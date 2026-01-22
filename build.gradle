@@ -1,0 +1,42 @@
+plugins {
+    id 'java'
+}
+
+group = 'com.smousseur'
+version = '1.0.0-SNAPSHOT'
+ext.jmonkeyengineVersion = '3.9.0-beta1'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.orekit:orekit:13.0.3'
+    implementation 'org.jmonkeyengine:jme3-core:' + jmonkeyengineVersion
+    implementation 'org.jmonkeyengine:jme3-desktop:' + jmonkeyengineVersion
+    implementation 'org.jmonkeyengine:jme3-jogg:' + jmonkeyengineVersion
+    runtimeOnly 'org.jmonkeyengine:jme3-plugins:' + jmonkeyengineVersion
+    runtimeOnly 'org.jmonkeyengine:jme3-lwjgl3:' + jmonkeyengineVersion
+
+    implementation 'com.simsilica:lemur:1.16.0'
+    implementation 'com.simsilica:lemur-proto:1.13.0'
+
+    implementation 'org.codehaus.groovy:groovy-all:2.4.12'
+
+    implementation 'io.projectreactor:reactor-core:3.7.8'
+
+    implementation 'com.google.guava:guava:33.4.8-jre'
+
+    implementation 'org.apache.logging.log4j:log4j-core:2.24.3'
+    implementation 'org.apache.logging.log4j:log4j-api:2.24.3'
+
+    implementation 'com.github.luben:zstd-jni:1.5.6-6'
+
+    testImplementation platform('org.junit:junit-bom:5.10.0')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+test {
+    useJUnitPlatform()
+}
