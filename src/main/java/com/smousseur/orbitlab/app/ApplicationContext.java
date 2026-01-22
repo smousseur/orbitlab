@@ -3,7 +3,6 @@ package com.smousseur.orbitlab.app;
 import com.jme3.scene.Node;
 import com.jme3.scene.Spatial;
 import com.smousseur.orbitlab.app.view.FocusView;
-import com.smousseur.orbitlab.app.view.ViewMode;
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.engine.events.OrbitEventBus;
 import com.smousseur.orbitlab.engine.scene.graph.GuiGraph;
@@ -14,7 +13,7 @@ import com.smousseur.orbitlab.engine.scene.planet.PlanetView;
 import java.util.EnumMap;
 import java.util.Map;
 
-public class SimulationContext {
+public class ApplicationContext {
   private final SimulationConfig config;
   private final SimulationClock clock;
   private final OrbitEventBus orbitBus;
@@ -25,13 +24,13 @@ public class SimulationContext {
 
   private final FocusView focusView = new FocusView();
 
-  public SimulationContext(Node rootNode, Node guiNode) {
+  public ApplicationContext(Node rootNode, Node guiNode) {
     this();
     guiGraph.attachTo(guiNode);
     sceneGraph.attachTo(rootNode);
   }
 
-  private SimulationContext() {
+  private ApplicationContext() {
     this.config = SimulationConfig.defaultSolarSystem();
     this.orbitBus = new OrbitEventBus();
     this.clock = new SimulationClock(config.computeClockStart());

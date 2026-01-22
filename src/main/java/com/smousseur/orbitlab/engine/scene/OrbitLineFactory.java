@@ -9,6 +9,7 @@ import com.jme3.scene.VertexBuffer;
 import com.jme3.util.BufferUtils;
 import com.smousseur.orbitlab.app.view.RenderContext;
 import com.smousseur.orbitlab.app.view.RenderTransform;
+import com.smousseur.orbitlab.engine.AssetFactory;
 import com.smousseur.orbitlab.simulation.orbit.OrbitPath;
 import java.nio.FloatBuffer;
 import java.util.List;
@@ -23,9 +24,8 @@ public final class OrbitLineFactory {
   private OrbitLineFactory() {}
 
   public static Geometry buildHeliocentricLineStrip(
-      AssetManager assetManager, OrbitPath path, ColorRGBA color, float lineWidth) {
+      OrbitPath path, ColorRGBA color, float lineWidth) {
 
-    Objects.requireNonNull(assetManager, "assetManager");
     Objects.requireNonNull(path, "path");
     Objects.requireNonNull(color, "color");
 
@@ -51,7 +51,7 @@ public final class OrbitLineFactory {
     mesh.updateBound();
     mesh.updateCounts();
 
-    Material mat = new Material(assetManager, "Common/MatDefs/Misc/Unshaded.j3md");
+    Material mat = AssetFactory.get().material(color);
     mat.setColor("Color", color);
     mat.getAdditionalRenderState().setLineWidth(lineWidth);
 

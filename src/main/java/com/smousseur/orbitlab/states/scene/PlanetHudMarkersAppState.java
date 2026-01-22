@@ -3,7 +3,7 @@ package com.smousseur.orbitlab.states.scene;
 import com.jme3.app.Application;
 import com.jme3.app.state.BaseAppState;
 import com.jme3.renderer.Camera;
-import com.smousseur.orbitlab.app.SimulationContext;
+import com.smousseur.orbitlab.app.ApplicationContext;
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.engine.scene.planet.PlanetPresenter;
 
@@ -13,7 +13,7 @@ public class PlanetHudMarkersAppState extends BaseAppState {
   private Camera camera;
   private Map<SolarSystemBody, PlanetPresenter> planets;
 
-  public PlanetHudMarkersAppState(SimulationContext context) {
+  public PlanetHudMarkersAppState(ApplicationContext context) {
     planets = context.getPlanets();
   }
 

@@ -3,9 +3,9 @@ package com.smousseur.orbitlab.engine.scene;
 import com.jme3.math.ColorRGBA;
 import com.smousseur.orbitlab.core.SolarSystemBody;
 
-public final class OrbitColors {
+public final class PlanetColors {
 
-  private OrbitColors() {}
+  private PlanetColors() {}
 
   public static ColorRGBA colorFor(SolarSystemBody body) {
     return switch (body) {

@@ -7,7 +7,7 @@ import com.jme3.input.KeyInput;
 import com.jme3.input.controls.ActionListener;
 import com.jme3.input.controls.KeyTrigger;
 import com.smousseur.orbitlab.app.SimulationClock;
-import com.smousseur.orbitlab.app.SimulationContext;
+import com.smousseur.orbitlab.app.ApplicationContext;
 import java.util.Objects;
 import org.orekit.time.AbsoluteDate;
 
@@ -34,7 +34,7 @@ public final class SimulationClockAppState extends BaseAppState implements Actio
   private double speedFactor = 2.0; // multiply/divide speed by this factor
   private double seekStepSeconds = 60.0; // seek +/- N seconds
 
-  public SimulationClockAppState(SimulationContext context) {
+  public SimulationClockAppState(ApplicationContext context) {
     this.clock = Objects.requireNonNull(context.clock(), "clock");
   }
 

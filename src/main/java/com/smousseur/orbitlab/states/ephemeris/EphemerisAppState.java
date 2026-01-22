@@ -3,7 +3,7 @@ package com.smousseur.orbitlab.states.ephemeris;
 import com.jme3.app.Application;
 import com.jme3.app.state.BaseAppState;
 import com.smousseur.orbitlab.app.SimulationClock;
-import com.smousseur.orbitlab.app.SimulationContext;
+import com.smousseur.orbitlab.app.ApplicationContext;
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.simulation.ephemeris.BodySample;
 import com.smousseur.orbitlab.simulation.ephemeris.EphemerisWorker;
@@ -41,7 +41,7 @@ public final class EphemerisAppState extends BaseAppState {
 
   private DatasetEphemerisSource source;
 
-  public EphemerisAppState(SimulationContext context) {
+  public EphemerisAppState(ApplicationContext context) {
     this.clock = Objects.requireNonNull(context.clock(), "clock");
     this.ephemerisConfig =
         Objects.requireNonNull(context.config().ephemerisConfig(), "ephemerisConfig");

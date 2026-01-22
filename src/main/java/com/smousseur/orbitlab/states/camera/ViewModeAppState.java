@@ -6,7 +6,7 @@ import com.jme3.input.InputManager;
 import com.jme3.input.KeyInput;
 import com.jme3.input.controls.ActionListener;
 import com.jme3.input.controls.KeyTrigger;
-import com.smousseur.orbitlab.app.SimulationContext;
+import com.smousseur.orbitlab.app.ApplicationContext;
 import com.smousseur.orbitlab.app.view.FocusView;
 import com.smousseur.orbitlab.app.view.ViewMode;
 import com.smousseur.orbitlab.core.SolarSystemBody;
@@ -16,11 +16,11 @@ import java.util.Objects;
 public final class ViewModeAppState extends BaseAppState implements ActionListener {
 
   private static final String ACTION_TOGGLE_VIEW_MODE = "viewMode.toggle";
-  private final SimulationContext context;
+  private final ApplicationContext context;
 
   private InputManager inputManager;
 
-  public ViewModeAppState(SimulationContext context) {
+  public ViewModeAppState(ApplicationContext context) {
     this.context = Objects.requireNonNull(context, "context");
   }
 

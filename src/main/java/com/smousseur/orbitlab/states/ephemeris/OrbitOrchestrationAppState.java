@@ -4,7 +4,7 @@ import com.jme3.app.Application;
 import com.jme3.app.state.BaseAppState;
 import com.smousseur.orbitlab.app.SimulationClock;
 import com.smousseur.orbitlab.app.SimulationConfig;
-import com.smousseur.orbitlab.app.SimulationContext;
+import com.smousseur.orbitlab.app.ApplicationContext;
 import com.smousseur.orbitlab.engine.events.OrbitEventBus;
 import com.smousseur.orbitlab.simulation.orbit.OrbitPathCache;
 import com.smousseur.orbitlab.simulation.source.DatasetEphemerisSource;
@@ -22,7 +22,7 @@ public final class OrbitOrchestrationAppState extends BaseAppState {
 
   private ExecutorService orbitComputePool;
 
-  public OrbitOrchestrationAppState(SimulationContext context) {
+  public OrbitOrchestrationAppState(ApplicationContext context) {
     this.clock = Objects.requireNonNull(context.clock(), "clock");
     this.simConfig = Objects.requireNonNull(context.config(), "simConfig");
     this.orbitBus = Objects.requireNonNull(context.orbitBus(), "orbitBus");

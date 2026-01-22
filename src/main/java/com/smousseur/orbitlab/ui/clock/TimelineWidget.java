@@ -2,12 +2,11 @@ package com.smousseur.orbitlab.ui.clock;
 
 import com.jme3.scene.Node;
 import com.simsilica.lemur.*;
-import com.simsilica.lemur.component.BorderLayout;
 import com.simsilica.lemur.component.BoxLayout;
 import com.simsilica.lemur.core.VersionedReference;
 import com.smousseur.orbitlab.app.OrekitTime;
 import com.smousseur.orbitlab.app.SimulationClock;
-import com.smousseur.orbitlab.app.SimulationContext;
+import com.smousseur.orbitlab.app.ApplicationContext;
 import com.smousseur.orbitlab.app.converters.TimeConverter;
 import java.util.Objects;
 
@@ -46,7 +45,7 @@ public class TimelineWidget implements AutoCloseable {
 
   private final VersionedReference<Double> speedValueRef;
 
-  public TimelineWidget(SimulationContext context) {
+  public TimelineWidget(ApplicationContext context) {
     this.clock = Objects.requireNonNull(context, "context must not be null").clock();
 
     Node timelineNode = context.guiGraph().getTimelineNode();

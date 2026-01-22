@@ -2,15 +2,15 @@ package com.smousseur.orbitlab.states.scene;
 
 import com.jme3.app.Application;
 import com.jme3.app.state.BaseAppState;
-import com.smousseur.orbitlab.app.SimulationContext;
+import com.smousseur.orbitlab.app.ApplicationContext;
 import com.smousseur.orbitlab.ui.clock.TimelineWidget;
 
 public final class TimelineWidgetAppState extends BaseAppState {
 
-  private final SimulationContext context;
+  private final ApplicationContext context;
   private TimelineWidget widget;
 
-  public TimelineWidgetAppState(SimulationContext context) {
+  public TimelineWidgetAppState(ApplicationContext context) {
     this.context = context;
   }
 

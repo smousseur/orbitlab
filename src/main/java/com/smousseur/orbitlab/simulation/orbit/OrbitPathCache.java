@@ -74,22 +74,17 @@ public final class OrbitPathCache {
 
     // Initial heliocentric relative PV (planet - sun) at t0
     PVCoordinates pvBody0 = pvSource.sampleIcrf(body, start).pvIcrf();
-    PVCoordinates pvSun0 = pvSource.sampleIcrf(SolarSystemBody.SUN, start).pvIcrf();
-
-    PVCoordinates pvRel0 =
-        new PVCoordinates(
-            pvBody0.getPosition().subtract(pvSun0.getPosition()),
-            pvBody0.getVelocity().subtract(pvSun0.getVelocity()));
+    Vector3D pvSun0 = pvSource.sampleIcrf(SolarSystemBody.SUN, start).pvIcrf().getPosition();
 
     // Two-body Kepler propagation around the Sun
     double muSun = orekit.body(SolarSystemBody.SUN).getGM();
-    Orbit relOrbit0 = new CartesianOrbit(pvRel0, icrf, start, muSun);
+    Orbit relOrbit0 = new CartesianOrbit(pvBody0, icrf, start, muSun);
     KeplerianPropagator propagator = new KeplerianPropagator(relOrbit0);
 
     AbsoluteDate t = start;
     for (int i = 0; i < n; i++) {
       Vector3D relPos = pvSource.sampleIcrfSafe(body, t, propagator);
-      positionsHelio.add(relPos);
+      positionsHelio.add(relPos.subtract(pvSun0));
 
       t = t.shiftedBy(step);
       if (t.compareTo(end) > 0) {
@@ -98,7 +93,7 @@ public final class OrbitPathCache {
     }
 
     Vector3D relEnd = pvSource.sampleIcrfSafe(body, end, propagator);
-    positionsHelio.add(relEnd);
+    positionsHelio.add(relEnd.subtract(pvSun0));
 
     return new OrbitPath(body, start, end, step, positionsHelio);
   }
