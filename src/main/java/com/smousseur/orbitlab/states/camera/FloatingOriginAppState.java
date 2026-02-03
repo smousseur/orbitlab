@@ -19,7 +19,7 @@ public class FloatingOriginAppState extends BaseAppState {
   public FloatingOriginAppState(ApplicationContext context) {
     this.context = Objects.requireNonNull(context, "context");
     sceneGraph = context.sceneGraph();
-    solarRoot = sceneGraph.getSolarRoot();
+    solarRoot = sceneGraph.getFarRoot();
   }
 
   @Override
@@ -31,7 +31,7 @@ public class FloatingOriginAppState extends BaseAppState {
     switch (view.getMode()) {
       case SOLAR -> solarRoot.setLocalTranslation(0, 0, 0);
       case PLANET -> {
-        Spatial planetSpatial = sceneGraph.getPlanetSpatial(view.getBody());
+        Spatial planetSpatial = sceneGraph.getBodySpatial(view.getBody());
         solarRoot.setLocalTranslation(planetSpatial.getLocalTranslation().negate());
       }
     }

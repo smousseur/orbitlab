@@ -76,24 +76,19 @@ public final class OrbitPathCache {
     PVCoordinates pvBody0 = pvSource.sampleIcrf(body, start).pvIcrf();
     Vector3D pvSun0 = pvSource.sampleIcrf(SolarSystemBody.SUN, start).pvIcrf().getPosition();
 
-    // Two-body Kepler propagation around the Sun
+    // Two-body Kepler propagation around the Sun as fallback computation
     double muSun = orekit.body(SolarSystemBody.SUN).getGM();
     Orbit relOrbit0 = new CartesianOrbit(pvBody0, icrf, start, muSun);
     KeplerianPropagator propagator = new KeplerianPropagator(relOrbit0);
 
-    AbsoluteDate t = start;
-    for (int i = 0; i < n; i++) {
+    // TODO only propagate from the last ephemeris point and not from start date
+    AbsoluteDate t = start.shiftedBy(-step * n / 2);
+    for (int i = 0; i <= n; i++) {
       Vector3D relPos = pvSource.sampleIcrfSafe(body, t, propagator);
+      // TODO use ICRF position for the sun at time t and not start date
       positionsHelio.add(relPos.subtract(pvSun0));
-
       t = t.shiftedBy(step);
-      if (t.compareTo(end) > 0) {
-        break;
-      }
     }
-
-    Vector3D relEnd = pvSource.sampleIcrfSafe(body, end, propagator);
-    positionsHelio.add(relEnd.subtract(pvSun0));
 
     return new OrbitPath(body, start, end, step, positionsHelio);
   }

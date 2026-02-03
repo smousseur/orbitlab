@@ -49,7 +49,7 @@ public final class PlanetPoseAppState extends BaseAppState {
       PlanetDescriptor desc =
           new PlanetDescriptor(body, body.displayName(), PlanetColors.colorFor(body));
 
-      PlanetLodView view = new PlanetLodView(guiNode, desc);
+      PlanetLodView view = new PlanetLodView(guiNode, context.sceneGraph(), desc);
       PlanetPresenter presenter = new PlanetPresenter(body, view);
       presenter.setVisible(true);
 

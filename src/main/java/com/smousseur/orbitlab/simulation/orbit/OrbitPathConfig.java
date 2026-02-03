@@ -39,15 +39,15 @@ public record OrbitPathConfig(
   public static OrbitPathConfig defaultSolarSystem() {
     EnumMap<SolarSystemBody, Integer> points = new EnumMap<>(SolarSystemBody.class);
 
-    points.put(SolarSystemBody.MERCURY, 300);
-    points.put(SolarSystemBody.VENUS, 360);
-    points.put(SolarSystemBody.EARTH, 400);
-    points.put(SolarSystemBody.MARS, 420);
-    points.put(SolarSystemBody.JUPITER, 500);
-    points.put(SolarSystemBody.SATURN, 550);
-    points.put(SolarSystemBody.URANUS, 600);
-    points.put(SolarSystemBody.NEPTUNE, 650);
-    points.put(SolarSystemBody.PLUTO, 700);
+    points.put(SolarSystemBody.MERCURY, 10000);
+    points.put(SolarSystemBody.VENUS, 8000);
+    points.put(SolarSystemBody.EARTH, 8000);
+    points.put(SolarSystemBody.MARS, 6000);
+    points.put(SolarSystemBody.JUPITER, 2000);
+    points.put(SolarSystemBody.SATURN, 1500);
+    points.put(SolarSystemBody.URANUS, 1000);
+    points.put(SolarSystemBody.NEPTUNE, 1000);
+    points.put(SolarSystemBody.PLUTO, 1000);
 
     return new OrbitPathConfig(
         400,

@@ -2,8 +2,8 @@ package com.smousseur.orbitlab.states.ephemeris;
 
 import com.jme3.app.Application;
 import com.jme3.app.state.BaseAppState;
-import com.smousseur.orbitlab.app.SimulationClock;
 import com.smousseur.orbitlab.app.ApplicationContext;
+import com.smousseur.orbitlab.app.SimulationClock;
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.simulation.ephemeris.BodySample;
 import com.smousseur.orbitlab.simulation.ephemeris.EphemerisWorker;
@@ -56,6 +56,7 @@ public final class EphemerisAppState extends BaseAppState {
 
   /** Non-blocking sample, empty if no window is built yet or outside the current window. */
   public Optional<BodySample> trySampleInterpolated(SolarSystemBody body, AbsoluteDate t) {
+
     Objects.requireNonNull(body, "body");
     Objects.requireNonNull(t, "t");
     SlidingWindowEphemerisBuffer buf = buffers.get(body);
@@ -74,8 +75,6 @@ public final class EphemerisAppState extends BaseAppState {
 
   @Override
   protected void initialize(Application app) {
-    // EphemerisSource source = new OrekitEphemerisSource();
-
     Path datasetDir = Path.of("dataset", "ephemeris");
 
     this.source = new DatasetEphemerisSource(datasetDir, /*chunksInCachePerBody*/ 32);
