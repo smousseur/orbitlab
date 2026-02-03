@@ -8,65 +8,94 @@ import java.util.EnumMap;
 import java.util.Map;
 import java.util.Objects;
 
-/**
- * Represents a scene graph for visualizing a solar system. This class structures nodes for various
- * components such as the sun, orbits, celestial bodies, and optional debugging tools, allowing for
- * controlled visibility and hierarchical attachment in a 3D rendering context.
- *
- * <p>The root node, solarRoot, acts as the parent node for solar system elements, providing a
- * central point of attachment and visibility management.
- */
 public final class SceneGraph {
+  public static final String ORBIT_PREFIX = "Orbit-";
   public static String PLANETS_BUCKET = "PlanetsBucket";
   public static String PLANET_ANCHOR_PREFIX = "PlanetAnchor-";
 
-  private final Node solarRoot = new Node("SolarRoot");
-  private final Node solarFrame = new Node("SolarFrame");
-  private final Node orbitsNode = new Node("OrbitsNode");
-  private final Node bodiesNode = new Node("BodiesNode");
+  private Node rootNode;
 
-  private final OrbitLayer orbitLayer = new OrbitLayer(orbitsNode);
+  private final Node farRoot = new Node("farRoot");
+  private final Node farFrame = new Node("farFrame");
+  private final Node farOrbitsNode = new Node("farOrbitsNode");
+  private final Node farBodiesNode = new Node("farBodiesNode");
+
+  private final Node nearRoot = new Node("nearRoot");
+  private final Node nearFrame = new Node("nearFrame");
+
+  private final Node nearOrbitsNode = new Node("nearOrbitsNode");
+  private final Node nearBodiesNode = new Node("nearBodiesNode");
+
+  private final OrbitLayer farOrbitLayer = new OrbitLayer(farOrbitsNode);
+  private final OrbitLayer nearOrbitLayer = new OrbitLayer(nearOrbitsNode);
 
   public SceneGraph() {
-    solarRoot.attachChild(solarFrame);
-    solarFrame.attachChild(orbitsNode);
-    solarFrame.attachChild(bodiesNode);
+    farRoot.attachChild(farFrame);
+    farFrame.attachChild(farOrbitsNode);
+    farFrame.attachChild(farBodiesNode);
+
+    nearRoot.attachChild(nearFrame);
+    nearFrame.attachChild(nearOrbitsNode);
+    nearFrame.attachChild(nearBodiesNode);
   }
 
   public void attachTo(Node rootNode) {
+    this.rootNode = rootNode;
     Objects.requireNonNull(rootNode, "rootNode");
-    if (solarRoot.getParent() == null) {
-      rootNode.attachChild(solarRoot);
+    if (farRoot.getParent() == null) {
+      rootNode.attachChild(farRoot);
+    }
+    if (nearRoot.getParent() == null) {
+      rootNode.attachChild(nearRoot);
     }
   }
 
   public void detachFromParent() {
-    solarRoot.removeFromParent();
+    farRoot.removeFromParent();
+    nearRoot.removeFromParent();
   }
 
-  public Spatial getPlanetSpatial(SolarSystemBody body) {
-    return ((Node) bodiesNode.getChild(PLANETS_BUCKET))
+  public Spatial getBodySpatial(SolarSystemBody body) {
+    return ((Node) farBodiesNode.getChild(PLANETS_BUCKET))
         .getChild(PLANET_ANCHOR_PREFIX + body.name());
   }
 
+  public void setOrbitVisible(SolarSystemBody body, boolean visible) {
+    farOrbitLayer
+        .orbitNode(body)
+        .setCullHint(visible ? Spatial.CullHint.Inherit : Spatial.CullHint.Always);
+  }
+
   public OrbitLayer orbits() {
-    return orbitLayer;
+    return farOrbitLayer;
   }
 
   public Node bodiesNode() {
-    return bodiesNode;
+    return farBodiesNode;
   }
 
-  public Node getSolarRoot() {
-    return solarRoot;
+  public Node getFarRoot() {
+    return farRoot;
   }
 
-  public Node getSolarFrame() {
-    return solarFrame;
+  public Node getFarFrame() {
+    return farFrame;
+  }
+
+  public Node getNearRoot() {
+    return nearRoot;
+  }
+
+  public Node getRootNode() {
+    return rootNode;
   }
 
   public void setSolarVisible(boolean visible) {
-    solarRoot.setCullHint(visible ? Spatial.CullHint.Inherit : Spatial.CullHint.Always);
+    farRoot.setCullHint(visible ? Spatial.CullHint.Inherit : Spatial.CullHint.Always);
+  }
+
+  public void setPlanetVisible(boolean visible) {
+    nearRoot.setCullHint(visible ? Spatial.CullHint.Inherit : Spatial.CullHint.Always);
   }
 
   public static final class OrbitLayer {
@@ -86,7 +115,7 @@ public final class SceneGraph {
       return perBodyNodes.computeIfAbsent(
           body,
           b -> {
-            Node n = new Node("Orbit-" + b.name());
+            Node n = new Node(ORBIT_PREFIX + b.name());
             parent.attachChild(n);
             return n;
           });

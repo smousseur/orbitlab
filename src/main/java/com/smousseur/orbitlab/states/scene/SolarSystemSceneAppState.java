@@ -16,14 +16,11 @@ import java.util.Objects;
 
 public final class SolarSystemSceneAppState extends BaseAppState {
 
-  private final OrbitEventBus orbitBus;
-
   private final SceneGraph scene;
 
   private boolean orbitsVisible = true;
 
   public SolarSystemSceneAppState(ApplicationContext context) {
-    this.orbitBus = Objects.requireNonNull((context).orbitBus(), "orbitBus");
     this.scene = Objects.requireNonNull((context).sceneGraph(), "orbitBus");
   }
 
@@ -36,24 +33,6 @@ public final class SolarSystemSceneAppState extends BaseAppState {
   protected void initialize(Application app) {
     scene.setSolarVisible(true);
     scene.orbits().setVisible(orbitsVisible);
-  }
-
-  @Override
-  public void update(float tpf) {
-    // Drain bus on JME thread => safe to create/attach geometries here.
-    OrbitEventBus.OrbitPathReady evt;
-    while ((evt = orbitBus.pollOrbitPathReady()) != null) {
-      onOrbitPathReady(evt.body(), evt.path());
-    }
-  }
-
-  private void onOrbitPathReady(SolarSystemBody body, OrbitPath path) {
-    Geometry geom =
-        OrbitLineFactory.buildHeliocentricLineStrip(path, PlanetColors.colorFor(body), 2.0f);
-
-    Node bucket = scene.orbits().orbitNode(body);
-    bucket.detachAllChildren();
-    bucket.attachChild(geom);
   }
 
   @Override

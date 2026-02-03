@@ -2,9 +2,11 @@ package com.smousseur.orbitlab.engine;
 
 import com.jme3.asset.AssetManager;
 import com.jme3.material.Material;
+import com.jme3.material.RenderState;
 import com.jme3.math.ColorRGBA;
 import com.jme3.scene.Spatial;
 import com.smousseur.orbitlab.core.OrbitlabException;
+import org.jspecify.annotations.NonNull;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -21,7 +23,7 @@ public class AssetFactory {
             private final AtomicInteger idx = new AtomicInteger(1);
 
             @Override
-            public Thread newThread(Runnable r) {
+            public Thread newThread(@NonNull Runnable r) {
               Thread t = new Thread(r, "asset-loading-" + idx.getAndIncrement());
               t.setDaemon(true);
               return t;
@@ -41,6 +43,14 @@ public class AssetFactory {
   public Material material(ColorRGBA color) {
     Material material = new Material(assetManager, "Common/MatDefs/Misc/Unshaded.j3md");
     material.setColor("Color", color);
+    return material;
+  }
+
+  public Material alphaMaterial(ColorRGBA color) {
+    Material material = new Material(assetManager, "Common/MatDefs/Misc/Unshaded.j3md");
+    material.setColor("Color", color);
+    material.getAdditionalRenderState().setBlendMode(RenderState.BlendMode.Alpha);
+    material.getAdditionalRenderState().setDepthWrite(false);
     return material;
   }
 

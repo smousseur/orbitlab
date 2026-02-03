@@ -6,6 +6,7 @@ import com.smousseur.orbitlab.simulation.ephemeris.BodySample;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.orekit.propagation.analytical.KeplerianPropagator;
 import org.orekit.time.AbsoluteDate;
+import org.orekit.utils.PVCoordinates;
 
 /**
  * Computes exact samples (PV + rotation) from the underlying ephemeris model (e.g. JPL via Orekit).
@@ -15,6 +16,10 @@ import org.orekit.time.AbsoluteDate;
 @FunctionalInterface
 public interface EphemerisSource {
   BodySample sampleIcrf(SolarSystemBody body, AbsoluteDate date);
+
+  default PVCoordinates propagate(AbsoluteDate date, KeplerianPropagator propagator) {
+    return propagator.propagate(date).getPVCoordinates();
+  }
 
   default Vector3D sampleIcrfSafe(
       SolarSystemBody body, AbsoluteDate date, KeplerianPropagator propagator) {

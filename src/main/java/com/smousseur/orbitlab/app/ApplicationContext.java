@@ -62,8 +62,8 @@ public class ApplicationContext {
     return focusView;
   }
 
-  public Spatial getPlanetSpatial(SolarSystemBody body) {
-    return sceneGraph.getPlanetSpatial(body);
+  public Spatial getBodySpatial(SolarSystemBody body) {
+    return sceneGraph.getBodySpatial(body);
   }
 
   public void addPlanet(SolarSystemBody body, PlanetPresenter presenter) {
