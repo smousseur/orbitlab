@@ -111,4 +111,54 @@ public final class OrbitLineFactory {
     geom.setMaterial(mat);
     return geom;
   }
+
+  /**
+   * Updates an existing orbit Geometry position buffer (no rebuild of Geometry/Mesh). Assumes
+   * positions are heliocentric meters.
+   */
+  public static void updateGeometryPositionsHelioMeters(
+      Geometry geom, Vector3D[] positionsHelioMeters) {
+    Objects.requireNonNull(geom, "geom");
+    Objects.requireNonNull(positionsHelioMeters, "positionsHelioMeters");
+    if (positionsHelioMeters.length < 2) {
+      throw new IllegalArgumentException("positionsHelioMeters must contain at least 2 points");
+    }
+
+    Mesh mesh = geom.getMesh();
+    if (mesh == null) {
+      throw new IllegalStateException("Geometry has no mesh: " + geom.getName());
+    }
+
+    VertexBuffer vb = mesh.getBuffer(VertexBuffer.Type.Position);
+    FloatBuffer fb = null;
+
+    if (vb != null && vb.getData() instanceof FloatBuffer existing) {
+      fb = existing;
+      int required = positionsHelioMeters.length * 3;
+      if (fb.capacity() < required) {
+        fb = BufferUtils.createFloatBuffer(required);
+        mesh.setBuffer(VertexBuffer.Type.Position, 3, fb);
+      } else {
+        fb.clear();
+      }
+    } else {
+      fb = BufferUtils.createFloatBuffer(positionsHelioMeters.length * 3);
+      mesh.setBuffer(VertexBuffer.Type.Position, 3, fb);
+    }
+
+    RenderContext ctx = RenderContext.solar();
+    for (Vector3D pHelio : positionsHelioMeters) {
+      Vector3D jme = RenderTransform.toRenderUnitsJmeAxes(pHelio, null, ctx);
+      fb.put((float) jme.getX()).put((float) jme.getY()).put((float) jme.getZ());
+    }
+    fb.flip();
+
+    mesh.updateBound();
+    mesh.updateCounts();
+
+    VertexBuffer pos = mesh.getBuffer(VertexBuffer.Type.Position);
+    if (pos != null) {
+      pos.setUpdateNeeded();
+    }
+  }
 }

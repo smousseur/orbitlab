@@ -3,23 +3,23 @@ package com.smousseur.orbitlab.app;
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.simulation.ephemeris.config.EphemerisConfig;
 import com.smousseur.orbitlab.simulation.ephemeris.config.SlidingWindowConfig;
-import com.smousseur.orbitlab.simulation.orbit.OrbitPathConfig;
+import com.smousseur.orbitlab.simulation.orbit.config.OrbitWindowConfig;
 import org.orekit.time.AbsoluteDate;
 
 import java.util.EnumSet;
 import java.util.Objects;
 
 public record SimulationConfig(
-    EnumSet<SolarSystemBody> orbitWarmupBodies,
+    EnumSet<SolarSystemBody> orbitBodies,
     EphemerisConfig ephemerisConfig,
     SlidingWindowConfig slidingWindowConfig,
-    OrbitPathConfig orbitPathConfig) {
+    OrbitWindowConfig orbitWindowConfig) {
 
   public SimulationConfig {
-    Objects.requireNonNull(orbitWarmupBodies, "orbitWarmupBodies");
+    Objects.requireNonNull(orbitBodies, "orbitBodies");
     Objects.requireNonNull(ephemerisConfig, "ephemerisConfig");
     Objects.requireNonNull(slidingWindowConfig, "slidingWindowConfig");
-    Objects.requireNonNull(orbitPathConfig, "orbitPathConfig");
+    Objects.requireNonNull(orbitWindowConfig, "orbitWindowConfig");
   }
 
   /** Clock start is always "now" (UTC) for a user session. */
@@ -47,6 +47,6 @@ public record SimulationConfig(
             SolarSystemBody.PLUTO),
         EphemerisConfig.defaultSolarSystem(),
         SlidingWindowConfig.defaultSolarSystem(),
-        OrbitPathConfig.defaultSolarSystem());
+        OrbitWindowConfig.defaultSolarSystem());
   }
 }

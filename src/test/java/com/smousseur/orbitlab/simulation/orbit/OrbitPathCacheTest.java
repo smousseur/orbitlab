@@ -9,17 +9,24 @@ import java.util.Map;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.ephemeris.BodySample;
 import com.smousseur.orbitlab.simulation.ephemeris.config.EphemerisConfig;
+import com.smousseur.orbitlab.simulation.orbit.config.OrbitWindowConfig;
 import com.smousseur.orbitlab.simulation.source.EphemerisSource;
-import com.smousseur.orbitlab.simulation.source.PvSource;
 import org.hipparchus.geometry.euclidean.threed.Rotation;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.orekit.time.AbsoluteDate;
 import org.orekit.utils.PVCoordinates;
 
 class OrbitPathCacheTest {
+
+  @BeforeAll
+  static void init() {
+    OrekitService.get().initialize();
+  }
 
   @Test
   void computesOncePerBody() throws Exception {
@@ -48,8 +55,9 @@ class OrbitPathCacheTest {
     periods.put(SolarSystemBody.EARTH, 100.0);
 
     EphemerisConfig cfg = new EphemerisConfig(10.0, 2, 2, periods);
-    OrbitPathConfig orbitCfg =
-        new OrbitPathConfig(200, new EnumMap<>(Map.of(SolarSystemBody.EARTH, 200)), 200, 2000);
+    OrbitWindowConfig orbitCfg =
+        new OrbitWindowConfig(
+            new EnumMap<>(Map.of(SolarSystemBody.EARTH, 200)), 512, 64, 2 * 86400, 0.25);
 
     ExecutorService exec = Executors.newSingleThreadExecutor();
     try {

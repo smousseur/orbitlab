@@ -43,13 +43,13 @@ public class OrbitDatasetGenerator {
         new OrbitPathCache(
             datasetSource,
             simulationConfig.ephemerisConfig(),
-            simulationConfig.orbitPathConfig(),
+            simulationConfig.orbitWindowConfig(),
             executor);
   }
 
   public void generate() {
     AtomicInteger counter = new AtomicInteger(0);
-    EnumSet<SolarSystemBody> bodies = simulationConfig.orbitWarmupBodies();
+    EnumSet<SolarSystemBody> bodies = simulationConfig.orbitBodies();
     for (SolarSystemBody body : bodies) {
       CompletableFuture.supplyAsync(
               () -> cache.getOrComputeOnePeriod(body, referenceStart).join(), executor)

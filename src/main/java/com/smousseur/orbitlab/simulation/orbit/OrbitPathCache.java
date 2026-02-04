@@ -3,6 +3,7 @@ package com.smousseur.orbitlab.simulation.orbit;
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.ephemeris.config.EphemerisConfig;
+import com.smousseur.orbitlab.simulation.orbit.config.OrbitWindowConfig;
 import com.smousseur.orbitlab.simulation.source.EphemerisSource;
 import java.util.ArrayList;
 import java.util.Objects;
@@ -21,7 +22,7 @@ public final class OrbitPathCache {
 
   private final EphemerisSource pvSource;
   private final EphemerisConfig ephemerisConfig;
-  private final OrbitPathConfig orbitPathConfig;
+  private final OrbitWindowConfig orbitWindowConfig;
   private final Executor executor;
 
   private final ConcurrentHashMap<SolarSystemBody, CompletableFuture<OrbitPath>> cache =
@@ -30,11 +31,11 @@ public final class OrbitPathCache {
   public OrbitPathCache(
       EphemerisSource pvSource,
       EphemerisConfig ephemerisConfig,
-      OrbitPathConfig orbitPathConfig,
+      OrbitWindowConfig orbitWindowConfig,
       Executor executor) {
     this.pvSource = Objects.requireNonNull(pvSource, "pvSource");
     this.ephemerisConfig = Objects.requireNonNull(ephemerisConfig, "ephemerisConfig");
-    this.orbitPathConfig = Objects.requireNonNull(orbitPathConfig, "orbitPathConfig");
+    this.orbitWindowConfig = Objects.requireNonNull(orbitWindowConfig, "orbitWindowConfig");
     this.executor = Objects.requireNonNull(executor, "executor");
   }
 
@@ -61,9 +62,9 @@ public final class OrbitPathCache {
     double period = ephemerisConfig.orbitalPeriodSeconds(body);
     AbsoluteDate end = start.shiftedBy(period);
 
-    int targetPoints = orbitPathConfig.targetPoints(body);
+    int targetPoints = orbitWindowConfig.bodyPoints(body);
     double rawStep = period / targetPoints;
-    double step = orbitPathConfig.clampStepSeconds(rawStep);
+    double step = orbitWindowConfig.clampStepSeconds(rawStep);
 
     int n = (int) Math.ceil(period / step) + 1;
     ArrayList<Vector3D> positionsHelio = new ArrayList<>(n + 1);
@@ -74,19 +75,22 @@ public final class OrbitPathCache {
 
     // Initial heliocentric relative PV (planet - sun) at t0
     PVCoordinates pvBody0 = pvSource.sampleIcrf(body, start).pvIcrf();
-    Vector3D pvSun0 = pvSource.sampleIcrf(SolarSystemBody.SUN, start).pvIcrf().getPosition();
+
+    PVCoordinates pvSun0 = pvSource.sampleIcrf(SolarSystemBody.SUN, start).pvIcrf();
 
     // Two-body Kepler propagation around the Sun as fallback computation
     double muSun = orekit.body(SolarSystemBody.SUN).getGM();
+    CartesianOrbit orbitSun = new CartesianOrbit(pvSun0, icrf, start, muSun);
     Orbit relOrbit0 = new CartesianOrbit(pvBody0, icrf, start, muSun);
     KeplerianPropagator propagator = new KeplerianPropagator(relOrbit0);
+    KeplerianPropagator sunPropagator = new KeplerianPropagator(orbitSun);
 
     // TODO only propagate from the last ephemeris point and not from start date
     AbsoluteDate t = start.shiftedBy(-step * n / 2);
     for (int i = 0; i <= n; i++) {
       Vector3D relPos = pvSource.sampleIcrfSafe(body, t, propagator);
-      // TODO use ICRF position for the sun at time t and not start date
-      positionsHelio.add(relPos.subtract(pvSun0));
+      Vector3D pSun = pvSource.sampleIcrfSafe(SolarSystemBody.SUN, t, sunPropagator);
+      positionsHelio.add(relPos.subtract(pSun));
       t = t.shiftedBy(step);
     }
 

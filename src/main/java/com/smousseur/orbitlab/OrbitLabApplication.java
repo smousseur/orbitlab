@@ -16,8 +16,9 @@ import com.smousseur.orbitlab.states.camera.FloatingOriginAppState;
 import com.smousseur.orbitlab.states.camera.OrbitCameraAppState;
 import com.smousseur.orbitlab.states.camera.ViewModeAppState;
 import com.smousseur.orbitlab.states.ephemeris.EphemerisAppState;
-import com.smousseur.orbitlab.states.ephemeris.OrbitInitAppState;
+import com.smousseur.orbitlab.states.orbits.OrbitInitAppState;
 import com.smousseur.orbitlab.states.fx.LightningAppState;
+import com.smousseur.orbitlab.states.orbits.OrbitRuntimeAppState;
 import com.smousseur.orbitlab.states.scene.PlanetHudMarkersAppState;
 import com.smousseur.orbitlab.states.scene.PlanetPoseAppState;
 import com.smousseur.orbitlab.states.scene.SolarSystemSceneAppState;
@@ -58,6 +59,7 @@ public class OrbitLabApplication extends SimpleApplication {
     stateManager.attach(new PlanetHudMarkersAppState(applicationContext));
     stateManager.attach(new SolarSystemSceneAppState(applicationContext));
     stateManager.attach(new OrbitInitAppState(applicationContext));
+    stateManager.attach(new OrbitRuntimeAppState(applicationContext));
     stateManager.attach(new TimelineWidgetAppState(applicationContext));
     stateManager.attach(new LightningAppState(applicationContext));
 

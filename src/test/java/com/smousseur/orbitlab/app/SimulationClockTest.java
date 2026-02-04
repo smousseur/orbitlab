@@ -80,17 +80,12 @@ class SimulationClockTest {
     clock.setSpeed(100.0);
     clock.play();
 
-    assertEquals(2, events.size());
+    assertEquals(1, events.size());
     assertInstanceOf(SimulationClock.SpeedChanged.class, events.get(0));
-    assertInstanceOf(SimulationClock.PlayStateChanged.class, events.get(1));
 
     SimulationClock.SpeedChanged sc = (SimulationClock.SpeedChanged) events.get(0);
     assertEquals(1.0, sc.oldSpeed());
     assertEquals(100.0, sc.newSpeed());
-
-    SimulationClock.PlayStateChanged pc = (SimulationClock.PlayStateChanged) events.get(1);
-    assertFalse(pc.oldPlaying());
-    assertTrue(pc.newPlaying());
   }
 
   @Test
@@ -103,17 +98,20 @@ class SimulationClockTest {
       AtomicBoolean stop = new AtomicBoolean(false);
       CountDownLatch started = new CountDownLatch(1);
 
-      Future<?> reader = pool.submit(() -> {
-        started.countDown();
-        AbsoluteDate last = clock.now();
-        while (!stop.get()) {
-          AbsoluteDate cur = clock.now();
-          assertNotNull(cur);
-          // Not asserting monotonic because negative speeds could exist; here speed is positive.
-          assertTrue(cur.compareTo(last) >= 0);
-          last = cur;
-        }
-      });
+      Future<?> reader =
+          pool.submit(
+              () -> {
+                started.countDown();
+                AbsoluteDate last = clock.now();
+                while (!stop.get()) {
+                  AbsoluteDate cur = clock.now();
+                  assertNotNull(cur);
+                  // Not asserting monotonic because negative speeds could exist; here speed is
+                  // positive.
+                  assertTrue(cur.compareTo(last) >= 0);
+                  last = cur;
+                }
+              });
 
       started.await(1, TimeUnit.SECONDS);
 

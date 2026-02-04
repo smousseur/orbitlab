@@ -1,4 +1,4 @@
-package com.smousseur.orbitlab.states.ephemeris;
+package com.smousseur.orbitlab.states.orbits;
 
 import com.jme3.app.Application;
 import com.jme3.app.state.BaseAppState;
@@ -28,7 +28,7 @@ public class OrbitInitAppState extends BaseAppState {
 
   public OrbitInitAppState(ApplicationContext context) {
     orbitLayer = context.sceneGraph().orbits();
-    bodies = context.config().orbitWarmupBodies();
+    bodies = context.config().orbitBodies();
   }
 
   @Override
