@@ -40,4 +40,8 @@ public class Planet3dView {
   public void setVisible(boolean visible) {
     modelBucket.setCullHint(visible ? Spatial.CullHint.Inherit : Spatial.CullHint.Always);
   }
+
+  public Node getModelBucket() {
+    return modelBucket;
+  }
 }

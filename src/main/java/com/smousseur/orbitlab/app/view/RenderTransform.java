@@ -1,5 +1,9 @@
 package com.smousseur.orbitlab.app.view;
 
+import com.jme3.math.FastMath;
+import com.jme3.math.Quaternion;
+import com.jme3.math.Vector3f;
+import org.hipparchus.geometry.euclidean.threed.Rotation;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 
 import java.util.Objects;
@@ -13,6 +17,25 @@ import java.util.Objects;
 public final class RenderTransform {
 
   private RenderTransform() {}
+
+  private static final Quaternion meshCorrectionQ =
+      new Quaternion().fromAngleAxis(FastMath.HALF_PI, Vector3f.UNIT_X);
+
+  private static final Quaternion icrfToJmeQ =
+      new Quaternion().fromAngleAxis(-FastMath.HALF_PI, Vector3f.UNIT_X);
+
+  private static final Quaternion jmeToIcrfQ = icrfToJmeQ.inverse();
+
+  public static Quaternion toRenderQuaternion(Rotation rotationIcrf) {
+    Quaternion qIcrf =
+        new Quaternion(
+            (float) rotationIcrf.getQ1(),
+            (float) rotationIcrf.getQ2(),
+            (float) rotationIcrf.getQ3(),
+            (float) rotationIcrf.getQ0());
+    Quaternion physicRotation = icrfToJmeQ.mult(qIcrf).mult(jmeToIcrfQ);
+    return physicRotation.mult(meshCorrectionQ);
+  }
 
   /**
    * Converts an absolute object position in ICRF meters into a render-space position (JME units),

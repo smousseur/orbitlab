@@ -9,6 +9,7 @@ import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.engine.events.OrbitEventBus;
 import com.smousseur.orbitlab.engine.scene.PlanetColors;
 import com.smousseur.orbitlab.engine.scene.OrbitLineFactory;
+import com.smousseur.orbitlab.engine.scene.SceneUtils;
 import com.smousseur.orbitlab.engine.scene.graph.SceneGraph;
 import com.smousseur.orbitlab.simulation.orbit.OrbitPath;
 

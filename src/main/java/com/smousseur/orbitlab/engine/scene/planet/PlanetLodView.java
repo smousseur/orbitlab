@@ -1,5 +1,6 @@
 package com.smousseur.orbitlab.engine.scene.planet;
 
+import com.jme3.math.Quaternion;
 import com.jme3.math.Vector3f;
 import com.jme3.renderer.Camera;
 import com.jme3.scene.Node;
@@ -42,8 +43,14 @@ public final class PlanetLodView implements PlanetView {
   }
 
   @Override
-  public void setPositionWorld(Vector3f worldJmeUnits) {
-    anchor3d.setLocalTranslation(worldJmeUnits);
+  public void setPositionWorld(Vector3f position) {
+    anchor3d.setLocalTranslation(position);
+  }
+
+  @Override
+  public void setRotationWorld(Quaternion rotation) {
+    // anchor3d.setLocalRotation(rotation);
+    model3dView.getModelBucket().setLocalRotation(rotation);
   }
 
   @Override

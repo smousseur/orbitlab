@@ -9,6 +9,8 @@ import com.smousseur.orbitlab.engine.view.JmeVectorAdapter;
 import com.smousseur.orbitlab.simulation.ephemeris.service.EphemerisService;
 import com.smousseur.orbitlab.simulation.ephemeris.service.EphemerisServiceRegistry;
 import java.util.Objects;
+
+import org.hipparchus.geometry.euclidean.threed.Rotation;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.orekit.time.AbsoluteDate;
 
@@ -29,14 +31,17 @@ public record PlanetPresenter(SolarSystemBody body, PlanetView view) {
         EphemerisServiceRegistry.get()
             .orElseThrow(() -> new OrbitlabException("Cannot get EphemerisService"));
     ephemerisService
-        .tryPositionHelioIcrf(body, t)
+        .trySampleHelioIcrf(body, t)
         .ifPresent(
-            pos -> {
+            posRotation -> {
               // Convertir en JME units/axes selon le contexte SOLAR
+              Vector3D pos = posRotation.getLeft();
               Vector3D jmeUnitsJmeAxes =
                   RenderTransform.toRenderUnitsJmeAxes(pos, null, RenderContext.solar());
               Vector3f p = JmeVectorAdapter.toVector3f(jmeUnitsJmeAxes);
               view.setPositionWorld(p);
+              Rotation rotation = posRotation.getRight();
+              view.setRotationWorld(RenderTransform.toRenderQuaternion(rotation));
             });
   }
 }
