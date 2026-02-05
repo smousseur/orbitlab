@@ -2,17 +2,8 @@ package com.smousseur.orbitlab.states.scene;
 
 import com.jme3.app.Application;
 import com.jme3.app.state.BaseAppState;
-import com.jme3.scene.Geometry;
-import com.jme3.scene.Node;
 import com.smousseur.orbitlab.app.ApplicationContext;
-import com.smousseur.orbitlab.core.SolarSystemBody;
-import com.smousseur.orbitlab.engine.events.OrbitEventBus;
-import com.smousseur.orbitlab.engine.scene.PlanetColors;
-import com.smousseur.orbitlab.engine.scene.OrbitLineFactory;
-import com.smousseur.orbitlab.engine.scene.SceneUtils;
 import com.smousseur.orbitlab.engine.scene.graph.SceneGraph;
-import com.smousseur.orbitlab.simulation.orbit.OrbitPath;
-
 import java.util.Objects;
 
 public final class SolarSystemSceneAppState extends BaseAppState {
