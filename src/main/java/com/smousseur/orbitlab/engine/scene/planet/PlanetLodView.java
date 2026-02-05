@@ -49,7 +49,6 @@ public final class PlanetLodView implements PlanetView {
 
   @Override
   public void setRotationWorld(Quaternion rotation) {
-    // anchor3d.setLocalRotation(rotation);
     model3dView.getModelBucket().setLocalRotation(rotation);
   }
 
