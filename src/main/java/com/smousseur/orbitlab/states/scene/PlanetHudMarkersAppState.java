@@ -11,7 +11,7 @@ import java.util.Map;
 
 public class PlanetHudMarkersAppState extends BaseAppState {
   private Camera camera;
-  private Map<SolarSystemBody, PlanetPresenter> planets;
+  private final Map<SolarSystemBody, PlanetPresenter> planets;
 
   public PlanetHudMarkersAppState(ApplicationContext context) {
     planets = context.getPlanets();

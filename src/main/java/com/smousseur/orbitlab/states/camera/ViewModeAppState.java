@@ -7,10 +7,6 @@ import com.jme3.input.KeyInput;
 import com.jme3.input.controls.ActionListener;
 import com.jme3.input.controls.KeyTrigger;
 import com.smousseur.orbitlab.app.ApplicationContext;
-import com.smousseur.orbitlab.app.view.FocusView;
-import com.smousseur.orbitlab.app.view.ViewMode;
-import com.smousseur.orbitlab.core.SolarSystemBody;
-
 import java.util.Objects;
 
 public final class ViewModeAppState extends BaseAppState implements ActionListener {
@@ -27,10 +23,10 @@ public final class ViewModeAppState extends BaseAppState implements ActionListen
   @Override
   protected void initialize(Application app) {
     this.inputManager = app.getInputManager();
-    inputManager.addMapping(ACTION_TOGGLE_VIEW_MODE, new KeyTrigger(KeyInput.KEY_V));
+    inputManager.addMapping(ACTION_TOGGLE_VIEW_MODE, new KeyTrigger(KeyInput.KEY_R));
     inputManager.addListener(this, ACTION_TOGGLE_VIEW_MODE);
 
-    applyMode(context.focusView());
+    context.focusView().reset();
   }
 
   @Override
@@ -57,18 +53,6 @@ public final class ViewModeAppState extends BaseAppState implements ActionListen
     if (!ACTION_TOGGLE_VIEW_MODE.equals(name) || !isPressed) {
       return;
     }
-
-    FocusView view = context.focusView();
-    ViewMode mode = view.getMode();
-    mode = (mode == ViewMode.SOLAR) ? ViewMode.PLANET : ViewMode.SOLAR;
-    view.setMode(mode);
-    applyMode(view);
-  }
-
-  private void applyMode(FocusView view) {
-    switch (view.getMode()) {
-      case SOLAR -> view.reset();
-      case PLANET -> view.viewPlanet(SolarSystemBody.EARTH);
-    }
+    context.focusView().reset();
   }
 }
