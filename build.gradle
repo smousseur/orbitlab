@@ -11,7 +11,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'org.orekit:orekit:13.0.3'
+    implementation 'org.orekit:orekit:13.1.1'
     implementation 'org.jmonkeyengine:jme3-core:' + jmonkeyengineVersion
     implementation 'org.jmonkeyengine:jme3-desktop:' + jmonkeyengineVersion
     implementation 'org.jmonkeyengine:jme3-jogg:' + jmonkeyengineVersion

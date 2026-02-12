@@ -1,6 +1,7 @@
 package com.smousseur.orbitlab.engine.scene;
 
 import com.smousseur.orbitlab.core.SolarSystemBody;
+import org.orekit.utils.Constants;
 
 public final class PlanetRadius {
 
@@ -10,7 +11,7 @@ public final class PlanetRadius {
     return switch (body) {
       case MERCURY -> 2_439_700;
       case VENUS -> 6_051_800;
-      case EARTH -> 6_371_000;
+      case EARTH -> Constants.WGS84_EARTH_EQUATORIAL_RADIUS;
       case MARS -> 3_389_500;
       case JUPITER -> 69_911_000;
       case SATURN -> 58_232_000;

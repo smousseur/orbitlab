@@ -2,6 +2,7 @@ package com.smousseur.orbitlab.tools.ephemerisgen;
 
 import com.github.luben.zstd.Zstd;
 import com.smousseur.orbitlab.core.SolarSystemBody;
+import com.smousseur.orbitlab.simulation.OrekitService;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Objects;
@@ -9,7 +10,6 @@ import java.util.concurrent.Callable;
 import java.util.zip.CRC32;
 import org.hipparchus.geometry.euclidean.threed.Rotation;
 import org.orekit.bodies.CelestialBody;
-import org.orekit.bodies.CelestialBodyFactory;
 import org.orekit.frames.Frame;
 import org.orekit.frames.FramesFactory;
 import org.orekit.frames.Transform;
@@ -43,7 +43,7 @@ final class ChunkComputerV1 implements Callable<BodyFileWriterV1.ChunkResult> {
   @Override
   public BodyFileWriterV1.ChunkResult call() throws Exception {
     Frame icrf = FramesFactory.getICRF();
-    CelestialBody body = toOrekitBody(bodyId);
+    CelestialBody body = OrekitService.get().body(bodyId);
     Frame bodyFrame = body.getBodyOrientedFrame();
 
     double chunkDur = params.chunkDurationSeconds();
@@ -66,9 +66,8 @@ final class ChunkComputerV1 implements Callable<BodyFileWriterV1.ChunkResult> {
             chunkStartOffsetSeconds, params.dtRotSeconds(), rot.n(), rot.compressedPayload());
 
     int chunkHeaderSize = 40; // u32 + f64 + f64 + 4*u32 + u32 CRC = 40 bytes
-    int pvBlockOffset = chunkHeaderSize;
     int pvBlockLength = pvBlock.length;
-    int rotBlockOffset = pvBlockOffset + pvBlockLength;
+    int rotBlockOffset = chunkHeaderSize + pvBlockLength;
     int rotBlockLength = rotBlock.length;
 
     // Chunk header (without CRC field first)
@@ -76,7 +75,7 @@ final class ChunkComputerV1 implements Callable<BodyFileWriterV1.ChunkResult> {
     hdr.putInt(chunkId);
     hdr.putDouble(chunkStartOffsetSeconds);
     hdr.putDouble(chunkDur);
-    hdr.putInt(pvBlockOffset);
+    hdr.putInt(chunkHeaderSize);
     hdr.putInt(pvBlockLength);
     hdr.putInt(rotBlockOffset);
     hdr.putInt(rotBlockLength);
@@ -96,21 +95,6 @@ final class ChunkComputerV1 implements Callable<BodyFileWriterV1.ChunkResult> {
 
     int chunkCrc = crc32(chunkBytes, false);
     return new BodyFileWriterV1.ChunkResult(chunkId, chunkStartOffsetSeconds, chunkBytes, chunkCrc);
-  }
-
-  private static CelestialBody toOrekitBody(SolarSystemBody body) {
-    return switch (body) {
-      case SUN -> CelestialBodyFactory.getSun();
-      case MERCURY -> CelestialBodyFactory.getMercury();
-      case VENUS -> CelestialBodyFactory.getVenus();
-      case EARTH -> CelestialBodyFactory.getEarth();
-      case MARS -> CelestialBodyFactory.getMars();
-      case JUPITER -> CelestialBodyFactory.getJupiter();
-      case SATURN -> CelestialBodyFactory.getSaturn();
-      case URANUS -> CelestialBodyFactory.getUranus();
-      case NEPTUNE -> CelestialBodyFactory.getNeptune();
-      case PLUTO -> CelestialBodyFactory.getPluto();
-    };
   }
 
   private static AbsoluteDate minDate(AbsoluteDate a, AbsoluteDate b) {
