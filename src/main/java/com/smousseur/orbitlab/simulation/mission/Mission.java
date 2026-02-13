@@ -1,6 +1,5 @@
 package com.smousseur.orbitlab.simulation.mission;
 
-import com.smousseur.orbitlab.app.SimulationClock;
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.mission.objective.MissionObjective;
 import com.smousseur.orbitlab.simulation.mission.stage.MissionListener;
@@ -8,7 +7,6 @@ import com.smousseur.orbitlab.simulation.mission.stage.MissionStage;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.orekit.bodies.GeodeticPoint;

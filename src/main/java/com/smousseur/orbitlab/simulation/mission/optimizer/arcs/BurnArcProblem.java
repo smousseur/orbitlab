@@ -2,6 +2,7 @@ package com.smousseur.orbitlab.simulation.mission.optimizer.arcs;
 
 import com.smousseur.orbitlab.core.Physics;
 import com.smousseur.orbitlab.simulation.OrekitService;
+import com.smousseur.orbitlab.simulation.mission.forces.BurnArcForceModel;
 import com.smousseur.orbitlab.simulation.mission.optimizer.TrajectoryProblem;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropulsionSystem;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;

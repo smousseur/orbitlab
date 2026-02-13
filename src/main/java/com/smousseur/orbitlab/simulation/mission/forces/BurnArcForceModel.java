@@ -1,4 +1,4 @@
-package com.smousseur.orbitlab.simulation.mission.optimizer.arcs;
+package com.smousseur.orbitlab.simulation.mission.forces;
 
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropulsionSystem;
 import java.util.List;
@@ -6,12 +6,11 @@ import org.hipparchus.CalculusFieldElement;
 import org.hipparchus.geometry.euclidean.threed.FieldVector3D;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.hipparchus.util.FastMath;
-import org.orekit.forces.ForceModel;
 import org.orekit.propagation.FieldSpacecraftState;
 import org.orekit.propagation.SpacecraftState;
 import org.orekit.time.AbsoluteDate;
-import org.orekit.utils.ParameterDriver;
 import org.orekit.utils.PVCoordinates;
+import org.orekit.utils.ParameterDriver;
 
 /**
  * ForceModel that applies a single thrust arc.
@@ -32,9 +31,7 @@ import org.orekit.utils.PVCoordinates;
  *   <li>delta = π/2 → radial thrust
  * </ul>
  */
-public class BurnArcForceModel implements ForceModel {
-
-  private final PropulsionSystem propulsion;
+public class BurnArcForceModel extends AbstractForceModel {
   private final AbsoluteDate epoch;
   private final double tStart;
   private final double duration;
@@ -50,7 +47,7 @@ public class BurnArcForceModel implements ForceModel {
       double alpha,
       double delta,
       double throttle) {
-    this.propulsion = propulsion;
+    super(propulsion);
     this.epoch = epoch;
     this.tStart = tStart;
     this.duration = duration;
