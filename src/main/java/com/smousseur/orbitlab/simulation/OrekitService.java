@@ -52,7 +52,7 @@ public final class OrekitService {
     double[] relTol = {1e-8, 1e-8, 1e-8, 1e-8, 1e-8, 1e-8, 1e-8};
 
     NumericalPropagator propagator =
-        new NumericalPropagator(new DormandPrince853Integrator(0.1, 300.0, absTol, relTol));
+        new NumericalPropagator(new DormandPrince853Integrator(1e-12, 300.0, absTol, relTol));
     propagator.setOrbitType(OrbitType.CARTESIAN);
     propagator.setMu(Constants.WGS84_EARTH_MU);
 

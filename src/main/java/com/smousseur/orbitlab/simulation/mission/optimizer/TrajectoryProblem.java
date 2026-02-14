@@ -1,5 +1,7 @@
 package com.smousseur.orbitlab.simulation.mission.optimizer;
 
+import org.hipparchus.optim.ConvergenceChecker;
+import org.hipparchus.optim.PointValuePair;
 import org.orekit.propagation.SpacecraftState;
 
 /**
@@ -24,6 +26,15 @@ public interface TrajectoryProblem {
    */
   double[] buildInitialGuess();
 
+  /** Lower bounds for each parameter. */
+  double[] getLowerBounds();
+
+  /** Upper bounds for each parameter. */
+  double[] getUpperBounds();
+
+  /** Initial standard deviation (sigma) for each parameter (CMA-ES exploration). */
+  double[] getInitialSigma();
+
   /**
    * Propagates the trajectory from the initial state using the given variables.
    *
@@ -43,8 +54,10 @@ public interface TrajectoryProblem {
   SpacecraftState propagate(double[] variables);
 
   /**
-   * Decodes unconstrained variables into readable physical parameters. Useful for diagnostics and
-   * result display.
+   * Compute the scalar cost from the final state.
+   *
+   * @param finalState the final state
+   * @return 0.0 for a perfect solution.
    */
-  double[] toPhysical(double[] variables);
+  double computeCost(SpacecraftState finalState);
 }

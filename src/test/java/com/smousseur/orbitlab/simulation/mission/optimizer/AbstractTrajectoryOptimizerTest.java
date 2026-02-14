@@ -1,11 +1,29 @@
 package com.smousseur.orbitlab.simulation.mission.optimizer;
 
+import com.smousseur.orbitlab.core.SolarSystemBody;
+import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.mission.Mission;
+import com.smousseur.orbitlab.simulation.mission.objective.MissionObjective;
 import com.smousseur.orbitlab.simulation.mission.objective.ObjectiveStatus;
+import com.smousseur.orbitlab.simulation.mission.objective.orbit.OrbitTarget;
+import com.smousseur.orbitlab.simulation.mission.objective.orbit.OrbitalObjective;
+import com.smousseur.orbitlab.simulation.mission.stage.BallisticCoastingStage;
+import com.smousseur.orbitlab.simulation.mission.stage.JettisonStage;
+import com.smousseur.orbitlab.simulation.mission.stage.MissionStage;
+import com.smousseur.orbitlab.simulation.mission.stage.VerticalAscentStage;
+import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchVehicle;
+import com.smousseur.orbitlab.simulation.mission.vehicle.Spacecraft;
+import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
+import com.smousseur.orbitlab.simulation.mission.vehicle.VehicleStack;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.hipparchus.ode.nonstiff.DormandPrince853Integrator;
 import org.hipparchus.util.FastMath;
+import org.orekit.bodies.GeodeticPoint;
+import org.orekit.bodies.OneAxisEllipsoid;
+import org.orekit.frames.Frame;
+import org.orekit.frames.TopocentricFrame;
 import org.orekit.orbits.CartesianOrbit;
+import org.orekit.orbits.Orbit;
 import org.orekit.orbits.OrbitType;
 import org.orekit.propagation.SpacecraftState;
 import org.orekit.propagation.numerical.NumericalPropagator;
@@ -13,6 +31,8 @@ import org.orekit.time.AbsoluteDate;
 import org.orekit.utils.Constants;
 import org.orekit.utils.PVCoordinates;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -39,24 +59,6 @@ public class AbstractTrajectoryOptimizerTest {
 
     assertEquals(targetAltitude, finalAlt, 50_000, "Final altitude within 50 km of target");
     assertTrue(finalEcc < 0.1, "Eccentricity should be < 0.1, got " + finalEcc);
-  }
-
-  protected static void validateArcs(TrajectoryOptimizer.OptimizationResult result) {
-    double[] controls = result.variables();
-    assertNotNull(controls, "Thrust controls must not be null");
-    assertEquals(10, controls.length);
-    double[] physical = result.physicalParams();
-    for (int arc = 0; arc < 2; arc++) {
-      int o = arc * 5;
-      System.out.printf("Arc %d:%n", arc + 1);
-      System.out.printf("  tStart   = %.2f s (%.2f min)%n", physical[o], physical[o] / 60.0);
-      System.out.printf("  duration = %.2f s%n", physical[o + 1]);
-      System.out.printf(
-          "  alpha    = %.4f rad (%.1f°)%n", physical[o + 2], FastMath.toDegrees(physical[o + 2]));
-      System.out.printf(
-          "  delta    = %.4f rad (%.1f°)%n", physical[o + 3], FastMath.toDegrees(physical[o + 3]));
-      System.out.printf("  throttle = %.1f%%%n", physical[o + 4] * 100);
-    }
   }
 
   protected static void propagateMission(Mission mission, AbsoluteDate start) {
@@ -113,5 +115,81 @@ public class AbstractTrajectoryOptimizerTest {
         new NumericalPropagator(new DormandPrince853Integrator(1e-6, 1000.0, absTol, relTol));
     p.setOrbitType(OrbitType.CARTESIAN);
     return p;
+  }
+
+  private static class HohmannMission extends Mission {
+
+    final double latitude;
+    final double longitude;
+    final double altitude;
+    final double targetAltitude;
+
+    public HohmannMission(
+        List<MissionStage> stages,
+        Vehicle vehicule,
+        double latitude,
+        double longitude,
+        double altitude,
+        double targetAltitude) {
+      super("Low Earth Orbit Mission", vehicule, stages, getMissionObjective(targetAltitude));
+      this.latitude = latitude;
+      this.longitude = longitude;
+      this.altitude = altitude;
+      this.targetAltitude = targetAltitude;
+    }
+
+    @Override
+    public SpacecraftState getInitialState(AbsoluteDate initialDate) {
+      OneAxisEllipsoid earth = OrekitService.get().getEarthEllipsoid();
+      Frame itrf = OrekitService.get().itrf();
+      Frame gcrf = OrekitService.get().gcrf();
+      GeodeticPoint launchPad =
+          new GeodeticPoint(FastMath.toRadians(latitude), FastMath.toRadians(longitude), altitude);
+      TopocentricFrame launchFrame = new TopocentricFrame(earth, launchPad, "Launch Pad");
+      PVCoordinates initialPVInGCRF =
+          itrf.getTransformTo(gcrf, initialDate)
+              .transformPVCoordinates(
+                  new PVCoordinates(launchFrame.getCartesianPoint(), Vector3D.ZERO));
+      Orbit initialOrbit =
+          new CartesianOrbit(initialPVInGCRF, gcrf, initialDate, Constants.WGS84_EARTH_MU);
+
+      return new SpacecraftState(initialOrbit).withMass(this.getVehicle().getMass());
+    }
+  }
+
+  private static class SubOrbitalMission extends HohmannMission {
+    public SubOrbitalMission(
+        List<MissionStage> stages,
+        double latitude,
+        double longitude,
+        double altitude,
+        double targetAltitude) {
+      super(
+          getSubOrbitalMissionStages(),
+          getSubOrbitalVehicle(),
+          latitude,
+          longitude,
+          altitude,
+          targetAltitude);
+    }
+  }
+
+  private static VehicleStack getSubOrbitalVehicle() {
+    List<Vehicle> vehicles = new ArrayList<>();
+    LaunchVehicle launcher = LaunchVehicle.getLauncherVechicle();
+    vehicles.add(launcher);
+    vehicles.add(Spacecraft.getSpacecraft());
+    return new VehicleStack(vehicles, launcher.getPropulsion());
+  }
+
+  private static List<MissionStage> getSubOrbitalMissionStages() {
+    VerticalAscentStage ascentStage = new VerticalAscentStage("Ascent", 120);
+    JettisonStage jettisonStage = new JettisonStage("Jettison");
+    BallisticCoastingStage coastingStage = new BallisticCoastingStage("Coasting", 15.0);
+    return List.of(ascentStage, jettisonStage, coastingStage);
+  }
+
+  private static MissionObjective getMissionObjective(double targetAltitude) {
+    return new OrbitalObjective(new OrbitTarget(SolarSystemBody.EARTH, targetAltitude, 0));
   }
 }

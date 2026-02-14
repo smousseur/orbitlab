@@ -11,6 +11,6 @@ public record PropulsionSystem(double isp, double thrust) {
    }
   */
   public static PropulsionSystem getSpacecraftPropulsion() {
-    return new PropulsionSystem(315, 30);
+    return new PropulsionSystem(300, 7000);
   }
 }

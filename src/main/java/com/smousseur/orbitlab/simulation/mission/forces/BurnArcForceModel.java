@@ -32,6 +32,8 @@ import org.orekit.utils.ParameterDriver;
  * </ul>
  */
 public class BurnArcForceModel extends AbstractForceModel {
+  private static final double G0 = 9.80665;
+
   private final AbsoluteDate epoch;
   private final double tStart;
   private final double duration;
@@ -62,7 +64,39 @@ public class BurnArcForceModel extends AbstractForceModel {
   }
 
   @Override
+  public double getMassDerivative(SpacecraftState state, double[] parameters) {
+    double t = state.getDate().durationFrom(epoch);
+
+    double k = 5.0;
+    double activationStart = 1.0 / (1.0 + FastMath.exp(-k * (t - tStart)));
+    double activationEnd = 1.0 / (1.0 + FastMath.exp(-k * (t - (tStart + duration))));
+    double activation = activationStart - activationEnd;
+    /*
+        if (state.getMass() < 500.0 && activation > 0.001) {
+          System.out.printf(
+              "  [MASS LOW] t=%.1f tStart=%.1f dur=%.1f activation=%.6f mass=%.1f%n",
+              t, tStart, duration, activation, state.getMass());
+        }
+    */
+    if (activation < 1e-10 || state.getMass() < 1.0) {
+      return 0.0;
+    }
+
+    // Smooth mass protection: taper off consumption as mass approaches dryMass
+    double dryMass = 50.0;
+    double massFactor =
+        FastMath.min(1.0, FastMath.max(0.0, (state.getMass() - dryMass) / (2.0 * dryMass)));
+
+    double baseFlow = -propulsion.thrust() / (propulsion.isp() * 9.80665);
+    return baseFlow * throttle * activation * massFactor;
+  }
+
+  @Override
   public Vector3D acceleration(SpacecraftState s, double[] parameters) {
+    if (s.getMass() < 1.0) {
+      return Vector3D.ZERO;
+    }
+
     double t = s.getDate().durationFrom(epoch);
 
     // Outside the burn arc → no thrust
@@ -99,7 +133,9 @@ public class BurnArcForceModel extends AbstractForceModel {
             .add(radial.scalarMultiply(sinDelta));
 
     double mass = s.getMass();
-    double effectiveThrust = propulsion.thrust() * throttle * activation;
+    double dryMass = 50.0;
+    double massFactor = FastMath.min(1.0, FastMath.max(0.0, (mass - dryMass) / (2.0 * dryMass)));
+    double effectiveThrust = propulsion.thrust() * throttle * activation * massFactor;
     return direction.scalarMultiply(effectiveThrust / mass);
   }
 
