@@ -2,7 +2,15 @@ package com.smousseur.orbitlab.simulation.mission.vehicle;
 
 public record PropulsionSystem(double isp, double thrust) {
   public static PropulsionSystem getLauncherPropulsion() {
-    return new PropulsionSystem(300.0, 1e7);
+    return new PropulsionSystem(300, 1e7);
+  }
+
+  public static PropulsionSystem getLauncherStage1Propulsion() {
+    return new PropulsionSystem(300, 5_000_000);
+  }
+
+  public static PropulsionSystem getLauncherStage2Propulsion() {
+    return new PropulsionSystem(348, 1_500_000);
   }
 
   /*
@@ -11,6 +19,6 @@ public record PropulsionSystem(double isp, double thrust) {
    }
   */
   public static PropulsionSystem getSpacecraftPropulsion() {
-    return new PropulsionSystem(300, 7000);
+    return new PropulsionSystem(300, 3000);
   }
 }

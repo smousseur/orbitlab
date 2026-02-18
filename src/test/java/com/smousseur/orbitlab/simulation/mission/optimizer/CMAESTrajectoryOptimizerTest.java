@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.orekit.utils.Constants.WGS84_EARTH_EQUATORIAL_RADIUS;
 
-import com.smousseur.orbitlab.app.OrekitTime;
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropulsionSystem;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
@@ -16,12 +15,13 @@ import org.orekit.orbits.CartesianOrbit;
 import org.orekit.orbits.KeplerianOrbit;
 import org.orekit.propagation.SpacecraftState;
 import org.orekit.time.AbsoluteDate;
+import org.orekit.time.TimeScalesFactory;
 import org.orekit.utils.Constants;
 import org.orekit.utils.PVCoordinates;
 
 public class CMAESTrajectoryOptimizerTest {
 
-  private static final double TARGET_ALTITUDE_M = 380_000; // 400 km
+  private static final double TARGET_ALTITUDE_M = 350_000; // 400 km
 
   @BeforeAll
   static void init() {
@@ -44,7 +44,7 @@ public class CMAESTrajectoryOptimizerTest {
     Vector3D pos = new Vector3D(r, 0, 0);
     Vector3D vel = new Vector3D(vRadial, vTang, 0);
 
-    AbsoluteDate epoch = OrekitTime.utcNow();
+    AbsoluteDate epoch = new AbsoluteDate(2026, 1, 1, 12, 0, 0.0, TimeScalesFactory.getUTC());
     CartesianOrbit orbit = new CartesianOrbit(new PVCoordinates(pos, vel), gcrf, epoch, mu);
 
     double vCirc = FastMath.sqrt(mu / r);

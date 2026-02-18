@@ -97,6 +97,10 @@ public abstract class Mission {
     newStage.configure(propagator, this);
   }
 
+  public void updateMass() {
+    this.currentState = this.currentState.withMass(vehicle.getMass());
+  }
+
   public void addListener(MissionListener listener) {
     listeners.add(listener);
   }

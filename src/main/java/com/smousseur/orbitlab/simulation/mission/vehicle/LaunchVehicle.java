@@ -3,21 +3,28 @@ package com.smousseur.orbitlab.simulation.mission.vehicle;
 import java.util.Objects;
 
 public class LaunchVehicle implements Vehicle {
-  private double mass;
+  private final double dryMass;
+  private double propellantMass;
   private final PropulsionSystem propulsion;
 
-  public LaunchVehicle(double mass, PropulsionSystem propulsion) {
-    this.mass = mass;
+  public LaunchVehicle(double dryMass, double propellantMass, PropulsionSystem propulsion) {
+    this.dryMass = dryMass;
+    this.propellantMass = propellantMass;
     this.propulsion = propulsion;
   }
 
   @Override
-  public double getMass() {
-    return mass;
+  public double getDryMass() {
+    return dryMass;
   }
 
-  public void setMass(double mass) {
-    this.mass = mass;
+  @Override
+  public double getPropellantMass() {
+    return propellantMass;
+  }
+
+  public void setPropellantMass(double propellantMass) {
+    this.propellantMass = propellantMass;
   }
 
   @Override
@@ -26,18 +33,28 @@ public class LaunchVehicle implements Vehicle {
   }
 
   public static LaunchVehicle getLauncherVechicle() {
-    return new LaunchVehicle(500000, PropulsionSystem.getLauncherPropulsion());
+    return new LaunchVehicle(500000, 40000, PropulsionSystem.getLauncherPropulsion());
+  }
+
+  public static LaunchVehicle getLauncherStage1Vechicle() {
+    return new LaunchVehicle(27000, 300000, PropulsionSystem.getLauncherStage1Propulsion());
+  }
+
+  public static LaunchVehicle getLauncherStage2Vechicle() {
+    return new LaunchVehicle(4000, 9500, PropulsionSystem.getLauncherStage2Propulsion());
   }
 
   @Override
   public boolean equals(Object o) {
     if (o == null || getClass() != o.getClass()) return false;
     LaunchVehicle that = (LaunchVehicle) o;
-    return Double.compare(mass, that.mass) == 0 && Objects.equals(propulsion, that.propulsion);
+    return Double.compare(dryMass, that.dryMass) == 0
+        && Double.compare(propellantMass, that.propellantMass) == 0
+        && Objects.equals(propulsion, that.propulsion);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(mass, propulsion);
+    return Objects.hash(dryMass, propellantMass, propulsion);
   }
 }

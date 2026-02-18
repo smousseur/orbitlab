@@ -3,7 +3,13 @@ package com.smousseur.orbitlab.simulation.mission.vehicle;
 import com.smousseur.orbitlab.core.OrbitlabException;
 
 public interface Vehicle {
-  double getMass();
+  double getDryMass();
+
+  double getPropellantMass();
+
+  default double getMass() {
+    return getDryMass() + getPropellantMass();
+  }
 
   PropulsionSystem getPropulsion();
 

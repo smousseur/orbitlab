@@ -140,11 +140,11 @@ public class TwoManeuverTransferProblem implements TrajectoryProblem {
   public double[] getLowerBounds() {
     return new double[] {
       0.0, // t1
-      1.0, // dt1
+      0.1, // dt1
       -FastMath.PI, // alpha1
       -FastMath.PI / 2.0, // beta1
       0.0, // dtCoast
-      1.0, // dt2
+      0.1, // dt2
       -FastMath.PI, // alpha2
       -FastMath.PI / 2.0 // beta2
     };

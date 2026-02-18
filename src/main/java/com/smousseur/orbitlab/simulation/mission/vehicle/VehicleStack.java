@@ -4,11 +4,19 @@ import java.util.List;
 
 public class VehicleStack implements Vehicle {
   private final List<Vehicle> vehicles;
-  private PropulsionSystem propulsion;
 
-  public VehicleStack(List<Vehicle> vehicles, PropulsionSystem propulsion) {
+  public VehicleStack(List<Vehicle> vehicles) {
     this.vehicles = vehicles;
-    this.propulsion = propulsion;
+  }
+
+  @Override
+  public double getDryMass() {
+    return vehicles.stream().mapToDouble(Vehicle::getDryMass).sum();
+  }
+
+  @Override
+  public double getPropellantMass() {
+    return vehicles.stream().mapToDouble(Vehicle::getPropellantMass).sum();
   }
 
   @Override
@@ -17,7 +25,6 @@ public class VehicleStack implements Vehicle {
   }
 
   public Vehicle jettison(int index) {
-    this.propulsion = vehicles.get(index + 1).getPropulsion();
     return vehicles.remove(index);
   }
 
@@ -27,12 +34,6 @@ public class VehicleStack implements Vehicle {
 
   @Override
   public PropulsionSystem getPropulsion() {
-    return propulsion;
-  }
-
-  public static VehicleStack getDefaultStack() {
-    return new VehicleStack(
-        List.of(LaunchVehicle.getLauncherVechicle(), Spacecraft.getSpacecraft()),
-        PropulsionSystem.getLauncherPropulsion());
+    return vehicles.getFirst().getPropulsion();
   }
 }

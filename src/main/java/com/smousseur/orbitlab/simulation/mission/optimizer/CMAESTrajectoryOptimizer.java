@@ -1,17 +1,13 @@
 package com.smousseur.orbitlab.simulation.mission.optimizer;
 
 import org.hipparchus.analysis.MultivariateFunction;
-import org.hipparchus.ode.nonstiff.DormandPrince853Integrator;
 import org.hipparchus.optim.*;
 import org.hipparchus.optim.nonlinear.scalar.GoalType;
 import org.hipparchus.optim.nonlinear.scalar.ObjectiveFunction;
 import org.hipparchus.optim.nonlinear.scalar.noderiv.CMAESOptimizer;
 import org.hipparchus.random.MersenneTwister;
 import org.hipparchus.util.FastMath;
-import org.orekit.forces.gravity.NewtonianAttraction;
 import org.orekit.propagation.SpacecraftState;
-import org.orekit.propagation.numerical.NumericalPropagator;
-import org.orekit.utils.Constants;
 
 public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
   private static final double PENALTY_COST = Double.MAX_VALUE;
