@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.orekit.utils.Constants.WGS84_EARTH_EQUATORIAL_RADIUS;
 
 import com.smousseur.orbitlab.simulation.OrekitService;
+import com.smousseur.orbitlab.simulation.mission.optimizer.problems.TwoManeuverTransferProblem;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropulsionSystem;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.hipparchus.util.FastMath;

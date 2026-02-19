@@ -4,17 +4,15 @@ import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.stage.MissionStage;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropulsionSystem;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
-import org.hipparchus.geometry.euclidean.threed.Rotation;
-import org.hipparchus.geometry.euclidean.threed.RotationConvention;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.hipparchus.ode.events.Action;
 import org.hipparchus.util.FastMath;
-import org.orekit.attitudes.LofOffset;
 import org.orekit.forces.maneuvers.ConstantThrustManeuver;
-import org.orekit.frames.LOFType;
 import org.orekit.orbits.CartesianOrbit;
 import org.orekit.propagation.SpacecraftState;
+import org.orekit.propagation.events.DateDetector;
 import org.orekit.propagation.numerical.NumericalPropagator;
+import org.orekit.time.AbsoluteDate;
 import org.orekit.utils.Constants;
 import org.orekit.utils.PVCoordinates;
 
@@ -50,7 +48,7 @@ public class GravityTurnStage extends MissionStage {
     double mDot = propulsion.thrust() / (propulsion.isp() * Constants.G0_STANDARD_GRAVITY);
     double propellantBurned = ascensionDuration * mDot;
     double propellantRemaining = vehicle.getPropellantMass() - propellantBurned;
-    this.maxBurnTime = 80; // propellantRemaining / mDot;
+    this.maxBurnTime = propellantRemaining / mDot; // 114
     return state;
   }
 
@@ -58,24 +56,27 @@ public class GravityTurnStage extends MissionStage {
   public void configure(NumericalPropagator propagator, Mission mission) {
     SpacecraftState state = mission.getCurrentState();
     PropulsionSystem propulsion = mission.getVehicle().getPropulsion();
+    AbsoluteDate kickDate = state.getDate().shiftedBy(1.0e-3);
     ConstantThrustManeuver burn =
         new ConstantThrustManeuver(
-            state.getDate().shiftedBy(1.0e-3),
+            kickDate,
             this.maxBurnTime,
             propulsion.thrust(),
             propulsion.isp(),
-            new LofOffset(state.getFrame(), LOFType.TNW),
+            new GravityTurnAttitudeProvider(kickDate, 110.0),
             Vector3D.PLUS_I);
     propagator.addForceModel(burn);
-    RadialVelocityDetector radialDetector =
-        new RadialVelocityDetector(100)
+
+    AbsoluteDate mecoDate = state.getDate().shiftedBy(this.maxBurnTime);
+    DateDetector mecoDetector =
+        new DateDetector(mecoDate)
             .withHandler(
                 (s, detector, increasing) -> {
                   mission.transitionToNextStage(s);
                   return Action.STOP;
                 });
 
-    propagator.addEventDetector(radialDetector);
+    propagator.addEventDetector(mecoDetector);
   }
 
   /**
@@ -90,39 +91,43 @@ public class GravityTurnStage extends MissionStage {
    */
   private SpacecraftState applyPitchKick(
       SpacecraftState state, double pitchKickAngle, double launchAzimuth) {
-
     Vector3D pos = state.getPVCoordinates().getPosition();
     Vector3D vel = state.getPVCoordinates().getVelocity();
 
-    // Local topocentric frame at current position
+    // Local topocentric frame
     Vector3D zenith = pos.normalize();
-
-    // Local north: project Earth's rotation axis (PLUS_K in EME2000)
-    // onto the horizontal plane and normalize
     Vector3D northPole = Vector3D.PLUS_K;
     Vector3D north =
-        northPole.subtract(new Vector3D(Vector3D.dotProduct(northPole, zenith), zenith));
-    north = north.normalize();
-
-    // Local east completes the right-handed topocentric frame
+        northPole
+            .subtract(new Vector3D(Vector3D.dotProduct(northPole, zenith), zenith))
+            .normalize();
     Vector3D east = Vector3D.crossProduct(zenith, north).normalize();
 
-    // Kick direction in the local horizontal plane
+    // Kick direction in horizontal plane
     Vector3D azimuthDir =
         new Vector3D(
             FastMath.cos(launchAzimuth), north,
             FastMath.sin(launchAzimuth), east);
 
-    // Rotation axis: perpendicular to the plane (zenith, azimuthDir)
-    Vector3D rotationAxis = Vector3D.crossProduct(zenith, azimuthDir).normalize();
+    // Instead of rotating velocity, compute the NEW thrust direction
+    // and apply an instantaneous delta-v in that direction.
+    // The kick "redirects" the vertical burn component, not the whole velocity.
 
-    // Rotate the actual velocity vector by pitchKickAngle around this axis.
-    // Using Rotation preserves the velocity norm and the existing
-    // horizontal component from Earth's rotation (~400 m/s at equator).
-    Rotation kick = new Rotation(rotationAxis, pitchKickAngle, RotationConvention.VECTOR_OPERATOR);
-    Vector3D newVel = kick.applyTo(vel);
+    // Decompose velocity into:
+    //  - radial (along zenith) = the part from the vertical burn
+    //  - tangential (horizontal) = mostly Earth rotation
+    double vRadial = Vector3D.dotProduct(vel, zenith);
+    Vector3D vTangential = vel.subtract(new Vector3D(vRadial, zenith));
 
-    // Rebuild the spacecraft state with modified velocity
+    // Rotate ONLY the radial component by pitchKickAngle
+    // from zenith toward azimuthDir
+    Vector3D newRadialDir =
+        new Vector3D(
+            FastMath.cos(pitchKickAngle), zenith, FastMath.sin(pitchKickAngle), azimuthDir);
+
+    // Reconstruct velocity
+    Vector3D newVel = new Vector3D(vRadial, newRadialDir).add(vTangential);
+
     PVCoordinates newPV = new PVCoordinates(pos, newVel);
     CartesianOrbit newOrbit =
         new CartesianOrbit(newPV, state.getFrame(), state.getDate(), state.getOrbit().getMu());

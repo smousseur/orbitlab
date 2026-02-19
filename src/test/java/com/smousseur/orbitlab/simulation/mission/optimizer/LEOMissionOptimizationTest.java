@@ -6,6 +6,7 @@ import static org.orekit.utils.Constants.WGS84_EARTH_EQUATORIAL_RADIUS;
 
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.mission.Mission;
+import com.smousseur.orbitlab.simulation.mission.optimizer.problems.TwoManeuverTransferProblem;
 import com.smousseur.orbitlab.simulation.mission.stage.JettisonStage;
 import com.smousseur.orbitlab.simulation.mission.stage.MissionStage;
 import com.smousseur.orbitlab.simulation.mission.stage.ascent.GravityTurnStage;
@@ -26,8 +27,8 @@ import org.orekit.time.TimeScalesFactory;
 
 public class LEOMissionOptimizationTest extends AbstractTrajectoryOptimizerTest {
 
-  public static final int ASCENSION_DURATION = 60;
-  public static final double TARGET_ALTITUDE = 300_000;
+  public static final int ASCENSION_DURATION = 10;
+  public static final double TARGET_ALTITUDE = 400_000;
 
   @BeforeAll
   static void init() {
@@ -43,6 +44,8 @@ public class LEOMissionOptimizationTest extends AbstractTrajectoryOptimizerTest 
     propagateMission(mission, epoch);
 
     mission.updateMass();
+    // SpacecraftState finalState = mission.getCurrentState();
+
     PropulsionSystem propulsion = mission.getVehicle().getPropulsion();
     Orbit orbit = mission.getCurrentState().getOrbit();
     TwoManeuverTransferProblem problem =

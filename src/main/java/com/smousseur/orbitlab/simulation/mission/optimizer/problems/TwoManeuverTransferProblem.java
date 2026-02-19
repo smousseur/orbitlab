@@ -1,5 +1,6 @@
-package com.smousseur.orbitlab.simulation.mission.optimizer;
+package com.smousseur.orbitlab.simulation.mission.optimizer.problems;
 
+import com.smousseur.orbitlab.simulation.mission.optimizer.TrajectoryProblem;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropulsionSystem;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.hipparchus.ode.nonstiff.DormandPrince853Integrator;

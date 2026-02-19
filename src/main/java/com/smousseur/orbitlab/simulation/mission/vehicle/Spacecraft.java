@@ -24,7 +24,7 @@ public class Spacecraft implements Vehicle {
     }
   */
   public static Spacecraft getSpacecraft() {
-    return new Spacecraft(18000, 0, PropulsionSystem.getSpacecraftPropulsion());
+    return new Spacecraft(15000, 0, PropulsionSystem.getSpacecraftPropulsion());
   }
 
   @Override
