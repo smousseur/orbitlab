@@ -1,4 +1,4 @@
-package com.smousseur.orbitlab.simulation.mission.stage.ascent;
+package com.smousseur.orbitlab.simulation.mission.stage.ascent.attitude;
 
 import org.hipparchus.CalculusFieldElement;
 import org.hipparchus.Field;

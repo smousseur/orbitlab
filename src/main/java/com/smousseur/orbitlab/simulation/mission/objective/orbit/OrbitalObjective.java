@@ -26,10 +26,9 @@ public class OrbitalObjective implements MissionObjective {
     double vNorm = v.getNorm();
     double targetR = PlanetRadius.radiusFor(target.body()) + target.altitude();
 
-    // Énergie spécifique → demi-grand axe (vis-viva)
+    // Specific energy → semi-major axis (vis-viva)
     double energy = 0.5 * vNorm * vNorm - mu / rNorm;
     double currentA = -mu / (2.0 * energy);
-    double targetA = targetR; // pour orbite circulaire, a = r_cible
 
     // Vecteur excentricité
     Vector3D eVec =
@@ -37,13 +36,14 @@ public class OrbitalObjective implements MissionObjective {
             .subtract(v.scalarMultiply(Vector3D.dotProduct(r, v) / mu));
     double ecc = eVec.getNorm();
 
-    // Résidus normalisés (~1)
-    double aError = (currentA - targetA) / targetR;
+    // Normalized residuals (~1)
+    // For non circular orbit, aError = (currentA - targetA) / targetR
+    double aError = (currentA - targetR) / targetR;
     double eError = ecc - target.eccentricity();
 
-    // Fraction de vitesse radiale — critique pour le suborbital
+    // Radial velocity fraction — critical for suborbital trajectories
     double vRadial = Vector3D.dotProduct(r.normalize(), v);
-    double vrRatio = vRadial / vNorm; // → 0 pour orbite circulaire
+    double vrRatio = vRadial / vNorm; // → 0 for circular orbits
 
     status.setError(new double[] {aError, eError, vrRatio});
   }

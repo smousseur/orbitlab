@@ -1,4 +1,4 @@
-package com.smousseur.orbitlab.simulation.mission.stage.ascent;
+package com.smousseur.orbitlab.simulation.mission.stage.ascent.attitude;
 
 import org.hipparchus.CalculusFieldElement;
 import org.hipparchus.geometry.euclidean.threed.FieldRotation;
@@ -18,10 +18,13 @@ public class GravityTurnAttitudeProvider implements AttitudeProvider {
 
   private final AbsoluteDate kickDate;
   private final double transitionTime;
+  private final double exponent;
 
-  public GravityTurnAttitudeProvider(AbsoluteDate kickDate, double transitionTime) {
+  public GravityTurnAttitudeProvider(
+      AbsoluteDate kickDate, double transitionTime, double exponent) {
     this.kickDate = kickDate;
     this.transitionTime = transitionTime;
+    this.exponent = exponent;
   }
 
   @Override
@@ -36,7 +39,7 @@ public class GravityTurnAttitudeProvider implements AttitudeProvider {
 
     double dt = date.durationFrom(kickDate);
     double alpha = FastMath.min(1.0, FastMath.max(0.0, dt / transitionTime));
-    // alpha = alpha * alpha;
+    alpha = Math.pow(alpha, exponent);
 
     Vector3D thrustDir = new Vector3D(1.0 - alpha, zenith, alpha, prograde).normalize();
 
@@ -67,12 +70,10 @@ public class GravityTurnAttitudeProvider implements AttitudeProvider {
     FieldVector3D<T> prograde = vel.normalize();
 
     T dt = date.durationFrom(kickDate);
-    T alphaRaw = dt.divide(transitionTime);
     T zero = dt.getField().getZero();
     T one = dt.getField().getOne();
-    T alphaClamped = FastMath.min(one, FastMath.max(zero, alphaRaw));
-    T alpha = alphaClamped.multiply(alphaClamped);
-
+    T alphaRaw = FastMath.min(one, FastMath.max(zero, dt.divide(transitionTime)));
+    T alpha = FastMath.pow(alphaRaw, exponent);
     T oneMinusAlpha = one.subtract(alpha);
 
     FieldVector3D<T> thrustDir =

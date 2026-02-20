@@ -1,12 +1,11 @@
 package com.smousseur.orbitlab.simulation.mission.optimizer.problems;
 
+import com.smousseur.orbitlab.simulation.Physics;
 import com.smousseur.orbitlab.simulation.mission.optimizer.TrajectoryProblem;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropulsionSystem;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
-import org.hipparchus.ode.nonstiff.DormandPrince853Integrator;
 import org.hipparchus.util.FastMath;
 import org.orekit.attitudes.LofOffset;
-import org.orekit.forces.gravity.NewtonianAttraction;
 import org.orekit.forces.maneuvers.ConstantThrustManeuver;
 import org.orekit.frames.LOFType;
 import org.orekit.orbits.KeplerianOrbit;
@@ -30,7 +29,6 @@ import org.orekit.utils.Constants;
  */
 public class TwoManeuverTransferProblem implements TrajectoryProblem {
 
-  private static final int NUM_VARIABLES = 8;
   private static final double G0 = Constants.G0_STANDARD_GRAVITY;
   private static final double EARTH_RADIUS = Constants.WGS84_EARTH_EQUATORIAL_RADIUS;
 
@@ -41,14 +39,11 @@ public class TwoManeuverTransferProblem implements TrajectoryProblem {
 
   private final KeplerianOrbit initialOrbit;
   private final double initialMass;
-  private final double targetAltitude;
   private final double thrust;
   private final double isp;
-  private final double mu;
 
   // Precomputed values
   private final AbsoluteDate epoch;
-  private final double rTarget;
   private final double aTarget;
   private final double vCircTarget;
   private final double initialPeriod;
@@ -75,14 +70,13 @@ public class TwoManeuverTransferProblem implements TrajectoryProblem {
       PropulsionSystem propulsionSystem) {
     this.initialOrbit = initialOrbit;
     this.initialMass = initialMass;
-    this.targetAltitude = targetAltitude;
     this.thrust = propulsionSystem.thrust();
     this.isp = propulsionSystem.isp();
-    this.mu = initialOrbit.getMu();
+    double mu = initialOrbit.getMu();
     this.epoch = initialOrbit.getDate();
 
     // Target orbit
-    this.rTarget = EARTH_RADIUS + targetAltitude;
+    double rTarget = EARTH_RADIUS + targetAltitude;
     this.aTarget = rTarget; // circular orbit: a = r
     this.vCircTarget = FastMath.sqrt(mu / rTarget);
 
@@ -108,11 +102,11 @@ public class TwoManeuverTransferProblem implements TrajectoryProblem {
     this.guessT1 = computeTimeToPerigee();
 
     // Convert delta-V to burn durations via Tsiolkovski
-    this.guessDt1 = computeBurnDuration(FastMath.abs(dv1), initialMass);
+    this.guessDt1 = Physics.computeBurnDuration(FastMath.abs(dv1), initialMass, isp, thrust);
 
     // Mass after burn 1
     double massAfterBurn1 = initialMass - (thrust / (isp * G0)) * guessDt1;
-    this.guessDt2 = computeBurnDuration(FastMath.abs(dv2), massAfterBurn1);
+    this.guessDt2 = Physics.computeBurnDuration(FastMath.abs(dv2), massAfterBurn1, isp, thrust);
 
     // Coast = half transfer period (perigee to apogee)
     this.guessDtCoast = transferPeriod / 2.0;
@@ -120,7 +114,7 @@ public class TwoManeuverTransferProblem implements TrajectoryProblem {
 
   @Override
   public int getNumVariables() {
-    return NUM_VARIABLES;
+    return 8;
   }
 
   @Override
@@ -141,7 +135,7 @@ public class TwoManeuverTransferProblem implements TrajectoryProblem {
   public double[] getLowerBounds() {
     return new double[] {
       0.0, // t1
-      0.1, // dt1
+      0.01, // dt1
       -FastMath.PI, // alpha1
       -FastMath.PI / 2.0, // beta1
       0.0, // dtCoast
@@ -207,8 +201,8 @@ public class TwoManeuverTransferProblem implements TrajectoryProblem {
     propagator.setInitialState(initialState);
 
     // Thrust direction vectors in TNW frame
-    Vector3D thrustDirection1 = buildThrustDirection(alpha1, beta1);
-    Vector3D thrustDirection2 = buildThrustDirection(alpha2, beta2);
+    Vector3D thrustDirection1 = Physics.buildThrustDirectionTNW(alpha1, beta1);
+    Vector3D thrustDirection2 = Physics.buildThrustDirectionTNW(alpha2, beta2);
 
     LofOffset attitude = new LofOffset(initialOrbit.getFrame(), LOFType.TNW);
     // Create maneuvers
@@ -226,35 +220,14 @@ public class TwoManeuverTransferProblem implements TrajectoryProblem {
   }
 
   @Override
-  public double computeCost(SpacecraftState finalState) {
-    KeplerianOrbit finalOrbit =
-        (KeplerianOrbit) OrbitType.KEPLERIAN.convertType(finalState.getOrbit());
+  public double computeCost(SpacecraftState state) {
+    KeplerianOrbit finalOrbit = (KeplerianOrbit) OrbitType.KEPLERIAN.convertType(state.getOrbit());
 
     double errA = (finalOrbit.getA() - aTarget) / aTarget;
     double errE = finalOrbit.getE();
-    double errV = computeRadialVelocity(finalState) / vCircTarget;
+    double errV = Physics.computeRadialVelocity(state) / vCircTarget;
 
     return W_A * errA * errA + W_E * errE * errE + W_V * errV * errV;
-  }
-
-  /**
-   * Build thrust direction vector in TNW frame from in-plane and out-of-plane angles. alpha = 0,
-   * beta = 0 means pure tangential prograde thrust.
-   */
-  private Vector3D buildThrustDirection(double alpha, double beta) {
-    double cosB = FastMath.cos(beta);
-    return new Vector3D(
-        cosB * FastMath.cos(alpha), // T component
-        cosB * FastMath.sin(alpha), // N component
-        FastMath.sin(beta) // W component
-        );
-  }
-
-  /** Compute radial velocity (dot product of position and velocity divided by position norm). */
-  private double computeRadialVelocity(SpacecraftState state) {
-    Vector3D position = state.getPVCoordinates().getPosition();
-    Vector3D velocity = state.getPVCoordinates().getVelocity();
-    return Vector3D.dotProduct(position, velocity) / position.getNorm();
   }
 
   /** Compute time to next perigee passage from current position on the orbit. */
@@ -267,28 +240,5 @@ public class TwoManeuverTransferProblem implements TrajectoryProblem {
     double timeSincePerigee = meanAnomaly / (2.0 * FastMath.PI) * initialPeriod;
     // Time to next perigee
     return initialPeriod - timeSincePerigee;
-  }
-
-  /**
-   * Convert a delta-V to a burn duration using the Tsiolkovski equation. dt = (m * Isp * g0 / F) *
-   * (1 - exp(-dv / (Isp * g0)))
-   */
-  private double computeBurnDuration(double dv, double mass) {
-    double ve = isp * G0; // exhaust velocity
-    return (mass * ve / thrust) * (1.0 - FastMath.exp(-dv / ve));
-  }
-
-  NumericalPropagator createSimplePropagator() {
-    double minStep = 0.001;
-    double maxStep = 100.0;
-    double absTol = 1e-8;
-    double relTol = 1e-10;
-
-    DormandPrince853Integrator integrator =
-        new DormandPrince853Integrator(minStep, maxStep, absTol, relTol);
-
-    NumericalPropagator propagator = new NumericalPropagator(integrator);
-    propagator.addForceModel(new NewtonianAttraction(Constants.WGS84_EARTH_MU));
-    return propagator;
   }
 }

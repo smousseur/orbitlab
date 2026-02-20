@@ -59,7 +59,7 @@ public class CMAESTrajectoryOptimizerTest {
     TwoManeuverTransferProblem problem =
         new TwoManeuverTransferProblem(
             new KeplerianOrbit(orbit), 1000.0, TARGET_ALTITUDE_M, propulsion);
-    CMAESTrajectoryOptimizer optimizer = new CMAESTrajectoryOptimizer(problem, 20000);
+    CMAESTrajectoryOptimizer optimizer = new CMAESTrajectoryOptimizer(problem, 5000);
     OptimizationResult result = optimizer.optimize();
     SpacecraftState finalState = result.bestState();
 

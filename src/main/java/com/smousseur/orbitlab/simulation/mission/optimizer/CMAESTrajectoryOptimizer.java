@@ -10,7 +10,7 @@ import org.hipparchus.util.FastMath;
 import org.orekit.propagation.SpacecraftState;
 
 public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
-  private static final double PENALTY_COST = Double.MAX_VALUE;
+  public static final double EXCEPTION_PENALTY_COST = 1e10;
 
   private final TrajectoryProblem problem;
   private final int maxEvaluations;
@@ -33,7 +33,7 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
       double relativeTolerance,
       double absoluteTolerance) {
     this.problem = problem;
-    this.maxEvaluations = 5000;
+    this.maxEvaluations = maxEvaluations;
     this.stopFitness = stopFitness;
     this.relativeTolerance = relativeTolerance;
     this.absoluteTolerance = absoluteTolerance;
@@ -85,8 +85,7 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
       SpacecraftState state = problem.propagate(candidate);
       double cost = problem.computeCost(state);
       if (Double.isNaN(cost) || Double.isInfinite(cost)) {
-        // System.out.println("[EVAL] NaN/Inf cost for candidate");
-        return PENALTY_COST;
+        return Double.MAX_VALUE;
       }
       // Track global best
       if (cost < globalBestCost) {
@@ -95,7 +94,7 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
       }
       return cost;
     } catch (Exception e) {
-      return 1e10;
+      return EXCEPTION_PENALTY_COST;
     }
   }
 

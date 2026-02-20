@@ -6,10 +6,10 @@ import static org.orekit.utils.Constants.WGS84_EARTH_EQUATORIAL_RADIUS;
 
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.mission.Mission;
+import com.smousseur.orbitlab.simulation.mission.optimizer.problems.GravityTurnConstraints;
+import com.smousseur.orbitlab.simulation.mission.optimizer.problems.GravityTurnProblem;
 import com.smousseur.orbitlab.simulation.mission.optimizer.problems.TwoManeuverTransferProblem;
-import com.smousseur.orbitlab.simulation.mission.stage.JettisonStage;
 import com.smousseur.orbitlab.simulation.mission.stage.MissionStage;
-import com.smousseur.orbitlab.simulation.mission.stage.ascent.GravityTurnStage;
 import com.smousseur.orbitlab.simulation.mission.stage.ascent.VerticalAscentStage;
 import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchVehicle;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropulsionSystem;
@@ -42,17 +42,28 @@ public class LEOMissionOptimizationTest extends AbstractTrajectoryOptimizerTest 
         new AbstractTrajectoryOptimizerTest.TestMission(
             "Gravity Turn", getStages(), getMissionVehicle(), 5.23, -52.77, 0.0, TARGET_ALTITUDE);
     propagateMission(mission, epoch);
+    GravityTurnProblem turnProblem =
+        new GravityTurnProblem(
+            mission.getCurrentState(),
+            mission.getVehicle(),
+            3.0,
+            ASCENSION_DURATION,
+            new GravityTurnConstraints(85_000, TARGET_ALTITUDE, 600_000));
+    CMAESTrajectoryOptimizer optimizer = new CMAESTrajectoryOptimizer(turnProblem, 5000);
+    OptimizationResult result = optimizer.optimize();
+    SpacecraftState stateAfterTurn = result.bestState();
+    mission.setCurrentState(stateAfterTurn);
 
+    mission.getVehicle().jettison(0);
     mission.updateMass();
-    // SpacecraftState finalState = mission.getCurrentState();
 
     PropulsionSystem propulsion = mission.getVehicle().getPropulsion();
     Orbit orbit = mission.getCurrentState().getOrbit();
     TwoManeuverTransferProblem problem =
         new TwoManeuverTransferProblem(
             new KeplerianOrbit(orbit), mission.getVehicle().getMass(), TARGET_ALTITUDE, propulsion);
-    CMAESTrajectoryOptimizer optimizer = new CMAESTrajectoryOptimizer(problem, 20000);
-    OptimizationResult result = optimizer.optimize();
+    optimizer = new CMAESTrajectoryOptimizer(problem, 5000);
+    result = optimizer.optimize();
     SpacecraftState finalState = result.bestState();
 
     double finalAlt =
@@ -66,8 +77,6 @@ public class LEOMissionOptimizationTest extends AbstractTrajectoryOptimizerTest 
 
     assertEquals(TARGET_ALTITUDE, finalAlt, 50_000, "Final altitude within 50 km of target");
     assertTrue(finalEcc < 0.1, "Eccentricity should be < 0.1, got " + finalEcc);
-
-    return;
   }
 
   private static VehicleStack getMissionVehicle() {
@@ -80,11 +89,6 @@ public class LEOMissionOptimizationTest extends AbstractTrajectoryOptimizerTest 
   }
 
   private static List<MissionStage> getStages() {
-    return List.of(
-        new VerticalAscentStage("Vertical Ascent", ASCENSION_DURATION),
-        new GravityTurnStage("Gravity Turn", ASCENSION_DURATION, 3),
-        new JettisonStage("Separation stage 1"));
-    //        new ConstantThrustStage("Conservation"),
-    //        new JettisonStage("Separation stage 2"));
+    return List.of(new VerticalAscentStage("Vertical Ascent", ASCENSION_DURATION));
   }
 }
