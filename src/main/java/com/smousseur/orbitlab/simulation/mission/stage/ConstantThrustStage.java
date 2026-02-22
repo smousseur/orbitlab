@@ -1,6 +1,8 @@
 package com.smousseur.orbitlab.simulation.mission.stage;
 
+import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.mission.Mission;
+import com.smousseur.orbitlab.simulation.mission.MissionStage;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropulsionSystem;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
@@ -68,5 +70,26 @@ public class ConstantThrustStage extends MissionStage {
 
   protected AttitudeProvider getAttitudeProvider(SpacecraftState state) {
     return new LofOffset(state.getFrame(), LOFType.TNW);
+  }
+
+  @Override
+  public SpacecraftState propagateStandalone(SpacecraftState currentState, Mission mission) {
+    SpacecraftState stateAfterEnter = enter(currentState, mission);
+
+    NumericalPropagator propagator = OrekitService.get().createSimplePropagator();
+    propagator.setInitialState(stateAfterEnter);
+
+    PropulsionSystem propulsion = mission.getVehicle().getPropulsion();
+    ConstantThrustManeuver burn =
+        new ConstantThrustManeuver(
+            stateAfterEnter.getDate().shiftedBy(1.0e-3),
+            this.duration,
+            propulsion.thrust(),
+            propulsion.isp(),
+            getAttitudeProvider(stateAfterEnter),
+            Vector3D.PLUS_I);
+    propagator.addForceModel(burn);
+
+    return propagator.propagate(stateAfterEnter.getDate().shiftedBy(this.duration));
   }
 }

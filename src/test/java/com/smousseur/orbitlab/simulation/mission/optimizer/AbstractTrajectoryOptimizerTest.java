@@ -7,7 +7,7 @@ import com.smousseur.orbitlab.simulation.mission.objective.MissionObjective;
 import com.smousseur.orbitlab.simulation.mission.objective.ObjectiveStatus;
 import com.smousseur.orbitlab.simulation.mission.objective.orbit.OrbitTarget;
 import com.smousseur.orbitlab.simulation.mission.objective.orbit.OrbitalObjective;
-import com.smousseur.orbitlab.simulation.mission.stage.MissionStage;
+import com.smousseur.orbitlab.simulation.mission.MissionStage;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.hipparchus.ode.nonstiff.DormandPrince853Integrator;

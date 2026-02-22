@@ -1,6 +1,5 @@
-package com.smousseur.orbitlab.simulation.mission.stage;
+package com.smousseur.orbitlab.simulation.mission;
 
-import com.smousseur.orbitlab.simulation.mission.Mission;
 import org.orekit.propagation.SpacecraftState;
 
 public interface MissionListener {

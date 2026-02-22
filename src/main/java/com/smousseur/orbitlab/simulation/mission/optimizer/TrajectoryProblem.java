@@ -62,18 +62,4 @@ public interface TrajectoryProblem {
    * @return 0.0 for a perfect solution.
    */
   double computeCost(SpacecraftState state);
-
-  default NumericalPropagator createSimplePropagator() {
-    double minStep = 0.001;
-    double maxStep = 100.0;
-    double absTol = 1e-8;
-    double relTol = 1e-10;
-
-    DormandPrince853Integrator integrator =
-        new DormandPrince853Integrator(minStep, maxStep, absTol, relTol);
-
-    NumericalPropagator propagator = new NumericalPropagator(integrator);
-    propagator.addForceModel(new NewtonianAttraction(Constants.WGS84_EARTH_MU));
-    return propagator;
-  }
 }

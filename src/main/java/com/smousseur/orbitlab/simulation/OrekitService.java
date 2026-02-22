@@ -11,6 +11,7 @@ import org.orekit.data.DataProvidersManager;
 import org.orekit.data.ZipJarCrawler;
 import org.orekit.forces.ForceModel;
 import org.orekit.forces.gravity.HolmesFeatherstoneAttractionModel;
+import org.orekit.forces.gravity.NewtonianAttraction;
 import org.orekit.forces.gravity.potential.GravityFieldFactory;
 import org.orekit.forces.gravity.potential.NormalizedSphericalHarmonicsProvider;
 import org.orekit.frames.Frame;
@@ -22,6 +23,11 @@ import org.orekit.utils.IERSConventions;
 
 public final class OrekitService {
   private final AtomicBoolean initialized = new AtomicBoolean(false);
+
+  /** Cached gravity providers — created once, reused for every propagator. */
+  private volatile ForceModel fullGravityModel;
+
+  private volatile ForceModel lightGravityModel;
 
   private OrekitService() {
     DataProvidersManager manager = DataContext.getDefault().getDataProvidersManager();
@@ -47,7 +53,41 @@ public final class OrekitService {
     return FramesFactory.getGCRF();
   }
 
-  public NumericalPropagator getDefaultPropagator() {
+  public NumericalPropagator createSimplePropagator() {
+    double minStep = 0.001;
+    double maxStep = 100.0;
+    double absTol = 1e-8;
+    double relTol = 1e-10;
+
+    DormandPrince853Integrator integrator =
+        new DormandPrince853Integrator(minStep, maxStep, absTol, relTol);
+
+    NumericalPropagator propagator = new NumericalPropagator(integrator);
+    propagator.addForceModel(new NewtonianAttraction(Constants.WGS84_EARTH_MU));
+    return propagator;
+  }
+
+  /**
+   * Propagator for optimization loops: low-degree gravity (8×8) — fast but faithful enough for
+   * timing/trajectory consistency with the runtime propagator.
+   */
+  public NumericalPropagator createOptimizationPropagator() {
+    double minStep = 0.001;
+    double maxStep = 100.0;
+    double absTol = 1e-8;
+    double relTol = 1e-10;
+
+    DormandPrince853Integrator integrator =
+        new DormandPrince853Integrator(minStep, maxStep, absTol, relTol);
+
+    NumericalPropagator propagator = new NumericalPropagator(integrator);
+    propagator.setOrbitType(OrbitType.CARTESIAN);
+    propagator.setMu(Constants.WGS84_EARTH_MU);
+    propagator.addForceModel(getLightGravityModel());
+    return propagator;
+  }
+
+  public NumericalPropagator createDefaultPropagator() {
     double[] absTol = {1.0, 1.0, 1.0, 1e-3, 1e-3, 1e-3, 1e-2};
     double[] relTol = {1e-8, 1e-8, 1e-8, 1e-8, 1e-8, 1e-8, 1e-8};
 
@@ -56,16 +96,35 @@ public final class OrekitService {
     propagator.setOrbitType(OrbitType.CARTESIAN);
     propagator.setMu(Constants.WGS84_EARTH_MU);
 
-    // GRAVITÉ ! Sans ça le satellite tombe en ligne droite
-    propagator.addForceModel(getGravityModel());
+    propagator.addForceModel(getFullGravityModel());
 
     return propagator;
   }
 
-  public ForceModel getGravityModel() {
-    NormalizedSphericalHarmonicsProvider normalizedProvider =
-        GravityFieldFactory.getNormalizedProvider(50, 50);
-    return new HolmesFeatherstoneAttractionModel(itrf(), normalizedProvider);
+  private ForceModel getFullGravityModel() {
+    if (fullGravityModel == null) {
+      synchronized (this) {
+        if (fullGravityModel == null) {
+          NormalizedSphericalHarmonicsProvider provider =
+              GravityFieldFactory.getNormalizedProvider(50, 50);
+          fullGravityModel = new HolmesFeatherstoneAttractionModel(itrf(), provider);
+        }
+      }
+    }
+    return fullGravityModel;
+  }
+
+  private ForceModel getLightGravityModel() {
+    if (lightGravityModel == null) {
+      synchronized (this) {
+        if (lightGravityModel == null) {
+          NormalizedSphericalHarmonicsProvider provider =
+              GravityFieldFactory.getNormalizedProvider(8, 8);
+          lightGravityModel = new HolmesFeatherstoneAttractionModel(itrf(), provider);
+        }
+      }
+    }
+    return lightGravityModel;
   }
 
   public CelestialBody body(SolarSystemBody body) {

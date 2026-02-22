@@ -2,8 +2,6 @@ package com.smousseur.orbitlab.simulation.mission;
 
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.mission.objective.MissionObjective;
-import com.smousseur.orbitlab.simulation.mission.stage.MissionListener;
-import com.smousseur.orbitlab.simulation.mission.stage.MissionStage;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
 import java.util.ArrayList;
 import java.util.List;
@@ -63,10 +61,12 @@ public abstract class Mission {
     if (shouldLogAltitude(currentState.getDate())) {
       double altitudeM = computeAltitudeMeters(currentState);
       logger.info(
-          "t={} stage='{}' alt={}",
+          "t={} stage='{}' alt={} eccentricity={} speed={}",
           currentState.getDate(),
           currentStage.getName(),
-          String.format("%.1f m", altitudeM));
+          String.format("%.1f m", altitudeM),
+          currentState.getOrbit().getE(),
+          currentState.getVelocity().getNorm());
       lastAltLogDate = currentState.getDate();
     }
   }
@@ -89,7 +89,7 @@ public abstract class Mission {
       return;
     }
     this.currentState = stateAtEvent;
-    propagator = OrekitService.get().getDefaultPropagator();
+    propagator = OrekitService.get().createDefaultPropagator();
     propagator.setInitialState(stateAtEvent);
     listeners.forEach(listener -> listener.onStageTransition(this, stateAtEvent));
     MissionStage newStage = stages.get(currentStageIndex);
@@ -143,5 +143,9 @@ public abstract class Mission {
 
   public void setCurrentState(SpacecraftState parkingState) {
     this.currentState = parkingState;
+  }
+
+  public List<MissionStage> getStages() {
+    return stages;
   }
 }
