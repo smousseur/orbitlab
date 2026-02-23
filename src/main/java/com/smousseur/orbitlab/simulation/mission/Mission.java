@@ -10,6 +10,7 @@ import org.apache.logging.log4j.Logger;
 import org.orekit.bodies.GeodeticPoint;
 import org.orekit.bodies.OneAxisEllipsoid;
 import org.orekit.frames.Frame;
+import org.orekit.orbits.KeplerianOrbit;
 import org.orekit.propagation.SpacecraftState;
 import org.orekit.propagation.numerical.NumericalPropagator;
 import org.orekit.time.AbsoluteDate;
@@ -61,11 +62,12 @@ public abstract class Mission {
     if (shouldLogAltitude(currentState.getDate())) {
       double altitudeM = computeAltitudeMeters(currentState);
       logger.info(
-          "t={} stage='{}' alt={} eccentricity={} speed={}",
+          "t={} stage='{}' alt={} orbit=[{}], mass={}, speed={}",
           currentState.getDate(),
           currentStage.getName(),
           String.format("%.1f m", altitudeM),
-          currentState.getOrbit().getE(),
+          new KeplerianOrbit(currentState.getOrbit()),
+          currentState.getMass(),
           currentState.getVelocity().getNorm());
       lastAltLogDate = currentState.getDate();
     }

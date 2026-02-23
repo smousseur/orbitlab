@@ -59,10 +59,10 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
    * @param propulsionSystem the propulsion system
    */
   public TransferTwoManeuverProblem(
-      TransfertTwoManeuver maneuver,
-      SpacecraftState initialState,
-      double targetAltitude,
-      PropulsionSystem propulsionSystem) {
+          TransfertTwoManeuver maneuver,
+          SpacecraftState initialState,
+          double targetAltitude,
+          PropulsionSystem propulsionSystem) {
 
     this.initialState = initialState;
     this.maneuver = maneuver;
@@ -89,7 +89,7 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
       // Desired transfer orbit: from rCurrent to rTarget
       double aTransfer = (rCurrent + rTarget) / 2.0;
       this.transferPeriod =
-          2.0 * FastMath.PI * FastMath.sqrt(aTransfer * aTransfer * aTransfer / mu);
+              2.0 * FastMath.PI * FastMath.sqrt(aTransfer * aTransfer * aTransfer / mu);
 
       // Velocity needed at current position on the transfer orbit
       double vNeededForTransfer = FastMath.sqrt(mu * (2.0 / rCurrent - 1.0 / aTransfer));
@@ -118,7 +118,7 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
       // ── Normal orbital strategy (existing code) ──
       double aTransfer = (rPerigee + rTarget) / 2.0;
       this.transferPeriod =
-          2.0 * FastMath.PI * FastMath.sqrt(aTransfer * aTransfer * aTransfer / mu);
+              2.0 * FastMath.PI * FastMath.sqrt(aTransfer * aTransfer * aTransfer / mu);
 
       double vPerigeeInitial = FastMath.sqrt(mu * (2.0 / rPerigee - 1.0 / a1));
       double vPerigeeTransfer = FastMath.sqrt(mu * (2.0 / rPerigee - 1.0 / aTransfer));
@@ -154,14 +154,14 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
   @Override
   public double[] getLowerBounds() {
     return new double[] {
-      0.0, // t1: can start immediately
-      guessDt1 * 0.3,
-      -FastMath.PI,
-      -FastMath.PI / 6.0,
-      guessDtCoast * 0.3, // coast: don't go too short
-      guessDt2 * 0.3,
-      -FastMath.PI,
-      -FastMath.PI / 6.0
+            0.0, // t1: can start immediately
+            guessDt1 * 0.3,
+            -FastMath.PI,
+            -FastMath.PI / 6.0,
+            guessDtCoast * 0.3, // coast: don't go too short
+            guessDt2 * 0.3,
+            -FastMath.PI,
+            -FastMath.PI / 6.0
     };
   }
 
@@ -169,19 +169,19 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
   public double[] getUpperBounds() {
     boolean isSubOrbital = initialOrbit.getA() * (1.0 - initialOrbit.getE()) < EARTH_RADIUS;
     double maxT1 =
-        isSubOrbital
-            ? 60.0 // sub-orbital: must burn within ~1 min
-            : 2.0 * initialPeriod; // orbital: can wait up to 2 periods
+            isSubOrbital
+                    ? 60.0 // sub-orbital: must burn within ~1 min
+                    : 2.0 * initialPeriod; // orbital: can wait up to 2 periods
 
     return new double[] {
-      maxT1,
-      guessDt1 * 3.0,
-      FastMath.PI,
-      FastMath.PI / 6.0,
-      2.0 * transferPeriod,
-      guessDt2 * 3.0,
-      FastMath.PI,
-      FastMath.PI / 6.0
+            maxT1,
+            guessDt1 * 3.0,
+            FastMath.PI,
+            FastMath.PI / 6.0,
+            2.0 * transferPeriod,
+            guessDt2 * 3.0,
+            FastMath.PI,
+            FastMath.PI / 6.0
     };
   }
 
@@ -190,19 +190,19 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
     boolean isSubOrbital = initialOrbit.getA() * (1.0 - initialOrbit.getE()) < EARTH_RADIUS;
 
     double sigmaT1 =
-        isSubOrbital
-            ? 10.0 // explore ±10s around t=0, pas le temps de traîner
-            : initialPeriod / 2.0; // explore largement autour du périgée
+            isSubOrbital
+                    ? 10.0 // explore ±10s around t=0, pas le temps de traîner
+                    : initialPeriod / 2.0; // explore largement autour du périgée
 
     return new double[] {
-      sigmaT1,
-      guessDt1 * 0.5,
-      FastMath.PI / 3.0,
-      FastMath.PI / 12.0,
-      guessDtCoast * 0.3, // coast: explorer ±30% autour du guess
-      guessDt2 * 0.5,
-      FastMath.PI / 3.0,
-      FastMath.PI / 12.0
+            sigmaT1,
+            guessDt1 * 0.5,
+            FastMath.PI / 3.0,
+            FastMath.PI / 12.0,
+            guessDtCoast * 0.3, // coast: explorer ±30% autour du guess
+            guessDt2 * 0.5,
+            FastMath.PI / 3.0,
+            FastMath.PI / 12.0
     };
   }
 

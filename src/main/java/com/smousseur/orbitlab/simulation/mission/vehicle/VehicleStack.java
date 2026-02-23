@@ -2,12 +2,7 @@ package com.smousseur.orbitlab.simulation.mission.vehicle;
 
 import java.util.List;
 
-public class VehicleStack implements Vehicle {
-  private final List<Vehicle> vehicles;
-
-  public VehicleStack(List<Vehicle> vehicles) {
-    this.vehicles = vehicles;
-  }
+public record VehicleStack(List<Vehicle> vehicles) implements Vehicle {
 
   @Override
   public double getDryMass() {
@@ -24,12 +19,18 @@ public class VehicleStack implements Vehicle {
     return vehicles.stream().mapToDouble(Vehicle::getMass).sum();
   }
 
-  public Vehicle jettison(int index) {
-    return vehicles.remove(index);
+  @Override
+  public double getFullDryMass() {
+    return getMass() - vehicles.getFirst().getPropellantMass();
   }
 
-  public List<Vehicle> getVehicles() {
-    return vehicles;
+  @Override
+  public double getCurrentStagePropellantMass() {
+    return vehicles.getFirst().getPropellantMass();
+  }
+
+  public Vehicle jettison(int index) {
+    return vehicles.remove(index);
   }
 
   @Override

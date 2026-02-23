@@ -21,6 +21,7 @@ public class GravityTurnProblem implements TrajectoryProblem {
   private final GravityTurnManeuver maneuver;
   private final SpacecraftState initialState;
   private final GravityTurnConstraints constraints;
+  private final double minAllowableMass;
 
   public GravityTurnProblem(
       GravityTurnManeuver maneuver,
@@ -28,6 +29,7 @@ public class GravityTurnProblem implements TrajectoryProblem {
       GravityTurnConstraints constraints) {
     this.maneuver = maneuver;
     this.initialState = initialState;
+    this.minAllowableMass = maneuver.getVehicle().getFullDryMass();
     this.constraints = constraints;
   }
 
@@ -58,7 +60,7 @@ public class GravityTurnProblem implements TrajectoryProblem {
 
   @Override
   public SpacecraftState propagate(double[] variables) {
-    return maneuver.propagateForOptimization(initialState, variables);
+    return maneuver.propagateForOptimization(initialState, minAllowableMass, variables);
   }
 
   @Override
@@ -90,11 +92,12 @@ public class GravityTurnProblem implements TrajectoryProblem {
       cost += 3.0 * sq((apogee - constraints.maxApogee()) / constraints.targetApogee());
     }
 
-    double targetFPA = Math.toRadians(10.0);
+    double targetFPA = Math.toRadians(constraints.targetFlightPathAngleDeg());
     cost += 2.0 * sq((flightPathAngle - targetFPA) / targetFPA);
 
-    if (vTangential < 5000.0) {
-      cost += 3.0 * sq((5000.0 - vTangential) / 5000.0);
+    double minVtan = constraints.minTangentialVelocity();
+    if (vTangential < minVtan) {
+      cost += 3.0 * sq((minVtan - vTangential) / minVtan);
     }
 
     if (alt < 30_000) cost += 1e4;

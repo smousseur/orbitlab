@@ -76,6 +76,9 @@ public class TransfertTwoManeuver {
     // Attach maneuvers
     propagator.addForceModel(burn1);
     propagator.addForceModel(burn2);
+
+    propagator.addEventDetector(new MassDepletionDetector(25_000.0));
+    // propagator.addEventDetector(new MinAltitudeDetector(80_000.0));
   }
 
   public SpacecraftState propagateForOptimization(
@@ -87,6 +90,14 @@ public class TransfertTwoManeuver {
 
     double t2 = params.t1 + params.dt1 + params.dtCoast;
     AbsoluteDate endDate = initialState.getDate().shiftedBy(t2 + params.dt2);
-    return propagator.propagate(endDate);
+    SpacecraftState finalState = propagator.propagate(endDate);
+
+    // If propagation was cut short by MassDepletionDetector, return initial state as penalty
+    double timeDiff = Math.abs(finalState.getDate().durationFrom(endDate));
+    if (timeDiff > 1.0) {
+      return initialState;
+    }
+
+    return finalState;
   }
 }

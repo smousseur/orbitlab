@@ -49,7 +49,7 @@ public class GravityTurnManeuver {
 
     PropulsionSystem propulsion = vehicle.getPropulsion();
     double massFlowRate = propulsion.thrust() / (propulsion.isp() * Constants.G0_STANDARD_GRAVITY);
-    double propToUse = propFraction * vehicle.getPropellantMass();
+    double propToUse = propFraction * vehicle.getCurrentStagePropellantMass();
     double propUsedVertical = massFlowRate * verticalBurnDuration;
     double remainingBurnTime = (propToUse - propUsedVertical) / massFlowRate;
     remainingBurnTime = FastMath.max(10.0, remainingBurnTime);
@@ -95,18 +95,24 @@ public class GravityTurnManeuver {
    * penalizing fallback state on error.
    */
   public SpacecraftState propagateForOptimization(
-      SpacecraftState initialState, double[] variables) {
+      SpacecraftState initialState, double minAllowableMass, double[] variables) {
     GravityTurnParams params = decode(variables);
     SpacecraftState kickedState = applyKick(initialState);
 
     NumericalPropagator propagator = OrekitService.get().createSimplePropagator();
     propagator.setInitialState(kickedState);
     configure(propagator, kickedState, params);
-
+    propagator.addEventDetector(new MassDepletionDetector(minAllowableMass));
     AbsoluteDate endDate = kickedState.getDate().shiftedBy(params.remainingBurnTime() + 1.0);
 
     try {
       SpacecraftState finalState = propagator.propagate(endDate);
+      // If propagation was cut short by MassDepletionDetector, return penalty state
+      double timeDiff = FastMath.abs(finalState.getDate().durationFrom(endDate));
+      if (timeDiff > 1.0) {
+        return kickedState; // penalty: propellant exhausted before end of burn
+      }
+
       double stage2Mass = finalState.getMass() - vehicle.getDryMass();
       if (stage2Mass <= 0) {
         return kickedState; // penalty
