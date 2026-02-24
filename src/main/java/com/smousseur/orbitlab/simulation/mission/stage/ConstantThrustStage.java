@@ -20,10 +20,6 @@ import org.orekit.utils.Constants;
 public class ConstantThrustStage extends MissionStage {
   protected double duration;
 
-  public ConstantThrustStage(String name) {
-    super(name);
-  }
-
   public ConstantThrustStage(String name, double duration) {
     super(name);
     this.duration = duration;
@@ -33,9 +29,9 @@ public class ConstantThrustStage extends MissionStage {
   public SpacecraftState enter(SpacecraftState previousState, Mission mission) {
     if (duration == 0) {
       Vehicle vehicle = mission.getVehicle();
-      PropulsionSystem propulsion = vehicle.getPropulsion();
+      PropulsionSystem propulsion = vehicle.propulsion();
       double mDot = propulsion.thrust() / (propulsion.isp() * Constants.G0_STANDARD_GRAVITY);
-      this.duration = vehicle.getPropellantMass() / mDot;
+      this.duration = vehicle.propellantCapacity() / mDot;
     }
     return previousState;
   }
@@ -44,7 +40,7 @@ public class ConstantThrustStage extends MissionStage {
   public void configure(NumericalPropagator propagator, Mission mission) {
     SpacecraftState currentState = mission.getCurrentState();
 
-    PropulsionSystem propulsion = mission.getVehicle().getPropulsion();
+    PropulsionSystem propulsion = mission.getVehicle().propulsion();
     ConstantThrustManeuver burn =
         new ConstantThrustManeuver(
             currentState.getDate().shiftedBy(1.0e-3),
@@ -79,7 +75,7 @@ public class ConstantThrustStage extends MissionStage {
     NumericalPropagator propagator = OrekitService.get().createSimplePropagator();
     propagator.setInitialState(stateAfterEnter);
 
-    PropulsionSystem propulsion = mission.getVehicle().getPropulsion();
+    PropulsionSystem propulsion = mission.getVehicle().propulsion();
     ConstantThrustManeuver burn =
         new ConstantThrustManeuver(
             stateAfterEnter.getDate().shiftedBy(1.0e-3),

@@ -40,7 +40,7 @@ public class GravityTurnProblem implements TrajectoryProblem {
 
   @Override
   public double[] buildInitialGuess() {
-    return new double[] {200.0, 1.0, 1.0};
+    return new double[] {100.0, 1.0, 1.0};
   }
 
   @Override
@@ -50,7 +50,7 @@ public class GravityTurnProblem implements TrajectoryProblem {
 
   @Override
   public double[] getUpperBounds() {
-    return new double[] {300.0, 3.0, 1.0};
+    return new double[] {450.0, 3.0, 1.0};
   }
 
   @Override

@@ -3,26 +3,26 @@ package com.smousseur.orbitlab.simulation.mission.vehicle;
 import com.smousseur.orbitlab.core.OrbitlabException;
 
 public interface Vehicle {
-  double getDryMass();
+  double dryMass();
 
-  double getPropellantMass();
+  double propellantCapacity();
 
   default double getMass() {
-    return getDryMass() + getPropellantMass();
+    return dryMass() + propellantCapacity();
   }
 
   default double getFullDryMass() {
-    return getDryMass();
+    return dryMass();
   }
 
   /** Propellant mass of the current (first) stage only. */
   default double getCurrentStagePropellantMass() {
-    return getPropellantMass();
+    return propellantCapacity();
   }
 
-  PropulsionSystem getPropulsion();
+  PropulsionSystem propulsion();
 
-  default Vehicle jettison(int index) {
+  default void jettison(int index) {
     throw new OrbitlabException("Vehicle jettison unsupported for " + getClass().getSimpleName());
   }
 }

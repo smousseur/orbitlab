@@ -34,14 +34,11 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
   private static final double W_A = 1.0;
   private static final double W_E = 1.5;
   private static final double W_V = 1.0;
-  private static final double W_FUEL = 0.1;
-
-  private final KeplerianOrbit initialOrbit;
+  private static final double W_PERI = 1.0;
 
   // Precomputed values
   private final double aTarget;
   private final double vCircTarget;
-  private final double initialPeriod;
 
   // Hohmann-like guess values (precomputed)
   private final double guessT1;
@@ -59,86 +56,50 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
    * @param propulsionSystem the propulsion system
    */
   public TransferTwoManeuverProblem(
-          TransfertTwoManeuver maneuver,
-          SpacecraftState initialState,
-          double targetAltitude,
-          PropulsionSystem propulsionSystem) {
+      TransfertTwoManeuver maneuver,
+      SpacecraftState initialState,
+      double targetAltitude,
+      PropulsionSystem propulsionSystem) {
 
     this.initialState = initialState;
     this.maneuver = maneuver;
-    this.initialOrbit = new KeplerianOrbit(initialState.getOrbit());
+    KeplerianOrbit initialOrbit = new KeplerianOrbit(initialState.getOrbit());
     double mu = initialOrbit.getMu();
 
     double rTarget = EARTH_RADIUS + targetAltitude;
     this.aTarget = rTarget;
     this.vCircTarget = FastMath.sqrt(mu / rTarget);
 
-    double a1 = initialOrbit.getA();
-    double e1 = initialOrbit.getE();
-    double rPerigee = a1 * (1.0 - e1);
-    this.initialPeriod = 2.0 * FastMath.PI * FastMath.sqrt(a1 * a1 * a1 / mu);
+    // Burn immediately from current position to raise apogee to target
+    double rCurrent = initialState.getPVCoordinates().getPosition().getNorm();
+    double vCurrent = initialState.getPVCoordinates().getVelocity().getNorm();
 
-    boolean isSubOrbital = rPerigee < EARTH_RADIUS;
+    // Desired transfer orbit: from rCurrent to rTarget
+    double aTransfer = (rCurrent + rTarget) / 2.0;
+    this.transferPeriod = 2.0 * FastMath.PI * FastMath.sqrt(aTransfer * aTransfer * aTransfer / mu);
 
-    if (isSubOrbital) {
-      // ── Sub-orbital strategy ──
-      // Burn immediately from current position to raise apogee to target
-      double rCurrent = initialState.getPVCoordinates().getPosition().getNorm();
-      double vCurrent = initialState.getPVCoordinates().getVelocity().getNorm();
+    // Velocity needed at current position on the transfer orbit
+    double vNeededForTransfer = FastMath.sqrt(mu * (2.0 / rCurrent - 1.0 / aTransfer));
+    double dv1 = vNeededForTransfer - vCurrent;
 
-      // Desired transfer orbit: from rCurrent to rTarget
-      double aTransfer = (rCurrent + rTarget) / 2.0;
-      this.transferPeriod =
-              2.0 * FastMath.PI * FastMath.sqrt(aTransfer * aTransfer * aTransfer / mu);
+    // Circularization at apogee
+    double vApogeeTransfer = FastMath.sqrt(mu * (2.0 / rTarget - 1.0 / aTransfer));
+    double dv2 = vCircTarget - vApogeeTransfer;
 
-      // Velocity needed at current position on the transfer orbit
-      double vNeededForTransfer = FastMath.sqrt(mu * (2.0 / rCurrent - 1.0 / aTransfer));
-      double dv1 = vNeededForTransfer - vCurrent;
+    // Burn immediately
+    this.guessT1 = 0.0;
 
-      // Circularization at apogee
-      double vApogeeTransfer = FastMath.sqrt(mu * (2.0 / rTarget - 1.0 / aTransfer));
-      double dv2 = vCircTarget - vApogeeTransfer;
+    double initialMass = initialState.getMass();
+    double thrust = propulsionSystem.thrust();
+    double isp = propulsionSystem.isp();
 
-      // Burn immediately
-      this.guessT1 = 0.0;
+    this.guessDt1 = Physics.computeBurnDuration(FastMath.abs(dv1), initialMass, isp, thrust);
 
-      double initialMass = initialState.getMass();
-      double thrust = propulsionSystem.thrust();
-      double isp = propulsionSystem.isp();
+    double massAfterBurn1 = initialMass - (thrust / (isp * G0)) * guessDt1;
+    this.guessDt2 = Physics.computeBurnDuration(FastMath.abs(dv2), massAfterBurn1, isp, thrust);
 
-      this.guessDt1 = Physics.computeBurnDuration(FastMath.abs(dv1), initialMass, isp, thrust);
-
-      double massAfterBurn1 = initialMass - (thrust / (isp * G0)) * guessDt1;
-      this.guessDt2 = Physics.computeBurnDuration(FastMath.abs(dv2), massAfterBurn1, isp, thrust);
-
-      // Coast = half transfer period (current position to apogee)
-      this.guessDtCoast = transferPeriod / 2.0;
-
-    } else {
-      // ── Normal orbital strategy (existing code) ──
-      double aTransfer = (rPerigee + rTarget) / 2.0;
-      this.transferPeriod =
-              2.0 * FastMath.PI * FastMath.sqrt(aTransfer * aTransfer * aTransfer / mu);
-
-      double vPerigeeInitial = FastMath.sqrt(mu * (2.0 / rPerigee - 1.0 / a1));
-      double vPerigeeTransfer = FastMath.sqrt(mu * (2.0 / rPerigee - 1.0 / aTransfer));
-      double dv1 = vPerigeeTransfer - vPerigeeInitial;
-
-      double vApogeeTransfer = FastMath.sqrt(mu * (2.0 / rTarget - 1.0 / aTransfer));
-      double dv2 = vCircTarget - vApogeeTransfer;
-
-      double initialMass = initialState.getMass();
-      double thrust = propulsionSystem.thrust();
-      double isp = propulsionSystem.isp();
-
-      this.guessT1 = computeTimeToPerigee();
-      this.guessDt1 = Physics.computeBurnDuration(FastMath.abs(dv1), initialMass, isp, thrust);
-
-      double massAfterBurn1 = initialMass - (thrust / (isp * G0)) * guessDt1;
-      this.guessDt2 = Physics.computeBurnDuration(FastMath.abs(dv2), massAfterBurn1, isp, thrust);
-
-      this.guessDtCoast = transferPeriod / 2.0;
-    }
+    // Coast = half transfer period (current position to apogee)
+    this.guessDtCoast = transferPeriod / 2.0;
   }
 
   @Override
@@ -154,55 +115,42 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
   @Override
   public double[] getLowerBounds() {
     return new double[] {
-            0.0, // t1: can start immediately
-            guessDt1 * 0.3,
-            -FastMath.PI,
-            -FastMath.PI / 6.0,
-            guessDtCoast * 0.3, // coast: don't go too short
-            guessDt2 * 0.3,
-            -FastMath.PI,
-            -FastMath.PI / 6.0
+      0.0, // t1: can start immediately
+      guessDt1 * 0.3,
+      -FastMath.PI,
+      -FastMath.PI / 6.0,
+      guessDtCoast * 0.3, // coast: don't go too short
+      guessDt2 * 0.3,
+      -FastMath.PI,
+      -FastMath.PI / 6.0
     };
   }
 
   @Override
   public double[] getUpperBounds() {
-    boolean isSubOrbital = initialOrbit.getA() * (1.0 - initialOrbit.getE()) < EARTH_RADIUS;
-    double maxT1 =
-            isSubOrbital
-                    ? 60.0 // sub-orbital: must burn within ~1 min
-                    : 2.0 * initialPeriod; // orbital: can wait up to 2 periods
-
     return new double[] {
-            maxT1,
-            guessDt1 * 3.0,
-            FastMath.PI,
-            FastMath.PI / 6.0,
-            2.0 * transferPeriod,
-            guessDt2 * 3.0,
-            FastMath.PI,
-            FastMath.PI / 6.0
+      60,
+      guessDt1 * 3.0,
+      FastMath.PI,
+      FastMath.PI / 6.0,
+      2.0 * transferPeriod,
+      guessDt2 * 3.0,
+      FastMath.PI,
+      FastMath.PI / 6.0
     };
   }
 
   @Override
   public double[] getInitialSigma() {
-    boolean isSubOrbital = initialOrbit.getA() * (1.0 - initialOrbit.getE()) < EARTH_RADIUS;
-
-    double sigmaT1 =
-            isSubOrbital
-                    ? 10.0 // explore ±10s around t=0, pas le temps de traîner
-                    : initialPeriod / 2.0; // explore largement autour du périgée
-
     return new double[] {
-            sigmaT1,
-            guessDt1 * 0.5,
-            FastMath.PI / 3.0,
-            FastMath.PI / 12.0,
-            guessDtCoast * 0.3, // coast: explorer ±30% autour du guess
-            guessDt2 * 0.5,
-            FastMath.PI / 3.0,
-            FastMath.PI / 12.0
+      10.0,
+      guessDt1 * 0.5,
+      FastMath.PI / 3.0,
+      FastMath.PI / 12.0,
+      guessDtCoast * 0.3, // coast: explorer ±30% autour du guess
+      guessDt2 * 0.5,
+      FastMath.PI / 3.0,
+      FastMath.PI / 12.0
     };
   }
 
@@ -218,22 +166,14 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
     double errA = (finalOrbit.getA() - aTarget) / aTarget;
     double errE = finalOrbit.getE();
     double errV = Physics.computeRadialVelocity(state) / vCircTarget;
+    double errorP = 0;
 
-    // Penalize excessive fuel consumption
-    double fuelFraction = 1.0 - (state.getMass() / initialState.getMass());
-
-    return W_A * errA * errA + W_E * errE * errE + W_V * errV * errV; // + W_FUEL * fuelFraction;
-  }
-
-  /** Compute time to next perigee passage from current position on the orbit. */
-  private double computeTimeToPerigee() {
-    double meanAnomaly = initialOrbit.getMeanAnomaly();
-    if (meanAnomaly < 0) {
-      meanAnomaly += 2.0 * FastMath.PI;
+    double periapsis =
+        finalOrbit.getA() * (1.0 - finalOrbit.getE()) - Constants.WGS84_EARTH_EQUATORIAL_RADIUS;
+    if (periapsis < 100_000) {
+      errorP = (100_000 - periapsis) / 100_000;
     }
-    // Time from perigee to current position
-    double timeSincePerigee = meanAnomaly / (2.0 * FastMath.PI) * initialPeriod;
-    // Time to next perigee
-    return initialPeriod - timeSincePerigee;
+
+    return W_A * errA * errA + W_E * errE * errE + W_V * errV * errV + W_PERI * errorP * errorP;
   }
 }

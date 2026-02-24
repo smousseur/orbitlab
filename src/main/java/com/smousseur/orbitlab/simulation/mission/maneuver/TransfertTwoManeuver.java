@@ -54,7 +54,7 @@ public class TransfertTwoManeuver {
     Vector3D thrustDirection2 = Physics.buildThrustDirectionTNW(params.alpha2, params.beta2);
 
     LofOffset attitude = new LofOffset(state.getFrame(), LOFType.TNW);
-    PropulsionSystem propulsion = vehicle.getPropulsion();
+    PropulsionSystem propulsion = vehicle.propulsion();
     // Create maneuvers
     ConstantThrustManeuver burn1 =
         new ConstantThrustManeuver(
@@ -77,8 +77,7 @@ public class TransfertTwoManeuver {
     propagator.addForceModel(burn1);
     propagator.addForceModel(burn2);
 
-    propagator.addEventDetector(new MassDepletionDetector(25_000.0));
-    // propagator.addEventDetector(new MinAltitudeDetector(80_000.0));
+    propagator.addEventDetector(new MassDepletionDetector(vehicle.dryMass()));
   }
 
   public SpacecraftState propagateForOptimization(

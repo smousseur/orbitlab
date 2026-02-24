@@ -28,15 +28,5 @@ public class JettisonStage extends MissionStage {
   @Override
   public void configure(NumericalPropagator propagator, Mission mission) {
     mission.transitionToNextStage(mission.getCurrentState());
-    /*
-       AbsoluteDate t = mission.getCurrentState().getDate().shiftedBy(3);
-       propagator.addEventDetector(
-           new DateDetector(t)
-               .withHandler(
-                   (s, detector, increasing) -> {
-                     mission.transitionToNextStage(s);
-                     return Action.STOP;
-                   }));
-    */
   }
 }

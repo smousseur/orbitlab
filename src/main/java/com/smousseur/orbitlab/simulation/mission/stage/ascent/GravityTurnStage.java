@@ -1,7 +1,6 @@
 package com.smousseur.orbitlab.simulation.mission.stage.ascent;
 
 import com.smousseur.orbitlab.core.OrbitlabException;
-import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.Physics;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionStage;

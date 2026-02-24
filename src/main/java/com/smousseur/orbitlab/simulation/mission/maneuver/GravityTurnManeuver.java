@@ -47,7 +47,7 @@ public class GravityTurnManeuver {
     double exponent = variables[1];
     double propFraction = variables[2];
 
-    PropulsionSystem propulsion = vehicle.getPropulsion();
+    PropulsionSystem propulsion = vehicle.propulsion();
     double massFlowRate = propulsion.thrust() / (propulsion.isp() * Constants.G0_STANDARD_GRAVITY);
     double propToUse = propFraction * vehicle.getCurrentStagePropellantMass();
     double propUsedVertical = massFlowRate * verticalBurnDuration;
@@ -72,7 +72,7 @@ public class GravityTurnManeuver {
    */
   public void configure(
       NumericalPropagator propagator, SpacecraftState kickedState, GravityTurnParams params) {
-    PropulsionSystem propulsion = vehicle.getPropulsion();
+    PropulsionSystem propulsion = vehicle.propulsion();
     AbsoluteDate kickDate = kickedState.getDate();
 
     GravityTurnAttitudeProvider attitudeProvider =
@@ -113,7 +113,7 @@ public class GravityTurnManeuver {
         return kickedState; // penalty: propellant exhausted before end of burn
       }
 
-      double stage2Mass = finalState.getMass() - vehicle.getDryMass();
+      double stage2Mass = finalState.getMass() - vehicle.dryMass();
       if (stage2Mass <= 0) {
         return kickedState; // penalty
       }

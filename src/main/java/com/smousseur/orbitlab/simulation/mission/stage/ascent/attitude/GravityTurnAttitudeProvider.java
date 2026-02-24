@@ -51,7 +51,6 @@ public class GravityTurnAttitudeProvider implements AttitudeProvider {
       secondaryHint = Vector3D.crossProduct(thrustDir, prograde);
     }
     Vector3D yDir = secondaryHint.normalize();
-    Vector3D zDir = Vector3D.crossProduct(thrustDir, yDir).normalize();
 
     Rotation rot = new Rotation(thrustDir, yDir, Vector3D.PLUS_I, Vector3D.PLUS_J);
 
@@ -85,7 +84,6 @@ public class GravityTurnAttitudeProvider implements AttitudeProvider {
       secondaryHint = FieldVector3D.crossProduct(thrustDir, prograde);
     }
     FieldVector3D<T> yDir = secondaryHint.normalize();
-    FieldVector3D<T> zDir = FieldVector3D.crossProduct(thrustDir, yDir).normalize();
 
     FieldRotation<T> rot =
         new FieldRotation<>(

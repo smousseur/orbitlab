@@ -1,4 +1,4 @@
-package com.smousseur.orbitlab.simulation.mission.stage.ascent;
+package com.smousseur.orbitlab.simulation.mission.stage;
 
 import com.smousseur.orbitlab.core.OrbitlabException;
 import com.smousseur.orbitlab.simulation.mission.Mission;
@@ -51,7 +51,7 @@ public class TransfertTwoManeuverStage extends MissionStage
   public TransferTwoManeuverProblem buildProblem(Mission mission) {
     TransfertTwoManeuver maneuver = new TransfertTwoManeuver(mission.getVehicle());
     return new TransferTwoManeuverProblem(
-        maneuver, mission.getCurrentState(), targetAltitude, mission.getVehicle().getPropulsion());
+        maneuver, mission.getCurrentState(), targetAltitude, mission.getVehicle().propulsion());
   }
 
   @Override

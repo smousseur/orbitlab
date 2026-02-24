@@ -5,13 +5,13 @@ import java.util.List;
 public record VehicleStack(List<Vehicle> vehicles) implements Vehicle {
 
   @Override
-  public double getDryMass() {
-    return vehicles.stream().mapToDouble(Vehicle::getDryMass).sum();
+  public double dryMass() {
+    return vehicles.stream().mapToDouble(Vehicle::dryMass).sum();
   }
 
   @Override
-  public double getPropellantMass() {
-    return vehicles.stream().mapToDouble(Vehicle::getPropellantMass).sum();
+  public double propellantCapacity() {
+    return vehicles.stream().mapToDouble(Vehicle::propellantCapacity).sum();
   }
 
   @Override
@@ -21,20 +21,21 @@ public record VehicleStack(List<Vehicle> vehicles) implements Vehicle {
 
   @Override
   public double getFullDryMass() {
-    return getMass() - vehicles.getFirst().getPropellantMass();
+    return getMass() - vehicles.getFirst().propellantCapacity();
   }
 
   @Override
   public double getCurrentStagePropellantMass() {
-    return vehicles.getFirst().getPropellantMass();
-  }
-
-  public Vehicle jettison(int index) {
-    return vehicles.remove(index);
+    return vehicles.getFirst().propellantCapacity();
   }
 
   @Override
-  public PropulsionSystem getPropulsion() {
-    return vehicles.getFirst().getPropulsion();
+  public void jettison(int index) {
+    vehicles.remove(index);
+  }
+
+  @Override
+  public PropulsionSystem propulsion() {
+    return vehicles.getFirst().propulsion();
   }
 }
