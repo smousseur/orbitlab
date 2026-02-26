@@ -2,6 +2,7 @@ package com.smousseur.orbitlab.simulation.mission.maneuver;
 
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.Physics;
+import com.smousseur.orbitlab.simulation.mission.detector.MassDepletionDetector;
 import com.smousseur.orbitlab.simulation.mission.stage.ascent.GravityTurnStage;
 import com.smousseur.orbitlab.simulation.mission.stage.ascent.attitude.GravityTurnAttitudeProvider;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropulsionSystem;
@@ -99,7 +100,7 @@ public class GravityTurnManeuver {
     GravityTurnParams params = decode(variables);
     SpacecraftState kickedState = applyKick(initialState);
 
-    NumericalPropagator propagator = OrekitService.get().createSimplePropagator();
+    NumericalPropagator propagator = OrekitService.get().createOptimizationPropagator();
     propagator.setInitialState(kickedState);
     configure(propagator, kickedState, params);
     propagator.addEventDetector(new MassDepletionDetector(minAllowableMass));

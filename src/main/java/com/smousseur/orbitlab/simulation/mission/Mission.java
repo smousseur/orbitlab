@@ -91,7 +91,7 @@ public abstract class Mission {
       return;
     }
     this.currentState = stateAtEvent;
-    propagator = OrekitService.get().createDefaultPropagator();
+    propagator = OrekitService.get().createOptimizationPropagator();
     propagator.setInitialState(stateAtEvent);
     listeners.forEach(listener -> listener.onStageTransition(this, stateAtEvent));
     MissionStage newStage = stages.get(currentStageIndex);

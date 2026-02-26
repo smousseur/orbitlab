@@ -1,9 +1,12 @@
 package com.smousseur.orbitlab.simulation.mission.optimizer.problems;
 
 import com.smousseur.orbitlab.simulation.Physics;
+import com.smousseur.orbitlab.simulation.mission.detector.MinAltitudeTracker;
 import com.smousseur.orbitlab.simulation.mission.maneuver.TransfertTwoManeuver;
 import com.smousseur.orbitlab.simulation.mission.optimizer.TrajectoryProblem;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropulsionSystem;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.hipparchus.util.FastMath;
 import org.orekit.orbits.KeplerianOrbit;
 import org.orekit.orbits.OrbitType;
@@ -23,6 +26,7 @@ import org.orekit.utils.Constants;
  * <p>The start of burn 2 is derived: t2 = t1 + dt1 + dtCoast.
  */
 public class TransferTwoManeuverProblem implements TrajectoryProblem {
+  private static final Logger logger = LogManager.getLogger(TransferTwoManeuverProblem.class);
 
   private static final double G0 = Constants.G0_STANDARD_GRAVITY;
   private static final double EARTH_RADIUS = Constants.WGS84_EARTH_EQUATORIAL_RADIUS;
@@ -30,11 +34,21 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
   private final TransfertTwoManeuver maneuver;
   private final SpacecraftState initialState;
 
-  // Cost function weights
-  private static final double W_A = 1.0;
-  private static final double W_E = 1.5;
-  private static final double W_V = 1.0;
+  // ── Primary objective weights ──
+  private static final double W_APO = 1.0;
   private static final double W_PERI = 1.0;
+  private static final double W_E = 2.0;
+  private static final double W_V = 0.5;
+
+  // ── Constraint barrier weight ──
+  private static final double W_BARRIER = 0.1; // soft barriers (altitude min, periapsis)
+  private static final double W_ALT_MAX = 1.0; // separate, stronger weight for max altitude
+
+  // ── Constraint thresholds ──
+  private static final double ALT_MIN = 80_000;
+  private static final double PERIAPSIS_MIN = 100_000;
+
+  private final double altMax; // max altitude ceiling = target + margin
 
   // Precomputed values
   private final double aTarget;
@@ -46,6 +60,7 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
   private final double guessDtCoast;
   private final double guessDt2;
   private final double transferPeriod;
+  private final double guessAlpha1;
 
   /**
    * Instantiates a new Two maneuver transfer problem.
@@ -69,37 +84,69 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
     double rTarget = EARTH_RADIUS + targetAltitude;
     this.aTarget = rTarget;
     this.vCircTarget = FastMath.sqrt(mu / rTarget);
+    this.altMax = targetAltitude * 1.25;
 
-    // Burn immediately from current position to raise apogee to target
     double rCurrent = initialState.getPVCoordinates().getPosition().getNorm();
     double vCurrent = initialState.getPVCoordinates().getVelocity().getNorm();
 
-    // Desired transfer orbit: from rCurrent to rTarget
-    double aTransfer = (rCurrent + rTarget) / 2.0;
+    // ── Account for the actual orbital state (not just altitude) ──
+    double aInitial = initialOrbit.getA();
+    double eInitial = initialOrbit.getE();
+
+    // Time to apoapsis — burn 1 should happen near apoapsis to raise periapsis
+    double trueAnomaly = initialOrbit.getTrueAnomaly();
+    double meanAnomaly = initialOrbit.getMeanAnomaly();
+    double initialPeriod = 2.0 * FastMath.PI * FastMath.sqrt(aInitial * aInitial * aInitial / mu);
+
+    // Mean anomaly at apoapsis = π
+    double meanAnomalyAtApoapsis = FastMath.PI;
+    double dMeanAnomaly = meanAnomalyAtApoapsis - meanAnomaly;
+    if (dMeanAnomaly < 0) dMeanAnomaly += 2.0 * FastMath.PI;
+    double timeToApoapsis = dMeanAnomaly / (2.0 * FastMath.PI) * initialPeriod;
+
+    // Apoapsis radius — this is where burn 1 should happen
+    double rApoapsis = aInitial * (1.0 + eInitial);
+
+    // Transfer from apoapsis to target circular orbit
+    double aTransfer = (rApoapsis + rTarget) / 2.0;
     this.transferPeriod = 2.0 * FastMath.PI * FastMath.sqrt(aTransfer * aTransfer * aTransfer / mu);
 
-    // Velocity needed at current position on the transfer orbit
-    double vNeededForTransfer = FastMath.sqrt(mu * (2.0 / rCurrent - 1.0 / aTransfer));
-    double dv1 = vNeededForTransfer - vCurrent;
+    // Velocity at apoapsis on current orbit
+    double vAtApoapsis = FastMath.sqrt(mu * (2.0 / rApoapsis - 1.0 / aInitial));
 
-    // Circularization at apogee
+    // Velocity at apoapsis needed for transfer orbit
+    double vTransferAtApoapsis = FastMath.sqrt(mu * (2.0 / rApoapsis - 1.0 / aTransfer));
+    double dv1 = vTransferAtApoapsis - vAtApoapsis;
+
+    // Circularization at target
     double vApogeeTransfer = FastMath.sqrt(mu * (2.0 / rTarget - 1.0 / aTransfer));
     double dv2 = vCircTarget - vApogeeTransfer;
 
-    // Burn immediately
-    this.guessT1 = 0.0;
+    // Burn at apoapsis → no radial velocity → alpha1 = 0 is correct
+    this.guessT1 = timeToApoapsis;
+    this.guessAlpha1 = 0.0; // tangential at apoapsis
 
     double initialMass = initialState.getMass();
     double thrust = propulsionSystem.thrust();
     double isp = propulsionSystem.isp();
 
     this.guessDt1 = Physics.computeBurnDuration(FastMath.abs(dv1), initialMass, isp, thrust);
-
     double massAfterBurn1 = initialMass - (thrust / (isp * G0)) * guessDt1;
     this.guessDt2 = Physics.computeBurnDuration(FastMath.abs(dv2), massAfterBurn1, isp, thrust);
 
-    // Coast = half transfer period (current position to apogee)
+    // Coast = half transfer period (apoapsis to target apogee)
     this.guessDtCoast = transferPeriod / 2.0;
+
+    logger.info("═══ Problem setup ═══");
+    logger.info(
+        "  Initial orbit: a={} km, e={}, rCurrent={} km",
+        aInitial / 1000,
+        eInitial,
+        rCurrent / 1000);
+    logger.info("  Time to apoapsis: {} s, rApoapsis={} km", timeToApoapsis, rApoapsis / 1000);
+    logger.info("  Transfer: dv1={} m/s, dv2={} m/s", dv1, dv2);
+    logger.info(
+        "  Guess: t1={}s, dt1={}s, coast={}s, dt2={}s", guessT1, guessDt1, guessDtCoast, guessDt2);
   }
 
   @Override
@@ -109,19 +156,19 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
 
   @Override
   public double[] buildInitialGuess() {
-    return new double[] {guessT1, guessDt1, 0.0, 0.0, guessDtCoast, guessDt2, 0.0, 0.0};
+    return new double[] {guessT1, guessDt1, guessAlpha1, 0.0, guessDtCoast, guessDt2, 0.0, 0.0};
   }
 
   @Override
   public double[] getLowerBounds() {
     return new double[] {
-      0.0, // t1: can start immediately
-      guessDt1 * 0.3,
-      -FastMath.PI,
-      -FastMath.PI / 6.0,
-      guessDtCoast * 0.3, // coast: don't go too short
+      0.0,
+      guessDt1 * 0.5,
+      -FastMath.PI / 4.0, // burn 1: ±45° (near-tangential raise)
+      -FastMath.PI / 12.0,
+      guessDtCoast * 0.5,
       guessDt2 * 0.3,
-      -FastMath.PI,
+      -FastMath.PI, // burn 2: full ±180° (may need retrograde component)
       -FastMath.PI / 6.0
     };
   }
@@ -129,13 +176,13 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
   @Override
   public double[] getUpperBounds() {
     return new double[] {
-      60,
-      guessDt1 * 3.0,
-      FastMath.PI,
-      FastMath.PI / 6.0,
-      2.0 * transferPeriod,
-      guessDt2 * 3.0,
-      FastMath.PI,
+      guessT1 * 2.0 + 120.0,
+      guessDt1 * 2.0,
+      FastMath.PI / 4.0,
+      FastMath.PI / 12.0,
+      guessDtCoast * 2.0,
+      guessDt2 * 10.0,
+      FastMath.PI, // burn 2: full ±180°
       FastMath.PI / 6.0
     };
   }
@@ -143,15 +190,22 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
   @Override
   public double[] getInitialSigma() {
     return new double[] {
-      10.0,
-      guessDt1 * 0.5,
-      FastMath.PI / 3.0,
-      FastMath.PI / 12.0,
-      guessDtCoast * 0.3, // coast: explorer ±30% autour du guess
-      guessDt2 * 0.5,
-      FastMath.PI / 3.0,
+      FastMath.max(guessT1 * 0.3, 30.0),
+      guessDt1 * 0.3,
+      FastMath.PI / 8.0,
+      FastMath.PI / 24.0,
+      guessDtCoast * 0.2,
+      guessDt2 * 2.0,
+      FastMath.PI / 3.0, // wider exploration for burn 2 angle
       FastMath.PI / 12.0
     };
+  }
+
+  private boolean logNextCost = false;
+
+  /** Enable detailed logging for the next computeCost call. */
+  public void enableCostLogging() {
+    this.logNextCost = true;
   }
 
   @Override
@@ -163,17 +217,104 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
   public double computeCost(SpacecraftState state) {
     KeplerianOrbit finalOrbit = (KeplerianOrbit) OrbitType.KEPLERIAN.convertType(state.getOrbit());
 
-    double errA = (finalOrbit.getA() - aTarget) / aTarget;
+    // ── Primary objective: circular orbit at target altitude ──
+    double apoapsis = finalOrbit.getA() * (1.0 + finalOrbit.getE());
+    double periapsis = finalOrbit.getA() * (1.0 - finalOrbit.getE());
+    double rTarget = aTarget;
+
+    double errApo = (apoapsis - rTarget) / rTarget;
+    double errPeri = (periapsis - rTarget) / rTarget;
     double errE = finalOrbit.getE();
     double errV = Physics.computeRadialVelocity(state) / vCircTarget;
-    double errorP = 0;
 
-    double periapsis =
-        finalOrbit.getA() * (1.0 - finalOrbit.getE()) - Constants.WGS84_EARTH_EQUATORIAL_RADIUS;
-    if (periapsis < 100_000) {
-      errorP = (100_000 - periapsis) / 100_000;
+    double objective =
+        W_APO * errApo * errApo
+            + W_PERI * errPeri * errPeri
+            + W_E * errE * errE
+            + W_V * errV * errV;
+
+    // ── Soft barriers for safety constraints ──
+    double barrier = 0.0;
+
+    double periapsisAlt = periapsis - EARTH_RADIUS;
+    barrier += barrierBelow(periapsisAlt, PERIAPSIS_MIN);
+
+    // ── Max altitude: direct quadratic penalty (simpler, more predictable) ──
+    double altMaxPenalty = 0.0;
+    double barrierAltLow = 0;
+
+    MinAltitudeTracker tracker = maneuver.getLastAltitudeTracker();
+    if (tracker != null) {
+      barrierAltLow = barrierBelow(tracker.getMinAltitude(), ALT_MIN);
+      barrier += barrierAltLow;
+
+      // Direct quadratic penalty for exceeding max altitude corridor
+      if (tracker.getMaxAltitude() > altMax) {
+        double excess = (tracker.getMaxAltitude() - altMax) / altMax;
+        altMaxPenalty = excess * excess;
+      }
     }
 
-    return W_A * errA * errA + W_E * errE * errE + W_V * errV * errV + W_PERI * errorP * errorP;
+    double total = objective + W_BARRIER * barrier + W_ALT_MAX * altMaxPenalty;
+
+    if (logNextCost) {
+      logNextCost = false;
+      logger.info("═══ Cost decomposition ═══");
+      logger.info(
+          "  Apoapsis: {} km (target={} km) → errApo²={}",
+          apoapsis / 1000,
+          rTarget / 1000,
+          W_APO * errApo * errApo);
+      logger.info(
+          "  Periapsis: {} km (target={} km) → errPeri²={}",
+          periapsis / 1000,
+          rTarget / 1000,
+          W_PERI * errPeri * errPeri);
+      logger.info("  Eccentricity: e={} → errE²={}", errE, W_E * errE * errE);
+      logger.info(
+          "  Radial velocity: vr={} m/s → errV²={}",
+          Physics.computeRadialVelocity(state),
+          W_V * errV * errV);
+      logger.info(
+          "  Periapsis altitude: {} km → barrier={}",
+          periapsisAlt / 1000,
+          barrierBelow(periapsisAlt, PERIAPSIS_MIN));
+      if (tracker != null) {
+        logger.info(
+            "  Min altitude: {} km → barrier={}", tracker.getMinAltitude() / 1000, barrierAltLow);
+        logger.info(
+            "  Max altitude: {} km → penalty={}",
+            tracker.getMaxAltitude() / 1000,
+            W_ALT_MAX * altMaxPenalty);
+      }
+      logger.info(
+          "  OBJECTIVE={}  BARRIER={}  ALT_MAX={}  TOTAL={}",
+          objective,
+          W_BARRIER * barrier,
+          W_ALT_MAX * altMaxPenalty,
+          total);
+    }
+
+    return total;
+  }
+
+  /**
+   * Smooth penalty when value drops below threshold. Returns 0 when value >= threshold, grows
+   * smoothly below. Uses a "softplus" shape: penalty = log(1 + exp(-k * (value - threshold) /
+   * threshold))
+   */
+  private static double barrierBelow(double value, double threshold) {
+    double normalized = (value - threshold) / FastMath.abs(threshold);
+    double k = 10.0;
+    if (normalized > 5.0 / k) return 0.0;
+    return FastMath.log1p(FastMath.exp(-k * normalized));
+  }
+
+  /** Smooth penalty when value exceeds threshold. */
+  private static double barrierAbove(double value, double threshold) {
+    double normalized = (value - threshold) / FastMath.abs(threshold);
+    double k = 10.0;
+    if (normalized < -5.0 / k) return 0.0; // well below threshold → no penalty
+    return FastMath.log1p(FastMath.exp(k * normalized));
   }
 }

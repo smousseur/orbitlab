@@ -3,7 +3,6 @@ package com.smousseur.orbitlab.simulation.mission.runtime;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionStage;
 import com.smousseur.orbitlab.simulation.mission.OptimizableMissionStage;
-import com.smousseur.orbitlab.simulation.mission.optimizer.OptimizationResult;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.orekit.time.AbsoluteDate;

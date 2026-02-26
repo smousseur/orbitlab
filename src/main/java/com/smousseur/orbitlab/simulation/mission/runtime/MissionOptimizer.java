@@ -7,6 +7,7 @@ import com.smousseur.orbitlab.simulation.mission.OptimizableMissionStage;
 import com.smousseur.orbitlab.simulation.mission.optimizer.CMAESTrajectoryOptimizer;
 import com.smousseur.orbitlab.simulation.mission.optimizer.OptimizationResult;
 import com.smousseur.orbitlab.simulation.mission.optimizer.TrajectoryProblem;
+import com.smousseur.orbitlab.simulation.mission.optimizer.problems.TransferTwoManeuverProblem;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.orekit.propagation.SpacecraftState;
@@ -22,7 +23,7 @@ public class MissionOptimizer {
   private final int maxEvaluations;
 
   public MissionOptimizer(Mission mission) {
-    this(mission, 10_000);
+    this(mission, 20_000);
   }
 
   public MissionOptimizer(Mission mission, int maxEvaluations) {
@@ -42,6 +43,11 @@ public class MissionOptimizer {
         OptimizationResult result = optimizer.optimize();
 
         results.put(optimizable.optimizationKey(), result);
+
+        if (problem instanceof TransferTwoManeuverProblem transferProblem) {
+          transferProblem.enableCostLogging();
+          transferProblem.computeCost(problem.propagate(result.bestVariables()));
+        }
 
         logger.info(
             "Stage '{}' optimized: cost={}, values={}, evaluations={}",

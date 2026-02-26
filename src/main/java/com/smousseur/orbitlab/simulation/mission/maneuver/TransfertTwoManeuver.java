@@ -2,6 +2,8 @@ package com.smousseur.orbitlab.simulation.mission.maneuver;
 
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.Physics;
+import com.smousseur.orbitlab.simulation.mission.detector.MassDepletionDetector;
+import com.smousseur.orbitlab.simulation.mission.detector.MinAltitudeTracker;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropulsionSystem;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
@@ -14,9 +16,14 @@ import org.orekit.time.AbsoluteDate;
 
 public class TransfertTwoManeuver {
   private final Vehicle vehicle;
+  private final double targetAltitude;
 
-  public TransfertTwoManeuver(Vehicle vehicle) {
+  /** Tracks the minimum altitude during the last optimization propagation. */
+  private MinAltitudeTracker lastAltitudeTracker;
+
+  public TransfertTwoManeuver(Vehicle vehicle, double targetAltitude) {
     this.vehicle = vehicle;
+    this.targetAltitude = targetAltitude;
   }
 
   public record TransfertTwoManeuverParams(
@@ -44,18 +51,17 @@ public class TransfertTwoManeuver {
   public void configure(
       NumericalPropagator propagator, SpacecraftState state, TransfertTwoManeuverParams params) {
     AbsoluteDate epoch = state.getDate();
-    // Derived: start of burn 2
     double t2 = params.t1 + params.dt1 + params.dtCoast;
 
     AbsoluteDate burn1Start = epoch.shiftedBy(params.t1);
     AbsoluteDate burn2Start = epoch.shiftedBy(t2);
-    // Thrust direction vectors in TNW frame
+
     Vector3D thrustDirection1 = Physics.buildThrustDirectionTNW(params.alpha1, params.beta1);
     Vector3D thrustDirection2 = Physics.buildThrustDirectionTNW(params.alpha2, params.beta2);
 
     LofOffset attitude = new LofOffset(state.getFrame(), LOFType.TNW);
     PropulsionSystem propulsion = vehicle.propulsion();
-    // Create maneuvers
+
     ConstantThrustManeuver burn1 =
         new ConstantThrustManeuver(
             burn1Start,
@@ -73,17 +79,21 @@ public class TransfertTwoManeuver {
             attitude,
             thrustDirection2);
 
-    // Attach maneuvers
     propagator.addForceModel(burn1);
     propagator.addForceModel(burn2);
 
+    // Only track altitude AFTER burn 1 starts — the pre-burn orbit
+    // periapsis is inherited from gravity turn and not controllable here
+    double maxAltThreshold = targetAltitude * 1.25;
+    lastAltitudeTracker = new MinAltitudeTracker(80_000, maxAltThreshold, burn1Start);
     propagator.addEventDetector(new MassDepletionDetector(vehicle.dryMass()));
+    propagator.addEventDetector(lastAltitudeTracker);
   }
 
   public SpacecraftState propagateForOptimization(
       SpacecraftState initialState, double[] variables) {
     TransfertTwoManeuverParams params = decode(variables);
-    NumericalPropagator propagator = OrekitService.get().createSimplePropagator();
+    NumericalPropagator propagator = OrekitService.get().createOptimizationPropagator();
     propagator.setInitialState(initialState);
     configure(propagator, initialState, params);
 
@@ -98,5 +108,9 @@ public class TransfertTwoManeuver {
     }
 
     return finalState;
+  }
+
+  public MinAltitudeTracker getLastAltitudeTracker() {
+    return lastAltitudeTracker;
   }
 }
