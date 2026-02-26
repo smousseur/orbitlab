@@ -25,4 +25,8 @@ public interface Vehicle {
   default void jettison(int index) {
     throw new OrbitlabException("Vehicle jettison unsupported for " + getClass().getSimpleName());
   }
+
+  default double getFirstStageDryMass() {
+    return dryMass();
+  }
 }

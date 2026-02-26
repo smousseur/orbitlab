@@ -1,16 +1,18 @@
 package com.smousseur.orbitlab.simulation.mission.optimizer;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.mission.Mission;
+import com.smousseur.orbitlab.simulation.mission.MissionStage;
 import com.smousseur.orbitlab.simulation.mission.objective.MissionObjective;
-import com.smousseur.orbitlab.simulation.mission.objective.ObjectiveStatus;
 import com.smousseur.orbitlab.simulation.mission.objective.orbit.OrbitTarget;
 import com.smousseur.orbitlab.simulation.mission.objective.orbit.OrbitalObjective;
-import com.smousseur.orbitlab.simulation.mission.MissionStage;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
-import org.hipparchus.ode.nonstiff.DormandPrince853Integrator;
 import org.hipparchus.util.FastMath;
 import org.orekit.bodies.GeodeticPoint;
 import org.orekit.bodies.OneAxisEllipsoid;
@@ -18,25 +20,16 @@ import org.orekit.frames.Frame;
 import org.orekit.frames.TopocentricFrame;
 import org.orekit.orbits.CartesianOrbit;
 import org.orekit.orbits.Orbit;
-import org.orekit.orbits.OrbitType;
 import org.orekit.propagation.SpacecraftState;
-import org.orekit.propagation.numerical.NumericalPropagator;
 import org.orekit.time.AbsoluteDate;
 import org.orekit.utils.Constants;
 import org.orekit.utils.PVCoordinates;
-
-import java.util.List;
-import java.util.concurrent.TimeUnit;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.orekit.utils.Constants.WGS84_EARTH_EQUATORIAL_RADIUS;
 
 public class AbstractTrajectoryOptimizerTest {
   protected static void propagateMission(Mission mission, AbsoluteDate start) {
     mission.start(start);
 
-    double stepS = 10.0;
+    double stepS = 0.016; // finer step for better event timing
     AbsoluteDate end = start.shiftedBy(3, TimeUnit.HOURS);
 
     AbsoluteDate t = start;

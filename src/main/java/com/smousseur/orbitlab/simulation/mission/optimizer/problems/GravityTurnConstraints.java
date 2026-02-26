@@ -9,6 +9,6 @@ public record GravityTurnConstraints(
 
   /** Convenience constructor with sensible defaults. */
   public GravityTurnConstraints(double targetAltitude, double targetApogee, double maxApogee) {
-    this(targetAltitude, targetApogee, maxApogee, 3000.0, 5.0);
+    this(targetAltitude, targetApogee, maxApogee, 1500.0, 20.0);
   }
 }

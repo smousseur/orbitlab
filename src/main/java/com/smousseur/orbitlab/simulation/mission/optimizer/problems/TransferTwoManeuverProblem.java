@@ -35,9 +35,9 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
   private final SpacecraftState initialState;
 
   // ── Primary objective weights ──
-  private static final double W_APO = 1.0;
-  private static final double W_PERI = 1.0;
-  private static final double W_E = 2.0;
+  private static final double W_APO = 1.5;
+  private static final double W_PERI = 1.5;
+  private static final double W_E = 3.0;
   private static final double W_V = 0.5;
 
   // ── Constraint barrier weight ──
@@ -59,7 +59,6 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
   private final double guessDt1;
   private final double guessDtCoast;
   private final double guessDt2;
-  private final double transferPeriod;
   private final double guessAlpha1;
 
   /**
@@ -109,7 +108,8 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
 
     // Transfer from apoapsis to target circular orbit
     double aTransfer = (rApoapsis + rTarget) / 2.0;
-    this.transferPeriod = 2.0 * FastMath.PI * FastMath.sqrt(aTransfer * aTransfer * aTransfer / mu);
+    double transferPeriod =
+        2.0 * FastMath.PI * FastMath.sqrt(aTransfer * aTransfer * aTransfer / mu);
 
     // Velocity at apoapsis on current orbit
     double vAtApoapsis = FastMath.sqrt(mu * (2.0 / rApoapsis - 1.0 / aInitial));
@@ -136,17 +136,6 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
 
     // Coast = half transfer period (apoapsis to target apogee)
     this.guessDtCoast = transferPeriod / 2.0;
-
-    logger.info("═══ Problem setup ═══");
-    logger.info(
-        "  Initial orbit: a={} km, e={}, rCurrent={} km",
-        aInitial / 1000,
-        eInitial,
-        rCurrent / 1000);
-    logger.info("  Time to apoapsis: {} s, rApoapsis={} km", timeToApoapsis, rApoapsis / 1000);
-    logger.info("  Transfer: dv1={} m/s, dv2={} m/s", dv1, dv2);
-    logger.info(
-        "  Guess: t1={}s, dt1={}s, coast={}s, dt2={}s", guessT1, guessDt1, guessDtCoast, guessDt2);
   }
 
   @Override
@@ -201,13 +190,6 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
     };
   }
 
-  private boolean logNextCost = false;
-
-  /** Enable detailed logging for the next computeCost call. */
-  public void enableCostLogging() {
-    this.logNextCost = true;
-  }
-
   @Override
   public SpacecraftState propagate(double[] variables) {
     return maneuver.propagateForOptimization(initialState, variables);
@@ -255,47 +237,7 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
       }
     }
 
-    double total = objective + W_BARRIER * barrier + W_ALT_MAX * altMaxPenalty;
-
-    if (logNextCost) {
-      logNextCost = false;
-      logger.info("═══ Cost decomposition ═══");
-      logger.info(
-          "  Apoapsis: {} km (target={} km) → errApo²={}",
-          apoapsis / 1000,
-          rTarget / 1000,
-          W_APO * errApo * errApo);
-      logger.info(
-          "  Periapsis: {} km (target={} km) → errPeri²={}",
-          periapsis / 1000,
-          rTarget / 1000,
-          W_PERI * errPeri * errPeri);
-      logger.info("  Eccentricity: e={} → errE²={}", errE, W_E * errE * errE);
-      logger.info(
-          "  Radial velocity: vr={} m/s → errV²={}",
-          Physics.computeRadialVelocity(state),
-          W_V * errV * errV);
-      logger.info(
-          "  Periapsis altitude: {} km → barrier={}",
-          periapsisAlt / 1000,
-          barrierBelow(periapsisAlt, PERIAPSIS_MIN));
-      if (tracker != null) {
-        logger.info(
-            "  Min altitude: {} km → barrier={}", tracker.getMinAltitude() / 1000, barrierAltLow);
-        logger.info(
-            "  Max altitude: {} km → penalty={}",
-            tracker.getMaxAltitude() / 1000,
-            W_ALT_MAX * altMaxPenalty);
-      }
-      logger.info(
-          "  OBJECTIVE={}  BARRIER={}  ALT_MAX={}  TOTAL={}",
-          objective,
-          W_BARRIER * barrier,
-          W_ALT_MAX * altMaxPenalty,
-          total);
-    }
-
-    return total;
+    return objective + W_BARRIER * barrier + W_ALT_MAX * altMaxPenalty;
   }
 
   /**

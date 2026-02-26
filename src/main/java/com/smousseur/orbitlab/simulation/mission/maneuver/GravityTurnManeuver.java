@@ -4,7 +4,7 @@ import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.Physics;
 import com.smousseur.orbitlab.simulation.mission.detector.MassDepletionDetector;
 import com.smousseur.orbitlab.simulation.mission.stage.ascent.GravityTurnStage;
-import com.smousseur.orbitlab.simulation.mission.stage.ascent.attitude.GravityTurnAttitudeProvider;
+import com.smousseur.orbitlab.simulation.mission.attitude.GravityTurnAttitudeProvider;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropulsionSystem;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
@@ -79,13 +79,14 @@ public class GravityTurnManeuver {
     GravityTurnAttitudeProvider attitudeProvider =
         new GravityTurnAttitudeProvider(kickDate, params.transitionTime(), params.exponent());
 
+    propagator.setAttitudeProvider(attitudeProvider);
+
     ConstantThrustManeuver burn =
         new ConstantThrustManeuver(
             kickDate.shiftedBy(1.0e-3),
             params.remainingBurnTime(),
             propulsion.thrust(),
             propulsion.isp(),
-            attitudeProvider,
             Vector3D.PLUS_I);
 
     propagator.addForceModel(burn);
@@ -100,7 +101,7 @@ public class GravityTurnManeuver {
     GravityTurnParams params = decode(variables);
     SpacecraftState kickedState = applyKick(initialState);
 
-    NumericalPropagator propagator = OrekitService.get().createOptimizationPropagator();
+    NumericalPropagator propagator = OrekitService.get().createSimplePropagator();
     propagator.setInitialState(kickedState);
     configure(propagator, kickedState, params);
     propagator.addEventDetector(new MassDepletionDetector(minAllowableMass));
@@ -114,11 +115,13 @@ public class GravityTurnManeuver {
         return kickedState; // penalty: propellant exhausted before end of burn
       }
 
-      double stage2Mass = finalState.getMass() - vehicle.dryMass();
-      if (stage2Mass <= 0) {
+      // What we actually want is the dry mass of the first vehicle only
+      double jettisonMass = vehicle.getFirstStageDryMass();
+      double postJettisonMass = finalState.getMass() - jettisonMass;
+      if (postJettisonMass <= 0) {
         return kickedState; // penalty
       }
-      return finalState.withMass(stage2Mass);
+      return finalState.withMass(postJettisonMass);
     } catch (Exception e) {
       return kickedState; // penalty
     }

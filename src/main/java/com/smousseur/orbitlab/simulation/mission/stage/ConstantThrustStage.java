@@ -72,7 +72,7 @@ public class ConstantThrustStage extends MissionStage {
   public SpacecraftState propagateStandalone(SpacecraftState currentState, Mission mission) {
     SpacecraftState stateAfterEnter = enter(currentState, mission);
 
-    NumericalPropagator propagator = OrekitService.get().createOptimizationPropagator();
+    NumericalPropagator propagator = OrekitService.get().createSimplePropagator();
     propagator.setInitialState(stateAfterEnter);
 
     PropulsionSystem propulsion = mission.getVehicle().propulsion();

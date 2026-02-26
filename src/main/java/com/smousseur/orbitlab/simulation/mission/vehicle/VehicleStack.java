@@ -30,6 +30,11 @@ public record VehicleStack(List<Vehicle> vehicles) implements Vehicle {
   }
 
   @Override
+  public double getFirstStageDryMass() {
+    return vehicles.getFirst().dryMass();
+  }
+
+  @Override
   public void jettison(int index) {
     vehicles.remove(index);
   }

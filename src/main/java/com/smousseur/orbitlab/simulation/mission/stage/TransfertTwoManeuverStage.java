@@ -55,6 +55,11 @@ public class TransfertTwoManeuverStage extends MissionStage
   }
 
   @Override
+  public SpacecraftState getEntryState() {
+    return optimizationResult != null ? optimizationResult.stageEntryState() : null;
+  }
+
+  @Override
   public String optimizationKey() {
     return getName();
   }

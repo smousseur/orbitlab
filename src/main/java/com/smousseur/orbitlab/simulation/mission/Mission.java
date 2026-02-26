@@ -91,11 +91,18 @@ public abstract class Mission {
       return;
     }
     this.currentState = stateAtEvent;
-    propagator = OrekitService.get().createOptimizationPropagator();
-    propagator.setInitialState(stateAtEvent);
-    listeners.forEach(listener -> listener.onStageTransition(this, stateAtEvent));
     MissionStage newStage = stages.get(currentStageIndex);
+    propagator = OrekitService.get().createOptimizationPropagator();
+    listeners.forEach(listener -> listener.onStageTransition(this, stateAtEvent));
     this.currentState = newStage.enter(currentState, this);
+
+    // If this is an optimizable stage with a saved entry state, use it
+    // to ensure perfect reproducibility with the optimization
+    if (newStage instanceof OptimizableMissionStage<?> opt && opt.getEntryState() != null) {
+      this.currentState = opt.getEntryState();
+    }
+
+    propagator.setInitialState(this.currentState);
     newStage.configure(propagator, this);
   }
 

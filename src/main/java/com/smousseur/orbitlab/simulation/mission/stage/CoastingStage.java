@@ -2,9 +2,7 @@ package com.smousseur.orbitlab.simulation.mission.stage;
 
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionStage;
-import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
 import org.hipparchus.ode.events.Action;
-import org.orekit.propagation.SpacecraftState;
 import org.orekit.propagation.events.DateDetector;
 import org.orekit.propagation.numerical.NumericalPropagator;
 import org.orekit.time.AbsoluteDate;

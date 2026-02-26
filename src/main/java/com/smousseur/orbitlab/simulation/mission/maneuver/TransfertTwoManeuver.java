@@ -93,7 +93,7 @@ public class TransfertTwoManeuver {
   public SpacecraftState propagateForOptimization(
       SpacecraftState initialState, double[] variables) {
     TransfertTwoManeuverParams params = decode(variables);
-    NumericalPropagator propagator = OrekitService.get().createOptimizationPropagator();
+    NumericalPropagator propagator = OrekitService.get().createSimplePropagator();
     propagator.setInitialState(initialState);
     configure(propagator, initialState, params);
 

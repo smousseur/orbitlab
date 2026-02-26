@@ -1,7 +1,7 @@
 package com.smousseur.orbitlab.simulation.mission.stage.ascent;
 
 import com.smousseur.orbitlab.simulation.mission.stage.ConstantThrustStage;
-import com.smousseur.orbitlab.simulation.mission.stage.ascent.attitude.ZenithThrustAttitudeProvider;
+import com.smousseur.orbitlab.simulation.mission.attitude.ZenithThrustAttitudeProvider;
 import org.orekit.attitudes.AttitudeProvider;
 import org.orekit.propagation.SpacecraftState;
 

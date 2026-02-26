@@ -63,8 +63,7 @@ public class GravityTurnStage extends MissionStage
   @Override
   public GravityTurnProblem buildProblem(Mission mission) {
     GravityTurnManeuver maneuver = createManeuver(mission);
-    SpacecraftState kickedState = maneuver.applyKick(mission.getCurrentState());
-    return new GravityTurnProblem(maneuver, kickedState, constraints);
+    return new GravityTurnProblem(maneuver, mission.getCurrentState(), constraints);
   }
 
   @Override
