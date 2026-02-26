@@ -17,7 +17,6 @@ import org.orekit.utils.PVCoordinates;
  * propFraction)
  */
 public class GravityTurnProblem implements TrajectoryProblem {
-
   private final GravityTurnManeuver maneuver;
   private final SpacecraftState initialState;
   private final GravityTurnConstraints constraints;
@@ -40,7 +39,7 @@ public class GravityTurnProblem implements TrajectoryProblem {
 
   @Override
   public double[] buildInitialGuess() {
-    return new double[] {100.0, 1.0, 1.0};
+    return new double[] {100.0, 1.0, 0.95};
   }
 
   @Override
@@ -84,27 +83,32 @@ public class GravityTurnProblem implements TrajectoryProblem {
     double flightPathAngle = FastMath.atan2(vRadial, vTangential);
 
     double cost = 0.0;
+
+    // 1. Altitude at MECO — primary objective
     cost += 2.0 * sq((alt - constraints.targetAltitude()) / constraints.targetAltitude());
 
+    // 2. Apogee window — this is the key for staging
     if (apogee < constraints.targetApogee()) {
       cost += 8.0 * sq((constraints.targetApogee() - apogee) / constraints.targetApogee());
     } else if (apogee > constraints.maxApogee()) {
       cost += 3.0 * sq((apogee - constraints.maxApogee()) / constraints.targetApogee());
     }
 
+    // 3. Flight path angle — small = nearly horizontal
     double targetFPA = Math.toRadians(constraints.targetFlightPathAngleDeg());
-    cost += 2.0 * sq((flightPathAngle - targetFPA) / targetFPA);
+    cost += 2.0 * sq(flightPathAngle - targetFPA);
 
+    // 4. Tangential velocity — must be high enough for orbit insertion
     double minVtan = constraints.minTangentialVelocity();
     if (vTangential < minVtan) {
-      cost += 3.0 * sq((minVtan - vTangential) / minVtan);
+      cost += 5.0 * sq((minVtan - vTangential) / minVtan);
     }
 
-    if (alt < 30_000) cost += 1e4;
-    if (alt > 300_000) cost += 1e3;
-    if (ecc > 1.0) cost += 1e4;
-    if (apogee < 100_000) cost += 1e3;
-    if (vNorm < 2000) cost += 1e4;
+    // 5. Smooth guard rails
+    if (alt < 30_000) cost += 100.0 * sq((30_000 - alt) / 30_000);
+    if (ecc > 1.0) cost += 100.0 * sq(ecc - 1.0);
+    if (apogee < 100_000) cost += 50.0 * sq((100_000 - apogee) / 100_000);
+    if (vNorm < 2000) cost += 100.0 * sq((2000 - vNorm) / 2000);
 
     return cost;
   }

@@ -30,7 +30,7 @@ public class TransfertTwoManeuverStage extends MissionStage
       throw new OrbitlabException(
           "TransfertStage '" + getName() + "' requires optimization before execution");
     }
-    TransfertTwoManeuver maneuver = new TransfertTwoManeuver(mission.getVehicle());
+    TransfertTwoManeuver maneuver = new TransfertTwoManeuver(mission.getVehicle(), targetAltitude);
     SpacecraftState state = mission.getCurrentState();
     TransfertTwoManeuver.TransfertTwoManeuverParams params =
         maneuver.decode(optimizationResult.bestVariables());
@@ -49,9 +49,14 @@ public class TransfertTwoManeuverStage extends MissionStage
 
   @Override
   public TransferTwoManeuverProblem buildProblem(Mission mission) {
-    TransfertTwoManeuver maneuver = new TransfertTwoManeuver(mission.getVehicle());
+    TransfertTwoManeuver maneuver = new TransfertTwoManeuver(mission.getVehicle(), targetAltitude);
     return new TransferTwoManeuverProblem(
         maneuver, mission.getCurrentState(), targetAltitude, mission.getVehicle().propulsion());
+  }
+
+  @Override
+  public SpacecraftState getEntryState() {
+    return optimizationResult != null ? optimizationResult.stageEntryState() : null;
   }
 
   @Override

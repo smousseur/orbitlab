@@ -1,11 +1,10 @@
-package com.smousseur.orbitlab.simulation.mission.maneuver;
+package com.smousseur.orbitlab.simulation.mission.detector;
 
 import org.orekit.propagation.SpacecraftState;
 import org.orekit.propagation.events.AbstractDetector;
 import org.orekit.propagation.events.EventDetectionSettings;
 import org.orekit.propagation.events.handlers.ContinueOnEvent;
 import org.orekit.propagation.events.handlers.EventHandler;
-import org.orekit.propagation.events.handlers.StopOnEvent;
 
 /**
  * Stops propagation when spacecraft mass drops to the minimum allowable mass (i.e. all available

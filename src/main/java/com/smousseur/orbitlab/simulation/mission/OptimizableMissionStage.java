@@ -2,6 +2,7 @@ package com.smousseur.orbitlab.simulation.mission;
 
 import com.smousseur.orbitlab.simulation.mission.optimizer.OptimizationResult;
 import com.smousseur.orbitlab.simulation.mission.optimizer.TrajectoryProblem;
+import org.orekit.propagation.SpacecraftState;
 
 /**
  * Marks a {@link MissionStage} that requires parameter optimization before execution.
@@ -17,4 +18,15 @@ public interface OptimizableMissionStage<P extends TrajectoryProblem> {
 
   /** Injects the optimization result before execution (called by MissionPlayer). */
   void applyOptimization(OptimizationResult result);
+
+  /**
+   * Retrieves the entry {@link SpacecraftState} of the current stage, if available. This state is
+   * primarily used to ensure reproducibility for stages requiring optimization.
+   *
+   * @return the entry {@link SpacecraftState} of the current stage, or {@code null} if no specific
+   *     entry state is defined.
+   */
+  default SpacecraftState getEntryState() {
+    return null;
+  }
 }

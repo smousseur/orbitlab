@@ -1,4 +1,4 @@
-package com.smousseur.orbitlab.simulation.mission.stage.ascent.attitude;
+package com.smousseur.orbitlab.simulation.mission.attitude;
 
 import org.hipparchus.CalculusFieldElement;
 import org.hipparchus.geometry.euclidean.threed.FieldRotation;
@@ -35,20 +35,30 @@ public class GravityTurnAttitudeProvider implements AttitudeProvider {
     Vector3D vel = pv.getVelocity();
 
     Vector3D zenith = pos.normalize();
-    Vector3D prograde = vel.normalize();
+
+    // Horizontal (tangential) component of velocity — this is the "orbit plane" direction
+    double vRadial = Vector3D.dotProduct(vel, zenith);
+    Vector3D vTangential = vel.subtract(new Vector3D(vRadial, zenith));
+    Vector3D horizDir;
+    if (vTangential.getNormSq() > 1e-6) {
+      horizDir = vTangential.normalize();
+    } else {
+      // Fallback: use velocity direction if no tangential component yet
+      horizDir = vel.normalize();
+    }
 
     double dt = date.durationFrom(kickDate);
     double alpha = FastMath.min(1.0, FastMath.max(0.0, dt / transitionTime));
     alpha = Math.pow(alpha, exponent);
 
-    Vector3D thrustDir = new Vector3D(1.0 - alpha, zenith, alpha, prograde).normalize();
+    // Interpolate between zenith (vertical) and horizontal (tangential) direction
+    // alpha=0 → pure zenith, alpha=1 → pure horizontal (prograde orbit direction)
+    Vector3D thrustDir = new Vector3D(1.0 - alpha, zenith, alpha, horizDir).normalize();
 
     // Build rotation: map spacecraft +X to thrustDir
-    // Use zenith as hint for the secondary axis
     Vector3D secondaryHint = Vector3D.crossProduct(thrustDir, zenith);
     if (secondaryHint.getNormSq() < 1e-10) {
-      // thrustDir ≈ zenith at start, use prograde as fallback
-      secondaryHint = Vector3D.crossProduct(thrustDir, prograde);
+      secondaryHint = Vector3D.crossProduct(thrustDir, horizDir);
     }
     Vector3D yDir = secondaryHint.normalize();
 
@@ -66,7 +76,16 @@ public class GravityTurnAttitudeProvider implements AttitudeProvider {
     FieldVector3D<T> vel = pv.getVelocity();
 
     FieldVector3D<T> zenith = pos.normalize();
-    FieldVector3D<T> prograde = vel.normalize();
+
+    // Horizontal (tangential) component of velocity
+    T vRadial = FieldVector3D.dotProduct(vel, zenith);
+    FieldVector3D<T> vTangential = vel.subtract(new FieldVector3D<>(vRadial, zenith));
+    FieldVector3D<T> horizDir;
+    if (vTangential.getNormSq().getReal() > 1e-6) {
+      horizDir = vTangential.normalize();
+    } else {
+      horizDir = vel.normalize();
+    }
 
     T dt = date.durationFrom(kickDate);
     T zero = dt.getField().getZero();
@@ -75,13 +94,14 @@ public class GravityTurnAttitudeProvider implements AttitudeProvider {
     T alpha = FastMath.pow(alphaRaw, exponent);
     T oneMinusAlpha = one.subtract(alpha);
 
+    // Interpolate between zenith and horizontal direction
     FieldVector3D<T> thrustDir =
-        new FieldVector3D<>(oneMinusAlpha, zenith, alpha, prograde).normalize();
+        new FieldVector3D<>(oneMinusAlpha, zenith, alpha, horizDir).normalize();
 
     // Secondary axis
     FieldVector3D<T> secondaryHint = FieldVector3D.crossProduct(thrustDir, zenith);
     if (secondaryHint.getNormSq().getReal() < 1e-10) {
-      secondaryHint = FieldVector3D.crossProduct(thrustDir, prograde);
+      secondaryHint = FieldVector3D.crossProduct(thrustDir, horizDir);
     }
     FieldVector3D<T> yDir = secondaryHint.normalize();
 

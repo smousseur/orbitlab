@@ -4,14 +4,15 @@ import org.orekit.propagation.SpacecraftState;
 
 /** Result of a trajectory optimization run. */
 public record OptimizationResult(
-    double[] bestVariables, double bestCost, SpacecraftState bestState, int evaluations) {
+    double[] bestVariables,
+    double bestCost,
+    SpacecraftState bestState,
+    int evaluations,
+    SpacecraftState stageEntryState) {
 
   public OptimizationResult(
       double[] bestVariables, double bestCost, SpacecraftState bestState, int evaluations) {
-    this.bestVariables = bestVariables.clone();
-    this.bestCost = bestCost;
-    this.bestState = bestState;
-    this.evaluations = evaluations;
+    this(bestVariables.clone(), bestCost, bestState, evaluations, null);
   }
 
   /** Optimal parameter vector. */
