@@ -1,10 +1,6 @@
 package com.smousseur.orbitlab.simulation.mission.optimizer;
 
-import org.hipparchus.ode.nonstiff.DormandPrince853Integrator;
-import org.orekit.forces.gravity.NewtonianAttraction;
 import org.orekit.propagation.SpacecraftState;
-import org.orekit.propagation.numerical.NumericalPropagator;
-import org.orekit.utils.Constants;
 
 /**
  * Defines a trajectory problem for the optimizer.
@@ -16,6 +12,15 @@ import org.orekit.utils.Constants;
  * SpacecraftState (possibly a fallback state far from the target).
  */
 public interface TrajectoryProblem {
+
+  /**
+   * Gets acceptable threshold below which we consider the solution acceptable
+   *
+   * @return the acceptable cost
+   */
+  default double getAcceptableCost() {
+    return 0.1;
+  }
 
   /** Total number of optimization variables. For a multi-arc problem: numArcs × paramsPerArc. */
   int getNumVariables();

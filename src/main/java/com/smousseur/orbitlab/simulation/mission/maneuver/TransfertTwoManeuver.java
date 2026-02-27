@@ -104,7 +104,7 @@ public class TransfertTwoManeuver {
     // If propagation was cut short by MassDepletionDetector, return initial state as penalty
     double timeDiff = Math.abs(finalState.getDate().durationFrom(endDate));
     if (timeDiff > 1.0) {
-      return initialState;
+      return finalState;
     }
 
     return finalState;

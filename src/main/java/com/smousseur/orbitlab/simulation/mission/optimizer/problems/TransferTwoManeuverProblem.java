@@ -26,8 +26,6 @@ import org.orekit.utils.Constants;
  * <p>The start of burn 2 is derived: t2 = t1 + dt1 + dtCoast.
  */
 public class TransferTwoManeuverProblem implements TrajectoryProblem {
-  private static final Logger logger = LogManager.getLogger(TransferTwoManeuverProblem.class);
-
   private static final double G0 = Constants.G0_STANDARD_GRAVITY;
   private static final double EARTH_RADIUS = Constants.WGS84_EARTH_EQUATORIAL_RADIUS;
 
@@ -85,15 +83,11 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
     this.vCircTarget = FastMath.sqrt(mu / rTarget);
     this.altMax = targetAltitude * 1.25;
 
-    double rCurrent = initialState.getPVCoordinates().getPosition().getNorm();
-    double vCurrent = initialState.getPVCoordinates().getVelocity().getNorm();
-
     // ── Account for the actual orbital state (not just altitude) ──
     double aInitial = initialOrbit.getA();
     double eInitial = initialOrbit.getE();
 
     // Time to apoapsis — burn 1 should happen near apoapsis to raise periapsis
-    double trueAnomaly = initialOrbit.getTrueAnomaly();
     double meanAnomaly = initialOrbit.getMeanAnomaly();
     double initialPeriod = 2.0 * FastMath.PI * FastMath.sqrt(aInitial * aInitial * aInitial / mu);
 
@@ -136,6 +130,11 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
 
     // Coast = half transfer period (apoapsis to target apogee)
     this.guessDtCoast = transferPeriod / 2.0;
+  }
+
+  @Override
+  public double getAcceptableCost() {
+    return 5e-6;
   }
 
   @Override
@@ -223,7 +222,7 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
 
     // ── Max altitude: direct quadratic penalty (simpler, more predictable) ──
     double altMaxPenalty = 0.0;
-    double barrierAltLow = 0;
+    double barrierAltLow;
 
     MinAltitudeTracker tracker = maneuver.getLastAltitudeTracker();
     if (tracker != null) {
@@ -250,13 +249,5 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
     double k = 10.0;
     if (normalized > 5.0 / k) return 0.0;
     return FastMath.log1p(FastMath.exp(-k * normalized));
-  }
-
-  /** Smooth penalty when value exceeds threshold. */
-  private static double barrierAbove(double value, double threshold) {
-    double normalized = (value - threshold) / FastMath.abs(threshold);
-    double k = 10.0;
-    if (normalized < -5.0 / k) return 0.0; // well below threshold → no penalty
-    return FastMath.log1p(FastMath.exp(k * normalized));
   }
 }

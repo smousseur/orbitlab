@@ -1,7 +1,5 @@
 package com.smousseur.orbitlab.simulation.mission.optimizer;
 
-import static org.junit.jupiter.api.Assertions.*;
-
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.mission.Mission;
@@ -26,11 +24,34 @@ import org.orekit.utils.Constants;
 import org.orekit.utils.PVCoordinates;
 
 public class AbstractTrajectoryOptimizerTest {
-  protected static void propagateMission(Mission mission, AbsoluteDate start) {
+  protected static class PropagationResults {
+    double minCoastAltitude = Double.MAX_VALUE;
+    double maxCoastAltitude = Double.MIN_VALUE;
+
+    void update(Mission mission, String coastPhaseName) {
+      SpacecraftState state = mission.getCurrentState();
+      double altitude =
+          state.getPVCoordinates().getPosition().getNorm()
+              - Constants.WGS84_EARTH_EQUATORIAL_RADIUS;
+      MissionStage currentStage = mission.getCurrentStage();
+      if (coastPhaseName.equals(currentStage.getName())) {
+        if (altitude < minCoastAltitude) {
+          minCoastAltitude = altitude;
+        }
+        if (altitude > maxCoastAltitude) {
+          maxCoastAltitude = altitude;
+        }
+      }
+    }
+  }
+
+  protected static PropagationResults propagateMission(
+      Mission mission, String coastPhaseName, AbsoluteDate start) {
+    PropagationResults results = new PropagationResults();
     mission.start(start);
 
     double stepS = 0.016; // finer step for better event timing
-    AbsoluteDate end = start.shiftedBy(3, TimeUnit.HOURS);
+    AbsoluteDate end = start.shiftedBy(2, TimeUnit.HOURS);
 
     AbsoluteDate t = start;
     int i = 0;
@@ -39,11 +60,12 @@ public class AbstractTrajectoryOptimizerTest {
     while (mission.isOnGoing() && t.compareTo(end) < 0) {
       t = t.shiftedBy(stepS);
       mission.update(t);
-
+      results.update(mission, coastPhaseName);
       if (++i > maxIters) {
         throw new IllegalStateException("Too many iterations, stuck? t=" + t);
       }
     }
+    return results;
   }
 
   public static class TestMission extends Mission {

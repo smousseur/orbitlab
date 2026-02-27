@@ -17,6 +17,10 @@ import com.smousseur.orbitlab.simulation.mission.vehicle.Spacecraft;
 import com.smousseur.orbitlab.simulation.mission.vehicle.VehicleStack;
 import java.util.ArrayList;
 import java.util.List;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.orekit.propagation.SpacecraftState;
@@ -24,9 +28,11 @@ import org.orekit.time.AbsoluteDate;
 import org.orekit.time.TimeScalesFactory;
 
 public class LEOMissionOptimizationTest extends AbstractTrajectoryOptimizerTest {
+  private static final Logger logger = LogManager.getLogger(LEOMissionOptimizationTest.class);
 
   public static final int ASCENSION_DURATION = 10;
   public static final double TARGET_ALTITUDE = 400_000;
+  public static final double ORBIT_MARGIN_RATIO = 0.07;
 
   @BeforeAll
   static void init() {
@@ -50,7 +56,12 @@ public class LEOMissionOptimizationTest extends AbstractTrajectoryOptimizerTest 
     mission.setCurrentState(initialState);
     MissionPlayer player = new MissionPlayer(mission);
     player.play(optimResults, epoch);
-    propagateMission(mission, epoch);
+    PropagationResults results = propagateMission(mission, "Coasting", epoch);
+    logger.info("Max coast altitude: {} m", results.maxCoastAltitude);
+    logger.info("Min coast altitude: {} m", results.minCoastAltitude);
+    double errorMargin = ORBIT_MARGIN_RATIO * TARGET_ALTITUDE;
+    Assertions.assertTrue(Math.abs(results.maxCoastAltitude - TARGET_ALTITUDE) <= errorMargin);
+    Assertions.assertTrue(Math.abs(results.minCoastAltitude - TARGET_ALTITUDE) <= errorMargin);
   }
 
   private static VehicleStack getMissionVehicle() {

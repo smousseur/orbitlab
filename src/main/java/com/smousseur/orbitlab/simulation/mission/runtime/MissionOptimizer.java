@@ -1,21 +1,16 @@
 package com.smousseur.orbitlab.simulation.mission.runtime;
 
-import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionStage;
 import com.smousseur.orbitlab.simulation.mission.OptimizableMissionStage;
 import com.smousseur.orbitlab.simulation.mission.optimizer.CMAESTrajectoryOptimizer;
 import com.smousseur.orbitlab.simulation.mission.optimizer.OptimizationResult;
 import com.smousseur.orbitlab.simulation.mission.optimizer.TrajectoryProblem;
-import com.smousseur.orbitlab.simulation.mission.optimizer.problems.GravityTurnProblem;
-import com.smousseur.orbitlab.simulation.mission.optimizer.problems.TransferTwoManeuverProblem;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.orekit.propagation.SpacecraftState;
-import org.orekit.propagation.numerical.NumericalPropagator;
-
-import java.util.LinkedHashMap;
-import java.util.Map;
 
 public class MissionOptimizer {
   private static final Logger logger = LogManager.getLogger(MissionOptimizer.class);
@@ -60,13 +55,6 @@ public class MissionOptimizer {
             result.bestVariables(),
             result.evaluations());
         mission.setCurrentState(problem.propagate(result.bestVariables()));
-        SpacecraftState st = mission.getCurrentState();
-        logger.info(">>> Optimizer state after '{}' at t={}", stage.getName(), st.getDate());
-        logger.info(
-            "    pos={} vel={} mass={}",
-            st.getPVCoordinates().getPosition(),
-            st.getPVCoordinates().getVelocity(),
-            st.getMass());
       } else {
         logger.info("Propagating non-optimizable stage '{}'...", stage.getName());
         SpacecraftState propagated = stage.propagateStandalone(mission.getCurrentState(), mission);

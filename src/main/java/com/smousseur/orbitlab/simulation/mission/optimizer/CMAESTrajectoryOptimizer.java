@@ -1,5 +1,6 @@
 package com.smousseur.orbitlab.simulation.mission.optimizer;
 
+import com.smousseur.orbitlab.core.OrbitlabException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hipparchus.analysis.MultivariateFunction;
@@ -9,12 +10,14 @@ import org.hipparchus.optim.nonlinear.scalar.ObjectiveFunction;
 import org.hipparchus.optim.nonlinear.scalar.noderiv.CMAESOptimizer;
 import org.hipparchus.random.MersenneTwister;
 import org.hipparchus.util.FastMath;
+import org.jspecify.annotations.NonNull;
 import org.orekit.propagation.SpacecraftState;
 
 public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
   private static final Logger logger = LogManager.getLogger(CMAESTrajectoryOptimizer.class);
 
   public static final double EXCEPTION_PENALTY_COST = 1e10;
+  private static final int MAX_RESCUE_ATTEMPTS = 3;
 
   private final TrajectoryProblem problem;
   private final int maxEvaluations;
@@ -97,7 +100,7 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
           globalBestVars = result.bestVariables.clone();
         }
 
-        if (globalBestCost < stopFitness) {
+        if (globalBestCost < stopFitness || globalBestCost <= problem.getAcceptableCost()) {
           logger.info("Early stop: cost {} < stopFitness {}", globalBestCost, stopFitness);
           break;
         }
@@ -108,7 +111,9 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
     }
 
     // ── Phase 2: Local refinement around best found ──
-    if (globalBestVars != null && globalBestCost > stopFitness) {
+    if (globalBestVars != null
+        && globalBestCost > stopFitness
+        && globalBestCost > problem.getAcceptableCost()) {
       logger.info("Refinement phase starting from cost={}", globalBestCost);
       double[] refineSigma = new double[n];
       for (int i = 0; i < n; i++) {
@@ -130,10 +135,66 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
       } catch (Exception e) {
         logger.warn("Refinement failed: {}", e.getMessage());
       }
+
+      // ── Phase 3: Rescue — escape local minima if still stuck ──
+      if (globalBestVars != null && globalBestCost > problem.getAcceptableCost()) {
+        logger.warn(
+            "Stuck in local minimum (cost={}), launching rescue attempts...", globalBestCost);
+
+        for (int rescue = 0; rescue < MAX_RESCUE_ATTEMPTS; rescue++) {
+          // Each rescue attempt uses a completely different starting strategy
+          int rescuePopSize = FastMath.min(100 + 50 * rescue, 300);
+          int rescueEvals = evalsPerRun * 2; // give more budget
+
+          // Strategy: large sigma + Latin Hypercube-style random start far from current best
+          MersenneTwister rng = new MersenneTwister(rescue * 137L + System.nanoTime());
+          double[] rescueStart = new double[n];
+          double[] rescueSigma = new double[n];
+          for (int i = 0; i < n; i++) {
+            double range = upper[i] - lower[i];
+            // 50% chance: perturb from best; 50% chance: random in domain
+            if (rng.nextDouble() < 0.5) {
+              rescueStart[i] = globalBestVars[i] + rng.nextGaussian() * range * 0.3;
+            } else {
+              rescueStart[i] = lower[i] + rng.nextDouble() * range;
+            }
+            rescueStart[i] = FastMath.max(lower[i], FastMath.min(upper[i], rescueStart[i]));
+            rescueSigma[i] = range * 0.25; // wide exploration
+          }
+
+          try {
+            RunResult rescueResult =
+                runSingleCMAES(rescueStart, rescueSigma, rescuePopSize, rescueEvals);
+            totalEvaluations += rescueResult.evaluations;
+
+            logger.info(
+                "Rescue {}/{}: cost={}, evals={}",
+                rescue + 1,
+                MAX_RESCUE_ATTEMPTS,
+                rescueResult.bestCost,
+                rescueResult.evaluations);
+
+            if (rescueResult.bestCost < globalBestCost) {
+              globalBestCost = rescueResult.bestCost;
+              globalBestVars = rescueResult.bestVariables.clone();
+            }
+
+            if (globalBestCost <= problem.getAcceptableCost()) {
+              logger.info("Rescue succeeded: cost={}", globalBestCost);
+              break;
+            }
+          } catch (Exception e) {
+            logger.warn("Rescue {} failed: {}", rescue + 1, e.getMessage());
+          }
+        }
+      }
     }
 
     SpacecraftState bestState = problem.propagate(globalBestVars);
     logger.info("Final best cost={}, total evals={}", globalBestCost, totalEvaluations);
+    if (globalBestVars == null) {
+      throw new OrbitlabException("Optimization failed to find a valid solution");
+    }
     return new OptimizationResult(globalBestVars, globalBestCost, bestState, totalEvaluations);
   }
 
@@ -180,23 +241,7 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
           }
         };
 
-    ConvergenceChecker<PointValuePair> runChecker =
-        new ConvergenceChecker<>() {
-          private int iterationCount = 0;
-
-          @Override
-          public boolean converged(int iteration, PointValuePair previous, PointValuePair current) {
-            iterationCount++;
-            if (iterationCount < 100) return false;
-            double diff = FastMath.abs(previous.getValue() - current.getValue());
-            return diff <= absoluteTolerance
-                || diff <= relativeTolerance * FastMath.abs(current.getValue());
-          }
-        };
-
-    CMAESOptimizer optimizer =
-        new CMAESOptimizer(
-            maxEvals, stopFitness, true, 0, 0, new MersenneTwister(), false, runChecker);
+    CMAESOptimizer optimizer = getCmaesOptimizer(maxEvals);
 
     optimizer.optimize(
         new MaxEval(maxEvals),
@@ -208,5 +253,26 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
         new SimpleBounds(problem.getLowerBounds(), problem.getUpperBounds()));
 
     return new RunResult(runBestVars, runBestCostHolder[0], optimizer.getEvaluations());
+  }
+
+  private @NonNull CMAESOptimizer getCmaesOptimizer(int maxEvals) {
+    ConvergenceChecker<PointValuePair> runChecker =
+        new ConvergenceChecker<>() {
+          private int iterationCount = 0;
+
+          @Override
+          public boolean converged(int iteration, PointValuePair previous, PointValuePair current) {
+            iterationCount++;
+            if (iterationCount < 200) return false;
+            if (current.getValue() > problem.getAcceptableCost() && iterationCount < 500)
+              return false;
+            double diff = FastMath.abs(previous.getValue() - current.getValue());
+            return diff <= absoluteTolerance
+                || diff <= relativeTolerance * FastMath.abs(current.getValue());
+          }
+        };
+
+    return new CMAESOptimizer(
+        maxEvals, stopFitness, true, 0, 0, new MersenneTwister(), false, runChecker);
   }
 }

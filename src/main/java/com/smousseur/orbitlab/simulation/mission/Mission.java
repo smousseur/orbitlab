@@ -31,7 +31,7 @@ public abstract class Mission {
   private AbsoluteDate initialDate;
 
   private AbsoluteDate lastAltLogDate = null;
-  private static final double ALT_LOG_PERIOD_S = 5.0;
+  private static final double ALT_LOG_PERIOD_S = 10.0;
 
   public Mission(
       String name, Vehicle vehicle, List<MissionStage> stages, MissionObjective objective) {
@@ -79,7 +79,6 @@ public abstract class Mission {
 
   private double computeAltitudeMeters(SpacecraftState state) {
     OneAxisEllipsoid earth = OrekitService.get().getEarthEllipsoid();
-    Frame bodyFrame = earth.getBodyFrame(); // typically ITRF
     GeodeticPoint gp = earth.transform(state.getPosition(), state.getFrame(), state.getDate());
     return gp.getAltitude();
   }
@@ -104,10 +103,6 @@ public abstract class Mission {
 
     propagator.setInitialState(this.currentState);
     newStage.configure(propagator, this);
-  }
-
-  public void updateMass() {
-    this.currentState = this.currentState.withMass(vehicle.getMass());
   }
 
   public void addListener(MissionListener listener) {
@@ -156,5 +151,9 @@ public abstract class Mission {
 
   public List<MissionStage> getStages() {
     return stages;
+  }
+
+  public MissionStage getCurrentStage() {
+    return stages.get(currentStageIndex);
   }
 }
