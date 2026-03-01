@@ -94,14 +94,14 @@ public class GravityTurnProblem implements TrajectoryProblem {
 
     // 2. Apogee window — this is the key for staging
     if (apogee < constraints.targetApogee()) {
-      cost += 8.0 * sq((constraints.targetApogee() - apogee) / constraints.targetApogee());
+      cost += 6.0 * sq((constraints.targetApogee() - apogee) / constraints.targetApogee());
     } else if (apogee > constraints.maxApogee()) {
-      cost += 3.0 * sq((apogee - constraints.maxApogee()) / constraints.targetApogee());
+      cost += 2.0 * sq((apogee - constraints.maxApogee()) / constraints.targetApogee());
     }
 
-    // 3. Flight path angle — small = nearly horizontal
+    // 3. Flight path angle — normalized by target for consistent scale across altitudes
     double targetFPA = Math.toRadians(constraints.targetFlightPathAngleDeg());
-    cost += 2.0 * sq(flightPathAngle - targetFPA);
+    cost += 5.0 * sq((flightPathAngle - targetFPA) / targetFPA);
 
     // 4. Tangential velocity — must be high enough for orbit insertion
     double minVtan = constraints.minTangentialVelocity();
@@ -109,15 +109,13 @@ public class GravityTurnProblem implements TrajectoryProblem {
       cost += 5.0 * sq((minVtan - vTangential) / minVtan);
     }
 
-    // 5. Smooth guard rails
     // 5. Smooth guard rails — scaled to mission constraints
     double minSafeAlt = constraints.targetAltitude() * 0.45;
-    if (alt < minSafeAlt) cost += 100.0 * sq((minSafeAlt - alt) / minSafeAlt);
+    if (alt < minSafeAlt) cost += 50.0 * sq((minSafeAlt - alt) / minSafeAlt);
     if (ecc > 1.0) cost += 100.0 * sq(ecc - 1.0);
-    double minSafeApogee = constraints.targetApogee() * 0.6;
+    double minSafeApogee = constraints.targetApogee() * 0.5;
     if (apogee < minSafeApogee) cost += 50.0 * sq((minSafeApogee - apogee) / minSafeApogee);
-    double minSafeVel = constraints.minTangentialVelocity() * 1.3;
-    if (vNorm < minSafeVel) cost += 100.0 * sq((minSafeVel - vNorm) / minSafeVel);
+    if (vNorm < minVtan) cost += 50.0 * sq((minVtan - vNorm) / minVtan);
 
     return cost;
   }
