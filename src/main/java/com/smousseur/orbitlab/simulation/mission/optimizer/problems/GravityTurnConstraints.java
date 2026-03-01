@@ -36,32 +36,32 @@ public record GravityTurnConstraints(
     t = FastMath.max(0, t); // clamp below
 
     // ── Anchor values (empirical) ──
-    // At 185 km: MECO ~55 km, apogee target ~150 km, max apogee ~178 km, FPA ~12°
-    // At 400 km: MECO  65 km, apogee target  170 km, max apogee  280 km, FPA  18°
+    // At 185 km: MECO ~50 km, apogee target ~155 km, max apogee ~200 km, FPA ~10°
+    // At 400 km: MECO  65 km, apogee target  200 km, max apogee  350 km, FPA  15°
 
     // Non-linear blend: use t^0.6 to give more weight to low-altitude behavior
     double blend = FastMath.pow(t, 0.6);
 
     // MECO altitude
-    double mecoAltitude = lerp(55_000, 65_000, blend);
-    mecoAltitude = FastMath.clamp(mecoAltitude, 50_000, 200_000);
+    double mecoAltitude = lerp(50_000, 65_000, blend);
+    mecoAltitude = FastMath.clamp(mecoAltitude, 45_000, 200_000);
 
-    // Target apogee — at low alt, apogee must be very close to target
-    double targetApogee = lerp(150_000, 170_000, blend);
-    targetApogee = FastMath.max(targetApogee, mecoAltitude * 1.5);
+    // Target apogee — wider window for better optimizer convergence
+    double targetApogee = lerp(155_000, 200_000, blend);
+    targetApogee = FastMath.max(targetApogee, mecoAltitude * 2.0);
 
-    // Max apogee — at low alt, very tight window; at high alt, more margin
-    double maxApogee = lerp(178_000, 280_000, blend);
-    maxApogee = FastMath.max(maxApogee, targetApogee * 1.15);
+    // Max apogee — generous window so the optimizer can explore freely
+    double maxApogee = lerp(200_000, 350_000, blend);
+    maxApogee = FastMath.max(maxApogee, targetApogee * 1.25);
 
-    // Min tangential velocity (~20% of v_circ at target)
+    // Min tangential velocity (~25% of v_circ at target)
     double rTarget = rEarth + missionTargetAltitude;
     double vCircTarget = FastMath.sqrt(mu / rTarget);
-    double minTangentialVelocity = vCircTarget * 0.20;
+    double minTangentialVelocity = vCircTarget * 0.25;
 
     // Flight path angle: lower orbit = more horizontal MECO
-    double fpa = lerp(12.0, 18.0, blend);
-    fpa = FastMath.clamp(fpa, 10.0, 28.0);
+    double fpa = lerp(10.0, 15.0, blend);
+    fpa = FastMath.clamp(fpa, 8.0, 28.0);
 
     return new GravityTurnConstraints(
         mecoAltitude, targetApogee, maxApogee, minTangentialVelocity, fpa);
