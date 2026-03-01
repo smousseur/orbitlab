@@ -33,6 +33,11 @@ public class GravityTurnProblem implements TrajectoryProblem {
   }
 
   @Override
+  public double getAcceptableCost() {
+    return 0.01;
+  }
+
+  @Override
   public int getNumVariables() {
     return 3;
   }
@@ -105,10 +110,14 @@ public class GravityTurnProblem implements TrajectoryProblem {
     }
 
     // 5. Smooth guard rails
-    if (alt < 30_000) cost += 100.0 * sq((30_000 - alt) / 30_000);
+    // 5. Smooth guard rails — scaled to mission constraints
+    double minSafeAlt = constraints.targetAltitude() * 0.45;
+    if (alt < minSafeAlt) cost += 100.0 * sq((minSafeAlt - alt) / minSafeAlt);
     if (ecc > 1.0) cost += 100.0 * sq(ecc - 1.0);
-    if (apogee < 100_000) cost += 50.0 * sq((100_000 - apogee) / 100_000);
-    if (vNorm < 2000) cost += 100.0 * sq((2000 - vNorm) / 2000);
+    double minSafeApogee = constraints.targetApogee() * 0.6;
+    if (apogee < minSafeApogee) cost += 50.0 * sq((minSafeApogee - apogee) / minSafeApogee);
+    double minSafeVel = constraints.minTangentialVelocity() * 1.3;
+    if (vNorm < minSafeVel) cost += 100.0 * sq((minSafeVel - vNorm) / minSafeVel);
 
     return cost;
   }

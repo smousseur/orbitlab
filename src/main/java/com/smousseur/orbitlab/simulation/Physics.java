@@ -39,10 +39,6 @@ public final class Physics {
         );
   }
 
-  public static double getLaunchAzimuth() {
-    return getLaunchAzimuth(0, 0);
-  }
-
   /**
    * Gets launch azimuth.
    *
@@ -122,5 +118,9 @@ public final class Physics {
    */
   public static double sq(double x) {
     return x * x;
+  }
+
+  public static double lerp(double a, double b, double t) {
+    return a + (b - a) * t;
   }
 }

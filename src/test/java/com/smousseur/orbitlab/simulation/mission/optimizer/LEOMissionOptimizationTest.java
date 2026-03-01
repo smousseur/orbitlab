@@ -80,7 +80,7 @@ public class LEOMissionOptimizationTest extends AbstractTrajectoryOptimizerTest 
             "Gravity turn",
             ASCENSION_DURATION,
             3.0,
-            new GravityTurnConstraints(65_000, 170_000, 280_000, 1500.0, 18.0)),
+            GravityTurnConstraints.forMissionAltitude(TARGET_ALTITUDE)),
         new JettisonStage("Jettison"),
         new TransfertTwoManeuverStage("Transfert", TARGET_ALTITUDE),
         new CoastingStage("Coasting", null));

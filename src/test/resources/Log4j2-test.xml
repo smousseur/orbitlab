@@ -4,6 +4,17 @@
     <Console name="Console" target="SYSTEM_OUT">
       <PatternLayout pattern="%d{HH:mm:ss.SSS} %-5p %c{1} - %m%n"/>
     </Console>
+    <RollingFile name="TestFile"
+                 fileName="logs/test-output.log"
+                 filePattern="logs/test-output-%d{yyyy-MM-dd-HH-mm-ss}.log" append="true">
+      <PatternLayout
+              pattern="%d{HH:mm:ss.SSS} %-5p %c{1} - %m%n"/>
+      <Policies>
+        <TimeBasedTriggeringPolicy interval="1"/>
+        <SizeBasedTriggeringPolicy size="50 MB"/>
+      </Policies>
+
+    </RollingFile>
   </Appenders>
   <Loggers>
     <Root level="info">

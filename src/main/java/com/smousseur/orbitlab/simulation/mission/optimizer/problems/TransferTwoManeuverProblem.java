@@ -44,7 +44,7 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
 
   // ── Constraint thresholds ──
   private static final double ALT_MIN = 80_000;
-  private static final double PERIAPSIS_MIN = 100_000;
+  private final double periapsisMin;
 
   private final double altMax; // max altitude ceiling = target + margin
 
@@ -82,6 +82,7 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
     this.aTarget = rTarget;
     this.vCircTarget = FastMath.sqrt(mu / rTarget);
     this.altMax = targetAltitude * 1.25;
+    this.periapsisMin = FastMath.max(100_000, targetAltitude * 0.5);
 
     // ── Account for the actual orbital state (not just altitude) ──
     double aInitial = initialOrbit.getA();
@@ -151,12 +152,12 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
   public double[] getLowerBounds() {
     return new double[] {
       0.0,
-      guessDt1 * 0.5,
-      -FastMath.PI / 4.0, // burn 1: ±45° (near-tangential raise)
+      FastMath.max(guessDt1 * 0.5, 0.5),
+      -FastMath.PI / 4.0,
       -FastMath.PI / 12.0,
-      guessDtCoast * 0.5,
-      guessDt2 * 0.3,
-      -FastMath.PI, // burn 2: full ±180° (may need retrograde component)
+      FastMath.max(guessDtCoast * 0.5, 30.0),
+      FastMath.max(guessDt2 * 0.3, 0.5),
+      -FastMath.PI,
       -FastMath.PI / 6.0
     };
   }
@@ -165,12 +166,12 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
   public double[] getUpperBounds() {
     return new double[] {
       guessT1 * 2.0 + 120.0,
-      guessDt1 * 2.0,
+      FastMath.max(guessDt1 * 3.0, 15.0),
       FastMath.PI / 4.0,
       FastMath.PI / 12.0,
-      guessDtCoast * 2.0,
-      guessDt2 * 10.0,
-      FastMath.PI, // burn 2: full ±180°
+      guessDtCoast * 2.5,
+      FastMath.max(guessDt2 * 10.0, 30.0),
+      FastMath.PI,
       FastMath.PI / 6.0
     };
   }
@@ -179,12 +180,12 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
   public double[] getInitialSigma() {
     return new double[] {
       FastMath.max(guessT1 * 0.3, 30.0),
-      guessDt1 * 0.3,
+      FastMath.max(guessDt1 * 0.5, 3.0),
       FastMath.PI / 8.0,
       FastMath.PI / 24.0,
-      guessDtCoast * 0.2,
-      guessDt2 * 2.0,
-      FastMath.PI / 3.0, // wider exploration for burn 2 angle
+      FastMath.max(guessDtCoast * 0.3, 20.0),
+      FastMath.max(guessDt2 * 2.0, 5.0),
+      FastMath.PI / 3.0,
       FastMath.PI / 12.0
     };
   }
@@ -218,7 +219,7 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
     double barrier = 0.0;
 
     double periapsisAlt = periapsis - EARTH_RADIUS;
-    barrier += barrierBelow(periapsisAlt, PERIAPSIS_MIN);
+    barrier += barrierBelow(periapsisAlt, periapsisMin);
 
     // ── Max altitude: direct quadratic penalty (simpler, more predictable) ──
     double altMaxPenalty = 0.0;
