@@ -14,39 +14,46 @@ import org.orekit.propagation.SpacecraftState;
 import org.orekit.utils.Constants;
 
 /**
- * Two-burn transfer from an elliptical orbit to a circular orbit at an altitude above the initial
- * apogee.
+ * Optimization problem for a two-burn orbit transfer where only burn 1 is optimized.
  *
- * <p>Parameter vector (8 dimensions): [0] t1 — offset of burn 1 start from epoch (s) [1] dt1 —
- * duration of burn 1 (s) [2] alpha1 — in-plane thrust angle in TNW frame (rad) [3] beta1 —
- * out-of-plane thrust angle in TNW frame (rad) [4] dtCoast — coast duration between end of burn 1
- * and start of burn 2 (s) [5] dt2 — duration of burn 2 (s) [6] alpha2 — in-plane thrust angle in
- * TNW frame (rad) [7] beta2 — out-of-plane thrust angle in TNW frame (rad)
+ * <p>Burn 1 (4 CMA-ES parameters) places the spacecraft on an elliptical transfer orbit. Burn 2 is
+ * a deterministic prograde circularization at apoapsis, computed by the maneuver class.
  *
- * <p>The start of burn 2 is derived: t2 = t1 + dt1 + dtCoast.
+ * <p>The cost function evaluates the <b>final</b> orbit after both burns — this is what matters.
+ * Because burn 2 is deterministic, CMA-ES only needs to find the burn 1 parameters that produce a
+ * transfer orbit from which the circularization yields the best circular orbit.
+ *
+ * <p>Parameter vector (4 dimensions):
+ *
+ * <ul>
+ *   <li>[0] t1 — offset of burn 1 start from epoch (s)
+ *   <li>[1] dt1 — duration of burn 1 (s)
+ *   <li>[2] alpha1 — in-plane thrust angle in TNW frame (rad)
+ *   <li>[3] beta1 — out-of-plane thrust angle in TNW frame (rad)
+ * </ul>
  */
 public class TransferTwoManeuverProblem implements TrajectoryProblem {
-  private static final double G0 = Constants.G0_STANDARD_GRAVITY;
+  private static final Logger logger = LogManager.getLogger(TransferTwoManeuverProblem.class);
   private static final double EARTH_RADIUS = Constants.WGS84_EARTH_EQUATORIAL_RADIUS;
 
   private final TransfertTwoManeuver maneuver;
   private final SpacecraftState initialState;
 
   // ── Primary objective weights ──
-  private static final double W_APO = 1.5;
-  private static final double W_PERI = 1.5;
-  private static final double W_E = 3.0;
-  private static final double W_V = 0.5;
+  private static final double W_APO = 3.0;
+  private static final double W_PERI = 5.0;
+  private static final double W_E = 10.0;
+  private static final double W_V = 1.0;
 
   // ── Constraint barrier weight ──
-  private static final double W_BARRIER = 0.1; // soft barriers (altitude min, periapsis)
-  private static final double W_ALT_MAX = 1.0; // separate, stronger weight for max altitude
+  private static final double W_BARRIER = 0.1;
+  private static final double W_ALT_MAX = 1.0;
 
   // ── Constraint thresholds ──
   private static final double ALT_MIN = 80_000;
   private static final double PERIAPSIS_MIN = 100_000;
 
-  private final double altMax; // max altitude ceiling = target + margin
+  private final double altMax;
 
   // Precomputed values
   private final double aTarget;
@@ -55,18 +62,7 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
   // Hohmann-like guess values (precomputed)
   private final double guessT1;
   private final double guessDt1;
-  private final double guessDtCoast;
-  private final double guessDt2;
-  private final double guessAlpha1;
 
-  /**
-   * Instantiates a new Two maneuver transfer problem.
-   *
-   * @param maneuver the maneuver
-   * @param initialState the initial state
-   * @param targetAltitude altitude of the target circular orbit (m)
-   * @param propulsionSystem the propulsion system
-   */
   public TransferTwoManeuverProblem(
       TransfertTwoManeuver maneuver,
       SpacecraftState initialState,
@@ -83,68 +79,48 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
     this.vCircTarget = FastMath.sqrt(mu / rTarget);
     this.altMax = targetAltitude * 1.25;
 
-    // ── Account for the actual orbital state (not just altitude) ──
     double aInitial = initialOrbit.getA();
     double eInitial = initialOrbit.getE();
 
-    // Time to apoapsis — burn 1 should happen near apoapsis to raise periapsis
+    // ── Time to apoapsis ──
     double meanAnomaly = initialOrbit.getMeanAnomaly();
     double initialPeriod = 2.0 * FastMath.PI * FastMath.sqrt(aInitial * aInitial * aInitial / mu);
-
-    // Mean anomaly at apoapsis = π
-    double meanAnomalyAtApoapsis = FastMath.PI;
-    double dMeanAnomaly = meanAnomalyAtApoapsis - meanAnomaly;
+    double dMeanAnomaly = FastMath.PI - meanAnomaly;
     if (dMeanAnomaly < 0) dMeanAnomaly += 2.0 * FastMath.PI;
     double timeToApoapsis = dMeanAnomaly / (2.0 * FastMath.PI) * initialPeriod;
 
-    // Apoapsis radius — this is where burn 1 should happen
+    // ── Hohmann estimate for burn 1 ──
     double rApoapsis = aInitial * (1.0 + eInitial);
-
-    // Transfer from apoapsis to target circular orbit
     double aTransfer = (rApoapsis + rTarget) / 2.0;
-    double transferPeriod =
-        2.0 * FastMath.PI * FastMath.sqrt(aTransfer * aTransfer * aTransfer / mu);
 
-    // Velocity at apoapsis on current orbit
     double vAtApoapsis = FastMath.sqrt(mu * (2.0 / rApoapsis - 1.0 / aInitial));
-
-    // Velocity at apoapsis needed for transfer orbit
     double vTransferAtApoapsis = FastMath.sqrt(mu * (2.0 / rApoapsis - 1.0 / aTransfer));
     double dv1 = vTransferAtApoapsis - vAtApoapsis;
 
-    // Circularization at target
-    double vApogeeTransfer = FastMath.sqrt(mu * (2.0 / rTarget - 1.0 / aTransfer));
-    double dv2 = vCircTarget - vApogeeTransfer;
-
-    // Burn at apoapsis → no radial velocity → alpha1 = 0 is correct
     this.guessT1 = timeToApoapsis;
-    this.guessAlpha1 = 0.0; // tangential at apoapsis
 
     double initialMass = initialState.getMass();
     double thrust = propulsionSystem.thrust();
     double isp = propulsionSystem.isp();
 
     this.guessDt1 = Physics.computeBurnDuration(FastMath.abs(dv1), initialMass, isp, thrust);
-    double massAfterBurn1 = initialMass - (thrust / (isp * G0)) * guessDt1;
-    this.guessDt2 = Physics.computeBurnDuration(FastMath.abs(dv2), massAfterBurn1, isp, thrust);
-
-    // Coast = half transfer period (apoapsis to target apogee)
-    this.guessDtCoast = transferPeriod / 2.0;
+    logger.info("Initial burn 1 duration: {}", guessDt1);
+    logger.info("Initial state orbit: {}", new KeplerianOrbit(initialState.getOrbit()));
   }
 
   @Override
   public double getAcceptableCost() {
-    return 5e-6;
+    return 5e-7;
   }
 
   @Override
   public int getNumVariables() {
-    return 8;
+    return 4;
   }
 
   @Override
   public double[] buildInitialGuess() {
-    return new double[] {guessT1, guessDt1, guessAlpha1, 0.0, guessDtCoast, guessDt2, 0.0, 0.0};
+    return new double[] {guessT1, guessDt1, 0.0, 0.0};
   }
 
   @Override
@@ -152,26 +128,15 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
     return new double[] {
       0.0,
       guessDt1 * 0.5,
-      -FastMath.PI / 4.0, // burn 1: ±45° (near-tangential raise)
-      -FastMath.PI / 12.0,
-      guessDtCoast * 0.5,
-      guessDt2 * 0.3,
-      -FastMath.PI, // burn 2: full ±180° (may need retrograde component)
-      -FastMath.PI / 6.0
+      -FastMath.PI / 4.0, // alpha1: prograde ± 45°
+      -FastMath.PI / 12.0 // beta1: small out-of-plane
     };
   }
 
   @Override
   public double[] getUpperBounds() {
     return new double[] {
-      guessT1 * 2.0 + 120.0,
-      guessDt1 * 2.0,
-      FastMath.PI / 4.0,
-      FastMath.PI / 12.0,
-      guessDtCoast * 2.0,
-      guessDt2 * 10.0,
-      FastMath.PI, // burn 2: full ±180°
-      FastMath.PI / 6.0
+      guessT1 * 2.0 + 120.0, guessDt1 * 3.0, FastMath.PI / 4.0, FastMath.PI / 12.0
     };
   }
 
@@ -179,13 +144,9 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
   public double[] getInitialSigma() {
     return new double[] {
       FastMath.max(guessT1 * 0.3, 30.0),
-      guessDt1 * 0.3,
+      guessDt1 * 0.5, // était 0.3, passer à 0.5
       FastMath.PI / 8.0,
-      FastMath.PI / 24.0,
-      guessDtCoast * 0.2,
-      guessDt2 * 2.0,
-      FastMath.PI / 3.0, // wider exploration for burn 2 angle
-      FastMath.PI / 12.0
+      FastMath.PI / 24.0
     };
   }
 
@@ -198,13 +159,17 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
   public double computeCost(SpacecraftState state) {
     KeplerianOrbit finalOrbit = (KeplerianOrbit) OrbitType.KEPLERIAN.convertType(state.getOrbit());
 
-    // ── Primary objective: circular orbit at target altitude ──
     double apoapsis = finalOrbit.getA() * (1.0 + finalOrbit.getE());
     double periapsis = finalOrbit.getA() * (1.0 - finalOrbit.getE());
     double rTarget = aTarget;
 
-    double errApo = (apoapsis - rTarget) / rTarget;
-    double errPeri = (periapsis - rTarget) / rTarget;
+    // Normalize by target altitude — sensitive to km-scale errors
+    double targetAlt = rTarget - EARTH_RADIUS;
+    double apoAlt = apoapsis - EARTH_RADIUS;
+    double periAlt = periapsis - EARTH_RADIUS;
+
+    double errApo = (apoAlt - targetAlt) / targetAlt;
+    double errPeri = (periAlt - targetAlt) / targetAlt;
     double errE = finalOrbit.getE();
     double errV = Physics.computeRadialVelocity(state) / vCircTarget;
 
@@ -214,22 +179,14 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
             + W_E * errE * errE
             + W_V * errV * errV;
 
-    // ── Soft barriers for safety constraints ──
     double barrier = 0.0;
-
     double periapsisAlt = periapsis - EARTH_RADIUS;
     barrier += barrierBelow(periapsisAlt, PERIAPSIS_MIN);
 
-    // ── Max altitude: direct quadratic penalty (simpler, more predictable) ──
     double altMaxPenalty = 0.0;
-    double barrierAltLow;
-
     MinAltitudeTracker tracker = maneuver.getLastAltitudeTracker();
     if (tracker != null) {
-      barrierAltLow = barrierBelow(tracker.getMinAltitude(), ALT_MIN);
-      barrier += barrierAltLow;
-
-      // Direct quadratic penalty for exceeding max altitude corridor
+      barrier += barrierBelow(tracker.getMinAltitude(), ALT_MIN);
       if (tracker.getMaxAltitude() > altMax) {
         double excess = (tracker.getMaxAltitude() - altMax) / altMax;
         altMaxPenalty = excess * excess;
@@ -239,15 +196,14 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
     return objective + W_BARRIER * barrier + W_ALT_MAX * altMaxPenalty;
   }
 
-  /**
-   * Smooth penalty when value drops below threshold. Returns 0 when value >= threshold, grows
-   * smoothly below. Uses a "softplus" shape: penalty = log(1 + exp(-k * (value - threshold) /
-   * threshold))
-   */
   private static double barrierBelow(double value, double threshold) {
     double normalized = (value - threshold) / FastMath.abs(threshold);
     double k = 10.0;
     if (normalized > 5.0 / k) return 0.0;
     return FastMath.log1p(FastMath.exp(-k * normalized));
+  }
+
+  public TransfertTwoManeuver getManeuver() {
+    return maneuver;
   }
 }

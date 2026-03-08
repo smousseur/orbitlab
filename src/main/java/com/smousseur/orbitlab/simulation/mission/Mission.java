@@ -77,7 +77,7 @@ public abstract class Mission {
     return lastAltLogDate == null || date.durationFrom(lastAltLogDate) >= ALT_LOG_PERIOD_S;
   }
 
-  private double computeAltitudeMeters(SpacecraftState state) {
+  public double computeAltitudeMeters(SpacecraftState state) {
     OneAxisEllipsoid earth = OrekitService.get().getEarthEllipsoid();
     GeodeticPoint gp = earth.transform(state.getPosition(), state.getFrame(), state.getDate());
     return gp.getAltitude();

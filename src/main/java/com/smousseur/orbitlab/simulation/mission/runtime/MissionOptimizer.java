@@ -3,11 +3,15 @@ package com.smousseur.orbitlab.simulation.mission.runtime;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionStage;
 import com.smousseur.orbitlab.simulation.mission.OptimizableMissionStage;
+import com.smousseur.orbitlab.simulation.mission.maneuver.TransfertTwoManeuver;
 import com.smousseur.orbitlab.simulation.mission.optimizer.CMAESTrajectoryOptimizer;
 import com.smousseur.orbitlab.simulation.mission.optimizer.OptimizationResult;
 import com.smousseur.orbitlab.simulation.mission.optimizer.TrajectoryProblem;
 import java.util.LinkedHashMap;
 import java.util.Map;
+
+import com.smousseur.orbitlab.simulation.mission.optimizer.problems.TransferTwoManeuverProblem;
+import com.smousseur.orbitlab.simulation.mission.stage.TransfertTwoManeuverStage;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.orekit.propagation.SpacecraftState;
@@ -31,6 +35,7 @@ public class MissionOptimizer {
     Map<String, OptimizationResult> results = new LinkedHashMap<>();
 
     for (MissionStage stage : mission.getStages()) {
+      logger.info("Current mass = {}", mission.getCurrentState().getMass());
       if (stage instanceof OptimizableMissionStage<?> optimizable) {
         logger.info("Optimizing stage '{}'...", stage.getName());
 
@@ -54,6 +59,11 @@ public class MissionOptimizer {
             result.bestCost(),
             result.bestVariables(),
             result.evaluations());
+        if (stage instanceof TransfertTwoManeuverStage) {
+          logger.info(
+              "Burn2 : {}",
+              ((TransferTwoManeuverProblem) problem).getManeuver().getLastResolvedBurn2());
+        }
         mission.setCurrentState(problem.propagate(result.bestVariables()));
       } else {
         logger.info("Propagating non-optimizable stage '{}'...", stage.getName());

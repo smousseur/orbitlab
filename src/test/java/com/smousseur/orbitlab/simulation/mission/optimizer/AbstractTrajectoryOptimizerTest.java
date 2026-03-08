@@ -30,16 +30,16 @@ public class AbstractTrajectoryOptimizerTest {
 
     void update(Mission mission, String coastPhaseName) {
       SpacecraftState state = mission.getCurrentState();
-      double altitude =
-          state.getPVCoordinates().getPosition().getNorm()
-              - Constants.WGS84_EARTH_EQUATORIAL_RADIUS;
-      MissionStage currentStage = mission.getCurrentStage();
-      if (coastPhaseName.equals(currentStage.getName())) {
-        if (altitude < minCoastAltitude) {
-          minCoastAltitude = altitude;
-        }
-        if (altitude > maxCoastAltitude) {
-          maxCoastAltitude = altitude;
+      double altitude = mission.computeAltitudeMeters(state);
+      if (mission.isOnGoing()) {
+        MissionStage currentStage = mission.getCurrentStage();
+        if (coastPhaseName.equals(currentStage.getName())) {
+          if (altitude < minCoastAltitude) {
+            minCoastAltitude = altitude;
+          }
+          if (altitude > maxCoastAltitude) {
+            maxCoastAltitude = altitude;
+          }
         }
       }
     }

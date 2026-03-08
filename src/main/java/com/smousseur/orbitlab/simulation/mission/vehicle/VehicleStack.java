@@ -5,6 +5,11 @@ import java.util.List;
 public record VehicleStack(List<Vehicle> vehicles) implements Vehicle {
 
   @Override
+  public Vehicle getStage(int index) {
+    return vehicles.get(index);
+  }
+
+  @Override
   public double dryMass() {
     return vehicles.stream().mapToDouble(Vehicle::dryMass).sum();
   }
