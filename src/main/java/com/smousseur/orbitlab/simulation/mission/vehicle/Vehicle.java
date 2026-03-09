@@ -7,6 +7,18 @@ public interface Vehicle {
 
   double propellantCapacity();
 
+  default Vehicle getFirstStage() {
+    return getStage(0);
+  }
+
+  default Vehicle getSecondStage() {
+    return getStage(1);
+  }
+
+  default Vehicle getStage(int index) {
+    return this;
+  }
+
   default double getMass() {
     return dryMass() + propellantCapacity();
   }
@@ -21,6 +33,10 @@ public interface Vehicle {
   }
 
   PropulsionSystem propulsion();
+
+  default void jettison() {
+    jettison(0);
+  }
 
   default void jettison(int index) {
     throw new OrbitlabException("Vehicle jettison unsupported for " + getClass().getSimpleName());

@@ -2,15 +2,18 @@ package com.smousseur.orbitlab.simulation.mission.maneuver;
 
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.Physics;
-import com.smousseur.orbitlab.simulation.mission.detector.MassDepletionDetector;
-import com.smousseur.orbitlab.simulation.mission.stage.ascent.GravityTurnStage;
 import com.smousseur.orbitlab.simulation.mission.attitude.GravityTurnAttitudeProvider;
+import com.smousseur.orbitlab.simulation.mission.stage.ascent.GravityTurnStage;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropulsionSystem;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
+import org.hipparchus.ode.events.Action;
 import org.hipparchus.util.FastMath;
 import org.orekit.forces.maneuvers.ConstantThrustManeuver;
 import org.orekit.propagation.SpacecraftState;
+import org.orekit.propagation.events.DateDetector;
+import org.orekit.propagation.events.EventDetector;
+import org.orekit.propagation.events.handlers.EventHandler;
 import org.orekit.propagation.numerical.NumericalPropagator;
 import org.orekit.time.AbsoluteDate;
 import org.orekit.utils.Constants;
@@ -25,37 +28,37 @@ public class GravityTurnManeuver {
   private final Vehicle vehicle;
   private final double pitchKickAngleRad;
   private final double launchAzimuth;
-  private final double verticalBurnDuration;
+  private final double usedAscensionPropellant;
 
   public GravityTurnManeuver(
-      Vehicle vehicle,
-      double pitchKickAngleRad,
-      double launchAzimuth,
-      double verticalBurnDuration) {
+      Vehicle vehicle, double ascensionDuration, double pitchKickAngleRad, double launchAzimuth) {
     this.vehicle = vehicle;
     this.pitchKickAngleRad = pitchKickAngleRad;
     this.launchAzimuth = launchAzimuth;
-    this.verticalBurnDuration = verticalBurnDuration;
+    this.usedAscensionPropellant =
+        vehicle.getFirstStage().propulsion().massBurnt(ascensionDuration);
   }
 
   /** Decoded physical parameters from the raw optimization variables. */
   public record GravityTurnParams(
-      double transitionTime, double exponent, double remainingBurnTime) {}
+      double transitionTime, double exponent, double burn1Duration, double burn2Duration) {}
 
   /** Decodes raw CMA-ES variables into physical parameters. */
   public GravityTurnParams decode(double[] variables) {
     double transitionTime = variables[0];
     double exponent = variables[1];
-    double propFraction = variables[2];
 
-    PropulsionSystem propulsion = vehicle.propulsion();
-    double massFlowRate = propulsion.thrust() / (propulsion.isp() * Constants.G0_STANDARD_GRAVITY);
-    double propToUse = propFraction * vehicle.getCurrentStagePropellantMass();
-    double propUsedVertical = massFlowRate * verticalBurnDuration;
-    double remainingBurnTime = (propToUse - propUsedVertical) / massFlowRate;
-    remainingBurnTime = FastMath.max(10.0, remainingBurnTime);
+    // Burn1 duration until propellant exhaustion
+    PropulsionSystem prop1 = vehicle.getFirstStage().propulsion();
+    double massFlowRate1 = prop1.thrust() / (prop1.isp() * Constants.G0_STANDARD_GRAVITY);
+    double burn1Duration =
+        (vehicle.getFirstStage().propellantCapacity() - usedAscensionPropellant) / massFlowRate1;
 
-    return new GravityTurnParams(transitionTime, exponent, remainingBurnTime);
+    // Burn2 duration after jettison until transitionTime
+    double burn2Duration = transitionTime - burn1Duration;
+    burn2Duration = FastMath.max(0.0, burn2Duration);
+
+    return new GravityTurnParams(transitionTime, exponent, burn1Duration, burn2Duration);
   }
 
   /** Applies the pitch kick to the state (entry into gravity turn). */
@@ -78,18 +81,50 @@ public class GravityTurnManeuver {
 
     GravityTurnAttitudeProvider attitudeProvider =
         new GravityTurnAttitudeProvider(kickDate, params.transitionTime(), params.exponent());
-
     propagator.setAttitudeProvider(attitudeProvider);
 
-    ConstantThrustManeuver burn =
+    // Burn 1
+    PropulsionSystem propulsion1 = vehicle.getFirstStage().propulsion();
+    ConstantThrustManeuver burn1 =
         new ConstantThrustManeuver(
             kickDate.shiftedBy(1.0e-3),
-            params.remainingBurnTime(),
-            propulsion.thrust(),
-            propulsion.isp(),
+            params.burn1Duration,
+            propulsion1.thrust(),
+            propulsion1.isp(),
             Vector3D.PLUS_I);
+    propagator.addForceModel(burn1);
 
-    propagator.addForceModel(burn);
+    AbsoluteDate jettisonDate =
+        kickDate.shiftedBy(1.0e-3).shiftedBy(params.burn1Duration).shiftedBy(1.0e-3);
+    // Jettison
+    DateDetector jettisonDetector =
+        new DateDetector(jettisonDate)
+            .withHandler(
+                new EventHandler() {
+                  @Override
+                  public Action eventOccurred(
+                      SpacecraftState s, EventDetector detector, boolean increasing) {
+                    return Action.RESET_STATE;
+                  }
+
+                  @Override
+                  public SpacecraftState resetState(
+                      EventDetector detector, SpacecraftState oldState) {
+                    double newMass = vehicle.getMass() - vehicle.getFirstStage().getMass();
+                    return oldState.withMass(newMass);
+                  }
+                });
+    propagator.addEventDetector(jettisonDetector);
+    // Burn 2
+    PropulsionSystem propulsion2 = vehicle.getSecondStage().propulsion();
+    ConstantThrustManeuver burn2 =
+        new ConstantThrustManeuver(
+            jettisonDate.shiftedBy(1.0e-3),
+            params.burn2Duration,
+            propulsion2.thrust(),
+            propulsion2.isp(),
+            Vector3D.PLUS_I);
+    propagator.addForceModel(burn2);
   }
 
   /**
@@ -97,31 +132,17 @@ public class GravityTurnManeuver {
    * penalizing fallback state on error.
    */
   public SpacecraftState propagateForOptimization(
-      SpacecraftState initialState, double minAllowableMass, double[] variables) {
+      SpacecraftState initialState, double[] variables) {
     GravityTurnParams params = decode(variables);
     SpacecraftState kickedState = applyKick(initialState);
 
-    NumericalPropagator propagator = OrekitService.get().createSimplePropagator();
+    NumericalPropagator propagator = OrekitService.get().createOptimizationPropagator();
     propagator.setInitialState(kickedState);
     configure(propagator, kickedState, params);
-    propagator.addEventDetector(new MassDepletionDetector(minAllowableMass));
-    AbsoluteDate endDate = kickedState.getDate().shiftedBy(params.remainingBurnTime() + 1.0);
+    AbsoluteDate endDate = kickedState.getDate().shiftedBy(params.transitionTime);
 
     try {
-      SpacecraftState finalState = propagator.propagate(endDate);
-      // If propagation was cut short by MassDepletionDetector, return penalty state
-      double timeDiff = FastMath.abs(finalState.getDate().durationFrom(endDate));
-      if (timeDiff > 1.0) {
-        return kickedState; // penalty: propellant exhausted before end of burn
-      }
-
-      // What we actually want is the dry mass of the first vehicle only
-      double jettisonMass = vehicle.getFirstStageDryMass();
-      double postJettisonMass = finalState.getMass() - jettisonMass;
-      if (postJettisonMass <= 0) {
-        return kickedState; // penalty
-      }
-      return finalState.withMass(postJettisonMass);
+      return propagator.propagate(endDate);
     } catch (Exception e) {
       return kickedState; // penalty
     }

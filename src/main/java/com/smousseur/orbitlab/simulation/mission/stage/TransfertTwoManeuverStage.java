@@ -5,6 +5,8 @@ import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionStage;
 import com.smousseur.orbitlab.simulation.mission.OptimizableMissionStage;
 import com.smousseur.orbitlab.simulation.mission.maneuver.TransfertTwoManeuver;
+import com.smousseur.orbitlab.simulation.mission.maneuver.TransfertTwoManeuver.Burn1Params;
+import com.smousseur.orbitlab.simulation.mission.maneuver.TransfertTwoManeuver.ResolvedBurns;
 import com.smousseur.orbitlab.simulation.mission.optimizer.OptimizationResult;
 import com.smousseur.orbitlab.simulation.mission.optimizer.problems.TransferTwoManeuverProblem;
 import org.hipparchus.ode.events.Action;
@@ -32,11 +34,18 @@ public class TransfertTwoManeuverStage extends MissionStage
     }
     TransfertTwoManeuver maneuver = new TransfertTwoManeuver(mission.getVehicle(), targetAltitude);
     SpacecraftState state = mission.getCurrentState();
-    TransfertTwoManeuver.TransfertTwoManeuverParams params =
-        maneuver.decode(optimizationResult.bestVariables());
-    maneuver.configure(propagator, state, params);
-    double maneuverTime = params.t1() + params.dt1() + params.dtCoast() + params.dt2();
-    // MECO event → transition to next stage
+
+    Burn1Params params = maneuver.decode(optimizationResult.bestVariables());
+
+    ResolvedBurns burns = maneuver.resolveBurnsFromInitial(state, params);
+    if (burns == null) {
+      throw new OrbitlabException(
+          "TransfertStage '" + getName() + "': failed to resolve burns at runtime");
+    }
+
+    maneuver.configure(propagator, state, params, burns);
+
+    double maneuverTime = maneuver.totalDuration(params, burns);
     AbsoluteDate mecoDate = state.getDate().shiftedBy(maneuverTime);
     propagator.addEventDetector(
         new DateDetector(mecoDate)
@@ -51,7 +60,10 @@ public class TransfertTwoManeuverStage extends MissionStage
   public TransferTwoManeuverProblem buildProblem(Mission mission) {
     TransfertTwoManeuver maneuver = new TransfertTwoManeuver(mission.getVehicle(), targetAltitude);
     return new TransferTwoManeuverProblem(
-        maneuver, mission.getCurrentState(), targetAltitude, mission.getVehicle().propulsion());
+        maneuver,
+        mission.getCurrentState(),
+        targetAltitude,
+        mission.getVehicle().getSecondStage().propulsion());
   }
 
   @Override

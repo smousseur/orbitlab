@@ -13,33 +13,60 @@ import org.hipparchus.util.FastMath;
 import org.jspecify.annotations.NonNull;
 import org.orekit.propagation.SpacecraftState;
 
+/**
+ * Adaptive CMA-ES optimizer with three phases:
+ *
+ * <ol>
+ *   <li><b>Exploration</b> — short runs to locate the best basin quickly. Runs that land in bad
+ *       basins are killed early via the convergence checker.
+ *   <li><b>Refinement cascade</b> — progressively tighter sigma passes around the best solution
+ *       found, each with generous budget.
+ *   <li><b>No rescue phase</b> — once a good basin is found (cost < 0.01), further exploration
+ *       wastes budget. All remaining evals go to refinement.
+ * </ol>
+ */
 public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
   private static final Logger logger = LogManager.getLogger(CMAESTrajectoryOptimizer.class);
 
   public static final double EXCEPTION_PENALTY_COST = 1e10;
-  private static final int MAX_RESCUE_ATTEMPTS = 3;
 
   private final TrajectoryProblem problem;
   private final int maxEvaluations;
-  private final int numRestarts;
+  private final int numExplorationRuns;
   private final double stopFitness;
   private final double relativeTolerance;
   private final double absoluteTolerance;
 
+  // ── Adaptive thresholds ──
+  /** Cost below which we consider we've found a good basin and switch to refinement-only. */
+  private static final double GOOD_BASIN_THRESHOLD = 0.01;
+
+  /** Cost above which an exploration run is killed early (bad basin). */
+  private static final double BAD_BASIN_KILL_THRESHOLD = 1.0;
+
+  /** Minimum iterations before killing a bad basin run. */
+  private static final int BAD_BASIN_MIN_ITERS = 300;
+
+  /** Number of refinement passes with decreasing sigma. */
+  private static final int REFINEMENT_PASSES = 3;
+
+  /** Sigma reduction factor per refinement pass. */
+  private static final double[] REFINEMENT_SIGMA_FACTORS = {0.1, 0.03, 0.01};
+
   public CMAESTrajectoryOptimizer(TrajectoryProblem problem, int maxEvaluations) {
-    this(problem, maxEvaluations, 5, 1e-6, 1e-4, 1e-6);
+    this(problem, maxEvaluations, 4, 1e-6, 1e-4, 1e-6);
   }
 
   public CMAESTrajectoryOptimizer(
       TrajectoryProblem problem,
       int maxEvaluations,
-      int numRestarts,
+      int numExplorationRuns,
       double stopFitness,
       double relativeTolerance,
       double absoluteTolerance) {
     this.problem = problem;
     this.maxEvaluations = maxEvaluations;
-    this.numRestarts = numRestarts;
+    this.numExplorationRuns = numExplorationRuns;
     this.stopFitness = stopFitness;
     this.relativeTolerance = relativeTolerance;
     this.absoluteTolerance = absoluteTolerance;
@@ -50,48 +77,62 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
     double[] globalBestVars = null;
     double globalBestCost = Double.MAX_VALUE;
     int totalEvaluations = 0;
+    int remainingEvals = maxEvaluations;
 
-    int evalsPerRun = maxEvaluations / (numRestarts + 1); // +1 for the refinement run
     double[] initialGuess = problem.buildInitialGuess();
     double[] lower = problem.getLowerBounds();
     double[] upper = problem.getUpperBounds();
     double[] sigma = problem.getInitialSigma();
     int n = problem.getNumVariables();
+    int basePopSize = 4 + (int) (3 * FastMath.log(n));
 
-    // ── Phase 1: Exploration with restarts ──
-    for (int run = 0; run < numRestarts; run++) {
+    // Budget: ~40% exploration, ~60% refinement
+    int explorationBudget = (int) (maxEvaluations * 0.4);
+    int evalsPerExploration = explorationBudget / numExplorationRuns;
+
+    // ════════════════════════════════════════════════════════════════════
+    // Phase 1: Exploration — find the best basin quickly
+    // ════════════════════════════════════════════════════════════════════
+    for (int run = 0; run < numExplorationRuns; run++) {
+      if (remainingEvals < evalsPerExploration / 2) break;
+
       double[] startPoint;
       double[] runSigma;
       int populationSize;
 
       if (run == 0) {
+        // First run: start from the physics-based initial guess
         startPoint = initialGuess.clone();
         runSigma = sigma.clone();
-        populationSize = 4 + (int) (3 * FastMath.log(n));
+        populationSize = basePopSize;
+      } else if (globalBestCost < GOOD_BASIN_THRESHOLD) {
+        // Good basin found — explore locally around it
+        startPoint = perturbLocal(globalBestVars, sigma, 0.3, run);
+        runSigma = scaleSigma(sigma, 0.5);
+        populationSize = basePopSize;
       } else {
-        populationSize = (int) ((4 + (int) (3 * FastMath.log(n))) * FastMath.pow(2, run));
-        populationSize = FastMath.min(populationSize, 200);
-
+        // No good basin yet — explore more broadly
         double[] base = (globalBestVars != null) ? globalBestVars : initialGuess;
-        startPoint = perturbStartPoint(base, lower, upper, sigma, run);
+        startPoint = perturbGlobal(base, lower, upper, sigma, run);
         runSigma = new double[n];
         for (int i = 0; i < n; i++) {
-          runSigma[i] = FastMath.min(sigma[i] * (1.0 + 0.5 * run), (upper[i] - lower[i]) / 4.0);
+          runSigma[i] = FastMath.min(sigma[i] * 1.5, (upper[i] - lower[i]) / 3.0);
         }
+        populationSize = FastMath.min(basePopSize * 2, 100);
       }
 
-      for (int i = 0; i < n; i++) {
-        startPoint[i] = FastMath.max(lower[i], FastMath.min(upper[i], startPoint[i]));
-      }
+      clampToBounds(startPoint, lower, upper);
+      int runBudget = FastMath.min(evalsPerExploration, remainingEvals);
 
       try {
-        RunResult result = runSingleCMAES(startPoint, runSigma, populationSize, evalsPerRun);
+        RunResult result = runSingleCMAES(startPoint, runSigma, populationSize, runBudget, true);
         totalEvaluations += result.evaluations;
+        remainingEvals -= result.evaluations;
 
         logger.info(
             "Exploration {}/{}: cost={}, evals={}",
             run + 1,
-            numRestarts,
+            numExplorationRuns,
             result.bestCost,
             result.evaluations);
 
@@ -100,123 +141,134 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
           globalBestVars = result.bestVariables.clone();
         }
 
-        if (globalBestCost < stopFitness || globalBestCost <= problem.getAcceptableCost()) {
-          logger.info("Early stop: cost {} < stopFitness {}", globalBestCost, stopFitness);
+        if (globalBestCost <= problem.getAcceptableCost()) {
+          logger.info("Target reached during exploration: cost={}", globalBestCost);
           break;
         }
       } catch (Exception e) {
-        logger.warn("Run {} failed: {}", run + 1, e.getMessage());
-        totalEvaluations += evalsPerRun;
+        logger.warn("Exploration {} failed: {}", run + 1, e.getMessage());
+        // Don't charge full budget for failed runs
+        totalEvaluations += runBudget / 4;
+        remainingEvals -= runBudget / 4;
       }
     }
 
-    // ── Phase 2: Local refinement around best found ──
-    if (globalBestVars != null
-        && globalBestCost > stopFitness
-        && globalBestCost > problem.getAcceptableCost()) {
-      logger.info("Refinement phase starting from cost={}", globalBestCost);
-      double[] refineSigma = new double[n];
-      for (int i = 0; i < n; i++) {
-        refineSigma[i] = sigma[i] * 0.1; // 10% of initial sigma → fine-grained search
-      }
-      try {
-        int refinePopSize = 4 + (int) (3 * FastMath.log(n));
-        RunResult refineResult =
-            runSingleCMAES(globalBestVars.clone(), refineSigma, refinePopSize, evalsPerRun);
-        totalEvaluations += refineResult.evaluations;
+    // ════════════════════════════════════════════════════════════════════
+    // Phase 2: Refinement cascade — polish the best solution
+    // ════════════════════════════════════════════════════════════════════
+    if (globalBestVars != null && globalBestCost > problem.getAcceptableCost()) {
+      logger.info(
+          "Refinement cascade starting from cost={}, remaining budget={}",
+          globalBestCost,
+          remainingEvals);
 
-        logger.info(
-            "Refinement: cost={}, evals={}", refineResult.bestCost, refineResult.evaluations);
+      int refinePassBudget = remainingEvals / REFINEMENT_PASSES;
 
-        if (refineResult.bestCost < globalBestCost) {
-          globalBestCost = refineResult.bestCost;
-          globalBestVars = refineResult.bestVariables.clone();
+      for (int pass = 0; pass < REFINEMENT_PASSES; pass++) {
+        if (remainingEvals < 500) break;
+        if (globalBestCost <= problem.getAcceptableCost()) break;
+
+        double sigmaFactor = REFINEMENT_SIGMA_FACTORS[pass];
+        double[] refineSigma = new double[n];
+        for (int i = 0; i < n; i++) {
+          // Sigma relative to current search space, not initial sigma
+          // This ensures we don't under-explore if the best is far from the initial guess
+          refineSigma[i] = FastMath.max(sigma[i] * sigmaFactor, (upper[i] - lower[i]) * 1e-4);
         }
-      } catch (Exception e) {
-        logger.warn("Refinement failed: {}", e.getMessage());
-      }
 
-      // ── Phase 3: Rescue — escape local minima if still stuck ──
-      if (globalBestVars != null && globalBestCost > problem.getAcceptableCost()) {
-        logger.warn(
-            "Stuck in local minimum (cost={}), launching rescue attempts...", globalBestCost);
+        int budget = FastMath.min(refinePassBudget, remainingEvals);
 
-        for (int rescue = 0; rescue < MAX_RESCUE_ATTEMPTS; rescue++) {
-          // Each rescue attempt uses a completely different starting strategy
-          int rescuePopSize = FastMath.min(100 + 50 * rescue, 300);
-          int rescueEvals = evalsPerRun * 2; // give more budget
+        try {
+          RunResult result =
+              runSingleCMAES(globalBestVars.clone(), refineSigma, basePopSize, budget, false);
+          totalEvaluations += result.evaluations;
+          remainingEvals -= result.evaluations;
 
-          // Strategy: large sigma + Latin Hypercube-style random start far from current best
-          MersenneTwister rng = new MersenneTwister(rescue * 137L + System.nanoTime());
-          double[] rescueStart = new double[n];
-          double[] rescueSigma = new double[n];
-          for (int i = 0; i < n; i++) {
-            double range = upper[i] - lower[i];
-            // 50% chance: perturb from best; 50% chance: random in domain
-            if (rng.nextDouble() < 0.5) {
-              rescueStart[i] = globalBestVars[i] + rng.nextGaussian() * range * 0.3;
-            } else {
-              rescueStart[i] = lower[i] + rng.nextDouble() * range;
-            }
-            rescueStart[i] = FastMath.max(lower[i], FastMath.min(upper[i], rescueStart[i]));
-            rescueSigma[i] = range * 0.25; // wide exploration
+          logger.info(
+              "Refinement {}/{} (sigma×{}): cost={}, evals={}",
+              pass + 1,
+              REFINEMENT_PASSES,
+              sigmaFactor,
+              result.bestCost,
+              result.evaluations);
+
+          if (result.bestCost < globalBestCost) {
+            globalBestCost = result.bestCost;
+            globalBestVars = result.bestVariables.clone();
           }
-
-          try {
-            RunResult rescueResult =
-                runSingleCMAES(rescueStart, rescueSigma, rescuePopSize, rescueEvals);
-            totalEvaluations += rescueResult.evaluations;
-
-            logger.info(
-                "Rescue {}/{}: cost={}, evals={}",
-                rescue + 1,
-                MAX_RESCUE_ATTEMPTS,
-                rescueResult.bestCost,
-                rescueResult.evaluations);
-
-            if (rescueResult.bestCost < globalBestCost) {
-              globalBestCost = rescueResult.bestCost;
-              globalBestVars = rescueResult.bestVariables.clone();
-            }
-
-            if (globalBestCost <= problem.getAcceptableCost()) {
-              logger.info("Rescue succeeded: cost={}", globalBestCost);
-              break;
-            }
-          } catch (Exception e) {
-            logger.warn("Rescue {} failed: {}", rescue + 1, e.getMessage());
-          }
+        } catch (Exception e) {
+          logger.warn("Refinement pass {} failed: {}", pass + 1, e.getMessage());
         }
       }
+    }
+
+    // ════════════════════════════════════════════════════════════════════
+    // Final result
+    // ════════════════════════════════════════════════════════════════════
+    if (globalBestVars == null) {
+      throw new OrbitlabException("Optimization failed to find a valid solution");
     }
 
     SpacecraftState bestState = problem.propagate(globalBestVars);
     logger.info("Final best cost={}, total evals={}", globalBestCost, totalEvaluations);
-    if (globalBestVars == null) {
-      throw new OrbitlabException("Optimization failed to find a valid solution");
-    }
     return new OptimizationResult(globalBestVars, globalBestCost, bestState, totalEvaluations);
   }
 
-  private double[] perturbStartPoint(
-      double[] base, double[] lower, double[] upper, double[] sigma, int run) {
-    MersenneTwister rng = new MersenneTwister(run * 42L + System.nanoTime());
-    double[] perturbed = new double[base.length];
+  // ══════════════════════════════════════════════════════════════════════
+  // Start point strategies
+  // ══════════════════════════════════════════════════════════════════════
+
+  /** Small perturbation around a known good point. */
+  private double[] perturbLocal(double[] base, double[] sigma, double scale, int seed) {
+    MersenneTwister rng = new MersenneTwister(seed * 42L + System.nanoTime());
+    double[] result = new double[base.length];
+    for (int i = 0; i < base.length; i++) {
+      result[i] = base[i] + rng.nextGaussian() * sigma[i] * scale;
+    }
+    return result;
+  }
+
+  /** Broader perturbation mixing local and global exploration. */
+  private double[] perturbGlobal(
+      double[] base, double[] lower, double[] upper, double[] sigma, int seed) {
+    MersenneTwister rng = new MersenneTwister(seed * 137L + System.nanoTime());
+    double[] result = new double[base.length];
     for (int i = 0; i < base.length; i++) {
       double range = upper[i] - lower[i];
-      // Mix between local perturbation and full-range exploration
-      double localPert = base[i] + rng.nextGaussian() * sigma[i] * (1.0 + run);
-      double globalPert = lower[i] + rng.nextDouble() * range;
-      double mixRatio = FastMath.min(0.3 * run, 0.8); // later runs = more global
-      perturbed[i] = (1.0 - mixRatio) * localPert + mixRatio * globalPert;
+      // Progressive: later runs explore more globally
+      double mixRatio = FastMath.min(0.2 * seed, 0.7);
+      double local = base[i] + rng.nextGaussian() * sigma[i] * 2.0;
+      double global = lower[i] + rng.nextDouble() * range;
+      result[i] = (1.0 - mixRatio) * local + mixRatio * global;
     }
-    return perturbed;
+    return result;
   }
+
+  private double[] scaleSigma(double[] sigma, double factor) {
+    double[] scaled = new double[sigma.length];
+    for (int i = 0; i < sigma.length; i++) {
+      scaled[i] = sigma[i] * factor;
+    }
+    return scaled;
+  }
+
+  private static void clampToBounds(double[] point, double[] lower, double[] upper) {
+    for (int i = 0; i < point.length; i++) {
+      point[i] = FastMath.max(lower[i], FastMath.min(upper[i], point[i]));
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
+  // Core CMA-ES execution
+  // ══════════════════════════════════════════════════════════════════════
 
   private record RunResult(double[] bestVariables, double bestCost, int evaluations) {}
 
+  /**
+   * @param earlyKill if true, the convergence checker will kill runs stuck in bad basins
+   */
   private RunResult runSingleCMAES(
-      double[] startPoint, double[] sigma, int populationSize, int maxEvals) {
+      double[] startPoint, double[] sigma, int populationSize, int maxEvals, boolean earlyKill) {
 
     double[] runBestVars = startPoint.clone();
     double[] runBestCostHolder = {Double.MAX_VALUE};
@@ -241,7 +293,7 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
           }
         };
 
-    CMAESOptimizer optimizer = getCmaesOptimizer(maxEvals);
+    CMAESOptimizer optimizer = buildOptimizer(maxEvals, earlyKill);
 
     optimizer.optimize(
         new MaxEval(maxEvals),
@@ -255,17 +307,31 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
     return new RunResult(runBestVars, runBestCostHolder[0], optimizer.getEvaluations());
   }
 
-  private @NonNull CMAESOptimizer getCmaesOptimizer(int maxEvals) {
-    ConvergenceChecker<PointValuePair> runChecker =
+  private @NonNull CMAESOptimizer buildOptimizer(int maxEvals, boolean earlyKill) {
+    ConvergenceChecker<PointValuePair> checker =
         new ConvergenceChecker<>() {
           private int iterationCount = 0;
 
           @Override
           public boolean converged(int iteration, PointValuePair previous, PointValuePair current) {
             iterationCount++;
-            if (iterationCount < 200) return false;
-            if (current.getValue() > problem.getAcceptableCost() && iterationCount < 500)
+
+            // Never converge too early
+            if (iterationCount < 100) return false;
+
+            // ── Early kill: abort runs stuck in bad basins ──
+            if (earlyKill
+                && iterationCount > BAD_BASIN_MIN_ITERS
+                && current.getValue() > BAD_BASIN_KILL_THRESHOLD) {
+              return true;
+            }
+
+            // Don't converge prematurely if we haven't reached acceptable cost yet
+            if (current.getValue() > problem.getAcceptableCost() && iterationCount < 500) {
               return false;
+            }
+
+            // Standard convergence: cost stopped improving
             double diff = FastMath.abs(previous.getValue() - current.getValue());
             return diff <= absoluteTolerance
                 || diff <= relativeTolerance * FastMath.abs(current.getValue());
@@ -273,6 +339,6 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
         };
 
     return new CMAESOptimizer(
-        maxEvals, stopFitness, true, 0, 0, new MersenneTwister(), false, runChecker);
+        maxEvals, stopFitness, true, 0, 0, new MersenneTwister(), false, checker);
   }
 }

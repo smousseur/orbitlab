@@ -87,7 +87,7 @@ public class GravityTurnStage extends MissionStage
     maneuver.configure(propagator, state, params);
 
     // MECO event → transition to next stage
-    AbsoluteDate mecoDate = state.getDate().shiftedBy(params.remainingBurnTime());
+    AbsoluteDate mecoDate = state.getDate().shiftedBy(params.transitionTime());
     propagator.addEventDetector(
         new DateDetector(mecoDate)
             .withHandler(
@@ -101,6 +101,6 @@ public class GravityTurnStage extends MissionStage
     Vehicle vehicle = mission.getVehicle();
     double launchAzimuth = Physics.getLaunchAzimuth(launchLatitude, targetInclination);
     return new GravityTurnManeuver(
-        vehicle, Math.toRadians(pitchKickAngle), launchAzimuth, ascensionDuration);
+        vehicle, ascensionDuration, Math.toRadians(pitchKickAngle), launchAzimuth);
   }
 }
