@@ -11,7 +11,6 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import com.smousseur.orbitlab.simulation.mission.optimizer.problems.TransferTwoManeuverProblem;
-import com.smousseur.orbitlab.simulation.mission.stage.TransfertTwoManeuverStage;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.orekit.propagation.SpacecraftState;
@@ -59,10 +58,10 @@ public class MissionOptimizer {
             result.bestCost(),
             result.bestVariables(),
             result.evaluations());
-        if (stage instanceof TransfertTwoManeuverStage) {
-          logger.info(
-              "Burn2 : {}",
-              ((TransferTwoManeuverProblem) problem).getManeuver().getLastResolvedBurn2());
+        if (problem instanceof TransferTwoManeuverProblem transferProblem) {
+          TransfertTwoManeuver.ResolvedBurns burns =
+              transferProblem.getManeuver().getLastResolvedBurns();
+          logger.info("Transfert burns: {}", burns);
         }
         mission.setCurrentState(problem.propagate(result.bestVariables()));
       } else {

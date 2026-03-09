@@ -80,7 +80,7 @@ public class LEOMissionOptimizationTest extends AbstractTrajectoryOptimizerTest 
             "Gravity turn",
             ASCENSION_DURATION,
             3.0,
-            new GravityTurnConstraints(300_000, 350_000, 2000.0, 18.0)),
+            new GravityTurnConstraints(300_000, 350_000, 2000.0, 5.0)),
         new TransfertTwoManeuverStage("Transfert", TARGET_ALTITUDE),
         new CoastingStage("Coasting", null));
   }

@@ -14,7 +14,7 @@ import org.orekit.utils.PVCoordinates;
 
 /** The type Gravity turn problem. 2 variables : transitionTime, exponent for pitch kick) */
 public class GravityTurnProblem implements TrajectoryProblem {
-  private static final double W_P = 1.e-5;
+  private static final double W_P = 9.e-5;
 
   private final GravityTurnManeuver maneuver;
   private final SpacecraftState initialState;
@@ -56,7 +56,7 @@ public class GravityTurnProblem implements TrajectoryProblem {
 
   @Override
   public double getAcceptableCost() {
-    return 1e-5;
+    return 1e-9;
   }
 
   @Override

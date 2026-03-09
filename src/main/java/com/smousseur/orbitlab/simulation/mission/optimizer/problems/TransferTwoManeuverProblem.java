@@ -4,6 +4,7 @@ import com.smousseur.orbitlab.simulation.Physics;
 import com.smousseur.orbitlab.simulation.mission.detector.MinAltitudeTracker;
 import com.smousseur.orbitlab.simulation.mission.maneuver.TransfertTwoManeuver;
 import com.smousseur.orbitlab.simulation.mission.optimizer.TrajectoryProblem;
+import com.smousseur.orbitlab.simulation.mission.runtime.MissionOptimizer;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropulsionSystem;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -104,13 +105,12 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
     double isp = propulsionSystem.isp();
 
     this.guessDt1 = Physics.computeBurnDuration(FastMath.abs(dv1), initialMass, isp, thrust);
-    logger.info("Initial burn 1 duration: {}", guessDt1);
-    logger.info("Initial state orbit: {}", new KeplerianOrbit(initialState.getOrbit()));
+    logger.info("Orbit before transfer : {}", new KeplerianOrbit(initialState.getOrbit()));
   }
 
   @Override
   public double getAcceptableCost() {
-    return 5e-7;
+    return 6e-4;
   }
 
   @Override
@@ -129,24 +129,21 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
       0.0,
       guessDt1 * 0.5,
       -FastMath.PI / 4.0, // alpha1: prograde ± 45°
-      -FastMath.PI / 12.0 // beta1: small out-of-plane
+      -FastMath.PI / 36.0 // beta1: small out-of-plane
     };
   }
 
   @Override
   public double[] getUpperBounds() {
     return new double[] {
-      guessT1 * 2.0 + 120.0, guessDt1 * 3.0, FastMath.PI / 4.0, FastMath.PI / 12.0
+      guessT1 * 2.0 + 120.0, guessDt1 * 2.0, FastMath.PI / 4.0, FastMath.PI / 36.0
     };
   }
 
   @Override
   public double[] getInitialSigma() {
     return new double[] {
-      FastMath.max(guessT1 * 0.3, 30.0),
-      guessDt1 * 0.5, // était 0.3, passer à 0.5
-      FastMath.PI / 8.0,
-      FastMath.PI / 24.0
+      FastMath.max(guessT1 * 0.3, 30.0), guessDt1 * 0.3, FastMath.PI / 8.0, FastMath.PI / 72.0
     };
   }
 
@@ -193,7 +190,18 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
       }
     }
 
+    TransfertTwoManeuver.ResolvedBurns burns = maneuver.getLastResolvedBurns();
+    if (burns != null && burns.dvBurn2() <= 0.0) {
+      // Pénalité douce : burn 1 a dépassé la cible, sous-optimal
+      double overshoot = FastMath.abs(burns.dvBurn2()) / vCircTarget;
+      objective += 0.5 * overshoot * overshoot;
+    }
+
     return objective + W_BARRIER * barrier + W_ALT_MAX * altMaxPenalty;
+  }
+
+  public TransfertTwoManeuver getManeuver() {
+    return maneuver;
   }
 
   private static double barrierBelow(double value, double threshold) {
@@ -201,9 +209,5 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
     double k = 10.0;
     if (normalized > 5.0 / k) return 0.0;
     return FastMath.log1p(FastMath.exp(-k * normalized));
-  }
-
-  public TransfertTwoManeuver getManeuver() {
-    return maneuver;
   }
 }
