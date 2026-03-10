@@ -59,6 +59,8 @@ public class MissionOptimizer {
             result.bestVariables(),
             result.evaluations());
         if (problem instanceof TransferTwoManeuverProblem transferProblem) {
+          logger.info(
+              "Post burn1 orbit: {}", transferProblem.getManeuver().getLastOrbitPostBurn1());
           TransfertTwoManeuver.ResolvedBurn2 burn =
               transferProblem.getManeuver().getLastResolvedBurn2();
           logger.info("Transfert burn 2: {}", burn);

@@ -5,6 +5,8 @@ import com.smousseur.orbitlab.simulation.mission.detector.MinAltitudeTracker;
 import com.smousseur.orbitlab.simulation.mission.maneuver.TransfertTwoManeuver;
 import com.smousseur.orbitlab.simulation.mission.optimizer.TrajectoryProblem;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropulsionSystem;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.hipparchus.util.FastMath;
 import org.orekit.orbits.KeplerianOrbit;
 import org.orekit.orbits.OrbitType;
@@ -31,6 +33,7 @@ import org.orekit.utils.Constants;
  * </ul>
  */
 public class TransferTwoManeuverProblem implements TrajectoryProblem {
+  private static final Logger logger = LogManager.getLogger(TransferTwoManeuverProblem.class);
   private static final double EARTH_RADIUS = Constants.WGS84_EARTH_EQUATORIAL_RADIUS;
 
   private final TransfertTwoManeuver maneuver;
@@ -101,11 +104,12 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
     double isp = propulsionSystem.isp();
 
     this.guessDt1 = Physics.computeBurnDuration(FastMath.abs(dv1), initialMass, isp, thrust);
+    logger.info("Initial guess for burn 1: T1={}, dt1={}, dv1={}", guessT1, guessDt1, dv1);
   }
 
   @Override
   public double getAcceptableCost() {
-    return 5e-7;
+    return 8e-4;
   }
 
   @Override

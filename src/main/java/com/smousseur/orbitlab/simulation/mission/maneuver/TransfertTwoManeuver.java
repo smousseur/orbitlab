@@ -5,6 +5,8 @@ import com.smousseur.orbitlab.simulation.Physics;
 import com.smousseur.orbitlab.simulation.mission.detector.MinAltitudeTracker;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropulsionSystem;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.hipparchus.util.FastMath;
 import org.orekit.attitudes.LofOffset;
@@ -42,10 +44,13 @@ import org.orekit.utils.Constants;
  * </ul>
  */
 public class TransfertTwoManeuver {
+  private static final Logger logger = LogManager.getLogger(TransfertTwoManeuver.class);
   private static final double EARTH_RADIUS = Constants.WGS84_EARTH_EQUATORIAL_RADIUS;
 
   private final Vehicle vehicle;
   private final double targetAltitude;
+
+  private KeplerianOrbit lastOrbitPostBurn1;
 
   /** Tracks altitude extremes during the last propagation. */
   private MinAltitudeTracker lastAltitudeTracker;
@@ -102,7 +107,13 @@ public class TransfertTwoManeuver {
     if (stateAfterBurn1 == null) {
       return initialState; // penalty
     }
-
+    KeplerianOrbit orbit = new KeplerianOrbit(stateAfterBurn1.getOrbit());
+    if (orbit.getE() > 0.95
+        || orbit.getA() < EARTH_RADIUS
+        || orbit.getA() > EARTH_RADIUS + 2_000_000) {
+      return null; // orbite non-viable, skip
+    }
+    lastOrbitPostBurn1 = orbit;
     // ── Step 2: Resolve burn 2 at next apoapsis ──
     ResolvedBurn2 burn2 = resolveBurn2(stateAfterBurn1);
     if (burn2 == null) {
@@ -301,7 +312,11 @@ public class TransfertTwoManeuver {
     coastPropagator.addEventDetector(apsideDetector);
 
     // Search up to 1.1 orbital periods — enough for one full orbit + margin
-    double maxCoast = stateAfterBurn1.getOrbit().getKeplerianPeriod() * 1.1;
+    double maxCoast =
+        FastMath.min(
+            stateAfterBurn1.getOrbit().getKeplerianPeriod() * 1.1,
+            7000.0 // max ~2h, protège contre les orbites très excentriques
+            );
     coastPropagator.propagate(stateAfterBurn1.getDate().shiftedBy(maxCoast));
 
     // Skip apoapsis events that are too close (< half a period)
@@ -316,5 +331,9 @@ public class TransfertTwoManeuver {
       }
     }
     return Double.NaN;
+  }
+
+  public KeplerianOrbit getLastOrbitPostBurn1() {
+    return lastOrbitPostBurn1;
   }
 }
