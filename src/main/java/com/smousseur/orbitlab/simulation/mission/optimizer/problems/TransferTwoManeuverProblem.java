@@ -4,10 +4,7 @@ import com.smousseur.orbitlab.simulation.Physics;
 import com.smousseur.orbitlab.simulation.mission.detector.MinAltitudeTracker;
 import com.smousseur.orbitlab.simulation.mission.maneuver.TransfertTwoManeuver;
 import com.smousseur.orbitlab.simulation.mission.optimizer.TrajectoryProblem;
-import com.smousseur.orbitlab.simulation.mission.runtime.MissionOptimizer;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropulsionSystem;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.hipparchus.util.FastMath;
 import org.orekit.orbits.KeplerianOrbit;
 import org.orekit.orbits.OrbitType;
@@ -34,7 +31,6 @@ import org.orekit.utils.Constants;
  * </ul>
  */
 public class TransferTwoManeuverProblem implements TrajectoryProblem {
-  private static final Logger logger = LogManager.getLogger(TransferTwoManeuverProblem.class);
   private static final double EARTH_RADIUS = Constants.WGS84_EARTH_EQUATORIAL_RADIUS;
 
   private final TransfertTwoManeuver maneuver;
@@ -105,12 +101,11 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
     double isp = propulsionSystem.isp();
 
     this.guessDt1 = Physics.computeBurnDuration(FastMath.abs(dv1), initialMass, isp, thrust);
-    logger.info("Orbit before transfer : {}", new KeplerianOrbit(initialState.getOrbit()));
   }
 
   @Override
   public double getAcceptableCost() {
-    return 6e-4;
+    return 5e-7;
   }
 
   @Override
@@ -129,21 +124,21 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
       0.0,
       guessDt1 * 0.5,
       -FastMath.PI / 4.0, // alpha1: prograde ± 45°
-      -FastMath.PI / 36.0 // beta1: small out-of-plane
+      -FastMath.PI / 12.0 // beta1: small out-of-plane
     };
   }
 
   @Override
   public double[] getUpperBounds() {
     return new double[] {
-      guessT1 * 2.0 + 120.0, guessDt1 * 2.0, FastMath.PI / 4.0, FastMath.PI / 36.0
+      guessT1 * 2.0 + 120.0, guessDt1 * 2.0, FastMath.PI / 4.0, FastMath.PI / 12.0
     };
   }
 
   @Override
   public double[] getInitialSigma() {
     return new double[] {
-      FastMath.max(guessT1 * 0.3, 30.0), guessDt1 * 0.3, FastMath.PI / 8.0, FastMath.PI / 72.0
+      FastMath.max(guessT1 * 0.3, 30.0), guessDt1 * 0.3, FastMath.PI / 8.0, FastMath.PI / 24.0
     };
   }
 
@@ -188,13 +183,6 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
         double excess = (tracker.getMaxAltitude() - altMax) / altMax;
         altMaxPenalty = excess * excess;
       }
-    }
-
-    TransfertTwoManeuver.ResolvedBurns burns = maneuver.getLastResolvedBurns();
-    if (burns != null && burns.dvBurn2() <= 0.0) {
-      // Pénalité douce : burn 1 a dépassé la cible, sous-optimal
-      double overshoot = FastMath.abs(burns.dvBurn2()) / vCircTarget;
-      objective += 0.5 * overshoot * overshoot;
     }
 
     return objective + W_BARRIER * barrier + W_ALT_MAX * altMaxPenalty;

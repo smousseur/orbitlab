@@ -6,7 +6,7 @@ import com.smousseur.orbitlab.simulation.mission.MissionStage;
 import com.smousseur.orbitlab.simulation.mission.OptimizableMissionStage;
 import com.smousseur.orbitlab.simulation.mission.maneuver.TransfertTwoManeuver;
 import com.smousseur.orbitlab.simulation.mission.maneuver.TransfertTwoManeuver.Burn1Params;
-import com.smousseur.orbitlab.simulation.mission.maneuver.TransfertTwoManeuver.ResolvedBurns;
+import com.smousseur.orbitlab.simulation.mission.maneuver.TransfertTwoManeuver.ResolvedBurn2;
 import com.smousseur.orbitlab.simulation.mission.optimizer.OptimizationResult;
 import com.smousseur.orbitlab.simulation.mission.optimizer.problems.TransferTwoManeuverProblem;
 import org.hipparchus.ode.events.Action;
@@ -37,15 +37,15 @@ public class TransfertTwoManeuverStage extends MissionStage
 
     Burn1Params params = maneuver.decode(optimizationResult.bestVariables());
 
-    ResolvedBurns burns = maneuver.resolveBurnsFromInitial(state, params);
-    if (burns == null) {
+    ResolvedBurn2 burn2 = maneuver.resolveBurn2FromInitial(state, params);
+    if (burn2 == null) {
       throw new OrbitlabException(
-          "TransfertStage '" + getName() + "': failed to resolve burns at runtime");
+          "TransfertStage '" + getName() + "': failed to resolve burn 2 at runtime");
     }
 
-    maneuver.configure(propagator, state, params, burns);
+    maneuver.configure(propagator, state, params, burn2);
 
-    double maneuverTime = maneuver.totalDuration(params, burns);
+    double maneuverTime = maneuver.totalDuration(params, burn2);
     AbsoluteDate mecoDate = state.getDate().shiftedBy(maneuverTime);
     propagator.addEventDetector(
         new DateDetector(mecoDate)
