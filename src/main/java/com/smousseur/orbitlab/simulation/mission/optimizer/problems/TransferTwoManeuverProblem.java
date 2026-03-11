@@ -41,8 +41,8 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
 
   // ── Primary objective weights ──
   private static final double W_APO = 3.0;
-  private static final double W_PERI = 5.0;
-  private static final double W_E = 10.0;
+  private static final double W_PERI = 10.0;
+  private static final double W_E = 2.0;
   private static final double W_V = 1.0;
 
   // ── Constraint barrier weight ──
@@ -81,7 +81,7 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
     double rTarget = EARTH_RADIUS + targetAltitude;
     this.aTarget = rTarget;
     this.vCircTarget = FastMath.sqrt(mu / rTarget);
-    this.altMax = targetAltitude * 1.25;
+    this.altMax = targetAltitude * 1.05;
 
     double aInitial = initialOrbit.getA();
     double eInitial = initialOrbit.getE();
@@ -115,7 +115,8 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
     this.dt1MaxPhysical = (availablePropellant * 0.90) / massFlow;
 
     logger.info("Initial guess for burn 1: T1={}, dt1={}, dv1={}", guessT1, guessDt1, dv1);
-    logger.info("Physical dt1 max: {}s (propellant available: {}kg)", dt1MaxPhysical, availablePropellant);
+    logger.info(
+        "Physical dt1 max: {}s (propellant available: {}kg)", dt1MaxPhysical, availablePropellant);
   }
 
   @Override
@@ -206,14 +207,14 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
     return objective + W_BARRIER * barrier + W_ALT_MAX * altMaxPenalty;
   }
 
-  public TransfertTwoManeuver getManeuver() {
-    return maneuver;
-  }
-
   private static double barrierBelow(double value, double threshold) {
     double normalized = (value - threshold) / FastMath.abs(threshold);
     double k = 10.0;
     if (normalized > 5.0 / k) return 0.0;
     return FastMath.log1p(FastMath.exp(-k * normalized));
+  }
+
+  public TransfertTwoManeuver getManeuver() {
+    return maneuver;
   }
 }

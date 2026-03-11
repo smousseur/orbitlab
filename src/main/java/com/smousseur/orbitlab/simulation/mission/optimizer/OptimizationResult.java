@@ -16,7 +16,6 @@ public record OptimizationResult(
   }
 
   /** Optimal parameter vector. */
-  @Override
   public double[] bestVariables() {
     return bestVariables.clone();
   }
