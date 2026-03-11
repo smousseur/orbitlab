@@ -35,12 +35,12 @@ public record PlanetPresenter(SolarSystemBody body, PlanetView view) {
         .ifPresent(
             posRotation -> {
               // Convertir en JME units/axes selon le contexte SOLAR
-              Vector3D pos = posRotation.getLeft();
+              Vector3D pos = posRotation.getKey();
               Vector3D jmeUnitsJmeAxes =
                   RenderTransform.toRenderUnitsJmeAxes(pos, null, RenderContext.solar());
               Vector3f p = JmeVectorAdapter.toVector3f(jmeUnitsJmeAxes);
               view.setPositionWorld(p);
-              Rotation rotation = posRotation.getRight();
+              Rotation rotation = posRotation.getValue();
               view.setRotationWorld(RenderTransform.toRenderQuaternion(rotation));
             });
   }

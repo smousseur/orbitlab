@@ -148,6 +148,13 @@ public class GravityTurnManeuver {
     }
   }
 
+  /** Returns the duration of burn 1 (stage 1 fires to propellant exhaustion). */
+  public double getBurn1Duration() {
+    PropulsionSystem prop1 = vehicle.getFirstStage().propulsion();
+    double massFlowRate1 = prop1.thrust() / (prop1.isp() * Constants.G0_STANDARD_GRAVITY);
+    return (vehicle.getFirstStage().propellantCapacity() - usedAscensionPropellant) / massFlowRate1;
+  }
+
   public Vehicle getVehicle() {
     return vehicle;
   }

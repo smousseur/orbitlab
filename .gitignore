@@ -5,6 +5,7 @@ build/
 !**/src/test/**/build/
 docs/**
 src/main/resources/**
+src/test/resources/orekit-data.zip
 dataset/**
 .kotlin
 gradle/**

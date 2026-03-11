@@ -289,20 +289,31 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
             }
             return cost;
           } catch (Exception e) {
+            synchronized (runBestCostHolder) {
+              if (EXCEPTION_PENALTY_COST < runBestCostHolder[0]) {
+                runBestCostHolder[0] = EXCEPTION_PENALTY_COST;
+                System.arraycopy(candidate, 0, runBestVars, 0, candidate.length);
+              }
+            }
             return EXCEPTION_PENALTY_COST;
           }
         };
 
     CMAESOptimizer optimizer = buildOptimizer(maxEvals, earlyKill);
 
-    optimizer.optimize(
-        new MaxEval(maxEvals),
-        new ObjectiveFunction(objectiveFunction),
-        GoalType.MINIMIZE,
-        new InitialGuess(startPoint),
-        new CMAESOptimizer.Sigma(sigma),
-        new CMAESOptimizer.PopulationSize(populationSize),
-        new SimpleBounds(problem.getLowerBounds(), problem.getUpperBounds()));
+    try {
+      optimizer.optimize(
+          new MaxEval(maxEvals),
+          new ObjectiveFunction(objectiveFunction),
+          GoalType.MINIMIZE,
+          new InitialGuess(startPoint),
+          new CMAESOptimizer.Sigma(sigma),
+          new CMAESOptimizer.PopulationSize(populationSize),
+          new SimpleBounds(problem.getLowerBounds(), problem.getUpperBounds()));
+    } catch (org.hipparchus.exception.MathRuntimeException e) {
+      // Budget exhausted (TooManyEvaluationsException) or numerical issue — use best found so far
+      logger.debug("CMA-ES run ended early: {}", e.getMessage());
+    }
 
     return new RunResult(runBestVars, runBestCostHolder[0], optimizer.getEvaluations());
   }
