@@ -59,11 +59,16 @@ public class TransfertTwoManeuverStage extends MissionStage
   @Override
   public TransferTwoManeuverProblem buildProblem(Mission mission) {
     TransfertTwoManeuver maneuver = new TransfertTwoManeuver(mission.getVehicle(), targetAltitude);
+    // Min viable mass after all transfer burns = dry mass of remaining stages (stage 2 + spacecraft)
+    // Vehicle model still holds all stages at this point, so subtract the already-jettisoned stage 1
+    double vehicleMinMass =
+        mission.getVehicle().dryMass() - mission.getVehicle().getFirstStage().dryMass();
     return new TransferTwoManeuverProblem(
         maneuver,
         mission.getCurrentState(),
         targetAltitude,
-        mission.getVehicle().getSecondStage().propulsion());
+        mission.getVehicle().getSecondStage().propulsion(),
+        vehicleMinMass);
   }
 
   @Override

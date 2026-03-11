@@ -36,7 +36,8 @@ public class GravityTurnProblem implements TrajectoryProblem {
 
   @Override
   public double[] buildInitialGuess() {
-    return new double[] {100.0, 1.0};
+    double burn1Duration = maneuver.getBurn1Duration();
+    return new double[] {burn1Duration + 20.0, 1.0};
   }
 
   @Override

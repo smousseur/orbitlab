@@ -111,7 +111,7 @@ public class TransfertTwoManeuver {
     if (orbit.getE() > 0.95
         || orbit.getA() < EARTH_RADIUS
         || orbit.getA() > EARTH_RADIUS + 2_000_000) {
-      return null; // orbite non-viable, skip
+      return initialState; // orbite non-viable, penalty
     }
     lastOrbitPostBurn1 = orbit;
     // ── Step 2: Resolve burn 2 at next apoapsis ──

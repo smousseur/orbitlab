@@ -63,11 +63,15 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
   private final double guessT1;
   private final double guessDt1;
 
+  // Physical upper bound on burn 1 duration (from available propellant)
+  private final double dt1MaxPhysical;
+
   public TransferTwoManeuverProblem(
       TransfertTwoManeuver maneuver,
       SpacecraftState initialState,
       double targetAltitude,
-      PropulsionSystem propulsionSystem) {
+      PropulsionSystem propulsionSystem,
+      double vehicleMinMass) {
 
     this.initialState = initialState;
     this.maneuver = maneuver;
@@ -104,7 +108,14 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
     double isp = propulsionSystem.isp();
 
     this.guessDt1 = Physics.computeBurnDuration(FastMath.abs(dv1), initialMass, isp, thrust);
+
+    // Physical upper bound: 90% of the time to exhaust available propellant
+    double massFlow = thrust / (isp * Constants.G0_STANDARD_GRAVITY);
+    double availablePropellant = initialMass - vehicleMinMass;
+    this.dt1MaxPhysical = (availablePropellant * 0.90) / massFlow;
+
     logger.info("Initial guess for burn 1: T1={}, dt1={}, dv1={}", guessT1, guessDt1, dv1);
+    logger.info("Physical dt1 max: {}s (propellant available: {}kg)", dt1MaxPhysical, availablePropellant);
   }
 
   @Override
@@ -135,7 +146,10 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
   @Override
   public double[] getUpperBounds() {
     return new double[] {
-      guessT1 * 2.0 + 120.0, guessDt1 * 2.0, FastMath.PI / 4.0, FastMath.PI / 12.0
+      guessT1 * 2.0 + 120.0,
+      FastMath.min(guessDt1 * 2.0, dt1MaxPhysical),
+      FastMath.PI / 4.0,
+      FastMath.PI / 12.0
     };
   }
 
