@@ -53,6 +53,13 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
   private static final double ALT_MIN = 80_000;
   private static final double PERIAPSIS_MIN = 100_000;
 
+  // ── J2 compensation ──
+  // J2 perturbations systematically lower the perigee during coasting.
+  // By targeting a slightly higher altitude in the cost function, the
+  // optimizer produces an orbit whose mean altitude after J2 drift
+  // matches the true target.
+  private static final double J2_ALTITUDE_BIAS_RATIO = 0.004;
+
   private final double altMax;
 
   // Precomputed values
@@ -78,10 +85,13 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
     KeplerianOrbit initialOrbit = new KeplerianOrbit(initialState.getOrbit());
     double mu = initialOrbit.getMu();
 
-    double rTarget = EARTH_RADIUS + targetAltitude;
+    // Apply J2 bias: target a slightly higher altitude so that the
+    // coasting orbit (perturbed by J2) averages around the true target.
+    double biasedTargetAltitude = targetAltitude * (1.0 + J2_ALTITUDE_BIAS_RATIO);
+    double rTarget = EARTH_RADIUS + biasedTargetAltitude;
     this.aTarget = rTarget;
     this.vCircTarget = FastMath.sqrt(mu / rTarget);
-    this.altMax = targetAltitude * 1.05;
+    this.altMax = biasedTargetAltitude * 1.05;
 
     double aInitial = initialOrbit.getA();
     double eInitial = initialOrbit.getE();
