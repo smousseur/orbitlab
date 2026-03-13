@@ -43,7 +43,7 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
   private static final double W_APO = 3.0;
   private static final double W_PERI = 10.0;
   private static final double W_E = 2.0;
-  private static final double W_V = 1.0;
+  private static final double W_V = 8.0;
 
   // ── Constraint barrier weight ──
   private static final double W_BARRIER = 0.1;

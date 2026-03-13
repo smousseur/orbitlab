@@ -57,8 +57,14 @@ public class LEOMissionOptimizationTest extends AbstractTrajectoryOptimizerTest 
     MissionPlayer player = new MissionPlayer(mission);
     player.play(optimResults, epoch);
     PropagationResults results = propagateMission(mission, "Coasting", epoch);
-    logger.info("[{}km] Max coast altitude: {} m", (int) (targetAltitude / 1000), results.maxCoastAltitude);
-    logger.info("[{}km] Min coast altitude: {} m", (int) (targetAltitude / 1000), results.minCoastAltitude);
+    System.out.printf("[%dkm] Max coast altitude: %.0f m (delta: %+.0f m, %.2f%%)%n",
+        (int) (targetAltitude / 1000), results.maxCoastAltitude,
+        results.maxCoastAltitude - targetAltitude,
+        (results.maxCoastAltitude - targetAltitude) / targetAltitude * 100);
+    System.out.printf("[%dkm] Min coast altitude: %.0f m (delta: %+.0f m, %.2f%%)%n",
+        (int) (targetAltitude / 1000), results.minCoastAltitude,
+        results.minCoastAltitude - targetAltitude,
+        (results.minCoastAltitude - targetAltitude) / targetAltitude * 100);
     double errorMargin = ORBIT_MARGIN_RATIO * targetAltitude;
     Assertions.assertTrue(
         Math.abs(results.maxCoastAltitude - targetAltitude) <= errorMargin,
