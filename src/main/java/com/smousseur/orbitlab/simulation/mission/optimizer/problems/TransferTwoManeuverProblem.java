@@ -78,7 +78,22 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
     KeplerianOrbit initialOrbit = new KeplerianOrbit(initialState.getOrbit());
     double mu = initialOrbit.getMu();
 
-    double rTarget = EARTH_RADIUS + targetAltitude;
+    // ── J2 short-period altitude compensation ──
+    // The osculating radius oscillates around the mean with amplitude ~J2*Re²/a
+    // To center the geodetic altitude excursions on targetAltitude,
+    // we target a slightly higher mean altitude
+    double rNominal = EARTH_RADIUS + targetAltitude;
+    double j2 = 1.0826e-3; // J2 coefficient
+    double sinI = FastMath.sin(initialOrbit.getI());
+    double j2Amplitude = j2 * EARTH_RADIUS * EARTH_RADIUS / rNominal * (1.0 - 1.5 * sinI * sinI);
+    double altitudeOffset = j2Amplitude / 2.0;
+
+    double effectiveTargetAlt = targetAltitude + altitudeOffset;
+    logger.info(
+        "J2 altitude offset: {} m, effective target: {} m", altitudeOffset, effectiveTargetAlt);
+
+    double rTarget = EARTH_RADIUS + effectiveTargetAlt;
+
     this.aTarget = rTarget;
     this.vCircTarget = FastMath.sqrt(mu / rTarget);
     this.altMax = targetAltitude * 1.05;
