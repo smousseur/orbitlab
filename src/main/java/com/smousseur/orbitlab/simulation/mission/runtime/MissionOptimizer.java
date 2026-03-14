@@ -3,6 +3,7 @@ package com.smousseur.orbitlab.simulation.mission.runtime;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionStage;
 import com.smousseur.orbitlab.simulation.mission.OptimizableMissionStage;
+import com.smousseur.orbitlab.simulation.mission.maneuver.TransferResult;
 import com.smousseur.orbitlab.simulation.mission.maneuver.TransfertTwoManeuver;
 import com.smousseur.orbitlab.simulation.mission.optimizer.CMAESTrajectoryOptimizer;
 import com.smousseur.orbitlab.simulation.mission.optimizer.OptimizationResult;
@@ -30,7 +31,7 @@ public class MissionOptimizer {
     this.maxEvaluations = maxEvaluations;
   }
 
-  public MissionOptimzerResult optimize() {
+  public MissionOptimizerResult optimize() {
     Map<String, OptimizationResult> results = new LinkedHashMap<>();
 
     for (MissionStage stage : mission.getStages()) {
@@ -59,10 +60,12 @@ public class MissionOptimizer {
             result.bestVariables(),
             result.evaluations());
         if (problem instanceof TransferTwoManeuverProblem transferProblem) {
+          TransferResult transferResult = transferProblem.getLastTransferResult();
           logger.info(
-              "Post burn1 orbit: {}", transferProblem.getManeuver().getLastOrbitPostBurn1());
+              "Post burn1 orbit: {}",
+              transferResult != null ? transferResult.orbitPostBurn1() : null);
           TransfertTwoManeuver.ResolvedBurn2 burn =
-              transferProblem.getManeuver().getLastResolvedBurn2();
+              transferResult != null ? transferResult.resolvedBurn2() : null;
           logger.info("Transfert burn 2: {}", burn);
         }
         mission.setCurrentState(problem.propagate(result.bestVariables()));
@@ -74,6 +77,6 @@ public class MissionOptimizer {
       }
     }
 
-    return new MissionOptimzerResult(results);
+    return new MissionOptimizerResult(results);
   }
 }

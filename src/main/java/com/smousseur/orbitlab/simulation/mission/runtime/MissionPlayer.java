@@ -16,7 +16,7 @@ public class MissionPlayer {
   }
 
   /** Injects optimization results into optimizable stages, then starts the mission. */
-  public void play(MissionOptimzerResult optimResult, AbsoluteDate startDate) {
+  public void play(MissionOptimizerResult optimResult, AbsoluteDate startDate) {
     // Push optimization results into stages that need them
     for (MissionStage stage : mission.getStages()) {
       if (stage instanceof OptimizableMissionStage<?> optimizable) {

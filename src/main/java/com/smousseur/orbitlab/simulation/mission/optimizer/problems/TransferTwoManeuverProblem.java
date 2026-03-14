@@ -2,6 +2,7 @@ package com.smousseur.orbitlab.simulation.mission.optimizer.problems;
 
 import com.smousseur.orbitlab.simulation.Physics;
 import com.smousseur.orbitlab.simulation.mission.detector.MinAltitudeTracker;
+import com.smousseur.orbitlab.simulation.mission.maneuver.TransferResult;
 import com.smousseur.orbitlab.simulation.mission.maneuver.TransfertTwoManeuver;
 import com.smousseur.orbitlab.simulation.mission.optimizer.TrajectoryProblem;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropulsionSystem;
@@ -38,6 +39,7 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
 
   private final TransfertTwoManeuver maneuver;
   private final SpacecraftState initialState;
+  private TransferResult lastResult;
 
   // ── Primary objective weights ──
   private static final double W_APO = 3.0;
@@ -178,7 +180,12 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
 
   @Override
   public SpacecraftState propagate(double[] variables) {
-    return maneuver.propagateForOptimization(initialState, variables);
+    lastResult = maneuver.propagateForOptimization(initialState, variables);
+    return lastResult.finalState();
+  }
+
+  public TransferResult getLastTransferResult() {
+    return lastResult;
   }
 
   @Override
@@ -210,7 +217,7 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
     barrier += barrierBelow(periapsisAlt, PERIAPSIS_MIN);
 
     double altMaxPenalty = 0.0;
-    MinAltitudeTracker tracker = maneuver.getLastAltitudeTracker();
+    MinAltitudeTracker tracker = lastResult != null ? lastResult.altitudeTracker() : null;
     if (tracker != null) {
       barrier += barrierBelow(tracker.getMinAltitude(), ALT_MIN);
       if (tracker.getMaxAltitude() > altMax) {

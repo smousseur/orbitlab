@@ -63,10 +63,10 @@ public class AssetFactory {
   }
 
   private static class Holder {
-    private static AssetFactory INSTANCE;
+    private static volatile AssetFactory INSTANCE;
   }
 
-  public static void init(AssetManager assetManager) {
+  public static synchronized void init(AssetManager assetManager) {
     if (Holder.INSTANCE == null) {
       Holder.INSTANCE = new AssetFactory(assetManager);
     } else {
@@ -75,10 +75,10 @@ public class AssetFactory {
   }
 
   public static AssetFactory get() {
-    if (Holder.INSTANCE == null) {
+    AssetFactory instance = Holder.INSTANCE;
+    if (instance == null) {
       throw new OrbitlabException("Asset factory not initialized");
     }
-
-    return Holder.INSTANCE;
+    return instance;
   }
 }

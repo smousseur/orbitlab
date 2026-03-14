@@ -4,6 +4,7 @@ import com.jme3.app.Application;
 import com.jme3.app.state.BaseAppState;
 import com.jme3.scene.Geometry;
 import com.jme3.scene.Node;
+import com.jme3.scene.Spatial;
 import com.smousseur.orbitlab.app.ApplicationContext;
 import com.smousseur.orbitlab.core.OrbitlabException;
 import com.smousseur.orbitlab.core.SolarSystemBody;
@@ -17,6 +18,8 @@ import com.smousseur.orbitlab.simulation.orbit.OrbitSnapshot;
 import com.smousseur.orbitlab.simulation.orbit.config.OrbitWindowConfig;
 import com.smousseur.orbitlab.simulation.source.EphemerisSource;
 import com.smousseur.orbitlab.simulation.source.EphemerisSourceRegistry;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.Map;
@@ -34,6 +37,7 @@ import org.orekit.utils.PVCoordinates;
 
 public final class OrbitRuntimeAppState extends BaseAppState {
 
+  private static final Logger logger = LogManager.getLogger(OrbitRuntimeAppState.class);
   private final ApplicationContext context;
   private final SceneGraph.OrbitLayer orbitLayer;
   private final EnumSet<SolarSystemBody> bodies;
@@ -134,8 +138,7 @@ public final class OrbitRuntimeAppState extends BaseAppState {
             slot.publish(snap);
           } catch (Exception e) {
             // V1: keep previous snapshot, just log.
-            // (Replace by your logger if you have one)
-            System.err.println("Orbit runtime job failed for " + body + ": " + e.getMessage());
+            logger.error("Orbit runtime job failed for {}: {}", body, e.getMessage(), e);
           } finally {
             slot.endJob();
           }
@@ -187,7 +190,8 @@ public final class OrbitRuntimeAppState extends BaseAppState {
     Node n = orbitLayer.orbitNode(body);
     if (n == null) return null;
     // OrbitInitAppState builds Geometry name "OrbitLine-" + body.name()
-    return (Geometry) n.getChild("OrbitLine-" + body.name());
+    Spatial child = n.getChild("OrbitLine-" + body.name());
+    return (child instanceof Geometry g) ? g : null;
   }
 
   @Override

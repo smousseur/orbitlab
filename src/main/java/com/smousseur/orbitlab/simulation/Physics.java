@@ -53,7 +53,12 @@ public final class Physics {
   public static double getLaunchAzimuth(double launchLatitude, double targetInclination) {
     double result = FastMath.PI / 2; // 90° = due east
     if (launchLatitude != 0 && targetInclination != 0) {
-      result = FastMath.asin(FastMath.cos(targetInclination) / FastMath.cos(launchLatitude));
+      double cosLat = FastMath.cos(launchLatitude);
+      if (FastMath.abs(cosLat) < 1e-10) {
+        throw new IllegalArgumentException(
+            "Launch latitude too close to a pole, azimuth is undefined: " + launchLatitude);
+      }
+      result = FastMath.asin(FastMath.cos(targetInclination) / cosLat);
     }
     return result;
   }

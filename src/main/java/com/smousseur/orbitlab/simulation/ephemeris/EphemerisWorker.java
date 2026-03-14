@@ -2,6 +2,8 @@ package com.smousseur.orbitlab.simulation.ephemeris;
 
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.simulation.ephemeris.config.SlidingWindowConfig;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.orekit.time.AbsoluteDate;
 
 import java.util.Map;
@@ -12,6 +14,8 @@ import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 
 public final class EphemerisWorker implements AutoCloseable {
+
+  private static final Logger logger = LogManager.getLogger(EphemerisWorker.class);
 
   private final SlidingWindowConfig windowConfig;
   private final Map<SolarSystemBody, SlidingWindowEphemerisBuffer> buffersByBodyId;
@@ -66,7 +70,7 @@ public final class EphemerisWorker implements AutoCloseable {
     try {
       tick();
     } catch (Throwable t) {
-      t.printStackTrace();
+      logger.error("Unexpected error in ephemeris worker tick", t);
     }
   }
 

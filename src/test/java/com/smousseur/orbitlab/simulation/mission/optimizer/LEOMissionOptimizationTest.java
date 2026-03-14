@@ -5,7 +5,7 @@ import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionStage;
 import com.smousseur.orbitlab.simulation.mission.optimizer.problems.GravityTurnConstraints;
 import com.smousseur.orbitlab.simulation.mission.runtime.MissionOptimizer;
-import com.smousseur.orbitlab.simulation.mission.runtime.MissionOptimzerResult;
+import com.smousseur.orbitlab.simulation.mission.runtime.MissionOptimizerResult;
 import com.smousseur.orbitlab.simulation.mission.runtime.MissionPlayer;
 import com.smousseur.orbitlab.simulation.mission.stage.CoastingStage;
 import com.smousseur.orbitlab.simulation.mission.stage.ascent.GravityTurnStage;
@@ -48,7 +48,7 @@ public class LEOMissionOptimizationTest extends AbstractTrajectoryOptimizerTest 
     SpacecraftState initialState = mission.getInitialState(epoch);
     mission.setCurrentState(initialState);
     MissionOptimizer optimizer = new MissionOptimizer(mission, 40_000);
-    MissionOptimzerResult optimResults = optimizer.optimize();
+    MissionOptimizerResult optimResults = optimizer.optimize();
     mission =
         new AbstractTrajectoryOptimizerTest.TestMission(
             "Gravity Turn", getStages(targetAltitude), getMissionVehicle(), 5.23, -52.77, 0.0, targetAltitude);
@@ -74,8 +74,8 @@ public class LEOMissionOptimizationTest extends AbstractTrajectoryOptimizerTest 
     return new VehicleStack(
         new ArrayList<>(
             List.of(
-                LaunchVehicle.getLauncherStage1Vechicle(),
-                LaunchVehicle.getLauncherStage2Vechicle(),
+                LaunchVehicle.getLauncherStage1Vehicle(),
+                LaunchVehicle.getLauncherStage2Vehicle(),
                 Spacecraft.getSpacecraft())));
   }
 

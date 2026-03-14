@@ -1,8 +1,14 @@
 package com.smousseur.orbitlab.simulation.mission.vehicle;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public record VehicleStack(List<Vehicle> vehicles) implements Vehicle {
+
+  /** Compact canonical constructor: defensive copy to prevent external mutation. */
+  public VehicleStack {
+    vehicles = new ArrayList<>(vehicles);
+  }
 
   @Override
   public Vehicle getStage(int index) {

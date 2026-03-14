@@ -2,11 +2,11 @@ package com.smousseur.orbitlab.simulation.mission.vehicle;
 
 public record LaunchVehicle(double dryMass, double propellantCapacity, PropulsionSystem propulsion)
     implements Vehicle {
-  public static LaunchVehicle getLauncherStage1Vechicle() {
+  public static LaunchVehicle getLauncherStage1Vehicle() {
     return new LaunchVehicle(27000, 425_000, PropulsionSystem.getLauncherStage1Propulsion());
   }
 
-  public static LaunchVehicle getLauncherStage2Vechicle() {
+  public static LaunchVehicle getLauncherStage2Vehicle() {
     return new LaunchVehicle(10000, 134_000, PropulsionSystem.getLauncherStage2Propulsion());
   }
 }

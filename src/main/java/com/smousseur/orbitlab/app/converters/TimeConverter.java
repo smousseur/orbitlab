@@ -21,7 +21,7 @@ public final class TimeConverter {
 
   private static final TimeScale UTC = TimeScalesFactory.getUTC();
   private static final DateTimeFormatter DATA_FORMATTER =
-      DateTimeFormatter.ofPattern("YYYY-MM-dd HH:mm:ss");
+      DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
   private TimeConverter() {}
 
