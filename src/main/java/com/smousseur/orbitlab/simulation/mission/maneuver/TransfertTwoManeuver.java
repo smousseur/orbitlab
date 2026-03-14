@@ -8,14 +8,11 @@ import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
-import org.hipparchus.util.FastMath;
 import org.orekit.attitudes.LofOffset;
 import org.orekit.forces.maneuvers.ConstantThrustManeuver;
 import org.orekit.frames.LOFType;
 import org.orekit.orbits.KeplerianOrbit;
 import org.orekit.propagation.SpacecraftState;
-import org.orekit.propagation.events.ApsideDetector;
-import org.orekit.propagation.events.handlers.RecordAndContinue;
 import org.orekit.propagation.numerical.NumericalPropagator;
 import org.orekit.time.AbsoluteDate;
 import org.orekit.utils.Constants;
@@ -49,18 +46,12 @@ public class TransfertTwoManeuver {
 
   private final Vehicle vehicle;
   private final double targetAltitude;
-
-  private KeplerianOrbit lastOrbitPostBurn1;
-
-  /** Tracks altitude extremes during the last propagation. */
-  private MinAltitudeTracker lastAltitudeTracker;
-
-  /** Resolved burn 2 parameters from the last propagation. */
-  private ResolvedBurn2 lastResolvedBurn2;
+  private final Burn2Resolver burn2Resolver;
 
   public TransfertTwoManeuver(Vehicle vehicle, double targetAltitude) {
     this.vehicle = vehicle;
     this.targetAltitude = targetAltitude;
+    this.burn2Resolver = new Burn2Resolver(vehicle);
   }
 
   // ════════════════════════════════════════════════════════════════════════
@@ -77,14 +68,6 @@ public class TransfertTwoManeuver {
     return new Burn1Params(variables[0], variables[1], variables[2], variables[3]);
   }
 
-  public ResolvedBurn2 getLastResolvedBurn2() {
-    return lastResolvedBurn2;
-  }
-
-  public MinAltitudeTracker getLastAltitudeTracker() {
-    return lastAltitudeTracker;
-  }
-
   // ════════════════════════════════════════════════════════════════════════
   // Optimization entry point
   // ════════════════════════════════════════════════════════════════════════
@@ -97,45 +80,48 @@ public class TransfertTwoManeuver {
    *   <li>Resolve burn 2 at next apoapsis (circularization correction)
    *   <li>Full propagation with both burns
    * </ol>
+   *
+   * @return a {@link TransferResult} with the final state and captured metadata; fields are null in
+   *     penalty cases
    */
-  public SpacecraftState propagateForOptimization(
-      SpacecraftState initialState, double[] variables) {
+  public TransferResult propagateForOptimization(SpacecraftState initialState, double[] variables) {
     Burn1Params params = decode(variables);
 
     // ── Step 1: Propagate burn 1 to get post-burn state ──
     SpacecraftState stateAfterBurn1 = propagateBurn1(initialState, params);
     if (stateAfterBurn1 == null) {
-      return initialState; // penalty
+      return new TransferResult(initialState, null, null, null); // penalty
     }
     KeplerianOrbit orbit = new KeplerianOrbit(stateAfterBurn1.getOrbit());
     if (orbit.getE() > 0.95
         || orbit.getA() < EARTH_RADIUS
         || orbit.getA() > EARTH_RADIUS + 2_000_000) {
-      return initialState; // orbite non-viable, penalty
+      return new TransferResult(initialState, null, null, null); // non-viable orbit, penalty
     }
-    lastOrbitPostBurn1 = orbit;
+
+    KeplerianOrbit orbitPostBurn1 = orbit;
+
     // ── Step 2: Resolve burn 2 at next apoapsis ──
-    ResolvedBurn2 burn2 = resolveBurn2(stateAfterBurn1);
+    ResolvedBurn2 burn2 = burn2Resolver.resolveBurn2(stateAfterBurn1);
     if (burn2 == null) {
-      return initialState; // penalty
+      return new TransferResult(initialState, orbitPostBurn1, null, null); // penalty
     }
-    this.lastResolvedBurn2 = burn2;
 
     // ── Step 3: Full propagation with both burns ──
     NumericalPropagator propagator = OrekitService.get().createOptimizationPropagator();
     propagator.setInitialState(initialState);
-    configure(propagator, initialState, params, burn2);
+    MinAltitudeTracker tracker = configure(propagator, initialState, params, burn2);
 
     double totalTime = totalDuration(params, burn2);
     AbsoluteDate endDate = initialState.getDate().shiftedBy(totalTime);
     try {
       SpacecraftState finalState = propagator.propagate(endDate);
       if (Math.abs(finalState.getDate().durationFrom(endDate)) > 1.0) {
-        return initialState; // penalty
+        return new TransferResult(initialState, orbitPostBurn1, burn2, tracker); // penalty
       }
-      return finalState;
+      return new TransferResult(finalState, orbitPostBurn1, burn2, tracker);
     } catch (Exception e) {
-      return initialState; // penalty
+      return new TransferResult(initialState, orbitPostBurn1, burn2, tracker); // penalty
     }
   }
 
@@ -143,8 +129,12 @@ public class TransfertTwoManeuver {
   // Configure — single source of truth for optimizer and Stage runtime
   // ════════════════════════════════════════════════════════════════════════
 
-  /** Configures both burns on the given propagator. */
-  public void configure(
+  /**
+   * Configures both burns on the given propagator and returns the altitude tracker.
+   *
+   * @return the {@link MinAltitudeTracker} added to the propagator
+   */
+  public MinAltitudeTracker configure(
       NumericalPropagator propagator,
       SpacecraftState state,
       Burn1Params params,
@@ -185,8 +175,10 @@ public class TransfertTwoManeuver {
 
     // ── Altitude tracker ──
     double maxAltThreshold = targetAltitude * 1.25;
-    lastAltitudeTracker = new MinAltitudeTracker(80_000, maxAltThreshold, burn1Start);
-    propagator.addEventDetector(lastAltitudeTracker);
+    MinAltitudeTracker altitudeTracker =
+        new MinAltitudeTracker(80_000, maxAltThreshold, burn1Start);
+    propagator.addEventDetector(altitudeTracker);
+    return altitudeTracker;
   }
 
   /** Total maneuver duration from epoch to end of burn 2. */
@@ -225,59 +217,16 @@ public class TransfertTwoManeuver {
   }
 
   // ════════════════════════════════════════════════════════════════════════
-  // Burn 2 resolution — circularization at next apoapsis
+  // Burn 2 resolution — delegates to Burn2Resolver
   // ════════════════════════════════════════════════════════════════════════
 
   /**
-   * Resolves burn 2 deterministically from the post-burn-1 state:
-   *
-   * <ol>
-   *   <li>Detect the next apoapsis after burn 1 (with J2)
-   *   <li>Compute orbital velocity at apoapsis
-   *   <li>Compute circular velocity at that altitude
-   *   <li>ΔV = vCirc - vAtApoapsis → burn duration via Tsiolkovsky
-   *   <li>Center burn on apoapsis: dtCoast = dtApoapsis - dt2/2
-   * </ol>
+   * Resolves burn 2 deterministically from the post-burn-1 state.
    *
    * @return resolved burn 2 parameters, or null on failure
    */
   public ResolvedBurn2 resolveBurn2(SpacecraftState stateAfterBurn1) {
-    // ── Find next apoapsis ──
-    double dtApoapsis = detectTimeToApoapsis(stateAfterBurn1);
-    if (Double.isNaN(dtApoapsis)) {
-      return null;
-    }
-
-    // ── Orbital elements post-burn-1 ──
-    KeplerianOrbit orbitAfterBurn1 = new KeplerianOrbit(stateAfterBurn1.getOrbit());
-    double mu = orbitAfterBurn1.getMu();
-    double a = orbitAfterBurn1.getA();
-    double e = orbitAfterBurn1.getE();
-    double rApoapsis = a * (1.0 + e);
-
-    // Velocity at apoapsis on the current orbit
-    double vAtApoapsis = FastMath.sqrt(mu * (2.0 / rApoapsis - 1.0 / a));
-    // Circular velocity at apoapsis altitude
-    double vCirc = FastMath.sqrt(mu / rApoapsis);
-    // ΔV needed (prograde — raises perigee to circularize)
-    double dvNeeded = vCirc - vAtApoapsis;
-
-    if (dvNeeded <= 0.0) {
-      // Already circular or hyperbolic — no burn needed
-      return new ResolvedBurn2(dtApoapsis, 0.0, 0.0);
-    }
-
-    // ── Compute burn duration via Tsiolkovsky ──
-    PropulsionSystem propulsion = vehicle.getSecondStage().propulsion();
-    double massAtApoapsis = stateAfterBurn1.getMass(); // approximate (coast is ballistic)
-    double dt2 =
-        Physics.computeBurnDuration(
-            dvNeeded, massAtApoapsis, propulsion.isp(), propulsion.thrust());
-
-    // ── Center burn on apoapsis ──
-    double dtCoast = FastMath.max(dtApoapsis - dt2 / 2.0, 0.0);
-
-    return new ResolvedBurn2(dtCoast, dt2, dvNeeded);
+    return burn2Resolver.resolveBurn2(stateAfterBurn1);
   }
 
   /** Re-resolve burn 2 from initial state + burn 1 params. Convenience for Stage runtime. */
@@ -286,54 +235,6 @@ public class TransfertTwoManeuver {
     if (stateAfterBurn1 == null) {
       return null;
     }
-    return resolveBurn2(stateAfterBurn1);
-  }
-
-  // ════════════════════════════════════════════════════════════════════════
-  // Apoapsis detection
-  // ════════════════════════════════════════════════════════════════════════
-
-  /**
-   * Detects the next apoapsis after burn 1 using a propagator with J2.
-   *
-   * <p>After burn 1, the spacecraft is near apoapsis on a quasi-circular orbit. The next apoapsis
-   * is approximately one full orbital period away. We search up to 1.1 periods to account for J2
-   * effects and the fact that burn 1 may end slightly past the current apoapsis.
-   *
-   * @return time from stateAfterBurn1 to next apoapsis (s), or NaN on failure
-   */
-  private double detectTimeToApoapsis(SpacecraftState stateAfterBurn1) {
-    NumericalPropagator coastPropagator = OrekitService.get().createOptimizationPropagator();
-    coastPropagator.setInitialState(stateAfterBurn1);
-
-    RecordAndContinue recorder = new RecordAndContinue();
-    ApsideDetector apsideDetector =
-        new ApsideDetector(stateAfterBurn1.getOrbit()).withHandler(recorder);
-    coastPropagator.addEventDetector(apsideDetector);
-
-    // Search up to 1.1 orbital periods — enough for one full orbit + margin
-    double maxCoast =
-        FastMath.min(
-            stateAfterBurn1.getOrbit().getKeplerianPeriod() * 1.1,
-            7000.0 // max ~2h, protège contre les orbites très excentriques
-            );
-    coastPropagator.propagate(stateAfterBurn1.getDate().shiftedBy(maxCoast));
-
-    // Skip apoapsis events that are too close (< half a period)
-    double minCoast = stateAfterBurn1.getOrbit().getKeplerianPeriod() * 0.4;
-
-    for (RecordAndContinue.Event event : recorder.getEvents()) {
-      if (!event.isIncreasing()) {
-        double dt = event.getState().getDate().durationFrom(stateAfterBurn1.getDate());
-        if (dt > minCoast) {
-          return Math.max(dt, 0.0);
-        }
-      }
-    }
-    return Double.NaN;
-  }
-
-  public KeplerianOrbit getLastOrbitPostBurn1() {
-    return lastOrbitPostBurn1;
+    return burn2Resolver.resolveBurn2(stateAfterBurn1);
   }
 }
