@@ -4,6 +4,7 @@ import com.jme3.app.Application;
 import com.jme3.app.state.BaseAppState;
 import com.jme3.scene.Geometry;
 import com.jme3.scene.Node;
+import com.jme3.scene.Spatial;
 import com.smousseur.orbitlab.app.ApplicationContext;
 import com.smousseur.orbitlab.core.OrbitlabException;
 import com.smousseur.orbitlab.core.SolarSystemBody;
@@ -189,7 +190,7 @@ public final class OrbitRuntimeAppState extends BaseAppState {
     Node n = orbitLayer.orbitNode(body);
     if (n == null) return null;
     // OrbitInitAppState builds Geometry name "OrbitLine-" + body.name()
-    com.jme3.scene.Spatial child = n.getChild("OrbitLine-" + body.name());
+    Spatial child = n.getChild("OrbitLine-" + body.name());
     return (child instanceof Geometry g) ? g : null;
   }
 

@@ -217,7 +217,7 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
     barrier += barrierBelow(periapsisAlt, PERIAPSIS_MIN);
 
     double altMaxPenalty = 0.0;
-    MinAltitudeTracker tracker = (lastResult != null) ? lastResult.altitudeTracker() : null;
+    MinAltitudeTracker tracker = lastResult != null ? lastResult.altitudeTracker() : null;
     if (tracker != null) {
       barrier += barrierBelow(tracker.getMinAltitude(), ALT_MIN);
       if (tracker.getMaxAltitude() > altMax) {
