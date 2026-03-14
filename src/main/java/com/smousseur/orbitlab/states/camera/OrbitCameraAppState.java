@@ -17,10 +17,20 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 
 /**
- * Blender-like orbit camera (turntable): - MMB drag: orbit - Shift + MMB drag: pan (moves pivot in
- * screen plane) - Wheel: dolly (exponential, changes distance, not FOV) Target/pivot can be
- * provided as a Spatial or a Supplier<Vector3f> (world space). If target is null/invalid, falls
- * back to a provided fallback pivot supplier.
+ * Blender-like orbit camera using a turntable model for 3D scene navigation.
+ *
+ * <p>Supports the following interaction modes:
+ * <ul>
+ *   <li>Middle mouse button (MMB) drag: orbit around the pivot point</li>
+ *   <li>Shift + MMB drag: pan (translates the pivot in the screen plane)</li>
+ *   <li>Mouse wheel: dolly zoom (exponential distance scaling)</li>
+ * </ul>
+ *
+ * <p>The camera orbits around a target pivot, which can be set as a {@link Spatial} or a
+ * {@code Supplier<Vector3f>} providing world-space coordinates. If the target is null or
+ * contains non-finite coordinates, the camera falls back to the provided fallback pivot
+ * supplier. The field of view adapts dynamically based on the zoom level, narrowing when
+ * close and widening when far.
  */
 public final class OrbitCameraAppState extends BaseAppState
     implements ActionListener, AnalogListener {
@@ -61,6 +71,15 @@ public final class OrbitCameraAppState extends BaseAppState
   private final float fovMaxRad = (float) Math.toRadians(60.0); // large lointain
   private final float fovCurveK = 0.9f; // 0.6..1.5 : <1 => plus de resserrement près du proche
 
+  /**
+   * Creates a new orbit camera state.
+   *
+   * @param config camera configuration controlling distances, speeds, and frustum parameters
+   * @param fallbackPivotWorldSupplier supplier for the fallback pivot position in world space,
+   *     used when no target is set or the target position is invalid
+   * @param uiWantsMouse supplier that returns {@code true} when the UI is capturing mouse
+   *     input, causing the camera to ignore mouse events
+   */
   public OrbitCameraAppState(
       OrbitCameraConfig config,
       Supplier<Vector3f> fallbackPivotWorldSupplier,
@@ -73,25 +92,54 @@ public final class OrbitCameraAppState extends BaseAppState
     reset();
   }
 
+  /**
+   * Sets the camera's orbit target to a scene spatial. The camera will orbit around
+   * the spatial's world translation. Clears any previously set supplier-based target.
+   *
+   * @param spatial the spatial to orbit around
+   */
   public void setTarget(Spatial spatial) {
     this.targetSpatial = spatial;
     this.targetWorldSupplier = null;
   }
 
+  /**
+   * Sets the camera's orbit target to a dynamic world-space position supplier.
+   * The camera will orbit around the position returned by the supplier each frame.
+   * Clears any previously set spatial-based target.
+   *
+   * @param pivotWorldSupplier supplier providing the pivot position in world space
+   */
   public void setTarget(Supplier<Vector3f> pivotWorldSupplier) {
     this.targetWorldSupplier = pivotWorldSupplier;
     this.targetSpatial = null;
   }
 
+  /**
+   * Clears the current orbit target. The camera will fall back to the fallback pivot
+   * supplier until a new target is set.
+   */
   public void clearTarget() {
     this.targetSpatial = null;
     this.targetWorldSupplier = null;
   }
 
+  /**
+   * Returns the current distance from the camera to the orbit pivot point.
+   *
+   * @return the distance in world units
+   */
   public float distanceToTarget() {
     return distance;
   }
 
+  /**
+   * Returns the current zoom level as a normalized value between 0 and 1, where 0 represents
+   * the minimum distance (fully zoomed in) and 1 represents the maximum distance (fully zoomed
+   * out). The mapping uses a logarithmic scale for perceptually uniform zoom behavior.
+   *
+   * @return the normalized zoom level in the range [0, 1]
+   */
   public float normalizedZoom01() {
     float d = FastMath.clamp(distance, config.minDistance(), config.maxDistance());
     float min = config.minDistance();
@@ -103,10 +151,19 @@ public final class OrbitCameraAppState extends BaseAppState
     return FastMath.clamp(t, 0f, 1f);
   }
 
+  /**
+   * Returns a copy of the last computed pivot position in world space.
+   *
+   * @return a clone of the pivot world position vector
+   */
   public Vector3f pivotWorldPosition() {
     return lastPivotWorld.clone();
   }
 
+  /**
+   * Resets the camera orientation and distance to their default values as defined by the
+   * configuration. The yaw is set to zero and the pitch is set to -20 degrees.
+   */
   public void reset() {
     yawRad = 0f;
     pitchRad = (float) (-20.0 * Math.PI / 180.0);

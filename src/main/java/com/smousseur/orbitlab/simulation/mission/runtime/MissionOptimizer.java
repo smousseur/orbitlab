@@ -16,21 +16,49 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.orekit.propagation.SpacecraftState;
 
+/**
+ * Orchestrates the sequential optimization of all stages in a {@link Mission}.
+ *
+ * <p>Iterates through the mission's stages in order. For each {@link OptimizableMissionStage}, it
+ * builds the corresponding {@link TrajectoryProblem}, runs a {@link CMAESTrajectoryOptimizer}, and
+ * advances the mission state with the optimal solution. Non-optimizable stages are propagated
+ * directly.
+ */
 public class MissionOptimizer {
   private static final Logger logger = LogManager.getLogger(MissionOptimizer.class);
 
   private final Mission mission;
   private final int maxEvaluations;
 
+  /**
+   * Creates a mission optimizer with a default evaluation budget of 20,000 per stage.
+   *
+   * @param mission the mission whose stages will be optimized
+   */
   public MissionOptimizer(Mission mission) {
     this(mission, 20_000);
   }
 
+  /**
+   * Creates a mission optimizer with a specified evaluation budget per stage.
+   *
+   * @param mission the mission whose stages will be optimized
+   * @param maxEvaluations maximum number of objective function evaluations per optimizable stage
+   */
   public MissionOptimizer(Mission mission, int maxEvaluations) {
     this.mission = mission;
     this.maxEvaluations = maxEvaluations;
   }
 
+  /**
+   * Optimizes all stages of the mission sequentially.
+   *
+   * <p>Each optimizable stage produces a trajectory problem that is solved via CMA-ES. The
+   * resulting optimal parameters and spacecraft state are recorded and used to advance the mission.
+   * Non-optimizable stages are propagated in standalone mode.
+   *
+   * @return the collected optimization results for all optimizable stages, keyed by stage name
+   */
   public MissionOptimizerResult optimize() {
     Map<String, OptimizationResult> results = new LinkedHashMap<>();
 

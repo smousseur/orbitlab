@@ -68,6 +68,19 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
   // Physical upper bound on burn 1 duration (from available propellant)
   private final double dt1MaxPhysical;
 
+  /**
+   * Creates a two-burn transfer optimization problem.
+   *
+   * <p>Precomputes Hohmann-like initial guesses for burn timing and duration, applies a J2
+   * short-period altitude compensation to the target, and determines physical upper bounds on burn
+   * duration from available propellant.
+   *
+   * @param maneuver the two-burn transfer maneuver that handles propagation
+   * @param initialState the spacecraft state at the start of the transfer
+   * @param targetAltitude the desired circular orbit altitude in meters above the Earth's surface
+   * @param propulsionSystem the propulsion system used for the transfer burns
+   * @param vehicleMinMass minimum allowable vehicle mass after burns (dry mass)
+   */
   public TransferTwoManeuverProblem(
       TransfertTwoManeuver maneuver,
       SpacecraftState initialState,
@@ -184,6 +197,12 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
     return lastResult.finalState();
   }
 
+  /**
+   * Returns the transfer result from the most recent propagation, containing the post-burn-1 orbit
+   * and the resolved burn-2 parameters.
+   *
+   * @return the last transfer result, or {@code null} if no propagation has been performed yet
+   */
   public TransferResult getLastTransferResult() {
     return lastResult;
   }
@@ -236,6 +255,11 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
     return FastMath.log1p(FastMath.exp(-k * normalized));
   }
 
+  /**
+   * Returns the underlying two-burn transfer maneuver.
+   *
+   * @return the transfer maneuver instance
+   */
   public TransfertTwoManeuver getManeuver() {
     return maneuver;
   }

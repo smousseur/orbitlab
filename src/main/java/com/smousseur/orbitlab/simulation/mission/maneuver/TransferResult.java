@@ -9,6 +9,15 @@ import org.orekit.propagation.SpacecraftState;
  *
  * <p>Fields are nullable when the propagation ended in a penalty case (invalid orbit, failed
  * propagation, etc.). Callers must null-check before accessing optional fields.
+ *
+ * @param finalState the spacecraft state at the end of the transfer, or the initial state in
+ *     penalty cases
+ * @param orbitPostBurn1 the Keplerian orbit after burn 1 completes, or {@code null} if burn 1
+ *     failed
+ * @param resolvedBurn2 the deterministically resolved burn 2 parameters, or {@code null} if burn
+ *     2 could not be resolved
+ * @param altitudeTracker the altitude tracker that recorded min/max altitudes during the transfer,
+ *     or {@code null} in early penalty cases
  */
 public record TransferResult(
     SpacecraftState finalState,

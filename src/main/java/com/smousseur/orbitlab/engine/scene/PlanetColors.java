@@ -3,10 +3,20 @@ package com.smousseur.orbitlab.engine.scene;
 import com.jme3.math.ColorRGBA;
 import com.smousseur.orbitlab.core.SolarSystemBody;
 
+/**
+ * Provides characteristic display colors for each solar system body,
+ * used for orbit lines and planet icon rendering.
+ */
 public final class PlanetColors {
 
   private PlanetColors() {}
 
+  /**
+   * Returns the characteristic display color for the given solar system body.
+   *
+   * @param body the solar system body
+   * @return the RGBA color associated with the body
+   */
   public static ColorRGBA colorFor(SolarSystemBody body) {
     return switch (body) {
       case MERCURY -> new ColorRGBA(0.70f, 0.70f, 0.70f, 1.0f);

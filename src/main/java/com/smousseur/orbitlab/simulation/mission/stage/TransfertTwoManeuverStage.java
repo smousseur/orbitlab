@@ -15,12 +15,24 @@ import org.orekit.propagation.events.DateDetector;
 import org.orekit.propagation.numerical.NumericalPropagator;
 import org.orekit.time.AbsoluteDate;
 
+/**
+ * A mission stage that performs a two-burn orbit transfer maneuver to reach a target circular
+ * orbit altitude. The first burn raises the orbit to a transfer ellipse, and the second burn
+ * circularizes at the target altitude. This stage requires CMA-ES optimization before execution
+ * to determine the optimal burn parameters.
+ */
 public class TransfertTwoManeuverStage extends MissionStage
     implements OptimizableMissionStage<TransferTwoManeuverProblem> {
   private final double targetAltitude;
 
   private OptimizationResult optimizationResult;
 
+  /**
+   * Creates a two-burn transfer maneuver stage targeting the specified circular orbit altitude.
+   *
+   * @param name the human-readable name of this stage
+   * @param targetAltitude the desired circular orbit altitude in meters above Earth's surface
+   */
   public TransfertTwoManeuverStage(String name, double targetAltitude) {
     super(name);
     this.targetAltitude = targetAltitude;

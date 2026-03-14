@@ -17,10 +17,20 @@ import org.orekit.utils.FieldAngularCoordinates;
 import org.orekit.utils.FieldPVCoordinatesProvider;
 import org.orekit.utils.PVCoordinatesProvider;
 
+/**
+ * Attitude provider that orients the spacecraft thrust axis along the local zenith direction
+ * (radially outward from the central body). Used during vertical ascent phases where the vehicle
+ * must thrust straight up from the launch site.
+ */
 public class ZenithThrustAttitudeProvider implements AttitudeProvider {
 
   private final Frame inertialFrame;
 
+  /**
+   * Creates a zenith thrust attitude provider.
+   *
+   * @param inertialFrame the inertial reference frame used for computing the zenith direction
+   */
   public ZenithThrustAttitudeProvider(Frame inertialFrame) {
     this.inertialFrame = inertialFrame;
   }

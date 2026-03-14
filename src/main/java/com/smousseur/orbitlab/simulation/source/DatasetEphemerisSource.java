@@ -35,6 +35,17 @@ public final class DatasetEphemerisSource
 
   private final EnumMap<SolarSystemBody, BodyFile> bodyFiles = new EnumMap<>(SolarSystemBody.class);
 
+  /**
+   * Creates a new dataset ephemeris source backed by binary files in the given directory.
+   *
+   * <p>All solar system body files are opened and indexed immediately. If any body file is missing
+   * or invalid, an {@link OrbitlabException} is thrown and all previously opened files are closed.
+   *
+   * @param datasetDir the directory containing {@code .bin} ephemeris dataset files (one per body)
+   * @param chunksInCachePerBody the maximum number of decoded chunks to cache per body
+   * @throws OrbitlabException if the directory does not exist or any body file is missing or invalid
+   * @throws IllegalArgumentException if {@code chunksInCachePerBody} is less than 1
+   */
   public DatasetEphemerisSource(Path datasetDir, int chunksInCachePerBody) {
     this.datasetDir = Objects.requireNonNull(datasetDir, "datasetDir").toAbsolutePath().normalize();
     if (chunksInCachePerBody < 1) {

@@ -5,8 +5,18 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 
+/**
+ * Utility class for computing cryptographic hash digests of files.
+ */
 public final class HashUtils {
 
+  /**
+   * Computes the SHA-256 hash of a file and returns it as a lowercase hexadecimal string.
+   *
+   * @param path the path to the file to hash
+   * @return the SHA-256 digest as a lowercase hex string
+   * @throws Exception if the file cannot be read or the SHA-256 algorithm is unavailable
+   */
   public static String sha256HexOfFile(Path path) throws Exception {
     MessageDigest md = MessageDigest.getInstance("SHA-256");
     try (InputStream in = Files.newInputStream(path)) {

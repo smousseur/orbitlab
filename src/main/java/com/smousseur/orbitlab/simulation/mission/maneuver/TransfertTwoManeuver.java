@@ -48,6 +48,12 @@ public class TransfertTwoManeuver {
   private final double targetAltitude;
   private final Burn2Resolver burn2Resolver;
 
+  /**
+   * Creates a two-burn transfer maneuver targeting the specified circular orbit altitude.
+   *
+   * @param vehicle the vehicle performing the transfer (second stage propulsion is used)
+   * @param targetAltitude the target circular orbit altitude above Earth's surface in meters
+   */
   public TransfertTwoManeuver(Vehicle vehicle, double targetAltitude) {
     this.vehicle = vehicle;
     this.targetAltitude = targetAltitude;
@@ -58,12 +64,31 @@ public class TransfertTwoManeuver {
   // Parameter records
   // ════════════════════════════════════════════════════════════════════════
 
-  /** The 4 CMA-ES-optimized parameters for burn 1. */
+  /**
+   * The 4 CMA-ES-optimized parameters for burn 1 (orbit insertion near apoapsis).
+   *
+   * @param t1 offset of burn 1 start from epoch (seconds)
+   * @param dt1 duration of burn 1 (seconds)
+   * @param alpha1 in-plane thrust angle in the TNW frame (radians)
+   * @param beta1 out-of-plane thrust angle in the TNW frame (radians)
+   */
   public record Burn1Params(double t1, double dt1, double alpha1, double beta1) {}
 
-  /** Deterministically resolved burn 2 (circularization at apoapsis). */
+  /**
+   * Deterministically resolved burn 2 parameters for circularization at the next apoapsis.
+   *
+   * @param dtCoast coast duration from end of burn 1 to start of burn 2 (seconds)
+   * @param dt2 duration of burn 2 (seconds)
+   * @param dvNeeded the delta-V required for circularization (m/s)
+   */
   public record ResolvedBurn2(double dtCoast, double dt2, double dvNeeded) {}
 
+  /**
+   * Decodes a raw CMA-ES variable array into typed burn 1 parameters.
+   *
+   * @param variables the 4-element optimization variable array [t1, dt1, alpha1, beta1]
+   * @return the decoded burn 1 parameters
+   */
   public Burn1Params decode(double[] variables) {
     return new Burn1Params(variables[0], variables[1], variables[2], variables[3]);
   }

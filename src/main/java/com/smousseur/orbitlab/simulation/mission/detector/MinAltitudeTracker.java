@@ -20,11 +20,19 @@ public class MinAltitudeTracker extends AbstractDetector<MinAltitudeTracker> {
   private double minAltitude = Double.MAX_VALUE;
   private double maxAltitude = Double.MIN_VALUE;
 
+  /**
+   * Creates a tracker that records altitude extremes, active from the start of propagation.
+   *
+   * @param altitudeThreshold minimum altitude threshold in meters
+   * @param maxAltitudeThreshold maximum altitude threshold in meters
+   */
   public MinAltitudeTracker(double altitudeThreshold, double maxAltitudeThreshold) {
     this(altitudeThreshold, maxAltitudeThreshold, null);
   }
 
   /**
+   * Creates a tracker that records altitude extremes, optionally activating only after a given date.
+   *
    * @param altitudeThreshold minimum altitude threshold (m)
    * @param maxAltitudeThreshold maximum altitude threshold (m)
    * @param activeFrom only track altitude after this date (null = track from start)
@@ -84,18 +92,38 @@ public class MinAltitudeTracker extends AbstractDetector<MinAltitudeTracker> {
     return altitude - altitudeThreshold;
   }
 
+  /**
+   * Returns the minimum altitude recorded during propagation.
+   *
+   * @return the minimum altitude in meters
+   */
   public double getMinAltitude() {
     return minAltitude;
   }
 
+  /**
+   * Returns the maximum altitude recorded during propagation.
+   *
+   * @return the maximum altitude in meters
+   */
   public double getMaxAltitude() {
     return maxAltitude;
   }
 
+  /**
+   * Returns whether the recorded minimum altitude fell below the configured threshold.
+   *
+   * @return {@code true} if the minimum altitude threshold was violated
+   */
   public boolean hasViolatedMin() {
     return minAltitude < altitudeThreshold;
   }
 
+  /**
+   * Returns whether the recorded maximum altitude exceeded the configured threshold.
+   *
+   * @return {@code true} if the maximum altitude threshold was violated
+   */
   public boolean hasViolatedMax() {
     return maxAltitude > maxAltitudeThreshold;
   }

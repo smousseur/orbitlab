@@ -6,6 +6,14 @@ import org.hipparchus.geometry.euclidean.threed.Rotation;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.orekit.utils.PVCoordinates;
 
+/**
+ * A decoded ephemeris chunk containing pre-parsed position/velocity and rotation data for a single
+ * celestial body over a fixed time interval.
+ *
+ * <p>Chunks are decoded from the binary dataset format and cached by {@link BodyFile}. Sampling
+ * methods use Hermite interpolation for position/velocity and spherical linear interpolation
+ * (SLERP) for rotations to produce smooth results between stored data points.
+ */
 final class DecodedChunk {
   @SuppressWarnings("unused")
   private final SolarSystemBody body;
@@ -32,6 +40,12 @@ final class DecodedChunk {
     this.rot = rot;
   }
 
+  /**
+   * Samples the position and velocity at the given time offset using Hermite interpolation.
+   *
+   * @param offsetSeconds elapsed seconds from the dataset start epoch
+   * @return the interpolated position and velocity coordinates in ICRF
+   */
   PVCoordinates samplePv(double offsetSeconds) {
     int i0 = (int) Math.floor((offsetSeconds - pv.t0()) / pv.dt());
     i0 = clamp(i0, 0, pv.n() - 2);
@@ -51,6 +65,12 @@ final class DecodedChunk {
     return new PVCoordinates(p, v);
   }
 
+  /**
+   * Samples the body rotation at the given time offset using spherical linear interpolation (SLERP).
+   *
+   * @param offsetSeconds elapsed seconds from the dataset start epoch
+   * @return the interpolated rotation quaternion
+   */
   Rotation sampleRot(double offsetSeconds) {
     int i0 = (int) Math.floor((offsetSeconds - rot.t0()) / rot.dt());
     i0 = clamp(i0, 0, rot.n() - 2);

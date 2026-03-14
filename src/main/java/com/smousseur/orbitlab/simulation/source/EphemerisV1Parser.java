@@ -26,14 +26,63 @@ final class EphemerisV1Parser {
 
   private EphemerisV1Parser() {}
 
+  /**
+   * Parsed header from a V1 ephemeris dataset file.
+   *
+   * @param chunkDurationSeconds the duration each chunk covers in seconds
+   * @param chunkCount the total number of chunks in the file
+   * @param chunkIndexOffset the byte offset of the chunk index within the file
+   */
   record HeaderV1(double chunkDurationSeconds, int chunkCount, long chunkIndexOffset) {}
 
+  /**
+   * Parsed chunk index from a V1 ephemeris dataset file, providing the file offset and byte length
+   * of each chunk.
+   *
+   * @param fileOffsets the byte offset of each chunk within the file
+   * @param byteLengths the byte length of each chunk
+   */
   record IndexV1(long[] fileOffsets, int[] byteLengths) {}
 
+  /**
+   * Decoded position/velocity data block from a chunk.
+   *
+   * <p>The {@code raw} array stores interleaved position and velocity components as
+   * {@code [px, py, pz, vx, vy, vz]} for each of the {@code n} samples.
+   *
+   * @param t0 the start time offset of this block in seconds from the dataset epoch
+   * @param dt the time step between consecutive samples in seconds
+   * @param n the number of samples in this block
+   * @param raw the flat array of interleaved position and velocity values (length {@code n * 6})
+   */
   record PvBlock(double t0, double dt, int n, double[] raw) {}
 
+  /**
+   * Decoded rotation data block from a chunk.
+   *
+   * <p>The {@code rawQuat} array stores quaternion components as {@code [q0, q1, q2, q3]} for
+   * each of the {@code n} samples.
+   *
+   * @param t0 the start time offset of this block in seconds from the dataset epoch
+   * @param dt the time step between consecutive samples in seconds
+   * @param n the number of samples in this block
+   * @param rawQuat the flat array of quaternion components (length {@code n * 4})
+   */
   record RotBlock(double t0, double dt, int n, double[] rawQuat) {}
 
+  /**
+   * Reads and validates the V1 header from the beginning of an ephemeris dataset file.
+   *
+   * <p>Validates the magic bytes, format version, body identity, time scale, and structural
+   * integrity of the header fields.
+   *
+   * @param expectedBody the body this file is expected to describe (used for validation)
+   * @param ch the file channel positioned at or near the start of the file
+   * @param path the file path (used in error messages)
+   * @return the parsed header
+   * @throws IOException if an I/O error occurs during reading
+   * @throws OrbitlabException if the header is invalid or does not match expectations
+   */
   static HeaderV1 readHeaderV1(SolarSystemBody expectedBody, FileChannel ch, Path path)
       throws IOException {
 
@@ -118,6 +167,15 @@ final class EphemerisV1Parser {
     return new HeaderV1(chunkDur, (int) chunkCountUnsigned, chunkIndexOffset);
   }
 
+  /**
+   * Reads the chunk index from the file, using the offset and count from the given header.
+   *
+   * @param ch the file channel to read from
+   * @param hdr the previously parsed header containing the index offset and chunk count
+   * @return the parsed chunk index with file offsets and byte lengths for each chunk
+   * @throws IOException if an I/O error occurs during reading
+   * @throws OrbitlabException if the index data is truncated or invalid
+   */
   static IndexV1 readIndexV1(FileChannel ch, HeaderV1 hdr) throws IOException {
     long indexSize = (long) hdr.chunkCount() * INDEX_ENTRY_SIZE;
 
@@ -152,6 +210,17 @@ final class EphemerisV1Parser {
     return new IndexV1(fileOffsets, byteLengths);
   }
 
+  /**
+   * Parses a position/velocity data block from a chunk's byte buffer.
+   *
+   * <p>The block is Zstandard-compressed and is decompressed during parsing.
+   *
+   * @param chunk the byte buffer of the entire chunk
+   * @param off the byte offset of the PV block within the chunk
+   * @param len the byte length of the PV block
+   * @return the decoded PV block
+   * @throws OrbitlabException if the codec is unsupported or the data is invalid
+   */
   static PvBlock parsePvBlock(ByteBuffer chunk, int off, int len) {
     ByteBuffer bb = slice(chunk, off, len).order(ByteOrder.LITTLE_ENDIAN);
 
@@ -186,6 +255,17 @@ final class EphemerisV1Parser {
     return new PvBlock(t0, dt, n, raw);
   }
 
+  /**
+   * Parses a rotation data block from a chunk's byte buffer.
+   *
+   * <p>The block is Zstandard-compressed and is decompressed during parsing.
+   *
+   * @param chunk the byte buffer of the entire chunk
+   * @param off the byte offset of the rotation block within the chunk
+   * @param len the byte length of the rotation block
+   * @return the decoded rotation block
+   * @throws OrbitlabException if the codec is unsupported or the data is invalid
+   */
   static RotBlock parseRotBlock(ByteBuffer chunk, int off, int len) {
     ByteBuffer bb = slice(chunk, off, len).order(ByteOrder.LITTLE_ENDIAN);
 
@@ -220,6 +300,15 @@ final class EphemerisV1Parser {
     return new RotBlock(t0, dt, n, raw);
   }
 
+  /**
+   * Creates a new byte buffer that is a slice of the parent buffer at the specified offset and
+   * length. The parent buffer's position and limit are not modified.
+   *
+   * @param parent the source byte buffer
+   * @param off the starting offset within the parent
+   * @param len the number of bytes to include in the slice
+   * @return a new byte buffer sharing the parent's content at the given range
+   */
   static ByteBuffer slice(ByteBuffer parent, int off, int len) {
     ByteBuffer dup = parent.duplicate();
     dup.position(off);
@@ -227,6 +316,10 @@ final class EphemerisV1Parser {
     return dup.slice();
   }
 
+  /**
+   * Sequential reader for a {@link FileChannel} that reads primitive values in little-endian byte
+   * order. Each read advances the channel position by the number of bytes consumed.
+   */
   static final class CountingReader {
     private final FileChannel ch;
 

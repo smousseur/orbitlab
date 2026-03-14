@@ -15,6 +15,8 @@ public class MassDepletionDetector extends AbstractDetector<MassDepletionDetecto
   private final double minAllowableMass;
 
   /**
+   * Creates a mass depletion detector that triggers when spacecraft mass drops to the floor value.
+   *
    * @param minAllowableMass floor mass in kg (dry stage + upper stages + payload)
    */
   public MassDepletionDetector(double minAllowableMass) {

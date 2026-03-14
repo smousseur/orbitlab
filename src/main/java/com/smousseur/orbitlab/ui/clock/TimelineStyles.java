@@ -8,17 +8,26 @@ import com.simsilica.lemur.style.Attributes;
 import com.simsilica.lemur.style.Styles;
 
 /**
- * Centralise les styles Lemur du widget Timeline.
+ * Defines and registers Lemur GUI styles for the timeline widget.
  *
- * <p>Objectif: partir de GlassStyle (base) et surcharger uniquement ce qui est nécessaire. Quand tu
- * auras des PNG, tu remplaceras le QuadBackgroundComponent par un composant basé texture.
+ * <p>Builds a custom "timeline" style based on the Glass theme, overriding container
+ * transparency, slider background, and thumb button appearance to suit the HUD overlay.
  */
 public final class TimelineStyles {
 
+  /** The Lemur style identifier used to apply timeline-specific visual styling. */
   public static final String STYLE = "timeline";
 
   private TimelineStyles() {}
 
+  /**
+   * Initializes and registers the timeline styles with the global Lemur style system.
+   *
+   * <p>Creates a "timeline" style derived from the Glass base style and customizes
+   * container backgrounds, slider tracks, and thumb buttons for the HUD timeline widget.
+   *
+   * @param assetManager the JME3 asset manager (reserved for future texture loading)
+   */
   public static void init(AssetManager assetManager) {
     // assetManager pas encore utilisé ici (pas d'images), mais on le garde pour la suite.
     // (Tu pourras y loader des textures pour track/knob.)

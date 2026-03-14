@@ -26,9 +26,23 @@ import com.smousseur.orbitlab.states.time.SimulationClockAppState;
 import com.smousseur.orbitlab.states.time.TimelineWidgetAppState;
 import com.smousseur.orbitlab.ui.clock.TimelineStyles;
 
+/**
+ * Main entry point for the OrbitLab application.
+ *
+ * <p>Extends JMonkeyEngine's {@link SimpleApplication} to set up a dual-viewport 3D rendering
+ * environment for orbital mechanics simulation. Initializes the Orekit astrodynamics library,
+ * configures the GUI (Lemur), and registers all application states that drive the simulation,
+ * rendering, and user interaction.
+ */
 public class OrbitLabApplication extends SimpleApplication {
+  /** Global application instance. */
   public static OrbitLabApplication app;
 
+  /**
+   * Application entry point. Configures window settings and starts the JME3 application loop.
+   *
+   * @param args command-line arguments (currently unused)
+   */
   public static void main(String[] args) {
     app = new OrbitLabApplication();
     AppSettings settings = new AppSettings(true);

@@ -17,9 +17,22 @@ import org.orekit.propagation.numerical.NumericalPropagator;
 import org.orekit.time.AbsoluteDate;
 import org.orekit.utils.Constants;
 
+/**
+ * A mission stage that applies a constant-thrust maneuver along the velocity direction in the
+ * TNW (Tangential-Normal-Binormal) local orbital frame. The stage terminates after the specified
+ * burn duration. If the duration is set to zero, it is automatically computed from the vehicle's
+ * available propellant and thrust at entry time.
+ */
 public class ConstantThrustStage extends MissionStage {
   protected double duration;
 
+  /**
+   * Creates a constant thrust stage with the given burn duration.
+   *
+   * @param name the human-readable name of this stage
+   * @param duration the burn duration in seconds; if zero, duration is computed from available
+   *     propellant at stage entry
+   */
   public ConstantThrustStage(String name, double duration) {
     super(name);
     this.duration = duration;

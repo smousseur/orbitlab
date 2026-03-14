@@ -24,6 +24,13 @@ final class CMAESRunExecutor {
 
   static final double EXCEPTION_PENALTY_COST = 1e10;
 
+  /**
+   * Result of a single CMA-ES optimization run.
+   *
+   * @param bestVariables the parameter vector that produced the lowest cost
+   * @param bestCost the lowest cost value achieved during the run
+   * @param evaluations the number of objective function evaluations performed
+   */
   record RunResult(double[] bestVariables, double bestCost, int evaluations) {}
 
   private final TrajectoryProblem problem;
@@ -31,6 +38,14 @@ final class CMAESRunExecutor {
   private final double absoluteTolerance;
   private final double relativeTolerance;
 
+  /**
+   * Creates a new executor for running CMA-ES optimization passes.
+   *
+   * @param problem the trajectory problem defining the objective function and bounds
+   * @param stopFitness fitness value at which the optimizer stops immediately
+   * @param absoluteTolerance absolute convergence tolerance
+   * @param relativeTolerance relative convergence tolerance
+   */
   CMAESRunExecutor(
       TrajectoryProblem problem,
       double stopFitness,
@@ -43,9 +58,17 @@ final class CMAESRunExecutor {
   }
 
   /**
-   * Runs a single CMA-ES pass.
+   * Runs a single CMA-ES pass with the given configuration.
    *
+   * <p>The objective function wraps the problem's propagation and cost computation, assigning a
+   * large penalty cost when exceptions occur or when the cost is NaN/Infinite.
+   *
+   * @param startPoint initial parameter vector for the optimization
+   * @param sigma initial standard deviations for each parameter dimension
+   * @param populationSize CMA-ES population size per generation
+   * @param maxEvals maximum number of objective function evaluations
    * @param earlyKill if true, the convergence checker will kill runs stuck in bad basins
+   * @return the result containing the best parameters, cost, and evaluation count
    */
   RunResult execute(
       double[] startPoint, double[] sigma, int populationSize, int maxEvals, boolean earlyKill) {

@@ -11,6 +11,14 @@ import com.smousseur.orbitlab.core.SolarSystemBody;
 public final class PlanetLodTuning {
   private PlanetLodTuning() {}
 
+  /**
+   * Returns the LOD distance ratio for the given body. The 3D model is shown when
+   * the camera distance is less than the planet's radius multiplied by this ratio;
+   * otherwise the icon view is used.
+   *
+   * @param body the solar system body
+   * @return the distance-to-radius multiplier for LOD switching
+   */
   public static double lodDistanceRatio(SolarSystemBody body) {
     // Start conservative; tweak per planet later.
     return switch (body) {

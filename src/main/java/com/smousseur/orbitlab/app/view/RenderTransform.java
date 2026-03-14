@@ -26,6 +26,13 @@ public final class RenderTransform {
 
   private static final Quaternion jmeToIcrfQ = icrfToJmeQ.inverse();
 
+  /**
+   * Converts an Orekit/Hipparchus rotation in ICRF frame to a JME quaternion suitable for
+   * rendering, including the mesh correction for JME's Y-up convention.
+   *
+   * @param rotationIcrf the rotation expressed in ICRF axes
+   * @return the equivalent JME quaternion with mesh correction applied
+   */
   public static Quaternion toRenderQuaternion(Rotation rotationIcrf) {
     Quaternion qIcrf =
         new Quaternion(

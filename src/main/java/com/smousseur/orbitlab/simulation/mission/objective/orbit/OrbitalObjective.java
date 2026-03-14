@@ -8,9 +8,19 @@ import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.orekit.propagation.SpacecraftState;
 import org.orekit.utils.PVCoordinates;
 
+/**
+ * Mission objective that evaluates how closely the spacecraft's current orbit matches a target
+ * circular orbit. Computes three normalized error residuals: semi-major axis error, eccentricity
+ * error, and radial velocity fraction (which approaches zero for circular orbits).
+ */
 public class OrbitalObjective implements MissionObjective {
   private final OrbitTarget target;
 
+  /**
+   * Creates an orbital objective with the given target orbit parameters.
+   *
+   * @param target the target orbit parameters (body, altitude, eccentricity)
+   */
   public OrbitalObjective(OrbitTarget target) {
     this.target = target;
   }

@@ -7,10 +7,25 @@ import org.orekit.propagation.SpacecraftState;
 import org.orekit.utils.Constants;
 import org.orekit.utils.PVCoordinates;
 
+/**
+ * Utility class providing orbital mechanics and flight dynamics computations.
+ *
+ * <p>Includes methods for radial velocity calculation, burn duration estimation via the
+ * Tsiolkovsky equation, thrust direction construction, launch azimuth determination,
+ * and pitch kick maneuvers.
+ */
 public final class Physics {
   private Physics() {}
 
-  /** Compute radial velocity (dot product of position and velocity divided by position norm). */
+  /**
+   * Computes the radial velocity component of a spacecraft state.
+   *
+   * <p>Radial velocity is the projection of the velocity vector onto the position direction,
+   * calculated as the dot product of position and velocity divided by the position magnitude.
+   *
+   * @param state the spacecraft state containing position and velocity
+   * @return the radial velocity in m/s (positive = moving away from center)
+   */
   public static double computeRadialVelocity(SpacecraftState state) {
     Vector3D position = state.getPVCoordinates().getPosition();
     Vector3D velocity = state.getPVCoordinates().getVelocity();
@@ -18,8 +33,15 @@ public final class Physics {
   }
 
   /**
-   * Convert a delta-V to a burn duration using the Tsiolkovski equation. dt = (m * Isp * g0 / F) *
-   * (1 - exp(-dv / (Isp * g0)))
+   * Converts a delta-V to a burn duration using the Tsiolkovsky rocket equation.
+   *
+   * <p>The formula is: {@code dt = (m * Isp * g0 / F) * (1 - exp(-dv / (Isp * g0)))}
+   *
+   * @param dv the desired velocity change in m/s
+   * @param mass the initial spacecraft mass in kg
+   * @param isp the specific impulse in seconds
+   * @param thrust the engine thrust in Newtons
+   * @return the required burn duration in seconds
    */
   public static double computeBurnDuration(double dv, double mass, double isp, double thrust) {
     double ve = isp * Constants.G0_STANDARD_GRAVITY; // exhaust velocity
@@ -27,8 +49,14 @@ public final class Physics {
   }
 
   /**
-   * Build thrust direction vector in TNW frame from in-plane and out-of-plane angles. alpha = 0,
-   * beta = 0 means pure tangential prograde thrust.
+   * Builds a thrust direction vector in the TNW (tangential, normal, out-of-plane) frame
+   * from in-plane and out-of-plane angles.
+   *
+   * <p>When both angles are zero, the result is pure tangential prograde thrust.
+   *
+   * @param alpha in-plane angle from the tangential direction (radians)
+   * @param beta out-of-plane angle (radians)
+   * @return the unit thrust direction vector in TNW coordinates
    */
   public static Vector3D buildThrustDirectionTNW(double alpha, double beta) {
     double cosB = FastMath.cos(beta);
@@ -39,6 +67,11 @@ public final class Physics {
         );
   }
 
+  /**
+   * Returns the default launch azimuth for an equatorial due-east launch (90 degrees).
+   *
+   * @return the launch azimuth in radians
+   */
   public static double getLaunchAzimuth() {
     return getLaunchAzimuth(0, 0);
   }
@@ -120,10 +153,10 @@ public final class Physics {
   }
 
   /**
-   * Sq double.
+   * Returns the square of a value.
    *
-   * @param x the x
-   * @return the double
+   * @param x the value to square
+   * @return {@code x * x}
    */
   public static double sq(double x) {
     return x * x;

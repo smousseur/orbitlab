@@ -23,6 +23,13 @@ import java.util.logging.Logger;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.orekit.time.AbsoluteDate;
 
+/**
+ * Generates pre-computed orbital path binary files for all configured solar system bodies.
+ *
+ * <p>Uses a {@link DatasetEphemerisSource} to obtain ephemeris data and an {@link OrbitPathCache}
+ * to compute one full orbital period per body. Each orbit is written as a binary file containing
+ * heliocentric position vectors in meters.
+ */
 public class OrbitDatasetGenerator {
   private static final Logger LOG = Logger.getLogger(OrbitDatasetGenerator.class.getName());
 
@@ -32,6 +39,14 @@ public class OrbitDatasetGenerator {
   private final SimulationConfig simulationConfig;
   private final AbsoluteDate referenceStart = OrekitTime.utcNow(); // AbsoluteDate.J2000_EPOCH;
 
+  /**
+   * Creates a new orbit dataset generator that writes output files to the specified directory.
+   *
+   * <p>Initializes a thread pool sized to the number of available processors, loads
+   * the ephemeris dataset from the default location, and creates an orbit path cache.
+   *
+   * @param outputDir the directory where orbit binary files will be written
+   */
   public OrbitDatasetGenerator(Path outputDir) {
     this.outputDir = outputDir;
     this.executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
@@ -47,6 +62,13 @@ public class OrbitDatasetGenerator {
             executor);
   }
 
+  /**
+   * Generates orbit binary files for all configured orbital bodies asynchronously.
+   *
+   * <p>For each body, computes one full orbital period and writes the resulting
+   * heliocentric positions to a binary file named {@code <BODY>-orbit.bin} in the
+   * output directory. The executor is shut down after all bodies have been processed.
+   */
   public void generate() {
     AtomicInteger counter = new AtomicInteger(0);
     EnumSet<SolarSystemBody> bodies = simulationConfig.orbitBodies();

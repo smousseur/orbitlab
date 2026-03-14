@@ -34,14 +34,31 @@ public final class SimulationClockAppState extends BaseAppState implements Actio
   private double speedFactor = 2.0; // multiply/divide speed by this factor
   private double seekStepSeconds = 60.0; // seek +/- N seconds
 
+  /**
+   * Creates a new simulation clock state.
+   *
+   * @param context the application context providing the simulation clock instance
+   */
   public SimulationClockAppState(ApplicationContext context) {
     this.clock = Objects.requireNonNull(context.clock(), "clock");
   }
 
+  /**
+   * Returns the underlying simulation clock managed by this state.
+   *
+   * @return the simulation clock instance
+   */
   public SimulationClock clock() {
     return clock;
   }
 
+  /**
+   * Sets the multiplier used when increasing or decreasing simulation speed via keyboard input.
+   * The speed is multiplied by this factor on speed-up and divided by it on speed-down.
+   *
+   * @param speedFactor the speed multiplier, must be finite and greater than 1.0
+   * @throws IllegalArgumentException if the factor is not finite or is less than or equal to 1.0
+   */
   public void setSpeedFactor(double speedFactor) {
     if (!Double.isFinite(speedFactor) || speedFactor <= 1.0) {
       throw new IllegalArgumentException("speedFactor must be finite and > 1.0");
@@ -49,6 +66,13 @@ public final class SimulationClockAppState extends BaseAppState implements Actio
     this.speedFactor = speedFactor;
   }
 
+  /**
+   * Sets the time jump interval in seconds used when seeking forward or backward via
+   * the arrow keys.
+   *
+   * @param seekStepSeconds the seek step in seconds, must be finite and positive
+   * @throws IllegalArgumentException if the value is not finite or is less than or equal to zero
+   */
   public void setSeekStepSeconds(double seekStepSeconds) {
     if (!Double.isFinite(seekStepSeconds) || seekStepSeconds <= 0.0) {
       throw new IllegalArgumentException("seekStepSeconds must be finite and > 0");

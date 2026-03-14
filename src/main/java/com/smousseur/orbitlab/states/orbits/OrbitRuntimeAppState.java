@@ -35,6 +35,16 @@ import org.orekit.propagation.analytical.KeplerianPropagator;
 import org.orekit.time.AbsoluteDate;
 import org.orekit.utils.PVCoordinates;
 
+/**
+ * Application state that dynamically recomputes and updates orbital path geometries at runtime
+ * as simulation time progresses.
+ *
+ * <p>For each tracked celestial body, maintains an {@link OrbitRuntimeSlot} that monitors
+ * whether the current orbit window still covers the simulation time. When the window drifts
+ * outside a comfort margin, a background job is submitted to recompute orbit positions using
+ * Keplerian propagation. Completed snapshots are applied to the scene graph's orbit line
+ * geometries on the render thread.
+ */
 public final class OrbitRuntimeAppState extends BaseAppState {
 
   private static final Logger logger = LogManager.getLogger(OrbitRuntimeAppState.class);
@@ -54,6 +64,11 @@ public final class OrbitRuntimeAppState extends BaseAppState {
   // Anchor for snapping (V1). You can swap it to something stable like J2000 if you prefer.
   private final AbsoluteDate snapAnchor = AbsoluteDate.J2000_EPOCH;
 
+  /**
+   * Creates a new orbit runtime state.
+   *
+   * @param context the application context providing clock, scene graph, and orbit configuration
+   */
   public OrbitRuntimeAppState(ApplicationContext context) {
     this.context = Objects.requireNonNull(context, "context");
     this.orbitLayer = context.sceneGraph().orbits();

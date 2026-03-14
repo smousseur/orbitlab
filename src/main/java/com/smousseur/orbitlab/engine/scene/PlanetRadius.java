@@ -3,10 +3,20 @@ package com.smousseur.orbitlab.engine.scene;
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import org.orekit.utils.Constants;
 
+/**
+ * Provides the mean equatorial radius in meters for each solar system body.
+ * Uses the WGS84 constant for Earth; other values are standard IAU approximations.
+ */
 public final class PlanetRadius {
 
   private PlanetRadius() {}
 
+  /**
+   * Returns the mean equatorial radius of the given solar system body in meters.
+   *
+   * @param body the solar system body
+   * @return the equatorial radius in meters
+   */
   public static double radiusFor(SolarSystemBody body) {
     return switch (body) {
       case MERCURY -> 2_439_700;

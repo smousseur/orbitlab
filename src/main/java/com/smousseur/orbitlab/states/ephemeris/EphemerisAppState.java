@@ -45,6 +45,12 @@ public final class EphemerisAppState extends BaseAppState {
 
   private DatasetEphemerisSource source;
 
+  /**
+   * Creates a new ephemeris state.
+   *
+   * @param context the application context providing clock, ephemeris configuration,
+   *     and sliding window configuration
+   */
   public EphemerisAppState(ApplicationContext context) {
     this.clock = Objects.requireNonNull(context.clock(), "clock");
     this.ephemerisConfig =

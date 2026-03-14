@@ -16,9 +16,13 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * Sliding window buffer of time-stamped PV + rotation samples, stored in ICRF. Threading: - One
- * writer (worker thread) replaces the snapshot. - Many readers (render thread + others) read
- * snapshot and interpolate.
+ * Thread-safe sliding window buffer of time-stamped position/velocity and rotation samples
+ * for a single celestial body, stored in the ICRF frame.
+ *
+ * <p>Designed for a single-writer (ephemeris worker thread) / multiple-reader (render thread
+ * and others) concurrency model. The writer atomically publishes new snapshots via
+ * {@link #rebuildWindow} or {@link #ensureWindow}, and readers interpolate from the current
+ * snapshot via {@link #trySampleInterpolated} without blocking.
  */
 public final class SlidingWindowEphemerisBuffer {
 
@@ -28,6 +32,13 @@ public final class SlidingWindowEphemerisBuffer {
 
   private final AtomicReference<Snapshot> ref = new AtomicReference<>();
 
+  /**
+   * Creates a new sliding window ephemeris buffer for the given body.
+   *
+   * @param source the ephemeris data source providing raw body samples
+   * @param config the ephemeris configuration controlling default window parameters
+   * @param bodyId the celestial body this buffer tracks
+   */
   public SlidingWindowEphemerisBuffer(
       EphemerisSource source, EphemerisConfig config, SolarSystemBody bodyId) {
     this.source = Objects.requireNonNull(source, "source");
@@ -35,7 +46,13 @@ public final class SlidingWindowEphemerisBuffer {
     this.body = Objects.requireNonNull(bodyId, "body");
   }
 
-  /** Non-blocking: current published window info (empty if none). */
+  /**
+   * Returns information about the currently published window, if any.
+   *
+   * <p>This is a non-blocking read of the current snapshot state.
+   *
+   * @return the window info, or empty if no snapshot has been published yet
+   */
   public Optional<WindowInfo> windowInfo() {
     Snapshot s = ref.get();
     if (s == null) return Optional.empty();
@@ -43,7 +60,13 @@ public final class SlidingWindowEphemerisBuffer {
   }
 
   /**
-   * Non-blocking sample. Returns empty if there is no snapshot or t is outside the current window.
+   * Attempts to produce an interpolated body sample at the given time.
+   *
+   * <p>This is a non-blocking operation. Returns empty if no snapshot exists or if the
+   * requested time falls outside the current window boundaries.
+   *
+   * @param t the time at which to interpolate
+   * @return the interpolated body sample, or empty if unavailable
    */
   public Optional<BodySample> trySampleInterpolated(AbsoluteDate t) {
     Objects.requireNonNull(t, "t");
@@ -57,7 +80,14 @@ public final class SlidingWindowEphemerisBuffer {
     return Optional.of(interpolate(s, t));
   }
 
-  /** (Worker) rebuild a new window centered on centerDate and publish atomically. */
+  /**
+   * Rebuilds the entire buffer window centered on the given date using default configuration
+   * parameters, and publishes the result atomically.
+   *
+   * <p>Intended to be called from the worker thread.
+   *
+   * @param centerDate the center of the new window
+   */
   public void rebuildWindow(AbsoluteDate centerDate) {
     Objects.requireNonNull(centerDate, "centerDate");
 
@@ -68,7 +98,18 @@ public final class SlidingWindowEphemerisBuffer {
     rebuildWindow(centerDate, step, back, fwd);
   }
 
-  /** (Worker) rebuild using explicit parameters (preferred for per-body tuning). */
+  /**
+   * Rebuilds the entire buffer window centered on the given date using explicit parameters,
+   * and publishes the result atomically.
+   *
+   * <p>Preferred over {@link #rebuildWindow(AbsoluteDate)} when per-body tuning of step size
+   * and window extent is needed. Intended to be called from the worker thread.
+   *
+   * @param centerDate the center of the new window
+   * @param stepSeconds the time interval between consecutive samples in seconds
+   * @param pointsBack the number of sample points before the center
+   * @param pointsForward the number of sample points after the center
+   */
   public void rebuildWindow(
       AbsoluteDate centerDate, double stepSeconds, int pointsBack, int pointsForward) {
     Objects.requireNonNull(centerDate, "centerDate");
@@ -133,18 +174,25 @@ public final class SlidingWindowEphemerisBuffer {
     return new BodySample(t, new PVCoordinates(p, v), r);
   }
 
-  // ----
   /**
-   * (Worker) Ensure the buffer window stays valid for {@code now}.
+   * Ensures the buffer window remains valid for the current simulation time.
    *
-   * <p>Rules:
-   *
+   * <p>This method implements the sliding window maintenance logic:
    * <ul>
-   *   <li>Seek => full rebuild (no incremental logic for now).
-   *   <li>Normal tick => if now is in comfort zone => no-op.
-   *   <li>If now leaves comfort zone => reposition window on a stable grid (anchor+round), then
-   *       slide if the shift is small; else full rebuild.
+   *   <li>If {@code forceFullRebuild} is true (e.g., after a seek), a full rebuild is performed.</li>
+   *   <li>If {@code now} falls within the comfort zone of the current window, no action is taken.</li>
+   *   <li>If {@code now} leaves the comfort zone, the window is repositioned on a stable grid
+   *       aligned to the session anchor; a slide is attempted if the shift is small, otherwise
+   *       a full rebuild is triggered.</li>
    * </ul>
+   *
+   * <p>Intended to be called from the worker thread.
+   *
+   * @param sessionAnchor the fixed reference date for grid alignment
+   * @param now the current simulation time
+   * @param speed the current clock speed multiplier (sign indicates direction)
+   * @param plan the window plan determining step size, extent, and margin
+   * @param forceFullRebuild if true, forces a complete rebuild regardless of comfort zone
    */
   public void ensureWindow(
       AbsoluteDate sessionAnchor,
@@ -330,7 +378,14 @@ public final class SlidingWindowEphemerisBuffer {
     return new Snapshot(newStart, newEnd, stepSeconds, dates, pos, vel, rot);
   }
 
-  // ----
+  /**
+   * Describes the extent and resolution of the currently published ephemeris window.
+   *
+   * @param start the start time of the window
+   * @param end the end time of the window
+   * @param stepSeconds the time interval between consecutive samples in seconds
+   * @param totalPoints the total number of sample points in the window
+   */
   public record WindowInfo(
       AbsoluteDate start, AbsoluteDate end, double stepSeconds, int totalPoints) {
     public WindowInfo {
