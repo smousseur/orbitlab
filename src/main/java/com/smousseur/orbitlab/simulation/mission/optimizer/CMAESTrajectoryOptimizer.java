@@ -37,6 +37,8 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
   private final double relativeTolerance;
   private final double absoluteTolerance;
 
+  private final MersenneTwister rng = new MersenneTwister();
+
   // ── Adaptive thresholds ──
   /** Cost below which we consider we've found a good basin and switch to refinement-only. */
   private static final double GOOD_BASIN_THRESHOLD = 0.01;
@@ -220,7 +222,6 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
 
   /** Small perturbation around a known good point. */
   private double[] perturbLocal(double[] base, double[] sigma, double scale, int seed) {
-    MersenneTwister rng = new MersenneTwister(seed * 42L + System.nanoTime());
     double[] result = new double[base.length];
     for (int i = 0; i < base.length; i++) {
       result[i] = base[i] + rng.nextGaussian() * sigma[i] * scale;
@@ -231,7 +232,6 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
   /** Broader perturbation mixing local and global exploration. */
   private double[] perturbGlobal(
       double[] base, double[] lower, double[] upper, double[] sigma, int seed) {
-    MersenneTwister rng = new MersenneTwister(seed * 137L + System.nanoTime());
     double[] result = new double[base.length];
     for (int i = 0; i < base.length; i++) {
       double range = upper[i] - lower[i];

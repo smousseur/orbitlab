@@ -17,6 +17,8 @@ import java.nio.file.Path;
 import java.util.EnumMap;
 import java.util.Objects;
 import java.util.Optional;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.orekit.time.AbsoluteDate;
 
 /**
@@ -26,6 +28,8 @@ import org.orekit.time.AbsoluteDate;
  * EphemerisWorker}.
  */
 public final class EphemerisAppState extends BaseAppState {
+
+  private static final Logger logger = LogManager.getLogger(EphemerisAppState.class);
 
   private final SimulationClock clock;
   private final EphemerisConfig ephemerisConfig;
@@ -104,7 +108,7 @@ public final class EphemerisAppState extends BaseAppState {
       try {
         clockSubscription.close();
       } catch (Exception e) {
-        // ignore (or log)
+        logger.warn("Failed to close clock subscription during cleanup", e);
       } finally {
         clockSubscription = null;
       }

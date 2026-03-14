@@ -189,7 +189,8 @@ public final class OrbitRuntimeAppState extends BaseAppState {
     Node n = orbitLayer.orbitNode(body);
     if (n == null) return null;
     // OrbitInitAppState builds Geometry name "OrbitLine-" + body.name()
-    return (Geometry) n.getChild("OrbitLine-" + body.name());
+    com.jme3.scene.Spatial child = n.getChild("OrbitLine-" + body.name());
+    return (child instanceof Geometry g) ? g : null;
   }
 
   @Override

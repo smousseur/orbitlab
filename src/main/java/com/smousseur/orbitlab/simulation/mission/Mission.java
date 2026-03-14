@@ -54,7 +54,7 @@ public abstract class Mission {
   }
 
   public void update(AbsoluteDate currentTime) {
-    if (isFinished()) {
+    if (!isStarted || isFinished()) {
       return;
     }
     MissionStage currentStage = stages.get(currentStageIndex);
@@ -154,6 +154,12 @@ public abstract class Mission {
   }
 
   public MissionStage getCurrentStage() {
+    if (currentStageIndex < 0) {
+      throw new IllegalStateException("Mission has not been started yet");
+    }
+    if (isFinished()) {
+      throw new IllegalStateException("Mission is already finished, no current stage");
+    }
     return stages.get(currentStageIndex);
   }
 }
