@@ -17,6 +17,8 @@ import com.smousseur.orbitlab.simulation.orbit.OrbitSnapshot;
 import com.smousseur.orbitlab.simulation.orbit.config.OrbitWindowConfig;
 import com.smousseur.orbitlab.simulation.source.EphemerisSource;
 import com.smousseur.orbitlab.simulation.source.EphemerisSourceRegistry;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.Map;
@@ -34,6 +36,7 @@ import org.orekit.utils.PVCoordinates;
 
 public final class OrbitRuntimeAppState extends BaseAppState {
 
+  private static final Logger logger = LogManager.getLogger(OrbitRuntimeAppState.class);
   private final ApplicationContext context;
   private final SceneGraph.OrbitLayer orbitLayer;
   private final EnumSet<SolarSystemBody> bodies;
@@ -134,8 +137,7 @@ public final class OrbitRuntimeAppState extends BaseAppState {
             slot.publish(snap);
           } catch (Exception e) {
             // V1: keep previous snapshot, just log.
-            // (Replace by your logger if you have one)
-            System.err.println("Orbit runtime job failed for " + body + ": " + e.getMessage());
+            logger.error("Orbit runtime job failed for {}: {}", body, e.getMessage(), e);
           } finally {
             slot.endJob();
           }

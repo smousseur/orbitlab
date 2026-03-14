@@ -30,7 +30,7 @@ public class MissionOptimizer {
     this.maxEvaluations = maxEvaluations;
   }
 
-  public MissionOptimzerResult optimize() {
+  public MissionOptimizerResult optimize() {
     Map<String, OptimizationResult> results = new LinkedHashMap<>();
 
     for (MissionStage stage : mission.getStages()) {
@@ -74,6 +74,6 @@ public class MissionOptimizer {
       }
     }
 
-    return new MissionOptimzerResult(results);
+    return new MissionOptimizerResult(results);
   }
 }
