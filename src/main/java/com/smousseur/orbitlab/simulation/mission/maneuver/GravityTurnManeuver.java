@@ -30,6 +30,15 @@ public class GravityTurnManeuver {
   private final double launchAzimuth;
   private final double usedAscensionPropellant;
 
+  /**
+   * Creates a gravity turn maneuver for the given vehicle and launch parameters.
+   *
+   * @param vehicle the vehicle performing the maneuver (must have at least two stages)
+   * @param ascensionDuration the duration of the vertical ascent phase before the gravity turn
+   *     (seconds)
+   * @param pitchKickAngleRad the initial pitch kick angle in radians
+   * @param launchAzimuth the launch azimuth angle in radians (measured from north)
+   */
   public GravityTurnManeuver(
       Vehicle vehicle, double ascensionDuration, double pitchKickAngleRad, double launchAzimuth) {
     this.vehicle = vehicle;
@@ -39,11 +48,24 @@ public class GravityTurnManeuver {
         vehicle.getFirstStage().propulsion().massBurnt(ascensionDuration);
   }
 
-  /** Decoded physical parameters from the raw optimization variables. */
+  /**
+   * Decoded physical parameters from the raw CMA-ES optimization variables.
+   *
+   * @param transitionTime total gravity turn transition duration (seconds)
+   * @param exponent power-law exponent controlling pitch-over profile
+   * @param burn1Duration duration of the first stage burn (seconds)
+   * @param burn2Duration duration of the second stage burn after jettison (seconds)
+   */
   public record GravityTurnParams(
       double transitionTime, double exponent, double burn1Duration, double burn2Duration) {}
 
-  /** Decodes raw CMA-ES variables into physical parameters. */
+  /**
+   * Decodes raw CMA-ES optimization variables into physical gravity turn parameters. The burn
+   * durations are derived from the vehicle's propellant capacity and propulsion characteristics.
+   *
+   * @param variables the raw optimization variable array (transitionTime, exponent)
+   * @return the decoded physical parameters
+   */
   public GravityTurnParams decode(double[] variables) {
     double transitionTime = variables[0];
     double exponent = variables[1];
@@ -61,7 +83,14 @@ public class GravityTurnManeuver {
     return new GravityTurnParams(transitionTime, exponent, burn1Duration, burn2Duration);
   }
 
-  /** Applies the pitch kick to the state (entry into gravity turn). */
+  /**
+   * Applies the initial pitch kick to the spacecraft state, marking the entry into the gravity
+   * turn. The kick rotates the velocity vector by the configured pitch angle along the launch
+   * azimuth.
+   *
+   * @param state the spacecraft state before the pitch kick
+   * @return the spacecraft state after the pitch kick has been applied
+   */
   public SpacecraftState applyKick(SpacecraftState state) {
     return Physics.applyPitchKick(state, pitchKickAngleRad, launchAzimuth);
   }
@@ -148,13 +177,23 @@ public class GravityTurnManeuver {
     }
   }
 
-  /** Returns the duration of burn 1 (stage 1 fires to propellant exhaustion). */
+  /**
+   * Returns the duration of burn 1, computed from the remaining first-stage propellant after
+   * vertical ascent. The first stage fires until propellant exhaustion.
+   *
+   * @return the burn 1 duration in seconds
+   */
   public double getBurn1Duration() {
     PropulsionSystem prop1 = vehicle.getFirstStage().propulsion();
     double massFlowRate1 = prop1.thrust() / (prop1.isp() * Constants.G0_STANDARD_GRAVITY);
     return (vehicle.getFirstStage().propellantCapacity() - usedAscensionPropellant) / massFlowRate1;
   }
 
+  /**
+   * Returns the vehicle performing this maneuver.
+   *
+   * @return the vehicle
+   */
   public Vehicle getVehicle() {
     return vehicle;
   }

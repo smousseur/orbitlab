@@ -11,17 +11,34 @@ import org.orekit.propagation.events.DateDetector;
 import org.orekit.propagation.numerical.NumericalPropagator;
 import org.orekit.time.AbsoluteDate;
 
+/**
+ * A mission stage that coasts along a ballistic (unpowered) trajectory until a termination
+ * condition is met. The stage can terminate either after a fixed duration or when the spacecraft
+ * reaches an apside (apogee or perigee).
+ */
 public class BallisticCoastingStage extends MissionStage {
   private static final Logger logger = LogManager.getLogger(BallisticCoastingStage.class);
   private final boolean stopAtApside;
   private final Double duration;
 
+  /**
+   * Creates a ballistic coasting stage that terminates after a fixed duration.
+   *
+   * @param name the human-readable name of this stage
+   * @param duration the coasting duration in seconds
+   */
   public BallisticCoastingStage(String name, Double duration) {
     super(name);
     this.stopAtApside = false;
     this.duration = duration;
   }
 
+  /**
+   * Creates a ballistic coasting stage that terminates when an apside is reached.
+   *
+   * @param name the human-readable name of this stage
+   * @param stopAtApside whether to stop at the next apside (apogee or perigee)
+   */
   public BallisticCoastingStage(String name, boolean stopAtApside) {
     super(name);
     this.duration = -1.0;

@@ -16,6 +16,14 @@ import com.smousseur.orbitlab.engine.scene.planet.lod.PlanetLodTuning;
 
 import java.util.Objects;
 
+/**
+ * Level-of-detail view for a planet that switches between a 3D model and a 2D icon
+ * based on the camera distance relative to the planet's radius.
+ *
+ * <p>When the camera is close enough (within a body-specific LOD distance ratio multiplied
+ * by the planet radius), the full 3D model is displayed. When farther away, a simple
+ * colored icon with a label is shown instead.
+ */
 public final class PlanetLodView implements PlanetView {
   private final Node anchor3d;
   private final PlanetIconView iconView;
@@ -23,6 +31,13 @@ public final class PlanetLodView implements PlanetView {
   private final SceneGraph sceneGraph;
   private final SolarSystemBody body;
 
+  /**
+   * Creates a new LOD view for a planet, setting up both the 3D model view and the icon view.
+   *
+   * @param guiNode          the GUI node for attaching the 2D icon overlay
+   * @param context          the application context providing the scene graph and focus view
+   * @param planetDescriptor the descriptor defining the planet's identity and visual properties
+   */
   public PlanetLodView(
       Node guiNode, ApplicationContext context, PlanetDescriptor planetDescriptor) {
     Objects.requireNonNull(guiNode, "guiNode");
@@ -54,10 +69,22 @@ public final class PlanetLodView implements PlanetView {
     iconView.setVisible(visible);
   }
 
+  /**
+   * Returns the 3D model view component for this planet.
+   *
+   * @return the planet's 3D view
+   */
   public Planet3dView getModel3dView() {
     return model3dView;
   }
 
+  /**
+   * Updates the LOD state by switching between the 3D model and icon views
+   * based on the camera's distance to the planet anchor. Also toggles
+   * orbit line visibility accordingly.
+   *
+   * @param cam the active camera used for distance calculation and screen projection
+   */
   public void updateScreen(Camera cam) {
     float distance = cam.getLocation().distance(anchor3d.getWorldTranslation());
     double radius = PlanetRadius.radiusFor(body) * RenderContext.solar().unitsPerMeter();
@@ -76,6 +103,9 @@ public final class PlanetLodView implements PlanetView {
     sceneGraph.setOrbitVisible(body, !show3d);
   }
 
+  /**
+   * Detaches the icon view from the GUI, cleaning up its screen-space elements.
+   */
   public void detach() {
     iconView.detach();
   }

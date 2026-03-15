@@ -6,6 +6,20 @@ import org.orekit.time.AbsoluteDate;
 
 import java.util.Objects;
 
+/**
+ * An immutable snapshot of a celestial body's computed orbit positions at a specific point in time.
+ *
+ * <p>Contains a sequence of heliocentric position vectors centered on a reference date,
+ * along with the orbital period and sampling step used to generate them. Each snapshot
+ * carries a version number for change detection.
+ *
+ * @param body the celestial body this snapshot represents
+ * @param centerDate the center date around which positions are computed
+ * @param periodSeconds the orbital period of the body in seconds
+ * @param stepSeconds the time interval between consecutive position samples in seconds
+ * @param positions the array of heliocentric position vectors in meters
+ * @param version a monotonically increasing version number for change detection
+ */
 public record OrbitSnapshot(
     SolarSystemBody body,
     AbsoluteDate centerDate,

@@ -9,6 +9,17 @@ import org.orekit.time.AbsoluteDate;
 import java.util.EnumSet;
 import java.util.Objects;
 
+/**
+ * Immutable configuration for the orbital simulation session.
+ *
+ * <p>Defines which solar system bodies to simulate, ephemeris computation settings,
+ * sliding window buffer parameters, and orbit rendering window configuration.
+ *
+ * @param orbitBodies         the set of solar system bodies whose orbits are simulated
+ * @param ephemerisConfig     configuration for ephemeris computation
+ * @param slidingWindowConfig configuration for the sliding window ephemeris buffer
+ * @param orbitWindowConfig   configuration for the orbit visualization window
+ */
 public record SimulationConfig(
     EnumSet<SolarSystemBody> orbitBodies,
     EphemerisConfig ephemerisConfig,
@@ -33,6 +44,12 @@ public record SimulationConfig(
     return clockStart;
   }
 
+  /**
+   * Creates a default configuration for a full solar system simulation including all major planets
+   * and Pluto.
+   *
+   * @return a new default solar system simulation configuration
+   */
   public static SimulationConfig defaultSolarSystem() {
     return new SimulationConfig(
         EnumSet.of(

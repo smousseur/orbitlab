@@ -49,7 +49,10 @@ public sealed interface RenderContext permits RenderContext.Solar, RenderContext
     return new Planet(targetBody);
   }
 
-  /** Solar view context: - frame: HELIOCENTRIC_ICRF - scale: 1 unit = 1e9 m (1 million km) */
+  /**
+   * Solar view context: positions are heliocentric in ICRF, scaled at 1 JME unit = 1e9 meters
+   * (1 million km).
+   */
   record Solar() implements RenderContext {
     public static final double SOLAR_METERS_PER_UNIT = 1e9;
 
@@ -74,7 +77,12 @@ public sealed interface RenderContext permits RenderContext.Solar, RenderContext
     }
   }
 
-  /** Planet view context: - frame: PLANETOCENTRIC_RELATIVE_ICRF - scale: 1 unit = 1e3 m (1 km) */
+  /**
+   * Planet view context: positions are relative to a target body in ICRF axes, scaled at
+   * 1 JME unit = 1e3 meters (1 km).
+   *
+   * @param body the target solar system body that serves as the coordinate origin
+   */
   record Planet(SolarSystemBody body) implements RenderContext {
     public static final double PLANET_METERS_PER_UNIT = 1e3;
 

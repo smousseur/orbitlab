@@ -14,6 +14,14 @@ import java.util.concurrent.Semaphore;
 import java.util.zip.CRC32;
 import org.orekit.time.AbsoluteDate;
 
+/**
+ * Writes a single celestial body's ephemeris data to a binary file in the V1 format.
+ *
+ * <p>The output file contains a header with metadata, a chunk index for fast lookup,
+ * and a sequence of data chunks. Each chunk holds position/velocity and rotation samples
+ * compressed with Zstd. Chunks are computed in parallel via a shared thread pool and
+ * written sequentially to ensure deterministic file layout.
+ */
 final class BodyFileWriterV1 {
 
   private static final byte[] MAGIC = new byte[] {'O','R','B','L','_','E','P','H'};
@@ -47,6 +55,15 @@ final class BodyFileWriterV1 {
     this.globalInFlight = Objects.requireNonNull(globalInFlight, "globalInFlight");
   }
 
+  /**
+   * Generates all ephemeris chunks for the body and writes them to the output binary file.
+   *
+   * <p>Chunks are computed concurrently using the shared compute pool with backpressure
+   * controlled by semaphores, then written in sequential order. After all chunks are written,
+   * the file header and chunk index are patched with final offsets and CRC checksums.
+   *
+   * @throws Exception if chunk computation or file I/O fails
+   */
   void generateAndWrite() throws Exception {
     Path out = cfg.outputDir().resolve("ephem").resolve(body.name() + ".bin");
     java.nio.file.Files.createDirectories(out.getParent());
@@ -180,5 +197,13 @@ final class BodyFileWriterV1 {
     return (int) crc.getValue();
   }
 
+  /**
+   * Holds the computed result of a single ephemeris chunk.
+   *
+   * @param chunkId the zero-based index of this chunk
+   * @param chunkStartOffsetSeconds the time offset in seconds from the dataset start to this chunk's beginning
+   * @param chunkBytes the serialized chunk data (header + PV block + rotation block)
+   * @param chunkCrc32 the CRC-32 checksum of {@code chunkBytes}
+   */
   record ChunkResult(int chunkId, double chunkStartOffsetSeconds, byte[] chunkBytes, int chunkCrc32) {}
 }

@@ -20,14 +20,28 @@ import org.orekit.time.AbsoluteDate;
  */
 public final class SimulationClock {
 
+  /** Indicates what triggered a time change in the simulation clock. */
   public enum ChangeCause {
+    /** The change was initiated by a user action (e.g., seek). */
     USER,
+    /** The change resulted from a regular simulation tick. */
     TICK
   }
 
+  /**
+   * Sealed event hierarchy representing all possible state changes of the simulation clock.
+   * Listeners receive these events via {@link #subscribe(Consumer)}.
+   */
   public sealed interface ClockEvent
       permits TimeChanged, PlayStateChanged, SpeedChanged, SeekPerformed {}
 
+  /**
+   * Event emitted when the simulation time changes, either from a tick or a user seek.
+   *
+   * @param oldTime the previous simulation time
+   * @param newTime the new simulation time
+   * @param cause   what triggered the time change
+   */
   public record TimeChanged(AbsoluteDate oldTime, AbsoluteDate newTime, ChangeCause cause)
       implements ClockEvent {
     public TimeChanged {
@@ -37,10 +51,28 @@ public final class SimulationClock {
     }
   }
 
+  /**
+   * Event emitted when the clock transitions between playing and paused states.
+   *
+   * @param oldPlaying the previous playing state
+   * @param newPlaying the new playing state
+   */
   public record PlayStateChanged(boolean oldPlaying, boolean newPlaying) implements ClockEvent {}
 
+  /**
+   * Event emitted when the simulation speed multiplier changes.
+   *
+   * @param oldSpeed the previous speed multiplier
+   * @param newSpeed the new speed multiplier
+   */
   public record SpeedChanged(double oldSpeed, double newSpeed) implements ClockEvent {}
 
+  /**
+   * Event emitted when the user seeks to a specific simulation time.
+   *
+   * @param oldTime the time before the seek
+   * @param newTime the time after the seek
+   */
   public record SeekPerformed(AbsoluteDate oldTime, AbsoluteDate newTime) implements ClockEvent {
     public SeekPerformed {
       Objects.requireNonNull(oldTime, "oldTime");
@@ -60,6 +92,11 @@ public final class SimulationClock {
   private boolean playing;
   private double speed; // seconds of simulation per 1 second of app time (can be negative)
 
+  /**
+   * Creates a new simulation clock initialized to the given time, in playing state at 1x speed.
+   *
+   * @param initialTime the initial simulation time
+   */
   public SimulationClock(AbsoluteDate initialTime) {
     this.now = Objects.requireNonNull(initialTime, "initialTime");
     this.playing = true;
@@ -104,6 +141,12 @@ public final class SimulationClock {
     setPlaying(false);
   }
 
+  /**
+   * Sets the playing state of the clock. Emits a {@link PlayStateChanged} event if the state
+   * actually changes.
+   *
+   * @param playing {@code true} to start playback, {@code false} to pause
+   */
   public void setPlaying(boolean playing) {
     PlayStateChanged evt = null;
     synchronized (this) {

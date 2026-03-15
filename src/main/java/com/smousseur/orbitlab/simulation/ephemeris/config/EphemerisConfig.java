@@ -4,6 +4,18 @@ import com.smousseur.orbitlab.core.SolarSystemBody;
 import java.util.EnumMap;
 import java.util.Objects;
 
+/**
+ * Immutable configuration for ephemeris computation and buffering.
+ *
+ * <p>Defines the sample step size, window extent (points back and forward), and the known
+ * sidereal orbital periods for each solar system body. Use {@link #defaultSolarSystem()} to
+ * obtain a configuration with reasonable defaults.
+ *
+ * @param sampleStepSeconds the time interval between consecutive ephemeris samples in seconds
+ * @param windowPointsBack the number of sample points before the center of the window
+ * @param windowPointsForward the number of sample points after the center of the window
+ * @param orbitalPeriodSecondsByBody the approximate sidereal orbital period for each body in seconds
+ */
 public record EphemerisConfig(
     double sampleStepSeconds,
     int windowPointsBack,
@@ -22,6 +34,13 @@ public record EphemerisConfig(
     Objects.requireNonNull(orbitalPeriodSecondsByBody, "orbitalPeriodSecondsByBody");
   }
 
+  /**
+   * Returns the configured orbital period for the given body.
+   *
+   * @param body the solar system body
+   * @return the orbital period in seconds
+   * @throws IllegalArgumentException if no period is configured for the body
+   */
   public double orbitalPeriodSeconds(SolarSystemBody body) {
     Objects.requireNonNull(body, "body");
     Double v = orbitalPeriodSecondsByBody.get(body);
@@ -32,11 +51,22 @@ public record EphemerisConfig(
     return v;
   }
 
+  /**
+   * Returns the total number of sample points in the window (back + center + forward).
+   *
+   * @return the total point count
+   */
   public int windowTotalPoints() {
     return windowPointsBack + 1 + windowPointsForward;
   }
 
-  /** Reasonable defaults (sidereal orbital periods, approximate) in seconds. */
+  /**
+   * Creates a default configuration with approximate sidereal orbital periods for all
+   * solar system bodies, a 10-minute sample step, and a window spanning roughly 33 hours
+   * back and 66 hours forward.
+   *
+   * @return a default solar system ephemeris configuration
+   */
   public static EphemerisConfig defaultSolarSystem() {
     double day = 86400.0;
     EnumMap<SolarSystemBody, Double> periods = new EnumMap<>(SolarSystemBody.class);

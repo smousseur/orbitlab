@@ -21,6 +21,13 @@ import org.orekit.propagation.numerical.NumericalPropagator;
 import org.orekit.utils.Constants;
 import org.orekit.utils.IERSConventions;
 
+/**
+ * Singleton service providing access to the Orekit astrodynamics library.
+ *
+ * <p>Encapsulates Orekit initialization, reference frame retrieval, celestial body lookup,
+ * and numerical propagator creation with different fidelity levels (simple, optimization, default).
+ * Access the singleton instance via {@link #get()}.
+ */
 public final class OrekitService {
   private final AtomicBoolean initialized = new AtomicBoolean(false);
 
@@ -34,6 +41,11 @@ public final class OrekitService {
     manager.addProvider(new ZipJarCrawler(OrekitService.class.getClassLoader(), "orekit-data.zip"));
   }
 
+  /**
+   * Eagerly initializes the Orekit data context and loads reference frames.
+   *
+   * <p>This method is idempotent; subsequent calls after the first are no-ops.
+   */
   public void initialize() {
     if (!initialized.compareAndSet(false, true)) {
       return;
@@ -41,18 +53,41 @@ public final class OrekitService {
     FramesFactory.getICRF();
   }
 
+  /**
+   * Returns the International Celestial Reference Frame (ICRF).
+   *
+   * @return the ICRF frame
+   */
   public Frame icrf() {
     return FramesFactory.getICRF();
   }
 
+  /**
+   * Returns the International Terrestrial Reference Frame (ITRF) using IERS 2010 conventions.
+   *
+   * @return the ITRF frame
+   */
   public Frame itrf() {
     return FramesFactory.getITRF(IERSConventions.IERS_2010, true);
   }
 
+  /**
+   * Returns the Geocentric Celestial Reference Frame (GCRF).
+   *
+   * @return the GCRF frame
+   */
   public Frame gcrf() {
     return FramesFactory.getGCRF();
   }
 
+  /**
+   * Creates a simple numerical propagator using only Newtonian two-body attraction.
+   *
+   * <p>Suitable for quick, low-fidelity orbit propagations where gravitational perturbations
+   * are not needed.
+   *
+   * @return a new numerical propagator with Newtonian gravity only
+   */
   public NumericalPropagator createSimplePropagator() {
     double minStep = 0.001;
     double maxStep = 100.0;
@@ -68,8 +103,12 @@ public final class OrekitService {
   }
 
   /**
-   * Propagator for optimization loops: low-degree gravity (8×8) — fast but faithful enough for
-   * timing/trajectory consistency with the runtime propagator.
+   * Creates a numerical propagator tuned for optimization loops.
+   *
+   * <p>Uses a low-degree (8x8) spherical harmonics gravity model, which is fast enough for
+   * iterative trajectory optimization while remaining faithful to the runtime propagator.
+   *
+   * @return a new numerical propagator with 8x8 gravity field
    */
   public NumericalPropagator createOptimizationPropagator() {
     double minStep = 0.001;
@@ -87,6 +126,14 @@ public final class OrekitService {
     return propagator;
   }
 
+  /**
+   * Creates a high-fidelity numerical propagator using a 50x50 spherical harmonics gravity model.
+   *
+   * <p>This is the most accurate propagator, suitable for mission playback and precise
+   * orbit determination.
+   *
+   * @return a new numerical propagator with 50x50 gravity field
+   */
   public NumericalPropagator createDefaultPropagator() {
     double[] absTol = {1.0, 1.0, 1.0, 1e-3, 1e-3, 1e-3, 1e-2};
     double[] relTol = {1e-8, 1e-8, 1e-8, 1e-8, 1e-8, 1e-8, 1e-8};
@@ -127,6 +174,12 @@ public final class OrekitService {
     return lightGravityModel;
   }
 
+  /**
+   * Returns the Orekit {@link CelestialBody} corresponding to the given solar system body.
+   *
+   * @param body the solar system body identifier
+   * @return the Orekit celestial body instance
+   */
   public CelestialBody body(SolarSystemBody body) {
     return switch (body) {
       case SUN -> CelestialBodyFactory.getSun();
@@ -142,6 +195,11 @@ public final class OrekitService {
     };
   }
 
+  /**
+   * Creates a WGS84 Earth ellipsoid model in the ITRF frame.
+   *
+   * @return a new Earth ellipsoid with WGS84 parameters
+   */
   public OneAxisEllipsoid getEarthEllipsoid() {
     return new OneAxisEllipsoid(
         Constants.WGS84_EARTH_EQUATORIAL_RADIUS, Constants.WGS84_EARTH_FLATTENING, itrf());
@@ -151,6 +209,11 @@ public final class OrekitService {
     private static final OrekitService INSTANCE = new OrekitService();
   }
 
+  /**
+   * Returns the singleton instance of the Orekit service.
+   *
+   * @return the shared {@code OrekitService} instance
+   */
   public static OrekitService get() {
     return Holder.INSTANCE;
   }

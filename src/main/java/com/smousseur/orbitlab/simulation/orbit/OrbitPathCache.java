@@ -18,6 +18,12 @@ import org.orekit.propagation.analytical.KeplerianPropagator;
 import org.orekit.time.AbsoluteDate;
 import org.orekit.utils.PVCoordinates;
 
+/**
+ * Asynchronous cache for one-orbital-period paths of celestial bodies.
+ *
+ * <p>Computes each body's orbit path at most once using Keplerian propagation, and caches the
+ * result for repeated access. Computation is performed asynchronously on a provided executor.
+ */
 public final class OrbitPathCache {
 
   private final EphemerisSource pvSource;
@@ -28,6 +34,14 @@ public final class OrbitPathCache {
   private final ConcurrentHashMap<SolarSystemBody, CompletableFuture<OrbitPath>> cache =
       new ConcurrentHashMap<>();
 
+  /**
+   * Creates a new orbit path cache.
+   *
+   * @param pvSource the ephemeris data source for sampling body positions
+   * @param ephemerisConfig the ephemeris configuration providing orbital periods
+   * @param orbitWindowConfig the orbit window configuration controlling point counts and step limits
+   * @param executor the executor on which to run asynchronous path computations
+   */
   public OrbitPathCache(
       EphemerisSource pvSource,
       EphemerisConfig ephemerisConfig,

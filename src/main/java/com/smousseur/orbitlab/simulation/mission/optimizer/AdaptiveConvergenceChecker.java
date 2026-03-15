@@ -29,6 +29,14 @@ final class AdaptiveConvergenceChecker implements ConvergenceChecker<PointValueP
 
   private int iterationCount = 0;
 
+  /**
+   * Creates a new adaptive convergence checker.
+   *
+   * @param earlyKill whether to enable early termination of runs stuck in bad basins
+   * @param acceptableCost cost threshold below which a solution is considered acceptable
+   * @param absoluteTolerance absolute improvement threshold for convergence
+   * @param relativeTolerance relative improvement threshold for convergence
+   */
   AdaptiveConvergenceChecker(
       boolean earlyKill,
       double acceptableCost,

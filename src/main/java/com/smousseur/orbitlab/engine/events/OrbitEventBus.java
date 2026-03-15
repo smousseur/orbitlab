@@ -15,6 +15,12 @@ import java.util.concurrent.ConcurrentLinkedQueue;
  */
 public final class OrbitEventBus {
 
+  /**
+   * Event indicating that an orbit path has been computed and is ready for rendering.
+   *
+   * @param body the solar system body whose orbit was computed
+   * @param path the computed orbit path
+   */
   public record OrbitPathReady(SolarSystemBody body, OrbitPath path) {
     public OrbitPathReady {
       Objects.requireNonNull(body, "body");
@@ -25,6 +31,12 @@ public final class OrbitEventBus {
   private final ConcurrentLinkedQueue<OrbitPathReady> orbitPathReadyQueue =
       new ConcurrentLinkedQueue<>();
 
+  /**
+   * Publishes an orbit path ready event. Can be called from any thread.
+   *
+   * @param body the solar system body whose orbit path is ready
+   * @param path the computed orbit path
+   */
   public void publishOrbitPathReady(SolarSystemBody body, OrbitPath path) {
     orbitPathReadyQueue.add(new OrbitPathReady(body, path));
   }

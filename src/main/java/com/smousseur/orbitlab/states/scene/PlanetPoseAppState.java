@@ -20,6 +20,15 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import org.orekit.time.AbsoluteDate;
 
+/**
+ * Application state responsible for creating planet scene nodes and updating their positions
+ * and rotations each frame based on ephemeris data.
+ *
+ * <p>During initialization, constructs a {@link PlanetPresenter} and {@link PlanetLodView}
+ * for every solar system body, attaches them to the scene graph, and asynchronously loads
+ * their 3D models. Each frame, queries the simulation clock and updates planet poses
+ * (position and orientation) for all non-Sun bodies.
+ */
 public final class PlanetPoseAppState extends BaseAppState {
 
   private final SimulationClock clock;
@@ -28,6 +37,11 @@ public final class PlanetPoseAppState extends BaseAppState {
   private final Node bucket = new Node(SceneGraph.PLANETS_BUCKET);
   private final Node bodiesNode;
 
+  /**
+   * Creates a new planet pose state.
+   *
+   * @param context the application context providing clock, scene graph, and planet management
+   */
   public PlanetPoseAppState(ApplicationContext context) {
     this.clock = Objects.requireNonNull(context.clock(), "clock");
     this.context = context;

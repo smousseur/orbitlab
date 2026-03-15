@@ -49,6 +49,12 @@ public final class TimeConverter {
     return toUtcLocalDateTime(date) + "Z";
   }
 
+  /**
+   * Formats an Orekit {@link AbsoluteDate} using the pattern {@code yyyy-MM-dd HH:mm:ss} in UTC.
+   *
+   * @param date the date to format
+   * @return the formatted date string
+   */
   public static String formatDate(AbsoluteDate date) {
     Objects.requireNonNull(date, "date");
     Instant instant = date.toInstant();

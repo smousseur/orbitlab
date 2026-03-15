@@ -32,7 +32,19 @@ public enum AxisConvention {
     }
   };
 
+  /**
+   * Converts a vector from ICRF axes to JME world axes.
+   *
+   * @param icrf the vector in ICRF coordinates
+   * @return the equivalent vector in JME coordinates
+   */
   public abstract Vector3D icrfToJme(Vector3D icrf);
 
+  /**
+   * Converts a vector from JME world axes back to ICRF axes.
+   *
+   * @param jme the vector in JME coordinates
+   * @return the equivalent vector in ICRF coordinates
+   */
   public abstract Vector3D jmeToIcrf(Vector3D jme);
 }

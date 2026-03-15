@@ -40,10 +40,26 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
 
   private final CMAESRunExecutor executor;
 
+  /**
+   * Creates an optimizer with default exploration runs, tolerances, and stop fitness.
+   *
+   * @param problem the trajectory problem to optimize
+   * @param maxEvaluations total budget of objective function evaluations across all phases
+   */
   public CMAESTrajectoryOptimizer(TrajectoryProblem problem, int maxEvaluations) {
     this(problem, maxEvaluations, 4, 1e-6, 1e-4, 1e-6);
   }
 
+  /**
+   * Creates an optimizer with full control over exploration and convergence parameters.
+   *
+   * @param problem the trajectory problem to optimize
+   * @param maxEvaluations total budget of objective function evaluations across all phases
+   * @param numExplorationRuns number of independent exploration runs in phase 1
+   * @param stopFitness fitness value at which the CMA-ES optimizer stops immediately
+   * @param relativeTolerance relative convergence tolerance for cost improvement
+   * @param absoluteTolerance absolute convergence tolerance for cost improvement
+   */
   public CMAESTrajectoryOptimizer(
       TrajectoryProblem problem,
       int maxEvaluations,

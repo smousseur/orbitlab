@@ -20,12 +20,25 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 
+/**
+ * Application state that loads precomputed orbital path data from disk and builds the
+ * initial orbit line geometry for each configured celestial body.
+ *
+ * <p>During initialization, reads binary orbit dataset files containing heliocentric
+ * position samples and creates colored line-strip geometries attached to the scene graph's
+ * orbit layer. This provides the static visual representation of planetary orbits.
+ */
 public class OrbitInitAppState extends BaseAppState {
 
   private final SceneGraph.OrbitLayer orbitLayer;
   private final EnumSet<SolarSystemBody> bodies;
   private final Path datasetDir = Path.of("dataset", "orbits");
 
+  /**
+   * Creates a new orbit initialization state.
+   *
+   * @param context the application context providing scene graph and orbit body configuration
+   */
   public OrbitInitAppState(ApplicationContext context) {
     orbitLayer = context.sceneGraph().orbits();
     bodies = context.config().orbitBodies();

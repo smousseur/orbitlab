@@ -8,7 +8,18 @@ import com.jme3.scene.Geometry;
 import com.jme3.scene.Node;
 import com.jme3.scene.debug.Arrow;
 
+/**
+ * Utility class for creating common scene elements such as coordinate axis indicators.
+ */
 public class SceneUtils {
+  /**
+   * Creates a node containing three colored arrows representing the X (red), Y (green),
+   * and Z (blue) coordinate axes.
+   *
+   * @param assetManager the JME3 asset manager used to create arrow materials
+   * @param length       the length of each axis arrow in world units
+   * @return a node containing the three axis arrows
+   */
   public static Node createAxes(AssetManager assetManager, float length) {
     Node axes = new Node("Axes");
 

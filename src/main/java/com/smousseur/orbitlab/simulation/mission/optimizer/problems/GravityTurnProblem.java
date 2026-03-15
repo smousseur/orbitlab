@@ -12,7 +12,20 @@ import org.orekit.propagation.SpacecraftState;
 import org.orekit.utils.Constants;
 import org.orekit.utils.PVCoordinates;
 
-/** The type Gravity turn problem. 2 variables : transitionTime, exponent for pitch kick) */
+/**
+ * Trajectory optimization problem for the gravity turn phase of an ascent mission.
+ *
+ * <p>Optimizes two variables:
+ *
+ * <ul>
+ *   <li><b>transitionTime</b> -- time at which the gravity turn ends (MECO)
+ *   <li><b>exponent</b> -- pitch program exponent controlling the gravity turn profile
+ * </ul>
+ *
+ * <p>The cost function penalizes deviations from the target apogee window, excessive flight path
+ * angle, insufficient tangential velocity, unsafe altitudes, hyperbolic orbits, and propellant
+ * consumption.
+ */
 public class GravityTurnProblem implements TrajectoryProblem {
   private static final double W_P = 9.e-5;
 
@@ -20,6 +33,13 @@ public class GravityTurnProblem implements TrajectoryProblem {
   private final SpacecraftState initialState;
   private final GravityTurnConstraints constraints;
 
+  /**
+   * Creates a gravity turn optimization problem.
+   *
+   * @param maneuver the gravity turn maneuver that handles propagation
+   * @param initialState the spacecraft state at the beginning of the gravity turn
+   * @param constraints the target apogee, velocity, and flight path angle constraints
+   */
   public GravityTurnProblem(
       GravityTurnManeuver maneuver,
       SpacecraftState initialState,

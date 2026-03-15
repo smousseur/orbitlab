@@ -10,6 +10,15 @@ import com.smousseur.orbitlab.app.ApplicationContext;
 import com.smousseur.orbitlab.app.converters.TimeConverter;
 import java.util.Objects;
 
+/**
+ * A Lemur-based GUI widget that provides playback controls and a speed slider for the simulation clock.
+ *
+ * <p>The widget displays a "Live" button to jump to the current real time, a play/pause toggle,
+ * a speed label, a bidirectional speed slider (supporting both forward and reverse playback),
+ * and the current simulation date. It is designed to be positioned at the bottom center of the screen.
+ *
+ * <p>Implements {@link AutoCloseable} to detach itself from the scene graph when no longer needed.
+ */
 public class TimelineWidget implements AutoCloseable {
   private static final double[] ABS_SPEED = {
     1, // 0 -> 1× (spécial-cas i==0)
@@ -45,6 +54,15 @@ public class TimelineWidget implements AutoCloseable {
 
   private final VersionedReference<Double> speedValueRef;
 
+  /**
+   * Creates and attaches the timeline widget to the GUI scene graph.
+   *
+   * <p>Builds the control row (Live, Play/Pause, speed label), the speed slider with
+   * a range of -16 to +16 discrete steps, and the date label. Wires up button actions
+   * and performs an initial synchronization with the simulation clock.
+   *
+   * @param context the application context providing the simulation clock and GUI scene graph
+   */
   public TimelineWidget(ApplicationContext context) {
     this.clock = Objects.requireNonNull(context, "context must not be null").clock();
 
@@ -95,7 +113,14 @@ public class TimelineWidget implements AutoCloseable {
         });
   }
 
-  /** À appeler périodiquement (ex: depuis un AppState) pour garder l'UI à jour. */
+  /**
+   * Updates the widget state, typically called once per frame from an AppState.
+   *
+   * <p>Refreshes the displayed date from the simulation clock and, if the speed slider
+   * has been moved, applies the new speed to the clock and updates the speed label.
+   *
+   * @param tpf time per frame in seconds (unused, but follows JME3 update convention)
+   */
   public void update(float tpf) {
     // TODO: si d'autres systèmes modifient speed/playing, resync ici.
     dateLabel.setText(TimeConverter.formatDate(clock.now()));
@@ -120,6 +145,11 @@ public class TimelineWidget implements AutoCloseable {
     playPauseButton.setText(clock.isPlaying() ? "Pause" : "Play");
   }
 
+  /**
+   * Positions the widget at the bottom center of the screen.
+   *
+   * @param screenWidth the current screen width in pixels, used to center the widget horizontally
+   */
   public void layoutBottomCenter(int screenWidth) {
     var size = root.getPreferredSize(); // largeur/hauteur du widget en pixels
     float x = (screenWidth - size.x) * 0.5f;

@@ -4,6 +4,20 @@ import com.smousseur.orbitlab.core.SolarSystemBody;
 import java.util.EnumMap;
 import java.util.Objects;
 
+/**
+ * Configuration for the adaptive sliding window ephemeris system.
+ *
+ * <p>Controls how the ephemeris worker sizes and repositions per-body buffers based on
+ * the current simulation clock speed. The window adapts by increasing the sample step at
+ * higher speeds to keep the total point count bounded.
+ *
+ * @param speedMaxAbs the maximum absolute clock speed to plan for (speeds above this are clamped)
+ * @param lookaheadRealSeconds the real-time lookahead duration used to size the window
+ * @param minPointsEachSide the minimum number of sample points on each side of the center
+ * @param maxPointsEachSide the maximum number of sample points on each side of the center
+ * @param marginRatio the fraction of points used as comfort margin before triggering a rebuild (0, 0.5)
+ * @param stepSecondsByBody the base sample step in seconds for each celestial body
+ */
 public record SlidingWindowConfig(
     double speedMaxAbs,
     double lookaheadRealSeconds,
@@ -30,6 +44,13 @@ public record SlidingWindowConfig(
     Objects.requireNonNull(stepSecondsByBody, "stepSecondsByBody");
   }
 
+  /**
+   * Returns the configured base sample step for the given body.
+   *
+   * @param body the solar system body
+   * @return the base sample step in seconds
+   * @throws IllegalArgumentException if no step is configured for the body or the value is invalid
+   */
   public double stepSeconds(SolarSystemBody body) {
     Objects.requireNonNull(body, "body");
     Double v = stepSecondsByBody.get(body);
@@ -44,6 +65,16 @@ public record SlidingWindowConfig(
     return v;
   }
 
+  /**
+   * Computes an adaptive window plan for the given body and clock speed.
+   *
+   * <p>At higher clock speeds, the sample step is increased (in power-of-two multiples of the
+   * base step) to keep the number of points bounded, while the margin is scaled proportionally.
+   *
+   * @param body the celestial body to plan for
+   * @param clockSpeedAbs the absolute value of the current clock speed multiplier
+   * @return the computed window plan
+   */
   public WindowPlan plan(SolarSystemBody body, double clockSpeedAbs) {
     double speedAbs = Math.min(Math.abs(clockSpeedAbs), speedMaxAbs);
 
@@ -88,6 +119,14 @@ public record SlidingWindowConfig(
     return Math.max(min, Math.min(max, v));
   }
 
+  /**
+   * An immutable plan describing the concrete window parameters for a single buffer rebuild.
+   *
+   * @param stepSeconds the time interval between consecutive samples in seconds
+   * @param pointsBack the number of sample points before the center
+   * @param pointsForward the number of sample points after the center
+   * @param marginPoints the number of margin points defining the comfort zone boundary
+   */
   public record WindowPlan(
       double stepSeconds, int pointsBack, int pointsForward, int marginPoints) {
     public WindowPlan {
@@ -99,6 +138,12 @@ public record SlidingWindowConfig(
     }
   }
 
+  /**
+   * Creates a default sliding window configuration for the solar system with per-body
+   * base sample steps ranging from 3 hours (Mercury) to 14 days (Pluto).
+   *
+   * @return a default solar system sliding window configuration
+   */
   public static SlidingWindowConfig defaultSolarSystem() {
     EnumMap<SolarSystemBody, Double> steps = new EnumMap<>(SolarSystemBody.class);
     steps.put(SolarSystemBody.SUN, 6 * 3600.0);
