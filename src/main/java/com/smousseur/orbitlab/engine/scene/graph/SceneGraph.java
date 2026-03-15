@@ -24,6 +24,7 @@ public final class SceneGraph {
   public static final String ORBIT_PREFIX = "Orbit-";
   public static String PLANETS_BUCKET = "PlanetsBucket";
   public static String PLANET_ANCHOR_PREFIX = "PlanetAnchor-";
+  public static String NEAR_PLANET_ANCHOR_PREFIX = "NearPlanetAnchor-";
 
   private Node rootNode;
 
@@ -114,6 +115,25 @@ public final class SceneGraph {
    */
   public Node bodiesNode() {
     return farBodiesNode;
+  }
+
+  /**
+   * Returns the near frame node, used for applying the km-scale coordinate transform
+   * in the planet/spacecraft viewport.
+   *
+   * @return the near frame node
+   */
+  public Node nearFrame() {
+    return nearFrame;
+  }
+
+  /**
+   * Returns the near bodies node where planet near-scale spatials are attached.
+   *
+   * @return the near bodies node
+   */
+  public Node nearBodiesNode() {
+    return nearBodiesNode;
   }
 
   /**
