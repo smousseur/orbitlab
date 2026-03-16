@@ -20,17 +20,17 @@ import java.util.function.Supplier;
  * Blender-like orbit camera using a turntable model for 3D scene navigation.
  *
  * <p>Supports the following interaction modes:
+ *
  * <ul>
- *   <li>Middle mouse button (MMB) drag: orbit around the pivot point</li>
- *   <li>Shift + MMB drag: pan (translates the pivot in the screen plane)</li>
- *   <li>Mouse wheel: dolly zoom (exponential distance scaling)</li>
+ *   <li>Middle mouse button (MMB) drag: orbit around the pivot point
+ *   <li>Shift + MMB drag: pan (translates the pivot in the screen plane)
+ *   <li>Mouse wheel: dolly zoom (exponential distance scaling)
  * </ul>
  *
- * <p>The camera orbits around a target pivot, which can be set as a {@link Spatial} or a
- * {@code Supplier<Vector3f>} providing world-space coordinates. If the target is null or
- * contains non-finite coordinates, the camera falls back to the provided fallback pivot
- * supplier. The field of view adapts dynamically based on the zoom level, narrowing when
- * close and widening when far.
+ * <p>The camera orbits around a target pivot, which can be set as a {@link Spatial} or a {@code
+ * Supplier<Vector3f>} providing world-space coordinates. If the target is null or contains
+ * non-finite coordinates, the camera falls back to the provided fallback pivot supplier. The field
+ * of view adapts dynamically based on the zoom level, narrowing when close and widening when far.
  */
 public final class OrbitCameraAppState extends BaseAppState
     implements ActionListener, AnalogListener {
@@ -66,6 +66,9 @@ public final class OrbitCameraAppState extends BaseAppState
 
   private final Vector3f lastPivotWorld = new Vector3f();
 
+  /** Dynamic minimum far plane, applied after adaptive frustum calculation. */
+  private volatile float farFloor = 0f;
+
   // FoV adaptatif: bornes en radians et exponent de courbe
   private final float fovMinRad = (float) Math.toRadians(15.0); // étroit proche
   private final float fovMaxRad = (float) Math.toRadians(60.0); // large lointain
@@ -75,10 +78,10 @@ public final class OrbitCameraAppState extends BaseAppState
    * Creates a new orbit camera state.
    *
    * @param config camera configuration controlling distances, speeds, and frustum parameters
-   * @param fallbackPivotWorldSupplier supplier for the fallback pivot position in world space,
-   *     used when no target is set or the target position is invalid
-   * @param uiWantsMouse supplier that returns {@code true} when the UI is capturing mouse
-   *     input, causing the camera to ignore mouse events
+   * @param fallbackPivotWorldSupplier supplier for the fallback pivot position in world space, used
+   *     when no target is set or the target position is invalid
+   * @param uiWantsMouse supplier that returns {@code true} when the UI is capturing mouse input,
+   *     causing the camera to ignore mouse events
    */
   public OrbitCameraAppState(
       OrbitCameraConfig config,
@@ -93,8 +96,8 @@ public final class OrbitCameraAppState extends BaseAppState
   }
 
   /**
-   * Sets the camera's orbit target to a scene spatial. The camera will orbit around
-   * the spatial's world translation. Clears any previously set supplier-based target.
+   * Sets the camera's orbit target to a scene spatial. The camera will orbit around the spatial's
+   * world translation. Clears any previously set supplier-based target.
    *
    * @param spatial the spatial to orbit around
    */
@@ -104,9 +107,9 @@ public final class OrbitCameraAppState extends BaseAppState
   }
 
   /**
-   * Sets the camera's orbit target to a dynamic world-space position supplier.
-   * The camera will orbit around the position returned by the supplier each frame.
-   * Clears any previously set spatial-based target.
+   * Sets the camera's orbit target to a dynamic world-space position supplier. The camera will
+   * orbit around the position returned by the supplier each frame. Clears any previously set
+   * spatial-based target.
    *
    * @param pivotWorldSupplier supplier providing the pivot position in world space
    */
@@ -116,8 +119,8 @@ public final class OrbitCameraAppState extends BaseAppState
   }
 
   /**
-   * Clears the current orbit target. The camera will fall back to the fallback pivot
-   * supplier until a new target is set.
+   * Clears the current orbit target. The camera will fall back to the fallback pivot supplier until
+   * a new target is set.
    */
   public void clearTarget() {
     this.targetSpatial = null;
@@ -134,9 +137,9 @@ public final class OrbitCameraAppState extends BaseAppState
   }
 
   /**
-   * Returns the current zoom level as a normalized value between 0 and 1, where 0 represents
-   * the minimum distance (fully zoomed in) and 1 represents the maximum distance (fully zoomed
-   * out). The mapping uses a logarithmic scale for perceptually uniform zoom behavior.
+   * Returns the current zoom level as a normalized value between 0 and 1, where 0 represents the
+   * minimum distance (fully zoomed in) and 1 represents the maximum distance (fully zoomed out).
+   * The mapping uses a logarithmic scale for perceptually uniform zoom behavior.
    *
    * @return the normalized zoom level in the range [0, 1]
    */
@@ -351,6 +354,16 @@ public final class OrbitCameraAppState extends BaseAppState
     cam.lookAt(pivotWorld, Vector3f.UNIT_Y);
   }
 
+  /**
+   * Sets a minimum floor for the far clip plane. The adaptive frustum will never produce a far
+   * value below this floor. Set to 0 to disable.
+   *
+   * @param farFloor minimum far clip plane in world units
+   */
+  public void setFarFloor(float farFloor) {
+    this.farFloor = Math.max(0f, farFloor);
+  }
+
   private void updateFrustum() {
     float d = distance;
 
@@ -367,6 +380,9 @@ public final class OrbitCameraAppState extends BaseAppState
 
     // Optionally keep a very small absolute minimum far (but not 1000 when close)
     far = Math.max(far, 10f);
+
+    // Apply dynamic floor (e.g. for planet view where distant orbits must remain visible)
+    far = Math.max(far, farFloor);
 
     // Keep pivot visible: near must be < distance (minus a small margin)
     float margin = Math.max(near * 2f, 0.01f);

@@ -8,7 +8,6 @@ import com.smousseur.orbitlab.app.ApplicationContext;
 import com.smousseur.orbitlab.app.view.FocusView;
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.engine.scene.graph.SceneGraph;
-
 import java.util.Objects;
 
 /**
@@ -21,10 +20,13 @@ import java.util.Objects;
  * scene on that planet.
  */
 public class FloatingOriginAppState extends BaseAppState {
+  /** Minimum far plane for the farCam in planet view mode, in solar-scale units. */
+  private static final float PLANET_MODE_FAR_MIN = 50_000f;
 
   private final ApplicationContext context;
   private final Node solarRoot;
   private final SceneGraph sceneGraph;
+  private OrbitCameraAppState orbitCam;
 
   /**
    * Creates a new floating origin state.
@@ -38,7 +40,10 @@ public class FloatingOriginAppState extends BaseAppState {
   }
 
   @Override
-  protected void initialize(Application app) {}
+  protected void initialize(Application app) {
+    // TODO Get camera from context
+    orbitCam = getState(OrbitCameraAppState.class);
+  }
 
   @Override
   public void update(float tpf) {
@@ -47,6 +52,7 @@ public class FloatingOriginAppState extends BaseAppState {
       case SOLAR -> {
         sceneGraph.showBodySpatial(SolarSystemBody.SUN);
         solarRoot.setLocalTranslation(0, 0, 0);
+        orbitCam.setFarFloor(0f);
       }
       case PLANET -> {
         sceneGraph.showBodySpatial(view.getBody());
@@ -54,6 +60,8 @@ public class FloatingOriginAppState extends BaseAppState {
         if (planetSpatial != null) {
           solarRoot.setLocalTranslation(planetSpatial.getLocalTranslation().negate());
         }
+        // Ensure the far frustum is large enough to encompass distant orbits and bodies.
+        orbitCam.setFarFloor(PLANET_MODE_FAR_MIN);
       }
     }
   }

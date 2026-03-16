@@ -6,19 +6,26 @@ import com.jme3.renderer.Camera;
 import com.smousseur.orbitlab.app.ApplicationContext;
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.engine.scene.planet.PlanetPresenter;
-
 import java.util.Map;
 
 /**
- * Application state that updates HUD markers (screen-space labels and indicators) for all
- * planets each frame.
+ * Application state that updates HUD markers (screen-space labels and indicators) for all planets
+ * each frame.
  *
- * <p>Projects the 3D world positions of planet presenters onto the 2D screen using the
- * application camera, keeping on-screen markers aligned with their corresponding celestial
- * bodies as the camera moves.
+ * <p>Projects the 3D world positions of planet presenters onto the 2D screen using the application
+ * camera, keeping on-screen markers aligned with their corresponding celestial bodies as the camera
+ * moves.
+ *
+ * <p>When the main camera's frustum far plane is too small (e.g. in planet view), a temporary
+ * projection camera with an extended far plane is used so distant planets still project to valid
+ * screen coordinates.
  */
 public class PlanetHudMarkersAppState extends BaseAppState {
   private Camera camera;
+
+  /** Dedicated camera clone used only for screen-space projection of distant icons. */
+  private Camera projectionCam;
+
   private final Map<SolarSystemBody, PlanetPresenter> planets;
 
   /**
@@ -33,11 +40,26 @@ public class PlanetHudMarkersAppState extends BaseAppState {
   @Override
   protected void initialize(Application app) {
     camera = app.getCamera();
+    projectionCam = camera.clone();
   }
 
   @Override
   public void update(float tpf) {
-    planets.values().stream().map(PlanetPresenter::view).forEach(view -> view.updateScreen(camera));
+    // Sync projection camera with the real camera
+    projectionCam.setLocation(camera.getLocation());
+    projectionCam.setRotation(camera.getRotation());
+    projectionCam.setFrustumNear(camera.getFrustumNear());
+    projectionCam.setFrustumLeft(camera.getFrustumLeft());
+    projectionCam.setFrustumRight(camera.getFrustumRight());
+    projectionCam.setFrustumTop(camera.getFrustumTop());
+    projectionCam.setFrustumBottom(camera.getFrustumBottom());
+
+    // Use a far plane large enough to encompass the whole solar system for projection
+    projectionCam.setFrustumFar(Math.max(camera.getFrustumFar(), 50_000f));
+
+    planets.values().stream()
+        .map(PlanetPresenter::view)
+        .forEach(view -> view.updateScreen(projectionCam));
   }
 
   @Override

@@ -3,8 +3,8 @@ package com.smousseur.orbitlab.app.view;
 import com.smousseur.orbitlab.core.SolarSystemBody;
 
 /**
- * Mutable state holder that tracks the current camera focus: which view mode is active and
- * which solar system body the camera is centered on.
+ * Mutable state holder that tracks the current camera focus: which view mode is active and which
+ * solar system body the camera is centered on.
  *
  * <p>Used by camera and rendering states to determine how the scene should be displayed.
  */
@@ -12,9 +12,11 @@ public class FocusView {
   private ViewMode mode = ViewMode.SOLAR;
   private SolarSystemBody body = SolarSystemBody.SUN;
 
-  /**
-   * Resets the focus to the default state: solar view centered on the Sun.
-   */
+  public boolean isFocused(SolarSystemBody body) {
+    return this.mode == ViewMode.PLANET && this.body == body;
+  }
+
+  /** Resets the focus to the default state: solar view centered on the Sun. */
   public void reset() {
     this.mode = ViewMode.SOLAR;
     this.body = SolarSystemBody.SUN;
