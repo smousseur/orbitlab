@@ -116,7 +116,7 @@ public class OrbitLabApplication extends SimpleApplication {
     // Near frustum: far kept fixed for planet-scale coverage; near is synced dynamically
     // by NearCameraSyncAppState to match the main camera's adaptive near plane.
     nearCam.setFrustumNear(0.1f);
-    nearCam.setFrustumFar(20000f);
+    nearCam.setFrustumFar(100_000f);
 
     stateManager.attach(new NearCameraSyncAppState(nearCam));
   }

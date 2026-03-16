@@ -3,7 +3,6 @@ package com.smousseur.orbitlab.states.scene;
 import com.jme3.app.Application;
 import com.jme3.app.state.BaseAppState;
 import com.jme3.scene.Node;
-import com.jme3.scene.Spatial;
 import com.smousseur.orbitlab.app.ApplicationContext;
 import com.smousseur.orbitlab.app.SimulationClock;
 import com.smousseur.orbitlab.core.SolarSystemBody;
@@ -21,13 +20,13 @@ import java.util.concurrent.ExecutorService;
 import org.orekit.time.AbsoluteDate;
 
 /**
- * Application state responsible for creating planet scene nodes and updating their positions
- * and rotations each frame based on ephemeris data.
+ * Application state responsible for creating planet scene nodes and updating their positions and
+ * rotations each frame based on ephemeris data.
  *
- * <p>During initialization, constructs a {@link PlanetPresenter} and {@link PlanetLodView}
- * for every solar system body, attaches them to the scene graph, and asynchronously loads
- * their 3D models. Each frame, queries the simulation clock and updates planet poses
- * (position and orientation) for all non-Sun bodies.
+ * <p>During initialization, constructs a {@link PlanetPresenter} and {@link PlanetLodView} for
+ * every solar system body, attaches them to the scene graph, and asynchronously loads their 3D
+ * models. Each frame, queries the simulation clock and updates planet poses (position and
+ * orientation) for all non-Sun bodies.
  */
 public final class PlanetPoseAppState extends BaseAppState {
 
@@ -56,7 +55,7 @@ public final class PlanetPoseAppState extends BaseAppState {
     Node guiNode = context.guiGraph().getPlanetBillboardsNode();
 
     // Set km scale on nearFrame: 1 near unit = 1 km (1e3 m), 1 solar unit = 1e9 m → ratio 1e-6
-    context.sceneGraph().nearFrame().setLocalScale(1e-6f);
+    // context.sceneGraph().nearFrame().setLocalScale(1e-6f);
 
     bodiesNode.attachChild(bucket);
     nearBodiesNode.attachChild(nearBucket);

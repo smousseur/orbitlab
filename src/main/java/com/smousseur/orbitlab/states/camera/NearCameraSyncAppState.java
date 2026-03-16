@@ -2,20 +2,23 @@ package com.smousseur.orbitlab.states.camera;
 
 import com.jme3.app.Application;
 import com.jme3.app.state.BaseAppState;
+import com.jme3.math.Vector3f;
 import com.jme3.renderer.Camera;
 
 /**
  * Synchronizes the near viewport camera with the main (far) camera every frame.
  *
- * <p>The near viewport uses a separate {@link Camera} instance cloned at startup. Without
- * synchronization, this camera would remain static. This state copies the far camera's position,
- * rotation, and frustum near plane each frame so the near scene (planet-scale km coordinate
- * space) tracks the user's viewpoint correctly.
- *
- * <p>The frustum far plane is not synced; the near camera keeps a fixed far value to cover the
- * full planet-scale scene without wasting depth-buffer precision on solar-system distances.
+ * <p>The far camera works in solar-scale units (1 unit = 1e9 m) while the near camera works in
+ * km-scale units (1 unit = 1e3 m). This state converts the far camera's position into km-scale
+ * coordinates and copies the rotation and frustum planes so both viewports stay visually aligned.
  */
 public final class NearCameraSyncAppState extends BaseAppState {
+
+  /**
+   * Conversion factor: 1 solar unit = 1e9 m, 1 km unit = 1e3 m → ratio = 1e6. Multiply far camera
+   * position by this to get near camera position in km units.
+   */
+  private static final float SOLAR_TO_KM = 1e6f;
 
   private final Camera nearCam;
   private Camera farCam;
@@ -36,10 +39,19 @@ public final class NearCameraSyncAppState extends BaseAppState {
 
   @Override
   public void update(float tpf) {
-    nearCam.setLocation(farCam.getLocation());
+    // Convert position from solar-scale (1 unit = 1e9 m) to km-scale (1 unit = 1e3 m)
+    Vector3f farPos = farCam.getLocation();
+    nearCam.setLocation(farPos.mult(SOLAR_TO_KM));
+
     nearCam.setRotation(farCam.getRotation());
-    // Mirror the dynamically adjusted near frustum so planet-scale geometry is not clipped.
-    nearCam.setFrustumNear(farCam.getFrustumNear());
+
+    // Mirror the full frustum (including adaptive FoV) so both viewports match visually.
+    nearCam.setFrustumNear(farCam.getFrustumNear() * SOLAR_TO_KM);
+    nearCam.setFrustumFar(farCam.getFrustumFar() * SOLAR_TO_KM);
+    nearCam.setFrustumLeft(farCam.getFrustumLeft() * SOLAR_TO_KM);
+    nearCam.setFrustumRight(farCam.getFrustumRight() * SOLAR_TO_KM);
+    nearCam.setFrustumTop(farCam.getFrustumTop() * SOLAR_TO_KM);
+    nearCam.setFrustumBottom(farCam.getFrustumBottom() * SOLAR_TO_KM);
   }
 
   @Override
