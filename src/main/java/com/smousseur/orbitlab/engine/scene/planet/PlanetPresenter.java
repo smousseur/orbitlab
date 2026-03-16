@@ -15,8 +15,8 @@ import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.orekit.time.AbsoluteDate;
 
 /**
- * MVC presenter that drives a {@link PlanetView} by computing and applying the planet's
- * position and rotation from ephemeris data at a given simulation time.
+ * MVC presenter that drives a {@link PlanetView} by computing and applying the planet's position
+ * and rotation from ephemeris data at a given simulation time.
  *
  * @param body the solar system body this presenter manages
  * @param view the view that renders the planet
@@ -38,13 +38,13 @@ public record PlanetPresenter(SolarSystemBody body, PlanetView view) {
   }
 
   /**
-   * Updates the planet's position and rotation in the view based on its heliocentric
-   * ICRF ephemeris at the given simulation time.
+   * Updates the planet's position and rotation in the view based on its heliocentric ICRF ephemeris
+   * at the given simulation time.
    *
    * @param t the simulation time at which to compute the planet's pose
    */
   public void updatePose(AbsoluteDate t) {
-    // Heliocentrique: pos = planetICRF - sunICRF (interpolation via buffers)
+    // Heliocentric: pos = planetICRF - sunICRF (interpolation via buffers)
     EphemerisService ephemerisService =
         EphemerisServiceRegistry.get()
             .orElseThrow(() -> new OrbitlabException("Cannot get EphemerisService"));

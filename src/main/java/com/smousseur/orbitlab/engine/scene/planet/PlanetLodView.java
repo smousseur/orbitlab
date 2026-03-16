@@ -90,15 +90,6 @@ public final class PlanetLodView implements PlanetView {
   }
 
   /**
-   * Returns the 3D model view component for this planet.
-   *
-   * @return the planet's 3D view
-   */
-  public Planet3dView getModel3dView() {
-    return model3dView;
-  }
-
-  /**
    * Updates the LOD state by switching between the 3D model and icon views based on the camera's
    * distance to the planet anchor. Also toggles orbit line visibility accordingly.
    *
@@ -119,9 +110,17 @@ public final class PlanetLodView implements PlanetView {
       iconView.setVisible(true);
       iconView.updateScreenPosition(cam, farAnchor);
     }
-    // Only hide the orbit for the planet currently focused in planet view.
-    // Other planets always keep their orbit visible regardless of LOD state.
-    sceneGraph.setOrbitVisible(body, !(focusView.isFocused(body) && show3d));
+    boolean isFocused = focusView.isFocused(body);
+    sceneGraph.setOrbitVisible(body, !(isFocused && show3d));
+  }
+
+  /**
+   * Returns the 3D model view component for this planet.
+   *
+   * @return the planet's 3D view
+   */
+  public Planet3dView getModel3dView() {
+    return model3dView;
   }
 
   /** Detaches the icon view from the GUI, cleaning up its screen-space elements. */

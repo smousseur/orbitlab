@@ -279,6 +279,16 @@ public final class OrbitCameraAppState extends BaseAppState
     }
   }
 
+  /**
+   * Sets a minimum floor for the far clip plane. The adaptive frustum will never produce a far
+   * value below this floor. Set to 0 to disable.
+   *
+   * @param farFloor minimum far clip plane in world units
+   */
+  public void setFarFloor(float farFloor) {
+    this.farFloor = Math.max(0f, farFloor);
+  }
+
   private void applyWheelZoom(String name, float value) {
     if (uiWantsMouse.getAsBoolean()) {
       return;
@@ -352,16 +362,6 @@ public final class OrbitCameraAppState extends BaseAppState
 
     cam.setLocation(pivotWorld.add(offset));
     cam.lookAt(pivotWorld, Vector3f.UNIT_Y);
-  }
-
-  /**
-   * Sets a minimum floor for the far clip plane. The adaptive frustum will never produce a far
-   * value below this floor. Set to 0 to disable.
-   *
-   * @param farFloor minimum far clip plane in world units
-   */
-  public void setFarFloor(float farFloor) {
-    this.farFloor = Math.max(0f, farFloor);
   }
 
   private void updateFrustum() {

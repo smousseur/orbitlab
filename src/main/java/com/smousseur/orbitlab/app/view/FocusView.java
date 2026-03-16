@@ -12,6 +12,12 @@ public class FocusView {
   private ViewMode mode = ViewMode.SOLAR;
   private SolarSystemBody body = SolarSystemBody.SUN;
 
+  /**
+   * Tests if the view is currently focused on the specified body in planet view mode.
+   *
+   * @param body the body
+   * @return true if body is focused
+   */
   public boolean isFocused(SolarSystemBody body) {
     return this.mode == ViewMode.PLANET && this.body == body;
   }
