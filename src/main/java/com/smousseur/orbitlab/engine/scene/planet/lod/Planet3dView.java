@@ -41,12 +41,11 @@ public class Planet3dView {
   public Spatial loadModel() {
     logger.info("Loading model for {}", planetDescriptor.body().displayName());
     String name = planetDescriptor.displayName().toLowerCase();
-    // TODO scale
     double planetRadius = PlanetRadius.radiusFor(planetDescriptor.body());
     return AssetFactory.get()
         .loadModel(
             "models/planets/" + name + "/" + name + ".gltf",
-            (float) (planetRadius * RenderContext.solar().unitsPerMeter()));
+            (float) (planetRadius * RenderContext.planet(planetDescriptor.body()).unitsPerMeter()));
   }
 
   /**

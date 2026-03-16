@@ -13,6 +13,7 @@ import com.smousseur.orbitlab.engine.EngineConfig;
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.states.InitAppState;
 import com.smousseur.orbitlab.states.camera.FloatingOriginAppState;
+import com.smousseur.orbitlab.states.camera.NearCameraSyncAppState;
 import com.smousseur.orbitlab.states.camera.OrbitCameraAppState;
 import com.smousseur.orbitlab.states.camera.ViewModeAppState;
 import com.smousseur.orbitlab.states.ephemeris.EphemerisAppState;
@@ -112,9 +113,12 @@ public class OrbitLabApplication extends SimpleApplication {
     nearViewport.setClearFlags(false, true, false); // don't clear color, DO clear depth
     nearViewport.attachScene(sceneGraph.getNearRoot());
 
-    // Typical near frustum tuning (planet-scale): keep far smaller for depth precision.
+    // Near frustum: far kept fixed for planet-scale coverage; near is synced dynamically
+    // by NearCameraSyncAppState to match the main camera's adaptive near plane.
     nearCam.setFrustumNear(0.1f);
-    nearCam.setFrustumFar(20000f);
+    nearCam.setFrustumFar(100_000f);
+
+    stateManager.attach(new NearCameraSyncAppState(nearCam));
   }
 
   @Override

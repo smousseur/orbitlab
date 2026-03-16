@@ -12,18 +12,22 @@ import java.util.Objects;
  * Manages the 3D scene graph hierarchy for the dual-viewport rendering system.
  *
  * <p>The scene graph is split into two root nodes:
+ *
  * <ul>
- *   <li><strong>Far root</strong>: Contains solar system-scale elements (orbit lines, distant bodies)
- *       rendered with a far frustum.</li>
- *   <li><strong>Near root</strong>: Contains planet/spacecraft-scale elements rendered with a near frustum.</li>
+ *   <li><strong>Far root</strong>: Contains solar system-scale elements (orbit lines, distant
+ *       bodies) rendered with a far frustum.
+ *   <li><strong>Near root</strong>: Contains planet/spacecraft-scale elements rendered with a near
+ *       frustum.
  * </ul>
  *
- * <p>Each root has a frame node for floating-origin offset, plus dedicated nodes for orbits and bodies.
+ * <p>Each root has a frame node for floating-origin offset, plus dedicated nodes for orbits and
+ * bodies.
  */
 public final class SceneGraph {
   public static final String ORBIT_PREFIX = "Orbit-";
   public static String PLANETS_BUCKET = "PlanetsBucket";
   public static String PLANET_ANCHOR_PREFIX = "PlanetAnchor-";
+  public static String NEAR_PLANET_ANCHOR_PREFIX = "NearPlanetAnchor-";
 
   private Node rootNode;
 
@@ -67,12 +71,17 @@ public final class SceneGraph {
     }
   }
 
-  /**
-   * Detaches both the far and near root nodes from their parent node.
-   */
+  /** Detaches both the far and near root nodes from their parent node. */
   public void detachFromParent() {
     farRoot.removeFromParent();
     nearRoot.removeFromParent();
+  }
+
+  public void showBodySpatial(SolarSystemBody body) {
+    Node planetBucket = (Node) nearBodiesNode.getChild(PLANETS_BUCKET);
+    planetBucket.getChildren().forEach(n -> n.setCullHint(Spatial.CullHint.Always));
+    Spatial planetAnchor = planetBucket.getChild(NEAR_PLANET_ANCHOR_PREFIX + body.name());
+    planetAnchor.setCullHint(Spatial.CullHint.Inherit);
   }
 
   /**
@@ -89,7 +98,7 @@ public final class SceneGraph {
   /**
    * Sets the visibility of the orbit line for the given solar system body.
    *
-   * @param body    the solar system body whose orbit visibility to control
+   * @param body the solar system body whose orbit visibility to control
    * @param visible {@code true} to show the orbit, {@code false} to hide it
    */
   public void setOrbitVisible(SolarSystemBody body, boolean visible) {
@@ -114,6 +123,25 @@ public final class SceneGraph {
    */
   public Node bodiesNode() {
     return farBodiesNode;
+  }
+
+  /**
+   * Returns the near frame node, used for applying the km-scale coordinate transform in the
+   * planet/spacecraft viewport.
+   *
+   * @return the near frame node
+   */
+  public Node nearFrame() {
+    return nearFrame;
+  }
+
+  /**
+   * Returns the near bodies node where planet near-scale spatials are attached.
+   *
+   * @return the near bodies node
+   */
+  public Node nearBodiesNode() {
+    return nearBodiesNode;
   }
 
   /**
@@ -171,8 +199,8 @@ public final class SceneGraph {
   }
 
   /**
-   * Manages per-body orbit line nodes within a parent orbit container node.
-   * Creates and caches individual nodes for each solar system body on demand.
+   * Manages per-body orbit line nodes within a parent orbit container node. Creates and caches
+   * individual nodes for each solar system body on demand.
    */
   public static final class OrbitLayer {
     private final Node parent;
@@ -192,8 +220,8 @@ public final class SceneGraph {
     }
 
     /**
-     * Returns (or creates) the dedicated orbit node for the given solar system body.
-     * The node is automatically attached to the parent orbit container.
+     * Returns (or creates) the dedicated orbit node for the given solar system body. The node is
+     * automatically attached to the parent orbit container.
      *
      * @param body the solar system body
      * @return the orbit node for the body

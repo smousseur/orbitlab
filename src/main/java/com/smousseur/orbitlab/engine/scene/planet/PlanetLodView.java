@@ -25,7 +25,8 @@ import java.util.Objects;
  * colored icon with a label is shown instead.
  */
 public final class PlanetLodView implements PlanetView {
-  private final Node anchor3d;
+  private final Node farAnchor;
+  private final Node nearAnchor;
   private final PlanetIconView iconView;
   private final Planet3dView model3dView;
   private final SceneGraph sceneGraph;
@@ -33,6 +34,11 @@ public final class PlanetLodView implements PlanetView {
 
   /**
    * Creates a new LOD view for a planet, setting up both the 3D model view and the icon view.
+   *
+   * <p>The far anchor is positioned in heliocentric solar-scale coordinates (farView). The near
+   * anchor lives at the origin of the km-scale nearFrame and holds the 3D model, which is scaled
+   * in km units. The LOD decision uses the far anchor distance so the switch threshold is
+   * expressed in consistent solar-scale world units.
    *
    * @param guiNode          the GUI node for attaching the 2D icon overlay
    * @param context          the application context providing the scene graph and focus view
@@ -43,20 +49,31 @@ public final class PlanetLodView implements PlanetView {
     Objects.requireNonNull(guiNode, "guiNode");
     Objects.requireNonNull(planetDescriptor, "planetDescriptor");
     this.sceneGraph = Objects.requireNonNull(context.sceneGraph(), "sceneGraph");
-    this.anchor3d = new Node(SceneGraph.PLANET_ANCHOR_PREFIX + planetDescriptor.body().name());
+    this.farAnchor = new Node(SceneGraph.PLANET_ANCHOR_PREFIX + planetDescriptor.body().name());
+    this.nearAnchor = new Node(SceneGraph.NEAR_PLANET_ANCHOR_PREFIX + planetDescriptor.body().name());
     this.iconView = new PlanetIconView(guiNode, context.focusView(), planetDescriptor);
-    this.model3dView = new Planet3dView(anchor3d, planetDescriptor);
+    this.model3dView = new Planet3dView(nearAnchor, planetDescriptor);
     this.body = planetDescriptor.body();
   }
 
   @Override
   public Spatial spatial() {
-    return anchor3d;
+    return farAnchor;
+  }
+
+  /**
+   * Returns the near-scale anchor node (km coordinate space) that holds the 3D model.
+   * This node should be attached to the near bodies bucket in the nearRoot scene graph.
+   *
+   * @return the near anchor node
+   */
+  public Spatial nearSpatial() {
+    return nearAnchor;
   }
 
   @Override
   public void setPositionWorld(Vector3f position) {
-    anchor3d.setLocalTranslation(position);
+    farAnchor.setLocalTranslation(position);
   }
 
   @Override
@@ -86,7 +103,7 @@ public final class PlanetLodView implements PlanetView {
    * @param cam the active camera used for distance calculation and screen projection
    */
   public void updateScreen(Camera cam) {
-    float distance = cam.getLocation().distance(anchor3d.getWorldTranslation());
+    float distance = cam.getLocation().distance(farAnchor.getWorldTranslation());
     double radius = PlanetRadius.radiusFor(body) * RenderContext.solar().unitsPerMeter();
 
     double multiplier = PlanetLodTuning.lodDistanceRatio(body);
@@ -98,7 +115,7 @@ public final class PlanetLodView implements PlanetView {
     } else {
       model3dView.setVisible(false);
       iconView.setVisible(true);
-      iconView.updateScreenPosition(cam, anchor3d);
+      iconView.updateScreenPosition(cam, farAnchor);
     }
     sceneGraph.setOrbitVisible(body, !show3d);
   }

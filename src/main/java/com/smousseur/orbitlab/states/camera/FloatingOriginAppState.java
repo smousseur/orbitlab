@@ -11,13 +11,13 @@ import com.smousseur.orbitlab.engine.scene.graph.SceneGraph;
 import java.util.Objects;
 
 /**
- * Application state that implements a floating-origin technique to prevent floating-point
- * precision issues when rendering objects at large distances from the world origin.
+ * Application state that implements a floating-origin technique to prevent floating-point precision
+ * issues when rendering objects at large distances from the world origin.
  *
- * <p>Each frame, this state translates the solar system root node so that the currently
- * focused body sits at the world origin. In solar view mode, the root stays at the origin;
- * in planet view mode, the focused planet's position is negated and applied to the root,
- * effectively centering the scene on that planet.
+ * <p>Each frame, this state translates the solar system root node so that the currently focused
+ * body sits at the world origin. In solar view mode, the root stays at the origin; in planet view
+ * mode, the focused planet's position is negated and applied to the root, effectively centering the
+ * scene on that planet.
  */
 public class FloatingOriginAppState extends BaseAppState {
 
@@ -45,6 +45,7 @@ public class FloatingOriginAppState extends BaseAppState {
     switch (view.getMode()) {
       case SOLAR -> solarRoot.setLocalTranslation(0, 0, 0);
       case PLANET -> {
+        sceneGraph.showBodySpatial(view.getBody());
         Spatial planetSpatial = sceneGraph.getBodySpatial(view.getBody());
         if (planetSpatial != null) {
           solarRoot.setLocalTranslation(planetSpatial.getLocalTranslation().negate());

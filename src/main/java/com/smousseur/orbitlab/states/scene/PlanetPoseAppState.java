@@ -3,7 +3,6 @@ package com.smousseur.orbitlab.states.scene;
 import com.jme3.app.Application;
 import com.jme3.app.state.BaseAppState;
 import com.jme3.scene.Node;
-import com.jme3.scene.Spatial;
 import com.smousseur.orbitlab.app.ApplicationContext;
 import com.smousseur.orbitlab.app.SimulationClock;
 import com.smousseur.orbitlab.core.SolarSystemBody;
@@ -21,13 +20,13 @@ import java.util.concurrent.ExecutorService;
 import org.orekit.time.AbsoluteDate;
 
 /**
- * Application state responsible for creating planet scene nodes and updating their positions
- * and rotations each frame based on ephemeris data.
+ * Application state responsible for creating planet scene nodes and updating their positions and
+ * rotations each frame based on ephemeris data.
  *
- * <p>During initialization, constructs a {@link PlanetPresenter} and {@link PlanetLodView}
- * for every solar system body, attaches them to the scene graph, and asynchronously loads
- * their 3D models. Each frame, queries the simulation clock and updates planet poses
- * (position and orientation) for all non-Sun bodies.
+ * <p>During initialization, constructs a {@link PlanetPresenter} and {@link PlanetLodView} for
+ * every solar system body, attaches them to the scene graph, and asynchronously loads their 3D
+ * models. Each frame, queries the simulation clock and updates planet poses (position and
+ * orientation) for all non-Sun bodies.
  */
 public final class PlanetPoseAppState extends BaseAppState {
 
@@ -35,7 +34,9 @@ public final class PlanetPoseAppState extends BaseAppState {
   private final ApplicationContext context;
 
   private final Node bucket = new Node(SceneGraph.PLANETS_BUCKET);
+  private final Node nearBucket = new Node(SceneGraph.PLANETS_BUCKET);
   private final Node bodiesNode;
+  private final Node nearBodiesNode;
 
   /**
    * Creates a new planet pose state.
@@ -46,12 +47,18 @@ public final class PlanetPoseAppState extends BaseAppState {
     this.clock = Objects.requireNonNull(context.clock(), "clock");
     this.context = context;
     bodiesNode = context.sceneGraph().bodiesNode();
+    nearBodiesNode = context.sceneGraph().nearBodiesNode();
   }
 
   @Override
   protected void initialize(Application app) {
     Node guiNode = context.guiGraph().getPlanetBillboardsNode();
+
+    // Set km scale on nearFrame: 1 near unit = 1 km (1e3 m), 1 solar unit = 1e9 m → ratio 1e-6
+    // context.sceneGraph().nearFrame().setLocalScale(1e-6f);
+
     bodiesNode.attachChild(bucket);
+    nearBodiesNode.attachChild(nearBucket);
 
     for (SolarSystemBody body : SolarSystemBody.values()) {
       PlanetDescriptor desc =
@@ -61,8 +68,8 @@ public final class PlanetPoseAppState extends BaseAppState {
       PlanetPresenter presenter = new PlanetPresenter(body, view);
       presenter.setVisible(true);
 
-      Spatial anchor = view.spatial();
-      bucket.attachChild(anchor);
+      bucket.attachChild(view.spatial());
+      nearBucket.attachChild(view.nearSpatial());
       context.addPlanet(body, presenter);
       ExecutorService assetExecutor = AssetFactory.get().assetLoadingExecutor();
       Planet3dView model3dView = view.getModel3dView();
@@ -88,18 +95,21 @@ public final class PlanetPoseAppState extends BaseAppState {
   @Override
   protected void cleanup(Application app) {
     bucket.removeFromParent();
+    nearBucket.removeFromParent();
     context.clearPlanets();
   }
 
   @Override
   protected void onEnable() {
     bucket.setCullHint(Node.CullHint.Inherit);
+    nearBucket.setCullHint(Node.CullHint.Inherit);
     context.enablePlanets(true);
   }
 
   @Override
   protected void onDisable() {
     bucket.setCullHint(Node.CullHint.Always);
+    nearBucket.setCullHint(Node.CullHint.Always);
     context.enablePlanets(false);
   }
 }
