@@ -6,6 +6,7 @@ import com.jme3.scene.Node;
 import com.jme3.scene.Spatial;
 import com.smousseur.orbitlab.app.ApplicationContext;
 import com.smousseur.orbitlab.app.view.FocusView;
+import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.engine.scene.graph.SceneGraph;
 
 import java.util.Objects;
@@ -43,7 +44,10 @@ public class FloatingOriginAppState extends BaseAppState {
   public void update(float tpf) {
     FocusView view = context.focusView();
     switch (view.getMode()) {
-      case SOLAR -> solarRoot.setLocalTranslation(0, 0, 0);
+      case SOLAR -> {
+        sceneGraph.showBodySpatial(SolarSystemBody.SUN);
+        solarRoot.setLocalTranslation(0, 0, 0);
+      }
       case PLANET -> {
         sceneGraph.showBodySpatial(view.getBody());
         Spatial planetSpatial = sceneGraph.getBodySpatial(view.getBody());

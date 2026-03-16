@@ -39,6 +39,10 @@ public sealed interface RenderContext permits RenderContext.Solar, RenderContext
     return 1.0d / metersPerUnit();
   }
 
+  static double ratioSolarToPlanetPerUnit() {
+    return Solar.SOLAR_METERS_PER_UNIT / Planet.PLANET_METERS_PER_UNIT;
+  }
+
   /** Factory for the Solar (heliocentric) view. */
   static Solar solar() {
     return new Solar();
@@ -50,8 +54,8 @@ public sealed interface RenderContext permits RenderContext.Solar, RenderContext
   }
 
   /**
-   * Solar view context: positions are heliocentric in ICRF, scaled at 1 JME unit = 1e9 meters
-   * (1 million km).
+   * Solar view context: positions are heliocentric in ICRF, scaled at 1 JME unit = 1e9 meters (1
+   * million km).
    */
   record Solar() implements RenderContext {
     public static final double SOLAR_METERS_PER_UNIT = 1e9;
@@ -78,8 +82,8 @@ public sealed interface RenderContext permits RenderContext.Solar, RenderContext
   }
 
   /**
-   * Planet view context: positions are relative to a target body in ICRF axes, scaled at
-   * 1 JME unit = 1e3 meters (1 km).
+   * Planet view context: positions are relative to a target body in ICRF axes, scaled at 1 JME unit
+   * = 1e3 meters (1 km).
    *
    * @param body the target solar system body that serves as the coordinate origin
    */

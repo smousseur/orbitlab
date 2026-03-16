@@ -4,6 +4,7 @@ import com.jme3.app.Application;
 import com.jme3.app.state.BaseAppState;
 import com.jme3.math.Vector3f;
 import com.jme3.renderer.Camera;
+import com.smousseur.orbitlab.app.view.RenderContext;
 
 /**
  * Synchronizes the near viewport camera with the main (far) camera every frame.
@@ -18,7 +19,7 @@ public final class NearCameraSyncAppState extends BaseAppState {
    * Conversion factor: 1 solar unit = 1e9 m, 1 km unit = 1e3 m → ratio = 1e6. Multiply far camera
    * position by this to get near camera position in km units.
    */
-  private static final float SOLAR_TO_KM = 1e6f;
+  private static final float SOLAR_TO_KM = (float) RenderContext.ratioSolarToPlanetPerUnit();
 
   private final Camera nearCam;
   private Camera farCam;
