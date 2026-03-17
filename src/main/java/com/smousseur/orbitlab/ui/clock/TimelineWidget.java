@@ -1,7 +1,13 @@
 package com.smousseur.orbitlab.ui.clock;
 
 import com.jme3.scene.Node;
-import com.simsilica.lemur.*;
+import com.simsilica.lemur.Axis;
+import com.simsilica.lemur.Button;
+import com.simsilica.lemur.Container;
+import com.simsilica.lemur.FillMode;
+import com.simsilica.lemur.HAlignment;
+import com.simsilica.lemur.Label;
+import com.simsilica.lemur.Slider;
 import com.simsilica.lemur.component.BoxLayout;
 import com.simsilica.lemur.core.VersionedReference;
 import com.smousseur.orbitlab.app.OrekitTime;
@@ -71,28 +77,28 @@ public class TimelineWidget implements AutoCloseable {
     this.root = new Container(new BoxLayout(Axis.Y, FillMode.None));
     timelineNode.attachChild(root);
 
-    // Ligne 1: Live / PlayPause / SpeedLabel
+    // Row 1: Live / PlayPause / SpeedLabel
     Container controlsRow = root.addChild(new Container(new BoxLayout(Axis.X, FillMode.Even)));
 
     this.liveButton = controlsRow.addChild(new Button("Live"));
     this.playPauseButton = controlsRow.addChild(new Button("Play"));
     this.speedLabel = controlsRow.addChild(new Label("+1×"));
 
-    // Ligne 2: slider
+    // Row 2: slider
     this.speedSlider = root.addChild(new Slider("timeline"));
     speedSlider.setDelta(1);
     speedSlider.getModel().setMinimum(-16);
     speedSlider.getModel().setMaximum(16);
     speedSlider.getModel().setValue(0);
 
-    // Ligne 3: date
+    // Row 3: date
     this.dateLabel = root.addChild(new Label("—"));
 
     this.speedValueRef = speedSlider.getModel().createReference();
 
     wireUiActions();
 
-    // Initial sync (au cas où clock n'est pas à 1× / playing)
+    // Initial sync in case clock is not at 1× / playing
     refreshUiFromClock();
   }
 
@@ -122,7 +128,7 @@ public class TimelineWidget implements AutoCloseable {
    * @param tpf time per frame in seconds (unused, but follows JME3 update convention)
    */
   public void update(float tpf) {
-    // TODO: si d'autres systèmes modifient speed/playing, resync ici.
+    // TODO: if other systems modify speed/playing, resync here.
     dateLabel.setText(TimeConverter.formatDate(clock.now()));
     if (speedValueRef.update()) {
       int index = (int) Math.rint(speedSlider.getModel().getValue());
@@ -136,8 +142,7 @@ public class TimelineWidget implements AutoCloseable {
   private void refreshUiFromClock() {
     refreshPlayPauseText();
 
-    // Resync slider + label depuis la vitesse courante si tu veux (optionnel).
-    // Pour l’instant on garde le slider "source of truth" côté UI.
+    // The slider is the source of truth on the UI side; resync label from it.
     speedLabel.setText(formatSpeedLabel((int) speedSlider.getModel().getValue()));
   }
 
@@ -151,9 +156,9 @@ public class TimelineWidget implements AutoCloseable {
    * @param screenWidth the current screen width in pixels, used to center the widget horizontally
    */
   public void layoutBottomCenter(int screenWidth) {
-    var size = root.getPreferredSize(); // largeur/hauteur du widget en pixels
+    var size = root.getPreferredSize(); // widget width/height in pixels
     float x = (screenWidth - size.x) * 0.5f;
-    float y = bottomMarginPx + size.y; // Lemur place souvent par le "coin haut-gauche" visuel
+    float y = bottomMarginPx + size.y; // Lemur positions by the visual top-left corner
     root.setLocalTranslation(x, y, 0f);
   }
 

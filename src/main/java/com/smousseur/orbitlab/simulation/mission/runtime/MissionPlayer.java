@@ -55,7 +55,6 @@ public class MissionPlayer {
       }
     }
 
-    // Start the mission — stages will use their injected results in configure()
-    // mission.start(startDate);
+    // Stages will use their injected optimization results when configure() is called.
   }
 }

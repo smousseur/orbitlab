@@ -146,6 +146,7 @@ public class TransfertTwoManeuver {
       }
       return new TransferResult(finalState, orbitPostBurn1, burn2, tracker);
     } catch (Exception e) {
+      logger.debug("Transfer propagation failed (penalty applied): {}", e.getMessage());
       return new TransferResult(initialState, orbitPostBurn1, burn2, tracker); // penalty
     }
   }
@@ -237,6 +238,7 @@ public class TransfertTwoManeuver {
       }
       return stateAfterBurn1;
     } catch (Exception e) {
+      logger.debug("Burn 1 propagation failed (penalty applied): {}", e.getMessage());
       return null;
     }
   }

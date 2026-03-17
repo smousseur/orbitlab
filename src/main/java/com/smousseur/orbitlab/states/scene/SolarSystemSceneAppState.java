@@ -26,7 +26,7 @@ public final class SolarSystemSceneAppState extends BaseAppState {
    * @param context the application context providing the scene graph
    */
   public SolarSystemSceneAppState(ApplicationContext context) {
-    this.scene = Objects.requireNonNull((context).sceneGraph(), "orbitBus");
+    this.scene = Objects.requireNonNull((context).sceneGraph(), "sceneGraph");
   }
 
   /**

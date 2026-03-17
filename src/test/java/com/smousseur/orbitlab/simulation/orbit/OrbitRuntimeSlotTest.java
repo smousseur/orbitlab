@@ -20,6 +20,11 @@ class OrbitRuntimeSlotTest {
     slot = new OrbitRuntimeSlot(SolarSystemBody.EARTH);
   }
 
+  private static OrbitSnapshot earthSnapshot(
+      AbsoluteDate centerDate, Vector3D[] positions, long version) {
+    return new OrbitSnapshot(SolarSystemBody.EARTH, centerDate, 86400.0, 100.0, positions, version);
+  }
+
   @Test
   void constructor_nullBody_shouldThrowException() {
     assertThrows(NullPointerException.class, () -> new OrbitRuntimeSlot(null));
@@ -42,13 +47,7 @@ class OrbitRuntimeSlotTest {
   void publish_shouldUpdateSnapshot() {
     AbsoluteDate centerDate = new AbsoluteDate(2024, 1, 1, 0, 0, 0, TimeScalesFactory.getUTC());
     OrbitSnapshot snapshot =
-        new OrbitSnapshot(
-            SolarSystemBody.EARTH,
-            centerDate,
-            86400.0,
-            100.0,
-            new Vector3D[] {Vector3D.ZERO, Vector3D.PLUS_I},
-            1);
+        earthSnapshot(centerDate, new Vector3D[] {Vector3D.ZERO, Vector3D.PLUS_I}, 1);
 
     slot.publish(snapshot);
     assertEquals(snapshot, slot.snapshot());
@@ -58,21 +57,10 @@ class OrbitRuntimeSlotTest {
   void publish_multipleSnapshots_shouldUpdateToLatest() {
     AbsoluteDate centerDate = new AbsoluteDate(2024, 1, 1, 0, 0, 0, TimeScalesFactory.getUTC());
     OrbitSnapshot snapshot1 =
-        new OrbitSnapshot(
-            SolarSystemBody.EARTH,
-            centerDate,
-            86400.0,
-            100.0,
-            new Vector3D[] {Vector3D.ZERO, Vector3D.PLUS_I},
-            1);
+        earthSnapshot(centerDate, new Vector3D[] {Vector3D.ZERO, Vector3D.PLUS_I}, 1);
     OrbitSnapshot snapshot2 =
-        new OrbitSnapshot(
-            SolarSystemBody.EARTH,
-            centerDate.shiftedBy(1000.0),
-            86400.0,
-            100.0,
-            new Vector3D[] {Vector3D.ZERO, Vector3D.PLUS_J},
-            2);
+        earthSnapshot(
+            centerDate.shiftedBy(1000.0), new Vector3D[] {Vector3D.ZERO, Vector3D.PLUS_J}, 2);
 
     slot.publish(snapshot1);
     assertEquals(snapshot1, slot.snapshot());
@@ -126,6 +114,7 @@ class OrbitRuntimeSlotTest {
   @Test
   void requestRebuildIfNeeded_snapshotNull_shouldTriggerRebuild() {
     AbsoluteDate now = new AbsoluteDate(2024, 1, 1, 0, 0, 0, TimeScalesFactory.getUTC());
+
     AtomicInteger callCount = new AtomicInteger(0);
 
     slot.requestRebuildIfNeeded(
@@ -143,13 +132,7 @@ class OrbitRuntimeSlotTest {
   void requestRebuildIfNeeded_snapshotInComfort_shouldNotTriggerRebuild() {
     AbsoluteDate centerDate = new AbsoluteDate(2024, 1, 1, 0, 0, 0, TimeScalesFactory.getUTC());
     OrbitSnapshot snapshot =
-        new OrbitSnapshot(
-            SolarSystemBody.EARTH,
-            centerDate,
-            86400.0,
-            100.0,
-            new Vector3D[] {Vector3D.ZERO, Vector3D.PLUS_I},
-            1);
+        earthSnapshot(centerDate, new Vector3D[] {Vector3D.ZERO, Vector3D.PLUS_I}, 1);
     slot.publish(snapshot);
 
     AbsoluteDate now = centerDate.shiftedBy(50.0);
@@ -166,13 +149,7 @@ class OrbitRuntimeSlotTest {
   void requestRebuildIfNeeded_snapshotOutOfComfort_shouldTriggerRebuild() {
     AbsoluteDate centerDate = new AbsoluteDate(2024, 1, 1, 0, 0, 0, TimeScalesFactory.getUTC());
     OrbitSnapshot snapshot =
-        new OrbitSnapshot(
-            SolarSystemBody.EARTH,
-            centerDate,
-            86400.0,
-            100.0,
-            new Vector3D[] {Vector3D.ZERO, Vector3D.PLUS_I},
-            1);
+        earthSnapshot(centerDate, new Vector3D[] {Vector3D.ZERO, Vector3D.PLUS_I}, 1);
     slot.publish(snapshot);
 
     AbsoluteDate now = centerDate.shiftedBy(200.0);
@@ -193,13 +170,7 @@ class OrbitRuntimeSlotTest {
   void requestRebuildIfNeeded_multipleCallsOutOfComfort_shouldOnlyTriggerOnce() {
     AbsoluteDate centerDate = new AbsoluteDate(2024, 1, 1, 0, 0, 0, TimeScalesFactory.getUTC());
     OrbitSnapshot snapshot =
-        new OrbitSnapshot(
-            SolarSystemBody.EARTH,
-            centerDate,
-            86400.0,
-            100.0,
-            new Vector3D[] {Vector3D.ZERO, Vector3D.PLUS_I},
-            1);
+        earthSnapshot(centerDate, new Vector3D[] {Vector3D.ZERO, Vector3D.PLUS_I}, 1);
     slot.publish(snapshot);
 
     AbsoluteDate now = centerDate.shiftedBy(200.0);
@@ -222,13 +193,7 @@ class OrbitRuntimeSlotTest {
   void requestRebuildIfNeeded_afterEndJob_shouldAllowNewRebuild() {
     AbsoluteDate centerDate = new AbsoluteDate(2024, 1, 1, 0, 0, 0, TimeScalesFactory.getUTC());
     OrbitSnapshot snapshot =
-        new OrbitSnapshot(
-            SolarSystemBody.EARTH,
-            centerDate,
-            86400.0,
-            100.0,
-            new Vector3D[] {Vector3D.ZERO, Vector3D.PLUS_I},
-            1);
+        earthSnapshot(centerDate, new Vector3D[] {Vector3D.ZERO, Vector3D.PLUS_I}, 1);
     slot.publish(snapshot);
 
     AbsoluteDate now = centerDate.shiftedBy(200.0);
