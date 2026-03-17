@@ -10,7 +10,11 @@ import com.jme3.renderer.Camera;
 import com.jme3.scene.Node;
 import com.jme3.scene.Spatial;
 import com.jme3.texture.Texture;
-import com.simsilica.lemur.*;
+import com.simsilica.lemur.Axis;
+import com.simsilica.lemur.Container;
+import com.simsilica.lemur.FillMode;
+import com.simsilica.lemur.HAlignment;
+import com.simsilica.lemur.Label;
 import com.simsilica.lemur.component.BoxLayout;
 import com.simsilica.lemur.component.IconComponent;
 import com.simsilica.lemur.event.DefaultMouseListener;
@@ -94,7 +98,7 @@ public class PlanetIconView {
     }
     Vector3f world = anchor3d.getWorldTranslation();
     Vector3f screen = cam.getScreenCoordinates(world);
-    // z en dehors => derrière caméra / non visible
+    // z out of range => behind camera / not visible
     if (screen.z < 0f || screen.z > 1f) {
       container.setCullHint(Spatial.CullHint.Always);
       return;

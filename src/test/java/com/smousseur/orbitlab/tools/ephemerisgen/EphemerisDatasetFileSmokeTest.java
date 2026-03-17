@@ -39,10 +39,8 @@ final class EphemerisDatasetFileSmokeTest {
 
   @Test
   void writes_one_body_one_chunk_file_with_valid_header_index_and_chunk_crc() throws Exception {
-    // String zipProp = System.getProperty("orekitDataZip");
     OrekitService.get().initialize();
-    String zipProp =
-        "C:\\Prog\\projects\\intelliJ\\orbitlab\\src\\main\\resources\\orekit-data.zip"; // System.getProperty("orekitDataZip");
+    String zipProp = System.getProperty("orekitDataZip");
     Assumptions.assumeTrue(zipProp != null && !zipProp.isBlank(), "Missing -DorekitDataZip=...");
 
     Path orekitZip = Path.of(zipProp).toAbsolutePath().normalize();

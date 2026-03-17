@@ -15,6 +15,8 @@ import org.orekit.propagation.events.DateDetector;
 import org.orekit.propagation.events.EventDetector;
 import org.orekit.propagation.events.handlers.EventHandler;
 import org.orekit.propagation.numerical.NumericalPropagator;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.orekit.time.AbsoluteDate;
 import org.orekit.utils.Constants;
 
@@ -24,6 +26,8 @@ import org.orekit.utils.Constants;
  * com.smousseur.orbitlab.simulation.mission.optimizer.problems.GravityTurnProblem} (optimization).
  */
 public class GravityTurnManeuver {
+
+  private static final Logger logger = LogManager.getLogger(GravityTurnManeuver.class);
 
   private final Vehicle vehicle;
   private final double pitchKickAngleRad;
@@ -173,6 +177,7 @@ public class GravityTurnManeuver {
     try {
       return propagator.propagate(endDate);
     } catch (Exception e) {
+      logger.debug("Gravity turn propagation failed (penalty applied): {}", e.getMessage());
       return kickedState; // penalty
     }
   }

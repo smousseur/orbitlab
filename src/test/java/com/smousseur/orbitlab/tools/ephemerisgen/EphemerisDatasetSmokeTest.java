@@ -27,8 +27,7 @@ final class EphemerisDatasetSmokeTest {
   @Test
   void chunk_has_valid_crcs_and_expected_sample_counts() throws Exception {
     OrekitService.get().initialize();
-    String zipProp =
-        "C:\\Prog\\projects\\intelliJ\\orbitlab\\src\\main\\resources\\orekit-data.zip"; // System.getProperty("orekitDataZip");
+    String zipProp = System.getProperty("orekitDataZip");
     Assumptions.assumeTrue(zipProp != null && !zipProp.isBlank(), "Missing -DorekitDataZip=...");
 
     Path orekitZip = Path.of(zipProp).toAbsolutePath().normalize();

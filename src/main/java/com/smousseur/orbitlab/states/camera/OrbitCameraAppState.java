@@ -5,7 +5,11 @@ import com.jme3.app.state.BaseAppState;
 import com.jme3.input.InputManager;
 import com.jme3.input.KeyInput;
 import com.jme3.input.MouseInput;
-import com.jme3.input.controls.*;
+import com.jme3.input.controls.ActionListener;
+import com.jme3.input.controls.AnalogListener;
+import com.jme3.input.controls.KeyTrigger;
+import com.jme3.input.controls.MouseAxisTrigger;
+import com.jme3.input.controls.MouseButtonTrigger;
 import com.jme3.math.FastMath;
 import com.jme3.math.Quaternion;
 import com.jme3.math.Vector3f;
@@ -69,10 +73,10 @@ public final class OrbitCameraAppState extends BaseAppState
   /** Dynamic minimum far plane, applied after adaptive frustum calculation. */
   private volatile float farFloor = 0f;
 
-  // FoV adaptatif: bornes en radians et exponent de courbe
-  private final float fovMinRad = (float) Math.toRadians(15.0); // étroit proche
-  private final float fovMaxRad = (float) Math.toRadians(60.0); // large lointain
-  private final float fovCurveK = 0.9f; // 0.6..1.5 : <1 => plus de resserrement près du proche
+  // Adaptive FoV: bounds in radians and curve exponent
+  private final float fovMinRad = (float) Math.toRadians(15.0); // narrow when close
+  private final float fovMaxRad = (float) Math.toRadians(60.0); // wide when far
+  private final float fovCurveK = 0.9f; // 0.6..1.5 : <1 => more narrowing near close range
 
   /**
    * Creates a new orbit camera state.
@@ -396,14 +400,11 @@ public final class OrbitCameraAppState extends BaseAppState
     cam.setFrustumFar(far);
   }
 
-  // FoV adaptatif en fonction du zoom normalisé 0..1 (0 = proche, 1 = lointain)
+  // Adaptive FoV as a function of normalized zoom 0..1 (0 = close, 1 = far)
   private void updateAdaptiveFov() {
-    float t = normalizedZoom01(); // déjà clampé 0..1
+    float t = normalizedZoom01(); // already clamped 0..1
     float tt = (float) Math.pow(t, fovCurveK);
     float fov = FastMath.interpolateLinear(tt, fovMinRad, fovMaxRad);
-    // JME attend des demi-angles verticaux en radian via setFrustumPerspective(fovYDegrees, aspect,
-    // near, far)
-    // mais on peut définir directement via cam.setFrustumPerspective()
     float aspect = (float) cam.getWidth() / Math.max(1f, cam.getHeight());
     cam.setFrustumPerspective(
         (float) Math.toDegrees(fov), aspect, cam.getFrustumNear(), cam.getFrustumFar());

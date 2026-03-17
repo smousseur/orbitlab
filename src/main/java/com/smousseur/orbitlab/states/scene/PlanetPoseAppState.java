@@ -54,9 +54,6 @@ public final class PlanetPoseAppState extends BaseAppState {
   protected void initialize(Application app) {
     Node guiNode = context.guiGraph().getPlanetBillboardsNode();
 
-    // Set km scale on nearFrame: 1 near unit = 1 km (1e3 m), 1 solar unit = 1e9 m → ratio 1e-6
-    // context.sceneGraph().nearFrame().setLocalScale(1e-6f);
-
     bodiesNode.attachChild(bucket);
     nearBodiesNode.attachChild(nearBucket);
 
