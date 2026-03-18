@@ -127,9 +127,3 @@ src/main/java/com/smousseur/orbitlab/
 │   └── mission/               # Mission model, stages, optimizer, player
 └── ui/                        # GUI widgets (timeline...)
 ```
-
----
-
-## 📄 License
-
-*License to be defined.*
