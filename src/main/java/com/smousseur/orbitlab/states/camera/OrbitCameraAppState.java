@@ -15,6 +15,7 @@ import com.jme3.math.Quaternion;
 import com.jme3.math.Vector3f;
 import com.jme3.renderer.Camera;
 import com.jme3.scene.Spatial;
+import com.smousseur.orbitlab.app.ApplicationContext;
 import com.smousseur.orbitlab.engine.OrbitCameraConfig;
 import java.util.Objects;
 import java.util.function.BooleanSupplier;
@@ -66,9 +67,11 @@ public final class OrbitCameraAppState extends BaseAppState
   private float yawRad;
   private float pitchRad;
 
-  private float distance;
+  // private float distance;
 
   private final Vector3f lastPivotWorld = new Vector3f();
+
+  private final ApplicationContext context;
 
   /** Dynamic minimum far plane, applied after adaptive frustum calculation. */
   private volatile float farFloor = 0f;
@@ -81,17 +84,18 @@ public final class OrbitCameraAppState extends BaseAppState
   /**
    * Creates a new orbit camera state.
    *
-   * @param config camera configuration controlling distances, speeds, and frustum parameters
+   * @param context the context
    * @param fallbackPivotWorldSupplier supplier for the fallback pivot position in world space, used
    *     when no target is set or the target position is invalid
    * @param uiWantsMouse supplier that returns {@code true} when the UI is capturing mouse input,
    *     causing the camera to ignore mouse events
    */
   public OrbitCameraAppState(
-      OrbitCameraConfig config,
+      ApplicationContext context,
       Supplier<Vector3f> fallbackPivotWorldSupplier,
       BooleanSupplier uiWantsMouse) {
-    this.config = Objects.requireNonNull(config, "config");
+    this.context = Objects.requireNonNull(context, "context");
+    this.config = Objects.requireNonNull(context.getEngineConfig().orbitCamera(), "config");
     this.fallbackPivotWorldSupplier =
         Objects.requireNonNull(fallbackPivotWorldSupplier, "fallbackPivotWorldSupplier");
     this.uiWantsMouse = Objects.requireNonNull(uiWantsMouse, "uiWantsMouse");
@@ -132,15 +136,6 @@ public final class OrbitCameraAppState extends BaseAppState
   }
 
   /**
-   * Returns the current distance from the camera to the orbit pivot point.
-   *
-   * @return the distance in world units
-   */
-  public float distanceToTarget() {
-    return distance;
-  }
-
-  /**
    * Returns the current zoom level as a normalized value between 0 and 1, where 0 represents the
    * minimum distance (fully zoomed in) and 1 represents the maximum distance (fully zoomed out).
    * The mapping uses a logarithmic scale for perceptually uniform zoom behavior.
@@ -148,6 +143,7 @@ public final class OrbitCameraAppState extends BaseAppState
    * @return the normalized zoom level in the range [0, 1]
    */
   public float normalizedZoom01() {
+    float distance = context.focusView().getCameraDistance();
     float d = FastMath.clamp(distance, config.minDistance(), config.maxDistance());
     float min = config.minDistance();
     float max = config.maxDistance();
@@ -175,7 +171,9 @@ public final class OrbitCameraAppState extends BaseAppState
     yawRad = 0f;
     pitchRad = (float) (-20.0 * Math.PI / 180.0);
     pitchRad = FastMath.clamp(pitchRad, config.pitchMinRad(), config.pitchMaxRad());
-    distance = FastMath.clamp(config.defaultDistance(), config.minDistance(), config.maxDistance());
+    float distance =
+        FastMath.clamp(config.defaultDistance(), config.minDistance(), config.maxDistance());
+    context.focusView().setCameraDistance(distance);
   }
 
   @Override
@@ -318,9 +316,12 @@ public final class OrbitCameraAppState extends BaseAppState
     }
 
     // Exponential dolly
+    float distance = context.focusView().getCameraDistance();
     double scale = Math.exp(-wheelDelta * config.zoomSpeed());
     float next = (float) (distance * scale);
-    distance = FastMath.clamp(next, config.minDistance(), config.maxDistance());
+    context
+        .focusView()
+        .setCameraDistance(FastMath.clamp(next, config.minDistance(), config.maxDistance()));
   }
 
   private void orbitByMouseDelta(float dx, float dy) {
@@ -337,7 +338,7 @@ public final class OrbitCameraAppState extends BaseAppState
     Vector3f right = cam.getLeft().negate(); // JME stores left; right = -left
     Vector3f up = cam.getUp();
 
-    float panSpeed = config.panFactor() * distance;
+    float panSpeed = config.panFactor() * context.focusView().getCameraDistance();
 
     // Mouse Y is usually inverted vs screen; keep it feeling "editor-like".
     Vector3f delta = right.mult(dx * panSpeed).addLocal(up.mult(-dy * panSpeed));
@@ -361,7 +362,7 @@ public final class OrbitCameraAppState extends BaseAppState
     // Turntable: apply pitch then yaw (so pitch axis is "yawed" X)
     Quaternion orbitRot = qYaw.mult(qPitch);
 
-    Vector3f offset = new Vector3f(0f, 0f, distance);
+    Vector3f offset = new Vector3f(0f, 0f, context.focusView().getCameraDistance());
     orbitRot.multLocal(offset);
 
     cam.setLocation(pivotWorld.add(offset));
@@ -369,7 +370,7 @@ public final class OrbitCameraAppState extends BaseAppState
   }
 
   private void updateFrustum() {
-    float d = distance;
+    float d = context.focusView().getCameraDistance();
 
     float near = d * config.nearFactor();
     near = clampFinite(near, config.nearMin(), config.nearMax());

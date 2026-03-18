@@ -50,13 +50,13 @@ public final class PlanetLodView implements PlanetView {
     Objects.requireNonNull(guiNode, "guiNode");
     Objects.requireNonNull(planetDescriptor, "planetDescriptor");
     this.sceneGraph = Objects.requireNonNull(context.sceneGraph(), "sceneGraph");
+    this.focusView = context.focusView();
     this.farAnchor = new Node(SceneGraph.PLANET_ANCHOR_PREFIX + planetDescriptor.body().name());
     this.nearAnchor =
         new Node(SceneGraph.NEAR_PLANET_ANCHOR_PREFIX + planetDescriptor.body().name());
-    this.iconView = new PlanetIconView(guiNode, context.focusView(), planetDescriptor);
+    this.iconView = new PlanetIconView(guiNode, focusView, planetDescriptor);
     this.model3dView = new Planet3dView(nearAnchor, planetDescriptor);
     this.body = planetDescriptor.body();
-    this.focusView = context.focusView();
   }
 
   @Override

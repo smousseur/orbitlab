@@ -1,6 +1,7 @@
 package com.smousseur.orbitlab.app.view;
 
 import com.smousseur.orbitlab.core.SolarSystemBody;
+import com.smousseur.orbitlab.engine.EngineConfig;
 
 /**
  * Mutable state holder that tracks the current camera focus: which view mode is active and which
@@ -11,6 +12,12 @@ import com.smousseur.orbitlab.core.SolarSystemBody;
 public class FocusView {
   private ViewMode mode = ViewMode.SOLAR;
   private SolarSystemBody body = SolarSystemBody.SUN;
+  private float cameraDistance;
+  private final EngineConfig engineConfig;
+
+  public FocusView(EngineConfig engineConfig) {
+    this.engineConfig = engineConfig;
+  }
 
   /**
    * Tests if the view is currently focused on the specified body in planet view mode.
@@ -26,6 +33,7 @@ public class FocusView {
   public void reset() {
     this.mode = ViewMode.SOLAR;
     this.body = SolarSystemBody.SUN;
+    this.cameraDistance = engineConfig.orbitCamera().defaultDistance();
   }
 
   /**
@@ -72,5 +80,23 @@ public class FocusView {
    */
   public void setBody(SolarSystemBody body) {
     this.body = body;
+  }
+
+  /**
+   * Gets camera distance.
+   *
+   * @return the camera distance
+   */
+  public float getCameraDistance() {
+    return cameraDistance;
+  }
+
+  /**
+   * Sets camera distance.
+   *
+   * @param cameraDistance the camera distance
+   */
+  public void setCameraDistance(float cameraDistance) {
+    this.cameraDistance = cameraDistance;
   }
 }

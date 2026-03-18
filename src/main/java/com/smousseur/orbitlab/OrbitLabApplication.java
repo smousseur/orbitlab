@@ -80,12 +80,10 @@ public class OrbitLabApplication extends SimpleApplication {
 
     flyCam.setEnabled(false);
 
-    EngineConfig engineConfig = EngineConfig.defaultSolarSystem();
-
     // TODO: wire this fallback to the actual SolarRoot world position when exposed by the scene
     // TODO: hook Lemur/GUI mouse capture here
     OrbitCameraAppState orbitCam =
-        new OrbitCameraAppState(engineConfig.orbitCamera(), () -> Vector3f.ZERO, () -> false);
+        new OrbitCameraAppState(applicationContext, () -> Vector3f.ZERO, () -> false);
     stateManager.attach(orbitCam);
 
     cam.setLocation(new Vector3f(0f, 0f, 9000f));

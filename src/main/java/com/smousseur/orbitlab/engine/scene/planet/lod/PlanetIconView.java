@@ -19,15 +19,17 @@ import com.simsilica.lemur.component.BoxLayout;
 import com.simsilica.lemur.component.IconComponent;
 import com.simsilica.lemur.event.DefaultMouseListener;
 import com.smousseur.orbitlab.app.view.FocusView;
+import com.smousseur.orbitlab.app.view.RenderContext;
 import com.smousseur.orbitlab.core.SolarSystemBody;
+import com.smousseur.orbitlab.engine.scene.PlanetRadius;
 import com.smousseur.orbitlab.engine.scene.planet.PlanetDescriptor;
 
 /**
- * Renders a planet as a simple 2D icon with a colored dot and label in the GUI overlay.
- * Used when the camera is too far from the planet for the 3D model to be meaningful.
+ * Renders a planet as a simple 2D icon with a colored dot and label in the GUI overlay. Used when
+ * the camera is too far from the planet for the 3D model to be meaningful.
  *
- * <p>The icon tracks the planet's 3D position by projecting it to screen coordinates
- * and supports mouse interaction: clicking navigates to the planet, hovering highlights the icon.
+ * <p>The icon tracks the planet's 3D position by projecting it to screen coordinates and supports
+ * mouse interaction: clicking navigates to the planet, hovering highlights the icon.
  */
 public class PlanetIconView {
   private static final float ICON_SIZE = 16f;
@@ -43,8 +45,8 @@ public class PlanetIconView {
   /**
    * Creates a new planet icon view and attaches it to the GUI node.
    *
-   * @param guiNode          the GUI node to attach the icon container to
-   * @param focusView        the focus view used to navigate to the planet on click
+   * @param guiNode the GUI node to attach the icon container to
+   * @param focusView the focus view used to navigate to the planet on click
    * @param planetDescriptor the descriptor defining the planet's identity and visual properties
    */
   public PlanetIconView(Node guiNode, FocusView focusView, PlanetDescriptor planetDescriptor) {
@@ -86,10 +88,10 @@ public class PlanetIconView {
   }
 
   /**
-   * Updates the icon's screen position by projecting the planet's 3D world position
-   * to screen coordinates. Hides the icon if the planet is behind the camera.
+   * Updates the icon's screen position by projecting the planet's 3D world position to screen
+   * coordinates. Hides the icon if the planet is behind the camera.
    *
-   * @param cam      the active camera used for projection
+   * @param cam the active camera used for projection
    * @param anchor3d the planet's anchor node providing the world position
    */
   public void updateScreenPosition(Camera cam, Node anchor3d) {
@@ -117,6 +119,9 @@ public class PlanetIconView {
           @Override
           public void mouseButtonEvent(MouseButtonEvent event, Spatial target, Spatial capture) {
             if (event.isPressed() && event.getButtonIndex() == MouseInput.BUTTON_LEFT) {
+              double radius = PlanetRadius.radiusFor(body);
+              double distance = radius * 5 / RenderContext.Solar.SOLAR_METERS_PER_UNIT;
+              focusView.setCameraDistance((float) distance);
               focusView.viewPlanet(body);
             }
           }
@@ -133,9 +138,7 @@ public class PlanetIconView {
         });
   }
 
-  /**
-   * Detaches the icon container from the GUI node.
-   */
+  /** Detaches the icon container from the GUI node. */
   public void detach() {
     container.removeFromParent();
   }

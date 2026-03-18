@@ -4,6 +4,7 @@ import com.jme3.scene.Node;
 import com.jme3.scene.Spatial;
 import com.smousseur.orbitlab.app.view.FocusView;
 import com.smousseur.orbitlab.core.SolarSystemBody;
+import com.smousseur.orbitlab.engine.EngineConfig;
 import com.smousseur.orbitlab.engine.events.OrbitEventBus;
 import com.smousseur.orbitlab.engine.scene.graph.GuiGraph;
 import com.smousseur.orbitlab.engine.scene.graph.SceneGraph;
@@ -17,10 +18,11 @@ import java.util.Map;
  * Central dependency container for the OrbitLab application.
  *
  * <p>Holds the shared simulation configuration, clock, event bus, scene graphs, and planet
- * presenters. Passed to {@code AppState} implementations and other subsystems instead of
- * individual services, providing a single point of access to cross-cutting concerns.
+ * presenters. Passed to {@code AppState} implementations and other subsystems instead of individual
+ * services, providing a single point of access to cross-cutting concerns.
  */
 public class ApplicationContext {
+  private final EngineConfig engineConfig = EngineConfig.defaultSolarSystem();
   private final SimulationConfig config;
   private final SimulationClock clock;
   private final OrbitEventBus orbitBus;
@@ -29,14 +31,14 @@ public class ApplicationContext {
   private final Map<SolarSystemBody, PlanetPresenter> planets =
       new EnumMap<>(SolarSystemBody.class);
 
-  private final FocusView focusView = new FocusView();
+  private final FocusView focusView;
 
   /**
    * Creates a new application context and attaches the scene and GUI graphs to the provided JME3
    * root nodes.
    *
    * @param rootNode the JME3 root node for 3D scene rendering
-   * @param guiNode  the JME3 GUI node for 2D overlay rendering
+   * @param guiNode the JME3 GUI node for 2D overlay rendering
    */
   public ApplicationContext(Node rootNode, Node guiNode) {
     this();
@@ -50,6 +52,7 @@ public class ApplicationContext {
     this.clock = new SimulationClock(config.computeClockStart());
     this.sceneGraph = new SceneGraph();
     this.guiGraph = new GuiGraph();
+    this.focusView = new FocusView(engineConfig);
   }
 
   /**
@@ -119,16 +122,14 @@ public class ApplicationContext {
   /**
    * Registers a planet presenter for a given solar system body.
    *
-   * @param body      the solar system body
+   * @param body the solar system body
    * @param presenter the presenter managing the planet's rendering and logic
    */
   public void addPlanet(SolarSystemBody body, PlanetPresenter presenter) {
     planets.put(body, presenter);
   }
 
-  /**
-   * Detaches all planet views from the scene and clears the planet presenter registry.
-   */
+  /** Detaches all planet views from the scene and clears the planet presenter registry. */
   public void clearPlanets() {
     planets.values().stream().map(PlanetPresenter::view).forEach(PlanetView::detach);
     planets.clear();
@@ -150,5 +151,14 @@ public class ApplicationContext {
    */
   public Map<SolarSystemBody, PlanetPresenter> getPlanets() {
     return planets;
+  }
+
+  /**
+   * Gets engine config.
+   *
+   * @return the engine config
+   */
+  public EngineConfig getEngineConfig() {
+    return engineConfig;
   }
 }
