@@ -25,8 +25,6 @@ Fly through a physically accurate, animated solar system — for the sheer joy o
 - **Live orbital motion** — planet positions are computed from real ephemeris data and updated in real-time
 - **Orbit paths** traced for every body, visible at solar and planetary scales simultaneously
 - **Simulation clock** you can speed up, slow down, or rewind — watch years of orbital motion in seconds
-- **Intuitive camera** — orbit, pan, and zoom like in Blender (middle-mouse drag, Shift+drag, scroll wheel)
-- **Seamless scale transitions** — switch from a solar-system overview to a close-up of a planet without any visual glitch, across 12 orders of magnitude of distance
 
 > The rendering engine handles the extreme scale of space (Mercury's orbit vs. Pluto's) without any floating-point precision artifacts, keeping the view crisp at every zoom level.
 
@@ -129,12 +127,6 @@ src/main/java/com/smousseur/orbitlab/
 │   └── mission/               # Mission model, stages, optimizer, player
 └── ui/                        # GUI widgets (timeline...)
 ```
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome! Feel free to open issues, suggest features, or submit pull requests.
 
 ---
 
