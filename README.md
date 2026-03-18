@@ -110,20 +110,3 @@ cd orbitlab
 | Async / Reactive | Reactor Core |
 | Logging | Log4j 2 |
 | Testing | JUnit 5 |
-
----
-
-## 🗺️ Project Structure (abridged)
-
-```
-src/main/java/com/smousseur/orbitlab/
-├── OrbitLabApplication.java   # Entry point
-├── app/                       # Configuration and clock
-├── engine/                    # 3D rendering (planets, scene, camera)
-├── states/                    # Application states (scene, camera, time, FX...)
-├── simulation/
-│   ├── ephemeris/             # Real-time body position computation
-│   ├── orbit/                 # Orbit path visualization
-│   └── mission/               # Mission model, stages, optimizer, player
-└── ui/                        # GUI widgets (timeline...)
-```
