@@ -5,6 +5,7 @@ import com.smousseur.orbitlab.app.view.RenderContext;
 import com.smousseur.orbitlab.app.view.RenderTransform;
 import com.smousseur.orbitlab.core.OrbitlabException;
 import com.smousseur.orbitlab.core.SolarSystemBody;
+import com.smousseur.orbitlab.engine.scene.body.BodyView;
 import com.smousseur.orbitlab.engine.view.JmeVectorAdapter;
 import com.smousseur.orbitlab.simulation.ephemeris.service.EphemerisService;
 import com.smousseur.orbitlab.simulation.ephemeris.service.EphemerisServiceRegistry;
@@ -15,15 +16,15 @@ import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.orekit.time.AbsoluteDate;
 
 /**
- * MVC presenter that drives a {@link PlanetView} by computing and applying the planet's position
- * and rotation from ephemeris data at a given simulation time.
+ * MVC presenter that drives a {@link BodyView} by computing and applying the planet's
+ * position and rotation from ephemeris data at a given simulation time.
  *
  * @param body the solar system body this presenter manages
  * @param view the view that renders the planet
  */
-public record PlanetPresenter(SolarSystemBody body, PlanetView view) {
+public record PlanetPresenter(SolarSystemBody body, BodyView view) {
 
-  public PlanetPresenter(SolarSystemBody body, PlanetView view) {
+  public PlanetPresenter(SolarSystemBody body, BodyView view) {
     this.body = Objects.requireNonNull(body, "body");
     this.view = Objects.requireNonNull(view, "view");
   }

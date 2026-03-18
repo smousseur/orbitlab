@@ -5,14 +5,17 @@ import com.jme3.app.state.BaseAppState;
 import com.jme3.scene.Node;
 import com.smousseur.orbitlab.app.ApplicationContext;
 import com.smousseur.orbitlab.app.SimulationClock;
+import com.smousseur.orbitlab.app.view.RenderContext;
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.engine.AssetFactory;
 import com.smousseur.orbitlab.engine.scene.PlanetColors;
+import com.smousseur.orbitlab.engine.scene.PlanetRadius;
+import com.smousseur.orbitlab.engine.scene.body.BodyRenderConfig;
+import com.smousseur.orbitlab.engine.scene.body.LodView;
+import com.smousseur.orbitlab.engine.scene.body.lod.Model3dView;
 import com.smousseur.orbitlab.engine.scene.graph.SceneGraph;
-import com.smousseur.orbitlab.engine.scene.planet.PlanetDescriptor;
-import com.smousseur.orbitlab.engine.scene.planet.PlanetLodView;
 import com.smousseur.orbitlab.engine.scene.planet.PlanetPresenter;
-import com.smousseur.orbitlab.engine.scene.planet.lod.Planet3dView;
+import com.smousseur.orbitlab.engine.scene.planet.lod.PlanetLodTuning;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
@@ -23,10 +26,10 @@ import org.orekit.time.AbsoluteDate;
  * Application state responsible for creating planet scene nodes and updating their positions and
  * rotations each frame based on ephemeris data.
  *
- * <p>During initialization, constructs a {@link PlanetPresenter} and {@link PlanetLodView} for
- * every solar system body, attaches them to the scene graph, and asynchronously loads their 3D
- * models. Each frame, queries the simulation clock and updates planet poses (position and
- * orientation) for all non-Sun bodies.
+ * <p>During initialization, constructs a {@link PlanetPresenter} and {@link LodView} for every
+ * solar system body, attaches them to the scene graph, and asynchronously loads their 3D models.
+ * Each frame, queries the simulation clock and updates planet poses (position and orientation) for
+ * all non-Sun bodies.
  */
 public final class PlanetPoseAppState extends BaseAppState {
 
@@ -53,15 +56,28 @@ public final class PlanetPoseAppState extends BaseAppState {
   @Override
   protected void initialize(Application app) {
     Node guiNode = context.guiGraph().getPlanetBillboardsNode();
-
+    SceneGraph sceneGraph = context.sceneGraph();
     bodiesNode.attachChild(bucket);
     nearBodiesNode.attachChild(nearBucket);
 
     for (SolarSystemBody body : SolarSystemBody.values()) {
-      PlanetDescriptor desc =
-          new PlanetDescriptor(body, body.displayName(), PlanetColors.colorFor(body));
+      String name = body.displayName().toLowerCase();
+      BodyRenderConfig config =
+          new BodyRenderConfig(
+              body.name(),
+              body.displayName(),
+              PlanetColors.colorFor(body),
+              PlanetRadius.radiusFor(body),
+              PlanetLodTuning.lodDistanceRatio(body),
+              "models/planets/" + name + "/" + name + ".gltf",
+              RenderContext.solar());
 
-      PlanetLodView view = new PlanetLodView(guiNode, context, desc);
+      LodView view =
+          new LodView(
+              guiNode,
+              config,
+              () -> context.focusView().viewPlanet(body),
+              show3d -> sceneGraph.setOrbitVisible(body, !show3d));
       PlanetPresenter presenter = new PlanetPresenter(body, view);
       presenter.setVisible(true);
 
@@ -69,7 +85,7 @@ public final class PlanetPoseAppState extends BaseAppState {
       nearBucket.attachChild(view.nearSpatial());
       context.addPlanet(body, presenter);
       ExecutorService assetExecutor = AssetFactory.get().assetLoadingExecutor();
-      Planet3dView model3dView = view.getModel3dView();
+      Model3dView model3dView = view.getModel3dView();
       CompletableFuture.supplyAsync(model3dView::loadModel, assetExecutor)
           .thenAccept(model3dView::onModelLoaded);
     }

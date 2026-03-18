@@ -172,6 +172,24 @@ public final class SceneGraph {
   }
 
   /**
+   * Returns the near bodies node where spacecraft and near-scale body spatials are attached.
+   *
+   * @return the near bodies node
+   */
+  public Node nearBodiesNode() {
+    return nearBodiesNode;
+  }
+
+  /**
+   * Returns the near orbits node where spacecraft trajectory lines are attached.
+   *
+   * @return the near orbits node
+   */
+  public Node nearOrbitsNode() {
+    return nearOrbitsNode;
+  }
+
+  /**
    * Returns the JME3 root node that this scene graph is attached to.
    *
    * @return the JME3 root node, or {@code null} if not yet attached
