@@ -18,6 +18,7 @@ import java.util.function.Consumer;
  * displayed. When farther away, a simple colored icon with a label is shown instead.
  */
 public final class LodView implements BodyView {
+  private final Node farAnchor;
   private final Node anchor3d;
   private final BillboardIconView iconView;
   private final Model3dView model3dView;
@@ -34,14 +35,12 @@ public final class LodView implements BodyView {
    *     when the 3D model is shown, {@code false} when the icon is shown. May be null.
    */
   public LodView(
-      Node guiNode,
-      BodyRenderConfig config,
-      Runnable onClick,
-      Consumer<Boolean> onLodChanged) {
+      Node guiNode, BodyRenderConfig config, Runnable onClick, Consumer<Boolean> onLodChanged) {
     Objects.requireNonNull(guiNode, "guiNode");
     Objects.requireNonNull(config, "config");
     this.config = config;
     this.onLodChanged = onLodChanged;
+    this.farAnchor = new Node("Anchor-" + config.id());
     this.anchor3d = new Node("BodyAnchor-" + config.id());
     this.iconView = new BillboardIconView(guiNode, config, onClick);
     this.model3dView = new Model3dView(anchor3d, config);
@@ -49,12 +48,17 @@ public final class LodView implements BodyView {
 
   @Override
   public Spatial spatial() {
+    return farAnchor;
+  }
+
+  @Override
+  public Spatial nearSpatial() {
     return anchor3d;
   }
 
   @Override
   public void setPositionWorld(Vector3f position) {
-    anchor3d.setLocalTranslation(position);
+    farAnchor.setLocalTranslation(position);
   }
 
   @Override
@@ -64,6 +68,7 @@ public final class LodView implements BodyView {
 
   @Override
   public void setVisible(boolean visible) {
+    model3dView.setVisible(visible);
     iconView.setVisible(visible);
   }
 
@@ -84,7 +89,7 @@ public final class LodView implements BodyView {
    */
   @Override
   public void updateScreen(Camera cam) {
-    float distance = cam.getLocation().distance(anchor3d.getWorldTranslation());
+    float distance = cam.getLocation().distance(farAnchor.getWorldTranslation());
     double radius = config.radiusMeters() * config.renderContext().unitsPerMeter();
     double multiplier = config.lodMultiplier();
     boolean show3d = distance < radius * multiplier;
@@ -95,7 +100,7 @@ public final class LodView implements BodyView {
     } else {
       model3dView.setVisible(false);
       iconView.setVisible(true);
-      iconView.updateScreenPosition(cam, anchor3d);
+      iconView.updateScreenPosition(cam, farAnchor);
     }
 
     if (onLodChanged != null) {

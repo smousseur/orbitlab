@@ -3,6 +3,7 @@ package com.smousseur.orbitlab.engine.scene.body.lod;
 import com.jme3.scene.Node;
 import com.jme3.scene.Spatial;
 import com.smousseur.orbitlab.OrbitLabApplication;
+import com.smousseur.orbitlab.app.view.RenderContext;
 import com.smousseur.orbitlab.engine.AssetFactory;
 import com.smousseur.orbitlab.engine.scene.body.BodyRenderConfig;
 import org.apache.logging.log4j.LogManager;
@@ -42,7 +43,7 @@ public class Model3dView {
     return AssetFactory.get()
         .loadModel(
             config.modelPath(),
-            (float) (config.radiusMeters() * config.renderContext().unitsPerMeter()));
+            (float) (config.radiusMeters() / RenderContext.PLANET_METERS_PER_UNIT));
   }
 
   /**

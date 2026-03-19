@@ -5,6 +5,7 @@ import com.jme3.app.state.BaseAppState;
 import com.jme3.scene.Node;
 import com.smousseur.orbitlab.app.ApplicationContext;
 import com.smousseur.orbitlab.app.SimulationClock;
+import com.smousseur.orbitlab.app.view.FocusView;
 import com.smousseur.orbitlab.app.view.RenderContext;
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.engine.AssetFactory;
@@ -76,7 +77,7 @@ public final class PlanetPoseAppState extends BaseAppState {
           new LodView(
               guiNode,
               config,
-              () -> context.focusView().viewPlanet(body),
+              () -> onSelectPlanet(body),
               show3d -> sceneGraph.setOrbitVisible(body, !show3d));
       PlanetPresenter presenter = new PlanetPresenter(body, view);
       presenter.setVisible(true);
@@ -89,6 +90,14 @@ public final class PlanetPoseAppState extends BaseAppState {
       CompletableFuture.supplyAsync(model3dView::loadModel, assetExecutor)
           .thenAccept(model3dView::onModelLoaded);
     }
+  }
+
+  private void onSelectPlanet(SolarSystemBody body) {
+    FocusView focusView = context.focusView();
+    double radius = PlanetRadius.radiusFor(body);
+    double distance = radius * 5 / RenderContext.SOLAR_METERS_PER_UNIT;
+    focusView.setCameraDistance((float) distance);
+    focusView.viewPlanet(body);
   }
 
   @Override

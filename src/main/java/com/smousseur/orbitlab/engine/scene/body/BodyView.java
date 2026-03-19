@@ -19,6 +19,13 @@ public interface BodyView {
   Spatial spatial();
 
   /**
+   * Near spatial spatial.
+   *
+   * @return the spatial
+   */
+  Spatial nearSpatial();
+
+  /**
    * Sets the body's position in world coordinates.
    *
    * @param position the world position to apply
@@ -47,9 +54,7 @@ public interface BodyView {
    */
   void setVisible(boolean visible);
 
-  /**
-   * Detaches this body view from the scene graph, cleaning up any GUI or 3D nodes.
-   */
+  /** Detaches this body view from the scene graph, cleaning up any GUI or 3D nodes. */
   void detach();
 
   /**
