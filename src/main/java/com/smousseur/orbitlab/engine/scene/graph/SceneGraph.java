@@ -26,8 +26,8 @@ import java.util.Objects;
 public final class SceneGraph {
   public static final String ORBIT_PREFIX = "Orbit-";
   public static String PLANETS_BUCKET = "PlanetsBucket";
-  public static String PLANET_ANCHOR_PREFIX = "PlanetAnchor-";
-  public static String NEAR_PLANET_ANCHOR_PREFIX = "NearPlanetAnchor-";
+  public static String PLANET_ANCHOR_PREFIX = "Anchor-";
+  public static String NEAR_PLANET_ANCHOR_PREFIX = "BodyAnchor-";
 
   private Node rootNode;
 
@@ -136,15 +136,6 @@ public final class SceneGraph {
   }
 
   /**
-   * Returns the near bodies node where planet near-scale spatials are attached.
-   *
-   * @return the near bodies node
-   */
-  public Node nearBodiesNode() {
-    return nearBodiesNode;
-  }
-
-  /**
    * Returns the far root node (solar system scale viewport).
    *
    * @return the far root node
@@ -169,6 +160,24 @@ public final class SceneGraph {
    */
   public Node getNearRoot() {
     return nearRoot;
+  }
+
+  /**
+   * Returns the near bodies node where spacecraft and near-scale body spatials are attached.
+   *
+   * @return the near bodies node
+   */
+  public Node nearBodiesNode() {
+    return nearBodiesNode;
+  }
+
+  /**
+   * Returns the near orbits node where spacecraft trajectory lines are attached.
+   *
+   * @return the near orbits node
+   */
+  public Node nearOrbitsNode() {
+    return nearOrbitsNode;
   }
 
   /**

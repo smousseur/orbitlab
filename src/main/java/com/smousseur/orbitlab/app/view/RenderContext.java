@@ -12,6 +12,8 @@ import java.util.Optional;
  * <p>This intentionally does NOT depend on jME types (Camera, ViewPort, Vector3f...).
  */
 public sealed interface RenderContext permits RenderContext.Solar, RenderContext.Planet {
+  double SOLAR_METERS_PER_UNIT = 1e9;
+  double PLANET_METERS_PER_UNIT = 1e3;
 
   /** Global scale: how many meters correspond to 1 JME unit in this view. */
   double metersPerUnit();
@@ -58,8 +60,6 @@ public sealed interface RenderContext permits RenderContext.Solar, RenderContext
    * million km).
    */
   record Solar() implements RenderContext {
-    public static final double SOLAR_METERS_PER_UNIT = 1e9;
-
     @Override
     public double metersPerUnit() {
       return SOLAR_METERS_PER_UNIT;
@@ -88,8 +88,6 @@ public sealed interface RenderContext permits RenderContext.Solar, RenderContext
    * @param body the target solar system body that serves as the coordinate origin
    */
   record Planet(SolarSystemBody body) implements RenderContext {
-    public static final double PLANET_METERS_PER_UNIT = 1e3;
-
     public Planet {
       Objects.requireNonNull(body, "body");
     }

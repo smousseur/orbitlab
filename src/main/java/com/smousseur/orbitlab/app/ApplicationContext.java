@@ -8,11 +8,13 @@ import com.smousseur.orbitlab.engine.EngineConfig;
 import com.smousseur.orbitlab.engine.events.OrbitEventBus;
 import com.smousseur.orbitlab.engine.scene.graph.GuiGraph;
 import com.smousseur.orbitlab.engine.scene.graph.SceneGraph;
+import com.smousseur.orbitlab.engine.scene.body.BodyView;
 import com.smousseur.orbitlab.engine.scene.planet.PlanetPresenter;
-import com.smousseur.orbitlab.engine.scene.planet.PlanetView;
+import com.smousseur.orbitlab.engine.scene.spacecraft.SpacecraftPresenter;
 
 import java.util.EnumMap;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Central dependency container for the OrbitLab application.
@@ -32,6 +34,7 @@ public class ApplicationContext {
       new EnumMap<>(SolarSystemBody.class);
 
   private final FocusView focusView;
+  private SpacecraftPresenter spacecraftPresenter;
 
   /**
    * Creates a new application context and attaches the scene and GUI graphs to the provided JME3
@@ -131,7 +134,7 @@ public class ApplicationContext {
 
   /** Detaches all planet views from the scene and clears the planet presenter registry. */
   public void clearPlanets() {
-    planets.values().stream().map(PlanetPresenter::view).forEach(PlanetView::detach);
+    planets.values().stream().map(PlanetPresenter::view).forEach(BodyView::detach);
     planets.clear();
   }
 
@@ -160,5 +163,23 @@ public class ApplicationContext {
    */
   public EngineConfig getEngineConfig() {
     return engineConfig;
+  }
+
+  /**
+   * Sets the spacecraft presenter for the active mission.
+   *
+   * @param presenter the spacecraft presenter, or {@code null} to clear
+   */
+  public void setSpacecraftPresenter(SpacecraftPresenter presenter) {
+    this.spacecraftPresenter = presenter;
+  }
+
+  /**
+   * Returns the spacecraft presenter if one is registered.
+   *
+   * @return an optional containing the spacecraft presenter, or empty if none
+   */
+  public Optional<SpacecraftPresenter> getSpacecraftPresenter() {
+    return Optional.ofNullable(spacecraftPresenter);
   }
 }
