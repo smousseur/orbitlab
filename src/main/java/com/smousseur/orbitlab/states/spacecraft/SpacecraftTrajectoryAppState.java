@@ -103,7 +103,9 @@ public final class SpacecraftTrajectoryAppState extends BaseAppState {
     for (int i = 0; i < count; i++) {
       int idx = (start + i) % MAX_POINTS;
       Vector3D pos = positions[idx];
-      Vector3D jme = RenderTransform.toRenderUnitsJmeAxes(pos, null, renderContext);
+      // GCRF positions are already geocentric — only scale + axis conversion needed
+      Vector3D scaled = RenderTransform.scaleMetersToUnits(pos, renderContext);
+      Vector3D jme = renderContext.axisConvention().icrfToJme(scaled);
       fb.put((float) jme.getX()).put((float) jme.getY()).put((float) jme.getZ());
     }
     fb.flip();

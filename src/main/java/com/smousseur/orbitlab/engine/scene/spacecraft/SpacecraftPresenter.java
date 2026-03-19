@@ -34,14 +34,18 @@ public record SpacecraftPresenter(String id, BodyView view) {
   }
 
   /**
-   * Updates the spacecraft's position in the view. The position is provided directly in GCRF meters
-   * and scaled/transformed to JME render units.
+   * Updates the spacecraft's position in the view. The position is provided in GCRF meters
+   * (geocentric, Earth at origin). Since GCRF is already geocentric, no target subtraction is
+   * needed — only scaling to render units and ICRF-to-JME axis conversion are applied.
    *
    * @param positionGcrfMeters the spacecraft position in GCRF frame, in meters
-   * @param ctx the render context defining scale and frame conversion
+   * @param ctx the render context defining the scale (typically Planet with 1 unit = 1 km)
    */
   public void updatePose(Vector3D positionGcrfMeters, RenderContext ctx) {
-    Vector3D jme = RenderTransform.toRenderUnitsJmeAxes(positionGcrfMeters, null, ctx);
+    // GCRF positions are already geocentric (Earth = origin), same axis orientation as ICRF.
+    // We only need to scale (meters -> render units) and convert axes (ICRF -> JME Y-up).
+    Vector3D scaled = RenderTransform.scaleMetersToUnits(positionGcrfMeters, ctx);
+    Vector3D jme = ctx.axisConvention().icrfToJme(scaled);
     Vector3f p = JmeVectorAdapter.toVector3f(jme);
     view.setPositionWorld(p);
   }
