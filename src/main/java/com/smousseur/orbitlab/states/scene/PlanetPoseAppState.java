@@ -16,7 +16,6 @@ import com.smousseur.orbitlab.engine.scene.body.LodView;
 import com.smousseur.orbitlab.engine.scene.body.lod.Model3dView;
 import com.smousseur.orbitlab.engine.scene.graph.SceneGraph;
 import com.smousseur.orbitlab.engine.scene.planet.PlanetPresenter;
-import com.smousseur.orbitlab.engine.scene.planet.lod.PlanetLodTuning;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
@@ -69,7 +68,7 @@ public final class PlanetPoseAppState extends BaseAppState {
               body.displayName(),
               PlanetColors.colorFor(body),
               PlanetRadius.radiusFor(body),
-              PlanetLodTuning.lodDistanceRatio(body),
+              lodDistanceRatio(body),
               "models/planets/" + name + "/" + name + ".gltf",
               RenderContext.solar());
 
@@ -133,5 +132,29 @@ public final class PlanetPoseAppState extends BaseAppState {
     bucket.setCullHint(Node.CullHint.Always);
     nearBucket.setCullHint(Node.CullHint.Always);
     context.enablePlanets(false);
+  }
+
+  /**
+   * Returns the LOD distance ratio for the given body. The 3D model is shown when the camera
+   * distance is less than the planet's radius multiplied by this ratio; otherwise the icon view is
+   * used.
+   *
+   * @param body the solar system body
+   * @return the distance-to-radius multiplier for LOD switching
+   */
+  private static double lodDistanceRatio(SolarSystemBody body) {
+    // Start conservative; tweak per planet later.
+    return switch (body) {
+      case MERCURY -> 80.0;
+      case VENUS -> 90.0;
+      case EARTH -> 250.0;
+      case MARS -> 90.0;
+      case JUPITER -> 140.0;
+      case SATURN -> 140.0;
+      case URANUS -> 120.0;
+      case NEPTUNE -> 120.0;
+      case PLUTO -> 70.0;
+      case SUN -> 200.0;
+    };
   }
 }
