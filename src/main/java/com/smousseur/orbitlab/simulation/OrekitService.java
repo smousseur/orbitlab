@@ -36,10 +36,7 @@ public final class OrekitService {
 
   private volatile ForceModel lightGravityModel;
 
-  private OrekitService() {
-    DataProvidersManager manager = DataContext.getDefault().getDataProvidersManager();
-    manager.addProvider(new ZipJarCrawler(OrekitService.class.getClassLoader(), "orekit-data.zip"));
-  }
+  private OrekitService() {}
 
   /**
    * Eagerly initializes the Orekit data context and loads reference frames.
@@ -50,7 +47,15 @@ public final class OrekitService {
     if (!initialized.compareAndSet(false, true)) {
       return;
     }
-    FramesFactory.getICRF();
+    try {
+      DataProvidersManager manager = DataContext.getDefault().getDataProvidersManager();
+      manager.addProvider(
+          new ZipJarCrawler(OrekitService.class.getClassLoader(), "orekit-data.zip"));
+      FramesFactory.getICRF();
+    } catch (RuntimeException e) {
+      initialized.set(false);
+      throw e;
+    }
   }
 
   /**
