@@ -90,6 +90,8 @@ All runtime subsystems are implemented as `AppState` classes and registered in `
 
 Pass `ApplicationContext` (not individual services) to AppStates and constructors.
 
+> **Rule: No `getState()`** — AppStates must NEVER use `getState(Class)` to communicate with each other. All inter-state communication goes through `ApplicationContext`. If a state needs data from another state, that data must be exposed via a shared object in `ApplicationContext`.
+
 ### OrekitService (Singleton)
 Access via `OrekitService.get()`. It provides:
 - Three propagator types: **Simple** (Newtonian), **Optimization** (8×8 gravity, fast), **Default** (50×50 gravity, accurate)

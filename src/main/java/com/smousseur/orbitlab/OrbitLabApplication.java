@@ -22,6 +22,7 @@ import com.smousseur.orbitlab.states.fx.LightningAppState;
 import com.smousseur.orbitlab.states.orbits.OrbitRuntimeAppState;
 import com.smousseur.orbitlab.states.scene.PlanetHudMarkersAppState;
 import com.smousseur.orbitlab.states.scene.PlanetPoseAppState;
+import com.smousseur.orbitlab.states.mission.MissionOrchestratorAppState;
 import com.smousseur.orbitlab.states.scene.SolarSystemSceneAppState;
 import com.smousseur.orbitlab.states.time.SimulationClockAppState;
 import com.smousseur.orbitlab.states.time.TimelineWidgetAppState;
@@ -77,6 +78,7 @@ public class OrbitLabApplication extends SimpleApplication {
     stateManager.attach(new OrbitRuntimeAppState(applicationContext));
     stateManager.attach(new TimelineWidgetAppState(applicationContext));
     stateManager.attach(new LightningAppState(applicationContext));
+    stateManager.attach(new MissionOrchestratorAppState(applicationContext));
 
     flyCam.setEnabled(false);
 

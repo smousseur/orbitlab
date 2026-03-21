@@ -1,7 +1,6 @@
-package com.smousseur.orbitlab.states.spacecraft;
+package com.smousseur.orbitlab.states.mission;
 
 import com.jme3.app.Application;
-import com.jme3.app.state.BaseAppState;
 import com.jme3.math.ColorRGBA;
 import com.jme3.renderer.Camera;
 import com.jme3.scene.Node;
@@ -16,6 +15,7 @@ import com.smousseur.orbitlab.engine.scene.body.LodView;
 import com.smousseur.orbitlab.engine.scene.body.lod.Model3dView;
 import com.smousseur.orbitlab.engine.scene.spacecraft.SpacecraftPresenter;
 import com.smousseur.orbitlab.simulation.mission.Mission;
+import com.smousseur.orbitlab.simulation.mission.MissionEntry;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -24,52 +24,58 @@ import org.orekit.propagation.SpacecraftState;
 import org.orekit.time.AbsoluteDate;
 
 /**
- * Application state that displays a spacecraft's position from a mission in the near viewport.
- * Visible only in PLANET view mode.
- *
- * <p>Each frame, propagates the mission to the current simulation time, reads the spacecraft
- * position in GCRF, and updates the spacecraft's visual representation via the shared {@link
- * LodView} and {@link SpacecraftPresenter}.
+ * Encapsulates all rendering for a single mission: spacecraft display (SpacecraftPresenter +
+ * LodView) and trajectory line (delegated to {@link MissionTrajectoryRenderer}). This is NOT an
+ * AppState — it is a plain object managed by {@link MissionOrchestratorAppState}.
  */
-public final class SpacecraftDisplayAppState extends BaseAppState {
+public final class MissionRenderer {
 
   private static final double SPACECRAFT_RADIUS_METERS = 50.0;
   private static final double SPACECRAFT_LOD_MULTIPLIER = 500.0;
-  private static final String SPACECRAFT_MODEL_PATH = "models/spacecraft/spacecraft.gltf";
+  private static final String SPACECRAFT_MODEL_PATH = "models/vehicles/ariane.gltf";
 
+  private final MissionEntry entry;
   private final ApplicationContext context;
-  private final SimulationClock clock;
-  private final Mission mission;
   private final RenderContext renderContext;
+  private final ColorRGBA trajectoryColor;
 
   private SpacecraftPresenter presenter;
   private LodView view;
-  private SpacecraftTrajectoryAppState trajectoryState;
+  private MissionTrajectoryRenderer trajectoryRenderer;
 
   /**
-   * Creates a new spacecraft display state.
+   * Creates a new mission renderer.
    *
+   * @param entry the mission entry to render
    * @param context the application context
-   * @param mission the mission whose spacecraft state to visualize
-   * @param renderContext the render context for coordinate scaling (typically Planet)
+   * @param renderContext the render context for coordinate scaling
+   * @param trajectoryColor the color for the trajectory line
    */
-  public SpacecraftDisplayAppState(
-      ApplicationContext context, Mission mission, RenderContext renderContext) {
+  public MissionRenderer(
+      MissionEntry entry,
+      ApplicationContext context,
+      RenderContext renderContext,
+      ColorRGBA trajectoryColor) {
+    this.entry = Objects.requireNonNull(entry, "entry");
     this.context = Objects.requireNonNull(context, "context");
-    this.clock = Objects.requireNonNull(context.clock(), "clock");
-    this.mission = Objects.requireNonNull(mission, "mission");
     this.renderContext = Objects.requireNonNull(renderContext, "renderContext");
+    this.trajectoryColor = Objects.requireNonNull(trajectoryColor, "trajectoryColor");
   }
 
-  @Override
-  protected void initialize(Application app) {
+  /**
+   * Initializes the spacecraft view and trajectory geometry.
+   *
+   * @param app the JME application
+   */
+  public void initialize(Application app) {
+    Mission mission = entry.mission();
     Node guiNode = context.guiGraph().getPlanetBillboardsNode();
 
     BodyRenderConfig config =
         new BodyRenderConfig(
-            "spacecraft-" + mission.getName(),
+            "mission-" + mission.getName(),
             mission.getName(),
-            ColorRGBA.Cyan,
+            trajectoryColor,
             SPACECRAFT_RADIUS_METERS,
             SPACECRAFT_LOD_MULTIPLIER,
             SPACECRAFT_MODEL_PATH,
@@ -83,18 +89,27 @@ public final class SpacecraftDisplayAppState extends BaseAppState {
     Spatial anchor = view.spatial();
     nearBodiesNode.attachChild(anchor);
 
-    context.setSpacecraftPresenter(presenter);
-
+    // Load 3D model asynchronously
     ExecutorService assetExecutor = AssetFactory.get().assetLoadingExecutor();
     Model3dView model3dView = view.getModel3dView();
     CompletableFuture.supplyAsync(model3dView::loadModel, assetExecutor)
         .thenAccept(model3dView::onModelLoaded);
 
-    trajectoryState = getState(SpacecraftTrajectoryAppState.class);
+    // Initialize trajectory renderer
+    trajectoryRenderer =
+        new MissionTrajectoryRenderer(mission.getName(), renderContext, trajectoryColor);
+    trajectoryRenderer.initialize(context.sceneGraph().nearOrbitsNode());
   }
 
-  @Override
-  public void update(float tpf) {
+  /**
+   * Updates the spacecraft display and trajectory for the current frame.
+   *
+   * @param tpf time per frame
+   * @param cam the active camera
+   */
+  public void update(float tpf, Camera cam) {
+    Mission mission = entry.mission();
+
     if (!mission.isOnGoing()) {
       return;
     }
@@ -106,6 +121,7 @@ public final class SpacecraftDisplayAppState extends BaseAppState {
     }
     view.setVisible(true);
 
+    SimulationClock clock = context.clock();
     AbsoluteDate now = clock.now();
     mission.update(now);
 
@@ -116,25 +132,20 @@ public final class SpacecraftDisplayAppState extends BaseAppState {
 
     Vector3D posGcrf = state.getPosition();
     presenter.updatePose(posGcrf, renderContext);
-
-    Camera cam = getApplication().getCamera();
     view.updateScreen(cam);
 
-    if (trajectoryState != null) {
-      trajectoryState.addPosition(posGcrf);
+    trajectoryRenderer.addPosition(posGcrf);
+    trajectoryRenderer.update();
+  }
+
+  /** Detaches all visual elements from the scene. */
+  public void cleanup() {
+    if (view != null) {
+      view.spatial().removeFromParent();
+      view.detach();
+    }
+    if (trajectoryRenderer != null) {
+      trajectoryRenderer.cleanup();
     }
   }
-
-  @Override
-  protected void cleanup(Application app) {
-    view.spatial().removeFromParent();
-    view.detach();
-    context.setSpacecraftPresenter(null);
-  }
-
-  @Override
-  protected void onEnable() {}
-
-  @Override
-  protected void onDisable() {}
 }
