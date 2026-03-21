@@ -1,16 +1,16 @@
 package com.smousseur.orbitlab.ui.telemetry;
 
 import com.jme3.asset.AssetManager;
-import com.jme3.math.ColorRGBA;
 import com.simsilica.lemur.GuiGlobals;
 import com.simsilica.lemur.component.QuadBackgroundComponent;
 import com.simsilica.lemur.style.Styles;
+import com.smousseur.orbitlab.ui.AppStyles;
 
 /**
  * Defines and registers Lemur GUI styles for the mission telemetry widget.
  *
- * <p>Creates a "telemetry" style derived from the Glass base style with a semi-transparent
- * dark background suited for a HUD overlay.
+ * <p>Creates a "telemetry" style derived from the Glass base style.
+ * Visual tokens (colours, margins) are sourced from {@link AppStyles}.
  */
 public final class TelemetryStyles {
 
@@ -29,6 +29,6 @@ public final class TelemetryStyles {
     styles.applyStyles(STYLE, "glass");
     styles
         .getSelector("container", STYLE)
-        .set("background", new QuadBackgroundComponent(new ColorRGBA(0f, 0f, 0f, 0.25f)));
+        .set("background", new QuadBackgroundComponent(AppStyles.HUD_BACKGROUND));
   }
 }

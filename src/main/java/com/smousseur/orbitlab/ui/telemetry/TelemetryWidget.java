@@ -9,6 +9,7 @@ import com.simsilica.lemur.Label;
 import com.simsilica.lemur.component.BoxLayout;
 import com.smousseur.orbitlab.app.ApplicationContext;
 import com.smousseur.orbitlab.simulation.mission.Mission;
+import com.smousseur.orbitlab.ui.AppStyles;
 import java.util.Objects;
 import org.orekit.propagation.SpacecraftState;
 
@@ -24,7 +25,7 @@ import org.orekit.propagation.SpacecraftState;
  */
 public class TelemetryWidget implements AutoCloseable {
 
-  private static final float MARGIN_PX = 16f;
+  private static final float MARGIN_PX = AppStyles.HUD_MARGIN_PX;
 
   private final Container root;
   private final Label metVal;

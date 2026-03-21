@@ -27,8 +27,7 @@ import com.smousseur.orbitlab.states.mission.TelemetryWidgetAppState;
 import com.smousseur.orbitlab.states.scene.SolarSystemSceneAppState;
 import com.smousseur.orbitlab.states.time.SimulationClockAppState;
 import com.smousseur.orbitlab.states.time.TimelineWidgetAppState;
-import com.smousseur.orbitlab.ui.clock.TimelineStyles;
-import com.smousseur.orbitlab.ui.telemetry.TelemetryStyles;
+import com.smousseur.orbitlab.ui.AppStyles;
 
 /**
  * Main entry point for the OrbitLab application.
@@ -65,8 +64,7 @@ public class OrbitLabApplication extends SimpleApplication {
     BaseStyles.loadGlassStyle();
     GuiGlobals.getInstance().getStyles().setDefaultStyle("base");
     AssetFactory.init(assetManager);
-    TimelineStyles.init(assetManager);
-    TelemetryStyles.init(assetManager);
+    AppStyles.init(assetManager);
 
     ApplicationContext applicationContext = new ApplicationContext(rootNode, guiNode);
     stateManager.attach(new InitAppState());
