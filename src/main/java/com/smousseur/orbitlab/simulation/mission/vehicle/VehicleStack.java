@@ -1,23 +1,15 @@
 package com.smousseur.orbitlab.simulation.mission.vehicle;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
- * A composite vehicle made up of multiple stacked stages. The first vehicle in the list
- * represents the currently active (bottom) stage. Stages can be jettisoned by index,
- * removing them from the stack. Mass and propulsion queries delegate to the constituent
- * vehicles, with the active stage providing the propulsion system.
+ * A composite vehicle made up of multiple stacked stages. The first vehicle in the list represents
+ * the currently active (bottom) stage. Mass and propulsion queries delegate to the constituent
+ * vehicles.
  *
- * @param vehicles the ordered list of vehicle stages, from active (first) to uppermost (last)
+ * @param vehicles the ordered list of vehicle stages
  */
 public record VehicleStack(List<Vehicle> vehicles) implements Vehicle {
-
-  /** Compact canonical constructor: defensive copy to prevent external mutation. */
-  public VehicleStack {
-    vehicles = new ArrayList<>(vehicles);
-  }
-
   @Override
   public Vehicle getStage(int index) {
     return vehicles.get(index);
@@ -51,11 +43,6 @@ public record VehicleStack(List<Vehicle> vehicles) implements Vehicle {
   @Override
   public double getFirstStageDryMass() {
     return vehicles.getFirst().dryMass();
-  }
-
-  @Override
-  public void jettison(int index) {
-    vehicles.remove(index);
   }
 
   @Override

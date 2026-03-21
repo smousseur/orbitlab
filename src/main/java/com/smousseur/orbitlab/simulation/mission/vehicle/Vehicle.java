@@ -1,7 +1,5 @@
 package com.smousseur.orbitlab.simulation.mission.vehicle;
 
-import com.smousseur.orbitlab.core.OrbitlabException;
-
 /**
  * Represents a vehicle in the mission simulation. A vehicle has a dry mass, propellant capacity,
  * and a propulsion system. Vehicles can be single-stage or multi-stage (via {@link VehicleStack}),
@@ -85,27 +83,6 @@ public interface Vehicle {
    * @return the propulsion system
    */
   PropulsionSystem propulsion();
-
-  /**
-   * Jettisons the first stage of this vehicle. Only supported by multi-stage vehicles such as
-   * {@link VehicleStack}.
-   *
-   * @throws com.smousseur.orbitlab.core.OrbitlabException if jettison is not supported
-   */
-  default void jettison() {
-    jettison(0);
-  }
-
-  /**
-   * Jettisons the stage at the given index. Only supported by multi-stage vehicles such as
-   * {@link VehicleStack}.
-   *
-   * @param index the zero-based index of the stage to jettison
-   * @throws com.smousseur.orbitlab.core.OrbitlabException if jettison is not supported
-   */
-  default void jettison(int index) {
-    throw new OrbitlabException("Vehicle jettison unsupported for " + getClass().getSimpleName());
-  }
 
   /**
    * Returns the dry mass of the first stage only.

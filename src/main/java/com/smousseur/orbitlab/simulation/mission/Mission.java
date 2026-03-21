@@ -10,7 +10,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.orekit.bodies.GeodeticPoint;
 import org.orekit.bodies.OneAxisEllipsoid;
-import org.orekit.frames.Frame;
 import org.orekit.orbits.KeplerianOrbit;
 import org.orekit.propagation.SpacecraftState;
 import org.orekit.propagation.numerical.NumericalPropagator;
@@ -42,6 +41,7 @@ public abstract class Mission {
 
   private AbsoluteDate initialDate;
 
+  private MissionStatus status = MissionStatus.DRAFT;
   private AbsoluteDate lastAltLogDate = null;
   private static final double ALT_LOG_PERIOD_S = 10.0;
 
@@ -84,12 +84,13 @@ public abstract class Mission {
     this.initialDate = initialDate;
     this.currentState = getInitialState(initialDate);
     isStarted = true;
+    status = MissionStatus.RUNNING;
     transitionToNextStage(currentState);
   }
 
   /**
-   * Advances the mission simulation to the given time by propagating the current stage. Periodically
-   * logs altitude and orbital information for diagnostics.
+   * Advances the mission simulation to the given time by propagating the current stage.
+   * Periodically logs altitude and orbital information for diagnostics.
    *
    * @param currentTime the simulation time to propagate to
    */
@@ -140,6 +141,7 @@ public abstract class Mission {
     currentStageIndex++;
     if (isFinished()) {
       this.currentState = stateAtEvent;
+      this.status = MissionStatus.COMPLETED;
       return;
     }
     this.currentState = stateAtEvent;
@@ -282,5 +284,23 @@ public abstract class Mission {
       throw new OrbitlabException("Mission is already finished, no current stage");
     }
     return stages.get(currentStageIndex);
+  }
+
+  /**
+   * Gets status.
+   *
+   * @return the status
+   */
+  public MissionStatus getStatus() {
+    return status;
+  }
+
+  /**
+   * Sets status.
+   *
+   * @param status the status
+   */
+  public void setStatus(MissionStatus status) {
+    this.status = status;
   }
 }

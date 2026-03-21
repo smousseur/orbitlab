@@ -2,6 +2,7 @@ package com.smousseur.orbitlab.simulation.mission.runtime;
 
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionStage;
+import com.smousseur.orbitlab.simulation.mission.MissionStatus;
 import com.smousseur.orbitlab.simulation.mission.OptimizableMissionStage;
 import com.smousseur.orbitlab.simulation.mission.maneuver.TransferResult;
 import com.smousseur.orbitlab.simulation.mission.maneuver.TransfertTwoManeuver;
@@ -105,6 +106,7 @@ public class MissionOptimizer {
       }
     }
 
+    mission.setStatus(MissionStatus.READY);
     return new MissionOptimizerResult(results);
   }
 }

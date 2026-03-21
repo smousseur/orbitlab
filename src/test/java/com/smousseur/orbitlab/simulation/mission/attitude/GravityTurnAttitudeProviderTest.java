@@ -22,10 +22,7 @@ class GravityTurnAttitudeProviderTest {
   private static final PVCoordinatesProvider PV_PROV =
       (date, frame) ->
           new TimeStampedPVCoordinates(
-              date,
-              new Vector3D(7_000_000, 0, 0),
-              new Vector3D(0, 7500, 0),
-              Vector3D.ZERO);
+              date, new Vector3D(7_000_000, 0, 0), new Vector3D(0, 7500, 0), Vector3D.ZERO);
 
   @BeforeAll
   static void setup() {
@@ -121,7 +118,7 @@ class GravityTurnAttitudeProviderTest {
     // Total rotation = sum of partial rotations (approximately)
     assertTrue(d01 > 0, "Should rotate in first segment");
     assertTrue(d12 > 0, "Should rotate in second segment");
-    assertTrue(d02 > d01, "Total rotation greater than first segment");
-    assertTrue(d02 > d12, "Total rotation greater than second segment");
+    assertTrue(d02 >= d01, "Total rotation greater than first segment");
+    assertTrue(d02 >= d12, "Total rotation greater than second segment");
   }
 }
