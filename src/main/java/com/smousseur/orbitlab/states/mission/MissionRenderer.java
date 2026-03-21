@@ -1,19 +1,13 @@
 package com.smousseur.orbitlab.states.mission;
 
 import com.jme3.app.Application;
-import com.jme3.material.Material;
 import com.jme3.math.ColorRGBA;
 import com.jme3.renderer.Camera;
-import com.jme3.scene.Geometry;
-import com.jme3.scene.Mesh;
 import com.jme3.scene.Node;
 import com.jme3.scene.Spatial;
-import com.jme3.scene.VertexBuffer;
-import com.jme3.util.BufferUtils;
 import com.smousseur.orbitlab.app.ApplicationContext;
 import com.smousseur.orbitlab.app.SimulationClock;
 import com.smousseur.orbitlab.app.view.RenderContext;
-import com.smousseur.orbitlab.app.view.RenderTransform;
 import com.smousseur.orbitlab.app.view.ViewMode;
 import com.smousseur.orbitlab.engine.AssetFactory;
 import com.smousseur.orbitlab.engine.scene.body.BodyRenderConfig;
@@ -22,7 +16,6 @@ import com.smousseur.orbitlab.engine.scene.body.lod.Model3dView;
 import com.smousseur.orbitlab.engine.scene.spacecraft.SpacecraftPresenter;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionEntry;
-import java.nio.FloatBuffer;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -32,16 +25,14 @@ import org.orekit.time.AbsoluteDate;
 
 /**
  * Encapsulates all rendering for a single mission: spacecraft display (SpacecraftPresenter +
- * LodView) and trajectory line. This is NOT an AppState — it is a plain object managed by {@link
- * MissionOrchestratorAppState}.
+ * LodView) and trajectory line (delegated to {@link MissionTrajectoryRenderer}). This is NOT an
+ * AppState — it is a plain object managed by {@link MissionOrchestratorAppState}.
  */
 public final class MissionRenderer {
 
   private static final double SPACECRAFT_RADIUS_METERS = 50.0;
   private static final double SPACECRAFT_LOD_MULTIPLIER = 500.0;
   private static final String SPACECRAFT_MODEL_PATH = "models/vehicles/ariane.gltf";
-  private static final int MAX_POINTS = 4096;
-  private static final float LINE_WIDTH = 2f;
 
   private final MissionEntry entry;
   private final ApplicationContext context;
@@ -50,12 +41,7 @@ public final class MissionRenderer {
 
   private SpacecraftPresenter presenter;
   private LodView view;
-
-  // Trajectory circular buffer
-  private final Vector3D[] positions = new Vector3D[MAX_POINTS];
-  private int head = 0;
-  private int count = 0;
-  private Geometry lineGeometry;
+  private MissionTrajectoryRenderer trajectoryRenderer;
 
   /**
    * Creates a new mission renderer.
@@ -109,8 +95,10 @@ public final class MissionRenderer {
     CompletableFuture.supplyAsync(model3dView::loadModel, assetExecutor)
         .thenAccept(model3dView::onModelLoaded);
 
-    // Initialize trajectory line geometry
-    initTrajectoryGeometry();
+    // Initialize trajectory renderer
+    trajectoryRenderer =
+        new MissionTrajectoryRenderer(mission.getName(), renderContext, trajectoryColor);
+    trajectoryRenderer.initialize(context.sceneGraph().nearOrbitsNode());
   }
 
   /**
@@ -146,8 +134,8 @@ public final class MissionRenderer {
     presenter.updatePose(posGcrf, renderContext);
     view.updateScreen(cam);
 
-    addPosition(posGcrf);
-    updateLineGeometry();
+    trajectoryRenderer.addPosition(posGcrf);
+    trajectoryRenderer.update();
   }
 
   /** Detaches all visual elements from the scene. */
@@ -156,61 +144,8 @@ public final class MissionRenderer {
       view.spatial().removeFromParent();
       view.detach();
     }
-    if (lineGeometry != null) {
-      lineGeometry.removeFromParent();
+    if (trajectoryRenderer != null) {
+      trajectoryRenderer.cleanup();
     }
-  }
-
-  private void addPosition(Vector3D posGcrf) {
-    positions[head] = posGcrf;
-    head = (head + 1) % MAX_POINTS;
-    if (count < MAX_POINTS) {
-      count++;
-    }
-  }
-
-  private void initTrajectoryGeometry() {
-    Node nearOrbitsNode = context.sceneGraph().nearOrbitsNode();
-
-    Mesh mesh = new Mesh();
-    mesh.setMode(Mesh.Mode.LineStrip);
-    FloatBuffer pb = BufferUtils.createFloatBuffer(MAX_POINTS * 3);
-    mesh.setBuffer(VertexBuffer.Type.Position, 3, pb);
-    mesh.updateBound();
-    mesh.updateCounts();
-
-    Material mat = AssetFactory.get().material(trajectoryColor);
-    mat.setColor("Color", trajectoryColor);
-    mat.getAdditionalRenderState().setLineWidth(LINE_WIDTH);
-
-    lineGeometry =
-        new Geometry("MissionTrajectory-" + entry.mission().getName(), mesh);
-    lineGeometry.setMaterial(mat);
-    nearOrbitsNode.attachChild(lineGeometry);
-  }
-
-  private void updateLineGeometry() {
-    if (count == 0) {
-      return;
-    }
-
-    Mesh mesh = lineGeometry.getMesh();
-    VertexBuffer vb = mesh.getBuffer(VertexBuffer.Type.Position);
-    FloatBuffer fb = (FloatBuffer) vb.getData();
-    fb.clear();
-
-    int start = (count < MAX_POINTS) ? 0 : head;
-    for (int i = 0; i < count; i++) {
-      int idx = (start + i) % MAX_POINTS;
-      Vector3D pos = positions[idx];
-      Vector3D scaled = RenderTransform.scaleMetersToUnits(pos, renderContext);
-      Vector3D jme = renderContext.axisConvention().icrfToJme(scaled);
-      fb.put((float) jme.getX()).put((float) jme.getY()).put((float) jme.getZ());
-    }
-    fb.flip();
-
-    mesh.updateCounts();
-    mesh.updateBound();
-    vb.setUpdateNeeded();
   }
 }
