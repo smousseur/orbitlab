@@ -10,11 +10,10 @@ import com.smousseur.orbitlab.engine.scene.graph.GuiGraph;
 import com.smousseur.orbitlab.engine.scene.graph.SceneGraph;
 import com.smousseur.orbitlab.engine.scene.body.BodyView;
 import com.smousseur.orbitlab.engine.scene.planet.PlanetPresenter;
-import com.smousseur.orbitlab.engine.scene.spacecraft.SpacecraftPresenter;
+import com.smousseur.orbitlab.simulation.mission.MissionContext;
 
 import java.util.EnumMap;
 import java.util.Map;
-import java.util.Optional;
 
 /**
  * Central dependency container for the OrbitLab application.
@@ -34,7 +33,7 @@ public class ApplicationContext {
       new EnumMap<>(SolarSystemBody.class);
 
   private final FocusView focusView;
-  private SpacecraftPresenter spacecraftPresenter;
+  private final MissionContext missionContext;
 
   /**
    * Creates a new application context and attaches the scene and GUI graphs to the provided JME3
@@ -56,6 +55,7 @@ public class ApplicationContext {
     this.sceneGraph = new SceneGraph();
     this.guiGraph = new GuiGraph();
     this.focusView = new FocusView(engineConfig);
+    this.missionContext = new MissionContext();
   }
 
   /**
@@ -166,20 +166,11 @@ public class ApplicationContext {
   }
 
   /**
-   * Sets the spacecraft presenter for the active mission.
+   * Returns the mission context that manages active missions.
    *
-   * @param presenter the spacecraft presenter, or {@code null} to clear
+   * @return the mission context
    */
-  public void setSpacecraftPresenter(SpacecraftPresenter presenter) {
-    this.spacecraftPresenter = presenter;
-  }
-
-  /**
-   * Returns the spacecraft presenter if one is registered.
-   *
-   * @return an optional containing the spacecraft presenter, or empty if none
-   */
-  public Optional<SpacecraftPresenter> getSpacecraftPresenter() {
-    return Optional.ofNullable(spacecraftPresenter);
+  public MissionContext missionContext() {
+    return missionContext;
   }
 }
