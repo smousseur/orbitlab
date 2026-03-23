@@ -3,6 +3,7 @@ package com.smousseur.orbitlab.simulation.mission.maneuver;
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.Physics;
 import com.smousseur.orbitlab.simulation.mission.detector.MinAltitudeTracker;
+import com.smousseur.orbitlab.simulation.mission.vehicle.ActiveStageInfo;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropulsionSystem;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
 import org.apache.logging.log4j.LogManager;
@@ -39,6 +40,9 @@ import org.orekit.utils.Constants;
  *   <li>[2] alpha1 — in-plane thrust angle in TNW frame (rad)
  *   <li>[3] beta1 — out-of-plane thrust angle in TNW frame (rad)
  * </ul>
+ *
+ * <p>The active stage propulsion is resolved automatically from the spacecraft mass via {@link
+ * Vehicle#resolveActiveStage(double)}.
  */
 public class TransfertTwoManeuver {
   private static final Logger logger = LogManager.getLogger(TransfertTwoManeuver.class);
@@ -51,7 +55,7 @@ public class TransfertTwoManeuver {
   /**
    * Creates a two-burn transfer maneuver targeting the specified circular orbit altitude.
    *
-   * @param vehicle the vehicle performing the transfer (second stage propulsion is used)
+   * @param vehicle the vehicle performing the transfer
    * @param targetAltitude the target circular orbit altitude above Earth's surface in meters
    */
   public TransfertTwoManeuver(Vehicle vehicle, double targetAltitude) {
@@ -168,7 +172,8 @@ public class TransfertTwoManeuver {
 
     AbsoluteDate epoch = state.getDate();
     LofOffset attitude = new LofOffset(state.getFrame(), LOFType.TNW);
-    PropulsionSystem propulsion = vehicle.getSecondStage().propulsion();
+    ActiveStageInfo stage = vehicle.resolveActiveStage(state.getMass());
+    PropulsionSystem propulsion = stage.propulsion();
 
     // ── Burn 1: optimized (near apoapsis, quasi-circularizes) ──
     AbsoluteDate burn1Start = epoch.shiftedBy(params.t1);
@@ -224,7 +229,8 @@ public class TransfertTwoManeuver {
     AbsoluteDate burn1End = burn1Start.shiftedBy(params.dt1);
 
     LofOffset attitude = new LofOffset(initialState.getFrame(), LOFType.TNW);
-    PropulsionSystem propulsion = vehicle.getSecondStage().propulsion();
+    ActiveStageInfo stage = vehicle.resolveActiveStage(initialState.getMass());
+    PropulsionSystem propulsion = stage.propulsion();
     Vector3D thrustDir1 = Physics.buildThrustDirectionTNW(params.alpha1, params.beta1);
 
     burn1Propagator.addForceModel(

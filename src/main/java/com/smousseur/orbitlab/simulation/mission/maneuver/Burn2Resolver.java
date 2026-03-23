@@ -2,6 +2,7 @@ package com.smousseur.orbitlab.simulation.mission.maneuver;
 
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.Physics;
+import com.smousseur.orbitlab.simulation.mission.vehicle.ActiveStageInfo;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropulsionSystem;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
 import org.hipparchus.util.FastMath;
@@ -14,7 +15,8 @@ import org.orekit.propagation.numerical.NumericalPropagator;
 /**
  * Resolves burn 2 (circularization at next apoapsis) deterministically from a post-burn-1 state.
  *
- * <p>Pure computation — no mutable state.
+ * <p>Pure computation — no mutable state. The active stage propulsion is resolved automatically
+ * from the spacecraft mass via {@link Vehicle#resolveActiveStage(double)}.
  */
 final class Burn2Resolver {
 
@@ -61,7 +63,8 @@ final class Burn2Resolver {
       return new TransfertTwoManeuver.ResolvedBurn2(dtApoapsis, 0.0, 0.0);
     }
 
-    PropulsionSystem propulsion = vehicle.getSecondStage().propulsion();
+    ActiveStageInfo stage = vehicle.resolveActiveStage(stateAfterBurn1.getMass());
+    PropulsionSystem propulsion = stage.propulsion();
     double massAtApoapsis = stateAfterBurn1.getMass(); // approximate (coast is ballistic)
     double dt2 =
         Physics.computeBurnDuration(

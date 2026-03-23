@@ -4,6 +4,7 @@ import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.Physics;
 import com.smousseur.orbitlab.simulation.mission.attitude.GravityTurnAttitudeProvider;
 import com.smousseur.orbitlab.simulation.mission.stage.ascent.GravityTurnStage;
+import com.smousseur.orbitlab.simulation.mission.vehicle.ActiveStageInfo;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropulsionSystem;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
@@ -24,6 +25,9 @@ import org.orekit.utils.Constants;
  * Encapsulates the gravity turn maneuver configuration logic. Shared between {@link
  * GravityTurnStage} (execution) and {@link
  * com.smousseur.orbitlab.simulation.mission.optimizer.problems.GravityTurnProblem} (optimization).
+ *
+ * <p>Stage resolution is automatic: the active stage and the next stage after jettison are
+ * determined from the vehicle's reference mass via {@link Vehicle#resolveActiveStage(double)}.
  */
 public class GravityTurnManeuver {
 
@@ -33,6 +37,8 @@ public class GravityTurnManeuver {
   private final double pitchKickAngleRad;
   private final double launchAzimuth;
   private final double usedAscensionPropellant;
+  private final ActiveStageInfo activeStage;
+  private final ActiveStageInfo nextStage;
 
   /**
    * Creates a gravity turn maneuver for the given vehicle and launch parameters.
@@ -48,8 +54,9 @@ public class GravityTurnManeuver {
     this.vehicle = vehicle;
     this.pitchKickAngleRad = pitchKickAngleRad;
     this.launchAzimuth = launchAzimuth;
-    this.usedAscensionPropellant =
-        vehicle.getFirstStage().propulsion().massBurnt(ascensionDuration);
+    this.activeStage = vehicle.resolveActiveStage(vehicle.getMass());
+    this.nextStage = vehicle.resolveActiveStage(activeStage.massAfterJettison());
+    this.usedAscensionPropellant = activeStage.propulsion().massBurnt(ascensionDuration);
   }
 
   /**
@@ -75,10 +82,10 @@ public class GravityTurnManeuver {
     double exponent = variables[1];
 
     // Burn1 duration until propellant exhaustion
-    PropulsionSystem prop1 = vehicle.getFirstStage().propulsion();
+    PropulsionSystem prop1 = activeStage.propulsion();
     double massFlowRate1 = prop1.thrust() / (prop1.isp() * Constants.G0_STANDARD_GRAVITY);
     double burn1Duration =
-        (vehicle.getFirstStage().propellantCapacity() - usedAscensionPropellant) / massFlowRate1;
+        (activeStage.propellantCapacity() - usedAscensionPropellant) / massFlowRate1;
 
     // Burn2 duration after jettison until transitionTime
     double burn2Duration = transitionTime - burn1Duration;
@@ -109,15 +116,14 @@ public class GravityTurnManeuver {
    */
   public void configure(
       NumericalPropagator propagator, SpacecraftState kickedState, GravityTurnParams params) {
-    PropulsionSystem propulsion = vehicle.propulsion();
     AbsoluteDate kickDate = kickedState.getDate();
 
     GravityTurnAttitudeProvider attitudeProvider =
         new GravityTurnAttitudeProvider(kickDate, params.transitionTime(), params.exponent());
     propagator.setAttitudeProvider(attitudeProvider);
 
-    // Burn 1
-    PropulsionSystem propulsion1 = vehicle.getFirstStage().propulsion();
+    // Burn 1 — active stage propulsion
+    PropulsionSystem propulsion1 = activeStage.propulsion();
     ConstantThrustManeuver burn1 =
         new ConstantThrustManeuver(
             kickDate.shiftedBy(1.0e-3),
@@ -129,7 +135,8 @@ public class GravityTurnManeuver {
 
     AbsoluteDate jettisonDate =
         kickDate.shiftedBy(1.0e-3).shiftedBy(params.burn1Duration).shiftedBy(1.0e-3);
-    // Jettison
+    // Jettison — mass drops to the reference mass of all stages above
+    double massAfterJettison = activeStage.massAfterJettison();
     DateDetector jettisonDetector =
         new DateDetector(jettisonDate)
             .withHandler(
@@ -143,13 +150,12 @@ public class GravityTurnManeuver {
                   @Override
                   public SpacecraftState resetState(
                       EventDetector detector, SpacecraftState oldState) {
-                    double newMass = vehicle.getMass() - vehicle.getFirstStage().getMass();
-                    return oldState.withMass(newMass);
+                    return oldState.withMass(massAfterJettison);
                   }
                 });
     propagator.addEventDetector(jettisonDetector);
-    // Burn 2
-    PropulsionSystem propulsion2 = vehicle.getSecondStage().propulsion();
+    // Burn 2 — next stage propulsion (after jettison)
+    PropulsionSystem propulsion2 = nextStage.propulsion();
     ConstantThrustManeuver burn2 =
         new ConstantThrustManeuver(
             jettisonDate.shiftedBy(1.0e-3),
@@ -189,9 +195,9 @@ public class GravityTurnManeuver {
    * @return the burn 1 duration in seconds
    */
   public double getBurn1Duration() {
-    PropulsionSystem prop1 = vehicle.getFirstStage().propulsion();
+    PropulsionSystem prop1 = activeStage.propulsion();
     double massFlowRate1 = prop1.thrust() / (prop1.isp() * Constants.G0_STANDARD_GRAVITY);
-    return (vehicle.getFirstStage().propellantCapacity() - usedAscensionPropellant) / massFlowRate1;
+    return (activeStage.propellantCapacity() - usedAscensionPropellant) / massFlowRate1;
   }
 
   /**
