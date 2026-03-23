@@ -7,6 +7,7 @@ import com.smousseur.orbitlab.app.ApplicationContext;
 import com.smousseur.orbitlab.app.SimulationClock;
 import com.smousseur.orbitlab.app.view.FocusView;
 import com.smousseur.orbitlab.app.view.RenderContext;
+import com.smousseur.orbitlab.app.view.ViewMode;
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.engine.AssetFactory;
 import com.smousseur.orbitlab.engine.scene.PlanetColors;
@@ -79,7 +80,7 @@ public final class PlanetPoseAppState extends BaseAppState {
               () -> onSelectPlanet(body),
               show3d -> sceneGraph.setOrbitVisible(body, !show3d));
       PlanetPresenter presenter = new PlanetPresenter(body, view);
-      presenter.setVisible(true);
+      presenter.setVisible(!body.isSatellite());
 
       bucket.attachChild(view.spatial());
       nearBucket.attachChild(view.nearSpatial());
@@ -102,15 +103,38 @@ public final class PlanetPoseAppState extends BaseAppState {
   @Override
   public void update(float tpf) {
     AbsoluteDate t = clock.now();
+    FocusView focusView = context.focusView();
+    SceneGraph sceneGraph = context.sceneGraph();
 
     Map<SolarSystemBody, PlanetPresenter> planets = context.getPlanets();
-    planets.keySet().stream()
-        .filter(body -> body != SolarSystemBody.SUN)
-        .forEach(
-            body -> {
-              PlanetPresenter presenter = planets.get(body);
-              presenter.updatePose(t);
-            });
+    for (Map.Entry<SolarSystemBody, PlanetPresenter> entry : planets.entrySet()) {
+      SolarSystemBody body = entry.getKey();
+      if (body == SolarSystemBody.SUN) continue;
+
+      PlanetPresenter presenter = entry.getValue();
+
+      if (body.isSatellite()) {
+        boolean visible = isSatelliteVisible(body, focusView.getMode(), focusView.getBody());
+        presenter.setVisible(visible);
+        sceneGraph.setOrbitVisible(body, visible);
+        if (!visible) continue;
+      }
+
+      presenter.updatePose(t);
+    }
+  }
+
+  /**
+   * Returns whether a satellite body should be visible given the current view mode and focus.
+   * Satellites are only visible when the camera is focused on themselves or on their parent body.
+   *
+   * @param body the satellite body
+   * @param mode the current view mode
+   * @param focus the currently focused body
+   * @return true if the satellite should be visible
+   */
+  static boolean isSatelliteVisible(SolarSystemBody body, ViewMode mode, SolarSystemBody focus) {
+    return mode == ViewMode.PLANET && (focus == body || focus == body.parent());
   }
 
   @Override
@@ -154,6 +178,7 @@ public final class PlanetPoseAppState extends BaseAppState {
       case URANUS -> 120.0;
       case NEPTUNE -> 120.0;
       case PLUTO -> 70.0;
+      case MOON -> 150.0;
       case SUN -> 200.0;
     };
   }

@@ -79,6 +79,7 @@ public record EphemerisConfig(
     periods.put(SolarSystemBody.URANUS, 30688.5 * day);
     periods.put(SolarSystemBody.NEPTUNE, 60182.0 * day);
     periods.put(SolarSystemBody.PLUTO, 90560.0 * day);
+    periods.put(SolarSystemBody.MOON, 27.321661 * day);
 
     return new EphemerisConfig(
         600.0, // 10 min step (starter value)

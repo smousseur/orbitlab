@@ -28,6 +28,7 @@ public final class PlanetRadius {
       case URANUS -> 25_362_000;
       case NEPTUNE -> 24_622_000;
       case PLUTO -> 1_188_300;
+      case MOON -> 1_737_400;
       case SUN -> 696_340_000;
     };
   }

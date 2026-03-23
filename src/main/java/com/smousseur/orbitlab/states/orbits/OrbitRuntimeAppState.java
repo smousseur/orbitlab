@@ -130,6 +130,15 @@ public final class OrbitRuntimeAppState extends BaseAppState {
           }
         }
       }
+
+      // For satellites, position the orbit node at the parent body's heliocentric location
+      if (body.isSatellite()) {
+        Spatial parentSpatial = context.getBodySpatial(body.parent());
+        Node orbitNode = orbitLayer.orbitNode(body);
+        if (parentSpatial != null) {
+          orbitNode.setLocalTranslation(parentSpatial.getLocalTranslation());
+        }
+      }
     }
   }
 
@@ -178,14 +187,16 @@ public final class OrbitRuntimeAppState extends BaseAppState {
     // Window [Tc - P/2, Tc + P/2]
     AbsoluteDate start = centerTc.shiftedBy(-periodSeconds / 2.0);
 
-    // Build a Kepler propagator from a PV close to center (fallback usage inside sampleIcrfSafe)
-    double muSun = orekit.body(SolarSystemBody.SUN).getGM();
-    PVCoordinates pvSun0 = source.sampleIcrf(SolarSystemBody.SUN, centerTc).pvIcrf();
-    CartesianOrbit orbitSun = new CartesianOrbit(pvSun0, icrf, centerTc, muSun);
-    KeplerianPropagator sunPropagator = new KeplerianPropagator(orbitSun);
+    // Use the body's parent as orbit center (SUN for planets, parent planet for satellites)
+    SolarSystemBody center = body.parent();
+    double muCenter = orekit.body(center).getGM();
+
+    PVCoordinates pvCenter0 = source.sampleIcrf(center, centerTc).pvIcrf();
+    CartesianOrbit orbitCenter = new CartesianOrbit(pvCenter0, icrf, centerTc, muCenter);
+    KeplerianPropagator centerPropagator = new KeplerianPropagator(orbitCenter);
 
     PVCoordinates pvBodyCenter = source.sampleIcrf(body, centerTc).pvIcrf();
-    Orbit orbit0 = new CartesianOrbit(pvBodyCenter, icrf, centerTc, muSun);
+    Orbit orbit0 = new CartesianOrbit(pvBodyCenter, icrf, centerTc, muCenter);
     KeplerianPropagator propagator = new KeplerianPropagator(orbit0);
 
     Vector3D[] positions = new Vector3D[nPoints];
@@ -193,8 +204,8 @@ public final class OrbitRuntimeAppState extends BaseAppState {
     AbsoluteDate t = start;
     for (int i = 0; i < nPoints; i++) {
       Vector3D pBody = source.sampleIcrfSafe(body, t, propagator);
-      Vector3D pSun = source.sampleIcrfSafe(SolarSystemBody.SUN, t, sunPropagator);
-      positions[i] = pBody.subtract(pSun); // heliocentric meters
+      Vector3D pCenter = source.sampleIcrfSafe(center, t, centerPropagator);
+      positions[i] = pBody.subtract(pCenter); // parent-centric meters
       t = t.shiftedBy(stepSeconds);
     }
 

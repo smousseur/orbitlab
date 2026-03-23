@@ -8,6 +8,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.EnumMap;
 import java.util.Objects;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.hipparchus.geometry.euclidean.threed.Rotation;
 import org.orekit.time.AbsoluteDate;
 import org.orekit.time.TimeScale;
@@ -23,6 +25,8 @@ import org.orekit.utils.PVCoordinates;
  */
 public final class DatasetEphemerisSource
     implements EphemerisSource, PrefetchingEphemerisSource, AutoCloseable {
+
+  private static final Logger logger = LogManager.getLogger(DatasetEphemerisSource.class);
 
   // Dataset coverage (as requested)
   private static final TimeScale TAI = TimeScalesFactory.getTAI();
@@ -57,11 +61,12 @@ public final class DatasetEphemerisSource
       throw new OrbitlabException("Ephemeris dataset directory not found: " + this.datasetDir);
     }
 
-    // Open & index all bodies upfront (fail-fast).
+    // Open & index all bodies upfront; skip bodies whose dataset file is missing.
     for (SolarSystemBody b : SolarSystemBody.values()) {
       Path p = this.datasetDir.resolve(b.name() + ".bin");
       if (!Files.isRegularFile(p)) {
-        throw new OrbitlabException("Missing ephemeris dataset file: " + p);
+        logger.warn("No ephemeris dataset file for {} — body will not be available: {}", b, p);
+        continue;
       }
       try {
         bodyFiles.put(b, BodyFile.open(b, p, chunksInCachePerBody));

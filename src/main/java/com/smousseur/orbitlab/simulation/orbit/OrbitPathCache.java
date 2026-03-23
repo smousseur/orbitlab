@@ -81,33 +81,34 @@ public final class OrbitPathCache {
     double step = orbitWindowConfig.clampStepSeconds(rawStep);
 
     int n = (int) Math.ceil(period / step) + 1;
-    ArrayList<Vector3D> positionsHelio = new ArrayList<>(n + 1);
+    ArrayList<Vector3D> positions = new ArrayList<>(n + 1);
 
     OrekitService orekit = OrekitService.get();
     orekit.initialize();
     Frame icrf = orekit.icrf();
 
-    // Initial heliocentric relative PV (planet - sun) at t0
+    // Use the body's parent as orbit center (SUN for planets, parent planet for satellites)
+    SolarSystemBody center = body.parent();
+    double muCenter = orekit.body(center).getGM();
+
     PVCoordinates pvBody0 = pvSource.sampleIcrf(body, start).pvIcrf();
+    PVCoordinates pvCenter0 = pvSource.sampleIcrf(center, start).pvIcrf();
 
-    PVCoordinates pvSun0 = pvSource.sampleIcrf(SolarSystemBody.SUN, start).pvIcrf();
-
-    // Two-body Kepler propagation around the Sun as fallback computation
-    double muSun = orekit.body(SolarSystemBody.SUN).getGM();
-    CartesianOrbit orbitSun = new CartesianOrbit(pvSun0, icrf, start, muSun);
-    Orbit relOrbit0 = new CartesianOrbit(pvBody0, icrf, start, muSun);
+    // Two-body Kepler propagation around the center as fallback computation
+    CartesianOrbit orbitCenter = new CartesianOrbit(pvCenter0, icrf, start, muCenter);
+    Orbit relOrbit0 = new CartesianOrbit(pvBody0, icrf, start, muCenter);
     KeplerianPropagator propagator = new KeplerianPropagator(relOrbit0);
-    KeplerianPropagator sunPropagator = new KeplerianPropagator(orbitSun);
+    KeplerianPropagator centerPropagator = new KeplerianPropagator(orbitCenter);
 
     // TODO only propagate from the last ephemeris point and not from start date
     AbsoluteDate t = start.shiftedBy(-step * n / 2);
     for (int i = 0; i <= n; i++) {
       Vector3D relPos = pvSource.sampleIcrfSafe(body, t, propagator);
-      Vector3D pSun = pvSource.sampleIcrfSafe(SolarSystemBody.SUN, t, sunPropagator);
-      positionsHelio.add(relPos.subtract(pSun));
+      Vector3D pCenter = pvSource.sampleIcrfSafe(center, t, centerPropagator);
+      positions.add(relPos.subtract(pCenter));
       t = t.shiftedBy(step);
     }
 
-    return new OrbitPath(body, start, end, step, positionsHelio);
+    return new OrbitPath(body, start, end, step, positions);
   }
 }

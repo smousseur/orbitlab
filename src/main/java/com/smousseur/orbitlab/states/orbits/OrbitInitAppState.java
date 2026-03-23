@@ -19,6 +19,8 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /**
  * Application state that loads precomputed orbital path data from disk and builds the
@@ -30,6 +32,7 @@ import java.util.List;
  */
 public class OrbitInitAppState extends BaseAppState {
 
+  private static final Logger logger = LogManager.getLogger(OrbitInitAppState.class);
   private final SceneGraph.OrbitLayer orbitLayer;
   private final EnumSet<SolarSystemBody> bodies;
   private final Path datasetDir = Path.of("dataset", "orbits");
@@ -46,27 +49,30 @@ public class OrbitInitAppState extends BaseAppState {
 
   @Override
   protected void initialize(Application app) {
-    try {
-      for (SolarSystemBody body : bodies) {
+    for (SolarSystemBody body : bodies) {
+      try {
         List<Vector3D> pts = readOrbitData(body);
+        if (pts == null) {
+          continue; // no dataset file for this body — runtime will compute it
+        }
         Geometry orbitGeometry =
             OrbitLineFactory.buildBodyRelativeLineStrip(
                 body, pts, PlanetColors.colorFor(body), 1.f);
         orbitLayer.orbitNode(body).attachChild(orbitGeometry);
+      } catch (IOException e) {
+        logger.warn("Failed to read orbit dataset for {} — skipping: {}", body, e.getMessage());
       }
-    } catch (IOException e) {
-      throw new OrbitlabException("Cannot read orbit dataset: " + e.getMessage());
     }
   }
 
   private List<Vector3D> readOrbitData(SolarSystemBody body) throws IOException {
     Path orbitFile = this.datasetDir.resolve(body.name() + "-orbit.bin");
-    List<Vector3D> results = new ArrayList<>();
     if (!Files.isRegularFile(orbitFile)) {
-      throw new OrbitlabException("Missing orbit dataset file: " + orbitFile);
+      logger.info("No orbit dataset file for {} — will be computed at runtime: {}", body, orbitFile);
+      return null;
     }
+    List<Vector3D> results = new ArrayList<>();
     try (var in = new DataInputStream(new BufferedInputStream(Files.newInputStream(orbitFile)))) {
-
       int count = in.readInt();
       for (int i = 0; i < count; i++) {
         results.add(new Vector3D(in.readDouble(), in.readDouble(), in.readDouble()));
