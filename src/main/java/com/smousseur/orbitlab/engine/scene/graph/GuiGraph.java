@@ -14,11 +14,13 @@ public class GuiGraph {
   private final Node guiFrame = new Node("guiFrame");
   private final Node timelineNode = new Node("timelineNode");
   private final Node planetBillboardsNode = new Node("planetBillboardsNode");
+  private final Node telemetryNode = new Node("telemetryNode");
 
   public GuiGraph() {
     guiRoot.attachChild(guiFrame);
     guiFrame.attachChild(timelineNode);
     guiFrame.attachChild(planetBillboardsNode);
+    guiFrame.attachChild(telemetryNode);
   }
 
   /**
@@ -58,5 +60,14 @@ public class GuiGraph {
    */
   public Node getPlanetBillboardsNode() {
     return planetBillboardsNode;
+  }
+
+  /**
+   * Returns the node designated for the mission telemetry widget.
+   *
+   * @return the telemetry node
+   */
+  public Node getTelemetryNode() {
+    return telemetryNode;
   }
 }

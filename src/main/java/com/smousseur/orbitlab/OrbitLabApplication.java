@@ -23,10 +23,11 @@ import com.smousseur.orbitlab.states.orbits.OrbitRuntimeAppState;
 import com.smousseur.orbitlab.states.scene.PlanetHudMarkersAppState;
 import com.smousseur.orbitlab.states.scene.PlanetPoseAppState;
 import com.smousseur.orbitlab.states.mission.MissionOrchestratorAppState;
+import com.smousseur.orbitlab.states.mission.TelemetryWidgetAppState;
 import com.smousseur.orbitlab.states.scene.SolarSystemSceneAppState;
 import com.smousseur.orbitlab.states.time.SimulationClockAppState;
 import com.smousseur.orbitlab.states.time.TimelineWidgetAppState;
-import com.smousseur.orbitlab.ui.clock.TimelineStyles;
+import com.smousseur.orbitlab.ui.AppStyles;
 
 /**
  * Main entry point for the OrbitLab application.
@@ -63,7 +64,7 @@ public class OrbitLabApplication extends SimpleApplication {
     BaseStyles.loadGlassStyle();
     GuiGlobals.getInstance().getStyles().setDefaultStyle("base");
     AssetFactory.init(assetManager);
-    TimelineStyles.init(assetManager);
+    AppStyles.init(assetManager);
 
     ApplicationContext applicationContext = new ApplicationContext(rootNode, guiNode);
     stateManager.attach(new InitAppState());
@@ -77,6 +78,7 @@ public class OrbitLabApplication extends SimpleApplication {
     stateManager.attach(new OrbitInitAppState(applicationContext));
     stateManager.attach(new OrbitRuntimeAppState(applicationContext));
     stateManager.attach(new TimelineWidgetAppState(applicationContext));
+    stateManager.attach(new TelemetryWidgetAppState(applicationContext));
     stateManager.attach(new LightningAppState(applicationContext));
     stateManager.attach(new MissionOrchestratorAppState(applicationContext));
 

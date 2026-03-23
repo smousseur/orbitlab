@@ -14,6 +14,7 @@ import com.smousseur.orbitlab.app.OrekitTime;
 import com.smousseur.orbitlab.app.SimulationClock;
 import com.smousseur.orbitlab.app.ApplicationContext;
 import com.smousseur.orbitlab.app.converters.TimeConverter;
+import com.smousseur.orbitlab.ui.AppStyles;
 import java.util.Objects;
 
 /**
@@ -47,7 +48,7 @@ public class TimelineWidget implements AutoCloseable {
   };
 
   // Simple tuning knob (pixels)
-  private static final float bottomMarginPx = 16f;
+  private static final float bottomMarginPx = AppStyles.HUD_MARGIN_PX;
 
   private final SimulationClock clock;
 
