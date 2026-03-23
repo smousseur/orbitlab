@@ -2,8 +2,10 @@ package com.smousseur.orbitlab.simulation.mission.vehicle;
 
 /**
  * Represents a vehicle in the mission simulation. A vehicle has a dry mass, propellant capacity,
- * and a propulsion system. Vehicles can be single-stage or multi-stage (via {@link VehicleStack}),
- * and support stage retrieval and jettison operations.
+ * and a propulsion system. Vehicles can be single-stage or multi-stage (via {@link VehicleStack}).
+ *
+ * <p>The active stage is resolved dynamically via {@link #resolveActiveStage(double)} based on the
+ * current spacecraft mass, eliminating the need for explicit stage-index lookups.
  */
 public interface Vehicle {
   /**
@@ -21,33 +23,11 @@ public interface Vehicle {
   double propellantCapacity();
 
   /**
-   * Returns the first stage of this vehicle. For single-stage vehicles, returns itself.
+   * Returns the propulsion system of this vehicle or its active stage.
    *
-   * @return the first stage vehicle
+   * @return the propulsion system
    */
-  default Vehicle getFirstStage() {
-    return getStage(0);
-  }
-
-  /**
-   * Returns the second stage of this vehicle. For single-stage vehicles, returns itself.
-   *
-   * @return the second stage vehicle
-   */
-  default Vehicle getSecondStage() {
-    return getStage(1);
-  }
-
-  /**
-   * Returns the stage at the given index. For single-stage vehicles, returns itself regardless of
-   * the index.
-   *
-   * @param index the zero-based stage index
-   * @return the vehicle representing the requested stage
-   */
-  default Vehicle getStage(int index) {
-    return this;
-  }
+  PropulsionSystem propulsion();
 
   /**
    * Returns the total mass of this vehicle (dry mass plus propellant).
@@ -59,37 +39,14 @@ public interface Vehicle {
   }
 
   /**
-   * Returns the total dry mass of all stages combined. For stacked vehicles, this excludes the
-   * current stage's propellant but includes all other mass.
+   * Resolves the active stage based on the current spacecraft mass. For single-stage vehicles,
+   * always returns itself. For multi-stage vehicles ({@link VehicleStack}), determines which stage
+   * is active by comparing the current mass against cumulative stage mass thresholds.
    *
-   * @return the full dry mass in kilograms
+   * @param currentMass the current spacecraft mass from SpacecraftState
+   * @return the active stage information
    */
-  default double getFullDryMass() {
-    return dryMass();
-  }
-
-  /**
-   * Returns the propellant mass of the current (first) stage only.
-   *
-   * @return the current stage propellant mass in kilograms
-   */
-  default double getCurrentStagePropellantMass() {
-    return propellantCapacity();
-  }
-
-  /**
-   * Returns the propulsion system of this vehicle or its active stage.
-   *
-   * @return the propulsion system
-   */
-  PropulsionSystem propulsion();
-
-  /**
-   * Returns the dry mass of the first stage only.
-   *
-   * @return the first stage dry mass in kilograms
-   */
-  default double getFirstStageDryMass() {
-    return dryMass();
+  default ActiveStageInfo resolveActiveStage(double currentMass) {
+    return new ActiveStageInfo(0, this, 0, 0);
   }
 }

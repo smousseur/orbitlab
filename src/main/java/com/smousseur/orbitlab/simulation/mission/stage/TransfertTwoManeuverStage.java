@@ -9,6 +9,7 @@ import com.smousseur.orbitlab.simulation.mission.maneuver.TransfertTwoManeuver.B
 import com.smousseur.orbitlab.simulation.mission.maneuver.TransfertTwoManeuver.ResolvedBurn2;
 import com.smousseur.orbitlab.simulation.mission.optimizer.OptimizationResult;
 import com.smousseur.orbitlab.simulation.mission.optimizer.problems.TransferTwoManeuverProblem;
+import com.smousseur.orbitlab.simulation.mission.vehicle.ActiveStageInfo;
 import org.hipparchus.ode.events.Action;
 import org.orekit.propagation.SpacecraftState;
 import org.orekit.propagation.events.DateDetector;
@@ -71,15 +72,16 @@ public class TransfertTwoManeuverStage extends MissionStage
   @Override
   public TransferTwoManeuverProblem buildProblem(Mission mission) {
     TransfertTwoManeuver maneuver = new TransfertTwoManeuver(mission.getVehicle(), targetAltitude);
-    // Min viable mass after all transfer burns = dry mass of remaining stages (stage 2 + spacecraft)
-    // Vehicle model still holds all stages at this point, so subtract the already-jettisoned stage 1
-    double vehicleMinMass =
-        mission.getVehicle().dryMass() - mission.getVehicle().getFirstStage().dryMass();
+    // Resolve the active stage from the current spacecraft mass (stage 1 is already jettisoned)
+    ActiveStageInfo activeStage =
+        mission.getVehicle().resolveActiveStage(mission.getCurrentState().getMass());
+    // Min viable mass = dry mass of active stage + dry mass of all stages above
+    double vehicleMinMass = activeStage.remainingDryMass();
     return new TransferTwoManeuverProblem(
         maneuver,
         mission.getCurrentState(),
         targetAltitude,
-        mission.getVehicle().getSecondStage().propulsion(),
+        activeStage.propulsion(),
         vehicleMinMass);
   }
 
