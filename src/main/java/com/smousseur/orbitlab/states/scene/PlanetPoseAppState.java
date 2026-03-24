@@ -7,7 +7,6 @@ import com.smousseur.orbitlab.app.ApplicationContext;
 import com.smousseur.orbitlab.app.SimulationClock;
 import com.smousseur.orbitlab.app.view.FocusView;
 import com.smousseur.orbitlab.app.view.RenderContext;
-import com.smousseur.orbitlab.app.view.ViewMode;
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.engine.AssetFactory;
 import com.smousseur.orbitlab.engine.scene.PlanetColors;
@@ -114,7 +113,7 @@ public final class PlanetPoseAppState extends BaseAppState {
       PlanetPresenter presenter = entry.getValue();
 
       if (body.isSatellite()) {
-        boolean visible = isSatelliteVisible(body, focusView.getMode(), focusView.getBody());
+        boolean visible = focusView.isSatelliteVisible(body);
         presenter.setVisible(visible);
         sceneGraph.setOrbitVisible(body, visible);
         if (!visible) continue;
@@ -122,19 +121,6 @@ public final class PlanetPoseAppState extends BaseAppState {
 
       presenter.updatePose(t);
     }
-  }
-
-  /**
-   * Returns whether a satellite body should be visible given the current view mode and focus.
-   * Satellites are only visible when the camera is focused on themselves or on their parent body.
-   *
-   * @param body the satellite body
-   * @param mode the current view mode
-   * @param focus the currently focused body
-   * @return true if the satellite should be visible
-   */
-  static boolean isSatelliteVisible(SolarSystemBody body, ViewMode mode, SolarSystemBody focus) {
-    return mode == ViewMode.PLANET && (focus == body || focus == body.parent());
   }
 
   @Override
