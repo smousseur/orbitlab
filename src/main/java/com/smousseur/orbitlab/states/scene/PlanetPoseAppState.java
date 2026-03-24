@@ -79,7 +79,7 @@ public final class PlanetPoseAppState extends BaseAppState {
               () -> onSelectPlanet(body),
               show3d -> sceneGraph.setOrbitVisible(body, !show3d));
       PlanetPresenter presenter = new PlanetPresenter(body, view);
-      presenter.setVisible(true);
+      presenter.setVisible(!body.isSatellite());
 
       bucket.attachChild(view.spatial());
       nearBucket.attachChild(view.nearSpatial());
@@ -102,15 +102,25 @@ public final class PlanetPoseAppState extends BaseAppState {
   @Override
   public void update(float tpf) {
     AbsoluteDate t = clock.now();
+    FocusView focusView = context.focusView();
+    SceneGraph sceneGraph = context.sceneGraph();
 
     Map<SolarSystemBody, PlanetPresenter> planets = context.getPlanets();
-    planets.keySet().stream()
-        .filter(body -> body != SolarSystemBody.SUN)
-        .forEach(
-            body -> {
-              PlanetPresenter presenter = planets.get(body);
-              presenter.updatePose(t);
-            });
+    for (Map.Entry<SolarSystemBody, PlanetPresenter> entry : planets.entrySet()) {
+      SolarSystemBody body = entry.getKey();
+      if (body == SolarSystemBody.SUN) continue;
+
+      PlanetPresenter presenter = entry.getValue();
+
+      if (body.isSatellite()) {
+        boolean visible = focusView.isSatelliteVisible(body);
+        presenter.setVisible(visible);
+        sceneGraph.setOrbitVisible(body, visible);
+        if (!visible) continue;
+      }
+
+      presenter.updatePose(t);
+    }
   }
 
   @Override
@@ -154,6 +164,7 @@ public final class PlanetPoseAppState extends BaseAppState {
       case URANUS -> 120.0;
       case NEPTUNE -> 120.0;
       case PLUTO -> 70.0;
+      case MOON -> 150.0;
       case SUN -> 200.0;
     };
   }

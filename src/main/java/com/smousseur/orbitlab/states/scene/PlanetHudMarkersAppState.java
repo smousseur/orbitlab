@@ -4,7 +4,9 @@ import com.jme3.app.Application;
 import com.jme3.app.state.BaseAppState;
 import com.jme3.renderer.Camera;
 import com.smousseur.orbitlab.app.ApplicationContext;
+import com.smousseur.orbitlab.app.view.FocusView;
 import com.smousseur.orbitlab.core.SolarSystemBody;
+import com.smousseur.orbitlab.engine.scene.body.BodyView;
 import com.smousseur.orbitlab.engine.scene.planet.PlanetPresenter;
 import java.util.Map;
 
@@ -21,6 +23,7 @@ import java.util.Map;
  * screen coordinates.
  */
 public class PlanetHudMarkersAppState extends BaseAppState {
+  private final FocusView focusView;
   private Camera camera;
 
   /** Dedicated camera clone used only for screen-space projection of distant icons. */
@@ -34,6 +37,7 @@ public class PlanetHudMarkersAppState extends BaseAppState {
    * @param context the application context providing the planet presenter registry
    */
   public PlanetHudMarkersAppState(ApplicationContext context) {
+    focusView = context.focusView();
     planets = context.getPlanets();
   }
 
@@ -57,9 +61,13 @@ public class PlanetHudMarkersAppState extends BaseAppState {
     // Use a far plane large enough to encompass the whole solar system for projection
     projectionCam.setFrustumFar(Math.max(camera.getFrustumFar(), 50_000f));
 
-    planets.values().stream()
-        .map(PlanetPresenter::view)
-        .forEach(view -> view.updateScreen(projectionCam));
+    for (PlanetPresenter presenter : planets.values()) {
+      SolarSystemBody body = presenter.body();
+      BodyView view = presenter.view();
+      if (!body.isSatellite() || focusView.isSatelliteVisible(body)) {
+        view.updateScreen(projectionCam);
+      }
+    }
   }
 
   @Override

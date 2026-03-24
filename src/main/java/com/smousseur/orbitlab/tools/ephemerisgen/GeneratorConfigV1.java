@@ -74,7 +74,8 @@ public record GeneratorConfigV1(
             SolarSystemBody.SATURN,
             SolarSystemBody.URANUS,
             SolarSystemBody.NEPTUNE,
-            SolarSystemBody.PLUTO);
+            SolarSystemBody.PLUTO,
+            SolarSystemBody.MOON);
 
     // Dataset v1 time model:
     // T_START = 1949-12-31T00:00:00 TAI => offset 0.
@@ -100,6 +101,7 @@ public record GeneratorConfigV1(
     p.put(SolarSystemBody.URANUS, new BodyGenerationParams(345_600.0, 172_800.0, chunk30d));
     p.put(SolarSystemBody.NEPTUNE, new BodyGenerationParams(604_800.0, 345_600.0, chunk30d));
     p.put(SolarSystemBody.PLUTO, new BodyGenerationParams(1_209_600.0, 604_800.0, chunk30d));
+    p.put(SolarSystemBody.MOON, new BodyGenerationParams(120.0, 600.0, chunk30d));
 
     return new GeneratorConfigV1(
         orekitZip,

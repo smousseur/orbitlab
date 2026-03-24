@@ -99,4 +99,15 @@ public class FocusView {
   public void setCameraDistance(float cameraDistance) {
     this.cameraDistance = cameraDistance;
   }
+
+  /**
+   * Returns whether a satellite body should be visible given the current view mode and focus.
+   * Satellites are only visible when the camera is focused on themselves or on their parent body.
+   *
+   * @param body the satellite body
+   * @return true if the satellite should be visible
+   */
+  public boolean isSatelliteVisible(SolarSystemBody body) {
+    return mode == ViewMode.PLANET && (this.body == body || this.body == body.parent());
+  }
 }

@@ -197,6 +197,7 @@ public final class OrekitService {
       case URANUS -> CelestialBodyFactory.getUranus();
       case NEPTUNE -> CelestialBodyFactory.getNeptune();
       case PLUTO -> CelestialBodyFactory.getPluto();
+      case MOON -> CelestialBodyFactory.getMoon();
     };
   }
 

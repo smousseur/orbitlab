@@ -5,7 +5,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.EnumMap;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
@@ -50,8 +52,9 @@ public final class EphemerisDatasetGeneratorMain {
   public static void main(String[] args) throws Exception {
     configureLogging();
 
-    if (args.length != 2) {
-      System.err.println("Usage: EphemerisDatasetGeneratorMain <orekit-data.zip> <outputDir>");
+    if (args.length < 2 || args.length > 3) {
+      System.err.println(
+          "Usage: EphemerisDatasetGeneratorMain <orekit-data.zip> <outputDir> [BODY1,BODY2,...]");
       System.exit(2);
       return;
     }
@@ -73,6 +76,11 @@ public final class EphemerisDatasetGeneratorMain {
     GeneratorConfigV1 baseCfg = GeneratorConfigV1.defaultV1(orekitZip, outputDir);
 
     GeneratorConfigV1 cfg = withPvFirstUnder10GoParams(baseCfg);
+
+    // Optional body filter: only generate the specified bodies
+    if (args.length == 3) {
+      cfg = filterBodies(cfg, args[2]);
+    }
 
     logConfigSummary(cfg);
     logRoughSizeEstimate(cfg);
@@ -139,6 +147,7 @@ public final class EphemerisDatasetGeneratorMain {
     map.put(SolarSystemBody.URANUS, new BodyGenerationParams(3600.0, 900.0, chunkDur));
     map.put(SolarSystemBody.NEPTUNE, new BodyGenerationParams(7200.0, 1800.0, chunkDur));
     map.put(SolarSystemBody.PLUTO, new BodyGenerationParams(14400.0, 7200.0, chunkDur));
+    map.put(SolarSystemBody.MOON, new BodyGenerationParams(60.0, 300.0, chunkDur));
 
     List<SolarSystemBody> bodies =
         List.of(
@@ -151,7 +160,8 @@ public final class EphemerisDatasetGeneratorMain {
             SolarSystemBody.SATURN,
             SolarSystemBody.URANUS,
             SolarSystemBody.NEPTUNE,
-            SolarSystemBody.PLUTO);
+            SolarSystemBody.PLUTO,
+            SolarSystemBody.MOON);
 
     // Record "copy with modifications": rewrite the config with our params & fixed body order.
     return new GeneratorConfigV1(
@@ -167,6 +177,39 @@ public final class EphemerisDatasetGeneratorMain {
         baseCfg.maxChunksInFlightGlobal(),
         baseCfg.zstdLevel(),
         map);
+  }
+
+  private static GeneratorConfigV1 filterBodies(GeneratorConfigV1 cfg, String bodyNames) {
+    EnumSet<SolarSystemBody> requested = EnumSet.noneOf(SolarSystemBody.class);
+    for (String name : bodyNames.split(",")) {
+      requested.add(SolarSystemBody.valueOf(name.trim().toUpperCase(Locale.ROOT)));
+    }
+
+    List<SolarSystemBody> filtered =
+        cfg.bodiesInOrder().stream().filter(requested::contains).toList();
+
+    EnumMap<SolarSystemBody, BodyGenerationParams> filteredParams =
+        new EnumMap<>(SolarSystemBody.class);
+    for (SolarSystemBody b : filtered) {
+      BodyGenerationParams p = cfg.paramsByBody().get(b);
+      if (p != null) filteredParams.put(b, p);
+    }
+
+    LOG.info(() -> "Body filter active — generating only: " + filtered);
+
+    return new GeneratorConfigV1(
+        cfg.orekitDataZipPath(),
+        cfg.orekitDataIdSha256Hex(),
+        cfg.outputDir(),
+        filtered,
+        cfg.datasetStartTaiOffsetSeconds(),
+        cfg.datasetEndTaiOffsetSecondsExclusive(),
+        cfg.computeThreads(),
+        cfg.maxBodiesInParallel(),
+        cfg.maxChunksInFlightPerBody(),
+        cfg.maxChunksInFlightGlobal(),
+        cfg.zstdLevel(),
+        filteredParams);
   }
 
   private static void logConfigSummary(GeneratorConfigV1 cfg) {

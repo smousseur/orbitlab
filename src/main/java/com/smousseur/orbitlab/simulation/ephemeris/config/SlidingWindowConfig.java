@@ -156,6 +156,7 @@ public record SlidingWindowConfig(
     steps.put(SolarSystemBody.URANUS, 4 * 86400.0);
     steps.put(SolarSystemBody.NEPTUNE, 7 * 86400.0);
     steps.put(SolarSystemBody.PLUTO, 14 * 86400.0);
+    steps.put(SolarSystemBody.MOON, 1800.0);
 
     return new SlidingWindowConfig(2_000_000.0, 10.0, 8, 2_000, 0.25, steps);
   }

@@ -28,6 +28,7 @@ public final class PlanetColors {
       case URANUS -> new ColorRGBA(0.50f, 0.90f, 0.90f, 1.0f);
       case NEPTUNE -> new ColorRGBA(0.30f, 0.45f, 0.95f, 1.0f);
       case PLUTO -> new ColorRGBA(0.80f, 0.75f, 0.70f, 1.0f);
+      case MOON -> new ColorRGBA(0.75f, 0.75f, 0.75f, 1.0f);
       case SUN -> new ColorRGBA(1.00f, 0.95f, 0.50f, 1.0f);
     };
   }

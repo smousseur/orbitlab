@@ -319,6 +319,7 @@ final class EphemerisDatasetFileSmokeTest {
           case URANUS -> CelestialBodyFactory.getUranus();
           case NEPTUNE -> CelestialBodyFactory.getNeptune();
           case PLUTO -> CelestialBodyFactory.getPluto();
+          case MOON -> CelestialBodyFactory.getMoon();
         };
     Frame bodyFrame = body.getBodyOrientedFrame();
 
@@ -445,6 +446,7 @@ final class EphemerisDatasetFileSmokeTest {
           case URANUS -> CelestialBodyFactory.getUranus();
           case NEPTUNE -> CelestialBodyFactory.getNeptune();
           case PLUTO -> CelestialBodyFactory.getPluto();
+          case MOON -> CelestialBodyFactory.getMoon();
         };
     Frame bodyFrame = body.getBodyOrientedFrame();
 

@@ -61,7 +61,8 @@ public record SimulationConfig(
             SolarSystemBody.SATURN,
             SolarSystemBody.URANUS,
             SolarSystemBody.NEPTUNE,
-            SolarSystemBody.PLUTO),
+            SolarSystemBody.PLUTO,
+            SolarSystemBody.MOON),
         EphemerisConfig.defaultSolarSystem(),
         SlidingWindowConfig.defaultSolarSystem(),
         OrbitWindowConfig.defaultSolarSystem());

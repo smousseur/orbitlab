@@ -4,27 +4,30 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Enumeration of the major solar system bodies supported by the simulation.
+ * Enumeration of the solar system bodies supported by the simulation.
  *
- * <p>Each body has a human-readable display name used in the UI and logging. The enum values
- * correspond to the celestial bodies for which Orekit can compute ephemeris data.
+ * <p>Each body has a human-readable display name and an optional parent body representing the
+ * primary it orbits. Planets orbit the Sun; natural satellites orbit their parent planet.
  */
 public enum SolarSystemBody {
-  SUN("Sun"),
-  MERCURY("Mercury"),
-  VENUS("Venus"),
-  EARTH("Earth"),
-  MARS("Mars"),
-  JUPITER("Jupiter"),
-  SATURN("Saturn"),
-  URANUS("Uranus"),
-  NEPTUNE("Neptune"),
-  PLUTO("Pluto");
+  SUN("Sun", null),
+  MERCURY("Mercury", SUN),
+  VENUS("Venus", SUN),
+  EARTH("Earth", SUN),
+  MARS("Mars", SUN),
+  JUPITER("Jupiter", SUN),
+  SATURN("Saturn", SUN),
+  URANUS("Uranus", SUN),
+  NEPTUNE("Neptune", SUN),
+  PLUTO("Pluto", SUN),
+  MOON("Moon", EARTH);
 
   private final String displayName;
+  private final SolarSystemBody parent;
 
-  SolarSystemBody(String displayName) {
+  SolarSystemBody(String displayName, SolarSystemBody parent) {
     this.displayName = Objects.requireNonNull(displayName, "displayName");
+    this.parent = parent;
   }
 
   /**
@@ -34,5 +37,23 @@ public enum SolarSystemBody {
    */
   public String displayName() {
     return displayName;
+  }
+
+  /**
+   * Returns the parent body that this body orbits, or {@code null} for the Sun.
+   *
+   * @return the parent body, or {@code null} if this is the Sun
+   */
+  public SolarSystemBody parent() {
+    return parent;
+  }
+
+  /**
+   * Returns {@code true} if this body is a natural satellite (orbits a planet, not the Sun).
+   *
+   * @return {@code true} for satellites like the Moon, {@code false} for planets and the Sun
+   */
+  public boolean isSatellite() {
+    return parent != null && parent != SUN;
   }
 }

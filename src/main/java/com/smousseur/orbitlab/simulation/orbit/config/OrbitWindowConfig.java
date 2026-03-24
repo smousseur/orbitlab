@@ -76,6 +76,7 @@ public record OrbitWindowConfig(
     points.put(SolarSystemBody.URANUS, 4096);
     points.put(SolarSystemBody.NEPTUNE, 4096);
     points.put(SolarSystemBody.PLUTO, 4096);
+    points.put(SolarSystemBody.MOON, 4096);
 
     return new OrbitWindowConfig(points, 512, 64, 2 * 86400, 0.25);
   }
