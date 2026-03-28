@@ -3,6 +3,7 @@ package com.smousseur.orbitlab.ui;
 import com.jme3.asset.AssetManager;
 import com.jme3.math.ColorRGBA;
 import com.smousseur.orbitlab.ui.clock.TimelineStyles;
+import com.smousseur.orbitlab.ui.mission.MissionPanelStyles;
 import com.smousseur.orbitlab.ui.telemetry.TelemetryStyles;
 
 /**
@@ -49,5 +50,6 @@ public final class AppStyles {
   public static void init(AssetManager assetManager) {
     TimelineStyles.init(assetManager);
     TelemetryStyles.init(assetManager);
+    MissionPanelStyles.init(assetManager);
   }
 }
