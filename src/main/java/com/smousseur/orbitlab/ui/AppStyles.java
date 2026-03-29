@@ -3,6 +3,7 @@ package com.smousseur.orbitlab.ui;
 import com.jme3.asset.AssetManager;
 import com.jme3.math.ColorRGBA;
 import com.smousseur.orbitlab.ui.clock.TimelineStyles;
+import com.smousseur.orbitlab.ui.mission.MissionPanelStyles;
 import com.smousseur.orbitlab.ui.telemetry.TelemetryStyles;
 
 /**
@@ -31,6 +32,40 @@ public final class AppStyles {
   public static final ColorRGBA HUD_SLIDER_THUMB = new ColorRGBA(0.6f, 0.8f, 0.8f, 0f);
 
   // -------------------------------------------------------------------------
+  // Ice Blue palette — modern, transparent, blue-toned
+  // -------------------------------------------------------------------------
+
+  /** Main panel background — deep blue, fairly transparent. */
+  public static final ColorRGBA ICE_PANEL_BG = new ColorRGBA(0.08f, 0.12f, 0.20f, 0.75f);
+
+  /** Lighter panel / row background. */
+  public static final ColorRGBA ICE_PANEL_BG_LIGHT = new ColorRGBA(0.12f, 0.18f, 0.28f, 0.60f);
+
+  /** Selected row highlight. */
+  public static final ColorRGBA ICE_ROW_SELECTED = new ColorRGBA(0.20f, 0.45f, 0.70f, 0.80f);
+
+  /** Primary accent — buttons, titles. */
+  public static final ColorRGBA ICE_ACCENT = new ColorRGBA(0.30f, 0.65f, 0.90f, 1.0f);
+
+  /** Danger action (delete). */
+  public static final ColorRGBA ICE_DANGER = new ColorRGBA(0.90f, 0.35f, 0.35f, 1.0f);
+
+  /** Success action (launch). */
+  public static final ColorRGBA ICE_SUCCESS = new ColorRGBA(0.30f, 0.80f, 0.55f, 1.0f);
+
+  /** Warning action (optimize). */
+  public static final ColorRGBA ICE_WARNING = new ColorRGBA(0.95f, 0.75f, 0.30f, 1.0f);
+
+  /** Primary text colour — near-white with blue tint. */
+  public static final ColorRGBA ICE_TEXT_PRIMARY = new ColorRGBA(0.90f, 0.94f, 0.98f, 1.0f);
+
+  /** Secondary text — muted blue-grey. */
+  public static final ColorRGBA ICE_TEXT_SECONDARY = new ColorRGBA(0.55f, 0.65f, 0.75f, 1.0f);
+
+  /** Thin separator / border colour. */
+  public static final ColorRGBA ICE_BORDER = new ColorRGBA(0.30f, 0.40f, 0.55f, 0.40f);
+
+  // -------------------------------------------------------------------------
   // HUD layout constants
   // -------------------------------------------------------------------------
 
@@ -49,5 +84,6 @@ public final class AppStyles {
   public static void init(AssetManager assetManager) {
     TimelineStyles.init(assetManager);
     TelemetryStyles.init(assetManager);
+    MissionPanelStyles.init(assetManager);
   }
 }
