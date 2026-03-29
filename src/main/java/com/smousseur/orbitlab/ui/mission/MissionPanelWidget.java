@@ -198,8 +198,8 @@ public class MissionPanelWidget implements AutoCloseable {
       if (isSelected) {
         row.setBackground(MissionPanelStyles.createGradient(AppStyles.ICE_ROW_SELECTED));
       }
-      row.setInsetsComponent(new InsetsComponent(new Insets3f(3, 6, 3, 6)));
-      row.setPreferredSize(new Vector3f(PANEL_WIDTH, 0, 0));
+      row.setPreferredSize(new Vector3f(PANEL_WIDTH, 24, 0));
+      row.setInsetsComponent(new InsetsComponent(new Insets3f(2, 6, 2, 6)));
 
       // Name label — fixed width for alignment
       Label nameLabel = row.addChild(new Label(name, MissionPanelStyles.STYLE));
