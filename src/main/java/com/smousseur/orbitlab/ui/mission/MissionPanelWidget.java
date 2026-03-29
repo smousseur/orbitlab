@@ -195,9 +195,10 @@ public class MissionPanelWidget implements AutoCloseable {
       // Row container — no style to avoid nested borders; gradient only when selected
       Container row =
           listContainer.addChild(new Container(new BoxLayout(Axis.X, FillMode.None)));
-      if (isSelected) {
-        row.setBackground(MissionPanelStyles.createGradient(AppStyles.ICE_ROW_SELECTED));
-      }
+      row.setBackground(
+          isSelected
+              ? MissionPanelStyles.createGradient(AppStyles.ICE_ROW_SELECTED)
+              : MissionPanelStyles.createGradient(new ColorRGBA(0, 0, 0, 0)));
       row.setPreferredSize(new Vector3f(PANEL_WIDTH, 24, 0));
       row.setInsetsComponent(new InsetsComponent(new Insets3f(2, 6, 2, 6)));
 
