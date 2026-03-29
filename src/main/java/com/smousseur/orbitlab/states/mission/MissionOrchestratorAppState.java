@@ -7,6 +7,7 @@ import com.jme3.renderer.Camera;
 import com.smousseur.orbitlab.app.ApplicationContext;
 import com.smousseur.orbitlab.app.view.RenderContext;
 import com.smousseur.orbitlab.core.SolarSystemBody;
+import com.smousseur.orbitlab.engine.events.EventBus;
 import com.smousseur.orbitlab.simulation.mission.MissionContext;
 import com.smousseur.orbitlab.simulation.mission.MissionEntry;
 import com.smousseur.orbitlab.simulation.mission.MissionStatus;
@@ -71,6 +72,8 @@ public final class MissionOrchestratorAppState extends BaseAppState {
 
   @Override
   public void update(float tpf) {
+    pollMissionActions();
+
     MissionContext missionContext = context.missionContext();
     Camera cam = getApplication().getCamera();
 
@@ -114,6 +117,28 @@ public final class MissionOrchestratorAppState extends BaseAppState {
       }
       return false;
     });
+  }
+
+  private void pollMissionActions() {
+    EventBus bus = context.eventBus();
+    EventBus.MissionActionRequest request;
+    while ((request = bus.pollMissionAction()) != null) {
+      String name = request.missionName();
+      switch (request.action()) {
+        case OPTIMIZE ->
+            context.missionContext().findMission(name).ifPresent(this::submitForOptimization);
+        case START ->
+            context.missionContext().findMission(name).ifPresent(this::startMission);
+        case DELETE -> {
+          MissionRenderer renderer = renderers.remove(name);
+          if (renderer != null) {
+            renderer.cleanup();
+          }
+          context.missionContext().removeMission(name);
+          logger.info("Mission '{}' deleted", name);
+        }
+      }
+    }
   }
 
   /**

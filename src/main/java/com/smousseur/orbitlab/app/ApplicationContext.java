@@ -5,7 +5,7 @@ import com.jme3.scene.Spatial;
 import com.smousseur.orbitlab.app.view.FocusView;
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.engine.EngineConfig;
-import com.smousseur.orbitlab.engine.events.OrbitEventBus;
+import com.smousseur.orbitlab.engine.events.EventBus;
 import com.smousseur.orbitlab.engine.scene.graph.GuiGraph;
 import com.smousseur.orbitlab.engine.scene.graph.SceneGraph;
 import com.smousseur.orbitlab.engine.scene.body.BodyView;
@@ -26,7 +26,7 @@ public class ApplicationContext {
   private final EngineConfig engineConfig = EngineConfig.defaultSolarSystem();
   private final SimulationConfig config;
   private final SimulationClock clock;
-  private final OrbitEventBus orbitBus;
+  private final EventBus eventBus;
   private final SceneGraph sceneGraph;
   private final GuiGraph guiGraph;
   private final Map<SolarSystemBody, PlanetPresenter> planets =
@@ -50,7 +50,7 @@ public class ApplicationContext {
 
   private ApplicationContext() {
     this.config = SimulationConfig.defaultSolarSystem();
-    this.orbitBus = new OrbitEventBus();
+    this.eventBus = new EventBus();
     this.clock = new SimulationClock(config.computeClockStart());
     this.sceneGraph = new SceneGraph();
     this.guiGraph = new GuiGraph();
@@ -77,12 +77,12 @@ public class ApplicationContext {
   }
 
   /**
-   * Returns the event bus used for inter-component communication.
+   * Returns the event bus used for asynchronous inter-state communication.
    *
-   * @return the orbit event bus
+   * @return the application event bus
    */
-  public OrbitEventBus orbitBus() {
-    return orbitBus;
+  public EventBus eventBus() {
+    return eventBus;
   }
 
   /**
