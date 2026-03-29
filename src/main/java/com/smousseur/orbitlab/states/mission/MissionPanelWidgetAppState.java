@@ -3,13 +3,19 @@ package com.smousseur.orbitlab.states.mission;
 import com.jme3.app.Application;
 import com.jme3.app.state.BaseAppState;
 import com.smousseur.orbitlab.app.ApplicationContext;
+import com.smousseur.orbitlab.simulation.mission.Mission;
+import com.smousseur.orbitlab.simulation.mission.MissionContext;
+import com.smousseur.orbitlab.simulation.mission.MissionStatus;
 import com.smousseur.orbitlab.ui.mission.MissionPanelWidget;
+import java.util.List;
+import org.orekit.propagation.SpacecraftState;
+import org.orekit.time.AbsoluteDate;
 
 /**
  * Application state that manages the mission panel GUI widget.
  *
- * <p>Creates and lays out a {@link MissionPanelWidget} during initialization, updates it each
- * frame to keep the mission list current, and properly closes the widget on cleanup.
+ * <p>Creates and lays out a {@link MissionPanelWidget} during initialization, updates it each frame
+ * to keep the mission list current, and properly closes the widget on cleanup.
  */
 public final class MissionPanelWidgetAppState extends BaseAppState {
 
@@ -23,6 +29,11 @@ public final class MissionPanelWidgetAppState extends BaseAppState {
    */
   public MissionPanelWidgetAppState(ApplicationContext context) {
     this.context = context;
+    MissionContext missionContext = context.missionContext();
+    missionContext.addMission(new DummyMission("LEO 400km", MissionStatus.RUNNING));
+    missionContext.addMission(new DummyMission("LEO 185km", MissionStatus.DRAFT));
+    missionContext.addMission(new DummyMission("GTO", MissionStatus.READY));
+    missionContext.addMission(new DummyMission("Lunar mission", MissionStatus.FAILED));
   }
 
   @Override
@@ -49,4 +60,16 @@ public final class MissionPanelWidgetAppState extends BaseAppState {
 
   @Override
   protected void onDisable() {}
+
+  static class DummyMission extends Mission {
+    public DummyMission(String name, MissionStatus status) {
+      super(name, null, List.of(), null);
+      setStatus(status);
+    }
+
+    @Override
+    public SpacecraftState getInitialState(AbsoluteDate initialDate) {
+      return null;
+    }
+  }
 }

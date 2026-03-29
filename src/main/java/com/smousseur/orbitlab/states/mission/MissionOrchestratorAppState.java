@@ -6,7 +6,6 @@ import com.jme3.math.ColorRGBA;
 import com.jme3.renderer.Camera;
 import com.smousseur.orbitlab.app.ApplicationContext;
 import com.smousseur.orbitlab.app.view.RenderContext;
-import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.engine.events.EventBus;
 import com.smousseur.orbitlab.simulation.mission.MissionContext;
 import com.smousseur.orbitlab.simulation.mission.MissionEntry;
@@ -107,16 +106,19 @@ public final class MissionOrchestratorAppState extends BaseAppState {
     }
 
     // Cleanup renderers for removed missions
-    renderers.keySet().removeIf(name -> {
-      if (!activeMissionNames.contains(name)) {
-        MissionRenderer renderer = renderers.get(name);
-        if (renderer != null) {
-          renderer.cleanup();
-        }
-        return true;
-      }
-      return false;
-    });
+    renderers
+        .keySet()
+        .removeIf(
+            name -> {
+              if (!activeMissionNames.contains(name)) {
+                MissionRenderer renderer = renderers.get(name);
+                if (renderer != null) {
+                  renderer.cleanup();
+                }
+                return true;
+              }
+              return false;
+            });
   }
 
   private void pollMissionActions() {
@@ -127,8 +129,7 @@ public final class MissionOrchestratorAppState extends BaseAppState {
       switch (request.action()) {
         case OPTIMIZE ->
             context.missionContext().findMission(name).ifPresent(this::submitForOptimization);
-        case START ->
-            context.missionContext().findMission(name).ifPresent(this::startMission);
+        case START -> context.missionContext().findMission(name).ifPresent(this::startMission);
         case DELETE -> {
           MissionRenderer renderer = renderers.remove(name);
           if (renderer != null) {
@@ -160,8 +161,7 @@ public final class MissionOrchestratorAppState extends BaseAppState {
             logger.info("Optimization completed for mission '{}'", entry.mission().getName());
           } catch (Exception e) {
             entry.mission().setStatus(MissionStatus.FAILED);
-            logger.error(
-                "Optimization failed for mission '{}'", entry.mission().getName(), e);
+            logger.error("Optimization failed for mission '{}'", entry.mission().getName(), e);
           }
         });
   }
@@ -192,19 +192,15 @@ public final class MissionOrchestratorAppState extends BaseAppState {
               entry.setPlayerPrepared(true);
 
               // Create renderer
-              RenderContext renderContext =
-                  RenderContext.planet(context.focusView().getBody());
+              RenderContext renderContext = RenderContext.planet(context.focusView().getBody());
               ColorRGBA color = TRAJECTORY_PALETTE[colorIndex % TRAJECTORY_PALETTE.length];
               colorIndex++;
 
-              MissionRenderer renderer =
-                  new MissionRenderer(entry, context, renderContext, color);
+              MissionRenderer renderer = new MissionRenderer(entry, context, renderContext, color);
               renderer.initialize(getApplication());
               renderers.put(entry.mission().getName(), renderer);
 
-              logger.info(
-                  "Mission '{}' prepared and renderer created",
-                  entry.mission().getName());
+              logger.info("Mission '{}' prepared and renderer created", entry.mission().getName());
             });
   }
 
