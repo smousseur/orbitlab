@@ -10,7 +10,9 @@ import com.simsilica.lemur.Button;
 import com.simsilica.lemur.Container;
 import com.simsilica.lemur.FillMode;
 import com.simsilica.lemur.HAlignment;
+import com.simsilica.lemur.Insets3f;
 import com.simsilica.lemur.Label;
+import com.simsilica.lemur.component.InsetsComponent;
 import com.simsilica.lemur.component.BoxLayout;
 import com.simsilica.lemur.event.DefaultMouseListener;
 import com.simsilica.lemur.event.MouseEventControl;
@@ -196,6 +198,7 @@ public class MissionPanelWidget implements AutoCloseable {
       if (isSelected) {
         row.setBackground(MissionPanelStyles.createGradient(AppStyles.ICE_ROW_SELECTED));
       }
+      row.setInsetsComponent(new InsetsComponent(new Insets3f(3, 6, 3, 6)));
       row.setPreferredSize(new Vector3f(PANEL_WIDTH, 0, 0));
 
       // Name label — fixed width for alignment
