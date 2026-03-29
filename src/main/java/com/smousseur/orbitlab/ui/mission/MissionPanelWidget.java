@@ -87,17 +87,17 @@ public class MissionPanelWidget implements AutoCloseable {
     // Header row: title + create button
     Container headerRow =
         mainPanel.addChild(
-            new Container(new BoxLayout(Axis.X, FillMode.Even), MissionPanelStyles.STYLE));
+            new Container(new BoxLayout(Axis.X, FillMode.None), MissionPanelStyles.STYLE));
     Label titleLabel = headerRow.addChild(new Label("MISSIONS", MissionPanelStyles.STYLE));
     titleLabel.setColor(AppStyles.ICE_ACCENT);
+    titleLabel.setPreferredSize(new Vector3f(NAME_COL_WIDTH, 0, 0));
     Button createButton = headerRow.addChild(new Button("+ Create", MissionPanelStyles.STYLE));
     createButton.setBackground(MissionPanelStyles.createGradient(AppStyles.ICE_ACCENT));
     createButton.addClickCommands(source -> onCreate());
 
-    // Mission list
+    // Mission list — no styled background to avoid nested borders
     this.listContainer =
-        mainPanel.addChild(
-            new Container(new BoxLayout(Axis.Y, FillMode.None), MissionPanelStyles.STYLE));
+        mainPanel.addChild(new Container(new BoxLayout(Axis.Y, FillMode.None)));
 
     // Action bar
     this.actionBar =
@@ -190,13 +190,13 @@ public class MissionPanelWidget implements AutoCloseable {
       MissionStatus status = entry.mission().getStatus();
       boolean isSelected = name.equals(selectedMissionName);
 
-      // Row container with two columns: name (left) + status (right)
+      // Row container — no style to avoid nested borders; gradient only when selected
       Container row =
-          listContainer.addChild(
-              new Container(new BoxLayout(Axis.X, FillMode.None), MissionPanelStyles.STYLE));
-      row.setBackground(
-          MissionPanelStyles.createGradient(
-              isSelected ? AppStyles.ICE_ROW_SELECTED : AppStyles.ICE_PANEL_BG_LIGHT));
+          listContainer.addChild(new Container(new BoxLayout(Axis.X, FillMode.None)));
+      if (isSelected) {
+        row.setBackground(MissionPanelStyles.createGradient(AppStyles.ICE_ROW_SELECTED));
+      }
+      row.setPreferredSize(new Vector3f(PANEL_WIDTH, 0, 0));
 
       // Name label — fixed width for alignment
       Label nameLabel = row.addChild(new Label(name, MissionPanelStyles.STYLE));
