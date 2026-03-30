@@ -77,7 +77,8 @@ public final class MissionOrchestratorAppState extends BaseAppState {
     pollMissionActions();
 
     MissionContext missionContext = context.missionContext();
-    Camera cam = getApplication().getCamera();
+    // Use the near camera: spacecraft lives in the near view (km scale), not the far view (solar scale)
+    Camera cam = context.nearCamera();
 
     // Track which missions are still in the context
     Set<String> activeMissionNames = new HashSet<>();

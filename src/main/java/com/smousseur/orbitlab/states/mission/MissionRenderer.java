@@ -86,9 +86,12 @@ public final class MissionRenderer {
     presenter = new SpacecraftPresenter(config.id(), view);
     presenter.setVisible(true);
 
-    Node nearBodiesNode = context.sceneGraph().nearBodiesNode();
-    Spatial anchor = view.spatial();
-    nearBodiesNode.attachChild(anchor);
+    // Attach anchor3d (3D model) as child of farAnchor so they move together in the near view.
+    // Unlike planets (where farAnchor is in far view and anchor3d in near view), the spacecraft
+    // lives entirely in the near view, so both nodes share the same coordinate system.
+    Node anchor = (Node) view.spatial();
+    anchor.attachChild(view.nearSpatial());
+    context.sceneGraph().nearBodiesNode().attachChild(anchor);
 
     // Load 3D model asynchronously
     ExecutorService assetExecutor = AssetFactory.get().assetLoadingExecutor();
