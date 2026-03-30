@@ -7,6 +7,7 @@ import com.jme3.renderer.Camera;
 import com.smousseur.orbitlab.app.ApplicationContext;
 import com.smousseur.orbitlab.app.view.RenderContext;
 import com.smousseur.orbitlab.engine.events.EventBus;
+import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionContext;
 import com.smousseur.orbitlab.simulation.mission.MissionEntry;
 import com.smousseur.orbitlab.simulation.mission.MissionStatus;
@@ -22,6 +23,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.orekit.propagation.SpacecraftState;
+import org.orekit.time.AbsoluteDate;
 
 /**
  * Application state that orchestrates the lifecycle and rendering of all missions in the {@link
@@ -150,18 +153,23 @@ public final class MissionOrchestratorAppState extends BaseAppState {
    * @param entry the mission entry to optimize
    */
   public void submitForOptimization(MissionEntry entry) {
-    entry.mission().setStatus(MissionStatus.OPTIMIZING);
+    Mission mission = entry.mission();
+    mission.setStatus(MissionStatus.OPTIMIZING);
     optimizationExecutor.submit(
         () -> {
           try {
-            MissionOptimizer optimizer = new MissionOptimizer(entry.mission());
+            logger.info("Starting optimization for mission '{}'", mission.getName());
+            AbsoluteDate now = context.clock().now();
+            SpacecraftState initialState = mission.getInitialState(now);
+            mission.setCurrentState(initialState);
+            MissionOptimizer optimizer = new MissionOptimizer(mission);
             MissionOptimizerResult result = optimizer.optimize();
             entry.setOptimizerResult(result);
-            entry.mission().setStatus(MissionStatus.READY);
-            logger.info("Optimization completed for mission '{}'", entry.mission().getName());
+            mission.setStatus(MissionStatus.READY);
+            logger.info("Optimization completed for mission '{}'", mission.getName());
           } catch (Exception e) {
-            entry.mission().setStatus(MissionStatus.FAILED);
-            logger.error("Optimization failed for mission '{}'", entry.mission().getName(), e);
+            mission.setStatus(MissionStatus.FAILED);
+            logger.error("Optimization failed for mission '{}'", mission.getName(), e);
           }
         });
   }

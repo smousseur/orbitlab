@@ -1,6 +1,7 @@
 package com.smousseur.orbitlab.simulation.mission.optimizer;
 
 import com.smousseur.orbitlab.simulation.OrekitService;
+import com.smousseur.orbitlab.simulation.mission.LEOMission;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionStage;
 import com.smousseur.orbitlab.simulation.mission.optimizer.problems.GravityTurnConstraints;
@@ -42,9 +43,7 @@ public class LEOMissionOptimizationTest extends AbstractTrajectoryOptimizerTest 
   @ValueSource(doubles = {185_000, 400_000})
   void testLEOMission(double targetAltitude) {
     AbsoluteDate epoch = new AbsoluteDate(2026, 1, 1, 12, 0, 0.0, TimeScalesFactory.getUTC());
-    Mission mission =
-        new AbstractTrajectoryOptimizerTest.TestMission(
-            "Gravity Turn", getStages(targetAltitude), getMissionVehicle(), 5.23, -52.77, 0.0, targetAltitude);
+    Mission mission = new LEOMission("LEO mission", targetAltitude);
     SpacecraftState initialState = mission.getInitialState(epoch);
     mission.setCurrentState(initialState);
     MissionOptimizer optimizer = new MissionOptimizer(mission, 40_000);
@@ -53,17 +52,23 @@ public class LEOMissionOptimizationTest extends AbstractTrajectoryOptimizerTest 
     MissionPlayer player = new MissionPlayer(mission);
     player.play(optimResults, epoch);
     PropagationResults results = propagateMission(mission, "Coasting", epoch);
-    logger.info("[{}km] Max coast altitude: {} m", (int) (targetAltitude / 1000), results.maxCoastAltitude);
-    logger.info("[{}km] Min coast altitude: {} m", (int) (targetAltitude / 1000), results.minCoastAltitude);
+    logger.info(
+        "[{}km] Max coast altitude: {} m", (int) (targetAltitude / 1000), results.maxCoastAltitude);
+    logger.info(
+        "[{}km] Min coast altitude: {} m", (int) (targetAltitude / 1000), results.minCoastAltitude);
     double errorMargin = ORBIT_MARGIN_RATIO * targetAltitude;
     Assertions.assertTrue(
         Math.abs(results.maxCoastAltitude - targetAltitude) <= errorMargin,
-        () -> String.format("Max coast altitude %.0f m not within %.0f m of target %.0f m",
-            results.maxCoastAltitude, errorMargin, targetAltitude));
+        () ->
+            String.format(
+                "Max coast altitude %.0f m not within %.0f m of target %.0f m",
+                results.maxCoastAltitude, errorMargin, targetAltitude));
     Assertions.assertTrue(
         Math.abs(results.minCoastAltitude - targetAltitude) <= errorMargin,
-        () -> String.format("Min coast altitude %.0f m not within %.0f m of target %.0f m",
-            results.minCoastAltitude, errorMargin, targetAltitude));
+        () ->
+            String.format(
+                "Min coast altitude %.0f m not within %.0f m of target %.0f m",
+                results.minCoastAltitude, errorMargin, targetAltitude));
   }
 
   private static VehicleStack getMissionVehicle() {

@@ -32,7 +32,8 @@ public final class MissionRenderer {
 
   private static final double SPACECRAFT_RADIUS_METERS = 50.0;
   private static final double SPACECRAFT_LOD_MULTIPLIER = 500.0;
-  private static final String SPACECRAFT_MODEL_PATH = "models/vehicles/ariane.gltf";
+  private static final String SPACECRAFT_MODEL_PATH =
+      "models/vehicles/heavy_falcon/heavy_falcon.gltf";
 
   private final MissionEntry entry;
   private final ApplicationContext context;
