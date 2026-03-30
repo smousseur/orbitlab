@@ -303,4 +303,24 @@ public abstract class Mission {
   public void setStatus(MissionStatus status) {
     this.status = status;
   }
+
+  /**
+   * Resets all runtime state so the mission can be re-executed from scratch. Configuration (name,
+   * vehicle, stages, objective, listeners) is preserved. The mission status is set to {@link
+   * MissionStatus#READY}, indicating it has been optimized and is prepared for a new execution
+   * cycle.
+   *
+   * @throws IllegalStateException if the mission has not been optimized yet (status is DRAFT)
+   */
+  public void reset() {
+    if (status == MissionStatus.DRAFT) {
+      throw new IllegalStateException("Cannot reset a mission that has not been optimized");
+    }
+    this.currentStageIndex = -1;
+    this.isStarted = false;
+    this.currentState = null;
+    this.propagator = null;
+    this.lastAltLogDate = null;
+    this.status = MissionStatus.READY;
+  }
 }
