@@ -49,11 +49,7 @@ public class LEOMissionOptimizationTest extends AbstractTrajectoryOptimizerTest 
     mission.setCurrentState(initialState);
     MissionOptimizer optimizer = new MissionOptimizer(mission, 40_000);
     MissionOptimizerResult optimResults = optimizer.optimize();
-    mission =
-        new AbstractTrajectoryOptimizerTest.TestMission(
-            "Gravity Turn", getStages(targetAltitude), getMissionVehicle(), 5.23, -52.77, 0.0, targetAltitude);
-    initialState = mission.getInitialState(epoch);
-    mission.setCurrentState(initialState);
+    mission.reset();
     MissionPlayer player = new MissionPlayer(mission);
     player.play(optimResults, epoch);
     PropagationResults results = propagateMission(mission, "Coasting", epoch);
