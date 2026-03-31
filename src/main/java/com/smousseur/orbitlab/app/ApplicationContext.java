@@ -1,5 +1,6 @@
 package com.smousseur.orbitlab.app;
 
+import com.jme3.renderer.Camera;
 import com.jme3.scene.Node;
 import com.jme3.scene.Spatial;
 import com.smousseur.orbitlab.app.view.FocusView;
@@ -34,6 +35,7 @@ public class ApplicationContext {
 
   private final FocusView focusView;
   private final MissionContext missionContext;
+  private Camera nearCamera;
 
   /**
    * Creates a new application context and attaches the scene and GUI graphs to the provided JME3
@@ -172,5 +174,23 @@ public class ApplicationContext {
    */
   public MissionContext missionContext() {
     return missionContext;
+  }
+
+  /**
+   * Returns the near viewport camera (planet/spacecraft scale).
+   *
+   * @return the near camera
+   */
+  public Camera nearCamera() {
+    return nearCamera;
+  }
+
+  /**
+   * Sets the near viewport camera.
+   *
+   * @param nearCamera the near viewport camera
+   */
+  public void setNearCamera(Camera nearCamera) {
+    this.nearCamera = nearCamera;
   }
 }

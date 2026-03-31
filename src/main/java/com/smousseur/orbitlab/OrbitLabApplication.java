@@ -112,6 +112,7 @@ public class OrbitLabApplication extends SimpleApplication {
     farViewport.attachScene(sceneGraph.getFarRoot());
 
     Camera nearCam = farCam.clone();
+    applicationContext.setNearCamera(nearCam);
     ViewPort nearViewport = renderManager.createPostView("NearView", nearCam);
 
     nearViewport.setClearFlags(false, true, false); // don't clear color, DO clear depth
