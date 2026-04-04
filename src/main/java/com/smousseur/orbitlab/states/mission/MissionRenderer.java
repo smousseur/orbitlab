@@ -14,17 +14,14 @@ import com.smousseur.orbitlab.engine.scene.body.BodyRenderConfig;
 import com.smousseur.orbitlab.engine.scene.body.LodView;
 import com.smousseur.orbitlab.engine.scene.body.lod.Model3dView;
 import com.smousseur.orbitlab.engine.scene.spacecraft.SpacecraftPresenter;
-import com.smousseur.orbitlab.simulation.ephemeris.EphemerisInterpolator;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionEntry;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
-import org.hipparchus.geometry.euclidean.threed.Rotation;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.orekit.propagation.SpacecraftState;
 import org.orekit.time.AbsoluteDate;
-import org.orekit.utils.PVCoordinates;
 
 /**
  * Encapsulates all rendering for a single mission: spacecraft display (SpacecraftPresenter +
@@ -46,12 +43,6 @@ public final class MissionRenderer {
   private SpacecraftPresenter presenter;
   private LodView view;
   private MissionTrajectoryRenderer trajectoryRenderer;
-
-  // Two-sample SLERP buffer for smooth attitude interpolation between propagation steps
-  private AbsoluteDate prevSampleDate;
-  private Rotation prevSampleRot;
-  private AbsoluteDate lastSampleDate;
-  private Rotation lastSampleRot;
 
   /**
    * Creates a new mission renderer.
@@ -139,10 +130,6 @@ public final class MissionRenderer {
       view.setVisible(isPlanetMode);
       trajectoryRenderer.setVisible(true);
       if (isPlanetMode) {
-        if (lastSampleRot != null) {
-          view.setRotationWorld(
-              com.smousseur.orbitlab.app.view.RenderTransform.toRenderQuaternion(lastSampleRot));
-        }
         view.updateScreen(cam);
       }
       trajectoryRenderer.update();
@@ -169,39 +156,11 @@ public final class MissionRenderer {
     }
 
     Vector3D posGcrf = state.getPosition();
-    Rotation rot = velocityAlignedRotation(state.getPVCoordinates());
-
-    // Shift the two-sample buffer
-    prevSampleDate = lastSampleDate;
-    prevSampleRot = lastSampleRot;
-    lastSampleDate = state.getDate();
-    lastSampleRot = rot;
-
-    // SLERP between the two most recent samples at the exact clock time
-    Rotation interpRot = rot;
-    if (prevSampleDate != null && !prevSampleDate.equals(lastSampleDate)) {
-      double dt = lastSampleDate.durationFrom(prevSampleDate);
-      double dn = now.durationFrom(prevSampleDate);
-      double tau = Math.max(0.0, Math.min(1.0, dn / dt));
-      interpRot = EphemerisInterpolator.slerp(prevSampleRot, lastSampleRot, tau);
-    }
-
-    presenter.updatePose(posGcrf, interpRot, renderContext);
+    presenter.updatePose(posGcrf, renderContext);
     view.updateScreen(cam);
 
     trajectoryRenderer.addPosition(posGcrf);
     trajectoryRenderer.update();
-  }
-
-  /**
-   * Computes a velocity-aligned rotation (GCRF→body) where body +X points along the prograde
-   * (velocity) direction and body +Z points along the orbit normal (vel × pos).
-   */
-  private static Rotation velocityAlignedRotation(PVCoordinates pv) {
-    Vector3D vel = pv.getVelocity();
-    Vector3D pos = pv.getPosition();
-    Vector3D orbitNormal = vel.crossProduct(pos);
-    return new Rotation(vel, orbitNormal, Vector3D.PLUS_I, Vector3D.PLUS_K);
   }
 
   /** Detaches all visual elements from the scene. */
