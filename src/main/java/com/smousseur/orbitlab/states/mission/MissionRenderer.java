@@ -113,30 +113,7 @@ public final class MissionRenderer {
    */
   public void update(float tpf, Camera cam) {
     Mission mission = entry.mission();
-    AbsoluteDate now = context.clock().now();
-    AbsoluteDate missionStart = mission.getInitialDate();
-    AbsoluteDate missionEnd = mission.getEndDate();
 
-    // Before mission start: hide everything, no propagation
-    if (missionStart != null && now.compareTo(missionStart) < 0) {
-      view.setVisible(false);
-      trajectoryRenderer.setVisible(false);
-      return;
-    }
-
-    // After mission end: show trajectory + spacecraft frozen at final position, no propagation
-    if (missionEnd != null && now.compareTo(missionEnd) > 0) {
-      boolean isPlanetMode = context.focusView().getMode() == ViewMode.PLANET;
-      view.setVisible(isPlanetMode);
-      trajectoryRenderer.setVisible(true);
-      if (isPlanetMode) {
-        view.updateScreen(cam);
-      }
-      trajectoryRenderer.update();
-      return;
-    }
-
-    // Within mission range: normal propagation
     if (!mission.isOnGoing()) {
       return;
     }
@@ -148,6 +125,8 @@ public final class MissionRenderer {
     }
     view.setVisible(true);
 
+    SimulationClock clock = context.clock();
+    AbsoluteDate now = clock.now();
     mission.update(now);
 
     SpacecraftState state = mission.getCurrentState();

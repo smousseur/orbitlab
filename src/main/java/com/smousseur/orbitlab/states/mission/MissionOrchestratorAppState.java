@@ -104,10 +104,7 @@ public final class MissionOrchestratorAppState extends BaseAppState {
           }
         }
         case COMPLETED -> {
-          MissionRenderer renderer = renderers.get(name);
-          if (renderer != null) {
-            renderer.update(tpf, cam);
-          }
+          // Renderer stays visible but no propagation
         }
       }
     }
