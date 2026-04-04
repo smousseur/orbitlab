@@ -108,6 +108,20 @@ public final class MissionTrajectoryRenderer {
     vb.setUpdateNeeded();
   }
 
+  /**
+   * Shows or hides the trajectory line geometry.
+   *
+   * @param visible {@code true} to show, {@code false} to hide
+   */
+  public void setVisible(boolean visible) {
+    if (lineGeometry != null) {
+      lineGeometry.setCullHint(
+          visible
+              ? com.jme3.scene.Spatial.CullHint.Inherit
+              : com.jme3.scene.Spatial.CullHint.Always);
+    }
+  }
+
   /** Detaches the trajectory geometry from the scene. */
   public void cleanup() {
     if (lineGeometry != null) {
