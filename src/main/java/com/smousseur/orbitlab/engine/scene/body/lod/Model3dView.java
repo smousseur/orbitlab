@@ -43,7 +43,7 @@ public class Model3dView {
     return AssetFactory.get()
         .loadModel(
             config.modelPath(),
-            (float) (config.radiusMeters() / RenderContext.PLANET_METERS_PER_UNIT));
+            2 * (float) (config.radiusMeters() / RenderContext.PLANET_METERS_PER_UNIT));
   }
 
   /**

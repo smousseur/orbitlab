@@ -6,10 +6,10 @@ import com.jme3.renderer.Camera;
 import com.jme3.renderer.ViewPort;
 import com.jme3.system.AppSettings;
 import com.simsilica.lemur.GuiGlobals;
+import com.simsilica.lemur.event.PickState;
 import com.simsilica.lemur.style.BaseStyles;
 import com.smousseur.orbitlab.app.ApplicationContext;
 import com.smousseur.orbitlab.engine.AssetFactory;
-import com.smousseur.orbitlab.engine.EngineConfig;
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.states.InitAppState;
 import com.smousseur.orbitlab.states.camera.FloatingOriginAppState;
@@ -17,14 +17,14 @@ import com.smousseur.orbitlab.states.camera.NearCameraSyncAppState;
 import com.smousseur.orbitlab.states.camera.OrbitCameraAppState;
 import com.smousseur.orbitlab.states.camera.ViewModeAppState;
 import com.smousseur.orbitlab.states.ephemeris.EphemerisAppState;
-import com.smousseur.orbitlab.states.orbits.OrbitInitAppState;
 import com.smousseur.orbitlab.states.fx.LightningAppState;
-import com.smousseur.orbitlab.states.orbits.OrbitRuntimeAppState;
-import com.smousseur.orbitlab.states.scene.PlanetHudMarkersAppState;
-import com.smousseur.orbitlab.states.scene.PlanetPoseAppState;
 import com.smousseur.orbitlab.states.mission.MissionOrchestratorAppState;
 import com.smousseur.orbitlab.states.mission.MissionPanelWidgetAppState;
 import com.smousseur.orbitlab.states.mission.TelemetryWidgetAppState;
+import com.smousseur.orbitlab.states.orbits.OrbitInitAppState;
+import com.smousseur.orbitlab.states.orbits.OrbitRuntimeAppState;
+import com.smousseur.orbitlab.states.scene.PlanetHudMarkersAppState;
+import com.smousseur.orbitlab.states.scene.PlanetPoseAppState;
 import com.smousseur.orbitlab.states.scene.SolarSystemSceneAppState;
 import com.smousseur.orbitlab.states.time.SimulationClockAppState;
 import com.smousseur.orbitlab.states.time.TimelineWidgetAppState;
@@ -117,6 +117,20 @@ public class OrbitLabApplication extends SimpleApplication {
 
     nearViewport.setClearFlags(false, true, false); // don't clear color, DO clear depth
     nearViewport.attachScene(sceneGraph.getNearRoot());
+
+    // Re-order the GUI viewport so it renders AFTER NearView.
+    // The default guiViewPort is rendered before post-views, so NearView
+    // was drawing on top of the GUI. Fix: detach guiNode from the default
+    // guiViewPort and create a new post-view for the GUI that comes after NearView.
+    guiViewPort.detachScene(guiNode);
+    ViewPort guiPost = renderManager.createPostView("GuiPost", cam);
+    guiPost.setClearFlags(false, false, false);
+    guiPost.attachScene(guiNode);
+
+    // Re-register the GUI picking with Lemur so mouse events (click, hover, etc.)
+    // work in the new GUI viewport instead of the now-empty default guiViewPort.
+    getStateManager().getState(PickState.class).removeCollisionRoot(guiViewPort);
+    getStateManager().getState(PickState.class).addCollisionRoot(guiPost, PickState.PICK_LAYER_GUI);
 
     // Near frustum: far kept fixed for planet-scale coverage; near is synced dynamically
     // by NearCameraSyncAppState to match the main camera's adaptive near plane.
