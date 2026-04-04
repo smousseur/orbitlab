@@ -167,7 +167,6 @@ public final class MissionOrchestratorAppState extends BaseAppState {
             MissionOptimizer optimizer = new MissionOptimizer(mission);
             MissionOptimizerResult result = optimizer.optimize();
             entry.setOptimizerResult(result);
-            mission.setStatus(MissionStatus.READY);
             logger.info("Optimization completed for mission '{}'", mission.getName());
           } catch (Exception e) {
             mission.setStatus(MissionStatus.FAILED);

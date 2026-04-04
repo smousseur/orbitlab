@@ -4,6 +4,7 @@ import com.jme3.app.Application;
 import com.jme3.app.state.BaseAppState;
 import com.smousseur.orbitlab.app.ApplicationContext;
 import com.smousseur.orbitlab.simulation.mission.Mission;
+import com.smousseur.orbitlab.simulation.mission.MissionStatus;
 import com.smousseur.orbitlab.ui.telemetry.TelemetryWidget;
 import java.util.Optional;
 
@@ -40,7 +41,7 @@ public final class TelemetryWidgetAppState extends BaseAppState {
     Optional<Mission> ongoing =
         context.missionContext().getMissions().stream()
             .map(entry -> entry.mission())
-            .filter(Mission::isOnGoing)
+            .filter(m -> m.getStatus() == MissionStatus.RUNNING)
             .findFirst();
 
     if (ongoing.isPresent()) {
