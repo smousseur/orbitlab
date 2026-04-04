@@ -160,8 +160,9 @@ public final class MissionOrchestratorAppState extends BaseAppState {
         () -> {
           try {
             logger.info("Starting optimization for mission '{}'", mission.getName());
-            AbsoluteDate now = context.clock().now();
-            SpacecraftState initialState = mission.getInitialState(now);
+            AbsoluteDate launchDate = entry.getScheduledDate().orElseGet(context.clock()::now);
+            entry.setScheduledDate(launchDate);
+            SpacecraftState initialState = mission.getInitialState(launchDate);
             mission.setCurrentState(initialState);
             MissionOptimizer optimizer = new MissionOptimizer(mission);
             MissionOptimizerResult result = optimizer.optimize();
@@ -187,8 +188,16 @@ public final class MissionOrchestratorAppState extends BaseAppState {
       throw new IllegalStateException(
           "Mission '" + entry.mission().getName() + "' is not ready to start");
     }
-    entry.mission().start(context.clock().now());
-    logger.info("Mission '{}' started", entry.mission().getName());
+    AbsoluteDate launchDate =
+        entry
+            .getScheduledDate()
+            .orElseThrow(
+                () ->
+                    new IllegalStateException(
+                        "Mission '" + entry.mission().getName() + "' has no scheduled date"));
+    context.clock().seek(launchDate);
+    entry.mission().start(launchDate);
+    logger.info("Mission '{}' started at {}", entry.mission().getName(), launchDate);
   }
 
   private void prepareMission(MissionEntry entry) {

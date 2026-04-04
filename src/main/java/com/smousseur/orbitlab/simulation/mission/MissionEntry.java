@@ -3,6 +3,7 @@ package com.smousseur.orbitlab.simulation.mission;
 import com.smousseur.orbitlab.simulation.mission.runtime.MissionOptimizerResult;
 import java.util.Objects;
 import java.util.Optional;
+import org.orekit.time.AbsoluteDate;
 
 /**
  * Groups a {@link Mission} with its optimization result and runtime preparation state. This is a
@@ -15,6 +16,7 @@ public final class MissionEntry {
   private final Mission mission;
   private volatile MissionOptimizerResult optimizerResult;
   private volatile boolean playerPrepared;
+  private volatile AbsoluteDate scheduledDate;
 
   /**
    * Creates a new mission entry for the given mission.
@@ -69,5 +71,24 @@ public final class MissionEntry {
    */
   public void setPlayerPrepared(boolean prepared) {
     this.playerPrepared = prepared;
+  }
+
+  /**
+   * Sets the planned launch date for this mission. If not set before optimization, it will be
+   * defaulted to the current simulation clock time at the moment optimization is submitted.
+   *
+   * @param date the planned launch date
+   */
+  public void setScheduledDate(AbsoluteDate date) {
+    this.scheduledDate = date;
+  }
+
+  /**
+   * Returns the planned launch date, if set.
+   *
+   * @return an optional containing the scheduled date, or empty if not yet defined
+   */
+  public Optional<AbsoluteDate> getScheduledDate() {
+    return Optional.ofNullable(scheduledDate);
   }
 }
