@@ -40,6 +40,7 @@ public abstract class Mission {
   private NumericalPropagator propagator;
 
   private AbsoluteDate initialDate;
+  private AbsoluteDate endDate;
 
   private MissionStatus status = MissionStatus.DRAFT;
   private AbsoluteDate lastAltLogDate = null;
@@ -141,6 +142,7 @@ public abstract class Mission {
     currentStageIndex++;
     if (isFinished()) {
       this.currentState = stateAtEvent;
+      this.endDate = stateAtEvent.getDate();
       this.status = MissionStatus.COMPLETED;
       return;
     }
@@ -251,6 +253,16 @@ public abstract class Mission {
   }
 
   /**
+   * Returns the date at which the mission completed (all stages finished). Returns {@code null} if
+   * the mission has not yet completed.
+   *
+   * @return the mission end date, or {@code null}
+   */
+  public AbsoluteDate getEndDate() {
+    return endDate;
+  }
+
+  /**
    * Replaces the current spacecraft state. Used to inject externally computed states such as
    * parking orbit states.
    *
@@ -321,6 +333,7 @@ public abstract class Mission {
     this.currentState = null;
     this.propagator = null;
     this.lastAltLogDate = null;
+    this.endDate = null;
     this.status = MissionStatus.READY;
   }
 }
