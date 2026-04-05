@@ -38,29 +38,25 @@ public class LEOMissionOptimizationTest extends AbstractTrajectoryOptimizerTest 
     MissionComputeResult computeResult = optimizer.optimize();
     MissionEphemeris ephemeris = computeResult.ephemeris();
 
-    CoastAltitudeResults results = extractCoastAltitudes(ephemeris, "Coasting");
+    MinMaxAltitudeResults results = extractMinMaxAltitudes(ephemeris, "Coasting");
 
     logger.info(
-        "[{}km] Max coast altitude: {} m",
-        (int) (targetAltitude / 1000),
-        results.maxCoastAltitude);
+        "[{}km] Max coast altitude: {} m", (int) (targetAltitude / 1000), results.maxAltitude);
     logger.info(
-        "[{}km] Min coast altitude: {} m",
-        (int) (targetAltitude / 1000),
-        results.minCoastAltitude);
+        "[{}km] Min coast altitude: {} m", (int) (targetAltitude / 1000), results.minAltitude);
 
     double errorMargin = ORBIT_MARGIN_RATIO * targetAltitude;
     Assertions.assertTrue(
-        Math.abs(results.maxCoastAltitude - targetAltitude) <= errorMargin,
+        Math.abs(results.maxAltitude - targetAltitude) <= errorMargin,
         () ->
             String.format(
                 "Max coast altitude %.0f m not within %.0f m of target %.0f m",
-                results.maxCoastAltitude, errorMargin, targetAltitude));
+                results.maxAltitude, errorMargin, targetAltitude));
     Assertions.assertTrue(
-        Math.abs(results.minCoastAltitude - targetAltitude) <= errorMargin,
+        Math.abs(results.minAltitude - targetAltitude) <= errorMargin,
         () ->
             String.format(
                 "Min coast altitude %.0f m not within %.0f m of target %.0f m",
-                results.minCoastAltitude, errorMargin, targetAltitude));
+                results.minAltitude, errorMargin, targetAltitude));
   }
 }

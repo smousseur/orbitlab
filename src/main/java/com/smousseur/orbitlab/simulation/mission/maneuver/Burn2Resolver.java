@@ -45,18 +45,7 @@ final class Burn2Resolver {
       return null;
     }
 
-    KeplerianOrbit orbitAfterBurn1 = new KeplerianOrbit(stateAfterBurn1.getOrbit());
-    double mu = orbitAfterBurn1.getMu();
-    double a = orbitAfterBurn1.getA();
-    double e = orbitAfterBurn1.getE();
-    double rApoapsis = a * (1.0 + e);
-
-    // Velocity at apoapsis on the current orbit
-    double vAtApoapsis = FastMath.sqrt(mu * (2.0 / rApoapsis - 1.0 / a));
-    // Circular velocity at apoapsis altitude
-    double vCirc = FastMath.sqrt(mu / rApoapsis);
-    // ΔV needed (prograde — raises perigee to circularize)
-    double dvNeeded = vCirc - vAtApoapsis;
+    double dvNeeded = getDvNeeded(stateAfterBurn1);
 
     if (dvNeeded <= 0.0) {
       // Already circular or hyperbolic — no burn needed
@@ -76,12 +65,27 @@ final class Burn2Resolver {
     return new TransfertTwoManeuver.ResolvedBurn2(dtCoast, dt2, dvNeeded);
   }
 
+  private static double getDvNeeded(SpacecraftState stateAfterBurn1) {
+    KeplerianOrbit orbitAfterBurn1 = new KeplerianOrbit(stateAfterBurn1.getOrbit());
+    double mu = orbitAfterBurn1.getMu();
+    double a = orbitAfterBurn1.getA();
+    double e = orbitAfterBurn1.getE();
+    double rApoapsis = a * (1.0 + e);
+
+    // Velocity at apoapsis on the current orbit
+    double vAtApoapsis = FastMath.sqrt(mu * (2.0 / rApoapsis - 1.0 / a));
+    // Circular velocity at apoapsis altitude
+    double vCirc = FastMath.sqrt(mu / rApoapsis);
+    // ΔV needed (prograde — raises perigee to circularize)
+    return vCirc - vAtApoapsis;
+  }
+
   /**
    * Detects the next apoapsis after burn 1 using a propagator with J2.
    *
    * @return time from stateAfterBurn1 to next apoapsis (s), or NaN on failure
    */
-  private double detectTimeToApoapsis(SpacecraftState stateAfterBurn1) {
+  private static double detectTimeToApoapsis(SpacecraftState stateAfterBurn1) {
     NumericalPropagator coastPropagator = OrekitService.get().createOptimizationPropagator();
     coastPropagator.setInitialState(stateAfterBurn1);
 

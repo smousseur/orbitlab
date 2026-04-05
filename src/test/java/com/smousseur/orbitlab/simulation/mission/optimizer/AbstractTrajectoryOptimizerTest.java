@@ -9,28 +9,28 @@ import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemerisPoint
  */
 public class AbstractTrajectoryOptimizerTest {
 
-  protected static class CoastAltitudeResults {
-    double minCoastAltitude = Double.MAX_VALUE;
-    double maxCoastAltitude = Double.MIN_VALUE;
+  protected static class MinMaxAltitudeResults {
+    double minAltitude = Double.MAX_VALUE;
+    double maxAltitude = Double.MIN_VALUE;
   }
 
   /**
    * Extracts min/max altitude for all ephemeris points in the specified stage.
    *
    * @param ephemeris the pre-computed mission ephemeris
-   * @param coastPhaseName the name of the coasting stage to measure
+   * @param phaseName the name of the coasting stage to measure
    * @return the min and max altitudes found in that stage
    */
-  protected static CoastAltitudeResults extractCoastAltitudes(
-      MissionEphemeris ephemeris, String coastPhaseName) {
-    CoastAltitudeResults results = new CoastAltitudeResults();
+  protected static MinMaxAltitudeResults extractMinMaxAltitudes(
+      MissionEphemeris ephemeris, String phaseName) {
+    MinMaxAltitudeResults results = new MinMaxAltitudeResults();
     for (MissionEphemerisPoint pt : ephemeris.allPoints()) {
-      if (coastPhaseName.equals(pt.stageName())) {
-        if (pt.altitudeMeters() < results.minCoastAltitude) {
-          results.minCoastAltitude = pt.altitudeMeters();
+      if (phaseName.equals(pt.stageName())) {
+        if (pt.altitudeMeters() < results.minAltitude) {
+          results.minAltitude = pt.altitudeMeters();
         }
-        if (pt.altitudeMeters() > results.maxCoastAltitude) {
-          results.maxCoastAltitude = pt.altitudeMeters();
+        if (pt.altitudeMeters() > results.maxAltitude) {
+          results.maxAltitude = pt.altitudeMeters();
         }
       }
     }
