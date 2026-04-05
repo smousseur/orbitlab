@@ -231,6 +231,8 @@ public class MissionPanelWidget implements AutoCloseable {
     } else {
       selectedMissionName = name;
     }
+    // Publish selection to MissionContext
+    missionContext.setSelectedMissionName(selectedMissionName);
     refreshMissionList();
     rebuildActionBar();
   }
@@ -253,29 +255,29 @@ public class MissionPanelWidget implements AutoCloseable {
     switch (status) {
       case DRAFT -> {
         addActionButton("Edit", AppStyles.ICE_ACCENT, this::onEdit);
-        addActionButton("Optimize", AppStyles.ICE_WARNING, this::onOptimize);
+        addActionButton("Compute", AppStyles.ICE_WARNING, this::onOptimize);
         addActionButton("Delete", AppStyles.ICE_DANGER, this::onDelete);
       }
-      case OPTIMIZING -> {
-        Label label = actionBar.addChild(new Label("Optimizing...", MissionPanelStyles.STYLE));
+      case COMPUTING -> {
+        Label label = actionBar.addChild(new Label("Computing...", MissionPanelStyles.STYLE));
         label.setColor(AppStyles.ICE_WARNING);
       }
       case READY -> {
         addActionButton("Edit", AppStyles.ICE_ACCENT, this::onEdit);
-        addActionButton("Optimize", AppStyles.ICE_WARNING, this::onOptimize);
+        addActionButton("Re-compute", AppStyles.ICE_WARNING, this::onOptimize);
         addActionButton("Delete", AppStyles.ICE_DANGER, this::onDelete);
-        addActionButton("Launch", AppStyles.ICE_SUCCESS, this::onStart);
-      }
-      case RUNNING -> {
-        Label label = actionBar.addChild(new Label("Running...", MissionPanelStyles.STYLE));
-        label.setColor(AppStyles.ICE_SUCCESS);
-      }
-      case COMPLETED -> {
-        addActionButton("Delete", AppStyles.ICE_DANGER, this::onDelete);
+        // Show/Hide toggle
+        boolean isVisible =
+            missionContext
+                .findMission(selectedMissionName)
+                .map(MissionEntry::isVisible)
+                .orElse(false);
+        String toggleLabel = isVisible ? "Hide" : "Show";
+        addActionButton(toggleLabel, AppStyles.ICE_SUCCESS, this::onToggleVisible);
       }
       case FAILED -> {
         addActionButton("Edit", AppStyles.ICE_ACCENT, this::onEdit);
-        addActionButton("Optimize", AppStyles.ICE_WARNING, this::onOptimize);
+        addActionButton("Re-compute", AppStyles.ICE_WARNING, this::onOptimize);
         addActionButton("Delete", AppStyles.ICE_DANGER, this::onDelete);
       }
     }
@@ -306,9 +308,9 @@ public class MissionPanelWidget implements AutoCloseable {
     }
   }
 
-  private void onStart() {
+  private void onToggleVisible() {
     if (selectedMissionName != null) {
-      eventBus.publishMissionAction(selectedMissionName, EventBus.MissionAction.START);
+      eventBus.publishMissionAction(selectedMissionName, EventBus.MissionAction.TOGGLE_VISIBLE);
     }
   }
 
@@ -327,10 +329,8 @@ public class MissionPanelWidget implements AutoCloseable {
   private static ColorRGBA statusColor(MissionStatus status) {
     return switch (status) {
       case DRAFT -> AppStyles.ICE_TEXT_SECONDARY;
-      case OPTIMIZING -> AppStyles.ICE_WARNING;
+      case COMPUTING -> AppStyles.ICE_WARNING;
       case READY -> AppStyles.ICE_SUCCESS;
-      case RUNNING -> AppStyles.ICE_ACCENT;
-      case COMPLETED -> AppStyles.ICE_TEXT_SECONDARY;
       case FAILED -> AppStyles.ICE_DANGER;
     };
   }

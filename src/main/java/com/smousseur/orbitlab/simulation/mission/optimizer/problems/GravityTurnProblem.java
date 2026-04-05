@@ -87,6 +87,12 @@ public class GravityTurnProblem implements TrajectoryProblem {
 
   @Override
   public double computeCost(SpacecraftState state) {
+    // Detect penalty states: if propagation failed, the returned state is the initial state
+    double elapsed = state.getDate().durationFrom(initialState.getDate());
+    if (elapsed < 1.0) {
+      return 1e6;
+    }
+
     PVCoordinates pv = state.getPVCoordinates();
     Vector3D pos = pv.getPosition();
     Vector3D vel = pv.getVelocity();

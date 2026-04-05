@@ -13,6 +13,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
  */
 public final class MissionContext {
   private final List<MissionEntry> missions = new CopyOnWriteArrayList<>();
+  private volatile String selectedMissionName;
 
   /**
    * Adds a mission to the registry and returns its entry.
@@ -54,5 +55,34 @@ public final class MissionContext {
     return missions.stream()
         .filter(entry -> entry.mission().getName().equals(name))
         .findFirst();
+  }
+
+  /**
+   * Returns the name of the currently selected mission, or {@code null} if none is selected.
+   *
+   * @return the selected mission name
+   */
+  public String getSelectedMissionName() {
+    return selectedMissionName;
+  }
+
+  /**
+   * Sets the name of the currently selected mission.
+   *
+   * @param name the mission name to select, or {@code null} to deselect
+   */
+  public void setSelectedMissionName(String name) {
+    this.selectedMissionName = name;
+  }
+
+  /**
+   * Returns the currently selected mission entry, if any.
+   *
+   * @return an optional containing the selected entry
+   */
+  public Optional<MissionEntry> getSelectedMission() {
+    String name = selectedMissionName;
+    if (name == null) return Optional.empty();
+    return findMission(name);
   }
 }

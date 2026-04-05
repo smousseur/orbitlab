@@ -11,11 +11,13 @@ import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionContext;
 import com.smousseur.orbitlab.simulation.mission.MissionEntry;
 import com.smousseur.orbitlab.simulation.mission.MissionStatus;
+import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemeris;
+import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemerisPoint;
+import com.smousseur.orbitlab.simulation.mission.runtime.MissionComputeResult;
 import com.smousseur.orbitlab.simulation.mission.runtime.MissionOptimizer;
-import com.smousseur.orbitlab.simulation.mission.runtime.MissionOptimizerResult;
-import com.smousseur.orbitlab.simulation.mission.runtime.MissionPlayer;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -23,17 +25,14 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.orekit.propagation.SpacecraftState;
 import org.orekit.time.AbsoluteDate;
 
 /**
  * Application state that orchestrates the lifecycle and rendering of all missions in the {@link
- * MissionContext}. Replaces the former {@code SpacecraftDisplayAppState} and {@code
- * SpacecraftTrajectoryAppState}.
- *
- * <p>For each mission, this state manages: optimization submission, player preparation, renderer
- * creation, per-frame updates, and cleanup. Missions are started explicitly via {@link
- * #startMission(MissionEntry)}.
+ * MissionContext}. For each mission, this state manages: computation submission, ephemeris-based
+ * rendering with visibility rules, and cleanup.
  */
 public final class MissionOrchestratorAppState extends BaseAppState {
   private static final Logger logger = LogManager.getLogger(MissionOrchestratorAppState.class);
@@ -52,11 +51,6 @@ public final class MissionOrchestratorAppState extends BaseAppState {
   private ExecutorService optimizationExecutor;
   private int colorIndex = 0;
 
-  /**
-   * Creates a new mission orchestrator state.
-   *
-   * @param context the application context
-   */
   public MissionOrchestratorAppState(ApplicationContext context) {
     this.context = Objects.requireNonNull(context, "context");
   }
@@ -76,53 +70,54 @@ public final class MissionOrchestratorAppState extends BaseAppState {
   public void update(float tpf) {
     pollMissionActions();
 
-    MissionContext missionContext = context.missionContext();
-    // Use the near camera: spacecraft lives in the near view (km scale), not the far view (solar scale)
+    AbsoluteDate now = context.clock().now();
     Camera cam = context.nearCamera();
-
-    // Track which missions are still in the context
     Set<String> activeMissionNames = new HashSet<>();
 
-    for (MissionEntry entry : missionContext.getMissions()) {
+    for (MissionEntry entry : context.missionContext().getMissions()) {
       String name = entry.mission().getName();
       activeMissionNames.add(name);
-      MissionStatus status = entry.mission().getStatus();
 
-      switch (status) {
-        case DRAFT, OPTIMIZING, FAILED -> {
-          // Nothing to render
-        }
-        case READY -> {
-          if (!entry.isPlayerPrepared()) {
-            prepareMission(entry);
-          }
-        }
-        case RUNNING -> {
-          MissionRenderer renderer = renderers.get(name);
-          if (renderer != null) {
-            renderer.update(tpf, cam);
-          }
-        }
-        case COMPLETED -> {
-          // Renderer stays visible but no propagation
-        }
+      MissionRenderer renderer = renderers.get(name);
+
+      // Only render if READY + visible
+      if (entry.mission().getStatus() != MissionStatus.READY || !entry.isVisible()) {
+        if (renderer != null) renderer.setVisible(false);
+        continue;
+      }
+
+      MissionEphemeris eph = entry.getEphemeris().orElse(null);
+      if (eph == null) {
+        if (renderer != null) renderer.setVisible(false);
+        continue;
+      }
+
+      // Lazy-create renderer on first visible frame
+      if (renderer == null) {
+        renderer = createRenderer(entry);
+        renderers.put(name, renderer);
+      }
+
+      // Visibility rules
+      if (now.compareTo(eph.startDate()) < 0) {
+        // clock before ephemeris → hide everything
+        renderer.setVisible(false);
+      } else if (now.compareTo(eph.endDate()) <= 0) {
+        // clock within ephemeris → interpolate + partial trail
+        MissionEphemerisPoint pt = eph.interpolate(now);
+        List<Vector3D> trail = eph.positionsUpTo(now);
+        renderer.setVisible(true);
+        renderer.updateFromEphemeris(pt, trail, cam);
+      } else {
+        // clock after ephemeris → last position + full trail
+        MissionEphemerisPoint last = eph.lastPoint();
+        List<Vector3D> trail = eph.allPositions();
+        renderer.setVisible(true);
+        renderer.updateFromEphemeris(last, trail, cam);
       }
     }
 
-    // Cleanup renderers for removed missions
-    renderers
-        .keySet()
-        .removeIf(
-            name -> {
-              if (!activeMissionNames.contains(name)) {
-                MissionRenderer renderer = renderers.get(name);
-                if (renderer != null) {
-                  renderer.cleanup();
-                }
-                return true;
-              }
-              return false;
-            });
+    cleanupRemovedMissions(activeMissionNames);
   }
 
   private void pollMissionActions() {
@@ -132,13 +127,20 @@ public final class MissionOrchestratorAppState extends BaseAppState {
       String name = request.missionName();
       switch (request.action()) {
         case OPTIMIZE ->
-            context.missionContext().findMission(name).ifPresent(this::submitForOptimization);
-        case START -> context.missionContext().findMission(name).ifPresent(this::startMission);
+            context.missionContext().findMission(name).ifPresent(this::submitForComputation);
+        case TOGGLE_VISIBLE ->
+            context
+                .missionContext()
+                .findMission(name)
+                .ifPresent(
+                    entry -> {
+                      if (entry.mission().getStatus() == MissionStatus.READY) {
+                        entry.setVisible(!entry.isVisible());
+                      }
+                    });
         case DELETE -> {
           MissionRenderer renderer = renderers.remove(name);
-          if (renderer != null) {
-            renderer.cleanup();
-          }
+          if (renderer != null) renderer.cleanup();
           context.missionContext().removeMission(name);
           logger.info("Mission '{}' deleted", name);
         }
@@ -146,78 +148,57 @@ public final class MissionOrchestratorAppState extends BaseAppState {
     }
   }
 
-  /**
-   * Submits a mission for background optimization. Sets the mission status to {@link
-   * MissionStatus#OPTIMIZING} and runs the optimizer on a background thread. On completion, the
-   * status is set to {@link MissionStatus#READY} or {@link MissionStatus#FAILED}.
-   *
-   * @param entry the mission entry to optimize
-   */
-  public void submitForOptimization(MissionEntry entry) {
+  private void submitForComputation(MissionEntry entry) {
     Mission mission = entry.mission();
-    mission.setStatus(MissionStatus.OPTIMIZING);
+    mission.setStatus(MissionStatus.COMPUTING);
+    entry.setEphemeris(null); // invalidate previous
+
     optimizationExecutor.submit(
         () -> {
           try {
-            logger.info("Starting optimization for mission '{}'", mission.getName());
+            logger.info("Starting computation for mission '{}'", mission.getName());
             AbsoluteDate launchDate = entry.getScheduledDate().orElseGet(context.clock()::now);
             entry.setScheduledDate(launchDate);
             SpacecraftState initialState = mission.getInitialState(launchDate);
             mission.setCurrentState(initialState);
+            mission.setInitialDate(launchDate);
+
             MissionOptimizer optimizer = new MissionOptimizer(mission);
-            MissionOptimizerResult result = optimizer.optimize();
-            entry.setOptimizerResult(result);
-            logger.info("Optimization completed for mission '{}'", mission.getName());
+            MissionComputeResult result = optimizer.optimize();
+
+            entry.setOptimizerResult(result.optimizerResult());
+            entry.setEphemeris(result.ephemeris());
+            // Status already set to READY by optimizer
+            logger.info("Computation completed for mission '{}'", mission.getName());
           } catch (Exception e) {
             mission.setStatus(MissionStatus.FAILED);
-            logger.error("Optimization failed for mission '{}'", mission.getName(), e);
+            logger.error("Computation failed for mission '{}'", mission.getName(), e);
           }
         });
   }
 
-  /**
-   * Starts a mission that has been prepared (READY + playerPrepared). Sets the status to {@link
-   * MissionStatus#RUNNING} and calls {@code mission.start()}.
-   *
-   * @param entry the mission entry to start
-   * @throws IllegalStateException if the mission is not in READY state or not prepared
-   */
-  public void startMission(MissionEntry entry) {
-    if (entry.mission().getStatus() != MissionStatus.READY || !entry.isPlayerPrepared()) {
-      throw new IllegalStateException(
-          "Mission '" + entry.mission().getName() + "' is not ready to start");
-    }
-    AbsoluteDate launchDate =
-        entry
-            .getScheduledDate()
-            .orElseThrow(
-                () ->
-                    new IllegalStateException(
-                        "Mission '" + entry.mission().getName() + "' has no scheduled date"));
-    context.clock().seek(launchDate);
-    entry.mission().start(launchDate);
-    logger.info("Mission '{}' started at {}", entry.mission().getName(), launchDate);
+  private MissionRenderer createRenderer(MissionEntry entry) {
+    RenderContext renderContext = RenderContext.planet(context.focusView().getBody());
+    ColorRGBA color = TRAJECTORY_PALETTE[colorIndex % TRAJECTORY_PALETTE.length];
+    colorIndex++;
+
+    MissionRenderer renderer = new MissionRenderer(entry, context, renderContext, color);
+    renderer.initialize(getApplication());
+    logger.info("Renderer created for mission '{}'", entry.mission().getName());
+    return renderer;
   }
 
-  private void prepareMission(MissionEntry entry) {
-    entry
-        .getOptimizerResult()
-        .ifPresent(
-            result -> {
-              MissionPlayer player = new MissionPlayer(entry.mission());
-              player.play(result, context.clock().now());
-              entry.setPlayerPrepared(true);
-
-              // Create renderer
-              RenderContext renderContext = RenderContext.planet(context.focusView().getBody());
-              ColorRGBA color = TRAJECTORY_PALETTE[colorIndex % TRAJECTORY_PALETTE.length];
-              colorIndex++;
-
-              MissionRenderer renderer = new MissionRenderer(entry, context, renderContext, color);
-              renderer.initialize(getApplication());
-              renderers.put(entry.mission().getName(), renderer);
-
-              logger.info("Mission '{}' prepared and renderer created", entry.mission().getName());
+  private void cleanupRemovedMissions(Set<String> activeMissionNames) {
+    renderers
+        .keySet()
+        .removeIf(
+            name -> {
+              if (!activeMissionNames.contains(name)) {
+                MissionRenderer renderer = renderers.get(name);
+                if (renderer != null) renderer.cleanup();
+                return true;
+              }
+              return false;
             });
   }
 

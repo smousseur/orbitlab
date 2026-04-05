@@ -31,6 +31,7 @@ public class CoastingStage extends MissionStage {
   public void configure(NumericalPropagator propagator, Mission mission) {
     if (maxTime != null) {
       AbsoluteDate t = mission.getCurrentState().getDate().shiftedBy(maxTime);
+      this.configuredEndDate = t;
       propagator.addEventDetector(
           new DateDetector(t)
               .withHandler(

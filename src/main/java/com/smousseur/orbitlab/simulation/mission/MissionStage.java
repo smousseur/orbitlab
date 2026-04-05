@@ -2,6 +2,7 @@ package com.smousseur.orbitlab.simulation.mission;
 
 import org.orekit.propagation.SpacecraftState;
 import org.orekit.propagation.numerical.NumericalPropagator;
+import org.orekit.time.AbsoluteDate;
 
 /**
  * Abstract base class for a single phase of a {@link Mission}. Each stage has a name, an optional
@@ -14,6 +15,7 @@ import org.orekit.propagation.numerical.NumericalPropagator;
  */
 public abstract class MissionStage {
   protected final String name;
+  protected AbsoluteDate configuredEndDate;
 
   /**
    * Creates a new mission stage with the given name.
@@ -64,5 +66,15 @@ public abstract class MissionStage {
    */
   public final String getName() {
     return name;
+  }
+
+  /**
+   * Returns the expected end date for this stage, set during {@link #configure}. Used by the
+   * ephemeris generator to propagate to the exact end time rather than an arbitrary safety limit.
+   *
+   * @return the end date, or {@code null} if not set
+   */
+  public AbsoluteDate getConfiguredEndDate() {
+    return configuredEndDate;
   }
 }

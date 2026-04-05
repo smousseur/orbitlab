@@ -209,6 +209,13 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
 
   @Override
   public double computeCost(SpacecraftState state) {
+    // Detect penalty states: if propagation failed, the returned state is the initial state
+    // (no time advancement). Assign a very high cost so CMA-ES avoids these solutions.
+    double elapsed = state.getDate().durationFrom(initialState.getDate());
+    if (elapsed < 1.0) {
+      return 1e6;
+    }
+
     KeplerianOrbit finalOrbit = (KeplerianOrbit) OrbitType.KEPLERIAN.convertType(state.getOrbit());
 
     double apoapsis = finalOrbit.getA() * (1.0 + finalOrbit.getE());

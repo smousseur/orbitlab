@@ -57,7 +57,7 @@ public final class EventBus {
   /** Actions that can be requested on a mission from the UI. */
   public enum MissionAction {
     OPTIMIZE,
-    START,
+    TOGGLE_VISIBLE,
     DELETE
   }
 

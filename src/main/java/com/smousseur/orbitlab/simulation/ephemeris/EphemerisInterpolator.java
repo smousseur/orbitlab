@@ -1,7 +1,9 @@
 package com.smousseur.orbitlab.simulation.ephemeris;
 
+import java.util.Arrays;
 import org.hipparchus.geometry.euclidean.threed.Rotation;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
+import org.orekit.time.AbsoluteDate;
 
 /**
  * Shared interpolation utilities for ephemeris data (position, velocity, rotation).
@@ -12,6 +14,41 @@ import org.hipparchus.geometry.euclidean.threed.Vector3D;
 public final class EphemerisInterpolator {
 
   private EphemerisInterpolator() {}
+
+  /**
+   * Finds the interpolation interval for the given date in a sorted date array.
+   *
+   * @param dates sorted array of dates
+   * @param date the target date
+   * @return int[2] = {i0, i1} where dates[i0] &lt;= date &lt;= dates[i1]. If exact match, i0 == i1.
+   */
+  public static int[] findInterval(AbsoluteDate[] dates, AbsoluteDate date) {
+    int i = Arrays.binarySearch(dates, date);
+    if (i >= 0) {
+      return new int[] {i, i};
+    }
+    int insertPoint = -i - 1;
+    int i0 = Math.max(0, insertPoint - 1);
+    int i1 = Math.min(dates.length - 1, insertPoint);
+    return new int[] {i0, i1};
+  }
+
+  /**
+   * Computes the normalized interpolation parameter tau in [0, 1] for the given date within
+   * [dates[i0], dates[i1]]. Returns 0.0 if i0 == i1 or dt &lt;= 0.
+   *
+   * @param dates sorted array of dates
+   * @param i0 lower interval index
+   * @param i1 upper interval index
+   * @param date the target date
+   * @return tau in [0, 1]
+   */
+  public static double computeTau(AbsoluteDate[] dates, int i0, int i1, AbsoluteDate date) {
+    if (i0 == i1) return 0.0;
+    double dt = dates[i1].durationFrom(dates[i0]);
+    if (dt <= 0.0) return 0.0;
+    return date.durationFrom(dates[i0]) / dt;
+  }
 
   /**
    * Cubic Hermite position interpolation.

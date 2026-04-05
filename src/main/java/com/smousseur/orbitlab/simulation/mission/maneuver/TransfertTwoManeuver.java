@@ -121,14 +121,12 @@ public class TransfertTwoManeuver {
     if (stateAfterBurn1 == null) {
       return new TransferResult(initialState, null, null, null); // penalty
     }
-    KeplerianOrbit orbit = new KeplerianOrbit(stateAfterBurn1.getOrbit());
-    if (orbit.getE() > 0.95
-        || orbit.getA() < EARTH_RADIUS
-        || orbit.getA() > EARTH_RADIUS + 2_000_000) {
+    KeplerianOrbit orbitPostBurn1 = new KeplerianOrbit(stateAfterBurn1.getOrbit());
+    if (orbitPostBurn1.getE() > 0.95
+        || orbitPostBurn1.getA() < EARTH_RADIUS
+        || orbitPostBurn1.getA() > EARTH_RADIUS + 2_000_000) {
       return new TransferResult(initialState, null, null, null); // non-viable orbit, penalty
     }
-
-    KeplerianOrbit orbitPostBurn1 = orbit;
 
     // ── Step 2: Resolve burn 2 at next apoapsis ──
     ResolvedBurn2 burn2 = burn2Resolver.resolveBurn2(stateAfterBurn1);

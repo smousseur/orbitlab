@@ -16,7 +16,7 @@ public interface OptimizableMissionStage<P extends TrajectoryProblem> {
   /** Stable key used to store/retrieve the optimization result for this stage. */
   String optimizationKey();
 
-  /** Injects the optimization result before execution (called by MissionPlayer). */
+  /** Injects the optimization result before execution. */
   void applyOptimization(OptimizationResult result);
 
   /**

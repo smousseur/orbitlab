@@ -4,6 +4,8 @@ import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionStage;
 import com.smousseur.orbitlab.simulation.mission.MissionStatus;
 import com.smousseur.orbitlab.simulation.mission.OptimizableMissionStage;
+import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemeris;
+import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemerisGenerator;
 import com.smousseur.orbitlab.simulation.mission.maneuver.TransferResult;
 import com.smousseur.orbitlab.simulation.mission.maneuver.TransfertTwoManeuver;
 import com.smousseur.orbitlab.simulation.mission.optimizer.CMAESTrajectoryOptimizer;
@@ -16,6 +18,7 @@ import com.smousseur.orbitlab.simulation.mission.optimizer.problems.TransferTwoM
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.orekit.propagation.SpacecraftState;
+import org.orekit.time.AbsoluteDate;
 
 /**
  * Orchestrates the sequential optimization of all stages in a {@link Mission}.
@@ -60,8 +63,9 @@ public class MissionOptimizer {
    *
    * @return the collected optimization results for all optimizable stages, keyed by stage name
    */
-  public MissionOptimizerResult optimize() {
+  public MissionComputeResult optimize() {
     Map<String, OptimizationResult> results = new LinkedHashMap<>();
+    AbsoluteDate launchDate = mission.getCurrentState().getDate();
 
     for (MissionStage stage : mission.getStages()) {
       logger.info("Current mass = {}", mission.getCurrentState().getMass());
@@ -97,7 +101,8 @@ public class MissionOptimizer {
               transferResult != null ? transferResult.resolvedBurn2() : null;
           logger.info("Transfert burn 2: {}", burn);
         }
-        mission.setCurrentState(problem.propagate(result.bestVariables()));
+        SpacecraftState propagated = problem.propagate(result.bestVariables());
+        mission.setCurrentState(propagated);
       } else {
         logger.info("Propagating non-optimizable stage '{}'...", stage.getName());
         SpacecraftState propagated = stage.propagateStandalone(mission.getCurrentState(), mission);
@@ -106,7 +111,22 @@ public class MissionOptimizer {
       }
     }
 
+    // Inject optimization results into stages for replay
+    MissionOptimizerResult optimResult = new MissionOptimizerResult(results);
+    for (MissionStage stage : mission.getStages()) {
+      if (stage instanceof OptimizableMissionStage<?> optimizable) {
+        optimResult
+            .findFor(optimizable.optimizationKey())
+            .ifPresent(optimizable::applyOptimization);
+      }
+    }
+
+    // Generate the full ephemeris from the original launch date
+    SpacecraftState initialState = mission.getInitialState(launchDate);
+    MissionEphemerisGenerator generator = new MissionEphemerisGenerator();
+    MissionEphemeris ephemeris = generator.generate(mission, initialState);
+
     mission.setStatus(MissionStatus.READY);
-    return new MissionOptimizerResult(results);
+    return new MissionComputeResult(optimResult, ephemeris);
   }
 }
