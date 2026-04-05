@@ -60,6 +60,7 @@ public class TransfertTwoManeuverStage extends MissionStage
 
     double maneuverTime = maneuver.totalDuration(params, burn2);
     AbsoluteDate mecoDate = state.getDate().shiftedBy(maneuverTime);
+    this.configuredEndDate = mecoDate;
     propagator.addEventDetector(
         new DateDetector(mecoDate)
             .withHandler(

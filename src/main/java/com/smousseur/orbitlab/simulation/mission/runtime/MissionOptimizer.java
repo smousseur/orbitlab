@@ -101,7 +101,8 @@ public class MissionOptimizer {
               transferResult != null ? transferResult.resolvedBurn2() : null;
           logger.info("Transfert burn 2: {}", burn);
         }
-        mission.setCurrentState(problem.propagate(result.bestVariables()));
+        SpacecraftState propagated = problem.propagate(result.bestVariables());
+        mission.setCurrentState(propagated);
       } else {
         logger.info("Propagating non-optimizable stage '{}'...", stage.getName());
         SpacecraftState propagated = stage.propagateStandalone(mission.getCurrentState(), mission);

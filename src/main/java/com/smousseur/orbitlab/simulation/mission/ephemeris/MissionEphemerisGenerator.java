@@ -60,7 +60,6 @@ public final class MissionEphemerisGenerator {
 
       // Collect samples via fixed-step handler
       String stageName = stage.getName();
-      SpacecraftState stageEntryState = currentState;
       propagator.getMultiplexer().add(DEFAULT_STEP_SECONDS, (OrekitFixedStepHandler) state -> {
         Vector3D pos = state.getPosition();
         Vector3D vel = state.getPVCoordinates().getVelocity();
@@ -70,17 +69,25 @@ public final class MissionEphemerisGenerator {
                 state.getDate(), pos, vel, stageName, state.getMass(), alt));
       });
 
-      // Propagate: stage event detectors will STOP propagation at end-of-stage.
-      // For the last stage with no end event, propagate for a default coast duration.
+      // Propagate to the exact end date configured by the stage. Using the precise end date
+      // avoids numerical issues where adaptive-step integrators might miss ConstantThrustManeuver
+      // boundary events when propagating far past the actual stage duration.
       AbsoluteDate endDate;
       if (isLastStage) {
         endDate = currentState.getDate().shiftedBy(DEFAULT_COAST_DURATION_SECONDS);
+      } else if (stage.getConfiguredEndDate() != null) {
+        endDate = stage.getConfiguredEndDate();
       } else {
-        // Far future — event detectors stop propagation at the actual end time
-        endDate = currentState.getDate().shiftedBy(7200.0); // 2 hours max safety
+        endDate = currentState.getDate().shiftedBy(7200.0); // fallback safety
       }
 
-      SpacecraftState finalState = propagator.propagate(endDate);
+      SpacecraftState finalState;
+      try {
+        finalState = propagator.propagate(endDate);
+      } catch (Exception e) {
+        logger.warn("Propagation failed for stage '{}': {}", stage.getName(), e.getMessage());
+        finalState = mission.getCurrentState();
+      }
 
       // Add the final state of this stage as a sample point
       Vector3D pos = finalState.getPosition();

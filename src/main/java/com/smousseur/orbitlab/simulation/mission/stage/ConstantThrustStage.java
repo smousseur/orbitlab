@@ -69,6 +69,7 @@ public class ConstantThrustStage extends MissionStage {
     propagator.addForceModel(burn);
 
     AbsoluteDate mecoDate = currentState.getDate().shiftedBy(this.duration);
+    this.configuredEndDate = mecoDate;
     DateDetector mecoDetector =
         new DateDetector(mecoDate)
             .withHandler(

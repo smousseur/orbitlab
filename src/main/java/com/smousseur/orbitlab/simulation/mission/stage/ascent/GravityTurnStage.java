@@ -88,6 +88,7 @@ public class GravityTurnStage extends MissionStage
 
     // MECO event → transition to next stage
     AbsoluteDate mecoDate = state.getDate().shiftedBy(params.transitionTime());
+    this.configuredEndDate = mecoDate;
     propagator.addEventDetector(
         new DateDetector(mecoDate)
             .withHandler(
