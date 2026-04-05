@@ -4,9 +4,7 @@ import com.jme3.app.Application;
 import com.jme3.math.ColorRGBA;
 import com.jme3.renderer.Camera;
 import com.jme3.scene.Node;
-import com.jme3.scene.Spatial;
 import com.smousseur.orbitlab.app.ApplicationContext;
-import com.smousseur.orbitlab.app.SimulationClock;
 import com.smousseur.orbitlab.app.view.RenderContext;
 import com.smousseur.orbitlab.app.view.ViewMode;
 import com.smousseur.orbitlab.engine.AssetFactory;
@@ -16,12 +14,12 @@ import com.smousseur.orbitlab.engine.scene.body.lod.Model3dView;
 import com.smousseur.orbitlab.engine.scene.spacecraft.SpacecraftPresenter;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionEntry;
+import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemerisPoint;
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
-import org.orekit.propagation.SpacecraftState;
-import org.orekit.time.AbsoluteDate;
 
 /**
  * Encapsulates all rendering for a single mission: spacecraft display (SpacecraftPresenter +
@@ -44,14 +42,6 @@ public final class MissionRenderer {
   private LodView view;
   private MissionTrajectoryRenderer trajectoryRenderer;
 
-  /**
-   * Creates a new mission renderer.
-   *
-   * @param entry the mission entry to render
-   * @param context the application context
-   * @param renderContext the render context for coordinate scaling
-   * @param trajectoryColor the color for the trajectory line
-   */
   public MissionRenderer(
       MissionEntry entry,
       ApplicationContext context,
@@ -86,59 +76,53 @@ public final class MissionRenderer {
     presenter = new SpacecraftPresenter(config.id(), view);
     presenter.setVisible(true);
 
-    // Attach anchor3d (3D model) as child of farAnchor so they move together in the near view.
-    // Unlike planets (where farAnchor is in far view and anchor3d in near view), the spacecraft
-    // lives entirely in the near view, so both nodes share the same coordinate system.
     Node anchor = (Node) view.spatial();
     anchor.attachChild(view.nearSpatial());
     context.sceneGraph().nearBodiesNode().attachChild(anchor);
 
-    // Load 3D model asynchronously
     ExecutorService assetExecutor = AssetFactory.get().assetLoadingExecutor();
     Model3dView model3dView = view.getModel3dView();
     CompletableFuture.supplyAsync(model3dView::loadModel, assetExecutor)
         .thenAccept(model3dView::onModelLoaded);
 
-    // Initialize trajectory renderer
     trajectoryRenderer =
         new MissionTrajectoryRenderer(mission.getName(), renderContext, trajectoryColor);
     trajectoryRenderer.initialize(context.sceneGraph().nearOrbitsNode());
   }
 
   /**
-   * Updates the spacecraft display and trajectory for the current frame.
+   * Shows/hides all visual elements (spacecraft + trajectory).
    *
-   * @param tpf time per frame
+   * @param visible whether to show or hide
+   */
+  public void setVisible(boolean visible) {
+    if (view != null) {
+      view.setVisible(visible);
+    }
+    if (trajectoryRenderer != null) {
+      trajectoryRenderer.setVisible(visible);
+    }
+  }
+
+  /**
+   * Updates display from a pre-computed ephemeris point. No propagation — pure rendering from
+   * pre-calculated data.
+   *
+   * @param point the interpolated ephemeris point
+   * @param trailPositions the positions for the trajectory trail
    * @param cam the active camera
    */
-  public void update(float tpf, Camera cam) {
-    Mission mission = entry.mission();
-
-    if (!mission.isOnGoing()) {
-      return;
-    }
-
+  public void updateFromEphemeris(
+      MissionEphemerisPoint point, List<Vector3D> trailPositions, Camera cam) {
     boolean isPlanetMode = context.focusView().getMode() == ViewMode.PLANET;
     if (!isPlanetMode) {
-      view.setVisible(false);
-      return;
-    }
-    view.setVisible(true);
-
-    SimulationClock clock = context.clock();
-    AbsoluteDate now = clock.now();
-    mission.update(now);
-
-    SpacecraftState state = mission.getCurrentState();
-    if (state == null) {
+      if (view != null) view.setVisible(false);
       return;
     }
 
-    Vector3D posGcrf = state.getPosition();
-    presenter.updatePose(posGcrf, renderContext);
+    presenter.updatePose(point.position(), renderContext);
     view.updateScreen(cam);
-
-    trajectoryRenderer.addPosition(posGcrf);
+    trajectoryRenderer.setPositions(trailPositions);
     trajectoryRenderer.update();
   }
 

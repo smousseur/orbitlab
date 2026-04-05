@@ -1,21 +1,23 @@
 package com.smousseur.orbitlab.simulation.mission;
 
+import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemeris;
 import com.smousseur.orbitlab.simulation.mission.runtime.MissionOptimizerResult;
 import java.util.Objects;
 import java.util.Optional;
 import org.orekit.time.AbsoluteDate;
 
 /**
- * Groups a {@link Mission} with its optimization result and runtime preparation state. This is a
- * mutable holder because the optimization result is set asynchronously after creation.
+ * Groups a {@link Mission} with its optimization result and ephemeris. This is a mutable holder
+ * because the optimization result and ephemeris are set asynchronously after creation.
  *
- * <p>Thread safety: {@code optimizerResult} and {@code playerPrepared} are {@code volatile} because
- * they are written from the optimization thread and read from the JME update thread.
+ * <p>Thread safety: volatile fields are written from the optimization thread and read from the JME
+ * update thread.
  */
 public final class MissionEntry {
   private final Mission mission;
   private volatile MissionOptimizerResult optimizerResult;
-  private volatile boolean playerPrepared;
+  private volatile MissionEphemeris ephemeris;
+  private volatile boolean visible = false;
   private volatile AbsoluteDate scheduledDate;
 
   /**
@@ -55,27 +57,43 @@ public final class MissionEntry {
   }
 
   /**
-   * Returns whether the mission player has been prepared (optimization results injected into
-   * stages).
+   * Returns the pre-computed mission ephemeris, if available.
    *
-   * @return {@code true} if player preparation is complete
+   * @return an optional containing the ephemeris, or empty if not yet computed
    */
-  public boolean isPlayerPrepared() {
-    return playerPrepared;
+  public Optional<MissionEphemeris> getEphemeris() {
+    return Optional.ofNullable(ephemeris);
   }
 
   /**
-   * Marks whether the mission player has been prepared.
+   * Sets the pre-computed mission ephemeris.
    *
-   * @param prepared {@code true} if player preparation is complete
+   * @param ephemeris the ephemeris to store
    */
-  public void setPlayerPrepared(boolean prepared) {
-    this.playerPrepared = prepared;
+  public void setEphemeris(MissionEphemeris ephemeris) {
+    this.ephemeris = ephemeris;
   }
 
   /**
-   * Sets the planned launch date for this mission. If not set before optimization, it will be
-   * defaulted to the current simulation clock time at the moment optimization is submitted.
+   * Returns whether this mission should be visible in the 3D scene.
+   *
+   * @return {@code true} if the mission is visible
+   */
+  public boolean isVisible() {
+    return visible;
+  }
+
+  /**
+   * Sets whether this mission should be visible in the 3D scene.
+   *
+   * @param visible {@code true} to show the mission
+   */
+  public void setVisible(boolean visible) {
+    this.visible = visible;
+  }
+
+  /**
+   * Sets the planned launch date for this mission.
    *
    * @param date the planned launch date
    */

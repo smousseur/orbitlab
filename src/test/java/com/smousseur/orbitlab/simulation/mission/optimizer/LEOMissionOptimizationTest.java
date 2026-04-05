@@ -3,21 +3,9 @@ package com.smousseur.orbitlab.simulation.mission.optimizer;
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.mission.LEOMission;
 import com.smousseur.orbitlab.simulation.mission.Mission;
-import com.smousseur.orbitlab.simulation.mission.MissionStage;
-import com.smousseur.orbitlab.simulation.mission.optimizer.problems.GravityTurnConstraints;
+import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemeris;
+import com.smousseur.orbitlab.simulation.mission.runtime.MissionComputeResult;
 import com.smousseur.orbitlab.simulation.mission.runtime.MissionOptimizer;
-import com.smousseur.orbitlab.simulation.mission.runtime.MissionOptimizerResult;
-import com.smousseur.orbitlab.simulation.mission.runtime.MissionPlayer;
-import com.smousseur.orbitlab.simulation.mission.stage.CoastingStage;
-import com.smousseur.orbitlab.simulation.mission.stage.ascent.GravityTurnStage;
-import com.smousseur.orbitlab.simulation.mission.stage.TransfertTwoManeuverStage;
-import com.smousseur.orbitlab.simulation.mission.stage.ascent.VerticalAscentStage;
-import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchVehicle;
-import com.smousseur.orbitlab.simulation.mission.vehicle.Spacecraft;
-import com.smousseur.orbitlab.simulation.mission.vehicle.VehicleStack;
-import java.util.ArrayList;
-import java.util.List;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.junit.jupiter.api.Assertions;
@@ -31,7 +19,6 @@ import org.orekit.time.TimeScalesFactory;
 public class LEOMissionOptimizationTest extends AbstractTrajectoryOptimizerTest {
   private static final Logger logger = LogManager.getLogger(LEOMissionOptimizationTest.class);
 
-  public static final int ASCENSION_DURATION = 10;
   public static final double ORBIT_MARGIN_RATIO = 0.07;
 
   @BeforeAll
@@ -46,16 +33,22 @@ public class LEOMissionOptimizationTest extends AbstractTrajectoryOptimizerTest 
     Mission mission = new LEOMission("LEO mission", targetAltitude);
     SpacecraftState initialState = mission.getInitialState(epoch);
     mission.setCurrentState(initialState);
+
     MissionOptimizer optimizer = new MissionOptimizer(mission, 40_000);
-    MissionOptimizerResult optimResults = optimizer.optimize();
-    mission.reset();
-    MissionPlayer player = new MissionPlayer(mission);
-    player.play(optimResults, epoch);
-    PropagationResults results = propagateMission(mission, "Coasting", epoch);
+    MissionComputeResult computeResult = optimizer.optimize();
+    MissionEphemeris ephemeris = computeResult.ephemeris();
+
+    CoastAltitudeResults results = extractCoastAltitudes(ephemeris, "Coasting");
+
     logger.info(
-        "[{}km] Max coast altitude: {} m", (int) (targetAltitude / 1000), results.maxCoastAltitude);
+        "[{}km] Max coast altitude: {} m",
+        (int) (targetAltitude / 1000),
+        results.maxCoastAltitude);
     logger.info(
-        "[{}km] Min coast altitude: {} m", (int) (targetAltitude / 1000), results.minCoastAltitude);
+        "[{}km] Min coast altitude: {} m",
+        (int) (targetAltitude / 1000),
+        results.minCoastAltitude);
+
     double errorMargin = ORBIT_MARGIN_RATIO * targetAltitude;
     Assertions.assertTrue(
         Math.abs(results.maxCoastAltitude - targetAltitude) <= errorMargin,
@@ -69,26 +62,5 @@ public class LEOMissionOptimizationTest extends AbstractTrajectoryOptimizerTest 
             String.format(
                 "Min coast altitude %.0f m not within %.0f m of target %.0f m",
                 results.minCoastAltitude, errorMargin, targetAltitude));
-  }
-
-  private static VehicleStack getMissionVehicle() {
-    return new VehicleStack(
-        new ArrayList<>(
-            List.of(
-                LaunchVehicle.getLauncherStage1Vehicle(),
-                LaunchVehicle.getLauncherStage2Vehicle(),
-                Spacecraft.getSpacecraft())));
-  }
-
-  private static List<MissionStage> getStages(double targetAltitude) {
-    return List.of(
-        new VerticalAscentStage("Vertical Ascent", ASCENSION_DURATION),
-        new GravityTurnStage(
-            "Gravity turn",
-            ASCENSION_DURATION,
-            3.0,
-            GravityTurnConstraints.forTarget(targetAltitude)),
-        new TransfertTwoManeuverStage("Transfert", targetAltitude),
-        new CoastingStage("Coasting", null));
   }
 }

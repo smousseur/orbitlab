@@ -2,9 +2,7 @@ package com.smousseur.orbitlab.simulation.mission;
 
 public enum MissionStatus {
   DRAFT,
-  OPTIMIZING,
+  COMPUTING,
   READY,
-  RUNNING,
-  COMPLETED,
   FAILED
 }

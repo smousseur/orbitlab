@@ -1,7 +1,7 @@
 package com.smousseur.orbitlab.ui.telemetry;
 
-import com.jme3.scene.Spatial;
 import com.jme3.scene.Node;
+import com.jme3.scene.Spatial;
 import com.simsilica.lemur.Axis;
 import com.simsilica.lemur.Container;
 import com.simsilica.lemur.FillMode;
@@ -9,19 +9,15 @@ import com.simsilica.lemur.Label;
 import com.simsilica.lemur.component.BoxLayout;
 import com.smousseur.orbitlab.app.ApplicationContext;
 import com.smousseur.orbitlab.simulation.mission.Mission;
+import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemeris;
+import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemerisPoint;
 import com.smousseur.orbitlab.ui.AppStyles;
 import java.util.Objects;
-import org.orekit.propagation.SpacecraftState;
+import org.orekit.time.AbsoluteDate;
 
 /**
- * A Lemur-based HUD widget displaying basic mission telemetry in real time.
- *
- * <p>Shows five parameters updated every frame from the active {@link Mission}:
- * mission elapsed time, current stage name, altitude, speed, and spacecraft mass.
- * The widget is positioned in the top-right corner of the screen and hidden when
- * no mission is ongoing.
- *
- * <p>Implements {@link AutoCloseable} to detach itself from the scene graph when no longer needed.
+ * A Lemur-based HUD widget displaying basic mission telemetry. All values come from pre-computed
+ * ephemeris — no Orekit calls at runtime.
  */
 public class TelemetryWidget implements AutoCloseable {
 
@@ -34,11 +30,6 @@ public class TelemetryWidget implements AutoCloseable {
   private final Label velVal;
   private final Label massVal;
 
-  /**
-   * Creates and attaches the telemetry widget to the GUI scene graph.
-   *
-   * @param context the application context providing the GUI scene graph
-   */
   public TelemetryWidget(ApplicationContext context) {
     Objects.requireNonNull(context, "context");
     Node telemetryNode = context.guiGraph().getTelemetryNode();
@@ -48,62 +39,63 @@ public class TelemetryWidget implements AutoCloseable {
 
     root.addChild(new Label("— TELEMETRY —", TelemetryStyles.STYLE));
 
-    this.metVal  = addRow("MET  ");
+    this.metVal = addRow("MET  ");
     this.phaseVal = addRow("Phase");
-    this.altVal  = addRow("Alt  ");
-    this.velVal  = addRow("Vit  ");
-    this.massVal  = addRow("Masse");
+    this.altVal = addRow("Alt  ");
+    this.velVal = addRow("Vit  ");
+    this.massVal = addRow("Masse");
   }
 
   private Label addRow(String key) {
-    Container row = root.addChild(
-        new Container(new BoxLayout(Axis.X, FillMode.None), TelemetryStyles.STYLE));
+    Container row =
+        root.addChild(
+            new Container(new BoxLayout(Axis.X, FillMode.None), TelemetryStyles.STYLE));
     row.addChild(new Label(key, TelemetryStyles.STYLE));
     Label val = row.addChild(new Label("—", TelemetryStyles.STYLE));
     return val;
   }
 
   /**
-   * Refreshes all displayed values from the given mission's current state.
+   * Updates telemetry display from ephemeris data. All values come from pre-computed ephemeris.
    *
-   * @param mission the mission currently in progress
+   * @param eph the mission ephemeris
+   * @param now the current simulation time
+   * @param mission the mission (for initial date / MET computation)
    */
-  public void update(Mission mission) {
-    SpacecraftState state = mission.getCurrentState();
-    if (state == null) {
-      clearValues();
+  public void updateFromEphemeris(MissionEphemeris eph, AbsoluteDate now, Mission mission) {
+    if (now.compareTo(eph.startDate()) < 0) {
+      metVal.setText("Before launch");
+      phaseVal.setText("—");
+      altVal.setText("—");
+      velVal.setText("—");
+      massVal.setText("—");
       return;
     }
 
-    double elapsedS = state.getDate().durationFrom(mission.getInitialDate());
-    metVal.setText(formatMet(elapsedS));
+    if (now.compareTo(eph.endDate()) > 0) {
+      MissionEphemerisPoint last = eph.lastPoint();
+      updateFields(last, mission);
+      phaseVal.setText("Mission complete");
+      return;
+    }
 
-    phaseVal.setText(mission.getCurrentStage().getName());
-
-    double altKm = mission.computeAltitudeMeters(state) / 1000.0;
-    altVal.setText(String.format("%.1f km", altKm));
-
-    double velMs = state.getVelocity().getNorm();
-    velVal.setText(String.format("%.0f m/s", velMs));
-
-    massVal.setText(String.format("%.0f kg", state.getMass()));
+    MissionEphemerisPoint pt = eph.interpolate(now);
+    updateFields(pt, mission);
   }
 
-  /**
-   * Shows or hides the widget.
-   *
-   * @param visible {@code true} to show, {@code false} to hide
-   */
+  private void updateFields(MissionEphemerisPoint pt, Mission mission) {
+    double elapsedS = pt.time().durationFrom(mission.getInitialDate());
+    metVal.setText(formatMet(elapsedS));
+    phaseVal.setText(pt.stageName());
+    altVal.setText(String.format("%.1f km", pt.altitudeMeters() / 1000.0));
+    velVal.setText(String.format("%.0f m/s", pt.velocity().getNorm()));
+    massVal.setText(String.format("%.0f kg", pt.mass()));
+  }
+
   public void setVisible(boolean visible) {
     root.setCullHint(visible ? Spatial.CullHint.Inherit : Spatial.CullHint.Always);
   }
 
-  /**
-   * Positions the widget in the top-right corner of the screen.
-   *
-   * @param screenWidth  the screen width in pixels
-   * @param screenHeight the screen height in pixels
-   */
   public void layoutTopRight(int screenWidth, int screenHeight) {
     var size = root.getPreferredSize();
     float x = screenWidth - size.x - MARGIN_PX;
@@ -114,14 +106,6 @@ public class TelemetryWidget implements AutoCloseable {
   @Override
   public void close() {
     root.removeFromParent();
-  }
-
-  private void clearValues() {
-    metVal.setText("—");
-    phaseVal.setText("—");
-    altVal.setText("—");
-    velVal.setText("—");
-    massVal.setText("—");
   }
 
   private static String formatMet(double totalSeconds) {
