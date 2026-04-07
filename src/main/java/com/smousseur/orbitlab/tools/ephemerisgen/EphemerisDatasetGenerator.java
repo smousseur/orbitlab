@@ -55,8 +55,8 @@ public final class EphemerisDatasetGenerator {
 
     TimeScale tai = TimeScalesFactory.getTAI();
 
-    // T_START (origine des offsets)
-    // Plage effective générée (clamp Orekit, end exclusive)
+    // T_START (offset origin)
+    // Effective generated range (Orekit clamp, end exclusive)
     AbsoluteDate tStart = new AbsoluteDate(1990, 1, 1, 0, 0, 0.0, tai);
     AbsoluteDate tEndExclusive = new AbsoluteDate(2100, 12, 31, 0, 0, 0.0, tai);
 
