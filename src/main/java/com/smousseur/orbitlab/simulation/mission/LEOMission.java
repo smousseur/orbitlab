@@ -3,8 +3,7 @@ package com.smousseur.orbitlab.simulation.mission;
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.mission.objective.MissionObjective;
-import com.smousseur.orbitlab.simulation.mission.objective.orbit.OrbitTarget;
-import com.smousseur.orbitlab.simulation.mission.objective.orbit.OrbitalObjective;
+import com.smousseur.orbitlab.simulation.mission.objective.OrbitInsertionObjective;
 import com.smousseur.orbitlab.simulation.mission.optimizer.problems.GravityTurnConstraints;
 import com.smousseur.orbitlab.simulation.mission.stage.CoastingStage;
 import com.smousseur.orbitlab.simulation.mission.stage.TransfertTwoManeuverStage;
@@ -112,6 +111,6 @@ public class LEOMission extends Mission {
   }
 
   private static MissionObjective buildObjective(double targetAltitude) {
-    return new OrbitalObjective(new OrbitTarget(SolarSystemBody.EARTH, targetAltitude, 0));
+    return new OrbitInsertionObjective(SolarSystemBody.EARTH, targetAltitude, 0);
   }
 }
