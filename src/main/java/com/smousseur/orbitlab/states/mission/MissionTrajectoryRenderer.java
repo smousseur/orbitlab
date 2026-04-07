@@ -23,7 +23,7 @@ import org.hipparchus.geometry.euclidean.threed.Vector3D;
  */
 public final class MissionTrajectoryRenderer {
 
-  private static final int MAX_POINTS = 4096;
+  private static final int MAX_POINTS = 8192;
   private static final float LINE_WIDTH = 2f;
 
   private final String missionName;
@@ -78,8 +78,7 @@ public final class MissionTrajectoryRenderer {
    */
   public void setVisible(boolean visible) {
     if (lineGeometry != null) {
-      lineGeometry.setCullHint(
-          visible ? Spatial.CullHint.Inherit : Spatial.CullHint.Always);
+      lineGeometry.setCullHint(visible ? Spatial.CullHint.Inherit : Spatial.CullHint.Always);
     }
   }
 
