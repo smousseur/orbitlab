@@ -107,13 +107,13 @@ public final class MissionOrchestratorAppState extends BaseAppState {
         MissionEphemerisPoint pt = eph.interpolate(now);
         List<Vector3D> trail = eph.positionsUpTo(now);
         renderer.setVisible(true);
-        renderer.updateFromEphemeris(pt, trail, cam);
+        renderer.updateFromEphemeris(pt, trail, cam, tpf);
       } else {
         // clock after ephemeris → last position + full trail
         MissionEphemerisPoint last = eph.lastPoint();
         List<Vector3D> trail = eph.allPositions();
         renderer.setVisible(true);
-        renderer.updateFromEphemeris(last, trail, cam);
+        renderer.updateFromEphemeris(last, trail, cam, tpf);
       }
     }
 
@@ -142,9 +142,16 @@ public final class MissionOrchestratorAppState extends BaseAppState {
           MissionRenderer renderer = renderers.remove(name);
           if (renderer != null) renderer.cleanup();
           context.missionContext().removeMission(name);
+          resetFocusIfFollowing(name);
           logger.info("Mission '{}' deleted", name);
         }
       }
+    }
+  }
+
+  private void resetFocusIfFollowing(String missionName) {
+    if (missionName.equals(context.focusView().getFocusedMission())) {
+      context.focusView().reset();
     }
   }
 
@@ -196,6 +203,7 @@ public final class MissionOrchestratorAppState extends BaseAppState {
               if (!activeMissionNames.contains(name)) {
                 MissionRenderer renderer = renderers.get(name);
                 if (renderer != null) renderer.cleanup();
+                resetFocusIfFollowing(name);
                 return true;
               }
               return false;
