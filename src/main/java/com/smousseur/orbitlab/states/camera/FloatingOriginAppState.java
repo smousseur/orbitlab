@@ -70,11 +70,9 @@ public class FloatingOriginAppState extends BaseAppState {
         orbitCam.setFarFloor(PLANET_MODE_FAR_MIN);
       }
       case SPACECRAFT -> {
-        // Hide the far 3D scene: at this scale the far camera would be sub-Earth-radius away
-        // from the origin and the solar rendering would look broken. The 2D HUD icons stay
-        // visible because PlanetHudMarkersAppState writes them into guiNode every frame,
-        // independently of farRoot visibility.
-        sceneGraph.setSolarVisible(false);
+        // Keep the far scene visible so that orbit lines of other planets remain drawn.
+        // The 2D HUD icons are handled independently by PlanetHudMarkersAppState.
+        sceneGraph.setSolarVisible(true);
         sceneGraph.showBodySpatial(view.getBody());
 
         // Keep the far root centered on the parent body — the projection camera used by
