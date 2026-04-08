@@ -36,7 +36,7 @@ public class LightningAppState extends BaseAppState {
   protected void initialize(Application app) {
     rootNode = context.sceneGraph().getRootNode();
     ambientLight = new AmbientLight();
-    ambientLight.setColor(ColorRGBA.White.mult(0.3f)); // intensité de la lumière
+    ambientLight.setColor(ColorRGBA.White.mult(0.3f)); // light intensity
 
     sunLight = new DirectionalLight();
     sunLight.setColor(ColorRGBA.White.mult(1.2f));

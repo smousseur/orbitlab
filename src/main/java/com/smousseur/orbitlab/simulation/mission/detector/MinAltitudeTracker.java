@@ -18,7 +18,7 @@ public class MinAltitudeTracker extends AbstractDetector<MinAltitudeTracker> {
   private final double maxAltitudeThreshold;
   private final AbsoluteDate activeFrom;
   private double minAltitude = Double.MAX_VALUE;
-  private double maxAltitude = Double.MIN_VALUE;
+  private double maxAltitude = Double.NEGATIVE_INFINITY;
 
   /**
    * Creates a tracker that records altitude extremes, active from the start of propagation.

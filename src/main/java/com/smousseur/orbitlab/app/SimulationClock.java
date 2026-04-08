@@ -241,9 +241,4 @@ public final class SimulationClock {
       l.accept(event);
     }
   }
-
-  // For debugging/tests
-  List<Consumer<ClockEvent>> listenersSnapshot() {
-    return List.copyOf(listeners);
-  }
 }
