@@ -27,7 +27,7 @@ import java.util.function.Supplier;
  * <p>Supports the following interaction modes:
  *
  * <ul>
- *   <li>Middle mouse button (MMB) drag: orbit around the pivot point
+ *   <li>Right mouse button (MMB) drag: orbit around the pivot point
  *   <li>Shift + MMB drag: pan (translates the pivot in the screen plane)
  *   <li>Mouse wheel: dolly zoom (exponential distance scaling)
  * </ul>
@@ -446,7 +446,7 @@ public final class OrbitCameraAppState extends BaseAppState
 
   private void registerInputs() {
     // Buttons / modifiers
-    inputManager.addMapping(ACTION_MMB, new MouseButtonTrigger(MouseInput.BUTTON_MIDDLE));
+    inputManager.addMapping(ACTION_MMB, new MouseButtonTrigger(MouseInput.BUTTON_RIGHT));
     inputManager.addMapping(
         ACTION_SHIFT, new KeyTrigger(KeyInput.KEY_LSHIFT), new KeyTrigger(KeyInput.KEY_RSHIFT));
 

@@ -73,6 +73,7 @@ public class OrbitLabApplication extends SimpleApplication {
     stateManager.attach(new EphemerisAppState(applicationContext));
     stateManager.attach(new PlanetPoseAppState(applicationContext));
     stateManager.attach(new ViewModeAppState(applicationContext));
+    stateManager.attach(new MissionOrchestratorAppState(applicationContext));
     stateManager.attach(new FloatingOriginAppState(applicationContext));
     stateManager.attach(new PlanetHudMarkersAppState(applicationContext));
     stateManager.attach(new SolarSystemSceneAppState(applicationContext));
@@ -82,7 +83,6 @@ public class OrbitLabApplication extends SimpleApplication {
     stateManager.attach(new TelemetryWidgetAppState(applicationContext));
     stateManager.attach(new MissionPanelWidgetAppState(applicationContext));
     stateManager.attach(new LightningAppState(applicationContext));
-    stateManager.attach(new MissionOrchestratorAppState(applicationContext));
 
     flyCam.setEnabled(false);
 

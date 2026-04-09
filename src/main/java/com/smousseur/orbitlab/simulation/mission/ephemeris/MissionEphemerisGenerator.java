@@ -11,7 +11,6 @@ import org.apache.logging.log4j.Logger;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.orekit.propagation.SpacecraftState;
 import org.orekit.propagation.numerical.NumericalPropagator;
-import org.orekit.propagation.sampling.OrekitFixedStepHandler;
 import org.orekit.time.AbsoluteDate;
 
 /**
@@ -60,14 +59,18 @@ public final class MissionEphemerisGenerator {
 
       // Collect samples via fixed-step handler
       String stageName = stage.getName();
-      propagator.getMultiplexer().add(DEFAULT_STEP_SECONDS, (OrekitFixedStepHandler) state -> {
-        Vector3D pos = state.getPosition();
-        Vector3D vel = state.getPVCoordinates().getVelocity();
-        double alt = mission.computeAltitudeMeters(state);
-        points.add(
-            new MissionEphemerisPoint(
-                state.getDate(), pos, vel, stageName, state.getMass(), alt));
-      });
+      propagator
+          .getMultiplexer()
+          .add(
+              DEFAULT_STEP_SECONDS,
+              state -> {
+                Vector3D pos = state.getPosition();
+                Vector3D vel = state.getPVCoordinates().getVelocity();
+                double alt = mission.computeAltitudeMeters(state);
+                points.add(
+                    new MissionEphemerisPoint(
+                        state.getDate(), pos, vel, stageName, state.getMass(), alt));
+              });
 
       // Propagate to the exact end date configured by the stage. Using the precise end date
       // avoids numerical issues where adaptive-step integrators might miss ConstantThrustManeuver
