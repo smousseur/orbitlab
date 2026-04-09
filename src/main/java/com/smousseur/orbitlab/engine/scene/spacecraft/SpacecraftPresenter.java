@@ -29,13 +29,13 @@ public final class SpacecraftPresenter {
   private static final double MIN_VELOCITY_NORM_SQ = 1e-6;
 
   /**
-   * Fixed correction applied to the {@link Quaternion#lookAt} result so that the
-   * {@code heavy_falcon.gltf} model — whose nose points along its own +Y axis — is aligned with
-   * the direction of travel. {@code lookAt} orients the local {@code -Z} along the given
-   * direction, so we rotate the model -90° around its local X to bring +Y onto -Z.
+   * Fixed correction applied to the {@link Quaternion#lookAt} result so that the {@code
+   * heavy_falcon.gltf} model — whose nose points along its own +Y axis — is aligned with the
+   * direction of travel. {@code lookAt} orients the local {@code -Z} along the given direction, so
+   * we rotate the model 90° around its local X to bring +Y onto -Z.
    */
   private static final Quaternion MODEL_FORWARD_CORRECTION =
-      new Quaternion().fromAngleAxis(-FastMath.HALF_PI, Vector3f.UNIT_X);
+      new Quaternion().fromAngleAxis(FastMath.HALF_PI, Vector3f.UNIT_X);
 
   private final String id;
   private final BodyView view;
@@ -76,13 +76,13 @@ public final class SpacecraftPresenter {
   }
 
   /**
-   * Updates the spacecraft's pose in the view. The position is provided in GCRF meters
-   * (geocentric, Earth at origin). Since GCRF is geocentric and aligned on ICRF axes, only
-   * render-unit scaling and ICRF-to-JME axis conversion are applied.
+   * Updates the spacecraft's pose in the view. The position is provided in GCRF meters (geocentric,
+   * Earth at origin). Since GCRF is geocentric and aligned on ICRF axes, only render-unit scaling
+   * and ICRF-to-JME axis conversion are applied.
    *
    * <p>Rotation is derived from the velocity vector and smoothed with a spherical linear
-   * interpolation. When the velocity magnitude is below a small epsilon the last computed
-   * rotation is preserved — the position is still applied.
+   * interpolation. When the velocity magnitude is below a small epsilon the last computed rotation
+   * is preserved — the position is still applied.
    *
    * @param positionGcrfMeters the spacecraft position in GCRF frame, in meters
    * @param velocityGcrf the spacecraft velocity in GCRF frame, in m/s (may be zero)

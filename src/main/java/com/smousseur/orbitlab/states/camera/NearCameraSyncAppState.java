@@ -11,12 +11,12 @@ import com.smousseur.orbitlab.app.view.RenderContext;
  * Synchronizes the near viewport camera with the main (far) camera every frame.
  *
  * <p>The far camera works in solar-scale units (1 unit = 1e9 m) while the near camera works in
- * km-scale units (1 unit = 1e3 m). This state copies the far camera's position (scaled by
- * {@link #SOLAR_TO_KM}) and rotation so both viewports share the same viewpoint, and derives the
+ * km-scale units (1 unit = 1e3 m). This state copies the far camera's position (scaled by {@link
+ * #SOLAR_TO_KM}) and rotation so both viewports share the same viewpoint, and derives the
  * field-of-view angle from the far camera so they stay angularly aligned.
  *
- * <p>The near camera's near/far clip planes are <em>not</em> scaled from the far camera: doing
- * so would multiply the far cam's ~100 km minimum near plane by 1e6, producing an unusable near
+ * <p>The near camera's near/far clip planes are <em>not</em> scaled from the far camera: doing so
+ * would multiply the far cam's ~100 km minimum near plane by 1e6, producing an unusable near
  * frustum when the far camera is close to its pivot (e.g. when focused on a spacecraft). Instead,
  * the near viewport owns a fixed depth range sized for planet/spacecraft scale content.
  */
@@ -28,11 +28,11 @@ public final class NearCameraSyncAppState extends BaseAppState {
    */
   private static final float SOLAR_TO_KM = (float) RenderContext.ratioSolarToPlanetPerUnit();
 
-  /** Near clip plane for the near viewport, in km units (10 m). */
-  private static final float NEAR_CAM_FRUSTUM_NEAR = 0.01f;
+  private static final float NEAR_MIN = 0.01f;
+  private static final float NEAR_MAX = 500f;
 
-  /** Far clip plane for the near viewport, in km units (100,000 km). */
-  private static final float NEAR_CAM_FRUSTUM_FAR = 100_000f;
+  private static final float FAR_MIN = 100_000f;
+  private static final float FAR_MAX = 100_000_000f;
 
   private final Camera nearCam;
   private Camera farCam;
@@ -66,7 +66,11 @@ public final class NearCameraSyncAppState extends BaseAppState {
     float halfFovY = FastMath.atan2(farTop, farNear);
     float fovYDeg = halfFovY * 2f * FastMath.RAD_TO_DEG;
     float aspect = (float) nearCam.getWidth() / Math.max(1, nearCam.getHeight());
-    nearCam.setFrustumPerspective(fovYDeg, aspect, NEAR_CAM_FRUSTUM_NEAR, NEAR_CAM_FRUSTUM_FAR);
+
+    float distToOrigin = nearCam.getLocation().length();
+    float near = FastMath.clamp(distToOrigin * 0.0005f, NEAR_MIN, NEAR_MAX);
+    float far = FastMath.clamp(distToOrigin * 10f, FAR_MIN, FAR_MAX);
+    nearCam.setFrustumPerspective(fovYDeg, aspect, near, far);
   }
 
   @Override

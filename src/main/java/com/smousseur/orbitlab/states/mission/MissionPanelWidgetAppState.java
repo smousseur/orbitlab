@@ -26,7 +26,7 @@ public final class MissionPanelWidgetAppState extends BaseAppState {
   public MissionPanelWidgetAppState(ApplicationContext context) {
     this.context = context;
     MissionContext missionContext = context.missionContext();
-    missionContext.addMission(new LEOMission("LEO 400km", 400_000));
+    missionContext.addMission(new LEOMission("LEO", 400_000));
   }
 
   @Override

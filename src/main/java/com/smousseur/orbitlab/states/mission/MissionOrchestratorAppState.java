@@ -92,7 +92,7 @@ public final class MissionOrchestratorAppState extends BaseAppState {
         continue;
       }
 
-      // Lazy-create renderer on first visible frame
+      // Lazy-create renderer on the first visible frame
       if (renderer == null) {
         renderer = createRenderer(entry);
         renderers.put(name, renderer);
@@ -190,7 +190,7 @@ public final class MissionOrchestratorAppState extends BaseAppState {
     colorIndex++;
 
     MissionRenderer renderer = new MissionRenderer(entry, context, renderContext, color);
-    renderer.initialize(getApplication());
+    renderer.initialize();
     logger.info("Renderer created for mission '{}'", entry.mission().getName());
     return renderer;
   }

@@ -32,18 +32,17 @@ import org.hipparchus.geometry.euclidean.threed.Vector3D;
 public final class MissionRenderer {
 
   private static final double SPACECRAFT_RADIUS_METERS = 50.0;
-  private static final double SPACECRAFT_LOD_MULTIPLIER = 500.0;
   private static final String SPACECRAFT_MODEL_PATH =
       "models/vehicles/heavy_falcon/heavy_falcon.gltf";
 
   /**
-   * Camera distance applied when the user clicks the spacecraft, expressed in solar-scale units
-   * (1 unit = 1e9 m). This value is consumed by the far camera via
-   * {@link com.smousseur.orbitlab.states.camera.OrbitCameraAppState}; the near viewport tracks it
-   * through {@link com.smousseur.orbitlab.states.camera.NearCameraSyncAppState} (position scaled
-   * by 1e6). {@code 5e-7} ≈ 500 m, which places the camera well inside the LOD-3D threshold
-   * ({@code radius × lodMultiplier} = 0.05 × 500 = 25 km in km units) and outside the near
-   * viewport's 10 m near clip plane, so the 3D model appears immediately.
+   * Camera distance applied when the user clicks the spacecraft, expressed in solar-scale units (1
+   * unit = 1e9 m). This value is consumed by the far camera via {@link
+   * com.smousseur.orbitlab.states.camera.OrbitCameraAppState}; the near viewport tracks it through
+   * {@link com.smousseur.orbitlab.states.camera.NearCameraSyncAppState} (position scaled by 1e6).
+   * {@code 5e-7} ≈ 500 m, which places the camera well inside the LOD-3D threshold ({@code radius ×
+   * lodMultiplier} = 0.05 × 500 = 25 km in km units) and outside the near viewport's 10 m near clip
+   * plane, so the 3D model appears immediately.
    */
   private static final float SPACECRAFT_FOCUS_DISTANCE_SOLAR_UNITS = 5e-7f;
 
@@ -67,12 +66,8 @@ public final class MissionRenderer {
     this.trajectoryColor = Objects.requireNonNull(trajectoryColor, "trajectoryColor");
   }
 
-  /**
-   * Initializes the spacecraft view and trajectory geometry.
-   *
-   * @param app the JME application
-   */
-  public void initialize(Application app) {
+  /** Initializes the spacecraft view and trajectory geometry. */
+  public void initialize() {
     Mission mission = entry.mission();
     Node guiNode = context.guiGraph().getPlanetBillboardsNode();
 
@@ -82,7 +77,6 @@ public final class MissionRenderer {
             mission.getName(),
             trajectoryColor,
             SPACECRAFT_RADIUS_METERS,
-            SPACECRAFT_LOD_MULTIPLIER,
             SPACECRAFT_MODEL_PATH,
             renderContext);
 
@@ -124,7 +118,7 @@ public final class MissionRenderer {
   }
 
   /**
-   * Shows/hides all visual elements (spacecraft + trajectory).
+   * Shows/hides all visual elements (spacecraft and trajectory).
    *
    * @param visible whether to show or hide
    */

@@ -15,7 +15,6 @@ import java.util.Objects;
  * @param displayName human-readable label shown in the UI
  * @param color color for icon dot and orbit line
  * @param radiusMeters physical radius in meters, used for 3D model scaling and LOD distance
- * @param lodMultiplier ratio: camera distance &lt; radius * lodMultiplier =&gt; show 3D model
  * @param modelPath GLTF asset path (e.g. "models/planets/earth/earth.gltf")
  * @param renderContext the render context defining scale and frame (Solar or Planet)
  */
@@ -24,7 +23,6 @@ public record BodyRenderConfig(
     String displayName,
     ColorRGBA color,
     double radiusMeters,
-    double lodMultiplier,
     String modelPath,
     RenderContext renderContext) {
 
