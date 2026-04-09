@@ -37,11 +37,15 @@ public final class MissionRenderer {
       "models/vehicles/heavy_falcon/heavy_falcon.gltf";
 
   /**
-   * Camera distance applied when the user clicks the spacecraft, expressed in near-view units (1
-   * unit = 1 km). ~1 km brings the camera inside the LOD-3D threshold ({@code radius ×
-   * lodMultiplier} = 0.05 × 500 = 25 km), so the 3D model appears immediately.
+   * Camera distance applied when the user clicks the spacecraft, expressed in solar-scale units
+   * (1 unit = 1e9 m). This value is consumed by the far camera via
+   * {@link com.smousseur.orbitlab.states.camera.OrbitCameraAppState}; the near viewport tracks it
+   * through {@link com.smousseur.orbitlab.states.camera.NearCameraSyncAppState} (position scaled
+   * by 1e6). {@code 5e-7} ≈ 500 m, which places the camera well inside the LOD-3D threshold
+   * ({@code radius × lodMultiplier} = 0.05 × 500 = 25 km in km units) and outside the near
+   * viewport's 10 m near clip plane, so the 3D model appears immediately.
    */
-  private static final float SPACECRAFT_FOCUS_DISTANCE_UNITS = 5e-7f;
+  private static final float SPACECRAFT_FOCUS_DISTANCE_SOLAR_UNITS = 5e-7f;
 
   private final MissionEntry entry;
   private final ApplicationContext context;
@@ -115,7 +119,7 @@ public final class MissionRenderer {
   private void onSpacecraftSelected() {
     FocusView focusView = context.focusView();
     SolarSystemBody parentBody = renderContext.targetBody().orElse(focusView.getBody());
-    focusView.setCameraDistance(SPACECRAFT_FOCUS_DISTANCE_UNITS);
+    focusView.setCameraDistance(SPACECRAFT_FOCUS_DISTANCE_SOLAR_UNITS);
     focusView.viewSpacecraft(entry.mission().getName(), parentBody);
   }
 

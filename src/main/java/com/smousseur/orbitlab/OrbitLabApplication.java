@@ -132,11 +132,7 @@ public class OrbitLabApplication extends SimpleApplication {
     getStateManager().getState(PickState.class).removeCollisionRoot(guiViewPort);
     getStateManager().getState(PickState.class).addCollisionRoot(guiPost, PickState.PICK_LAYER_GUI);
 
-    // Near frustum: far kept fixed for planet-scale coverage; near is synced dynamically
-    // by NearCameraSyncAppState to match the main camera's adaptive near plane.
-    nearCam.setFrustumNear(0.1f);
-    nearCam.setFrustumFar(100_000f);
-
+    // Near frustum: NearCameraSyncAppState owns the near cam's depth range and FoV every frame.
     stateManager.attach(new NearCameraSyncAppState(nearCam));
   }
 
