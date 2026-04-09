@@ -12,8 +12,10 @@ import com.smousseur.orbitlab.engine.scene.graph.SceneGraph;
 import com.smousseur.orbitlab.engine.scene.body.BodyView;
 import com.smousseur.orbitlab.engine.scene.planet.PlanetPresenter;
 import com.smousseur.orbitlab.simulation.mission.MissionContext;
+import com.smousseur.orbitlab.states.mission.MissionRenderer;
 
 import java.util.EnumMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -32,6 +34,7 @@ public class ApplicationContext {
   private final GuiGraph guiGraph;
   private final Map<SolarSystemBody, PlanetPresenter> planets =
       new EnumMap<>(SolarSystemBody.class);
+  private final Map<String, MissionRenderer> missionRenderers = new LinkedHashMap<>();
 
   private final FocusView focusView;
   private final MissionContext missionContext;
@@ -156,6 +159,39 @@ public class ApplicationContext {
    */
   public Map<SolarSystemBody, PlanetPresenter> getPlanets() {
     return planets;
+  }
+
+  /**
+   * Registers a mission renderer so that other subsystems (e.g. the floating-origin state) can
+   * look it up by mission name without going through {@code getState(...)}.
+   *
+   * @param name the unique mission name
+   * @param renderer the mission renderer to register
+   */
+  public void addMissionRenderer(String name, MissionRenderer renderer) {
+    missionRenderers.put(name, renderer);
+  }
+
+  /**
+   * Deregisters a mission renderer. No-op if the name is unknown.
+   *
+   * @param name the mission name to remove
+   */
+  public void removeMissionRenderer(String name) {
+    missionRenderers.remove(name);
+  }
+
+  /**
+   * Looks up a mission renderer by name.
+   *
+   * @param name the mission name, may be {@code null}
+   * @return the matching renderer, or {@code null} if not registered
+   */
+  public MissionRenderer getMissionRenderer(String name) {
+    if (name == null) {
+      return null;
+    }
+    return missionRenderers.get(name);
   }
 
   /**

@@ -2,12 +2,14 @@ package com.smousseur.orbitlab.states.camera;
 
 import com.jme3.app.Application;
 import com.jme3.app.state.BaseAppState;
+import com.jme3.math.Vector3f;
 import com.jme3.scene.Node;
 import com.jme3.scene.Spatial;
 import com.smousseur.orbitlab.app.ApplicationContext;
 import com.smousseur.orbitlab.app.view.FocusView;
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.engine.scene.graph.SceneGraph;
+import com.smousseur.orbitlab.states.mission.MissionRenderer;
 import java.util.Objects;
 
 /**
@@ -50,11 +52,15 @@ public class FloatingOriginAppState extends BaseAppState {
     FocusView view = context.focusView();
     switch (view.getMode()) {
       case SOLAR -> {
+        sceneGraph.setSolarVisible(true);
+        sceneGraph.nearFrame().setLocalTranslation(0f, 0f, 0f);
         sceneGraph.showBodySpatial(SolarSystemBody.SUN);
         solarRoot.setLocalTranslation(0, 0, 0);
         orbitCam.setFarFloor(0f);
       }
       case PLANET -> {
+        sceneGraph.setSolarVisible(true);
+        sceneGraph.nearFrame().setLocalTranslation(0f, 0f, 0f);
         sceneGraph.showBodySpatial(view.getBody());
         Spatial planetSpatial = sceneGraph.getBodySpatial(view.getBody());
         if (planetSpatial != null) {
@@ -62,6 +68,31 @@ public class FloatingOriginAppState extends BaseAppState {
         }
         // Ensure the far frustum is large enough to encompass distant orbits and bodies.
         orbitCam.setFarFloor(PLANET_MODE_FAR_MIN);
+      }
+      case SPACECRAFT -> {
+        // Keep the far scene visible so that orbit lines of other planets remain drawn.
+        // The 2D HUD icons are handled independently by PlanetHudMarkersAppState.
+        sceneGraph.setSolarVisible(true);
+        sceneGraph.showBodySpatial(view.getBody());
+
+        // Keep the far root centered on the parent body — the projection camera used by
+        // PlanetHudMarkersAppState is a clone of the far camera and needs the parent at origin
+        // to place the other planet icons correctly around it.
+        Spatial planetSpatial = sceneGraph.getBodySpatial(view.getBody());
+        if (planetSpatial != null) {
+          solarRoot.setLocalTranslation(planetSpatial.getLocalTranslation().negate());
+        }
+        orbitCam.setFarFloor(PLANET_MODE_FAR_MIN);
+
+        // Offset the near frame so the spacecraft sits at the near-view origin. The trajectory
+        // trail lives under nearOrbitsNode (child of nearFrame) and inherits the translation.
+        MissionRenderer mr = context.getMissionRenderer(view.getFocusedMission());
+        if (mr != null && mr.getAnchorSpatial() != null) {
+          Vector3f nearPos = mr.getAnchorSpatial().getLocalTranslation();
+          sceneGraph.nearFrame().setLocalTranslation(nearPos.negate());
+        } else {
+          sceneGraph.nearFrame().setLocalTranslation(0f, 0f, 0f);
+        }
       }
     }
   }

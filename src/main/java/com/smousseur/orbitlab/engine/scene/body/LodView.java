@@ -24,6 +24,7 @@ public final class LodView implements BodyView {
   private final Model3dView model3dView;
   private final BodyRenderConfig config;
   private final Consumer<Boolean> onLodChanged;
+  private boolean lastShow3d = false;
 
   /**
    * Creates a new LOD view for a body, setting up both the 3D model view and the icon view.
@@ -89,10 +90,21 @@ public final class LodView implements BodyView {
    */
   @Override
   public void updateScreen(Camera cam) {
-    float distance = cam.getLocation().distance(farAnchor.getWorldTranslation());
-    double radius = config.radiusMeters() * config.renderContext().unitsPerMeter();
-    double multiplier = config.lodMultiplier();
-    boolean show3d = distance < radius * multiplier;
+    Vector3f bodyPos = farAnchor.getWorldTranslation();
+    float distance = cam.getLocation().distance(bodyPos);
+    if (distance <= 0f) distance = 1e-6f;
+    double radiusUnits = config.radiusMeters() * config.renderContext().unitsPerMeter();
+
+    // Perspective projection: tan(halfFovY) = frustumTop / frustumNear
+    float tanHalfFov = Math.max(1e-6f, cam.getFrustumTop() / cam.getFrustumNear());
+    float projectedRadiusPx =
+        (float) (radiusUnits / distance) * (cam.getHeight() * 0.5f) / tanHalfFov;
+
+    // Icon is 16 px wide => 8 px half-size. Hysteresis band 6↔10 px prevents
+    // boundary flicker when the projected radius hovers around the threshold.
+    float threshold = lastShow3d ? 6f : 10f;
+    boolean show3d = projectedRadiusPx >= threshold;
+    lastShow3d = show3d;
 
     if (show3d) {
       model3dView.setVisible(true);
@@ -102,7 +114,6 @@ public final class LodView implements BodyView {
       iconView.setVisible(true);
       iconView.updateScreenPosition(cam, farAnchor);
     }
-
     if (onLodChanged != null) {
       onLodChanged.accept(show3d);
     }

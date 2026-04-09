@@ -12,6 +12,7 @@ import com.smousseur.orbitlab.engine.EngineConfig;
 public class FocusView {
   private ViewMode mode = ViewMode.SOLAR;
   private SolarSystemBody body = SolarSystemBody.SUN;
+  private String focusedMission;
   private float cameraDistance;
   private final EngineConfig engineConfig;
 
@@ -33,6 +34,7 @@ public class FocusView {
   public void reset() {
     this.mode = ViewMode.SOLAR;
     this.body = SolarSystemBody.SUN;
+    this.focusedMission = null;
     this.cameraDistance = engineConfig.orbitCamera().defaultDistance();
   }
 
@@ -44,6 +46,30 @@ public class FocusView {
   public void viewPlanet(SolarSystemBody body) {
     this.mode = ViewMode.PLANET;
     this.body = body;
+    this.focusedMission = null;
+  }
+
+  /**
+   * Switches the focus to spacecraft view mode, centering on a mission's spacecraft. The parent
+   * body is retained so the planet-scale render context (HUD markers, orbits, Earth-3D in the
+   * near view) keeps working.
+   *
+   * @param missionName the unique name of the mission to follow
+   * @param parentBody the body the mission is currently orbiting (e.g. Earth for LEO)
+   */
+  public void viewSpacecraft(String missionName, SolarSystemBody parentBody) {
+    this.mode = ViewMode.SPACECRAFT;
+    this.body = parentBody;
+    this.focusedMission = missionName;
+  }
+
+  /**
+   * Returns the name of the currently focused mission, if any.
+   *
+   * @return the focused mission name, or {@code null} when not in spacecraft mode
+   */
+  public String getFocusedMission() {
+    return focusedMission;
   }
 
   /**

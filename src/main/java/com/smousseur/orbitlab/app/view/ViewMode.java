@@ -10,5 +10,11 @@ public enum ViewMode {
   /** Solar system overview: heliocentric view showing all planetary orbits. */
   SOLAR,
   /** Planet-centered view: close-up view relative to a single celestial body. */
-  PLANET
+  PLANET,
+  /**
+   * Spacecraft-centered view: the camera follows a single mission's spacecraft. The parent body
+   * stored on the focus view is used to drive the planet-scale render context (HUD markers,
+   * orbits), while the near frame is offset so the spacecraft sits at the near-view origin.
+   */
+  SPACECRAFT
 }

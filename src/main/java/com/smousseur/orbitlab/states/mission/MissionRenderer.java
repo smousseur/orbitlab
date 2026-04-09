@@ -4,9 +4,12 @@ import com.jme3.app.Application;
 import com.jme3.math.ColorRGBA;
 import com.jme3.renderer.Camera;
 import com.jme3.scene.Node;
+import com.jme3.scene.Spatial;
 import com.smousseur.orbitlab.app.ApplicationContext;
+import com.smousseur.orbitlab.app.view.FocusView;
 import com.smousseur.orbitlab.app.view.RenderContext;
 import com.smousseur.orbitlab.app.view.ViewMode;
+import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.engine.AssetFactory;
 import com.smousseur.orbitlab.engine.scene.body.BodyRenderConfig;
 import com.smousseur.orbitlab.engine.scene.body.LodView;
@@ -29,9 +32,19 @@ import org.hipparchus.geometry.euclidean.threed.Vector3D;
 public final class MissionRenderer {
 
   private static final double SPACECRAFT_RADIUS_METERS = 50.0;
-  private static final double SPACECRAFT_LOD_MULTIPLIER = 500.0;
   private static final String SPACECRAFT_MODEL_PATH =
       "models/vehicles/heavy_falcon/heavy_falcon.gltf";
+
+  /**
+   * Camera distance applied when the user clicks the spacecraft, expressed in solar-scale units (1
+   * unit = 1e9 m). This value is consumed by the far camera via {@link
+   * com.smousseur.orbitlab.states.camera.OrbitCameraAppState}; the near viewport tracks it through
+   * {@link com.smousseur.orbitlab.states.camera.NearCameraSyncAppState} (position scaled by 1e6).
+   * {@code 5e-7} ≈ 500 m, which places the camera well inside the LOD-3D threshold ({@code radius ×
+   * lodMultiplier} = 0.05 × 500 = 25 km in km units) and outside the near viewport's 10 m near clip
+   * plane, so the 3D model appears immediately.
+   */
+  private static final float SPACECRAFT_FOCUS_DISTANCE_SOLAR_UNITS = 5e-7f;
 
   private final MissionEntry entry;
   private final ApplicationContext context;
@@ -53,12 +66,8 @@ public final class MissionRenderer {
     this.trajectoryColor = Objects.requireNonNull(trajectoryColor, "trajectoryColor");
   }
 
-  /**
-   * Initializes the spacecraft view and trajectory geometry.
-   *
-   * @param app the JME application
-   */
-  public void initialize(Application app) {
+  /** Initializes the spacecraft view and trajectory geometry. */
+  public void initialize() {
     Mission mission = entry.mission();
     Node guiNode = context.guiGraph().getPlanetBillboardsNode();
 
@@ -68,11 +77,10 @@ public final class MissionRenderer {
             mission.getName(),
             trajectoryColor,
             SPACECRAFT_RADIUS_METERS,
-            SPACECRAFT_LOD_MULTIPLIER,
             SPACECRAFT_MODEL_PATH,
             renderContext);
 
-    view = new LodView(guiNode, config, null, null);
+    view = new LodView(guiNode, config, this::onSpacecraftSelected, null);
     presenter = new SpacecraftPresenter(config.id(), view);
     presenter.setVisible(true);
 
@@ -88,10 +96,29 @@ public final class MissionRenderer {
     trajectoryRenderer =
         new MissionTrajectoryRenderer(mission.getName(), renderContext, trajectoryColor);
     trajectoryRenderer.initialize(context.sceneGraph().nearOrbitsNode());
+
+    context.addMissionRenderer(mission.getName(), this);
   }
 
   /**
-   * Shows/hides all visual elements (spacecraft + trajectory).
+   * Returns the near-view anchor spatial that the spacecraft icon and model are attached to. Used
+   * by the floating-origin state to offset the near frame so the spacecraft sits at the origin.
+   *
+   * @return the near-view anchor, or {@code null} if this renderer has not been initialized
+   */
+  public Spatial getAnchorSpatial() {
+    return view != null ? view.spatial() : null;
+  }
+
+  private void onSpacecraftSelected() {
+    FocusView focusView = context.focusView();
+    SolarSystemBody parentBody = renderContext.targetBody().orElse(focusView.getBody());
+    focusView.setCameraDistance(SPACECRAFT_FOCUS_DISTANCE_SOLAR_UNITS);
+    focusView.viewSpacecraft(entry.mission().getName(), parentBody);
+  }
+
+  /**
+   * Shows/hides all visual elements (spacecraft and trajectory).
    *
    * @param visible whether to show or hide
    */
@@ -111,16 +138,18 @@ public final class MissionRenderer {
    * @param point the interpolated ephemeris point
    * @param trailPositions the positions for the trajectory trail
    * @param cam the active camera
+   * @param tpf frame time in seconds, used for orientation smoothing
    */
   public void updateFromEphemeris(
-      MissionEphemerisPoint point, List<Vector3D> trailPositions, Camera cam) {
-    boolean isPlanetMode = context.focusView().getMode() == ViewMode.PLANET;
-    if (!isPlanetMode) {
+      MissionEphemerisPoint point, List<Vector3D> trailPositions, Camera cam, float tpf) {
+    ViewMode mode = context.focusView().getMode();
+    boolean visible = mode == ViewMode.PLANET || mode == ViewMode.SPACECRAFT;
+    if (!visible) {
       if (view != null) view.setVisible(false);
       return;
     }
 
-    presenter.updatePose(point.position(), renderContext);
+    presenter.updatePose(point.position(), point.velocity(), tpf, renderContext);
     view.updateScreen(cam);
     trajectoryRenderer.setPositions(trailPositions);
     trajectoryRenderer.update();
@@ -128,6 +157,7 @@ public final class MissionRenderer {
 
   /** Detaches all visual elements from the scene. */
   public void cleanup() {
+    context.removeMissionRenderer(entry.mission().getName());
     if (view != null) {
       view.spatial().removeFromParent();
       view.detach();
