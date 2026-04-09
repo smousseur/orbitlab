@@ -73,12 +73,6 @@ public class OrbitLabApplication extends SimpleApplication {
     stateManager.attach(new EphemerisAppState(applicationContext));
     stateManager.attach(new PlanetPoseAppState(applicationContext));
     stateManager.attach(new ViewModeAppState(applicationContext));
-    // MissionOrchestratorAppState must run BEFORE FloatingOriginAppState so that
-    // the spacecraft's anchor position is updated for the current frame before the
-    // floating origin reads it to offset the near frame. Otherwise the near frame
-    // is offset by the previous frame's position, leaving a per-frame ΔP residual
-    // (≈ velocity × tpf, ~125 m at LEO) that jitters as tpf varies and is very
-    // visible when zoomed in on the spacecraft.
     stateManager.attach(new MissionOrchestratorAppState(applicationContext));
     stateManager.attach(new FloatingOriginAppState(applicationContext));
     stateManager.attach(new PlanetHudMarkersAppState(applicationContext));
