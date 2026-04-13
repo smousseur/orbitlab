@@ -20,6 +20,7 @@ import com.smousseur.orbitlab.states.ephemeris.EphemerisAppState;
 import com.smousseur.orbitlab.states.fx.LightningAppState;
 import com.smousseur.orbitlab.states.mission.MissionOrchestratorAppState;
 import com.smousseur.orbitlab.states.mission.MissionPanelWidgetAppState;
+import com.smousseur.orbitlab.states.mission.MissionWizardAppState;
 import com.smousseur.orbitlab.states.mission.TelemetryWidgetAppState;
 import com.smousseur.orbitlab.states.orbits.OrbitInitAppState;
 import com.smousseur.orbitlab.states.orbits.OrbitRuntimeAppState;
@@ -84,12 +85,17 @@ public class OrbitLabApplication extends SimpleApplication {
     stateManager.attach(new MissionPanelWidgetAppState(applicationContext));
     stateManager.attach(new LightningAppState(applicationContext));
 
+    MissionWizardAppState wizardState = new MissionWizardAppState(applicationContext);
+    wizardState.setEnabled(false);
+    stateManager.attach(wizardState);
+
     flyCam.setEnabled(false);
 
-    // TODO: wire this fallback to the actual SolarRoot world position when exposed by the scene
-    // TODO: hook Lemur/GUI mouse capture here
     OrbitCameraAppState orbitCam =
-        new OrbitCameraAppState(applicationContext, () -> Vector3f.ZERO, () -> false);
+        new OrbitCameraAppState(
+            applicationContext,
+            () -> Vector3f.ZERO,
+            () -> wizardState.isEnabled() && wizardState.isWizardVisible());
     stateManager.attach(orbitCam);
 
     cam.setLocation(new Vector3f(0f, 0f, 9000f));

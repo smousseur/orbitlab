@@ -92,4 +92,30 @@ public final class EventBus {
   public MissionActionRequest pollMissionAction() {
     return missionActionQueue.poll();
   }
+
+  // -------------------------------------------------------------------------
+  // UI navigation events
+  // -------------------------------------------------------------------------
+
+  /** Actions that can be requested on the UI from widgets. */
+  public enum UiNavigation {
+    OPEN_MISSION_WIZARD
+  }
+
+  private final ConcurrentLinkedQueue<UiNavigation> uiNavigationQueue =
+      new ConcurrentLinkedQueue<>();
+
+  /**
+   * Publishes a UI navigation event. Can be called from any thread.
+   *
+   * @param nav the navigation event
+   */
+  public void publishUiNavigation(UiNavigation nav) {
+    uiNavigationQueue.add(Objects.requireNonNull(nav));
+  }
+
+  /** Poll one UI navigation event; returns null if none. */
+  public UiNavigation pollUiNavigation() {
+    return uiNavigationQueue.poll();
+  }
 }

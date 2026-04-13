@@ -16,6 +16,7 @@ public class GuiGraph {
   private final Node planetBillboardsNode = new Node("planetBillboardsNode");
   private final Node telemetryNode = new Node("telemetryNode");
   private final Node missionPanelNode = new Node("missionPanelNode");
+  private final Node modalNode = new Node("modalNode");
 
   public GuiGraph() {
     guiRoot.attachChild(guiFrame);
@@ -23,6 +24,7 @@ public class GuiGraph {
     guiFrame.attachChild(planetBillboardsNode);
     guiFrame.attachChild(telemetryNode);
     guiFrame.attachChild(missionPanelNode);
+    guiFrame.attachChild(modalNode); // topmost
   }
 
   /**
@@ -80,5 +82,15 @@ public class GuiGraph {
    */
   public Node getMissionPanelNode() {
     return missionPanelNode;
+  }
+
+  /**
+   * Returns the node for modal overlays (wizard, dialogs).
+   * Renders on top of all other GUI nodes.
+   *
+   * @return the modal node
+   */
+  public Node getModalNode() {
+    return modalNode;
   }
 }
