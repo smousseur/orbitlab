@@ -31,6 +31,19 @@ public class SelectableCard {
       String value,
       Badge badge,
       State initial) {
+    this(width, height, title, subtitle, value, badge, initial, null, 48);
+  }
+
+  public SelectableCard(
+      float width,
+      float height,
+      String title,
+      String subtitle,
+      String value,
+      Badge badge,
+      State initial,
+      String iconPath,
+      float iconSize) {
     this.state = initial;
 
     root =
@@ -38,9 +51,13 @@ public class SelectableCard {
             new BoxLayout(Axis.Y, FillMode.None), MissionWizardStyles.STYLE);
     root.setPreferredSize(new Vector3f(width, height, 0));
 
-    Container iconSlot = root.addChild(new Container());
-    iconSlot.setPreferredSize(new Vector3f(48, 48, 0));
-    iconSlot.setBackground(null);
+    if (iconPath != null) {
+      root.addChild(MissionWizardStyles.iconPlaceholder(iconPath, iconSize, iconSize));
+    } else {
+      Container iconSlot = root.addChild(new Container());
+      iconSlot.setPreferredSize(new Vector3f(iconSize, iconSize, 0));
+      iconSlot.setBackground(null);
+    }
 
     Label titleLabel = root.addChild(new Label(title, MissionWizardStyles.STYLE));
     titleLabel.setFont(MissionWizardStyles.rajdhani(16));

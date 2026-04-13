@@ -11,6 +11,7 @@ public class StepLauncher {
 
   private static final float CARD_W = 400f;
   private static final float CARD_H = 112f;
+  private static final float LAUNCHER_ICON = 40f;
 
   private final Container root;
 
@@ -42,7 +43,9 @@ public class StepLauncher {
                 "S1 thrust: 22.8 MN",
                 "Isp S2: 348 s \u00b7 LEO payload: 63.8 t",
                 null,
-                SelectableCard.State.SELECTED)
+                SelectableCard.State.SELECTED,
+                "icons/wizard/launcher-falcon-heavy.png",
+                LAUNCHER_ICON)
             .getNode());
     vRow1.addChild(
         new SelectableCard(
@@ -52,7 +55,9 @@ public class StepLauncher {
                 "S1 thrust: 7.6 MN",
                 "Isp S2: 431 s \u00b7 LEO payload: 21 t",
                 null,
-                SelectableCard.State.IDLE)
+                SelectableCard.State.IDLE,
+                "icons/wizard/launcher-ariane5.png",
+                LAUNCHER_ICON)
             .getNode());
 
     Container vRow2 =
@@ -66,7 +71,9 @@ public class StepLauncher {
                 "S1: ~8.4 MN \u00b7 S2: ~980 kN",
                 "Isp S2: 348 s \u00b7 project config",
                 null,
-                SelectableCard.State.IDLE)
+                SelectableCard.State.IDLE,
+                "icons/wizard/launcher-custom.png",
+                LAUNCHER_ICON)
             .getNode());
     vRow2.addChild(
         new SelectableCard(
@@ -76,11 +83,22 @@ public class StepLauncher {
                 "Define S1 & S2 parameters",
                 "manually",
                 null,
-                SelectableCard.State.IDLE)
+                SelectableCard.State.IDLE,
+                "icons/wizard/launcher-wrench.png",
+                LAUNCHER_ICON)
             .getNode());
 
+    // Payload label with icon
+    Container payloadLabelRow =
+        root.addChild(new Container(new BoxLayout(Axis.X, FillMode.None)));
+    payloadLabelRow.setBackground(null);
+    payloadLabelRow.addChild(
+        MissionWizardStyles.iconPlaceholder("icons/wizard/payload.png", 14, 14));
+    Label payloadSpacer =
+        payloadLabelRow.addChild(new Label(" ", MissionWizardStyles.STYLE));
+    payloadSpacer.setBackground(null);
     Label payloadLabel =
-        root.addChild(new Label("PAYLOAD", MissionWizardStyles.STYLE));
+        payloadLabelRow.addChild(new Label("PAYLOAD", MissionWizardStyles.STYLE));
     payloadLabel.setFont(MissionWizardStyles.rajdhani(12));
     payloadLabel.setColor(MissionWizardStyles.WIZARD_TEXT_SECONDARY);
 

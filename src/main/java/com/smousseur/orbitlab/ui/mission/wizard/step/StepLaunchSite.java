@@ -42,22 +42,48 @@ public class StepLaunchSite {
                 "Baikonur \u2014 Kazakhstan"),
             "Kourou (CSG) \u2014 French Guiana");
     root.addChild(
-        new LabeledField("COSMODROME", cosmodrome.getNode(), null).getNode());
+        new LabeledField(
+                "COSMODROME",
+                cosmodrome.getNode(),
+                null,
+                "icons/wizard/field-building.png")
+            .getNode());
 
     Container row2 =
         root.addChild(new Container(new BoxLayout(Axis.X, FillMode.None)));
     row2.setBackground(null);
     row2.addChild(
-        fieldCol(COL3_W, "LATITUDE", "5.236", "decimal degrees \u00b7 N positive"));
+        fieldCol(
+            COL3_W,
+            "LATITUDE",
+            "5.236",
+            "decimal degrees \u00b7 N positive",
+            "icons/wizard/field-globe-lat.png"));
     row2.addChild(
-        fieldCol(COL3_W, "LONGITUDE", "-52.769", "decimal degrees \u00b7 E positive"));
-    row2.addChild(fieldCol(COL3_W, "GROUND ALTITUDE", "14", "meters MSL"));
+        fieldCol(
+            COL3_W,
+            "LONGITUDE",
+            "-52.769",
+            "decimal degrees \u00b7 E positive",
+            "icons/wizard/field-globe-lon.png"));
+    row2.addChild(
+        fieldCol(
+            COL3_W,
+            "GROUND ALTITUDE",
+            "14",
+            "meters MSL",
+            "icons/wizard/field-mountain.png"));
 
     Container row3 =
         root.addChild(new Container(new BoxLayout(Axis.X, FillMode.None)));
     row3.setBackground(null);
     row3.addChild(
-        fieldCol(COL2_W, "LAUNCH HEADING", "90.0", "azimuth \u00b7 90\u00b0 = East"));
+        fieldCol(
+            COL2_W,
+            "LAUNCH HEADING",
+            "90.0",
+            "azimuth \u00b7 90\u00b0 = East",
+            "icons/wizard/field-compass.png"));
 
     Container pressCol =
         new Container(new BoxLayout(Axis.Y, FillMode.None));
@@ -69,7 +95,8 @@ public class StepLaunchSite {
         new LabeledField(
                 "ATMOSPHERIC PRESSURE",
                 pressCtrl.getNode(),
-                "ground atmospheric model")
+                "ground atmospheric model",
+                "icons/wizard/field-pressure.png")
             .getNode());
     row3.addChild(pressCol);
 
@@ -118,13 +145,13 @@ public class StepLaunchSite {
   }
 
   private Container fieldCol(
-      float w, String label, String value, String helper) {
+      float w, String label, String value, String helper, String iconPath) {
     Container col = new Container(new BoxLayout(Axis.Y, FillMode.None));
     col.setBackground(null);
     col.setPreferredSize(new Vector3f(w, 0, 0));
     TextField f = new TextField(value, MissionWizardStyles.STYLE);
     f.setFont(MissionWizardStyles.mono(14));
-    col.addChild(new LabeledField(label, f, helper).getNode());
+    col.addChild(new LabeledField(label, f, helper, iconPath).getNode());
     return col;
   }
 }

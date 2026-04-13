@@ -37,9 +37,11 @@ public class InfoBanner {
         root.addChild(new Container(new BoxLayout(Axis.X, FillMode.None)));
     body.setBackground(null);
 
-    Label icon = body.addChild(new Label("i", MissionWizardStyles.STYLE));
-    icon.setFont(MissionWizardStyles.rajdhani(14));
-    icon.setColor(barColor);
+    String iconPath =
+        (variant == Variant.INFO)
+            ? "icons/wizard/info.png"
+            : "icons/wizard/warning.png";
+    body.addChild(MissionWizardStyles.iconPlaceholder(iconPath, 16, 16));
 
     Label msg = body.addChild(new Label(text, MissionWizardStyles.STYLE));
     msg.setFont(MissionWizardStyles.mono(12));

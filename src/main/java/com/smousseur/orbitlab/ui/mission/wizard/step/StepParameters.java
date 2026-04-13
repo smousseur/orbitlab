@@ -30,7 +30,11 @@ public class StepParameters {
 
     // Row 1 — Mission Name
     root.addChild(
-        new LabeledField("MISSION NAME", monoField("ORBITLAB-LEO-001"), null)
+        new LabeledField(
+                "MISSION NAME",
+                monoField("ORBITLAB-LEO-001"),
+                null,
+                "icons/wizard/field-pencil.png")
             .getNode());
 
     // Row 2 — Altitude + Tolerance
@@ -48,7 +52,8 @@ public class StepParameters {
         new LabeledField(
                 "TARGET ALTITUDE",
                 altSlider,
-                "160 km                         2 000 km")
+                "160 km                         2 000 km",
+                "icons/wizard/field-altitude.png")
             .getNode());
     Label altValue =
         altCol.addChild(new Label("550 km", MissionWizardStyles.STYLE));
@@ -61,7 +66,8 @@ public class StepParameters {
         new LabeledField(
                 "ALTITUDE TOLERANCE",
                 monoField("1"),
-                "+/- km \u00b7 CMA-ES convergence")
+                "+/- km \u00b7 CMA-ES convergence",
+                "icons/wizard/field-tolerance.png")
             .getNode());
     row2.addChild(tolCol);
 
@@ -69,9 +75,15 @@ public class StepParameters {
     root.addChild(
         twoColRow(
             new LabeledField(
-                "INCLINATION", monoField("51.6"), "degrees \u00b7 0\u00b0 = equatorial"),
+                "INCLINATION",
+                monoField("51.6"),
+                "degrees \u00b7 0\u00b0 = equatorial",
+                "icons/wizard/field-inclination.png"),
             new LabeledField(
-                "RAAN (\u03a9)", monoField("0.0"), "degrees \u00b7 ascending node")));
+                "RAAN (\u03a9)",
+                monoField("0.0"),
+                "degrees \u00b7 ascending node",
+                "icons/wizard/field-raan.png")));
 
     // Row 4 — Arg Perigee + Strategy
     Container row4 =
@@ -81,7 +93,10 @@ public class StepParameters {
     Container perigeeCol = col(COL_WIDTH);
     perigeeCol.addChild(
         new LabeledField(
-                "ARGUMENT OF PERIGEE (\u03c9)", monoField("0.0"), "degrees")
+                "ARGUMENT OF PERIGEE (\u03c9)",
+                monoField("0.0"),
+                "degrees",
+                "icons/wizard/field-perigee.png")
             .getNode());
     row4.addChild(perigeeCol);
 
@@ -92,7 +107,8 @@ public class StepParameters {
         new LabeledField(
                 "INSERTION STRATEGY",
                 strat.getNode(),
-                "2 burns: gravity turn + circularisation")
+                "2 burns: gravity turn + circularisation",
+                "icons/wizard/field-strategy.png")
             .getNode());
     row4.addChild(stratCol);
 
@@ -100,7 +116,11 @@ public class StepParameters {
     TextField dateField = monoField("2026-06-15T06:00:00Z");
     dateField.setPreferredSize(new Vector3f(320, 0, 0));
     root.addChild(
-        new LabeledField("LAUNCH DATE", dateField, "UTC \u00b7 Orekit epoch")
+        new LabeledField(
+                "LAUNCH DATE",
+                dateField,
+                "UTC \u00b7 Orekit epoch",
+                "icons/wizard/field-clock.png")
             .getNode());
 
     // Info Banner

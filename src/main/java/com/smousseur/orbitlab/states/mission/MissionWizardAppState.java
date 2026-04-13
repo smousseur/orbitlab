@@ -31,37 +31,31 @@ public final class MissionWizardAppState extends BaseAppState implements ActionL
   @Override
   protected void initialize(Application app) {
     this.inputManager = app.getInputManager();
-  }
-
-  @Override
-  protected void cleanup(Application app) {
-    closeWizard();
-    this.inputManager = null;
-  }
-
-  @Override
-  protected void onEnable() {
-    openWizard();
     inputManager.addMapping(ACTION_DEBUG_CYCLE, new KeyTrigger(KeyInput.KEY_F8));
     inputManager.addListener(this, ACTION_DEBUG_CYCLE);
   }
 
   @Override
-  protected void onDisable() {
+  protected void cleanup(Application app) {
     closeWizard();
     if (inputManager.hasMapping(ACTION_DEBUG_CYCLE)) {
       inputManager.deleteMapping(ACTION_DEBUG_CYCLE);
     }
     inputManager.removeListener(this);
+    this.inputManager = null;
   }
 
   @Override
+  protected void onEnable() {}
+
+  @Override
+  protected void onDisable() {}
+
+  @Override
   public void update(float tpf) {
-    if (!isEnabled()) {
-      EventBus.UiNavigation nav = context.eventBus().pollUiNavigation();
-      if (nav == EventBus.UiNavigation.OPEN_MISSION_WIZARD) {
-        setEnabled(true);
-      }
+    EventBus.UiNavigation nav = context.eventBus().pollUiNavigation();
+    if (nav == EventBus.UiNavigation.OPEN_MISSION_WIZARD) {
+      openWizard();
     }
     if (widget != null) {
       widget.update(tpf, getApplication().getCamera());
@@ -78,7 +72,7 @@ public final class MissionWizardAppState extends BaseAppState implements ActionL
   private void openWizard() {
     if (widget != null) return;
     widget = new MissionWizardWidget(context);
-    widget.setOnCancel(() -> setEnabled(false));
+    widget.setOnCancel(this::closeWizard);
     widget.attachTo(context.guiGraph().getModalNode());
     logger.info("Mission Wizard opened");
   }

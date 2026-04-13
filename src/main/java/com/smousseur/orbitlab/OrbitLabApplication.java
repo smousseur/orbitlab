@@ -86,7 +86,6 @@ public class OrbitLabApplication extends SimpleApplication {
     stateManager.attach(new LightningAppState(applicationContext));
 
     MissionWizardAppState wizardState = new MissionWizardAppState(applicationContext);
-    wizardState.setEnabled(false);
     stateManager.attach(wizardState);
 
     flyCam.setEnabled(false);
@@ -95,7 +94,7 @@ public class OrbitLabApplication extends SimpleApplication {
         new OrbitCameraAppState(
             applicationContext,
             () -> Vector3f.ZERO,
-            () -> wizardState.isEnabled() && wizardState.isWizardVisible());
+            wizardState::isWizardVisible);
     stateManager.attach(orbitCam);
 
     cam.setLocation(new Vector3f(0f, 0f, 9000f));

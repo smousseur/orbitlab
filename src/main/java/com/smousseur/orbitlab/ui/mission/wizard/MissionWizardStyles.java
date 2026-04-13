@@ -4,9 +4,12 @@ import com.jme3.asset.AssetManager;
 import com.jme3.asset.AssetNotFoundException;
 import com.jme3.font.BitmapFont;
 import com.jme3.math.ColorRGBA;
+import com.jme3.math.Vector3f;
 import com.jme3.texture.Texture;
+import com.simsilica.lemur.Container;
 import com.simsilica.lemur.GuiGlobals;
 import com.simsilica.lemur.Insets3f;
+import com.simsilica.lemur.component.QuadBackgroundComponent;
 import com.simsilica.lemur.component.TbtQuadBackgroundComponent;
 import com.simsilica.lemur.style.Attributes;
 import com.simsilica.lemur.style.Styles;
@@ -95,6 +98,24 @@ public final class MissionWizardStyles {
       logger.debug("Font not found: {}, using Lemur default", path);
       return GuiGlobals.getInstance().loadFont("Interface/Fonts/Default.fnt");
     }
+  }
+
+  // =================================================================
+  //  ICON PLACEHOLDER FACTORY
+  // =================================================================
+
+  public static Container iconPlaceholder(String iconPath, float width, float height) {
+    Container icon = new Container();
+    icon.setPreferredSize(new Vector3f(width, height, 0));
+    try {
+      Texture tex = assetManager.loadTexture(iconPath);
+      QuadBackgroundComponent bg = new QuadBackgroundComponent(tex);
+      icon.setBackground(bg);
+    } catch (AssetNotFoundException e) {
+      logger.debug("Icon not found: {}, using empty placeholder", iconPath);
+      icon.setBackground(null);
+    }
+    return icon;
   }
 
   // =================================================================

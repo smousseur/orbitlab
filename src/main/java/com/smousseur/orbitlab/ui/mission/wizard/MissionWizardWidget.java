@@ -59,8 +59,11 @@ public class MissionWizardWidget implements AutoCloseable {
             new Container(new BoxLayout(Axis.X, FillMode.None)));
     brandRow.setBackground(null);
 
+    brandRow.addChild(
+        MissionWizardStyles.iconPlaceholder("icons/wizard/brand-globe.png", 24, 24));
+
     Label brandName =
-        brandRow.addChild(new Label("ORBITLAB", MissionWizardStyles.STYLE));
+        brandRow.addChild(new Label(" ORBITLAB", MissionWizardStyles.STYLE));
     brandName.setFont(MissionWizardStyles.rajdhani(18));
     brandName.setColor(MissionWizardStyles.WIZARD_TEXT_PRIMARY);
 

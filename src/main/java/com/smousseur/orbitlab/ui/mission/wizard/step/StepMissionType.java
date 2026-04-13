@@ -10,6 +10,7 @@ public class StepMissionType {
 
   private static final float CARD_W = 256f;
   private static final float CARD_H = 152f;
+  private static final float ICON_SIZE = 48f;
 
   private final Container root;
 
@@ -40,7 +41,9 @@ public class StepMissionType {
                 "Low Earth Orbit",
                 "160 - 2 000 km",
                 new Badge("v AVAILABLE", Badge.Variant.SUCCESS),
-                SelectableCard.State.SELECTED)
+                SelectableCard.State.SELECTED,
+                "icons/wizard/mission-leo.png",
+                ICON_SIZE)
             .getNode());
     row1.addChild(
         new SelectableCard(
@@ -50,7 +53,9 @@ public class StepMissionType {
                 "Geostationary Transfer",
                 "200 x 35 786 km",
                 new Badge("o IN PROGRESS", Badge.Variant.WARNING),
-                SelectableCard.State.IDLE)
+                SelectableCard.State.IDLE,
+                "icons/wizard/mission-gto.png",
+                ICON_SIZE)
             .getNode());
     row1.addChild(
         new SelectableCard(
@@ -60,7 +65,9 @@ public class StepMissionType {
                 "Sun-Synchronous Orbit",
                 "600 - 800 km",
                 new Badge("SOON", Badge.Variant.MUTED),
-                SelectableCard.State.DISABLED)
+                SelectableCard.State.DISABLED,
+                "icons/wizard/mission-sso.png",
+                ICON_SIZE)
             .getNode());
 
     Container row2 =
@@ -75,7 +82,9 @@ public class StepMissionType {
                 "Medium Earth Orbit",
                 "2 000 - 35 786 km",
                 new Badge("SOON", Badge.Variant.MUTED),
-                SelectableCard.State.DISABLED)
+                SelectableCard.State.DISABLED,
+                "icons/wizard/mission-meo.png",
+                ICON_SIZE)
             .getNode());
     row2.addChild(
         new SelectableCard(
@@ -85,7 +94,9 @@ public class StepMissionType {
                 "Geostationary Orbit",
                 "35 786 km",
                 new Badge("SOON", Badge.Variant.MUTED),
-                SelectableCard.State.DISABLED)
+                SelectableCard.State.DISABLED,
+                "icons/wizard/mission-geo.png",
+                ICON_SIZE)
             .getNode());
     row2.addChild(
         new SelectableCard(
@@ -95,7 +106,9 @@ public class StepMissionType {
                 "Trans-Lunar Injection",
                 "Cislunar",
                 new Badge("SOON", Badge.Variant.MUTED),
-                SelectableCard.State.DISABLED)
+                SelectableCard.State.DISABLED,
+                "icons/wizard/mission-tli.png",
+                ICON_SIZE)
             .getNode());
   }
 

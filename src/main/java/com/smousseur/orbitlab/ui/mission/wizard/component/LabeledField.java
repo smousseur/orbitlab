@@ -9,11 +9,24 @@ public class LabeledField {
   private final Container root;
 
   public LabeledField(String labelText, Panel input, String helperText) {
+    this(labelText, input, helperText, null);
+  }
+
+  public LabeledField(String labelText, Panel input, String helperText, String iconPath) {
     root = new Container(new BoxLayout(Axis.Y, FillMode.None));
     root.setBackground(null);
 
-    Label label =
-        root.addChild(new Label(labelText, MissionWizardStyles.STYLE));
+    Container labelRow =
+        root.addChild(new Container(new BoxLayout(Axis.X, FillMode.None)));
+    labelRow.setBackground(null);
+
+    if (iconPath != null) {
+      labelRow.addChild(MissionWizardStyles.iconPlaceholder(iconPath, 14, 14));
+      Label spacer = labelRow.addChild(new Label(" ", MissionWizardStyles.STYLE));
+      spacer.setBackground(null);
+    }
+
+    Label label = labelRow.addChild(new Label(labelText, MissionWizardStyles.STYLE));
     label.setFont(MissionWizardStyles.rajdhani(12));
     label.setColor(MissionWizardStyles.WIZARD_TEXT_SECONDARY);
 
