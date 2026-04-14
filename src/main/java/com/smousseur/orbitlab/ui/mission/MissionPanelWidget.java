@@ -299,7 +299,7 @@ public class MissionPanelWidget implements AutoCloseable {
   }
 
   private void onCreate() {
-    logger.info("Create mission not yet implemented");
+    eventBus.publishUiNavigation(EventBus.UiNavigation.OPEN_MISSION_WIZARD);
   }
 
   private void onOptimize() {

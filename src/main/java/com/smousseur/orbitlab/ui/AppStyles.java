@@ -4,6 +4,7 @@ import com.jme3.asset.AssetManager;
 import com.jme3.math.ColorRGBA;
 import com.smousseur.orbitlab.ui.clock.TimelineStyles;
 import com.smousseur.orbitlab.ui.mission.MissionPanelStyles;
+import com.smousseur.orbitlab.ui.mission.wizard.MissionWizardStyles;
 import com.smousseur.orbitlab.ui.telemetry.TelemetryStyles;
 
 /**
@@ -85,5 +86,6 @@ public final class AppStyles {
     TimelineStyles.init(assetManager);
     TelemetryStyles.init(assetManager);
     MissionPanelStyles.init(assetManager);
+    MissionWizardStyles.init(assetManager);
   }
 }
