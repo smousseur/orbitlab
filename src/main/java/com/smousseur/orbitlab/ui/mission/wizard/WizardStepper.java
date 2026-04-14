@@ -1,9 +1,14 @@
 package com.smousseur.orbitlab.ui.mission.wizard;
 
+import com.jme3.input.event.MouseButtonEvent;
 import com.jme3.math.Vector3f;
+import com.jme3.scene.Spatial;
 import com.simsilica.lemur.*;
 import com.simsilica.lemur.component.BoxLayout;
 import com.simsilica.lemur.component.QuadBackgroundComponent;
+import com.simsilica.lemur.event.DefaultMouseListener;
+import com.simsilica.lemur.event.MouseEventControl;
+import java.util.function.Consumer;
 
 public class WizardStepper {
 
@@ -16,6 +21,7 @@ public class WizardStepper {
 
   private final Container root;
   private final Container[] stepNodes = new Container[MissionWizardStep.COUNT];
+  private Consumer<MissionWizardStep> onStepClicked = step -> {};
 
   public WizardStepper() {
     root =
@@ -34,6 +40,10 @@ public class WizardStepper {
 
   public Container getNode() {
     return root;
+  }
+
+  public void setOnStepClicked(Consumer<MissionWizardStep> listener) {
+    this.onStepClicked = listener != null ? listener : step -> {};
   }
 
   public void setActiveStep(MissionWizardStep activeStep) {
@@ -66,6 +76,15 @@ public class WizardStepper {
         col.addChild(new Label(step.label(), MissionWizardStyles.STYLE));
     label.setFont(MissionWizardStyles.rajdhani(12));
     label.setTextHAlignment(HAlignment.Center);
+
+    MouseEventControl.addListenersToSpatial(
+        col,
+        new DefaultMouseListener() {
+          @Override
+          public void click(MouseButtonEvent evt, Spatial target, Spatial capture) {
+            onStepClicked.accept(step);
+          }
+        });
 
     return col;
   }

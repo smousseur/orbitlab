@@ -99,7 +99,8 @@ public final class EventBus {
 
   /** Actions that can be requested on the UI from widgets. */
   public enum UiNavigation {
-    OPEN_MISSION_WIZARD
+    OPEN_MISSION_WIZARD,
+    CREATE_MISSION
   }
 
   private final ConcurrentLinkedQueue<UiNavigation> uiNavigationQueue =

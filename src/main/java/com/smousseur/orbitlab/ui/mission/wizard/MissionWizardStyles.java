@@ -28,6 +28,8 @@ public final class MissionWizardStyles {
   // --- Backgrounds ---
   public static final ColorRGBA WIZARD_BG_DEEP =
       new ColorRGBA(0.043f, 0.078f, 0.125f, 0.95f);
+  public static final ColorRGBA WIZARD_BG_CONTENT =
+      new ColorRGBA(0.055f, 0.094f, 0.149f, 0.95f);
   public static final ColorRGBA WIZARD_BG_CARD =
       new ColorRGBA(0.059f, 0.118f, 0.180f, 0.85f);
   public static final ColorRGBA WIZARD_BG_CARD_HOVER =

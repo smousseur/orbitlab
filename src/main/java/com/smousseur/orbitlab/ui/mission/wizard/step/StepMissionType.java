@@ -8,11 +8,12 @@ import com.smousseur.orbitlab.ui.mission.wizard.component.SelectableCard;
 
 public class StepMissionType {
 
-  private static final float CARD_W = 256f;
+  private static final float CARD_W = 380f;
   private static final float CARD_H = 152f;
   private static final float ICON_SIZE = 48f;
 
   private final Container root;
+  private boolean missionTypeSelected = true;
 
   public StepMissionType() {
     root = new Container(new BoxLayout(Axis.Y, FillMode.None));
@@ -29,11 +30,11 @@ public class StepMissionType {
     subtitle.setFont(MissionWizardStyles.mono(12));
     subtitle.setColor(MissionWizardStyles.WIZARD_TEXT_SECONDARY);
 
-    Container row1 =
+    Container row =
         root.addChild(new Container(new BoxLayout(Axis.X, FillMode.None)));
-    row1.setBackground(null);
+    row.setBackground(null);
 
-    row1.addChild(
+    row.addChild(
         new SelectableCard(
                 CARD_W,
                 CARD_H,
@@ -45,7 +46,7 @@ public class StepMissionType {
                 "icons/wizard/mission-leo.png",
                 ICON_SIZE)
             .getNode());
-    row1.addChild(
+    row.addChild(
         new SelectableCard(
                 CARD_W,
                 CARD_H,
@@ -53,66 +54,17 @@ public class StepMissionType {
                 "Geostationary Transfer",
                 "200 x 35 786 km",
                 new Badge("o IN PROGRESS", Badge.Variant.WARNING),
-                SelectableCard.State.IDLE,
+                SelectableCard.State.DISABLED,
                 "icons/wizard/mission-gto.png",
-                ICON_SIZE)
-            .getNode());
-    row1.addChild(
-        new SelectableCard(
-                CARD_W,
-                CARD_H,
-                "SSO",
-                "Sun-Synchronous Orbit",
-                "600 - 800 km",
-                new Badge("SOON", Badge.Variant.MUTED),
-                SelectableCard.State.DISABLED,
-                "icons/wizard/mission-sso.png",
-                ICON_SIZE)
-            .getNode());
-
-    Container row2 =
-        root.addChild(new Container(new BoxLayout(Axis.X, FillMode.None)));
-    row2.setBackground(null);
-
-    row2.addChild(
-        new SelectableCard(
-                CARD_W,
-                CARD_H,
-                "MEO",
-                "Medium Earth Orbit",
-                "2 000 - 35 786 km",
-                new Badge("SOON", Badge.Variant.MUTED),
-                SelectableCard.State.DISABLED,
-                "icons/wizard/mission-meo.png",
-                ICON_SIZE)
-            .getNode());
-    row2.addChild(
-        new SelectableCard(
-                CARD_W,
-                CARD_H,
-                "GEO",
-                "Geostationary Orbit",
-                "35 786 km",
-                new Badge("SOON", Badge.Variant.MUTED),
-                SelectableCard.State.DISABLED,
-                "icons/wizard/mission-geo.png",
-                ICON_SIZE)
-            .getNode());
-    row2.addChild(
-        new SelectableCard(
-                CARD_W,
-                CARD_H,
-                "TLI",
-                "Trans-Lunar Injection",
-                "Cislunar",
-                new Badge("SOON", Badge.Variant.MUTED),
-                SelectableCard.State.DISABLED,
-                "icons/wizard/mission-tli.png",
                 ICON_SIZE)
             .getNode());
   }
 
   public Container getNode() {
     return root;
+  }
+
+  public boolean isMissionTypeSelected() {
+    return missionTypeSelected;
   }
 }
