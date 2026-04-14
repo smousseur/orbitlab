@@ -5,7 +5,6 @@ import com.jme3.math.Vector3f;
 import com.jme3.scene.Spatial;
 import com.simsilica.lemur.*;
 import com.simsilica.lemur.component.BoxLayout;
-import com.simsilica.lemur.component.QuadBackgroundComponent;
 import com.simsilica.lemur.event.DefaultMouseListener;
 import com.simsilica.lemur.event.MouseEventControl;
 import java.util.function.Consumer;
@@ -90,20 +89,8 @@ public class WizardStepper {
   }
 
   private Container buildDashSeparator() {
-    Container sep = new Container(new BoxLayout(Axis.X, FillMode.None));
-    sep.setBackground(null);
-    sep.setPreferredSize(
-        new Vector3f(
-            DASH_COUNT * DASH_WIDTH + (DASH_COUNT - 1) * DASH_GAP,
-            DASH_HEIGHT,
-            0));
-    for (int i = 0; i < DASH_COUNT; i++) {
-      Container dash = new Container();
-      dash.setPreferredSize(new Vector3f(DASH_WIDTH, DASH_HEIGHT, 0));
-      dash.setBackground(new QuadBackgroundComponent(MissionWizardStyles.WIZARD_BORDER));
-      sep.addChild(dash);
-    }
-    return sep;
+    float totalW = DASH_COUNT * DASH_WIDTH + (DASH_COUNT - 1) * DASH_GAP;
+    return MissionWizardStyles.spacer(totalW, DASH_HEIGHT);
   }
 
   private void applyDoneState(Container node, MissionWizardStep step) {

@@ -80,6 +80,11 @@ public class MissionWizardWidget implements AutoCloseable {
             new Container(new BoxLayout(Axis.Y, FillMode.None)));
     content.setBackground(
         MissionWizardStyles.createGradient(MissionWizardStyles.WIZARD_BG_CONTENT));
+    content.setPreferredSize(
+        new Vector3f(
+            MissionWizardStyles.WIZARD_CONTENT_WIDTH,
+            MissionWizardStyles.WIZARD_CONTENT_HEIGHT,
+            0));
 
     // Footer (deep bg)
     footer = new WizardFooter();

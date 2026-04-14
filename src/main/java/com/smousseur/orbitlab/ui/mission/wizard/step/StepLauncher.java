@@ -17,12 +17,22 @@ public class StepLauncher {
   private static final float CARD_W = 400f;
   private static final float CARD_H = 112f;
   private static final float LAUNCHER_ICON = 40f;
+  private static final float PAYLOAD_POPUP_W = 520f;
+  private static final float MASS_FIELD_W = 140f;
+  private static final float KG_LABEL_W = 40f;
+  private static final float ROW_GAP = 12f;
+  private static final float COL_GAP = 16f;
 
   private final Container root;
 
   public StepLauncher() {
     root = new Container(new BoxLayout(Axis.Y, FillMode.None));
     root.setBackground(null);
+    root.setPreferredSize(
+        new Vector3f(
+            MissionWizardStyles.WIZARD_CONTENT_WIDTH,
+            MissionWizardStyles.WIZARD_CONTENT_HEIGHT,
+            0));
 
     Label title =
         root.addChild(
@@ -30,12 +40,16 @@ public class StepLauncher {
     title.setFont(MissionWizardStyles.rajdhani(20));
     title.setColor(MissionWizardStyles.WIZARD_TEXT_PRIMARY);
 
+    root.addChild(MissionWizardStyles.vSpacer(ROW_GAP));
+
     Label subtitle =
         root.addChild(
             new Label(
                 "// vehicle configuration", MissionWizardStyles.STYLE));
     subtitle.setFont(MissionWizardStyles.mono(12));
     subtitle.setColor(MissionWizardStyles.WIZARD_TEXT_SECONDARY);
+
+    root.addChild(MissionWizardStyles.vSpacer(ROW_GAP));
 
     SelectableCard falcon =
         new SelectableCard(
@@ -64,7 +78,13 @@ public class StepLauncher {
         root.addChild(new Container(new BoxLayout(Axis.X, FillMode.None)));
     vRow.setBackground(null);
     vRow.addChild(falcon.getNode());
+    vRow.addChild(MissionWizardStyles.hSpacer(COL_GAP));
     vRow.addChild(ariane.getNode());
+    float vRowTrailing =
+        MissionWizardStyles.WIZARD_CONTENT_WIDTH - 2 * CARD_W - COL_GAP;
+    if (vRowTrailing > 0f) {
+      vRow.addChild(MissionWizardStyles.hSpacer(vRowTrailing));
+    }
 
     // Mutual exclusion: clicking one deselects the other.
     MouseEventControl.addListenersToSpatial(
@@ -84,6 +104,8 @@ public class StepLauncher {
           }
         });
 
+    root.addChild(MissionWizardStyles.vSpacer(ROW_GAP));
+
     // Payload label
     Container payloadLabelRow =
         root.addChild(new Container(new BoxLayout(Axis.X, FillMode.None)));
@@ -98,13 +120,15 @@ public class StepLauncher {
     payloadLabel.setFont(MissionWizardStyles.rajdhani(12));
     payloadLabel.setColor(MissionWizardStyles.WIZARD_TEXT_SECONDARY);
 
+    root.addChild(MissionWizardStyles.vSpacer(ROW_GAP));
+
     Container payloadRow =
         root.addChild(new Container(new BoxLayout(Axis.X, FillMode.None)));
     payloadRow.setBackground(null);
 
     PopupList payloadType =
         new PopupList(
-            520f,
+            PAYLOAD_POPUP_W,
             List.of(
                 "Communication satellite",
                 "Earth observation satellite",
@@ -112,18 +136,30 @@ public class StepLauncher {
                 "Cargo module"),
             "Communication satellite");
     payloadRow.addChild(payloadType.getNode());
+    payloadRow.addChild(MissionWizardStyles.hSpacer(COL_GAP));
 
     TextField massField =
         new TextField("15000", MissionWizardStyles.STYLE);
     massField.setFont(MissionWizardStyles.mono(14));
-    massField.setPreferredSize(new Vector3f(140, 0, 0));
+    massField.setPreferredSize(new Vector3f(MASS_FIELD_W, 0, 0));
     payloadRow.addChild(massField);
+    payloadRow.addChild(MissionWizardStyles.hSpacer(COL_GAP));
 
     Label kgLabel =
         payloadRow.addChild(new Label("kg", MissionWizardStyles.STYLE));
     kgLabel.setFont(MissionWizardStyles.mono(14));
     kgLabel.setColor(MissionWizardStyles.WIZARD_TEXT_SECONDARY);
-    kgLabel.setPreferredSize(new Vector3f(40, 0, 0));
+    kgLabel.setPreferredSize(new Vector3f(KG_LABEL_W, 0, 0));
+
+    float payloadTrailing =
+        MissionWizardStyles.WIZARD_CONTENT_WIDTH
+            - PAYLOAD_POPUP_W
+            - MASS_FIELD_W
+            - KG_LABEL_W
+            - 2 * COL_GAP;
+    if (payloadTrailing > 0f) {
+      payloadRow.addChild(MissionWizardStyles.hSpacer(payloadTrailing));
+    }
   }
 
   public Container getNode() {

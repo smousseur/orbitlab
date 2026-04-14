@@ -22,6 +22,15 @@ public final class MissionWizardStyles {
   public static final String STYLE = "mission-wizard";
 
   // =================================================================
+  //  WIZARD LAYOUT CONSTANTS
+  // =================================================================
+
+  /** Inner content width: WINDOW_WIDTH (880) - 2 * OUTER_PADDING (24). */
+  public static final float WIZARD_CONTENT_WIDTH = 832f;
+  /** Inner content height: WINDOW_HEIGHT (640) - HEADER_HEIGHT (88) - FOOTER_HEIGHT (72). */
+  public static final float WIZARD_CONTENT_HEIGHT = 480f;
+
+  // =================================================================
   //  WIZARD COLOUR PALETTE
   // =================================================================
 
@@ -118,6 +127,28 @@ public final class MissionWizardStyles {
       icon.setBackground(null);
     }
     return icon;
+  }
+
+  // =================================================================
+  //  INVISIBLE SPACERS
+  // =================================================================
+
+  /** Fixed-size transparent container used to pad layouts. */
+  public static Container spacer(float width, float height) {
+    Container s = new Container();
+    s.setPreferredSize(new Vector3f(width, height, 0));
+    s.setBackground(null);
+    return s;
+  }
+
+  /** Vertical row-gap spacer. */
+  public static Container vSpacer(float height) {
+    return spacer(0, height);
+  }
+
+  /** Horizontal column-gap spacer. */
+  public static Container hSpacer(float width) {
+    return spacer(width, 0);
   }
 
   // =================================================================

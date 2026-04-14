@@ -10,18 +10,28 @@ import java.util.List;
 
 public class StepLaunchSite {
 
-  private static final float COL3_W = 260f;
+  private static final float COSMODROME_W = 520f;
+  private static final float COL3_W = 140f;
+  private static final float COL_GAP = 16f;
+  private static final float ROW_GAP = 12f;
 
   private final Container root;
 
   public StepLaunchSite() {
     root = new Container(new BoxLayout(Axis.Y, FillMode.None));
     root.setBackground(null);
+    root.setPreferredSize(
+        new Vector3f(
+            MissionWizardStyles.WIZARD_CONTENT_WIDTH,
+            MissionWizardStyles.WIZARD_CONTENT_HEIGHT,
+            0));
 
     Label title =
         root.addChild(new Label("LAUNCH SITE", MissionWizardStyles.STYLE));
     title.setFont(MissionWizardStyles.rajdhani(20));
     title.setColor(MissionWizardStyles.WIZARD_TEXT_PRIMARY);
+
+    root.addChild(MissionWizardStyles.vSpacer(ROW_GAP));
 
     Label subtitle =
         root.addChild(
@@ -30,21 +40,27 @@ public class StepLaunchSite {
     subtitle.setFont(MissionWizardStyles.mono(12));
     subtitle.setColor(MissionWizardStyles.WIZARD_TEXT_SECONDARY);
 
+    root.addChild(MissionWizardStyles.vSpacer(ROW_GAP));
+
     PopupList cosmodrome =
         new PopupList(
-            800f,
+            COSMODROME_W,
             List.of(
                 "Kourou (CSG) \u2014 French Guiana",
                 "Cape Canaveral (CCSFS) \u2014 Florida, USA",
                 "Baikonur \u2014 Kazakhstan"),
             "Kourou (CSG) \u2014 French Guiana");
     root.addChild(
-        new LabeledField(
-                "COSMODROME",
-                cosmodrome.getNode(),
-                null,
-                "icons/wizard/field-building.png")
-            .getNode());
+        widthBoundedRow(
+            new LabeledField(
+                    "COSMODROME",
+                    cosmodrome.getNode(),
+                    null,
+                    "icons/wizard/field-building.png")
+                .getNode(),
+            COSMODROME_W));
+
+    root.addChild(MissionWizardStyles.vSpacer(ROW_GAP));
 
     Container row2 =
         root.addChild(new Container(new BoxLayout(Axis.X, FillMode.None)));
@@ -56,6 +72,7 @@ public class StepLaunchSite {
             "5.236",
             "decimal degrees \u00b7 N positive",
             "icons/wizard/field-globe-lat.png"));
+    row2.addChild(MissionWizardStyles.hSpacer(COL_GAP));
     row2.addChild(
         fieldCol(
             COL3_W,
@@ -63,6 +80,7 @@ public class StepLaunchSite {
             "-52.769",
             "decimal degrees \u00b7 E positive",
             "icons/wizard/field-globe-lon.png"));
+    row2.addChild(MissionWizardStyles.hSpacer(COL_GAP));
     row2.addChild(
         fieldCol(
             COL3_W,
@@ -70,6 +88,11 @@ public class StepLaunchSite {
             "14",
             "meters MSL",
             "icons/wizard/field-mountain.png"));
+    float trailing =
+        MissionWizardStyles.WIZARD_CONTENT_WIDTH - 3 * COL3_W - 2 * COL_GAP;
+    if (trailing > 0f) {
+      row2.addChild(MissionWizardStyles.hSpacer(trailing));
+    }
   }
 
   public Container getNode() {
@@ -83,7 +106,20 @@ public class StepLaunchSite {
     col.setPreferredSize(new Vector3f(w, 0, 0));
     TextField f = new TextField(value, MissionWizardStyles.STYLE);
     f.setFont(MissionWizardStyles.mono(14));
+    f.setPreferredSize(new Vector3f(w, 0, 0));
     col.addChild(new LabeledField(label, f, helper, iconPath).getNode());
     return col;
+  }
+
+  /** Wraps a child in an X-row with a trailing invisible spacer so it keeps its fixed width. */
+  private Container widthBoundedRow(Container child, float childWidth) {
+    Container row = new Container(new BoxLayout(Axis.X, FillMode.None));
+    row.setBackground(null);
+    row.addChild(child);
+    float trailing = MissionWizardStyles.WIZARD_CONTENT_WIDTH - childWidth;
+    if (trailing > 0f) {
+      row.addChild(MissionWizardStyles.hSpacer(trailing));
+    }
+    return row;
   }
 }

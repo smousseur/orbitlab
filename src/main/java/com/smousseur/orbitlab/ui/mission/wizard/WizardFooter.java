@@ -8,9 +8,12 @@ public class WizardFooter {
 
   private static final float FOOTER_HEIGHT = 72f;
   private static final float BUTTON_HEIGHT = 36f;
+  private static final float CANCEL_BTN_W = 120f;
+  private static final float PREVIOUS_BTN_W = 120f;
+  private static final float NEXT_BTN_W = 140f;
+  private static final float BUTTON_GAP = 12f;
 
   private final Container root;
-  private final Container buttonRow;
   private final Button cancelButton;
   private final Button previousButton;
   private final Button nextButton;
@@ -25,29 +28,25 @@ public class WizardFooter {
     root.setPreferredSize(new Vector3f(0, FOOTER_HEIGHT, 0));
     root.setBackground(null);
 
-    buttonRow =
-        root.addChild(new Container(new BoxLayout(Axis.X, FillMode.None)));
-    buttonRow.setBackground(null);
-
     cancelButton = new Button("x  Cancel", MissionWizardStyles.STYLE);
     cancelButton.setBackground(
         MissionWizardStyles.createGradient(MissionWizardStyles.WIZARD_DANGER));
     cancelButton.setFont(MissionWizardStyles.rajdhani(14));
-    cancelButton.setPreferredSize(new Vector3f(0, BUTTON_HEIGHT, 0));
+    cancelButton.setPreferredSize(new Vector3f(CANCEL_BTN_W, BUTTON_HEIGHT, 0));
     cancelButton.addClickCommands(src -> onCancel.run());
 
     previousButton = new Button("<  Previous", MissionWizardStyles.STYLE);
     previousButton.setBackground(
         MissionWizardStyles.createGradient(MissionWizardStyles.WIZARD_BG_CARD));
     previousButton.setFont(MissionWizardStyles.rajdhani(14));
-    previousButton.setPreferredSize(new Vector3f(0, BUTTON_HEIGHT, 0));
+    previousButton.setPreferredSize(new Vector3f(PREVIOUS_BTN_W, BUTTON_HEIGHT, 0));
     previousButton.addClickCommands(src -> onPrevious.run());
 
     nextButton = new Button("Next  >", MissionWizardStyles.STYLE);
     nextButton.setBackground(
         MissionWizardStyles.createGradient(MissionWizardStyles.WIZARD_ACCENT));
     nextButton.setFont(MissionWizardStyles.rajdhani(14));
-    nextButton.setPreferredSize(new Vector3f(0, BUTTON_HEIGHT, 0));
+    nextButton.setPreferredSize(new Vector3f(NEXT_BTN_W, BUTTON_HEIGHT, 0));
     nextButton.addClickCommands(src -> onNext.run());
   }
 
@@ -68,15 +67,31 @@ public class WizardFooter {
   }
 
   public void setStep(MissionWizardStep step) {
-    buttonRow.clearChildren();
-    buttonRow.addChild(cancelButton);
+    root.clearChildren();
+
+    // Leading spacer pushes the button cluster to the right.
+    float clusterW = CANCEL_BTN_W + BUTTON_GAP + NEXT_BTN_W;
     if (step.index() > 0) {
-      buttonRow.addChild(previousButton);
+      clusterW += PREVIOUS_BTN_W + BUTTON_GAP;
     }
-    buttonRow.addChild(nextButton);
+    float leadingW =
+        Math.max(0f, MissionWizardStyles.WIZARD_CONTENT_WIDTH - clusterW);
+    root.addChild(MissionWizardStyles.hSpacer(leadingW));
+
+    // Right-aligned button cluster.
+    Container cluster =
+        root.addChild(new Container(new BoxLayout(Axis.X, FillMode.None)));
+    cluster.setBackground(null);
+    cluster.addChild(cancelButton);
+    cluster.addChild(MissionWizardStyles.hSpacer(BUTTON_GAP));
+    if (step.index() > 0) {
+      cluster.addChild(previousButton);
+      cluster.addChild(MissionWizardStyles.hSpacer(BUTTON_GAP));
+    }
+    cluster.addChild(nextButton);
 
     if (step == MissionWizardStep.LAUNCHER) {
-      nextButton.setText("v  Create mission");
+      nextButton.setText("Create");
       nextButton.setBackground(
           MissionWizardStyles.createGradient(MissionWizardStyles.WIZARD_SUCCESS));
     } else {
