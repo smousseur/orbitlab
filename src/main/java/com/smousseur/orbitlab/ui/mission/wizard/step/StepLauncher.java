@@ -14,7 +14,7 @@ import java.util.List;
 
 public class StepLauncher {
 
-  private static final float CARD_W = 400f;
+  private static final float CARD_W = 264;
   private static final float CARD_H = 112f;
   private static final float LAUNCHER_ICON = 40f;
   private static final float PAYLOAD_POPUP_W = 520f;
@@ -34,18 +34,14 @@ public class StepLauncher {
             MissionWizardStyles.WIZARD_CONTENT_HEIGHT,
             0));
 
-    Label title =
-        root.addChild(
-            new Label("LAUNCHER & PAYLOAD", MissionWizardStyles.STYLE));
+    Label title = root.addChild(new Label("LAUNCHER & PAYLOAD", MissionWizardStyles.STYLE));
     title.setFont(MissionWizardStyles.rajdhani(20));
     title.setColor(MissionWizardStyles.WIZARD_TEXT_PRIMARY);
 
     root.addChild(MissionWizardStyles.vSpacer(ROW_GAP));
 
     Label subtitle =
-        root.addChild(
-            new Label(
-                "// vehicle configuration", MissionWizardStyles.STYLE));
+        root.addChild(new Label("// vehicle configuration", MissionWizardStyles.STYLE));
     subtitle.setFont(MissionWizardStyles.mono(12));
     subtitle.setColor(MissionWizardStyles.WIZARD_TEXT_SECONDARY);
 
@@ -74,14 +70,12 @@ public class StepLauncher {
             "icons/wizard/launcher-ariane5.png",
             LAUNCHER_ICON);
 
-    Container vRow =
-        root.addChild(new Container(new BoxLayout(Axis.X, FillMode.None)));
+    Container vRow = root.addChild(new Container(new BoxLayout(Axis.X, FillMode.None)));
     vRow.setBackground(null);
     vRow.addChild(falcon.getNode());
     vRow.addChild(MissionWizardStyles.hSpacer(COL_GAP));
     vRow.addChild(ariane.getNode());
-    float vRowTrailing =
-        MissionWizardStyles.WIZARD_CONTENT_WIDTH - 2 * CARD_W - COL_GAP;
+    float vRowTrailing = MissionWizardStyles.WIZARD_CONTENT_WIDTH - 2 * CARD_W - COL_GAP;
     if (vRowTrailing > 0f) {
       vRow.addChild(MissionWizardStyles.hSpacer(vRowTrailing));
     }
@@ -107,23 +101,19 @@ public class StepLauncher {
     root.addChild(MissionWizardStyles.vSpacer(ROW_GAP));
 
     // Payload label
-    Container payloadLabelRow =
-        root.addChild(new Container(new BoxLayout(Axis.X, FillMode.None)));
+    Container payloadLabelRow = root.addChild(new Container(new BoxLayout(Axis.X, FillMode.None)));
     payloadLabelRow.setBackground(null);
     payloadLabelRow.addChild(
         MissionWizardStyles.iconPlaceholder("icons/wizard/payload.png", 14, 14));
-    Label payloadSpacer =
-        payloadLabelRow.addChild(new Label(" ", MissionWizardStyles.STYLE));
+    Label payloadSpacer = payloadLabelRow.addChild(new Label(" ", MissionWizardStyles.STYLE));
     payloadSpacer.setBackground(null);
-    Label payloadLabel =
-        payloadLabelRow.addChild(new Label("PAYLOAD", MissionWizardStyles.STYLE));
+    Label payloadLabel = payloadLabelRow.addChild(new Label("PAYLOAD", MissionWizardStyles.STYLE));
     payloadLabel.setFont(MissionWizardStyles.rajdhani(12));
     payloadLabel.setColor(MissionWizardStyles.WIZARD_TEXT_SECONDARY);
 
     root.addChild(MissionWizardStyles.vSpacer(ROW_GAP));
 
-    Container payloadRow =
-        root.addChild(new Container(new BoxLayout(Axis.X, FillMode.None)));
+    Container payloadRow = root.addChild(new Container(new BoxLayout(Axis.X, FillMode.None)));
     payloadRow.setBackground(null);
 
     PopupList payloadType =
@@ -138,15 +128,13 @@ public class StepLauncher {
     payloadRow.addChild(payloadType.getNode());
     payloadRow.addChild(MissionWizardStyles.hSpacer(COL_GAP));
 
-    TextField massField =
-        new TextField("15000", MissionWizardStyles.STYLE);
+    TextField massField = new TextField("15000", MissionWizardStyles.STYLE);
     massField.setFont(MissionWizardStyles.mono(14));
     massField.setPreferredSize(new Vector3f(MASS_FIELD_W, 0, 0));
     payloadRow.addChild(massField);
     payloadRow.addChild(MissionWizardStyles.hSpacer(COL_GAP));
 
-    Label kgLabel =
-        payloadRow.addChild(new Label("kg", MissionWizardStyles.STYLE));
+    Label kgLabel = payloadRow.addChild(new Label("kg", MissionWizardStyles.STYLE));
     kgLabel.setFont(MissionWizardStyles.mono(14));
     kgLabel.setColor(MissionWizardStyles.WIZARD_TEXT_SECONDARY);
     kgLabel.setPreferredSize(new Vector3f(KG_LABEL_W, 0, 0));
