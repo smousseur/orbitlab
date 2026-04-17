@@ -3,28 +3,35 @@ package com.smousseur.orbitlab.ui.mission.wizard.step;
 import com.jme3.math.Vector3f;
 import com.simsilica.lemur.*;
 import com.simsilica.lemur.component.BoxLayout;
-import com.simsilica.lemur.component.QuadBackgroundComponent;
 import com.smousseur.orbitlab.ui.mission.wizard.MissionWizardStyles;
-import com.smousseur.orbitlab.ui.mission.wizard.component.*;
+import com.smousseur.orbitlab.ui.mission.wizard.component.LabeledField;
+import com.smousseur.orbitlab.ui.mission.wizard.component.PopupList;
 import java.util.List;
 
 public class StepLaunchSite {
 
-  private static final float COL3_W = 260f;
-  private static final float COL2_W = 400f;
-  private static final float MAP_W = 780f;
-  private static final float MAP_H = 160f;
+  private static final float COSMODROME_W = 520f;
+  private static final float COL3_W = 140f;
+  private static final float COL_GAP = 16f;
+  private static final float ROW_GAP = 12f;
 
   private final Container root;
 
   public StepLaunchSite() {
     root = new Container(new BoxLayout(Axis.Y, FillMode.None));
     root.setBackground(null);
+    root.setPreferredSize(
+        new Vector3f(
+            MissionWizardStyles.WIZARD_CONTENT_WIDTH,
+            MissionWizardStyles.WIZARD_CONTENT_HEIGHT,
+            0));
 
     Label title =
         root.addChild(new Label("LAUNCH SITE", MissionWizardStyles.STYLE));
     title.setFont(MissionWizardStyles.rajdhani(20));
     title.setColor(MissionWizardStyles.WIZARD_TEXT_PRIMARY);
+
+    root.addChild(MissionWizardStyles.vSpacer(ROW_GAP));
 
     Label subtitle =
         root.addChild(
@@ -33,21 +40,27 @@ public class StepLaunchSite {
     subtitle.setFont(MissionWizardStyles.mono(12));
     subtitle.setColor(MissionWizardStyles.WIZARD_TEXT_SECONDARY);
 
+    root.addChild(MissionWizardStyles.vSpacer(ROW_GAP));
+
     PopupList cosmodrome =
         new PopupList(
-            800f,
+            COSMODROME_W,
             List.of(
                 "Kourou (CSG) \u2014 French Guiana",
                 "Cape Canaveral (CCSFS) \u2014 Florida, USA",
                 "Baikonur \u2014 Kazakhstan"),
             "Kourou (CSG) \u2014 French Guiana");
     root.addChild(
-        new LabeledField(
-                "COSMODROME",
-                cosmodrome.getNode(),
-                null,
-                "icons/wizard/field-building.png")
-            .getNode());
+        widthBoundedRow(
+            new LabeledField(
+                    "COSMODROME",
+                    cosmodrome.getNode(),
+                    null,
+                    "icons/wizard/field-building.png")
+                .getNode(),
+            COSMODROME_W));
+
+    root.addChild(MissionWizardStyles.vSpacer(ROW_GAP));
 
     Container row2 =
         root.addChild(new Container(new BoxLayout(Axis.X, FillMode.None)));
@@ -59,6 +72,7 @@ public class StepLaunchSite {
             "5.236",
             "decimal degrees \u00b7 N positive",
             "icons/wizard/field-globe-lat.png"));
+    row2.addChild(MissionWizardStyles.hSpacer(COL_GAP));
     row2.addChild(
         fieldCol(
             COL3_W,
@@ -66,6 +80,7 @@ public class StepLaunchSite {
             "-52.769",
             "decimal degrees \u00b7 E positive",
             "icons/wizard/field-globe-lon.png"));
+    row2.addChild(MissionWizardStyles.hSpacer(COL_GAP));
     row2.addChild(
         fieldCol(
             COL3_W,
@@ -73,71 +88,11 @@ public class StepLaunchSite {
             "14",
             "meters MSL",
             "icons/wizard/field-mountain.png"));
-
-    Container row3 =
-        root.addChild(new Container(new BoxLayout(Axis.X, FillMode.None)));
-    row3.setBackground(null);
-    row3.addChild(
-        fieldCol(
-            COL2_W,
-            "LAUNCH HEADING",
-            "90.0",
-            "azimuth \u00b7 90\u00b0 = East",
-            "icons/wizard/field-compass.png"));
-
-    Container pressCol =
-        new Container(new BoxLayout(Axis.Y, FillMode.None));
-    pressCol.setBackground(null);
-    pressCol.setPreferredSize(new Vector3f(COL2_W, 0, 0));
-    SegmentedControl pressCtrl =
-        new SegmentedControl("AUTO", "ISA", "MANUAL").select(0);
-    pressCol.addChild(
-        new LabeledField(
-                "ATMOSPHERIC PRESSURE",
-                pressCtrl.getNode(),
-                "ground atmospheric model",
-                "icons/wizard/field-pressure.png")
-            .getNode());
-    row3.addChild(pressCol);
-
-    // Mini-map
-    Container map = root.addChild(new Container());
-    map.setPreferredSize(new Vector3f(MAP_W, MAP_H, 0));
-    map.setBackground(
-        new QuadBackgroundComponent(MissionWizardStyles.WIZARD_BG_DEEP));
-
-    for (int i = 0; i < 6; i++) {
-      Container vLine = new Container();
-      vLine.setPreferredSize(new Vector3f(1, MAP_H, 0));
-      vLine.setBackground(
-          new QuadBackgroundComponent(MissionWizardStyles.WIZARD_BORDER));
-      vLine.setLocalTranslation(MAP_W / 7f * (i + 1), MAP_H, 0.1f);
-      map.attachChild(vLine);
+    float trailing =
+        MissionWizardStyles.WIZARD_CONTENT_WIDTH - 3 * COL3_W - 2 * COL_GAP;
+    if (trailing > 0f) {
+      row2.addChild(MissionWizardStyles.hSpacer(trailing));
     }
-    for (int i = 0; i < 3; i++) {
-      Container hLine = new Container();
-      hLine.setPreferredSize(new Vector3f(MAP_W, 1, 0));
-      hLine.setBackground(
-          new QuadBackgroundComponent(MissionWizardStyles.WIZARD_BORDER));
-      hLine.setLocalTranslation(0, MAP_H / 4f * (i + 1), 0.1f);
-      map.attachChild(hLine);
-    }
-
-    Container dot = new Container();
-    dot.setPreferredSize(new Vector3f(8, 8, 0));
-    dot.setBackground(
-        new QuadBackgroundComponent(MissionWizardStyles.WIZARD_ACCENT));
-    dot.setLocalTranslation(MAP_W / 2f - 4f, MAP_H / 2f + 4f, 0.2f);
-    map.attachChild(dot);
-
-    Label caption =
-        root.addChild(
-            new Label(
-                "CSG \u00b7 KOUROU \u00b7 5.236\u00b0N 52.769\u00b0W",
-                MissionWizardStyles.STYLE));
-    caption.setFont(MissionWizardStyles.mono(10));
-    caption.setColor(MissionWizardStyles.WIZARD_TEXT_SECONDARY);
-    caption.setTextHAlignment(HAlignment.Right);
   }
 
   public Container getNode() {
@@ -151,7 +106,20 @@ public class StepLaunchSite {
     col.setPreferredSize(new Vector3f(w, 0, 0));
     TextField f = new TextField(value, MissionWizardStyles.STYLE);
     f.setFont(MissionWizardStyles.mono(14));
+    f.setPreferredSize(new Vector3f(w, 0, 0));
     col.addChild(new LabeledField(label, f, helper, iconPath).getNode());
     return col;
+  }
+
+  /** Wraps a child in an X-row with a trailing invisible spacer so it keeps its fixed width. */
+  private Container widthBoundedRow(Container child, float childWidth) {
+    Container row = new Container(new BoxLayout(Axis.X, FillMode.None));
+    row.setBackground(null);
+    row.addChild(child);
+    float trailing = MissionWizardStyles.WIZARD_CONTENT_WIDTH - childWidth;
+    if (trailing > 0f) {
+      row.addChild(MissionWizardStyles.hSpacer(trailing));
+    }
+    return row;
   }
 }

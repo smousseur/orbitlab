@@ -1,9 +1,13 @@
 package com.smousseur.orbitlab.ui.mission.wizard;
 
+import com.jme3.input.event.MouseButtonEvent;
 import com.jme3.math.Vector3f;
+import com.jme3.scene.Spatial;
 import com.simsilica.lemur.*;
 import com.simsilica.lemur.component.BoxLayout;
-import com.simsilica.lemur.component.QuadBackgroundComponent;
+import com.simsilica.lemur.event.DefaultMouseListener;
+import com.simsilica.lemur.event.MouseEventControl;
+import java.util.function.Consumer;
 
 public class WizardStepper {
 
@@ -16,6 +20,7 @@ public class WizardStepper {
 
   private final Container root;
   private final Container[] stepNodes = new Container[MissionWizardStep.COUNT];
+  private Consumer<MissionWizardStep> onStepClicked = step -> {};
 
   public WizardStepper() {
     root =
@@ -34,6 +39,10 @@ public class WizardStepper {
 
   public Container getNode() {
     return root;
+  }
+
+  public void setOnStepClicked(Consumer<MissionWizardStep> listener) {
+    this.onStepClicked = listener != null ? listener : step -> {};
   }
 
   public void setActiveStep(MissionWizardStep activeStep) {
@@ -67,24 +76,21 @@ public class WizardStepper {
     label.setFont(MissionWizardStyles.rajdhani(12));
     label.setTextHAlignment(HAlignment.Center);
 
+    MouseEventControl.addListenersToSpatial(
+        col,
+        new DefaultMouseListener() {
+          @Override
+          public void click(MouseButtonEvent evt, Spatial target, Spatial capture) {
+            onStepClicked.accept(step);
+          }
+        });
+
     return col;
   }
 
   private Container buildDashSeparator() {
-    Container sep = new Container(new BoxLayout(Axis.X, FillMode.None));
-    sep.setBackground(null);
-    sep.setPreferredSize(
-        new Vector3f(
-            DASH_COUNT * DASH_WIDTH + (DASH_COUNT - 1) * DASH_GAP,
-            DASH_HEIGHT,
-            0));
-    for (int i = 0; i < DASH_COUNT; i++) {
-      Container dash = new Container();
-      dash.setPreferredSize(new Vector3f(DASH_WIDTH, DASH_HEIGHT, 0));
-      dash.setBackground(new QuadBackgroundComponent(MissionWizardStyles.WIZARD_BORDER));
-      sep.addChild(dash);
-    }
-    return sep;
+    float totalW = DASH_COUNT * DASH_WIDTH + (DASH_COUNT - 1) * DASH_GAP;
+    return MissionWizardStyles.spacer(totalW, DASH_HEIGHT);
   }
 
   private void applyDoneState(Container node, MissionWizardStep step) {

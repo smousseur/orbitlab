@@ -4,22 +4,33 @@ import com.jme3.math.Vector3f;
 import com.simsilica.lemur.*;
 import com.simsilica.lemur.component.BoxLayout;
 import com.smousseur.orbitlab.ui.mission.wizard.MissionWizardStyles;
-import com.smousseur.orbitlab.ui.mission.wizard.component.*;
+import com.smousseur.orbitlab.ui.mission.wizard.component.LabeledField;
 
 public class StepParameters {
 
-  private static final float COL_WIDTH = 400f;
+  private static final float NAME_FIELD_W = 320f;
+  private static final float SLIDER_W = 520f;
+  private static final float DATE_FIELD_W = 320f;
+  private static final float ROW_GAP = 12f;
+
   private final Container root;
 
   public StepParameters() {
     root = new Container(new BoxLayout(Axis.Y, FillMode.None));
     root.setBackground(null);
+    root.setPreferredSize(
+        new Vector3f(
+            MissionWizardStyles.WIZARD_CONTENT_WIDTH,
+            MissionWizardStyles.WIZARD_CONTENT_HEIGHT,
+            0));
 
     Label title =
         root.addChild(
             new Label("PARAMETERS \u2014 LEO", MissionWizardStyles.STYLE));
     title.setFont(MissionWizardStyles.rajdhani(20));
     title.setColor(MissionWizardStyles.WIZARD_TEXT_PRIMARY);
+
+    root.addChild(MissionWizardStyles.vSpacer(ROW_GAP));
 
     Label subtitle =
         root.addChild(
@@ -28,26 +39,33 @@ public class StepParameters {
     subtitle.setFont(MissionWizardStyles.mono(12));
     subtitle.setColor(MissionWizardStyles.WIZARD_TEXT_SECONDARY);
 
-    // Row 1 — Mission Name
+    root.addChild(MissionWizardStyles.vSpacer(ROW_GAP));
+
+    // Mission Name
+    TextField nameField = monoField("ORBITLAB-LEO-001");
+    nameField.setPreferredSize(new Vector3f(NAME_FIELD_W, 0, 0));
     root.addChild(
-        new LabeledField(
-                "MISSION NAME",
-                monoField("ORBITLAB-LEO-001"),
-                null,
-                "icons/wizard/field-pencil.png")
-            .getNode());
+        widthBoundedRow(
+            new LabeledField(
+                    "MISSION NAME",
+                    nameField,
+                    null,
+                    "icons/wizard/field-pencil.png")
+                .getNode(),
+            NAME_FIELD_W));
 
-    // Row 2 — Altitude + Tolerance
-    Container row2 =
-        root.addChild(new Container(new BoxLayout(Axis.X, FillMode.None)));
-    row2.setBackground(null);
+    root.addChild(MissionWizardStyles.vSpacer(ROW_GAP));
 
-    Container altCol = col(COL_WIDTH);
+    // Target Altitude (slider + big value)
     Slider altSlider =
         new Slider(
             new DefaultRangedValueModel(160, 2000, 550),
             Axis.X,
             MissionWizardStyles.STYLE);
+    altSlider.setPreferredSize(new Vector3f(SLIDER_W, 0, 0));
+
+    Container altCol = new Container(new BoxLayout(Axis.Y, FillMode.None));
+    altCol.setBackground(null);
     altCol.addChild(
         new LabeledField(
                 "TARGET ALTITUDE",
@@ -59,78 +77,22 @@ public class StepParameters {
         altCol.addChild(new Label("550 km", MissionWizardStyles.STYLE));
     altValue.setFont(MissionWizardStyles.rajdhani(28));
     altValue.setColor(MissionWizardStyles.WIZARD_ACCENT);
-    row2.addChild(altCol);
+    root.addChild(widthBoundedRow(altCol, SLIDER_W));
 
-    Container tolCol = col(COL_WIDTH);
-    tolCol.addChild(
-        new LabeledField(
-                "ALTITUDE TOLERANCE",
-                monoField("1"),
-                "+/- km \u00b7 CMA-ES convergence",
-                "icons/wizard/field-tolerance.png")
-            .getNode());
-    row2.addChild(tolCol);
+    root.addChild(MissionWizardStyles.vSpacer(ROW_GAP));
 
-    // Row 3 — Inclination + RAAN
-    root.addChild(
-        twoColRow(
-            new LabeledField(
-                "INCLINATION",
-                monoField("51.6"),
-                "degrees \u00b7 0\u00b0 = equatorial",
-                "icons/wizard/field-inclination.png"),
-            new LabeledField(
-                "RAAN (\u03a9)",
-                monoField("0.0"),
-                "degrees \u00b7 ascending node",
-                "icons/wizard/field-raan.png")));
-
-    // Row 4 — Arg Perigee + Strategy
-    Container row4 =
-        root.addChild(new Container(new BoxLayout(Axis.X, FillMode.None)));
-    row4.setBackground(null);
-
-    Container perigeeCol = col(COL_WIDTH);
-    perigeeCol.addChild(
-        new LabeledField(
-                "ARGUMENT OF PERIGEE (\u03c9)",
-                monoField("0.0"),
-                "degrees",
-                "icons/wizard/field-perigee.png")
-            .getNode());
-    row4.addChild(perigeeCol);
-
-    Container stratCol = col(COL_WIDTH);
-    SegmentedControl strat =
-        new SegmentedControl("2 BURNS", "DIRECT", "HOHMANN").select(0);
-    stratCol.addChild(
-        new LabeledField(
-                "INSERTION STRATEGY",
-                strat.getNode(),
-                "2 burns: gravity turn + circularisation",
-                "icons/wizard/field-strategy.png")
-            .getNode());
-    row4.addChild(stratCol);
-
-    // Row 5 — Launch Date
+    // Launch Date
     TextField dateField = monoField("2026-06-15T06:00:00Z");
-    dateField.setPreferredSize(new Vector3f(320, 0, 0));
+    dateField.setPreferredSize(new Vector3f(DATE_FIELD_W, 0, 0));
     root.addChild(
-        new LabeledField(
-                "LAUNCH DATE",
-                dateField,
-                "UTC \u00b7 Orekit epoch",
-                "icons/wizard/field-clock.png")
-            .getNode());
-
-    // Info Banner
-    root.addChild(
-        new InfoBanner(
-                "Iterative altitude correction enabled: the mean altitude "
-                    + "over a full period (J2 filter) is used as reference. "
-                    + "Convergence in 2-3 iterations \u00b7 tolerance 500 m.",
-                InfoBanner.Variant.INFO)
-            .getNode());
+        widthBoundedRow(
+            new LabeledField(
+                    "LAUNCH DATE",
+                    dateField,
+                    "UTC \u00b7 Orekit epoch",
+                    "icons/wizard/field-clock.png")
+                .getNode(),
+            DATE_FIELD_W));
   }
 
   public Container getNode() {
@@ -143,22 +105,15 @@ public class StepParameters {
     return f;
   }
 
-  private Container col(float w) {
-    Container c = new Container(new BoxLayout(Axis.Y, FillMode.None));
-    c.setBackground(null);
-    c.setPreferredSize(new Vector3f(w, 0, 0));
-    return c;
-  }
-
-  private Container twoColRow(LabeledField left, LabeledField right) {
+  /** Wraps a child in an X-row with a trailing invisible spacer so it keeps its fixed width. */
+  private Container widthBoundedRow(Container child, float childWidth) {
     Container row = new Container(new BoxLayout(Axis.X, FillMode.None));
     row.setBackground(null);
-    Container l = col(COL_WIDTH);
-    l.addChild(left.getNode());
-    row.addChild(l);
-    Container r = col(COL_WIDTH);
-    r.addChild(right.getNode());
-    row.addChild(r);
+    row.addChild(child);
+    float trailing = MissionWizardStyles.WIZARD_CONTENT_WIDTH - childWidth;
+    if (trailing > 0f) {
+      row.addChild(MissionWizardStyles.hSpacer(trailing));
+    }
     return row;
   }
 }
