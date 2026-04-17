@@ -51,33 +51,43 @@ public class SelectableCard {
             new BoxLayout(Axis.Y, FillMode.None), MissionWizardStyles.STYLE);
     root.setPreferredSize(new Vector3f(width, height, 0));
 
+    Container iconNode;
     if (iconPath != null) {
-      root.addChild(MissionWizardStyles.iconPlaceholder(iconPath, iconSize, iconSize));
+      iconNode = MissionWizardStyles.iconPlaceholder(iconPath, iconSize, iconSize);
     } else {
-      Container iconSlot = root.addChild(new Container());
-      iconSlot.setPreferredSize(new Vector3f(iconSize, iconSize, 0));
-      iconSlot.setBackground(null);
+      iconNode = new Container();
+      iconNode.setPreferredSize(new Vector3f(iconSize, iconSize, 0));
+      iconNode.setBackground(null);
     }
+    root.addChild(centerH(iconNode, width));
 
-    Label titleLabel = root.addChild(new Label(title, MissionWizardStyles.STYLE));
+    Label titleLabel = new Label(title, MissionWizardStyles.STYLE);
     titleLabel.setFont(MissionWizardStyles.rajdhani(16));
     titleLabel.setTextHAlignment(HAlignment.Center);
+    titleLabel.setPreferredSize(
+        new Vector3f(width, titleLabel.getPreferredSize().y, 0));
+    root.addChild(titleLabel);
 
-    Label subtitleLabel =
-        root.addChild(new Label(subtitle, MissionWizardStyles.STYLE));
+    Label subtitleLabel = new Label(subtitle, MissionWizardStyles.STYLE);
     subtitleLabel.setFont(MissionWizardStyles.rajdhani(11));
     subtitleLabel.setColor(MissionWizardStyles.WIZARD_TEXT_SECONDARY);
     subtitleLabel.setTextHAlignment(HAlignment.Center);
+    subtitleLabel.setPreferredSize(
+        new Vector3f(width, subtitleLabel.getPreferredSize().y, 0));
+    root.addChild(subtitleLabel);
 
     if (value != null) {
-      Label valueLabel = root.addChild(new Label(value, MissionWizardStyles.STYLE));
+      Label valueLabel = new Label(value, MissionWizardStyles.STYLE);
       valueLabel.setFont(MissionWizardStyles.mono(11));
       valueLabel.setColor(MissionWizardStyles.WIZARD_TEXT_SECONDARY);
       valueLabel.setTextHAlignment(HAlignment.Center);
+      valueLabel.setPreferredSize(
+          new Vector3f(width, valueLabel.getPreferredSize().y, 0));
+      root.addChild(valueLabel);
     }
 
     if (badge != null) {
-      root.addChild(badge.getNode());
+      root.addChild(centerH(badge.getNode(), width));
     }
 
     applyState(initial);
@@ -109,6 +119,18 @@ public class SelectableCard {
 
   public Container getNode() {
     return root;
+  }
+
+  private static Container centerH(Container child, float cardWidth) {
+    Container row =
+        new Container(new BoxLayout(Axis.X, FillMode.None), MissionWizardStyles.STYLE);
+    row.setBackground(null);
+    float childWidth = child.getPreferredSize().x;
+    float pad = Math.max(0f, (cardWidth - childWidth) / 2f);
+    row.addChild(MissionWizardStyles.hSpacer(pad));
+    row.addChild(child);
+    row.addChild(MissionWizardStyles.hSpacer(pad));
+    return row;
   }
 
   public void applyState(State newState) {

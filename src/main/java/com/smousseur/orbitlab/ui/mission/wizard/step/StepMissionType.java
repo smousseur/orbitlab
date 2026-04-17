@@ -9,9 +9,9 @@ import com.smousseur.orbitlab.ui.mission.wizard.component.SelectableCard;
 
 public class StepMissionType {
 
-  private static final float CARD_W = 380f;
+  private static final float CARD_W = 264f;
   private static final float CARD_H = 152f;
-  private static final float ICON_SIZE = 48f;
+  private static final float ICON_SIZE = 16f;
   private static final float CARD_GAP = 16f;
   private static final float ROW_GAP = 12f;
 
@@ -71,9 +71,12 @@ public class StepMissionType {
                 "icons/wizard/mission-gto.png",
                 ICON_SIZE)
             .getNode());
+    // Reserve the 3rd column (no mission yet) so the grid stays on a 3-column layout.
+    row.addChild(MissionWizardStyles.hSpacer(CARD_GAP));
+    row.addChild(MissionWizardStyles.spacer(CARD_W, CARD_H));
     // Trailing spacer fills remaining row width so cards stay at their fixed size.
     float trailing =
-        MissionWizardStyles.WIZARD_CONTENT_WIDTH - 2 * CARD_W - CARD_GAP;
+        MissionWizardStyles.WIZARD_CONTENT_WIDTH - 3 * CARD_W - 2 * CARD_GAP;
     if (trailing > 0f) {
       row.addChild(MissionWizardStyles.hSpacer(trailing));
     }
