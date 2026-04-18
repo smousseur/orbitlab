@@ -5,15 +5,12 @@ import com.jme3.math.Vector2f;
 import com.jme3.math.Vector3f;
 import com.jme3.scene.Node;
 import com.jme3.texture.Texture2D;
-import com.simsilica.lemur.Axis;
 import com.simsilica.lemur.Button;
 import com.simsilica.lemur.Container;
-import com.simsilica.lemur.FillMode;
 import com.simsilica.lemur.HAlignment;
 import com.simsilica.lemur.Label;
 import com.simsilica.lemur.Panel;
 import com.simsilica.lemur.VAlignment;
-import com.simsilica.lemur.component.BoxLayout;
 import com.simsilica.lemur.component.IconComponent;
 import com.simsilica.lemur.component.QuadBackgroundComponent;
 import com.simsilica.lemur.component.TbtQuadBackgroundComponent;
@@ -27,41 +24,13 @@ import java.util.Objects;
 /**
  * Lemur-based "Capsule console" timeline rendered at the bottom of the HUD.
  *
- * <p>The widget exposes three functional clusters inside a single glass capsule:
- *
- * <ul>
- *   <li><b>Transport</b> (left) — a LIVE jump-to-now indicator, a ±60 s step-backward button,
- *       a Play/Pause toggle, and a ±60 s step-forward button.
- *   <li><b>Scrubber + speed stepper</b> (centre) — a decorative scrubber track with ticks whose
- *       playhead position mirrors the current speed index; a {@code −} / {@code ×N} / {@code +}
- *       stepper that replaces the former speed slider (step buttons walk through the discrete
- *       speed presets of {@link #ABS_SPEED}).
- *   <li><b>Clock</b> (right) — the current simulation date/time in UTC.
- * </ul>
- *
- * <p>Visual assets live under {@code interface/timeline/} and fonts fall back to Lemur's default
- * when the bundled bitmap fonts are absent. The widget is non-interactive on the scrubber track
- * itself; only the stepper buttons modify the speed.
+ * <p>All children are placed with absolute positioning inside the capsule so every element stays
+ * visually centred along the vertical axis regardless of its height.
  */
 public class TimelineWidget implements AutoCloseable {
   private static final double[] ABS_SPEED = {
-    1, // 0 -> 1× (spécial-cas i==0)
-    2, // 1
-    5, // 2
-    10, // 3
-    30, // 4
-    60, // 5 -> 1m/s
-    300, // 6 -> 5m/s
-    600, // 7 -> 10m/s
-    1800, // 8 -> 30m/s
-    3600, // 9 -> 1h/s
-    21600, // 10 -> 6h/s
-    86400, // 11 -> 1d/s
-    432000, // 12 -> 5d/s
-    864000, // 13 -> 10d/s
-    1728000, // 14 -> 20d/s
-    3456000, // 15 -> 40d/s
-    6912000 // 16 -> 80d/s
+    1, 2, 5, 10, 30, 60, 300, 600, 1800, 3600, 21600, 86400, 432000, 864000, 1728000, 3456000,
+    6912000
   };
 
   private static final int MIN_INDEX = -16;
@@ -69,25 +38,19 @@ public class TimelineWidget implements AutoCloseable {
 
   private static final double STEP_SECONDS = 60.0;
 
-  // Capsule geometry (must follow the handoff design)
-  private static final float CAPSULE_WIDTH = 680f;
+  private static final float CAPSULE_WIDTH = 600f;
   private static final float CAPSULE_HEIGHT = 52f;
+  private static final float CAPSULE_PAD_X = 14f;
 
-  // Cluster widths
-  private static final float TRANSPORT_WIDTH = 188f;
-  private static final float CLOCK_WIDTH = 170f;
-  private static final float STEPPER_WIDTH = 96f;
-
-  // Scrubber geometry
   private static final float TRACK_HEIGHT = 4f;
   private static final int TICK_COUNT = 21;
   private static final float PLAYHEAD_WIDTH = 12f;
   private static final float PLAYHEAD_HEIGHT = 16f;
 
-  // Transport glyphs
-  private static final float ICON_SIZE = 10f;
+  private static final float ICON_SIZE = 12f;
   private static final float BUTTON_SIZE = 24f;
   private static final float STEPPER_BTN_SIZE = 18f;
+  private static final float DIVIDER_HEIGHT = CAPSULE_HEIGHT - 20f;
 
   private static final float BOTTOM_MARGIN_PX = AppStyles.HUD_MARGIN_PX + 10f;
 
@@ -95,28 +58,21 @@ public class TimelineWidget implements AutoCloseable {
 
   private final Container root;
 
-  // Transport cluster
-  private final Container liveIndicator;
-  private final IconComponent liveDot;
+  private final Panel liveDotPanel;
+  private final IconComponent liveDotIcon;
   private final Label liveLabel;
   private final Button playPauseButton;
   private final IconComponent playPauseIcon;
 
-  // Scrubber
-  private final Node scrubberArea;
   private final Panel playhead;
   private final Panel fillPanel;
   private final float trackStartX;
   private final float trackEndX;
 
-  // Stepper
   private final Label speedLabel;
 
-  // Clock
   private final Label dateLabel;
-  private final Label utcLabel;
 
-  // State
   private int speedIndex = 0;
   private Mode currentMode = Mode.LIVE;
 
@@ -136,162 +92,112 @@ public class TimelineWidget implements AutoCloseable {
 
     Node timelineNode = context.guiGraph().getTimelineNode();
 
-    this.root = new Container(new BoxLayout(Axis.X, FillMode.None), TimelineStyles.STYLE);
+    this.root = new Container(TimelineStyles.STYLE);
     applyCapsuleBackground(root);
     root.setPreferredSize(new Vector3f(CAPSULE_WIDTH, CAPSULE_HEIGHT, 0f));
     timelineNode.attachChild(root);
 
-    // === LEFT: transport cluster ===
-    Container transport =
-        new Container(new BoxLayout(Axis.X, FillMode.None), TimelineStyles.STYLE);
-    transport.setBackground(null);
-    transport.setPreferredSize(new Vector3f(TRANSPORT_WIDTH, CAPSULE_HEIGHT, 0f));
-    root.addChild(transport);
+    float cursorX = CAPSULE_PAD_X;
 
-    transport.addChild(hSpacer(14f));
-
-    this.liveIndicator =
-        new Container(new BoxLayout(Axis.X, FillMode.None), TimelineStyles.STYLE);
-    this.liveIndicator.setBackground(null);
-    transport.addChild(liveIndicator);
-
-    Label liveDotHost = new Label("", TimelineStyles.STYLE);
-    liveDotHost.setBackground(null);
-    this.liveDot = makeIcon("glyph-live-active.png", 12f);
-    if (liveDot != null) {
-      liveDot.setColor(AppStyles.TL_CYAN);
-      liveDotHost.setIcon(liveDot);
+    // === LIVE indicator ===
+    float liveDotSize = 12f;
+    this.liveDotPanel = new Panel(liveDotSize, liveDotSize, TimelineStyles.STYLE);
+    this.liveDotIcon = makeIcon("glyph-live-active.png", liveDotSize);
+    if (liveDotIcon != null) {
+      liveDotIcon.setColor(AppStyles.TL_CYAN);
+      liveDotPanel.setBackground(null);
+      Label holder = new Label("", TimelineStyles.STYLE);
+      holder.setIcon(liveDotIcon);
+      holder.setBackground(null);
+      holder.setPreferredSize(new Vector3f(liveDotSize, liveDotSize, 0f));
+      placeCentered(holder, cursorX, liveDotSize, 1f);
+    } else {
+      liveDotPanel.setBackground(new QuadBackgroundComponent(AppStyles.TL_CYAN));
+      placeCentered(liveDotPanel, cursorX, liveDotSize, 1f);
     }
-    liveDotHost.setPreferredSize(new Vector3f(16f, 16f, 0f));
-    liveIndicator.addChild(liveDotHost);
+    cursorX += liveDotSize + 4f;
 
-    liveIndicator.addChild(hSpacer(4f));
-
+    float liveLabelWidth = 34f;
     this.liveLabel = new Label("LIVE", TimelineStyles.STYLE);
     liveLabel.setFont(TimelineStyles.mono(10));
     liveLabel.setFontSize(10f);
     liveLabel.setColor(AppStyles.TL_CYAN);
     liveLabel.setBackground(null);
     liveLabel.setTextVAlignment(VAlignment.Center);
-    liveIndicator.addChild(liveLabel);
+    liveLabel.setPreferredSize(new Vector3f(liveLabelWidth, 16f, 0f));
+    placeCentered(liveLabel, cursorX, 16f, 1f);
+    wireLiveIndicator(liveLabel);
+    cursorX += liveLabelWidth + 10f;
 
-    transport.addChild(hSpacer(14f));
+    // Divider 1
+    placeDivider(cursorX);
+    cursorX += 1f + 10f;
 
+    // === Transport buttons ===
     Button stepBack = makeIconButton("glyph-step-bw.png");
     stepBack.addClickCommands(s -> seekBySeconds(-STEP_SECONDS));
-    transport.addChild(stepBack);
-
-    transport.addChild(hSpacer(4f));
+    placeCentered(stepBack, cursorX, BUTTON_SIZE, 1f);
+    cursorX += BUTTON_SIZE + 4f;
 
     this.playPauseButton = makeIconButton("glyph-play.png");
-    this.playPauseIcon = (IconComponent) playPauseButton.getIcon();
+    this.playPauseIcon =
+        (playPauseButton.getIcon() instanceof IconComponent ic) ? ic : null;
     playPauseButton.addClickCommands(
         s -> {
           clock.setPlaying(!clock.isPlaying());
           refreshMode();
         });
-    transport.addChild(playPauseButton);
-
-    transport.addChild(hSpacer(4f));
+    placeCentered(playPauseButton, cursorX, BUTTON_SIZE, 1f);
+    cursorX += BUTTON_SIZE + 4f;
 
     Button stepForward = makeIconButton("glyph-step-fw.png");
     stepForward.addClickCommands(s -> seekBySeconds(STEP_SECONDS));
-    transport.addChild(stepForward);
+    placeCentered(stepForward, cursorX, BUTTON_SIZE, 1f);
+    cursorX += BUTTON_SIZE + 10f;
 
-    // Divider
-    root.addChild(divider());
+    // Divider 2
+    placeDivider(cursorX);
+    cursorX += 1f + 10f;
 
-    // === CENTER: scrubber + speed stepper ===
-    Container middle =
-        new Container(new BoxLayout(Axis.X, FillMode.None), TimelineStyles.STYLE);
-    middle.setBackground(null);
-    float middleWidth = CAPSULE_WIDTH - TRANSPORT_WIDTH - CLOCK_WIDTH - 4f;
-    middle.setPreferredSize(new Vector3f(middleWidth, CAPSULE_HEIGHT, 0f));
-    root.addChild(middle);
+    // === Right-hand cluster (clock) — reserve space from the right edge ===
+    float clockLabelWidth = 86f;
+    float utcLabelWidth = 24f;
+    float rightEnd = CAPSULE_WIDTH - CAPSULE_PAD_X;
+    float utcX = rightEnd - utcLabelWidth;
+    float dateX = utcX - 4f - clockLabelWidth;
 
-    middle.addChild(hSpacer(14f));
+    Label utcLabel = new Label("UTC", TimelineStyles.STYLE);
+    utcLabel.setFont(TimelineStyles.mono(10));
+    utcLabel.setFontSize(10f);
+    utcLabel.setColor(AppStyles.TL_TEXT_MUTED);
+    utcLabel.setBackground(null);
+    utcLabel.setTextVAlignment(VAlignment.Center);
+    utcLabel.setPreferredSize(new Vector3f(utcLabelWidth, 14f, 0f));
+    placeCentered(utcLabel, utcX, 14f, 1f);
 
-    float trackWidth = middleWidth - STEPPER_WIDTH - 14f - 14f - 12f;
+    this.dateLabel = new Label(TimeConverter.formatDate(clock.now()), TimelineStyles.STYLE);
+    dateLabel.setFont(TimelineStyles.mono(12));
+    dateLabel.setFontSize(12f);
+    dateLabel.setColor(AppStyles.TL_CYAN);
+    dateLabel.setBackground(null);
+    dateLabel.setTextHAlignment(HAlignment.Right);
+    dateLabel.setTextVAlignment(VAlignment.Center);
+    dateLabel.setPreferredSize(new Vector3f(clockLabelWidth, 16f, 0f));
+    placeCentered(dateLabel, dateX, 16f, 1f);
 
-    Container scrubberContainer =
-        new Container(new BoxLayout(Axis.X, FillMode.None), TimelineStyles.STYLE);
-    scrubberContainer.setBackground(null);
-    scrubberContainer.setPreferredSize(new Vector3f(trackWidth, CAPSULE_HEIGHT, 0f));
-    middle.addChild(scrubberContainer);
+    // Divider 3 (right of the scrubber)
+    float divider3X = dateX - 10f - 1f;
+    placeDivider(divider3X);
 
-    this.scrubberArea = new Node("scrubberOverlay");
-    scrubberContainer.attachChild(scrubberArea);
-    float centerY = -(CAPSULE_HEIGHT - TRACK_HEIGHT) * 0.5f;
-
-    // Track
-    Panel track = new Panel(trackWidth, TRACK_HEIGHT, TimelineStyles.STYLE);
-    applyBackground(track, TimelineStyles.tex("scrubber-track.png"), 2);
-    if (track.getBackground() == null) {
-      track.setBackground(new QuadBackgroundComponent(withAlpha(ColorRGBA.Black, 0.50f)));
-    }
-    track.setLocalTranslation(0f, centerY, 1f);
-    scrubberArea.attachChild(track);
-
-    // Fill (elapsed) — sized dynamically in update()
-    this.fillPanel = new Panel(1f, TRACK_HEIGHT, TimelineStyles.STYLE);
-    Texture2D fillTex = TimelineStyles.tex("scrubber-fill.png");
-    if (fillTex != null) {
-      fillPanel.setBackground(new QuadBackgroundComponent(fillTex));
-    } else {
-      fillPanel.setBackground(new QuadBackgroundComponent(AppStyles.TL_CYAN_SOFT));
-    }
-    fillPanel.setLocalTranslation(0f, centerY, 2f);
-    scrubberArea.attachChild(fillPanel);
-
-    // Ticks
-    Texture2D tickMajor = TimelineStyles.tex("tick-major.png");
-    Texture2D tickMinor = TimelineStyles.tex("tick-minor.png");
-    for (int i = 0; i < TICK_COUNT; i++) {
-      boolean major = (i % 5) == 0;
-      float x = (trackWidth - 1f) * (i / (float) (TICK_COUNT - 1));
-      float tickH = major ? 10f : 6f;
-      float tickY = centerY + (TRACK_HEIGHT - tickH) * 0.5f;
-      Panel tick = new Panel(1f, tickH, TimelineStyles.STYLE);
-      Texture2D tTex = major ? tickMajor : tickMinor;
-      if (tTex != null) {
-        tick.setBackground(new QuadBackgroundComponent(tTex));
-      } else {
-        tick.setBackground(
-            new QuadBackgroundComponent(major ? AppStyles.TL_CYAN_SOFT : AppStyles.TL_TEXT_MUTED));
-      }
-      tick.setLocalTranslation(x, tickY, 3f);
-      scrubberArea.attachChild(tick);
-    }
-
-    // Playhead
-    this.playhead = new Panel(PLAYHEAD_WIDTH, PLAYHEAD_HEIGHT, TimelineStyles.STYLE);
-    Texture2D playheadTex = TimelineStyles.tex("playhead.png");
-    if (playheadTex != null) {
-      playhead.setBackground(new QuadBackgroundComponent(playheadTex));
-    } else {
-      playhead.setBackground(new QuadBackgroundComponent(AppStyles.TL_CYAN));
-    }
-    float playheadY = centerY + (TRACK_HEIGHT - PLAYHEAD_HEIGHT) * 0.5f;
-    playhead.setLocalTranslation(0f, playheadY, 4f);
-    scrubberArea.attachChild(playhead);
-
-    this.trackStartX = 0f;
-    this.trackEndX = trackWidth;
-
-    middle.addChild(hSpacer(12f));
-
-    // Speed stepper
-    Container stepper =
-        new Container(new BoxLayout(Axis.X, FillMode.None), TimelineStyles.STYLE);
-    stepper.setBackground(null);
-    stepper.setPreferredSize(new Vector3f(STEPPER_WIDTH, CAPSULE_HEIGHT, 0f));
-    middle.addChild(stepper);
+    // === Stepper (right side of middle region) ===
+    float stepperRight = divider3X - 10f;
+    float speedLabelWidth = 44f;
+    float stepperWidth = STEPPER_BTN_SIZE + 4f + speedLabelWidth + 4f + STEPPER_BTN_SIZE;
+    float stepperStart = stepperRight - stepperWidth;
 
     Button minusBtn = makeStepperButton("-");
     minusBtn.addClickCommands(s -> changeSpeedIndex(-1));
-    stepper.addChild(minusBtn);
-
-    stepper.addChild(hSpacer(4f));
+    placeCentered(minusBtn, stepperStart, STEPPER_BTN_SIZE, 1f);
 
     this.speedLabel = new Label(formatSpeedLabel(0), TimelineStyles.STYLE);
     speedLabel.setFont(TimelineStyles.mono(11));
@@ -300,55 +206,97 @@ public class TimelineWidget implements AutoCloseable {
     speedLabel.setBackground(null);
     speedLabel.setTextHAlignment(HAlignment.Center);
     speedLabel.setTextVAlignment(VAlignment.Center);
-    speedLabel.setPreferredSize(new Vector3f(44f, CAPSULE_HEIGHT, 0f));
-    stepper.addChild(speedLabel);
-
-    stepper.addChild(hSpacer(4f));
+    speedLabel.setPreferredSize(new Vector3f(speedLabelWidth, 16f, 0f));
+    placeCentered(speedLabel, stepperStart + STEPPER_BTN_SIZE + 4f, 16f, 1f);
 
     Button plusBtn = makeStepperButton("+");
     plusBtn.addClickCommands(s -> changeSpeedIndex(+1));
-    stepper.addChild(plusBtn);
+    placeCentered(
+        plusBtn,
+        stepperStart + STEPPER_BTN_SIZE + 4f + speedLabelWidth + 4f,
+        STEPPER_BTN_SIZE,
+        1f);
 
-    middle.addChild(hSpacer(14f));
+    // === Scrubber (fills remaining middle space) ===
+    float scrubberStart = cursorX;
+    float scrubberEnd = stepperStart - 10f;
+    float trackWidth = Math.max(40f, scrubberEnd - scrubberStart);
+    float centerY = CAPSULE_HEIGHT * 0.5f;
 
-    // Divider
-    root.addChild(divider());
+    Panel track = new Panel(trackWidth, TRACK_HEIGHT, TimelineStyles.STYLE);
+    applyBackground(track, TimelineStyles.tex("scrubber-track.png"), 2);
+    if (track.getBackground() == null) {
+      track.setBackground(new QuadBackgroundComponent(withAlpha(AppStyles.TL_CYAN_SOFT, 0.20f)));
+    }
+    track.setLocalTranslation(scrubberStart, -(centerY - TRACK_HEIGHT * 0.5f), 1f);
+    root.attachChild(track);
 
-    // === RIGHT: clock ===
-    Container clockBox =
-        new Container(new BoxLayout(Axis.X, FillMode.None), TimelineStyles.STYLE);
-    clockBox.setBackground(null);
-    clockBox.setPreferredSize(new Vector3f(CLOCK_WIDTH, CAPSULE_HEIGHT, 0f));
-    root.addChild(clockBox);
+    this.fillPanel = new Panel(1f, TRACK_HEIGHT, TimelineStyles.STYLE);
+    Texture2D fillTex = TimelineStyles.tex("scrubber-fill.png");
+    if (fillTex != null) {
+      fillPanel.setBackground(new QuadBackgroundComponent(fillTex));
+    } else {
+      fillPanel.setBackground(new QuadBackgroundComponent(AppStyles.TL_CYAN_SOFT));
+    }
+    fillPanel.setLocalTranslation(scrubberStart, -(centerY - TRACK_HEIGHT * 0.5f), 2f);
+    root.attachChild(fillPanel);
 
-    clockBox.addChild(hSpacer(16f));
+    Texture2D tickMajor = TimelineStyles.tex("tick-major.png");
+    Texture2D tickMinor = TimelineStyles.tex("tick-minor.png");
+    for (int i = 0; i < TICK_COUNT; i++) {
+      boolean major = (i % 5) == 0;
+      float xLocal = (trackWidth - 1f) * (i / (float) (TICK_COUNT - 1));
+      float tickH = major ? 10f : 6f;
+      Panel tick = new Panel(1f, tickH, TimelineStyles.STYLE);
+      Texture2D tTex = major ? tickMajor : tickMinor;
+      if (tTex != null) {
+        tick.setBackground(new QuadBackgroundComponent(tTex));
+      } else {
+        tick.setBackground(
+            new QuadBackgroundComponent(major ? AppStyles.TL_CYAN_SOFT : AppStyles.TL_TEXT_MUTED));
+      }
+      tick.setLocalTranslation(scrubberStart + xLocal, -(centerY - tickH * 0.5f), 3f);
+      root.attachChild(tick);
+    }
 
-    this.dateLabel = new Label(TimeConverter.formatDate(clock.now()), TimelineStyles.STYLE);
-    dateLabel.setFont(TimelineStyles.mono(12));
-    dateLabel.setFontSize(12f);
-    dateLabel.setColor(AppStyles.TL_CYAN);
-    dateLabel.setBackground(null);
-    dateLabel.setTextVAlignment(VAlignment.Center);
-    clockBox.addChild(dateLabel);
+    this.playhead = new Panel(PLAYHEAD_WIDTH, PLAYHEAD_HEIGHT, TimelineStyles.STYLE);
+    Texture2D playheadTex = TimelineStyles.tex("playhead.png");
+    if (playheadTex != null) {
+      playhead.setBackground(new QuadBackgroundComponent(playheadTex));
+    } else {
+      playhead.setBackground(new QuadBackgroundComponent(AppStyles.TL_CYAN));
+    }
+    playhead.setLocalTranslation(scrubberStart, -(centerY - PLAYHEAD_HEIGHT * 0.5f), 4f);
+    root.attachChild(playhead);
 
-    clockBox.addChild(hSpacer(8f));
+    this.trackStartX = scrubberStart;
+    this.trackEndX = scrubberStart + trackWidth;
 
-    this.utcLabel = new Label("UTC", TimelineStyles.STYLE);
-    utcLabel.setFont(TimelineStyles.mono(10));
-    utcLabel.setFontSize(10f);
-    utcLabel.setColor(AppStyles.TL_TEXT_MUTED);
-    utcLabel.setBackground(null);
-    utcLabel.setTextVAlignment(VAlignment.Center);
-    clockBox.addChild(utcLabel);
-
-    // Initial sync
-    wireLiveIndicator();
     refreshMode();
     refreshScrubberFromSpeed();
   }
 
-  private void wireLiveIndicator() {
-    liveIndicator.addMouseListener(
+  private void placeCentered(com.jme3.scene.Spatial spatial, float x, float height, float z) {
+    float y = -(CAPSULE_HEIGHT - height) * 0.5f;
+    spatial.setLocalTranslation(x, y, z);
+    root.attachChild(spatial);
+  }
+
+  private void placeDivider(float x) {
+    Panel d = new Panel(1f, DIVIDER_HEIGHT, TimelineStyles.STYLE);
+    Texture2D tex = TimelineStyles.tex("divider.png");
+    if (tex != null) {
+      d.setBackground(new QuadBackgroundComponent(tex));
+    } else {
+      d.setBackground(new QuadBackgroundComponent(withAlpha(AppStyles.TL_CYAN_SOFT, 0.40f)));
+    }
+    float y = -(CAPSULE_HEIGHT - DIVIDER_HEIGHT) * 0.5f;
+    d.setLocalTranslation(x, y, 1f);
+    root.attachChild(d);
+  }
+
+  private void wireLiveIndicator(Label liveClickTarget) {
+    liveClickTarget.addMouseListener(
         new com.simsilica.lemur.event.DefaultMouseListener() {
           @Override
           public void mouseButtonEvent(
@@ -392,8 +340,8 @@ public class TimelineWidget implements AutoCloseable {
             case PAUSED -> AppStyles.TL_TEXT_MUTED;
           };
       liveLabel.setColor(color);
-      if (liveDot != null) {
-        liveDot.setColor(color);
+      if (liveDotIcon != null) {
+        liveDotIcon.setColor(color);
       }
     }
     String glyph = clock.isPlaying() ? "glyph-pause.png" : "glyph-play.png";
@@ -407,9 +355,9 @@ public class TimelineWidget implements AutoCloseable {
     float normalized =
         (speedIndex - (float) MIN_INDEX) / (float) (MAX_INDEX - MIN_INDEX); // 0..1
     float trackSpan = trackEndX - trackStartX;
-    float playheadX = trackStartX + trackSpan * normalized - PLAYHEAD_WIDTH * 0.5f;
+    float playheadCenterX = trackStartX + trackSpan * normalized;
     Vector3f p = playhead.getLocalTranslation();
-    playhead.setLocalTranslation(playheadX, p.y, p.z);
+    playhead.setLocalTranslation(playheadCenterX - PLAYHEAD_WIDTH * 0.5f, p.y, p.z);
 
     float fillWidth = Math.max(1f, trackSpan * normalized);
     fillPanel.setPreferredSize(new Vector3f(fillWidth, TRACK_HEIGHT, 0f));
@@ -449,34 +397,13 @@ public class TimelineWidget implements AutoCloseable {
     root.removeFromParent();
   }
 
-  // ------------------------------------------------------------------
-  // Helpers
-  // ------------------------------------------------------------------
-
-  private static Container hSpacer(float width) {
-    Container c = new Container();
-    c.setBackground(null);
-    c.setPreferredSize(new Vector3f(width, 1f, 0f));
-    return c;
-  }
-
-  private Panel divider() {
-    Panel d = new Panel(1f, CAPSULE_HEIGHT - 16f, TimelineStyles.STYLE);
-    Texture2D tex = TimelineStyles.tex("divider.png");
-    if (tex != null) {
-      d.setBackground(new QuadBackgroundComponent(tex));
-    } else {
-      d.setBackground(new QuadBackgroundComponent(withAlpha(AppStyles.TL_CYAN_SOFT, 0.30f)));
-    }
-    return d;
-  }
-
   private void applyCapsuleBackground(Container c) {
     TbtQuadBackgroundComponent capsule = TimelineStyles.capsuleBackground();
     if (capsule != null) {
       c.setBackground(capsule);
     } else {
-      c.setBackground(new QuadBackgroundComponent(withAlpha(ColorRGBA.Black, 0.70f)));
+      c.setBackground(
+          new QuadBackgroundComponent(new ColorRGBA(0.05f, 0.10f, 0.16f, 0.88f)));
     }
   }
 
@@ -490,7 +417,6 @@ public class TimelineWidget implements AutoCloseable {
   }
 
   private IconComponent makeIcon(String textureName, float size) {
-    // Pre-check the texture so we don't crash when the interface/ folder is absent.
     Texture2D preloaded = TimelineStyles.tex(textureName);
     if (preloaded == null) {
       return null;
@@ -511,7 +437,7 @@ public class TimelineWidget implements AutoCloseable {
     if (bg != null) {
       btn.setBackground(bg);
     } else {
-      btn.setBackground(new QuadBackgroundComponent(withAlpha(AppStyles.TL_CYAN_SOFT, 0.08f)));
+      btn.setBackground(new QuadBackgroundComponent(withAlpha(AppStyles.TL_CYAN_SOFT, 0.12f)));
     }
     IconComponent icon = makeIcon(iconName, ICON_SIZE);
     if (icon != null) {
@@ -531,7 +457,7 @@ public class TimelineWidget implements AutoCloseable {
     btn.setColor(AppStyles.TL_TEXT_DIM);
     TbtQuadBackgroundComponent bg = TimelineStyles.buttonBackground("btn-hover.png");
     if (bg == null) {
-      btn.setBackground(new QuadBackgroundComponent(withAlpha(AppStyles.TL_CYAN_SOFT, 0.08f)));
+      btn.setBackground(new QuadBackgroundComponent(withAlpha(AppStyles.TL_CYAN_SOFT, 0.12f)));
     } else {
       btn.setBackground(bg);
     }
