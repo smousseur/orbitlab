@@ -134,12 +134,12 @@ public class TimelineWidget implements AutoCloseable {
     cursorX += 1f + 10f;
 
     // === Transport buttons ===
-    Button stepBack = makeIconButton("glyph-step-bw.png");
+    Button stepBack = makeIconButton("glyph-step-bw.png", "<<");
     stepBack.addClickCommands(s -> seekBySeconds(-STEP_SECONDS));
     placeCentered(stepBack, cursorX, BUTTON_SIZE, 1f);
     cursorX += BUTTON_SIZE + 4f;
 
-    this.playPauseButton = makeIconButton("glyph-play.png");
+    this.playPauseButton = makeIconButton("glyph-play.png", ">");
     this.playPauseIcon =
         (playPauseButton.getIcon() instanceof IconComponent ic) ? ic : null;
     playPauseButton.addClickCommands(
@@ -150,7 +150,7 @@ public class TimelineWidget implements AutoCloseable {
     placeCentered(playPauseButton, cursorX, BUTTON_SIZE, 1f);
     cursorX += BUTTON_SIZE + 4f;
 
-    Button stepForward = makeIconButton("glyph-step-fw.png");
+    Button stepForward = makeIconButton("glyph-step-fw.png", ">>");
     stepForward.addClickCommands(s -> seekBySeconds(STEP_SECONDS));
     placeCentered(stepForward, cursorX, BUTTON_SIZE, 1f);
     cursorX += BUTTON_SIZE + 10f;
@@ -288,7 +288,7 @@ public class TimelineWidget implements AutoCloseable {
     if (tex != null) {
       d.setBackground(new QuadBackgroundComponent(tex));
     } else {
-      d.setBackground(new QuadBackgroundComponent(withAlpha(AppStyles.TL_CYAN_SOFT, 0.40f)));
+      d.setBackground(new QuadBackgroundComponent(withAlpha(AppStyles.TL_CYAN, 0.60f)));
     }
     float y = -(CAPSULE_HEIGHT - DIVIDER_HEIGHT) * 0.5f;
     d.setLocalTranslation(x, y, 1f);
@@ -348,6 +348,8 @@ public class TimelineWidget implements AutoCloseable {
     Texture2D tex = TimelineStyles.tex(glyph);
     if (tex != null && playPauseIcon != null) {
       playPauseIcon.setImageTexture(tex);
+    } else if (playPauseIcon == null) {
+      playPauseButton.setText(clock.isPlaying() ? "||" : ">");
     }
   }
 
@@ -403,7 +405,7 @@ public class TimelineWidget implements AutoCloseable {
       c.setBackground(capsule);
     } else {
       c.setBackground(
-          new QuadBackgroundComponent(new ColorRGBA(0.05f, 0.10f, 0.16f, 0.88f)));
+          new QuadBackgroundComponent(new ColorRGBA(0.06f, 0.14f, 0.22f, 0.95f)));
     }
   }
 
@@ -428,18 +430,22 @@ public class TimelineWidget implements AutoCloseable {
     return icon;
   }
 
-  private Button makeIconButton(String iconName) {
-    Button btn = new Button("", TimelineStyles.STYLE);
+  private Button makeIconButton(String iconName, String fallbackText) {
+    IconComponent icon = makeIcon(iconName, ICON_SIZE);
+    String text = (icon == null && fallbackText != null) ? fallbackText : "";
+    Button btn = new Button(text, TimelineStyles.STYLE);
     btn.setPreferredSize(new Vector3f(BUTTON_SIZE, BUTTON_SIZE, 0f));
+    btn.setFont(TimelineStyles.rajdhani(12));
+    btn.setFontSize(12f);
+    btn.setColor(AppStyles.TL_TEXT_MAIN);
     btn.setTextHAlignment(HAlignment.Center);
     btn.setTextVAlignment(VAlignment.Center);
     TbtQuadBackgroundComponent bg = TimelineStyles.buttonBackground("btn-hover.png");
     if (bg != null) {
       btn.setBackground(bg);
     } else {
-      btn.setBackground(new QuadBackgroundComponent(withAlpha(AppStyles.TL_CYAN_SOFT, 0.12f)));
+      btn.setBackground(new QuadBackgroundComponent(withAlpha(AppStyles.TL_CYAN_SOFT, 0.22f)));
     }
-    IconComponent icon = makeIcon(iconName, ICON_SIZE);
     if (icon != null) {
       icon.setColor(AppStyles.TL_TEXT_DIM);
       btn.setIcon(icon);
