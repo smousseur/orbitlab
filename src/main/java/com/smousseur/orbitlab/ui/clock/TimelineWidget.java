@@ -94,7 +94,9 @@ public class TimelineWidget implements AutoCloseable {
 
     this.root = new Container(TimelineStyles.STYLE);
     applyCapsuleBackground(root);
-    root.setPreferredSize(new Vector3f(CAPSULE_WIDTH, CAPSULE_HEIGHT, 0f));
+    Vector3f capsuleSize = new Vector3f(CAPSULE_WIDTH, CAPSULE_HEIGHT, 0f);
+    root.setPreferredSize(capsuleSize);
+    root.setSize(capsuleSize);
     timelineNode.attachChild(root);
 
     float cursorX = CAPSULE_PAD_X;
@@ -228,6 +230,7 @@ public class TimelineWidget implements AutoCloseable {
     if (track.getBackground() == null) {
       track.setBackground(new QuadBackgroundComponent(withAlpha(AppStyles.TL_CYAN_SOFT, 0.20f)));
     }
+    track.setSize(track.getPreferredSize());
     track.setLocalTranslation(scrubberStart, -(centerY - TRACK_HEIGHT * 0.5f), 1f);
     root.attachChild(track);
 
@@ -238,6 +241,7 @@ public class TimelineWidget implements AutoCloseable {
     } else {
       fillPanel.setBackground(new QuadBackgroundComponent(AppStyles.TL_CYAN_SOFT));
     }
+    fillPanel.setSize(fillPanel.getPreferredSize());
     fillPanel.setLocalTranslation(scrubberStart, -(centerY - TRACK_HEIGHT * 0.5f), 2f);
     root.attachChild(fillPanel);
 
@@ -255,6 +259,7 @@ public class TimelineWidget implements AutoCloseable {
         tick.setBackground(
             new QuadBackgroundComponent(major ? AppStyles.TL_CYAN_SOFT : AppStyles.TL_TEXT_MUTED));
       }
+      tick.setSize(tick.getPreferredSize());
       tick.setLocalTranslation(scrubberStart + xLocal, -(centerY - tickH * 0.5f), 3f);
       root.attachChild(tick);
     }
@@ -266,6 +271,7 @@ public class TimelineWidget implements AutoCloseable {
     } else {
       playhead.setBackground(new QuadBackgroundComponent(AppStyles.TL_CYAN));
     }
+    playhead.setSize(playhead.getPreferredSize());
     playhead.setLocalTranslation(scrubberStart, -(centerY - PLAYHEAD_HEIGHT * 0.5f), 4f);
     root.attachChild(playhead);
 
@@ -277,6 +283,7 @@ public class TimelineWidget implements AutoCloseable {
   }
 
   private void placeCentered(com.jme3.scene.Spatial spatial, float x, float height, float z) {
+    forceSize(spatial);
     float y = -(CAPSULE_HEIGHT - height) * 0.5f;
     spatial.setLocalTranslation(x, y, z);
     root.attachChild(spatial);
@@ -290,9 +297,16 @@ public class TimelineWidget implements AutoCloseable {
     } else {
       d.setBackground(new QuadBackgroundComponent(withAlpha(AppStyles.TL_CYAN, 0.60f)));
     }
+    d.setSize(d.getPreferredSize());
     float y = -(CAPSULE_HEIGHT - DIVIDER_HEIGHT) * 0.5f;
     d.setLocalTranslation(x, y, 1f);
     root.attachChild(d);
+  }
+
+  private static void forceSize(com.jme3.scene.Spatial spatial) {
+    if (spatial instanceof Panel panel) {
+      panel.setSize(panel.getPreferredSize());
+    }
   }
 
   private void wireLiveIndicator(Label liveClickTarget) {
@@ -362,7 +376,9 @@ public class TimelineWidget implements AutoCloseable {
     playhead.setLocalTranslation(playheadCenterX - PLAYHEAD_WIDTH * 0.5f, p.y, p.z);
 
     float fillWidth = Math.max(1f, trackSpan * normalized);
-    fillPanel.setPreferredSize(new Vector3f(fillWidth, TRACK_HEIGHT, 0f));
+    Vector3f newFillSize = new Vector3f(fillWidth, TRACK_HEIGHT, 0f);
+    fillPanel.setPreferredSize(newFillSize);
+    fillPanel.setSize(newFillSize);
     Vector3f f = fillPanel.getLocalTranslation();
     fillPanel.setLocalTranslation(trackStartX, f.y, f.z);
   }
