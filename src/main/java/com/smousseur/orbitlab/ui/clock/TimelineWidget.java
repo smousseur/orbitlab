@@ -8,6 +8,7 @@ import com.jme3.texture.Texture2D;
 import com.simsilica.lemur.Button;
 import com.simsilica.lemur.Container;
 import com.simsilica.lemur.HAlignment;
+import com.simsilica.lemur.Insets3f;
 import com.simsilica.lemur.Label;
 import com.simsilica.lemur.Panel;
 import com.simsilica.lemur.VAlignment;
@@ -474,6 +475,7 @@ public class TimelineWidget implements AutoCloseable {
     btn.setPreferredSize(new Vector3f(STEPPER_BTN_SIZE, STEPPER_BTN_SIZE, 0f));
     btn.setFont(TimelineStyles.rajdhani(14));
     btn.setFontSize(14f);
+    btn.setInsets(new Insets3f(0, 0, 0, 0));
     btn.setTextHAlignment(HAlignment.Center);
     btn.setTextVAlignment(VAlignment.Center);
     btn.setColor(AppStyles.TL_TEXT_DIM);
