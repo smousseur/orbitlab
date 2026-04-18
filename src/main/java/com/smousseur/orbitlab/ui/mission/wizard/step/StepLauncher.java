@@ -56,7 +56,7 @@ public class StepLauncher {
             "Isp S2: 348 s \u00b7 LEO payload: 63.8 t",
             null,
             SelectableCard.State.SELECTED,
-            "icons/wizard/launcher-falcon-heavy.png",
+            "interface/wizard/launcher-falcon-heavy.png",
             LAUNCHER_ICON);
     SelectableCard ariane =
         new SelectableCard(
@@ -67,7 +67,7 @@ public class StepLauncher {
             "Isp S2: 431 s \u00b7 LEO payload: 21 t",
             null,
             SelectableCard.State.IDLE,
-            "icons/wizard/launcher-ariane5.png",
+            "interface/wizard/launcher-ariane5.png",
             LAUNCHER_ICON);
 
     Container vRow = root.addChild(new Container(new BoxLayout(Axis.X, FillMode.None)));
@@ -104,7 +104,7 @@ public class StepLauncher {
     Container payloadLabelRow = root.addChild(new Container(new BoxLayout(Axis.X, FillMode.None)));
     payloadLabelRow.setBackground(null);
     payloadLabelRow.addChild(
-        MissionWizardStyles.iconPlaceholder("icons/wizard/payload.png", 14, 14));
+        MissionWizardStyles.iconPlaceholder("interface/wizard/payload.png", 14, 14));
     Label payloadSpacer = payloadLabelRow.addChild(new Label(" ", MissionWizardStyles.STYLE));
     payloadSpacer.setBackground(null);
     Label payloadLabel = payloadLabelRow.addChild(new Label("PAYLOAD", MissionWizardStyles.STYLE));

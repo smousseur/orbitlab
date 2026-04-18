@@ -24,18 +24,14 @@ public class StepParameters {
             MissionWizardStyles.WIZARD_CONTENT_HEIGHT,
             0));
 
-    Label title =
-        root.addChild(
-            new Label("PARAMETERS \u2014 LEO", MissionWizardStyles.STYLE));
+    Label title = root.addChild(new Label("PARAMETERS \u2014 LEO", MissionWizardStyles.STYLE));
     title.setFont(MissionWizardStyles.rajdhani(20));
     title.setColor(MissionWizardStyles.WIZARD_TEXT_PRIMARY);
 
     root.addChild(MissionWizardStyles.vSpacer(ROW_GAP));
 
     Label subtitle =
-        root.addChild(
-            new Label(
-                "// target orbit configuration", MissionWizardStyles.STYLE));
+        root.addChild(new Label("// target orbit configuration", MissionWizardStyles.STYLE));
     subtitle.setFont(MissionWizardStyles.mono(12));
     subtitle.setColor(MissionWizardStyles.WIZARD_TEXT_SECONDARY);
 
@@ -46,11 +42,7 @@ public class StepParameters {
     nameField.setPreferredSize(new Vector3f(NAME_FIELD_W, 0, 0));
     root.addChild(
         widthBoundedRow(
-            new LabeledField(
-                    "MISSION NAME",
-                    nameField,
-                    null,
-                    "icons/wizard/field-pencil.png")
+            new LabeledField("MISSION NAME", nameField, null, "interface/wizard/field-pencil.png")
                 .getNode(),
             NAME_FIELD_W));
 
@@ -58,10 +50,7 @@ public class StepParameters {
 
     // Target Altitude (slider + big value)
     Slider altSlider =
-        new Slider(
-            new DefaultRangedValueModel(160, 2000, 550),
-            Axis.X,
-            MissionWizardStyles.STYLE);
+        new Slider(new DefaultRangedValueModel(160, 2000, 550), Axis.X, MissionWizardStyles.STYLE);
     altSlider.setPreferredSize(new Vector3f(SLIDER_W, 0, 0));
 
     Container altCol = new Container(new BoxLayout(Axis.Y, FillMode.None));
@@ -71,10 +60,9 @@ public class StepParameters {
                 "TARGET ALTITUDE",
                 altSlider,
                 "160 km                         2 000 km",
-                "icons/wizard/field-altitude.png")
+                "interface/wizard/field-altitude.png")
             .getNode());
-    Label altValue =
-        altCol.addChild(new Label("550 km", MissionWizardStyles.STYLE));
+    Label altValue = altCol.addChild(new Label("550 km", MissionWizardStyles.STYLE));
     altValue.setFont(MissionWizardStyles.rajdhani(28));
     altValue.setColor(MissionWizardStyles.WIZARD_ACCENT);
     root.addChild(widthBoundedRow(altCol, SLIDER_W));
@@ -90,7 +78,7 @@ public class StepParameters {
                     "LAUNCH DATE",
                     dateField,
                     "UTC \u00b7 Orekit epoch",
-                    "icons/wizard/field-clock.png")
+                    "interface/wizard/field-clock.png")
                 .getNode(),
             DATE_FIELD_W));
   }

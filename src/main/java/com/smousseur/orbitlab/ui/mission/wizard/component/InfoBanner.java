@@ -22,25 +22,19 @@ public class InfoBanner {
             ? MissionWizardStyles.WIZARD_ACCENT
             : MissionWizardStyles.WIZARD_WARNING;
 
-    root =
-        new Container(
-            new BoxLayout(Axis.X, FillMode.None), MissionWizardStyles.STYLE);
+    root = new Container(new BoxLayout(Axis.X, FillMode.None), MissionWizardStyles.STYLE);
     root.setPreferredSize(new Vector3f(0, 48, 0));
-    root.setBackground(
-        MissionWizardStyles.createGradient(MissionWizardStyles.WIZARD_BG_CARD));
+    root.setBackground(MissionWizardStyles.createGradient(MissionWizardStyles.WIZARD_BG_CARD));
 
     Container bar = root.addChild(new Container());
     bar.setPreferredSize(new Vector3f(4, 48, 0));
     bar.setBackground(new QuadBackgroundComponent(barColor));
 
-    Container body =
-        root.addChild(new Container(new BoxLayout(Axis.X, FillMode.None)));
+    Container body = root.addChild(new Container(new BoxLayout(Axis.X, FillMode.None)));
     body.setBackground(null);
 
     String iconPath =
-        (variant == Variant.INFO)
-            ? "icons/wizard/info.png"
-            : "icons/wizard/warning.png";
+        (variant == Variant.INFO) ? "interface/wizard/info.png" : "interface/wizard/warning.png";
     body.addChild(MissionWizardStyles.iconPlaceholder(iconPath, 16, 16));
 
     Label msg = body.addChild(new Label(text, MissionWizardStyles.STYLE));

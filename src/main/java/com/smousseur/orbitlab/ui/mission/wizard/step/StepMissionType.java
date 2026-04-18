@@ -52,7 +52,7 @@ public class StepMissionType {
                 "160 - 2 000 km",
                 new Badge("AVAILABLE", Badge.Variant.SUCCESS),
                 SelectableCard.State.SELECTED,
-                "icons/wizard/mission-leo.png",
+                "interface/wizard/mission-leo.png",
                 ICON_SIZE)
             .getNode());
     row.addChild(MissionWizardStyles.hSpacer(CARD_GAP));
@@ -65,7 +65,7 @@ public class StepMissionType {
                 "200 x 35 786 km",
                 new Badge("IN PROGRESS", Badge.Variant.WARNING),
                 SelectableCard.State.DISABLED,
-                "icons/wizard/mission-gto.png",
+                "interface/wizard/mission-gto.png",
                 ICON_SIZE)
             .getNode());
     // Reserve the 3rd column (no mission yet) so the grid stays on a 3-column layout.

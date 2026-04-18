@@ -39,35 +39,25 @@ public class MissionWizardWidget implements AutoCloseable {
   public MissionWizardWidget(ApplicationContext context) {
     backdrop = new ModalBackdrop();
 
-    root =
-        new Container(
-            new BoxLayout(Axis.Y, FillMode.None), MissionWizardStyles.STYLE);
+    root = new Container(new BoxLayout(Axis.Y, FillMode.None), MissionWizardStyles.STYLE);
     root.setPreferredSize(new Vector3f(WINDOW_WIDTH, WINDOW_HEIGHT, 0));
-    root.setBackground(
-        MissionWizardStyles.createGradient(MissionWizardStyles.WIZARD_BG_DEEP));
+    root.setBackground(MissionWizardStyles.createGradient(MissionWizardStyles.WIZARD_BG_DEEP));
     root.setInsetsComponent(
         new InsetsComponent(
-            new Insets3f(
-                OUTER_PADDING, OUTER_PADDING, OUTER_PADDING, OUTER_PADDING)));
+            new Insets3f(OUTER_PADDING, OUTER_PADDING, OUTER_PADDING, OUTER_PADDING)));
 
     // Header (deep bg)
-    Container header =
-        root.addChild(
-            new Container(new BoxLayout(Axis.Y, FillMode.None)));
-    header.setBackground(
-        MissionWizardStyles.createGradient(MissionWizardStyles.WIZARD_BG_DEEP));
+    Container header = root.addChild(new Container(new BoxLayout(Axis.Y, FillMode.None)));
+    header.setBackground(MissionWizardStyles.createGradient(MissionWizardStyles.WIZARD_BG_DEEP));
     header.setPreferredSize(new Vector3f(0, HEADER_HEIGHT, 0));
 
-    Container brandRow =
-        header.addChild(
-            new Container(new BoxLayout(Axis.X, FillMode.None)));
+    Container brandRow = header.addChild(new Container(new BoxLayout(Axis.X, FillMode.None)));
     brandRow.setBackground(null);
 
     brandRow.addChild(
-        MissionWizardStyles.iconPlaceholder("icons/wizard/brand-globe.png", 24, 24));
+        MissionWizardStyles.iconPlaceholder("interface/wizard/brand-globe.png", 24, 24));
 
-    Label brandName =
-        brandRow.addChild(new Label(" ORBITLAB", MissionWizardStyles.STYLE));
+    Label brandName = brandRow.addChild(new Label(" ORBITLAB", MissionWizardStyles.STYLE));
     brandName.setFont(MissionWizardStyles.rajdhani(18));
     brandName.setColor(MissionWizardStyles.WIZARD_TEXT_PRIMARY);
 
@@ -75,9 +65,7 @@ public class MissionWizardWidget implements AutoCloseable {
     header.addChild(stepper.getNode());
 
     // Content (slightly lighter bg)
-    content =
-        root.addChild(
-            new Container(new BoxLayout(Axis.Y, FillMode.None)));
+    content = root.addChild(new Container(new BoxLayout(Axis.Y, FillMode.None)));
     content.setBackground(
         MissionWizardStyles.createGradient(MissionWizardStyles.WIZARD_BG_CONTENT));
     content.setPreferredSize(
@@ -88,8 +76,9 @@ public class MissionWizardWidget implements AutoCloseable {
 
     // Footer (deep bg)
     footer = new WizardFooter();
-    footer.getNode().setBackground(
-        MissionWizardStyles.createGradient(MissionWizardStyles.WIZARD_BG_DEEP));
+    footer
+        .getNode()
+        .setBackground(MissionWizardStyles.createGradient(MissionWizardStyles.WIZARD_BG_DEEP));
     root.addChild(footer.getNode());
 
     stepMissionType = new StepMissionType();
@@ -169,10 +158,7 @@ public class MissionWizardWidget implements AutoCloseable {
   private void centerOnScreen(int screenWidth, int screenHeight) {
     if (screenWidth < WINDOW_WIDTH + 2 * MIN_VIEWPORT_MARGIN
         || screenHeight < WINDOW_HEIGHT + 2 * MIN_VIEWPORT_MARGIN) {
-      logger.warn(
-          "Viewport {}x{} smaller than wizard minimum",
-          screenWidth,
-          screenHeight);
+      logger.warn("Viewport {}x{} smaller than wizard minimum", screenWidth, screenHeight);
     }
     float x = Math.round((screenWidth - WINDOW_WIDTH) / 2f);
     float y = Math.round((screenHeight + WINDOW_HEIGHT) / 2f);
