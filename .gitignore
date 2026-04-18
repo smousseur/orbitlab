@@ -4,7 +4,7 @@ build/
 !**/src/main/**/build/
 !**/src/test/**/build/
 docs/**
-src/main/resources/**
+src/main/resources/models/**
 src/test/resources/orekit-data.zip
 dataset/**
 .kotlin
