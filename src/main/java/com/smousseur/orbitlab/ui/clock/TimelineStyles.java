@@ -88,7 +88,7 @@ public final class TimelineStyles {
       return null;
     }
     return TbtQuadBackgroundComponent.create(
-        capsule, 1f, CAPSULE_INSET, CAPSULE_INSET, CAPSULE_INSET, CAPSULE_INSET, 1f, true);
+        capsule, 1f, CAPSULE_INSET, CAPSULE_INSET, CAPSULE_INSET, CAPSULE_INSET, 1f, false);
   }
 
   /**
@@ -103,7 +103,7 @@ public final class TimelineStyles {
     if (t == null) {
       return null;
     }
-    return TbtQuadBackgroundComponent.create(t, 1f, 3, 3, 3, 3, 1f, true);
+    return TbtQuadBackgroundComponent.create(t, 1f, 3, 3, 3, 3, 1f, false);
   }
 
   /**

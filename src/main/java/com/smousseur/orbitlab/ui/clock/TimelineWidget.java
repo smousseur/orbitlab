@@ -430,7 +430,7 @@ public class TimelineWidget implements AutoCloseable {
       return;
     }
     TbtQuadBackgroundComponent bg =
-        TbtQuadBackgroundComponent.create(tex, 1f, inset, inset, inset, inset, 1f, true);
+        TbtQuadBackgroundComponent.create(tex, 1f, inset, inset, inset, inset, 1f, false);
     panel.setBackground(bg);
   }
 
