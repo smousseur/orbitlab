@@ -5,7 +5,7 @@ import com.jme3.asset.AssetNotFoundException;
 import com.jme3.font.BitmapFont;
 import com.jme3.math.ColorRGBA;
 import com.simsilica.lemur.GuiGlobals;
-import com.smousseur.orbitlab.ui.clock.TimelineStyles;
+import com.smousseur.orbitlab.ui.timeline.TimelineStyles;
 import com.smousseur.orbitlab.ui.mission.MissionPanelStyles;
 import com.smousseur.orbitlab.ui.mission.wizard.MissionWizardStyles;
 import com.smousseur.orbitlab.ui.telemetry.TelemetryStyles;
@@ -15,12 +15,12 @@ import org.apache.logging.log4j.Logger;
 /**
  * Central registry for OrbitLab's Lemur GUI visual tokens and style initialization.
  *
- * <p>All shared HUD colours and layout constants are defined here so every widget stays
- * visually consistent. Individual style classes ({@link TimelineStyles}, {@link TelemetryStyles})
- * reference these tokens instead of repeating raw literals.
+ * <p>All shared HUD colours and layout constants are defined here so every widget stays visually
+ * consistent. Individual style classes ({@link TimelineStyles}, {@link TelemetryStyles}) reference
+ * these tokens instead of repeating raw literals.
  *
- * <p>Call {@link #init(AssetManager)} once from {@code OrbitLabApplication.simpleInitApp()}
- * after {@code GuiGlobals.initialize()} and {@code BaseStyles.loadGlassStyle()}.
+ * <p>Call {@link #init(AssetManager)} once from {@code OrbitLabApplication.simpleInitApp()} after
+ * {@code GuiGlobals.initialize()} and {@code BaseStyles.loadGlassStyle()}.
  */
 public final class AppStyles {
 
@@ -44,32 +44,25 @@ public final class AppStyles {
   // -------------------------------------------------------------------------
 
   /** Timeline cyan accent (#5ee0f5). */
-  public static final ColorRGBA TL_CYAN =
-      new ColorRGBA(0.369f, 0.878f, 0.961f, 1.0f);
+  public static final ColorRGBA TL_CYAN = new ColorRGBA(0.369f, 0.878f, 0.961f, 1.0f);
 
   /** Timeline cyan accent with softened alpha. */
-  public static final ColorRGBA TL_CYAN_SOFT =
-      new ColorRGBA(0.369f, 0.878f, 0.961f, 0.85f);
+  public static final ColorRGBA TL_CYAN_SOFT = new ColorRGBA(0.369f, 0.878f, 0.961f, 0.85f);
 
   /** Primary timeline text colour (near-white with blue tint). */
-  public static final ColorRGBA TL_TEXT_MAIN =
-      new ColorRGBA(0.863f, 0.941f, 0.980f, 0.95f);
+  public static final ColorRGBA TL_TEXT_MAIN = new ColorRGBA(0.863f, 0.941f, 0.980f, 0.95f);
 
   /** Dimmed timeline text colour. */
-  public static final ColorRGBA TL_TEXT_DIM =
-      new ColorRGBA(0.667f, 0.804f, 0.882f, 0.70f);
+  public static final ColorRGBA TL_TEXT_DIM = new ColorRGBA(0.667f, 0.804f, 0.882f, 0.70f);
 
   /** Muted timeline text colour used for subtle labels like "UTC". */
-  public static final ColorRGBA TL_TEXT_MUTED =
-      new ColorRGBA(0.549f, 0.706f, 0.804f, 0.50f);
+  public static final ColorRGBA TL_TEXT_MUTED = new ColorRGBA(0.549f, 0.706f, 0.804f, 0.50f);
 
   /** Amber accent for warning-style states (SEEK, burn markers). */
-  public static final ColorRGBA TL_AMBER =
-      new ColorRGBA(0.910f, 0.647f, 0.278f, 1.0f);
+  public static final ColorRGBA TL_AMBER = new ColorRGBA(0.910f, 0.647f, 0.278f, 1.0f);
 
   /** Rose accent for destructive / critical states. */
-  public static final ColorRGBA TL_ROSE =
-      new ColorRGBA(0.831f, 0.353f, 0.420f, 1.0f);
+  public static final ColorRGBA TL_ROSE = new ColorRGBA(0.831f, 0.353f, 0.420f, 1.0f);
 
   // -------------------------------------------------------------------------
   // Ice Blue palette — modern, transparent, blue-toned
@@ -117,9 +110,9 @@ public final class AppStyles {
   private AppStyles() {}
 
   /**
-   * Loads a BitmapFont from the given classpath path, falling back to Lemur's default font when
-   * the resource is missing. Shared helper for widgets that embed bitmap fonts generated from
-   * {@code rajdhani-semibold} or {@code share-tech-mono}.
+   * Loads a BitmapFont from the given classpath path, falling back to Lemur's default font when the
+   * resource is missing. Shared helper for widgets that embed bitmap fonts generated from {@code
+   * rajdhani-semibold} or {@code share-tech-mono}.
    *
    * @param assetManager the JME3 asset manager
    * @param path the font resource path (e.g. {@code "fonts/rajdhani-semibold-14.fnt"})
@@ -140,6 +133,7 @@ public final class AppStyles {
    * @param assetManager the JME3 asset manager forwarded to each style initializer
    */
   public static void init(AssetManager assetManager) {
+    UiKit.init(assetManager);
     TimelineStyles.init(assetManager);
     TelemetryStyles.init(assetManager);
     MissionPanelStyles.init(assetManager);

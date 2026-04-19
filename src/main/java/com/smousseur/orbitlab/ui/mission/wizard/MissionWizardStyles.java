@@ -1,23 +1,15 @@
 package com.smousseur.orbitlab.ui.mission.wizard;
 
 import com.jme3.asset.AssetManager;
-import com.jme3.asset.AssetNotFoundException;
-import com.jme3.font.BitmapFont;
 import com.jme3.math.ColorRGBA;
-import com.jme3.math.Vector3f;
-import com.jme3.texture.Texture;
-import com.simsilica.lemur.Container;
 import com.simsilica.lemur.GuiGlobals;
 import com.simsilica.lemur.Insets3f;
-import com.simsilica.lemur.component.QuadBackgroundComponent;
 import com.simsilica.lemur.component.TbtQuadBackgroundComponent;
 import com.simsilica.lemur.style.Attributes;
 import com.simsilica.lemur.style.Styles;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import com.smousseur.orbitlab.ui.UiKit;
 
 public final class MissionWizardStyles {
-  private static final Logger logger = LogManager.getLogger(MissionWizardStyles.class);
 
   public static final String STYLE = "mission-wizard";
 
@@ -80,101 +72,18 @@ public final class MissionWizardStyles {
   public static final ColorRGBA WIZARD_BACKDROP =
       new ColorRGBA(0f, 0f, 0f, 0.60f);
 
-  // =================================================================
-  //  FONT HELPERS
-  // =================================================================
-
-  private static final String GRADIENT_TEXTURE =
-      "com/simsilica/lemur/icons/bordered-gradient.png";
-  private static final String FONT_RAJDHANI = "fonts/rajdhani-semibold-%d.fnt";
-  private static final String FONT_MONO = "fonts/share-tech-mono-%d.fnt";
-
-  private static Texture gradientTex;
-  private static AssetManager assetManager;
-
   private MissionWizardStyles() {}
-
-  public static BitmapFont rajdhani(int size) {
-    return loadFontSafe(String.format(FONT_RAJDHANI, size));
-  }
-
-  public static BitmapFont mono(int size) {
-    return loadFontSafe(String.format(FONT_MONO, size));
-  }
-
-  private static BitmapFont loadFontSafe(String path) {
-    try {
-      return assetManager.loadFont(path);
-    } catch (AssetNotFoundException e) {
-      logger.debug("Font not found: {}, using Lemur default", path);
-      return GuiGlobals.getInstance().loadFont("Interface/Fonts/Default.fnt");
-    }
-  }
-
-  // =================================================================
-  //  ICON PLACEHOLDER FACTORY
-  // =================================================================
-
-  public static Container iconPlaceholder(String iconPath, float width, float height) {
-    Container icon = new Container();
-    icon.setPreferredSize(new Vector3f(width, height, 0));
-    try {
-      Texture tex = assetManager.loadTexture(iconPath);
-      QuadBackgroundComponent bg = new QuadBackgroundComponent(tex);
-      icon.setBackground(bg);
-    } catch (AssetNotFoundException e) {
-      logger.debug("Icon not found: {}, using empty placeholder", iconPath);
-      icon.setBackground(null);
-    }
-    return icon;
-  }
-
-  // =================================================================
-  //  INVISIBLE SPACERS
-  // =================================================================
-
-  /** Fixed-size transparent container used to pad layouts. */
-  public static Container spacer(float width, float height) {
-    Container s = new Container();
-    s.setPreferredSize(new Vector3f(width, height, 0));
-    s.setBackground(null);
-    return s;
-  }
-
-  /** Vertical row-gap spacer. */
-  public static Container vSpacer(float height) {
-    return spacer(0, height);
-  }
-
-  /** Horizontal column-gap spacer. */
-  public static Container hSpacer(float width) {
-    return spacer(width, 0);
-  }
-
-  // =================================================================
-  //  GRADIENT BACKGROUND FACTORY
-  // =================================================================
-
-  public static TbtQuadBackgroundComponent createGradient(ColorRGBA color) {
-    TbtQuadBackgroundComponent bg =
-        TbtQuadBackgroundComponent.create(gradientTex, 1, 1, 1, 126, 126, 1f, false);
-    bg.setColor(color);
-    return bg;
-  }
 
   // =================================================================
   //  STYLE REGISTRATION
   // =================================================================
 
-  public static void init(AssetManager am) {
-    assetManager = am;
-    gradientTex = am.loadTexture(GRADIENT_TEXTURE);
-
+  public static void init(AssetManager assetManager) {
     Styles styles = GuiGlobals.getInstance().getStyles();
     styles.applyStyles(STYLE, "glass");
 
     Attributes c = styles.getSelector("container", STYLE);
-    c.set("background", createGradient(WIZARD_BG_DEEP));
+    c.set("background", UiKit.gradientBackground(WIZARD_BG_DEEP));
     c.set("insets", new Insets3f(0, 0, 0, 0));
 
     Attributes l = styles.getSelector("label", STYLE);
@@ -182,18 +91,18 @@ public final class MissionWizardStyles {
     l.set("fontSize", 14);
 
     Attributes b = styles.getSelector("button", STYLE);
-    b.set("background", createGradient(WIZARD_BG_CARD));
+    b.set("background", UiKit.gradientBackground(WIZARD_BG_CARD));
     b.set("color", WIZARD_TEXT_PRIMARY);
     b.set("fontSize", 14);
     b.set("insets", new Insets3f(6, 10, 6, 10));
 
     Attributes tf = styles.getSelector("textField", STYLE);
-    tf.set("background", createGradient(WIZARD_BG_CARD));
+    tf.set("background", UiKit.gradientBackground(WIZARD_BG_CARD));
     tf.set("color", WIZARD_TEXT_PRIMARY);
     tf.set("fontSize", 14);
     tf.set("insets", new Insets3f(6, 8, 6, 8));
 
     Attributes s = styles.getSelector("slider", STYLE);
-    s.set("background", createGradient(WIZARD_BORDER));
+    s.set("background", UiKit.gradientBackground(WIZARD_BORDER));
   }
 }

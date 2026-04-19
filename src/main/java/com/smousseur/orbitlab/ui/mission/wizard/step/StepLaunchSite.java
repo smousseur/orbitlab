@@ -3,6 +3,7 @@ package com.smousseur.orbitlab.ui.mission.wizard.step;
 import com.jme3.math.Vector3f;
 import com.simsilica.lemur.*;
 import com.simsilica.lemur.component.BoxLayout;
+import com.smousseur.orbitlab.ui.UiKit;
 import com.smousseur.orbitlab.ui.mission.wizard.MissionWizardStyles;
 import com.smousseur.orbitlab.ui.mission.wizard.component.LabeledField;
 import com.smousseur.orbitlab.ui.mission.wizard.component.PopupList;
@@ -27,16 +28,16 @@ public class StepLaunchSite {
             0));
 
     Label title = root.addChild(new Label("LAUNCH SITE", MissionWizardStyles.STYLE));
-    title.setFont(MissionWizardStyles.rajdhani(20));
+    title.setFont(UiKit.rajdhani(20));
     title.setColor(MissionWizardStyles.WIZARD_TEXT_PRIMARY);
 
-    root.addChild(MissionWizardStyles.vSpacer(ROW_GAP));
+    root.addChild(UiKit.vSpacer(ROW_GAP));
 
     Label subtitle = root.addChild(new Label("// cosmodrome selection", MissionWizardStyles.STYLE));
-    subtitle.setFont(MissionWizardStyles.mono(12));
+    subtitle.setFont(UiKit.mono(12));
     subtitle.setColor(MissionWizardStyles.WIZARD_TEXT_SECONDARY);
 
-    root.addChild(MissionWizardStyles.vSpacer(ROW_GAP));
+    root.addChild(UiKit.vSpacer(ROW_GAP));
 
     PopupList cosmodrome =
         new PopupList(
@@ -53,7 +54,7 @@ public class StepLaunchSite {
                 .getNode(),
             COSMODROME_W));
 
-    root.addChild(MissionWizardStyles.vSpacer(ROW_GAP));
+    root.addChild(UiKit.vSpacer(ROW_GAP));
 
     Container row2 = root.addChild(new Container(new BoxLayout(Axis.X, FillMode.None)));
     row2.setBackground(null);
@@ -64,7 +65,7 @@ public class StepLaunchSite {
             "5.236",
             "decimal degrees \u00b7 N positive",
             "interface/wizard/field-globe-lat.png"));
-    row2.addChild(MissionWizardStyles.hSpacer(COL_GAP));
+    row2.addChild(UiKit.hSpacer(COL_GAP));
     row2.addChild(
         fieldCol(
             COL3_W,
@@ -72,13 +73,13 @@ public class StepLaunchSite {
             "-52.769",
             "decimal degrees \u00b7 E positive",
             "interface/wizard/field-globe-lon.png"));
-    row2.addChild(MissionWizardStyles.hSpacer(COL_GAP));
+    row2.addChild(UiKit.hSpacer(COL_GAP));
     row2.addChild(
         fieldCol(
             COL3_W, "GROUND ALTITUDE", "14", "meters MSL", "interface/wizard/field-mountain.png"));
     float trailing = MissionWizardStyles.WIZARD_CONTENT_WIDTH - 3 * COL3_W - 2 * COL_GAP;
     if (trailing > 0f) {
-      row2.addChild(MissionWizardStyles.hSpacer(trailing));
+      row2.addChild(UiKit.hSpacer(trailing));
     }
   }
 
@@ -91,7 +92,7 @@ public class StepLaunchSite {
     col.setBackground(null);
     col.setPreferredSize(new Vector3f(w, 0, 0));
     TextField f = new TextField(value, MissionWizardStyles.STYLE);
-    f.setFont(MissionWizardStyles.mono(14));
+    f.setFont(UiKit.mono(14));
     f.setPreferredSize(new Vector3f(w, 0, 0));
     col.addChild(new LabeledField(label, f, helper, iconPath).getNode());
     return col;
@@ -104,7 +105,7 @@ public class StepLaunchSite {
     row.addChild(child);
     float trailing = MissionWizardStyles.WIZARD_CONTENT_WIDTH - childWidth;
     if (trailing > 0f) {
-      row.addChild(MissionWizardStyles.hSpacer(trailing));
+      row.addChild(UiKit.hSpacer(trailing));
     }
     return row;
   }

@@ -8,6 +8,7 @@ import com.simsilica.lemur.*;
 import com.simsilica.lemur.component.BoxLayout;
 import com.simsilica.lemur.event.DefaultMouseListener;
 import com.simsilica.lemur.event.MouseEventControl;
+import com.smousseur.orbitlab.ui.UiKit;
 import com.smousseur.orbitlab.ui.mission.wizard.MissionWizardStyles;
 import java.util.List;
 
@@ -31,15 +32,15 @@ public class PopupList {
                 new BoxLayout(Axis.X, FillMode.None), MissionWizardStyles.STYLE));
     trigger.setPreferredSize(new Vector3f(width, 32, 0));
     trigger.setBackground(
-        MissionWizardStyles.createGradient(MissionWizardStyles.WIZARD_BG_CARD));
+        UiKit.gradientBackground(MissionWizardStyles.WIZARD_BG_CARD));
 
     valueLabel =
         trigger.addChild(new Label(defaultValue, MissionWizardStyles.STYLE));
-    valueLabel.setFont(MissionWizardStyles.mono(14));
+    valueLabel.setFont(UiKit.mono(14));
     valueLabel.setColor(MissionWizardStyles.WIZARD_TEXT_PRIMARY);
 
     Label chevron = trigger.addChild(new Label("v", MissionWizardStyles.STYLE));
-    chevron.setFont(MissionWizardStyles.mono(14));
+    chevron.setFont(UiKit.mono(14));
     chevron.setColor(MissionWizardStyles.WIZARD_TEXT_SECONDARY);
     chevron.setTextHAlignment(HAlignment.Right);
 
@@ -48,7 +49,7 @@ public class PopupList {
             new BoxLayout(Axis.Y, FillMode.None), MissionWizardStyles.STYLE);
     popup.setPreferredSize(new Vector3f(width, 0, 0));
     popup.setBackground(
-        MissionWizardStyles.createGradient(MissionWizardStyles.WIZARD_BG_DEEP));
+        UiKit.gradientBackground(MissionWizardStyles.WIZARD_BG_DEEP));
 
     for (String option : options) {
       Container row =
@@ -56,11 +57,11 @@ public class PopupList {
               new Container(new BoxLayout(Axis.X, FillMode.None)));
       row.setPreferredSize(new Vector3f(width, 28, 0));
       row.setBackground(
-          MissionWizardStyles.createGradient(MissionWizardStyles.WIZARD_BG_DEEP));
+          UiKit.gradientBackground(MissionWizardStyles.WIZARD_BG_DEEP));
 
       Label optLabel =
           row.addChild(new Label(option, MissionWizardStyles.STYLE));
-      optLabel.setFont(MissionWizardStyles.mono(14));
+      optLabel.setFont(UiKit.mono(14));
       optLabel.setColor(MissionWizardStyles.WIZARD_TEXT_PRIMARY);
 
       MouseEventControl.addListenersToSpatial(
@@ -70,7 +71,7 @@ public class PopupList {
             public void mouseEntered(
                 MouseMotionEvent evt, Spatial t, Spatial c) {
               row.setBackground(
-                  MissionWizardStyles.createGradient(
+                  UiKit.gradientBackground(
                       MissionWizardStyles.WIZARD_BG_CARD));
             }
 
@@ -78,7 +79,7 @@ public class PopupList {
             public void mouseExited(
                 MouseMotionEvent evt, Spatial t, Spatial c) {
               row.setBackground(
-                  MissionWizardStyles.createGradient(
+                  UiKit.gradientBackground(
                       MissionWizardStyles.WIZARD_BG_DEEP));
             }
 

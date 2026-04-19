@@ -3,6 +3,7 @@ package com.smousseur.orbitlab.ui.mission.wizard.step;
 import com.jme3.math.Vector3f;
 import com.simsilica.lemur.*;
 import com.simsilica.lemur.component.BoxLayout;
+import com.smousseur.orbitlab.ui.UiKit;
 import com.smousseur.orbitlab.ui.mission.wizard.MissionWizardStyles;
 import com.smousseur.orbitlab.ui.mission.wizard.component.LabeledField;
 
@@ -25,17 +26,17 @@ public class StepParameters {
             0));
 
     Label title = root.addChild(new Label("PARAMETERS \u2014 LEO", MissionWizardStyles.STYLE));
-    title.setFont(MissionWizardStyles.rajdhani(20));
+    title.setFont(UiKit.rajdhani(20));
     title.setColor(MissionWizardStyles.WIZARD_TEXT_PRIMARY);
 
-    root.addChild(MissionWizardStyles.vSpacer(ROW_GAP));
+    root.addChild(UiKit.vSpacer(ROW_GAP));
 
     Label subtitle =
         root.addChild(new Label("// target orbit configuration", MissionWizardStyles.STYLE));
-    subtitle.setFont(MissionWizardStyles.mono(12));
+    subtitle.setFont(UiKit.mono(12));
     subtitle.setColor(MissionWizardStyles.WIZARD_TEXT_SECONDARY);
 
-    root.addChild(MissionWizardStyles.vSpacer(ROW_GAP));
+    root.addChild(UiKit.vSpacer(ROW_GAP));
 
     // Mission Name
     TextField nameField = monoField("ORBITLAB-LEO-001");
@@ -46,7 +47,7 @@ public class StepParameters {
                 .getNode(),
             NAME_FIELD_W));
 
-    root.addChild(MissionWizardStyles.vSpacer(ROW_GAP));
+    root.addChild(UiKit.vSpacer(ROW_GAP));
 
     // Target Altitude (slider + big value)
     Slider altSlider =
@@ -63,11 +64,11 @@ public class StepParameters {
                 "interface/wizard/field-altitude.png")
             .getNode());
     Label altValue = altCol.addChild(new Label("550 km", MissionWizardStyles.STYLE));
-    altValue.setFont(MissionWizardStyles.rajdhani(28));
+    altValue.setFont(UiKit.rajdhani(28));
     altValue.setColor(MissionWizardStyles.WIZARD_ACCENT);
     root.addChild(widthBoundedRow(altCol, SLIDER_W));
 
-    root.addChild(MissionWizardStyles.vSpacer(ROW_GAP));
+    root.addChild(UiKit.vSpacer(ROW_GAP));
 
     // Launch Date
     TextField dateField = monoField("2026-06-15T06:00:00Z");
@@ -89,7 +90,7 @@ public class StepParameters {
 
   private TextField monoField(String value) {
     TextField f = new TextField(value, MissionWizardStyles.STYLE);
-    f.setFont(MissionWizardStyles.mono(14));
+    f.setFont(UiKit.mono(14));
     return f;
   }
 
@@ -100,7 +101,7 @@ public class StepParameters {
     row.addChild(child);
     float trailing = MissionWizardStyles.WIZARD_CONTENT_WIDTH - childWidth;
     if (trailing > 0f) {
-      row.addChild(MissionWizardStyles.hSpacer(trailing));
+      row.addChild(UiKit.hSpacer(trailing));
     }
     return row;
   }

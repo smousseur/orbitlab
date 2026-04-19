@@ -7,6 +7,7 @@ import com.simsilica.lemur.*;
 import com.simsilica.lemur.component.BoxLayout;
 import com.simsilica.lemur.event.DefaultMouseListener;
 import com.simsilica.lemur.event.MouseEventControl;
+import com.smousseur.orbitlab.ui.UiKit;
 import java.util.function.Consumer;
 
 public class WizardStepper {
@@ -67,13 +68,13 @@ public class WizardStepper {
     Label number =
         circle.addChild(
             new Label(String.valueOf(step.index() + 1), MissionWizardStyles.STYLE));
-    number.setFont(MissionWizardStyles.rajdhani(14));
+    number.setFont(UiKit.rajdhani(14));
     number.setTextHAlignment(HAlignment.Center);
     col.addChild(circle);
 
     Label label =
         col.addChild(new Label(step.label(), MissionWizardStyles.STYLE));
-    label.setFont(MissionWizardStyles.rajdhani(12));
+    label.setFont(UiKit.rajdhani(12));
     label.setTextHAlignment(HAlignment.Center);
 
     MouseEventControl.addListenersToSpatial(
@@ -90,13 +91,13 @@ public class WizardStepper {
 
   private Container buildDashSeparator() {
     float totalW = DASH_COUNT * DASH_WIDTH + (DASH_COUNT - 1) * DASH_GAP;
-    return MissionWizardStyles.spacer(totalW, DASH_HEIGHT);
+    return UiKit.spacer(totalW, DASH_HEIGHT);
   }
 
   private void applyDoneState(Container node, MissionWizardStep step) {
     Container circle = (Container) node.getChild(0);
     circle.setBackground(
-        MissionWizardStyles.createGradient(MissionWizardStyles.WIZARD_SUCCESS));
+        UiKit.gradientBackground(MissionWizardStyles.WIZARD_SUCCESS));
     ((Label) circle.getChild(0)).setText("v");
     ((Label) circle.getChild(0)).setColor(MissionWizardStyles.WIZARD_TEXT_PRIMARY);
     ((Label) node.getChild(1)).setColor(MissionWizardStyles.WIZARD_SUCCESS);
@@ -105,7 +106,7 @@ public class WizardStepper {
   private void applyActiveState(Container node, MissionWizardStep step) {
     Container circle = (Container) node.getChild(0);
     circle.setBackground(
-        MissionWizardStyles.createGradient(MissionWizardStyles.WIZARD_ACCENT));
+        UiKit.gradientBackground(MissionWizardStyles.WIZARD_ACCENT));
     ((Label) circle.getChild(0)).setText(String.valueOf(step.index() + 1));
     ((Label) circle.getChild(0)).setColor(MissionWizardStyles.WIZARD_TEXT_PRIMARY);
     ((Label) node.getChild(1)).setColor(MissionWizardStyles.WIZARD_TEXT_PRIMARY);
@@ -114,7 +115,7 @@ public class WizardStepper {
   private void applyPendingState(Container node, MissionWizardStep step) {
     Container circle = (Container) node.getChild(0);
     circle.setBackground(
-        MissionWizardStyles.createGradient(MissionWizardStyles.WIZARD_BORDER));
+        UiKit.gradientBackground(MissionWizardStyles.WIZARD_BORDER));
     ((Label) circle.getChild(0)).setText(String.valueOf(step.index() + 1));
     ((Label) circle.getChild(0)).setColor(MissionWizardStyles.WIZARD_TEXT_SECONDARY);
     ((Label) node.getChild(1)).setColor(MissionWizardStyles.WIZARD_TEXT_SECONDARY);
