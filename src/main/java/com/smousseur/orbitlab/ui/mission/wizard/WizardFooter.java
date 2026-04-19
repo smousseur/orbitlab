@@ -35,14 +35,22 @@ public class WizardFooter {
   private String nextBaseTex = "btn-primary";
   private String nextHoverTex = "btn-primary-hover";
 
+  /** Largeur utile du footer (entre ses paddings horizontaux). */
+  private final float innerWidth;
+
   private Runnable onCancel = () -> {};
   private Runnable onPrevious = () -> {};
   private Runnable onNext = () -> {};
 
   public WizardFooter() {
+    this(0f);
+  }
+
+  public WizardFooter(float preferredWidth) {
+    this.innerWidth = Math.max(0f, preferredWidth - 2 * PAD_X);
     root = new Container(new BoxLayout(Axis.X, FillMode.None), MissionWizardStyles.STYLE);
-    root.setPreferredSize(new Vector3f(0, FOOTER_HEIGHT, 0));
-    root.setInsetsComponent(new InsetsComponent(new Insets3f(PAD_Y, PAD_X, PAD_Y, PAD_X)));
+    root.setPreferredSize(new Vector3f(preferredWidth, FOOTER_HEIGHT, 0));
+    root.setInsetsComponent(new InsetsComponent(new Insets3f(0, 0, 20, 0)));
 
     cancelButton = newButton("  Cancel", CANCEL_BTN_W);
     cancelButton.setIcon(UiKit.wizardIconComponent("icon-close-red"));
@@ -61,10 +69,7 @@ public class WizardFooter {
     chevron.setHAlignment(HAlignment.Right);
     nextButton.setIcon(chevron);
     nextButton.setColor(MissionWizardStyles.WIZARD_TEXT_PRIMARY);
-    attachHoverSkin(
-        nextButton,
-        () -> nextBaseTex,
-        () -> nextHoverTex);
+    attachHoverSkin(nextButton, () -> nextBaseTex, () -> nextHoverTex);
     nextButton.addClickCommands(src -> onNext.run());
     applyNextSkin();
 
@@ -95,6 +100,7 @@ public class WizardFooter {
 
     Container progressCol = new Container(new BoxLayout(Axis.Y, FillMode.None));
     progressCol.setBackground(null);
+    progressCol.setPreferredSize(new Vector3f(PROGRESS_W, FOOTER_HEIGHT - 2 * PAD_Y, 0));
     progressCol.addChild(progressLabel);
     progressCol.addChild(UiKit.vSpacer(6));
     progressCol.addChild(progressBar.getNode());
@@ -104,12 +110,12 @@ public class WizardFooter {
     if (step.index() > 0) {
       clusterW += PREVIOUS_BTN_W + BUTTON_GAP;
     }
-    float usableW = MissionWizardStyles.WIZARD_CONTENT_WIDTH - 2 * PAD_X;
-    float leadingW = Math.max(0f, usableW - PROGRESS_W - clusterW);
+    float leadingW = Math.max(0f, innerWidth - PROGRESS_W - clusterW);
     root.addChild(UiKit.hSpacer(leadingW));
 
     Container cluster = root.addChild(new Container(new BoxLayout(Axis.X, FillMode.None)));
     cluster.setBackground(null);
+    cluster.setPreferredSize(new Vector3f(clusterW, BUTTON_HEIGHT, 0));
     cluster.addChild(cancelButton);
     cluster.addChild(UiKit.hSpacer(BUTTON_GAP));
     if (step.index() > 0) {

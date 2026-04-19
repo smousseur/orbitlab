@@ -18,12 +18,18 @@ public class MissionWizardWidget implements AutoCloseable {
   private static final Logger logger = LogManager.getLogger(MissionWizardWidget.class);
 
   private static final float WINDOW_WIDTH = 880f;
-  private static final float WINDOW_HEIGHT = 640f;
+  private static final float WINDOW_HEIGHT = 660f;
   private static final float MIN_VIEWPORT_MARGIN = 32f;
   private static final float OUTER_PADDING = 16f;
-  private static final float HEADER_HEIGHT = 96f;
+  private static final float HEADER_HEIGHT = 120f;
   private static final float HEADER_PAD_X = 32f;
   private static final float HEADER_PAD_Y = 20f;
+
+  /** Largeur utile à l'intérieur du shell (root) : WINDOW_WIDTH - 2 * OUTER_PADDING. */
+  private static final float SHELL_INNER_WIDTH = WINDOW_WIDTH - 2 * OUTER_PADDING;
+
+  /** Largeur utile à l'intérieur du header (entre ses paddings horizontaux). */
+  private static final float HEADER_INNER_WIDTH = SHELL_INNER_WIDTH - 2 * HEADER_PAD_X;
 
   private final ModalBackdrop backdrop;
   private final Container root;
@@ -52,12 +58,14 @@ public class MissionWizardWidget implements AutoCloseable {
     // Header strip (deep flat bg)
     Container header = root.addChild(new Container(new BoxLayout(Axis.Y, FillMode.None)));
     header.setBackground(MissionWizardStyles.headerBg());
-    header.setPreferredSize(new Vector3f(0, HEADER_HEIGHT, 0));
-    header.setInsetsComponent(
-        new InsetsComponent(new Insets3f(HEADER_PAD_Y, HEADER_PAD_X, HEADER_PAD_Y, HEADER_PAD_X)));
+    header.setPreferredSize(new Vector3f(WINDOW_WIDTH, HEADER_HEIGHT, 0));
+    // header.setInsetsComponent(
+    //    new InsetsComponent(new Insets3f(HEADER_PAD_Y, HEADER_PAD_X, HEADER_PAD_Y,
+    // HEADER_PAD_X)));
 
     Container brandRow = header.addChild(new Container(new BoxLayout(Axis.X, FillMode.None)));
     brandRow.setBackground(null);
+    brandRow.setPreferredSize(new Vector3f(HEADER_INNER_WIDTH, 18f, 0));
 
     brandRow.addChild(UiKit.wizardIcon("icon-brand-globe", 18, 18));
     brandRow.addChild(UiKit.hSpacer(8));
@@ -70,28 +78,24 @@ public class MissionWizardWidget implements AutoCloseable {
     brandSep.setFont(UiKit.ibmPlexMono(11));
     brandSep.setColor(MissionWizardStyles.WIZARD_TEXT_LO);
 
-    Label brandSub =
-        brandRow.addChild(new Label("MISSION WIZARD v2.1", MissionWizardStyles.STYLE));
+    Label brandSub = brandRow.addChild(new Label("MISSION WIZARD v2.1", MissionWizardStyles.STYLE));
     brandSub.setFont(UiKit.ibmPlexMono(11));
     brandSub.setColor(MissionWizardStyles.WIZARD_TEXT_LO);
 
     header.addChild(UiKit.vSpacer(14));
 
-    stepper = new WizardStepper();
+    stepper = new WizardStepper(HEADER_INNER_WIDTH);
     header.addChild(stepper.getNode());
 
     // Content pane
     content = root.addChild(new Container(new BoxLayout(Axis.Y, FillMode.None)));
     content.setBackground(null);
     content.setPreferredSize(
-        new Vector3f(
-            MissionWizardStyles.WIZARD_CONTENT_WIDTH,
-            MissionWizardStyles.WIZARD_CONTENT_HEIGHT,
-            0));
+        new Vector3f(SHELL_INNER_WIDTH, MissionWizardStyles.WIZARD_CONTENT_HEIGHT, 0));
     content.setInsetsComponent(new InsetsComponent(new Insets3f(28, 32, 16, 32)));
 
     // Footer strip
-    footer = new WizardFooter();
+    footer = new WizardFooter(WINDOW_WIDTH);
     footer.getNode().setBackground(MissionWizardStyles.footerBg());
     root.addChild(footer.getNode());
 
@@ -176,6 +180,6 @@ public class MissionWizardWidget implements AutoCloseable {
     }
     float x = Math.round((screenWidth - WINDOW_WIDTH) / 2f);
     float y = Math.round((screenHeight + WINDOW_HEIGHT) / 2f);
-    root.setLocalTranslation(x, y, 1f);
+    root.setLocalTranslation(x, y, 101f);
   }
 }

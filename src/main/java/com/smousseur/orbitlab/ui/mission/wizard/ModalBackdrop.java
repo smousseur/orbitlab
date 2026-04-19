@@ -9,6 +9,7 @@ import com.simsilica.lemur.Container;
 import com.simsilica.lemur.component.QuadBackgroundComponent;
 import com.simsilica.lemur.event.DefaultMouseListener;
 import com.simsilica.lemur.event.MouseEventControl;
+import com.smousseur.orbitlab.ui.UiKit;
 
 public class ModalBackdrop {
 
@@ -18,8 +19,8 @@ public class ModalBackdrop {
 
   public ModalBackdrop() {
     backdrop = new Container();
-    backdrop.setBackground(new QuadBackgroundComponent(MissionWizardStyles.WIZARD_BACKDROP));
-    backdrop.setLocalTranslation(0, 0, 0);
+    backdrop.setBackground(UiKit.gradientBackground(MissionWizardStyles.WIZARD_BACKDROP));
+    backdrop.setLocalTranslation(0, 0, 100);
 
     MouseEventControl.addListenersToSpatial(
         backdrop,
@@ -30,8 +31,7 @@ public class ModalBackdrop {
           }
 
           @Override
-          public void mouseButtonEvent(
-              MouseButtonEvent event, Spatial target, Spatial capture) {
+          public void mouseButtonEvent(MouseButtonEvent event, Spatial target, Spatial capture) {
             event.setConsumed();
           }
 
@@ -58,7 +58,7 @@ public class ModalBackdrop {
       lastWidth = w;
       lastHeight = h;
       backdrop.setPreferredSize(new Vector3f(w, h, 0));
-      backdrop.setLocalTranslation(0, h, 0);
+      backdrop.setLocalTranslation(0, h, 100);
     }
   }
 }

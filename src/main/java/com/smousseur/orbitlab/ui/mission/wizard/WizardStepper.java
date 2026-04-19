@@ -17,7 +17,7 @@ public class WizardStepper {
   private static final float CIRCLE_SIZE = 28f;
   private static final float LABEL_GAP = 6f;
   private static final float CONNECTOR_WIDTH = 48f;
-  private static final float CONNECTOR_HEIGHT = 1f;
+  private static final float CONNECTOR_HEIGHT = 2f;
   private static final float STEP_TAB_WIDTH = 92f;
 
   private final Container root;
@@ -26,9 +26,21 @@ public class WizardStepper {
   private Consumer<MissionWizardStep> onStepClicked = step -> {};
 
   public WizardStepper() {
+    this(0f);
+  }
+
+  public WizardStepper(float preferredWidth) {
     root = new Container(new BoxLayout(Axis.X, FillMode.None), MissionWizardStyles.STYLE);
-    root.setPreferredSize(new Vector3f(0, STEPPER_HEIGHT, 0));
+    root.setPreferredSize(new Vector3f(preferredWidth, STEPPER_HEIGHT, 0));
     root.setBackground(null);
+
+    // Centre horizontalement le rang d'étapes dans la largeur disponible.
+    float stepsWidth =
+        MissionWizardStep.COUNT * STEP_TAB_WIDTH + (MissionWizardStep.COUNT - 1) * CONNECTOR_WIDTH;
+    float sidePad = Math.max(0f, (preferredWidth - stepsWidth) / 2f);
+    if (sidePad > 0f) {
+      root.addChild(UiKit.hSpacer(sidePad));
+    }
 
     for (int i = 0; i < MissionWizardStep.COUNT; i++) {
       if (i > 0) {
@@ -63,13 +75,12 @@ public class WizardStepper {
       }
     }
     for (int i = 0; i < connectors.length; i++) {
-      Container connector = connectors[i];
+      Container connectorWrap = connectors[i];
+      Container line = (Container) connectorWrap.getChild(1);
       boolean done = i < activeStep.index();
-      connector.setBackground(
+      line.setBackground(
           new QuadBackgroundComponent(
-              done
-                  ? MissionWizardStyles.WIZARD_SUCCESS
-                  : MissionWizardStyles.WIZARD_BORDER));
+              done ? MissionWizardStyles.WIZARD_SUCCESS : MissionWizardStyles.WIZARD_BORDER));
     }
   }
 
@@ -83,7 +94,7 @@ public class WizardStepper {
     float pad = Math.max(0f, (STEP_TAB_WIDTH - CIRCLE_SIZE) / 2f);
     circleRow.addChild(UiKit.hSpacer(pad));
 
-    Container circle = new Container();
+    Container circle = new Container(new BoxLayout(Axis.Y, FillMode.None));
     circle.setPreferredSize(new Vector3f(CIRCLE_SIZE, CIRCLE_SIZE, 0));
     circle.setBackground(UiKit.wizardBg9("step-dot-default", 14));
     Label number =
@@ -116,10 +127,16 @@ public class WizardStepper {
   }
 
   private Container buildConnector() {
-    Container c = new Container();
-    c.setPreferredSize(new Vector3f(CONNECTOR_WIDTH, CONNECTOR_HEIGHT, 0));
-    c.setBackground(new QuadBackgroundComponent(MissionWizardStyles.WIZARD_BORDER));
-    return c;
+    // Colonne pour placer le trait à la hauteur du centre du cercle.
+    Container wrap = new Container(new BoxLayout(Axis.Y, FillMode.None));
+    wrap.setBackground(null);
+    wrap.setPreferredSize(new Vector3f(CONNECTOR_WIDTH, CIRCLE_SIZE, 0));
+    // Spacer du haut ≈ (CIRCLE_SIZE - CONNECTOR_HEIGHT) / 2 pour centrer verticalement
+    wrap.addChild(UiKit.vSpacer((CIRCLE_SIZE - CONNECTOR_HEIGHT) / 2f));
+    Container line = wrap.addChild(new Container());
+    line.setPreferredSize(new Vector3f(CONNECTOR_WIDTH, CONNECTOR_HEIGHT, 0));
+    line.setBackground(new QuadBackgroundComponent(MissionWizardStyles.WIZARD_BORDER));
+    return wrap;
   }
 
   private void applyDoneState(Container node, MissionWizardStep step) {
