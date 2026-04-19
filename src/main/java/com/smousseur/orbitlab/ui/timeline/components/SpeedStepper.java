@@ -1,4 +1,4 @@
-package com.smousseur.orbitlab.ui.clock;
+package com.smousseur.orbitlab.ui.timeline.components;
 
 import com.jme3.math.ColorRGBA;
 import com.jme3.math.Vector3f;
@@ -12,6 +12,9 @@ import com.simsilica.lemur.VAlignment;
 import com.simsilica.lemur.component.QuadBackgroundComponent;
 import com.simsilica.lemur.component.TbtQuadBackgroundComponent;
 import com.smousseur.orbitlab.ui.AppStyles;
+import com.smousseur.orbitlab.ui.timeline.TimelineStyles;
+import com.smousseur.orbitlab.ui.timeline.TimelineWidget;
+
 import java.util.function.IntConsumer;
 
 /**
@@ -20,10 +23,10 @@ import java.util.function.IntConsumer;
  * <p>Anchored to a right edge and laid out right-to-left. Speed constants and conversion methods
  * are {@code static} so {@link ScrubberTrack} and {@link TimelineWidget} can share them.
  */
-class SpeedStepper {
+public class SpeedStepper {
 
-  static final int MIN_INDEX = -16;
-  static final int MAX_INDEX = 16;
+  public static final int MIN_INDEX = -16;
+  public static final int MAX_INDEX = 16;
 
   private static final double[] ABS_SPEED = {
     1, 2, 5, 10, 30, 60, 300, 600, 1800, 3600, 21600, 86400, 432000, 864000, 1728000, 3456000,
@@ -38,7 +41,7 @@ class SpeedStepper {
   private final Label speedLabel;
   private final float leftEdgeX;
 
-  SpeedStepper(Container root, float capsuleHeight, float rightEnd, IntConsumer onChange) {
+  public SpeedStepper(Container root, float capsuleHeight, float rightEnd, IntConsumer onChange) {
     float stepperWidth = BTN_SIZE + GAP + LABEL_WIDTH + GAP + BTN_SIZE;
     float stepperStart = rightEnd - stepperWidth;
     this.leftEdgeX = stepperStart;
@@ -60,21 +63,27 @@ class SpeedStepper {
 
     Button plusBtn = makeButton("+");
     plusBtn.addClickCommands(s -> onChange.accept(+1));
-    place(plusBtn, root, stepperStart + BTN_SIZE + GAP + LABEL_WIDTH + GAP, BTN_SIZE, capsuleHeight, 1f);
+    place(
+        plusBtn,
+        root,
+        stepperStart + BTN_SIZE + GAP + LABEL_WIDTH + GAP,
+        BTN_SIZE,
+        capsuleHeight,
+        1f);
   }
 
   /** Updates the speed label to reflect the given speed index. */
-  void refresh(int speedIndex) {
+  public void refresh(int speedIndex) {
     speedLabel.setText(formatSpeedLabel(speedIndex));
   }
 
   /** X coordinate of the stepper's left edge, used to bound the scrubber track on the right. */
-  float leftEdge() {
+  public float leftEdge() {
     return leftEdgeX;
   }
 
   /** Maps a speed index to an absolute speed value with sign. */
-  static double mapIndexToSpeed(int i) {
+  public static double mapIndexToSpeed(int i) {
     if (i == 0) return 1.0;
     int a = Math.abs(i);
     return Math.copySign(ABS_SPEED[a], i);

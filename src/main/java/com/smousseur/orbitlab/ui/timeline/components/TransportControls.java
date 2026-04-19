@@ -1,4 +1,4 @@
-package com.smousseur.orbitlab.ui.clock;
+package com.smousseur.orbitlab.ui.timeline.components;
 
 import com.jme3.math.ColorRGBA;
 import com.jme3.math.Vector2f;
@@ -14,6 +14,7 @@ import com.simsilica.lemur.component.QuadBackgroundComponent;
 import com.simsilica.lemur.component.TbtQuadBackgroundComponent;
 import com.smousseur.orbitlab.app.SimulationClock;
 import com.smousseur.orbitlab.ui.AppStyles;
+import com.smousseur.orbitlab.ui.timeline.TimelineStyles;
 
 /**
  * Transport controls cluster: step-back, play/pause, step-forward buttons.
@@ -21,7 +22,7 @@ import com.smousseur.orbitlab.ui.AppStyles;
  * <p>Step buttons seek the clock by {@value #STEP_SECONDS} seconds. Play/pause toggles the clock
  * playing state.
  */
-class TransportControls {
+public class TransportControls {
 
   private static final float BUTTON_SIZE = 24f;
   private static final float ICON_SIZE = 12f;
@@ -33,7 +34,7 @@ class TransportControls {
   private final IconComponent playPauseIcon;
   private final float rightEdgeX;
 
-  TransportControls(
+  public TransportControls(
       Container root, float capsuleHeight, float startX, SimulationClock clock) {
 
     this.rightEdgeX = startX + (BUTTON_SIZE + BUTTON_GAP) * 2 + BUTTON_SIZE + TRAILING_GAP;
@@ -50,16 +51,11 @@ class TransportControls {
     Button stepForward = makeButton("glyph-step-fw.png", ">>");
     stepForward.addClickCommands(s -> clock.seek(clock.now().shiftedBy(STEP_SECONDS)));
     place(
-        stepForward,
-        root,
-        startX + (BUTTON_SIZE + BUTTON_GAP) * 2,
-        BUTTON_SIZE,
-        capsuleHeight,
-        1f);
+        stepForward, root, startX + (BUTTON_SIZE + BUTTON_GAP) * 2, BUTTON_SIZE, capsuleHeight, 1f);
   }
 
   /** Swaps the play/pause icon to match the current playing state. */
-  void refresh(boolean isPlaying) {
+  public void refresh(boolean isPlaying) {
     String glyph = isPlaying ? "glyph-pause.png" : "glyph-play.png";
     Texture2D tex = TimelineStyles.tex(glyph);
     if (tex != null && playPauseIcon != null) {
@@ -70,7 +66,7 @@ class TransportControls {
   }
 
   /** X coordinate of the first free pixel after this cluster (position for the next divider). */
-  float rightEdge() {
+  public float rightEdge() {
     return rightEdgeX;
   }
 

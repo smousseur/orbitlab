@@ -1,4 +1,4 @@
-package com.smousseur.orbitlab.ui.clock;
+package com.smousseur.orbitlab.ui.timeline.components;
 
 import com.jme3.input.MouseInput;
 import com.jme3.input.event.MouseButtonEvent;
@@ -18,15 +18,17 @@ import com.simsilica.lemur.event.DefaultMouseListener;
 import com.smousseur.orbitlab.app.OrekitTime;
 import com.smousseur.orbitlab.app.SimulationClock;
 import com.smousseur.orbitlab.ui.AppStyles;
+import com.smousseur.orbitlab.ui.timeline.Mode;
+import com.smousseur.orbitlab.ui.timeline.TimelineStyles;
 
 /**
  * Live indicator cluster: animated dot + LIVE/PAUSED label + click-to-reset handler.
  *
- * <p>Clicking the label seeks the clock to real UTC now, sets speed to 1× and starts playback.
- * The {@code onLiveReset} callback is invoked so the parent widget can synchronise derived state
- * (speed index, scrubber position).
+ * <p>Clicking the label seeks the clock to real UTC now, sets speed to 1× and starts playback. The
+ * {@code onLiveReset} callback is invoked so the parent widget can synchronise derived state (speed
+ * index, scrubber position).
  */
-class LiveIndicator {
+public class LiveIndicator {
 
   private static final float DOT_SIZE = 12f;
   private static final float LABEL_WIDTH = 34f;
@@ -37,7 +39,7 @@ class LiveIndicator {
   private final Label liveLabel;
   private final float rightEdgeX;
 
-  LiveIndicator(
+  public LiveIndicator(
       Container root,
       float capsuleHeight,
       float startX,
@@ -80,8 +82,7 @@ class LiveIndicator {
     liveLabel.addMouseListener(
         new DefaultMouseListener() {
           @Override
-          public void mouseButtonEvent(
-              MouseButtonEvent event, Spatial target, Spatial capture) {
+          public void mouseButtonEvent(MouseButtonEvent event, Spatial target, Spatial capture) {
             if (event.isPressed() && event.getButtonIndex() == MouseInput.BUTTON_LEFT) {
               clock.seek(OrekitTime.utcNow());
               clock.setSpeed(1.0);
@@ -94,7 +95,7 @@ class LiveIndicator {
   }
 
   /** Updates label text and colour to reflect the current playback mode. */
-  void refresh(Mode mode) {
+  public void refresh(Mode mode) {
     liveLabel.setText(mode.name());
     ColorRGBA color =
         switch (mode) {
@@ -109,7 +110,7 @@ class LiveIndicator {
   }
 
   /** X coordinate of the first free pixel after this cluster (position for the next divider). */
-  float rightEdge() {
+  public float rightEdge() {
     return rightEdgeX;
   }
 

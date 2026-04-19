@@ -1,4 +1,4 @@
-package com.smousseur.orbitlab.ui.clock;
+package com.smousseur.orbitlab.ui.timeline;
 
 import com.jme3.math.ColorRGBA;
 import com.jme3.math.Vector3f;
@@ -9,9 +9,10 @@ import com.simsilica.lemur.Panel;
 import com.simsilica.lemur.component.QuadBackgroundComponent;
 import com.simsilica.lemur.component.TbtQuadBackgroundComponent;
 import com.smousseur.orbitlab.app.ApplicationContext;
-import com.smousseur.orbitlab.app.OrekitTime;
 import com.smousseur.orbitlab.app.SimulationClock;
 import com.smousseur.orbitlab.ui.AppStyles;
+import com.smousseur.orbitlab.ui.timeline.components.*;
+
 import java.util.Objects;
 
 /**
@@ -66,7 +67,8 @@ public class TimelineWidget implements AutoCloseable {
     timelineNode.attachChild(root);
 
     // Live indicator — leftmost cluster
-    liveIndicator = new LiveIndicator(root, CAPSULE_HEIGHT, CAPSULE_PAD_X, clock, this::onLiveReset);
+    liveIndicator =
+        new LiveIndicator(root, CAPSULE_HEIGHT, CAPSULE_PAD_X, clock, this::onLiveReset);
 
     // Divider 1 (after live indicator)
     float divider1X = liveIndicator.rightEdge();

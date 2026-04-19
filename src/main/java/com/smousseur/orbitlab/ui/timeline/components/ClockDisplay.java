@@ -1,7 +1,8 @@
-package com.smousseur.orbitlab.ui.clock;
+package com.smousseur.orbitlab.ui.timeline.components;
 
 import com.jme3.math.Vector3f;
 import com.jme3.scene.Spatial;
+import com.smousseur.orbitlab.ui.timeline.TimelineStyles;
 import org.orekit.time.AbsoluteDate;
 import com.simsilica.lemur.Container;
 import com.simsilica.lemur.HAlignment;
@@ -14,10 +15,10 @@ import com.smousseur.orbitlab.ui.AppStyles;
 /**
  * Clock display cluster: date label (right-aligned) + "UTC" suffix label.
  *
- * <p>Both elements are anchored to the right edge of the capsule. Call {@link #update(AbsoluteDate)}
- * each frame to refresh the date text.
+ * <p>Both elements are anchored to the right edge of the capsule. Call {@link
+ * #update(AbsoluteDate)} each frame to refresh the date text.
  */
-class ClockDisplay {
+public class ClockDisplay {
 
   private static final float CLOCK_LABEL_WIDTH = 86f;
   private static final float CLOCK_LABEL_HEIGHT = 16f;
@@ -28,7 +29,7 @@ class ClockDisplay {
   private final Label dateLabel;
   private final float leftEdgeX;
 
-  ClockDisplay(Container root, float capsuleHeight, float rightEnd, SimulationClock clock) {
+  public ClockDisplay(Container root, float capsuleHeight, float rightEnd, SimulationClock clock) {
     float utcX = rightEnd - UTC_LABEL_WIDTH;
     float dateX = utcX - DATE_UTC_GAP - CLOCK_LABEL_WIDTH;
     this.leftEdgeX = dateX;
@@ -56,12 +57,12 @@ class ClockDisplay {
   }
 
   /** Updates the date label text. Call once per frame. */
-  void update(AbsoluteDate now) {
+  public void update(AbsoluteDate now) {
     dateLabel.setText(TimeConverter.formatDate(now));
   }
 
   /** X coordinate of the date label's left edge, used to position divider 3 to its left. */
-  float leftEdge() {
+  public float leftEdge() {
     return leftEdgeX;
   }
 

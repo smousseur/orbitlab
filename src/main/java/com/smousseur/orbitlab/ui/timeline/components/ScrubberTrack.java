@@ -1,4 +1,4 @@
-package com.smousseur.orbitlab.ui.clock;
+package com.smousseur.orbitlab.ui.timeline.components;
 
 import com.jme3.math.ColorRGBA;
 import com.jme3.math.Vector3f;
@@ -8,15 +8,16 @@ import com.simsilica.lemur.Panel;
 import com.simsilica.lemur.component.QuadBackgroundComponent;
 import com.simsilica.lemur.component.TbtQuadBackgroundComponent;
 import com.smousseur.orbitlab.ui.AppStyles;
+import com.smousseur.orbitlab.ui.timeline.TimelineStyles;
 
 /**
  * Scrubber track cluster: background track, fill bar, tick marks, and playhead.
  *
  * <p>Call {@link #refresh(int)} whenever the speed index changes to move the playhead and resize
- * the fill bar. The playhead position is normalised over {@link SpeedStepper#MIN_INDEX} to
- * {@link SpeedStepper#MAX_INDEX}.
+ * the fill bar. The playhead position is normalised over {@link SpeedStepper#MIN_INDEX} to {@link
+ * SpeedStepper#MAX_INDEX}.
  */
-class ScrubberTrack {
+public class ScrubberTrack {
 
   private static final float TRACK_HEIGHT = 4f;
   private static final float PLAYHEAD_WIDTH = 12f;
@@ -28,7 +29,7 @@ class ScrubberTrack {
   private final float trackStartX;
   private final float trackSpan;
 
-  ScrubberTrack(Container root, float capsuleHeight, float startX, float endX) {
+  public ScrubberTrack(Container root, float capsuleHeight, float startX, float endX) {
     float trackWidth = Math.max(40f, endX - startX);
     float centerY = capsuleHeight * 0.5f;
     this.trackStartX = startX;
@@ -69,8 +70,7 @@ class ScrubberTrack {
         tick.setBackground(new QuadBackgroundComponent(tTex));
       } else {
         tick.setBackground(
-            new QuadBackgroundComponent(
-                major ? AppStyles.TL_CYAN_SOFT : AppStyles.TL_TEXT_MUTED));
+            new QuadBackgroundComponent(major ? AppStyles.TL_CYAN_SOFT : AppStyles.TL_TEXT_MUTED));
       }
       tick.setSize(tick.getPreferredSize());
       tick.setLocalTranslation(startX + xLocal, -(centerY - tickH * 0.5f), 3f);
@@ -91,7 +91,7 @@ class ScrubberTrack {
   }
 
   /** Moves the playhead and resizes the fill bar to match the given speed index. */
-  void refresh(int speedIndex) {
+  public void refresh(int speedIndex) {
     float normalized =
         (speedIndex - (float) SpeedStepper.MIN_INDEX)
             / (float) (SpeedStepper.MAX_INDEX - SpeedStepper.MIN_INDEX);

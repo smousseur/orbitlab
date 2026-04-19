@@ -1,7 +1,7 @@
-package com.smousseur.orbitlab.ui.clock;
+package com.smousseur.orbitlab.ui.timeline;
 
 /** Playback state of the timeline widget. */
-enum Mode {
+public enum Mode {
   LIVE,
   PAUSED,
   SEEK

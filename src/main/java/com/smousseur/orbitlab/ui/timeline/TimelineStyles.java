@@ -1,4 +1,4 @@
-package com.smousseur.orbitlab.ui.clock;
+package com.smousseur.orbitlab.ui.timeline;
 
 import com.jme3.asset.AssetManager;
 import com.jme3.asset.AssetNotFoundException;
@@ -18,8 +18,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 /**
- * Registers the Lemur style for the Capsule timeline and exposes texture/font helpers for
- * {@link TimelineWidget}.
+ * Registers the Lemur style for the Capsule timeline and exposes texture/font helpers for {@link
+ * TimelineWidget}.
  *
  * <p>Textures follow the layout shipped in {@code src/main/resources/interface/timeline/} as
  * produced by the Orbitlab handoff texture pack; missing textures fall back to no background
@@ -43,8 +43,8 @@ public final class TimelineStyles {
   private TimelineStyles() {}
 
   /**
-   * Returns the {@code share-tech-mono} bitmap font at the given pixel size, or Lemur's default
-   * if the asset is missing.
+   * Returns the {@code share-tech-mono} bitmap font at the given pixel size, or Lemur's default if
+   * the asset is missing.
    *
    * @param size pixel size (must match one of the bundled sizes: 10, 12, 14)
    * @return the bitmap font (never {@code null})
@@ -54,8 +54,8 @@ public final class TimelineStyles {
   }
 
   /**
-   * Returns the {@code rajdhani-semibold} bitmap font at the given pixel size, or Lemur's
-   * default if the asset is missing.
+   * Returns the {@code rajdhani-semibold} bitmap font at the given pixel size, or Lemur's default
+   * if the asset is missing.
    *
    * @param size pixel size (must match one of the bundled sizes: 10, 12, 14, 16, 18, 20)
    * @return the bitmap font (never {@code null})
@@ -65,8 +65,8 @@ public final class TimelineStyles {
   }
 
   /**
-   * Loads a timeline texture by its short name (e.g. {@code "capsule.png"}) with cached
-   * filter settings tuned for UI rendering. Returns {@code null} if the asset is missing.
+   * Loads a timeline texture by its short name (e.g. {@code "capsule.png"}) with cached filter
+   * settings tuned for UI rendering. Returns {@code null} if the asset is missing.
    *
    * @param name file name relative to {@code interface/timeline/}
    * @return the cached texture, or {@code null} if absent
@@ -76,8 +76,8 @@ public final class TimelineStyles {
   }
 
   /**
-   * Builds a 9-slice capsule background from {@code capsule.png}, or {@code null} if the texture
-   * is missing.
+   * Builds a 9-slice capsule background from {@code capsule.png}, or {@code null} if the texture is
+   * missing.
    *
    * @return a new background component or {@code null}
    */
