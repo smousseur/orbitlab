@@ -12,7 +12,7 @@ public class StepMissionType {
 
   private static final float CARD_W = 264f;
   private static final float CARD_H = 152f;
-  private static final float ICON_SIZE = 16f;
+  private static final float ICON_SIZE = 48f;
   private static final float CARD_GAP = 16f;
   private static final float ROW_GAP = 12f;
 
@@ -29,14 +29,14 @@ public class StepMissionType {
             0));
 
     Label title = root.addChild(new Label("MISSION TYPE", MissionWizardStyles.STYLE));
-    title.setFont(UiKit.rajdhani(20));
+    title.setFont(UiKit.orbitron(13));
     title.setColor(MissionWizardStyles.WIZARD_TEXT_PRIMARY);
 
     root.addChild(UiKit.vSpacer(ROW_GAP));
 
     Label subtitle =
         root.addChild(new Label("// select the target orbit", MissionWizardStyles.STYLE));
-    subtitle.setFont(UiKit.mono(12));
+    subtitle.setFont(UiKit.ibmPlexMono(11));
     subtitle.setColor(MissionWizardStyles.WIZARD_TEXT_SECONDARY);
 
     root.addChild(UiKit.vSpacer(ROW_GAP));
@@ -53,8 +53,9 @@ public class StepMissionType {
                 "160 - 2 000 km",
                 new Badge("AVAILABLE", Badge.Variant.SUCCESS),
                 SelectableCard.State.SELECTED,
-                "interface/wizard/mission-leo.png",
-                ICON_SIZE)
+                "interface/wizard/v2/icon-mission-leo.png",
+                ICON_SIZE,
+                SelectableCard.Variant.MISSION)
             .getNode());
     row.addChild(UiKit.hSpacer(CARD_GAP));
     row.addChild(
@@ -66,8 +67,9 @@ public class StepMissionType {
                 "200 x 35 786 km",
                 new Badge("IN PROGRESS", Badge.Variant.WARNING),
                 SelectableCard.State.DISABLED,
-                "interface/wizard/mission-gto.png",
-                ICON_SIZE)
+                "interface/wizard/v2/icon-mission-gto.png",
+                ICON_SIZE,
+                SelectableCard.Variant.MISSION)
             .getNode());
     // Reserve the 3rd column (no mission yet) so the grid stays on a 3-column layout.
     row.addChild(UiKit.hSpacer(CARD_GAP));

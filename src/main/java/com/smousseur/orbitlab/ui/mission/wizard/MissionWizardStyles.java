@@ -4,6 +4,7 @@ import com.jme3.asset.AssetManager;
 import com.jme3.math.ColorRGBA;
 import com.simsilica.lemur.GuiGlobals;
 import com.simsilica.lemur.Insets3f;
+import com.simsilica.lemur.component.QuadBackgroundComponent;
 import com.simsilica.lemur.component.TbtQuadBackgroundComponent;
 import com.simsilica.lemur.style.Attributes;
 import com.simsilica.lemur.style.Styles;
@@ -18,61 +19,115 @@ public final class MissionWizardStyles {
   // =================================================================
 
   /** Inner content width: WINDOW_WIDTH (880) - 2 * OUTER_PADDING (24). */
-  public static final float WIZARD_CONTENT_WIDTH = 832f;
-  /** Inner content height: WINDOW_HEIGHT (640) - HEADER_HEIGHT (88) - FOOTER_HEIGHT (72). */
-  public static final float WIZARD_CONTENT_HEIGHT = 480f;
+  public static final float WIZARD_CONTENT_WIDTH = 848f;
+
+  /**
+   * Inner content height: WINDOW_HEIGHT (640) - 2 * OUTER_PADDING (16) - HEADER_HEIGHT (120) -
+   * FOOTER_HEIGHT (72).
+   */
+  public static final float WIZARD_CONTENT_HEIGHT = 426f;
 
   // =================================================================
-  //  WIZARD COLOUR PALETTE
+  //  WIZARD COLOUR PALETTE (from wizard.zip design tokens)
   // =================================================================
 
   // --- Backgrounds ---
-  public static final ColorRGBA WIZARD_BG_DEEP =
-      new ColorRGBA(0.043f, 0.078f, 0.125f, 0.95f);
-  public static final ColorRGBA WIZARD_BG_CONTENT =
-      new ColorRGBA(0.055f, 0.094f, 0.149f, 0.95f);
-  public static final ColorRGBA WIZARD_BG_CARD =
-      new ColorRGBA(0.059f, 0.118f, 0.180f, 0.85f);
-  public static final ColorRGBA WIZARD_BG_CARD_HOVER =
-      new ColorRGBA(0.078f, 0.157f, 0.220f, 0.90f);
-  public static final ColorRGBA WIZARD_SELECTED =
-      new ColorRGBA(0.051f, 0.227f, 0.361f, 0.90f);
+  /** bg-void — page backdrop (#030b16). */
+  public static final ColorRGBA WIZARD_BG_VOID = new ColorRGBA(0.012f, 0.043f, 0.086f, 1.0f);
 
-  // --- Accents ---
-  public static final ColorRGBA WIZARD_ACCENT =
-      new ColorRGBA(0.00f, 0.831f, 1.00f, 1.0f);
-  public static final ColorRGBA WIZARD_ACCENT_DIM =
-      new ColorRGBA(0.102f, 0.561f, 0.686f, 0.80f);
+  /** bg-deep — header, footer, input bg (#071526). */
+  public static final ColorRGBA WIZARD_BG_DEEP = new ColorRGBA(0.027f, 0.082f, 0.149f, 0.98f);
+
+  /** bg-panel — wizard shell body (#0b1e35). */
+  public static final ColorRGBA WIZARD_BG_CONTENT = new ColorRGBA(0.043f, 0.118f, 0.208f, 0.98f);
+
+  /** bg-card — mission / launcher cards (#0f2847). */
+  public static final ColorRGBA WIZARD_BG_CARD = new ColorRGBA(0.059f, 0.157f, 0.278f, 1.0f);
+
+  /** bg-hover — card hover (#153259). */
+  public static final ColorRGBA WIZARD_BG_CARD_HOVER = new ColorRGBA(0.082f, 0.196f, 0.349f, 1.0f);
+
+  /** Selected card tint (rgba(14,165,233,.10)). */
+  public static final ColorRGBA WIZARD_SELECTED = new ColorRGBA(0.055f, 0.647f, 0.914f, 0.10f);
+
+  // --- Accents (blue-core, blue-bright, cyan) ---
+  /** blue-core (#0ea5e9). */
+  public static final ColorRGBA WIZARD_ACCENT = new ColorRGBA(0.055f, 0.647f, 0.914f, 1.0f);
+
+  /** blue-bright (#38bdf8). */
+  public static final ColorRGBA WIZARD_ACCENT_BRIGHT = new ColorRGBA(0.220f, 0.741f, 0.973f, 1.0f);
+
+  /** Half-opacity accent for shadows / subtle fills. */
+  public static final ColorRGBA WIZARD_ACCENT_DIM = new ColorRGBA(0.055f, 0.647f, 0.914f, 0.30f);
+
+  /** cyan (#22d3ee). */
+  public static final ColorRGBA WIZARD_CYAN = new ColorRGBA(0.133f, 0.827f, 0.933f, 1.0f);
 
   // --- Borders ---
-  public static final ColorRGBA WIZARD_BORDER =
-      new ColorRGBA(0.110f, 0.204f, 0.282f, 0.70f);
-  public static final ColorRGBA WIZARD_BORDER_GLOW =
-      new ColorRGBA(0.00f, 0.659f, 0.80f, 0.60f);
+  /** border (#1a3a5c). */
+  public static final ColorRGBA WIZARD_BORDER = new ColorRGBA(0.102f, 0.227f, 0.361f, 0.70f);
+
+  /** border-glow (#234d7a). */
+  public static final ColorRGBA WIZARD_BORDER_GLOW = new ColorRGBA(0.137f, 0.302f, 0.478f, 0.80f);
 
   // --- Text ---
-  public static final ColorRGBA WIZARD_TEXT_PRIMARY =
-      new ColorRGBA(0.91f, 0.957f, 0.973f, 1.0f);
-  public static final ColorRGBA WIZARD_TEXT_SECONDARY =
-      new ColorRGBA(0.353f, 0.545f, 0.627f, 1.0f);
-  public static final ColorRGBA WIZARD_TEXT_ACCENT = WIZARD_ACCENT;
-  public static final ColorRGBA WIZARD_TEXT_DISABLED =
-      new ColorRGBA(0.180f, 0.290f, 0.361f, 0.60f);
+  /** text-hi (#e2f0ff). */
+  public static final ColorRGBA WIZARD_TEXT_PRIMARY = new ColorRGBA(0.886f, 0.941f, 1.0f, 1.0f);
+
+  /** text-mid (#7eb5d6). */
+  public static final ColorRGBA WIZARD_TEXT_SECONDARY = new ColorRGBA(0.494f, 0.710f, 0.839f, 1.0f);
+
+  /** text-lo (#3d6585). */
+  public static final ColorRGBA WIZARD_TEXT_LO = new ColorRGBA(0.239f, 0.396f, 0.522f, 1.0f);
+
+  public static final ColorRGBA WIZARD_TEXT_ACCENT = WIZARD_ACCENT_BRIGHT;
+  public static final ColorRGBA WIZARD_TEXT_DISABLED = new ColorRGBA(0.239f, 0.396f, 0.522f, 0.60f);
 
   // --- Semantic ---
-  public static final ColorRGBA WIZARD_SUCCESS =
-      new ColorRGBA(0.00f, 0.910f, 0.471f, 1.0f);
-  public static final ColorRGBA WIZARD_WARNING =
-      new ColorRGBA(1.00f, 0.722f, 0.188f, 1.0f);
-  public static final ColorRGBA WIZARD_DANGER =
-      new ColorRGBA(1.00f, 0.302f, 0.416f, 1.0f);
-  public static final ColorRGBA WIZARD_INFO = WIZARD_ACCENT;
+  /** success (#10b981). */
+  public static final ColorRGBA WIZARD_SUCCESS = new ColorRGBA(0.063f, 0.725f, 0.506f, 1.0f);
+
+  /** warning (#f59e0b). */
+  public static final ColorRGBA WIZARD_WARNING = new ColorRGBA(0.961f, 0.620f, 0.043f, 1.0f);
+
+  /** danger (#ef4444). */
+  public static final ColorRGBA WIZARD_DANGER = new ColorRGBA(0.937f, 0.267f, 0.267f, 1.0f);
+
+  public static final ColorRGBA WIZARD_INFO = WIZARD_CYAN;
 
   // --- Backdrop ---
-  public static final ColorRGBA WIZARD_BACKDROP =
-      new ColorRGBA(0f, 0f, 0f, 0.60f);
+  public static final ColorRGBA WIZARD_BACKDROP = new ColorRGBA(0f, 0f, 0f, 0.60f);
 
   private MissionWizardStyles() {}
+
+  // =================================================================
+  //  BACKGROUND FACTORIES (v2 texture atlas)
+  // =================================================================
+
+  /** 9-slice shell background (34×34 texture, 16-pixel corners). */
+  public static TbtQuadBackgroundComponent shellBg() {
+    return UiKit.wizardBg9("wizard-shell", 16);
+  }
+
+  /** Flat header strip. */
+  public static QuadBackgroundComponent headerBg() {
+    return UiKit.wizardFlat("header-bg");
+  }
+
+  /** Flat footer strip. */
+  public static QuadBackgroundComponent footerBg() {
+    return UiKit.wizardFlat("footer-bg");
+  }
+
+  /** 9-slice input / textfield background (18×18 texture, 8-pixel corners). */
+  public static TbtQuadBackgroundComponent inputBg() {
+    return UiKit.wizardBg9("input", 8);
+  }
+
+  /** 9-slice input background with accent focus ring. */
+  public static TbtQuadBackgroundComponent inputFocusBg() {
+    return UiKit.wizardBg9("input-focus", 8);
+  }
 
   // =================================================================
   //  STYLE REGISTRATION
@@ -83,26 +138,26 @@ public final class MissionWizardStyles {
     styles.applyStyles(STYLE, "glass");
 
     Attributes c = styles.getSelector("container", STYLE);
-    c.set("background", UiKit.gradientBackground(WIZARD_BG_DEEP));
+    c.set("background", null);
     c.set("insets", new Insets3f(0, 0, 0, 0));
 
     Attributes l = styles.getSelector("label", STYLE);
     l.set("color", WIZARD_TEXT_PRIMARY);
-    l.set("fontSize", 14);
+    l.set("font", UiKit.sora(13));
 
     Attributes b = styles.getSelector("button", STYLE);
-    b.set("background", UiKit.gradientBackground(WIZARD_BG_CARD));
+    b.set("background", UiKit.wizardBg9("btn-ghost", 8));
     b.set("color", WIZARD_TEXT_PRIMARY);
-    b.set("fontSize", 14);
-    b.set("insets", new Insets3f(6, 10, 6, 10));
+    b.set("font", UiKit.sora(13));
+    b.set("insets", new Insets3f(10, 22, 10, 22));
 
     Attributes tf = styles.getSelector("textField", STYLE);
-    tf.set("background", UiKit.gradientBackground(WIZARD_BG_CARD));
+    tf.set("background", inputBg());
     tf.set("color", WIZARD_TEXT_PRIMARY);
-    tf.set("fontSize", 14);
-    tf.set("insets", new Insets3f(6, 8, 6, 8));
+    tf.set("font", UiKit.ibmPlexMono(11));
+    tf.set("insets", new Insets3f(8, 12, 8, 12));
 
     Attributes s = styles.getSelector("slider", STYLE);
-    s.set("background", UiKit.gradientBackground(WIZARD_BORDER));
+    s.set("background", UiKit.wizardFlat("slider-track"));
   }
 }

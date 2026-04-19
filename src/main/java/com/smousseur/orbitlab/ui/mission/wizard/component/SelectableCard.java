@@ -2,7 +2,6 @@ package com.smousseur.orbitlab.ui.mission.wizard.component;
 
 import com.jme3.input.event.MouseButtonEvent;
 import com.jme3.input.event.MouseMotionEvent;
-import com.jme3.math.ColorRGBA;
 import com.jme3.math.Vector3f;
 import com.jme3.scene.Spatial;
 import com.simsilica.lemur.*;
@@ -21,12 +20,18 @@ public class SelectableCard {
     DISABLED
   }
 
+  public enum Variant {
+    MISSION,
+    LAUNCHER
+  }
+
   private static final float GAP_ICON_TITLE = 8f;
   private static final float GAP_TITLE_SUBTITLE = 2f;
   private static final float GAP_SUBTITLE_VALUE = 2f;
   private static final float GAP_VALUE_BADGE = 10f;
 
   private final Container root;
+  private final Variant variant;
   private State state;
 
   public SelectableCard(
@@ -37,7 +42,7 @@ public class SelectableCard {
       String value,
       Badge badge,
       State initial) {
-    this(width, height, title, subtitle, value, badge, initial, null, 48);
+    this(width, height, title, subtitle, value, badge, initial, null, 48, Variant.MISSION);
   }
 
   public SelectableCard(
@@ -50,11 +55,24 @@ public class SelectableCard {
       State initial,
       String iconPath,
       float iconSize) {
-    this.state = initial;
+    this(width, height, title, subtitle, value, badge, initial, iconPath, iconSize, Variant.MISSION);
+  }
 
-    root =
-        new Container(
-            new BoxLayout(Axis.Y, FillMode.None), MissionWizardStyles.STYLE);
+  public SelectableCard(
+      float width,
+      float height,
+      String title,
+      String subtitle,
+      String value,
+      Badge badge,
+      State initial,
+      String iconPath,
+      float iconSize,
+      Variant variant) {
+    this.state = initial;
+    this.variant = variant;
+
+    root = new Container(new BoxLayout(Axis.Y, FillMode.None), MissionWizardStyles.STYLE);
     root.setPreferredSize(new Vector3f(width, height, 0));
 
     Container content =
@@ -73,29 +91,27 @@ public class SelectableCard {
     content.addChild(UiKit.vSpacer(GAP_ICON_TITLE));
 
     Label titleLabel = new Label(title, MissionWizardStyles.STYLE);
-    titleLabel.setFont(UiKit.rajdhani(16));
+    titleLabel.setFont(UiKit.orbitron(13));
+    titleLabel.setColor(MissionWizardStyles.WIZARD_TEXT_PRIMARY);
     titleLabel.setTextHAlignment(HAlignment.Center);
-    titleLabel.setPreferredSize(
-        new Vector3f(width, titleLabel.getPreferredSize().y, 0));
+    titleLabel.setPreferredSize(new Vector3f(width, titleLabel.getPreferredSize().y, 0));
     content.addChild(titleLabel);
     content.addChild(UiKit.vSpacer(GAP_TITLE_SUBTITLE));
 
     Label subtitleLabel = new Label(subtitle, MissionWizardStyles.STYLE);
-    subtitleLabel.setFont(UiKit.rajdhani(11));
+    subtitleLabel.setFont(UiKit.ibmPlexMono(11));
     subtitleLabel.setColor(MissionWizardStyles.WIZARD_TEXT_SECONDARY);
     subtitleLabel.setTextHAlignment(HAlignment.Center);
-    subtitleLabel.setPreferredSize(
-        new Vector3f(width, subtitleLabel.getPreferredSize().y, 0));
+    subtitleLabel.setPreferredSize(new Vector3f(width, subtitleLabel.getPreferredSize().y, 0));
     content.addChild(subtitleLabel);
 
     if (value != null) {
       content.addChild(UiKit.vSpacer(GAP_SUBTITLE_VALUE));
       Label valueLabel = new Label(value, MissionWizardStyles.STYLE);
-      valueLabel.setFont(UiKit.mono(11));
-      valueLabel.setColor(MissionWizardStyles.WIZARD_TEXT_SECONDARY);
+      valueLabel.setFont(UiKit.ibmPlexMono(11));
+      valueLabel.setColor(MissionWizardStyles.WIZARD_TEXT_LO);
       valueLabel.setTextHAlignment(HAlignment.Center);
-      valueLabel.setPreferredSize(
-          new Vector3f(width, valueLabel.getPreferredSize().y, 0));
+      valueLabel.setPreferredSize(new Vector3f(width, valueLabel.getPreferredSize().y, 0));
       content.addChild(valueLabel);
     }
 
@@ -117,20 +133,17 @@ public class SelectableCard {
           root,
           new DefaultMouseListener() {
             @Override
-            public void mouseEntered(
-                MouseMotionEvent event, Spatial target, Spatial capture) {
+            public void mouseEntered(MouseMotionEvent event, Spatial target, Spatial capture) {
               if (state != State.SELECTED) applyState(State.HOVER);
             }
 
             @Override
-            public void mouseExited(
-                MouseMotionEvent event, Spatial target, Spatial capture) {
+            public void mouseExited(MouseMotionEvent event, Spatial target, Spatial capture) {
               if (state != State.SELECTED) applyState(State.IDLE);
             }
 
             @Override
-            public void click(
-                MouseButtonEvent event, Spatial target, Spatial capture) {
+            public void click(MouseButtonEvent event, Spatial target, Spatial capture) {
               applyState(State.SELECTED);
             }
           });
@@ -155,25 +168,17 @@ public class SelectableCard {
 
   public void applyState(State newState) {
     this.state = newState;
+    String base = variant == Variant.MISSION ? "card-mission" : "card-launcher";
+    int border = variant == Variant.MISSION ? 12 : 10;
     switch (newState) {
-      case IDLE ->
-          root.setBackground(
-              UiKit.gradientBackground(MissionWizardStyles.WIZARD_BG_CARD));
-      case HOVER ->
-          root.setBackground(
-              UiKit.gradientBackground(
-                  MissionWizardStyles.WIZARD_BG_CARD_HOVER));
-      case SELECTED ->
-          root.setBackground(
-              UiKit.gradientBackground(MissionWizardStyles.WIZARD_SELECTED));
-      case DISABLED ->
-          root.setBackground(
-              UiKit.gradientBackground(
-                  new ColorRGBA(
-                      MissionWizardStyles.WIZARD_BG_CARD.r,
-                      MissionWizardStyles.WIZARD_BG_CARD.g,
-                      MissionWizardStyles.WIZARD_BG_CARD.b,
-                      0.30f)));
+      case IDLE -> root.setBackground(UiKit.wizardBg9(base, border));
+      case HOVER -> root.setBackground(UiKit.wizardBg9(base + "-hover", border));
+      case SELECTED -> root.setBackground(UiKit.wizardBg9(base + "-selected", border));
+      case DISABLED -> {
+        String disabledTex =
+            variant == Variant.MISSION ? "card-mission-disabled" : "card-launcher";
+        root.setBackground(UiKit.wizardBg9(disabledTex, border));
+      }
     }
   }
 }

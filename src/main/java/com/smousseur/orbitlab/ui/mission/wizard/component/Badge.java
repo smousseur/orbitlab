@@ -1,8 +1,14 @@
 package com.smousseur.orbitlab.ui.mission.wizard.component;
 
 import com.jme3.math.ColorRGBA;
+import com.jme3.math.Vector3f;
 import com.simsilica.lemur.Container;
+import com.simsilica.lemur.FillMode;
+import com.simsilica.lemur.Axis;
 import com.simsilica.lemur.Label;
+import com.simsilica.lemur.Insets3f;
+import com.simsilica.lemur.component.BoxLayout;
+import com.simsilica.lemur.component.InsetsComponent;
 import com.smousseur.orbitlab.ui.UiKit;
 import com.smousseur.orbitlab.ui.mission.wizard.MissionWizardStyles;
 
@@ -17,39 +23,39 @@ public class Badge {
   private final Container root;
 
   public Badge(String text, Variant variant) {
-    root = new Container(MissionWizardStyles.STYLE);
+    root = new Container(new BoxLayout(Axis.X, FillMode.None), MissionWizardStyles.STYLE);
+    root.setInsetsComponent(new InsetsComponent(new Insets3f(3, 8, 3, 8)));
 
-    ColorRGBA bg;
+    String bgTex;
     ColorRGBA fg;
+    String iconName = null;
     switch (variant) {
       case SUCCESS -> {
-        bg =
-            new ColorRGBA(
-                MissionWizardStyles.WIZARD_SUCCESS.r,
-                MissionWizardStyles.WIZARD_SUCCESS.g,
-                MissionWizardStyles.WIZARD_SUCCESS.b,
-                0.80f);
-        fg = MissionWizardStyles.WIZARD_TEXT_PRIMARY;
+        bgTex = "badge-ready";
+        fg = MissionWizardStyles.WIZARD_SUCCESS;
+        iconName = "icon-check-success";
       }
       case WARNING -> {
-        bg =
-            new ColorRGBA(
-                MissionWizardStyles.WIZARD_WARNING.r,
-                MissionWizardStyles.WIZARD_WARNING.g,
-                MissionWizardStyles.WIZARD_WARNING.b,
-                0.80f);
-        fg = MissionWizardStyles.WIZARD_TEXT_PRIMARY;
+        bgTex = "badge-wip";
+        fg = MissionWizardStyles.WIZARD_WARNING;
       }
       default -> {
-        bg = MissionWizardStyles.WIZARD_BG_CARD;
+        bgTex = "badge-ready";
         fg = MissionWizardStyles.WIZARD_TEXT_SECONDARY;
       }
     }
 
-    root.setBackground(UiKit.gradientBackground(bg));
+    root.setBackground(UiKit.wizardBg9(bgTex, 7));
+
+    if (iconName != null) {
+      root.addChild(UiKit.wizardIcon(iconName, 10, 10));
+      root.addChild(UiKit.hSpacer(4));
+    }
+
     Label label = root.addChild(new Label(text, MissionWizardStyles.STYLE));
-    label.setFont(UiKit.rajdhani(10));
+    label.setFont(UiKit.ibmPlexMono(11));
     label.setColor(fg);
+    label.setPreferredSize(new Vector3f(label.getPreferredSize().x, label.getPreferredSize().y, 0));
   }
 
   public Container getNode() {

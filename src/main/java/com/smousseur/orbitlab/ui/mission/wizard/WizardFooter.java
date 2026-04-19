@@ -1,54 +1,82 @@
 package com.smousseur.orbitlab.ui.mission.wizard;
 
+import com.jme3.input.event.MouseMotionEvent;
 import com.jme3.math.Vector3f;
+import com.jme3.scene.Spatial;
 import com.simsilica.lemur.*;
 import com.simsilica.lemur.component.BoxLayout;
+import com.simsilica.lemur.component.IconComponent;
+import com.simsilica.lemur.component.InsetsComponent;
+import com.simsilica.lemur.event.DefaultMouseListener;
+import com.simsilica.lemur.event.MouseEventControl;
 import com.smousseur.orbitlab.ui.UiKit;
+import com.smousseur.orbitlab.ui.mission.wizard.component.ProgressBar;
 
 public class WizardFooter {
 
   private static final float FOOTER_HEIGHT = 72f;
-  private static final float BUTTON_HEIGHT = 36f;
-  private static final float CANCEL_BTN_W = 120f;
-  private static final float PREVIOUS_BTN_W = 120f;
+  private static final float BUTTON_HEIGHT = 38f;
+  private static final float CANCEL_BTN_W = 140f;
+  private static final float PREVIOUS_BTN_W = 140f;
   private static final float NEXT_BTN_W = 140f;
   private static final float BUTTON_GAP = 12f;
+  private static final float PAD_X = 32f;
+  private static final float PAD_Y = 18f;
+  private static final float PROGRESS_W = 120f;
+  private static final float PROGRESS_H = 4f;
 
   private final Container root;
   private final Button cancelButton;
   private final Button previousButton;
   private final Button nextButton;
+  private final ProgressBar progressBar;
+  private final Label progressLabel;
+
+  private String nextBaseTex = "btn-primary";
+  private String nextHoverTex = "btn-primary-hover";
+
+  /** Largeur utile du footer (entre ses paddings horizontaux). */
+  private final float innerWidth;
 
   private Runnable onCancel = () -> {};
   private Runnable onPrevious = () -> {};
   private Runnable onNext = () -> {};
 
   public WizardFooter() {
-    root =
-        new Container(new BoxLayout(Axis.X, FillMode.None), MissionWizardStyles.STYLE);
-    root.setPreferredSize(new Vector3f(0, FOOTER_HEIGHT, 0));
-    root.setBackground(null);
+    this(0f);
+  }
 
-    cancelButton = new Button("x  Cancel", MissionWizardStyles.STYLE);
-    cancelButton.setBackground(
-        UiKit.gradientBackground(MissionWizardStyles.WIZARD_DANGER));
-    cancelButton.setFont(UiKit.rajdhani(14));
-    cancelButton.setPreferredSize(new Vector3f(CANCEL_BTN_W, BUTTON_HEIGHT, 0));
+  public WizardFooter(float preferredWidth) {
+    this.innerWidth = Math.max(0f, preferredWidth - 2 * PAD_X);
+    root = new Container(new BoxLayout(Axis.X, FillMode.None), MissionWizardStyles.STYLE);
+    root.setPreferredSize(new Vector3f(preferredWidth, FOOTER_HEIGHT, 0));
+    root.setInsetsComponent(new InsetsComponent(new Insets3f(0, 0, 20, 0)));
+
+    cancelButton = newButton("  Cancel", CANCEL_BTN_W);
+    cancelButton.setIcon(UiKit.wizardIconComponent("icon-close-red"));
+    cancelButton.setColor(MissionWizardStyles.WIZARD_DANGER);
+    attachHoverSkin(cancelButton, "btn-cancel", "btn-cancel-hover");
     cancelButton.addClickCommands(src -> onCancel.run());
 
-    previousButton = new Button("<  Previous", MissionWizardStyles.STYLE);
-    previousButton.setBackground(
-        UiKit.gradientBackground(MissionWizardStyles.WIZARD_BG_CARD));
-    previousButton.setFont(UiKit.rajdhani(14));
-    previousButton.setPreferredSize(new Vector3f(PREVIOUS_BTN_W, BUTTON_HEIGHT, 0));
+    previousButton = newButton("  Previous", PREVIOUS_BTN_W);
+    previousButton.setIcon(UiKit.wizardIconComponent("icon-chevron-left-mid"));
+    previousButton.setColor(MissionWizardStyles.WIZARD_TEXT_SECONDARY);
+    attachHoverSkin(previousButton, "btn-ghost", "btn-ghost-hover");
     previousButton.addClickCommands(src -> onPrevious.run());
 
-    nextButton = new Button("Next  >", MissionWizardStyles.STYLE);
-    nextButton.setBackground(
-        UiKit.gradientBackground(MissionWizardStyles.WIZARD_ACCENT));
-    nextButton.setFont(UiKit.rajdhani(14));
-    nextButton.setPreferredSize(new Vector3f(NEXT_BTN_W, BUTTON_HEIGHT, 0));
+    nextButton = newButton("Next  ", NEXT_BTN_W);
+    IconComponent chevron = UiKit.wizardIconComponent("icon-chevron-right-white");
+    chevron.setHAlignment(HAlignment.Right);
+    nextButton.setIcon(chevron);
+    nextButton.setColor(MissionWizardStyles.WIZARD_TEXT_PRIMARY);
+    attachHoverSkin(nextButton, () -> nextBaseTex, () -> nextHoverTex);
     nextButton.addClickCommands(src -> onNext.run());
+    applyNextSkin();
+
+    progressBar = new ProgressBar(PROGRESS_W, PROGRESS_H);
+    progressLabel = new Label("PROGRESS", MissionWizardStyles.STYLE);
+    progressLabel.setFont(UiKit.ibmPlexMono(11));
+    progressLabel.setColor(MissionWizardStyles.WIZARD_TEXT_LO);
   }
 
   public Container getNode() {
@@ -70,19 +98,24 @@ public class WizardFooter {
   public void setStep(MissionWizardStep step) {
     root.clearChildren();
 
-    // Leading spacer pushes the button cluster to the right.
+    Container progressCol = new Container(new BoxLayout(Axis.Y, FillMode.None));
+    progressCol.setBackground(null);
+    progressCol.setPreferredSize(new Vector3f(PROGRESS_W, FOOTER_HEIGHT - 2 * PAD_Y, 0));
+    progressCol.addChild(progressLabel);
+    progressCol.addChild(UiKit.vSpacer(6));
+    progressCol.addChild(progressBar.getNode());
+    root.addChild(progressCol);
+
     float clusterW = CANCEL_BTN_W + BUTTON_GAP + NEXT_BTN_W;
     if (step.index() > 0) {
       clusterW += PREVIOUS_BTN_W + BUTTON_GAP;
     }
-    float leadingW =
-        Math.max(0f, MissionWizardStyles.WIZARD_CONTENT_WIDTH - clusterW);
+    float leadingW = Math.max(0f, innerWidth - PROGRESS_W - clusterW);
     root.addChild(UiKit.hSpacer(leadingW));
 
-    // Right-aligned button cluster.
-    Container cluster =
-        root.addChild(new Container(new BoxLayout(Axis.X, FillMode.None)));
+    Container cluster = root.addChild(new Container(new BoxLayout(Axis.X, FillMode.None)));
     cluster.setBackground(null);
+    cluster.setPreferredSize(new Vector3f(clusterW, BUTTON_HEIGHT, 0));
     cluster.addChild(cancelButton);
     cluster.addChild(UiKit.hSpacer(BUTTON_GAP));
     if (step.index() > 0) {
@@ -92,13 +125,57 @@ public class WizardFooter {
     cluster.addChild(nextButton);
 
     if (step == MissionWizardStep.LAUNCHER) {
-      nextButton.setText("Create");
-      nextButton.setBackground(
-          UiKit.gradientBackground(MissionWizardStyles.WIZARD_SUCCESS));
+      nextButton.setText("  Create");
+      IconComponent check = UiKit.wizardIconComponent("icon-check-white");
+      check.setHAlignment(HAlignment.Left);
+      nextButton.setIcon(check);
+      nextBaseTex = "btn-success";
+      nextHoverTex = "btn-success";
     } else {
-      nextButton.setText("Next  >");
-      nextButton.setBackground(
-          UiKit.gradientBackground(MissionWizardStyles.WIZARD_ACCENT));
+      nextButton.setText("Next  ");
+      IconComponent chevron = UiKit.wizardIconComponent("icon-chevron-right-white");
+      chevron.setHAlignment(HAlignment.Right);
+      nextButton.setIcon(chevron);
+      nextBaseTex = "btn-primary";
+      nextHoverTex = "btn-primary-hover";
     }
+    applyNextSkin();
+
+    progressBar.setProgress((step.index() + 1f) / (float) MissionWizardStep.COUNT);
+  }
+
+  private Button newButton(String text, float width) {
+    Button btn = new Button(text, MissionWizardStyles.STYLE);
+    btn.setPreferredSize(new Vector3f(width, BUTTON_HEIGHT, 0));
+    btn.setFont(UiKit.sora(13));
+    return btn;
+  }
+
+  private void applyNextSkin() {
+    nextButton.setBackground(UiKit.wizardBg9(nextBaseTex, 8));
+  }
+
+  private void attachHoverSkin(Button btn, String baseTex, String hoverTex) {
+    attachHoverSkin(btn, () -> baseTex, () -> hoverTex);
+  }
+
+  private void attachHoverSkin(
+      Button btn,
+      java.util.function.Supplier<String> baseSupplier,
+      java.util.function.Supplier<String> hoverSupplier) {
+    btn.setBackground(UiKit.wizardBg9(baseSupplier.get(), 8));
+    MouseEventControl.addListenersToSpatial(
+        btn,
+        new DefaultMouseListener() {
+          @Override
+          public void mouseEntered(MouseMotionEvent event, Spatial target, Spatial capture) {
+            btn.setBackground(UiKit.wizardBg9(hoverSupplier.get(), 8));
+          }
+
+          @Override
+          public void mouseExited(MouseMotionEvent event, Spatial target, Spatial capture) {
+            btn.setBackground(UiKit.wizardBg9(baseSupplier.get(), 8));
+          }
+        });
   }
 }

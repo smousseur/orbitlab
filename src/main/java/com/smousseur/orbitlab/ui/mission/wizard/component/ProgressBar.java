@@ -1,10 +1,8 @@
 package com.smousseur.orbitlab.ui.mission.wizard.component;
 
-import com.jme3.math.ColorRGBA;
 import com.jme3.math.Vector3f;
 import com.simsilica.lemur.Container;
-import com.simsilica.lemur.component.QuadBackgroundComponent;
-import com.smousseur.orbitlab.ui.mission.wizard.MissionWizardStyles;
+import com.smousseur.orbitlab.ui.UiKit;
 
 public class ProgressBar {
 
@@ -19,17 +17,11 @@ public class ProgressBar {
 
     root = new Container();
     root.setPreferredSize(new Vector3f(width, height, 0));
-    root.setBackground(
-        new QuadBackgroundComponent(
-            new ColorRGBA(
-                MissionWizardStyles.WIZARD_BORDER.r,
-                MissionWizardStyles.WIZARD_BORDER.g,
-                MissionWizardStyles.WIZARD_BORDER.b,
-                0.50f)));
+    root.setBackground(UiKit.wizardFlat("progress-track"));
 
     fill = new Container();
     fill.setPreferredSize(new Vector3f(0, height, 0));
-    fill.setBackground(new QuadBackgroundComponent(MissionWizardStyles.WIZARD_ACCENT));
+    fill.setBackground(UiKit.wizardFlat("progress-fill"));
     root.attachChild(fill);
   }
 
