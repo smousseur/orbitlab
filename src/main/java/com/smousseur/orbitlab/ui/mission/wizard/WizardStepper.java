@@ -103,6 +103,7 @@ public class WizardStepper {
     number.setTextHAlignment(HAlignment.Center);
     number.setTextVAlignment(VAlignment.Center);
     number.setPreferredSize(new Vector3f(CIRCLE_SIZE, CIRCLE_SIZE, 0));
+    number.setInsets(new Insets3f(-30, 0, 0, 0));
     circleRow.addChild(circle);
     circleRow.addChild(UiKit.hSpacer(pad));
 

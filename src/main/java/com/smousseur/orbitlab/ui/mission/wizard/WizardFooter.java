@@ -16,8 +16,8 @@ public class WizardFooter {
 
   private static final float FOOTER_HEIGHT = 72f;
   private static final float BUTTON_HEIGHT = 38f;
-  private static final float CANCEL_BTN_W = 120f;
-  private static final float PREVIOUS_BTN_W = 130f;
+  private static final float CANCEL_BTN_W = 140f;
+  private static final float PREVIOUS_BTN_W = 140f;
   private static final float NEXT_BTN_W = 140f;
   private static final float BUTTON_GAP = 12f;
   private static final float PAD_X = 32f;
