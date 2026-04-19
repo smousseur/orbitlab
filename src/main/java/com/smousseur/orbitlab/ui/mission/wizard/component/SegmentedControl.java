@@ -12,19 +12,16 @@ public class SegmentedControl {
   private int selectedIndex = -1;
 
   public SegmentedControl(String... labels) {
-    root =
-        new Container(
-            new BoxLayout(Axis.X, FillMode.None), MissionWizardStyles.STYLE);
-    root.setBackground(null);
+    root = new Container(new BoxLayout(Axis.X, FillMode.None), MissionWizardStyles.STYLE);
+    root.setBackground(UiKit.wizardBg9("toggle-group", 8));
     buttons = new Button[labels.length];
 
     for (int i = 0; i < labels.length; i++) {
       final int idx = i;
       Button btn = new Button(labels[i], MissionWizardStyles.STYLE);
-      btn.setFont(UiKit.rajdhani(14));
-      btn.setBackground(
-          UiKit.gradientBackground(MissionWizardStyles.WIZARD_BG_CARD));
-      btn.setColor(MissionWizardStyles.WIZARD_TEXT_PRIMARY);
+      btn.setFont(UiKit.sora(13));
+      btn.setBackground(null);
+      btn.setColor(MissionWizardStyles.WIZARD_TEXT_SECONDARY);
       btn.addClickCommands(src -> select(idx));
       buttons[i] = btn;
       root.addChild(btn);
@@ -38,11 +35,13 @@ public class SegmentedControl {
   public SegmentedControl select(int index) {
     selectedIndex = index;
     for (int i = 0; i < buttons.length; i++) {
-      buttons[i].setBackground(
-          UiKit.gradientBackground(
-              i == index
-                  ? MissionWizardStyles.WIZARD_ACCENT
-                  : MissionWizardStyles.WIZARD_BG_CARD));
+      if (i == index) {
+        buttons[i].setBackground(UiKit.wizardBg9("toggle-btn-active", 6));
+        buttons[i].setColor(MissionWizardStyles.WIZARD_TEXT_PRIMARY);
+      } else {
+        buttons[i].setBackground(null);
+        buttons[i].setColor(MissionWizardStyles.WIZARD_TEXT_SECONDARY);
+      }
     }
     return this;
   }

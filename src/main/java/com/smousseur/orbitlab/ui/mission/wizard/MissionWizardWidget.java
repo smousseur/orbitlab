@@ -20,8 +20,10 @@ public class MissionWizardWidget implements AutoCloseable {
   private static final float WINDOW_WIDTH = 880f;
   private static final float WINDOW_HEIGHT = 640f;
   private static final float MIN_VIEWPORT_MARGIN = 32f;
-  private static final float OUTER_PADDING = 24f;
-  private static final float HEADER_HEIGHT = 88f;
+  private static final float OUTER_PADDING = 16f;
+  private static final float HEADER_HEIGHT = 96f;
+  private static final float HEADER_PAD_X = 32f;
+  private static final float HEADER_PAD_Y = 20f;
 
   private final ModalBackdrop backdrop;
   private final Container root;
@@ -42,44 +44,55 @@ public class MissionWizardWidget implements AutoCloseable {
 
     root = new Container(new BoxLayout(Axis.Y, FillMode.None), MissionWizardStyles.STYLE);
     root.setPreferredSize(new Vector3f(WINDOW_WIDTH, WINDOW_HEIGHT, 0));
-    root.setBackground(UiKit.gradientBackground(MissionWizardStyles.WIZARD_BG_DEEP));
+    root.setBackground(MissionWizardStyles.shellBg());
     root.setInsetsComponent(
         new InsetsComponent(
             new Insets3f(OUTER_PADDING, OUTER_PADDING, OUTER_PADDING, OUTER_PADDING)));
 
-    // Header (deep bg)
+    // Header strip (deep flat bg)
     Container header = root.addChild(new Container(new BoxLayout(Axis.Y, FillMode.None)));
-    header.setBackground(UiKit.gradientBackground(MissionWizardStyles.WIZARD_BG_DEEP));
+    header.setBackground(MissionWizardStyles.headerBg());
     header.setPreferredSize(new Vector3f(0, HEADER_HEIGHT, 0));
+    header.setInsetsComponent(
+        new InsetsComponent(new Insets3f(HEADER_PAD_Y, HEADER_PAD_X, HEADER_PAD_Y, HEADER_PAD_X)));
 
     Container brandRow = header.addChild(new Container(new BoxLayout(Axis.X, FillMode.None)));
     brandRow.setBackground(null);
 
-    brandRow.addChild(
-        UiKit.iconPlaceholder("interface/wizard/brand-globe.png", 24, 24));
+    brandRow.addChild(UiKit.wizardIcon("icon-brand-globe", 18, 18));
+    brandRow.addChild(UiKit.hSpacer(8));
 
-    Label brandName = brandRow.addChild(new Label(" ORBITLAB", MissionWizardStyles.STYLE));
-    brandName.setFont(UiKit.rajdhani(18));
-    brandName.setColor(MissionWizardStyles.WIZARD_TEXT_PRIMARY);
+    Label brandName = brandRow.addChild(new Label("ORBITLAB", MissionWizardStyles.STYLE));
+    brandName.setFont(UiKit.orbitron(13));
+    brandName.setColor(MissionWizardStyles.WIZARD_ACCENT_BRIGHT);
+
+    Label brandSep = brandRow.addChild(new Label("  /  ", MissionWizardStyles.STYLE));
+    brandSep.setFont(UiKit.ibmPlexMono(11));
+    brandSep.setColor(MissionWizardStyles.WIZARD_TEXT_LO);
+
+    Label brandSub =
+        brandRow.addChild(new Label("MISSION WIZARD v2.1", MissionWizardStyles.STYLE));
+    brandSub.setFont(UiKit.ibmPlexMono(11));
+    brandSub.setColor(MissionWizardStyles.WIZARD_TEXT_LO);
+
+    header.addChild(UiKit.vSpacer(14));
 
     stepper = new WizardStepper();
     header.addChild(stepper.getNode());
 
-    // Content (slightly lighter bg)
+    // Content pane
     content = root.addChild(new Container(new BoxLayout(Axis.Y, FillMode.None)));
-    content.setBackground(
-        UiKit.gradientBackground(MissionWizardStyles.WIZARD_BG_CONTENT));
+    content.setBackground(null);
     content.setPreferredSize(
         new Vector3f(
             MissionWizardStyles.WIZARD_CONTENT_WIDTH,
             MissionWizardStyles.WIZARD_CONTENT_HEIGHT,
             0));
+    content.setInsetsComponent(new InsetsComponent(new Insets3f(28, 32, 16, 32)));
 
-    // Footer (deep bg)
+    // Footer strip
     footer = new WizardFooter();
-    footer
-        .getNode()
-        .setBackground(UiKit.gradientBackground(MissionWizardStyles.WIZARD_BG_DEEP));
+    footer.getNode().setBackground(MissionWizardStyles.footerBg());
     root.addChild(footer.getNode());
 
     stepMissionType = new StepMissionType();

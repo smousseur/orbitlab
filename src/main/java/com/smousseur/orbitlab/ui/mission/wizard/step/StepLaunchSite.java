@@ -28,13 +28,13 @@ public class StepLaunchSite {
             0));
 
     Label title = root.addChild(new Label("LAUNCH SITE", MissionWizardStyles.STYLE));
-    title.setFont(UiKit.rajdhani(20));
+    title.setFont(UiKit.orbitron(13));
     title.setColor(MissionWizardStyles.WIZARD_TEXT_PRIMARY);
 
     root.addChild(UiKit.vSpacer(ROW_GAP));
 
     Label subtitle = root.addChild(new Label("// cosmodrome selection", MissionWizardStyles.STYLE));
-    subtitle.setFont(UiKit.mono(12));
+    subtitle.setFont(UiKit.ibmPlexMono(11));
     subtitle.setColor(MissionWizardStyles.WIZARD_TEXT_SECONDARY);
 
     root.addChild(UiKit.vSpacer(ROW_GAP));
@@ -49,8 +49,7 @@ public class StepLaunchSite {
             "Kourou (CSG) \u2014 French Guiana");
     root.addChild(
         widthBoundedRow(
-            new LabeledField(
-                    "COSMODROME", cosmodrome.getNode(), null, "interface/wizard/field-building.png")
+            new LabeledField("COSMODROME", cosmodrome.getNode(), null, "lbl-factory")
                 .getNode(),
             COSMODROME_W));
 
@@ -64,7 +63,7 @@ public class StepLaunchSite {
             "LATITUDE",
             "5.236",
             "decimal degrees \u00b7 N positive",
-            "interface/wizard/field-globe-lat.png"));
+            "lbl-globe"));
     row2.addChild(UiKit.hSpacer(COL_GAP));
     row2.addChild(
         fieldCol(
@@ -72,11 +71,10 @@ public class StepLaunchSite {
             "LONGITUDE",
             "-52.769",
             "decimal degrees \u00b7 E positive",
-            "interface/wizard/field-globe-lon.png"));
+            "lbl-globe"));
     row2.addChild(UiKit.hSpacer(COL_GAP));
     row2.addChild(
-        fieldCol(
-            COL3_W, "GROUND ALTITUDE", "14", "meters MSL", "interface/wizard/field-mountain.png"));
+        fieldCol(COL3_W, "GROUND ALTITUDE", "14", "meters MSL", "lbl-mountain"));
     float trailing = MissionWizardStyles.WIZARD_CONTENT_WIDTH - 3 * COL3_W - 2 * COL_GAP;
     if (trailing > 0f) {
       row2.addChild(UiKit.hSpacer(trailing));
@@ -87,14 +85,14 @@ public class StepLaunchSite {
     return root;
   }
 
-  private Container fieldCol(float w, String label, String value, String helper, String iconPath) {
+  private Container fieldCol(float w, String label, String value, String helper, String iconName) {
     Container col = new Container(new BoxLayout(Axis.Y, FillMode.None));
     col.setBackground(null);
     col.setPreferredSize(new Vector3f(w, 0, 0));
     TextField f = new TextField(value, MissionWizardStyles.STYLE);
-    f.setFont(UiKit.mono(14));
+    f.setFont(UiKit.ibmPlexMono(11));
     f.setPreferredSize(new Vector3f(w, 0, 0));
-    col.addChild(new LabeledField(label, f, helper, iconPath).getNode());
+    col.addChild(new LabeledField(label, f, helper, iconName).getNode());
     return col;
   }
 

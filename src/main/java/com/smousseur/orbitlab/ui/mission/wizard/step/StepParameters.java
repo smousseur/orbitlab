@@ -26,14 +26,14 @@ public class StepParameters {
             0));
 
     Label title = root.addChild(new Label("PARAMETERS \u2014 LEO", MissionWizardStyles.STYLE));
-    title.setFont(UiKit.rajdhani(20));
+    title.setFont(UiKit.orbitron(13));
     title.setColor(MissionWizardStyles.WIZARD_TEXT_PRIMARY);
 
     root.addChild(UiKit.vSpacer(ROW_GAP));
 
     Label subtitle =
         root.addChild(new Label("// target orbit configuration", MissionWizardStyles.STYLE));
-    subtitle.setFont(UiKit.mono(12));
+    subtitle.setFont(UiKit.ibmPlexMono(11));
     subtitle.setColor(MissionWizardStyles.WIZARD_TEXT_SECONDARY);
 
     root.addChild(UiKit.vSpacer(ROW_GAP));
@@ -43,7 +43,7 @@ public class StepParameters {
     nameField.setPreferredSize(new Vector3f(NAME_FIELD_W, 0, 0));
     root.addChild(
         widthBoundedRow(
-            new LabeledField("MISSION NAME", nameField, null, "interface/wizard/field-pencil.png")
+            new LabeledField("MISSION NAME", nameField, null, "lbl-edit")
                 .getNode(),
             NAME_FIELD_W));
 
@@ -61,10 +61,10 @@ public class StepParameters {
                 "TARGET ALTITUDE",
                 altSlider,
                 "160 km                         2 000 km",
-                "interface/wizard/field-altitude.png")
+                "lbl-ruler")
             .getNode());
     Label altValue = altCol.addChild(new Label("550 km", MissionWizardStyles.STYLE));
-    altValue.setFont(UiKit.rajdhani(28));
+    altValue.setFont(UiKit.orbitron(13));
     altValue.setColor(MissionWizardStyles.WIZARD_ACCENT);
     root.addChild(widthBoundedRow(altCol, SLIDER_W));
 
@@ -79,7 +79,7 @@ public class StepParameters {
                     "LAUNCH DATE",
                     dateField,
                     "UTC \u00b7 Orekit epoch",
-                    "interface/wizard/field-clock.png")
+                    "lbl-clock")
                 .getNode(),
             DATE_FIELD_W));
   }
