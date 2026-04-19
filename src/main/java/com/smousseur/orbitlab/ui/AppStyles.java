@@ -140,6 +140,7 @@ public final class AppStyles {
    * @param assetManager the JME3 asset manager forwarded to each style initializer
    */
   public static void init(AssetManager assetManager) {
+    UiKit.init(assetManager);
     TimelineStyles.init(assetManager);
     TelemetryStyles.init(assetManager);
     MissionPanelStyles.init(assetManager);

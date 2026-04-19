@@ -3,6 +3,7 @@ package com.smousseur.orbitlab.ui.mission.wizard.step;
 import com.jme3.math.Vector3f;
 import com.simsilica.lemur.*;
 import com.simsilica.lemur.component.BoxLayout;
+import com.smousseur.orbitlab.ui.UiKit;
 import com.smousseur.orbitlab.ui.mission.wizard.MissionWizardStyles;
 import com.smousseur.orbitlab.ui.mission.wizard.component.Badge;
 import com.smousseur.orbitlab.ui.mission.wizard.component.SelectableCard;
@@ -28,17 +29,17 @@ public class StepMissionType {
             0));
 
     Label title = root.addChild(new Label("MISSION TYPE", MissionWizardStyles.STYLE));
-    title.setFont(MissionWizardStyles.rajdhani(20));
+    title.setFont(UiKit.rajdhani(20));
     title.setColor(MissionWizardStyles.WIZARD_TEXT_PRIMARY);
 
-    root.addChild(MissionWizardStyles.vSpacer(ROW_GAP));
+    root.addChild(UiKit.vSpacer(ROW_GAP));
 
     Label subtitle =
         root.addChild(new Label("// select the target orbit", MissionWizardStyles.STYLE));
-    subtitle.setFont(MissionWizardStyles.mono(12));
+    subtitle.setFont(UiKit.mono(12));
     subtitle.setColor(MissionWizardStyles.WIZARD_TEXT_SECONDARY);
 
-    root.addChild(MissionWizardStyles.vSpacer(ROW_GAP));
+    root.addChild(UiKit.vSpacer(ROW_GAP));
 
     Container row = root.addChild(new Container(new BoxLayout(Axis.X, FillMode.None)));
     row.setBackground(null);
@@ -55,7 +56,7 @@ public class StepMissionType {
                 "interface/wizard/mission-leo.png",
                 ICON_SIZE)
             .getNode());
-    row.addChild(MissionWizardStyles.hSpacer(CARD_GAP));
+    row.addChild(UiKit.hSpacer(CARD_GAP));
     row.addChild(
         new SelectableCard(
                 CARD_W,
@@ -69,12 +70,12 @@ public class StepMissionType {
                 ICON_SIZE)
             .getNode());
     // Reserve the 3rd column (no mission yet) so the grid stays on a 3-column layout.
-    row.addChild(MissionWizardStyles.hSpacer(CARD_GAP));
-    row.addChild(MissionWizardStyles.spacer(CARD_W, CARD_H));
+    row.addChild(UiKit.hSpacer(CARD_GAP));
+    row.addChild(UiKit.spacer(CARD_W, CARD_H));
     // Trailing spacer fills remaining row width so cards stay at their fixed size.
     float trailing = MissionWizardStyles.WIZARD_CONTENT_WIDTH - 3 * CARD_W - 2 * CARD_GAP;
     if (trailing > 0f) {
-      row.addChild(MissionWizardStyles.hSpacer(trailing));
+      row.addChild(UiKit.hSpacer(trailing));
     }
   }
 

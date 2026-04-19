@@ -3,6 +3,7 @@ package com.smousseur.orbitlab.ui.mission.wizard.component;
 import com.jme3.math.ColorRGBA;
 import com.simsilica.lemur.Container;
 import com.simsilica.lemur.Label;
+import com.smousseur.orbitlab.ui.UiKit;
 import com.smousseur.orbitlab.ui.mission.wizard.MissionWizardStyles;
 
 public class Badge {
@@ -45,9 +46,9 @@ public class Badge {
       }
     }
 
-    root.setBackground(MissionWizardStyles.createGradient(bg));
+    root.setBackground(UiKit.gradientBackground(bg));
     Label label = root.addChild(new Label(text, MissionWizardStyles.STYLE));
-    label.setFont(MissionWizardStyles.rajdhani(10));
+    label.setFont(UiKit.rajdhani(10));
     label.setColor(fg);
   }
 

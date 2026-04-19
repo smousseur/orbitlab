@@ -22,6 +22,7 @@ import com.smousseur.orbitlab.simulation.mission.MissionContext;
 import com.smousseur.orbitlab.simulation.mission.MissionEntry;
 import com.smousseur.orbitlab.simulation.mission.MissionStatus;
 import com.smousseur.orbitlab.ui.AppStyles;
+import com.smousseur.orbitlab.ui.UiKit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -76,7 +77,7 @@ public class MissionPanelWidget implements AutoCloseable {
 
     // Toggle button — always visible, accent gradient
     Button toggleButton = root.addChild(new Button("Missions", MissionPanelStyles.STYLE));
-    toggleButton.setBackground(MissionPanelStyles.createGradient(AppStyles.ICE_ACCENT));
+    toggleButton.setBackground(UiKit.gradientBackground(AppStyles.ICE_ACCENT));
     toggleButton.addClickCommands(source -> togglePanel());
 
     // Main panel — hidden by default
@@ -94,7 +95,7 @@ public class MissionPanelWidget implements AutoCloseable {
     titleLabel.setColor(AppStyles.ICE_ACCENT);
     titleLabel.setPreferredSize(new Vector3f(NAME_COL_WIDTH, 0, 0));
     Button createButton = headerRow.addChild(new Button("+ Create", MissionPanelStyles.STYLE));
-    createButton.setBackground(MissionPanelStyles.createGradient(AppStyles.ICE_ACCENT));
+    createButton.setBackground(UiKit.gradientBackground(AppStyles.ICE_ACCENT));
     createButton.addClickCommands(source -> onCreate());
 
     // Mission list — no styled background to avoid nested borders
@@ -197,8 +198,8 @@ public class MissionPanelWidget implements AutoCloseable {
           listContainer.addChild(new Container(new BoxLayout(Axis.X, FillMode.None)));
       row.setBackground(
           isSelected
-              ? MissionPanelStyles.createGradient(AppStyles.ICE_ROW_SELECTED)
-              : MissionPanelStyles.createGradient(new ColorRGBA(0, 0, 0, 0)));
+              ? UiKit.gradientBackground(AppStyles.ICE_ROW_SELECTED)
+              : UiKit.gradientBackground(new ColorRGBA(0, 0, 0, 0)));
       row.setPreferredSize(new Vector3f(PANEL_WIDTH, 24, 0));
       row.setInsetsComponent(new InsetsComponent(new Insets3f(2, 6, 2, 6)));
 
@@ -285,7 +286,7 @@ public class MissionPanelWidget implements AutoCloseable {
 
   private void addActionButton(String label, ColorRGBA bgColor, Runnable action) {
     Button button = actionBar.addChild(new Button(label, MissionPanelStyles.STYLE));
-    button.setBackground(MissionPanelStyles.createGradient(bgColor));
+    button.setBackground(UiKit.gradientBackground(bgColor));
     button.setColor(AppStyles.ICE_TEXT_PRIMARY);
     button.addClickCommands(source -> action.run());
   }

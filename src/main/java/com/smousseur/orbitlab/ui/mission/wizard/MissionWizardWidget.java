@@ -7,6 +7,7 @@ import com.simsilica.lemur.*;
 import com.simsilica.lemur.component.BoxLayout;
 import com.simsilica.lemur.component.InsetsComponent;
 import com.smousseur.orbitlab.app.ApplicationContext;
+import com.smousseur.orbitlab.ui.UiKit;
 import com.smousseur.orbitlab.ui.mission.wizard.step.*;
 import java.util.EnumMap;
 import java.util.Map;
@@ -41,24 +42,24 @@ public class MissionWizardWidget implements AutoCloseable {
 
     root = new Container(new BoxLayout(Axis.Y, FillMode.None), MissionWizardStyles.STYLE);
     root.setPreferredSize(new Vector3f(WINDOW_WIDTH, WINDOW_HEIGHT, 0));
-    root.setBackground(MissionWizardStyles.createGradient(MissionWizardStyles.WIZARD_BG_DEEP));
+    root.setBackground(UiKit.gradientBackground(MissionWizardStyles.WIZARD_BG_DEEP));
     root.setInsetsComponent(
         new InsetsComponent(
             new Insets3f(OUTER_PADDING, OUTER_PADDING, OUTER_PADDING, OUTER_PADDING)));
 
     // Header (deep bg)
     Container header = root.addChild(new Container(new BoxLayout(Axis.Y, FillMode.None)));
-    header.setBackground(MissionWizardStyles.createGradient(MissionWizardStyles.WIZARD_BG_DEEP));
+    header.setBackground(UiKit.gradientBackground(MissionWizardStyles.WIZARD_BG_DEEP));
     header.setPreferredSize(new Vector3f(0, HEADER_HEIGHT, 0));
 
     Container brandRow = header.addChild(new Container(new BoxLayout(Axis.X, FillMode.None)));
     brandRow.setBackground(null);
 
     brandRow.addChild(
-        MissionWizardStyles.iconPlaceholder("interface/wizard/brand-globe.png", 24, 24));
+        UiKit.iconPlaceholder("interface/wizard/brand-globe.png", 24, 24));
 
     Label brandName = brandRow.addChild(new Label(" ORBITLAB", MissionWizardStyles.STYLE));
-    brandName.setFont(MissionWizardStyles.rajdhani(18));
+    brandName.setFont(UiKit.rajdhani(18));
     brandName.setColor(MissionWizardStyles.WIZARD_TEXT_PRIMARY);
 
     stepper = new WizardStepper();
@@ -67,7 +68,7 @@ public class MissionWizardWidget implements AutoCloseable {
     // Content (slightly lighter bg)
     content = root.addChild(new Container(new BoxLayout(Axis.Y, FillMode.None)));
     content.setBackground(
-        MissionWizardStyles.createGradient(MissionWizardStyles.WIZARD_BG_CONTENT));
+        UiKit.gradientBackground(MissionWizardStyles.WIZARD_BG_CONTENT));
     content.setPreferredSize(
         new Vector3f(
             MissionWizardStyles.WIZARD_CONTENT_WIDTH,
@@ -78,7 +79,7 @@ public class MissionWizardWidget implements AutoCloseable {
     footer = new WizardFooter();
     footer
         .getNode()
-        .setBackground(MissionWizardStyles.createGradient(MissionWizardStyles.WIZARD_BG_DEEP));
+        .setBackground(UiKit.gradientBackground(MissionWizardStyles.WIZARD_BG_DEEP));
     root.addChild(footer.getNode());
 
     stepMissionType = new StepMissionType();

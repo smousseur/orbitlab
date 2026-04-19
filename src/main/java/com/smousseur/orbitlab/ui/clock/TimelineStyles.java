@@ -11,6 +11,7 @@ import com.simsilica.lemur.component.TbtQuadBackgroundComponent;
 import com.simsilica.lemur.style.Attributes;
 import com.simsilica.lemur.style.Styles;
 import com.smousseur.orbitlab.ui.AppStyles;
+import com.smousseur.orbitlab.ui.UiKit;
 import java.util.HashMap;
 import java.util.Map;
 import org.apache.logging.log4j.LogManager;
@@ -32,8 +33,6 @@ public final class TimelineStyles {
   public static final String STYLE = "timeline";
 
   private static final String TEX_PREFIX = "interface/timeline/";
-  private static final String FONT_RAJDHANI = "fonts/rajdhani-semibold-%d.fnt";
-  private static final String FONT_MONO = "fonts/share-tech-mono-%d.fnt";
 
   /** Rounded corner inset (in pixels) for the capsule 9-slice texture (54×54, R=26). */
   public static final int CAPSULE_INSET = 26;
@@ -51,7 +50,7 @@ public final class TimelineStyles {
    * @return the bitmap font (never {@code null})
    */
   public static BitmapFont mono(int size) {
-    return AppStyles.loadFontSafe(assetManager, String.format(FONT_MONO, size));
+    return UiKit.mono(size);
   }
 
   /**
@@ -62,7 +61,7 @@ public final class TimelineStyles {
    * @return the bitmap font (never {@code null})
    */
   public static BitmapFont rajdhani(int size) {
-    return AppStyles.loadFontSafe(assetManager, String.format(FONT_RAJDHANI, size));
+    return UiKit.rajdhani(size);
   }
 
   /**

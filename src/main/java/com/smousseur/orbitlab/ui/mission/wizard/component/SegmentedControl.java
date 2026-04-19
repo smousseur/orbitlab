@@ -2,6 +2,7 @@ package com.smousseur.orbitlab.ui.mission.wizard.component;
 
 import com.simsilica.lemur.*;
 import com.simsilica.lemur.component.BoxLayout;
+import com.smousseur.orbitlab.ui.UiKit;
 import com.smousseur.orbitlab.ui.mission.wizard.MissionWizardStyles;
 
 public class SegmentedControl {
@@ -20,9 +21,9 @@ public class SegmentedControl {
     for (int i = 0; i < labels.length; i++) {
       final int idx = i;
       Button btn = new Button(labels[i], MissionWizardStyles.STYLE);
-      btn.setFont(MissionWizardStyles.rajdhani(14));
+      btn.setFont(UiKit.rajdhani(14));
       btn.setBackground(
-          MissionWizardStyles.createGradient(MissionWizardStyles.WIZARD_BG_CARD));
+          UiKit.gradientBackground(MissionWizardStyles.WIZARD_BG_CARD));
       btn.setColor(MissionWizardStyles.WIZARD_TEXT_PRIMARY);
       btn.addClickCommands(src -> select(idx));
       buttons[i] = btn;
@@ -38,7 +39,7 @@ public class SegmentedControl {
     selectedIndex = index;
     for (int i = 0; i < buttons.length; i++) {
       buttons[i].setBackground(
-          MissionWizardStyles.createGradient(
+          UiKit.gradientBackground(
               i == index
                   ? MissionWizardStyles.WIZARD_ACCENT
                   : MissionWizardStyles.WIZARD_BG_CARD));

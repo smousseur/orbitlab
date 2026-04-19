@@ -7,6 +7,7 @@ import com.simsilica.lemur.*;
 import com.simsilica.lemur.component.BoxLayout;
 import com.simsilica.lemur.event.DefaultMouseListener;
 import com.simsilica.lemur.event.MouseEventControl;
+import com.smousseur.orbitlab.ui.UiKit;
 import com.smousseur.orbitlab.ui.mission.wizard.MissionWizardStyles;
 import com.smousseur.orbitlab.ui.mission.wizard.component.PopupList;
 import com.smousseur.orbitlab.ui.mission.wizard.component.SelectableCard;
@@ -35,17 +36,17 @@ public class StepLauncher {
             0));
 
     Label title = root.addChild(new Label("LAUNCHER & PAYLOAD", MissionWizardStyles.STYLE));
-    title.setFont(MissionWizardStyles.rajdhani(20));
+    title.setFont(UiKit.rajdhani(20));
     title.setColor(MissionWizardStyles.WIZARD_TEXT_PRIMARY);
 
-    root.addChild(MissionWizardStyles.vSpacer(ROW_GAP));
+    root.addChild(UiKit.vSpacer(ROW_GAP));
 
     Label subtitle =
         root.addChild(new Label("// vehicle configuration", MissionWizardStyles.STYLE));
-    subtitle.setFont(MissionWizardStyles.mono(12));
+    subtitle.setFont(UiKit.mono(12));
     subtitle.setColor(MissionWizardStyles.WIZARD_TEXT_SECONDARY);
 
-    root.addChild(MissionWizardStyles.vSpacer(ROW_GAP));
+    root.addChild(UiKit.vSpacer(ROW_GAP));
 
     SelectableCard falcon =
         new SelectableCard(
@@ -73,11 +74,11 @@ public class StepLauncher {
     Container vRow = root.addChild(new Container(new BoxLayout(Axis.X, FillMode.None)));
     vRow.setBackground(null);
     vRow.addChild(falcon.getNode());
-    vRow.addChild(MissionWizardStyles.hSpacer(COL_GAP));
+    vRow.addChild(UiKit.hSpacer(COL_GAP));
     vRow.addChild(ariane.getNode());
     float vRowTrailing = MissionWizardStyles.WIZARD_CONTENT_WIDTH - 2 * CARD_W - COL_GAP;
     if (vRowTrailing > 0f) {
-      vRow.addChild(MissionWizardStyles.hSpacer(vRowTrailing));
+      vRow.addChild(UiKit.hSpacer(vRowTrailing));
     }
 
     // Mutual exclusion: clicking one deselects the other.
@@ -98,20 +99,20 @@ public class StepLauncher {
           }
         });
 
-    root.addChild(MissionWizardStyles.vSpacer(ROW_GAP));
+    root.addChild(UiKit.vSpacer(ROW_GAP));
 
     // Payload label
     Container payloadLabelRow = root.addChild(new Container(new BoxLayout(Axis.X, FillMode.None)));
     payloadLabelRow.setBackground(null);
     payloadLabelRow.addChild(
-        MissionWizardStyles.iconPlaceholder("interface/wizard/payload.png", 14, 14));
+        UiKit.iconPlaceholder("interface/wizard/payload.png", 14, 14));
     Label payloadSpacer = payloadLabelRow.addChild(new Label(" ", MissionWizardStyles.STYLE));
     payloadSpacer.setBackground(null);
     Label payloadLabel = payloadLabelRow.addChild(new Label("PAYLOAD", MissionWizardStyles.STYLE));
-    payloadLabel.setFont(MissionWizardStyles.rajdhani(12));
+    payloadLabel.setFont(UiKit.rajdhani(12));
     payloadLabel.setColor(MissionWizardStyles.WIZARD_TEXT_SECONDARY);
 
-    root.addChild(MissionWizardStyles.vSpacer(ROW_GAP));
+    root.addChild(UiKit.vSpacer(ROW_GAP));
 
     Container payloadRow = root.addChild(new Container(new BoxLayout(Axis.X, FillMode.None)));
     payloadRow.setBackground(null);
@@ -126,16 +127,16 @@ public class StepLauncher {
                 "Cargo module"),
             "Communication satellite");
     payloadRow.addChild(payloadType.getNode());
-    payloadRow.addChild(MissionWizardStyles.hSpacer(COL_GAP));
+    payloadRow.addChild(UiKit.hSpacer(COL_GAP));
 
     TextField massField = new TextField("15000", MissionWizardStyles.STYLE);
-    massField.setFont(MissionWizardStyles.mono(14));
+    massField.setFont(UiKit.mono(14));
     massField.setPreferredSize(new Vector3f(MASS_FIELD_W, 0, 0));
     payloadRow.addChild(massField);
-    payloadRow.addChild(MissionWizardStyles.hSpacer(COL_GAP));
+    payloadRow.addChild(UiKit.hSpacer(COL_GAP));
 
     Label kgLabel = payloadRow.addChild(new Label("kg", MissionWizardStyles.STYLE));
-    kgLabel.setFont(MissionWizardStyles.mono(14));
+    kgLabel.setFont(UiKit.mono(14));
     kgLabel.setColor(MissionWizardStyles.WIZARD_TEXT_SECONDARY);
     kgLabel.setPreferredSize(new Vector3f(KG_LABEL_W, 0, 0));
 
@@ -146,7 +147,7 @@ public class StepLauncher {
             - KG_LABEL_W
             - 2 * COL_GAP;
     if (payloadTrailing > 0f) {
-      payloadRow.addChild(MissionWizardStyles.hSpacer(payloadTrailing));
+      payloadRow.addChild(UiKit.hSpacer(payloadTrailing));
     }
   }
 
