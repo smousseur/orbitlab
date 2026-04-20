@@ -3,6 +3,7 @@ package com.smousseur.orbitlab.ui.mission.wizard.step;
 import com.jme3.math.Vector3f;
 import com.simsilica.lemur.*;
 import com.simsilica.lemur.component.BoxLayout;
+import com.simsilica.lemur.core.GuiControl;
 import com.smousseur.orbitlab.ui.UiKit;
 import com.smousseur.orbitlab.ui.mission.wizard.MissionWizardStyles;
 
@@ -147,6 +148,7 @@ public class StepParameters {
     thumb.setBackground(UiKit.wizardFlat("slider-thumb"));
     thumb.setInsets(new Insets3f(0, 0, 0, 0));
     thumb.setPreferredSize(new Vector3f(THUMB_SIZE, THUMB_SIZE, 0));
+    thumb.getControl(GuiControl.class).setSize(new Vector3f(THUMB_SIZE, THUMB_SIZE, 0));
 
     hideButton(slider.getDecrementButton());
     hideButton(slider.getIncrementButton());

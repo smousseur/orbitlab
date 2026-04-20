@@ -156,5 +156,12 @@ public final class MissionWizardStyles {
 
     Attributes s = styles.getSelector("slider", STYLE);
     s.set("background", UiKit.wizardFlat("slider-track"));
+
+    Attributes sThumb = styles.getSelector("slider.thumb.button", STYLE);
+    sThumb.set("text", "");
+    sThumb.set("background", UiKit.wizardFlat("slider-thumb"));
+    sThumb.set("color", WIZARD_TEXT_PRIMARY);
+    sThumb.set("font", UiKit.sora(1));
+    sThumb.set("insets", new Insets3f(0, 0, 0, 0));
   }
 }
