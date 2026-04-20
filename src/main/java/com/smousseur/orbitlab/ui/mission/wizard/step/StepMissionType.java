@@ -10,8 +10,8 @@ import com.smousseur.orbitlab.ui.mission.wizard.component.SelectableCard;
 
 public class StepMissionType {
 
-  private static final float CARD_W = 264f;
-  private static final float CARD_H = 152f;
+  private static final float CARD_W = 256f;
+  private static final float CARD_H = 176f;
   private static final float ICON_SIZE = 48f;
   private static final float CARD_GAP = 16f;
   private static final float ROW_GAP = 12f;

@@ -3,16 +3,21 @@ package com.smousseur.orbitlab.ui.mission.wizard.step;
 import com.jme3.math.Vector3f;
 import com.simsilica.lemur.*;
 import com.simsilica.lemur.component.BoxLayout;
+import com.simsilica.lemur.core.GuiControl;
 import com.smousseur.orbitlab.ui.UiKit;
 import com.smousseur.orbitlab.ui.mission.wizard.MissionWizardStyles;
-import com.smousseur.orbitlab.ui.mission.wizard.component.LabeledField;
 
 public class StepParameters {
 
-  private static final float NAME_FIELD_W = 320f;
-  private static final float SLIDER_W = 520f;
-  private static final float DATE_FIELD_W = 320f;
-  private static final float ROW_GAP = 12f;
+  private static final float FIELD_W = 752f;
+  private static final float FIELD_H = 36f;
+  private static final float ROW_GAP = 16f;
+  private static final float LABEL_ICON_SIZE = 14f;
+  private static final float LABEL_GAP = 6f;
+  private static final float LABEL_FIELD_GAP = 6f;
+  private static final float SLIDER_HEIGHT = 18f;
+  private static final float SLIDER_TRACK_H = 4f;
+  private static final float THUMB_SIZE = 16f;
 
   private final Container root;
 
@@ -29,7 +34,7 @@ public class StepParameters {
     title.setFont(UiKit.orbitron(13));
     title.setColor(MissionWizardStyles.WIZARD_TEXT_PRIMARY);
 
-    root.addChild(UiKit.vSpacer(ROW_GAP));
+    root.addChild(UiKit.vSpacer(6));
 
     Label subtitle =
         root.addChild(new Label("// target orbit configuration", MissionWizardStyles.STYLE));
@@ -38,71 +43,123 @@ public class StepParameters {
 
     root.addChild(UiKit.vSpacer(ROW_GAP));
 
-    // Mission Name
-    TextField nameField = monoField("ORBITLAB-LEO-001");
-    nameField.setPreferredSize(new Vector3f(NAME_FIELD_W, 0, 0));
-    root.addChild(
-        widthBoundedRow(
-            new LabeledField("MISSION NAME", nameField, null, "lbl-edit")
-                .getNode(),
-            NAME_FIELD_W));
+    // --- Mission Name ---
+    root.addChild(fieldLabelRow("MISSION NAME", "lbl-edit"));
+    root.addChild(UiKit.vSpacer(LABEL_FIELD_GAP));
+    root.addChild(newInputField("ORBITLAB-LEO-001"));
 
     root.addChild(UiKit.vSpacer(ROW_GAP));
 
-    // Target Altitude (slider + big value)
-    Slider altSlider =
-        new Slider(new DefaultRangedValueModel(160, 2000, 550), Axis.X, MissionWizardStyles.STYLE);
-    altSlider.setPreferredSize(new Vector3f(SLIDER_W, 0, 0));
-
-    Container altCol = new Container(new BoxLayout(Axis.Y, FillMode.None));
-    altCol.setBackground(null);
-    altCol.addChild(
-        new LabeledField(
-                "TARGET ALTITUDE",
-                altSlider,
-                "160 km                         2 000 km",
-                "lbl-ruler")
-            .getNode());
-    Label altValue = altCol.addChild(new Label("550 km", MissionWizardStyles.STYLE));
-    altValue.setFont(UiKit.orbitron(13));
-    altValue.setColor(MissionWizardStyles.WIZARD_ACCENT);
-    root.addChild(widthBoundedRow(altCol, SLIDER_W));
+    // --- Target Altitude ---
+    root.addChild(altitudeHeaderRow("TARGET ALTITUDE", "lbl-ruler", "550 km"));
+    root.addChild(UiKit.vSpacer(LABEL_FIELD_GAP));
+    root.addChild(buildSlider(160, 2000, 550));
+    root.addChild(UiKit.vSpacer(LABEL_FIELD_GAP));
+    root.addChild(rangeBoundsRow("160 km", "2 000 km"));
 
     root.addChild(UiKit.vSpacer(ROW_GAP));
 
-    // Launch Date
-    TextField dateField = monoField("2026-06-15T06:00:00Z");
-    dateField.setPreferredSize(new Vector3f(DATE_FIELD_W, 0, 0));
-    root.addChild(
-        widthBoundedRow(
-            new LabeledField(
-                    "LAUNCH DATE",
-                    dateField,
-                    "UTC \u00b7 Orekit epoch",
-                    "lbl-clock")
-                .getNode(),
-            DATE_FIELD_W));
+    // --- Launch Date ---
+    root.addChild(fieldLabelRow("LAUNCH DATE", "lbl-clock"));
+    root.addChild(UiKit.vSpacer(LABEL_FIELD_GAP));
+    root.addChild(newInputField("2026-06-15T06:00:00Z"));
+    root.addChild(UiKit.vSpacer(LABEL_FIELD_GAP));
+    Label helper =
+        root.addChild(new Label("UTC \u00b7 Orekit epoch", MissionWizardStyles.STYLE));
+    helper.setFont(UiKit.ibmPlexMono(11));
+    helper.setColor(MissionWizardStyles.WIZARD_TEXT_LO);
   }
 
   public Container getNode() {
     return root;
   }
 
-  private TextField monoField(String value) {
+  private Container fieldLabelRow(String text, String iconName) {
+    Container row = new Container(new BoxLayout(Axis.X, FillMode.None));
+    row.setBackground(null);
+    row.addChild(UiKit.wizardIcon(iconName, LABEL_ICON_SIZE, LABEL_ICON_SIZE));
+    row.addChild(UiKit.hSpacer(LABEL_GAP));
+    Label label = row.addChild(new Label(text, MissionWizardStyles.STYLE));
+    label.setFont(UiKit.ibmPlexMono(11));
+    label.setColor(MissionWizardStyles.WIZARD_TEXT_SECONDARY);
+    return row;
+  }
+
+  private Container altitudeHeaderRow(String text, String iconName, String valueText) {
+    Container row = new Container(new BoxLayout(Axis.X, FillMode.None));
+    row.setBackground(null);
+    row.addChild(UiKit.wizardIcon(iconName, LABEL_ICON_SIZE, LABEL_ICON_SIZE));
+    row.addChild(UiKit.hSpacer(LABEL_GAP));
+    Label label = row.addChild(new Label(text, MissionWizardStyles.STYLE));
+    label.setFont(UiKit.ibmPlexMono(11));
+    label.setColor(MissionWizardStyles.WIZARD_TEXT_SECONDARY);
+
+    Label value = new Label(valueText, MissionWizardStyles.STYLE);
+    value.setFont(UiKit.orbitron(13));
+    value.setColor(MissionWizardStyles.WIZARD_ACCENT_BRIGHT);
+
+    float used =
+        LABEL_ICON_SIZE + LABEL_GAP + label.getPreferredSize().x + value.getPreferredSize().x;
+    float trailing = Math.max(0f, FIELD_W - used);
+    row.addChild(UiKit.hSpacer(trailing));
+    row.addChild(value);
+    return row;
+  }
+
+  private Container rangeBoundsRow(String minText, String maxText) {
+    Container row = new Container(new BoxLayout(Axis.X, FillMode.None));
+    row.setBackground(null);
+    Label min = row.addChild(new Label(minText, MissionWizardStyles.STYLE));
+    min.setFont(UiKit.ibmPlexMono(11));
+    min.setColor(MissionWizardStyles.WIZARD_TEXT_LO);
+
+    Label max = new Label(maxText, MissionWizardStyles.STYLE);
+    max.setFont(UiKit.ibmPlexMono(11));
+    max.setColor(MissionWizardStyles.WIZARD_TEXT_LO);
+
+    float used = min.getPreferredSize().x + max.getPreferredSize().x;
+    float trailing = Math.max(0f, FIELD_W - used);
+    row.addChild(UiKit.hSpacer(trailing));
+    row.addChild(max);
+    return row;
+  }
+
+  private TextField newInputField(String value) {
     TextField f = new TextField(value, MissionWizardStyles.STYLE);
-    f.setFont(UiKit.mono(14));
+    f.setFont(UiKit.ibmPlexMono(13));
+    f.setPreferredSize(new Vector3f(FIELD_W, FIELD_H, 0));
     return f;
   }
 
-  /** Wraps a child in an X-row with a trailing invisible spacer so it keeps its fixed width. */
-  private Container widthBoundedRow(Container child, float childWidth) {
-    Container row = new Container(new BoxLayout(Axis.X, FillMode.None));
-    row.setBackground(null);
-    row.addChild(child);
-    float trailing = MissionWizardStyles.WIZARD_CONTENT_WIDTH - childWidth;
-    if (trailing > 0f) {
-      row.addChild(UiKit.hSpacer(trailing));
-    }
-    return row;
+  private Slider buildSlider(double min, double max, double value) {
+    Slider slider =
+        new Slider(new DefaultRangedValueModel(min, max, value), Axis.X, MissionWizardStyles.STYLE);
+    slider.setBackground(null);
+    slider.setInsets(new Insets3f(0, 0, 0, 0));
+    slider.setPreferredSize(new Vector3f(FIELD_W, SLIDER_HEIGHT, 0));
+
+    Panel range = slider.getRangePanel();
+    range.setBackground(UiKit.wizardFlat("slider-track"));
+    range.setPreferredSize(new Vector3f(FIELD_W, SLIDER_TRACK_H, 0));
+    range.setInsets(new Insets3f(0, 0, 0, 0));
+
+    Button thumb = slider.getThumbButton();
+    thumb.setText("");
+    thumb.setBackground(UiKit.wizardFlat("slider-thumb"));
+    thumb.setInsets(new Insets3f(0, 0, 0, 0));
+    thumb.setPreferredSize(new Vector3f(THUMB_SIZE, THUMB_SIZE, 0));
+    thumb.getControl(GuiControl.class).setSize(new Vector3f(THUMB_SIZE, THUMB_SIZE, 0));
+
+    hideButton(slider.getDecrementButton());
+    hideButton(slider.getIncrementButton());
+
+    return slider;
+  }
+
+  private static void hideButton(Button btn) {
+    btn.setText("");
+    btn.setBackground(null);
+    btn.setInsets(new Insets3f(0, 0, 0, 0));
+    btn.setPreferredSize(new Vector3f(0, 0, 0));
   }
 }

@@ -18,14 +18,11 @@ public final class MissionWizardStyles {
   //  WIZARD LAYOUT CONSTANTS
   // =================================================================
 
-  /** Inner content width: WINDOW_WIDTH (880) - 2 * OUTER_PADDING (24). */
-  public static final float WIZARD_CONTENT_WIDTH = 848f;
+  /** Inner content width: WINDOW_WIDTH (880) - 2 * content horizontal inset (32). */
+  public static final float WIZARD_CONTENT_WIDTH = 816f;
 
-  /**
-   * Inner content height: WINDOW_HEIGHT (640) - 2 * OUTER_PADDING (16) - HEADER_HEIGHT (120) -
-   * FOOTER_HEIGHT (72).
-   */
-  public static final float WIZARD_CONTENT_HEIGHT = 426f;
+  /** Inner content height: WINDOW_HEIGHT (660) - HEADER_HEIGHT (120) - FOOTER_HEIGHT (72). */
+  public static final float WIZARD_CONTENT_HEIGHT = 468f;
 
   // =================================================================
   //  WIZARD COLOUR PALETTE (from wizard.zip design tokens)
@@ -159,5 +156,12 @@ public final class MissionWizardStyles {
 
     Attributes s = styles.getSelector("slider", STYLE);
     s.set("background", UiKit.wizardFlat("slider-track"));
+
+    Attributes sThumb = styles.getSelector("slider.thumb.button", STYLE);
+    sThumb.set("text", "");
+    sThumb.set("background", UiKit.wizardFlat("slider-thumb"));
+    sThumb.set("color", WIZARD_TEXT_PRIMARY);
+    sThumb.set("font", UiKit.sora(1));
+    sThumb.set("insets", new Insets3f(0, 0, 0, 0));
   }
 }

@@ -20,16 +20,12 @@ public class MissionWizardWidget implements AutoCloseable {
   private static final float WINDOW_WIDTH = 880f;
   private static final float WINDOW_HEIGHT = 660f;
   private static final float MIN_VIEWPORT_MARGIN = 32f;
-  private static final float OUTER_PADDING = 16f;
   private static final float HEADER_HEIGHT = 120f;
   private static final float HEADER_PAD_X = 32f;
   private static final float HEADER_PAD_Y = 20f;
 
-  /** Largeur utile à l'intérieur du shell (root) : WINDOW_WIDTH - 2 * OUTER_PADDING. */
-  private static final float SHELL_INNER_WIDTH = WINDOW_WIDTH - 2 * OUTER_PADDING;
-
   /** Largeur utile à l'intérieur du header (entre ses paddings horizontaux). */
-  private static final float HEADER_INNER_WIDTH = SHELL_INNER_WIDTH - 2 * HEADER_PAD_X;
+  private static final float HEADER_INNER_WIDTH = WINDOW_WIDTH - 2 * HEADER_PAD_X;
 
   private final ModalBackdrop backdrop;
   private final Container root;
@@ -51,17 +47,14 @@ public class MissionWizardWidget implements AutoCloseable {
     root = new Container(new BoxLayout(Axis.Y, FillMode.None), MissionWizardStyles.STYLE);
     root.setPreferredSize(new Vector3f(WINDOW_WIDTH, WINDOW_HEIGHT, 0));
     root.setBackground(MissionWizardStyles.shellBg());
-    root.setInsetsComponent(
-        new InsetsComponent(
-            new Insets3f(OUTER_PADDING, OUTER_PADDING, OUTER_PADDING, OUTER_PADDING)));
 
-    // Header strip (deep flat bg)
+    // Header strip (deep flat bg) — spans full wizard width, touches the top edge.
     Container header = root.addChild(new Container(new BoxLayout(Axis.Y, FillMode.None)));
     header.setBackground(MissionWizardStyles.headerBg());
     header.setPreferredSize(new Vector3f(WINDOW_WIDTH, HEADER_HEIGHT, 0));
-    // header.setInsetsComponent(
-    //    new InsetsComponent(new Insets3f(HEADER_PAD_Y, HEADER_PAD_X, HEADER_PAD_Y,
-    // HEADER_PAD_X)));
+    header.setInsetsComponent(
+        new InsetsComponent(
+            new Insets3f(HEADER_PAD_Y, HEADER_PAD_X, HEADER_PAD_Y, HEADER_PAD_X)));
 
     Container brandRow = header.addChild(new Container(new BoxLayout(Axis.X, FillMode.None)));
     brandRow.setBackground(null);
@@ -91,7 +84,7 @@ public class MissionWizardWidget implements AutoCloseable {
     content = root.addChild(new Container(new BoxLayout(Axis.Y, FillMode.None)));
     content.setBackground(null);
     content.setPreferredSize(
-        new Vector3f(SHELL_INNER_WIDTH, MissionWizardStyles.WIZARD_CONTENT_HEIGHT, 0));
+        new Vector3f(WINDOW_WIDTH, MissionWizardStyles.WIZARD_CONTENT_HEIGHT, 0));
     content.setInsetsComponent(new InsetsComponent(new Insets3f(28, 32, 16, 32)));
 
     // Footer strip
