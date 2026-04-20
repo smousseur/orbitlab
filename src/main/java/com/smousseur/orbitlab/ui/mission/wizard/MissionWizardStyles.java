@@ -18,14 +18,11 @@ public final class MissionWizardStyles {
   //  WIZARD LAYOUT CONSTANTS
   // =================================================================
 
-  /** Inner content width: WINDOW_WIDTH (880) - 2 * OUTER_PADDING (24). */
-  public static final float WIZARD_CONTENT_WIDTH = 848f;
+  /** Inner content width: WINDOW_WIDTH (880) - 2 * content horizontal inset (32). */
+  public static final float WIZARD_CONTENT_WIDTH = 816f;
 
-  /**
-   * Inner content height: WINDOW_HEIGHT (640) - 2 * OUTER_PADDING (16) - HEADER_HEIGHT (120) -
-   * FOOTER_HEIGHT (72).
-   */
-  public static final float WIZARD_CONTENT_HEIGHT = 426f;
+  /** Inner content height: WINDOW_HEIGHT (660) - HEADER_HEIGHT (120) - FOOTER_HEIGHT (72). */
+  public static final float WIZARD_CONTENT_HEIGHT = 468f;
 
   // =================================================================
   //  WIZARD COLOUR PALETTE (from wizard.zip design tokens)

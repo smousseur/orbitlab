@@ -50,7 +50,7 @@ public class WizardFooter {
     this.innerWidth = Math.max(0f, preferredWidth - 2 * PAD_X);
     root = new Container(new BoxLayout(Axis.X, FillMode.None), MissionWizardStyles.STYLE);
     root.setPreferredSize(new Vector3f(preferredWidth, FOOTER_HEIGHT, 0));
-    root.setInsetsComponent(new InsetsComponent(new Insets3f(0, 0, 20, 0)));
+    root.setInsetsComponent(new InsetsComponent(new Insets3f(PAD_Y, PAD_X, PAD_Y, PAD_X)));
 
     cancelButton = newButton("  Cancel", CANCEL_BTN_W);
     cancelButton.setIcon(UiKit.wizardIconComponent("icon-close-red"));
