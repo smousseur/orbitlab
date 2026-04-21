@@ -18,12 +18,14 @@ public class StepParameters {
   private static final float LABEL_ICON_SIZE = 14f;
   private static final float LABEL_GAP = 6f;
   private static final float LABEL_FIELD_GAP = 6f;
-  private static final float SLIDER_HEIGHT = 16f;
+  private static final float SLIDER_ROW_H = 32f;
   private static final float SLIDER_TRACK_H = 2f;
   private static final float THUMB_SIZE = 16f;
   private static final float VALUE_FIELD_W = 80f;
   private static final float KM_LABEL_W = 22f;
   private static final float SLIDER_TEXT_GAP = 8f;
+  private static final float SLIDER_W =
+      FIELD_W - VALUE_FIELD_W - KM_LABEL_W - 2 * SLIDER_TEXT_GAP;
 
   private final Container root;
 
@@ -137,7 +139,7 @@ public class StepParameters {
     max.setColor(MissionWizardStyles.WIZARD_TEXT_LO);
 
     float used = min.getPreferredSize().x + max.getPreferredSize().x;
-    float trailing = Math.max(0f, FIELD_W - used);
+    float trailing = Math.max(0f, SLIDER_W - used);
     row.addChild(UiKit.hSpacer(trailing));
     row.addChild(max);
     return row;
@@ -154,19 +156,19 @@ public class StepParameters {
     altitudeMin = min;
     altitudeMax = max;
 
-    float sliderW = FIELD_W - VALUE_FIELD_W - KM_LABEL_W - 2 * SLIDER_TEXT_GAP;
-
     Container row = new Container(new BoxLayout(Axis.X, FillMode.None));
     row.setBackground(null);
+    row.setPreferredSize(new Vector3f(FIELD_W, SLIDER_ROW_H, 0));
 
-    altitudeSlider = buildSlider(min, max, value, sliderW);
+    altitudeSlider = buildSlider(min, max, value, SLIDER_W);
     row.addChild(altitudeSlider);
 
     row.addChild(UiKit.hSpacer(SLIDER_TEXT_GAP));
 
     altitudeField = new TextField(Long.toString(Math.round(value)), MissionWizardStyles.STYLE);
-    altitudeField.setFont(UiKit.ibmPlexMono(13));
-    altitudeField.setPreferredSize(new Vector3f(VALUE_FIELD_W, SLIDER_HEIGHT, 0));
+    altitudeField.setFont(UiKit.ibmPlexMono(11));
+    altitudeField.setInsets(new Insets3f(6, 10, 6, 10));
+    altitudeField.setPreferredSize(new Vector3f(VALUE_FIELD_W, SLIDER_ROW_H, 0));
     row.addChild(altitudeField);
 
     row.addChild(UiKit.hSpacer(SLIDER_TEXT_GAP));
@@ -185,7 +187,7 @@ public class StepParameters {
         new Slider(new DefaultRangedValueModel(min, max, value), Axis.X, MissionWizardStyles.STYLE);
     slider.setBackground(null);
     slider.setInsets(new Insets3f(0, 0, 0, 0));
-    slider.setPreferredSize(new Vector3f(width, SLIDER_HEIGHT, 0));
+    slider.setPreferredSize(new Vector3f(width, SLIDER_ROW_H, 0));
 
     Panel range = slider.getRangePanel();
     range.setBackground(new QuadBackgroundComponent(new ColorRGBA(MissionWizardStyles.WIZARD_BORDER)));
