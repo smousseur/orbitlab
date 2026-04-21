@@ -33,6 +33,7 @@ public class MissionWizardWidget implements AutoCloseable {
   private final WizardFooter footer;
   private final Container content;
   private final StepMissionType stepMissionType;
+  private final StepParameters stepParameters;
 
   private final Map<MissionWizardStep, Container> stepPanels =
       new EnumMap<>(MissionWizardStep.class);
@@ -94,7 +95,8 @@ public class MissionWizardWidget implements AutoCloseable {
 
     stepMissionType = new StepMissionType();
     stepPanels.put(MissionWizardStep.MISSION, stepMissionType.getNode());
-    stepPanels.put(MissionWizardStep.PARAMETERS, new StepParameters().getNode());
+    stepParameters = new StepParameters();
+    stepPanels.put(MissionWizardStep.PARAMETERS, stepParameters.getNode());
     stepPanels.put(MissionWizardStep.SITE, new StepLaunchSite().getNode());
     stepPanels.put(MissionWizardStep.LAUNCHER, new StepLauncher().getNode());
 
@@ -126,6 +128,7 @@ public class MissionWizardWidget implements AutoCloseable {
     if (!visible) return;
     backdrop.update(cam);
     centerOnScreen(cam.getWidth(), cam.getHeight());
+    stepParameters.update(tpf);
   }
 
   public void showStep(MissionWizardStep step) {
