@@ -6,6 +6,7 @@ import com.jme3.scene.Spatial;
 import com.simsilica.lemur.*;
 import com.simsilica.lemur.component.BoxLayout;
 import com.simsilica.lemur.component.QuadBackgroundComponent;
+import com.simsilica.lemur.core.GuiControl;
 import com.simsilica.lemur.core.VersionedReference;
 import com.smousseur.orbitlab.ui.UiKit;
 import com.smousseur.orbitlab.ui.mission.wizard.MissionWizardStyles;
@@ -160,8 +161,19 @@ public class StepParameters {
     row.setBackground(null);
     row.setPreferredSize(new Vector3f(FIELD_W, SLIDER_ROW_H, 0));
 
+    // Lemur's BorderLayout stretches the slider's range panel to the slider's
+    // full height, so a tall slider produces a fat track. Keep the slider
+    // itself 2 px tall and center it inside a SLIDER_ROW_H-tall column; the
+    // thumb renders outside the 2 px bounds and is not clipped by JME nodes.
+    float vPad = (SLIDER_ROW_H - SLIDER_TRACK_H) * 0.5f;
+    Container sliderWrap = new Container(new BoxLayout(Axis.Y, FillMode.None));
+    sliderWrap.setBackground(null);
+    sliderWrap.setPreferredSize(new Vector3f(SLIDER_W, SLIDER_ROW_H, 0));
+    sliderWrap.addChild(UiKit.vSpacer(vPad));
     altitudeSlider = buildSlider(min, max, value, SLIDER_W);
-    row.addChild(altitudeSlider);
+    sliderWrap.addChild(altitudeSlider);
+    sliderWrap.addChild(UiKit.vSpacer(vPad));
+    row.addChild(sliderWrap);
 
     row.addChild(UiKit.hSpacer(SLIDER_TEXT_GAP));
 
@@ -187,18 +199,25 @@ public class StepParameters {
         new Slider(new DefaultRangedValueModel(min, max, value), Axis.X, MissionWizardStyles.STYLE);
     slider.setBackground(null);
     slider.setInsets(new Insets3f(0, 0, 0, 0));
-    slider.setPreferredSize(new Vector3f(width, SLIDER_ROW_H, 0));
+    slider.setPreferredSize(new Vector3f(width, SLIDER_TRACK_H, 0));
 
     Panel range = slider.getRangePanel();
     range.setBackground(new QuadBackgroundComponent(new ColorRGBA(MissionWizardStyles.WIZARD_BORDER)));
     range.setPreferredSize(new Vector3f(width, SLIDER_TRACK_H, 0));
     range.setInsets(new Insets3f(0, 0, 0, 0));
 
+    // Lemur's Slider constructor calls setSize(preferredSize) on the thumb
+    // right after building it, freezing the actual size at whatever the
+    // preferred size was at that moment (~0x1 given text="" and a 1pt font).
+    // The thumb is attachChild'd, not managed by a layout, so our later
+    // setPreferredSize only updates the hint. Force the actual size here.
     Button thumb = slider.getThumbButton();
     thumb.setText("");
     thumb.setBackground(UiKit.wizardFlat("slider-thumb"));
     thumb.setInsets(new Insets3f(0, 0, 0, 0));
-    thumb.setPreferredSize(new Vector3f(THUMB_SIZE, THUMB_SIZE, 0));
+    Vector3f thumbSize = new Vector3f(THUMB_SIZE, THUMB_SIZE, 0);
+    thumb.setPreferredSize(thumbSize);
+    thumb.getControl(GuiControl.class).setSize(thumbSize);
 
     hideButton(slider.getDecrementButton());
     hideButton(slider.getIncrementButton());
