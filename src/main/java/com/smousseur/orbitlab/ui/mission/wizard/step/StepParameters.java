@@ -165,6 +165,7 @@ public class StepParameters {
     TextField f = new TextField(value, MissionWizardStyles.STYLE);
     f.setFont(UiKit.ibmPlexMono(13));
     f.setPreferredSize(new Vector3f(FIELD_W, FIELD_H, 0));
+    f.setInsets(new Insets3f(0, 0, 10, 0));
     return f;
   }
 

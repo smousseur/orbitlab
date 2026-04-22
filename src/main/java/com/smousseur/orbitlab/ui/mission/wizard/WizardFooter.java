@@ -14,7 +14,7 @@ import com.smousseur.orbitlab.ui.mission.wizard.component.ProgressBar;
 
 public class WizardFooter {
 
-  private static final float FOOTER_HEIGHT = 72f;
+  private static final float FOOTER_HEIGHT = 92f;
   private static final float BUTTON_HEIGHT = 38f;
   private static final float CANCEL_BTN_W = 140f;
   private static final float PREVIOUS_BTN_W = 140f;

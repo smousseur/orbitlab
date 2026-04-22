@@ -6,6 +6,9 @@ import com.jme3.scene.Node;
 import com.simsilica.lemur.*;
 import com.simsilica.lemur.component.BoxLayout;
 import com.simsilica.lemur.component.InsetsComponent;
+import com.simsilica.lemur.component.QuadBackgroundComponent;
+import com.simsilica.lemur.component.TbtQuadBackgroundComponent;
+import com.simsilica.lemur.core.GuiComponent;
 import com.smousseur.orbitlab.app.ApplicationContext;
 import com.smousseur.orbitlab.ui.UiKit;
 import com.smousseur.orbitlab.ui.mission.wizard.step.*;
@@ -18,7 +21,7 @@ public class MissionWizardWidget implements AutoCloseable {
   private static final Logger logger = LogManager.getLogger(MissionWizardWidget.class);
 
   private static final float WINDOW_WIDTH = 880f;
-  private static final float WINDOW_HEIGHT = 660f;
+  private static final float WINDOW_HEIGHT = 680f;
   private static final float MIN_VIEWPORT_MARGIN = 32f;
   private static final float HEADER_HEIGHT = 120f;
   private static final float HEADER_PAD_X = 32f;
@@ -48,14 +51,21 @@ public class MissionWizardWidget implements AutoCloseable {
     root = new Container(new BoxLayout(Axis.Y, FillMode.None), MissionWizardStyles.STYLE);
     root.setPreferredSize(new Vector3f(WINDOW_WIDTH, WINDOW_HEIGHT, 0));
     root.setBackground(MissionWizardStyles.shellBg());
+    root.getInsetsComponent().setInsets(new Insets3f(0, 0, 0, 0));
+    root.setBorder(null);
+    GuiComponent bg = root.getBackground();
+    if (bg instanceof TbtQuadBackgroundComponent quad) {
+      quad.setMargin(0f, 0f);
+    } else if (bg instanceof QuadBackgroundComponent quad) {
+      quad.setMargin(0f, 0f);
+    }
 
     // Header strip (deep flat bg) — spans full wizard width, touches the top edge.
     Container header = root.addChild(new Container(new BoxLayout(Axis.Y, FillMode.None)));
     header.setBackground(MissionWizardStyles.headerBg());
     header.setPreferredSize(new Vector3f(WINDOW_WIDTH, HEADER_HEIGHT, 0));
     header.setInsetsComponent(
-        new InsetsComponent(
-            new Insets3f(HEADER_PAD_Y, HEADER_PAD_X, HEADER_PAD_Y, HEADER_PAD_X)));
+        new InsetsComponent(new Insets3f(HEADER_PAD_Y, HEADER_PAD_X, HEADER_PAD_Y, HEADER_PAD_X)));
 
     Container brandRow = header.addChild(new Container(new BoxLayout(Axis.X, FillMode.None)));
     brandRow.setBackground(null);
