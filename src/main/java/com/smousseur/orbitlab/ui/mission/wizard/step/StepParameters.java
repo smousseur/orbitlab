@@ -39,7 +39,7 @@ public class StepParameters {
 
   public StepParameters() {
     root = new Container(new BoxLayout(Axis.Y, FillMode.None));
-    root.setBackground(null);
+    root.setBackground(new QuadBackgroundComponent(new ColorRGBA(0, 0, 0, 0)));
     root.setPreferredSize(
         new Vector3f(
             MissionWizardStyles.WIZARD_CONTENT_WIDTH,
@@ -83,6 +83,22 @@ public class StepParameters {
     Label helper = root.addChild(new Label("UTC · Orekit epoch", MissionWizardStyles.STYLE));
     helper.setFont(UiKit.ibmPlexMono(11));
     helper.setColor(MissionWizardStyles.WIZARD_TEXT_LO);
+
+    CursorEventControl.addListenersToSpatial(
+        root,
+        new DefaultCursorListener() {
+          @Override
+          public void cursorButtonEvent(CursorButtonEvent event, Spatial target, Spatial capture) {
+            if (event.getButtonIndex() == 0 && event.isPressed()) {
+              Spatial currentFocus = GuiGlobals.getInstance().getFocusManagerState().getFocus();
+              if (currentFocus != null && target != currentFocus) {
+                if (!(target instanceof TextField)) {
+                  GuiGlobals.getInstance().requestFocus(null);
+                }
+              }
+            }
+          }
+        });
   }
 
   public Container getNode() {
@@ -230,6 +246,7 @@ public class StepParameters {
           public void cursorButtonEvent(CursorButtonEvent event, Spatial target, Spatial capture) {
             if (event.getButtonIndex() == 0) {
               if (event.isPressed()) {
+                GuiGlobals.getInstance().requestFocus(null);
                 lastX = event.getX();
                 dragging = true;
                 event.setConsumed();
