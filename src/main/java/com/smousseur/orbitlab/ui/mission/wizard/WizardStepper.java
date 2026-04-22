@@ -147,6 +147,7 @@ public class WizardStepper {
     Label number = (Label) circle.getChild(0);
     number.setText("");
     number.setIcon(UiKit.wizardIconComponent("icon-check-success"));
+    number.setInsets(new Insets3f(-30, -7, 0, 0));
     ((Label) node.getChild(2)).setColor(MissionWizardStyles.WIZARD_SUCCESS);
   }
 
@@ -157,6 +158,7 @@ public class WizardStepper {
     Label number = (Label) circle.getChild(0);
     number.setIcon(null);
     number.setText(String.valueOf(step.index() + 1));
+    number.setInsets(new Insets3f(-30, 0, 0, 0));
     number.setColor(MissionWizardStyles.WIZARD_ACCENT_BRIGHT);
     ((Label) node.getChild(2)).setColor(MissionWizardStyles.WIZARD_ACCENT_BRIGHT);
   }
@@ -167,6 +169,7 @@ public class WizardStepper {
     circle.setBackground(UiKit.wizardBg9("step-dot-default", 14));
     Label number = (Label) circle.getChild(0);
     number.setIcon(null);
+    number.setInsets(new Insets3f(-30, 0, 0, 0));
     number.setText(String.valueOf(step.index() + 1));
     number.setColor(MissionWizardStyles.WIZARD_TEXT_LO);
     ((Label) node.getChild(2)).setColor(MissionWizardStyles.WIZARD_TEXT_LO);

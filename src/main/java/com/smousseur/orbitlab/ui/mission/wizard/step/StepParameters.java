@@ -5,6 +5,7 @@ import com.jme3.math.Vector3f;
 import com.jme3.scene.Spatial;
 import com.simsilica.lemur.*;
 import com.simsilica.lemur.component.BoxLayout;
+import com.simsilica.lemur.component.InsetsComponent;
 import com.simsilica.lemur.component.QuadBackgroundComponent;
 import com.simsilica.lemur.core.GuiControl;
 import com.simsilica.lemur.core.VersionedReference;
@@ -192,8 +193,10 @@ public class StepParameters {
     altitudeField =
         new TextField(Long.toString(Math.round((double) 550)), MissionWizardStyles.STYLE);
     altitudeField.setFont(UiKit.ibmPlexMono(11));
-    altitudeField.setInsets(new Insets3f(6, 10, 6, 10));
     altitudeField.setPreferredSize(new Vector3f(VALUE_FIELD_W, SLIDER_ROW_H, 0));
+    // altitudeField.setBorder(null);
+    altitudeField.setInsets(new Insets3f(-7, 0, 10, 0));
+    altitudeField.setInsetsComponent(new InsetsComponent(new Insets3f(3, 10, 0, 0)));
     row.addChild(altitudeField);
 
     row.addChild(UiKit.hSpacer(SLIDER_TEXT_GAP));

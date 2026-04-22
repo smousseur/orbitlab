@@ -20,7 +20,8 @@ public class ProgressBar {
     root.setBackground(UiKit.wizardFlat("progress-track"));
 
     fill = new Container();
-    fill.setPreferredSize(new Vector3f(0, height, 0));
+    fill.setSize(new Vector3f(0, height, 0));
+    fill.setLocalTranslation(0, 0, 1f);
     fill.setBackground(UiKit.wizardFlat("progress-fill"));
     root.attachChild(fill);
   }
@@ -31,6 +32,6 @@ public class ProgressBar {
 
   public void setProgress(float progress) {
     float clamped = Math.max(0f, Math.min(1f, progress));
-    fill.setPreferredSize(new Vector3f(trackWidth * clamped, trackHeight, 0));
+    fill.setSize(new Vector3f(trackWidth * clamped, trackHeight, 0));
   }
 }

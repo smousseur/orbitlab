@@ -55,7 +55,8 @@ public class SelectableCard {
       State initial,
       String iconPath,
       float iconSize) {
-    this(width, height, title, subtitle, value, badge, initial, iconPath, iconSize, Variant.MISSION);
+    this(
+        width, height, title, subtitle, value, badge, initial, iconPath, iconSize, Variant.MISSION);
   }
 
   public SelectableCard(
@@ -118,10 +119,11 @@ public class SelectableCard {
     if (badge != null) {
       content.addChild(UiKit.vSpacer(GAP_VALUE_BADGE));
       content.addChild(centerH(badge.getNode(), width));
+      root.addChild(UiKit.vSpacer(GAP_VALUE_BADGE));
     }
 
     float contentHeight = content.getPreferredSize().y;
-    float vPad = Math.max(0f, (height - contentHeight) / 2f);
+    float vPad = Math.max(0f, (height - contentHeight - 40) / 2f);
     root.addChild(UiKit.vSpacer(vPad));
     root.addChild(content);
     root.addChild(UiKit.vSpacer(vPad));
@@ -155,11 +157,10 @@ public class SelectableCard {
   }
 
   private static Container centerH(Container child, float cardWidth) {
-    Container row =
-        new Container(new BoxLayout(Axis.X, FillMode.None), MissionWizardStyles.STYLE);
+    Container row = new Container(new BoxLayout(Axis.X, FillMode.None), MissionWizardStyles.STYLE);
     row.setBackground(null);
     float childWidth = child.getPreferredSize().x;
-    float pad = Math.max(0f, (cardWidth - childWidth) / 2f);
+    float pad = Math.max(0f, (cardWidth - childWidth - 24) / 2f);
     row.addChild(UiKit.hSpacer(pad));
     row.addChild(child);
     row.addChild(UiKit.hSpacer(pad));
@@ -175,8 +176,7 @@ public class SelectableCard {
       case HOVER -> root.setBackground(UiKit.wizardBg9(base + "-hover", border));
       case SELECTED -> root.setBackground(UiKit.wizardBg9(base + "-selected", border));
       case DISABLED -> {
-        String disabledTex =
-            variant == Variant.MISSION ? "card-mission-disabled" : "card-launcher";
+        String disabledTex = variant == Variant.MISSION ? "card-mission-disabled" : "card-launcher";
         root.setBackground(UiKit.wizardBg9(disabledTex, border));
       }
     }
