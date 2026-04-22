@@ -8,6 +8,7 @@ import com.simsilica.lemur.component.BoxLayout;
 import com.simsilica.lemur.component.QuadBackgroundComponent;
 import com.simsilica.lemur.core.GuiControl;
 import com.simsilica.lemur.core.VersionedReference;
+import com.simsilica.lemur.event.*;
 import com.smousseur.orbitlab.ui.UiKit;
 import com.smousseur.orbitlab.ui.mission.wizard.MissionWizardStyles;
 
@@ -25,8 +26,7 @@ public class StepParameters {
   private static final float VALUE_FIELD_W = 80f;
   private static final float KM_LABEL_W = 22f;
   private static final float SLIDER_TEXT_GAP = 8f;
-  private static final float SLIDER_W =
-      FIELD_W - VALUE_FIELD_W - KM_LABEL_W - 2 * SLIDER_TEXT_GAP;
+  private static final float SLIDER_W = FIELD_W - VALUE_FIELD_W - KM_LABEL_W - 2 * SLIDER_TEXT_GAP;
 
   private final Container root;
 
@@ -69,9 +69,9 @@ public class StepParameters {
     // --- Target Altitude ---
     root.addChild(fieldLabelRow("TARGET ALTITUDE", "lbl-ruler"));
     root.addChild(UiKit.vSpacer(LABEL_FIELD_GAP));
-    root.addChild(buildSliderRow(160, 2000, 550));
+    root.addChild(buildSliderRow());
     root.addChild(UiKit.vSpacer(LABEL_FIELD_GAP));
-    root.addChild(rangeBoundsRow("160 km", "2 000 km"));
+    root.addChild(rangeBoundsRow());
 
     root.addChild(UiKit.vSpacer(ROW_GAP));
 
@@ -80,8 +80,7 @@ public class StepParameters {
     root.addChild(UiKit.vSpacer(LABEL_FIELD_GAP));
     root.addChild(newInputField("2026-06-15T06:00:00Z"));
     root.addChild(UiKit.vSpacer(LABEL_FIELD_GAP));
-    Label helper =
-        root.addChild(new Label("UTC · Orekit epoch", MissionWizardStyles.STYLE));
+    Label helper = root.addChild(new Label("UTC · Orekit epoch", MissionWizardStyles.STYLE));
     helper.setFont(UiKit.ibmPlexMono(11));
     helper.setColor(MissionWizardStyles.WIZARD_TEXT_LO);
   }
@@ -128,14 +127,14 @@ public class StepParameters {
     return row;
   }
 
-  private Container rangeBoundsRow(String minText, String maxText) {
+  private Container rangeBoundsRow() {
     Container row = new Container(new BoxLayout(Axis.X, FillMode.None));
     row.setBackground(null);
-    Label min = row.addChild(new Label(minText, MissionWizardStyles.STYLE));
+    Label min = row.addChild(new Label("160 km", MissionWizardStyles.STYLE));
     min.setFont(UiKit.ibmPlexMono(11));
     min.setColor(MissionWizardStyles.WIZARD_TEXT_LO);
 
-    Label max = new Label(maxText, MissionWizardStyles.STYLE);
+    Label max = new Label("2 000 km", MissionWizardStyles.STYLE);
     max.setFont(UiKit.ibmPlexMono(11));
     max.setColor(MissionWizardStyles.WIZARD_TEXT_LO);
 
@@ -153,31 +152,28 @@ public class StepParameters {
     return f;
   }
 
-  private Container buildSliderRow(double min, double max, double value) {
-    altitudeMin = min;
-    altitudeMax = max;
+  private Container buildSliderRow() {
+    altitudeMin = 160;
+    altitudeMax = 2000;
 
     Container row = new Container(new BoxLayout(Axis.X, FillMode.None));
     row.setBackground(null);
     row.setPreferredSize(new Vector3f(FIELD_W, SLIDER_ROW_H, 0));
 
-    // Lemur's BorderLayout stretches the slider's range panel to the slider's
-    // full height, so a tall slider produces a fat track. Keep the slider
-    // itself 2 px tall and center it inside a SLIDER_ROW_H-tall column; the
-    // thumb renders outside the 2 px bounds and is not clipped by JME nodes.
     float vPad = (SLIDER_ROW_H - SLIDER_TRACK_H) * 0.5f;
     Container sliderWrap = new Container(new BoxLayout(Axis.Y, FillMode.None));
     sliderWrap.setBackground(null);
     sliderWrap.setPreferredSize(new Vector3f(SLIDER_W, SLIDER_ROW_H, 0));
     sliderWrap.addChild(UiKit.vSpacer(vPad));
-    altitudeSlider = buildSlider(min, max, value, SLIDER_W);
+    altitudeSlider = buildSlider();
     sliderWrap.addChild(altitudeSlider);
     sliderWrap.addChild(UiKit.vSpacer(vPad));
     row.addChild(sliderWrap);
 
     row.addChild(UiKit.hSpacer(SLIDER_TEXT_GAP));
 
-    altitudeField = new TextField(Long.toString(Math.round(value)), MissionWizardStyles.STYLE);
+    altitudeField =
+        new TextField(Long.toString(Math.round((double) 550)), MissionWizardStyles.STYLE);
     altitudeField.setFont(UiKit.ibmPlexMono(11));
     altitudeField.setInsets(new Insets3f(6, 10, 6, 10));
     altitudeField.setPreferredSize(new Vector3f(VALUE_FIELD_W, SLIDER_ROW_H, 0));
@@ -194,26 +190,22 @@ public class StepParameters {
     return row;
   }
 
-  private Slider buildSlider(double min, double max, double value, float width) {
+  private Slider buildSlider() {
     Slider slider =
-        new Slider(new DefaultRangedValueModel(min, max, value), Axis.X, MissionWizardStyles.STYLE);
+        new Slider(new DefaultRangedValueModel(160, 2000, 550), Axis.X, MissionWizardStyles.STYLE);
     slider.setBackground(null);
     slider.setInsets(new Insets3f(0, 0, 0, 0));
-    slider.setPreferredSize(new Vector3f(width, SLIDER_TRACK_H, 0));
+    slider.setPreferredSize(new Vector3f(StepParameters.SLIDER_W, SLIDER_TRACK_H, 0));
 
     Panel range = slider.getRangePanel();
-    range.setBackground(new QuadBackgroundComponent(new ColorRGBA(MissionWizardStyles.WIZARD_BORDER)));
-    range.setPreferredSize(new Vector3f(width, SLIDER_TRACK_H, 0));
+    range.setBackground(
+        new QuadBackgroundComponent(new ColorRGBA(MissionWizardStyles.WIZARD_BORDER)));
+    range.setPreferredSize(new Vector3f(StepParameters.SLIDER_W, SLIDER_TRACK_H, 0));
     range.setInsets(new Insets3f(0, 0, 0, 0));
 
-    // Lemur's Slider constructor calls setSize(preferredSize) on the thumb
-    // right after building it, freezing the actual size at whatever the
-    // preferred size was at that moment (~0x1 given text="" and a 1pt font).
-    // The thumb is attachChild'd, not managed by a layout, so our later
-    // setPreferredSize only updates the hint. Force the actual size here.
     Button thumb = slider.getThumbButton();
     thumb.setText("");
-    thumb.setBackground(UiKit.wizardFlat("slider-thumb"));
+    thumb.setBackground(UiKit.wizardFlat("btn-primary"));
     thumb.setInsets(new Insets3f(0, 0, 0, 0));
     Vector3f thumbSize = new Vector3f(THUMB_SIZE, THUMB_SIZE, 0);
     thumb.setPreferredSize(thumbSize);
@@ -221,6 +213,55 @@ public class StepParameters {
 
     hideButton(slider.getDecrementButton());
     hideButton(slider.getIncrementButton());
+
+    // Replace mouse control with custom drag handler
+    CursorEventControl cec = thumb.getControl(CursorEventControl.class);
+    if (cec != null) {
+      thumb.removeControl(cec); // Détruit le ButtonDragger privé et les effets de survol
+    }
+
+    CursorEventControl.addListenersToSpatial(
+        thumb,
+        new DefaultCursorListener() {
+          private float lastX;
+          private boolean dragging = false;
+
+          @Override
+          public void cursorButtonEvent(CursorButtonEvent event, Spatial target, Spatial capture) {
+            if (event.getButtonIndex() == 0) {
+              if (event.isPressed()) {
+                lastX = event.getX();
+                dragging = true;
+                event.setConsumed();
+              } else {
+                dragging = false;
+              }
+            }
+          }
+
+          @Override
+          public void cursorMoved(CursorMotionEvent event, Spatial target, Spatial capture) {
+            if (!dragging) return;
+            float currentX = event.getX();
+            float deltaX = currentX - lastX;
+            lastX = currentX;
+
+            float scaleX = slider.getWorldScale().x;
+            double localDelta = deltaX / scaleX;
+
+            double draggableWidth = slider.getRangePanel().getSize().x - thumb.getSize().x;
+            if (draggableWidth <= 0) return;
+
+            double percentDelta = localDelta / draggableWidth;
+            double valueRange = (double) 2000 - (double) 160;
+
+            double newValue = slider.getModel().getValue() + (percentDelta * valueRange);
+
+            slider.getModel().setValue(Math.max(160, Math.min(2000, newValue)));
+
+            event.setConsumed();
+          }
+        });
 
     return slider;
   }
