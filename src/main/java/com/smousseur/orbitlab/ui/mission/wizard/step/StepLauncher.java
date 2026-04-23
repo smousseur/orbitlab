@@ -9,8 +9,6 @@ import com.simsilica.lemur.event.DefaultMouseListener;
 import com.simsilica.lemur.event.MouseEventControl;
 import com.smousseur.orbitlab.ui.UiKit;
 import com.smousseur.orbitlab.ui.mission.wizard.MissionWizardStyles;
-import com.smousseur.orbitlab.ui.mission.wizard.component.InfoBanner;
-import com.smousseur.orbitlab.ui.mission.wizard.component.LabeledField;
 import com.smousseur.orbitlab.ui.mission.wizard.component.PopupList;
 import com.smousseur.orbitlab.ui.mission.wizard.component.SelectableCard;
 import java.util.List;
@@ -82,9 +80,7 @@ public class StepLauncher {
     vRow.addChild(UiKit.hSpacer(COL_GAP));
     vRow.addChild(ariane.getNode());
     float vRowTrailing = MissionWizardStyles.WIZARD_CONTENT_WIDTH - 2 * CARD_W - COL_GAP;
-    if (vRowTrailing > 0f) {
-      vRow.addChild(UiKit.hSpacer(vRowTrailing));
-    }
+    vRow.addChild(UiKit.hSpacer(vRowTrailing));
 
     // Mutual exclusion: clicking one deselects the other.
     MouseEventControl.addListenersToSpatial(
@@ -109,6 +105,8 @@ public class StepLauncher {
     Container payloadRow = new Container(new BoxLayout(Axis.X, FillMode.None));
     payloadRow.setBackground(null);
 
+    root.addChild(UiKit.fieldLabelRow("PAYLOAD", "lbl-box"));
+    root.addChild(UiKit.vSpacer(ROW_GAP));
     PopupList payloadType =
         new PopupList(
             PAYLOAD_POPUP_W,
@@ -121,17 +119,14 @@ public class StepLauncher {
                 "Cargo module"),
             "Communication satellite");
 
-    root.addChild(UiKit.fieldLabelRow("PAYLOAD", "lbl-box"));
-    root.addChild(UiKit.vSpacer(LABEL_FIELD_GAP));
-
     payloadRow.addChild(payloadType.getNode());
-    // payloadRow.addChild(UiKit.hSpacer(2 * COL_GAP));
 
     TextField massField = new TextField("15000", MissionWizardStyles.STYLE);
     massField.setFont(UiKit.ibmPlexMono(11));
-    massField.setPreferredSize(new Vector3f(MASS_FIELD_W, 50, 0));
+    massField.setPreferredSize(new Vector3f(MASS_FIELD_W, 46, 0));
+    massField.setInsets(new Insets3f(0, 0, 10, 0));
     payloadRow.addChild(massField);
-    payloadRow.addChild(UiKit.vSpacer(LABEL_FIELD_GAP));
+    payloadRow.addChild(UiKit.vSpacer(3 * LABEL_FIELD_GAP));
     Label kgLabel = payloadRow.addChild(new Label("kg", MissionWizardStyles.STYLE));
     kgLabel.setTextHAlignment(HAlignment.Center);
     kgLabel.setTextVAlignment(VAlignment.Center);
@@ -145,10 +140,10 @@ public class StepLauncher {
             - MASS_FIELD_W
             - KG_LABEL_W
             - 2 * COL_GAP;
-    payloadRow.addChild(UiKit.hSpacer(payloadTrailing));
+    // payloadRow.addChild(UiKit.hSpacer(payloadTrailing));
     root.addChild(payloadRow);
 
-    root.addChild(UiKit.vSpacer(ROW_GAP));
+    //    root.addChild(UiKit.vSpacer(ROW_GAP));
   }
 
   public Container getNode() {

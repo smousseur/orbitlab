@@ -90,7 +90,7 @@ public class PopupList {
     for (String option : options) {
       Container row = popup.addChild(new Container(new BorderLayout(), (String) null));
       row.setPreferredSize(new Vector3f(width, OPTION_HEIGHT, 0));
-      row.setInsetsComponent(new InsetsComponent(new Insets3f(0, PAD_X, 0, PAD_X)));
+      row.setInsetsComponent(new InsetsComponent(new Insets3f(0, 0, 0, 0)));
 
       TbtQuadBackgroundComponent rowBg = UiKit.wizardBg9("btn-primary", 8);
       rowBg.setMargin(0, 0);
@@ -101,6 +101,7 @@ public class PopupList {
                trigger.getLocalTranslation().y - TRIGGER_HEIGHT,
       */
       Label optLabel = new Label(option, MissionWizardStyles.STYLE);
+      optLabel.setInsetsComponent(new InsetsComponent(new Insets3f(0, PAD_X, 0, PAD_X)));
       optLabel.setFont(UiKit.ibmPlexMono(11));
       optLabel.setColor(MissionWizardStyles.WIZARD_TEXT_PRIMARY);
       optLabel.setTextHAlignment(HAlignment.Left);

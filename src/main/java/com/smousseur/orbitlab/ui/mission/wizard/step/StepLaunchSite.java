@@ -77,7 +77,7 @@ public class StepLaunchSite {
 
     root.addChild(UiKit.vSpacer(ROW_GAP));
 
-    SiteData defaultSite = sites.get(0);
+    SiteData defaultSite = sites.getFirst();
     latField = createTextField(defaultSite.lat, COL3_W);
     lonField = createTextField(defaultSite.lon, COL3_W);
     altField = createTextField(defaultSite.alt, COL3_W);
@@ -94,24 +94,20 @@ public class StepLaunchSite {
           }
         });
 
-    // --- 3. Coordonnées (3 Colonnes) ---
     Container row2 = root.addChild(new Container(new BoxLayout(Axis.X, FillMode.None)));
     row2.setBackground(null);
 
-    row2.addChild(
-        fieldCol(COL3_W, "LATITUDE", latField, "decimal degrees N positive", "lbl-globe"));
+    row2.addChild(fieldCol("LATITUDE", latField, "decimal degrees N positive", "lbl-globe"));
     row2.addChild(UiKit.hSpacer(COL_GAP));
-    row2.addChild(
-        fieldCol(COL3_W, "LONGITUDE", lonField, "decimal degrees E positive", "lbl-globe"));
+    row2.addChild(fieldCol("LONGITUDE", lonField, "decimal degrees E positive", "lbl-globe"));
     row2.addChild(UiKit.hSpacer(COL_GAP));
-    row2.addChild(fieldCol(COL3_W, "ALTITUDE", altField, "meters MSL", "lbl-mountain"));
+    row2.addChild(fieldCol("ALTITUDE", altField, "meters MSL", "lbl-mountain"));
   }
 
   public Container getNode() {
     return root;
   }
 
-  // Méthode utilitaire pour générer le champ texte formaté
   private TextField createTextField(String value, float w) {
     TextField f = new TextField(value, MissionWizardStyles.STYLE);
     f.setFont(UiKit.ibmPlexMono(13));
@@ -121,12 +117,11 @@ public class StepLaunchSite {
     return f;
   }
 
-  // FIX 4 : La méthode prend désormais le TextField pré-instancié en paramètre
   private Container fieldCol(
-      float w, String labelText, TextField field, String helperText, String iconName) {
+      String labelText, TextField field, String helperText, String iconName) {
     Container col = new Container(new BoxLayout(Axis.Y, FillMode.None));
     col.setBackground(null);
-    col.setPreferredSize(new Vector3f(w, 0, 0));
+    col.setPreferredSize(new Vector3f(StepLaunchSite.COL3_W, 0, 0));
 
     col.addChild(UiKit.fieldLabelRow(labelText, iconName));
     col.addChild(UiKit.vSpacer(LABEL_FIELD_GAP));
