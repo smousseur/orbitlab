@@ -82,14 +82,15 @@ public class MissionWizardWidget implements AutoCloseable {
     brandSep.setFont(UiKit.ibmPlexMono(11));
     brandSep.setColor(MissionWizardStyles.WIZARD_TEXT_LO);
 
-    Label brandSub = brandRow.addChild(new Label("MISSION WIZARD v2.1", MissionWizardStyles.STYLE));
+    Label brandSub = brandRow.addChild(new Label("MISSION WIZARD", MissionWizardStyles.STYLE));
     brandSub.setFont(UiKit.ibmPlexMono(11));
     brandSub.setColor(MissionWizardStyles.WIZARD_TEXT_LO);
 
-    header.addChild(UiKit.vSpacer(14));
+    header.addChild(UiKit.vSpacer(7));
 
     stepper = new WizardStepper(HEADER_INNER_WIDTH);
     header.addChild(stepper.getNode());
+    header.addChild(UiKit.vSpacer(12));
 
     // Content pane
     content = root.addChild(new Container(new BoxLayout(Axis.Y, FillMode.None)));

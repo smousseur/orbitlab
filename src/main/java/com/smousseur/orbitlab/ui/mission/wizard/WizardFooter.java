@@ -101,9 +101,10 @@ public class WizardFooter {
     Container progressCol = new Container(new BoxLayout(Axis.Y, FillMode.None));
     progressCol.setBackground(null);
     progressCol.setPreferredSize(new Vector3f(PROGRESS_W, FOOTER_HEIGHT - 2 * PAD_Y, 0));
+    progressCol.addChild(UiKit.vSpacer(PAD_Y));
     progressCol.addChild(progressLabel);
-    progressCol.addChild(UiKit.vSpacer(6));
     progressCol.addChild(progressBar.getNode());
+    root.addChild(UiKit.hSpacer(10));
     root.addChild(progressCol);
 
     float clusterW = CANCEL_BTN_W + BUTTON_GAP + NEXT_BTN_W;
