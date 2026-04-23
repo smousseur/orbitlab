@@ -3,18 +3,21 @@ package com.smousseur.orbitlab.ui.mission.wizard.step;
 import com.jme3.math.Vector3f;
 import com.simsilica.lemur.*;
 import com.simsilica.lemur.component.BoxLayout;
+import com.simsilica.lemur.component.InsetsComponent;
 import com.smousseur.orbitlab.ui.UiKit;
 import com.smousseur.orbitlab.ui.mission.wizard.MissionWizardStyles;
-import com.smousseur.orbitlab.ui.mission.wizard.component.LabeledField;
 import com.smousseur.orbitlab.ui.mission.wizard.component.PopupList;
 import java.util.List;
 
 public class StepLaunchSite {
 
-  private static final float COSMODROME_W = 520f;
-  private static final float COL3_W = 140f;
+  private static final float FIELD_W = 752f;
+  private static final float FIELD_H = 36f;
   private static final float COL_GAP = 16f;
-  private static final float ROW_GAP = 12f;
+  // Calcul dynamique : (752 - 32) / 3 = 240 pixels par colonne
+  private static final float COL3_W = (FIELD_W - (2 * COL_GAP)) / 3f;
+  private static final float ROW_GAP = 16f;
+  private static final float LABEL_FIELD_GAP = 6f;
 
   private final Container root;
 
@@ -31,7 +34,7 @@ public class StepLaunchSite {
     title.setFont(UiKit.orbitron(13));
     title.setColor(MissionWizardStyles.WIZARD_TEXT_PRIMARY);
 
-    root.addChild(UiKit.vSpacer(ROW_GAP));
+    root.addChild(UiKit.vSpacer(6f));
 
     Label subtitle = root.addChild(new Label("// cosmodrome selection", MissionWizardStyles.STYLE));
     subtitle.setFont(UiKit.ibmPlexMono(11));
@@ -39,72 +42,78 @@ public class StepLaunchSite {
 
     root.addChild(UiKit.vSpacer(ROW_GAP));
 
+    // --- 1. Cosmodrome (Select) ---
+    root.addChild(fieldLabelRow("COSMODROME", "lbl-factory"));
+    root.addChild(UiKit.vSpacer(LABEL_FIELD_GAP));
+
     PopupList cosmodrome =
         new PopupList(
-            COSMODROME_W,
+            FIELD_W,
             List.of(
-                "Kourou (CSG) \u2014 French Guiana",
-                "Cape Canaveral (CCSFS) \u2014 Florida, USA",
-                "Baikonur \u2014 Kazakhstan"),
-            "Kourou (CSG) \u2014 French Guiana");
-    root.addChild(
-        widthBoundedRow(
-            new LabeledField("COSMODROME", cosmodrome.getNode(), null, "lbl-factory")
-                .getNode(),
-            COSMODROME_W));
+                "Kourou (CSG) — French Guiana",
+                "Cape Canaveral (CCSFS) — Florida, USA",
+                "Baikonur — Kazakhstan"),
+            "Kourou (CSG) — French Guiana");
+
+    root.addChild(cosmodrome.getNode());
 
     root.addChild(UiKit.vSpacer(ROW_GAP));
 
+    // --- 2. Coordonnées (3 Colonnes) ---
     Container row2 = root.addChild(new Container(new BoxLayout(Axis.X, FillMode.None)));
     row2.setBackground(null);
+
     row2.addChild(
-        fieldCol(
-            COL3_W,
-            "LATITUDE",
-            "5.236",
-            "decimal degrees \u00b7 N positive",
-            "lbl-globe"));
+        fieldCol(COL3_W, "LATITUDE", "5.236", "decimal degrees · N positive", "lbl-globe"));
     row2.addChild(UiKit.hSpacer(COL_GAP));
     row2.addChild(
-        fieldCol(
-            COL3_W,
-            "LONGITUDE",
-            "-52.769",
-            "decimal degrees \u00b7 E positive",
-            "lbl-globe"));
+        fieldCol(COL3_W, "LONGITUDE", "-52.769", "decimal degrees · E positive", "lbl-globe"));
     row2.addChild(UiKit.hSpacer(COL_GAP));
-    row2.addChild(
-        fieldCol(COL3_W, "GROUND ALTITUDE", "14", "meters MSL", "lbl-mountain"));
-    float trailing = MissionWizardStyles.WIZARD_CONTENT_WIDTH - 3 * COL3_W - 2 * COL_GAP;
-    if (trailing > 0f) {
-      row2.addChild(UiKit.hSpacer(trailing));
-    }
+    row2.addChild(fieldCol(COL3_W, "ALTITUDE", "14", "meters MSL", "lbl-mountain"));
   }
 
   public Container getNode() {
     return root;
   }
 
-  private Container fieldCol(float w, String label, String value, String helper, String iconName) {
+  // Identique à StepParameters
+  private Container fieldLabelRow(String text, String iconName) {
+    Container row = new Container(new BoxLayout(Axis.X, FillMode.None));
+    row.setBackground(null);
+    row.addChild(UiKit.wizardIcon(iconName, 14f, 14f));
+    row.addChild(UiKit.hSpacer(6f));
+    Label label = row.addChild(new Label(text, MissionWizardStyles.STYLE));
+    label.setFont(UiKit.ibmPlexMono(11));
+    label.setColor(MissionWizardStyles.WIZARD_TEXT_SECONDARY);
+    return row;
+  }
+
+  // Assemble la colonne avec les vraies insets de StepParameters
+  private Container fieldCol(
+      float w, String labelText, String value, String helperText, String iconName) {
     Container col = new Container(new BoxLayout(Axis.Y, FillMode.None));
     col.setBackground(null);
     col.setPreferredSize(new Vector3f(w, 0, 0));
-    TextField f = new TextField(value, MissionWizardStyles.STYLE);
-    f.setFont(UiKit.ibmPlexMono(11));
-    f.setPreferredSize(new Vector3f(w, 0, 0));
-    col.addChild(new LabeledField(label, f, helper, iconName).getNode());
-    return col;
-  }
 
-  /** Wraps a child in an X-row with a trailing invisible spacer so it keeps its fixed width. */
-  private Container widthBoundedRow(Container child, float childWidth) {
-    Container row = new Container(new BoxLayout(Axis.X, FillMode.None));
-    row.setBackground(null);
-    row.addChild(child);
-    float trailing = MissionWizardStyles.WIZARD_CONTENT_WIDTH - childWidth;
-    if (trailing > 0f) {
-      row.addChild(UiKit.hSpacer(trailing));
-    }
-    return row;
+    // A. Label et Icone
+    col.addChild(fieldLabelRow(labelText, iconName));
+    col.addChild(UiKit.vSpacer(LABEL_FIELD_GAP));
+
+    // B. Champ texte
+    TextField f = new TextField(value, MissionWizardStyles.STYLE);
+    f.setFont(UiKit.ibmPlexMono(13));
+    f.setPreferredSize(new Vector3f(w, FIELD_H, 0)); // Hauteur cible respectée
+    f.setInsets(new Insets3f(0, 0, 10, 0)); // Centre verticalement
+    f.setInsetsComponent(new InsetsComponent(new Insets3f(3, 10, 0, 0))); // Marge texte à gauche
+    col.addChild(f);
+
+    col.addChild(UiKit.vSpacer(LABEL_FIELD_GAP));
+
+    // C. Hint
+    Label helper = col.addChild(new Label(helperText, MissionWizardStyles.STYLE));
+    helper.setFont(UiKit.ibmPlexMono(11));
+    helper.setColor(MissionWizardStyles.WIZARD_TEXT_LO);
+
+    return col;
   }
 }

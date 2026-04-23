@@ -61,7 +61,7 @@ public record OrbitCameraConfig(
     float deg = (float) (Math.PI / 180.0);
     return new OrbitCameraConfig(
         systemRadiusWorldUnits,
-        0.75f,
+        0.2f,
         10f,
         -89f * deg,
         +89f * deg,
