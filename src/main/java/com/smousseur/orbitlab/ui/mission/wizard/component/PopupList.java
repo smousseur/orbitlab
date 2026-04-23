@@ -96,10 +96,6 @@ public class PopupList {
       rowBg.setMargin(0, 0);
       rowBg.setColor(new ColorRGBA(1f, 1f, 1f, 0f));
       row.setBackground(rowBg);
-      /*
-               trigger.getLocalTranslation().x + popupDeltaPosX,
-               trigger.getLocalTranslation().y - TRIGGER_HEIGHT,
-      */
       Label optLabel = new Label(option, MissionWizardStyles.STYLE);
       optLabel.setInsetsComponent(new InsetsComponent(new Insets3f(0, PAD_X, 0, PAD_X)));
       optLabel.setFont(UiKit.ibmPlexMono(11));
@@ -113,7 +109,7 @@ public class PopupList {
           new DefaultMouseListener() {
             @Override
             public void mouseEntered(MouseMotionEvent evt, Spatial t, Spatial c) {
-              rowBg.setColor(ColorRGBA.White);
+              rowBg.setColor(new ColorRGBA(1f, 1f, 1f, 0.33f));
             }
 
             @Override

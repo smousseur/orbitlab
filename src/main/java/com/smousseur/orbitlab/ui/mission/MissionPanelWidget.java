@@ -31,9 +31,9 @@ import org.apache.logging.log4j.Logger;
 
 /**
  * A Lemur-based GUI widget for mission management. Provides a toggle button that reveals a panel
- * listing all missions from the {@link MissionContext}, with selection support and contextual action
- * buttons (Edit, Optimize, Delete, Launch) that appear or hide based on the selected mission's
- * status.
+ * listing all missions from the {@link MissionContext}, with selection support and contextual
+ * action buttons (Edit, Optimize, Delete, Launch) that appear or hide based on the selected
+ * mission's status.
  *
  * <p>Actions are published asynchronously to the {@link EventBus} and consumed by the mission
  * orchestrator on the JME update thread.
@@ -99,8 +99,7 @@ public class MissionPanelWidget implements AutoCloseable {
     createButton.addClickCommands(source -> onCreate());
 
     // Mission list — no styled background to avoid nested borders
-    this.listContainer =
-        mainPanel.addChild(new Container(new BoxLayout(Axis.Y, FillMode.None)));
+    this.listContainer = mainPanel.addChild(new Container(new BoxLayout(Axis.Y, FillMode.None)));
 
     // Action bar
     this.actionBar =
@@ -121,8 +120,7 @@ public class MissionPanelWidget implements AutoCloseable {
 
     List<String> currentSnapshot = buildSnapshot();
     boolean selectionStillValid =
-        selectedMissionName != null
-            && missionContext.findMission(selectedMissionName).isPresent();
+        selectedMissionName != null && missionContext.findMission(selectedMissionName).isPresent();
 
     if (!selectionStillValid && selectedMissionName != null) {
       selectedMissionName = null;
@@ -142,9 +140,8 @@ public class MissionPanelWidget implements AutoCloseable {
    * @param screenHeight the screen height in pixels
    */
   public void layoutTopLeft(int screenWidth, int screenHeight) {
-    float x = MARGIN_PX;
     float y = screenHeight - MARGIN_PX;
-    root.setLocalTranslation(x, y, 0f);
+    root.setLocalTranslation(MARGIN_PX, y, 0f);
   }
 
   @Override
@@ -182,8 +179,7 @@ public class MissionPanelWidget implements AutoCloseable {
     List<MissionEntry> missions = missionContext.getMissions();
 
     if (missions.isEmpty()) {
-      Label emptyLabel =
-          listContainer.addChild(new Label("No missions", MissionPanelStyles.STYLE));
+      Label emptyLabel = listContainer.addChild(new Label("No missions", MissionPanelStyles.STYLE));
       emptyLabel.setColor(AppStyles.ICE_TEXT_SECONDARY);
       return;
     }
@@ -194,8 +190,7 @@ public class MissionPanelWidget implements AutoCloseable {
       boolean isSelected = name.equals(selectedMissionName);
 
       // Row container — no style to avoid nested borders; gradient only when selected
-      Container row =
-          listContainer.addChild(new Container(new BoxLayout(Axis.X, FillMode.None)));
+      Container row = listContainer.addChild(new Container(new BoxLayout(Axis.X, FillMode.None)));
       row.setBackground(
           isSelected
               ? UiKit.gradientBackground(AppStyles.ICE_ROW_SELECTED)
@@ -218,8 +213,7 @@ public class MissionPanelWidget implements AutoCloseable {
           row,
           new DefaultMouseListener() {
             @Override
-            public void click(
-                MouseButtonEvent event, Spatial target, Spatial capture) {
+            public void click(MouseButtonEvent event, Spatial target, Spatial capture) {
               selectMission(name);
             }
           });

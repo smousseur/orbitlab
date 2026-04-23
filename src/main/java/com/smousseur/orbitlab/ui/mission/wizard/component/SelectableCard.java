@@ -41,31 +41,6 @@ public class SelectableCard {
       String subtitle,
       String value,
       Badge badge,
-      State initial) {
-    this(width, height, title, subtitle, value, badge, initial, null, 48, Variant.MISSION);
-  }
-
-  public SelectableCard(
-      float width,
-      float height,
-      String title,
-      String subtitle,
-      String value,
-      Badge badge,
-      State initial,
-      String iconPath,
-      float iconSize) {
-    this(
-        width, height, title, subtitle, value, badge, initial, iconPath, iconSize, Variant.MISSION);
-  }
-
-  public SelectableCard(
-      float width,
-      float height,
-      String title,
-      String subtitle,
-      String value,
-      Badge badge,
       State initial,
       String iconPath,
       float iconSize,
