@@ -67,12 +67,12 @@ public class StepLaunchSite {
 
     root.addChild(UiKit.vSpacer(ROW_GAP));
 
-    root.addChild(fieldLabelRow("COSMODROME", "lbl-factory"));
+    root.addChild(UiKit.fieldLabelRow("COSMODROME", "lbl-factory"));
     root.addChild(UiKit.vSpacer(LABEL_FIELD_GAP));
 
     List<String> siteNames = sites.stream().map(s -> s.name).collect(Collectors.toList());
 
-    PopupList cosmodrome = new PopupList(FIELD_W, siteNames, siteNames.getFirst());
+    PopupList cosmodrome = new PopupList(FIELD_W, 40, 12, siteNames, siteNames.getFirst());
     root.addChild(cosmodrome.getNode());
 
     root.addChild(UiKit.vSpacer(ROW_GAP));
@@ -111,17 +111,6 @@ public class StepLaunchSite {
     return root;
   }
 
-  private Container fieldLabelRow(String text, String iconName) {
-    Container row = new Container(new BoxLayout(Axis.X, FillMode.None));
-    row.setBackground(null);
-    row.addChild(UiKit.wizardIcon(iconName, 14f, 14f));
-    row.addChild(UiKit.hSpacer(6f));
-    Label label = row.addChild(new Label(text, MissionWizardStyles.STYLE));
-    label.setFont(UiKit.ibmPlexMono(11));
-    label.setColor(MissionWizardStyles.WIZARD_TEXT_SECONDARY);
-    return row;
-  }
-
   // Méthode utilitaire pour générer le champ texte formaté
   private TextField createTextField(String value, float w) {
     TextField f = new TextField(value, MissionWizardStyles.STYLE);
@@ -139,7 +128,7 @@ public class StepLaunchSite {
     col.setBackground(null);
     col.setPreferredSize(new Vector3f(w, 0, 0));
 
-    col.addChild(fieldLabelRow(labelText, iconName));
+    col.addChild(UiKit.fieldLabelRow(labelText, iconName));
     col.addChild(UiKit.vSpacer(LABEL_FIELD_GAP));
 
     // On attache le champ qui a été passé

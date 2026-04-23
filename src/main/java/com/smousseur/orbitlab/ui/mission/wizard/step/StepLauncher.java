@@ -25,6 +25,7 @@ public class StepLauncher {
   private static final float KG_LABEL_W = 40f;
   private static final float ROW_GAP = 12f;
   private static final float COL_GAP = 16f;
+  private static final float LABEL_FIELD_GAP = 6f;
 
   private final Container root;
 
@@ -56,7 +57,7 @@ public class StepLauncher {
             CARD_H,
             "FALCON HEAVY",
             "S1 thrust: 22.8 MN",
-            "Isp S2: 348 s \u00b7 LEO payload: 63.8 t",
+            "Isp S2: 348s",
             null,
             SelectableCard.State.SELECTED,
             "interface/wizard/v2/icon-launcher-falcon.png",
@@ -68,7 +69,7 @@ public class StepLauncher {
             CARD_H,
             "ARIANE 5 ECA",
             "S1 thrust: 7.6 MN",
-            "Isp S2: 431 s \u00b7 LEO payload: 21 t",
+            "Isp S2: 431s",
             null,
             SelectableCard.State.IDLE,
             "interface/wizard/v2/icon-launcher-ariane.png",
@@ -103,7 +104,7 @@ public class StepLauncher {
           }
         });
 
-    root.addChild(UiKit.vSpacer(ROW_GAP));
+    root.addChild(UiKit.vSpacer(3 * ROW_GAP));
 
     Container payloadRow = new Container(new BoxLayout(Axis.X, FillMode.None));
     payloadRow.setBackground(null);
@@ -111,23 +112,29 @@ public class StepLauncher {
     PopupList payloadType =
         new PopupList(
             PAYLOAD_POPUP_W,
+            -24,
+            12,
             List.of(
                 "Communication satellite",
                 "Earth observation satellite",
                 "Scientific probe",
                 "Cargo module"),
             "Communication satellite");
-    payloadRow.addChild(
-        new LabeledField("PAYLOAD", payloadType.getNode(), null, "lbl-box").getNode());
-    payloadRow.addChild(UiKit.hSpacer(COL_GAP));
+
+    root.addChild(UiKit.fieldLabelRow("PAYLOAD", "lbl-box"));
+    root.addChild(UiKit.vSpacer(LABEL_FIELD_GAP));
+
+    payloadRow.addChild(payloadType.getNode());
+    // payloadRow.addChild(UiKit.hSpacer(2 * COL_GAP));
 
     TextField massField = new TextField("15000", MissionWizardStyles.STYLE);
     massField.setFont(UiKit.ibmPlexMono(11));
-    massField.setPreferredSize(new Vector3f(MASS_FIELD_W, 0, 0));
+    massField.setPreferredSize(new Vector3f(MASS_FIELD_W, 50, 0));
     payloadRow.addChild(massField);
-    payloadRow.addChild(UiKit.hSpacer(COL_GAP));
-
+    payloadRow.addChild(UiKit.vSpacer(LABEL_FIELD_GAP));
     Label kgLabel = payloadRow.addChild(new Label("kg", MissionWizardStyles.STYLE));
+    kgLabel.setTextHAlignment(HAlignment.Center);
+    kgLabel.setTextVAlignment(VAlignment.Center);
     kgLabel.setFont(UiKit.ibmPlexMono(11));
     kgLabel.setColor(MissionWizardStyles.WIZARD_TEXT_SECONDARY);
     kgLabel.setPreferredSize(new Vector3f(KG_LABEL_W, 0, 0));
@@ -138,18 +145,10 @@ public class StepLauncher {
             - MASS_FIELD_W
             - KG_LABEL_W
             - 2 * COL_GAP;
-    if (payloadTrailing > 0f) {
-      payloadRow.addChild(UiKit.hSpacer(payloadTrailing));
-    }
+    payloadRow.addChild(UiKit.hSpacer(payloadTrailing));
     root.addChild(payloadRow);
 
     root.addChild(UiKit.vSpacer(ROW_GAP));
-
-    root.addChild(
-        new InfoBanner(
-                "Tsiolkovsky feasibility check: \u0394v margin ~ 1.8 km/s \u00b7 propellant mass fraction 0.87",
-                InfoBanner.Variant.WARNING)
-            .getNode());
   }
 
   public Container getNode() {

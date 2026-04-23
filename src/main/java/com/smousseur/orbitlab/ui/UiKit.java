@@ -7,12 +7,18 @@ import com.jme3.math.ColorRGBA;
 import com.jme3.math.Vector3f;
 import com.jme3.texture.Texture;
 import com.jme3.texture.Texture2D;
+import com.simsilica.lemur.Axis;
 import com.simsilica.lemur.Container;
+import com.simsilica.lemur.FillMode;
+import com.simsilica.lemur.Label;
+import com.simsilica.lemur.component.BoxLayout;
 import com.simsilica.lemur.component.IconComponent;
 import com.simsilica.lemur.component.QuadBackgroundComponent;
 import com.simsilica.lemur.component.TbtQuadBackgroundComponent;
 import java.util.HashMap;
 import java.util.Map;
+
+import com.smousseur.orbitlab.ui.mission.wizard.MissionWizardStyles;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -53,8 +59,8 @@ public final class UiKit {
   /**
    * Creates a 9-slice gradient background tinted to {@code color}.
    *
-   * <p>Uses the Lemur built-in {@code bordered-gradient.png} texture loaded once during
-   * {@link #init(AssetManager)}.
+   * <p>Uses the Lemur built-in {@code bordered-gradient.png} texture loaded once during {@link
+   * #init(AssetManager)}.
    *
    * @param color the tint colour
    * @return a new background component
@@ -89,7 +95,7 @@ public final class UiKit {
   /**
    * Returns a fixed-size transparent container used for padding in layouts.
    *
-   * @param width  preferred width in pixels
+   * @param width preferred width in pixels
    * @param height preferred height in pixels
    * @return a new spacer container with no background
    */
@@ -115,8 +121,8 @@ public final class UiKit {
    * asset is missing.
    *
    * @param iconPath asset path
-   * @param width    preferred width in pixels
-   * @param height   preferred height in pixels
+   * @param width preferred width in pixels
+   * @param height preferred height in pixels
    * @return container with the icon background, or an empty container on missing asset
    */
   public static Container iconPlaceholder(String iconPath, float width, float height) {
@@ -159,7 +165,7 @@ public final class UiKit {
    * Builds a 9-slice background from a wizard v2 texture. The texture is assumed to be square and
    * uses {@code border} pixels from every edge as the non-stretched corner region.
    *
-   * @param name   texture name without extension or folder
+   * @param name texture name without extension or folder
    * @param border inset (pixels) on every side of the texture
    * @return a 9-slice background, or a flat gradient fallback when the texture is missing
    */
@@ -172,9 +178,7 @@ public final class UiKit {
         tex, 1f, border, border, w - border, h - border, 1f, false);
   }
 
-  /**
-   * Builds a flat (non 9-slice) background from a wizard v2 texture.
-   */
+  /** Builds a flat (non 9-slice) background from a wizard v2 texture. */
   public static QuadBackgroundComponent wizardFlat(String name) {
     Texture2D tex = loadWizardTexture(name);
     if (tex == null) return new QuadBackgroundComponent(ColorRGBA.DarkGray);
@@ -189,31 +193,34 @@ public final class UiKit {
     return iconPlaceholder(WIZARD_V2_DIR + name + ".png", width, height);
   }
 
-  /**
-   * Builds a Lemur {@link IconComponent} pointing at a wizard v2 texture.
-   */
+  /** Builds a Lemur {@link IconComponent} pointing at a wizard v2 texture. */
   public static IconComponent wizardIconComponent(String name) {
     return new IconComponent(WIZARD_V2_DIR + name + ".png");
   }
 
-  /**
-   * Loads {@code orbitron-semibold} at the given pixel size, falling back to Lemur's default.
-   */
+  /** Loads {@code orbitron-semibold} at the given pixel size, falling back to Lemur's default. */
   public static BitmapFont orbitron(int size) {
     return AppStyles.loadFontSafe(assetManager, String.format(FONT_ORBITRON, size));
   }
 
-  /**
-   * Loads {@code ibmplexmono-regular} at the given pixel size, falling back to Lemur's default.
-   */
+  /** Loads {@code ibmplexmono-regular} at the given pixel size, falling back to Lemur's default. */
   public static BitmapFont ibmPlexMono(int size) {
     return AppStyles.loadFontSafe(assetManager, String.format(FONT_IBM_PLEX_MONO, size));
   }
 
-  /**
-   * Loads {@code sora-medium} at the given pixel size, falling back to Lemur's default.
-   */
+  /** Loads {@code sora-medium} at the given pixel size, falling back to Lemur's default. */
   public static BitmapFont sora(int size) {
     return AppStyles.loadFontSafe(assetManager, String.format(FONT_SORA, size));
+  }
+
+  public static Container fieldLabelRow(String text, String iconName) {
+    Container row = new Container(new BoxLayout(Axis.X, FillMode.None));
+    row.setBackground(null);
+    row.addChild(UiKit.wizardIcon(iconName, 14f, 14f));
+    row.addChild(UiKit.hSpacer(6f));
+    Label label = row.addChild(new Label(text, MissionWizardStyles.STYLE));
+    label.setFont(UiKit.ibmPlexMono(11));
+    label.setColor(MissionWizardStyles.WIZARD_TEXT_SECONDARY);
+    return row;
   }
 }
