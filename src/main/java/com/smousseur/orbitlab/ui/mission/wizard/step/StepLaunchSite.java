@@ -8,7 +8,6 @@ import com.smousseur.orbitlab.ui.UiKit;
 import com.smousseur.orbitlab.ui.mission.wizard.MissionWizardStyles;
 import com.smousseur.orbitlab.ui.mission.wizard.component.PopupList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class StepLaunchSite {
 
@@ -21,30 +20,19 @@ public class StepLaunchSite {
 
   private final Container root;
 
-  // FIX 1 : On promeut les champs textes en attributs pour pouvoir les mettre à jour
   private final TextField latField;
   private final TextField lonField;
   private final TextField altField;
 
-  // FIX 2 : Structure de données pour lier le nom aux coordonnées
-  private static class SiteData {
-    String name, lat, lon, alt;
+  private record SiteData(String name, String lat, String lon, String alt) {}
 
-    SiteData(String name, String lat, String lon, String alt) {
-      this.name = name;
-      this.lat = lat;
-      this.lon = lon;
-      this.alt = alt;
-    }
-  }
-
-  private final List<SiteData> sites =
+  private static final List<SiteData> sites =
       List.of(
-          new SiteData("Kourou (CSG) — French Guiana", "5.236", "-52.769", "14"),
-          new SiteData("Cape Canaveral (SLC-40) — USA", "28.562", "-80.577", "3"),
-          new SiteData("Baikonur — Kazakhstan", "45.965", "63.305", "105"),
-          new SiteData("Vandenberg SFB (SLC-4E) — USA", "34.632", "-120.611", "112"),
-          new SiteData("Tanegashima — Japan", "30.400", "130.970", "16"));
+          new SiteData("Kourou - French Guiana", "5.236", "-52.769", "14"),
+          new SiteData("Cape Canaveral - USA", "28.562", "-80.577", "3"),
+          new SiteData("Baikonur - Kazakhstan", "45.965", "63.305", "105"),
+          new SiteData("Vandenberg - USA", "34.632", "-120.611", "112"),
+          new SiteData("Tanegashima - Japan", "30.400", "130.970", "16"));
 
   public StepLaunchSite() {
     root = new Container(new BoxLayout(Axis.Y, FillMode.None));
@@ -70,7 +58,7 @@ public class StepLaunchSite {
     root.addChild(UiKit.fieldLabelRow("COSMODROME", "lbl-factory"));
     root.addChild(UiKit.vSpacer(LABEL_FIELD_GAP));
 
-    List<String> siteNames = sites.stream().map(s -> s.name).collect(Collectors.toList());
+    List<String> siteNames = sites.stream().map(s -> s.name).toList();
 
     PopupList cosmodrome = new PopupList(FIELD_W, 40, 12, siteNames, siteNames.getFirst());
     root.addChild(cosmodrome.getNode());
@@ -78,21 +66,21 @@ public class StepLaunchSite {
     root.addChild(UiKit.vSpacer(ROW_GAP));
 
     SiteData defaultSite = sites.getFirst();
-    latField = createTextField(defaultSite.lat, COL3_W);
-    lonField = createTextField(defaultSite.lon, COL3_W);
-    altField = createTextField(defaultSite.alt, COL3_W);
+    latField = createTextField(defaultSite.lat);
+    lonField = createTextField(defaultSite.lon);
+    altField = createTextField(defaultSite.alt);
 
     cosmodrome.setOnSelect(
-        selectedName -> {
-          for (SiteData site : sites) {
-            if (site.name.equals(selectedName)) {
-              latField.setText(site.lat);
-              lonField.setText(site.lon);
-              altField.setText(site.alt);
-              break;
-            }
-          }
-        });
+        selectedName ->
+            sites.stream()
+                .filter(site -> site.name.equals(selectedName))
+                .findFirst()
+                .ifPresent(
+                    site -> {
+                      latField.setText(site.lat);
+                      lonField.setText(site.lon);
+                      altField.setText(site.alt);
+                    }));
 
     Container row2 = root.addChild(new Container(new BoxLayout(Axis.X, FillMode.None)));
     row2.setBackground(null);
@@ -108,10 +96,10 @@ public class StepLaunchSite {
     return root;
   }
 
-  private TextField createTextField(String value, float w) {
+  private TextField createTextField(String value) {
     TextField f = new TextField(value, MissionWizardStyles.STYLE);
     f.setFont(UiKit.ibmPlexMono(13));
-    f.setPreferredSize(new Vector3f(w, FIELD_H, 0));
+    f.setPreferredSize(new Vector3f(StepLaunchSite.COL3_W, FIELD_H, 0));
     f.setInsets(new Insets3f(0, 0, 10, 0));
     f.setInsetsComponent(new InsetsComponent(new Insets3f(3, 10, 0, 0)));
     return f;

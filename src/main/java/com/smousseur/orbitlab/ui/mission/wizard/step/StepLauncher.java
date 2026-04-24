@@ -27,6 +27,13 @@ public class StepLauncher {
 
   private final Container root;
 
+  private record PayloadData(String name, String mass) {}
+
+  private static final List<PayloadData> payloads =
+      List.of(
+          new PayloadData("Cargo module", "15000"),
+          new PayloadData("Earth observation satellite", "10000"));
+
   public StepLauncher() {
     root = new Container(new BoxLayout(Axis.Y, FillMode.None));
     root.setBackground(null);
@@ -112,12 +119,8 @@ public class StepLauncher {
             PAYLOAD_POPUP_W,
             -24,
             12,
-            List.of(
-                "Communication satellite",
-                "Earth observation satellite",
-                "Scientific probe",
-                "Cargo module"),
-            "Communication satellite");
+            payloads.stream().map(PayloadData::name).toList(),
+            payloads.getFirst().name());
 
     payloadRow.addChild(payloadType.getNode());
 
@@ -126,6 +129,13 @@ public class StepLauncher {
     massField.setPreferredSize(new Vector3f(MASS_FIELD_W, 46, 0));
     massField.setInsets(new Insets3f(0, 0, 10, 0));
     payloadRow.addChild(massField);
+    payloadType.setOnSelect(
+        selectedName ->
+            payloads.stream()
+                .filter(payload -> payload.name.equals(selectedName))
+                .findFirst()
+                .ifPresent(payload -> massField.setText(payload.mass)));
+
     payloadRow.addChild(UiKit.vSpacer(3 * LABEL_FIELD_GAP));
     Label kgLabel = payloadRow.addChild(new Label("kg", MissionWizardStyles.STYLE));
     kgLabel.setTextHAlignment(HAlignment.Center);
@@ -134,16 +144,7 @@ public class StepLauncher {
     kgLabel.setColor(MissionWizardStyles.WIZARD_TEXT_SECONDARY);
     kgLabel.setPreferredSize(new Vector3f(KG_LABEL_W, 0, 0));
 
-    float payloadTrailing =
-        MissionWizardStyles.WIZARD_CONTENT_WIDTH
-            - PAYLOAD_POPUP_W
-            - MASS_FIELD_W
-            - KG_LABEL_W
-            - 2 * COL_GAP;
-    // payloadRow.addChild(UiKit.hSpacer(payloadTrailing));
     root.addChild(payloadRow);
-
-    //    root.addChild(UiKit.vSpacer(ROW_GAP));
   }
 
   public Container getNode() {
