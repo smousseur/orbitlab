@@ -4,7 +4,7 @@ import com.jme3.math.Vector3f;
 import com.simsilica.lemur.*;
 import com.simsilica.lemur.component.BoxLayout;
 import com.smousseur.orbitlab.ui.UiKit;
-import com.smousseur.orbitlab.ui.mission.wizard.MissionWizardStyles;
+import com.smousseur.orbitlab.ui.form.FormStyles;
 import com.smousseur.orbitlab.ui.mission.wizard.component.Badge;
 import com.smousseur.orbitlab.ui.mission.wizard.component.SelectableCard;
 
@@ -24,20 +24,20 @@ public class StepMissionType {
     root.setBackground(null);
     root.setPreferredSize(
         new Vector3f(
-            MissionWizardStyles.WIZARD_CONTENT_WIDTH,
-            MissionWizardStyles.WIZARD_CONTENT_HEIGHT,
+            FormStyles.CONTENT_WIDTH,
+            FormStyles.CONTENT_HEIGHT,
             0));
 
-    Label title = root.addChild(new Label("MISSION TYPE", MissionWizardStyles.STYLE));
+    Label title = root.addChild(new Label("MISSION TYPE", FormStyles.STYLE));
     title.setFont(UiKit.orbitron(13));
-    title.setColor(MissionWizardStyles.WIZARD_TEXT_PRIMARY);
+    title.setColor(FormStyles.TEXT_PRIMARY);
 
     root.addChild(UiKit.vSpacer(ROW_GAP));
 
     Label subtitle =
-        root.addChild(new Label("// select the target orbit", MissionWizardStyles.STYLE));
+        root.addChild(new Label("// select the target orbit", FormStyles.STYLE));
     subtitle.setFont(UiKit.ibmPlexMono(11));
-    subtitle.setColor(MissionWizardStyles.WIZARD_TEXT_SECONDARY);
+    subtitle.setColor(FormStyles.TEXT_SECONDARY);
 
     root.addChild(UiKit.vSpacer(ROW_GAP));
 
@@ -75,7 +75,7 @@ public class StepMissionType {
     row.addChild(UiKit.hSpacer(CARD_GAP));
     row.addChild(UiKit.spacer(CARD_W, CARD_H));
     // Trailing spacer fills remaining row width so cards stay at their fixed size.
-    float trailing = MissionWizardStyles.WIZARD_CONTENT_WIDTH - 3 * CARD_W - 2 * CARD_GAP;
+    float trailing = FormStyles.CONTENT_WIDTH - 3 * CARD_W - 2 * CARD_GAP;
     if (trailing > 0f) {
       row.addChild(UiKit.hSpacer(trailing));
     }

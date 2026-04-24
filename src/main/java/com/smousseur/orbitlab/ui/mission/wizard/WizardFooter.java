@@ -1,5 +1,7 @@
 package com.smousseur.orbitlab.ui.mission.wizard;
 
+import com.smousseur.orbitlab.ui.form.FormStyles;
+
 import com.jme3.input.event.MouseMotionEvent;
 import com.jme3.math.Vector3f;
 import com.jme3.scene.Spatial;
@@ -48,19 +50,19 @@ public class WizardFooter {
 
   public WizardFooter(float preferredWidth) {
     this.innerWidth = Math.max(0f, preferredWidth - 2 * PAD_X);
-    root = new Container(new BoxLayout(Axis.X, FillMode.None), MissionWizardStyles.STYLE);
+    root = new Container(new BoxLayout(Axis.X, FillMode.None), FormStyles.STYLE);
     root.setPreferredSize(new Vector3f(preferredWidth, FOOTER_HEIGHT, 0));
     root.setInsetsComponent(new InsetsComponent(new Insets3f(PAD_Y, PAD_X, PAD_Y, PAD_X)));
 
     cancelButton = newButton("  Cancel", CANCEL_BTN_W);
     cancelButton.setIcon(UiKit.wizardIconComponent("icon-close-red"));
-    cancelButton.setColor(MissionWizardStyles.WIZARD_DANGER);
+    cancelButton.setColor(FormStyles.DANGER);
     attachHoverSkin(cancelButton, "btn-cancel", "btn-cancel-hover");
     cancelButton.addClickCommands(src -> onCancel.run());
 
     previousButton = newButton("  Previous", PREVIOUS_BTN_W);
     previousButton.setIcon(UiKit.wizardIconComponent("icon-chevron-left-mid"));
-    previousButton.setColor(MissionWizardStyles.WIZARD_TEXT_SECONDARY);
+    previousButton.setColor(FormStyles.TEXT_SECONDARY);
     attachHoverSkin(previousButton, "btn-ghost", "btn-ghost-hover");
     previousButton.addClickCommands(src -> onPrevious.run());
 
@@ -68,15 +70,15 @@ public class WizardFooter {
     IconComponent chevron = UiKit.wizardIconComponent("icon-chevron-right-white");
     chevron.setHAlignment(HAlignment.Right);
     nextButton.setIcon(chevron);
-    nextButton.setColor(MissionWizardStyles.WIZARD_TEXT_PRIMARY);
+    nextButton.setColor(FormStyles.TEXT_PRIMARY);
     attachHoverSkin(nextButton, () -> nextBaseTex, () -> nextHoverTex);
     nextButton.addClickCommands(src -> onNext.run());
     applyNextSkin();
 
     progressBar = new ProgressBar(PROGRESS_W, PROGRESS_H);
-    progressLabel = new Label("PROGRESS", MissionWizardStyles.STYLE);
+    progressLabel = new Label("PROGRESS", FormStyles.STYLE);
     progressLabel.setFont(UiKit.ibmPlexMono(11));
-    progressLabel.setColor(MissionWizardStyles.WIZARD_TEXT_LO);
+    progressLabel.setColor(FormStyles.TEXT_LO);
   }
 
   public Container getNode() {
@@ -146,7 +148,7 @@ public class WizardFooter {
   }
 
   private Button newButton(String text, float width) {
-    Button btn = new Button(text, MissionWizardStyles.STYLE);
+    Button btn = new Button(text, FormStyles.STYLE);
     btn.setPreferredSize(new Vector3f(width, BUTTON_HEIGHT, 0));
     btn.setFont(UiKit.sora(13));
     return btn;

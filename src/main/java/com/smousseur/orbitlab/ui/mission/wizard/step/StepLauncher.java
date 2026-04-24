@@ -8,7 +8,7 @@ import com.simsilica.lemur.component.BoxLayout;
 import com.simsilica.lemur.event.DefaultMouseListener;
 import com.simsilica.lemur.event.MouseEventControl;
 import com.smousseur.orbitlab.ui.UiKit;
-import com.smousseur.orbitlab.ui.mission.wizard.MissionWizardStyles;
+import com.smousseur.orbitlab.ui.form.FormStyles;
 import com.smousseur.orbitlab.ui.mission.wizard.component.PopupList;
 import com.smousseur.orbitlab.ui.mission.wizard.component.SelectableCard;
 import java.util.List;
@@ -39,20 +39,20 @@ public class StepLauncher {
     root.setBackground(null);
     root.setPreferredSize(
         new Vector3f(
-            MissionWizardStyles.WIZARD_CONTENT_WIDTH,
-            MissionWizardStyles.WIZARD_CONTENT_HEIGHT,
+            FormStyles.CONTENT_WIDTH,
+            FormStyles.CONTENT_HEIGHT,
             0));
 
-    Label title = root.addChild(new Label("LAUNCHER & PAYLOAD", MissionWizardStyles.STYLE));
+    Label title = root.addChild(new Label("LAUNCHER & PAYLOAD", FormStyles.STYLE));
     title.setFont(UiKit.orbitron(13));
-    title.setColor(MissionWizardStyles.WIZARD_TEXT_PRIMARY);
+    title.setColor(FormStyles.TEXT_PRIMARY);
 
     root.addChild(UiKit.vSpacer(ROW_GAP));
 
     Label subtitle =
-        root.addChild(new Label("// vehicle configuration", MissionWizardStyles.STYLE));
+        root.addChild(new Label("// vehicle configuration", FormStyles.STYLE));
     subtitle.setFont(UiKit.ibmPlexMono(11));
-    subtitle.setColor(MissionWizardStyles.WIZARD_TEXT_SECONDARY);
+    subtitle.setColor(FormStyles.TEXT_SECONDARY);
 
     root.addChild(UiKit.vSpacer(ROW_GAP));
 
@@ -86,7 +86,7 @@ public class StepLauncher {
     vRow.addChild(falcon.getNode());
     vRow.addChild(UiKit.hSpacer(COL_GAP));
     vRow.addChild(ariane.getNode());
-    float vRowTrailing = MissionWizardStyles.WIZARD_CONTENT_WIDTH - 2 * CARD_W - COL_GAP;
+    float vRowTrailing = FormStyles.CONTENT_WIDTH - 2 * CARD_W - COL_GAP;
     vRow.addChild(UiKit.hSpacer(vRowTrailing));
 
     // Mutual exclusion: clicking one deselects the other.
@@ -124,7 +124,7 @@ public class StepLauncher {
 
     payloadRow.addChild(payloadType.getNode());
 
-    TextField massField = new TextField("15000", MissionWizardStyles.STYLE);
+    TextField massField = new TextField("15000", FormStyles.STYLE);
     massField.setFont(UiKit.ibmPlexMono(11));
     massField.setPreferredSize(new Vector3f(MASS_FIELD_W, 46, 0));
     massField.setInsets(new Insets3f(0, 0, 10, 0));
@@ -137,11 +137,11 @@ public class StepLauncher {
                 .ifPresent(payload -> massField.setText(payload.mass)));
 
     payloadRow.addChild(UiKit.vSpacer(3 * LABEL_FIELD_GAP));
-    Label kgLabel = payloadRow.addChild(new Label("kg", MissionWizardStyles.STYLE));
+    Label kgLabel = payloadRow.addChild(new Label("kg", FormStyles.STYLE));
     kgLabel.setTextHAlignment(HAlignment.Center);
     kgLabel.setTextVAlignment(VAlignment.Center);
     kgLabel.setFont(UiKit.ibmPlexMono(11));
-    kgLabel.setColor(MissionWizardStyles.WIZARD_TEXT_SECONDARY);
+    kgLabel.setColor(FormStyles.TEXT_SECONDARY);
     kgLabel.setPreferredSize(new Vector3f(KG_LABEL_W, 0, 0));
 
     root.addChild(payloadRow);

@@ -18,7 +18,7 @@ import com.simsilica.lemur.component.TbtQuadBackgroundComponent;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.smousseur.orbitlab.ui.mission.wizard.MissionWizardStyles;
+import com.smousseur.orbitlab.ui.form.FormStyles;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -218,9 +218,9 @@ public final class UiKit {
     row.setBackground(null);
     row.addChild(UiKit.wizardIcon(iconName, 14f, 14f));
     row.addChild(UiKit.hSpacer(6f));
-    Label label = row.addChild(new Label(text, MissionWizardStyles.STYLE));
+    Label label = row.addChild(new Label(text, FormStyles.STYLE));
     label.setFont(UiKit.ibmPlexMono(11));
-    label.setColor(MissionWizardStyles.WIZARD_TEXT_SECONDARY);
+    label.setColor(FormStyles.TEXT_SECONDARY);
     return row;
   }
 }
