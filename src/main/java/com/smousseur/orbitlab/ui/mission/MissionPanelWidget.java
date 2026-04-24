@@ -1,6 +1,7 @@
 package com.smousseur.orbitlab.ui.mission;
 
 import com.jme3.input.event.MouseButtonEvent;
+import com.jme3.input.event.MouseMotionEvent;
 import com.jme3.math.ColorRGBA;
 import com.jme3.math.Vector3f;
 import com.jme3.renderer.Camera;
@@ -35,11 +36,10 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 /**
- * Modal mission panel: lists all missions in {@link MissionContext}, exposes per-row actions
- * (Edit / Compute / Delete / Show-Hide) and a footer summary of the selected mission.
- *
- * <p>Reuses the wizard's shell / header / footer textures through {@link FormStyles} and is
- * attached to the shared modal layer through a {@link ModalBackdrop}.
+ * Modal mission panel: lists all missions in {@link MissionContext}, exposes per-row icon actions
+ * (Edit / Compute / Delete) and a footer summary of the selected mission. Shares the wizard shell /
+ * header / footer textures through {@link FormStyles} and is attached to the shared modal layer
+ * through a {@link ModalBackdrop}.
  */
 public class MissionPanelWidget implements AutoCloseable {
   private static final Logger logger = LogManager.getLogger(MissionPanelWidget.class);
@@ -55,10 +55,16 @@ public class MissionPanelWidget implements AutoCloseable {
   private static final float HEADER_INNER_WIDTH = WINDOW_WIDTH - 2 * HEADER_PAD_X;
   private static final float CONTENT_INNER_WIDTH = WINDOW_WIDTH - 2 * CONTENT_PAD_X;
 
-  private static final float COL_NAME = 300f;
-  private static final float COL_STATUS = 120f;
-  private static final float COL_ACTIONS = CONTENT_INNER_WIDTH - COL_NAME - COL_STATUS;
-  private static final float ROW_HEIGHT = 30f;
+  private static final float COL_NAME = 220f;
+  private static final float COL_TYPE = 90f;
+  private static final float COL_STATUS = 130f;
+  private static final float COL_ACTIONS = CONTENT_INNER_WIDTH - COL_NAME - COL_TYPE - COL_STATUS;
+  private static final float ROW_HEIGHT = 34f;
+  private static final float ACTION_ICON_SIZE = 20f;
+  private static final float ACTION_ICON_GAP = 10f;
+
+  /** Placeholder mission type displayed in the Type column until Mission exposes one. */
+  private static final String DEFAULT_MISSION_TYPE = "LEO";
 
   private final MissionContext missionContext;
   private final EventBus eventBus;
@@ -189,33 +195,83 @@ public class MissionPanelWidget implements AutoCloseable {
 
     Container titleRow = header.addChild(new Container(new BoxLayout(Axis.X, FillMode.None)));
     titleRow.setBackground(null);
-    titleRow.setPreferredSize(new Vector3f(HEADER_INNER_WIDTH, 26f, 0));
+    titleRow.setPreferredSize(new Vector3f(HEADER_INNER_WIDTH, 32f, 0));
 
     Label title = titleRow.addChild(new Label("MISSION ROSTER", FormStyles.STYLE));
     title.setFont(UiKit.orbitron(16));
     title.setColor(FormStyles.TEXT_PRIMARY);
 
-    float reservedRightWidth = 160f + 12f + 28f;
+    float reservedRightWidth = 160f + 12f + 32f;
     float titleColWidth = HEADER_INNER_WIDTH - reservedRightWidth;
-    title.setPreferredSize(new Vector3f(titleColWidth, 22f, 0));
+    title.setPreferredSize(new Vector3f(titleColWidth, 26f, 0));
 
-    Button newMissionButton = titleRow.addChild(new Button("+ New mission", FormStyles.STYLE));
-    newMissionButton.setFont(UiKit.sora(12));
-    newMissionButton.setColor(FormStyles.ACCENT_BRIGHT);
-    newMissionButton.setInsetsComponent(new InsetsComponent(new Insets3f(6, 14, 6, 14)));
-    newMissionButton.setPreferredSize(new Vector3f(160f, 26f, 0));
-    newMissionButton.addClickCommands(src -> onNewMission.run());
-
+    titleRow.addChild(buildNewMissionButton());
     titleRow.addChild(UiKit.hSpacer(12));
-
-    Button closeButton = titleRow.addChild(new Button("X", FormStyles.STYLE));
-    closeButton.setFont(UiKit.sora(12));
-    closeButton.setColor(FormStyles.TEXT_SECONDARY);
-    closeButton.setInsetsComponent(new InsetsComponent(new Insets3f(6, 10, 6, 10)));
-    closeButton.setPreferredSize(new Vector3f(28f, 26f, 0));
-    closeButton.addClickCommands(src -> onClose.run());
+    titleRow.addChild(buildCloseButton());
 
     return header;
+  }
+
+  private Button buildNewMissionButton() {
+    Button btn = new Button("+ New mission", FormStyles.STYLE);
+    btn.setFont(UiKit.sora(13));
+    btn.setColor(FormStyles.TEXT_PRIMARY);
+    TbtQuadBackgroundComponent bg = UiKit.wizardBg9("btn-primary", 8);
+    bg.setMargin(0f, 0f);
+    btn.setBackground(bg);
+    TbtQuadBackgroundComponent hoverBg = UiKit.wizardBg9("btn-primary-hover", 8);
+    hoverBg.setMargin(0f, 0f);
+    btn.setInsetsComponent(new InsetsComponent(new Insets3f(6, 16, 6, 16)));
+    btn.setPreferredSize(new Vector3f(160f, 32f, 0));
+    btn.addClickCommands(src -> onNewMission.run());
+    MouseEventControl.addListenersToSpatial(
+        btn,
+        new DefaultMouseListener() {
+          @Override
+          public void mouseEntered(MouseMotionEvent evt, Spatial t, Spatial c) {
+            TbtQuadBackgroundComponent h = UiKit.wizardBg9("btn-primary-hover", 8);
+            h.setMargin(0f, 0f);
+            btn.setBackground(h);
+          }
+
+          @Override
+          public void mouseExited(MouseMotionEvent evt, Spatial t, Spatial c) {
+            TbtQuadBackgroundComponent n = UiKit.wizardBg9("btn-primary", 8);
+            n.setMargin(0f, 0f);
+            btn.setBackground(n);
+          }
+        });
+    return btn;
+  }
+
+  private Button buildCloseButton() {
+    Button close = new Button("X", FormStyles.STYLE);
+    close.setFont(UiKit.sora(13));
+    close.setColor(FormStyles.TEXT_SECONDARY);
+    TbtQuadBackgroundComponent bg = UiKit.wizardBg9("btn-ghost", 8);
+    bg.setMargin(0f, 0f);
+    close.setBackground(bg);
+    close.setInsetsComponent(new InsetsComponent(new Insets3f(6, 12, 6, 12)));
+    close.setPreferredSize(new Vector3f(32f, 32f, 0));
+    close.addClickCommands(src -> onClose.run());
+    MouseEventControl.addListenersToSpatial(
+        close,
+        new DefaultMouseListener() {
+          @Override
+          public void mouseEntered(MouseMotionEvent evt, Spatial t, Spatial c) {
+            TbtQuadBackgroundComponent h = UiKit.wizardBg9("btn-ghost-hover", 8);
+            h.setMargin(0f, 0f);
+            close.setBackground(h);
+          }
+
+          @Override
+          public void mouseExited(MouseMotionEvent evt, Spatial t, Spatial c) {
+            TbtQuadBackgroundComponent n = UiKit.wizardBg9("btn-ghost", 8);
+            n.setMargin(0f, 0f);
+            close.setBackground(n);
+          }
+        });
+    return close;
   }
 
   private Container buildContent() {
@@ -228,14 +284,17 @@ public class MissionPanelWidget implements AutoCloseable {
 
     Container columnHeader = content.addChild(new Container(new BoxLayout(Axis.X, FillMode.None)));
     columnHeader.setBackground(null);
-    columnHeader.setPreferredSize(new Vector3f(CONTENT_INNER_WIDTH, 20f, 0));
+    columnHeader.setPreferredSize(new Vector3f(CONTENT_INNER_WIDTH, 14f, 0));
+    columnHeader.setInsetsComponent(new InsetsComponent(new Insets3f(0, 8, 0, 8)));
 
-    columnHeader.addChild(columnHeaderLabel("NAME", COL_NAME, HAlignment.Left));
-    columnHeader.addChild(columnHeaderLabel("STATUS", COL_STATUS, HAlignment.Left));
-    columnHeader.addChild(columnHeaderLabel("ACTIONS", COL_ACTIONS, HAlignment.Right));
+    columnHeader.addChild(columnHeaderLabel("NAME", COL_NAME));
+    columnHeader.addChild(columnHeaderLabel("TYPE", COL_TYPE));
+    columnHeader.addChild(columnHeaderLabel("STATUS", COL_STATUS));
+    columnHeader.addChild(columnHeaderLabel("ACTIONS", COL_ACTIONS));
 
+    content.addChild(UiKit.vSpacer(6));
     content.addChild(divider(CONTENT_INNER_WIDTH));
-    content.addChild(UiKit.vSpacer(4));
+    content.addChild(UiKit.vSpacer(6));
 
     listContainer = content.addChild(new Container(new BoxLayout(Axis.Y, FillMode.None)));
     listContainer.setBackground(null);
@@ -257,12 +316,12 @@ public class MissionPanelWidget implements AutoCloseable {
     return footer;
   }
 
-  private Label columnHeaderLabel(String text, float width, HAlignment align) {
+  private Label columnHeaderLabel(String text, float width) {
     Label l = new Label(text, FormStyles.STYLE);
-    l.setFont(UiKit.ibmPlexMono(10));
+    l.setFont(UiKit.mono(10));
     l.setColor(FormStyles.TEXT_LO);
-    l.setPreferredSize(new Vector3f(width, 16, 0));
-    l.setTextHAlignment(align);
+    l.setPreferredSize(new Vector3f(width, 12, 0));
+    l.setTextHAlignment(HAlignment.Left);
     return l;
   }
 
@@ -293,7 +352,7 @@ public class MissionPanelWidget implements AutoCloseable {
     List<MissionEntry> entries = missionContext.getMissions();
     if (entries.isEmpty()) {
       Label empty = listContainer.addChild(new Label("No missions yet", FormStyles.STYLE));
-      empty.setFont(UiKit.sora(12));
+      empty.setFont(UiKit.sora(13));
       empty.setColor(FormStyles.TEXT_SECONDARY);
       empty.setPreferredSize(new Vector3f(CONTENT_INNER_WIDTH, 24, 0));
       return;
@@ -301,6 +360,7 @@ public class MissionPanelWidget implements AutoCloseable {
 
     for (MissionEntry entry : entries) {
       listContainer.addChild(buildRow(entry));
+      listContainer.addChild(UiKit.vSpacer(4));
     }
   }
 
@@ -309,95 +369,69 @@ public class MissionPanelWidget implements AutoCloseable {
     MissionStatus status = entry.mission().getStatus();
     boolean selected = name.equals(selectedMissionName);
 
-    Container row = new Container(new BoxLayout(Axis.X, FillMode.None));
+    Container row = new Container(new BoxLayout(Axis.X, FillMode.None), FormStyles.STYLE);
     row.setPreferredSize(new Vector3f(CONTENT_INNER_WIDTH, ROW_HEIGHT, 0));
-    row.setInsetsComponent(new InsetsComponent(new Insets3f(4, 8, 4, 8)));
-    row.setBackground(
-        selected
-            ? UiKit.gradientBackground(new ColorRGBA(FormStyles.ACCENT_BRIGHT.r,
-                FormStyles.ACCENT_BRIGHT.g, FormStyles.ACCENT_BRIGHT.b, 0.18f))
-            : null);
+    row.setInsetsComponent(new InsetsComponent(new Insets3f(6, 12, 6, 12)));
+    TbtQuadBackgroundComponent rowBg = selected ? FormStyles.inputFocusBg() : FormStyles.inputBg();
+    rowBg.setMargin(0f, 0f);
+    row.setBackground(rowBg);
 
     Label nameLabel = row.addChild(new Label(name, FormStyles.STYLE));
-    nameLabel.setFont(UiKit.sora(12));
+    nameLabel.setFont(UiKit.sora(13));
     nameLabel.setColor(FormStyles.TEXT_PRIMARY);
-    nameLabel.setPreferredSize(new Vector3f(COL_NAME - 16, ROW_HEIGHT - 8, 0));
+    nameLabel.setTextHAlignment(HAlignment.Left);
+    nameLabel.setPreferredSize(new Vector3f(COL_NAME, ROW_HEIGHT - 12, 0));
+
+    Label typeLabel = row.addChild(new Label(missionType(entry), FormStyles.STYLE));
+    typeLabel.setFont(UiKit.ibmPlexMono(11));
+    typeLabel.setColor(FormStyles.TEXT_SECONDARY);
+    typeLabel.setTextHAlignment(HAlignment.Left);
+    typeLabel.setPreferredSize(new Vector3f(COL_TYPE, ROW_HEIGHT - 12, 0));
 
     Label statusLabel = row.addChild(new Label(status.name(), FormStyles.STYLE));
     statusLabel.setFont(UiKit.ibmPlexMono(11));
     statusLabel.setColor(statusColor(status));
-    statusLabel.setPreferredSize(new Vector3f(COL_STATUS, ROW_HEIGHT - 8, 0));
     statusLabel.setTextHAlignment(HAlignment.Left);
+    statusLabel.setPreferredSize(new Vector3f(COL_STATUS, ROW_HEIGHT - 12, 0));
 
     Container actions = row.addChild(new Container(new BoxLayout(Axis.X, FillMode.None)));
     actions.setBackground(null);
-    actions.setPreferredSize(new Vector3f(COL_ACTIONS, ROW_HEIGHT - 8, 0));
-    populateRowActions(actions, name, status, entry.isVisible());
+    actions.setPreferredSize(new Vector3f(COL_ACTIONS, ROW_HEIGHT - 12, 0));
+    populateRowActions(actions, name, status);
 
-    // Click on name or status selects the row.
-    MouseEventControl.addListenersToSpatial(
-        nameLabel,
+    // Click on name / type / status selects the row.
+    DefaultMouseListener selectListener =
         new DefaultMouseListener() {
           @Override
           public void click(MouseButtonEvent event, Spatial target, Spatial capture) {
             selectMission(name);
             event.setConsumed();
           }
-        });
-    MouseEventControl.addListenersToSpatial(
-        statusLabel,
-        new DefaultMouseListener() {
-          @Override
-          public void click(MouseButtonEvent event, Spatial target, Spatial capture) {
-            selectMission(name);
-            event.setConsumed();
-          }
-        });
+        };
+    MouseEventControl.addListenersToSpatial(nameLabel, selectListener);
+    MouseEventControl.addListenersToSpatial(typeLabel, selectListener);
+    MouseEventControl.addListenersToSpatial(statusLabel, selectListener);
 
     return row;
   }
 
-  private void populateRowActions(
-      Container actions, String missionName, MissionStatus status, boolean visibleInScene) {
-    float btnH = ROW_HEIGHT - 10f;
+  private void populateRowActions(Container actions, String missionName, MissionStatus status) {
+    boolean computing = status == MissionStatus.COMPUTING;
 
-    if (status == MissionStatus.COMPUTING) {
-      Label computing = actions.addChild(new Label("computing...", FormStyles.STYLE));
-      computing.setFont(UiKit.ibmPlexMono(10));
-      computing.setColor(FormStyles.WARNING);
-      computing.setTextHAlignment(HAlignment.Right);
-      computing.setPreferredSize(new Vector3f(COL_ACTIONS, btnH, 0));
-      return;
-    }
-
-    // Right-align: spacer first, then action buttons.
-    actions.addChild(hFlex());
-
-    boolean showToggle = status == MissionStatus.READY;
-    if (showToggle) {
-      actions.addChild(
-          rowActionButton(
-              visibleInScene ? "Hide" : "Show",
-              FormStyles.SUCCESS,
-              () ->
-                  eventBus.publishMissionAction(
-                      missionName, EventBus.MissionAction.TOGGLE_VISIBLE)));
-      actions.addChild(UiKit.hSpacer(6));
-    }
-
-    actions.addChild(rowActionButton("Edit", FormStyles.ACCENT_BRIGHT, () -> onEdit(missionName)));
-    actions.addChild(UiKit.hSpacer(6));
     actions.addChild(
-        rowActionButton(
-            status == MissionStatus.DRAFT ? "Compute" : "Re-compute",
-            FormStyles.WARNING,
+        actionIconButton("edit", !computing, () -> onEdit(missionName)));
+    actions.addChild(UiKit.hSpacer(ACTION_ICON_GAP));
+    actions.addChild(
+        actionIconButton(
+            "compute",
+            !computing,
             () ->
                 eventBus.publishMissionAction(missionName, EventBus.MissionAction.OPTIMIZE)));
-    actions.addChild(UiKit.hSpacer(6));
+    actions.addChild(UiKit.hSpacer(ACTION_ICON_GAP));
     actions.addChild(
-        rowActionButton(
-            "Delete",
-            FormStyles.DANGER,
+        actionIconButton(
+            "delete",
+            !computing,
             () -> {
               if (missionName.equals(selectedMissionName)) {
                 selectedMissionName = null;
@@ -407,21 +441,40 @@ public class MissionPanelWidget implements AutoCloseable {
             }));
   }
 
-  private Container hFlex() {
-    // Absorbs free width so action buttons float to the right.
-    Container c = new Container();
-    c.setBackground(null);
-    c.setPreferredSize(new Vector3f(0, 0, 0));
-    return c;
-  }
+  private Container actionIconButton(String iconKey, boolean enabled, Runnable onClick) {
+    final String normalTex = "icon-action-" + iconKey;
+    final String hoverTex = "icon-action-" + iconKey + "-hover";
+    final String disabledTex = "icon-action-" + iconKey + "-disabled";
 
-  private Button rowActionButton(String label, ColorRGBA color, Runnable action) {
-    Button b = new Button(label, FormStyles.STYLE);
-    b.setFont(UiKit.sora(11));
-    b.setColor(color);
-    b.setInsetsComponent(new InsetsComponent(new Insets3f(3, 9, 3, 9)));
-    b.addClickCommands(src -> action.run());
-    return b;
+    Container icon = new Container();
+    icon.setPreferredSize(new Vector3f(ACTION_ICON_SIZE, ACTION_ICON_SIZE, 0));
+
+    if (!enabled) {
+      icon.setBackground(UiKit.wizardFlat(disabledTex));
+      return icon;
+    }
+
+    icon.setBackground(UiKit.wizardFlat(normalTex));
+    MouseEventControl.addListenersToSpatial(
+        icon,
+        new DefaultMouseListener() {
+          @Override
+          public void mouseEntered(MouseMotionEvent evt, Spatial target, Spatial capture) {
+            icon.setBackground(UiKit.wizardFlat(hoverTex));
+          }
+
+          @Override
+          public void mouseExited(MouseMotionEvent evt, Spatial target, Spatial capture) {
+            icon.setBackground(UiKit.wizardFlat(normalTex));
+          }
+
+          @Override
+          public void click(MouseButtonEvent event, Spatial target, Spatial capture) {
+            onClick.run();
+            event.setConsumed();
+          }
+        });
+    return icon;
   }
 
   // -------------------------------------------------------------------------
@@ -464,9 +517,9 @@ public class MissionPanelWidget implements AutoCloseable {
         entry.mission().getVehicle() != null
             ? entry.mission().getVehicle().getClass().getSimpleName()
             : "—";
-    String schedule =
-        entry.getScheduledDate().map(Object::toString).orElse("unscheduled");
-    String line = "vehicle: " + vehicleName + "   •   launch: " + schedule;
+    String schedule = entry.getScheduledDate().map(Object::toString).orElse("unscheduled");
+    String line =
+        "type: " + missionType(entry) + "   •   vehicle: " + vehicleName + "   •   launch: " + schedule;
 
     Label meta = footerSummary.addChild(new Label(line, FormStyles.STYLE));
     meta.setFont(UiKit.ibmPlexMono(11));
@@ -495,6 +548,11 @@ public class MissionPanelWidget implements AutoCloseable {
   // -------------------------------------------------------------------------
   // Utilities
   // -------------------------------------------------------------------------
+
+  private static String missionType(MissionEntry entry) {
+    // TODO: pull the actual mission type from the wizard once stored on Mission.
+    return DEFAULT_MISSION_TYPE;
+  }
 
   private void centerOnScreen(int screenWidth, int screenHeight) {
     float x = Math.round((screenWidth - WINDOW_WIDTH) / 2f);
