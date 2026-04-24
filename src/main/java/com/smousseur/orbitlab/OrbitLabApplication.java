@@ -92,9 +92,7 @@ public class OrbitLabApplication extends SimpleApplication {
 
     OrbitCameraAppState orbitCam =
         new OrbitCameraAppState(
-            applicationContext,
-            () -> Vector3f.ZERO,
-            wizardState::isWizardVisible);
+            applicationContext, () -> Vector3f.ZERO, wizardState::isWizardVisible);
     stateManager.attach(orbitCam);
 
     cam.setLocation(new Vector3f(0f, 0f, 9000f));

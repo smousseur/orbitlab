@@ -38,7 +38,7 @@ public final class UiKit {
   private static final String FONT_ORBITRON = "fonts/orbitron-semibold-%d.fnt";
   private static final String FONT_IBM_PLEX_MONO = "fonts/ibmplexmono-regular-%d.fnt";
   private static final String FONT_SORA = "fonts/sora-medium-%d.fnt";
-  private static final String WIZARD_V2_DIR = "interface/wizard/v2/";
+  private static final String WIZARD_DIR = "interface/wizard/";
 
   private static AssetManager assetManager;
   private static Texture gradientTex;
@@ -150,7 +150,7 @@ public final class UiKit {
     Texture2D cached = wizardTextureCache.get(name);
     if (cached != null) return cached;
     try {
-      Texture2D tex = (Texture2D) assetManager.loadTexture(WIZARD_V2_DIR + name + ".png");
+      Texture2D tex = (Texture2D) assetManager.loadTexture(WIZARD_DIR + name + ".png");
       tex.setMinFilter(Texture.MinFilter.BilinearNoMipMaps);
       tex.setMagFilter(Texture.MagFilter.Bilinear);
       wizardTextureCache.put(name, tex);
@@ -190,12 +190,12 @@ public final class UiKit {
    * container on missing asset.
    */
   public static Container wizardIcon(String name, float width, float height) {
-    return iconPlaceholder(WIZARD_V2_DIR + name + ".png", width, height);
+    return iconPlaceholder(WIZARD_DIR + name + ".png", width, height);
   }
 
   /** Builds a Lemur {@link IconComponent} pointing at a wizard v2 texture. */
   public static IconComponent wizardIconComponent(String name) {
-    return new IconComponent(WIZARD_V2_DIR + name + ".png");
+    return new IconComponent(WIZARD_DIR + name + ".png");
   }
 
   /** Loads {@code orbitron-semibold} at the given pixel size, falling back to Lemur's default. */

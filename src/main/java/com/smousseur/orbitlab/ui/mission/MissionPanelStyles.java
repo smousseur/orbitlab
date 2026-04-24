@@ -22,12 +22,11 @@ public final class MissionPanelStyles {
   /**
    * Initializes and registers the mission panel styles with the global Lemur style system.
    *
-   * @param assetManager the JME3 asset manager (unused; gradient texture is managed by
-   *     {@link UiKit})
+   * @param assetManager the JME3 asset manager (unused; gradient texture is managed by {@link
+   *     UiKit})
    */
   public static void init(AssetManager assetManager) {
     Styles styles = GuiGlobals.getInstance().getStyles();
-    styles.applyStyles(STYLE, "glass");
 
     Attributes containerAttrs = styles.getSelector("container", STYLE);
     containerAttrs.set("background", UiKit.gradientBackground(AppStyles.ICE_PANEL_BG));

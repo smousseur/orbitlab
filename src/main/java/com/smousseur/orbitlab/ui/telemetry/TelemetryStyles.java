@@ -9,8 +9,8 @@ import com.smousseur.orbitlab.ui.AppStyles;
 /**
  * Defines and registers Lemur GUI styles for the mission telemetry widget.
  *
- * <p>Creates a "telemetry" style derived from the Glass base style.
- * Visual tokens (colours, margins) are sourced from {@link AppStyles}.
+ * <p>Creates a "telemetry" style derived from the Glass base style. Visual tokens (colours,
+ * margins) are sourced from {@link AppStyles}.
  */
 public final class TelemetryStyles {
 
@@ -26,7 +26,7 @@ public final class TelemetryStyles {
    */
   public static void init(AssetManager assetManager) {
     Styles styles = GuiGlobals.getInstance().getStyles();
-    styles.applyStyles(STYLE, "glass");
+    // styles.applyStyles(STYLE, "glass");
     styles
         .getSelector("container", STYLE)
         .set("background", new QuadBackgroundComponent(AppStyles.HUD_BACKGROUND));

@@ -115,7 +115,7 @@ public final class TimelineStyles {
     textureCache.clear();
 
     Styles styles = GuiGlobals.getInstance().getStyles();
-    styles.applyStyles(STYLE, "glass");
+    // styles.applyStyles(STYLE, "glass");
 
     TbtQuadBackgroundComponent capsule = capsuleBackground();
 

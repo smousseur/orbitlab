@@ -65,7 +65,7 @@ public class StepLauncher {
             "Isp S2: 348s",
             null,
             SelectableCard.State.SELECTED,
-            "interface/wizard/v2/icon-launcher-falcon.png",
+            "interface/wizard/icon-launcher-falcon.png",
             LAUNCHER_ICON,
             SelectableCard.Variant.LAUNCHER);
     SelectableCard ariane =
@@ -77,7 +77,7 @@ public class StepLauncher {
             "Isp S2: 431s",
             null,
             SelectableCard.State.IDLE,
-            "interface/wizard/v2/icon-launcher-ariane.png",
+            "interface/wizard/icon-launcher-ariane.png",
             LAUNCHER_ICON,
             SelectableCard.Variant.LAUNCHER);
 
