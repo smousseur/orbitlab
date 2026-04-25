@@ -421,7 +421,7 @@ public class MissionPanelWidget implements AutoCloseable {
     Container actions = row.addChild(new Container(new BoxLayout(Axis.X, FillMode.None)));
     actions.setBackground(null);
     actions.setPreferredSize(new Vector3f(COL_ACTIONS, rowInnerH, 0));
-    populateRowActions(actions, name, status, rowInnerH);
+    populateRowActions(actions, name, status, entry.isVisible(), rowInnerH);
 
     // Hover + selection follow the PopupList pattern (white tint over btn-primary).
     // Action icons consume their own clicks so clicks on icons don't trigger row selection.
@@ -451,8 +451,13 @@ public class MissionPanelWidget implements AutoCloseable {
   }
 
   private void populateRowActions(
-      Container actions, String missionName, MissionStatus status, float rowInnerH) {
+      Container actions,
+      String missionName,
+      MissionStatus status,
+      boolean visible,
+      float rowInnerH) {
     boolean computing = status == MissionStatus.COMPUTING;
+    boolean ready = status == MissionStatus.READY;
 
     actions.addChild(
         vCenter(actionIconButton("edit", !computing, () -> onEdit(missionName)), rowInnerH));
@@ -463,6 +468,16 @@ public class MissionPanelWidget implements AutoCloseable {
                 "compute",
                 !computing,
                 () -> eventBus.publishMissionAction(missionName, EventBus.MissionAction.OPTIMIZE)),
+            rowInnerH));
+    actions.addChild(UiKit.hSpacer(ACTION_ICON_GAP));
+    actions.addChild(
+        vCenter(
+            visualizeIconButton(
+                ready,
+                visible,
+                () ->
+                    eventBus.publishMissionAction(
+                        missionName, EventBus.MissionAction.TOGGLE_VISIBLE)),
             rowInnerH));
     actions.addChild(UiKit.hSpacer(ACTION_ICON_GAP));
     actions.addChild(
@@ -516,6 +531,44 @@ public class MissionPanelWidget implements AutoCloseable {
           @Override
           public void mouseExited(MouseMotionEvent evt, Spatial target, Spatial capture) {
             icon.setBackground(tintedFlat(normalTex, FormStyles.ACCENT_BRIGHT));
+          }
+
+          @Override
+          public void click(MouseButtonEvent event, Spatial target, Spatial capture) {
+            onClick.run();
+            event.setConsumed();
+          }
+        });
+    return icon;
+  }
+
+  private Container visualizeIconButton(boolean ready, boolean on, Runnable onClick) {
+    final String normalTex = "icon_visualize_normal";
+    final String hoverTex = "icon_visualize_hover";
+    final String disabledTex = "icon_visualize_disabled";
+
+    Container icon = new Container();
+    icon.setPreferredSize(new Vector3f(ACTION_ICON_SIZE, ACTION_ICON_SIZE, 0));
+
+    if (!ready) {
+      icon.setBackground(UiKit.wizardFlat(disabledTex));
+      return icon;
+    }
+
+    final String idleTex = on ? normalTex : disabledTex;
+    icon.setBackground(UiKit.wizardFlat(idleTex));
+
+    MouseEventControl.addListenersToSpatial(
+        icon,
+        new DefaultMouseListener() {
+          @Override
+          public void mouseEntered(MouseMotionEvent evt, Spatial target, Spatial capture) {
+            icon.setBackground(UiKit.wizardFlat(hoverTex));
+          }
+
+          @Override
+          public void mouseExited(MouseMotionEvent evt, Spatial target, Spatial capture) {
+            icon.setBackground(UiKit.wizardFlat(idleTex));
           }
 
           @Override
@@ -603,7 +656,6 @@ public class MissionPanelWidget implements AutoCloseable {
       selectedMissionName = name;
     }
     missionContext.setSelectedMissionName(selectedMissionName);
-    missionContext.getSelectedMission().ifPresent(mission -> mission.setVisible(true));
     refreshMissionList();
     refreshFooterSummary();
   }

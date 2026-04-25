@@ -134,9 +134,18 @@ public final class MissionOrchestratorAppState extends BaseAppState {
                 .findMission(name)
                 .ifPresent(
                     entry -> {
-                      if (entry.mission().getStatus() == MissionStatus.READY) {
-                        entry.setVisible(!entry.isVisible());
+                      if (entry.mission().getStatus() != MissionStatus.READY) {
+                        return;
                       }
+                      boolean turningOn = !entry.isVisible();
+                      if (turningOn) {
+                        for (MissionEntry other : context.missionContext().getMissions()) {
+                          if (other != entry && other.isVisible()) {
+                            other.setVisible(false);
+                          }
+                        }
+                      }
+                      entry.setVisible(turningOn);
                     });
         case DELETE -> {
           MissionRenderer renderer = renderers.remove(name);
