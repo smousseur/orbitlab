@@ -14,6 +14,7 @@ import com.simsilica.lemur.FillMode;
 import com.simsilica.lemur.HAlignment;
 import com.simsilica.lemur.Insets3f;
 import com.simsilica.lemur.Label;
+import com.simsilica.lemur.VAlignment;
 import com.simsilica.lemur.component.BorderLayout;
 import com.simsilica.lemur.component.BoxLayout;
 import com.simsilica.lemur.component.InsetsComponent;
@@ -392,28 +393,33 @@ public class MissionPanelWidget implements AutoCloseable {
     rowBg.setColor(selected ? ROW_SELECT_TINT : ROW_IDLE_TINT);
     row.setBackground(rowBg);
 
+    float rowInnerH = ROW_HEIGHT - 12;
+
     Label nameLabel = row.addChild(new Label(name, FormStyles.STYLE));
     nameLabel.setFont(UiKit.sora(13));
     nameLabel.setColor(FormStyles.TEXT_PRIMARY);
     nameLabel.setTextHAlignment(HAlignment.Left);
-    nameLabel.setPreferredSize(new Vector3f(COL_NAME, ROW_HEIGHT - 12, 0));
+    nameLabel.setTextVAlignment(VAlignment.Center);
+    nameLabel.setPreferredSize(new Vector3f(COL_NAME, rowInnerH, 0));
 
     Label typeLabel = row.addChild(new Label(missionType(entry), FormStyles.STYLE));
     typeLabel.setFont(UiKit.ibmPlexMono(11));
     typeLabel.setColor(FormStyles.TEXT_SECONDARY);
     typeLabel.setTextHAlignment(HAlignment.Left);
-    typeLabel.setPreferredSize(new Vector3f(COL_TYPE, ROW_HEIGHT - 12, 0));
+    typeLabel.setTextVAlignment(VAlignment.Center);
+    typeLabel.setPreferredSize(new Vector3f(COL_TYPE, rowInnerH, 0));
 
     Label statusLabel = row.addChild(new Label(status.name(), FormStyles.STYLE));
     statusLabel.setFont(UiKit.ibmPlexMono(11));
     statusLabel.setColor(statusColor(status));
     statusLabel.setTextHAlignment(HAlignment.Left);
-    statusLabel.setPreferredSize(new Vector3f(COL_STATUS, ROW_HEIGHT - 12, 0));
+    statusLabel.setTextVAlignment(VAlignment.Center);
+    statusLabel.setPreferredSize(new Vector3f(COL_STATUS, rowInnerH, 0));
 
     Container actions = row.addChild(new Container(new BoxLayout(Axis.X, FillMode.None)));
     actions.setBackground(null);
-    actions.setPreferredSize(new Vector3f(COL_ACTIONS, ROW_HEIGHT - 12, 0));
-    populateRowActions(actions, name, status);
+    actions.setPreferredSize(new Vector3f(COL_ACTIONS, rowInnerH, 0));
+    populateRowActions(actions, name, status, rowInnerH);
 
     // Hover + selection follow the PopupList pattern (white tint over btn-primary).
     // Action icons consume their own clicks so clicks on icons don't trigger row selection.
@@ -442,30 +448,46 @@ public class MissionPanelWidget implements AutoCloseable {
     return row;
   }
 
-  private void populateRowActions(Container actions, String missionName, MissionStatus status) {
+  private void populateRowActions(
+      Container actions, String missionName, MissionStatus status, float rowInnerH) {
     boolean computing = status == MissionStatus.COMPUTING;
 
     actions.addChild(
-        actionIconButton("edit", !computing, () -> onEdit(missionName)));
+        vCenter(actionIconButton("edit", !computing, () -> onEdit(missionName)), rowInnerH));
     actions.addChild(UiKit.hSpacer(ACTION_ICON_GAP));
     actions.addChild(
-        actionIconButton(
-            "compute",
-            !computing,
-            () ->
-                eventBus.publishMissionAction(missionName, EventBus.MissionAction.OPTIMIZE)));
+        vCenter(
+            actionIconButton(
+                "compute",
+                !computing,
+                () ->
+                    eventBus.publishMissionAction(missionName, EventBus.MissionAction.OPTIMIZE)),
+            rowInnerH));
     actions.addChild(UiKit.hSpacer(ACTION_ICON_GAP));
     actions.addChild(
-        actionIconButton(
-            "delete",
-            !computing,
-            () -> {
-              if (missionName.equals(selectedMissionName)) {
-                selectedMissionName = null;
-                missionContext.setSelectedMissionName(null);
-              }
-              eventBus.publishMissionAction(missionName, EventBus.MissionAction.DELETE);
-            }));
+        vCenter(
+            actionIconButton(
+                "delete",
+                !computing,
+                () -> {
+                  if (missionName.equals(selectedMissionName)) {
+                    selectedMissionName = null;
+                    missionContext.setSelectedMissionName(null);
+                  }
+                  eventBus.publishMissionAction(missionName, EventBus.MissionAction.DELETE);
+                }),
+            rowInnerH));
+  }
+
+  private static Container vCenter(Container child, float containerHeight) {
+    float vPad = Math.max(0f, (containerHeight - child.getPreferredSize().y) * 0.5f);
+    Container wrap = new Container(new BoxLayout(Axis.Y, FillMode.None));
+    wrap.setBackground(null);
+    wrap.setPreferredSize(new Vector3f(child.getPreferredSize().x, containerHeight, 0));
+    wrap.addChild(UiKit.vSpacer(vPad));
+    wrap.addChild(child);
+    wrap.addChild(UiKit.vSpacer(vPad));
+    return wrap;
   }
 
   private Container actionIconButton(String iconKey, boolean enabled, Runnable onClick) {
