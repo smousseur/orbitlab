@@ -47,7 +47,7 @@ public class MissionPanelWidget implements AutoCloseable {
   private static final float WINDOW_WIDTH = 720f;
   private static final float WINDOW_HEIGHT = 520f;
   private static final float HEADER_HEIGHT = 88f;
-  private static final float FOOTER_HEIGHT = 72f;
+  private static final float FOOTER_HEIGHT = 110f;
   private static final float HEADER_PAD_X = 32f;
   private static final float HEADER_PAD_Y = 20f;
   private static final float CONTENT_PAD_X = 32f;
@@ -59,12 +59,27 @@ public class MissionPanelWidget implements AutoCloseable {
   private static final float COL_TYPE = 90f;
   private static final float COL_STATUS = 130f;
   private static final float COL_ACTIONS = CONTENT_INNER_WIDTH - COL_NAME - COL_TYPE - COL_STATUS;
-  private static final float ROW_HEIGHT = 34f;
+  private static final float ROW_HEIGHT = 46f;
   private static final float ACTION_ICON_SIZE = 20f;
   private static final float ACTION_ICON_GAP = 10f;
+  private static final float COL_HEADER_ALPHA = 0.6f;
+  private static final float CLOSE_ICON_SIZE = 16f;
+  private static final float CLOSE_BTN_INSET = 12f;
+  private static final ColorRGBA ROW_IDLE_TINT = new ColorRGBA(1f, 1f, 1f, 0f);
+  private static final ColorRGBA ROW_HOVER_TINT = new ColorRGBA(1f, 1f, 1f, 0.18f);
+  private static final ColorRGBA ROW_SELECT_TINT = new ColorRGBA(1f, 1f, 1f, 0.45f);
 
   /** Placeholder mission type displayed in the Type column until Mission exposes one. */
   private static final String DEFAULT_MISSION_TYPE = "LEO";
+
+  // Dummy values shown in the selection details footer until real metadata is plumbed.
+  private static final String DUMMY_PAYLOAD = "14.2 t";
+  private static final String DUMMY_ALTITUDE = "380 km";
+  private static final String DUMMY_INCLINATION = "51.6°";
+  private static final String DUMMY_DV = "9.4 km/s";
+  private static final String DUMMY_PROPELLANT = "RP-1 / LOX";
+  private static final String DUMMY_WINDOW = "T-00:42:11";
+  private static final int DUMMY_STAGES = 2;
 
   private final MissionContext missionContext;
   private final EventBus eventBus;
@@ -100,6 +115,15 @@ public class MissionPanelWidget implements AutoCloseable {
     root.addChild(buildHeader());
     root.addChild(buildContent());
     root.addChild(buildFooter());
+
+    // Close icon: anchored at the top-right of the root, bypassing the BoxLayout
+    // (same idiom as PopupList.openPopup using attachChild rather than Container.addChild).
+    Container closeIcon = buildCloseButton();
+    root.attachChild(closeIcon);
+    closeIcon.setLocalTranslation(
+        WINDOW_WIDTH - CLOSE_ICON_SIZE - CLOSE_BTN_INSET,
+        WINDOW_HEIGHT - CLOSE_BTN_INSET,
+        1f);
 
     // Mouse on the modal shell must not leak through to the backdrop.
     MouseEventControl.addListenersToSpatial(
@@ -200,14 +224,7 @@ public class MissionPanelWidget implements AutoCloseable {
     Label title = titleRow.addChild(new Label("MISSION ROSTER", FormStyles.STYLE));
     title.setFont(UiKit.orbitron(16));
     title.setColor(FormStyles.TEXT_PRIMARY);
-
-    float reservedRightWidth = 160f + 12f + 32f;
-    float titleColWidth = HEADER_INNER_WIDTH - reservedRightWidth;
-    title.setPreferredSize(new Vector3f(titleColWidth, 26f, 0));
-
-    titleRow.addChild(buildNewMissionButton());
-    titleRow.addChild(UiKit.hSpacer(12));
-    titleRow.addChild(buildCloseButton());
+    title.setPreferredSize(new Vector3f(HEADER_INNER_WIDTH, 26f, 0));
 
     return header;
   }
@@ -244,34 +261,30 @@ public class MissionPanelWidget implements AutoCloseable {
     return btn;
   }
 
-  private Button buildCloseButton() {
-    Button close = new Button("X", FormStyles.STYLE);
-    close.setFont(UiKit.sora(13));
-    close.setColor(FormStyles.TEXT_SECONDARY);
-    TbtQuadBackgroundComponent bg = UiKit.wizardBg9("btn-ghost", 8);
-    bg.setMargin(0f, 0f);
-    close.setBackground(bg);
-    close.setInsetsComponent(new InsetsComponent(new Insets3f(6, 12, 6, 12)));
-    close.setPreferredSize(new Vector3f(32f, 32f, 0));
-    close.addClickCommands(src -> onClose.run());
+  private Container buildCloseButton() {
+    Container icon = new Container();
+    icon.setBackground(UiKit.wizardFlat("icon-close-lo"));
+    icon.setPreferredSize(new Vector3f(CLOSE_ICON_SIZE, CLOSE_ICON_SIZE, 0));
     MouseEventControl.addListenersToSpatial(
-        close,
+        icon,
         new DefaultMouseListener() {
           @Override
           public void mouseEntered(MouseMotionEvent evt, Spatial t, Spatial c) {
-            TbtQuadBackgroundComponent h = UiKit.wizardBg9("btn-ghost-hover", 8);
-            h.setMargin(0f, 0f);
-            close.setBackground(h);
+            icon.setBackground(UiKit.wizardFlat("icon-close-red"));
           }
 
           @Override
           public void mouseExited(MouseMotionEvent evt, Spatial t, Spatial c) {
-            TbtQuadBackgroundComponent n = UiKit.wizardBg9("btn-ghost", 8);
-            n.setMargin(0f, 0f);
-            close.setBackground(n);
+            icon.setBackground(UiKit.wizardFlat("icon-close-lo"));
+          }
+
+          @Override
+          public void click(MouseButtonEvent event, Spatial target, Spatial capture) {
+            onClose.run();
+            event.setConsumed();
           }
         });
-    return close;
+    return icon;
   }
 
   private Container buildContent() {
@@ -281,6 +294,13 @@ public class MissionPanelWidget implements AutoCloseable {
         new Vector3f(WINDOW_WIDTH, WINDOW_HEIGHT - HEADER_HEIGHT - FOOTER_HEIGHT, 0));
     content.setInsetsComponent(
         new InsetsComponent(new Insets3f(CONTENT_PAD_Y, CONTENT_PAD_X, CONTENT_PAD_Y, CONTENT_PAD_X)));
+
+    Container actionsBar = content.addChild(new Container(new BoxLayout(Axis.X, FillMode.None)));
+    actionsBar.setBackground(null);
+    actionsBar.setPreferredSize(new Vector3f(CONTENT_INNER_WIDTH, 32f, 0));
+    actionsBar.addChild(UiKit.hSpacer(CONTENT_INNER_WIDTH - 160f));
+    actionsBar.addChild(buildNewMissionButton());
+    content.addChild(UiKit.vSpacer(12));
 
     Container columnHeader = content.addChild(new Container(new BoxLayout(Axis.X, FillMode.None)));
     columnHeader.setBackground(null);
@@ -319,7 +339,9 @@ public class MissionPanelWidget implements AutoCloseable {
   private Label columnHeaderLabel(String text, float width) {
     Label l = new Label(text, FormStyles.STYLE);
     l.setFont(UiKit.mono(10));
-    l.setColor(FormStyles.TEXT_LO);
+    ColorRGBA c = FormStyles.TEXT_LO.clone();
+    c.a = COL_HEADER_ALPHA;
+    l.setColor(c);
     l.setPreferredSize(new Vector3f(width, 12, 0));
     l.setTextHAlignment(HAlignment.Left);
     return l;
@@ -358,9 +380,11 @@ public class MissionPanelWidget implements AutoCloseable {
       return;
     }
 
-    for (MissionEntry entry : entries) {
-      listContainer.addChild(buildRow(entry));
-      listContainer.addChild(UiKit.vSpacer(4));
+    for (int i = 0; i < entries.size(); i++) {
+      listContainer.addChild(buildRow(entries.get(i)));
+      if (i < entries.size() - 1) {
+        listContainer.addChild(divider(CONTENT_INNER_WIDTH));
+      }
     }
   }
 
@@ -372,8 +396,9 @@ public class MissionPanelWidget implements AutoCloseable {
     Container row = new Container(new BoxLayout(Axis.X, FillMode.None), FormStyles.STYLE);
     row.setPreferredSize(new Vector3f(CONTENT_INNER_WIDTH, ROW_HEIGHT, 0));
     row.setInsetsComponent(new InsetsComponent(new Insets3f(6, 12, 6, 12)));
-    TbtQuadBackgroundComponent rowBg = selected ? FormStyles.inputFocusBg() : FormStyles.inputBg();
+    TbtQuadBackgroundComponent rowBg = UiKit.wizardBg9("btn-primary", 8);
     rowBg.setMargin(0f, 0f);
+    rowBg.setColor(selected ? ROW_SELECT_TINT : ROW_IDLE_TINT);
     row.setBackground(rowBg);
 
     Label nameLabel = row.addChild(new Label(name, FormStyles.STYLE));
@@ -399,18 +424,29 @@ public class MissionPanelWidget implements AutoCloseable {
     actions.setPreferredSize(new Vector3f(COL_ACTIONS, ROW_HEIGHT - 12, 0));
     populateRowActions(actions, name, status);
 
-    // Click on name / type / status selects the row.
-    DefaultMouseListener selectListener =
+    // Hover + selection follow the PopupList pattern (white tint over btn-primary).
+    // Action icons consume their own clicks so clicks on icons don't trigger row selection.
+    MouseEventControl.addListenersToSpatial(
+        row,
         new DefaultMouseListener() {
+          @Override
+          public void mouseEntered(MouseMotionEvent evt, Spatial t, Spatial c) {
+            if (!name.equals(selectedMissionName)) {
+              rowBg.setColor(ROW_HOVER_TINT);
+            }
+          }
+
+          @Override
+          public void mouseExited(MouseMotionEvent evt, Spatial t, Spatial c) {
+            rowBg.setColor(name.equals(selectedMissionName) ? ROW_SELECT_TINT : ROW_IDLE_TINT);
+          }
+
           @Override
           public void click(MouseButtonEvent event, Spatial target, Spatial capture) {
             selectMission(name);
             event.setConsumed();
           }
-        };
-    MouseEventControl.addListenersToSpatial(nameLabel, selectListener);
-    MouseEventControl.addListenersToSpatial(typeLabel, selectListener);
-    MouseEventControl.addListenersToSpatial(statusLabel, selectListener);
+        });
 
     return row;
   }
@@ -454,7 +490,7 @@ public class MissionPanelWidget implements AutoCloseable {
       return icon;
     }
 
-    icon.setBackground(UiKit.wizardFlat(normalTex));
+    icon.setBackground(tintedFlat(normalTex, FormStyles.ACCENT_BRIGHT));
     MouseEventControl.addListenersToSpatial(
         icon,
         new DefaultMouseListener() {
@@ -465,7 +501,7 @@ public class MissionPanelWidget implements AutoCloseable {
 
           @Override
           public void mouseExited(MouseMotionEvent evt, Spatial target, Spatial capture) {
-            icon.setBackground(UiKit.wizardFlat(normalTex));
+            icon.setBackground(tintedFlat(normalTex, FormStyles.ACCENT_BRIGHT));
           }
 
           @Override
@@ -475,6 +511,12 @@ public class MissionPanelWidget implements AutoCloseable {
           }
         });
     return icon;
+  }
+
+  private static QuadBackgroundComponent tintedFlat(String tex, ColorRGBA tint) {
+    QuadBackgroundComponent q = UiKit.wizardFlat(tex);
+    q.setColor(tint);
+    return q;
   }
 
   // -------------------------------------------------------------------------
@@ -518,12 +560,28 @@ public class MissionPanelWidget implements AutoCloseable {
             ? entry.mission().getVehicle().getClass().getSimpleName()
             : "—";
     String schedule = entry.getScheduledDate().map(Object::toString).orElse("unscheduled");
-    String line =
-        "type: " + missionType(entry) + "   •   vehicle: " + vehicleName + "   •   launch: " + schedule;
 
-    Label meta = footerSummary.addChild(new Label(line, FormStyles.STYLE));
-    meta.setFont(UiKit.ibmPlexMono(11));
-    meta.setColor(FormStyles.TEXT_SECONDARY);
+    addDetailLine(
+        "type: " + missionType(entry)
+            + "   •   vehicle: " + vehicleName
+            + "   •   launch: " + schedule);
+    footerSummary.addChild(UiKit.vSpacer(4));
+    addDetailLine(
+        "stages: " + DUMMY_STAGES
+            + "   •   payload: " + DUMMY_PAYLOAD
+            + "   •   target alt: " + DUMMY_ALTITUDE
+            + "   •   inclination: " + DUMMY_INCLINATION);
+    footerSummary.addChild(UiKit.vSpacer(4));
+    addDetailLine(
+        "ΔV budget: " + DUMMY_DV
+            + "   •   propellant: " + DUMMY_PROPELLANT
+            + "   •   window: " + DUMMY_WINDOW);
+  }
+
+  private void addDetailLine(String text) {
+    Label line = footerSummary.addChild(new Label(text, FormStyles.STYLE));
+    line.setFont(UiKit.ibmPlexMono(11));
+    line.setColor(FormStyles.TEXT_SECONDARY);
   }
 
   // -------------------------------------------------------------------------
