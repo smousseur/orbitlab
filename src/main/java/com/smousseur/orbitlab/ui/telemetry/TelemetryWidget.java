@@ -9,8 +9,10 @@ import com.simsilica.lemur.FillMode;
 import com.simsilica.lemur.HAlignment;
 import com.simsilica.lemur.Insets3f;
 import com.simsilica.lemur.Label;
+import com.simsilica.lemur.VAlignment;
 import com.simsilica.lemur.component.BorderLayout;
 import com.simsilica.lemur.component.BoxLayout;
+import com.simsilica.lemur.component.IconComponent;
 import com.simsilica.lemur.component.InsetsComponent;
 import com.simsilica.lemur.component.QuadBackgroundComponent;
 import com.smousseur.orbitlab.app.ApplicationContext;
@@ -37,7 +39,9 @@ public class TelemetryWidget implements AutoCloseable {
   private static final float INNER_WIDTH = WIDTH - 2 * PAD_X;
   private static final float SECTION_GAP = 8f;
   private static final float LABEL_VALUE_GAP = 2f;
-  private static final float DOT_ICON_SIZE = 6f;
+  /** step-dot-active.png is 32x32; scale to ~6.4 px so the cyan dot stays a clean small circle. */
+  private static final float DOT_ICON_SCALE = 0.2f;
+
   private static final float DOT_LABEL_GAP = 5f;
 
   private final Container root;
@@ -55,7 +59,7 @@ public class TelemetryWidget implements AutoCloseable {
     Node telemetryNode = context.guiGraph().getTelemetryNode();
 
     this.root = new Container(new BoxLayout(Axis.Y, FillMode.None), TelemetryStyles.STYLE);
-    this.root.setBackground(FormStyles.inputBg());
+    this.root.setBackground(UiKit.gradientBackground(AppStyles.ICE_PANEL_BG));
     this.root.setPreferredSize(new Vector3f(WIDTH, 0, 0));
     this.root.setInsetsComponent(new InsetsComponent(new Insets3f(PAD_Y, PAD_X, PAD_Y, PAD_X)));
     telemetryNode.attachChild(root);
@@ -64,9 +68,8 @@ public class TelemetryWidget implements AutoCloseable {
     Container header = root.addChild(new Container(new BorderLayout(), TelemetryStyles.STYLE));
     header.setPreferredSize(new Vector3f(INNER_WIDTH, 14f, 0));
     header.addChild(buildDotLabel("TELEMETRY"), BorderLayout.Position.West);
-    Container phaseGroup = buildDotLabel("—");
-    this.phaseLabel = (Label) phaseGroup.getChild(2);
-    header.addChild(phaseGroup, BorderLayout.Position.East);
+    this.phaseLabel = buildDotLabel("—");
+    header.addChild(phaseLabel, BorderLayout.Position.East);
 
     root.addChild(UiKit.vSpacer(SECTION_GAP));
     root.addChild(hDivider(INNER_WIDTH));
@@ -110,21 +113,17 @@ public class TelemetryWidget implements AutoCloseable {
     this.massUnit = (Label) massRow.getChild(2);
   }
 
-  private Container buildDotLabel(String text) {
-    Container row = new Container(new BoxLayout(Axis.X, FillMode.None), TelemetryStyles.STYLE);
-    row.addChild(buildDotIcon());
-    row.addChild(UiKit.hSpacer(DOT_LABEL_GAP));
-    Label label = row.addChild(new Label(text, TelemetryStyles.STYLE));
+  private Label buildDotLabel(String text) {
+    Label label = new Label(text, TelemetryStyles.STYLE);
     label.setFont(UiKit.mono(10));
     label.setColor(FormStyles.TEXT_PRIMARY);
-    return row;
-  }
-
-  private Container buildDotIcon() {
-    Container icon = new Container(TelemetryStyles.STYLE);
-    icon.setPreferredSize(new Vector3f(DOT_ICON_SIZE, DOT_ICON_SIZE, 0));
-    icon.setBackground(UiKit.wizardFlat("step-dot-active"));
-    return icon;
+    IconComponent dot = UiKit.wizardIconComponent("step-dot-active");
+    dot.setIconScale(DOT_ICON_SCALE);
+    dot.setMargin(DOT_LABEL_GAP, 0f);
+    dot.setHAlignment(HAlignment.Left);
+    dot.setVAlignment(VAlignment.Center);
+    label.setIcon(dot);
+    return label;
   }
 
   private Label smallLabel(String text, float width) {
