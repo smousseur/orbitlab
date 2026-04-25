@@ -10,9 +10,9 @@ import com.smousseur.orbitlab.ui.mission.MissionPanelTrigger;
 import com.smousseur.orbitlab.ui.mission.MissionPanelWidget;
 
 /**
- * Orchestrates the mission panel: a persistent top-left trigger button and an on-demand modal
- * panel attached to the shared modal layer. The panel itself is created only when the trigger is
- * pressed and torn down when it closes.
+ * Orchestrates the mission panel: a persistent top-left trigger button and an on-demand modal panel
+ * attached to the shared modal layer. The panel itself is created only when the trigger is pressed
+ * and torn down when it closes.
  */
 public final class MissionPanelWidgetAppState extends BaseAppState {
 
@@ -24,6 +24,7 @@ public final class MissionPanelWidgetAppState extends BaseAppState {
     this.context = context;
     MissionContext missionContext = context.missionContext();
     missionContext.addMission(new LEOMission("LEO", 400_000));
+    missionContext.addMission(new LEOMission("LEO2", 450_000));
   }
 
   @Override

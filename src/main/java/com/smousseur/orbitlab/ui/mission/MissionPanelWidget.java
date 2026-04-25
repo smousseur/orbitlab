@@ -62,7 +62,7 @@ public class MissionPanelWidget implements AutoCloseable {
   private static final float COL_STATUS = 130f;
   private static final float COL_ACTIONS = CONTENT_INNER_WIDTH - COL_NAME - COL_TYPE - COL_STATUS;
   private static final float ROW_HEIGHT = 46f;
-  private static final float ACTION_ICON_SIZE = 14f;
+  private static final float ACTION_ICON_SIZE = 20f;
   private static final float ACTION_ICON_GAP = 8f;
   private static final float COL_HEADER_ALPHA = 0.6f;
   private static final float CLOSE_ICON_SIZE = 14f;
@@ -285,7 +285,8 @@ public class MissionPanelWidget implements AutoCloseable {
     content.setPreferredSize(
         new Vector3f(WINDOW_WIDTH, WINDOW_HEIGHT - HEADER_HEIGHT - FOOTER_HEIGHT, 0));
     content.setInsetsComponent(
-        new InsetsComponent(new Insets3f(CONTENT_PAD_Y, CONTENT_PAD_X, CONTENT_PAD_Y, CONTENT_PAD_X)));
+        new InsetsComponent(
+            new Insets3f(CONTENT_PAD_Y, CONTENT_PAD_X, CONTENT_PAD_Y, CONTENT_PAD_X)));
 
     Container actionsBar = content.addChild(new Container(new BoxLayout(Axis.X, FillMode.None)));
     actionsBar.setBackground(null);
@@ -319,7 +320,8 @@ public class MissionPanelWidget implements AutoCloseable {
     Container footer = new Container(new BoxLayout(Axis.Y, FillMode.None));
     footer.setBackground(FormStyles.footerBg());
     footer.setPreferredSize(new Vector3f(WINDOW_WIDTH, FOOTER_HEIGHT, 0));
-    footer.setInsetsComponent(new InsetsComponent(new Insets3f(16, HEADER_PAD_X, 16, HEADER_PAD_X)));
+    footer.setInsetsComponent(
+        new InsetsComponent(new Insets3f(16, HEADER_PAD_X, 16, HEADER_PAD_X)));
 
     footerSummary = footer.addChild(new Container(new BoxLayout(Axis.Y, FillMode.None)));
     footerSummary.setBackground(null);
@@ -393,7 +395,7 @@ public class MissionPanelWidget implements AutoCloseable {
     rowBg.setColor(selected ? ROW_SELECT_TINT : ROW_IDLE_TINT);
     row.setBackground(rowBg);
 
-    float rowInnerH = ROW_HEIGHT - 12;
+    float rowInnerH = ROW_HEIGHT; // - 12;
 
     Label nameLabel = row.addChild(new Label(name, FormStyles.STYLE));
     nameLabel.setFont(UiKit.sora(13));
@@ -460,8 +462,7 @@ public class MissionPanelWidget implements AutoCloseable {
             actionIconButton(
                 "compute",
                 !computing,
-                () ->
-                    eventBus.publishMissionAction(missionName, EventBus.MissionAction.OPTIMIZE)),
+                () -> eventBus.publishMissionAction(missionName, EventBus.MissionAction.OPTIMIZE)),
             rowInnerH));
     actions.addChild(UiKit.hSpacer(ACTION_ICON_GAP));
     actions.addChild(
@@ -545,8 +546,7 @@ public class MissionPanelWidget implements AutoCloseable {
 
     if (entry == null) {
       Label hint =
-          footerSummary.addChild(
-              new Label("Select a mission to see details", FormStyles.STYLE));
+          footerSummary.addChild(new Label("Select a mission to see details", FormStyles.STYLE));
       hint.setFont(UiKit.ibmPlexMono(11));
       hint.setColor(FormStyles.TEXT_LO);
       return;
@@ -562,7 +562,8 @@ public class MissionPanelWidget implements AutoCloseable {
     row1.addChild(UiKit.hSpacer(12));
 
     Label status =
-        row1.addChild(new Label("[ " + entry.mission().getStatus().name() + " ]", FormStyles.STYLE));
+        row1.addChild(
+            new Label("[ " + entry.mission().getStatus().name() + " ]", FormStyles.STYLE));
     status.setFont(UiKit.ibmPlexMono(11));
     status.setColor(statusColor(entry.mission().getStatus()));
 
@@ -575,10 +576,14 @@ public class MissionPanelWidget implements AutoCloseable {
     String schedule = entry.getScheduledDate().map(Object::toString).orElse("unscheduled");
 
     addDetailLine(
-        "type: " + missionType(entry)
-            + "   •   vehicle: " + vehicleName
-            + "   •   alt: " + DUMMY_ALTITUDE
-            + "   •   launch: " + schedule);
+        "type: "
+            + missionType(entry)
+            + "   •   vehicle: "
+            + vehicleName
+            + "   •   alt: "
+            + DUMMY_ALTITUDE
+            + "   •   launch: "
+            + schedule);
   }
 
   private void addDetailLine(String text) {
