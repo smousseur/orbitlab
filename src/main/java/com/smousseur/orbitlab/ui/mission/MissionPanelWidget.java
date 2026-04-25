@@ -14,6 +14,7 @@ import com.simsilica.lemur.FillMode;
 import com.simsilica.lemur.HAlignment;
 import com.simsilica.lemur.Insets3f;
 import com.simsilica.lemur.Label;
+import com.simsilica.lemur.component.BorderLayout;
 import com.simsilica.lemur.component.BoxLayout;
 import com.simsilica.lemur.component.InsetsComponent;
 import com.simsilica.lemur.component.QuadBackgroundComponent;
@@ -47,7 +48,7 @@ public class MissionPanelWidget implements AutoCloseable {
   private static final float WINDOW_WIDTH = 720f;
   private static final float WINDOW_HEIGHT = 520f;
   private static final float HEADER_HEIGHT = 88f;
-  private static final float FOOTER_HEIGHT = 110f;
+  private static final float FOOTER_HEIGHT = 78f;
   private static final float HEADER_PAD_X = 32f;
   private static final float HEADER_PAD_Y = 20f;
   private static final float CONTENT_PAD_X = 32f;
@@ -60,10 +61,10 @@ public class MissionPanelWidget implements AutoCloseable {
   private static final float COL_STATUS = 130f;
   private static final float COL_ACTIONS = CONTENT_INNER_WIDTH - COL_NAME - COL_TYPE - COL_STATUS;
   private static final float ROW_HEIGHT = 46f;
-  private static final float ACTION_ICON_SIZE = 20f;
-  private static final float ACTION_ICON_GAP = 10f;
+  private static final float ACTION_ICON_SIZE = 14f;
+  private static final float ACTION_ICON_GAP = 8f;
   private static final float COL_HEADER_ALPHA = 0.6f;
-  private static final float CLOSE_ICON_SIZE = 16f;
+  private static final float CLOSE_ICON_SIZE = 14f;
   private static final float CLOSE_BTN_INSET = 12f;
   private static final ColorRGBA ROW_IDLE_TINT = new ColorRGBA(1f, 1f, 1f, 0f);
   private static final ColorRGBA ROW_HOVER_TINT = new ColorRGBA(1f, 1f, 1f, 0.18f);
@@ -72,14 +73,8 @@ public class MissionPanelWidget implements AutoCloseable {
   /** Placeholder mission type displayed in the Type column until Mission exposes one. */
   private static final String DEFAULT_MISSION_TYPE = "LEO";
 
-  // Dummy values shown in the selection details footer until real metadata is plumbed.
-  private static final String DUMMY_PAYLOAD = "14.2 t";
+  // Dummy value shown in the selection details footer until real metadata is plumbed.
   private static final String DUMMY_ALTITUDE = "380 km";
-  private static final String DUMMY_INCLINATION = "51.6°";
-  private static final String DUMMY_DV = "9.4 km/s";
-  private static final String DUMMY_PROPELLANT = "RP-1 / LOX";
-  private static final String DUMMY_WINDOW = "T-00:42:11";
-  private static final int DUMMY_STAGES = 2;
 
   private final MissionContext missionContext;
   private final EventBus eventBus;
@@ -115,15 +110,6 @@ public class MissionPanelWidget implements AutoCloseable {
     root.addChild(buildHeader());
     root.addChild(buildContent());
     root.addChild(buildFooter());
-
-    // Close icon: anchored at the top-right of the root, bypassing the BoxLayout
-    // (same idiom as PopupList.openPopup using attachChild rather than Container.addChild).
-    Container closeIcon = buildCloseButton();
-    root.attachChild(closeIcon);
-    closeIcon.setLocalTranslation(
-        WINDOW_WIDTH - CLOSE_ICON_SIZE - CLOSE_BTN_INSET,
-        WINDOW_HEIGHT - CLOSE_BTN_INSET,
-        1f);
 
     // Mouse on the modal shell must not leak through to the backdrop.
     MouseEventControl.addListenersToSpatial(
@@ -196,24 +182,29 @@ public class MissionPanelWidget implements AutoCloseable {
     header.setInsetsComponent(
         new InsetsComponent(new Insets3f(HEADER_PAD_Y, HEADER_PAD_X, HEADER_PAD_Y, HEADER_PAD_X)));
 
-    Container brandRow = header.addChild(new Container(new BoxLayout(Axis.X, FillMode.None)));
+    Container brandRow = header.addChild(new Container(new BorderLayout()));
     brandRow.setBackground(null);
     brandRow.setPreferredSize(new Vector3f(HEADER_INNER_WIDTH, 18f, 0));
 
-    brandRow.addChild(UiKit.wizardIcon("icon-brand-globe", 18, 18));
-    brandRow.addChild(UiKit.hSpacer(8));
+    Container brandLeft = new Container(new BoxLayout(Axis.X, FillMode.None));
+    brandLeft.setBackground(null);
+    brandLeft.addChild(UiKit.wizardIcon("icon-brand-globe", 18, 18));
+    brandLeft.addChild(UiKit.hSpacer(8));
 
-    Label brandName = brandRow.addChild(new Label("ORBITLAB", FormStyles.STYLE));
+    Label brandName = brandLeft.addChild(new Label("ORBITLAB", FormStyles.STYLE));
     brandName.setFont(UiKit.orbitron(13));
     brandName.setColor(FormStyles.ACCENT_BRIGHT);
 
-    Label brandSep = brandRow.addChild(new Label("  /  ", FormStyles.STYLE));
+    Label brandSep = brandLeft.addChild(new Label("  /  ", FormStyles.STYLE));
     brandSep.setFont(UiKit.ibmPlexMono(11));
     brandSep.setColor(FormStyles.TEXT_LO);
 
-    Label brandSub = brandRow.addChild(new Label("MISSIONS", FormStyles.STYLE));
+    Label brandSub = brandLeft.addChild(new Label("MISSIONS", FormStyles.STYLE));
     brandSub.setFont(UiKit.ibmPlexMono(11));
     brandSub.setColor(FormStyles.TEXT_LO);
+
+    brandRow.addChild(brandLeft, BorderLayout.Position.West);
+    brandRow.addChild(buildCloseButton(), BorderLayout.Position.East);
 
     header.addChild(UiKit.vSpacer(10));
 
@@ -564,18 +555,8 @@ public class MissionPanelWidget implements AutoCloseable {
     addDetailLine(
         "type: " + missionType(entry)
             + "   •   vehicle: " + vehicleName
+            + "   •   alt: " + DUMMY_ALTITUDE
             + "   •   launch: " + schedule);
-    footerSummary.addChild(UiKit.vSpacer(4));
-    addDetailLine(
-        "stages: " + DUMMY_STAGES
-            + "   •   payload: " + DUMMY_PAYLOAD
-            + "   •   target alt: " + DUMMY_ALTITUDE
-            + "   •   inclination: " + DUMMY_INCLINATION);
-    footerSummary.addChild(UiKit.vSpacer(4));
-    addDetailLine(
-        "ΔV budget: " + DUMMY_DV
-            + "   •   propellant: " + DUMMY_PROPELLANT
-            + "   •   window: " + DUMMY_WINDOW);
   }
 
   private void addDetailLine(String text) {
