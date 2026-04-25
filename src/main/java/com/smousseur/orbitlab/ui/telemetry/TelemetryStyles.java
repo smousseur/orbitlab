@@ -2,15 +2,18 @@ package com.smousseur.orbitlab.ui.telemetry;
 
 import com.jme3.asset.AssetManager;
 import com.simsilica.lemur.GuiGlobals;
-import com.simsilica.lemur.component.QuadBackgroundComponent;
+import com.simsilica.lemur.Insets3f;
+import com.simsilica.lemur.style.Attributes;
 import com.simsilica.lemur.style.Styles;
-import com.smousseur.orbitlab.ui.AppStyles;
+import com.smousseur.orbitlab.ui.UiKit;
+import com.smousseur.orbitlab.ui.form.FormStyles;
 
 /**
  * Defines and registers Lemur GUI styles for the mission telemetry widget.
  *
- * <p>Creates a "telemetry" style derived from the Glass base style. Visual tokens (colours,
- * margins) are sourced from {@link AppStyles}.
+ * <p>Creates a "telemetry" style. The shell background (rounded dark-blue panel) is set explicitly
+ * on the root container by {@link TelemetryWidget}; sub-containers using this style stay
+ * transparent so layout dividers, rows and cells render cleanly.
  */
 public final class TelemetryStyles {
 
@@ -26,9 +29,14 @@ public final class TelemetryStyles {
    */
   public static void init(AssetManager assetManager) {
     Styles styles = GuiGlobals.getInstance().getStyles();
-    // styles.applyStyles(STYLE, "glass");
-    styles
-        .getSelector("container", STYLE)
-        .set("background", new QuadBackgroundComponent(AppStyles.HUD_BACKGROUND));
+
+    Attributes c = styles.getSelector("container", STYLE);
+    c.set("background", null);
+    c.set("insets", new Insets3f(0, 0, 0, 0));
+
+    Attributes l = styles.getSelector("label", STYLE);
+    l.set("color", FormStyles.TEXT_PRIMARY);
+    l.set("font", UiKit.ibmPlexMono(11));
+    l.set("insets", new Insets3f(0, 0, 0, 0));
   }
 }
