@@ -31,14 +31,14 @@ public class TelemetryWidget implements AutoCloseable {
 
   private static final float MARGIN_PX = AppStyles.HUD_MARGIN_PX;
 
-  private static final float WIDTH = 286f;
-  private static final float PAD_X = 18f;
-  private static final float PAD_Y = 16f;
+  private static final float WIDTH = 268f;
+  private static final float PAD_X = 14f;
+  private static final float PAD_Y = 12f;
   private static final float INNER_WIDTH = WIDTH - 2 * PAD_X;
-  private static final float SECTION_GAP = 10f;
-  private static final float LABEL_VALUE_GAP = 4f;
-  private static final float DOT_ICON_SIZE = 8f;
-  private static final float DOT_LABEL_GAP = 6f;
+  private static final float SECTION_GAP = 8f;
+  private static final float LABEL_VALUE_GAP = 2f;
+  private static final float DOT_ICON_SIZE = 6f;
+  private static final float DOT_LABEL_GAP = 5f;
 
   private final Container root;
   private final Label phaseLabel;
@@ -55,14 +55,14 @@ public class TelemetryWidget implements AutoCloseable {
     Node telemetryNode = context.guiGraph().getTelemetryNode();
 
     this.root = new Container(new BoxLayout(Axis.Y, FillMode.None), TelemetryStyles.STYLE);
-    this.root.setBackground(FormStyles.shellBg());
+    this.root.setBackground(FormStyles.inputBg());
     this.root.setPreferredSize(new Vector3f(WIDTH, 0, 0));
     this.root.setInsetsComponent(new InsetsComponent(new Insets3f(PAD_Y, PAD_X, PAD_Y, PAD_X)));
     telemetryNode.attachChild(root);
 
     // Header: dot + TELEMETRY (left)  /  dot + phase (right)
     Container header = root.addChild(new Container(new BorderLayout(), TelemetryStyles.STYLE));
-    header.setPreferredSize(new Vector3f(INNER_WIDTH, 16f, 0));
+    header.setPreferredSize(new Vector3f(INNER_WIDTH, 14f, 0));
     header.addChild(buildDotLabel("TELEMETRY"), BorderLayout.Position.West);
     Container phaseGroup = buildDotLabel("—");
     this.phaseLabel = (Label) phaseGroup.getChild(2);
@@ -75,8 +75,8 @@ public class TelemetryWidget implements AutoCloseable {
     // MET section
     root.addChild(smallLabel("MISSION ELAPSED TIME", INNER_WIDTH));
     root.addChild(UiKit.vSpacer(LABEL_VALUE_GAP));
-    this.metValue = root.addChild(buildBigValueLabel("—"));
-    this.metValue.setPreferredSize(new Vector3f(INNER_WIDTH, 26f, 0));
+    this.metValue = root.addChild(buildMetLabel("—"));
+    this.metValue.setPreferredSize(new Vector3f(INNER_WIDTH, 18f, 0));
 
     root.addChild(UiKit.vSpacer(SECTION_GAP));
     root.addChild(hDivider(INNER_WIDTH));
@@ -86,13 +86,13 @@ public class TelemetryWidget implements AutoCloseable {
     float halfWidth = (INNER_WIDTH - 1f) / 2f;
     Container altVelRow = root.addChild(new Container(new BoxLayout(Axis.X, FillMode.None),
         TelemetryStyles.STYLE));
-    altVelRow.setPreferredSize(new Vector3f(INNER_WIDTH, 44f, 0));
+    altVelRow.setPreferredSize(new Vector3f(INNER_WIDTH, 36f, 0));
 
     Container altCell = altVelRow.addChild(buildValueCell("ALT", halfWidth));
     this.altValue = (Label) ((Container) altCell.getChild(2)).getChild(0);
     this.altUnit = (Label) ((Container) altCell.getChild(2)).getChild(2);
 
-    altVelRow.addChild(vDivider(44f));
+    altVelRow.addChild(vDivider(36f));
 
     Container velCell = altVelRow.addChild(buildValueCell("VEL", halfWidth));
     this.velValue = (Label) ((Container) velCell.getChild(2)).getChild(0);
@@ -112,26 +112,33 @@ public class TelemetryWidget implements AutoCloseable {
 
   private Container buildDotLabel(String text) {
     Container row = new Container(new BoxLayout(Axis.X, FillMode.None), TelemetryStyles.STYLE);
-    row.addChild(UiKit.wizardIcon("step-dot-active", DOT_ICON_SIZE, DOT_ICON_SIZE));
+    row.addChild(buildDotIcon());
     row.addChild(UiKit.hSpacer(DOT_LABEL_GAP));
     Label label = row.addChild(new Label(text, TelemetryStyles.STYLE));
-    label.setFont(UiKit.ibmPlexMono(11));
+    label.setFont(UiKit.mono(10));
     label.setColor(FormStyles.TEXT_PRIMARY);
     return row;
   }
 
+  private Container buildDotIcon() {
+    Container icon = new Container(TelemetryStyles.STYLE);
+    icon.setPreferredSize(new Vector3f(DOT_ICON_SIZE, DOT_ICON_SIZE, 0));
+    icon.setBackground(UiKit.wizardFlat("step-dot-active"));
+    return icon;
+  }
+
   private Label smallLabel(String text, float width) {
     Label l = new Label(text, TelemetryStyles.STYLE);
-    l.setFont(UiKit.ibmPlexMono(10));
+    l.setFont(UiKit.mono(10));
     l.setColor(FormStyles.TEXT_LO);
-    l.setPreferredSize(new Vector3f(width, 12f, 0));
+    l.setPreferredSize(new Vector3f(width, 10f, 0));
     l.setTextHAlignment(HAlignment.Left);
     return l;
   }
 
-  private Label buildBigValueLabel(String text) {
+  private Label buildMetLabel(String text) {
     Label l = new Label(text, TelemetryStyles.STYLE);
-    l.setFont(UiKit.orbitron(20));
+    l.setFont(UiKit.mono(14));
     l.setColor(FormStyles.CYAN);
     l.setTextHAlignment(HAlignment.Left);
     return l;
@@ -139,7 +146,7 @@ public class TelemetryWidget implements AutoCloseable {
 
   private Container buildValueCell(String labelText, float width) {
     Container cell = new Container(new BoxLayout(Axis.Y, FillMode.None), TelemetryStyles.STYLE);
-    cell.setPreferredSize(new Vector3f(width, 44f, 0));
+    cell.setPreferredSize(new Vector3f(width, 36f, 0));
     cell.setInsetsComponent(new InsetsComponent(new Insets3f(0, 4, 0, 4)));
     cell.addChild(smallLabel(labelText, width - 8f));
     cell.addChild(UiKit.vSpacer(LABEL_VALUE_GAP));
@@ -149,27 +156,27 @@ public class TelemetryWidget implements AutoCloseable {
 
   private Container buildValueUnitRow(float width) {
     Container row = new Container(new BoxLayout(Axis.X, FillMode.None), TelemetryStyles.STYLE);
-    row.setPreferredSize(new Vector3f(width, 22f, 0));
+    row.setPreferredSize(new Vector3f(width, 18f, 0));
     Label value = row.addChild(new Label("—", TelemetryStyles.STYLE));
-    value.setFont(UiKit.orbitron(18));
+    value.setFont(UiKit.mono(14));
     value.setColor(FormStyles.CYAN);
     value.setTextHAlignment(HAlignment.Left);
     row.addChild(UiKit.hSpacer(4f));
     Label unit = row.addChild(new Label("", TelemetryStyles.STYLE));
-    unit.setFont(UiKit.ibmPlexMono(10));
+    unit.setFont(UiKit.mono(10));
     unit.setColor(FormStyles.TEXT_LO);
     return row;
   }
 
   private Container hDivider(float width) {
-    Container d = new Container();
+    Container d = new Container(TelemetryStyles.STYLE);
     d.setPreferredSize(new Vector3f(width, 1f, 0));
     d.setBackground(new QuadBackgroundComponent(FormStyles.BORDER));
     return d;
   }
 
   private Container vDivider(float height) {
-    Container d = new Container();
+    Container d = new Container(TelemetryStyles.STYLE);
     d.setPreferredSize(new Vector3f(1f, height, 0));
     d.setBackground(new QuadBackgroundComponent(FormStyles.BORDER));
     return d;
