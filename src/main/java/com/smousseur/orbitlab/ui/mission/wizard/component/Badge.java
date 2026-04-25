@@ -10,7 +10,7 @@ import com.simsilica.lemur.Insets3f;
 import com.simsilica.lemur.component.BoxLayout;
 import com.simsilica.lemur.component.InsetsComponent;
 import com.smousseur.orbitlab.ui.UiKit;
-import com.smousseur.orbitlab.ui.mission.wizard.MissionWizardStyles;
+import com.smousseur.orbitlab.ui.form.FormStyles;
 
 public class Badge {
 
@@ -23,7 +23,7 @@ public class Badge {
   private final Container root;
 
   public Badge(String text, Variant variant) {
-    root = new Container(new BoxLayout(Axis.X, FillMode.None), MissionWizardStyles.STYLE);
+    root = new Container(new BoxLayout(Axis.X, FillMode.None), FormStyles.STYLE);
     root.setInsetsComponent(new InsetsComponent(new Insets3f(3, 8, 3, 8)));
 
     String bgTex;
@@ -32,16 +32,16 @@ public class Badge {
     switch (variant) {
       case SUCCESS -> {
         bgTex = "badge-ready";
-        fg = MissionWizardStyles.WIZARD_SUCCESS;
+        fg = FormStyles.SUCCESS;
         iconName = "icon-check-success";
       }
       case WARNING -> {
         bgTex = "badge-wip";
-        fg = MissionWizardStyles.WIZARD_WARNING;
+        fg = FormStyles.WARNING;
       }
       default -> {
         bgTex = "badge-ready";
-        fg = MissionWizardStyles.WIZARD_TEXT_SECONDARY;
+        fg = FormStyles.TEXT_SECONDARY;
       }
     }
 
@@ -52,7 +52,7 @@ public class Badge {
       root.addChild(UiKit.hSpacer(4));
     }
 
-    Label label = root.addChild(new Label(text, MissionWizardStyles.STYLE));
+    Label label = root.addChild(new Label(text, FormStyles.STYLE));
     label.setFont(UiKit.ibmPlexMono(11));
     label.setColor(fg);
     label.setPreferredSize(new Vector3f(label.getPreferredSize().x, label.getPreferredSize().y, 0));

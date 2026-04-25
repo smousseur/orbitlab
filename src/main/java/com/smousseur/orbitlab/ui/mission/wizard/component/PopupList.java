@@ -13,7 +13,7 @@ import com.simsilica.lemur.component.TbtQuadBackgroundComponent;
 import com.simsilica.lemur.event.DefaultMouseListener;
 import com.simsilica.lemur.event.MouseEventControl;
 import com.smousseur.orbitlab.ui.UiKit;
-import com.smousseur.orbitlab.ui.mission.wizard.MissionWizardStyles;
+import com.smousseur.orbitlab.ui.form.FormStyles;
 import java.util.List;
 import java.util.function.Consumer;
 
@@ -46,19 +46,19 @@ public class PopupList {
     root = new Container(new BoxLayout(Axis.Y, FillMode.None), (String) null);
     root.setBackground(null);
 
-    trigger = root.addChild(new Container(MissionWizardStyles.STYLE));
+    trigger = root.addChild(new Container(FormStyles.STYLE));
     trigger.setLayout(new BorderLayout());
     trigger.setPreferredSize(new Vector3f(width, TRIGGER_HEIGHT, 0));
 
-    TbtQuadBackgroundComponent triggerBg = MissionWizardStyles.inputBg();
+    TbtQuadBackgroundComponent triggerBg = FormStyles.inputBg();
     triggerBg.setMargin(0, 0);
     trigger.setBackground(triggerBg);
     trigger.setInsetsComponent(new InsetsComponent(new Insets3f(0, PAD_X, 0, PAD_X)));
 
-    valueLabel = new Label(defaultValue, MissionWizardStyles.STYLE);
+    valueLabel = new Label(defaultValue, FormStyles.STYLE);
     valueLabel.setInsets(new Insets3f(0, PAD_X, 0, 0));
     valueLabel.setFont(UiKit.ibmPlexMono(11));
-    valueLabel.setColor(MissionWizardStyles.WIZARD_TEXT_PRIMARY);
+    valueLabel.setColor(FormStyles.TEXT_PRIMARY);
     valueLabel.setTextHAlignment(HAlignment.Left);
     valueLabel.setTextVAlignment(VAlignment.Center);
     trigger.addChild(valueLabel, BorderLayout.Position.Center);
@@ -80,7 +80,7 @@ public class PopupList {
     rightSide.addChild(chevronWrap);
     trigger.addChild(rightSide, BorderLayout.Position.East);
 
-    popup = new Container(MissionWizardStyles.STYLE);
+    popup = new Container(FormStyles.STYLE);
     popup.setLayout(new BoxLayout(Axis.Y, FillMode.None));
     TbtQuadBackgroundComponent popupBg = UiKit.wizardBg9("input", 8);
     popupBg.setMargin(0, 0);
@@ -96,10 +96,10 @@ public class PopupList {
       rowBg.setMargin(0, 0);
       rowBg.setColor(new ColorRGBA(1f, 1f, 1f, 0f));
       row.setBackground(rowBg);
-      Label optLabel = new Label(option, MissionWizardStyles.STYLE);
+      Label optLabel = new Label(option, FormStyles.STYLE);
       optLabel.setInsetsComponent(new InsetsComponent(new Insets3f(0, PAD_X, 0, PAD_X)));
       optLabel.setFont(UiKit.ibmPlexMono(11));
-      optLabel.setColor(MissionWizardStyles.WIZARD_TEXT_PRIMARY);
+      optLabel.setColor(FormStyles.TEXT_PRIMARY);
       optLabel.setTextHAlignment(HAlignment.Left);
       optLabel.setTextVAlignment(VAlignment.Center);
       row.addChild(optLabel, BorderLayout.Position.Center);
@@ -136,7 +136,7 @@ public class PopupList {
         new DefaultMouseListener() {
           @Override
           public void mouseEntered(MouseMotionEvent evt, Spatial t, Spatial c) {
-            TbtQuadBackgroundComponent focusBg = MissionWizardStyles.inputFocusBg();
+            TbtQuadBackgroundComponent focusBg = FormStyles.inputFocusBg();
             focusBg.setMargin(0, 0);
             trigger.setBackground(focusBg);
           }
@@ -144,7 +144,7 @@ public class PopupList {
           @Override
           public void mouseExited(MouseMotionEvent evt, Spatial t, Spatial c) {
             if (!open) {
-              TbtQuadBackgroundComponent baseBg = MissionWizardStyles.inputBg();
+              TbtQuadBackgroundComponent baseBg = FormStyles.inputBg();
               baseBg.setMargin(0, 0);
               trigger.setBackground(baseBg);
             }

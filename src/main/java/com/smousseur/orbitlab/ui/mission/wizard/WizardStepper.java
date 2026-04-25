@@ -1,5 +1,7 @@
 package com.smousseur.orbitlab.ui.mission.wizard;
 
+import com.smousseur.orbitlab.ui.form.FormStyles;
+
 import com.jme3.input.event.MouseButtonEvent;
 import com.jme3.math.Vector3f;
 import com.jme3.scene.Spatial;
@@ -30,7 +32,7 @@ public class WizardStepper {
   }
 
   public WizardStepper(float preferredWidth) {
-    root = new Container(new BoxLayout(Axis.X, FillMode.None), MissionWizardStyles.STYLE);
+    root = new Container(new BoxLayout(Axis.X, FillMode.None), FormStyles.STYLE);
     root.setPreferredSize(new Vector3f(preferredWidth, STEPPER_HEIGHT, 0));
     root.setBackground(null);
 
@@ -80,7 +82,7 @@ public class WizardStepper {
       boolean done = i < activeStep.index();
       line.setBackground(
           new QuadBackgroundComponent(
-              done ? MissionWizardStyles.WIZARD_SUCCESS : MissionWizardStyles.WIZARD_BORDER));
+              done ? FormStyles.SUCCESS : FormStyles.BORDER));
     }
   }
 
@@ -98,7 +100,7 @@ public class WizardStepper {
     circle.setPreferredSize(new Vector3f(CIRCLE_SIZE, CIRCLE_SIZE, 0));
     circle.setBackground(UiKit.wizardBg9("step-dot-default", 14));
     Label number =
-        circle.addChild(new Label(String.valueOf(step.index() + 1), MissionWizardStyles.STYLE));
+        circle.addChild(new Label(String.valueOf(step.index() + 1), FormStyles.STYLE));
     number.setFont(UiKit.orbitron(13));
     number.setTextHAlignment(HAlignment.Center);
     number.setTextVAlignment(VAlignment.Center);
@@ -109,11 +111,11 @@ public class WizardStepper {
 
     col.addChild(UiKit.vSpacer(LABEL_GAP));
 
-    Label label = col.addChild(new Label(step.label(), MissionWizardStyles.STYLE));
+    Label label = col.addChild(new Label(step.label(), FormStyles.STYLE));
     label.setFont(UiKit.ibmPlexMono(11));
     label.setTextHAlignment(HAlignment.Center);
     label.setPreferredSize(new Vector3f(STEP_TAB_WIDTH, label.getPreferredSize().y, 0));
-    label.setColor(MissionWizardStyles.WIZARD_TEXT_LO);
+    label.setColor(FormStyles.TEXT_LO);
 
     MouseEventControl.addListenersToSpatial(
         col,
@@ -136,7 +138,7 @@ public class WizardStepper {
     wrap.addChild(UiKit.vSpacer((CIRCLE_SIZE - CONNECTOR_HEIGHT) / 2f));
     Container line = wrap.addChild(new Container());
     line.setPreferredSize(new Vector3f(CONNECTOR_WIDTH, CONNECTOR_HEIGHT, 0));
-    line.setBackground(new QuadBackgroundComponent(MissionWizardStyles.WIZARD_BORDER));
+    line.setBackground(new QuadBackgroundComponent(FormStyles.BORDER));
     return wrap;
   }
 
@@ -148,7 +150,7 @@ public class WizardStepper {
     number.setText("");
     number.setIcon(UiKit.wizardIconComponent("icon-check-success"));
     number.setInsets(new Insets3f(-30, -7, 0, 0));
-    ((Label) node.getChild(2)).setColor(MissionWizardStyles.WIZARD_SUCCESS);
+    ((Label) node.getChild(2)).setColor(FormStyles.SUCCESS);
   }
 
   private void applyActiveState(Container node, MissionWizardStep step) {
@@ -159,8 +161,8 @@ public class WizardStepper {
     number.setIcon(null);
     number.setText(String.valueOf(step.index() + 1));
     number.setInsets(new Insets3f(-30, 0, 0, 0));
-    number.setColor(MissionWizardStyles.WIZARD_ACCENT_BRIGHT);
-    ((Label) node.getChild(2)).setColor(MissionWizardStyles.WIZARD_ACCENT_BRIGHT);
+    number.setColor(FormStyles.ACCENT_BRIGHT);
+    ((Label) node.getChild(2)).setColor(FormStyles.ACCENT_BRIGHT);
   }
 
   private void applyPendingState(Container node, MissionWizardStep step) {
@@ -171,7 +173,7 @@ public class WizardStepper {
     number.setIcon(null);
     number.setInsets(new Insets3f(-30, 0, 0, 0));
     number.setText(String.valueOf(step.index() + 1));
-    number.setColor(MissionWizardStyles.WIZARD_TEXT_LO);
-    ((Label) node.getChild(2)).setColor(MissionWizardStyles.WIZARD_TEXT_LO);
+    number.setColor(FormStyles.TEXT_LO);
+    ((Label) node.getChild(2)).setColor(FormStyles.TEXT_LO);
   }
 }

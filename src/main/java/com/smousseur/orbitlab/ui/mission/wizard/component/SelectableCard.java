@@ -9,7 +9,7 @@ import com.simsilica.lemur.component.BoxLayout;
 import com.simsilica.lemur.event.DefaultMouseListener;
 import com.simsilica.lemur.event.MouseEventControl;
 import com.smousseur.orbitlab.ui.UiKit;
-import com.smousseur.orbitlab.ui.mission.wizard.MissionWizardStyles;
+import com.smousseur.orbitlab.ui.form.FormStyles;
 
 public class SelectableCard {
 
@@ -48,11 +48,11 @@ public class SelectableCard {
     this.state = initial;
     this.variant = variant;
 
-    root = new Container(new BoxLayout(Axis.Y, FillMode.None), MissionWizardStyles.STYLE);
+    root = new Container(new BoxLayout(Axis.Y, FillMode.None), FormStyles.STYLE);
     root.setPreferredSize(new Vector3f(width, height, 0));
 
     Container content =
-        new Container(new BoxLayout(Axis.Y, FillMode.None), MissionWizardStyles.STYLE);
+        new Container(new BoxLayout(Axis.Y, FillMode.None), FormStyles.STYLE);
     content.setBackground(null);
 
     Container iconNode;
@@ -66,26 +66,26 @@ public class SelectableCard {
     content.addChild(centerH(iconNode, width));
     content.addChild(UiKit.vSpacer(GAP_ICON_TITLE));
 
-    Label titleLabel = new Label(title, MissionWizardStyles.STYLE);
+    Label titleLabel = new Label(title, FormStyles.STYLE);
     titleLabel.setFont(UiKit.orbitron(13));
-    titleLabel.setColor(MissionWizardStyles.WIZARD_TEXT_PRIMARY);
+    titleLabel.setColor(FormStyles.TEXT_PRIMARY);
     titleLabel.setTextHAlignment(HAlignment.Center);
     titleLabel.setPreferredSize(new Vector3f(width, titleLabel.getPreferredSize().y, 0));
     content.addChild(titleLabel);
     content.addChild(UiKit.vSpacer(GAP_TITLE_SUBTITLE));
 
-    Label subtitleLabel = new Label(subtitle, MissionWizardStyles.STYLE);
+    Label subtitleLabel = new Label(subtitle, FormStyles.STYLE);
     subtitleLabel.setFont(UiKit.ibmPlexMono(11));
-    subtitleLabel.setColor(MissionWizardStyles.WIZARD_TEXT_SECONDARY);
+    subtitleLabel.setColor(FormStyles.TEXT_SECONDARY);
     subtitleLabel.setTextHAlignment(HAlignment.Center);
     subtitleLabel.setPreferredSize(new Vector3f(width, subtitleLabel.getPreferredSize().y, 0));
     content.addChild(subtitleLabel);
 
     if (value != null) {
       content.addChild(UiKit.vSpacer(GAP_SUBTITLE_VALUE));
-      Label valueLabel = new Label(value, MissionWizardStyles.STYLE);
+      Label valueLabel = new Label(value, FormStyles.STYLE);
       valueLabel.setFont(UiKit.ibmPlexMono(11));
-      valueLabel.setColor(MissionWizardStyles.WIZARD_TEXT_LO);
+      valueLabel.setColor(FormStyles.TEXT_LO);
       valueLabel.setTextHAlignment(HAlignment.Center);
       valueLabel.setPreferredSize(new Vector3f(width, valueLabel.getPreferredSize().y, 0));
       content.addChild(valueLabel);
@@ -132,7 +132,7 @@ public class SelectableCard {
   }
 
   private static Container centerH(Container child, float cardWidth) {
-    Container row = new Container(new BoxLayout(Axis.X, FillMode.None), MissionWizardStyles.STYLE);
+    Container row = new Container(new BoxLayout(Axis.X, FillMode.None), FormStyles.STYLE);
     row.setBackground(null);
     float childWidth = child.getPreferredSize().x;
     float pad = Math.max(0f, (cardWidth - childWidth - 24) / 2f);

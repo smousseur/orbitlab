@@ -11,7 +11,7 @@ import com.simsilica.lemur.core.GuiControl;
 import com.simsilica.lemur.core.VersionedReference;
 import com.simsilica.lemur.event.*;
 import com.smousseur.orbitlab.ui.UiKit;
-import com.smousseur.orbitlab.ui.mission.wizard.MissionWizardStyles;
+import com.smousseur.orbitlab.ui.form.FormStyles;
 
 public class StepParameters {
 
@@ -43,20 +43,20 @@ public class StepParameters {
     root.setBackground(new QuadBackgroundComponent(new ColorRGBA(0, 0, 0, 0)));
     root.setPreferredSize(
         new Vector3f(
-            MissionWizardStyles.WIZARD_CONTENT_WIDTH,
-            MissionWizardStyles.WIZARD_CONTENT_HEIGHT,
+            FormStyles.CONTENT_WIDTH,
+            FormStyles.CONTENT_HEIGHT,
             0));
 
-    Label title = root.addChild(new Label("PARAMETERS — LEO", MissionWizardStyles.STYLE));
+    Label title = root.addChild(new Label("PARAMETERS — LEO", FormStyles.STYLE));
     title.setFont(UiKit.orbitron(13));
-    title.setColor(MissionWizardStyles.WIZARD_TEXT_PRIMARY);
+    title.setColor(FormStyles.TEXT_PRIMARY);
 
     root.addChild(UiKit.vSpacer(6));
 
     Label subtitle =
-        root.addChild(new Label("// target orbit configuration", MissionWizardStyles.STYLE));
+        root.addChild(new Label("// target orbit configuration", FormStyles.STYLE));
     subtitle.setFont(UiKit.ibmPlexMono(11));
-    subtitle.setColor(MissionWizardStyles.WIZARD_TEXT_SECONDARY);
+    subtitle.setColor(FormStyles.TEXT_SECONDARY);
 
     root.addChild(UiKit.vSpacer(ROW_GAP));
 
@@ -81,9 +81,9 @@ public class StepParameters {
     root.addChild(UiKit.vSpacer(LABEL_FIELD_GAP));
     root.addChild(newInputField("2026-06-15T06:00:00Z"));
     root.addChild(UiKit.vSpacer(LABEL_FIELD_GAP));
-    Label helper = root.addChild(new Label("UTC · Orekit epoch", MissionWizardStyles.STYLE));
+    Label helper = root.addChild(new Label("UTC · Orekit epoch", FormStyles.STYLE));
     helper.setFont(UiKit.ibmPlexMono(11));
-    helper.setColor(MissionWizardStyles.WIZARD_TEXT_LO);
+    helper.setColor(FormStyles.TEXT_LO);
 
     CursorEventControl.addListenersToSpatial(
         root,
@@ -138,22 +138,22 @@ public class StepParameters {
     row.setBackground(null);
     row.addChild(UiKit.wizardIcon(iconName, LABEL_ICON_SIZE, LABEL_ICON_SIZE));
     row.addChild(UiKit.hSpacer(LABEL_GAP));
-    Label label = row.addChild(new Label(text, MissionWizardStyles.STYLE));
+    Label label = row.addChild(new Label(text, FormStyles.STYLE));
     label.setFont(UiKit.ibmPlexMono(11));
-    label.setColor(MissionWizardStyles.WIZARD_TEXT_SECONDARY);
+    label.setColor(FormStyles.TEXT_SECONDARY);
     return row;
   }
 
   private Container rangeBoundsRow() {
     Container row = new Container(new BoxLayout(Axis.X, FillMode.None));
     row.setBackground(null);
-    Label min = row.addChild(new Label("160 km", MissionWizardStyles.STYLE));
+    Label min = row.addChild(new Label("160 km", FormStyles.STYLE));
     min.setFont(UiKit.ibmPlexMono(11));
-    min.setColor(MissionWizardStyles.WIZARD_TEXT_LO);
+    min.setColor(FormStyles.TEXT_LO);
 
-    Label max = new Label("2 000 km", MissionWizardStyles.STYLE);
+    Label max = new Label("2 000 km", FormStyles.STYLE);
     max.setFont(UiKit.ibmPlexMono(11));
-    max.setColor(MissionWizardStyles.WIZARD_TEXT_LO);
+    max.setColor(FormStyles.TEXT_LO);
 
     float used = min.getPreferredSize().x + max.getPreferredSize().x;
     float trailing = Math.max(0f, SLIDER_W - used);
@@ -163,7 +163,7 @@ public class StepParameters {
   }
 
   private TextField newInputField(String value) {
-    TextField f = new TextField(value, MissionWizardStyles.STYLE);
+    TextField f = new TextField(value, FormStyles.STYLE);
     f.setFont(UiKit.ibmPlexMono(13));
     f.setPreferredSize(new Vector3f(FIELD_W, FIELD_H, 0));
     f.setInsets(new Insets3f(0, 0, 10, 0));
@@ -191,7 +191,7 @@ public class StepParameters {
     row.addChild(UiKit.hSpacer(SLIDER_TEXT_GAP));
 
     altitudeField =
-        new TextField(Long.toString(Math.round((double) 550)), MissionWizardStyles.STYLE);
+        new TextField(Long.toString(Math.round((double) 550)), FormStyles.STYLE);
     altitudeField.setFont(UiKit.ibmPlexMono(11));
     altitudeField.setPreferredSize(new Vector3f(VALUE_FIELD_W, SLIDER_ROW_H, 0));
     // altitudeField.setBorder(null);
@@ -201,9 +201,9 @@ public class StepParameters {
 
     row.addChild(UiKit.hSpacer(SLIDER_TEXT_GAP));
 
-    Label km = row.addChild(new Label("km", MissionWizardStyles.STYLE));
+    Label km = row.addChild(new Label("km", FormStyles.STYLE));
     km.setFont(UiKit.ibmPlexMono(11));
-    km.setColor(MissionWizardStyles.WIZARD_TEXT_LO);
+    km.setColor(FormStyles.TEXT_LO);
 
     altitudeSliderRef = altitudeSlider.getModel().createReference();
 
@@ -212,14 +212,14 @@ public class StepParameters {
 
   private Slider buildSlider() {
     Slider slider =
-        new Slider(new DefaultRangedValueModel(160, 2000, 550), Axis.X, MissionWizardStyles.STYLE);
+        new Slider(new DefaultRangedValueModel(160, 2000, 550), Axis.X, FormStyles.STYLE);
     slider.setBackground(null);
     slider.setInsets(new Insets3f(0, 0, 0, 0));
     slider.setPreferredSize(new Vector3f(StepParameters.SLIDER_W, SLIDER_TRACK_H, 0));
 
     Panel range = slider.getRangePanel();
     range.setBackground(
-        new QuadBackgroundComponent(new ColorRGBA(MissionWizardStyles.WIZARD_BORDER)));
+        new QuadBackgroundComponent(new ColorRGBA(FormStyles.BORDER)));
     range.setPreferredSize(new Vector3f(StepParameters.SLIDER_W, SLIDER_TRACK_H, 0));
     range.setInsets(new Insets3f(0, 0, 0, 0));
 

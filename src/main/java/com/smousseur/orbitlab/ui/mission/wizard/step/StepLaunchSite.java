@@ -5,7 +5,7 @@ import com.simsilica.lemur.*;
 import com.simsilica.lemur.component.BoxLayout;
 import com.simsilica.lemur.component.InsetsComponent;
 import com.smousseur.orbitlab.ui.UiKit;
-import com.smousseur.orbitlab.ui.mission.wizard.MissionWizardStyles;
+import com.smousseur.orbitlab.ui.form.FormStyles;
 import com.smousseur.orbitlab.ui.mission.wizard.component.PopupList;
 import java.util.List;
 
@@ -39,19 +39,19 @@ public class StepLaunchSite {
     root.setBackground(null);
     root.setPreferredSize(
         new Vector3f(
-            MissionWizardStyles.WIZARD_CONTENT_WIDTH,
-            MissionWizardStyles.WIZARD_CONTENT_HEIGHT,
+            FormStyles.CONTENT_WIDTH,
+            FormStyles.CONTENT_HEIGHT,
             0));
 
-    Label title = root.addChild(new Label("LAUNCH SITE", MissionWizardStyles.STYLE));
+    Label title = root.addChild(new Label("LAUNCH SITE", FormStyles.STYLE));
     title.setFont(UiKit.orbitron(13));
-    title.setColor(MissionWizardStyles.WIZARD_TEXT_PRIMARY);
+    title.setColor(FormStyles.TEXT_PRIMARY);
 
     root.addChild(UiKit.vSpacer(6f));
 
-    Label subtitle = root.addChild(new Label("// cosmodrome selection", MissionWizardStyles.STYLE));
+    Label subtitle = root.addChild(new Label("// cosmodrome selection", FormStyles.STYLE));
     subtitle.setFont(UiKit.ibmPlexMono(11));
-    subtitle.setColor(MissionWizardStyles.WIZARD_TEXT_SECONDARY);
+    subtitle.setColor(FormStyles.TEXT_SECONDARY);
 
     root.addChild(UiKit.vSpacer(ROW_GAP));
 
@@ -97,7 +97,7 @@ public class StepLaunchSite {
   }
 
   private TextField createTextField(String value) {
-    TextField f = new TextField(value, MissionWizardStyles.STYLE);
+    TextField f = new TextField(value, FormStyles.STYLE);
     f.setFont(UiKit.ibmPlexMono(13));
     f.setPreferredSize(new Vector3f(StepLaunchSite.COL3_W, FIELD_H, 0));
     f.setInsets(new Insets3f(0, 0, 10, 0));
@@ -119,9 +119,9 @@ public class StepLaunchSite {
 
     col.addChild(UiKit.vSpacer(LABEL_FIELD_GAP));
 
-    Label helper = col.addChild(new Label(helperText, MissionWizardStyles.STYLE));
+    Label helper = col.addChild(new Label(helperText, FormStyles.STYLE));
     helper.setFont(UiKit.ibmPlexMono(11));
-    helper.setColor(MissionWizardStyles.WIZARD_TEXT_LO);
+    helper.setColor(FormStyles.TEXT_LO);
 
     return col;
   }

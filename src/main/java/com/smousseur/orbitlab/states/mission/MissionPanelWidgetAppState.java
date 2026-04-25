@@ -3,48 +3,50 @@ package com.smousseur.orbitlab.states.mission;
 import com.jme3.app.Application;
 import com.jme3.app.state.BaseAppState;
 import com.smousseur.orbitlab.app.ApplicationContext;
+import com.smousseur.orbitlab.engine.events.EventBus;
 import com.smousseur.orbitlab.simulation.mission.LEOMission;
 import com.smousseur.orbitlab.simulation.mission.MissionContext;
+import com.smousseur.orbitlab.ui.mission.MissionPanelTrigger;
 import com.smousseur.orbitlab.ui.mission.MissionPanelWidget;
 
 /**
- * Application state that manages the mission panel GUI widget.
- *
- * <p>Creates and lays out a {@link MissionPanelWidget} during initialization, updates it each frame
- * to keep the mission list current, and properly closes the widget on cleanup.
+ * Orchestrates the mission panel: a persistent top-left trigger button and an on-demand modal panel
+ * attached to the shared modal layer. The panel itself is created only when the trigger is pressed
+ * and torn down when it closes.
  */
 public final class MissionPanelWidgetAppState extends BaseAppState {
 
   private final ApplicationContext context;
-  private MissionPanelWidget widget;
+  private MissionPanelTrigger trigger;
+  private MissionPanelWidget panel;
 
-  /**
-   * Creates a new mission panel widget state.
-   *
-   * @param context the application context providing mission context and GUI graph
-   */
   public MissionPanelWidgetAppState(ApplicationContext context) {
     this.context = context;
     MissionContext missionContext = context.missionContext();
     missionContext.addMission(new LEOMission("LEO", 400_000));
+    missionContext.addMission(new LEOMission("LEO2", 450_000));
   }
 
   @Override
   protected void initialize(Application app) {
-    widget = new MissionPanelWidget(context);
-    widget.layoutTopLeft(app.getCamera().getWidth(), app.getCamera().getHeight());
+    trigger = new MissionPanelTrigger(context);
+    trigger.layoutTopLeft(app.getCamera().getWidth(), app.getCamera().getHeight());
+    trigger.setOnClick(this::togglePanel);
   }
 
   @Override
   public void update(float tpf) {
-    widget.update(tpf);
+    if (panel != null) {
+      panel.update(tpf, getApplication().getCamera());
+    }
   }
 
   @Override
   protected void cleanup(Application app) {
-    if (widget != null) {
-      widget.close();
-      widget = null;
+    closePanel();
+    if (trigger != null) {
+      trigger.close();
+      trigger = null;
     }
   }
 
@@ -53,4 +55,34 @@ public final class MissionPanelWidgetAppState extends BaseAppState {
 
   @Override
   protected void onDisable() {}
+
+  private void togglePanel() {
+    if (panel == null) {
+      openPanel();
+    } else {
+      closePanel();
+    }
+  }
+
+  private void openPanel() {
+    panel = new MissionPanelWidget(context);
+    panel.setOnClose(this::closePanel);
+    panel.setOnNewMission(
+        () -> {
+          closePanel();
+          context.eventBus().publishUiNavigation(EventBus.UiNavigation.OPEN_MISSION_WIZARD);
+        });
+    panel.attachTo(context.guiGraph().getModalNode());
+    trigger.setEnabled(false);
+  }
+
+  private void closePanel() {
+    if (panel != null) {
+      panel.close();
+      panel = null;
+    }
+    if (trigger != null) {
+      trigger.setEnabled(true);
+    }
+  }
 }

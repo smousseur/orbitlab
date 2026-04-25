@@ -1,5 +1,8 @@
 package com.smousseur.orbitlab.ui.mission.wizard;
 
+import com.smousseur.orbitlab.ui.form.FormStyles;
+import com.smousseur.orbitlab.ui.form.ModalBackdrop;
+
 import com.jme3.math.Vector3f;
 import com.jme3.renderer.Camera;
 import com.jme3.scene.Node;
@@ -48,9 +51,9 @@ public class MissionWizardWidget implements AutoCloseable {
   public MissionWizardWidget(ApplicationContext context) {
     backdrop = new ModalBackdrop();
 
-    root = new Container(new BoxLayout(Axis.Y, FillMode.None), MissionWizardStyles.STYLE);
+    root = new Container(new BoxLayout(Axis.Y, FillMode.None), FormStyles.STYLE);
     root.setPreferredSize(new Vector3f(WINDOW_WIDTH, WINDOW_HEIGHT, 0));
-    root.setBackground(MissionWizardStyles.shellBg());
+    root.setBackground(FormStyles.shellBg());
     root.getInsetsComponent().setInsets(new Insets3f(0, 0, 0, 0));
     root.setBorder(null);
     GuiComponent bg = root.getBackground();
@@ -62,7 +65,7 @@ public class MissionWizardWidget implements AutoCloseable {
 
     // Header strip (deep flat bg) — spans full wizard width, touches the top edge.
     Container header = root.addChild(new Container(new BoxLayout(Axis.Y, FillMode.None)));
-    header.setBackground(MissionWizardStyles.headerBg());
+    header.setBackground(FormStyles.headerBg());
     header.setPreferredSize(new Vector3f(WINDOW_WIDTH, HEADER_HEIGHT, 0));
     header.setInsetsComponent(
         new InsetsComponent(new Insets3f(HEADER_PAD_Y, HEADER_PAD_X, HEADER_PAD_Y, HEADER_PAD_X)));
@@ -74,17 +77,17 @@ public class MissionWizardWidget implements AutoCloseable {
     brandRow.addChild(UiKit.wizardIcon("icon-brand-globe", 18, 18));
     brandRow.addChild(UiKit.hSpacer(8));
 
-    Label brandName = brandRow.addChild(new Label("ORBITLAB", MissionWizardStyles.STYLE));
+    Label brandName = brandRow.addChild(new Label("ORBITLAB", FormStyles.STYLE));
     brandName.setFont(UiKit.orbitron(13));
-    brandName.setColor(MissionWizardStyles.WIZARD_ACCENT_BRIGHT);
+    brandName.setColor(FormStyles.ACCENT_BRIGHT);
 
-    Label brandSep = brandRow.addChild(new Label("  /  ", MissionWizardStyles.STYLE));
+    Label brandSep = brandRow.addChild(new Label("  /  ", FormStyles.STYLE));
     brandSep.setFont(UiKit.ibmPlexMono(11));
-    brandSep.setColor(MissionWizardStyles.WIZARD_TEXT_LO);
+    brandSep.setColor(FormStyles.TEXT_LO);
 
-    Label brandSub = brandRow.addChild(new Label("MISSION WIZARD", MissionWizardStyles.STYLE));
+    Label brandSub = brandRow.addChild(new Label("MISSION WIZARD", FormStyles.STYLE));
     brandSub.setFont(UiKit.ibmPlexMono(11));
-    brandSub.setColor(MissionWizardStyles.WIZARD_TEXT_LO);
+    brandSub.setColor(FormStyles.TEXT_LO);
 
     header.addChild(UiKit.vSpacer(7));
 
@@ -96,12 +99,12 @@ public class MissionWizardWidget implements AutoCloseable {
     content = root.addChild(new Container(new BoxLayout(Axis.Y, FillMode.None)));
     content.setBackground(null);
     content.setPreferredSize(
-        new Vector3f(WINDOW_WIDTH, MissionWizardStyles.WIZARD_CONTENT_HEIGHT, 0));
+        new Vector3f(WINDOW_WIDTH, FormStyles.CONTENT_HEIGHT, 0));
     content.setInsetsComponent(new InsetsComponent(new Insets3f(28, 32, 16, 32)));
 
     // Footer strip
     footer = new WizardFooter(WINDOW_WIDTH);
-    footer.getNode().setBackground(MissionWizardStyles.footerBg());
+    footer.getNode().setBackground(FormStyles.footerBg());
     root.addChild(footer.getNode());
 
     stepMissionType = new StepMissionType();
