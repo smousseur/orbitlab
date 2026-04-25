@@ -5,9 +5,8 @@ import com.jme3.asset.AssetNotFoundException;
 import com.jme3.font.BitmapFont;
 import com.jme3.math.ColorRGBA;
 import com.simsilica.lemur.GuiGlobals;
-import com.smousseur.orbitlab.ui.timeline.TimelineStyles;
 import com.smousseur.orbitlab.ui.form.FormStyles;
-import com.smousseur.orbitlab.ui.telemetry.TelemetryStyles;
+import com.smousseur.orbitlab.ui.timeline.TimelineStyles;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -15,8 +14,8 @@ import org.apache.logging.log4j.Logger;
  * Central registry for OrbitLab's Lemur GUI visual tokens and style initialization.
  *
  * <p>All shared HUD colours and layout constants are defined here so every widget stays visually
- * consistent. Individual style classes ({@link TimelineStyles}, {@link TelemetryStyles},
- * {@link FormStyles}) reference these tokens instead of repeating raw literals.
+ * consistent. Individual style classes ({@link TimelineStyles}, {@link FormStyles}) reference these
+ * tokens instead of repeating raw literals.
  *
  * <p>Call {@link #init(AssetManager)} once from {@code OrbitLabApplication.simpleInitApp()} after
  * {@code GuiGlobals.initialize()} and {@code BaseStyles.loadGlassStyle()}.
@@ -135,6 +134,5 @@ public final class AppStyles {
     UiKit.init(assetManager);
     FormStyles.init(assetManager);
     TimelineStyles.init(assetManager);
-    TelemetryStyles.init(assetManager);
   }
 }

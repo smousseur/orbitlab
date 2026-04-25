@@ -34,13 +34,15 @@ public class TelemetryWidget implements AutoCloseable {
   private static final float MARGIN_PX = AppStyles.HUD_MARGIN_PX;
 
   private static final float WIDTH = 268f;
+  private static final float HEIGHT = 215f;
   private static final float PAD_X = 14f;
   private static final float PAD_Y = 12f;
   private static final float INNER_WIDTH = WIDTH - 2 * PAD_X;
   private static final float SECTION_GAP = 8f;
   private static final float LABEL_VALUE_GAP = 2f;
+
   /** step-dot-active.png is 32x32; scale to ~6.4 px so the cyan dot stays a clean small circle. */
-  private static final float DOT_ICON_SCALE = 0.2f;
+  private static final float DOT_ICON_SCALE = 0.4f;
 
   private static final float DOT_LABEL_GAP = 5f;
 
@@ -58,14 +60,14 @@ public class TelemetryWidget implements AutoCloseable {
     Objects.requireNonNull(context, "context");
     Node telemetryNode = context.guiGraph().getTelemetryNode();
 
-    this.root = new Container(new BoxLayout(Axis.Y, FillMode.None), TelemetryStyles.STYLE);
-    this.root.setBackground(UiKit.gradientBackground(AppStyles.ICE_PANEL_BG));
-    this.root.setPreferredSize(new Vector3f(WIDTH, 0, 0));
+    this.root = new Container(new BoxLayout(Axis.Y, FillMode.None), FormStyles.STYLE);
+    this.root.setBackground(FormStyles.shellBg());
+    this.root.setPreferredSize(new Vector3f(WIDTH, HEIGHT, 0));
     this.root.setInsetsComponent(new InsetsComponent(new Insets3f(PAD_Y, PAD_X, PAD_Y, PAD_X)));
     telemetryNode.attachChild(root);
 
     // Header: dot + TELEMETRY (left)  /  dot + phase (right)
-    Container header = root.addChild(new Container(new BorderLayout(), TelemetryStyles.STYLE));
+    Container header = root.addChild(new Container(new BorderLayout(), FormStyles.STYLE));
     header.setPreferredSize(new Vector3f(INNER_WIDTH, 14f, 0));
     header.addChild(buildDotLabel("TELEMETRY"), BorderLayout.Position.West);
     this.phaseLabel = buildDotLabel("—");
@@ -87,8 +89,8 @@ public class TelemetryWidget implements AutoCloseable {
 
     // ALT | VEL row
     float halfWidth = (INNER_WIDTH - 1f) / 2f;
-    Container altVelRow = root.addChild(new Container(new BoxLayout(Axis.X, FillMode.None),
-        TelemetryStyles.STYLE));
+    Container altVelRow =
+        root.addChild(new Container(new BoxLayout(Axis.X, FillMode.None), FormStyles.STYLE));
     altVelRow.setPreferredSize(new Vector3f(INNER_WIDTH, 36f, 0));
 
     Container altCell = altVelRow.addChild(buildValueCell("ALT", halfWidth));
@@ -114,7 +116,7 @@ public class TelemetryWidget implements AutoCloseable {
   }
 
   private Label buildDotLabel(String text) {
-    Label label = new Label(text, TelemetryStyles.STYLE);
+    Label label = new Label(text, FormStyles.STYLE);
     label.setFont(UiKit.mono(10));
     label.setColor(FormStyles.TEXT_PRIMARY);
     IconComponent dot = UiKit.wizardIconComponent("step-dot-active");
@@ -127,7 +129,7 @@ public class TelemetryWidget implements AutoCloseable {
   }
 
   private Label smallLabel(String text, float width) {
-    Label l = new Label(text, TelemetryStyles.STYLE);
+    Label l = new Label(text, FormStyles.STYLE);
     l.setFont(UiKit.mono(10));
     l.setColor(FormStyles.TEXT_LO);
     l.setPreferredSize(new Vector3f(width, 10f, 0));
@@ -136,7 +138,7 @@ public class TelemetryWidget implements AutoCloseable {
   }
 
   private Label buildMetLabel(String text) {
-    Label l = new Label(text, TelemetryStyles.STYLE);
+    Label l = new Label(text, FormStyles.STYLE);
     l.setFont(UiKit.mono(14));
     l.setColor(FormStyles.CYAN);
     l.setTextHAlignment(HAlignment.Left);
@@ -144,7 +146,7 @@ public class TelemetryWidget implements AutoCloseable {
   }
 
   private Container buildValueCell(String labelText, float width) {
-    Container cell = new Container(new BoxLayout(Axis.Y, FillMode.None), TelemetryStyles.STYLE);
+    Container cell = new Container(new BoxLayout(Axis.Y, FillMode.None), FormStyles.STYLE);
     cell.setPreferredSize(new Vector3f(width, 36f, 0));
     cell.setInsetsComponent(new InsetsComponent(new Insets3f(0, 4, 0, 4)));
     cell.addChild(smallLabel(labelText, width - 8f));
@@ -154,28 +156,28 @@ public class TelemetryWidget implements AutoCloseable {
   }
 
   private Container buildValueUnitRow(float width) {
-    Container row = new Container(new BoxLayout(Axis.X, FillMode.None), TelemetryStyles.STYLE);
+    Container row = new Container(new BoxLayout(Axis.X, FillMode.None), FormStyles.STYLE);
     row.setPreferredSize(new Vector3f(width, 18f, 0));
-    Label value = row.addChild(new Label("—", TelemetryStyles.STYLE));
+    Label value = row.addChild(new Label("—", FormStyles.STYLE));
     value.setFont(UiKit.mono(14));
     value.setColor(FormStyles.CYAN);
     value.setTextHAlignment(HAlignment.Left);
     row.addChild(UiKit.hSpacer(4f));
-    Label unit = row.addChild(new Label("", TelemetryStyles.STYLE));
+    Label unit = row.addChild(new Label("", FormStyles.STYLE));
     unit.setFont(UiKit.mono(10));
     unit.setColor(FormStyles.TEXT_LO);
     return row;
   }
 
   private Container hDivider(float width) {
-    Container d = new Container(TelemetryStyles.STYLE);
+    Container d = new Container(FormStyles.STYLE);
     d.setPreferredSize(new Vector3f(width, 1f, 0));
     d.setBackground(new QuadBackgroundComponent(FormStyles.BORDER));
     return d;
   }
 
   private Container vDivider(float height) {
-    Container d = new Container(TelemetryStyles.STYLE);
+    Container d = new Container(FormStyles.STYLE);
     d.setPreferredSize(new Vector3f(1f, height, 0));
     d.setBackground(new QuadBackgroundComponent(FormStyles.BORDER));
     return d;
@@ -213,12 +215,9 @@ public class TelemetryWidget implements AutoCloseable {
     double elapsedS = pt.time().durationFrom(mission.getInitialDate());
     metValue.setText(formatMet(elapsedS));
     phaseLabel.setText(pt.stageName().toUpperCase());
-    setValueUnit(altValue, altUnit,
-        String.format("%.1f", pt.altitudeMeters() / 1000.0), "km");
-    setValueUnit(velValue, velUnit,
-        String.format("%.0f", pt.velocity().getNorm()), "m/s");
-    setValueUnit(massValue, massUnit,
-        String.format("%.0f", pt.mass()), "kg");
+    setValueUnit(altValue, altUnit, String.format("%.1f", pt.altitudeMeters() / 1000.0), "km");
+    setValueUnit(velValue, velUnit, String.format("%.0f", pt.velocity().getNorm()), "m/s");
+    setValueUnit(massValue, massUnit, String.format("%.0f", pt.mass()), "kg");
   }
 
   private static void setValueUnit(Label value, Label unit, String v, String u) {
