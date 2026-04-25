@@ -603,6 +603,7 @@ public class MissionPanelWidget implements AutoCloseable {
       selectedMissionName = name;
     }
     missionContext.setSelectedMissionName(selectedMissionName);
+    missionContext.getSelectedMission().ifPresent(mission -> mission.setVisible(true));
     refreshMissionList();
     refreshFooterSummary();
   }
