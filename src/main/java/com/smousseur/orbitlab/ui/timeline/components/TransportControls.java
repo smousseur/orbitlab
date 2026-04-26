@@ -43,7 +43,7 @@ public class TransportControls {
     stepBack.addClickCommands(s -> clock.seek(clock.now().shiftedBy(-STEP_SECONDS)));
     place(stepBack, root, startX, BUTTON_SIZE, capsuleHeight, 1f);
 
-    playPauseButton = makeButton("glyph-play.png", ">");
+    playPauseButton = makeButton("glyph-pause.png", ">");
     playPauseButton.addClickCommands(s -> clock.setPlaying(!clock.isPlaying()));
     place(playPauseButton, root, startX + BUTTON_SIZE + BUTTON_GAP, BUTTON_SIZE, capsuleHeight, 1f);
     playPauseIcon = (playPauseButton.getIcon() instanceof IconComponent ic) ? ic : null;
