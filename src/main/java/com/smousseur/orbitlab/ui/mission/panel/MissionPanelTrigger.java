@@ -1,4 +1,4 @@
-package com.smousseur.orbitlab.ui.mission;
+package com.smousseur.orbitlab.ui.mission.panel;
 
 import com.jme3.math.ColorRGBA;
 import com.jme3.scene.Node;
@@ -11,9 +11,7 @@ import com.smousseur.orbitlab.ui.UiKit;
 import com.smousseur.orbitlab.ui.form.FormStyles;
 import java.util.Objects;
 
-/**
- * Small toggle button anchored top-left that opens and closes the mission panel modal.
- */
+/** Small toggle button anchored top-left that opens and closes the mission panel modal. */
 public final class MissionPanelTrigger implements AutoCloseable {
 
   private static final float MARGIN_PX = AppStyles.HUD_MARGIN_PX;
@@ -45,15 +43,12 @@ public final class MissionPanelTrigger implements AutoCloseable {
   }
 
   /**
-   * Visually communicates whether the trigger is currently enabled. When disabled, the button
-   * stays clickable but is rendered semi-transparent to signal the panel is already open.
+   * Visually communicates whether the trigger is currently enabled. When disabled, the button stays
+   * clickable but is rendered semi-transparent to signal the panel is already open.
    */
   public void setEnabled(boolean enabled) {
     ColorRGBA base = AppStyles.ICE_ACCENT;
-    ColorRGBA tint =
-        enabled
-            ? base
-            : new ColorRGBA(base.r, base.g, base.b, base.a * 0.4f);
+    ColorRGBA tint = enabled ? base : new ColorRGBA(base.r, base.g, base.b, base.a * 0.4f);
     button.setBackground(UiKit.gradientBackground(tint));
     button.setColor(enabled ? FormStyles.TEXT_PRIMARY : FormStyles.TEXT_LO);
   }

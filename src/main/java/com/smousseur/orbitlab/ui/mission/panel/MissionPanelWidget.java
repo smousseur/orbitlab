@@ -1,4 +1,4 @@
-package com.smousseur.orbitlab.ui.mission;
+package com.smousseur.orbitlab.ui.mission.panel;
 
 import com.jme3.input.event.MouseButtonEvent;
 import com.jme3.math.Vector3f;
@@ -21,9 +21,7 @@ import com.smousseur.orbitlab.simulation.mission.MissionContext;
 import com.smousseur.orbitlab.simulation.mission.MissionEntry;
 import com.smousseur.orbitlab.ui.form.FormStyles;
 import com.smousseur.orbitlab.ui.form.ModalBackdrop;
-import com.smousseur.orbitlab.ui.mission.panel.MissionListView;
-import com.smousseur.orbitlab.ui.mission.panel.PanelFooter;
-import com.smousseur.orbitlab.ui.mission.panel.PanelHeader;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -31,10 +29,10 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 /**
- * Modal mission panel: orchestrates a {@link PanelHeader}, a {@link MissionListView} and a
- * {@link PanelFooter} attached to the shared modal layer through a {@link ModalBackdrop}. Per-row
- * actions (Edit / Compute / Visualize / Delete) are routed to {@link MissionContext} and the
- * {@link EventBus}.
+ * Modal mission panel: orchestrates a {@link PanelHeader}, a {@link MissionListView} and a {@link
+ * PanelFooter} attached to the shared modal layer through a {@link ModalBackdrop}. Per-row actions
+ * (Edit / Compute / Visualize / Delete) are routed to {@link MissionContext} and the {@link
+ * EventBus}.
  */
 public class MissionPanelWidget implements AutoCloseable {
   private static final Logger logger = LogManager.getLogger(MissionPanelWidget.class);
