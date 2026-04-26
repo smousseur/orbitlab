@@ -194,7 +194,8 @@ public final class MissionOrchestratorAppState extends BaseAppState {
   }
 
   private MissionRenderer createRenderer(MissionEntry entry) {
-    RenderContext renderContext = RenderContext.planet(context.focusView().getBody());
+    RenderContext renderContext =
+        RenderContext.planet(entry.mission().getObjective().body());
     ColorRGBA color = TRAJECTORY_PALETTE[colorIndex % TRAJECTORY_PALETTE.length];
     colorIndex++;
 
