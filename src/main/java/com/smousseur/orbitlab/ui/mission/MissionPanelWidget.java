@@ -306,7 +306,7 @@ public class MissionPanelWidget implements AutoCloseable {
     columnHeader.addChild(columnHeaderLabel("ACTIONS", COL_ACTIONS));
 
     content.addChild(UiKit.vSpacer(6));
-    content.addChild(divider(CONTENT_INNER_WIDTH));
+    content.addChild(divider());
     content.addChild(UiKit.vSpacer(6));
 
     listContainer = content.addChild(new Container(new BoxLayout(Axis.Y, FillMode.None)));
@@ -341,9 +341,9 @@ public class MissionPanelWidget implements AutoCloseable {
     return l;
   }
 
-  private Container divider(float width) {
+  private Container divider() {
     Container d = new Container();
-    d.setPreferredSize(new Vector3f(width, 1, 0));
+    d.setPreferredSize(new Vector3f(CONTENT_INNER_WIDTH, 1, 0));
     d.setBackground(new QuadBackgroundComponent(FormStyles.BORDER));
     return d;
   }
@@ -377,7 +377,7 @@ public class MissionPanelWidget implements AutoCloseable {
     for (int i = 0; i < entries.size(); i++) {
       listContainer.addChild(buildRow(entries.get(i)));
       if (i < entries.size() - 1) {
-        listContainer.addChild(divider(CONTENT_INNER_WIDTH));
+        listContainer.addChild(divider());
       }
     }
   }
@@ -421,7 +421,7 @@ public class MissionPanelWidget implements AutoCloseable {
     Container actions = row.addChild(new Container(new BoxLayout(Axis.X, FillMode.None)));
     actions.setBackground(null);
     actions.setPreferredSize(new Vector3f(COL_ACTIONS, rowInnerH, 0));
-    populateRowActions(actions, name, status, rowInnerH);
+    populateRowActions(actions, name, status, entry.isVisible(), rowInnerH);
 
     // Hover + selection follow the PopupList pattern (white tint over btn-primary).
     // Action icons consume their own clicks so clicks on icons don't trigger row selection.
@@ -451,8 +451,13 @@ public class MissionPanelWidget implements AutoCloseable {
   }
 
   private void populateRowActions(
-      Container actions, String missionName, MissionStatus status, float rowInnerH) {
+      Container actions,
+      String missionName,
+      MissionStatus status,
+      boolean visible,
+      float rowInnerH) {
     boolean computing = status == MissionStatus.COMPUTING;
+    boolean ready = status == MissionStatus.READY;
 
     actions.addChild(
         vCenter(actionIconButton("edit", !computing, () -> onEdit(missionName)), rowInnerH));
@@ -463,6 +468,16 @@ public class MissionPanelWidget implements AutoCloseable {
                 "compute",
                 !computing,
                 () -> eventBus.publishMissionAction(missionName, EventBus.MissionAction.OPTIMIZE)),
+            rowInnerH));
+    actions.addChild(UiKit.hSpacer(ACTION_ICON_GAP));
+    actions.addChild(
+        vCenter(
+            visualizeIconButton(
+                ready,
+                visible,
+                () ->
+                    eventBus.publishMissionAction(
+                        missionName, EventBus.MissionAction.TOGGLE_VISIBLE)),
             rowInnerH));
     actions.addChild(UiKit.hSpacer(ACTION_ICON_GAP));
     actions.addChild(
@@ -484,6 +499,7 @@ public class MissionPanelWidget implements AutoCloseable {
     float vPad = Math.max(0f, (containerHeight - child.getPreferredSize().y) * 0.5f);
     Container wrap = new Container(new BoxLayout(Axis.Y, FillMode.None));
     wrap.setBackground(null);
+    wrap.setInsets(new Insets3f(0, 0, 20, 0));
     wrap.setPreferredSize(new Vector3f(child.getPreferredSize().x, containerHeight, 0));
     wrap.addChild(UiKit.vSpacer(vPad));
     wrap.addChild(child);
@@ -504,7 +520,7 @@ public class MissionPanelWidget implements AutoCloseable {
       return icon;
     }
 
-    icon.setBackground(tintedFlat(normalTex, FormStyles.ACCENT_BRIGHT));
+    icon.setBackground(tintedFlat(normalTex));
     MouseEventControl.addListenersToSpatial(
         icon,
         new DefaultMouseListener() {
@@ -515,7 +531,7 @@ public class MissionPanelWidget implements AutoCloseable {
 
           @Override
           public void mouseExited(MouseMotionEvent evt, Spatial target, Spatial capture) {
-            icon.setBackground(tintedFlat(normalTex, FormStyles.ACCENT_BRIGHT));
+            icon.setBackground(tintedFlat(normalTex));
           }
 
           @Override
@@ -527,9 +543,47 @@ public class MissionPanelWidget implements AutoCloseable {
     return icon;
   }
 
-  private static QuadBackgroundComponent tintedFlat(String tex, ColorRGBA tint) {
+  private Container visualizeIconButton(boolean ready, boolean on, Runnable onClick) {
+    final String normalTex = "icon-action-view";
+    final String hoverTex = "icon-action-view-hover";
+    final String disabledTex = "icon-action-view-disabled";
+
+    Container icon = new Container();
+    icon.setPreferredSize(new Vector3f(ACTION_ICON_SIZE, ACTION_ICON_SIZE, 0));
+
+    if (!ready) {
+      icon.setBackground(UiKit.wizardFlat(disabledTex));
+      return icon;
+    }
+
+    final String idleTex = on ? normalTex : disabledTex;
+    icon.setBackground(UiKit.wizardFlat(idleTex));
+
+    MouseEventControl.addListenersToSpatial(
+        icon,
+        new DefaultMouseListener() {
+          @Override
+          public void mouseEntered(MouseMotionEvent evt, Spatial target, Spatial capture) {
+            icon.setBackground(UiKit.wizardFlat(hoverTex));
+          }
+
+          @Override
+          public void mouseExited(MouseMotionEvent evt, Spatial target, Spatial capture) {
+            icon.setBackground(UiKit.wizardFlat(idleTex));
+          }
+
+          @Override
+          public void click(MouseButtonEvent event, Spatial target, Spatial capture) {
+            onClick.run();
+            event.setConsumed();
+          }
+        });
+    return icon;
+  }
+
+  private static QuadBackgroundComponent tintedFlat(String tex) {
     QuadBackgroundComponent q = UiKit.wizardFlat(tex);
-    q.setColor(tint);
+    q.setColor(FormStyles.ACCENT_BRIGHT);
     return q;
   }
 
@@ -603,7 +657,6 @@ public class MissionPanelWidget implements AutoCloseable {
       selectedMissionName = name;
     }
     missionContext.setSelectedMissionName(selectedMissionName);
-    missionContext.getSelectedMission().ifPresent(mission -> mission.setVisible(true));
     refreshMissionList();
     refreshFooterSummary();
   }
