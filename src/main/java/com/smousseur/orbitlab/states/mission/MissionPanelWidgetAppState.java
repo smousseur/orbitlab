@@ -6,8 +6,8 @@ import com.smousseur.orbitlab.app.ApplicationContext;
 import com.smousseur.orbitlab.engine.events.EventBus;
 import com.smousseur.orbitlab.simulation.mission.LEOMission;
 import com.smousseur.orbitlab.simulation.mission.MissionContext;
-import com.smousseur.orbitlab.ui.mission.MissionPanelTrigger;
-import com.smousseur.orbitlab.ui.mission.MissionPanelWidget;
+import com.smousseur.orbitlab.ui.mission.panel.MissionPanelTrigger;
+import com.smousseur.orbitlab.ui.mission.panel.MissionPanelWidget;
 
 /**
  * Orchestrates the mission panel: a persistent top-left trigger button and an on-demand modal panel
