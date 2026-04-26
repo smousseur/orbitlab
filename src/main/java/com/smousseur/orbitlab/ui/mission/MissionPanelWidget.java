@@ -306,7 +306,7 @@ public class MissionPanelWidget implements AutoCloseable {
     columnHeader.addChild(columnHeaderLabel("ACTIONS", COL_ACTIONS));
 
     content.addChild(UiKit.vSpacer(6));
-    content.addChild(divider(CONTENT_INNER_WIDTH));
+    content.addChild(divider());
     content.addChild(UiKit.vSpacer(6));
 
     listContainer = content.addChild(new Container(new BoxLayout(Axis.Y, FillMode.None)));
@@ -341,9 +341,9 @@ public class MissionPanelWidget implements AutoCloseable {
     return l;
   }
 
-  private Container divider(float width) {
+  private Container divider() {
     Container d = new Container();
-    d.setPreferredSize(new Vector3f(width, 1, 0));
+    d.setPreferredSize(new Vector3f(CONTENT_INNER_WIDTH, 1, 0));
     d.setBackground(new QuadBackgroundComponent(FormStyles.BORDER));
     return d;
   }
@@ -377,7 +377,7 @@ public class MissionPanelWidget implements AutoCloseable {
     for (int i = 0; i < entries.size(); i++) {
       listContainer.addChild(buildRow(entries.get(i)));
       if (i < entries.size() - 1) {
-        listContainer.addChild(divider(CONTENT_INNER_WIDTH));
+        listContainer.addChild(divider());
       }
     }
   }
@@ -499,6 +499,7 @@ public class MissionPanelWidget implements AutoCloseable {
     float vPad = Math.max(0f, (containerHeight - child.getPreferredSize().y) * 0.5f);
     Container wrap = new Container(new BoxLayout(Axis.Y, FillMode.None));
     wrap.setBackground(null);
+    wrap.setInsets(new Insets3f(0, 0, 20, 0));
     wrap.setPreferredSize(new Vector3f(child.getPreferredSize().x, containerHeight, 0));
     wrap.addChild(UiKit.vSpacer(vPad));
     wrap.addChild(child);
@@ -519,7 +520,7 @@ public class MissionPanelWidget implements AutoCloseable {
       return icon;
     }
 
-    icon.setBackground(tintedFlat(normalTex, FormStyles.ACCENT_BRIGHT));
+    icon.setBackground(tintedFlat(normalTex));
     MouseEventControl.addListenersToSpatial(
         icon,
         new DefaultMouseListener() {
@@ -530,7 +531,7 @@ public class MissionPanelWidget implements AutoCloseable {
 
           @Override
           public void mouseExited(MouseMotionEvent evt, Spatial target, Spatial capture) {
-            icon.setBackground(tintedFlat(normalTex, FormStyles.ACCENT_BRIGHT));
+            icon.setBackground(tintedFlat(normalTex));
           }
 
           @Override
@@ -543,9 +544,9 @@ public class MissionPanelWidget implements AutoCloseable {
   }
 
   private Container visualizeIconButton(boolean ready, boolean on, Runnable onClick) {
-    final String normalTex = "icon_visualize_normal";
-    final String hoverTex = "icon_visualize_hover";
-    final String disabledTex = "icon_visualize_disabled";
+    final String normalTex = "icon-action-view";
+    final String hoverTex = "icon-action-view-hover";
+    final String disabledTex = "icon-action-view-disabled";
 
     Container icon = new Container();
     icon.setPreferredSize(new Vector3f(ACTION_ICON_SIZE, ACTION_ICON_SIZE, 0));
@@ -580,9 +581,9 @@ public class MissionPanelWidget implements AutoCloseable {
     return icon;
   }
 
-  private static QuadBackgroundComponent tintedFlat(String tex, ColorRGBA tint) {
+  private static QuadBackgroundComponent tintedFlat(String tex) {
     QuadBackgroundComponent q = UiKit.wizardFlat(tex);
-    q.setColor(tint);
+    q.setColor(FormStyles.ACCENT_BRIGHT);
     return q;
   }
 
