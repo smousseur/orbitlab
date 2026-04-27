@@ -9,11 +9,14 @@ import com.simsilica.lemur.event.DefaultMouseListener;
 import com.simsilica.lemur.event.MouseEventControl;
 import com.smousseur.orbitlab.ui.UiKit;
 import com.smousseur.orbitlab.ui.form.FormStyles;
+import com.smousseur.orbitlab.ui.mission.wizard.FormField;
+import com.smousseur.orbitlab.ui.mission.wizard.StepValues;
 import com.smousseur.orbitlab.ui.mission.wizard.component.PopupList;
 import com.smousseur.orbitlab.ui.mission.wizard.component.SelectableCard;
 import java.util.List;
+import java.util.Map;
 
-public class StepLauncher {
+public class StepLauncher implements StepValues {
 
   private static final float CARD_W = 264;
   private static final float CARD_H = 112f;
@@ -26,6 +29,11 @@ public class StepLauncher {
   private static final float LABEL_FIELD_GAP = 6f;
 
   private final Container root;
+  private final SelectableCard falconCard;
+  private final SelectableCard arianeCard;
+  private final PopupList payloadType;
+  private final TextField massField;
+  private String selectedLauncher = "FALCON_HEAVY";
 
   private record PayloadData(String name, String mass) {}
 
@@ -56,7 +64,7 @@ public class StepLauncher {
 
     root.addChild(UiKit.vSpacer(ROW_GAP));
 
-    SelectableCard falcon =
+    falconCard =
         new SelectableCard(
             CARD_W,
             CARD_H,
@@ -68,7 +76,7 @@ public class StepLauncher {
             "interface/wizard/icon-launcher-falcon.png",
             LAUNCHER_ICON,
             SelectableCard.Variant.LAUNCHER);
-    SelectableCard ariane =
+    arianeCard =
         new SelectableCard(
             CARD_W,
             CARD_H,
@@ -83,27 +91,29 @@ public class StepLauncher {
 
     Container vRow = root.addChild(new Container(new BoxLayout(Axis.X, FillMode.None)));
     vRow.setBackground(null);
-    vRow.addChild(falcon.getNode());
+    vRow.addChild(falconCard.getNode());
     vRow.addChild(UiKit.hSpacer(COL_GAP));
-    vRow.addChild(ariane.getNode());
+    vRow.addChild(arianeCard.getNode());
     float vRowTrailing = FormStyles.CONTENT_WIDTH - 2 * CARD_W - COL_GAP;
     vRow.addChild(UiKit.hSpacer(vRowTrailing));
 
     // Mutual exclusion: clicking one deselects the other.
     MouseEventControl.addListenersToSpatial(
-        falcon.getNode(),
+        falconCard.getNode(),
         new DefaultMouseListener() {
           @Override
           public void click(MouseButtonEvent e, Spatial t, Spatial c) {
-            ariane.applyState(SelectableCard.State.IDLE);
+            arianeCard.applyState(SelectableCard.State.IDLE);
+            selectedLauncher = "FALCON_HEAVY";
           }
         });
     MouseEventControl.addListenersToSpatial(
-        ariane.getNode(),
+        arianeCard.getNode(),
         new DefaultMouseListener() {
           @Override
           public void click(MouseButtonEvent e, Spatial t, Spatial c) {
-            falcon.applyState(SelectableCard.State.IDLE);
+            falconCard.applyState(SelectableCard.State.IDLE);
+            selectedLauncher = "ARIANE_5_ECA";
           }
         });
 
@@ -114,7 +124,7 @@ public class StepLauncher {
 
     root.addChild(UiKit.fieldLabelRow("PAYLOAD", "lbl-box"));
     root.addChild(UiKit.vSpacer(ROW_GAP));
-    PopupList payloadType =
+    payloadType =
         new PopupList(
             PAYLOAD_POPUP_W,
             -24,
@@ -124,7 +134,7 @@ public class StepLauncher {
 
     payloadRow.addChild(payloadType.getNode());
 
-    TextField massField = new TextField("15000", FormStyles.STYLE);
+    massField = new TextField("15000", FormStyles.STYLE);
     massField.setFont(UiKit.ibmPlexMono(11));
     massField.setPreferredSize(new Vector3f(MASS_FIELD_W, 46, 0));
     massField.setInsets(new Insets3f(0, 0, 10, 0));
@@ -149,5 +159,21 @@ public class StepLauncher {
 
   public Container getNode() {
     return root;
+  }
+
+  @Override
+  public Map<String, Object> getValues() {
+    return Map.of(
+        FormField.LAUNCHER_TYPE.key(), selectedLauncher,
+        FormField.PAYLOAD_TYPE.key(), payloadType.getSelectedValue(),
+        FormField.PAYLOAD_MASS.key(), parseDoubleOrZero(massField.getText()));
+  }
+
+  private static double parseDoubleOrZero(String text) {
+    try {
+      return Double.parseDouble(text.trim());
+    } catch (NumberFormatException e) {
+      return 0d;
+    }
   }
 }

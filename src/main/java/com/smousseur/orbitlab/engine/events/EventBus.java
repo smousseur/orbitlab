@@ -3,6 +3,7 @@ package com.smousseur.orbitlab.engine.events;
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.simulation.orbit.OrbitPath;
 
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -97,26 +98,40 @@ public final class EventBus {
   // UI navigation events
   // -------------------------------------------------------------------------
 
-  /** Actions that can be requested on the UI from widgets. */
-  public enum UiNavigation {
-    OPEN_MISSION_WIZARD,
-    CREATE_MISSION
+  /** UI navigation events, published by widgets and consumed by AppStates. */
+  public sealed interface UiNavigationEvent
+      permits UiNavigationEvent.OpenMissionWizard, UiNavigationEvent.CreateMission {
+
+    /** Request to open the mission wizard. */
+    record OpenMissionWizard() implements UiNavigationEvent {}
+
+    /**
+     * Request to create a mission from the wizard form values.
+     *
+     * @param values aggregated form values keyed by {@code FormField.key()}
+     */
+    record CreateMission(Map<String, Object> values) implements UiNavigationEvent {
+      public CreateMission {
+        Objects.requireNonNull(values, "values");
+        values = Map.copyOf(values);
+      }
+    }
   }
 
-  private final ConcurrentLinkedQueue<UiNavigation> uiNavigationQueue =
+  private final ConcurrentLinkedQueue<UiNavigationEvent> uiNavigationQueue =
       new ConcurrentLinkedQueue<>();
 
   /**
    * Publishes a UI navigation event. Can be called from any thread.
    *
-   * @param nav the navigation event
+   * @param event the navigation event
    */
-  public void publishUiNavigation(UiNavigation nav) {
-    uiNavigationQueue.add(Objects.requireNonNull(nav));
+  public void publishUiNavigation(UiNavigationEvent event) {
+    uiNavigationQueue.add(Objects.requireNonNull(event));
   }
 
   /** Poll one UI navigation event; returns null if none. */
-  public UiNavigation pollUiNavigation() {
+  public UiNavigationEvent pollUiNavigation() {
     return uiNavigationQueue.poll();
   }
 }

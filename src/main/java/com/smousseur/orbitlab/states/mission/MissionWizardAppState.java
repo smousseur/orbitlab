@@ -38,8 +38,8 @@ public final class MissionWizardAppState extends BaseAppState {
 
   @Override
   public void update(float tpf) {
-    EventBus.UiNavigation nav = context.eventBus().pollUiNavigation();
-    if (nav == EventBus.UiNavigation.OPEN_MISSION_WIZARD) {
+    EventBus.UiNavigationEvent nav = context.eventBus().pollUiNavigation();
+    if (nav instanceof EventBus.UiNavigationEvent.OpenMissionWizard) {
       openWizard();
     }
     if (widget != null) {
@@ -52,8 +52,9 @@ public final class MissionWizardAppState extends BaseAppState {
     widget = new MissionWizardWidget(context);
     widget.setOnCancel(this::closeWizard);
     widget.setOnCreate(
-        () -> {
-          context.eventBus().publishUiNavigation(EventBus.UiNavigation.CREATE_MISSION);
+        values -> {
+          logger.info("Mission Wizard CREATE_MISSION values = {}", values);
+          context.eventBus().publishUiNavigation(new EventBus.UiNavigationEvent.CreateMission(values));
           closeWizard();
         });
     widget.attachTo(context.guiGraph().getModalNode());

@@ -70,7 +70,7 @@ public final class MissionPanelWidgetAppState extends BaseAppState {
     panel.setOnNewMission(
         () -> {
           closePanel();
-          context.eventBus().publishUiNavigation(EventBus.UiNavigation.OPEN_MISSION_WIZARD);
+          context.eventBus().publishUiNavigation(new EventBus.UiNavigationEvent.OpenMissionWizard());
         });
     panel.attachTo(context.guiGraph().getModalNode());
     trigger.setEnabled(false);

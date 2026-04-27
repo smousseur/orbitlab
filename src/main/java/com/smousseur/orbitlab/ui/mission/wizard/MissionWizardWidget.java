@@ -16,7 +16,10 @@ import com.smousseur.orbitlab.app.ApplicationContext;
 import com.smousseur.orbitlab.ui.UiKit;
 import com.smousseur.orbitlab.ui.mission.wizard.step.*;
 import java.util.EnumMap;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -40,13 +43,15 @@ public class MissionWizardWidget implements AutoCloseable {
   private final Container content;
   private final StepMissionType stepMissionType;
   private final StepParameters stepParameters;
+  private final StepLaunchSite stepLaunchSite;
+  private final StepLauncher stepLauncher;
 
   private final Map<MissionWizardStep, Container> stepPanels =
       new EnumMap<>(MissionWizardStep.class);
   private MissionWizardStep currentStep = MissionWizardStep.MISSION;
   private boolean visible = false;
 
-  private Runnable onCreate = () -> {};
+  private Consumer<Map<String, Object>> onCreate = values -> {};
 
   public MissionWizardWidget(ApplicationContext context) {
     backdrop = new ModalBackdrop();
@@ -111,8 +116,10 @@ public class MissionWizardWidget implements AutoCloseable {
     stepPanels.put(MissionWizardStep.MISSION, stepMissionType.getNode());
     stepParameters = new StepParameters();
     stepPanels.put(MissionWizardStep.PARAMETERS, stepParameters.getNode());
-    stepPanels.put(MissionWizardStep.SITE, new StepLaunchSite().getNode());
-    stepPanels.put(MissionWizardStep.LAUNCHER, new StepLauncher().getNode());
+    stepLaunchSite = new StepLaunchSite();
+    stepPanels.put(MissionWizardStep.SITE, stepLaunchSite.getNode());
+    stepLauncher = new StepLauncher();
+    stepPanels.put(MissionWizardStep.LAUNCHER, stepLauncher.getNode());
 
     footer.setOnNext(this::goNext);
     footer.setOnPrevious(this::goPrevious);
@@ -157,11 +164,27 @@ public class MissionWizardWidget implements AutoCloseable {
 
   public void goNext() {
     if (currentStep == MissionWizardStep.LAUNCHER) {
-      onCreate.run();
+      onCreate.accept(getAllValues());
       return;
     }
     MissionWizardStep next = currentStep.next();
     if (next != null) showStep(next);
+  }
+
+  /** Aggregates values from every step. Throws if two steps publish the same key. */
+  public Map<String, Object> getAllValues() {
+    Map<String, Object> all = new LinkedHashMap<>();
+    List<StepValues> steps = List.of(stepMissionType, stepParameters, stepLaunchSite, stepLauncher);
+    for (StepValues step : steps) {
+      step.getValues()
+          .forEach(
+              (k, v) -> {
+                if (all.putIfAbsent(k, v) != null) {
+                  throw new IllegalStateException("Duplicate FormField key across steps: " + k);
+                }
+              });
+    }
+    return all;
   }
 
   public void goPrevious() {
@@ -179,8 +202,8 @@ public class MissionWizardWidget implements AutoCloseable {
     footer.setOnCancel(action);
   }
 
-  public void setOnCreate(Runnable action) {
-    this.onCreate = action != null ? action : () -> {};
+  public void setOnCreate(Consumer<Map<String, Object>> action) {
+    this.onCreate = action != null ? action : values -> {};
   }
 
   private void centerOnScreen(int screenWidth, int screenHeight) {
