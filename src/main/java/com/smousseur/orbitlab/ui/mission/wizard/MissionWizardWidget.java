@@ -103,8 +103,7 @@ public class MissionWizardWidget implements AutoCloseable {
     // Content pane
     content = root.addChild(new Container(new BoxLayout(Axis.Y, FillMode.None)));
     content.setBackground(null);
-    content.setPreferredSize(
-        new Vector3f(WINDOW_WIDTH, FormStyles.CONTENT_HEIGHT, 0));
+    content.setPreferredSize(new Vector3f(WINDOW_WIDTH, FormStyles.CONTENT_HEIGHT, 0));
     content.setInsetsComponent(new InsetsComponent(new Insets3f(28, 32, 16, 32)));
 
     // Footer strip
@@ -207,10 +206,6 @@ public class MissionWizardWidget implements AutoCloseable {
   }
 
   private void centerOnScreen(int screenWidth, int screenHeight) {
-    if (screenWidth < WINDOW_WIDTH + 2 * MIN_VIEWPORT_MARGIN
-        || screenHeight < WINDOW_HEIGHT + 2 * MIN_VIEWPORT_MARGIN) {
-      logger.warn("Viewport {}x{} smaller than wizard minimum", screenWidth, screenHeight);
-    }
     float x = Math.round((screenWidth - WINDOW_WIDTH) / 2f);
     float y = Math.round((screenHeight + WINDOW_HEIGHT) / 2f);
     root.setLocalTranslation(x, y, 101f);
