@@ -12,8 +12,11 @@ import com.simsilica.lemur.core.VersionedReference;
 import com.simsilica.lemur.event.*;
 import com.smousseur.orbitlab.ui.UiKit;
 import com.smousseur.orbitlab.ui.form.FormStyles;
+import com.smousseur.orbitlab.ui.mission.wizard.FormField;
+import com.smousseur.orbitlab.ui.mission.wizard.StepValues;
+import java.util.Map;
 
-public class StepParameters {
+public class StepParameters implements StepValues {
 
   private static final float FIELD_W = 752f;
   private static final float FIELD_H = 36f;
@@ -31,6 +34,8 @@ public class StepParameters {
 
   private final Container root;
 
+  private TextField missionNameField;
+  private TextField launchDateField;
   private Slider altitudeSlider;
   private TextField altitudeField;
   private double altitudeMin;
@@ -63,7 +68,8 @@ public class StepParameters {
     // --- Mission Name ---
     root.addChild(fieldLabelRow("MISSION NAME", "lbl-edit"));
     root.addChild(UiKit.vSpacer(LABEL_FIELD_GAP));
-    root.addChild(newInputField("ORBITLAB-LEO-001"));
+    missionNameField = newInputField("ORBITLAB-LEO-001");
+    root.addChild(missionNameField);
 
     root.addChild(UiKit.vSpacer(ROW_GAP));
 
@@ -79,7 +85,8 @@ public class StepParameters {
     // --- Launch Date ---
     root.addChild(fieldLabelRow("LAUNCH DATE", "lbl-clock"));
     root.addChild(UiKit.vSpacer(LABEL_FIELD_GAP));
-    root.addChild(newInputField("2026-06-15T06:00:00Z"));
+    launchDateField = newInputField("2026-06-15T06:00:00Z");
+    root.addChild(launchDateField);
     root.addChild(UiKit.vSpacer(LABEL_FIELD_GAP));
     Label helper = root.addChild(new Label("UTC · Orekit epoch", FormStyles.STYLE));
     helper.setFont(UiKit.ibmPlexMono(11));
@@ -104,6 +111,14 @@ public class StepParameters {
 
   public Container getNode() {
     return root;
+  }
+
+  @Override
+  public Map<String, Object> getValues() {
+    return Map.of(
+        FormField.MISSION_NAME.key(), missionNameField.getText(),
+        FormField.LEO_TARGET_ALT.key(), altitudeSlider.getModel().getValue(),
+        FormField.LAUNCH_DATE.key(), launchDateField.getText());
   }
 
   public void update(float tpf) {

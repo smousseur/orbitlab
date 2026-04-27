@@ -6,10 +6,13 @@ import com.simsilica.lemur.component.BoxLayout;
 import com.simsilica.lemur.component.InsetsComponent;
 import com.smousseur.orbitlab.ui.UiKit;
 import com.smousseur.orbitlab.ui.form.FormStyles;
+import com.smousseur.orbitlab.ui.mission.wizard.FormField;
+import com.smousseur.orbitlab.ui.mission.wizard.StepValues;
 import com.smousseur.orbitlab.ui.mission.wizard.component.PopupList;
 import java.util.List;
+import java.util.Map;
 
-public class StepLaunchSite {
+public class StepLaunchSite implements StepValues {
 
   private static final float FIELD_W = 752f;
   private static final float FIELD_H = 36f;
@@ -23,6 +26,7 @@ public class StepLaunchSite {
   private final TextField latField;
   private final TextField lonField;
   private final TextField altField;
+  private String selectedSiteName;
 
   private record SiteData(String name, String lat, String lon, String alt) {}
 
@@ -66,6 +70,7 @@ public class StepLaunchSite {
     root.addChild(UiKit.vSpacer(ROW_GAP));
 
     SiteData defaultSite = sites.getFirst();
+    selectedSiteName = defaultSite.name;
     latField = createTextField(defaultSite.lat);
     lonField = createTextField(defaultSite.lon);
     altField = createTextField(defaultSite.alt);
@@ -77,6 +82,7 @@ public class StepLaunchSite {
                 .findFirst()
                 .ifPresent(
                     site -> {
+                      selectedSiteName = site.name;
                       latField.setText(site.lat);
                       lonField.setText(site.lon);
                       altField.setText(site.alt);
@@ -94,6 +100,23 @@ public class StepLaunchSite {
 
   public Container getNode() {
     return root;
+  }
+
+  @Override
+  public Map<String, Object> getValues() {
+    return Map.of(
+        FormField.LAUNCH_SITE_NAME.key(), selectedSiteName,
+        FormField.LAUNCH_SITE_LAT.key(), parseDoubleOrZero(latField.getText()),
+        FormField.LAUNCH_SITE_LONG.key(), parseDoubleOrZero(lonField.getText()),
+        FormField.LAUNCH_SITE_ALT.key(), parseDoubleOrZero(altField.getText()));
+  }
+
+  private static double parseDoubleOrZero(String text) {
+    try {
+      return Double.parseDouble(text.trim());
+    } catch (NumberFormatException e) {
+      return 0d;
+    }
   }
 
   private TextField createTextField(String value) {
