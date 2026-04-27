@@ -46,7 +46,7 @@ Under the hood, OrbitLab uses **CMA-ES trajectory optimization** to find the opt
 
 | | | |
 |:---:|:---:|:---:|
-| ![Mission setup](https://github.com/user-attachments/assets/34a932b2-425d-4ad6-97b0-b1b746eb84ea) | ![Mission in flight](https://github.com/user-attachments/assets/8cf01fbd-ba35-4e17-90b9-40cf83e316db) | ![Orbit insertion](https://github.com/user-attachments/assets/a17ff4a5-b8ee-43ab-a2df-4e36c6efb1b7) |
+| ![Mission setup](https://github.com/user-attachments/assets/34a932b2-425d-4ad6-97b0-b1b746eb84ea) | ![Mission in flight](https://github.com/user-attachments/assets/ed7e4722-5dc5-4831-bea5-8363ad3aca28) | ![Orbit insertion](https://github.com/user-attachments/assets/a17ff4a5-b8ee-43ab-a2df-4e36c6efb1b7) |
 
 ### Roadmap
 
