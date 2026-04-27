@@ -28,30 +28,25 @@ Fly through a physically accurate, animated solar system — for the sheer joy o
 
 > The rendering engine handles the extreme scale of space (Mercury's orbit vs. Pluto's) without any floating-point precision artifacts, keeping the view crisp at every zoom level.
 
-| | |
-|:---:|:---:|
-| ![Solar system overview](https://github.com/user-attachments/assets/34a932b2-425d-4ad6-97b0-b1b746eb84ea) | ![Planet close-up with orbit path](https://github.com/user-attachments/assets/8cf01fba-ba35-4e17-90b9-40cf83e316db) |
+| | | |
+|:---:|:---:|:---:|
+| ![Solar system view](https://github.com/user-attachments/assets/aa06d343-acc0-436c-b09c-caae5cf67feb) | ![Planet and orbits](https://github.com/user-attachments/assets/a2cbb0dd-e39f-483e-aa79-8b5215eb307c) | ![Close-up view](https://github.com/user-attachments/assets/a18981f4-fa01-49fb-aac5-27f733df8fab) |
 
 ---
 
 ## 🛸 Space Mission Simulation
 
-Design and simulate rocket missions from launchpad to orbit — with automatic trajectory optimization.
+Create, configure, and visualize complete space missions — from launch vehicle design to orbital insertion.
 
-OrbitLab simulates a complete LEO launch campaign through five sequential phases:
+- **Create** custom missions: define your launch vehicle, target orbit, and mission profile
+- **Configure** every parameter: stage masses, thrust, ISP, payload, target altitude, and more
+- **Visualize** the resulting trajectory in 3D, with full playback controls to step through every phase of the flight
 
-| Phase | Screenshot |
-|---|:---:|
-| **Vertical ascent** — burn straight up to clear the atmosphere | ![Vertical ascent](https://github.com/user-attachments/assets/a18981f4-fa01-49fb-aac5-27f733df8fab) |
-| **Gravity turn** — pitch over and let gravity shape the trajectory | ![Gravity turn](https://github.com/user-attachments/assets/a2cbb0dd-e39f-483e-aa79-8b5215eb307c) |
-| **Coasting arc** — follow a ballistic arc to apoapsis | ![Coasting arc](https://github.com/user-attachments/assets/aa06d343-acc0-436c-b09c-caae5cf67feb) |
-| **Circularization burn** — final burn to achieve circular orbit | ![Circularization burn](https://github.com/user-attachments/assets/a17ff4a5-b8ee-43ab-a2df-4e36c6efb1b7) |
+Under the hood, OrbitLab uses **CMA-ES trajectory optimization** to find the optimal flight profile for your target orbit, and a **high-fidelity physics model** (including Earth's gravitational oblateness) to make the resulting trajectory realistic. Once optimized, missions are deterministic and can be replayed and analyzed in 3D.
 
-**Key features:**
-- **Multi-stage rocket definition** — model your vehicle's mass, thrust, and ISP for each stage
-- **Automatic trajectory optimization** — OrbitLab uses CMA-ES to find the optimal gravity-turn profile for your target orbit altitude
-- **High-fidelity physics** — Earth's gravitational field (including oblateness effects) is modeled for realistic trajectory computation
-- **Deterministic replay** — once optimized, missions are replayed step-by-step and visualized in 3D
+| | | |
+|:---:|:---:|:---:|
+| ![Mission setup](https://github.com/user-attachments/assets/34a932b2-425d-4ad6-97b0-b1b746eb84ea) | ![Mission in flight](https://github.com/user-attachments/assets/8cf01fbd-ba35-4e17-90b9-40cf83e316db) | ![Orbit insertion](https://github.com/user-attachments/assets/a17ff4a5-b8ee-43ab-a2df-4e36c6efb1b7) |
 
 ### Roadmap
 
