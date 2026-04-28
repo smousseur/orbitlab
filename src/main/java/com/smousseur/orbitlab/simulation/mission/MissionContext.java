@@ -27,6 +27,10 @@ public final class MissionContext {
     return entry;
   }
 
+  public void addMission(MissionEntry entry) {
+    missions.add(entry);
+  }
+
   /**
    * Removes a mission by name.
    *
@@ -52,9 +56,7 @@ public final class MissionContext {
    * @return an optional containing the entry, or empty if not found
    */
   public Optional<MissionEntry> findMission(String name) {
-    return missions.stream()
-        .filter(entry -> entry.mission().getName().equals(name))
-        .findFirst();
+    return missions.stream().filter(entry -> entry.mission().getName().equals(name)).findFirst();
   }
 
   /**
