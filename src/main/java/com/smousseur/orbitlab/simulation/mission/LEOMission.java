@@ -33,8 +33,8 @@ import org.orekit.utils.PVCoordinates;
  */
 public class LEOMission extends Mission {
   private static final int ASCENSION_DURATION = 10;
-  private static final double DEFAULT_LATITUDE = 5.23;
-  private static final double DEFAULT_LONGITUDE = -52.77;
+  private static final double DEFAULT_LATITUDE = 45.96;
+  private static final double DEFAULT_LONGITUDE = 63.30;
   private static final double DEFAULT_ALTITUDE = 0.0;
 
   private final double latitude;
@@ -61,11 +61,7 @@ public class LEOMission extends Mission {
    * @param altitude the launch site altitude in meters
    */
   public LEOMission(
-      String name,
-      double targetAltitude,
-      double latitude,
-      double longitude,
-      double altitude) {
+      String name, double targetAltitude, double latitude, double longitude, double altitude) {
     super(name, buildVehicle(), buildStages(targetAltitude), buildObjective(targetAltitude));
     this.latitude = latitude;
     this.longitude = longitude;
