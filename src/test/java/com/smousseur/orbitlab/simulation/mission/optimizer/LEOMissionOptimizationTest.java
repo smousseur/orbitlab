@@ -27,7 +27,7 @@ public class LEOMissionOptimizationTest extends AbstractTrajectoryOptimizerTest 
   }
 
   @ParameterizedTest(name = "targetAltitude={0}m")
-  @ValueSource(doubles = {185_000, 400_000})
+  @ValueSource(doubles = {600_000, 400_000})
   void testLEOMission(double targetAltitude) {
     AbsoluteDate epoch = new AbsoluteDate(2026, 1, 1, 12, 0, 0.0, TimeScalesFactory.getUTC());
     Mission mission = new LEOMission("LEO mission", targetAltitude);
