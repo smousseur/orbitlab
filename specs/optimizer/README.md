@@ -28,6 +28,7 @@ cible GTO.
 | `01-convergence-analysis.md` | Diagnostic du cas 400 km (succès) vs 600 km (échec). Décodage des 4 paramètres optimisés, fonction de coût, indices physiques de saturation. |
 | `02-altitude-dependent-design.md` | Principes physiques pour rendre `GravityTurnConstraints` et `TransferTwoManeuverProblem` adaptatifs en `targetAltitude` (vis-viva, géométrie de transfert). |
 | `03-robustness-roadmap.md` | Plan d'action séquencé (Phase 0 → Phase 5) pour couvrir 185 km → 2000 km, avec instrumentation, refonte des contraintes, robustesse de l'optimiseur, suite de tests, et anticipation GTO. |
+| `04-phase0-baseline-analysis.md` | **Spec technique d'exécution.** Synthèse de l'investigation Phase 0 (instrumentation + suite paramétrique). Identifie quatre pathologies (P1 biais géodésique, P2 passation GT→Transfert, P3 bornes transfert, P4 bornes GT non adaptatives), classe les correctifs par niveau de priorité (0 → 5) et référence les formules détaillées des docs 02/03. **Document à suivre pour l'implémentation.** |
 
 ## Fichiers de code concernés
 
