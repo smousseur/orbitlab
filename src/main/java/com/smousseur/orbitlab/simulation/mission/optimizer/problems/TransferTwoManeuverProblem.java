@@ -68,6 +68,10 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
   // Physical upper bound on burn 1 duration (from available propellant)
   private final double dt1MaxPhysical;
 
+  // Propulsion characteristics (kept for post-mortem Δv breakdown diagnostics)
+  private final double thrust;
+  private final double isp;
+
   /**
    * Creates a two-burn transfer optimization problem.
    *
@@ -134,8 +138,8 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
     this.guessT1 = timeToApoapsis;
 
     double initialMass = initialState.getMass();
-    double thrust = propulsionSystem.thrust();
-    double isp = propulsionSystem.isp();
+    this.thrust = propulsionSystem.thrust();
+    this.isp = propulsionSystem.isp();
 
     this.guessDt1 = Physics.computeBurnDuration(FastMath.abs(dv1), initialMass, isp, thrust);
 
@@ -269,5 +273,113 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
    */
   public TransfertTwoManeuver getManeuver() {
     return maneuver;
+  }
+
+  // ════════════════════════════════════════════════════════════════════════
+  // Post-mortem diagnostics — see specs/optimizer/03-robustness-roadmap.md §0.1
+  // ════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Δv decomposition for the two-burn transfer.
+   *
+   * @param dvBurn1Total the total Δv delivered by burn 1 (Tsiolkovsky), m/s
+   * @param dvBurn1Useful the in-plane prograde projection (cos α · cos β), m/s
+   * @param dvBurn1Wasted the residual ({@code total − useful}), m/s
+   * @param dvBurn2 the deterministic burn-2 circularization Δv, m/s, or {@code NaN} if
+   *     burn 2 could not be resolved from the optimal parameters
+   */
+  public record DvBreakdown(
+      double dvBurn1Total, double dvBurn1Useful, double dvBurn1Wasted, double dvBurn2) {}
+
+  /**
+   * Computes the Δv breakdown for the optimal solution.
+   *
+   * <p>Burn 1 total uses the rocket equation with the propulsion characteristics of the
+   * stage active at transfer entry. The useful projection is {@code cos α · cos β} of
+   * that scalar Δv. Burn 2 is resolved deterministically via {@link
+   * TransfertTwoManeuver#resolveBurn2FromInitial}.
+   *
+   * @param bestVariables the optimized 4-element parameter vector
+   * @return the Δv breakdown
+   */
+  public DvBreakdown computeDvBreakdown(double[] bestVariables) {
+    TransfertTwoManeuver.Burn1Params params = maneuver.decode(bestVariables);
+
+    double m0 = initialState.getMass();
+    double massFlow = thrust / (isp * Constants.G0_STANDARD_GRAVITY);
+    double mAfter = FastMath.max(m0 - massFlow * params.dt1(), 1.0);
+    double dv1Total = isp * Constants.G0_STANDARD_GRAVITY * FastMath.log(m0 / mAfter);
+    double useful = dv1Total * FastMath.cos(params.alpha1()) * FastMath.cos(params.beta1());
+    double wasted = dv1Total - useful;
+
+    TransfertTwoManeuver.ResolvedBurn2 burn2 =
+        maneuver.resolveBurn2FromInitial(initialState, params);
+    double dv2 = burn2 != null ? burn2.dvNeeded() : Double.NaN;
+
+    return new DvBreakdown(dv1Total, useful, wasted, dv2);
+  }
+
+  /**
+   * Per-barrier diagnostic for the optimal solution.
+   *
+   * @param periapsisFloor true if the post-burn-2 periapsis is at or below {@code
+   *     PERIAPSIS_MIN}
+   * @param altMin true if the in-flight altitude tracker recorded a value at or below
+   *     {@code ALT_MIN}
+   * @param altMax true if the in-flight altitude tracker exceeded {@code 1.05 · target}
+   * @param periapsisContribution the {@code W_BARRIER · barrierBelow(periapsis,
+   *     PERIAPSIS_MIN)} term
+   * @param altMinContribution the {@code W_BARRIER · barrierBelow(minAlt, ALT_MIN)} term
+   * @param altMaxContribution the {@code W_ALT_MAX · ((excess)/altMax)²} term
+   */
+  public record BarrierReport(
+      boolean periapsisFloor,
+      boolean altMin,
+      boolean altMax,
+      double periapsisContribution,
+      double altMinContribution,
+      double altMaxContribution) {}
+
+  /**
+   * Re-runs propagation for the optimal parameters and isolates each barrier
+   * contribution to the cost. Pure, no side effects beyond updating {@code lastResult}.
+   *
+   * @param bestVariables the optimized parameter vector
+   * @return the per-barrier report
+   */
+  public BarrierReport diagnoseBarriers(double[] bestVariables) {
+    SpacecraftState state = propagate(bestVariables);
+    double elapsed = state.getDate().durationFrom(initialState.getDate());
+    if (elapsed < 1.0) {
+      return new BarrierReport(false, false, false, 0.0, 0.0, 0.0);
+    }
+    KeplerianOrbit finalOrbit =
+        (KeplerianOrbit) OrbitType.KEPLERIAN.convertType(state.getOrbit());
+    double periapsisAlt = finalOrbit.getA() * (1.0 - finalOrbit.getE()) - EARTH_RADIUS;
+
+    double periBarrier = barrierBelow(periapsisAlt, PERIAPSIS_MIN);
+    boolean periHit = periapsisAlt <= PERIAPSIS_MIN;
+
+    double altMinBarrier = 0.0;
+    double altMaxPenalty = 0.0;
+    boolean altMinHit = false;
+    boolean altMaxHit = false;
+    MinAltitudeTracker tracker = lastResult != null ? lastResult.altitudeTracker() : null;
+    if (tracker != null) {
+      altMinBarrier = barrierBelow(tracker.getMinAltitude(), ALT_MIN);
+      altMinHit = tracker.getMinAltitude() <= ALT_MIN;
+      if (tracker.getMaxAltitude() > altMax) {
+        double excess = (tracker.getMaxAltitude() - altMax) / altMax;
+        altMaxPenalty = excess * excess;
+        altMaxHit = true;
+      }
+    }
+    return new BarrierReport(
+        periHit,
+        altMinHit,
+        altMaxHit,
+        W_BARRIER * periBarrier,
+        W_BARRIER * altMinBarrier,
+        W_ALT_MAX * altMaxPenalty);
   }
 }
