@@ -169,7 +169,7 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
     return new double[] {
       0.0,
       guessDt1 * 0.5,
-      -FastMath.PI / 4.0, // alpha1: prograde ± 45°
+      -FastMath.PI / 2.0, // alpha1: prograde ± 45°
       -FastMath.PI / 12.0 // beta1: small out-of-plane
     };
   }
@@ -179,7 +179,7 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
     return new double[] {
       guessT1 * 2.0 + 120.0,
       FastMath.min(guessDt1 * 2.0, dt1MaxPhysical),
-      FastMath.PI / 4.0,
+      FastMath.PI / 2.0,
       FastMath.PI / 12.0
     };
   }
