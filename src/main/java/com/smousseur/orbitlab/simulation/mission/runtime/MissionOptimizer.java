@@ -8,12 +8,18 @@ import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemeris;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemerisGenerator;
 import com.smousseur.orbitlab.simulation.mission.maneuver.TransferResult;
 import com.smousseur.orbitlab.simulation.mission.maneuver.TransfertTwoManeuver;
+import com.smousseur.orbitlab.simulation.mission.objective.MissionObjective;
+import com.smousseur.orbitlab.simulation.mission.objective.OrbitInsertionObjective;
 import com.smousseur.orbitlab.simulation.mission.optimizer.CMAESTrajectoryOptimizer;
 import com.smousseur.orbitlab.simulation.mission.optimizer.OptimizationResult;
+import com.smousseur.orbitlab.simulation.mission.optimizer.OptimizerDiagnostics;
+import com.smousseur.orbitlab.simulation.mission.optimizer.StageEndStateDiagnostic;
 import com.smousseur.orbitlab.simulation.mission.optimizer.TrajectoryProblem;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
+import com.smousseur.orbitlab.simulation.mission.optimizer.problems.GravityTurnProblem;
 import com.smousseur.orbitlab.simulation.mission.optimizer.problems.TransferTwoManeuverProblem;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -92,6 +98,14 @@ public class MissionOptimizer {
             result.bestCost(),
             result.bestVariables(),
             result.evaluations());
+
+        // ── Phase 0.1 instrumentation: bound saturation ───────────────────
+        String[] paramNames = paramNamesFor(problem);
+        List<OptimizerDiagnostics.BoundFlag> boundFlags =
+            OptimizerDiagnostics.evaluateBounds(
+                result.bestVariables(), problem.getLowerBounds(), problem.getUpperBounds());
+        OptimizerDiagnostics.logBoundReport(logger, stage.getName(), boundFlags, paramNames);
+
         if (problem instanceof TransferTwoManeuverProblem transferProblem) {
           TransferResult transferResult = transferProblem.getLastTransferResult();
           logger.info(
@@ -100,7 +114,49 @@ public class MissionOptimizer {
           TransfertTwoManeuver.ResolvedBurn2 burn =
               transferResult != null ? transferResult.resolvedBurn2() : null;
           logger.info("Transfert burn 2: {}", burn);
+
+          // ── Phase 0.1: Δv decomposition + active barriers ──
+          TransferTwoManeuverProblem.DvBreakdown dv =
+              transferProblem.computeDvBreakdown(result.bestVariables());
+          logger.info(
+              "Transfert Δv breakdown: total1={} m/s, useful1={} m/s, wasted1={} m/s, dv2={} m/s",
+              dv.dvBurn1Total(),
+              dv.dvBurn1Useful(),
+              dv.dvBurn1Wasted(),
+              dv.dvBurn2());
+          TransferTwoManeuverProblem.BarrierReport barriers =
+              transferProblem.diagnoseBarriers(result.bestVariables());
+          logger.info(
+              "Transfert barriers: peri={}({}), altMin={}({}), altMax={}({})",
+              barriers.periapsisFloor(),
+              barriers.periapsisContribution(),
+              barriers.altMin(),
+              barriers.altMinContribution(),
+              barriers.altMax(),
+              barriers.altMaxContribution());
         }
+
+        if (problem instanceof GravityTurnProblem) {
+          // ── Phase 0.1: GT exit state vs. ideal Hohmann handoff ──
+          StageEndStateDiagnostic.EndState actual =
+              StageEndStateDiagnostic.from(result.bestState());
+          double targetAlt = resolveTargetAltitude(mission);
+          if (Double.isFinite(targetAlt)) {
+            StageEndStateDiagnostic.EndState ideal =
+                StageEndStateDiagnostic.idealHohmannHandoff(targetAlt, actual.altitude());
+            logger.info(
+                "Gravity turn end-state vs ideal Hohmann: {}",
+                StageEndStateDiagnostic.format(actual, ideal));
+          } else {
+            logger.info(
+                "Gravity turn end-state: alt={} m, vTan={} m/s, vRad={} m/s, FPA={}°",
+                actual.altitude(),
+                actual.vTan(),
+                actual.vRad(),
+                actual.fpaDeg());
+          }
+        }
+
         SpacecraftState propagated = problem.propagate(result.bestVariables());
         mission.setCurrentState(propagated);
       } else {
@@ -128,5 +184,26 @@ public class MissionOptimizer {
 
     mission.setStatus(MissionStatus.READY);
     return new MissionComputeResult(optimResult, ephemeris);
+  }
+
+  private static String[] paramNamesFor(TrajectoryProblem problem) {
+    if (problem instanceof GravityTurnProblem) {
+      return new String[] {"transitionTime", "exponent"};
+    }
+    if (problem instanceof TransferTwoManeuverProblem) {
+      return new String[] {"t1", "dt1", "α1", "β1"};
+    }
+    int n = problem.getNumVariables();
+    String[] names = new String[n];
+    for (int i = 0; i < n; i++) names[i] = "x" + i;
+    return names;
+  }
+
+  private static double resolveTargetAltitude(Mission mission) {
+    MissionObjective objective = mission.getObjective();
+    if (objective instanceof OrbitInsertionObjective insertion) {
+      return insertion.altitude();
+    }
+    return Double.NaN;
   }
 }
