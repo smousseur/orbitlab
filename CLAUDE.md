@@ -37,40 +37,78 @@ The application visualizes the solar system, computes spacecraft orbits, and sim
 src/
 ├── main/java/com/smousseur/orbitlab/
 │   ├── OrbitLabApplication.java      # Main entry point (extends JME3 SimpleApplication)
-│   ├── app/                          # Application layer (context, config, clock, converters)
+│   ├── app/                          # Application layer (context, config, clock)
+│   │   ├── converters/               # Time/value converters
+│   │   └── view/                     # View-mode + render-frame abstractions
+│   │                                 #   (FocusView, RenderContext, RenderFrame,
+│   │                                 #    RenderTransform, ViewMode, AxisConvention)
 │   ├── core/                         # Domain models (SolarSystemBody enum, custom exceptions)
-│   ├── engine/                       # JME3 integration (assets, camera, scene graph, event bus)
-│   │   └── scene/
-│   │       ├── planet/               # Planet rendering (MVC: Presenter, View, LOD system)
-│   │       └── graph/
+│   ├── engine/                       # JME3 integration (assets, engine/camera config)
+│   │   ├── events/                   # EventBus for asynchronous inter-state communication
+│   │   ├── scene/
+│   │   │   ├── body/                 # Generic body rendering (BodyView, BodyRenderConfig, LodView)
+│   │   │   │   └── lod/              # LOD implementations (BillboardIconView, Model3dView)
+│   │   │   ├── graph/                # SceneGraph and GuiGraph roots
+│   │   │   ├── planet/               # Planet presenter (MVC)
+│   │   │   └── spacecraft/           # Spacecraft presenter
+│   │   └── view/                     # JME-specific view adapters (JmeVectorAdapter)
 │   ├── states/                       # JME3 AppState implementations
-│   │   ├── camera/                   # Camera states (orbit, floating origin, view mode)
+│   │   ├── camera/                   # Camera states (orbit, floating origin, view mode, near sync)
 │   │   ├── ephemeris/                # Celestial body position computation state
-│   │   ├── orbits/                   # Orbit visualization states
-│   │   ├── scene/                    # Scene management states
 │   │   ├── fx/                       # Visual effects (lighting)
+│   │   ├── mission/                  # Mission orchestration, rendering, panel and wizard states
+│   │   ├── orbits/                   # Orbit visualization states (init + runtime)
+│   │   ├── scene/                    # Scene management (solar system, planet pose, HUD markers)
 │   │   └── time/                     # Clock and timeline widget states
 │   ├── simulation/                   # Core orbital mechanics
 │   │   ├── OrekitService.java        # Orekit singleton (propagators, frames)
 │   │   ├── Physics.java              # Orbital mechanics utilities
 │   │   ├── ephemeris/                # Ephemeris buffering and workers
-│   │   ├── orbit/                    # Orbit path, cache, policy
-│   │   └── mission/                  # Mission model, stages, optimizer, player
-│   │       ├── vehicle/              # Spacecraft and launch vehicle models
-│   │       ├── stage/                # Mission phase implementations
-│   │       ├── attitude/             # Attitude providers
-│   │       ├── maneuver/             # Maneuver implementations
-│   │       ├── objective/            # Mission objectives
+│   │   │   ├── config/               # Ephemeris/sliding-window configs
+│   │   │   └── service/              # EphemerisService + registry (per-body services)
+│   │   ├── orbit/                    # Orbit path, cache, policy, runtime slot, snapshot
+│   │   │   └── config/               # OrbitWindowConfig
+│   │   ├── source/                   # Ephemeris data sources (dataset reader, Orekit PV,
+│   │   │                             #   prefetching, LRU cache, V1 file format)
+│   │   └── mission/                  # Mission model
+│   │       ├── attitude/             # Attitude providers (gravity-turn, zenith-thrust)
+│   │       ├── detector/             # Event detectors (mass depletion, min-altitude tracker)
+│   │       ├── ephemeris/            # Mission-trajectory ephemeris (point + generator)
+│   │       ├── maneuver/             # Maneuver implementations (gravity-turn, transfer-2)
+│   │       ├── objective/            # Mission objectives (orbit insertion)
 │   │       ├── optimizer/            # CMA-ES trajectory optimization
-│   │       └── runtime/              # MissionOptimizer, MissionPlayer
-│   ├── ui/                           # GUI widgets (Lemur-based timeline)
-│   └── tools/                        # Standalone utilities (ephemeris/orbit generation)
+│   │       │   └── problems/         # Concrete trajectory problems (gravity-turn, transfer-2)
+│   │       ├── runtime/              # MissionOptimizer + compute/optimizer results
+│   │       ├── stage/                # Mission phase implementations
+│   │       │   └── ascent/           # Vertical ascent + gravity turn stages
+│   │       └── vehicle/              # Spacecraft, launch vehicle, propulsion, vehicle stack
+│   ├── ui/                           # Lemur-based GUI widgets (AppStyles, UiKit)
+│   │   ├── form/                     # Form/modal styling (FormStyles, ModalBackdrop)
+│   │   ├── mission/
+│   │   │   ├── panel/                # Mission list panel (rows, header/footer, triggers)
+│   │   │   └── wizard/               # Mission creation wizard
+│   │   │       ├── component/        # Reusable widgets (Badge, PopupList, ProgressBar, …)
+│   │   │       └── step/             # Wizard steps (mission type, launcher, site, parameters)
+│   │   ├── telemetry/                # Telemetry widget
+│   │   └── timeline/                 # Timeline widget
+│   │       └── components/           # Clock display, scrubber, transport controls, speed stepper
+│   └── tools/                        # Standalone utilities
+│       ├── ephemerisgen/             # Ephemeris dataset generator
+│       └── orbitgen/                 # Orbit dataset generator
 └── test/java/com/smousseur/orbitlab/
-    ├── app/                          # Unit tests for clock, converters, transforms
+    ├── app/                          # Unit tests for clock, converters
+    │   └── view/                     # FocusView and RenderTransform tests
+    ├── core/                         # SolarSystemBody tests
+    ├── engine/scene/spacecraft/      # SpacecraftPresenter tests
     ├── simulation/
     │   ├── ephemeris/                # Ephemeris buffer and worker tests
-    │   ├── mission/optimizer/        # Integration tests (LEO mission optimization)
-    │   └── orbit/                    # Orbit path, cache, policy unit tests
+    │   ├── mission/
+    │   │   ├── attitude/             # Attitude provider tests
+    │   │   ├── optimizer/            # Trajectory optimizer tests (LEO, sweeps, convergence)
+    │   │   │   └── problems/         # Per-problem optimizer tests (gravity-turn)
+    │   │   └── vehicle/              # Vehicle/propulsion tests
+    │   ├── orbit/                    # Orbit path, cache, policy, snapshot, runtime slot tests
+    │   └── source/                   # Source-layer tests (LRU cache)
     └── tools/ephemerisgen/           # Smoke tests for ephemeris datasets
 ```
 
@@ -79,14 +117,16 @@ src/
 ## Key Architectural Concepts
 
 ### JME3 AppState Pattern
-All runtime subsystems are implemented as `AppState` classes and registered in `OrbitLabApplication`. Each `AppState` has `initialize()`, `update(float tpf)`, and `cleanup()` lifecycle methods. AppStates communicate through `ApplicationContext` and the `OrbitEventBus`.
+All runtime subsystems are implemented as `AppState` classes and registered in `OrbitLabApplication`. Each `AppState` has `initialize()`, `update(float tpf)`, and `cleanup()` lifecycle methods. AppStates communicate through `ApplicationContext` and the `EventBus` (in `engine/events`).
 
 ### ApplicationContext
 `ApplicationContext` is the central dependency container. It holds:
-- `SimulationClock`, `SimulationConfig`
-- `OrbitEventBus`
+- `SimulationClock`, `SimulationConfig`, `EngineConfig`
+- `EventBus`
 - `SceneGraph`, `GuiGraph`
-- Planet presenter mappings
+- `FocusView` (current view mode and focus body)
+- `MissionContext` (active missions) and per-mission `MissionRenderer` registry
+- Planet presenter mappings, near-viewport camera
 
 Pass `ApplicationContext` (not individual services) to AppStates and constructors.
 
@@ -105,20 +145,24 @@ Supports time speed multipliers and reverse playback (negative speed = rewind).
 
 ### Mission System
 ```
-Mission (abstract)
+Mission (abstract; e.g. LEOMission)
   └── MissionStage[] (sequential phases)
-        ├── VerticalAscentStage
-        ├── GravityTurnStage
+        ├── ascent/VerticalAscentStage
+        ├── ascent/GravityTurnStage
         ├── CoastingStage
-        ├── JettisonStage
+        ├── BallisticCoastingStage
+        ├── ConstantThrustStage
         └── TransfertTwoManeuverStage
 ```
-- `MissionOptimizer`: Finds optimal parameters using CMA-ES (with backup multi-try to escape local minima)
-- `MissionPlayer`: Executes a pre-optimized mission deterministically
-- `OptimizableMissionStage<T>`: Stores optimization results for replay
+- `MissionContext` / `MissionEntry`: Tracks active missions and their lifecycle status (`MissionStatus`).
+- `MissionOptimizer` (`runtime/`): Finds optimal parameters using CMA-ES (with backup multi-try to escape local minima); returns a `MissionOptimizerResult`/`MissionComputeResult`.
+- `OptimizableMissionStage<T>`: Stores optimization results for replay.
+- `optimizer/problems/`: Concrete `TrajectoryProblem` implementations (gravity-turn, transfer-2-maneuver) plus their constraints.
+- `detector/`: Orekit event detectors (mass depletion, minimum altitude tracking) used during propagation.
+- `ephemeris/`: Mission-trajectory sampling (`MissionEphemeris`, `MissionEphemerisGenerator`) used by renderers.
 
 ### Ephemeris System
-`SlidingWindowEphemerisBuffer` caches celestial body positions in a sliding time window. `EphemerisWorker` computes positions ahead of the simulation clock. `EphemerisAppState` drives this in the JME3 update loop.
+`SlidingWindowEphemerisBuffer` caches celestial body positions in a sliding time window. `EphemerisWorker` computes positions ahead of the simulation clock. `EphemerisAppState` drives this in the JME3 update loop. Ephemeris data is sourced through `simulation/source/` (`OrekitPvSource`, `DatasetEphemerisSource`, `PrefetchingEphemerisSource`, with `LruCache`), and `EphemerisServiceRegistry` exposes per-body services.
 
 ### Rendering: Dual Viewport
 The application renders two stacked viewports:
