@@ -20,6 +20,7 @@ plus haut niveau.
 | [`01-convergence-analysis.md`](01-convergence-analysis.md) | Décodage initial des 4 paramètres CMA-ES, structure de la cost function. Source des indices n°1-5 sur le cas 400 km vs 600 km. |
 | [`02-altitude-dependent-design.md`](02-altitude-dependent-design.md) | Principes physiques (vis-viva, géométrie ellipse de transfert) pour les bornes adaptatives. **À consulter pour les formules exactes des correctifs.** |
 | [`03-robustness-roadmap.md`](03-robustness-roadmap.md) | Plan séquencé Phases 0-5. Cette spec **affine et réordonne** les Phases 1-3 selon les résultats Phase 0. |
+| [`05-phase0-level0-cost-metric-alignment.md`](05-phase0-level0-cost-metric-alignment.md) | Spec technique détaillée du **Niveau 0** (alignement géocentrique → géodésique de la métrique de coût). Remplace l'ébauche analytique `sin(i)` par un calcul géodésique direct via `OneAxisEllipsoid.transform`. |
 
 ## Mesures Phase 0 (baseline)
 
@@ -196,30 +197,30 @@ ont mis en évidence que :
 et le test en géodésique, le seuil `acceptableCost = 8e-4` ne signifie
 rien d'absolu et chaque correctif sera évalué dans le bruit du biais.
 
-**Fichier** : `TransferTwoManeuverProblem.java`
+**Approche retenue** : l'ébauche analytique initialement esquissée ici
+(compensation `sin(initialOrbit.getI())`) a été écartée car elle suppose
+implicitement que l'apogée tombe à la latitude maximale de l'orbite
+(`φ_apo ≈ i`) — vrai uniquement quand `ω = ±π/2` — et fige une
+équivalence inclinaison-latitude qui ne tient plus dès qu'on généralise
+(cibles à inclinaison spécifique, futurs cas GTO du Niveau 5).
+La spec dédiée [`05-phase0-level0-cost-metric-alignment.md`](05-phase0-level0-cost-metric-alignment.md)
+documente l'analyse comparée et retient une approche géodésique directe :
+réutiliser `OneAxisEllipsoid.transform` (la primitive déjà utilisée par
+`Mission.computeAltitudeMeters` et donc par les tests) sur la position
+osculatrice à l'apogée et au périgée. Aligné par construction avec la
+mesure des tests, indépendant de `i`, `ω`, et de la latitude réelle de
+l'apogée.
 
-**Modification** : dans le constructeur, après le calcul existant de
-`altitudeOffset` (J2 short-period), ajouter une compensation
-géodésique :
-
-```java
-double sinPhi = FastMath.sin(initialOrbit.getI()); // φ_apo ≈ inclination
-double f = Constants.WGS84_EARTH_FLATTENING;
-double e2 = 2 * f - f * f;
-double rEllipsoid = EARTH_RADIUS *
-    FastMath.sqrt((1 - e2 * (2 - e2) * sinPhi * sinPhi)
-                / (1 - e2 * sinPhi * sinPhi));
-double geodeticOffset = EARTH_RADIUS - rEllipsoid; // ~+10.7 km à i=45°
-
-double effectiveTargetAlt = targetAltitude + altitudeOffset + geodeticOffset;
-```
+**Fichier visé** : `TransferTwoManeuverProblem.java` (seul fichier
+modifié au Niveau 0).
 
 **Critère de succès** : sur `LEOAltitudeSweepTest`, `apoErr` médian
 < 2 km à 400 km (au lieu de +11.7 km), `apoErr` constant disparaît à
 toutes les altitudes.
 
-**Effort** : ~5 lignes. Risque : nul (la valeur ne dépend que de
-l'inclinaison initiale, déjà disponible).
+Voir doc 05 § 4 (spécification de la modification) et § 6 (procédure
+de vérification) pour le pseudocode complet et la check-list de
+validation.
 
 ---
 
@@ -447,7 +448,7 @@ elliptique. Évite un second refactor lourd.
 
 | Niveau | Effort | Risque | Pathologies résolues |
 |---|---|---|---|
-| **0** — Compensation géodésique | 5 lignes | Nul | P1 entier |
+| **0** — Alignement géodésique de la cost (voir [doc 05](05-phase0-level0-cost-metric-alignment.md)) | ~30 lignes | Faible | P1 entier |
 | **1.1** — `transitionTime` adaptatif | 5 lignes | Faible | P2.c, P4 partiel |
 | **1.2** — `vTanMin` vis-viva | 10 lignes | Faible | P2.a, P4 partiel |
 | **1.3** — Ratios apogée adaptatifs | 10 lignes | Faible | P4 partiel |
