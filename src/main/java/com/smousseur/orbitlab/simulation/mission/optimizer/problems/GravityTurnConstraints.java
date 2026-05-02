@@ -68,11 +68,16 @@ public record GravityTurnConstraints(
     double rTarget = Constants.WGS84_EARTH_EQUATORIAL_RADIUS + targetAltitude;
     double aTransfer = (rGtEnd + rTarget) / 2.0;
     double vMin = FastMath.sqrt(Constants.WGS84_EARTH_MU * (2.0 / rGtEnd - 1.0 / aTransfer));
-    // Tighter ratio at low altitudes forces the gravity turn to deliver a
-    // hand-off close to the Hohmann apoapsis velocity, sparing the transfer
-    // stage from having to make up large tangential-velocity deficits.
+    // Tighter ratio at low/medium altitudes forces the gravity turn to deliver
+    // a hand-off close to the Hohmann apoapsis velocity, sparing the transfer
+    // stage from having to make up large tangential-velocity deficits. The
+    // ratio scales linearly between 250 km (0.99) and 500 km (0.96), then
+    // returns to the historical 0.95 at and above 500 km.
     double altKm = targetAltitude / 1000.0;
-    double tightnessRatio = altKm <= 250.0 ? 0.99 : 0.95;
+    double tightnessRatio;
+    if (altKm <= 250.0) tightnessRatio = 0.99;
+    else if (altKm <= 500.0) tightnessRatio = lerp(altKm, 250.0, 500.0, 0.99, 0.96);
+    else tightnessRatio = 0.95;
     return vMin * tightnessRatio;
   }
 

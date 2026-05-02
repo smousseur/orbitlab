@@ -68,11 +68,15 @@ public class GravityTurnProblem implements TrajectoryProblem {
 
   @Override
   public double[] getUpperBounds() {
-    // Floor at 550 s below 250 km, 450 s otherwise. The analytical estimate
-    // 300 + 0.3·√alt clamps too tightly at low altitudes where the optimizer
-    // needs more time to accumulate tangential velocity.
+    // Floor scales linearly between 550 s (≤250 km) and 500 s (500 km), then
+    // returns to 450 s above. Combined with the tighter vTan ratio at low and
+    // medium altitudes, this gives CMA-ES enough time to accumulate the
+    // tangential velocity required by the new constraint.
     double altKm = constraints.targetAltitude() / 1000.0;
-    double lowAltFloor = altKm <= 250.0 ? 550.0 : 450.0;
+    double lowAltFloor;
+    if (altKm <= 250.0) lowAltFloor = 550.0;
+    else if (altKm <= 500.0) lowAltFloor = 550.0 + (500.0 - 550.0) * (altKm - 250.0) / 250.0;
+    else lowAltFloor = 450.0;
     double transitionTimeMax =
         FastMath.max(lowAltFloor, 300.0 + 0.3 * FastMath.sqrt(constraints.targetAltitude()));
     return new double[] {transitionTimeMax, 3.0};
@@ -124,6 +128,7 @@ public class GravityTurnProblem implements TrajectoryProblem {
         new KeplerianOrbit(pv, state.getFrame(), state.getDate(), Constants.WGS84_EARTH_MU);
     double ecc = orb.getE();
     double apogee = orb.getA() * (1.0 + ecc) - WGS84_EARTH_EQUATORIAL_RADIUS;
+    double periapsis = orb.getA() * (1.0 - ecc) - WGS84_EARTH_EQUATORIAL_RADIUS;
 
     double flightPathAngle = FastMath.atan2(vRadial, vTangential);
 
@@ -156,6 +161,15 @@ public class GravityTurnProblem implements TrajectoryProblem {
     if (ecc > 1.0) cost += 100.0 * sq(ecc - 1.0);
     if (apogee < 100_000) cost += 50.0 * sq((100_000 - apogee) / 100_000);
     if (vNorm < 2000) cost += 100.0 * sq((2000 - vNorm) / 2000);
+
+    // 6. Periapsis safety: a GT exit with periapsis far below ground gives the
+    // transfer phase a near-impossible starting point (Earth-piercing orbit).
+    // Penalize trajectories whose orbital periapsis falls more than 200 km
+    // below sea level so CMA-ES is pushed towards a near-orbital hand-off.
+    double periFloor = -200_000.0;
+    if (periapsis < periFloor) {
+      cost += 30.0 * sq((periFloor - periapsis) / 200_000.0);
+    }
 
     cost += W_P * (initialState.getMass() - state.getMass()) / initialState.getMass();
 

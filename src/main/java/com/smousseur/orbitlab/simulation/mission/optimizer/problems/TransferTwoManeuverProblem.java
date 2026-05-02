@@ -323,16 +323,27 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
   @Override
   public double computeCost(SpacecraftState state) {
     // Detect penalty states: if propagation failed, the returned state is the initial state
-    // (no time advancement). Use a graded penalty when the in-flight altitude tracker
-    // captured underground excursions, so CMA-ES gets a usable gradient instead of a
-    // flat 1e6 wall. The 1e3 base still dominates any nominal cost (typically ≪ 100).
+    // (no time advancement). Use a graded penalty so CMA-ES gets a usable gradient instead
+    // of a flat 1e6 wall. The 1e3 base still dominates any nominal cost (typically ≪ 100).
+    // Three failure modes, in order of preference:
+    //   1. Tracker captured an in-flight altitude excursion → grade by depth underground.
+    //   2. orbitPostBurn1 is non-null but extreme (e>0.95, a out of range) → grade by
+    //      orbital distance from a viable target orbit.
+    //   3. Nothing usable → fall back to the flat 1e6 wall.
     double elapsed = state.getDate().durationFrom(initialState.getDate());
     if (elapsed < 1.0) {
-      MinAltitudeTracker failureTracker =
-          lastResult != null ? lastResult.altitudeTracker() : null;
-      if (failureTracker != null && failureTracker.getMinAltitude() != Double.MAX_VALUE) {
-        double underground = FastMath.max(0.0, -failureTracker.getMinAltitude());
-        return 1e3 + underground / 1000.0;
+      if (lastResult != null) {
+        MinAltitudeTracker failureTracker = lastResult.altitudeTracker();
+        if (failureTracker != null && failureTracker.getMinAltitude() != Double.MAX_VALUE) {
+          double underground = FastMath.max(0.0, -failureTracker.getMinAltitude());
+          return 1e3 + underground / 1000.0;
+        }
+        KeplerianOrbit postBurn1 = lastResult.orbitPostBurn1();
+        if (postBurn1 != null) {
+          double aErr = FastMath.abs(postBurn1.getA() - aTarget) / aTarget;
+          double eErr = postBurn1.getE();
+          return 1e3 + 50.0 * aErr + 50.0 * eErr;
+        }
       }
       return 1e6;
     }
