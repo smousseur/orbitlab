@@ -67,7 +67,10 @@ public class GravityTurnProblem implements TrajectoryProblem {
 
   @Override
   public double[] getUpperBounds() {
-    return new double[] {450.0, 3.0};
+    double targetAltMeters = constraints.targetApogee() / 0.75;
+    double transitionTimeMax = 300.0 + 0.3 * FastMath.sqrt(targetAltMeters);
+
+    return new double[] {transitionTimeMax, 3.0};
   }
 
   @Override

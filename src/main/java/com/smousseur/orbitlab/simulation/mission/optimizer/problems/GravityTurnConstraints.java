@@ -1,5 +1,9 @@
 package com.smousseur.orbitlab.simulation.mission.optimizer.problems;
 
+import org.hipparchus.util.FastMath;
+import org.hipparchus.util.Pair;
+import org.orekit.utils.Constants;
+
 /**
  * Defines the target constraints for gravity turn optimization.
  *
@@ -46,7 +50,35 @@ public record GravityTurnConstraints(
    * @return constraints suitable for a gravity turn targeting the given altitude
    */
   public static GravityTurnConstraints forTarget(double targetAltitude) {
-    return new GravityTurnConstraints(
-        targetAltitude * 0.75, targetAltitude * 0.875, 2000.0, 2.0);
+    double vTanMin = getVTanMin(targetAltitude);
+    Pair<Double, Double> apogeeDatas = getApogeeTargetAndMax(targetAltitude);
+
+    Double rTarget = apogeeDatas.getFirst();
+    Double rTargetMax = apogeeDatas.getSecond();
+
+    return new GravityTurnConstraints(rTarget, rTargetMax, vTanMin, 2.0);
+  }
+
+  private static Pair<Double, Double> getApogeeTargetAndMax(double targetAltitude) {
+    double targetKm = targetAltitude / 1000.0;
+    double ratioApo;
+    if (targetKm <= 250) ratioApo = 0.95;
+    else if (targetKm <= 800) ratioApo = 0.95 + (0.75 - 0.95) * (targetKm - 250) / (800 - 250);
+    else ratioApo = 0.75;
+
+    double apogeeTarget = ratioApo * targetAltitude;
+    double apogeeMax = FastMath.min(targetAltitude, apogeeTarget * 1.15);
+    double apogeeMinSafe = FastMath.max(140_000, 0.6 * targetAltitude);
+    apogeeTarget = FastMath.max(apogeeTarget, apogeeMinSafe);
+    return new Pair<>(apogeeTarget, apogeeMax);
+  }
+
+  private static double getVTanMin(double targetAltitude) {
+    double rGtEnd =
+        Constants.WGS84_EARTH_EQUATORIAL_RADIUS + targetAltitude * 0.75; // = apogeeTarget
+    double rTarget = Constants.WGS84_EARTH_EQUATORIAL_RADIUS + targetAltitude;
+    double aTransfer = (rGtEnd + rTarget) / 2.0;
+    double vMin = FastMath.sqrt(Constants.WGS84_EARTH_MU * (2.0 / rGtEnd - 1.0 / aTransfer));
+    return vMin * 0.95; // marge -5%
   }
 }
