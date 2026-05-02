@@ -3,6 +3,7 @@ package com.smousseur.orbitlab.simulation.mission.optimizer.problems;
 import static com.smousseur.orbitlab.simulation.Physics.sq;
 import static org.orekit.utils.Constants.WGS84_EARTH_EQUATORIAL_RADIUS;
 
+import com.smousseur.orbitlab.simulation.mission.detector.MinAltitudeTracker;
 import com.smousseur.orbitlab.simulation.mission.maneuver.GravityTurnManeuver;
 import com.smousseur.orbitlab.simulation.mission.optimizer.TrajectoryProblem;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
@@ -67,7 +68,10 @@ public class GravityTurnProblem implements TrajectoryProblem {
 
   @Override
   public double[] getUpperBounds() {
-    double transitionTimeMax = 300.0 + 0.3 * FastMath.sqrt(constraints.targetAltitude());
+    // Floor at 450 s avoids saturation at low altitudes (≤225 km) where the
+    // analytical estimate 300 + 0.3·√alt clamps the gravity turn too tightly.
+    double transitionTimeMax =
+        FastMath.max(450.0, 300.0 + 0.3 * FastMath.sqrt(constraints.targetAltitude()));
     return new double[] {transitionTimeMax, 3.0};
   }
 
@@ -91,6 +95,14 @@ public class GravityTurnProblem implements TrajectoryProblem {
     // Detect penalty states: if propagation failed, the returned state is the initial state
     double elapsed = state.getDate().durationFrom(initialState.getDate());
     if (elapsed < 1.0) {
+      // Graded penalty: still high enough to dominate any nominal cost (<100),
+      // but proportional to how far underground the trajectory dipped, so CMA-ES
+      // gets a usable gradient instead of a flat 1e6 wall.
+      MinAltitudeTracker tracker = maneuver.getLastAltitudeTracker();
+      if (tracker != null && tracker.getMinAltitude() != Double.MAX_VALUE) {
+        double underground = FastMath.max(0.0, -tracker.getMinAltitude());
+        return 1e3 + underground / 1000.0;
+      }
       return 1e6;
     }
 

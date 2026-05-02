@@ -81,7 +81,10 @@ public record GravityTurnConstraints(
     else fpaMaxDeg = 5.0 + (altKm - 1500.0) * (5.0 / 1500.0);
 
     double margin = 1.0;
-    return new double[] {0.0, fpaMaxDeg + margin};
+    // Allow a small negative FPA at low altitudes so the admissible window isn't
+    // contradictory with a short gravity turn that finishes slightly descending.
+    double fpaMinDeg = altKm <= 250.0 ? -0.5 : 0.0;
+    return new double[] {fpaMinDeg, fpaMaxDeg + margin};
   }
 
   private static double lerp(double x, double x0, double x1, double y0, double y1) {

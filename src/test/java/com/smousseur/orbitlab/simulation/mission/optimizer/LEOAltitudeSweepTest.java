@@ -49,7 +49,10 @@ public class LEOAltitudeSweepTest extends AbstractTrajectoryOptimizerTest {
 
   @ParameterizedTest(name = "targetAltitude={0}m")
   @ValueSource(
-      doubles = {185_000, 250_000, 400_000, 600_000, 800_000, 1_200_000, 1_500_000, 2_000_000})
+      doubles = {
+        150_000, 185_000, 200_000, 250_000, 400_000, 600_000, 800_000, 1_200_000, 1_500_000,
+        2_000_000
+      })
   void sweepAltitudes(double targetAltitude) {
     AbsoluteDate epoch = new AbsoluteDate(2026, 1, 1, 12, 0, 0.0, TimeScalesFactory.getUTC());
     int km = (int) (targetAltitude / 1000);

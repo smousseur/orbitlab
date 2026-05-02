@@ -149,7 +149,11 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
     this.effectiveTargetAlt = effectiveTargetAlt;
     this.aTarget = rTarget;
     this.vCircTarget = FastMath.sqrt(mu / rTarget);
-    this.altMax = targetAltitude * 1.05;
+    // At low altitudes (≤400 km) the previous 5 % cap leaves <20 km of margin,
+    // which the J2 oscillation alone can violate. Use a floor of 20 km so the
+    // bound is meaningful below LEO; at higher altitudes the relative term
+    // dominates and behaves as before.
+    this.altMax = targetAltitude + FastMath.max(20_000.0, 0.05 * targetAltitude);
 
     double aInitial = initialOrbit.getA();
     double eInitial = initialOrbit.getE();
@@ -217,10 +221,14 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
     // soft-barrier ramps from threshold up to ≈1.5·threshold, which would
     // overlap the nominal solution at high-altitude targets. Cap the floor
     // at 0.5·target to keep the barrier inactive at the target altitude.
-    this.periapsisFloor =
+    // Additional cap at target/1.6 prevents the barrier from biting the target
+    // at low altitudes (e.g. at 185 km, PERIAPSIS_FLOOR_MIN=120 km would
+    // saturate up to ~180 km — almost the target itself).
+    double floorCandidate =
         FastMath.max(
             PERIAPSIS_FLOOR_MIN,
             FastMath.min(targetAltitude * 0.5, targetAltitude - 100_000.0));
+    this.periapsisFloor = FastMath.min(floorCandidate, targetAltitude / 1.6);
     this.weightE = W_E_BASE * FastMath.max(1.0, W_E_REF_ALT / targetAltitude);
 
     logger.info(
@@ -310,9 +318,17 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
   @Override
   public double computeCost(SpacecraftState state) {
     // Detect penalty states: if propagation failed, the returned state is the initial state
-    // (no time advancement). Assign a very high cost so CMA-ES avoids these solutions.
+    // (no time advancement). Use a graded penalty when the in-flight altitude tracker
+    // captured underground excursions, so CMA-ES gets a usable gradient instead of a
+    // flat 1e6 wall. The 1e3 base still dominates any nominal cost (typically ≪ 100).
     double elapsed = state.getDate().durationFrom(initialState.getDate());
     if (elapsed < 1.0) {
+      MinAltitudeTracker failureTracker =
+          lastResult != null ? lastResult.altitudeTracker() : null;
+      if (failureTracker != null && failureTracker.getMinAltitude() != Double.MAX_VALUE) {
+        double underground = FastMath.max(0.0, -failureTracker.getMinAltitude());
+        return 1e3 + underground / 1000.0;
+      }
       return 1e6;
     }
 

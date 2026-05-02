@@ -3,6 +3,7 @@ package com.smousseur.orbitlab.simulation.mission.maneuver;
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.Physics;
 import com.smousseur.orbitlab.simulation.mission.attitude.GravityTurnAttitudeProvider;
+import com.smousseur.orbitlab.simulation.mission.detector.MinAltitudeTracker;
 import com.smousseur.orbitlab.simulation.mission.stage.ascent.GravityTurnStage;
 import com.smousseur.orbitlab.simulation.mission.vehicle.ActiveStageInfo;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropulsionSystem;
@@ -39,6 +40,7 @@ public class GravityTurnManeuver {
   private final double usedAscensionPropellant;
   private final ActiveStageInfo activeStage;
   private final ActiveStageInfo nextStage;
+  private MinAltitudeTracker lastAltitudeTracker;
 
   /**
    * Creates a gravity turn maneuver for the given vehicle and launch parameters.
@@ -178,6 +180,9 @@ public class GravityTurnManeuver {
     NumericalPropagator propagator = OrekitService.get().createOptimizationPropagator();
     propagator.setInitialState(kickedState);
     configure(propagator, kickedState, params);
+    MinAltitudeTracker tracker = new MinAltitudeTracker(0.0, Double.POSITIVE_INFINITY);
+    propagator.addEventDetector(tracker);
+    this.lastAltitudeTracker = tracker;
     AbsoluteDate endDate = kickedState.getDate().shiftedBy(params.transitionTime);
 
     try {
@@ -186,6 +191,16 @@ public class GravityTurnManeuver {
       logger.debug("Gravity turn propagation failed (penalty applied): {}", e.getMessage());
       return kickedState; // penalty
     }
+  }
+
+  /**
+   * Returns the altitude tracker attached to the most recent {@link #propagateForOptimization}
+   * call, or {@code null} if no propagation has been performed yet.
+   *
+   * @return the last altitude tracker, or {@code null}
+   */
+  public MinAltitudeTracker getLastAltitudeTracker() {
+    return lastAltitudeTracker;
   }
 
   /**
