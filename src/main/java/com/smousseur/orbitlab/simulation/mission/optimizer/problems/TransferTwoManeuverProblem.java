@@ -206,8 +206,13 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
 
     // Niveau 2.1 — adaptive β1 bound. apoDefect quantifies how much apogee
     // raising remains; out-of-plane authority should grow with that defect.
+    // Floor at π/8 (~22.5°) so CMA-ES retains usable out-of-plane authority
+    // even when the GT lands close to the target apogee (apoDefect ≈ 0): in
+    // practice, the transfer often needs β to absorb the GT's residual
+    // velocity orientation regardless of the apogee gap.
     double apoDefect = (rTarget - rApoapsis) / rTarget;
-    this.betaMax = (FastMath.PI / 12.0) * (1.0 + FastMath.max(0.0, apoDefect));
+    double betaMaxAdaptive = (FastMath.PI / 12.0) * (1.0 + FastMath.max(0.0, apoDefect));
+    this.betaMax = FastMath.max(FastMath.PI / 8.0, betaMaxAdaptive);
 
     // Niveau 2.3 — bound t1 by a fraction of the current orbital period so
     // CMA-ES can explore the full pre-burn coast window without depending on

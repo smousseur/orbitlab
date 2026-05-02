@@ -68,10 +68,13 @@ public class GravityTurnProblem implements TrajectoryProblem {
 
   @Override
   public double[] getUpperBounds() {
-    // Floor at 450 s avoids saturation at low altitudes (≤225 km) where the
-    // analytical estimate 300 + 0.3·√alt clamps the gravity turn too tightly.
+    // Floor at 550 s below 250 km, 450 s otherwise. The analytical estimate
+    // 300 + 0.3·√alt clamps too tightly at low altitudes where the optimizer
+    // needs more time to accumulate tangential velocity.
+    double altKm = constraints.targetAltitude() / 1000.0;
+    double lowAltFloor = altKm <= 250.0 ? 550.0 : 450.0;
     double transitionTimeMax =
-        FastMath.max(450.0, 300.0 + 0.3 * FastMath.sqrt(constraints.targetAltitude()));
+        FastMath.max(lowAltFloor, 300.0 + 0.3 * FastMath.sqrt(constraints.targetAltitude()));
     return new double[] {transitionTimeMax, 3.0};
   }
 

@@ -68,7 +68,12 @@ public record GravityTurnConstraints(
     double rTarget = Constants.WGS84_EARTH_EQUATORIAL_RADIUS + targetAltitude;
     double aTransfer = (rGtEnd + rTarget) / 2.0;
     double vMin = FastMath.sqrt(Constants.WGS84_EARTH_MU * (2.0 / rGtEnd - 1.0 / aTransfer));
-    return vMin * 0.95; // -5% margin
+    // Tighter ratio at low altitudes forces the gravity turn to deliver a
+    // hand-off close to the Hohmann apoapsis velocity, sparing the transfer
+    // stage from having to make up large tangential-velocity deficits.
+    double altKm = targetAltitude / 1000.0;
+    double tightnessRatio = altKm <= 250.0 ? 0.99 : 0.95;
+    return vMin * tightnessRatio;
   }
 
   private static double[] getFpaWindowDeg(double targetAltitude) {
