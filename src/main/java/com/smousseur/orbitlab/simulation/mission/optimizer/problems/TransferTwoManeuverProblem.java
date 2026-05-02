@@ -1,5 +1,6 @@
 package com.smousseur.orbitlab.simulation.mission.optimizer.problems;
 
+import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.Physics;
 import com.smousseur.orbitlab.simulation.mission.detector.MinAltitudeTracker;
 import com.smousseur.orbitlab.simulation.mission.maneuver.TransferResult;
@@ -8,9 +9,12 @@ import com.smousseur.orbitlab.simulation.mission.optimizer.TrajectoryProblem;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropulsionSystem;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.hipparchus.util.FastMath;
+import org.orekit.bodies.OneAxisEllipsoid;
 import org.orekit.orbits.KeplerianOrbit;
 import org.orekit.orbits.OrbitType;
+import org.orekit.orbits.PositionAngleType;
 import org.orekit.propagation.SpacecraftState;
 import org.orekit.utils.Constants;
 
@@ -60,6 +64,7 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
   // Precomputed values
   private final double aTarget;
   private final double vCircTarget;
+  private final double effectiveTargetAlt;
 
   // Hohmann-like guess values (precomputed)
   private final double guessT1;
@@ -113,6 +118,7 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
 
     double rTarget = EARTH_RADIUS + effectiveTargetAlt;
 
+    this.effectiveTargetAlt = effectiveTargetAlt;
     this.aTarget = rTarget;
     this.vCircTarget = FastMath.sqrt(mu / rTarget);
     this.altMax = targetAltitude * 1.05;
@@ -222,14 +228,10 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
 
     KeplerianOrbit finalOrbit = (KeplerianOrbit) OrbitType.KEPLERIAN.convertType(state.getOrbit());
 
-    double apoapsis = finalOrbit.getA() * (1.0 + finalOrbit.getE());
-    double periapsis = finalOrbit.getA() * (1.0 - finalOrbit.getE());
-    double rTarget = aTarget;
-
-    // Normalize by target altitude — sensitive to km-scale errors
-    double targetAlt = rTarget - EARTH_RADIUS;
-    double apoAlt = apoapsis - EARTH_RADIUS;
-    double periAlt = periapsis - EARTH_RADIUS;
+    OneAxisEllipsoid earth = OrekitService.get().getEarthEllipsoid();
+    double apoAlt = computeGeodeticAltitude(finalOrbit, FastMath.PI, earth); // ν = π
+    double periAlt = computeGeodeticAltitude(finalOrbit, 0.0, earth); // ν = 0
+    double targetAlt = effectiveTargetAlt;
 
     double errApo = (apoAlt - targetAlt) / targetAlt;
     double errPeri = (periAlt - targetAlt) / targetAlt;
@@ -243,8 +245,7 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
             + W_V * errV * errV;
 
     double barrier = 0.0;
-    double periapsisAlt = periapsis - EARTH_RADIUS;
-    barrier += barrierBelow(periapsisAlt, PERIAPSIS_MIN);
+    barrier += barrierBelow(periAlt, PERIAPSIS_MIN); // périapsis géodésique
 
     double altMaxPenalty = 0.0;
     MinAltitudeTracker tracker = lastResult != null ? lastResult.altitudeTracker() : null;
@@ -257,6 +258,24 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
     }
 
     return objective + W_BARRIER * barrier + W_ALT_MAX * altMaxPenalty;
+  }
+
+  private static double computeGeodeticAltitude(
+      KeplerianOrbit src, double trueAnomaly, OneAxisEllipsoid earth) {
+    KeplerianOrbit at =
+        new KeplerianOrbit(
+            src.getA(),
+            src.getE(),
+            src.getI(),
+            src.getPerigeeArgument(),
+            src.getRightAscensionOfAscendingNode(),
+            trueAnomaly,
+            PositionAngleType.TRUE,
+            src.getFrame(),
+            src.getDate(),
+            src.getMu());
+    Vector3D pos = at.getPVCoordinates().getPosition();
+    return earth.transform(pos, src.getFrame(), src.getDate()).getAltitude();
   }
 
   private static double barrierBelow(double value, double threshold) {
@@ -285,8 +304,8 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
    * @param dvBurn1Total the total Δv delivered by burn 1 (Tsiolkovsky), m/s
    * @param dvBurn1Useful the in-plane prograde projection (cos α · cos β), m/s
    * @param dvBurn1Wasted the residual ({@code total − useful}), m/s
-   * @param dvBurn2 the deterministic burn-2 circularization Δv, m/s, or {@code NaN} if
-   *     burn 2 could not be resolved from the optimal parameters
+   * @param dvBurn2 the deterministic burn-2 circularization Δv, m/s, or {@code NaN} if burn 2 could
+   *     not be resolved from the optimal parameters
    */
   public record DvBreakdown(
       double dvBurn1Total, double dvBurn1Useful, double dvBurn1Wasted, double dvBurn2) {}
@@ -294,10 +313,9 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
   /**
    * Computes the Δv breakdown for the optimal solution.
    *
-   * <p>Burn 1 total uses the rocket equation with the propulsion characteristics of the
-   * stage active at transfer entry. The useful projection is {@code cos α · cos β} of
-   * that scalar Δv. Burn 2 is resolved deterministically via {@link
-   * TransfertTwoManeuver#resolveBurn2FromInitial}.
+   * <p>Burn 1 total uses the rocket equation with the propulsion characteristics of the stage
+   * active at transfer entry. The useful projection is {@code cos α · cos β} of that scalar Δv.
+   * Burn 2 is resolved deterministically via {@link TransfertTwoManeuver#resolveBurn2FromInitial}.
    *
    * @param bestVariables the optimized 4-element parameter vector
    * @return the Δv breakdown
@@ -322,13 +340,12 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
   /**
    * Per-barrier diagnostic for the optimal solution.
    *
-   * @param periapsisFloor true if the post-burn-2 periapsis is at or below {@code
-   *     PERIAPSIS_MIN}
-   * @param altMin true if the in-flight altitude tracker recorded a value at or below
-   *     {@code ALT_MIN}
+   * @param periapsisFloor true if the post-burn-2 periapsis is at or below {@code PERIAPSIS_MIN}
+   * @param altMin true if the in-flight altitude tracker recorded a value at or below {@code
+   *     ALT_MIN}
    * @param altMax true if the in-flight altitude tracker exceeded {@code 1.05 · target}
-   * @param periapsisContribution the {@code W_BARRIER · barrierBelow(periapsis,
-   *     PERIAPSIS_MIN)} term
+   * @param periapsisContribution the {@code W_BARRIER · barrierBelow(periapsis, PERIAPSIS_MIN)}
+   *     term
    * @param altMinContribution the {@code W_BARRIER · barrierBelow(minAlt, ALT_MIN)} term
    * @param altMaxContribution the {@code W_ALT_MAX · ((excess)/altMax)²} term
    */
@@ -341,8 +358,8 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
       double altMaxContribution) {}
 
   /**
-   * Re-runs propagation for the optimal parameters and isolates each barrier
-   * contribution to the cost. Pure, no side effects beyond updating {@code lastResult}.
+   * Re-runs propagation for the optimal parameters and isolates each barrier contribution to the
+   * cost. Pure, no side effects beyond updating {@code lastResult}.
    *
    * @param bestVariables the optimized parameter vector
    * @return the per-barrier report
@@ -353,8 +370,7 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
     if (elapsed < 1.0) {
       return new BarrierReport(false, false, false, 0.0, 0.0, 0.0);
     }
-    KeplerianOrbit finalOrbit =
-        (KeplerianOrbit) OrbitType.KEPLERIAN.convertType(state.getOrbit());
+    KeplerianOrbit finalOrbit = (KeplerianOrbit) OrbitType.KEPLERIAN.convertType(state.getOrbit());
     double periapsisAlt = finalOrbit.getA() * (1.0 - finalOrbit.getE()) - EARTH_RADIUS;
 
     double periBarrier = barrierBelow(periapsisAlt, PERIAPSIS_MIN);
