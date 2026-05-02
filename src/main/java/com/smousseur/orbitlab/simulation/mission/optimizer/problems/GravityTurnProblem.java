@@ -62,14 +62,12 @@ public class GravityTurnProblem implements TrajectoryProblem {
 
   @Override
   public double[] getLowerBounds() {
-    return new double[] {30.0, 0.3};
+    return new double[] {30.0, 0.1};
   }
 
   @Override
   public double[] getUpperBounds() {
-    double targetAltMeters = constraints.targetApogee() / 0.75;
-    double transitionTimeMax = 300.0 + 0.3 * FastMath.sqrt(targetAltMeters);
-
+    double transitionTimeMax = 300.0 + 0.3 * FastMath.sqrt(constraints.targetAltitude());
     return new double[] {transitionTimeMax, 3.0};
   }
 
@@ -123,9 +121,14 @@ public class GravityTurnProblem implements TrajectoryProblem {
       cost += 3.0 * sq((apogee - constraints.maxApogee()) / constraints.targetApogee());
     }
 
-    // 3. Flight path angle — small = nearly horizontal
-    double targetFPA = Math.toRadians(constraints.targetFlightPathAngleDeg());
-    cost += 2.0 * sq(flightPathAngle - targetFPA);
+    // 3. Flight path angle — penalize only outside the [fpaMin, fpaMax] window
+    double fpaMin = Math.toRadians(constraints.targetFlightPathAngleMinDeg());
+    double fpaMax = Math.toRadians(constraints.targetFlightPathAngleMaxDeg());
+    if (flightPathAngle < fpaMin) {
+      cost += 2.0 * sq(fpaMin - flightPathAngle);
+    } else if (flightPathAngle > fpaMax) {
+      cost += 2.0 * sq(flightPathAngle - fpaMax);
+    }
 
     // 4. Tangential velocity — must be high enough for orbit insertion
     double minVtan = constraints.minTangentialVelocity();
