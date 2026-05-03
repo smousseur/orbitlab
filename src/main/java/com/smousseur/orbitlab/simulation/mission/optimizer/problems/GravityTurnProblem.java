@@ -3,6 +3,7 @@ package com.smousseur.orbitlab.simulation.mission.optimizer.problems;
 import static com.smousseur.orbitlab.simulation.Physics.sq;
 import static org.orekit.utils.Constants.WGS84_EARTH_EQUATORIAL_RADIUS;
 
+import com.smousseur.orbitlab.simulation.mission.detector.MinAltitudeTracker;
 import com.smousseur.orbitlab.simulation.mission.maneuver.GravityTurnManeuver;
 import com.smousseur.orbitlab.simulation.mission.optimizer.TrajectoryProblem;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
@@ -62,12 +63,23 @@ public class GravityTurnProblem implements TrajectoryProblem {
 
   @Override
   public double[] getLowerBounds() {
-    return new double[] {30.0, 0.3};
+    return new double[] {30.0, 0.1};
   }
 
   @Override
   public double[] getUpperBounds() {
-    return new double[] {450.0, 3.0};
+    // Floor scales linearly between 550 s (≤250 km) and 500 s (500 km), then
+    // returns to 450 s above. Combined with the tighter vTan ratio at low and
+    // medium altitudes, this gives CMA-ES enough time to accumulate the
+    // tangential velocity required by the new constraint.
+    double altKm = constraints.targetAltitude() / 1000.0;
+    double lowAltFloor;
+    if (altKm <= 250.0) lowAltFloor = 550.0;
+    else if (altKm <= 500.0) lowAltFloor = 550.0 + (500.0 - 550.0) * (altKm - 250.0) / 250.0;
+    else lowAltFloor = 450.0;
+    double transitionTimeMax =
+        FastMath.max(lowAltFloor, 300.0 + 0.3 * FastMath.sqrt(constraints.targetAltitude()));
+    return new double[] {transitionTimeMax, 3.0};
   }
 
   @Override
@@ -90,6 +102,14 @@ public class GravityTurnProblem implements TrajectoryProblem {
     // Detect penalty states: if propagation failed, the returned state is the initial state
     double elapsed = state.getDate().durationFrom(initialState.getDate());
     if (elapsed < 1.0) {
+      // Graded penalty: still high enough to dominate any nominal cost (<100),
+      // but proportional to how far underground the trajectory dipped, so CMA-ES
+      // gets a usable gradient instead of a flat 1e6 wall.
+      MinAltitudeTracker tracker = maneuver.getLastAltitudeTracker();
+      if (tracker != null && tracker.getMinAltitude() != Double.MAX_VALUE) {
+        double underground = FastMath.max(0.0, -tracker.getMinAltitude());
+        return 1e3 + underground / 1000.0;
+      }
       return 1e6;
     }
 
@@ -108,6 +128,7 @@ public class GravityTurnProblem implements TrajectoryProblem {
         new KeplerianOrbit(pv, state.getFrame(), state.getDate(), Constants.WGS84_EARTH_MU);
     double ecc = orb.getE();
     double apogee = orb.getA() * (1.0 + ecc) - WGS84_EARTH_EQUATORIAL_RADIUS;
+    double periapsis = orb.getA() * (1.0 - ecc) - WGS84_EARTH_EQUATORIAL_RADIUS;
 
     double flightPathAngle = FastMath.atan2(vRadial, vTangential);
 
@@ -120,9 +141,14 @@ public class GravityTurnProblem implements TrajectoryProblem {
       cost += 3.0 * sq((apogee - constraints.maxApogee()) / constraints.targetApogee());
     }
 
-    // 3. Flight path angle — small = nearly horizontal
-    double targetFPA = Math.toRadians(constraints.targetFlightPathAngleDeg());
-    cost += 2.0 * sq(flightPathAngle - targetFPA);
+    // 3. Flight path angle — penalize only outside the [fpaMin, fpaMax] window
+    double fpaMin = Math.toRadians(constraints.targetFlightPathAngleMinDeg());
+    double fpaMax = Math.toRadians(constraints.targetFlightPathAngleMaxDeg());
+    if (flightPathAngle < fpaMin) {
+      cost += 2.0 * sq(fpaMin - flightPathAngle);
+    } else if (flightPathAngle > fpaMax) {
+      cost += 2.0 * sq(flightPathAngle - fpaMax);
+    }
 
     // 4. Tangential velocity — must be high enough for orbit insertion
     double minVtan = constraints.minTangentialVelocity();
@@ -135,6 +161,15 @@ public class GravityTurnProblem implements TrajectoryProblem {
     if (ecc > 1.0) cost += 100.0 * sq(ecc - 1.0);
     if (apogee < 100_000) cost += 50.0 * sq((100_000 - apogee) / 100_000);
     if (vNorm < 2000) cost += 100.0 * sq((2000 - vNorm) / 2000);
+
+    // 6. Periapsis safety: a GT exit with periapsis far below ground gives the
+    // transfer phase a near-impossible starting point (Earth-piercing orbit).
+    // Penalize trajectories whose orbital periapsis falls more than 200 km
+    // below sea level so CMA-ES is pushed towards a near-orbital hand-off.
+    double periFloor = -200_000.0;
+    if (periapsis < periFloor) {
+      cost += 30.0 * sq((periFloor - periapsis) / 200_000.0);
+    }
 
     cost += W_P * (initialState.getMass() - state.getMass()) / initialState.getMass();
 

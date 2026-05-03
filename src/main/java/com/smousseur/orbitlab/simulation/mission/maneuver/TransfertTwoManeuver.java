@@ -125,7 +125,9 @@ public class TransfertTwoManeuver {
     if (orbitPostBurn1.getE() > 0.95
         || orbitPostBurn1.getA() < EARTH_RADIUS
         || orbitPostBurn1.getA() > EARTH_RADIUS + 2_000_000) {
-      return new TransferResult(initialState, null, null, null); // non-viable orbit, penalty
+      // Pass orbitPostBurn1 through so the cost function can grade the failure
+      // by orbital-element distance instead of falling back to a flat 1e6 wall.
+      return new TransferResult(initialState, orbitPostBurn1, null, null);
     }
 
     // ── Step 2: Resolve burn 2 at next apoapsis ──
