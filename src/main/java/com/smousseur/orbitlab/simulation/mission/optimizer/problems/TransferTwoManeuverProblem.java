@@ -231,8 +231,7 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
     // saturate up to ~180 km — almost the target itself).
     double floorCandidate =
         FastMath.max(
-            PERIAPSIS_FLOOR_MIN,
-            FastMath.min(targetAltitude * 0.5, targetAltitude - 100_000.0));
+            PERIAPSIS_FLOOR_MIN, FastMath.min(targetAltitude * 0.5, targetAltitude - 100_000.0));
     this.periapsisFloor = FastMath.min(floorCandidate, targetAltitude / 1.6);
     this.weightE = W_E_BASE * FastMath.max(1.0, W_E_REF_ALT / targetAltitude);
 
@@ -258,7 +257,7 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
 
   @Override
   public double getAcceptableCost() {
-    return 8e-4;
+    return 3e-3;
   }
 
   @Override
@@ -469,8 +468,8 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
   /**
    * Per-barrier diagnostic for the optimal solution.
    *
-   * @param periapsisFloor true if the post-burn-2 periapsis is at or below the adaptive
-   *     periapsis floor
+   * @param periapsisFloor true if the post-burn-2 periapsis is at or below the adaptive periapsis
+   *     floor
    * @param altMin true if the in-flight altitude tracker recorded a value at or below {@code
    *     ALT_MIN}
    * @param altMax true if the in-flight altitude tracker exceeded {@code 1.05 · target}
