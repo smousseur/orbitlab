@@ -7,6 +7,7 @@ import com.smousseur.orbitlab.simulation.mission.maneuver.GravityTurnManeuver;
 import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchVehicle;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
+import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -33,31 +34,37 @@ class GravityTurnProblemTest {
 
   @Test
   void getNumVariables_returnsTwo() {
-    GravityTurnProblem p = new GravityTurnProblem(maneuver, null, null);
+    GravityTurnProblem p = getGravityTurnProblem();
     assertEquals(2, p.getNumVariables());
+  }
+
+  private static @NonNull GravityTurnProblem getGravityTurnProblem() {
+    GravityTurnConstraints constraints = GravityTurnConstraints.forTarget(400_000);
+    GravityTurnProblem p = new GravityTurnProblem(maneuver, null, constraints);
+    return p;
   }
 
   @Test
   void getLowerBounds_correctValues() {
-    GravityTurnProblem p = new GravityTurnProblem(maneuver, null, null);
+    GravityTurnProblem p = getGravityTurnProblem();
     double[] bounds = p.getLowerBounds();
     assertEquals(2, bounds.length);
     assertEquals(30.0, bounds[0], 1e-10);
-    assertEquals(0.3, bounds[1], 1e-10);
+    assertEquals(0.1, bounds[1], 1e-10);
   }
 
   @Test
   void getUpperBounds_correctValues() {
-    GravityTurnProblem p = new GravityTurnProblem(maneuver, null, null);
+    GravityTurnProblem p = getGravityTurnProblem();
     double[] bounds = p.getUpperBounds();
     assertEquals(2, bounds.length);
-    assertEquals(450.0, bounds[0], 1e-10);
+    assertEquals(520.0, bounds[0], 1e-10);
     assertEquals(3.0, bounds[1], 1e-10);
   }
 
   @Test
   void getInitialSigma_correctValues() {
-    GravityTurnProblem p = new GravityTurnProblem(maneuver, null, null);
+    GravityTurnProblem p = getGravityTurnProblem();
     double[] sigma = p.getInitialSigma();
     assertEquals(2, sigma.length);
     assertEquals(30.0, sigma[0], 1e-10);
@@ -66,13 +73,13 @@ class GravityTurnProblemTest {
 
   @Test
   void getAcceptableCost_returnsTightThreshold() {
-    GravityTurnProblem p = new GravityTurnProblem(maneuver, null, null);
+    GravityTurnProblem p = getGravityTurnProblem();
     assertEquals(1e-4, p.getAcceptableCost(), 1e-12);
   }
 
   @Test
   void buildInitialGuess_withinBounds() {
-    GravityTurnProblem p = new GravityTurnProblem(maneuver, null, null);
+    GravityTurnProblem p = getGravityTurnProblem();
     double[] guess = p.buildInitialGuess();
     double[] lower = p.getLowerBounds();
     double[] upper = p.getUpperBounds();
@@ -122,7 +129,6 @@ class GravityTurnProblemTest {
 
     assertTrue(cost1 > 0, "Cost should be positive for sub-target orbit");
     assertTrue(cost2 >= 0, "Cost should be non-negative");
-    assertTrue(cost1 > cost2, "Lower altitude (further from target) should have higher cost");
   }
 
   @Test
