@@ -40,8 +40,7 @@ class GravityTurnProblemTest {
 
   private static @NonNull GravityTurnProblem getGravityTurnProblem() {
     GravityTurnConstraints constraints = GravityTurnConstraints.forTarget(400_000);
-    GravityTurnProblem p = new GravityTurnProblem(maneuver, null, constraints);
-    return p;
+    return new GravityTurnProblem(maneuver, null, constraints);
   }
 
   @Test
