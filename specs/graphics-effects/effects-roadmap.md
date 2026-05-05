@@ -314,3 +314,261 @@ Ordre suggéré pour maximiser l'impact visuel par jour-homme investi
 
 Au-delà (tier 4), ce sont des chantiers à isoler dans des specs
 dédiées.
+
+---
+
+## 9. Rendu des trajectoires & orbites
+
+### 9.1 État actuel
+
+Le rendu des chemins (orbites planétaires + trajectoires de mission)
+est aujourd'hui réduit au strict minimum :
+
+- **Géométrie** : `Mesh.Mode.LineStrip` (ou `LineLoop` pour les
+  orbites fermées body-relative), construite par
+  `engine/scene/OrbitLineFactory.java`. Trajectoires de mission
+  buildées par `states/mission/MissionTrajectoryRenderer.java` à
+  partir des `MissionEphemerisPoint`
+  (`simulation/mission/ephemeris/MissionEphemerisPoint.java`).
+- **Matériau** : `Common/MatDefs/Misc/Unshaded.j3md`, couleur
+  uniforme via `setColor("Color", ...)`. Largeur en **pixels**
+  (`RenderState.setLineWidth`) — donc constante à l'écran, pas de
+  taper en biseau, drivers modernes plafonnent souvent à 1 px.
+- **Couleur** : par planète via `engine/scene/PlanetColors.java`,
+  par mission via une `ColorRGBA` unique passée au
+  `MissionRenderer` — **uniforme sur toute la trajectoire**, alors
+  que `MissionEphemerisPoint` porte déjà un `stageName` exploitable.
+- **Pas d'antialiasing**, pas d'alpha, pas de fade, pas de marqueur
+  de direction, pas de distinction passé / futur, pas de marqueur
+  d'apoapse / périapse, pas de trace au sol.
+
+### 9.2 Tableau ranké
+
+| Tier | Effet | ★ | ✨ | Mécanisme principal |
+|---|---|---|---|---|
+| 1 | Couleur par stage de mission | 1 | 4 | Vertex colors + map `stageName → RGBA` |
+| 1 | Distinction passé / futur | 1 | 4 | Vertex colors / alpha modulés par t vs `clock.now()` |
+| 1 | Marqueur "now" (curseur temps) | 1 | 3 | `Sphere` ou billboard à la position courante |
+| 1 | Marqueurs apoapse / périapse | 2 | 3 | Billboards aux extrema, calculés depuis l'`OrbitPath` |
+| 2 | Ribbon billboardé (épaisseur stable) | 3 | 4 | Mesh tri-strip face-camera, remplace les GL lines |
+| 2 | Tirets animés (flow-along) | 2 | 4 | Texture 1D + offset UV piloté par le temps |
+| 2 | Halo additif sous la ligne | 2 | 4 | Ribbon plus large, additif, faible alpha |
+| 2 | Trace au sol (ground track) | 3 | 4 | Projection sur la sphère planète + ligne secondaire |
+| 2 | Flèches directionnelles périodiques | 2 | 3 | Mesh triangle billboardé tous les N points |
+| 3 | Code couleur thrust / coast | 2 | 4 | Vertex colors selon phase (`stage.thrust > 0`) |
+| 3 | Gradient vitesse / altitude | 2 | 3 | Vertex colors via colormap (viridis / heat) |
+| 3 | Mise en avant mission sélectionnée | 2 | 4 | Boost largeur+glow sur mission active, dim sur les autres |
+| 3 | Marqueurs Δv aux nœuds de manœuvre | 3 | 4 | Billboard 3D fléché à chaque transition de stage |
+| 3 | Fenêtrage temporel (±N h autour de now) | 2 | 3 | Sous-échantillonner + alpha-fade aux bords |
+| 4 | Enveloppe d'incertitude (sweep optimizer) | 4 | 5 | Tube semi-transparent autour du nominal |
+| 4 | Traînée vapeur derrière le vaisseau live | 4 | 4 | Particules + ribbon décroissant en alpha |
+| 4 | Heat-haze sur les segments atmosphériques | 4 | 3 | Distorsion screen-space localisée |
+
+### 9.3 Tier 1 — Quick wins trajectoires
+
+#### 9.3.1 Couleur par stage de mission
+
+**Pourquoi** — La donnée existe déjà (`MissionEphemerisPoint.stageName`)
+mais n'est pas exploitée visuellement. Le user ne voit pas où finit
+l'ascension verticale, où commence la gravity turn, où se déclenche
+le transfert. C'est la modification "plus de signal pour zéro coût
+GPU".
+
+**Comment** — Étendre `OrbitLineFactory.buildHeliocentricLineStrip`
+(et l'équivalent body-relative) pour accepter un buffer de couleurs
+par sommet (`VertexBuffer.Type.Color`). Côté
+`MissionTrajectoryRenderer`, mapper chaque `stageName` → `ColorRGBA`
+via une table (à coder dans une `MissionStageColors` similaire à
+`PlanetColors`). Activer `mat.setBoolean("VertexColor", true)` sur
+le matériau Unshaded.
+
+**Touche** — `engine/scene/OrbitLineFactory.java`,
+`states/mission/MissionTrajectoryRenderer.java`, nouveau
+`engine/scene/MissionStageColors.java`.
+
+#### 9.3.2 Distinction passé / futur
+
+**Pourquoi** — Aujourd'hui rien ne distingue le segment déjà parcouru
+du segment à venir. C'est l'info la plus lue par l'utilisateur sur
+une trajectoire en cours.
+
+**Comment** — Toujours via le `VertexBuffer.Type.Color` (combinable
+avec 9.3.1 — multiplier les RGB du stage par un alpha) : alpha
+plein pour `t <= clock.now()`, alpha à 0,3–0,4 pour `t > clock.now()`.
+Mise à jour : soit re-uploader le color buffer à chaque tick (les
+trajectoires de mission sont bornées en taille — 8192 points max,
+acceptable), soit envoyer `now` en uniform et discriminer dans un
+shader Unshaded patché. Le buffer-update est plus simple à câbler.
+
+**Touche** — `MissionTrajectoryRenderer` (subscribe au
+`SimulationClock`, recolore à la volée).
+
+#### 9.3.3 Marqueur "now" (curseur de temps)
+
+**Pourquoi** — Lit en un coup d'œil la position courante du vaisseau
+sur sa propre trajectoire — utile à grande vitesse de simulation.
+
+**Comment** — Petit billboard additif (sprite cercle ou losange)
+placé à la position interpolée correspondant à `clock.now()` dans
+l'ephemeris. Réutilise le pattern de `BillboardIconView` déjà
+présent.
+
+#### 9.3.4 Marqueurs apoapse / périapse
+
+**Pourquoi** — Lecture immédiate de la forme de l'orbite ; utile
+pour les missions LEO et GTO.
+
+**Comment** — Lors de la construction de l'`OrbitPath`, calculer
+les indices argmin/argmax de `‖r‖` (heliocentrique pour une orbite
+solaire, body-relative pour LEO). Placer deux billboards (icônes
+`Pe` / `Ap`) aux positions correspondantes.
+
+**Touche** — `simulation/orbit/OrbitPath.java` (helper),
+`OrbitInitAppState` / `OrbitRuntimeAppState` (placement des
+billboards).
+
+### 9.4 Tier 2 — Ribbon, trace au sol, animation
+
+#### 9.4.1 Ribbon billboardé (épaisseur stable)
+
+**Pourquoi** — Les `glLineWidth` > 1 sont **non garantis** sur les
+drivers modernes (Mesa, NVIDIA core profile). Résultat : nos lignes
+sont très fines et crénelées. Un ribbon (quad-strip face-caméra)
+règle :
+- l'épaisseur (configurable en pixels ou en degrés visuels),
+- l'antialiasing (alpha-fade des bords du ruban),
+- la lisibilité à grande distance.
+
+**Comment** — Soit CPU : pour chaque segment, générer 2 vertices
+décalés par `cross(tangent, view)`. Recalcul à chaque frame ou
+géométrie en world-space + correction par geometry shader. Soit
+GPU : geometry shader / vertex shader qui expand la ligne en quad.
+JME3 supporte les geometry shaders mais c'est plus simple côté CPU
+pour un nombre de points limité (orbite ~256 pts, mission ~8 192
+pts).
+
+**Touche** — Nouveau `engine/scene/RibbonLineFactory.java`,
+matériau custom `Common/MatDefs/Misc/Unshaded.j3md` patché ou
+`assets/shaders/ribbon/Ribbon.j3md`.
+
+#### 9.4.2 Tirets animés (flow-along)
+
+**Pourquoi** — Indique le sens de parcours sans flèches discrètes.
+Effet "missile en route" très lisible.
+
+**Comment** — Sur le ribbon : texture 1D dash/gap, UV.x = abscisse
+curviligne (longueur cumulée), offset = `time * speed`. Quasi
+gratuit GPU.
+
+#### 9.4.3 Halo additif sous la ligne
+
+**Pourquoi** — Donne du corps visuel sans bouffer la lisibilité.
+
+**Comment** — Doubler le ribbon : un brin "core" opaque + un brin
+plus large en blending additif, alpha décroissant transversalement.
+
+#### 9.4.4 Trace au sol (ground track)
+
+**Pourquoi** — Standard de l'industrie pour les orbites LEO ; permet
+de voir survol des sites, créneaux de visibilité.
+
+**Comment** — Pour chaque point de l'orbite/mission, projeter
+`(lat, lon)` calculés en frame ITRF (déjà disponible via
+`OrekitService`) sur la sphère planète à `R + ε`. Construit un
+deuxième ribbon collé au sol. Couleur dérivée de la trajectoire
+parente, alpha plus faible.
+
+**Touche** — Nouveau `engine/scene/GroundTrackFactory.java`,
+nouveau `states/mission/GroundTrackRenderer.java` (ou intégrer dans
+`MissionTrajectoryRenderer`).
+
+#### 9.4.5 Flèches directionnelles périodiques
+
+**Pourquoi** — Complément discret au flow des tirets pour les vues
+statiques / captures d'écran.
+
+**Comment** — Tous les N points (ou tous les Δt simulation), placer
+un mesh triangle billboardé orienté selon la tangente. Couleur du
+stage.
+
+### 9.5 Tier 3 — Sémantique avancée
+
+#### 9.5.1 Code couleur thrust / coast
+
+Vertex colors : si la phase courante a une poussée non nulle →
+couleur saturée (jaune/orange) ; sinon → couleur du stage atténuée.
+Lecture immédiate des phases motorisées vs balistiques.
+
+#### 9.5.2 Gradient vitesse / altitude
+
+Vertex colors via colormap (viridis, plasma, heat). Utile en debug
+mission / tuning optimizer ; à exposer derrière un toggle UI.
+
+#### 9.5.3 Mise en avant de la mission sélectionnée
+
+Boost largeur + glow + alpha 1 sur la mission active dans le
+panneau ; les autres descendent à largeur réduite + alpha 0,3.
+Hook sur la sélection courante exposée par
+`MissionContext`.
+
+#### 9.5.4 Marqueurs Δv aux nœuds de manœuvre
+
+Aux frontières de stages où un `ImpulsiveManeuver` ou un changement
+de poussée a lieu, billboard 3D fléché orienté selon le Δv local.
+Taille proportionnelle à `‖Δv‖`.
+
+#### 9.5.5 Fenêtrage temporel ±N heures
+
+Au lieu de dessiner toute l'ephemeris, ne rendre que les points
+dans `[now − N, now + M]`, avec alpha-fade aux deux extrémités.
+Allège la scène, met l'accent sur le moment courant.
+
+### 9.6 Tier 4 — Ambitieux
+
+#### 9.6.1 Enveloppe d'incertitude
+
+L'optimizer de
+`simulation/mission/optimizer/` produit déjà des sweeps de
+robustesse (cf. `specs/optimizer/03-robustness-roadmap.md`). Render
+l'enveloppe min/max comme un tube semi-transparent autour du
+trajectoire nominale → effet "couloir de vol" très parlant.
+
+#### 9.6.2 Traînée vapeur derrière le vaisseau live
+
+En complément (ou alternative) à la trajectoire prédite : émettre
+des particules à la position du vaisseau, fade-out sur ~30 s sim.
+Donne une impression de "où il vient de passer" même quand la
+trajectoire calculée n'est pas affichée.
+
+#### 9.6.3 Heat-haze sur segments atmosphériques
+
+Pour les segments où l'altitude est < ~80 km (rentrée, ascent
+basse), distorsion screen-space localisée autour du segment.
+Synergie avec l'effet "plasma de rentrée" (5.5).
+
+### 9.7 Refactoring suggéré
+
+Les sections 9.3 et 9.4 supposent une factorisation côté
+`OrbitLineFactory` :
+
+1. Extraire un `LineMeshBuilder` qui accepte `(positions, colors,
+   widths)` par sommet — versions ribbon et raw-line héritent.
+2. Pousser les couleurs vers un `VertexBuffer.Type.Color` au lieu
+   de `setColor("Color", ...)` global.
+3. Permettre à `MissionTrajectoryRenderer` de faire un
+   "color refresh" sans rebuild complet du mesh (juste l'update du
+   color buffer) → coût négligeable pour le marqueur passé/futur.
+
+### 9.8 Suggestion d'ordre d'attaque (trajectoires)
+
+1. **Couleur par stage** (9.3.1) — débloque tout le reste.
+2. **Passé / futur** (9.3.2) — trivial une fois 9.3.1 en place.
+3. **Marqueur "now"** (9.3.3) — complète le triptyque temporel.
+4. **Apoapse / périapse** (9.3.4) — utile pour LEO et GTO.
+5. **Ribbon** (9.4.1) — saute le mur des `glLineWidth`.
+6. **Tirets animés + halo** (9.4.2 + 9.4.3) — exploitent le ribbon.
+7. **Trace au sol** (9.4.4) — gros impact pour les missions LEO.
+8. **Sélection / highlight** (9.5.3) — lisibilité multi-mission.
+9. **Marqueurs Δv** (9.5.4) — enrichit la lecture des manœuvres.
+10. **Enveloppe d'incertitude** (9.6.1) — synergie avec le travail
+    optimizer.
