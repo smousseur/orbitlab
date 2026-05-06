@@ -101,6 +101,9 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
   // Niveau 2.3 — burn 1 duration upper bound (Hohmann × K, capped by propellant)
   private final double dt1Max;
 
+  // Niveau 3.1 — orbital period of the post-GT orbit, used as the hard upper bound for t1.
+  private final double initialPeriod;
+
   // Niveau 2.4 — adaptive periapsis floor and eccentricity weight
   private final double periapsisFloor;
   private final double weightE;
@@ -158,7 +161,8 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
     double aInitial = initialOrbit.getA();
     double eInitial = initialOrbit.getE();
 
-    double initialPeriod = 2.0 * FastMath.PI * FastMath.sqrt(aInitial * aInitial * aInitial / mu);
+    this.initialPeriod =
+        2.0 * FastMath.PI * FastMath.sqrt(aInitial * aInitial * aInitial / mu);
 
     // Time-to-apoapsis on the current orbit — used as the CMA-ES initial seed.
     double meanAnomaly = initialOrbit.getMeanAnomaly();
@@ -296,6 +300,21 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
       FastMath.PI / 2.0,
       betaMax
     };
+  }
+
+  @Override
+  public double[] getHardLowerBounds() {
+    // Niveau 3.1 — absolute physical floors. t1 cannot start before epoch; dt1 must
+    // be at least 1 s; angles can extend to a full sphere worth of orientation if
+    // the optimizer ever needs it.
+    return new double[] {0.0, 1.0, -FastMath.PI, -FastMath.PI / 2.0};
+  }
+
+  @Override
+  public double[] getHardUpperBounds() {
+    // Niveau 3.1 — absolute physical ceilings. t1 cannot exceed one full orbital
+    // period; dt1 capped by available propellant; angles up to a full sphere.
+    return new double[] {initialPeriod, dt1MaxPhysical, FastMath.PI, FastMath.PI / 2.0};
   }
 
   @Override

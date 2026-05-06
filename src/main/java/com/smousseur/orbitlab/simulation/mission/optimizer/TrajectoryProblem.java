@@ -50,6 +50,28 @@ public interface TrajectoryProblem {
   /** Upper bounds for each parameter. */
   double[] getUpperBounds();
 
+  /**
+   * Absolute physical lower bounds, used as a hard floor when the optimizer auto-widens a
+   * saturated bound (Niveau 3.1). Defaults to {@link #getLowerBounds()}, which disables widening
+   * for problems that don't expose a separate physical limit.
+   *
+   * @return the absolute physical lower bounds
+   */
+  default double[] getHardLowerBounds() {
+    return getLowerBounds();
+  }
+
+  /**
+   * Absolute physical upper bounds, used as a hard ceiling when the optimizer auto-widens a
+   * saturated bound (Niveau 3.1). Defaults to {@link #getUpperBounds()}, which disables widening
+   * for problems that don't expose a separate physical limit.
+   *
+   * @return the absolute physical upper bounds
+   */
+  default double[] getHardUpperBounds() {
+    return getUpperBounds();
+  }
+
   /** Initial standard deviation (sigma) for each parameter (CMA-ES exploration). */
   double[] getInitialSigma();
 

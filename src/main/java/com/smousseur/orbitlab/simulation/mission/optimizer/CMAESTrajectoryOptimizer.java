@@ -55,6 +55,12 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
   /** Per-attempt multiplier on the initial sigma vector (index 0 = first attempt). */
   private static final double[] RETRY_SIGMA_SCALE = {1.0, 1.3, 1.6};
 
+  /** Niveau 3.1 — multiplicative factor applied to the saturated bound's range each widening. */
+  private static final double WIDEN_FACTOR = 1.5;
+
+  /** Niveau 3.1 — maximum number of widenings per parameter across the full optimize() call. */
+  private static final int MAX_WIDENINGS_PER_PARAM = 2;
+
   private final CMAESRunExecutor executor;
 
   /**
@@ -100,6 +106,8 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
   public OptimizationResult optimize() {
     double[] lower = problem.getLowerBounds();
     double[] upper = problem.getUpperBounds();
+    double[] hardLower = problem.getHardLowerBounds();
+    double[] hardUpper = problem.getHardUpperBounds();
     double[] baseSigma = problem.getInitialSigma();
     double acceptableCost = problem.getAcceptableCost();
 
@@ -107,6 +115,7 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
     double globalBestCost = Double.MAX_VALUE;
     int totalEvaluations = 0;
     boolean previousSaturated = false;
+    int[] widenCount = new int[problem.getNumVariables()];
 
     int totalAttempts = maxRetries + 1;
     for (int attempt = 0; attempt < totalAttempts; attempt++) {
@@ -146,6 +155,11 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
 
       if (globalBestVars != null) {
         previousSaturated = hasSaturatedParameter(globalBestVars, lower, upper);
+        // Niveau 3.1 — widen any saturated bound (capped by the problem's hard physical limits)
+        // so the next retry can explore beyond the previous nominal box.
+        if (previousSaturated && attempt < totalAttempts - 1) {
+          widenSaturatedBounds(globalBestVars, lower, upper, hardLower, hardUpper, widenCount);
+        }
       }
     }
 
@@ -364,6 +378,55 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
   private static boolean hasSaturatedParameter(double[] best, double[] lower, double[] upper) {
     return OptimizerDiagnostics.evaluateBounds(best, lower, upper).stream()
         .anyMatch(f -> f.lowSat() || f.highSat());
+  }
+
+  /**
+   * Niveau 3.1 — for each saturated parameter, extends the saturated side of {@code [lower, upper]}
+   * by {@link #WIDEN_FACTOR} of the current range, capped by the problem's hard bounds and limited
+   * to {@link #MAX_WIDENINGS_PER_PARAM} widenings per parameter. Mutates {@code lower}/{@code
+   * upper} in place; logs a WARN per widening.
+   */
+  private void widenSaturatedBounds(
+      double[] best,
+      double[] lower,
+      double[] upper,
+      double[] hardLower,
+      double[] hardUpper,
+      int[] widenCount) {
+    for (OptimizerDiagnostics.BoundFlag f :
+        OptimizerDiagnostics.evaluateBounds(best, lower, upper)) {
+      int i = f.index();
+      if (!f.lowSat() && !f.highSat()) continue;
+      if (widenCount[i] >= MAX_WIDENINGS_PER_PARAM) continue;
+      double range = upper[i] - lower[i];
+      if (range <= 0) continue;
+      double newLower = lower[i];
+      double newUpper = upper[i];
+      String side;
+      if (f.lowSat()) {
+        newLower = FastMath.max(hardLower[i], upper[i] - WIDEN_FACTOR * range);
+        side = "LOW";
+      } else {
+        newUpper = FastMath.min(hardUpper[i], lower[i] + WIDEN_FACTOR * range);
+        side = "HIGH";
+      }
+      if (newLower == lower[i] && newUpper == upper[i]) {
+        // already at hard bound, no room to widen
+        continue;
+      }
+      logger.warn(
+          "Niveau 3.1: widening param[{}] ({}-saturated) [{}, {}] -> [{}, {}] (count={})",
+          i,
+          side,
+          lower[i],
+          upper[i],
+          newLower,
+          newUpper,
+          widenCount[i] + 1);
+      lower[i] = newLower;
+      upper[i] = newUpper;
+      widenCount[i]++;
+    }
   }
 
   // ══════════════════════════════════════════════════════════════════════
