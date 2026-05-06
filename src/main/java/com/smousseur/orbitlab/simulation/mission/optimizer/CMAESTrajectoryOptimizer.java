@@ -310,13 +310,22 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
   /**
    * Builds the list of imposed starting points for the leading exploration runs of a given attempt.
    *
-   * <p>For attempt 0 the list is empty (default behavior unchanged). For retries, includes
+   * <p>For attempt 0, prepends the pure analytical (e.g., Hohmann) seed when the problem provides
+   * one (Niveau 3.2 of the robustness roadmap), followed by the {@code initialGuess}. Retries add
    * physically diverse seeds so CMA-ES is not pulled back into the same basin.
    */
   private List<double[]> buildSeededStartPoints(
       int attempt, boolean previousSaturated, double[] lower, double[] upper) {
     if (attempt == 0) {
-      return List.of();
+      List<double[]> seeds = new ArrayList<>();
+      double[] analyticalSeed = problem.buildAnalyticalSeed();
+      if (analyticalSeed != null) {
+        seeds.add(analyticalSeed.clone());
+        seeds.add(problem.buildInitialGuess());
+        logger.info(
+            "Niveau 3.2: warm-start with pure analytical seed for run 0, initialGuess for run 1");
+      }
+      return seeds;
     }
 
     List<double[]> seeds = new ArrayList<>();

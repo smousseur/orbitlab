@@ -271,6 +271,14 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
   }
 
   @Override
+  public double[] buildAnalyticalSeed() {
+    // Niveau 3.2 — pure Hohmann analytical seed: burn immediately (t1=0) for the
+    // Hohmann burn duration, prograde coplanar (alpha1=0, beta1=0). Forces at least
+    // one CMA-ES exploration run to start in the closed-form Hohmann basin.
+    return new double[] {0.0, guessDt1, 0.0, 0.0};
+  }
+
+  @Override
   public double[] getLowerBounds() {
     return new double[] {
       0.0,

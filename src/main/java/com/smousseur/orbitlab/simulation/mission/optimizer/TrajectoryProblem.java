@@ -33,6 +33,17 @@ public interface TrajectoryProblem {
    */
   double[] buildInitialGuess();
 
+  /**
+   * Returns a pure analytical seed (e.g., Hohmann transfer) used by the optimizer to force at least
+   * one exploration run to start from the closed-form physical solution. Returns {@code null} when
+   * no analytical solution is available for this problem.
+   *
+   * @return the analytical parameter vector, or {@code null}
+   */
+  default double[] buildAnalyticalSeed() {
+    return null;
+  }
+
   /** Lower bounds for each parameter. */
   double[] getLowerBounds();
 

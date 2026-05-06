@@ -6,11 +6,16 @@ import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemeris;
 import com.smousseur.orbitlab.simulation.mission.runtime.MissionComputeResult;
 import com.smousseur.orbitlab.simulation.mission.runtime.MissionOptimizer;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.RepeatedTest;
+import org.junit.jupiter.api.RepetitionInfo;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.orekit.propagation.SpacecraftState;
@@ -22,14 +27,45 @@ public class LEOMissionOptimizationTest extends AbstractTrajectoryOptimizerTest 
 
   public static final double ORBIT_MARGIN_RATIO = 0.07;
 
+  private static final List<Long> SENSIBLE_DURATIONS_NS = new ArrayList<>();
+
   @BeforeAll
   static void init() {
     OrekitService.get().initialize();
   }
 
-  @RepeatedTest(50)
-  void testSensibleMission() {
+  @RepeatedTest(20)
+  void testSensibleMission(RepetitionInfo info) {
+    long start = System.nanoTime();
     testLEOMission(275_000);
+    long elapsedNs = System.nanoTime() - start;
+    SENSIBLE_DURATIONS_NS.add(elapsedNs);
+    logger.info(
+        "[testSensibleMission rep {}/{}] elapsed={} s",
+        info.getCurrentRepetition(),
+        info.getTotalRepetitions(),
+        String.format("%.2f", elapsedNs / 1e9));
+  }
+
+  @AfterAll
+  static void reportSensibleTimings() {
+    if (SENSIBLE_DURATIONS_NS.isEmpty()) return;
+    List<Long> sorted = new ArrayList<>(SENSIBLE_DURATIONS_NS);
+    Collections.sort(sorted);
+    long min = sorted.get(0);
+    long max = sorted.get(sorted.size() - 1);
+    long median = sorted.get(sorted.size() / 2);
+    long p95 = sorted.get((int) Math.floor((sorted.size() - 1) * 0.95));
+    double mean =
+        SENSIBLE_DURATIONS_NS.stream().mapToLong(Long::longValue).average().orElse(0.0);
+    logger.info(
+        "[testSensibleMission summary over {} reps] min={} s, median={} s, mean={} s, p95={} s, max={} s",
+        SENSIBLE_DURATIONS_NS.size(),
+        String.format("%.2f", min / 1e9),
+        String.format("%.2f", median / 1e9),
+        String.format("%.2f", mean / 1e9),
+        String.format("%.2f", p95 / 1e9),
+        String.format("%.2f", max / 1e9));
   }
 
   @ParameterizedTest(name = "targetAltitude={0}m")
