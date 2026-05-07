@@ -231,8 +231,10 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
       configs.add(new RunConfig(startPoint, runSigma, populationSize, parallelBudget));
     }
 
-    int poolSize =
-        FastMath.min(explorationRuns, Runtime.getRuntime().availableProcessors());
+    // Reserve one core for the JME render thread so the UI stays responsive while the optimizer
+    // is running on the dedicated mission-optimizer thread.
+    int availableForOptimizer = FastMath.max(1, Runtime.getRuntime().availableProcessors() - 1);
+    int poolSize = FastMath.min(explorationRuns, availableForOptimizer);
     ExecutorService pool = Executors.newFixedThreadPool(poolSize);
     try {
       List<Future<CMAESRunExecutor.RunResult>> futures = new ArrayList<>(configs.size());
