@@ -68,6 +68,33 @@ public class LEOMissionOptimizationTest extends AbstractTrajectoryOptimizerTest 
         String.format("%.2f", max / 1e9));
   }
 
+  @ParameterizedTest(name = "outlier targetAltitude={0}m")
+  @ValueSource(
+      doubles = {200_000, 225_000, 650_000, 1_250_000, 1_375_000, 1_900_000})
+  void testOutlierAltitudes(double targetAltitude) {
+    int repeats = 3;
+    long[] elapsedNs = new long[repeats];
+    for (int i = 0; i < repeats; i++) {
+      long start = System.nanoTime();
+      testLEOMission(targetAltitude);
+      elapsedNs[i] = System.nanoTime() - start;
+      logger.info(
+          "[outlier {}km rep {}/{}] elapsed={} s",
+          (int) (targetAltitude / 1000),
+          i + 1,
+          repeats,
+          String.format("%.2f", elapsedNs[i] / 1e9));
+    }
+    double sumS = 0.0;
+    for (long ns : elapsedNs) sumS += ns / 1e9;
+    logger.info(
+        "[outlier {}km summary] runs={}, mean={} s, total={} s",
+        (int) (targetAltitude / 1000),
+        repeats,
+        String.format("%.2f", sumS / repeats),
+        String.format("%.2f", sumS));
+  }
+
   @ParameterizedTest(name = "targetAltitude={0}m")
   @ValueSource(
       doubles = {

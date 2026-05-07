@@ -98,9 +98,6 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
 
   @Override
   public OptimizationResult optimize() {
-    double[] lower = problem.getLowerBounds();
-    double[] upper = problem.getUpperBounds();
-    double[] baseSigma = problem.getInitialSigma();
     double acceptableCost = problem.getAcceptableCost();
 
     double[] globalBestVars = null;
@@ -110,6 +107,12 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
 
     int totalAttempts = maxRetries + 1;
     for (int attempt = 0; attempt < totalAttempts; attempt++) {
+      // Per-attempt bounds and sigma — problems may relax β1 (or other parameters) on retry
+      // when the previous attempt saturated; default impl returns the un-relaxed bounds.
+      double[] lower = problem.getLowerBoundsForAttempt(attempt, globalBestVars);
+      double[] upper = problem.getUpperBoundsForAttempt(attempt, globalBestVars);
+      double[] baseSigma = problem.getInitialSigmaForAttempt(attempt, globalBestVars);
+
       int idx = FastMath.min(attempt, RETRY_SIGMA_SCALE.length - 1);
       int explorationRuns = numExplorationRuns + RETRY_EXPLORATION_RUNS_BONUS[idx];
       double[] attemptSigma = scaleSigma(baseSigma, RETRY_SIGMA_SCALE[idx]);
