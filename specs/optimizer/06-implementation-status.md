@@ -11,9 +11,9 @@ métier : mission parking → GTO → GEO**.
   transfert altitude-aware)** : **livrées**.
 - **Instrumentation Phase 0.1** complète (saturation des bornes, décomposition
   Δv, état de fin de GT, barrières).
-- **Phase 3 (robustesse)** : **partielle** — feasibility check (3.3) OK ;
-  auto-widening des bornes (3.1) et warm-start Hohmann explicite (3.2)
-  manquants.
+- **Phase 3 (robustesse)** : **partielle** — feasibility check (3.3) ✅ ;
+  warm-start Hohmann explicite (3.2) ✅ ; auto-widening des bornes (3.1)
+  **évalué et écarté** sur LEO (cf. note ligne 3.1 ci-dessous).
 - **Phase 4 (assertions de régression)** : **harness en place mais assertions
   désactivées** dans `LEOAltitudeSweepTest`.
 - **Phase 5 (anticipation GTO via `OrbitTarget`)** : **non démarrée** — c'est
@@ -39,8 +39,8 @@ Légende : ✅ implémenté · ⚠️ partiel · ❌ non implémenté.
 | 2.4a | Termes d'erreur absolus (`ABS_ERR_SCALE`) | ✅ | `TransferTwoManeuverProblem.java:60-62, 362-363` |
 | 2.4b | `W_E` adaptatif (plus fort à basse altitude) | ✅ | `TransferTwoManeuverProblem.java:52, 56, 236` |
 | 2.4c | `periapsisFloor` adaptatif | ✅ | `TransferTwoManeuverProblem.java:105, 232-235` |
-| 3.1 | Auto-élargissement des bornes en cas de saturation | ❌ | détection présente (`OptimizerDiagnostics`), action manquante dans `CMAESTrajectoryOptimizer` |
-| 3.2 | Warm-start Hohmann explicite | ⚠️ | `buildInitialGuess` est Hohmann-like (`TransferTwoManeuverProblem:269`) mais pas un seed pur séparé des runs d'exploration |
+| 3.1 | Auto-élargissement des bornes en cas de saturation | ⛔ évalué, non retenu | implémenté puis revert (commit 709c3be). Sur `LEOMissionOptimizationTest.testSensibleMission` (20 reps), aucune variante (seuil 5 % all-params, seuil 1 % t1/dt1 only) n'a égalé la baseline 3.2-only : médiane +8 %, moyenne +24 %, BUILD +22 %. Les saturations détectées étaient majoritairement des optima physiques (α1, β1) ou des artefacts de variance CMA-ES, pas de vraies bornes math-derived sous-dimensionnées. À reconsidérer si une mission GTO/GEO future expose un vrai pinning sur `t1`/`dt1`. |
+| 3.2 | Warm-start Hohmann explicite | ✅ | `CMAESTrajectoryOptimizer.buildSeededStartPoints` injecte le guess analytique `TransferTwoManeuverProblem.buildInitialGuess` à chaque attempt, en plus des runs d'exploration. |
 | 3.3 | Diagnostic d'infaisabilité a priori | ✅ | identique à 2.3c |
 | 4.1 | Assertions actives sur `LEOAltitudeSweepTest` | ⚠️ | `LEOAltitudeSweepTest:50-114` mesure et logue ; aucune assertion JUnit |
 | 5 | Abstraction `OrbitTarget(rPeri, rApo, inclination)` | ❌ | aucun record `OrbitTarget`, aucune `Burn2Resolver` polymorphe |
@@ -105,8 +105,7 @@ Toutes les sondes prévues sont en place et exploitées par `MissionOptimizer` :
 
 | Item | Difficulté | Bénéfice |
 |---|---|---|
-| Niveau 3.1 — auto-widening des bornes | Faible | Filet de sécurité contre cas pathologiques GTO non anticipés. |
-| Niveau 3.2 — warm-start Hohmann explicite | Faible | Garantit un run partant de la solution analytique pure ; utile car la géométrie GTO est tendue. |
+| Niveau 3.1 — auto-widening des bornes | Faible | ⛔ Évalué et écarté sur LEO (voir tableau Status). Filet de sécurité théorique pour cas pathologiques GTO non anticipés ; à re-évaluer si les diagnostics GTO révèlent un vrai pinning sur `t1`/`dt1`. |
 | Niveau 4.1 — assertions actives sur `LEOAltitudeSweepTest` | Faible | Verrouille les acquis Phases 0-2 **avant** de toucher au code partagé pour GTO. |
 | Plane change combiné optimal à l'apogée GEO | Moyenne | Économie ~150-300 m/s vs. plane change pur. Demande un objectif Δv minimisé, pas seulement géométrique. |
 | Phasing GEO (longitude cible / slot) | Haute | Hors périmètre court terme. |
@@ -119,15 +118,16 @@ Ordre suggéré pour limiter le risque :
 
 1. **Niveau 4.1** — activer les assertions de la suite paramétrique LEO
    (verrouille l'existant avant tout refactor partagé).
-2. **Niveau 3.2** — warm-start Hohmann (faible coût, gros gain robustesse pour
-   les cas tendus GTO).
+2. ~~**Niveau 3.2** — warm-start Hohmann~~ — **livré**.
 3. **Niveau 5** — abstraction `OrbitTarget` (refactor non fonctionnel : LEO
    continue de passer en cas dégénéré `rPeri == rApo`).
 4. `Burn2Resolver` interface + extraction `CircularizationResolver`.
 5. `ApogeeRaiseResolver` + premier test parking → GTO (sans plane change,
    inclinaison de parking conservée).
 6. Stage circularisation + plane change → GEO et test bout-en-bout.
-7. **Niveau 3.1** — auto-widening (en dernier, une fois la boîte stabilisée).
+7. ~~**Niveau 3.1** — auto-widening~~ — **écarté sur LEO** ; à reconsidérer
+   uniquement si les diagnostics GTO/GEO révèlent un vrai pinning sur les
+   bornes math-derived `t1`/`dt1`.
 
 ## Questions ouvertes à trancher
 
