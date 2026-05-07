@@ -33,6 +33,17 @@ public interface TrajectoryProblem {
    */
   double[] buildInitialGuess();
 
+  /**
+   * Returns a pure analytical seed (e.g., Hohmann transfer) used by the optimizer to force at least
+   * one exploration run to start from the closed-form physical solution. Returns {@code null} when
+   * no analytical solution is available for this problem.
+   *
+   * @return the analytical parameter vector, or {@code null}
+   */
+  default double[] buildAnalyticalSeed() {
+    return null;
+  }
+
   /** Lower bounds for each parameter. */
   double[] getLowerBounds();
 
@@ -41,6 +52,36 @@ public interface TrajectoryProblem {
 
   /** Initial standard deviation (sigma) for each parameter (CMA-ES exploration). */
   double[] getInitialSigma();
+
+  /**
+   * Lower bounds for a specific retry attempt. Default returns {@link #getLowerBounds()}, ignoring
+   * the attempt index and the previous best vector. Problems may override to relax bounds on retry
+   * when the previous attempt landed against a saturated bound.
+   *
+   * @param attempt the zero-based attempt index (0 is the initial run, ≥1 are retries)
+   * @param previousBestVars the best vector from the failed previous attempt, or {@code null} when
+   *     {@code attempt == 0}
+   */
+  default double[] getLowerBoundsForAttempt(int attempt, double[] previousBestVars) {
+    return getLowerBounds();
+  }
+
+  /**
+   * Upper bounds for a specific retry attempt. Default returns {@link #getUpperBounds()}; see
+   * {@link #getLowerBoundsForAttempt(int, double[])}.
+   */
+  default double[] getUpperBoundsForAttempt(int attempt, double[] previousBestVars) {
+    return getUpperBounds();
+  }
+
+  /**
+   * Initial sigma for a specific retry attempt. Default returns {@link #getInitialSigma()}; problems
+   * that relax bounds on retry should also override this so the exploration scale tracks the new
+   * box width.
+   */
+  default double[] getInitialSigmaForAttempt(int attempt, double[] previousBestVars) {
+    return getInitialSigma();
+  }
 
   /**
    * Propagates the trajectory from the initial state using the given variables.

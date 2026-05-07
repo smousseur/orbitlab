@@ -3,6 +3,9 @@ package com.smousseur.orbitlab.simulation.mission.optimizer;
 import com.smousseur.orbitlab.core.OrbitlabException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hipparchus.random.MersenneTwister;
@@ -37,9 +40,6 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
   private final MersenneTwister rng = new MersenneTwister();
 
   // ── Adaptive thresholds ──
-  /** Cost below which we consider we've found a good basin and switch to refinement-only. */
-  private static final double GOOD_BASIN_THRESHOLD = 0.01;
-
   /** Number of refinement passes with decreasing sigma. */
   private static final int REFINEMENT_PASSES = 3;
 
@@ -98,9 +98,6 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
 
   @Override
   public OptimizationResult optimize() {
-    double[] lower = problem.getLowerBounds();
-    double[] upper = problem.getUpperBounds();
-    double[] baseSigma = problem.getInitialSigma();
     double acceptableCost = problem.getAcceptableCost();
 
     double[] globalBestVars = null;
@@ -110,6 +107,12 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
 
     int totalAttempts = maxRetries + 1;
     for (int attempt = 0; attempt < totalAttempts; attempt++) {
+      // Per-attempt bounds and sigma — problems may relax β1 (or other parameters) on retry
+      // when the previous attempt saturated; default impl returns the un-relaxed bounds.
+      double[] lower = problem.getLowerBoundsForAttempt(attempt, globalBestVars);
+      double[] upper = problem.getUpperBoundsForAttempt(attempt, globalBestVars);
+      double[] baseSigma = problem.getInitialSigmaForAttempt(attempt, globalBestVars);
+
       int idx = FastMath.min(attempt, RETRY_SIGMA_SCALE.length - 1);
       int explorationRuns = numExplorationRuns + RETRY_EXPLORATION_RUNS_BONUS[idx];
       double[] attemptSigma = scaleSigma(baseSigma, RETRY_SIGMA_SCALE[idx]);
@@ -176,6 +179,9 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
   /** Result of one full exploration + refinement pass. */
   private record SinglePassResult(double[] bestVars, double bestCost, int evaluations) {}
 
+  /** Pre-computed configuration for one parallel exploration run. */
+  private record RunConfig(double[] startPoint, double[] runSigma, int populationSize, int budget) {}
+
   private SinglePassResult runSinglePass(
       int explorationRuns,
       double[] sigma,
@@ -195,10 +201,15 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
     int explorationBudget = (int) (maxEvaluations * 0.4);
     int evalsPerExploration = explorationBudget / explorationRuns;
 
-    // ── Phase 1: Exploration ─────────────────────────────────────────────
+    // ── Phase 1: Exploration (parallel) ──────────────────────────────────
+    // Pre-compute every run's config sequentially (uses this.rng, which is not
+    // thread-safe). Each config is independent of the others' results, so they
+    // can be executed concurrently — the Hohmann warm-start lives in run 0,
+    // additional seededStartPoints come next, and remaining slots get
+    // perturbGlobal seeds around the analytical guess.
+    int parallelBudget = FastMath.min(evalsPerExploration, remainingEvals / FastMath.max(1, explorationRuns));
+    List<RunConfig> configs = new ArrayList<>(explorationRuns);
     for (int run = 0; run < explorationRuns; run++) {
-      if (remainingEvals < evalsPerExploration / 2) break;
-
       double[] startPoint;
       double[] runSigma;
       int populationSize;
@@ -211,50 +222,58 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
         startPoint = initialGuess.clone();
         runSigma = sigma.clone();
         populationSize = basePopSize;
-      } else if (bestCost < GOOD_BASIN_THRESHOLD) {
-        startPoint = perturbLocal(bestVars, sigma, 0.3);
-        runSigma = scaleSigma(sigma, 0.5);
-        populationSize = basePopSize;
       } else {
-        double[] base = (bestVars != null) ? bestVars : initialGuess;
-        startPoint = perturbGlobal(base, lower, upper, sigma, run);
+        startPoint = perturbGlobal(initialGuess, lower, upper, sigma, run);
         runSigma = new double[n];
         for (int i = 0; i < n; i++) {
           runSigma[i] = FastMath.min(sigma[i] * 1.5, (upper[i] - lower[i]) / 3.0);
         }
         populationSize = FastMath.min(basePopSize * 2, 100);
       }
-
       clampToBounds(startPoint, lower, upper);
-      int runBudget = FastMath.min(evalsPerExploration, remainingEvals);
+      configs.add(new RunConfig(startPoint, runSigma, populationSize, parallelBudget));
+    }
 
-      try {
-        CMAESRunExecutor.RunResult result =
-            executor.execute(startPoint, runSigma, populationSize, runBudget, true);
-        totalEvals += result.evaluations();
-        remainingEvals -= result.evaluations();
-
-        logger.info(
-            "Exploration {}/{}: cost={}, evals={}",
-            run + 1,
-            explorationRuns,
-            result.bestCost(),
-            result.evaluations());
-
-        if (result.bestCost() < bestCost) {
-          bestCost = result.bestCost();
-          bestVars = result.bestVariables().clone();
-        }
-
-        if (bestCost <= problem.getAcceptableCost()) {
-          logger.info("Target reached during exploration: cost={}", bestCost);
-          break;
-        }
-      } catch (Exception e) {
-        logger.warn("Exploration {} failed: {}", run + 1, e.getMessage());
-        totalEvals += runBudget / 4;
-        remainingEvals -= runBudget / 4;
+    // Reserve one core for the JME render thread so the UI stays responsive while the optimizer
+    // is running on the dedicated mission-optimizer thread.
+    int availableForOptimizer = FastMath.max(1, Runtime.getRuntime().availableProcessors() - 1);
+    int poolSize = FastMath.min(explorationRuns, availableForOptimizer);
+    ExecutorService pool = Executors.newFixedThreadPool(poolSize);
+    try {
+      List<Future<CMAESRunExecutor.RunResult>> futures = new ArrayList<>(configs.size());
+      for (RunConfig cfg : configs) {
+        futures.add(
+            pool.submit(
+                () ->
+                    executor.execute(
+                        cfg.startPoint, cfg.runSigma, cfg.populationSize, cfg.budget, true)));
       }
+      for (int run = 0; run < futures.size(); run++) {
+        try {
+          CMAESRunExecutor.RunResult result = futures.get(run).get();
+          totalEvals += result.evaluations();
+          remainingEvals -= result.evaluations();
+          logger.info(
+              "Exploration {}/{}: cost={}, evals={}",
+              run + 1,
+              explorationRuns,
+              result.bestCost(),
+              result.evaluations());
+          if (result.bestCost() < bestCost) {
+            bestCost = result.bestCost();
+            bestVars = result.bestVariables().clone();
+          }
+        } catch (Exception e) {
+          logger.warn("Exploration {} failed: {}", run + 1, e.getMessage());
+          totalEvals += parallelBudget / 4;
+          remainingEvals -= parallelBudget / 4;
+        }
+      }
+    } finally {
+      pool.shutdown();
+    }
+    if (bestVars != null && bestCost <= problem.getAcceptableCost()) {
+      logger.info("Target reached during exploration: cost={}", bestCost);
     }
 
     // ── Phase 2: Refinement cascade ──────────────────────────────────────
@@ -310,13 +329,22 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
   /**
    * Builds the list of imposed starting points for the leading exploration runs of a given attempt.
    *
-   * <p>For attempt 0 the list is empty (default behavior unchanged). For retries, includes
+   * <p>For attempt 0, prepends the pure analytical (e.g., Hohmann) seed when the problem provides
+   * one (Niveau 3.2 of the robustness roadmap), followed by the {@code initialGuess}. Retries add
    * physically diverse seeds so CMA-ES is not pulled back into the same basin.
    */
   private List<double[]> buildSeededStartPoints(
       int attempt, boolean previousSaturated, double[] lower, double[] upper) {
     if (attempt == 0) {
-      return List.of();
+      List<double[]> seeds = new ArrayList<>();
+      double[] analyticalSeed = problem.buildAnalyticalSeed();
+      if (analyticalSeed != null) {
+        seeds.add(analyticalSeed.clone());
+        seeds.add(problem.buildInitialGuess());
+        logger.info(
+            "Niveau 3.2: warm-start with pure analytical seed for run 0, initialGuess for run 1");
+      }
+      return seeds;
     }
 
     List<double[]> seeds = new ArrayList<>();
@@ -360,15 +388,6 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
   // ══════════════════════════════════════════════════════════════════════
   // Start point strategies
   // ══════════════════════════════════════════════════════════════════════
-
-  /** Small perturbation around a known good point. */
-  private double[] perturbLocal(double[] base, double[] sigma, double scale) {
-    double[] result = new double[base.length];
-    for (int i = 0; i < base.length; i++) {
-      result[i] = base[i] + rng.nextGaussian() * sigma[i] * scale;
-    }
-    return result;
-  }
 
   /** Broader perturbation mixing local and global exploration. */
   private double[] perturbGlobal(

@@ -2,6 +2,8 @@
 
 Runs `LEOMissionOptimizationTest`, downloading Orekit data if needed.
 
+If `$ARGUMENTS` is non-empty, it is interpreted as a single test-method name to run (e.g. `testSensibleMission`); otherwise the entire test class is executed.
+
 ## Steps
 
 1. **Ensure orekit-data.zip is present** in `src/test/resources/`:
@@ -56,9 +58,15 @@ Runs `LEOMissionOptimizationTest`, downloading Orekit data if needed.
      ```
 
 2. **Run the test**:
-   ```bash
-   gradle test --tests "com.smousseur.orbitlab.simulation.mission.optimizer.LEOMissionOptimizationTest"
-   ```
+   - If `$ARGUMENTS` is empty, run the whole class:
+     ```bash
+     gradle test --tests "com.smousseur.orbitlab.simulation.mission.optimizer.LEOMissionOptimizationTest"
+     ```
+   - If `$ARGUMENTS` contains a method name (e.g. `testSensibleMission`), restrict to that method:
+     ```bash
+     gradle test --tests "com.smousseur.orbitlab.simulation.mission.optimizer.LEOMissionOptimizationTest.$ARGUMENTS"
+     ```
+   - Never combine the two forms; pick exactly one based on whether `$ARGUMENTS` is empty.
 
 3. **Report results** — show whether the test passed and, if it failed, display the failure message from the test XML report at `build/test-results/test/TEST-*.xml`.
 

@@ -44,7 +44,9 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
 
   private final TransfertTwoManeuver maneuver;
   private final SpacecraftState initialState;
-  private TransferResult lastResult;
+  // Stored per-thread so multiple CMA-ES exploration runs can call propagate()/computeCost()
+  // concurrently without overwriting each other's results.
+  private final ThreadLocal<TransferResult> lastResult = new ThreadLocal<>();
 
   // ── Primary objective weights ──
   private static final double W_APO = 3.0;
@@ -94,6 +96,11 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
 
   // Niveau 2.1 — adaptive β1 bound derived from post-GT apoapsis defect
   private final double betaMax;
+
+  // Adaptive value before the π/8 floor is applied — used by the per-attempt bounds
+  // overrides to decide whether the floor is the active constraint and whether a
+  // saturation observed on a previous attempt warrants relaxing β1Max on retry.
+  private final double betaMaxAdaptive;
 
   // Niveau 2.3 — adaptive t1 upper bound (fraction of post-GT orbital period)
   private final double t1Max;
@@ -211,7 +218,7 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
     // practice, the transfer often needs β to absorb the GT's residual
     // velocity orientation regardless of the apogee gap.
     double apoDefect = (rTarget - rApoapsis) / rTarget;
-    double betaMaxAdaptive = (FastMath.PI / 12.0) * (1.0 + FastMath.max(0.0, apoDefect));
+    this.betaMaxAdaptive = (FastMath.PI / 12.0) * (1.0 + FastMath.max(0.0, apoDefect));
     this.betaMax = FastMath.max(FastMath.PI / 8.0, betaMaxAdaptive);
 
     // Niveau 2.3 — bound t1 by a fraction of the current orbital period so
@@ -246,9 +253,13 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
         dt1MaxPhysical,
         availablePropellant,
         dvAvailable);
+    boolean betaFloorActive = betaMaxAdaptive < FastMath.PI / 8.0;
     logger.info(
-        "Adaptive bounds — βMax: {} rad, t1Max: {}s, dt1Max: {}s, periapsisFloor: {}m, W_E: {}",
+        "Adaptive bounds — βMax: {} rad (adaptive={}, π/8 floor active={}), "
+            + "t1Max: {}s, dt1Max: {}s, periapsisFloor: {}m, W_E: {}",
         betaMax,
+        betaMaxAdaptive,
+        betaFloorActive,
         t1Max,
         dt1Max,
         periapsisFloor,
@@ -268,6 +279,14 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
   @Override
   public double[] buildInitialGuess() {
     return new double[] {guessT1, guessDt1, 0.0, 0.0};
+  }
+
+  @Override
+  public double[] buildAnalyticalSeed() {
+    // Niveau 3.2 — pure Hohmann analytical seed: burn immediately (t1=0) for the
+    // Hohmann burn duration, prograde coplanar (alpha1=0, beta1=0). Forces at least
+    // one CMA-ES exploration run to start in the closed-form Hohmann basin.
+    return new double[] {0.0, guessDt1, 0.0, 0.0};
   }
 
   @Override
@@ -303,20 +322,88 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
     return sigma;
   }
 
+  // Index of β1 in the parameter vector (t1=0, dt1=1, α1=2, β1=3).
+  private static final int BETA1_INDEX = 3;
+
+  // Saturation threshold for triggering relaxation: previous |β1| ≥ 0.95 × βMax.
+  private static final double BETA_SATURATION_FRACTION = 0.95;
+
+  // Per-attempt relaxation policy: minimum floor and multiplicative coefficient on
+  // the previous saturated |β1|. Index 0 is unused (attempt 0 never relaxes).
+  private static final double[] BETA_RELAX_MIN_FLOOR = {
+    Double.NaN, FastMath.PI / 6.0, FastMath.PI / 4.0
+  };
+  private static final double[] BETA_RELAX_COEFF = {Double.NaN, 1.5, 2.0};
+
+  /**
+   * Computes the relaxed β1Max for a retry attempt, given the previous attempt's best vector. The
+   * relaxation only fires when the previous solution saturated the current β1 bound (within {@link
+   * #BETA_SATURATION_FRACTION}); otherwise the current βMax is returned unchanged.
+   *
+   * <p>For attempt N ≥ 1: {@code relaxedβMax = max(BETA_RELAX_MIN_FLOOR[N], BETA_RELAX_COEFF[N] ·
+   * |β1_observed|)}.
+   */
+  private double computeRelaxedBetaMax(int attempt, double[] previousBestVars) {
+    if (attempt <= 0 || previousBestVars == null) return betaMax;
+    double prevBetaAbs = FastMath.abs(previousBestVars[BETA1_INDEX]);
+    if (prevBetaAbs < BETA_SATURATION_FRACTION * betaMax) return betaMax;
+    int idx = FastMath.min(attempt, BETA_RELAX_MIN_FLOOR.length - 1);
+    return FastMath.max(BETA_RELAX_MIN_FLOOR[idx], BETA_RELAX_COEFF[idx] * prevBetaAbs);
+  }
+
+  @Override
+  public double[] getLowerBoundsForAttempt(int attempt, double[] previousBestVars) {
+    double[] lb = getLowerBounds();
+    double relaxed = computeRelaxedBetaMax(attempt, previousBestVars);
+    if (relaxed > betaMax) {
+      lb[BETA1_INDEX] = -relaxed;
+      logger.info(
+          "Attempt {}: relaxing β1 lower bound from {} to {} (previous |β1|={})",
+          attempt,
+          -betaMax,
+          -relaxed,
+          FastMath.abs(previousBestVars[BETA1_INDEX]));
+    }
+    return lb;
+  }
+
+  @Override
+  public double[] getUpperBoundsForAttempt(int attempt, double[] previousBestVars) {
+    double[] ub = getUpperBounds();
+    double relaxed = computeRelaxedBetaMax(attempt, previousBestVars);
+    if (relaxed > betaMax) {
+      ub[BETA1_INDEX] = relaxed;
+    }
+    return ub;
+  }
+
+  @Override
+  public double[] getInitialSigmaForAttempt(int attempt, double[] previousBestVars) {
+    double[] lo = getLowerBoundsForAttempt(attempt, previousBestVars);
+    double[] hi = getUpperBoundsForAttempt(attempt, previousBestVars);
+    double[] sigma = new double[lo.length];
+    for (int i = 0; i < sigma.length; i++) {
+      sigma[i] = 0.3 * (hi[i] - lo[i]);
+    }
+    return sigma;
+  }
+
   @Override
   public SpacecraftState propagate(double[] variables) {
-    lastResult = maneuver.propagateForOptimization(initialState, variables);
-    return lastResult.finalState();
+    TransferResult result = maneuver.propagateForOptimization(initialState, variables);
+    lastResult.set(result);
+    return result.finalState();
   }
 
   /**
-   * Returns the transfer result from the most recent propagation, containing the post-burn-1 orbit
-   * and the resolved burn-2 parameters.
+   * Returns the transfer result from the most recent propagation on the calling thread,
+   * containing the post-burn-1 orbit and the resolved burn-2 parameters.
    *
-   * @return the last transfer result, or {@code null} if no propagation has been performed yet
+   * @return the last transfer result for this thread, or {@code null} if no propagation has been
+   *     performed on this thread yet
    */
   public TransferResult getLastTransferResult() {
-    return lastResult;
+    return lastResult.get();
   }
 
   @Override
@@ -331,13 +418,14 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
     //   3. Nothing usable → fall back to the flat 1e6 wall.
     double elapsed = state.getDate().durationFrom(initialState.getDate());
     if (elapsed < 1.0) {
-      if (lastResult != null) {
-        MinAltitudeTracker failureTracker = lastResult.altitudeTracker();
+      TransferResult tr = lastResult.get();
+      if (tr != null) {
+        MinAltitudeTracker failureTracker = tr.altitudeTracker();
         if (failureTracker != null && failureTracker.getMinAltitude() != Double.MAX_VALUE) {
           double underground = FastMath.max(0.0, -failureTracker.getMinAltitude());
           return 1e3 + underground / 1000.0;
         }
-        KeplerianOrbit postBurn1 = lastResult.orbitPostBurn1();
+        KeplerianOrbit postBurn1 = tr.orbitPostBurn1();
         if (postBurn1 != null) {
           double aErr = FastMath.abs(postBurn1.getA() - aTarget) / aTarget;
           double eErr = postBurn1.getE();
@@ -376,7 +464,8 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
     barrier += barrierBelow(periAlt, periapsisFloor); // périapsis géodésique
 
     double altMaxPenalty = 0.0;
-    MinAltitudeTracker tracker = lastResult != null ? lastResult.altitudeTracker() : null;
+    TransferResult tr = lastResult.get();
+    MinAltitudeTracker tracker = tr != null ? tr.altitudeTracker() : null;
     if (tracker != null) {
       barrier += barrierBelow(tracker.getMinAltitude(), ALT_MIN);
       if (tracker.getMaxAltitude() > altMax) {
@@ -509,7 +598,8 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
     double altMaxPenalty = 0.0;
     boolean altMinHit = false;
     boolean altMaxHit = false;
-    MinAltitudeTracker tracker = lastResult != null ? lastResult.altitudeTracker() : null;
+    TransferResult tr = lastResult.get();
+    MinAltitudeTracker tracker = tr != null ? tr.altitudeTracker() : null;
     if (tracker != null) {
       altMinBarrier = barrierBelow(tracker.getMinAltitude(), ALT_MIN);
       altMinHit = tracker.getMinAltitude() <= ALT_MIN;
