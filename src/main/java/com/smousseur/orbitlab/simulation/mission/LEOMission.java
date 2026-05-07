@@ -62,7 +62,7 @@ public class LEOMission extends Mission {
    */
   public LEOMission(
       String name, double targetAltitude, double latitude, double longitude, double altitude) {
-    super(name, buildVehicle(), buildStages(targetAltitude), buildObjective(targetAltitude));
+    super(name, buildVehicle(), buildStages(targetAltitude), buildObjective(targetAltitude, latitude));
     this.latitude = latitude;
     this.longitude = longitude;
     this.altitude = altitude;
@@ -106,7 +106,8 @@ public class LEOMission extends Mission {
         new CoastingStage("Coasting", null));
   }
 
-  private static MissionObjective buildObjective(double targetAltitude) {
-    return new OrbitInsertionObjective(SolarSystemBody.EARTH, targetAltitude, 0);
+  private static MissionObjective buildObjective(double targetAltitude, double latitudeDegrees) {
+    return new OrbitInsertionObjective(
+        SolarSystemBody.EARTH, targetAltitude, 0, FastMath.toRadians(latitudeDegrees));
   }
 }

@@ -53,6 +53,9 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
   private static final double W_PERI = 10.0;
   private static final double W_E_BASE = 2.0;
   private static final double W_V = 1.0;
+  // Penalize inclination drift away from the target plane (rad²); discourages
+  // CMA-ES from using out-of-plane thrust (β1) to compensate for in-plane errors.
+  private static final double W_I = 50.0;
 
   // Reference altitude for adaptive eccentricity weighting (Niveau 2.4)
   private static final double W_E_REF_ALT = 400_000.0;
@@ -112,6 +115,9 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
   private final double periapsisFloor;
   private final double weightE;
 
+  // Target orbital plane inclination (rad), used by the inclination penalty term
+  private final double targetInclination;
+
   /**
    * Creates a two-burn transfer optimization problem.
    *
@@ -124,16 +130,19 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
    * @param targetAltitude the desired circular orbit altitude in meters above the Earth's surface
    * @param propulsionSystem the propulsion system used for the transfer burns
    * @param vehicleMinMass minimum allowable vehicle mass after burns (dry mass)
+   * @param targetInclination target orbital plane inclination in radians
    */
   public TransferTwoManeuverProblem(
       TransfertTwoManeuver maneuver,
       SpacecraftState initialState,
       double targetAltitude,
       PropulsionSystem propulsionSystem,
-      double vehicleMinMass) {
+      double vehicleMinMass,
+      double targetInclination) {
 
     this.initialState = initialState;
     this.maneuver = maneuver;
+    this.targetInclination = targetInclination;
     KeplerianOrbit initialOrbit = new KeplerianOrbit(initialState.getOrbit());
     double mu = initialOrbit.getMu();
 
@@ -264,6 +273,11 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
         dt1Max,
         periapsisFloor,
         weightE);
+    logger.info(
+        "Inclination target: {} rad ({}°), W_I={}",
+        targetInclination,
+        FastMath.toDegrees(targetInclination),
+        W_I);
   }
 
   @Override
@@ -451,6 +465,7 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
     double errPeriAbs = (periAlt - targetAlt) / ABS_ERR_SCALE;
     double errE = finalOrbit.getE();
     double errV = Physics.computeRadialVelocity(state) / vCircTarget;
+    double errI = finalOrbit.getI() - targetInclination;
 
     double objective =
         W_APO * errApo * errApo
@@ -458,7 +473,8 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
             + W_APO_ABS * errApoAbs * errApoAbs
             + W_PERI_ABS * errPeriAbs * errPeriAbs
             + weightE * errE * errE
-            + W_V * errV * errV;
+            + W_V * errV * errV
+            + W_I * errI * errI;
 
     double barrier = 0.0;
     barrier += barrierBelow(periAlt, periapsisFloor); // périapsis géodésique
