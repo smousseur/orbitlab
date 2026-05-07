@@ -44,7 +44,9 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
 
   private final TransfertTwoManeuver maneuver;
   private final SpacecraftState initialState;
-  private TransferResult lastResult;
+  // Stored per-thread so multiple CMA-ES exploration runs can call propagate()/computeCost()
+  // concurrently without overwriting each other's results.
+  private final ThreadLocal<TransferResult> lastResult = new ThreadLocal<>();
 
   // ── Primary objective weights ──
   private static final double W_APO = 3.0;
@@ -313,18 +315,20 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
 
   @Override
   public SpacecraftState propagate(double[] variables) {
-    lastResult = maneuver.propagateForOptimization(initialState, variables);
-    return lastResult.finalState();
+    TransferResult result = maneuver.propagateForOptimization(initialState, variables);
+    lastResult.set(result);
+    return result.finalState();
   }
 
   /**
-   * Returns the transfer result from the most recent propagation, containing the post-burn-1 orbit
-   * and the resolved burn-2 parameters.
+   * Returns the transfer result from the most recent propagation on the calling thread,
+   * containing the post-burn-1 orbit and the resolved burn-2 parameters.
    *
-   * @return the last transfer result, or {@code null} if no propagation has been performed yet
+   * @return the last transfer result for this thread, or {@code null} if no propagation has been
+   *     performed on this thread yet
    */
   public TransferResult getLastTransferResult() {
-    return lastResult;
+    return lastResult.get();
   }
 
   @Override
@@ -339,13 +343,14 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
     //   3. Nothing usable → fall back to the flat 1e6 wall.
     double elapsed = state.getDate().durationFrom(initialState.getDate());
     if (elapsed < 1.0) {
-      if (lastResult != null) {
-        MinAltitudeTracker failureTracker = lastResult.altitudeTracker();
+      TransferResult tr = lastResult.get();
+      if (tr != null) {
+        MinAltitudeTracker failureTracker = tr.altitudeTracker();
         if (failureTracker != null && failureTracker.getMinAltitude() != Double.MAX_VALUE) {
           double underground = FastMath.max(0.0, -failureTracker.getMinAltitude());
           return 1e3 + underground / 1000.0;
         }
-        KeplerianOrbit postBurn1 = lastResult.orbitPostBurn1();
+        KeplerianOrbit postBurn1 = tr.orbitPostBurn1();
         if (postBurn1 != null) {
           double aErr = FastMath.abs(postBurn1.getA() - aTarget) / aTarget;
           double eErr = postBurn1.getE();
@@ -384,7 +389,8 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
     barrier += barrierBelow(periAlt, periapsisFloor); // périapsis géodésique
 
     double altMaxPenalty = 0.0;
-    MinAltitudeTracker tracker = lastResult != null ? lastResult.altitudeTracker() : null;
+    TransferResult tr = lastResult.get();
+    MinAltitudeTracker tracker = tr != null ? tr.altitudeTracker() : null;
     if (tracker != null) {
       barrier += barrierBelow(tracker.getMinAltitude(), ALT_MIN);
       if (tracker.getMaxAltitude() > altMax) {
@@ -517,7 +523,8 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
     double altMaxPenalty = 0.0;
     boolean altMinHit = false;
     boolean altMaxHit = false;
-    MinAltitudeTracker tracker = lastResult != null ? lastResult.altitudeTracker() : null;
+    TransferResult tr = lastResult.get();
+    MinAltitudeTracker tracker = tr != null ? tr.altitudeTracker() : null;
     if (tracker != null) {
       altMinBarrier = barrierBelow(tracker.getMinAltitude(), ALT_MIN);
       altMinHit = tracker.getMinAltitude() <= ALT_MIN;

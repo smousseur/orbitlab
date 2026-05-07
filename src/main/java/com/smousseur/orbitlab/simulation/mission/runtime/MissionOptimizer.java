@@ -107,6 +107,10 @@ public class MissionOptimizer {
         OptimizerDiagnostics.logBoundReport(logger, stage.getName(), boundFlags, paramNames);
 
         if (problem instanceof TransferTwoManeuverProblem transferProblem) {
+          // Re-propagate on the calling thread: TransferTwoManeuverProblem's lastResult is
+          // ThreadLocal so post-optimization callers running on a different thread (the parallel
+          // exploration workers) wouldn't see the worker-thread state.
+          transferProblem.propagate(result.bestVariables());
           TransferResult transferResult = transferProblem.getLastTransferResult();
           logger.info(
               "Post burn1 orbit: {}",
