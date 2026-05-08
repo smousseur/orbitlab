@@ -7,6 +7,7 @@ import com.smousseur.orbitlab.simulation.mission.OptimizableMissionStage;
 import com.smousseur.orbitlab.simulation.mission.maneuver.TransfertTwoManeuver;
 import com.smousseur.orbitlab.simulation.mission.maneuver.TransfertTwoManeuver.Burn1Params;
 import com.smousseur.orbitlab.simulation.mission.maneuver.TransfertTwoManeuver.ResolvedBurn2;
+import com.smousseur.orbitlab.simulation.mission.objective.OrbitInsertionObjective;
 import com.smousseur.orbitlab.simulation.mission.optimizer.OptimizationResult;
 import com.smousseur.orbitlab.simulation.mission.optimizer.problems.TransferTwoManeuverProblem;
 import com.smousseur.orbitlab.simulation.mission.vehicle.ActiveStageInfo;
@@ -78,12 +79,14 @@ public class TransfertTwoManeuverStage extends MissionStage
         mission.getVehicle().resolveActiveStage(mission.getCurrentState().getMass());
     // Min viable mass = dry mass of active stage + dry mass of all stages above
     double vehicleMinMass = activeStage.remainingDryMass();
+    double targetInclination = ((OrbitInsertionObjective) mission.getObjective()).inclination();
     return new TransferTwoManeuverProblem(
         maneuver,
         mission.getCurrentState(),
         targetAltitude,
         activeStage.propulsion(),
-        vehicleMinMass);
+        vehicleMinMass,
+        targetInclination);
   }
 
   @Override

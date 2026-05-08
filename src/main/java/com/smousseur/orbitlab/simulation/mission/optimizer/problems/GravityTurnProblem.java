@@ -29,6 +29,11 @@ import org.orekit.utils.PVCoordinates;
  */
 public class GravityTurnProblem implements TrajectoryProblem {
   private static final double W_P = 9.e-5;
+  // Soft target toward FPA=0° inside the admissible window. Without a
+  // gradient inside [fpaMin, fpaMax] CMA-ES has no preference and may
+  // settle on the lower bound (e.g. -0.5° at 200 km targets), handing off
+  // a descending state that slows the downstream transfer phase by 2-5×.
+  private static final double W_FPA_SOFT = 25.0;
 
   private final GravityTurnManeuver maneuver;
   private final SpacecraftState initialState;
@@ -141,7 +146,7 @@ public class GravityTurnProblem implements TrajectoryProblem {
       cost += 3.0 * sq((apogee - constraints.maxApogee()) / constraints.targetApogee());
     }
 
-    // 3. Flight path angle — penalize only outside the [fpaMin, fpaMax] window
+    // 3. Flight path angle — penalize outside the [fpaMin, fpaMax] window
     double fpaMin = Math.toRadians(constraints.targetFlightPathAngleMinDeg());
     double fpaMax = Math.toRadians(constraints.targetFlightPathAngleMaxDeg());
     if (flightPathAngle < fpaMin) {
@@ -149,6 +154,10 @@ public class GravityTurnProblem implements TrajectoryProblem {
     } else if (flightPathAngle > fpaMax) {
       cost += 2.0 * sq(flightPathAngle - fpaMax);
     }
+    // Soft pull toward FPA=0° (ideal Hohmann hand-off). Provides a gradient
+    // inside the admissible window so CMA-ES does not stochastically settle
+    // on edge solutions like FPA=-0.5° that slow transfer convergence.
+    cost += W_FPA_SOFT * sq(flightPathAngle);
 
     // 4. Tangential velocity — must be high enough for orbit insertion
     double minVtan = constraints.minTangentialVelocity();

@@ -4,6 +4,7 @@ import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.mission.LEOMission;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemeris;
+import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemerisPoint;
 import com.smousseur.orbitlab.simulation.mission.runtime.MissionComputeResult;
 import com.smousseur.orbitlab.simulation.mission.runtime.MissionOptimizer;
 import java.util.ArrayList;
@@ -11,6 +12,7 @@ import java.util.Collections;
 import java.util.List;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.hipparchus.util.FastMath;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
@@ -18,9 +20,12 @@ import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.RepetitionInfo;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.orekit.orbits.KeplerianOrbit;
 import org.orekit.propagation.SpacecraftState;
 import org.orekit.time.AbsoluteDate;
 import org.orekit.time.TimeScalesFactory;
+import org.orekit.utils.Constants;
+import org.orekit.utils.PVCoordinates;
 
 public class LEOMissionOptimizationTest extends AbstractTrajectoryOptimizerTest {
   private static final Logger logger = LogManager.getLogger(LEOMissionOptimizationTest.class);
@@ -138,6 +143,19 @@ public class LEOMissionOptimizationTest extends AbstractTrajectoryOptimizerTest 
         "[{}km] Max coast altitude: {} m", (int) (targetAltitude / 1000), results.maxAltitude);
     logger.info(
         "[{}km] Min coast altitude: {} m", (int) (targetAltitude / 1000), results.minAltitude);
+
+    MissionEphemerisPoint last = ephemeris.lastPoint();
+    KeplerianOrbit finalOrbit =
+        new KeplerianOrbit(
+            new PVCoordinates(last.position(), last.velocity()),
+            OrekitService.get().gcrf(),
+            last.time(),
+            Constants.WGS84_EARTH_MU);
+    logger.info(
+        "[{}km] Final inclination: {} rad ({}°)",
+        (int) (targetAltitude / 1000),
+        finalOrbit.getI(),
+        FastMath.toDegrees(finalOrbit.getI()));
 
     double errorMargin = ORBIT_MARGIN_RATIO * targetAltitude;
     Assertions.assertTrue(
