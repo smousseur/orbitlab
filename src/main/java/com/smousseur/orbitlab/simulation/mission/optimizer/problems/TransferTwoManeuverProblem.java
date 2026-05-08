@@ -249,7 +249,11 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
         FastMath.max(
             PERIAPSIS_FLOOR_MIN, FastMath.min(targetAltitude * 0.5, targetAltitude - 100_000.0));
     this.periapsisFloor = FastMath.min(floorCandidate, targetAltitude / 1.6);
-    this.weightE = W_E_BASE * FastMath.max(1.0, W_E_REF_ALT / targetAltitude);
+    // Quadratic ramp on the W_E_REF_ALT/targetAltitude ratio so the eccentricity
+    // term dominates more aggressively at very low altitudes (e.g. 185 km),
+    // where the test margin (±7%) leaves little room for residual ellipticity.
+    double altRatio = FastMath.max(1.0, W_E_REF_ALT / targetAltitude);
+    this.weightE = W_E_BASE * altRatio * altRatio;
 
     logger.info(
         "Initial guess for burn 1: T1={}, dt1={}, dv1={}, dv2≈{}",
