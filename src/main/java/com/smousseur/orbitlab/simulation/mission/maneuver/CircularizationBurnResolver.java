@@ -13,21 +13,21 @@ import org.orekit.propagation.events.handlers.RecordAndContinue;
 import org.orekit.propagation.numerical.NumericalPropagator;
 
 /**
- * Resolves burn 2 (circularization at next apoapsis) deterministically from a post-burn-1 state.
+ * Resolves the circularization burn (at next apoapsis) deterministically from a post-burn-1 state.
  *
  * <p>Pure computation — no mutable state. The active stage propulsion is resolved automatically
  * from the spacecraft mass via {@link Vehicle#resolveActiveStage(double)}.
  */
-final class Burn2Resolver {
+final class CircularizationBurnResolver {
 
   private final Vehicle vehicle;
 
-  Burn2Resolver(Vehicle vehicle) {
+  CircularizationBurnResolver(Vehicle vehicle) {
     this.vehicle = vehicle;
   }
 
   /**
-   * Resolves burn 2 from the post-burn-1 state:
+   * Resolves the circularization burn from the post-burn-1 state:
    *
    * <ol>
    *   <li>Detect the next apoapsis after burn 1 (with J2)
@@ -37,9 +37,10 @@ final class Burn2Resolver {
    *   <li>Center burn on apoapsis: dtCoast = dtApoapsis - dt2/2
    * </ol>
    *
-   * @return resolved burn 2 parameters, or null on failure
+   * @return resolved circularization burn parameters, or null on failure
    */
-  TransfertTwoManeuver.ResolvedBurn2 resolveBurn2(SpacecraftState stateAfterBurn1) {
+  TransfertTwoManeuver.ResolvedCircularizationBurn resolveCircularizationBurn(
+      SpacecraftState stateAfterBurn1) {
     double dtApoapsis = detectTimeToApoapsis(stateAfterBurn1);
     if (Double.isNaN(dtApoapsis)) {
       return null;
@@ -49,7 +50,7 @@ final class Burn2Resolver {
 
     if (dvNeeded <= 0.0) {
       // Already circular or hyperbolic — no burn needed
-      return new TransfertTwoManeuver.ResolvedBurn2(dtApoapsis, 0.0, 0.0);
+      return new TransfertTwoManeuver.ResolvedCircularizationBurn(dtApoapsis, 0.0, 0.0);
     }
 
     ActiveStageInfo stage = vehicle.resolveActiveStage(stateAfterBurn1.getMass());
@@ -62,7 +63,7 @@ final class Burn2Resolver {
     // Center burn on apoapsis
     double dtCoast = FastMath.max(dtApoapsis - dt2 / 2.0, 0.0);
 
-    return new TransfertTwoManeuver.ResolvedBurn2(dtCoast, dt2, dvNeeded);
+    return new TransfertTwoManeuver.ResolvedCircularizationBurn(dtCoast, dt2, dvNeeded);
   }
 
   private static double getDvNeeded(SpacecraftState stateAfterBurn1) {

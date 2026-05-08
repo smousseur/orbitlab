@@ -107,7 +107,7 @@ public class LEOMission extends Mission {
   }
 
   private static MissionObjective buildObjective(double targetAltitude, double latitudeDegrees) {
-    return new OrbitInsertionObjective(
-        SolarSystemBody.EARTH, targetAltitude, 0, FastMath.toRadians(latitudeDegrees));
+    return OrbitInsertionObjective.circular(
+        SolarSystemBody.EARTH, targetAltitude, FastMath.toRadians(latitudeDegrees));
   }
 }
