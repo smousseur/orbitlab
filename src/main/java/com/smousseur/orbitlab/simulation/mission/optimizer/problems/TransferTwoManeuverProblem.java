@@ -84,7 +84,11 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
   // Precomputed values
   private final double aTarget;
   private final double vCircTarget;
-  private final double effectiveTargetAlt;
+  // Effective target altitudes (geodetic, m), J2-compensated. Equal for a circular target.
+  private final double perigeeTarget;
+  private final double apogeeTarget;
+  // Target eccentricity derived from (perigeeTarget, apogeeTarget). Zero for a circular target.
+  private final double eTarget;
 
   // Hohmann-like guess values (precomputed)
   private final double guessT1;
@@ -125,9 +129,13 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
    * short-period altitude compensation to the target, and determines physical upper bounds on burn
    * duration from available propellant.
    *
+   * <p>The target is described by a (perigee, apogee) altitude pair. For a circular target, both
+   * altitudes are equal. The circularization burn (burn 2) targets the apogee altitude.
+   *
    * @param maneuver the two-burn transfer maneuver that handles propagation
    * @param initialState the spacecraft state at the start of the transfer
-   * @param targetAltitude the desired circular orbit altitude in meters above the Earth's surface
+   * @param perigeeAltitude target perigee altitude in meters above the Earth's surface
+   * @param apogeeAltitude target apogee altitude in meters above the Earth's surface
    * @param propulsionSystem the propulsion system used for the transfer burns
    * @param vehicleMinMass minimum allowable vehicle mass after burns (dry mass)
    * @param targetInclination target orbital plane inclination in radians
@@ -135,7 +143,8 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
   public TransferTwoManeuverProblem(
       TransfertTwoManeuver maneuver,
       SpacecraftState initialState,
-      double targetAltitude,
+      double perigeeAltitude,
+      double apogeeAltitude,
       PropulsionSystem propulsionSystem,
       double vehicleMinMass,
       double targetInclination) {
@@ -148,28 +157,42 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
 
     // ── J2 short-period altitude compensation ──
     // The osculating radius oscillates around the mean with amplitude ~J2*Re²/a
-    // To center the geodetic altitude excursions on targetAltitude,
-    // we target a slightly higher mean altitude
-    double rNominal = EARTH_RADIUS + targetAltitude;
+    // To center the geodetic altitude excursions on the target altitudes, we target
+    // slightly higher mean altitudes. Compute the offset from the apogee (where the
+    // circularization burn lands) and apply it uniformly to both apsides — preserves
+    // the historical LEO behavior (rp == ra) and remains a small constant offset for
+    // elliptic targets.
+    double rNominal = EARTH_RADIUS + apogeeAltitude;
     double j2 = 1.0826e-3; // J2 coefficient
     double sinI = FastMath.sin(initialOrbit.getI());
     double j2Amplitude = j2 * EARTH_RADIUS * EARTH_RADIUS / rNominal * (1.0 - 1.5 * sinI * sinI);
     double altitudeOffset = j2Amplitude / 2.0;
 
-    double effectiveTargetAlt = targetAltitude + altitudeOffset;
+    double effectivePerigeeAlt = perigeeAltitude + altitudeOffset;
+    double effectiveApogeeAlt = apogeeAltitude + altitudeOffset;
     logger.info(
-        "J2 altitude offset: {} m, effective target: {} m", altitudeOffset, effectiveTargetAlt);
+        "J2 altitude offset: {} m, effective perigee: {} m, effective apogee: {} m",
+        altitudeOffset,
+        effectivePerigeeAlt,
+        effectiveApogeeAlt);
 
-    double rTarget = EARTH_RADIUS + effectiveTargetAlt;
+    this.perigeeTarget = effectivePerigeeAlt;
+    this.apogeeTarget = effectiveApogeeAlt;
 
-    this.effectiveTargetAlt = effectiveTargetAlt;
+    double rPerigeeTarget = EARTH_RADIUS + effectivePerigeeAlt;
+    double rApogeeTarget = EARTH_RADIUS + effectiveApogeeAlt;
+    this.eTarget =
+        (rApogeeTarget - rPerigeeTarget) / (rApogeeTarget + rPerigeeTarget);
+
+    // The circularization burn happens at apogee — use it as the target circular radius.
+    double rTarget = rApogeeTarget;
     this.aTarget = rTarget;
     this.vCircTarget = FastMath.sqrt(mu / rTarget);
     // At low altitudes (≤400 km) the previous 5 % cap leaves <20 km of margin,
     // which the J2 oscillation alone can violate. Use a floor of 20 km so the
     // bound is meaningful below LEO; at higher altitudes the relative term
     // dominates and behaves as before.
-    this.altMax = targetAltitude + FastMath.max(20_000.0, 0.05 * targetAltitude);
+    this.altMax = apogeeAltitude + FastMath.max(20_000.0, 0.05 * apogeeAltitude);
 
     double aInitial = initialOrbit.getA();
     double eInitial = initialOrbit.getE();
@@ -215,9 +238,9 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
     if (dvHohmannTotal > dvAvailable) {
       throw new OrbitlabException(
           String.format(
-              "Target altitude %.0f m infeasible with current vehicle stack: "
+              "Target orbit (perigee %.0f m, apogee %.0f m) infeasible with current vehicle stack: "
                   + "Hohmann Δv ≈ %.0f m/s exceeds available Δv ≈ %.0f m/s",
-              targetAltitude, dvHohmannTotal, dvAvailable));
+              perigeeAltitude, apogeeAltitude, dvHohmannTotal, dvAvailable));
     }
 
     // Niveau 2.1 — adaptive β1 bound. apoDefect quantifies how much apogee
@@ -245,14 +268,16 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
     // Additional cap at target/1.6 prevents the barrier from biting the target
     // at low altitudes (e.g. at 185 km, PERIAPSIS_FLOOR_MIN=120 km would
     // saturate up to ~180 km — almost the target itself).
+    // Anchored on the perigee target — the most constraining apside.
     double floorCandidate =
         FastMath.max(
-            PERIAPSIS_FLOOR_MIN, FastMath.min(targetAltitude * 0.5, targetAltitude - 100_000.0));
-    this.periapsisFloor = FastMath.min(floorCandidate, targetAltitude / 1.6);
-    // Quadratic ramp on the W_E_REF_ALT/targetAltitude ratio so the eccentricity
+            PERIAPSIS_FLOOR_MIN,
+            FastMath.min(perigeeAltitude * 0.5, perigeeAltitude - 100_000.0));
+    this.periapsisFloor = FastMath.min(floorCandidate, perigeeAltitude / 1.6);
+    // Quadratic ramp on the W_E_REF_ALT/perigeeAltitude ratio so the eccentricity
     // term dominates more aggressively at very low altitudes (e.g. 185 km),
     // where the test margin (±7%) leaves little room for residual ellipticity.
-    double altRatio = FastMath.max(1.0, W_E_REF_ALT / targetAltitude);
+    double altRatio = FastMath.max(1.0, W_E_REF_ALT / perigeeAltitude);
     this.weightE = W_E_BASE * altRatio * altRatio;
 
     logger.info(
@@ -458,16 +483,18 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
     OneAxisEllipsoid earth = OrekitService.get().getEarthEllipsoid();
     double apoAlt = computeGeodeticAltitude(finalOrbit, FastMath.PI, earth); // ν = π
     double periAlt = computeGeodeticAltitude(finalOrbit, 0.0, earth); // ν = 0
-    double targetAlt = effectiveTargetAlt;
 
     // Niveau 2.4 — relative errors keep the cost dimensionless across altitudes.
-    double errApo = (apoAlt - targetAlt) / targetAlt;
-    double errPeri = (periAlt - targetAlt) / targetAlt;
+    double errApo = (apoAlt - apogeeTarget) / apogeeTarget;
+    double errPeri = (periAlt - perigeeTarget) / perigeeTarget;
     // Niveau 2.4 — small absolute terms preserve sensitivity at high altitudes
     // where relative errors get arbitrarily small for non-trivial deviations.
-    double errApoAbs = (apoAlt - targetAlt) / ABS_ERR_SCALE;
-    double errPeriAbs = (periAlt - targetAlt) / ABS_ERR_SCALE;
-    double errE = finalOrbit.getE();
+    double errApoAbs = (apoAlt - apogeeTarget) / ABS_ERR_SCALE;
+    double errPeriAbs = (periAlt - perigeeTarget) / ABS_ERR_SCALE;
+    // Penalize deviation from the target eccentricity (0 for circular targets).
+    // Forces the two apsides to converge to the target shape, not just to their
+    // individual altitudes.
+    double errE = finalOrbit.getE() - eTarget;
     double errV = Physics.computeRadialVelocity(state) / vCircTarget;
     double errI = finalOrbit.getI() - targetInclination;
 
@@ -552,7 +579,8 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
    *
    * <p>Burn 1 total uses the rocket equation with the propulsion characteristics of the stage
    * active at transfer entry. The useful projection is {@code cos α · cos β} of that scalar Δv.
-   * Burn 2 is resolved deterministically via {@link TransfertTwoManeuver#resolveBurn2FromInitial}.
+   * The circularization burn is resolved deterministically via {@link
+   * TransfertTwoManeuver#resolveCircularizationBurnFromInitial}.
    *
    * @param bestVariables the optimized 4-element parameter vector
    * @return the Δv breakdown
@@ -567,9 +595,9 @@ public class TransferTwoManeuverProblem implements TrajectoryProblem {
     double useful = dv1Total * FastMath.cos(params.alpha1()) * FastMath.cos(params.beta1());
     double wasted = dv1Total - useful;
 
-    TransfertTwoManeuver.ResolvedBurn2 burn2 =
-        maneuver.resolveBurn2FromInitial(initialState, params);
-    double dv2 = burn2 != null ? burn2.dvNeeded() : Double.NaN;
+    TransfertTwoManeuver.ResolvedCircularizationBurn circBurn =
+        maneuver.resolveCircularizationBurnFromInitial(initialState, params);
+    double dv2 = circBurn != null ? circBurn.dvNeeded() : Double.NaN;
 
     return new DvBreakdown(dv1Total, useful, wasted, dv2);
   }

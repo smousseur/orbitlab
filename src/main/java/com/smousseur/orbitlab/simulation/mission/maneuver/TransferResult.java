@@ -14,13 +14,13 @@ import org.orekit.propagation.SpacecraftState;
  *     penalty cases
  * @param orbitPostBurn1 the Keplerian orbit after burn 1 completes, or {@code null} if burn 1
  *     failed
- * @param resolvedBurn2 the deterministically resolved burn 2 parameters, or {@code null} if burn
- *     2 could not be resolved
+ * @param circularizationBurn the deterministically resolved circularization burn parameters, or
+ *     {@code null} if the circularization burn could not be resolved
  * @param altitudeTracker the altitude tracker that recorded min/max altitudes during the transfer,
  *     or {@code null} in early penalty cases
  */
 public record TransferResult(
     SpacecraftState finalState,
     KeplerianOrbit orbitPostBurn1,
-    TransfertTwoManeuver.ResolvedBurn2 resolvedBurn2,
+    TransfertTwoManeuver.ResolvedCircularizationBurn circularizationBurn,
     MinAltitudeTracker altitudeTracker) {}

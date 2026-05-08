@@ -28,8 +28,9 @@ import org.orekit.utils.Constants;
  *       altitude. The result is a near-circular orbit with a slight residual eccentricity.
  *   <li><b>Coast to next apoapsis</b> — the spacecraft coasts approximately one full orbit to reach
  *       the apoapsis of the post-burn-1 orbit.
- *   <li><b>Burn 2 (at apoapsis)</b> — deterministic prograde circularization. Raises the perigee to
- *       match the apoapsis, producing a circular orbit. Centered on the apoapsis passage.
+ *   <li><b>Circularization burn (at apoapsis)</b> — deterministic prograde correction. Raises the
+ *       perigee to match the apoapsis, producing a circular orbit. Centered on the apoapsis
+ *       passage.
  * </ol>
  *
  * <p>Optimization parameter vector (4 dimensions — only burn 1):
@@ -50,7 +51,7 @@ public class TransfertTwoManeuver {
 
   private final Vehicle vehicle;
   private final double targetAltitude;
-  private final Burn2Resolver burn2Resolver;
+  private final CircularizationBurnResolver circularizationBurnResolver;
 
   /**
    * Creates a two-burn transfer maneuver targeting the specified circular orbit altitude.
@@ -61,7 +62,7 @@ public class TransfertTwoManeuver {
   public TransfertTwoManeuver(Vehicle vehicle, double targetAltitude) {
     this.vehicle = vehicle;
     this.targetAltitude = targetAltitude;
-    this.burn2Resolver = new Burn2Resolver(vehicle);
+    this.circularizationBurnResolver = new CircularizationBurnResolver(vehicle);
   }
 
   // ════════════════════════════════════════════════════════════════════════
@@ -79,13 +80,13 @@ public class TransfertTwoManeuver {
   public record Burn1Params(double t1, double dt1, double alpha1, double beta1) {}
 
   /**
-   * Deterministically resolved burn 2 parameters for circularization at the next apoapsis.
+   * Deterministically resolved circularization burn parameters (next apoapsis).
    *
-   * @param dtCoast coast duration from end of burn 1 to start of burn 2 (seconds)
-   * @param dt2 duration of burn 2 (seconds)
+   * @param dtCoast coast duration from end of burn 1 to start of the circularization burn (seconds)
+   * @param dt2 duration of the circularization burn (seconds)
    * @param dvNeeded the delta-V required for circularization (m/s)
    */
-  public record ResolvedBurn2(double dtCoast, double dt2, double dvNeeded) {}
+  public record ResolvedCircularizationBurn(double dtCoast, double dt2, double dvNeeded) {}
 
   /**
    * Decodes a raw CMA-ES variable array into typed burn 1 parameters.
@@ -130,28 +131,29 @@ public class TransfertTwoManeuver {
       return new TransferResult(initialState, orbitPostBurn1, null, null);
     }
 
-    // ── Step 2: Resolve burn 2 at next apoapsis ──
-    ResolvedBurn2 burn2 = burn2Resolver.resolveBurn2(stateAfterBurn1);
-    if (burn2 == null) {
+    // ── Step 2: Resolve circularization burn at next apoapsis ──
+    ResolvedCircularizationBurn circBurn =
+        circularizationBurnResolver.resolveCircularizationBurn(stateAfterBurn1);
+    if (circBurn == null) {
       return new TransferResult(initialState, orbitPostBurn1, null, null); // penalty
     }
 
     // ── Step 3: Full propagation with both burns ──
     NumericalPropagator propagator = OrekitService.get().createOptimizationPropagator();
     propagator.setInitialState(initialState);
-    MinAltitudeTracker tracker = configure(propagator, initialState, params, burn2);
+    MinAltitudeTracker tracker = configure(propagator, initialState, params, circBurn);
 
-    double totalTime = totalDuration(params, burn2);
+    double totalTime = totalDuration(params, circBurn);
     AbsoluteDate endDate = initialState.getDate().shiftedBy(totalTime);
     try {
       SpacecraftState finalState = propagator.propagate(endDate);
       if (Math.abs(finalState.getDate().durationFrom(endDate)) > 1.0) {
-        return new TransferResult(initialState, orbitPostBurn1, burn2, tracker); // penalty
+        return new TransferResult(initialState, orbitPostBurn1, circBurn, tracker); // penalty
       }
-      return new TransferResult(finalState, orbitPostBurn1, burn2, tracker);
+      return new TransferResult(finalState, orbitPostBurn1, circBurn, tracker);
     } catch (Exception e) {
       logger.debug("Transfer propagation failed (penalty applied): {}", e.getMessage());
-      return new TransferResult(initialState, orbitPostBurn1, burn2, tracker); // penalty
+      return new TransferResult(initialState, orbitPostBurn1, circBurn, tracker); // penalty
     }
   }
 
@@ -168,7 +170,7 @@ public class TransfertTwoManeuver {
       NumericalPropagator propagator,
       SpacecraftState state,
       Burn1Params params,
-      ResolvedBurn2 burn2) {
+      ResolvedCircularizationBurn circBurn) {
 
     AbsoluteDate epoch = state.getDate();
     LofOffset attitude = new LofOffset(state.getFrame(), LOFType.TNW);
@@ -188,16 +190,16 @@ public class TransfertTwoManeuver {
             attitude,
             thrustDirection1));
 
-    // ── Burn 2: prograde circularization at next apoapsis ──
-    if (burn2.dt2 > 0.0) {
-      double t2Start = params.t1 + params.dt1 + burn2.dtCoast;
+    // ── Circularization burn: prograde at next apoapsis ──
+    if (circBurn.dt2 > 0.0) {
+      double t2Start = params.t1 + params.dt1 + circBurn.dtCoast;
       AbsoluteDate burn2Start = epoch.shiftedBy(t2Start);
       Vector3D thrustDirection2 = Physics.buildThrustDirectionTNW(0.0, 0.0);
 
       propagator.addForceModel(
           new ConstantThrustManeuver(
               burn2Start,
-              burn2.dt2,
+              circBurn.dt2,
               propulsion.thrust(),
               propulsion.isp(),
               attitude,
@@ -212,9 +214,9 @@ public class TransfertTwoManeuver {
     return altitudeTracker;
   }
 
-  /** Total maneuver duration from epoch to end of burn 2. */
-  public double totalDuration(Burn1Params params, ResolvedBurn2 burn2) {
-    return params.t1 + params.dt1 + burn2.dtCoast + burn2.dt2;
+  /** Total maneuver duration from epoch to end of the circularization burn. */
+  public double totalDuration(Burn1Params params, ResolvedCircularizationBurn circBurn) {
+    return params.t1 + params.dt1 + circBurn.dtCoast + circBurn.dt2;
   }
 
   // ════════════════════════════════════════════════════════════════════════
@@ -250,24 +252,28 @@ public class TransfertTwoManeuver {
   }
 
   // ════════════════════════════════════════════════════════════════════════
-  // Burn 2 resolution — delegates to Burn2Resolver
+  // Circularization burn resolution — delegates to CircularizationBurnResolver
   // ════════════════════════════════════════════════════════════════════════
 
   /**
-   * Resolves burn 2 deterministically from the post-burn-1 state.
+   * Resolves the circularization burn deterministically from the post-burn-1 state.
    *
-   * @return resolved burn 2 parameters, or null on failure
+   * @return resolved circularization burn parameters, or null on failure
    */
-  public ResolvedBurn2 resolveBurn2(SpacecraftState stateAfterBurn1) {
-    return burn2Resolver.resolveBurn2(stateAfterBurn1);
+  public ResolvedCircularizationBurn resolveCircularizationBurn(SpacecraftState stateAfterBurn1) {
+    return circularizationBurnResolver.resolveCircularizationBurn(stateAfterBurn1);
   }
 
-  /** Re-resolve burn 2 from initial state + burn 1 params. Convenience for Stage runtime. */
-  public ResolvedBurn2 resolveBurn2FromInitial(SpacecraftState initialState, Burn1Params params) {
+  /**
+   * Re-resolve the circularization burn from initial state + burn 1 params. Convenience for Stage
+   * runtime.
+   */
+  public ResolvedCircularizationBurn resolveCircularizationBurnFromInitial(
+      SpacecraftState initialState, Burn1Params params) {
     SpacecraftState stateAfterBurn1 = propagateBurn1(initialState, params);
     if (stateAfterBurn1 == null) {
       return null;
     }
-    return burn2Resolver.resolveBurn2(stateAfterBurn1);
+    return circularizationBurnResolver.resolveCircularizationBurn(stateAfterBurn1);
   }
 }

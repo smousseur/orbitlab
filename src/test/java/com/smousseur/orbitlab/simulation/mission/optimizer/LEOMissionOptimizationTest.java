@@ -52,6 +52,18 @@ public class LEOMissionOptimizationTest extends AbstractTrajectoryOptimizerTest 
         String.format("%.2f", elapsedNs / 1e9));
   }
 
+  @RepeatedTest(3)
+  void testNonRegression400km(RepetitionInfo info) {
+    long start = System.nanoTime();
+    testLEOMission(400_000);
+    long elapsedNs = System.nanoTime() - start;
+    logger.info(
+        "[testNonRegression400km rep {}/{}] elapsed={} s",
+        info.getCurrentRepetition(),
+        info.getTotalRepetitions(),
+        String.format("%.2f", elapsedNs / 1e9));
+  }
+
   @AfterAll
   static void reportSensibleTimings() {
     if (SENSIBLE_DURATIONS_NS.isEmpty()) return;

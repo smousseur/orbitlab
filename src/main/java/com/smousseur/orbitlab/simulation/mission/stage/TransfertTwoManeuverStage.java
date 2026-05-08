@@ -6,7 +6,7 @@ import com.smousseur.orbitlab.simulation.mission.MissionStage;
 import com.smousseur.orbitlab.simulation.mission.OptimizableMissionStage;
 import com.smousseur.orbitlab.simulation.mission.maneuver.TransfertTwoManeuver;
 import com.smousseur.orbitlab.simulation.mission.maneuver.TransfertTwoManeuver.Burn1Params;
-import com.smousseur.orbitlab.simulation.mission.maneuver.TransfertTwoManeuver.ResolvedBurn2;
+import com.smousseur.orbitlab.simulation.mission.maneuver.TransfertTwoManeuver.ResolvedCircularizationBurn;
 import com.smousseur.orbitlab.simulation.mission.objective.OrbitInsertionObjective;
 import com.smousseur.orbitlab.simulation.mission.optimizer.OptimizationResult;
 import com.smousseur.orbitlab.simulation.mission.optimizer.problems.TransferTwoManeuverProblem;
@@ -51,15 +51,18 @@ public class TransfertTwoManeuverStage extends MissionStage
 
     Burn1Params params = maneuver.decode(optimizationResult.bestVariables());
 
-    ResolvedBurn2 burn2 = maneuver.resolveBurn2FromInitial(state, params);
-    if (burn2 == null) {
+    ResolvedCircularizationBurn circBurn =
+        maneuver.resolveCircularizationBurnFromInitial(state, params);
+    if (circBurn == null) {
       throw new OrbitlabException(
-          "TransfertStage '" + getName() + "': failed to resolve burn 2 at runtime");
+          "TransfertStage '"
+              + getName()
+              + "': failed to resolve circularization burn at runtime");
     }
 
-    maneuver.configure(propagator, state, params, burn2);
+    maneuver.configure(propagator, state, params, circBurn);
 
-    double maneuverTime = maneuver.totalDuration(params, burn2);
+    double maneuverTime = maneuver.totalDuration(params, circBurn);
     AbsoluteDate mecoDate = state.getDate().shiftedBy(maneuverTime);
     this.configuredEndDate = mecoDate;
     propagator.addEventDetector(
@@ -79,14 +82,15 @@ public class TransfertTwoManeuverStage extends MissionStage
         mission.getVehicle().resolveActiveStage(mission.getCurrentState().getMass());
     // Min viable mass = dry mass of active stage + dry mass of all stages above
     double vehicleMinMass = activeStage.remainingDryMass();
-    double targetInclination = ((OrbitInsertionObjective) mission.getObjective()).inclination();
+    OrbitInsertionObjective insertion = (OrbitInsertionObjective) mission.getObjective();
     return new TransferTwoManeuverProblem(
         maneuver,
         mission.getCurrentState(),
-        targetAltitude,
+        insertion.perigeeAltitude(),
+        insertion.apogeeAltitude(),
         activeStage.propulsion(),
         vehicleMinMass,
-        targetInclination);
+        insertion.inclination());
   }
 
   @Override

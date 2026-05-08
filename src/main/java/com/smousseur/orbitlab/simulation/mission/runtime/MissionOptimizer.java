@@ -115,9 +115,9 @@ public class MissionOptimizer {
           logger.info(
               "Post burn1 orbit: {}",
               transferResult != null ? transferResult.orbitPostBurn1() : null);
-          TransfertTwoManeuver.ResolvedBurn2 burn =
-              transferResult != null ? transferResult.resolvedBurn2() : null;
-          logger.info("Transfert burn 2: {}", burn);
+          TransfertTwoManeuver.ResolvedCircularizationBurn burn =
+              transferResult != null ? transferResult.circularizationBurn() : null;
+          logger.info("Circularization burn: {}", burn);
 
           // ── Phase 0.1: Δv decomposition + active barriers ──
           TransferTwoManeuverProblem.DvBreakdown dv =
@@ -206,7 +206,7 @@ public class MissionOptimizer {
   private static double resolveTargetAltitude(Mission mission) {
     MissionObjective objective = mission.getObjective();
     if (objective instanceof OrbitInsertionObjective insertion) {
-      return insertion.altitude();
+      return 0.5 * (insertion.perigeeAltitude() + insertion.apogeeAltitude());
     }
     return Double.NaN;
   }
