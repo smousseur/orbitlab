@@ -1,13 +1,14 @@
 package com.smousseur.orbitlab.simulation.mission.objective;
 
 import com.smousseur.orbitlab.core.SolarSystemBody;
+import com.smousseur.orbitlab.simulation.mission.Mission;
 
 /**
  * Objective describing insertion into an orbit defined by perigee, apogee and inclination around a
  * celestial body.
  *
- * <p>Altitudes are geodetic, in meters above the body's surface. For a circular target,
- * {@code perigeeAltitude == apogeeAltitude} — use {@link #circular(SolarSystemBody, double, double)}.
+ * <p>Altitudes are geodetic, in meters above the body's surface. For a circular target, {@code
+ * perigeeAltitude == apogeeAltitude} — use {@link #circular(SolarSystemBody, double, double)}.
  *
  * @param body the central body
  * @param perigeeAltitude target perigee altitude in meters
@@ -22,5 +23,11 @@ public record OrbitInsertionObjective(
   public static OrbitInsertionObjective circular(
       SolarSystemBody body, double altitude, double inclination) {
     return new OrbitInsertionObjective(body, altitude, altitude, inclination);
+  }
+
+  public static OrbitInsertionObjective gto(
+      SolarSystemBody body, Mission mission, double altitude, double inclination) {
+    return new OrbitInsertionObjective(
+        body, mission.computeAltitudeMeters(), altitude, inclination);
   }
 }

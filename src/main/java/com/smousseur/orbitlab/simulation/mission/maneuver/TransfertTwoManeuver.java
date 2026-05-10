@@ -47,7 +47,6 @@ public class TransfertTwoManeuver extends TransferManeuver {
    * Creates a two-burn transfer maneuver targeting the specified circular orbit altitude.
    *
    * @param vehicle the vehicle performing the transfer
-   * @param targetAltitude the target circular orbit altitude above Earth's surface in meters
    */
   public TransfertTwoManeuver(Vehicle vehicle, double targetAltitude) {
     super(vehicle, targetAltitude);

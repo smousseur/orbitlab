@@ -63,6 +63,10 @@ public abstract class Mission {
     return gp.getAltitude();
   }
 
+  public double computeAltitudeMeters() {
+    return computeAltitudeMeters(currentState);
+  }
+
   /**
    * Called by stage event handlers during ephemeris generation to update the current state. This
    * simplified version only sets the current state — no stage tracking or listener notification.

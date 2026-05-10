@@ -6,14 +6,14 @@ import com.smousseur.orbitlab.simulation.mission.objective.MissionObjective;
 import com.smousseur.orbitlab.simulation.mission.objective.OrbitInsertionObjective;
 import com.smousseur.orbitlab.simulation.mission.optimizer.problems.GravityTurnConstraints;
 import com.smousseur.orbitlab.simulation.mission.stage.CoastingStage;
+import com.smousseur.orbitlab.simulation.mission.stage.TransferStage;
 import com.smousseur.orbitlab.simulation.mission.stage.TwoManeuverTransferStage;
 import com.smousseur.orbitlab.simulation.mission.stage.ascent.GravityTurnStage;
 import com.smousseur.orbitlab.simulation.mission.stage.ascent.VerticalAscentStage;
 import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchVehicle;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Spacecraft;
+import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
 import com.smousseur.orbitlab.simulation.mission.vehicle.VehicleStack;
-import java.util.ArrayList;
-import java.util.List;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.hipparchus.util.FastMath;
 import org.orekit.bodies.GeodeticPoint;
@@ -27,11 +27,10 @@ import org.orekit.time.AbsoluteDate;
 import org.orekit.utils.Constants;
 import org.orekit.utils.PVCoordinates;
 
-/**
- * Concrete LEO (Low Earth Orbit) insertion mission launching from Kourou (French Guiana). Stages:
- * Vertical Ascent → Gravity Turn → Transfer Two-Maneuver → Coasting.
- */
-public class LEOMission extends Mission {
+import java.util.ArrayList;
+import java.util.List;
+
+public class GTOMission extends Mission {
   private static final int ASCENSION_DURATION = 10;
   private static final double DEFAULT_LATITUDE = 45.96;
   private static final double DEFAULT_LONGITUDE = 63.30;
@@ -41,32 +40,29 @@ public class LEOMission extends Mission {
   private final double longitude;
   private final double altitude;
 
-  /**
-   * Creates a LEO mission with default Kourou launch site.
-   *
-   * @param name the mission name
-   * @param targetAltitude the target orbital altitude in meters
-   */
-  public LEOMission(String name, double targetAltitude) {
-    this(name, targetAltitude, DEFAULT_LATITUDE, DEFAULT_LONGITUDE, DEFAULT_ALTITUDE);
+  public GTOMission(String name, double parkingAltitude, double targetAltitude) {
+    this(
+        name,
+        parkingAltitude,
+        targetAltitude,
+        DEFAULT_LATITUDE,
+        DEFAULT_LONGITUDE,
+        DEFAULT_ALTITUDE);
   }
 
-  /**
-   * Creates a LEO mission with a custom launch site.
-   *
-   * @param name the mission name
-   * @param targetAltitude the target orbital altitude in meters
-   * @param latitude the launch site latitude in degrees
-   * @param longitude the launch site longitude in degrees
-   * @param altitude the launch site altitude in meters
-   */
-  public LEOMission(
-      String name, double targetAltitude, double latitude, double longitude, double altitude) {
+  public GTOMission(
+      String name,
+      double parkingAltitude,
+      double targetAltitude,
+      double latitude,
+      double longitude,
+      double altitude) {
     super(
         name,
         buildVehicle(),
-        buildStages(targetAltitude),
-        buildObjective(targetAltitude, latitude));
+        buildStages(parkingAltitude, targetAltitude),
+        new OrbitInsertionObjective(
+            SolarSystemBody.EARTH, parkingAltitude, targetAltitude, FastMath.toRadians(latitude)));
     this.latitude = latitude;
     this.longitude = longitude;
     this.altitude = altitude;
@@ -98,20 +94,16 @@ public class LEOMission extends Mission {
                 Spacecraft.getSpacecraft())));
   }
 
-  private static List<MissionStage> buildStages(double targetAltitude) {
+  private static List<MissionStage> buildStages(double parkingAltitude, double targetAltitude) {
     return List.of(
         new VerticalAscentStage("Vertical Ascent", ASCENSION_DURATION),
         new GravityTurnStage(
             "Gravity turn",
             ASCENSION_DURATION,
             3.0,
-            GravityTurnConstraints.forTarget(targetAltitude)),
-        new TwoManeuverTransferStage("Transfert", targetAltitude),
+            GravityTurnConstraints.forTarget(parkingAltitude)),
+        new TwoManeuverTransferStage("Parking", parkingAltitude),
+        new TransferStage("Transfert", targetAltitude),
         new CoastingStage("Coasting", null));
-  }
-
-  private static MissionObjective buildObjective(double targetAltitude, double latitudeDegrees) {
-    return OrbitInsertionObjective.circular(
-        SolarSystemBody.EARTH, targetAltitude, FastMath.toRadians(latitudeDegrees));
   }
 }
