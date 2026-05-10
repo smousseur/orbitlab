@@ -4,8 +4,8 @@ import com.smousseur.orbitlab.core.OrbitlabException;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionStage;
 import com.smousseur.orbitlab.simulation.mission.OptimizableMissionStage;
+import com.smousseur.orbitlab.simulation.mission.maneuver.TransferManeuver.Burn1Params;
 import com.smousseur.orbitlab.simulation.mission.maneuver.TransfertTwoManeuver;
-import com.smousseur.orbitlab.simulation.mission.maneuver.TransfertTwoManeuver.Burn1Params;
 import com.smousseur.orbitlab.simulation.mission.maneuver.TransfertTwoManeuver.ResolvedCircularizationBurn;
 import com.smousseur.orbitlab.simulation.mission.objective.OrbitInsertionObjective;
 import com.smousseur.orbitlab.simulation.mission.optimizer.OptimizationResult;
@@ -86,8 +86,7 @@ public class TransfertTwoManeuverStage extends MissionStage
     return new TransferTwoManeuverProblem(
         maneuver,
         mission.getCurrentState(),
-        insertion.perigeeAltitude(),
-        insertion.apogeeAltitude(),
+        targetAltitude,
         activeStage.propulsion(),
         vehicleMinMass,
         insertion.inclination());

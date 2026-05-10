@@ -33,24 +33,14 @@ import org.orekit.utils.Constants;
  *       passage.
  * </ol>
  *
- * <p>Optimization parameter vector (4 dimensions — only burn 1):
- *
- * <ul>
- *   <li>[0] t1 — offset of burn 1 start from epoch (s)
- *   <li>[1] dt1 — duration of burn 1 (s)
- *   <li>[2] alpha1 — in-plane thrust angle in TNW frame (rad)
- *   <li>[3] beta1 — out-of-plane thrust angle in TNW frame (rad)
- * </ul>
- *
- * <p>The active stage propulsion is resolved automatically from the spacecraft mass via {@link
- * Vehicle#resolveActiveStage(double)}.
+ * <p>This is a special case of {@link TransferManeuver} where the target orbit is circular: burn 1
+ * is followed by an analytic circularization burn. Optimization parameters are the same 4
+ * parameters of burn 1 (the circularization burn is fully determined by the post-burn-1 state).
  */
-public class TransfertTwoManeuver {
+public class TransfertTwoManeuver extends TransferManeuver {
   private static final Logger logger = LogManager.getLogger(TransfertTwoManeuver.class);
   private static final double EARTH_RADIUS = Constants.WGS84_EARTH_EQUATORIAL_RADIUS;
 
-  private final Vehicle vehicle;
-  private final double targetAltitude;
   private final CircularizationBurnResolver circularizationBurnResolver;
 
   /**
@@ -60,24 +50,9 @@ public class TransfertTwoManeuver {
    * @param targetAltitude the target circular orbit altitude above Earth's surface in meters
    */
   public TransfertTwoManeuver(Vehicle vehicle, double targetAltitude) {
-    this.vehicle = vehicle;
-    this.targetAltitude = targetAltitude;
+    super(vehicle, targetAltitude);
     this.circularizationBurnResolver = new CircularizationBurnResolver(vehicle);
   }
-
-  // ════════════════════════════════════════════════════════════════════════
-  // Parameter records
-  // ════════════════════════════════════════════════════════════════════════
-
-  /**
-   * The 4 CMA-ES-optimized parameters for burn 1 (orbit insertion near apoapsis).
-   *
-   * @param t1 offset of burn 1 start from epoch (seconds)
-   * @param dt1 duration of burn 1 (seconds)
-   * @param alpha1 in-plane thrust angle in the TNW frame (radians)
-   * @param beta1 out-of-plane thrust angle in the TNW frame (radians)
-   */
-  public record Burn1Params(double t1, double dt1, double alpha1, double beta1) {}
 
   /**
    * Deterministically resolved circularization burn parameters (next apoapsis).
@@ -87,16 +62,6 @@ public class TransfertTwoManeuver {
    * @param dvNeeded the delta-V required for circularization (m/s)
    */
   public record ResolvedCircularizationBurn(double dtCoast, double dt2, double dvNeeded) {}
-
-  /**
-   * Decodes a raw CMA-ES variable array into typed burn 1 parameters.
-   *
-   * @param variables the 4-element optimization variable array [t1, dt1, alpha1, beta1]
-   * @return the decoded burn 1 parameters
-   */
-  public Burn1Params decode(double[] variables) {
-    return new Burn1Params(variables[0], variables[1], variables[2], variables[3]);
-  }
 
   // ════════════════════════════════════════════════════════════════════════
   // Optimization entry point
@@ -114,6 +79,7 @@ public class TransfertTwoManeuver {
    * @return a {@link TransferResult} with the final state and captured metadata; fields are null in
    *     penalty cases
    */
+  @Override
   public TransferResult propagateForOptimization(SpacecraftState initialState, double[] variables) {
     Burn1Params params = decode(variables);
 
@@ -172,27 +138,17 @@ public class TransfertTwoManeuver {
       Burn1Params params,
       ResolvedCircularizationBurn circBurn) {
 
-    AbsoluteDate epoch = state.getDate();
-    LofOffset attitude = new LofOffset(state.getFrame(), LOFType.TNW);
-    ActiveStageInfo stage = vehicle.resolveActiveStage(state.getMass());
-    PropulsionSystem propulsion = stage.propulsion();
-
-    // ── Burn 1: optimized (near apoapsis, quasi-circularizes) ──
-    AbsoluteDate burn1Start = epoch.shiftedBy(params.t1);
-    Vector3D thrustDirection1 = Physics.buildThrustDirectionTNW(params.alpha1, params.beta1);
-
-    propagator.addForceModel(
-        new ConstantThrustManeuver(
-            burn1Start,
-            params.dt1,
-            propulsion.thrust(),
-            propulsion.isp(),
-            attitude,
-            thrustDirection1));
+    // ── Burn 1 + altitude tracker (delegated to the base class) ──
+    MinAltitudeTracker altitudeTracker = super.configure(propagator, state, params);
 
     // ── Circularization burn: prograde at next apoapsis ──
     if (circBurn.dt2 > 0.0) {
-      double t2Start = params.t1 + params.dt1 + circBurn.dtCoast;
+      AbsoluteDate epoch = state.getDate();
+      LofOffset attitude = new LofOffset(state.getFrame(), LOFType.TNW);
+      ActiveStageInfo stage = vehicle.resolveActiveStage(state.getMass());
+      PropulsionSystem propulsion = stage.propulsion();
+
+      double t2Start = params.t1() + params.dt1() + circBurn.dtCoast;
       AbsoluteDate burn2Start = epoch.shiftedBy(t2Start);
       Vector3D thrustDirection2 = Physics.buildThrustDirectionTNW(0.0, 0.0);
 
@@ -206,49 +162,12 @@ public class TransfertTwoManeuver {
               thrustDirection2));
     }
 
-    // ── Altitude tracker ──
-    double maxAltThreshold = targetAltitude * 1.25;
-    MinAltitudeTracker altitudeTracker =
-        new MinAltitudeTracker(80_000, maxAltThreshold, burn1Start);
-    propagator.addEventDetector(altitudeTracker);
     return altitudeTracker;
   }
 
   /** Total maneuver duration from epoch to end of the circularization burn. */
   public double totalDuration(Burn1Params params, ResolvedCircularizationBurn circBurn) {
-    return params.t1 + params.dt1 + circBurn.dtCoast + circBurn.dt2;
-  }
-
-  // ════════════════════════════════════════════════════════════════════════
-  // Burn 1 propagation (fast, for timing resolution)
-  // ════════════════════════════════════════════════════════════════════════
-
-  private SpacecraftState propagateBurn1(SpacecraftState initialState, Burn1Params params) {
-    NumericalPropagator burn1Propagator = OrekitService.get().createSimplePropagator();
-    burn1Propagator.setInitialState(initialState);
-
-    AbsoluteDate burn1Start = initialState.getDate().shiftedBy(params.t1);
-    AbsoluteDate burn1End = burn1Start.shiftedBy(params.dt1);
-
-    LofOffset attitude = new LofOffset(initialState.getFrame(), LOFType.TNW);
-    ActiveStageInfo stage = vehicle.resolveActiveStage(initialState.getMass());
-    PropulsionSystem propulsion = stage.propulsion();
-    Vector3D thrustDir1 = Physics.buildThrustDirectionTNW(params.alpha1, params.beta1);
-
-    burn1Propagator.addForceModel(
-        new ConstantThrustManeuver(
-            burn1Start, params.dt1, propulsion.thrust(), propulsion.isp(), attitude, thrustDir1));
-
-    try {
-      SpacecraftState stateAfterBurn1 = burn1Propagator.propagate(burn1End);
-      if (Math.abs(stateAfterBurn1.getDate().durationFrom(burn1End)) > 1.0) {
-        return null;
-      }
-      return stateAfterBurn1;
-    } catch (Exception e) {
-      logger.debug("Burn 1 propagation failed (penalty applied): {}", e.getMessage());
-      return null;
-    }
+    return super.totalDuration(params) + circBurn.dtCoast + circBurn.dt2;
   }
 
   // ════════════════════════════════════════════════════════════════════════
