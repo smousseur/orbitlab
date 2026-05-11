@@ -4,8 +4,8 @@ import com.smousseur.orbitlab.core.OrbitlabException;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionStage;
 import com.smousseur.orbitlab.simulation.mission.OptimizableMissionStage;
+import com.smousseur.orbitlab.simulation.mission.maneuver.TransferManeuver.Burn1Params;
 import com.smousseur.orbitlab.simulation.mission.maneuver.TransfertTwoManeuver;
-import com.smousseur.orbitlab.simulation.mission.maneuver.TransfertTwoManeuver.Burn1Params;
 import com.smousseur.orbitlab.simulation.mission.maneuver.TransfertTwoManeuver.ResolvedCircularizationBurn;
 import com.smousseur.orbitlab.simulation.mission.objective.OrbitInsertionObjective;
 import com.smousseur.orbitlab.simulation.mission.optimizer.OptimizationResult;
@@ -18,12 +18,12 @@ import org.orekit.propagation.numerical.NumericalPropagator;
 import org.orekit.time.AbsoluteDate;
 
 /**
- * A mission stage that performs a two-burn orbit transfer maneuver to reach a target circular
- * orbit altitude. The first burn raises the orbit to a transfer ellipse, and the second burn
- * circularizes at the target altitude. This stage requires CMA-ES optimization before execution
- * to determine the optimal burn parameters.
+ * A mission stage that performs a two-burn orbit transfer maneuver to reach a target circular orbit
+ * altitude. The first burn raises the orbit to a transfer ellipse, and the second burn circularizes
+ * at the target altitude. This stage requires CMA-ES optimization before execution to determine the
+ * optimal burn parameters.
  */
-public class TransfertTwoManeuverStage extends MissionStage
+public class TwoManeuverTransferStage extends MissionStage
     implements OptimizableMissionStage<TransferTwoManeuverProblem> {
   private final double targetAltitude;
 
@@ -35,7 +35,7 @@ public class TransfertTwoManeuverStage extends MissionStage
    * @param name the human-readable name of this stage
    * @param targetAltitude the desired circular orbit altitude in meters above Earth's surface
    */
-  public TransfertTwoManeuverStage(String name, double targetAltitude) {
+  public TwoManeuverTransferStage(String name, double targetAltitude) {
     super(name);
     this.targetAltitude = targetAltitude;
   }
@@ -55,9 +55,7 @@ public class TransfertTwoManeuverStage extends MissionStage
         maneuver.resolveCircularizationBurnFromInitial(state, params);
     if (circBurn == null) {
       throw new OrbitlabException(
-          "TransfertStage '"
-              + getName()
-              + "': failed to resolve circularization burn at runtime");
+          "TransfertStage '" + getName() + "': failed to resolve circularization burn at runtime");
     }
 
     maneuver.configure(propagator, state, params, circBurn);
@@ -86,8 +84,7 @@ public class TransfertTwoManeuverStage extends MissionStage
     return new TransferTwoManeuverProblem(
         maneuver,
         mission.getCurrentState(),
-        insertion.perigeeAltitude(),
-        insertion.apogeeAltitude(),
+        targetAltitude,
         activeStage.propulsion(),
         vehicleMinMass,
         insertion.inclination());

@@ -25,6 +25,6 @@ public record LaunchVehicle(double dryMass, double propellantCapacity, Propulsio
    * @return a second-stage launch vehicle
    */
   public static LaunchVehicle getLauncherStage2Vehicle() {
-    return new LaunchVehicle(10000, 134_000, PropulsionSystem.getLauncherStage2Propulsion());
+    return new LaunchVehicle(5000, 134_000, PropulsionSystem.getLauncherStage2Propulsion());
   }
 }

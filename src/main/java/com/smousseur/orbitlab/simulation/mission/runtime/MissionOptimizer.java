@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.smousseur.orbitlab.simulation.mission.optimizer.problems.GravityTurnProblem;
+import com.smousseur.orbitlab.simulation.mission.optimizer.problems.TransferProblem;
 import com.smousseur.orbitlab.simulation.mission.optimizer.problems.TransferTwoManeuverProblem;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -194,7 +195,7 @@ public class MissionOptimizer {
     if (problem instanceof GravityTurnProblem) {
       return new String[] {"transitionTime", "exponent"};
     }
-    if (problem instanceof TransferTwoManeuverProblem) {
+    if (problem instanceof TransferProblem) {
       return new String[] {"t1", "dt1", "α1", "β1"};
     }
     int n = problem.getNumVariables();

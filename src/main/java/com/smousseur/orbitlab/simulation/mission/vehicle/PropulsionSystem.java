@@ -12,8 +12,8 @@ import org.orekit.utils.Constants;
  */
 public record PropulsionSystem(double isp, double thrust) {
   /**
-   * Computes the propellant mass consumed over a given burn duration using the rocket equation
-   * mass flow rate.
+   * Computes the propellant mass consumed over a given burn duration using the rocket equation mass
+   * flow rate.
    *
    * @param duration the burn duration in seconds
    * @return the mass of propellant consumed in kilograms
