@@ -179,7 +179,7 @@ public final class MissionOrchestratorAppState extends BaseAppState {
             mission.setCurrentState(initialState);
             mission.setInitialDate(launchDate);
 
-            MissionOptimizer optimizer = new MissionOptimizer(mission);
+            MissionOptimizer optimizer = new MissionOptimizer(mission, 40_000);
             MissionComputeResult result = optimizer.optimize();
 
             entry.setOptimizerResult(result.optimizerResult());
@@ -194,8 +194,7 @@ public final class MissionOrchestratorAppState extends BaseAppState {
   }
 
   private MissionRenderer createRenderer(MissionEntry entry) {
-    RenderContext renderContext =
-        RenderContext.planet(entry.mission().getObjective().body());
+    RenderContext renderContext = RenderContext.planet(entry.mission().getObjective().body());
     ColorRGBA color = TRAJECTORY_PALETTE[colorIndex % TRAJECTORY_PALETTE.length];
     colorIndex++;
 

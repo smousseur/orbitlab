@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test;
 
 public class GTOMissionOptimizationTest extends AbstractTrajectoryOptimizerTest {
   public static final int GTO_ALTITUDE = 35_786_000;
-  public static final int PARKING_ALTITUDE = 300_000;
+  public static final int PARKING_ALTITUDE = 450_000;
 
   @BeforeAll
   static void init() {

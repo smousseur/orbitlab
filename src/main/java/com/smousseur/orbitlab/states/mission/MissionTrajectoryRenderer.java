@@ -91,9 +91,10 @@ public final class MissionTrajectoryRenderer {
     FloatBuffer fb = (FloatBuffer) vb.getData();
     fb.clear();
 
-    int count = Math.min(currentPositions.size(), MAX_POINTS);
-    for (int i = 0; i < count; i++) {
-      Vector3D pos = currentPositions.get(i);
+    int size = currentPositions.size();
+    int count = Math.min(size, MAX_POINTS);
+    for (int i = 1; i < count + 1; i++) {
+      Vector3D pos = currentPositions.get(size - i);
       Vector3D scaled = RenderTransform.scaleMetersToUnits(pos, renderContext);
       Vector3D jme = renderContext.axisConvention().icrfToJme(scaled);
       fb.put((float) jme.getX()).put((float) jme.getY()).put((float) jme.getZ());
