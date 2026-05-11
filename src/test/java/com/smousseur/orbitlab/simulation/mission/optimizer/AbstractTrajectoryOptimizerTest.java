@@ -66,9 +66,13 @@ public class AbstractTrajectoryOptimizerTest {
     MinMaxAltitudeResults results = extractMinMaxAltitudes(ephemeris, "Coasting");
 
     logger.info(
-        "[{}km] Max coast altitude: {} m", (int) (apogeeAltitude / 1000), results.maxAltitude);
+        "[{}km] Max coast altitude: {} km",
+        (int) (apogeeAltitude / 1000),
+        results.maxAltitude / 1000);
     logger.info(
-        "[{}km] Min coast altitude: {} m", (int) (perigeeAltitude / 1000), results.minAltitude);
+        "[{}km] Min coast altitude: {} km",
+        (int) (perigeeAltitude / 1000),
+        results.minAltitude / 1000);
 
     MissionEphemerisPoint last = ephemeris.lastPoint();
     KeplerianOrbit finalOrbit =

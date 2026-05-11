@@ -21,7 +21,7 @@ public final class MissionEphemerisGenerator {
   private static final Logger logger = LogManager.getLogger(MissionEphemerisGenerator.class);
 
   private static final double DEFAULT_STEP_SECONDS = 1.0;
-  private static final double DEFAULT_COAST_DURATION_SECONDS = 5400.0; // 90 min (one LEO orbit)
+  private static final double DEFAULT_COAST_DURATION_SECONDS = 86_164.0; // 90 min (one LEO orbit)
 
   /**
    * Re-propagates the mission from initialState through all stages, sampling the trajectory at

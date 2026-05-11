@@ -62,7 +62,7 @@ public class TransferStage extends MissionStage
         mission.getCurrentState(),
         insertion.perigeeAltitude(),
         targetAltitude,
-        mission.getVehicle().propulsion(),
+        LaunchVehicle.getLauncherStage2Vehicle().propulsion(),
         dryMass,
         insertion.inclination());
   }

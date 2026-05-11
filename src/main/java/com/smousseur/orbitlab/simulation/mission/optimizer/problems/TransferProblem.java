@@ -20,8 +20,8 @@ import org.orekit.propagation.SpacecraftState;
 import org.orekit.utils.Constants;
 
 /**
- * Optimization problem for a single-burn orbit transfer where burn 1 is optimized to reach a
- * target {@code (perigee, apogee)} altitude pair.
+ * Optimization problem for a single-burn orbit transfer where burn 1 is optimized to reach a target
+ * {@code (perigee, apogee)} altitude pair.
  *
  * <p>Burn 1 (4 CMA-ES parameters) places the spacecraft on the target orbit. The cost function
  * evaluates the orbit at the end of burn 1 against the target apsidal altitudes and the derived
@@ -110,10 +110,10 @@ public class TransferProblem implements TrajectoryProblem {
   private final double betaMaxAdaptive;
 
   // Niveau 2.3 — adaptive t1 upper bound (fraction of post-GT orbital period)
-  private final double t1Max;
+  protected final double t1Max;
 
   // Niveau 2.3 — burn 1 duration upper bound (Hohmann × K, capped by propellant)
-  private final double dt1Max;
+  protected final double dt1Max;
 
   // Niveau 2.4 — adaptive periapsis floor and eccentricity weight
   protected final double periapsisFloor;
@@ -191,7 +191,7 @@ public class TransferProblem implements TrajectoryProblem {
     // which the J2 oscillation alone can violate. Use a floor of 20 km so the
     // bound is meaningful below LEO; at higher altitudes the relative term
     // dominates and behaves as before.
-    this.altMax = apogeeAltitude + FastMath.max(20_000.0, 0.05 * apogeeAltitude);
+    this.altMax = apogeeAltitude + FastMath.max(500_000.0, 0.30 * apogeeAltitude);
 
     double aInitial = initialOrbit.getA();
     double eInitial = initialOrbit.getE();
@@ -205,17 +205,24 @@ public class TransferProblem implements TrajectoryProblem {
     double timeToApoapsis = dMeanAnomaly / (2.0 * FastMath.PI) * initialPeriod;
 
     // ── Hohmann estimate for burn 1 ──
+    // Pick the apside that minimizes the burn: periapsis when raising the orbit,
+    // apoapsis when lowering it. This makes the guess valid for both circular
+    // departures (LEO → GTO) and elliptic departures (post-gravity-turn → LEO).
+    double rPeriapsis = aInitial * (1.0 - eInitial);
     double rApoapsis = aInitial * (1.0 + eInitial);
-    double aTransfer = (rApoapsis + rTarget) / 2.0;
+    boolean raising = rTarget >= aInitial;
+    double rDeparture = raising ? rPeriapsis : rApoapsis;
+    double aTransfer = (rDeparture + rTarget) / 2.0;
 
-    double vAtApoapsis = FastMath.sqrt(mu * (2.0 / rApoapsis - 1.0 / aInitial));
-    double vTransferAtApoapsis = FastMath.sqrt(mu * (2.0 / rApoapsis - 1.0 / aTransfer));
-    double dv1 = vTransferAtApoapsis - vAtApoapsis;
+    double vAtDeparture = FastMath.sqrt(mu * (2.0 / rDeparture - 1.0 / aInitial));
+    double vTransferAtDeparture = FastMath.sqrt(mu * (2.0 / rDeparture - 1.0 / aTransfer));
+    double dv1 = vTransferAtDeparture - vAtDeparture;
 
-    // Initial CMA-ES seed for t1: physically meaningful natural-apoapsis time.
-    // Niveau 2.3 widens the upper bound to a fraction of the orbital period
-    // so CMA-ES can still escape if the natural apoapsis isn't optimal.
-    this.guessT1 = timeToApoapsis;
+    // Initial CMA-ES seed for t1: time-to-departure-apside on the current orbit.
+    // For a circular initial orbit, both apsides are at the same radius, so
+    // timeToApoapsis is a safe default (any t1 works geometrically); the
+    // optimizer is free to relocate the burn within [0, t1Max].
+    this.guessT1 = raising ? timeToPeriapsis(initialOrbit, initialPeriod) : timeToApoapsis;
 
     double initialMass = initialState.getMass();
     this.thrust = propulsionSystem.thrust();
@@ -230,7 +237,7 @@ public class TransferProblem implements TrajectoryProblem {
 
     // Niveau 2.3 — feasibility check: total Hohmann Δv must fit available propellant.
     double vCircAtTarget = FastMath.sqrt(mu / rTarget);
-    double dv2Hohmann = vCircAtTarget - vTransferAtApoapsis;
+    double dv2Hohmann = vCircAtTarget - vTransferAtDeparture;
     double dvHohmannTotal = FastMath.abs(dv1) + FastMath.max(0.0, dv2Hohmann);
     double dvAvailable =
         isp * Constants.G0_STANDARD_GRAVITY * FastMath.log(initialMass / vehicleMinMass);
@@ -257,7 +264,7 @@ public class TransferProblem implements TrajectoryProblem {
     // a (possibly meaningless) time-to-apoapsis guess. dt1 cap moves from
     // 2·guessDt1 to K·guessDt1, still clamped by propellant feasibility.
     this.t1Max = FastMath.max(120.0, T1_MAX_PERIOD_FRACTION * initialPeriod);
-    this.dt1Max = FastMath.min(DT1_MAX_MULTIPLIER * guessDt1, dt1MaxPhysical);
+    this.dt1Max = FastMath.max(DT1_MAX_MULTIPLIER * guessDt1, dt1MaxPhysical);
 
     // Niveau 2.4 — adaptive periapsis floor and eccentricity weight.
     // Spec (02 §2.4) suggests max(120 km, target − 100 km); but the existing
@@ -270,8 +277,7 @@ public class TransferProblem implements TrajectoryProblem {
     // Anchored on the perigee target — the most constraining apside.
     double floorCandidate =
         FastMath.max(
-            PERIAPSIS_FLOOR_MIN,
-            FastMath.min(perigeeAltitude * 0.5, perigeeAltitude - 100_000.0));
+            PERIAPSIS_FLOOR_MIN, FastMath.min(perigeeAltitude * 0.5, perigeeAltitude - 100_000.0));
     this.periapsisFloor = FastMath.min(floorCandidate, perigeeAltitude / 1.6);
     // Quadratic ramp on the W_E_REF_ALT/perigeeAltitude ratio so the eccentricity
     // term dominates more aggressively at very low altitudes (e.g. 185 km),
@@ -546,6 +552,17 @@ public class TransferProblem implements TrajectoryProblem {
     double k = 10.0;
     if (normalized > 5.0 / k) return 0.0;
     return FastMath.log1p(FastMath.exp(-k * normalized));
+  }
+
+  /**
+   * Time from the current state to the next periapsis passage on the given orbit. Returns a
+   * strictly positive value within ]0, period].
+   */
+  private static double timeToPeriapsis(KeplerianOrbit orbit, double period) {
+    double meanAnomaly = orbit.getMeanAnomaly();
+    double dMeanAnomaly = -meanAnomaly; // periapsis is M = 0
+    while (dMeanAnomaly <= 0) dMeanAnomaly += 2.0 * FastMath.PI;
+    return dMeanAnomaly / (2.0 * FastMath.PI) * period;
   }
 
   /**

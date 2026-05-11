@@ -23,8 +23,8 @@ import org.orekit.utils.Constants;
  *
  * <p>The spacecraft arrives near apoapsis on a highly elliptical sub-orbital orbit. Burn 1 raises
  * the perigee and shapes the orbit to match the target {@code (perigee, apogee)} altitudes. The
- * post-burn state is the final state of the transfer; no circularization is performed at this
- * level — see {@link TransfertTwoManeuver} for the two-burn variant.
+ * post-burn state is the final state of the transfer; no circularization is performed at this level
+ * — see {@link TransfertTwoManeuver} for the two-burn variant.
  *
  * <p>Optimization parameter vector (4 dimensions):
  *
@@ -94,7 +94,7 @@ public class TransferManeuver {
     KeplerianOrbit orbitPostBurn1 = new KeplerianOrbit(stateAfterBurn1.getOrbit());
     if (orbitPostBurn1.getE() > 0.95
         || orbitPostBurn1.getA() < EARTH_RADIUS
-        || orbitPostBurn1.getA() > EARTH_RADIUS + 2_000_000) {
+        || orbitPostBurn1.getA() > EARTH_RADIUS + targetAltitude + 2_000_000) {
       return new TransferResult(initialState, orbitPostBurn1, null, null);
     }
 
@@ -141,7 +141,7 @@ public class TransferManeuver {
             attitude,
             thrustDirection1));
 
-    double maxAltThreshold = targetAltitude * 1.25;
+    double maxAltThreshold = targetAltitude * 2.0;
     MinAltitudeTracker altitudeTracker =
         new MinAltitudeTracker(80_000, maxAltThreshold, burn1Start);
     propagator.addEventDetector(altitudeTracker);
