@@ -60,6 +60,15 @@ final class CircularizationBurnResolver {
         Physics.computeBurnDuration(
             dvNeeded, massAtApoapsis, propulsion.isp(), propulsion.thrust());
 
+    // Sanity check: a circularization burn longer than the orbital period
+    // (or longer than 1 hour) usually means the post-burn-1 orbit is so
+    // off-target that the prograde-only model is no longer meaningful.
+    // Bail out to a graded penalty instead of forcing a very long Step 3 propagation.
+    double period = stateAfterBurn1.getOrbit().getKeplerianPeriod();
+    if (!Double.isFinite(dt2) || dt2 > FastMath.min(period, 3600.0)) {
+      return null;
+    }
+
     // Center burn on apoapsis
     double dtCoast = FastMath.max(dtApoapsis - dt2 / 2.0, 0.0);
 
@@ -95,16 +104,12 @@ final class CircularizationBurnResolver {
         new ApsideDetector(stateAfterBurn1.getOrbit()).withHandler(recorder);
     coastPropagator.addEventDetector(apsideDetector);
 
-    // Search up to 1.1 orbital periods — enough for one full orbit + margin
-    double maxCoast =
-        FastMath.min(
-            stateAfterBurn1.getOrbit().getKeplerianPeriod() * 1.1,
-            7000.0 // max ~2h, protects against highly eccentric orbits
-            );
+    double period = stateAfterBurn1.getOrbit().getKeplerianPeriod();
+    double maxCoast = period * 1.1;
     coastPropagator.propagate(stateAfterBurn1.getDate().shiftedBy(maxCoast));
 
     // Skip apoapsis events that are too close (< half a period)
-    double minCoast = stateAfterBurn1.getOrbit().getKeplerianPeriod() * 0.4;
+    double minCoast = period * 0.4;
 
     for (RecordAndContinue.Event event : recorder.getEvents()) {
       if (!event.isIncreasing()) {

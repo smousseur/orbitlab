@@ -18,6 +18,6 @@ public class GTOMissionOptimizationTest extends AbstractTrajectoryOptimizerTest 
   @Test
   void testGTOMission() {
     Mission GTOMission = new GTOMission("GTO mission", PARKING_ALTITUDE, GTO_ALTITUDE);
-    testMission(GTOMission, PARKING_ALTITUDE, GTO_ALTITUDE);
+    testMission(GTOMission, GTO_ALTITUDE, GTO_ALTITUDE);
   }
 }

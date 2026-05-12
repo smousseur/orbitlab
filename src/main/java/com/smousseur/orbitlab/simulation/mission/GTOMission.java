@@ -103,7 +103,8 @@ public class GTOMission extends Mission {
             3.0,
             GravityTurnConstraints.forTarget(parkingAltitude)),
         new TwoManeuverTransferStage("Parking", parkingAltitude),
-        new TransferStage("Transfert", targetAltitude),
+        new CoastingStage("Coasting parking", true),
+        new TwoManeuverTransferStage("Transfert", targetAltitude),
         new CoastingStage("Coasting", null));
   }
 }

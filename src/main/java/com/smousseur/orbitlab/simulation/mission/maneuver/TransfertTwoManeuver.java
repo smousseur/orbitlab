@@ -90,7 +90,7 @@ public class TransfertTwoManeuver extends TransferManeuver {
     KeplerianOrbit orbitPostBurn1 = new KeplerianOrbit(stateAfterBurn1.getOrbit());
     if (orbitPostBurn1.getE() > 0.95
         || orbitPostBurn1.getA() < EARTH_RADIUS
-        || orbitPostBurn1.getA() > EARTH_RADIUS + 2_000_000) {
+        || orbitPostBurn1.getA() > EARTH_RADIUS + targetAltitude + 2_000_000) {
       // Pass orbitPostBurn1 through so the cost function can grade the failure
       // by orbital-element distance instead of falling back to a flat 1e6 wall.
       return new TransferResult(initialState, orbitPostBurn1, null, null);
@@ -112,13 +112,32 @@ public class TransfertTwoManeuver extends TransferManeuver {
     AbsoluteDate endDate = initialState.getDate().shiftedBy(totalTime);
     try {
       SpacecraftState finalState = propagator.propagate(endDate);
+
       if (Math.abs(finalState.getDate().durationFrom(endDate)) > 1.0) {
-        return new TransferResult(initialState, orbitPostBurn1, circBurn, tracker); // penalty
+        /*
+               logger.warn(
+                   "PENALTY[step3-truncated] expected={}s, actual={}s, postBurn1: a={}, e={}, dvNeeded={}",
+                   totalTime,
+                   finalState.getDate().durationFrom(initialState.getDate()),
+                   orbitPostBurn1.getA(),
+                   orbitPostBurn1.getE(),
+                   circBurn.dvNeeded);
+        */
+        return new TransferResult(initialState, orbitPostBurn1, circBurn, tracker);
       }
       return new TransferResult(finalState, orbitPostBurn1, circBurn, tracker);
     } catch (Exception e) {
-      logger.debug("Transfer propagation failed (penalty applied): {}", e.getMessage());
-      return new TransferResult(initialState, orbitPostBurn1, circBurn, tracker); // penalty
+      /*
+      logger.warn(
+          "PENALTY[step3-exception] {}, postBurn1: a={}, e={}, totalTime={}, dvNeeded={}",
+          e.getMessage(),
+          orbitPostBurn1.getA(),
+          orbitPostBurn1.getE(),
+          totalTime,
+          circBurn.dvNeeded);
+
+       */
+      return new TransferResult(initialState, orbitPostBurn1, circBurn, tracker);
     }
   }
 

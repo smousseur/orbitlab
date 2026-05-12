@@ -468,17 +468,21 @@ public class TransferProblem implements TrajectoryProblem {
     if (elapsed < 1.0) {
       TransferResult tr = lastResult.get();
       if (tr != null) {
+        // Combine all available signals so CMA-ES gets a non-flat gradient even
+        // when both the in-flight tracker and the post-burn-1 orbit are usable.
+        double penalty = 1e3;
         MinAltitudeTracker failureTracker = tr.altitudeTracker();
         if (failureTracker != null && failureTracker.getMinAltitude() != Double.MAX_VALUE) {
           double underground = FastMath.max(0.0, -failureTracker.getMinAltitude());
-          return 1e3 + underground / 1000.0;
+          penalty += underground / 1000.0;
         }
         KeplerianOrbit postBurn1 = tr.orbitPostBurn1();
         if (postBurn1 != null) {
           double aErr = FastMath.abs(postBurn1.getA() - aTarget) / aTarget;
           double eErr = postBurn1.getE();
-          return 1e3 + 50.0 * aErr + 50.0 * eErr;
+          penalty += 50.0 * aErr + 50.0 * eErr;
         }
+        return penalty;
       }
       return 1e6;
     }
