@@ -2,12 +2,10 @@ package com.smousseur.orbitlab.simulation.mission;
 
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.simulation.OrekitService;
-import com.smousseur.orbitlab.simulation.mission.objective.MissionObjective;
 import com.smousseur.orbitlab.simulation.mission.objective.OrbitInsertionObjective;
 import com.smousseur.orbitlab.simulation.mission.optimizer.problems.GravityTurnConstraints;
-import com.smousseur.orbitlab.simulation.mission.optimizer.problems.TransferTuning;
+import com.smousseur.orbitlab.simulation.mission.stage.AnalyticHohmannTransferStage;
 import com.smousseur.orbitlab.simulation.mission.stage.CoastingStage;
-import com.smousseur.orbitlab.simulation.mission.stage.TransferStage;
 import com.smousseur.orbitlab.simulation.mission.stage.TwoManeuverTransferStage;
 import com.smousseur.orbitlab.simulation.mission.stage.ascent.GravityTurnStage;
 import com.smousseur.orbitlab.simulation.mission.stage.ascent.VerticalAscentStage;
@@ -42,13 +40,19 @@ public class GTOMission extends Mission {
   private final double altitude;
 
   public GTOMission(String name, double parkingAltitude, double targetAltitude) {
+    this(name, parkingAltitude, targetAltitude, 0.0);
+  }
+
+  public GTOMission(
+      String name, double parkingAltitude, double targetAltitude, double finalInclination) {
     this(
         name,
         parkingAltitude,
         targetAltitude,
         DEFAULT_LATITUDE,
         DEFAULT_LONGITUDE,
-        DEFAULT_ALTITUDE);
+        DEFAULT_ALTITUDE,
+        finalInclination);
   }
 
   public GTOMission(
@@ -58,10 +62,21 @@ public class GTOMission extends Mission {
       double latitude,
       double longitude,
       double altitude) {
+    this(name, parkingAltitude, targetAltitude, latitude, longitude, altitude, 0.0);
+  }
+
+  public GTOMission(
+      String name,
+      double parkingAltitude,
+      double targetAltitude,
+      double latitude,
+      double longitude,
+      double altitude,
+      double finalInclination) {
     super(
         name,
         buildVehicle(),
-        buildStages(parkingAltitude, targetAltitude),
+        buildStages(parkingAltitude, targetAltitude, finalInclination),
         new OrbitInsertionObjective(
             SolarSystemBody.EARTH, parkingAltitude, targetAltitude, FastMath.toRadians(latitude)));
     this.latitude = latitude;
@@ -95,7 +110,8 @@ public class GTOMission extends Mission {
                 Spacecraft.getSpacecraft())));
   }
 
-  private static List<MissionStage> buildStages(double parkingAltitude, double targetAltitude) {
+  private static List<MissionStage> buildStages(
+      double parkingAltitude, double targetAltitude, double finalInclination) {
     return List.of(
         new VerticalAscentStage("Vertical Ascent", ASCENSION_DURATION),
         new GravityTurnStage(
@@ -105,7 +121,8 @@ public class GTOMission extends Mission {
             GravityTurnConstraints.forTarget(parkingAltitude)),
         new TwoManeuverTransferStage("Parking", parkingAltitude),
         new CoastingStage("Coasting parking", true),
-        new TwoManeuverTransferStage("Transfert", targetAltitude, TransferTuning.forGtoTransfer()),
+        new AnalyticHohmannTransferStage(
+            "Transfert", targetAltitude, FastMath.toRadians(finalInclination)),
         new CoastingStage("Coasting", null));
   }
 }
