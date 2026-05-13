@@ -36,8 +36,7 @@ public class TransferTwoManeuverProblem extends TransferProblem {
   private static final double EARTH_RADIUS = Constants.WGS84_EARTH_EQUATORIAL_RADIUS;
 
   /**
-   * Creates a two-burn transfer optimization problem targeting a circular orbit at the given
-   * altitude.
+   * Creates a two-burn transfer optimization problem with the historical LEO-tuned defaults.
    *
    * @param maneuver the two-burn transfer maneuver that handles propagation
    * @param initialState the spacecraft state at the start of the transfer
@@ -53,6 +52,35 @@ public class TransferTwoManeuverProblem extends TransferProblem {
       PropulsionSystem propulsionSystem,
       double vehicleMinMass,
       double targetInclination) {
+    this(
+        maneuver,
+        initialState,
+        targetAltitude,
+        propulsionSystem,
+        vehicleMinMass,
+        targetInclination,
+        TransferTuning.defaults());
+  }
+
+  /**
+   * Creates a two-burn transfer optimization problem with explicit per-mission tuning.
+   *
+   * @param maneuver the two-burn transfer maneuver that handles propagation
+   * @param initialState the spacecraft state at the start of the transfer
+   * @param targetAltitude target circular orbit altitude in meters above the Earth's surface
+   * @param propulsionSystem the propulsion system used for the transfer burns
+   * @param vehicleMinMass minimum allowable vehicle mass after burns (dry mass)
+   * @param targetInclination target orbital plane inclination in radians
+   * @param tuning per-mission tuning (search bounds, convergence threshold, failure-path grading)
+   */
+  public TransferTwoManeuverProblem(
+      TransfertTwoManeuver maneuver,
+      SpacecraftState initialState,
+      double targetAltitude,
+      PropulsionSystem propulsionSystem,
+      double vehicleMinMass,
+      double targetInclination,
+      TransferTuning tuning) {
     super(
         maneuver,
         initialState,
@@ -60,7 +88,8 @@ public class TransferTwoManeuverProblem extends TransferProblem {
         targetAltitude,
         propulsionSystem,
         vehicleMinMass,
-        targetInclination);
+        targetInclination,
+        tuning);
   }
 
   @Override

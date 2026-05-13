@@ -5,6 +5,7 @@ import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.mission.objective.MissionObjective;
 import com.smousseur.orbitlab.simulation.mission.objective.OrbitInsertionObjective;
 import com.smousseur.orbitlab.simulation.mission.optimizer.problems.GravityTurnConstraints;
+import com.smousseur.orbitlab.simulation.mission.optimizer.problems.TransferTuning;
 import com.smousseur.orbitlab.simulation.mission.stage.CoastingStage;
 import com.smousseur.orbitlab.simulation.mission.stage.TransferStage;
 import com.smousseur.orbitlab.simulation.mission.stage.TwoManeuverTransferStage;
@@ -104,7 +105,7 @@ public class GTOMission extends Mission {
             GravityTurnConstraints.forTarget(parkingAltitude)),
         new TwoManeuverTransferStage("Parking", parkingAltitude),
         new CoastingStage("Coasting parking", true),
-        new TwoManeuverTransferStage("Transfert", targetAltitude),
+        new TwoManeuverTransferStage("Transfert", targetAltitude, TransferTuning.forGtoTransfer()),
         new CoastingStage("Coasting", null));
   }
 }

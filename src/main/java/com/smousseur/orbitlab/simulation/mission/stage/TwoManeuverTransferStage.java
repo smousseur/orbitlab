@@ -9,6 +9,7 @@ import com.smousseur.orbitlab.simulation.mission.maneuver.TransfertTwoManeuver;
 import com.smousseur.orbitlab.simulation.mission.maneuver.TransfertTwoManeuver.ResolvedCircularizationBurn;
 import com.smousseur.orbitlab.simulation.mission.objective.OrbitInsertionObjective;
 import com.smousseur.orbitlab.simulation.mission.optimizer.OptimizationResult;
+import com.smousseur.orbitlab.simulation.mission.optimizer.problems.TransferTuning;
 import com.smousseur.orbitlab.simulation.mission.optimizer.problems.TransferTwoManeuverProblem;
 import com.smousseur.orbitlab.simulation.mission.vehicle.ActiveStageInfo;
 import org.hipparchus.ode.events.Action;
@@ -26,18 +27,29 @@ import org.orekit.time.AbsoluteDate;
 public class TwoManeuverTransferStage extends MissionStage
     implements OptimizableMissionStage<TransferTwoManeuverProblem> {
   private final double targetAltitude;
+  private final TransferTuning tuning;
 
   private OptimizationResult optimizationResult;
 
   /**
-   * Creates a two-burn transfer maneuver stage targeting the specified circular orbit altitude.
+   * Creates a two-burn transfer maneuver stage targeting the specified circular orbit altitude with
+   * the default LEO-tuned {@link TransferTuning}.
    *
    * @param name the human-readable name of this stage
    * @param targetAltitude the desired circular orbit altitude in meters above Earth's surface
    */
   public TwoManeuverTransferStage(String name, double targetAltitude) {
+    this(name, targetAltitude, TransferTuning.defaults());
+  }
+
+  /**
+   * Creates a two-burn transfer maneuver stage with explicit per-mission tuning (search bounds,
+   * convergence threshold, fail-fast envelope, failure-path grading).
+   */
+  public TwoManeuverTransferStage(String name, double targetAltitude, TransferTuning tuning) {
     super(name);
     this.targetAltitude = targetAltitude;
+    this.tuning = tuning;
   }
 
   @Override
@@ -46,7 +58,8 @@ public class TwoManeuverTransferStage extends MissionStage
       throw new OrbitlabException(
           "TransfertStage '" + getName() + "' requires optimization before execution");
     }
-    TransfertTwoManeuver maneuver = new TransfertTwoManeuver(mission.getVehicle(), targetAltitude);
+    TransfertTwoManeuver maneuver =
+        new TransfertTwoManeuver(mission.getVehicle(), targetAltitude, tuning.failFast());
     SpacecraftState state = mission.getCurrentState();
 
     Burn1Params params = maneuver.decode(optimizationResult.bestVariables());
@@ -74,7 +87,8 @@ public class TwoManeuverTransferStage extends MissionStage
 
   @Override
   public TransferTwoManeuverProblem buildProblem(Mission mission) {
-    TransfertTwoManeuver maneuver = new TransfertTwoManeuver(mission.getVehicle(), targetAltitude);
+    TransfertTwoManeuver maneuver =
+        new TransfertTwoManeuver(mission.getVehicle(), targetAltitude, tuning.failFast());
     // Resolve the active stage from the current spacecraft mass (stage 1 is already jettisoned)
     ActiveStageInfo activeStage =
         mission.getVehicle().resolveActiveStage(mission.getCurrentState().getMass());
@@ -87,7 +101,8 @@ public class TwoManeuverTransferStage extends MissionStage
         targetAltitude,
         activeStage.propulsion(),
         vehicleMinMass,
-        insertion.inclination());
+        insertion.inclination(),
+        tuning);
   }
 
   @Override
