@@ -5,8 +5,9 @@ import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.mission.objective.MissionObjective;
 import com.smousseur.orbitlab.simulation.mission.objective.OrbitInsertionObjective;
 import com.smousseur.orbitlab.simulation.mission.optimizer.problems.GravityTurnConstraints;
+import com.smousseur.orbitlab.simulation.mission.stage.AnalyticHohmannTransferStage;
+import com.smousseur.orbitlab.simulation.mission.stage.AnalyticTrimBurnStage;
 import com.smousseur.orbitlab.simulation.mission.stage.CoastingStage;
-import com.smousseur.orbitlab.simulation.mission.stage.TwoManeuverTransferStage;
 import com.smousseur.orbitlab.simulation.mission.stage.ascent.GravityTurnStage;
 import com.smousseur.orbitlab.simulation.mission.stage.ascent.VerticalAscentStage;
 import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchVehicle;
@@ -65,7 +66,7 @@ public class LEOMission extends Mission {
     super(
         name,
         buildVehicle(),
-        buildStages(targetAltitude),
+        buildStages(targetAltitude, latitude),
         buildObjective(targetAltitude, latitude));
     this.latitude = latitude;
     this.longitude = longitude;
@@ -98,7 +99,7 @@ public class LEOMission extends Mission {
                 Spacecraft.getSpacecraft())));
   }
 
-  private static List<MissionStage> buildStages(double targetAltitude) {
+  private static List<MissionStage> buildStages(double targetAltitude, double latitude) {
     return List.of(
         new VerticalAscentStage("Vertical Ascent", ASCENSION_DURATION),
         new GravityTurnStage(
@@ -106,7 +107,9 @@ public class LEOMission extends Mission {
             ASCENSION_DURATION,
             3.0,
             GravityTurnConstraints.forTarget(targetAltitude)),
-        new TwoManeuverTransferStage("Transfert", targetAltitude),
+        // new TwoManeuverTransferStage("Transfert", targetAltitude),
+        new AnalyticHohmannTransferStage("Transfert", targetAltitude, FastMath.toRadians(latitude)),
+        new AnalyticTrimBurnStage("Trim", FastMath.toRadians(latitude)),
         new CoastingStage("Coasting", null));
   }
 
