@@ -3,6 +3,7 @@ package com.smousseur.orbitlab.simulation.mission.maneuver;
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.Physics;
 import com.smousseur.orbitlab.simulation.mission.detector.MinAltitudeTracker;
+import com.smousseur.orbitlab.simulation.mission.optimizer.problems.FailFastEnvelope;
 import com.smousseur.orbitlab.simulation.mission.vehicle.ActiveStageInfo;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropulsionSystem;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
@@ -42,15 +43,29 @@ public class TransfertTwoManeuver extends TransferManeuver {
   private static final double EARTH_RADIUS = Constants.WGS84_EARTH_EQUATORIAL_RADIUS;
 
   private final CircularizationBurnResolver circularizationBurnResolver;
+  private final FailFastEnvelope failFast;
 
   /**
-   * Creates a two-burn transfer maneuver targeting the specified circular orbit altitude.
+   * Creates a two-burn transfer maneuver targeting the specified circular orbit altitude with the
+   * default {@link FailFastEnvelope}.
    *
    * @param vehicle the vehicle performing the transfer
    */
   public TransfertTwoManeuver(Vehicle vehicle, double targetAltitude) {
+    this(vehicle, targetAltitude, FailFastEnvelope.defaults());
+  }
+
+  /**
+   * Creates a two-burn transfer maneuver with an explicit fail-fast envelope.
+   *
+   * <p>The envelope is consumed by {@link #propagateForOptimization} to short-circuit Step 3 when
+   * the post-burn-1 orbit lies outside the configured eccentricity / semi-major-axis bounds.
+   */
+  public TransfertTwoManeuver(
+      Vehicle vehicle, double targetAltitude, FailFastEnvelope failFast) {
     super(vehicle, targetAltitude);
     this.circularizationBurnResolver = new CircularizationBurnResolver(vehicle);
+    this.failFast = failFast;
   }
 
   /**
@@ -88,9 +103,10 @@ public class TransfertTwoManeuver extends TransferManeuver {
       return new TransferResult(initialState, null, null, null); // penalty
     }
     KeplerianOrbit orbitPostBurn1 = new KeplerianOrbit(stateAfterBurn1.getOrbit());
-    if (orbitPostBurn1.getE() > 0.95
+    double aMax = EARTH_RADIUS + targetAltitude + failFast.semiMajorAxisOffsetMax();
+    if (orbitPostBurn1.getE() > failFast.eccentricityMax()
         || orbitPostBurn1.getA() < EARTH_RADIUS
-        || orbitPostBurn1.getA() > EARTH_RADIUS + 2_000_000) {
+        || orbitPostBurn1.getA() > aMax) {
       // Pass orbitPostBurn1 through so the cost function can grade the failure
       // by orbital-element distance instead of falling back to a flat 1e6 wall.
       return new TransferResult(initialState, orbitPostBurn1, null, null);
@@ -112,13 +128,32 @@ public class TransfertTwoManeuver extends TransferManeuver {
     AbsoluteDate endDate = initialState.getDate().shiftedBy(totalTime);
     try {
       SpacecraftState finalState = propagator.propagate(endDate);
+
       if (Math.abs(finalState.getDate().durationFrom(endDate)) > 1.0) {
-        return new TransferResult(initialState, orbitPostBurn1, circBurn, tracker); // penalty
+        /*
+               logger.warn(
+                   "PENALTY[step3-truncated] expected={}s, actual={}s, postBurn1: a={}, e={}, dvNeeded={}",
+                   totalTime,
+                   finalState.getDate().durationFrom(initialState.getDate()),
+                   orbitPostBurn1.getA(),
+                   orbitPostBurn1.getE(),
+                   circBurn.dvNeeded);
+        */
+        return new TransferResult(initialState, orbitPostBurn1, circBurn, tracker);
       }
       return new TransferResult(finalState, orbitPostBurn1, circBurn, tracker);
     } catch (Exception e) {
-      logger.debug("Transfer propagation failed (penalty applied): {}", e.getMessage());
-      return new TransferResult(initialState, orbitPostBurn1, circBurn, tracker); // penalty
+      /*
+      logger.warn(
+          "PENALTY[step3-exception] {}, postBurn1: a={}, e={}, totalTime={}, dvNeeded={}",
+          e.getMessage(),
+          orbitPostBurn1.getA(),
+          orbitPostBurn1.getE(),
+          totalTime,
+          circBurn.dvNeeded);
+
+       */
+      return new TransferResult(initialState, orbitPostBurn1, circBurn, tracker);
     }
   }
 

@@ -74,10 +74,8 @@ public class TransferProblem implements TrajectoryProblem {
   private static final double ALT_MIN = 80_000;
   private static final double PERIAPSIS_FLOOR_MIN = 120_000;
 
-  // Niveau 2.3 — burn-1 duration multiplier on the Hohmann estimate
-  private static final double DT1_MAX_MULTIPLIER = 4.0;
-  // Niveau 2.3 — t1 upper bound as a fraction of the post-GT orbital period
-  private static final double T1_MAX_PERIOD_FRACTION = 0.5;
+  // Per-mission tuning (bounds, convergence threshold, failure-path grading).
+  protected final TransferTuning tuning;
 
   protected final double altMax;
 
@@ -123,7 +121,33 @@ public class TransferProblem implements TrajectoryProblem {
   private final double targetInclination;
 
   /**
-   * Creates a single-burn transfer optimization problem.
+   * Creates a single-burn transfer optimization problem with the historical LEO-tuned defaults.
+   *
+   * <p>Equivalent to calling {@link #TransferProblem(TransferManeuver, SpacecraftState, double,
+   * double, PropulsionSystem, double, double, TransferTuning) the tuning-aware overload} with
+   * {@link TransferTuning#defaults()}.
+   */
+  public TransferProblem(
+      TransferManeuver maneuver,
+      SpacecraftState initialState,
+      double perigeeAltitude,
+      double apogeeAltitude,
+      PropulsionSystem propulsionSystem,
+      double vehicleMinMass,
+      double targetInclination) {
+    this(
+        maneuver,
+        initialState,
+        perigeeAltitude,
+        apogeeAltitude,
+        propulsionSystem,
+        vehicleMinMass,
+        targetInclination,
+        TransferTuning.defaults());
+  }
+
+  /**
+   * Creates a single-burn transfer optimization problem with explicit per-mission tuning.
    *
    * <p>Precomputes Hohmann-like initial guesses for burn timing and duration, applies a J2
    * short-period altitude compensation to the target, and determines physical upper bounds on burn
@@ -139,6 +163,7 @@ public class TransferProblem implements TrajectoryProblem {
    * @param propulsionSystem the propulsion system used for the transfer burn
    * @param vehicleMinMass minimum allowable vehicle mass after burns (dry mass)
    * @param targetInclination target orbital plane inclination in radians
+   * @param tuning per-mission tuning (search bounds, convergence threshold, failure-path grading)
    */
   public TransferProblem(
       TransferManeuver maneuver,
@@ -147,11 +172,13 @@ public class TransferProblem implements TrajectoryProblem {
       double apogeeAltitude,
       PropulsionSystem propulsionSystem,
       double vehicleMinMass,
-      double targetInclination) {
+      double targetInclination,
+      TransferTuning tuning) {
 
     this.initialState = initialState;
     this.maneuver = maneuver;
     this.targetInclination = targetInclination;
+    this.tuning = tuning;
     KeplerianOrbit initialOrbit = new KeplerianOrbit(initialState.getOrbit());
     double mu = initialOrbit.getMu();
 
@@ -257,14 +284,18 @@ public class TransferProblem implements TrajectoryProblem {
     // velocity orientation regardless of the apogee gap.
     double apoDefect = (rTarget - rApoapsis) / rTarget;
     this.betaMaxAdaptive = (FastMath.PI / 12.0) * (1.0 + FastMath.max(0.0, apoDefect));
-    this.betaMax = FastMath.max(FastMath.PI / 8.0, betaMaxAdaptive);
+    // Historical behavior: max(π/8, adaptive). The tuning adds a hard cap on top,
+    // letting GTO/GEO tighten β across the search without disturbing the LEO defaults.
+    this.betaMax =
+        FastMath.min(
+            tuning.betaMaxRad(), FastMath.max(FastMath.PI / 8.0, betaMaxAdaptive));
 
     // Niveau 2.3 — bound t1 by a fraction of the current orbital period so
     // CMA-ES can explore the full pre-burn coast window without depending on
     // a (possibly meaningless) time-to-apoapsis guess. dt1 cap moves from
     // 2·guessDt1 to K·guessDt1, still clamped by propellant feasibility.
-    this.t1Max = FastMath.max(120.0, T1_MAX_PERIOD_FRACTION * initialPeriod);
-    this.dt1Max = FastMath.max(DT1_MAX_MULTIPLIER * guessDt1, dt1MaxPhysical);
+    this.t1Max = FastMath.max(120.0, tuning.t1MaxPeriodFraction() * initialPeriod);
+    this.dt1Max = FastMath.max(tuning.dt1MaxMultiplier() * guessDt1, dt1MaxPhysical);
 
     // Niveau 2.4 — adaptive periapsis floor and eccentricity weight.
     // Spec (02 §2.4) suggests max(120 km, target − 100 km); but the existing
@@ -316,7 +347,7 @@ public class TransferProblem implements TrajectoryProblem {
 
   @Override
   public double getAcceptableCost() {
-    return 3e-3;
+    return tuning.acceptableCost();
   }
 
   @Override
@@ -342,8 +373,8 @@ public class TransferProblem implements TrajectoryProblem {
     return new double[] {
       0.0,
       guessDt1 * 0.5,
-      -FastMath.PI / 2.0, // alpha1: prograde ± 90°
-      -betaMax // beta1: adaptive out-of-plane (Niveau 2.1)
+      -tuning.alphaMaxRad(), // alpha1: bounded by tuning (defaults to ±π/2)
+      -betaMax // beta1: adaptive out-of-plane (Niveau 2.1) capped by tuning
     };
   }
 
@@ -352,7 +383,7 @@ public class TransferProblem implements TrajectoryProblem {
     return new double[] {
       t1Max, // Niveau 2.3 — fraction of post-GT orbital period
       dt1Max, // Niveau 2.3 — K·guessDt1, capped by propellant
-      FastMath.PI / 2.0,
+      tuning.alphaMaxRad(),
       betaMax
     };
   }
@@ -457,30 +488,13 @@ public class TransferProblem implements TrajectoryProblem {
   @Override
   public double computeCost(SpacecraftState state) {
     // Detect penalty states: if propagation failed, the returned state is the initial state
-    // (no time advancement). Use a graded penalty so CMA-ES gets a usable gradient instead
-    // of a flat 1e6 wall. The 1e3 base still dominates any nominal cost (typically ≪ 100).
-    // Three failure modes, in order of preference:
-    //   1. Tracker captured an in-flight altitude excursion → grade by depth underground.
-    //   2. orbitPostBurn1 is non-null but extreme (e>0.95, a out of range) → grade by
-    //      orbital distance from a viable target orbit.
-    //   3. Nothing usable → fall back to the flat 1e6 wall.
+    // (no time advancement). Combine every available signal (post-burn-1 orbit elements,
+    // in-flight underground excursion) with tuning-driven weights so CMA-ES sees a
+    // continuous gradient instead of a flat plateau. The {@code failureBaseCost} keeps the
+    // failure path well above any nominal cost while remaining finite.
     double elapsed = state.getDate().durationFrom(initialState.getDate());
     if (elapsed < 1.0) {
-      TransferResult tr = lastResult.get();
-      if (tr != null) {
-        MinAltitudeTracker failureTracker = tr.altitudeTracker();
-        if (failureTracker != null && failureTracker.getMinAltitude() != Double.MAX_VALUE) {
-          double underground = FastMath.max(0.0, -failureTracker.getMinAltitude());
-          return 1e3 + underground / 1000.0;
-        }
-        KeplerianOrbit postBurn1 = tr.orbitPostBurn1();
-        if (postBurn1 != null) {
-          double aErr = FastMath.abs(postBurn1.getA() - aTarget) / aTarget;
-          double eErr = postBurn1.getE();
-          return 1e3 + 50.0 * aErr + 50.0 * eErr;
-        }
-      }
-      return 1e6;
+      return computeFailurePenalty();
     }
 
     KeplerianOrbit finalOrbit = (KeplerianOrbit) OrbitType.KEPLERIAN.convertType(state.getOrbit());
@@ -527,6 +541,32 @@ public class TransferProblem implements TrajectoryProblem {
     }
 
     return objective + W_BARRIER * barrier + W_ALT_MAX * altMaxPenalty;
+  }
+
+  private double computeFailurePenalty() {
+    TransferResult tr = lastResult.get();
+    if (tr == null) {
+      // No partial information at all (no propagation result captured).
+      // Use a large finite value rather than a hard wall.
+      return 1e6;
+    }
+    double penalty = tuning.failureBaseCost();
+    MinAltitudeTracker failureTracker = tr.altitudeTracker();
+    if (failureTracker != null && failureTracker.getMinAltitude() != Double.MAX_VALUE) {
+      double underground = FastMath.max(0.0, -failureTracker.getMinAltitude());
+      penalty += underground / 1000.0;
+    }
+    KeplerianOrbit postBurn1 = tr.orbitPostBurn1();
+    if (postBurn1 != null) {
+      double aErr = FastMath.abs(postBurn1.getA() - aTarget) / aTarget;
+      double eErr = FastMath.abs(postBurn1.getE() - eTarget);
+      double iErr = postBurn1.getI() - targetInclination;
+      penalty +=
+          tuning.failureWeightA() * aErr
+              + tuning.failureWeightE() * eErr
+              + tuning.failureWeightI() * iErr * iErr;
+    }
+    return penalty;
   }
 
   private static double computeGeodeticAltitude(

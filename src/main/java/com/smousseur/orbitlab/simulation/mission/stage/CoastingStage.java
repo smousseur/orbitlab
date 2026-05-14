@@ -1,20 +1,22 @@
 package com.smousseur.orbitlab.simulation.mission.stage;
 
+import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionStage;
 import org.hipparchus.ode.events.Action;
 import org.orekit.propagation.events.DateDetector;
+import org.orekit.propagation.events.NodeDetector;
 import org.orekit.propagation.numerical.NumericalPropagator;
 import org.orekit.time.AbsoluteDate;
 
 /**
- * A mission stage representing an unpowered coasting phase with an optional maximum duration.
- * If a maximum time is specified, the stage transitions to the next stage when that time elapses.
- * If no maximum time is set, the stage coasts indefinitely until an external event triggers
- * a transition.
+ * A mission stage representing an unpowered coasting phase with an optional maximum duration. If a
+ * maximum time is specified, the stage transitions to the next stage when that time elapses. If no
+ * maximum time is set, the stage coasts indefinitely until an external event triggers a transition.
  */
 public class CoastingStage extends MissionStage {
   private final Double maxTime;
+  private final boolean stopAtNode;
 
   /**
    * Creates a coasting stage with an optional maximum duration.
@@ -25,11 +27,26 @@ public class CoastingStage extends MissionStage {
   public CoastingStage(String name, Double maxTime) {
     super(name);
     this.maxTime = maxTime;
+    this.stopAtNode = false;
+  }
+
+  public CoastingStage(String name, boolean stopAtNode) {
+    super(name);
+    this.maxTime = null;
+    this.stopAtNode = stopAtNode;
   }
 
   @Override
   public void configure(NumericalPropagator propagator, Mission mission) {
-    if (maxTime != null) {
+    if (stopAtNode) {
+      propagator.addEventDetector(
+          new NodeDetector(OrekitService.get().gcrf())
+              .withHandler(
+                  (s, detector, increasing) -> {
+                    mission.transitionToNextStage(s);
+                    return Action.STOP;
+                  }));
+    } else if (maxTime != null) {
       AbsoluteDate t = mission.getCurrentState().getDate().shiftedBy(maxTime);
       this.configuredEndDate = t;
       propagator.addEventDetector(
