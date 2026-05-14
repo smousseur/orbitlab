@@ -5,8 +5,8 @@ import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.mission.objective.OrbitInsertionObjective;
 import com.smousseur.orbitlab.simulation.mission.optimizer.problems.GravityTurnConstraints;
 import com.smousseur.orbitlab.simulation.mission.stage.AnalyticHohmannTransferStage;
+import com.smousseur.orbitlab.simulation.mission.stage.AnalyticParkingInsertionStage;
 import com.smousseur.orbitlab.simulation.mission.stage.CoastingStage;
-import com.smousseur.orbitlab.simulation.mission.stage.TwoManeuverTransferStage;
 import com.smousseur.orbitlab.simulation.mission.stage.ascent.GravityTurnStage;
 import com.smousseur.orbitlab.simulation.mission.stage.ascent.VerticalAscentStage;
 import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchVehicle;
@@ -119,7 +119,7 @@ public class GTOMission extends Mission {
             ASCENSION_DURATION,
             3.0,
             GravityTurnConstraints.forTarget(parkingAltitude)),
-        new TwoManeuverTransferStage("Parking", parkingAltitude),
+        new AnalyticParkingInsertionStage("Parking", parkingAltitude),
         new CoastingStage("Coasting parking", true),
         new AnalyticHohmannTransferStage(
             "Transfert", targetAltitude, FastMath.toRadians(finalInclination)),
