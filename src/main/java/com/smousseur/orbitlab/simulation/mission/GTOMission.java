@@ -31,8 +31,8 @@ import java.util.List;
 
 public class GTOMission extends Mission {
   private static final int ASCENSION_DURATION = 10;
-  private static final double DEFAULT_LATITUDE = 45.96;
-  private static final double DEFAULT_LONGITUDE = 63.30;
+  private static final double DEFAULT_LATITUDE = 5.23;
+  private static final double DEFAULT_LONGITUDE = -52.77;
   private static final double DEFAULT_ALTITUDE = 0.0;
 
   private final double latitude;
