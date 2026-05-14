@@ -193,8 +193,12 @@ public class AnalyticHohmannTransferStage extends MissionStage {
     // change effectively accumulates against a fixed reference.
     Vector3D burn2DirectionInertial = deltaV2.normalize();
 
-    // Center burn 2 on the apogee passage.
-    double dtCoast = FastMath.max(0.0, dtCoastImpulsive - dt2 / 2.0);
+    // Center burn 2 on the impulsive apogee. The impulsive equivalent of burn 1 happens at its
+    // midpoint (epoch + dt1/2), so the transfer ellipse's apogee passage is at
+    // epoch + dt1/2 + halfPeriod. Burn 2 mid = burn2Start + dt2/2, so burn2Start must be
+    // epoch + dt1/2 + halfPeriod − dt2/2. With burn2Start = epoch + dt1 + dtCoast, this means
+    // dtCoast = halfPeriod − dt1/2 − dt2/2.
+    double dtCoast = FastMath.max(0.0, dtCoastImpulsive - dt1 / 2.0 - dt2 / 2.0);
     double totalDuration = dt1 + dtCoast + dt2;
 
     logger.info(
