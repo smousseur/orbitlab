@@ -14,6 +14,7 @@ import org.hipparchus.geometry.euclidean.threed.RotationConvention;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.hipparchus.ode.events.Action;
 import org.hipparchus.util.FastMath;
+import org.orekit.attitudes.FrameAlignedProvider;
 import org.orekit.attitudes.LofOffset;
 import org.orekit.forces.maneuvers.ConstantThrustManeuver;
 import org.orekit.frames.LOFType;
@@ -118,7 +119,7 @@ public class AnalyticHohmannTransferStage extends MissionStage {
       Vector3D burn1DirectionTNW,
       double dtCoast,
       double dt2,
-      Vector3D burn2DirectionTNW,
+      Vector3D burn2DirectionInertial,
       double totalDuration,
       double dv1,
       double dv2) {}
@@ -184,14 +185,13 @@ public class AnalyticHohmannTransferStage extends MissionStage {
     double dt2 =
         Physics.computeBurnDuration(dv2, massAfterBurn1, propulsion2.isp(), propulsion2.thrust());
 
-    // ── Express ΔV₂ in the TNW frame at apogee ──
-    Vector3D tHat = vCurrentApo.normalize();
-    Vector3D wHat = Vector3D.crossProduct(rApo, vCurrentApo).normalize();
-    Vector3D nHat = Vector3D.crossProduct(wHat, tHat);
-    double uT = Vector3D.dotProduct(deltaV2, tHat) / dv2;
-    double uN = Vector3D.dotProduct(deltaV2, nHat) / dv2;
-    double uW = Vector3D.dotProduct(deltaV2, wHat) / dv2;
-    Vector3D burn2Direction = new Vector3D(uT, uN, uW);
+    // ── Burn 2 direction in inertial frame ──
+    // Applying the ΔV₂ as a constant LOF-TNW direction would let the local frame rotate with the
+    // orbital plane *during* the finite burn — which is exactly the rotation the W component is
+    // trying to induce. The result is that the plane change comes out short (observed: 1.88°
+    // residual on a 5.3° target). Apply it as a constant inertial direction instead so the plane
+    // change effectively accumulates against a fixed reference.
+    Vector3D burn2DirectionInertial = deltaV2.normalize();
 
     // Center burn 2 on the apogee passage.
     double dtCoast = FastMath.max(0.0, dtCoastImpulsive - dt2 / 2.0);
@@ -206,7 +206,7 @@ public class AnalyticHohmannTransferStage extends MissionStage {
         dt2);
 
     return new AnalyticBurnPlan(
-        dt1, burn1Direction, dtCoast, dt2, burn2Direction, totalDuration, dv1, dv2);
+        dt1, burn1Direction, dtCoast, dt2, burn2DirectionInertial, totalDuration, dv1, dv2);
   }
 
   /**
@@ -251,7 +251,7 @@ public class AnalyticHohmannTransferStage extends MissionStage {
       AnalyticBurnPlan plan,
       Vehicle vehicle) {
     AbsoluteDate epoch = state.getDate();
-    LofOffset attitude = new LofOffset(state.getFrame(), LOFType.TNW);
+    LofOffset lofAttitude = new LofOffset(state.getFrame(), LOFType.TNW);
 
     ActiveStageInfo stage1 = vehicle.resolveActiveStage(state.getMass());
     PropulsionSystem propulsion1 = stage1.propulsion();
@@ -262,7 +262,7 @@ public class AnalyticHohmannTransferStage extends MissionStage {
             plan.dt1(),
             propulsion1.thrust(),
             propulsion1.isp(),
-            attitude,
+            lofAttitude,
             plan.burn1DirectionTNW()));
 
     double massAfterBurn1 =
@@ -271,13 +271,21 @@ public class AnalyticHohmannTransferStage extends MissionStage {
     ActiveStageInfo stage2 = vehicle.resolveActiveStage(massAfterBurn1);
     PropulsionSystem propulsion2 = stage2.propulsion();
     AbsoluteDate burn2Start = epoch.shiftedBy(plan.dt1() + plan.dtCoast());
+    // Burn 2 uses a frame-aligned attitude so the thrust direction stays constant in inertial
+    // throughout the finite burn — this is what makes the combined circularization + plane change
+    // converge to the impulsive target instead of losing authority to LOF rotation.
+    // FrameAlignedProvider's rotation maps inertial → body. We want body PLUS_I to point along
+    // burn2DirectionInertial in inertial, i.e. r(burn2DirectionInertial) = PLUS_I.
+    Rotation inertialToBody = new Rotation(plan.burn2DirectionInertial(), Vector3D.PLUS_I);
+    FrameAlignedProvider inertialAttitude =
+        new FrameAlignedProvider(inertialToBody, state.getFrame());
     propagator.addForceModel(
         new ConstantThrustManeuver(
             burn2Start,
             plan.dt2(),
             propulsion2.thrust(),
             propulsion2.isp(),
-            attitude,
-            plan.burn2DirectionTNW()));
+            inertialAttitude,
+            Vector3D.PLUS_I));
   }
 }
