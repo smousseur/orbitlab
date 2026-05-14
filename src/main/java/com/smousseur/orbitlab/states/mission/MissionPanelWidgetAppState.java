@@ -4,7 +4,7 @@ import com.jme3.app.Application;
 import com.jme3.app.state.BaseAppState;
 import com.smousseur.orbitlab.app.ApplicationContext;
 import com.smousseur.orbitlab.engine.events.EventBus;
-import com.smousseur.orbitlab.simulation.mission.GTOMission;
+import com.smousseur.orbitlab.simulation.mission.GEOMission;
 import com.smousseur.orbitlab.simulation.mission.LEOMission;
 import com.smousseur.orbitlab.simulation.mission.MissionContext;
 import com.smousseur.orbitlab.ui.mission.panel.MissionPanelTrigger;
@@ -25,7 +25,7 @@ public final class MissionPanelWidgetAppState extends BaseAppState {
     this.context = context;
     MissionContext missionContext = context.missionContext();
     missionContext.addMission(new LEOMission("LEO", 400_000));
-    missionContext.addMission(new GTOMission("GTO mission", 400_000, 35_786_000));
+    missionContext.addMission(new GEOMission("GTO mission", 400_000, 35_786_000));
   }
 
   @Override

@@ -12,7 +12,6 @@ import org.apache.logging.log4j.Logger;
 import org.hipparchus.geometry.euclidean.threed.Rotation;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.hipparchus.ode.events.Action;
-import org.hipparchus.util.FastMath;
 import org.orekit.attitudes.FrameAlignedProvider;
 import org.orekit.forces.maneuvers.ConstantThrustManeuver;
 import org.orekit.propagation.SpacecraftState;

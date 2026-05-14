@@ -12,7 +12,6 @@ import com.smousseur.orbitlab.simulation.mission.stage.ascent.GravityTurnStage;
 import com.smousseur.orbitlab.simulation.mission.stage.ascent.VerticalAscentStage;
 import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchVehicle;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Spacecraft;
-import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
 import com.smousseur.orbitlab.simulation.mission.vehicle.VehicleStack;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.hipparchus.util.FastMath;
@@ -30,7 +29,7 @@ import org.orekit.utils.PVCoordinates;
 import java.util.ArrayList;
 import java.util.List;
 
-public class GTOMission extends Mission {
+public class GEOMission extends Mission {
   private static final int ASCENSION_DURATION = 10;
   private static final double DEFAULT_LATITUDE = 5.23;
   private static final double DEFAULT_LONGITUDE = -52.77;
@@ -40,11 +39,11 @@ public class GTOMission extends Mission {
   private final double longitude;
   private final double altitude;
 
-  public GTOMission(String name, double parkingAltitude, double targetAltitude) {
+  public GEOMission(String name, double parkingAltitude, double targetAltitude) {
     this(name, parkingAltitude, targetAltitude, 0.0);
   }
 
-  public GTOMission(
+  public GEOMission(
       String name, double parkingAltitude, double targetAltitude, double finalInclination) {
     this(
         name,
@@ -56,7 +55,7 @@ public class GTOMission extends Mission {
         finalInclination);
   }
 
-  public GTOMission(
+  public GEOMission(
       String name,
       double parkingAltitude,
       double targetAltitude,
@@ -66,7 +65,7 @@ public class GTOMission extends Mission {
     this(name, parkingAltitude, targetAltitude, latitude, longitude, altitude, 0.0);
   }
 
-  public GTOMission(
+  public GEOMission(
       String name,
       double parkingAltitude,
       double targetAltitude,

@@ -16,7 +16,6 @@ import org.hipparchus.ode.events.Action;
 import org.hipparchus.util.FastMath;
 import org.orekit.attitudes.FrameAlignedProvider;
 import org.orekit.forces.maneuvers.ConstantThrustManeuver;
-import org.orekit.orbits.CartesianOrbit;
 import org.orekit.propagation.SpacecraftState;
 import org.orekit.propagation.events.ApsideDetector;
 import org.orekit.propagation.events.DateDetector;
@@ -24,7 +23,6 @@ import org.orekit.propagation.events.handlers.RecordAndContinue;
 import org.orekit.propagation.numerical.NumericalPropagator;
 import org.orekit.time.AbsoluteDate;
 import org.orekit.utils.Constants;
-import org.orekit.utils.PVCoordinates;
 
 /**
  * Deterministic two-burn Hohmann transfer from a circular orbit to a target circular orbit at a
@@ -60,11 +58,11 @@ import org.orekit.utils.PVCoordinates;
  *       under the full 8×8 gravity model up to the next apogee (detected via {@link
  *       ApsideDetector}). This captures J2/J3+ effects exactly rather than approximating them with
  *       Brouwer secular formulae.
- *   <li>Both burns use {@link FrameAlignedProvider} with a constant inertial direction equal to
- *       the impulsive ΔV direction, so the integrated finite burn matches the impulsive equivalent
+ *   <li>Both burns use {@link FrameAlignedProvider} with a constant inertial direction equal to the
+ *       impulsive ΔV direction, so the integrated finite burn matches the impulsive equivalent
  *       (within Tsiolkovsky-rectangle quadrature error).
- *   <li>Active-stage propulsion is resolved twice (at burn 1 entry mass and at the post-burn-1
- *       mass estimated by Tsiolkovsky), so a stage transition between burns is handled correctly.
+ *   <li>Active-stage propulsion is resolved twice (at burn 1 entry mass and at the post-burn-1 mass
+ *       estimated by Tsiolkovsky), so a stage transition between burns is handled correctly.
  * </ul>
  */
 public class AnalyticHohmannTransferStage extends MissionStage {
@@ -233,8 +231,7 @@ public class AnalyticHohmannTransferStage extends MissionStage {
         vRadial1);
 
     return new AnalyticBurnPlan(
-        dt1, burn1DirectionInertial, dtCoast, dt2, burn2DirectionInertial, totalDuration, dv1,
-        dv2);
+        dt1, burn1DirectionInertial, dtCoast, dt2, burn2DirectionInertial, totalDuration, dv1, dv2);
   }
 
   /**
@@ -307,8 +304,7 @@ public class AnalyticHohmannTransferStage extends MissionStage {
       } else {
         rotAxis = rotAxis.normalize();
       }
-      Rotation rot =
-          new Rotation(rotAxis, targetInclination, RotationConvention.VECTOR_OPERATOR);
+      Rotation rot = new Rotation(rotAxis, targetInclination, RotationConvention.VECTOR_OPERATOR);
       nTarget = rot.applyTo(zHat);
     }
 
@@ -363,8 +359,8 @@ public class AnalyticHohmannTransferStage extends MissionStage {
 
   /**
    * Builds a {@link FrameAlignedProvider} that points body {@code PLUS_I} along {@code direction}
-   * in the spacecraft inertial frame. The provider holds the rotation constant for the duration
-   * of any maneuver attached to it.
+   * in the spacecraft inertial frame. The provider holds the rotation constant for the duration of
+   * any maneuver attached to it.
    */
   private static FrameAlignedProvider inertialFrameAttitude(
       Vector3D direction, SpacecraftState state) {
