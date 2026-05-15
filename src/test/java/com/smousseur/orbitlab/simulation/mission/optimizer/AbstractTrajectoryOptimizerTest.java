@@ -88,6 +88,7 @@ public class AbstractTrajectoryOptimizerTest {
         finalOrbit.getI(),
         FastMath.toDegrees(finalOrbit.getI()));
 
+    logger.info("Final eccentricity: {}", finalOrbit.getE());
     double errorApogeeMargin = ORBIT_MARGIN_RATIO * apogeeAltitude;
     Assertions.assertTrue(
         Math.abs(results.maxAltitude - apogeeAltitude) <= errorApogeeMargin,

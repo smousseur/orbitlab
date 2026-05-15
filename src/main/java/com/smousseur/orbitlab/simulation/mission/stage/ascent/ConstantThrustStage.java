@@ -1,4 +1,4 @@
-package com.smousseur.orbitlab.simulation.mission.stage;
+package com.smousseur.orbitlab.simulation.mission.stage.ascent;
 
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.mission.Mission;

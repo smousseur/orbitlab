@@ -1,5 +1,6 @@
-package com.smousseur.orbitlab.simulation.mission;
+package com.smousseur.orbitlab.simulation.mission.context;
 
+import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemeris;
 import com.smousseur.orbitlab.simulation.mission.runtime.MissionOptimizerResult;
 import java.util.Objects;

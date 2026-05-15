@@ -1,11 +1,13 @@
-package com.smousseur.orbitlab.simulation.mission;
+package com.smousseur.orbitlab.simulation.mission.operation;
 
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.simulation.OrekitService;
+import com.smousseur.orbitlab.simulation.mission.Mission;
+import com.smousseur.orbitlab.simulation.mission.MissionStage;
+import com.smousseur.orbitlab.simulation.mission.objective.MissionObjective;
 import com.smousseur.orbitlab.simulation.mission.objective.OrbitInsertionObjective;
 import com.smousseur.orbitlab.simulation.mission.optimizer.problems.GravityTurnConstraints;
 import com.smousseur.orbitlab.simulation.mission.stage.AnalyticHohmannTransferStage;
-import com.smousseur.orbitlab.simulation.mission.stage.AnalyticParkingInsertionStage;
 import com.smousseur.orbitlab.simulation.mission.stage.AnalyticTrimBurnStage;
 import com.smousseur.orbitlab.simulation.mission.stage.CoastingStage;
 import com.smousseur.orbitlab.simulation.mission.stage.ascent.GravityTurnStage;
@@ -13,6 +15,8 @@ import com.smousseur.orbitlab.simulation.mission.stage.ascent.VerticalAscentStag
 import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchVehicle;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Spacecraft;
 import com.smousseur.orbitlab.simulation.mission.vehicle.VehicleStack;
+import java.util.ArrayList;
+import java.util.List;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.hipparchus.util.FastMath;
 import org.orekit.bodies.GeodeticPoint;
@@ -26,59 +30,85 @@ import org.orekit.time.AbsoluteDate;
 import org.orekit.utils.Constants;
 import org.orekit.utils.PVCoordinates;
 
-import java.util.ArrayList;
-import java.util.List;
-
-public class GEOMission extends Mission {
+/**
+ * Concrete LEO (Low Earth Orbit) insertion mission launching from Kourou (French Guiana). Stages:
+ * Vertical Ascent → Gravity Turn → Transfer Two-Maneuver → Coasting.
+ */
+public class LEOMission extends Mission {
   private static final int ASCENSION_DURATION = 10;
-  private static final double DEFAULT_LATITUDE = 5.23;
-  private static final double DEFAULT_LONGITUDE = -52.77;
+  private static final double DEFAULT_LATITUDE = 45.96;
+  private static final double DEFAULT_LONGITUDE = 63.30;
   private static final double DEFAULT_ALTITUDE = 0.0;
 
   private final double latitude;
   private final double longitude;
   private final double altitude;
 
-  public GEOMission(String name, double parkingAltitude, double targetAltitude) {
-    this(name, parkingAltitude, targetAltitude, 0.0);
+  /**
+   * Creates a circular LEO mission with default Kourou launch site.
+   *
+   * @param name the mission name
+   * @param targetAltitude the target orbital altitude in meters
+   */
+  public LEOMission(String name, double targetAltitude) {
+    this(name, targetAltitude, targetAltitude);
   }
 
-  public GEOMission(
-      String name, double parkingAltitude, double targetAltitude, double finalInclination) {
+  /**
+   * Creates a LEO mission with default Kourou launch site. Pass equal perigee and apogee for a
+   * circular orbit.
+   *
+   * @param name the mission name
+   * @param perigeeAltitude the target perigee altitude in meters
+   * @param apogeeAltitude the target apogee altitude in meters
+   */
+  public LEOMission(String name, double perigeeAltitude, double apogeeAltitude) {
     this(
         name,
-        parkingAltitude,
-        targetAltitude,
+        perigeeAltitude,
+        apogeeAltitude,
         DEFAULT_LATITUDE,
         DEFAULT_LONGITUDE,
-        DEFAULT_ALTITUDE,
-        finalInclination);
+        DEFAULT_ALTITUDE);
   }
 
-  public GEOMission(
+  /**
+   * Creates a circular LEO mission with a custom launch site.
+   *
+   * @param name the mission name
+   * @param targetAltitude the target orbital altitude in meters
+   * @param latitude the launch site latitude in degrees
+   * @param longitude the launch site longitude in degrees
+   * @param altitude the launch site altitude in meters
+   */
+  public LEOMission(
+      String name, double targetAltitude, double latitude, double longitude, double altitude) {
+    this(name, targetAltitude, targetAltitude, latitude, longitude, altitude);
+  }
+
+  /**
+   * Creates a LEO mission with a custom launch site. Pass equal perigee and apogee for a circular
+   * orbit.
+   *
+   * @param name the mission name
+   * @param perigeeAltitude the target perigee altitude in meters
+   * @param apogeeAltitude the target apogee altitude in meters
+   * @param latitude the launch site latitude in degrees
+   * @param longitude the launch site longitude in degrees
+   * @param altitude the launch site altitude in meters
+   */
+  public LEOMission(
       String name,
-      double parkingAltitude,
-      double targetAltitude,
+      double perigeeAltitude,
+      double apogeeAltitude,
       double latitude,
       double longitude,
       double altitude) {
-    this(name, parkingAltitude, targetAltitude, latitude, longitude, altitude, 0.0);
-  }
-
-  public GEOMission(
-      String name,
-      double parkingAltitude,
-      double targetAltitude,
-      double latitude,
-      double longitude,
-      double altitude,
-      double finalInclination) {
     super(
         name,
         buildVehicle(),
-        buildStages(parkingAltitude, targetAltitude, finalInclination),
-        new OrbitInsertionObjective(
-            SolarSystemBody.EARTH, parkingAltitude, targetAltitude, FastMath.toRadians(latitude)));
+        buildStages(perigeeAltitude, apogeeAltitude, latitude),
+        buildObjective(perigeeAltitude, apogeeAltitude, latitude));
     this.latitude = latitude;
     this.longitude = longitude;
     this.altitude = altitude;
@@ -111,19 +141,26 @@ public class GEOMission extends Mission {
   }
 
   private static List<MissionStage> buildStages(
-      double parkingAltitude, double targetAltitude, double finalInclination) {
+      double perigeeAltitude, double apogeeAltitude, double latitude) {
     return List.of(
         new VerticalAscentStage("Vertical Ascent", ASCENSION_DURATION),
         new GravityTurnStage(
             "Gravity turn",
             ASCENSION_DURATION,
             3.0,
-            GravityTurnConstraints.forTarget(parkingAltitude)),
-        new AnalyticParkingInsertionStage("Parking", parkingAltitude),
-        new CoastingStage("Coasting parking", true),
+            GravityTurnConstraints.forTarget(perigeeAltitude)),
         new AnalyticHohmannTransferStage(
-            "Transfert", targetAltitude, FastMath.toRadians(finalInclination)),
-        new AnalyticTrimBurnStage("Trim", FastMath.toRadians(finalInclination)),
+            "Transfert", perigeeAltitude, apogeeAltitude, FastMath.toRadians(latitude)),
+        new AnalyticTrimBurnStage("Trim", perigeeAltitude, FastMath.toRadians(latitude)),
         new CoastingStage("Coasting", null));
+  }
+
+  private static MissionObjective buildObjective(
+      double perigeeAltitude, double apogeeAltitude, double latitudeDegrees) {
+    return new OrbitInsertionObjective(
+        SolarSystemBody.EARTH,
+        perigeeAltitude,
+        apogeeAltitude,
+        FastMath.toRadians(latitudeDegrees));
   }
 }

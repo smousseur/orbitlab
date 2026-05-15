@@ -17,7 +17,7 @@ import com.simsilica.lemur.component.InsetsComponent;
 import com.simsilica.lemur.component.TbtQuadBackgroundComponent;
 import com.simsilica.lemur.event.DefaultMouseListener;
 import com.simsilica.lemur.event.MouseEventControl;
-import com.smousseur.orbitlab.simulation.mission.MissionEntry;
+import com.smousseur.orbitlab.simulation.mission.context.MissionEntry;
 import com.smousseur.orbitlab.simulation.mission.MissionStatus;
 import com.smousseur.orbitlab.ui.UiKit;
 import com.smousseur.orbitlab.ui.form.FormStyles;
@@ -114,8 +114,7 @@ class MissionRow {
 
     actions.addChild(
         RowActionIcons.vCenter(
-            RowActionIcons.actionIconButton(
-                "edit", !computing, () -> listener.onEdit(missionName)),
+            RowActionIcons.actionIconButton("edit", !computing, () -> listener.onEdit(missionName)),
             HEIGHT));
     actions.addChild(UiKit.hSpacer(RowActionIcons.ICON_GAP));
     actions.addChild(

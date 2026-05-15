@@ -7,7 +7,7 @@ import com.simsilica.lemur.*;
 import com.simsilica.lemur.component.BoxLayout;
 import com.simsilica.lemur.event.DefaultMouseListener;
 import com.simsilica.lemur.event.MouseEventControl;
-import com.smousseur.orbitlab.simulation.mission.MissionContext;
+import com.smousseur.orbitlab.simulation.mission.context.MissionContext;
 import com.smousseur.orbitlab.simulation.mission.MissionType;
 import com.smousseur.orbitlab.ui.UiKit;
 import com.smousseur.orbitlab.ui.form.FormStyles;
@@ -28,12 +28,10 @@ public class StepMissionType implements StepValues {
   private final Container root;
   private final SelectableCard leoCard;
   private final SelectableCard geoCard;
-  private final MissionContext missionContext;
   private boolean missionTypeSelected = true;
   private String selectedMissionType = "LEO";
 
   public StepMissionType(MissionContext missionContext) {
-    this.missionContext = missionContext;
     root = new Container(new BoxLayout(Axis.Y, FillMode.None));
     root.setBackground(null);
     root.setPreferredSize(new Vector3f(FormStyles.CONTENT_WIDTH, FormStyles.CONTENT_HEIGHT, 0));

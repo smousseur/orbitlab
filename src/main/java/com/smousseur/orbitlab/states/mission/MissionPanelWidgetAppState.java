@@ -4,9 +4,9 @@ import com.jme3.app.Application;
 import com.jme3.app.state.BaseAppState;
 import com.smousseur.orbitlab.app.ApplicationContext;
 import com.smousseur.orbitlab.engine.events.EventBus;
-import com.smousseur.orbitlab.simulation.mission.GEOMission;
-import com.smousseur.orbitlab.simulation.mission.LEOMission;
-import com.smousseur.orbitlab.simulation.mission.MissionContext;
+import com.smousseur.orbitlab.simulation.mission.operation.GEOMission;
+import com.smousseur.orbitlab.simulation.mission.operation.LEOMission;
+import com.smousseur.orbitlab.simulation.mission.context.MissionContext;
 import com.smousseur.orbitlab.ui.mission.panel.MissionPanelTrigger;
 import com.smousseur.orbitlab.ui.mission.panel.MissionPanelWidget;
 

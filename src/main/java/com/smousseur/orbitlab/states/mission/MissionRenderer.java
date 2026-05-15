@@ -1,6 +1,5 @@
 package com.smousseur.orbitlab.states.mission;
 
-import com.jme3.app.Application;
 import com.jme3.math.ColorRGBA;
 import com.jme3.renderer.Camera;
 import com.jme3.scene.Node;
@@ -16,7 +15,7 @@ import com.smousseur.orbitlab.engine.scene.body.LodView;
 import com.smousseur.orbitlab.engine.scene.body.lod.Model3dView;
 import com.smousseur.orbitlab.engine.scene.spacecraft.SpacecraftPresenter;
 import com.smousseur.orbitlab.simulation.mission.Mission;
-import com.smousseur.orbitlab.simulation.mission.MissionEntry;
+import com.smousseur.orbitlab.simulation.mission.context.MissionEntry;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemerisPoint;
 import java.util.List;
 import java.util.Objects;

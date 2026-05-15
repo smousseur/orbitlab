@@ -11,7 +11,7 @@ import com.smousseur.orbitlab.engine.scene.graph.GuiGraph;
 import com.smousseur.orbitlab.engine.scene.graph.SceneGraph;
 import com.smousseur.orbitlab.engine.scene.body.BodyView;
 import com.smousseur.orbitlab.engine.scene.planet.PlanetPresenter;
-import com.smousseur.orbitlab.simulation.mission.MissionContext;
+import com.smousseur.orbitlab.simulation.mission.context.MissionContext;
 import com.smousseur.orbitlab.states.mission.MissionRenderer;
 
 import java.util.EnumMap;
@@ -162,8 +162,8 @@ public class ApplicationContext {
   }
 
   /**
-   * Registers a mission renderer so that other subsystems (e.g. the floating-origin state) can
-   * look it up by mission name without going through {@code getState(...)}.
+   * Registers a mission renderer so that other subsystems (e.g. the floating-origin state) can look
+   * it up by mission name without going through {@code getState(...)}.
    *
    * @param name the unique mission name
    * @param renderer the mission renderer to register

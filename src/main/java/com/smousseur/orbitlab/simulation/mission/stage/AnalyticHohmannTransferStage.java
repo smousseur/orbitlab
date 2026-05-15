@@ -25,9 +25,10 @@ import org.orekit.time.AbsoluteDate;
 import org.orekit.utils.Constants;
 
 /**
- * Deterministic two-burn Hohmann transfer from a circular orbit to a target circular orbit at a
- * specified altitude and inclination. No optimization variables — all burn parameters are computed
- * in closed form from the entry state and the target.
+ * Deterministic two-burn Hohmann transfer from a near-circular parking orbit to a target orbit
+ * defined by perigee, apogee and inclination. The circular case is recovered when {@code
+ * targetPerigeeAltitude == targetApogeeAltitude}. No optimization variables — all burn parameters
+ * are computed in closed form from the entry state and the target.
  *
  * <p>Geometry assumption: the entry state lies at an equatorial node of the parking orbit. This is
  * normally guaranteed by chaining this stage after a {@link CoastingStage} configured with {@code
@@ -35,11 +36,12 @@ import org.orekit.utils.Constants;
  *
  * <ul>
  *   <li>Burn 1 is a pure prograde Hohmann burn; the perigee of the transfer ellipse sits at the
- *       node.
+ *       node and matches the target-orbit perigee.
  *   <li>The transfer ellipse retains the parking-orbit plane; its apogee sits at the antipodal
  *       node, also on the equator.
- *   <li>Burn 2 is a single vector burn at apogee that combines circularization at the target
- *       altitude and the plane change to the target inclination, in inertial-frame components
+ *   <li>Burn 2 is a single vector burn at apogee that sets the velocity to the elliptical
+ *       target-orbit apogee velocity (collapses to the circularization velocity when {@code rp ==
+ *       ra}) and performs the plane change to the target inclination, in inertial-frame components
  *       projected onto the spacecraft TNW frame.
  * </ul>
  *
@@ -69,18 +71,25 @@ public class AnalyticHohmannTransferStage extends MissionStage {
   private static final Logger logger = LogManager.getLogger(AnalyticHohmannTransferStage.class);
   private static final double EARTH_RADIUS = Constants.WGS84_EARTH_EQUATORIAL_RADIUS;
 
-  private final double targetAltitude;
+  private final double targetPerigeeAltitude;
+  private final double targetApogeeAltitude;
   private final double targetInclination;
 
   /**
    * @param name human-readable stage name
-   * @param targetAltitude target circular orbit altitude (m, above the Earth surface)
+   * @param targetPerigeeAltitude target perigee altitude (m, above the Earth surface); equals
+   *     {@code targetApogeeAltitude} for a circular orbit
+   * @param targetApogeeAltitude target apogee altitude (m, above the Earth surface)
    * @param targetInclination target orbital plane inclination (rad); 0 for an equatorial GEO
    */
   public AnalyticHohmannTransferStage(
-      String name, double targetAltitude, double targetInclination) {
+      String name,
+      double targetPerigeeAltitude,
+      double targetApogeeAltitude,
+      double targetInclination) {
     super(name);
-    this.targetAltitude = targetAltitude;
+    this.targetPerigeeAltitude = targetPerigeeAltitude;
+    this.targetApogeeAltitude = targetApogeeAltitude;
     this.targetInclination = targetInclination;
   }
 
@@ -144,7 +153,8 @@ public class AnalyticHohmannTransferStage extends MissionStage {
     // the node. Newton on r2Aim converges in 1-2 iterations to drive the apogee under finite
     // burn dynamics to r2_target. The trim stage downstream zeros the residual eccentricity
     // and the small finite-burn-2 plane-change miss.
-    double r2 = EARTH_RADIUS + targetAltitude;
+    double rPerigeeTarget = EARTH_RADIUS + targetPerigeeAltitude;
+    double r2 = EARTH_RADIUS + targetApogeeAltitude;
     Vector3D tHat = vTangential1.normalize();
     ActiveStageInfo stage1 = vehicle.resolveActiveStage(state.getMass());
     PropulsionSystem propulsion1 = stage1.propulsion();
@@ -154,7 +164,7 @@ public class AnalyticHohmannTransferStage extends MissionStage {
     double dv1 = 0.0;
     double dt1 = 0.0;
     Vector3D deltaV1 = Vector3D.ZERO;
-    Vector3D vAfterBurn1 = Vector3D.ZERO;
+    Vector3D vAfterBurn1;
     SpacecraftState stateAtApogee = null;
     for (int iter = 0; iter < 4; iter++) {
       double aTransfer = (r1Mag + r2Aim) / 2.0;
@@ -188,13 +198,14 @@ public class AnalyticHohmannTransferStage extends MissionStage {
     Vector3D rApo = stateAtApogee.getPVCoordinates().getPosition();
     Vector3D vCurrentApo = stateAtApogee.getPVCoordinates().getVelocity();
 
-    // ── Target velocity at apogee: circular at r2_target (not |rApo|) in target plane ──
+    // ── Target velocity at apogee: elliptical (rp, r2_target) in target plane ──
     // After the Newton iteration r2Aim is such that simulated |rApo| equals r2_target to within
-    // ~100 m, so targeting circular at r2_target (rather than |rApo|) is essentially equivalent
-    // and removes the residual O(100 m) misalignment between the two radii.
+    // ~100 m, so targeting the elliptical apogee velocity at r2_target (rather than |rApo|) is
+    // essentially equivalent and removes the residual O(100 m) misalignment. When the target
+    // orbit is circular (rp == r2_target) this collapses to the circularization velocity.
     double rApoMag = rApo.getNorm();
     Vector3D vTargetApo =
-        computeTargetVelocityAtApogee(rApo, vCurrentApo, mu, r2, targetInclination);
+        computeTargetVelocityAtApogee(rApo, vCurrentApo, mu, rPerigeeTarget, r2, targetInclination);
 
     Vector3D deltaV2 = vTargetApo.subtract(vCurrentApo);
     double dv2 = deltaV2.getNorm();
@@ -279,17 +290,27 @@ public class AnalyticHohmannTransferStage extends MissionStage {
   }
 
   /**
-   * Computes the target velocity vector at apogee for a circular orbit of radius {@code r2} and
-   * inclination {@code targetInclination}, prograde, with a target plane normal chosen to minimize
-   * the wedge angle from the current orbit plane (purely a sign convention; the Δv magnitude is
-   * unaffected by other plane choices that satisfy the inclination constraint and prograde sense).
+   * Computes the target velocity vector at apogee for an orbit of perigee radius {@code
+   * targetPerigeeRadius}, apogee radius {@code targetApogeeRadius} and inclination {@code
+   * targetInclination}, prograde, with a target plane normal chosen to minimize the wedge angle
+   * from the current orbit plane (purely a sign convention; the Δv magnitude is unaffected by other
+   * plane choices that satisfy the inclination constraint and prograde sense).
    *
-   * <p>Package-private so it can be reused by trim-burn stages computing a circularization +
-   * plane-change burn against an in-flight state.
+   * <p>Magnitude from vis-viva: {@code sqrt(mu·(2/ra − 1/a))} with {@code a = (rp + ra)/2}.
+   * Collapses to the circularization velocity {@code sqrt(mu/ra)} when {@code rp == ra}.
+   *
+   * <p>Package-private so it can be reused by trim-burn stages computing a target-shape + plane-
+   * change burn against an in-flight state.
    */
   static Vector3D computeTargetVelocityAtApogee(
-      Vector3D rApo, Vector3D vCurrentApo, double mu, double r2, double targetInclination) {
-    double vCirc = FastMath.sqrt(mu / r2);
+      Vector3D rApo,
+      Vector3D vCurrentApo,
+      double mu,
+      double targetPerigeeRadius,
+      double targetApogeeRadius,
+      double targetInclination) {
+    double a = 0.5 * (targetPerigeeRadius + targetApogeeRadius);
+    double vMag = FastMath.sqrt(mu * (2.0 / targetApogeeRadius - 1.0 / a));
 
     Vector3D zHat = Vector3D.PLUS_K;
     Vector3D wCurrent = Vector3D.crossProduct(rApo, vCurrentApo).normalize();
@@ -309,7 +330,7 @@ public class AnalyticHohmannTransferStage extends MissionStage {
     }
 
     Vector3D vTargetDir = Vector3D.crossProduct(nTarget, rApo).normalize();
-    return vTargetDir.scalarMultiply(vCirc);
+    return vTargetDir.scalarMultiply(vMag);
   }
 
   // ════════════════════════════════════════════════════════════════════════

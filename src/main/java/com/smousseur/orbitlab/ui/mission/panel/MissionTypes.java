@@ -1,6 +1,6 @@
 package com.smousseur.orbitlab.ui.mission.panel;
 
-import com.smousseur.orbitlab.simulation.mission.MissionEntry;
+import com.smousseur.orbitlab.simulation.mission.context.MissionEntry;
 
 final class MissionTypes {
 

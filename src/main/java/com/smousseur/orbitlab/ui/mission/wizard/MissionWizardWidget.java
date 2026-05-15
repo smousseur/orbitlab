@@ -1,6 +1,6 @@
 package com.smousseur.orbitlab.ui.mission.wizard;
 
-import com.smousseur.orbitlab.simulation.mission.MissionContext;
+import com.smousseur.orbitlab.simulation.mission.context.MissionContext;
 import com.smousseur.orbitlab.ui.form.FormStyles;
 import com.smousseur.orbitlab.ui.form.ModalBackdrop;
 
@@ -29,7 +29,6 @@ public class MissionWizardWidget implements AutoCloseable {
 
   private static final float WINDOW_WIDTH = 880f;
   private static final float WINDOW_HEIGHT = 680f;
-  private static final float MIN_VIEWPORT_MARGIN = 32f;
   private static final float HEADER_HEIGHT = 120f;
   private static final float HEADER_PAD_X = 32f;
   private static final float HEADER_PAD_Y = 20f;

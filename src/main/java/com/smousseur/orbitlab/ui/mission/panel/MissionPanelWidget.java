@@ -17,8 +17,8 @@ import com.simsilica.lemur.event.DefaultMouseListener;
 import com.simsilica.lemur.event.MouseEventControl;
 import com.smousseur.orbitlab.app.ApplicationContext;
 import com.smousseur.orbitlab.engine.events.EventBus;
-import com.smousseur.orbitlab.simulation.mission.MissionContext;
-import com.smousseur.orbitlab.simulation.mission.MissionEntry;
+import com.smousseur.orbitlab.simulation.mission.context.MissionContext;
+import com.smousseur.orbitlab.simulation.mission.context.MissionEntry;
 import com.smousseur.orbitlab.ui.form.FormStyles;
 import com.smousseur.orbitlab.ui.form.ModalBackdrop;
 
@@ -48,7 +48,6 @@ public class MissionPanelWidget implements AutoCloseable {
 
   private final ModalBackdrop backdrop;
   private final Container root;
-  private final PanelHeader header;
   private final MissionListView listView;
   private final PanelFooter footer;
 
@@ -75,7 +74,7 @@ public class MissionPanelWidget implements AutoCloseable {
     root.setBorder(null);
     clearMargin(root.getBackground());
 
-    header = new PanelHeader(WINDOW_WIDTH);
+    PanelHeader header = new PanelHeader(WINDOW_WIDTH);
     header.setOnClose(() -> onClose.run());
 
     listView = new MissionListView(WINDOW_WIDTH, CONTENT_HEIGHT);

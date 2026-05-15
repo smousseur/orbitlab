@@ -24,15 +24,17 @@ import org.orekit.utils.Constants;
 
 /**
  * Deterministic single-burn trim stage at the next apogee. Used after {@link
- * AnalyticHohmannTransferStage} to absorb the residual eccentricity and inclination error left by
- * the analytical Hohmann transfer — driven mainly by un-modelled J3+ zonal harmonics and finite-
- * burn losses.
+ * AnalyticHohmannTransferStage} to absorb the residual shape and inclination error left by the
+ * analytical Hohmann transfer — driven mainly by un-modelled J3+ zonal harmonics and finite-burn
+ * losses.
  *
  * <p>The burn is computed from the spacecraft state at the next apogee (detected via {@link
  * ApsideDetector} using the same gravity model as the main propagation):
  *
  * <ul>
- *   <li>ΔV vector = (circular velocity at apogee radius, target inclination plane) − v(apogee).
+ *   <li>ΔV vector = (target-shape velocity at the achieved apogee radius, target inclination plane)
+ *       − v(apogee). The target shape is the ellipse (target perigee, achieved apogee); when the
+ *       LEO target is circular, this is exactly the circularization velocity.
  *   <li>If {@code ||ΔV|| < SKIP_DV_THRESHOLD} the burn is skipped and the stage transitions
  *       immediately.
  *   <li>Otherwise the finite burn is scheduled centered on the impulsive apogee using a {@link
@@ -40,22 +42,28 @@ import org.orekit.utils.Constants;
  *       burn (same rationale as burn 2 of the Hohmann transfer).
  * </ul>
  *
- * <p>The resulting orbit is circular at the apogee radius (not necessarily at {@code
- * targetAltitude}) in the target-inclination plane. With a J2-aware Hohmann upstream the apogee
+ * <p>The resulting orbit has the requested perigee and the achieved apogee (not necessarily the
+ * requested apogee) in the target-inclination plane. With a J2-aware Hohmann upstream the apogee
  * radius is already close to the target.
  */
 public class AnalyticTrimBurnStage extends MissionStage {
   private static final Logger logger = LogManager.getLogger(AnalyticTrimBurnStage.class);
   private static final double SKIP_DV_THRESHOLD = 1.0; // m/s
+  private static final double EARTH_RADIUS = Constants.WGS84_EARTH_EQUATORIAL_RADIUS;
 
+  private final double targetPerigeeAltitude;
   private final double targetInclination;
 
   /**
    * @param name human-readable stage name
+   * @param targetPerigeeAltitude target perigee altitude (m, above the Earth surface); equals the
+   *     target apogee altitude for a circular orbit
    * @param targetInclination target orbital plane inclination (rad); 0 for an equatorial GEO
    */
-  public AnalyticTrimBurnStage(String name, double targetInclination) {
+  public AnalyticTrimBurnStage(
+      String name, double targetPerigeeAltitude, double targetInclination) {
     super(name);
+    this.targetPerigeeAltitude = targetPerigeeAltitude;
     this.targetInclination = targetInclination;
   }
 
@@ -116,10 +124,11 @@ public class AnalyticTrimBurnStage extends MissionStage {
     Vector3D rApo = stateAtApogee.getPVCoordinates().getPosition();
     Vector3D vCurrentApo = stateAtApogee.getPVCoordinates().getVelocity();
     double r2 = rApo.getNorm();
+    double rPerigeeTarget = EARTH_RADIUS + targetPerigeeAltitude;
 
     Vector3D vTarget =
         AnalyticHohmannTransferStage.computeTargetVelocityAtApogee(
-            rApo, vCurrentApo, mu, r2, targetInclination);
+            rApo, vCurrentApo, mu, rPerigeeTarget, r2, targetInclination);
     Vector3D deltaV = vTarget.subtract(vCurrentApo);
     double dv = deltaV.getNorm();
 
