@@ -36,6 +36,7 @@ public class GEOMission extends Mission {
   private static final double DEFAULT_LATITUDE = 5.23;
   private static final double DEFAULT_LONGITUDE = -52.77;
   private static final double DEFAULT_ALTITUDE = 0.0;
+  public static final int GEO_ALTITUDE = 35_786_000;
 
   private final double latitude;
   private final double longitude;
@@ -55,6 +56,11 @@ public class GEOMission extends Mission {
         DEFAULT_LONGITUDE,
         DEFAULT_ALTITUDE,
         finalInclination);
+  }
+
+  public GEOMission(
+      String name, double parkingAltitude, double latitude, double longitude, double altitude) {
+    this(name, parkingAltitude, GEO_ALTITUDE, latitude, longitude, altitude, 0.0);
   }
 
   public GEOMission(

@@ -74,8 +74,9 @@ public class StepParameters implements StepValues {
 
     // --- Dynamic parameters ---
     LEODynamicParameters leoParams = new LEODynamicParameters(200, 2000);
+    GEODynamicParameters geoParams = new GEODynamicParameters(200, 2000);
     dynamicParametersMap.put(MissionType.LEO, leoParams);
-    dynamicParametersMap.put(MissionType.GEO, new GEODynamicParameters());
+    dynamicParametersMap.put(MissionType.GEO, geoParams);
     dynamicParameters = leoParams;
     for (DynamicParameters params : dynamicParametersMap.values()) {
       params.setVisible(false);
