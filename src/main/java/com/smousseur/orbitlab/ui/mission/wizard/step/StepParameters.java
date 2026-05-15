@@ -28,7 +28,7 @@ import java.util.Optional;
 public class StepParameters implements StepValues {
 
   private static final float FIELD_W = 752f;
-  private static final float FIELD_H = 36f;
+  public static final float FIELD_H = 36f;
   public static final float ROW_GAP = 16f;
   public static final float LABEL_FIELD_GAP = 6f;
   public static final float LABEL_ICON_SIZE = 14f;
@@ -43,6 +43,8 @@ public class StepParameters implements StepValues {
   private DynamicParameters dynamicParameters;
   private final EnumMap<MissionType, DynamicParameters> dynamicParametersMap =
       new EnumMap<>(MissionType.class);
+  private final Container dynamicSlot;
+  private MissionType shownMissionType;
 
   public StepParameters(MissionContext missionContext) {
     this.missionContext = missionContext;
@@ -78,16 +80,15 @@ public class StepParameters implements StepValues {
     dynamicParametersMap.put(MissionType.LEO, leoParams);
     dynamicParametersMap.put(MissionType.GEO, geoParams);
     dynamicParameters = leoParams;
-    for (DynamicParameters params : dynamicParametersMap.values()) {
-      params.setVisible(false);
-      root.addChild(params.getContainer());
-    }
+    dynamicSlot = new Container(new BoxLayout(Axis.Y, FillMode.None));
+    dynamicSlot.setBackground(null);
+    root.addChild(dynamicSlot);
 
     // --- Launch Date ---
     root.addChild(
         UiKit.fieldLabelRow("LAUNCH DATE", "lbl-clock", LABEL_ICON_SIZE, LABEL_FIELD_GAP));
     root.addChild(UiKit.vSpacer(LABEL_FIELD_GAP));
-    launchDateField = newInputField("2026-06-15T06:00:00Z", FIELD_W, FIELD_H);
+    launchDateField = newInputField("2026-05-16T01:00:00Z", FIELD_W, FIELD_H);
     root.addChild(launchDateField);
     root.addChild(UiKit.vSpacer(LABEL_FIELD_GAP));
     Label helper = root.addChild(new Label("UTC · Orekit epoch", FormStyles.STYLE));
@@ -136,14 +137,18 @@ public class StepParameters implements StepValues {
 
   private void updateDynamicParameters(float tpf) {
     MissionType selectedMissionType = missionContext.getSelectedMissionType();
-    dynamicParametersMap.values().forEach(params -> params.setVisible(false));
-    dynamicParameters =
-        Optional.ofNullable(dynamicParametersMap.get(selectedMissionType))
-            .orElseThrow(
-                () ->
-                    new OrbitlabException(
-                        "No dynamic parameters for mission type " + selectedMissionType));
+    if (selectedMissionType != shownMissionType) {
+      DynamicParameters next =
+          Optional.ofNullable(dynamicParametersMap.get(selectedMissionType))
+              .orElseThrow(
+                  () ->
+                      new OrbitlabException(
+                          "No dynamic parameters for mission type " + selectedMissionType));
+      dynamicSlot.clearChildren();
+      dynamicSlot.addChild(next.getContainer());
+      dynamicParameters = next;
+      shownMissionType = selectedMissionType;
+    }
     dynamicParameters.update(tpf);
-    dynamicParameters.setVisible(true);
   }
 }

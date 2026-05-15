@@ -43,8 +43,11 @@ public class LEODynamicParameters extends DynamicParameters {
   @Override
   protected Container createContainer() {
     Container parameters = new Container(new BoxLayout(Axis.Y, FillMode.Even));
-    parameters.addChild(getSliderContainer("PERIGEE ALTITUDE", perigeeSlider, perigeeField));
-    parameters.addChild(getSliderContainer("APOGEE ALTITUDE", apogeeSlider, apogeeField));
+    parameters.addChild(
+        getSliderContainer(
+            "PERIGEE ALTITUDE", perigeeSlider, perigeeField, altitudeMin, altitudeMax));
+    parameters.addChild(
+        getSliderContainer("APOGEE ALTITUDE", apogeeSlider, apogeeField, altitudeMin, altitudeMax));
     return parameters;
   }
 

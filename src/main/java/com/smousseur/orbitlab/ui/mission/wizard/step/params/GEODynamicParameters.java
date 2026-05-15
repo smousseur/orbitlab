@@ -1,10 +1,13 @@
 package com.smousseur.orbitlab.ui.mission.wizard.step.params;
 
-import static com.smousseur.orbitlab.ui.mission.wizard.step.StepParameters.LABEL_ICON_SIZE;
+import static com.smousseur.orbitlab.ui.UiKit.fieldLabelRow;
+import static com.smousseur.orbitlab.ui.UiKit.newInputField;
+import static com.smousseur.orbitlab.ui.mission.wizard.step.StepParameters.*;
 
 import com.simsilica.lemur.*;
 import com.simsilica.lemur.component.BoxLayout;
 import com.simsilica.lemur.core.VersionedReference;
+import com.simsilica.lemur.event.CursorEventControl;
 import com.smousseur.orbitlab.ui.UiKit;
 import com.smousseur.orbitlab.ui.form.FormStyles;
 import com.smousseur.orbitlab.ui.mission.wizard.FormField;
@@ -23,6 +26,8 @@ public class GEODynamicParameters extends DynamicParameters {
   private final VersionedReference<Double> parkingSliderRef;
   private boolean parkingFieldWasFocused;
 
+  private TextField geoAltitudeField;
+
   public GEODynamicParameters(double altitudeMin, double altitudeMax) {
     this.altitudeMin = altitudeMin;
     this.altitudeMax = altitudeMax;
@@ -36,10 +41,17 @@ public class GEODynamicParameters extends DynamicParameters {
   @Override
   protected Container createContainer() {
     Container parameters = new Container(new BoxLayout(Axis.Y, FillMode.Even));
-    parameters.addChild(getSliderContainer("PARKING ALTITUDE", parkingSlider, parkingField));
     parameters.addChild(
-        UiKit.fieldLabelRow(
-            String.valueOf(GEO_ALTITUDE), "lbl-globe", LABEL_ICON_SIZE, LABEL_ICON_SIZE));
+        getSliderContainer(
+            "PARKING ALTITUDE", parkingSlider, parkingField, altitudeMin, altitudeMax));
+
+    parameters.addChild(
+        fieldLabelRow("GEO ALTITUDE", "lbl-globe", LABEL_ICON_SIZE, LABEL_FIELD_GAP));
+    parameters.addChild(UiKit.vSpacer(LABEL_FIELD_GAP));
+    geoAltitudeField = newInputField(GEO_ALTITUDE + " km", 100, FIELD_H);
+    UiKit.makeReadOnly(geoAltitudeField);
+    parameters.addChild(geoAltitudeField);
+
     return parameters;
   }
 

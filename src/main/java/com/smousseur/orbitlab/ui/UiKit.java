@@ -15,6 +15,8 @@ import com.simsilica.lemur.component.TbtQuadBackgroundComponent;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.simsilica.lemur.event.CursorEventControl;
+import com.simsilica.lemur.event.MouseEventControl;
 import com.smousseur.orbitlab.ui.form.FormStyles;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -232,5 +234,13 @@ public final class UiKit {
     f.setPreferredSize(new Vector3f(width, height, 0));
     f.setInsets(new Insets3f(0, 0, 10, 0));
     return f;
+  }
+
+  public static void makeReadOnly(TextField field) {
+    field.getActionMap().clear();
+    MouseEventControl cec = field.getControl(MouseEventControl.class);
+    if (cec != null) {
+      field.removeControl(cec);
+    }
   }
 }

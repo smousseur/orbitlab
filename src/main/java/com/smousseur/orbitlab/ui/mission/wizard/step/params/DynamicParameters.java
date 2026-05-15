@@ -42,32 +42,27 @@ public abstract class DynamicParameters {
 
   public abstract Map<String, Object> getDynamicValues();
 
-  public void setVisible(boolean visible) {
-    if (container != null) {
-      container.setCullHint(visible ? Spatial.CullHint.Inherit : Spatial.CullHint.Always);
-    }
-  }
-
-  protected Container getSliderContainer(String label, Slider slider, TextField field) {
+  protected Container getSliderContainer(
+      String label, Slider slider, TextField field, double altitudeMin, double altitudeMax) {
     Container sliderContainer = new Container();
     sliderContainer.addChild(
         UiKit.fieldLabelRow(label, "lbl-ruler", LABEL_ICON_SIZE, LABEL_FIELD_GAP));
     sliderContainer.addChild(UiKit.vSpacer(LABEL_FIELD_GAP));
     sliderContainer.addChild(buildSliderRow(slider, field));
     sliderContainer.addChild(UiKit.vSpacer(LABEL_FIELD_GAP));
-    sliderContainer.addChild(rangeBoundsRow());
+    sliderContainer.addChild(rangeBoundsRow(altitudeMin, altitudeMax));
     sliderContainer.addChild(UiKit.vSpacer(ROW_GAP));
     return sliderContainer;
   }
 
-  private Container rangeBoundsRow() {
+  private Container rangeBoundsRow(double altitudeMin, double altitudeMax) {
     Container row = new Container(new BoxLayout(Axis.X, FillMode.None));
     row.setBackground(null);
-    Label min = row.addChild(new Label("160 km", FormStyles.STYLE));
+    Label min = row.addChild(new Label(altitudeMin + " km", FormStyles.STYLE));
     min.setFont(UiKit.ibmPlexMono(11));
     min.setColor(FormStyles.TEXT_LO);
 
-    Label max = new Label("2 000 km", FormStyles.STYLE);
+    Label max = new Label(altitudeMax + " km", FormStyles.STYLE);
     max.setFont(UiKit.ibmPlexMono(11));
     max.setColor(FormStyles.TEXT_LO);
 
