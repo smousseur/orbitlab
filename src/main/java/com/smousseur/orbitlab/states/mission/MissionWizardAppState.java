@@ -50,7 +50,7 @@ public final class MissionWizardAppState extends BaseAppState {
 
     if (nav != null) {
       switch (nav) {
-        case EventBus.UiNavigationEvent.OpenMissionWizard open -> openWizard();
+        case EventBus.UiNavigationEvent.OpenMissionWizard() -> openWizard();
         case EventBus.UiNavigationEvent.CreateMission mission -> createMission(mission);
       }
     }
@@ -64,7 +64,7 @@ public final class MissionWizardAppState extends BaseAppState {
     MissionContext missionContext = context.missionContext();
     Map<String, Object> values = createMission.values();
     String name = String.valueOf(values.get("MISSION_NAME"));
-    double targetAlt = Double.parseDouble(values.get("LEO_TARGET_ALT").toString());
+    double targetAlt = Double.parseDouble(values.get("LEO_APOGEE_ALT").toString());
     double latitude = Double.parseDouble(values.get("LAUNCH_SITE_LAT").toString());
     double longitude = Double.parseDouble(values.get("LAUNCH_SITE_LONG").toString());
     double altitude = Double.parseDouble(values.get("LAUNCH_SITE_ALT").toString());

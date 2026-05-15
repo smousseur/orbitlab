@@ -14,17 +14,16 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public final class MissionContext {
   private final List<MissionEntry> missions = new CopyOnWriteArrayList<>();
   private volatile String selectedMissionName;
+  private volatile MissionType selectedMissionType = MissionType.LEO;
 
   /**
    * Adds a mission to the registry and returns its entry.
    *
    * @param mission the mission to register
-   * @return the created mission entry
    */
-  public MissionEntry addMission(Mission mission) {
+  public void addMission(Mission mission) {
     MissionEntry entry = new MissionEntry(mission);
     missions.add(entry);
-    return entry;
   }
 
   public void addMission(MissionEntry entry) {
@@ -75,6 +74,24 @@ public final class MissionContext {
    */
   public void setSelectedMissionName(String name) {
     this.selectedMissionName = name;
+  }
+
+  /**
+   * Gets selected mission type.
+   *
+   * @return the selected mission type
+   */
+  public MissionType getSelectedMissionType() {
+    return selectedMissionType;
+  }
+
+  /**
+   * Sets selected mission type.
+   *
+   * @param selectedMissionType the selected mission type
+   */
+  public void setSelectedMissionType(MissionType selectedMissionType) {
+    this.selectedMissionType = selectedMissionType;
   }
 
   /**

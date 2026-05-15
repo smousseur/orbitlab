@@ -107,7 +107,6 @@ public class LEOMission extends Mission {
             ASCENSION_DURATION,
             3.0,
             GravityTurnConstraints.forTarget(targetAltitude)),
-        // new TwoManeuverTransferStage("Transfert", targetAltitude),
         new AnalyticHohmannTransferStage("Transfert", targetAltitude, FastMath.toRadians(latitude)),
         new AnalyticTrimBurnStage("Trim", FastMath.toRadians(latitude)),
         new CoastingStage("Coasting", null));

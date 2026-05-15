@@ -38,10 +38,11 @@ public final class FormField<T> {
       new FormField<>("MISSION_TYPE", String.class);
   public static final FormField<String> MISSION_NAME =
       new FormField<>("MISSION_NAME", String.class);
-  public static final FormField<Double> LEO_TARGET_ALT =
-      new FormField<>("LEO_TARGET_ALT", Double.class);
-  public static final FormField<String> LAUNCH_DATE =
-      new FormField<>("LAUNCH_DATE", String.class);
+  public static final FormField<Double> LEO_PERIGEE_ALT =
+      new FormField<>("LEO_PERIGEE_ALT", Double.class);
+  public static final FormField<Double> LEO_APOGEE_ALT =
+      new FormField<>("LEO_APOGEE_ALT", Double.class);
+  public static final FormField<String> LAUNCH_DATE = new FormField<>("LAUNCH_DATE", String.class);
   public static final FormField<String> LAUNCH_SITE_NAME =
       new FormField<>("LAUNCH_SITE_NAME", String.class);
   public static final FormField<Double> LAUNCH_SITE_LAT =

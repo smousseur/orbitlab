@@ -7,6 +7,8 @@ import com.simsilica.lemur.*;
 import com.simsilica.lemur.component.BoxLayout;
 import com.simsilica.lemur.event.DefaultMouseListener;
 import com.simsilica.lemur.event.MouseEventControl;
+import com.smousseur.orbitlab.simulation.mission.MissionContext;
+import com.smousseur.orbitlab.simulation.mission.MissionType;
 import com.smousseur.orbitlab.ui.UiKit;
 import com.smousseur.orbitlab.ui.form.FormStyles;
 import com.smousseur.orbitlab.ui.mission.wizard.FormField;
@@ -25,18 +27,16 @@ public class StepMissionType implements StepValues {
 
   private final Container root;
   private final SelectableCard leoCard;
-  private final SelectableCard gtoCard;
+  private final SelectableCard geoCard;
+  private final MissionContext missionContext;
   private boolean missionTypeSelected = true;
   private String selectedMissionType = "LEO";
 
-  public StepMissionType() {
+  public StepMissionType(MissionContext missionContext) {
+    this.missionContext = missionContext;
     root = new Container(new BoxLayout(Axis.Y, FillMode.None));
     root.setBackground(null);
-    root.setPreferredSize(
-        new Vector3f(
-            FormStyles.CONTENT_WIDTH,
-            FormStyles.CONTENT_HEIGHT,
-            0));
+    root.setPreferredSize(new Vector3f(FormStyles.CONTENT_WIDTH, FormStyles.CONTENT_HEIGHT, 0));
 
     Label title = root.addChild(new Label("MISSION TYPE", FormStyles.STYLE));
     title.setFont(UiKit.orbitron(13));
@@ -44,8 +44,7 @@ public class StepMissionType implements StepValues {
 
     root.addChild(UiKit.vSpacer(ROW_GAP));
 
-    Label subtitle =
-        root.addChild(new Label("// select the target orbit", FormStyles.STYLE));
+    Label subtitle = root.addChild(new Label("// select the target orbit", FormStyles.STYLE));
     subtitle.setFont(UiKit.ibmPlexMono(11));
     subtitle.setColor(FormStyles.TEXT_SECONDARY);
 
@@ -66,16 +65,16 @@ public class StepMissionType implements StepValues {
             "interface/wizard/icon-mission-leo.png",
             ICON_SIZE,
             SelectableCard.Variant.MISSION);
-    gtoCard =
+    geoCard =
         new SelectableCard(
             CARD_W,
             CARD_H,
-            "GTO",
-            "Geostationary Transfer",
-            "200 x 35 786 km",
-            new Badge("IN PROGRESS", Badge.Variant.WARNING),
-            SelectableCard.State.DISABLED,
-            "interface/wizard/icon-mission-gto.png",
+            "GEO",
+            "Geostationary Orbit",
+            "35 786 km",
+            new Badge("AVAILABLE", Badge.Variant.SUCCESS),
+            SelectableCard.State.IDLE,
+            "interface/wizard/icon-mission-geo.png",
             ICON_SIZE,
             SelectableCard.Variant.MISSION);
 
@@ -84,22 +83,34 @@ public class StepMissionType implements StepValues {
         new DefaultMouseListener() {
           @Override
           public void click(MouseButtonEvent e, Spatial t, Spatial c) {
-            selectedMissionType = "LEO";
+            selectedMissionType = MissionType.LEO.name();
+            geoCard.applyState(SelectableCard.State.IDLE);
             missionTypeSelected = true;
+            missionContext.setSelectedMissionType(MissionType.LEO);
+          }
+        });
+
+    MouseEventControl.addListenersToSpatial(
+        geoCard.getNode(),
+        new DefaultMouseListener() {
+          @Override
+          public void click(MouseButtonEvent e, Spatial t, Spatial c) {
+            selectedMissionType = MissionType.GEO.name();
+            leoCard.applyState(SelectableCard.State.IDLE);
+            missionTypeSelected = true;
+            missionContext.setSelectedMissionType(MissionType.GEO);
           }
         });
 
     row.addChild(leoCard.getNode());
     row.addChild(UiKit.hSpacer(CARD_GAP));
-    row.addChild(gtoCard.getNode());
+    row.addChild(geoCard.getNode());
     // Reserve the 3rd column (no mission yet) so the grid stays on a 3-column layout.
     row.addChild(UiKit.hSpacer(CARD_GAP));
     row.addChild(UiKit.spacer(CARD_W, CARD_H));
     // Trailing spacer fills remaining row width so cards stay at their fixed size.
     float trailing = FormStyles.CONTENT_WIDTH - 3 * CARD_W - 2 * CARD_GAP;
-    if (trailing > 0f) {
-      row.addChild(UiKit.hSpacer(trailing));
-    }
+    row.addChild(UiKit.hSpacer(trailing));
   }
 
   public Container getNode() {

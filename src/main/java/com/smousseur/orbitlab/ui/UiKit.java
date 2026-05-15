@@ -7,10 +7,7 @@ import com.jme3.math.ColorRGBA;
 import com.jme3.math.Vector3f;
 import com.jme3.texture.Texture;
 import com.jme3.texture.Texture2D;
-import com.simsilica.lemur.Axis;
-import com.simsilica.lemur.Container;
-import com.simsilica.lemur.FillMode;
-import com.simsilica.lemur.Label;
+import com.simsilica.lemur.*;
 import com.simsilica.lemur.component.BoxLayout;
 import com.simsilica.lemur.component.IconComponent;
 import com.simsilica.lemur.component.QuadBackgroundComponent;
@@ -213,14 +210,27 @@ public final class UiKit {
     return AppStyles.loadFontSafe(assetManager, String.format(FONT_SORA, size));
   }
 
-  public static Container fieldLabelRow(String text, String iconName) {
+  public static Container fieldLabelRow(
+      String text, String iconName, float iconSize, float labelGap) {
     Container row = new Container(new BoxLayout(Axis.X, FillMode.None));
     row.setBackground(null);
-    row.addChild(UiKit.wizardIcon(iconName, 14f, 14f));
-    row.addChild(UiKit.hSpacer(6f));
+    row.addChild(UiKit.wizardIcon(iconName, iconSize, iconSize));
+    row.addChild(UiKit.hSpacer(labelGap));
     Label label = row.addChild(new Label(text, FormStyles.STYLE));
     label.setFont(UiKit.ibmPlexMono(11));
     label.setColor(FormStyles.TEXT_SECONDARY);
     return row;
+  }
+
+  public static Container fieldLabelRow(String text, String iconName) {
+    return fieldLabelRow(text, iconName, 14f, 6f);
+  }
+
+  public static TextField newInputField(String value, float width, float height) {
+    TextField f = new TextField(value, FormStyles.STYLE);
+    f.setFont(UiKit.ibmPlexMono(13));
+    f.setPreferredSize(new Vector3f(width, height, 0));
+    f.setInsets(new Insets3f(0, 0, 10, 0));
+    return f;
   }
 }

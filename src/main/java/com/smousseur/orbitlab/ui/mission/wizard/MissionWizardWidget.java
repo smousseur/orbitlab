@@ -1,5 +1,6 @@
 package com.smousseur.orbitlab.ui.mission.wizard;
 
+import com.smousseur.orbitlab.simulation.mission.MissionContext;
 import com.smousseur.orbitlab.ui.form.FormStyles;
 import com.smousseur.orbitlab.ui.form.ModalBackdrop;
 
@@ -111,9 +112,10 @@ public class MissionWizardWidget implements AutoCloseable {
     footer.getNode().setBackground(FormStyles.footerBg());
     root.addChild(footer.getNode());
 
-    stepMissionType = new StepMissionType();
+    MissionContext missionContext = context.missionContext();
+    stepMissionType = new StepMissionType(missionContext);
     stepPanels.put(MissionWizardStep.MISSION, stepMissionType.getNode());
-    stepParameters = new StepParameters();
+    stepParameters = new StepParameters(missionContext);
     stepPanels.put(MissionWizardStep.PARAMETERS, stepParameters.getNode());
     stepLaunchSite = new StepLaunchSite();
     stepPanels.put(MissionWizardStep.SITE, stepLaunchSite.getNode());
