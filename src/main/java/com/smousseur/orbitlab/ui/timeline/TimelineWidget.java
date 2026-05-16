@@ -97,7 +97,8 @@ public class TimelineWidget implements AutoCloseable {
     // Scrubber — fills the middle space between transport and stepper
     float scrubberStart = divider2X + 1f + 10f;
     float scrubberEnd = speedStepper.leftEdge() - 10f;
-    scrubberTrack = new ScrubberTrack(root, CAPSULE_HEIGHT, scrubberStart, scrubberEnd);
+    scrubberTrack =
+        new ScrubberTrack(root, CAPSULE_HEIGHT, scrubberStart, scrubberEnd, this::applySpeedIndex);
 
     refreshMode();
     scrubberTrack.refresh(speedIndex);
@@ -148,7 +149,11 @@ public class TimelineWidget implements AutoCloseable {
   }
 
   private void onSpeedDelta(int delta) {
-    int next = clamp(speedIndex + delta, SpeedStepper.MIN_INDEX, SpeedStepper.MAX_INDEX);
+    applySpeedIndex(speedIndex + delta);
+  }
+
+  private void applySpeedIndex(int next) {
+    next = clamp(next, SpeedStepper.MIN_INDEX, SpeedStepper.MAX_INDEX);
     if (next == speedIndex) return;
     speedIndex = next;
     clock.setSpeed(SpeedStepper.mapIndexToSpeed(speedIndex));
