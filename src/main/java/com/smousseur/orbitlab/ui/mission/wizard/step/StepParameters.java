@@ -43,7 +43,7 @@ public class StepParameters implements StepValues {
   private DynamicParameters dynamicParameters;
   private final EnumMap<MissionType, DynamicParameters> dynamicParametersMap =
       new EnumMap<>(MissionType.class);
-  private final Container dynamicSlot;
+  private final Container dynamicParametersContainer;
   private MissionType shownMissionType;
 
   public StepParameters(MissionContext missionContext) {
@@ -80,9 +80,9 @@ public class StepParameters implements StepValues {
     dynamicParametersMap.put(MissionType.LEO, leoParams);
     dynamicParametersMap.put(MissionType.GEO, geoParams);
     dynamicParameters = leoParams;
-    dynamicSlot = new Container(new BoxLayout(Axis.Y, FillMode.None));
-    dynamicSlot.setBackground(null);
-    root.addChild(dynamicSlot);
+    dynamicParametersContainer = new Container(new BoxLayout(Axis.Y, FillMode.None));
+    dynamicParametersContainer.setBackground(null);
+    root.addChild(dynamicParametersContainer);
 
     // --- Launch Date ---
     root.addChild(
@@ -144,8 +144,8 @@ public class StepParameters implements StepValues {
                   () ->
                       new OrbitlabException(
                           "No dynamic parameters for mission type " + selectedMissionType));
-      dynamicSlot.clearChildren();
-      dynamicSlot.addChild(next.getContainer());
+      dynamicParametersContainer.clearChildren();
+      dynamicParametersContainer.addChild(next.getContainer());
       dynamicParameters = next;
       shownMissionType = selectedMissionType;
     }

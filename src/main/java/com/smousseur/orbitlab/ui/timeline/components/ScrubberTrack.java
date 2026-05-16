@@ -2,13 +2,20 @@ package com.smousseur.orbitlab.ui.timeline.components;
 
 import com.jme3.math.ColorRGBA;
 import com.jme3.math.Vector3f;
+import com.jme3.scene.Spatial;
 import com.jme3.texture.Texture2D;
 import com.simsilica.lemur.Container;
+import com.simsilica.lemur.GuiGlobals;
 import com.simsilica.lemur.Panel;
 import com.simsilica.lemur.component.QuadBackgroundComponent;
 import com.simsilica.lemur.component.TbtQuadBackgroundComponent;
+import com.simsilica.lemur.event.CursorButtonEvent;
+import com.simsilica.lemur.event.CursorEventControl;
+import com.simsilica.lemur.event.CursorMotionEvent;
+import com.simsilica.lemur.event.DefaultCursorListener;
 import com.smousseur.orbitlab.ui.AppStyles;
 import com.smousseur.orbitlab.ui.timeline.TimelineStyles;
+import java.util.function.IntConsumer;
 
 /**
  * Scrubber track cluster: background track, fill bar, tick marks, and playhead.
@@ -28,8 +35,10 @@ public class ScrubberTrack {
   private final Panel fillPanel;
   private final float trackStartX;
   private final float trackSpan;
+  private int currentSpeedIndex = 0;
 
-  public ScrubberTrack(Container root, float capsuleHeight, float startX, float endX) {
+  public ScrubberTrack(
+      Container root, float capsuleHeight, float startX, float endX, IntConsumer onTargetIndex) {
     float trackWidth = Math.max(40f, endX - startX);
     float centerY = capsuleHeight * 0.5f;
     this.trackStartX = startX;
@@ -88,13 +97,51 @@ public class ScrubberTrack {
     playhead.setSize(playhead.getPreferredSize());
     playhead.setLocalTranslation(startX, -(centerY - PLAYHEAD_HEIGHT * 0.5f), 4f);
     root.attachChild(playhead);
+
+    CursorEventControl.addListenersToSpatial(
+        playhead,
+        new DefaultCursorListener() {
+          private float dragStartScreenX;
+          private int dragStartIndex;
+          private boolean dragging = false;
+
+          @Override
+          public void cursorButtonEvent(CursorButtonEvent event, Spatial target, Spatial capture) {
+            if (event.getButtonIndex() != 0) return;
+            if (event.isPressed()) {
+              GuiGlobals.getInstance().requestFocus(null);
+              dragStartScreenX = event.getX();
+              dragStartIndex = currentSpeedIndex;
+              dragging = true;
+              event.setConsumed();
+            } else {
+              dragging = false;
+            }
+          }
+
+          @Override
+          public void cursorMoved(CursorMotionEvent event, Spatial target, Spatial capture) {
+            if (!dragging) return;
+            float scaleX = playhead.getWorldScale().x;
+            if (scaleX == 0f) return;
+            float deltaXLocal = (event.getX() - dragStartScreenX) / scaleX;
+
+            float startCenterX = indexToCenterX(dragStartIndex);
+            float wantedCenterX = startCenterX + deltaXLocal;
+            int newIndex = centerXToIndex(wantedCenterX);
+
+            if (newIndex != currentSpeedIndex) {
+              onTargetIndex.accept(newIndex);
+            }
+            event.setConsumed();
+          }
+        });
   }
 
   /** Moves the playhead and resizes the fill bar to match the given speed index. */
   public void refresh(int speedIndex) {
-    float normalized =
-        (speedIndex - (float) SpeedStepper.MIN_INDEX)
-            / (float) (SpeedStepper.MAX_INDEX - SpeedStepper.MIN_INDEX);
+    currentSpeedIndex = speedIndex;
+    float normalized = indexToNormalized(speedIndex);
 
     float playheadCenterX = trackStartX + trackSpan * normalized;
     Vector3f p = playhead.getLocalTranslation();
@@ -106,6 +153,22 @@ public class ScrubberTrack {
     fillPanel.setSize(newFillSize);
     Vector3f f = fillPanel.getLocalTranslation();
     fillPanel.setLocalTranslation(trackStartX, f.y, f.z);
+  }
+
+  private static float indexToNormalized(int speedIndex) {
+    return (speedIndex - (float) SpeedStepper.MIN_INDEX)
+        / (float) (SpeedStepper.MAX_INDEX - SpeedStepper.MIN_INDEX);
+  }
+
+  private float indexToCenterX(int speedIndex) {
+    return trackStartX + trackSpan * indexToNormalized(speedIndex);
+  }
+
+  private int centerXToIndex(float centerX) {
+    float normalized = (centerX - trackStartX) / trackSpan;
+    normalized = Math.max(0f, Math.min(1f, normalized));
+    int span = SpeedStepper.MAX_INDEX - SpeedStepper.MIN_INDEX;
+    return SpeedStepper.MIN_INDEX + Math.round(normalized * span);
   }
 
   private static void applyBackground(Panel panel, Texture2D tex, int inset) {
