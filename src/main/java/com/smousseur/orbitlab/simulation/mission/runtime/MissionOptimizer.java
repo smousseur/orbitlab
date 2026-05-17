@@ -24,6 +24,7 @@ import com.smousseur.orbitlab.simulation.mission.optimizer.problems.TransferProb
 import com.smousseur.orbitlab.simulation.mission.optimizer.problems.TransferTwoManeuverProblem;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.hipparchus.random.MersenneTwister;
 import org.orekit.propagation.SpacecraftState;
 import org.orekit.time.AbsoluteDate;
 
@@ -37,28 +38,36 @@ import org.orekit.time.AbsoluteDate;
  */
 public class MissionOptimizer {
   private static final Logger logger = LogManager.getLogger(MissionOptimizer.class);
+  private static final long DEFAULT_SEED = 42L;
 
   private final Mission mission;
   private final int maxEvaluations;
+  private final Long seed;
 
   /**
-   * Creates a mission optimizer with a default evaluation budget of 20,000 per stage.
-   *
-   * @param mission the mission whose stages will be optimized
-   */
-  public MissionOptimizer(Mission mission) {
-    this(mission, 20_000);
-  }
-
-  /**
-   * Creates a mission optimizer with a specified evaluation budget per stage.
+   * Creates a mission optimizer with a specified evaluation budget per stage and a
+   * non-deterministic CMA-ES seed.
    *
    * @param mission the mission whose stages will be optimized
    * @param maxEvaluations maximum number of objective function evaluations per optimizable stage
    */
   public MissionOptimizer(Mission mission, int maxEvaluations) {
+    this(mission, maxEvaluations, DEFAULT_SEED);
+  }
+
+  /**
+   * Creates a mission optimizer with an explicit master seed driving CMA-ES randomness. When {@code
+   * seed} is non-null, the same seed yields bit-identical optimization results across runs. When
+   * null, a {@link System#nanoTime()} value is used and logged for traceability.
+   *
+   * @param mission the mission whose stages will be optimized
+   * @param maxEvaluations maximum number of objective function evaluations per optimizable stage
+   * @param seed master seed for CMA-ES randomness, or null for non-deterministic
+   */
+  public MissionOptimizer(Mission mission, int maxEvaluations, Long seed) {
     this.mission = mission;
     this.maxEvaluations = maxEvaluations;
+    this.seed = seed;
   }
 
   /**
@@ -74,13 +83,23 @@ public class MissionOptimizer {
     Map<String, OptimizationResult> results = new LinkedHashMap<>();
     AbsoluteDate launchDate = mission.getCurrentState().getDate();
 
+    long effectiveSeed = seed != null ? seed : System.nanoTime();
+    if (seed == null) {
+      logger.info("MissionOptimizer running with non-deterministic seed={}", effectiveSeed);
+    } else {
+      logger.info("MissionOptimizer running with explicit seed={}", effectiveSeed);
+    }
+    MersenneTwister seedRng = new MersenneTwister(effectiveSeed);
+
     for (MissionStage stage : mission.getStages()) {
       logger.info("Current mass = {}", mission.getCurrentState().getMass());
       if (stage instanceof OptimizableMissionStage<?> optimizable) {
         logger.info("Optimizing stage '{}'...", stage.getName());
 
         TrajectoryProblem problem = optimizable.buildProblem(mission);
-        CMAESTrajectoryOptimizer optimizer = new CMAESTrajectoryOptimizer(problem, maxEvaluations);
+        long stageSeed = seedRng.nextLong();
+        CMAESTrajectoryOptimizer optimizer =
+            new CMAESTrajectoryOptimizer(problem, maxEvaluations, stageSeed);
         OptimizationResult result = optimizer.optimize();
 
         // Store the entry state so the runtime can start from exactly the same point

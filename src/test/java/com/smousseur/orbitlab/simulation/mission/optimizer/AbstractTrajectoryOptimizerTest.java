@@ -26,6 +26,9 @@ public class AbstractTrajectoryOptimizerTest {
 
   public static final double ORBIT_MARGIN_RATIO = 0.07;
 
+  /** Fixed seed for reproducible CMA-ES runs across test executions. */
+  protected static final long TEST_SEED = 42L;
+
   protected static class MinMaxAltitudeResults {
     double minAltitude = Double.MAX_VALUE;
     double maxAltitude = Double.MIN_VALUE;
@@ -59,7 +62,7 @@ public class AbstractTrajectoryOptimizerTest {
     SpacecraftState initialState = mission.getInitialState(epoch);
     mission.setCurrentState(initialState);
 
-    MissionOptimizer optimizer = new MissionOptimizer(mission, 40_000);
+    MissionOptimizer optimizer = new MissionOptimizer(mission, 40_000, TEST_SEED);
     MissionComputeResult computeResult = optimizer.optimize();
     MissionEphemeris ephemeris = computeResult.ephemeris();
 

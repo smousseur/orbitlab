@@ -68,10 +68,16 @@ final class CMAESRunExecutor {
    * @param populationSize CMA-ES population size per generation
    * @param maxEvals maximum number of objective function evaluations
    * @param earlyKill if true, the convergence checker will kill runs stuck in bad basins
+   * @param seed seed for the MersenneTwister driving CMA-ES sampling (run-local, thread-safe)
    * @return the result containing the best parameters, cost, and evaluation count
    */
   RunResult execute(
-      double[] startPoint, double[] sigma, int populationSize, int maxEvals, boolean earlyKill) {
+      double[] startPoint,
+      double[] sigma,
+      int populationSize,
+      int maxEvals,
+      boolean earlyKill,
+      long seed) {
 
     double[] runBestVars = startPoint.clone();
     double[] runBestCostHolder = {Double.MAX_VALUE};
@@ -107,7 +113,8 @@ final class CMAESRunExecutor {
             earlyKill, problem.getAcceptableCost(), absoluteTolerance, relativeTolerance);
 
     CMAESOptimizer optimizer =
-        new CMAESOptimizer(maxEvals, stopFitness, true, 0, 0, new MersenneTwister(), false, checker);
+        new CMAESOptimizer(
+            maxEvals, stopFitness, true, 0, 0, new MersenneTwister(seed), false, checker);
 
     try {
       optimizer.optimize(

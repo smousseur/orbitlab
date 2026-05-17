@@ -44,7 +44,7 @@ public class GEOMissionOptimizationTest extends AbstractTrajectoryOptimizerTest 
     AbsoluteDate epoch = new AbsoluteDate(2026, 1, 1, 12, 0, 0.0, TimeScalesFactory.getUTC());
     SpacecraftState initialState = geoMission.getInitialState(epoch);
     geoMission.setCurrentState(initialState);
-    MissionOptimizer optimizer = new MissionOptimizer(geoMission, 40_000);
+    MissionOptimizer optimizer = new MissionOptimizer(geoMission, 40_000, TEST_SEED);
     MissionComputeResult result = optimizer.optimize();
     MissionEphemeris ephemeris = result.ephemeris();
 

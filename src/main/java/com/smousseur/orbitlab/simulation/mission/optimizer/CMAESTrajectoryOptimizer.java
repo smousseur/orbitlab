@@ -37,7 +37,7 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
   private final int numExplorationRuns;
   private final int maxRetries;
 
-  private final MersenneTwister rng = new MersenneTwister();
+  private final MersenneTwister rng;
 
   // ── Adaptive thresholds ──
   /** Number of refinement passes with decreasing sigma. */
@@ -58,18 +58,33 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
   private final CMAESRunExecutor executor;
 
   /**
-   * Creates an optimizer with default exploration runs, retries, tolerances, and stop fitness.
+   * Creates an optimizer with default exploration runs, retries, tolerances, and stop fitness, and
+   * a non-deterministic master seed (current default behavior).
    *
    * @param problem the trajectory problem to optimize
    * @param maxEvaluations total budget of objective function evaluations across all phases (per
    *     retry attempt)
    */
   public CMAESTrajectoryOptimizer(TrajectoryProblem problem, int maxEvaluations) {
-    this(problem, maxEvaluations, 4, DEFAULT_MAX_RETRIES, 1e-6, 1e-4, 1e-6);
+    this(problem, maxEvaluations, System.nanoTime());
+  }
+
+  /**
+   * Creates an optimizer with default exploration runs, retries, tolerances, and stop fitness, and
+   * an explicit master seed (for reproducible runs, e.g. tests).
+   *
+   * @param problem the trajectory problem to optimize
+   * @param maxEvaluations total budget of objective function evaluations across all phases (per
+   *     retry attempt)
+   * @param seed master seed driving all CMA-ES randomness in this optimizer instance
+   */
+  public CMAESTrajectoryOptimizer(TrajectoryProblem problem, int maxEvaluations, long seed) {
+    this(problem, maxEvaluations, 4, DEFAULT_MAX_RETRIES, 1e-6, 1e-4, 1e-6, seed);
   }
 
   /**
    * Creates an optimizer with full control over exploration, retry, and convergence parameters.
+   * Uses a non-deterministic master seed.
    *
    * @param problem the trajectory problem to optimize
    * @param maxEvaluations total budget of objective function evaluations across all phases (per
@@ -89,11 +104,39 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
       double stopFitness,
       double relativeTolerance,
       double absoluteTolerance) {
+    this(
+        problem,
+        maxEvaluations,
+        numExplorationRuns,
+        maxRetries,
+        stopFitness,
+        relativeTolerance,
+        absoluteTolerance,
+        System.nanoTime());
+  }
+
+  /**
+   * Creates an optimizer with full control over exploration, retry, and convergence parameters and
+   * an explicit master seed.
+   *
+   * @param seed master seed driving all CMA-ES randomness in this optimizer instance
+   */
+  public CMAESTrajectoryOptimizer(
+      TrajectoryProblem problem,
+      int maxEvaluations,
+      int numExplorationRuns,
+      int maxRetries,
+      double stopFitness,
+      double relativeTolerance,
+      double absoluteTolerance,
+      long seed) {
     this.problem = problem;
     this.maxEvaluations = maxEvaluations;
     this.numExplorationRuns = numExplorationRuns;
     this.maxRetries = maxRetries;
+    this.rng = new MersenneTwister(seed);
     this.executor = new CMAESRunExecutor(problem, stopFitness, absoluteTolerance, relativeTolerance);
+    logger.info("CMA-ES optimizer initialized with seed={}", seed);
   }
 
   @Override
@@ -239,14 +282,27 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
     int availableForOptimizer = FastMath.max(1, Runtime.getRuntime().availableProcessors() - 1);
     int poolSize = FastMath.min(explorationRuns, availableForOptimizer);
     ExecutorService pool = Executors.newFixedThreadPool(poolSize);
+    // Pre-draw a sub-seed per run sequentially so that the master seed deterministically reproduces
+    // the full exploration phase even when runs execute in parallel.
+    long[] runSeeds = new long[configs.size()];
+    for (int i = 0; i < configs.size(); i++) {
+      runSeeds[i] = rng.nextLong();
+    }
     try {
       List<Future<CMAESRunExecutor.RunResult>> futures = new ArrayList<>(configs.size());
-      for (RunConfig cfg : configs) {
+      for (int i = 0; i < configs.size(); i++) {
+        RunConfig cfg = configs.get(i);
+        long runSeed = runSeeds[i];
         futures.add(
             pool.submit(
                 () ->
                     executor.execute(
-                        cfg.startPoint, cfg.runSigma, cfg.populationSize, cfg.budget, true)));
+                        cfg.startPoint,
+                        cfg.runSigma,
+                        cfg.populationSize,
+                        cfg.budget,
+                        true,
+                        runSeed)));
       }
       for (int run = 0; run < futures.size(); run++) {
         try {
@@ -297,7 +353,8 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
 
         try {
           CMAESRunExecutor.RunResult result =
-              executor.execute(bestVars.clone(), refineSigma, basePopSize, budget, false);
+              executor.execute(
+                  bestVars.clone(), refineSigma, basePopSize, budget, false, rng.nextLong());
           totalEvals += result.evaluations();
           remainingEvals -= result.evaluations();
 
