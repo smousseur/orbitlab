@@ -48,13 +48,13 @@ public final class MissionWizardAppState extends BaseAppState {
 
   @Override
   public void update(float tpf) {
-    EventBus.UiNavigationEvent nav = context.eventBus().pollUiNavigation();
-
-    if (nav != null) {
-      switch (nav) {
-        case EventBus.UiNavigationEvent.OpenMissionWizard() -> openWizard();
-        case EventBus.UiNavigationEvent.CreateMission mission -> createMission(mission);
-      }
+    EventBus bus = context.eventBus();
+    if (bus.pollOpenWizard() != null) {
+      openWizard();
+    }
+    EventBus.UiNavigationEvent.CreateMission create = bus.pollCreateMission();
+    if (create != null) {
+      createMission(create);
     }
     if (widget != null) {
       widget.update(tpf, getApplication().getCamera());

@@ -4,38 +4,31 @@ import com.jme3.app.Application;
 import com.jme3.app.state.BaseAppState;
 import com.smousseur.orbitlab.app.ApplicationContext;
 import com.smousseur.orbitlab.engine.events.EventBus;
-import com.smousseur.orbitlab.simulation.mission.operation.GEOMission;
-import com.smousseur.orbitlab.simulation.mission.operation.LEOMission;
-import com.smousseur.orbitlab.simulation.mission.context.MissionContext;
-import com.smousseur.orbitlab.ui.mission.panel.MissionPanelTrigger;
 import com.smousseur.orbitlab.ui.mission.panel.MissionPanelWidget;
 
 /**
- * Orchestrates the mission panel: a persistent top-left trigger button and an on-demand modal panel
- * attached to the shared modal layer. The panel itself is created only when the trigger is pressed
- * and torn down when it closes.
+ * On-demand opener of the mission management modal. Listens for {@link
+ * EventBus.UiNavigationEvent.OpenMissionManagement} requests (published by the Display Panel) and
+ * builds the modal panel when needed. The trigger button is now owned by {@link
+ * MissionDisplayPanelAppState}.
  */
 public final class MissionPanelWidgetAppState extends BaseAppState {
 
   private final ApplicationContext context;
-  private MissionPanelTrigger trigger;
   private MissionPanelWidget panel;
 
   public MissionPanelWidgetAppState(ApplicationContext context) {
     this.context = context;
-    MissionContext missionContext = context.missionContext();
-    missionContext.addMission(new LEOMission("LEO", 400_000));
   }
 
   @Override
-  protected void initialize(Application app) {
-    trigger = new MissionPanelTrigger(context);
-    trigger.layoutTopLeft(app.getCamera().getWidth(), app.getCamera().getHeight());
-    trigger.setOnClick(this::togglePanel);
-  }
+  protected void initialize(Application app) {}
 
   @Override
   public void update(float tpf) {
+    if (context.eventBus().pollOpenManagement() != null) {
+      openPanel();
+    }
     if (panel != null) {
       panel.update(tpf, getApplication().getCamera());
     }
@@ -44,10 +37,6 @@ public final class MissionPanelWidgetAppState extends BaseAppState {
   @Override
   protected void cleanup(Application app) {
     closePanel();
-    if (trigger != null) {
-      trigger.close();
-      trigger = null;
-    }
   }
 
   @Override
@@ -56,15 +45,8 @@ public final class MissionPanelWidgetAppState extends BaseAppState {
   @Override
   protected void onDisable() {}
 
-  private void togglePanel() {
-    if (panel == null) {
-      openPanel();
-    } else {
-      closePanel();
-    }
-  }
-
   private void openPanel() {
+    if (panel != null) return;
     panel = new MissionPanelWidget(context);
     panel.setOnClose(this::closePanel);
     panel.setOnNewMission(
@@ -75,16 +57,12 @@ public final class MissionPanelWidgetAppState extends BaseAppState {
               .publishUiNavigation(new EventBus.UiNavigationEvent.OpenMissionWizard());
         });
     panel.attachTo(context.guiGraph().getModalNode());
-    trigger.setEnabled(false);
   }
 
   private void closePanel() {
     if (panel != null) {
       panel.close();
       panel = null;
-    }
-    if (trigger != null) {
-      trigger.setEnabled(true);
     }
   }
 }

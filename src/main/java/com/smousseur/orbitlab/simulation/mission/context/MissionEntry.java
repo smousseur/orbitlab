@@ -1,5 +1,6 @@
 package com.smousseur.orbitlab.simulation.mission.context;
 
+import com.jme3.math.ColorRGBA;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemeris;
 import com.smousseur.orbitlab.simulation.mission.runtime.MissionOptimizerResult;
@@ -20,6 +21,7 @@ public final class MissionEntry {
   private volatile MissionEphemeris ephemeris;
   private volatile boolean visible = false;
   private volatile AbsoluteDate scheduledDate;
+  private volatile ColorRGBA color;
 
   /**
    * Creates a new mission entry for the given mission.
@@ -109,5 +111,23 @@ public final class MissionEntry {
    */
   public Optional<AbsoluteDate> getScheduledDate() {
     return Optional.ofNullable(scheduledDate);
+  }
+
+  /**
+   * Returns the color used to render this mission's trajectory and spacecraft.
+   *
+   * @return the color, or {@code null} if not yet assigned
+   */
+  public ColorRGBA getColor() {
+    return color;
+  }
+
+  /**
+   * Sets the color used to render this mission's trajectory and spacecraft.
+   *
+   * @param color the color to assign
+   */
+  public void setColor(ColorRGBA color) {
+    this.color = color;
   }
 }
