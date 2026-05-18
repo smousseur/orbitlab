@@ -1,0 +1,32 @@
+MaterialDef Wrap Lighting {
+
+    MaterialParameters {
+        Texture2D DiffuseMap
+        Color Ambient
+        Color Diffuse
+        Boolean UseMaterialColors
+        // Width of the soft twilight band on the LIT side of the geometric terminator.
+        // The shadow boundary stays anchored at N.L = 0 regardless of this value:
+        // illumination ramps from 0 at N.L = 0 to full bright at N.L = FallOffFactor
+        // via a Hermite curve. 0 = hard step. 0.1 - 0.3 = soft twilight.
+        Float FallOffFactor : 0.3
+    }
+
+    Technique {
+        LightMode SinglePass
+
+        VertexShader   GLSL150: MatDefs/Light/WrapLighting.vert
+        FragmentShader GLSL150: MatDefs/Light/WrapLighting.frag
+
+        WorldParameters {
+            WorldViewProjectionMatrix
+            WorldViewMatrix
+            NormalMatrix
+        }
+
+        Defines {
+            DIFFUSEMAP : DiffuseMap
+            MATERIAL_COLORS : UseMaterialColors
+        }
+    }
+}

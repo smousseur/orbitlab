@@ -21,7 +21,7 @@ public class LEOMissionOptimizationTest extends AbstractTrajectoryOptimizerTest 
   }
 
   @ParameterizedTest(name = "perigee={0}m, apogee={1}m")
-  @CsvSource({"300_000, 600_000", "600_000, 800_000", "800_000, 1_000_000"})
+  @CsvSource({"300_000, 600_000", "600_000, 800_000", "200_000, 1_000_000"})
   void testEllipticMissions(double perigeeAltitude, double apogeeAltitude) {
     LEOMission mission = new LEOMission("LEO mission", perigeeAltitude, apogeeAltitude);
     testMission(mission, perigeeAltitude, apogeeAltitude);

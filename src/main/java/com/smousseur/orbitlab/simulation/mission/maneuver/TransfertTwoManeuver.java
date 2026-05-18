@@ -61,8 +61,7 @@ public class TransfertTwoManeuver extends TransferManeuver {
    * <p>The envelope is consumed by {@link #propagateForOptimization} to short-circuit Step 3 when
    * the post-burn-1 orbit lies outside the configured eccentricity / semi-major-axis bounds.
    */
-  public TransfertTwoManeuver(
-      Vehicle vehicle, double targetAltitude, FailFastEnvelope failFast) {
+  public TransfertTwoManeuver(Vehicle vehicle, double targetAltitude, FailFastEnvelope failFast) {
     super(vehicle, targetAltitude);
     this.circularizationBurnResolver = new CircularizationBurnResolver(vehicle);
     this.failFast = failFast;
@@ -130,29 +129,10 @@ public class TransfertTwoManeuver extends TransferManeuver {
       SpacecraftState finalState = propagator.propagate(endDate);
 
       if (Math.abs(finalState.getDate().durationFrom(endDate)) > 1.0) {
-        /*
-               logger.warn(
-                   "PENALTY[step3-truncated] expected={}s, actual={}s, postBurn1: a={}, e={}, dvNeeded={}",
-                   totalTime,
-                   finalState.getDate().durationFrom(initialState.getDate()),
-                   orbitPostBurn1.getA(),
-                   orbitPostBurn1.getE(),
-                   circBurn.dvNeeded);
-        */
         return new TransferResult(initialState, orbitPostBurn1, circBurn, tracker);
       }
       return new TransferResult(finalState, orbitPostBurn1, circBurn, tracker);
     } catch (Exception e) {
-      /*
-      logger.warn(
-          "PENALTY[step3-exception] {}, postBurn1: a={}, e={}, totalTime={}, dvNeeded={}",
-          e.getMessage(),
-          orbitPostBurn1.getA(),
-          orbitPostBurn1.getE(),
-          totalTime,
-          circBurn.dvNeeded);
-
-       */
       return new TransferResult(initialState, orbitPostBurn1, circBurn, tracker);
     }
   }

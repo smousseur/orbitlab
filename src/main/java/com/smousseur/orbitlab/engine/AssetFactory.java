@@ -1,10 +1,14 @@
 package com.smousseur.orbitlab.engine;
 
 import com.jme3.asset.AssetManager;
+import com.jme3.material.MatParamTexture;
 import com.jme3.material.Material;
 import com.jme3.material.RenderState;
 import com.jme3.math.ColorRGBA;
+import com.jme3.scene.Geometry;
+import com.jme3.scene.SceneGraphVisitorAdapter;
 import com.jme3.scene.Spatial;
+import com.jme3.texture.Texture;
 import com.smousseur.orbitlab.core.OrbitlabException;
 import org.jspecify.annotations.NonNull;
 
@@ -16,11 +20,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * Singleton factory for creating and managing JME3 assets such as 3D models and materials.
  *
- * <p>Provides a shared thread pool for asynchronous asset loading and convenience methods
- * for creating unshaded materials with solid or alpha-blended colors.
+ * <p>Provides a shared thread pool for asynchronous asset loading and convenience methods for
+ * creating unshaded materials with solid or alpha-blended colors.
  *
- * <p>Must be initialized once via {@link #init(AssetManager)} before use.
- * Access the singleton instance via {@link #get()}.
+ * <p>Must be initialized once via {@link #init(AssetManager)} before use. Access the singleton
+ * instance via {@link #get()}.
  */
 public class AssetFactory {
   private final AssetManager assetManager;
@@ -46,7 +50,7 @@ public class AssetFactory {
   /**
    * Loads a 3D model from the given asset path and applies a uniform scale.
    *
-   * @param path  the asset path to the model file
+   * @param path the asset path to the model file
    * @param scale the uniform scale factor to apply to the loaded model
    * @return the loaded and scaled spatial
    */
@@ -54,6 +58,46 @@ public class AssetFactory {
     Spatial model = assetManager.loadModel(path);
     model.setLocalScale(scale);
     return model;
+  }
+
+  /**
+   * Replaces the material of every {@link Geometry} under the given spatial with a twilight Lambert
+   * material ({@code MatDefs/Light/WrapLighting.j3md}).
+   *
+   * @param spatial the root spatial whose geometries should be re-materialized
+   * @param fallOffFactor width of the twilight band on the lit side (0 = hard step, 0.1-0.3 = soft
+   *     twilight)
+   * @return the same spatial, for fluent chaining
+   */
+  public Spatial applyLambert(Spatial spatial, float fallOffFactor) {
+    spatial.depthFirstTraversal(
+        new SceneGraphVisitorAdapter() {
+          @Override
+          public void visit(Geometry geom) {
+            Texture diffuse = extractDiffuseTexture(geom.getMaterial());
+            Material lambert = new Material(assetManager, "MatDefs/Light/WrapLighting.j3md");
+            lambert.setBoolean("UseMaterialColors", true);
+            lambert.setColor("Ambient", new ColorRGBA(0.1f, 0.1f, 0.1f, 0.1f));
+            lambert.setColor("Diffuse", ColorRGBA.White);
+            lambert.setFloat("FallOffFactor", fallOffFactor);
+            if (diffuse != null) {
+              lambert.setTexture("DiffuseMap", diffuse);
+            }
+            geom.setMaterial(lambert);
+          }
+        });
+    return spatial;
+  }
+
+  private static Texture extractDiffuseTexture(Material source) {
+    if (source == null) {
+      return null;
+    }
+    MatParamTexture param = source.getTextureParam("BaseColorMap");
+    if (param == null) {
+      param = source.getTextureParam("DiffuseMap");
+    }
+    return param != null ? param.getTextureValue() : null;
   }
 
   /**
@@ -91,9 +135,7 @@ public class AssetFactory {
     return ASSET_LOADING_EXECUTOR;
   }
 
-  /**
-   * Immediately shuts down the asset loading executor, cancelling any pending tasks.
-   */
+  /** Immediately shuts down the asset loading executor, cancelling any pending tasks. */
   public void shutdown() {
     ASSET_LOADING_EXECUTOR.shutdownNow();
   }
@@ -103,8 +145,8 @@ public class AssetFactory {
   }
 
   /**
-   * Initializes the singleton factory with the given asset manager.
-   * Must be called exactly once before any calls to {@link #get()}.
+   * Initializes the singleton factory with the given asset manager. Must be called exactly once
+   * before any calls to {@link #get()}.
    *
    * @param assetManager the JME3 asset manager to use for loading assets
    * @throws OrbitlabException if the factory has already been initialized

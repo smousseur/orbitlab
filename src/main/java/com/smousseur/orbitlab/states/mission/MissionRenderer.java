@@ -90,6 +90,7 @@ public final class MissionRenderer {
     ExecutorService assetExecutor = AssetFactory.get().assetLoadingExecutor();
     Model3dView model3dView = view.getModel3dView();
     CompletableFuture.supplyAsync(model3dView::loadModel, assetExecutor)
+        .thenApply(spatial -> AssetFactory.get().applyLambert(spatial, 0.3f))
         .thenAccept(model3dView::onModelLoaded);
 
     trajectoryRenderer =

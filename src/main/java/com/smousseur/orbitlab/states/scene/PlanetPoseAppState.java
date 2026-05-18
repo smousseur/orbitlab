@@ -86,6 +86,11 @@ public final class PlanetPoseAppState extends BaseAppState {
       ExecutorService assetExecutor = AssetFactory.get().assetLoadingExecutor();
       Model3dView model3dView = view.getModel3dView();
       CompletableFuture.supplyAsync(model3dView::loadModel, assetExecutor)
+          .thenApply(
+              spatial ->
+                  body == SolarSystemBody.SUN
+                      ? spatial
+                      : AssetFactory.get().applyLambert(spatial, 0.8f))
           .thenAccept(model3dView::onModelLoaded);
     }
   }
