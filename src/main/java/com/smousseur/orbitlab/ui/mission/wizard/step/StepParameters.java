@@ -10,6 +10,7 @@ import com.simsilica.lemur.*;
 import com.simsilica.lemur.component.BoxLayout;
 import com.simsilica.lemur.component.QuadBackgroundComponent;
 import com.simsilica.lemur.event.*;
+import com.smousseur.orbitlab.app.OrekitTime;
 import com.smousseur.orbitlab.core.OrbitlabException;
 import com.smousseur.orbitlab.simulation.mission.context.MissionContext;
 import com.smousseur.orbitlab.simulation.mission.MissionType;
@@ -88,7 +89,7 @@ public class StepParameters implements StepValues {
     root.addChild(
         UiKit.fieldLabelRow("LAUNCH DATE", "lbl-clock", LABEL_ICON_SIZE, LABEL_FIELD_GAP));
     root.addChild(UiKit.vSpacer(LABEL_FIELD_GAP));
-    launchDateField = newInputField("2026-05-16T01:00:00Z", FIELD_W, FIELD_H);
+    launchDateField = newInputField(OrekitTime.utcNowString(), FIELD_W, FIELD_H);
     root.addChild(launchDateField);
     root.addChild(UiKit.vSpacer(LABEL_FIELD_GAP));
     Label helper = root.addChild(new Label("UTC · Orekit epoch", FormStyles.STYLE));

@@ -34,22 +34,22 @@ final class DisplayPanelFooter {
     root.setBackground(null);
 
     counter = root.addChild(new Label("0 visible / 0 total", FormStyles.STYLE));
-    counter.setFont(UiKit.sora(11));
+    counter.setFont(UiKit.sora(12));
     counter.setColor(FormStyles.TEXT_SECONDARY);
     counter.setTextHAlignment(HAlignment.Left);
     counter.setTextVAlignment(VAlignment.Center);
-    float counterWidth = totalWidth - 12 - 12 - 80f;
+    float counterWidth = totalWidth - 12 - 12 - 75;
     counter.setPreferredSize(new Vector3f(counterWidth, HEIGHT, 0));
 
     hideAllButton = new Container(new BoxLayout(Axis.X, FillMode.None), FormStyles.STYLE);
     hideAllButton.setBackground(null);
-    hideAllButton.setPreferredSize(new Vector3f(80f, HEIGHT, 0));
+    hideAllButton.setPreferredSize(new Vector3f(75f, HEIGHT, 0));
     hideAllLabel = hideAllButton.addChild(new Label("Hide all", FormStyles.STYLE));
     hideAllLabel.setFont(UiKit.sora(12));
     hideAllLabel.setColor(FormStyles.TEXT_SECONDARY);
     hideAllLabel.setTextHAlignment(HAlignment.Right);
     hideAllLabel.setTextVAlignment(VAlignment.Center);
-    hideAllLabel.setPreferredSize(new Vector3f(80f, HEIGHT, 0));
+    hideAllLabel.setPreferredSize(new Vector3f(55f, HEIGHT, 0));
 
     MouseEventControl.addListenersToSpatial(
         hideAllButton,
@@ -69,8 +69,7 @@ final class DisplayPanelFooter {
 
   void refresh(int visibleCount, int totalCount) {
     counter.setText(visibleCount + " visible / " + totalCount + " total");
-    hideAllLabel.setColor(
-        visibleCount > 0 ? FormStyles.TEXT_PRIMARY : FormStyles.TEXT_LO);
+    hideAllLabel.setColor(visibleCount > 0 ? FormStyles.TEXT_PRIMARY : FormStyles.TEXT_LO);
   }
 
   Container getNode() {

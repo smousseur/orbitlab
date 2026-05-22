@@ -57,8 +57,7 @@ final class DisplayRow {
     root.addChild(
         DisplayRowIcons.vCenter(
             DisplayRowIcons.telemetryIconButton(
-                s.telemetered(),
-                () -> listener.onToggleTelemetry(s.name(), s.telemetered())),
+                s.telemetered(), () -> listener.onToggleTelemetry(s.name(), s.telemetered())),
             HEIGHT));
     root.addChild(UiKit.hSpacer(INNER_GAP));
 
@@ -85,7 +84,7 @@ final class DisplayRow {
     nameLabel.setPreferredSize(new Vector3f(labelsWidth, HEIGHT * 0.55f, 0));
 
     Label subtitleLabel = labels.addChild(new Label(s.subtitle(), FormStyles.STYLE));
-    subtitleLabel.setFont(UiKit.ibmPlexMono(10));
+    subtitleLabel.setFont(UiKit.ibmPlexMono(11));
     subtitleLabel.setColor(FormStyles.TEXT_SECONDARY);
     subtitleLabel.setTextHAlignment(HAlignment.Left);
     subtitleLabel.setTextVAlignment(VAlignment.Top);

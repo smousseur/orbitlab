@@ -82,8 +82,7 @@ public final class MissionWizardAppState extends BaseAppState {
       missionContext.addMission(missionEntry);
     } else if (missionContext.getSelectedMissionType() == MissionType.GEO) {
       double parkingKm = Double.parseDouble(values.get("GTO_PARKING_ALT").toString());
-      GEOMission mission =
-          new GEOMission(name, parkingKm * 1000.0, latitude, longitude, altitude);
+      GEOMission mission = new GEOMission(name, parkingKm * 1000.0, latitude, longitude, altitude);
       MissionEntry missionEntry = new MissionEntry(mission);
       missionEntry.setScheduledDate(missionDate);
       missionContext.addMission(missionEntry);
@@ -101,6 +100,9 @@ public final class MissionWizardAppState extends BaseAppState {
               .eventBus()
               .publishUiNavigation(new EventBus.UiNavigationEvent.CreateMission(values));
           closeWizard();
+          context
+              .eventBus()
+              .publishUiNavigation(new EventBus.UiNavigationEvent.OpenMissionManagement());
         });
     widget.attachTo(context.guiGraph().getModalNode());
     logger.info("Mission Wizard opened");

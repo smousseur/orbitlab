@@ -17,7 +17,6 @@ import com.smousseur.orbitlab.simulation.mission.context.MissionEntry;
 import com.smousseur.orbitlab.ui.AppStyles;
 import com.smousseur.orbitlab.ui.UiKit;
 import com.smousseur.orbitlab.ui.form.FormStyles;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -29,7 +28,9 @@ import java.util.Objects;
  */
 public final class MissionDisplayPanelWidget implements AutoCloseable {
 
-  static final float WINDOW_WIDTH = 320f;
+  static final float WINDOW_WIDTH = 420f;
+  static final float WINDOW_HEIGHT = 240f;
+  static final float BODY_HEIGHT = 120f;
   private static final float MARGIN_PX = AppStyles.HUD_MARGIN_PX;
   private static final float TRIGGER_HEIGHT = 28f;
   private static final float TRIGGER_GAP = 8f;
@@ -70,7 +71,7 @@ public final class MissionDisplayPanelWidget implements AutoCloseable {
     this.missionContext = context.missionContext();
 
     root = new Container(new BoxLayout(Axis.Y, FillMode.None), FormStyles.STYLE);
-    root.setPreferredSize(new Vector3f(WINDOW_WIDTH, 0f, 0));
+    root.setPreferredSize(new Vector3f(WINDOW_WIDTH, WINDOW_HEIGHT, 0));
     root.setBackground(FormStyles.shellBg());
     root.setInsetsComponent(new InsetsComponent(new Insets3f(8, 0, 8, 0)));
 
@@ -80,7 +81,7 @@ public final class MissionDisplayPanelWidget implements AutoCloseable {
 
     body = new Container(new BoxLayout(Axis.Y, FillMode.None), FormStyles.STYLE);
     body.setBackground(null);
-    body.setPreferredSize(new Vector3f(WINDOW_WIDTH, 0f, 0));
+    body.setPreferredSize(new Vector3f(WINDOW_WIDTH, BODY_HEIGHT, 0));
     root.addChild(body);
 
     emptyState = new DisplayPanelEmptyState(WINDOW_WIDTH);
@@ -140,8 +141,8 @@ public final class MissionDisplayPanelWidget implements AutoCloseable {
   }
 
   /**
-   * Reattach this widget to its parent node if it was hidden. Combined helper for callers that
-   * keep the parent reference.
+   * Reattach this widget to its parent node if it was hidden. Combined helper for callers that keep
+   * the parent reference.
    */
   public void show(Node parent) {
     if (!attached) {
