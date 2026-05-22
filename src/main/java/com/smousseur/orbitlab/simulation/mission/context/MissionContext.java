@@ -1,10 +1,13 @@
 package com.smousseur.orbitlab.simulation.mission.context;
 
+import com.jme3.math.ColorRGBA;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionType;
+import com.smousseur.orbitlab.ui.mission.MissionColorPalette;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -17,6 +20,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public final class MissionContext {
   private final List<MissionEntry> missions = new CopyOnWriteArrayList<>();
   private volatile String selectedMissionName;
+  private volatile String telemetryFocusMissionName;
   private volatile MissionType selectedMissionType = MissionType.LEO;
 
   /**
@@ -26,11 +30,21 @@ public final class MissionContext {
    */
   public void addMission(Mission mission) {
     MissionEntry entry = new MissionEntry(mission);
+    assignColor(entry);
     missions.add(entry);
   }
 
   public void addMission(MissionEntry entry) {
+    if (entry.getColor() == null) {
+      assignColor(entry);
+    }
     missions.add(entry);
+  }
+
+  private void assignColor(MissionEntry entry) {
+    List<ColorRGBA> inUse =
+        missions.stream().map(MissionEntry::getColor).filter(Objects::nonNull).toList();
+    entry.setColor(MissionColorPalette.pickFree(inUse));
   }
 
   /**
@@ -104,6 +118,35 @@ public final class MissionContext {
    */
   public Optional<MissionEntry> getSelectedMission() {
     String name = selectedMissionName;
+    if (name == null) return Optional.empty();
+    return findMission(name);
+  }
+
+  /**
+   * Returns the name of the mission currently displaying telemetry, or {@code null} if none.
+   *
+   * @return the telemetry focus mission name
+   */
+  public String getTelemetryFocusMissionName() {
+    return telemetryFocusMissionName;
+  }
+
+  /**
+   * Sets the mission whose telemetry should be displayed.
+   *
+   * @param name the mission name, or {@code null} to clear the focus
+   */
+  public void setTelemetryFocusMissionName(String name) {
+    this.telemetryFocusMissionName = name;
+  }
+
+  /**
+   * Returns the mission entry currently displaying telemetry, if any.
+   *
+   * @return an optional containing the telemetry focus entry
+   */
+  public Optional<MissionEntry> getTelemetryFocusMission() {
+    String name = telemetryFocusMissionName;
     if (name == null) return Optional.empty();
     return findMission(name);
   }

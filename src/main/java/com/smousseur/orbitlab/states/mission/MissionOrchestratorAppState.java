@@ -37,19 +37,9 @@ import org.orekit.time.AbsoluteDate;
 public final class MissionOrchestratorAppState extends BaseAppState {
   private static final Logger logger = LogManager.getLogger(MissionOrchestratorAppState.class);
 
-  private static final ColorRGBA[] TRAJECTORY_PALETTE = {
-    ColorRGBA.Cyan,
-    ColorRGBA.Yellow,
-    ColorRGBA.Green,
-    ColorRGBA.Orange,
-    ColorRGBA.Magenta,
-    ColorRGBA.Pink
-  };
-
   private final ApplicationContext context;
   private final Map<String, MissionRenderer> renderers = new LinkedHashMap<>();
   private ExecutorService optimizationExecutor;
-  private int colorIndex = 0;
 
   public MissionOrchestratorAppState(ApplicationContext context) {
     this.context = Objects.requireNonNull(context, "context");
@@ -138,14 +128,12 @@ public final class MissionOrchestratorAppState extends BaseAppState {
                         return;
                       }
                       boolean turningOn = !entry.isVisible();
-                      if (turningOn) {
-                        for (MissionEntry other : context.missionContext().getMissions()) {
-                          if (other != entry && other.isVisible()) {
-                            other.setVisible(false);
-                          }
-                        }
-                      }
                       entry.setVisible(turningOn);
+                      if (!turningOn
+                          && name.equals(
+                              context.missionContext().getTelemetryFocusMissionName())) {
+                        context.missionContext().setTelemetryFocusMissionName(null);
+                      }
                     });
         case DELETE -> {
           MissionRenderer renderer = renderers.remove(name);
@@ -195,8 +183,8 @@ public final class MissionOrchestratorAppState extends BaseAppState {
 
   private MissionRenderer createRenderer(MissionEntry entry) {
     RenderContext renderContext = RenderContext.planet(entry.mission().getObjective().body());
-    ColorRGBA color = TRAJECTORY_PALETTE[colorIndex % TRAJECTORY_PALETTE.length];
-    colorIndex++;
+    ColorRGBA color = entry.getColor();
+    if (color == null) color = ColorRGBA.Cyan;
 
     MissionRenderer renderer = new MissionRenderer(entry, context, renderContext, color);
     renderer.initialize();

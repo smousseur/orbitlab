@@ -31,8 +31,6 @@ public class MissionListView {
 
     void onCompute(String missionName);
 
-    void onToggleVisible(String missionName);
-
     void onDelete(String missionName);
   }
 
@@ -106,7 +104,8 @@ public class MissionListView {
     this.rowListener = listener != null ? listener : noopRowListener();
   }
 
-  public void refresh(List<MissionEntry> entries, String selectedMissionName) {
+  public void refresh(
+      List<MissionEntry> entries, String selectedMissionName, String telemeteredMissionName) {
     listContainer.clearChildren();
     if (entries.isEmpty()) {
       Label empty = listContainer.addChild(new Label("No missions yet", FormStyles.STYLE));
@@ -118,8 +117,10 @@ public class MissionListView {
 
     for (int i = 0; i < entries.size(); i++) {
       MissionEntry entry = entries.get(i);
-      boolean selected = entry.mission().getName().equals(selectedMissionName);
-      MissionRow row = new MissionRow(entry, columns, selected, rowListener);
+      String name = entry.mission().getName();
+      boolean selected = name.equals(selectedMissionName);
+      boolean telemetered = name.equals(telemeteredMissionName);
+      MissionRow row = new MissionRow(entry, columns, selected, telemetered, rowListener);
       listContainer.addChild(row.getNode());
       if (i < entries.size() - 1) {
         listContainer.addChild(divider());
@@ -185,9 +186,6 @@ public class MissionListView {
 
       @Override
       public void onCompute(String missionName) {}
-
-      @Override
-      public void onToggleVisible(String missionName) {}
 
       @Override
       public void onDelete(String missionName) {}

@@ -98,9 +98,14 @@ public final class EventBus {
   // UI navigation events
   // -------------------------------------------------------------------------
 
-  /** UI navigation events, published by widgets and consumed by AppStates. */
+  /**
+   * UI navigation events, published by widgets and consumed by AppStates. Each concrete event type
+   * has its own queue so independent consumers do not race to drain a shared queue.
+   */
   public sealed interface UiNavigationEvent
-      permits UiNavigationEvent.OpenMissionWizard, UiNavigationEvent.CreateMission {
+      permits UiNavigationEvent.OpenMissionWizard,
+          UiNavigationEvent.CreateMission,
+          UiNavigationEvent.OpenMissionManagement {
 
     /** Request to open the mission wizard. */
     record OpenMissionWizard() implements UiNavigationEvent {}
@@ -116,22 +121,72 @@ public final class EventBus {
         values = Map.copyOf(values);
       }
     }
+
+    /** Request to open the mission management modal. */
+    record OpenMissionManagement() implements UiNavigationEvent {}
   }
 
-  private final ConcurrentLinkedQueue<UiNavigationEvent> uiNavigationQueue =
+  private final ConcurrentLinkedQueue<UiNavigationEvent.OpenMissionWizard> openWizardQueue =
+      new ConcurrentLinkedQueue<>();
+  private final ConcurrentLinkedQueue<UiNavigationEvent.CreateMission> createMissionQueue =
+      new ConcurrentLinkedQueue<>();
+  private final ConcurrentLinkedQueue<UiNavigationEvent.OpenMissionManagement> openManagementQueue =
       new ConcurrentLinkedQueue<>();
 
   /**
-   * Publishes a UI navigation event. Can be called from any thread.
+   * Publishes a UI navigation event. Routes to the per-type queue. Can be called from any thread.
    *
    * @param event the navigation event
    */
   public void publishUiNavigation(UiNavigationEvent event) {
-    uiNavigationQueue.add(Objects.requireNonNull(event));
+    Objects.requireNonNull(event);
+    switch (event) {
+      case UiNavigationEvent.OpenMissionWizard w -> openWizardQueue.add(w);
+      case UiNavigationEvent.CreateMission c -> createMissionQueue.add(c);
+      case UiNavigationEvent.OpenMissionManagement m -> openManagementQueue.add(m);
+    }
   }
 
-  /** Poll one UI navigation event; returns null if none. */
-  public UiNavigationEvent pollUiNavigation() {
-    return uiNavigationQueue.poll();
+  /** Poll one open-wizard request; returns null if none. */
+  public UiNavigationEvent.OpenMissionWizard pollOpenWizard() {
+    return openWizardQueue.poll();
+  }
+
+  /** Poll one create-mission request; returns null if none. */
+  public UiNavigationEvent.CreateMission pollCreateMission() {
+    return createMissionQueue.poll();
+  }
+
+  /** Poll one open-management request; returns null if none. */
+  public UiNavigationEvent.OpenMissionManagement pollOpenManagement() {
+    return openManagementQueue.poll();
+  }
+
+  // -------------------------------------------------------------------------
+  // Mission telemetry focus events
+  // -------------------------------------------------------------------------
+
+  /**
+   * Request to change the telemetry focus.
+   *
+   * @param missionName the mission to follow, or {@code null} to clear the focus
+   */
+  public record MissionTelemetryFocusRequest(String missionName) {}
+
+  private final ConcurrentLinkedQueue<MissionTelemetryFocusRequest> telemetryFocusQueue =
+      new ConcurrentLinkedQueue<>();
+
+  /**
+   * Publishes a telemetry focus request. Can be called from any thread.
+   *
+   * @param missionName the target mission, or {@code null} to clear the focus
+   */
+  public void publishTelemetryFocus(String missionName) {
+    telemetryFocusQueue.add(new MissionTelemetryFocusRequest(missionName));
+  }
+
+  /** Poll one telemetry focus request; returns null if none. */
+  public MissionTelemetryFocusRequest pollTelemetryFocus() {
+    return telemetryFocusQueue.poll();
   }
 }

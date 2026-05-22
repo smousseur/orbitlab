@@ -35,17 +35,17 @@ public final class TelemetryWidgetAppState extends BaseAppState {
   @Override
   public void update(float tpf) {
     MissionContext mc = context.missionContext();
-    Optional<MissionEntry> selected = mc.getSelectedMission();
+    Optional<MissionEntry> focus = mc.getTelemetryFocusMission();
 
-    // Telemetry requires: selected + READY + visible
-    if (selected.isEmpty()
-        || selected.get().mission().getStatus() != MissionStatus.READY
-        || !selected.get().isVisible()) {
+    // Telemetry requires: telemetry focus + READY + visible
+    if (focus.isEmpty()
+        || focus.get().mission().getStatus() != MissionStatus.READY
+        || !focus.get().isVisible()) {
       widget.setVisible(false);
       return;
     }
 
-    MissionEntry entry = selected.get();
+    MissionEntry entry = focus.get();
     MissionEphemeris eph = entry.getEphemeris().orElse(null);
     if (eph == null) {
       widget.setVisible(false);

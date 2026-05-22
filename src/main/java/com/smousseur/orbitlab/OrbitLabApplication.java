@@ -18,6 +18,7 @@ import com.smousseur.orbitlab.states.camera.OrbitCameraAppState;
 import com.smousseur.orbitlab.states.camera.ViewModeAppState;
 import com.smousseur.orbitlab.states.ephemeris.EphemerisAppState;
 import com.smousseur.orbitlab.states.fx.LightningAppState;
+import com.smousseur.orbitlab.states.mission.MissionDisplayPanelAppState;
 import com.smousseur.orbitlab.states.mission.MissionOrchestratorAppState;
 import com.smousseur.orbitlab.states.mission.MissionPanelWidgetAppState;
 import com.smousseur.orbitlab.states.mission.MissionWizardAppState;
@@ -82,6 +83,7 @@ public class OrbitLabApplication extends SimpleApplication {
     stateManager.attach(new OrbitRuntimeAppState(applicationContext));
     stateManager.attach(new TimelineWidgetAppState(applicationContext));
     stateManager.attach(new TelemetryWidgetAppState(applicationContext));
+    stateManager.attach(new MissionDisplayPanelAppState(applicationContext));
     stateManager.attach(new MissionPanelWidgetAppState(applicationContext));
     stateManager.attach(new LightningAppState(applicationContext));
 

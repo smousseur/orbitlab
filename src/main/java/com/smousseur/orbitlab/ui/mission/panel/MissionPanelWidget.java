@@ -125,7 +125,6 @@ public class MissionPanelWidget implements AutoCloseable {
     List<String> snapshot = buildSnapshot();
     if (selectedMissionName != null && missionContext.findMission(selectedMissionName).isEmpty()) {
       selectedMissionName = null;
-      missionContext.setSelectedMissionName(null);
     }
     if (!snapshot.equals(lastSnapshot)) {
       lastSnapshot = snapshot;
@@ -159,15 +158,9 @@ public class MissionPanelWidget implements AutoCloseable {
       }
 
       @Override
-      public void onToggleVisible(String missionName) {
-        eventBus.publishMissionAction(missionName, EventBus.MissionAction.TOGGLE_VISIBLE);
-      }
-
-      @Override
       public void onDelete(String missionName) {
         if (missionName.equals(selectedMissionName)) {
           selectedMissionName = null;
-          missionContext.setSelectedMissionName(null);
         }
         eventBus.publishMissionAction(missionName, EventBus.MissionAction.DELETE);
       }
@@ -180,13 +173,12 @@ public class MissionPanelWidget implements AutoCloseable {
     } else {
       selectedMissionName = name;
     }
-    missionContext.setSelectedMissionName(selectedMissionName);
     refresh();
   }
 
   private void refresh() {
     List<MissionEntry> entries = missionContext.getMissions();
-    listView.refresh(entries, selectedMissionName);
+    listView.refresh(entries, selectedMissionName, missionContext.getTelemetryFocusMissionName());
     MissionEntry selected =
         selectedMissionName == null
             ? null
@@ -196,8 +188,10 @@ public class MissionPanelWidget implements AutoCloseable {
 
   private List<String> buildSnapshot() {
     List<MissionEntry> entries = missionContext.getMissions();
-    List<String> snapshot = new ArrayList<>(entries.size() + 1);
+    String telemetered = missionContext.getTelemetryFocusMissionName();
+    List<String> snapshot = new ArrayList<>(entries.size() + 2);
     snapshot.add("sel=" + (selectedMissionName == null ? "" : selectedMissionName));
+    snapshot.add("tel=" + (telemetered == null ? "" : telemetered));
     for (MissionEntry entry : entries) {
       snapshot.add(
           entry.mission().getName() + ":" + entry.mission().getStatus() + ":" + entry.isVisible());
