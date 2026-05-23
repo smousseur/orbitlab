@@ -90,12 +90,49 @@ Pistes :
 - Introduire une abstraction `EphemerisTarget` (sealed) avec deux variantes : `SolarBody` et
   `TleTarget` (porte le NORAD ID + les deux lignes).
 - Généraliser `EphemerisService.trySampleIcrf` à `EphemerisTarget`.
-- Ajouter un `TleEphemerisSource` wrappant `TLEPropagator`. Question ouverte : on bufferise
-  (sliding window comme les planètes, pour amortir le coût SGP4 dans la boucle de rendu) ou on
-  appelle direct (SGP4 est rapide, ~µs par évaluation) ? Probablement **direct sans buffer**
-  pour démarrer, et on bufferise si profilage montre un coût.
-- Le dataset `.bin` n'est **pas** pertinent pour un TLE (qui doit pouvoir évoluer) : la
-  propagation se fait à la volée à partir des deux lignes.
+- Ajouter un `TleEphemerisSource` wrappant `TLEPropagator`, **bufferisé** comme les planètes
+  (cf. §2.4 ci-dessous, contrainte timeline).
+- Le dataset `.bin` shippé sur disque n'est pertinent **que pour l'option A** (cible figée
+  livrée avec l'app, type ISS). Pour l'option B / C, la propagation alimente directement la
+  fenêtre glissante à partir des deux lignes — pas de fichier intermédiaire.
+
+### 2.4 Bufferisation et contrainte de la timeline
+
+SGP4 est rapide en absolu (~µs par évaluation). Naïvement on pourrait l'appeler à la volée à
+chaque sample. **Ce n'est pas viable** dans OrbitLab à cause de la timeline :
+
+- `SimulationClock` autorise des **multiplicateurs de vitesse extrêmes** (lecture rapide,
+  rewind). À x10⁵–x10⁶, l'orbite cible défile **entièrement entre deux frames** de rendu.
+- Le rendu d'une ligne d'orbite n'est pas un sample isolé : il faut **100–500 points** le long
+  de la trajectoire, à reconstruire à chaque rafraîchissement quand l'orbite précesse ou que la
+  fenêtre temporelle visible se déplace.
+- Le scrubbing manuel de la timeline (`SimulationClock` supporte le saut arbitraire) impose une
+  disponibilité **instantanée** à n'importe quel instant — pas de latence acceptable.
+- Multiplicité : si on a un jour plusieurs cibles TLE (constellation, débris), c'est N fois la
+  charge à chaque frame.
+
+→ Conclusion : on **doit** réutiliser l'infrastructure `SlidingWindowEphemerisBuffer` +
+`EphemerisWorker`. Le worker thread calcule SGP4 en arrière-plan et alimente une grille
+pré-échantillonnée ; le thread de rendu fait juste de l'interpolation, comme pour les planètes
+aujourd'hui.
+
+**Spécificité TLE vs planètes** : un TLE n'est valable que **quelques jours autour de son
+époque** (au-delà, l'erreur SGP4 explose). Donc :
+
+- Pas de précalcul "1990–2101" comme les planètes. La fenêtre maximale a un sens **borné** par
+  la validité physique du TLE (typiquement ±3 à ±7 jours autour de l'époque, paramétrable).
+- À la **chargement** d'un TLE, on génère la fenêtre complète en une passe (rapide : quelques
+  millions d'évaluations SGP4 ≈ quelques secondes), on la met en cache mémoire. Pas besoin de
+  re-générer en cours de simulation tant que la timeline reste dans la fenêtre.
+- Si l'utilisateur scrubbe hors fenêtre, on **clampe** ou on **avertit** (TLE périmé hors
+  domaine de validité — cf. §4.2).
+- Format : pas de `.bin` sur disque pour les TLE chargés à la volée. Pour le cas A (ISS shippée),
+  on peut soit shipper un `.bin` pré-généré, soit shipper juste les deux lignes et régénérer
+  la fenêtre au démarrage (probablement plus simple et négligeable en coût).
+
+En résumé : on garde toute la **couche tampon** (sliding window, worker, interpolation) du
+système actuel, on remplace juste la **source** (SGP4 au lieu de lecture fichier zstd), et on
+borne la fenêtre par la validité du TLE.
 
 ---
 
@@ -306,7 +343,7 @@ Sans entrer dans le détail, points qui n'entrent pas dans §2/§3 mais qu'il fa
 | Question                  | Choix MVP                                                                   |
 |---------------------------|-----------------------------------------------------------------------------|
 | Cible                     | ISS, TLE shippé en dataset (option A)                                       |
-| Source des éphémérides    | `TleEphemerisSource` wrappant `TLEPropagator`, propagation à la volée       |
+| Source des éphémérides    | `TleEphemerisSource` wrappant `TLEPropagator`, **bufferisé** via `SlidingWindowEphemerisBuffer` (cf. §2.4) |
 | Pipeline optimisation     | Multi-stage : insert + phasing + transfer (Lambert seed) + CMA-ES par stage |
 | Coût terminal             | ‖Δr‖ + ‖Δv‖ + ΔV total + corridor + propergol                               |
 | Approche terminale HCW    | **Hors MVP** ; objectif d'arrivée : Δr < 10 km, |Δv_rel| < 10 m/s           |
