@@ -15,7 +15,6 @@ import com.simsilica.lemur.component.TbtQuadBackgroundComponent;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.simsilica.lemur.event.CursorEventControl;
 import com.simsilica.lemur.event.MouseEventControl;
 import com.smousseur.orbitlab.ui.form.FormStyles;
 import org.apache.logging.log4j.LogManager;
@@ -37,11 +36,12 @@ public final class UiKit {
   private static final String FONT_ORBITRON = "fonts/orbitron-semibold-%d.fnt";
   private static final String FONT_IBM_PLEX_MONO = "fonts/ibmplexmono-regular-%d.fnt";
   private static final String FONT_SORA = "fonts/sora-medium-%d.fnt";
-  private static final String WIZARD_DIR = "interface/wizard/";
+  public static final String WIZARD_DIR = "interface/wizard";
+  public static final String MISSIONS_DIR = "interface/missions";
 
   private static AssetManager assetManager;
   private static Texture gradientTex;
-  private static final Map<String, Texture2D> wizardTextureCache = new HashMap<>();
+  private static final Map<String, Texture2D> textureCache = new HashMap<>();
 
   private UiKit() {}
 
@@ -137,27 +137,33 @@ public final class UiKit {
     return icon;
   }
 
-  // =================================================================
-  //  Wizard v2 texture / icon / font helpers
-  // =================================================================
+  private static Texture2D loadTexture(String directory, String name) {
+    Texture2D cached = textureCache.get(name);
+    if (cached != null) return cached;
+    try {
+      Texture2D tex = (Texture2D) assetManager.loadTexture(directory + "/" + name + ".png");
+      tex.setMinFilter(Texture.MinFilter.BilinearNoMipMaps);
+      tex.setMagFilter(Texture.MagFilter.Bilinear);
+      textureCache.put(name, tex);
+      return tex;
+    } catch (AssetNotFoundException e) {
+      logger.warn("Texture not found: {}", name);
+      return null;
+    }
+  }
 
   /**
    * Loads a wizard v2 texture (bilinear, no mipmaps) from {@code interface/wizard/v2/<name>.png},
    * caching it for reuse. Returns {@code null} on a missing asset.
    */
   private static Texture2D loadWizardTexture(String name) {
-    Texture2D cached = wizardTextureCache.get(name);
-    if (cached != null) return cached;
-    try {
-      Texture2D tex = (Texture2D) assetManager.loadTexture(WIZARD_DIR + name + ".png");
-      tex.setMinFilter(Texture.MinFilter.BilinearNoMipMaps);
-      tex.setMagFilter(Texture.MagFilter.Bilinear);
-      wizardTextureCache.put(name, tex);
-      return tex;
-    } catch (AssetNotFoundException e) {
-      logger.warn("Wizard texture not found: {}", name);
-      return null;
-    }
+    return loadTexture(WIZARD_DIR, name);
+  }
+
+  public static TbtQuadBackgroundComponent textureBg(String name, int inset) {
+    Texture2D tex = loadTexture(MISSIONS_DIR, name);
+    if (tex == null) return gradientBackground(ColorRGBA.DarkGray);
+    return TbtQuadBackgroundComponent.create(tex, 1f, inset, inset, inset, inset, 0.01f, false);
   }
 
   /**
@@ -178,10 +184,20 @@ public final class UiKit {
   }
 
   /** Builds a flat (non 9-slice) background from a wizard v2 texture. */
-  public static QuadBackgroundComponent wizardFlat(String name) {
-    Texture2D tex = loadWizardTexture(name);
+  private static QuadBackgroundComponent flat(String directory, String name) {
+    Texture2D tex = loadTexture(directory, name);
     if (tex == null) return new QuadBackgroundComponent(ColorRGBA.DarkGray);
     return new QuadBackgroundComponent(tex);
+  }
+
+  /** Builds a flat (non 9-slice) background from a wizard v2 texture. */
+  public static QuadBackgroundComponent wizardFlat(String name) {
+    return flat(WIZARD_DIR, name);
+  }
+
+  /** Builds a flat (non 9-slice) background from a wizard v2 texture. */
+  public static QuadBackgroundComponent missionsFlat(String name) {
+    return flat(MISSIONS_DIR, name);
   }
 
   /**
@@ -189,12 +205,12 @@ public final class UiKit {
    * container on missing asset.
    */
   public static Container wizardIcon(String name, float width, float height) {
-    return iconPlaceholder(WIZARD_DIR + name + ".png", width, height);
+    return iconPlaceholder(WIZARD_DIR + "/" + name + ".png", width, height);
   }
 
   /** Builds a Lemur {@link IconComponent} pointing at a wizard v2 texture. */
   public static IconComponent wizardIconComponent(String name) {
-    return new IconComponent(WIZARD_DIR + name + ".png");
+    return new IconComponent(WIZARD_DIR + "/" + name + ".png");
   }
 
   /** Loads {@code orbitron-semibold} at the given pixel size, falling back to Lemur's default. */

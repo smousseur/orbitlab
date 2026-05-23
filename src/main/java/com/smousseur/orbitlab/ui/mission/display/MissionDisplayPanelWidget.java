@@ -31,7 +31,7 @@ public final class MissionDisplayPanelWidget implements AutoCloseable {
   static final float WINDOW_WIDTH = 420f;
   static final float WINDOW_HEIGHT = 240f;
   static final float BODY_HEIGHT = 120f;
-  private static final float MARGIN_PX = AppStyles.HUD_MARGIN_PX;
+  private static final float MARGIN_PX = 5f;
   private static final float TRIGGER_HEIGHT = 28f;
   private static final float TRIGGER_GAP = 8f;
 
@@ -73,7 +73,7 @@ public final class MissionDisplayPanelWidget implements AutoCloseable {
     root = new Container(new BoxLayout(Axis.Y, FillMode.None), FormStyles.STYLE);
     root.setPreferredSize(new Vector3f(WINDOW_WIDTH, WINDOW_HEIGHT, 0));
     root.setBackground(FormStyles.shellBg());
-    root.setInsetsComponent(new InsetsComponent(new Insets3f(8, 0, 8, 0)));
+    root.setInsetsComponent(new InsetsComponent(new Insets3f(5, 0, 5, 0)));
 
     header = new DisplayPanelHeader(WINDOW_WIDTH, () -> onManageClicked.run());
     root.addChild(header.getNode());

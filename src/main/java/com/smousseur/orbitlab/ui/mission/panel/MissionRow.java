@@ -153,13 +153,15 @@ class MissionRow {
   }
 
   private static Container centerVertically(Container child, float childHeight) {
-    float vPad = Math.max(0f, (HEIGHT - childHeight) * 0.5f);
+    float vPad = Math.max(0f, (HEIGHT - childHeight) * 0.5f - 6);
     Container wrap = new Container(new BoxLayout(Axis.Y, FillMode.None));
     wrap.setBackground(null);
-    wrap.setPreferredSize(new Vector3f(child.getPreferredSize().x, HEIGHT, 0));
+    wrap.setPreferredSize(new Vector3f(child.getPreferredSize().x + 5, HEIGHT, 0));
     wrap.addChild(UiKit.vSpacer(vPad));
+    wrap.addChild(UiKit.hSpacer(10));
     wrap.addChild(child);
     wrap.addChild(UiKit.vSpacer(vPad));
+    wrap.setInsets(new Insets3f(0, 5, 0, 0));
     return wrap;
   }
 }

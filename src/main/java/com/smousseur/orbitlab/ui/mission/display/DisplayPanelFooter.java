@@ -30,7 +30,7 @@ final class DisplayPanelFooter {
   DisplayPanelFooter(float totalWidth) {
     root = new Container(new BoxLayout(Axis.X, FillMode.None), FormStyles.STYLE);
     root.setPreferredSize(new Vector3f(totalWidth, HEIGHT, 0));
-    root.setInsetsComponent(new InsetsComponent(new Insets3f(0, 12, 0, 12)));
+    root.setInsetsComponent(new InsetsComponent(new Insets3f(0, 5, 0, 5)));
     root.setBackground(null);
 
     counter = root.addChild(new Label("0 visible / 0 total", FormStyles.STYLE));

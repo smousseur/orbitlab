@@ -24,7 +24,7 @@ final class DisplayRowIcons {
     float vPad = Math.max(0f, (containerHeight - child.getPreferredSize().y) * 0.5f);
     Container wrap = new Container(new BoxLayout(Axis.Y, FillMode.None));
     wrap.setBackground(null);
-    wrap.setInsets(new Insets3f(0, 0, 0, 0));
+    wrap.setInsets(new Insets3f(0, 2, 0, 0));
     wrap.setPreferredSize(new Vector3f(child.getPreferredSize().x, containerHeight, 0));
     wrap.addChild(UiKit.vSpacer(vPad));
     wrap.addChild(child);
@@ -32,18 +32,14 @@ final class DisplayRowIcons {
     return wrap;
   }
 
-  /**
-   * Telemetry toggle icon. {@code active} controls the idle texture (filled vs grayed).
-   */
+  /** Telemetry toggle icon. {@code active} controls the idle texture (filled vs grayed). */
   static Container telemetryIconButton(boolean active, Runnable onClick) {
     String idleTex = active ? "icon-action-telemetry" : "icon-action-telemetry-disabled";
     String hoverTex = "icon-action-telemetry-hover";
     return toggleIcon(idleTex, hoverTex, onClick);
   }
 
-  /**
-   * Visibility toggle icon. {@code on} controls the idle texture (filled vs grayed).
-   */
+  /** Visibility toggle icon. {@code on} controls the idle texture (filled vs grayed). */
   static Container visibilityIconButton(boolean on, Runnable onClick) {
     String idleTex = on ? "icon-action-view" : "icon-action-view-disabled";
     String hoverTex = "icon-action-view-hover";
@@ -58,19 +54,19 @@ final class DisplayRowIcons {
   private static Container toggleIcon(String idleTex, String hoverTex, Runnable onClick) {
     Container icon = new Container();
     icon.setPreferredSize(new Vector3f(ICON_SIZE, ICON_SIZE, 0));
-    icon.setBackground(UiKit.wizardFlat(idleTex));
+    icon.setBackground(UiKit.missionsFlat(idleTex));
 
     MouseEventControl.addListenersToSpatial(
         icon,
         new DefaultMouseListener() {
           @Override
           public void mouseEntered(MouseMotionEvent evt, Spatial t, Spatial c) {
-            icon.setBackground(UiKit.wizardFlat(hoverTex));
+            icon.setBackground(UiKit.missionsFlat(hoverTex));
           }
 
           @Override
           public void mouseExited(MouseMotionEvent evt, Spatial t, Spatial c) {
-            icon.setBackground(UiKit.wizardFlat(idleTex));
+            icon.setBackground(UiKit.missionsFlat(idleTex));
           }
 
           @Override

@@ -48,6 +48,7 @@ public final class MissionDisplayPanelAppState extends BaseAppState {
     widget.setOnHideAll(this::handleHideAll);
     widget.setRowListener(buildRowListener());
     widget.attachTo(parentNode);
+    widget.setVisible(false);
     trigger.setEnabled(true);
   }
 
@@ -90,9 +91,7 @@ public final class MissionDisplayPanelAppState extends BaseAppState {
   }
 
   private void publishOpenManagement() {
-    context
-        .eventBus()
-        .publishUiNavigation(new EventBus.UiNavigationEvent.OpenMissionManagement());
+    context.eventBus().publishUiNavigation(new EventBus.UiNavigationEvent.OpenMissionManagement());
   }
 
   private void publishOpenWizard() {

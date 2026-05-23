@@ -23,7 +23,7 @@ final class RowActionIcons {
   private RowActionIcons() {}
 
   static Container vCenter(Container child, float containerHeight) {
-    float vPad = Math.max(0f, (containerHeight - child.getPreferredSize().y) * 0.5f);
+    float vPad = Math.max(0f, (containerHeight - child.getPreferredSize().y) * 0.5f - 5);
     Container wrap = new Container(new BoxLayout(Axis.Y, FillMode.None));
     wrap.setBackground(null);
     wrap.setInsets(new Insets3f(0, 0, 20, 0));

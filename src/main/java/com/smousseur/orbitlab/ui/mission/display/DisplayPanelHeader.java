@@ -22,7 +22,7 @@ final class DisplayPanelHeader {
   DisplayPanelHeader(float totalWidth, Runnable onManage) {
     root = new Container(new BoxLayout(Axis.X, FillMode.None), FormStyles.STYLE);
     root.setPreferredSize(new Vector3f(totalWidth, HEIGHT, 0));
-    root.setInsetsComponent(new InsetsComponent(new Insets3f(0, 12, 0, 10)));
+    root.setInsetsComponent(new InsetsComponent(new Insets3f(0, 5, 0, 5)));
     root.setBackground(null);
 
     Label title = root.addChild(new Label("MISSIONS", FormStyles.STYLE));
@@ -30,8 +30,7 @@ final class DisplayPanelHeader {
     title.setColor(FormStyles.TEXT_PRIMARY);
     title.setTextHAlignment(HAlignment.Left);
     title.setTextVAlignment(VAlignment.Center);
-    float titleWidth =
-        totalWidth - 12 - 10 - DisplayRowIcons.ICON_SIZE - 6 - manageLabelWidth();
+    float titleWidth = totalWidth - 12 - 10 - DisplayRowIcons.ICON_SIZE - 6 - manageLabelWidth();
     title.setPreferredSize(new Vector3f(titleWidth, HEIGHT, 0));
 
     root.addChild(DisplayRowIcons.vCenter(DisplayRowIcons.manageIconButton(onManage), HEIGHT));
