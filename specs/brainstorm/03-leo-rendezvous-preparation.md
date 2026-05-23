@@ -90,12 +90,49 @@ Pistes :
 - Introduire une abstraction `EphemerisTarget` (sealed) avec deux variantes : `SolarBody` et
   `TleTarget` (porte le NORAD ID + les deux lignes).
 - Généraliser `EphemerisService.trySampleIcrf` à `EphemerisTarget`.
-- Ajouter un `TleEphemerisSource` wrappant `TLEPropagator`. Question ouverte : on bufferise
-  (sliding window comme les planètes, pour amortir le coût SGP4 dans la boucle de rendu) ou on
-  appelle direct (SGP4 est rapide, ~µs par évaluation) ? Probablement **direct sans buffer**
-  pour démarrer, et on bufferise si profilage montre un coût.
-- Le dataset `.bin` n'est **pas** pertinent pour un TLE (qui doit pouvoir évoluer) : la
-  propagation se fait à la volée à partir des deux lignes.
+- Ajouter un `TleEphemerisSource` wrappant `TLEPropagator`, **bufferisé** comme les planètes
+  (cf. §2.4 ci-dessous, contrainte timeline).
+- Le dataset `.bin` shippé sur disque n'est pertinent **que pour l'option A** (cible figée
+  livrée avec l'app, type ISS). Pour l'option B / C, la propagation alimente directement la
+  fenêtre glissante à partir des deux lignes — pas de fichier intermédiaire.
+
+### 2.4 Bufferisation et contrainte de la timeline
+
+SGP4 est rapide en absolu (~µs par évaluation). Naïvement on pourrait l'appeler à la volée à
+chaque sample. **Ce n'est pas viable** dans OrbitLab à cause de la timeline :
+
+- `SimulationClock` autorise des **multiplicateurs de vitesse extrêmes** (lecture rapide,
+  rewind). À x10⁵–x10⁶, l'orbite cible défile **entièrement entre deux frames** de rendu.
+- Le rendu d'une ligne d'orbite n'est pas un sample isolé : il faut **100–500 points** le long
+  de la trajectoire, à reconstruire à chaque rafraîchissement quand l'orbite précesse ou que la
+  fenêtre temporelle visible se déplace.
+- Le scrubbing manuel de la timeline (`SimulationClock` supporte le saut arbitraire) impose une
+  disponibilité **instantanée** à n'importe quel instant — pas de latence acceptable.
+- Multiplicité : si on a un jour plusieurs cibles TLE (constellation, débris), c'est N fois la
+  charge à chaque frame.
+
+→ Conclusion : on **doit** réutiliser l'infrastructure `SlidingWindowEphemerisBuffer` +
+`EphemerisWorker`. Le worker thread calcule SGP4 en arrière-plan et alimente une grille
+pré-échantillonnée ; le thread de rendu fait juste de l'interpolation, comme pour les planètes
+aujourd'hui.
+
+**Spécificité TLE vs planètes** : un TLE n'est valable que **quelques jours autour de son
+époque** (au-delà, l'erreur SGP4 explose). Donc :
+
+- Pas de précalcul "1990–2101" comme les planètes. La fenêtre maximale a un sens **borné** par
+  la validité physique du TLE (typiquement ±3 à ±7 jours autour de l'époque, paramétrable).
+- À la **chargement** d'un TLE, on génère la fenêtre complète en une passe (rapide : quelques
+  millions d'évaluations SGP4 ≈ quelques secondes), on la met en cache mémoire. Pas besoin de
+  re-générer en cours de simulation tant que la timeline reste dans la fenêtre.
+- Si l'utilisateur scrubbe hors fenêtre, on **clampe** ou on **avertit** (TLE périmé hors
+  domaine de validité — cf. §4.2).
+- Format : pas de `.bin` sur disque pour les TLE chargés à la volée. Pour le cas A (ISS shippée),
+  on peut soit shipper un `.bin` pré-généré, soit shipper juste les deux lignes et régénérer
+  la fenêtre au démarrage (probablement plus simple et négligeable en coût).
+
+En résumé : on garde toute la **couche tampon** (sliding window, worker, interpolation) du
+système actuel, on remplace juste la **source** (SGP4 au lieu de lecture fichier zstd), et on
+borne la fenêtre par la validité du TLE.
 
 ---
 
@@ -248,15 +285,181 @@ vitesse), wrapping le `LOF` Orekit. Un service qui transforme un `SpacecraftStat
 état relatif `(δr, δv)` LVLH. Réutilisable pour la fonction de coût terminale, le rendu, et
 plus tard HCW.
 
-### 3.6 Lambert solver
+### 3.6 Lambert — principes et utilité
 
-- Disponible dans Orekit (`org.orekit.utils.IodLambert`, plus les outils analytiques de la
-  bibliothèque). Étant données `r1`, `r2`, TOF, retourne `v1` et `v2` (vitesses requises au
-  départ et à l'arrivée), donc les Δv des deux burns du transfert.
-- **Multi-revolution Lambert** : pour les TOF longs (> 1 période), plusieurs solutions existent
-  (k = 0, 1, 2…). Important pour les phasings longs ; à exposer comme paramètre de l'optimiseur.
-- Sert d'initial guess analytique au CMA-ES du stage Transfer, comme le seed Hohmann actuel
-  dans `TransferProblem.buildAnalyticalSeed`.
+**Énoncé du problème.** Étant donnés deux vecteurs position `r1` et `r2` exprimés dans un repère
+inertiel, et un temps de vol `TOF`, trouver l'orbite keplérienne qui relie `r1` à `r2` en
+exactement `TOF` secondes. Les inconnues sont les vitesses `v1` (au départ) et `v2` (à l'arrivée).
+C'est un **problème aux deux bouts** (TPBVP) — on impose les positions aux extrémités, pas l'état
+complet, et le solveur en déduit les vitesses correspondantes.
+
+**Caractère du problème.**
+- Pour `r1`, `r2`, `TOF` donnés, l'orbite peut suivre la **voie courte** (transit < 180° autour
+  du foyer) ou la **voie longue** (> 180°). Choix discret à fournir au solveur.
+- Pour `TOF` > une période orbitale, plusieurs solutions existent : **multi-révolution**, indexées
+  par `k = 0, 1, 2…` (le chaser fait `k` tours complets avant d'atteindre `r2`). Pour chaque `k ≥ 1`,
+  deux branches sont possibles (low-energy / high-energy).
+- Résolution : itération 1D sur un paramètre interne (formulations Battin, Lancaster-Blanchard,
+  Izzo). Très rapide en absolu (< 1 ms par appel), donc utilisable en boucle d'optimisation et
+  même pour des balayages (cf. pork-chop, §3.9).
+- Restriction : modèle **purement keplérien**. Pas de J2, pas de traînée, pas de troisième corps.
+  La solution Lambert est exacte dans son modèle, mais dérive de la réalité dès qu'on intègre la
+  trajectoire dans un propagateur complet.
+
+**Pourquoi c'est central pour le rendez-vous.**
+
+1. **Sortie directement actionnable.** Pour un transfer, on connaît `r1` (position du chaser à
+   l'instant du burn) et `r2` (position **future** de la cible à l'instant d'arrivée, fournie par
+   la propagation TLE bufferisée). Lambert renvoie `v1` ⇒ `Δv₁ = v1 − v_chaser_actuelle` (vecteur
+   du burn de départ) et `Δv₂ = v_target(t_f) − v2` (vecteur du burn d'arrivée pour annuler la
+   vitesse relative). En une résolution, on a les **deux burns** du transfer, sans tâtonner.
+
+2. **Seed analytique pour CMA-ES.** Comme aujourd'hui le seed Hohmann dans
+   `TransferProblem.buildAnalyticalSeed`, Lambert place CMA-ES dans un voisinage où la fonction
+   de coût est déjà proche de zéro. L'optimiseur sert alors à **corriger** les effets non modélisés
+   par Lambert (J2, durée finie du burn, biais TLE, masse variable), pas à découvrir le transfer
+   depuis zéro. Convergence plus rapide et plus robuste, en quelques générations.
+
+3. **Pork-chop chart** (stretch UI, cf. §3.9). Lambert est suffisamment rapide pour balayer un
+   quadrillage `(t_départ, TOF)` en une fraction de seconde et générer une carte de `ΔV` total.
+   C'est l'outil standard d'analyse de fenêtre de transfert en mission planning. Pour le RDV, ça
+   matérialise visuellement les zones de coût faible et donne à l'utilisateur un repère intuitif.
+
+4. **Multi-révolution = phasing implicite.** Pour les `TOF` longs, un Lambert avec `k ≥ 1` couvre
+   à la fois la mise à jour temporelle (k tours) et le rendez-vous géométrique. Si la séparation
+   phasing/transfer est artificielle dans certains cas, le multi-rev permet de fusionner les deux
+   en une seule manoeuvre paramétrique.
+
+**Disponibilité Orekit.** `org.orekit.utils.IodLambert` couvre le cas `k = 0` (single-rev). Pour
+le multi-rev, vérifier la disponibilité native ; à défaut, implémenter une variante (l'algorithme
+Izzo 2014 est l'état de l'art, court à coder, robuste, et gère uniformément `k = 0..N`).
+
+### 3.7 Stage Phasing (nouveau) — détail
+
+**Objectif.** Synchroniser **temporellement** chaser et cible. Après l'insertion en parking orbit,
+les deux objets peuvent être sur des plans (presque) confondus mais à des anomalies très
+différentes — on est au "bon endroit géométrique" mais pas "au bon moment".
+
+**Mécanisme physique.** Différence de **période orbitale**. Le chaser sur une orbite légèrement
+plus basse que la cible a une période plus courte (`T = 2π √(a³/μ)`) et **rattrape** la cible le
+long de V-bar (cf. §3.5). Plus haute ⇒ il **prend du retard**. Le taux de catch-up (en degrés par
+révolution) est directement proportionnel au `Δa` entre les deux orbites.
+
+**Paramétrisation pour l'optimisation.** Variables typiques :
+- `N` : nombre entier de révolutions sur l'orbite de phasing (1 à ~10). Entier ⇒ variable discrète,
+  à gérer dans CMA-ES (arrondi + post-traitement, ou décomposition : un sous-problème continu par
+  valeur de `N`, on garde le meilleur).
+- `Δa_phasing` : delta de demi-grand axe par rapport à la cible (négatif = plus bas = rattrape).
+  Borné par contraintes opérationnelles (altitude minimale, marge atmosphérique).
+- Optionnel : décomposition en **deux burns** (insertion sur orbite de phasing, puis raise après
+  `N` révolutions) plutôt qu'un seul. Plus de degrés de liberté, plus de propergol, mais permet de
+  rejoindre exactement la condition initiale du Lambert.
+
+**Contraintes.**
+- Altitude périgée ≥ seuil de sécurité atmosphérique (> ~200 km pour éviter la traînée notable).
+- `N` borné en haut par budget de propergol restant et durée totale acceptable de mission
+  (chaque révolution ajoute ~90 min de mission).
+- Phase finale : à la sortie du phasing, le **rendez-vous angulaire** doit placer le chaser dans
+  la fenêtre Lambert acceptable (cf. §3.8). On peut formuler cela soit comme contrainte dure
+  (rejet de la solution), soit comme partie du coût global de la mission (pénalité douce).
+
+**Sortie utile au stage suivant.** L'état `(r_chaser, v_chaser)` à `t_fin_phasing`, qui devient
+`r1` pour le Lambert du transfer.
+
+**Cas dégénéré.** Si l'orbite d'insertion est déjà bien phasée (par chance ou par choix d'une
+fenêtre de lancement précise, cf. §4.1), `N = 0` et le stage devient un passe-plat. Le pipeline
+doit le gérer proprement sans crash ni overhead.
+
+### 3.8 Stage Lambert Transfer (nouveau) — détail
+
+**Objectif.** Amener le chaser depuis sa position courante (fin de phasing) jusqu'à un point
+d'arrivée à proximité immédiate de la cible, en un temps de vol `TOF` choisi.
+
+**Mécanisme.** Deux burns impulsifs encadrant un arc keplérien :
+- **Burn 1 (départ)** : `Δv₁ = v_lambert(t₀) − v_chaser(t₀)`. Place le chaser sur l'orbite de
+  transfert calculée par Lambert.
+- **Burn 2 (arrivée)** : `Δv₂ = v_target(t_f) − v_lambert(t_f)`. Annule la vitesse relative à
+  l'arrivée — sans ce burn, le chaser passerait à proximité puis dériverait sur sa propre orbite.
+
+**Variables d'optimisation.**
+- `TOF` (temps de vol) : continu, borné. Pour le RDV LEO typique, ordre de grandeur 0,5 à 2
+  périodes orbitales (~45 min à 3 h).
+- `branche` : voie courte / voie longue (discret, 2 valeurs).
+- `k` : nombre de révolutions Lambert (entier, 0 à 2 typiquement pour LEO). Pour `k = 0` le
+  transfer est rapide ; pour `k ≥ 1` on bénéficie du multi-rev qui fusionne partiellement avec
+  le phasing.
+- Optionnel : petits offsets de timing autour du seed Lambert pour absorber les perturbations J2
+  que Lambert ignore (typiquement quelques secondes à quelques dizaines de secondes).
+
+**Fonction de coût locale.**
+```
+J_transfer = ‖Δv₁‖ + ‖Δv₂‖
+           + w_arrival  * ‖r_chaser(t_f) − r_target(t_f)‖
+           + w_velocity * ‖v_chaser(t_f) − v_target(t_f)‖
+           + corridor + propergol
+```
+Avec un seed Lambert exact, le terme `‖r_chaser − r_target‖` est microscopique au point de seed —
+c'est l'intégration réelle (avec J2, masse variable, finite burn) qui crée l'écart résiduel que
+CMA-ES corrige.
+
+**Hand-off au stage d'approche terminale.** Pour le MVP, le stage Lambert termine la mission. Si
+on ajoute plus tard l'approche HCW (cf. §3.5), le critère de sortie devient "chaser dans la KOS de
+2 km autour de la cible avec `‖Δv_rel‖` < 1 m/s" puis un stage HCW prend le relais en LVLH.
+
+### 3.9 Pistes d'intégration UI
+
+L'introduction du RDV ajoute des paramètres physiques et des choix d'optimisation que
+l'utilisateur doit pouvoir contrôler ou observer. Ébauche, à raffiner au moment du design UI.
+
+**Sélection de la cible (wizard, nouvelle étape).**
+- Choix dans une liste catégorisée (stations / satellites scientifiques / débris notables) — pour
+  le MVP, ISS uniquement.
+- À terme : import d'un TLE collé dans une zone de texte, ou fetch depuis Celestrak via URL.
+- Affichage de l'**âge du TLE** et avertissement si > 7 jours (cf. §4.2).
+
+**Fenêtre de recherche temporelle.**
+- L'utilisateur définit une plage `[t_min, t_max]` pour la date de lancement (ou laisse l'algo
+  proposer un créneau à partir du site de lancement et de l'orientation orbitale de la cible,
+  cf. §4.1).
+- Slider de **`TOF` total** (durée totale mission) avec recalcul du `ΔV` à la volée — Lambert est
+  suffisamment rapide pour ça.
+- Stretch : afficher un **diagramme pork-chop** `(date_lancement × TOF)` colorisé par `ΔV` total.
+  Visualisation iconique en mission planning, et naturelle ici grâce au coût négligeable de
+  Lambert.
+
+**Paramètres du phasing.**
+- Borne `N_max` (révolutions maximum) — directement liée à la durée acceptable de mission. Slider
+  ou input numérique simple.
+- Borne `Δa_max` (écart d'altitude maximum sur l'orbite de phasing) — pédagogique, sinon
+  l'optimiseur peut choisir des orbites peu réalistes.
+
+**Paramètres du transfer.**
+- Bornes sur `TOF_transfer` (min/max) — souvent dérivables de `TOF` total et de `N_max`, donc pas
+  forcément à exposer.
+- Toggle "autoriser le multi-révolution Lambert" (`k ≥ 1`) — affecte le nombre de branches
+  explorées.
+- Choix du **profil d'approche** (V-bar / R-bar / direct), même si pour le MVP "direct" suffit
+  (l'approche fine sort du scope).
+
+**Visualisation pendant l'optimisation.**
+- Tracer chaser + cible dans le viewport principal (ICRF) avec des couleurs distinctes et un
+  pictogramme de cible reconnaissable.
+- Afficher les **moments des burns** (départ phasing, arrivée phasing, burn 1 Lambert, burn 2
+  Lambert) comme marqueurs sur la timeline.
+- Stretch : viewport LVLH dédié (cf. §3.5 et §4.8), où la convergence du chaser sur la cible
+  devient visuellement évidente.
+
+**Affichage des résultats.**
+- `ΔV` total, masse propergol restante, écart final position + vitesse, durée totale de mission.
+- Marqueurs sur la trajectoire pour chaque burn (déjà partiellement présent dans
+  `MissionRenderer`).
+
+**Wizard et `MissionContext`.**
+- Nouveau type de mission `RDV` dans `StepMissionType`, avec étape "Cible" supplémentaire dans le
+  wizard.
+- `MissionEntry` étendu d'un `Optional<EphemerisTarget>` (cf. §4.6).
+- Réutiliser les patterns existants (`StepParameters`, formulaire, validation), pas de nouveau
+  framework UI.
 
 ---
 
@@ -306,8 +509,8 @@ Sans entrer dans le détail, points qui n'entrent pas dans §2/§3 mais qu'il fa
 | Question                  | Choix MVP                                                                   |
 |---------------------------|-----------------------------------------------------------------------------|
 | Cible                     | ISS, TLE shippé en dataset (option A)                                       |
-| Source des éphémérides    | `TleEphemerisSource` wrappant `TLEPropagator`, propagation à la volée       |
-| Pipeline optimisation     | Multi-stage : insert + phasing + transfer (Lambert seed) + CMA-ES par stage |
+| Source des éphémérides    | `TleEphemerisSource` wrappant `TLEPropagator`, **bufferisé** via `SlidingWindowEphemerisBuffer` (cf. §2.4) |
+| Pipeline optimisation     | Multi-stage : insert + phasing (§3.7) + transfer Lambert (§3.6, §3.8) + CMA-ES par stage |
 | Coût terminal             | ‖Δr‖ + ‖Δv‖ + ΔV total + corridor + propergol                               |
 | Approche terminale HCW    | **Hors MVP** ; objectif d'arrivée : Δr < 10 km, |Δv_rel| < 10 m/s           |
 | Pontryagin / PMP          | **Hors MVP** ; à reconsidérer pour un futur module low-thrust               |
