@@ -26,10 +26,8 @@ import com.smousseur.orbitlab.ui.form.FormStyles;
  */
 public final class PaginationBar {
 
-  private static final float CHEVRON_SIZE = 12f;
   private static final float SIDE_PAD = 8f;
   private static final float LABEL_GAP = 4f;
-  private static final ColorRGBA TRANSPARENT = new ColorRGBA(0f, 0f, 0f, 0f);
 
   private final Container root;
   private final Container prevChevron;

@@ -42,7 +42,7 @@ public final class MissionDisplayPanelAppState extends BaseAppState {
 
     parentNode = context.guiGraph().getMissionPanelNode();
     widget = new MissionDisplayPanelWidget(context);
-    widget.layoutTopLeft(sw, sh);
+    widget.layoutTopLeft(sh);
     widget.setOnManageClicked(this::publishOpenManagement);
     widget.setOnHideAll(this::handleHideAll);
     widget.setRowListener(buildRowListener());
@@ -56,7 +56,7 @@ public final class MissionDisplayPanelAppState extends BaseAppState {
     drainTelemetryFocusEvents();
     rules.applyStatusTransitionRules(context.missionContext());
     if (widget != null) {
-      widget.update(tpf, getApplication().getCamera());
+      widget.update();
     }
   }
 

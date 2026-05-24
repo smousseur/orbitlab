@@ -19,10 +19,8 @@ import com.smousseur.orbitlab.app.ApplicationContext;
 import com.smousseur.orbitlab.engine.events.EventBus;
 import com.smousseur.orbitlab.simulation.mission.context.MissionContext;
 import com.smousseur.orbitlab.simulation.mission.context.MissionEntry;
-import com.smousseur.orbitlab.simulation.mission.operation.LEOMission;
 import com.smousseur.orbitlab.ui.form.FormStyles;
 import com.smousseur.orbitlab.ui.form.ModalBackdrop;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;

@@ -172,13 +172,13 @@ public final class MissionDisplayPanelWidget implements AutoCloseable {
   }
 
   /** Position the panel top-left, sitting just below the trigger button. */
-  public void layoutTopLeft(int screenWidth, int screenHeight) {
+  public void layoutTopLeft(int screenHeight) {
     float y = screenHeight - MARGIN_PX - TRIGGER_HEIGHT - TRIGGER_GAP;
     root.setLocalTranslation(MARGIN_PX, y, 0f);
   }
 
   /** Called every frame; rebuilds the body only when the snapshot key changes. */
-  public void update(float tpf, Camera cam) {
+  public void update() {
     if (!attached) return;
     List<RowSnapshot> snapshot = buildSnapshot();
     if (!snapshot.equals(lastSnapshot)) {
@@ -233,7 +233,7 @@ public final class MissionDisplayPanelWidget implements AutoCloseable {
     if (footer.getNode().getParent() == null) {
       root.addChild(footer.getNode());
     }
-    footer.refresh(visibleCount, total, pageIndex, pageCount);
+    footer.refresh(visibleCount, pageIndex, pageCount);
   }
 
   /** Row snapshot key — equality drives whether the body needs a rebuild. */

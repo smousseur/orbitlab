@@ -81,7 +81,7 @@ final class DisplayPanelFooter {
     pagination.setOnNext(r);
   }
 
-  void refresh(int visibleCount, int totalCount, int pageIndex, int pageCount) {
+  void refresh(int visibleCount, int pageIndex, int pageCount) {
     hideAllLabel.setColor(visibleCount > 0 ? FormStyles.TEXT_PRIMARY : FormStyles.TEXT_LO);
 
     boolean showPagination = pageCount > 1;
