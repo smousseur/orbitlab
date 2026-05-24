@@ -33,13 +33,14 @@ public final class MissionDisplayPanelWidget implements AutoCloseable {
   private static final float MARGIN_PX = 5f;
   private static final float TRIGGER_HEIGHT = 28f;
   private static final float TRIGGER_GAP = 8f;
+  private static final int PAGE_SIZE = 3;
 
   private final MissionContext missionContext;
   private final Container root;
   private final Container body;
-  private final DisplayPanelHeader header;
   private final DisplayPanelFooter footer;
   private Container listContainer;
+  private int pageIndex = 0;
 
   private boolean attached = false;
   private boolean visible = true;
@@ -72,7 +73,7 @@ public final class MissionDisplayPanelWidget implements AutoCloseable {
     root.setBackground(FormStyles.shellBg());
     root.setInsetsComponent(new InsetsComponent(new Insets3f(5, 0, 5, 0)));
 
-    header = new DisplayPanelHeader(WINDOW_WIDTH, () -> onManageClicked.run());
+    DisplayPanelHeader header = new DisplayPanelHeader(WINDOW_WIDTH, () -> onManageClicked.run());
     root.addChild(header.getNode());
     root.addChild(UiKit.vSpacer(4));
 
@@ -85,6 +86,18 @@ public final class MissionDisplayPanelWidget implements AutoCloseable {
 
     footer = new DisplayPanelFooter(WINDOW_WIDTH);
     footer.setOnHideAll(() -> onHideAll.run());
+    footer.setOnPrev(
+        () -> {
+          if (pageIndex > 0) {
+            pageIndex--;
+            rebuildBody(lastSnapshot);
+          }
+        });
+    footer.setOnNext(
+        () -> {
+          pageIndex++;
+          rebuildBody(lastSnapshot);
+        });
     root.addChild(UiKit.vSpacer(4));
     root.addChild(footer.getNode());
   }
@@ -199,26 +212,28 @@ public final class MissionDisplayPanelWidget implements AutoCloseable {
 
   private void rebuildBody(List<RowSnapshot> snapshot) {
     body.clearChildren();
-    /*
-        if (snapshot.isEmpty()) {
-          body.addChild(emptyState.getNode());
-          footer.getNode().removeFromParent();
-          return;
-        }
-    */
     listContainer = newListContainer();
+
+    int total = snapshot.size();
+    int pageCount = Math.max(1, (total + PAGE_SIZE - 1) / PAGE_SIZE);
+    pageIndex = Math.min(Math.max(0, pageIndex), pageCount - 1);
+    int from = pageIndex * PAGE_SIZE;
+    int to = Math.min(from + PAGE_SIZE, total);
+
     int visibleCount = 0;
     for (RowSnapshot s : snapshot) {
-      DisplayRow row = new DisplayRow(s, WINDOW_WIDTH, rowListener);
-      listContainer.addChild(row.getNode());
       if (s.visible()) visibleCount++;
+    }
+    for (int i = from; i < to; i++) {
+      DisplayRow row = new DisplayRow(snapshot.get(i), WINDOW_WIDTH, rowListener);
+      listContainer.addChild(row.getNode());
     }
     body.addChild(listContainer);
 
     if (footer.getNode().getParent() == null) {
       root.addChild(footer.getNode());
     }
-    footer.refresh(visibleCount, snapshot.size());
+    footer.refresh(visibleCount, total, pageIndex, pageCount);
   }
 
   /** Row snapshot key — equality drives whether the body needs a rebuild. */

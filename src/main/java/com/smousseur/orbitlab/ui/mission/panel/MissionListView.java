@@ -20,6 +20,7 @@ import com.simsilica.lemur.event.MouseEventControl;
 import com.smousseur.orbitlab.simulation.mission.context.MissionEntry;
 import com.smousseur.orbitlab.ui.UiKit;
 import com.smousseur.orbitlab.ui.form.FormStyles;
+import com.smousseur.orbitlab.ui.mission.component.PaginationBar;
 import java.util.List;
 
 public class MissionListView {
@@ -42,6 +43,8 @@ public class MissionListView {
   private static final float COL_HEADER_ALPHA = 0.6f;
   private static final float NEW_MISSION_BTN_W = 160f;
   private static final float ACTIONS_BAR_H = 32f;
+  private static final float PAGINATION_WIDTH = 150f;
+  private static final int PAGE_SIZE = 5;
 
   record ColumnLayout(float name, float type, float status, float actions) {
     float totalWidth() {
@@ -51,11 +54,18 @@ public class MissionListView {
 
   private final Container root;
   private final Container listContainer;
+  private final Container paginationSlot;
+  private final PaginationBar pagination;
   private final ColumnLayout columns;
   private final float innerWidth;
 
   private Runnable onNewMission = () -> {};
   private MissionListView.RowListener rowListener = noopRowListener();
+
+  private int pageIndex = 0;
+  private List<MissionEntry> lastEntries = List.of();
+  private String lastSelectedName;
+  private String lastTelemeteredName;
 
   public MissionListView(float width, float height) {
     this.innerWidth = width - 2 * PAD_X;
@@ -70,7 +80,27 @@ public class MissionListView {
     Container actionsBar = root.addChild(new Container(new BoxLayout(Axis.X, FillMode.None)));
     actionsBar.setBackground(null);
     actionsBar.setPreferredSize(new Vector3f(innerWidth, ACTIONS_BAR_H, 0));
-    actionsBar.addChild(UiKit.hSpacer(innerWidth - NEW_MISSION_BTN_W));
+
+    paginationSlot = new Container(new BoxLayout(Axis.X, FillMode.None));
+    paginationSlot.setBackground(null);
+    paginationSlot.setPreferredSize(new Vector3f(PAGINATION_WIDTH, ACTIONS_BAR_H, 0));
+    actionsBar.addChild(paginationSlot);
+
+    pagination = new PaginationBar(PAGINATION_WIDTH, ACTIONS_BAR_H);
+    pagination.setOnPrev(
+        () -> {
+          if (pageIndex > 0) {
+            pageIndex--;
+            rebuildList();
+          }
+        });
+    pagination.setOnNext(
+        () -> {
+          pageIndex++;
+          rebuildList();
+        });
+
+    actionsBar.addChild(UiKit.hSpacer(innerWidth - PAGINATION_WIDTH - NEW_MISSION_BTN_W));
     actionsBar.addChild(buildNewMissionButton());
     root.addChild(UiKit.vSpacer(12));
 
@@ -106,8 +136,29 @@ public class MissionListView {
 
   public void refresh(
       List<MissionEntry> entries, String selectedMissionName, String telemeteredMissionName) {
+    this.lastEntries = entries;
+    this.lastSelectedName = selectedMissionName;
+    this.lastTelemeteredName = telemeteredMissionName;
+    rebuildList();
+  }
+
+  private void rebuildList() {
     listContainer.clearChildren();
-    if (entries.isEmpty()) {
+
+    int total = lastEntries.size();
+    int pageCount = Math.max(1, (total + PAGE_SIZE - 1) / PAGE_SIZE);
+    pageIndex = Math.min(Math.max(0, pageIndex), pageCount - 1);
+
+    boolean showPagination = pageCount > 1;
+    boolean attached = pagination.getNode().getParent() != null;
+    if (showPagination) {
+      if (!attached) paginationSlot.addChild(pagination.getNode());
+      pagination.refresh(pageIndex, pageCount);
+    } else if (attached) {
+      paginationSlot.clearChildren();
+    }
+
+    if (total == 0) {
       Label empty = listContainer.addChild(new Label("No missions yet", FormStyles.STYLE));
       empty.setFont(UiKit.sora(13));
       empty.setColor(FormStyles.TEXT_SECONDARY);
@@ -115,14 +166,16 @@ public class MissionListView {
       return;
     }
 
-    for (int i = 0; i < entries.size(); i++) {
-      MissionEntry entry = entries.get(i);
+    int from = pageIndex * PAGE_SIZE;
+    int to = Math.min(from + PAGE_SIZE, total);
+    for (int i = from; i < to; i++) {
+      MissionEntry entry = lastEntries.get(i);
       String name = entry.mission().getName();
-      boolean selected = name.equals(selectedMissionName);
-      boolean telemetered = name.equals(telemeteredMissionName);
+      boolean selected = name.equals(lastSelectedName);
+      boolean telemetered = name.equals(lastTelemeteredName);
       MissionRow row = new MissionRow(entry, columns, selected, telemetered, rowListener);
       listContainer.addChild(row.getNode());
-      if (i < entries.size() - 1) {
+      if (i < to - 1) {
         listContainer.addChild(divider());
       }
     }

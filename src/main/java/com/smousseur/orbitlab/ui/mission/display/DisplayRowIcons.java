@@ -16,7 +16,6 @@ import com.smousseur.orbitlab.ui.UiKit;
 final class DisplayRowIcons {
 
   static final float ICON_SIZE = 20f;
-  static final float ICON_GAP = 8f;
 
   private DisplayRowIcons() {}
 

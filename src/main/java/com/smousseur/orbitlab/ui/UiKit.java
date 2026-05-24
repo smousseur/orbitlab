@@ -38,6 +38,7 @@ public final class UiKit {
   private static final String FONT_SORA = "fonts/sora-medium-%d.fnt";
   public static final String WIZARD_DIR = "interface/wizard";
   public static final String MISSIONS_DIR = "interface/missions";
+  private static final String COMMON_DIR = "interface/common";
 
   private static AssetManager assetManager;
   private static Texture gradientTex;
@@ -198,6 +199,11 @@ public final class UiKit {
   /** Builds a flat (non 9-slice) background from a wizard v2 texture. */
   public static QuadBackgroundComponent missionsFlat(String name) {
     return flat(MISSIONS_DIR, name);
+  }
+
+  /** Builds a flat (non 9-slice) background from a wizard v2 texture. */
+  public static QuadBackgroundComponent flat(String name) {
+    return flat(COMMON_DIR, name);
   }
 
   /**
