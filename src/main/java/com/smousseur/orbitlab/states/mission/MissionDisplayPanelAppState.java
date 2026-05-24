@@ -44,7 +44,6 @@ public final class MissionDisplayPanelAppState extends BaseAppState {
     widget = new MissionDisplayPanelWidget(context);
     widget.layoutTopLeft(sw, sh);
     widget.setOnManageClicked(this::publishOpenManagement);
-    widget.setOnCreateClicked(this::publishOpenWizard);
     widget.setOnHideAll(this::handleHideAll);
     widget.setRowListener(buildRowListener());
     widget.attachTo(parentNode);

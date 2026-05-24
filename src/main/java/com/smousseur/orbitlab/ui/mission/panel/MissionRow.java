@@ -36,6 +36,7 @@ class MissionRow {
   private static final ColorRGBA ROW_SELECT_TINT = new ColorRGBA(1f, 1f, 1f, 0.45f);
 
   private final Container root;
+  private final TbtQuadBackgroundComponent rowBg;
 
   MissionRow(
       MissionEntry entry,
@@ -49,8 +50,9 @@ class MissionRow {
     root = new Container(new BoxLayout(Axis.X, FillMode.None), FormStyles.STYLE);
     root.setPreferredSize(new Vector3f(cols.totalWidth(), HEIGHT, 0));
     root.setInsetsComponent(new InsetsComponent(new Insets3f(6, 12, 6, 12)));
-    TbtQuadBackgroundComponent rowBg = UiKit.wizardBg9("btn-primary", 8);
-    rowBg.setMargin(0f, 0f);
+
+    rowBg = UiKit.textureBg("row-hover", 8);
+    rowBg.setMargin(0f, 0);
     rowBg.setColor(selected ? ROW_SELECT_TINT : ROW_IDLE_TINT);
     root.setBackground(rowBg);
 

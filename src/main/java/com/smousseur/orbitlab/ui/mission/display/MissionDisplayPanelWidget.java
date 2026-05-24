@@ -14,7 +14,6 @@ import com.smousseur.orbitlab.app.ApplicationContext;
 import com.smousseur.orbitlab.simulation.mission.MissionStatus;
 import com.smousseur.orbitlab.simulation.mission.context.MissionContext;
 import com.smousseur.orbitlab.simulation.mission.context.MissionEntry;
-import com.smousseur.orbitlab.ui.AppStyles;
 import com.smousseur.orbitlab.ui.UiKit;
 import com.smousseur.orbitlab.ui.form.FormStyles;
 import java.util.ArrayList;
@@ -40,7 +39,6 @@ public final class MissionDisplayPanelWidget implements AutoCloseable {
   private final Container body;
   private final DisplayPanelHeader header;
   private final DisplayPanelFooter footer;
-  private final DisplayPanelEmptyState emptyState;
   private Container listContainer;
 
   private boolean attached = false;
@@ -48,7 +46,6 @@ public final class MissionDisplayPanelWidget implements AutoCloseable {
   private List<RowSnapshot> lastSnapshot = List.of();
 
   private Runnable onManageClicked = () -> {};
-  private Runnable onCreateClicked = () -> {};
   private Runnable onHideAll = () -> {};
   private RowListener rowListener =
       new RowListener() {
@@ -83,9 +80,6 @@ public final class MissionDisplayPanelWidget implements AutoCloseable {
     body.setBackground(null);
     body.setPreferredSize(new Vector3f(WINDOW_WIDTH, BODY_HEIGHT, 0));
     root.addChild(body);
-
-    emptyState = new DisplayPanelEmptyState(WINDOW_WIDTH);
-    emptyState.setOnCreate(() -> onCreateClicked.run());
 
     listContainer = newListContainer();
 
@@ -156,10 +150,6 @@ public final class MissionDisplayPanelWidget implements AutoCloseable {
     this.onManageClicked = r != null ? r : () -> {};
   }
 
-  public void setOnCreateClicked(Runnable r) {
-    this.onCreateClicked = r != null ? r : () -> {};
-  }
-
   public void setOnHideAll(Runnable r) {
     this.onHideAll = r != null ? r : () -> {};
   }
@@ -209,13 +199,13 @@ public final class MissionDisplayPanelWidget implements AutoCloseable {
 
   private void rebuildBody(List<RowSnapshot> snapshot) {
     body.clearChildren();
-
-    if (snapshot.isEmpty()) {
-      body.addChild(emptyState.getNode());
-      footer.getNode().removeFromParent();
-      return;
-    }
-
+    /*
+        if (snapshot.isEmpty()) {
+          body.addChild(emptyState.getNode());
+          footer.getNode().removeFromParent();
+          return;
+        }
+    */
     listContainer = newListContainer();
     int visibleCount = 0;
     for (RowSnapshot s : snapshot) {

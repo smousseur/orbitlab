@@ -13,7 +13,6 @@ import com.simsilica.lemur.component.BoxLayout;
 import com.simsilica.lemur.component.InsetsComponent;
 import com.simsilica.lemur.component.QuadBackgroundComponent;
 import com.simsilica.lemur.component.TbtQuadBackgroundComponent;
-import com.smousseur.orbitlab.ui.AppStyles;
 import com.smousseur.orbitlab.ui.UiKit;
 import com.smousseur.orbitlab.ui.form.FormStyles;
 
@@ -26,7 +25,9 @@ final class DisplayRow {
   private static final float RIGHT_PAD = 10f;
   private static final float INNER_GAP = 8f;
 
-  private static final ColorRGBA ROW_IDLE = new ColorRGBA(1f, 1f, 1f, 0f);
+  private static final ColorRGBA ROW_IDLE_TINT = new ColorRGBA(1f, 1f, 1f, 0f);
+  private static final ColorRGBA ROW_HOVER_TINT = new ColorRGBA(1f, 1f, 1f, 0.18f);
+  private static final ColorRGBA ROW_SELECT_TINT = new ColorRGBA(1f, 1f, 1f, 0.45f);
 
   private final Container root;
 
@@ -38,14 +39,15 @@ final class DisplayRow {
     root.setPreferredSize(new Vector3f(totalWidth, HEIGHT, 0));
     root.setInsetsComponent(new InsetsComponent(new Insets3f(0, LEFT_PAD, 0, RIGHT_PAD)));
 
-    if (s.telemetered()) {
-      TbtQuadBackgroundComponent rowBg = UiKit.textureBg("row-hover", 8);
-      // root.setBackground(rowBg);
-    }
+    TbtQuadBackgroundComponent rowBg = UiKit.textureBg("row-hover", 8);
+    rowBg.setMargin(0f, 0);
+    root.setBackground(rowBg);
+    rowBg.setColor(s.telemetered() ? ROW_SELECT_TINT : ROW_IDLE_TINT);
     // Color swatch
     Container swatch = new Container();
     swatch.setPreferredSize(new Vector3f(SWATCH_SIZE, SWATCH_SIZE, 0));
     swatch.setBackground(new QuadBackgroundComponent(s.color()));
+    root.addChild(UiKit.hSpacer(INNER_GAP));
     root.addChild(DisplayRowIcons.vCenter(swatch, HEIGHT));
     root.addChild(UiKit.hSpacer(INNER_GAP));
 
@@ -89,7 +91,7 @@ final class DisplayRow {
     nameLabel.setPreferredSize(new Vector3f(labelsWidth, HEIGHT * 0.55f, 0));
 
     Label subtitleLabel = labels.addChild(new Label(s.subtitle(), FormStyles.STYLE));
-    subtitleLabel.setFont(UiKit.ibmPlexMono(11));
+    subtitleLabel.setFont(UiKit.ibmPlexMono(10));
     subtitleLabel.setColor(FormStyles.TEXT_SECONDARY);
     subtitleLabel.setTextHAlignment(HAlignment.Left);
     subtitleLabel.setTextVAlignment(VAlignment.Top);

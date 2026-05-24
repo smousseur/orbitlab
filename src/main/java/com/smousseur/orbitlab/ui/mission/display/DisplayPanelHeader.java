@@ -37,7 +37,7 @@ final class DisplayPanelHeader {
     root.addChild(UiKit.hSpacer(6));
 
     Label manageLabel = root.addChild(new Label("Manage", FormStyles.STYLE));
-    manageLabel.setFont(UiKit.sora(12));
+    manageLabel.setFont(UiKit.sora(10));
     manageLabel.setColor(FormStyles.TEXT_SECONDARY);
     manageLabel.setTextHAlignment(HAlignment.Left);
     manageLabel.setTextVAlignment(VAlignment.Center);
