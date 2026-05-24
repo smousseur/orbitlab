@@ -161,6 +161,7 @@ public class MissionPanelWidget implements AutoCloseable {
         if (missionName.equals(selectedMissionName)) {
           selectedMissionName = null;
         }
+        missionContext.removeMission(missionName);
         eventBus.publishMissionAction(missionName, EventBus.MissionAction.DELETE);
       }
     };

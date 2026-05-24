@@ -65,6 +65,10 @@ public final class MissionWizardAppState extends BaseAppState {
     MissionContext missionContext = context.missionContext();
     Map<String, Object> values = createMission.values();
     String name = String.valueOf(values.get("MISSION_NAME"));
+    if (missionContext.findMission(name).isPresent()) {
+      logger.warn("Mission '{}' already exists, creation ignored", name);
+      return;
+    }
     double latitude = Double.parseDouble(values.get("LAUNCH_SITE_LAT").toString());
     double longitude = Double.parseDouble(values.get("LAUNCH_SITE_LONG").toString());
     double altitude = Double.parseDouble(values.get("LAUNCH_SITE_ALT").toString());
