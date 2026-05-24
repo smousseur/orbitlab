@@ -4,7 +4,6 @@ import com.jme3.app.Application;
 import com.jme3.app.state.BaseAppState;
 import com.smousseur.orbitlab.app.ApplicationContext;
 import com.smousseur.orbitlab.engine.events.EventBus;
-import com.smousseur.orbitlab.simulation.mission.operation.LEOMission;
 import com.smousseur.orbitlab.ui.mission.panel.MissionPanelWidget;
 
 /**
@@ -20,9 +19,6 @@ public final class MissionPanelWidgetAppState extends BaseAppState {
 
   public MissionPanelWidgetAppState(ApplicationContext context) {
     this.context = context;
-    for (int i = 0; i < 19; i++) {
-      context.missionContext().addMission(new LEOMission("LEO-" + i, 400_000 + i * 10_000));
-    }
   }
 
   @Override

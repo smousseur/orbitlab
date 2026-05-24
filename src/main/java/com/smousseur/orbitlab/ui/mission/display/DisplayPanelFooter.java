@@ -21,7 +21,7 @@ import com.smousseur.orbitlab.ui.mission.component.PaginationBar;
 final class DisplayPanelFooter {
 
   static final float HEIGHT = 30f;
-  private static final float PAGINATION_WIDTH = 110f;
+  private static final float PAGINATION_WIDTH = 147f;
   private static final float HIDE_ALL_WIDTH = 75f;
   private static final float SIDE_INSET = 5f;
 
@@ -45,7 +45,7 @@ final class DisplayPanelFooter {
     pagination = new PaginationBar(PAGINATION_WIDTH, HEIGHT);
 
     float spacerWidth = totalWidth - 2 * SIDE_INSET - PAGINATION_WIDTH - HIDE_ALL_WIDTH;
-    root.addChild(UiKit.hSpacer(Math.max(0, spacerWidth)));
+    root.addChild(UiKit.hSpacer(Math.max(0, spacerWidth - 20)));
 
     Container hideAllButton = new Container(new BoxLayout(Axis.X, FillMode.None), FormStyles.STYLE);
     hideAllButton.setBackground(null);
