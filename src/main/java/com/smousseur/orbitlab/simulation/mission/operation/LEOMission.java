@@ -12,10 +12,8 @@ import com.smousseur.orbitlab.simulation.mission.stage.AnalyticTrimBurnStage;
 import com.smousseur.orbitlab.simulation.mission.stage.CoastingStage;
 import com.smousseur.orbitlab.simulation.mission.stage.ascent.GravityTurnStage;
 import com.smousseur.orbitlab.simulation.mission.stage.ascent.VerticalAscentStage;
-import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchVehicle;
-import com.smousseur.orbitlab.simulation.mission.vehicle.Spacecraft;
+import com.smousseur.orbitlab.simulation.mission.vehicle.LauncherType;
 import com.smousseur.orbitlab.simulation.mission.vehicle.VehicleStack;
-import java.util.ArrayList;
 import java.util.List;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.hipparchus.util.FastMath;
@@ -104,11 +102,44 @@ public class LEOMission extends Mission {
       double latitude,
       double longitude,
       double altitude) {
+    this(
+        name,
+        perigeeAltitude,
+        apogeeAltitude,
+        latitude,
+        longitude,
+        altitude,
+        Mission.getDefaultVehicle(),
+        LauncherType.FALCON_HEAVY.modelPath());
+  }
+
+  /**
+   * Creates a LEO mission with a custom launch site and an explicit vehicle stack and 3D model.
+   *
+   * @param name the mission name
+   * @param perigeeAltitude the target perigee altitude in meters
+   * @param apogeeAltitude the target apogee altitude in meters
+   * @param latitude the launch site latitude in degrees
+   * @param longitude the launch site longitude in degrees
+   * @param altitude the launch site altitude in meters
+   * @param vehicle the vehicle stack to use for the mission
+   * @param modelPath the JME3 asset path of the 3D model representing the vehicle
+   */
+  public LEOMission(
+      String name,
+      double perigeeAltitude,
+      double apogeeAltitude,
+      double latitude,
+      double longitude,
+      double altitude,
+      VehicleStack vehicle,
+      String modelPath) {
     super(
         name,
-        buildVehicle(),
+        vehicle,
         buildStages(perigeeAltitude, apogeeAltitude, latitude),
-        buildObjective(perigeeAltitude, apogeeAltitude, latitude));
+        buildObjective(perigeeAltitude, apogeeAltitude, latitude),
+        modelPath);
     this.latitude = latitude;
     this.longitude = longitude;
     this.altitude = altitude;
@@ -129,15 +160,6 @@ public class LEOMission extends Mission {
     Orbit initialOrbit =
         new CartesianOrbit(initialPVInGCRF, gcrf, initialDate, Constants.WGS84_EARTH_MU);
     return new SpacecraftState(initialOrbit).withMass(this.getVehicle().getMass());
-  }
-
-  private static VehicleStack buildVehicle() {
-    return new VehicleStack(
-        new ArrayList<>(
-            List.of(
-                LaunchVehicle.getLauncherStage1Vehicle(),
-                LaunchVehicle.getLauncherStage2Vehicle(),
-                Spacecraft.getSpacecraft())));
   }
 
   private static List<MissionStage> buildStages(

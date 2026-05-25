@@ -44,13 +44,13 @@ class VehicleTest {
 
   @Test
   void launchVehicle_getMass_equalsDryPlusPropellant() {
-    LaunchVehicle v = LaunchVehicle.getLauncherStage1Vehicle();
+    LaunchVehicle v = LaunchVehicle.defaultStage1();
     assertEquals(v.dryMass() + v.propellantCapacity(), v.getMass(), 1e-6);
   }
 
   @Test
   void launchVehicle_stage1_knownValues() {
-    LaunchVehicle v = LaunchVehicle.getLauncherStage1Vehicle();
+    LaunchVehicle v = LaunchVehicle.defaultStage1();
     assertEquals(27_000, v.dryMass(), 1e-6);
     assertEquals(425_000, v.propellantCapacity(), 1e-6);
     assertEquals(452_000, v.getMass(), 1e-6);
@@ -58,7 +58,7 @@ class VehicleTest {
 
   @Test
   void launchVehicle_stage2_knownValues() {
-    LaunchVehicle v = LaunchVehicle.getLauncherStage2Vehicle();
+    LaunchVehicle v = LaunchVehicle.defaultStage2();
     assertEquals(10_000, v.dryMass(), 1e-6);
     assertEquals(134_000, v.propellantCapacity(), 1e-6);
     assertEquals(144_000, v.getMass(), 1e-6);
@@ -66,7 +66,7 @@ class VehicleTest {
 
   @Test
   void singleVehicle_resolveActiveStage_returnsSelf() {
-    LaunchVehicle v = LaunchVehicle.getLauncherStage1Vehicle();
+    LaunchVehicle v = LaunchVehicle.defaultStage1();
     ActiveStageInfo info = v.resolveActiveStage(v.getMass());
     assertEquals(0, info.stageIndex());
     assertSame(v, info.stage());
@@ -77,24 +77,24 @@ class VehicleTest {
 
   @Test
   void vehicleStack_getMass_sumOfAllStages() {
-    LaunchVehicle s1 = LaunchVehicle.getLauncherStage1Vehicle();
-    LaunchVehicle s2 = LaunchVehicle.getLauncherStage2Vehicle();
+    LaunchVehicle s1 = LaunchVehicle.defaultStage1();
+    LaunchVehicle s2 = LaunchVehicle.defaultStage2();
     VehicleStack stack = new VehicleStack(List.of(s1, s2));
     assertEquals(s1.getMass() + s2.getMass(), stack.getMass(), 1e-6);
   }
 
   @Test
   void vehicleStack_dryMass_sumOfAllDryMasses() {
-    LaunchVehicle s1 = LaunchVehicle.getLauncherStage1Vehicle();
-    LaunchVehicle s2 = LaunchVehicle.getLauncherStage2Vehicle();
+    LaunchVehicle s1 = LaunchVehicle.defaultStage1();
+    LaunchVehicle s2 = LaunchVehicle.defaultStage2();
     VehicleStack stack = new VehicleStack(List.of(s1, s2));
     assertEquals(s1.dryMass() + s2.dryMass(), stack.dryMass(), 1e-6);
   }
 
   @Test
   void vehicleStack_propulsion_delegatesToFirstStage() {
-    LaunchVehicle s1 = LaunchVehicle.getLauncherStage1Vehicle();
-    LaunchVehicle s2 = LaunchVehicle.getLauncherStage2Vehicle();
+    LaunchVehicle s1 = LaunchVehicle.defaultStage1();
+    LaunchVehicle s2 = LaunchVehicle.defaultStage2();
     VehicleStack stack = new VehicleStack(List.of(s1, s2));
     assertEquals(s1.propulsion().isp(), stack.propulsion().isp(), 1e-6);
     assertEquals(s1.propulsion().thrust(), stack.propulsion().thrust(), 1e-6);
@@ -104,9 +104,9 @@ class VehicleTest {
 
   @Test
   void vehicleStack_resolveActiveStage_fullMass_returnsFirstStage() {
-    LaunchVehicle s1 = LaunchVehicle.getLauncherStage1Vehicle();
-    LaunchVehicle s2 = LaunchVehicle.getLauncherStage2Vehicle();
-    Spacecraft sc = Spacecraft.getSpacecraft();
+    LaunchVehicle s1 = LaunchVehicle.defaultStage1();
+    LaunchVehicle s2 = LaunchVehicle.defaultStage2();
+    Spacecraft sc = Spacecraft.defaultPayload();
     VehicleStack stack = new VehicleStack(List.of(s1, s2, sc));
 
     ActiveStageInfo info = stack.resolveActiveStage(stack.getMass());
@@ -118,9 +118,9 @@ class VehicleTest {
 
   @Test
   void vehicleStack_resolveActiveStage_afterJettison_returnsSecondStage() {
-    LaunchVehicle s1 = LaunchVehicle.getLauncherStage1Vehicle();
-    LaunchVehicle s2 = LaunchVehicle.getLauncherStage2Vehicle();
-    Spacecraft sc = Spacecraft.getSpacecraft();
+    LaunchVehicle s1 = LaunchVehicle.defaultStage1();
+    LaunchVehicle s2 = LaunchVehicle.defaultStage2();
+    Spacecraft sc = Spacecraft.defaultPayload();
     VehicleStack stack = new VehicleStack(List.of(s1, s2, sc));
 
     // After jettison of stage 1, mass = s2.getMass() + sc.getMass()
@@ -133,9 +133,9 @@ class VehicleTest {
 
   @Test
   void vehicleStack_resolveActiveStage_spacecraftOnly_returnsTopStage() {
-    LaunchVehicle s1 = LaunchVehicle.getLauncherStage1Vehicle();
-    LaunchVehicle s2 = LaunchVehicle.getLauncherStage2Vehicle();
-    Spacecraft sc = Spacecraft.getSpacecraft();
+    LaunchVehicle s1 = LaunchVehicle.defaultStage1();
+    LaunchVehicle s2 = LaunchVehicle.defaultStage2();
+    Spacecraft sc = Spacecraft.defaultPayload();
     VehicleStack stack = new VehicleStack(List.of(s1, s2, sc));
 
     ActiveStageInfo info = stack.resolveActiveStage(sc.getMass());
@@ -146,9 +146,9 @@ class VehicleTest {
 
   @Test
   void vehicleStack_resolveActiveStage_massAfterJettison_equalsReferenceAbove() {
-    LaunchVehicle s1 = LaunchVehicle.getLauncherStage1Vehicle();
-    LaunchVehicle s2 = LaunchVehicle.getLauncherStage2Vehicle();
-    Spacecraft sc = Spacecraft.getSpacecraft();
+    LaunchVehicle s1 = LaunchVehicle.defaultStage1();
+    LaunchVehicle s2 = LaunchVehicle.defaultStage2();
+    Spacecraft sc = Spacecraft.defaultPayload();
     VehicleStack stack = new VehicleStack(List.of(s1, s2, sc));
 
     ActiveStageInfo stage1 = stack.resolveActiveStage(stack.getMass());
@@ -162,9 +162,9 @@ class VehicleTest {
 
   @Test
   void vehicleStack_resolveActiveStage_remainingFuel() {
-    LaunchVehicle s1 = LaunchVehicle.getLauncherStage1Vehicle();
-    LaunchVehicle s2 = LaunchVehicle.getLauncherStage2Vehicle();
-    Spacecraft sc = Spacecraft.getSpacecraft();
+    LaunchVehicle s1 = LaunchVehicle.defaultStage1();
+    LaunchVehicle s2 = LaunchVehicle.defaultStage2();
+    Spacecraft sc = Spacecraft.defaultPayload();
     VehicleStack stack = new VehicleStack(List.of(s1, s2, sc));
 
     // At full mass, remaining fuel of stage 1 = propellant capacity of stage 1
@@ -179,9 +179,9 @@ class VehicleTest {
 
   @Test
   void vehicleStack_resolveActiveStage_remainingDryMass() {
-    LaunchVehicle s1 = LaunchVehicle.getLauncherStage1Vehicle();
-    LaunchVehicle s2 = LaunchVehicle.getLauncherStage2Vehicle();
-    Spacecraft sc = Spacecraft.getSpacecraft();
+    LaunchVehicle s1 = LaunchVehicle.defaultStage1();
+    LaunchVehicle s2 = LaunchVehicle.defaultStage2();
+    Spacecraft sc = Spacecraft.defaultPayload();
     VehicleStack stack = new VehicleStack(List.of(s1, s2, sc));
 
     ActiveStageInfo stage1 = stack.resolveActiveStage(stack.getMass());

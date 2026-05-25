@@ -191,7 +191,7 @@ class MissionDisplayPanelRulesTest {
    */
   private static final class StubMission extends Mission {
     StubMission(String name) {
-      super(name, null, null, null);
+      super(name, null, null, null, null);
     }
 
     @Override

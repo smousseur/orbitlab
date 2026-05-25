@@ -28,7 +28,7 @@ class GravityTurnProblemTest {
         OrekitService.class.getClassLoader().getResource("orekit-data.zip") != null,
         "orekit-data.zip not on classpath — skipping");
     OrekitService.get().initialize();
-    Vehicle vehicle = LaunchVehicle.getLauncherStage1Vehicle();
+    Vehicle vehicle = LaunchVehicle.defaultStage1();
     maneuver = new GravityTurnManeuver(vehicle, 0, 0, Math.PI / 2);
   }
 

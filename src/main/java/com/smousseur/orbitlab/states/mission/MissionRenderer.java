@@ -31,8 +31,6 @@ import org.hipparchus.geometry.euclidean.threed.Vector3D;
 public final class MissionRenderer {
 
   private static final double SPACECRAFT_RADIUS_METERS = 50.0;
-  private static final String SPACECRAFT_MODEL_PATH =
-      "models/vehicles/heavy_falcon/heavy_falcon.gltf";
 
   /**
    * Camera distance applied when the user clicks the spacecraft, expressed in solar-scale units (1
@@ -76,7 +74,7 @@ public final class MissionRenderer {
             mission.getName(),
             trajectoryColor,
             SPACECRAFT_RADIUS_METERS,
-            SPACECRAFT_MODEL_PATH,
+            mission.getModelPath(),
             renderContext);
 
     view = new LodView(guiNode, config, this::onSpacecraftSelected, null);

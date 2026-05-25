@@ -12,9 +12,9 @@ import com.smousseur.orbitlab.simulation.mission.stage.AnalyticTrimBurnStage;
 import com.smousseur.orbitlab.simulation.mission.stage.CoastingStage;
 import com.smousseur.orbitlab.simulation.mission.stage.ascent.GravityTurnStage;
 import com.smousseur.orbitlab.simulation.mission.stage.ascent.VerticalAscentStage;
-import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchVehicle;
-import com.smousseur.orbitlab.simulation.mission.vehicle.Spacecraft;
+import com.smousseur.orbitlab.simulation.mission.vehicle.LauncherType;
 import com.smousseur.orbitlab.simulation.mission.vehicle.VehicleStack;
+import java.util.List;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.hipparchus.util.FastMath;
 import org.orekit.bodies.GeodeticPoint;
@@ -27,9 +27,6 @@ import org.orekit.propagation.SpacecraftState;
 import org.orekit.time.AbsoluteDate;
 import org.orekit.utils.Constants;
 import org.orekit.utils.PVCoordinates;
-
-import java.util.ArrayList;
-import java.util.List;
 
 public class GEOMission extends Mission {
   private static final int ASCENSION_DURATION = 10;
@@ -81,12 +78,35 @@ public class GEOMission extends Mission {
       double longitude,
       double altitude,
       double finalInclination) {
+    this(
+        name,
+        parkingAltitude,
+        targetAltitude,
+        latitude,
+        longitude,
+        altitude,
+        finalInclination,
+        Mission.getDefaultVehicle(),
+        LauncherType.FALCON_HEAVY.modelPath());
+  }
+
+  public GEOMission(
+      String name,
+      double parkingAltitude,
+      double targetAltitude,
+      double latitude,
+      double longitude,
+      double altitude,
+      double finalInclination,
+      VehicleStack vehicle,
+      String modelPath) {
     super(
         name,
-        buildVehicle(),
+        vehicle,
         buildStages(parkingAltitude, targetAltitude, finalInclination),
         new OrbitInsertionObjective(
-            SolarSystemBody.EARTH, parkingAltitude, targetAltitude, FastMath.toRadians(latitude)));
+            SolarSystemBody.EARTH, parkingAltitude, targetAltitude, FastMath.toRadians(latitude)),
+        modelPath);
     this.latitude = latitude;
     this.longitude = longitude;
     this.altitude = altitude;
@@ -107,15 +127,6 @@ public class GEOMission extends Mission {
     Orbit initialOrbit =
         new CartesianOrbit(initialPVInGCRF, gcrf, initialDate, Constants.WGS84_EARTH_MU);
     return new SpacecraftState(initialOrbit).withMass(this.getVehicle().getMass());
-  }
-
-  private static VehicleStack buildVehicle() {
-    return new VehicleStack(
-        new ArrayList<>(
-            List.of(
-                LaunchVehicle.getLauncherStage1Vehicle(),
-                LaunchVehicle.getLauncherStage2Vehicle(),
-                Spacecraft.getSpacecraft())));
   }
 
   private static List<MissionStage> buildStages(

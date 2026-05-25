@@ -11,20 +11,40 @@ package com.smousseur.orbitlab.simulation.mission.vehicle;
 public record LaunchVehicle(double dryMass, double propellantCapacity, PropulsionSystem propulsion)
     implements Vehicle {
   /**
-   * Creates a standard first-stage launch vehicle with typical heavy-lift characteristics.
+   * Creates the default first-stage launch vehicle with typical heavy-lift characteristics.
    *
    * @return a first-stage launch vehicle
    */
-  public static LaunchVehicle getLauncherStage1Vehicle() {
+  public static LaunchVehicle defaultStage1() {
     return new LaunchVehicle(27000, 425_000, PropulsionSystem.getLauncherStage1Propulsion());
   }
 
   /**
-   * Creates a standard second-stage launch vehicle with upper-stage characteristics.
+   * Creates the default second-stage launch vehicle with upper-stage characteristics.
    *
    * @return a second-stage launch vehicle
    */
-  public static LaunchVehicle getLauncherStage2Vehicle() {
+  public static LaunchVehicle defaultStage2() {
     return new LaunchVehicle(5000, 134_000, PropulsionSystem.getLauncherStage2Propulsion());
+  }
+
+  /**
+   * Creates a first-stage launch vehicle matching Ariane 5 ECA characteristics (EPC core combined
+   * with two EAP solid boosters).
+   *
+   * @return an Ariane 5 ECA first-stage launch vehicle
+   */
+  public static LaunchVehicle ariane5Stage1() {
+    return new LaunchVehicle(80_700, 653_000, PropulsionSystem.ariane5Stage1Propulsion());
+  }
+
+  /**
+   * Creates a second-stage launch vehicle matching Ariane 5 ECA characteristics (ESC-A cryogenic
+   * upper stage).
+   *
+   * @return an Ariane 5 ECA second-stage launch vehicle
+   */
+  public static LaunchVehicle ariane5Stage2() {
+    return new LaunchVehicle(4_540, 14_900, PropulsionSystem.ariane5Stage2Propulsion());
   }
 }

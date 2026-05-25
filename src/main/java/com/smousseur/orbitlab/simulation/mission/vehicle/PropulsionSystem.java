@@ -50,4 +50,24 @@ public record PropulsionSystem(double isp, double thrust) {
   public static PropulsionSystem getSpacecraftPropulsion() {
     return new PropulsionSystem(300, 3000);
   }
+
+  /**
+   * Creates a first-stage propulsion system matching Ariane 5 ECA characteristics (combined EPC +
+   * EAP solid boosters total).
+   *
+   * @return an Ariane 5 ECA first-stage propulsion system
+   */
+  public static PropulsionSystem ariane5Stage1Propulsion() {
+    return new PropulsionSystem(300, 7_600_000);
+  }
+
+  /**
+   * Creates a second-stage propulsion system matching Ariane 5 ECA characteristics (ESC-A upper
+   * stage with HM7B engine).
+   *
+   * @return an Ariane 5 ECA second-stage propulsion system
+   */
+  public static PropulsionSystem ariane5Stage2Propulsion() {
+    return new PropulsionSystem(431, 67_000);
+  }
 }

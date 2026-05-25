@@ -15,7 +15,7 @@ public record Spacecraft(double dryMass, double propellantCapacity, PropulsionSy
    *
    * @return a default spacecraft instance
    */
-  public static Spacecraft getSpacecraft() {
+  public static Spacecraft defaultPayload() {
     return new Spacecraft(150, 0, PropulsionSystem.getSpacecraftPropulsion());
   }
 }
