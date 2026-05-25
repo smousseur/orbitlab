@@ -12,7 +12,6 @@ import com.smousseur.orbitlab.simulation.mission.stage.AnalyticTrimBurnStage;
 import com.smousseur.orbitlab.simulation.mission.stage.CoastingStage;
 import com.smousseur.orbitlab.simulation.mission.stage.ascent.GravityTurnStage;
 import com.smousseur.orbitlab.simulation.mission.stage.ascent.VerticalAscentStage;
-import com.smousseur.orbitlab.simulation.mission.vehicle.LauncherType;
 import com.smousseur.orbitlab.simulation.mission.vehicle.VehicleStack;
 import java.util.List;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
@@ -86,8 +85,7 @@ public class GEOMission extends Mission {
         longitude,
         altitude,
         finalInclination,
-        Mission.getDefaultVehicle(),
-        LauncherType.FALCON_HEAVY.modelPath());
+        Mission.getDefaultVehicle());
   }
 
   public GEOMission(
@@ -98,15 +96,13 @@ public class GEOMission extends Mission {
       double longitude,
       double altitude,
       double finalInclination,
-      VehicleStack vehicle,
-      String modelPath) {
+      VehicleStack vehicle) {
     super(
         name,
         vehicle,
         buildStages(parkingAltitude, targetAltitude, finalInclination),
         new OrbitInsertionObjective(
-            SolarSystemBody.EARTH, parkingAltitude, targetAltitude, FastMath.toRadians(latitude)),
-        modelPath);
+            SolarSystemBody.EARTH, parkingAltitude, targetAltitude, FastMath.toRadians(latitude)));
     this.latitude = latitude;
     this.longitude = longitude;
     this.altitude = altitude;

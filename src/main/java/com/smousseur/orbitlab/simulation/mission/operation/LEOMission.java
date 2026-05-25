@@ -12,7 +12,6 @@ import com.smousseur.orbitlab.simulation.mission.stage.AnalyticTrimBurnStage;
 import com.smousseur.orbitlab.simulation.mission.stage.CoastingStage;
 import com.smousseur.orbitlab.simulation.mission.stage.ascent.GravityTurnStage;
 import com.smousseur.orbitlab.simulation.mission.stage.ascent.VerticalAscentStage;
-import com.smousseur.orbitlab.simulation.mission.vehicle.LauncherType;
 import com.smousseur.orbitlab.simulation.mission.vehicle.VehicleStack;
 import java.util.List;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
@@ -109,12 +108,11 @@ public class LEOMission extends Mission {
         latitude,
         longitude,
         altitude,
-        Mission.getDefaultVehicle(),
-        LauncherType.FALCON_HEAVY.modelPath());
+        Mission.getDefaultVehicle());
   }
 
   /**
-   * Creates a LEO mission with a custom launch site and an explicit vehicle stack and 3D model.
+   * Creates a LEO mission with a custom launch site and an explicit vehicle stack.
    *
    * @param name the mission name
    * @param perigeeAltitude the target perigee altitude in meters
@@ -123,7 +121,6 @@ public class LEOMission extends Mission {
    * @param longitude the launch site longitude in degrees
    * @param altitude the launch site altitude in meters
    * @param vehicle the vehicle stack to use for the mission
-   * @param modelPath the JME3 asset path of the 3D model representing the vehicle
    */
   public LEOMission(
       String name,
@@ -132,14 +129,12 @@ public class LEOMission extends Mission {
       double latitude,
       double longitude,
       double altitude,
-      VehicleStack vehicle,
-      String modelPath) {
+      VehicleStack vehicle) {
     super(
         name,
         vehicle,
         buildStages(perigeeAltitude, apogeeAltitude, latitude),
-        buildObjective(perigeeAltitude, apogeeAltitude, latitude),
-        modelPath);
+        buildObjective(perigeeAltitude, apogeeAltitude, latitude));
     this.latitude = latitude;
     this.longitude = longitude;
     this.altitude = altitude;

@@ -84,17 +84,16 @@ public final class MissionWizardAppState extends BaseAppState {
     Spacecraft payload =
         new Spacecraft(payloadMass, 0, PropulsionSystem.getSpacecraftPropulsion());
     VehicleStack vehicle = Mission.buildVehicle(launcherType.toVehicleStack(), payload);
-    String modelPath = launcherType.modelPath();
     if (missionContext.getSelectedMissionType() == MissionType.LEO) {
       double perigeeKm = Double.parseDouble(values.get("LEO_PERIGEE_ALT").toString());
       double apogeeKm = Double.parseDouble(values.get("LEO_APOGEE_ALT").toString());
       double perigeeAlt = Math.min(perigeeKm, apogeeKm) * 1000.0;
       double apogeeAlt = Math.max(perigeeKm, apogeeKm) * 1000.0;
       LEOMission mission =
-          new LEOMission(
-              name, perigeeAlt, apogeeAlt, latitude, longitude, altitude, vehicle, modelPath);
+          new LEOMission(name, perigeeAlt, apogeeAlt, latitude, longitude, altitude, vehicle);
       MissionEntry missionEntry = new MissionEntry(mission);
       missionEntry.setScheduledDate(missionDate);
+      missionEntry.setModelPath(launcherType.modelPath());
       missionContext.addMission(missionEntry);
     } else if (missionContext.getSelectedMissionType() == MissionType.GEO) {
       double parkingKm = Double.parseDouble(values.get("GTO_PARKING_ALT").toString());
@@ -107,10 +106,10 @@ public final class MissionWizardAppState extends BaseAppState {
               longitude,
               altitude,
               0.0,
-              vehicle,
-              modelPath);
+              vehicle);
       MissionEntry missionEntry = new MissionEntry(mission);
       missionEntry.setScheduledDate(missionDate);
+      missionEntry.setModelPath(launcherType.modelPath());
       missionContext.addMission(missionEntry);
     }
   }

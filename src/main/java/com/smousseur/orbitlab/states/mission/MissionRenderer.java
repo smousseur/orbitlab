@@ -74,7 +74,7 @@ public final class MissionRenderer {
             mission.getName(),
             trajectoryColor,
             SPACECRAFT_RADIUS_METERS,
-            mission.getModelPath(),
+            entry.getModelPath(),
             renderContext);
 
     view = new LodView(guiNode, config, this::onSpacecraftSelected, null);

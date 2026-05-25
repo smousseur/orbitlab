@@ -4,6 +4,7 @@ import com.jme3.math.ColorRGBA;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemeris;
 import com.smousseur.orbitlab.simulation.mission.runtime.MissionOptimizerResult;
+import com.smousseur.orbitlab.simulation.mission.vehicle.LauncherType;
 import java.util.Objects;
 import java.util.Optional;
 import org.orekit.time.AbsoluteDate;
@@ -22,9 +23,11 @@ public final class MissionEntry {
   private volatile boolean visible = false;
   private volatile AbsoluteDate scheduledDate;
   private volatile ColorRGBA color;
+  private volatile String modelPath = LauncherType.FALCON_HEAVY.modelPath();
 
   /**
-   * Creates a new mission entry for the given mission.
+   * Creates a new mission entry for the given mission. The 3D model defaults to
+   * {@link LauncherType#FALCON_HEAVY}; override via {@link #setModelPath(String)}.
    *
    * @param mission the mission to wrap
    */
@@ -129,5 +132,23 @@ public final class MissionEntry {
    */
   public void setColor(ColorRGBA color) {
     this.color = color;
+  }
+
+  /**
+   * Returns the JME3 asset path of the 3D model used to render the spacecraft.
+   *
+   * @return the model asset path
+   */
+  public String getModelPath() {
+    return modelPath;
+  }
+
+  /**
+   * Sets the JME3 asset path of the 3D model used to render the spacecraft.
+   *
+   * @param modelPath the model asset path
+   */
+  public void setModelPath(String modelPath) {
+    this.modelPath = Objects.requireNonNull(modelPath, "modelPath");
   }
 }

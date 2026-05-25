@@ -26,31 +26,24 @@ public abstract class Mission {
   private final Vehicle vehicle;
   private final MissionObjective objective;
   private final List<MissionStage> stages;
-  private final String modelPath;
   private SpacecraftState currentState;
   private AbsoluteDate initialDate;
   private MissionStatus status = MissionStatus.DRAFT;
 
   /**
-   * Creates a new mission with the specified name, vehicle, stages, objective and 3D model.
+   * Creates a new mission with the specified name, vehicle, stages and objective.
    *
    * @param name the human-readable name of the mission
    * @param vehicle the vehicle used for the mission
    * @param stages the ordered list of mission stages to execute
    * @param objective the mission objective used for evaluation
-   * @param modelPath the JME3 asset path of the 3D model representing the vehicle
    */
   public Mission(
-      String name,
-      Vehicle vehicle,
-      List<MissionStage> stages,
-      MissionObjective objective,
-      String modelPath) {
+      String name, Vehicle vehicle, List<MissionStage> stages, MissionObjective objective) {
     this.name = name;
     this.vehicle = vehicle;
     this.objective = objective;
     this.stages = stages;
-    this.modelPath = modelPath;
   }
 
   /**
@@ -136,10 +129,6 @@ public abstract class Mission {
 
   public List<MissionStage> getStages() {
     return stages;
-  }
-
-  public String getModelPath() {
-    return modelPath;
   }
 
   public AbsoluteDate getInitialDate() {
