@@ -35,7 +35,8 @@ public class LEOMissionOptimizationTest extends AbstractTrajectoryOptimizerTest 
     LEOMission mission =
         new LEOMission(
             "Falcon Heavy",
-            Launchers.FalconHeavy(600_000, 50_000, Spacecraft.getSpacecraft()),
+            Launchers.FALCON_HEAVY.instantiate(
+                new double[] {600_000, 100_000}, Spacecraft.getSpacecraft()),
             400_000);
     testMission(mission, 400_000, 400_000);
   }
