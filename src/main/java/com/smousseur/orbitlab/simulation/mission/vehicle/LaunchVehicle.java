@@ -8,21 +8,32 @@ package com.smousseur.orbitlab.simulation.mission.vehicle;
  * @param propellantCapacity the maximum propellant mass this stage can carry (kg)
  * @param propulsion the propulsion system of this stage
  */
-public record LaunchVehicle(double dryMass, double propellantCapacity, PropulsionSystem propulsion)
+public record LaunchVehicle(
+    double dryMass, double propellantCapacity, double propellantLoad, PropulsionSystem propulsion)
     implements Vehicle {
+  public LaunchVehicle {
+    if (propellantLoad > propellantCapacity) {
+      throw new IllegalArgumentException("propellantLoad cannot exceed propellantCapacity");
+    }
+  }
+
+  public LaunchVehicle(double dryMass, double propellantCapacity, PropulsionSystem propulsion) {
+    this(dryMass, propellantCapacity, propellantCapacity, propulsion);
+  }
+
   /**
-   * Creates a standard first-stage launch vehicle with typical heavy-lift characteristics.
+   * Creates a standard first-vehicle launch vehicle with typical heavy-lift characteristics.
    *
-   * @return a first-stage launch vehicle
+   * @return a first-vehicle launch vehicle
    */
   public static LaunchVehicle getLauncherStage1Vehicle() {
     return new LaunchVehicle(27000, 425_000, PropulsionSystem.getLauncherStage1Propulsion());
   }
 
   /**
-   * Creates a standard second-stage launch vehicle with upper-stage characteristics.
+   * Creates a standard second-vehicle launch vehicle with upper-vehicle characteristics.
    *
-   * @return a second-stage launch vehicle
+   * @return a second-vehicle launch vehicle
    */
   public static LaunchVehicle getLauncherStage2Vehicle() {
     return new LaunchVehicle(5000, 134_000, PropulsionSystem.getLauncherStage2Propulsion());

@@ -4,10 +4,10 @@ import java.util.List;
 
 /**
  * A composite vehicle made up of multiple stacked stages. The first vehicle in the list represents
- * the currently active (bottom) stage. Mass and propulsion queries delegate to the constituent
+ * the currently active (bottom) vehicle. Mass and propulsion queries delegate to the constituent
  * vehicles.
  *
- * @param vehicles the ordered list of vehicle stages (index 0 = bottom stage)
+ * @param vehicles the ordered list of vehicle stages (index 0 = bottom vehicle)
  */
 public record VehicleStack(List<Vehicle> vehicles) implements Vehicle {
 
@@ -22,6 +22,11 @@ public record VehicleStack(List<Vehicle> vehicles) implements Vehicle {
   }
 
   @Override
+  public double propellantLoad() {
+    return vehicles.stream().mapToDouble(Vehicle::propellantLoad).sum();
+  }
+
+  @Override
   public double getMass() {
     return vehicles.stream().mapToDouble(Vehicle::getMass).sum();
   }
@@ -32,11 +37,12 @@ public record VehicleStack(List<Vehicle> vehicles) implements Vehicle {
   }
 
   /**
-   * Resolves the active stage based on the current spacecraft mass. The active stage is the lowest
-   * (bottom-most) stage whose cumulative mass-above is strictly less than the current mass.
+   * Resolves the active vehicle based on the current spacecraft mass. The active vehicle is the
+   * lowest (bottom-most) vehicle whose cumulative mass-above is strictly less than the current
+   * mass.
    *
    * @param currentMass the current spacecraft mass from SpacecraftState
-   * @return the active stage information
+   * @return the active vehicle information
    */
   @Override
   public ActiveStageInfo resolveActiveStage(double currentMass) {
@@ -58,7 +64,7 @@ public record VehicleStack(List<Vehicle> vehicles) implements Vehicle {
         return new ActiveStageInfo(i, vehicles.get(i), massAbove[i], dryMassAbove[i]);
       }
     }
-    // Fallback: topmost stage
+    // Fallback: topmost vehicle
     int last = n - 1;
     return new ActiveStageInfo(last, vehicles.get(last), 0, 0);
   }

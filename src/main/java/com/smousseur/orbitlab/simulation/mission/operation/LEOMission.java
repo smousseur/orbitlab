@@ -14,6 +14,7 @@ import com.smousseur.orbitlab.simulation.mission.stage.ascent.GravityTurnStage;
 import com.smousseur.orbitlab.simulation.mission.stage.ascent.VerticalAscentStage;
 import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchVehicle;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Spacecraft;
+import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
 import com.smousseur.orbitlab.simulation.mission.vehicle.VehicleStack;
 import java.util.ArrayList;
 import java.util.List;
@@ -45,48 +46,6 @@ public class LEOMission extends Mission {
   private final double altitude;
 
   /**
-   * Creates a circular LEO mission with default Kourou launch site.
-   *
-   * @param name the mission name
-   * @param targetAltitude the target orbital altitude in meters
-   */
-  public LEOMission(String name, double targetAltitude) {
-    this(name, targetAltitude, targetAltitude);
-  }
-
-  /**
-   * Creates a LEO mission with default Kourou launch site. Pass equal perigee and apogee for a
-   * circular orbit.
-   *
-   * @param name the mission name
-   * @param perigeeAltitude the target perigee altitude in meters
-   * @param apogeeAltitude the target apogee altitude in meters
-   */
-  public LEOMission(String name, double perigeeAltitude, double apogeeAltitude) {
-    this(
-        name,
-        perigeeAltitude,
-        apogeeAltitude,
-        DEFAULT_LATITUDE,
-        DEFAULT_LONGITUDE,
-        DEFAULT_ALTITUDE);
-  }
-
-  /**
-   * Creates a circular LEO mission with a custom launch site.
-   *
-   * @param name the mission name
-   * @param targetAltitude the target orbital altitude in meters
-   * @param latitude the launch site latitude in degrees
-   * @param longitude the launch site longitude in degrees
-   * @param altitude the launch site altitude in meters
-   */
-  public LEOMission(
-      String name, double targetAltitude, double latitude, double longitude, double altitude) {
-    this(name, targetAltitude, targetAltitude, latitude, longitude, altitude);
-  }
-
-  /**
    * Creates a LEO mission with a custom launch site. Pass equal perigee and apogee for a circular
    * orbit.
    *
@@ -99,6 +58,7 @@ public class LEOMission extends Mission {
    */
   public LEOMission(
       String name,
+      Vehicle vehicle,
       double perigeeAltitude,
       double apogeeAltitude,
       double latitude,
@@ -106,12 +66,52 @@ public class LEOMission extends Mission {
       double altitude) {
     super(
         name,
-        buildVehicle(),
+        vehicle,
         buildStages(perigeeAltitude, apogeeAltitude, latitude),
         buildObjective(perigeeAltitude, apogeeAltitude, latitude));
     this.latitude = latitude;
     this.longitude = longitude;
     this.altitude = altitude;
+  }
+
+  public LEOMission(String name, Vehicle vehicle, double targetAltitude) {
+    this(
+        name,
+        vehicle,
+        targetAltitude,
+        targetAltitude,
+        DEFAULT_LATITUDE,
+        DEFAULT_LONGITUDE,
+        DEFAULT_ALTITUDE);
+  }
+
+  public LEOMission(String name, double targetAltitude) {
+    this(name, targetAltitude, targetAltitude);
+  }
+
+  public LEOMission(String name, double perigeeAltitude, double apogeeAltitude) {
+    this(
+        name,
+        perigeeAltitude,
+        apogeeAltitude,
+        DEFAULT_LATITUDE,
+        DEFAULT_LONGITUDE,
+        DEFAULT_ALTITUDE);
+  }
+
+  public LEOMission(
+      String name, double targetAltitude, double latitude, double longitude, double altitude) {
+    this(name, targetAltitude, targetAltitude, latitude, longitude, altitude);
+  }
+
+  public LEOMission(
+      String name,
+      double perigeeAltitude,
+      double apogeeAltitude,
+      double latitude,
+      double longitude,
+      double altitude) {
+    this(name, buildVehicle(), perigeeAltitude, apogeeAltitude, latitude, longitude, altitude);
   }
 
   @Override

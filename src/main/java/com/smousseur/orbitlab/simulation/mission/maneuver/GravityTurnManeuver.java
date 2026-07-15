@@ -87,7 +87,7 @@ public class GravityTurnManeuver {
     PropulsionSystem prop1 = activeStage.propulsion();
     double massFlowRate1 = prop1.thrust() / (prop1.isp() * Constants.G0_STANDARD_GRAVITY);
     double burn1Duration =
-        (activeStage.propellantCapacity() - usedAscensionPropellant) / massFlowRate1;
+        (activeStage.remainingFuel(vehicle.getMass()) - usedAscensionPropellant) / massFlowRate1;
 
     // Burn2 duration after jettison until transitionTime
     double burn2Duration = transitionTime - burn1Duration;
@@ -212,7 +212,7 @@ public class GravityTurnManeuver {
   public double getBurn1Duration() {
     PropulsionSystem prop1 = activeStage.propulsion();
     double massFlowRate1 = prop1.thrust() / (prop1.isp() * Constants.G0_STANDARD_GRAVITY);
-    return (activeStage.propellantCapacity() - usedAscensionPropellant) / massFlowRate1;
+    return (activeStage.remainingFuel(vehicle.getMass()) - usedAscensionPropellant) / massFlowRate1;
   }
 
   /**

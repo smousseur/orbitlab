@@ -5,6 +5,7 @@ import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionStage;
 import com.smousseur.orbitlab.simulation.mission.vehicle.ActiveStageInfo;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropulsionSystem;
+import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.hipparchus.ode.events.Action;
 import org.orekit.attitudes.AttitudeProvider;
@@ -41,11 +42,11 @@ public class ConstantThrustStage extends MissionStage {
   @Override
   public SpacecraftState enter(SpacecraftState previousState, Mission mission) {
     if (duration == 0) {
-      ActiveStageInfo activeStage =
-          mission.getVehicle().resolveActiveStage(previousState.getMass());
+      Vehicle vehicle = mission.getVehicle();
+      ActiveStageInfo activeStage = vehicle.resolveActiveStage(previousState.getMass());
       PropulsionSystem propulsion = activeStage.propulsion();
       double mDot = propulsion.thrust() / (propulsion.isp() * Constants.G0_STANDARD_GRAVITY);
-      this.duration = activeStage.propellantCapacity() / mDot;
+      this.duration = activeStage.remainingFuel(vehicle.getMass()) / mDot;
     }
     return previousState;
   }
@@ -54,8 +55,7 @@ public class ConstantThrustStage extends MissionStage {
   public void configure(NumericalPropagator propagator, Mission mission) {
     SpacecraftState currentState = mission.getCurrentState();
 
-    ActiveStageInfo activeStage =
-        mission.getVehicle().resolveActiveStage(currentState.getMass());
+    ActiveStageInfo activeStage = mission.getVehicle().resolveActiveStage(currentState.getMass());
     PropulsionSystem propulsion = activeStage.propulsion();
     ConstantThrustManeuver burn =
         new ConstantThrustManeuver(

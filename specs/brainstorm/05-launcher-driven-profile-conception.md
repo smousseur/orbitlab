@@ -111,14 +111,14 @@ Le cœur conceptuel. Étant donné l'objectif et la pile d'étages capacités-ty
    l'orbite, décomposé en grands postes (ascension + pertes, insertion, transfert, plan,
    circularisation).
 2. **Affectation étage→postes de ΔV**, en respectant les capacités :
-   - Le(s) booster(s) **à épuisement** prennent le ΔV initial **jusqu'à flame-out**, puis
-     sont **jettisonnés sur `MassDepletionDetector`** (charge figée = capacité).
-   - L'étage sustainer/principal (liquide, coupable) prend l'ascension/gravity turn
-     jusqu'à MECO ; terminaison par **épuisement** ou coupure commandée selon la capacité.
-   - L'étage supérieur **rallumable** peut enchaîner insertion → coast → transfert ; un
-     étage supérieur **cryogénique** dont la durée de coast est dépassée par le coast
-     requis **ne peut pas** porter la circularisation lointaine → ce poste **bascule sur
-     le spacecraft** (AKM).
+    - Le(s) booster(s) **à épuisement** prennent le ΔV initial **jusqu'à flame-out**, puis
+      sont **jettisonnés sur `MassDepletionDetector`** (charge figée = capacité).
+    - L'étage sustainer/principal (liquide, coupable) prend l'ascension/gravity turn
+      jusqu'à MECO ; terminaison par **épuisement** ou coupure commandée selon la capacité.
+    - L'étage supérieur **rallumable** peut enchaîner insertion → coast → transfert ; un
+      étage supérieur **cryogénique** dont la durée de coast est dépassée par le coast
+      requis **ne peut pas** porter la circularisation lointaine → ce poste **bascule sur
+      le spacecraft** (AKM).
 3. **Insertion des phases de service** : coast inter-étage court après chaque séparation,
    coast d'alignement (nœud/apside) là où la géométrie l'exige.
 4. **Marquage des phases optimisables** et de leur condition de terminaison (date vs

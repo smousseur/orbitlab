@@ -2,7 +2,10 @@ package com.smousseur.orbitlab.simulation.mission.optimizer;
 
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.mission.operation.LEOMission;
+import com.smousseur.orbitlab.simulation.mission.vehicle.Launchers;
+import com.smousseur.orbitlab.simulation.mission.vehicle.Spacecraft;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -25,5 +28,15 @@ public class LEOMissionOptimizationTest extends AbstractTrajectoryOptimizerTest 
   void testEllipticMissions(double perigeeAltitude, double apogeeAltitude) {
     LEOMission mission = new LEOMission("LEO mission", perigeeAltitude, apogeeAltitude);
     testMission(mission, perigeeAltitude, apogeeAltitude);
+  }
+
+  @Test
+  void testFalconHeavy() {
+    LEOMission mission =
+        new LEOMission(
+            "Falcon Heavy",
+            Launchers.FalconHeavy(600_000, 50_000, Spacecraft.getSpacecraft()),
+            400_000);
+    testMission(mission, 400_000, 400_000);
   }
 }

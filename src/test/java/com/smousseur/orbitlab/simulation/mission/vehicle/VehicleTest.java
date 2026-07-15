@@ -45,23 +45,23 @@ class VehicleTest {
   @Test
   void launchVehicle_getMass_equalsDryPlusPropellant() {
     LaunchVehicle v = LaunchVehicle.getLauncherStage1Vehicle();
-    assertEquals(v.dryMass() + v.propellantCapacity(), v.getMass(), 1e-6);
+    assertEquals(v.dryMass() + v.propellantLoad(), v.getMass(), 1e-6);
   }
 
   @Test
   void launchVehicle_stage1_knownValues() {
     LaunchVehicle v = LaunchVehicle.getLauncherStage1Vehicle();
     assertEquals(27_000, v.dryMass(), 1e-6);
-    assertEquals(425_000, v.propellantCapacity(), 1e-6);
+    assertEquals(425_000, v.propellantLoad(), 1e-6);
     assertEquals(452_000, v.getMass(), 1e-6);
   }
 
   @Test
   void launchVehicle_stage2_knownValues() {
     LaunchVehicle v = LaunchVehicle.getLauncherStage2Vehicle();
-    assertEquals(10_000, v.dryMass(), 1e-6);
-    assertEquals(134_000, v.propellantCapacity(), 1e-6);
-    assertEquals(144_000, v.getMass(), 1e-6);
+    assertEquals(5_000, v.dryMass(), 1e-6);
+    assertEquals(134_000, v.propellantLoad(), 1e-6);
+    assertEquals(139_000, v.getMass(), 1e-6);
   }
 
   @Test
@@ -69,7 +69,7 @@ class VehicleTest {
     LaunchVehicle v = LaunchVehicle.getLauncherStage1Vehicle();
     ActiveStageInfo info = v.resolveActiveStage(v.getMass());
     assertEquals(0, info.stageIndex());
-    assertSame(v, info.stage());
+    assertSame(v, info.vehicle());
     assertEquals(0, info.massAbove(), 1e-6);
   }
 
@@ -111,7 +111,7 @@ class VehicleTest {
 
     ActiveStageInfo info = stack.resolveActiveStage(stack.getMass());
     assertEquals(0, info.stageIndex());
-    assertSame(s1, info.stage());
+    assertSame(s1, info.vehicle());
     assertEquals(s2.getMass() + sc.getMass(), info.massAbove(), 1e-6);
     assertEquals(s2.dryMass() + sc.dryMass(), info.dryMassAbove(), 1e-6);
   }
@@ -123,11 +123,11 @@ class VehicleTest {
     Spacecraft sc = Spacecraft.getSpacecraft();
     VehicleStack stack = new VehicleStack(List.of(s1, s2, sc));
 
-    // After jettison of stage 1, mass = s2.getMass() + sc.getMass()
+    // After jettison of vehicle 1, mass = s2.getMass() + sc.getMass()
     double massAfterJettison = s2.getMass() + sc.getMass();
     ActiveStageInfo info = stack.resolveActiveStage(massAfterJettison);
     assertEquals(1, info.stageIndex());
-    assertSame(s2, info.stage());
+    assertSame(s2, info.vehicle());
     assertEquals(sc.getMass(), info.massAbove(), 1e-6);
   }
 
@@ -140,7 +140,7 @@ class VehicleTest {
 
     ActiveStageInfo info = stack.resolveActiveStage(sc.getMass());
     assertEquals(2, info.stageIndex());
-    assertSame(sc, info.stage());
+    assertSame(sc, info.vehicle());
     assertEquals(0, info.massAbove(), 1e-6);
   }
 
@@ -154,7 +154,7 @@ class VehicleTest {
     ActiveStageInfo stage1 = stack.resolveActiveStage(stack.getMass());
     assertEquals(s2.getMass() + sc.getMass(), stage1.massAfterJettison(), 1e-6);
 
-    // Chained resolution: resolve next stage from massAfterJettison
+    // Chained resolution: resolve next vehicle from massAfterJettison
     ActiveStageInfo stage2 = stack.resolveActiveStage(stage1.massAfterJettison());
     assertEquals(1, stage2.stageIndex());
     assertEquals(sc.getMass(), stage2.massAfterJettison(), 1e-6);
@@ -167,14 +167,14 @@ class VehicleTest {
     Spacecraft sc = Spacecraft.getSpacecraft();
     VehicleStack stack = new VehicleStack(List.of(s1, s2, sc));
 
-    // At full mass, remaining fuel of stage 1 = propellant capacity of stage 1
+    // At full mass, remaining fuel of vehicle 1 = propellant capacity of vehicle 1
     ActiveStageInfo info = stack.resolveActiveStage(stack.getMass());
-    assertEquals(s1.propellantCapacity(), info.remainingFuel(stack.getMass()), 1e-6);
+    assertEquals(s1.propellantLoad(), info.remainingFuel(stack.getMass()), 1e-6);
 
     // After burning some fuel
     double partialMass = stack.getMass() - 100_000;
     ActiveStageInfo info2 = stack.resolveActiveStage(partialMass);
-    assertEquals(s1.propellantCapacity() - 100_000, info2.remainingFuel(partialMass), 1e-6);
+    assertEquals(s1.propellantLoad() - 100_000, info2.remainingFuel(partialMass), 1e-6);
   }
 
   @Test

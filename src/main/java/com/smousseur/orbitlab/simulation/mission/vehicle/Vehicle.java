@@ -23,28 +23,35 @@ public interface Vehicle {
   double propellantCapacity();
 
   /**
-   * Returns the propulsion system of this vehicle or its active stage.
+   * Returns the propellant actually loaded into the vehicle.
+   *
+   * @return the propellant loaded in kilograms
+   */
+  double propellantLoad();
+
+  /**
+   * Returns the propulsion system of this vehicle or its active vehicle.
    *
    * @return the propulsion system
    */
   PropulsionSystem propulsion();
 
   /**
-   * Returns the total mass of this vehicle (dry mass plus propellant).
+   * Returns the total mass of this vehicle (dry mass plus propellant loaded).
    *
    * @return the total mass in kilograms
    */
   default double getMass() {
-    return dryMass() + propellantCapacity();
+    return dryMass() + propellantLoad();
   }
 
   /**
-   * Resolves the active stage based on the current spacecraft mass. For single-stage vehicles,
-   * always returns itself. For multi-stage vehicles ({@link VehicleStack}), determines which stage
-   * is active by comparing the current mass against cumulative stage mass thresholds.
+   * Resolves the active vehicle based on the current spacecraft mass. For single-vehicle vehicles,
+   * always returns itself. For multi-vehicle vehicles ({@link VehicleStack}), determines which
+   * vehicle is active by comparing the current mass against cumulative vehicle mass thresholds.
    *
    * @param currentMass the current spacecraft mass from SpacecraftState
-   * @return the active stage information
+   * @return the active vehicle information
    */
   default ActiveStageInfo resolveActiveStage(double currentMass) {
     return new ActiveStageInfo(0, this, 0, 0);

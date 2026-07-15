@@ -8,8 +8,19 @@ package com.smousseur.orbitlab.simulation.mission.vehicle;
  * @param propellantCapacity the maximum propellant mass the spacecraft can carry (kg)
  * @param propulsion the spacecraft's propulsion system
  */
-public record Spacecraft(double dryMass, double propellantCapacity, PropulsionSystem propulsion)
+public record Spacecraft(
+    double dryMass, double propellantCapacity, double propellantLoad, PropulsionSystem propulsion)
     implements Vehicle {
+  public Spacecraft {
+    if (propellantLoad > propellantCapacity) {
+      throw new IllegalArgumentException("propellantLoad cannot exceed propellantCapacity");
+    }
+  }
+
+  public Spacecraft(double dryMass, double propellantCapacity, PropulsionSystem propulsion) {
+    this(dryMass, propellantCapacity, propellantCapacity, propulsion);
+  }
+
   /**
    * Creates a standard spacecraft with default mass and propulsion characteristics.
    *
