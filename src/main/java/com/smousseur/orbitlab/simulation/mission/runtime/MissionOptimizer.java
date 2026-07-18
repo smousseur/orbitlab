@@ -15,6 +15,8 @@ import com.smousseur.orbitlab.simulation.mission.optimizer.OptimizationResult;
 import com.smousseur.orbitlab.simulation.mission.optimizer.OptimizerDiagnostics;
 import com.smousseur.orbitlab.simulation.mission.optimizer.StageEndStateDiagnostic;
 import com.smousseur.orbitlab.simulation.mission.optimizer.TrajectoryProblem;
+import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -25,8 +27,10 @@ import com.smousseur.orbitlab.simulation.mission.optimizer.problems.TransferTwoM
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hipparchus.random.MersenneTwister;
+import org.hipparchus.util.FastMath;
 import org.orekit.propagation.SpacecraftState;
 import org.orekit.time.AbsoluteDate;
+import org.orekit.utils.Constants;
 
 /**
  * Orchestrates the sequential optimization of all stages in a {@link Mission}.
@@ -81,6 +85,7 @@ public class MissionOptimizer {
    */
   public MissionComputeResult optimize() {
     Map<String, OptimizationResult> results = new LinkedHashMap<>();
+    List<StagePerformance> stagePerformances = new ArrayList<>();
     AbsoluteDate launchDate = mission.getCurrentState().getDate();
 
     long effectiveSeed = seed != null ? seed : System.nanoTime();
@@ -92,7 +97,8 @@ public class MissionOptimizer {
     MersenneTwister seedRng = new MersenneTwister(effectiveSeed);
 
     for (MissionStage stage : mission.getStages()) {
-      logger.info("Current mass = {}", mission.getCurrentState().getMass());
+      double massIn = mission.getCurrentState().getMass();
+      logger.info("Current mass = {}", massIn);
       if (stage instanceof OptimizableMissionStage<?> optimizable) {
         logger.info("Optimizing stage '{}'...", stage.getName());
 
@@ -183,13 +189,18 @@ public class MissionOptimizer {
 
         SpacecraftState propagated = problem.propagate(result.bestVariables());
         mission.setCurrentState(propagated);
+        stagePerformances.add(buildStagePerformance(stage.getName(), massIn, propagated.getMass()));
       } else {
         logger.info("Propagating non-optimizable stage '{}'...", stage.getName());
         SpacecraftState propagated = stage.propagateStandalone(mission.getCurrentState(), mission);
         mission.setCurrentState(propagated);
+        stagePerformances.add(buildStagePerformance(stage.getName(), massIn, propagated.getMass()));
         logger.info("Stage '{}' done.", stage.getName());
       }
     }
+
+    MissionPerformanceReport report = buildReport(stagePerformances);
+    logReport(report);
 
     // Inject optimization results into stages for replay
     MissionOptimizerResult optimResult = new MissionOptimizerResult(results);
@@ -207,7 +218,57 @@ public class MissionOptimizer {
     MissionEphemeris ephemeris = generator.generate(mission, initialState);
 
     mission.setStatus(MissionStatus.READY);
-    return new MissionComputeResult(optimResult, ephemeris);
+    return new MissionComputeResult(optimResult, ephemeris, report);
+  }
+
+  /**
+   * Accounts one executed stage. Jettisoned dry mass (drop in remaining dry mass between entry
+   * and exit) is excluded from the propellant consumption; ΔV uses the entry stage's Isp, an
+   * approximation for stages spanning a jettison.
+   */
+  private StagePerformance buildStagePerformance(String stageName, double massIn, double massOut) {
+    Vehicle vehicle = mission.getVehicle();
+    double dryIn = vehicle.resolveActiveStage(massIn).remainingDryMass();
+    double dryOut = vehicle.resolveActiveStage(massOut).remainingDryMass();
+    double jettisonedDry = FastMath.max(0.0, dryIn - dryOut);
+    double propellantConsumed = FastMath.max(0.0, massIn - massOut - jettisonedDry);
+    double deltaV = 0.0;
+    if (propellantConsumed > 0) {
+      double isp = vehicle.resolveActiveStage(massIn).propulsion().isp();
+      deltaV =
+          isp
+              * Constants.G0_STANDARD_GRAVITY
+              * FastMath.log(massIn / (massIn - propellantConsumed));
+    }
+    return new StagePerformance(stageName, massIn, massOut, propellantConsumed, deltaV);
+  }
+
+  private MissionPerformanceReport buildReport(List<StagePerformance> stagePerformances) {
+    double finalMass = mission.getCurrentState().getMass();
+    double residual =
+        FastMath.max(
+            0.0, finalMass - mission.getVehicle().resolveActiveStage(finalMass).remainingDryMass());
+    double loaded = mission.getVehicle().propellantLoad();
+    double totalDeltaV = stagePerformances.stream().mapToDouble(StagePerformance::deltaV).sum();
+    return new MissionPerformanceReport(stagePerformances, totalDeltaV, loaded, residual);
+  }
+
+  private static void logReport(MissionPerformanceReport report) {
+    for (StagePerformance sp : report.stages()) {
+      logger.info(
+          "Stage '{}': massIn={} kg, massOut={} kg, propellant={} kg, dV={} m/s",
+          sp.stageName(),
+          FastMath.round(sp.massIn()),
+          FastMath.round(sp.massOut()),
+          FastMath.round(sp.propellantConsumed()),
+          FastMath.round(sp.deltaV()));
+    }
+    logger.info(
+        "Mission performance: total dV={} m/s, propellant loaded={} kg, residual={} kg ({}%)",
+        FastMath.round(report.totalDeltaV()),
+        FastMath.round(report.totalPropellantLoaded()),
+        FastMath.round(report.totalPropellantResidual()),
+        String.format(java.util.Locale.ROOT, "%.1f", 100.0 * report.residualRatio()));
   }
 
   private static String[] paramNamesFor(TrajectoryProblem problem) {

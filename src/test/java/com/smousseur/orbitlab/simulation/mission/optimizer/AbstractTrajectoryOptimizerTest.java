@@ -57,7 +57,7 @@ public class AbstractTrajectoryOptimizerTest {
     return results;
   }
 
-  void testMission(Mission mission, double perigeeAltitude, double apogeeAltitude) {
+  MissionComputeResult testMission(Mission mission, double perigeeAltitude, double apogeeAltitude) {
     AbsoluteDate epoch = new AbsoluteDate(2026, 1, 1, 12, 0, 0.0, TimeScalesFactory.getUTC());
     SpacecraftState initialState = mission.getInitialState(epoch);
     mission.setCurrentState(initialState);
@@ -106,5 +106,6 @@ public class AbstractTrajectoryOptimizerTest {
             String.format(
                 "Min coast altitude %.0f m not within %.0f m of target %.0f m",
                 results.minAltitude, errorPerigeeMargin, perigeeAltitude));
+    return computeResult;
   }
 }

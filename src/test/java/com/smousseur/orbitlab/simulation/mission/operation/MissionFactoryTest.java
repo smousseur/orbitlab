@@ -5,7 +5,10 @@ import static org.junit.jupiter.api.Assertions.*;
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionType;
+import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
+import com.smousseur.orbitlab.simulation.mission.vehicle.VehicleStack;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
@@ -13,8 +16,8 @@ import org.junit.jupiter.api.Test;
 
 class MissionFactoryTest {
 
-  /** Falcon Heavy fully loaded, without payload: 66 t + 1 233 t + 4 t + 107.5 t. */
-  private static final double FH_FULL_MASS = 66_000 + 1_233_000 + 4_000 + 107_500;
+  private static final double S1_CAPACITY = 1_233_000;
+  private static final double S2_CAPACITY = 107_500;
 
   @BeforeAll
   static void setup() {
@@ -39,23 +42,48 @@ class MissionFactoryTest {
     return values;
   }
 
-  /** Exit criterion of spec 06 I2: the vehicle mass reflects the payload entered in the wizard. */
+  private static List<Vehicle> stackOf(Mission mission) {
+    return assertInstanceOf(VehicleStack.class, mission.getVehicle()).vehicles();
+  }
+
+  /**
+   * Exit criteria of spec 06 I2 (vehicle mass reflects the entered payload) and I3 (loads sized
+   * per mission: S1 full, S2 well under capacity for LEO 400 km).
+   */
   @Test
-  void leoFromWizard_vehicleMassReflectsEnteredPayload() {
+  void leoFromWizard_payloadReflected_andS2SizedByBudget() {
     Mission mission = MissionFactory.fromWizardValues(baseValues(), MissionType.LEO);
     assertInstanceOf(LEOMission.class, mission);
-    assertEquals(FH_FULL_MASS + 10_000, mission.getVehicle().getMass(), 1e-6);
+
+    List<Vehicle> vehicles = stackOf(mission);
+    assertEquals(S1_CAPACITY, vehicles.get(0).propellantLoad(), 1e-6, "S1 flies full in v1");
+    double s2Load = vehicles.get(1).propellantLoad();
+    assertTrue(s2Load > 0 && s2Load < 0.5 * S2_CAPACITY, () -> "sized S2 load, got " + s2Load);
+    assertEquals(10_000, vehicles.get(2).getMass(), 1e-6, "payload mass as entered, AKM empty");
   }
 
   @Test
-  void geoFromWizard_geoSatCarriesFullAkm() {
+  void geoFromWizard_akmSized_andS2HeavierThanLeo() {
     Map<String, Object> values = baseValues();
     values.put("PAYLOAD_TYPE", "GEO_SAT");
     values.put("PAYLOAD_MASS", 2_000.0);
-    Mission mission = MissionFactory.fromWizardValues(values, MissionType.GEO);
-    assertInstanceOf(GEOMission.class, mission);
-    // 2 t dry entered in the wizard + 2 t of AKM propellant (fully loaded until spec 06 I3).
-    assertEquals(FH_FULL_MASS + 4_000, mission.getVehicle().getMass(), 1e-6);
+    Mission geoMission = MissionFactory.fromWizardValues(values, MissionType.GEO);
+    assertInstanceOf(GEOMission.class, geoMission);
+
+    Mission leoMission = MissionFactory.fromWizardValues(baseValues(), MissionType.LEO);
+
+    List<Vehicle> geoVehicles = stackOf(geoMission);
+    Vehicle akmPayload = geoVehicles.get(2);
+    assertEquals(2_000, akmPayload.dryMass(), 1e-6);
+    assertTrue(
+        akmPayload.propellantLoad() > 1_000 && akmPayload.propellantLoad() <= 2_000,
+        () -> "sized AKM load expected, got " + akmPayload.propellantLoad());
+
+    double geoS2 = geoVehicles.get(1).propellantLoad();
+    double leoS2 = stackOf(leoMission).get(1).propellantLoad();
+    assertTrue(
+        geoS2 > 3 * leoS2,
+        () -> String.format("GEO S2 load (%.0f) must dwarf LEO S2 load (%.0f)", geoS2, leoS2));
   }
 
   @Test
@@ -63,7 +91,7 @@ class MissionFactoryTest {
     Map<String, Object> values = baseValues();
     values.put("PAYLOAD_MASS", 0.0);
     Mission mission = MissionFactory.fromWizardValues(values, MissionType.LEO);
-    assertEquals(FH_FULL_MASS + 10_000, mission.getVehicle().getMass(), 1e-6);
+    assertEquals(10_000, stackOf(mission).get(2).getMass(), 1e-6);
   }
 
   @Test

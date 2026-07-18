@@ -5,6 +5,7 @@ import com.smousseur.orbitlab.simulation.mission.MissionType;
 import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchConfiguration;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Launchers;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Payloads;
+import com.smousseur.orbitlab.simulation.mission.vehicle.PropellantBudget;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Spacecraft;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.LauncherModel;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.PayloadModel;
@@ -40,23 +41,27 @@ public final class MissionFactory {
       payloadMass = payloadModel.defaultDryMass();
     }
 
-    // Propellant sizing arrives with the PropellantBudget increment (spec 06 I3); until then
-    // every tank — launcher stages and AKM alike — flies fully loaded.
-    Spacecraft payload =
-        payloadModel.toSpacecraft(payloadMass, payloadModel.akmPropellantCapacity());
-    LaunchConfiguration configuration = LaunchConfiguration.fullyLoaded(launcher, payload);
-
     return switch (type) {
       case LEO -> {
         double perigeeKm = doubleValue(values, "LEO_PERIGEE_ALT");
         double apogeeKm = doubleValue(values, "LEO_APOGEE_ALT");
         double perigeeAlt = Math.min(perigeeKm, apogeeKm) * 1000.0;
         double apogeeAlt = Math.max(perigeeKm, apogeeKm) * 1000.0;
+        // The AKM has no role on a LEO mission: flown empty. Loads sized on the apogee
+        // (conservative for elliptic targets).
+        Spacecraft payload = payloadModel.toSpacecraft(payloadMass, 0.0);
+        double[] loads = PropellantBudget.loadsForLeo(launcher, payload, apogeeAlt, latitude);
+        LaunchConfiguration configuration = new LaunchConfiguration(launcher, loads, payload);
         yield new LEOMission(
             name, configuration, perigeeAlt, apogeeAlt, latitude, longitude, altitude);
       }
       case GEO -> {
         double parkingAlt = doubleValue(values, "GTO_PARKING_ALT") * 1000.0;
+        PropellantBudget.GeoLoads geoLoads =
+            PropellantBudget.loadsForGeo(launcher, payloadModel, payloadMass, parkingAlt, latitude);
+        Spacecraft payload = payloadModel.toSpacecraft(payloadMass, geoLoads.akmLoad());
+        LaunchConfiguration configuration =
+            new LaunchConfiguration(launcher, geoLoads.launcherLoads(), payload);
         yield new GEOMission(
             name,
             configuration,
