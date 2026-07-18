@@ -3,6 +3,11 @@ package com.smousseur.orbitlab.simulation.mission.vehicle;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.List;
+
+import com.smousseur.orbitlab.simulation.mission.vehicle.model.stage.IgnitionMode;
+import com.smousseur.orbitlab.simulation.mission.vehicle.model.stage.StageCapabilities;
+import com.smousseur.orbitlab.simulation.mission.vehicle.model.stage.StageModel;
+import com.smousseur.orbitlab.simulation.mission.vehicle.model.stage.StageRole;
 import org.junit.jupiter.api.Test;
 
 class LaunchersTest {
@@ -53,9 +58,9 @@ class LaunchersTest {
   }
 
   /**
-   * Behaviour-equivalence lock (spec 07 §6): instantiating the catalog model with the loads of
-   * the former {@code Launchers.FalconHeavy(600_000, 50_000, …)} factory yields a stack with the
-   * same per-stage masses and propulsion, hence identical trajectories.
+   * Behaviour-equivalence lock (spec 07 §6): instantiating the catalog model with the loads of the
+   * former {@code Launchers.FalconHeavy(600_000, 50_000, …)} factory yields a stack with the same
+   * per-stage masses and propulsion, hence identical trajectories.
    */
   @Test
   void falconHeavy_instantiate_matchesFormerFactoryStack() {

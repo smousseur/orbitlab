@@ -1,5 +1,9 @@
 package com.smousseur.orbitlab.simulation.mission.vehicle;
 
+import com.smousseur.orbitlab.simulation.mission.vehicle.model.AscentProfile;
+import com.smousseur.orbitlab.simulation.mission.vehicle.model.LauncherModel;
+import com.smousseur.orbitlab.simulation.mission.vehicle.model.stage.*;
+
 import java.util.List;
 
 /** Catalog of named launcher models, resolvable by id for the mission wizard. */
@@ -7,9 +11,9 @@ public final class Launchers {
   private Launchers() {}
 
   /**
-   * Falcon Heavy (expendable), first stage aggregating the three kerolox cores. The upper stage
-   * max coast (2 h) exceeds any parking coast but not a GTO coast to apogee (~5 h 15), which
-   * delegates distant circularization to the payload's kick motor.
+   * Falcon Heavy (expendable), first stage aggregating the three kerolox cores. The upper stage max
+   * coast (2 h) exceeds any parking coast but not a GTO coast to apogee (~5 h 15), which delegates
+   * distant circularization to the payload's kick motor.
    */
   public static final LauncherModel FALCON_HEAVY =
       new LauncherModel(

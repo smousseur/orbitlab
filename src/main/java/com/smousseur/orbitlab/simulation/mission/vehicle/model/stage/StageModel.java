@@ -1,4 +1,7 @@
-package com.smousseur.orbitlab.simulation.mission.vehicle;
+package com.smousseur.orbitlab.simulation.mission.vehicle.model.stage;
+
+import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchVehicle;
+import com.smousseur.orbitlab.simulation.mission.vehicle.PropulsionSystem;
 
 import java.util.Objects;
 
@@ -35,8 +38,8 @@ public record StageModel(
   /**
    * Instantiates this stage with a mission-specific propellant load.
    *
-   * @param propellantLoad the propellant mass to load (kg), within [0, capacity]; solid stages
-   *     must be loaded at full capacity
+   * @param propellantLoad the propellant mass to load (kg), within [0, capacity]; solid stages must
+   *     be loaded at full capacity
    * @return the flying instance of this stage
    */
   public LaunchVehicle toVehicle(double propellantLoad) {

@@ -1,4 +1,4 @@
-package com.smousseur.orbitlab.simulation.mission.vehicle;
+package com.smousseur.orbitlab.simulation.mission.vehicle.model.stage;
 
 /** Intended role of the stage in a flight profile (hint for profile derivation). */
 public enum StageRole {

@@ -1,4 +1,4 @@
-package com.smousseur.orbitlab.simulation.mission.vehicle;
+package com.smousseur.orbitlab.simulation.mission.vehicle.model;
 
 /**
  * Flight-profile parameters imposed by the launcher (launcher-driven profile). These are
@@ -23,4 +23,7 @@ public record AscentProfile(
       throw new IllegalArgumentException("interstageCoastDuration cannot be negative");
     }
   }
+
+  /** Flight profile of the historical default launcher (legacy vehicle path). */
+  public static final AscentProfile LEGACY = new AscentProfile(10.0, 3.0, 0.0);
 }

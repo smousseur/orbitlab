@@ -3,6 +3,10 @@ package com.smousseur.orbitlab.simulation.mission.vehicle;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.List;
+
+import com.smousseur.orbitlab.simulation.mission.vehicle.model.AscentProfile;
+import com.smousseur.orbitlab.simulation.mission.vehicle.model.LauncherModel;
+import com.smousseur.orbitlab.simulation.mission.vehicle.model.stage.*;
 import org.junit.jupiter.api.Test;
 
 class LauncherModelTest {
@@ -89,8 +93,8 @@ class LauncherModelTest {
   }
 
   /**
-   * Expressiveness lock (spec 07 §4.6): the capability descriptor must express Ariane 5 ECA
-   * (solid boosters, non-restartable cryogenic upper stage) without any future refactor.
+   * Expressiveness lock (spec 07 §4.6): the capability descriptor must express Ariane 5 ECA (solid
+   * boosters, non-restartable cryogenic upper stage) without any future refactor.
    */
   @Test
   void capabilityDescriptor_expressesAriane5Eca() {

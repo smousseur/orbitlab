@@ -1,4 +1,4 @@
-package com.smousseur.orbitlab.simulation.mission.vehicle;
+package com.smousseur.orbitlab.simulation.mission.vehicle.model.stage;
 
 /** How a stage's engines are ignited. */
 public enum IgnitionMode {

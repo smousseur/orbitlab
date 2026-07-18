@@ -12,7 +12,7 @@ import com.smousseur.orbitlab.simulation.mission.stage.AnalyticTrimBurnStage;
 import com.smousseur.orbitlab.simulation.mission.stage.CoastingStage;
 import com.smousseur.orbitlab.simulation.mission.stage.ascent.GravityTurnStage;
 import com.smousseur.orbitlab.simulation.mission.stage.ascent.VerticalAscentStage;
-import com.smousseur.orbitlab.simulation.mission.vehicle.AscentProfile;
+import com.smousseur.orbitlab.simulation.mission.vehicle.model.AscentProfile;
 import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchConfiguration;
 import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchVehicle;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Spacecraft;
@@ -38,9 +38,6 @@ import org.orekit.utils.PVCoordinates;
  * Vertical Ascent → Gravity Turn → Transfer Two-Maneuver → Coasting.
  */
 public class LEOMission extends Mission {
-  /** Flight profile of the historical default launcher (legacy vehicle path). */
-  private static final AscentProfile LEGACY_PROFILE = new AscentProfile(10.0, 3.0, 0.0);
-
   private static final double DEFAULT_LATITUDE = 45.96;
   private static final double DEFAULT_LONGITUDE = 63.30;
   private static final double DEFAULT_ALTITUDE = 0.0;
@@ -68,7 +65,14 @@ public class LEOMission extends Mission {
       double latitude,
       double longitude,
       double altitude) {
-    this(name, vehicle, LEGACY_PROFILE, perigeeAltitude, apogeeAltitude, latitude, longitude,
+    this(
+        name,
+        vehicle,
+        AscentProfile.LEGACY,
+        perigeeAltitude,
+        apogeeAltitude,
+        latitude,
+        longitude,
         altitude);
   }
 

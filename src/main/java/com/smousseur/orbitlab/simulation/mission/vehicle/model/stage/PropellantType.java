@@ -1,4 +1,4 @@
-package com.smousseur.orbitlab.simulation.mission.vehicle;
+package com.smousseur.orbitlab.simulation.mission.vehicle.model.stage;
 
 /** Propellant nature; constrains load variability and coast endurance. */
 public enum PropellantType {

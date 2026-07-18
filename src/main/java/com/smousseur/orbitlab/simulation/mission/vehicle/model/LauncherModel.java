@@ -1,4 +1,7 @@
-package com.smousseur.orbitlab.simulation.mission.vehicle;
+package com.smousseur.orbitlab.simulation.mission.vehicle.model;
+
+import com.smousseur.orbitlab.simulation.mission.vehicle.*;
+import com.smousseur.orbitlab.simulation.mission.vehicle.model.stage.StageModel;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -14,7 +17,7 @@ import java.util.Objects;
  * @param ascentProfile the flight-profile parameters imposed by this launcher
  */
 public record LauncherModel(
-    String id, String displayName, List<StageModel> stages, AscentProfile ascentProfile) {
+        String id, String displayName, List<StageModel> stages, AscentProfile ascentProfile) {
 
   public LauncherModel {
     Objects.requireNonNull(id, "id");

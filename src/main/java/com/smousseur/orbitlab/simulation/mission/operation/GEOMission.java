@@ -12,7 +12,7 @@ import com.smousseur.orbitlab.simulation.mission.stage.AnalyticTrimBurnStage;
 import com.smousseur.orbitlab.simulation.mission.stage.CoastingStage;
 import com.smousseur.orbitlab.simulation.mission.stage.ascent.GravityTurnStage;
 import com.smousseur.orbitlab.simulation.mission.stage.ascent.VerticalAscentStage;
-import com.smousseur.orbitlab.simulation.mission.vehicle.AscentProfile;
+import com.smousseur.orbitlab.simulation.mission.vehicle.model.AscentProfile;
 import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchConfiguration;
 import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchVehicle;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Spacecraft;
@@ -180,7 +180,9 @@ public class GEOMission extends Mission {
   }
 
   private static List<MissionStage> buildStages(
-      AscentProfile profile, double parkingAltitude, double targetAltitude,
+      AscentProfile profile,
+      double parkingAltitude,
+      double targetAltitude,
       double finalInclination) {
     return List.of(
         new VerticalAscentStage("Vertical Ascent", profile.verticalAscentDuration()),

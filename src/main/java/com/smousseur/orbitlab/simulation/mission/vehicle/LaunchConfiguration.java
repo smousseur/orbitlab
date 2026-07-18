@@ -1,11 +1,15 @@
 package com.smousseur.orbitlab.simulation.mission.vehicle;
 
+import com.smousseur.orbitlab.simulation.mission.vehicle.model.AscentProfile;
+import com.smousseur.orbitlab.simulation.mission.vehicle.model.LauncherModel;
+import com.smousseur.orbitlab.simulation.mission.vehicle.model.stage.StageModel;
+
 import java.util.Objects;
 
 /**
  * Mission-ready assembly of a launcher model, per-stage propellant loads and a payload. Missions
- * consume this instead of a raw {@link Vehicle} so the launcher's flight-profile parameters
- * ({@link AscentProfile}) travel with the stack they belong to.
+ * consume this instead of a raw {@link Vehicle} so the launcher's flight-profile parameters ({@link
+ * AscentProfile}) travel with the stack they belong to.
  *
  * @param launcher the launcher model from the catalog
  * @param propellantLoads the propellant load per stage (kg), same order as the launcher stages

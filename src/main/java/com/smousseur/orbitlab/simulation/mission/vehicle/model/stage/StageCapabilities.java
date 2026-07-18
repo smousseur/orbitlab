@@ -1,4 +1,4 @@
-package com.smousseur.orbitlab.simulation.mission.vehicle;
+package com.smousseur.orbitlab.simulation.mission.vehicle.model.stage;
 
 import java.util.Objects;
 
