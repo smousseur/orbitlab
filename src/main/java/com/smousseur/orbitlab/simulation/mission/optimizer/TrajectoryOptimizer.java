@@ -1,7 +1,5 @@
 package com.smousseur.orbitlab.simulation.mission.optimizer;
 
-import org.orekit.propagation.SpacecraftState;
-
 /**
  * Strategy interface for trajectory optimization algorithms.
  *

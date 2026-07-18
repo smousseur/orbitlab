@@ -28,6 +28,12 @@ import org.orekit.propagation.SpacecraftState;
  * exploration + refinement pass, the optimizer retries up to {@link #DEFAULT_MAX_RETRIES} times
  * with progressively more exploration runs, larger initial sigma, and seeded starting points
  * biased away from any saturated bound observed on the previous attempt.
+ *
+ * <p><b>Plateau detection</b>: refinement passes and retries that fail to improve the best cost by
+ * more than {@link #STAGNATION_RELATIVE_EPS} (relative) are cut short — when every phase lands on
+ * the same optimum, the cost floor is structural (e.g. irreducible penalty terms) and the
+ * remaining budget would only re-find it. The first retry is never skipped: a flat first attempt
+ * says nothing about what broader exploration can reach (see the trap-problem retry test).
  */
 public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
   private static final Logger logger = LogManager.getLogger(CMAESTrajectoryOptimizer.class);
@@ -54,6 +60,13 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
 
   /** Per-attempt multiplier on the initial sigma vector (index 0 = first attempt). */
   private static final double[] RETRY_SIGMA_SCALE = {1.0, 1.3, 1.6};
+
+  /**
+   * Relative cost improvement below which a refinement pass or a retry is considered stagnant.
+   * Kept strict (parts-per-million) so only a true plateau is cut: a retry that relaxes bounds
+   * (e.g. β1 anti-saturation) and still cannot move the cost has genuinely hit the floor.
+   */
+  private static final double STAGNATION_RELATIVE_EPS = 1e-6;
 
   private final CMAESRunExecutor executor;
 
@@ -174,6 +187,7 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
             previousSaturated);
       }
 
+      double costBeforeAttempt = globalBestCost;
       SinglePassResult pass =
           runSinglePass(explorationRuns, attemptSigma, seededStartPoints, lower, upper);
       totalEvaluations += pass.evaluations();
@@ -187,6 +201,16 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
         if (attempt > 0) {
           logger.info("Retry {} succeeded: cost={}", attempt, globalBestCost);
         }
+        break;
+      }
+
+      if (attempt > 0 && !improvedMeaningfully(costBeforeAttempt, globalBestCost)) {
+        logger.info(
+            "Plateau detected: retry {} left best cost at {} (relative improvement <= {}); "
+                + "skipping remaining retries",
+            attempt,
+            globalBestCost,
+            STAGNATION_RELATIVE_EPS);
         break;
       }
 
@@ -352,6 +376,7 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
         int budget = FastMath.min(refinePassBudget, remainingEvals);
 
         try {
+          double costBeforePass = bestCost;
           CMAESRunExecutor.RunResult result =
               executor.execute(
                   bestVars.clone(), refineSigma, basePopSize, budget, false, rng.nextLong());
@@ -369,6 +394,11 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
           if (result.bestCost() < bestCost) {
             bestCost = result.bestCost();
             bestVars = result.bestVariables().clone();
+          }
+          if (!improvedMeaningfully(costBeforePass, bestCost)) {
+            logger.info(
+                "Refinement cascade stopped after pass {}: plateau at cost={}", pass + 1, bestCost);
+            break;
           }
         } catch (Exception e) {
           logger.warn("Refinement pass {} failed: {}", pass + 1, e.getMessage());
@@ -435,6 +465,11 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
       }
     }
     return out;
+  }
+
+  /** True when {@code after} improves on {@code before} by more than the stagnation epsilon. */
+  private static boolean improvedMeaningfully(double before, double after) {
+    return before - after > STAGNATION_RELATIVE_EPS * FastMath.abs(before);
   }
 
   private static boolean hasSaturatedParameter(double[] best, double[] lower, double[] upper) {

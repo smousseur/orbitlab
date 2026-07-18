@@ -14,10 +14,9 @@ import com.smousseur.orbitlab.simulation.mission.stage.ascent.GravityTurnStage;
 import com.smousseur.orbitlab.simulation.mission.stage.ascent.VerticalAscentStage;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.AscentProfile;
 import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchConfiguration;
-import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchVehicle;
+import com.smousseur.orbitlab.simulation.mission.vehicle.Launchers;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Spacecraft;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
-import com.smousseur.orbitlab.simulation.mission.vehicle.VehicleStack;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.hipparchus.util.FastMath;
 import org.orekit.bodies.GeodeticPoint;
@@ -31,13 +30,9 @@ import org.orekit.time.AbsoluteDate;
 import org.orekit.utils.Constants;
 import org.orekit.utils.PVCoordinates;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public class GEOMission extends Mission {
-  /** Flight profile of the historical default launcher (legacy vehicle path). */
-  private static final AscentProfile LEGACY_PROFILE = new AscentProfile(10.0, 3.0, 0.0);
-
   private static final double DEFAULT_LATITUDE = 5.23;
   private static final double DEFAULT_LONGITUDE = -52.77;
   private static final double DEFAULT_ALTITUDE = 0.0;
@@ -88,8 +83,7 @@ public class GEOMission extends Mission {
       double finalInclination) {
     this(
         name,
-        buildVehicle(),
-        LEGACY_PROFILE,
+        defaultConfiguration(),
         parkingAltitude,
         targetAltitude,
         latitude,
@@ -170,13 +164,9 @@ public class GEOMission extends Mission {
     return new SpacecraftState(initialOrbit).withMass(this.getVehicle().getMass());
   }
 
-  private static VehicleStack buildVehicle() {
-    return new VehicleStack(
-        new ArrayList<>(
-            List.of(
-                LaunchVehicle.getLauncherStage1Vehicle(),
-                LaunchVehicle.getLauncherStage2Vehicle(),
-                Spacecraft.getSpacecraft())));
+  /** Default configuration of the historical ctors: Falcon Heavy fully loaded (spec 06 I1). */
+  private static LaunchConfiguration defaultConfiguration() {
+    return LaunchConfiguration.fullyLoaded(Launchers.FALCON_HEAVY, Spacecraft.getSpacecraft());
   }
 
   private static List<MissionStage> buildStages(

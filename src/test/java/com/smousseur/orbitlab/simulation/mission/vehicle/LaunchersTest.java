@@ -35,7 +35,7 @@ class LaunchersTest {
     StageModel s1 = stages.get(0);
     assertEquals(66_000, s1.dryMass(), 1e-6);
     assertEquals(1_233_000, s1.propellantCapacity(), 1e-6);
-    assertEquals(311, s1.propulsion().isp(), 1e-6);
+    assertEquals(296, s1.propulsion().isp(), 1e-6);
     assertEquals(22_800_000, s1.propulsion().thrust(), 1e-6);
     assertEquals(IgnitionMode.GROUND, s1.capabilities().ignition());
     assertEquals(StageRole.CORE, s1.capabilities().role());
@@ -58,9 +58,10 @@ class LaunchersTest {
   }
 
   /**
-   * Behaviour-equivalence lock (spec 07 §6): instantiating the catalog model with the loads of the
+   * Mass-equivalence lock (spec 07 §6): instantiating the catalog model with the loads of the
    * former {@code Launchers.FalconHeavy(600_000, 50_000, …)} factory yields a stack with the same
-   * per-stage masses and propulsion, hence identical trajectories.
+   * per-stage masses. Propulsion follows the catalog, whose S1 ISP was deliberately recalibrated
+   * from 311 s to 296 s (spec 06 §S1).
    */
   @Test
   void falconHeavy_instantiate_matchesFormerFactoryStack() {
@@ -74,7 +75,7 @@ class LaunchersTest {
     Vehicle s1 = vehicles.get(0);
     assertEquals(66_000, s1.dryMass(), 1e-6);
     assertEquals(600_000, s1.propellantLoad(), 1e-6);
-    assertEquals(311, s1.propulsion().isp(), 1e-6);
+    assertEquals(296, s1.propulsion().isp(), 1e-6);
     assertEquals(22_800_000, s1.propulsion().thrust(), 1e-6);
 
     Vehicle s2 = vehicles.get(1);

@@ -24,7 +24,9 @@ public final class Launchers {
                   "S1 (3 cores aggregated)",
                   66_000,
                   1_233_000,
-                  new PropulsionSystem(311, 22_800_000),
+                  // Mean-trajectory ISP (sea level 282 s / vacuum 311 s): with no atmosphere
+                  // modeled, 296 s is the proxy for real ascent losses (spec 06 §S1).
+                  new PropulsionSystem(296, 22_800_000),
                   new StageCapabilities(
                       IgnitionMode.GROUND,
                       0,

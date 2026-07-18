@@ -25,12 +25,14 @@ public class GEOMissionOptimizationTest extends AbstractTrajectoryOptimizerTest 
   public static final int GEO_ALTITUDE = 35_786_000;
   public static final int PARKING_ALTITUDE = 400_000;
 
-  // Tight tolerances reflecting the fully-analytic insertion accuracy: the J2-aware Hohmann
+  // Tolerances calibrated on the Falcon Heavy GTO scenario: the J2-aware Hohmann
   // (Newton-iterated on r2 to compensate finite-burn losses) plus the apogee trim deliver a
-  // post-trim coast within ~5 km of target altitude and ~0.1° of target inclination on the
-  // current GTO scenario.
+  // post-trim coast within ~5 km of target altitude. The FH upper stage (981 kN pushing the full
+  // GTO stack) burns longer than the legacy launcher's, leaving a plane residual of ~0.11°
+  // (was ~0.07°), hence 0.15° here instead of the historical 0.10°. Wiring the optimized
+  // transfer (spec 06 I6) should allow tightening this again.
   private static final double ALTITUDE_TOLERANCE_M = 50_000.0; // ±50 km
-  private static final double INCLINATION_TOLERANCE_RAD = FastMath.toRadians(0.1);
+  private static final double INCLINATION_TOLERANCE_RAD = FastMath.toRadians(0.15);
 
   @BeforeAll
   static void init() {

@@ -11,12 +11,14 @@ import org.orekit.propagation.SpacecraftState;
  * TrajectoryProblem} implementations. No Orekit data, propagator, or {@link SpacecraftState} is
  * exercised — the mocks return {@code null} states and arbitrary scalar costs.
  *
- * <p>Two scenarios:
+ * <p>Three scenarios:
  *
  * <ol>
  *   <li>A trap problem whose cost is artificially flat-bad on the first attempt and well-behaved
  *       afterwards: the optimizer must trigger a retry and succeed below the acceptable cost.
  *   <li>A simple convex problem solved on the first attempt: the optimizer must NOT retry.
+ *   <li>A plateau problem whose cost is constant on every attempt: the first retry must still run
+ *       (it is the escape mechanism), but plateau detection must skip the remaining retries.
  * </ol>
  */
 class CMAESTrajectoryOptimizerRetryTest {
@@ -137,6 +139,72 @@ class CMAESTrajectoryOptimizerRetryTest {
     public double computeCost(SpacecraftState state) {
       return lastVars[0] * lastVars[0] + lastVars[1] * lastVars[1];
     }
+  }
+
+  /** A problem stuck at a constant cost above the acceptable threshold on every attempt. */
+  static final class PlateauProblem implements TrajectoryProblem {
+    private int passCount = 0;
+
+    int passCount() {
+      return passCount;
+    }
+
+    @Override
+    public double getAcceptableCost() {
+      return ACCEPTABLE_COST;
+    }
+
+    @Override
+    public int getNumVariables() {
+      return 2;
+    }
+
+    @Override
+    public double[] buildInitialGuess() {
+      passCount++;
+      return new double[] {0.5, 0.5};
+    }
+
+    @Override
+    public double[] getLowerBounds() {
+      return new double[] {-1.0, -1.0};
+    }
+
+    @Override
+    public double[] getUpperBounds() {
+      return new double[] {1.0, 1.0};
+    }
+
+    @Override
+    public double[] getInitialSigma() {
+      return new double[] {0.6, 0.6};
+    }
+
+    @Override
+    public SpacecraftState propagate(double[] variables) {
+      return null;
+    }
+
+    @Override
+    public double computeCost(SpacecraftState state) {
+      return 0.5;
+    }
+  }
+
+  @Test
+  void plateauSkipsSecondRetryButNotFirst() {
+    PlateauProblem problem = new PlateauProblem();
+    CMAESTrajectoryOptimizer optimizer = new CMAESTrajectoryOptimizer(problem, 5_000, 42L);
+
+    OptimizationResult result = optimizer.optimize();
+
+    // buildInitialGuess call count: 1 (attempt 0) + 2 (retry 1: seeded start points + pass).
+    // Without plateau detection retry 2 would add 2 more calls (total 5).
+    assertEquals(
+        3,
+        problem.passCount(),
+        "Plateau: retry 1 must run (escape mechanism) but retry 2 must be skipped");
+    assertEquals(0.5, result.bestCost(), 1e-12, "Best cost must be the plateau value");
   }
 
   @Test

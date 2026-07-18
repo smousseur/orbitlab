@@ -14,11 +14,9 @@ import com.smousseur.orbitlab.simulation.mission.stage.ascent.GravityTurnStage;
 import com.smousseur.orbitlab.simulation.mission.stage.ascent.VerticalAscentStage;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.AscentProfile;
 import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchConfiguration;
-import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchVehicle;
+import com.smousseur.orbitlab.simulation.mission.vehicle.Launchers;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Spacecraft;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
-import com.smousseur.orbitlab.simulation.mission.vehicle.VehicleStack;
-import java.util.ArrayList;
 import java.util.List;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.hipparchus.util.FastMath;
@@ -174,7 +172,14 @@ public class LEOMission extends Mission {
       double latitude,
       double longitude,
       double altitude) {
-    this(name, buildVehicle(), perigeeAltitude, apogeeAltitude, latitude, longitude, altitude);
+    this(
+        name,
+        defaultConfiguration(),
+        perigeeAltitude,
+        apogeeAltitude,
+        latitude,
+        longitude,
+        altitude);
   }
 
   @Override
@@ -194,13 +199,9 @@ public class LEOMission extends Mission {
     return new SpacecraftState(initialOrbit).withMass(this.getVehicle().getMass());
   }
 
-  private static VehicleStack buildVehicle() {
-    return new VehicleStack(
-        new ArrayList<>(
-            List.of(
-                LaunchVehicle.getLauncherStage1Vehicle(),
-                LaunchVehicle.getLauncherStage2Vehicle(),
-                Spacecraft.getSpacecraft())));
+  /** Default configuration of the historical ctors: Falcon Heavy fully loaded (spec 06 I1). */
+  private static LaunchConfiguration defaultConfiguration() {
+    return LaunchConfiguration.fullyLoaded(Launchers.FALCON_HEAVY, Spacecraft.getSpacecraft());
   }
 
   private static List<MissionStage> buildStages(

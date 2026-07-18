@@ -2,6 +2,7 @@ package com.smousseur.orbitlab.simulation.mission.optimizer;
 
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.mission.operation.LEOMission;
+import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchConfiguration;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Launchers;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Spacecraft;
 import org.junit.jupiter.api.BeforeAll;
@@ -35,8 +36,10 @@ public class LEOMissionOptimizationTest extends AbstractTrajectoryOptimizerTest 
     LEOMission mission =
         new LEOMission(
             "Falcon Heavy",
-            Launchers.FALCON_HEAVY.instantiate(
-                new double[] {600_000, 100_000}, Spacecraft.getSpacecraft()),
+            new LaunchConfiguration(
+                Launchers.FALCON_HEAVY,
+                new double[] {600_000, 100_000},
+                Spacecraft.getSpacecraft()),
             400_000);
     testMission(mission, 400_000, 400_000);
   }

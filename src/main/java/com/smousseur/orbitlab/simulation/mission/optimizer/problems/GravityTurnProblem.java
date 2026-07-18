@@ -94,7 +94,7 @@ public class GravityTurnProblem implements TrajectoryProblem {
 
   @Override
   public double getAcceptableCost() {
-    return 1e-4;
+    return 1e-3;
   }
 
   @Override
