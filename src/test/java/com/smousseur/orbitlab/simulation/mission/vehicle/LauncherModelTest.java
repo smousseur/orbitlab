@@ -43,7 +43,7 @@ class LauncherModelTest {
       new LauncherModel(
           "TEST_LAUNCHER", "Test launcher", List.of(STAGE_1, STAGE_2), new AscentProfile(7, 3, 2));
 
-  private static final Spacecraft PAYLOAD = Spacecraft.getSpacecraft();
+  private static final Spacecraft PAYLOAD = Spacecraft.LEGACY;
 
   @Test
   void instantiate_wrongLoadCount_rejected() {

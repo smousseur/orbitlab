@@ -22,11 +22,9 @@ public record Spacecraft(
   }
 
   /**
-   * Creates a standard spacecraft with default mass and propulsion characteristics.
-   *
-   * @return a default spacecraft instance
+   * Historical default payload (150 kg, no usable propellant). Kept for the legacy mission path
+   * and test fixtures; wizard payloads come from the {@code Payloads} catalog.
    */
-  public static Spacecraft getSpacecraft() {
-    return new Spacecraft(150, 0, PropulsionSystem.getSpacecraftPropulsion());
-  }
+  public static final Spacecraft LEGACY =
+      new Spacecraft(150, 0, PropulsionSystem.getSpacecraftPropulsion());
 }

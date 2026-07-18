@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Test;
 
 class LaunchConfigurationTest {
 
-  private static final Spacecraft PAYLOAD = Spacecraft.getSpacecraft();
+  private static final Spacecraft PAYLOAD = Spacecraft.LEGACY;
 
   @Test
   void wrongLoadCount_rejected() {

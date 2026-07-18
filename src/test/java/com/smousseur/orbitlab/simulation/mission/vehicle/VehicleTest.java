@@ -106,7 +106,7 @@ class VehicleTest {
   void vehicleStack_resolveActiveStage_fullMass_returnsFirstStage() {
     LaunchVehicle s1 = LaunchVehicle.getLauncherStage1Vehicle();
     LaunchVehicle s2 = LaunchVehicle.getLauncherStage2Vehicle();
-    Spacecraft sc = Spacecraft.getSpacecraft();
+    Spacecraft sc = Spacecraft.LEGACY;
     VehicleStack stack = new VehicleStack(List.of(s1, s2, sc));
 
     ActiveStageInfo info = stack.resolveActiveStage(stack.getMass());
@@ -120,7 +120,7 @@ class VehicleTest {
   void vehicleStack_resolveActiveStage_afterJettison_returnsSecondStage() {
     LaunchVehicle s1 = LaunchVehicle.getLauncherStage1Vehicle();
     LaunchVehicle s2 = LaunchVehicle.getLauncherStage2Vehicle();
-    Spacecraft sc = Spacecraft.getSpacecraft();
+    Spacecraft sc = Spacecraft.LEGACY;
     VehicleStack stack = new VehicleStack(List.of(s1, s2, sc));
 
     // After jettison of vehicle 1, mass = s2.getMass() + sc.getMass()
@@ -135,7 +135,7 @@ class VehicleTest {
   void vehicleStack_resolveActiveStage_spacecraftOnly_returnsTopStage() {
     LaunchVehicle s1 = LaunchVehicle.getLauncherStage1Vehicle();
     LaunchVehicle s2 = LaunchVehicle.getLauncherStage2Vehicle();
-    Spacecraft sc = Spacecraft.getSpacecraft();
+    Spacecraft sc = Spacecraft.LEGACY;
     VehicleStack stack = new VehicleStack(List.of(s1, s2, sc));
 
     ActiveStageInfo info = stack.resolveActiveStage(sc.getMass());
@@ -148,7 +148,7 @@ class VehicleTest {
   void vehicleStack_resolveActiveStage_massAfterJettison_equalsReferenceAbove() {
     LaunchVehicle s1 = LaunchVehicle.getLauncherStage1Vehicle();
     LaunchVehicle s2 = LaunchVehicle.getLauncherStage2Vehicle();
-    Spacecraft sc = Spacecraft.getSpacecraft();
+    Spacecraft sc = Spacecraft.LEGACY;
     VehicleStack stack = new VehicleStack(List.of(s1, s2, sc));
 
     ActiveStageInfo stage1 = stack.resolveActiveStage(stack.getMass());
@@ -164,7 +164,7 @@ class VehicleTest {
   void vehicleStack_resolveActiveStage_remainingFuel() {
     LaunchVehicle s1 = LaunchVehicle.getLauncherStage1Vehicle();
     LaunchVehicle s2 = LaunchVehicle.getLauncherStage2Vehicle();
-    Spacecraft sc = Spacecraft.getSpacecraft();
+    Spacecraft sc = Spacecraft.LEGACY;
     VehicleStack stack = new VehicleStack(List.of(s1, s2, sc));
 
     // At full mass, remaining fuel of vehicle 1 = propellant capacity of vehicle 1
@@ -181,7 +181,7 @@ class VehicleTest {
   void vehicleStack_resolveActiveStage_remainingDryMass() {
     LaunchVehicle s1 = LaunchVehicle.getLauncherStage1Vehicle();
     LaunchVehicle s2 = LaunchVehicle.getLauncherStage2Vehicle();
-    Spacecraft sc = Spacecraft.getSpacecraft();
+    Spacecraft sc = Spacecraft.LEGACY;
     VehicleStack stack = new VehicleStack(List.of(s1, s2, sc));
 
     ActiveStageInfo stage1 = stack.resolveActiveStage(stack.getMass());

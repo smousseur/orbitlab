@@ -65,7 +65,7 @@ class LaunchersTest {
    */
   @Test
   void falconHeavy_instantiate_matchesFormerFactoryStack() {
-    Spacecraft payload = Spacecraft.getSpacecraft();
+    Spacecraft payload = Spacecraft.LEGACY;
     VehicleStack stack =
         Launchers.FALCON_HEAVY.instantiate(new double[] {600_000, 50_000}, payload);
 

@@ -166,7 +166,7 @@ public class GEOMission extends Mission {
 
   /** Default configuration of the historical ctors: Falcon Heavy fully loaded (spec 06 I1). */
   private static LaunchConfiguration defaultConfiguration() {
-    return LaunchConfiguration.fullyLoaded(Launchers.FALCON_HEAVY, Spacecraft.getSpacecraft());
+    return LaunchConfiguration.fullyLoaded(Launchers.FALCON_HEAVY, Spacecraft.LEGACY);
   }
 
   private static List<MissionStage> buildStages(
