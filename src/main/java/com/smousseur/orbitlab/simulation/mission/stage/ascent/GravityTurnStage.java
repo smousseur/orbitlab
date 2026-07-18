@@ -20,30 +20,23 @@ public class GravityTurnStage extends MissionStage
     implements OptimizableMissionStage<GravityTurnProblem> {
 
   private final double targetInclination;
-  private final double ascensionDuration;
   private final double pitchKickAngle;
   private final double launchLatitude;
   private final GravityTurnConstraints constraints;
 
   private OptimizationResult optimizationResult;
 
-  public GravityTurnStage(
-      String name,
-      double ascensionDuration,
-      double pitchKickAngle,
-      GravityTurnConstraints constraints) {
-    this(name, ascensionDuration, pitchKickAngle, 0.0, 0.0, constraints);
+  public GravityTurnStage(String name, double pitchKickAngle, GravityTurnConstraints constraints) {
+    this(name, pitchKickAngle, 0.0, 0.0, constraints);
   }
 
   public GravityTurnStage(
       String name,
-      double ascensionDuration,
       double pitchKickAngle,
       double launchLatitude,
       double targetInclination,
       GravityTurnConstraints constraints) {
     super(name);
-    this.ascensionDuration = ascensionDuration;
     this.pitchKickAngle = pitchKickAngle;
     this.launchLatitude = launchLatitude;
     this.targetInclination = targetInclination;
@@ -62,13 +55,14 @@ public class GravityTurnStage extends MissionStage
 
   @Override
   public GravityTurnProblem buildProblem(Mission mission) {
-    GravityTurnManeuver maneuver = createManeuver(mission);
-    return new GravityTurnProblem(maneuver, mission.getCurrentState(), constraints);
+    SpacecraftState entryState = mission.getCurrentState();
+    GravityTurnManeuver maneuver = createManeuver(mission, entryState.getMass());
+    return new GravityTurnProblem(maneuver, entryState, constraints);
   }
 
   @Override
   public SpacecraftState enter(SpacecraftState previousState, Mission mission) {
-    GravityTurnManeuver maneuver = createManeuver(mission);
+    GravityTurnManeuver maneuver = createManeuver(mission, previousState.getMass());
     return maneuver.applyKick(previousState);
   }
 
@@ -79,11 +73,12 @@ public class GravityTurnStage extends MissionStage
           "GravityTurnStage '" + getName() + "' requires optimization before execution");
     }
 
-    GravityTurnManeuver maneuver = createManeuver(mission);
+    SpacecraftState state = mission.getCurrentState();
+    // The pitch kick applied by enter() preserves mass: this is still the entry mass.
+    GravityTurnManeuver maneuver = createManeuver(mission, state.getMass());
     GravityTurnManeuver.GravityTurnParams params =
         maneuver.decode(optimizationResult.bestVariables());
 
-    SpacecraftState state = mission.getCurrentState();
     maneuver.configure(propagator, state, params);
 
     // MECO event → transition to next stage
@@ -98,10 +93,12 @@ public class GravityTurnStage extends MissionStage
                 }));
   }
 
-  private GravityTurnManeuver createManeuver(Mission mission) {
+  private GravityTurnManeuver createManeuver(Mission mission, double entryMass) {
     Vehicle vehicle = mission.getVehicle();
     double launchAzimuth = Physics.getLaunchAzimuth(launchLatitude, targetInclination);
+    // Interstage coast stays 0.0 until the MassDepletionDetector increment wires the launcher's
+    // AscentProfile value (spec 06 I4).
     return new GravityTurnManeuver(
-        vehicle, ascensionDuration, Math.toRadians(pitchKickAngle), launchAzimuth);
+        vehicle, entryMass, Math.toRadians(pitchKickAngle), launchAzimuth, 0.0);
   }
 }

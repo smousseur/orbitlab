@@ -35,9 +35,10 @@ public class GravityTurnManeuver {
   private static final Logger logger = LogManager.getLogger(GravityTurnManeuver.class);
 
   private final Vehicle vehicle;
+  private final double entryMass;
   private final double pitchKickAngleRad;
   private final double launchAzimuth;
-  private final double usedAscensionPropellant;
+  private final double interstageCoastDuration;
   private final ActiveStageInfo activeStage;
   private final ActiveStageInfo nextStage;
   private MinAltitudeTracker lastAltitudeTracker;
@@ -46,19 +47,25 @@ public class GravityTurnManeuver {
    * Creates a gravity turn maneuver for the given vehicle and launch parameters.
    *
    * @param vehicle the vehicle performing the maneuver (must have at least two stages)
-   * @param ascensionDuration the duration of the vertical ascent phase before the gravity turn
-   *     (seconds)
+   * @param entryMass the actual spacecraft mass at gravity turn entry (kg); already reflects any
+   *     propellant burnt during the vertical ascent
    * @param pitchKickAngleRad the initial pitch kick angle in radians
    * @param launchAzimuth the launch azimuth angle in radians (measured from north)
+   * @param interstageCoastDuration unpowered coast between jettison and next-stage ignition (s)
    */
   public GravityTurnManeuver(
-      Vehicle vehicle, double ascensionDuration, double pitchKickAngleRad, double launchAzimuth) {
+      Vehicle vehicle,
+      double entryMass,
+      double pitchKickAngleRad,
+      double launchAzimuth,
+      double interstageCoastDuration) {
     this.vehicle = vehicle;
+    this.entryMass = entryMass;
     this.pitchKickAngleRad = pitchKickAngleRad;
     this.launchAzimuth = launchAzimuth;
-    this.activeStage = vehicle.resolveActiveStage(vehicle.getMass());
+    this.interstageCoastDuration = interstageCoastDuration;
+    this.activeStage = vehicle.resolveActiveStage(entryMass);
     this.nextStage = vehicle.resolveActiveStage(activeStage.massAfterJettison());
-    this.usedAscensionPropellant = activeStage.propulsion().massBurnt(ascensionDuration);
   }
 
   /**
@@ -74,7 +81,7 @@ public class GravityTurnManeuver {
 
   /**
    * Decodes raw CMA-ES optimization variables into physical gravity turn parameters. The burn
-   * durations are derived from the vehicle's propellant capacity and propulsion characteristics.
+   * durations are derived from the propellant remaining at gravity turn entry.
    *
    * @param variables the raw optimization variable array (transitionTime, exponent)
    * @return the decoded physical parameters
@@ -84,13 +91,10 @@ public class GravityTurnManeuver {
     double exponent = variables[1];
 
     // Burn1 duration until propellant exhaustion
-    PropulsionSystem prop1 = activeStage.propulsion();
-    double massFlowRate1 = prop1.thrust() / (prop1.isp() * Constants.G0_STANDARD_GRAVITY);
-    double burn1Duration =
-        (activeStage.remainingFuel(vehicle.getMass()) - usedAscensionPropellant) / massFlowRate1;
+    double burn1Duration = getBurn1Duration();
 
-    // Burn2 duration after jettison until transitionTime
-    double burn2Duration = transitionTime - burn1Duration;
+    // Burn2 duration after jettison and interstage coast, until transitionTime
+    double burn2Duration = transitionTime - burn1Duration - interstageCoastDuration;
     burn2Duration = FastMath.max(0.0, burn2Duration);
 
     return new GravityTurnParams(transitionTime, exponent, burn1Duration, burn2Duration);
@@ -156,11 +160,11 @@ public class GravityTurnManeuver {
                   }
                 });
     propagator.addEventDetector(jettisonDetector);
-    // Burn 2 — next stage propulsion (after jettison)
+    // Burn 2 — next stage propulsion (after jettison and interstage coast)
     PropulsionSystem propulsion2 = nextStage.propulsion();
     ConstantThrustManeuver burn2 =
         new ConstantThrustManeuver(
-            jettisonDate.shiftedBy(1.0e-3),
+            jettisonDate.shiftedBy(interstageCoastDuration).shiftedBy(1.0e-3),
             params.burn2Duration,
             propulsion2.thrust(),
             propulsion2.isp(),
@@ -204,15 +208,15 @@ public class GravityTurnManeuver {
   }
 
   /**
-   * Returns the duration of burn 1, computed from the remaining first-stage propellant after
-   * vertical ascent. The first stage fires until propellant exhaustion.
+   * Returns the duration of burn 1, computed from the propellant remaining in the active stage at
+   * gravity turn entry. The first stage fires until propellant exhaustion.
    *
    * @return the burn 1 duration in seconds
    */
   public double getBurn1Duration() {
     PropulsionSystem prop1 = activeStage.propulsion();
     double massFlowRate1 = prop1.thrust() / (prop1.isp() * Constants.G0_STANDARD_GRAVITY);
-    return (activeStage.remainingFuel(vehicle.getMass()) - usedAscensionPropellant) / massFlowRate1;
+    return activeStage.remainingFuel(entryMass) / massFlowRate1;
   }
 
   /**

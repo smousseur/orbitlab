@@ -29,7 +29,7 @@ class GravityTurnProblemTest {
         "orekit-data.zip not on classpath — skipping");
     OrekitService.get().initialize();
     Vehicle vehicle = LaunchVehicle.getLauncherStage1Vehicle();
-    maneuver = new GravityTurnManeuver(vehicle, 0, 0, Math.PI / 2);
+    maneuver = new GravityTurnManeuver(vehicle, vehicle.getMass(), 0.0, Math.PI / 2, 0.0);
   }
 
   @Test

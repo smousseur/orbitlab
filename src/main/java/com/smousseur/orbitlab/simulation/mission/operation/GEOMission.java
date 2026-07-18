@@ -12,8 +12,11 @@ import com.smousseur.orbitlab.simulation.mission.stage.AnalyticTrimBurnStage;
 import com.smousseur.orbitlab.simulation.mission.stage.CoastingStage;
 import com.smousseur.orbitlab.simulation.mission.stage.ascent.GravityTurnStage;
 import com.smousseur.orbitlab.simulation.mission.stage.ascent.VerticalAscentStage;
+import com.smousseur.orbitlab.simulation.mission.vehicle.AscentProfile;
+import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchConfiguration;
 import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchVehicle;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Spacecraft;
+import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
 import com.smousseur.orbitlab.simulation.mission.vehicle.VehicleStack;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.hipparchus.util.FastMath;
@@ -32,7 +35,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class GEOMission extends Mission {
-  private static final int ASCENSION_DURATION = 10;
+  /** Flight profile of the historical default launcher (legacy vehicle path). */
+  private static final AscentProfile LEGACY_PROFILE = new AscentProfile(10.0, 3.0, 0.0);
+
   private static final double DEFAULT_LATITUDE = 5.23;
   private static final double DEFAULT_LONGITUDE = -52.77;
   private static final double DEFAULT_ALTITUDE = 0.0;
@@ -81,10 +86,66 @@ public class GEOMission extends Mission {
       double longitude,
       double altitude,
       double finalInclination) {
-    super(
+    this(
         name,
         buildVehicle(),
-        buildStages(parkingAltitude, targetAltitude, finalInclination),
+        LEGACY_PROFILE,
+        parkingAltitude,
+        targetAltitude,
+        latitude,
+        longitude,
+        altitude,
+        finalInclination);
+  }
+
+  /**
+   * Creates a GEO mission whose vehicle and flight profile come from a launch configuration
+   * (launcher-driven profile).
+   *
+   * @param name the mission name
+   * @param configuration the launcher model, propellant loads and payload
+   * @param parkingAltitude the parking orbit altitude in meters
+   * @param targetAltitude the target orbit altitude in meters
+   * @param latitude the launch site latitude in degrees
+   * @param longitude the launch site longitude in degrees
+   * @param altitude the launch site altitude in meters
+   * @param finalInclination the target final inclination in degrees
+   */
+  public GEOMission(
+      String name,
+      LaunchConfiguration configuration,
+      double parkingAltitude,
+      double targetAltitude,
+      double latitude,
+      double longitude,
+      double altitude,
+      double finalInclination) {
+    this(
+        name,
+        configuration.toVehicleStack(),
+        configuration.ascentProfile(),
+        parkingAltitude,
+        targetAltitude,
+        latitude,
+        longitude,
+        altitude,
+        finalInclination);
+  }
+
+  private GEOMission(
+      String name,
+      Vehicle vehicle,
+      AscentProfile profile,
+      double parkingAltitude,
+      double targetAltitude,
+      double latitude,
+      double longitude,
+      double altitude,
+      double finalInclination) {
+    super(
+        name,
+        vehicle,
+        buildStages(profile, parkingAltitude, targetAltitude, finalInclination),
         new OrbitInsertionObjective(
             SolarSystemBody.EARTH, parkingAltitude, targetAltitude, FastMath.toRadians(latitude)));
     this.latitude = latitude;
@@ -119,13 +180,13 @@ public class GEOMission extends Mission {
   }
 
   private static List<MissionStage> buildStages(
-      double parkingAltitude, double targetAltitude, double finalInclination) {
+      AscentProfile profile, double parkingAltitude, double targetAltitude,
+      double finalInclination) {
     return List.of(
-        new VerticalAscentStage("Vertical Ascent", ASCENSION_DURATION),
+        new VerticalAscentStage("Vertical Ascent", profile.verticalAscentDuration()),
         new GravityTurnStage(
             "Gravity turn",
-            ASCENSION_DURATION,
-            3.0,
+            profile.pitchKickAngleDeg(),
             GravityTurnConstraints.forTarget(parkingAltitude)),
         new AnalyticParkingInsertionStage("Parking", parkingAltitude),
         new CoastingStage("Coasting parking", true),
