@@ -4,6 +4,7 @@ import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.Physics;
 import com.smousseur.orbitlab.simulation.mission.attitude.GravityTurnAttitudeProvider;
 import com.smousseur.orbitlab.simulation.mission.detector.DepletionGuard;
+import com.smousseur.orbitlab.simulation.mission.detector.DepletionStopTrigger;
 import com.smousseur.orbitlab.simulation.mission.detector.MinAltitudeTracker;
 import com.smousseur.orbitlab.simulation.mission.stage.ascent.GravityTurnStage;
 import com.smousseur.orbitlab.simulation.mission.vehicle.ActiveStageInfo;
@@ -13,6 +14,8 @@ import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.hipparchus.ode.events.Action;
 import org.hipparchus.util.FastMath;
 import org.orekit.forces.maneuvers.ConstantThrustManeuver;
+import org.orekit.forces.maneuvers.Maneuver;
+import org.orekit.forces.maneuvers.propulsion.BasicConstantThrustPropulsionModel;
 import org.orekit.propagation.SpacecraftState;
 import org.orekit.propagation.events.DateDetector;
 import org.orekit.propagation.events.EventDetector;
@@ -129,15 +132,17 @@ public class GravityTurnManeuver {
         new GravityTurnAttitudeProvider(kickDate, params.transitionTime(), params.exponent());
     propagator.setAttitudeProvider(attitudeProvider);
 
-    // Burn 1 — active stage propulsion
+    // Burn 1 — active stage propulsion, flame-out semantics (spec 06 I4b): the engine thrusts
+    // until stage 1's depletion floor instead of a date window, so the load can vary (outer
+    // propellant-sizing loop) without recomputing the window. The analytic burn1Duration remains
+    // the schedule prediction for the jettison and burn 2 dates below.
     PropulsionSystem propulsion1 = activeStage.propulsion();
-    ConstantThrustManeuver burn1 =
-        new ConstantThrustManeuver(
-            kickDate.shiftedBy(1.0e-3),
-            params.burn1Duration,
-            propulsion1.thrust(),
-            propulsion1.isp(),
-            Vector3D.PLUS_I);
+    Maneuver burn1 =
+        new Maneuver(
+            null,
+            new DepletionStopTrigger(kickDate.shiftedBy(1.0e-3), activeStage.depletionFloor()),
+            new BasicConstantThrustPropulsionModel(
+                propulsion1.thrust(), propulsion1.isp(), Vector3D.PLUS_I, "GT-burn1"));
     propagator.addForceModel(burn1);
 
     AbsoluteDate jettisonDate =

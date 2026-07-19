@@ -49,6 +49,25 @@ public final class Physics {
   }
 
   /**
+   * Computes the finite-burn duration for a ΔV, capped by the propellant actually available in the
+   * burning stage. An undersized stage burns to depletion and stops — a clean under-performance
+   * caught by the mission objective — instead of consuming propellant it does not carry.
+   *
+   * @param dv the required velocity change in m/s
+   * @param mass the spacecraft mass at ignition in kg
+   * @param isp the specific impulse in seconds
+   * @param thrust the engine thrust in Newtons
+   * @param remainingFuel the propellant available in the burning stage in kg
+   * @return the burn duration in seconds
+   */
+  public static double computeBurnDurationCapped(
+      double dv, double mass, double isp, double thrust, double remainingFuel) {
+    double massFlow = thrust / (isp * Constants.G0_STANDARD_GRAVITY);
+    double depletionDuration = FastMath.max(0.0, remainingFuel) / massFlow;
+    return FastMath.min(computeBurnDuration(dv, mass, isp, thrust), depletionDuration);
+  }
+
+  /**
    * Builds a thrust direction vector in the TNW (tangential, normal, out-of-plane) frame
    * from in-plane and out-of-plane angles.
    *

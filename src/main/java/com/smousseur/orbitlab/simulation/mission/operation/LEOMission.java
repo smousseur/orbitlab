@@ -211,6 +211,7 @@ public class LEOMission extends Mission {
         new GravityTurnStage(
             "Gravity turn",
             profile.pitchKickAngleDeg(),
+            profile.interstageCoastDuration(),
             GravityTurnConstraints.forTarget(perigeeAltitude)),
         new AnalyticHohmannTransferStage(
             "Transfert", perigeeAltitude, apogeeAltitude, FastMath.toRadians(latitude)),

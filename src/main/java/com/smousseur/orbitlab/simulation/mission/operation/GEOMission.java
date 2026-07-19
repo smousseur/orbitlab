@@ -179,6 +179,7 @@ public class GEOMission extends Mission {
         new GravityTurnStage(
             "Gravity turn",
             profile.pitchKickAngleDeg(),
+            profile.interstageCoastDuration(),
             GravityTurnConstraints.forTarget(parkingAltitude)),
         new AnalyticParkingInsertionStage("Parking", parkingAltitude),
         new CoastingStage("Coasting parking", true),

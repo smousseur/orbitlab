@@ -174,8 +174,12 @@ public class AnalyticHohmannTransferStage extends MissionStage {
       deltaV1 = vAfterBurn1.subtract(v1);
       dv1 = deltaV1.getNorm();
       dt1 =
-          Physics.computeBurnDuration(
-              dv1, state.getMass(), propulsion1.isp(), propulsion1.thrust());
+          Physics.computeBurnDurationCapped(
+              dv1,
+              state.getMass(),
+              propulsion1.isp(),
+              propulsion1.thrust(),
+              stage1.remainingFuel(state.getMass()));
       double transferHalfPeriod =
           FastMath.PI * FastMath.sqrt(aTransfer * aTransfer * aTransfer / mu);
       stateAtApogee =
@@ -214,7 +218,12 @@ public class AnalyticHohmannTransferStage extends MissionStage {
     ActiveStageInfo stage2 = vehicle.resolveActiveStage(massAfterBurn1);
     PropulsionSystem propulsion2 = stage2.propulsion();
     double dt2 =
-        Physics.computeBurnDuration(dv2, massAfterBurn1, propulsion2.isp(), propulsion2.thrust());
+        Physics.computeBurnDurationCapped(
+            dv2,
+            massAfterBurn1,
+            propulsion2.isp(),
+            propulsion2.thrust(),
+            stage2.remainingFuel(massAfterBurn1));
     Vector3D burn2DirectionInertial = deltaV2.normalize();
 
     // Center burn 2 on the actual apogee. The simulation starts burn 1 at state.date (matching

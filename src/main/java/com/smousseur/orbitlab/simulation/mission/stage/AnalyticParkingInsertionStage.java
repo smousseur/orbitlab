@@ -117,7 +117,12 @@ public class AnalyticParkingInsertionStage extends MissionStage {
     ActiveStageInfo stage1 = vehicle.resolveActiveStage(state.getMass());
     PropulsionSystem propulsion1 = stage1.propulsion();
     double dt1 =
-        Physics.computeBurnDuration(dv1, state.getMass(), propulsion1.isp(), propulsion1.thrust());
+        Physics.computeBurnDurationCapped(
+            dv1,
+            state.getMass(),
+            propulsion1.isp(),
+            propulsion1.thrust(),
+            stage1.remainingFuel(state.getMass()));
 
     double g0Ve = propulsion1.isp() * Constants.G0_STANDARD_GRAVITY;
     double massAfterBurn1 = state.getMass() * FastMath.exp(-dv1 / g0Ve);
@@ -125,7 +130,12 @@ public class AnalyticParkingInsertionStage extends MissionStage {
     ActiveStageInfo stage2 = vehicle.resolveActiveStage(massAfterBurn1);
     PropulsionSystem propulsion2 = stage2.propulsion();
     double dt2 =
-        Physics.computeBurnDuration(dv2, massAfterBurn1, propulsion2.isp(), propulsion2.thrust());
+        Physics.computeBurnDurationCapped(
+            dv2,
+            massAfterBurn1,
+            propulsion2.isp(),
+            propulsion2.thrust(),
+            stage2.remainingFuel(massAfterBurn1));
 
     double transferPeriod =
         2.0 * FastMath.PI * FastMath.sqrt(aTransfer * aTransfer * aTransfer / mu);

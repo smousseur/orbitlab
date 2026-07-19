@@ -46,6 +46,29 @@ class PhysicsTest {
     assertTrue(dt2 > dt1);
   }
 
+  // --- computeBurnDurationCapped ---
+
+  @Test
+  void computeBurnDurationCapped_ampleFuel_equalsUncapped() {
+    double uncapped = Physics.computeBurnDuration(500, 20_000, 300, 100_000);
+    double capped = Physics.computeBurnDurationCapped(500, 20_000, 300, 100_000, 10_000);
+    assertEquals(uncapped, capped, 1e-9);
+  }
+
+  @Test
+  void computeBurnDurationCapped_shortFuel_capsAtDepletion() {
+    double massFlow = 100_000 / (300 * Constants.G0_STANDARD_GRAVITY);
+    double remainingFuel = 200;
+    double capped = Physics.computeBurnDurationCapped(500, 20_000, 300, 100_000, remainingFuel);
+    assertEquals(remainingFuel / massFlow, capped, 1e-9);
+    assertTrue(capped < Physics.computeBurnDuration(500, 20_000, 300, 100_000));
+  }
+
+  @Test
+  void computeBurnDurationCapped_negativeFuel_zeroDuration() {
+    assertEquals(0.0, Physics.computeBurnDurationCapped(500, 20_000, 300, 100_000, -1.0), 1e-12);
+  }
+
   // --- buildThrustDirectionTNW ---
 
   @Test

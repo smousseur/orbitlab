@@ -34,6 +34,14 @@ import org.orekit.propagation.SpacecraftState;
  * the same optimum, the cost floor is structural (e.g. irreducible penalty terms) and the
  * remaining budget would only re-find it. The first retry is never skipped: a flat first attempt
  * says nothing about what broader exploration can reach (see the trap-problem retry test).
+ *
+ * <p><b>Consensus early-stop</b>: when at least {@link #CONSENSUS_MIN_RUNS} exploration runs
+ * started from different points, genuinely <em>descended</em> (best cost below their start-point
+ * cost by {@link #CONSENSUS_DESCENT_RATIO}) and agree on the attempt's best cost within {@link
+ * #CONSENSUS_RELATIVE_EPS}, the landscape has one dominant basin: refinement and all remaining
+ * retries are skipped. The descent requirement is what protects the trap-problem contract — on a
+ * flat deceptive landscape the runs do not descend, so no consensus forms and the escape retry
+ * still runs.
  */
 public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
   private static final Logger logger = LogManager.getLogger(CMAESTrajectoryOptimizer.class);
@@ -67,6 +75,19 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
    * (e.g. β1 anti-saturation) and still cannot move the cost has genuinely hit the floor.
    */
   private static final double STAGNATION_RELATIVE_EPS = 1e-6;
+
+  /** Number of descended, agreeing exploration runs that concludes the attempt (consensus). */
+  private static final int CONSENSUS_MIN_RUNS = 2;
+
+  /** Relative cost window within which two exploration results are considered the same optimum. */
+  private static final double CONSENSUS_RELATIVE_EPS = 1e-4;
+
+  /**
+   * Minimum relative descent from a run's start-point cost for it to count toward the consensus.
+   * A run that barely moved (flat landscape, or warm start already at the optimum) carries no
+   * evidence that the shared value is a genuine attractor.
+   */
+  private static final double CONSENSUS_DESCENT_RATIO = 0.01;
 
   private final CMAESRunExecutor executor;
 
@@ -204,6 +225,12 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
         break;
       }
 
+      if (pass.consensusPlateau() && globalBestVars != null) {
+        // Multiple independent explorations descended to the same optimum: the floor is real,
+        // further retries would only re-find it (logged by runSinglePass).
+        break;
+      }
+
       if (attempt > 0 && !improvedMeaningfully(costBeforeAttempt, globalBestCost)) {
         logger.info(
             "Plateau detected: retry {} left best cost at {} (relative improvement <= {}); "
@@ -244,7 +271,8 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
   // ══════════════════════════════════════════════════════════════════════
 
   /** Result of one full exploration + refinement pass. */
-  private record SinglePassResult(double[] bestVars, double bestCost, int evaluations) {}
+  private record SinglePassResult(
+      double[] bestVars, double bestCost, int evaluations, boolean consensusPlateau) {}
 
   /** Pre-computed configuration for one parallel exploration run. */
   private record RunConfig(double[] startPoint, double[] runSigma, int populationSize, int budget) {}
@@ -301,6 +329,16 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
       configs.add(new RunConfig(startPoint, runSigma, populationSize, parallelBudget));
     }
 
+    // Start-point costs feed the descent half of the consensus test (one evaluation per run).
+    double[] startCosts = new double[configs.size()];
+    for (int i = 0; i < configs.size(); i++) {
+      startCosts[i] = evaluateCost(configs.get(i).startPoint);
+      totalEvals++;
+      remainingEvals--;
+    }
+    double[] runCosts = new double[configs.size()];
+    java.util.Arrays.fill(runCosts, Double.NaN);
+
     // Reserve one core for the JME render thread so the UI stays responsive while the optimizer
     // is running on the dedicated mission-optimizer thread.
     int availableForOptimizer = FastMath.max(1, Runtime.getRuntime().availableProcessors() - 1);
@@ -339,6 +377,7 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
               explorationRuns,
               result.bestCost(),
               result.evaluations());
+          runCosts[run] = result.bestCost();
           if (result.bestCost() < bestCost) {
             bestCost = result.bestCost();
             bestVars = result.bestVariables().clone();
@@ -354,6 +393,32 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
     }
     if (bestVars != null && bestCost <= problem.getAcceptableCost()) {
       logger.info("Target reached during exploration: cost={}", bestCost);
+    }
+
+    // ── Consensus early-stop ─────────────────────────────────────────────
+    if (bestVars != null && bestCost > problem.getAcceptableCost()) {
+      int consensus = 0;
+      for (int run = 0; run < runCosts.length; run++) {
+        double cost = runCosts[run];
+        if (Double.isNaN(cost)) {
+          continue;
+        }
+        boolean descended =
+            startCosts[run] - cost > CONSENSUS_DESCENT_RATIO * FastMath.abs(startCosts[run]);
+        boolean agrees = FastMath.abs(cost - bestCost) <= CONSENSUS_RELATIVE_EPS * FastMath.abs(bestCost);
+        if (descended && agrees) {
+          consensus++;
+        }
+      }
+      if (consensus >= CONSENSUS_MIN_RUNS) {
+        logger.info(
+            "Consensus: {} independent explorations descended to cost={} (within {} relative); "
+                + "skipping refinement and remaining retries",
+            consensus,
+            bestCost,
+            CONSENSUS_RELATIVE_EPS);
+        return new SinglePassResult(bestVars, bestCost, totalEvals, true);
+      }
     }
 
     // ── Phase 2: Refinement cascade ──────────────────────────────────────
@@ -406,7 +471,16 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
       }
     }
 
-    return new SinglePassResult(bestVars, bestCost, totalEvals);
+    return new SinglePassResult(bestVars, bestCost, totalEvals, false);
+  }
+
+  /** Cost of a single point, with the same exception penalty semantics as an optimization run. */
+  private double evaluateCost(double[] point) {
+    try {
+      return problem.computeCost(problem.propagate(point));
+    } catch (Exception e) {
+      return CMAESRunExecutor.EXCEPTION_PENALTY_COST;
+    }
   }
 
   // ══════════════════════════════════════════════════════════════════════

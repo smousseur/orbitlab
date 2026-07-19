@@ -22,23 +22,30 @@ public class GravityTurnStage extends MissionStage
 
   private final double targetInclination;
   private final double pitchKickAngle;
+  private final double interstageCoastDuration;
   private final double launchLatitude;
   private final GravityTurnConstraints constraints;
 
   private OptimizationResult optimizationResult;
 
-  public GravityTurnStage(String name, double pitchKickAngle, GravityTurnConstraints constraints) {
-    this(name, pitchKickAngle, 0.0, 0.0, constraints);
+  public GravityTurnStage(
+      String name,
+      double pitchKickAngle,
+      double interstageCoastDuration,
+      GravityTurnConstraints constraints) {
+    this(name, pitchKickAngle, interstageCoastDuration, 0.0, 0.0, constraints);
   }
 
   public GravityTurnStage(
       String name,
       double pitchKickAngle,
+      double interstageCoastDuration,
       double launchLatitude,
       double targetInclination,
       GravityTurnConstraints constraints) {
     super(name);
     this.pitchKickAngle = pitchKickAngle;
+    this.interstageCoastDuration = interstageCoastDuration;
     this.launchLatitude = launchLatitude;
     this.targetInclination = targetInclination;
     this.constraints = constraints;
@@ -100,9 +107,8 @@ public class GravityTurnStage extends MissionStage
   private GravityTurnManeuver createManeuver(Mission mission, double entryMass) {
     Vehicle vehicle = mission.getVehicle();
     double launchAzimuth = Physics.getLaunchAzimuth(launchLatitude, targetInclination);
-    // Interstage coast stays 0.0 until the MassDepletionDetector increment wires the launcher's
-    // AscentProfile value (spec 06 I4).
     return new GravityTurnManeuver(
-        vehicle, entryMass, Math.toRadians(pitchKickAngle), launchAzimuth, 0.0);
+        vehicle, entryMass, Math.toRadians(pitchKickAngle), launchAzimuth,
+        interstageCoastDuration);
   }
 }

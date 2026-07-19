@@ -141,8 +141,12 @@ public class AnalyticTrimBurnStage extends MissionStage {
     ActiveStageInfo stageInfo = vehicle.resolveActiveStage(stateAtApogee.getMass());
     PropulsionSystem propulsion = stageInfo.propulsion();
     double dt =
-        Physics.computeBurnDuration(
-            dv, stateAtApogee.getMass(), propulsion.isp(), propulsion.thrust());
+        Physics.computeBurnDurationCapped(
+            dv,
+            stateAtApogee.getMass(),
+            propulsion.isp(),
+            propulsion.thrust(),
+            stageInfo.remainingFuel(stateAtApogee.getMass()));
 
     AbsoluteDate burnStart = stateAtApogee.getDate().shiftedBy(-dt / 2.0);
     if (burnStart.isBefore(state.getDate())) {
