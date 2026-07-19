@@ -3,6 +3,7 @@ package com.smousseur.orbitlab.simulation.mission.maneuver;
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.Physics;
 import com.smousseur.orbitlab.simulation.mission.attitude.GravityTurnAttitudeProvider;
+import com.smousseur.orbitlab.simulation.mission.detector.DepletionGuard;
 import com.smousseur.orbitlab.simulation.mission.detector.MinAltitudeTracker;
 import com.smousseur.orbitlab.simulation.mission.stage.ascent.GravityTurnStage;
 import com.smousseur.orbitlab.simulation.mission.vehicle.ActiveStageInfo;
@@ -173,6 +174,16 @@ public class GravityTurnManeuver {
   }
 
   /**
+   * Returns the depletion floor guarding this maneuver: the post-jettison stack floor. A single
+   * detector at this floor covers both burns — during burn 1 the mass stays above stage 1's own
+   * floor, which is above this one. Burn 2's window is transition-time-driven, not fuel-capped,
+   * so this is where a wrong mass accounting would burn nonexistent propellant (spec 06 I4a).
+   */
+  public double getDepletionFloor() {
+    return nextStage.depletionFloor();
+  }
+
+  /**
    * Propagates the trajectory for optimization purposes (creates its own propagator). Returns a
    * penalizing fallback state on error.
    */
@@ -184,6 +195,9 @@ public class GravityTurnManeuver {
     NumericalPropagator propagator = OrekitService.get().createOptimizationPropagator();
     propagator.setInitialState(kickedState);
     configure(propagator, kickedState, params);
+    // Quiet guard: infeasible candidates crossing the floor are truncated (and thus penalized by
+    // the cost function) instead of burning nonexistent propellant.
+    DepletionGuard.armQuiet(propagator, getDepletionFloor());
     MinAltitudeTracker tracker = new MinAltitudeTracker(0.0, Double.POSITIVE_INFINITY);
     propagator.addEventDetector(tracker);
     this.lastAltitudeTracker = tracker;

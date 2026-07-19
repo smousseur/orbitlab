@@ -5,6 +5,7 @@ import com.smousseur.orbitlab.simulation.Physics;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionStage;
 import com.smousseur.orbitlab.simulation.mission.OptimizableMissionStage;
+import com.smousseur.orbitlab.simulation.mission.detector.DepletionGuard;
 import com.smousseur.orbitlab.simulation.mission.maneuver.GravityTurnManeuver;
 import com.smousseur.orbitlab.simulation.mission.optimizer.OptimizationResult;
 import com.smousseur.orbitlab.simulation.mission.optimizer.problems.GravityTurnConstraints;
@@ -80,6 +81,9 @@ public class GravityTurnStage extends MissionStage
         maneuver.decode(optimizationResult.bestVariables());
 
     maneuver.configure(propagator, state, params);
+    // Replay path: the optimized transition time is supposed to fit the loaded propellant, so a
+    // depletion here is a real accounting bug — fail loud.
+    DepletionGuard.arm(propagator, maneuver.getDepletionFloor(), getName());
 
     // MECO event → transition to next stage
     AbsoluteDate mecoDate = state.getDate().shiftedBy(params.transitionTime());

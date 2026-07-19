@@ -3,6 +3,7 @@ package com.smousseur.orbitlab.simulation.mission.stage.ascent;
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionStage;
+import com.smousseur.orbitlab.simulation.mission.detector.DepletionGuard;
 import com.smousseur.orbitlab.simulation.mission.vehicle.ActiveStageInfo;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropulsionSystem;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
@@ -67,6 +68,7 @@ public class ConstantThrustStage extends MissionStage {
             Vector3D.PLUS_I);
 
     propagator.addForceModel(burn);
+    DepletionGuard.arm(propagator, activeStage.depletionFloor(), getName());
 
     AbsoluteDate mecoDate = currentState.getDate().shiftedBy(this.duration);
     this.configuredEndDate = mecoDate;
@@ -104,6 +106,7 @@ public class ConstantThrustStage extends MissionStage {
             getAttitudeProvider(stateAfterEnter),
             Vector3D.PLUS_I);
     propagator.addForceModel(burn);
+    DepletionGuard.arm(propagator, activeStage.depletionFloor(), getName());
 
     return propagator.propagate(stateAfterEnter.getDate().shiftedBy(this.duration));
   }

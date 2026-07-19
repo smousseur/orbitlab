@@ -4,6 +4,7 @@ import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.Physics;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionStage;
+import com.smousseur.orbitlab.simulation.mission.detector.DepletionGuard;
 import com.smousseur.orbitlab.simulation.mission.vehicle.ActiveStageInfo;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropulsionSystem;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
@@ -189,6 +190,7 @@ public class AnalyticTrimBurnStage extends MissionStage {
       NumericalPropagator propagator, SpacecraftState state, TrimBurn plan, Vehicle vehicle) {
     ActiveStageInfo stageInfo = vehicle.resolveActiveStage(state.getMass());
     PropulsionSystem propulsion = stageInfo.propulsion();
+    DepletionGuard.arm(propagator, stageInfo.depletionFloor(), "Trim burn");
 
     // FrameAlignedProvider maps inertial → body. We want body PLUS_I to point along the inertial
     // burn direction, i.e. r(directionInertial) = PLUS_I.

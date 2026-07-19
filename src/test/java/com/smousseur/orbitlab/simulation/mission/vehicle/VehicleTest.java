@@ -190,4 +190,20 @@ class VehicleTest {
     ActiveStageInfo stage2 = stack.resolveActiveStage(stage1.massAfterJettison());
     assertEquals(s2.dryMass() + sc.dryMass(), stage2.remainingDryMass(), 1e-6);
   }
+
+  @Test
+  void vehicleStack_resolveActiveStage_depletionFloor() {
+    LaunchVehicle s1 = LaunchVehicle.getLauncherStage1Vehicle();
+    LaunchVehicle s2 = LaunchVehicle.getLauncherStage2Vehicle();
+    Spacecraft sc = Spacecraft.LEGACY;
+    VehicleStack stack = new VehicleStack(List.of(s1, s2, sc));
+
+    // Stage 1 floor: stage 1 fully drained, upper stack at reference mass.
+    ActiveStageInfo stage1 = stack.resolveActiveStage(stack.getMass());
+    assertEquals(s1.dryMass() + s2.getMass() + sc.getMass(), stage1.depletionFloor(), 1e-6);
+
+    // Stage 2 floor after jettison: stage 2 fully drained, payload at reference mass.
+    ActiveStageInfo stage2 = stack.resolveActiveStage(stage1.massAfterJettison());
+    assertEquals(s2.dryMass() + sc.getMass(), stage2.depletionFloor(), 1e-6);
+  }
 }

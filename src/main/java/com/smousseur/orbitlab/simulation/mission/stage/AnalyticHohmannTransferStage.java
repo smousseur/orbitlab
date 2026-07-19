@@ -4,6 +4,7 @@ import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.Physics;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionStage;
+import com.smousseur.orbitlab.simulation.mission.detector.DepletionGuard;
 import com.smousseur.orbitlab.simulation.mission.vehicle.ActiveStageInfo;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropulsionSystem;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
@@ -346,6 +347,7 @@ public class AnalyticHohmannTransferStage extends MissionStage {
 
     ActiveStageInfo stage1 = vehicle.resolveActiveStage(state.getMass());
     PropulsionSystem propulsion1 = stage1.propulsion();
+    DepletionGuard.arm(propagator, stage1.depletionFloor(), getName());
     AbsoluteDate burn1Start = epoch.shiftedBy(1.0e-3);
     // Burn 1 uses a frame-aligned inertial attitude: the ΔV₁ vector has a radial component
     // (cancelling the parking-orbit residual eccentricity at the node) plus the tangential
