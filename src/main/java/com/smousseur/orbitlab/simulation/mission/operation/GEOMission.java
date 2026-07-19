@@ -6,16 +6,18 @@ import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionStage;
 import com.smousseur.orbitlab.simulation.mission.objective.OrbitInsertionObjective;
 import com.smousseur.orbitlab.simulation.mission.optimizer.problems.GravityTurnConstraints;
-import com.smousseur.orbitlab.simulation.mission.stage.AnalyticHohmannTransferStage;
+import com.smousseur.orbitlab.simulation.mission.stage.AnalyticApogeeCircularizationStage;
+import com.smousseur.orbitlab.simulation.mission.stage.AnalyticGtoInjectionStage;
 import com.smousseur.orbitlab.simulation.mission.stage.AnalyticParkingInsertionStage;
 import com.smousseur.orbitlab.simulation.mission.stage.AnalyticTrimBurnStage;
 import com.smousseur.orbitlab.simulation.mission.stage.CoastingStage;
+import com.smousseur.orbitlab.simulation.mission.stage.StageSeparationStage;
 import com.smousseur.orbitlab.simulation.mission.stage.ascent.GravityTurnStage;
 import com.smousseur.orbitlab.simulation.mission.stage.ascent.VerticalAscentStage;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.AscentProfile;
 import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchConfiguration;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Launchers;
-import com.smousseur.orbitlab.simulation.mission.vehicle.Spacecraft;
+import com.smousseur.orbitlab.simulation.mission.vehicle.Payloads;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.hipparchus.util.FastMath;
@@ -164,9 +166,16 @@ public class GEOMission extends Mission {
     return new SpacecraftState(initialOrbit).withMass(this.getVehicle().getMass());
   }
 
-  /** Default configuration of the historical ctors: Falcon Heavy fully loaded (spec 06 I1). */
+  /**
+   * Default configuration of the historical ctors: Falcon Heavy fully loaded with the catalog GEO
+   * satellite, AKM at full capacity. The split GEO profile (spec 06 I5) delegates the apogee
+   * circularization to the payload's kick motor, so an AKM-less payload cannot fly it.
+   */
   private static LaunchConfiguration defaultConfiguration() {
-    return LaunchConfiguration.fullyLoaded(Launchers.FALCON_HEAVY, Spacecraft.LEGACY);
+    return LaunchConfiguration.fullyLoaded(
+        Launchers.FALCON_HEAVY,
+        Payloads.GEO_SAT.toSpacecraft(
+            Payloads.GEO_SAT.defaultDryMass(), Payloads.GEO_SAT.akmPropellantCapacity()));
   }
 
   private static List<MissionStage> buildStages(
@@ -183,8 +192,14 @@ public class GEOMission extends Mission {
             GravityTurnConstraints.forTarget(parkingAltitude)),
         new AnalyticParkingInsertionStage("Parking", parkingAltitude),
         new CoastingStage("Coasting parking", true),
-        new AnalyticHohmannTransferStage(
-            "Transfert", targetAltitude, targetAltitude, FastMath.toRadians(finalInclination)),
+        new AnalyticGtoInjectionStage("GTO injection", targetAltitude),
+        new StageSeparationStage("S2 separation", profile.interstageCoastDuration()),
+        // The AKM burn owns its ~5 h lead-in coast to the GTO apogee and centers the burn on it
+        // (an hours-long 400 N burn starting AT apogee would ruin the insertion). Its plan runs a
+        // Newton on the aimed perigee so the finite-burn apogee inflation lands on target; the
+        // trim then raises the deliberately-low perigee with a short, drift-free burn.
+        new AnalyticApogeeCircularizationStage(
+            "Apogee circularization (AKM)", targetAltitude, FastMath.toRadians(finalInclination)),
         new AnalyticTrimBurnStage("Trim", targetAltitude, FastMath.toRadians(finalInclination)),
         new CoastingStage("Coasting", null));
   }

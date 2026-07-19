@@ -259,8 +259,11 @@ public class AnalyticHohmannTransferStage extends MissionStage {
    * Mirrors the burn 1 force model the mission will use (constant inertial thrust over {@code
    * dt1}), then coasts under the full gravity model to the next apogee. Returns the spacecraft
    * state at that apogee.
+   *
+   * <p>Package-private so {@link AnalyticGtoInjectionStage} can reuse the same Newton-iteration
+   * building block for its perigee-injection plan.
    */
-  private static SpacecraftState simulateBurn1AndFindApogee(
+  static SpacecraftState simulateBurn1AndFindApogee(
       SpacecraftState state,
       Vector3D burn1DirectionInertial,
       double dt1,

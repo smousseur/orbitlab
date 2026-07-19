@@ -206,4 +206,28 @@ class VehicleTest {
     ActiveStageInfo stage2 = stack.resolveActiveStage(stage1.massAfterJettison());
     assertEquals(s2.dryMass() + sc.getMass(), stage2.depletionFloor(), 1e-6);
   }
+
+  /**
+   * Separation boundary of the split GEO profile (spec 06 I5 risk): with a nearly-empty upper
+   * stage, jettisoning to the exact reference mass of the stack above must activate the payload's
+   * kick motor with its full AKM load available.
+   */
+  @Test
+  void vehicleStack_separationBoundary_activatesKickStage() {
+    LaunchVehicle s2 = new LaunchVehicle(4_000, 107_500, 500, new PropulsionSystem(348, 981_000));
+    Spacecraft akmSat = new Spacecraft(2_000, 2_000, 1_500, new PropulsionSystem(320, 400));
+    VehicleStack stack = new VehicleStack(List.of(s2, akmSat));
+
+    double beforeSeparation = s2.getMass() + akmSat.getMass();
+    ActiveStageInfo active = stack.resolveActiveStage(beforeSeparation);
+    assertSame(s2, active.vehicle(), "nearly-empty upper stage must still be the active one");
+
+    double afterSeparation = active.massAfterJettison();
+    assertEquals(akmSat.getMass(), afterSeparation, 1e-9);
+
+    ActiveStageInfo kick = stack.resolveActiveStage(afterSeparation);
+    assertSame(akmSat, kick.vehicle(), "the payload must be active right at the boundary mass");
+    assertEquals(1_500, kick.remainingFuel(afterSeparation), 1e-9);
+    assertEquals(400, kick.propulsion().thrust(), 1e-9);
+  }
 }

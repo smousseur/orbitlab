@@ -189,12 +189,12 @@ public class MissionOptimizer {
 
         SpacecraftState propagated = problem.propagate(result.bestVariables());
         mission.setCurrentState(propagated);
-        stagePerformances.add(buildStagePerformance(stage.getName(), massIn, propagated.getMass()));
+        stagePerformances.add(buildStagePerformance(stage, massIn, propagated.getMass()));
       } else {
         logger.info("Propagating non-optimizable stage '{}'...", stage.getName());
         SpacecraftState propagated = stage.propagateStandalone(mission.getCurrentState(), mission);
         mission.setCurrentState(propagated);
-        stagePerformances.add(buildStagePerformance(stage.getName(), massIn, propagated.getMass()));
+        stagePerformances.add(buildStagePerformance(stage, massIn, propagated.getMass()));
         logger.info("Stage '{}' done.", stage.getName());
       }
     }
@@ -224,9 +224,14 @@ public class MissionOptimizer {
   /**
    * Accounts one executed stage. Jettisoned dry mass (drop in remaining dry mass between entry
    * and exit) is excluded from the propellant consumption; ΔV uses the entry stage's Isp, an
-   * approximation for stages spanning a jettison.
+   * approximation for stages spanning a jettison. Non-propulsive stages (coasts, separations)
+   * drop mass by jettison only — including any residual propellant discarded with the spent
+   * stage — so they report zero consumption and zero ΔV.
    */
-  private StagePerformance buildStagePerformance(String stageName, double massIn, double massOut) {
+  private StagePerformance buildStagePerformance(MissionStage stage, double massIn, double massOut) {
+    if (!stage.isPropulsive()) {
+      return new StagePerformance(stage.getName(), massIn, massOut, 0.0, 0.0);
+    }
     Vehicle vehicle = mission.getVehicle();
     double dryIn = vehicle.resolveActiveStage(massIn).remainingDryMass();
     double dryOut = vehicle.resolveActiveStage(massOut).remainingDryMass();
@@ -240,7 +245,7 @@ public class MissionOptimizer {
               * Constants.G0_STANDARD_GRAVITY
               * FastMath.log(massIn / (massIn - propellantConsumed));
     }
-    return new StagePerformance(stageName, massIn, massOut, propellantConsumed, deltaV);
+    return new StagePerformance(stage.getName(), massIn, massOut, propellantConsumed, deltaV);
   }
 
   private MissionPerformanceReport buildReport(List<StagePerformance> stagePerformances) {

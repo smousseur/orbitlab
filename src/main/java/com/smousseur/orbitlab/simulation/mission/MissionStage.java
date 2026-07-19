@@ -60,6 +60,15 @@ public abstract class MissionStage {
   }
 
   /**
+   * Returns whether this stage burns propellant. Non-propulsive stages (coasts, separations) drop
+   * mass only by jettison: the performance report must not account their mass delta as consumed
+   * propellant nor derive a ΔV from it.
+   */
+  public boolean isPropulsive() {
+    return true;
+  }
+
+  /**
    * Returns the name of this stage.
    *
    * @return the stage name

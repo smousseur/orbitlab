@@ -166,8 +166,10 @@ public class AnalyticTrimBurnStage extends MissionStage {
    * Detects the next apogee after {@code state} using a propagator with J2+ (same gravity model as
    * the optimization path). Returns the spacecraft state recorded at the apogee event, or null on
    * failure. Pattern matches {@code CircularizationBurnResolver#detectTimeToApoapsis}.
+   *
+   * <p>Package-private so {@link AnalyticApogeeCircularizationStage} reuses the same detection.
    */
-  private static SpacecraftState detectStateAtApogee(SpacecraftState state) {
+  static SpacecraftState detectStateAtApogee(SpacecraftState state) {
     NumericalPropagator coastPropagator = OrekitService.get().createOptimizationPropagator();
     coastPropagator.setInitialState(state);
 

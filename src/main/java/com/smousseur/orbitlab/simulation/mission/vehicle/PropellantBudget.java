@@ -62,12 +62,9 @@ public final class PropellantBudget {
   }
 
   /**
-   * Launcher loads and AKM load for a GEO mission (parking → GTO → GEO).
-   *
-   * <p>Until the GEO profile split (spec 06 I5), the launcher's top stage performs the whole
-   * flight — ascent residual, GTO injection AND apogee circularization/plane change — so its
-   * budget includes all three. The AKM is sized for the apogee burn it will take over in I5 and
-   * rides along until then.
+   * Launcher loads and AKM load for a GEO mission (parking → GTO → GEO). The split GEO profile
+   * (spec 06 I5) assigns the ascent residual and the GTO injection to the launcher's top stage,
+   * and the apogee circularization + plane change to the payload's kick motor.
    *
    * @param launcher the launcher model
    * @param payload the payload model (provides the AKM characteristics)
@@ -95,9 +92,7 @@ public final class PropellantBudget {
     }
 
     double dvTotal =
-        ascentDeltaV(parkingAltitude, launchLatitudeDeg)
-            + gtoInjectionDeltaV(parkingAltitude)
-            + dvApogee;
+        ascentDeltaV(parkingAltitude, launchLatitudeDeg) + gtoInjectionDeltaV(parkingAltitude);
     double[] launcherLoads = sizeTopStage(launcher, payloadDryMass + akmLoad, dvTotal);
     return new GeoLoads(launcherLoads, akmLoad);
   }

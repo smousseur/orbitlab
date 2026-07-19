@@ -25,14 +25,15 @@ public class GEOMissionOptimizationTest extends AbstractTrajectoryOptimizerTest 
   public static final int GEO_ALTITUDE = 35_786_000;
   public static final int PARKING_ALTITUDE = 400_000;
 
-  // Tolerances calibrated on the Falcon Heavy GTO scenario: the J2-aware Hohmann
-  // (Newton-iterated on r2 to compensate finite-burn losses) plus the apogee trim deliver a
-  // post-trim coast within ~5 km of target altitude. The FH upper stage (981 kN pushing the full
-  // GTO stack) burns longer than the legacy launcher's, leaving a plane residual of ~0.11°
-  // (was ~0.07°), hence 0.15° here instead of the historical 0.10°. Wiring the optimized
-  // transfer (spec 06 I6) should allow tightening this again.
+  // Tolerances calibrated on the split GEO profile (spec 06 I5): the apogee circularization is a
+  // single ~3 h finite burn of the 400 N AKM. Its simulate-and-correct plan lands the apogee
+  // within ~5 km, but the plane rotation smeared over the ~40° burn arc leaves a ~0.25° residual
+  // that is geometrically uncorrectable away from a node (at the burn point the plane only
+  // rotates about the radius vector, and the trim's burn point is not a node either). Hence
+  // 0.30° here; a node-targeted plane-trim stage or a multi-burn apogee sequence is the future
+  // fix that would allow tightening back towards the historical 0.10-0.15°.
   private static final double ALTITUDE_TOLERANCE_M = 50_000.0; // ±50 km
-  private static final double INCLINATION_TOLERANCE_RAD = FastMath.toRadians(0.15);
+  private static final double INCLINATION_TOLERANCE_RAD = FastMath.toRadians(0.30);
 
   @BeforeAll
   static void init() {
@@ -80,8 +81,21 @@ public class GEOMissionOptimizationTest extends AbstractTrajectoryOptimizerTest 
                 FastMath.toDegrees(finalOrbit.getI()),
                 INCLINATION_TOLERANCE_RAD,
                 FastMath.toDegrees(INCLINATION_TOLERANCE_RAD)));
+    // Split GEO profile (spec 06 I5): the launcher separates after GTO injection, only the
+    // payload (2 t dry + AKM residual, 4 t max) reaches GEO. A final mass above that means the
+    // upper stage never separated.
+    double payloadReferenceMass = 4_000.0;
+    Assertions.assertTrue(
+        last.mass() <= payloadReferenceMass + 1.0,
+        () ->
+            String.format(
+                "Final mass %.0f kg exceeds the payload reference mass %.0f kg: "
+                    + "the upper stage did not separate",
+                last.mass(), payloadReferenceMass));
+
     logger.info("Inclinaison: {}°", FastMath.toDegrees(finalOrbit.getI()));
     logger.info("Min coast altitude: {} km", coast.minAltitude / 1000);
     logger.info("Max coast altitude: {} km", coast.maxAltitude / 1000);
+    logger.info("Final mass: {} kg (AKM residual {} kg)", last.mass(), last.mass() - 2_000.0);
   }
 }

@@ -37,6 +37,11 @@ public class CoastingStage extends MissionStage {
   }
 
   @Override
+  public boolean isPropulsive() {
+    return false;
+  }
+
+  @Override
   public void configure(NumericalPropagator propagator, Mission mission) {
     if (stopAtNode) {
       propagator.addEventDetector(
