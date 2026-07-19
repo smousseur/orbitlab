@@ -257,10 +257,13 @@ public class TransferProblem implements TrajectoryProblem {
 
     this.guessDt1 = Physics.computeBurnDuration(FastMath.abs(dv1), initialMass, isp, thrust);
 
-    // Physical upper bound: 90% of the time to exhaust available propellant
+    // Physical upper bound: the exact time to full depletion (spec 06 I6). Flame-out is a
+    // legitimate burn end since I4: candidates reaching the floor are truncated by the quiet
+    // depletion guard and graded on their actual trajectory — no arbitrary 0.90 safety factor
+    // shrinking the search space.
     double massFlow = thrust / (isp * Constants.G0_STANDARD_GRAVITY);
     double availablePropellant = initialMass - vehicleMinMass;
-    this.dt1MaxPhysical = (availablePropellant * 0.90) / massFlow;
+    this.dt1MaxPhysical = availablePropellant / massFlow;
 
     // Niveau 2.3 — feasibility check: total Hohmann Δv must fit available propellant.
     double vCircAtTarget = FastMath.sqrt(mu / rTarget);

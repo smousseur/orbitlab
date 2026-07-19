@@ -2,6 +2,7 @@ package com.smousseur.orbitlab.simulation.mission.maneuver;
 
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.Physics;
+import com.smousseur.orbitlab.simulation.mission.detector.DepletionGuard;
 import com.smousseur.orbitlab.simulation.mission.detector.MinAltitudeTracker;
 import com.smousseur.orbitlab.simulation.mission.vehicle.ActiveStageInfo;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropulsionSystem;
@@ -101,6 +102,9 @@ public class TransferManeuver {
     NumericalPropagator propagator = OrekitService.get().createOptimizationPropagator();
     propagator.setInitialState(initialState);
     MinAltitudeTracker tracker = configure(propagator, initialState, params);
+    // dt1 may explore up to full depletion (spec 06 I6): truncate infeasible candidates quietly.
+    DepletionGuard.armQuiet(
+        propagator, vehicle.resolveActiveStage(initialState.getMass()).depletionFloor());
 
     double totalTime = totalDuration(params);
     AbsoluteDate endDate = initialState.getDate().shiftedBy(totalTime);
@@ -160,6 +164,8 @@ public class TransferManeuver {
   protected SpacecraftState propagateBurn1(SpacecraftState initialState, Burn1Params params) {
     NumericalPropagator burn1Propagator = OrekitService.get().createSimplePropagator();
     burn1Propagator.setInitialState(initialState);
+    DepletionGuard.armQuiet(
+        burn1Propagator, vehicle.resolveActiveStage(initialState.getMass()).depletionFloor());
 
     AbsoluteDate burn1Start = initialState.getDate().shiftedBy(params.t1);
     AbsoluteDate burn1End = burn1Start.shiftedBy(params.dt1);

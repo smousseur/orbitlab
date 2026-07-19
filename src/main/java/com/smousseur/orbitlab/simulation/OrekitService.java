@@ -24,8 +24,8 @@ import org.orekit.utils.IERSConventions;
 /**
  * Singleton service providing access to the Orekit astrodynamics library.
  *
- * <p>Encapsulates Orekit initialization, reference frame retrieval, celestial body lookup,
- * and numerical propagator creation with different fidelity levels (simple, optimization, default).
+ * <p>Encapsulates Orekit initialization, reference frame retrieval, celestial body lookup, and
+ * numerical propagator creation with different fidelity levels (simple, optimization, default).
  * Access the singleton instance via {@link #get()}.
  */
 public final class OrekitService {
@@ -88,14 +88,16 @@ public final class OrekitService {
   /**
    * Creates a simple numerical propagator using only Newtonian two-body attraction.
    *
-   * <p>Suitable for quick, low-fidelity orbit propagations where gravitational perturbations
-   * are not needed.
+   * <p>Suitable for quick, low-fidelity orbit propagations where gravitational perturbations are
+   * not needed.
    *
    * @return a new numerical propagator with Newtonian gravity only
    */
   public NumericalPropagator createSimplePropagator() {
     double minStep = 0.001;
-    double maxStep = 100.0;
+    // Same bound as createOptimizationPropagator: a burn igniting mid-propagation with a
+    // coast-sized trial step can drive the mass negative and crash the trial evaluation.
+    double maxStep = 30.0;
     double absTol = 1e-8;
     double relTol = 1e-10;
 
@@ -117,7 +119,13 @@ public final class OrekitService {
    */
   public NumericalPropagator createOptimizationPropagator() {
     double minStep = 0.001;
-    double maxStep = 100.0;
+    // Max step must stay below mass(ignition)/massFlow for every burn that can ignite
+    // mid-propagation: after an ignition event the integrator restarts with the coast-sized
+    // step, and a trial step that drives the mass negative makes Orekit throw DURING the trial
+    // evaluation — before step-size control or any event detection (cutoff, depletion guard)
+    // can react. Worst realistic case: the upper stage igniting a transfer burn (~16 t at
+    // ~287 kg/s → 56 s); 30 s keeps a 2× margin at ~3× the coast stepping cost.
+    double maxStep = 30.0;
     double absTol = 1e-8;
     double relTol = 1e-10;
 
@@ -128,28 +136,6 @@ public final class OrekitService {
     propagator.setOrbitType(OrbitType.CARTESIAN);
     propagator.setMu(Constants.WGS84_EARTH_MU);
     propagator.addForceModel(getLightGravityModel());
-    return propagator;
-  }
-
-  /**
-   * Creates a high-fidelity numerical propagator using a 50x50 spherical harmonics gravity model.
-   *
-   * <p>This is the most accurate propagator, suitable for mission playback and precise
-   * orbit determination.
-   *
-   * @return a new numerical propagator with 50x50 gravity field
-   */
-  public NumericalPropagator createDefaultPropagator() {
-    double[] absTol = {1.0, 1.0, 1.0, 1e-3, 1e-3, 1e-3, 1e-2};
-    double[] relTol = {1e-8, 1e-8, 1e-8, 1e-8, 1e-8, 1e-8, 1e-8};
-
-    NumericalPropagator propagator =
-        new NumericalPropagator(new DormandPrince853Integrator(1e-12, 300.0, absTol, relTol));
-    propagator.setOrbitType(OrbitType.CARTESIAN);
-    propagator.setMu(Constants.WGS84_EARTH_MU);
-
-    propagator.addForceModel(getFullGravityModel());
-
     return propagator;
   }
 

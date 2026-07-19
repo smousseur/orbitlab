@@ -74,4 +74,22 @@ public class LEOMissionOptimizationTest extends AbstractTrajectoryOptimizerTest 
             String.format(
                 "S2 residual %.0f kg exceeds 15%% of its sized load %.0f kg", residual, s2Load));
   }
+
+  /**
+   * Spec 06 I6 exit criterion: the CMA-ES-optimized transfer (analytic seed, dt1 bounded by
+   * actual depletion) must reach the same insertion quality as the analytic profile on the
+   * budget-sized reference mission.
+   */
+  @Test
+  void testFalconHeavyOptimizedTransfer() {
+    Spacecraft payload = Payloads.EARTH_OBSERVATION_SAT.toSpacecraft(10_000, 0.0);
+    double[] loads =
+        PropellantBudget.loadsForLeo(Launchers.FALCON_HEAVY, payload, 400_000, 45.96);
+    LEOMission mission =
+        LEOMission.withOptimizedTransfer(
+            "Falcon Heavy (optimized transfer)",
+            new LaunchConfiguration(Launchers.FALCON_HEAVY, loads, payload),
+            400_000);
+    testMission(mission, 400_000, 400_000);
+  }
 }

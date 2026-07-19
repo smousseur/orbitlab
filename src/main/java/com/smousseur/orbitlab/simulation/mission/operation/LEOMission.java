@@ -10,6 +10,7 @@ import com.smousseur.orbitlab.simulation.mission.optimizer.problems.GravityTurnC
 import com.smousseur.orbitlab.simulation.mission.stage.AnalyticHohmannTransferStage;
 import com.smousseur.orbitlab.simulation.mission.stage.AnalyticTrimBurnStage;
 import com.smousseur.orbitlab.simulation.mission.stage.CoastingStage;
+import com.smousseur.orbitlab.simulation.mission.stage.TransfertTwoManeuverStage;
 import com.smousseur.orbitlab.simulation.mission.stage.ascent.GravityTurnStage;
 import com.smousseur.orbitlab.simulation.mission.stage.ascent.VerticalAscentStage;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.AscentProfile;
@@ -125,14 +126,68 @@ public class LEOMission extends Mission {
       double latitude,
       double longitude,
       double altitude) {
-    super(
+    this(
         name,
         vehicle,
         buildStages(profile, perigeeAltitude, apogeeAltitude, latitude),
-        buildObjective(perigeeAltitude, apogeeAltitude, latitude));
+        perigeeAltitude,
+        apogeeAltitude,
+        latitude,
+        longitude,
+        altitude);
+  }
+
+  private LEOMission(
+      String name,
+      Vehicle vehicle,
+      List<MissionStage> stages,
+      double perigeeAltitude,
+      double apogeeAltitude,
+      double latitude,
+      double longitude,
+      double altitude) {
+    super(name, vehicle, stages, buildObjective(perigeeAltitude, apogeeAltitude, latitude));
     this.latitude = latitude;
     this.longitude = longitude;
     this.altitude = altitude;
+  }
+
+  /**
+   * LEO mission variant whose transfer is CMA-ES-optimized (spec 06 I6) instead of analytic:
+   * burn 1 explores timing, duration (up to actual depletion) and thrust angles, seeded by the
+   * analytic Hohmann solution. Circular targets only — the two-burn problem circularizes at the
+   * target altitude. Opt-in: the regular ctors keep the analytic Hohmann profile.
+   *
+   * @param name the mission name
+   * @param configuration the launcher model, propellant loads and payload
+   * @param targetAltitude the circular target orbit altitude (m)
+   * @return the mission, launching from the default site
+   */
+  public static LEOMission withOptimizedTransfer(
+      String name, LaunchConfiguration configuration, double targetAltitude) {
+    AscentProfile profile = configuration.ascentProfile();
+    List<MissionStage> stages =
+        List.of(
+            new VerticalAscentStage("Vertical Ascent", profile.verticalAscentDuration()),
+            new GravityTurnStage(
+                "Gravity turn",
+                profile.pitchKickAngleDeg(),
+                profile.interstageCoastDuration(),
+                GravityTurnConstraints.forTarget(targetAltitude)),
+            new TransfertTwoManeuverStage(
+                "Transfert", targetAltitude, FastMath.toRadians(DEFAULT_LATITUDE)),
+            new AnalyticTrimBurnStage(
+                "Trim", targetAltitude, FastMath.toRadians(DEFAULT_LATITUDE)),
+            new CoastingStage("Coasting", null));
+    return new LEOMission(
+        name,
+        configuration.toVehicleStack(),
+        stages,
+        targetAltitude,
+        targetAltitude,
+        DEFAULT_LATITUDE,
+        DEFAULT_LONGITUDE,
+        DEFAULT_ALTITUDE);
   }
 
   public LEOMission(String name, Vehicle vehicle, double targetAltitude) {
