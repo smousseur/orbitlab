@@ -234,7 +234,7 @@ The application renders two stacked viewports:
 ./gradlew test
 ```
 
-> **Tests are run manually.** There is no CI pipeline in this repo (no `.github/workflows`) — nothing runs `./gradlew test` automatically on push or PR. Run the test suite yourself before considering a change done, unless the user says otherwise.
+> **AI assistants: do not run `./gradlew test` (or any test task) after code changes on your own initiative.** There is no CI pipeline in this repo (no `.github/workflows`), and the user runs tests manually. Only run tests when the user explicitly asks, or when you need to investigate/debug something to complete the feature you're actively working on.
 
 **Test categories:**
 - **Unit tests**: Clock, converters, transforms, orbit path/cache/policy, ephemeris buffer, vehicle/launcher/payload catalogs, propellant budgeting, depletion guard/stop trigger, mission stages
