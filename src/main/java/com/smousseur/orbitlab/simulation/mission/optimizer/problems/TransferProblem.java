@@ -235,10 +235,18 @@ public class TransferProblem implements TrajectoryProblem {
     // Pick the apside that minimizes the burn: periapsis when raising the orbit,
     // apoapsis when lowering it. This makes the guess valid for both circular
     // departures (LEO → GTO) and elliptic departures (post-gravity-turn → LEO).
+    // A periapsis departure additionally requires the periapsis to be flyable
+    // (bilan 08 §3.3): on a sub-orbital hand-off the periapsis sits at a few tens
+    // of km — the coast there is not a usable burn point, and the resulting seed
+    // t1 (time to periapsis, almost a full period away) overshoots t1Max. Depart
+    // from apoapsis instead: the burn then raises the periapsis, which is the
+    // physical geometry of the post-gravity-turn insertion.
     double rPeriapsis = aInitial * (1.0 - eInitial);
     double rApoapsis = aInitial * (1.0 + eInitial);
     boolean raising = rTarget >= aInitial;
-    double rDeparture = raising ? rPeriapsis : rApoapsis;
+    boolean periapsisFlyable = rPeriapsis - EARTH_RADIUS > ALT_MIN;
+    boolean departAtPeriapsis = raising && periapsisFlyable;
+    double rDeparture = departAtPeriapsis ? rPeriapsis : rApoapsis;
     double aTransfer = (rDeparture + rTarget) / 2.0;
 
     double vAtDeparture = FastMath.sqrt(mu * (2.0 / rDeparture - 1.0 / aInitial));
@@ -248,8 +256,10 @@ public class TransferProblem implements TrajectoryProblem {
     // Initial CMA-ES seed for t1: time-to-departure-apside on the current orbit.
     // For a circular initial orbit, both apsides are at the same radius, so
     // timeToApoapsis is a safe default (any t1 works geometrically); the
-    // optimizer is free to relocate the burn within [0, t1Max].
-    this.guessT1 = raising ? timeToPeriapsis(initialOrbit, initialPeriod) : timeToApoapsis;
+    // optimizer is free to relocate the burn within [0, t1Max]. Clamped to t1Max
+    // once the bound is known, further below.
+    double guessT1Unclamped =
+        departAtPeriapsis ? timeToPeriapsis(initialOrbit, initialPeriod) : timeToApoapsis;
 
     double initialMass = initialState.getMass();
     this.thrust = propulsionSystem.thrust();
@@ -266,9 +276,16 @@ public class TransferProblem implements TrajectoryProblem {
     this.dt1MaxPhysical = availablePropellant / massFlow;
 
     // Niveau 2.3 — feasibility check: total Hohmann Δv must fit available propellant.
-    double vCircAtTarget = FastMath.sqrt(mu / rTarget);
-    double dv2Hohmann = vCircAtTarget - vTransferAtDeparture;
-    double dvHohmannTotal = FastMath.abs(dv1) + FastMath.max(0.0, dv2Hohmann);
+    // Burn 2 happens at arrival (rTarget), so both speeds must be taken at that
+    // radius (bilan 08 §3.4 — the previous formula subtracted the transfer speed at
+    // *departure*, underestimating the required Δv and going negative on sub-orbital
+    // hand-offs). The speed to match is that of the target orbit at rTarget — the
+    // circular speed when the target is circular.
+    double aTargetOrbit = (rPerigeeTarget + rApogeeTarget) / 2.0;
+    double vTargetAtArrival = FastMath.sqrt(mu * (2.0 / rTarget - 1.0 / aTargetOrbit));
+    double vTransferAtArrival = FastMath.sqrt(mu * (2.0 / rTarget - 1.0 / aTransfer));
+    double dv2Hohmann = vTargetAtArrival - vTransferAtArrival;
+    double dvHohmannTotal = FastMath.abs(dv1) + FastMath.abs(dv2Hohmann);
     double dvAvailable =
         isp * Constants.G0_STANDARD_GRAVITY * FastMath.log(initialMass / vehicleMinMass);
     if (dvHohmannTotal > dvAvailable) {
@@ -299,6 +316,11 @@ public class TransferProblem implements TrajectoryProblem {
     // 2·guessDt1 to K·guessDt1, still clamped by propellant feasibility.
     this.t1Max = FastMath.max(120.0, tuning.t1MaxPeriodFraction() * initialPeriod);
     this.dt1Max = FastMath.max(tuning.dt1MaxMultiplier() * guessDt1, dt1MaxPhysical);
+
+    // The seed must start inside the search box (bilan 08 §3.3): a clamped seed is
+    // still a meaningful burn point, an out-of-box one derails the exploration run
+    // it was supposed to anchor.
+    this.guessT1 = FastMath.min(guessT1Unclamped, t1Max);
 
     // Niveau 2.4 — adaptive periapsis floor and eccentricity weight.
     // Spec (02 §2.4) suggests max(120 km, target − 100 km); but the existing

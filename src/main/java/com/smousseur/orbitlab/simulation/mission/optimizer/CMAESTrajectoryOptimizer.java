@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hipparchus.random.MersenneTwister;
@@ -17,7 +18,9 @@ import org.orekit.propagation.SpacecraftState;
  *
  * <ol>
  *   <li><b>Exploration</b> — short runs to locate the best basin quickly. Runs that land in bad
- *       basins are killed early via the convergence checker.
+ *       basins are killed early via the convergence checker, and the first run to <em>complete</em>
+ *       below the acceptable cost aborts every other run (cross-run early stop): the phase costs
+ *       the time of the first converged success, not of the slowest run.
  *   <li><b>Refinement cascade</b> — progressively tighter sigma passes around the best solution
  *       found, each with generous budget.
  *   <li><b>No rescue phase</b> — once a good basin is found (cost < 0.01), further exploration
@@ -350,6 +353,11 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
     for (int i = 0; i < configs.size(); i++) {
       runSeeds[i] = rng.nextLong();
     }
+    // Cross-run early stop: the first run to complete below the acceptable cost flips the flag
+    // and every other run aborts at its next evaluation, returning its best-so-far. The phase
+    // then costs the time of the first converged success instead of the slowest run — completion
+    // (not first threshold crossing) so a run seeded below the acceptable cost still optimizes.
+    AtomicBoolean crossRunStop = new AtomicBoolean(false);
     try {
       List<Future<CMAESRunExecutor.RunResult>> futures = new ArrayList<>(configs.size());
       for (int i = 0; i < configs.size(); i++) {
@@ -364,7 +372,8 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
                         cfg.populationSize,
                         cfg.budget,
                         true,
-                        runSeed)));
+                        runSeed,
+                        crossRunStop)));
       }
       for (int run = 0; run < futures.size(); run++) {
         try {
@@ -444,7 +453,7 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
           double costBeforePass = bestCost;
           CMAESRunExecutor.RunResult result =
               executor.execute(
-                  bestVars.clone(), refineSigma, basePopSize, budget, false, rng.nextLong());
+                  bestVars.clone(), refineSigma, basePopSize, budget, false, rng.nextLong(), null);
           totalEvals += result.evaluations();
           remainingEvals -= result.evaluations();
 

@@ -252,6 +252,85 @@ class CMAESTrajectoryOptimizerRetryTest {
     }
   }
 
+  /**
+   * Convex problem whose analytical seed already scores below the acceptable cost — the synthetic
+   * version of the transfer stage seeded by a good Hohmann solution. The cross-run early stop must
+   * not conclude at the seed itself: runs signal each other on <em>completion</em>, so the winning
+   * run has actually optimized before the phase ends.
+   */
+  static final class AcceptableSeedProblem implements TrajectoryProblem {
+    static final double[] SEED = {0.05, 0.05};
+
+    private final ThreadLocal<double[]> lastVars = ThreadLocal.withInitial(() -> new double[2]);
+
+    @Override
+    public double getAcceptableCost() {
+      return ACCEPTABLE_COST;
+    }
+
+    @Override
+    public int getNumVariables() {
+      return 2;
+    }
+
+    @Override
+    public double[] buildInitialGuess() {
+      return SEED.clone();
+    }
+
+    @Override
+    public double[] buildAnalyticalSeed() {
+      return SEED.clone();
+    }
+
+    @Override
+    public double[] getLowerBounds() {
+      return new double[] {-1.0, -1.0};
+    }
+
+    @Override
+    public double[] getUpperBounds() {
+      return new double[] {1.0, 1.0};
+    }
+
+    @Override
+    public double[] getInitialSigma() {
+      return new double[] {0.6, 0.6};
+    }
+
+    @Override
+    public SpacecraftState propagate(double[] variables) {
+      lastVars.set(variables.clone());
+      return null;
+    }
+
+    @Override
+    public double computeCost(SpacecraftState state) {
+      double[] vars = lastVars.get();
+      return vars[0] * vars[0] + vars[1] * vars[1];
+    }
+  }
+
+  @Test
+  void seedAlreadyBelowAcceptable_isOptimizedNotReturnedVerbatim() {
+    AcceptableSeedProblem problem = new AcceptableSeedProblem();
+    CMAESTrajectoryOptimizer optimizer = new CMAESTrajectoryOptimizer(problem, 20_000, 42L);
+
+    OptimizationResult result = optimizer.optimize();
+
+    // cost(SEED) = 0.005, already below ACCEPTABLE_COST = 0.01. Concluding at the seed (the
+    // first-crossing early-stop bug) leaves the cost at exactly 0.005; genuine optimization on
+    // this convex bowl lands orders of magnitude lower.
+    double seedCost = 2 * 0.05 * 0.05;
+    assertTrue(
+        result.bestCost() < seedCost / 10.0,
+        () ->
+            "Optimizer must improve on an already-acceptable seed (seed cost "
+                + seedCost
+                + "), got "
+                + result.bestCost());
+  }
+
   @Test
   void consensusOnFlooredOptimum_skipsRefinementAndRetries() {
     FlooredConvexProblem problem = new FlooredConvexProblem();

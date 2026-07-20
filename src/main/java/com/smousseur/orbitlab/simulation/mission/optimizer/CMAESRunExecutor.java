@@ -1,5 +1,6 @@
 package com.smousseur.orbitlab.simulation.mission.optimizer;
 
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hipparchus.analysis.MultivariateFunction;
@@ -17,12 +18,30 @@ import org.orekit.propagation.SpacecraftState;
  *
  * <p>Wraps objective function evaluation (with exception penalty), CMAESOptimizer construction,
  * and result capture. Delegates convergence decisions to {@link AdaptiveConvergenceChecker}.
+ *
+ * <p>An optional cross-run stop signal lets parallel exploration runs cut each other short: a run
+ * that <em>completes</em> (checker convergence or budget exhaustion) with a best cost at or below
+ * the problem's acceptable cost flips the signal, and every other run aborts at its next
+ * evaluation. The signal is deliberately not raised mid-run at the first threshold crossing: a
+ * good analytical seed can start below the acceptable cost, and claiming victory there would end
+ * the phase without any optimization having happened (observed: the transfer stage returning its
+ * Hohmann seed verbatim, angles unexplored).
  */
 final class CMAESRunExecutor {
 
   private static final Logger logger = LogManager.getLogger(CMAESRunExecutor.class);
 
   static final double EXCEPTION_PENALTY_COST = 1e10;
+
+  /**
+   * Control-flow exception thrown by the objective wrapper when a concurrent run already reached
+   * the acceptable cost. Stackless: it carries no diagnostic value, it only unwinds the run.
+   */
+  private static final class RunAbortedException extends RuntimeException {
+    RunAbortedException() {
+      super(null, null, false, false);
+    }
+  }
 
   /**
    * Result of a single CMA-ES optimization run.
@@ -69,7 +88,12 @@ final class CMAESRunExecutor {
    * @param maxEvals maximum number of objective function evaluations
    * @param earlyKill if true, the convergence checker will kill runs stuck in bad basins
    * @param seed seed for the MersenneTwister driving CMA-ES sampling (run-local, thread-safe)
-   * @return the result containing the best parameters, cost, and evaluation count
+   * @param crossRunStop shared stop signal between parallel runs, or {@code null} for a
+   *     sequential pass. This run sets it when it completes with a best cost at or below the
+   *     acceptable cost; when it is set by a concurrent run, this run aborts at its next
+   *     evaluation and returns its best-so-far.
+   * @return the result containing the best parameters, cost, and evaluation count. An aborted run
+   *     that never completed an evaluation reports {@code Double.MAX_VALUE} as its best cost.
    */
   RunResult execute(
       double[] startPoint,
@@ -77,13 +101,18 @@ final class CMAESRunExecutor {
       int populationSize,
       int maxEvals,
       boolean earlyKill,
-      long seed) {
+      long seed,
+      AtomicBoolean crossRunStop) {
 
     double[] runBestVars = startPoint.clone();
     double[] runBestCostHolder = {Double.MAX_VALUE};
+    double acceptableCost = problem.getAcceptableCost();
 
     MultivariateFunction objectiveFunction =
         candidate -> {
+          if (crossRunStop != null && crossRunStop.get()) {
+            throw new RunAbortedException();
+          }
           try {
             SpacecraftState state = problem.propagate(candidate);
             double cost = problem.computeCost(state);
@@ -110,8 +139,12 @@ final class CMAESRunExecutor {
 
     AdaptiveConvergenceChecker checker =
         new AdaptiveConvergenceChecker(
-            earlyKill, problem.getAcceptableCost(), absoluteTolerance, relativeTolerance);
+            earlyKill, acceptableCost, absoluteTolerance, relativeTolerance);
 
+    // stopFitness stays the configured value on purpose: flooring it at the acceptable cost
+    // would stop a well-seeded run at its start point (an analytical seed can already sit below
+    // the acceptable cost) before any optimization happened. Per-run termination belongs to the
+    // convergence checker.
     CMAESOptimizer optimizer =
         new CMAESOptimizer(
             maxEvals, stopFitness, true, 0, 0, new MersenneTwister(seed), false, checker);
@@ -125,9 +158,18 @@ final class CMAESRunExecutor {
           new CMAESOptimizer.Sigma(sigma),
           new CMAESOptimizer.PopulationSize(populationSize),
           new SimpleBounds(problem.getLowerBounds(), problem.getUpperBounds()));
+    } catch (RunAbortedException e) {
+      logger.debug("CMA-ES run aborted: a concurrent run completed below the acceptable cost");
     } catch (org.hipparchus.exception.MathRuntimeException e) {
       // Budget exhausted (TooManyEvaluationsException) or numerical issue — use best found so far
       logger.debug("CMA-ES run ended early: {}", e.getMessage());
+    }
+
+    // Completion-based cross-run stop: this run has finished its local work (converged or spent
+    // its budget). If it ended at or below the target, the laggards' remaining budget buys
+    // nothing better — signal them to abort with their best-so-far.
+    if (crossRunStop != null && runBestCostHolder[0] <= acceptableCost) {
+      crossRunStop.set(true);
     }
 
     return new RunResult(runBestVars, runBestCostHolder[0], optimizer.getEvaluations());
