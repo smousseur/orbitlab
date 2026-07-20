@@ -56,7 +56,8 @@ src/
 │   │   ├── camera/                   # Camera states (orbit, floating origin, view mode, near sync)
 │   │   ├── ephemeris/                # Celestial body position computation state
 │   │   ├── fx/                       # Visual effects (lighting)
-│   │   ├── mission/                  # Mission orchestration, rendering, panel and wizard states
+│   │   ├── mission/                  # Mission orchestration, trajectory rendering, list panel,
+│   │   │                             #   display panel, telemetry widget and wizard states
 │   │   ├── orbits/                   # Orbit visualization states (init + runtime)
 │   │   ├── scene/                    # Scene management (solar system, planet pose, HUD markers)
 │   │   └── time/                     # Clock and timeline widget states
@@ -72,23 +73,37 @@ src/
 │   │   │                             #   prefetching, LRU cache, V1 file format)
 │   │   └── mission/                  # Mission model
 │   │       ├── attitude/             # Attitude providers (gravity-turn, zenith-thrust)
-│   │       ├── detector/             # Event detectors (mass depletion, min-altitude tracker)
+│   │       ├── context/              # MissionContext + MissionEntry (active mission tracking)
+│   │       ├── detector/             # Event detectors (mass depletion, min-altitude tracker,
+│   │       │                         #   fail-fast DepletionGuard/DepletionStopTrigger)
 │   │       ├── ephemeris/            # Mission-trajectory ephemeris (point + generator)
 │   │       ├── maneuver/             # Maneuver implementations (gravity-turn, transfer-2)
 │   │       ├── objective/            # Mission objectives (orbit insertion)
+│   │       ├── operation/            # Concrete missions (LEOMission, GEOMission) + MissionFactory
 │   │       ├── optimizer/            # CMA-ES trajectory optimization
 │   │       │   └── problems/         # Concrete trajectory problems (gravity-turn, transfer-2)
-│   │       ├── runtime/              # MissionOptimizer + compute/optimizer results
-│   │       ├── stage/                # Mission phase implementations
+│   │       ├── runtime/              # MissionOptimizer + compute/optimizer/performance results
+│   │       ├── stage/                # Mission phase implementations (coasting, stage separation,
+│   │       │   │                     #   analytic GTO injection/apogee circularization/Hohmann
+│   │       │   │                     #   transfer/parking insertion/trim burn, transfer-2 maneuver)
 │   │       │   └── ascent/           # Vertical ascent + gravity turn stages
-│   │       └── vehicle/              # Spacecraft, launch vehicle, propulsion, vehicle stack
+│   │       └── vehicle/              # Spacecraft, launch vehicle, propulsion, vehicle stack,
+│   │           │                     #   Launchers/Payloads catalogs, LaunchConfiguration,
+│   │           │                     #   PropellantBudget
+│   │           └── model/            # Catalog data model (LauncherModel, PayloadModel,
+│   │               │                 #   AscentProfile)
+│   │               └── stage/        # Stage model (StageModel, StageCapabilities, StageRole,
+│   │                                 #   PropellantType, IgnitionMode, ShutdownMode)
 │   ├── ui/                           # Lemur-based GUI widgets (AppStyles, UiKit)
 │   │   ├── form/                     # Form/modal styling (FormStyles, ModalBackdrop)
 │   │   ├── mission/
+│   │   │   ├── component/            # Shared mission-UI widgets (PaginationBar)
+│   │   │   ├── display/              # Mission trajectory display panel (rows, header/footer)
 │   │   │   ├── panel/                # Mission list panel (rows, header/footer, triggers)
 │   │   │   └── wizard/               # Mission creation wizard
 │   │   │       ├── component/        # Reusable widgets (Badge, PopupList, ProgressBar, …)
 │   │   │       └── step/             # Wizard steps (mission type, launcher, site, parameters)
+│   │   │           └── params/       # Per-mission-type dynamic parameter fields (LEO, GEO)
 │   │   ├── telemetry/                # Telemetry widget
 │   │   └── timeline/                 # Timeline widget
 │   │       └── components/           # Clock display, scrubber, transport controls, speed stepper
@@ -104,12 +119,19 @@ src/
     │   ├── ephemeris/                # Ephemeris buffer and worker tests
     │   ├── mission/
     │   │   ├── attitude/             # Attitude provider tests
-    │   │   ├── optimizer/            # Trajectory optimizer tests (LEO, sweeps, convergence)
+    │   │   ├── detector/             # DepletionGuard/DepletionStopTrigger tests
+    │   │   ├── maneuver/             # Maneuver tests
+    │   │   ├── operation/            # MissionFactory tests
+    │   │   ├── optimizer/            # Trajectory optimizer tests (LEO, GEO, sweeps, convergence)
     │   │   │   └── problems/         # Per-problem optimizer tests (gravity-turn)
-    │   │   └── vehicle/              # Vehicle/propulsion tests
+    │   │   ├── stage/                # Mission stage tests (stage separation, transfer-2)
+    │   │   └── vehicle/              # Vehicle/propulsion/catalog tests (launchers, payloads,
+    │   │                             #   propellant budget, launch configuration)
     │   ├── orbit/                    # Orbit path, cache, policy, snapshot, runtime slot tests
     │   └── source/                   # Source-layer tests (LRU cache)
-    └── tools/ephemerisgen/           # Smoke tests for ephemeris datasets
+    ├── states/mission/               # Mission display panel rules tests
+    ├── tools/ephemerisgen/           # Smoke tests for ephemeris datasets
+    └── ui/mission/                   # Mission color palette tests
 ```
 
 ---
@@ -145,21 +167,25 @@ Supports time speed multipliers and reverse playback (negative speed = rewind).
 
 ### Mission System
 ```
-Mission (abstract; e.g. LEOMission)
+Mission (abstract; operation/LEOMission, operation/GEOMission — MissionType enum)
   └── MissionStage[] (sequential phases)
         ├── ascent/VerticalAscentStage
         ├── ascent/GravityTurnStage
+        ├── ascent/ConstantThrustStage
         ├── CoastingStage
-        ├── BallisticCoastingStage
-        ├── ConstantThrustStage
-        └── TransfertTwoManeuverStage
+        ├── StageSeparationStage
+        ├── TransfertTwoManeuverStage
+        └── analytic stages (GEO): AnalyticGtoInjectionStage, AnalyticApogeeCircularizationStage,
+            AnalyticHohmannTransferStage, AnalyticParkingInsertionStage, AnalyticTrimBurnStage
 ```
-- `MissionContext` / `MissionEntry`: Tracks active missions and their lifecycle status (`MissionStatus`).
-- `MissionOptimizer` (`runtime/`): Finds optimal parameters using CMA-ES (with backup multi-try to escape local minima); returns a `MissionOptimizerResult`/`MissionComputeResult`.
+- `MissionFactory` (`operation/`): Builds a `Mission` from the wizard's raw form values — resolves launcher/payload from the catalogs and sizes propellant via `PropellantBudget`.
+- `MissionContext` / `MissionEntry` (`context/`): Tracks active missions and their lifecycle status (`MissionStatus`).
+- `MissionOptimizer` (`runtime/`): Finds optimal parameters using CMA-ES (with backup multi-try / plateau detection to escape local minima); returns a `MissionOptimizerResult`/`MissionComputeResult`/`MissionPerformanceReport`.
 - `OptimizableMissionStage<T>`: Stores optimization results for replay.
-- `optimizer/problems/`: Concrete `TrajectoryProblem` implementations (gravity-turn, transfer-2-maneuver) plus their constraints.
-- `detector/`: Orekit event detectors (mass depletion, minimum altitude tracking) used during propagation.
+- `optimizer/problems/`: Concrete `TrajectoryProblem` implementations (gravity-turn, I6-optimized two-maneuver transfer with depletion-aware bounds) plus their constraints.
+- `detector/`: Orekit event detectors (mass depletion, minimum altitude tracking) used during propagation, plus `DepletionGuard`/`DepletionStopTrigger` — fail-fast propellant monitoring armed on propagators across stages, maneuvers and vehicle modeling.
 - `ephemeris/`: Mission-trajectory sampling (`MissionEphemeris`, `MissionEphemerisGenerator`) used by renderers.
+- `vehicle/`: `LaunchConfiguration` assembles a `LauncherModel` (from the `Launchers` catalog) with per-stage propellant loads and a `Spacecraft` payload (from the `Payloads` catalog) into a `VehicleStack`; `PropellantBudget` sizes loads analytically (inverse Tsiolkovsky, top-down from the payload) instead of always flying fully loaded. `vehicle/model/` and `vehicle/model/stage/` hold the underlying catalog data model.
 
 ### Ephemeris System
 `SlidingWindowEphemerisBuffer` caches celestial body positions in a sliding time window. `EphemerisWorker` computes positions ahead of the simulation clock. `EphemerisAppState` drives this in the JME3 update loop. Ephemeris data is sourced through `simulation/source/` (`OrekitPvSource`, `DatasetEphemerisSource`, `PrefetchingEphemerisSource`, with `LruCache`), and `EphemerisServiceRegistry` exposes per-body services.
@@ -208,9 +234,11 @@ The application renders two stacked viewports:
 ./gradlew test
 ```
 
+> **Tests are run manually.** There is no CI pipeline in this repo (no `.github/workflows`) — nothing runs `./gradlew test` automatically on push or PR. Run the test suite yourself before considering a change done, unless the user says otherwise.
+
 **Test categories:**
-- **Unit tests**: Clock, converters, transforms, orbit path/cache/policy, ephemeris buffer
-- **Integration tests**: `LEOMissionOptimizationTest` — runs a full LEO mission with gravity turn optimization; validates orbit insertion within ±7% of 400 km target altitude
+- **Unit tests**: Clock, converters, transforms, orbit path/cache/policy, ephemeris buffer, vehicle/launcher/payload catalogs, propellant budgeting, depletion guard/stop trigger, mission stages
+- **Integration tests**: `LEOMissionOptimizationTest` — runs a full LEO mission with gravity turn optimization; validates orbit insertion within ±7% of 400 km target altitude. `GEOMissionOptimizationTest` — runs a full GEO mission (GTO injection through apogee circularization).
 - **Smoke tests**: `EphemerisDatasetSmokeTest`, `EphemerisDatasetFileSmokeTest` — validate ephemeris dataset integrity
 
 **Test logging:** Configured via `src/test/resources/Log4j2-test.xml` at INFO level.
