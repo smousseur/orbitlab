@@ -65,10 +65,16 @@ public class AnalyticGtoInjectionStage extends MissionStage {
   }
 
   @Override
+  public double maxStepSeconds(SpacecraftState entryState, Mission mission) {
+    return burnLimitedMaxStep(entryState, mission.getVehicle());
+  }
+
+  @Override
   public SpacecraftState propagateStandalone(SpacecraftState currentState, Mission mission) {
     InjectionPlan plan = computePlan(currentState, mission.getVehicle());
 
-    NumericalPropagator propagator = OrekitService.get().createSimplePropagator();
+    NumericalPropagator propagator =
+        OrekitService.get().createSimplePropagator(burnLimitedMaxStep(currentState, mission.getVehicle()));
     propagator.setInitialState(currentState);
     addBurn(propagator, currentState, plan, mission.getVehicle());
 
@@ -89,6 +95,7 @@ public class AnalyticGtoInjectionStage extends MissionStage {
 
     ActiveStageInfo stage1 = vehicle.resolveActiveStage(state.getMass());
     PropulsionSystem propulsion1 = stage1.propulsion();
+    double maxStep = burnLimitedMaxStep(state, vehicle);
 
     // Newton on the aimed apogee radius: the finite burn under-shoots the impulsive target, so
     // aim higher until the simulated post-burn apogee lands on r2 (same scheme as the Hohmann
@@ -120,7 +127,8 @@ public class AnalyticGtoInjectionStage extends MissionStage {
               dt1,
               propulsion1.thrust(),
               propulsion1.isp(),
-              transferHalfPeriod);
+              transferHalfPeriod,
+              maxStep);
       double bias = r2 - stateAtApogee.getPVCoordinates().getPosition().getNorm();
       r2Aim += bias;
       if (FastMath.abs(bias) < 100.0) {

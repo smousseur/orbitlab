@@ -86,10 +86,16 @@ public class AnalyticParkingInsertionStage extends MissionStage {
   }
 
   @Override
+  public double maxStepSeconds(SpacecraftState entryState, Mission mission) {
+    return burnLimitedMaxStep(entryState, mission.getVehicle());
+  }
+
+  @Override
   public SpacecraftState propagateStandalone(SpacecraftState currentState, Mission mission) {
     BurnPlan plan = computeBurnPlan(currentState, mission.getVehicle());
 
-    NumericalPropagator propagator = OrekitService.get().createSimplePropagator();
+    NumericalPropagator propagator =
+        OrekitService.get().createSimplePropagator(burnLimitedMaxStep(currentState, mission.getVehicle()));
     propagator.setInitialState(currentState);
     addBurns(propagator, currentState, plan, mission.getVehicle());
 

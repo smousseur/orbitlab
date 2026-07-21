@@ -41,7 +41,7 @@ public class GEOMissionOptimizationTest extends AbstractTrajectoryOptimizerTest 
   }
 
   @Test
-  void testGTOMission() {
+  void testGEOMission() {
     Mission geoMission = new GEOMission("GTO mission", PARKING_ALTITUDE, GEO_ALTITUDE);
 
     AbsoluteDate epoch = new AbsoluteDate(2026, 1, 1, 12, 0, 0.0, TimeScalesFactory.getUTC());

@@ -1,6 +1,9 @@
 package com.smousseur.orbitlab.simulation.mission;
 
 import com.smousseur.orbitlab.simulation.OrekitService;
+import com.smousseur.orbitlab.simulation.mission.vehicle.ActiveStageInfo;
+import com.smousseur.orbitlab.simulation.mission.vehicle.PropulsionSystem;
+import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
 import org.orekit.propagation.SpacecraftState;
 import org.orekit.propagation.numerical.NumericalPropagator;
 import org.orekit.time.AbsoluteDate;
@@ -83,6 +86,31 @@ public abstract class MissionStage {
    */
   public double maxStepSeconds(SpacecraftState entryState, Mission mission) {
     return isPropulsive() ? OrekitService.SAFE_MAX_STEP : OrekitService.COAST_MAX_STEP;
+  }
+
+  /**
+   * Sizes the integrator max step from the burns of the vehicle stage active at {@code entryState},
+   * taking that stage's {@link ActiveStageInfo#depletionFloor() depletion floor} as the worst-case
+   * (smallest) ignition mass — the tightest bound that keeps the late-ignition invariant for every
+   * burn the stage can fire (spec 06 I6, bilan 08 §3.1, spec 09 §4). {@link
+   * OrekitService#burnLimitedMaxStep} caps at {@link OrekitService#SAFE_MAX_STEP}, so a heavy load
+   * (Falcon Heavy) keeps its 30 s stepping unchanged and only a lighter I7 load auto-tightens.
+   *
+   * <p>Analytic stages that host a burn override {@link #maxStepSeconds} with this <em>and</em> pass
+   * the SAME value to every {@code create*Propagator(...)} that hosts one of their burns — their
+   * {@code propagateStandalone} and Newton/secant plan propagators, not only {@code maxStepSeconds}.
+   * Otherwise the optimizer/plan crashes on a light load while only the ephemeris is protected.
+   *
+   * @param entryState the spacecraft state at the start of the burn-hosting propagation
+   * @param vehicle the mission vehicle stack
+   * @return the largest integrator max step in seconds that keeps the invariant for the active stage
+   */
+  protected static double burnLimitedMaxStep(SpacecraftState entryState, Vehicle vehicle) {
+    ActiveStageInfo stage = vehicle.resolveActiveStage(entryState.getMass());
+    PropulsionSystem propulsion = stage.propulsion();
+    return OrekitService.burnLimitedMaxStep(
+        new OrekitService.BurnSpec(
+            propulsion.thrust(), propulsion.isp(), stage.depletionFloor()));
   }
 
   /**

@@ -84,13 +84,19 @@ public class AnalyticApogeeCircularizationStage extends MissionStage {
   }
 
   @Override
+  public double maxStepSeconds(SpacecraftState entryState, Mission mission) {
+    return burnLimitedMaxStep(entryState, mission.getVehicle());
+  }
+
+  @Override
   public SpacecraftState propagateStandalone(SpacecraftState currentState, Mission mission) {
     CircularizationPlan plan = computePlan(currentState, mission.getVehicle());
 
     // Same gravity model as the plan simulation and the ephemeris generation: the hours-long
     // burn is planned against its own finite-burn drift, a Newtonian standalone flight would
     // diverge from that plan by tens of km.
-    NumericalPropagator propagator = OrekitService.get().createOptimizationPropagator();
+    NumericalPropagator propagator =
+        OrekitService.get().createOptimizationPropagator(burnLimitedMaxStep(currentState, mission.getVehicle()));
     propagator.setInitialState(currentState);
     addBurn(propagator, currentState, plan, mission.getVehicle());
     return propagator.propagate(plan.burnStart().shiftedBy(plan.dt()));
@@ -113,6 +119,7 @@ public class AnalyticApogeeCircularizationStage extends MissionStage {
 
     ActiveStageInfo stageInfo = vehicle.resolveActiveStage(stateAtApogee.getMass());
     PropulsionSystem propulsion = stageInfo.propulsion();
+    double maxStep = burnLimitedMaxStep(stateAtApogee, vehicle);
 
     // The finite burn smears both targets while it executes: the apogee inflates (energy added
     // off-apogee) and the plane rotation delivered over a ~40° arc misses the aimed plane — as a
@@ -176,7 +183,13 @@ public class AnalyticApogeeCircularizationStage extends MissionStage {
 
       SpacecraftState endState =
           simulateCenteredBurn(
-              state, deltaV.normalize(), burnStart, dt, propulsion.thrust(), propulsion.isp());
+              state,
+              deltaV.normalize(),
+              burnStart,
+              dt,
+              propulsion.thrust(),
+              propulsion.isp(),
+              maxStep);
       KeplerianOrbit postBurn =
           new KeplerianOrbit(
               endState.getPVCoordinates(), endState.getFrame(), endState.getDate(), mu);
@@ -239,8 +252,9 @@ public class AnalyticApogeeCircularizationStage extends MissionStage {
       AbsoluteDate burnStart,
       double dt,
       double thrust,
-      double isp) {
-    NumericalPropagator propagator = OrekitService.get().createOptimizationPropagator();
+      double isp,
+      double maxStep) {
+    NumericalPropagator propagator = OrekitService.get().createOptimizationPropagator(maxStep);
     propagator.setInitialState(state);
     Rotation inertialToBody = new Rotation(directionInertial, Vector3D.PLUS_I);
     FrameAlignedProvider attitude = new FrameAlignedProvider(inertialToBody, state.getFrame());

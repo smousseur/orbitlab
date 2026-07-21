@@ -99,13 +99,19 @@ public class AnalyticTrimBurnStage extends MissionStage {
   }
 
   @Override
+  public double maxStepSeconds(SpacecraftState entryState, Mission mission) {
+    return burnLimitedMaxStep(entryState, mission.getVehicle());
+  }
+
+  @Override
   public SpacecraftState propagateStandalone(SpacecraftState currentState, Mission mission) {
     TrimBurn plan = computeTrimBurn(currentState, mission.getVehicle());
     if (plan == null) {
       return currentState;
     }
 
-    NumericalPropagator propagator = OrekitService.get().createSimplePropagator();
+    NumericalPropagator propagator =
+        OrekitService.get().createSimplePropagator(burnLimitedMaxStep(currentState, mission.getVehicle()));
     propagator.setInitialState(currentState);
     addBurn(propagator, currentState, plan, mission.getVehicle());
     return propagator.propagate(plan.burnStart().shiftedBy(plan.dt()));

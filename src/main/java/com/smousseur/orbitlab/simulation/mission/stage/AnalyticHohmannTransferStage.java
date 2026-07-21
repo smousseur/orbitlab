@@ -113,10 +113,16 @@ public class AnalyticHohmannTransferStage extends MissionStage {
   }
 
   @Override
+  public double maxStepSeconds(SpacecraftState entryState, Mission mission) {
+    return burnLimitedMaxStep(entryState, mission.getVehicle());
+  }
+
+  @Override
   public SpacecraftState propagateStandalone(SpacecraftState currentState, Mission mission) {
     AnalyticBurnPlan plan = computeBurnPlan(currentState, mission.getVehicle());
 
-    NumericalPropagator propagator = OrekitService.get().createSimplePropagator();
+    NumericalPropagator propagator =
+        OrekitService.get().createSimplePropagator(burnLimitedMaxStep(currentState, mission.getVehicle()));
     propagator.setInitialState(currentState);
     addBurns(propagator, currentState, plan, mission.getVehicle());
 
@@ -160,6 +166,7 @@ public class AnalyticHohmannTransferStage extends MissionStage {
     ActiveStageInfo stage1 = vehicle.resolveActiveStage(state.getMass());
     PropulsionSystem propulsion1 = stage1.propulsion();
     double g0Ve = propulsion1.isp() * Constants.G0_STANDARD_GRAVITY;
+    double maxStep = burnLimitedMaxStep(state, vehicle);
 
     double r2Aim = r2;
     double dv1 = 0.0;
@@ -189,7 +196,8 @@ public class AnalyticHohmannTransferStage extends MissionStage {
               dt1,
               propulsion1.thrust(),
               propulsion1.isp(),
-              transferHalfPeriod);
+              transferHalfPeriod,
+              maxStep);
       double rApoActual = stateAtApogee.getPVCoordinates().getPosition().getNorm();
       double bias = r2 - rApoActual;
       r2Aim += bias;
@@ -261,7 +269,9 @@ public class AnalyticHohmannTransferStage extends MissionStage {
    * state at that apogee.
    *
    * <p>Package-private so {@link AnalyticGtoInjectionStage} can reuse the same Newton-iteration
-   * building block for its perigee-injection plan.
+   * building block for its perigee-injection plan. Both callers size {@code maxStep} from their
+   * active stage via {@link #burnLimitedMaxStep} so this burn-hosting plan propagator honours the
+   * late-ignition invariant on a light I7 load (spec 09 §4).
    */
   static SpacecraftState simulateBurn1AndFindApogee(
       SpacecraftState state,
@@ -269,8 +279,9 @@ public class AnalyticHohmannTransferStage extends MissionStage {
       double dt1,
       double thrust,
       double isp,
-      double transferHalfPeriod) {
-    NumericalPropagator propagator = OrekitService.get().createOptimizationPropagator();
+      double transferHalfPeriod,
+      double maxStep) {
+    NumericalPropagator propagator = OrekitService.get().createOptimizationPropagator(maxStep);
     propagator.setInitialState(state);
 
     AbsoluteDate burnStart = state.getDate().shiftedBy(1.0e-3);
