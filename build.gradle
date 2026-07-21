@@ -43,6 +43,10 @@ tasks.withType(JavaCompile).configureEach {
 
 test {
     useJUnitPlatform()
+    // Forward the opt-in flag for slow/nightly integration tests (e.g. the I7 propellant-sizing
+    // loop, ~15 min) from the Gradle JVM to the test JVM. Default off, so the normal suite is
+    // unaffected; enable with `-Dorbitlab.slowTests=true`.
+    systemProperty 'orbitlab.slowTests', System.getProperty('orbitlab.slowTests', 'false')
 }
 
 javadoc {

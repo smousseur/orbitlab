@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.orekit.time.AbsoluteDate;
 
 /**
- * Fast unit test of the I7 feasibility predicate (spec 09 §6 task 2) — the {@code objectiveMet} /
+ * Fast unit test of the I7 feasibility predicate (spec 09 §6 task 2) — the {@code objectiveMet} and
  * {@code residualSufficient} decisions — exercised on synthetic ephemerides and performance reports,
  * with no propagation.
  */
@@ -99,26 +99,38 @@ class MissionLoadEvaluatorTest {
     assertFalse(MissionLoadEvaluator.objectiveMet(ephemeris, target, TOL));
   }
 
-  // ── residualSufficient ──────────────────────────────────────────────────
+  // ── residualSufficient (floor vs the SIZED stage's own load) ──────────────
 
   @Test
-  void residualSufficient_aboveFloor_true() {
+  void residualSufficient_marginAboveFloorOfSizedStageLoad_true() {
+    // Heuristic-like point: 284 kg residual on a 2844 kg sized-stage load = 10 % ≥ 1 %.
     MissionPerformanceReport report =
-        new MissionPerformanceReport(List.of(), 9_000.0, 100_000.0, 2_000.0); // 2 %
-    assertTrue(MissionLoadEvaluator.residualSufficient(report, 0.01));
+        new MissionPerformanceReport(List.of(), 8_000.0, 1_235_844.0, 284.0);
+    assertTrue(MissionLoadEvaluator.residualSufficient(report, 2_844.0, 0.01));
   }
 
   @Test
-  void residualSufficient_belowFloor_false() {
+  void residualSufficient_flameOut_false() {
+    // Knife-edge point: the sized stage is emptied (residual 0) → below any positive floor.
     MissionPerformanceReport report =
-        new MissionPerformanceReport(List.of(), 9_000.0, 100_000.0, 500.0); // 0.5 %
-    assertFalse(MissionLoadEvaluator.residualSufficient(report, 0.01));
+        new MissionPerformanceReport(List.of(), 8_000.0, 1_234_040.0, 0.0);
+    assertFalse(MissionLoadEvaluator.residualSufficient(report, 1_040.0, 0.01));
   }
 
   @Test
-  void residualSufficient_noPropellantLoaded_false() {
+  void residualSufficient_dividesBySizedStageNotWholeStack() {
+    // 284 kg over the whole 1.24 M stack is 0.02 % (would fail a stack-wide 1 % floor), but over the
+    // 2844 kg sized stage it is 10 % — the floor must use the sized-stage denominator.
     MissionPerformanceReport report =
-        new MissionPerformanceReport(List.of(), 9_000.0, 0.0, 0.0); // ratio 0
-    assertFalse(MissionLoadEvaluator.residualSufficient(report, 0.01));
+        new MissionPerformanceReport(List.of(), 8_000.0, 1_235_844.0, 284.0);
+    assertFalse(MissionLoadEvaluator.residualSufficient(report, 1_235_844.0, 0.01));
+    assertTrue(MissionLoadEvaluator.residualSufficient(report, 2_844.0, 0.01));
+  }
+
+  @Test
+  void residualSufficient_noSizedStage_disablesFloor() {
+    MissionPerformanceReport report =
+        new MissionPerformanceReport(List.of(), 8_000.0, 1_233_000.0, 0.0);
+    assertTrue(MissionLoadEvaluator.residualSufficient(report, 0.0, 0.01));
   }
 }

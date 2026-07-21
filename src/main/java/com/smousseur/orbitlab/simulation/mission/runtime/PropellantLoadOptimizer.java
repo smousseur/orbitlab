@@ -4,6 +4,8 @@ import com.smousseur.orbitlab.simulation.mission.vehicle.model.LauncherModel;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.stage.StageModel;
 import java.util.List;
 import java.util.Objects;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /**
  * Outer propellant-sizing loop of I7 (spec 09 §1): closes the "the launcher sizes the propellant"
@@ -25,6 +27,7 @@ import java.util.Objects;
  * monotone evaluator without any propagation (spec 09 §6 task 1: monotonicity + budget).
  */
 public final class PropellantLoadOptimizer {
+  private static final Logger logger = LogManager.getLogger(PropellantLoadOptimizer.class);
 
   /** Lower bound of the scaling factor: the heuristic margin is at most ~10 %, so 0.3 is ample. */
   public static final double DEFAULT_LAMBDA_MIN = 0.3;
@@ -130,11 +133,29 @@ public final class PropellantLoadOptimizer {
    * under-dotée (nothing to shrink); if {@code λmin} is already feasible the search cannot do
    * better and returns immediately.
    *
+   * <p><b>Monotonicity is only approximate.</b> The bisection assumes feasibility is monotone in
+   * {@code λ} (more propellant ⇒ still feasible). Physical closure is monotone, but the residual
+   * floor is not: the inner CMA-ES optimizes orbit accuracy, not propellant thrift, so at a given
+   * {@code λ} it may stochastically land on a wasteful solution that empties the sized stage
+   * (residual 0, below the floor) even though a thriftier solution with margin exists. A {@code λ}
+   * can therefore read "infeasible" while a slightly larger one reads "feasible" with generous
+   * residual (observed on the FH LEO integration run). The consequence is benign: {@code λ*} stays a
+   * genuinely feasible load with margin, but it may be <em>conservative</em> (a smaller feasible load
+   * might exist) and can shift with the seed. Making it exact would require a propellant-aware inner
+   * cost — out of scope here.
+   *
    * @param evaluator rebuilds + optimizes the mission at a given {@code λ}
    * @return the minimal feasible scaling and the evaluation that achieved it
    */
   public Result minimize(Evaluator evaluator) {
     Objects.requireNonNull(evaluator, "evaluator");
+
+    logger.info(
+        "PropellantLoadOptimizer starting: λ∈[{}, {}], tolerance={}, budget={} evals",
+        lambdaMin,
+        lambdaMax,
+        tolerance,
+        maxEvaluations);
 
     int evaluations = 0;
 
@@ -142,14 +163,26 @@ public final class PropellantLoadOptimizer {
     // nothing to shrink, so report infeasible rather than bisect toward an ever-smaller load.
     Evaluation hi = evaluator.evaluate(lambdaMax, null);
     evaluations++;
+    logger.info("Probe λ={} (upper bound / heuristic loads): feasible={}", lambdaMax, hi.feasible());
     if (!hi.feasible()) {
+      logger.warn(
+          "Heuristic loads (λ={}) infeasible — mission under-dotée, nothing to shrink; aborting"
+              + " after {} eval(s)",
+          lambdaMax,
+          evaluations);
       return new Result(false, lambdaMax, evaluations, hi);
     }
 
     // Lower bound. If the smallest allowed load already succeeds, we cannot do better; stop.
     Evaluation lo = evaluator.evaluate(lambdaMin, hi);
     evaluations++;
+    logger.info("Probe λ={} (lower bound): feasible={}", lambdaMin, lo.feasible());
     if (lo.feasible()) {
+      logger.info(
+          "Lower bound λ={} already feasible — cannot do better; λ*={} after {} evals",
+          lambdaMin,
+          lambdaMin,
+          evaluations);
       return new Result(true, lambdaMin, evaluations, lo);
     }
 
@@ -169,8 +202,24 @@ public final class PropellantLoadOptimizer {
       } else {
         infeasibleLambda = mid;
       }
+      logger.info(
+          "Bisection eval {}/{}: λ={} feasible={} → bracket [{}, {}] (width {})",
+          evaluations,
+          maxEvaluations,
+          mid,
+          midEval.feasible(),
+          infeasibleLambda,
+          feasibleLambda,
+          feasibleLambda - infeasibleLambda);
     }
 
+    boolean converged = (feasibleLambda - infeasibleLambda) <= tolerance;
+    logger.info(
+        "PropellantLoadOptimizer done: λ*={} after {} evals ({}), final bracket width={}",
+        feasibleLambda,
+        evaluations,
+        converged ? "converged within tolerance" : "budget exhausted",
+        feasibleLambda - infeasibleLambda);
     return new Result(true, feasibleLambda, evaluations, best);
   }
 
@@ -201,19 +250,28 @@ public final class PropellantLoadOptimizer {
   }
 
   /**
-   * Builds the scaling mask for a launcher: the scaling applies to the liquid (variable-load)
-   * stages and skips the SOLID stages, which must fly full (spec 09 §1). The payload AKM is sized
-   * separately and never appears in the launcher loads, so it is naturally out of scope.
+   * Builds the scaling mask for a launcher: only the <b>sized top stage</b> — the last stage, and
+   * only when it is variable-load (liquid) — is scaled by {@code λ}. The lower stages and any SOLID
+   * stage stay off the scaling, and the payload AKM is sized separately and never appears in the
+   * launcher loads.
+   *
+   * <p><b>Deviation from spec 09 §1</b> (which puts every non-SOLID, non-AKM stage under {@code λ}).
+   * On the flown profiles the first stage is never jettisoned — it is dragged, dry mass and all, to
+   * orbit — so its full load is already "just enough" to loft its own structure (~0.3 % residual on
+   * Falcon Heavy LEO). Scaling it down breaks the ascent immediately, pinning {@code λ*} at 1 with
+   * nothing reclaimed. The only stage carrying a genuine, reclaimable margin is the one {@link
+   * com.smousseur.orbitlab.simulation.mission.vehicle.PropellantBudget} actually sizes: the top
+   * stage. Restricting {@code λ} to it is what lets the loop reclaim propellant on an un-staged
+   * stack (finding logged when the I7 integration test first ran on FH LEO).
    *
    * @param launcher the launcher model
-   * @return a per-stage boolean mask, {@code true} where the {@code λ} scaling applies
+   * @return a per-stage boolean mask, {@code true} only on the sized (top, variable-load) stage
    */
   public static boolean[] lambdaScaledMask(LauncherModel launcher) {
     List<StageModel> stages = launcher.stages();
     boolean[] mask = new boolean[stages.size()];
-    for (int i = 0; i < mask.length; i++) {
-      mask[i] = stages.get(i).capabilities().variableLoad();
-    }
+    int topStage = stages.size() - 1;
+    mask[topStage] = stages.get(topStage).capabilities().variableLoad();
     return mask;
   }
 }

@@ -22,17 +22,25 @@ import org.orekit.time.AbsoluteDate;
  * Mission} — a fresh one every time, because {@link MissionOptimizer#optimize()} mutates the mission
  * it optimizes.
  *
- * <p><b>Feasibility.</b> The mission is feasible when the objective is met <em>and</em> the residual
- * floor is respected (spec 09 §1, §5):
+ * <p><b>Feasibility.</b> The mission is feasible when both hold:
  *
  * <ul>
  *   <li><b>objective</b> — the final coast orbit lands within {@code objectiveToleranceRatio} of the
  *       target perigee and apogee, measured from the ephemeris exactly as the mission optimization
  *       tests do (min/max altitude of the terminal {@code "Coasting"} stage);
- *   <li><b>residual</b> — the propellant still aboard at mission end is at least {@code
- *       residualFloorRatio} of the loaded propellant, so the sized (top liquid) stage is not flown
- *       bone-dry, which would be brittle under the un-modelled losses the optimizer cannot see.
+ *   <li><b>residual floor</b> — the end-of-mission residual is at least {@code residualFloorRatio}
+ *       of the <em>sized stage's</em> load (spec 09 §5, "≥ 1 % de la charge par étage liquide"). The
+ *       denominator is the load of the λ-scaled top stage, not the whole stack: on an S1-dominated
+ *       stack the stack-wide residual ratio is meaningless (~0.3 %), but against the sized stage's
+ *       own load it is the real margin (~10 % at the heuristic load). Without this floor the loop
+ *       drives the sized stage to exact flame-out (residual 0), and the ephemeris replay trips the
+ *       {@code DepletionGuard} on a truncated burn — a knife-edge solution that defeats I7's realism
+ *       goal (observed on the first FH LEO integration run).
  * </ul>
+ *
+ * <p>The residual of the sized stage is read from {@link
+ * MissionPerformanceReport#totalPropellantResidual()} — the residual of the final active stage,
+ * which is the sized stage on a correctly-matched vehicle (the case I7 targets).
  *
  * <p>An optimization that <em>throws</em> (an under-dotée load whose ascent/transfer cannot reach
  * orbit makes CMA-ES fail) is caught and reported as infeasible — that is the signal the bisection
@@ -53,7 +61,7 @@ public final class MissionLoadEvaluator implements PropellantLoadOptimizer.Evalu
   /** Default objective tolerance: the ±7 % band the mission optimization tests assert on. */
   public static final double DEFAULT_OBJECTIVE_TOLERANCE_RATIO = 0.07;
 
-  /** Default residual floor: the sized stage must land with at least 1 % of its load (spec 09 §5). */
+  /** Default residual floor: the sized stage keeps ≥ 1 % of its own load, off flame-out (spec §5). */
   public static final double DEFAULT_RESIDUAL_FLOOR_RATIO = 0.01;
 
   /** Default per-stage CMA-ES evaluation budget, matching the mission optimization tests. */
@@ -69,8 +77,8 @@ public final class MissionLoadEvaluator implements PropellantLoadOptimizer.Evalu
   private final double residualFloorRatio;
 
   /**
-   * Creates an evaluator with the spec-09 defaults (±7 % objective, 1 % residual floor, 40 000 inner
-   * evals, deterministic seed).
+   * Creates an evaluator with the spec-09 defaults (±7 % objective, 40 000 inner evals, deterministic
+   * seed).
    *
    * @param missionBuilder assembles a fresh mission from a per-stage launcher load array
    * @param heuristicLoads the baseline per-stage loads (kg), same order as the launcher stages
@@ -104,7 +112,8 @@ public final class MissionLoadEvaluator implements PropellantLoadOptimizer.Evalu
    * @param optimizerMaxEvaluations the inner CMA-ES evaluation budget per stage
    * @param seed the CMA-ES master seed, or {@code null} for non-deterministic
    * @param objectiveToleranceRatio the ± band on perigee/apogee the objective must land within
-   * @param residualFloorRatio the minimum residual (fraction of loaded propellant) for feasibility
+   * @param residualFloorRatio the minimum end-of-mission residual as a fraction of the sized stage's
+   *     load; keeps the sized stage off flame-out
    */
   public MissionLoadEvaluator(
       Function<double[], Mission> missionBuilder,
@@ -152,17 +161,22 @@ public final class MissionLoadEvaluator implements PropellantLoadOptimizer.Evalu
     }
 
     OrbitInsertionObjective objective = orbitInsertionObjective(mission.getObjective());
-    boolean objectiveMet =
-        objectiveMet(result.ephemeris(), objective, objectiveToleranceRatio);
+    boolean objectiveMet = objectiveMet(result.ephemeris(), objective, objectiveToleranceRatio);
+
+    double sizedStageLoad = sizedStageLoad(loads);
     boolean residualOk =
-        residualSufficient(result.performanceReport(), residualFloorRatio);
+        residualSufficient(result.performanceReport(), sizedStageLoad, residualFloorRatio);
     boolean feasible = objectiveMet && residualOk;
 
+    double residual = result.performanceReport().totalPropellantResidual();
     logger.info(
-        "λ={} evaluation: objectiveMet={}, residualRatio={} (floor {}), feasible={}",
+        "λ={} evaluation: objectiveMet={}, residual={} kg of sized-stage load {} kg ({} vs floor {})"
+            + " → feasible={}",
         lambda,
         objectiveMet,
-        result.performanceReport().residualRatio(),
+        Math.round(residual),
+        Math.round(sizedStageLoad),
+        sizedStageLoad > 0 ? residual / sizedStageLoad : Double.NaN,
         residualFloorRatio,
         feasible);
 
@@ -203,17 +217,33 @@ public final class MissionLoadEvaluator implements PropellantLoadOptimizer.Evalu
   }
 
   /**
-   * Whether the propellant still aboard at mission end clears the residual floor — the sized stage
-   * is not flown bone-dry (spec 09 §5). Uses {@link MissionPerformanceReport#residualRatio()}, the
-   * residual of the final active (top liquid) stage that the λ scaling sizes.
+   * Whether the end-of-mission residual clears the floor relative to the sized stage's own load:
+   * {@code residual ≥ floorRatio · sizedStageLoad}. This keeps the sized (λ-scaled top) stage off
+   * flame-out — the whole-stack residual ratio is meaningless on an S1-dominated stack, but against
+   * the sized stage's own load it is the real margin (spec 09 §5). A zero {@code sizedStageLoad}
+   * (no scaled stage / degenerate) disables the floor.
    *
-   * @param report the mission performance report
-   * @param floorRatio the minimum residual, as a fraction of loaded propellant
-   * @return {@code true} when the residual ratio is at or above the floor
+   * @param report the mission performance report (its total residual = the final active stage's)
+   * @param sizedStageLoad the load of the λ-scaled top stage at this λ (kg)
+   * @param floorRatio the minimum residual as a fraction of {@code sizedStageLoad}
+   * @return {@code true} when the residual is at or above the floor
    */
   public static boolean residualSufficient(
-      MissionPerformanceReport report, double floorRatio) {
-    return report.residualRatio() >= floorRatio;
+      MissionPerformanceReport report, double sizedStageLoad, double floorRatio) {
+    if (!(sizedStageLoad > 0)) {
+      return true; // no sized liquid stage to guard
+    }
+    return report.totalPropellantResidual() >= floorRatio * sizedStageLoad;
+  }
+
+  /** The load of the sized (last λ-scaled) stage in {@code loads}, or 0 if none is scaled. */
+  private double sizedStageLoad(double[] loads) {
+    for (int i = lambdaScaled.length - 1; i >= 0; i--) {
+      if (lambdaScaled[i]) {
+        return loads[i];
+      }
+    }
+    return 0.0;
   }
 
   private static OrbitInsertionObjective orbitInsertionObjective(MissionObjective objective) {

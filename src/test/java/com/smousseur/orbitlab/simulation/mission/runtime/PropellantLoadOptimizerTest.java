@@ -209,7 +209,7 @@ class PropellantLoadOptimizerTest {
   }
 
   @Test
-  void lambdaScaledMask_flagsLiquidStagesOnly() {
+  void lambdaScaledMask_flagsOnlySizedTopStage() {
     StageModel solidBooster =
         new StageModel(
             "SRB",
@@ -258,6 +258,43 @@ class PropellantLoadOptimizerTest {
 
     boolean[] mask = PropellantLoadOptimizer.lambdaScaledMask(launcher);
 
-    assertArrayEquals(new boolean[] {false, true, true}, mask);
+    // Only the sized top stage is scaled; the lower (even liquid) and SOLID stages stay off λ.
+    assertArrayEquals(new boolean[] {false, false, true}, mask);
+  }
+
+  @Test
+  void lambdaScaledMask_solidTopStage_scalesNothing() {
+    StageModel liquidCore =
+        new StageModel(
+            "Core",
+            15_000,
+            170_000,
+            new PropulsionSystem(431, 1_400_000),
+            new StageCapabilities(
+                IgnitionMode.GROUND,
+                0,
+                ShutdownMode.COMMANDED,
+                PropellantType.CRYOGENIC,
+                0.0,
+                StageRole.CORE));
+    StageModel solidTop =
+        new StageModel(
+            "Solid upper",
+            2_000,
+            15_000,
+            new PropulsionSystem(280, 200_000),
+            new StageCapabilities(
+                IgnitionMode.AIRSTART,
+                0,
+                ShutdownMode.BURN_TO_DEPLETION,
+                PropellantType.SOLID,
+                0.0,
+                StageRole.UPPER));
+    LauncherModel launcher =
+        new LauncherModel(
+            "SOLID_TOP", "Solid top stage", List.of(liquidCore, solidTop), new AscentProfile(7, 3, 2));
+
+    assertArrayEquals(
+        new boolean[] {false, false}, PropellantLoadOptimizer.lambdaScaledMask(launcher));
   }
 }
