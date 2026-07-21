@@ -49,6 +49,8 @@ L'optimiseur trouve un burn hors de portée de l'analytique : coast au-delà de 
 - **Plancher de plan ~0,25°** : la rotation de plan étalée sur ~3 h de burn laisse un résidu
   vectoriel incorrigible hors nœud (démontré : 1,57° de visée pour 0,03° d'effet). Tolérance
   test actée à 0,30° (historique : 0,10° → 0,15° → 0,30° au fil des changements d'architecture).
+  → **MàJ (§3.5 fait)** : trim de plan au nœud (`AnalyticPlaneTrimAtNodeStage`) → inclinaison
+  finale ~3e-5° sur la mission de référence, tolérance test resserrée à 0,05°.
 
 ### 2.3 Calibrations actées
 
@@ -56,13 +58,16 @@ L'optimiseur trouve un burn hors de portée de l'analytique : coast au-delà de 
 |---|---|---|
 | `ASCENT_LOSSES_MS` | 1 260 m/s | point fixe sur 2 mesures du rapport (1 600 → 37,9 % de résiduel S2, 1 400 → 26,2 %, pente conso/charge ≈ 0,31) ; pertes réelles mesurées ≈ 1 100 |
 | `SAFETY_MARGIN` budget | 10 % | marge résiduelle S2 ≈ 12 % sur le point de référence |
-| `acceptableCost` GT | 1e-3 | le plancher FPA (25·fpa², fpa ≈ 2,1°) vaut ~0,034 : voir §3.6 |
-| Tolérance inclinaison GTO | 0,30° | plancher physique du burn AKM long (§2.2) |
-| maxStep propagateurs optim/simple | **30 s** | invariant anti-crash, voir §3.1 |
+| `acceptableCost` GT | ~0,048 *(MàJ)* | relevé à `W_FPA_SOFT·(2,5°)²` au-dessus du plancher (§3.6 étape 1) |
+| Tolérance inclinaison GTO | 0,05° *(MàJ)* | ~3e-5° atteint via le trim de plan au nœud (§3.5) |
+| maxStep propagateurs optim/simple | dynamique *(MàJ)* | `burnLimitedMaxStep`, plafonné à 30 s (§3.1) |
 
 ---
 
 ## 3. Points à traiter avant / pendant I7
+
+> **MàJ post-bilan :** la plupart de ces points sont désormais résolus ou tranchés — voir §5
+> (ci-dessous) pour le récapitulatif de résolution.
 
 ### 3.1 ✅ Réglé mais à connaître — l'invariant maxStep (crash « late ignition »)
 
@@ -143,3 +148,21 @@ sur λ** appliqué aux charges heuristiques (`load_i = λ·load_i^heuristique`, 
 tolérance 2 %, ≤ 10 évaluations externes, étages `SOLID` et AKM hors λ, succès ⇔ objectif atteint
 **et** résiduel ≥ 1 % par étage liquide. Bascule CMA-ES externe (v2) seulement si le résiduel
 post-bisection dépasse 5 % de la capacité sur un étage.
+
+---
+
+## 5. État de résolution (post-bilan)
+
+Mises à jour depuis l'instantané ci-dessus. Les prérequis durs de la section 4 restaient tous ✅ —
+**I7 peut démarrer.**
+
+| Point | État | Résolution |
+|---|---|---|
+| §3.1 maxStep | ✅ fait | invariant rendu dynamique : `OrekitService.burnLimitedMaxStep(BurnSpec…)` + `MissionStage.maxStepSeconds`. Coasts burn-free au `COAST_MAX_STEP` ; burns bornés par leur masse d'allumage réelle, plafonné à `SAFE_MAX_STEP` (30 s) → stepping Falcon Heavy inchangé, resserrement auto sur charge légère I7. **Reste** : appliquer aux stages analytiques (en cours). |
+| §3.2 défaut LEO / boucle I7 | ✅ tranché | I7 tourne sa boucle interne sur le **transfert optimisé** (`TransfertTwoManeuver`) — objectif « simu au plus proche du réel », temps de calcul assumé (progressbar utilisateur). |
+| §3.3 seed Hohmann | ✅ fait (`a8fb39e`) | départ à l'apoapse quand le périgée n'est pas volable + seed borné à `t1Max` ; testé (`TransferProblemSeedTest`). Hérité par le transfert optimisé. |
+| §3.4 faisabilité `dv2Hohmann` | ✅ fait (`a8fb39e`) | les deux vitesses prises à `rTarget`. |
+| §3.5 plan GEO | ✅ fait | `AnalyticPlaneTrimAtNodeStage` (burn hors-plan court au nœud) → inclinaison finale ~3e-5° (contre ~0,25°), tolérance test 0,05°. |
+| §3.6 plancher coût GT | ✅ fait (étape 1) | terme `W_FPA_SOFT` symétrique conservé, `acceptableCost` relevé à ~0,048. L'étape 2 (asymétrie) a été implémentée puis **revertée** : elle dégradait la circularité finale ~6× (ecc 1,4e-4 → 8,5e-4) même sur le transfert optimisé. |
+| §3.7 race tracker | ✅ fait | `GravityTurnManeuver.lastAltitudeTracker` → `ThreadLocal`. |
+| §3.7 docs / rapport perf | ⬜ en cours | CLAUDE.md + javadocs à jour ; l'approx ΔV multi-Isp du rapport reste documentée (suffisante). |

@@ -85,7 +85,8 @@ src/
 │   │       ├── runtime/              # MissionOptimizer + compute/optimizer/performance results
 │   │       ├── stage/                # Mission phase implementations (coasting, stage separation,
 │   │       │   │                     #   analytic GTO injection/apogee circularization/Hohmann
-│   │       │   │                     #   transfer/parking insertion/trim burn, transfer-2 maneuver)
+│   │       │   │                     #   transfer/parking insertion/trim burn/plane trim at node,
+│   │       │   │                     #   transfer-2 maneuver)
 │   │       │   └── ascent/           # Vertical ascent + gravity turn stages
 │   │       └── vehicle/              # Spacecraft, launch vehicle, propulsion, vehicle stack,
 │   │           │                     #   Launchers/Payloads catalogs, LaunchConfiguration,
@@ -160,6 +161,8 @@ Access via `OrekitService.get()`. It provides:
 - Reference frames: ICRF, ITRF, GCRF
 - Requires `orekit-data.zip` on classpath
 
+**Integrator max-step sizing (late-ignition invariant, bilan 08 §3.1):** a burn igniting after a coast can drive the mass negative on the integrator's first trial step, which Orekit throws *before* any detector (cutoff, depletion guard) can react. The `create*Propagator(double maxStep)` overloads plus `burnLimitedMaxStep(BurnSpec…)` size the step from the burns that will actually fire — `COAST_MAX_STEP` for burn-free coasts, capped at `SAFE_MAX_STEP` (30 s) when a burn is present. Stages advertise their step via `MissionStage.maxStepSeconds`. This keeps the calibrated Falcon Heavy stepping unchanged while auto-tightening for a lighter (I7) load. **Never** hand a raw large max step to a propagator that will host a burn.
+
 ### SimulationClock
 Thread-safe, event-driven simulation time manager. Subscribe to clock events (time changes, speed changes, play state changes) via `subscribe(Consumer<ClockEvent>)` which returns `AutoCloseable` — always close subscriptions in `cleanup()`.
 
@@ -176,7 +179,8 @@ Mission (abstract; operation/LEOMission, operation/GEOMission — MissionType en
         ├── StageSeparationStage
         ├── TransfertTwoManeuverStage
         └── analytic stages (GEO): AnalyticGtoInjectionStage, AnalyticApogeeCircularizationStage,
-            AnalyticHohmannTransferStage, AnalyticParkingInsertionStage, AnalyticTrimBurnStage
+            AnalyticHohmannTransferStage, AnalyticParkingInsertionStage, AnalyticTrimBurnStage,
+            AnalyticPlaneTrimAtNodeStage (node-targeted plane trim, bilan 08 §3.5)
 ```
 - `MissionFactory` (`operation/`): Builds a `Mission` from the wizard's raw form values — resolves launcher/payload from the catalogs and sizes propellant via `PropellantBudget`.
 - `MissionContext` / `MissionEntry` (`context/`): Tracks active missions and their lifecycle status (`MissionStatus`).
