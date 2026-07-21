@@ -99,7 +99,8 @@ public class TransferManeuver {
       return new TransferResult(initialState, orbitPostBurn1, null, null);
     }
 
-    NumericalPropagator propagator = OrekitService.get().createOptimizationPropagator();
+    NumericalPropagator propagator =
+        OrekitService.get().createOptimizationPropagator(maxStepSeconds(initialState));
     propagator.setInitialState(initialState);
     MinAltitudeTracker tracker = configure(propagator, initialState, params);
     // dt1 may explore up to full depletion (spec 06 I6): truncate infeasible candidates quietly.
@@ -118,6 +119,23 @@ public class TransferManeuver {
       logger.debug("Transfer propagation failed (penalty applied): {}", e.getMessage());
       return new TransferResult(initialState, orbitPostBurn1, null, tracker);
     }
+  }
+
+  /**
+   * Integrator max step keeping the late-ignition invariant for this transfer. A burn can ignite
+   * after a long coast (burn 1 at {@code t1}, or the circularization burn after burn 1), the latter
+   * down to the active stage's depletion floor — the worst-case ignition mass that bounds every burn
+   * here. See {@link OrekitService#burnLimitedMaxStep}.
+   *
+   * @param state the spacecraft state at the start of the transfer
+   * @return the integrator max step in seconds
+   */
+  public double maxStepSeconds(SpacecraftState state) {
+    ActiveStageInfo stage = vehicle.resolveActiveStage(state.getMass());
+    PropulsionSystem propulsion = stage.propulsion();
+    return OrekitService.burnLimitedMaxStep(
+        new OrekitService.BurnSpec(
+            propulsion.thrust(), propulsion.isp(), stage.depletionFloor()));
   }
 
   /**
@@ -162,7 +180,8 @@ public class TransferManeuver {
    * resolve downstream events such as the next apoapsis.
    */
   protected SpacecraftState propagateBurn1(SpacecraftState initialState, Burn1Params params) {
-    NumericalPropagator burn1Propagator = OrekitService.get().createSimplePropagator();
+    NumericalPropagator burn1Propagator =
+        OrekitService.get().createSimplePropagator(maxStepSeconds(initialState));
     burn1Propagator.setInitialState(initialState);
     DepletionGuard.armQuiet(
         burn1Propagator, vehicle.resolveActiveStage(initialState.getMass()).depletionFloor());

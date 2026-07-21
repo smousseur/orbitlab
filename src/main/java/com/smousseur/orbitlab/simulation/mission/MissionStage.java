@@ -1,5 +1,6 @@
 package com.smousseur.orbitlab.simulation.mission;
 
+import com.smousseur.orbitlab.simulation.OrekitService;
 import org.orekit.propagation.SpacecraftState;
 import org.orekit.propagation.numerical.NumericalPropagator;
 import org.orekit.time.AbsoluteDate;
@@ -66,6 +67,22 @@ public abstract class MissionStage {
    */
   public boolean isPropulsive() {
     return true;
+  }
+
+  /**
+   * Returns the integrator max step to use when propagating this stage, sized to keep the
+   * late-ignition invariant (spec 06 I6, bilan 08 §3.1). The default steps at {@link
+   * OrekitService#COAST_MAX_STEP} for a non-propulsive (burn-free) stage and at the conservative
+   * {@link OrekitService#SAFE_MAX_STEP} for a propulsive one. Stages whose upper-stage burn can grow
+   * light under a varying I7 load override this to size the step from their actual burns, so the
+   * proven Falcon Heavy stepping is preserved while a lighter load auto-tightens.
+   *
+   * @param entryState the spacecraft state at the start of this stage
+   * @param mission the parent mission
+   * @return the integrator max step in seconds
+   */
+  public double maxStepSeconds(SpacecraftState entryState, Mission mission) {
+    return isPropulsive() ? OrekitService.SAFE_MAX_STEP : OrekitService.COAST_MAX_STEP;
   }
 
   /**

@@ -35,6 +35,27 @@ public class GravityTurnProblem implements TrajectoryProblem {
   // a descending state that slows the downstream transfer phase by 2-5×.
   private static final double W_FPA_SOFT = 25.0;
 
+  // Acceptance threshold (bilan 08 §3.6). The W_FPA_SOFT·fpa² term is a tie-breaker toward a level
+  // hand-off, not a constraint to drive to zero: at the reference FH mission the profile hands off
+  // at fpa ≈ 2.1° while holding the apogee window, leaving an irreducible W_FPA_SOFT·(2.1°)² ≈
+  // 0.034
+  // that no GT solution can remove. Accept above that floor — sized at the FPA-soft cost of a 2.5°
+  // hand-off — so the GT concludes on the first exploration instead of exhausting retries (and
+  // logging a WARN) against a structural minimum. A positive residual FPA here is benign: the
+  // CMA-ES
+  // transfer (spec 06 I6) absorbs it downstream. Derived from W_FPA_SOFT so it tracks a future
+  // recalibration of that weight. If a mission ever hands off above 2.5°, the WARN returns — a
+  // genuine anomaly worth seeing, not noise.
+  //
+  // Step 2 (make W_FPA_SOFT asymmetric — penalize only a descending fpa<0 hand-off) was built and
+  // sweep-tested, then reverted: dropping the pull toward a level hand-off let the GT hand off
+  // less level (FPA 0.23°→0.46° at 600 km), degrading final-orbit circularity ~6× (ecc
+  // 1.4e-4→8.5e-4) even on the CMA-ES-optimized transfer — inside the ±7% test margin, but a real
+  // regression. The symmetric pull earns its keep as a level-hand-off tie-breaker; the floor it
+  // leaves is handled here by accepting above it, not by removing the pull.
+  private static final double MAX_EXPECTED_HANDOFF_FPA_RAD = FastMath.toRadians(2.5);
+  private static final double ACCEPTABLE_COST = W_FPA_SOFT * sq(MAX_EXPECTED_HANDOFF_FPA_RAD);
+
   private final GravityTurnManeuver maneuver;
   private final SpacecraftState initialState;
   private final GravityTurnConstraints constraints;
@@ -94,7 +115,7 @@ public class GravityTurnProblem implements TrajectoryProblem {
 
   @Override
   public double getAcceptableCost() {
-    return 1e-3;
+    return ACCEPTABLE_COST;
   }
 
   @Override

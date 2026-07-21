@@ -45,7 +45,9 @@ public class GravityTurnManeuver {
   private final double interstageCoastDuration;
   private final ActiveStageInfo activeStage;
   private final ActiveStageInfo nextStage;
-  private MinAltitudeTracker lastAltitudeTracker;
+  // Stored per-thread so parallel CMA-ES exploration runs can call propagateForOptimization()
+  // concurrently without overwriting each other's tracker (matches TransferProblem.lastResult).
+  private final ThreadLocal<MinAltitudeTracker> lastAltitudeTracker = new ThreadLocal<>();
 
   /**
    * Creates a gravity turn maneuver for the given vehicle and launch parameters.
@@ -189,6 +191,22 @@ public class GravityTurnManeuver {
   }
 
   /**
+   * Integrator max step keeping the late-ignition invariant for this maneuver. Burn 2 (the next
+   * stage) ignites after the interstage coast, so a coast-sized trial step at its ignition mass
+   * ({@link ActiveStageInfo#massAfterJettison()}, the full post-jettison stack) must not drive the
+   * mass negative. Burn 1 fires immediately (no preceding coast, so no late-ignition hazard) and is
+   * excluded. See {@link OrekitService#burnLimitedMaxStep}.
+   *
+   * @return the integrator max step in seconds
+   */
+  public double maxStepSeconds() {
+    PropulsionSystem propulsion2 = nextStage.propulsion();
+    return OrekitService.burnLimitedMaxStep(
+        new OrekitService.BurnSpec(
+            propulsion2.thrust(), propulsion2.isp(), activeStage.massAfterJettison()));
+  }
+
+  /**
    * Propagates the trajectory for optimization purposes (creates its own propagator). Returns a
    * penalizing fallback state on error.
    */
@@ -197,7 +215,8 @@ public class GravityTurnManeuver {
     GravityTurnParams params = decode(variables);
     SpacecraftState kickedState = applyKick(initialState);
 
-    NumericalPropagator propagator = OrekitService.get().createOptimizationPropagator();
+    NumericalPropagator propagator =
+        OrekitService.get().createOptimizationPropagator(maxStepSeconds());
     propagator.setInitialState(kickedState);
     configure(propagator, kickedState, params);
     // Quiet guard: infeasible candidates crossing the floor are truncated (and thus penalized by
@@ -205,7 +224,7 @@ public class GravityTurnManeuver {
     DepletionGuard.armQuiet(propagator, getDepletionFloor());
     MinAltitudeTracker tracker = new MinAltitudeTracker(0.0, Double.POSITIVE_INFINITY);
     propagator.addEventDetector(tracker);
-    this.lastAltitudeTracker = tracker;
+    this.lastAltitudeTracker.set(tracker);
     AbsoluteDate endDate = kickedState.getDate().shiftedBy(params.transitionTime);
 
     try {
@@ -218,12 +237,13 @@ public class GravityTurnManeuver {
 
   /**
    * Returns the altitude tracker attached to the most recent {@link #propagateForOptimization}
-   * call, or {@code null} if no propagation has been performed yet.
+   * call on the calling thread, or {@code null} if no propagation has been performed on this thread
+   * yet. Stored per-thread so parallel CMA-ES exploration runs don't overwrite each other's tracker.
    *
-   * @return the last altitude tracker, or {@code null}
+   * @return the last altitude tracker for this thread, or {@code null}
    */
   public MinAltitudeTracker getLastAltitudeTracker() {
-    return lastAltitudeTracker;
+    return lastAltitudeTracker.get();
   }
 
   /**

@@ -52,8 +52,11 @@ public final class MissionEphemerisGenerator {
 
       mission.setCurrentState(currentState);
 
-      // Create and configure propagator
-      NumericalPropagator propagator = OrekitService.get().createOptimizationPropagator();
+      // Create and configure propagator. The stage sizes its own max step (bilan 08 §3.1): burn-free
+      // stages coast at the large cap (a big saving on the multi-hour final coast), burn stages keep
+      // the late-ignition invariant against their own upper-stage burns for a light I7 load.
+      double maxStep = stage.maxStepSeconds(currentState, mission);
+      NumericalPropagator propagator = OrekitService.get().createOptimizationPropagator(maxStep);
       propagator.setInitialState(currentState);
       stage.configure(propagator, mission);
 

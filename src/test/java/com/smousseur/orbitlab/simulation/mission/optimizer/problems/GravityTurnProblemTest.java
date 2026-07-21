@@ -71,9 +71,20 @@ class GravityTurnProblemTest {
   }
 
   @Test
-  void getAcceptableCost_returnsTightThreshold() {
+  void getAcceptableCost_sitsAboveIrreducibleFpaFloor() {
+    // Bilan 08 §3.6: the acceptance threshold must clear the irreducible W_FPA_SOFT·fpa² floor so
+    // the GT concludes without exhausting retries against a structural minimum. At the reference
+    // hand-off (fpa ≈ 2.1°) that floor is ≈ 0.034; the threshold is sized at the FPA-soft cost of a
+    // 2.5° hand-off, so it must land above 0.034 while staying well below any real constraint
+    // violation (apogee/vTan penalties reach ~0.1+).
     GravityTurnProblem p = getGravityTurnProblem();
-    assertEquals(1e-4, p.getAcceptableCost(), 1e-3);
+    double referenceFpaFloor = 25.0 * Math.pow(Math.toRadians(2.1), 2); // ≈ 0.0337
+    assertTrue(
+        p.getAcceptableCost() > referenceFpaFloor,
+        "Acceptable cost must clear the reference FPA-soft floor (~0.034)");
+    assertTrue(
+        p.getAcceptableCost() < 0.1,
+        "Acceptable cost must stay below genuine constraint-violation costs");
   }
 
   @Test

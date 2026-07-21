@@ -75,6 +75,12 @@ public class GravityTurnStage extends MissionStage
   }
 
   @Override
+  public double maxStepSeconds(SpacecraftState entryState, Mission mission) {
+    // Replay uses the same burn-2 invariant the optimizer's own propagator uses.
+    return createManeuver(mission, entryState.getMass()).maxStepSeconds();
+  }
+
+  @Override
   public void configure(NumericalPropagator propagator, Mission mission) {
     if (optimizationResult == null) {
       throw new OrbitlabException(

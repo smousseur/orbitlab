@@ -70,6 +70,12 @@ public class TransfertTwoManeuverStage extends MissionStage
   }
 
   @Override
+  public double maxStepSeconds(SpacecraftState entryState, Mission mission) {
+    // Replay uses the same late-ignition invariant the optimizer's own propagator uses.
+    return createManeuver(mission).maxStepSeconds(entryState);
+  }
+
+  @Override
   public void configure(NumericalPropagator propagator, Mission mission) {
     if (optimizationResult == null) {
       throw new OrbitlabException(

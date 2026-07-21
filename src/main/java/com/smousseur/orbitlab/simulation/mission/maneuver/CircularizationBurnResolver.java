@@ -96,7 +96,10 @@ final class CircularizationBurnResolver {
    * @return time from stateAfterBurn1 to next apoapsis (s), or NaN on failure
    */
   private static double detectTimeToApoapsis(SpacecraftState stateAfterBurn1) {
-    NumericalPropagator coastPropagator = OrekitService.get().createOptimizationPropagator();
+    // Burn-free coast: nothing ignites, so step at the large coast cap (the apoapsis found is set
+    // by the detector's root-finder + dense output, not by the integration step). See bilan 08 §3.1.
+    NumericalPropagator coastPropagator =
+        OrekitService.get().createOptimizationPropagator(OrekitService.COAST_MAX_STEP);
     coastPropagator.setInitialState(stateAfterBurn1);
 
     RecordAndContinue recorder = new RecordAndContinue();

@@ -170,7 +170,10 @@ public class AnalyticTrimBurnStage extends MissionStage {
    * <p>Package-private so {@link AnalyticApogeeCircularizationStage} reuses the same detection.
    */
   static SpacecraftState detectStateAtApogee(SpacecraftState state) {
-    NumericalPropagator coastPropagator = OrekitService.get().createOptimizationPropagator();
+    // Burn-free coast: nothing ignites, so step at the large coast cap (the apogee found is set by
+    // the detector's root-finder + dense output, not by the integration step). See bilan 08 §3.1.
+    NumericalPropagator coastPropagator =
+        OrekitService.get().createOptimizationPropagator(OrekitService.COAST_MAX_STEP);
     coastPropagator.setInitialState(state);
 
     RecordAndContinue recorder = new RecordAndContinue();

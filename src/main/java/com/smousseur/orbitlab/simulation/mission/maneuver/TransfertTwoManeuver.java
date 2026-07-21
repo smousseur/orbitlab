@@ -120,7 +120,8 @@ public class TransfertTwoManeuver extends TransferManeuver {
     }
 
     // ── Step 3: Full propagation with both burns ──
-    NumericalPropagator propagator = OrekitService.get().createOptimizationPropagator();
+    NumericalPropagator propagator =
+        OrekitService.get().createOptimizationPropagator(maxStepSeconds(initialState));
     propagator.setInitialState(initialState);
     MinAltitudeTracker tracker = configure(propagator, initialState, params, circBurn);
     // dt1 may explore up to full depletion (spec 06 I6): truncate infeasible candidates quietly.
