@@ -25,15 +25,15 @@ public class GEOMissionOptimizationTest extends AbstractTrajectoryOptimizerTest 
   public static final int GEO_ALTITUDE = 35_786_000;
   public static final int PARKING_ALTITUDE = 400_000;
 
-  // Tolerances calibrated on the split GEO profile (spec 06 I5): the apogee circularization is a
-  // single ~3 h finite burn of the 400 N AKM. Its simulate-and-correct plan lands the apogee
-  // within ~5 km, but the plane rotation smeared over the ~40° burn arc leaves a ~0.25° residual
-  // that is geometrically uncorrectable away from a node (at the burn point the plane only
-  // rotates about the radius vector, and the trim's burn point is not a node either). Hence
-  // 0.30° here; a node-targeted plane-trim stage or a multi-burn apogee sequence is the future
-  // fix that would allow tightening back towards the historical 0.10-0.15°.
+  // Tolerances calibrated on the split GEO profile (spec 06 I5). The apogee circularization is a
+  // single ~3 h AKM burn whose plane rotation smears over the ~40° arc, leaving a ~0.25° residual
+  // it cannot correct off-node (at the burn point the plane only rotates about the radius vector).
+  // The node-targeted plane trim (bilan 08 §3.5, AnalyticPlaneTrimAtNodeStage) nulls that residual
+  // with a short out-of-plane burn at a node — on the reference mission the final inclination lands
+  // at ~3e-5°. 0.05° here guards against a regression (e.g. back to the ~0.25° pre-trim floor)
+  // while keeping generous headroom (was 0.30° before the trim).
   private static final double ALTITUDE_TOLERANCE_M = 50_000.0; // ±50 km
-  private static final double INCLINATION_TOLERANCE_RAD = FastMath.toRadians(0.30);
+  private static final double INCLINATION_TOLERANCE_RAD = FastMath.toRadians(0.05);
 
   @BeforeAll
   static void init() {

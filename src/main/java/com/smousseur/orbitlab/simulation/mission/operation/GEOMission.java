@@ -9,6 +9,7 @@ import com.smousseur.orbitlab.simulation.mission.optimizer.problems.GravityTurnC
 import com.smousseur.orbitlab.simulation.mission.stage.AnalyticApogeeCircularizationStage;
 import com.smousseur.orbitlab.simulation.mission.stage.AnalyticGtoInjectionStage;
 import com.smousseur.orbitlab.simulation.mission.stage.AnalyticParkingInsertionStage;
+import com.smousseur.orbitlab.simulation.mission.stage.AnalyticPlaneTrimAtNodeStage;
 import com.smousseur.orbitlab.simulation.mission.stage.AnalyticTrimBurnStage;
 import com.smousseur.orbitlab.simulation.mission.stage.CoastingStage;
 import com.smousseur.orbitlab.simulation.mission.stage.StageSeparationStage;
@@ -201,6 +202,10 @@ public class GEOMission extends Mission {
         new AnalyticApogeeCircularizationStage(
             "Apogee circularization (AKM)", targetAltitude, FastMath.toRadians(finalInclination)),
         new AnalyticTrimBurnStage("Trim", targetAltitude, FastMath.toRadians(finalInclination)),
+        // Node-targeted plane trim (bilan 08 §3.5): the hours-long AKM burn leaves a ~0.25° plane
+        // residual it cannot correct off-node; a short out-of-plane burn at the node cleans it up.
+        new AnalyticPlaneTrimAtNodeStage(
+            "Plane trim (node)", FastMath.toRadians(finalInclination)),
         new CoastingStage("Coasting", null));
   }
 }
