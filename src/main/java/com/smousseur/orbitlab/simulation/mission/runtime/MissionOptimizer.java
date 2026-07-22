@@ -164,6 +164,18 @@ public class MissionOptimizer {
               barriers.altMinContribution(),
               barriers.altMax(),
               barriers.altMaxContribution());
+
+          // ── I7 §5.1: propellant-awareness contribution of the retained solution ──
+          TransferProblem.PropellantReport prop =
+              transferProblem.diagnosePropellant(result.bestVariables());
+          logger.info(
+              "Transfert propellant term: consumedΔv={} m/s, HohmannΔv={} m/s, excessΔv={} m/s, "
+                  + "availableΔv={} m/s, costContribution={}",
+              prop.consumedDv(),
+              prop.hohmannDv(),
+              prop.excessDv(),
+              prop.availableDv(),
+              prop.costContribution());
         }
 
         if (problem instanceof GravityTurnProblem) {

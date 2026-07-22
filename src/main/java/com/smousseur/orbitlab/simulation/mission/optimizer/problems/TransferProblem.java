@@ -25,7 +25,9 @@ import org.orekit.utils.Constants;
  *
  * <p>Burn 1 (4 CMA-ES parameters) places the spacecraft on the target orbit. The cost function
  * evaluates the orbit at the end of burn 1 against the target apsidal altitudes and the derived
- * target eccentricity. For the special case {@code perigee == apogee}, see {@link
+ * target eccentricity, plus a small propellant-awareness term (I7, bilan 10 §5.1) penalizing Δv
+ * consumed beyond the analytic Hohmann reference — equal-precision solutions tie-break toward the
+ * least wasteful one. For the special case {@code perigee == apogee}, see {@link
  * TransferTwoManeuverProblem}, which adds a deterministic circularization burn at the next
  * apoapsis.
  *
@@ -70,6 +72,13 @@ public class TransferProblem implements TrajectoryProblem {
   protected static final double W_BARRIER = 0.1;
   protected static final double W_ALT_MAX = 1.0;
 
+  // ── Propellant-awareness tie-breaker (I7, bilan 10 §5.1) ──
+  // Penalizes Δv spent beyond the analytic Hohmann reference, as a fraction of the tank's
+  // Δv capacity. Small enough that orbit precision always dominates the gradient; large
+  // enough that a wasteful basin (flame-out, wasted1 ~250 m/s) grades worse than a sober
+  // basin of equal precision — restores feasibility monotonicity for the outer λ-bisection.
+  private static final double W_PROPELLANT = 5e-3;
+
   // ── Constraint thresholds ──
   private static final double ALT_MIN = 80_000;
   private static final double PERIAPSIS_FLOOR_MIN = 120_000;
@@ -94,6 +103,11 @@ public class TransferProblem implements TrajectoryProblem {
 
   // Physical upper bound on burn 1 duration (from available propellant)
   private final double dt1MaxPhysical;
+
+  // Analytic Hohmann Δv (burn 1 + burn 2) and tank Δv capacity down to the depletion
+  // floor — reference and normalizer for the propellant-awareness cost term (I7).
+  private final double dvHohmannTotal;
+  private final double dvAvailable;
 
   // Propulsion characteristics (kept for post-mortem Δv breakdown diagnostics)
   protected final double thrust;
@@ -285,8 +299,8 @@ public class TransferProblem implements TrajectoryProblem {
     double vTargetAtArrival = FastMath.sqrt(mu * (2.0 / rTarget - 1.0 / aTargetOrbit));
     double vTransferAtArrival = FastMath.sqrt(mu * (2.0 / rTarget - 1.0 / aTransfer));
     double dv2Hohmann = vTargetAtArrival - vTransferAtArrival;
-    double dvHohmannTotal = FastMath.abs(dv1) + FastMath.abs(dv2Hohmann);
-    double dvAvailable =
+    this.dvHohmannTotal = FastMath.abs(dv1) + FastMath.abs(dv2Hohmann);
+    this.dvAvailable =
         isp * Constants.G0_STANDARD_GRAVITY * FastMath.log(initialMass / vehicleMinMass);
     if (dvHohmannTotal > dvAvailable) {
       throw new OrbitlabException(
@@ -368,6 +382,11 @@ public class TransferProblem implements TrajectoryProblem {
         targetInclination,
         FastMath.toDegrees(targetInclination),
         W_I);
+    logger.info(
+        "Propellant-aware term (I7): W_PROPELLANT={}, Hohmann Δv ref={} m/s, Δv available={} m/s",
+        W_PROPELLANT,
+        dvHohmannTotal,
+        dvAvailable);
   }
 
   @Override
@@ -565,7 +584,62 @@ public class TransferProblem implements TrajectoryProblem {
       }
     }
 
-    return objective + W_BARRIER * barrier + W_ALT_MAX * altMaxPenalty;
+    // I7 propellant-awareness (bilan 10 §5.1): tie-break toward the least wasteful
+    // solution — Δv consumed above the Hohmann reference is waste (off-axis thrust,
+    // overlong burns) that would otherwise drain the sized stage to a zero residual.
+    double consumedDv = computeConsumedDv(state);
+    double excessDv = FastMath.max(0.0, consumedDv - dvHohmannTotal);
+    double propellantTerm = W_PROPELLANT * excessDv / dvAvailable;
+    logger.debug(
+        "Propellant term: consumedΔv={} m/s, HohmannΔv={} m/s, excessΔv={} m/s, contribution={}",
+        consumedDv,
+        dvHohmannTotal,
+        excessDv,
+        propellantTerm);
+
+    return objective + W_BARRIER * barrier + W_ALT_MAX * altMaxPenalty + propellantTerm;
+  }
+
+  /** Δv actually delivered between the initial state and {@code state} (rocket equation). */
+  private double computeConsumedDv(SpacecraftState state) {
+    double m0 = initialState.getMass();
+    double mf = FastMath.max(state.getMass(), 1.0);
+    return isp * Constants.G0_STANDARD_GRAVITY * FastMath.log(m0 / mf);
+  }
+
+  /**
+   * Propellant-awareness diagnostic for the optimal solution (I7, bilan 10 §5.1).
+   *
+   * @param consumedDv the Δv actually delivered over the whole transfer (rocket equation), m/s
+   * @param hohmannDv the analytic Hohmann reference Δv (burn 1 + burn 2), m/s
+   * @param excessDv the wasted part ({@code max(0, consumed − Hohmann)}), m/s
+   * @param availableDv the tank Δv capacity down to the depletion floor, m/s
+   * @param costContribution the {@code W_PROPELLANT · excessDv / availableDv} cost term
+   */
+  public record PropellantReport(
+      double consumedDv,
+      double hohmannDv,
+      double excessDv,
+      double availableDv,
+      double costContribution) {}
+
+  /**
+   * Re-runs propagation for the optimal parameters and isolates the propellant-awareness
+   * contribution to the cost. Pure, no side effects beyond updating {@code lastResult}.
+   *
+   * @param bestVariables the optimized parameter vector
+   * @return the propellant report; Δv fields are {@code NaN} when the propagation failed
+   */
+  public PropellantReport diagnosePropellant(double[] bestVariables) {
+    SpacecraftState state = propagate(bestVariables);
+    double elapsed = state.getDate().durationFrom(initialState.getDate());
+    if (elapsed < 1.0) {
+      return new PropellantReport(Double.NaN, dvHohmannTotal, Double.NaN, dvAvailable, 0.0);
+    }
+    double consumedDv = computeConsumedDv(state);
+    double excessDv = FastMath.max(0.0, consumedDv - dvHohmannTotal);
+    return new PropellantReport(
+        consumedDv, dvHohmannTotal, excessDv, dvAvailable, W_PROPELLANT * excessDv / dvAvailable);
   }
 
   private double computeFailurePenalty() {
