@@ -1,5 +1,6 @@
 package com.smousseur.orbitlab.simulation.mission.stage;
 
+import com.smousseur.orbitlab.core.OrbitlabException;
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.Physics;
 import com.smousseur.orbitlab.simulation.mission.Mission;
@@ -38,6 +39,12 @@ import org.orekit.utils.Constants;
  *       the target altitude in the same plane.
  * </ul>
  *
+ * <p>The "apoapsis below the target" half of that assumption is <b>checked</b>: an entry state
+ * carrying enough energy to overshoot the target would require a retrograde burn, which this stage
+ * cannot express, so the plan is refused rather than flown (see {@code DV_SIGN_TOLERANCE}). The
+ * "entry at periapsis" half is only approximate in practice — the gravity turn hands off at a
+ * flight path angle of one to a few degrees — and is deliberately not checked.
+ *
  * <p>The stage does not implement {@link
  * com.smousseur.orbitlab.simulation.mission.OptimizableMissionStage}; the mission optimizer
  * propagates it via {@link #propagateStandalone(SpacecraftState, Mission)} without running CMA-ES.
@@ -55,6 +62,14 @@ import org.orekit.utils.Constants;
 public class AnalyticParkingInsertionStage extends MissionStage {
   private static final Logger logger = LogManager.getLogger(AnalyticParkingInsertionStage.class);
   private static final double EARTH_RADIUS = Constants.WGS84_EARTH_EQUATORIAL_RADIUS;
+
+  /**
+   * Retrograde ΔV tolerated before a burn is rejected as an assumption violation (m/s). Sized to
+   * separate "the entry apoapsis is numerically level with the target, so this burn is a no-op"
+   * from a real geometry breakdown: on the reference GEO profile burn 1 runs at +20 to +59 m/s,
+   * and the run that exposed the flaw sat at −57 m/s.
+   */
+  private static final double DV_SIGN_TOLERANCE = 1.0;
 
   private final double targetAltitude;
 
@@ -117,8 +132,35 @@ public class AnalyticParkingInsertionStage extends MissionStage {
     double vTransferApogee = FastMath.sqrt(mu * (2.0 / r2 - 1.0 / aTransfer));
     double vCircTarget = FastMath.sqrt(mu / r2);
 
-    double dv1 = vTransferPerigee - v1;
-    double dv2 = vCircTarget - vTransferApogee;
+    double dv1Raw = vTransferPerigee - v1;
+    double dv2Raw = vCircTarget - vTransferApogee;
+
+    // Both burns of a raising Hohmann transfer are prograde. A retrograde ΔV means the entry
+    // apoapsis already sits above the target, i.e. the geometry documented on this class does not
+    // hold — and it is not a benign inaccuracy: Physics.computeBurnDuration evaluates
+    // (1 − exp(−Δv/ve)), which goes NEGATIVE for a negative Δv, so the plan hands the propagator a
+    // maneuver whose end date precedes its start and predicts a mass GAIN across burn 1. Observed
+    // on the I7 GEO loop at λ=0.3 (dv1 = −57 m/s, dt1 = −0.61 s): the burns silently did nothing
+    // and the mission flew on with a corrupted plan. Refuse it instead — the caller (mission
+    // optimizer, then the outer propellant loop) reads this as a clean infeasibility.
+    if (dv1Raw < -DV_SIGN_TOLERANCE || dv2Raw < -DV_SIGN_TOLERANCE) {
+      throw new OrbitlabException(
+          String.format(
+              "[%s] cannot plan the insertion to a %.0f km circular orbit: the entry state at "
+                  + "%.0f km already carries too much energy, so the transfer would need a "
+                  + "retrograde burn (ΔV1 %.1f m/s, ΔV2 %.1f m/s — both must be prograde). The "
+                  + "entry apoapsis is above the target, which breaks the raising-Hohmann "
+                  + "geometry this stage assumes",
+              getName(),
+              targetAltitude / 1000.0,
+              (r1 - EARTH_RADIUS) / 1000.0,
+              dv1Raw,
+              dv2Raw));
+    }
+    // Within tolerance the entry apoapsis is level with the target: the correct response is no
+    // burn at all, not a retrograde one.
+    double dv1 = FastMath.max(0.0, dv1Raw);
+    double dv2 = FastMath.max(0.0, dv2Raw);
 
     ActiveStageInfo stage1 = vehicle.resolveActiveStage(state.getMass());
     PropulsionSystem propulsion1 = stage1.propulsion();

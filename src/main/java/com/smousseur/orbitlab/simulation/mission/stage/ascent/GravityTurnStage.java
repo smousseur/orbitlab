@@ -11,6 +11,8 @@ import com.smousseur.orbitlab.simulation.mission.optimizer.OptimizationResult;
 import com.smousseur.orbitlab.simulation.mission.optimizer.problems.GravityTurnConstraints;
 import com.smousseur.orbitlab.simulation.mission.optimizer.problems.GravityTurnProblem;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.hipparchus.ode.events.Action;
 import org.orekit.propagation.SpacecraftState;
 import org.orekit.propagation.events.DateDetector;
@@ -19,6 +21,8 @@ import org.orekit.time.AbsoluteDate;
 
 public class GravityTurnStage extends MissionStage
     implements OptimizableMissionStage<GravityTurnProblem> {
+
+  private static final Logger logger = LogManager.getLogger(GravityTurnStage.class);
 
   private final double targetInclination;
   private final double pitchKickAngle;
@@ -97,6 +101,25 @@ public class GravityTurnStage extends MissionStage
     // Replay path: the optimized transition time is supposed to fit the loaded propellant, so a
     // depletion here is a real accounting bug — fail loud.
     DepletionGuard.arm(propagator, maneuver.getDepletionFloor(), getName());
+
+    // Staging invariant (bilan 10 §5.3): the optimizer's lower bound guarantees MECO comes after
+    // first-stage burnout plus the interstage coast, so the jettison scheduled at burn1Duration
+    // always fires. Logged once per mission so a profile that ever loses its staging is visible.
+    double stagingComplete = maneuver.getStagingCompleteTime();
+    if (params.transitionTime() < stagingComplete) {
+      throw new OrbitlabException(
+          String.format(
+              "GravityTurnStage '%s': MECO at %.2f s precedes staging completion at %.2f s "
+                  + "(burn 1 %.2f s + interstage coast) — the first stage would never be "
+                  + "jettisoned and would stay active for the rest of the mission",
+              getName(), params.transitionTime(), stagingComplete, maneuver.getBurn1Duration()));
+    }
+    logger.info(
+        "[{}] staging: burn1 {}s to first-stage burnout, jettison, then burn2 {}s (MECO at {}s)",
+        getName(),
+        String.format(java.util.Locale.ROOT, "%.1f", params.burn1Duration()),
+        String.format(java.util.Locale.ROOT, "%.1f", params.burn2Duration()),
+        String.format(java.util.Locale.ROOT, "%.1f", params.transitionTime()));
 
     // MECO event → transition to next stage
     AbsoluteDate mecoDate = state.getDate().shiftedBy(params.transitionTime());

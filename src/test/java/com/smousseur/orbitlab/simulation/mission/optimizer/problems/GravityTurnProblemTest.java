@@ -48,6 +48,9 @@ class GravityTurnProblemTest {
     GravityTurnProblem p = getGravityTurnProblem();
     double[] bounds = p.getLowerBounds();
     assertEquals(2, bounds.length);
+    // The staging invariant is a cost penalty, not a bound: Hipparchus normalizes the search space
+    // by the box width, so moving this floor would perturb every mission (see the penalty tests
+    // below and GravityTurnProblem#getLowerBounds).
     assertEquals(30.0, bounds[0], 1e-10);
     assertEquals(0.1, bounds[1], 1e-10);
   }
@@ -100,6 +103,57 @@ class GravityTurnProblemTest {
     assertTrue(guess[0] <= upper[0], "transitionTime guess should be <= upper bound");
     // exponent
     assertEquals(1.0, guess[1], 1e-10);
+  }
+
+  // ── Staging invariant, carried as a cost penalty (bilan 10 §5.3) ──────────
+  //
+  // The penalty is applied on top of the trajectory cost, so these assert the exact delta between
+  // grading the SAME hand-off state with and without a below-staging candidate recorded. That
+  // keeps them independent of whatever the propagation produced.
+
+  /** Circular orbit at {@code altitude}, dated late enough to take computeCost's nominal path. */
+  private static SpacecraftState circularStateAfter(double altitude, double secondsAfterEpoch) {
+    double r = Constants.WGS84_EARTH_EQUATORIAL_RADIUS + altitude;
+    double v = Math.sqrt(Constants.WGS84_EARTH_MU / r);
+    return new SpacecraftState(
+            new CartesianOrbit(
+                new PVCoordinates(new Vector3D(r, 0, 0), new Vector3D(0, v, 0)),
+                OrekitService.get().gcrf(),
+                AbsoluteDate.J2000_EPOCH.shiftedBy(secondsAfterEpoch),
+                Constants.WGS84_EARTH_MU))
+        .withMass(10_000);
+  }
+
+  private static GravityTurnProblem problemWithRealInitialState() {
+    return new GravityTurnProblem(
+        maneuver, circularStateAfter(150_000, 0.0), GravityTurnConstraints.forTarget(400_000));
+  }
+
+  @Test
+  void computeCost_mecoBeforeStaging_addsAPenaltyDominatingAnyNominalCost() {
+    GravityTurnProblem p = problemWithRealInitialState();
+    SpacecraftState handOff = circularStateAfter(325_000, 200.0);
+    double baseline = p.computeCost(handOff);
+
+    double shortfall = 5.0;
+    p.propagate(new double[] {maneuver.getStagingCompleteTime() - shortfall, 1.0});
+    double penalized = p.computeCost(handOff);
+
+    // 1e3 base + 1.0 per second short. The base has to dominate outright: the GEO run's
+    // staging-skipping solution scored a perfectly respectable 0.0089 on the criteria above.
+    assertEquals(baseline + 1_000.0 + shortfall, penalized, 1e-6);
+    assertTrue(penalized > 1_000.0, "a staging-skipping candidate must never outrank a valid one");
+  }
+
+  @Test
+  void computeCost_mecoAfterStaging_carriesNoPenalty() {
+    GravityTurnProblem p = problemWithRealInitialState();
+    SpacecraftState handOff = circularStateAfter(325_000, 200.0);
+    double baseline = p.computeCost(handOff);
+
+    p.propagate(new double[] {maneuver.getStagingCompleteTime() + 20.0, 1.0});
+
+    assertEquals(baseline, p.computeCost(handOff), 1e-9);
   }
 
   @Test

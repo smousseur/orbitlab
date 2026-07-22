@@ -259,6 +259,26 @@ public class GravityTurnManeuver {
   }
 
   /**
+   * Earliest MECO that still completes first-stage staging: burn 1 run to depletion plus the
+   * interstage settling coast. Burn 2 has zero duration exactly at this time.
+   *
+   * <p><b>Invariant.</b> {@link #configure} schedules the jettison with a {@link DateDetector} at
+   * {@code burn1Duration}, so a transition time below that ends the propagation <em>before</em> the
+   * detector fires: burn 1 is truncated, the first stage is never dropped, and it stays the active
+   * stage for every downstream phase. The gravity turn optimizer must therefore keep the transition
+   * time at or above this value — its search bounds are what enforce the invariant (bilan 10 §5.3).
+   *
+   * <p>The failure this prevents is silent and knife-edge: on the GEO profile CMA-ES settled at
+   * 149.6 s against a 150.0 s burn 1, so the 0.4 s shortfall stranded 3.3 t in S1, the "S2
+   * separation" jettisoned S1 in its place, and S2 then flew the payload kick motor's burns.
+   *
+   * @return the earliest transition time that completes staging, in seconds
+   */
+  public double getStagingCompleteTime() {
+    return getBurn1Duration() + interstageCoastDuration;
+  }
+
+  /**
    * Returns the vehicle performing this maneuver.
    *
    * @return the vehicle

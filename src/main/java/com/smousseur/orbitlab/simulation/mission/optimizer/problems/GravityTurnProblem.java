@@ -56,9 +56,32 @@ public class GravityTurnProblem implements TrajectoryProblem {
   private static final double MAX_EXPECTED_HANDOFF_FPA_RAD = FastMath.toRadians(2.5);
   private static final double ACCEPTABLE_COST = W_FPA_SOFT * sq(MAX_EXPECTED_HANDOFF_FPA_RAD);
 
+  // ── Staging invariant (bilan 10 §5.3) ──
+  // The jettison of the first stage is scheduled inside the maneuver by a DateDetector at
+  // burn1Duration, so a MECO before that ends the propagation before the detector fires: burn 1 is
+  // truncated, the stage is never dropped, and it stays active for every downstream phase — on the
+  // GEO profile a 0.4 s shortfall against a 150 s burn 1 stranded 3.3 t in S1 and let the "S2
+  // separation" jettison S1 in its place. Such a candidate can score perfectly well on the
+  // criteria below (that run cost 0.0089), so the penalty has to dominate any nominal cost
+  // outright rather than merely nudge.
+  //
+  // This is deliberately a cost term and not a search bound: CMA-ES is rank-based and these
+  // candidates already sit in the discarded half of every generation (a truncated ascent trips the
+  // velocity and apogee guard rails), so penalizing them leaves the search path untouched — where
+  // raising the lower bound would rescale the box and perturb every mission.
+  private static final double STAGING_PENALTY_BASE = 1e3;
+
+  /** Gradient per second of shortfall, pushing CMA-ES back above the staging floor. */
+  private static final double W_STAGING_SHORTFALL = 1.0;
+
   private final GravityTurnManeuver maneuver;
   private final SpacecraftState initialState;
   private final GravityTurnConstraints constraints;
+
+  // How far the candidate's MECO falls short of staging completion (s), handed from propagate() to
+  // computeCost(). Per-thread so parallel CMA-ES exploration runs cannot overwrite each other's
+  // value, matching GravityTurnManeuver#lastAltitudeTracker.
+  private final ThreadLocal<Double> stagingShortfall = ThreadLocal.withInitial(() -> 0.0);
 
   /**
    * Creates a gravity turn optimization problem.
@@ -89,6 +112,10 @@ public class GravityTurnProblem implements TrajectoryProblem {
 
   @Override
   public double[] getLowerBounds() {
+    // The staging invariant is enforced as a cost penalty, NOT as a bound: Hipparchus normalizes
+    // the search space by the box width, so moving this floor would re-encode every candidate and
+    // rescale the effective sigma, perturbing the search on missions the invariant never binds
+    // (measured: a LEO 300 km hand-off degrading to 290×311 km). See computeCost.
     return new double[] {30.0, 0.1};
   }
 
@@ -120,11 +147,21 @@ public class GravityTurnProblem implements TrajectoryProblem {
 
   @Override
   public SpacecraftState propagate(double[] variables) {
+    // Recorded for the computeCost() call the executor makes right after, on this same thread.
+    stagingShortfall.set(FastMath.max(0.0, maneuver.getStagingCompleteTime() - variables[0]));
     return maneuver.propagateForOptimization(initialState, variables);
   }
 
   @Override
   public double computeCost(SpacecraftState state) {
+    double shortfall = stagingShortfall.get();
+    double stagingPenalty =
+        shortfall > 0 ? STAGING_PENALTY_BASE + W_STAGING_SHORTFALL * shortfall : 0.0;
+    return trajectoryCost(state) + stagingPenalty;
+  }
+
+  /** Cost of the hand-off state itself, before the staging invariant is applied. */
+  private double trajectoryCost(SpacecraftState state) {
     // Detect penalty states: if propagation failed, the returned state is the initial state
     double elapsed = state.getDate().durationFrom(initialState.getDate());
     if (elapsed < 1.0) {
