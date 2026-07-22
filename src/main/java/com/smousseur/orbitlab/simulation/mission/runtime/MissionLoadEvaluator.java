@@ -28,7 +28,11 @@ import org.orekit.time.AbsoluteDate;
  * <ul>
  *   <li><b>objective</b> — the final coast orbit lands within {@code objectiveToleranceRatio} of the
  *       target perigee and apogee, measured from the ephemeris exactly as the mission optimization
- *       tests do (min/max altitude of the terminal {@code "Coasting"} stage);
+ *       tests do (min/max altitude of the terminal {@code "Coasting"} stage). The target is the
+ *       mission's own {@link OrbitInsertionObjective} by default; missions whose recorded objective
+ *       is not the flown final orbit must pass an explicit feasibility objective — {@code
+ *       GEOMission} records {@code (parking, GEO)}, the two mission phases, while the flown end
+ *       state is circular GEO;
  *   <li><b>residual floor</b> — the end-of-mission residual is at least {@code residualFloorRatio}
  *       of the <em>sized stage's</em> load (spec 09 §5, "≥ 1 % de la charge par étage liquide"). The
  *       denominator is the load of the λ-scaled top stage, not the whole stack: on an S1-dominated
@@ -77,6 +81,8 @@ public final class MissionLoadEvaluator implements PropellantLoadOptimizer.Evalu
   private final Long seed;
   private final double objectiveToleranceRatio;
   private final double residualFloorRatio;
+  // The orbit the terminal coast is measured against; null → the mission's own objective.
+  private final OrbitInsertionObjective feasibilityObjective;
 
   /**
    * Creates an evaluator with the spec-09 defaults (±7 % objective, 40 000 inner evals, deterministic
@@ -105,17 +111,11 @@ public final class MissionLoadEvaluator implements PropellantLoadOptimizer.Evalu
   }
 
   /**
-   * Creates an evaluator with explicit settings.
+   * Creates an evaluator with explicit settings, measuring feasibility against the mission's own
+   * objective.
    *
-   * @param missionBuilder assembles a fresh mission from a per-stage launcher load array
-   * @param heuristicLoads the baseline per-stage loads (kg), same order as the launcher stages
-   * @param lambdaScaled which stages the λ scaling applies to
-   * @param launchEpoch the launch date the mission's initial state is built at
-   * @param optimizerMaxEvaluations the inner CMA-ES evaluation budget per stage
-   * @param seed the CMA-ES master seed, or {@code null} for non-deterministic
-   * @param objectiveToleranceRatio the ± band on perigee/apogee the objective must land within
-   * @param residualFloorRatio the minimum end-of-mission residual as a fraction of the sized stage's
-   *     load; keeps the sized stage off flame-out
+   * <p>See {@link #MissionLoadEvaluator(Function, double[], boolean[], AbsoluteDate, int, Long,
+   * double, double, OrbitInsertionObjective) the full overload} for the parameter documentation.
    */
   public MissionLoadEvaluator(
       Function<double[], Mission> missionBuilder,
@@ -126,6 +126,45 @@ public final class MissionLoadEvaluator implements PropellantLoadOptimizer.Evalu
       Long seed,
       double objectiveToleranceRatio,
       double residualFloorRatio) {
+    this(
+        missionBuilder,
+        heuristicLoads,
+        lambdaScaled,
+        launchEpoch,
+        optimizerMaxEvaluations,
+        seed,
+        objectiveToleranceRatio,
+        residualFloorRatio,
+        null);
+  }
+
+  /**
+   * Creates an evaluator with explicit settings and an explicit feasibility objective.
+   *
+   * @param missionBuilder assembles a fresh mission from a per-stage launcher load array
+   * @param heuristicLoads the baseline per-stage loads (kg), same order as the launcher stages
+   * @param lambdaScaled which stages the λ scaling applies to
+   * @param launchEpoch the launch date the mission's initial state is built at
+   * @param optimizerMaxEvaluations the inner CMA-ES evaluation budget per stage
+   * @param seed the CMA-ES master seed, or {@code null} for non-deterministic
+   * @param objectiveToleranceRatio the ± band on perigee/apogee the objective must land within
+   * @param residualFloorRatio the minimum end-of-mission residual as a fraction of the sized stage's
+   *     load; keeps the sized stage off flame-out
+   * @param feasibilityObjective the orbit the terminal coast is measured against, or {@code null}
+   *     to use the mission's own {@link OrbitInsertionObjective}. Required for missions whose
+   *     recorded objective is not the flown final orbit (a GEO mission records {@code (parking,
+   *     GEO)} while its end state is circular GEO)
+   */
+  public MissionLoadEvaluator(
+      Function<double[], Mission> missionBuilder,
+      double[] heuristicLoads,
+      boolean[] lambdaScaled,
+      AbsoluteDate launchEpoch,
+      int optimizerMaxEvaluations,
+      Long seed,
+      double objectiveToleranceRatio,
+      double residualFloorRatio,
+      OrbitInsertionObjective feasibilityObjective) {
     this.missionBuilder = Objects.requireNonNull(missionBuilder, "missionBuilder");
     this.heuristicLoads = heuristicLoads.clone();
     this.lambdaScaled = lambdaScaled.clone();
@@ -143,6 +182,7 @@ public final class MissionLoadEvaluator implements PropellantLoadOptimizer.Evalu
     this.seed = seed;
     this.objectiveToleranceRatio = objectiveToleranceRatio;
     this.residualFloorRatio = residualFloorRatio;
+    this.feasibilityObjective = feasibilityObjective;
   }
 
   @Override
@@ -162,7 +202,10 @@ public final class MissionLoadEvaluator implements PropellantLoadOptimizer.Evalu
       return new PropellantLoadOptimizer.Evaluation(lambda, false, null);
     }
 
-    OrbitInsertionObjective objective = orbitInsertionObjective(mission.getObjective());
+    OrbitInsertionObjective objective =
+        feasibilityObjective != null
+            ? feasibilityObjective
+            : orbitInsertionObjective(mission.getObjective());
     boolean objectiveMet = objectiveMet(result.ephemeris(), objective, objectiveToleranceRatio);
 
     MissionPerformanceReport report = result.performanceReport();

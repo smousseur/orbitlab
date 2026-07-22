@@ -41,6 +41,9 @@ public class GEOMission extends Mission {
   private static final double DEFAULT_ALTITUDE = 0.0;
   public static final int GEO_ALTITUDE = 35_786_000;
 
+  /** Stack index of the launcher's upper stage — the one "S2 separation" is meant to jettison. */
+  private static final int UPPER_STAGE_INDEX = 1;
+
   private final double latitude;
   private final double longitude;
   private final double altitude;
@@ -194,7 +197,12 @@ public class GEOMission extends Mission {
         new AnalyticParkingInsertionStage("Parking", parkingAltitude),
         new CoastingStage("Coasting parking", true),
         new AnalyticGtoInjectionStage("GTO injection", targetAltitude),
-        new StageSeparationStage("S2 separation", profile.interstageCoastDuration()),
+        // Index 1 = the launcher's upper stage (stack = [S1, S2, payload]). Declaring it makes the
+        // separation refuse to fire when the gravity turn left propellant in S1 — S1 would still
+        // be the active stage and get jettisoned in S2's place, after which S2 silently takes over
+        // the payload kick motor's burns (bilan 10 §6 follow-up, found by the I7 GEO run).
+        new StageSeparationStage(
+            "S2 separation", profile.interstageCoastDuration(), UPPER_STAGE_INDEX),
         // The AKM burn owns its ~5 h lead-in coast to the GTO apogee and centers the burn on it
         // (an hours-long 400 N burn starting AT apogee would ruin the insertion). Its plan runs a
         // Newton on the aimed perigee so the finite-burn apogee inflation lands on target; the
