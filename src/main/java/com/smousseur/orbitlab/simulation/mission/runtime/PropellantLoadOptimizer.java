@@ -173,8 +173,45 @@ public final class PropellantLoadOptimizer {
       return new Result(false, lambdaMax, evaluations, hi);
     }
 
+    return bisectBelow(evaluator, lambdaMax, hi, evaluations);
+  }
+
+  /**
+   * Bisects downward from an upper bound the caller has <em>already</em> evaluated and knows to be
+   * feasible, so that point is not paid for twice.
+   *
+   * <p>This is what the coordinate-wise multi-stage sweep needs: when it starts bisecting one
+   * stage's {@code λ}, the current load vector has just been evaluated and found feasible, and
+   * raising only that stage's share cannot break it. Re-probing would cost a full mission
+   * optimization (25–65 s) to re-learn something already known.
+   *
+   * @param evaluator rebuilds + optimizes the mission at a given {@code λ}
+   * @param knownFeasibleLambda the upper bound of the bracket, known feasible
+   * @param knownFeasibleEvaluation the evaluation obtained at that bound (warm-start source)
+   * @return the minimal feasible scaling at or below {@code knownFeasibleLambda}
+   */
+  public Result minimizeBelow(
+      Evaluator evaluator, double knownFeasibleLambda, Evaluation knownFeasibleEvaluation) {
+    Objects.requireNonNull(evaluator, "evaluator");
+    Objects.requireNonNull(knownFeasibleEvaluation, "knownFeasibleEvaluation");
+    if (!(knownFeasibleLambda > lambdaMin)) {
+      // Already at (or below) the floor: nothing left to bisect.
+      return new Result(true, knownFeasibleLambda, 0, knownFeasibleEvaluation);
+    }
+    return bisectBelow(evaluator, knownFeasibleLambda, knownFeasibleEvaluation, 0);
+  }
+
+  /**
+   * Shared bisection core: probes {@code lambdaMin}, then halves the bracket until it is narrower
+   * than the tolerance or the budget runs out. {@code evaluationsSoFar} counts evaluations the
+   * caller already spent, so the budget covers the whole search.
+   */
+  private Result bisectBelow(
+      Evaluator evaluator, double upperLambda, Evaluation upperEval, int evaluationsSoFar) {
+    int evaluations = evaluationsSoFar;
+
     // Lower bound. If the smallest allowed load already succeeds, we cannot do better; stop.
-    Evaluation lo = evaluator.evaluate(lambdaMin, hi);
+    Evaluation lo = evaluator.evaluate(lambdaMin, upperEval);
     evaluations++;
     logger.info("Probe λ={} (lower bound): feasible={}", lambdaMin, lo.feasible());
     if (lo.feasible()) {
@@ -187,8 +224,8 @@ public final class PropellantLoadOptimizer {
     }
 
     double infeasibleLambda = lambdaMin; // known infeasible
-    double feasibleLambda = lambdaMax; // known feasible
-    Evaluation best = hi; // smallest-λ feasible evaluation so far
+    double feasibleLambda = upperLambda; // known feasible
+    Evaluation best = upperEval; // smallest-λ feasible evaluation so far
     Evaluation previous = lo; // last evaluation performed, for warm-start
 
     while (evaluations < maxEvaluations && (feasibleLambda - infeasibleLambda) > tolerance) {
@@ -247,6 +284,54 @@ public final class PropellantLoadOptimizer {
       }
     }
     return scaled;
+  }
+
+  /**
+   * Per-stage variant of {@link #scaledLoads(double, double[], boolean[])}: each scaled stage gets
+   * its <em>own</em> factor. {@code load_i = λ_i · load_i^heuristic} where {@code lambdaScaled[i]},
+   * otherwise the heuristic load is kept and {@code lambdas[i]} is ignored.
+   *
+   * @param lambdas per-stage scale factors, same length and order as the launcher stages
+   * @param heuristicLoads the baseline per-stage loads (kg)
+   * @param lambdaScaled which stages the scaling applies to
+   * @return a new per-stage load array
+   */
+  public static double[] scaledLoads(
+      double[] lambdas, double[] heuristicLoads, boolean[] lambdaScaled) {
+    if (heuristicLoads.length != lambdaScaled.length || lambdas.length != heuristicLoads.length) {
+      throw new IllegalArgumentException(
+          "lambdas, heuristicLoads and lambdaScaled must have the same length");
+    }
+    double[] scaled = heuristicLoads.clone();
+    for (int i = 0; i < scaled.length; i++) {
+      if (lambdaScaled[i]) {
+        scaled[i] = Math.max(0.0, lambdas[i] * heuristicLoads[i]);
+      }
+    }
+    return scaled;
+  }
+
+  /**
+   * Scaling mask putting <b>every variable-load stage</b> under its own {@code λ} — the mask the
+   * multi-stage coordinate sweep consumes. SOLID stages keep their design load (no sizing degree of
+   * freedom) and the payload AKM never appears in the launcher loads.
+   *
+   * <p>Opt-in: {@link #lambdaScaledMask} (top stage only) stays the default, because on the flown
+   * LEO profile the first stage's full load is already "just enough" and scaling it pins {@code λ*}
+   * at 1. On GEO the picture differs — the gravity turn sits pinned on its staging floor, which
+   * says it has more first-stage propellant than it needs — so that stage is worth putting under
+   * {@code λ} there.
+   *
+   * @param launcher the launcher model
+   * @return a per-stage boolean mask, {@code true} on every variable-load stage
+   */
+  public static boolean[] allVariableLoadMask(LauncherModel launcher) {
+    List<StageModel> stages = launcher.stages();
+    boolean[] mask = new boolean[stages.size()];
+    for (int i = 0; i < stages.size(); i++) {
+      mask[i] = stages.get(i).capabilities().variableLoad();
+    }
+    return mask;
   }
 
   /**

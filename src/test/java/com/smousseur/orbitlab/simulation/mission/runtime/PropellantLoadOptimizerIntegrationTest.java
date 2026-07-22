@@ -289,6 +289,152 @@ public class PropellantLoadOptimizerIntegrationTest {
                 FastMath.toDegrees(GEO_INCLINATION_TOLERANCE_RAD)));
   }
 
+  /**
+   * Multi-stage counterpart on GEO: <b>every</b> variable-load stage gets its own λ (S1 and S2 on
+   * Falcon Heavy) and {@link MultiStageLoadOptimizer} minimizes them by coordinate-wise bisection.
+   *
+   * <p>GEO is where this is worth trying first, on measured evidence rather than hope: on the
+   * single-λ run the gravity turn sat pinned exactly on its staging floor at every λ&lt;1, with a
+   * zero-length second burn — the optimizer saying it has more first-stage propellant than the
+   * profile needs. That is the slack this test goes after, and it is the opposite of the LEO
+   * finding recorded in {@link PropellantLoadOptimizer#lambdaScaledMask}.
+   *
+   * <p>Reference to beat: the single-λ result on the same configuration, {@code λ*=0.8141} →
+   * S2 8645 kg, S1 untouched at 1 233 000 kg.
+   */
+  @Test
+  void geoMultiStage_shrinksEveryVariableLoadStage() {
+    LauncherModel launcher = Launchers.FALCON_HEAVY;
+    double payloadDryMass = Payloads.GEO_SAT.defaultDryMass();
+
+    PropellantBudget.GeoLoads geoLoads =
+        PropellantBudget.loadsForGeo(
+            launcher,
+            Payloads.GEO_SAT,
+            payloadDryMass,
+            GEO_PARKING_ALTITUDE_M,
+            GEO_LAUNCH_LATITUDE_DEG);
+    double[] heuristicLoads = geoLoads.launcherLoads();
+    double akmLoad = geoLoads.akmLoad();
+    boolean[] mask = PropellantLoadOptimizer.allVariableLoadMask(launcher);
+    logStageLoads("GEO multi-stage heuristic loads", launcher, heuristicLoads, mask);
+    logger.info("GEO heuristic AKM load: {} kg (off λ)", Math.round(akmLoad));
+
+    AbsoluteDate launchEpoch =
+        new AbsoluteDate(2026, 1, 1, 12, 0, 0.0, TimeScalesFactory.getUTC());
+
+    Function<double[], Mission> missionBuilder =
+        loads ->
+            new GEOMission(
+                "I7 GEO multi-stage",
+                new LaunchConfiguration(
+                    launcher, loads, Payloads.GEO_SAT.toSpacecraft(payloadDryMass, akmLoad)),
+                GEO_PARKING_ALTITUDE_M,
+                GEO_ALTITUDE_M,
+                GEO_LAUNCH_LATITUDE_DEG,
+                GEO_LAUNCH_LONGITUDE_DEG,
+                0.0,
+                0.0);
+
+    MissionLoadEvaluator evaluator =
+        new MissionLoadEvaluator(
+            missionBuilder,
+            heuristicLoads,
+            mask,
+            launchEpoch,
+            MissionLoadEvaluator.DEFAULT_OPTIMIZER_MAX_EVALUATIONS,
+            42L,
+            GEO_ALTITUDE_TOLERANCE_M / GEO_ALTITUDE_M,
+            MissionLoadEvaluator.DEFAULT_RESIDUAL_FLOOR_RATIO,
+            OrbitInsertionObjective.circular(SolarSystemBody.EARTH, GEO_ALTITUDE_M, 0.0));
+
+    MultiStageLoadOptimizer.Result result =
+        new MultiStageLoadOptimizer().minimize(evaluator::evaluate, mask, heuristicLoads);
+
+    double[] scaledLoads =
+        PropellantLoadOptimizer.scaledLoads(result.lambdas(), heuristicLoads, mask);
+    logStageLoads("GEO multi-stage loads at λ*", launcher, scaledLoads, mask);
+
+    double scaledMassHeuristic = maskedSum(heuristicLoads, mask);
+    double scaledMassFinal = maskedSum(scaledLoads, mask);
+    logger.info(
+        "I7 GEO multi-stage result: feasible={}, λ*={}, evals={}, passes={};"
+            + " scaled-stage mass {} kg → {} kg (−{} kg, −{}%)",
+        result.feasible(),
+        Arrays.toString(result.lambdas()),
+        result.evaluations(),
+        result.passes(),
+        Math.round(scaledMassHeuristic),
+        Math.round(scaledMassFinal),
+        Math.round(scaledMassHeuristic - scaledMassFinal),
+        String.format(
+            java.util.Locale.ROOT, "%.1f", 100.0 * (1.0 - scaledMassFinal / scaledMassHeuristic)));
+
+    assertTrue(result.feasible(), "the heuristic GEO loads must themselves be feasible");
+    assertTrue(
+        scaledMassFinal < scaledMassHeuristic,
+        () ->
+            String.format(
+                java.util.Locale.ROOT,
+                "scaled-stage mass %.0f kg must fall below the heuristic %.0f kg",
+                scaledMassFinal,
+                scaledMassHeuristic));
+    for (int i = 0; i < mask.length; i++) {
+      int index = i;
+      assertTrue(
+          result.lambdas()[index] <= PropellantLoadOptimizer.DEFAULT_LAMBDA_MAX + 1e-12,
+          () -> "λ" + index + " must not exceed the heuristic bound");
+    }
+
+    MissionComputeResult best = result.best().result();
+    assertNotNull(best, "the feasible best evaluation must carry its mission compute result");
+    StagePropellant s2 =
+        best.performanceReport()
+            .residualForStage(1)
+            .orElseThrow(() -> new AssertionError("no per-stage propellant split for S2"));
+    logger.info(
+        "GEO multi-stage S2 at λ*: loaded={} kg, residual at jettison={} kg ({}% of its load)",
+        Math.round(s2.loaded()),
+        Math.round(s2.residual()),
+        String.format(java.util.Locale.ROOT, "%.1f", 100.0 * s2.residualRatio()));
+    assertTrue(
+        s2.residualRatio() >= MissionLoadEvaluator.DEFAULT_RESIDUAL_FLOOR_RATIO,
+        () ->
+            String.format(
+                java.util.Locale.ROOT,
+                "S2 residual at jettison (%.0f kg) is below %.0f%% of its %.0f kg load",
+                s2.residual(),
+                100.0 * MissionLoadEvaluator.DEFAULT_RESIDUAL_FLOOR_RATIO,
+                s2.loaded()));
+
+    MissionEphemerisPoint last = best.ephemeris().lastPoint();
+    KeplerianOrbit finalOrbit =
+        new KeplerianOrbit(
+            new PVCoordinates(last.position(), last.velocity()),
+            OrekitService.get().gcrf(),
+            last.time(),
+            Constants.WGS84_EARTH_MU);
+    assertTrue(
+        finalOrbit.getI() < GEO_INCLINATION_TOLERANCE_RAD,
+        () ->
+            String.format(
+                java.util.Locale.ROOT,
+                "Final inclination %.4f° exceeds tolerance %.3f°",
+                FastMath.toDegrees(finalOrbit.getI()),
+                FastMath.toDegrees(GEO_INCLINATION_TOLERANCE_RAD)));
+  }
+
+  /** Sum of the loads of the masked stages only — the mass actually under the loop's control. */
+  private static double maskedSum(double[] loads, boolean[] mask) {
+    double sum = 0.0;
+    for (int i = 0; i < loads.length; i++) {
+      if (mask[i]) {
+        sum += loads[i];
+      }
+    }
+    return sum;
+  }
+
   private static void logStageLoads(
       String label, LauncherModel launcher, double[] loads, boolean[] mask) {
     for (int i = 0; i < loads.length; i++) {

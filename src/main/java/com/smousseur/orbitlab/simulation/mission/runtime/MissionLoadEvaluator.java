@@ -188,7 +188,35 @@ public final class MissionLoadEvaluator implements PropellantLoadOptimizer.Evalu
   @Override
   public PropellantLoadOptimizer.Evaluation evaluate(
       double lambda, PropellantLoadOptimizer.Evaluation previous) {
-    double[] loads = PropellantLoadOptimizer.scaledLoads(lambda, heuristicLoads, lambdaScaled);
+    double[] lambdas = new double[heuristicLoads.length];
+    java.util.Arrays.fill(lambdas, lambda);
+    PropellantLoadOptimizer.Evaluation evaluation = evaluate(lambdas, previous);
+    // Re-tag with the scalar factor the caller bisects on; the vector overload cannot know it.
+    return new PropellantLoadOptimizer.Evaluation(
+        lambda, evaluation.feasible(), evaluation.result());
+  }
+
+  /**
+   * Per-stage overload driving the multi-stage coordinate sweep ({@link MultiStageLoadOptimizer}):
+   * each scaled stage carries its own factor instead of sharing one.
+   *
+   * <p>The returned evaluation's {@code lambda} field is {@link Double#NaN} — a vector has no single
+   * factor — and the sweep tags it with the coordinate it is currently bisecting.
+   *
+   * <p><b>Residual floor with several stages under λ.</b> The floor still guards the top scaled
+   * stage only. Extending it to the lower stages would need a per-stage notion the model does not
+   * carry yet: a stage burnt to depletion by the gravity turn reads a 0 % residual whatever its
+   * slack, so the same floor would reject every load. The lower stages are instead guarded by the
+   * objective and by the analytic stages' own feasibility checks (staging, GTO injection
+   * convergence, parking burn signs).
+   *
+   * @param lambdas per-stage scale factors, same length and order as the launcher stages
+   * @param previous the last evaluation performed, or {@code null} on the first call
+   * @return the evaluation outcome at these loads
+   */
+  public PropellantLoadOptimizer.Evaluation evaluate(
+      double[] lambdas, PropellantLoadOptimizer.Evaluation previous) {
+    double[] loads = PropellantLoadOptimizer.scaledLoads(lambdas, heuristicLoads, lambdaScaled);
     Mission mission = missionBuilder.apply(loads);
     mission.setCurrentState(mission.getInitialState(launchEpoch));
 
@@ -198,8 +226,11 @@ public final class MissionLoadEvaluator implements PropellantLoadOptimizer.Evalu
     } catch (RuntimeException e) {
       // An under-dotée load whose ascent/transfer cannot reach orbit makes the inner optimizer
       // fail. That is a feasibility signal (keep λ up), not an error to bubble up.
-      logger.info("λ={} evaluation failed to optimize ({}); treating as infeasible", lambda, e.toString());
-      return new PropellantLoadOptimizer.Evaluation(lambda, false, null);
+      logger.info(
+          "λ={} evaluation failed to optimize ({}); treating as infeasible",
+          java.util.Arrays.toString(lambdas),
+          e.toString());
+      return new PropellantLoadOptimizer.Evaluation(Double.NaN, false, null);
     }
 
     OrbitInsertionObjective objective =
@@ -221,7 +252,7 @@ public final class MissionLoadEvaluator implements PropellantLoadOptimizer.Evalu
     logger.info(
         "λ={} evaluation: objectiveMet={}, sized stage [{}] residual={} kg of its {} kg load"
             + " ({} vs floor {}) → feasible={}",
-        lambda,
+        java.util.Arrays.toString(lambdas),
         objectiveMet,
         sizedStageIndex,
         Math.round(residual),
@@ -230,7 +261,7 @@ public final class MissionLoadEvaluator implements PropellantLoadOptimizer.Evalu
         residualFloorRatio,
         feasible);
 
-    return new PropellantLoadOptimizer.Evaluation(lambda, feasible, result);
+    return new PropellantLoadOptimizer.Evaluation(Double.NaN, feasible, result);
   }
 
   /**
