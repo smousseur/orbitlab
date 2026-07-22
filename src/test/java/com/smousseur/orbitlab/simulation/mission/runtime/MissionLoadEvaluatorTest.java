@@ -6,6 +6,7 @@ import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemeris;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemerisPoint;
 import com.smousseur.orbitlab.simulation.mission.objective.OrbitInsertionObjective;
+import com.smousseur.orbitlab.simulation.mission.vehicle.StagePropellant;
 import java.util.ArrayList;
 import java.util.List;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
@@ -101,36 +102,60 @@ class MissionLoadEvaluatorTest {
 
   // ── residualSufficient (floor vs the SIZED stage's own load) ──────────────
 
+  /** Report for an FH-like stack: S1 burnt out, S2 sized, payload dry. */
+  private static MissionPerformanceReport reportOf(
+      double s2Loaded, double s2Residual, double payloadLoaded, double payloadResidual) {
+    List<StagePropellant> perStage =
+        List.of(
+            new StagePropellant(0, 1_233_000.0, 0.0),
+            new StagePropellant(1, s2Loaded, s2Residual),
+            new StagePropellant(2, payloadLoaded, payloadResidual));
+    double loaded = 1_233_000.0 + s2Loaded + payloadLoaded;
+    return new MissionPerformanceReport(
+        List.of(), 8_000.0, loaded, s2Residual + payloadResidual, perStage);
+  }
+
   @Test
   void residualSufficient_marginAboveFloorOfSizedStageLoad_true() {
     // Heuristic-like point: 284 kg residual on a 2844 kg sized-stage load = 10 % ≥ 1 %.
-    MissionPerformanceReport report =
-        new MissionPerformanceReport(List.of(), 8_000.0, 1_235_844.0, 284.0);
-    assertTrue(MissionLoadEvaluator.residualSufficient(report, 2_844.0, 0.01));
+    assertTrue(MissionLoadEvaluator.residualSufficient(reportOf(2_844.0, 284.0, 0.0, 0.0), 1, 0.01));
   }
 
   @Test
   void residualSufficient_flameOut_false() {
     // Knife-edge point: the sized stage is emptied (residual 0) → below any positive floor.
-    MissionPerformanceReport report =
-        new MissionPerformanceReport(List.of(), 8_000.0, 1_234_040.0, 0.0);
-    assertFalse(MissionLoadEvaluator.residualSufficient(report, 1_040.0, 0.01));
+    assertFalse(MissionLoadEvaluator.residualSufficient(reportOf(1_040.0, 0.0, 0.0, 0.0), 1, 0.01));
   }
 
   @Test
   void residualSufficient_dividesBySizedStageNotWholeStack() {
     // 284 kg over the whole 1.24 M stack is 0.02 % (would fail a stack-wide 1 % floor), but over the
     // 2844 kg sized stage it is 10 % — the floor must use the sized-stage denominator.
-    MissionPerformanceReport report =
-        new MissionPerformanceReport(List.of(), 8_000.0, 1_235_844.0, 284.0);
-    assertFalse(MissionLoadEvaluator.residualSufficient(report, 1_235_844.0, 0.01));
-    assertTrue(MissionLoadEvaluator.residualSufficient(report, 2_844.0, 0.01));
+    MissionPerformanceReport report = reportOf(2_844.0, 284.0, 0.0, 0.0);
+    assertTrue(MissionLoadEvaluator.residualSufficient(report, 1, 0.01));
+    assertFalse(MissionLoadEvaluator.residualSufficient(report, 0, 0.01)); // S1 burnt out
+  }
+
+  @Test
+  void residualSufficient_ignoresPropellantOfStagesAboveTheSizedOne() {
+    // bilan 10 §6: the sized stage is emptied but a loaded payload kick motor sits above it. The
+    // stack-wide total (500 kg) would clear a 1 % floor on the 1040 kg sized load and wrongly
+    // report the flame-out as feasible; the sized stage's own entry rejects it.
+    MissionPerformanceReport report = reportOf(1_040.0, 0.0, 500.0, 500.0);
+    assertTrue(report.totalPropellantResidual() >= 0.01 * 1_040.0); // the old, masking comparison
+    assertFalse(MissionLoadEvaluator.residualSufficient(report, 1, 0.01));
+    assertTrue(MissionLoadEvaluator.residualSufficient(report, 2, 0.01)); // the AKM is untouched
   }
 
   @Test
   void residualSufficient_noSizedStage_disablesFloor() {
-    MissionPerformanceReport report =
-        new MissionPerformanceReport(List.of(), 8_000.0, 1_233_000.0, 0.0);
-    assertTrue(MissionLoadEvaluator.residualSufficient(report, 0.0, 0.01));
+    assertTrue(MissionLoadEvaluator.residualSufficient(reportOf(0.0, 0.0, 0.0, 0.0), -1, 0.01));
+  }
+
+  @Test
+  void residualSufficient_reportWithoutPerStageSplit_fallsBackToStackTotal() {
+    MissionPerformanceReport legacy =
+        new MissionPerformanceReport(List.of(), 8_000.0, 1_235_844.0, 284.0);
+    assertFalse(MissionLoadEvaluator.residualSufficient(legacy, 1, 0.01)); // 284 / 1.24 M < 1 %
   }
 }

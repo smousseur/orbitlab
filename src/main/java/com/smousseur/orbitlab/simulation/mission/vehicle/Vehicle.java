@@ -1,5 +1,7 @@
 package com.smousseur.orbitlab.simulation.mission.vehicle;
 
+import java.util.List;
+
 /**
  * Represents a vehicle in the mission simulation. A vehicle has a dry mass, propellant capacity,
  * and a propulsion system. Vehicles can be single-stage or multi-stage (via {@link VehicleStack}).
@@ -55,5 +57,22 @@ public interface Vehicle {
    */
   default ActiveStageInfo resolveActiveStage(double currentMass) {
     return new ActiveStageInfo(0, this, 0, 0);
+  }
+
+  /**
+   * Resolves the per-stage propellant accounting implied by the current spacecraft mass. For a
+   * single vehicle this is one entry holding whatever mass sits above the dry mass.
+   *
+   * <p>The mass model makes a stage's transition to the next one happen exactly when the mass
+   * reaches its depletion floor, so a stage below the active one has burnt out (residual 0). A
+   * stage jettisoned <em>early</em>, with propellant still aboard, is invisible here — the caller
+   * observing the jettison must capture that residual (see {@code MissionOptimizer}).
+   *
+   * @param currentMass the current spacecraft mass from SpacecraftState
+   * @return the per-stage propellant accounting, in stack order (index 0 = bottom stage)
+   */
+  default List<StagePropellant> resolveStagePropellant(double currentMass) {
+    double residual = Math.max(0.0, Math.min(propellantLoad(), currentMass - dryMass()));
+    return List.of(new StagePropellant(0, propellantLoad(), residual));
   }
 }

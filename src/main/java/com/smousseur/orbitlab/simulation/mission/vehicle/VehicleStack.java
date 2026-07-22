@@ -1,5 +1,6 @@
 package com.smousseur.orbitlab.simulation.mission.vehicle;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -67,5 +68,36 @@ public record VehicleStack(List<Vehicle> vehicles) implements Vehicle {
     // Fallback: topmost vehicle
     int last = n - 1;
     return new ActiveStageInfo(last, vehicles.get(last), 0, 0);
+  }
+
+  /**
+   * Splits the propellant still aboard across the physical stages, instead of reporting a single
+   * stack-wide total (bilan 10 §6). Given the current mass, the active stage holds {@link
+   * ActiveStageInfo#remainingFuel(double)}, every stage below it has reached its depletion floor
+   * (residual 0 — the mass model switches stages exactly there), and every stage above it is still
+   * untouched at its full load.
+   *
+   * <p>A stage jettisoned early with propellant aboard is the one case this cannot see after the
+   * fact: once the mass has dropped, the discarded propellant is indistinguishable from burnt
+   * propellant. {@code MissionOptimizer} captures that residual as the separation happens.
+   */
+  @Override
+  public List<StagePropellant> resolveStagePropellant(double currentMass) {
+    ActiveStageInfo active = resolveActiveStage(currentMass);
+    int activeIndex = active.stageIndex();
+    List<StagePropellant> perStage = new ArrayList<>(vehicles.size());
+    for (int i = 0; i < vehicles.size(); i++) {
+      double loaded = vehicles.get(i).propellantLoad();
+      double residual;
+      if (i < activeIndex) {
+        residual = 0.0;
+      } else if (i == activeIndex) {
+        residual = Math.max(0.0, Math.min(loaded, active.remainingFuel(currentMass)));
+      } else {
+        residual = loaded;
+      }
+      perStage.add(new StagePropellant(i, loaded, residual));
+    }
+    return List.copyOf(perStage);
   }
 }

@@ -15,6 +15,9 @@ import com.smousseur.orbitlab.simulation.mission.optimizer.OptimizationResult;
 import com.smousseur.orbitlab.simulation.mission.optimizer.OptimizerDiagnostics;
 import com.smousseur.orbitlab.simulation.mission.optimizer.StageEndStateDiagnostic;
 import com.smousseur.orbitlab.simulation.mission.optimizer.TrajectoryProblem;
+import com.smousseur.orbitlab.simulation.mission.stage.StageSeparationStage;
+import com.smousseur.orbitlab.simulation.mission.vehicle.ActiveStageInfo;
+import com.smousseur.orbitlab.simulation.mission.vehicle.StagePropellant;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -86,6 +89,9 @@ public class MissionOptimizer {
   public MissionComputeResult optimize() {
     Map<String, OptimizationResult> results = new LinkedHashMap<>();
     List<StagePerformance> stagePerformances = new ArrayList<>();
+    // Propellant discarded with a stage dropped before depletion, keyed by stack index. Once the
+    // mass has dropped it is indistinguishable from burnt propellant, so it must be read here.
+    Map<Integer, Double> jettisonedResiduals = new LinkedHashMap<>();
     AbsoluteDate launchDate = mission.getCurrentState().getDate();
 
     long effectiveSeed = seed != null ? seed : System.nanoTime();
@@ -99,6 +105,7 @@ public class MissionOptimizer {
     for (MissionStage stage : mission.getStages()) {
       double massIn = mission.getCurrentState().getMass();
       logger.info("Current mass = {}", massIn);
+      captureJettisonedResidual(stage, massIn, jettisonedResiduals);
       if (stage instanceof OptimizableMissionStage<?> optimizable) {
         logger.info("Optimizing stage '{}'...", stage.getName());
 
@@ -211,7 +218,7 @@ public class MissionOptimizer {
       }
     }
 
-    MissionPerformanceReport report = buildReport(stagePerformances);
+    MissionPerformanceReport report = buildReport(stagePerformances, jettisonedResiduals);
     logReport(report);
 
     // Inject optimization results into stages for replay
@@ -260,14 +267,57 @@ public class MissionOptimizer {
     return new StagePerformance(stage.getName(), massIn, massOut, propellantConsumed, deltaV);
   }
 
-  private MissionPerformanceReport buildReport(List<StagePerformance> stagePerformances) {
+  /**
+   * Records the propellant discarded with a stage separated before it ran dry. {@code massIn} is
+   * the mass before {@link StageSeparationStage#enter} drops it to the stack-above reference mass,
+   * so it is the last moment the jettisoned stage's remaining fuel is observable.
+   */
+  private void captureJettisonedResidual(
+      MissionStage stage, double massIn, Map<Integer, Double> jettisonedResiduals) {
+    if (!(stage instanceof StageSeparationStage)) {
+      return;
+    }
+    ActiveStageInfo dropped = mission.getVehicle().resolveActiveStage(massIn);
+    double left = FastMath.max(0.0, dropped.remainingFuel(massIn));
+    jettisonedResiduals.put(dropped.stageIndex(), left);
+    logger.info(
+        "Stage separation '{}': jettisoning stack stage {} with {} kg of propellant aboard",
+        stage.getName(),
+        dropped.stageIndex(),
+        FastMath.round(left));
+  }
+
+  private MissionPerformanceReport buildReport(
+      List<StagePerformance> stagePerformances, Map<Integer, Double> jettisonedResiduals) {
     double finalMass = mission.getCurrentState().getMass();
+    Vehicle vehicle = mission.getVehicle();
     double residual =
-        FastMath.max(
-            0.0, finalMass - mission.getVehicle().resolveActiveStage(finalMass).remainingDryMass());
-    double loaded = mission.getVehicle().propellantLoad();
+        FastMath.max(0.0, finalMass - vehicle.resolveActiveStage(finalMass).remainingDryMass());
+    double loaded = vehicle.propellantLoad();
     double totalDeltaV = stagePerformances.stream().mapToDouble(StagePerformance::deltaV).sum();
-    return new MissionPerformanceReport(stagePerformances, totalDeltaV, loaded, residual);
+    return new MissionPerformanceReport(
+        stagePerformances,
+        totalDeltaV,
+        loaded,
+        residual,
+        resolveStagePropellant(vehicle, finalMass, jettisonedResiduals));
+  }
+
+  /**
+   * The per-stage propellant split at mission end, with the stages dropped early restored to the
+   * residual observed at their separation (the mass model alone would report them as burnt out).
+   */
+  private static List<StagePropellant> resolveStagePropellant(
+      Vehicle vehicle, double finalMass, Map<Integer, Double> jettisonedResiduals) {
+    List<StagePropellant> perStage = new ArrayList<>(vehicle.resolveStagePropellant(finalMass));
+    perStage.replaceAll(
+        sp -> {
+          Double jettisoned = jettisonedResiduals.get(sp.stageIndex());
+          return jettisoned == null
+              ? sp
+              : new StagePropellant(sp.stageIndex(), sp.loaded(), jettisoned);
+        });
+    return List.copyOf(perStage);
   }
 
   private static void logReport(MissionPerformanceReport report) {
@@ -286,6 +336,17 @@ public class MissionOptimizer {
         FastMath.round(report.totalPropellantLoaded()),
         FastMath.round(report.totalPropellantResidual()),
         String.format(java.util.Locale.ROOT, "%.1f", 100.0 * report.residualRatio()));
+    // Per-stage split (bilan 10 §6): the margin that actually matters for a sized stage, which the
+    // stack-wide ratio above cannot show on an S1-dominated stack.
+    for (StagePropellant sp : report.stagePropellants()) {
+      logger.info(
+          "Stage propellant [{}]: loaded={} kg, consumed={} kg, residual={} kg ({}% of its load)",
+          sp.stageIndex(),
+          FastMath.round(sp.loaded()),
+          FastMath.round(sp.consumed()),
+          FastMath.round(sp.residual()),
+          String.format(java.util.Locale.ROOT, "%.1f", 100.0 * sp.residualRatio()));
+    }
   }
 
   private static String[] paramNamesFor(TrajectoryProblem problem) {

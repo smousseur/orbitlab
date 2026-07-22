@@ -5,6 +5,7 @@ import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemeris;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemerisPoint;
 import com.smousseur.orbitlab.simulation.mission.objective.MissionObjective;
 import com.smousseur.orbitlab.simulation.mission.objective.OrbitInsertionObjective;
+import com.smousseur.orbitlab.simulation.mission.vehicle.StagePropellant;
 import java.util.Objects;
 import java.util.function.Function;
 import org.apache.logging.log4j.LogManager;
@@ -38,9 +39,10 @@ import org.orekit.time.AbsoluteDate;
  *       goal (observed on the first FH LEO integration run).
  * </ul>
  *
- * <p>The residual of the sized stage is read from {@link
- * MissionPerformanceReport#totalPropellantResidual()} — the residual of the final active stage,
- * which is the sized stage on a correctly-matched vehicle (the case I7 targets).
+ * <p>The residual of the sized stage is read from its own entry in {@link
+ * MissionPerformanceReport#stagePropellants()} (bilan 10 §6), so the predicate holds even when the
+ * sized stage is not the final active stage — the stack-wide total would then also count the
+ * propellant of whatever sits above it and mask an emptied sized stage.
  *
  * <p>An optimization that <em>throws</em> (an under-dotée load whose ascent/transfer cannot reach
  * orbit makes CMA-ES fail) is caught and reported as infeasible — that is the signal the bisection
@@ -163,17 +165,22 @@ public final class MissionLoadEvaluator implements PropellantLoadOptimizer.Evalu
     OrbitInsertionObjective objective = orbitInsertionObjective(mission.getObjective());
     boolean objectiveMet = objectiveMet(result.ephemeris(), objective, objectiveToleranceRatio);
 
-    double sizedStageLoad = sizedStageLoad(loads);
-    boolean residualOk =
-        residualSufficient(result.performanceReport(), sizedStageLoad, residualFloorRatio);
+    MissionPerformanceReport report = result.performanceReport();
+    int sizedStageIndex = sizedStageIndex();
+    boolean residualOk = residualSufficient(report, sizedStageIndex, residualFloorRatio);
     boolean feasible = objectiveMet && residualOk;
 
-    double residual = result.performanceReport().totalPropellantResidual();
+    // Report the sized stage's own numbers when available — the stack-wide total counts everything
+    // above it too, and would overstate the margin of the stage the loop is actually sizing.
+    StagePropellant sized = report.residualForStage(sizedStageIndex).orElse(null);
+    double residual = sized != null ? sized.residual() : report.totalPropellantResidual();
+    double sizedStageLoad = sized != null ? sized.loaded() : sizedStageLoad(loads);
     logger.info(
-        "λ={} evaluation: objectiveMet={}, residual={} kg of sized-stage load {} kg ({} vs floor {})"
-            + " → feasible={}",
+        "λ={} evaluation: objectiveMet={}, sized stage [{}] residual={} kg of its {} kg load"
+            + " ({} vs floor {}) → feasible={}",
         lambda,
         objectiveMet,
+        sizedStageIndex,
         Math.round(residual),
         Math.round(sizedStageLoad),
         sizedStageLoad > 0 ? residual / sizedStageLoad : Double.NaN,
@@ -217,33 +224,56 @@ public final class MissionLoadEvaluator implements PropellantLoadOptimizer.Evalu
   }
 
   /**
-   * Whether the end-of-mission residual clears the floor relative to the sized stage's own load:
-   * {@code residual ≥ floorRatio · sizedStageLoad}. This keeps the sized (λ-scaled top) stage off
-   * flame-out — the whole-stack residual ratio is meaningless on an S1-dominated stack, but against
-   * the sized stage's own load it is the real margin (spec 09 §5). A zero {@code sizedStageLoad}
-   * (no scaled stage / degenerate) disables the floor.
+   * Whether the sized stage's <em>own</em> residual clears the floor: {@code residual ≥ floorRatio ·
+   * load}, both read from the stage's entry in {@link MissionPerformanceReport#stagePropellants()}
+   * (bilan 10 §6). This keeps the sized (λ-scaled top) stage off flame-out — the whole-stack
+   * residual ratio is meaningless on an S1-dominated stack, but against the sized stage's own load
+   * it is the real margin (spec 09 §5).
    *
-   * @param report the mission performance report (its total residual = the final active stage's)
-   * @param sizedStageLoad the load of the λ-scaled top stage at this λ (kg)
-   * @param floorRatio the minimum residual as a fraction of {@code sizedStageLoad}
+   * <p>Reading the stage's own entry rather than {@link
+   * MissionPerformanceReport#totalPropellantResidual()} makes the predicate exact even when the
+   * sized stage is not the final active stage: the stack-wide total also counts whatever sits above
+   * it (a payload kick motor's load, say), which would mask an emptied sized stage.
+   *
+   * <p>A negative {@code sizedStageIndex} (no λ-scaled stage) disables the floor, as does a stage
+   * loaded with nothing. A report carrying no per-stage split falls back to the stack-wide total —
+   * the pre-bilan-10 approximation, valid only when the sized stage is the final active one.
+   *
+   * @param report the mission performance report
+   * @param sizedStageIndex the stack index of the λ-scaled top stage, or negative when there is none
+   * @param floorRatio the minimum residual as a fraction of that stage's own load
    * @return {@code true} when the residual is at or above the floor
    */
   public static boolean residualSufficient(
-      MissionPerformanceReport report, double sizedStageLoad, double floorRatio) {
-    if (!(sizedStageLoad > 0)) {
+      MissionPerformanceReport report, int sizedStageIndex, double floorRatio) {
+    if (sizedStageIndex < 0) {
       return true; // no sized liquid stage to guard
     }
-    return report.totalPropellantResidual() >= floorRatio * sizedStageLoad;
+    return report
+        .residualForStage(sizedStageIndex)
+        .map(sp -> !(sp.loaded() > 0) || sp.residual() >= floorRatio * sp.loaded())
+        .orElseGet(
+            () -> {
+              // No per-stage split available (hand-built report): fall back to the stack-wide total.
+              double load = report.totalPropellantLoaded();
+              return !(load > 0) || report.totalPropellantResidual() >= floorRatio * load;
+            });
   }
 
-  /** The load of the sized (last λ-scaled) stage in {@code loads}, or 0 if none is scaled. */
+  /** The load of the sized stage in {@code loads}, or 0 when no stage is scaled. */
   private double sizedStageLoad(double[] loads) {
+    int index = sizedStageIndex();
+    return index >= 0 ? loads[index] : 0.0;
+  }
+
+  /** The stack index of the sized (last λ-scaled) stage, or -1 when no stage is scaled. */
+  private int sizedStageIndex() {
     for (int i = lambdaScaled.length - 1; i >= 0; i--) {
       if (lambdaScaled[i]) {
-        return loads[i];
+        return i;
       }
     }
-    return 0.0;
+    return -1;
   }
 
   private static OrbitInsertionObjective orbitInsertionObjective(MissionObjective objective) {

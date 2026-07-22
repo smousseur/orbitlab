@@ -8,6 +8,7 @@ import com.smousseur.orbitlab.simulation.mission.vehicle.Launchers;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Payloads;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropellantBudget;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Spacecraft;
+import com.smousseur.orbitlab.simulation.mission.vehicle.StagePropellant;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -50,8 +51,9 @@ public class LEOMissionOptimizationTest extends AbstractTrajectoryOptimizerTest 
 
   /**
    * Spec 06 I3 integration criterion: a LEO 400 km mission flying the analytic budget loads
-   * converges, and the propellant left aboard at mission end (all of it sits in the sized S2)
-   * stays under 15 % of that stage's load.
+   * converges, and the propellant left in the sized S2 stays under 15 % of that stage's load. Read
+   * from the per-stage split (bilan 10 §6) rather than the stack-wide total, so the assertion
+   * measures S2 alone.
    */
   @Test
   void testFalconHeavyBudgetLoads() {
@@ -66,13 +68,18 @@ public class LEOMissionOptimizationTest extends AbstractTrajectoryOptimizerTest 
 
     MissionComputeResult result = testMission(mission, 400_000, 400_000);
 
-    double s2Load = loads[1];
-    double residual = result.performanceReport().totalPropellantResidual();
+    StagePropellant s2 =
+        result
+            .performanceReport()
+            .residualForStage(1)
+            .orElseThrow(() -> new AssertionError("no per-stage propellant split for S2"));
+    Assertions.assertEquals(loads[1], s2.loaded(), 1.0, "S2 reported load differs from the budget");
     Assertions.assertTrue(
-        residual / s2Load < 0.15,
+        s2.residualRatio() < 0.15,
         () ->
             String.format(
-                "S2 residual %.0f kg exceeds 15%% of its sized load %.0f kg", residual, s2Load));
+                "S2 residual %.0f kg exceeds 15%% of its sized load %.0f kg",
+                s2.residual(), s2.loaded()));
   }
 
   /**
