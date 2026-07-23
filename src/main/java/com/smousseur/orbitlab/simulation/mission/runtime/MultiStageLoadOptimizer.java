@@ -36,9 +36,11 @@ import org.apache.logging.log4j.Logger;
  * <p><b>Known limit.</b> Coordinate descent can stall on a corner of the feasible boundary that is
  * not its global minimum, because the coupling between stages is real and asymmetric: lightening an
  * upper stage eases the job of the stages below it, whereas lightening a lower stage makes the
- * upper ones work harder. The closing {@linkplain #diagonalStep diagonal probe} detects the classic
- * axis-aligned stall for two or three evaluations; a deeper stall would call for a surrogate
- * (Bayesian) search, which is the escalation path — not CMA-ES.
+ * upper ones work harder. The closing {@linkplain #diagonalStep diagonal probe} spends one
+ * evaluation looking for the classic axis-aligned stall, and only when at least two coordinates
+ * actually moved off the heuristic load — with fewer, there is no corner to find. A stall it does
+ * not catch would call for a surrogate (Bayesian) search, which is the escalation path — not
+ * CMA-ES.
  */
 public final class MultiStageLoadOptimizer {
   private static final Logger logger = LogManager.getLogger(MultiStageLoadOptimizer.class);
@@ -115,7 +117,17 @@ public final class MultiStageLoadOptimizer {
     this.minPassGain = minPassGain;
   }
 
-  /** Relative step the closing diagonal probe takes on every scaled coordinate at once. */
+  /**
+   * Step, on the {@code λ} axis, that the closing diagonal probe takes on every movable coordinate
+   * at once.
+   *
+   * <p><b>Absolute, not relative</b> (bilan 11 §3.1). The step has to be commensurable with the
+   * bisection's own convergence criterion, which is an absolute bracket width; a relative step
+   * shrinks below that width as soon as {@code λ < 1}, so the probe lands <em>inside</em> the
+   * unresolved bracket and re-asks a question the bisection just declined to answer. Measured on
+   * FH LEO: at {@code λ = 0.43125} with a converged bracket of {@code [0.4203, 0.43125]}, a 2 %
+   * relative step probed {@code 0.4226} — strictly inside it, hence an uninformative failure.
+   */
   public double diagonalStep() {
     return tolerance;
   }
@@ -266,34 +278,48 @@ public final class MultiStageLoadOptimizer {
     }
 
     // Diagonal probe: coordinate descent is blind to a feasible direction that is not axis-aligned.
-    // One step down on every scaled coordinate at once costs a single evaluation and tells us
-    // whether we are on the boundary or merely in a corner.
-    if (evaluations < maxEvaluations) {
+    // One step down on every movable coordinate at once costs a single evaluation and tells us
+    // whether the sweep stopped on the boundary or merely in a corner.
+    int[] movable = movableCoordinates(coordinates, lambdas);
+    if (movable.length < 2) {
+      // A corner needs two coordinates. With one, the diagonal degenerates into a single-coordinate
+      // step the bisection has just bracketed — a full mission optimization spent on a known answer.
+      logger.info(
+          "Diagonal probe skipped: {} movable coordinate(s) of {} scaled, a corner needs two",
+          movable.length,
+          coordinates.length);
+    } else if (evaluations >= maxEvaluations) {
+      logger.info("Diagonal probe skipped: evaluation budget spent");
+    } else {
       double[] diagonal = lambdas.clone();
-      boolean moved = false;
-      for (int index : coordinates) {
-        double stepped = Math.max(lambdaMin, lambdas[index] * (1.0 - diagonalStep()));
-        if (stepped < lambdas[index]) {
-          diagonal[index] = stepped;
-          moved = true;
-        }
+      for (int index : movable) {
+        diagonal[index] = Math.max(lambdaMin, lambdas[index] - diagonalStep());
       }
-      if (moved) {
-        PropellantLoadOptimizer.Evaluation diagonalEval =
-            evaluator.evaluate(diagonal.clone(), current);
-        evaluations++;
+      PropellantLoadOptimizer.Evaluation diagonalEval =
+          evaluator.evaluate(diagonal.clone(), current);
+      evaluations++;
+      logger.info(
+          "Diagonal probe (λ −{} on the {} movable coordinate(s) {}, others held): λ={} →"
+              + " feasible={}",
+          format(diagonalStep()),
+          movable.length,
+          Arrays.toString(movable),
+          format(diagonal),
+          diagonalEval.feasible());
+      if (diagonalEval.feasible()) {
+        lambdas = diagonal;
+        current = diagonalEval;
         logger.info(
-            "Diagonal probe (all scaled λ ×{}): λ={} → feasible={}",
-            1.0 - diagonalStep(),
-            format(diagonal),
-            diagonalEval.feasible());
-        if (diagonalEval.feasible()) {
-          lambdas = diagonal;
-          current = diagonalEval;
-          logger.info(
-              "Diagonal step accepted — the sweep had stalled on a corner, not on the boundary."
-                  + " Re-running the sweep would reclaim more.");
-        }
+            "Diagonal step accepted — the sweep had stalled on a corner, not on the boundary."
+                + " Re-running the sweep would reclaim more.");
+      } else {
+        // Deliberately not phrased as "we are on the boundary": one probe of one length cannot
+        // establish that, and reading it that way is what made the FH LEO run look conclusive.
+        logger.info(
+            "Diagonal step refused — no diagonal slack beyond the bisection's own resolution ({}"
+                + " on the λ axis). A finer corner, or one whose feasible direction needs a"
+                + " coordinate pinned at the heuristic load, stays invisible to a single probe.",
+            format(diagonalStep()));
       }
     }
 
@@ -335,6 +361,23 @@ public final class MultiStageLoadOptimizer {
       }
     }
     return mass;
+  }
+
+  /**
+   * The coordinates the diagonal probe is allowed to step: those strictly inside {@code (λmin,
+   * λmax)}.
+   *
+   * <p>A coordinate still sitting at {@code λmax} has just been proven unable to take a single step
+   * down; stepping it anyway makes the probe fail for a reason unrelated to the corner hypothesis,
+   * and the probe returns one bit that cannot be attributed. One already at {@code λmin} has no room
+   * left. Excluding both is what keeps a refused probe interpretable — at the price of missing a
+   * corner whose feasible direction requires moving a pinned coordinate, which is why the refusal is
+   * logged as "no slack found", never as "the sweep is optimal".
+   */
+  private int[] movableCoordinates(int[] coordinates, double[] lambdas) {
+    return Arrays.stream(coordinates)
+        .filter(i -> lambdas[i] < lambdaMax - 1e-12 && lambdas[i] > lambdaMin + 1e-12)
+        .toArray();
   }
 
   private static int[] scaledCoordinatesTopDown(boolean[] lambdaScaled) {

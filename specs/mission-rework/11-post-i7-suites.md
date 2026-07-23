@@ -15,6 +15,7 @@ I7 est **vert sur les deux profils**, avec un gain qui compte désormais au nive
 |---|---|---|---|
 | LEO 400 km (mono-λ) | 0,4313 | S2 2844 → 1227 kg | **−57 % de S2** (−0,1 % du stack) |
 | LEO 400 km (multi-λ) | [1,0000 ; 0,4312] | S2 seul, S1 épinglé à 1 | identique au mono-λ (§3.1) |
+| GEO (multi-λ, sonde corrigée) | [0,9453 ; 0,8141] | inchangé | **confirme le −5,6 %** (§3.1) |
 | GEO (mono-λ) | 0,8141 | S2 10 619 → 8645 kg | −18,6 % de S2 |
 | **GEO (multi-λ)** | **[0,9453 ; 0,8141]** | **S1 −67 430 kg**, S2 −1974 kg | **−69 404 kg, −5,6 % du stack** |
 
@@ -93,11 +94,29 @@ laisse la GT collée à son plancher d'étagement — du gras en bas. Sur LEO, S
 presque tout le travail — rien à récupérer en bas. **Corollaire : `allVariableLoadMask` reste un
 opt-in profil par profil, et ne doit pas devenir le défaut.**
 
-**Limite d'outillage relevée au passage.** La sonde diagonale a testé `[0,98 ; 0,4226]`, donc elle a
-bougé une coordonnée déjà connue épinglée : son `feasible=false` ne dit rien sur S2 et ne distingue
-pas « sur la frontière » de « dans un coin ». Sur un profil où une coordonnée est épinglée, la sonde
-devrait ne stepper que les coordonnées ayant bougé pendant la passe. Sans conséquence ici —
-l'information manquante était déjà dans le log — mais à corriger avant de s'appuyer dessus.
+**Défaut d'outillage trouvé au passage, corrigé depuis : la sonde diagonale.** Elle avait testé
+`[0,98 ; 0,4226]` et renvoyé `feasible=false`, ce qui se lisait « on est sur la frontière ». Le
+verdict était vide de sens : `tolerance` était utilisée en **absolu** comme critère d'arrêt de la
+bissection (`feasible − infeasible > tolerance`) et en **relatif** comme pas de la sonde
+(`λ × (1 − step)`). Dès que λ < 1 le pas devient plus petit que la résolution de la bissection —
+ici 0,43125 × 0,02 = 0,0086 contre un bracket non résolu de [0,4203 ; 0,43125] — donc la sonde
+sondait **à l'intérieur du bracket**, une zone sur laquelle la bissection venait de renoncer à
+conclure.
+
+Trois correctifs posés dans `MultiStageLoadOptimizer` :
+
+| # | Correctif |
+|---|---|
+| 1 | pas **absolu** sur l'axe λ (`λ − step`), commensurable avec le critère d'arrêt |
+| 2 | seules les coordonnées strictement dans (λmin, λmax) sont steppées ; sous 2 coordonnées mobiles la sonde est **sautée** (pas de coin possible) |
+| 3 | un refus se loggue « aucun gras diagonal au-delà de la résolution », plus jamais « on est sur la frontière » |
+
+**Vérifié sur les deux profils après correctif** :
+
+- **LEO** — sonde sautée (1 coordonnée mobile sur 2), **15 évaluations au lieu de 16**, λ* inchangé.
+- **GEO** — sonde exécutée avec le pas absolu, `[0,9253 ; 0,7941]` → infaisable, λ* inchangé à
+  [0,9453 ; 0,8141]. **Le −5,6 % de GEO n'est donc pas un artefact de coin** à l'échelle de 0,02 :
+  le chiffre du tableau §1 tient, cette fois sur une sonde qui teste réellement quelque chose.
 
 ### 3.2 — Marge mesurée pour les étages brûlés à épuisement ★ priorité haute
 
@@ -182,10 +201,29 @@ N'importe quelle valeur dans (0 ; 10,3 %] donne le même λ*. Ce n'est pas un bo
 un **détecteur binaire de flame-out**. Il fait bien son travail (rejeter les solutions en équilibre
 sur le fil), mais le régler est sans effet.
 
-**Ce que ça change pour cette action** : sur LEO il n'y a pas trois boutons qui interagissent, il y
-en a un seul dont l'effet reste à mesurer (`W_PROPELLANT`). La prémisse « les trois doivent être
-re-réglés ensemble » est à re-vérifier sur GEO avant d'être conservée — c'est le profil où
-l'objectif ±50 km est nettement plus serré, donc le seul où la tolérance peut plausiblement mordre.
+**Sur GEO le plancher se comporte à l'inverse — il mord, mais sa course est courte.** À
+λ* = [0,9453 ; 0,8141], S2 termine à **118 kg sur 8645 kg chargés, soit 1,4 % contre un plancher à
+1 %** : collé au plancher, pas à 10 points au-dessus comme sur LEO. La descente y est continue —
+λ = 0,803 → 0,81 % · 0,814 → 1,39 % · 0,825 → 1,95 % · 1,0 → 11,34 % — donc le 1,4 % est une marge
+réelle et **la valeur du plancher fixe directement λ\***.
+
+Mais sous λ(S2) ≈ 0,79 la mission **ne vole plus** : l'injection GTO refuse le plan. Le mur est
+entre 0,782 et 0,798. Baisser le plancher de 1 % à 0,5 % déplacerait donc λ* de 0,814 à ~0,798, soit
+**~140 kg sur S2**, puis mur. **C'est un bouton à ~150 kg de course, pas un levier sur le −5,6 %** —
+et ce qui borne réellement GEO n'est ni la tolérance ni le plancher, mais le garde-fou d'injection
+GTO (§3.7).
+
+| Profil | résiduel de l'étage dimensionné à λ* | plancher | régime | ce qui borne λ* |
+|---|---|---|---|---|
+| LEO | 10,3 % | 1 % | falaise — valeur sans effet | plancher, en détecteur binaire |
+| GEO | **1,4 %** | 1 % | continu — valeur active | **garde-fou GTO** (§3.7) |
+
+**Ce que ça change pour cette action** : la prémisse « trois boutons qui interagissent » n'est vraie
+sur aucun des deux profils, mais pour des raisons opposées. Sur LEO il ne reste qu'un bouton à
+mesurer (`W_PROPELLANT`), les deux autres étant sans effet. Sur GEO c'est le plancher de résiduel
+qui pilote, et `ORBIT_MARGIN_RATIO` n'y est même pas le paramètre en jeu (GEO est asserté à ±50 km
+via un objectif de faisabilité explicite, pas via `ORBIT_MARGIN_RATIO`). **Resserrer les tolérances
+d'insertion n'est donc pas le levier qu'on croyait sur λ\*, sur aucun des deux profils.**
 
 Si `acceptableCost` bouge, la calibration de `W_PROPELLANT` est à revérifier.
 
@@ -213,6 +251,40 @@ Progressbar sur la boucle externe. Deux éléments nouveaux à intégrer :
 - **le chemin GEO de `MissionFactory` peut désormais lever une exception** pour des masses de charge
   utile où la GT n'épuise pas S1 — là où il produisait silencieusement une mission fausse. Le wizard
   n'a aucune gestion d'erreur pour ça.
+
+### 3.7 — Calibrage du garde-fou d'injection GTO ★ priorité haute, borne réellement λ* sur GEO
+
+**Le constat**, lu sur la séquence d'évaluations GEO. Le refus de `AnalyticGtoInjectionStage` se
+déclenche à `AIM_CONVERGENCE_TOLERANCE_RATIO` = 1 % de r₂, soit **422 km** pour GEO. Le refus le
+plus serré du run manque de **472 km**, avec **7481 kg encore à bord** et une combustion de 26,0 s.
+Ce n'est pas un étage affamé.
+
+Le javadoc de la constante énonce pourtant que le seuil « n'a qu'à séparer *à quelques itérations
+près* de *n'a jamais bougé* », le second cas laissant « des dizaines de milliers de km ». Le run
+fournit le contraste exact : `λ=[0,3 ; 0,814]` manque de **35 614 km avec 0 kg et 0,000 s de
+combustion** — ça, c'est la starvation. 472 km, c'est la bande ambiguë que le design supposait
+jamais visitée. **La bissection s'y installe, parce que c'est précisément là qu'est la frontière.**
+
+**La question ouverte** : à λ(S2) = 0,782, le refus vient-il de la physique ou du budget de 4
+itérations de Newton (`AIM_ITERATIONS = 4`) ? `MissionLoadEvaluator` ne peut pas trancher — les deux
+arrivent en `OrbitlabException` et sont lus « infaisable ».
+
+**Pourquoi c'est prioritaire** : ce garde-fou, et non la tolérance d'insertion ni le plancher de
+résiduel, est ce qui borne λ* sur GEO (§3.4). Sa calibration est devenue porteuse pour le résultat,
+ce qu'elle n'était pas quand elle a été posée comme simple filet anti-aberration.
+
+**Le test** : passer `AIM_ITERATIONS` à 8 et rejouer le seul point `λ=[0,9453 ; 0,78193]`. Si les
+472 km se referment, le mur GEO descend et λ* avec lui — une évaluation, ~30 s. Si les itérations
+supplémentaires ne bougent rien, le refus est physique et le seuil de 1 % mérite d'être resserré
+pour ne plus tirer que sur la starvation qu'il vise.
+
+### 3.8 — `minimizeBelow` re-sonde `lambdaMin` à chaque passe ▸ priorité basse
+
+Sur le run GEO, `λ=[0,3 ; 0,8140625]` est évalué **deux fois à l'identique** (passe 1 et passe 2),
+avec la même exception. La bissection ouvre systématiquement son bracket sur `lambdaMin` alors que
+la passe précédente l'a déjà prouvé infaisable pour cette coordonnée. ~26 s sur 29 évaluations.
+Corriger en mémorisant, par coordonnée, le dernier point infaisable connu et en ouvrant le bracket
+là plutôt qu'à `lambdaMin`.
 
 ---
 

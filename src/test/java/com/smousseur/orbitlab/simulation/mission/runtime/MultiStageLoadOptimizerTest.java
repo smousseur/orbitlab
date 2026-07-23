@@ -208,7 +208,7 @@ class MultiStageLoadOptimizerTest {
   }
 
   @Test
-  void diagonalProbeRunsOnceTheSweepConverged() {
+  void diagonalProbeStepsEveryMovableCoordinateByAnAbsoluteStep() {
     boolean[] scaled = {true, true};
     PerStageThresholdEvaluator evaluator =
         new PerStageThresholdEvaluator(new double[] {0.55, 0.78}, scaled);
@@ -217,17 +217,64 @@ class MultiStageLoadOptimizerTest {
     MultiStageLoadOptimizer.Result result =
         optimizer.minimize(evaluator, scaled, new double[] {100_000, 10_000});
 
-    // The last call steps every scaled coordinate down together by the diagonal step.
+    // The step must be absolute on the λ axis, not relative (bilan 11 §3.1): a relative step is
+    // smaller than the bisection's own bracket tolerance as soon as λ < 1, so it probes inside the
+    // unresolved bracket and can only re-measure what the bisection already declined to resolve.
     double[] last = evaluator.calls.get(evaluator.calls.size() - 1);
-    double[] expected = {
-      result.lambdas()[0] * (1.0 - optimizer.diagonalStep()),
-      result.lambdas()[1] * (1.0 - optimizer.diagonalStep())
-    };
-    // On a separable boundary the probe fails, so the result keeps the pre-probe λ.
-    assertTrue(last[0] < result.lambdas()[0] + 1e-12);
-    assertTrue(last[1] < result.lambdas()[1] + 1e-12);
-    assertEquals(expected[0], last[0], 1e-9);
-    assertEquals(expected[1], last[1], 1e-9);
+    // On a separable boundary the probe fails, so the result keeps its pre-probe λ.
+    assertEquals(result.lambdas()[0] - optimizer.diagonalStep(), last[0], 1e-9);
+    assertEquals(result.lambdas()[1] - optimizer.diagonalStep(), last[1], 1e-9);
+    assertTrue(
+        optimizer.diagonalStep() >= TOL,
+        "the diagonal step must not be finer than the bisection's own resolution");
+  }
+
+  @Test
+  void diagonalProbeSkipped_whenOnlyOneCoordinateLeftTheHeuristicLoad() {
+    // Threshold 1.0 on the lower stage pins it at λmax: every step down fails, exactly the FH LEO
+    // situation. The probe then has a single movable coordinate — no corner to find — and must not
+    // spend an evaluation stepping the pinned one, whose failure would say nothing about a corner.
+    boolean[] scaled = {true, true};
+    PerStageThresholdEvaluator evaluator =
+        new PerStageThresholdEvaluator(new double[] {1.0, 0.78}, scaled);
+
+    MultiStageLoadOptimizer.Result result =
+        new MultiStageLoadOptimizer().minimize(evaluator, scaled, new double[] {100_000, 10_000});
+
+    assertTrue(result.feasible());
+    assertEquals(1.0, result.lambdas()[0], 1e-12, "the pinned coordinate stays at the heuristic");
+    assertEquals(0, diagonalCalls(evaluator.calls, result.lambdas()), "no diagonal probe ran");
+  }
+
+  @Test
+  void diagonalProbeRunsExactlyOnce_whenTwoCoordinatesMoved() {
+    boolean[] scaled = {true, true};
+    PerStageThresholdEvaluator evaluator =
+        new PerStageThresholdEvaluator(new double[] {0.55, 0.78}, scaled);
+
+    MultiStageLoadOptimizer.Result result =
+        new MultiStageLoadOptimizer().minimize(evaluator, scaled, new double[] {100_000, 10_000});
+
+    assertEquals(1, diagonalCalls(evaluator.calls, result.lambdas()), "one probe, at the very end");
+  }
+
+  /**
+   * Counts the evaluations that stepped <em>every</em> scaled coordinate strictly below its final
+   * value — the signature of a diagonal probe. A coordinate-wise bisection never produces one: it
+   * moves a single coordinate while the others sit at a value they will not rise above.
+   */
+  private static long diagonalCalls(List<double[]> calls, double[] finalLambdas) {
+    return calls.stream()
+        .filter(
+            call -> {
+              for (int i = 0; i < call.length; i++) {
+                if (call[i] >= finalLambdas[i] - 1e-12) {
+                  return false;
+                }
+              }
+              return true;
+            })
+        .count();
   }
 
   // ── Per-stage λ → loads mapping ───────────────────────────────────────────
