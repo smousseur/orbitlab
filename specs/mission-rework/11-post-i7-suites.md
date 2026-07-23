@@ -14,6 +14,7 @@ I7 est **vert sur les deux profils**, avec un gain qui compte désormais au nive
 | Profil | λ* | Étage(s) réduit(s) | Gain |
 |---|---|---|---|
 | LEO 400 km (mono-λ) | 0,4313 | S2 2844 → 1227 kg | **−57 % de S2** (−0,1 % du stack) |
+| LEO 400 km (multi-λ) | [1,0000 ; 0,4312] | S2 seul, S1 épinglé à 1 | identique au mono-λ (§3.1) |
 | GEO (mono-λ) | 0,8141 | S2 10 619 → 8645 kg | −18,6 % de S2 |
 | **GEO (multi-λ)** | **[0,9453 ; 0,8141]** | **S1 −67 430 kg**, S2 −1974 kg | **−69 404 kg, −5,6 % du stack** |
 
@@ -55,12 +56,14 @@ Arithmétique de la panne (massFlow S1 ≈ 7855 kg/s, `burn1Duration` ≈ 149,97
 
 LEO franchissait la falaise de 4 secondes par chance, GEO la ratait de 0,4 seconde.
 
-### 2.2 « Scaler S1 casse l'ascension, λ* épinglé à 1 » (§4.1) — FAUX sur GEO
+### 2.2 « Scaler S1 casse l'ascension, λ* épinglé à 1 » (§4.1) — FAUX sur GEO, VRAI sur LEO
 
 Mesuré : **λ₀ = 0,9453 sur GEO**, soit 67 tonnes récupérées. La conclusion du bilan 10 avait été
 tirée sur des runs où le largage était raté — elle est donc bâtie sur des données faussées.
 
-**Elle n'a jamais été re-testée sur LEO depuis le correctif.** C'est l'action n°1 ci-dessous.
+Re-mesurée depuis sur LEO (§3.1) : **λ₀ = 1,0000**, la conclusion tient — mais pour une raison que
+le bilan 10 n'énonçait pas, et sur des données cette fois saines. Ce n'est donc pas une affirmation
+sur le comportement de S1 en général : c'est une propriété du profil.
 
 ### 2.3 « Le gain stack est structurellement masqué par S1 » (§5.2) — CADUC
 
@@ -70,15 +73,31 @@ Vrai tant que S1 restait hors λ. Avec S1 sous λ : −5,6 % du stack.
 
 ## 3. Actions, par priorité
 
-### 3.1 — Relancer le multi-étages sur LEO ★ priorité haute
+### 3.1 — Multi-étages sur LEO ✔ FAIT, question tranchée
 
-**Pourquoi** : §2.2. La conclusion « S1 n'a pas de gras sur LEO » repose sur des runs antérieurs au
-correctif d'étagement. GEO vient de démontrer l'inverse de la même intuition.
+Test : `PropellantLoadOptimizerIntegrationTest.leoMultiStage_shrinksEveryVariableLoadStage`.
+16 évaluations, 1 passe, ~10 min.
 
-**Comment** : dupliquer `geoMultiStage_shrinksEveryVariableLoadStage` sur le profil LEO transfert
-optimisé, masque `allVariableLoadMask`, référence à battre λ* = 0,4313 sur S2 seul.
+**Résultat : λ* = [1,0000 ; 0,4312].** S1 reste épinglé à 1 ; λ(S2) reproduit le mono-λ (0,4313) à
+la 4ᵉ décimale, ce qui valide au passage la machinerie multi-étages contre la scalaire et confirme
+la quasi-séparabilité des coordonnées déjà observée sur GEO.
 
-**Coût** : ~27 évaluations × 64 s ≈ 30 min. **Tranche une question ouverte sur données.**
+**Pourquoi S1 ne bouge pas — le mécanisme, pas l'intuition.** La sonde qui l'explique est
+`λ = [0,9891 ; 0,43125]` : **−1,1 % sur S1 seul, S2 laissé à sa valeur gagnante**, et le résiduel de
+S2 tombe de 127 kg à **0**. Les 13,5 t retirées à S1 sont intégralement repayées par S2, qui est
+déjà au bord de sa falaise (voir §3.2). Ce n'est donc pas « l'ascension casse » : c'est un transfert
+de charge vers un étage sans marge, qui sature immédiatement.
+
+**L'asymétrie LEO/GEO est structurelle, pas accidentelle.** Sur GEO, S2 injecte 10,6 t en GTO et
+laisse la GT collée à son plancher d'étagement — du gras en bas. Sur LEO, S2 pèse 1227 kg et S1 fait
+presque tout le travail — rien à récupérer en bas. **Corollaire : `allVariableLoadMask` reste un
+opt-in profil par profil, et ne doit pas devenir le défaut.**
+
+**Limite d'outillage relevée au passage.** La sonde diagonale a testé `[0,98 ; 0,4226]`, donc elle a
+bougé une coordonnée déjà connue épinglée : son `feasible=false` ne dit rien sur S2 et ne distingue
+pas « sur la frontière » de « dans un coin ». Sur un profil où une coordonnée est épinglée, la sonde
+devrait ne stepper que les coordonnées ayant bougé pendant la passe. Sans conséquence ici —
+l'information manquante était déjà dans le log — mais à corriger avant de s'appuyer dessus.
 
 ### 3.2 — Marge mesurée pour les étages brûlés à épuisement ★ priorité haute
 
@@ -88,6 +107,29 @@ tout consommer). Donc **λ₀ = 0,9453 est faisable mais sans marge mesurée**, 
 
 **Le piège** : on ne peut pas s'appuyer sur `StageCapabilities.shutdownMode()` pour distinguer les
 deux régimes — **FH S1 déclare `COMMANDED` alors qu'il vole en épuisement**. Le modèle ment.
+
+**Ce n'est pas propre à S1 : c'est un basculement de mode, mesuré sur S2 (LEO multi-λ, §3.1).**
+Le résiduel ne décroît pas continûment vers le plancher quand on serre la charge — il tombe d'un
+coup :
+
+| λ(S2) | charge | résiduel | |
+|---|---|---|---|
+| 1,0 | 2844 kg | 47,1 % | ✓ |
+| 0,65 | 1849 kg | 34,2 % | ✓ |
+| 0,475 | 1351 kg | 12,3 % | ✓ |
+| **0,43125** | **1227 kg** | **10,3 %** | **✓ ← λ\*** |
+| 0,4203 | 1195 kg | **0,0 %** | ✗ |
+| 0,40937 | 1164 kg | 0,0 % | ✗ |
+| 0,3875 | 1102 kg | 0,0 % | ✗ |
+
+32 kg de moins (−2,6 % de charge) font passer 127 kg de résiduel à **exactement zéro** :
+sous un seuil critique, la solution bascule d'une coupure commandée à une coupure par épuisement.
+`objectiveMet=true` **des deux côtés** de la falaise — l'orbite est atteinte dans les deux modes,
+seule la façon de terminer la combustion change.
+
+Conséquence pour cette section : n'importe quel étage peut basculer en épuisement selon sa charge,
+donc « lire la marge dans le résiduel » n'est pas seulement inapplicable à S1, c'est inapplicable à
+tout étage serré. La marge cherchée ici doit se lire ailleurs que dans le résiduel.
 
 **Pistes** :
 - soit corriger la déclaration du catalogue et faire porter le plancher par le mode réel ;
@@ -123,16 +165,34 @@ apsides osculatrices — plutôt que sur des extrêmes d'altitude sur tout le co
 
 ### 3.4 — Resserrer les tolérances ▸ priorité moyenne, après 3.3
 
-`ORBIT_MARGIN_RATIO` (±7 %) conditionne le λ* atteignable : le −57 % de LEO est en partie « acheté »
-par cette tolérance. Trois boutons interagissent et doivent être re-réglés **ensemble** :
+> **Corrigé par la mesure (§3.1).** Ce paragraphe affirmait que le −57 % de LEO était « en partie
+> acheté » par la tolérance ±7 %. **C'est faux sur LEO** : sur les 8 évaluations du run multi-λ,
+> `objectiveMet=true` **partout**, y compris sur les points déclarés infaisables. L'objectif n'est
+> jamais la contrainte active ; c'est le plancher de résiduel qui ferme le bracket, à chaque fois.
 
-| Bouton | Valeur | Remarque |
+| Bouton | Valeur | Sensibilité mesurée sur LEO |
 |---|---|---|
-| `ORBIT_MARGIN_RATIO` | ±7 % | plafonné par 3.3 en basse altitude |
-| plancher de résiduel | 1 % | de la charge de l'étage dimensionné |
-| `W_PROPELLANT` | 5e-3 | calibré à ~27 % d'`acceptableCost` (3e-3) |
+| `ORBIT_MARGIN_RATIO` | ±7 % | **nulle** — jamais la contrainte active ; plafonné par 3.3 en basse altitude |
+| plancher de résiduel | 1 % | **nulle** — voir ci-dessous |
+| `W_PROPELLANT` | 5e-3 | non re-mesurée ; calibré à ~27 % d'`acceptableCost` (3e-3) |
+
+**La valeur numérique du plancher ne porte aucune information.** À cause de la falaise (§3.2), le
+résiduel de l'étage dimensionné vaut soit ≥ 10,3 %, soit exactement 0 — jamais entre les deux.
+N'importe quelle valeur dans (0 ; 10,3 %] donne le même λ*. Ce n'est pas un bouton de réglage, c'est
+un **détecteur binaire de flame-out**. Il fait bien son travail (rejeter les solutions en équilibre
+sur le fil), mais le régler est sans effet.
+
+**Ce que ça change pour cette action** : sur LEO il n'y a pas trois boutons qui interagissent, il y
+en a un seul dont l'effet reste à mesurer (`W_PROPELLANT`). La prémisse « les trois doivent être
+re-réglés ensemble » est à re-vérifier sur GEO avant d'être conservée — c'est le profil où
+l'objectif ±50 km est nettement plus serré, donc le seul où la tolérance peut plausiblement mordre.
 
 Si `acceptableCost` bouge, la calibration de `W_PROPELLANT` est à revérifier.
+
+**Note sur la précision de λ\*** : le bracket final LEO vaut 0,4203–0,43125, soit une largeur de
+0,011 sous la tolérance de 0,02 — λ* est donc précis à ~12 kg près, et **n'est pas conservateur**.
+La non-monotonicité stochastique documentée dans `PropellantLoadOptimizer` ne s'est pas manifestée
+sur ce run : la séquence des résiduels est propre et monotone jusqu'à la falaise.
 
 ### 3.5 — Tension de la GT sur GEO ▸ à qualifier
 

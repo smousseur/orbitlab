@@ -67,7 +67,16 @@ public final class MissionLoadEvaluator implements PropellantLoadOptimizer.Evalu
   /** Default objective tolerance: the ±7 % band the mission optimization tests assert on. */
   public static final double DEFAULT_OBJECTIVE_TOLERANCE_RATIO = 0.07;
 
-  /** Default residual floor: the sized stage keeps ≥ 1 % of its own load, off flame-out (spec §5). */
+  /**
+   * Default residual floor: the sized stage keeps ≥ 1 % of its own load, off flame-out (spec §5).
+   *
+   * <p><b>The exact value carries little information</b> (bilan 11 §3.4). Measured on FH LEO, the
+   * sized stage's residual does not decrease continuously as the load tightens — it falls off a
+   * cliff: 10.3 % of its load at {@code λ*}, exactly 0 one bisection step below (a 2.6 % lighter
+   * load), with the objective met on both sides. Only the termination mode changes, from a commanded
+   * cutoff to depletion. Any floor in {@code (0, 0.103]} therefore yields the same {@code λ*}: this
+   * is a binary flame-out detector rather than a tuning knob.
+   */
   public static final double DEFAULT_RESIDUAL_FLOOR_RATIO = 0.01;
 
   /** Default per-stage CMA-ES evaluation budget, matching the mission optimization tests. */

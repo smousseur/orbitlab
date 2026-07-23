@@ -34,10 +34,13 @@ import org.orekit.utils.PVCoordinates;
  * I7 outer-loop integration tests (spec 09 §6 task 4, extended to GEO per bilan 10 §7.3). Runs the
  * full propellant-sizing bisection on real Falcon Heavy missions and asserts the exit criterion:
  * the loads found at {@code λ*} weigh strictly less than the heuristic loads, and the mission at
- * {@code λ*} is feasible. Only the sized top stage (S2) is scaled — the un-staged S1 is dragged
- * until depletion and already flies "just enough", so it stays off λ (see {@link
- * PropellantLoadOptimizer#lambdaScaledMask}); on GEO the payload's AKM is sized separately by
- * {@link PropellantBudget#loadsForGeo} and never appears in the launcher loads.
+ * {@code λ*} is feasible. On GEO the payload's AKM is sized separately by {@link
+ * PropellantBudget#loadsForGeo} and never appears in the launcher loads.
+ *
+ * <p>Each profile is run twice, under two scaling masks: the single-λ tests scale only the sized top
+ * stage (S2, {@link PropellantLoadOptimizer#lambdaScaledMask}), while the {@code *MultiStage} tests
+ * put every variable-load stage under its own λ ({@link PropellantLoadOptimizer#allVariableLoadMask})
+ * and let {@link MultiStageLoadOptimizer} sweep the coordinates.
  *
  * <p>The two scenarios differ structurally in where the sized stage's residual ends up: on LEO, S2
  * is the final active stage and its residual is read at mission end; on GEO, S2 is jettisoned after
@@ -58,6 +61,22 @@ public class PropellantLoadOptimizerIntegrationTest {
   private static final double LAUNCH_LATITUDE_DEG = 45.96;
 
   private static final double TARGET_ALTITUDE_M = 400_000.0;
+
+  /**
+   * Single-λ reference on the same LEO configuration (bilan 11 §1), the number the multi-stage run
+   * is read against. Logged, not asserted: the multi-stage sweep is answering an open question, and
+   * pinning it to a past figure would turn a measurement into a regression bar.
+   */
+  private static final double SINGLE_LAMBDA_LEO_REFERENCE = 0.4313;
+
+  /**
+   * Circularity bar on the LEO final orbit. Asserted on {@code e} rather than on min/max coast
+   * altitude (bilan 11 §3.3): geodetic altitudes mix insertion quality with the Earth's oblateness —
+   * at i = 45.9° the flattening alone spreads min and max by 11 km on a perfectly circular orbit.
+   * This bar is looser than what the ±7 % feasibility band already permits (e ≈ 4.1e-3 at 400 km),
+   * so it corroborates the shape without tightening the criterion the loop optimizes against.
+   */
+  private static final double LEO_ECCENTRICITY_TOLERANCE = 5e-3;
 
   // ── GEO scenario ──
   /** GEO mission default site (Kourou), mirrors GEOMission's private defaults. */
@@ -287,6 +306,150 @@ public class PropellantLoadOptimizerIntegrationTest {
                 "Final inclination %.4f° exceeds tolerance %.3f°",
                 FastMath.toDegrees(finalOrbit.getI()),
                 FastMath.toDegrees(GEO_INCLINATION_TOLERANCE_RAD)));
+  }
+
+  /**
+   * Multi-stage counterpart on LEO (bilan 11 §3.1): <b>every</b> variable-load stage gets its own λ
+   * and {@link MultiStageLoadOptimizer} minimizes them by coordinate-wise bisection, same setup as
+   * {@link #geoMultiStage_shrinksEveryVariableLoadStage()} on the LEO optimized-transfer profile.
+   *
+   * <p><b>The question it settles.</b> {@link PropellantLoadOptimizer#lambdaScaledMask} records that
+   * S1 has no reclaimable slack on LEO, so putting it under λ pins λ* at 1. That finding predates
+   * the staging fix (bilan 11 §2.1): before it, a {@code transitionTime} below {@code burn1Duration}
+   * stopped the propagation short of the jettison detector, so S1 was never dropped and every
+   * reduced-S1 run was measured on a mission that did not fly the profile. GEO then demonstrated the
+   * opposite of the same intuition — λ₀ = 0.9453, 67 t reclaimed. This test re-measures LEO on
+   * corrected data.
+   *
+   * <p><b>Measured answer: {@code λ* = [1.0000, 0.4312]}</b> — S1 stays pinned, and λ(S2) reproduces
+   * the single-λ reference ({@code 0.4313}) to four decimals, which also cross-validates the
+   * multi-stage sweep against the scalar bisection. The mask's finding holds on LEO, on sound data
+   * this time, and the mechanism is a load transfer rather than a broken ascent: taking 1.1 % off S1
+   * alone, S2 held at its optimum, drops S2's residual from 127 kg to zero. So this stays a
+   * <em>regression guard on a settled question</em> — if λ₀ ever leaves 1 here, either the profile or
+   * the staging changed.
+   */
+  @Test
+  void leoMultiStage_shrinksEveryVariableLoadStage() {
+    LauncherModel launcher = Launchers.FALCON_HEAVY;
+    Spacecraft payload = Payloads.EARTH_OBSERVATION_SAT.toSpacecraft(PAYLOAD_MASS_KG, 0.0);
+
+    double[] heuristicLoads =
+        PropellantBudget.loadsForLeo(launcher, payload, TARGET_ALTITUDE_M, LAUNCH_LATITUDE_DEG);
+    boolean[] mask = PropellantLoadOptimizer.allVariableLoadMask(launcher);
+    logStageLoads("LEO multi-stage heuristic loads", launcher, heuristicLoads, mask);
+
+    AbsoluteDate launchEpoch =
+        new AbsoluteDate(2026, 1, 1, 12, 0, 0.0, TimeScalesFactory.getUTC());
+
+    Function<double[], Mission> missionBuilder =
+        loads ->
+            LEOMission.withOptimizedTransfer(
+                "I7 LEO 400 km multi-stage",
+                new LaunchConfiguration(launcher, loads, payload),
+                TARGET_ALTITUDE_M);
+
+    // The LEO mission's own recorded objective is the flown final orbit (circular 400 km), so no
+    // explicit feasibility objective is needed — unlike GEO, whose objective is (parking, GEO).
+    MissionLoadEvaluator evaluator =
+        new MissionLoadEvaluator(missionBuilder, heuristicLoads, mask, launchEpoch);
+
+    MultiStageLoadOptimizer.Result result =
+        new MultiStageLoadOptimizer().minimize(evaluator::evaluate, mask, heuristicLoads);
+
+    double[] scaledLoads =
+        PropellantLoadOptimizer.scaledLoads(result.lambdas(), heuristicLoads, mask);
+    logStageLoads("LEO multi-stage loads at λ*", launcher, scaledLoads, mask);
+
+    double scaledMassHeuristic = maskedSum(heuristicLoads, mask);
+    double scaledMassFinal = maskedSum(scaledLoads, mask);
+    logger.info(
+        "I7 LEO multi-stage result: feasible={}, λ*={}, evals={}, passes={};"
+            + " scaled-stage mass {} kg → {} kg (−{} kg, −{}%)",
+        result.feasible(),
+        Arrays.toString(result.lambdas()),
+        result.evaluations(),
+        result.passes(),
+        Math.round(scaledMassHeuristic),
+        Math.round(scaledMassFinal),
+        Math.round(scaledMassHeuristic - scaledMassFinal),
+        String.format(
+            java.util.Locale.ROOT, "%.1f", 100.0 * (1.0 - scaledMassFinal / scaledMassHeuristic)));
+
+    // The open question of bilan 11 §3.1, answered in the log rather than asserted: whether the
+    // first stage moves off the heuristic load once staging actually happens.
+    int bottomStage = 0;
+    logger.info(
+        "LEO multi-stage vs single-λ reference: λ(S1)={} (mask comment predicts 1.0),"
+            + " λ(S2)={} vs reference λ*={}",
+        String.format(java.util.Locale.ROOT, "%.4f", result.lambdas()[bottomStage]),
+        String.format(
+            java.util.Locale.ROOT, "%.4f", result.lambdas()[result.lambdas().length - 1]),
+        SINGLE_LAMBDA_LEO_REFERENCE);
+
+    assertTrue(result.feasible(), "the heuristic LEO loads must themselves be feasible");
+    assertTrue(
+        scaledMassFinal < scaledMassHeuristic,
+        () ->
+            String.format(
+                java.util.Locale.ROOT,
+                "scaled-stage mass %.0f kg must fall below the heuristic %.0f kg",
+                scaledMassFinal,
+                scaledMassHeuristic));
+    for (int i = 0; i < mask.length; i++) {
+      int index = i;
+      assertTrue(
+          result.lambdas()[index] <= PropellantLoadOptimizer.DEFAULT_LAMBDA_MAX + 1e-12,
+          () -> "λ" + index + " must not exceed the heuristic bound");
+    }
+
+    MissionComputeResult best = result.best().result();
+    assertNotNull(best, "the feasible best evaluation must carry its mission compute result");
+
+    // S2 is the final active stage on LEO, so its residual is read at mission end (no jettison
+    // capture, unlike GEO). It is the stage the residual floor guards, and it must clear it.
+    int sizedStage = launcher.stages().size() - 1;
+    StagePropellant s2 =
+        best.performanceReport()
+            .residualForStage(sizedStage)
+            .orElseThrow(() -> new AssertionError("no per-stage propellant split for S2"));
+    logger.info(
+        "LEO multi-stage S2 at λ*: loaded={} kg, residual at mission end={} kg ({}% of its load)",
+        Math.round(s2.loaded()),
+        Math.round(s2.residual()),
+        String.format(java.util.Locale.ROOT, "%.1f", 100.0 * s2.residualRatio()));
+    assertTrue(
+        s2.residualRatio() >= MissionLoadEvaluator.DEFAULT_RESIDUAL_FLOOR_RATIO,
+        () ->
+            String.format(
+                java.util.Locale.ROOT,
+                "S2 residual at mission end (%.0f kg) is below %.0f%% of its %.0f kg load",
+                s2.residual(),
+                100.0 * MissionLoadEvaluator.DEFAULT_RESIDUAL_FLOOR_RATIO,
+                s2.loaded()));
+
+    // The retained solution must still be a genuine circular 400 km orbit, not merely inside the
+    // altitude band the feasibility predicate reads off the terminal coast.
+    MissionEphemerisPoint last = best.ephemeris().lastPoint();
+    KeplerianOrbit finalOrbit =
+        new KeplerianOrbit(
+            new PVCoordinates(last.position(), last.velocity()),
+            OrekitService.get().gcrf(),
+            last.time(),
+            Constants.WGS84_EARTH_MU);
+    logger.info(
+        "LEO multi-stage final orbit: a={} km, e={}, i={}°",
+        String.format(java.util.Locale.ROOT, "%.1f", finalOrbit.getA() / 1000.0),
+        String.format(java.util.Locale.ROOT, "%.5f", finalOrbit.getE()),
+        String.format(java.util.Locale.ROOT, "%.2f", FastMath.toDegrees(finalOrbit.getI())));
+    assertTrue(
+        finalOrbit.getE() < LEO_ECCENTRICITY_TOLERANCE,
+        () ->
+            String.format(
+                java.util.Locale.ROOT,
+                "Final eccentricity %.5f exceeds tolerance %.5f",
+                finalOrbit.getE(),
+                LEO_ECCENTRICITY_TOLERANCE));
   }
 
   /**

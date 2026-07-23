@@ -316,11 +316,10 @@ public final class PropellantLoadOptimizer {
    * multi-stage coordinate sweep consumes. SOLID stages keep their design load (no sizing degree of
    * freedom) and the payload AKM never appears in the launcher loads.
    *
-   * <p>Opt-in: {@link #lambdaScaledMask} (top stage only) stays the default, because on the flown
-   * LEO profile the first stage's full load is already "just enough" and scaling it pins {@code λ*}
-   * at 1. On GEO the picture differs — the gravity turn sits pinned on its staging floor, which
-   * says it has more first-stage propellant than it needs — so that stage is worth putting under
-   * {@code λ} there.
+   * <p><b>Opt-in, per profile</b> — {@link #lambdaScaledMask} (top stage only) stays the default.
+   * Measured on Falcon Heavy: this mask reclaims 67 t on GEO ({@code λ₀ = 0.9453}) and <b>nothing</b>
+   * on LEO ({@code λ₀ = 1.0000}), so which mask to use is a property of the profile, not a setting
+   * to standardize. See {@link #lambdaScaledMask} for why LEO's first stage cannot move.
    *
    * @param launcher the launcher model
    * @return a per-stage boolean mask, {@code true} on every variable-load stage
@@ -340,14 +339,20 @@ public final class PropellantLoadOptimizer {
    * stage stay off the scaling, and the payload AKM is sized separately and never appears in the
    * launcher loads.
    *
-   * <p><b>Deviation from spec 09 §1</b> (which puts every non-SOLID, non-AKM stage under {@code λ}).
-   * On the flown profiles the first stage is never jettisoned — it is dragged, dry mass and all, to
-   * orbit — so its full load is already "just enough" to loft its own structure (~0.3 % residual on
-   * Falcon Heavy LEO). Scaling it down breaks the ascent immediately, pinning {@code λ*} at 1 with
-   * nothing reclaimed. The only stage carrying a genuine, reclaimable margin is the one {@link
-   * com.smousseur.orbitlab.simulation.mission.vehicle.PropellantBudget} actually sizes: the top
-   * stage. Restricting {@code λ} to it is what lets the loop reclaim propellant on an un-staged
-   * stack (finding logged when the I7 integration test first ran on FH LEO).
+   * <p><b>Deviation from spec 09 §1</b> (which puts every non-SOLID, non-AKM stage under {@code λ}),
+   * kept on the strength of a measurement, not of an assumption. Re-run on Falcon Heavy LEO with
+   * every variable-load stage under its own {@code λ}, the first stage settles at {@code λ₀ = 1}
+   * exactly: nothing to reclaim. The mechanism is a load transfer, not a broken ascent — taking
+   * 1.1 % off S1 alone, with S2 held at its own optimum, drops S2's residual from 127 kg to zero.
+   * S1's propellant is repaid in full by the stage above it, which has no margin to pay with.
+   *
+   * <p>This is a property of the profile, not of first stages: on GEO the same measurement yields
+   * {@code λ₀ = 0.9453}, 67 t reclaimed, because there S2 does the heavy lifting (a 10.6 t GTO
+   * injection) and the gravity turn sits pinned on its staging floor with propellant to spare.
+   * The stage carrying a reliably reclaimable margin on <em>every</em> profile is the one {@link
+   * com.smousseur.orbitlab.simulation.mission.vehicle.PropellantBudget} actually sizes — the top
+   * stage — which is why {@code λ} is restricted to it by default. Use {@link #allVariableLoadMask}
+   * when a profile's lower stages are suspected of carrying slack, and measure rather than assume.
    *
    * @param launcher the launcher model
    * @return a per-stage boolean mask, {@code true} only on the sized (top, variable-load) stage
