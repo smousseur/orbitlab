@@ -24,6 +24,10 @@ import org.orekit.utils.PVCoordinates;
  * pad from a geodetic launch site, in GCRF. Concrete missions supply the site coordinates.
  */
 public abstract class EarthMission extends Mission {
+  protected static final double DEFAULT_LATITUDE = 5.23;
+  protected static final double DEFAULT_LONGITUDE = -52.77;
+  protected static final double DEFAULT_ALTITUDE = 0.0;
+
   public EarthMission(
       String name, Vehicle vehicle, List<MissionStage> stages, MissionObjective objective) {
     super(name, vehicle, stages, objective);

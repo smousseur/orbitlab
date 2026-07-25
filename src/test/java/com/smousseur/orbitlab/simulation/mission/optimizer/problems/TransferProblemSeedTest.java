@@ -4,7 +4,7 @@ import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.mission.maneuver.TransfertTwoManeuver;
 import com.smousseur.orbitlab.simulation.mission.vehicle.ActiveStageInfo;
 import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchConfiguration;
-import com.smousseur.orbitlab.simulation.mission.vehicle.Launchers;
+import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Launchers;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Spacecraft;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
 import org.hipparchus.util.FastMath;
@@ -29,6 +29,7 @@ public class TransferProblemSeedTest {
   private static final double EARTH_RADIUS = Constants.WGS84_EARTH_EQUATORIAL_RADIUS;
   private static final double TARGET_ALTITUDE = 300_000.0;
   private static final double TARGET_INCLINATION = FastMath.toRadians(45.96);
+
   /** Transfer-entry mass of the fully-loaded FH reference mission at 300 km (S2 active). */
   private static final double TRANSFER_ENTRY_MASS = 60_709.0;
 
@@ -83,8 +84,7 @@ public class TransferProblemSeedTest {
 
   private static TransferProblem problemFor(SpacecraftState state, double targetAltitude) {
     Vehicle vehicle =
-        LaunchConfiguration.fullyLoaded(Launchers.FALCON_HEAVY, Spacecraft.LEGACY)
-            .toVehicleStack();
+        LaunchConfiguration.fullyLoaded(Launchers.FALCON_HEAVY, Spacecraft.LEGACY).toVehicleStack();
     ActiveStageInfo activeStage = vehicle.resolveActiveStage(state.getMass());
     return new TransferTwoManeuverProblem(
         new TransfertTwoManeuver(vehicle, targetAltitude),

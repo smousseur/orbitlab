@@ -14,17 +14,14 @@ import com.smousseur.orbitlab.simulation.mission.stage.StageSeparationStage;
 import com.smousseur.orbitlab.simulation.mission.stage.ascent.GravityTurnStage;
 import com.smousseur.orbitlab.simulation.mission.stage.ascent.VerticalAscentStage;
 import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchConfiguration;
-import com.smousseur.orbitlab.simulation.mission.vehicle.Launchers;
-import com.smousseur.orbitlab.simulation.mission.vehicle.Payloads;
+import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Launchers;
+import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Payloads;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.AscentProfile;
 import java.util.List;
 import org.hipparchus.util.FastMath;
 
 public class GEOMission extends EarthMission {
-  private static final double DEFAULT_LATITUDE = 5.23;
-  private static final double DEFAULT_LONGITUDE = -52.77;
-  private static final double DEFAULT_ALTITUDE = 0.0;
   public static final int GEO_ALTITUDE = 35_786_000;
 
   /** Stack index of the launcher's upper stage — the one "S2 separation" is meant to jettison. */

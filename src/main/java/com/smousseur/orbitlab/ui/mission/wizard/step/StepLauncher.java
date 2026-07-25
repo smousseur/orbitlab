@@ -7,8 +7,8 @@ import com.simsilica.lemur.*;
 import com.simsilica.lemur.component.BoxLayout;
 import com.simsilica.lemur.event.DefaultMouseListener;
 import com.simsilica.lemur.event.MouseEventControl;
-import com.smousseur.orbitlab.simulation.mission.vehicle.Launchers;
-import com.smousseur.orbitlab.simulation.mission.vehicle.Payloads;
+import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Launchers;
+import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Payloads;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.LauncherModel;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.PayloadModel;
 import com.smousseur.orbitlab.ui.UiKit;
@@ -48,11 +48,7 @@ public class StepLauncher implements StepValues {
   public StepLauncher() {
     root = new Container(new BoxLayout(Axis.Y, FillMode.None));
     root.setBackground(null);
-    root.setPreferredSize(
-        new Vector3f(
-            FormStyles.CONTENT_WIDTH,
-            FormStyles.CONTENT_HEIGHT,
-            0));
+    root.setPreferredSize(new Vector3f(FormStyles.CONTENT_WIDTH, FormStyles.CONTENT_HEIGHT, 0));
 
     Label title = root.addChild(new Label("LAUNCHER & PAYLOAD", FormStyles.STYLE));
     title.setFont(UiKit.orbitron(13));
@@ -60,8 +56,7 @@ public class StepLauncher implements StepValues {
 
     root.addChild(UiKit.vSpacer(ROW_GAP));
 
-    Label subtitle =
-        root.addChild(new Label("// vehicle configuration", FormStyles.STYLE));
+    Label subtitle = root.addChild(new Label("// vehicle configuration", FormStyles.STYLE));
     subtitle.setFont(UiKit.ibmPlexMono(11));
     subtitle.setColor(FormStyles.TEXT_SECONDARY);
 
@@ -84,9 +79,7 @@ public class StepLauncher implements StepValues {
                   "S1 thrust: %.1f MN",
                   launcher.stages().getFirst().propulsion().thrust() / 1e6),
               String.format(
-                  Locale.ROOT,
-                  "Isp S2: %.0fs",
-                  launcher.stages().getLast().propulsion().isp()),
+                  Locale.ROOT, "Isp S2: %.0fs", launcher.stages().getLast().propulsion().isp()),
               null,
               i == 0 ? SelectableCard.State.SELECTED : SelectableCard.State.IDLE,
               iconFor(launcher.id()),
@@ -185,10 +178,11 @@ public class StepLauncher implements StepValues {
   }
 
   private static String iconFor(String launcherId) {
-    return switch (launcherId) {
-      case "ARIANE_5_ECA" -> "interface/wizard/icon-launcher-ariane.png";
-      default -> "interface/wizard/icon-launcher-falcon.png";
-    };
+    String icon = "interface/wizard/icon-launcher-falcon.png";
+    if (launcherId.equals("ARIANE_5_ECA")) {
+      icon = "interface/wizard/icon-launcher-ariane.png";
+    }
+    return icon;
   }
 
   private static double parseDoubleOrZero(String text) {

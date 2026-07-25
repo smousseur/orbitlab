@@ -10,8 +10,8 @@ import com.smousseur.orbitlab.simulation.mission.objective.OrbitInsertionObjecti
 import com.smousseur.orbitlab.simulation.mission.operation.GEOMission;
 import com.smousseur.orbitlab.simulation.mission.operation.LEOMission;
 import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchConfiguration;
-import com.smousseur.orbitlab.simulation.mission.vehicle.Launchers;
-import com.smousseur.orbitlab.simulation.mission.vehicle.Payloads;
+import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Launchers;
+import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Payloads;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropellantBudget;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Spacecraft;
 import com.smousseur.orbitlab.simulation.mission.vehicle.StagePropellant;

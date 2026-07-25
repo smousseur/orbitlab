@@ -13,7 +13,7 @@ import com.smousseur.orbitlab.simulation.mission.stage.TransfertTwoManeuverStage
 import com.smousseur.orbitlab.simulation.mission.stage.ascent.GravityTurnStage;
 import com.smousseur.orbitlab.simulation.mission.stage.ascent.VerticalAscentStage;
 import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchConfiguration;
-import com.smousseur.orbitlab.simulation.mission.vehicle.Launchers;
+import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Launchers;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Spacecraft;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.AscentProfile;
@@ -25,10 +25,6 @@ import org.hipparchus.util.FastMath;
  * Vertical Ascent → Gravity Turn → Transfer Two-Maneuver → Coasting.
  */
 public class LEOMission extends EarthMission {
-  private static final double DEFAULT_LATITUDE = 45.96;
-  private static final double DEFAULT_LONGITUDE = 63.30;
-  private static final double DEFAULT_ALTITUDE = 0.0;
-
   private final double latitude;
   private final double longitude;
   private final double altitude;
@@ -154,7 +150,8 @@ public class LEOMission extends EarthMission {
                 "Transfert", perigeeAltitude, apogeeAltitude, FastMath.toRadians(DEFAULT_LATITUDE)),
             // The trim burn at the next apogee raises the perigee to the target perigee, shaping
             // the ellipse (target perigee, achieved apogee) — its altitude argument is the perigee.
-            new AnalyticTrimBurnStage("Trim", perigeeAltitude, FastMath.toRadians(DEFAULT_LATITUDE)),
+            new AnalyticTrimBurnStage(
+                "Trim", perigeeAltitude, FastMath.toRadians(DEFAULT_LATITUDE)),
             new CoastingStage("Coasting", null));
     return new LEOMission(
         name,

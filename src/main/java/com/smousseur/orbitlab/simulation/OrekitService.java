@@ -32,9 +32,7 @@ public final class OrekitService {
   private final AtomicBoolean initialized = new AtomicBoolean(false);
 
   /** Cached gravity providers — created once, reused for every propagator. */
-  private volatile ForceModel fullGravityModel;
-
-  private volatile ForceModel lightGravityModel;
+  private volatile ForceModel gravityModel;
 
   private OrekitService() {}
 
@@ -157,9 +155,9 @@ public final class OrekitService {
   }
 
   /**
-   * Creates a simple Newtonian propagator with an explicit integrator max step. Size {@code maxStep}
-   * with {@link #burnLimitedMaxStep} from the burns the caller will configure, or use {@link
-   * #COAST_MAX_STEP} for a burn-free coast.
+   * Creates a simple Newtonian propagator with an explicit integrator max step. Size {@code
+   * maxStep} with {@link #burnLimitedMaxStep} from the burns the caller will configure, or use
+   * {@link #COAST_MAX_STEP} for a burn-free coast.
    *
    * @param maxStep integrator maximum step in seconds (must satisfy the late-ignition invariant)
    * @return a new numerical propagator with Newtonian gravity only
@@ -209,34 +207,21 @@ public final class OrekitService {
     NumericalPropagator propagator = new NumericalPropagator(integrator);
     propagator.setOrbitType(OrbitType.CARTESIAN);
     propagator.setMu(Constants.WGS84_EARTH_MU);
-    propagator.addForceModel(getLightGravityModel());
+    propagator.addForceModel(getGravityModel());
     return propagator;
   }
 
-  private ForceModel getFullGravityModel() {
-    if (fullGravityModel == null) {
+  private ForceModel getGravityModel() {
+    if (gravityModel == null) {
       synchronized (this) {
-        if (fullGravityModel == null) {
-          NormalizedSphericalHarmonicsProvider provider =
-              GravityFieldFactory.getNormalizedProvider(50, 50);
-          fullGravityModel = new HolmesFeatherstoneAttractionModel(itrf(), provider);
-        }
-      }
-    }
-    return fullGravityModel;
-  }
-
-  private ForceModel getLightGravityModel() {
-    if (lightGravityModel == null) {
-      synchronized (this) {
-        if (lightGravityModel == null) {
+        if (gravityModel == null) {
           NormalizedSphericalHarmonicsProvider provider =
               GravityFieldFactory.getNormalizedProvider(8, 8);
-          lightGravityModel = new HolmesFeatherstoneAttractionModel(itrf(), provider);
+          gravityModel = new HolmesFeatherstoneAttractionModel(itrf(), provider);
         }
       }
     }
-    return lightGravityModel;
+    return gravityModel;
   }
 
   /**

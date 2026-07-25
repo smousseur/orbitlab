@@ -1,6 +1,7 @@
 package com.smousseur.orbitlab.simulation.mission.vehicle.model;
 
 import com.smousseur.orbitlab.simulation.mission.vehicle.*;
+import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Launchers;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.stage.StageModel;
 
 import java.util.ArrayList;
@@ -17,7 +18,7 @@ import java.util.Objects;
  * @param ascentProfile the flight-profile parameters imposed by this launcher
  */
 public record LauncherModel(
-        String id, String displayName, List<StageModel> stages, AscentProfile ascentProfile) {
+    String id, String displayName, List<StageModel> stages, AscentProfile ascentProfile) {
 
   public LauncherModel {
     Objects.requireNonNull(id, "id");
@@ -53,8 +54,7 @@ public record LauncherModel(
   }
 
   /**
-   * Instantiates the vehicle stack with every stage loaded at full capacity (historical
-   * behaviour).
+   * Instantiates the vehicle stack with every stage loaded at full capacity (historical behaviour).
    *
    * @param payload the payload placed on top of the stack
    * @return the assembled vehicle stack, bottom stage first, payload last

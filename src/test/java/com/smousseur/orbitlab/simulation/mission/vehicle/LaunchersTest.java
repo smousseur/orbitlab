@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.List;
 
+import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Launchers;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.stage.IgnitionMode;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.stage.StageCapabilities;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.stage.StageModel;
@@ -32,7 +33,7 @@ class LaunchersTest {
     List<StageModel> stages = Launchers.FALCON_HEAVY.stages();
     assertEquals(2, stages.size());
 
-    StageModel s1 = stages.get(0);
+    StageModel s1 = stages.getFirst();
     assertEquals(66_000, s1.dryMass(), 1e-6);
     assertEquals(1_233_000, s1.propellantCapacity(), 1e-6);
     assertEquals(296, s1.propulsion().isp(), 1e-6);
@@ -72,7 +73,7 @@ class LaunchersTest {
     List<Vehicle> vehicles = stack.vehicles();
     assertEquals(3, vehicles.size());
 
-    Vehicle s1 = vehicles.get(0);
+    Vehicle s1 = vehicles.getFirst();
     assertEquals(66_000, s1.dryMass(), 1e-6);
     assertEquals(600_000, s1.propellantLoad(), 1e-6);
     assertEquals(296, s1.propulsion().isp(), 1e-6);

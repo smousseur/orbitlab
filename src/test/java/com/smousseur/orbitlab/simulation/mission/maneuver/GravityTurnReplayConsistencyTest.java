@@ -12,10 +12,9 @@ import com.smousseur.orbitlab.simulation.mission.optimizer.OptimizationResult;
 import com.smousseur.orbitlab.simulation.mission.optimizer.problems.GravityTurnConstraints;
 import com.smousseur.orbitlab.simulation.mission.stage.ascent.GravityTurnStage;
 import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchConfiguration;
-import com.smousseur.orbitlab.simulation.mission.vehicle.Launchers;
-import com.smousseur.orbitlab.simulation.mission.vehicle.Payloads;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropellantBudget;
-import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
+import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Launchers;
+import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Payloads;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
@@ -40,16 +39,16 @@ import org.orekit.time.TimeScalesFactory;
  * under the 8×8 {@code createOptimizationPropagator}. Same 7 s burn, same mass consumed, but a
  * different post-ascent state — and the gravity turn's {@code getEntryState()} override never
  * reconciles it, because that default returns {@code null} and {@code GravityTurnStage} does not
- * override it. So the optimize GT starts from the point-mass post-ascent state, the ephemeris GT from
- * the 8×8 one.
+ * override it. So the optimize GT starts from the point-mass post-ascent state, the ephemeris GT
+ * from the 8×8 one.
  *
  * <p>The four fixtures separate the cause from the two dead ends chased earlier:
  *
  * <ul>
  *   <li>{@code verticalAscentGravityModelMismatch_*} — point-mass vs 8×8 vertical ascent differ
  *       (~0.4 m, 0.1 m/s), the seed;
- *   <li>{@code differentPostAscentStates_*} — the same maneuver + same config, fed those two entries,
- *       diverges (~25 m) — the cause is the entry, i.e. the VA model;
+ *   <li>{@code differentPostAscentStates_*} — the same maneuver + same config, fed those two
+ *       entries, diverges (~25 m) — the cause is the entry, i.e. the VA model;
  *   <li>{@code samePostAscentState_configDifferenceIsHarmless} — the same entry with the two
  *       <em>propagator configs</em> (armQuiet+tracker vs arm+MECO+multiplexer), even <b>with
  *       staging</b>, agrees to the bit — the config is NOT the cause;
@@ -57,12 +56,12 @@ import org.orekit.time.TimeScalesFactory;
  *       divergence-irrelevant) 2b pitch-kick fix.
  * </ul>
  *
- * <p>The reproduction needs the <em>real</em> regime (sub-orbital climbing entry, |v| ≈ 466 m/s, with
- * staging), so the fixtures fly the actual Falcon Heavy vertical ascent rather than a synthetic state.
+ * <p>The reproduction needs the <em>real</em> regime (sub-orbital climbing entry, |v| ≈ 466 m/s,
+ * with staging), so the fixtures fly the actual Falcon Heavy vertical ascent rather than a
+ * synthetic state.
  */
 class GravityTurnReplayConsistencyTest {
-  private static final Logger logger =
-      LogManager.getLogger(GravityTurnReplayConsistencyTest.class);
+  private static final Logger logger = LogManager.getLogger(GravityTurnReplayConsistencyTest.class);
 
   // Falcon Heavy GEO profile, mirroring PropellantLoadOptimizerIntegrationTest.
   private static final double PARKING_ALT = 400_000.0;
@@ -112,9 +111,8 @@ class GravityTurnReplayConsistencyTest {
     AbsoluteDate epoch = new AbsoluteDate(2026, 1, 1, 12, 0, 0.0, TimeScalesFactory.getUTC());
     mission.setCurrentState(mission.getInitialState(epoch));
 
-    MissionStage verticalAscent = mission.getStages().get(0);
-    SpacecraftState postVa =
-        verticalAscent.propagateStandalone(mission.getCurrentState(), mission);
+    MissionStage verticalAscent = mission.getStages().getFirst();
+    SpacecraftState postVa = verticalAscent.propagateStandalone(mission.getCurrentState(), mission);
 
     // The maneuver the GEO gravity-turn stage builds internally (launch latitude / target
     // inclination are 0 on that stage, as in GEOMission.buildStages).
@@ -129,14 +127,17 @@ class GravityTurnReplayConsistencyTest {
     return new GtSetup(maneuver, postVa);
   }
 
-  /** Replays the GT exactly as {@code MissionEphemerisGenerator} drives it, from the given start. */
+  /**
+   * Replays the GT exactly as {@code MissionEphemerisGenerator} drives it, from the given start.
+   */
   private static SpacecraftState replayLikeGenerator(
       GravityTurnManeuver maneuver, SpacecraftState start, double[] variables) {
     GravityTurnManeuver.GravityTurnParams params = maneuver.decode(variables);
     NumericalPropagator prop =
         OrekitService.get().createOptimizationPropagator(maneuver.maxStepSeconds());
     prop.setInitialState(start);
-    maneuver.configure(prop, start, params); // single source of truth, shared with the optimize path
+    maneuver.configure(
+        prop, start, params); // single source of truth, shared with the optimize path
     DepletionGuard.arm(prop, maneuver.getDepletionFloor(), "GT"); // loud, as GravityTurnStage does
     AbsoluteDate meco = start.getDate().shiftedBy(params.transitionTime());
     prop.addEventDetector(new DateDetector(meco).withHandler((s, d, inc) -> Action.STOP));
@@ -145,13 +146,14 @@ class GravityTurnReplayConsistencyTest {
   }
 
   /** Post-vertical-ascent state, flown under the two gravity models the two passes actually use. */
-  private record PostVa(SpacecraftState pointMass, SpacecraftState eightByEight, double burn1Mass) {}
+  private record PostVa(
+      SpacecraftState pointMass, SpacecraftState eightByEight, double burn1Mass) {}
 
   private static PostVa postVerticalAscentBothModels() {
     GEOMission mission = geoMission();
     AbsoluteDate epoch = new AbsoluteDate(2026, 1, 1, 12, 0, 0.0, TimeScalesFactory.getUTC());
     SpacecraftState initial = mission.getInitialState(epoch);
-    MissionStage va = mission.getStages().get(0);
+    MissionStage va = mission.getStages().getFirst();
 
     // Optimize pass: propagateStandalone → createSimplePropagator (point-mass).
     mission.setCurrentState(initial);
@@ -212,7 +214,8 @@ class GravityTurnReplayConsistencyTest {
     // Same config (both optimize) — so the ONLY difference is the entry state, which the VA model
     // mismatch produced. This isolates the cause to the entry, not the propagator config.
     SpacecraftState fromPointMass = maneuver.propagateForOptimization(va.pointMass(), variables);
-    SpacecraftState fromEightByEight = maneuver.propagateForOptimization(va.eightByEight(), variables);
+    SpacecraftState fromEightByEight =
+        maneuver.propagateForOptimization(va.eightByEight(), variables);
     assertTrue(fromPointMass.getMass() < va.burn1Mass() - 1.0, "GT must fly (mass consumed)");
 
     double dPos = Vector3D.distance(fromPointMass.getPosition(), fromEightByEight.getPosition());
@@ -262,10 +265,12 @@ class GravityTurnReplayConsistencyTest {
   @Test
   void gravityTurnStageConfigure_startsTheReplayFromTheKickedState() {
     GtSetup gt = gravityTurnAtEntry();
-    Vehicle vehicle = geoMission().getVehicle();
     GravityTurnStage stage =
         new GravityTurnStage(
-            "Gravity turn", PITCH_KICK_DEG, INTERSTAGE_COAST, GravityTurnConstraints.forTarget(PARKING_ALT));
+            "Gravity turn",
+            PITCH_KICK_DEG,
+            INTERSTAGE_COAST,
+            GravityTurnConstraints.forTarget(PARKING_ALT));
     double[] variables = {gt.maneuver().getStagingCompleteTime() + 2.0, 0.32};
     SpacecraftState preKick = gt.entry();
     stage.applyOptimization(new OptimizationResult(variables, 0.0, preKick, 1, preKick));

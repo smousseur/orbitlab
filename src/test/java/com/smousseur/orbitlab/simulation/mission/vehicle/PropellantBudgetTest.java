@@ -2,6 +2,8 @@ package com.smousseur.orbitlab.simulation.mission.vehicle;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Launchers;
+import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Payloads;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.AscentProfile;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.LauncherModel;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.stage.*;
@@ -47,8 +49,7 @@ class PropellantBudgetTest {
   @Test
   void loadsForLeo_lowerStageFull_topStageSizedUnderHalfCapacity() {
     Spacecraft payload = Payloads.EARTH_OBSERVATION_SAT.toSpacecraft(10_000, 0.0);
-    double[] loads =
-        PropellantBudget.loadsForLeo(Launchers.FALCON_HEAVY, payload, 400_000, 45.96);
+    double[] loads = PropellantBudget.loadsForLeo(Launchers.FALCON_HEAVY, payload, 400_000, 45.96);
 
     assertEquals(2, loads.length);
     assertEquals(1_233_000, loads[0], 1e-6, "S1 flies full in v1");
@@ -65,13 +66,15 @@ class PropellantBudgetTest {
         PropellantBudget.loadsForLeo(Launchers.FALCON_HEAVY, leoPayload, 400_000, 5.23);
 
     PropellantBudget.GeoLoads geoLoads =
-        PropellantBudget.loadsForGeo(Launchers.FALCON_HEAVY, Payloads.GEO_SAT, 2_000, 400_000, 5.23);
+        PropellantBudget.loadsForGeo(
+            Launchers.FALCON_HEAVY, Payloads.GEO_SAT, 2_000, 400_000, 5.23);
 
     assertEquals(1_233_000, geoLoads.launcherLoads()[0], 1e-6, "S1 flies full in v1");
     assertTrue(
         geoLoads.akmLoad() > 1_000 && geoLoads.akmLoad() <= 2_000,
-        () -> "AKM sized for ~1 500 m/s apogee dV expected in (1000, 2000] kg, got "
-            + geoLoads.akmLoad());
+        () ->
+            "AKM sized for ~1 500 m/s apogee dV expected in (1000, 2000] kg, got "
+                + geoLoads.akmLoad());
     assertTrue(
         geoLoads.launcherLoads()[1] > 3 * leoLoads[1],
         () ->
@@ -109,8 +112,7 @@ class PropellantBudgetTest {
                         0.0,
                         StageRole.UPPER))),
             new AscentProfile(7, 3, 2));
-    double[] loads =
-        PropellantBudget.loadsForLeo(solidTop, Spacecraft.LEGACY, 400_000, 0.0);
+    double[] loads = PropellantBudget.loadsForLeo(solidTop, Spacecraft.LEGACY, 400_000, 0.0);
     assertEquals(30_000, loads[1], 1e-6, "solid stages have no sizing degree of freedom");
   }
 

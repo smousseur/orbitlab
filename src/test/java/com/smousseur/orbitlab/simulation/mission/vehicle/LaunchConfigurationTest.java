@@ -2,6 +2,7 @@ package com.smousseur.orbitlab.simulation.mission.vehicle;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Launchers;
 import org.junit.jupiter.api.Test;
 
 class LaunchConfigurationTest {

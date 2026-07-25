@@ -2,6 +2,7 @@ package com.smousseur.orbitlab.simulation.mission.vehicle;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Payloads;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.PayloadModel;
 import org.junit.jupiter.api.Test;
 
@@ -43,8 +44,7 @@ class PayloadsTest {
 
   @Test
   void akmLoadAboveCapacity_rejected() {
-    assertThrows(
-        IllegalArgumentException.class, () -> Payloads.GEO_SAT.toSpacecraft(2_000, 2_001));
+    assertThrows(IllegalArgumentException.class, () -> Payloads.GEO_SAT.toSpacecraft(2_000, 2_001));
   }
 
   @Test
