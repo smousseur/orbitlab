@@ -12,11 +12,14 @@ import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
 import com.smousseur.orbitlab.simulation.mission.vehicle.VehicleStack;
 import java.util.List;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
+import org.hipparchus.util.FastMath;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.orekit.frames.Frame;
 import org.orekit.orbits.CartesianOrbit;
+import org.orekit.orbits.KeplerianOrbit;
+import org.orekit.orbits.PositionAngleType;
 import org.orekit.propagation.SpacecraftState;
 import org.orekit.time.AbsoluteDate;
 import org.orekit.utils.Constants;
@@ -114,5 +117,49 @@ class AnalyticGtoInjectionStageTest {
     assertTrue(
         afterInjection.getMass() < stack.getMass(),
         "the injection burn must have consumed propellant");
+  }
+
+  @Test
+  void inclinedOffNodeParking_landsTheTransferApogeeOnTheEquator() {
+    // Node-aware injection (bilan 11 §3.10): the downstream apogee plane change only has authority
+    // when apogee sits on an equatorial node. From an inclined parking orbit taken deliberately off
+    // a node (argument of latitude 45°), the un-targeted antipodal apogee would fall several degrees
+    // off the equator; node-aware injection must nudge its lead coast so the flown transfer apogee
+    // lands back on the equator.
+    LaunchVehicle s2 = new LaunchVehicle(4_000, 107_500, 12_000, new PropulsionSystem(348, 981_000));
+    Spacecraft payload = new Spacecraft(2_000, 2_000, 1_500, new PropulsionSystem(320, 400));
+    VehicleStack stack = new VehicleStack(List.of(s2, payload));
+
+    Frame gcrf = OrekitService.get().gcrf();
+    double a = Constants.WGS84_EARTH_EQUATORIAL_RADIUS + PARKING_ALTITUDE;
+    KeplerianOrbit parking =
+        new KeplerianOrbit(
+            a,
+            1.0e-3,
+            FastMath.toRadians(5.2), // Kourou-like inclination
+            0.0, // argument of perigee
+            0.0, // RAAN
+            FastMath.toRadians(45.0), // true anomaly ⇒ argument of latitude 45°, off the node
+            PositionAngleType.TRUE,
+            gcrf,
+            AbsoluteDate.J2000_EPOCH,
+            Constants.WGS84_EARTH_MU);
+    SpacecraftState parkingState = new SpacecraftState(parking).withMass(stack.getMass());
+
+    AnalyticGtoInjectionStage stage = new AnalyticGtoInjectionStage("GTO injection", GEO_ALTITUDE);
+    SpacecraftState afterInjection = stage.propagateStandalone(parkingState, missionWith(stack));
+
+    SpacecraftState apogee = AnalyticTrimBurnStage.detectStateAtApogee(afterInjection);
+    assertNotNull(apogee, "the transfer apogee must be reachable after the injection burn");
+
+    Vector3D r = apogee.getPVCoordinates().getPosition();
+    double apogeeLatitudeDeg = FastMath.toDegrees(FastMath.asin(r.getZ() / r.getNorm()));
+    assertTrue(
+        FastMath.abs(apogeeLatitudeDeg) < 0.2,
+        () ->
+            "node-aware injection must place the transfer apogee on the equator, but its latitude "
+                + "was "
+                + apogeeLatitudeDeg
+                + "° (off-node apogee starves the AKM plane change)");
   }
 }
