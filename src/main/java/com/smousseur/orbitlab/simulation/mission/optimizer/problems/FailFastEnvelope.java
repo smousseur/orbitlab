@@ -18,13 +18,4 @@ public record FailFastEnvelope(double eccentricityMax, double semiMajorAxisOffse
   public static FailFastEnvelope defaults() {
     return new FailFastEnvelope(0.95, 2_000_000.0);
   }
-
-  /**
-   * Tighter envelope for GTO/GEO transfers: the Hohmann transfer ellipse for a parking-to-GEO
-   * Hohmann has e ≈ 0.72, so we reject above 0.85 to catch wildly off-track candidates while still
-   * tolerating CMA-ES wandering near the optimum.
-   */
-  public static FailFastEnvelope forGtoTransfer() {
-    return new FailFastEnvelope(0.85, 5_000_000.0);
-  }
 }
