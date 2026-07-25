@@ -74,8 +74,12 @@ public class GravityTurnStage extends MissionStage
 
   @Override
   public SpacecraftState enter(SpacecraftState previousState, Mission mission) {
-    GravityTurnManeuver maneuver = createManeuver(mission, previousState.getMass());
-    return maneuver.applyKick(previousState);
+    // The pitch kick that starts the gravity turn is applied in configure(), not here (bilan 11
+    // §3.9). The ephemeris generator overrides enter()'s result with the pre-kick entry state saved
+    // during optimization (opt.getEntryState()), so a kick applied here would be discarded; applying
+    // it in configure() instead guarantees the replay flies the turn from the kicked velocity, the
+    // same one the optimize pass uses. Entering is therefore a no-op.
+    return previousState;
   }
 
   @Override
@@ -91,9 +95,16 @@ public class GravityTurnStage extends MissionStage
           "GravityTurnStage '" + getName() + "' requires optimization before execution");
     }
 
-    SpacecraftState state = mission.getCurrentState();
-    // The pitch kick applied by enter() preserves mass: this is still the entry mass.
-    GravityTurnManeuver maneuver = createManeuver(mission, state.getMass());
+    // Apply the pitch kick here (bilan 11 §3.9): the generator replays the GT from the pre-kick
+    // entry state it saved during optimization, so without this the turn would fly from an un-kicked
+    // velocity — 3° off on Falcon Heavy — seeding the optimize-vs-ephemeris divergence. The optimize
+    // pass applies the same kick inside propagateForOptimization, so both passes now start the turn
+    // identically. The kick preserves date, position and mass; only the velocity heading changes.
+    GravityTurnManeuver maneuver = createManeuver(mission, mission.getCurrentState().getMass());
+    SpacecraftState state = maneuver.applyKick(mission.getCurrentState());
+    // The generator set the propagator's initial state to the pre-kick state before calling us;
+    // reset it to the kicked state so the flown (and sampled) trajectory starts kicked.
+    propagator.setInitialState(state);
     GravityTurnManeuver.GravityTurnParams params =
         maneuver.decode(optimizationResult.bestVariables());
 

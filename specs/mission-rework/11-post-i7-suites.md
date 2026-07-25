@@ -389,35 +389,62 @@ apogée au nœud → AKM retire le plan → résidu 0,15°, plane-trim 6 m/s (co
 Passe point-masse : apogée hors-nœud → AKM impuissant → 5,30° restants → le plane-trim, dimensionné
 pour 0,25°, se voit demander 283 m/s qu'il n'a pas → famine, trip du garde.
 
-**Verdict : la passe 8×8 (éphéméride) est la physiquement juste** — c'est le modèle de conception, et
-elle reproduit l'intention. La passe point-masse casse la géométrie apogée-nœud dont l'AKM dépend.
-Les 283 m/s « physiquement exacts » sont un leurre : la mission n'était jamais censée porter 5,28° au
-plane-trim. **Le trip du `DepletionGuard` en passe optimize est donc un faux positif du mauvais
-modèle** — ce qui confirme rétroactivement qu'il fallait bien **différer** son passage en infaisable
-(le faire lever aurait rejeté des missions faisables). **Corollaire : l'option 1 ci-dessous est la
-bonne, et suffit.**
-
-Réserve : le *pourquoi* exact de « point-masse hors-nœud vs 8×8 au-nœud » (précession J2 inférée) n'a
-pas été tracé jusqu'au ciblage de nœud de l'injection GTO. Sans effet sur le verdict — la conception
-vise apogée-au-nœud (résidu ~0,25°) et seule la passe 8×8 l'atteint. Question de robustesse ouverte
-**au-delà** de §3.9 : si pour certains époques/charges le 8×8 lui-même plaçait l'apogée hors-nœud, la
-mission serait réellement sous-budgétée au plane-trim (le node-trim ne porte que ~0,25°).
+> **⚠ CORRIGÉ PAR LA MESURE (run GEO post-alignement).** Le raisonnement ci-dessus attribuait la
+> divergence au modèle gravitationnel (point-masse vs 8×8). **Faux.** Après avoir aligné les quatre
+> étages sur 8×8 (option 1 ci-dessous), **la divergence persiste à l'identique** : passe optimize AKM
+> 5,29° / plane-trim 283 m/s, passe éphéméride 0,15° / 6 m/s. Les deux passes sont maintenant en 8×8
+> et divergent quand même. La mécanique apogée-nœud du tracé est juste, mais la *source* de l'écart
+> n'est pas le champ de gravité.
+>
+> **⚠⚠ CAUSE RACINE FINALE, PROUVÉE (`GravityTurnReplayConsistencyTest`, 4 tests).** Deux fausses
+> pistes ont été écartées en chemin — le modèle *des étages analytiques* (option 1, aligné mais
+> insuffisant) et le *pitch kick* (option 2b, appliqué mais il se lave dans le programme d'attitude
+> de la GT). La vraie cause est un **troisième** mismatch de modèle, sur la **Vertical Ascent** :
+>
+> - `ConstantThrustStage.propagateStandalone` (dont hérite `VerticalAscentStage`) vole en
+>   **point-masse** (`createSimplePropagator`) ; le générateur d'éphéméride la vole en **8×8**. Même
+>   combustion de 7 s, même masse consommée, mais **état post-ascension différent** — mesuré
+>   Δpos=0,38 m, Δvel=0,11 m/s (|v|≈466,5, exactement le runtime).
+> - L'override `getEntryState()` du générateur ne réconcilie **rien** : le default renvoie `null` et
+>   `GravityTurnStage` ne l'override pas. Donc la GT éphéméride part du post-VA **8×8**, la GT optimize
+>   du post-VA **point-masse**.
+> - La GT amplifie cet écart d'entrée : Δpos=25,5 m, Δvel=0,39 m/s en sortie (même config des deux
+>   côtés — **la config de propagateur est innocentée : même entrée → Δ=0 bit-à-bit, même avec
+>   étagement**). Puis GTO → apogée-nœud → AKM explose à 5° d'inclinaison.
+>
+> **C'est le bug de l'option 1, pour le `ConstantThrustStage` exclu à tort** (« hors profils testés » —
+> faux : VerticalAscentStage l'étend et est le 1ᵉʳ étage de tout profil). **Le correctif de la
+> divergence est donc : aligner `ConstantThrustStage.propagateStandalone` sur 8×8**, exactement comme
+> les quatre étages de l'option 1.
+>
+> **Le reframe qui reste vrai** : cet écart n'est qu'**une** perturbation sub-pourcent parmi d'autres.
+> Le fond est §3.10 : l'injection GTO ne cible pas le nœud, l'AKM ne retire les 5° qu'au nœud, donc la
+> faisabilité bascule pour n'importe quelle perturbation. Aligner la VA rend les deux passes
+> cohérentes (affichage UI juste) **mais ne rend pas la mission robuste**. **La validité du −5,6 % GEO
+> dépend de §3.10, pas de l'égalité des deux passes.**
 
 **Deux directions de correction :**
 
-1. **Aligner `propagateStandalone` sur le modèle de l'éphéméride** ★ **validée par le tracé AKM** —
-   remplacer `createSimplePropagator` par `createOptimizationPropagator` dans les quatre étages mal
-   appariés (parking, GTO, trim, Hohmann LEO). Un mot par étage, les deux passes volent alors le même
-   champ 8×8 — et c'est le champ physiquement juste (l'AKM y retrouve sa géométrie apogée-nœud, plus
-   de famine du plane-trim). Le 8×8 est déjà la référence (toute la pile d'optim et le générateur
-   l'utilisent). **Ça change la trajectoire que voit l'optimiseur → λ* GEO/LEO et calibrations à
-   re-mesurer (non-régression, cf. §4)**, mais dans le sens correct. Le point-masse avait sans doute
-   été choisi pour la vitesse ; ces étages étant analytiques et propagés une fois par évaluation
-   (hors boucle CMA-ES), le surcoût est borné — l'éphéméride fait déjà ce travail en 8×8.
-2. **Supprimer la double planification** — les étages analytiques re-planifient à neuf dans chaque
-   passe (`propagateStandalone` puis `configure`). Les faire persister le plan calculé en passe
-   optimize et le rejouer, comme `OptimizableMissionStage`, rend les deux passes identiques par
-   construction et indépendantes du modèle. Plus de travail, mais ferme la classe de bugs entière.
+1. **Aligner `propagateStandalone` sur 8×8 dans les étages analytiques** ✔ fait (parking, GTO, trim,
+   Hohmann LEO). Correct et à garder, mais **n'a pas résolu la divergence** — parce qu'il **manquait
+   la Vertical Ascent** (`ConstantThrustStage`), que j'avais exclue à tort. C'est là qu'était le
+   mismatch réel (encadré ⚠⚠). λ* GEO/LEO inchangés à ce stade.
+2. **Rejouer la GT kickée** (option 2b) ✔ fait, **sans effet sur la divergence** — le kick est
+   désormais appliqué dans `GravityTurnStage.configure` (déplacé de `enter`, réinitialise le
+   propagateur sur l'état kické, vérifié runtime). Correct et gardé (le GT affiché démarre kické comme
+   le vol réel), **mais le run instrumenté prouve que ça ne change rien** : les deux passes démarrent
+   du même état kické et divergent quand même (le kick se lave dans le programme d'attitude). λ* GEO
+   inchangé.
+3. **Aligner la Vertical Ascent sur 8×8** ▸ le correctif de la divergence, **prouvé, pas encore
+   appliqué** — `ConstantThrustStage.propagateStandalone` : `createSimplePropagator()` →
+   `createOptimizationPropagator(maxStep)`, comme les quatre étages de l'option 1. Rend les deux
+   passes cohérentes (affiché = optimisé), donc **prérequis UI**. Changement de comportement → λ*
+   bouge → **re-mesure GEO/LEO**. Non appliqué dans cette itération (scope : prouver + documenter).
+4. **§3.10 — rendre le changement de plan robuste (injection node-aware)** ▸ le fond, **itération
+   suivante**. Tant que l'apogée n'est pas ciblé au nœud, toute perturbation sub-pourcent (VA, config,
+   réalité) fait basculer la faisabilité. **C'est de §3.10 que dépend la validité du −5,6 % GEO**, pas
+   de l'égalité des deux passes. Options 3 et 4 orthogonales : 3 pour un affichage juste, 4 pour une
+   mission fiable.
 
 **Prérequis transverse.** À l'analyse, ce prérequis s'est révélé **couplé au choix de modèle** et
 non indépendant comme annoncé :
@@ -439,11 +466,28 @@ comme infaisable toute évaluation dont la trajectoire volée est tronquée — 
 paraît sur cible. Ne rejette pas le λ* actuel (son éphéméride atteint tous les cutoffs), ne biaise
 aucun modèle. C'est ce qui empêche l'UI d'afficher une trajectoire cassée comme une mission valide.
 
-**Reste couplé à §3.9 (option 1/2), à faire ensemble** : aligner le modèle des étages analytiques
-sur 8×8, faire lever le garde optimize (désormais sûr, une fois les modèles alignés), et lire les
-deux moitiés du prédicat sur la même passe — le tout suivi d'une re-mesure GEO/LEO. **Le préalable
-qui bloquait — tracer l'AKM pour savoir quelle passe est juste — est fait : c'est la passe 8×8, donc
-l'option 1 est la bonne. Le chantier est débloqué.**
+**Reste couplé à §3.9 option 2 (faire voler les deux passes à l'identique)**, à faire avant de faire
+lever le garde optimize ou d'unifier le prédicat : tant que les deux passes divergent, l'un ou
+l'autre rejetterait/accepterait sur une géométrie qui n'est qu'un artefact de config. **Contrairement
+à ce qui était écrit ici, l'alignement 8×8 (option 1) n'a PAS débloqué le chantier** — la divergence
+tient à la config de propagateur de la GT, pas au modèle (voir l'encadré ⚠ plus haut).
+
+### 3.10 — Fragilité apogée-nœud du changement de plan GEO ★★ soulevée par §3.9, potentiellement structurelle
+
+Le tracé AKM a mis au jour un point qui dépasse le bug de double-passe : **l'injection GTO ne cible
+pas le nœud**, elle ne vise que le rayon d'apogée. L'AKM, lui, ne peut retirer les ~5,2° d'inclinaison
+que si l'apogée tombe près d'un nœud. Donc la faisabilité du changement de plan GEO **n'est garantie
+par rien** — elle dépend d'où l'apogée atterrit, ce qui bascule pour une perturbation de 0,03 %.
+
+Conséquences si confirmé (à vérifier sur un run une fois §3.9 option 2 posée) :
+- même les deux passes réconciliées, la mission peut être **réellement** sous-budgétée au plane-trim
+  (dimensionné ~0,25°) pour des époques/charges où l'apogée tombe hors-nœud ;
+- le vrai correctif serait de **cibler le nœud à l'injection GTO** (ajouter au plan un placement de
+  l'argument du périgée / timing d'injection amenant l'apogée sur un nœud), pas seulement de rendre
+  les deux passes cohérentes.
+
+À trancher : est-ce que le −5,6 % GEO tient sous une injection node-aware, ou était-il un artefact de
+la passe éphéméride chanceuse ?
 
 ---
 

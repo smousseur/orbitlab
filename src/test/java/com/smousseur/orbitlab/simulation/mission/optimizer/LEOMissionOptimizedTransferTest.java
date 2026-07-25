@@ -2,12 +2,12 @@ package com.smousseur.orbitlab.simulation.mission.optimizer;
 
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.mission.operation.LEOMission;
-import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchConfiguration;
-import com.smousseur.orbitlab.simulation.mission.vehicle.Launchers;
-import com.smousseur.orbitlab.simulation.mission.vehicle.Spacecraft;
+import com.smousseur.orbitlab.simulation.mission.vehicle.*;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -19,6 +19,7 @@ import org.junit.jupiter.params.provider.ValueSource;
  * classes isolates the transfer mode. This is the multi-altitude sweep required before deciding
  * whether the optimized transfer becomes the LEO default (bilan 08 §3.2).
  */
+@EnabledIfSystemProperty(named = "orbitlab.slowTests", matches = "true")
 public class LEOMissionOptimizedTransferTest extends AbstractTrajectoryOptimizerTest {
   @BeforeAll
   static void init() {
@@ -32,6 +33,18 @@ public class LEOMissionOptimizedTransferTest extends AbstractTrajectoryOptimizer
         LEOMission.withOptimizedTransfer(
             "LEO mission (optimized transfer)", defaultConfiguration(), targetAltitude);
     testMission(mission, targetAltitude, targetAltitude);
+  }
+
+  @Test
+  void testFalconHeavyOptimizedTransfer() {
+    Spacecraft payload = Payloads.EARTH_OBSERVATION_SAT.toSpacecraft(10_000, 0.0);
+    double[] loads = PropellantBudget.loadsForLeo(Launchers.FALCON_HEAVY, payload, 400_000, 45.96);
+    LEOMission mission =
+        LEOMission.withOptimizedTransfer(
+            "Falcon Heavy (optimized transfer)",
+            new LaunchConfiguration(Launchers.FALCON_HEAVY, loads, payload),
+            400_000);
+    testMission(mission, 400_000, 400_000);
   }
 
   /**

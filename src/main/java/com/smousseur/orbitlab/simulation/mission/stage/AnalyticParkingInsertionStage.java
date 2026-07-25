@@ -109,8 +109,12 @@ public class AnalyticParkingInsertionStage extends MissionStage {
   public SpacecraftState propagateStandalone(SpacecraftState currentState, Mission mission) {
     BurnPlan plan = computeBurnPlan(currentState, mission.getVehicle());
 
+    // 8×8 gravity, matching the ephemeris generator (bilan 11 §3.9): this standalone flight advances
+    // the state the next stage plans from, so a Newtonian point-mass field here would diverge from
+    // the flown 8×8 trajectory and break the apogee-node geometry the GEO plane change relies on.
     NumericalPropagator propagator =
-        OrekitService.get().createSimplePropagator(burnLimitedMaxStep(currentState, mission.getVehicle()));
+        OrekitService.get()
+            .createOptimizationPropagator(burnLimitedMaxStep(currentState, mission.getVehicle()));
     propagator.setInitialState(currentState);
     addBurns(propagator, currentState, plan, mission.getVehicle());
 
