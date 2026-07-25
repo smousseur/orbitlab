@@ -23,9 +23,13 @@ import org.orekit.time.AbsoluteDate;
  * Mission} — a fresh one every time, because {@link MissionOptimizer#optimize()} mutates the mission
  * it optimizes.
  *
- * <p><b>Feasibility.</b> The mission is feasible when both hold:
+ * <p><b>Feasibility.</b> The mission is feasible when all three hold:
  *
  * <ul>
+ *   <li><b>ephemeris complete</b> — the flown (8×8, rendered) trajectory actually reached the end of
+ *       every stage ({@link MissionEphemeris#isComplete()}). A burn that ran its tank dry mid-mission
+ *       truncates the flight yet can still leave the terminal coast looking on-target, so the
+ *       objective check below is not enough on its own (bilan 11 §3.9 prérequis);
  *   <li><b>objective</b> — the final coast orbit lands within {@code objectiveToleranceRatio} of the
  *       target perigee and apogee, measured from the ephemeris exactly as the mission optimization
  *       tests do (min/max altitude of the terminal {@code "Coasting"} stage). The target is the
@@ -251,7 +255,11 @@ public final class MissionLoadEvaluator implements PropellantLoadOptimizer.Evalu
     MissionPerformanceReport report = result.performanceReport();
     int sizedStageIndex = sizedStageIndex();
     boolean residualOk = residualSufficient(report, sizedStageIndex, residualFloorRatio);
-    boolean feasible = objectiveMet && residualOk;
+    // The flown (8×8, rendered) trajectory must actually reach the end of every stage. A truncated
+    // one — a burn that ran its tank dry mid-mission — can still leave the terminal coast looking
+    // on-target while being a broken mission (bilan 11 §3.9 prérequis); refuse it outright.
+    boolean ephemerisComplete = result.ephemeris().isComplete();
+    boolean feasible = objectiveMet && residualOk && ephemerisComplete;
 
     // Report the sized stage's own numbers when available — the stack-wide total counts everything
     // above it too, and would overstate the margin of the stage the loop is actually sizing.
@@ -260,7 +268,7 @@ public final class MissionLoadEvaluator implements PropellantLoadOptimizer.Evalu
     double sizedStageLoad = sized != null ? sized.loaded() : sizedStageLoad(loads);
     logger.info(
         "λ={} evaluation: objectiveMet={}, sized stage [{}] residual={} kg of its {} kg load"
-            + " ({} vs floor {}) → feasible={}",
+            + " ({} vs floor {}), ephemerisComplete={} → feasible={}",
         java.util.Arrays.toString(lambdas),
         objectiveMet,
         sizedStageIndex,
@@ -268,6 +276,7 @@ public final class MissionLoadEvaluator implements PropellantLoadOptimizer.Evalu
         Math.round(sizedStageLoad),
         sizedStageLoad > 0 ? residual / sizedStageLoad : Double.NaN,
         residualFloorRatio,
+        ephemerisComplete,
         feasible);
 
     return new PropellantLoadOptimizer.Evaluation(Double.NaN, feasible, result);

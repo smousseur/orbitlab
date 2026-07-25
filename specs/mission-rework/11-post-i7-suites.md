@@ -232,27 +232,46 @@ Si `acceptableCost` bouge, la calibration de `W_PROPELLANT` est à revérifier.
 La non-monotonicité stochastique documentée dans `PropellantLoadOptimizer` ne s'est pas manifestée
 sur ce run : la séquence des résiduels est propre et monotone jusqu'à la falaise.
 
-### 3.5 — Tension de la GT sur GEO ▸ à qualifier
+### 3.5 — Tension de la GT sur GEO ✔ FAIT, le sujet s'est refermé tout seul
 
 Sur le run GEO mono-λ, à tous les λ < 1 la GT se figeait **exactement** sur son plancher d'étagement
 (`transitionTime = 151,9796595263…` à la 11ᵉ décimale, `burn2 = 0`), avec pour conséquences : coût
 au-dessus de l'acceptable → **WARN à chaque évaluation**, **~12 000 évaluations CMA-ES au lieu de
 2065**, hand-off à FPA 2,8–4,0° au lieu de 1,17°.
 
-**Question ouverte** : maintenant que S1 est sous λ, la GT est-elle encore collée au plancher ? Si
-oui, le budget interne reste 6× trop cher ; si non, c'était bien le symptôme du gras S1 et le sujet
-se referme tout seul. **À lire dans le log du run multi-étages GEO avant d'ouvrir quoi que ce soit.**
+**Lu dans le run multi-étages : dès que S1 passe sous λ, la GT se décolle.**
+
+| λ(S1) | `transitionTime` | plancher | coût (acceptable 0,0476) | évals CMA-ES | FPA |
+|---|---|---|---|---|---|
+| 1,0 | **151,9797** | 151,98 — `burn2 = 0` | 0,13 à 5,40 ⚠ | 10 000–13 500 | 2,80–4,01° |
+| 0,9453 (λ*) | **144,3130** | 143,39 — `burn2 = 0,9 s` | **0,0133** ✓ | **2 356** | **1,32°** |
+
+Budget interne revenu au normal, coût sous l'acceptable, hand-off à 1,32°. C'était bien le symptôme
+du gras S1.
+
+**Ce qu'il faut retenir quand même** : la pathologie n'a pas disparu, elle n'est plus *déclenchée* à
+l'optimum. La sonde `λ=[0,9453 ; 0,3]` re-épingle la GT sur le nouveau plancher (143,3949), WARN et
+10 208 évals. Le mécanisme réel est « l'étage du dessus est trop léger pour le profil que la GT
+vise » — le gras de S1 n'en était qu'une cause parmi d'autres. **Conséquence pratique : l'épinglage
+reste un indicateur fiable de « ce λ est loin du faisable », et il coûte 5× le temps d'une
+évaluation saine** (voir §3.6).
 
 ### 3.6 — Tâche 3 : feedback UI ▸ chantier séparé, différé
 
-Progressbar sur la boucle externe. Deux éléments nouveaux à intégrer :
+Progressbar sur la boucle externe. Trois éléments nouveaux à intégrer :
 
 - le coût est maintenant de **~29 évaluations** (multi-étages) et non ≤ 10 ;
 - **le chemin GEO de `MissionFactory` peut désormais lever une exception** pour des masses de charge
   utile où la GT n'épuise pas S1 — là où il produisait silencieusement une mission fausse. Le wizard
-  n'a aucune gestion d'erreur pour ça.
+  n'a aucune gestion d'erreur pour ça ;
+- **le coût d'une évaluation varie d'un facteur 5** et n'est pas prévisible à l'avance. Mesuré sur le
+  run GEO : ~5–8 s quand la GT converge normalement (~2 200 évals CMA-ES), **~25–33 s quand elle
+  s'épingle sur son plancher d'étagement** (~12 000 évals, §3.5). Une barre de progression linéaire
+  en nombre d'évaluations sera donc très fausse par moments. Le signal existe et est lisible en
+  cours de route — l'épinglage se voit au WARN `cost above acceptable` —, mais il arrive *après*
+  coup.
 
-### 3.7 — Calibrage du garde-fou d'injection GTO ★ priorité haute, borne réellement λ* sur GEO
+### 3.7 — Garde-fou d'injection GTO ✔ FAIT, question tranchée (mur physique, diagnostic corrigé)
 
 **Le constat**, lu sur la séquence d'évaluations GEO. Le refus de `AnalyticGtoInjectionStage` se
 déclenche à `AIM_CONVERGENCE_TOLERANCE_RATIO` = 1 % de r₂, soit **422 km** pour GEO. Le refus le
@@ -265,18 +284,33 @@ fournit le contraste exact : `λ=[0,3 ; 0,814]` manque de **35 614 km avec 0 kg 
 combustion** — ça, c'est la starvation. 472 km, c'est la bande ambiguë que le design supposait
 jamais visitée. **La bissection s'y installe, parce que c'est précisément là qu'est la frontière.**
 
-**La question ouverte** : à λ(S2) = 0,782, le refus vient-il de la physique ou du budget de 4
-itérations de Newton (`AIM_ITERATIONS = 4`) ? `MissionLoadEvaluator` ne peut pas trancher — les deux
-arrivent en `OrbitlabException` et sont lus « infaisable ».
+**Tranché : c'est de la physique, et sans rien relancer.** Le rapport propergol/durée est constant
+sur **tous** les refus GEO — 2832/9,852 · 5379/18,713 · 6649/23,130 · 7206/25,067 · 7481/26,027 =
+**287,4–287,5 kg/s**, le débit du Merlin Vacuum. `dt1` vaut donc exactement
+`propergol restant / débit` dans chaque refus : la combustion est **plafonnée par le carburant**.
 
-**Pourquoi c'est prioritaire** : ce garde-fou, et non la tolérance d'insertion ni le plancher de
-résiduel, est ce qui borne λ* sur GEO (§3.4). Sa calibration est devenue porteuse pour le résultat,
-ce qu'elle n'était pas quand elle a été posée comme simple filet anti-aberration.
+Or `Physics.computeBurnDurationCapped` renvoie `min(requis, épuisement)`. Une fois le plafond
+atteint, **`dt1` ne dépend plus de `dv1`, donc plus de `r2Aim`** : chaque itération resimule la même
+combustion et relit le même `bias`, pendant que `r2Aim` accumule dans le vide. L'itération de Newton
+n'a plus aucun degré de liberté. **Aucun budget d'itérations ne peut refermer ces 472 km**, et le
+test proposé plus haut était voué à ne rien montrer.
 
-**Le test** : passer `AIM_ITERATIONS` à 8 et rejouer le seul point `λ=[0,9453 ; 0,78193]`. Si les
-472 km se referment, le mur GEO descend et λ* avec lui — une évaluation, ~30 s. Si les itérations
-supplémentaires ne bougent rien, le refus est physique et le seuil de 1 % mérite d'être resserré
-pour ne plus tirer que sur la starvation qu'il vise.
+Le mur à λ(S2) ≈ 0,79 est donc réel : GEO ne récupère pas de masse de ce côté. **Résultat négatif,
+mais définitif** — et §3.4 tient tel quel (plancher à ~150 kg de course, puis mur physique).
+
+**Ce qui restait vraiment défectueux, corrigé** : le diagnostic, pas la borne. Les deux pannes
+arrivaient sous le même message « did not converge », ce qui a fait passer une limite du véhicule
+pour un artefact de solveur méritant plus d'itérations. `AnalyticGtoInjectionStage` distingue
+désormais :
+
+| Panne | Message | Vraie question |
+|---|---|---|
+| combustion plafonnée, toujours court | `injection out of reach: burning all N kg …` | le véhicule ne peut pas, point |
+| marge de propergol, itérations épuisées | `did not converge … the burn was not propellant-limited` | là, `AIM_ITERATIONS` mérite d'être augmenté |
+
+La boucle sort aussi dès le plafond détecté, au lieu de dépenser trois propagations de plus à
+re-dériver le même nombre. `AIM_CONVERGENCE_TOLERANCE_RATIO` est **inchangé** : ce n'est pas lui qui
+décidait de la faisabilité, et le toucher aurait couplé deux changements de comportement (§4).
 
 ### 3.8 — `minimizeBelow` re-sonde `lambdaMin` à chaque passe ▸ priorité basse
 
@@ -285,6 +319,131 @@ avec la même exception. La bissection ouvre systématiquement son bracket sur `
 la passe précédente l'a déjà prouvé infaisable pour cette coordonnée. ~26 s sur 29 évaluations.
 Corriger en mémorisant, par coordonnée, le dernier point infaisable connu et en ouvrant le bracket
 là plutôt qu'à `lambdaMin`.
+
+### 3.9 — La passe optimize et la réplique éphéméride ne volent pas la même trajectoire ★★ BLOQUANT avant l'UI
+
+**Le constat.** Chaque évaluation propage deux fois : `MissionOptimizer.optimize()`, puis
+`MissionEphemerisGenerator` qui re-planifie les étages analytiques depuis son propre état. Les deux
+divergent. Mesuré sur le run GEO multi-étages à λ=[1 ; 1], même mission, même graine :
+
+| | passe optimize | passe éphéméride |
+|---|---|---|
+| Injection GTO Δv / durée | 2410,40 m/s / 30,4215 s | 2360,31 m/s / 29,9833 s |
+| résiduel S2 au largage | **1204 kg** | **1330 kg** |
+| inclinaison à l'entrée AKM | **5,2955°** | **0,1501°** |
+| aim tilt de circularisation | 31,77° | 0,80° |
+| plane trim au nœud | **283 m/s demandés pour 68 kg** | 7 m/s |
+
+L'écart de masse ferme exactement (0,438 s × 287,4 kg/s = 126 kg), donc ce n'est pas du bruit
+d'intégration : les deux passes entrent dans l'injection GTO avec des états différents.
+
+**Trois symptômes, dont deux étaient déjà visibles dans les logs sans être lus :**
+
+1. `DepletionGuard` tire en **ERROR** — *« Propellant depleted before scheduled cutoff … upstream
+   mass accounting is wrong »* — **sur une solution retenue** (λ=[1 ; 0,8141], le λ₁\* de la passe 1).
+   Le code signale lui-même une incohérence de comptabilité, au niveau ERROR, et rien ne la lit.
+2. Dans la passe optimize, le plane trim est **systématiquement affamé** : 283 m/s demandés, 68 kg
+   disponibles (~105 m/s), combustion jusqu'à la masse sèche exacte, 5,28° d'inclinaison laissés.
+   Dans la réplique le même trim demande 6 m/s et finit à 0,12°.
+3. **Les deux moitiés du prédicat de faisabilité portent sur deux trajectoires différentes** :
+   `MissionLoadEvaluator` lit `objectiveMet` dans `result.ephemeris()` (la réplique) et le plancher
+   de résiduel dans `result.performanceReport()` (la passe optimize). D'où le 1204 kg loggué par
+   l'évaluateur contre 1330 kg loggué au largage dans l'éphéméride, pour la même évaluation.
+
+**Pourquoi c'est bloquant pour la Tâche 3.** Le rendu et le panneau de trajectoire affichent
+l'éphéméride. L'utilisateur verrait donc la réplique — ni la mission qui a été optimisée, ni celle
+dont le résiduel par étage a été validé. Tant que les deux divergent, « la mission affichée » et
+« la mission retenue » ne sont pas le même objet, et aucun affichage ne peut être juste.
+
+**Diagnostiqué — incohérence de modèle gravitationnel, étage par étage.** Le générateur
+d'éphéméride propage **tout** en `createOptimizationPropagator` (8×8 Holmes-Featherstone, avec J2 et
+l'aplatissement). La passe optimize propage chaque étage analytique via son `propagateStandalone`,
+et ceux-ci **ne sont pas cohérents entre eux** :
+
+| Étage | `propagateStandalone` (optimize) | générateur (éphéméride) | |
+|---|---|---|---|
+| Parking insertion | `createSimplePropagator` — point-masse | 8×8 | ✗ |
+| GTO injection | `createSimplePropagator` — point-masse | 8×8 | ✗ |
+| Trim burn | `createSimplePropagator` — point-masse | 8×8 | ✗ |
+| Hohmann (profil LEO) | `createSimplePropagator` — point-masse | 8×8 | ✗ |
+| AKM circularization | `createOptimizationPropagator` — 8×8 | 8×8 | ✓ |
+| Plane trim (nœud) | `createOptimizationPropagator` — 8×8 | 8×8 | ✓ |
+
+Le point-masse (`NewtonianAttraction`) est sphérique — pas de J2. Parking, GTO et Trim volent donc
+en champ sphérique dans la passe optimize et en champ oblate dans l'éphéméride ; les deux
+trajectoires divergent dès la première combustion analytique et l'écart s'accumule sur le transfert
+GTO. La GT est en 8×8 des **deux** côtés (`propagateForOptimization` et le replay via `configure`),
+d'où l'écart minuscule à l'entrée du parking (dv1 20,335 vs 20,341) : la divergence naît *après*, pas
+dans le hand-off de la GT.
+
+**Tracé — le mécanisme complet, et quelle passe est juste.** L'AKM (`finalInclination = 0`) vise
+l'équateur : il fait **tout** le changement de plan (~5,2° depuis Kourou → 0°) à l'apogée, combiné à
+la circularisation ; le plane-trim-at-node ne nettoie que le résidu **~0,25°** qu'il laisse (commentaire
+`GEOMission`). Or un changement de plan à l'apogée n'a d'autorité que si l'apogée tombe **près d'un
+nœud** (commentaire `AnalyticApogeeCircularizationStage` : hors-nœud, seul ~0,03° est récupérable).
+
+Les deux propagateurs de l'AKM sont en 8×8, donc son *plan* est calculé pareil dans les deux passes —
+seul son **état d'entrée** diffère. L'inclinaison est invariante sous J2 (les deux passes arrivent à
+~5,2°) ; ce qui diffère, c'est la position apogée-vs-nœud, que **J2 fait précesser**. Passe 8×8 :
+apogée au nœud → AKM retire le plan → résidu 0,15°, plane-trim 6 m/s (comportement de conception).
+Passe point-masse : apogée hors-nœud → AKM impuissant → 5,30° restants → le plane-trim, dimensionné
+pour 0,25°, se voit demander 283 m/s qu'il n'a pas → famine, trip du garde.
+
+**Verdict : la passe 8×8 (éphéméride) est la physiquement juste** — c'est le modèle de conception, et
+elle reproduit l'intention. La passe point-masse casse la géométrie apogée-nœud dont l'AKM dépend.
+Les 283 m/s « physiquement exacts » sont un leurre : la mission n'était jamais censée porter 5,28° au
+plane-trim. **Le trip du `DepletionGuard` en passe optimize est donc un faux positif du mauvais
+modèle** — ce qui confirme rétroactivement qu'il fallait bien **différer** son passage en infaisable
+(le faire lever aurait rejeté des missions faisables). **Corollaire : l'option 1 ci-dessous est la
+bonne, et suffit.**
+
+Réserve : le *pourquoi* exact de « point-masse hors-nœud vs 8×8 au-nœud » (précession J2 inférée) n'a
+pas été tracé jusqu'au ciblage de nœud de l'injection GTO. Sans effet sur le verdict — la conception
+vise apogée-au-nœud (résidu ~0,25°) et seule la passe 8×8 l'atteint. Question de robustesse ouverte
+**au-delà** de §3.9 : si pour certains époques/charges le 8×8 lui-même plaçait l'apogée hors-nœud, la
+mission serait réellement sous-budgétée au plane-trim (le node-trim ne porte que ~0,25°).
+
+**Deux directions de correction :**
+
+1. **Aligner `propagateStandalone` sur le modèle de l'éphéméride** ★ **validée par le tracé AKM** —
+   remplacer `createSimplePropagator` par `createOptimizationPropagator` dans les quatre étages mal
+   appariés (parking, GTO, trim, Hohmann LEO). Un mot par étage, les deux passes volent alors le même
+   champ 8×8 — et c'est le champ physiquement juste (l'AKM y retrouve sa géométrie apogée-nœud, plus
+   de famine du plane-trim). Le 8×8 est déjà la référence (toute la pile d'optim et le générateur
+   l'utilisent). **Ça change la trajectoire que voit l'optimiseur → λ* GEO/LEO et calibrations à
+   re-mesurer (non-régression, cf. §4)**, mais dans le sens correct. Le point-masse avait sans doute
+   été choisi pour la vitesse ; ces étages étant analytiques et propagés une fois par évaluation
+   (hors boucle CMA-ES), le surcoût est borné — l'éphéméride fait déjà ce travail en 8×8.
+2. **Supprimer la double planification** — les étages analytiques re-planifient à neuf dans chaque
+   passe (`propagateStandalone` puis `configure`). Les faire persister le plan calculé en passe
+   optimize et le rejouer, comme `OptimizableMissionStage`, rend les deux passes identiques par
+   construction et indépendantes du modèle. Plus de travail, mais ferme la classe de bugs entière.
+
+**Prérequis transverse.** À l'analyse, ce prérequis s'est révélé **couplé au choix de modèle** et
+non indépendant comme annoncé :
+
+- Faire lever le `DepletionGuard` de la passe **optimize** rejetterait des solutions sur la foi du
+  modèle point-masse — or c'est justement le modèle suspect. Pire, à λ* GEO le plane trim demande
+  283 m/s pour retirer 5,28°, ce qui est **physiquement exact** (5,28° × 3075 × π/180 ≈ 283) : on ne
+  peut pas savoir si c'est le point-masse (pessimiste correct) ou le 8×8 (0,12°, plan déjà retiré en
+  amont) qui dit vrai **sans tracer la logique de plan de l'AKM**. Tant que ce n'est pas fait, faire
+  lever le garde optimize figerait peut-être le mauvais modèle et déplacerait λ*.
+- Lire les deux moitiés du prédicat sur la même passe change forcément la source du résiduel **ou**
+  de `objectiveMet`, donc λ* → re-mesure. C'est du ressort de l'option 1/2, pas un préalable neutre.
+
+**✔ Fait — le sous-ensemble réellement sûr et découplé.** L'échec de la passe **éphéméride** (le
+8×8, la trajectoire affichée) est désormais visible : `MissionEphemeris` porte un drapeau
+`isComplete()`, le générateur le baisse quand un étage lève **ou** s'arrête avant son cutoff
+planifié (un `DepletionGuard` qui tronque une combustion à sec), et `MissionLoadEvaluator` refuse
+comme infaisable toute évaluation dont la trajectoire volée est tronquée — même si le coast terminal
+paraît sur cible. Ne rejette pas le λ* actuel (son éphéméride atteint tous les cutoffs), ne biaise
+aucun modèle. C'est ce qui empêche l'UI d'afficher une trajectoire cassée comme une mission valide.
+
+**Reste couplé à §3.9 (option 1/2), à faire ensemble** : aligner le modèle des étages analytiques
+sur 8×8, faire lever le garde optimize (désormais sûr, une fois les modèles alignés), et lire les
+deux moitiés du prédicat sur la même passe — le tout suivi d'une re-mesure GEO/LEO. **Le préalable
+qui bloquait — tracer l'AKM pour savoir quelle passe est juste — est fait : c'est la passe 8×8, donc
+l'option 1 est la bonne. Le chantier est débloqué.**
 
 ---
 

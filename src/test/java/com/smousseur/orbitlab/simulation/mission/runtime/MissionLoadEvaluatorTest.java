@@ -100,6 +100,32 @@ class MissionLoadEvaluatorTest {
     assertFalse(MissionLoadEvaluator.objectiveMet(ephemeris, target, TOL));
   }
 
+  // ── ephemeris completeness (bilan 11 §3.9 prérequis) ─────────────────────
+
+  @Test
+  void ephemeris_defaultsToComplete() {
+    // The single-arg constructor every existing caller uses must keep meaning "flew to the end".
+    assertTrue(coastEphemeris(399_000, 401_000).isComplete());
+  }
+
+  @Test
+  void ephemeris_incompleteFlagIsCarried() {
+    // A truncated flight (a burn depleted mid-mission) keeps its samples for a partial trail but
+    // reports incomplete, so the evaluator's feasibility AND rejects it even if the coast looks
+    // on-target.
+    MissionEphemeris onTargetButTruncated =
+        new MissionEphemeris(
+            coastEphemeris(399_000, 401_000).allPoints(), /* complete= */ false);
+    assertFalse(onTargetButTruncated.isComplete());
+    // The objective check alone would still pass — which is exactly why completeness is a separate,
+    // dominating condition.
+    assertTrue(
+        MissionLoadEvaluator.objectiveMet(
+            onTargetButTruncated,
+            OrbitInsertionObjective.circular(SolarSystemBody.EARTH, 400_000, 0.0),
+            TOL));
+  }
+
   // ── residualSufficient (floor vs the SIZED stage's own load) ──────────────
 
   /** Report for an FH-like stack: S1 burnt out, S2 sized, payload dry. */

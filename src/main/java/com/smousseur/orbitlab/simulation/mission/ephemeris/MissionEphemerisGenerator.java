@@ -24,6 +24,15 @@ public final class MissionEphemerisGenerator {
   private static final double DEFAULT_COAST_DURATION_SECONDS = 86_164.0; // 90 min (one LEO orbit)
 
   /**
+   * How far short of its scheduled cutoff a stage may stop before the trajectory counts as
+   * truncated. Orekit brackets STOP events to well under a millisecond, so a stage reaching its own
+   * cutoff lands on it; ending seconds early means a different STOP fired first — in practice the
+   * {@code DepletionGuard} on a burn that ran its tank dry (bilan 11 §3.9). One second sits far
+   * above the bracketing noise and far below any real depletion shortfall (tens of seconds+).
+   */
+  private static final double STAGE_END_TOLERANCE_SECONDS = 1.0;
+
+  /**
    * Re-propagates the mission from initialState through all stages, sampling the trajectory at
    * regular intervals.
    *
@@ -34,6 +43,8 @@ public final class MissionEphemerisGenerator {
   public MissionEphemeris generate(Mission mission, SpacecraftState initialState) {
     List<MissionEphemerisPoint> points = new ArrayList<>();
     SpacecraftState currentState = initialState;
+    // Cleared the moment any stage fails to reach its scheduled end (bilan 11 §3.9 prérequis).
+    boolean complete = true;
 
     List<MissionStage> stages = mission.getStages();
     for (int stageIdx = 0; stageIdx < stages.size(); stageIdx++) {
@@ -79,10 +90,15 @@ public final class MissionEphemerisGenerator {
       // avoids numerical issues where adaptive-step integrators might miss ConstantThrustManeuver
       // boundary events when propagating far past the actual stage duration.
       AbsoluteDate endDate;
+      // Only a stage whose own cutoff defines endDate can be judged "reached its end": the last
+      // stage runs an open-ended coast, and a stage falling back to the 7200 s safety net has no
+      // real cutoff to compare against, so neither is checked for early truncation.
+      boolean endDateIsStageCutoff = false;
       if (isLastStage) {
         endDate = currentState.getDate().shiftedBy(DEFAULT_COAST_DURATION_SECONDS);
       } else if (stage.getConfiguredEndDate() != null) {
         endDate = stage.getConfiguredEndDate();
+        endDateIsStageCutoff = true;
       } else {
         endDate = currentState.getDate().shiftedBy(7200.0); // fallback safety
       }
@@ -93,6 +109,23 @@ public final class MissionEphemerisGenerator {
       } catch (Exception e) {
         logger.warn("Propagation failed for stage '{}': {}", stage.getName(), e.getMessage());
         finalState = mission.getCurrentState();
+        complete = false;
+      }
+
+      // A stage that stops materially before its own scheduled cutoff was truncated by an earlier
+      // STOP event — in practice the DepletionGuard firing on a burn that ran its tank dry (bilan
+      // 11 §3.9). The flown 8×8 trajectory (the one rendered and read for feasibility) is then
+      // broken past this point, so the whole ephemeris is flagged incomplete.
+      if (endDateIsStageCutoff) {
+        double shortfall = endDate.durationFrom(finalState.getDate());
+        if (shortfall > STAGE_END_TOLERANCE_SECONDS) {
+          logger.warn(
+              "Stage '{}' stopped {} s before its scheduled cutoff — flown trajectory truncated"
+                  + " (propellant depleted mid-burn); marking ephemeris incomplete",
+              stage.getName(),
+              String.format(java.util.Locale.ROOT, "%.1f", shortfall));
+          complete = false;
+        }
       }
 
       // Add the final state of this stage as a sample point
@@ -113,7 +146,7 @@ public final class MissionEphemerisGenerator {
           finalState.getDate());
     }
 
-    logger.info("Total ephemeris points: {}", points.size());
-    return new MissionEphemeris(points);
+    logger.info("Total ephemeris points: {} (complete={})", points.size(), complete);
+    return new MissionEphemeris(points, complete);
   }
 }

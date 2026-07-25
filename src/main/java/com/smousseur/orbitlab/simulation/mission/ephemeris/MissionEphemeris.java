@@ -24,16 +24,34 @@ public final class MissionEphemeris {
   private final String[] stageNames;
   private final double[] masses;
   private final double[] altitudes;
+  private final boolean complete;
 
   /**
-   * Constructs from a list of sample points (must be sorted by time, >= 2 points).
+   * Constructs a complete ephemeris from a list of sample points (must be sorted by time, >= 2
+   * points).
    *
    * @param points the sorted list of ephemeris points
    */
   public MissionEphemeris(List<MissionEphemerisPoint> points) {
+    this(points, true);
+  }
+
+  /**
+   * Constructs from a list of sample points, flagged complete or not (bilan 11 §3.9 prérequis). An
+   * <em>incomplete</em> ephemeris is one whose flown trajectory could not be propagated to the end
+   * of every stage — a stage threw, or a burn ran its tank dry before its scheduled cutoff and the
+   * {@code DepletionGuard} truncated it. The points collected up to that break are still returned
+   * (a partial trail is better than none for rendering), but a consumer judging feasibility must
+   * read {@link #isComplete()} first: a truncated trajectory is not a mission that flew.
+   *
+   * @param points the sorted list of ephemeris points
+   * @param complete whether every stage propagated to its scheduled end
+   */
+  public MissionEphemeris(List<MissionEphemerisPoint> points, boolean complete) {
     if (points.size() < 2) {
       throw new IllegalArgumentException("At least 2 points required, got " + points.size());
     }
+    this.complete = complete;
     int n = points.size();
     times = new AbsoluteDate[n];
     positions = new Vector3D[n];
@@ -51,6 +69,18 @@ public final class MissionEphemeris {
       masses[i] = p.mass();
       altitudes[i] = p.altitudeMeters();
     }
+  }
+
+  /**
+   * Whether every stage propagated to its scheduled end. {@code false} means the flown trajectory
+   * was truncated (a stage threw, or a burn depleted its tank before its cutoff): the samples are
+   * still usable for a partial trail, but the mission did not complete and must not be read as
+   * feasible (bilan 11 §3.9 prérequis).
+   *
+   * @return {@code true} when the trajectory reached the end of every stage
+   */
+  public boolean isComplete() {
+    return complete;
   }
 
   /** First sample time (T_start). */

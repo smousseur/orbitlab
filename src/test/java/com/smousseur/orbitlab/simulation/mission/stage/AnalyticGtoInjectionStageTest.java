@@ -80,12 +80,23 @@ class AnalyticGtoInjectionStageTest {
             OrbitlabException.class,
             () -> stage.propagateStandalone(parkingState(stack.getMass()), missionWith(stack)));
 
+    // A starved stage is a *capability* limit, not a solver one: its burn is clamped to depletion,
+    // so the aim iteration has no degree of freedom and no iteration budget could rescue it. The
+    // message must say so — conflating the two is what made the I7 GEO wall look like an artifact
+    // worth re-running with more iterations (bilan 11 §3.7).
     assertTrue(
+        thrown.getMessage().contains("injection out of reach"),
+        () -> "message must name a capability limit, got: " + thrown.getMessage());
+    assertFalse(
         thrown.getMessage().contains("did not converge"),
-        () -> "message must name the failure, got: " + thrown.getMessage());
+        () -> "a propellant-capped burn must not be reported as a solver failure, got: "
+            + thrown.getMessage());
     assertTrue(
         thrown.getMessage().contains("GTO injection"),
         () -> "message must name the stage, got: " + thrown.getMessage());
+    assertTrue(
+        thrown.getMessage().contains("burning all 5 kg"),
+        () -> "message must carry the propellant actually available, got: " + thrown.getMessage());
   }
 
   @Test
