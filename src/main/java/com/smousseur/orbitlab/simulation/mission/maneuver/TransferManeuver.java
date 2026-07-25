@@ -124,8 +124,8 @@ public class TransferManeuver {
   /**
    * Integrator max step keeping the late-ignition invariant for this transfer. A burn can ignite
    * after a long coast (burn 1 at {@code t1}, or the circularization burn after burn 1), the latter
-   * down to the active stage's depletion floor — the worst-case ignition mass that bounds every burn
-   * here. See {@link OrekitService#burnLimitedMaxStep}.
+   * down to the active stage's depletion floor — the worst-case ignition mass that bounds every
+   * burn here. See {@link OrekitService#burnLimitedMaxStep}.
    *
    * @param state the spacecraft state at the start of the transfer
    * @return the integrator max step in seconds
@@ -134,8 +134,7 @@ public class TransferManeuver {
     ActiveStageInfo stage = vehicle.resolveActiveStage(state.getMass());
     PropulsionSystem propulsion = stage.propulsion();
     return OrekitService.burnLimitedMaxStep(
-        new OrekitService.BurnSpec(
-            propulsion.thrust(), propulsion.isp(), stage.depletionFloor()));
+        new OrekitService.BurnSpec(propulsion.thrust(), propulsion.isp(), stage.depletionFloor()));
   }
 
   /**
@@ -181,7 +180,7 @@ public class TransferManeuver {
    */
   protected SpacecraftState propagateBurn1(SpacecraftState initialState, Burn1Params params) {
     NumericalPropagator burn1Propagator =
-        OrekitService.get().createSimplePropagator(maxStepSeconds(initialState));
+        OrekitService.get().createOptimizationPropagator(maxStepSeconds(initialState));
     burn1Propagator.setInitialState(initialState);
     DepletionGuard.armQuiet(
         burn1Propagator, vehicle.resolveActiveStage(initialState.getMass()).depletionFloor());

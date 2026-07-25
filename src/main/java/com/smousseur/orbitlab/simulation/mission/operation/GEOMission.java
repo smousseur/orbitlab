@@ -1,8 +1,6 @@
 package com.smousseur.orbitlab.simulation.mission.operation;
 
 import com.smousseur.orbitlab.core.SolarSystemBody;
-import com.smousseur.orbitlab.simulation.OrekitService;
-import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionStage;
 import com.smousseur.orbitlab.simulation.mission.objective.OrbitInsertionObjective;
 import com.smousseur.orbitlab.simulation.mission.optimizer.problems.GravityTurnConstraints;
@@ -15,27 +13,15 @@ import com.smousseur.orbitlab.simulation.mission.stage.CoastingStage;
 import com.smousseur.orbitlab.simulation.mission.stage.StageSeparationStage;
 import com.smousseur.orbitlab.simulation.mission.stage.ascent.GravityTurnStage;
 import com.smousseur.orbitlab.simulation.mission.stage.ascent.VerticalAscentStage;
-import com.smousseur.orbitlab.simulation.mission.vehicle.model.AscentProfile;
 import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchConfiguration;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Launchers;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Payloads;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
-import org.hipparchus.geometry.euclidean.threed.Vector3D;
-import org.hipparchus.util.FastMath;
-import org.orekit.bodies.GeodeticPoint;
-import org.orekit.bodies.OneAxisEllipsoid;
-import org.orekit.frames.Frame;
-import org.orekit.frames.TopocentricFrame;
-import org.orekit.orbits.CartesianOrbit;
-import org.orekit.orbits.Orbit;
-import org.orekit.propagation.SpacecraftState;
-import org.orekit.time.AbsoluteDate;
-import org.orekit.utils.Constants;
-import org.orekit.utils.PVCoordinates;
-
+import com.smousseur.orbitlab.simulation.mission.vehicle.model.AscentProfile;
 import java.util.List;
+import org.hipparchus.util.FastMath;
 
-public class GEOMission extends Mission {
+public class GEOMission extends EarthMission {
   private static final double DEFAULT_LATITUDE = 5.23;
   private static final double DEFAULT_LONGITUDE = -52.77;
   private static final double DEFAULT_ALTITUDE = 0.0;
@@ -65,21 +51,6 @@ public class GEOMission extends Mission {
   }
 
   public GEOMission(
-      String name, double parkingAltitude, double latitude, double longitude, double altitude) {
-    this(name, parkingAltitude, GEO_ALTITUDE, latitude, longitude, altitude, 0.0);
-  }
-
-  public GEOMission(
-      String name,
-      double parkingAltitude,
-      double targetAltitude,
-      double latitude,
-      double longitude,
-      double altitude) {
-    this(name, parkingAltitude, targetAltitude, latitude, longitude, altitude, 0.0);
-  }
-
-  public GEOMission(
       String name,
       double parkingAltitude,
       double targetAltitude,
@@ -98,19 +69,6 @@ public class GEOMission extends Mission {
         finalInclination);
   }
 
-  /**
-   * Creates a GEO mission whose vehicle and flight profile come from a launch configuration
-   * (launcher-driven profile).
-   *
-   * @param name the mission name
-   * @param configuration the launcher model, propellant loads and payload
-   * @param parkingAltitude the parking orbit altitude in meters
-   * @param targetAltitude the target orbit altitude in meters
-   * @param latitude the launch site latitude in degrees
-   * @param longitude the launch site longitude in degrees
-   * @param altitude the launch site altitude in meters
-   * @param finalInclination the target final inclination in degrees
-   */
   public GEOMission(
       String name,
       LaunchConfiguration configuration,
@@ -154,20 +112,18 @@ public class GEOMission extends Mission {
   }
 
   @Override
-  public SpacecraftState getInitialState(AbsoluteDate initialDate) {
-    OneAxisEllipsoid earth = OrekitService.get().getEarthEllipsoid();
-    Frame itrf = OrekitService.get().itrf();
-    Frame gcrf = OrekitService.get().gcrf();
-    GeodeticPoint launchPad =
-        new GeodeticPoint(FastMath.toRadians(latitude), FastMath.toRadians(longitude), altitude);
-    TopocentricFrame launchFrame = new TopocentricFrame(earth, launchPad, "Launch Pad");
-    PVCoordinates initialPVInGCRF =
-        itrf.getTransformTo(gcrf, initialDate)
-            .transformPVCoordinates(
-                new PVCoordinates(launchFrame.getCartesianPoint(), Vector3D.ZERO));
-    Orbit initialOrbit =
-        new CartesianOrbit(initialPVInGCRF, gcrf, initialDate, Constants.WGS84_EARTH_MU);
-    return new SpacecraftState(initialOrbit).withMass(this.getVehicle().getMass());
+  public double getLatitude() {
+    return latitude;
+  }
+
+  @Override
+  public double getLongitude() {
+    return longitude;
+  }
+
+  @Override
+  public double getAltitude() {
+    return altitude;
   }
 
   /**
@@ -212,8 +168,7 @@ public class GEOMission extends Mission {
         new AnalyticTrimBurnStage("Trim", targetAltitude, FastMath.toRadians(finalInclination)),
         // Node-targeted plane trim (bilan 08 §3.5): the hours-long AKM burn leaves a ~0.25° plane
         // residual it cannot correct off-node; a short out-of-plane burn at the node cleans it up.
-        new AnalyticPlaneTrimAtNodeStage(
-            "Plane trim (node)", FastMath.toRadians(finalInclination)),
+        new AnalyticPlaneTrimAtNodeStage("Plane trim (node)", FastMath.toRadians(finalInclination)),
         new CoastingStage("Coasting", null));
   }
 }

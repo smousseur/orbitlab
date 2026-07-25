@@ -37,20 +37,21 @@ import org.orekit.utils.PVCoordinates;
  * {@code λ*} is feasible. On GEO the payload's AKM is sized separately by {@link
  * PropellantBudget#loadsForGeo} and never appears in the launcher loads.
  *
- * <p>Each profile is run twice, under two scaling masks: the single-λ tests scale only the sized top
- * stage (S2, {@link PropellantLoadOptimizer#lambdaScaledMask}), while the {@code *MultiStage} tests
- * put every variable-load stage under its own λ ({@link PropellantLoadOptimizer#allVariableLoadMask})
- * and let {@link MultiStageLoadOptimizer} sweep the coordinates.
+ * <p>Each profile is run twice, under two scaling masks: the single-λ tests scale only the sized
+ * top stage (S2, {@link PropellantLoadOptimizer#lambdaScaledMask}), while the {@code *MultiStage}
+ * tests put every variable-load stage under its own λ ({@link
+ * PropellantLoadOptimizer#allVariableLoadMask}) and let {@link MultiStageLoadOptimizer} sweep the
+ * coordinates.
  *
  * <p>The two scenarios differ structurally in where the sized stage's residual ends up: on LEO, S2
  * is the final active stage and its residual is read at mission end; on GEO, S2 is jettisoned after
  * the GTO injection with its residual aboard, which exercises the per-stage split and the jettison
  * capture (bilan 10 §6) — the stack-wide total would only see the AKM.
  *
- * <p><b>Slow / nightly.</b> Each bisection evaluation is a complete mission optimization (~1.5 min),
- * so each loop is ~15 min. They are opt-in: enable with {@code -Dorbitlab.slowTests=true}. The
- * per-λ progress, the resolved {@code λ*} and the per-stage load comparison are logged at INFO by
- * {@link PropellantLoadOptimizer} and {@link MissionLoadEvaluator}.
+ * <p><b>Slow / nightly.</b> Each bisection evaluation is a complete mission optimization (~1.5
+ * min), so each loop is ~15 min. They are opt-in: enable with {@code -Dorbitlab.slowTests=true}.
+ * The per-λ progress, the resolved {@code λ*} and the per-stage load comparison are logged at INFO
+ * by {@link PropellantLoadOptimizer} and {@link MissionLoadEvaluator}.
  */
 @EnabledIfSystemProperty(named = "orbitlab.slowTests", matches = "true")
 public class PropellantLoadOptimizerIntegrationTest {
@@ -71,8 +72,8 @@ public class PropellantLoadOptimizerIntegrationTest {
 
   /**
    * Circularity bar on the LEO final orbit. Asserted on {@code e} rather than on min/max coast
-   * altitude (bilan 11 §3.3): geodetic altitudes mix insertion quality with the Earth's oblateness —
-   * at i = 45.9° the flattening alone spreads min and max by 11 km on a perfectly circular orbit.
+   * altitude (bilan 11 §3.3): geodetic altitudes mix insertion quality with the Earth's oblateness
+   * — at i = 45.9° the flattening alone spreads min and max by 11 km on a perfectly circular orbit.
    * This bar is looser than what the ±7 % feasibility band already permits (e ≈ 4.1e-3 at 400 km),
    * so it corroborates the shape without tightening the criterion the loop optimizes against.
    */
@@ -118,14 +119,13 @@ public class PropellantLoadOptimizerIntegrationTest {
     boolean[] mask = PropellantLoadOptimizer.lambdaScaledMask(launcher);
     logStageLoads("Heuristic loads", launcher, heuristicLoads, mask);
 
-    AbsoluteDate launchEpoch =
-        new AbsoluteDate(2026, 1, 1, 12, 0, 0.0, TimeScalesFactory.getUTC());
+    AbsoluteDate launchEpoch = new AbsoluteDate(2026, 1, 1, 12, 0, 0.0, TimeScalesFactory.getUTC());
 
     // Each evaluation rebuilds the LEO mission (optimized transfer, spec 06 I6 — the inner loop I7
     // runs per spec 09 §2) with the scaled loads and optimizes it end to end.
     Function<double[], Mission> missionBuilder =
         loads ->
-            LEOMission.withOptimizedTransfer(
+            LEOMission.circularWithOptimizedTransfer(
                 "I7 LEO 400 km",
                 new LaunchConfiguration(launcher, loads, payload),
                 TARGET_ALTITUDE_M);
@@ -201,8 +201,7 @@ public class PropellantLoadOptimizerIntegrationTest {
     logStageLoads("GEO heuristic loads", launcher, heuristicLoads, mask);
     logger.info("GEO heuristic AKM load: {} kg (off λ)", Math.round(akmLoad));
 
-    AbsoluteDate launchEpoch =
-        new AbsoluteDate(2026, 1, 1, 12, 0, 0.0, TimeScalesFactory.getUTC());
+    AbsoluteDate launchEpoch = new AbsoluteDate(2026, 1, 1, 12, 0, 0.0, TimeScalesFactory.getUTC());
 
     Function<double[], Mission> missionBuilder =
         loads ->
@@ -313,21 +312,21 @@ public class PropellantLoadOptimizerIntegrationTest {
    * and {@link MultiStageLoadOptimizer} minimizes them by coordinate-wise bisection, same setup as
    * {@link #geoMultiStage_shrinksEveryVariableLoadStage()} on the LEO optimized-transfer profile.
    *
-   * <p><b>The question it settles.</b> {@link PropellantLoadOptimizer#lambdaScaledMask} records that
-   * S1 has no reclaimable slack on LEO, so putting it under λ pins λ* at 1. That finding predates
-   * the staging fix (bilan 11 §2.1): before it, a {@code transitionTime} below {@code burn1Duration}
-   * stopped the propagation short of the jettison detector, so S1 was never dropped and every
-   * reduced-S1 run was measured on a mission that did not fly the profile. GEO then demonstrated the
-   * opposite of the same intuition — λ₀ = 0.9453, 67 t reclaimed. This test re-measures LEO on
-   * corrected data.
+   * <p><b>The question it settles.</b> {@link PropellantLoadOptimizer#lambdaScaledMask} records
+   * that S1 has no reclaimable slack on LEO, so putting it under λ pins λ* at 1. That finding
+   * predates the staging fix (bilan 11 §2.1): before it, a {@code transitionTime} below {@code
+   * burn1Duration} stopped the propagation short of the jettison detector, so S1 was never dropped
+   * and every reduced-S1 run was measured on a mission that did not fly the profile. GEO then
+   * demonstrated the opposite of the same intuition — λ₀ = 0.9453, 67 t reclaimed. This test
+   * re-measures LEO on corrected data.
    *
-   * <p><b>Measured answer: {@code λ* = [1.0000, 0.4312]}</b> — S1 stays pinned, and λ(S2) reproduces
-   * the single-λ reference ({@code 0.4313}) to four decimals, which also cross-validates the
-   * multi-stage sweep against the scalar bisection. The mask's finding holds on LEO, on sound data
-   * this time, and the mechanism is a load transfer rather than a broken ascent: taking 1.1 % off S1
-   * alone, S2 held at its optimum, drops S2's residual from 127 kg to zero. So this stays a
-   * <em>regression guard on a settled question</em> — if λ₀ ever leaves 1 here, either the profile or
-   * the staging changed.
+   * <p><b>Measured answer: {@code λ* = [1.0000, 0.4312]}</b> — S1 stays pinned, and λ(S2)
+   * reproduces the single-λ reference ({@code 0.4313}) to four decimals, which also cross-validates
+   * the multi-stage sweep against the scalar bisection. The mask's finding holds on LEO, on sound
+   * data this time, and the mechanism is a load transfer rather than a broken ascent: taking 1.1 %
+   * off S1 alone, S2 held at its optimum, drops S2's residual from 127 kg to zero. So this stays a
+   * <em>regression guard on a settled question</em> — if λ₀ ever leaves 1 here, either the profile
+   * or the staging changed.
    */
   @Test
   void leoMultiStage_shrinksEveryVariableLoadStage() {
@@ -339,12 +338,11 @@ public class PropellantLoadOptimizerIntegrationTest {
     boolean[] mask = PropellantLoadOptimizer.allVariableLoadMask(launcher);
     logStageLoads("LEO multi-stage heuristic loads", launcher, heuristicLoads, mask);
 
-    AbsoluteDate launchEpoch =
-        new AbsoluteDate(2026, 1, 1, 12, 0, 0.0, TimeScalesFactory.getUTC());
+    AbsoluteDate launchEpoch = new AbsoluteDate(2026, 1, 1, 12, 0, 0.0, TimeScalesFactory.getUTC());
 
     Function<double[], Mission> missionBuilder =
         loads ->
-            LEOMission.withOptimizedTransfer(
+            LEOMission.circularWithOptimizedTransfer(
                 "I7 LEO 400 km multi-stage",
                 new LaunchConfiguration(launcher, loads, payload),
                 TARGET_ALTITUDE_M);
@@ -383,8 +381,7 @@ public class PropellantLoadOptimizerIntegrationTest {
         "LEO multi-stage vs single-λ reference: λ(S1)={} (mask comment predicts 1.0),"
             + " λ(S2)={} vs reference λ*={}",
         String.format(java.util.Locale.ROOT, "%.4f", result.lambdas()[bottomStage]),
-        String.format(
-            java.util.Locale.ROOT, "%.4f", result.lambdas()[result.lambdas().length - 1]),
+        String.format(java.util.Locale.ROOT, "%.4f", result.lambdas()[result.lambdas().length - 1]),
         SINGLE_LAMBDA_LEO_REFERENCE);
 
     assertTrue(result.feasible(), "the heuristic LEO loads must themselves be feasible");
@@ -462,8 +459,8 @@ public class PropellantLoadOptimizerIntegrationTest {
    * profile needs. That is the slack this test goes after, and it is the opposite of the LEO
    * finding recorded in {@link PropellantLoadOptimizer#lambdaScaledMask}.
    *
-   * <p>Reference to beat: the single-λ result on the same configuration, {@code λ*=0.8141} →
-   * S2 8645 kg, S1 untouched at 1 233 000 kg.
+   * <p>Reference to beat: the single-λ result on the same configuration, {@code λ*=0.8141} → S2
+   * 8645 kg, S1 untouched at 1 233 000 kg.
    */
   @Test
   void geoMultiStage_shrinksEveryVariableLoadStage() {
@@ -483,8 +480,7 @@ public class PropellantLoadOptimizerIntegrationTest {
     logStageLoads("GEO multi-stage heuristic loads", launcher, heuristicLoads, mask);
     logger.info("GEO heuristic AKM load: {} kg (off λ)", Math.round(akmLoad));
 
-    AbsoluteDate launchEpoch =
-        new AbsoluteDate(2026, 1, 1, 12, 0, 0.0, TimeScalesFactory.getUTC());
+    AbsoluteDate launchEpoch = new AbsoluteDate(2026, 1, 1, 12, 0, 0.0, TimeScalesFactory.getUTC());
 
     Function<double[], Mission> missionBuilder =
         loads ->

@@ -3,9 +3,7 @@ package com.smousseur.orbitlab.simulation.mission.optimizer;
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.mission.operation.LEOMission;
 import com.smousseur.orbitlab.simulation.mission.vehicle.*;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -14,10 +12,10 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 /**
  * Mirror of {@link LEOMissionOptimizationTest} flying the CMA-ES-optimized transfer (spec 06 I6,
- * {@link LEOMission#withOptimizedTransfer}) instead of the analytic Hohmann profile. Same launcher
- * configuration (Falcon Heavy fully loaded) and same targets, so any divergence between the two
- * classes isolates the transfer mode. This is the multi-altitude sweep required before deciding
- * whether the optimized transfer becomes the LEO default (bilan 08 §3.2).
+ * {@link LEOMission#circularWithOptimizedTransfer}) instead of the analytic Hohmann profile. Same
+ * launcher configuration (Falcon Heavy fully loaded) and same targets, so any divergence between
+ * the two classes isolates the transfer mode. This is the multi-altitude sweep required before
+ * deciding whether the optimized transfer becomes the LEO default (bilan 08 §3.2).
  */
 @EnabledIfSystemProperty(named = "orbitlab.slowTests", matches = "true")
 public class LEOMissionOptimizedTransferTest extends AbstractTrajectoryOptimizerTest {
@@ -30,7 +28,7 @@ public class LEOMissionOptimizedTransferTest extends AbstractTrajectoryOptimizer
   @ValueSource(doubles = {300_000, 600_000, 800_000, 1_000_000})
   void testCircularMissions(double targetAltitude) {
     LEOMission mission =
-        LEOMission.withOptimizedTransfer(
+        LEOMission.circularWithOptimizedTransfer(
             "LEO mission (optimized transfer)", defaultConfiguration(), targetAltitude);
     testMission(mission, targetAltitude, targetAltitude);
   }
@@ -40,7 +38,7 @@ public class LEOMissionOptimizedTransferTest extends AbstractTrajectoryOptimizer
     Spacecraft payload = Payloads.EARTH_OBSERVATION_SAT.toSpacecraft(10_000, 0.0);
     double[] loads = PropellantBudget.loadsForLeo(Launchers.FALCON_HEAVY, payload, 400_000, 45.96);
     LEOMission mission =
-        LEOMission.withOptimizedTransfer(
+        LEOMission.circularWithOptimizedTransfer(
             "Falcon Heavy (optimized transfer)",
             new LaunchConfiguration(Launchers.FALCON_HEAVY, loads, payload),
             400_000);
@@ -48,17 +46,25 @@ public class LEOMissionOptimizedTransferTest extends AbstractTrajectoryOptimizer
   }
 
   /**
-   * Same elliptic targets as the analytic class, pending elliptic support in the optimized
-   * transfer: {@code TransfertTwoManeuverStage} resolves burn 2 as a full circularization at
-   * apoapsis, so only circular targets exist today. Enabling these requires a perigee-aware burn-2
-   * resolution (vis-viva instead of circular speed) threaded through {@code TransfertTwoManeuver}
-   * and an elliptic {@code withOptimizedTransfer} overload.
+   * Same elliptic targets as the analytic {@link LEOMissionOptimizationTest#testEllipticMissions},
+   * now flown through the CMA-ES-optimized single-burn transfer ({@link
+   * LEOMission#ellipticWithOptimizedTransfer}). The single burn shapes the post-gravity-turn state
+   * directly onto the target ellipse — {@link
+   * com.smousseur.orbitlab.simulation.mission.stage.TransfertManeuverStage} grades apogee, perigee
+   * and eccentricity — instead of the deterministic apoapsis circularization {@code
+   * TransfertTwoManeuverStage} is limited to. The downstream trim burn is keyed on the target
+   * perigee so the achieved shape is the ellipse (target perigee, achieved apogee).
    */
-  @Disabled("TransfertTwoManeuverStage only supports circular targets (spec 06 I6)")
   @ParameterizedTest(name = "perigee={0}m, apogee={1}m")
   @CsvSource({"300_000, 600_000", "600_000, 800_000", "200_000, 1_000_000"})
   void testEllipticMissions(double perigeeAltitude, double apogeeAltitude) {
-    Assertions.fail("LEOMission.withOptimizedTransfer has no elliptic variant yet");
+    LEOMission mission =
+        LEOMission.ellipticWithOptimizedTransfer(
+            "LEO mission (optimized elliptic transfer)",
+            defaultConfiguration(),
+            perigeeAltitude,
+            apogeeAltitude);
+    testMission(mission, perigeeAltitude, apogeeAltitude);
   }
 
   /** Same configuration as the historical ctors used by the analytic circular tests. */
