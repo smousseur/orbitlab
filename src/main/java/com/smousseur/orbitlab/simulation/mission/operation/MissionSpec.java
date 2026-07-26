@@ -48,6 +48,16 @@ public sealed interface MissionSpec permits MissionSpec.Leo, MissionSpec.Geo {
   MissionType type();
 
   /**
+   * Returns a copy of this spec with the launcher's per-stage propellant loads replaced, keeping the
+   * launcher model and the payload (including a GEO payload's fixed AKM load) unchanged. Used by the
+   * propellant-sizing planner to rebuild the mission at each candidate load array.
+   *
+   * @param launcherLoads the per-stage launcher loads (kg), same order as the launcher stages
+   * @return a spec identical to this one but flying the given launcher loads
+   */
+  MissionSpec withLauncherLoads(double[] launcherLoads);
+
+  /**
    * LEO insertion spec. A circular target has {@code perigeeAltitude == apogeeAltitude}; an elliptic
    * target keeps a distinct apogee.
    *
@@ -76,6 +86,18 @@ public sealed interface MissionSpec permits MissionSpec.Leo, MissionSpec.Geo {
     @Override
     public MissionType type() {
       return MissionType.LEO;
+    }
+
+    @Override
+    public MissionSpec withLauncherLoads(double[] launcherLoads) {
+      return new Leo(
+          name,
+          new LaunchConfiguration(configuration.launcher(), launcherLoads, configuration.payload()),
+          perigeeAltitude,
+          apogeeAltitude,
+          latitude,
+          longitude,
+          altitude);
     }
   }
 
@@ -109,6 +131,19 @@ public sealed interface MissionSpec permits MissionSpec.Leo, MissionSpec.Geo {
     @Override
     public MissionType type() {
       return MissionType.GEO;
+    }
+
+    @Override
+    public MissionSpec withLauncherLoads(double[] launcherLoads) {
+      return new Geo(
+          name,
+          new LaunchConfiguration(configuration.launcher(), launcherLoads, configuration.payload()),
+          parkingAltitude,
+          targetAltitude,
+          finalInclination,
+          latitude,
+          longitude,
+          altitude);
     }
   }
 }

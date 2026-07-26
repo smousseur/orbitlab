@@ -74,6 +74,19 @@ public final class MissionEntry {
   }
 
   /**
+   * Replaces the wrapped mission with the one actually flown by the optimizer. In PRECISE the
+   * propellant-sizing sweep flies internal missions at scaled loads; adopting the winning one keeps
+   * {@code mission()} consistent with the rendered ephemeris for consumers that read mission-level
+   * data (vehicle loads, solved stages) rather than the trajectory. The spec is unchanged, so a
+   * later mode toggle still recomposes from the original budgeted loads.
+   *
+   * @param mission the flown mission to adopt
+   */
+  public void setMission(Mission mission) {
+    this.mission = Objects.requireNonNull(mission, "mission");
+  }
+
+  /**
    * Sets the optimization result after the optimizer completes.
    *
    * @param result the optimization result

@@ -233,11 +233,14 @@ public class MissionOptimizer {
 
     // Generate the full ephemeris from the original launch date
     SpacecraftState initialState = mission.getInitialState(launchDate);
+    // Record the launch date on the flown mission: it is the telemetry MET base, and the caller may
+    // adopt this mission (the sizing sweep's winning one) in place of the pre-sweep composition.
+    mission.setInitialDate(launchDate);
     MissionEphemerisGenerator generator = new MissionEphemerisGenerator();
     MissionEphemeris ephemeris = generator.generate(mission, initialState);
 
     mission.setStatus(MissionStatus.READY);
-    return new MissionComputeResult(optimResult, ephemeris, report);
+    return new MissionComputeResult(optimResult, ephemeris, report, mission);
   }
 
   /**

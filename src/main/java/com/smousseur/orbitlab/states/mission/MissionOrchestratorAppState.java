@@ -13,8 +13,8 @@ import com.smousseur.orbitlab.simulation.mission.context.MissionEntry;
 import com.smousseur.orbitlab.simulation.mission.MissionStatus;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemeris;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemerisPoint;
+import com.smousseur.orbitlab.simulation.mission.planner.MissionPlanOptimizer;
 import com.smousseur.orbitlab.simulation.mission.runtime.MissionComputeResult;
-import com.smousseur.orbitlab.simulation.mission.runtime.MissionOptimizer;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -26,7 +26,6 @@ import java.util.concurrent.Executors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
-import org.orekit.propagation.SpacecraftState;
 import org.orekit.time.AbsoluteDate;
 
 /**
@@ -163,16 +162,18 @@ public final class MissionOrchestratorAppState extends BaseAppState {
             logger.info("Starting computation for mission '{}'", mission.getName());
             AbsoluteDate launchDate = entry.getScheduledDate().orElseGet(context.clock()::now);
             entry.setScheduledDate(launchDate);
-            SpacecraftState initialState = mission.getInitialState(launchDate);
-            mission.setCurrentState(initialState);
-            mission.setInitialDate(launchDate);
 
-            MissionOptimizer optimizer = new MissionOptimizer(mission, 40_000);
-            MissionComputeResult result = optimizer.optimize();
+            // The planner is selected from the entry's optimization mode; FAST reproduces the
+            // legacy fixed-load path (analytic composition, single CMA-ES pass at budgeted loads).
+            MissionComputeResult result =
+                new MissionPlanOptimizer(entry, launchDate).compute().computation();
 
+            // Adopt the mission actually flown: for a fixed-load run it is the entry's own mission;
+            // for PRECISE it is the sizing sweep's winning internal mission (scaled loads, solved
+            // stages), already optimized and marked READY by the optimizer.
+            entry.setMission(result.mission());
             entry.setOptimizerResult(result.optimizerResult());
             entry.setEphemeris(result.ephemeris());
-            // Status already set to READY by optimizer
             logger.info("Computation completed for mission '{}'", mission.getName());
           } catch (Exception e) {
             mission.setStatus(MissionStatus.FAILED);
