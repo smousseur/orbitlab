@@ -38,6 +38,7 @@ public final class UiKit {
   private static final String FONT_SORA = "fonts/sora-medium-%d.fnt";
   public static final String WIZARD_DIR = "interface/wizard";
   public static final String MISSIONS_DIR = "interface/missions";
+  public static final String ROSTER_DIR = MISSIONS_DIR + "/roster";
   private static final String COMMON_DIR = "interface/common";
 
   private static AssetManager assetManager;
@@ -189,6 +190,11 @@ public final class UiKit {
     Texture2D tex = loadTexture(directory, name);
     if (tex == null) return new QuadBackgroundComponent(ColorRGBA.DarkGray);
     return new QuadBackgroundComponent(tex);
+  }
+
+  /** Builds a flat (non 9-slice) background from a wizard v2 texture. */
+  public static QuadBackgroundComponent rosterFlat(String name) {
+    return flat(ROSTER_DIR, name);
   }
 
   /** Builds a flat (non 9-slice) background from a wizard v2 texture. */

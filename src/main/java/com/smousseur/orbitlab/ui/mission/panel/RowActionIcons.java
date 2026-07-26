@@ -43,7 +43,7 @@ final class RowActionIcons {
     icon.setPreferredSize(new Vector3f(ICON_SIZE, ICON_SIZE, 0));
 
     if (!enabled) {
-      icon.setBackground(UiKit.wizardFlat(disabledTex));
+      icon.setBackground(UiKit.rosterFlat(disabledTex));
       return icon;
     }
 
@@ -53,7 +53,7 @@ final class RowActionIcons {
         new DefaultMouseListener() {
           @Override
           public void mouseEntered(MouseMotionEvent evt, Spatial target, Spatial capture) {
-            icon.setBackground(UiKit.wizardFlat(hoverTex));
+            icon.setBackground(UiKit.rosterFlat(hoverTex));
           }
 
           @Override
@@ -70,46 +70,8 @@ final class RowActionIcons {
     return icon;
   }
 
-  static Container visualizeIconButton(boolean ready, boolean on, Runnable onClick) {
-    final String normalTex = "icon-action-view";
-    final String hoverTex = "icon-action-view-hover";
-    final String disabledTex = "icon-action-view-disabled";
-
-    Container icon = new Container();
-    icon.setPreferredSize(new Vector3f(ICON_SIZE, ICON_SIZE, 0));
-
-    if (!ready) {
-      icon.setBackground(UiKit.wizardFlat(disabledTex));
-      return icon;
-    }
-
-    final String idleTex = on ? normalTex : disabledTex;
-    icon.setBackground(UiKit.wizardFlat(idleTex));
-
-    MouseEventControl.addListenersToSpatial(
-        icon,
-        new DefaultMouseListener() {
-          @Override
-          public void mouseEntered(MouseMotionEvent evt, Spatial target, Spatial capture) {
-            icon.setBackground(UiKit.wizardFlat(hoverTex));
-          }
-
-          @Override
-          public void mouseExited(MouseMotionEvent evt, Spatial target, Spatial capture) {
-            icon.setBackground(UiKit.wizardFlat(idleTex));
-          }
-
-          @Override
-          public void click(MouseButtonEvent event, Spatial target, Spatial capture) {
-            onClick.run();
-            event.setConsumed();
-          }
-        });
-    return icon;
-  }
-
   private static QuadBackgroundComponent tintedFlat(String tex) {
-    QuadBackgroundComponent q = UiKit.wizardFlat(tex);
+    QuadBackgroundComponent q = UiKit.rosterFlat(tex);
     q.setColor(FormStyles.ACCENT_BRIGHT);
     return q;
   }
