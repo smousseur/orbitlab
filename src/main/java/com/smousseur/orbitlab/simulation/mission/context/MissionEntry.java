@@ -26,7 +26,7 @@ public final class MissionEntry {
   // Volatile + non-final: replaced on the JME thread when the mode toggles, read on the
   // mission-optimizer thread.
   private volatile Mission mission;
-  private OptimizationType optimizationType = OptimizationType.FAST;
+  private volatile OptimizationType optimizationType = OptimizationType.FAST;
   private volatile MissionOptimizerResult optimizerResult;
   private volatile MissionEphemeris ephemeris;
   private volatile boolean visible = false;
@@ -35,7 +35,8 @@ public final class MissionEntry {
 
   /**
    * Creates a mission entry from a spec, composing the mission for the default {@link
-   * OptimizationType#FAST} mode. This is the path that supports recomposition when the mode toggles.
+   * OptimizationType#FAST} mode. This is the path that supports recomposition when the mode
+   * toggles.
    *
    * @param spec the mission spec (targets, vehicle, site)
    */
@@ -45,8 +46,9 @@ public final class MissionEntry {
   }
 
   /**
-   * Creates a mission entry wrapping a pre-built mission (legacy path). The entry carries no spec, so
-   * {@link #setOptimizationType(OptimizationType)} records the mode but cannot recompose the stages.
+   * Creates a mission entry wrapping a pre-built mission (legacy path). The entry carries no spec,
+   * so {@link #setOptimizationType(OptimizationType)} records the mode but cannot recompose the
+   * stages.
    *
    * @param mission the mission to wrap
    */
