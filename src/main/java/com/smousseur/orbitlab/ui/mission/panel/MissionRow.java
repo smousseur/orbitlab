@@ -98,7 +98,7 @@ class MissionRow {
     Container actions = root.addChild(new Container(new BoxLayout(Axis.X, FillMode.None)));
     actions.setBackground(null);
     actions.setPreferredSize(new Vector3f(cols.actions(), HEIGHT, 0));
-    populateActions(actions, name, status, listener);
+    populateActions(actions, entry, name, status, listener);
 
     // Hover + selection follow the PopupList pattern (white tint over btn-primary).
     // Action icons consume their own clicks so clicks on icons don't trigger row selection.
@@ -131,6 +131,7 @@ class MissionRow {
 
   private static void populateActions(
       Container actions,
+      MissionEntry entry,
       String missionName,
       MissionStatus status,
       MissionListView.RowListener listener) {
@@ -139,6 +140,12 @@ class MissionRow {
     actions.addChild(
         RowActionIcons.vCenter(
             RowActionIcons.actionIconButton("edit", !computing, () -> listener.onEdit(missionName)),
+            HEIGHT));
+    actions.addChild(UiKit.hSpacer(RowActionIcons.ICON_GAP));
+    actions.addChild(
+        RowActionIcons.vCenter(
+            ModeSegmentedControl.build(
+                entry, !computing, type -> listener.onSetMode(missionName, type)),
             HEIGHT));
     actions.addChild(UiKit.hSpacer(RowActionIcons.ICON_GAP));
     actions.addChild(

@@ -17,6 +17,7 @@ import com.simsilica.lemur.component.QuadBackgroundComponent;
 import com.simsilica.lemur.component.TbtQuadBackgroundComponent;
 import com.simsilica.lemur.event.DefaultMouseListener;
 import com.simsilica.lemur.event.MouseEventControl;
+import com.smousseur.orbitlab.simulation.mission.OptimizationType;
 import com.smousseur.orbitlab.simulation.mission.context.MissionEntry;
 import com.smousseur.orbitlab.ui.UiKit;
 import com.smousseur.orbitlab.ui.form.FormStyles;
@@ -31,6 +32,8 @@ public class MissionListView {
     void onEdit(String missionName);
 
     void onCompute(String missionName);
+
+    void onSetMode(String missionName, OptimizationType type);
 
     void onDelete(String missionName);
   }
@@ -239,6 +242,9 @@ public class MissionListView {
 
       @Override
       public void onCompute(String missionName) {}
+
+      @Override
+      public void onSetMode(String missionName, OptimizationType type) {}
 
       @Override
       public void onDelete(String missionName) {}

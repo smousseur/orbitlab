@@ -68,7 +68,7 @@ public class MissionPlanOptimizer {
 
   private MissionPlanner planner() {
     if (entry.getOptimizationType() == OptimizationType.PRECISE) {
-      return entry.spec().map(this::minimizedPlanner).orElseGet(this::fixedLoadPlanner);
+      return entry.spec().map(this::minimizedLoadPlanner).orElseGet(this::fixedLoadPlanner);
     }
     return fixedLoadPlanner();
   }
@@ -81,7 +81,7 @@ public class MissionPlanOptimizer {
     return new FixedLoadPlanner(mission, MAX_EVALUATIONS, SEED);
   }
 
-  private MissionPlanner minimizedPlanner(MissionSpec spec) {
+  private MissionPlanner minimizedLoadPlanner(MissionSpec spec) {
     OptimizationType mode = entry.getOptimizationType();
     LauncherModel launcher = spec.configuration().launcher();
     double[] heuristicLoads = spec.configuration().propellantLoads();

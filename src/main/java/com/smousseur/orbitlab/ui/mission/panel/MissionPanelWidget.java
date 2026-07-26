@@ -17,6 +17,7 @@ import com.simsilica.lemur.event.DefaultMouseListener;
 import com.simsilica.lemur.event.MouseEventControl;
 import com.smousseur.orbitlab.app.ApplicationContext;
 import com.smousseur.orbitlab.engine.events.EventBus;
+import com.smousseur.orbitlab.simulation.mission.OptimizationType;
 import com.smousseur.orbitlab.simulation.mission.context.MissionContext;
 import com.smousseur.orbitlab.simulation.mission.context.MissionEntry;
 import com.smousseur.orbitlab.ui.form.FormStyles;
@@ -154,6 +155,12 @@ public class MissionPanelWidget implements AutoCloseable {
       @Override
       public void onCompute(String missionName) {
         eventBus.publishMissionAction(missionName, EventBus.MissionAction.OPTIMIZE);
+      }
+
+      @Override
+      public void onSetMode(String missionName, OptimizationType type) {
+        missionContext.findMission(missionName).ifPresent(e -> e.setOptimizationType(type));
+        refresh();
       }
 
       @Override
