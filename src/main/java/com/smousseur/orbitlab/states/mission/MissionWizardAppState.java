@@ -4,8 +4,8 @@ import com.jme3.app.Application;
 import com.jme3.app.state.BaseAppState;
 import com.smousseur.orbitlab.app.ApplicationContext;
 import com.smousseur.orbitlab.engine.events.EventBus;
-import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.operation.MissionFactory;
+import com.smousseur.orbitlab.simulation.mission.operation.MissionSpec;
 import com.smousseur.orbitlab.simulation.mission.context.MissionContext;
 import com.smousseur.orbitlab.simulation.mission.context.MissionEntry;
 import com.smousseur.orbitlab.ui.mission.wizard.MissionWizardWidget;
@@ -71,9 +71,9 @@ public final class MissionWizardAppState extends BaseAppState {
     TimeScale utc = TimeScalesFactory.getUTC();
     AbsoluteDate missionDate = new AbsoluteDate(values.get("LAUNCH_DATE").toString(), utc);
     try {
-      Mission mission =
-          MissionFactory.fromWizardValues(values, missionContext.getSelectedMissionType());
-      MissionEntry missionEntry = new MissionEntry(mission);
+      MissionSpec spec =
+          MissionFactory.specFromWizardValues(values, missionContext.getSelectedMissionType());
+      MissionEntry missionEntry = new MissionEntry(spec);
       missionEntry.setScheduledDate(missionDate);
       missionContext.addMission(missionEntry);
     } catch (RuntimeException e) {

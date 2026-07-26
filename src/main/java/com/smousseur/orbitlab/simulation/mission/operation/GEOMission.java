@@ -161,11 +161,11 @@ public class GEOMission extends EarthMission {
         // Newton on the aimed perigee so the finite-burn apogee inflation lands on target; the
         // trim then raises the deliberately-low perigee with a short, drift-free burn.
         new AnalyticApogeeCircularizationStage(
-            "Apogee circularization (AKM)", targetAltitude, FastMath.toRadians(finalInclination)),
+            "Circularization", targetAltitude, FastMath.toRadians(finalInclination)),
         new AnalyticTrimBurnStage("Trim", targetAltitude, FastMath.toRadians(finalInclination)),
         // Node-targeted plane trim (bilan 08 §3.5): the hours-long AKM burn leaves a ~0.25° plane
         // residual it cannot correct off-node; a short out-of-plane burn at the node cleans it up.
-        new AnalyticPlaneTrimAtNodeStage("Plane trim (node)", FastMath.toRadians(finalInclination)),
+        new AnalyticPlaneTrimAtNodeStage("Plane trim", FastMath.toRadians(finalInclination)),
         new CoastingStage("Coasting", null));
   }
 }

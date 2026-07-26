@@ -108,6 +108,17 @@ public class LEOMission extends EarthMission {
 
   public static LEOMission circularWithOptimizedTransfer(
       String name, LaunchConfiguration configuration, double targetAltitude) {
+    return circularWithOptimizedTransfer(
+        name, configuration, targetAltitude, DEFAULT_LATITUDE, DEFAULT_LONGITUDE, DEFAULT_ALTITUDE);
+  }
+
+  public static LEOMission circularWithOptimizedTransfer(
+      String name,
+      LaunchConfiguration configuration,
+      double targetAltitude,
+      double latitude,
+      double longitude,
+      double altitude) {
     AscentProfile profile = configuration.ascentProfile();
     List<MissionStage> stages =
         List.of(
@@ -118,8 +129,8 @@ public class LEOMission extends EarthMission {
                 profile.interstageCoastDuration(),
                 GravityTurnConstraints.forTarget(targetAltitude)),
             new TransfertTwoManeuverStage(
-                "Transfert", targetAltitude, FastMath.toRadians(DEFAULT_LATITUDE)),
-            new AnalyticTrimBurnStage("Trim", targetAltitude, FastMath.toRadians(DEFAULT_LATITUDE)),
+                "Transfert", targetAltitude, FastMath.toRadians(latitude)),
+            new AnalyticTrimBurnStage("Trim", targetAltitude, FastMath.toRadians(latitude)),
             new CoastingStage("Coasting", null));
     return new LEOMission(
         name,
@@ -127,6 +138,21 @@ public class LEOMission extends EarthMission {
         stages,
         targetAltitude,
         targetAltitude,
+        latitude,
+        longitude,
+        altitude);
+  }
+
+  public static LEOMission ellipticWithOptimizedTransfer(
+      String name,
+      LaunchConfiguration configuration,
+      double perigeeAltitude,
+      double apogeeAltitude) {
+    return ellipticWithOptimizedTransfer(
+        name,
+        configuration,
+        perigeeAltitude,
+        apogeeAltitude,
         DEFAULT_LATITUDE,
         DEFAULT_LONGITUDE,
         DEFAULT_ALTITUDE);
@@ -136,7 +162,10 @@ public class LEOMission extends EarthMission {
       String name,
       LaunchConfiguration configuration,
       double perigeeAltitude,
-      double apogeeAltitude) {
+      double apogeeAltitude,
+      double latitude,
+      double longitude,
+      double altitude) {
     AscentProfile profile = configuration.ascentProfile();
     List<MissionStage> stages =
         List.of(
@@ -147,11 +176,10 @@ public class LEOMission extends EarthMission {
                 profile.interstageCoastDuration(),
                 GravityTurnConstraints.forTarget(perigeeAltitude)),
             new TransfertManeuverStage(
-                "Transfert", perigeeAltitude, apogeeAltitude, FastMath.toRadians(DEFAULT_LATITUDE)),
+                "Transfert", perigeeAltitude, apogeeAltitude, FastMath.toRadians(latitude)),
             // The trim burn at the next apogee raises the perigee to the target perigee, shaping
             // the ellipse (target perigee, achieved apogee) — its altitude argument is the perigee.
-            new AnalyticTrimBurnStage(
-                "Trim", perigeeAltitude, FastMath.toRadians(DEFAULT_LATITUDE)),
+            new AnalyticTrimBurnStage("Trim", perigeeAltitude, FastMath.toRadians(latitude)),
             new CoastingStage("Coasting", null));
     return new LEOMission(
         name,
@@ -159,9 +187,9 @@ public class LEOMission extends EarthMission {
         stages,
         perigeeAltitude,
         apogeeAltitude,
-        DEFAULT_LATITUDE,
-        DEFAULT_LONGITUDE,
-        DEFAULT_ALTITUDE);
+        latitude,
+        longitude,
+        altitude);
   }
 
   public LEOMission(String name, double targetAltitude) {

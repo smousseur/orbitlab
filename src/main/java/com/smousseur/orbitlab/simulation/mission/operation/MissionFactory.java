@@ -2,6 +2,7 @@ package com.smousseur.orbitlab.simulation.mission.operation;
 
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionType;
+import com.smousseur.orbitlab.simulation.mission.OptimizationType;
 import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchConfiguration;
 import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Launchers;
 import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Payloads;
@@ -20,8 +21,9 @@ public final class MissionFactory {
   private MissionFactory() {}
 
   /**
-   * Builds a mission from the wizard values: launcher and payload resolved from the catalogs, the
-   * payload instantiated with the mass entered by the user.
+   * Builds a mission from the wizard values in the default {@link OptimizationType#FAST} mode
+   * (analytic profile). Equivalent to {@code MissionComposer.compose(specFromWizardValues(values,
+   * type), OptimizationType.FAST)}.
    *
    * @param values the raw wizard values
    * @param type the selected mission type
@@ -29,6 +31,37 @@ public final class MissionFactory {
    * @throws IllegalArgumentException if a catalog id is unknown or a required value is missing
    */
   public static Mission fromWizardValues(Map<String, Object> values, MissionType type) {
+    return fromWizardValues(values, type, OptimizationType.FAST);
+  }
+
+  /**
+   * Builds a mission from the wizard values in the given optimization mode. The spec (targets,
+   * vehicle, site) is resolved once from the wizard values, then {@link MissionComposer} picks the
+   * stage composition matching the mode.
+   *
+   * @param values the raw wizard values
+   * @param type the selected mission type
+   * @param mode the optimization mode driving the stage composition
+   * @return the mission to schedule
+   * @throws IllegalArgumentException if a catalog id is unknown or a required value is missing
+   */
+  public static Mission fromWizardValues(
+      Map<String, Object> values, MissionType type, OptimizationType mode) {
+    return MissionComposer.compose(specFromWizardValues(values, type), mode);
+  }
+
+  /**
+   * Resolves the immutable {@link MissionSpec} from the wizard values: launcher and payload resolved
+   * from the catalogs, the payload instantiated with the mass entered by the user, and propellant
+   * loads sized analytically. Carries no stage decomposition — that is {@link MissionComposer}'s
+   * job.
+   *
+   * @param values the raw wizard values
+   * @param type the selected mission type
+   * @return the resolved mission spec
+   * @throws IllegalArgumentException if a catalog id is unknown or a required value is missing
+   */
+  public static MissionSpec specFromWizardValues(Map<String, Object> values, MissionType type) {
     String name = String.valueOf(values.get("MISSION_NAME"));
     double latitude = doubleValue(values, "LAUNCH_SITE_LAT");
     double longitude = doubleValue(values, "LAUNCH_SITE_LONG");
@@ -52,7 +85,7 @@ public final class MissionFactory {
         Spacecraft payload = payloadModel.toSpacecraft(payloadMass, 0.0);
         double[] loads = PropellantBudget.loadsForLeo(launcher, payload, apogeeAlt, latitude);
         LaunchConfiguration configuration = new LaunchConfiguration(launcher, loads, payload);
-        yield new LEOMission(
+        yield new MissionSpec.Leo(
             name, configuration, perigeeAlt, apogeeAlt, latitude, longitude, altitude);
       }
       case GEO -> {
@@ -62,15 +95,15 @@ public final class MissionFactory {
         Spacecraft payload = payloadModel.toSpacecraft(payloadMass, geoLoads.akmLoad());
         LaunchConfiguration configuration =
             new LaunchConfiguration(launcher, geoLoads.launcherLoads(), payload);
-        yield new GEOMission(
+        yield new MissionSpec.Geo(
             name,
             configuration,
             parkingAlt,
             GEOMission.GEO_ALTITUDE,
+            0.0,
             latitude,
             longitude,
-            altitude,
-            0.0);
+            altitude);
       }
     };
   }

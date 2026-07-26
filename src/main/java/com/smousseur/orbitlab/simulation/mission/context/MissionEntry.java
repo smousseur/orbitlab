@@ -2,7 +2,10 @@ package com.smousseur.orbitlab.simulation.mission.context;
 
 import com.jme3.math.ColorRGBA;
 import com.smousseur.orbitlab.simulation.mission.Mission;
+import com.smousseur.orbitlab.simulation.mission.OptimizationType;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemeris;
+import com.smousseur.orbitlab.simulation.mission.operation.MissionComposer;
+import com.smousseur.orbitlab.simulation.mission.operation.MissionSpec;
 import com.smousseur.orbitlab.simulation.mission.runtime.MissionOptimizerResult;
 import java.util.Objects;
 import java.util.Optional;
@@ -16,7 +19,14 @@ import org.orekit.time.AbsoluteDate;
  * update thread.
  */
 public final class MissionEntry {
-  private final Mission mission;
+  // Non-null only when the entry was built from a spec: that is what lets setOptimizationType
+  // recompose the mission for a new mode. Entries wrapping a pre-built mission (legacy path) leave
+  // it null and cannot recompose.
+  private final MissionSpec spec;
+  // Volatile + non-final: replaced on the JME thread when the mode toggles, read on the
+  // mission-optimizer thread.
+  private volatile Mission mission;
+  private OptimizationType optimizationType = OptimizationType.FAST;
   private volatile MissionOptimizerResult optimizerResult;
   private volatile MissionEphemeris ephemeris;
   private volatile boolean visible = false;
@@ -24,12 +34,34 @@ public final class MissionEntry {
   private volatile ColorRGBA color;
 
   /**
-   * Creates a new mission entry for the given mission.
+   * Creates a mission entry from a spec, composing the mission for the default {@link
+   * OptimizationType#FAST} mode. This is the path that supports recomposition when the mode toggles.
+   *
+   * @param spec the mission spec (targets, vehicle, site)
+   */
+  public MissionEntry(MissionSpec spec) {
+    this.spec = Objects.requireNonNull(spec, "spec");
+    this.mission = MissionComposer.compose(spec, optimizationType);
+  }
+
+  /**
+   * Creates a mission entry wrapping a pre-built mission (legacy path). The entry carries no spec, so
+   * {@link #setOptimizationType(OptimizationType)} records the mode but cannot recompose the stages.
    *
    * @param mission the mission to wrap
    */
   public MissionEntry(Mission mission) {
+    this.spec = null;
     this.mission = Objects.requireNonNull(mission, "mission");
+  }
+
+  /**
+   * Returns the spec this entry was built from, if any.
+   *
+   * @return an optional containing the spec, or empty for legacy pre-built-mission entries
+   */
+  public Optional<MissionSpec> spec() {
+    return Optional.ofNullable(spec);
   }
 
   /**
@@ -129,5 +161,35 @@ public final class MissionEntry {
    */
   public void setColor(ColorRGBA color) {
     this.color = color;
+  }
+
+  /**
+   * Gets optimization type.
+   *
+   * @return the optimization type
+   */
+  public OptimizationType getOptimizationType() {
+    return optimizationType;
+  }
+
+  /**
+   * Sets the optimization type. When the mode actually changes and this entry carries a {@link
+   * MissionSpec}, the mission is recomposed for the new mode and any previous computation is
+   * invalidated: the recomposed mission starts in {@code DRAFT}, so status-gated consumers stop
+   * rendering it until it is recomputed (via a fresh {@code OPTIMIZE} action).
+   *
+   * @param optimizationType the optimization type
+   */
+  public void setOptimizationType(OptimizationType optimizationType) {
+    Objects.requireNonNull(optimizationType, "optimizationType");
+    if (optimizationType == this.optimizationType) {
+      return;
+    }
+    this.optimizationType = optimizationType;
+    if (spec != null) {
+      this.mission = MissionComposer.compose(spec, optimizationType);
+      this.optimizerResult = null;
+      this.ephemeris = null;
+    }
   }
 }
