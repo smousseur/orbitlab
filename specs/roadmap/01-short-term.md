@@ -43,89 +43,174 @@ panel. Le détail de ce qui a été fait est archivé en
   catalogué (`FALCON_HEAVY`) donc la variété inter-lanceurs n'est pas encore
   démontrée en pratique — à garder en tête avant d'ajouter un 2ᵉ lanceur.
 
-**Ce que ce chantier a laissé ouvert** — deux régressions/dettes visibles utilisateur,
-traitées en priorité ci-dessous (Phase 0) :
+**Ce que ce chantier avait laissé ouvert** — les deux régressions/dettes visibles
+utilisateur ont été **corrigées le 2026-07-27** (détail en Phase 0, items 0.1 et
+0.3, tous deux ✔) :
 
-1. Le panel affiche toujours `"LEO"` pour **toutes** les missions, y compris GEO
-   — `ui/mission/panel/MissionTypes.java:8-15`, TODO jamais résolu. Avant, ce
-   TODO était inoffensif (GEO n'était pas créable) ; maintenant qu'il l'est,
-   c'est un bug visible dès qu'on crée une mission GEO depuis le wizard.
-2. `MissionEntry.setOptimizationType` (recompose côté UI, sur le fil JME) et la
-   création de mission (`MissionWizardAppState.createMission()`, qui catch déjà
-   les `RuntimeException` de composition) n'ont pas le même filet — un mode
-   toggle qui ferait échouer `MissionComposer.compose(...)` planterait sans
-   retour utilisateur visible autre qu'un log. Peu probable aujourd'hui (GEO ne
-   varie pas par mode), mais à surveiller si GEO gagne un mode CMA-ES.
+1. ~~Le panel affiche toujours `"LEO"` pour toutes les missions, y compris GEO.~~
+   Corrigé : `MissionTypes.label()` lit `MissionSpec.type()`.
+2. ~~`MissionEntry.setOptimizationType` recompose sans filet sur le fil JME.~~
+   Corrigé : composition sous `try`, rollback complet, statut `FAILED`.
+
+Il ne reste donc en Phase 0 qu'une **feature demandée par l'utilisateur** : le
+seek par saisie manuelle de date sur la timeline (0.2).
 
 Légende : **P0/P1/P2** = priorité (P0 = doit être fait d'abord) ;
 **S/M/L** = difficulté (Small / Medium / Large).
 
 ---
 
-## Phase 0 — Corrections rapides (P0)
+## Phase 0 — Dette soldée + seek timeline (P0)
 
-Dette directement issue du chantier GEO/modes, plus une nouvelle feature
-demandée par l'utilisateur (seek timeline) dont l'infrastructure existe déjà
-à moitié.
+La dette issue du chantier GEO/modes est soldée (0.1 et 0.3 ✔, conservés
+ci-dessous pour la traçabilité des écarts d'implémentation). Reste la feature
+seek timeline (0.2), seul item P0 encore ouvert.
 
-### 0.1 Réparer l'étiquette de type dans le panel — **P0 / S**
+### 0.1 Réparer l'étiquette de type dans le panel — **✔ FAIT (2026-07-27)**
 
-- `MissionTypes.label(entry)` doit lire le vrai type au lieu du
-  `DEFAULT_MISSION_TYPE` codé en dur.
-- Le type existe déjà : `MissionSpec.type()` (`MissionSpec.java:48`, implémenté
-  ligne 87 et 132) renvoie un `MissionType`. `MissionEntry.spec()` l'expose en
-  `Optional` (vide seulement pour le chemin legacy `MissionEntry(Mission)`,
-  utilisé par `MissionContext.java:32`).
-- Donc : `entry.spec().map(MissionSpec::type).map(MissionType::displayName)`
-  avec fallback sur l'ancien comportement (ou un label `"—"`) pour les entrées
-  legacy sans spec. Pas besoin d'ajouter `Mission.getType()` comme prévu dans
-  l'ancienne version de ce document — l'info est déjà portée par `MissionSpec`.
+`MissionTypes.label(entry)` lit désormais le vrai type :
+`entry.spec().map(MissionSpec::type).map(MissionType::displayName)`.
 
-Fichier : `ui/mission/panel/MissionTypes.java`.
+Écarts avec le plan initial, à connaître :
 
-### 0.2 Seek timeline (édition de la date) — **P0 / M** — *nouvelle feature*
+- **Fallback = `"—"`**, pas l'ancien `"LEO"`. Le chemin legacy
+  `MissionContext.addMission(Mission)` n'a plus aucun appelant en production
+  (seul `MissionDisplayPanelRulesTest` l'utilise) : un repli `"LEO"` ne
+  couvrait aucun cas réel et reconduisait l'affirmation fausse qu'on
+  corrigeait. `"—"` reprend l'idiome déjà présent dans `PanelFooter:75` pour
+  un véhicule inconnu.
+- **`MissionType.displayName()` a dû être ajouté** — il n'existait pas.
+  Implémenté en déléguant à `name()` (pas de champ dupliquant `"LEO"`/`"GEO"`,
+  qui ne ferait que dériver) ; l'accesseur existe pour que l'UI ne dépende pas
+  de l'orthographe des constantes.
+- Corrige d'un coup les deux appelants : colonne Type de la ligne
+  (`MissionRow.java:84`) et ligne de détail du footer (`PanelFooter.java:80`).
 
-Aujourd'hui la timeline ne fait que piloter la **vitesse** de lecture. On veut
-pouvoir cliquer/glisser sur la piste pour sauter directement à une date/heure
-de simulation arbitraire.
+Fichiers : `ui/mission/panel/MissionTypes.java`,
+`simulation/mission/MissionType.java`.
 
-- L'infrastructure existe déjà côté horloge :
-  `SimulationClock.seek(AbsoluteDate)` (`app/SimulationClock.java:191-206`) est
-  thread-safe et émet `SeekPerformed`/`TimeChanged(cause=USER)`. Elle est déjà
-  appelée par les boutons pas-à-pas (`TransportControls.java:43,52`, saut de
-  `±STEP_SECONDS`) et par le retour au direct (`LiveIndicator.java:87`).
-- Ce qui manque : `ScrubberTrack` (`ui/timeline/components/ScrubberTrack.java`)
-  n'est câblé qu'à la vitesse. Son callback de drag remonte via
-  `TimelineWidget.java:101` vers `applySpeedIndex`
-  (`TimelineWidget.java:155-162`), qui appelle uniquement `clock.setSpeed(...)` —
-  jamais `clock.seek(...)`.
-- Reste à faire :
-  - Décider de la représentation : soit une piste dédiée "scrub" séparée de la
-    piste "vitesse" actuelle (recommandé — éviter de surcharger un seul widget
-    avec deux sémantiques), soit un mode d'interaction distinct sur
-    `ScrubberTrack` (drag court = vitesse, drag long / shift-drag = seek).
-  - Mapper la position de drag vers une `AbsoluteDate` (borne réaliste : plage
-    couverte par l'éphéméride chargée, ou fenêtre glissante autour de `now()`)
-    et appeler `clock.seek(date)`.
-  - Feedback visuel pendant le drag (tooltip date, comme les marqueurs prévus
-    en 2.1) pour que l'utilisateur sache où il va atterrir avant de relâcher.
-  - Vérifier l'interaction avec la vitesse courante : un seek pendant lecture
-    doit-il mettre en pause, ou continuer à jouer depuis la nouvelle date ?
-    (à trancher avec l'utilisateur — cf. *Question ouverte 3*).
+### 0.2 Seek par saisie manuelle d'une date — **P0 / S** — *nouvelle feature*
 
-Fichiers : `ui/timeline/components/ScrubberTrack.java`,
-`ui/timeline/TimelineWidget.java`, `app/SimulationClock.java` (déjà prêt, pas
-de modif attendue sauf besoin de bornes).
+**Besoin.** Amener la simulation à une date **précise** — un survol, une date
+de lancement, un instant relevé dans un log — sans glisser un curseur et sans
+attendre que l'horloge y arrive. La saisie texte est le bon geste ici : elle
+est exacte à la seconde, ce qu'un drag sur 300 px de piste ne sera jamais.
+Aujourd'hui la timeline ne pilote que la **vitesse** de lecture ; la date
+(`ClockDisplay`) est en lecture seule.
 
-### 0.3 Filet d'erreur sur le recompose de mode — **P0 / S**
+*Périmètre resserré par rapport à la version précédente de ce document* : le
+glisser-déposer sur la piste n'est plus dans cet item — il est déplacé en 2.2,
+avec les marqueurs qui en dépendent. Ce n'est pas le besoin exprimé.
 
-- `MissionEntry.setOptimizationType` (`MissionEntry.java:198-209`) appelle
-  `MissionComposer.compose(...)` sans try/catch, contrairement à
-  `MissionWizardAppState.createMission()` qui catch déjà les
-  `RuntimeException` de composition.
-- Envelopper l'appel, garder l'ancienne mission + l'ancien mode si la
-  recomposition échoue, logger et remonter un statut visible (rejoint 1.1 —
-  affichage `FAILED`/erreur dans le panel).
+#### Comportement attendu
+
+1. **Point d'entrée** : le libellé de date de la timeline devient éditable —
+   click → champ de saisie prérempli avec la date courante. (Alternative
+   écartée : un bouton « GOTO » séparé, la capsule fait déjà 600 px pour 5
+   clusters.)
+2. **Format saisi** : celui qui est affiché, `yyyy-MM-dd HH:mm:ss`, en UTC.
+   Accepter aussi l'ISO `yyyy-MM-ddTHH:mm:ssZ` et la date seule `yyyy-MM-dd`
+   (→ `00:00:00`).
+3. **Validation** : `Entrée` valide, `Échap` annule et restaure la date
+   courante, la perte de focus annule (jamais de seek implicite).
+4. **Saisie non parsable** : champ en état erreur, pas de saut, la date
+   courante reste affichée. Pas de modale, pas de log d'erreur.
+5. **Date hors couverture éphéméride** : **refusée**, avec un message donnant
+   l'intervalle admissible — pas de clamp silencieux. Atterrir en 2101 quand on
+   a demandé 2150 est plus déroutant qu'un refus explicite.
+6. **Date acceptée** : `clock.seek(date)`. Vitesse et état lecture/pause
+   inchangés — c'est déjà le contrat documenté de `SimulationClock.seek`
+   (« Does not change playing state », `SimulationClock.java:190`).
+7. **Piège d'implémentation principal** : `TimelineWidget.update()` appelle
+   `clockDisplay.update(clock.now())` **à chaque frame** (`TimelineWidget.java:114`).
+   L'édition doit suspendre ce rafraîchissement, sinon la saisie est effacée
+   pendant la frappe.
+
+#### Bornes admissibles
+
+- **Source de vérité** : `DatasetEphemerisSource`, `[1990-01-01, 2101-01-01[`
+  en TAI (`DatasetEphemerisSource.java:33-35`). Hors de cet intervalle,
+  `sampleIcrf` lève `OrbitlabException`.
+- **Seul vrai manque backend** : ces bornes sont des constantes **privées**.
+  Les exposer (accesseurs sur `DatasetEphemerisSource`, plus des méthodes
+  `default` sur `EphemerisSource` — l'interface reste `@FunctionalInterface`,
+  une seule méthode abstraite), lisibles depuis l'UI via
+  `EphemerisSourceRegistry.get()`.
+- Bornes en **TAI**, saisie en **UTC** : convertir pour le message d'erreur
+  (~37 s d'écart, sans conséquence pratique, mais autant afficher les bornes
+  dans l'échelle où l'utilisateur saisit).
+- **Aucune source publiée** (`EphemerisSourceRegistry.get()` vide) : pas de
+  bornes, accepter toute date parsable — dégradation cohérente avec le repli
+  keplerien de `EphemerisSource.sampleIcrfSafe`.
+
+#### Déjà en place (rien à écrire)
+
+- `SimulationClock.seek(AbsoluteDate)` (`SimulationClock.java:191-206`),
+  thread-safe, émet `SeekPerformed` + `TimeChanged(USER)`. Déjà appelée par le
+  pas-à-pas (`TransportControls.java:43,52`) et le retour au direct
+  (`LiveIndicator.java:87`).
+- **Le saut arbitraire est déjà géré côté données** : `EphemerisAppState`
+  s'abonne à `SeekPerformed` et déclenche `EphemerisWorker.onSeek(newTime)`
+  (`EphemerisAppState.java:100-106`), qui reconstruit la fenêtre glissante en
+  entier. Un saut de 50 ans n'est pas plus coûteux à câbler qu'un saut de 5
+  minutes.
+- Champ de saisie stylé : `UiKit.newInputField(...)`, déjà utilisé pour la date
+  de lancement du wizard (`StepParameters.java:92`).
+- **Attention, deux formats de date coexistent dans l'app** :
+  `TimeConverter.formatDate` produit `2030-03-14 09:26:53` (affiché par la
+  timeline) tandis que `OrekitTime.formatDate` produit
+  `2030-03-14T09:26:53Z` (écrit par le wizard, reparsé par
+  `new AbsoluteDate(String, utc)` dans `MissionWizardAppState.java:72`). Le
+  parseur du champ doit accepter les deux, sinon un copier-coller d'un bout à
+  l'autre de l'app échoue.
+
+#### Critères d'acceptation
+
+1. Saisir `2030-03-14 09:26:53` → la simulation saute à cette date, le libellé
+   l'affiche, les corps se repositionnent une fois la fenêtre reconstruite.
+2. `2150-01-01` → refus, message indiquant l'intervalle, aucun saut.
+3. `hier` → refus, aucun saut, aucune exception dans les logs.
+4. `Échap` en cours d'édition → état strictement inchangé.
+5. Seek pendant une lecture à 100× → la lecture continue depuis la nouvelle
+   date, à la même vitesse.
+6. Après un seek accepté, **aucun** `Unexpected error in ephemeris worker tick`
+   dans les logs — le worker attrape les `Throwable` par tick
+   (`EphemerisWorker.java:103`), donc une borne mal validée se manifesterait
+   par un spam d'erreurs et des corps figés, pas par un crash.
+
+Fichiers : `ui/timeline/components/ClockDisplay.java` (édition inline),
+`ui/timeline/TimelineWidget.java` (suspendre le refresh pendant l'édition,
+câbler le seek), `simulation/source/DatasetEphemerisSource.java` +
+`simulation/source/EphemerisSource.java` (exposer les bornes),
+`app/converters/TimeConverter.java` (helper de parsing tolérant, à ajouter).
+Pas de modif attendue : `app/SimulationClock.java`,
+`states/ephemeris/EphemerisAppState.java`.
+
+### 0.3 Filet d'erreur sur le recompose de mode — **✔ FAIT (2026-07-27)**
+
+`MissionEntry.setOptimizationType` compose désormais sous `try` et ne publie
+rien tant que la composition n'a pas réussi.
+
+- **Ordre des affectations corrigé au passage** : `this.optimizationType` était
+  affecté *avant* `compose(...)`. Même enveloppé, l'ancien code aurait laissé
+  l'entrée avec un mode ne correspondant plus à sa mission. Mode, mission,
+  invalidation résultat/éphéméride sont maintenant publiés ensemble, après
+  succès.
+- Sur `RuntimeException` : log `error` (mode visé, mission, mode conservé,
+  exception), `mission.setStatus(MissionStatus.FAILED)`, retour — ancienne
+  mission, ancien mode, résultat et éphéméride tous intacts.
+- **Aucun changement UI nécessaire** : `MissionPanelWidget.onSetMode` appelle
+  déjà `refresh()`, et `ModeSegmentedControl` ne garde pas d'état de sélection
+  (il lit `entry.getOptimizationType()` au build) — la ligne se reconstruit
+  avec l'ancien mode toujours actif et le statut `FAILED`.
+- Effet de bord assumé : `FAILED` bloque `TOGGLE_VISIBLE` (gaté sur `READY`,
+  `MissionOrchestratorAppState.java:126`). Une mission déjà affichée reste
+  rendue mais n'est plus re-togglable avant recalcul.
+- **Pas de test unitaire** : `MissionComposer.compose` est aujourd'hui total
+  pour tout `MissionSpec` constructible (interface scellée sur `Leo`/`Geo`,
+  aucun constructeur traversé ne valide ni ne lève). Forcer un échec
+  demanderait un seam d'injection dans `MissionEntry` — plus coûteux que le
+  filet lui-même. Le garde-fou vise le jour où GEO gagne un mode CMA-ES.
 
 Fichier : `simulation/mission/context/MissionEntry.java`.
 
@@ -146,12 +231,17 @@ getOptimizerResult()`), l'absence de vue détail est plus visible qu'avant.
   lignes 78-86) — jamais de lecture de `MissionOptimizerResult`.
 - Ajouter une zone de détails (extension du footer ou sous-panel) affichée sur
   sélection d'une ligne :
-  - Type (une fois 0.1 fait), statut, mode d'optimisation courant, scheduled
-    date, launch site.
+  - Type (déjà disponible via `MissionTypes.label()` depuis 0.1), statut, mode
+    d'optimisation courant, scheduled date, launch site.
   - Liste des stages (nom, durée, Δv approx).
   - Pour `READY` : altitude finale, inclinaison finale, écart à la cible —
     lit `entry.getOptimizerResult()`.
-  - Pour `FAILED` : message d'erreur lisible (rejoint 0.3).
+  - Pour `FAILED` : message d'erreur lisible. 0.3 pose déjà le statut mais **ne
+    conserve pas le message** — l'exception n'est que loguée, ni
+    `MissionEntry` ni `Mission` ne la stockent. Cet item doit donc ajouter le
+    champ (ex. `MissionEntry.lastError`) et le renseigner aux deux endroits qui
+    passent en `FAILED` : `MissionEntry.setOptimizationType` et
+    `MissionOrchestratorAppState.java:179`.
 - Réutiliser `FormStyles` / `UiKit`.
 
 Fichiers : `ui/mission/panel/PanelFooter.java` (ou nouveau
@@ -188,9 +278,10 @@ mesurées à respecter :
   fausse. Préférer un indicateur indéterminé (spinner) avec le nombre
   d'évaluations écoulées en texte, plutôt qu'une vraie barre de progression.
 - Le mode `PRECISE` (GEO en particulier) peut désormais **lever une exception**
-  pour des charges où la GT ne consomme pas S1 (cf. mémoire I7) — le wizard/panel
-  n'a aucune gestion d'erreur pour ce cas. À couvrir en même temps que 1.1
-  (affichage `FAILED`) et 0.3 (filet d'erreur).
+  pour des charges où la GT ne consomme pas S1 (cf. mémoire I7). Ce cas-là est
+  déjà rattrapé côté calcul (`MissionOrchestratorAppState.java:178-181`, statut
+  `FAILED`), et 0.3 a fermé le trou symétrique côté toggle de mode. Ce qui
+  manque encore est le **message** rendu à l'utilisateur — à traiter avec 1.1.
 
 Fichiers : `states/mission/*` (état de calcul déjà suivi via `MissionStatus`),
 `ui/mission/panel/MissionRow.java`, `ui/mission/panel/PanelFooter.java`.
@@ -208,26 +299,53 @@ Fichiers : `states/mission/*` (état de calcul déjà suivi via `MissionStatus`)
 
 ## Phase 2 — Timeline & navigation 3D (P1/P2)
 
-### 2.1 Marqueurs d'événements sur la timeline — **P1 / M**
+### 2.1 Piste indexée sur le temps + marqueurs d'événements — **P1 / M**
 
-Dépend de 0.2 (seek) : les marqueurs n'ont de sens que si cliquer dessus peut
-effectivement sauter à cette date.
+Ne dépend **pas** de 0.2 : `clock.seek(...)` existe déjà et 0.2 ne fait que
+l'appeler depuis un champ texte. Ce qui manque ici est autre chose — une piste
+qui représente le **temps** et non la vitesse.
 
-- `ScrubberTrack` n'a aucune notion de mission ou de stage aujourd'hui — ni le
-  fichier ni `TimelineWidget` ne référencent `MissionEntry`/`MissionStage`.
-  Les graduations actuelles (`TICK_COUNT = 21`) sont décoratives, indexées sur
-  la vitesse, pas sur le temps de simulation.
-- Pour la mission sélectionnée (ou toutes les missions visibles), poser des
-  marqueurs aux transitions de stages : vertical ascent → gravity turn,
-  gravity turn → parking/Hohmann, apoapsis/periapsis/trim burn, mass
+- `ScrubberTrack` n'a aucune notion de mission, de stage ni même de date : ni
+  le fichier ni `TimelineWidget` ne référencent `MissionEntry`/`MissionStage`,
+  et les graduations (`TICK_COUNT = 21`) sont décoratives, indexées sur la
+  vitesse. **Premier travail : définir la fenêtre temporelle représentée par la
+  piste** (durée de la mission sélectionnée ? fenêtre glissante autour de
+  `now()` ?) et la fonction temps ↔ position.
+- Sur cette base, poser des marqueurs aux transitions de stages pour la mission
+  sélectionnée (ou toutes les missions visibles) : vertical ascent → gravity
+  turn, gravity turn → parking/Hohmann, apoapsis/periapsis/trim burn, mass
   depletion.
 - Hover marqueur → tooltip nom du stage + timestamp ; click → `clock.seek(...)`
-  sur ce timestamp (réutilise 0.2).
+  sur ce timestamp.
+- Reste en **lecture + click discret** : le glisser continu est en 2.2.
 
 Fichiers : `ui/timeline/components/ScrubberTrack.java`,
 `ui/timeline/TimelineWidget.java`.
 
-### 2.2 Breadcrumb de navigation 3D — **P2 / M** *(rétrogradé de P1)*
+### 2.2 Scrub continu (glisser sur la piste) — **P2 / M** *(extrait de 0.2)*
+
+Faisait partie de l'ancien item 0.2, retiré parce que le besoin réel est la
+saisie d'une date exacte. Le drag reste utile pour l'exploration approximative
+(« qu'est-ce qui se passe vers le milieu de la mission ? »), mais il est
+subordonné à 2.1 : sans piste indexée sur le temps, il n'y a rien à parcourir.
+
+- Aujourd'hui le callback de drag de `ScrubberTrack` remonte via
+  `TimelineWidget.java:101` vers `applySpeedIndex`
+  (`TimelineWidget.java:155-162`), qui n'appelle que `clock.setSpeed(...)` —
+  jamais `clock.seek(...)`.
+- Trancher la cohabitation des deux sémantiques sur un même widget : piste
+  « scrub » dédiée séparée de la piste « vitesse » (recommandé), ou modes
+  d'interaction distincts (drag court = vitesse, shift-drag = seek).
+- Feedback pendant le drag : tooltip de la date visée avant relâchement —
+  sinon l'utilisateur navigue à l'aveugle.
+- Attention au débit de seeks : chaque `seek` déclenche une reconstruction
+  complète de la fenêtre éphéméride (`EphemerisWorker.onSeek`). Un drag émet
+  potentiellement un seek par frame → n'émettre qu'au relâchement, ou étrangler.
+
+Fichiers : `ui/timeline/components/ScrubberTrack.java`,
+`ui/timeline/TimelineWidget.java`.
+
+### 2.3 Breadcrumb de navigation 3D — **P2 / M** *(rétrogradé de P1)*
 
 Suit intégralement la spec `specs/navigation/01-breadcrumb.md`. Aucun fichier
 n'existe encore (`ui/breadcrumb/`, `states/scene/BreadcrumbWidgetAppState.java`
@@ -308,9 +426,14 @@ Fichier :
 2. **Auto-optimisation** : après création depuis le wizard, on déclenche
    automatiquement l'optimisation, ou on laisse l'utilisateur cliquer "compute"
    depuis le panel comme aujourd'hui (comportement actuel confirmé, voir 1.4) ?
-3. **Seek pendant lecture** (nouvelle, liée à 0.2) : un seek déclenché pendant
-   que la simulation joue doit-il mettre en pause automatiquement, ou continuer
-   à jouer depuis la nouvelle date ?
+3. **Seek pendant lecture** (liée à 0.2) : ~~mettre en pause automatiquement ou
+   continuer à jouer ?~~ **Défaut retenu : on ne touche pas à l'état de
+   lecture**, c'est le contrat déjà documenté de `SimulationClock.seek` et le
+   comportement des boutons pas-à-pas existants. À rouvrir seulement si
+   l'usage montre qu'atterrir en pleine lecture à 100× est désagréable.
+4. **Bornes hors couverture** (liée à 0.2) : ~~refuser ou clamper une date hors
+   dataset ?~~ **Tranché : refus explicite** avec affichage de l'intervalle
+   admissible (cf. 0.2, comportement 5).
 
 ---
 
@@ -318,18 +441,25 @@ Fichier :
 
 | Item | Priorité | Difficulté |
 |---|---|---|
-| 0.1 Réparer l'étiquette de type (panel) | P0 | S |
-| 0.2 Seek timeline (édition de date) | P0 | M |
-| 0.3 Filet d'erreur sur recompose de mode | P0 | S |
+| ~~0.1 Réparer l'étiquette de type (panel)~~ | ✔ FAIT | S |
+| ~~0.3 Filet d'erreur sur recompose de mode~~ | ✔ FAIT | S |
+| **0.2 Seek par saisie manuelle d'une date** | **P0** | **S** |
 | 1.1 Détail mission (panel) | P1 | M |
 | 1.2 Action Edit (panel) | P1 | M |
 | 1.3 Feedback progression optimisation | P1 | M |
 | 1.4 Polish général | P1 | S |
-| 2.1 Marqueurs timeline | P1 | M |
-| 2.2 Breadcrumb 3D | P2 | M |
+| 2.1 Piste indexée temps + marqueurs | P1 | M |
+| 2.2 Scrub continu (drag) | P2 | M |
+| 2.3 Breadcrumb 3D | P2 | M |
 | 3.1 Rendezvous simulation | P2 | L |
 | 3.2 Rendezvous test | P2 | M |
 | 3.3 Rendezvous wizard | P2 | M |
+
+Changements de priorité de cette révision : 0.2 passe de **M à S** (le drag et
+son feedback en sortent, il ne reste qu'un champ texte, un parseur et
+l'exposition des bornes) ; le drag devient **2.2 / P2**, subordonné à 2.1 qui
+doit d'abord donner un sens temporel à la piste ; le breadcrumb glisse en 2.3
+sans changer de priorité.
 
 Hors scope court terme (à backlogger) : persistance des missions
 (save/load), command palette, vue multi-mission comparée, télémétrie
@@ -351,10 +481,9 @@ Historique, conservé pour traçabilité. Tous les items ci-dessous sont **✔ F
 | `StepParameters` paramétré par type (LEO/GEO) | ✔ `StepParameters.java:45-82,133-137` |
 | `MissionWizardAppState.createMission()` branché GEO | ✔ `MissionWizardAppState.java:63-83`, via `MissionFactory.specFromWizardValues` + `MissionComposer.compose` |
 | Seed GEO codé en dur retiré | ✔ `MissionPanelWidgetAppState.java` ne contient plus de `GEOMission(...)` |
-| `Mission.getType()` / étiquette panel | ✘ jamais fait tel quel — remplacé par `MissionSpec.type()`, mais `MissionTypes.label()` ne le lit pas encore (→ Phase 0.1) |
+| `Mission.getType()` / étiquette panel | ✔ autrement — `Mission.getType()` jamais ajouté, le type est porté par `MissionSpec.type()` et lu par `MissionTypes.label()` depuis le 2026-07-27 (Phase 0.1) |
 
-Le dernier item explique pourquoi Phase 0.1 existe : le plan initial prévoyait
+Le dernier item explique pourquoi Phase 0.1 a existé : le plan initial prévoyait
 d'ajouter le type directement sur `Mission`, mais le framework de composition
-qui a été construit à la place porte déjà cette information sur `MissionSpec` —
-il ne restait qu'à faire lire `MissionTypes.label()` depuis là, ce qui n'a pas
-été fait.
+construit à la place porte déjà cette information sur `MissionSpec` — il ne
+restait qu'à faire lire `MissionTypes.label()` depuis là. C'est fait.
