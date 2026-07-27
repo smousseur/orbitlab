@@ -23,9 +23,8 @@ import com.simsilica.lemur.focus.FocusChangeEvent;
 import com.simsilica.lemur.focus.FocusChangeListener;
 import com.smousseur.orbitlab.app.SimulationClock;
 import com.smousseur.orbitlab.app.converters.TimeConverter;
-import com.smousseur.orbitlab.simulation.source.EphemerisSource;
-import com.smousseur.orbitlab.simulation.source.EphemerisSourceRegistry;
 import com.smousseur.orbitlab.ui.AppStyles;
+import com.smousseur.orbitlab.ui.EphemerisWindow;
 import com.smousseur.orbitlab.ui.timeline.TimelineStyles;
 import java.util.Optional;
 import org.orekit.time.AbsoluteDate;
@@ -264,14 +263,8 @@ public class ClockDisplay {
       return;
     }
     AbsoluteDate target = parsed.get();
-    Optional<EphemerisSource> source = EphemerisSourceRegistry.get();
-    AbsoluteDate start = source.flatMap(EphemerisSource::coverageStart).orElse(null);
-    AbsoluteDate endExclusive = source.flatMap(EphemerisSource::coverageEndExclusive).orElse(null);
-    boolean outside =
-        (start != null && target.compareTo(start) < 0)
-            || (endExclusive != null && target.compareTo(endExclusive) >= 0);
-    if (outside) {
-      reject("date hors couverture ephemeride", coverageRange(start, endExclusive));
+    if (!EphemerisWindow.covers(target)) {
+      reject("date hors couverture ephemeride", EphemerisWindow.rangeLabel().orElse(""));
       return;
     }
     endEdit();
@@ -303,13 +296,6 @@ public class ClockDisplay {
       hintTitle.removeFromParent();
       hintDetail.removeFromParent();
     }
-  }
-
-  /** Bounds are held in TAI; they are shown in UTC, the scale the field is typed in. */
-  private static String coverageRange(AbsoluteDate start, AbsoluteDate endExclusive) {
-    String from = start == null ? "..." : TimeConverter.formatDate(start);
-    String to = endExclusive == null ? "..." : TimeConverter.formatDate(endExclusive);
-    return from + " -> " + to;
   }
 
   private static Label hintLabel(ColorRGBA color) {

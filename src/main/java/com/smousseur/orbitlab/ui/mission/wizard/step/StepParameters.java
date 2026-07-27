@@ -11,9 +11,11 @@ import com.simsilica.lemur.component.BoxLayout;
 import com.simsilica.lemur.component.QuadBackgroundComponent;
 import com.simsilica.lemur.event.*;
 import com.smousseur.orbitlab.app.OrekitTime;
+import com.smousseur.orbitlab.app.converters.TimeConverter;
 import com.smousseur.orbitlab.core.OrbitlabException;
 import com.smousseur.orbitlab.simulation.mission.context.MissionContext;
 import com.smousseur.orbitlab.simulation.mission.MissionType;
+import com.smousseur.orbitlab.ui.EphemerisWindow;
 import com.smousseur.orbitlab.ui.UiKit;
 import com.smousseur.orbitlab.ui.form.FormStyles;
 import com.smousseur.orbitlab.ui.mission.wizard.FormField;
@@ -25,6 +27,7 @@ import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import org.orekit.time.AbsoluteDate;
 
 public class StepParameters implements StepValues {
 
@@ -34,12 +37,20 @@ public class StepParameters implements StepValues {
   public static final float LABEL_FIELD_GAP = 6f;
   public static final float LABEL_ICON_SIZE = 14f;
 
+  private static final String LAUNCH_DATE_HELPER = "UTC · Orekit epoch";
+  private static final String LAUNCH_DATE_FORMAT_HELPER =
+      "format attendu : yyyy-MM-dd HH:mm:ss (UTC)";
+
   private final Container root;
   private final MissionContext missionContext;
   private final Label titleLabel;
 
   private final TextField missionNameField;
   private final TextField launchDateField;
+  private final Label launchDateHelper;
+
+  /** Entry that was refused, kept so the error state clears as soon as it is edited. */
+  private String rejectedLaunchDate;
 
   private DynamicParameters dynamicParameters;
   private final EnumMap<MissionType, DynamicParameters> dynamicParametersMap =
@@ -92,9 +103,9 @@ public class StepParameters implements StepValues {
     launchDateField = newInputField(OrekitTime.utcNowString(), FIELD_W, FIELD_H);
     root.addChild(launchDateField);
     root.addChild(UiKit.vSpacer(LABEL_FIELD_GAP));
-    Label helper = root.addChild(new Label("UTC · Orekit epoch", FormStyles.STYLE));
-    helper.setFont(UiKit.ibmPlexMono(11));
-    helper.setColor(FormStyles.TEXT_LO);
+    launchDateHelper = root.addChild(new Label(LAUNCH_DATE_HELPER, FormStyles.STYLE));
+    launchDateHelper.setFont(UiKit.ibmPlexMono(11));
+    launchDateHelper.setColor(FormStyles.TEXT_LO);
 
     for (DynamicParameters params : dynamicParametersMap.values()) {
       CursorEventControl.addListenersToSpatial(
@@ -133,7 +144,49 @@ public class StepParameters implements StepValues {
   public void update(float tpf) {
     MissionType selectedMissionType = missionContext.getSelectedMissionType();
     titleLabel.setText("PARAMETERS " + selectedMissionType);
+    if (rejectedLaunchDate != null && !rejectedLaunchDate.equals(launchDateField.getText())) {
+      clearLaunchDateRejection();
+    }
     updateDynamicParameters(tpf);
+  }
+
+  /**
+   * Checks the launch date and marks the field when it cannot be used, so a bad entry is caught
+   * while the wizard is still open rather than swallowed at mission creation.
+   *
+   * <p>Accepts the same entries as the timeline date field, including the ISO form this very field
+   * is prefilled with.
+   *
+   * @return the reason the date was refused, or empty when it is usable
+   */
+  public Optional<String> validateLaunchDate() {
+    String text = launchDateField.getText();
+    Optional<AbsoluteDate> parsed = TimeConverter.parseUtcDate(text);
+    if (parsed.isEmpty()) {
+      return Optional.of(rejectLaunchDate(text, LAUNCH_DATE_FORMAT_HELPER));
+    }
+    if (!EphemerisWindow.covers(parsed.get())) {
+      return Optional.of(
+          rejectLaunchDate(
+              text, "hors couverture ephemeride : " + EphemerisWindow.rangeLabel().orElse("")));
+    }
+    clearLaunchDateRejection();
+    return Optional.empty();
+  }
+
+  private String rejectLaunchDate(String text, String message) {
+    rejectedLaunchDate = text;
+    launchDateField.setColor(FormStyles.DANGER);
+    launchDateHelper.setText(message);
+    launchDateHelper.setColor(FormStyles.DANGER);
+    return message;
+  }
+
+  private void clearLaunchDateRejection() {
+    rejectedLaunchDate = null;
+    launchDateField.setColor(FormStyles.TEXT_PRIMARY);
+    launchDateHelper.setText(LAUNCH_DATE_HELPER);
+    launchDateHelper.setColor(FormStyles.TEXT_LO);
   }
 
   private void updateDynamicParameters(float tpf) {

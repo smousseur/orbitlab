@@ -45,11 +45,24 @@ public final class TimeConverter {
     return LocalDateTime.ofInstant(instant, ZoneOffset.UTC);
   }
 
-  /** Converts a {@link LocalDateTime} interpreted as UTC to an Orekit {@link AbsoluteDate}. */
+  /**
+   * Converts a {@link LocalDateTime} interpreted as UTC to an Orekit {@link AbsoluteDate}.
+   *
+   * <p>Built from calendar components rather than from a {@link Date}: Orekit's {@code
+   * AbsoluteDate(Date, TimeScale)} splits the epoch milliseconds with {@code /} and {@code %}, which
+   * both truncate towards zero, so any instant before 1970 yields a negative seconds-in-day and
+   * throws.
+   */
   public static AbsoluteDate fromUtcLocalDateTime(LocalDateTime utcDateTime) {
     Objects.requireNonNull(utcDateTime, "utcDateTime");
-    Instant instant = utcDateTime.toInstant(ZoneOffset.UTC);
-    return new AbsoluteDate(Date.from(instant), UTC);
+    return new AbsoluteDate(
+        utcDateTime.getYear(),
+        utcDateTime.getMonthValue(),
+        utcDateTime.getDayOfMonth(),
+        utcDateTime.getHour(),
+        utcDateTime.getMinute(),
+        utcDateTime.getSecond() + utcDateTime.getNano() / 1_000_000_000.0,
+        UTC);
   }
 
   /**

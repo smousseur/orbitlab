@@ -20,6 +20,7 @@ import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Consumer;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -164,11 +165,27 @@ public class MissionWizardWidget implements AutoCloseable {
 
   public void goNext() {
     if (currentStep == MissionWizardStep.LAUNCHER) {
+      // Checked again here, and not only when leaving the parameters step, because the stepper lets
+      // the user jump over it.
+      if (launchDateRefused()) {
+        showStep(MissionWizardStep.PARAMETERS);
+        return;
+      }
       onCreate.accept(getAllValues());
+      return;
+    }
+    if (currentStep == MissionWizardStep.PARAMETERS && launchDateRefused()) {
       return;
     }
     MissionWizardStep next = currentStep.next();
     if (next != null) showStep(next);
+  }
+
+  /** Keeps the wizard open on a launch date the application cannot use, field marked. */
+  private boolean launchDateRefused() {
+    Optional<String> error = stepParameters.validateLaunchDate();
+    error.ifPresent(reason -> logger.info("Wizard: launch date refused ({})", reason));
+    return error.isPresent();
   }
 
   /** Aggregates values from every step. Throws if two steps publish the same key. */

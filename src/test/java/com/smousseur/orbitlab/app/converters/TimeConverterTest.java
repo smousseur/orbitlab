@@ -10,6 +10,7 @@ import org.orekit.time.TimeScalesFactory;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class TimeConverterTest {
@@ -85,6 +86,30 @@ class TimeConverterTest {
     assertEquals(Optional.empty(), TimeConverter.parseUtcDate("2030-03-14 09:26"));
     assertEquals(Optional.empty(), TimeConverter.parseUtcDate(""));
     assertEquals(Optional.empty(), TimeConverter.parseUtcDate(null));
+  }
+
+  /**
+   * The field feeds a Lemur key handler: anything thrown here escapes into the input loop, so
+   * parsing must be total whatever is typed. Whether an entry is refused as a bad format or accepted
+   * and then refused by the coverage bounds is not the point.
+   */
+  @Test
+  void parseUtcDate_neverThrowsOnHostileInput() {
+    assertDoesNotThrow(() -> TimeConverter.parseUtcDate("12345-01-01 00:00:00"));
+    assertDoesNotThrow(() -> TimeConverter.parseUtcDate("0000-00-00 00:00:00"));
+    assertDoesNotThrow(() -> TimeConverter.parseUtcDate("-0001-01-01"));
+    assertDoesNotThrow(() -> TimeConverter.parseUtcDate("9999-12-31 23:59:60"));
+    assertDoesNotThrow(() -> TimeConverter.parseUtcDate("T"));
+  }
+
+  @Test
+  void parseUtcDate_acceptsDatesBeforeTheJavaEpoch() {
+    AbsoluteDate expected = new AbsoluteDate(1962, 5, 3, 12, 0, 0.0, UTC);
+
+    assertEquals(Optional.of(expected), TimeConverter.parseUtcDate("1962-05-03 12:00:00"));
+    assertEquals(
+        Optional.of(new AbsoluteDate(1, 1, 1, 0, 0, 0.0, UTC)),
+        TimeConverter.parseUtcDate("0001-01-01"));
   }
 
   @Test

@@ -3,6 +3,7 @@ package com.smousseur.orbitlab.states.mission;
 import com.jme3.app.Application;
 import com.jme3.app.state.BaseAppState;
 import com.smousseur.orbitlab.app.ApplicationContext;
+import com.smousseur.orbitlab.app.converters.TimeConverter;
 import com.smousseur.orbitlab.engine.events.EventBus;
 import com.smousseur.orbitlab.simulation.mission.operation.MissionFactory;
 import com.smousseur.orbitlab.simulation.mission.operation.MissionSpec;
@@ -12,10 +13,9 @@ import com.smousseur.orbitlab.ui.mission.wizard.MissionWizardWidget;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.orekit.time.AbsoluteDate;
-import org.orekit.time.TimeScale;
-import org.orekit.time.TimeScalesFactory;
 
 import java.util.Map;
+import java.util.Optional;
 
 public final class MissionWizardAppState extends BaseAppState {
   private static final Logger logger = LogManager.getLogger(MissionWizardAppState.class);
@@ -68,13 +68,19 @@ public final class MissionWizardAppState extends BaseAppState {
       logger.warn("Mission '{}' already exists, creation ignored", name);
       return;
     }
-    TimeScale utc = TimeScalesFactory.getUTC();
-    AbsoluteDate missionDate = new AbsoluteDate(values.get("LAUNCH_DATE").toString(), utc);
+    // Second line of defence behind the wizard's own validation: this runs in the render loop, and
+    // Orekit's string constructor throws on anything it dislikes — including any date before 1970.
+    Object rawDate = values.get("LAUNCH_DATE");
+    Optional<AbsoluteDate> missionDate = TimeConverter.parseUtcDate(String.valueOf(rawDate));
+    if (missionDate.isEmpty()) {
+      logger.error("Mission creation failed for '{}': unusable launch date '{}'", name, rawDate);
+      return;
+    }
     try {
       MissionSpec spec =
           MissionFactory.specFromWizardValues(values, missionContext.getSelectedMissionType());
       MissionEntry missionEntry = new MissionEntry(spec);
-      missionEntry.setScheduledDate(missionDate);
+      missionEntry.setScheduledDate(missionDate.get());
       missionContext.addMission(missionEntry);
     } catch (RuntimeException e) {
       // A bad wizard value must not crash the render loop; the mission is simply not created.

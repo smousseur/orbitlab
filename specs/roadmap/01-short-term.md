@@ -136,6 +136,14 @@ Autres écarts, à connaître :
 - **Parsing STRICT** : `DateTimeFormatter.ofPattern` résout en SMART par défaut
   et ramenait silencieusement `2030-02-31` au 28. Refusé désormais — cohérent
   avec le refus de clamp sur les bornes.
+- **Bug préexistant corrigé dans `TimeConverter.fromUtcLocalDateTime`** : le
+  passage par `java.util.Date` faisait lever Orekit
+  (`out of range seconds number`) pour **toute date antérieure à 1970**, le
+  constructeur `AbsoluteDate(Date, TimeScale)` découpant l'epoch en `/` et `%`
+  qui tronquent vers zéro. La conversion se fait désormais par composantes
+  calendaires ; ces dates sont donc parsées puis refusées normalement par les
+  bornes. Le parseur est couvert par un test de totalité : rien de ce qui est
+  tapé ne doit remonter dans la boucle clavier de Lemur.
 - **Saisie invalide → le champ reste ouvert** en état erreur (au lieu de se
   refermer), pour corriger la faute de frappe sans tout retaper.
 - **Message d'erreur hors capsule** : il n'y a pas 224 px à l'intérieur pour un
@@ -145,9 +153,21 @@ Autres écarts, à connaître :
   (`coverageStart` / `coverageEndExclusive`) : l'interface reste
   `@FunctionalInterface`, les sources analytiques renvoient `Optional.empty()`.
 
-Couvert par des tests : le parseur tolérant (`TimeConverterTest`, 5 cas). **Non
-vérifié à l'écran** : les critères d'acceptation 1 à 6 ci-dessous demandent
-l'application lancée.
+Couvert par des tests : le parseur tolérant (`TimeConverterTest`, 7 cas dont les
+dates antérieures à 1970 et la totalité du parseur). **Non vérifié à l'écran** :
+les critères d'acceptation 1 à 6 ci-dessous demandent l'application lancée.
+
+**Extension hors périmètre 0.2 — la date de lancement du wizard.** Même geste
+utilisateur, même faiblesse : `MissionWizardAppState.createMission` reparsait la
+valeur avec `new AbsoluteDate(String, utc)`, **hors du `try`**, donc dans la
+boucle de rendu. Aligné sur la timeline : `StepParameters.validateLaunchDate()`
+refuse format invalide et date hors couverture, en teignant le champ et en
+remplaçant le libellé d'aide (`UTC · Orekit epoch`) par la raison du refus ;
+`MissionWizardWidget.goNext()` bloque le passage à l'étape suivante **et** la
+création, donc le wizard ne se ferme plus sur une date inutilisable ;
+l'`AppState` garde un filet qui log et ne crée rien. La politique de couverture
+commune aux deux widgets est dans `ui/EphemerisWindow.java` (`covers`,
+`rangeLabel`), pour que les deux refusent la même chose avec les mêmes mots.
 
 Fichiers : `ui/timeline/components/ClockDisplay.java`,
 `ui/timeline/TimelineStyles.java`, `app/converters/TimeConverter.java`,
