@@ -3,6 +3,7 @@ package com.smousseur.orbitlab.simulation.source;
 import com.smousseur.orbitlab.core.OrbitlabException;
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.simulation.ephemeris.BodySample;
+import java.util.Optional;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.orekit.propagation.analytical.KeplerianPropagator;
 import org.orekit.time.AbsoluteDate;
@@ -24,6 +25,29 @@ public interface EphemerisSource {
    * @return the body sample containing position/velocity and rotation data
    */
   BodySample sampleIcrf(SolarSystemBody body, AbsoluteDate date);
+
+  /**
+   * Returns the earliest date this source can sample, when it has a bounded coverage.
+   *
+   * <p>Sources with no intrinsic limit (analytic propagation) return an empty optional. The date is
+   * expressed in the source's own time scale; callers displaying it must convert.
+   *
+   * @return the first sampleable date, or empty if the source is unbounded
+   */
+  default Optional<AbsoluteDate> coverageStart() {
+    return Optional.empty();
+  }
+
+  /**
+   * Returns the first date beyond this source's coverage (exclusive upper bound), when it has a
+   * bounded coverage.
+   *
+   * @return the first non-sampleable date after the covered range, or empty if the source is
+   *     unbounded
+   */
+  default Optional<AbsoluteDate> coverageEndExclusive() {
+    return Optional.empty();
+  }
 
   /**
    * Propagates a Keplerian orbit to the given date and returns the resulting position/velocity

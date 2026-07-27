@@ -131,6 +131,16 @@ public final class TimelineStyles {
     label.set("font", defaultLabel);
     label.set("fontSize", 12f);
 
+    // Inline date editing: the field carries no background of its own — the box behind it is drawn
+    // by ClockDisplay so that the read-only label and the field share the exact same text origin.
+    Attributes textField = styles.getSelector("textField", STYLE);
+    textField.set("color", AppStyles.TL_CYAN);
+    textField.set("font", UiKit.mono(12));
+    textField.set("fontSize", 12f);
+    textField.set("insets", new Insets3f(0, 0, 0, 0));
+    textField.set("background", null);
+    textField.set("singleLine", true);
+
     Attributes button = styles.getSelector("button", STYLE);
     button.set("color", AppStyles.TL_TEXT_DIM);
     button.set("font", defaultLabel);

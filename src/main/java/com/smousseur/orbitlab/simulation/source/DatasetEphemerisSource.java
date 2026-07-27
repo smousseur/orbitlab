@@ -8,6 +8,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.EnumMap;
 import java.util.Objects;
+import java.util.Optional;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hipparchus.geometry.euclidean.threed.Rotation;
@@ -77,6 +78,18 @@ public final class DatasetEphemerisSource
             "Invalid ephemeris dataset file: " + p + " (" + e.getMessage() + ")");
       }
     }
+  }
+
+  /** Dataset coverage lower bound, in TAI. */
+  @Override
+  public Optional<AbsoluteDate> coverageStart() {
+    return Optional.of(DATASET_T_START);
+  }
+
+  /** Dataset coverage upper bound (exclusive), in TAI. */
+  @Override
+  public Optional<AbsoluteDate> coverageEndExclusive() {
+    return Optional.of(DATASET_T_END_EXCL);
   }
 
   @Override

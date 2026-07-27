@@ -24,7 +24,7 @@ import java.util.Objects;
  * <ul>
  *   <li>{@link LiveIndicator} — animated dot + LIVE/PAUSED label
  *   <li>{@link TransportControls} — step-back, play/pause, step-forward
- *   <li>{@link ClockDisplay} — UTC date label
+ *   <li>{@link ClockDisplay} — UTC date label, editable to seek to a typed date
  *   <li>{@link SpeedStepper} — speed ± buttons and label
  *   <li>{@link ScrubberTrack} — timeline scrubber with playhead
  * </ul>

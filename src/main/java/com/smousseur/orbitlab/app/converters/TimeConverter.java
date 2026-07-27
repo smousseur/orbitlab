@@ -1,11 +1,15 @@
 package com.smousseur.orbitlab.app.converters;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.time.format.ResolverStyle;
 import java.util.Date;
 import java.util.Objects;
+import java.util.Optional;
 import org.orekit.time.AbsoluteDate;
 import org.orekit.time.TimeScale;
 import org.orekit.time.TimeScalesFactory;
@@ -22,6 +26,14 @@ public final class TimeConverter {
   private static final TimeScale UTC = TimeScalesFactory.getUTC();
   private static final DateTimeFormatter DATA_FORMATTER =
       DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+  // Parsing is strict on purpose: the default SMART resolver silently folds 2030-02-31 back to the
+  // 28th, and a seek is not the place to guess what the user meant. STRICT requires era-less
+  // "uuuu" rather than "yyyy".
+  private static final DateTimeFormatter PARSE_FORMATTER =
+      DateTimeFormatter.ofPattern("uuuu-MM-dd HH:mm:ss").withResolverStyle(ResolverStyle.STRICT);
+  private static final DateTimeFormatter PARSE_DATE_ONLY_FORMATTER =
+      DateTimeFormatter.ofPattern("uuuu-MM-dd").withResolverStyle(ResolverStyle.STRICT);
+  private static final int DATE_ONLY_LENGTH = "yyyy-MM-dd".length();
 
   private TimeConverter() {}
 
@@ -59,5 +71,43 @@ public final class TimeConverter {
     Objects.requireNonNull(date, "date");
     Instant instant = date.toInstant();
     return instant.atZone(ZoneOffset.UTC).format(DATA_FORMATTER);
+  }
+
+  /**
+   * Parses a user-entered UTC date, accepting the two formats the application itself produces plus a
+   * date-only shorthand:
+   *
+   * <ul>
+   *   <li>{@code yyyy-MM-dd HH:mm:ss} — what {@link #formatDate(AbsoluteDate)} displays
+   *   <li>{@code yyyy-MM-ddTHH:mm:ssZ} — what {@code OrekitTime.formatDate} writes, so a value
+   *       copied from the mission wizard round-trips
+   *   <li>{@code yyyy-MM-dd} — resolved to {@code 00:00:00}
+   * </ul>
+   *
+   * <p>Invalid input yields an empty optional rather than an exception: callers are interactive and
+   * treat a rejected entry as a UI state, not as an error.
+   *
+   * @param text the raw user input (surrounding whitespace is ignored, {@code null} is accepted)
+   * @return the parsed date interpreted as UTC, or empty if the text is not a supported date
+   */
+  public static Optional<AbsoluteDate> parseUtcDate(String text) {
+    if (text == null) {
+      return Optional.empty();
+    }
+    String normalized = text.trim();
+    if (normalized.endsWith("Z") || normalized.endsWith("z")) {
+      normalized = normalized.substring(0, normalized.length() - 1);
+    }
+    normalized = normalized.replace('T', ' ').replace('t', ' ').trim();
+
+    try {
+      LocalDateTime parsed =
+          normalized.length() == DATE_ONLY_LENGTH
+              ? LocalDate.parse(normalized, PARSE_DATE_ONLY_FORMATTER).atStartOfDay()
+              : LocalDateTime.parse(normalized, PARSE_FORMATTER);
+      return Optional.of(fromUtcLocalDateTime(parsed));
+    } catch (DateTimeParseException e) {
+      return Optional.empty();
+    }
   }
 }

@@ -52,19 +52,20 @@ utilisateur ont été **corrigées le 2026-07-27** (détail en Phase 0, items 0.
 2. ~~`MissionEntry.setOptimizationType` recompose sans filet sur le fil JME.~~
    Corrigé : composition sous `try`, rollback complet, statut `FAILED`.
 
-Il ne reste donc en Phase 0 qu'une **feature demandée par l'utilisateur** : le
-seek par saisie manuelle de date sur la timeline (0.2).
+La **feature demandée par l'utilisateur** — le seek par saisie manuelle de date
+sur la timeline (0.2) — a été livrée le même jour. La Phase 0 est donc close ;
+la prochaine priorité est la Phase 1 (panel).
 
 Légende : **P0/P1/P2** = priorité (P0 = doit être fait d'abord) ;
 **S/M/L** = difficulté (Small / Medium / Large).
 
 ---
 
-## Phase 0 — Dette soldée + seek timeline (P0)
+## Phase 0 — Dette soldée + seek timeline (P0) — **close**
 
-La dette issue du chantier GEO/modes est soldée (0.1 et 0.3 ✔, conservés
-ci-dessous pour la traçabilité des écarts d'implémentation). Reste la feature
-seek timeline (0.2), seul item P0 encore ouvert.
+La dette issue du chantier GEO/modes est soldée (0.1 et 0.3 ✔) et la feature
+seek timeline est livrée (0.2 ✔). Les trois items sont conservés ci-dessous
+pour la traçabilité des écarts d'implémentation.
 
 ### 0.1 Réparer l'étiquette de type dans le panel — **✔ FAIT (2026-07-27)**
 
@@ -89,7 +90,75 @@ seek timeline (0.2), seul item P0 encore ouvert.
 Fichiers : `ui/mission/panel/MissionTypes.java`,
 `simulation/mission/MissionType.java`.
 
-### 0.2 Seek par saisie manuelle d'une date — **P0 / S** — *nouvelle feature*
+### 0.2 Seek par saisie manuelle d'une date — **✔ FAIT (2026-07-27)**
+
+Le libellé de date est éditable : clic → champ prérempli, `Entrée` valide,
+`Échap`/perte de focus annulent, refus explicite hors couverture éphéméride.
+
+**Écart principal — la boîte de date était déjà trop petite pour son propre
+texte.** `2030-03-14 09:26:53` mesure **115 px** en `share-tech-mono-12`, dans
+une boîte de 86 px : Lemur impose `box = taille du composant`
+(`TextComponent.reshape`) et `BitmapText` est en `LineWrapMode.Word`, donc la
+date s'affichait **sur deux lignes** avant ce chantier. Un `TextField` au même
+endroit aurait été pire (`TextEntryComponent` force `Clip` + défilement
+horizontal : 14 caractères visibles sur 19, qui défilent pendant la frappe).
+
+Comme l'édition ne doit rien déplacer, le cluster est donc dimensionné une fois
+pour les deux états : **boîte 128 px** (116 px de texte + 2×6 px de padding),
+les 42 px pris sur le scrubber (167 → 125 px, piste décorative aujourd'hui, que
+2.1 doit refaire de toute façon). `LiveIndicator`, `TransportControls` et les
+dividers 1 et 2 ne bougent pas ; la capsule reste 600×52. Les positions du
+divider 3, du stepper et du scrubber se recalculent seules
+(`TimelineWidget` les dérive de `clockDisplay.leftEdge()`).
+
+Autres écarts, à connaître :
+
+- **Alignement à gauche imposé par Lemur** : `resetCursorPosition()` calcule le
+  x du curseur depuis le bord gauche **sans tenir compte du `hAlignment`**. Le
+  libellé est donc passé de `Right` à `Left`, et libellé et champ partagent
+  x, police et ligne de base (alignement sur la ligne de glyphes, pas sur la
+  boîte) — zéro pixel de saut au clic.
+- **Le gel du refresh est dans `ClockDisplay.update()`**, pas dans
+  `TimelineWidget` : l'état d'édition ne fuit pas hors du composant, et
+  `TimelineWidget` garde son appel inconditionnel. Le tick sert alors à
+  effacer l'état d'erreur dès que la saisie change. Idem pour `clock.seek(...)`,
+  appelé par `ClockDisplay` comme `LiveIndicator` le fait déjà.
+- **Style dédié plutôt que `UiKit.newInputField`** : nouveau sélecteur
+  `textField` dans le style `timeline` (mono 12, insets 0, sans fond). Le champ
+  wizard aurait apporté ibmPlexMono 11, insets 8/12 et le 9-slice wizard, soit
+  36 px de haut dans une capsule de 52. La boîte visible (24 px, `btn-hover` au
+  survol / `btn-active` en édition) reprend le gabarit des boutons transport.
+- **`ÉCHAP` doit être ajouté explicitement** à l'action map du champ : son
+  `keyChar` est < 32 donc Lemur ne le consomme pas par défaut. Bonne nouvelle
+  en revanche pour les binds globaux de `SimulationClockAppState` (`ESPACE`,
+  `-`, `=`, `BACKSPACE`, `←`, `→`) : `KeyInterceptState` +
+  `TextEntryComponent.KeyHandler` les consomment tant que le champ a le focus.
+- **Parsing STRICT** : `DateTimeFormatter.ofPattern` résout en SMART par défaut
+  et ramenait silencieusement `2030-02-31` au 28. Refusé désormais — cohérent
+  avec le refus de clamp sur les bornes.
+- **Saisie invalide → le champ reste ouvert** en état erreur (au lieu de se
+  refermer), pour corriger la faute de frappe sans tout retaper.
+- **Message d'erreur hors capsule** : il n'y a pas 224 px à l'intérieur pour un
+  intervalle de dates. Bulle posée au-dessus du cluster, donc aucune géométrie
+  interne touchée. Bornes affichées en UTC (≈ 37 s d'écart avec le TAI stocké).
+- **Bornes exposées par deux méthodes `default`** sur `EphemerisSource`
+  (`coverageStart` / `coverageEndExclusive`) : l'interface reste
+  `@FunctionalInterface`, les sources analytiques renvoient `Optional.empty()`.
+
+Couvert par des tests : le parseur tolérant (`TimeConverterTest`, 5 cas). **Non
+vérifié à l'écran** : les critères d'acceptation 1 à 6 ci-dessous demandent
+l'application lancée.
+
+Fichiers : `ui/timeline/components/ClockDisplay.java`,
+`ui/timeline/TimelineStyles.java`, `app/converters/TimeConverter.java`,
+`simulation/source/EphemerisSource.java`,
+`simulation/source/DatasetEphemerisSource.java`. Non modifiés comme prévu :
+`app/SimulationClock.java`, `states/ephemeris/EphemerisAppState.java` — et
+`ui/timeline/TimelineWidget.java` n'a reçu que des commentaires.
+
+#### Spécification d'origine
+
+*Conservée pour la traçabilité.*
 
 **Besoin.** Amener la simulation à une date **précise** — un survol, une date
 de lancement, un instant relevé dans un log — sans glisser un curseur et sans
@@ -443,7 +512,7 @@ Fichier :
 |---|---|---|
 | ~~0.1 Réparer l'étiquette de type (panel)~~ | ✔ FAIT | S |
 | ~~0.3 Filet d'erreur sur recompose de mode~~ | ✔ FAIT | S |
-| **0.2 Seek par saisie manuelle d'une date** | **P0** | **S** |
+| ~~0.2 Seek par saisie manuelle d'une date~~ | ✔ FAIT | S |
 | 1.1 Détail mission (panel) | P1 | M |
 | 1.2 Action Edit (panel) | P1 | M |
 | 1.3 Feedback progression optimisation | P1 | M |
