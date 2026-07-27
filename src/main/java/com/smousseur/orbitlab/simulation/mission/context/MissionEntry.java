@@ -2,6 +2,7 @@ package com.smousseur.orbitlab.simulation.mission.context;
 
 import com.jme3.math.ColorRGBA;
 import com.smousseur.orbitlab.simulation.mission.Mission;
+import com.smousseur.orbitlab.simulation.mission.MissionStatus;
 import com.smousseur.orbitlab.simulation.mission.OptimizationType;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemeris;
 import com.smousseur.orbitlab.simulation.mission.operation.MissionComposer;
@@ -9,6 +10,8 @@ import com.smousseur.orbitlab.simulation.mission.operation.MissionSpec;
 import com.smousseur.orbitlab.simulation.mission.runtime.MissionOptimizerResult;
 import java.util.Objects;
 import java.util.Optional;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.orekit.time.AbsoluteDate;
 
 /**
@@ -19,6 +22,8 @@ import org.orekit.time.AbsoluteDate;
  * update thread.
  */
 public final class MissionEntry {
+  private static final Logger logger = LogManager.getLogger(MissionEntry.class);
+
   // Non-null only when the entry was built from a spec: that is what lets setOptimizationType
   // recompose the mission for a new mode. Entries wrapping a pre-built mission (legacy path) leave
   // it null and cannot recompose.
@@ -193,6 +198,13 @@ public final class MissionEntry {
    * invalidated: the recomposed mission starts in {@code DRAFT}, so status-gated consumers stop
    * rendering it until it is recomputed (via a fresh {@code OPTIMIZE} action).
    *
+   * <p>This runs on the JME update thread (the panel's mode control calls it directly), so a
+   * composition failure must not escape: the toggle is rolled back — previous mission, previous
+   * mode, previous result and ephemeris all kept — and the failure is surfaced by marking the
+   * retained mission {@code FAILED}, the same signal the orchestrator uses when a computation
+   * blows up. A fresh {@code OPTIMIZE} clears it. Mirrors the {@code RuntimeException} net around
+   * composition in {@code MissionWizardAppState.createMission()}.
+   *
    * @param optimizationType the optimization type
    */
   public void setOptimizationType(OptimizationType optimizationType) {
@@ -200,11 +212,29 @@ public final class MissionEntry {
     if (optimizationType == this.optimizationType) {
       return;
     }
-    this.optimizationType = optimizationType;
-    if (spec != null) {
-      this.mission = MissionComposer.compose(spec, optimizationType);
-      this.optimizerResult = null;
-      this.ephemeris = null;
+    if (spec == null) {
+      // Legacy entry: nothing to recompose, the mode is only recorded.
+      this.optimizationType = optimizationType;
+      return;
     }
+    Mission recomposed;
+    try {
+      recomposed = MissionComposer.compose(spec, optimizationType);
+    } catch (RuntimeException e) {
+      logger.error(
+          "Mode switch to {} failed for mission '{}', keeping mode {}: {}",
+          optimizationType,
+          mission.getName(),
+          this.optimizationType,
+          e.getMessage(),
+          e);
+      mission.setStatus(MissionStatus.FAILED);
+      return;
+    }
+    // Published only once composition succeeded, so a failed toggle leaves a coherent entry.
+    this.optimizationType = optimizationType;
+    this.mission = recomposed;
+    this.optimizerResult = null;
+    this.ephemeris = null;
   }
 }
