@@ -27,6 +27,7 @@ public class PopupList {
   private final Container trigger;
   private final Label valueLabel;
   private final Container popup;
+  private final float width;
   private final float popupDeltaWidth;
   private final float popupDeltaPosX;
   private boolean open = false;
@@ -40,6 +41,7 @@ public class PopupList {
       List<String> options,
       String defaultValue) {
     this.selectedValue = defaultValue;
+    this.width = width;
     this.popupDeltaWidth = popupDeltaWidth;
     this.popupDeltaPosX = popupDeltaPosX;
     // ROOT : purement structurel, on lui retire tout style
@@ -87,6 +89,51 @@ public class PopupList {
     popup.setBackground(popupBg);
     popup.setInsetsComponent(new InsetsComponent(new Insets3f(0, 0, 0, 0)));
 
+    buildOptions(options);
+
+    MouseEventControl.addListenersToSpatial(
+        trigger,
+        new DefaultMouseListener() {
+          @Override
+          public void mouseEntered(MouseMotionEvent evt, Spatial t, Spatial c) {
+            TbtQuadBackgroundComponent focusBg = FormStyles.inputFocusBg();
+            focusBg.setMargin(0, 0);
+            trigger.setBackground(focusBg);
+          }
+
+          @Override
+          public void mouseExited(MouseMotionEvent evt, Spatial t, Spatial c) {
+            if (!open) {
+              TbtQuadBackgroundComponent baseBg = FormStyles.inputBg();
+              baseBg.setMargin(0, 0);
+              trigger.setBackground(baseBg);
+            }
+          }
+
+          @Override
+          public void click(MouseButtonEvent evt, Spatial t, Spatial c) {
+            if (open) closePopup();
+            else openPopup();
+          }
+        });
+  }
+
+  /**
+   * Replaces the options and the current selection. Does not fire the select listener: the caller
+   * stays in charge of the side effects tied to a selection change.
+   *
+   * @param options the new options, in display order
+   * @param selectedValue the value to show on the trigger
+   */
+  public void setOptions(List<String> options, String selectedValue) {
+    closePopup();
+    buildOptions(options);
+    this.selectedValue = selectedValue;
+    valueLabel.setText(selectedValue);
+  }
+
+  private void buildOptions(List<String> options) {
+    popup.clearChildren();
     for (String option : options) {
       Container row = popup.addChild(new Container(new BorderLayout(), (String) null));
       row.setPreferredSize(new Vector3f(width, OPTION_HEIGHT, 0));
@@ -130,32 +177,6 @@ public class PopupList {
             }
           });
     }
-
-    MouseEventControl.addListenersToSpatial(
-        trigger,
-        new DefaultMouseListener() {
-          @Override
-          public void mouseEntered(MouseMotionEvent evt, Spatial t, Spatial c) {
-            TbtQuadBackgroundComponent focusBg = FormStyles.inputFocusBg();
-            focusBg.setMargin(0, 0);
-            trigger.setBackground(focusBg);
-          }
-
-          @Override
-          public void mouseExited(MouseMotionEvent evt, Spatial t, Spatial c) {
-            if (!open) {
-              TbtQuadBackgroundComponent baseBg = FormStyles.inputBg();
-              baseBg.setMargin(0, 0);
-              trigger.setBackground(baseBg);
-            }
-          }
-
-          @Override
-          public void click(MouseButtonEvent evt, Spatial t, Spatial c) {
-            if (open) closePopup();
-            else openPopup();
-          }
-        });
   }
 
   public Container getNode() {

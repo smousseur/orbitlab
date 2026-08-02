@@ -89,6 +89,12 @@ public final class MissionFactory {
             name, configuration, perigeeAlt, apogeeAlt, latitude, longitude, altitude);
       }
       case GEO -> {
+        // The apogee circularization is flown by the payload's kick motor; without one the burn
+        // would only fail during propagation, on a background thread.
+        if (!payloadModel.hasAkm()) {
+          throw new IllegalArgumentException(
+              "GEO mission requires a payload with an apogee kick motor: " + payloadModel.id());
+        }
         double parkingAlt = doubleValue(values, "GTO_PARKING_ALT") * 1000.0;
         PropellantBudget.GeoLoads geoLoads =
             PropellantBudget.loadsForGeo(launcher, payloadModel, payloadMass, parkingAlt, latitude);

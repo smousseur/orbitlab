@@ -86,6 +86,20 @@ class MissionFactoryTest {
         () -> String.format("GEO S2 load (%.0f) must dwarf LEO S2 load (%.0f)", geoS2, leoS2));
   }
 
+  /**
+   * The wizard filters inert payloads out of a GEO mission; this is the net for every other caller,
+   * turning what used to be an NPE inside the propagation thread into an explicit refusal.
+   */
+  @Test
+  void geoWithInertPayload_rejected() {
+    Map<String, Object> values = baseValues();
+    values.put("PAYLOAD_TYPE", "CARGO_MODULE");
+    values.put("PAYLOAD_MASS", 15_000.0);
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> MissionFactory.fromWizardValues(values, MissionType.GEO));
+  }
+
   @Test
   void nonPositivePayloadMass_fallsBackToCatalogDefault() {
     Map<String, Object> values = baseValues();

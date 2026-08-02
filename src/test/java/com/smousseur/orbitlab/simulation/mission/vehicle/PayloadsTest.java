@@ -2,8 +2,10 @@ package com.smousseur.orbitlab.simulation.mission.vehicle;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import com.smousseur.orbitlab.simulation.mission.MissionType;
 import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Payloads;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.PayloadModel;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class PayloadsTest {
@@ -25,6 +27,27 @@ class PayloadsTest {
             .containsAll(
                 java.util.List.of(
                     Payloads.CARGO_MODULE, Payloads.EARTH_OBSERVATION_SAT, Payloads.GEO_SAT)));
+  }
+
+  @Test
+  void hasAkm_tracksPropulsion() {
+    assertFalse(Payloads.CARGO_MODULE.hasAkm());
+    assertFalse(Payloads.EARTH_OBSERVATION_SAT.hasAkm());
+    assertTrue(Payloads.GEO_SAT.hasAkm());
+  }
+
+  @Test
+  void forMissionType_geo_keepsOnlyPropelledPayloads() {
+    List<PayloadModel> eligible = Payloads.forMissionType(MissionType.GEO);
+    assertFalse(eligible.isEmpty(), "GEO must keep at least one flyable payload");
+    assertTrue(eligible.stream().allMatch(PayloadModel::hasAkm));
+    assertFalse(eligible.contains(Payloads.CARGO_MODULE));
+    assertTrue(eligible.contains(Payloads.GEO_SAT));
+  }
+
+  @Test
+  void forMissionType_leo_keepsWholeCatalog() {
+    assertEquals(Payloads.all(), Payloads.forMissionType(MissionType.LEO));
   }
 
   @Test

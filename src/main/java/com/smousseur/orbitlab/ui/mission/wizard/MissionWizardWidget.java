@@ -119,7 +119,7 @@ public class MissionWizardWidget implements AutoCloseable {
     stepPanels.put(MissionWizardStep.PARAMETERS, stepParameters.getNode());
     stepLaunchSite = new StepLaunchSite();
     stepPanels.put(MissionWizardStep.SITE, stepLaunchSite.getNode());
-    stepLauncher = new StepLauncher();
+    stepLauncher = new StepLauncher(missionContext);
     stepPanels.put(MissionWizardStep.LAUNCHER, stepLauncher.getNode());
 
     footer.setOnNext(this::goNext);
@@ -151,6 +151,7 @@ public class MissionWizardWidget implements AutoCloseable {
     backdrop.update(cam);
     centerOnScreen(cam.getWidth(), cam.getHeight());
     stepParameters.update(tpf);
+    stepLauncher.update();
   }
 
   public void showStep(MissionWizardStep step) {

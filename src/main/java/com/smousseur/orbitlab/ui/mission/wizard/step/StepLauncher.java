@@ -7,6 +7,9 @@ import com.simsilica.lemur.*;
 import com.simsilica.lemur.component.BoxLayout;
 import com.simsilica.lemur.event.DefaultMouseListener;
 import com.simsilica.lemur.event.MouseEventControl;
+import com.smousseur.orbitlab.core.OrbitlabException;
+import com.smousseur.orbitlab.simulation.mission.MissionType;
+import com.smousseur.orbitlab.simulation.mission.context.MissionContext;
 import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Launchers;
 import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Payloads;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.LauncherModel;
@@ -26,8 +29,16 @@ import java.util.Map;
  * Launcher & payload wizard step. Launcher cards and the payload list are driven by the {@link
  * Launchers} and {@link Payloads} catalogs; {@code PAYLOAD_TYPE} carries the catalog id (not the
  * display name) so the mission factory can resolve it.
+ *
+ * <p>The payload list is narrowed to the models the selected mission type can actually fly — a GEO
+ * mission delegates its apogee circularization to the payload's kick motor, so offering an inert
+ * payload there would only fail later, during propagation.
  */
 public class StepLauncher implements StepValues {
+
+  private static final String SUBTITLE = "// vehicle configuration";
+  private static final String SUBTITLE_PROPELLED =
+      SUBTITLE + " · this mission requires a payload with an apogee kick motor";
 
   private static final float CARD_W = 264;
   private static final float CARD_H = 112f;
@@ -40,12 +51,16 @@ public class StepLauncher implements StepValues {
   private static final float LABEL_FIELD_GAP = 6f;
 
   private final Container root;
+  private final MissionContext missionContext;
   private final List<SelectableCard> launcherCards = new ArrayList<>();
+  private final Label subtitle;
   private final PopupList payloadType;
   private final TextField massField;
   private String selectedLauncher;
+  private MissionType shownMissionType;
 
-  public StepLauncher() {
+  public StepLauncher(MissionContext missionContext) {
+    this.missionContext = missionContext;
     root = new Container(new BoxLayout(Axis.Y, FillMode.None));
     root.setBackground(null);
     root.setPreferredSize(new Vector3f(FormStyles.CONTENT_WIDTH, FormStyles.CONTENT_HEIGHT, 0));
@@ -56,7 +71,7 @@ public class StepLauncher implements StepValues {
 
     root.addChild(UiKit.vSpacer(ROW_GAP));
 
-    Label subtitle = root.addChild(new Label("// vehicle configuration", FormStyles.STYLE));
+    subtitle = root.addChild(new Label(SUBTITLE, FormStyles.STYLE));
     subtitle.setFont(UiKit.ibmPlexMono(11));
     subtitle.setColor(FormStyles.TEXT_SECONDARY);
 
@@ -119,7 +134,7 @@ public class StepLauncher implements StepValues {
 
     root.addChild(UiKit.fieldLabelRow("PAYLOAD", "lbl-box"));
     root.addChild(UiKit.vSpacer(ROW_GAP));
-    List<PayloadModel> payloads = Payloads.all();
+    List<PayloadModel> payloads = eligiblePayloads(missionContext.getSelectedMissionType());
     payloadType =
         new PopupList(
             PAYLOAD_POPUP_W,
@@ -149,18 +164,62 @@ public class StepLauncher implements StepValues {
     kgLabel.setPreferredSize(new Vector3f(KG_LABEL_W, 0, 0));
 
     root.addChild(payloadRow);
+
+    applyMissionType(missionContext.getSelectedMissionType());
   }
 
   public Container getNode() {
     return root;
   }
 
+  /** Keeps the payload list in step with the mission type picked on the first wizard step. */
+  public void update() {
+    applyMissionType(missionContext.getSelectedMissionType());
+  }
+
+  /**
+   * Narrows the payload list to the models the given mission type can fly, keeping the current
+   * selection when it survives the filter so a round trip through the stepper does not silently
+   * discard the user's payload and the mass they typed.
+   */
+  private void applyMissionType(MissionType type) {
+    if (type == shownMissionType) {
+      return;
+    }
+    List<PayloadModel> eligible = eligiblePayloads(type);
+    String current = payloadType.getSelectedValue();
+    PayloadModel selection =
+        eligible.stream()
+            .filter(payload -> payload.displayName().equals(current))
+            .findFirst()
+            .orElse(null);
+    if (selection == null) {
+      // The selected payload cannot fly this mission type. The mass on screen belonged to it, so it
+      // goes back to the default of the payload taking its place.
+      selection = eligible.getFirst();
+      massField.setText(defaultMassText(selection));
+    }
+    payloadType.setOptions(
+        eligible.stream().map(PayloadModel::displayName).toList(), selection.displayName());
+    subtitle.setText(type.requiresPayloadPropulsion() ? SUBTITLE_PROPELLED : SUBTITLE);
+    shownMissionType = type;
+  }
+
+  private static List<PayloadModel> eligiblePayloads(MissionType type) {
+    List<PayloadModel> eligible = Payloads.forMissionType(type);
+    if (eligible.isEmpty()) {
+      throw new OrbitlabException("No payload in the catalog can fly a " + type + " mission");
+    }
+    return eligible;
+  }
+
   @Override
   public Map<String, Object> getValues() {
+    MissionType type = missionContext.getSelectedMissionType();
     String payloadId =
         findByDisplayName(payloadType.getSelectedValue())
             .map(PayloadModel::id)
-            .orElse(Payloads.all().getFirst().id());
+            .orElseGet(() -> eligiblePayloads(type).getFirst().id());
     return Map.of(
         FormField.LAUNCHER_TYPE.key(), selectedLauncher,
         FormField.PAYLOAD_TYPE.key(), payloadId,

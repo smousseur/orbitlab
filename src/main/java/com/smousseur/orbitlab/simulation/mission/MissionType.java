@@ -1,8 +1,29 @@
 package com.smousseur.orbitlab.simulation.mission;
 
 public enum MissionType {
-  LEO,
-  GEO;
+  /** The AKM has no role here: an AKM-equipped payload simply flies with an empty tank. */
+  LEO(false),
+
+  /** Delegates the apogee circularization to the payload's kick motor. */
+  GEO(true);
+
+  private final boolean requiresPayloadPropulsion;
+
+  MissionType(boolean requiresPayloadPropulsion) {
+    this.requiresPayloadPropulsion = requiresPayloadPropulsion;
+  }
+
+  /**
+   * Tells whether this mission type can only be flown by a payload carrying its own propulsion. GEO
+   * hands the apogee circularization to the payload's kick motor whatever the {@code
+   * OptimizationType} — {@code MissionComposer} offers a single (analytic) GEO composition — so an
+   * inert payload cannot fly it.
+   *
+   * @return true when the payload must have an AKM
+   */
+  public boolean requiresPayloadPropulsion() {
+    return requiresPayloadPropulsion;
+  }
 
   /**
    * Returns the human-readable label for this type. Goes through this accessor rather than {@link

@@ -1,5 +1,6 @@
 package com.smousseur.orbitlab.simulation.mission.vehicle.catalog;
 
+import com.smousseur.orbitlab.simulation.mission.MissionType;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropulsionSystem;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.PayloadModel;
 import java.util.List;
@@ -39,5 +40,20 @@ public final class Payloads {
   /** Returns every payload model of the catalog. */
   public static List<PayloadModel> all() {
     return CATALOG;
+  }
+
+  /**
+   * Returns the payload models a mission of the given type can actually fly. A type requiring
+   * payload propulsion (see {@link MissionType#requiresPayloadPropulsion()}) keeps only the models
+   * carrying an AKM; every other type accepts the whole catalog.
+   *
+   * @param type the selected mission type
+   * @return the eligible models, possibly empty if the catalog offers no compatible model
+   */
+  public static List<PayloadModel> forMissionType(MissionType type) {
+    if (!type.requiresPayloadPropulsion()) {
+      return CATALOG;
+    }
+    return CATALOG.stream().filter(PayloadModel::hasAkm).toList();
   }
 }

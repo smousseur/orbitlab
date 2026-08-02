@@ -38,6 +38,17 @@ public record PayloadModel(
   }
 
   /**
+   * Tells whether this payload carries an apogee kick motor. The compact constructor guarantees the
+   * equivalence with {@code akmPropellantCapacity > 0}, so this is the single predicate callers
+   * need to decide whether the payload can perform a burn of its own.
+   *
+   * @return true when the payload has an AKM
+   */
+  public boolean hasAkm() {
+    return akmPropulsion != null;
+  }
+
+  /**
    * Instantiates the payload with the dry mass entered at mission creation.
    *
    * @param dryMass the dry mass (kg) entered in the wizard
