@@ -202,13 +202,19 @@ Reprises telles quelles de §7.1 du document 01, appliquées par les deux tests 
 
 | Grandeur | Seuil |
 |---|---|
-| Date MECO | < 1 ms |
+| **`date MECO − transitionTime`** (cf. §11) | < 1 ms |
 | Masse MECO | < 1 kg |
 | Position MECO | < 10 m |
 | Vitesse MECO | < 0,05 m/s |
 | Périgée / apogée finaux | écart relatif < 0,1 % |
 | Inclinaison finale | < 0,01° |
 | `transitionTime` retenu (graine 42) | < 0,5 s |
+
+La première ligne remplace « date MECO < 1 ms », qui ne pouvait pas coexister
+avec la dernière — voir §11. Les trois lignes de masse/position/vitesse MECO ne
+sont comparables que **tant que les variables retenues bougent peu** ; la fidélité
+du découpage à variables figées est tenue séparément, par
+`GravityTurnReplayConsistencyTest`.
 
 ## 7. N3 — temps de calcul (surveillé, non assertif)
 
@@ -278,8 +284,8 @@ Les 5 fixtures de la classe sont vertes, y compris la nouvelle référence du §
 |---|---|---|---|---|---|
 | 0 — baseline | 2026-08-03 | `1d53e83` | référence | référence | — |
 | 1 — `AscentPlan` + `StageChainRunner` | 2026-08-03 | `2ebcfa6` | **0 sur toutes les grandeurs** | **0 sur toutes les grandeurs** | **aucun** (ΔV total, points d'éphéméride et comptabilité par phase inchangés) |
-| 2 — découpage en 3 phases | | | | | |
-| 3 — branchement LEO/GEO | | | | | |
+| 2 — découpage en 3 phases | 2026-08-03 | *(ce commit)* | non exercé (missions encore sur `GravityTurnStage`) | idem | **aucun** — les missions ne volent pas encore la chaîne |
+| 3 — branchement LEO/GEO | 2026-08-03 | *(ce commit)* | orbite finale ≤ 1 m ; `transitionTime` +0,159559 s (budget 0,5) ; **MECO opt↔éph nul** | orbite finale ≤ 0,5 m ; `transitionTime` +0,030238 s ; **MECO opt↔éph nul** | tous ceux de §7.2, aucun autre — détail en §9.3 |
 | 5 — retrait de la pénalité d'étagement | | | | | |
 
 ### 9.1 Étape 1 — relevé du 2026-08-03
@@ -314,3 +320,293 @@ GEO 2 203 → 2 185), alors que le coût et les variables retenues sont identiqu
 Ce compteur n'est asserté nulle part et n'a pas d'effet sur la trajectoire ; il
 varie avec l'ordonnancement de l'exploration parallèle. À surveiller uniquement
 s'il devait dériver d'un ordre de grandeur.
+
+### 9.2 Étape 2 — relevé du 2026-08-03
+
+L'étape 2 construit les trois phases (`GravityTurnFirstBurnStage`,
+`StageSeparationStage`, `GravityTurnSecondBurnStage`), la fabrique
+`AscentSequence`, `advancesByReplay()` et le câblage de la passe d'optimisation
+sur `StageChainRunner` — **sans brancher les missions**, qui volent encore
+`GravityTurnStage`. C'est le découpage exigé par §8 du document 01 (« chaque
+étape est committable et vérifiable seule ») : `LEOMission`/`GEOMission` basculent
+à l'étape 3, et c'est là que N1/N2 seront réellement exercés. Les tests
+d'optimisation ne sont donc **pas** requis ici, conformément à l'objectif de
+minimiser les points de contrôle qui les exigent.
+
+Ce que l'étape 2 mesure à la place, à variables figées (§5, aucun optimiseur),
+sur le profil Falcon Heavy GEO — c'est-à-dire exactement le cas serré qui exerce
+burn 1 jusqu'à la panne sèche, le largage, le coast de 2 s et un burn 2 de 2 s :
+
+| Grandeur | Écart chaîne 3 phases vs baseline pré-découpage | Seuil N2 |
+|---|---|---|
+| Date MECO | 0 s (t + 153,979660 s) | < 1 ms |
+| Masse MECO | 0 kg (17 360,267 kg) | < 1 kg |
+| Position MECO | **0,001 m** | < 10 m |
+| Vitesse MECO | **0,00018 m/s** | < 0,05 m/s |
+
+Trois ordres de grandeur sous le budget : le redémarrage de l'intégrateur aux
+deux nouvelles frontières coûte un millimètre. C'est la contrepartie du calage
+exact des dates par `AscentPlan` (§4.3 du document 01) — les phases ne
+recalculent rien, elles lisent.
+
+Et le critère de §8.1, transposé à la chaîne : **passe d'optimisation et passe
+éphéméride donnent Δpos = 0, Δvel = 0, Δmasse = 0** — identiques au bit, parce
+que les deux empruntent le même `StageChainRunner` sur les mêmes trois phases.
+C'est la propriété que §5.4 du document 01 exigeait ; elle est désormais tenue
+par construction et non par coïncidence.
+
+Fixtures : `GravityTurnReplayConsistencyTest#threePhaseAscent_reproducesThePreSplitBaseline`
+et `#threePhaseAscent_optimizeAndReplayFlyTheSameChain`, plus `AscentSequenceTest`
+pour la structure (largage = phase d'index attendu 0 entre les deux burns, et une
+phase de burn sans plan refuse de se configurer).
+
+**Écarts au document 01 assumés à cette étape :**
+
+1. **La phase de séparation ne porte pas le fournisseur d'attitude du gravity
+   turn** (§5.3 le suggérait). `StageSeparationStage` reste inchangée, comme §10
+   le demande par ailleurs ; le coast est non propulsif et le propagateur
+   d'optimisation n'a aucune force dépendant de l'attitude, donc l'effet
+   dynamique est nul. Les 0,001 m mesurés ci-dessus le confirment.
+2. **Le max step de la phase de séparation** reste le défaut `COAST_MAX_STEP`
+   (§5.5 laissait le point « à vérifier à l'étape 2 »). Sur 2 s de coast,
+   l'intégrateur adaptatif borne de toute façon son pas à l'intervalle restant :
+   le paramètre est sans effet observable. Les deux burns, eux, portent bien
+   `AscentPlan.maxStepSeconds()`.
+3. **`GravityTurnProblem` reçoit sa façon de voler un candidat par injection**
+   (`AscentPropagation`) au lieu de passer inconditionnellement par le runner.
+   C'est ce qui permet aux missions de rester sur l'ancien chemin pendant que le
+   nouveau est construit et testé — donc de ne pas changer structure et
+   trajectoire dans le même commit. L'injection disparaîtra avec
+   `GravityTurnStage` à l'étape 3.
+
+**Deux corrections de sûreté nécessaires au câblage** (iso-comportement sur le
+chemin actuel, indispensables sur le nouveau) :
+
+- `MissionOptimizer` relève l'`entryState` **avant** `optimize()` et le restaure
+  après. Un problème qui vole de vraies phases avance l'état de la mission
+  partagée — et le fait depuis les fils d'exploration parallèles de CMA-ES —,
+  donc `mission.getCurrentState()` n'est plus l'entrée du stage au retour.
+- `StageSeparationStage.configure` mesure son coast depuis l'état initial du
+  propagateur au lieu de `mission.getCurrentState()`. Même valeur (le runner
+  pose les deux), mais l'une est privée au vol en cours.
+- `StageChainRunner.plain()` interrompt la chaîne sur échec et rend l'état
+  d'entrée, au lieu de lire l'état de la mission : c'est le contrat de pénalité
+  dont dépendent les fonctions de coût (un candidat qui n'a pas avancé est noté
+  comme échoué), et cela évite une lecture concurrente. Le mode `sampling()`
+  (éphéméride) garde son comportement historique de trajectoire partielle.
+
+### 9.3 Étape 3 — bascule des missions (relevé N2 à faire)
+
+Les **quatre** sites de construction sont passés sur `AscentSequence` :
+`LEOMission.buildStages` (Hohmann analytique), `LEOMission
+.circularWithOptimizedTransfer`, `LEOMission.ellipticWithOptimizedTransfer` et
+`GEOMission.buildStages`. `GravityTurnStage` est **supprimée**.
+
+Séquences résultantes :
+
+```
+LEO : Vertical Ascent → Gravity turn (S1) → S1 separation → Gravity turn (S2)
+      → Transfert → Trim → Coasting
+
+GEO : Vertical Ascent → Gravity turn (S1) → S1 separation → Gravity turn (S2)
+      → Parking → Coasting parking → GTO injection → S2 separation
+      → Circularization → Trim → Plane trim → Coasting
+```
+
+GEO gagne la symétrie annoncée en §4.2 du document 01 : `S1 separation` et
+`S2 separation` sont deux instances de la même classe, d'index attendu 0 et 1.
+
+`MissionAscentWiringTest` (rapide, sans propagation) tient la propriété que les
+fixtures numériques ne peuvent pas tenir : **tous** les profils volent bien les
+trois phases, pas seulement celui qu'un test exerce. Un profil resté sur un
+gravity turn monolithique optimiserait et volerait sans rien signaler.
+
+Le chemin pré-découpage n'est pas supprimé pour autant :
+`GravityTurnManeuver.configure`/`propagateForOptimization` restent la référence
+numérique du §5 ci-dessus — aucune mission ne les emprunte, mais c'est contre
+elles que la non-régression est définie, et l'étape 5 a encore un changement de
+comportement à mesurer depuis ce point.
+
+#### Relevé du 2026-08-03
+
+**Le critère de §8.1 est tenu sur les deux profils** : `MECO optimisation ↔
+éphéméride` = Δpos 0,000 m, Δvel 0,00000 m/s, Δmasse 0,000 kg. Nul, pas
+seulement dans les tolérances — c'est ce que le passage des deux passes par le
+même `StageChainRunner` devait garantir, et c'était le signal prioritaire.
+
+**L'orbite finale — ce sur quoi la mission est jugée — ne bouge pas :**
+
+| | périgée | apogée | inclinaison |
+|---|---|---|---|
+| LEO 400 km | Δ 0,1 m (2,6 × 10⁻⁷) | Δ 1,0 m (2,4 × 10⁻⁶) | Δ 7 × 10⁻⁶ ° |
+| GEO | Δ 0,5 m (1,4 × 10⁻⁸) | **identique** | **identique** |
+
+Pour des budgets de 0,1 % et 0,01°.
+
+**Le `transitionTime` retenu bouge, dans son budget** : +0,159559 s (LEO) et
++0,030238 s (GEO), pour 0,5 s autorisées. Les deux runs convergent ~500 sous le
+coût acceptable (8,8 × 10⁻⁵ contre 4,8 × 10⁻²) : CMA-ES retient donc le **premier
+candidat assez bon**, pas un optimum unique, et tout déplacement millimétrique du
+paysage change lequel c'est. Ce n'est pas un optimum dégradé — le coût est le
+même — c'est un arrêt anticipé ailleurs dans un bassin plat.
+
+**Le critère « date MECO » de §7.1 était contradictoire avec lui-même** et a été
+corrigé (voir §11). `date MECO = décollage + ascension verticale + transitionTime`
+algébriquement : exiger 1 ms sur la date revient à exiger 1 ms sur une variable à
+laquelle le même tableau accorde 0,5 s. Le relevé le montre au chiffre près —
+tout l'écart de date **est** l'écart de `transitionTime` :
+
+| | Δ `transitionTime` | Δ date MECO | Δ masse MECO | Δt × débit S2 (287,46 kg/s) |
+|---|---|---|---|---|
+| LEO | 0,159559 s | **0,159559 s** | 45,865 kg | **45,87 kg** |
+| GEO | 0,030238 s | **0,030238 s** | 8,692 kg | **8,69 kg** |
+
+Il ne reste rien à expliquer : le burn 2 a tourné plus longtemps parce que
+l'optimiseur a demandé un turn plus long. La fidélité du découpage lui-même se
+lit **à variables figées**, où elle vaut 0,001 m (§9.2).
+
+**Écarts de §7.2, tous constatés :**
+
+| Grandeur | LEO 400 km | GEO |
+|---|---|---|
+| ΔV total du rapport | 5 959,197 → **8 088,485 m/s** (+35,7 %) | 10 951,926 → **11 983,542** (+9,4 %) |
+| dont ligne(s) d'ascension | 5 648,2 → 4 167,9 + 3 612,8 = **7 780,7** | 6 803,5 → 5 845,1 + 1 990,7 = **7 835,8** |
+| Résidu étage `[0]` | 0,0 kg, désormais **mesuré** | 0,0 kg, désormais **mesuré** |
+| Phases du rapport | 5 → **7** | 10 → **12** |
+| Points d'éphéméride | 94 719 → **94 723**, complete | 206 152 → **206 153**, complete |
+| Masse finale | 35 175,116 → 35 163,757 kg | 2 470,425 → 2 470,362 kg |
+| N3 (optimisation complète) | 8,3 → **6,7 s** | 11,5 → **9,2 s** |
+
+Le saut de ΔV est **plus gros que ce que §7.2 laissait attendre**, et pour une
+raison qui mérite d'être écrite : ce n'était pas seulement « le burn 2 crédité à
+296 s au lieu de 348 ». Tsiolkovsky n'est pas additif à travers une chute de
+masse — l'ancienne ligne unique appliquait une équation qui n'a pas de sens sur
+un intervalle enjambant un largage de 66 t, et le résultat n'était pas « un peu
+bas », il était hors sujet. Les deux lignes actuelles sont le ΔV étagé correct.
+
+Le largage devient aussi lisible directement dans le rapport : `S1 separation`
+affiche 170 150 → 104 150 kg (LEO) et 181 500 → 115 500 kg (GEO), soit les
+66 000 kg de masse sèche de S1 du catalogue, et `[0]` sort à 600 000 / 600 000 /
+0 kg — burn 1 va bien jusqu'à la panne sèche.
+
+## 10. Marche à suivre du relevé d'étape 3
+
+```bash
+./gradlew test --tests "*AscentBaselineN2Test" -Dorbitlab.slowTests=true
+```
+
+Puis, pour les critères N1 :
+
+```bash
+./gradlew test --tests "*LEOMissionOptimizationTest" --tests "*GEOMissionOptimizationTest" --tests "*LEOMissionOptimizedTransferTest" --tests "*PropellantLoadOptimizerIntegrationTest" -Dorbitlab.slowTests=true
+```
+
+### 10.1 Ce qui doit rester dans les clous (rouge = régression)
+
+`AscentBaselineN2Test` assertent exactement ces grandeurs, sur les deux profils :
+
+| Grandeur | Seuil |
+|---|---|
+| MECO passe d'optimisation — date / masse / position / vitesse | 1 ms / 1 kg / 10 m / 0,05 m/s |
+| MECO passe éphéméride — idem | idem |
+| Périgée et apogée finaux | < 0,1 % relatif |
+| Inclinaison finale | < 0,01° |
+| `transitionTime` retenu (graine 42) | < 0,5 s |
+
+Plus le critère de §8.1, à lire dans `build/baseline/*.txt` : l'écart
+**MECO optimisation ↔ éphéméride doit rester nul**, pas seulement dans les
+tolérances. C'est ce que le passage des deux passes par le même
+`StageChainRunner` garantit ; s'il devient non nul, les deux passes ont recommencé
+à diverger et c'est le vrai signal d'alarme, avant même les seuils.
+
+### 10.2 Ce qui doit bouger (vert = attendu, à consigner en étape 4)
+
+Ces grandeurs sont écrites dans `build/baseline/*.txt` mais **assertées nulle
+part** — précisément pour que le découpage puisse les faire bouger :
+
+1. **ΔV total du rapport, en hausse.** La ligne `Gravity turn` se scinde en trois
+   et le burn 2 est enfin crédité à l'Isp de S2 (348 s) au lieu de celui de S1
+   (296 s). Références « avant » : LEO **5 959,197 m/s**, GEO **10 951,926 m/s**.
+2. **Résidu de l'étage `[0]`, désormais mesuré.** `captureJettisonedResidual` se
+   déclenche sur `S1 separation`, qui est maintenant une vraie
+   `StageSeparationStage`. La valeur restera proche de 0 kg tant que burn 1 tourne
+   jusqu'à la panne sèche — mais c'est une mesure, plus une conséquence du modèle
+   de masse (S3 du document 01, fermé).
+3. **Trois lignes de rapport au lieu d'une** pour l'ascension, et trois noms de
+   phase en télémétrie. Références « avant » : 5 phases sur LEO, 10 sur GEO →
+   7 et 12.
+4. **Deux points d'éphéméride de plus par frontière de phase.** Références
+   « avant » : LEO **94 719**, GEO **206 152**. Les points ajoutés sont
+   co-localisés dans le temps, le rendu de trajectoire n'en est pas affecté.
+
+### 10.3 Deux fixtures N1 déjà rouges *avant* le chantier
+
+À ne pas attribuer au découpage. Les deux échouent à l'identique sur `1d53e83`
+(le commit de référence de l'étape 0, avant toute modification de ce chantier),
+vérifié en relançant `LEOMissionOptimizationTest` sur cet état :
+
+| Fixture | Message | `1d53e83` | après étape 3 |
+|---|---|---|---|
+| `testEllipticMissions(200 km, 1 000 km)` | `Min coast altitude 183 094 m not within 14 000 m of target 200 000 m` | rouge, 183 094 m | rouge, **183 094 m** (inchangé) |
+| `testFalconHeavyBudgetLoads` | `S2 residual … exceeds 15% of its sized load 2 844 kg` | rouge, 1 045 kg | rouge, **1 037 kg** |
+
+Les 7 autres fixtures de la classe sont vertes. La bonne lecture de ces deux-là
+après l'étape 3 est donc **« même échec, même ordre de grandeur »**, pas
+« vert » : le premier reproduit le chiffre au mètre près, le second bouge de 8 kg
+(0,8 %), ce qui est l'ordre de grandeur attendu d'une boucle de dimensionnement
+re-jouée sur une trajectoire décalée de quelques millimètres.
+
+Elles pointent deux sujets réels et distincts du découpage — une insertion
+elliptique haute qui rate son périgée de 17 km, et un étage supérieur
+sur-dimensionné de 21 % sur le profil budgété. À traiter pour eux-mêmes, hors de
+ce chantier.
+
+### 10.4 Ce qui invaliderait le découpage
+
+- un `S1 separation` qui **lève** au lieu de larguer : le message dirait quel
+  étage est actif et combien de propergol reste à bord. Cela voudrait dire que
+  burn 1 ne consomme plus S1 comme prévu — pas un bug du découpage, mais un
+  dimensionnement de charge qui ne tient plus ;
+- une éphéméride marquée `complete = false` : une phase s'est arrêtée avant son
+  échéance, en pratique le garde-fou de déplétion sur un burn à sec ;
+- `MECO optimisation ↔ éphéméride` non nul (cf. §10.1).
+
+## 11. Correction d'un critère N2 contradictoire (étape 3)
+
+Le tableau de §7.1 du document 01 exigeait simultanément :
+
+- date MECO à **1 ms** près ;
+- `transitionTime` retenu à **0,5 s** près.
+
+Or `date MECO = décollage + durée d'ascension verticale + transitionTime`. La
+première exigence est donc la seconde, 500 fois plus stricte : les deux ne
+peuvent pas être vraies ensemble. Tant que le refactor ne touchait pas le
+paysage de coût (étapes 1 et 2), CMA-ES retombait sur les mêmes variables et la
+contradiction restait invisible. Elle est apparue à l'étape 3, la première où les
+missions volent réellement la chaîne découpée.
+
+**Ce qui remplace le critère.** La date MECO n'est plus comparée directement ;
+c'est `date MECO − transitionTime` qui l'est, à 1 ms. Cette quantité vaut la
+durée d'ascension verticale (7,000000 s sur les quatre relevés, avant et après,
+LEO et GEO) et teste exactement ce que le découpage pourrait casser : **que
+l'ascension se termine au MECO qu'on lui a demandé**. Elle est insensible à
+l'endroit où CMA-ES s'arrête.
+
+Un largage manqué, une phase qui déborde, un burn 2 qui s'allume au mauvais
+moment déplaceraient tous cette différence. Un optimiseur qui s'arrête ailleurs,
+non. C'est le critère que §7.1 aurait dû écrire.
+
+**Ce qui reste fragile, et pourquoi c'est acceptable.** Masse, position et
+vitesse au MECO sont encore comparées en absolu, donc encore sensibles au
+déplacement des variables. On les garde parce qu'elles attrapent une régression
+franche, et les messages d'échec indiquent désormais de combien
+`transitionTime` a bougé et quelle part de l'écart cela explique — un écart
+entièrement expliqué appelle un re-relevé, pas une enquête. La fidélité du
+découpage à variables **figées**, elle, est tenue ailleurs et sans optimiseur :
+`GravityTurnReplayConsistencyTest#threePhaseAscent_reproducesThePreSplitBaseline`,
+0,001 m et 0,00018 m/s.
+
+**Les valeurs de référence ont été re-relevées** dans `AscentBaselineN2Test`
+(§9.3 pour les chiffres et la justification). Les valeurs pré-découpage restent
+lisibles en §3 et §4 de ce fichier : c'est contre elles que l'étape 5 devra
+mesurer son changement de comportement assumé.

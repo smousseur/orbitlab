@@ -6,6 +6,7 @@ import static org.orekit.utils.Constants.WGS84_EARTH_EQUATORIAL_RADIUS;
 import com.smousseur.orbitlab.simulation.mission.detector.MinAltitudeTracker;
 import com.smousseur.orbitlab.simulation.mission.maneuver.GravityTurnManeuver;
 import com.smousseur.orbitlab.simulation.mission.optimizer.TrajectoryProblem;
+import com.smousseur.orbitlab.simulation.mission.stage.ascent.AscentPropagation;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.hipparchus.util.FastMath;
 import org.orekit.orbits.KeplerianOrbit;
@@ -77,6 +78,7 @@ public class GravityTurnProblem implements TrajectoryProblem {
   private final GravityTurnManeuver maneuver;
   private final SpacecraftState initialState;
   private final GravityTurnConstraints constraints;
+  private final AscentPropagation propagation;
 
   // How far the candidate's MECO falls short of staging completion (s), handed from propagate() to
   // computeCost(). Per-thread so parallel CMA-ES exploration runs cannot overwrite each other's
@@ -84,7 +86,8 @@ public class GravityTurnProblem implements TrajectoryProblem {
   private final ThreadLocal<Double> stagingShortfall = ThreadLocal.withInitial(() -> 0.0);
 
   /**
-   * Creates a gravity turn optimization problem.
+   * Creates a gravity turn optimization problem flying candidates on the historical single
+   * propagator (burn 1, jettison detector and burn 2 on one integration).
    *
    * @param maneuver the gravity turn maneuver that handles propagation
    * @param initialState the spacecraft state at the beginning of the gravity turn
@@ -94,9 +97,29 @@ public class GravityTurnProblem implements TrajectoryProblem {
       GravityTurnManeuver maneuver,
       SpacecraftState initialState,
       GravityTurnConstraints constraints) {
+    this(maneuver, initialState, constraints, maneuver.asPropagation());
+  }
+
+  /**
+   * Creates a gravity turn optimization problem with an explicit way of flying a candidate — the
+   * three explicit ascent phases, once the mission is built on {@code AscentSequence} (spec {@code
+   * specs/mission-stages/01-separations-implicites.md} §5.4). The cost function is unchanged
+   * either way: only the propagation differs.
+   *
+   * @param maneuver the gravity turn maneuver decoding the variables (burn 1 duration, staging)
+   * @param initialState the spacecraft state at the beginning of the gravity turn
+   * @param constraints the target apogee, velocity, and flight path angle constraints
+   * @param propagation how a candidate is flown from gravity-turn entry to MECO
+   */
+  public GravityTurnProblem(
+      GravityTurnManeuver maneuver,
+      SpacecraftState initialState,
+      GravityTurnConstraints constraints,
+      AscentPropagation propagation) {
     this.maneuver = maneuver;
     this.initialState = initialState;
     this.constraints = constraints;
+    this.propagation = propagation;
   }
 
   @Override
@@ -149,7 +172,7 @@ public class GravityTurnProblem implements TrajectoryProblem {
   public SpacecraftState propagate(double[] variables) {
     // Recorded for the computeCost() call the executor makes right after, on this same thread.
     stagingShortfall.set(FastMath.max(0.0, maneuver.getStagingCompleteTime() - variables[0]));
-    return maneuver.propagateForOptimization(initialState, variables);
+    return propagation.propagate(initialState, variables);
   }
 
   @Override
@@ -168,7 +191,7 @@ public class GravityTurnProblem implements TrajectoryProblem {
       // Graded penalty: still high enough to dominate any nominal cost (<100),
       // but proportional to how far underground the trajectory dipped, so CMA-ES
       // gets a usable gradient instead of a flat 1e6 wall.
-      MinAltitudeTracker tracker = maneuver.getLastAltitudeTracker();
+      MinAltitudeTracker tracker = propagation.lastAltitudeTracker();
       if (tracker != null && tracker.getMinAltitude() != Double.MAX_VALUE) {
         double underground = FastMath.max(0.0, -tracker.getMinAltitude());
         return 1e3 + underground / 1000.0;

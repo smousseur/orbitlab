@@ -97,9 +97,13 @@ public class StageSeparationStage extends MissionStage {
 
   @Override
   public void configure(NumericalPropagator propagator, Mission mission) {
+    // The coast is measured from the propagator's own entry state, not from mission.getCurrentState():
+    // the two are the same state (the runner sets both), but only the propagator's is private to
+    // this run. Once the ascent is optimized as a chain, this method runs on the parallel CMA-ES
+    // exploration threads, which share the mission (spec 01 §5.4).
     AbsoluteDate endDate =
-        mission
-            .getCurrentState()
+        propagator
+            .getInitialState()
             .getDate()
             .shiftedBy(FastMath.max(separationCoastDuration, 1.0e-3));
     this.configuredEndDate = endDate;

@@ -7,7 +7,7 @@ import com.smousseur.orbitlab.simulation.mission.detector.DepletionGuard;
 import com.smousseur.orbitlab.simulation.mission.detector.DepletionStopTrigger;
 import com.smousseur.orbitlab.simulation.mission.detector.MinAltitudeTracker;
 import com.smousseur.orbitlab.simulation.mission.stage.ascent.AscentPlan;
-import com.smousseur.orbitlab.simulation.mission.stage.ascent.GravityTurnStage;
+import com.smousseur.orbitlab.simulation.mission.stage.ascent.AscentPropagation;
 import com.smousseur.orbitlab.simulation.mission.vehicle.ActiveStageInfo;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropulsionSystem;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
@@ -28,12 +28,20 @@ import org.orekit.time.AbsoluteDate;
 import org.orekit.utils.Constants;
 
 /**
- * Encapsulates the gravity turn maneuver configuration logic. Shared between {@link
- * GravityTurnStage} (execution) and {@link
- * com.smousseur.orbitlab.simulation.mission.optimizer.problems.GravityTurnProblem} (optimization).
+ * Decodes the gravity turn's CMA-ES variables into the dated {@link AscentPlan} the three ascent
+ * phases fly, and holds the launcher-dependent quantities that plan is built from (burn 1 duration,
+ * staging completion, depletion floor, integrator max step).
  *
  * <p>Stage resolution is automatic: the active stage and the next stage after jettison are
  * determined from the vehicle's reference mass via {@link Vehicle#resolveActiveStage(double)}.
+ *
+ * <p><b>The single-propagator ascent below is the pre-split reference, not a production path.</b>
+ * {@link #configure} and {@link #propagateForOptimization} build one propagator carrying burn 1,
+ * the jettison detector and burn 2 — the way the ascent was flown before it became {@code Gravity
+ * turn (S1) → S1 separation → Gravity turn (S2)}. No mission uses them: they are kept because the
+ * migration's non-regression fixtures are defined <em>against</em> them (spec {@code
+ * specs/mission-stages/02-baseline-n2.md} §5), and étape 5 still has a behaviour change to measure
+ * from that reference.
  */
 public class GravityTurnManeuver {
 
@@ -243,6 +251,30 @@ public class GravityTurnManeuver {
    */
   public MinAltitudeTracker getLastAltitudeTracker() {
     return lastAltitudeTracker.get();
+  }
+
+  /**
+   * Exposes this maneuver as the historical single-propagator way of flying a gravity-turn
+   * candidate, for {@link
+   * com.smousseur.orbitlab.simulation.mission.optimizer.problems.GravityTurnProblem}. The
+   * alternative is {@link
+   * com.smousseur.orbitlab.simulation.mission.stage.ascent.AscentChainPropagation}, which flies the
+   * three explicit phases instead; the problem is indifferent to which it is handed.
+   *
+   * @return this maneuver, seen as an ascent propagation
+   */
+  public AscentPropagation asPropagation() {
+    return new AscentPropagation() {
+      @Override
+      public SpacecraftState propagate(SpacecraftState entryState, double[] variables) {
+        return propagateForOptimization(entryState, variables);
+      }
+
+      @Override
+      public MinAltitudeTracker lastAltitudeTracker() {
+        return getLastAltitudeTracker();
+      }
+    };
   }
 
   /**

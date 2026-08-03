@@ -10,12 +10,15 @@ import com.smousseur.orbitlab.simulation.mission.detector.DepletionGuard;
 import com.smousseur.orbitlab.simulation.mission.operation.GEOMission;
 import com.smousseur.orbitlab.simulation.mission.optimizer.OptimizationResult;
 import com.smousseur.orbitlab.simulation.mission.optimizer.problems.GravityTurnConstraints;
+import com.smousseur.orbitlab.simulation.mission.runtime.StageChainRunner;
 import com.smousseur.orbitlab.simulation.mission.stage.ascent.AscentPlan;
-import com.smousseur.orbitlab.simulation.mission.stage.ascent.GravityTurnStage;
+import com.smousseur.orbitlab.simulation.mission.stage.ascent.AscentSequence;
+import com.smousseur.orbitlab.simulation.mission.stage.ascent.GravityTurnFirstBurnStage;
 import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchConfiguration;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropellantBudget;
 import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Launchers;
 import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Payloads;
+import java.util.List;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
@@ -55,10 +58,14 @@ import org.orekit.utils.PVCoordinates;
  *   <li>{@code samePostAscentState_configDifferenceIsHarmless} — the dead end that was ruled out:
  *       the same entry under the two <em>propagator configs</em> (armQuiet+tracker vs
  *       arm+MECO+multiplexer), even <b>with staging</b>, agrees to the bit;
- *   <li>{@code gravityTurnStageConfigure_startsTheReplayFromTheKickedState} — the (correct but
- *       divergence-irrelevant) 2b pitch-kick fix;
+ *   <li>{@code firstBurnConfigure_startsTheReplayFromTheKickedState} — the (correct but
+ *       divergence-irrelevant) 2b pitch-kick fix, now carried by the first ascent phase;
  *   <li>{@code gravityTurnExit_matchesTheRecordedPreSplitBaseline} — étape 0 of the
- *       explicit-staging migration: the pre-split reference the three-phase ascent must reproduce.
+ *       explicit-staging migration: the pre-split reference the three-phase ascent must reproduce;
+ *   <li>{@code threePhaseAscent_reproducesThePreSplitBaseline} — étape 2: it does reproduce it,
+ *       within the N2 tolerances (spec 01 §7.1);
+ *   <li>{@code threePhaseAscent_optimizeAndReplayFlyTheSameChain} — étape 2: and both passes fly
+ *       that split through one traversal, so they cannot drift apart again.
  * </ul>
  *
  * <p>The regime matters (sub-orbital climbing entry, |v| ≈ 466 m/s, with staging), so the fixtures
@@ -371,21 +378,118 @@ class GravityTurnReplayConsistencyTest {
   }
 
   /**
-   * The 2b fix (bilan 11 §3.9): {@code GravityTurnStage.configure} — the ephemeris replay path —
-   * applies the pitch kick and resets the propagator's initial state to the kicked one (the
-   * generator sets it to the pre-kick saved entry before calling configure). Correct in itself,
-   * though it does not resolve the divergence (the kick washes out; the config difference above is
-   * the real cause).
+   * Flies the explicit three-phase ascent exactly as {@code StageChainRunner} drives it on the
+   * replay pass, with the given variables injected into the first burn.
+   */
+  private static SpacecraftState replayThreePhaseAscent(
+      GEOMission mission, SpacecraftState entry, double[] variables) {
+    List<MissionStage> ascent =
+        AscentSequence.gravityTurn(
+            Launchers.FALCON_HEAVY.ascentProfile(), GravityTurnConstraints.forTarget(PARKING_ALT));
+    ((GravityTurnFirstBurnStage) ascent.getFirst())
+        .applyOptimization(new OptimizationResult(variables, 0.0, entry, 1, entry));
+    mission.setCurrentState(entry);
+    return StageChainRunner.plain().run(ascent, entry, mission);
+  }
+
+  /**
+   * Étape 2 of the explicit-staging migration: the ascent split into {@code Gravity turn (S1) → S1
+   * separation → Gravity turn (S2)} lands on the <b>same</b> MECO as the single-propagator ascent
+   * it replaces, at the N2 tolerances of spec 01 §7.1 (1 ms / 1 kg / 10 m / 0.05 m/s).
+   *
+   * <p>This is the fixture the split has to earn. Cutting one propagation into three restarts the
+   * adaptive integrator at each phase boundary, so the arithmetic cannot be bit-identical — but the
+   * <em>schedule</em> can be, and that is what {@code AscentPlan} guarantees: burn 1 to flame-out,
+   * jettison at {@code kick + 1e-3 + burn1 + 1e-3}, interstage coast, second ignition, MECO. Same
+   * fixed variables as {@link #gravityTurnExit_matchesTheRecordedPreSplitBaseline}, same entry, no
+   * optimizer involved — the difference measured here is the split and nothing else.
    */
   @Test
-  void gravityTurnStageConfigure_startsTheReplayFromTheKickedState() {
+  void threePhaseAscent_reproducesThePreSplitBaseline() {
     GtSetup gt = gravityTurnAtEntry();
-    GravityTurnStage stage =
-        new GravityTurnStage(
-            "Gravity turn",
-            PITCH_KICK_DEG,
-            INTERSTAGE_COAST,
-            GravityTurnConstraints.forTarget(PARKING_ALT));
+    double transitionTime = gt.maneuver().getStagingCompleteTime() + 2.0;
+    double[] variables = {transitionTime, 0.32};
+
+    SpacecraftState exit = replayThreePhaseAscent(geoMission(), gt.entry(), variables);
+    double dt = exit.getDate().durationFrom(gt.entry().getDate());
+    Vector3D position = exit.getPosition();
+    Vector3D velocity = exit.getPVCoordinates().getVelocity();
+
+    logger.info(
+        "Three-phase ascent exit: t+{} s, mass={} kg, Δpos vs baseline={} m, Δvel={} m/s",
+        String.format(java.util.Locale.ROOT, "%.6f", dt),
+        String.format(java.util.Locale.ROOT, "%.3f", exit.getMass()),
+        String.format(
+            java.util.Locale.ROOT, "%.3f", Vector3D.distance(REF_EXIT_POSITION, position)),
+        String.format(
+            java.util.Locale.ROOT, "%.5f", Vector3D.distance(REF_EXIT_VELOCITY, velocity)));
+
+    assertEquals(REF_EXIT_DT_S, dt, 1.0e-3, "MECO date");
+    assertEquals(REF_EXIT_MASS_KG, exit.getMass(), 1.0, "MECO mass");
+    assertEquals(0.0, Vector3D.distance(REF_EXIT_POSITION, position), 10.0, "MECO position (10 m)");
+    assertEquals(
+        0.0, Vector3D.distance(REF_EXIT_VELOCITY, velocity), 0.05, "MECO velocity (0.05 m/s)");
+  }
+
+  /**
+   * The optimize-vs-replay contract of the split (spec 01 §5.4): the chain the CMA-ES problem flies
+   * and the chain the ephemeris pass replays are the <b>same</b> traversal of the same three
+   * phases, so they must land on the same MECO — not merely within the N2 budget.
+   *
+   * <p>This is what closes the door the divergence of bilan 11 §3.9 came through. Two
+   * implementations of "walk the ascent" would be free to restart the integrator differently; one,
+   * used by both, cannot.
+   */
+  @Test
+  void threePhaseAscent_optimizeAndReplayFlyTheSameChain() {
+    GtSetup gt = gravityTurnAtEntry();
+    double[] variables = {gt.maneuver().getStagingCompleteTime() + 2.0, 0.32};
+
+    GEOMission optimizeMission = geoMission();
+    optimizeMission.setCurrentState(gt.entry());
+    GravityTurnFirstBurnStage firstBurn =
+        (GravityTurnFirstBurnStage)
+            AscentSequence.gravityTurn(
+                    Launchers.FALCON_HEAVY.ascentProfile(),
+                    GravityTurnConstraints.forTarget(PARKING_ALT))
+                .getFirst();
+    SpacecraftState optimize =
+        firstBurn.buildProblem(optimizeMission).propagate(variables);
+
+    SpacecraftState replay = replayThreePhaseAscent(geoMission(), gt.entry(), variables);
+
+    double dPos = Vector3D.distance(optimize.getPosition(), replay.getPosition());
+    double dVel =
+        Vector3D.distance(
+            optimize.getPVCoordinates().getVelocity(), replay.getPVCoordinates().getVelocity());
+    logger.info(
+        "Three-phase ascent optimize vs replay: Δpos={} m, Δvel={} m/s, Δmass={} kg",
+        String.format(java.util.Locale.ROOT, "%.2e", dPos),
+        String.format(java.util.Locale.ROOT, "%.2e", dVel),
+        String.format(
+            java.util.Locale.ROOT, "%.2e", Math.abs(optimize.getMass() - replay.getMass())));
+
+    assertEquals(0.0, dPos, 1.0e-3, "one traversal: the two passes must agree on position");
+    assertEquals(0.0, dVel, 1.0e-6, "one traversal: the two passes must agree on velocity");
+    assertEquals(replay.getMass(), optimize.getMass(), 1.0e-6, "and on mass");
+  }
+
+  /**
+   * The 2b fix (bilan 11 §3.9), now carried by the first ascent phase: {@code
+   * GravityTurnFirstBurnStage.configure} — the ephemeris replay path — applies the pitch kick and
+   * resets the propagator's initial state to the kicked one (the generator sets it to the pre-kick
+   * saved entry before calling configure). Correct in itself, though it does not resolve the
+   * divergence (the kick washes out; the config difference above is the real cause).
+   */
+  @Test
+  void firstBurnConfigure_startsTheReplayFromTheKickedState() {
+    GtSetup gt = gravityTurnAtEntry();
+    GravityTurnFirstBurnStage stage =
+        (GravityTurnFirstBurnStage)
+            AscentSequence.gravityTurn(
+                    Launchers.FALCON_HEAVY.ascentProfile(),
+                    GravityTurnConstraints.forTarget(PARKING_ALT))
+                .getFirst();
     double[] variables = {gt.maneuver().getStagingCompleteTime() + 2.0, 0.32};
     SpacecraftState preKick = gt.entry();
     stage.applyOptimization(new OptimizationResult(variables, 0.0, preKick, 1, preKick));

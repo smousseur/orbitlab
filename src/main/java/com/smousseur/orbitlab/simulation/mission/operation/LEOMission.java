@@ -10,19 +10,21 @@ import com.smousseur.orbitlab.simulation.mission.stage.AnalyticTrimBurnStage;
 import com.smousseur.orbitlab.simulation.mission.stage.CoastingStage;
 import com.smousseur.orbitlab.simulation.mission.stage.TransfertManeuverStage;
 import com.smousseur.orbitlab.simulation.mission.stage.TransfertTwoManeuverStage;
-import com.smousseur.orbitlab.simulation.mission.stage.ascent.GravityTurnStage;
+import com.smousseur.orbitlab.simulation.mission.stage.ascent.AscentSequence;
 import com.smousseur.orbitlab.simulation.mission.stage.ascent.VerticalAscentStage;
 import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchConfiguration;
 import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Launchers;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Spacecraft;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.AscentProfile;
+import java.util.ArrayList;
 import java.util.List;
 import org.hipparchus.util.FastMath;
 
 /**
  * Concrete LEO (Low Earth Orbit) insertion mission launching from Kourou (French Guiana). Stages:
- * Vertical Ascent → Gravity Turn → Transfer Two-Maneuver → Coasting.
+ * Vertical Ascent → Gravity turn (S1) → S1 separation → Gravity turn (S2) → Transfer → Trim →
+ * Coasting.
  */
 public class LEOMission extends EarthMission {
   private final double latitude;
@@ -121,13 +123,9 @@ public class LEOMission extends EarthMission {
       double altitude) {
     AscentProfile profile = configuration.ascentProfile();
     List<MissionStage> stages =
-        List.of(
-            new VerticalAscentStage("Vertical Ascent", profile.verticalAscentDuration()),
-            new GravityTurnStage(
-                "Gravity turn",
-                profile.pitchKickAngleDeg(),
-                profile.interstageCoastDuration(),
-                GravityTurnConstraints.forTarget(targetAltitude)),
+        ascentThen(
+            profile,
+            GravityTurnConstraints.forTarget(targetAltitude),
             new TransfertTwoManeuverStage(
                 "Transfert", targetAltitude, FastMath.toRadians(latitude)),
             new AnalyticTrimBurnStage("Trim", targetAltitude, FastMath.toRadians(latitude)),
@@ -168,13 +166,9 @@ public class LEOMission extends EarthMission {
       double altitude) {
     AscentProfile profile = configuration.ascentProfile();
     List<MissionStage> stages =
-        List.of(
-            new VerticalAscentStage("Vertical Ascent", profile.verticalAscentDuration()),
-            new GravityTurnStage(
-                "Gravity turn",
-                profile.pitchKickAngleDeg(),
-                profile.interstageCoastDuration(),
-                GravityTurnConstraints.forTarget(perigeeAltitude)),
+        ascentThen(
+            profile,
+            GravityTurnConstraints.forTarget(perigeeAltitude),
             new TransfertManeuverStage(
                 "Transfert", perigeeAltitude, apogeeAltitude, FastMath.toRadians(latitude)),
             // The trim burn at the next apogee raises the perigee to the target perigee, shaping
@@ -229,17 +223,34 @@ public class LEOMission extends EarthMission {
 
   private static List<MissionStage> buildStages(
       AscentProfile profile, double perigeeAltitude, double apogeeAltitude, double latitude) {
-    return List.of(
-        new VerticalAscentStage("Vertical Ascent", profile.verticalAscentDuration()),
-        new GravityTurnStage(
-            "Gravity turn",
-            profile.pitchKickAngleDeg(),
-            profile.interstageCoastDuration(),
-            GravityTurnConstraints.forTarget(perigeeAltitude)),
+    return ascentThen(
+        profile,
+        GravityTurnConstraints.forTarget(perigeeAltitude),
         new AnalyticHohmannTransferStage(
             "Transfert", perigeeAltitude, apogeeAltitude, FastMath.toRadians(latitude)),
         new AnalyticTrimBurnStage("Trim", perigeeAltitude, FastMath.toRadians(latitude)),
         new CoastingStage("Coasting", null));
+  }
+
+  /**
+   * The ascent — vertical climb then the three explicit gravity-turn phases ({@code Gravity turn
+   * (S1) → S1 separation → Gravity turn (S2)}, spec {@code
+   * specs/mission-stages/01-separations-implicites.md} §4.2) — followed by the orbital phases of a
+   * given profile. Shared by the three LEO variants so none of them can drift on how the launcher
+   * stages.
+   *
+   * @param profile the launcher's flight profile
+   * @param constraints the gravity turn's hand-off targets
+   * @param orbitalPhases the phases flown after MECO, in order
+   * @return the full stage list
+   */
+  private static List<MissionStage> ascentThen(
+      AscentProfile profile, GravityTurnConstraints constraints, MissionStage... orbitalPhases) {
+    List<MissionStage> stages = new ArrayList<>();
+    stages.add(new VerticalAscentStage("Vertical Ascent", profile.verticalAscentDuration()));
+    stages.addAll(AscentSequence.gravityTurn(profile, constraints));
+    stages.addAll(List.of(orbitalPhases));
+    return List.copyOf(stages);
   }
 
   private static MissionObjective buildObjective(

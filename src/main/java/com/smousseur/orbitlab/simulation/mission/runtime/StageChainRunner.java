@@ -88,26 +88,34 @@ public final class StageChainRunner {
   private final StepSampler sampler;
   private final double lastStageCoastSeconds;
   private final StageListener listener;
+  private final boolean abortOnFailure;
 
   private StageChainRunner(
       double sampleStepSeconds,
       StepSampler sampler,
       double lastStageCoastSeconds,
-      StageListener listener) {
+      StageListener listener,
+      boolean abortOnFailure) {
     this.sampleStepSeconds = sampleStepSeconds;
     this.sampler = sampler;
     this.lastStageCoastSeconds = lastStageCoastSeconds;
     this.listener = listener;
+    this.abortOnFailure = abortOnFailure;
   }
 
   /**
    * A runner that only flies the chain: no sampling, no observation, and every stage — including
    * the last — bounded by its own configured cutoff.
    *
+   * <p>This is the optimize-pass runner, so it is also the strict one: a stage that fails aborts
+   * the chain and the run returns its <b>entry</b> state. That is the penalty contract the cost
+   * functions rely on (a candidate that barely advanced is scored as failed), and it keeps the run
+   * from reading the shared mission state — which parallel CMA-ES evaluations would race on.
+   *
    * @return the runner
    */
   public static StageChainRunner plain() {
-    return new StageChainRunner(0.0, null, 0.0, null);
+    return new StageChainRunner(0.0, null, 0.0, null, true);
   }
 
   /**
@@ -125,17 +133,19 @@ public final class StageChainRunner {
       StepSampler sampler,
       double lastStageCoastSeconds,
       StageListener listener) {
-    return new StageChainRunner(sampleStepSeconds, sampler, lastStageCoastSeconds, listener);
+    return new StageChainRunner(
+        sampleStepSeconds, sampler, lastStageCoastSeconds, listener, false);
   }
 
   /**
    * Flies the chain from {@code entryState}, advancing {@link Mission#setCurrentState} at each
    * boundary as the stages' event handlers expect.
    *
-   * <p>A stage whose propagation throws does not abort the chain: it is reported to the listener
-   * as failed and the following stages fly from the mission's current state, matching the
-   * ephemeris generator's long-standing behaviour of producing a partial (and flagged) trajectory
-   * rather than none at all.
+   * <p>A stage whose propagation throws does not abort a {@link #sampling} chain: it is reported to
+   * the listener as failed and the following stages fly from the mission's current state, matching
+   * the ephemeris generator's long-standing behaviour of producing a partial (and flagged)
+   * trajectory rather than none at all. A {@link #plain} chain stops there and returns {@code
+   * entryState} instead — see that factory for why.
    *
    * @param chain the stages to fly, in order
    * @param entryState the state the first stage starts from
@@ -202,6 +212,9 @@ public final class StageChainRunner {
         finalState = propagator.propagate(endDate);
       } catch (Exception e) {
         logger.warn("Propagation failed for stage '{}': {}", stage.getName(), e.getMessage());
+        if (abortOnFailure) {
+          return entryState;
+        }
         finalState = mission.getCurrentState();
         failed = true;
       }

@@ -109,14 +109,21 @@ public class MissionOptimizer {
       if (stage instanceof OptimizableMissionStage<?> optimizable) {
         logger.info("Optimizing stage '{}'...", stage.getName());
 
+        // Captured BEFORE the optimizer runs. A problem that flies real mission stages (the ascent
+        // chain, spec 01 §5.4) advances the shared mission as it goes — and does so from the
+        // parallel CMA-ES exploration threads — so mission.getCurrentState() is no longer the stage
+        // entry once optimize() returns. Reading it here, and restoring it below, keeps the loop on
+        // the state the stage actually starts from.
+        SpacecraftState entryState = mission.getCurrentState();
+
         TrajectoryProblem problem = optimizable.buildProblem(mission);
         long stageSeed = seedRng.nextLong();
         CMAESTrajectoryOptimizer optimizer =
             new CMAESTrajectoryOptimizer(problem, maxEvaluations, stageSeed);
         OptimizationResult result = optimizer.optimize();
+        mission.setCurrentState(entryState);
 
         // Store the entry state so the runtime can start from exactly the same point
-        SpacecraftState entryState = mission.getCurrentState();
         result =
             new OptimizationResult(
                 result.bestVariables(),
@@ -206,7 +213,16 @@ public class MissionOptimizer {
           }
         }
 
-        SpacecraftState propagated = problem.propagate(result.bestVariables());
+        SpacecraftState propagated;
+        if (optimizable.advancesByReplay()) {
+          // The problem flew a chain this loop is about to walk itself (spec 01 §5.6). Inject the
+          // result now — the phases that follow read the plan it publishes — and advance one phase
+          // at a time, so each gets its own accounting line instead of the chain's aggregate.
+          optimizable.applyOptimization(result);
+          propagated = stage.propagateStandalone(entryState, mission);
+        } else {
+          propagated = problem.propagate(result.bestVariables());
+        }
         mission.setCurrentState(propagated);
         stagePerformances.add(buildStagePerformance(stage, massIn, propagated.getMass()));
       } else {

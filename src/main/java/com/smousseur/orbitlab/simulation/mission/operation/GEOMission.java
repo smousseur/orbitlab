@@ -11,13 +11,14 @@ import com.smousseur.orbitlab.simulation.mission.stage.AnalyticPlaneTrimAtNodeSt
 import com.smousseur.orbitlab.simulation.mission.stage.AnalyticTrimBurnStage;
 import com.smousseur.orbitlab.simulation.mission.stage.CoastingStage;
 import com.smousseur.orbitlab.simulation.mission.stage.StageSeparationStage;
-import com.smousseur.orbitlab.simulation.mission.stage.ascent.GravityTurnStage;
+import com.smousseur.orbitlab.simulation.mission.stage.ascent.AscentSequence;
 import com.smousseur.orbitlab.simulation.mission.stage.ascent.VerticalAscentStage;
 import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchConfiguration;
 import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Launchers;
 import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Payloads;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.AscentProfile;
+import java.util.ArrayList;
 import java.util.List;
 import org.hipparchus.util.FastMath;
 
@@ -140,32 +141,36 @@ public class GEOMission extends EarthMission {
       double parkingAltitude,
       double targetAltitude,
       double finalInclination) {
-    return List.of(
-        new VerticalAscentStage("Vertical Ascent", profile.verticalAscentDuration()),
-        new GravityTurnStage(
-            "Gravity turn",
-            profile.pitchKickAngleDeg(),
-            profile.interstageCoastDuration(),
-            GravityTurnConstraints.forTarget(parkingAltitude)),
-        new AnalyticParkingInsertionStage("Parking", parkingAltitude),
-        new CoastingStage("Coasting parking", true),
-        new AnalyticGtoInjectionStage("GTO injection", targetAltitude),
-        // Index 1 = the launcher's upper stage (stack = [S1, S2, payload]). Declaring it makes the
-        // separation refuse to fire when the gravity turn left propellant in S1 — S1 would still
-        // be the active stage and get jettisoned in S2's place, after which S2 silently takes over
-        // the payload kick motor's burns (bilan 10 §6 follow-up, found by the I7 GEO run).
-        new StageSeparationStage(
-            "S2 separation", profile.interstageCoastDuration(), UPPER_STAGE_INDEX),
-        // The AKM burn owns its ~5 h lead-in coast to the GTO apogee and centers the burn on it
-        // (an hours-long 400 N burn starting AT apogee would ruin the insertion). Its plan runs a
-        // Newton on the aimed perigee so the finite-burn apogee inflation lands on target; the
-        // trim then raises the deliberately-low perigee with a short, drift-free burn.
-        new AnalyticApogeeCircularizationStage(
-            "Circularization", targetAltitude, FastMath.toRadians(finalInclination)),
-        new AnalyticTrimBurnStage("Trim", targetAltitude, FastMath.toRadians(finalInclination)),
-        // Node-targeted plane trim (bilan 08 §3.5): the hours-long AKM burn leaves a ~0.25° plane
-        // residual it cannot correct off-node; a short out-of-plane burn at the node cleans it up.
-        new AnalyticPlaneTrimAtNodeStage("Plane trim", FastMath.toRadians(finalInclination)),
-        new CoastingStage("Coasting", null));
+    List<MissionStage> stages = new ArrayList<>();
+    stages.add(new VerticalAscentStage("Vertical Ascent", profile.verticalAscentDuration()));
+    // The ascent is three explicit phases (spec 01 §4.2), so "S1 separation" and "S2 separation"
+    // below are now two instances of the same class with expected stack indices 0 and 1 — the
+    // launcher's staging is stated once, in one place, instead of half-implied by a detector.
+    stages.addAll(
+        AscentSequence.gravityTurn(profile, GravityTurnConstraints.forTarget(parkingAltitude)));
+    stages.addAll(
+        List.of(
+            new AnalyticParkingInsertionStage("Parking", parkingAltitude),
+            new CoastingStage("Coasting parking", true),
+            new AnalyticGtoInjectionStage("GTO injection", targetAltitude),
+            // Index 1 = the launcher's upper stage (stack = [S1, S2, payload]). Declaring it makes
+            // the separation refuse to fire when the gravity turn left propellant in S1 — S1 would
+            // still be the active stage and get jettisoned in S2's place, after which S2 silently
+            // takes over the payload kick motor's burns (bilan 10 §6 follow-up, I7 GEO run).
+            new StageSeparationStage(
+                "S2 separation", profile.interstageCoastDuration(), UPPER_STAGE_INDEX),
+            // The AKM burn owns its ~5 h lead-in coast to the GTO apogee and centers the burn on it
+            // (an hours-long 400 N burn starting AT apogee would ruin the insertion). Its plan runs
+            // a Newton on the aimed perigee so the finite-burn apogee inflation lands on target;
+            // the trim then raises the deliberately-low perigee with a short, drift-free burn.
+            new AnalyticApogeeCircularizationStage(
+                "Circularization", targetAltitude, FastMath.toRadians(finalInclination)),
+            new AnalyticTrimBurnStage("Trim", targetAltitude, FastMath.toRadians(finalInclination)),
+            // Node-targeted plane trim (bilan 08 §3.5): the hours-long AKM burn leaves a ~0.25°
+            // plane residual it cannot correct off-node; a short out-of-plane burn at the node
+            // cleans it up.
+            new AnalyticPlaneTrimAtNodeStage("Plane trim", FastMath.toRadians(finalInclination)),
+            new CoastingStage("Coasting", null)));
+    return List.copyOf(stages);
   }
 }
