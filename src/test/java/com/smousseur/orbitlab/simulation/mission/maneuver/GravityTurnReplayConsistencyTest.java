@@ -22,43 +22,46 @@ import org.hipparchus.ode.events.Action;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.orekit.orbits.CartesianOrbit;
 import org.orekit.propagation.SpacecraftState;
 import org.orekit.propagation.events.DateDetector;
 import org.orekit.propagation.numerical.NumericalPropagator;
 import org.orekit.time.AbsoluteDate;
 import org.orekit.time.TimeScalesFactory;
+import org.orekit.utils.PVCoordinates;
 
 /**
- * Pins the proven root cause of the GEO optimize-vs-ephemeris divergence (bilan 11 §3.9): the
- * <b>vertical ascent flies under different gravity models in the two passes</b>, and the gravity
- * turn amplifies the resulting post-ascent difference into a downstream one that the GTO →
- * apogee-node → AKM chain blows up to ~5° of inclinaison.
+ * Guards the optimize-vs-ephemeris consistency of the ascent, and holds the étape 0 numeric
+ * reference of the explicit-staging migration.
  *
- * <p>{@code ConstantThrustStage.propagateStandalone} (which {@code VerticalAscentStage} extends)
- * builds a point-mass {@code createSimplePropagator}; the ephemeris generator flies every stage
- * under the 8×8 {@code createOptimizationPropagator}. Same 7 s burn, same mass consumed, but a
- * different post-ascent state — and the gravity turn's {@code getEntryState()} override never
- * reconciles it, because that default returns {@code null} and {@code GravityTurnStage} does not
- * override it. So the optimize GT starts from the point-mass post-ascent state, the ephemeris GT
- * from the 8×8 one.
- *
- * <p>The four fixtures separate the cause from the two dead ends chased earlier:
+ * <p><b>History (bilan 11 §3.9), now closed.</b> The GEO optimize-vs-ephemeris divergence — ~5° of
+ * inclinaison once the GTO → apogee-node → AKM chain had amplified it — was traced to the
+ * <b>vertical ascent flying under two different gravity models</b>: {@code
+ * ConstantThrustStage.propagateStandalone} (which {@code VerticalAscentStage} extends) built a
+ * point-mass {@code createSimplePropagator}, while the ephemeris generator flew every stage under
+ * the 8×8 {@code createOptimizationPropagator}. Same 7 s burn, same mass consumed, but a
+ * post-ascent state differing by ~0.4 m / 0.1 m/s — which the gravity turn's {@code
+ * getEntryState()} never reconciled. {@code propagateStandalone} now builds the 8×8 too, so the two
+ * passes coincide; the fixtures below hold that closure rather than the former mismatch.
  *
  * <ul>
- *   <li>{@code verticalAscentGravityModelMismatch_*} — point-mass vs 8×8 vertical ascent differ
- *       (~0.4 m, 0.1 m/s), the seed;
- *   <li>{@code differentPostAscentStates_*} — the same maneuver + same config, fed those two
- *       entries, diverges (~25 m) — the cause is the entry, i.e. the VA model;
- *   <li>{@code samePostAscentState_configDifferenceIsHarmless} — the same entry with the two
- *       <em>propagator configs</em> (armQuiet+tracker vs arm+MECO+multiplexer), even <b>with
- *       staging</b>, agrees to the bit — the config is NOT the cause;
+ *   <li>{@code verticalAscent_fliesTheSameGravityModelInBothPasses} — the fix: the two passes
+ *       produce the same post-ascent state, to the bit. Red again if a point-mass propagator
+ *       reappears in the optimize path;
+ *   <li>{@code postAscentEntryDifference_isAmplifiedByTheGravityTurn} — why that matters: an entry
+ *       difference of the historical magnitude, injected deliberately, still moves the gravity-turn
+ *       exit by a real margin. The gravity turn amplifies its entry, so the entry must be shared;
+ *   <li>{@code samePostAscentState_configDifferenceIsHarmless} — the dead end that was ruled out:
+ *       the same entry under the two <em>propagator configs</em> (armQuiet+tracker vs
+ *       arm+MECO+multiplexer), even <b>with staging</b>, agrees to the bit;
  *   <li>{@code gravityTurnStageConfigure_startsTheReplayFromTheKickedState} — the (correct but
- *       divergence-irrelevant) 2b pitch-kick fix.
+ *       divergence-irrelevant) 2b pitch-kick fix;
+ *   <li>{@code gravityTurnExit_matchesTheRecordedPreSplitBaseline} — étape 0 of the
+ *       explicit-staging migration: the pre-split reference the three-phase ascent must reproduce.
  * </ul>
  *
- * <p>The reproduction needs the <em>real</em> regime (sub-orbital climbing entry, |v| ≈ 466 m/s,
- * with staging), so the fixtures fly the actual Falcon Heavy vertical ascent rather than a
- * synthetic state.
+ * <p>The regime matters (sub-orbital climbing entry, |v| ≈ 466 m/s, with staging), so the fixtures
+ * fly the actual Falcon Heavy vertical ascent rather than a synthetic state.
  */
 class GravityTurnReplayConsistencyTest {
   private static final Logger logger = LogManager.getLogger(GravityTurnReplayConsistencyTest.class);
@@ -70,6 +73,17 @@ class GravityTurnReplayConsistencyTest {
   private static final double LON = -52.77;
   private static final double PITCH_KICK_DEG = 3.0; // FALCON_HEAVY AscentProfile
   private static final double INTERSTAGE_COAST = 2.0;
+
+  // ── Étape 0 baseline of the explicit-staging migration (spec 01 §7.1) ─────
+  // Recorded on the pre-split code (commit 1d53e83), fixed variables, no optimizer involved.
+  private static final double REF_BURN1_DURATION_S = 149.979660;
+  private static final double REF_STAGING_COMPLETE_S = 151.979660;
+  private static final double REF_EXIT_DT_S = 153.979660;
+  private static final double REF_EXIT_MASS_KG = 17360.267;
+  private static final Vector3D REF_EXIT_POSITION =
+      new Vector3D(-3949439.705160, -5013991.353815, 589230.976026);
+  private static final Vector3D REF_EXIT_VELOCITY =
+      new Vector3D(6221.798395, -5155.808070, -48.249486);
 
   @BeforeAll
   static void setup() {
@@ -145,19 +159,22 @@ class GravityTurnReplayConsistencyTest {
     return prop.propagate(meco);
   }
 
-  /** Post-vertical-ascent state, flown under the two gravity models the two passes actually use. */
+  /**
+   * Post-vertical-ascent state as each pass computes it. Both fly 8×8 today; the field names say
+   * which pass, not which gravity model, precisely because the model is no longer what differs.
+   */
   private record PostVa(
-      SpacecraftState pointMass, SpacecraftState eightByEight, double burn1Mass) {}
+      SpacecraftState optimizePass, SpacecraftState ephemerisPass, double burn1Mass) {}
 
-  private static PostVa postVerticalAscentBothModels() {
+  private static PostVa postVerticalAscentBothPasses() {
     GEOMission mission = geoMission();
     AbsoluteDate epoch = new AbsoluteDate(2026, 1, 1, 12, 0, 0.0, TimeScalesFactory.getUTC());
     SpacecraftState initial = mission.getInitialState(epoch);
     MissionStage va = mission.getStages().getFirst();
 
-    // Optimize pass: propagateStandalone → createSimplePropagator (point-mass).
+    // Optimize pass: propagateStandalone, which builds its own propagator (8×8 since the fix).
     mission.setCurrentState(initial);
-    SpacecraftState pointMass = va.propagateStandalone(initial, mission);
+    SpacecraftState optimizePass = va.propagateStandalone(initial, mission);
 
     // Ephemeris pass: the generator flies every stage under createOptimizationPropagator (8×8).
     mission.setCurrentState(initial);
@@ -169,38 +186,75 @@ class GravityTurnReplayConsistencyTest {
         va.getConfiguredEndDate() != null
             ? va.getConfiguredEndDate()
             : initial.getDate().shiftedBy(7.0);
-    SpacecraftState eightByEight = p8.propagate(end);
-    return new PostVa(pointMass, eightByEight, pointMass.getMass());
+    SpacecraftState ephemerisPass = p8.propagate(end);
+    return new PostVa(optimizePass, ephemerisPass, optimizePass.getMass());
   }
 
+  /** The given state, displaced by {@code dPos} along the radius and {@code dVel} along v. */
+  private static SpacecraftState displaced(SpacecraftState state, double dPos, double dVel) {
+    Vector3D position = state.getPosition();
+    Vector3D velocity = state.getPVCoordinates().getVelocity();
+    PVCoordinates pv =
+        new PVCoordinates(
+            position.add(new Vector3D(dPos, position.normalize())),
+            velocity.add(new Vector3D(dVel, velocity.normalize())));
+    CartesianOrbit orbit =
+        new CartesianOrbit(pv, state.getFrame(), state.getDate(), state.getOrbit().getMu());
+    return new SpacecraftState(orbit).withMass(state.getMass());
+  }
+
+  /**
+   * The closure of bilan 11 §3.9: the vertical ascent is flown under the <b>same</b> gravity model
+   * by both passes, so the gravity turn starts from the same state either way.
+   *
+   * <p>This fixture used to assert the opposite — that the optimize pass (point-mass {@code
+   * createSimplePropagator}) and the ephemeris pass (8×8) produced post-ascent states ~0.4 m /
+   * 0.1 m/s apart, the seed of the ~5° GEO inclinaison divergence. {@code
+   * ConstantThrustStage.propagateStandalone} now builds the 8×8 propagator, the difference is
+   * exactly zero, and this fixture holds it there: it turns red the day a point-mass propagator
+   * reappears on the optimize path — which is how the divergence would come back.
+   */
   @Test
-  void verticalAscentGravityModelMismatch_movesThePostAscentState() {
-    PostVa va = postVerticalAscentBothModels();
-    double dPos = Vector3D.distance(va.pointMass().getPosition(), va.eightByEight().getPosition());
+  void verticalAscent_fliesTheSameGravityModelInBothPasses() {
+    PostVa va = postVerticalAscentBothPasses();
+    double dPos =
+        Vector3D.distance(va.optimizePass().getPosition(), va.ephemerisPass().getPosition());
     double dVel =
         Vector3D.distance(
-            va.pointMass().getPVCoordinates().getVelocity(),
-            va.eightByEight().getPVCoordinates().getVelocity());
+            va.optimizePass().getPVCoordinates().getVelocity(),
+            va.ephemerisPass().getPVCoordinates().getVelocity());
     logger.info(
-        "Vertical Ascent point-mass vs 8×8 post-state: Δpos={} m, Δvel={} m/s, |v|≈{} m/s",
-        String.format(java.util.Locale.ROOT, "%.3f", dPos),
-        String.format(java.util.Locale.ROOT, "%.5f", dVel),
+        "Vertical Ascent optimize vs ephemeris post-state: Δpos={} m, Δvel={} m/s, |v|≈{} m/s",
+        String.format(java.util.Locale.ROOT, "%.2e", dPos),
+        String.format(java.util.Locale.ROOT, "%.2e", dVel),
         String.format(
             java.util.Locale.ROOT,
             "%.1f",
-            va.pointMass().getPVCoordinates().getVelocity().getNorm()));
-    // The root cause (bilan 11 §3.9): the optimize pass flies the vertical ascent point-mass, the
-    // ephemeris generator 8×8. Same 7 s burn, same mass consumed — but the state differs, and the
-    // gravity-turn override never reconciles it (GravityTurnStage.getEntryState() is null).
-    assertEquals(va.pointMass().getMass(), va.eightByEight().getMass(), 1.0, "same mass consumed");
-    assertTrue(
-        dPos > 1.0e-3 || dVel > 1.0e-6,
-        () -> "the two VA models must produce different post-ascent states; Δpos=" + dPos);
+            va.optimizePass().getPVCoordinates().getVelocity().getNorm()));
+    assertEquals(
+        va.optimizePass().getMass(), va.ephemerisPass().getMass(), 1.0, "same mass consumed");
+    assertEquals(0.0, dPos, 1.0e-6, "the two passes must fly the same vertical ascent (position)");
+    assertEquals(0.0, dVel, 1.0e-9, "the two passes must fly the same vertical ascent (velocity)");
   }
 
+  /**
+   * Why the shared entry matters: the gravity turn <b>amplifies</b> whatever difference it is
+   * handed. Feeding it two entries a mere 0.4 m / 0.1 m/s apart — the magnitude the VA
+   * gravity-model mismatch used to produce — moves its exit by tens of meters, which the GTO →
+   * apogee-node → AKM chain then blew up to ~5° of inclinaison (bilan 11 §3.9).
+   *
+   * <p>The difference is injected deliberately here, since the ascent no longer produces one on its
+   * own. That keeps the sensitivity documented — and it is what makes the N2 tolerances of the
+   * explicit-staging migration (spec 01 §7.1) meaningful: 10 m at MECO is not slack, it is the
+   * budget for an entry difference three orders of magnitude smaller.
+   */
   @Test
-  void differentPostAscentStates_makeTheGravityTurnExitDiverge_sameConfig() {
-    PostVa va = postVerticalAscentBothModels();
+  void postAscentEntryDifference_isAmplifiedByTheGravityTurn() {
+    PostVa va = postVerticalAscentBothPasses();
+    SpacecraftState entry = va.optimizePass();
+    // The historical VA mismatch magnitude (bilan 11 §3.9), reproduced synthetically.
+    SpacecraftState nudgedEntry = displaced(entry, 0.4, 0.1);
+
     double azimuth = Physics.getLaunchAzimuth(0.0, 0.0);
     GravityTurnManeuver maneuver =
         new GravityTurnManeuver(
@@ -211,25 +265,23 @@ class GravityTurnReplayConsistencyTest {
             INTERSTAGE_COAST);
     double[] variables = {maneuver.getStagingCompleteTime() + 2.0, 0.32};
 
-    // Same config (both optimize) — so the ONLY difference is the entry state, which the VA model
-    // mismatch produced. This isolates the cause to the entry, not the propagator config.
-    SpacecraftState fromPointMass = maneuver.propagateForOptimization(va.pointMass(), variables);
-    SpacecraftState fromEightByEight =
-        maneuver.propagateForOptimization(va.eightByEight(), variables);
-    assertTrue(fromPointMass.getMass() < va.burn1Mass() - 1.0, "GT must fly (mass consumed)");
+    // Same maneuver, same config, same variables: the ONLY difference is the entry state.
+    SpacecraftState fromEntry = maneuver.propagateForOptimization(entry, variables);
+    SpacecraftState fromNudgedEntry = maneuver.propagateForOptimization(nudgedEntry, variables);
+    assertTrue(fromEntry.getMass() < va.burn1Mass() - 1.0, "GT must fly (mass consumed)");
 
-    double dPos = Vector3D.distance(fromPointMass.getPosition(), fromEightByEight.getPosition());
+    double dPos = Vector3D.distance(fromEntry.getPosition(), fromNudgedEntry.getPosition());
     double dVel =
         Vector3D.distance(
-            fromPointMass.getPVCoordinates().getVelocity(),
-            fromEightByEight.getPVCoordinates().getVelocity());
+            fromEntry.getPVCoordinates().getVelocity(),
+            fromNudgedEntry.getPVCoordinates().getVelocity());
     logger.info(
-        "GT exit from point-mass-VA vs 8×8-VA entry (same config): Δpos={} m, Δvel={} m/s",
+        "GT exit from a 0.4 m / 0.1 m/s entry difference: Δpos={} m, Δvel={} m/s",
         String.format(java.util.Locale.ROOT, "%.1f", dPos),
         String.format(java.util.Locale.ROOT, "%.4f", dVel));
     assertTrue(
         dPos > 1.0,
-        () -> "the VA-model entry difference must move the GT exit by a real margin; Δpos=" + dPos);
+        () -> "the gravity turn must amplify an entry difference of that size; Δpos=" + dPos);
   }
 
   @Test
@@ -253,6 +305,69 @@ class GravityTurnReplayConsistencyTest {
         String.format(java.util.Locale.ROOT, "%.2e", dVel));
     assertEquals(0.0, dPos, 1.0e-3, "same entry: the two configs agree (config is not the cause)");
     assertEquals(0.0, dVel, 1.0e-6, "same entry: the two configs agree on velocity");
+  }
+
+  /**
+   * Étape 0 of the explicit-staging migration (spec {@code
+   * specs/mission-stages/01-separations-implicites.md} §7.1/§8): the numeric reference of the
+   * gravity turn at <b>fixed variables</b>, so the split into {@code Gravity turn (S1) → S1
+   * separation → Gravity turn (S2)} can be checked without running CMA-ES.
+   *
+   * <p>Three quantities are pinned, and they are exactly the ones the split must reproduce:
+   *
+   * <ul>
+   *   <li>{@code burn1Duration} and {@code stagingCompleteTime} — the date arithmetic the split
+   *       phases inherit (spec §4.3: jettison at {@code kick + 1e-3 + burn1 + 1e-3}, second
+   *       ignition at {@code jettison + interstageCoast + 1e-3});
+   *   <li>the state at gravity-turn exit (MECO) — date, mass, position, velocity, at the N2
+   *       tolerances of §7.1 (1 ms / 1 kg / 10 m / 0.05 m/s).
+   * </ul>
+   *
+   * <p>Recorded on the pre-split code, seed-free (no optimizer involved), Falcon Heavy GEO profile.
+   * After the split this test must fly the three-phase chain from the same entry and land here.
+   */
+  @Test
+  void gravityTurnExit_matchesTheRecordedPreSplitBaseline() {
+    GtSetup gt = gravityTurnAtEntry();
+    double transitionTime = gt.maneuver().getStagingCompleteTime() + 2.0;
+    double[] variables = {transitionTime, 0.32};
+
+    SpacecraftState exit = gt.maneuver().propagateForOptimization(gt.entry(), variables);
+    double dt = exit.getDate().durationFrom(gt.entry().getDate());
+    Vector3D position = exit.getPosition();
+    Vector3D velocity = exit.getPVCoordinates().getVelocity();
+
+    logger.info(
+        "Ascent baseline (fixed variables): burn1={} s, stagingComplete={} s, transition={} s",
+        String.format(java.util.Locale.ROOT, "%.6f", gt.maneuver().getBurn1Duration()),
+        String.format(java.util.Locale.ROOT, "%.6f", gt.maneuver().getStagingCompleteTime()),
+        String.format(java.util.Locale.ROOT, "%.6f", transitionTime));
+    logger.info(
+        "Ascent baseline GT exit: t+{} s, mass={} kg, pos=({}), vel=({})",
+        String.format(java.util.Locale.ROOT, "%.6f", dt),
+        String.format(java.util.Locale.ROOT, "%.3f", exit.getMass()),
+        String.format(
+            java.util.Locale.ROOT,
+            "%.6f, %.6f, %.6f",
+            position.getX(),
+            position.getY(),
+            position.getZ()),
+        String.format(
+            java.util.Locale.ROOT,
+            "%.6f, %.6f, %.6f",
+            velocity.getX(),
+            velocity.getY(),
+            velocity.getZ()));
+
+    assertEquals(REF_BURN1_DURATION_S, gt.maneuver().getBurn1Duration(), 1.0e-3, "burn 1 duration");
+    assertEquals(
+        REF_STAGING_COMPLETE_S, gt.maneuver().getStagingCompleteTime(), 1.0e-3, "staging complete");
+    assertEquals(REF_EXIT_DT_S, dt, 1.0e-3, "GT exit date");
+    assertEquals(REF_EXIT_MASS_KG, exit.getMass(), 1.0, "GT exit mass");
+    assertEquals(
+        0.0, Vector3D.distance(REF_EXIT_POSITION, position), 10.0, "GT exit position (10 m)");
+    assertEquals(
+        0.0, Vector3D.distance(REF_EXIT_VELOCITY, velocity), 0.05, "GT exit velocity (0.05 m/s)");
   }
 
   /**
