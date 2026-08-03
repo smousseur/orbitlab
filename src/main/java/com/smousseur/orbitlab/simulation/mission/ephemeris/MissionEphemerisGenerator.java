@@ -1,21 +1,22 @@
 package com.smousseur.orbitlab.simulation.mission.ephemeris;
 
-import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionStage;
-import com.smousseur.orbitlab.simulation.mission.OptimizableMissionStage;
+import com.smousseur.orbitlab.simulation.mission.runtime.StageChainRunner;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.orekit.propagation.SpacecraftState;
-import org.orekit.propagation.numerical.NumericalPropagator;
-import org.orekit.time.AbsoluteDate;
 
 /**
  * Generates the complete mission ephemeris by replaying all stages with their optimized parameters
  * injected. Uses Orekit numerical propagation with a fixed-step handler to sample the trajectory.
+ *
+ * <p>The stage-by-stage traversal itself lives in {@link StageChainRunner}, shared with the
+ * optimize pass so the two cannot drift apart (spec 01 §5.4); this class contributes only what is
+ * specific to sampling a trajectory: the points, and the completeness verdict.
  */
 public final class MissionEphemerisGenerator {
   private static final Logger logger = LogManager.getLogger(MissionEphemerisGenerator.class);
@@ -41,74 +42,48 @@ public final class MissionEphemerisGenerator {
    * @return the complete mission ephemeris
    */
   public MissionEphemeris generate(Mission mission, SpacecraftState initialState) {
-    List<MissionEphemerisPoint> points = new ArrayList<>();
-    SpacecraftState currentState = initialState;
-    // Cleared the moment any stage fails to reach its scheduled end (bilan 11 §3.9 prérequis).
-    boolean complete = true;
+    Collector collector = new Collector(mission);
+    StageChainRunner runner =
+        StageChainRunner.sampling(
+            DEFAULT_STEP_SECONDS, collector, DEFAULT_COAST_DURATION_SECONDS, collector);
 
-    List<MissionStage> stages = mission.getStages();
-    for (int stageIdx = 0; stageIdx < stages.size(); stageIdx++) {
-      MissionStage stage = stages.get(stageIdx);
-      boolean isLastStage = (stageIdx == stages.size() - 1);
+    runner.run(mission.getStages(), initialState, mission);
 
+    logger.info(
+        "Total ephemeris points: {} (complete={})", collector.points.size(), collector.complete);
+    return new MissionEphemeris(collector.points, collector.complete);
+  }
+
+  /**
+   * Turns the flown chain into ephemeris points, and judges whether the trajectory is whole. Both
+   * roles read the same stream of stages, so they share one object.
+   */
+  private static final class Collector
+      implements StageChainRunner.StepSampler, StageChainRunner.StageListener {
+
+    private final Mission mission;
+    private final List<MissionEphemerisPoint> points = new ArrayList<>();
+
+    /** Cleared the moment any stage fails to reach its scheduled end (bilan 11 §3.9 prérequis). */
+    private boolean complete = true;
+
+    private Collector(Mission mission) {
+      this.mission = mission;
+    }
+
+    @Override
+    public void sample(MissionStage stage, SpacecraftState state) {
+      points.add(pointOf(stage, state));
+    }
+
+    @Override
+    public void onStageStart(MissionStage stage) {
       logger.info("Generating ephemeris for stage '{}'", stage.getName());
+    }
 
-      // Enter the stage
-      currentState = stage.enter(currentState, mission);
-
-      // If optimizable with saved entry state, use it for reproducibility
-      if (stage instanceof OptimizableMissionStage<?> opt && opt.getEntryState() != null) {
-        currentState = opt.getEntryState();
-      }
-
-      mission.setCurrentState(currentState);
-
-      // Create and configure propagator. The stage sizes its own max step (bilan 08 §3.1): burn-free
-      // stages coast at the large cap (a big saving on the multi-hour final coast), burn stages keep
-      // the late-ignition invariant against their own upper-stage burns for a light I7 load.
-      double maxStep = stage.maxStepSeconds(currentState, mission);
-      NumericalPropagator propagator = OrekitService.get().createOptimizationPropagator(maxStep);
-      propagator.setInitialState(currentState);
-      stage.configure(propagator, mission);
-
-      // Collect samples via fixed-step handler
-      String stageName = stage.getName();
-      propagator
-          .getMultiplexer()
-          .add(
-              DEFAULT_STEP_SECONDS,
-              state -> {
-                Vector3D pos = state.getPosition();
-                Vector3D vel = state.getPVCoordinates().getVelocity();
-                double alt = mission.computeAltitudeMeters(state);
-                points.add(
-                    new MissionEphemerisPoint(
-                        state.getDate(), pos, vel, stageName, state.getMass(), alt));
-              });
-
-      // Propagate to the exact end date configured by the stage. Using the precise end date
-      // avoids numerical issues where adaptive-step integrators might miss ConstantThrustManeuver
-      // boundary events when propagating far past the actual stage duration.
-      AbsoluteDate endDate;
-      // Only a stage whose own cutoff defines endDate can be judged "reached its end": the last
-      // stage runs an open-ended coast, and a stage falling back to the 7200 s safety net has no
-      // real cutoff to compare against, so neither is checked for early truncation.
-      boolean endDateIsStageCutoff = false;
-      if (isLastStage) {
-        endDate = currentState.getDate().shiftedBy(DEFAULT_COAST_DURATION_SECONDS);
-      } else if (stage.getConfiguredEndDate() != null) {
-        endDate = stage.getConfiguredEndDate();
-        endDateIsStageCutoff = true;
-      } else {
-        endDate = currentState.getDate().shiftedBy(7200.0); // fallback safety
-      }
-
-      SpacecraftState finalState;
-      try {
-        finalState = propagator.propagate(endDate);
-      } catch (Exception e) {
-        logger.warn("Propagation failed for stage '{}': {}", stage.getName(), e.getMessage());
-        finalState = mission.getCurrentState();
+    @Override
+    public void onStageEnd(StageChainRunner.StageRun run) {
+      if (run.propagationFailed()) {
         complete = false;
       }
 
@@ -116,37 +91,32 @@ public final class MissionEphemerisGenerator {
       // STOP event — in practice the DepletionGuard firing on a burn that ran its tank dry (bilan
       // 11 §3.9). The flown 8×8 trajectory (the one rendered and read for feasibility) is then
       // broken past this point, so the whole ephemeris is flagged incomplete.
-      if (endDateIsStageCutoff) {
-        double shortfall = endDate.durationFrom(finalState.getDate());
-        if (shortfall > STAGE_END_TOLERANCE_SECONDS) {
-          logger.warn(
-              "Stage '{}' stopped {} s before its scheduled cutoff — flown trajectory truncated"
-                  + " (propellant depleted mid-burn); marking ephemeris incomplete",
-              stage.getName(),
-              String.format(java.util.Locale.ROOT, "%.1f", shortfall));
-          complete = false;
-        }
+      double shortfall = run.shortfallSeconds();
+      if (shortfall > STAGE_END_TOLERANCE_SECONDS) {
+        logger.warn(
+            "Stage '{}' stopped {} s before its scheduled cutoff — flown trajectory truncated"
+                + " (propellant depleted mid-burn); marking ephemeris incomplete",
+            run.stage().getName(),
+            String.format(java.util.Locale.ROOT, "%.1f", shortfall));
+        complete = false;
       }
 
       // Add the final state of this stage as a sample point
-      Vector3D pos = finalState.getPosition();
-      Vector3D vel = finalState.getPVCoordinates().getVelocity();
-      double alt = mission.computeAltitudeMeters(finalState);
-      points.add(
-          new MissionEphemerisPoint(
-              finalState.getDate(), pos, vel, stageName, finalState.getMass(), alt));
-
-      currentState = finalState;
-      mission.setCurrentState(currentState);
+      points.add(pointOf(run.stage(), run.finalState()));
 
       logger.info(
           "Stage '{}': {} points, ended at {}",
-          stage.getName(),
+          run.stage().getName(),
           points.size(),
-          finalState.getDate());
+          run.finalState().getDate());
     }
 
-    logger.info("Total ephemeris points: {} (complete={})", points.size(), complete);
-    return new MissionEphemeris(points, complete);
+    private MissionEphemerisPoint pointOf(MissionStage stage, SpacecraftState state) {
+      Vector3D pos = state.getPosition();
+      Vector3D vel = state.getPVCoordinates().getVelocity();
+      double alt = mission.computeAltitudeMeters(state);
+      return new MissionEphemerisPoint(
+          state.getDate(), pos, vel, stage.getName(), state.getMass(), alt);
+    }
   }
 }

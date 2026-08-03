@@ -6,6 +6,7 @@ import com.smousseur.orbitlab.simulation.mission.attitude.GravityTurnAttitudePro
 import com.smousseur.orbitlab.simulation.mission.detector.DepletionGuard;
 import com.smousseur.orbitlab.simulation.mission.detector.DepletionStopTrigger;
 import com.smousseur.orbitlab.simulation.mission.detector.MinAltitudeTracker;
+import com.smousseur.orbitlab.simulation.mission.stage.ascent.AscentPlan;
 import com.smousseur.orbitlab.simulation.mission.stage.ascent.GravityTurnStage;
 import com.smousseur.orbitlab.simulation.mission.vehicle.ActiveStageInfo;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropulsionSystem;
@@ -75,24 +76,18 @@ public class GravityTurnManeuver {
   }
 
   /**
-   * Decoded physical parameters from the raw CMA-ES optimization variables.
+   * Decodes raw CMA-ES optimization variables into the fully dated ascent schedule. The burn
+   * durations are derived from the propellant remaining at gravity turn entry, and every date the
+   * ascent hangs off is fixed here — this is the single place they are computed, which is what
+   * lets the ascent be flown either as one propagation or as three phases without drifting (spec
+   * 01 §5.1).
    *
-   * @param transitionTime total gravity turn transition duration (seconds)
-   * @param exponent power-law exponent controlling pitch-over profile
-   * @param burn1Duration duration of the first stage burn (seconds)
-   * @param burn2Duration duration of the second stage burn after jettison (seconds)
-   */
-  public record GravityTurnParams(
-      double transitionTime, double exponent, double burn1Duration, double burn2Duration) {}
-
-  /**
-   * Decodes raw CMA-ES optimization variables into physical gravity turn parameters. The burn
-   * durations are derived from the propellant remaining at gravity turn entry.
-   *
+   * @param entryState the state at gravity turn entry; only its date is read, and the pitch kick
+   *     preserves it, so the pre-kick and kicked states give the same plan
    * @param variables the raw optimization variable array (transitionTime, exponent)
-   * @return the decoded physical parameters
+   * @return the ascent plan
    */
-  public GravityTurnParams decode(double[] variables) {
+  public AscentPlan plan(SpacecraftState entryState, double[] variables) {
     double transitionTime = variables[0];
     double exponent = variables[1];
 
@@ -103,7 +98,16 @@ public class GravityTurnManeuver {
     double burn2Duration = transitionTime - burn1Duration - interstageCoastDuration;
     burn2Duration = FastMath.max(0.0, burn2Duration);
 
-    return new GravityTurnParams(transitionTime, exponent, burn1Duration, burn2Duration);
+    return new AscentPlan(
+        entryState.getDate(),
+        transitionTime,
+        exponent,
+        burn1Duration,
+        interstageCoastDuration,
+        burn2Duration,
+        maxStepSeconds(),
+        activeStage,
+        nextStage);
   }
 
   /**
@@ -123,36 +127,31 @@ public class GravityTurnManeuver {
    * THE single source of truth for gravity turn configuration.
    *
    * @param propagator the propagator to configure
-   * @param kickedState the state after pitch kick
-   * @param params decoded physical parameters
+   * @param plan the ascent plan produced by {@link #plan}
    */
-  public void configure(
-      NumericalPropagator propagator, SpacecraftState kickedState, GravityTurnParams params) {
-    AbsoluteDate kickDate = kickedState.getDate();
-
+  public void configure(NumericalPropagator propagator, AscentPlan plan) {
     GravityTurnAttitudeProvider attitudeProvider =
-        new GravityTurnAttitudeProvider(kickDate, params.transitionTime(), params.exponent());
+        new GravityTurnAttitudeProvider(plan.kickDate(), plan.transitionTime(), plan.exponent());
     propagator.setAttitudeProvider(attitudeProvider);
 
     // Burn 1 — active stage propulsion, flame-out semantics (spec 06 I4b): the engine thrusts
     // until stage 1's depletion floor instead of a date window, so the load can vary (outer
     // propellant-sizing loop) without recomputing the window. The analytic burn1Duration remains
     // the schedule prediction for the jettison and burn 2 dates below.
-    PropulsionSystem propulsion1 = activeStage.propulsion();
+    PropulsionSystem propulsion1 = plan.firstStage().propulsion();
     Maneuver burn1 =
         new Maneuver(
             null,
-            new DepletionStopTrigger(kickDate.shiftedBy(1.0e-3), activeStage.depletionFloor()),
+            new DepletionStopTrigger(
+                plan.firstIgnitionDate(), plan.firstStage().depletionFloor()),
             new BasicConstantThrustPropulsionModel(
                 propulsion1.thrust(), propulsion1.isp(), Vector3D.PLUS_I, "GT-burn1"));
     propagator.addForceModel(burn1);
 
-    AbsoluteDate jettisonDate =
-        kickDate.shiftedBy(1.0e-3).shiftedBy(params.burn1Duration).shiftedBy(1.0e-3);
     // Jettison — mass drops to the reference mass of all stages above
-    double massAfterJettison = activeStage.massAfterJettison();
+    double massAfterJettison = plan.massAfterJettison();
     DateDetector jettisonDetector =
-        new DateDetector(jettisonDate)
+        new DateDetector(plan.jettisonDate())
             .withHandler(
                 new EventHandler() {
                   @Override
@@ -169,11 +168,11 @@ public class GravityTurnManeuver {
                 });
     propagator.addEventDetector(jettisonDetector);
     // Burn 2 — next stage propulsion (after jettison and interstage coast)
-    PropulsionSystem propulsion2 = nextStage.propulsion();
+    PropulsionSystem propulsion2 = plan.secondStage().propulsion();
     ConstantThrustManeuver burn2 =
         new ConstantThrustManeuver(
-            jettisonDate.shiftedBy(interstageCoastDuration).shiftedBy(1.0e-3),
-            params.burn2Duration,
+            plan.secondIgnitionDate(),
+            plan.burn2Duration(),
             propulsion2.thrust(),
             propulsion2.isp(),
             Vector3D.PLUS_I);
@@ -212,20 +211,20 @@ public class GravityTurnManeuver {
    */
   public SpacecraftState propagateForOptimization(
       SpacecraftState initialState, double[] variables) {
-    GravityTurnParams params = decode(variables);
     SpacecraftState kickedState = applyKick(initialState);
+    AscentPlan plan = plan(kickedState, variables);
 
     NumericalPropagator propagator =
-        OrekitService.get().createOptimizationPropagator(maxStepSeconds());
+        OrekitService.get().createOptimizationPropagator(plan.maxStepSeconds());
     propagator.setInitialState(kickedState);
-    configure(propagator, kickedState, params);
+    configure(propagator, plan);
     // Quiet guard: infeasible candidates crossing the floor are truncated (and thus penalized by
     // the cost function) instead of burning nonexistent propellant.
     DepletionGuard.armQuiet(propagator, getDepletionFloor());
     MinAltitudeTracker tracker = new MinAltitudeTracker(0.0, Double.POSITIVE_INFINITY);
     propagator.addEventDetector(tracker);
     this.lastAltitudeTracker.set(tracker);
-    AbsoluteDate endDate = kickedState.getDate().shiftedBy(params.transitionTime);
+    AbsoluteDate endDate = plan.mecoDate();
 
     try {
       return propagator.propagate(endDate);

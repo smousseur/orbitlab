@@ -277,7 +277,40 @@ Les 5 fixtures de la classe sont vertes, y compris la nouvelle référence du §
 | Étape | Date | Commit | LEO : écarts N2 | GEO : écarts N2 | Écarts §7.2 constatés |
 |---|---|---|---|---|---|
 | 0 — baseline | 2026-08-03 | `1d53e83` | référence | référence | — |
-| 1 — `AscentPlan` + `StageChainRunner` | | | | | |
+| 1 — `AscentPlan` + `StageChainRunner` | 2026-08-03 | `2ebcfa6` | **0 sur toutes les grandeurs** | **0 sur toutes les grandeurs** | **aucun** (ΔV total, points d'éphéméride et comptabilité par phase inchangés) |
 | 2 — découpage en 3 phases | | | | | |
 | 3 — branchement LEO/GEO | | | | | |
 | 5 — retrait de la pénalité d'étagement | | | | | |
+
+### 9.1 Étape 1 — relevé du 2026-08-03
+
+Le refactor de l'étape 1 est **interne** : la liste des stages ne bouge pas, donc
+l'intégrateur ne subit aucun redémarrage supplémentaire et le résultat n'est pas
+seulement « dans les tolérances », il est identique. Les deux relevés reproduisent
+la baseline sur **toutes** les décimales imprimées — MECO (date, masse, position,
+vitesse), orbite finale, `transitionTime` et `exponent` retenus, coût, masse
+finale, et jusqu'aux grandeurs que §7.2 annonce comme *devant* bouger plus tard :
+
+| Grandeur | LEO 400 km | GEO |
+|---|---|---|
+| ΔV total du rapport | 5 959,197 m/s (= baseline) | 10 951,926 m/s (= baseline) |
+| Points d'éphéméride | 94 719, complete (= baseline) | 206 152, complete (= baseline) |
+| Comptabilité par phase | identique ligne à ligne | identique ligne à ligne |
+
+C'est attendu : le ΔV agrégé sous le seul Isp de S1 et les résidus non mesurés
+restent tels quels tant que le gravity turn est **une** phase. Ces cases bougeront
+à l'étape 2, pas avant.
+
+Le critère de §8.1 est tenu : `MECO optimize↔ephemeris` vaut **Δpos = 0,000 m,
+Δvel = 0,00000 m/s, Δmasse = 0,000 kg** sur les deux profils — nul, pas seulement
+dans les tolérances. C'est ce que le passage du générateur d'éphéméride par
+`StageChainRunner` devait préserver.
+
+**N3** : LEO 7,2 s (baseline 8,3 s), GEO 9,4 s (baseline 11,5 s) — aucune
+dégradation ; l'écart est du bruit machine, pas un gain à revendiquer.
+
+**Une seule grandeur bouge** : le nombre d'évaluations CMA-ES (LEO 2 063 → 2 079,
+GEO 2 203 → 2 185), alors que le coût et les variables retenues sont identiques.
+Ce compteur n'est asserté nulle part et n'a pas d'effet sur la trajectoire ; il
+varie avec l'ordonnancement de l'exploration parallèle. À surveiller uniquement
+s'il devait dériver d'un ordre de grandeur.

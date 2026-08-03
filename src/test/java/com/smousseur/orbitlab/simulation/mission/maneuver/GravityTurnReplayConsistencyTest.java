@@ -10,6 +10,7 @@ import com.smousseur.orbitlab.simulation.mission.detector.DepletionGuard;
 import com.smousseur.orbitlab.simulation.mission.operation.GEOMission;
 import com.smousseur.orbitlab.simulation.mission.optimizer.OptimizationResult;
 import com.smousseur.orbitlab.simulation.mission.optimizer.problems.GravityTurnConstraints;
+import com.smousseur.orbitlab.simulation.mission.stage.ascent.AscentPlan;
 import com.smousseur.orbitlab.simulation.mission.stage.ascent.GravityTurnStage;
 import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchConfiguration;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropellantBudget;
@@ -146,14 +147,13 @@ class GravityTurnReplayConsistencyTest {
    */
   private static SpacecraftState replayLikeGenerator(
       GravityTurnManeuver maneuver, SpacecraftState start, double[] variables) {
-    GravityTurnManeuver.GravityTurnParams params = maneuver.decode(variables);
+    AscentPlan plan = maneuver.plan(start, variables);
     NumericalPropagator prop =
-        OrekitService.get().createOptimizationPropagator(maneuver.maxStepSeconds());
+        OrekitService.get().createOptimizationPropagator(plan.maxStepSeconds());
     prop.setInitialState(start);
-    maneuver.configure(
-        prop, start, params); // single source of truth, shared with the optimize path
+    maneuver.configure(prop, plan); // single source of truth, shared with the optimize path
     DepletionGuard.arm(prop, maneuver.getDepletionFloor(), "GT"); // loud, as GravityTurnStage does
-    AbsoluteDate meco = start.getDate().shiftedBy(params.transitionTime());
+    AbsoluteDate meco = plan.mecoDate();
     prop.addEventDetector(new DateDetector(meco).withHandler((s, d, inc) -> Action.STOP));
     prop.getMultiplexer().add(1.0, state -> {}); // fixed-step sampler, as the generator adds
     return prop.propagate(meco);

@@ -105,10 +105,12 @@ public class GravityTurnStage extends MissionStage
     // The generator set the propagator's initial state to the pre-kick state before calling us;
     // reset it to the kicked state so the flown (and sampled) trajectory starts kicked.
     propagator.setInitialState(state);
-    GravityTurnManeuver.GravityTurnParams params =
-        maneuver.decode(optimizationResult.bestVariables());
+    // The plan is the single date computation shared by both passes: the optimize pass builds one
+    // from the same variables inside propagateForOptimization, so the replay flies the same
+    // schedule to the millisecond (spec 01 §4.3).
+    AscentPlan plan = maneuver.plan(state, optimizationResult.bestVariables());
 
-    maneuver.configure(propagator, state, params);
+    maneuver.configure(propagator, plan);
     // Replay path: the optimized transition time is supposed to fit the loaded propellant, so a
     // depletion here is a real accounting bug — fail loud.
     DepletionGuard.arm(propagator, maneuver.getDepletionFloor(), getName());
@@ -116,24 +118,24 @@ public class GravityTurnStage extends MissionStage
     // Staging invariant (bilan 10 §5.3): the optimizer's lower bound guarantees MECO comes after
     // first-stage burnout plus the interstage coast, so the jettison scheduled at burn1Duration
     // always fires. Logged once per mission so a profile that ever loses its staging is visible.
-    double stagingComplete = maneuver.getStagingCompleteTime();
-    if (params.transitionTime() < stagingComplete) {
+    double stagingComplete = plan.stagingCompleteTime();
+    if (plan.transitionTime() < stagingComplete) {
       throw new OrbitlabException(
           String.format(
               "GravityTurnStage '%s': MECO at %.2f s precedes staging completion at %.2f s "
                   + "(burn 1 %.2f s + interstage coast) — the first stage would never be "
                   + "jettisoned and would stay active for the rest of the mission",
-              getName(), params.transitionTime(), stagingComplete, maneuver.getBurn1Duration()));
+              getName(), plan.transitionTime(), stagingComplete, plan.burn1Duration()));
     }
     logger.info(
         "[{}] staging: burn1 {}s to first-stage burnout, jettison, then burn2 {}s (MECO at {}s)",
         getName(),
-        String.format(java.util.Locale.ROOT, "%.1f", params.burn1Duration()),
-        String.format(java.util.Locale.ROOT, "%.1f", params.burn2Duration()),
-        String.format(java.util.Locale.ROOT, "%.1f", params.transitionTime()));
+        String.format(java.util.Locale.ROOT, "%.1f", plan.burn1Duration()),
+        String.format(java.util.Locale.ROOT, "%.1f", plan.burn2Duration()),
+        String.format(java.util.Locale.ROOT, "%.1f", plan.transitionTime()));
 
     // MECO event → transition to next stage
-    AbsoluteDate mecoDate = state.getDate().shiftedBy(params.transitionTime());
+    AbsoluteDate mecoDate = plan.mecoDate();
     this.configuredEndDate = mecoDate;
     propagator.addEventDetector(
         new DateDetector(mecoDate)
