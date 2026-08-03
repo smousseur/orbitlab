@@ -57,19 +57,33 @@ public class GravityTurnProblem implements TrajectoryProblem {
   private static final double MAX_EXPECTED_HANDOFF_FPA_RAD = FastMath.toRadians(2.5);
   private static final double ACCEPTABLE_COST = W_FPA_SOFT * sq(MAX_EXPECTED_HANDOFF_FPA_RAD);
 
-  // ── Staging invariant (bilan 10 §5.3) ──
-  // The jettison of the first stage is scheduled inside the maneuver by a DateDetector at
-  // burn1Duration, so a MECO before that ends the propagation before the detector fires: burn 1 is
-  // truncated, the stage is never dropped, and it stays active for every downstream phase — on the
-  // GEO profile a 0.4 s shortfall against a 150 s burn 1 stranded 3.3 t in S1 and let the "S2
-  // separation" jettison S1 in its place. Such a candidate can score perfectly well on the
-  // criteria below (that run cost 0.0089), so the penalty has to dominate any nominal cost
-  // outright rather than merely nudge.
+  // ── Staging floor penalty: no longer a guard, now a search regularizer ────
   //
-  // This is deliberately a cost term and not a search bound: CMA-ES is rank-based and these
-  // candidates already sit in the discarded half of every generation (a truncated ascent trips the
-  // velocity and apogee guard rails), so penalizing them leaves the search path untouched — where
-  // raising the lower bound would rescale the box and perturb every mission.
+  // ORIGINALLY (bilan 10 §5.3) this guarded a real failure mode. The jettison was a DateDetector
+  // planted inside the ascent, so a MECO scheduled before it ended the propagation before it fired:
+  // burn 1 truncated, the first stage never dropped, and it stayed active for every downstream
+  // phase. On the GEO profile a 0.4 s shortfall against a 150 s burn 1 stranded 3.3 t in S1 and let
+  // the "S2 separation" jettison S1 in its place — while scoring 0.0089 on the criteria below,
+  // which is why the penalty had to dominate outright rather than merely nudge.
+  //
+  // THAT FAILURE MODE IS GONE. The jettison is a phase of its own ("S1 separation"), so it happens
+  // whatever the MECO; a transition time below the floor now just yields a zero-length second burn
+  // (spec specs/mission-stages/01-separations-implicites.md §6).
+  //
+  // THE PENALTY IS KEPT ANYWAY, for the reason the measurement gave when it was removed and the
+  // optimization tests re-run (étape 5, see 02-baseline-n2.md §12). Below the floor, transitionTime
+  // stops controlling anything — every candidate there flies the same ascent and ends at the same
+  // jettison coast — so the region is a plateau of equally mediocre solutions. Without the cliff,
+  // CMA-ES spends real budget exploring it: on the Falcon Heavy LEO profile, +47 % evaluations and
+  // +57 % wall clock, and the retained solution stopped being reproducible at the fixed seed
+  // (transitionTime varying ±0.007 s run to run, because the cross-run early stop then depends on
+  // thread scheduling). The final orbit was identical either way. So this is no longer a guard
+  // rail — it is what keeps the search out of a degenerate flat region, and it earns its keep on
+  // that ground alone.
+  //
+  // It remains a cost term rather than a search bound on the original grounds: Hipparchus
+  // normalizes the search space by the box width, so raising the lower bound would re-encode every
+  // candidate and rescale the effective sigma, perturbing missions the floor never binds.
   private static final double STAGING_PENALTY_BASE = 1e3;
 
   /** Gradient per second of shortfall, pushing CMA-ES back above the staging floor. */
@@ -183,7 +197,7 @@ public class GravityTurnProblem implements TrajectoryProblem {
     return trajectoryCost(state) + stagingPenalty;
   }
 
-  /** Cost of the hand-off state itself, before the staging invariant is applied. */
+  /** Cost of the hand-off state itself, before the staging floor penalty is applied. */
   private double trajectoryCost(SpacecraftState state) {
     // Detect penalty states: if propagation failed, the returned state is the initial state
     double elapsed = state.getDate().durationFrom(initialState.getDate());

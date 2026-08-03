@@ -227,15 +227,16 @@ public class AnalyticHohmannTransferStage extends MissionStage {
     Vector3D deltaV2 = vTargetApo.subtract(vCurrentApo);
     double dv2 = deltaV2.getNorm();
 
-    ActiveStageInfo stage2 = vehicle.resolveActiveStage(massAfterBurn1);
-    PropulsionSystem propulsion2 = stage2.propulsion();
+    // Both burns are flown by the SAME stage — this phase contains no jettison, and only a
+    // jettison can change the active one (invariant on VehicleStack#resolveActiveStage). Only the
+    // mass moves between them.
     double dt2 =
         Physics.computeBurnDurationCapped(
             dv2,
             massAfterBurn1,
-            propulsion2.isp(),
-            propulsion2.thrust(),
-            stage2.remainingFuel(massAfterBurn1));
+            propulsion1.isp(),
+            propulsion1.thrust(),
+            stage1.remainingFuel(massAfterBurn1));
     Vector3D burn2DirectionInertial = deltaV2.normalize();
 
     // Center burn 2 on the actual apogee. The simulation starts burn 1 at state.date (matching
@@ -388,11 +389,8 @@ public class AnalyticHohmannTransferStage extends MissionStage {
             inertialFrameAttitude(plan.burn1DirectionInertial(), state),
             Vector3D.PLUS_I));
 
-    double massAfterBurn1 =
-        state.getMass()
-            * FastMath.exp(-plan.dv1() / (propulsion1.isp() * Constants.G0_STANDARD_GRAVITY));
-    ActiveStageInfo stage2 = vehicle.resolveActiveStage(massAfterBurn1);
-    PropulsionSystem propulsion2 = stage2.propulsion();
+    // Burn 2 fires the same stage as burn 1 (no jettison in this phase, see
+    // VehicleStack#resolveActiveStage), so it reuses propulsion1.
     AbsoluteDate burn2Start = epoch.shiftedBy(plan.dt1() + plan.dtCoast());
     // Burn 2 uses a frame-aligned attitude so the thrust direction stays constant in inertial
     // throughout the finite burn — this is what makes the combined circularization + plane change
@@ -401,8 +399,8 @@ public class AnalyticHohmannTransferStage extends MissionStage {
         new ConstantThrustManeuver(
             burn2Start,
             plan.dt2(),
-            propulsion2.thrust(),
-            propulsion2.isp(),
+            propulsion1.thrust(),
+            propulsion1.isp(),
             inertialFrameAttitude(plan.burn2DirectionInertial(), state),
             Vector3D.PLUS_I));
   }

@@ -260,11 +260,19 @@ public class MissionOptimizer {
   }
 
   /**
-   * Accounts one executed stage. Jettisoned dry mass (drop in remaining dry mass between entry
-   * and exit) is excluded from the propellant consumption; ΔV uses the entry stage's Isp, an
-   * approximation for stages spanning a jettison. Non-propulsive stages (coasts, separations)
-   * drop mass by jettison only — including any residual propellant discarded with the spent
-   * stage — so they report zero consumption and zero ΔV.
+   * Accounts one executed stage. Jettisoned dry mass (drop in remaining dry mass between entry and
+   * exit) is excluded from the propellant consumption, and ΔV uses the entry stage's Isp.
+   * Non-propulsive stages (coasts, separations) drop mass by jettison only — including any residual
+   * propellant discarded with the spent stage — so they report zero consumption and zero ΔV.
+   *
+   * <p><b>No stage spans a jettison any more</b> (spec {@code
+   * specs/mission-stages/01-separations-implicites.md}, S2), so the entry stage's Isp is the only
+   * Isp burnt during the stage and this accounting is exact. It used to be an approximation: the
+   * ascent was one stage carrying burn 1, a 66 t jettison and burn 2, and a single Tsiolkovsky
+   * across a mass drop is not an approximation but a category error — on the Falcon Heavy LEO
+   * profile the ascent reported 5 648 m/s where the staged computation gives 7 781 m/s. Every
+   * jettison being its own non-propulsive phase is what makes the formula below correct rather than
+   * indicative; a future stage that dropped mass mid-burn would silently reintroduce the error.
    */
   private StagePerformance buildStagePerformance(MissionStage stage, double massIn, double massOut) {
     if (!stage.isPropulsive()) {

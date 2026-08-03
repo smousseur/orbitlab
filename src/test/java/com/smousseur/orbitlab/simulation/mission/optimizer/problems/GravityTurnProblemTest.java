@@ -105,11 +105,17 @@ class GravityTurnProblemTest {
     assertEquals(1.0, guess[1], 1e-10);
   }
 
-  // ── Staging invariant, carried as a cost penalty (bilan 10 §5.3) ──────────
+  // ── Staging floor penalty: no longer a guard, now a search regularizer ────
   //
-  // The penalty is applied on top of the trajectory cost, so these assert the exact delta between
-  // grading the SAME hand-off state with and without a below-staging candidate recorded. That
-  // keeps them independent of whatever the propagation produced.
+  // It once protected a real failure mode (a MECO before the in-ascent jettison detector left the
+  // first stage attached, bilan 10 §5.3). The jettison is now a phase, so that cannot happen — but
+  // removing the penalty was measured to cost +47 % evaluations and the reproducibility of the LEO
+  // solution at the fixed seed, for an identical final orbit, so it was kept (spec
+  // specs/mission-stages/02-baseline-n2.md §12). These fixtures pin it either way.
+  //
+  // The penalty is applied on top of the trajectory cost, so they assert the exact delta between
+  // grading the SAME hand-off state with and without a below-staging candidate recorded. That keeps
+  // them independent of whatever the propagation produced.
 
   /** Circular orbit at {@code altitude}, dated late enough to take computeCost's nominal path. */
   private static SpacecraftState circularStateAfter(double altitude, double secondsAfterEpoch) {
@@ -139,10 +145,11 @@ class GravityTurnProblemTest {
     p.propagate(new double[] {maneuver.getStagingCompleteTime() - shortfall, 1.0});
     double penalized = p.computeCost(handOff);
 
-    // 1e3 base + 1.0 per second short. The base has to dominate outright: the GEO run's
-    // staging-skipping solution scored a perfectly respectable 0.0089 on the criteria above.
+    // 1e3 base + 1.0 per second short. Below the floor transitionTime controls nothing — every
+    // candidate there flies the same ascent — so the cliff is what stops CMA-ES from spending
+    // budget on that plateau.
     assertEquals(baseline + 1_000.0 + shortfall, penalized, 1e-6);
-    assertTrue(penalized > 1_000.0, "a staging-skipping candidate must never outrank a valid one");
+    assertTrue(penalized > 1_000.0, "a below-staging candidate must never outrank a valid one");
   }
 
   @Test

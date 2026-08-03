@@ -179,15 +179,16 @@ public class AnalyticParkingInsertionStage extends MissionStage {
     double g0Ve = propulsion1.isp() * Constants.G0_STANDARD_GRAVITY;
     double massAfterBurn1 = state.getMass() * FastMath.exp(-dv1 / g0Ve);
 
-    ActiveStageInfo stage2 = vehicle.resolveActiveStage(massAfterBurn1);
-    PropulsionSystem propulsion2 = stage2.propulsion();
+    // Both burns are flown by the SAME stage — this phase contains no jettison, and only a
+    // jettison can change the active one (invariant on VehicleStack#resolveActiveStage). Only the
+    // mass moves between them.
     double dt2 =
         Physics.computeBurnDurationCapped(
             dv2,
             massAfterBurn1,
-            propulsion2.isp(),
-            propulsion2.thrust(),
-            stage2.remainingFuel(massAfterBurn1));
+            propulsion1.isp(),
+            propulsion1.thrust(),
+            stage1.remainingFuel(massAfterBurn1));
 
     double transferPeriod =
         2.0 * FastMath.PI * FastMath.sqrt(aTransfer * aTransfer * aTransfer / mu);
@@ -226,18 +227,15 @@ public class AnalyticParkingInsertionStage extends MissionStage {
             attitude,
             progradeTNW));
 
-    double massAfterBurn1 =
-        state.getMass()
-            * FastMath.exp(-plan.dv1() / (propulsion1.isp() * Constants.G0_STANDARD_GRAVITY));
-    ActiveStageInfo stage2 = vehicle.resolveActiveStage(massAfterBurn1);
-    PropulsionSystem propulsion2 = stage2.propulsion();
+    // Burn 2 fires the same stage as burn 1 (no jettison in this phase, see
+    // VehicleStack#resolveActiveStage), so it reuses propulsion1.
     AbsoluteDate burn2Start = epoch.shiftedBy(plan.dt1() + plan.dtCoast());
     propagator.addForceModel(
         new ConstantThrustManeuver(
             burn2Start,
             plan.dt2(),
-            propulsion2.thrust(),
-            propulsion2.isp(),
+            propulsion1.thrust(),
+            propulsion1.isp(),
             attitude,
             progradeTNW));
   }

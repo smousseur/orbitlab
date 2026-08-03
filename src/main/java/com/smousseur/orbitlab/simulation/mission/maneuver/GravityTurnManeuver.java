@@ -293,15 +293,19 @@ public class GravityTurnManeuver {
    * Earliest MECO that still completes first-stage staging: burn 1 run to depletion plus the
    * interstage settling coast. Burn 2 has zero duration exactly at this time.
    *
-   * <p><b>Invariant.</b> {@link #configure} schedules the jettison with a {@link DateDetector} at
-   * {@code burn1Duration}, so a transition time below that ends the propagation <em>before</em> the
-   * detector fires: burn 1 is truncated, the first stage is never dropped, and it stays the active
-   * stage for every downstream phase. The gravity turn optimizer must therefore keep the transition
-   * time at or above this value — its search bounds are what enforce the invariant (bilan 10 §5.3).
+   * <p><b>It used to be a safety invariant; it is now the edge of a useless plateau.</b> While the
+   * jettison was a {@link DateDetector} inside {@link #configure}, a transition time below this
+   * value ended the propagation before the detector fired: burn 1 truncated, the first stage never
+   * dropped, and it stayed active for every downstream phase — silent and knife-edge, on the GEO
+   * profile CMA-ES once settled at 149.6 s against a 150.0 s burn 1, stranding 3.3 t in S1, after
+   * which the "S2 separation" jettisoned S1 in its place and S2 flew the payload kick motor's burns
+   * (bilan 10 §5.3). The ascent now drops the stage in a phase of its own, so that cannot happen.
    *
-   * <p>The failure this prevents is silent and knife-edge: on the GEO profile CMA-ES settled at
-   * 149.6 s against a 150.0 s burn 1, so the 0.4 s shortfall stranded 3.3 t in S1, the "S2
-   * separation" jettisoned S1 in its place, and S2 then flew the payload kick motor's burns.
+   * <p>What remains below this value is a region where the transition time controls nothing: every
+   * candidate flies the same ascent and ends at the same jettison coast. The optimizer's staging
+   * penalty still keeps CMA-ES out of it — not as a guard rail any more, but because exploring a
+   * plateau costs budget for nothing (measured: +47 % evaluations on the LEO profile when it was
+   * removed, spec {@code specs/mission-stages/02-baseline-n2.md} §12).
    *
    * @return the earliest transition time that completes staging, in seconds
    */

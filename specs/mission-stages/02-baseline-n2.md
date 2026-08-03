@@ -1,10 +1,11 @@
 # Baseline N2 — référence de non-régression avant le découpage des séparations
 
-> **Statut** : relevé de référence (étape 0 du plan de migration de
-> [`01-separations-implicites.md`](01-separations-implicites.md) §8).
-> **Code de référence** : `1d53e83` — état pré-découpage, aucune modification de
-> production.
-> **Date du relevé** : 2026-08-03. **Graine CMA-ES** : 42 (`TEST_SEED`).
+> **Statut** : relevés de non-régression du plan de migration de
+> [`01-separations-implicites.md`](01-separations-implicites.md) §8. §3 à §7
+> tiennent la référence **pré-découpage** (étape 0, commit `1d53e83`) ; le
+> journal §9 suit chaque étape, et §11–§12 consignent les deux endroits où le
+> plan a dû être corrigé par la mesure.
+> **Date des relevés** : 2026-08-03. **Graine CMA-ES** : 42 (`TEST_SEED`).
 > **Machine** : Windows 10, GraalVM JDK 21.0.5 (les seuls chiffres sensibles à la
 > machine sont les temps de calcul, cf. §7).
 
@@ -52,11 +53,12 @@ La référence à variables figées, rapide (~10 s), sans optimiseur :
 ./gradlew test --tests "*GravityTurnReplayConsistencyTest"
 ```
 
-**Re-relevé après un changement de comportement assumé** (étape 5 : retrait de la
-pénalité d'étagement) : remettre la constante `LEO_400_BASELINE` / `GEO_BASELINE`
-concernée à `null` dans `AscentBaselineN2Test`, relancer — le test passe en mode
-capture, journalise le relevé sans comparer — puis recopier les nouvelles valeurs
-et **documenter l'écart ici** (§8).
+**Re-relevé après un changement de comportement assumé** : remettre la constante
+`LEO_400_BASELINE` / `GEO_BASELINE` concernée à `null` dans
+`AscentBaselineN2Test`, relancer — le test passe en mode capture, journalise le
+relevé sans comparer — puis recopier les nouvelles valeurs et **documenter
+l'écart** dans le journal §9. Les constantes actuelles datent de l'étape 3
+(cf. §9.3 pour la justification du re-relevé).
 
 ## 2. Fixtures
 
@@ -286,7 +288,9 @@ Les 5 fixtures de la classe sont vertes, y compris la nouvelle référence du §
 | 1 — `AscentPlan` + `StageChainRunner` | 2026-08-03 | `2ebcfa6` | **0 sur toutes les grandeurs** | **0 sur toutes les grandeurs** | **aucun** (ΔV total, points d'éphéméride et comptabilité par phase inchangés) |
 | 2 — découpage en 3 phases | 2026-08-03 | *(ce commit)* | non exercé (missions encore sur `GravityTurnStage`) | idem | **aucun** — les missions ne volent pas encore la chaîne |
 | 3 — branchement LEO/GEO | 2026-08-03 | *(ce commit)* | orbite finale ≤ 1 m ; `transitionTime` +0,159559 s (budget 0,5) ; **MECO opt↔éph nul** | orbite finale ≤ 0,5 m ; `transitionTime` +0,030238 s ; **MECO opt↔éph nul** | tous ceux de §7.2, aucun autre — détail en §9.3 |
-| 5 — retrait de la pénalité d'étagement | | | | | |
+| 4 — comptabilité | 2026-08-03 | *(ce commit)* | — (pas de relevé requis) | — | constatés = attendus, cf. §9.3 |
+| 5 — retrait de la pénalité d'étagement | 2026-08-03 | *(ce commit)* | retrait **mesuré puis annulé** — baseline étape 3 inchangée | idem | aucun (retour à l'état étape 3/4) |
+| 6 — nettoyage des séparations fantômes | 2026-08-03 | *(ce commit)* | **identique chiffre pour chiffre** | **identique chiffre pour chiffre** | aucun |
 
 ### 9.1 Étape 1 — relevé du 2026-08-03
 
@@ -489,6 +493,32 @@ affiche 170 150 → 104 150 kg (LEO) et 181 500 → 115 500 kg (GEO), soit les
 66 000 kg de masse sèche de S1 du catalogue, et `[0]` sort à 600 000 / 600 000 /
 0 kg — burn 1 va bien jusqu'à la panne sèche.
 
+### 9.5 Étape 6 — les séparations fantômes (2026-08-03)
+
+Quatre sites résolvaient un « étage 2 » depuis la masse prédite après leur
+premier burn, comme si un étagement pouvait survenir en cours de phase :
+`AnalyticParkingInsertionStage` (plan + `addBurns`) et
+`AnalyticHohmannTransferStage` (idem). Ils utilisent désormais l'étage déjà
+résolu pour le burn 1, avec un commentaire renvoyant à l'invariant.
+
+L'invariant est écrit à sa source, sur `VehicleStack.resolveActiveStage` :
+**l'étage actif ne change que par largage explicite**. Une combustion ne peut pas
+le faire, si longue soit-elle : un étage cesse de pousser à son plancher de
+déplétion, `dryMass_i + massAbove[i]`, strictement au-dessus du seuil
+`massAbove[i]` qui déclenche le changement — strictement, tant que l'étage a une
+masse sèche non nulle, ce qui est le cas de tous les étages catalogués.
+
+**Vérification.** Le relevé N2 après ce nettoyage reproduit celui de l'étape 3
+**chiffre pour chiffre** sur les deux profils : `transitionTime`, MECO,
+orbite finale, points d'éphéméride, et jusqu'au ΔV total (LEO 8 088,485 m/s,
+GEO 11 983,542 m/s). C'est la confirmation empirique de l'invariant : si `stage2`
+avait jamais différé de `stage1`, la propulsion du second burn aurait changé et
+ces chiffres auraient bougé.
+
+Le code était donc bien « mort-né mais trompeur », comme S4 l'annonçait — aucun
+chemin d'exécution, mais une affirmation fausse sur le modèle qu'un lecteur
+pouvait prendre pour argent comptant.
+
 ## 10. Marche à suivre du relevé d'étape 3
 
 ```bash
@@ -539,7 +569,36 @@ part** — précisément pour que le découpage puisse les faire bouger :
    « avant » : LEO **94 719**, GEO **206 152**. Les points ajoutés sont
    co-localisés dans le temps, le rendu de trajectoire n'en est pas affecté.
 
-### 10.3 Deux fixtures N1 déjà rouges *avant* le chantier
+### 10.3 `PropellantLoadOptimizerIntegrationTest` — non vérifié, coût à établir
+
+**Le seul point du chantier resté sans mesure.** Cette classe (4 boucles de
+dimensionnement de charge, chacune enchaînant des optimisations de mission
+complètes) est opt-in et se documente elle-même à « ~15 min par boucle », soit
+**~1 h attendue**. Elle n'a été exécutée à aucun moment pendant les étapes 2 à 5 :
+les runs de vérification rapides ne passaient pas `-Dorbitlab.slowTests=true`.
+
+Un run lancé après l'étape 5 a été **interrompu à 4 h 16** sans qu'aucune classe
+n'ait terminé — soit 4× le coût annoncé. On ne peut donc conclure ni dans un sens
+ni dans l'autre :
+
+- ce peut être son coût normal sur cette machine (la documentation « ~15 min »
+  n'est pas datée, et plusieurs démons Gradle tournaient en parallèle) ;
+- ce peut être un effet du découpage, à travers la boucle de dimensionnement qui
+  rejoue des missions entières.
+
+Rien dans les mesures faites ne suggère une régression — une optimisation de
+mission unitaire est *plus rapide* qu'avant (LEO 8,3 → 6,7 s, GEO 11,5 → 9,2 s) —
+mais l'absence de signal n'est pas une preuve. **À établir par un run dédié**,
+idéalement chronométré aussi sur `1d53e83` pour avoir le point de comparaison :
+
+```bash
+./gradlew test --tests "*PropellantLoadOptimizerIntegrationTest" -Dorbitlab.slowTests=true
+```
+
+Ne pas l'inclure dans un filtre par paquet avec `-Dorbitlab.slowTests=true` : le
+motif `com.smousseur.orbitlab.simulation.mission.runtime.*` l'attrape.
+
+### 10.4 Deux fixtures N1 déjà rouges *avant* le chantier
 
 À ne pas attribuer au découpage. Les deux échouent à l'identique sur `1d53e83`
 (le commit de référence de l'étape 0, avant toute modification de ce chantier),
@@ -561,7 +620,7 @@ elliptique haute qui rate son périgée de 17 km, et un étage supérieur
 sur-dimensionné de 21 % sur le profil budgété. À traiter pour eux-mêmes, hors de
 ce chantier.
 
-### 10.4 Ce qui invaliderait le découpage
+### 10.5 Ce qui invaliderait le découpage
 
 - un `S1 separation` qui **lève** au lieu de larguer : le message dirait quel
   étage est actif et combien de propergol reste à bord. Cela voudrait dire que
@@ -570,6 +629,30 @@ ce chantier.
 - une éphéméride marquée `complete = false` : une phase s'est arrêtée avant son
   échéance, en pratique le garde-fou de déplétion sur un burn à sec ;
 - `MECO optimisation ↔ éphéméride` non nul (cf. §10.1).
+
+### 9.4 Étape 4 — comptabilité (2026-08-03)
+
+Les écarts de §7.2 sont constatés et chiffrés en §9.3 : ils correspondent aux
+écarts attendus, et il n'y en a pas d'autre.
+
+**Aucun test ne figeait un `ΔV total`.** Vérifié : la seule lecture de
+`MissionPerformanceReport.totalDeltaV()` hors journalisation est celle
+d'`AscentBaselineN2Test`, qui l'écrit dans son relevé sans l'asserter — c'est
+précisément pour cela que la grandeur pouvait bouger. Les assertions de
+`LEOMissionOptimizationTest` et `PropellantLoadOptimizerIntegrationTest` portent
+sur des **résidus de masse**, pas sur des ΔV, et ne sont donc pas concernées.
+L'étape 4 n'a donc rien eu à ajuster côté tests.
+
+Ce qu'elle a corrigé, c'est une **affirmation devenue fausse dans le code** :
+`MissionOptimizer.buildStagePerformance` annonçait en javadoc que « le ΔV utilise
+l'Isp de l'étage d'entrée, une approximation pour les stages enjambant un
+largage ». Plus aucun stage n'enjambe un largage : chaque largage est sa propre
+phase non-propulsive, donc l'Isp d'entrée est le seul Isp brûlé et le calcul est
+**exact**, pas approché. La javadoc dit désormais cela, avec le chiffre qui le
+justifie (5 648 → 7 781 m/s sur l'ascension LEO) et l'avertissement qu'un futur
+stage larguant de la masse en cours de combustion réintroduirait silencieusement
+l'erreur. Même famille que S4 : une ligne de code qui écrivait quelque chose de
+faux sur le modèle.
 
 ## 11. Correction d'un critère N2 contradictoire (étape 3)
 
@@ -610,3 +693,71 @@ découpage à variables **figées**, elle, est tenue ailleurs et sans optimiseur
 (§9.3 pour les chiffres et la justification). Les valeurs pré-découpage restent
 lisibles en §3 et §4 de ce fichier : c'est contre elles que l'étape 5 devra
 mesurer son changement de comportement assumé.
+
+## 12. Étape 5 — le retrait de la pénalité d'étagement, mesuré puis annulé
+
+§6 du document 01 annonçait deux garde-fous devenus sans objet une fois le
+largage transformé en phase, et demandait de les retirer dans un commit isolé
+« avec re-run des tests d'optimisation ». Le retrait a été fait, mesuré, et
+**annulé sur la foi de la mesure**. C'est le résultat de l'étape 5.
+
+### 12.1 Ce que le retrait a produit
+
+Deux exécutions de `AscentBaselineN2Test` après retrait, comparées à l'état
+étape 3 :
+
+| Grandeur | avant retrait | après retrait (2 runs) |
+|---|---|---|
+| LEO `transitionTime` | 308,011551 s (× 2, **bit-reproductible**) | 307,735618 / 307,742711 — **non reproductible** |
+| LEO évaluations | 2 311 | 3 416 / 3 384 (**+47 %**) |
+| LEO temps d'optimisation | 6,7 / 6,8 s | 10,7 / 10,7 s (**+57 %**) |
+| LEO coût | 8,8 × 10⁻⁵ | 8,5 × 10⁻⁵ |
+| GEO (tout) | — | inchangé, reproductible |
+
+Invariants tenus dans les deux cas : `MECO optimisation ↔ éphéméride` = **0** sur
+les deux profils, et orbite finale inchangée (LEO périgée Δ 0,2 m, apogée
+Δ 0,8 m, inclinaison Δ 1,6 × 10⁻⁵ ° ; GEO périgée Δ 0,2 m, apogée et inclinaison
+identiques).
+
+Le critère N3 de §7.1 — « pas de dégradation > 20 % » — est donc **franchi sur
+LEO** (+57 %), pour un gain de trajectoire nul.
+
+### 12.2 Pourquoi
+
+Sous le plancher d'étagement, `transitionTime` **ne contrôle plus rien** : tous
+les candidats y volent la même ascension et se terminent au même coast de
+largage. La région est un plateau de solutions équivalentes et médiocres.
+
+La pénalité de 1e3 les rendait derniers sans ambiguïté. Sans elle ils
+deviennent « recevables mais mauvais », et CMA-ES y dépense du budget. Pire, la
+perte de reproductibilité vient de l'arrêt anticipé inter-runs
+(`CMAESTrajectoryOptimizer`, `crossRunStop` : le premier run à passer sous le
+coût acceptable interrompt les autres). Avec plusieurs runs devenus compétitifs,
+lequel gagne dépend de l'ordonnancement des threads — donc la solution retenue
+aussi.
+
+### 12.3 Ce qui a été conservé, et avec quelle justification
+
+Les deux garde-fous sont restés, **avec une raison d'être différente** :
+
+- **La pénalité de `GravityTurnProblem`** n'est plus un garde-fou de sûreté —
+  elle **régularise le paysage de recherche**. Le commentaire du code le dit
+  ainsi désormais, avec le chiffre qui le justifie. C'est un renversement
+  d'argumentaire, pas un statu quo : le §6 du document 01 avait raison sur le
+  fond (le mode de défaillance a disparu) et tort sur la conclusion (il ne
+  s'ensuit pas qu'il faille retirer le terme).
+- **L'exception de `GravityTurnFirstBurnStage`** devient une assertion qui ne
+  doit jamais tirer. La pénalité garantit que les solutions retenues sont
+  au-dessus du plancher ; y arriver signifie qu'un plan vient d'ailleurs
+  (résultat injecté à la main, replay d'une optimisation périmée, appelant
+  contournant le problème). La situation est dégénérée plutôt que dangereuse,
+  mais la voler en silence masquerait sa provenance.
+
+### 12.4 Ce que l'épisode dit du chantier
+
+C'est le seul point du plan où la mesure a contredit la spécification, et il
+vaut d'être retenu : **« ce garde-fou ne garde plus rien » ne suffit pas à
+conclure « il faut le retirer »**. Un terme de coût introduit pour une raison
+peut en servir une autre, et seul le re-run le dit. C'est exactement ce que la
+procédure de §8 du document 01 — commit isolé, re-run complet, écart documenté —
+était censée permettre de constater ; elle a fonctionné.

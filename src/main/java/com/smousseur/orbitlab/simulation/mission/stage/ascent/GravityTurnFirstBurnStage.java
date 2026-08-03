@@ -210,11 +210,20 @@ public class GravityTurnFirstBurnStage extends GravityTurnBurnStage
   }
 
   /**
-   * Staging invariant (bilan 10 §5.3), kept through the split. It is now structurally impossible
-   * for the first stage to stay attached — the jettison is a phase, not a detector the propagation
-   * can end before — but a MECO earlier than staging completion still describes a schedule that
-   * runs backwards (the second burn would end before it starts), so it is refused rather than
-   * flown. Removing it, together with the optimizer's staging penalty, is étape 5 of the migration.
+   * Refuses a MECO scheduled before staging completes.
+   *
+   * <p><b>What it no longer guards.</b> While the jettison was a {@code DateDetector} inside the
+   * ascent, such a schedule ended the propagation before it fired and the first stage stayed
+   * attached for the rest of the mission (bilan 10 §5.3). That cannot happen now: the jettison is a
+   * phase, so it takes place whatever the MECO.
+   *
+   * <p><b>What it guards instead.</b> An assertion that should never fire. The optimizer's staging
+   * penalty keeps retained solutions above this floor, so reaching here means a schedule arrived
+   * from somewhere else — a hand-injected result, a replay of a stale optimization, a future caller
+   * bypassing the problem. Such a schedule is degenerate rather than dangerous (zero-length second
+   * burn, ascent ending at the jettison coast), but flying it silently would hide where it came
+   * from. Removing it together with the penalty was tried and reverted; see
+   * {@code GravityTurnProblem} and 02-baseline-n2.md §12.
    */
   private void checkStagingInvariant(AscentPlan plan) {
     if (plan.transitionTime() < plan.stagingCompleteTime()) {
@@ -222,8 +231,8 @@ public class GravityTurnFirstBurnStage extends GravityTurnBurnStage
           String.format(
               Locale.ROOT,
               "Ascent phase '%s': MECO at %.2f s precedes staging completion at %.2f s "
-                  + "(burn 1 %.2f s + interstage coast) — the second burn would be scheduled to "
-                  + "end before it starts",
+                  + "(burn 1 %.2f s + interstage coast) — the second burn would have zero duration "
+                  + "and the ascent would end at the jettison coast",
               getName(),
               plan.transitionTime(),
               plan.stagingCompleteTime(),

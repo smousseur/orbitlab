@@ -42,6 +42,21 @@ public record VehicleStack(List<Vehicle> vehicles) implements Vehicle {
    * lowest (bottom-most) vehicle whose cumulative mass-above is strictly less than the current
    * mass.
    *
+   * <p><b>Invariant: the active stage changes only by an explicit jettison.</b> Burning cannot do
+   * it, however long the burn runs. A stage stops thrusting at its depletion floor, {@code
+   * dryMass_i + massAbove[i]}, which is strictly above the {@code massAbove[i]} threshold below —
+   * strictly, as long as the stage has a non-zero dry mass, which every catalogued stage does. So
+   * even a burn to flame-out leaves the same stage active; only dropping the mass outright (a
+   * {@link com.smousseur.orbitlab.simulation.mission.stage.StageSeparationStage}) crosses the
+   * threshold.
+   *
+   * <p>Worth stating because the opposite was once assumed: several two-burn analytic stages
+   * re-resolved the active stage from the mass predicted after their first burn, as if staging
+   * could happen mid-phase. That second resolution always returned the first one, so it was
+   * unreachable defensive code writing a false claim about the model — that an intra-phase staging
+   * is supported somewhere. It is not, anywhere (spec {@code
+   * specs/mission-stages/01-separations-implicites.md} S4).
+   *
    * @param currentMass the current spacecraft mass from SpacecraftState
    * @return the active vehicle information
    */
