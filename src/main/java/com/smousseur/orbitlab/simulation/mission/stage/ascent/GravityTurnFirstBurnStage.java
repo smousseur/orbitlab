@@ -193,7 +193,7 @@ public class GravityTurnFirstBurnStage extends GravityTurnBurnStage
             targetInclination,
             constraints,
             instrumentation),
-        AscentSequence.separation(interstageCoastDuration),
+        AscentSequence.silentSeparation(interstageCoastDuration),
         new GravityTurnSecondBurnStage(
             AscentSequence.SECOND_BURN_NAME, planRef, instrumentation));
   }

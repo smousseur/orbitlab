@@ -36,6 +36,7 @@ public class StageSeparationStage extends MissionStage {
 
   private final double separationCoastDuration;
   private final int expectedStageIndex;
+  private final boolean logJettison;
 
   /**
    * Creates a separation stage that drops whichever stage is active, without checking which.
@@ -59,12 +60,39 @@ public class StageSeparationStage extends MissionStage {
    */
   public StageSeparationStage(
       String name, double separationCoastDuration, int expectedStageIndex) {
+    this(name, separationCoastDuration, expectedStageIndex, true);
+  }
+
+  /**
+   * Creates a separation stage that can fire silently.
+   *
+   * <p>The jettison line is per-mission telemetry, and that is the only rate at which it says
+   * anything: the same phase is <em>also</em> flown once per CMA-ES candidate by the ascent's
+   * optimization chain ({@code AscentChainPropagation}), tens of thousands of times per mission
+   * optimization and from every exploration thread at once, where it reports a mass the optimizer
+   * is deliberately varying and queues all those threads on one log appender. This is the same
+   * split the burn phases around it already make between {@code AscentInstrumentation#REPLAY} and
+   * {@code AscentInstrumentation#optimizing} — the separation was simply left out of it when the
+   * ascent became three explicit phases.
+   *
+   * <p>Only the log is silenced: the stack-index check still fires and still throws.
+   *
+   * @param name the human-readable name of this stage
+   * @param separationCoastDuration the settling coast after separation (s), typically the
+   *     launcher's interstage coast
+   * @param expectedStageIndex the stack index of the stage this separation is designed to
+   *     jettison, or {@link #ANY_STAGE} to accept whichever stage is active
+   * @param logJettison whether firing logs the jettison; {@code false} on an optimization chain
+   */
+  public StageSeparationStage(
+      String name, double separationCoastDuration, int expectedStageIndex, boolean logJettison) {
     super(name);
     if (!(separationCoastDuration >= 0)) {
       throw new IllegalArgumentException("separationCoastDuration cannot be negative");
     }
     this.separationCoastDuration = separationCoastDuration;
     this.expectedStageIndex = expectedStageIndex;
+    this.logJettison = logJettison;
   }
 
   @Override
@@ -87,11 +115,13 @@ public class StageSeparationStage extends MissionStage {
               previousState.getMass(),
               FastMath.max(0.0, info.remainingFuel(previousState.getMass()))));
     }
-    logger.info(
-        "[{}] jettison: mass {} kg -> {} kg",
-        getName(),
-        FastMath.round(previousState.getMass()),
-        FastMath.round(info.massAfterJettison()));
+    if (logJettison) {
+      logger.info(
+          "[{}] jettison: mass {} kg -> {} kg",
+          getName(),
+          FastMath.round(previousState.getMass()),
+          FastMath.round(info.massAfterJettison()));
+    }
     return previousState.withMass(info.massAfterJettison());
   }
 

@@ -92,6 +92,40 @@ class AnalyticParkingInsertionStageTest {
         () -> "message must name the stage, got: " + thrown.getMessage());
   }
 
+  /**
+   * Capability sibling of the test above (bilan 11 §3.11). The geometry is nominal — entry below
+   * the target, both burns prograde — but the active stage sits exactly on its dry mass, so {@code
+   * Physics.computeBurnDurationCapped} caps both burns to 0 s while the plan still asks for real
+   * ΔV. Before the guard, the stage flew that plan: a 2 666 s ballistic coast from a sub-orbital
+   * state, i.e. a re-entry no detector on this chain stops, on which the integrator's step control
+   * collapses and the propagation never returns. Observed on the I7 GEO multi-stage sweep at
+   * {@code λ(S1) = 0.3}, where it hung for four hours instead of reporting an infeasible λ in
+   * seconds.
+   */
+  @Test
+  void depletedStage_refusesThePlanInsteadOfFlyingZeroLengthBurns() {
+    VehicleStack stack = stack();
+    // Upper stage dry (4 t) + payload (2 t): the mass the DepletionGuard leaves behind when the
+    // ascent has burnt the stage out. resolveActiveStage reads 0 kg of propellant aboard.
+    SpacecraftState dry = circularStateAt(200_000, stack.dryMass());
+    AnalyticParkingInsertionStage stage =
+        new AnalyticParkingInsertionStage("Parking", TARGET_ALTITUDE);
+
+    OrbitlabException thrown =
+        assertThrows(
+            OrbitlabException.class, () -> stage.propagateStandalone(dry, missionWith(stack)));
+
+    assertTrue(
+        thrown.getMessage().contains("out of reach"),
+        () -> "message must name the cause, got: " + thrown.getMessage());
+    assertTrue(
+        thrown.getMessage().contains("Parking"),
+        () -> "message must name the stage, got: " + thrown.getMessage());
+    assertFalse(
+        thrown.getMessage().contains("retrograde"),
+        () -> "the geometry is sound here; this is a capability limit: " + thrown.getMessage());
+  }
+
   @Test
   void entryBelowTarget_plansAProgradeInsertion() {
     VehicleStack stack = stack();

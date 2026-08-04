@@ -90,12 +90,28 @@ public final class AscentSequence {
   }
 
   /**
-   * The jettison phase of an ascent: drops the first stage and carries the interstage coast.
+   * The jettison phase of an ascent, on the replay path: drops the first stage, carries the
+   * interstage coast, and logs the jettison — once per mission, which is what makes that line worth
+   * reading.
    *
    * @param interstageCoastDuration the settling coast after the jettison (s)
    * @return the separation phase
    */
   static StageSeparationStage separation(double interstageCoastDuration) {
     return new StageSeparationStage(SEPARATION_NAME, interstageCoastDuration, FIRST_STAGE_INDEX);
+  }
+
+  /**
+   * The same jettison phase for an optimization chain, silent. It fires once per CMA-ES candidate,
+   * on every exploration thread at once, where the jettison mass is exactly the quantity being
+   * varied and the line carries no information — only appender contention. The stack-index check is
+   * unaffected and still fails fast.
+   *
+   * @param interstageCoastDuration the settling coast after the jettison (s)
+   * @return the separation phase, not logging its jettison
+   */
+  static StageSeparationStage silentSeparation(double interstageCoastDuration) {
+    return new StageSeparationStage(
+        SEPARATION_NAME, interstageCoastDuration, FIRST_STAGE_INDEX, false);
   }
 }

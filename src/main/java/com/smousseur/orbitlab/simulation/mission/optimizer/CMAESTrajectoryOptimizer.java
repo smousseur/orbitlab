@@ -185,6 +185,11 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
     int totalEvaluations = 0;
     boolean previousSaturated = false;
 
+    // Attempts actually executed, as opposed to the configured ceiling. The three early exits
+    // below (target reached, consensus plateau, retry stagnation) are the normal outcome, not the
+    // exception, so reporting the ceiling reads as "we tried everything" on a run that stopped
+    // after one pass — a misreading that has already cost one wrong diagnosis.
+    int attemptsRun = 0;
     int totalAttempts = maxRetries + 1;
     for (int attempt = 0; attempt < totalAttempts; attempt++) {
       // Per-attempt bounds and sigma — problems may relax β1 (or other parameters) on retry
@@ -215,6 +220,7 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
       SinglePassResult pass =
           runSinglePass(explorationRuns, attemptSigma, seededStartPoints, lower, upper);
       totalEvaluations += pass.evaluations();
+      attemptsRun++;
 
       if (pass.bestVars() != null && pass.bestCost() < globalBestCost) {
         globalBestCost = pass.bestCost();
@@ -255,15 +261,18 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
 
     SpacecraftState bestState = problem.propagate(globalBestVars);
     logger.info(
-        "Final best cost={}, total evals={}, attempts up to {}",
+        "Final best cost={}, total evals={}, {} of up to {} attempt(s) run",
         globalBestCost,
         totalEvaluations,
+        attemptsRun,
         totalAttempts);
     if (globalBestCost > problem.getAcceptableCost()) {
       logger.warn(
-          "Final cost {} above acceptable {} after {} attempts",
+          "Final cost {} above acceptable {} after {} of up to {} attempt(s) — see the phase logs"
+              + " above for why the search stopped",
           globalBestCost,
           problem.getAcceptableCost(),
+          attemptsRun,
           totalAttempts);
     }
     return new OptimizationResult(globalBestVars, globalBestCost, bestState, totalEvaluations);

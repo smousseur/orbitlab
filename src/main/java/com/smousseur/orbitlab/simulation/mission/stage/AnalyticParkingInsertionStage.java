@@ -45,6 +45,11 @@ import org.orekit.utils.Constants;
  * "entry at periapsis" half is only approximate in practice — the gravity turn hands off at a
  * flight path angle of one to a few degrees — and is deliberately not checked.
  *
+ * <p>Separately from the geometry, the stage checks it can actually <b>fly</b> the plan it just
+ * computed: a burn whose duration is capped by the propellant left aboard is refused (see {@code
+ * BURN_CAPACITY_TOLERANCE}), the same verdict {@link AnalyticGtoInjectionStage} returns when the
+ * injection is out of reach.
+ *
  * <p>The stage does not implement {@link
  * com.smousseur.orbitlab.simulation.mission.OptimizableMissionStage}; the mission optimizer
  * propagates it via {@link #propagateStandalone(SpacecraftState, Mission)} without running CMA-ES.
@@ -70,6 +75,27 @@ public class AnalyticParkingInsertionStage extends MissionStage {
    * and the run that exposed the flaw sat at −57 m/s.
    */
   private static final double DV_SIGN_TOLERANCE = 1.0;
+
+  /**
+   * Fraction of a burn's required duration that may be lost to propellant capping before the plan
+   * is refused. Covers rounding between the Tsiolkovsky duration and the depletion duration;
+   * anything beyond it is a stage that cannot deliver the ΔV it just planned.
+   *
+   * <p><b>Why refusing rather than under-burning.</b> {@link Physics#computeBurnDurationCapped}
+   * caps a burn at depletion on the premise that the shortfall shows up later as a missed
+   * objective. That premise does not hold here. Observed on the I7 GEO multi-stage sweep at
+   * {@code λ(S1) = 0.3}: the gravity turn tripped the {@code DepletionGuard} on its second burn and
+   * handed this stage a stack sitting exactly on its dry mass, so both burns were capped to
+   * {@code 0 s} while the plan still asked for 372 and 107 m/s. Nothing refused, and the phase went
+   * on to propagate 2 666 s of pure ballistics from 36 km at 7 603 m/s — a re-entering trajectory,
+   * which no detector on this chain stops: the integrator follows it below the surface, the step
+   * control collapses as {@code r → 0} and the evaluation never returns. The outer loop would have
+   * read this λ as infeasible in seconds; instead it hung for hours.
+   *
+   * <p>This is the capability sibling of {@code DV_SIGN_TOLERANCE}: that one guards the sign of the
+   * ΔV, this one guards the ability to deliver it.
+   */
+  private static final double BURN_CAPACITY_TOLERANCE = 1.0e-3;
 
   private final double targetAltitude;
 
@@ -168,13 +194,11 @@ public class AnalyticParkingInsertionStage extends MissionStage {
 
     ActiveStageInfo stage1 = vehicle.resolveActiveStage(state.getMass());
     PropulsionSystem propulsion1 = stage1.propulsion();
+    double fuelAtBurn1 = stage1.remainingFuel(state.getMass());
     double dt1 =
         Physics.computeBurnDurationCapped(
-            dv1,
-            state.getMass(),
-            propulsion1.isp(),
-            propulsion1.thrust(),
-            stage1.remainingFuel(state.getMass()));
+            dv1, state.getMass(), propulsion1.isp(), propulsion1.thrust(), fuelAtBurn1);
+    requireDeliverable("transfer injection", dv1, dt1, state.getMass(), propulsion1, fuelAtBurn1);
 
     double g0Ve = propulsion1.isp() * Constants.G0_STANDARD_GRAVITY;
     double massAfterBurn1 = state.getMass() * FastMath.exp(-dv1 / g0Ve);
@@ -182,13 +206,11 @@ public class AnalyticParkingInsertionStage extends MissionStage {
     // Both burns are flown by the SAME stage — this phase contains no jettison, and only a
     // jettison can change the active one (invariant on VehicleStack#resolveActiveStage). Only the
     // mass moves between them.
+    double fuelAtBurn2 = stage1.remainingFuel(massAfterBurn1);
     double dt2 =
         Physics.computeBurnDurationCapped(
-            dv2,
-            massAfterBurn1,
-            propulsion1.isp(),
-            propulsion1.thrust(),
-            stage1.remainingFuel(massAfterBurn1));
+            dv2, massAfterBurn1, propulsion1.isp(), propulsion1.thrust(), fuelAtBurn2);
+    requireDeliverable("circularization", dv2, dt2, massAfterBurn1, propulsion1, fuelAtBurn2);
 
     double transferPeriod =
         2.0 * FastMath.PI * FastMath.sqrt(aTransfer * aTransfer * aTransfer / mu);
@@ -206,6 +228,52 @@ public class AnalyticParkingInsertionStage extends MissionStage {
         dt2);
 
     return new BurnPlan(dt1, dtCoast, dt2, dv1, dv2, totalDuration);
+  }
+
+  /**
+   * Refuses a burn the active stage cannot deliver, distinguishing a propellant-capped capability
+   * limit from a planning failure — the verdict the mission optimizer and the outer propellant loop
+   * read as a clean infeasibility. See {@link #BURN_CAPACITY_TOLERANCE} for why a capped burn is
+   * refused here rather than flown short.
+   *
+   * @param burnLabel which burn of the transfer this is, for the message
+   * @param dv the ΔV the plan asks this burn for (m/s)
+   * @param cappedDuration the burn duration after propellant capping (s)
+   * @param mass the spacecraft mass at ignition (kg)
+   * @param propulsion the burning stage's propulsion
+   * @param remainingFuel the propellant left in the burning stage at ignition (kg)
+   */
+  private void requireDeliverable(
+      String burnLabel,
+      double dv,
+      double cappedDuration,
+      double mass,
+      PropulsionSystem propulsion,
+      double remainingFuel) {
+    if (!(dv > 0)) {
+      return; // nothing to deliver — the burn is a deliberate no-op
+    }
+    double required =
+        Physics.computeBurnDuration(dv, mass, propulsion.isp(), propulsion.thrust());
+    if (cappedDuration >= required * (1.0 - BURN_CAPACITY_TOLERANCE)) {
+      return;
+    }
+    double ve = propulsion.isp() * Constants.G0_STANDARD_GRAVITY;
+    double burnt = FastMath.min(propulsion.thrust() / ve * cappedDuration, FastMath.max(0.0, remainingFuel));
+    double delivered = burnt > 0 ? ve * FastMath.log(mass / (mass - burnt)) : 0.0;
+    throw new OrbitlabException(
+        String.format(
+            "[%s] %s out of reach: burning all %.0f kg left in the active stage (%.2f s at full "
+                + "thrust, Δv %.0f m/s) falls %.0f m/s short of the %.0f m/s this burn needs to "
+                + "reach a %.0f km circular orbit — the stage cannot fly the plan it just computed",
+            getName(),
+            burnLabel,
+            FastMath.max(0.0, remainingFuel),
+            cappedDuration,
+            delivered,
+            dv - delivered,
+            dv,
+            targetAltitude / 1000.0));
   }
 
   private void addBurns(
