@@ -4,6 +4,7 @@ import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.Physics;
 import com.smousseur.orbitlab.simulation.mission.detector.DepletionGuard;
 import com.smousseur.orbitlab.simulation.mission.detector.MinAltitudeTracker;
+import com.smousseur.orbitlab.simulation.mission.detector.ReentryGuard;
 import com.smousseur.orbitlab.simulation.mission.optimizer.problems.FailFastEnvelope;
 import com.smousseur.orbitlab.simulation.mission.vehicle.ActiveStageInfo;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropulsionSystem;
@@ -127,6 +128,7 @@ public class TransfertTwoManeuver extends TransferManeuver {
     // dt1 may explore up to full depletion (spec 06 I6): truncate infeasible candidates quietly.
     DepletionGuard.armQuiet(
         propagator, vehicle.resolveActiveStage(initialState.getMass()).depletionFloor());
+    ReentryGuard.armQuiet(propagator);
 
     double totalTime = totalDuration(params, circBurn);
     AbsoluteDate endDate = initialState.getDate().shiftedBy(totalTime);

@@ -6,6 +6,7 @@ import com.smousseur.orbitlab.simulation.Physics;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionStage;
 import com.smousseur.orbitlab.simulation.mission.detector.DepletionGuard;
+import com.smousseur.orbitlab.simulation.mission.detector.ReentryGuard;
 import com.smousseur.orbitlab.simulation.mission.vehicle.ActiveStageInfo;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropulsionSystem;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
@@ -145,6 +146,7 @@ public class AnalyticGtoInjectionStage extends MissionStage {
         OrekitService.get()
             .createOptimizationPropagator(burnLimitedMaxStep(currentState, mission.getVehicle()));
     propagator.setInitialState(currentState);
+    ReentryGuard.armQuiet(propagator);
     addBurn(propagator, currentState, plan, mission.getVehicle());
 
     return propagator.propagate(
@@ -406,11 +408,17 @@ public class AnalyticGtoInjectionStage extends MissionStage {
    * Burn-free coast from {@code state} by {@code dt} under the 8×8 model, matching the flown
    * lead-in coast the injection schedules before its burn. Steps at the large coast cap (nothing
    * ignites here — the injection burn is a separate force model scheduled after it).
+   *
+   * <p>Re-entry-guarded: a re-entering parking orbit would otherwise hang this coast. On a stop the
+   * returned state is early rather than at {@code dt}; the aim built from it is then refused by
+   * {@link #aimApogeeRadius}'s capability check, so the truncation surfaces as a clean infeasibility
+   * instead of a four-hour propagation.
    */
   private static SpacecraftState coastForward(SpacecraftState state, double dt) {
     NumericalPropagator propagator =
         OrekitService.get().createOptimizationPropagator(OrekitService.COAST_MAX_STEP);
     propagator.setInitialState(state);
+    ReentryGuard.armQuiet(propagator);
     return propagator.propagate(state.getDate().shiftedBy(dt));
   }
 
@@ -423,6 +431,7 @@ public class AnalyticGtoInjectionStage extends MissionStage {
     NumericalPropagator propagator =
         OrekitService.get().createOptimizationPropagator(OrekitService.COAST_MAX_STEP);
     propagator.setInitialState(state);
+    ReentryGuard.armQuiet(propagator);
     RecordAndContinue recorder = new RecordAndContinue();
     propagator.addEventDetector(
         new NodeDetector(OrekitService.get().gcrf()).withHandler(recorder));

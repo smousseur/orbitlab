@@ -5,6 +5,7 @@ import com.smousseur.orbitlab.simulation.Physics;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionStage;
 import com.smousseur.orbitlab.simulation.mission.detector.DepletionGuard;
+import com.smousseur.orbitlab.simulation.mission.detector.ReentryGuard;
 import com.smousseur.orbitlab.simulation.mission.vehicle.ActiveStageInfo;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropulsionSystem;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
@@ -128,6 +129,7 @@ public class AnalyticHohmannTransferStage extends MissionStage {
         OrekitService.get()
             .createOptimizationPropagator(burnLimitedMaxStep(currentState, mission.getVehicle()));
     propagator.setInitialState(currentState);
+    ReentryGuard.armQuiet(propagator);
     addBurns(propagator, currentState, plan, mission.getVehicle());
 
     return propagator.propagate(currentState.getDate().shiftedBy(plan.totalDuration()));
@@ -288,6 +290,9 @@ public class AnalyticHohmannTransferStage extends MissionStage {
       double maxStep) {
     NumericalPropagator propagator = OrekitService.get().createOptimizationPropagator(maxStep);
     propagator.setInitialState(state);
+    // A re-entering aim would otherwise grind here; on a stop no apogee is recorded and the throw
+    // below reports it as a plan failure, which the optimizer reads as infeasible.
+    ReentryGuard.armQuiet(propagator);
 
     AbsoluteDate burnStart = state.getDate().shiftedBy(1.0e-3);
     Rotation inertialToBody = new Rotation(burn1DirectionInertial, Vector3D.PLUS_I);

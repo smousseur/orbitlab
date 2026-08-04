@@ -6,6 +6,7 @@ import com.smousseur.orbitlab.simulation.mission.MissionStage;
 import com.smousseur.orbitlab.simulation.mission.attitude.GravityTurnAttitudeProvider;
 import com.smousseur.orbitlab.simulation.mission.detector.DepletionGuard;
 import com.smousseur.orbitlab.simulation.mission.detector.MinAltitudeTracker;
+import com.smousseur.orbitlab.simulation.mission.detector.ReentryGuard;
 import java.util.Objects;
 import org.hipparchus.ode.events.Action;
 import org.orekit.propagation.SpacecraftState;
@@ -153,6 +154,7 @@ public abstract class GravityTurnBurnStage extends MissionStage {
     NumericalPropagator propagator =
         OrekitService.get().createOptimizationPropagator(maxStepSeconds(entryState, mission));
     propagator.setInitialState(entryState);
+    ReentryGuard.armQuiet(propagator);
     configure(propagator, mission);
     return propagator.propagate(getConfiguredEndDate());
   }

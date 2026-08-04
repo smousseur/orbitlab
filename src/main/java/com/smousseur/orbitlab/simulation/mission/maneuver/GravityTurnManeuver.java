@@ -6,6 +6,7 @@ import com.smousseur.orbitlab.simulation.mission.attitude.GravityTurnAttitudePro
 import com.smousseur.orbitlab.simulation.mission.detector.DepletionGuard;
 import com.smousseur.orbitlab.simulation.mission.detector.DepletionStopTrigger;
 import com.smousseur.orbitlab.simulation.mission.detector.MinAltitudeTracker;
+import com.smousseur.orbitlab.simulation.mission.detector.ReentryGuard;
 import com.smousseur.orbitlab.simulation.mission.stage.ascent.AscentPlan;
 import com.smousseur.orbitlab.simulation.mission.stage.ascent.AscentPropagation;
 import com.smousseur.orbitlab.simulation.mission.vehicle.ActiveStageInfo;
@@ -229,6 +230,9 @@ public class GravityTurnManeuver {
     // Quiet guard: infeasible candidates crossing the floor are truncated (and thus penalized by
     // the cost function) instead of burning nonexistent propellant.
     DepletionGuard.armQuiet(propagator, getDepletionFloor());
+    // Same rationale one level down: a candidate whose turn is too aggressive flies back into the
+    // ground, and the tracker below only *records* that — it does not stop.
+    ReentryGuard.armQuiet(propagator);
     MinAltitudeTracker tracker = new MinAltitudeTracker(0.0, Double.POSITIVE_INFINITY);
     propagator.addEventDetector(tracker);
     this.lastAltitudeTracker.set(tracker);

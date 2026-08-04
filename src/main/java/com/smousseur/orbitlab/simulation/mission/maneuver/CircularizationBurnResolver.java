@@ -2,6 +2,7 @@ package com.smousseur.orbitlab.simulation.mission.maneuver;
 
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.Physics;
+import com.smousseur.orbitlab.simulation.mission.detector.ReentryGuard;
 import com.smousseur.orbitlab.simulation.mission.vehicle.ActiveStageInfo;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropulsionSystem;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
@@ -101,6 +102,9 @@ final class CircularizationBurnResolver {
     NumericalPropagator coastPropagator =
         OrekitService.get().createOptimizationPropagator(OrekitService.COAST_MAX_STEP);
     coastPropagator.setInitialState(stateAfterBurn1);
+    // On a re-entering post-burn-1 orbit the coast stops early, no apoapsis is recorded and this
+    // returns NaN — the failure value the caller already handles (spec 03-garde-rentree §4.1).
+    ReentryGuard.armQuiet(coastPropagator);
 
     RecordAndContinue recorder = new RecordAndContinue();
     ApsideDetector apsideDetector =

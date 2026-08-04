@@ -4,6 +4,7 @@ import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionStage;
 import com.smousseur.orbitlab.simulation.mission.OptimizableMissionStage;
+import com.smousseur.orbitlab.simulation.mission.detector.ReentryGuard;
 import java.util.List;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -180,6 +181,19 @@ public final class StageChainRunner {
       double maxStep = stage.maxStepSeconds(stageEntry, mission);
       NumericalPropagator propagator = OrekitService.get().createOptimizationPropagator(maxStep);
       propagator.setInitialState(stageEntry);
+
+      // Re-entry guard on every phase of every mission, on both passes (spec
+      // specs/mission-stages/03-garde-rentree.md). Armed here rather than phase by phase because
+      // this is the single place that builds a flown-phase propagator: a stage added tomorrow is
+      // covered without having to remember. Loud only on the sampling (ephemeris/replay) runner —
+      // the plain runner is the CMA-ES path, where an infeasible candidate re-entering is a normal
+      // outcome and one line per candidate would flood the output.
+      if (abortOnFailure) {
+        ReentryGuard.armQuiet(propagator);
+      } else {
+        ReentryGuard.arm(propagator, stage.getName());
+      }
+
       stage.configure(propagator, mission);
 
       if (sampler != null && sampleStepSeconds > 0.0) {

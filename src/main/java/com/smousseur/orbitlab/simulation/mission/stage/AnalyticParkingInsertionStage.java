@@ -6,6 +6,7 @@ import com.smousseur.orbitlab.simulation.Physics;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionStage;
 import com.smousseur.orbitlab.simulation.mission.detector.DepletionGuard;
+import com.smousseur.orbitlab.simulation.mission.detector.ReentryGuard;
 import com.smousseur.orbitlab.simulation.mission.vehicle.ActiveStageInfo;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropulsionSystem;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
@@ -142,6 +143,7 @@ public class AnalyticParkingInsertionStage extends MissionStage {
         OrekitService.get()
             .createOptimizationPropagator(burnLimitedMaxStep(currentState, mission.getVehicle()));
     propagator.setInitialState(currentState);
+    ReentryGuard.armQuiet(propagator);
     addBurns(propagator, currentState, plan, mission.getVehicle());
 
     return propagator.propagate(currentState.getDate().shiftedBy(plan.totalDuration()));
