@@ -163,6 +163,83 @@ class GravityTurnProblemTest {
     assertEquals(baseline, p.computeCost(handOff), 1e-9);
   }
 
+  /**
+   * A hand-off at altitude {@code alt} with the given tangential and radial velocity, dated late
+   * enough to take computeCost's nominal path. Position on +X, velocity radial on +X and tangential
+   * on +Y, so the flight path angle is exactly {@code atan(vRad/vTan)}.
+   */
+  private static SpacecraftState handOff(double alt, double vTan, double vRad) {
+    double r = Constants.WGS84_EARTH_EQUATORIAL_RADIUS + alt;
+    return new SpacecraftState(
+            new CartesianOrbit(
+                new PVCoordinates(new Vector3D(r, 0, 0), new Vector3D(vRad, vTan, 0)),
+                OrekitService.get().gcrf(),
+                AbsoluteDate.J2000_EPOCH.shiftedBy(200.0),
+                Constants.WGS84_EARTH_MU))
+        .withMass(10_000);
+  }
+
+  /**
+   * The ranking the apogee-ceiling weight exists to get right (measured 2026-08-05 on the Falcon
+   * Heavy 400 km budget-loads profile, same loads and same MECO, differing only in pitch exponent):
+   *
+   * <pre>
+   *   exponent 0.354465 → alt 40 401 m, vTan 7971 m/s, vRad 284.5 m/s → final orbit 400 000×400 110 m
+   *   exponent 0.386137 → alt 49 212 m, vTan 7913 m/s, vRad 387.4 m/s → final orbit 251 397×400 128 m
+   * </pre>
+   *
+   * <p>The second hands off 103 m/s more radial velocity, which the transfer's first burn cancels
+   * outright — it emptied the upper stage and left the mission 148 km short of its target perigee.
+   * It also sits 36 km lower in apogee, and at the historical overshoot weight of 3.0 that bought
+   * it a <em>better</em> cost (0.130867 against 0.225404): the objective preferred the candidate
+   * that broke the mission. This fixture holds the fix — the cheaper hand-off must be the one the
+   * mission survives.
+   */
+  @Test
+  void computeCost_prefersTheHandOffTheMissionSurvives() {
+    GravityTurnProblem p = problemWithRealInitialState();
+    SpacecraftState survives = handOff(40_401, 7971.0, 284.5);
+    SpacecraftState breaksTheMission = handOff(49_212, 7913.0, 387.4);
+
+    double costSurvives = p.computeCost(survives);
+    double costBreaks = p.computeCost(breaksTheMission);
+
+    assertTrue(
+        costSurvives < costBreaks,
+        () ->
+            "the hand-off the mission survives must rank cheaper: "
+                + costSurvives
+                + " vs "
+                + costBreaks);
+  }
+
+  /**
+   * The asymmetry that fix rests on: past the window an apogee error is absorbed by the trim burn,
+   * short of it the transfer must make it up in ΔV. The same absolute deviation must therefore cost
+   * strictly less above the ceiling than below the target.
+   */
+  @Test
+  void computeCost_apogeeOvershoot_costsLessThanTheSameShortfall() {
+    GravityTurnConstraints constraints = GravityTurnConstraints.forTarget(400_000);
+    double deviation = 60_000.0;
+    GravityTurnProblem p = problemWithRealInitialState();
+
+    // Circular states are the cleanest way to place an apogee exactly: apogee = altitude.
+    double overshootCost = p.computeCost(circularStateAfter(constraints.maxApogee() + deviation, 200.0));
+    double shortfallCost =
+        p.computeCost(circularStateAfter(constraints.targetApogee() - deviation, 200.0));
+
+    assertTrue(
+        overshootCost < shortfallCost,
+        () ->
+            "an apogee "
+                + deviation
+                + " m past the ceiling must cost less than one that far short of the target: "
+                + overshootCost
+                + " vs "
+                + shortfallCost);
+  }
+
   @Test
   void computeCost_lowerAltitudeState_hasHigherCost() {
     // The cost function penalizes apogee below target window

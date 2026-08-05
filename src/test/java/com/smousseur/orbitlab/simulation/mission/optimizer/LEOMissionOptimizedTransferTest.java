@@ -21,6 +21,15 @@ import org.junit.jupiter.params.provider.ValueSource;
  */
 @EnabledIfSystemProperty(named = "orbitlab.slowTests", matches = "true")
 public class LEOMissionOptimizedTransferTest extends AbstractTrajectoryOptimizerTest {
+
+  /**
+   * The latitude the missions below actually launch from ({@code EarthMission.DEFAULT_LATITUDE},
+   * Kourou). Sizing the budget at any other latitude mis-credits the Earth-rotation assist and
+   * loads the difference into the sized top stage as dead propellant — see the same constant in
+   * {@link LEOMissionOptimizationTest}.
+   */
+  private static final double LAUNCH_LATITUDE_DEG = 5.23;
+
   @BeforeAll
   static void init() {
     OrekitService.get().initialize();
@@ -38,7 +47,8 @@ public class LEOMissionOptimizedTransferTest extends AbstractTrajectoryOptimizer
   @Test
   void testFalconHeavyOptimizedTransfer() {
     Spacecraft payload = Payloads.EARTH_OBSERVATION_SAT.toSpacecraft(10_000, 0.0);
-    double[] loads = PropellantBudget.loadsForLeo(Launchers.FALCON_HEAVY, payload, 400_000, 45.96);
+    double[] loads =
+        PropellantBudget.loadsForLeo(Launchers.FALCON_HEAVY, payload, 400_000, LAUNCH_LATITUDE_DEG);
     LEOMission mission =
         LEOMission.circularWithOptimizedTransfer(
             "Falcon Heavy (optimized transfer)",

@@ -86,6 +86,38 @@ public class GravityTurnProblem implements TrajectoryProblem {
   // candidate and rescale the effective sigma, perturbing missions the floor never binds.
   private static final double STAGING_PENALTY_BASE = 1e3;
 
+  /**
+   * Weight of an apogee <b>above</b> the admissible window, against {@link #W_APOGEE_SHORTFALL} =
+   * 8.0 below it. The asymmetry is the point: the two errors do not cost the mission the same
+   * thing.
+   *
+   * <p>An apogee short of the window must be made up by the transfer in real ΔV. An apogee past it
+   * is absorbed by the trim burn at the next apside for nothing measurable — on the Falcon Heavy
+   * 400 km profile, hand-offs 91 km apart in apogee both reached a final apogee of 400.128 km.
+   *
+   * <p><b>Why it was lowered from 3.0 (measured 2026-08-05).</b> When the first stage burns to
+   * flame-out and over-delivers, the gravity turn cannot lower its apogee by thrusting less — its
+   * only lever is to pitch up, trading tangential velocity for radial. That trade is a false
+   * economy: the radial velocity is cancelled outright by the transfer's first burn, which the cost
+   * function barely sees. At 3.0 the ceiling term outbid {@link #W_FPA_SOFT} and bought the trade.
+   * Two candidates of the same mission, same loads, same MECO, differing only in pitch exponent:
+   *
+   * <pre>
+   *   exponent 0.354465 → apogee 490 969 m, vRad 284.5 m/s → cost 0.225404 → final 400 000×400 110 m
+   *   exponent 0.386137 → apogee 455 066 m, vRad 387.4 m/s → cost 0.130867 → final 251 397×400 128 m
+   * </pre>
+   *
+   * The cost function preferred the candidate that emptied the upper stage 148 km short of target.
+   * The apogee term accounted for 0.12259 of the 0.094537 gap, the FPA term for 0.02807 against it;
+   * the ranking flips below a weight of 0.687. 0.5 is that threshold with margin, and it leaves the
+   * ceiling doing its real job — discouraging an overshoot the vehicle <em>can</em> avoid — without
+   * letting it pay for one it cannot.
+   */
+  private static final double W_APOGEE_OVERSHOOT = 0.5;
+
+  /** Weight of an apogee short of the target window, which the transfer must make up in ΔV. */
+  private static final double W_APOGEE_SHORTFALL = 8.0;
+
   /** Gradient per second of shortfall, pushing CMA-ES back above the staging floor. */
   private static final double W_STAGING_SHORTFALL = 1.0;
 
@@ -234,11 +266,13 @@ public class GravityTurnProblem implements TrajectoryProblem {
 
     double cost = 0.0;
 
-    // 2. Apogee window — this is the key for staging
+    // 2. Apogee window — this is the key for staging. Asymmetric on purpose: see W_APOGEE_OVERSHOOT.
     if (apogee < constraints.targetApogee()) {
-      cost += 8.0 * sq((constraints.targetApogee() - apogee) / constraints.targetApogee());
+      cost +=
+          W_APOGEE_SHORTFALL * sq((constraints.targetApogee() - apogee) / constraints.targetApogee());
     } else if (apogee > constraints.maxApogee()) {
-      cost += 3.0 * sq((apogee - constraints.maxApogee()) / constraints.targetApogee());
+      cost +=
+          W_APOGEE_OVERSHOOT * sq((apogee - constraints.maxApogee()) / constraints.targetApogee());
     }
 
     // 3. Flight path angle — penalize outside the [fpaMin, fpaMax] window

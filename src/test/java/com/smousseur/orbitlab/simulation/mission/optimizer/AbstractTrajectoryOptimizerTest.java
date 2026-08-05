@@ -26,6 +26,31 @@ public class AbstractTrajectoryOptimizerTest {
 
   public static final double ORBIT_MARGIN_RATIO = 0.07;
 
+  /** Name of the final coast, the phase the achieved orbit is read from. */
+  private static final String COAST_STAGE = "Coasting";
+
+  /**
+   * How far the flown trajectory may dip below the target perigee before the orbit counts as
+   * unsafe, rather than merely perturbed.
+   *
+   * <p><b>Why the achieved orbit is read at insertion and not from the coast minimum.</b> The
+   * mission's analytic stages target an <em>osculating</em> perigee and hit it: measured 2026-08-05
+   * on the elliptic 200/1000 profile, the orbit at the end of the trim burn is 200 000 × 1 000 077
+   * m — the target to the metre. The coast then flies a full sidereal day under the 8×8 field, and
+   * the osculating eccentricity oscillates with a long period: ~5 h 30 after insertion the same
+   * orbit reads 182 936 × 1 021 677 m. Sampling the minimum geodetic altitude over that day and
+   * comparing it against the target perigee therefore measures a J2 oscillation the mission neither
+   * controls nor sees, not an insertion error.
+   *
+   * <p>The band is close to altitude-independent in absolute terms (δr_p ≈ a·δe with δe ≈ 2.8e-3),
+   * which is why a <em>relative</em> tolerance mis-sorts the profiles: the deficit measured 16 906
+   * m on the elliptic 200/1000 case that failed at ±14 000 m, and 19 225 m — larger — on the
+   * Falcon Heavy 400 km case that passed at ±28 000 m. The profile that passed was the one further
+   * off. This floor keeps a genuinely decaying or re-entering trajectory failing while leaving the
+   * measured ~19 km band alone.
+   */
+  private static final double FLOWN_PERIGEE_FLOOR_MARGIN_M = 40_000.0;
+
   /** Fixed seed for reproducible CMA-ES runs across test executions. */
   protected static final long TEST_SEED = 42L;
 
@@ -66,7 +91,7 @@ public class AbstractTrajectoryOptimizerTest {
     MissionComputeResult computeResult = optimizer.optimize();
     MissionEphemeris ephemeris = computeResult.ephemeris();
 
-    MinMaxAltitudeResults results = extractMinMaxAltitudes(ephemeris, "Coasting");
+    MinMaxAltitudeResults results = extractMinMaxAltitudes(ephemeris, COAST_STAGE);
 
     logger.info(
         "[{}km] Max coast altitude: {} km",
@@ -76,6 +101,30 @@ public class AbstractTrajectoryOptimizerTest {
         "[{}km] Min coast altitude: {} km",
         (int) (perigeeAltitude / 1000),
         results.minAltitude / 1000);
+
+    // The achieved orbit, read where the mission delivers it: the first coast sample, i.e. the
+    // state the last burn hands over. See FLOWN_PERIGEE_FLOOR_MARGIN_M for why the coast extrema
+    // cannot play that role.
+    MissionEphemerisPoint insertion = firstPointOfStage(ephemeris, COAST_STAGE);
+    KeplerianOrbit insertionOrbit =
+        new KeplerianOrbit(
+            new PVCoordinates(insertion.position(), insertion.velocity()),
+            OrekitService.get().gcrf(),
+            insertion.time(),
+            Constants.WGS84_EARTH_MU);
+    double insertionPerigee =
+        insertionOrbit.getA() * (1.0 - insertionOrbit.getE())
+            - Constants.WGS84_EARTH_EQUATORIAL_RADIUS;
+    double insertionApogee =
+        insertionOrbit.getA() * (1.0 + insertionOrbit.getE())
+            - Constants.WGS84_EARTH_EQUATORIAL_RADIUS;
+    logger.info(
+        "[{}/{} km] Insertion orbit: {} x {} m (e={})",
+        (int) (perigeeAltitude / 1000),
+        (int) (apogeeAltitude / 1000),
+        (long) insertionPerigee,
+        (long) insertionApogee,
+        insertionOrbit.getE());
 
     MissionEphemerisPoint last = ephemeris.lastPoint();
     KeplerianOrbit finalOrbit =
@@ -94,18 +143,43 @@ public class AbstractTrajectoryOptimizerTest {
     logger.info("Final eccentricity: {}", finalOrbit.getE());
     double errorApogeeMargin = ORBIT_MARGIN_RATIO * apogeeAltitude;
     Assertions.assertTrue(
-        Math.abs(results.maxAltitude - apogeeAltitude) <= errorApogeeMargin,
+        Math.abs(insertionApogee - apogeeAltitude) <= errorApogeeMargin,
         () ->
             String.format(
-                "Max coast altitude %.0f m not within %.0f m of target %.0f m",
-                results.maxAltitude, errorApogeeMargin, apogeeAltitude));
+                "Insertion apogee %.0f m not within %.0f m of target %.0f m",
+                insertionApogee, errorApogeeMargin, apogeeAltitude));
     double errorPerigeeMargin = ORBIT_MARGIN_RATIO * perigeeAltitude;
     Assertions.assertTrue(
-        Math.abs(results.minAltitude - perigeeAltitude) <= errorPerigeeMargin,
+        Math.abs(insertionPerigee - perigeeAltitude) <= errorPerigeeMargin,
         () ->
             String.format(
-                "Min coast altitude %.0f m not within %.0f m of target %.0f m",
-                results.minAltitude, errorPerigeeMargin, perigeeAltitude));
+                "Insertion perigee %.0f m not within %.0f m of target %.0f m",
+                insertionPerigee, errorPerigeeMargin, perigeeAltitude));
+
+    // The flown trajectory is still checked, but for safety rather than for accuracy: it may drift
+    // within the J2 band, it may not head for the ground.
+    double flownFloor = perigeeAltitude - FLOWN_PERIGEE_FLOOR_MARGIN_M;
+    Assertions.assertTrue(
+        results.minAltitude >= flownFloor,
+        () ->
+            String.format(
+                "Min coast altitude %.0f m fell below the safety floor %.0f m"
+                    + " (target perigee %.0f m minus the %.0f m J2 band)",
+                results.minAltitude, flownFloor, perigeeAltitude, FLOWN_PERIGEE_FLOOR_MARGIN_M));
     return computeResult;
+  }
+
+  /**
+   * The first ephemeris sample tagged with the given stage — for the final coast, the state the
+   * last burn handed over.
+   */
+  private static MissionEphemerisPoint firstPointOfStage(
+      MissionEphemeris ephemeris, String stageName) {
+    for (MissionEphemerisPoint pt : ephemeris.allPoints()) {
+      if (stageName.equals(pt.stageName())) {
+        return pt;
+      }
+    }
+    throw new AssertionError("no '" + stageName + "' samples in the mission ephemeris");
   }
 }

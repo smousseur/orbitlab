@@ -17,6 +17,17 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 public class LEOMissionOptimizationTest extends AbstractTrajectoryOptimizerTest {
+
+  /**
+   * The latitude the missions below actually launch from ({@code EarthMission.DEFAULT_LATITUDE},
+   * Kourou). The propellant budget must be sized at the flown latitude: it credits the ascent with
+   * {@code 465·cos(latitude)} of Earth-rotation assist, so sizing at 45.96° — as this test did
+   * until 2026-08-05 — withheld 140 m/s the flight gets for free and loaded the difference into the
+   * sized top stage as dead propellant (S2 load 2 844 → 1 963 kg, residual 36.7 % → 13.1 %, same
+   * final orbit).
+   */
+  private static final double LAUNCH_LATITUDE_DEG = 5.23;
+
   @BeforeAll
   static void init() {
     OrekitService.get().initialize();
@@ -56,7 +67,8 @@ public class LEOMissionOptimizationTest extends AbstractTrajectoryOptimizerTest 
   @Test
   void testFalconHeavyBudgetLoads() {
     Spacecraft payload = Payloads.EARTH_OBSERVATION_SAT.toSpacecraft(10_000, 0.0);
-    double[] loads = PropellantBudget.loadsForLeo(Launchers.FALCON_HEAVY, payload, 400_000, 45.96);
+    double[] loads =
+        PropellantBudget.loadsForLeo(Launchers.FALCON_HEAVY, payload, 400_000, LAUNCH_LATITUDE_DEG);
     LEOMission mission =
         new LEOMission(
             "Falcon Heavy (budget loads)",

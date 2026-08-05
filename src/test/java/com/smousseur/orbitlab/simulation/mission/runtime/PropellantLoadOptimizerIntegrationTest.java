@@ -58,8 +58,21 @@ public class PropellantLoadOptimizerIntegrationTest {
   private static final Logger logger =
       LogManager.getLogger(PropellantLoadOptimizerIntegrationTest.class);
 
-  /** Same launch latitude the optimized-transfer LEO mission flies from (its default site). */
-  private static final double LAUNCH_LATITUDE_DEG = 45.96;
+  /**
+   * Same launch latitude the optimized-transfer LEO mission flies from — {@code
+   * EarthMission.DEFAULT_LATITUDE}, the Kourou site the three-argument {@code
+   * LEOMission.circularWithOptimizedTransfer} below builds.
+   *
+   * <p>It was 45.96° (Baikonur) until 2026-08-05, while the mission it sizes has always flown from
+   * 5.23°. The budget credits the ascent with {@code 465·cos(latitude)} of Earth-rotation assist,
+   * so the mismatch withheld 140 m/s the flight actually gets, and inverse Tsiolkovsky turned that
+   * into propellant loaded into the sized top stage and carried dead: measured on the Falcon Heavy
+   * 400 km profile, the S2 load fell from 2 844 kg to 1 963 kg and its residual from 36.7 % to
+   * 13.1 % for the same final orbit (400 000 × 400 110 m). The heuristic baseline λ scales from is
+   * therefore tighter than it was, and λ* moves with it — the previously recorded 0.475 was
+   * measured against the over-sized baseline.
+   */
+  private static final double LAUNCH_LATITUDE_DEG = 5.23;
 
   private static final double TARGET_ALTITUDE_M = 400_000.0;
 

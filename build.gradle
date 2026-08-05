@@ -47,6 +47,10 @@ test {
     // loop, ~15 min) from the Gradle JVM to the test JVM. Default off, so the normal suite is
     // unaffected; enable with `-Dorbitlab.slowTests=true`.
     systemProperty 'orbitlab.slowTests', System.getProperty('orbitlab.slowTests', 'false')
+    // Same forwarding for the read-only diagnostic probes (GravityTurnFloorProbeTest): they fly
+    // missions at forced variables, so they cost minutes rather than the optimizer loops' tens of
+    // minutes, but they print rather than assert and have no place in the normal suite.
+    systemProperty 'orbitlab.probe', System.getProperty('orbitlab.probe', 'false')
 }
 
 javadoc {
