@@ -1,5 +1,6 @@
 package com.smousseur.orbitlab.simulation.mission.optimizer;
 
+import com.smousseur.orbitlab.simulation.OrbitElements;
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemeris;
@@ -112,19 +113,29 @@ public class AbstractTrajectoryOptimizerTest {
             OrekitService.get().gcrf(),
             insertion.time(),
             Constants.WGS84_EARTH_MU);
-    double insertionPerigee =
-        insertionOrbit.getA() * (1.0 - insertionOrbit.getE())
-            - Constants.WGS84_EARTH_EQUATORIAL_RADIUS;
-    double insertionApogee =
-        insertionOrbit.getA() * (1.0 + insertionOrbit.getE())
-            - Constants.WGS84_EARTH_EQUATORIAL_RADIUS;
+    OrbitElements osculating = OrbitElements.osculating(insertionOrbit);
+    double insertionPerigee = osculating.perigeeAltitude();
+    double insertionApogee = osculating.apogeeAltitude();
     logger.info(
-        "[{}/{} km] Insertion orbit: {} x {} m (e={})",
+        "[{}/{} km] Insertion orbit (osculating): {}",
         (int) (perigeeAltitude / 1000),
         (int) (apogeeAltitude / 1000),
-        (long) insertionPerigee,
-        (long) insertionApogee,
-        insertionOrbit.getE());
+        osculating.format());
+
+    // The quantity the user asked for: the mission orbit, stripped of the J2 short-period
+    // oscillation. Reported IN ADDITION to the osculating one, never instead of it — the
+    // assertions below stay on the osculating orbit, the only quantity the analytic stages
+    // actually aim at, and which they hit to the metre.
+    //
+    // Do not read the gap as a targeting miss: measured 2026-08-05, an insertion aimed circular
+    // at 400 km gives 400 000 x 400 114 m osculating and 390 612 x 409 712 m mean. An
+    // instantaneously circular orbit has a mean eccentricity of about f; the two cannot be
+    // circular at the same time.
+    logger.info(
+        "[{}/{} km] Insertion orbit (mean):       {}",
+        (int) (perigeeAltitude / 1000),
+        (int) (apogeeAltitude / 1000),
+        OrbitElements.mean(insertionOrbit).map(OrbitElements::format).orElse("unavailable"));
 
     MissionEphemerisPoint last = ephemeris.lastPoint();
     KeplerianOrbit finalOrbit =

@@ -1,6 +1,7 @@
 package com.smousseur.orbitlab.simulation.mission.optimizer;
 
 import com.smousseur.orbitlab.simulation.OrekitService;
+import com.smousseur.orbitlab.simulation.OrbitElements;
 import com.smousseur.orbitlab.simulation.Physics;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionStage;
@@ -24,6 +25,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
@@ -61,7 +63,7 @@ class GravityTurnFloorProbeTest {
 
   private static final double RE = Constants.WGS84_EARTH_EQUATORIAL_RADIUS;
 
-  /** Seconds above the staging floor sampled by the défaut-A scan. */
+  /** Seconds above the staging floor sampled by the defect-A scan. */
   private static final double[] TRANSITION_OFFSETS = {0.0, 1.0, 2.0, 5.0, 10.0, 20.0, 40.0, 60.0};
 
   /** Pitch exponents sampled at each offset, bracketing the retained 0.354465. */
@@ -121,7 +123,8 @@ class GravityTurnFloorProbeTest {
       double finalApogee,
       double s2Loaded,
       double s2Residual,
-      Map<String, double[]> perStagePerigeeApogee) {
+      Map<String, double[]> perStagePerigeeApogee,
+      SpacecraftState insertionState) {
 
     double s2ResidualRatio() {
       return s2Loaded > 0 ? s2Residual / s2Loaded : 0.0;
@@ -215,7 +218,8 @@ class GravityTurnFloorProbeTest {
         finalPa[1],
         s2.loaded(),
         s2.residual(),
-        perStage);
+        perStage,
+        last);
   }
 
   /** Perigee and apogee altitudes (m) of the osculating orbit of {@code state}. */
@@ -247,7 +251,7 @@ class GravityTurnFloorProbeTest {
     return FastMath.toDegrees(FastMath.atan2(vRad, vTan));
   }
 
-  // ── Défaut A: is the staging floor an artefact, a search trap, or the envelope? ──
+  // ── Defect A: is the staging floor an artefact, a search trap, or the envelope? ──
 
   /**
    * Scans MECO above the staging floor on the Falcon Heavy budget-loads profile, at several pitch
@@ -485,7 +489,7 @@ class GravityTurnFloorProbeTest {
     return flight.handOffVRad();
   }
 
-  // ── Défaut B: where are the 17 km of perigee lost? ───────────────────────
+  // ── Defect B: where are the 17 km of perigee lost? ───────────────────────
 
   /**
    * Replays the elliptic 200/1000 mission at the variables the failing run retained, and prints the
@@ -541,6 +545,64 @@ class GravityTurnFloorProbeTest {
     // tolerance three times wider in absolute terms (±28 km at 400 km against ±14 km at 200 km).
     coastProbe(
         "FH-400", falconHeavyBudgetLoads(), falconHeavyBudgetLoads(), FH_400_RETAINED, 400_000);
+  }
+
+  /**
+   * Step 0 of the mean-elements work (spec orbit-reporting/01 section 5.1). Read-only: measures, at
+   * insertion, the gap between the osculating orbit — the one the analytic stages aim at and hit to
+   * the metre — and the mean orbit, the one the user asked for.
+   *
+   * <p>The prediction under test: insertion falling at the top of the J2 oscillation, the mean orbit
+   * should read around {@code target − a*f}, i.e. ~9.7 km below target at 400 km. If the sign flips,
+   * or differs between profiles, insertion does not land at the same point of the oscillation from
+   * one profile to the next and section 2 of the spec has to be rewritten.
+   *
+   * <p>Measured 2026-08-05: −9 388 m on FH-400 (96% of a*f) and −7 363 m on the elliptic profile
+   * (78%), negative on both. The prediction holds.
+   */
+  @Test
+  void meanVersusOsculatingAtInsertion() {
+    meanOrbitProbe(
+        "FH-400", falconHeavyBudgetLoads(), falconHeavyBudgetLoads(), FH_400_RETAINED, 400_000);
+    meanOrbitProbe(
+        "LEO-200x1000", elliptic200x1000(), elliptic200x1000(), ELLIPTIC_RETAINED, 200_000);
+  }
+
+  private static void meanOrbitProbe(
+      String tag, LEOMission mission, LEOMission twin, double[] vars, double targetPerigee) {
+    double stagingComplete =
+        stagingCompleteTime(twin, Launchers.FALCON_HEAVY.ascentProfile());
+    Flight flight = fly(mission, vars, stagingComplete);
+
+    KeplerianOrbit insertion =
+        new KeplerianOrbit(
+            flight.insertionState().getPVCoordinates(),
+            flight.insertionState().getFrame(),
+            flight.insertionState().getDate(),
+            Constants.WGS84_EARTH_MU);
+
+    OrbitElements osculating = OrbitElements.osculating(insertion);
+    Optional<OrbitElements> mean = OrbitElements.mean(insertion);
+
+    double a = osculating.semiMajorAxis();
+    double j2 = -Constants.WGS84_EARTH_C20;
+    double af = a * 1.5 * j2 * (RE / a) * (RE / a);
+
+    logger.info("[M/{}] osculating at insertion: {}", tag, osculating.format());
+    if (mean.isEmpty()) {
+      logger.warn("[M/{}] mean orbit UNAVAILABLE — Eckstein-Hechler did not converge", tag);
+      return;
+    }
+    logger.info("[M/{}] mean at insertion:       {}", tag, mean.get().format());
+    logger.info(
+        "[M/{}] target perigee={} m | osculating−target={} m | mean−target={} m"
+            + " | mean−osculating={} m | closed-form a·f={} m",
+        tag,
+        fmt(targetPerigee, 0),
+        fmt(osculating.perigeeAltitude() - targetPerigee, 0),
+        fmt(mean.get().perigeeAltitude() - targetPerigee, 0),
+        fmt(mean.get().perigeeAltitude() - osculating.perigeeAltitude(), 0),
+        fmt(af, 0));
   }
 
   private static void coastProbe(

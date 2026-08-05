@@ -220,10 +220,19 @@ The application renders two stacked viewports:
 
 ## Code Style and Patterns
 
+- **Language**: All code comments and Javadoc are written in **English**, without exception — including
+  design rationale, which is often long in this codebase. Only the design documents under `specs/`
+  are written in French. Do not infer the code's language from the specs': they differ deliberately.
 - **Records**: Prefer Java records for immutable data (`SimulationConfig`, clock events, `BodySample`, etc.)
 - **Sealed interfaces**: Used for type-safe event hierarchies (e.g., `ClockEvent`)
 - **Singletons**: Use the holder pattern (`private static final class Holder { static final T INSTANCE = new T(); }`)
 - **Null safety**: Use `Objects.requireNonNull` in constructors; avoid nullable fields in core classes
+- **`Optional` is a return type only.** Never a field, never a record component, never a method
+  parameter. When a value may legitimately be absent, hold it as a nullable field and expose the
+  absence through the API — a `hasX()` predicate, a formatting helper, or an `Optional`-returning
+  method. `AchievedOrbit` is the reference example: nullable components, `hasOsculating()` /
+  `hasMean()`, and `formatOsculating()` / `formatMean()`. A helper that has to handle absence takes
+  the value type and null-checks it, not an `Optional` parameter.
 - **Thread safety**: `SimulationClock` uses explicit synchronization and atomic updates; use concurrent collections where shared across threads
 - **Subscriptions**: Event subscriptions return `AutoCloseable`; always unsubscribe in `cleanup()` or `close()`
 - **Logging**: Use Log4j 2 (`LogManager.getLogger(ClassName.class)`)

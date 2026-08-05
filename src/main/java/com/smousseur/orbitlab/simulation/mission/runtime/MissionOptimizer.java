@@ -237,6 +237,9 @@ public class MissionOptimizer {
     MissionPerformanceReport report = buildReport(stagePerformances, jettisonedResiduals);
     logReport(report);
 
+    AchievedOrbit achievedOrbit = AchievedOrbit.of(mission.getCurrentState());
+    logAchievedOrbit(achievedOrbit);
+
     // Inject optimization results into stages for replay
     MissionOptimizerResult optimResult = new MissionOptimizerResult(results);
     for (MissionStage stage : mission.getStages()) {
@@ -256,7 +259,7 @@ public class MissionOptimizer {
     MissionEphemeris ephemeris = generator.generate(mission, initialState);
 
     mission.setStatus(MissionStatus.READY);
-    return new MissionComputeResult(optimResult, ephemeris, report, mission);
+    return new MissionComputeResult(optimResult, ephemeris, report, mission, achievedOrbit);
   }
 
   /**
@@ -374,6 +377,22 @@ public class MissionOptimizer {
           FastMath.round(sp.residual()),
           String.format(java.util.Locale.ROOT, "%.1f", 100.0 * sp.residualRatio()));
     }
+  }
+
+  /**
+   * The orbit achieved at the end of the mission, in both conventions (spec orbit-reporting/01).
+   *
+   * <p>Reporting only: neither value is read back into the computation. Between insertion and the
+   * end of the coast, the osculating orbit has oscillated by about 19 km under J2 while the mean
+   * one only moved by its secular drift — a comparable swing on both lines would signal that the
+   * conversion is wrong.
+   *
+   * <p>Reading note: the mean line of an insertion aimed circular is not circular, and the gap is
+   * not a targeting miss. See {@link AchievedOrbit}.
+   */
+  private static void logAchievedOrbit(AchievedOrbit achieved) {
+    logger.info("Achieved orbit (osculating): {}", achieved.formatOsculating());
+    logger.info("Achieved orbit (mean):       {}", achieved.formatMean());
   }
 
   private static String[] paramNamesFor(TrajectoryProblem problem) {
