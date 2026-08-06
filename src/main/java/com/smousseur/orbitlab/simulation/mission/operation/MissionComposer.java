@@ -26,7 +26,7 @@ public final class MissionComposer {
 
   /**
    * LEO targets whose perigee and apogee differ by less than this (meters) are treated as circular
-   * and flown with the single-burn circular transfer rather than the elliptic one.
+   * and flown with the two-burn circular transfer rather than the single-burn elliptic one.
    */
   private static final double CIRCULAR_TOLERANCE_M = 1_000.0;
 
@@ -61,8 +61,17 @@ public final class MissionComposer {
           spec.longitude(),
           spec.altitude());
     }
-    // CMA-ES optimized transfer. A circular target uses the single-burn circular transfer; an
-    // elliptic target keeps its distinct apogee via the two-maneuver transfer.
+    // CMA-ES optimized transfer, and the two shapes take DIFFERENT stages — read the direction
+    // carefully, this comment used to state it backwards:
+    //
+    //  - circular  -> TransfertTwoManeuverStage, TWO burns (burn 1 optimized on 4 variables, the
+    //    circularization at the next apoapsis resolved deterministically). It only supports
+    //    circular targets, which is exactly why the tolerance above exists;
+    //  - elliptic  -> TransfertManeuverStage, a SINGLE burn shaping the whole ellipse, graded on
+    //    apogee, perigee and eccentricity in one aggregate cost.
+    //
+    // See OptimizationType for what each path measurably buys — and for the open question on the
+    // elliptic one, which misses the apogee by 16 km where the analytic profile hits it to 562 m.
     boolean circular =
         Math.abs(spec.apogeeAltitude() - spec.perigeeAltitude()) < CIRCULAR_TOLERANCE_M;
     return circular
@@ -84,8 +93,8 @@ public final class MissionComposer {
   }
 
   private static Mission composeGeo(MissionSpec.Geo spec, OptimizationType mode) {
-    // GEO currently has a single (analytic) composition: the CMA-ES two-maneuver transfer is a LEO
-    // stage, with no GEO equivalent yet. Every mode therefore yields the analytic profile; the mode
+    // GEO currently has a single (analytic) composition: both CMA-ES transfer stages are LEO-only,
+    // with no GEO equivalent yet. Every mode therefore yields the analytic profile; the mode
     // still differentiates GEO on the load-handling axis in MissionPlanOptimizer.
     return new GEOMission(
         spec.name(),

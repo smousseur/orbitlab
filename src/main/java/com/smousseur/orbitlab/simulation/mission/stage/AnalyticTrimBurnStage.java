@@ -1,5 +1,6 @@
 package com.smousseur.orbitlab.simulation.mission.stage;
 
+import com.smousseur.orbitlab.simulation.FlownBandAim;
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.Physics;
 import com.smousseur.orbitlab.simulation.mission.Mission;
@@ -16,6 +17,7 @@ import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.hipparchus.ode.events.Action;
 import org.orekit.attitudes.FrameAlignedProvider;
 import org.orekit.forces.maneuvers.ConstantThrustManeuver;
+import org.orekit.orbits.KeplerianOrbit;
 import org.orekit.propagation.SpacecraftState;
 import org.orekit.propagation.events.ApsideDetector;
 import org.orekit.propagation.events.DateDetector;
@@ -23,6 +25,7 @@ import org.orekit.propagation.events.handlers.RecordAndContinue;
 import org.orekit.propagation.numerical.NumericalPropagator;
 import org.orekit.time.AbsoluteDate;
 import org.orekit.utils.Constants;
+import org.orekit.utils.PVCoordinates;
 
 /**
  * Deterministic single-burn trim stage at the next apogee. Used after {@link
@@ -35,8 +38,10 @@ import org.orekit.utils.Constants;
  *
  * <ul>
  *   <li>ΔV vector = (target-shape velocity at the achieved apogee radius, target inclination plane)
- *       − v(apogee). The target shape is the ellipse (target perigee, achieved apogee); when the
- *       LEO target is circular, this is exactly the circularization velocity.
+ *       − v(apogee). The target shape is the ellipse (aimed shaping radius, achieved apogee),
+ *       where the shaping radius is resolved by {@link
+ *       com.smousseur.orbitlab.simulation.FlownBandAim} so the <b>flown</b> altitude band is
+ *       centred on the requested orbit (spec orbit-reporting/02).
  *   <li>If {@code ||ΔV|| < SKIP_DV_THRESHOLD} the burn is skipped and the stage transitions
  *       immediately.
  *   <li>Otherwise the finite burn is scheduled centered on the impulsive apogee using a {@link
@@ -44,9 +49,16 @@ import org.orekit.utils.Constants;
  *       burn (same rationale as burn 2 of the Hohmann transfer).
  * </ul>
  *
- * <p>The resulting orbit has the requested perigee and the achieved apogee (not necessarily the
- * requested apogee) in the target-inclination plane. With a J2-aware Hohmann upstream the apogee
- * radius is already close to the target.
+ * <p>The resulting orbit carries the requested perigee <b>in mean elements</b> and the achieved
+ * apogee (not necessarily the requested apogee) in the target-inclination plane. With a J2-aware
+ * Hohmann upstream the apogee radius is already close to the target.
+ *
+ * <p><b>The osculating insertion is therefore no longer circular on a circular target</b>, and
+ * that is deliberate: an orbit that is instantaneously circular and one that is circular on
+ * average are incompatible to the order of {@code f = (3/2)·J2·(RE/a)²} — you have to choose which
+ * one you want (spec orbit-reporting/01 section 2.2). Aiming at the osculating one perches the
+ * mission at the top of the J2 short-period oscillation, where the flown perigee can only fall,
+ * by the whole ~19 km amplitude; aiming at the mean one centres that excursion on the request.
  */
 public class AnalyticTrimBurnStage extends MissionStage {
   private static final Logger logger = LogManager.getLogger(AnalyticTrimBurnStage.class);
@@ -137,8 +149,35 @@ public class AnalyticTrimBurnStage extends MissionStage {
     Vector3D rApo = stateAtApogee.getPVCoordinates().getPosition();
     Vector3D vCurrentApo = stateAtApogee.getPVCoordinates().getVelocity();
     double r2 = rApo.getNorm();
-    double rPerigeeTarget = EARTH_RADIUS + targetPerigeeAltitude;
+    // Centre the FLOWN altitude band on the requested orbit (spec orbit-reporting/02). Aiming at
+    // an osculating perigee perches the mission at the TOP of the J2 short-period oscillation, so
+    // the flown perigee can only fall, by the whole ~19 km amplitude. The amplitude itself is not
+    // a choice — no orbit is flat under J2 — only the centring is, and it is worth a factor of two
+    // on the worst-case deviation for ~5 m/s.
+    //
+    // The band centre is the mid-point of the requested perigee and the achieved apogee: on a
+    // circular target that is the requested radius, on an elliptic one the middle of the ellipse.
+    //
+    // The resolved value is the SHAPING parameter passed below, not the perigee we will read back:
+    // on a circular target it exceeds |rApo|, so the burn point stays the perigee and the aim is
+    // the far apside (spec 02 section 3.1).
+    double targetBandCentreRadius = 0.5 * ((EARTH_RADIUS + targetPerigeeAltitude) + r2);
+    double rPerigeeTarget =
+        FlownBandAim.resolve(
+            targetBandCentreRadius,
+            r2,
+            aim ->
+                new KeplerianOrbit(
+                    new PVCoordinates(
+                        rApo,
+                        AnalyticHohmannTransferStage.computeTargetVelocityAtApogee(
+                            rApo, vCurrentApo, mu, aim, r2, targetInclination)),
+                    stateAtApogee.getFrame(),
+                    stateAtApogee.getDate(),
+                    mu));
 
+    // Same function as the aim closure above: no drift is possible between what is aimed at and
+    // what is flown.
     Vector3D vTarget =
         AnalyticHohmannTransferStage.computeTargetVelocityAtApogee(
             rApo, vCurrentApo, mu, rPerigeeTarget, r2, targetInclination);
@@ -166,10 +205,11 @@ public class AnalyticTrimBurnStage extends MissionStage {
     }
 
     logger.info(
-        "Trim burn plan: dv={} m/s, dt={}s, apogee altitude {} km",
+        "Trim burn plan: dv={} m/s, dt={}s, apogee altitude {} km, flown-band aim lift {} m",
         dv,
         dt,
-        (r2 - Constants.WGS84_EARTH_EQUATORIAL_RADIUS) / 1000.0);
+        (r2 - Constants.WGS84_EARTH_EQUATORIAL_RADIUS) / 1000.0,
+        rPerigeeTarget - (EARTH_RADIUS + targetPerigeeAltitude));
 
     return new TrimBurn(burnStart, dt, deltaV.normalize(), dv);
   }

@@ -35,22 +35,24 @@ public class AbstractTrajectoryOptimizerTest {
    * unsafe, rather than merely perturbed.
    *
    * <p><b>Why the achieved orbit is read at insertion and not from the coast minimum.</b> The
-   * mission's analytic stages target an <em>osculating</em> perigee and hit it: measured 2026-08-05
-   * on the elliptic 200/1000 profile, the orbit at the end of the trim burn is 200 000 × 1 000 077
-   * m — the target to the metre. The coast then flies a full sidereal day under the 8×8 field, and
-   * the osculating eccentricity oscillates with a long period: ~5 h 30 after insertion the same
-   * orbit reads 182 936 × 1 021 677 m. Sampling the minimum geodetic altitude over that day and
-   * comparing it against the target perigee therefore measures a J2 oscillation the mission neither
-   * controls nor sees, not an insertion error.
+   * analytic trim targets the <em>mean</em> perigee (spec orbit-reporting/02), which centres the
+   * flown excursion on the request instead of perching it at the top of the J2 short-period
+   * oscillation. The excursion itself remains — no orbit is flat under J2 — so sampling the minimum
+   * geodetic altitude over a sidereal day and comparing it against the target still measures that
+   * oscillation, not an insertion error. Only its amplitude has been halved.
    *
-   * <p>The band is close to altitude-independent in absolute terms (δr_p ≈ a·δe with δe ≈ 2.8e-3),
-   * which is why a <em>relative</em> tolerance mis-sorts the profiles: the deficit measured 16 906
-   * m on the elliptic 200/1000 case that failed at ±14 000 m, and 19 225 m — larger — on the
-   * Falcon Heavy 400 km case that passed at ±28 000 m. The profile that passed was the one further
-   * off. This floor keeps a genuinely decaying or re-entering trajectory failing while leaving the
-   * measured ~19 km band alone.
+   * <p><b>The value is twice the worst case measured after the retargeting, not a round number.</b>
+   * Measured 2026-08-05 by {@code GravityTurnFloorProbeTest#flownBandCentringAndCost}: the minimum
+   * flown altitude sits 9 835 m under target on the Falcon Heavy 400 km profile and 9 536 m under
+   * on the elliptic 200/1000 one — down from 19 225 and 16 906 m before the change. Twice the
+   * larger, rounded up, is 20 000 m.
+   *
+   * <p>A <em>relative</em> tolerance would mis-sort the two profiles, which is why this floor is
+   * absolute: the deficits are within 300 m of each other while the targets differ by a factor of
+   * two. The floor keeps a genuinely decaying or re-entering trajectory failing while leaving the
+   * measured band alone.
    */
-  private static final double FLOWN_PERIGEE_FLOOR_MARGIN_M = 40_000.0;
+  private static final double FLOWN_PERIGEE_FLOOR_MARGIN_M = 20_000.0;
 
   /** Fixed seed for reproducible CMA-ES runs across test executions. */
   protected static final long TEST_SEED = 42L;
@@ -113,24 +115,23 @@ public class AbstractTrajectoryOptimizerTest {
             OrekitService.get().gcrf(),
             insertion.time(),
             Constants.WGS84_EARTH_MU);
-    OrbitElements osculating = OrbitElements.osculating(insertionOrbit);
-    double insertionPerigee = osculating.perigeeAltitude();
-    double insertionApogee = osculating.apogeeAltitude();
+    // Both element conventions are LOGGED, and neither is asserted. Read them as diagnostics of a
+    // clean insertion, not as the achieved orbit:
+    //
+    //  - the OSCULATING insertion is no longer circular on a circular target, by construction: the
+    //    trim aims an eccentricity of about f so the mean orbit comes out circular;
+    //  - the MEAN insertion sits ~9.8 km above the request for the same reason — measured
+    //    2026-08-05, a 400 km request inserts at 409 692 x 409 915 m mean.
+    //
+    // Asserting either against the request would measure the offset between a convention and the
+    // flown trajectory, not a targeting error. This class asserted the osculating orbit until
+    // 2026-08-05 and the mean one briefly after; both were wrong for the same reason, and the
+    // third change is the one that stops chasing conventions (spec orbit-reporting/02 section 5.6).
     logger.info(
         "[{}/{} km] Insertion orbit (osculating): {}",
         (int) (perigeeAltitude / 1000),
         (int) (apogeeAltitude / 1000),
-        osculating.format());
-
-    // The quantity the user asked for: the mission orbit, stripped of the J2 short-period
-    // oscillation. Reported IN ADDITION to the osculating one, never instead of it — the
-    // assertions below stay on the osculating orbit, the only quantity the analytic stages
-    // actually aim at, and which they hit to the metre.
-    //
-    // Do not read the gap as a targeting miss: measured 2026-08-05, an insertion aimed circular
-    // at 400 km gives 400 000 x 400 114 m osculating and 390 612 x 409 712 m mean. An
-    // instantaneously circular orbit has a mean eccentricity of about f; the two cannot be
-    // circular at the same time.
+        OrbitElements.osculating(insertionOrbit).format());
     logger.info(
         "[{}/{} km] Insertion orbit (mean):       {}",
         (int) (perigeeAltitude / 1000),
@@ -152,30 +153,37 @@ public class AbstractTrajectoryOptimizerTest {
         FastMath.toDegrees(finalOrbit.getI()));
 
     logger.info("Final eccentricity: {}", finalOrbit.getE());
+
+    // The assertions read the FLOWN altitude band over the terminal coast: its minimum against the
+    // requested perigee, its maximum against the requested apogee. That is the quantity the trim
+    // now targets (spec orbit-reporting/02), it needs no mean theory to be computed, and it is
+    // exactly what MissionLoadEvaluator.objectiveMet already reads — so the accuracy bar of these
+    // tests and the feasibility gate of the λ campaigns finally measure the same thing.
     double errorApogeeMargin = ORBIT_MARGIN_RATIO * apogeeAltitude;
     Assertions.assertTrue(
-        Math.abs(insertionApogee - apogeeAltitude) <= errorApogeeMargin,
+        Math.abs(results.maxAltitude - apogeeAltitude) <= errorApogeeMargin,
         () ->
             String.format(
-                "Insertion apogee %.0f m not within %.0f m of target %.0f m",
-                insertionApogee, errorApogeeMargin, apogeeAltitude));
+                "Max flown altitude %.0f m not within %.0f m of target apogee %.0f m",
+                results.maxAltitude, errorApogeeMargin, apogeeAltitude));
     double errorPerigeeMargin = ORBIT_MARGIN_RATIO * perigeeAltitude;
     Assertions.assertTrue(
-        Math.abs(insertionPerigee - perigeeAltitude) <= errorPerigeeMargin,
+        Math.abs(results.minAltitude - perigeeAltitude) <= errorPerigeeMargin,
         () ->
             String.format(
-                "Insertion perigee %.0f m not within %.0f m of target %.0f m",
-                insertionPerigee, errorPerigeeMargin, perigeeAltitude));
+                "Min flown altitude %.0f m not within %.0f m of target perigee %.0f m",
+                results.minAltitude, errorPerigeeMargin, perigeeAltitude));
 
-    // The flown trajectory is still checked, but for safety rather than for accuracy: it may drift
-    // within the J2 band, it may not head for the ground.
+    // Coarse backstop, now largely redundant with the perigee assertion above: it survives because
+    // it fails with a message about hitting the ground rather than about a tolerance, which is the
+    // right thing to read when a trajectory is genuinely decaying.
     double flownFloor = perigeeAltitude - FLOWN_PERIGEE_FLOOR_MARGIN_M;
     Assertions.assertTrue(
         results.minAltitude >= flownFloor,
         () ->
             String.format(
                 "Min coast altitude %.0f m fell below the safety floor %.0f m"
-                    + " (target perigee %.0f m minus the %.0f m J2 band)",
+                    + " (target perigee %.0f m minus the %.0f m margin)",
                 results.minAltitude, flownFloor, perigeeAltitude, FLOWN_PERIGEE_FLOOR_MARGIN_M));
     return computeResult;
   }

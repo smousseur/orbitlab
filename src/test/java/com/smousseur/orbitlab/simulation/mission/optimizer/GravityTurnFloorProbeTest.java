@@ -605,6 +605,101 @@ class GravityTurnFloorProbeTest {
         fmt(af, 0));
   }
 
+  /**
+   * Flown-band centring and its propellant cost — the baseline of spec orbit-reporting/02, and the
+   * measurement that falsifies it after the retargeting (spec 02 sections 5 P1 and 5 P2).
+   *
+   * <p>Prints, per profile: the min and max geodetic altitude of the final coast, their centre, the
+   * offset the centring would need ({@code target − centre}), the worst-case deviation, and the
+   * sized stage's residual.
+   *
+   * <p>Deliberately a NEW probe rather than an extension of {@link
+   * #meanVersusOsculatingAtInsertion} or {@code coastProbe}: their outputs are the baseline
+   * recorded in spec 01, and changing them would make yesterday's measurements incomparable to
+   * tomorrow's.
+   *
+   * <p>After the change both centres must land within 1 500 m of the target. If either misses, the
+   * "mean perigee = band centre" identity spec 02 rests on is wrong and the work stops there.
+   */
+  @Test
+  void flownBandCentringAndCost() {
+    bandProbe(
+        "FH-400", falconHeavyBudgetLoads(), falconHeavyBudgetLoads(), FH_400_RETAINED, 400_000);
+    bandProbe(
+        "LEO-200x1000", elliptic200x1000(), elliptic200x1000(), ELLIPTIC_RETAINED, 200_000);
+  }
+
+  private static void bandProbe(
+      String tag, LEOMission mission, LEOMission twin, double[] vars, double targetPerigee) {
+    double stagingComplete = stagingCompleteTime(twin, Launchers.FALCON_HEAVY.ascentProfile());
+    Flight flight = fly(mission, vars, stagingComplete);
+
+    // Re-run the chain through the sampling generator, exactly as MissionOptimizer closes a run.
+    SpacecraftState initial = mission.getInitialState(epoch());
+    MissionEphemeris ephemeris = new MissionEphemerisGenerator().generate(mission, initial);
+
+    // The centring quantity is the excursion of the OSCULATING PERIGEE along the coast, not of
+    // the flown altitude. On an elliptic target the altitude spans the whole ellipse — measured
+    // 2026-08-05 on the 200x1000 profile: 183 094 -> 1 000 573 m, whose "centre" at 591 833 m is
+    // the middle of the ellipse and says nothing about the J2 oscillation this probe is after.
+    // The perigee excursion is the same quantity on both profiles.
+    double perigeeMin = Double.POSITIVE_INFINITY;
+    double perigeeMax = Double.NEGATIVE_INFINITY;
+    double altitudeMin = Double.POSITIVE_INFINITY;
+    double altitudeMax = Double.NEGATIVE_INFINITY;
+    for (MissionEphemerisPoint pt : ephemeris.allPoints()) {
+      if (!"Coasting".equals(pt.stageName())) {
+        continue;
+      }
+      KeplerianOrbit orbit =
+          new KeplerianOrbit(
+              new org.orekit.utils.PVCoordinates(pt.position(), pt.velocity()),
+              initial.getFrame(),
+              pt.time(),
+              Constants.WGS84_EARTH_MU);
+      double perigee = orbit.getA() * (1.0 - orbit.getE()) - RE;
+      perigeeMin = FastMath.min(perigeeMin, perigee);
+      perigeeMax = FastMath.max(perigeeMax, perigee);
+      altitudeMin = FastMath.min(altitudeMin, pt.altitudeMeters());
+      altitudeMax = FastMath.max(altitudeMax, pt.altitudeMeters());
+    }
+    if (!Double.isFinite(perigeeMin) || !Double.isFinite(perigeeMax)) {
+      logger.warn("[C/{}] no Coasting samples in the ephemeris", tag);
+      return;
+    }
+
+    double centre = 0.5 * (perigeeMin + perigeeMax);
+    logger.info(
+        "[C/{}] osculating perigee excursion {} -> {} m | centre {} m | target {} m"
+            + " | required offset {} m | worst-case deviation {} m",
+        tag,
+        fmt(perigeeMin, 0),
+        fmt(perigeeMax, 0),
+        fmt(centre, 0),
+        fmt(targetPerigee, 0),
+        fmt(targetPerigee - centre, 0),
+        fmt(FastMath.max(targetPerigee - perigeeMin, perigeeMax - targetPerigee), 0));
+    // THE quantity the chantier is judged on: the flown altitude band and where its centre sits.
+    // Removing it in favour of the perigee excursion alone was the mistake that let "the band is
+    // centred" go unmeasured through a whole implementation (spec 02 section 5.5.2). On an
+    // elliptic target this band spans the whole ellipse, which is exactly what its centre means
+    // there — the mid-point of the requested apsides is the reference.
+    logger.info(
+        "[C/{}] flown altitude band {} -> {} m | centre {} m | min is {} m under target",
+        tag,
+        fmt(altitudeMin, 0),
+        fmt(altitudeMax, 0),
+        fmt(0.5 * (altitudeMin + altitudeMax), 0),
+        fmt(targetPerigee - altitudeMin, 0));
+    logger.info(
+        "[C/{}] sized stage residual {} kg of {} kg loaded (ratio {}), final mass {} kg",
+        tag,
+        fmt(flight.s2Residual(), 0),
+        fmt(flight.s2Loaded(), 0),
+        fmt(flight.s2ResidualRatio(), 4),
+        fmt(flight.finalMass(), 0));
+  }
+
   private static void coastProbe(
       String tag,
       LEOMission mission,
