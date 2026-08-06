@@ -30,8 +30,24 @@ import org.apache.logging.log4j.Logger;
  * here: the stages carry marginal slack of wildly different magnitude, so a common factor is pinned
  * by the tightest one (the first stage) and the upper stages gain nothing — the same domination
  * that makes a raw total-mass objective meaningless when one stage weighs 1.2 M kg and another
- * 8.6 t. For that reason progress is measured against the <em>scaled</em> stages' mass only, never
- * the stack total.
+ * 8.6 t. The same reasoning governs when to stop: <b>progress is measured per coordinate, against
+ * that coordinate's own load</b>. Measuring it on the scaled stages' total — which the first stage
+ * dominates — let a pass that reclaimed 3 % of the upper stage read as 0.0035 % and end the sweep
+ * (observed on FH LEO, 2026-08-06); no gain on an upper stage could ever have earned another pass.
+ *
+ * <p><b>Refinement passes probe before they bisect.</b> From the second pass on, a coordinate is
+ * first evaluated one {@code tolerance} below its current value. An infeasible probe ends that
+ * coordinate immediately: the minimal feasible {@code λ} then lies in {@code (λ−tolerance, λ]},
+ * whose width is the bisection's own convergence criterion, so a full re-bisection would have
+ * returned the same {@code λ} — for six or seven mission optimizations instead of one. Measured on
+ * both Falcon Heavy profiles, the second pass returned its starting point on every coordinate while
+ * costing 26 % (LEO) and 34 % (GEO) of the run. A feasible probe means the coupling below has opened
+ * real slack, and the bisection runs from the probe, already a known-feasible point one step down.
+ * The first pass is excluded: it is the one that decides {@code λ*}, and its schedule of evaluated
+ * {@code λ} is left untouched so the recorded references stay comparable. Note the equivalence
+ * argument assumes feasibility is monotone in {@code λ}, which {@link
+ * PropellantLoadOptimizer#minimize} documents as only approximately true — the same assumption the
+ * bisection already rests on everywhere else.
  *
  * <p><b>Known limit.</b> Coordinate descent can stall on a corner of the feasible boundary that is
  * not its global minimum, because the coupling between stages is real and asymmetric: lightening an
@@ -55,9 +71,12 @@ public final class MultiStageLoadOptimizer {
   public static final int DEFAULT_MAX_EVALUATIONS = 45;
 
   /**
-   * A sweep reclaiming less than this fraction of the scaled stages' mass ends the search: the
-   * coordinates have stopped moving each other and further passes would only re-measure the same
-   * point.
+   * A sweep in which <em>no</em> coordinate reclaimed at least this fraction of <b>its own</b> load
+   * ends the search: the coordinates have stopped moving each other and further passes would only
+   * re-measure the same point.
+   *
+   * <p>Per coordinate, never against the scaled stages' total — an upper stage weighing a thousandth
+   * of the stack could otherwise never clear the floor whatever it reclaimed (see {@link #minimize}).
    */
   public static final double DEFAULT_MIN_PASS_GAIN = 0.01;
 
@@ -87,8 +106,8 @@ public final class MultiStageLoadOptimizer {
    * @param tolerance convergence tolerance on each coordinate's bracket width
    * @param maxEvaluations total evaluation budget across all passes
    * @param maxPasses maximum number of sweeps over the coordinates
-   * @param minPassGain sweep gain, as a fraction of the scaled stages' mass, below which the search
-   *     stops
+   * @param minPassGain per-coordinate sweep gain, as a fraction of that coordinate's own load,
+   *     below which the search stops (no coordinate reaching it ends the sweep)
    */
   public MultiStageLoadOptimizer(
       double lambdaMin,
@@ -219,6 +238,7 @@ public final class MultiStageLoadOptimizer {
     int passes = 0;
     for (int pass = 1; pass <= maxPasses; pass++) {
       double scaledMassBefore = scaledMass(lambdas, heuristicLoads, lambdaScaled);
+      double[] lambdasBeforePass = lambdas.clone();
 
       for (int index : coordinates) {
         int remaining = maxEvaluations - evaluations;
@@ -227,7 +247,7 @@ public final class MultiStageLoadOptimizer {
           return finish(lambdas, evaluations, passes, current, heuristicLoads, lambdaScaled);
         }
         logger.info(
-            "Pass {}/{} — bisecting stage {} from λ={} (others fixed at {})",
+            "Pass {}/{} — stage {} from λ={} (others fixed at {})",
             pass,
             maxPasses,
             index,
@@ -235,13 +255,67 @@ public final class MultiStageLoadOptimizer {
             format(lambdas));
 
         CoordinateAdapter adapter = new CoordinateAdapter(evaluator, lambdas, index);
+        // Captured before the slack probe, which may itself lower the coordinate.
+        double before = lambdas[index];
+
+        // Refinement passes probe the endpoint before reopening a bracket. A full re-bisection of a
+        // coordinate that has stopped moving costs 6-7 mission optimizations to return the λ it
+        // started from — measured at 26 % (LEO) and 34 % (GEO) of the run, for zero propellant.
+        // One evaluation settles it: if λ−tolerance is infeasible, the minimal feasible λ lies in
+        // (λ−tolerance, λ], a bracket whose width IS the bisection's convergence criterion, so the
+        // bisection would have returned λ unchanged. When the probe succeeds instead, the coupling
+        // between stages has opened real slack and the bisection runs — from the probe, which is
+        // already a known-feasible point one step lower, so the evaluation is not spent twice.
+        //
+        // Pass 1 is deliberately excluded: it decides λ* and its schedule of evaluated λ stays
+        // byte-for-byte what it was, so the existing LEO/GEO references remain comparable.
+        if (pass > 1) {
+          double probe = lambdas[index] - tolerance;
+          if (probe < lambdaMin) {
+            logger.info(
+                "Pass {} — stage {}: λ={} is within one tolerance of λmin, bracket already"
+                    + " converged; no evaluation spent",
+                pass,
+                index,
+                format(lambdas[index]));
+            continue;
+          }
+          PropellantLoadOptimizer.Evaluation probeEval = adapter.evaluate(probe, current);
+          evaluations++;
+          if (!probeEval.feasible()) {
+            logger.info(
+                "Pass {} — stage {}: probe at λ={} infeasible, so the minimal feasible λ sits"
+                    + " within {} of {} — converged in 1 eval instead of a full bisection"
+                    + " ({} evals used overall)",
+                pass,
+                index,
+                format(probe),
+                format(tolerance),
+                format(lambdas[index]),
+                evaluations);
+            continue;
+          }
+          logger.info(
+              "Pass {} — stage {}: probe at λ={} feasible — the coordinates are still moving each"
+                  + " other, bisecting from there",
+              pass,
+              index,
+              format(probe));
+          lambdas[index] = probe;
+          current = probeEval;
+        }
+        remaining = maxEvaluations - evaluations;
+        if (remaining < 2) {
+          logger.info("Evaluation budget spent after the slack probe — stopping mid-pass {}", pass);
+          return finish(lambdas, evaluations, passes, current, heuristicLoads, lambdaScaled);
+        }
+
         PropellantLoadOptimizer bisection =
             new PropellantLoadOptimizer(lambdaMin, lambdaMax, tolerance, remaining);
         PropellantLoadOptimizer.Result coordinateResult =
             bisection.minimizeBelow(adapter, lambdas[index], current);
 
         evaluations += coordinateResult.evaluations();
-        double before = lambdas[index];
         lambdas[index] = coordinateResult.lambda();
         current = coordinateResult.best();
         logger.info(
@@ -256,25 +330,52 @@ public final class MultiStageLoadOptimizer {
       passes = pass;
 
       double scaledMassAfter = scaledMass(lambdas, heuristicLoads, lambdaScaled);
-      double gain =
-          scaledMassBefore > 0 ? (scaledMassBefore - scaledMassAfter) / scaledMassBefore : 0.0;
       logger.info(
-          "Pass {} done: scaled-stage mass {} → {} kg ({} reclaimed, {}%), λ={}",
+          "Pass {} done: scaled-stage mass {} → {} kg ({} reclaimed), λ={}",
           pass,
           Math.round(scaledMassBefore),
           Math.round(scaledMassAfter),
           Math.round(scaledMassBefore - scaledMassAfter),
-          String.format(Locale.ROOT, "%.1f", 100.0 * gain),
           format(lambdas));
       logStageResiduals(current);
 
-      if (gain < minPassGain) {
+      // The pass gain is read PER COORDINATE, against that coordinate's own load — never against
+      // the scaled stages' total. Since a coordinate's load is λ·heuristic, its relative gain is
+      // just the λ ratio and the loads cancel out.
+      //
+      // Measured 2026-08-06 on LEO, this is not a refinement: a pass reclaimed 3 % of the upper
+      // stage's load and the aggregate rule scored it 0.0035 %, below the floor, so the sweep
+      // stopped — because the upper stage's 1.3 t cannot weigh 1 % of a 1.13 M kg total that the
+      // first stage dominates. No gain on an upper stage could ever earn another pass. That is the
+      // same domination this class rejects a global λ for, and it had come back in the stopping
+      // rule.
+      int gainingCoordinate = -1;
+      double bestCoordinateGain = 0.0;
+      for (int index : coordinates) {
+        double before = lambdasBeforePass[index];
+        if (!(before > 0)) {
+          continue;
+        }
+        double coordinateGain = (before - lambdas[index]) / before;
+        if (coordinateGain > bestCoordinateGain) {
+          bestCoordinateGain = coordinateGain;
+          gainingCoordinate = index;
+        }
+      }
+
+      if (bestCoordinateGain < minPassGain) {
         logger.info(
-            "Pass gain {}% below the {}% floor — coordinates have stopped moving each other",
-            String.format(Locale.ROOT, "%.1f", 100.0 * gain),
+            "Best per-coordinate gain {}% below the {}% floor — coordinates have stopped moving"
+                + " each other",
+            String.format(Locale.ROOT, "%.2f", 100.0 * bestCoordinateGain),
             String.format(Locale.ROOT, "%.1f", 100.0 * minPassGain));
         break;
       }
+      logger.info(
+          "Stage {} reclaimed {}% of its own load this pass (floor {}%) — sweeping again",
+          gainingCoordinate,
+          String.format(Locale.ROOT, "%.2f", 100.0 * bestCoordinateGain),
+          String.format(Locale.ROOT, "%.1f", 100.0 * minPassGain));
     }
 
     // Diagonal probe: coordinate descent is blind to a feasible direction that is not axis-aligned.

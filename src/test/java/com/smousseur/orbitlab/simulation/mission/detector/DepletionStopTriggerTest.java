@@ -49,7 +49,7 @@ class DepletionStopTriggerTest {
                     Constants.WGS84_EARTH_MU))
             .withMass(FLOOR + 500);
 
-    NumericalPropagator propagator = OrekitService.get().createSimplePropagator();
+    NumericalPropagator propagator = OrekitService.get().createTestPropagator();
     propagator.setInitialState(state);
     // No date window: the engine ignites at t+1 ms and burns until flame-out.
     propagator.addForceModel(

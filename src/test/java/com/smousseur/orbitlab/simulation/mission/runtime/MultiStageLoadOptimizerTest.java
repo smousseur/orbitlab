@@ -144,6 +144,132 @@ class MultiStageLoadOptimizerTest {
     assertEquals(1, allOnes, "the all-heuristic point must be evaluated exactly once");
   }
 
+  // ── Refinement passes: probe the endpoint before re-bisecting ─────────────
+
+  /**
+   * Feasible iff {@code λ0 ≥ floor0} and {@code λ1 ≥ threshold1 − coupling·(1 − λ0)}: lightening the
+   * lower stage relaxes what the upper one needs. This is the coupling the refinement passes exist
+   * for — a separable evaluator can never exercise them, because a second sweep provably finds
+   * nothing there.
+   */
+  private static final class CoupledEvaluator implements MultiStageLoadOptimizer.Evaluator {
+    final List<double[]> calls = new ArrayList<>();
+
+    @Override
+    public Evaluation evaluate(double[] lambdas, Evaluation previous) {
+      calls.add(lambdas.clone());
+      boolean feasible = lambdas[0] >= 0.55 && lambdas[1] >= 0.78 - 0.5 * (1.0 - lambdas[0]);
+      return new Evaluation(Double.NaN, feasible, null);
+    }
+  }
+
+  @Test
+  void refinementPass_withoutSlack_costsOneProbeInsteadOfAFullBisection() {
+    // On a separable boundary the second pass provably finds nothing: each coordinate is already at
+    // its own threshold. Measured on both FH profiles, that pass cost 12-13 evaluations to return
+    // the exact λ it started from — 26 % (LEO) and 34 % (GEO) of the run for zero kilogram.
+    //
+    // One evaluation answers it: if λ−tolerance is infeasible, the minimal feasible λ lies inside
+    // (λ−tolerance, λ], a bracket whose width IS the bisection's convergence criterion, so the
+    // bisection would have returned λ anyway.
+    boolean[] scaled = {true, true};
+    PerStageThresholdEvaluator evaluator =
+        new PerStageThresholdEvaluator(new double[] {0.55, 0.78}, scaled);
+
+    MultiStageLoadOptimizer.Result result =
+        new MultiStageLoadOptimizer().minimize(evaluator, scaled, new double[] {100_000, 10_000});
+
+    double[] finalLambdas = result.lambdas();
+    assertTrue(result.passes() >= 2, "the scenario must actually reach a refinement pass");
+
+    // The top stage is swept first, so its pass-1 bisection ran with the lower stage still at 1.0.
+    // A call opening at λmin with the lower stage at its FINAL value can therefore only come from a
+    // refinement pass re-bisecting from scratch — exactly what the probe replaces.
+    boolean reopenedTheBracket =
+        evaluator.calls.stream()
+            .anyMatch(
+                c ->
+                    Math.abs(c[1] - PropellantLoadOptimizer.DEFAULT_LAMBDA_MIN) < 1e-12
+                        && Math.abs(c[0] - finalLambdas[0]) < 1e-12);
+    assertFalse(
+        reopenedTheBracket,
+        "a refinement pass must not reopen a full bracket at λmin: the endpoint probe settles it");
+
+    boolean probed =
+        evaluator.calls.stream()
+            .anyMatch(
+                c ->
+                    Math.abs(c[0] - finalLambdas[0]) < 1e-12
+                        && Math.abs(c[1] - (finalLambdas[1] - TOL)) < 1e-9);
+    assertTrue(probed, "the refinement pass must probe exactly one tolerance below the current λ");
+
+    // And the answer must be the one the full bisection gave.
+    assertTrue(finalLambdas[0] >= 0.55 && finalLambdas[0] - 0.55 <= TOL, "λ0 still at its threshold");
+    assertTrue(finalLambdas[1] >= 0.78 && finalLambdas[1] - 0.78 <= TOL, "λ1 still at its threshold");
+  }
+
+  @Test
+  void refinementPass_withSlack_stillBisectsAndReclaimsIt() {
+    // The probe is a short circuit, not a cap: when it succeeds there is real coupling to exploit
+    // and the full bisection must still run. Here pass 1 leaves λ1 at 0.78 (decided while λ0 was
+    // still 1.0); once λ0 drops to 0.55 the constraint on λ1 relaxes to 0.555, and the refinement
+    // pass has to find it.
+    boolean[] scaled = {true, true};
+    CoupledEvaluator evaluator = new CoupledEvaluator();
+
+    MultiStageLoadOptimizer.Result result =
+        new MultiStageLoadOptimizer().minimize(evaluator, scaled, new double[] {100_000, 10_000});
+
+    assertTrue(result.feasible());
+    assertTrue(
+        result.lambdas()[1] <= 0.60,
+        () ->
+            "the refinement pass must reclaim the slack the coupling opened (expected ≈0.555), got "
+                + result.lambdas()[1]);
+  }
+
+  // ── The pass-gain rule must be per coordinate ─────────────────────────────
+
+  @Test
+  void passGain_isMeasuredPerCoordinate_notOnTheStackDominatingStage() {
+    // Loads as lopsided as the real Falcon Heavy stack: S1 at 1.2 M kg against S2 at ~1.3 t.
+    //
+    // Measured 2026-08-06 on LEO: a refinement pass reclaimed 3 % of S2's load and the gain,
+    // measured on the scaled stages' TOTAL mass, read 0.0035 % — below the 1 % floor, so the sweep
+    // stopped. S2 cannot structurally weigh 1 % of a total S1 dominates, so no gain on an upper
+    // stage can ever earn another pass. That is the same domination the class javadoc invokes to
+    // reject a global λ, reappearing in the stopping rule.
+    //
+    // Here the coupling lets pass 2 reclaim ~29 % of the upper coordinate while the lower one does
+    // not move: on the total that is ~0.04 %, so the old rule stopped at two passes.
+    boolean[] scaled = {true, true};
+    CoupledEvaluator evaluator = new CoupledEvaluator();
+
+    MultiStageLoadOptimizer.Result result =
+        new MultiStageLoadOptimizer().minimize(evaluator, scaled, new double[] {1_000_000, 1_000});
+
+    assertTrue(result.feasible());
+    assertEquals(
+        3,
+        result.passes(),
+        "a coordinate that moved 29 % of its own load must earn another pass, however little it"
+            + " weighs in the stack");
+  }
+
+  @Test
+  void passGain_stillStopsWhenNoCoordinateMoves() {
+    // The counterpart: on a separable boundary no coordinate moves in pass 2, so the per-coordinate
+    // rule must stop exactly where the aggregate one did — the change must not turn the floor off.
+    boolean[] scaled = {true, true};
+    PerStageThresholdEvaluator evaluator =
+        new PerStageThresholdEvaluator(new double[] {0.55, 0.78}, scaled);
+
+    MultiStageLoadOptimizer.Result result =
+        new MultiStageLoadOptimizer().minimize(evaluator, scaled, new double[] {1_000_000, 1_000});
+
+    assertEquals(2, result.passes(), "nothing moved in pass 2: the sweep must stop there");
+  }
+
   // ── Budget and short-circuits ─────────────────────────────────────────────
 
   @Test
