@@ -150,8 +150,8 @@ public final class OrekitService {
    *
    * @return a new numerical propagator with Newtonian gravity only
    */
-  public NumericalPropagator createSimplePropagator() {
-    return createSimplePropagator(SAFE_MAX_STEP);
+  public NumericalPropagator createTestPropagator() {
+    return createTestPropagator(SAFE_MAX_STEP);
   }
 
   /**
@@ -162,7 +162,7 @@ public final class OrekitService {
    * @param maxStep integrator maximum step in seconds (must satisfy the late-ignition invariant)
    * @return a new numerical propagator with Newtonian gravity only
    */
-  public NumericalPropagator createSimplePropagator(double maxStep) {
+  public NumericalPropagator createTestPropagator(double maxStep) {
     double minStep = 0.001;
     double absTol = 1e-8;
     double relTol = 1e-10;
