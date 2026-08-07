@@ -5,6 +5,7 @@ import com.jme3.app.state.BaseAppState;
 import com.jme3.scene.Node;
 import com.smousseur.orbitlab.app.ApplicationContext;
 import com.smousseur.orbitlab.engine.events.EventBus;
+import com.smousseur.orbitlab.simulation.mission.MissionId;
 import com.smousseur.orbitlab.simulation.mission.MissionStatus;
 import com.smousseur.orbitlab.simulation.mission.context.MissionContext;
 import com.smousseur.orbitlab.simulation.mission.context.MissionEntry;
@@ -101,13 +102,13 @@ public final class MissionDisplayPanelAppState extends BaseAppState {
     EventBus bus = context.eventBus();
     return new MissionDisplayPanelWidget.RowListener() {
       @Override
-      public void onToggleTelemetry(String name, boolean currentlyOn) {
-        bus.publishTelemetryFocus(currentlyOn ? null : name);
+      public void onToggleTelemetry(MissionId missionId, boolean currentlyOn) {
+        bus.publishTelemetryFocus(currentlyOn ? null : missionId);
       }
 
       @Override
-      public void onToggleVisibility(String name) {
-        bus.publishMissionAction(name, EventBus.MissionAction.TOGGLE_VISIBLE);
+      public void onToggleVisibility(MissionId missionId) {
+        bus.publishMissionAction(missionId, EventBus.MissionAction.TOGGLE_VISIBLE);
       }
     };
   }
@@ -117,7 +118,7 @@ public final class MissionDisplayPanelAppState extends BaseAppState {
     EventBus bus = context.eventBus();
     for (MissionEntry entry : mc.getMissions()) {
       if (entry.mission().getStatus() == MissionStatus.READY && entry.isVisible()) {
-        bus.publishMissionAction(entry.mission().getName(), EventBus.MissionAction.TOGGLE_VISIBLE);
+        bus.publishMissionAction(entry.id(), EventBus.MissionAction.TOGGLE_VISIBLE);
       }
     }
     // R8: clear telemetry on hide-all.
@@ -128,7 +129,7 @@ public final class MissionDisplayPanelAppState extends BaseAppState {
     EventBus.MissionTelemetryFocusRequest req;
     MissionContext mc = context.missionContext();
     while ((req = context.eventBus().pollTelemetryFocus()) != null) {
-      rules.applyTelemetryFocus(mc, req.missionName());
+      rules.applyTelemetryFocus(mc, req.missionId());
     }
   }
 }

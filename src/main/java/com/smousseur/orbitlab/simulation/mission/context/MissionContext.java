@@ -2,6 +2,7 @@ package com.smousseur.orbitlab.simulation.mission.context;
 
 import com.jme3.math.ColorRGBA;
 import com.smousseur.orbitlab.simulation.mission.Mission;
+import com.smousseur.orbitlab.simulation.mission.MissionId;
 import com.smousseur.orbitlab.simulation.mission.MissionType;
 import com.smousseur.orbitlab.ui.mission.MissionColorPalette;
 
@@ -14,13 +15,16 @@ import java.util.concurrent.CopyOnWriteArrayList;
 /**
  * Thread-safe registry of active missions. Exposed via {@code ApplicationContext.missionContext()}.
  *
+ * <p>Missions are keyed by {@link MissionId}, never by name: names are display labels and may be
+ * duplicated.
+ *
  * <p>Uses {@link CopyOnWriteArrayList} because missions are added/removed infrequently (user
  * action) but iterated every frame by the orchestrator.
  */
 public final class MissionContext {
   private final List<MissionEntry> missions = new CopyOnWriteArrayList<>();
-  private volatile String selectedMissionName;
-  private volatile String telemetryFocusMissionName;
+  private volatile MissionId selectedMissionId;
+  private volatile MissionId telemetryFocusMissionId;
   private volatile MissionType selectedMissionType = MissionType.LEO;
 
   /**
@@ -48,12 +52,12 @@ public final class MissionContext {
   }
 
   /**
-   * Removes a mission by name.
+   * Removes a mission by id.
    *
-   * @param missionName the name of the mission to remove
+   * @param missionId the id of the mission to remove
    */
-  public void removeMission(String missionName) {
-    missions.removeIf(entry -> entry.mission().getName().equals(missionName));
+  public void removeMission(MissionId missionId) {
+    missions.removeIf(entry -> entry.id().equals(missionId));
   }
 
   /**
@@ -66,31 +70,43 @@ public final class MissionContext {
   }
 
   /**
-   * Finds a mission entry by name.
+   * Finds a mission entry by id.
    *
-   * @param name the mission name to search for
+   * @param missionId the mission id to search for, may be {@code null}
    * @return an optional containing the entry, or empty if not found
    */
-  public Optional<MissionEntry> findMission(String name) {
-    return missions.stream().filter(entry -> entry.mission().getName().equals(name)).findFirst();
+  public Optional<MissionEntry> findMission(MissionId missionId) {
+    if (missionId == null) return Optional.empty();
+    return missions.stream().filter(entry -> entry.id().equals(missionId)).findFirst();
   }
 
   /**
-   * Returns the name of the currently selected mission, or {@code null} if none is selected.
+   * Reports whether a mission name is already used. Names are not unique keys — this only backs the
+   * wizard's "name already taken" advice, which suggests a suffix instead of rejecting the mission.
    *
-   * @return the selected mission name
+   * @param name the candidate mission name
+   * @return {@code true} if a registered mission already carries this name
    */
-  public String getSelectedMissionName() {
-    return selectedMissionName;
+  public boolean isNameInUse(String name) {
+    return missions.stream().anyMatch(entry -> entry.mission().getName().equals(name));
   }
 
   /**
-   * Sets the name of the currently selected mission.
+   * Returns the id of the currently selected mission, or {@code null} if none is selected.
    *
-   * @param name the mission name to select, or {@code null} to deselect
+   * @return the selected mission id
    */
-  public void setSelectedMissionName(String name) {
-    this.selectedMissionName = name;
+  public MissionId getSelectedMissionId() {
+    return selectedMissionId;
+  }
+
+  /**
+   * Sets the currently selected mission.
+   *
+   * @param missionId the mission to select, or {@code null} to deselect
+   */
+  public void setSelectedMissionId(MissionId missionId) {
+    this.selectedMissionId = missionId;
   }
 
   /**
@@ -103,7 +119,7 @@ public final class MissionContext {
   }
 
   /**
-   * Sets selected mission type.
+   * Sets the selected mission type.
    *
    * @param selectedMissionType the selected mission type
    */
@@ -117,27 +133,25 @@ public final class MissionContext {
    * @return an optional containing the selected entry
    */
   public Optional<MissionEntry> getSelectedMission() {
-    String name = selectedMissionName;
-    if (name == null) return Optional.empty();
-    return findMission(name);
+    return findMission(selectedMissionId);
   }
 
   /**
-   * Returns the name of the mission currently displaying telemetry, or {@code null} if none.
+   * Returns the id of the mission currently displaying telemetry, or {@code null} if none.
    *
-   * @return the telemetry focus mission name
+   * @return the telemetry focus mission id
    */
-  public String getTelemetryFocusMissionName() {
-    return telemetryFocusMissionName;
+  public MissionId getTelemetryFocusMissionId() {
+    return telemetryFocusMissionId;
   }
 
   /**
    * Sets the mission whose telemetry should be displayed.
    *
-   * @param name the mission name, or {@code null} to clear the focus
+   * @param missionId the mission id, or {@code null} to clear the focus
    */
-  public void setTelemetryFocusMissionName(String name) {
-    this.telemetryFocusMissionName = name;
+  public void setTelemetryFocusMissionId(MissionId missionId) {
+    this.telemetryFocusMissionId = missionId;
   }
 
   /**
@@ -146,8 +160,6 @@ public final class MissionContext {
    * @return an optional containing the telemetry focus entry
    */
   public Optional<MissionEntry> getTelemetryFocusMission() {
-    String name = telemetryFocusMissionName;
-    if (name == null) return Optional.empty();
-    return findMission(name);
+    return findMission(telemetryFocusMissionId);
   }
 }

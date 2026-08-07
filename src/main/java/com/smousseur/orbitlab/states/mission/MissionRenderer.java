@@ -70,9 +70,12 @@ public final class MissionRenderer {
     Mission mission = entry.mission();
     Node guiNode = context.guiGraph().getPlanetBillboardsNode();
 
+    // The scene-graph id is derived from the mission id, not the name: names may be duplicated, and
+    // two homonymous missions sharing a spatial id would collide in the graph. The name is still
+    // carried as the display label (second argument).
     BodyRenderConfig config =
         new BodyRenderConfig(
-            "mission-" + mission.getName(),
+            "mission-" + entry.id(),
             mission.getName(),
             trajectoryColor,
             SPACECRAFT_RADIUS_METERS,
@@ -94,10 +97,10 @@ public final class MissionRenderer {
         .thenAccept(model3dView::onModelLoaded);
 
     trajectoryRenderer =
-        new MissionTrajectoryRenderer(mission.getName(), renderContext, trajectoryColor);
+        new MissionTrajectoryRenderer(entry.id(), renderContext, trajectoryColor);
     trajectoryRenderer.initialize(context.sceneGraph().nearOrbitsNode());
 
-    context.addMissionRenderer(mission.getName(), this);
+    context.addMissionRenderer(entry.id(), this);
   }
 
   /**
@@ -114,7 +117,7 @@ public final class MissionRenderer {
     FocusView focusView = context.focusView();
     SolarSystemBody parentBody = renderContext.targetBody().orElse(focusView.getBody());
     focusView.setCameraDistance(SPACECRAFT_FOCUS_DISTANCE_SOLAR_UNITS);
-    focusView.viewSpacecraft(entry.mission().getName(), parentBody);
+    focusView.viewSpacecraft(entry.id(), parentBody);
   }
 
   /**
@@ -157,7 +160,7 @@ public final class MissionRenderer {
 
   /** Detaches all visual elements from the scene. */
   public void cleanup() {
-    context.removeMissionRenderer(entry.mission().getName());
+    context.removeMissionRenderer(entry.id());
     if (view != null) {
       view.spatial().removeFromParent();
       view.detach();

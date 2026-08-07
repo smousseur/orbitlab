@@ -8,6 +8,7 @@ import com.smousseur.orbitlab.app.ApplicationContext;
 import com.smousseur.orbitlab.app.view.RenderContext;
 import com.smousseur.orbitlab.engine.events.EventBus;
 import com.smousseur.orbitlab.simulation.mission.Mission;
+import com.smousseur.orbitlab.simulation.mission.MissionId;
 import com.smousseur.orbitlab.simulation.mission.context.MissionContext;
 import com.smousseur.orbitlab.simulation.mission.context.MissionEntry;
 import com.smousseur.orbitlab.simulation.mission.MissionStatus;
@@ -37,7 +38,7 @@ public final class MissionOrchestratorAppState extends BaseAppState {
   private static final Logger logger = LogManager.getLogger(MissionOrchestratorAppState.class);
 
   private final ApplicationContext context;
-  private final Map<String, MissionRenderer> renderers = new LinkedHashMap<>();
+  private final Map<MissionId, MissionRenderer> renderers = new LinkedHashMap<>();
   private ExecutorService optimizationExecutor;
 
   public MissionOrchestratorAppState(ApplicationContext context) {
@@ -61,13 +62,13 @@ public final class MissionOrchestratorAppState extends BaseAppState {
 
     AbsoluteDate now = context.clock().now();
     Camera cam = context.nearCamera();
-    Set<String> activeMissionNames = new HashSet<>();
+    Set<MissionId> activeMissionIds = new HashSet<>();
 
     for (MissionEntry entry : context.missionContext().getMissions()) {
-      String name = entry.mission().getName();
-      activeMissionNames.add(name);
+      MissionId id = entry.id();
+      activeMissionIds.add(id);
 
-      MissionRenderer renderer = renderers.get(name);
+      MissionRenderer renderer = renderers.get(id);
 
       // Only render if READY + visible
       if (entry.mission().getStatus() != MissionStatus.READY || !entry.isVisible()) {
@@ -84,7 +85,7 @@ public final class MissionOrchestratorAppState extends BaseAppState {
       // Lazy-create renderer on the first visible frame
       if (renderer == null) {
         renderer = createRenderer(entry);
-        renderers.put(name, renderer);
+        renderers.put(id, renderer);
       }
 
       // Visibility rules
@@ -106,21 +107,21 @@ public final class MissionOrchestratorAppState extends BaseAppState {
       }
     }
 
-    cleanupRemovedMissions(activeMissionNames);
+    cleanupRemovedMissions(activeMissionIds);
   }
 
   private void pollMissionActions() {
     EventBus bus = context.eventBus();
     EventBus.MissionActionRequest request;
     while ((request = bus.pollMissionAction()) != null) {
-      String name = request.missionName();
+      MissionId id = request.missionId();
       switch (request.action()) {
         case OPTIMIZE ->
-            context.missionContext().findMission(name).ifPresent(this::submitForComputation);
+            context.missionContext().findMission(id).ifPresent(this::submitForComputation);
         case TOGGLE_VISIBLE ->
             context
                 .missionContext()
-                .findMission(name)
+                .findMission(id)
                 .ifPresent(
                     entry -> {
                       if (entry.mission().getStatus() != MissionStatus.READY) {
@@ -129,24 +130,23 @@ public final class MissionOrchestratorAppState extends BaseAppState {
                       boolean turningOn = !entry.isVisible();
                       entry.setVisible(turningOn);
                       if (!turningOn
-                          && name.equals(
-                              context.missionContext().getTelemetryFocusMissionName())) {
-                        context.missionContext().setTelemetryFocusMissionName(null);
+                          && id.equals(context.missionContext().getTelemetryFocusMissionId())) {
+                        context.missionContext().setTelemetryFocusMissionId(null);
                       }
                     });
         case DELETE -> {
-          MissionRenderer renderer = renderers.remove(name);
+          MissionRenderer renderer = renderers.remove(id);
           if (renderer != null) renderer.cleanup();
-          context.missionContext().removeMission(name);
-          resetFocusIfFollowing(name);
-          logger.info("Mission '{}' deleted", name);
+          context.missionContext().removeMission(id);
+          resetFocusIfFollowing(id);
+          logger.info("Mission [{}] deleted", id.shortForm());
         }
       }
     }
   }
 
-  private void resetFocusIfFollowing(String missionName) {
-    if (missionName.equals(context.focusView().getFocusedMission())) {
+  private void resetFocusIfFollowing(MissionId missionId) {
+    if (missionId.equals(context.focusView().getFocusedMission())) {
       context.focusView().reset();
     }
   }
@@ -159,7 +159,10 @@ public final class MissionOrchestratorAppState extends BaseAppState {
     optimizationExecutor.submit(
         () -> {
           try {
-            logger.info("Starting computation for mission '{}'", mission.getName());
+            logger.info(
+                "Starting computation for mission '{}' [{}]",
+                mission.getName(),
+                entry.id().shortForm());
             AbsoluteDate launchDate = entry.getScheduledDate().orElseGet(context.clock()::now);
             entry.setScheduledDate(launchDate);
 
@@ -174,10 +177,17 @@ public final class MissionOrchestratorAppState extends BaseAppState {
             entry.setMission(result.mission());
             entry.setOptimizerResult(result.optimizerResult());
             entry.setEphemeris(result.ephemeris());
-            logger.info("Computation completed for mission '{}'", mission.getName());
+            logger.info(
+                "Computation completed for mission '{}' [{}]",
+                mission.getName(),
+                entry.id().shortForm());
           } catch (Exception e) {
             mission.setStatus(MissionStatus.FAILED);
-            logger.error("Computation failed for mission '{}'", mission.getName(), e);
+            logger.error(
+                "Computation failed for mission '{}' [{}]",
+                mission.getName(),
+                entry.id().shortForm(),
+                e);
           }
         });
   }
@@ -189,19 +199,22 @@ public final class MissionOrchestratorAppState extends BaseAppState {
 
     MissionRenderer renderer = new MissionRenderer(entry, context, renderContext, color);
     renderer.initialize();
-    logger.info("Renderer created for mission '{}'", entry.mission().getName());
+    logger.info(
+        "Renderer created for mission '{}' [{}]",
+        entry.mission().getName(),
+        entry.id().shortForm());
     return renderer;
   }
 
-  private void cleanupRemovedMissions(Set<String> activeMissionNames) {
+  private void cleanupRemovedMissions(Set<MissionId> activeMissionIds) {
     renderers
         .keySet()
         .removeIf(
-            name -> {
-              if (!activeMissionNames.contains(name)) {
-                MissionRenderer renderer = renderers.get(name);
+            id -> {
+              if (!activeMissionIds.contains(id)) {
+                MissionRenderer renderer = renderers.get(id);
                 if (renderer != null) renderer.cleanup();
-                resetFocusIfFollowing(name);
+                resetFocusIfFollowing(id);
                 return true;
               }
               return false;

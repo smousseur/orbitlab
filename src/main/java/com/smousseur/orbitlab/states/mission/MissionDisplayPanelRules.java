@@ -1,5 +1,6 @@
 package com.smousseur.orbitlab.states.mission;
 
+import com.smousseur.orbitlab.simulation.mission.MissionId;
 import com.smousseur.orbitlab.simulation.mission.MissionStatus;
 import com.smousseur.orbitlab.simulation.mission.context.MissionContext;
 import com.smousseur.orbitlab.simulation.mission.context.MissionEntry;
@@ -21,8 +22,8 @@ import java.util.Set;
  */
 final class MissionDisplayPanelRules {
 
-  /** Last known status per mission name, used to detect transitions for R1/R9. */
-  private final Map<String, MissionStatus> previousStatuses = new HashMap<>();
+  /** Last known status per mission id, used to detect transitions for R1/R9. */
+  private final Map<MissionId, MissionStatus> previousStatuses = new HashMap<>();
 
   /**
    * Applies R1 (mission entering READY auto-arms telemetry if none is set), R9 (telemetered mission
@@ -31,26 +32,26 @@ final class MissionDisplayPanelRules {
    * @param mc the mission context to mutate
    */
   void applyStatusTransitionRules(MissionContext mc) {
-    Set<String> currentNames = new HashSet<>();
+    Set<MissionId> currentIds = new HashSet<>();
 
     for (MissionEntry entry : mc.getMissions()) {
-      String name = entry.mission().getName();
-      currentNames.add(name);
+      MissionId id = entry.id();
+      currentIds.add(id);
       MissionStatus current = entry.mission().getStatus();
-      MissionStatus prev = previousStatuses.get(name);
+      MissionStatus prev = previousStatuses.get(id);
       if (prev != current) {
         onStatusTransition(mc, entry, prev, current);
-        previousStatuses.put(name, current);
+        previousStatuses.put(id, current);
       }
     }
 
     // R10: detect deleted missions (present last frame, absent now)
-    Iterator<Map.Entry<String, MissionStatus>> it = previousStatuses.entrySet().iterator();
+    Iterator<Map.Entry<MissionId, MissionStatus>> it = previousStatuses.entrySet().iterator();
     while (it.hasNext()) {
-      Map.Entry<String, MissionStatus> e = it.next();
-      if (!currentNames.contains(e.getKey())) {
-        if (e.getKey().equals(mc.getTelemetryFocusMissionName())) {
-          mc.setTelemetryFocusMissionName(null);
+      Map.Entry<MissionId, MissionStatus> e = it.next();
+      if (!currentIds.contains(e.getKey())) {
+        if (e.getKey().equals(mc.getTelemetryFocusMissionId())) {
+          mc.setTelemetryFocusMissionId(null);
         }
         it.remove();
       }
@@ -59,19 +60,19 @@ final class MissionDisplayPanelRules {
 
   private static void onStatusTransition(
       MissionContext mc, MissionEntry entry, MissionStatus prev, MissionStatus current) {
-    String name = entry.mission().getName();
+    MissionId id = entry.id();
 
     // R9: telemetered mission leaves READY
     if (prev == MissionStatus.READY
         && current != MissionStatus.READY
-        && name.equals(mc.getTelemetryFocusMissionName())) {
-      mc.setTelemetryFocusMissionName(null);
+        && id.equals(mc.getTelemetryFocusMissionId())) {
+      mc.setTelemetryFocusMissionId(null);
     }
 
     // R1: mission enters READY and no telemetry is set → auto-on (and visible)
-    if (current == MissionStatus.READY && mc.getTelemetryFocusMissionName() == null) {
+    if (current == MissionStatus.READY && mc.getTelemetryFocusMissionId() == null) {
       entry.setVisible(true);
-      mc.setTelemetryFocusMissionName(name);
+      mc.setTelemetryFocusMissionId(id);
     }
   }
 
@@ -79,14 +80,14 @@ final class MissionDisplayPanelRules {
    * Applies R3 / R4 (telemetry focus toggle).
    *
    * @param mc the mission context to mutate
-   * @param missionName the mission to focus, or {@code null} to clear the focus
+   * @param missionId the mission to focus, or {@code null} to clear the focus
    */
-  void applyTelemetryFocus(MissionContext mc, String missionName) {
-    if (missionName == null) {
-      mc.setTelemetryFocusMissionName(null);
+  void applyTelemetryFocus(MissionContext mc, MissionId missionId) {
+    if (missionId == null) {
+      mc.setTelemetryFocusMissionId(null);
       return;
     }
-    Optional<MissionEntry> target = mc.findMission(missionName);
+    Optional<MissionEntry> target = mc.findMission(missionId);
     if (target.isEmpty() || target.get().mission().getStatus() != MissionStatus.READY) {
       return;
     }
@@ -94,6 +95,6 @@ final class MissionDisplayPanelRules {
     if (!entry.isVisible()) {
       entry.setVisible(true); // R3: force visible
     }
-    mc.setTelemetryFocusMissionName(missionName);
+    mc.setTelemetryFocusMissionId(missionId);
   }
 }

@@ -2,6 +2,7 @@ package com.smousseur.orbitlab.app.view;
 
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.engine.EngineConfig;
+import com.smousseur.orbitlab.simulation.mission.MissionId;
 
 /**
  * Mutable state holder that tracks the current camera focus: which view mode is active and which
@@ -12,7 +13,7 @@ import com.smousseur.orbitlab.engine.EngineConfig;
 public class FocusView {
   private ViewMode mode = ViewMode.SOLAR;
   private SolarSystemBody body = SolarSystemBody.SUN;
-  private String focusedMission;
+  private MissionId focusedMission;
   private float cameraDistance;
   private final EngineConfig engineConfig;
 
@@ -54,21 +55,21 @@ public class FocusView {
    * body is retained so the planet-scale render context (HUD markers, orbits, Earth-3D in the
    * near view) keeps working.
    *
-   * @param missionName the unique name of the mission to follow
+   * @param missionId the id of the mission to follow
    * @param parentBody the body the mission is currently orbiting (e.g. Earth for LEO)
    */
-  public void viewSpacecraft(String missionName, SolarSystemBody parentBody) {
+  public void viewSpacecraft(MissionId missionId, SolarSystemBody parentBody) {
     this.mode = ViewMode.SPACECRAFT;
     this.body = parentBody;
-    this.focusedMission = missionName;
+    this.focusedMission = missionId;
   }
 
   /**
-   * Returns the name of the currently focused mission, if any.
+   * Returns the id of the currently focused mission, if any.
    *
-   * @return the focused mission name, or {@code null} when not in spacecraft mode
+   * @return the focused mission id, or {@code null} when not in spacecraft mode
    */
-  public String getFocusedMission() {
+  public MissionId getFocusedMission() {
     return focusedMission;
   }
 

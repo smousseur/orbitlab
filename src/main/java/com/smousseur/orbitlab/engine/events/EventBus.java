@@ -1,6 +1,7 @@
 package com.smousseur.orbitlab.engine.events;
 
 import com.smousseur.orbitlab.core.SolarSystemBody;
+import com.smousseur.orbitlab.simulation.mission.MissionId;
 import com.smousseur.orbitlab.simulation.orbit.OrbitPath;
 
 import java.util.Map;
@@ -66,12 +67,12 @@ public final class EventBus {
    * Request to perform an action on a mission, published by the UI and consumed by the
    * orchestrator.
    *
-   * @param missionName the name of the target mission
+   * @param missionId the id of the target mission
    * @param action the action to perform
    */
-  public record MissionActionRequest(String missionName, MissionAction action) {
+  public record MissionActionRequest(MissionId missionId, MissionAction action) {
     public MissionActionRequest {
-      Objects.requireNonNull(missionName, "missionName");
+      Objects.requireNonNull(missionId, "missionId");
       Objects.requireNonNull(action, "action");
     }
   }
@@ -82,11 +83,11 @@ public final class EventBus {
   /**
    * Publishes a mission action request. Can be called from any thread.
    *
-   * @param missionName the name of the target mission
+   * @param missionId the id of the target mission
    * @param action the action to perform
    */
-  public void publishMissionAction(String missionName, MissionAction action) {
-    missionActionQueue.add(new MissionActionRequest(missionName, action));
+  public void publishMissionAction(MissionId missionId, MissionAction action) {
+    missionActionQueue.add(new MissionActionRequest(missionId, action));
   }
 
   /** Poll one mission action request; returns null if none. */
@@ -169,9 +170,9 @@ public final class EventBus {
   /**
    * Request to change the telemetry focus.
    *
-   * @param missionName the mission to follow, or {@code null} to clear the focus
+   * @param missionId the mission to follow, or {@code null} to clear the focus
    */
-  public record MissionTelemetryFocusRequest(String missionName) {}
+  public record MissionTelemetryFocusRequest(MissionId missionId) {}
 
   private final ConcurrentLinkedQueue<MissionTelemetryFocusRequest> telemetryFocusQueue =
       new ConcurrentLinkedQueue<>();
@@ -179,10 +180,10 @@ public final class EventBus {
   /**
    * Publishes a telemetry focus request. Can be called from any thread.
    *
-   * @param missionName the target mission, or {@code null} to clear the focus
+   * @param missionId the target mission, or {@code null} to clear the focus
    */
-  public void publishTelemetryFocus(String missionName) {
-    telemetryFocusQueue.add(new MissionTelemetryFocusRequest(missionName));
+  public void publishTelemetryFocus(MissionId missionId) {
+    telemetryFocusQueue.add(new MissionTelemetryFocusRequest(missionId));
   }
 
   /** Poll one telemetry focus request; returns null if none. */

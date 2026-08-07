@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.engine.EngineConfig;
+import com.smousseur.orbitlab.simulation.mission.MissionId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -18,11 +19,13 @@ class FocusViewTest {
 
   private FocusView focusView;
   private EngineConfig engineConfig;
+  private MissionId leo1;
 
   @BeforeEach
   void setUp() {
     engineConfig = EngineConfig.defaultSolarSystem();
     focusView = new FocusView(engineConfig);
+    leo1 = MissionId.newId();
   }
 
   @Test
@@ -45,16 +48,16 @@ class FocusViewTest {
 
   @Test
   void viewSpacecraftStoresMissionAndParentBody() {
-    focusView.viewSpacecraft("LEO-1", SolarSystemBody.EARTH);
+    focusView.viewSpacecraft(leo1, SolarSystemBody.EARTH);
 
     assertEquals(ViewMode.SPACECRAFT, focusView.getMode());
     assertEquals(SolarSystemBody.EARTH, focusView.getBody());
-    assertEquals("LEO-1", focusView.getFocusedMission());
+    assertEquals(leo1, focusView.getFocusedMission());
   }
 
   @Test
   void isFocusedReturnsFalseWhileInSpacecraftMode() {
-    focusView.viewSpacecraft("LEO-1", SolarSystemBody.EARTH);
+    focusView.viewSpacecraft(leo1, SolarSystemBody.EARTH);
 
     // isFocused only returns true in PLANET mode by contract; document that here.
     assertFalse(focusView.isFocused(SolarSystemBody.EARTH));
@@ -66,7 +69,7 @@ class FocusViewTest {
     // PLANET branch drives that contract. Pin it down.
     assertFalse(focusView.isSatelliteVisible(SolarSystemBody.MOON));
 
-    focusView.viewSpacecraft("LEO-1", SolarSystemBody.EARTH);
+    focusView.viewSpacecraft(leo1, SolarSystemBody.EARTH);
     assertFalse(focusView.isSatelliteVisible(SolarSystemBody.MOON));
   }
 
@@ -79,7 +82,7 @@ class FocusViewTest {
 
   @Test
   void viewPlanetClearsFocusedMission() {
-    focusView.viewSpacecraft("LEO-1", SolarSystemBody.EARTH);
+    focusView.viewSpacecraft(leo1, SolarSystemBody.EARTH);
     focusView.viewPlanet(SolarSystemBody.MARS);
 
     assertEquals(ViewMode.PLANET, focusView.getMode());
@@ -89,7 +92,7 @@ class FocusViewTest {
 
   @Test
   void resetGoesBackToSolarSunWithNoMission() {
-    focusView.viewSpacecraft("LEO-1", SolarSystemBody.EARTH);
+    focusView.viewSpacecraft(leo1, SolarSystemBody.EARTH);
 
     focusView.reset();
 
@@ -104,11 +107,11 @@ class FocusViewTest {
   void setModeAndSetBodyDoNotAutomaticallyClearFocusedMission() {
     // Low-level setters are kept on the class for backwards compatibility. Document that they
     // do NOT touch the focused-mission field — only the high-level viewXxx / reset methods do.
-    focusView.viewSpacecraft("LEO-1", SolarSystemBody.EARTH);
+    focusView.viewSpacecraft(leo1, SolarSystemBody.EARTH);
 
     focusView.setMode(ViewMode.PLANET);
     focusView.setBody(SolarSystemBody.EARTH);
 
-    assertEquals("LEO-1", focusView.getFocusedMission());
+    assertEquals(leo1, focusView.getFocusedMission());
   }
 }

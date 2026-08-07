@@ -11,6 +11,7 @@ import com.simsilica.lemur.Insets3f;
 import com.simsilica.lemur.component.BoxLayout;
 import com.simsilica.lemur.component.InsetsComponent;
 import com.smousseur.orbitlab.app.ApplicationContext;
+import com.smousseur.orbitlab.simulation.mission.MissionId;
 import com.smousseur.orbitlab.simulation.mission.MissionStatus;
 import com.smousseur.orbitlab.simulation.mission.context.MissionContext;
 import com.smousseur.orbitlab.simulation.mission.context.MissionEntry;
@@ -51,17 +52,17 @@ public final class MissionDisplayPanelWidget implements AutoCloseable {
   private RowListener rowListener =
       new RowListener() {
         @Override
-        public void onToggleTelemetry(String missionName, boolean currentlyTelemetered) {}
+        public void onToggleTelemetry(MissionId missionId, boolean currentlyTelemetered) {}
 
         @Override
-        public void onToggleVisibility(String missionName) {}
+        public void onToggleVisibility(MissionId missionId) {}
       };
 
   /** Listener for row-level actions exposed by the widget. */
   public interface RowListener {
-    void onToggleTelemetry(String missionName, boolean currentlyTelemetered);
+    void onToggleTelemetry(MissionId missionId, boolean currentlyTelemetered);
 
-    void onToggleVisibility(String missionName);
+    void onToggleVisibility(MissionId missionId);
   }
 
   public MissionDisplayPanelWidget(ApplicationContext context) {
@@ -189,18 +190,18 @@ public final class MissionDisplayPanelWidget implements AutoCloseable {
 
   private List<RowSnapshot> buildSnapshot() {
     List<RowSnapshot> snapshot = new ArrayList<>();
-    String telemeteredName = missionContext.getTelemetryFocusMissionName();
+    MissionId telemeteredId = missionContext.getTelemetryFocusMissionId();
     for (MissionEntry entry : missionContext.getMissions()) {
       if (entry.mission().getStatus() != MissionStatus.READY) continue;
-      String name = entry.mission().getName();
       ColorRGBA c = entry.getColor() != null ? entry.getColor() : ColorRGBA.Cyan;
       snapshot.add(
           new RowSnapshot(
-              name,
+              entry.id(),
+              entry.mission().getName(),
               entry.mission().getStatus(),
               c,
               entry.isVisible(),
-              name.equals(telemeteredName),
+              entry.id().equals(telemeteredId),
               subtitleFor(entry)));
     }
     return snapshot;
@@ -236,8 +237,12 @@ public final class MissionDisplayPanelWidget implements AutoCloseable {
     footer.refresh(visibleCount, pageIndex, pageCount);
   }
 
-  /** Row snapshot key — equality drives whether the body needs a rebuild. */
+  /**
+   * Row snapshot key — equality drives whether the body needs a rebuild. Carries both the id (what
+   * the row's actions target) and the name (what the row displays), since names may be duplicated.
+   */
   public record RowSnapshot(
+      MissionId missionId,
       String name,
       MissionStatus status,
       ColorRGBA color,

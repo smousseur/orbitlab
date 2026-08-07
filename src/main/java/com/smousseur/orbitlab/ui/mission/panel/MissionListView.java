@@ -17,6 +17,7 @@ import com.simsilica.lemur.component.QuadBackgroundComponent;
 import com.simsilica.lemur.component.TbtQuadBackgroundComponent;
 import com.simsilica.lemur.event.DefaultMouseListener;
 import com.simsilica.lemur.event.MouseEventControl;
+import com.smousseur.orbitlab.simulation.mission.MissionId;
 import com.smousseur.orbitlab.simulation.mission.OptimizationType;
 import com.smousseur.orbitlab.simulation.mission.context.MissionEntry;
 import com.smousseur.orbitlab.ui.UiKit;
@@ -27,15 +28,15 @@ import java.util.List;
 public class MissionListView {
 
   public interface RowListener {
-    void onSelect(String missionName);
+    void onSelect(MissionId missionId);
 
-    void onEdit(String missionName);
+    void onEdit(MissionId missionId);
 
-    void onCompute(String missionName);
+    void onCompute(MissionId missionId);
 
-    void onSetMode(String missionName, OptimizationType type);
+    void onSetMode(MissionId missionId, OptimizationType type);
 
-    void onDelete(String missionName);
+    void onDelete(MissionId missionId);
   }
 
   private static final float PAD_X = 32f;
@@ -67,8 +68,7 @@ public class MissionListView {
 
   private int pageIndex = 0;
   private List<MissionEntry> lastEntries = List.of();
-  private String lastSelectedName;
-  private String lastTelemeteredName;
+  private MissionId lastSelectedId;
 
   public MissionListView(float width, float height) {
     this.innerWidth = width - 2 * PAD_X;
@@ -137,11 +137,9 @@ public class MissionListView {
     this.rowListener = listener != null ? listener : noopRowListener();
   }
 
-  public void refresh(
-      List<MissionEntry> entries, String selectedMissionName, String telemeteredMissionName) {
+  public void refresh(List<MissionEntry> entries, MissionId selectedMissionId) {
     this.lastEntries = entries;
-    this.lastSelectedName = selectedMissionName;
-    this.lastTelemeteredName = telemeteredMissionName;
+    this.lastSelectedId = selectedMissionId;
     rebuildList();
   }
 
@@ -173,8 +171,7 @@ public class MissionListView {
     int to = Math.min(from + PAGE_SIZE, total);
     for (int i = from; i < to; i++) {
       MissionEntry entry = lastEntries.get(i);
-      String name = entry.mission().getName();
-      boolean selected = name.equals(lastSelectedName);
+      boolean selected = entry.id().equals(lastSelectedId);
       MissionRow row = new MissionRow(entry, columns, selected, rowListener);
       listContainer.addChild(row.getNode());
       if (i < to - 1) {
@@ -234,19 +231,19 @@ public class MissionListView {
   private static MissionListView.RowListener noopRowListener() {
     return new MissionListView.RowListener() {
       @Override
-      public void onSelect(String missionName) {}
+      public void onSelect(MissionId missionId) {}
 
       @Override
-      public void onEdit(String missionName) {}
+      public void onEdit(MissionId missionId) {}
 
       @Override
-      public void onCompute(String missionName) {}
+      public void onCompute(MissionId missionId) {}
 
       @Override
-      public void onSetMode(String missionName, OptimizationType type) {}
+      public void onSetMode(MissionId missionId, OptimizationType type) {}
 
       @Override
-      public void onDelete(String missionName) {}
+      public void onDelete(MissionId missionId) {}
     };
   }
 }

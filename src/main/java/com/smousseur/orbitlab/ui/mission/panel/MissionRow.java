@@ -18,6 +18,7 @@ import com.simsilica.lemur.component.QuadBackgroundComponent;
 import com.simsilica.lemur.component.TbtQuadBackgroundComponent;
 import com.simsilica.lemur.event.DefaultMouseListener;
 import com.simsilica.lemur.event.MouseEventControl;
+import com.smousseur.orbitlab.simulation.mission.MissionId;
 import com.smousseur.orbitlab.simulation.mission.context.MissionEntry;
 import com.smousseur.orbitlab.simulation.mission.MissionStatus;
 import com.smousseur.orbitlab.ui.UiKit;
@@ -43,6 +44,7 @@ class MissionRow {
       MissionListView.ColumnLayout cols,
       boolean selected,
       MissionListView.RowListener listener) {
+    MissionId missionId = entry.id();
     String name = entry.mission().getName();
     MissionStatus status = entry.mission().getStatus();
 
@@ -92,7 +94,7 @@ class MissionRow {
     Container actions = root.addChild(new Container(new BoxLayout(Axis.X, FillMode.None)));
     actions.setBackground(null);
     actions.setPreferredSize(new Vector3f(cols.actions(), HEIGHT, 0));
-    populateActions(actions, entry, name, status, listener);
+    populateActions(actions, entry, missionId, status, listener);
 
     // Hover + selection follow the PopupList pattern (white tint over btn-primary).
     // Action icons consume their own clicks so clicks on icons don't trigger row selection.
@@ -113,7 +115,7 @@ class MissionRow {
 
           @Override
           public void click(MouseButtonEvent event, Spatial target, Spatial capture) {
-            listener.onSelect(name);
+            listener.onSelect(missionId);
             event.setConsumed();
           }
         });
@@ -126,32 +128,32 @@ class MissionRow {
   private static void populateActions(
       Container actions,
       MissionEntry entry,
-      String missionName,
+      MissionId missionId,
       MissionStatus status,
       MissionListView.RowListener listener) {
     boolean computing = status == MissionStatus.COMPUTING;
 
     actions.addChild(
         RowActionIcons.vCenter(
-            RowActionIcons.actionIconButton("edit", !computing, () -> listener.onEdit(missionName)),
+            RowActionIcons.actionIconButton("edit", !computing, () -> listener.onEdit(missionId)),
             HEIGHT));
     actions.addChild(UiKit.hSpacer(RowActionIcons.ICON_GAP));
     actions.addChild(
         RowActionIcons.vCenter(
             ModeSegmentedControl.build(
-                entry, !computing, type -> listener.onSetMode(missionName, type)),
+                entry, !computing, type -> listener.onSetMode(missionId, type)),
             HEIGHT));
     actions.addChild(UiKit.hSpacer(RowActionIcons.ICON_GAP));
     actions.addChild(
         RowActionIcons.vCenter(
             RowActionIcons.actionIconButton(
-                "compute", !computing, () -> listener.onCompute(missionName)),
+                "compute", !computing, () -> listener.onCompute(missionId)),
             HEIGHT));
     actions.addChild(UiKit.hSpacer(RowActionIcons.ICON_GAP));
     actions.addChild(
         RowActionIcons.vCenter(
             RowActionIcons.actionIconButton(
-                "delete", !computing, () -> listener.onDelete(missionName)),
+                "delete", !computing, () -> listener.onDelete(missionId)),
             HEIGHT));
   }
 

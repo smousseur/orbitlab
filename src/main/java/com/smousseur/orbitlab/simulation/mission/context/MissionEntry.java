@@ -2,6 +2,7 @@ package com.smousseur.orbitlab.simulation.mission.context;
 
 import com.jme3.math.ColorRGBA;
 import com.smousseur.orbitlab.simulation.mission.Mission;
+import com.smousseur.orbitlab.simulation.mission.MissionId;
 import com.smousseur.orbitlab.simulation.mission.MissionStatus;
 import com.smousseur.orbitlab.simulation.mission.OptimizationType;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemeris;
@@ -18,12 +19,21 @@ import org.orekit.time.AbsoluteDate;
  * Groups a {@link Mission} with its optimization result and ephemeris. This is a mutable holder
  * because the optimization result and ephemeris are set asynchronously after creation.
  *
+ * <p>This is also where mission <em>identity</em> lives: the entry is the only object whose lifetime
+ * matches "the mission as the user manages it". Both the {@link Mission} and the {@link MissionSpec}
+ * are replaced or copied during a run — see {@link MissionId} for why an id on either would be
+ * unstable. Everything that designates a mission (registries, events, UI callbacks) keys on {@link
+ * #id()}; the mission name is a display label and may be duplicated.
+ *
  * <p>Thread safety: volatile fields are written from the optimization thread and read from the JME
  * update thread.
  */
 public final class MissionEntry {
   private static final Logger logger = LogManager.getLogger(MissionEntry.class);
 
+  // Final and assigned once for both constructors: identity must survive every mission and spec
+  // replacement this entry goes through.
+  private final MissionId id = MissionId.newId();
   // Non-null only when the entry was built from a spec: that is what lets setOptimizationType
   // recompose the mission for a new mode. Entries wrapping a pre-built mission (legacy path) leave
   // it null and cannot recompose.
@@ -60,6 +70,16 @@ public final class MissionEntry {
   public MissionEntry(Mission mission) {
     this.spec = null;
     this.mission = Objects.requireNonNull(mission, "mission");
+  }
+
+  /**
+   * Returns this mission's stable identity. Unique across installations and unchanged for the whole
+   * life of the entry, including across optimization-mode toggles and propellant-sizing sweeps.
+   *
+   * @return the mission id
+   */
+  public MissionId id() {
+    return id;
   }
 
   /**
@@ -222,9 +242,10 @@ public final class MissionEntry {
       recomposed = MissionComposer.compose(spec, optimizationType);
     } catch (RuntimeException e) {
       logger.error(
-          "Mode switch to {} failed for mission '{}', keeping mode {}: {}",
+          "Mode switch to {} failed for mission '{}' [{}], keeping mode {}: {}",
           optimizationType,
           mission.getName(),
+          id.shortForm(),
           this.optimizationType,
           e.getMessage(),
           e);

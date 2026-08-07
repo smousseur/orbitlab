@@ -2,11 +2,13 @@ package com.smousseur.orbitlab.states.mission;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.smousseur.orbitlab.engine.events.EventBus;
 import com.smousseur.orbitlab.simulation.mission.Mission;
+import com.smousseur.orbitlab.simulation.mission.MissionId;
 import com.smousseur.orbitlab.simulation.mission.MissionStatus;
 import com.smousseur.orbitlab.simulation.mission.context.MissionContext;
 import com.smousseur.orbitlab.simulation.mission.context.MissionEntry;
@@ -23,8 +25,9 @@ class MissionDisplayPanelRulesTest {
   private static MissionEntry addMission(MissionContext mc, String name, MissionStatus status) {
     Mission m = new StubMission(name);
     m.setStatus(status);
-    mc.addMission(m);
-    return mc.findMission(name).orElseThrow();
+    MissionEntry entry = new MissionEntry(m);
+    mc.addMission(entry);
+    return entry;
   }
 
   @Test
@@ -38,7 +41,7 @@ class MissionDisplayPanelRulesTest {
     entry.mission().setStatus(MissionStatus.READY);
     rules.applyStatusTransitionRules(mc);
 
-    assertEquals("Apollo", mc.getTelemetryFocusMissionName());
+    assertEquals(entry.id(), mc.getTelemetryFocusMissionId());
     assertTrue(entry.isVisible(), "R1 must force visible=true");
   }
 
@@ -55,9 +58,34 @@ class MissionDisplayPanelRulesTest {
     second.mission().setStatus(MissionStatus.READY);
     rules.applyStatusTransitionRules(mc);
 
-    assertEquals("Apollo", mc.getTelemetryFocusMissionName());
+    assertEquals(first.id(), mc.getTelemetryFocusMissionId());
     assertTrue(first.isVisible());
     assertFalse(second.isVisible(), "second mission default visibility stays false (R2)");
+  }
+
+  /**
+   * The reason mission identity moved off the name: two missions may legitimately share a label, and
+   * the rules engine must still track them as distinct. Under the previous name-keyed
+   * implementation, the second mission's status transition would have overwritten the first's entry
+   * in the status map and R1 would have mis-fired.
+   */
+  @Test
+  void homonymousMissionsAreTrackedIndependently() {
+    MissionContext mc = new MissionContext();
+    MissionDisplayPanelRules rules = new MissionDisplayPanelRules();
+
+    MissionEntry first = addMission(mc, "Apollo", MissionStatus.COMPUTING);
+    MissionEntry second = addMission(mc, "Apollo", MissionStatus.COMPUTING);
+    assertNotEquals(first.id(), second.id());
+    rules.applyStatusTransitionRules(mc); // record both as COMPUTING
+
+    second.mission().setStatus(MissionStatus.READY);
+    rules.applyStatusTransitionRules(mc);
+
+    // Telemetry armed on the mission that actually became READY, not on its homonym.
+    assertEquals(second.id(), mc.getTelemetryFocusMissionId());
+    assertTrue(second.isVisible());
+    assertFalse(first.isVisible());
   }
 
   @Test
@@ -67,12 +95,12 @@ class MissionDisplayPanelRulesTest {
 
     MissionEntry entry = addMission(mc, "Apollo", MissionStatus.READY);
     rules.applyStatusTransitionRules(mc); // R1 fires
-    assertEquals("Apollo", mc.getTelemetryFocusMissionName());
+    assertEquals(entry.id(), mc.getTelemetryFocusMissionId());
 
     entry.mission().setStatus(MissionStatus.COMPUTING);
     rules.applyStatusTransitionRules(mc);
 
-    assertNull(mc.getTelemetryFocusMissionName(), "R9 must clear the telemetry focus");
+    assertNull(mc.getTelemetryFocusMissionId(), "R9 must clear the telemetry focus");
   }
 
   @Test
@@ -80,14 +108,14 @@ class MissionDisplayPanelRulesTest {
     MissionContext mc = new MissionContext();
     MissionDisplayPanelRules rules = new MissionDisplayPanelRules();
 
-    addMission(mc, "Apollo", MissionStatus.READY);
+    MissionEntry entry = addMission(mc, "Apollo", MissionStatus.READY);
     rules.applyStatusTransitionRules(mc);
-    assertEquals("Apollo", mc.getTelemetryFocusMissionName());
+    assertEquals(entry.id(), mc.getTelemetryFocusMissionId());
 
-    mc.removeMission("Apollo");
+    mc.removeMission(entry.id());
     rules.applyStatusTransitionRules(mc);
 
-    assertNull(mc.getTelemetryFocusMissionName(), "R10 must clear focus when deleted");
+    assertNull(mc.getTelemetryFocusMissionId(), "R10 must clear focus when deleted");
   }
 
   @Test
@@ -98,9 +126,9 @@ class MissionDisplayPanelRulesTest {
     MissionEntry hidden = addMission(mc, "Apollo", MissionStatus.READY);
     hidden.setVisible(false);
 
-    rules.applyTelemetryFocus(mc, "Apollo");
+    rules.applyTelemetryFocus(mc, hidden.id());
 
-    assertEquals("Apollo", mc.getTelemetryFocusMissionName());
+    assertEquals(hidden.id(), mc.getTelemetryFocusMissionId());
     assertTrue(hidden.isVisible(), "R3 must force the targeted mission visible");
   }
 
@@ -109,9 +137,9 @@ class MissionDisplayPanelRulesTest {
     MissionContext mc = new MissionContext();
     MissionDisplayPanelRules rules = new MissionDisplayPanelRules();
 
-    rules.applyTelemetryFocus(mc, "DoesNotExist");
+    rules.applyTelemetryFocus(mc, MissionId.newId());
 
-    assertNull(mc.getTelemetryFocusMissionName());
+    assertNull(mc.getTelemetryFocusMissionId());
   }
 
   @Test
@@ -119,10 +147,10 @@ class MissionDisplayPanelRulesTest {
     MissionContext mc = new MissionContext();
     MissionDisplayPanelRules rules = new MissionDisplayPanelRules();
 
-    addMission(mc, "Draft", MissionStatus.DRAFT);
-    rules.applyTelemetryFocus(mc, "Draft");
+    MissionEntry draft = addMission(mc, "Draft", MissionStatus.DRAFT);
+    rules.applyTelemetryFocus(mc, draft.id());
 
-    assertNull(mc.getTelemetryFocusMissionName());
+    assertNull(mc.getTelemetryFocusMissionId());
   }
 
   @Test
@@ -130,12 +158,12 @@ class MissionDisplayPanelRulesTest {
     MissionContext mc = new MissionContext();
     MissionDisplayPanelRules rules = new MissionDisplayPanelRules();
 
-    addMission(mc, "Apollo", MissionStatus.READY);
-    rules.applyTelemetryFocus(mc, "Apollo");
-    assertEquals("Apollo", mc.getTelemetryFocusMissionName());
+    MissionEntry entry = addMission(mc, "Apollo", MissionStatus.READY);
+    rules.applyTelemetryFocus(mc, entry.id());
+    assertEquals(entry.id(), mc.getTelemetryFocusMissionId());
 
     rules.applyTelemetryFocus(mc, null);
-    assertNull(mc.getTelemetryFocusMissionName());
+    assertNull(mc.getTelemetryFocusMissionId());
   }
 
   @Test
@@ -143,7 +171,7 @@ class MissionDisplayPanelRulesTest {
     // R5 is implemented in MissionOrchestratorAppState.pollMissionActions (TOGGLE_VISIBLE branch).
     // The Display Panel rules engine does not own R5; we cover the relevant side effect here by
     // simulating what the orchestrator now does: flip visible=false on the telemetered entry, then
-    // clear the focus name. The rules engine must then NOT re-arm telemetry on the next tick
+    // clear the focus id. The rules engine must then NOT re-arm telemetry on the next tick
     // (R1 only fires on a status transition into READY, which did not happen).
     MissionContext mc = new MissionContext();
     MissionDisplayPanelRules rules = new MissionDisplayPanelRules();
@@ -153,12 +181,12 @@ class MissionDisplayPanelRulesTest {
 
     // Orchestrator simulates the TOGGLE_VISIBLE off branch:
     entry.setVisible(false);
-    mc.setTelemetryFocusMissionName(null);
+    mc.setTelemetryFocusMissionId(null);
 
     // Subsequent rule tick must NOT re-arm telemetry: Apollo is still READY but the status did not
     // transition this frame, so R1 does not fire.
     rules.applyStatusTransitionRules(mc);
-    assertNull(mc.getTelemetryFocusMissionName());
+    assertNull(mc.getTelemetryFocusMissionId());
     assertFalse(entry.isVisible());
   }
 

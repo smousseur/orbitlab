@@ -9,11 +9,13 @@ import com.smousseur.orbitlab.simulation.mission.operation.MissionFactory;
 import com.smousseur.orbitlab.simulation.mission.operation.MissionSpec;
 import com.smousseur.orbitlab.simulation.mission.context.MissionContext;
 import com.smousseur.orbitlab.simulation.mission.context.MissionEntry;
+import com.smousseur.orbitlab.ui.mission.wizard.FormField;
 import com.smousseur.orbitlab.ui.mission.wizard.MissionWizardWidget;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.orekit.time.AbsoluteDate;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
@@ -63,11 +65,17 @@ public final class MissionWizardAppState extends BaseAppState {
   private void createMission(EventBus.UiNavigationEvent.CreateMission createMission) {
     MissionContext missionContext = context.missionContext();
     Map<String, Object> values = createMission.values();
-    String name = String.valueOf(values.get("MISSION_NAME"));
-    if (missionContext.findMission(name).isPresent()) {
-      logger.warn("Mission '{}' already exists, creation ignored", name);
-      return;
+    String requestedName = String.valueOf(values.get(FormField.MISSION_NAME.key()));
+
+    // Names are labels, not keys — a duplicate no longer costs the user their mission. It is
+    // suffixed so the list stays readable, and the mission is created either way.
+    String name = availableName(missionContext, requestedName);
+    if (!name.equals(requestedName)) {
+      logger.warn("Mission name '{}' is already in use, creating '{}' instead", requestedName, name);
+      values = new HashMap<>(values);
+      values.put(FormField.MISSION_NAME.key(), name);
     }
+
     // Second line of defence behind the wizard's own validation: this runs in the render loop, and
     // Orekit's string constructor throws on anything it dislikes — including any date before 1970.
     Object rawDate = values.get("LAUNCH_DATE");
@@ -82,9 +90,27 @@ public final class MissionWizardAppState extends BaseAppState {
       MissionEntry missionEntry = new MissionEntry(spec);
       missionEntry.setScheduledDate(missionDate.get());
       missionContext.addMission(missionEntry);
+      logger.info("Mission '{}' created [{}]", name, missionEntry.id().shortForm());
     } catch (RuntimeException e) {
       // A bad wizard value must not crash the render loop; the mission is simply not created.
       logger.error("Mission creation failed for '{}': {}", name, e.getMessage());
+    }
+  }
+
+  /**
+   * Returns {@code requested} if no mission carries it, otherwise the first free {@code "requested
+   * (n)"} variant. Purely cosmetic: uniqueness of the name is advisory, mission identity is the
+   * {@code MissionId} minted by the entry.
+   */
+  private static String availableName(MissionContext missionContext, String requested) {
+    if (!missionContext.isNameInUse(requested)) {
+      return requested;
+    }
+    for (int suffix = 2; ; suffix++) {
+      String candidate = requested + " (" + suffix + ")";
+      if (!missionContext.isNameInUse(candidate)) {
+        return candidate;
+      }
     }
   }
 

@@ -17,6 +17,7 @@ import com.simsilica.lemur.event.DefaultMouseListener;
 import com.simsilica.lemur.event.MouseEventControl;
 import com.smousseur.orbitlab.app.ApplicationContext;
 import com.smousseur.orbitlab.engine.events.EventBus;
+import com.smousseur.orbitlab.simulation.mission.MissionId;
 import com.smousseur.orbitlab.simulation.mission.OptimizationType;
 import com.smousseur.orbitlab.simulation.mission.context.MissionContext;
 import com.smousseur.orbitlab.simulation.mission.context.MissionEntry;
@@ -50,7 +51,7 @@ public class MissionPanelWidget implements AutoCloseable {
   private final MissionListView listView;
   private final PanelFooter footer;
 
-  private String selectedMissionName;
+  private MissionId selectedMissionId;
   private List<String> lastSnapshot = List.of();
   private boolean visible = false;
 
@@ -61,7 +62,7 @@ public class MissionPanelWidget implements AutoCloseable {
     Objects.requireNonNull(context, "context");
     this.missionContext = context.missionContext();
     this.eventBus = context.eventBus();
-    this.selectedMissionName = missionContext.getSelectedMissionName();
+    this.selectedMissionId = missionContext.getSelectedMissionId();
 
     backdrop = new ModalBackdrop();
     backdrop.setOnClick(() -> onClose.run());
@@ -122,8 +123,8 @@ public class MissionPanelWidget implements AutoCloseable {
     centerOnScreen(cam.getWidth(), cam.getHeight());
 
     List<String> snapshot = buildSnapshot();
-    if (selectedMissionName != null && missionContext.findMission(selectedMissionName).isEmpty()) {
-      selectedMissionName = null;
+    if (selectedMissionId != null && missionContext.findMission(selectedMissionId).isEmpty()) {
+      selectedMissionId = null;
     }
     if (!snapshot.equals(lastSnapshot)) {
       lastSnapshot = snapshot;
@@ -142,67 +143,66 @@ public class MissionPanelWidget implements AutoCloseable {
   private MissionListView.RowListener buildRowListener() {
     return new MissionListView.RowListener() {
       @Override
-      public void onSelect(String missionName) {
-        selectMission(missionName);
+      public void onSelect(MissionId missionId) {
+        selectMission(missionId);
       }
 
       @Override
-      public void onEdit(String missionName) {
-        logger.info("Edit not yet implemented for mission '{}'", missionName);
+      public void onEdit(MissionId missionId) {
+        logger.info("Edit not yet implemented for mission [{}]", missionId.shortForm());
       }
 
       @Override
-      public void onCompute(String missionName) {
-        eventBus.publishMissionAction(missionName, EventBus.MissionAction.OPTIMIZE);
+      public void onCompute(MissionId missionId) {
+        eventBus.publishMissionAction(missionId, EventBus.MissionAction.OPTIMIZE);
       }
 
       @Override
-      public void onSetMode(String missionName, OptimizationType type) {
-        missionContext.findMission(missionName).ifPresent(e -> e.setOptimizationType(type));
+      public void onSetMode(MissionId missionId, OptimizationType type) {
+        missionContext.findMission(missionId).ifPresent(e -> e.setOptimizationType(type));
         refresh();
       }
 
       @Override
-      public void onDelete(String missionName) {
-        if (missionName.equals(selectedMissionName)) {
-          selectedMissionName = null;
+      public void onDelete(MissionId missionId) {
+        if (missionId.equals(selectedMissionId)) {
+          selectedMissionId = null;
         }
-        missionContext.removeMission(missionName);
-        eventBus.publishMissionAction(missionName, EventBus.MissionAction.DELETE);
+        missionContext.removeMission(missionId);
+        eventBus.publishMissionAction(missionId, EventBus.MissionAction.DELETE);
       }
     };
   }
 
-  private void selectMission(String name) {
-    if (name.equals(selectedMissionName)) {
-      selectedMissionName = null;
+  private void selectMission(MissionId missionId) {
+    if (missionId.equals(selectedMissionId)) {
+      selectedMissionId = null;
     } else {
-      selectedMissionName = name;
+      selectedMissionId = missionId;
     }
     refresh();
   }
 
   private void refresh() {
     List<MissionEntry> entries = missionContext.getMissions();
-    listView.refresh(entries, selectedMissionName, missionContext.getTelemetryFocusMissionName());
-    MissionEntry selected =
-        selectedMissionName == null
-            ? null
-            : missionContext.findMission(selectedMissionName).orElse(null);
+    listView.refresh(entries, selectedMissionId);
+    MissionEntry selected = missionContext.findMission(selectedMissionId).orElse(null);
     footer.setSelectedMission(selected);
   }
 
   private List<String> buildSnapshot() {
     List<MissionEntry> entries = missionContext.getMissions();
-    String telemetered = missionContext.getTelemetryFocusMissionName();
+    MissionId telemetered = missionContext.getTelemetryFocusMissionId();
     List<String> snapshot = new ArrayList<>(entries.size() + 2);
-    snapshot.add("sel=" + (selectedMissionName == null ? "" : selectedMissionName));
+    snapshot.add("sel=" + (selectedMissionId == null ? "" : selectedMissionId));
     snapshot.add("tel=" + (telemetered == null ? "" : telemetered));
     for (MissionEntry entry : entries) {
-      // The optimization type is part of the snapshot because the footer's details line shows it:
-      // a mode set outside this panel must still redraw the selection details.
+      // Keyed on the id so two homonymous missions produce distinct snapshot lines. The
+      // optimization
+      // type is part of the snapshot because the footer's details line shows it: a mode set outside
+      // this panel must still redraw the selection details.
       snapshot.add(
-          entry.mission().getName()
+          entry.id()
               + ":"
               + entry.mission().getStatus()
               + ":"

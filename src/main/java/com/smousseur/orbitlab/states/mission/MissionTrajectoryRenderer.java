@@ -11,6 +11,7 @@ import com.jme3.util.BufferUtils;
 import com.smousseur.orbitlab.app.view.RenderContext;
 import com.smousseur.orbitlab.app.view.RenderTransform;
 import com.smousseur.orbitlab.engine.AssetFactory;
+import com.smousseur.orbitlab.simulation.mission.MissionId;
 import java.nio.FloatBuffer;
 import java.util.List;
 import java.util.Objects;
@@ -26,7 +27,7 @@ public final class MissionTrajectoryRenderer {
   private static final int MAX_POINTS = 8192;
   private static final float LINE_WIDTH = 2f;
 
-  private final String missionName;
+  private final MissionId missionId;
   private final RenderContext renderContext;
   private final ColorRGBA color;
 
@@ -34,8 +35,8 @@ public final class MissionTrajectoryRenderer {
   private Geometry lineGeometry;
 
   public MissionTrajectoryRenderer(
-      String missionName, RenderContext renderContext, ColorRGBA color) {
-    this.missionName = Objects.requireNonNull(missionName, "missionName");
+      MissionId missionId, RenderContext renderContext, ColorRGBA color) {
+    this.missionId = Objects.requireNonNull(missionId, "missionId");
     this.renderContext = Objects.requireNonNull(renderContext, "renderContext");
     this.color = Objects.requireNonNull(color, "color");
   }
@@ -57,7 +58,8 @@ public final class MissionTrajectoryRenderer {
     mat.setColor("Color", color);
     mat.getAdditionalRenderState().setLineWidth(LINE_WIDTH);
 
-    lineGeometry = new Geometry("MissionTrajectory-" + missionName, mesh);
+    // Keyed on the id, not the name: duplicate names must not produce colliding geometry names.
+    lineGeometry = new Geometry("MissionTrajectory-" + missionId, mesh);
     lineGeometry.setMaterial(mat);
     nearOrbitsNode.attachChild(lineGeometry);
   }
