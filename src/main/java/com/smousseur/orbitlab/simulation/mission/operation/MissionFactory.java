@@ -63,6 +63,9 @@ public final class MissionFactory {
    */
   public static MissionSpec specFromWizardValues(Map<String, Object> values, MissionType type) {
     String name = String.valueOf(values.get("MISSION_NAME"));
+    // Descriptive only, and optional: the wizard always supplies it, but any caller assembling
+    // values by hand may omit it, in which case the spec stays unnamed rather than carrying "null".
+    String siteName = stringValueOrNull(values, "LAUNCH_SITE_NAME");
     double latitude = doubleValue(values, "LAUNCH_SITE_LAT");
     double longitude = doubleValue(values, "LAUNCH_SITE_LONG");
     double altitude = doubleValue(values, "LAUNCH_SITE_ALT");
@@ -86,7 +89,7 @@ public final class MissionFactory {
         double[] loads = PropellantBudget.loadsForLeo(launcher, payload, apogeeAlt, latitude);
         LaunchConfiguration configuration = new LaunchConfiguration(launcher, loads, payload);
         yield new MissionSpec.Leo(
-            name, configuration, perigeeAlt, apogeeAlt, latitude, longitude, altitude);
+            name, configuration, perigeeAlt, apogeeAlt, siteName, latitude, longitude, altitude);
       }
       case GEO -> {
         // The apogee circularization is flown by the payload's kick motor; without one the burn
@@ -107,11 +110,17 @@ public final class MissionFactory {
             parkingAlt,
             GEOMission.GEO_ALTITUDE,
             0.0,
+            siteName,
             latitude,
             longitude,
             altitude);
       }
     };
+  }
+
+  private static String stringValueOrNull(Map<String, Object> values, String key) {
+    Object raw = values.get(key);
+    return raw == null ? null : raw.toString();
   }
 
   private static double doubleValue(Map<String, Object> values, String key) {

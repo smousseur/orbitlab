@@ -175,8 +175,7 @@ public class MissionListView {
       MissionEntry entry = lastEntries.get(i);
       String name = entry.mission().getName();
       boolean selected = name.equals(lastSelectedName);
-      boolean telemetered = name.equals(lastTelemeteredName);
-      MissionRow row = new MissionRow(entry, columns, selected, telemetered, rowListener);
+      MissionRow row = new MissionRow(entry, columns, selected, rowListener);
       listContainer.addChild(row.getNode());
       if (i < to - 1) {
         listContainer.addChild(divider());

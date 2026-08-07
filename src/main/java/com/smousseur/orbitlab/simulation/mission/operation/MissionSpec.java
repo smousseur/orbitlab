@@ -28,6 +28,26 @@ public sealed interface MissionSpec permits MissionSpec.Leo, MissionSpec.Geo {
   LaunchConfiguration configuration();
 
   /**
+   * Returns the launch site's display name as picked in the wizard, e.g. {@code "Kourou - French
+   * Guiana"}. Purely descriptive: nothing in the composition or the propagation reads it, the site
+   * geometry is carried by {@link #latitude()}, {@link #longitude()} and {@link #altitude()}.
+   *
+   * <p>Nullable, because a spec built outside the wizard — tests, or any programmatic path
+   * assembling raw coordinates — has no name to give. Callers check {@link #hasSiteName()} rather
+   * than the value.
+   *
+   * @return the launch site name, or {@code null} when the site is unnamed
+   */
+  String siteName();
+
+  /**
+   * @return {@code true} when this spec carries a usable launch site name
+   */
+  default boolean hasSiteName() {
+    return siteName() != null && !siteName().isBlank();
+  }
+
+  /**
    * @return the launch site latitude in degrees
    */
   double latitude();
@@ -65,6 +85,7 @@ public sealed interface MissionSpec permits MissionSpec.Leo, MissionSpec.Geo {
    * @param configuration the launch configuration
    * @param perigeeAltitude the target perigee altitude in meters
    * @param apogeeAltitude the target apogee altitude in meters
+   * @param siteName the launch site display name, or {@code null} when unnamed
    * @param latitude the launch site latitude in degrees
    * @param longitude the launch site longitude in degrees
    * @param altitude the launch site altitude in meters
@@ -74,6 +95,7 @@ public sealed interface MissionSpec permits MissionSpec.Leo, MissionSpec.Geo {
       LaunchConfiguration configuration,
       double perigeeAltitude,
       double apogeeAltitude,
+      String siteName,
       double latitude,
       double longitude,
       double altitude)
@@ -95,6 +117,7 @@ public sealed interface MissionSpec permits MissionSpec.Leo, MissionSpec.Geo {
           new LaunchConfiguration(configuration.launcher(), launcherLoads, configuration.payload()),
           perigeeAltitude,
           apogeeAltitude,
+          siteName,
           latitude,
           longitude,
           altitude);
@@ -109,6 +132,7 @@ public sealed interface MissionSpec permits MissionSpec.Leo, MissionSpec.Geo {
    * @param parkingAltitude the parking orbit altitude in meters
    * @param targetAltitude the geostationary target altitude in meters
    * @param finalInclination the target final inclination in degrees
+   * @param siteName the launch site display name, or {@code null} when unnamed
    * @param latitude the launch site latitude in degrees
    * @param longitude the launch site longitude in degrees
    * @param altitude the launch site altitude in meters
@@ -119,6 +143,7 @@ public sealed interface MissionSpec permits MissionSpec.Leo, MissionSpec.Geo {
       double parkingAltitude,
       double targetAltitude,
       double finalInclination,
+      String siteName,
       double latitude,
       double longitude,
       double altitude)
@@ -141,6 +166,7 @@ public sealed interface MissionSpec permits MissionSpec.Leo, MissionSpec.Geo {
           parkingAltitude,
           targetAltitude,
           finalInclination,
+          siteName,
           latitude,
           longitude,
           altitude);

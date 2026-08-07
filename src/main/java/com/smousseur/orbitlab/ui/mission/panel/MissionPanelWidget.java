@@ -40,8 +40,7 @@ public class MissionPanelWidget implements AutoCloseable {
   private static final float WINDOW_WIDTH = 720f;
   private static final float WINDOW_HEIGHT = 520f;
   private static final float HEADER_HEIGHT = 88f;
-  private static final float FOOTER_HEIGHT = 78f;
-  private static final float CONTENT_HEIGHT = WINDOW_HEIGHT - HEADER_HEIGHT - FOOTER_HEIGHT;
+  private static final float CONTENT_HEIGHT = WINDOW_HEIGHT - HEADER_HEIGHT - PanelFooter.HEIGHT;
 
   private final MissionContext missionContext;
   private final EventBus eventBus;
@@ -200,8 +199,16 @@ public class MissionPanelWidget implements AutoCloseable {
     snapshot.add("sel=" + (selectedMissionName == null ? "" : selectedMissionName));
     snapshot.add("tel=" + (telemetered == null ? "" : telemetered));
     for (MissionEntry entry : entries) {
+      // The optimization type is part of the snapshot because the footer's details line shows it:
+      // a mode set outside this panel must still redraw the selection details.
       snapshot.add(
-          entry.mission().getName() + ":" + entry.mission().getStatus() + ":" + entry.isVisible());
+          entry.mission().getName()
+              + ":"
+              + entry.mission().getStatus()
+              + ":"
+              + entry.isVisible()
+              + ":"
+              + entry.getOptimizationType());
     }
     return snapshot;
   }

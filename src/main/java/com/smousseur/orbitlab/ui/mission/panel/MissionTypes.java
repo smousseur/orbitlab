@@ -9,9 +9,10 @@ final class MissionTypes {
 
   /**
    * Shown for legacy entries wrapping a pre-built mission: they carry no {@link MissionSpec}, so
-   * their type is genuinely unknown here — better a dash than a type we would be guessing.
+   * their type is genuinely unknown here — better a dash than a type we would be guessing. ASCII
+   * hyphen, not an em dash: the bundled bitmap fonts only carry glyphs 32-127.
    */
-  private static final String UNKNOWN_MISSION_TYPE = "—";
+  private static final String UNKNOWN_MISSION_TYPE = "-";
 
   private MissionTypes() {}
 

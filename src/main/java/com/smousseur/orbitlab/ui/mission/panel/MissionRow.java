@@ -42,7 +42,6 @@ class MissionRow {
       MissionEntry entry,
       MissionListView.ColumnLayout cols,
       boolean selected,
-      boolean telemetered,
       MissionListView.RowListener listener) {
     String name = entry.mission().getName();
     MissionStatus status = entry.mission().getStatus();
@@ -65,11 +64,6 @@ class MissionRow {
 
     Container badge = new Container();
     badge.setPreferredSize(new Vector3f(BADGE_SIZE, BADGE_SIZE, 0));
-    if (telemetered) {
-      badge.setBackground(UiKit.wizardFlat("badge-telemetry-active"));
-    } else {
-      badge.setBackground(null);
-    }
     root.addChild(centerVertically(badge, BADGE_SIZE));
     root.addChild(UiKit.hSpacer(ICON_GAP));
 
