@@ -99,8 +99,6 @@ public final class MissionRenderer {
     trajectoryRenderer =
         new MissionTrajectoryRenderer(entry.id(), renderContext, trajectoryColor);
     trajectoryRenderer.initialize(context.sceneGraph().nearOrbitsNode());
-
-    context.addMissionRenderer(entry.id(), this);
   }
 
   /**
@@ -158,9 +156,11 @@ public final class MissionRenderer {
     trajectoryRenderer.update();
   }
 
-  /** Detaches all visual elements from the scene. */
+  /**
+   * Detaches all visual elements from the scene. Registration in {@link ApplicationContext} is owned
+   * by {@link MissionOrchestratorAppState}, which deregisters this renderer before calling here.
+   */
   public void cleanup() {
-    context.removeMissionRenderer(entry.id());
     if (view != null) {
       view.spatial().removeFromParent();
       view.detach();

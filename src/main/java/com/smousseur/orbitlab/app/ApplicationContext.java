@@ -15,6 +15,7 @@ import com.smousseur.orbitlab.simulation.mission.MissionId;
 import com.smousseur.orbitlab.simulation.mission.context.MissionContext;
 import com.smousseur.orbitlab.states.mission.MissionRenderer;
 
+import java.util.Collections;
 import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -166,6 +167,10 @@ public class ApplicationContext {
    * Registers a mission renderer so that other subsystems (e.g. the floating-origin state) can look
    * it up by mission id without going through {@code getState(...)}.
    *
+   * <p>This map is the single registry of live mission renderers. {@code
+   * MissionOrchestratorAppState} owns its lifecycle — it registers a renderer right after creating
+   * it and deregisters it before disposing it — so no other component should add or remove entries.
+   *
    * @param missionId the mission id
    * @param renderer the mission renderer to register
    */
@@ -174,12 +179,26 @@ public class ApplicationContext {
   }
 
   /**
-   * Deregisters a mission renderer. No-op if the id is unknown.
+   * Deregisters a mission renderer and returns it so the caller can dispose it. No-op returning
+   * {@code null} if the id is unknown.
    *
    * @param missionId the mission id to remove
+   * @return the deregistered renderer, or {@code null} if none was registered for that id
    */
-  public void removeMissionRenderer(MissionId missionId) {
-    missionRenderers.remove(missionId);
+  public MissionRenderer removeMissionRenderer(MissionId missionId) {
+    return missionRenderers.remove(missionId);
+  }
+
+  /**
+   * Returns a read-only view of the registered mission renderers, in registration order.
+   *
+   * <p>The view is backed by the live map: callers that dispose renderers while walking it must
+   * snapshot the ids first, since disposal deregisters the entry.
+   *
+   * @return an unmodifiable view of the mission renderer registry
+   */
+  public Map<MissionId, MissionRenderer> missionRenderers() {
+    return Collections.unmodifiableMap(missionRenderers);
   }
 
   /**

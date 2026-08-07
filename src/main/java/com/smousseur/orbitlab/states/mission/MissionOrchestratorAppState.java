@@ -17,9 +17,7 @@ import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemerisPoint
 import com.smousseur.orbitlab.simulation.mission.planner.MissionPlanOptimizer;
 import com.smousseur.orbitlab.simulation.mission.runtime.MissionComputeResult;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
@@ -38,7 +36,6 @@ public final class MissionOrchestratorAppState extends BaseAppState {
   private static final Logger logger = LogManager.getLogger(MissionOrchestratorAppState.class);
 
   private final ApplicationContext context;
-  private final Map<MissionId, MissionRenderer> renderers = new LinkedHashMap<>();
   private ExecutorService optimizationExecutor;
 
   public MissionOrchestratorAppState(ApplicationContext context) {
@@ -68,7 +65,7 @@ public final class MissionOrchestratorAppState extends BaseAppState {
       MissionId id = entry.id();
       activeMissionIds.add(id);
 
-      MissionRenderer renderer = renderers.get(id);
+      MissionRenderer renderer = context.getMissionRenderer(id);
 
       // Only render if READY + visible
       if (entry.mission().getStatus() != MissionStatus.READY || !entry.isVisible()) {
@@ -85,7 +82,6 @@ public final class MissionOrchestratorAppState extends BaseAppState {
       // Lazy-create renderer on the first visible frame
       if (renderer == null) {
         renderer = createRenderer(entry);
-        renderers.put(id, renderer);
       }
 
       // Visibility rules
@@ -135,8 +131,7 @@ public final class MissionOrchestratorAppState extends BaseAppState {
                       }
                     });
         case DELETE -> {
-          MissionRenderer renderer = renderers.remove(id);
-          if (renderer != null) renderer.cleanup();
+          disposeRenderer(id);
           context.missionContext().removeMission(id);
           resetFocusIfFollowing(id);
           logger.info("Mission [{}] deleted", id.shortForm());
@@ -199,6 +194,9 @@ public final class MissionOrchestratorAppState extends BaseAppState {
 
     MissionRenderer renderer = new MissionRenderer(entry, context, renderContext, color);
     renderer.initialize();
+    // The context registry is the single source of truth for live renderers: register here, right
+    // after creation, and deregister in disposeRenderer(). Nothing else writes to it.
+    context.addMissionRenderer(entry.id(), renderer);
     logger.info(
         "Renderer created for mission '{}' [{}]",
         entry.mission().getName(),
@@ -206,25 +204,32 @@ public final class MissionOrchestratorAppState extends BaseAppState {
     return renderer;
   }
 
+  /**
+   * Deregisters the renderer bound to a mission id and detaches its visuals. No-op if no renderer
+   * was created for that mission.
+   *
+   * @param missionId the mission whose renderer must be disposed
+   */
+  private void disposeRenderer(MissionId missionId) {
+    MissionRenderer renderer = context.removeMissionRenderer(missionId);
+    if (renderer != null) renderer.cleanup();
+  }
+
   private void cleanupRemovedMissions(Set<MissionId> activeMissionIds) {
-    renderers
-        .keySet()
-        .removeIf(
-            id -> {
-              if (!activeMissionIds.contains(id)) {
-                MissionRenderer renderer = renderers.get(id);
-                if (renderer != null) renderer.cleanup();
-                resetFocusIfFollowing(id);
-                return true;
-              }
-              return false;
-            });
+    // Snapshot the ids: disposeRenderer() mutates the registry we are walking.
+    List<MissionId> staleIds =
+        context.missionRenderers().keySet().stream()
+            .filter(id -> !activeMissionIds.contains(id))
+            .toList();
+    for (MissionId id : staleIds) {
+      disposeRenderer(id);
+      resetFocusIfFollowing(id);
+    }
   }
 
   @Override
   protected void cleanup(Application app) {
-    renderers.values().forEach(MissionRenderer::cleanup);
-    renderers.clear();
+    List.copyOf(context.missionRenderers().keySet()).forEach(this::disposeRenderer);
     if (optimizationExecutor != null) {
       optimizationExecutor.shutdownNow();
     }
