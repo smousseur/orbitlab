@@ -87,7 +87,8 @@ public final class MissionFactory {
         // (conservative for elliptic targets).
         Spacecraft payload = payloadModel.toSpacecraft(payloadMass, 0.0);
         double[] loads = PropellantBudget.loadsForLeo(launcher, payload, apogeeAlt, latitude);
-        LaunchConfiguration configuration = new LaunchConfiguration(launcher, loads, payload);
+        LaunchConfiguration configuration =
+            new LaunchConfiguration(launcher, loads, payload, payloadModel.id());
         yield new MissionSpec.Leo(
             name, configuration, perigeeAlt, apogeeAlt, siteName, latitude, longitude, altitude);
       }
@@ -103,7 +104,8 @@ public final class MissionFactory {
             PropellantBudget.loadsForGeo(launcher, payloadModel, payloadMass, parkingAlt, latitude);
         Spacecraft payload = payloadModel.toSpacecraft(payloadMass, geoLoads.akmLoad());
         LaunchConfiguration configuration =
-            new LaunchConfiguration(launcher, geoLoads.launcherLoads(), payload);
+            new LaunchConfiguration(
+                launcher, geoLoads.launcherLoads(), payload, payloadModel.id());
         yield new MissionSpec.Geo(
             name,
             configuration,

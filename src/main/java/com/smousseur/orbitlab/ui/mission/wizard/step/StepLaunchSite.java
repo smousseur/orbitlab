@@ -7,9 +7,11 @@ import com.simsilica.lemur.component.InsetsComponent;
 import com.smousseur.orbitlab.ui.UiKit;
 import com.smousseur.orbitlab.ui.form.FormStyles;
 import com.smousseur.orbitlab.ui.mission.wizard.FormField;
+import com.smousseur.orbitlab.ui.mission.wizard.FormValues;
 import com.smousseur.orbitlab.ui.mission.wizard.StepValues;
 import com.smousseur.orbitlab.ui.mission.wizard.component.PopupList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 public class StepLaunchSite implements StepValues {
@@ -23,6 +25,7 @@ public class StepLaunchSite implements StepValues {
 
   private final Container root;
 
+  private final PopupList cosmodrome;
   private final TextField latField;
   private final TextField lonField;
   private final TextField altField;
@@ -64,7 +67,7 @@ public class StepLaunchSite implements StepValues {
 
     List<String> siteNames = sites.stream().map(s -> s.name).toList();
 
-    PopupList cosmodrome = new PopupList(FIELD_W, 40, 12, siteNames, siteNames.getFirst());
+    cosmodrome = new PopupList(FIELD_W, 40, 12, siteNames, siteNames.getFirst());
     root.addChild(cosmodrome.getNode());
 
     root.addChild(UiKit.vSpacer(ROW_GAP));
@@ -109,6 +112,42 @@ public class StepLaunchSite implements StepValues {
         FormField.LAUNCH_SITE_LAT.key(), parseDoubleOrZero(latField.getText()),
         FormField.LAUNCH_SITE_LONG.key(), parseDoubleOrZero(lonField.getText()),
         FormField.LAUNCH_SITE_ALT.key(), parseDoubleOrZero(altField.getText()));
+  }
+
+  @Override
+  public void applyValues(Map<String, Object> values) {
+    String siteName = FormValues.string(values, FormField.LAUNCH_SITE_NAME);
+    if (siteName != null) {
+      selectedSiteName = siteName;
+      // A spec assembled outside the wizard may name a site the cosmodrome list does not offer. The
+      // coordinates applied below still describe it exactly, so the trigger just keeps its label
+      // rather than claiming a site the mission does not launch from.
+      sites.stream()
+          .filter(site -> site.name.equals(siteName))
+          .findFirst()
+          .ifPresent(site -> cosmodrome.setSelectedValue(site.name));
+    }
+    applyCoordinate(values, FormField.LAUNCH_SITE_LAT, latField);
+    applyCoordinate(values, FormField.LAUNCH_SITE_LONG, lonField);
+    applyCoordinate(values, FormField.LAUNCH_SITE_ALT, altField);
+  }
+
+  private void applyCoordinate(
+      Map<String, Object> values, FormField<Double> field, TextField target) {
+    if (values.get(field.key()) == null) {
+      return;
+    }
+    target.setText(formatCoordinate(FormValues.number(values, field, 0d)));
+  }
+
+  /**
+   * Formats a coordinate the way the cosmodrome table writes them: plain decimals, no trailing
+   * zeros, and no exponent or locale comma that {@link #parseDoubleOrZero(String)} would reject.
+   */
+  private static String formatCoordinate(double value) {
+    String text = String.format(Locale.ROOT, "%.6f", value);
+    text = text.replaceAll("0+$", "");
+    return text.endsWith(".") ? text.substring(0, text.length() - 1) : text;
   }
 
   private static double parseDoubleOrZero(String text) {

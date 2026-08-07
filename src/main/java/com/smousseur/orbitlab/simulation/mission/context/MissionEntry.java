@@ -37,7 +37,10 @@ public final class MissionEntry {
   // Non-null only when the entry was built from a spec: that is what lets setOptimizationType
   // recompose the mission for a new mode. Entries wrapping a pre-built mission (legacy path) leave
   // it null and cannot recompose.
-  private final MissionSpec spec;
+  // Volatile + non-final: replaced on the JME thread when the user re-edits the mission in the
+  // wizard. Null-ness, on the other hand, is fixed at construction — a legacy entry never gains a
+  // spec, so `spec == null` stays a reliable "cannot recompose" test.
+  private volatile MissionSpec spec;
   // Volatile + non-final: replaced on the JME thread when the mode toggles, read on the
   // mission-optimizer thread.
   private volatile Mission mission;
@@ -83,7 +86,8 @@ public final class MissionEntry {
   }
 
   /**
-   * Returns the spec this entry was built from, if any.
+   * Returns the spec this entry currently flies — the one it was built from, or the last one {@link
+   * #applySpec(MissionSpec)} accepted. Its presence is also what makes the entry editable at all.
    *
    * @return an optional containing the spec, or empty for legacy pre-built-mission entries
    */
@@ -237,23 +241,84 @@ public final class MissionEntry {
       this.optimizationType = optimizationType;
       return;
     }
-    Mission recomposed;
-    try {
-      recomposed = MissionComposer.compose(spec, optimizationType);
-    } catch (RuntimeException e) {
-      logger.error(
-          "Mode switch to {} failed for mission '{}' [{}], keeping mode {}: {}",
-          optimizationType,
-          mission.getName(),
-          id.shortForm(),
-          this.optimizationType,
-          e.getMessage(),
-          e);
-      mission.setStatus(MissionStatus.FAILED);
+    Mission recomposed = recompose(spec, optimizationType, "Mode switch to " + optimizationType);
+    if (recomposed == null) {
       return;
     }
     // Published only once composition succeeded, so a failed toggle leaves a coherent entry.
     this.optimizationType = optimizationType;
+    publish(recomposed);
+  }
+
+  /**
+   * Replaces the spec this entry was built from and recomposes the mission for the current mode.
+   * This is the wizard's edit path: the user reopens a mission, changes its targets, vehicle or
+   * launch site, and the entry keeps its identity — {@link #id()}, color, visibility and telemetry
+   * focus all survive — while everything derived from the previous spec is dropped, exactly as a
+   * mode toggle does.
+   *
+   * <p>The mission type is not editable (the wizard locks the type step in edit mode), so a spec of
+   * another type is a programming error rather than something a user can do.
+   *
+   * <p>Same contract as {@link #setOptimizationType(OptimizationType)} on failure: this runs on the
+   * JME update thread, so a composition failure must not escape. The previous spec, mission, result
+   * and ephemeris are all kept and the retained mission is marked {@code FAILED}.
+   *
+   * @param spec the edited spec, of the same {@link MissionSpec#type() type} as the current one
+   * @return {@code true} when the mission was recomposed, {@code false} when composition failed
+   * @throws IllegalStateException if this entry carries no spec (legacy entry)
+   * @throws IllegalArgumentException if the given spec changes the mission type
+   */
+  public boolean applySpec(MissionSpec spec) {
+    Objects.requireNonNull(spec, "spec");
+    MissionSpec current = this.spec;
+    if (current == null) {
+      throw new IllegalStateException(
+          "Mission [" + id.shortForm() + "] carries no spec and cannot be edited");
+    }
+    if (spec.type() != current.type()) {
+      throw new IllegalArgumentException(
+          "Mission type is not editable: " + current.type() + " -> " + spec.type());
+    }
+    Mission recomposed = recompose(spec, optimizationType, "Edit");
+    if (recomposed == null) {
+      return false;
+    }
+    this.spec = spec;
+    publish(recomposed);
+    return true;
+  }
+
+  /**
+   * Composes {@code spec} for {@code mode}, absorbing a failure rather than letting it escape to the
+   * render loop.
+   *
+   * @param change what was being applied, for the failure log ("Edit", "Mode switch to PRECISE")
+   * @return the recomposed mission, or {@code null} when composition failed
+   */
+  private Mission recompose(MissionSpec spec, OptimizationType mode, String change) {
+    try {
+      return MissionComposer.compose(spec, mode);
+    } catch (RuntimeException e) {
+      logger.error(
+          "{} failed for mission '{}' [{}], keeping the previous composition (mode {}): {}",
+          change,
+          mission.getName(),
+          id.shortForm(),
+          optimizationType,
+          e.getMessage(),
+          e);
+      mission.setStatus(MissionStatus.FAILED);
+      return null;
+    }
+  }
+
+  /**
+   * Adopts a freshly composed mission and invalidates everything the previous one produced. The
+   * recomposed mission starts in {@code DRAFT}, so status-gated consumers stop rendering it until a
+   * fresh {@code OPTIMIZE} recomputes it.
+   */
+  private void publish(Mission recomposed) {
     this.mission = recomposed;
     this.optimizerResult = null;
     this.ephemeris = null;

@@ -149,7 +149,12 @@ public class MissionPanelWidget implements AutoCloseable {
 
       @Override
       public void onEdit(MissionId missionId) {
-        logger.info("Edit not yet implemented for mission [{}]", missionId.shortForm());
+        logger.info("Editing mission [{}]", missionId.shortForm());
+        // Closed first, like "+ New mission" does: the wizard is a modal of its own and would
+        // otherwise stack on top of this panel. Submitting the edit reopens it.
+        onClose.run();
+        eventBus.publishUiNavigation(
+            new EventBus.UiNavigationEvent.OpenMissionWizard(missionId));
       }
 
       @Override

@@ -5,6 +5,7 @@ import com.simsilica.lemur.component.BoxLayout;
 import com.simsilica.lemur.core.VersionedReference;
 import com.smousseur.orbitlab.ui.form.FormStyles;
 import com.smousseur.orbitlab.ui.mission.wizard.FormField;
+import com.smousseur.orbitlab.ui.mission.wizard.FormValues;
 import java.util.Map;
 
 public class LEODynamicParameters extends DynamicParameters {
@@ -76,5 +77,23 @@ public class LEODynamicParameters extends DynamicParameters {
     return Map.of(
         FormField.LEO_PERIGEE_ALT.key(), Math.round(perigeeSlider.getModel().getValue()),
         FormField.LEO_APOGEE_ALT.key(), Math.round(apogeeSlider.getModel().getValue()));
+  }
+
+  @Override
+  public void applyValues(Map<String, Object> values) {
+    setSliderValue(
+        perigeeSlider,
+        perigeeSliderRef,
+        perigeeField,
+        FormValues.number(values, FormField.LEO_PERIGEE_ALT, perigeeSlider.getModel().getValue()),
+        altitudeMin,
+        altitudeMax);
+    setSliderValue(
+        apogeeSlider,
+        apogeeSliderRef,
+        apogeeField,
+        FormValues.number(values, FormField.LEO_APOGEE_ALT, apogeeSlider.getModel().getValue()),
+        altitudeMin,
+        altitudeMax);
   }
 }

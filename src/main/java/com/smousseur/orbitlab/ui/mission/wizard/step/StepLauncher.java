@@ -17,6 +17,7 @@ import com.smousseur.orbitlab.simulation.mission.vehicle.model.PayloadModel;
 import com.smousseur.orbitlab.ui.UiKit;
 import com.smousseur.orbitlab.ui.form.FormStyles;
 import com.smousseur.orbitlab.ui.mission.wizard.FormField;
+import com.smousseur.orbitlab.ui.mission.wizard.FormValues;
 import com.smousseur.orbitlab.ui.mission.wizard.StepValues;
 import com.smousseur.orbitlab.ui.mission.wizard.component.PopupList;
 import com.smousseur.orbitlab.ui.mission.wizard.component.SelectableCard;
@@ -224,6 +225,42 @@ public class StepLauncher implements StepValues {
         FormField.LAUNCHER_TYPE.key(), selectedLauncher,
         FormField.PAYLOAD_TYPE.key(), payloadId,
         FormField.PAYLOAD_MASS.key(), parseDoubleOrZero(massField.getText()));
+  }
+
+  @Override
+  public void applyValues(Map<String, Object> values) {
+    String launcherId = FormValues.string(values, FormField.LAUNCHER_TYPE);
+    if (launcherId != null) {
+      selectLauncher(launcherId);
+    }
+    String payloadId = FormValues.string(values, FormField.PAYLOAD_TYPE);
+    if (payloadId != null) {
+      // Looked up in the narrowed list, not the whole catalog: a payload absent from it is one this
+      // mission type cannot fly, and the eligible default already on screen is the better offer.
+      eligiblePayloads(missionContext.getSelectedMissionType()).stream()
+          .filter(payload -> payload.id().equals(payloadId))
+          .findFirst()
+          .ifPresent(payload -> payloadType.setSelectedValue(payload.displayName()));
+    }
+    double payloadMass = FormValues.number(values, FormField.PAYLOAD_MASS, 0d);
+    if (payloadMass > 0) {
+      massField.setText(Long.toString(Math.round(payloadMass)));
+    }
+  }
+
+  /** Moves the card selection to the given launcher, ignoring an id the catalog does not offer. */
+  private void selectLauncher(String launcherId) {
+    List<LauncherModel> launchers = Launchers.all();
+    if (launchers.stream().noneMatch(launcher -> launcher.id().equals(launcherId))) {
+      return;
+    }
+    selectedLauncher = launcherId;
+    for (int i = 0; i < launchers.size() && i < launcherCards.size(); i++) {
+      boolean selected = launchers.get(i).id().equals(launcherId);
+      launcherCards
+          .get(i)
+          .applyState(selected ? SelectableCard.State.SELECTED : SelectableCard.State.IDLE);
+    }
   }
 
   private static java.util.Optional<PayloadModel> findByDisplayName(String displayName) {

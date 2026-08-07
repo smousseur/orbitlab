@@ -132,6 +132,18 @@ public class PopupList {
     valueLabel.setText(selectedValue);
   }
 
+  /**
+   * Moves the selection to one of the current options, leaving the option list untouched. Like
+   * {@link #setOptions(List, String)} it does not fire the select listener: it is meant for
+   * prefilling, where the caller already knows the state the selection implies.
+   *
+   * @param value the value to show on the trigger; expected to be one of the current options
+   */
+  public void setSelectedValue(String value) {
+    this.selectedValue = value;
+    valueLabel.setText(value);
+  }
+
   private void buildOptions(List<String> options) {
     popup.clearChildren();
     for (String option : options) {

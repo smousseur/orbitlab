@@ -42,6 +42,14 @@ public abstract class DynamicParameters {
 
   public abstract Map<String, Object> getDynamicValues();
 
+  /**
+   * Prefills these parameters from values previously produced by {@link #getDynamicValues()}, as
+   * the wizard's edit mode does. Keys these parameters do not own are ignored.
+   *
+   * @param values the raw wizard values
+   */
+  public abstract void applyValues(Map<String, Object> values);
+
   protected Container getSliderContainer(
       String label, Slider slider, TextField field, double altitudeMin, double altitudeMax) {
     Container sliderContainer = new Container();
@@ -212,14 +220,29 @@ public abstract class DynamicParameters {
       double valueMin,
       double valueMax) {
     try {
-      double v = Double.parseDouble(field.getText().trim());
-      v = Math.max(valueMin, Math.min(valueMax, v));
-      slider.getModel().setValue(v);
-      sliderRef.update();
-      field.setText(Long.toString(Math.round(v)));
+      setSliderValue(
+          slider, sliderRef, field, Double.parseDouble(field.getText().trim()), valueMin, valueMax);
     } catch (NumberFormatException e) {
       field.setText(Long.toString(Math.round(slider.getModel().getValue())));
     }
+  }
+
+  /**
+   * Drives a slider and its text field to {@code value}, clamped to the slider range. The versioned
+   * reference is consumed here so the next {@link #update(float)} does not treat the move as a user
+   * drag and rewrite the field a frame later.
+   */
+  protected void setSliderValue(
+      Slider slider,
+      VersionedReference<Double> sliderRef,
+      TextField field,
+      double value,
+      double valueMin,
+      double valueMax) {
+    double clamped = Math.max(valueMin, Math.min(valueMax, value));
+    slider.getModel().setValue(clamped);
+    sliderRef.update();
+    field.setText(Long.toString(Math.round(clamped)));
   }
 
   private static void hideButton(Button btn) {

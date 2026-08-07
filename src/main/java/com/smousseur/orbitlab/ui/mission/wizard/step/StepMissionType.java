@@ -29,9 +29,23 @@ public class StepMissionType implements StepValues {
   private final SelectableCard leoCard;
   private final SelectableCard geoCard;
   private boolean missionTypeSelected = true;
-  private String selectedMissionType = "LEO";
+  private String selectedMissionType;
 
-  public StepMissionType(MissionContext missionContext) {
+  /**
+   * Builds the mission-type step.
+   *
+   * <p>When {@code locked}, the type on display is the one the mission already flies and cannot be
+   * changed: a mission's stages, propellant budget and payload eligibility all derive from it, so
+   * re-typing an existing mission would be creating a different one. The other card is rendered
+   * disabled and no card carries a click listener.
+   *
+   * @param missionContext the context whose selected type drives the downstream steps
+   * @param initialType the type to show as selected
+   * @param locked {@code true} to forbid changing the type (wizard edit mode)
+   */
+  public StepMissionType(MissionContext missionContext, MissionType initialType, boolean locked) {
+    selectedMissionType = initialType.name();
+    boolean leoSelected = initialType == MissionType.LEO;
     root = new Container(new BoxLayout(Axis.Y, FillMode.None));
     root.setBackground(null);
     root.setPreferredSize(new Vector3f(FormStyles.CONTENT_WIDTH, FormStyles.CONTENT_HEIGHT, 0));
@@ -59,7 +73,7 @@ public class StepMissionType implements StepValues {
             "Low Earth Orbit",
             "160 - 2 000 km",
             new Badge("AVAILABLE", Badge.Variant.SUCCESS),
-            SelectableCard.State.SELECTED,
+            cardState(leoSelected, locked),
             "interface/wizard/icon-mission-leo.png",
             ICON_SIZE,
             SelectableCard.Variant.MISSION);
@@ -71,34 +85,36 @@ public class StepMissionType implements StepValues {
             "Geostationary Orbit",
             "35 786 km",
             new Badge("AVAILABLE", Badge.Variant.SUCCESS),
-            SelectableCard.State.IDLE,
+            cardState(!leoSelected, locked),
             "interface/wizard/icon-mission-geo.png",
             ICON_SIZE,
             SelectableCard.Variant.MISSION);
 
-    MouseEventControl.addListenersToSpatial(
-        leoCard.getNode(),
-        new DefaultMouseListener() {
-          @Override
-          public void click(MouseButtonEvent e, Spatial t, Spatial c) {
-            selectedMissionType = MissionType.LEO.name();
-            geoCard.applyState(SelectableCard.State.IDLE);
-            missionTypeSelected = true;
-            missionContext.setSelectedMissionType(MissionType.LEO);
-          }
-        });
+    if (!locked) {
+      MouseEventControl.addListenersToSpatial(
+          leoCard.getNode(),
+          new DefaultMouseListener() {
+            @Override
+            public void click(MouseButtonEvent e, Spatial t, Spatial c) {
+              selectedMissionType = MissionType.LEO.name();
+              geoCard.applyState(SelectableCard.State.IDLE);
+              missionTypeSelected = true;
+              missionContext.setSelectedMissionType(MissionType.LEO);
+            }
+          });
 
-    MouseEventControl.addListenersToSpatial(
-        geoCard.getNode(),
-        new DefaultMouseListener() {
-          @Override
-          public void click(MouseButtonEvent e, Spatial t, Spatial c) {
-            selectedMissionType = MissionType.GEO.name();
-            leoCard.applyState(SelectableCard.State.IDLE);
-            missionTypeSelected = true;
-            missionContext.setSelectedMissionType(MissionType.GEO);
-          }
-        });
+      MouseEventControl.addListenersToSpatial(
+          geoCard.getNode(),
+          new DefaultMouseListener() {
+            @Override
+            public void click(MouseButtonEvent e, Spatial t, Spatial c) {
+              selectedMissionType = MissionType.GEO.name();
+              leoCard.applyState(SelectableCard.State.IDLE);
+              missionTypeSelected = true;
+              missionContext.setSelectedMissionType(MissionType.GEO);
+            }
+          });
+    }
 
     row.addChild(leoCard.getNode());
     row.addChild(UiKit.hSpacer(CARD_GAP));
@@ -109,6 +125,18 @@ public class StepMissionType implements StepValues {
     // Trailing spacer fills remaining row width so cards stay at their fixed size.
     float trailing = FormStyles.CONTENT_WIDTH - 3 * CARD_W - 2 * CARD_GAP;
     row.addChild(UiKit.hSpacer(trailing));
+  }
+
+  /**
+   * Resolves the state a card starts in. A locked step greys out the type the mission does not fly;
+   * a disabled card also loses {@link SelectableCard}'s own hover/select feedback, so it reads as
+   * inert rather than merely unresponsive.
+   */
+  private static SelectableCard.State cardState(boolean selected, boolean locked) {
+    if (selected) {
+      return SelectableCard.State.SELECTED;
+    }
+    return locked ? SelectableCard.State.DISABLED : SelectableCard.State.IDLE;
   }
 
   public Container getNode() {

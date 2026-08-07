@@ -11,6 +11,7 @@ import com.simsilica.lemur.event.CursorEventControl;
 import com.smousseur.orbitlab.ui.UiKit;
 import com.smousseur.orbitlab.ui.form.FormStyles;
 import com.smousseur.orbitlab.ui.mission.wizard.FormField;
+import com.smousseur.orbitlab.ui.mission.wizard.FormValues;
 
 import java.util.Map;
 
@@ -70,5 +71,17 @@ public class GEODynamicParameters extends DynamicParameters {
   @Override
   public Map<String, Object> getDynamicValues() {
     return Map.of(FormField.GTO_PARKING_ALT.key(), Math.round(parkingSlider.getModel().getValue()));
+  }
+
+  @Override
+  public void applyValues(Map<String, Object> values) {
+    // The GEO altitude is read-only: it is the mission's definition, not a parameter.
+    setSliderValue(
+        parkingSlider,
+        parkingSliderRef,
+        parkingField,
+        FormValues.number(values, FormField.GTO_PARKING_ALT, parkingSlider.getModel().getValue()),
+        altitudeMin,
+        altitudeMax);
   }
 }

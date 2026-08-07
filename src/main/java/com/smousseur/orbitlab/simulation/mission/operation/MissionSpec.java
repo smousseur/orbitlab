@@ -114,7 +114,11 @@ public sealed interface MissionSpec permits MissionSpec.Leo, MissionSpec.Geo {
     public MissionSpec withLauncherLoads(double[] launcherLoads) {
       return new Leo(
           name,
-          new LaunchConfiguration(configuration.launcher(), launcherLoads, configuration.payload()),
+          new LaunchConfiguration(
+              configuration.launcher(),
+              launcherLoads,
+              configuration.payload(),
+              configuration.payloadId()),
           perigeeAltitude,
           apogeeAltitude,
           siteName,
@@ -162,7 +166,11 @@ public sealed interface MissionSpec permits MissionSpec.Leo, MissionSpec.Geo {
     public MissionSpec withLauncherLoads(double[] launcherLoads) {
       return new Geo(
           name,
-          new LaunchConfiguration(configuration.launcher(), launcherLoads, configuration.payload()),
+          new LaunchConfiguration(
+              configuration.launcher(),
+              launcherLoads,
+              configuration.payload(),
+              configuration.payloadId()),
           parkingAltitude,
           targetAltitude,
           finalInclination,

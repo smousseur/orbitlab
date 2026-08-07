@@ -19,6 +19,7 @@ import com.smousseur.orbitlab.ui.EphemerisWindow;
 import com.smousseur.orbitlab.ui.UiKit;
 import com.smousseur.orbitlab.ui.form.FormStyles;
 import com.smousseur.orbitlab.ui.mission.wizard.FormField;
+import com.smousseur.orbitlab.ui.mission.wizard.FormValues;
 import com.smousseur.orbitlab.ui.mission.wizard.StepValues;
 import com.smousseur.orbitlab.ui.mission.wizard.step.params.DynamicParameters;
 import com.smousseur.orbitlab.ui.mission.wizard.step.params.GEODynamicParameters;
@@ -139,6 +140,38 @@ public class StepParameters implements StepValues {
     values.putAll(dynamicParameters.getDynamicValues());
     values.put(FormField.LAUNCH_DATE.key(), launchDateField.getText());
     return values;
+  }
+
+  @Override
+  public void applyValues(Map<String, Object> values) {
+    String name = FormValues.string(values, FormField.MISSION_NAME);
+    if (name != null) {
+      missionNameField.setText(name);
+    }
+    String launchDate = FormValues.string(values, FormField.LAUNCH_DATE);
+    if (launchDate != null) {
+      launchDateField.setText(launchDate);
+      clearLaunchDateRejection();
+    }
+    // Applied to the parameters of the type carried by the values, not to the ones currently on
+    // screen: the panel is swapped by update(), which has not necessarily run yet.
+    DynamicParameters target = dynamicParametersMap.get(missionTypeOf(values));
+    if (target != null) {
+      target.applyValues(values);
+    }
+  }
+
+  /** Reads the mission type out of the raw values, falling back on the one the context selects. */
+  private MissionType missionTypeOf(Map<String, Object> values) {
+    String raw = FormValues.string(values, FormField.MISSION_TYPE);
+    if (raw == null) {
+      return missionContext.getSelectedMissionType();
+    }
+    try {
+      return MissionType.valueOf(raw);
+    } catch (IllegalArgumentException e) {
+      return missionContext.getSelectedMissionType();
+    }
   }
 
   public void update(float tpf) {

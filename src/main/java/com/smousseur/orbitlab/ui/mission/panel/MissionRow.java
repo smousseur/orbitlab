@@ -132,10 +132,13 @@ class MissionRow {
       MissionStatus status,
       MissionListView.RowListener listener) {
     boolean computing = status == MissionStatus.COMPUTING;
+    // Editing reopens the wizard on the mission's spec, so a legacy entry — which has none — has
+    // nothing to reopen: the icon stays greyed out rather than leading to a dead end.
+    boolean editable = !computing && entry.spec().isPresent();
 
     actions.addChild(
         RowActionIcons.vCenter(
-            RowActionIcons.actionIconButton("edit", !computing, () -> listener.onEdit(missionId)),
+            RowActionIcons.actionIconButton("edit", editable, () -> listener.onEdit(missionId)),
             HEIGHT));
     actions.addChild(UiKit.hSpacer(RowActionIcons.ICON_GAP));
     actions.addChild(

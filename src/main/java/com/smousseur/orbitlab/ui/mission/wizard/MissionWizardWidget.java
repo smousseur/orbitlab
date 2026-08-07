@@ -49,12 +49,36 @@ public class MissionWizardWidget implements AutoCloseable {
 
   private final Map<MissionWizardStep, Container> stepPanels =
       new EnumMap<>(MissionWizardStep.class);
+  private final boolean editMode;
   private MissionWizardStep currentStep = MissionWizardStep.MISSION;
   private boolean visible = false;
 
-  private Consumer<Map<String, Object>> onCreate = values -> {};
+  private Consumer<Map<String, Object>> onSubmit = values -> {};
 
+  /**
+   * Opens the wizard on a new mission.
+   *
+   * @param context the application context
+   */
   public MissionWizardWidget(ApplicationContext context) {
+    this(context, null);
+  }
+
+  /**
+   * Opens the wizard, prefilled on the values of an existing mission when {@code initialValues} is
+   * non-null — the edit mode. Editing differs from creating on three points: the header says so, the
+   * last step confirms with "Update" rather than "Create", and the mission type is locked, since a
+   * mission's stages, propellant budget and eligible payloads all derive from it.
+   *
+   * <p>The type on display is the one {@code context.missionContext()} currently selects, so a
+   * caller opening the wizard on a mission must select that mission's type first: every step reads
+   * the type from the context, not from {@code initialValues}.
+   *
+   * @param context the application context
+   * @param initialValues values to prefill the steps with, or {@code null} to open blank
+   */
+  public MissionWizardWidget(ApplicationContext context, Map<String, Object> initialValues) {
+    this.editMode = initialValues != null;
     backdrop = new ModalBackdrop();
 
     root = new Container(new BoxLayout(Axis.Y, FillMode.None), FormStyles.STYLE);
@@ -91,7 +115,9 @@ public class MissionWizardWidget implements AutoCloseable {
     brandSep.setFont(UiKit.ibmPlexMono(11));
     brandSep.setColor(FormStyles.TEXT_LO);
 
-    Label brandSub = brandRow.addChild(new Label("MISSION WIZARD", FormStyles.STYLE));
+    Label brandSub =
+        brandRow.addChild(
+            new Label(editMode ? "EDIT MISSION" : "MISSION WIZARD", FormStyles.STYLE));
     brandSub.setFont(UiKit.ibmPlexMono(11));
     brandSub.setColor(FormStyles.TEXT_LO);
 
@@ -113,7 +139,8 @@ public class MissionWizardWidget implements AutoCloseable {
     root.addChild(footer.getNode());
 
     MissionContext missionContext = context.missionContext();
-    stepMissionType = new StepMissionType(missionContext);
+    stepMissionType =
+        new StepMissionType(missionContext, missionContext.getSelectedMissionType(), editMode);
     stepPanels.put(MissionWizardStep.MISSION, stepMissionType.getNode());
     stepParameters = new StepParameters(missionContext);
     stepPanels.put(MissionWizardStep.PARAMETERS, stepParameters.getNode());
@@ -125,6 +152,15 @@ public class MissionWizardWidget implements AutoCloseable {
     footer.setOnNext(this::goNext);
     footer.setOnPrevious(this::goPrevious);
     stepper.setOnStepClicked(this::goToStep);
+
+    if (editMode) {
+      footer.setSubmitLabel("Update");
+      // The mission-type step is absent from this list on purpose: its value is fixed at
+      // construction (locked card), there is nothing left to prefill.
+      for (StepValues step : List.of(stepParameters, stepLaunchSite, stepLauncher)) {
+        step.applyValues(initialValues);
+      }
+    }
 
     showStep(currentStep);
   }
@@ -172,7 +208,7 @@ public class MissionWizardWidget implements AutoCloseable {
         showStep(MissionWizardStep.PARAMETERS);
         return;
       }
-      onCreate.accept(getAllValues());
+      onSubmit.accept(getAllValues());
       return;
     }
     if (currentStep == MissionWizardStep.PARAMETERS && launchDateRefused()) {
@@ -220,8 +256,14 @@ public class MissionWizardWidget implements AutoCloseable {
     footer.setOnCancel(action);
   }
 
-  public void setOnCreate(Consumer<Map<String, Object>> action) {
-    this.onCreate = action != null ? action : values -> {};
+  /**
+   * Sets what the last step's confirmation button does with the aggregated values — create a mission
+   * or update the one the wizard was opened on.
+   *
+   * @param action the submit handler, or {@code null} to ignore submissions
+   */
+  public void setOnSubmit(Consumer<Map<String, Object>> action) {
+    this.onSubmit = action != null ? action : values -> {};
   }
 
   private void centerOnScreen(int screenWidth, int screenHeight) {

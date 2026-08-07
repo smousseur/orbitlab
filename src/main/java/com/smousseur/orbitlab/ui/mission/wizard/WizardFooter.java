@@ -34,8 +34,11 @@ public class WizardFooter {
   private final ProgressBar progressBar;
   private final Label progressLabel;
 
+  private static final String DEFAULT_SUBMIT_LABEL = "Create";
+
   private String nextBaseTex = "btn-primary";
   private String nextHoverTex = "btn-primary-hover";
+  private String submitLabel = DEFAULT_SUBMIT_LABEL;
 
   /** Largeur utile du footer (entre ses paddings horizontaux). */
   private final float innerWidth;
@@ -97,6 +100,17 @@ public class WizardFooter {
     this.onNext = action != null ? action : () -> {};
   }
 
+  /**
+   * Sets the wording of the last step's confirmation button — "Create" for a new mission, "Update"
+   * when the wizard reopened on an existing one. Takes effect the next time the footer renders the
+   * last step.
+   *
+   * @param label the button label, or {@code null} to restore the default
+   */
+  public void setSubmitLabel(String label) {
+    this.submitLabel = label != null ? label : DEFAULT_SUBMIT_LABEL;
+  }
+
   public void setStep(MissionWizardStep step) {
     root.clearChildren();
 
@@ -128,7 +142,7 @@ public class WizardFooter {
     cluster.addChild(nextButton);
 
     if (step == MissionWizardStep.LAUNCHER) {
-      nextButton.setText("  Create");
+      nextButton.setText("  " + submitLabel);
       IconComponent check = UiKit.wizardIconComponent("icon-check-white");
       check.setHAlignment(HAlignment.Left);
       nextButton.setIcon(check);

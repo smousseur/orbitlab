@@ -14,9 +14,11 @@ import java.util.Objects;
  * @param launcher the launcher model from the catalog
  * @param propellantLoads the propellant load per stage (kg), same order as the launcher stages
  * @param payload the payload placed on top of the stack
+ * @param payloadId the {@code Payloads} catalog id the payload was instantiated from, or {@code
+ *     null} when it was assembled by hand
  */
 public record LaunchConfiguration(
-    LauncherModel launcher, double[] propellantLoads, Spacecraft payload) {
+    LauncherModel launcher, double[] propellantLoads, Spacecraft payload, String payloadId) {
 
   public LaunchConfiguration {
     Objects.requireNonNull(launcher, "launcher");
@@ -32,9 +34,35 @@ public record LaunchConfiguration(
     propellantLoads = propellantLoads.clone();
   }
 
+  /**
+   * Configuration for a payload with no catalog origin — tests and any programmatic path assembling
+   * a {@link Spacecraft} directly. The launcher keeps its identity through {@link
+   * LauncherModel#id()}; the payload simply has none to give.
+   *
+   * @param launcher the launcher model from the catalog
+   * @param propellantLoads the propellant load per stage (kg), same order as the launcher stages
+   * @param payload the payload placed on top of the stack
+   */
+  public LaunchConfiguration(
+      LauncherModel launcher, double[] propellantLoads, Spacecraft payload) {
+    this(launcher, propellantLoads, payload, null);
+  }
+
   @Override
   public double[] propellantLoads() {
     return propellantLoads.clone();
+  }
+
+  /**
+   * Reports whether this configuration remembers which catalog model its payload came from. Only
+   * the wizard path sets it, and it is what lets the wizard reopen prefilled on the very payload the
+   * user picked: the {@link Spacecraft} alone does not identify its model — two inert models differ
+   * only by a default dry mass the user overrides.
+   *
+   * @return {@code true} when {@link #payloadId()} is usable
+   */
+  public boolean hasPayloadId() {
+    return payloadId != null && !payloadId.isBlank();
   }
 
   /** Configuration with every stage loaded at full capacity (historical behaviour). */
