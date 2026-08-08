@@ -1,0 +1,860 @@
+# Roadmap OrbitLab — révision 2026-08-08
+
+Ce document remplace `specs/roadmap/01-short-term.md` (supprimé : ses phases 0
+et 1 sont soldées, cf. §1). Il est **la** porte d'entrée du dossier `specs/` :
+chaque item renvoie vers la spec détaillée quand elle existe, et l'index
+complet des documents est dans [`specs/README.md`](../README.md).
+
+**Comment le lire.** Le plan, c'est le **§3** — six phases dans l'ordre. Le §4
+est un classement valeur/difficulté qui sert à arbitrer, pas à planifier ; le
+§6 est un recueil de fiches par item, à ouvrir au moment de coder. Si vous ne
+lisez qu'une section, lisez le §3.
+
+---
+
+## 1. État des lieux (ce qui a changé depuis la révision précédente)
+
+**Livré et vérifié dans le code :**
+
+| Chantier | Preuve |
+|---|---|
+| Seek timeline par saisie de date | `ui/timeline/components/ClockDisplay.java` |
+| Étiquette de type dans le panel | `ui/mission/panel/MissionTypes.java` lit `MissionSpec.type()` |
+| Filet d'erreur sur le changement de mode | `MissionEntry.setOptimizationType` |
+| Action « Edit » du panel + préremplissage wizard | commit `6baff0d` |
+| Confirmation avant suppression | commit `686b7e2` |
+| `MissionId` (UUID) et registre de renderers centralisé | commits `cedda8e`, `1b1d7a6` |
+| **Skybox étoilée** | `states/scene/SkyboxAppState.java`, cubemap sous `resources/textures/skybox/` |
+| **Éclairage Lambert avec terminator** | `MatDefs/Light/WrapLighting.j3md` + `AssetFactory.applyLambert` |
+| **MSAA 4×** | `OrbitLabApplication.java:58` — `settings.setSamples(4)` |
+
+**Reste ouvert de l'ancienne roadmap** : la vue détail avec résultats
+d'optimisation (`AchievedOrbit` n'est référencé par aucun fichier de `ui/`) et
+le feedback de progression pendant l'optimisation. Repris ici en `UI-1` et
+`UI-2`.
+
+**Corrections d'hypothèses par rapport aux specs graphiques** — `effects-roadmap.md`
+§1 décrit un rendu « tout `Unshaded`, aucun shader custom, pas de skybox ». Ce
+n'est plus vrai : le projet possède désormais son propre shader d'éclairage.
+Deux conséquences notées plus bas : les éclipses (`FX-2`) descendent de ◆4 à ◆3,
+et l'item « Lambert sur les planètes » disparaît de la roadmap (fait).
+
+---
+
+## 2. Notation
+
+- **★ Valeur** — apport perçu dans l'application, tous publics confondus
+  (lisibilité, réalisme, spectacle, déblocage d'autres features).
+  ★1 = à peine perceptible → ★5 = change ce qu'OrbitLab *est*.
+- **◆ Difficulté** — ◆1 = quelques lignes localisées → ◆5 = R&D, refonte d'un
+  sous-système, plusieurs semaines.
+- **Taille** — S (< 1 j), M (1–3 j), L (1–2 semaines), XL (au-delà).
+- Les identifiants (`RND-1`, `MIS-4`…) sont **stables** : les phases peuvent
+  bouger, les identifiants non.
+
+---
+
+## 3. La roadmap
+
+**C'est cette section qui dit quoi faire, et dans quel ordre.** Six phases, à
+prendre dans l'ordre ; à l'intérieur d'une phase, l'ordre des lignes est
+indicatif — les items d'une même phase sont volontairement peu couplés entre
+eux. Le §4 sert à arbitrer un échange, pas à planifier.
+
+Les durées sont des ordres de grandeur pour une personne, sans marge de
+découverte.
+
+### Phase 1 — Hygiène visuelle, horizon de mission, dette panel · ~1,5 semaine
+
+> Que ce qui est déjà à l'écran soit propre, honnête et dise quelque chose,
+> avant d'ajouter quoi que ce soit. `MIS-8` est le seul item de la phase qui
+> soit un préalable pour d'autres : il fixe le substrat temporel sur lequel
+> `NAV-2` (phase 2) et les missions longues (phases 4 et 5) vont s'appuyer.
+
+| ID | Item | ★ | ◆ | Taille |
+|---|---|:-:|:-:|:-:|
+| MIS-8 | **Horizon de mission explicite** (fin de mission aujourd'hui codée en dur) | 5 | 2 | M |
+| RND-1 | Corriger le Z-fighting / scintillement en vue spacecraft | 4 | 1 | S |
+| FX-1 | Bloom sur le Soleil | 3 | 1 | S |
+| RND-2 | Filtrage anisotrope | 2 | 1 | S |
+| MIS-1 | Deuxième lanceur au catalogue | 3 | 1 | S |
+| RND-3 | Couleur par stage + passé/futur + marqueur « now » | 4 | 2 | M |
+| UI-1 | Vue détail mission (orbite atteinte, message d'erreur) | 4 | 2 | M |
+
+**Fin de phase quand** : plus aucun scintillement en vue vaisseau, une mission
+calculée affiche ce qu'elle a atteint, et sa durée est une décision explicite
+plutôt qu'une constante.
+
+### Phase 2 — Navigation, temps, caméra · ~2 semaines
+
+> Rendre la scène et la timeline parcourables. C'est le bloc « timeline et
+> navigation 3D » + « transitions de caméra ». `NAV-3` suit `NAV-2` ; `NAV-4`
+> peut se faire à tout moment.
+
+| ID | Item | ★ | ◆ | Taille |
+|---|---|:-:|:-:|:-:|
+| NAV-1 | Transitions de caméra entre vues | 4 | 2 | M |
+| NAV-2 | Timeline indexée sur le temps + marqueurs d'événements | 4 | 3 | M |
+| NAV-3 | Scrub continu (glisser sur la piste) | 3 | 2 | S |
+| RND-4 | Ribbon billboardé (orbites + trajectoires) | 4 | 3 | M |
+| NAV-4 | Breadcrumb de navigation 3D | 3 | 2 | M |
+
+**Fin de phase quand** : on atteint n'importe quel instant d'une mission à la
+souris, et on change de corps focalisé sans cut.
+
+### Phase 3 — Socle physique et mission partagé · ~4,5 semaines
+
+> **La phase pivot.** Rien ici n'est spectaculaire pris isolément ; tout est
+> réclamé par les missions lunaires (phase 4) et par le rendez-vous (phase 5).
+> C'est aussi la phase la plus risquée en estimation.
+>
+> Les deux derniers items sont de l'**outillage** plutôt que du socle physique,
+> et c'est délibéré : ils rendent les phases 4 et 5 tenables au quotidien.
+
+| ID | Item | ★ | ◆ | Taille | Sert à |
+|---|---|:-:|:-:|:-:|---|
+| MIS-7 | `EarthOrbitMission` paramétrable | 4 | 2 | M | MIS-2, MIS-6, + polaire/SSO/MEO gratuits |
+| PHY-4 | Socle multi-corps (3ᵉ corps, SOI, repères) | 5 | 4 | L | MIS-4, MIS-5 |
+| MIS-2 | Fenêtres de lancement | 4 | 3 | M | MIS-4, MIS-6 |
+| MIS-3 | Solveur de Lambert + repère LVLH | 4 | 3 | M | MIS-6, ciblage lunaire |
+| PHY-1 | Atmosphère : la brique, **off** par défaut | 4 | 3 | L | PHY-2, PHY-3 |
+| UI-2 | Feedback de progression pendant l'optimisation | 3 | 2 | M | confort des phases 4 et 5 |
+| UI-3 | Persistance des missions / format de scénario | 4 | 3 | M | **outil de dev** des phases 4 et 5 |
+
+**Pourquoi `UI-3` est ici et pas en phase 6.** Il n'a aucune dépendance, et son
+bénéfice principal à ce stade n'est pas la feature mais l'outillage : sans lui,
+mettre au point une mission lunaire ou un rendez-vous impose de re-saisir la
+mission dans le wizard **à chaque lancement de l'application**. Un save/load
+livré avant les phases 4 et 5 se rembourse pendant celles-ci ; livré après, il
+ne rembourse rien.
+
+**Fin de phase quand** : une trajectoire peut sortir de la sphère d'influence
+terrestre, une date de lancement est choisie parce qu'elle est bonne, et une
+mission survit à la fermeture de l'application.
+
+### Phase 4 — Missions lunaires · ~2 semaines
+
+| ID | Item | ★ | ◆ | Taille |
+|---|---|:-:|:-:|:-:|
+| MIS-4 | Survol lunaire (TLI + flyby) | 5 | 4 | L |
+| MIS-5 | Mise en orbite lunaire (LOI) | 5 | 3 | M |
+| FX-2 | Éclipses / pénombre inter-corps | 4 | 3 | M |
+
+`FX-2` est ici et pas en phase 6 : c'est le moment où la scène a enfin trois
+corps alignés qui s'occultent, et où l'effet se voit.
+
+### Phase 5 — Rendezvous / phasing · ~3 semaines
+
+| ID | Item | ★ | ◆ | Taille |
+|---|---|:-:|:-:|:-:|
+| MIS-6 | Rendezvous / phasing sur cible TLE | 5 | 5 | XL |
+
+Seul item de sa phase parce qu'il en vaut plusieurs : source éphéméride TLE
+bufferisée, abstraction `EphemerisTarget`, deux nouveaux stages, nouveau coût,
+rendu de la cible. Découpage détaillé en §6.
+
+### Phase 6 — Réalisme et spectacle · ~2,5 semaines
+
+| ID | Item | ★ | ◆ | Taille |
+|---|---|:-:|:-:|:-:|
+| PHY-2 | Atmosphère par défaut + recalibrage optimiseur | 5 | 4 | L |
+| PHY-3 | Détecteurs MaxQ / interface + télémétrie + UI fidélité | 3 | 2 | M |
+| FX-3 | Particules de tuyère | 4 | 2 | M |
+| NAV-5 | Hover « wow » planètes + orbites | 3 | 2 | M |
+
+**Note pour `PHY-2`** : les scénarios écrits en phase 3 par `UI-3` datent d'avant
+la bascule du drag. Le champ « modèle d'atmosphère » du format doit donc exister
+**dès `UI-3`**, même s'il ne vaut que `NONE` à ce moment-là — sinon les scénarios
+d'avant deviennent silencieusement faux au moment du basculement.
+
+### Pourquoi l'atmosphère est coupée en deux, à cheval sur les phases 3 et 6
+
+Le drag renchérit **l'ascension**, donc *toutes* les missions, lunaires et
+rendez-vous compris. Activer le drag par défaut invalide les baselines
+d'optimiseur : chaque type de mission écrit avant devra être recalibré après.
+Deux stratégies, une seule tient :
+
+- livrer l'atmosphère complète *avant* les nouvelles missions → un seul
+  recalibrage, mais la Lune recule de plusieurs semaines derrière un chantier
+  ◆4 risqué ;
+- livrer la **brique** tôt (`PHY-1`, drag activable par mission, **off** par
+  défaut, aucune trajectoire existante modifiée) et **basculer le défaut**
+  (`PHY-2`) une fois les types de missions posés → un seul recalibrage groupé,
+  en fin de parcours, sur un périmètre connu.
+
+La seconde est retenue. `PHY-1` doit donc être écrit avec cette contrainte
+explicite : *drag off ⇒ trajectoire identique au bit près*.
+
+---
+
+## 4. Vue d'ensemble — arbitrage
+
+Les mêmes items, triés par rapport valeur / difficulté décroissant. Ce tableau
+**ne donne pas l'ordre d'exécution** (c'est le §3) : il sert à piocher un item
+opportuniste, ou à décider quoi sacrifier quand une phase déborde.
+
+| ID | Item | ★ | ◆ | Taille | Dépend de |
+|---|---|:-:|:-:|:-:|---|
+| MIS-8 | Horizon de mission explicite | 5 | 2 | M | — |
+| RND-1 | Corriger le Z-fighting / scintillement en vue spacecraft | 4 | 1 | S | — |
+| FX-1 | Bloom sur le Soleil (+ tone mapping) | 3 | 1 | S | — |
+| MIS-1 | Deuxième lanceur au catalogue | 3 | 1 | S | — |
+| RND-3 | Couleur par stage + passé/futur + marqueur « now » | 4 | 2 | M | — |
+| UI-1 | Vue détail mission (orbite atteinte, message d'erreur) | 4 | 2 | M | — |
+| NAV-1 | Transitions de caméra entre vues | 4 | 2 | M | — |
+| MIS-7 | `EarthOrbitMission` paramétrable → polaire / SSO / MEO | 4 | 2 | M | — |
+| RND-2 | Filtrage anisotrope (MSAA déjà actif) | 2 | 1 | S | — |
+| FX-2 | Éclipses / pénombre inter-corps | 4 | 3 | M | — |
+| FX-3 | Particules de tuyère | 4 | 2 | M | — |
+| NAV-4 | Breadcrumb de navigation 3D | 3 | 2 | M | — |
+| UI-2 | Feedback de progression pendant l'optimisation | 3 | 2 | M | — |
+| NAV-2 | Timeline indexée sur le temps + marqueurs d'événements | 4 | 3 | M | — |
+| NAV-3 | Scrub continu (glisser sur la piste) | 3 | 2 | S | NAV-2 |
+| RND-4 | Ribbon billboardé (orbites + trajectoires) | 4 | 3 | M | — |
+| MIS-3 | Solveur de Lambert + repère LVLH | 4 | 3 | M | — |
+| MIS-2 | Fenêtres de lancement | 4 | 3 | M | MIS-7 |
+| NAV-5 | Hover « wow » planètes + orbites | 3 | 2 | M | RND-4 (conseillé) |
+| UI-3 | Persistance des missions / format de scénario | 4 | 3 | M | — |
+| PHY-4 | Socle multi-corps (3ᵉ corps, SOI, repères) | 5 | 4 | L | — |
+| MIS-5 | Mise en orbite lunaire (LOI) | 5 | 3 | M | MIS-4 |
+| MIS-4 | Survol lunaire (TLI + flyby) | 5 | 4 | L | PHY-4, MIS-2 |
+| PHY-1 | Atmosphère : brique drag, désactivée par défaut | 4 | 3 | L | — |
+| PHY-3 | Détecteurs MaxQ / interface + télémétrie + UI fidélité | 3 | 2 | M | PHY-1 |
+| PHY-2 | Atmosphère par défaut + recalibrage optimiseur | 5 | 4 | L | PHY-1 |
+| MIS-6 | Rendezvous / phasing sur cible TLE | 5 | 5 | XL | MIS-2, MIS-3, MIS-7 |
+
+---
+
+## 5. Graphe de dépendances (l'essentiel)
+
+```
+MIS-8 (horizon de mission)
+   ├── NAV-2 (piste temporelle) ── NAV-3 (scrub)
+   ├── MIS-4 / MIS-5 (lunaire : coast TLI ~3 j > horizon actuel)
+   └── MIS-6 (rendezvous : phasing sur N révolutions)
+
+MIS-7 (mission Terre paramétrable)
+   └── MIS-2 (fenêtres de lancement)
+          ├── MIS-4 (survol lunaire) ──── MIS-5 (orbite lunaire)
+          │      ▲
+          │   PHY-4 (multi-corps)
+          └── MIS-6 (rendezvous) ◄── MIS-3 (Lambert + LVLH)
+                                  ◄── source éphéméride TLE
+
+PHY-1 (drag off par défaut) ── PHY-2 (drag par défaut + recalibrage)
+                            └─ PHY-3 (MaxQ, télémétrie)
+
+RND-4 (ribbon) ── NAV-5 (hover)
+```
+
+Trois nœuds commandent tout le reste : **MIS-8** (le plus en amont, et le moins
+cher — tout ce qui dure plus d'un jour simulé bute dessus), **PHY-4** (sans lui,
+rien de lunaire) et **MIS-2** (sans fenêtre de lancement, ni la Lune ni un
+rendez-vous ne convergent — la cible n'est jamais au bon endroit).
+
+---
+
+## 6. Détail des items
+
+*Fiches de référence, dans l'ordre des familles d'identifiants — pas dans
+l'ordre d'exécution. Pour savoir par quoi commencer, voir le §3.*
+
+### RND — Rendu et lisibilité
+
+#### RND-1 — Corriger le Z-fighting / scintillement en vue spacecraft — ★4 ◆1 S
+
+**Pourquoi.** Deux artefacts visibles aujourd'hui : la ligne de trajectoire
+scintille, et la Terre se couvre de motifs hexagonaux troués à certaines
+distances. C'est le défaut le plus visible de l'application, pour le correctif
+le moins cher du document. C'est aussi un **prérequis d'hygiène** : tout
+enrichissement de la ligne (RND-3, RND-4) ou de l'approche planétaire (missions
+lunaires) empile du travail sur un rendu qui bataille déjà.
+
+**État.** `MissionTrajectoryRenderer.java:59` ne pose que `setLineWidth(2f)` —
+ni `setDepthWrite`, ni `setPolyOffset`, ni bucket transparent.
+`NearCameraSyncAppState.java:31,34,71` garde `NEAR_MIN = 0.01f` (10 m),
+`FAR_MIN = 100_000f` et un facteur near de `0.0005f` : ratio far/near ≈ 10⁴,
+soit ~300–500 m de résolution de profondeur à la surface de la Terre.
+
+**À faire.** Le tier 1 de la spec, tel quel : `setDepthWrite(false)` +
+`setPolyOffset(-1,-1)` + `Bucket.Transparent` sur le matériau de ligne ;
+`NEAR_MIN = 1f`, facteur near `0.005f`, `FAR_MIN = 50_000f`. Quatre lignes et
+trois constantes.
+
+**Spec.** [`specs/graphics-effects/spacecraft-view-artefacts.md`](../graphics-effects/spacecraft-view-artefacts.md) §5.1.
+
+#### RND-2 — Filtrage anisotrope — ★2 ◆1 S
+
+**Pourquoi.** Complète le MSAA déjà actif. Effet réel mais modeste : les
+textures planétaires vues en biseau.
+
+**Attention — ce que le MSAA ne fait pas.** Il n'antialiase pas les lignes GL de
+manière fiable, et `glLineWidth > 1` est silencieusement plafonné à 1 px sur les
+drivers en profil core. L'aliasing des orbites ne se règle donc **pas** par les
+réglages `AppSettings` : c'est `RND-4` (ribbon) qui le règle. Ne pas attendre de
+`RND-2` qu'il « nettoie les orbites ».
+
+#### RND-3 — Couleur par stage, passé / futur, marqueur « now » — ★4 ◆2 M
+
+**Pourquoi.** `MissionEphemerisPoint` porte déjà un `stageName` que rien
+n'exploite visuellement : on ne voit pas où finit l'ascension verticale, où
+commence la gravity turn, où le transfert s'allume. Beaucoup de signal pour zéro
+coût GPU.
+
+**À faire.** Buffer `VertexBuffer.Type.Color` dans `OrbitLineFactory`, table
+`stageName → ColorRGBA`, alpha modulé par `t ≶ clock.now()` (re-upload du seul
+color buffer, la trajectoire est bornée à 8192 points), billboard additif à la
+position courante.
+
+**Spec.** [`effects-roadmap.md`](../graphics-effects/effects-roadmap.md) §9.3.
+
+#### RND-4 — Ribbon billboardé — ★4 ◆3 M
+
+**Pourquoi.** Seule vraie réponse au plafonnement de `glLineWidth` : épaisseur
+stable, antialiasing par alpha-fade des bords, lisibilité à distance. Débloque
+ensuite les tirets animés, le halo additif et le hover (`NAV-5`).
+
+**Spec.** [`effects-roadmap.md`](../graphics-effects/effects-roadmap.md) §9.4.1.
+
+---
+
+### NAV — Caméra, timeline, navigation
+
+#### NAV-1 — Transitions de caméra — ★4 ◆2 M
+
+**Pourquoi.** Aujourd'hui tout changement de vue est un cut sec en un frame :
+l'utilisateur perd le fil spatial entre « d'où je viens » et « où je suis ».
+
+**État.** La spec est complète et prête à coder : `CameraTransitionConfig`,
+`Easing`, `TransitionTarget` scellé, `CameraTransitionAppState`, blocage centralisé
+des entrées, ordre d'attachement des AppStates. Rien n'existe encore côté code
+(`states/camera/` ne contient que floating origin, near sync, orbit cam, view mode).
+
+**Piège principal**, déjà identifié par la spec : `CameraTransitionAppState` doit
+être attaché **avant** `FloatingOriginAppState`, sinon un sursaut apparaît au
+basculement de mode.
+
+**Spec.** [`specs/camera/01-view-transitions.md`](../camera/01-view-transitions.md).
+
+#### NAV-2 — Timeline indexée sur le temps + marqueurs d'événements — ★4 ◆3 M
+
+**Pourquoi.** `ScrubberTrack` n'a aujourd'hui aucune notion de date : ses 21
+graduations sont décoratives et indexées sur la **vitesse**. Une timeline de
+simulation orbitale qui ne représente pas le temps est une anomalie.
+
+**Dépend de `MIS-8`.** La fenêtre représentée par la piste, c'est la durée de la
+mission : tant que cette durée est une constante arbitraire, la piste l'est
+aussi et devra être refaite.
+
+**À faire, dans l'ordre.**
+1. Trancher la fenêtre représentée : durée de la mission sélectionnée, ou
+   fenêtre glissante autour de `now()` ? (cf. question ouverte n°1.)
+2. Fonction temps ↔ position, puis marqueurs aux transitions de stages de la
+   mission sélectionnée.
+3. Hover → tooltip (stage + timestamp), click → `clock.seek(...)`.
+
+Synergie forte avec `RND-3` : mêmes frontières de stages, mêmes couleurs — la
+timeline et la trajectoire 3D doivent partager la table de couleurs, pas en
+avoir deux.
+
+#### NAV-3 — Scrub continu — ★3 ◆2 S
+
+Subordonné à NAV-2. Attention au débit : chaque `seek` reconstruit toute la
+fenêtre éphéméride (`EphemerisWorker.onSeek`) — n'émettre qu'au relâchement, ou
+étrangler. Trancher la cohabitation piste-vitesse / piste-temps sur le même
+widget (recommandé : deux pistes distinctes).
+
+#### NAV-4 — Breadcrumb de navigation 3D — ★3 ◆2 M
+
+Spec complète et non commencée (`ui/breadcrumb/` et
+`states/scene/BreadcrumbWidgetAppState.java` absents). Devient nettement plus
+utile une fois les missions lunaires en place : la hiérarchie
+`Soleil > Terre > Lune > mission` est exactement ce que le widget sait afficher.
+
+**Spec.** [`specs/navigation/01-breadcrumb.md`](../navigation/01-breadcrumb.md).
+
+#### NAV-5 — Hover « wow » — ★3 ◆2 M
+
+Spec complète. À faire **après** `RND-4` : le boost d'épaisseur à ×2 sur hover
+repose sur `setLineWidth`, qui ne marchera pas sur les drivers en profil core.
+Avec le ribbon, la spec devient applicable telle qu'écrite.
+
+**Spec.** [`specs/graphics-effects/hover-effects.md`](../graphics-effects/hover-effects.md).
+
+---
+
+### FX — Effets graphiques
+
+#### FX-1 — Bloom sur le Soleil — ★3 ◆1 S
+
+**Pourquoi.** Le Soleil est un disque mat au centre d'une scène qui a maintenant
+une skybox et un éclairage directionnel : c'est l'élément qui détonne.
+
+**À faire.** Nouveau `PostFxAppState` dans `states/fx/` (qui centralisera ensuite
+tone-mapping et god-rays), `FilterPostProcessor` sur le viewport **far**.
+
+**Détail qui compte, nouveau depuis la skybox** : en `GlowMode.Scene` avec un
+seuil de luminance, le champ d'étoiles de la cubemap va blooming avec le Soleil
+et la scène devient laiteuse. Utiliser **`BloomFilter(GlowMode.Objects)`** et
+poser un `GlowColor` sur le seul matériau du Soleil — le bloom devient explicite
+et ne dépend plus d'un seuil à régler contre le fond.
+
+#### FX-2 — Éclipses / pénombre inter-corps — ★4 ◆3 M
+
+**Pourquoi.** Un vaisseau qui traverse le cône d'ombre de la Terre, la Lune qui
+s'éteint en entrant dans l'ombre terrestre : c'est un phénomène *que la
+simulation calcule déjà correctement* et que le rendu ignore.
+
+**Réévaluation par rapport à `effects-roadmap.md` §6.3 (qui la classait ◆4).**
+Le document supposait un pipeline `Unshaded` sans shader maison. Ce n'est plus
+le cas : `MatDefs/Light/WrapLighting.frag` est notre shader, et son terme
+d'éclairage tient en une ligne (`color += DiffuseSum.rgb * lightColor.rgb *
+diffuseColor.rgb * diff * lightDir.w`). Deux niveaux de mise en œuvre :
+
+- **Niveau 1 — facteur scalaire par corps (◆2).** Un uniform `m_EclipseFactor`
+  multiplie `diff`. Calcul CPU analytique sphère/cône (Orekit fournit la
+  géométrie), une valeur par corps et par frame. Couvre le vaisseau dans l'ombre
+  de la Terre et la Lune éclipsée — les cas où l'occulteur couvre tout le corps.
+- **Niveau 2 — occultation par fragment (◆3).** Passer position et rayon de
+  l'occulteur en uniforms et calculer la fraction occultée dans le fragment
+  shader. Nécessaire pour la **tache d'ombre lunaire sur la Terre** (éclipse
+  solaire vue de l'espace), qui est l'image qui vaut le chantier.
+
+Livrer le niveau 1 d'abord ; le niveau 2 réutilise le même point d'injection.
+
+#### FX-3 — Particules de tuyère — ★4 ◆2 M *(ajout)*
+
+Les vaisseaux glissent en silence, et rien à l'écran ne distingue une phase
+propulsée d'un coast. `ParticleEmitter` (built-in) attaché au node du vaisseau,
+blending additif, débit modulé par la magnitude de poussée, activation pilotée
+par la phase courante via `MissionContext`. Synergie directe avec `RND-3` (code
+couleur thrust/coast sur la trajectoire) : même information, deux canaux.
+
+---
+
+### PHY — Physique
+
+#### PHY-1 — Atmosphère : la brique, désactivée par défaut — ★4 ◆3 L
+
+**Périmètre.** Phases 0 à 3 de la spec atmosphère : prototype isolé, record
+`AerodynamicProperties` (optionnel sur `Spacecraft` / `LaunchVehicle`, agrégé par
+`VehicleStack` sur l'étage actif), `AtmosphereModel` enum + factories
+`OrekitService` surchargées avec cache, câblage du contexte aéro dans
+`GravityTurnManeuver.propagateForOptimization` et
+`TransfertTwoManeuver.propagateForOptimization`.
+
+**Contrainte non négociable.** `AtmosphereModel.NONE` ⇒ propagation **identique
+au bit près** à aujourd'hui. C'est ce qui permet de livrer la brique sans
+toucher aux baselines, et donc de la livrer tôt.
+
+**Piège Orekit signalé par la spec** : à la séparation d'étage, le `DragForce`
+doit voir la nouvelle surface. Un `IsotropicDrag` construit une fois pour toutes
+ne le verra pas.
+
+**Spec.** [`specs/atmosphere/01-impacts-fonctionnels-techniques.md`](../atmosphere/01-impacts-fonctionnels-techniques.md) §5 phases 0–3.
+
+#### PHY-2 — Atmosphère par défaut + recalibrage — ★5 ◆4 L
+
+Harris-Priester pour l'optimisation, NRLMSISE-00 pour la propagation runtime —
+cohérent avec la philosophie 8×8 / 50×50 déjà en place. Relever le
+`periapsisFloor` (100 km n'a plus de sens avec du drag), absorber les pertes
+dans `dt1MaxPhysical`, re-baseliner `LEOMissionOptimizationTest` et la suite
+paramétrique. C'est **le** chantier qui rend la simulation crédible : sans drag,
+un gravity turn atteint son apogée avec moins d'ergols qu'un vrai lanceur.
+
+Coût compute attendu : +5 % (Harris-Priester) à +50 % (NRLMSISE-00) sur une
+optimisation CMA-ES.
+
+#### PHY-3 — Détecteurs, télémétrie, UI de fidélité — ★3 ◆2 M
+
+`MaxQDetector`, `AtmosphericInterfaceDetector` (ligne de Kármán — hook direct
+pour une future rentrée), extension de `TelemetryWidgetAppState` avec Q et drag
+instantané, sélecteur Off / Statique / Réaliste dans `StepParameters`. Le profil
+`Q(t)` est le meilleur objet pédagogique que l'atmosphère apporte.
+
+#### PHY-4 — Socle multi-corps — ★5 ◆4 L
+
+**Pourquoi.** C'est le prérequis dur des deux missions lunaires. Aujourd'hui
+tout est propagé dans un repère central unique et purement gravitationnel autour
+d'un corps.
+
+**À faire.**
+- `ThirdBodyAttraction` (Lune, Soleil) dans les propagateurs concernés.
+- Orchestration des transitions de sphère d'influence Terre → Lune : bascule de
+  repère central, concaténation des arcs.
+- Adaptation de `MissionEphemeris` à une trajectoire multi-arcs (repères
+  différents selon le segment) — impacte `MissionTrajectoryRenderer`, qui suppose
+  aujourd'hui un repère unique.
+- Rendu : la trajectoire lunaire traverse deux échelles ; vérifier la cohabitation
+  avec les deux viewports et la floating origin (cf. `spacecraft-view-artefacts.md`
+  §5.3.3, qui propose un troisième viewport « mid » — à considérer ici, pas avant).
+
+**Prudence sur l'estimation.** ◆4 / L couvre le patched-conic avec 3ᵉ corps, pas
+une propagation N-corps complète ni l'optimisation multi-arcs. Si `MIS-4`
+demande plus, c'est ici que ça se verra.
+
+---
+
+### MIS — Missions
+
+#### MIS-1 — Deuxième lanceur au catalogue — ★3 ◆1 S
+
+`catalog/Launchers.java` ne contient que `FALCON_HEAVY`. `AscentProfile` est
+déjà un champ de `LauncherModel` consommé par `LEOMission` et `GEOMission` :
+tout le câblage « profil de vol dépendant du lanceur » existe mais **n'est
+démontré par aucun second cas**. Ajouter un lanceur (Ariane 6 ou Soyouz)
+valide le câblage, et rend le catalogue de payloads (3 entrées) moins solitaire.
+À faire **avant** les missions lunaires, qui voudront un étage supérieur
+cryogénique.
+
+#### MIS-7 — `EarthOrbitMission` paramétrable — ★4 ◆2 M *(ajout)*
+
+**Pourquoi.** Trois types de mission — polaire, SSO, MEO — sont à ★4/★5
+d'intérêt et quasi gratuits en physique : il ne manque que `launchAzimuth` et
+`targetInclination` comme paramètres au lieu de valeurs implicites Kourou.
+`missions.md` recommandait déjà ce refactor avant d'écrire ces missions ; il est
+en plus un **prérequis du rendez-vous** (matcher le plan de la cible, c'est
+exactement choisir un azimut et une inclinaison).
+
+**À faire.** Généraliser `LEOMission` en mission Terre paramétrée par
+`(launchSite, launchAzimuth, targetAltitude, targetInclination, targetEccentricity)`,
+contrainte d'inclinaison dans le coût (`beta1` est déjà partiellement disponible
+dans `TransferTwoManeuverProblem`), formule analytique SSO
+`cos(i) = -((Re+h)^{7/2} · n_prec) / (3/2 · J2 · Re² · √µ)`.
+
+**Bonus mesurable** : une fois fait, les cartes wizard polaire / SSO / MEO sont
+essentiellement de la saisie de paramètres.
+
+#### MIS-2 — Fenêtres de lancement — ★4 ◆3 M
+
+**Pourquoi.** Sans elle, ni le rendez-vous ni la Lune ne convergent : la cible
+n'est jamais au bon endroit au moment du lancement. C'est aussi ce qui donne
+enfin un sens au champ « date de lancement » du wizard.
+
+**À faire.** `LaunchWindowSolver` qui balaie une plage temporelle et liste les
+créneaux (alignement de plan, RAAN cible, précession J2 ~5°/jour pour l'ISS,
+géométrie Terre-Lune ~mensuelle). UI : timeline des créneaux ouverts dans le
+wizard, avec le Δv associé.
+
+#### MIS-3 — Solveur de Lambert + repère LVLH — ★4 ◆3 M
+
+Deux briques partagées, à écrire une fois :
+
+- **Lambert** — `org.orekit.utils.IodLambert` couvre le mono-révolution ; le
+  multi-révolution est à vérifier et, à défaut, à implémenter (Izzo 2014, court
+  et robuste). Sert de **seed analytique** au CMA-ES exactement comme le seed
+  Hohmann aujourd'hui : l'optimiseur corrige J2, poussée finie et masse variable
+  au lieu de découvrir le transfert depuis rien. Sert aussi au ciblage lunaire.
+- **LVLH** — service qui transforme un état chaser en `(δr, δv)` relatif via
+  `LOFType.LVLH`. Utile au coût terminal, au rendu, et plus tard à HCW.
+
+**Spec.** [`specs/brainstorm/leo-rendezvous-preparation.md`](../brainstorm/leo-rendezvous-preparation.md) §3.5, §3.6.
+
+#### MIS-4 — Survol lunaire (TLI + flyby) — ★5 ◆4 L
+
+**Pourquoi.** Premier objectif au-delà de l'orbite terrestre. Fort en spectacle
+(la trajectoire traverse l'échelle Terre-Lune), fort en pédagogie, et c'est le
+palier qui valide `PHY-4` sur un cas réel.
+
+**À faire.** `TLIBurnStage` (depuis l'apogée d'une orbite de parking),
+coast ~3 jours sous influence lunaire croissante, objectif de survol
+(altitude de périlune visée, distance minimale d'approche). Seed patched-conic,
+correction CMA-ES. Le timing du TLI est très contraint : sans `MIS-2`,
+l'optimiseur cherche dans le vide.
+
+**Spec.** [`specs/brainstorm/missions.md`](../brainstorm/missions.md) §8 (à
+étendre : la spec traite TLI+LOI d'un bloc, le flyby seul est un palier
+intermédiaire moins cher qui mérite d'être livré d'abord).
+
+#### MIS-5 — Mise en orbite lunaire (LOI) — ★5 ◆3 M
+
+Directement sur `MIS-4` : `LunarInsertionStage` (burn rétrograde à l'arrivée),
+`LunarOrbitObjective` (altitude de périlune, inclinaison lunaire). L'essentiel
+du coût est dans `MIS-4` ; ici on ajoute un stage et un objectif. Rapport
+valeur/effort excellent une fois le survol acquis — raison pour laquelle les
+deux sont séparés.
+
+#### MIS-6 — Rendezvous / phasing sur cible TLE — ★5 ◆5 XL
+
+Le plus gros item du document, et le mieux préparé : la spec dédiée fait 528
+lignes et a déjà tranché l'essentiel.
+
+**Décomposition.**
+1. **Source TLE bufferisée.** `TLEPropagator` (SGP4) derrière
+   `SlidingWindowEphemerisBuffer` — **non négociable** : à ×10⁵ de vitesse
+   d'horloge, l'orbite cible défile entièrement entre deux frames, et une ligne
+   d'orbite demande 100–500 points par rafraîchissement. Fenêtre bornée par la
+   validité physique du TLE (±3 à 7 jours), pas de dataset 1990-2101.
+2. **Abstraction `EphemerisTarget`** (scellée : `SolarBody` | `TleTarget`) —
+   l'API est aujourd'hui couplée à l'enum `SolarSystemBody` de bout en bout.
+   C'est le vrai coût de refactor du chantier.
+3. **Stages** phasing (N révolutions entières, `Δa`) puis transfert Lambert.
+4. **Coût** `‖Δr‖ + ‖Δv‖ + ΣΔv + corridor + ergols`, cible MVP Δr < 10 km,
+   `‖Δv_rel‖` < 10 m/s.
+5. **Rendu de la cible** : `TargetObjectRenderer`, aujourd'hui inexistant.
+
+**Tranché dans la spec, à ne pas rouvrir** : pas de Pontryagin (dans le cas
+impulsif il ne rapporte rien sur une méthode directe), pas d'approche terminale
+HCW au MVP, ISS seule comme cible.
+
+**Stretch à fort rendement** : la vue LVLH dédiée. En repère inertiel, un
+rendez-vous est une spirale illisible ; en LVLH, c'est une figure compacte
+autour de la cible. C'est le bénéfice visuel n°1 de la feature.
+
+**Spec.** [`specs/brainstorm/leo-rendezvous-preparation.md`](../brainstorm/leo-rendezvous-preparation.md).
+
+#### MIS-8 — Horizon de mission explicite — ★5 ◆2 M
+
+**Pourquoi.** La date de fin d'une mission est aujourd'hui une **constante**, et
+elle est arbitraire à deux endroits :
+
+| Constante | Valeur | Rôle |
+|---|---|---|
+| `MissionEphemerisGenerator.DEFAULT_COAST_DURATION_SECONDS` | `86_164.0` | coast final, appliqué au **dernier stage** de la chaîne |
+| `StageChainRunner.FALLBACK_DURATION_SECONDS` | `7200.0` | filet pour un stage sans cutoff configuré |
+
+Trois problèmes distincts, du plus bénin au plus bloquant.
+
+1. **Le commentaire ment.** `86_164.0` est annoté `// 90 min (one LEO orbit)` :
+   c'est un **jour sidéral**, seize fois la valeur commentée. Quelqu'un a écrit
+   une intention et une autre valeur. On ne peut pas raisonner sur un horizon
+   dont la documentation est fausse d'un facteur 16.
+2. **Le symptôme est visible aujourd'hui.** Passé cet horizon,
+   `MissionOrchestratorAppState` bascule sur la branche « clock after
+   ephemeris » : le vaisseau est figé sur `lastPoint()` avec sa traînée
+   complète, et `TelemetryWidget` affiche `COMPLETE`. Un satellite correctement
+   inséré en LEO **s'arrête donc de tourner au bout de ~23 h 56 de temps
+   simulé** et reste parqué là. Avec une timeline qui monte à ×10⁵, on y arrive
+   en quelques secondes de temps réel.
+3. **C'est un blocage dur pour les phases 4 et 5**, pas une finition. Un coast
+   TLI vers la Lune dure ~3 jours : il est **tronqué avant l'arrivée** par un
+   horizon d'un jour. Un phasing de rendez-vous sur N révolutions se heurte au
+   même mur. Aucune des deux familles de missions ne peut être écrite tant que
+   l'horizon est une constante.
+
+**Ce qui rend l'item plus qu'un remplacement de constante.** L'échantillonnage
+est à pas fixe (`DEFAULT_STEP_SECONDS = 1.0`), et `MissionEphemeris` garde tout
+en mémoire dans des tableaux parallèles de `AbsoluteDate` / `Vector3D` (~160 o
+par point, références comprises) :
+
+| Horizon | Pas fixe 1 s | Pas variable (1 s en burn, 60 s en coast) |
+|---|---|---|
+| aujourd'hui (1 j) | 86 k pts ≈ 14 Mo | ~5 k pts ≈ 0,8 Mo |
+| lunaire (3 j) | 260 k pts ≈ 42 Mo | ~9 k pts ≈ 1,5 Mo |
+| dérive (30 j) | 2,6 M pts ≈ **420 Mo** | ~45 k pts ≈ 7 Mo |
+
+Le pas variable achète donc ~60× et rend tenable tout horizon réaliste — c'est
+lui, et pas un stockage hors mémoire, qui est la réponse au problème de taille
+(cf. `MIS-9`). S'ajoute une dépense inutile par frame :
+`MissionOrchestratorAppState:94` appelle `eph.positionsUpTo(now)` **à chaque
+frame et par mission visible**, ce qui alloue une `ArrayList` neuve de cette
+taille à chaque fois.
+
+**Le vrai défaut de conception sous-jacent : un seul tableau sert deux
+consommateurs aux besoins incompatibles.**
+
+- L'**enregistreur de vol** — télémétrie, analytics, verdict de complétude —
+  veut de la fidélité là où la dynamique est rapide, et se moque du reste.
+- La **polyligne d'affichage** veut au plus quelques milliers de points :
+  l'écran fait ~2000 px de large.
+
+Preuve que la tension est déjà là : `MissionTrajectoryRenderer.MAX_POINTS =
+8192`, et `update()` parcourt le tableau **à rebours depuis la fin**
+(`currentPositions.get(size - i)`). La traînée dessinée est donc *les 8192
+derniers échantillons*, soit ≈ 2 h 17 de temps mission au pas actuel : sur toute
+mission plus longue, l'ascension **disparaît silencieusement de la ligne**. Ce
+n'est pas une décimation, c'est une troncature par le début, et personne ne l'a
+décidée. Séparer les deux produits est plus utile — et moins cher — que de
+sortir l'éphéméride de la mémoire. Effet de bord agréable du pas variable : à
+nombre de points constant, la fenêtre dessinée couvre bien plus de temps.
+
+**À faire.**
+
+1. **Politique d'horizon, dérivée et non constante.** Le bon horizon dépend du
+   type de mission : *N périodes orbitales après insertion* pour une mise en
+   orbite (la période se déduit de l'orbite atteinte, déjà calculée), *arrivée
+   + N révolutions* pour un transfert. Porter la décision sur `MissionSpec` /
+   `Mission` plutôt que dans le générateur d'éphéméride, qui n'a pas à
+   connaître l'intention.
+2. **Exposer le réglage** dans le wizard (« durée de mission » / « propager
+   jusqu'à ») avec le défaut dérivé pré-rempli — c'est le geste que l'absence
+   d'horizon explicite empêche aujourd'hui.
+3. **Pas d'échantillonnage variable par phase.** 1 s pendant les burns (où la
+   dynamique est rapide et où la précision compte), nettement plus grossier
+   pendant les coasts. Sans quoi le point 1 est impayable.
+4. **Corriger le commentaire faux**, et pendant qu'on y est le
+   `positionsUpTo` par frame (cache invalidé sur changement de `now`, ou vue
+   sans copie).
+
+**Attention à ne pas confondre deux horizons.** Celui-ci est l'horizon *de
+restitution* (jusqu'où on échantillonne et affiche). Il ne doit pas changer les
+trajectoires optimisées : le coast final est postérieur au dernier stage
+optimisé, donc l'allonger ou le raccourcir ne doit toucher **aucune** baseline
+d'optimiseur. C'est ce qui permet de faire ce chantier en phase 1 sans risque.
+À vérifier explicitement par un test de non-régression avant de toucher au
+`FALLBACK_DURATION_SECONDS`, lui **est** dans le chemin des stages.
+
+**Fichiers.** `simulation/mission/ephemeris/MissionEphemerisGenerator.java`,
+`simulation/mission/runtime/StageChainRunner.java`,
+`simulation/mission/ephemeris/MissionEphemeris.java`,
+`states/mission/MissionOrchestratorAppState.java`,
+`states/mission/MissionTrajectoryRenderer.java`,
+`simulation/mission/operation/MissionSpec.java`,
+`ui/mission/wizard/step/StepParameters.java`.
+
+#### MIS-9 — Éphéméride de mission hors mémoire — **non planifié, conditionnel**
+
+> Corollaire naturel de `MIS-8`, délibérément **non retenu dans une phase**. Ce
+> n'est pas un refus : c'est un item dont la condition de déclenchement n'est
+> pas remplie aujourd'hui, et qui coûterait cher s'il était fait trop tôt.
+
+**L'idée.** Ne plus garder toute la trajectoire en mémoire : la générer en flux
+vers le disque, et n'en charger qu'une fenêtre.
+
+**Pourquoi ce n'est pas la bonne réponse *maintenant*.** Le tableau de `MIS-8`
+montre que le pas d'échantillonnage variable rend tenable tout horizon
+réaliste (30 jours ≈ 7 Mo). Le stockage hors mémoire achèterait le même
+résultat pour dix fois le travail : format, versionnement, IO hors du fil de
+rendu, fenêtre glissante, invalidation à la ré-optimisation, cycle de vie des
+fichiers temporaires. Et il ne réglerait pas le vrai défaut — les deux
+consommateurs aux besoins incompatibles (cf. `MIS-8`), qui restera entier
+quelle que soit la localisation des octets.
+
+**Conditions de déclenchement** (au moins une, et **mesurée**, pas supposée) :
+
+1. un cas d'usage réel demande une résolution fine sur un horizon long — par
+   exemple une décroissance orbitale sur des mois après `PHY-2`, ou une analyse
+   post-mission qui veut chaque seconde de l'ascension **et** 30 jours de
+   dérive ;
+2. le nombre de missions simultanément visibles fait de la somme des
+   éphémérides un poste mémoire mesuré, pas redouté ;
+3. le mode batch (backlog) veut produire des trajectoires sans les afficher.
+
+**Comment le faire le jour venu — et surtout, ce qu'il ne faut pas faire.**
+Ne pas inventer un format de trajectoire mission sur disque. Le projet a déjà
+toute la machinerie pour ça : `SlidingWindowEphemerisBuffer`,
+`EphemerisWorker`, le format V1 zstd de `simulation/source/`, `LruCache`,
+prefetch. Et `MIS-6` conclut déjà que la cible TLE doit passer par cette même
+couche. Trois consommateurs convergent donc — planètes, cibles TLE,
+trajectoires longues — et le geste juste est de **généraliser
+`EphemerisSource` / `EphemerisTarget` une fois**, la trajectoire de mission
+devenant une source parmi d'autres. Ce refactor est déjà compté dans `MIS-6` :
+si `MIS-9` se déclenche, il se fait *après* lui et à son tarif marginal, pas
+comme un chantier séparé.
+
+---
+
+### UI — Panel et plomberie mission
+
+#### UI-1 — Vue détail mission — ★4 ◆2 M
+
+**Pourquoi.** `MissionOptimizerResult` et `AchievedOrbit` sont calculés et
+stockés — et **aucun fichier de `ui/` ne les lit**. L'application optimise des
+trajectoires sans jamais dire ce qu'elle a obtenu. `PanelFooter` affiche
+identité et attributs (type, date, site), rien du résultat.
+
+**À faire.** Zone de détail sur sélection : altitude et inclinaison atteintes,
+écart à la cible (`AchievedOrbit` expose déjà `hasOsculating()` /
+`formatOsculating()` / équivalents moyens), liste des stages avec durée et Δv.
+Et pour `FAILED` : un message lisible — ce qui suppose d'**ajouter le champ**
+(`MissionEntry.lastError`, absent aujourd'hui) et de l'alimenter aux deux
+endroits qui passent en `FAILED` (`MissionEntry.setOptimizationType` et
+`MissionOrchestratorAppState`), où l'exception n'est aujourd'hui que loguée.
+
+#### UI-2 — Feedback de progression pendant l'optimisation — ★3 ◆2 M
+
+**Contrainte mesurée à respecter** : le coût d'une évaluation varie d'un facteur
+~5 et n'est pas prévisible → une barre linéaire en nombre d'évaluations sera
+par moments franchement fausse. Indicateur **indéterminé** (spinner) + compteur
+d'évaluations en texte. Devient plus important à mesure que les optimisations
+s'allongent (lunaire, rendez-vous) — d'où son placement en phase 3, avant
+elles.
+
+#### UI-3 — Persistance / format de scénario — ★4 ◆3 M *(ajout)*
+
+**Pourquoi.** Les missions ne survivent pas à la fermeture de l'application. Au
+delà du confort, un format de scénario sérialisable (lanceur, payload, site,
+paramètres, date, seed CMA-ES) est la feature la plus *enabling* du brainstorm
+long terme : reproductibilité, partage, mode batch, scénarios historiques,
+défis en dépendent tous.
+
+**Ce qui existe.** `MissionSpec` est immuable et sérialise déjà les paramètres
+du wizard — le plus dur est fait. Manquent le schéma v1 avec `formatVersion`,
+les (dé)sérialiseurs et deux entrées de menu.
+
+**Ce qu'on persiste, et ce qu'on ne persiste pas.** Le point est structurant,
+autant le poser ici :
+
+| Donnée | Persistée ? | Pourquoi |
+|---|---|---|
+| `MissionSpec` (type, lanceur, payload, site, date, paramètres) | **oui** | quelques centaines d'octets, versionnable, diffable, lisible |
+| Résultat d'optimisation (le petit vecteur de paramètres, pas la trajectoire) | **oui** | évite de rejouer un CMA-ES de plusieurs minutes au chargement |
+| `MissionEphemeris` (les points échantillonnés) | **non** | produit **dérivé**, 14 à 420 Mo par mission (cf. `MIS-8`), et périmé dès que le propagateur change |
+
+Autrement dit : on recharge une mission en **régénérant** son éphéméride depuis
+le spec et les paramètres optimisés. C'est ce qui garde `UI-3` à ◆3 et le rend
+indépendant de toute question de mémoire.
+
+**Couplage avec `PHY-2`, désormais certain.** `UI-3` est en phase 3, la bascule
+du drag en phase 6 : tous les scénarios écrits d'ici là le seront **sans**
+atmosphère. Le champ « modèle d'atmosphère » doit donc figurer dans le format
+dès la v1, même s'il ne vaut que `NONE` — sans lui, un scénario d'avant la
+bascule se rejoue après avec une physique différente et personne ne le voit
+passer. C'est aussi la raison pour laquelle stocker la trajectoire échantillonnée
+serait un piège : elle deviendrait fausse sans que rien ne le signale.
+
+---
+
+## 7. Backlog non planifié
+
+Gardé hors phases, à remonter si le besoin se manifeste :
+
+- **Rendu** — god-rays, normal maps, lumières de villes côté nuit, halo
+  atmosphérique Fresnel, anneaux de Saturne, ombres portées, trace au sol
+  (ground track), enveloppe d'incertitude autour du nominal.
+- **Profondeur** — logarithmic depth buffer ou reverse-Z, troisième viewport
+  « mid ». À rouvrir si `RND-1` ne suffit pas une fois les missions lunaires en
+  place (Terre + Lune + vaisseau dans le même cadre est précisément le cas qui
+  fait exploser le ratio far/near).
+- **Missions** — Molniya / HEO, déorbitage et rentrée, déploiement de
+  constellation, points de Lagrange, interplanétaire, gravity assist.
+- **Plateforme** — mode batch headless, analytics et graphes post-mission,
+  replays cinématiques, catalogue de débris TLE, validation contre données
+  réelles (JPL Horizons), scripting.
+- **Éphéméride hors mémoire** — `MIS-9`, fiche complète en §6 avec ses
+  conditions de déclenchement. Rangé ici et non dans une phase : le pas
+  variable de `MIS-8` le rend inutile pour tout horizon réaliste, et il devra
+  passer par la généralisation d'`EphemerisSource` faite en `MIS-6`.
+- **Optimiseur** — mode CMA-ES pour la composition GEO (les 3 modes composent
+  aujourd'hui la même `GEOMission` analytique ; seul le levier ergols agit
+  réellement sur GEO).
+
+Détail et notation dans [`specs/brainstorm/features-long-terme.md`](../brainstorm/features-long-terme.md)
+et [`specs/brainstorm/missions.md`](../brainstorm/missions.md).
+
+---
+
+## 8. Questions ouvertes
+
+1. **Horizon de mission (MIS-8)** — purement dérivé du type de mission (N
+   périodes après insertion, arrivée + N révolutions), ou réglable par
+   l'utilisateur dans le wizard avec ce dérivé comme défaut ? Le dérivé seul
+   suffit à débloquer les phases 4 et 5 et coûte nettement moins cher ; le
+   champ wizard est ce qui rend l'horizon *intéressant* (« montre-moi 30 jours
+   de dérive »). La fiche §6 propose les deux, l'ordre est négociable.
+2. **Fenêtre de la piste temporelle (NAV-2)** — durée de la mission
+   sélectionnée, ou fenêtre glissante autour de `now()` ? La première est plus
+   lisible pour analyser une mission, la seconde reste utile quand aucune
+   mission n'est sélectionnée. Probablement les deux, avec bascule — mais à
+   trancher avant de coder la fonction temps ↔ position.
+3. **Auto-optimisation après création** — toujours ouverte depuis la révision
+   précédente. Aujourd'hui `createMission()` ajoute l'entrée en `DRAFT` sans
+   déclencher de calcul. `UI-2` (progression) est un préalable raisonnable :
+   déclencher automatiquement un calcul long sans indicateur serait pire que le
+   clic actuel.
+4. **Troisième viewport** — le décide-t-on avec `PHY-4` (les missions lunaires
+   exposent d'un coup trois échelles) ou attend-on de constater les artefacts ?
+   Recommandation : attendre, mais garder `RND-1` mesuré pour pouvoir comparer.
+5. **Cible du rendez-vous** — ISS livrée en dur (option A de la spec) suffit au
+   MVP. L'import de TLE arbitraire (option B) est une feature UI à part entière,
+   à ne pas glisser dans `MIS-6`.

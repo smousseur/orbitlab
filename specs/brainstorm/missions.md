@@ -1,6 +1,18 @@
 # Brainstorm — Types de missions OrbitLab
 
-> **Baseline** : LEO et GTO sont stables et intégrés.
+> **⚠ Bandeau de statut — 2026-08-08.** La baseline a avancé : **GEO (§4) est
+> livré** (composition analytique GTO → circularisation d'apogée, carte active
+> dans le wizard), et LEO est stable. Le tableau de priorisation en fin de
+> document n'a pas été recalé — la priorisation qui fait foi est celle de
+> [`roadmap/01-roadmap.md`](../roadmap/01-roadmap.md), qui retient le survol
+> lunaire et la mise en orbite lunaire (§8, scindés en deux paliers), le
+> rendez-vous (§9, détaillé dans
+> [`leo-rendezvous-preparation.md`](leo-rendezvous-preparation.md)) et le
+> refactor `EarthOrbitMission` de la §"Recommandations architecturales" (qui
+> rend polaire / SSO / MEO quasi gratuits). Le reste du document sert de
+> catalogue de référence.
+
+> **Baseline (à la rédaction)** : LEO et GTO sont stables et intégrés.
 >
 > **Critères de classement** : **difficulté technique** (briques manquantes à créer) × **intérêt utilisateur** (valeur pédagogique, spectacle visuel, réalisme).
 

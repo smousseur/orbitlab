@@ -1,5 +1,28 @@
 # Spec — Roadmap effets graphiques
 
+> **⚠ Bandeau de statut — 2026-08-08.** Le §1 ci-dessous décrit un état du rendu
+> qui n'est plus le nôtre. Trois éléments du tier 1 sont **livrés** :
+>
+> - **Skybox étoilée (§3.1)** — `states/scene/SkyboxAppState.java`, cubemap sous
+>   `resources/textures/skybox/`.
+> - **Lambert sur les planètes (§3.2)** — fait **autrement** que prévu : pas
+>   `Common/MatDefs/Light/Lighting.j3md`, mais un shader maison
+>   `MatDefs/Light/WrapLighting.{j3md,vert,frag}` avec bande crépusculaire
+>   paramétrable (`FallOffFactor`), appliqué par `AssetFactory.applyLambert`
+>   depuis `PlanetPoseAppState` (0.8) et `MissionRenderer` (0.3).
+> - **MSAA (§3.4)** — `OrbitLabApplication.java:58`, `settings.setSamples(4)`.
+>   Le filtrage anisotrope reste à faire. Rappel : le MSAA **n'antialiase pas**
+>   les lignes GL de façon fiable — l'aliasing des orbites relève du ribbon
+>   (§9.4.1), pas des `AppSettings`.
+>
+> Conséquences sur le reste du document : « aucun shader custom » (§1) est faux,
+> nous en avons un et nous le maîtrisons — ce qui **abaisse le coût des éclipses
+> (§6.3)** à un uniform d'occultation multipliant le terme `diff` du fragment
+> shader. Voir `roadmap/01-roadmap.md` item `FX-2`.
+>
+> Le reste du document (tiers 2 à 4, et tout le §9 sur les trajectoires) est
+> valide.
+
 ## 1. Contexte
 
 Le rendu actuel d'OrbitLab est fonctionnel mais minimal :
