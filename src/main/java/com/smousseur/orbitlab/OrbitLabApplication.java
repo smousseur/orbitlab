@@ -77,8 +77,13 @@ public class OrbitLabApplication extends SimpleApplication {
     stateManager.attach(new EphemerisAppState(applicationContext));
     stateManager.attach(new PlanetPoseAppState(applicationContext));
     stateManager.attach(new ViewModeAppState(applicationContext));
-    stateManager.attach(new MissionOrchestratorAppState(applicationContext));
+    // Attach order IS update order (AppStateManager walks the states in insertion order), and it
+    // matters here: FloatingOriginAppState owns the frame offsets, and every state that reads a
+    // world position back out of the scene graph must come after it. MissionOrchestratorAppState
+    // does exactly that (the LOD measures the camera-to-spacecraft distance), so it must not be
+    // moved back above this line — cf. specs/graphics-effects/spacecraft-view-artefacts.md §3.
     stateManager.attach(new FloatingOriginAppState(applicationContext));
+    stateManager.attach(new MissionOrchestratorAppState(applicationContext));
     stateManager.attach(new PlanetHudMarkersAppState(applicationContext));
     stateManager.attach(new SolarSystemSceneAppState(applicationContext));
     stateManager.attach(new OrbitInitAppState(applicationContext));

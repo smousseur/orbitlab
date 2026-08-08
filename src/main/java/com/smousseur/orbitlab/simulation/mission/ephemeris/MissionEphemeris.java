@@ -165,6 +165,31 @@ public final class MissionEphemeris {
   }
 
   /**
+   * The point to show at {@code date}: interpolated inside the recorded span, and clamped to the
+   * first or last sample outside it — before launch the spacecraft is on its pad, after the last
+   * sample the mission is over and it stays where it ended.
+   *
+   * <p>Exists so that the two states that need the spacecraft's current position cannot disagree
+   * about it. {@link com.smousseur.orbitlab.states.camera.FloatingOriginAppState} offsets the near
+   * frame by the negation of that position while {@link
+   * com.smousseur.orbitlab.states.mission.MissionOrchestratorAppState} places the spacecraft anchor
+   * at it; the spacecraft lands exactly on the near-view origin only if both read the same point
+   * for the same date.
+   *
+   * @param date the current simulation date
+   * @return the point to display, never {@code null}
+   */
+  public MissionEphemerisPoint displayPointAt(AbsoluteDate date) {
+    if (date.compareTo(startDate()) <= 0) {
+      return firstPoint();
+    }
+    if (date.compareTo(endDate()) >= 0) {
+      return lastPoint();
+    }
+    return interpolate(date);
+  }
+
+  /**
    * Returns all raw sample points. Used for extracting stage-specific data (e.g. in tests).
    *
    * @return unmodifiable list of all ephemeris points

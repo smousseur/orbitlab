@@ -98,7 +98,7 @@ public final class MissionOrchestratorAppState extends BaseAppState {
       // the previous code built a fresh list of up to 86 400 positions per frame and per mission.
       TrajectoryPolyline trail = eph.displayTrail();
       boolean within = now.compareTo(eph.endDate()) <= 0;
-      MissionEphemerisPoint pt = within ? eph.interpolate(now) : eph.lastPoint();
+      MissionEphemerisPoint pt = eph.displayPointAt(now);
       int upTo = within ? trail.indexUpTo(now) : trail.size() - 1;
 
       renderer.setVisible(true);
@@ -190,7 +190,7 @@ public final class MissionOrchestratorAppState extends BaseAppState {
   }
 
   private MissionRenderer createRenderer(MissionEntry entry) {
-    RenderContext renderContext = RenderContext.planet(entry.mission().getObjective().body());
+    RenderContext renderContext = MissionRenderer.renderContextFor(entry);
     ColorRGBA color = entry.getColor();
     if (color == null) color = ColorRGBA.Cyan;
 

@@ -1,405 +1,474 @@
-# Spec — Artefacts graphiques en vue Spacecraft
+# Spec — Artefacts visuels en vue Spacecraft
 
-> Diagnostic de deux artefacts visuels observés en `ViewMode.SPACECRAFT`,
-> et catalogue des correctifs envisageables, des plus simples (one-liner)
-> aux plus structurants (refonte du pipeline de profondeur). Aucune
-> implémentation engagée à ce stade — ce document sert de base de
-> décision.
+> **Diagnostic refait le 2026-08-09.** Il remplace intégralement la version du
+> commit `6d0676e`, devenue fausse sur trois points (§7). Les symptômes
+> observés aujourd'hui ne sont plus ceux qui y étaient décrits, et la cause
+> dominante n'est pas celle qui y était retenue.
+>
+> **État des correctifs.** Cause A **corrigée le 2026-08-09** (§3, §9.1).
+> Causes B et C ouvertes. Ce document sert de base de décision pour l'item
+> `RND-1` de la roadmap, dont il révise le contenu et le coût.
 
 ## 1. Symptômes observés
 
-1. **La ligne de trajectoire du vaisseau scintille.** Pixels qui
-   clignotent le long de la `LineStrip` quand la caméra bouge, surtout
-   quand l'orbite passe près de la surface de la Terre (LEO basse).
-2. **À partir d'une certaine distance, le modèle 3D de la Terre se
-   déforme** : la sphère se couvre de motifs hexagonaux avec des
-   "trous", comme si des faces internes du maillage perçaient à
-   travers la surface visible. Symptôme classique de **Z-fighting**.
+En `ViewMode.SPACECRAFT`, caméra posée sur le vaisseau (clic sur l'icône) :
 
-Les deux symptômes pointent vers la même famille de problèmes :
-**précision insuffisante du depth buffer** dans la near viewport du
-mode spacecraft.
+1. **La ligne de trajectoire saute.** Elle ne reste pas accrochée au vaisseau :
+   elle danse autour de lui d'une frame à l'autre, et scintille par endroits.
+2. **Le modèle 3D du vaisseau disparaît à haute vitesse d'horloge.** À vitesse
+   réelle il est là ; en accéléré il s'éclipse (l'icône 2D prend sa place).
 
-## 2. Rappel — architecture viewports
+Le symptôme « la Terre se couvre de motifs hexagonaux troués » décrit par
+l'ancienne version n'est plus rapporté. Il n'est pas traité ici ; s'il
+réapparaît, il relève du §5.3 (plancher de précision de profondeur), dont les
+chiffres ci-dessous donnent la mesure réelle.
 
-Cf. `specs/camera/01-view-transitions.md` et `CLAUDE.md` §"Rendering:
-Dual Viewport".
+**Trois causes racines indépendantes** ont été identifiées, une par mécanisme.
+Elles n'ont ni la même origine, ni le même correctif :
 
-| | Far viewport | Near viewport |
-|---|---|---|
-| Échelle | 1 unité = 1e9 m (Mm × 1000) | 1 unité = 1e3 m (km) |
-| Cible | Soleil, planètes lointaines, lignes d'orbites héliocentriques | Modèles 3D des corps, vaisseaux, trajectoires de mission |
-| Cam | `cam` JME par défaut | Clone post-view (`NearView`) |
-| Frustum | Adapté frame par frame (`OrbitCameraAppState.updateFrustum`) | Adapté frame par frame (`NearCameraSyncAppState`) |
-| Origine flottante | `solarRoot` translaté de `-planet.position` en PLANET/SPACECRAFT | `nearFrame` translaté de `-spacecraft.position` en SPACECRAFT |
+| # | Cause | Symptôme produit | Confiance | État |
+|---|---|---|:-:|:-:|
+| A | Offset de floating origin en retard d'une frame, lu par le calcul de LOD | Modèle 3D qui disparaît en accéléré | Établie par lecture de code | **Corrigée** |
+| B | Sommets de la ligne en coordonnées GCRF absolues, annulation catastrophique en `float32` | Ligne qui saute / danse autour du vaisseau | Dérivée, quantifiée, non observée | Ouverte |
+| C | Plan near à 10 m ⇒ ~270 km de résolution de profondeur à la distance de la Terre | Ligne qui scintille **là où elle croise le disque terrestre** | Dérivée, quantifiée, non observée | Ouverte |
 
-Le modèle 3D de la Terre est attaché à
-`Model3dView.modelBucket` → `anchor3d` → `nearBucket` →
-`nearBodiesNode` → `nearFrame` → `nearRoot` → near viewport.
-La ligne de trajectoire est dans le même graphe via
-`nearOrbitsNode` (`MissionTrajectoryRenderer.initialize` ligne 62).
+Le §8 donne le protocole d'observation qui sépare B de C en trente secondes.
 
-## 3. Diagnostic — ligne de trajectoire
+## 2. Rappel — architecture concernée
 
-### 3.1 Code en cause
+### 2.1 Graphe near
 
-`states/mission/MissionTrajectoryRenderer.java:48-63` :
-
-```java
-Mesh mesh = new Mesh();
-mesh.setMode(Mesh.Mode.LineStrip);
-// …
-Material mat = AssetFactory.get().material(color);
-mat.setColor("Color", color);
-mat.getAdditionalRenderState().setLineWidth(LINE_WIDTH);   // 2 px
-
-lineGeometry = new Geometry("MissionTrajectory-" + missionName, mesh);
-lineGeometry.setMaterial(mat);
-nearOrbitsNode.attachChild(lineGeometry);
+```
+nearRoot
+└── nearFrame                    ← translaté de −p_vaisseau en SPACECRAFT
+    ├── nearOrbitsNode
+    │   └── MissionTrajectory-<id>   (LineStrip, sommets GCRF absolus en km)
+    └── nearBodiesNode
+        ├── PlanetsBucket → BodyAnchor-EARTH → ModelBucket   (local = 0)
+        └── Anchor-mission-<id>          ← local = +p_vaisseau (km)
+            └── BodyAnchor-mission-<id>  → ModelBucket → heavy_falcon.gltf
 ```
 
-`AssetFactory.material(...)` ne configure **ni `setDepthWrite`, ni
-`setPolyOffset`** (cf. `engine/AssetFactory.java:65-69`). Comparer avec
-`alphaMaterial(...)` qui désactive explicitement le depth write — la
-méthode `material` "non alpha" reste sur les défauts JME (depth test
-on, depth write on, pas de polygon offset).
+`SceneGraph:58-62`, `MissionRenderer:88-90`, `MissionTrajectoryRenderer:69`.
 
-### 3.2 Mécanique de l'artefact
+Échelle near : 1 unité = 1 km (`RenderContext.PLANET_METERS_PER_UNIT`). En LEO
+à 400 km, `|p| ≈ 6778` unités.
 
-Sources cumulables du scintillement :
+### 2.2 Ordre des AppState dans la frame
 
-- **Z-fighting ligne ↔ surface Terre**. Pour une orbite LEO à 400 km,
-  la ligne est à r=6778 km alors que la surface est à r=6378 km. La
-  différence relative à la profondeur caméra est faible (typiquement
-  ≪ 1 %). Avec la précision actuelle du depth buffer dans la near
-  viewport (cf. §4), c'est dans la zone de bataille.
-- **Z-fighting ligne ↔ ligne**. La trajectoire forme des boucles ;
-  des segments distincts se projettent sur les mêmes pixels avec des
-  z très proches. Avec `setDepthWrite(true)`, chaque segment écrit
-  sa profondeur et le suivant tape sur celle d'avant à 1 ulp près.
-- **Rasterisation de `glLineWidth > 1`**. Sur les drivers modernes
-  (Mesa core, NVIDIA core profile, macOS), `setLineWidth(2f)` est
-  silencieusement clampé à 1.0 ; sur les drivers qui l'honorent,
-  l'expansion en quad introduit un anti-aliasing dont les pixels de
-  bord oscillent quand la ligne se déplace sub-pixel à l'écran. Le
-  symptôme "scintille en mouvement" peut venir de là indépendamment
-  du Z-buffer.
+L'ordre d'attachement **est** l'ordre de mise à jour
+(`AppStateManager.update` itère le tableau des états dans l'ordre d'insertion),
+et il est décidé dans `OrbitLabApplication.simpleInitApp` :
 
-## 4. Diagnostic — déformation de la Terre
+| Rang | État | Ce qu'il fait du couple (ancre, nearFrame) |
+|---:|---|---|
+| … | `PlanetPoseAppState` | pose les planètes |
+| 7 | **`MissionOrchestratorAppState`** | écrit `ancre.local = p(t)`, **puis lit `ancre.getWorldTranslation()`** pour le LOD |
+| 8 | **`FloatingOriginAppState`** | lit `ancre.local` et écrit `nearFrame.local = −p(t)` |
+| 9 | `PlanetHudMarkersAppState` | lit les positions monde des planètes (**après** l'origine flottante) |
+| … | `OrbitCameraAppState`, `NearCameraSyncAppState` | posent les caméras |
+| — | `rootNode.updateGeometricState()` | fige les transformées monde pour le rendu |
 
-### 4.1 Code en cause
+Les planètes font donc la lecture **dans le bon ordre** (rang 9 > 8) ; la
+mission la fait **dans le mauvais** (rang 7 < 8). C'est toute la cause A.
 
-`states/camera/NearCameraSyncAppState.java:31-35,70-73` :
+## 3. Cause A — le modèle 3D disparaît en accéléré
 
-```java
-private static final float NEAR_MIN = 0.01f;          // 10 m
-private static final float NEAR_MAX = 500f;           // 500 km
-private static final float FAR_MIN  = 100_000f;       // 100 000 km
-private static final float FAR_MAX  = 100_000_000f;   // 100 millions km
-// …
-float distToOrigin = nearCam.getLocation().length();
-float near = FastMath.clamp(distToOrigin * 0.0005f, NEAR_MIN, NEAR_MAX);
-float far  = FastMath.clamp(distToOrigin * 10f,    FAR_MIN, FAR_MAX);
-nearCam.setFrustumPerspective(fovYDeg, aspect, near, far);
-```
+> **Corrigée le 2026-08-09.** Le §3 décrit l'état d'avant correctif ; ce qui a
+> été fait, et ce qui a été fait *en plus* de ce qui était prévu, est en §9.1.
 
-### 4.2 Mécanique de l'artefact
+### 3.1 Chaîne de causalité
 
-Le depth buffer OpenGL standard fait une projection **non linéaire** :
-la précision se concentre près du near plane et chute en `z²` quand on
-s'éloigne.
-
-Ordre de grandeur réaliste en spacecraft view, vaisseau en LEO, caméra
-à `distToOrigin ≈ 20 000 km` :
-
-| Quantité | Valeur |
-|---|---|
-| `near` | `20 000 × 0.0005 = 10 km` |
-| `far`  | clamp `200 000 → max(100 000, ·)` = `200 000 km`, mais en pratique souvent `FAR_MIN = 100 000 km` |
-| Ratio `far / near` | ~10 000 à 20 000 |
-| Surface Terre vue de la caméra | profondeur dans `[~14 000, ~26 000]` km |
-| Résolution depth à 20 000 km (depth 24 bits) | **~300–500 m** |
-
-300 m de résolution Z à la surface d'un GLTF planète dont les triangles
-adjacents diffèrent en profondeur de quelques mètres (sphère/icosphère
-subdivisée) = **Z-fighting généralisé**. Les "trous hexagonaux"
-correspondent aux faces du maillage géodésique du GLTF (typique d'une
-sphère subdivisée — icosphère ou Goldberg polyhedron) dont certaines
-gagnent localement le test de profondeur sur leurs voisines.
-
-### 4.3 Pourquoi le near est si petit
-
-Le facteur `0.0005f` et `NEAR_MIN = 0.01f` (10 m) sont sur-dimensionnés
-pour les détails du vaisseau. En pratique :
-
-- Le vaisseau est rendu à son ancrage `MissionRenderer.getAnchorSpatial()`,
-  qui est à l'origine de la `nearFrame` en SPACECRAFT mode (cf.
-  `FloatingOriginAppState.update` ligne 87-95). Sa taille effective
-  est de l'ordre de la dizaine de mètres → la caméra ne descend
-  presque jamais à < 1 km.
-- Aucun autre objet n'est aussi proche de l'origine.
-
-Le near plane à 10 m n'est jamais "utile" mais coûte cher en précision
-à la profondeur de la Terre.
-
-### 4.4 Pourquoi le far est si grand
-
-`FAR_MIN = 100 000 km` est fixé pour que la Lune (~384 000 km) ou des
-satellites lointains restent visibles dans la near viewport. Mais il
-est appliqué **inconditionnellement**, même quand le vaisseau est en
-LEO sans rien d'autre à voir à grande distance.
-
-### 4.5 Confirmation indirecte
-
-`FloatingOriginAppState.update` ligne 70 commente déjà le risque :
+`MissionRenderer.updateFromEphemeris` (`:153-155`) fait, dans cet ordre :
 
 ```java
-// Ensure the far frustum is large enough to encompass distant orbits and bodies.
-orbitCam.setFarFloor(PLANET_MODE_FAR_MIN);   // = 50 000 (solar units)
+presenter.updatePose(point.position(), …);   // ancre.local ← p(t)
+view.updateScreen(cam);                      // LOD, lit la position MONDE
+trajectoryRenderer.update(trail, upTo, point.position());
 ```
 
-Le constat — depth precision écrasée par un far plane élevé — est
-**connu côté far viewport** mais pas répliqué côté near.
+et `LodView.updateScreen` (`:92-107`) décide du LOD ainsi :
 
-## 5. Catalogue de correctifs
+```java
+Vector3f bodyPos = farAnchor.getWorldTranslation();   // ← ligne 93
+float distance = cam.getLocation().distance(bodyPos);
+…
+float projectedRadiusPx = (float) (radiusUnits / distance) * (cam.getHeight() * 0.5f) / tanHalfFov;
+float threshold = lastShow3d ? 6f : 10f;
+```
 
-Classés du moins invasif au plus structurant.
+`getWorldTranslation()` déclenche `checkDoTransformUpdate()` : la transformée
+monde est recalculée depuis l'ancêtre le plus haut **marqué sale**. Or
+`nearFrame` n'est pas sale à cet instant — sa translation date de la frame
+précédente, `FloatingOriginAppState` ne passera qu'au rang 8. D'où :
 
-| Niveau | Correctif | Cible | Difficulté | Effet attendu |
+```
+ancre.world = nearFrame.local(t−1) + ancre.local(t)
+            = −p(t−1) + p(t)
+            = Δ   (le déplacement du vaisseau pendant une frame simulée)
+```
+
+Au **rendu**, en revanche, tout est juste : `updateGeometricState()` s'exécute
+après le rang 8, donc `ancre.world = −p(t) + p(t) = 0` exactement (annulation
+bit à bit de deux `float` opposés). Le vaisseau est bien dessiné à l'origine.
+**Seule la décision de LOD est fausse** — elle croit le vaisseau à `Δ` de
+l'origine alors qu'il y est posé.
+
+### 3.2 Chiffres
+
+Vitesse orbitale LEO ≈ 7,7 km/s, 60 fps ⇒ `Δ = 7,7 × (vitesse d'horloge / 60)` km.
+
+Seuil de bascule : `radiusUnits = 0,05` (50 m), `height = 720`, FoV ≈ 21° à la
+distance de focus (500 m ⇒ `normalizedZoom01 ≈ 0,11`), donc
+`projectedRadiusPx ≈ 1915 × 0,05 / distance`. Le modèle s'éteint sous 6 px,
+soit **distance > 16 km**.
+
+| Vitesse d'horloge | Δ (km) | Rayon projeté | Affichage |
+|---:|---:|---:|---|
+| ×0 (pause) | 0 | 191 px (d = 0,5 km) | modèle 3D |
+| ×1 | 0,13 | 149 px | modèle 3D |
+| ×10 | 1,3 | 74 px | modèle 3D |
+| ×60 | 7,7 | 12 px | modèle 3D (marginal) |
+| ×300 | 38 | 2,5 px | **icône** |
+| ×3600 | 462 | 0,2 px | **icône** |
+
+**Prédictions falsifiables** (cf. §8) :
+
+- Le basculement se produit entre ×60 et ×300, pas avant.
+- **Mettre l'horloge en pause fait revenir le modèle instantanément**, sans
+  bouger la caméra : `Δ` tombe à zéro. C'est le test décisif — aucun mécanisme
+  de profondeur ou de précision ne réagit à la pause.
+- Le seuil se déplace avec le framerate : moins de fps ⇒ `Δ` plus grand ⇒
+  disparition plus tôt.
+- Autour du seuil, l'hystérésis 6↔10 px s'applique à une grandeur bruitée (Δ
+  varie avec le jitter de `tpf`) : on doit voir un **clignotement** modèle ↔
+  icône plutôt qu'une bascule franche.
+
+### 3.3 Effet de bord
+
+`BillboardIconView.updateScreenPosition` (`:87-102`) projette la **même**
+position monde fausse. L'icône censée remplacer le modèle est donc placée à
+l'écran comme si le vaisseau était à `Δ` : elle atterrit n'importe où, ou est
+rejetée par le test `screen.z ∉ [0,1]`. D'où l'impression que le vaisseau
+« disparaît » plutôt que « repasse en icône ».
+
+## 4. Cause B — la ligne saute
+
+### 4.1 Le mécanisme
+
+`MissionTrajectoryRenderer.putVertex` (`:117-122`) écrit les sommets en
+**GCRF absolu** converti en km :
+
+```java
+Vector3D scaled = RenderTransform.scaleMetersToUnits(positionGcrf, renderContext);
+Vector3D jme = renderContext.axisConvention().icrfToJme(scaled);
+fb.put((float) jme.getX())…
+```
+
+Un sommet proche du vaisseau vaut donc ~6778 en `float32`, et la matrice monde
+de la géométrie porte la translation `−p ≈ −6778` (héritée de `nearFrame`). Le
+GPU calcule `M · v` avec deux opérandes de l'ordre de 6778 dont la somme vaut
+~0 : **annulation catastrophique**.
+
+- `ulp(6778) = 2⁻¹¹ = 4,9·10⁻⁴` unité = **0,49 m**. Le seul stockage du sommet
+  le quantifie déjà à un demi-mètre.
+- Après produit matriciel (facteur de projection `cot(FoV/2) ≈ 5,3`), l'erreur
+  résiduelle est de l'ordre de **1 m**, et elle **change à chaque frame**
+  puisque la translation `−p` change à chaque frame (≈ 128 m/frame à ×1, soit
+  ~260 ulp : le motif d'arrondi est entièrement renouvelé).
+- Angulairement, à 500 m de distance : `1 m / 500 m = 0,115°`. Avec 720 px pour
+  21° de FoV (33,8 px/°) ⇒ **≈ 4 px de tremblement par frame**.
+
+### 4.2 Pourquoi la ligne et pas le vaisseau
+
+C'est la signature qui identifie cette cause. Le modèle 3D est immobile parce
+que sa géométrie a des sommets **petits** (±50 m) et une translation monde
+**exactement nulle** (§3.1) : aucune annulation dans sa matrice. La Terre a une
+grosse translation mais elle est à 6778 km de la caméra, donc son erreur de
+0,5 m sous-tend 0,005 px. La ligne est le seul objet qui cumule **coordonnées
+énormes** et **géométrie à quelques centaines de mètres de la caméra**.
+
+En vue `PLANET` le même défaut existe mais la caméra est à des milliers de km :
+invisible. L'artefact est intrinsèquement spécifique à la vue spacecraft.
+
+### 4.3 Contributeur secondaire — le raccord terminal
+
+`MissionTrajectoryRenderer.update` (`:103-109`) dessine `trail[0..upTo]` puis le
+point interpolé `tip`. La dernière corde relie donc un sommet **échantillonné**
+au point courant. Pas de coast = 60 s (`MissionStage.sampleStepSeconds`), soit
+en LEO une corde de 460 km, dont la direction s'écarte de la tangente réelle de
+jusqu'à **1,9°**. À chaque incrément de `upTo`, cette direction se recale d'un
+coup : la ligne pivote autour du vaisseau d'environ 2°, soit ~12 px au bord de
+l'écran, **une fois par pas d'échantillonnage simulé** (toutes les 0,2 s de
+temps réel à ×300).
+
+C'est un vrai « saut », périodique et distinct du tremblement continu de §4.1.
+Il s'aggrave si l'horizon de mission force la décimation de
+`TrajectoryPolyline` (stride > 1 au-delà de 8192 points) : la corde terminale
+passe alors à plusieurs milliers de km.
+
+## 5. Cause C — la ligne scintille sur le disque terrestre
+
+### 5.1 Chiffres réels du frustum near
+
+`NearCameraSyncAppState:70-73`, caméra posée sur le vaisseau
+(`SPACECRAFT_FOCUS_DISTANCE_SOLAR_UNITS = 5e-7` ⇒ `distToOrigin = 0,5` unité) :
+
+```java
+float near = FastMath.clamp(0.5f * 0.0005f, 0.01f, 500f);      // → 0,01 km = 10 m (plancher)
+float far  = FastMath.clamp(0.5f * 10f,  100_000f, 1e8f);      // → 100 000 km (plancher)
+```
+
+Les deux valeurs sont **collées à leur plancher** : les facteurs adaptatifs ne
+jouent plus du tout. C'est précisément en vue spacecraft que le frustum est le
+plus mauvais.
+
+### 5.2 Résolution de profondeur
+
+Buffer de profondeur 24 bits, `Δd = 2⁻²⁴` :
+
+```
+Δz = 2⁻²⁴ · z² · (1/near − 1/far)
+```
+
+avec `z = 6778 km` (distance caméra → surface terrestre), `near = 0,01 km`,
+`far = 10⁵ km` :
+
+```
+Δz = 5,96·10⁻⁸ × 4,59·10⁷ × (100 − 10⁻⁵) ≈ 274 km
+```
+
+**274 km de résolution de profondeur.** La trajectoire LEO passe à 400 km
+au-dessus de la surface : elle n'est séparée de la Terre que d'**environ 1,5
+pas de quantification**. C'est exactement la zone de bataille — la ligne gagne
+ou perd le test de profondeur selon le pixel et selon l'angle de vue, et le
+motif change dès que la caméra ou le vaisseau bouge : **scintillement**.
+
+Corollaire : la face arrière de l'orbite, qui devrait être occultée par la
+Terre, ne l'est pas de façon fiable non plus.
+
+### 5.3 Ce qui pilote réellement cette résolution
+
+`Δz ∝ z² / near` dès que `far ≫ near`. Ici `1/near = 100` contre
+`1/far = 10⁻⁵` : **le plan far n'a aucun effet mesurable.**
+
+| `near` | `far` | Δz à 6778 km |
+|---:|---:|---:|
+| 10 m | 100 000 km | 274 km |
+| 10 m | 50 000 km | 274 km *(inchangé)* |
+| 100 m | 100 000 km | 27 km |
+| 1 km | 100 000 km | 2,7 km |
+
+Descendre `FAR_MIN` — ce que recommandaient l'ancienne spec et la roadmap — ne
+sert **à rien**. Tout le levier est sur `near`, et il est gratuit : en vue
+spacecraft l'objet le plus proche est le vaisseau lui-même, à l'origine, donc
+`distToOrigin` **est** la distance au contenu le plus proche. Un facteur de
+0,2 (au lieu de 0,0005) laisse encore une marge confortable devant un modèle
+de ~100 m d'envergure.
+
+## 6. Contributeurs mineurs
+
+- **`setLineWidth(2f)`** (`MissionTrajectoryRenderer:64`) : plafonné à 1 px sur
+  les drivers en profil core, et sur ceux qui l'honorent l'expansion en quad
+  produit un aliasing de bord qui oscille en mouvement sub-pixel. Ne suffit pas
+  à expliquer les symptômes, mais s'ajoute à eux. Réponse : `RND-4` (ribbon).
+- **Aucun réglage de profondeur sur le matériau ligne** : ni `setDepthWrite`,
+  ni bucket transparent. Un `setDepthWrite(false)` supprimerait au moins les
+  batailles ligne ↔ ligne aux croisements de boucles.
+- **Sommet terminal dupliqué** quand la mission est finie (`upTo = size−1` et
+  `tip = dernier point`) : sans effet visuel, signalé pour mémoire.
+
+## 7. Ce que l'ancienne version disait de faux
+
+À corriger aussi dans la roadmap (`RND-1`) :
+
+1. **« Résolution de profondeur ~300–500 m à la surface de la Terre. »** Faux
+   d'un facteur ~600. Le calcul supposait `distToOrigin ≈ 20 000 km` donc
+   `near = 10 km` ; en vue spacecraft réelle la caméra est à 500 m de l'origine
+   et `near` est cloué à son plancher de **10 m**. La valeur est ~274 km (§5.2).
+2. **« Descendre `FAR_MIN` de 100 000 à 50 000 km. »** Sans effet (§5.3). Le
+   correctif à trois constantes annoncé par la roadmap en contient donc une
+   inutile.
+3. **« `setPolyOffset(-1,-1)` sur le matériau de ligne. »** Sans effet : JME
+   n'active que `GL_POLYGON_OFFSET_FILL` (`GLRenderer:871-892`), jamais
+   `GL_POLYGON_OFFSET_LINE`. Le polygon offset ne s'applique pas à une
+   géométrie en `Mesh.Mode.LineStrip`.
+
+Restent valables : le diagnostic de z-fighting sur la ligne (mais bien plus
+sévère qu'estimé), l'idée de resserrer le near, et le §5.4 de l'ancienne
+version (rendu de trajectoire relatif au vaisseau) — qui n'était classé
+« pas urgent » que faute d'avoir été chiffré, et qui est en réalité le
+correctif de la cause dominante B.
+
+## 8. Protocole d'observation (à faire avant tout correctif)
+
+Quatre manipulations, aucune modification de code. Elles confirment ou
+infirment chaque cause séparément.
+
+| # | Manipulation | Si A est vraie | Si B est vraie | Si C est vraie |
 |---|---|---|---|---|
-| 1 | `setDepthWrite(false)` + `setPolyOffset(-1, -1)` sur le matériau ligne | Ligne | ★ | Tue le Z-fighting ligne ↔ surface |
-| 1 | Bucket `Transparent` pour la ligne | Ligne | ★ | Dessine après les opaques, depth-test seul |
-| 1 | Resserrer `NEAR_MIN`, durcir le facteur near (`0.0005 → 0.005`), descendre `FAR_MIN` | Terre | ★ | Récupère 1–2 ordres de grandeur de précision |
-| 2 | Ribbon billboardé à la place des GL lines | Ligne | ★★★ | Élimine l'aliasing `glLineWidth` + AA explicite |
-| 2 | Near plane adaptatif par contenu (closest object) au lieu de `distToOrigin` | Terre | ★★ | Précision optimale frame par frame |
-| 3 | Reverse-Z + depth buffer `D32F` | Terre + ligne | ★★★★ | Précision quasi linéaire ; supprime quasi tout le Z-fighting |
-| 3 | Logarithmic depth buffer (shader patch sur tous les matériaux near) | Terre + ligne | ★★★★ | Idem ; intrusif côté matériaux |
-| 3 | Troisième viewport "spacecraft proche" (cascade 3 niveaux) | Terre + ligne | ★★★★ | Plage de profondeur réduite par viewport |
-| 4 | Refonte rendu trajectoire en mesh procédural body-relative | Ligne | ★★★★ | Re-centre les calculs sur le vaisseau (FP precision) |
+| 1 | Passer de ×1 à ×60 puis ×300, caméra immobile | modèle présent jusqu'à ×60, absent à ×300 | sans effet sur le modèle | sans effet sur le modèle |
+| 2 | Mettre l'horloge **en pause** | le modèle revient immédiatement | la ligne se fige (mais reste décalée) | le scintillement persiste si on bouge la caméra |
+| 3 | Regarder la ligne **là où elle croise le ciel noir**, hors du disque terrestre | — | elle tremble aussi | elle est stable (rien contre quoi battre) |
+| 4 | Dézoomer à ~50 km du vaisseau | — | le tremblement disparaît (erreur constante en mètres, angle qui s'écrase) | le scintillement persiste |
 
-### 5.1 Tier 1 — Quick wins
+La manipulation 3 est la discriminante : **B tremble partout, C ne scintille
+que sur la Terre.**
 
-#### 5.1.1 Patch matériau ligne
+## 9. Catalogue de correctifs
 
-`MissionTrajectoryRenderer.initialize` :
+| Niveau | Correctif | Cause | Difficulté | Effet |
+|---|---|:-:|:-:|---|
+| 1 | ~~`FloatingOriginAppState` devient propriétaire de l'offset et passe **avant** l'orchestrateur~~ **fait** | A | ★ | Supprime la disparition du modèle |
+| 1 | `NEAR_MIN` / facteur near resserrés | C | ★ | ×20 à ×100 de résolution de profondeur |
+| 1 | `setDepthWrite(false)` sur le matériau ligne | C | ★ | Supprime les batailles ligne ↔ ligne |
+| 2 | Sommets de trajectoire relatifs au vaisseau | B | ★★ | Supprime le tremblement |
+| 2 | Densifier le raccord terminal de la ligne | B (§4.3) | ★★ | Supprime le pivotement périodique |
+| 3 | Near/far pilotés par le contenu réel de la near viewport | C | ★★ | Rend les constantes inutiles |
+| 3 | Ribbon billboardé (`RND-4`) | §6 | ★★★ | Épaisseur stable + AA explicite |
+| 4 | Reverse-Z ou logarithmic depth | C | ★★★★ | Précision quasi constante, en réserve |
+
+### 9.1 Cause A — rendre l'offset frais
+
+Le défaut n'est pas dans `LodView` : il est dans le fait qu'un consommateur de
+position monde tourne **avant** le producteur de l'origine flottante. Deux
+options, une seule recommandée.
+
+**Recommandée.** `FloatingOriginAppState` ne lit plus l'ancre de la scène : il
+calcule `p(t)` lui-même depuis l'éphéméride de la mission focalisée à
+`clock.now()`, écrit `nearFrame`, et est **attaché avant**
+`MissionOrchestratorAppState`. L'orchestrateur pose ensuite l'ancre à partir de
+la même donnée, via la même conversion (`RenderTransform` + `AxisConvention`) :
+les deux `float` restent bit à bit opposés, l'annulation exacte du §3.1 est
+préservée, et `getWorldTranslation()` redevient juste dès le rang 7. C'est
+aussi ce qui aligne la mission sur le fonctionnement déjà correct des planètes
+(rang 9 > 8).
+
+**Écartée.** Faire écrire `nearFrame` par l'orchestrateur entre `updatePose` et
+`updateScreen` : plus court, mais éclate la propriété de l'origine flottante
+entre deux états, contre la règle « une donnée partagée, un propriétaire ».
+
+#### Fait le 2026-08-09
+
+L'option recommandée, telle quelle :
+
+- `FloatingOriginAppState.nearFrameOffset(MissionId)` lit l'éphéméride de la
+  mission focalisée à `clock.now()` ; il ne touche plus au registre des
+  renderers. `MissionRenderer.getAnchorSpatial()` n'avait plus d'appelant : il
+  est supprimé.
+- L'ordre d'attachement est inversé dans `OrbitLabApplication`, avec le
+  commentaire qui dit pourquoi il ne doit pas être reperdu.
+- Deux points de conversion partagés garantissent l'annulation exacte :
+  `MissionEphemeris.displayPointAt(date)` (même point pour les deux états) et
+  `JmeVectorAdapter.toJmeBodyRelativePosition(position, ctx)` (même triplet
+  `float`). `SpacecraftPresenter` passe par le second au lieu d'inliner la
+  conversion. `MissionRenderer.renderContextFor(entry)` porte le contexte de
+  rendu, jusque-là construit à un seul endroit et désormais à deux.
+
+**Écarts avec ce qui était prévu ici**, tous deux dans le sens de la prudence :
+
+1. **Repli sur le dernier offset connu.** Une mission focalisée perd son
+   éphéméride le temps d'un recalcul. Retomber à zéro pour ces frames poserait
+   l'origine near au centre de la Terre — caméra à l'intérieur de la planète.
+   `FloatingOriginAppState` conserve donc le dernier offset calculé et le
+   réutilise tant qu'il ne peut pas en produire un nouveau. Le comportement
+   d'avant correctif (garder la position périmée de l'ancre) était déjà celui-là
+   par accident ; il est maintenant explicite.
+2. **Le test ne verrouille pas l'ordre.** Ce paragraphe annonçait qu'un test
+   sans OpenGL suffirait à verrouiller la non-régression : c'est faux.
+   L'ordre vit dans la séquence d'attachement de `OrbitLabApplication`, dont
+   `simpleInitApp` exige un contexte GL. `NearFrameOriginTest` verrouille ce
+   qui l'est : l'annulation **exacte** (sans tolérance) de l'offset et de
+   l'ancre, propriété fragile puisqu'elle repose désormais sur deux
+   producteurs indépendants ; et il mesure, sur le graphe JME, ce que coûte une
+   frame dans le mauvais ordre (~38 km à ×300, sous le seuil de LOD de 16 km).
+   Contre un retour en arrière sur l'ordre lui-même, il n'y a que le
+   commentaire à l'endroit de l'attachement.
+
+### 9.2 Cause B — trajectoire relative au vaisseau
+
+Soustraire `p` **en `double`** avant le cast `float`, et compenser par une
+translation locale de la géométrie :
 
 ```java
-mat.getAdditionalRenderState().setDepthTest(true);
-mat.getAdditionalRenderState().setDepthWrite(false);
-mat.getAdditionalRenderState().setPolyOffset(-1f, -1f);   // bias vers la caméra
-lineGeometry.setQueueBucket(RenderQueue.Bucket.Transparent);
+// dans update(…), tip = position GCRF du vaisseau à l'instant courant
+Vector3D origin = tip;                                   // double, exact
+… putVertex(fb, trail.positionAt(i).subtract(origin));   // sommets petits près du vaisseau
+lineGeometry.setLocalTranslation(sameVector3fAsAnchorLocal);   // + p, annule le −p de nearFrame
 ```
 
-- `DepthWrite(false)` : la ligne ne pollue pas le depth buffer, donc
-  pas de bataille ligne ↔ ligne ni ligne ↔ Terre en self-occlusion.
-- `PolyOffset(-1, -1)` : décale le z des fragments d'une fraction
-  d'ulp vers l'avant. Standard pour les "lignes sur surface".
-- `Bucket.Transparent` : trie en arrière → avant et dessine après les
-  opaques.
+Propriétés :
 
-Coût : 4 lignes, aucune incidence sur les autres rendus.
+- `nearFrame(−p) + ligne(+p) = 0` **exactement**, à condition d'utiliser le
+  même triplet `float` que l'ancre — donc de le produire par le même chemin de
+  conversion (à factoriser).
+- L'erreur d'un sommet devient proportionnelle à sa distance au vaisseau, donc
+  **son erreur angulaire vue de la caméra reste bornée** : c'est la propriété
+  standard du rendu camera-relative.
+- Coût nul : le buffer entier est déjà réécrit à chaque frame
+  (`MissionTrajectoryRenderer:95-115`).
+- Fonctionne sans branche en vue `PLANET` (`nearFrame = 0`, la ligne est posée
+  à `+p`, position absolue correcte).
 
-Limitation : la ligne reste visible **à travers** la Terre quand elle
-passe derrière (depth test on, depth write off). Pour le masquer, il
-faudrait soit garder `DepthWrite(true)` et accepter le bias seul, soit
-faire deux passes (visible + occulté à alpha bas) → cf. `specs/
-graphics-effects/effects-roadmap.md` §9.3.2. Premier choix simple :
-laisser la ligne traverser, débugger ensuite.
+Pour §4.3, ajouter au raccord terminal quelques points interpolés entre
+`trail[upTo]` et `tip` (l'éphéméride brute les a déjà, seule la polyline
+d'affichage est décimée), ou simplement faire commencer le raccord au dernier
+sommet **de l'éphéméride** plutôt que de la polyline.
 
-#### 5.1.2 Resserrer le frustum near
-
-`NearCameraSyncAppState` — proposition de valeurs :
+### 9.3 Cause C — resserrer le near
 
 ```java
-private static final float NEAR_MIN = 1.0f;          // 1 km (au lieu de 10 m)
-private static final float NEAR_MAX = 500f;          // inchangé
-private static final float FAR_MIN  = 50_000f;       // 50 000 km (au lieu de 100 000)
-private static final float FAR_MAX  = 100_000_000f;  // inchangé
+private static final float NEAR_MIN = 0.005f;   // 5 m, plancher de sécurité
 // …
-float near = FastMath.clamp(distToOrigin * 0.005f,  NEAR_MIN, NEAR_MAX);   // ×10
-float far  = FastMath.clamp(distToOrigin * 10f,     FAR_MIN, FAR_MAX);
+float near = FastMath.clamp(distToOrigin * 0.2f, NEAR_MIN, NEAR_MAX);
+float far  = FastMath.clamp(distToOrigin * 10f, FAR_MIN, FAR_MAX);   // inchangé (§5.3)
 ```
 
-Impact attendu sur un cas LEO (`distToOrigin = 20 000 km`) :
+À 500 m de distance : `near = 100 m`, `Δz ≈ 27 km` à la Terre, la ligne LEO est
+à 400 km au-dessus de la surface soit ~15 pas de quantification. La bataille
+cesse. Le modèle du vaisseau (~100 m d'envergure, centré à l'origine) reste
+entièrement devant le plan near tant que le facteur reste ≤ 0,3.
 
-| Avant | Après |
-|---|---|
-| `near = 10 km`, `far = 100 000 km` | `near = 100 km`, `far = 100 000 km` |
-| Ratio ~10 000 | Ratio ~1 000 |
-| Résolution Z à la Terre ~300–500 m | Résolution Z à la Terre ~30–50 m |
+Limite connue : cette formule suppose que l'objet le plus proche est à
+l'origine. C'est vrai en `SPACECRAFT`, pas en `PLANET` où l'origine est le
+centre de la Terre et où le contenu le plus proche est sa surface, 6378 km plus
+près que l'origine. Un near piloté par le contenu (niveau 3) lève l'hypothèse ;
+tant qu'on ne l'écrit pas, le facteur doit rester conditionné au mode de vue.
 
-C'est suffisant pour battre les triangles GLTF dans la grande majorité
-des cas. Trade-off : on ne peut plus zoomer sous ~1 km du vaisseau ;
-acceptable tant qu'on ne fait pas de "fly-by caméra rapprochée" du
-vaisseau lui-même.
+## 10. Recommandation
 
-Si la limite `1 km` est trop grossière pour des futurs zooms vaisseau,
-on peut conditionner `NEAR_MIN` à l'échelle du vaisseau focalisé
-plutôt qu'utiliser une constante (cf. §5.2.2).
+1. **D'abord** : faire tourner le §8. Trente secondes, et cela verrouille ou
+   invalide B et C, qui sont dérivées et non observées. Les manipulations 1 et
+   2 servent maintenant de recette du correctif A : le modèle doit rester
+   affiché à ×300 et au-delà.
+2. **Ensuite, dans l'ordre** : ~~§9.1 (cause A)~~ **fait le 2026-08-09**, puis
+   §9.3 (cause C, trois lignes), puis §9.2 (cause B, le seul travail réel).
+3. **Conséquence sur la roadmap** : `RND-1` était coté ◆1 / taille S sur la
+   base d'un diagnostic qui ne couvrait qu'une des trois causes, et dont deux
+   des trois correctifs sont sans effet (§7). Le périmètre réel est
+   ◆2 / taille M, et il faut y ajouter explicitement la disparition du modèle
+   en accéléré, qui n'est pas un problème de z-fighting.
+4. Reverse-Z, logarithmic depth et troisième viewport restent en réserve
+   (ancienne version §5.3, toujours valable dans son analyse) : ils
+   deviendront nécessaires le jour où la near viewport devra tenir Terre +
+   Lune + vaisseau dans le même cadre.
 
-### 5.2 Tier 2 — Adaptations
+## 11. Liens
 
-#### 5.2.1 Ribbon billboardé
-
-Déjà documenté dans `effects-roadmap.md` §9.4.1. Résout
-indépendamment :
-- Le scintillement résiduel dû à l'aliasing `glLineWidth` après le
-  patch §5.1.1.
-- L'épaisseur constante à grande distance.
-- L'AA gratuit via alpha-fade des bords.
-
-#### 5.2.2 Near plane piloté par le contenu
-
-Au lieu d'utiliser `distToOrigin` comme proxy, calculer chaque frame
-le plus proche objet de la caméra parmi un petit ensemble pertinent
-(vaisseau focalisé + planète parent) :
-
-```java
-float dClosestObject = min(
-    distance(nearCam, spacecraftAnchor),
-    distance(nearCam, planetSurfaceTangent)   // distance - radius
-);
-float near = max(NEAR_MIN, dClosestObject * 0.5f);
-```
-
-Avantage : on n'a plus à choisir un compromis global `NEAR_MIN`. Le
-near plane suit ce que la caméra regarde vraiment. Coût : une boucle
-de quelques distances par frame, négligeable.
-
-Le `far` peut suivre la même logique en cherchant l'objet **le plus
-loin** intéressant à voir dans la near viewport (Lune ? GEO ?), ce
-qui rend `FAR_MIN` lui aussi inutile.
-
-### 5.3 Tier 3 — Refonte du pipeline de profondeur
-
-Les solutions ci-dessus repoussent le mur mais ne le suppriment pas :
-dès qu'on aura besoin d'à la fois voir le vaisseau de près **et** la
-Terre nettement **et** la Lune au loin, le ratio far/near explosera
-de nouveau.
-
-#### 5.3.1 Reverse-Z + depth buffer flottant
-
-Convention "reverse-Z" : on inverse la signification du depth buffer
-(near → 1.0, far → 0.0) et on utilise un format **D32F** au lieu de
-D24/D24S8. L'association des deux donne une précision **quasi
-constante en world space** sur toute la plage du frustum — c'est
-mathématiquement la combinaison optimale pour le rendu à grande
-dynamique de profondeur (cf. articles de Nathan Reed, Eric Lengyel).
-
-Côté JME3 :
-- Setter `glDepthFunc(GL_GEQUAL)` + `glClearDepth(0.0)` côté renderer.
-- Demander un FrameBuffer avec un attachement depth `Image.Format.Depth32F`.
-- Patcher la projection (`Camera.getProjectionMatrix`) ou injecter une
-  matrice de projection reverse-Z (swap des deux dernières lignes).
-- JME ne supporte pas reverse-Z out-of-the-box → il faut surcharger
-  le `Renderer` et écrire un petit pipeline custom. Plusieurs jours
-  de R&D, mais le résultat est définitif.
-
-Compatibilité : OpenGL 4.5+ ou ARB_clip_control. Tous les GPU desktop
-modernes l'ont depuis 2015.
-
-#### 5.3.2 Logarithmic depth buffer
-
-Alternative reverse-Z, plus simple à câbler mais avec des artefacts
-au polygon-clipping (les arêtes de gros polygones peuvent passer
-"derrière" le near plane en interpolation linéaire alors qu'elles
-devraient être visibles). Mitigation : géométrie suffisamment
-tessellée OU calculer le log-z par fragment.
-
-Implémentation : dans chaque vertex shader, après projection :
-
-```glsl
-gl_Position.z = (log(C * gl_Position.w + 1.0) / log(C * far + 1.0)) * 2.0 - 1.0;
-gl_Position.z *= gl_Position.w;
-```
-
-Avantage vs reverse-Z : un seul patch dans les shaders, pas besoin de
-modifier le pipeline depth côté Renderer. Inconvénient : doit toucher
-**tous** les matériaux utilisés dans la near viewport. Avec
-`Unshaded.j3md` partout, c'est un fork de ce j3md + un nouveau
-include GLSL. Acceptable.
-
-C'est la solution adoptée par la plupart des moteurs de simulation
-"galactique" (Outerra, SpaceEngine) avant qu'ils migrent vers
-reverse-Z.
-
-#### 5.3.3 Cascade de viewports
-
-Au lieu de 2 viewports (far + near), en avoir 3 :
-
-| Viewport | Échelle | Contenu |
-|---|---|---|
-| Far | 1 unité = 1e9 m | Soleil, orbites héliocentriques, planètes lointaines |
-| Mid (nouveau) | 1 unité = 1e6 m | Système Terre-Lune, satellites éloignés |
-| Near | 1 unité = 1e3 m | Vaisseau, Terre proche, atmosphère, trajectoires de mission |
-
-Chaque viewport a son frustum borné aux objets qu'il contient → le
-ratio far/near de chacun reste sain. Coût : un troisième render pass,
-un troisième `Camera` à sync, un troisième `Frame` à translater pour
-la floating origin. C'est l'option la plus "physique" : on n'enrichit
-pas la précision, on segmente les échelles. Synergie avec `specs/camera/
-01-view-transitions.md` qui définit déjà le saut SOLAR ↔ PLANET ↔
-SPACECRAFT — un viewport "mid" cadrerait bien avec la transition
-PLANET.
-
-Inconvénient : aujourd'hui le code couple chaque viewport à un seul
-`RenderContext` (`SOLAR_METERS_PER_UNIT` vs `PLANET_METERS_PER_UNIT`).
-Ajouter un troisième context signifie compléter `RenderContext`
-(`Solar`, `Planet`, `Spacecraft`?), `RenderTransform`, et tous les
-`Presenter` qui scalent les positions. Plusieurs jours, mais
-extensible "naturellement" plus tard.
-
-### 5.4 Tier 4 — Rendu trajectoire body-relative
-
-Aujourd'hui les positions de la trajectoire sont stockées en GCRF
-absolu (mètres → km via `RenderTransform.scaleMetersToUnits` dans
-`MissionTrajectoryRenderer.update` ligne 98), puis la `nearFrame` est
-translatée pour ramener le vaisseau à l'origine. La précision
-`float32` du buffer GPU à ~7 000 km est ~1 m — suffisante pour la
-géométrie mais marginale pour la profondeur après projection.
-
-Stocker la trajectoire **directement en spacecraft-relative** (déjà
-décalé côté CPU avant cast `float`) supprime cette source d'erreur.
-Côté CPU on garde le `double` Vector3D ; on soustrait `spacecraft.position`
-en double avant de caster. Pratique : adapté quand on aura déjà la
-souplesse pour décorréler l'origine de la `LineStrip` du `nearFrame`.
-
-Pas urgent — utile surtout après §5.3 (sinon dominé par le bruit
-depth).
-
-## 6. Solution robuste recommandée
-
-À moyen terme, la combinaison la plus solide et la moins risquée :
-
-1. **Maintenant** — appliquer §5.1.1 (patch matériau ligne) et
-   §5.1.2 (frustum near plus serré). Suffisant pour 90 % des cas
-   d'usage actuels. Code minimal, isolé, réversible.
-2. **Quand on attaque le ribbon** (effects-roadmap §9.4.1) —
-   intégrer §5.2.2 (near plane piloté par le contenu) en même temps,
-   parce que les deux touchent les mêmes fichiers (frustum sync +
-   factory ligne).
-3. **Si on commence à voir des artefacts persistants** (vue ultra-large
-   sur Terre + Lune + Mars dans le même cadre, ou zooms vaisseau
-   serrés) — passer à §5.3.2 (logarithmic depth). C'est le plus petit
-   pas vers une précision "définitive" sans toucher au pipeline JME.
-
-§5.3.1 (reverse-Z) et §5.3.3 (3 viewports) restent en réserve pour
-le jour où le contenu de la near viewport gagne en richesse
-(atmosphère, ombres, gros zoom sol-vaisseau).
-
-## 7. Liens
-
-- `specs/camera/01-view-transitions.md` — sémantique des trois
-  `ViewMode` (SOLAR/PLANET/SPACECRAFT) et de la cascade actuelle de
-  caméras.
-- `specs/graphics-effects/effects-roadmap.md` §9 — backlog rendu
-  trajectoires (ribbon, vertex colors, passé/futur). §5.1.1 ci-dessus
-  est un prérequis hygiène avant tout enrichissement de la ligne.
-- `specs/atmosphere/01-impacts-fonctionnels-techniques.md` — la
-  future couche atmosphérique (halo Fresnel, scattering) imposera des
-  exigences supplémentaires sur la précision Z autour de la planète ;
-  donne du poids à §5.3.
-- Code : `states/mission/MissionTrajectoryRenderer.java`,
-  `engine/AssetFactory.java`, `states/camera/NearCameraSyncAppState.java`,
+- [`../roadmap/01-roadmap.md`](../roadmap/01-roadmap.md) — item `RND-1`, à
+  recoter (§10.3).
+- [`effects-roadmap.md`](effects-roadmap.md) §9 — backlog rendu trajectoires ;
+  §9.4.1 (ribbon) reste la réponse au §6.
+- [`../camera/01-view-transitions.md`](../camera/01-view-transitions.md) —
+  sémantique des trois `ViewMode`.
+- [`../atmosphere/01-impacts-fonctionnels-techniques.md`](../atmosphere/01-impacts-fonctionnels-techniques.md)
+  — la future couche atmosphérique durcira les exigences de précision Z autour
+  de la planète.
+- Code : `states/mission/MissionRenderer.java`,
+  `states/mission/MissionTrajectoryRenderer.java`,
+  `engine/scene/body/LodView.java`,
+  `engine/scene/body/lod/BillboardIconView.java`,
   `states/camera/FloatingOriginAppState.java`,
-  `engine/scene/body/lod/Model3dView.java`.
+  `states/camera/NearCameraSyncAppState.java`,
+  `engine/scene/graph/SceneGraph.java`,
+  `OrbitLabApplication.java` (ordre d'attachement des états).

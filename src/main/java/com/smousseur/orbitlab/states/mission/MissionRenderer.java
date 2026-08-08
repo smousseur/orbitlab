@@ -3,7 +3,6 @@ package com.smousseur.orbitlab.states.mission;
 import com.jme3.math.ColorRGBA;
 import com.jme3.renderer.Camera;
 import com.jme3.scene.Node;
-import com.jme3.scene.Spatial;
 import com.smousseur.orbitlab.app.ApplicationContext;
 import com.smousseur.orbitlab.app.view.FocusView;
 import com.smousseur.orbitlab.app.view.RenderContext;
@@ -101,13 +100,19 @@ public final class MissionRenderer {
   }
 
   /**
-   * Returns the near-view anchor spatial that the spacecraft icon and model are attached to. Used
-   * by the floating-origin state to offset the near frame so the spacecraft sits at the origin.
+   * The render context a mission is drawn in: planet scale (1 unit = 1 km), centred on the body its
+   * objective targets.
    *
-   * @return the near-view anchor, or {@code null} if this renderer has not been initialized
+   * <p>Static, and public, because {@link
+   * com.smousseur.orbitlab.states.camera.FloatingOriginAppState} needs it before any renderer
+   * exists: it converts the focused spacecraft's position itself, and has to use the very same
+   * context to land on the same {@code float} triple as the anchor.
+   *
+   * @param entry the mission entry
+   * @return the render context that mission is drawn in
    */
-  public Spatial getAnchorSpatial() {
-    return view != null ? view.spatial() : null;
+  public static RenderContext renderContextFor(MissionEntry entry) {
+    return RenderContext.planet(entry.mission().getObjective().body());
   }
 
   private void onSpacecraftSelected() {

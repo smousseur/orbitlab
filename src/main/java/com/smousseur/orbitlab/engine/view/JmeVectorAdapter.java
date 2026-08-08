@@ -38,6 +38,31 @@ public final class JmeVectorAdapter {
   }
 
   /**
+   * Body-relative ICRF meters -> JME Vector3f (JME units, JME axes). Differs from {@link
+   * #toJmePosition} only in that nothing is subtracted: the position is already expressed in a frame
+   * centred on the render context's body, as a GCRF position is for the Earth.
+   *
+   * <p><b>Single conversion path, deliberately.</b> Two states convert the same spacecraft position
+   * on every frame: {@link com.smousseur.orbitlab.states.mission.MissionOrchestratorAppState} places
+   * the spacecraft anchor at it, and {@link
+   * com.smousseur.orbitlab.states.camera.FloatingOriginAppState} offsets the near frame by its
+   * negation. The two cancel to exactly zero — the spacecraft sitting on the near-view origin — only
+   * because both go through this method and therefore produce the same {@code float} triple. Neither
+   * may inline the scale and axis conversion again.
+   *
+   * @param positionIcrfMeters position in ICRF axes, in meters, relative to the context's body
+   * @param ctx the render context giving the scale and axis convention
+   * @return the position in JME units and JME axes
+   */
+  public static Vector3f toJmeBodyRelativePosition(Vector3D positionIcrfMeters, RenderContext ctx) {
+    Objects.requireNonNull(positionIcrfMeters, "positionIcrfMeters");
+    Objects.requireNonNull(ctx, "ctx");
+
+    Vector3D scaled = RenderTransform.scaleMetersToUnits(positionIcrfMeters, ctx);
+    return toVector3f(ctx.axisConvention().icrfToJme(scaled));
+  }
+
+  /**
    * JME Vector3f (JME units, JME axes) -> absolute ICRF meters.
    *
    * @param jmeUnitsJmeAxes position in JME units/axes

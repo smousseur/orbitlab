@@ -74,16 +74,17 @@ découverte.
 | ID | Item | ★ | ◆ | Taille |
 |---|---|:-:|:-:|:-:|
 | MIS-8 | **Horizon de mission explicite** (fin de mission aujourd'hui codée en dur) | 5 | 2 | M |
-| RND-1 | Corriger le Z-fighting / scintillement en vue spacecraft | 4 | 1 | S |
+| RND-1 | Corriger les artefacts visuels de la vue spacecraft | 4 | 2 | M |
 | FX-1 | Bloom sur le Soleil | 3 | 1 | S |
 | RND-2 | Filtrage anisotrope | 2 | 1 | S |
 | MIS-1 | Deuxième lanceur au catalogue | 3 | 1 | S |
 | RND-3 | Couleur par stage + passé/futur + marqueur « now » | 4 | 2 | M |
 | UI-1 | Vue détail mission (orbite atteinte, message d'erreur) | 4 | 2 | M |
 
-**Fin de phase quand** : plus aucun scintillement en vue vaisseau, une mission
-calculée affiche ce qu'elle a atteint, et sa durée est une décision explicite
-plutôt qu'une constante.
+**Fin de phase quand** : plus aucun scintillement en vue vaisseau et le modèle
+3D y reste visible quelle que soit la vitesse d'horloge, une mission calculée
+affiche ce qu'elle a atteint, et sa durée est une décision explicite plutôt
+qu'une constante.
 
 ### Phase 2 — Navigation, temps, caméra · ~2 semaines
 
@@ -196,7 +197,7 @@ opportuniste, ou à décider quoi sacrifier quand une phase déborde.
 | ID | Item | ★ | ◆ | Taille | Dépend de |
 |---|---|:-:|:-:|:-:|---|
 | MIS-8 | Horizon de mission explicite | 5 | 2 | M | — |
-| RND-1 | Corriger le Z-fighting / scintillement en vue spacecraft | 4 | 1 | S | — |
+| RND-1 | Corriger les artefacts visuels de la vue spacecraft | 4 | 2 | M | — |
 | FX-1 | Bloom sur le Soleil (+ tone mapping) | 3 | 1 | S | — |
 | MIS-1 | Deuxième lanceur au catalogue | 3 | 1 | S | — |
 | RND-3 | Couleur par stage + passé/futur + marqueur « now » | 4 | 2 | M | — |
@@ -261,27 +262,42 @@ l'ordre d'exécution. Pour savoir par quoi commencer, voir le §3.*
 
 ### RND — Rendu et lisibilité
 
-#### RND-1 — Corriger le Z-fighting / scintillement en vue spacecraft — ★4 ◆1 S
+#### RND-1 — Corriger les artefacts visuels de la vue spacecraft — ★4 ◆2 M
 
-**Pourquoi.** Deux artefacts visibles aujourd'hui : la ligne de trajectoire
-scintille, et la Terre se couvre de motifs hexagonaux troués à certaines
-distances. C'est le défaut le plus visible de l'application, pour le correctif
-le moins cher du document. C'est aussi un **prérequis d'hygiène** : tout
-enrichissement de la ligne (RND-3, RND-4) ou de l'approche planétaire (missions
-lunaires) empile du travail sur un rendu qui bataille déjà.
+**Pourquoi.** C'est le défaut le plus visible de l'application, et un
+**prérequis d'hygiène** : tout enrichissement de la ligne (RND-3, RND-4) ou de
+l'approche planétaire (missions lunaires) empile du travail sur un rendu qui
+bataille déjà.
 
-**État.** `MissionTrajectoryRenderer.java:59` ne pose que `setLineWidth(2f)` —
-ni `setDepthWrite`, ni `setPolyOffset`, ni bucket transparent.
-`NearCameraSyncAppState.java:31,34,71` garde `NEAR_MIN = 0.01f` (10 m),
-`FAR_MIN = 100_000f` et un facteur near de `0.0005f` : ratio far/near ≈ 10⁴,
-soit ~300–500 m de résolution de profondeur à la surface de la Terre.
+**État (rediagnostiqué le 2026-08-09).** Trois causes racines indépendantes,
+pas une :
 
-**À faire.** Le tier 1 de la spec, tel quel : `setDepthWrite(false)` +
-`setPolyOffset(-1,-1)` + `Bucket.Transparent` sur le matériau de ligne ;
-`NEAR_MIN = 1f`, facteur near `0.005f`, `FAR_MIN = 50_000f`. Quatre lignes et
-trois constantes.
+- ~~**A — le modèle 3D du vaisseau disparaît en accéléré.**~~ **Corrigé le
+  2026-08-09.** `MissionOrchestrator` était mis à jour *avant* `FloatingOrigin` :
+  le calcul de LOD lisait une position monde en retard d'une frame, donc croyait
+  le vaisseau à `v × Δt_sim` de l'origine, et basculait en icône au-delà de
+  ~×100. Ce n'était pas du z-fighting. `FloatingOrigin` est désormais
+  propriétaire de l'offset, le dérive de l'éphéméride et passe en premier.
+- **B — la ligne de trajectoire saute.** Ses sommets sont en GCRF absolu
+  (~6778 en unités km) alors que `nearFrame` la translate de `−p` : annulation
+  catastrophique en `float32`, ~1 m d'erreur renouvelée à chaque frame, soit
+  ~4 px de tremblement à 500 m de distance.
+- **C — la ligne scintille sur le disque terrestre.** En vue spacecraft, `near`
+  et `far` sont collés à leurs planchers (10 m / 100 000 km) : **~274 km** de
+  résolution de profondeur à la distance de la Terre, pas 300–500 m comme
+  estimé précédemment.
 
-**Spec.** [`specs/graphics-effects/spacecraft-view-artefacts.md`](../graphics-effects/spacecraft-view-artefacts.md) §5.1.
+**Deux correctifs annoncés par l'ancienne version sont sans effet** : baisser
+`FAR_MIN` (`Δz ∝ z²/near`, le far ne compte pas) et `setPolyOffset` sur la
+ligne (JME n'active que `GL_POLYGON_OFFSET_FILL`, jamais `..._LINE`).
+
+**Reste à faire.** Resserrer le facteur near à `0.2f` avec
+`NEAR_MIN = 0.005f` (C) ; rendre les sommets de trajectoire relatifs au
+vaisseau, soustraction en `double` avant le cast `float` (B). Seul le dernier
+est un vrai travail.
+
+**Spec.** [`specs/graphics-effects/spacecraft-view-artefacts.md`](../graphics-effects/spacecraft-view-artefacts.md)
+§9 (correctifs) et §8 (protocole d'observation à passer avant de coder).
 
 #### RND-2 — Filtrage anisotrope — ★2 ◆1 S
 

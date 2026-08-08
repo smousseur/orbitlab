@@ -4,7 +4,6 @@ import com.jme3.math.FastMath;
 import com.jme3.math.Quaternion;
 import com.jme3.math.Vector3f;
 import com.smousseur.orbitlab.app.view.RenderContext;
-import com.smousseur.orbitlab.app.view.RenderTransform;
 import com.smousseur.orbitlab.engine.scene.body.BodyView;
 import com.smousseur.orbitlab.engine.view.JmeVectorAdapter;
 import java.util.Objects;
@@ -95,10 +94,9 @@ public final class SpacecraftPresenter {
     Objects.requireNonNull(velocityGcrf, "velocityGcrf");
     Objects.requireNonNull(ctx, "ctx");
 
-    Vector3D scaled = RenderTransform.scaleMetersToUnits(positionGcrfMeters, ctx);
-    Vector3D positionJmeAxes = ctx.axisConvention().icrfToJme(scaled);
-    Vector3f p = JmeVectorAdapter.toVector3f(positionJmeAxes);
-    view.setPositionWorld(p);
+    // Through JmeVectorAdapter, never inlined: the floating-origin state negates the very same
+    // conversion of the very same position to place the near-view origin on this spacecraft.
+    view.setPositionWorld(JmeVectorAdapter.toJmeBodyRelativePosition(positionGcrfMeters, ctx));
 
     if (velocityGcrf.getNormSq() > MIN_VELOCITY_NORM_SQ) {
       Vector3D dirIcrf = velocityGcrf.normalize();

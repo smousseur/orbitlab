@@ -9,8 +9,13 @@ import com.smousseur.orbitlab.app.ApplicationContext;
 import com.smousseur.orbitlab.app.view.FocusView;
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.engine.scene.graph.SceneGraph;
+import com.smousseur.orbitlab.engine.view.JmeVectorAdapter;
+import com.smousseur.orbitlab.simulation.mission.MissionId;
+import com.smousseur.orbitlab.simulation.mission.context.MissionEntry;
+import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemeris;
 import com.smousseur.orbitlab.states.mission.MissionRenderer;
 import java.util.Objects;
+import org.hipparchus.geometry.euclidean.threed.Vector3D;
 
 /**
  * Application state that implements a floating-origin technique to prevent floating-point precision
@@ -19,7 +24,12 @@ import java.util.Objects;
  * <p>Each frame, this state translates the solar system root node so that the currently focused
  * body sits at the world origin. In solar view mode, the root stays at the origin; in planet view
  * mode, the focused planet's position is negated and applied to the root, effectively centering the
- * scene on that planet.
+ * scene on that planet. In spacecraft view mode it additionally offsets the near frame onto the
+ * focused spacecraft.
+ *
+ * <p><b>This state is the sole owner of both frame offsets, and must run before anything that reads
+ * a world position out of the scene graph</b> — see {@link #nearFrameOffset} for what breaks
+ * otherwise.
  */
 public class FloatingOriginAppState extends BaseAppState {
   /** Minimum far plane for the farCam in planet view mode, in solar-scale units. */
@@ -29,6 +39,15 @@ public class FloatingOriginAppState extends BaseAppState {
   private final Node solarRoot;
   private final SceneGraph sceneGraph;
   private OrbitCameraAppState orbitCam;
+
+  /**
+   * Last near-frame offset that could be computed, kept as the fallback for the frames where it
+   * cannot. A focused mission loses its ephemeris while it is being recomputed; snapping the offset
+   * back to zero for those frames would drop the near-view origin onto the centre of the Earth and
+   * put the camera inside the planet. Holding the last known position leaves the view where the user
+   * left it until the new trajectory lands.
+   */
+  private final Vector3f lastNearOffset = new Vector3f();
 
   /**
    * Creates a new floating origin state.
@@ -86,15 +105,52 @@ public class FloatingOriginAppState extends BaseAppState {
 
         // Offset the near frame so the spacecraft sits at the near-view origin. The trajectory
         // trail lives under nearOrbitsNode (child of nearFrame) and inherits the translation.
-        MissionRenderer mr = context.getMissionRenderer(view.getFocusedMission());
-        if (mr != null && mr.getAnchorSpatial() != null) {
-          Vector3f nearPos = mr.getAnchorSpatial().getLocalTranslation();
-          sceneGraph.nearFrame().setLocalTranslation(nearPos.negate());
-        } else {
-          sceneGraph.nearFrame().setLocalTranslation(0f, 0f, 0f);
-        }
+        sceneGraph.nearFrame().setLocalTranslation(nearFrameOffset(view.getFocusedMission()));
       }
     }
+  }
+
+  /**
+   * Translation to apply to the near frame so that the focused spacecraft lands on the near-view
+   * origin: the negation of its position at the current instant, in near render units. Falls back to
+   * {@link #lastNearOffset} when no mission is focused or its trajectory is not available.
+   *
+   * <p><b>Why this reads the ephemeris and not the spacecraft's scene anchor.</b> It used to read
+   * the anchor, which made this state a <em>consumer</em> of what {@code
+   * MissionOrchestratorAppState} writes, and therefore forced it to run after the orchestrator. But
+   * the orchestrator itself reads a world position back out of the graph — {@code
+   * LodView.updateScreen} measures the camera-to-spacecraft distance to pick the level of detail —
+   * and at that point the near frame still carried the <em>previous</em> frame's offset. The
+   * spacecraft therefore measured as {@code p(t) − p(t−1)} away from the origin instead of zero:
+   * harmless at ×1, but at ×300 that is some 40 km, the projected radius falls under the LOD
+   * threshold, and the 3D model silently drops to its 2D icon. Rendering was never wrong — only the
+   * measurement was, and only because it happened too early.
+   *
+   * <p>So this state no longer consumes the graph: it derives the offset from the same ephemeris
+   * the orchestrator will read, and runs <em>before</em> it (see the attach order in {@code
+   * OrbitLabApplication}). Both go through {@link MissionEphemeris#displayPointAt} at the same date
+   * and {@link JmeVectorAdapter#toJmeBodyRelativePosition} with the same context, so the offset and
+   * the anchor stay bit-for-bit opposite and cancel exactly.
+   *
+   * @param missionId the focused mission, may be {@code null}
+   * @return the near-frame translation, never {@code null}
+   */
+  private Vector3f nearFrameOffset(MissionId missionId) {
+    MissionEntry entry =
+        missionId == null
+            ? null
+            : context.missionContext().findMission(missionId).orElse(null);
+    MissionEphemeris ephemeris = entry == null ? null : entry.getEphemeris().orElse(null);
+    if (ephemeris == null) {
+      return lastNearOffset;
+    }
+    Vector3D position = ephemeris.displayPointAt(context.clock().now()).position();
+    // negateLocal, not negate: the anchor is placed at the un-negated value of the very same
+    // conversion, so the two floats must stay exact opposites (cf. toJmeBodyRelativePosition).
+    return lastNearOffset.set(
+        JmeVectorAdapter.toJmeBodyRelativePosition(
+                position, MissionRenderer.renderContextFor(entry))
+            .negateLocal());
   }
 
   @Override
