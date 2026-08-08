@@ -702,6 +702,14 @@ d'optimiseur. C'est ce qui permet de faire ce chantier en phase 1 sans risque.
 `simulation/mission/operation/MissionSpec.java`,
 `ui/mission/wizard/step/StepParameters.java`.
 
+**Spec.** [`specs/mission-horizon/01-horizon-explicite.md`](../mission-horizon/01-horizon-explicite.md).
+Elle tranche la question ouverte n°1 (dérivé *et* champ wizard), et elle corrige deux
+constats de cette fiche : le coast final n'est **jamais** volé pendant l'optimisation
+(la passe d'optim emprunte `StageChainRunner.plain()`, dont le coast final vaut zéro),
+donc l'invariant est structurel et non seulement souhaité ; et `FALLBACK_DURATION_SECONDS`
+est bien atteignable, mais par un `CoastingStage(stopAtNode = true)` dont le nœud n'arrive
+pas — d'où la décision de ne pas y toucher.
+
 #### MIS-9 — Éphéméride de mission hors mémoire — **non planifié, conditionnel**
 
 > Corollaire naturel de `MIS-8`, délibérément **non retenu dans une phase**. Ce
