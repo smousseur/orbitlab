@@ -6,6 +6,7 @@ import com.simsilica.lemur.GuiGlobals;
 import com.simsilica.lemur.Insets3f;
 import com.simsilica.lemur.component.QuadBackgroundComponent;
 import com.simsilica.lemur.component.TbtQuadBackgroundComponent;
+import com.simsilica.lemur.core.GuiComponent;
 import com.simsilica.lemur.style.Attributes;
 import com.simsilica.lemur.style.Styles;
 import com.smousseur.orbitlab.ui.UiKit;
@@ -90,6 +91,18 @@ public final class FormStyles {
   /** 9-slice input background with accent focus ring. */
   public static TbtQuadBackgroundComponent inputFocusBg() {
     return UiKit.wizardBg9("input-focus", 8);
+  }
+
+  /**
+   * Drops the default margin of a modal shell background so the window's own insets are the only
+   * padding. No-op on background types that carry no margin.
+   */
+  public static void clearMargin(GuiComponent background) {
+    if (background instanceof TbtQuadBackgroundComponent quad) {
+      quad.setMargin(0f, 0f);
+    } else if (background instanceof QuadBackgroundComponent quad) {
+      quad.setMargin(0f, 0f);
+    }
   }
 
   // =================================================================

@@ -16,15 +16,28 @@ import com.smousseur.orbitlab.ui.UiKit;
  */
 public class ModalBackdrop {
 
+  /** Depth of a first-level modal's backdrop; its window sits one unit in front. */
+  private static final float DEFAULT_Z = 100f;
+
   private final Container backdrop;
+  private final float z;
   private int lastWidth;
   private int lastHeight;
   private Runnable onClick;
 
   public ModalBackdrop() {
+    this(DEFAULT_Z);
+  }
+
+  /**
+   * @param z depth of the backdrop, used to stack a modal on top of another one (the GUI bucket
+   *     picks and renders higher z first)
+   */
+  public ModalBackdrop(float z) {
+    this.z = z;
     backdrop = new Container();
     backdrop.setBackground(UiKit.gradientBackground(FormStyles.BACKDROP));
-    backdrop.setLocalTranslation(0, 0, 100);
+    backdrop.setLocalTranslation(0, 0, z);
 
     MouseEventControl.addListenersToSpatial(
         backdrop,
@@ -70,7 +83,7 @@ public class ModalBackdrop {
       lastWidth = w;
       lastHeight = h;
       backdrop.setPreferredSize(new Vector3f(w, h, 0));
-      backdrop.setLocalTranslation(0, h, 100);
+      backdrop.setLocalTranslation(0, h, z);
     }
   }
 }
