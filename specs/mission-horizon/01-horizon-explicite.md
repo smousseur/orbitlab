@@ -73,18 +73,29 @@ Interface scellée dans `simulation/mission/`, aux côtés de `MissionType` et `
 du vocabulaire de mission, pas de la plomberie d'éphéméride.
 
 ```java
-sealed interface MissionHorizon permits Revolutions, FixedDuration
+sealed interface MissionHorizon permits Revolutions, FixedDuration, TrailingCoast
   record Revolutions(int count)          // N révolutions après insertion
   record FixedDuration(double seconds)   // durée totale depuis le lancement
+  record TrailingCoast(double seconds)   // coast de longueur fixe après insertion
 ```
 
-Une seule opération : `finalCoastSeconds(launchDate, insertionDate, achievedOrbit)`, la durée du
-coast final.
+Une seule opération : `finalCoastSeconds(launchDate, insertionState)`, la durée du coast final.
+Elle prend l'**état** d'insertion et non une date plus une orbite : c'est ce que l'appelant a
+réellement en main (`mission.getCurrentState()`), la date s'en déduit, et `Revolutions` y lit
+lui-même sa période sans dépendre de la forme d'`AchievedOrbit`.
 
 | Cas | Résolution |
 |---|---|
-| `Revolutions(n)` | `n × achievedOrbit.getKeplerianPeriod()` |
-| `FixedDuration(s)` | `s − (insertionDate − launchDate)` |
+| `Revolutions(n)` | `n × période képlérienne de l'orbite atteinte` |
+| `FixedDuration(s)` | `s − (dateInsertion − launchDate)` |
+| `TrailingCoast(s)` | `s`, indépendant de l'insertion |
+
+> **Pourquoi trois cas et pas deux.** `TrailingCoast` est la primitive que `StageChainRunner`
+> implémente déjà, et c'est exactement la sémantique de la constante remplacée. Il existe pour que
+> le défaut de `Mission` soit *démontrablement* l'ancien comportement. Exprimer ce défaut en
+> `FixedDuration(86_164)` aurait été subtilement différent : une durée totale retranche l'ascension,
+> raccourcissant le coast d'environ 600 s — assez pour déplacer ce que mesure
+> `GravityTurnFloorProbeTest`. Le wizard n'écrit jamais ce cas.
 
 Les trois garde-fous :
 
@@ -131,10 +142,10 @@ balayage ergols appelle, et qui doivent donc le propager.
 > le statut d'`initialDate` : décidé dehors, appliqué à la mission. `Mission` est déjà un porteur
 > mutable assumé (`setInitialDate`, `setStatus`, `setCurrentState`).
 
-**La valeur par défaut du champ est `FixedDuration(86_164.0)`** — la constante actuelle. Ce n'est
-pas de la nostalgie : `GravityTurnFloorProbeTest` appelle `generate()` sur des missions construites
-hors composer. Ce défaut leur garantit un comportement identique, et confine l'écart mesuré du
-chantier aux missions que l'application construit.
+**La valeur par défaut du champ est `TrailingCoast(86_164.0)`** — la constante actuelle, à la
+seconde près. Ce n'est pas de la nostalgie : `GravityTurnFloorProbeTest` appelle `generate()` sur des
+missions construites hors composer. Ce défaut leur garantit un comportement identique, et confine
+l'écart mesuré du chantier aux missions que l'application construit.
 
 **La résolution produit une durée, pas une date.** `MissionOptimizer` calcule déjà
 `AchievedOrbit.of(mission.getCurrentState())` juste avant de générer, et à ce point
@@ -257,10 +268,23 @@ test : **c'est structurel.**
 Le coast final n'est donc **jamais volé pendant l'optimisation**. L'horizon est postérieur au dernier
 étage optimisé par construction.
 
-Le test qui verrouille l'invariant sans relancer CMA-ES : sur une mission LEO déjà optimisée,
-appeler `generate()` **deux fois** avec des horizons très éloignés (1 h et 30 j) et vérifier que les
-points du préfixe commun coïncident à la nanoseconde et au mètre, et que `isComplete()` ne bouge
-pas. Une seule optimisation, deux générations — et il teste le comportement, pas la forme du code.
+Le test qui verrouille l'invariant appelle `generate()` **deux fois** avec des horizons éloignés et
+compare. Il n'a besoin d'aucune optimisation : ce qui est testé est le câblage — quelle phase reçoit
+quel pas, ce qui borne une phase sans cutoff, et jusqu'où l'horizon peut atteindre. Des phases
+inertes suffisent, et ne pas avoir besoin d'un modèle de poussée garde ces tests à la seconde plutôt
+qu'à la minute.
+
+Il affirme **deux choses à deux niveaux d'exigence différents**, et la distinction est mesurée, pas
+supposée :
+
+- **Tout ce qui précède le coast final est identique au bit.** Ces phases sont propagées jusqu'à
+  leurs propres cutoffs, que l'horizon ne touche pas : aucune tolérance n'est accordée. C'est
+  l'assertion qui attraperait une fuite de l'horizon dans un étage optimisé.
+- **Le coast final lui-même s'accorde au millimètre, pas exactement.** Mesuré : **1,3 µm** sur les
+  premiers échantillons communs. Ce n'est pas l'horizon qui perturbe la trajectoire, c'est
+  l'intégrateur adaptatif qui choisit une séquence de pas différente quand on lui donne une date
+  cible différente — attendu, et sans conséquence pour une phase qui est par construction postérieure
+  à tout ce que l'optimiseur a produit.
 
 ---
 
@@ -280,13 +304,18 @@ confirme le bornage. On documente le filet au lieu de le déplacer.
 
 ## 10. Tests
 
-| Test | Nature | Ce qu'il prouve |
-|---|---|---|
-| Double `generate()` à horizons éloignés | intégration, une seule optim | L'horizon n'agit qu'après l'insertion (§8) |
-| `MissionHorizon` | unitaire | Les deux cas, le clamp à zéro, le repli sans période, le plafond 30 j |
-| `TrajectoryPolyline` | unitaire | Identité sous le budget ; taille bornée et extrémités conservées au-delà ; `indexUpTo` aux bornes, avant, après |
-| Pas variable | unitaire | Intervalles à 1 s en stage propulsif, 60 s en coast |
-| Filet du runner | unitaire | Un `CoastingStage(stopAtNode = true)` sans nœud est borné à 7200 s |
+Livrés, 22 tests, ~12 s au total.
+
+| Classe | Ce qu'elle prouve |
+|---|---|
+| `MissionHorizonTest` | Les trois cas ; le défaut LEO tombe bien vers 3,2 j ; clamp à zéro sous l'ascension ; repli sur orbite non liée ; plafond 30 j sur les trois cas ; le défaut de `Mission` est le `TrailingCoast` historique |
+| `TrajectoryPolylineTest` | Identité sous le budget et à la limite ; au-delà, taille bornée, **extrémités conservées** et temps strictement croissants ; `indexUpTo` au plancher, entre deux échantillons, et clampé aux deux bouts ; `displayTrail()` rend la même instance |
+| `MissionHorizonSamplingTest` | La règle 1 s / 60 s lue sur les étages **et** telle qu'elle atterrit dans une éphéméride générée ; l'horizon n'atteint rien avant le coast final (§8) ; une phase sans cutoff est bornée par le filet, et ce n'est pas compté comme un shortfall |
+
+Le filet est testé via un `CoastingStage` sans `maxTime` ni nœud plutôt que via
+`stopAtNode = true` sur une orbite équatoriale : le `NodeDetector` d'une orbite dont la fonction de
+commutation est identiquement nulle a un comportement numérique douteux, et ce n'est pas ce qu'on
+cherche à mesurer. La branche exercée est la même.
 
 ---
 

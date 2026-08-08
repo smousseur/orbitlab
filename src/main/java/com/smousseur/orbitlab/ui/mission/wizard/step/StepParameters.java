@@ -13,6 +13,7 @@ import com.simsilica.lemur.event.*;
 import com.smousseur.orbitlab.app.OrekitTime;
 import com.smousseur.orbitlab.app.converters.TimeConverter;
 import com.smousseur.orbitlab.core.OrbitlabException;
+import com.smousseur.orbitlab.simulation.mission.MissionHorizon;
 import com.smousseur.orbitlab.simulation.mission.context.MissionContext;
 import com.smousseur.orbitlab.simulation.mission.MissionType;
 import com.smousseur.orbitlab.ui.EphemerisWindow;
@@ -42,6 +43,21 @@ public class StepParameters implements StepValues {
   private static final String LAUNCH_DATE_FORMAT_HELPER =
       "format attendu : yyyy-MM-dd HH:mm:ss (UTC)";
 
+  private static final float HORIZON_FIELD_W = 120f;
+  private static final float HORIZON_BUTTON_W = 76f;
+
+  /** Shortest mission the horizon field accepts: one minute, expressed in days. */
+  private static final double HORIZON_MIN_DAYS = 1.0 / 1440.0;
+
+  /** Longest mission the horizon field accepts — the cap the model enforces anyway. */
+  private static final double HORIZON_MAX_DAYS =
+      MissionHorizon.MAX_COAST_SECONDS / MissionHorizon.SECONDS_PER_DAY;
+
+  private static final String HORIZON_FORMAT_HELPER =
+      "durée attendue : un nombre de jours entre 1 min et " + (long) HORIZON_MAX_DAYS + " j";
+
+  private static final String HORIZON_MANUAL_HELPER = "durée totale, depuis le décollage";
+
   private final Container root;
   private final MissionContext missionContext;
   private final Label titleLabel;
@@ -50,8 +66,25 @@ public class StepParameters implements StepValues {
   private final TextField launchDateField;
   private final Label launchDateHelper;
 
+  private final TextField horizonField;
+  private final Label horizonHelper;
+
+  /**
+   * Whether the duration field still shows the derived default. This is the whole of the "auto"
+   * state: while it holds, {@link #getValues()} omits the key entirely, which is what makes the
+   * wizard's auto mode survive a round-trip through the raw value map without a flag of its own
+   * (spec {@code specs/mission-horizon/01-horizon-explicite.md} §7).
+   */
+  private boolean horizonAuto = true;
+
+  /** The last text this step wrote into the duration field, to tell a prefill from a user edit. */
+  private String lastAutoHorizonText = "";
+
   /** Entry that was refused, kept so the error state clears as soon as it is edited. */
   private String rejectedLaunchDate;
+
+  /** Same, for the duration field. */
+  private String rejectedHorizon;
 
   private DynamicParameters dynamicParameters;
   private final EnumMap<MissionType, DynamicParameters> dynamicParametersMap =
@@ -108,6 +141,19 @@ public class StepParameters implements StepValues {
     launchDateHelper.setFont(UiKit.ibmPlexMono(11));
     launchDateHelper.setColor(FormStyles.TEXT_LO);
 
+    root.addChild(UiKit.vSpacer(ROW_GAP));
+
+    // --- Mission duration (restitution horizon) ---
+    root.addChild(
+        UiKit.fieldLabelRow("MISSION DURATION", "lbl-clock", LABEL_ICON_SIZE, LABEL_FIELD_GAP));
+    root.addChild(UiKit.vSpacer(LABEL_FIELD_GAP));
+    horizonField = newInputField("", HORIZON_FIELD_W, FIELD_H);
+    root.addChild(buildHorizonRow());
+    root.addChild(UiKit.vSpacer(LABEL_FIELD_GAP));
+    horizonHelper = root.addChild(new Label("", FormStyles.STYLE));
+    horizonHelper.setFont(UiKit.ibmPlexMono(11));
+    horizonHelper.setColor(FormStyles.TEXT_LO);
+
     for (DynamicParameters params : dynamicParametersMap.values()) {
       CursorEventControl.addListenersToSpatial(
           params.getContainer(),
@@ -127,6 +173,83 @@ public class StepParameters implements StepValues {
           });
     }
     updateDynamicParameters(0);
+    refreshHorizonFromDerived();
+  }
+
+  /** The duration field, its unit and the button that hands the value back to the derived default. */
+  private Container buildHorizonRow() {
+    Container row = new Container(new BoxLayout(Axis.X, FillMode.None));
+    row.setBackground(null);
+    row.addChild(horizonField);
+    row.addChild(UiKit.hSpacer(8f));
+
+    Label unit = row.addChild(new Label("jours", FormStyles.STYLE));
+    unit.setFont(UiKit.ibmPlexMono(11));
+    unit.setColor(FormStyles.TEXT_LO);
+
+    row.addChild(UiKit.hSpacer(16f));
+
+    Button auto = new Button("AUTO", FormStyles.STYLE);
+    auto.setPreferredSize(new Vector3f(HORIZON_BUTTON_W, FIELD_H, 0));
+    auto.setFont(UiKit.sora(12));
+    auto.setBackground(UiKit.wizardBg9("btn-ghost", 8));
+    auto.addClickCommands(src -> resetHorizonToDerived());
+    row.addChild(auto);
+
+    return row;
+  }
+
+  /** Hands the duration back to the derived policy, clearing any refused entry. */
+  private void resetHorizonToDerived() {
+    horizonAuto = true;
+    clearHorizonRejection();
+    refreshHorizonFromDerived();
+  }
+
+  /**
+   * Keeps the duration field in step with the target orbit while it is on auto, and notices the
+   * first keystroke that takes it off auto.
+   *
+   * <p>The auto state needs no widget of its own: the field's text either is what this step last
+   * wrote, or it is not.
+   */
+  private void updateHorizon() {
+    if (horizonAuto && !horizonField.getText().equals(lastAutoHorizonText)) {
+      // The user typed over the prefill. From here the value is theirs until AUTO is pressed.
+      horizonAuto = false;
+    }
+    if (horizonAuto) {
+      refreshHorizonFromDerived();
+      return;
+    }
+    if (rejectedHorizon != null) {
+      if (!rejectedHorizon.equals(horizonField.getText())) {
+        clearHorizonRejection();
+      }
+      return;
+    }
+    setHorizonHelper(HORIZON_MANUAL_HELPER, FormStyles.TEXT_LO);
+  }
+
+  /** Writes the derived duration into the field and describes it in the helper line. */
+  private void refreshHorizonFromDerived() {
+    String text = formatDays(dynamicParameters.defaultHorizonDays());
+    if (!text.equals(horizonField.getText())) {
+      horizonField.setText(text);
+    }
+    lastAutoHorizonText = text;
+    setHorizonHelper(
+        "auto · " + MissionHorizon.defaultFor(missionContext.getSelectedMissionType()).describe(),
+        FormStyles.TEXT_LO);
+  }
+
+  private void setHorizonHelper(String text, ColorRGBA color) {
+    horizonHelper.setText(text);
+    horizonHelper.setColor(color);
+  }
+
+  private static String formatDays(double days) {
+    return String.format(java.util.Locale.ROOT, "%.2f", days);
   }
 
   public Container getNode() {
@@ -139,6 +262,11 @@ public class StepParameters implements StepValues {
     values.put(FormField.MISSION_NAME.key(), missionNameField.getText());
     values.putAll(dynamicParameters.getDynamicValues());
     values.put(FormField.LAUNCH_DATE.key(), launchDateField.getText());
+    // Published only when overridden: an absent key IS the auto state, which is what lets a mission
+    // reopened in the wizard come back on auto without a second key to carry it.
+    if (!horizonAuto) {
+      values.put(FormField.MISSION_HORIZON_DAYS.key(), horizonField.getText());
+    }
     return values;
   }
 
@@ -159,6 +287,23 @@ public class StepParameters implements StepValues {
     if (target != null) {
       target.applyValues(values);
     }
+    applyHorizon(values);
+  }
+
+  /**
+   * Restores the duration field from previously published values. The key's absence is meaningful —
+   * it means the mission was left on the derived default — so it puts the field back on auto rather
+   * than leaving whatever the previous edit had shown.
+   */
+  private void applyHorizon(Map<String, Object> values) {
+    Object raw = values.get(FormField.MISSION_HORIZON_DAYS.key());
+    if (raw == null || raw.toString().isBlank()) {
+      resetHorizonToDerived();
+      return;
+    }
+    horizonAuto = false;
+    clearHorizonRejection();
+    horizonField.setText(raw.toString().trim());
   }
 
   /** Reads the mission type out of the raw values, falling back on the one the context selects. */
@@ -181,6 +326,8 @@ public class StepParameters implements StepValues {
       clearLaunchDateRejection();
     }
     updateDynamicParameters(tpf);
+    // After the panel swap, so the derived duration is read off the parameters now on screen.
+    updateHorizon();
   }
 
   /**
@@ -220,6 +367,48 @@ public class StepParameters implements StepValues {
     launchDateField.setColor(FormStyles.TEXT_PRIMARY);
     launchDateHelper.setText(LAUNCH_DATE_HELPER);
     launchDateHelper.setColor(FormStyles.TEXT_LO);
+  }
+
+  /**
+   * Checks the mission duration and marks the field when it cannot be used, on the same contract as
+   * {@link #validateLaunchDate()}: caught while the wizard is still open rather than degraded
+   * silently to the derived default at mission creation.
+   *
+   * <p>Always accepts an untouched field: the derived default is by construction within bounds.
+   *
+   * @return the reason the duration was refused, or empty when it is usable
+   */
+  public Optional<String> validateHorizon() {
+    if (horizonAuto) {
+      clearHorizonRejection();
+      return Optional.empty();
+    }
+    String text = horizonField.getText().trim();
+    double days;
+    try {
+      days = Double.parseDouble(text);
+    } catch (NumberFormatException e) {
+      return Optional.of(rejectHorizon(text, HORIZON_FORMAT_HELPER));
+    }
+    if (!Double.isFinite(days) || days < HORIZON_MIN_DAYS || days > HORIZON_MAX_DAYS) {
+      return Optional.of(rejectHorizon(text, HORIZON_FORMAT_HELPER));
+    }
+    clearHorizonRejection();
+    return Optional.empty();
+  }
+
+  private String rejectHorizon(String text, String message) {
+    rejectedHorizon = text;
+    horizonField.setColor(FormStyles.DANGER);
+    setHorizonHelper(message, FormStyles.DANGER);
+    return message;
+  }
+
+  private void clearHorizonRejection() {
+    rejectedHorizon = null;
+    horizonField.setColor(FormStyles.TEXT_PRIMARY);
+    // The neutral line; on auto, the next updateHorizon() replaces it with the derived description.
+    setHorizonHelper(HORIZON_MANUAL_HELPER, FormStyles.TEXT_LO);
   }
 
   private void updateDynamicParameters(float tpf) {

@@ -13,9 +13,11 @@ import com.simsilica.lemur.event.CursorButtonEvent;
 import com.simsilica.lemur.event.CursorEventControl;
 import com.simsilica.lemur.event.CursorMotionEvent;
 import com.simsilica.lemur.event.DefaultCursorListener;
+import com.smousseur.orbitlab.simulation.mission.MissionHorizon;
 import com.smousseur.orbitlab.ui.UiKit;
 import com.smousseur.orbitlab.ui.form.FormStyles;
 import java.util.Map;
+import org.orekit.utils.Constants;
 
 import static com.smousseur.orbitlab.ui.mission.wizard.step.StepParameters.*;
 
@@ -49,6 +51,36 @@ public abstract class DynamicParameters {
    * @param values the raw wizard values
    */
   public abstract void applyValues(Map<String, Object> values);
+
+  /**
+   * The derived mission duration these parameters imply, in days — what the wizard's duration field
+   * shows while the user leaves it on auto.
+   *
+   * <p>It lives here, and not in {@code StepParameters}, because the number is a function of the
+   * target orbit: only the type's own panel knows which of its fields carry the semi-major axis. The
+   * step asks, the panel answers.
+   *
+   * <p>A display estimate, computed on the orbit being <em>aimed at</em>. The horizon that is
+   * actually flown resolves against the orbit <em>achieved</em>, which the wizard cannot know; the
+   * two differ by well under a percent.
+   *
+   * @return the derived horizon in days
+   */
+  public abstract double defaultHorizonDays();
+
+  /**
+   * Days spanned by {@code revolutions} turns of a circular-equivalent orbit of the given semi-major
+   * axis, via the Keplerian period {@code 2π√(a³/µ)}.
+   *
+   * @param revolutions the number of revolutions
+   * @param semiMajorAxisMeters the semi-major axis in meters, measured from Earth's centre
+   * @return the duration in days
+   */
+  protected static double revolutionDays(int revolutions, double semiMajorAxisMeters) {
+    double a = semiMajorAxisMeters;
+    double period = 2.0 * Math.PI * Math.sqrt(a * a * a / Constants.WGS84_EARTH_MU);
+    return revolutions * period / MissionHorizon.SECONDS_PER_DAY;
+  }
 
   protected Container getSliderContainer(
       String label, Slider slider, TextField field, double altitudeMin, double altitudeMax) {

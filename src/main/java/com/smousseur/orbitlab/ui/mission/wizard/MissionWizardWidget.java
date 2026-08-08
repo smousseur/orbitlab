@@ -204,25 +204,33 @@ public class MissionWizardWidget implements AutoCloseable {
     if (currentStep == MissionWizardStep.LAUNCHER) {
       // Checked again here, and not only when leaving the parameters step, because the stepper lets
       // the user jump over it.
-      if (launchDateRefused()) {
+      if (parametersRefused()) {
         showStep(MissionWizardStep.PARAMETERS);
         return;
       }
       onSubmit.accept(getAllValues());
       return;
     }
-    if (currentStep == MissionWizardStep.PARAMETERS && launchDateRefused()) {
+    if (currentStep == MissionWizardStep.PARAMETERS && parametersRefused()) {
       return;
     }
     MissionWizardStep next = currentStep.next();
     if (next != null) showStep(next);
   }
 
-  /** Keeps the wizard open on a launch date the application cannot use, field marked. */
-  private boolean launchDateRefused() {
-    Optional<String> error = stepParameters.validateLaunchDate();
-    error.ifPresent(reason -> logger.info("Wizard: launch date refused ({})", reason));
-    return error.isPresent();
+  /**
+   * Keeps the wizard open on a parameter the application cannot use, the offending field marked.
+   *
+   * <p>Both checks run, and neither short-circuits the other: a user who has a bad date <em>and</em>
+   * a bad duration should see both fields marked at once rather than discover the second only after
+   * fixing the first.
+   */
+  private boolean parametersRefused() {
+    Optional<String> dateError = stepParameters.validateLaunchDate();
+    dateError.ifPresent(reason -> logger.info("Wizard: launch date refused ({})", reason));
+    Optional<String> horizonError = stepParameters.validateHorizon();
+    horizonError.ifPresent(reason -> logger.info("Wizard: mission duration refused ({})", reason));
+    return dateError.isPresent() || horizonError.isPresent();
   }
 
   /** Aggregates values from every step. Throws if two steps publish the same key. */
