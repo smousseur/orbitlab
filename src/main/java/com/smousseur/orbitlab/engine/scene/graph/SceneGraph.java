@@ -22,6 +22,10 @@ import java.util.Objects;
  *
  * <p>Each root has a frame node for floating-origin offset, plus dedicated nodes for orbits and
  * bodies.
+ *
+ * <p>A third root, the <strong>sky root</strong>, holds the skybox. It is rendered by its own
+ * pre-view with a fixed frustum, because JME's sky shader places the sky mesh at its raw model
+ * radius in view space and would therefore be clipped away by the far camera's dynamic near plane.
  */
 public final class SceneGraph {
   public static final String ORBIT_PREFIX = "Orbit-";
@@ -42,6 +46,8 @@ public final class SceneGraph {
   private final Node nearOrbitsNode = new Node("nearOrbitsNode");
   private final Node nearBodiesNode = new Node("nearBodiesNode");
 
+  private final Node skyRoot = new Node("skyRoot");
+
   private final OrbitLayer farOrbitLayer = new OrbitLayer(farOrbitsNode);
   private final OrbitLayer nearOrbitLayer = new OrbitLayer(nearOrbitsNode);
 
@@ -56,7 +62,12 @@ public final class SceneGraph {
   }
 
   /**
-   * Attaches both the far and near root nodes to the specified JME3 root node.
+   * Attaches the far, near and sky root nodes to the specified JME3 root node.
+   *
+   * <p>The JME root node itself is detached from every viewport: each of these roots is attached to
+   * its own viewport instead. Keeping them under the root node is what makes {@code
+   * SimpleApplication} run {@code updateLogicalState} / {@code updateGeometricState} over them each
+   * frame.
    *
    * @param rootNode the JME3 root node to attach to
    */
@@ -69,12 +80,16 @@ public final class SceneGraph {
     if (nearRoot.getParent() == null) {
       rootNode.attachChild(nearRoot);
     }
+    if (skyRoot.getParent() == null) {
+      rootNode.attachChild(skyRoot);
+    }
   }
 
-  /** Detaches both the far and near root nodes from their parent node. */
+  /** Detaches the far, near and sky root nodes from their parent node. */
   public void detachFromParent() {
     farRoot.removeFromParent();
     nearRoot.removeFromParent();
+    skyRoot.removeFromParent();
   }
 
   public void showBodySpatial(SolarSystemBody body) {
@@ -160,6 +175,19 @@ public final class SceneGraph {
    */
   public Node getNearRoot() {
     return nearRoot;
+  }
+
+  /**
+   * Returns the sky root node, rendered by the dedicated sky pre-view.
+   *
+   * <p>This node must keep an identity transform: JME's sky shader derives the cube map lookup
+   * direction from the inverse world matrix, so any rotation applied here would rotate the starfield
+   * with respect to the scene axes.
+   *
+   * @return the sky root node
+   */
+  public Node getSkyRoot() {
+    return skyRoot;
   }
 
   /**

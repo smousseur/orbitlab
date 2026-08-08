@@ -9,6 +9,7 @@ import com.jme3.scene.Geometry;
 import com.jme3.scene.SceneGraphVisitorAdapter;
 import com.jme3.scene.Spatial;
 import com.jme3.texture.Texture;
+import com.jme3.util.SkyFactory;
 import com.smousseur.orbitlab.core.OrbitlabException;
 import org.jspecify.annotations.NonNull;
 
@@ -58,6 +59,38 @@ public class AssetFactory {
     Spatial model = assetManager.loadModel(path);
     model.setLocalScale(scale);
     return model;
+  }
+
+  /**
+   * Loads a texture from the specified path within the "textures" directory.
+   *
+   * @param path the relative path to the texture file, excluding the "textures/" prefix
+   * @return the loaded texture, or null if the texture could not be loaded
+   */
+  public Texture loadTexture(String path) {
+    return assetManager.loadTexture("textures/" + path);
+  }
+
+  public Spatial createSkybox(
+      String westTex,
+      String eastTex,
+      String northTex,
+      String southTex,
+      String upTex,
+      String downTex) {
+    return SkyFactory.createSky(
+        assetManager,
+        loadTexture(westTex),
+        loadTexture(eastTex),
+        loadTexture(northTex),
+        loadTexture(southTex),
+        loadTexture(upTex),
+        loadTexture(downTex));
+  }
+
+  public Spatial createSkybox(
+      Texture west, Texture east, Texture north, Texture south, Texture up, Texture down) {
+    return SkyFactory.createSky(assetManager, west, east, north, south, up, down);
   }
 
   /**

@@ -27,6 +27,7 @@ import com.smousseur.orbitlab.states.orbits.OrbitInitAppState;
 import com.smousseur.orbitlab.states.orbits.OrbitRuntimeAppState;
 import com.smousseur.orbitlab.states.scene.PlanetHudMarkersAppState;
 import com.smousseur.orbitlab.states.scene.PlanetPoseAppState;
+import com.smousseur.orbitlab.states.scene.SkyboxAppState;
 import com.smousseur.orbitlab.states.scene.SolarSystemSceneAppState;
 import com.smousseur.orbitlab.states.time.SimulationClockAppState;
 import com.smousseur.orbitlab.states.time.TimelineWidgetAppState;
@@ -71,6 +72,7 @@ public class OrbitLabApplication extends SimpleApplication {
 
     ApplicationContext applicationContext = new ApplicationContext(rootNode, guiNode);
     stateManager.attach(new InitAppState());
+    stateManager.attach(new SkyboxAppState(applicationContext));
     stateManager.attach(new SimulationClockAppState(applicationContext));
     stateManager.attach(new EphemerisAppState(applicationContext));
     stateManager.attach(new PlanetPoseAppState(applicationContext));
@@ -115,6 +117,20 @@ public class OrbitLabApplication extends SimpleApplication {
 
     farViewport.detachScene(rootNode);
     farViewport.attachScene(sceneGraph.getFarRoot());
+
+    // Sky pre-view: rendered before everything else, it owns the background color.
+    // It needs its own camera because JME's sky shader places the sky mesh at its raw model
+    // radius (10) in view space: the far camera's dynamic near plane grows with the zoom
+    // distance and would clip the skybox away entirely past ~10 000 world units.
+    // SkyboxAppState keeps this camera's rotation and FoV in sync with the far camera.
+    Camera skyCam = farCam.clone();
+    applicationContext.setSkyCamera(skyCam);
+    ViewPort skyViewport = renderManager.createPreView("SkyView", skyCam);
+    skyViewport.setClearFlags(true, true, true);
+    skyViewport.attachScene(sceneGraph.getSkyRoot());
+
+    // The far viewport must no longer clear the color buffer, otherwise it erases the sky.
+    farViewport.setClearFlags(false, true, true);
 
     Camera nearCam = farCam.clone();
     applicationContext.setNearCamera(nearCam);

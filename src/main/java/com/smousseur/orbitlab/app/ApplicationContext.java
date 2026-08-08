@@ -7,14 +7,13 @@ import com.smousseur.orbitlab.app.view.FocusView;
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.engine.EngineConfig;
 import com.smousseur.orbitlab.engine.events.EventBus;
+import com.smousseur.orbitlab.engine.scene.body.BodyView;
 import com.smousseur.orbitlab.engine.scene.graph.GuiGraph;
 import com.smousseur.orbitlab.engine.scene.graph.SceneGraph;
-import com.smousseur.orbitlab.engine.scene.body.BodyView;
 import com.smousseur.orbitlab.engine.scene.planet.PlanetPresenter;
 import com.smousseur.orbitlab.simulation.mission.MissionId;
 import com.smousseur.orbitlab.simulation.mission.context.MissionContext;
 import com.smousseur.orbitlab.states.mission.MissionRenderer;
-
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.LinkedHashMap;
@@ -41,6 +40,7 @@ public class ApplicationContext {
   private final FocusView focusView;
   private final MissionContext missionContext;
   private Camera nearCamera;
+  private Camera skyCamera;
 
   /**
    * Creates a new application context and attaches the scene and GUI graphs to the provided JME3
@@ -248,5 +248,24 @@ public class ApplicationContext {
    */
   public void setNearCamera(Camera nearCamera) {
     this.nearCamera = nearCamera;
+  }
+
+  /**
+   * Returns the sky pre-view camera. Only its rotation and field of view are meaningful: the sky
+   * shader ignores the camera translation, and the camera owns a fixed depth range.
+   *
+   * @return the sky camera
+   */
+  public Camera skyCamera() {
+    return skyCamera;
+  }
+
+  /**
+   * Sets the sky pre-view camera.
+   *
+   * @param skyCamera the sky pre-view camera
+   */
+  public void setSkyCamera(Camera skyCamera) {
+    this.skyCamera = skyCamera;
   }
 }
