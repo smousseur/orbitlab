@@ -3,6 +3,7 @@ package com.smousseur.orbitlab.ui.mission.wizard.step;
 import static com.smousseur.orbitlab.ui.UiKit.fieldLabelRow;
 import static com.smousseur.orbitlab.ui.UiKit.newInputField;
 
+import com.jme3.input.event.MouseMotionEvent;
 import com.jme3.math.ColorRGBA;
 import com.jme3.math.Vector3f;
 import com.jme3.scene.Spatial;
@@ -14,8 +15,8 @@ import com.smousseur.orbitlab.app.OrekitTime;
 import com.smousseur.orbitlab.app.converters.TimeConverter;
 import com.smousseur.orbitlab.core.OrbitlabException;
 import com.smousseur.orbitlab.simulation.mission.MissionHorizon;
-import com.smousseur.orbitlab.simulation.mission.context.MissionContext;
 import com.smousseur.orbitlab.simulation.mission.MissionType;
+import com.smousseur.orbitlab.simulation.mission.context.MissionContext;
 import com.smousseur.orbitlab.ui.EphemerisWindow;
 import com.smousseur.orbitlab.ui.UiKit;
 import com.smousseur.orbitlab.ui.form.FormStyles;
@@ -41,10 +42,21 @@ public class StepParameters implements StepValues {
 
   private static final String LAUNCH_DATE_HELPER = "UTC · Orekit epoch";
   private static final String LAUNCH_DATE_FORMAT_HELPER =
-      "format attendu : yyyy-MM-dd HH:mm:ss (UTC)";
+      "expected format : yyyy-MM-dd HH:mm:ss (UTC)";
 
   private static final float HORIZON_FIELD_W = 120f;
-  private static final float HORIZON_BUTTON_W = 76f;
+
+  /** Diameter of the auto/manual status dot. */
+  private static final float AUTO_DOT_SIZE = 8f;
+
+  /** Gap between the launch-date and mission-duration columns. */
+  private static final float COLUMN_GAP = 24f;
+
+  /**
+   * Width of the launch-date field, now that it shares its row. Whatever the duration column does
+   * not take, less the gap — comfortably more than the {@code yyyy-MM-dd HH:mm:ss} it must show.
+   */
+  private static final float DATE_FIELD_W = 420f;
 
   /** Shortest mission the horizon field accepts: one minute, expressed in days. */
   private static final double HORIZON_MIN_DAYS = 1.0 / 1440.0;
@@ -54,9 +66,14 @@ public class StepParameters implements StepValues {
       MissionHorizon.MAX_COAST_SECONDS / MissionHorizon.SECONDS_PER_DAY;
 
   private static final String HORIZON_FORMAT_HELPER =
-      "durée attendue : un nombre de jours entre 1 min et " + (long) HORIZON_MAX_DAYS + " j";
+      "Expected duration: number of days between 1 minute and " + (long) HORIZON_MAX_DAYS + " d";
 
-  private static final String HORIZON_MANUAL_HELPER = "durée totale, depuis le décollage";
+  /**
+   * Kept short on purpose: a column takes the width of its widest child, and the accepted range is
+   * already spelled out by {@link #HORIZON_FORMAT_HELPER} the moment an entry is refused — the same
+   * bargain the launch-date field makes.
+   */
+  private static final String HORIZON_MANUAL_HELPER = "total duration since takeoff";
 
   private final Container root;
   private final MissionContext missionContext;
@@ -68,6 +85,14 @@ public class StepParameters implements StepValues {
 
   private final TextField horizonField;
   private final Label horizonHelper;
+
+  /** The word {@code auto}: a text-only control, and the click target that restores the default. */
+  private Button autoButton;
+
+  /** The lit/unlit dot beside it. It, and not the button's weight, is what shows the state. */
+  private Panel autoDot;
+
+  private boolean autoHovered;
 
   /**
    * Whether the duration field still shows the derived default. This is the whole of the "auto"
@@ -130,29 +155,32 @@ public class StepParameters implements StepValues {
     dynamicParametersContainer.setBackground(null);
     root.addChild(dynamicParametersContainer);
 
-    // --- Launch Date ---
-    root.addChild(
-        UiKit.fieldLabelRow("LAUNCH DATE", "lbl-clock", LABEL_ICON_SIZE, LABEL_FIELD_GAP));
-    root.addChild(UiKit.vSpacer(LABEL_FIELD_GAP));
-    launchDateField = newInputField(OrekitTime.utcNowString(), FIELD_W, FIELD_H);
-    root.addChild(launchDateField);
-    root.addChild(UiKit.vSpacer(LABEL_FIELD_GAP));
-    launchDateHelper = root.addChild(new Label(LAUNCH_DATE_HELPER, FormStyles.STYLE));
+    // --- Launch date and mission duration, side by side ---
+    // Two columns rather than two stacked blocks: the step has no vertical room to spare (the root
+    // is pinned to FormStyles.CONTENT_HEIGHT and nothing clips, so an overflow lands on the
+    // footer),
+    // and the two fields belong together anyway — when it starts, and how long it runs.
+    launchDateField = newInputField(OrekitTime.utcNowString(), DATE_FIELD_W, FIELD_H);
+    launchDateHelper = new Label(LAUNCH_DATE_HELPER, FormStyles.STYLE);
     launchDateHelper.setFont(UiKit.ibmPlexMono(11));
     launchDateHelper.setColor(FormStyles.TEXT_LO);
 
-    root.addChild(UiKit.vSpacer(ROW_GAP));
-
-    // --- Mission duration (restitution horizon) ---
-    root.addChild(
-        UiKit.fieldLabelRow("MISSION DURATION", "lbl-clock", LABEL_ICON_SIZE, LABEL_FIELD_GAP));
-    root.addChild(UiKit.vSpacer(LABEL_FIELD_GAP));
     horizonField = newInputField("", HORIZON_FIELD_W, FIELD_H);
-    root.addChild(buildHorizonRow());
-    root.addChild(UiKit.vSpacer(LABEL_FIELD_GAP));
-    horizonHelper = root.addChild(new Label("", FormStyles.STYLE));
+    // Under its own column, like every other field's helper: same slot, same role — provenance
+    // while
+    // the entry is good, the reason while it is refused. The auto/manual state is NOT written here;
+    // the button carries it, and saying it twice is what made this line read as noise.
+    horizonHelper = new Label("", FormStyles.STYLE);
     horizonHelper.setFont(UiKit.ibmPlexMono(11));
     horizonHelper.setColor(FormStyles.TEXT_LO);
+
+    Container columns = new Container(new BoxLayout(Axis.X, FillMode.None));
+    columns.setBackground(null);
+    columns.addChild(fieldColumn("LAUNCH DATE", "lbl-clock", launchDateField, launchDateHelper));
+    columns.addChild(UiKit.hSpacer(COLUMN_GAP));
+    columns.addChild(
+        fieldColumn("MISSION DURATION", "lbl-clock", buildHorizonRow(), horizonHelper));
+    root.addChild(columns);
 
     for (DynamicParameters params : dynamicParametersMap.values()) {
       CursorEventControl.addListenersToSpatial(
@@ -176,27 +204,144 @@ public class StepParameters implements StepValues {
     refreshHorizonFromDerived();
   }
 
-  /** The duration field, its unit and the button that hands the value back to the derived default. */
+  /**
+   * One labelled column: the field's label above, the control, and its helper line below. Nothing
+   * here is given a preferred width — each column takes the width of its widest child, which is
+   * what keeps a helper longer than its field from being clipped.
+   *
+   * @param label the field label, in the form's uppercase convention
+   * @param iconName the wizard icon shown beside the label
+   * @param control the field, or a row of widgets acting as one
+   * @param helper the helper line, already styled
+   * @return the assembled column
+   */
+  private static Container fieldColumn(String label, String iconName, Panel control, Label helper) {
+    Container column = new Container(new BoxLayout(Axis.Y, FillMode.None));
+    column.setBackground(null);
+    column.addChild(fieldLabelRow(label, iconName, LABEL_ICON_SIZE, LABEL_FIELD_GAP));
+    column.addChild(UiKit.vSpacer(LABEL_FIELD_GAP));
+    column.addChild(control);
+    column.addChild(UiKit.vSpacer(LABEL_FIELD_GAP));
+    column.addChild(helper);
+    return column;
+  }
+
+  /**
+   * Wraps a widget shorter than the field it sits beside so it lines up on the row's centre line
+   * rather than on its top edge. Padding, not alignment: a widget sizes itself to its content, so
+   * there is no box for an alignment to work inside — the same reason {@code
+   * DynamicParameters.buildSliderRow} centres its slider this way.
+   *
+   * @param child the widget to centre against a {@link #FIELD_H}-tall row
+   * @return the wrapper to add to the row
+   */
+  private static Container centeredInRow(Panel child) {
+    Container wrap = new Container(new BoxLayout(Axis.Y, FillMode.None));
+    wrap.setBackground(null);
+    float pad = Math.max(0f, (FIELD_H - child.getPreferredSize().y) * 0.5f);
+    // Padded on both sides, not just the top: that makes the wrapper exactly FIELD_H tall, so
+    // wrapping something already centred is a no-op instead of shifting it down by half the
+    // leftover — which is precisely how the auto indicator ended up sitting low.
+    wrap.addChild(UiKit.vSpacer(pad));
+    wrap.addChild(child);
+    wrap.addChild(UiKit.vSpacer(pad));
+    return wrap;
+  }
+
+  /**
+   * The duration field, its unit and the AUTO button.
+   *
+   * <p>No custom insets on the button: they shrink the content box that {@code VAlignment.Center}
+   * then centres in, so a bottom inset visibly pushes the label up. Preferred size plus alignment
+   * is enough, and it matches the recipe {@code WizardFooter} already uses for its own buttons.
+   */
   private Container buildHorizonRow() {
+    // No preferred size on the row: forcing one made the sum of the children exceed it — the unit
+    // label reports a width of its own whatever is asked of it — and Lemur then squeezed the last
+    // child, so the button rendered narrower than its text and wrapped to two lines.
     Container row = new Container(new BoxLayout(Axis.X, FillMode.None));
     row.setBackground(null);
     row.addChild(horizonField);
     row.addChild(UiKit.hSpacer(8f));
 
-    Label unit = row.addChild(new Label("jours", FormStyles.STYLE));
+    Label unit = new Label("days", FormStyles.STYLE);
     unit.setFont(UiKit.ibmPlexMono(11));
     unit.setColor(FormStyles.TEXT_LO);
+    row.addChild(centeredInRow(unit));
 
     row.addChild(UiKit.hSpacer(16f));
 
-    Button auto = new Button("AUTO", FormStyles.STYLE);
-    auto.setPreferredSize(new Vector3f(HORIZON_BUTTON_W, FIELD_H, 0));
-    auto.setFont(UiKit.sora(12));
-    auto.setBackground(UiKit.wizardBg9("btn-ghost", 8));
-    auto.addClickCommands(src -> resetHorizonToDerived());
-    row.addChild(auto);
+    // Not wrapped again: the indicator centres its own two parts against the row already.
+    row.addChild(buildAutoIndicator());
 
     return row;
+  }
+
+  /**
+   * The auto/manual control: a status dot and the word {@code auto}, no button chrome.
+   *
+   * <p>A filled pill was tried first and read wrong — the strongest element of the whole form was
+   * the secondary control, heavier than the field it governs. The state now lives in the dot, which
+   * lets the control itself stay quiet.
+   */
+  private Container buildAutoIndicator() {
+    Container indicator = new Container(new BoxLayout(Axis.X, FillMode.None));
+    indicator.setBackground(null);
+
+    // Reuses the slider thumb's texture purely for its shape — it is the only round asset in the
+    // wizard atlas. The tint is what carries the state; the texture only makes the dot a disc
+    // instead of a square. Missing asset degrades to a plain coloured quad, which still reads.
+    autoDot = new Panel(AUTO_DOT_SIZE, AUTO_DOT_SIZE, FormStyles.STYLE);
+    indicator.addChild(centeredInRow(autoDot));
+    indicator.addChild(UiKit.hSpacer(7f));
+
+    // Still a Button, for its click and hover handling — but stripped of every visual: no
+    // background, and the style's (10, 22, 10, 22) insets cleared, or the word would sit in a
+    // 44-pixel-wide invisible box.
+    autoButton = new Button("auto", FormStyles.STYLE);
+    autoButton.setBackground(null);
+    autoButton.setInsets(new Insets3f(0, 0, 0, 0));
+    autoButton.setFont(UiKit.ibmPlexMono(11));
+    autoButton.addClickCommands(src -> resetHorizonToDerived());
+    MouseEventControl.addListenersToSpatial(
+        autoButton,
+        new DefaultMouseListener() {
+          @Override
+          public void mouseEntered(MouseMotionEvent event, Spatial target, Spatial capture) {
+            autoHovered = true;
+            applyAutoIndicator();
+          }
+
+          @Override
+          public void mouseExited(MouseMotionEvent event, Spatial target, Spatial capture) {
+            autoHovered = false;
+            applyAutoIndicator();
+          }
+        });
+    indicator.addChild(centeredInRow(autoButton));
+
+    applyAutoIndicator();
+    return indicator;
+  }
+
+  /**
+   * Paints the indicator from the state it reports. This is the only place the auto/manual
+   * distinction is shown, which is why the helper line below no longer repeats it: dot lit and word
+   * in the accent while the duration is derived, both dimmed once the user has typed their own.
+   */
+  private void applyAutoIndicator() {
+    ColorRGBA tint = horizonAuto ? FormStyles.ACCENT_BRIGHT : FormStyles.BORDER;
+    QuadBackgroundComponent dotBg = UiKit.wizardFlat("slider-thumb");
+    dotBg.setColor(tint);
+    autoDot.setBackground(dotBg);
+
+    ColorRGBA word;
+    if (horizonAuto) {
+      word = FormStyles.ACCENT_BRIGHT;
+    } else {
+      word = autoHovered ? FormStyles.TEXT_SECONDARY : FormStyles.TEXT_LO;
+    }
+    autoButton.setColor(word);
   }
 
   /** Hands the duration back to the derived policy, clearing any refused entry. */
@@ -204,6 +349,7 @@ public class StepParameters implements StepValues {
     horizonAuto = true;
     clearHorizonRejection();
     refreshHorizonFromDerived();
+    applyAutoIndicator();
   }
 
   /**
@@ -217,6 +363,7 @@ public class StepParameters implements StepValues {
     if (horizonAuto && !horizonField.getText().equals(lastAutoHorizonText)) {
       // The user typed over the prefill. From here the value is theirs until AUTO is pressed.
       horizonAuto = false;
+      applyAutoIndicator();
     }
     if (horizonAuto) {
       refreshHorizonFromDerived();
@@ -231,7 +378,7 @@ public class StepParameters implements StepValues {
     setHorizonHelper(HORIZON_MANUAL_HELPER, FormStyles.TEXT_LO);
   }
 
-  /** Writes the derived duration into the field and describes it in the helper line. */
+  /** Writes the derived duration into the field and says where the number comes from. */
   private void refreshHorizonFromDerived() {
     String text = formatDays(dynamicParameters.defaultHorizonDays());
     if (!text.equals(horizonField.getText())) {
@@ -239,12 +386,31 @@ public class StepParameters implements StepValues {
     }
     lastAutoHorizonText = text;
     setHorizonHelper(
-        "auto · " + MissionHorizon.defaultFor(missionContext.getSelectedMissionType()).describe(),
+        derivedHelper(MissionHorizon.defaultFor(missionContext.getSelectedMissionType())),
         FormStyles.TEXT_LO);
   }
 
+  /**
+   * The provenance line for a derived horizon, in the wizard's language. Built here rather than
+   * from {@code MissionHorizon.describe()}: that one is English, because the code is, and the UI is
+   * not.
+   */
+  private static String derivedHelper(MissionHorizon horizon) {
+    return switch (horizon) {
+      case MissionHorizon.Revolutions r ->
+          r.count() + (r.count() > 1 ? " revolutions" : " revolution") + " of the target orbit";
+      // Not produced by defaultFor today; the switch stays exhaustive so adding a case is a
+      // compile error here rather than a silently wrong line on screen.
+      case MissionHorizon.FixedDuration ignored -> HORIZON_MANUAL_HELPER;
+      case MissionHorizon.TrailingCoast ignored -> HORIZON_MANUAL_HELPER;
+    };
+  }
+
+  /** Writes the helper line, skipping the no-op: this runs on every frame of the wizard. */
   private void setHorizonHelper(String text, ColorRGBA color) {
-    horizonHelper.setText(text);
+    if (!text.equals(horizonHelper.getText())) {
+      horizonHelper.setText(text);
+    }
     horizonHelper.setColor(color);
   }
 
@@ -304,6 +470,7 @@ public class StepParameters implements StepValues {
     horizonAuto = false;
     clearHorizonRejection();
     horizonField.setText(raw.toString().trim());
+    applyAutoIndicator();
   }
 
   /** Reads the mission type out of the raw values, falling back on the one the context selects. */
