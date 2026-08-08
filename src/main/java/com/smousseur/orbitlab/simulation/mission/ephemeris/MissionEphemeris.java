@@ -27,6 +27,12 @@ public final class MissionEphemeris {
   private final boolean complete;
 
   /**
+   * The drawable form of this trajectory, built once here rather than per frame. See {@link
+   * TrajectoryPolyline} for why the display product is separate from this one.
+   */
+  private final TrajectoryPolyline displayTrail;
+
+  /**
    * Constructs a complete ephemeris from a list of sample points (must be sorted by time, >= 2
    * points).
    *
@@ -69,6 +75,18 @@ public final class MissionEphemeris {
       masses[i] = p.mass();
       altitudes[i] = p.altitudeMeters();
     }
+
+    displayTrail = TrajectoryPolyline.of(times, positions);
+  }
+
+  /**
+   * Returns the drawable form of this trajectory: bounded in size, indexable by date, and shared —
+   * the same instance is handed out on every call, so a renderer may hold it across frames.
+   *
+   * @return the display polyline
+   */
+  public TrajectoryPolyline displayTrail() {
+    return displayTrail;
   }
 
   /**
@@ -144,41 +162,6 @@ public final class MissionEphemeris {
 
     // Mass and stage: floor semantics
     return new MissionEphemerisPoint(date, p, v, stageNames[i0], masses[i0], alt);
-  }
-
-  /**
-   * Returns all sample positions from T_start up to the given date, plus the interpolated position
-   * at date. Used for partial trail rendering.
-   *
-   * @param date the target date
-   * @return list of positions for trail rendering
-   */
-  public List<Vector3D> positionsUpTo(AbsoluteDate date) {
-    int[] interval = EphemerisInterpolator.findInterval(times, date);
-    int i0 = interval[0];
-
-    List<Vector3D> result = new ArrayList<>(i0 + 2);
-    for (int i = 0; i <= i0; i++) {
-      result.add(positions[i]);
-    }
-
-    // Add interpolated tip if date is between two points
-    if (interval[1] != i0) {
-      double dt = times[interval[1]].durationFrom(times[i0]);
-      double tau = EphemerisInterpolator.computeTau(times, i0, interval[1], date);
-      Vector3D tip =
-          EphemerisInterpolator.hermitePosition(
-              positions[i0], velocities[i0], positions[interval[1]], velocities[interval[1]], dt,
-              tau);
-      result.add(tip);
-    }
-
-    return result;
-  }
-
-  /** All sample positions from T_start to T_end. */
-  public List<Vector3D> allPositions() {
-    return List.of(positions);
   }
 
   /**

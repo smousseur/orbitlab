@@ -22,6 +22,7 @@ import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 import com.smousseur.orbitlab.simulation.mission.optimizer.problems.GravityTurnProblem;
@@ -255,8 +256,24 @@ public class MissionOptimizer {
     // Record the launch date on the flown mission: it is the telemetry MET base, and the caller may
     // adopt this mission (the sizing sweep's winning one) in place of the pre-sweep composition.
     mission.setInitialDate(launchDate);
+    // Resolve the restitution horizon here rather than in the generator: this is the one place that
+    // holds both ends of what the policy needs — the launch date and the insertion state — and it
+    // already reads the achieved orbit off the very same state a few lines above. The generator
+    // receives seconds, not an intent (spec specs/mission-horizon/01-horizon-explicite.md §4).
+    //
+    // mission.getCurrentState() is the insertion state at this point: the trailing CoastingStage
+    // does not override propagateStandalone, so the stage walk above left the state at the end of
+    // the last flown stage. That is also why this horizon cannot move an optimizer baseline — the
+    // final coast is never flown on the optimize pass at all.
+    double finalCoastSeconds =
+        mission.getHorizon().finalCoastSeconds(launchDate, mission.getCurrentState());
+    logger.info(
+        "Restitution horizon: {} -> {} s of trailing coast",
+        mission.getHorizon().describe(),
+        String.format(Locale.ROOT, "%.0f", finalCoastSeconds));
+
     MissionEphemerisGenerator generator = new MissionEphemerisGenerator();
-    MissionEphemeris ephemeris = generator.generate(mission, initialState);
+    MissionEphemeris ephemeris = generator.generate(mission, initialState, finalCoastSeconds);
 
     mission.setStatus(MissionStatus.READY);
     return new MissionComputeResult(optimResult, ephemeris, report, mission, achievedOrbit);

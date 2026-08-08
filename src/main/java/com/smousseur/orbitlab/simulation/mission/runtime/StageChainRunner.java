@@ -34,8 +34,19 @@ public final class StageChainRunner {
   private static final Logger logger = LogManager.getLogger(StageChainRunner.class);
 
   /**
-   * Duration propagated for a stage that configured no cutoff of its own. Pure safety net: every
-   * stage but the last sets {@link MissionStage#getConfiguredEndDate()}.
+   * Duration propagated for a stage that configured no cutoff of its own.
+   *
+   * <p><b>This branch is reachable, contrary to what one might assume from the stage list.</b>
+   * {@link com.smousseur.orbitlab.simulation.mission.stage.CoastingStage} only sets {@link
+   * MissionStage#getConfiguredEndDate()} in its {@code maxTime != null} branch: a coast built with
+   * {@code stopAtNode = true} ends on a {@code NodeDetector}, with no date configured. If the node
+   * never comes, these 7200 s are what bound it — comfortably above any LEO or GTO node wait, and
+   * far below anything that would hang the optimizer.
+   *
+   * <p>The value is deliberately left where it was by the mission-horizon work (spec {@code
+   * specs/mission-horizon/01-horizon-explicite.md} §9): it is a genuine safety net on the stage
+   * path, not an arbitrary restitution horizon, and moving it would change what an event-terminated
+   * coast does. It is logged when it fires instead, so its use stops being invisible.
    */
   public static final double FALLBACK_DURATION_SECONDS = 7200.0;
 
@@ -85,19 +96,16 @@ public final class StageChainRunner {
     }
   }
 
-  private final double sampleStepSeconds;
   private final StepSampler sampler;
   private final double lastStageCoastSeconds;
   private final StageListener listener;
   private final boolean abortOnFailure;
 
   private StageChainRunner(
-      double sampleStepSeconds,
       StepSampler sampler,
       double lastStageCoastSeconds,
       StageListener listener,
       boolean abortOnFailure) {
-    this.sampleStepSeconds = sampleStepSeconds;
     this.sampler = sampler;
     this.lastStageCoastSeconds = lastStageCoastSeconds;
     this.listener = listener;
@@ -116,26 +124,26 @@ public final class StageChainRunner {
    * @return the runner
    */
   public static StageChainRunner plain() {
-    return new StageChainRunner(0.0, null, 0.0, null, true);
+    return new StageChainRunner(null, 0.0, null, true);
   }
 
   /**
-   * A runner that samples the flown trajectory at a fixed step and reports each stage.
+   * A runner that samples the flown trajectory and reports each stage.
    *
-   * @param sampleStepSeconds the sampling step (s)
-   * @param sampler receives every sample
+   * <p>The sampling step is <b>not</b> a parameter: each stage advertises its own through {@link
+   * MissionStage#sampleStepSeconds}, so a burn is recorded at 1 s where the dynamics are fast and a
+   * coast at 60 s where they are not (spec {@code specs/mission-horizon/01-horizon-explicite.md}
+   * §5). A single step for the whole chain cannot serve both an 8-minute ascent and a 3-day coast.
+   *
+   * @param sampler receives every sample, or {@code null} to fly the chain without sampling
    * @param lastStageCoastSeconds how long to propagate the last stage of the chain, which has no
    *     cutoff of its own; pass {@code 0} to bound it by its configured cutoff like any other
    * @param listener observes each stage, or {@code null}
    * @return the runner
    */
   public static StageChainRunner sampling(
-      double sampleStepSeconds,
-      StepSampler sampler,
-      double lastStageCoastSeconds,
-      StageListener listener) {
-    return new StageChainRunner(
-        sampleStepSeconds, sampler, lastStageCoastSeconds, listener, false);
+      StepSampler sampler, double lastStageCoastSeconds, StageListener listener) {
+    return new StageChainRunner(sampler, lastStageCoastSeconds, listener, false);
   }
 
   /**
@@ -196,10 +204,11 @@ public final class StageChainRunner {
 
       stage.configure(propagator, mission);
 
-      if (sampler != null && sampleStepSeconds > 0.0) {
-        propagator
-            .getMultiplexer()
-            .add(sampleStepSeconds, state -> sampler.sample(stage, state));
+      if (sampler != null) {
+        double sampleStep = stage.sampleStepSeconds(stageEntry, mission);
+        if (sampleStep > 0.0) {
+          propagator.getMultiplexer().add(sampleStep, state -> sampler.sample(stage, state));
+        }
       }
 
       // Propagate to the exact end date configured by the stage. Using the precise end date
@@ -217,6 +226,13 @@ public final class StageChainRunner {
         endDate = stage.getConfiguredEndDate();
         endDateIsStageCutoff = true;
       } else {
+        // Reachable: an event-terminated coast (CoastingStage with stopAtNode) configures no date.
+        // Loud, because a stage bounded by the net rather than by its own cutoff is a fact worth
+        // seeing in the log — the net has been silent since it was written.
+        logger.warn(
+            "Stage '{}' configured no end date; bounding it by the {} s safety net",
+            stage.getName(),
+            FALLBACK_DURATION_SECONDS);
         endDate = stageEntry.getDate().shiftedBy(FALLBACK_DURATION_SECONDS);
       }
 

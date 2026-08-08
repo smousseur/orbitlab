@@ -128,7 +128,7 @@ class ReentryGuardTest {
 
     List<StageChainRunner.StageRun> runs = new ArrayList<>();
     StageChainRunner runner =
-        StageChainRunner.sampling(0.0, null, 0.0, run -> runs.add(run));
+        StageChainRunner.sampling(null, 0.0, run -> runs.add(run));
 
     assertTimeoutPreemptively(
         TIMEOUT,

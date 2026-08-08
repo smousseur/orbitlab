@@ -14,6 +14,7 @@ import com.smousseur.orbitlab.simulation.mission.context.MissionEntry;
 import com.smousseur.orbitlab.simulation.mission.MissionStatus;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemeris;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemerisPoint;
+import com.smousseur.orbitlab.simulation.mission.ephemeris.TrajectoryPolyline;
 import com.smousseur.orbitlab.simulation.mission.planner.MissionPlanOptimizer;
 import com.smousseur.orbitlab.simulation.mission.runtime.MissionComputeResult;
 import java.util.HashSet;
@@ -88,19 +89,20 @@ public final class MissionOrchestratorAppState extends BaseAppState {
       if (now.compareTo(eph.startDate()) < 0) {
         // clock before ephemeris → hide everything
         renderer.setVisible(false);
-      } else if (now.compareTo(eph.endDate()) <= 0) {
-        // clock within ephemeris → interpolate + partial trail
-        MissionEphemerisPoint pt = eph.interpolate(now);
-        List<Vector3D> trail = eph.positionsUpTo(now);
-        renderer.setVisible(true);
-        renderer.updateFromEphemeris(pt, trail, cam, tpf);
-      } else {
-        // clock after ephemeris → last position + full trail
-        MissionEphemerisPoint last = eph.lastPoint();
-        List<Vector3D> trail = eph.allPositions();
-        renderer.setVisible(true);
-        renderer.updateFromEphemeris(last, trail, cam, tpf);
+        continue;
       }
+
+      // Within the ephemeris the point is interpolated and the trail stops at the current instant;
+      // past its end the mission is over, so both settle on the last sample. The trail itself is
+      // the same shared, pre-decimated polyline in both cases — nothing is allocated here, where
+      // the previous code built a fresh list of up to 86 400 positions per frame and per mission.
+      TrajectoryPolyline trail = eph.displayTrail();
+      boolean within = now.compareTo(eph.endDate()) <= 0;
+      MissionEphemerisPoint pt = within ? eph.interpolate(now) : eph.lastPoint();
+      int upTo = within ? trail.indexUpTo(now) : trail.size() - 1;
+
+      renderer.setVisible(true);
+      renderer.updateFromEphemeris(pt, trail, upTo, cam, tpf);
     }
 
     cleanupRemovedMissions(activeMissionIds);

@@ -18,6 +18,22 @@ import org.orekit.time.AbsoluteDate;
  * duration.
  */
 public abstract class MissionStage {
+
+  /**
+   * Ephemeris sampling step for a propulsive phase (s). One second: this is where the dynamics are
+   * fast and where the recorded trajectory has to be faithful.
+   */
+  protected static final double BURN_SAMPLE_STEP = 1.0;
+
+  /**
+   * Ephemeris sampling step for a burn-free phase (s). Sixty seconds gives ~96 points per LEO
+   * revolution — under 4° of arc per segment, indistinguishable from a smooth ellipse on screen —
+   * while cutting the point count of a multi-day coast by 60x. That factor is what makes any
+   * realistic mission horizon affordable in memory (spec {@code
+   * specs/mission-horizon/01-horizon-explicite.md} §5).
+   */
+  protected static final double COAST_SAMPLE_STEP = 60.0;
+
   protected final String name;
   protected AbsoluteDate configuredEndDate;
 
@@ -86,6 +102,26 @@ public abstract class MissionStage {
    */
   public double maxStepSeconds(SpacecraftState entryState, Mission mission) {
     return isPropulsive() ? OrekitService.SAFE_MAX_STEP : OrekitService.COAST_MAX_STEP;
+  }
+
+  /**
+   * Returns the step at which the ephemeris samples this stage, in seconds. Deliberately shaped like
+   * {@link #maxStepSeconds}: a phase is the unit that knows how fast its own dynamics are, so it is
+   * the unit that decides how finely it must be recorded.
+   *
+   * <p>The default splits on {@link #isPropulsive()} — {@link #BURN_SAMPLE_STEP} for a burn, {@link
+   * #COAST_SAMPLE_STEP} for a coast. That single distinction covers the trailing coast without a
+   * special case, because the last stage of every mission is a non-propulsive {@code CoastingStage}.
+   * A stage with unusual dynamics for its class may override this.
+   *
+   * <p>Returning {@code 0} disables sampling for the stage.
+   *
+   * @param entryState the spacecraft state at the start of this stage
+   * @param mission the parent mission
+   * @return the sampling step in seconds
+   */
+  public double sampleStepSeconds(SpacecraftState entryState, Mission mission) {
+    return isPropulsive() ? BURN_SAMPLE_STEP : COAST_SAMPLE_STEP;
   }
 
   /**

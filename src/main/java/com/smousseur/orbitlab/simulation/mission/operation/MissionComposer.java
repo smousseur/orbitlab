@@ -42,10 +42,17 @@ public final class MissionComposer {
   public static Mission compose(MissionSpec spec, OptimizationType mode) {
     Objects.requireNonNull(spec, "spec");
     Objects.requireNonNull(mode, "mode");
-    return switch (spec) {
-      case MissionSpec.Leo leo -> composeLeo(leo, mode);
-      case MissionSpec.Geo geo -> composeGeo(geo, mode);
-    };
+    Mission mission =
+        switch (spec) {
+          case MissionSpec.Leo leo -> composeLeo(leo, mode);
+          case MissionSpec.Geo geo -> composeGeo(geo, mode);
+        };
+    // This composer is the ONLY writer of a mission's restitution horizon (spec
+    // specs/mission-horizon/01-horizon-explicite.md). Carrying it on the spec and applying it here,
+    // rather than threading it through the constructor chains, is what makes it survive a mode
+    // toggle or a wizard edit: both replace the Mission, neither replaces the spec.
+    mission.setHorizon(spec.horizon());
+    return mission;
   }
 
   private static Mission composeLeo(MissionSpec.Leo spec, OptimizationType mode) {

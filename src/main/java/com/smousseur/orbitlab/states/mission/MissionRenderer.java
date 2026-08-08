@@ -17,11 +17,10 @@ import com.smousseur.orbitlab.engine.scene.spacecraft.SpacecraftPresenter;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.context.MissionEntry;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemerisPoint;
-import java.util.List;
+import com.smousseur.orbitlab.simulation.mission.ephemeris.TrajectoryPolyline;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
-import org.hipparchus.geometry.euclidean.threed.Vector3D;
 
 /**
  * Encapsulates all rendering for a single mission: spacecraft display (SpacecraftPresenter +
@@ -136,13 +135,14 @@ public final class MissionRenderer {
    * Updates display from a pre-computed ephemeris point. No propagation — pure rendering from
    * pre-calculated data.
    *
-   * @param point the interpolated ephemeris point
-   * @param trailPositions the positions for the trajectory trail
+   * @param point the interpolated ephemeris point, whose position also serves as the trail tip
+   * @param trail the mission's display polyline, the same instance on every frame
+   * @param upTo index of the last trail vertex flown at the current instant
    * @param cam the active camera
    * @param tpf frame time in seconds, used for orientation smoothing
    */
   public void updateFromEphemeris(
-      MissionEphemerisPoint point, List<Vector3D> trailPositions, Camera cam, float tpf) {
+      MissionEphemerisPoint point, TrajectoryPolyline trail, int upTo, Camera cam, float tpf) {
     ViewMode mode = context.focusView().getMode();
     boolean visible = mode == ViewMode.PLANET || mode == ViewMode.SPACECRAFT;
     if (!visible) {
@@ -152,8 +152,7 @@ public final class MissionRenderer {
 
     presenter.updatePose(point.position(), point.velocity(), tpf, renderContext);
     view.updateScreen(cam);
-    trajectoryRenderer.setPositions(trailPositions);
-    trajectoryRenderer.update();
+    trajectoryRenderer.update(trail, upTo, point.position());
   }
 
   /**

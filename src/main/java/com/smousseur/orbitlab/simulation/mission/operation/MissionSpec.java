@@ -1,5 +1,6 @@
 package com.smousseur.orbitlab.simulation.mission.operation;
 
+import com.smousseur.orbitlab.simulation.mission.MissionHorizon;
 import com.smousseur.orbitlab.simulation.mission.MissionType;
 import com.smousseur.orbitlab.simulation.mission.OptimizationType;
 import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchConfiguration;
@@ -68,6 +69,19 @@ public sealed interface MissionSpec permits MissionSpec.Leo, MissionSpec.Geo {
   MissionType type();
 
   /**
+   * Returns the restitution horizon: how far past insertion the mission is sampled and displayed
+   * (spec {@code specs/mission-horizon/01-horizon-explicite.md}). Never {@code null} — a spec built
+   * without one falls back to {@link MissionHorizon#defaultFor(MissionType)}.
+   *
+   * <p>It lives on the spec rather than on the built mission because it is <em>user intent</em>: it
+   * must survive the recompositions that {@code MissionEntry} performs on a mode toggle or a wizard
+   * edit, both of which replace the {@link com.smousseur.orbitlab.simulation.mission.Mission}.
+   *
+   * @return the mission horizon
+   */
+  MissionHorizon horizon();
+
+  /**
    * Returns a copy of this spec with the launcher's per-stage propellant loads replaced, keeping the
    * launcher model and the payload (including a GEO payload's fixed AKM load) unchanged. Used by the
    * propellant-sizing planner to rebuild the mission at each candidate load array.
@@ -89,6 +103,7 @@ public sealed interface MissionSpec permits MissionSpec.Leo, MissionSpec.Geo {
    * @param latitude the launch site latitude in degrees
    * @param longitude the launch site longitude in degrees
    * @param altitude the launch site altitude in meters
+   * @param horizon the restitution horizon, or {@code null} for the derived default
    */
   record Leo(
       String name,
@@ -98,11 +113,17 @@ public sealed interface MissionSpec permits MissionSpec.Leo, MissionSpec.Geo {
       String siteName,
       double latitude,
       double longitude,
-      double altitude)
+      double altitude,
+      MissionHorizon horizon)
       implements MissionSpec {
     public Leo {
       Objects.requireNonNull(name, "name");
       Objects.requireNonNull(configuration, "configuration");
+      // Normalised here rather than at every call site: a spec assembled by hand (tests, any
+      // programmatic path) gets the derived default without having to know it exists.
+      if (horizon == null) {
+        horizon = MissionHorizon.defaultFor(MissionType.LEO);
+      }
     }
 
     @Override
@@ -124,7 +145,8 @@ public sealed interface MissionSpec permits MissionSpec.Leo, MissionSpec.Geo {
           siteName,
           latitude,
           longitude,
-          altitude);
+          altitude,
+          horizon);
     }
   }
 
@@ -140,6 +162,7 @@ public sealed interface MissionSpec permits MissionSpec.Leo, MissionSpec.Geo {
    * @param latitude the launch site latitude in degrees
    * @param longitude the launch site longitude in degrees
    * @param altitude the launch site altitude in meters
+   * @param horizon the restitution horizon, or {@code null} for the derived default
    */
   record Geo(
       String name,
@@ -150,11 +173,16 @@ public sealed interface MissionSpec permits MissionSpec.Leo, MissionSpec.Geo {
       String siteName,
       double latitude,
       double longitude,
-      double altitude)
+      double altitude,
+      MissionHorizon horizon)
       implements MissionSpec {
     public Geo {
       Objects.requireNonNull(name, "name");
       Objects.requireNonNull(configuration, "configuration");
+      // See Leo: normalised here so a hand-assembled spec need not know the default exists.
+      if (horizon == null) {
+        horizon = MissionHorizon.defaultFor(MissionType.GEO);
+      }
     }
 
     @Override
@@ -177,7 +205,8 @@ public sealed interface MissionSpec permits MissionSpec.Leo, MissionSpec.Geo {
           siteName,
           latitude,
           longitude,
-          altitude);
+          altitude,
+          horizon);
     }
   }
 }

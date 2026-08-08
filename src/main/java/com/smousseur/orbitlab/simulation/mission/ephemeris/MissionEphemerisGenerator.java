@@ -1,6 +1,7 @@
 package com.smousseur.orbitlab.simulation.mission.ephemeris;
 
 import com.smousseur.orbitlab.simulation.mission.Mission;
+import com.smousseur.orbitlab.simulation.mission.MissionHorizon;
 import com.smousseur.orbitlab.simulation.mission.MissionStage;
 import com.smousseur.orbitlab.simulation.mission.runtime.StageChainRunner;
 import java.util.ArrayList;
@@ -21,9 +22,6 @@ import org.orekit.propagation.SpacecraftState;
 public final class MissionEphemerisGenerator {
   private static final Logger logger = LogManager.getLogger(MissionEphemerisGenerator.class);
 
-  private static final double DEFAULT_STEP_SECONDS = 1.0;
-  private static final double DEFAULT_COAST_DURATION_SECONDS = 86_164.0; // 90 min (one LEO orbit)
-
   /**
    * How far short of its scheduled cutoff a stage may stop before the trajectory counts as
    * truncated. Orekit brackets STOP events to well under a millisecond, so a stage reaching its own
@@ -34,23 +32,54 @@ public final class MissionEphemerisGenerator {
   private static final double STAGE_END_TOLERANCE_SECONDS = 1.0;
 
   /**
-   * Re-propagates the mission from initialState through all stages, sampling the trajectory at
-   * regular intervals.
+   * Re-propagates the mission from initialState through all stages, sampling the trajectory. The
+   * trailing coast is resolved from the mission's own {@link MissionHorizon}, taking {@code
+   * mission.getCurrentState()} as the insertion state — which is what it holds once the optimize
+   * pass has walked the chain.
    *
    * @param mission the mission with optimization results injected into stages
    * @param initialState the spacecraft state at T_start
    * @return the complete mission ephemeris
    */
   public MissionEphemeris generate(Mission mission, SpacecraftState initialState) {
+    SpacecraftState insertionState =
+        mission.getCurrentState() != null ? mission.getCurrentState() : initialState;
+    return generate(
+        mission,
+        initialState,
+        mission.getHorizon().finalCoastSeconds(initialState.getDate(), insertionState));
+  }
+
+  /**
+   * Re-propagates the mission from initialState through all stages, sampling the trajectory and
+   * coasting for {@code finalCoastSeconds} past the last stage.
+   *
+   * <p>The caller passes a <b>resolved duration</b>, not a {@link MissionHorizon}: deciding how long
+   * a mission should be recorded is an intent, and a generator has no business knowing the intent
+   * (spec {@code specs/mission-horizon/01-horizon-explicite.md} §4). {@code MissionOptimizer}
+   * resolves it, because that is where the achieved orbit is already in hand.
+   *
+   * <p>The sampling step is not a parameter either: each stage advertises its own through {@link
+   * com.smousseur.orbitlab.simulation.mission.MissionStage#sampleStepSeconds}, so burns are recorded
+   * at 1 s and coasts at 60 s.
+   *
+   * @param mission the mission with optimization results injected into stages
+   * @param initialState the spacecraft state at T_start
+   * @param finalCoastSeconds how long to coast past the last stage, in seconds
+   * @return the complete mission ephemeris
+   */
+  public MissionEphemeris generate(
+      Mission mission, SpacecraftState initialState, double finalCoastSeconds) {
     Collector collector = new Collector(mission);
-    StageChainRunner runner =
-        StageChainRunner.sampling(
-            DEFAULT_STEP_SECONDS, collector, DEFAULT_COAST_DURATION_SECONDS, collector);
+    StageChainRunner runner = StageChainRunner.sampling(collector, finalCoastSeconds, collector);
 
     runner.run(mission.getStages(), initialState, mission);
 
     logger.info(
-        "Total ephemeris points: {} (complete={})", collector.points.size(), collector.complete);
+        "Total ephemeris points: {} (complete={}, final coast {} s)",
+        collector.points.size(),
+        collector.complete,
+        String.format(java.util.Locale.ROOT, "%.0f", finalCoastSeconds));
     return new MissionEphemeris(collector.points, collector.complete);
   }
 

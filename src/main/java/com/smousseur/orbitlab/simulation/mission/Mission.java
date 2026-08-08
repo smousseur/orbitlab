@@ -4,6 +4,7 @@ import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.mission.objective.MissionObjective;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
 import java.util.List;
+import java.util.Objects;
 import org.orekit.bodies.GeodeticPoint;
 import org.orekit.bodies.OneAxisEllipsoid;
 import org.orekit.propagation.SpacecraftState;
@@ -25,6 +26,22 @@ public abstract class Mission {
   private SpacecraftState currentState;
   private AbsoluteDate initialDate;
   private MissionStatus status = MissionStatus.DRAFT;
+
+  /**
+   * How far past insertion this mission is sampled (spec {@code
+   * specs/mission-horizon/01-horizon-explicite.md}). Written by {@code MissionComposer}, which is
+   * its only writer, from the {@code MissionSpec} the user configured.
+   *
+   * <p><b>The default is the legacy constant, deliberately.</b> A mission built outside the composer
+   * — every test mission, and the direct {@code generate()} calls in {@code
+   * GravityTurnFloorProbeTest} — keeps exactly the one-sidereal-day trailing coast it had before
+   * this field existed. That confines the behavioural change of this work to the missions the
+   * application actually composes, instead of quietly moving every measurement in the test suite.
+   *
+   * <p>It is a {@code TrailingCoast} and not a {@code FixedDuration} precisely so that "exactly" is
+   * literal: a total duration would subtract the ascent and shorten the coast by ~600 s.
+   */
+  private MissionHorizon horizon = new MissionHorizon.TrailingCoast(86_164.0);
 
   /**
    * Creates a new mission with the specified name, vehicle, stages, and objective.
@@ -107,6 +124,26 @@ public abstract class Mission {
 
   public void setInitialDate(AbsoluteDate initialDate) {
     this.initialDate = initialDate;
+  }
+
+  /**
+   * Returns the restitution horizon: how far past insertion this mission is sampled and displayed.
+   * Never {@code null}.
+   *
+   * @return the mission horizon
+   */
+  public MissionHorizon getHorizon() {
+    return horizon;
+  }
+
+  /**
+   * Sets the restitution horizon. Called by {@code MissionComposer} right after composition, from
+   * the spec's horizon; nothing else writes it.
+   *
+   * @param horizon the horizon to apply
+   */
+  public void setHorizon(MissionHorizon horizon) {
+    this.horizon = Objects.requireNonNull(horizon, "horizon");
   }
 
   public MissionStatus getStatus() {

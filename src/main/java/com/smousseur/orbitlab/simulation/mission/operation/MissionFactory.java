@@ -1,6 +1,7 @@
 package com.smousseur.orbitlab.simulation.mission.operation;
 
 import com.smousseur.orbitlab.simulation.mission.Mission;
+import com.smousseur.orbitlab.simulation.mission.MissionHorizon;
 import com.smousseur.orbitlab.simulation.mission.MissionType;
 import com.smousseur.orbitlab.simulation.mission.OptimizationType;
 import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchConfiguration;
@@ -70,6 +71,11 @@ public final class MissionFactory {
     double longitude = doubleValue(values, "LAUNCH_SITE_LONG");
     double altitude = doubleValue(values, "LAUNCH_SITE_ALT");
 
+    // Absent means "auto": the wizard omits the key while the user leaves the derived default in
+    // place, so an unedited (or reopened) mission gets MissionHorizon.defaultFor(type) rather than
+    // a frozen number (spec specs/mission-horizon/01-horizon-explicite.md §7).
+    MissionHorizon horizon = horizonOrNull(values, type);
+
     LauncherModel launcher = Launchers.byId(String.valueOf(values.get("LAUNCHER_TYPE")));
     PayloadModel payloadModel = Payloads.byId(String.valueOf(values.get("PAYLOAD_TYPE")));
     double payloadMass = doubleValue(values, "PAYLOAD_MASS");
@@ -90,7 +96,15 @@ public final class MissionFactory {
         LaunchConfiguration configuration =
             new LaunchConfiguration(launcher, loads, payload, payloadModel.id());
         yield new MissionSpec.Leo(
-            name, configuration, perigeeAlt, apogeeAlt, siteName, latitude, longitude, altitude);
+            name,
+            configuration,
+            perigeeAlt,
+            apogeeAlt,
+            siteName,
+            latitude,
+            longitude,
+            altitude,
+            horizon);
       }
       case GEO -> {
         // The apogee circularization is flown by the payload's kick motor; without one the burn
@@ -115,9 +129,36 @@ public final class MissionFactory {
             siteName,
             latitude,
             longitude,
-            altitude);
+            altitude,
+            horizon);
       }
     };
+  }
+
+  /**
+   * Reads the optional mission-duration override. Returns {@code null} — which the spec records
+   * normalise into {@link MissionHorizon#defaultFor(MissionType)} — when the key is absent, blank or
+   * unusable, so a malformed value degrades to the derived default instead of failing the whole
+   * mission creation.
+   *
+   * @param values the raw wizard values
+   * @param type the mission type, for the default
+   * @return the overridden horizon, or {@code null} to take the derived default
+   */
+  private static MissionHorizon horizonOrNull(Map<String, Object> values, MissionType type) {
+    Object raw = values.get("MISSION_HORIZON_DAYS");
+    if (raw == null || raw.toString().isBlank()) {
+      return null;
+    }
+    try {
+      double days = Double.parseDouble(raw.toString().trim());
+      return days > 0.0
+          ? new MissionHorizon.FixedDuration(days * MissionHorizon.SECONDS_PER_DAY)
+          : null;
+    } catch (IllegalArgumentException e) {
+      // Covers both the parse failure and a FixedDuration rejecting a non-finite value.
+      return null;
+    }
   }
 
   private static String stringValueOrNull(Map<String, Object> values, String key) {
