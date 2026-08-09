@@ -16,6 +16,7 @@ sont en anglais, cf. `CLAUDE.md`).
 | [`graphics-effects/spacecraft-view-artefacts.md`](graphics-effects/spacecraft-view-artefacts.md) | Diagnostic des trois artefacts de la vue spacecraft + correctifs | **Rediagnostiqué le 2026-08-09**, cause A corrigée, B et C ouvertes (item `RND-1`) |
 | [`graphics-effects/effects-roadmap.md`](graphics-effects/effects-roadmap.md) | Backlog d'effets graphiques | Valide **sauf §1 et 3 premiers items** — voir bandeau du document |
 | [`atmosphere/01-impacts-fonctionnels-techniques.md`](atmosphere/01-impacts-fonctionnels-techniques.md) | Étude d'impact du drag atmosphérique | Valide (items `PHY-1` à `PHY-3`) |
+| [`launchers/01-ariane-62.md`](launchers/01-ariane-62.md) | Design de l'ajout d'Ariane 62 au catalogue des lanceurs | **Implémenté et mesuré le 2026-08-09** (item `MIS-1`) |
 | [`brainstorm/leo-rendezvous-preparation.md`](brainstorm/leo-rendezvous-preparation.md) | Préparation du rendez-vous orbital TLE | Valide (item `MIS-6`) |
 | [`brainstorm/missions.md`](brainstorm/missions.md) | Catalogue de types de missions candidats | Valide **sauf baseline** — voir bandeau du document |
 | [`brainstorm/features-long-terme.md`](brainstorm/features-long-terme.md) | Backlog de features transverses | Exploratoire, valide |

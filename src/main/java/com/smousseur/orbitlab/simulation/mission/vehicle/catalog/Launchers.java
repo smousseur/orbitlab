@@ -49,7 +49,77 @@ public final class Launchers {
                       StageRole.UPPER))),
           new AscentProfile(7.0, 3.0, 2.0));
 
-  private static final List<LauncherModel> CATALOG = List.of(FALCON_HEAVY);
+  /**
+   * Ariane 62 (two P120C boosters), first stage aggregating the boosters and the Vulcain core.
+   *
+   * <p><b>Why the boosters and the core are one stage.</b> Ariane 6 stages in <em>parallel</em> —
+   * the P120Cs and the Vulcain are lit together on the pad — and the model has no parallel-burn
+   * representation: {@code VehicleStack} resolves exactly one active stage, changed only by an
+   * explicit jettison. Aggregating them is the same convention {@link #FALCON_HEAVY} already
+   * applies to its three cores, and is what the mission stage list can actually fly (spec {@code
+   * specs/launchers/01-ariane-62.md} §2).
+   *
+   * <p><b>What the aggregation costs, stated because it is not visible in the figures.</b> At
+   * 9 960 kN and 300 s the block flames out around 128 s — measured at T+128.2 s. That is faithful
+   * to the boosters (~130 s) and wrong for the core, which really burns ~8 min, so the ascent
+   * <em>shape</em> is not this vehicle's. Neither knob can move it: stretching the burn to 300 s
+   * would need the aggregate thrust below the lift-off weight.
+   *
+   * <p>It does not, however, prevent the mission from closing. Measured 2026-08-09 by {@code
+   * Ariane62MissionTest}: LEO 400 km on budget loads with a 5 t payload inserts inside 1.2 km of
+   * target, 21.7 % of the sized upper-stage load to spare. The reason is that {@code
+   * PropellantBudget} sizes the ULPM to 6.7 t rather than flying its 31 t capacity, so the Vinci
+   * takes over at a thrust-to-weight near 1.04 — a fully-loaded stack, which no mission flies,
+   * would hand over near 0.44 instead.
+   *
+   * <p>Ariane 64 is deliberately absent: with four boosters the distortion grows until the model
+   * separates A64 from A62 by 3 % where reality separates them by a factor 2.5 in GTO capacity
+   * (§3 of the spec).
+   */
+  public static final LauncherModel ARIANE_62 =
+      new LauncherModel(
+          "ARIANE_62",
+          "Ariane 62",
+          List.of(
+              new StageModel(
+                  "S1 (2 P120C + LLPM aggregated)",
+                  36_000,
+                  434_000,
+                  // Mean-trajectory ISP, same rule as the Falcon Heavy S1: placed in the
+                  // aggregate's [sea level 271 s, vacuum 331 s] bracket where 296 s sits in the
+                  // Falcon Heavy one, propellant-mass weighted over the solid boosters and the
+                  // cryogenic core.
+                  new PropulsionSystem(300, 9_960_000),
+                  new StageCapabilities(
+                      IgnitionMode.GROUND,
+                      0,
+                      ShutdownMode.COMMANDED,
+                      // A modelling convention, not a chemical claim: 65 % of this block's
+                      // propellant is solid, but declaring SOLID would freeze the load (a stage
+                      // that is 35 % liquid) out of both StageModel.toVehicle and the multi-lambda
+                      // sweep of PropellantLoadOptimizer. FALCON_HEAVY declares its kerolox
+                      // aggregate the same way: the field reads "liquid, finite coast".
+                      PropellantType.CRYOGENIC,
+                      0.0,
+                      StageRole.CORE)),
+              new StageModel(
+                  "S2 (ULPM, Vinci)",
+                  6_000,
+                  31_000,
+                  new PropulsionSystem(457, 180_000),
+                  new StageCapabilities(
+                      IgnitionMode.AIRSTART,
+                      4,
+                      ShutdownMode.COMMANDED,
+                      PropellantType.CRYOGENIC,
+                      21_600.0,
+                      StageRole.UPPER))),
+          // Shorter vertical rise than Falcon Heavy's 7 s (lift-off T/W ~1.99 against ~1.65, the
+          // pad is cleared sooner); same pitch kick, deliberately — nothing justifies an offset.
+          // The 5 s interstage coast is the chill-down Vinci needs and the Merlin Vacuum does not.
+          new AscentProfile(6.0, 3.0, 5.0));
+
+  private static final List<LauncherModel> CATALOG = List.of(FALCON_HEAVY, ARIANE_62);
 
   /**
    * Resolves a launcher model by its catalog id.

@@ -46,6 +46,10 @@ class MissionAscentWiringTest {
     return LaunchConfiguration.fullyLoaded(Launchers.FALCON_HEAVY, Spacecraft.LEGACY);
   }
 
+  private static LaunchConfiguration ariane62() {
+    return LaunchConfiguration.fullyLoaded(Launchers.ARIANE_62, Spacecraft.LEGACY);
+  }
+
   static Stream<Arguments> profiles() {
     return Stream.of(
         Arguments.of(
@@ -63,7 +67,13 @@ class MissionAscentWiringTest {
                     "LEO elliptic", falconHeavy(), TARGET_ALT, 800_000.0)),
         Arguments.of(
             "GEO",
-            (Mission) new GEOMission("GEO", TARGET_ALT, GEOMission.GEO_ALTITUDE)));
+            (Mission) new GEOMission("GEO", TARGET_ALT, GEOMission.GEO_ALTITUDE)),
+        // A second launcher holds the property where a single one could not: the three-phase
+        // ascent is a property of every mission, not a shape Falcon Heavy's figures happen to
+        // produce (spec specs/launchers/01-ariane-62.md §6.2).
+        Arguments.of(
+            "LEO circular, Ariane 62 (analytic Hohmann transfer)",
+            (Mission) new LEOMission("LEO Ariane 62", ariane62(), TARGET_ALT)));
   }
 
   @ParameterizedTest(name = "{0}")
