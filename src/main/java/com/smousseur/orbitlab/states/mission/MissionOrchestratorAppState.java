@@ -80,6 +80,14 @@ public final class MissionOrchestratorAppState extends BaseAppState {
         continue;
       }
 
+      // A wizard edit can swap the launcher, and the 3D mesh is baked into the renderer at
+      // initialize(). The entry keeps its identity through such an edit, so nothing else would
+      // rebuild the renderer and the mission would keep flying the previous vehicle's shape.
+      if (renderer != null && !renderer.modelPath().equals(MissionRenderer.modelPathFor(entry))) {
+        disposeRenderer(id);
+        renderer = null;
+      }
+
       // Lazy-create renderer on the first visible frame
       if (renderer == null) {
         renderer = createRenderer(entry);

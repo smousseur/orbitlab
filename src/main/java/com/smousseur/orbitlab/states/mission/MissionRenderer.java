@@ -11,6 +11,7 @@ import com.smousseur.orbitlab.engine.AssetFactory;
 import com.smousseur.orbitlab.engine.scene.body.BodyRenderConfig;
 import com.smousseur.orbitlab.engine.scene.body.LodView;
 import com.smousseur.orbitlab.engine.scene.body.lod.Model3dView;
+import com.smousseur.orbitlab.engine.scene.spacecraft.LauncherAssets;
 import com.smousseur.orbitlab.engine.scene.spacecraft.SpacecraftPresenter;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.context.MissionEntry;
@@ -28,8 +29,6 @@ import java.util.concurrent.ExecutorService;
 public final class MissionRenderer {
 
   private static final double SPACECRAFT_RADIUS_METERS = 50.0;
-  private static final String SPACECRAFT_MODEL_PATH =
-      "models/vehicles/heavy_falcon/heavy_falcon.gltf";
 
   /**
    * Camera distance applied when the user clicks the spacecraft, expressed in solar-scale units (1
@@ -51,6 +50,7 @@ public final class MissionRenderer {
   private SpacecraftPresenter presenter;
   private LodView view;
   private MissionTrajectoryRenderer trajectoryRenderer;
+  private String modelPath;
 
   public MissionRenderer(
       MissionEntry entry,
@@ -67,6 +67,10 @@ public final class MissionRenderer {
   public void initialize() {
     Mission mission = entry.mission();
     Node guiNode = context.guiGraph().getPlanetBillboardsNode();
+    // Resolved once and kept: the mesh is baked into the LodView at construction, so modelPath()
+    // is what actually flies — that is what MissionOrchestratorAppState compares against the
+    // entry's current launcher to detect a wizard edit that swapped it.
+    modelPath = modelPathFor(entry);
 
     // The scene-graph id is derived from the mission id, not the name: names may be duplicated, and
     // two homonymous missions sharing a spatial id would collide in the graph. The name is still
@@ -77,7 +81,7 @@ public final class MissionRenderer {
             mission.getName(),
             trajectoryColor,
             SPACECRAFT_RADIUS_METERS,
-            SPACECRAFT_MODEL_PATH,
+            modelPath,
             renderContext);
 
     view = new LodView(guiNode, config, this::onSpacecraftSelected, null);
@@ -97,6 +101,40 @@ public final class MissionRenderer {
     trajectoryRenderer =
         new MissionTrajectoryRenderer(entry.id(), renderContext, trajectoryColor);
     trajectoryRenderer.initialize(context.sceneGraph().nearOrbitsNode());
+  }
+
+  /**
+   * The mesh a mission is drawn with: the one paired with its launcher.
+   *
+   * <p>Read from the {@link com.smousseur.orbitlab.simulation.mission.operation.MissionSpec spec}
+   * rather than from the built {@link Mission}, because the mission only keeps the assembled {@code
+   * VehicleStack} — the stages' masses and propulsion, with the launcher identity already dissolved
+   * into them. The spec is also stable across the recompositions {@link MissionEntry} performs on a
+   * mode toggle or a wizard edit; a legacy entry carries none and falls back.
+   *
+   * <p>Static, and public, for the same reason as {@link #renderContextFor(MissionEntry)}: {@link
+   * MissionOrchestratorAppState} evaluates it on an entry whose renderer already exists, to find out
+   * whether that renderer still draws the right vehicle.
+   *
+   * @param entry the mission entry
+   * @return the GLTF asset path to draw that mission's spacecraft with
+   */
+  public static String modelPathFor(MissionEntry entry) {
+    return entry
+        .spec()
+        .map(spec -> LauncherAssets.modelPath(spec.configuration().launcher().id()))
+        .orElse(LauncherAssets.DEFAULT_MODEL_PATH);
+  }
+
+  /**
+   * The GLTF asset this renderer was initialized with. Fixed for its whole life — swapping the mesh
+   * of a live {@link LodView} is not supported, so a launcher change is handled by disposing the
+   * renderer and creating a new one.
+   *
+   * @return the asset path, or {@code null} before {@link #initialize()}
+   */
+  public String modelPath() {
+    return modelPath;
   }
 
   /**

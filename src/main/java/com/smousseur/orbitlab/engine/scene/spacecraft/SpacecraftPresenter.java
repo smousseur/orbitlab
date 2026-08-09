@@ -28,10 +28,14 @@ public final class SpacecraftPresenter {
   private static final double MIN_VELOCITY_NORM_SQ = 1e-6;
 
   /**
-   * Fixed correction applied to the {@link Quaternion#lookAt} result so that the {@code
-   * heavy_falcon.gltf} model — whose nose points along its own +Y axis — is aligned with the
-   * direction of travel. {@code lookAt} orients the local {@code -Z} along the given direction, so
-   * we rotate the model 90° around its local X to bring +Y onto -Z.
+   * Fixed correction applied to the {@link Quaternion#lookAt} result so that a launcher model —
+   * whose nose points along its own +Y axis — is aligned with the direction of travel. {@code
+   * lookAt} orients the local +Z along the given direction, so we rotate the model 90° around its
+   * local X to bring +Y onto +Z.
+   *
+   * <p>One correction for every spacecraft, deliberately: the +Y nose is a convention every mesh
+   * listed in {@link LauncherAssets} is checked against, rather than something re-derived per
+   * launcher.
    */
   private static final Quaternion MODEL_FORWARD_CORRECTION =
       new Quaternion().fromAngleAxis(FastMath.HALF_PI, Vector3f.UNIT_X);
