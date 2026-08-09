@@ -18,6 +18,7 @@ import com.smousseur.orbitlab.states.camera.OrbitCameraAppState;
 import com.smousseur.orbitlab.states.camera.ViewModeAppState;
 import com.smousseur.orbitlab.states.ephemeris.EphemerisAppState;
 import com.smousseur.orbitlab.states.fx.LightningAppState;
+import com.smousseur.orbitlab.states.fx.PostFxAppState;
 import com.smousseur.orbitlab.states.mission.MissionDisplayPanelAppState;
 import com.smousseur.orbitlab.states.mission.MissionOrchestratorAppState;
 import com.smousseur.orbitlab.states.mission.MissionPanelWidgetAppState;
@@ -160,6 +161,13 @@ public class OrbitLabApplication extends SimpleApplication {
 
     // Near frustum: NearCameraSyncAppState owns the near cam's depth range and FoV every frame.
     stateManager.attach(new NearCameraSyncAppState(applicationContext, nearCam));
+
+    // Post-processing. The filter chain hangs off NearView because that is the viewport that draws
+    // the bodies' 3D models — the far viewport only carries their position anchors and the orbit
+    // lines. The sky and far viewports are handed to it so it can route them into its framebuffer:
+    // its composite pass clears the screen, and they would otherwise be wiped out. Attached last so
+    // both viewports it re-routes already exist.
+    stateManager.attach(new PostFxAppState(nearViewport, skyViewport, farViewport));
   }
 
   @Override

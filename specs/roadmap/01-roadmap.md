@@ -28,6 +28,7 @@ lisez qu'une section, lisez le §3.
 | **Éclairage Lambert avec terminator** | `MatDefs/Light/WrapLighting.j3md` + `AssetFactory.applyLambert` |
 | **MSAA 4×** | `OrbitLabApplication.java:58` — `settings.setSamples(4)` |
 | **`RND-1` — artefacts de la vue spacecraft** (3 causes racines) | `FloatingOriginAppState`, `NearCameraSyncAppState.nearPlane`, `MissionTrajectoryRenderer.update` ; `NearFrameOriginTest`, `NearFrustumDepthTest`, `MissionTrajectoryOriginTest` |
+| **`FX-1` — halo du Soleil** (couronne géométrique + bloom résiduel) | `engine/scene/body/CoronaView.java`, `MatDefs/Fx/Corona.*`, `states/fx/PostFxAppState.java`, `states/fx/SmoothBloomFilter.java`, `AssetFactory.applyGlow` |
 
 **Reste ouvert de l'ancienne roadmap** : la vue détail avec résultats
 d'optimisation (`AchievedOrbit` n'est référencé par aucun fichier de `ui/`) et
@@ -76,7 +77,7 @@ découverte.
 |---|---|:-:|:-:|:-:|
 | MIS-8 | **Horizon de mission explicite** (fin de mission aujourd'hui codée en dur) | 5 | 2 | M |
 | ~~RND-1~~ | ~~Corriger les artefacts visuels de la vue spacecraft~~ — **résolu le 2026-08-09** | 4 | 2 | M |
-| FX-1 | Bloom sur le Soleil | 3 | 1 | S |
+| ~~FX-1~~ | ~~Bloom sur le Soleil~~ — **résolu le 2026-08-09** | 3 | 1 | S |
 | RND-2 | Filtrage anisotrope | 2 | 1 | S |
 | MIS-1 | Deuxième lanceur au catalogue | 3 | 1 | S |
 | RND-3 | Couleur par stage + passé/futur + marqueur « now » | 4 | 2 | M |
@@ -199,7 +200,7 @@ opportuniste, ou à décider quoi sacrifier quand une phase déborde.
 |---|---|:-:|:-:|:-:|---|
 | MIS-8 | Horizon de mission explicite | 5 | 2 | M | — |
 | ~~RND-1~~ | ~~Corriger les artefacts visuels de la vue spacecraft~~ — résolu | 4 | 2 | M | — |
-| FX-1 | Bloom sur le Soleil (+ tone mapping) | 3 | 1 | S | — |
+| ~~FX-1~~ | ~~Bloom sur le Soleil~~ — résolu (le tone mapping n'en faisait pas partie, voir détail) | 3 | 1 | S | — |
 | MIS-1 | Deuxième lanceur au catalogue | 3 | 1 | S | — |
 | RND-3 | Couleur par stage + passé/futur + marqueur « now » | 4 | 2 | M | — |
 | UI-1 | Vue détail mission (orbite atteinte, message d'erreur) | 4 | 2 | M | — |
@@ -414,19 +415,44 @@ Avec le ribbon, la spec devient applicable telle qu'écrite.
 
 ### FX — Effets graphiques
 
-#### FX-1 — Bloom sur le Soleil — ★3 ◆1 S
+#### ~~FX-1 — Bloom sur le Soleil — ★3 ◆1 S~~ — **RÉSOLU le 2026-08-09**
 
-**Pourquoi.** Le Soleil est un disque mat au centre d'une scène qui a maintenant
-une skybox et un éclairage directionnel : c'est l'élément qui détonne.
+**Pourquoi.** Le Soleil était un disque mat au centre d'une scène qui avait
+désormais une skybox et un éclairage directionnel : c'était l'élément qui
+détonnait.
 
-**À faire.** Nouveau `PostFxAppState` dans `states/fx/` (qui centralisera ensuite
-tone-mapping et god-rays), `FilterPostProcessor` sur le viewport **far**.
+**Livré en deux morceaux, et pas comme prévu.** Le pari « `BloomFilter` seul sur
+le viewport far » ne tenait pas ; trois hypothèses de la rédaction d'origine se
+sont révélées fausses à la mesure. Détail technique complet en
+[`effects-roadmap.md` §3.3](../graphics-effects/effects-roadmap.md) — ici le
+résumé et les corrections.
 
-**Détail qui compte, nouveau depuis la skybox** : en `GlowMode.Scene` avec un
-seuil de luminance, le champ d'étoiles de la cubemap va blooming avec le Soleil
-et la scène devient laiteuse. Utiliser **`BloomFilter(GlowMode.Objects)`** et
-poser un `GlowColor` sur le seul matériau du Soleil — le bloom devient explicite
-et ne dépend plus d'un seuil à régler contre le fond.
+- **Le viewport est `near`, pas `far`.** `LodView` coupe un corps en deux : une
+  ancre de position sans géométrie sous `farBodiesNode`, le modèle GLTF sous
+  `nearBodiesNode`. Le viewport far ne dessine que les lignes d'orbite ; un
+  processor posé dessus n'aurait rien eu à faire briller.
+- **Le halo est de la géométrie, pas du post-process.** Un flou écran travaille
+  en pixels, donc sa portée et son plancher de résolution sont le même nombre :
+  assez large pour un gros plan imposait un plancher d'une quinzaine de pixels,
+  et tout astre projetant plus petit recevait un **carré** au lieu d'un halo.
+  D'où `engine/scene/body/CoronaView.java` + `resources/MatDefs/Fx/Corona.*` —
+  quad face-caméra, décroissance radiale procédurale, masquage gratuit par le
+  depth test. Le bloom `GlowMode.Objects` reste, réduit au débord vers
+  l'intérieur qui adoucit le limbe.
+- **`GlowColor` n'existe pas sur le matériau du Soleil.** Le GLTF est chargé en
+  `PBRLighting.j3md`, dont la technique `Glow` lit `Emissive`.
+  `AssetFactory.applyGlow` gère les deux orthographes.
+
+**Le tone mapping n'en fait pas partie, et ne l'aurait pas aidé.** Les passes
+internes de `BloomFilter` sont en `RGBA8` : le glow est écrêté à 1 avant d'être
+flouté, donc pousser le Soleil au-delà ne lui donne rien. Le gain de §4.5 porte
+sur le reste de la scène, pas sur le halo — item toujours ouvert côté
+`effects-roadmap.md`.
+
+**Preuve.** `states/fx/PostFxAppState.java` (chaîne de post-process et
+framebuffer partagé, réutilisable par `FX-2` et les god-rays),
+`states/fx/SmoothBloomFilter.java`, `engine/scene/body/CoronaView.java`,
+`resources/MatDefs/Fx/Corona.{j3md,vert,frag}`, `AssetFactory.applyGlow`.
 
 #### FX-2 — Éclipses / pénombre inter-corps — ★4 ◆3 M
 

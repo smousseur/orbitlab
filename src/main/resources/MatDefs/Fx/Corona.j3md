@@ -1,0 +1,30 @@
+MaterialDef Corona {
+
+    MaterialParameters {
+        // Colour of the glow. Its alpha is the overall strength: the shader multiplies the
+        // radial profile by it, and the blend mode is AlphaAdditive, so alpha scales what is
+        // added to the frame rather than hiding what is behind.
+        Color Color
+
+        // Where the star's limb sits, as a fraction of the quad's half-width. The mesh is sized
+        // at some multiple of the stellar radius and this is its reciprocal, so the decay starts
+        // exactly at the surface and reaches zero at the quad's inscribed circle. Set from code
+        // together with the mesh; the two are one measurement expressed twice.
+        Float CoreRatio : 0.4
+
+        // Exponent of the decay past the limb. 1 is linear, higher hugs the star more tightly.
+        Float Falloff : 3.0
+    }
+
+    // Deliberately no Glow technique. In GlowMode.Objects the bloom re-renders the scene through
+    // that technique, and a corona that declared one would be blurred and added back on top of
+    // itself — the halo counted twice, once as geometry and once as a screen-space smear.
+    Technique {
+        VertexShader   GLSL150: MatDefs/Fx/Corona.vert
+        FragmentShader GLSL150: MatDefs/Fx/Corona.frag
+
+        WorldParameters {
+            WorldViewProjectionMatrix
+        }
+    }
+}

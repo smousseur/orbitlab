@@ -1,7 +1,7 @@
 # Spec — Roadmap effets graphiques
 
-> **⚠ Bandeau de statut — 2026-08-08.** Le §1 ci-dessous décrit un état du rendu
-> qui n'est plus le nôtre. Trois éléments du tier 1 sont **livrés** :
+> **⚠ Bandeau de statut — 2026-08-09.** Le §1 ci-dessous décrit un état du rendu
+> qui n'est plus le nôtre. Quatre éléments du tier 1 sont **livrés** :
 >
 > - **Skybox étoilée (§3.1)** — `states/scene/SkyboxAppState.java`, cubemap sous
 >   `resources/textures/skybox/`.
@@ -14,6 +14,16 @@
 >   Le filtrage anisotrope reste à faire. Rappel : le MSAA **n'antialiase pas**
 >   les lignes GL de façon fiable — l'aliasing des orbites relève du ribbon
 >   (§9.4.1), pas des `AppSettings`.
+> - **Halo du Soleil (§3.3)** — livré en **deux morceaux**, et pas comme
+>   le §3.3 le prévoyait. Une **couronne géométrique**
+>   (`engine/scene/body/CoronaView.java` + `resources/MatDefs/Fx/Corona.*`)
+>   porte la portée du halo ; le bloom `GlowMode.Objects`
+>   (`states/fx/PostFxAppState.java`, `SmoothBloomFilter`) est réduit au
+>   débord vers l'intérieur qui adoucit le limbe. Le tint émissif du
+>   Soleil est posé par `AssetFactory.applyGlow` depuis
+>   `PlanetPoseAppState`. Sur le viewport **`near`**, pas `far`. Le
+>   pourquoi du découpage est en §3.3 ; il vaut pour tout futur effet
+>   d'astre.
 >
 > Conséquences sur le reste du document : « aucun shader custom » (§1) est faux,
 > nous en avons un et nous le maîtrisons — ce qui **abaisse le coût des éclipses
@@ -65,7 +75,7 @@ décide pas d'un ordre d'implémentation engagé.
 |---|---|---|---|---|
 | 1 | Skybox étoilée | 1 | 4 | `SkyFactory` + cubemap |
 | 1 | Lambert sur planètes (fall-off Soleil) | 1 | 4 | `Lighting.j3md` (built-in) |
-| 1 | Bloom sur le Soleil | 1 | 3 | `BloomFilter` (built-in) |
+| 1 | Bloom sur le Soleil ✅ | 1 | 3 | `BloomFilter` (built-in) |
 | 1 | MSAA + filtrage anisotrope | 1 | 2 | `AppSettings` |
 | 1 | Particules de tuyère | 2 | 4 | `ParticleEmitter` (built-in) |
 | 2 | God-rays / rayons solaires | 2 | 4 | `LightScatteringFilter` |
@@ -130,11 +140,148 @@ des GLTF planètes sont correctes.
 rend lumineux et donne une cohérence visuelle "spatiale".
 
 **Comment** — `FilterPostProcessor` + `BloomFilter` (built-in JME3).
-Seuil élevé pour ne capter que le Soleil. À appliquer sur le viewport
-`far`.
 
 **Code à toucher** — Nouveau `PostFxAppState` dans `states/fx/`
 (centralisera ensuite tone-mapping, god-rays, etc.).
+
+> **Correction — livré le 2026-08-09.** Deux points de la rédaction
+> ci-dessus étaient faux, et le sont restés dans le §7.1.
+>
+> 1. **Pas de seuil, et pas sur le viewport `far`.** `GlowMode.Scene` avec
+>    un seuil de luminance se règle *contre le fond*, et depuis la skybox
+>    le champ d'étoiles blooming avec le Soleil : la scène devient
+>    laiteuse. Livré en `GlowMode.Objects`, qui re-rend la scène par la
+>    technique `Glow` des matériaux — seul ce qui se déclare émissif
+>    brille. Le Soleil est le seul à le faire (`AssetFactory.applyGlow`),
+>    les planètes portent `WrapLighting` qui n'a pas de technique `Glow`
+>    du tout, les lignes d'orbite portent `Unshaded` sans `GlowColor`
+>    donc sortent du noir. Plus aucun seuil à régler.
+> 2. **Le disque du Soleil est dessiné par le viewport `near`.**
+>    `LodView` coupe un corps en deux : une ancre de position sans
+>    géométrie sous `farBodiesNode`, et le modèle GLTF sous
+>    `nearBodiesNode` — c'est ce dernier que `FloatingOriginAppState`
+>    dé-culle pour le corps focalisé. Le viewport `far` ne dessine que
+>    les lignes d'orbite. Un processor posé dessus n'aurait rien à faire
+>    briller.
+>
+> **La leçon, si vous n'en lisez qu'une.** Un flou écran travaille en
+> pixels : **sa portée et son plancher de résolution sont le même
+> nombre**. Le buffer est sous-échantillonné, donc aucun halo plus fin
+> qu'un texel n'est représentable, et un texel magnifié est une tente
+> carrée. Un halo assez large pour un gros plan impose donc un plancher
+> d'une quinzaine de pixels, et tout astre projetant plus petit que ça
+> reçoit l'empreinte de magnification au lieu d'un halo : un carré. Avec
+> les réglages d'alors, la bande morte allait de ~10 px de rayon projeté
+> (en dessous, le LOD bascule sur l'icône GUI et la question disparaît) à
+> ~40 px. Le seul paramètre qui la déplacerait, `DownSamplingFactor`, ne
+> s'anime pas : il réalloue les framebuffers.
+>
+> **D'où la couronne géométrique.** Le halo d'une étoile est une
+> propriété de l'étoile ; exprimé dans les unités de l'astre il n'a pas
+> de plancher, il est rond par construction et il suit le disque
+> gratuitement — la modulation de `blurScale` par le rayon projeté, qu'il
+> avait fallu écrire pour masquer le carré, devient sans objet et a été
+> retirée. Un quad face-caméra, une décroissance radiale procédurale, et
+> le **depth test fait le masquage tout seul** : le quad passe par le
+> centre de l'astre, donc l'hémisphère avant échoue au test et seul
+> l'anneau hors silhouette est dessiné — avec l'occultation correcte par
+> tout ce qui passe devant, en prime. `Corona.j3md` ne déclare
+> **pas** de technique `Glow`, sinon le bloom flouterait et rajouterait
+> la couronne par-dessus elle-même.
+>
+> Ce que la géométrie ne sait pas faire, et pourquoi le bloom reste :
+> déborder **vers l'intérieur** pour adoucir le limbe. Il lui faut si peu
+> de portée (`DownSamplingFactor` 2) qu'il ne rencontre jamais son propre
+> plancher.
+>
+> **Trois pièges de réglage, mesurés le 2026-08-09 en approchant un rendu
+> cible.**
+>
+> - **`ExposurePower` doit rester à 1 en mode `Objects`.** Le shader
+>   `bloomExtract.frag` se réduit alors à `color = pow(glowColor,
+>   ExposurePow)` — la branche `DO_EXTRACT` n'est pas compilée, donc
+>   `ExposureCutOff` est mort et l'exposant s'applique droit à la couleur
+>   du Soleil. Il sert à trier brillant/terne en mode `Scene` ; ici la
+>   passe ne contient que le Soleil, il n'y a rien à trier. Et comme la
+>   puissance est par canal, elle déforme : sur l'orange mesuré de la
+>   texture (`R 0.98, G 0.42, B 0.008`), un cube donne `(0.94, 0.07,
+>   ~0)` — halo rouge sang autour d'un disque orange, qui meurt à
+>   quelques pixels du limbe.
+> - **La mosaïque du halo : toute texture de render target JME naît en
+>   `Nearest`.** C'est la cause racine, et elle ne vient pas de nos
+>   réglages. `Texture2D(Image)` force `MagFilter.Nearest` /
+>   `MinFilter.NearestNoMipMaps` dès que `img.getData(0) == null`, ce qui
+>   est le cas de *toute* cible de rendu offscreen — le garde-fou se lit
+>   comme s'il visait les formats de profondeur, il attrape tout.
+>   `Texture2D(width, height, format)`, le constructeur qu'utilise
+>   `Filter.Pass.init`, y délègue avec `data = null`. Le défaut
+>   `MagFilter.Bilinear` du champ de `Texture` ne s'applique donc jamais
+>   aux passes de filtre. `BloomFilter` floute à résolution réduite puis
+>   ré-agrandit à la composition : le halo sort en grille de carrés d'un
+>   texel, dont la taille suit exactement `DownSamplingFactor`.
+>   `SoftBloomFilter` remet `Bilinear` explicitement sur ses textures de
+>   pyramide ; `BloomFilter` ne le fait pas. D'où
+>   `states/fx/SmoothBloomFilter.java`, qui ré-applique la correction sur
+>   les passes exposées par `getPostRenderPasses()`. **À refaire pour
+>   tout filtre qui sous-échantillonne.**
+> - **Le rayon du flou doit suivre la taille apparente du Soleil, sinon
+>   le halo devient un carré en vue solaire.** Le support du noyau *est*
+>   un carré de 9×9 taps : avec les poids `[.06 .09 .12 .15 .16 .15 .12
+>   .09 .06]` dans chaque direction, le coin du noyau 2D porte
+>   `.06²/.16² = 14 %` du pic là où une vraie gaussienne serait vers
+>   0,1 %. Tant que le disque est large devant ce support, le halo
+>   l'épouse et la forme ne se voit pas ; dès que le disque tombe à
+>   quelques pixels — c'est le cas en vue solaire dézoomée — la sortie
+>   *est* le noyau, et on regarde un carré orange autour d'un point
+>   jaune. `PostFxAppState.update()` dérive donc `blurScale` du rayon
+>   projeté du Soleil (`HALO_RADIUS_RATIO`). Praticable parce que
+>   `setBlurScale` n'écrit qu'un champ, relu à chaque frame par le
+>   `beforeRender()` des passes de flou — contrairement à
+>   `setDownSamplingFactor`, qui appelle `reInitFilter()` et **ne doit
+>   jamais être appelé par frame**.
+> - **`BlurScale` n'est pas le réglage de largeur.**
+>   `HGaussianBlur.frag` calcule `blurSize = m_Scale / m_Size` avec
+>   `m_Size` la largeur du buffer réduit : cette valeur *est*
+>   l'espacement des neuf taps, en texels de ce buffer. À 1 les taps sont
+>   contigus et le noyau est la gaussienne annoncée ; au-dessus ils
+>   sautent des texels et le flou se dégrade en peigne. **Toute la
+>   largeur doit venir de `DownSamplingFactor`** : la portée vaut
+>   `±4 × BlurScale × DownSamplingFactor` pixels écran. Contre-intuitif
+>   mais vrai une fois le filtrage bilinéaire rétabli :
+>   sous-échantillonner fort ne coûte rien en douceur, ce qu'on
+>   ré-agrandit est déjà un flou. Ce que ça coûte, c'est la fidélité à la
+>   silhouette quand le disque ne fait plus que quelques texels.
+> - **Pas de HDR à espérer de ce filtre.** `BloomFilter` initialise
+>   `preGlowPass`, `extractPass` et les deux flous en `Format.RGBA8` :
+>   tout est écrêté à 1 dès la passe de glow. Monter l'`Emissive` du
+>   Soleil au-delà de 1 ne gagne aucun headroom — l'écrêtage *est* le
+>   mécanisme (c'est lui qui épingle R et G pour donner un jaune saturé),
+>   mais §4.5 ne débloquera rien de plus ici. Le framebuffer de scène du
+>   `FilterPostProcessor`, lui, est bien `RGB111110F` : le HDR existe
+>   dans la chaîne, le bloom n'y touche pas.
+> - **`SoftBloomFilter` (nouveau en 3.9) est tentant et inutilisable.**
+>   Pyramide downsample/upsample en `RGBA16F`, c'est la retombée large et
+>   douce des bloom modernes — mais aucun mode `Objects`, son shader
+>   final est un `mix(scène, glow, facteur)` sur l'image entière. Soit
+>   exactement le ciel laiteux qu'on cherchait à éviter.
+>
+> **Conséquence non évidente, à connaître avant d'ajouter le moindre
+> filtre.** La passe de composition d'un `FilterPostProcessor` efface le
+> buffer couleur avant de blitter son quad plein écran
+> (`FilterPostProcessor.renderProcessing` → `clearBuffers(true, true,
+> true)`). Tout ce qu'un viewport *antérieur* avait déjà dessiné à
+> l'écran disparaît — ici la skybox (pre-view `SkyView`) et les orbites
+> (viewport `far`), qui rendent tous deux avant `NearView`. La frame doit
+> donc être assemblée **dans le framebuffer du filtre** et non à l'écran :
+> `PostFxAppState` lit chaque frame le framebuffer que le processor a lié
+> au viewport `near` et y branche les viewports amont
+> (`ViewPort.setOutputFrameBuffer`). Le post-view GUI, lui, rend après et
+> reste hors du filtre — ce qui est bien ce qu'on veut. Deux effets de
+> bord : la première frame (et la première après un resize) perd le ciel
+> et les orbites, le temps que le framebuffer existe ; et la profondeur
+> comme le MSAA viennent désormais du framebuffer du processor — 24 bits
+> et `AppSettings.getSamples()` respectivement, donc le budget de
+> profondeur de `spacecraft-view-artefacts.md` §5.3 est inchangé.
 
 ---
 
@@ -204,7 +351,14 @@ Mars, Mercure, Lune). Effet sensible surtout en approche rapprochée
 ### 4.5 HDR + tone mapping
 
 `ToneMapFilter` (built-in). Permet de pousser l'intensité du Soleil
-au-delà de 1.0 sans cramer les planètes. Synergie forte avec bloom.
+au-delà de 1.0 sans cramer les planètes.
+
+> **Correction 2026-08-09 — pas de synergie avec le bloom livré.** Les
+> passes internes de `BloomFilter` sont en `RGBA8` : le glow est écrêté
+> à 1 avant même d'être flouté, donc un Soleil en HDR ne lui donnerait
+> rien de plus. Le gain de §4.5 porte sur *le reste* de la scène (ne pas
+> cramer les planètes proches, garder de la latitude sur l'éclairage),
+> pas sur le halo. Voir §3.3.
 
 ---
 
@@ -292,9 +446,18 @@ mesh tessellé à partir d'un heightmap (Earth/Mars). Gros chantier
 
 ### 7.1 Double viewport et floating origin
 
-- Tout `FilterPostProcessor` doit être attaché au **bon** viewport.
-  Bloom et god-rays vont sur `far` ; shadow map et nuages vont sur
-  `near`.
+- Tout `FilterPostProcessor` doit être attaché au **bon** viewport, et
+  ce n'est pas `far` : les modèles 3D des corps sont dessinés par
+  `near`, `far` ne porte que les ancres de position et les lignes
+  d'orbite. Bloom, god-rays, shadow map et nuages vont donc tous sur
+  `near`. Un seul `FilterPostProcessor` pour tous (celui de
+  `PostFxAppState`) : chaque processor supplémentaire coûterait un
+  framebuffer offscreen et une résolution de plus.
+- La composition d'un `FilterPostProcessor` **efface l'écran** avant de
+  blitter. Les viewports amont (`SkyView`, `far`) doivent donc être
+  redirigés dans son framebuffer, ce dont `PostFxAppState` se charge
+  déjà — un nouveau filtre s'ajoute à sa chaîne et hérite du câblage,
+  il ne se pose pas ailleurs. Détail complet en §3.3.
 - Les shaders qui dépendent de la position monde doivent prendre en
   compte le re-centrage opéré par `FloatingOriginAppState` — passer
   systématiquement en uniforms les positions corrigées (relatives
@@ -302,11 +465,19 @@ mesh tessellé à partir d'un heightmap (Earth/Mars). Gros chantier
 
 ### 7.2 Pipeline d'assets
 
-- `src/main/resources/` est `.gitignore`'d → tout asset (cubemap,
-  normal maps, émissive, sprite d'exhaust, textures de halo) doit
-  être documenté hors-dépôt et chargé via `AssetFactory`.
-- Prévoir une convention `assets/textures/{sky,planets,fx}/...` et
-  `assets/shaders/{atmosphere,fx}/...`.
+> **Correction 2026-08-09.** La phrase d'origine — « `src/main/resources/`
+> est `.gitignore`'d » — est **fausse**, et elle a induit en erreur.
+> Seul `src/main/resources/models/**` l'est. Les shaders (`MatDefs/`),
+> la cubemap de skybox, les fontes et les textures d'UI sont versionnés,
+> et `orekit-data.zip` aussi.
+
+- Seuls les **modèles GLTF** (`src/main/resources/models/**`) sont
+  hors-dépôt, pour leur taille : à documenter hors-dépôt et à fournir
+  séparément.
+- Tout le reste va dans `src/main/resources/` et se commite
+  normalement. Conventions en place : `MatDefs/{Light,Fx}/...` pour les
+  shaders, `textures/skybox/...`, `interface/...` pour l'UI. Chargement
+  via `AssetFactory`.
 
 ### 7.3 Convention AppState
 

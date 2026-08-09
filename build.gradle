@@ -14,6 +14,9 @@ dependencies {
     implementation 'org.orekit:orekit:13.1.1'
     implementation 'org.jmonkeyengine:jme3-core:' + jmonkeyengineVersion
     implementation 'org.jmonkeyengine:jme3-desktop:' + jmonkeyengineVersion
+    // Screen-space filters (BloomFilter and the matdefs it loads). FilterPostProcessor itself
+    // lives in jme3-core, the com.jme3.post.filters.* implementations do not.
+    implementation 'org.jmonkeyengine:jme3-effects:' + jmonkeyengineVersion
     implementation 'org.jmonkeyengine:jme3-jogg:' + jmonkeyengineVersion
     runtimeOnly 'org.jmonkeyengine:jme3-plugins:' + jmonkeyengineVersion
     runtimeOnly 'org.jmonkeyengine:jme3-lwjgl3:' + jmonkeyengineVersion

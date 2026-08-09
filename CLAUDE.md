@@ -27,7 +27,7 @@ The application visualizes the solar system, computes spacecraft orbits, and sim
 
 - Java is required (modern version; the code uses records and sealed interfaces → Java 17+)
 - No environment variables are required; configuration is hardcoded or embedded in classpath resources
-- Orekit requires `orekit-data.zip` to be present in the runtime classpath (excluded from git via `.gitignore` on `src/main/resources/`)
+- Orekit requires `orekit-data.zip` on the runtime classpath; it is tracked at `src/main/resources/orekit-data.zip` (only the test copy is gitignored)
 
 ---
 
@@ -46,7 +46,8 @@ src/
 │   ├── engine/                       # JME3 integration (assets, engine/camera config)
 │   │   ├── events/                   # EventBus for asynchronous inter-state communication
 │   │   ├── scene/
-│   │   │   ├── body/                 # Generic body rendering (BodyView, BodyRenderConfig, LodView)
+│   │   │   ├── body/                 # Generic body rendering (BodyView, BodyRenderConfig, LodView,
+│   │   │   │                         #   CoronaView — geometric star glow)
 │   │   │   │   └── lod/              # LOD implementations (BillboardIconView, Model3dView)
 │   │   │   ├── graph/                # SceneGraph and GuiGraph roots
 │   │   │   ├── planet/               # Planet presenter (MVC)
@@ -55,7 +56,7 @@ src/
 │   ├── states/                       # JME3 AppState implementations
 │   │   ├── camera/                   # Camera states (orbit, floating origin, view mode, near sync)
 │   │   ├── ephemeris/                # Celestial body position computation state
-│   │   ├── fx/                       # Visual effects (lighting)
+│   │   ├── fx/                       # Visual effects (lighting, post-processing chain)
 │   │   ├── mission/                  # Mission orchestration, trajectory rendering, list panel,
 │   │   │                             #   display panel, telemetry widget and wizard states
 │   │   ├── orbits/                   # Orbit visualization states (init + runtime)
@@ -281,12 +282,12 @@ The application renders two stacked viewports:
 - **Branch naming**: Feature branches follow `feature_<name>` or `claude/<description>-<id>` conventions
 - **Commit messages**: Imperative mood, descriptive (e.g., `Add backup computations to avoid local minimums in CMAES optimization`)
 - **Merge strategy**: Feature branches are merged via pull requests
-- **Excluded from git** (see `.gitignore`): `build/`, `.gradle/`, `gradle/`, `docs/`, `dataset/`, `src/main/resources/` (contains large ephemeris/asset files)
+- **Excluded from git** (see `.gitignore`): `build/`, `.gradle/`, `gradle/`, `docs/`, `dataset/`, `src/main/resources/models/**` (large GLTF bodies). Note that `src/main/resources/` itself is **not** excluded — shaders, fonts, UI textures, the skybox and `orekit-data.zip` are all tracked
 
 ---
 
 ## What Is Not in This Repo
 
-- `src/main/resources/` — Runtime assets and `orekit-data.zip` (excluded from version control; must be provided separately)
+- `src/main/resources/models/` — GLTF models of the celestial bodies (too large for version control; must be provided separately). The rest of `src/main/resources/` **is** tracked, including the custom shaders under `MatDefs/`
 - `dataset/` — Mission and test data files
 - `docs/` — Generated documentation
