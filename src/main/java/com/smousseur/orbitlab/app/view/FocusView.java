@@ -131,10 +131,41 @@ public class FocusView {
    * Returns whether a satellite body should be visible given the current view mode and focus.
    * Satellites are only visible when the camera is focused on themselves or on their parent body.
    *
+   * <p>Spacecraft mode counts as looking at the parent body, not as a third case: {@link
+   * #viewSpacecraft} deliberately keeps {@code body} pointing at the planet the mission orbits, so
+   * following a satellite of Earth from Earth orbit is the same viewing situation as focusing Earth
+   * itself. The clause read {@code mode == PLANET} alone until spacecraft mode was added and this
+   * predicate was not revisited, which is what made the Moon disappear on entering a mission.
+   *
    * @param body the satellite body
    * @return true if the satellite should be visible
    */
   public boolean isSatelliteVisible(SolarSystemBody body) {
-    return mode == ViewMode.PLANET && (this.body == body || this.body == body.parent());
+    return isPlanetScale() && (this.body == body || this.body == body.parent());
+  }
+
+  /**
+   * Returns whether a mission drawn around {@code missionBody} should be visible given the current
+   * view mode and focus.
+   *
+   * <p>A mission is rendered in the planet-scale context of the body its objective targets, so it
+   * only belongs on screen while that same body is the one being looked at. Focusing another body
+   * of the system — the Moon, in particular, which shares the near viewport with Earth — must hide
+   * it: its trajectory is expressed about Earth and would otherwise be drawn into a scene it does
+   * not belong to.
+   *
+   * <p>Missions around the focused body stay visible in spacecraft mode too, so following one of
+   * them does not hide its siblings.
+   *
+   * @param missionBody the body the mission's render context is centred on
+   * @return true if the mission should be shown
+   */
+  public boolean isMissionVisible(SolarSystemBody missionBody) {
+    return isPlanetScale() && this.body == missionBody;
+  }
+
+  /** Whether the current mode draws the planet-scale scene at all. */
+  private boolean isPlanetScale() {
+    return mode == ViewMode.PLANET || mode == ViewMode.SPACECRAFT;
   }
 }

@@ -6,7 +6,6 @@ import com.jme3.scene.Node;
 import com.smousseur.orbitlab.app.ApplicationContext;
 import com.smousseur.orbitlab.app.view.FocusView;
 import com.smousseur.orbitlab.app.view.RenderContext;
-import com.smousseur.orbitlab.app.view.ViewMode;
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.engine.AssetFactory;
 import com.smousseur.orbitlab.engine.scene.body.BodyRenderConfig;
@@ -141,6 +140,10 @@ public final class MissionRenderer {
    * Updates display from a pre-computed ephemeris point. No propagation — pure rendering from
    * pre-calculated data.
    *
+   * <p>Draws unconditionally: whether the mission belongs on screen at all is decided by {@link
+   * MissionOrchestratorAppState}, which owns every visibility rule and skips this call entirely
+   * when the answer is no. Re-testing it here is what previously let the two disagree.
+   *
    * @param point the interpolated ephemeris point, whose position also serves as the trail tip
    * @param trail the mission's display polyline, the same instance on every frame
    * @param upTo index of the last trail vertex flown at the current instant
@@ -149,13 +152,6 @@ public final class MissionRenderer {
    */
   public void updateFromEphemeris(
       MissionEphemerisPoint point, TrajectoryPolyline trail, int upTo, Camera cam, float tpf) {
-    ViewMode mode = context.focusView().getMode();
-    boolean visible = mode == ViewMode.PLANET || mode == ViewMode.SPACECRAFT;
-    if (!visible) {
-      if (view != null) view.setVisible(false);
-      return;
-    }
-
     presenter.updatePose(point.position(), point.velocity(), tpf, renderContext);
     view.updateScreen(cam);
     trajectoryRenderer.update(trail, upTo, point.position());

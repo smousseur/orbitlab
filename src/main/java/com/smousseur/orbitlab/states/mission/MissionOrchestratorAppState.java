@@ -92,6 +92,17 @@ public final class MissionOrchestratorAppState extends BaseAppState {
         continue;
       }
 
+      // A mission is drawn in the planet-scale context of the body its objective targets, so it
+      // only belongs on screen while the camera is looking at that body — not in the solar view,
+      // and not while focusing another body that shares the same near viewport, the Moon being the
+      // case that surfaced this. Deciding it here rather than inside the renderer is what makes the
+      // rule cover the trajectory line as well: setVisible() hides both, whereas the mode test that
+      // used to live in updateFromEphemeris() hid the spacecraft alone and left the line drawn.
+      if (!context.focusView().isMissionVisible(entry.mission().getObjective().body())) {
+        renderer.setVisible(false);
+        continue;
+      }
+
       // Within the ephemeris the point is interpolated and the trail stops at the current instant;
       // past its end the mission is over, so both settle on the last sample. The trail itself is
       // the same shared, pre-decimated polyline in both cases — nothing is allocated here, where

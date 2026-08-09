@@ -10,6 +10,7 @@ import com.smousseur.orbitlab.app.view.FocusView;
 import com.smousseur.orbitlab.app.view.RenderContext;
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.engine.AssetFactory;
+import com.smousseur.orbitlab.engine.TextureDiagnostics;
 import com.smousseur.orbitlab.engine.scene.PlanetColors;
 import com.smousseur.orbitlab.engine.scene.PlanetRadius;
 import com.smousseur.orbitlab.engine.scene.body.BodyRenderConfig;
@@ -147,6 +148,13 @@ public final class PlanetPoseAppState extends BaseAppState {
                   body == SolarSystemBody.SUN
                       ? AssetFactory.get().applyGlow(spatial, SUN_GLOW)
                       : AssetFactory.get().applyLambert(spatial, 0.8f))
+          .thenApply(
+              spatial -> {
+                // After re-materialisation, so the report describes the textures actually bound at
+                // draw time rather than the ones the GLTF loader handed over.
+                TextureDiagnostics.logTextures(config.displayName(), spatial);
+                return spatial;
+              })
           .thenAccept(model3dView::onModelLoaded);
     }
   }

@@ -69,16 +69,18 @@ découverte.
 ### Phase 1 — Hygiène visuelle, horizon de mission, dette panel · ~1,5 semaine
 
 > Que ce qui est déjà à l'écran soit propre, honnête et dise quelque chose,
-> avant d'ajouter quoi que ce soit. `MIS-8` est le seul item de la phase qui
+> avant d'ajouter quoi que ce soit. `MIS-8` était le seul item de la phase qui
 > soit un préalable pour d'autres : il fixe le substrat temporel sur lequel
 > `NAV-2` (phase 2) et les missions longues (phases 4 et 5) vont s'appuyer.
+> **Il est livré**, donc plus rien dans cette phase ne bloque les suivantes :
+> les trois items restants peuvent être pris dans n'importe quel ordre.
 
 | ID | Item | ★ | ◆ | Taille |
 |---|---|:-:|:-:|:-:|
-| MIS-8 | **Horizon de mission explicite** (fin de mission aujourd'hui codée en dur) | 5 | 2 | M |
+| ~~MIS-8~~ | ~~**Horizon de mission explicite** (fin de mission codée en dur)~~ — **résolu le 2026-08-09** | 5 | 2 | M |
 | ~~RND-1~~ | ~~Corriger les artefacts visuels de la vue spacecraft~~ — **résolu le 2026-08-09** | 4 | 2 | M |
 | ~~FX-1~~ | ~~Bloom sur le Soleil~~ — **résolu le 2026-08-09** | 3 | 1 | S |
-| RND-2 | Filtrage anisotrope | 2 | 1 | S |
+| ~~RND-2~~ | ~~Filtrage anisotrope~~ — **résolu le 2026-08-09** | 2 | 1 | S |
 | MIS-1 | Deuxième lanceur au catalogue | 3 | 1 | S |
 | RND-3 | Couleur par stage + passé/futur + marqueur « now » | 4 | 2 | M |
 | UI-1 | Vue détail mission (orbite atteinte, message d'erreur) | 4 | 2 | M |
@@ -198,7 +200,7 @@ opportuniste, ou à décider quoi sacrifier quand une phase déborde.
 
 | ID | Item | ★ | ◆ | Taille | Dépend de |
 |---|---|:-:|:-:|:-:|---|
-| MIS-8 | Horizon de mission explicite | 5 | 2 | M | — |
+| ~~MIS-8~~ | ~~Horizon de mission explicite~~ — résolu | 5 | 2 | M | — |
 | ~~RND-1~~ | ~~Corriger les artefacts visuels de la vue spacecraft~~ — résolu | 4 | 2 | M | — |
 | ~~FX-1~~ | ~~Bloom sur le Soleil~~ — résolu (le tone mapping n'en faisait pas partie, voir détail) | 3 | 1 | S | — |
 | MIS-1 | Deuxième lanceur au catalogue | 3 | 1 | S | — |
@@ -206,7 +208,7 @@ opportuniste, ou à décider quoi sacrifier quand une phase déborde.
 | UI-1 | Vue détail mission (orbite atteinte, message d'erreur) | 4 | 2 | M | — |
 | NAV-1 | Transitions de caméra entre vues | 4 | 2 | M | — |
 | MIS-7 | `EarthOrbitMission` paramétrable → polaire / SSO / MEO | 4 | 2 | M | — |
-| RND-2 | Filtrage anisotrope (MSAA déjà actif) | 2 | 1 | S | — |
+| ~~RND-2~~ | ~~Filtrage anisotrope (MSAA déjà actif)~~ — résolu | 2 | 1 | S | — |
 | FX-2 | Éclipses / pénombre inter-corps | 4 | 3 | M | — |
 | FX-3 | Particules de tuyère | 4 | 2 | M | — |
 | NAV-4 | Breadcrumb de navigation 3D | 3 | 2 | M | — |
@@ -231,7 +233,7 @@ opportuniste, ou à décider quoi sacrifier quand une phase déborde.
 ## 5. Graphe de dépendances (l'essentiel)
 
 ```
-MIS-8 (horizon de mission)
+MIS-8 (horizon de mission) ✔ résolu — ses trois aval sont débloqués
    ├── NAV-2 (piste temporelle) ── NAV-3 (scrub)
    ├── MIS-4 / MIS-5 (lunaire : coast TLI ~3 j > horizon actuel)
    └── MIS-6 (rendezvous : phasing sur N révolutions)
@@ -250,10 +252,13 @@ PHY-1 (drag off par défaut) ── PHY-2 (drag par défaut + recalibrage)
 RND-4 (ribbon) ── NAV-5 (hover)
 ```
 
-Trois nœuds commandent tout le reste : **MIS-8** (le plus en amont, et le moins
-cher — tout ce qui dure plus d'un jour simulé bute dessus), **PHY-4** (sans lui,
-rien de lunaire) et **MIS-2** (sans fenêtre de lancement, ni la Lune ni un
-rendez-vous ne convergent — la cible n'est jamais au bon endroit).
+Trois nœuds commandaient tout le reste : **MIS-8** (le plus en amont, et le
+moins cher — tout ce qui durait plus d'un jour simulé butait dessus), **PHY-4**
+(sans lui, rien de lunaire) et **MIS-2** (sans fenêtre de lancement, ni la Lune
+ni un rendez-vous ne convergent — la cible n'est jamais au bon endroit).
+
+`MIS-8` étant livré, il n'en reste que deux : **PHY-4** et **MIS-2** sont
+désormais les seuls verrous du haut du graphe.
 
 ---
 
@@ -313,7 +318,7 @@ identifiant propre le jour où l'un des deux gêne.
 **Spec.** [`specs/graphics-effects/spacecraft-view-artefacts.md`](../graphics-effects/spacecraft-view-artefacts.md)
 §9.1 à §9.3 (ce qui a été fait, et les écarts avec ce qui était prévu).
 
-#### RND-2 — Filtrage anisotrope — ★2 ◆1 S
+#### ~~RND-2 — Filtrage anisotrope — ★2 ◆1 S~~ — **RÉSOLU le 2026-08-09**
 
 **Pourquoi.** Complète le MSAA déjà actif. Effet réel mais modeste : les
 textures planétaires vues en biseau.
@@ -323,6 +328,27 @@ manière fiable, et `glLineWidth > 1` est silencieusement plafonné à 1 px sur 
 drivers en profil core. L'aliasing des orbites ne se règle donc **pas** par les
 réglages `AppSettings` : c'est `RND-4` (ribbon) qui le règle. Ne pas attendre de
 `RND-2` qu'il « nettoie les orbites ».
+
+**Ce qui a été fait.** Une ligne au boot,
+`renderer.setDefaultAnisotropicFilter(8)` dans `OrbitLabApplication`, à côté du
+`setSamples(4)` du MSAA. Le niveau 8 est délibéré alors que le pilote autorise
+16 : au-delà, le rendement décroît vite pendant que le nombre d'échantillons
+continue de doubler sur les fragments obliques, déjà les plus chers.
+
+**Le réglage global a suffi parce qu'on l'a mesuré d'abord.** `TextureDiagnostics`
+(`engine/`) rapporte le plafond du pilote, le `MinFilter` réellement posé par le
+chargeur GLTF et le niveau propre de chaque texture. Verdict sur les 13 textures
+planétaires : `Trilinear` partout, aucun niveau propre — donc rien à faire texture
+par texture. Le rapport reste en DEBUG pour le jour où un asset change ; la ligne
+de plafond, en INFO, sert désormais à confirmer que le réglage a bien pris.
+
+**Deux pièges que la mesure a écartés.** L'anisotropie est un état de *texture*,
+pas de matériau : le `Material.setFloat("AnisotropicFilter", 8)` que proposait
+[`effects-roadmap.md`](../graphics-effects/effects-roadmap.md) §3.4 n'existe pas
+en JME3. Et le contrôle naïf des mipmaps (`Image.hasMipmaps()`) répond à une
+question plus étroite qu'il n'y paraît — il ne dit que si la chaîne venait du
+fichier, et vaut faux pour un PNG dont le renderer génère les mips à l'upload.
+Le signal décisif est `MinFilter.usesMipMapLevels()`.
 
 #### RND-3 — Couleur par stage, passé / futur, marqueur « now » — ★4 ◆2 M
 
@@ -372,13 +398,14 @@ basculement de mode.
 graduations sont décoratives et indexées sur la **vitesse**. Une timeline de
 simulation orbitale qui ne représente pas le temps est une anomalie.
 
-**Dépend de `MIS-8`.** La fenêtre représentée par la piste, c'est la durée de la
-mission : tant que cette durée est une constante arbitraire, la piste l'est
-aussi et devra être refaite.
+**Dépendait de `MIS-8`, désormais levé.** La fenêtre représentée par la piste,
+c'est la durée de la mission : tant que cette durée était une constante
+arbitraire, la piste l'était aussi et aurait été à refaire. `MissionHorizon`
+donne maintenant cette durée, donc la piste peut s'indexer dessus directement.
 
 **À faire, dans l'ordre.**
 1. Trancher la fenêtre représentée : durée de la mission sélectionnée, ou
-   fenêtre glissante autour de `now()` ? (cf. question ouverte n°1.)
+   fenêtre glissante autour de `now()` ? (cf. question ouverte n°2.)
 2. Fonction temps ↔ position, puis marqueurs aux transitions de stages de la
    mission sélectionnée.
 3. Hover → tooltip (stage + timestamp), click → `clock.seek(...)`.
@@ -658,10 +685,26 @@ autour de la cible. C'est le bénéfice visuel n°1 de la feature.
 
 **Spec.** [`specs/brainstorm/leo-rendezvous-preparation.md`](../brainstorm/leo-rendezvous-preparation.md).
 
-#### MIS-8 — Horizon de mission explicite — ★5 ◆2 M
+#### ~~MIS-8 — Horizon de mission explicite — ★5 ◆2 M~~ — **RÉSOLU le 2026-08-09**
 
-**Pourquoi.** La date de fin d'une mission est aujourd'hui une **constante**, et
-elle est arbitraire à deux endroits :
+> **Ce qui a été livré.** `MissionHorizon` (interface scellée,
+> `simulation/mission/`) porte la décision hors du générateur d'éphéméride, en
+> trois formes : `Revolutions` (le défaut dérivé du type de mission),
+> `FixedDuration` et `TrailingCoast`, bornées à 30 jours. Le wizard expose le
+> réglage via `FormField.MISSION_HORIZON_DAYS` avec bascule auto / manuel, le
+> défaut dérivé pré-rempli et une validation (`validateHorizon()`). Le pas
+> d'échantillonnage est devenu variable : chaque stage annonce le sien, au lieu
+> du `DEFAULT_STEP_SECONDS = 1.0` global. Les deux constantes de la fiche
+> ci-dessous — `DEFAULT_COAST_DURATION_SECONDS` et `FALLBACK_DURATION_SECONDS` —
+> n'existent plus, commentaire faux compris. Les quatre points du « À faire »
+> sont donc couverts.
+>
+> Le reste de la fiche est conservé tel quel : il documente le diagnostic
+> d'origine et le raisonnement de dimensionnement, qui restent la référence pour
+> les phases 4 et 5.
+
+**Pourquoi.** La date de fin d'une mission était alors une **constante**, et
+elle était arbitraire à deux endroits :
 
 | Constante | Valeur | Rôle |
 |---|---|---|
@@ -901,12 +944,11 @@ et [`specs/brainstorm/missions.md`](../brainstorm/missions.md).
 
 ## 8. Questions ouvertes
 
-1. **Horizon de mission (MIS-8)** — purement dérivé du type de mission (N
-   périodes après insertion, arrivée + N révolutions), ou réglable par
-   l'utilisateur dans le wizard avec ce dérivé comme défaut ? Le dérivé seul
-   suffit à débloquer les phases 4 et 5 et coûte nettement moins cher ; le
-   champ wizard est ce qui rend l'horizon *intéressant* (« montre-moi 30 jours
-   de dérive »). La fiche §6 propose les deux, l'ordre est négociable.
+1. ~~**Horizon de mission (MIS-8)** — purement dérivé du type de mission, ou
+   réglable dans le wizard avec ce dérivé comme défaut ?~~ **Tranchée le
+   2026-08-09 : les deux.** `MissionHorizon.Revolutions` fournit le dérivé,
+   pré-rempli comme défaut, et le wizard laisse basculer en manuel
+   (`FixedDuration`) — la bascule revenant au dérivé quand on la relâche.
 2. **Fenêtre de la piste temporelle (NAV-2)** — durée de la mission
    sélectionnée, ou fenêtre glissante autour de `now()` ? La première est plus
    lisible pour analyser une mission, la seconde reste utile quand aucune

@@ -10,6 +10,7 @@ import com.simsilica.lemur.event.PickState;
 import com.simsilica.lemur.style.BaseStyles;
 import com.smousseur.orbitlab.app.ApplicationContext;
 import com.smousseur.orbitlab.engine.AssetFactory;
+import com.smousseur.orbitlab.engine.TextureDiagnostics;
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.states.InitAppState;
 import com.smousseur.orbitlab.states.camera.FloatingOriginAppState;
@@ -47,6 +48,26 @@ public class OrbitLabApplication extends SimpleApplication {
   public static OrbitLabApplication app;
 
   /**
+   * Anisotropic filtering level applied to every texture that does not carry one of its own, which
+   * as of today is all of them — see {@link TextureDiagnostics}, whose boot report is what makes
+   * this a global setting rather than a per-texture pass.
+   *
+   * <p>It sharpens planetary surfaces seen at a grazing angle, where a mipmapped filter alone has
+   * to pick its level from the more compressed of the two UV axes and therefore blurs the axis
+   * that needed no reduction. Sampling is adaptive, so face-on surfaces cost nothing extra.
+   *
+   * <p>Deliberately 8 and not the 16 the driver allows: past 8 the returns fall off sharply while
+   * the sample count keeps doubling on exactly the oblique fragments that are already the most
+   * expensive. 16 is available if a side-by-side ever justifies it.
+   *
+   * <p><b>This does not touch the orbit lines.</b> Anisotropy is a texture-sampling state and the
+   * trajectories are GL line primitives — no texture, nothing to filter. Their aliasing is not
+   * addressable from {@code AppSettings} at all (MSAA does not reliably antialias lines, and
+   * {@code glLineWidth > 1} is silently clamped to 1 px in a core profile); that is RND-4's job.
+   */
+  private static final int ANISOTROPIC_FILTER_LEVEL = 8;
+
+  /**
    * Application entry point. Configures window settings and starts the JME3 application loop.
    *
    * @param args command-line arguments (currently unused)
@@ -70,6 +91,8 @@ public class OrbitLabApplication extends SimpleApplication {
     GuiGlobals.getInstance().getStyles().setDefaultStyle("base");
     AssetFactory.init(assetManager);
     AppStyles.init(assetManager);
+    renderer.setDefaultAnisotropicFilter(ANISOTROPIC_FILTER_LEVEL);
+    TextureDiagnostics.logRendererCaps(renderer);
 
     ApplicationContext applicationContext = new ApplicationContext(rootNode, guiNode);
     stateManager.attach(new InitAppState());

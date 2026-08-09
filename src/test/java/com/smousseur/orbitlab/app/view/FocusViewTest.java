@@ -64,13 +64,51 @@ class FocusViewTest {
   }
 
   @Test
-  void isSatelliteVisibleIsFalseOutsidePlanetMode() {
-    // In SOLAR/SPACECRAFT the Moon should not be considered visible as a satellite — only the
-    // PLANET branch drives that contract. Pin it down.
+  void isSatelliteVisibleIsFalseInSolarMode() {
+    // Solar mode draws no planet-scale scene at all, so no satellite belongs on screen. This used
+    // to also pin SPACECRAFT to false, which was the bug rather than the contract — see
+    // isSatelliteVisibleFollowsTheParentBodyInSpacecraftMode.
     assertFalse(focusView.isSatelliteVisible(SolarSystemBody.MOON));
+  }
 
-    focusView.viewSpacecraft(leo1, SolarSystemBody.EARTH);
+  @Test
+  void isSatelliteVisibleIsFalseWhenFocusingAnUnrelatedBody() {
+    focusView.viewPlanet(SolarSystemBody.MARS);
+
     assertFalse(focusView.isSatelliteVisible(SolarSystemBody.MOON));
+  }
+
+  @Test
+  void isMissionVisibleOnlyAroundTheFocusedBody() {
+    focusView.viewPlanet(SolarSystemBody.EARTH);
+    assertTrue(focusView.isMissionVisible(SolarSystemBody.EARTH));
+
+    // The reported bug: focusing the Moon kept Earth-centred missions on screen, because the rule
+    // tested the view mode and never which body was being looked at.
+    focusView.viewPlanet(SolarSystemBody.MOON);
+    assertFalse(focusView.isMissionVisible(SolarSystemBody.EARTH));
+  }
+
+  @Test
+  void isMissionVisibleIsFalseInSolarMode() {
+    assertFalse(focusView.isMissionVisible(SolarSystemBody.EARTH));
+  }
+
+  @Test
+  void isMissionVisibleKeepsSiblingMissionsWhileFollowingOne() {
+    focusView.viewSpacecraft(leo1, SolarSystemBody.EARTH);
+
+    assertTrue(focusView.isMissionVisible(SolarSystemBody.EARTH));
+    assertFalse(focusView.isMissionVisible(SolarSystemBody.MARS));
+  }
+
+  @Test
+  void isSatelliteVisibleFollowsTheParentBodyInSpacecraftMode() {
+    // Following a mission in Earth orbit still looks at the Earth system: viewSpacecraft keeps the
+    // parent body precisely so planet-scale rendering carries on, so the Moon must not vanish.
+    focusView.viewSpacecraft(leo1, SolarSystemBody.EARTH);
+
+    assertTrue(focusView.isSatelliteVisible(SolarSystemBody.MOON));
   }
 
   @Test
