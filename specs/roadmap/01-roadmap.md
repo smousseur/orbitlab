@@ -29,6 +29,7 @@ lisez qu'une section, lisez le §3.
 | **MSAA 4×** | `OrbitLabApplication.java:58` — `settings.setSamples(4)` |
 | **`RND-1` — artefacts de la vue spacecraft** (3 causes racines) | `FloatingOriginAppState`, `NearCameraSyncAppState.nearPlane`, `MissionTrajectoryRenderer.update` ; `NearFrameOriginTest`, `NearFrustumDepthTest`, `MissionTrajectoryOriginTest` |
 | **`FX-1` — halo du Soleil** (couronne géométrique + bloom résiduel) | `engine/scene/body/CoronaView.java`, `MatDefs/Fx/Corona.*`, `states/fx/PostFxAppState.java`, `states/fx/SmoothBloomFilter.java`, `AssetFactory.applyGlow` |
+| **`MIS-1` — deuxième lanceur** (Ariane 62 au catalogue + mesh choisi par lanceur) | `vehicle/catalog/Launchers.java` (commit `f9ea80c`), `engine/scene/spacecraft/LauncherAssets.java`, `MissionRenderer.modelPathFor` |
 
 **Reste ouvert de l'ancienne roadmap** : la vue détail avec résultats
 d'optimisation (`AchievedOrbit` n'est référencé par aucun fichier de `ui/`) et
@@ -73,7 +74,8 @@ découverte.
 > soit un préalable pour d'autres : il fixe le substrat temporel sur lequel
 > `NAV-2` (phase 2) et les missions longues (phases 4 et 5) vont s'appuyer.
 > **Il est livré**, donc plus rien dans cette phase ne bloque les suivantes :
-> les trois items restants peuvent être pris dans n'importe quel ordre.
+> les deux items restants (`RND-3`, `UI-1`) peuvent être pris dans n'importe
+> quel ordre.
 
 | ID | Item | ★ | ◆ | Taille |
 |---|---|:-:|:-:|:-:|
@@ -81,7 +83,7 @@ découverte.
 | ~~RND-1~~ | ~~Corriger les artefacts visuels de la vue spacecraft~~ — **résolu le 2026-08-09** | 4 | 2 | M |
 | ~~FX-1~~ | ~~Bloom sur le Soleil~~ — **résolu le 2026-08-09** | 3 | 1 | S |
 | ~~RND-2~~ | ~~Filtrage anisotrope~~ — **résolu le 2026-08-09** | 2 | 1 | S |
-| MIS-1 | Deuxième lanceur au catalogue | 3 | 1 | S |
+| ~~MIS-1~~ | ~~Deuxième lanceur au catalogue~~ — **résolu le 2026-08-09** | 3 | 1 | S |
 | RND-3 | Couleur par stage + passé/futur + marqueur « now » | 4 | 2 | M |
 | UI-1 | Vue détail mission (orbite atteinte, message d'erreur) | 4 | 2 | M |
 
@@ -203,7 +205,7 @@ opportuniste, ou à décider quoi sacrifier quand une phase déborde.
 | ~~MIS-8~~ | ~~Horizon de mission explicite~~ — résolu | 5 | 2 | M | — |
 | ~~RND-1~~ | ~~Corriger les artefacts visuels de la vue spacecraft~~ — résolu | 4 | 2 | M | — |
 | ~~FX-1~~ | ~~Bloom sur le Soleil~~ — résolu (le tone mapping n'en faisait pas partie, voir détail) | 3 | 1 | S | — |
-| MIS-1 | Deuxième lanceur au catalogue | 3 | 1 | S | — |
+| ~~MIS-1~~ | ~~Deuxième lanceur au catalogue~~ — résolu (mesh Ariane 5 faute d'Ariane 6, voir détail) | 3 | 1 | S | — |
 | RND-3 | Couleur par stage + passé/futur + marqueur « now » | 4 | 2 | M | — |
 | UI-1 | Vue détail mission (orbite atteinte, message d'erreur) | 4 | 2 | M | — |
 | NAV-1 | Transitions de caméra entre vues | 4 | 2 | M | — |
@@ -579,15 +581,49 @@ demande plus, c'est ici que ça se verra.
 
 ### MIS — Missions
 
-#### MIS-1 — Deuxième lanceur au catalogue — ★3 ◆1 S
+#### ~~MIS-1 — Deuxième lanceur au catalogue — ★3 ◆1 S~~ — **RÉSOLU le 2026-08-09**
 
-`catalog/Launchers.java` ne contient que `FALCON_HEAVY`. `AscentProfile` est
-déjà un champ de `LauncherModel` consommé par `LEOMission` et `GEOMission` :
-tout le câblage « profil de vol dépendant du lanceur » existe mais **n'est
-démontré par aucun second cas**. Ajouter un lanceur (Ariane 6 ou Soyouz)
-valide le câblage, et rend le catalogue de payloads (3 entrées) moins solitaire.
-À faire **avant** les missions lunaires, qui voudront un étage supérieur
-cryogénique.
+**Pourquoi.** `catalog/Launchers.java` ne contenait que `FALCON_HEAVY`.
+`AscentProfile` était déjà un champ de `LauncherModel` consommé par `LEOMission`
+et `GEOMission` : tout le câblage « profil de vol dépendant du lanceur »
+existait mais **n'était démontré par aucun second cas**.
+
+**Ce qui a été livré, en deux temps.**
+
+- **Le lanceur** (commit `f9ea80c`) — `ARIANE_62`, boosters P120C et corps
+  central agrégés en un seul étage faute de représentation du fonctionnement en
+  parallèle, avec son propre `AscentProfile` (montée verticale plus courte à 6 s,
+  coast interétage de 5 s pour le chill-down du Vinci). Le câblage est donc
+  désormais exercé par deux lanceurs aux profils réellement distincts. Le coût de
+  l'agrégation est chiffré dans le Javadoc de `Launchers.ARIANE_62` et dans
+  [`specs/launchers/01-ariane-62.md`](../launchers/01-ariane-62.md) : la forme de
+  l'ascension n'est pas celle de ce lanceur, mais la mission se ferme (LEO 400 km
+  à moins de 1,2 km de la cible, 21,7 % de l'ULPM en réserve).
+- **Le rendu** — `engine/scene/spacecraft/LauncherAssets.java` associe chaque id
+  du catalogue à son mesh GLTF, et `MissionRenderer.modelPathFor` le résout depuis
+  le `MissionSpec` de la mission au lieu du chemin en dur vers le Falcon Heavy.
+  Le lanceur est lu sur le **spec** et non sur la `Mission` : celle-ci ne garde
+  que le `VehicleStack` assemblé, où l'identité du lanceur est déjà dissoute en
+  masses et propulsion. `MissionOrchestratorAppState` détruit et recrée le
+  renderer quand une édition du wizard change de lanceur — le mesh est figé dans
+  le `LodView` à la construction, et l'entrée garde son identité à travers
+  l'édition, donc rien d'autre ne l'aurait reconstruit.
+
+**Limite connue — le mesh de l'Ariane est un Ariane 5, pas un Ariane 6.** Aucun
+modèle 3D d'Ariane 6 n'était disponible. Seule la silhouette est fausse : les
+masses, la propulsion et le profil de vol restent ceux de l'Ariane 62 du
+catalogue, et rien de fonctionnel n'en dépend — mais l'écran ne montre pas le
+lanceur qui vole. Le remplacement est une ligne de `LauncherAssets.MODEL_PATHS`
+et l'asset, le jour où un mesh Ariane 6 existe. Deux conventions à vérifier sur
+tout mesh candidat, parce que le code les suppose sans les mesurer : nez sur
+**+Y** après la transformation racine du GLTF (`SpacecraftPresenter` applique une
+correction unique pour tous les vaisseaux) et vaisseau normalisé à ~1 unité
+(`Model3dView` l'échelonne à partir du seul rayon).
+
+**Note pour la suite** : le besoin d'origine mentionnait « avant les missions
+lunaires, qui voudront un étage supérieur cryogénique » — l'ULPM/Vinci de
+l'Ariane 62 le fournit, avec un coast déclaré compatible d'une remontée jusqu'à
+l'apogée GTO (5 h 15) là où l'étage du Falcon Heavy s'arrête à 2 h.
 
 #### MIS-7 — `EarthOrbitMission` paramétrable — ★4 ◆2 M *(ajout)*
 

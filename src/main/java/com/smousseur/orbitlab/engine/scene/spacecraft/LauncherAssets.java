@@ -18,7 +18,12 @@ import org.apache.logging.log4j.Logger;
  * <p>The table is explicit rather than a naming convention like the planets' ({@code
  * models/planets/&lt;name&gt;/&lt;name&gt;.gltf}), because the asset folders do not follow the
  * catalog ids: {@code FALCON_HEAVY} is stored under {@code heavy_falcon/heavy_falcon.gltf} and
- * {@code ARIANE_62} under {@code ariane/ariane62.gltf}.
+ * {@code ARIANE_62} under {@code ariane/scene.gltf}.
+ *
+ * <p><b>Known limitation.</b> The mesh paired with {@code ARIANE_62} is an <em>Ariane 5</em>: no
+ * Ariane 6 model was available. Only the silhouette is wrong — masses, propulsion and ascent
+ * profile all remain the catalog's Ariane 62 — but the screen does not show the launcher being
+ * flown. Replacing it is one row here plus the asset.
  *
  * <p><b>What a mesh listed here must satisfy.</b> Two conventions are assumed by the code that
  * draws it, and both hold for the two current assets: after the GLTF root transform the nose points
