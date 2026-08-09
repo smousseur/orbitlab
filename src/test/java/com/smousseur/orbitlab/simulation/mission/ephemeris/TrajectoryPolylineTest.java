@@ -1,9 +1,12 @@
 package com.smousseur.orbitlab.simulation.mission.ephemeris;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.Arrays;
+import java.util.List;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.junit.jupiter.api.Test;
 import org.orekit.time.AbsoluteDate;
@@ -23,13 +26,32 @@ class TrajectoryPolylineTest {
 
   /** {@code n} samples one second apart, position {@code i} sitting at {@code (i, 0, 0)}. */
   private static TrajectoryPolyline polylineOf(int n) {
+    return polylineOf(new int[] {n}, new boolean[] {false});
+  }
+
+  /**
+   * A trail of consecutive runs: {@code lengths[k]} samples of stage {@code "S" + k}, whose
+   * propulsive flag is {@code propulsive[k]}. Sample {@code i} sits at {@code (i, 0, 0)}.
+   */
+  private static TrajectoryPolyline polylineOf(int[] lengths, boolean[] propulsive) {
+    int n = 0;
+    for (int len : lengths) {
+      n += len;
+    }
     AbsoluteDate[] times = new AbsoluteDate[n];
     Vector3D[] positions = new Vector3D[n];
-    for (int i = 0; i < n; i++) {
-      times[i] = T0.shiftedBy((double) i);
-      positions[i] = new Vector3D(i, 0, 0);
+    String[] names = new String[n];
+    boolean[] burns = new boolean[n];
+    int i = 0;
+    for (int k = 0; k < lengths.length; k++) {
+      for (int j = 0; j < lengths[k]; j++, i++) {
+        times[i] = T0.shiftedBy((double) i);
+        positions[i] = new Vector3D(i, 0, 0);
+        names[i] = "S" + k;
+        burns[i] = propulsive[k];
+      }
     }
-    return TrajectoryPolyline.of(times, positions);
+    return TrajectoryPolyline.of(times, positions, names, burns);
   }
 
   @Test
@@ -97,11 +119,77 @@ class TrajectoryPolylineTest {
     MissionEphemeris ephemeris =
         new MissionEphemeris(
             java.util.List.of(
-                new MissionEphemerisPoint(T0, Vector3D.ZERO, Vector3D.PLUS_I, "S", 1.0, 0.0),
+                new MissionEphemerisPoint(T0, Vector3D.ZERO, Vector3D.PLUS_I, "S", false, 1.0, 0.0),
                 new MissionEphemerisPoint(
-                    T0.shiftedBy(1.0), Vector3D.PLUS_I, Vector3D.PLUS_I, "S", 1.0, 0.0)));
+                    T0.shiftedBy(1.0), Vector3D.PLUS_I, Vector3D.PLUS_I, "S", false, 1.0, 0.0)));
 
     assertSame(ephemeris.displayTrail(), ephemeris.displayTrail());
     assertEquals(2, ephemeris.displayTrail().size());
+  }
+
+  @Test
+  void runsAreContiguousSegmentsOfTheSameStage() {
+    TrajectoryPolyline trail = polylineOf(new int[] {10, 20, 5}, new boolean[] {true, false, true});
+
+    List<PhaseRun> runs = trail.runs();
+    assertEquals(3, runs.size());
+    assertEquals("S0", runs.get(0).stageName());
+    assertTrue(runs.get(0).propulsive());
+    assertEquals(0, runs.get(0).firstVertex());
+    assertEquals("S1", runs.get(1).stageName());
+    assertFalse(runs.get(1).propulsive());
+    assertEquals(10, runs.get(1).firstVertex());
+    assertEquals(30, runs.get(2).firstVertex());
+  }
+
+  @Test
+  void runOfIsParallelToPositions() {
+    TrajectoryPolyline trail = polylineOf(new int[] {10, 20, 5}, new boolean[] {true, false, true});
+
+    for (int i = 0; i < trail.size(); i++) {
+      int expected = i < 10 ? 0 : i < 30 ? 1 : 2;
+      int index = i;
+      assertEquals(expected, trail.runOf(index), () -> "vertex " + index + " in the wrong run");
+    }
+  }
+
+  /**
+   * The regression this class exists to prevent, in its phase form. A vertical ascent is ~15 samples
+   * at the 1 s burn step; on a long horizon the stride exceeds that, and a plain stride would delete
+   * the whole phase from the drawn line, transition marker included.
+   */
+  @Test
+  void aRunShorterThanTheStrideKeepsItsFirstVertex() {
+    // One 15-sample burn, then a coast long enough to force a stride well above 15.
+    TrajectoryPolyline trail = polylineOf(new int[] {15, 400_000}, new boolean[] {true, false});
+
+    assertTrue(
+        trail.size() <= TrajectoryPolyline.MAX_POINTS, () -> "budget exceeded: " + trail.size());
+
+    List<PhaseRun> runs = trail.runs();
+    assertEquals(2, runs.size(), "the short burn must not be swallowed by decimation");
+    assertEquals(0, runs.get(0).firstVertex());
+    assertEquals(
+        new Vector3D(15, 0, 0),
+        trail.positionAt(runs.get(1).firstVertex()),
+        "run 1 must start on the raw sample where the stage actually changed");
+  }
+
+  @Test
+  void everyRunStartIsAKeptVertexEvenWhenAllRunsAreShort() {
+    int[] lengths = new int[40];
+    boolean[] propulsive = new boolean[40];
+    Arrays.fill(lengths, 5);
+    lengths[39] = 300_000; // forces heavy decimation
+    TrajectoryPolyline trail = polylineOf(lengths, propulsive);
+
+    assertEquals(40, trail.runs().size());
+    assertTrue(trail.size() <= TrajectoryPolyline.MAX_POINTS);
+    for (PhaseRun run : trail.runs()) {
+      assertEquals(
+          run.stageName(),
+          trail.runs().get(trail.runOf(run.firstVertex())).stageName(),
+          "a run's first vertex must belong to that run");
+    }
   }
 }

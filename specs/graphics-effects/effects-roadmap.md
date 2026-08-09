@@ -560,6 +560,13 @@ est aujourd'hui réduit au strict minimum :
 
 ### 9.3 Tier 1 — Quick wins trajectoires
 
+> **§9.3.1 et §9.3.2 sont périmés — voir
+> [`mission-phase-encoding.md`](mission-phase-encoding.md), qui les remplace et
+> qui a été implémenté le 2026-08-10.** Deux prémisses ci-dessous sont fausses :
+> une table `stageName → ColorRGBA` n'est pas tenable (les noms d'étapes sont des
+> chaînes libres par mission), et l'alpha passé / futur n'a rien à moduler
+> puisque rien n'est dessiné en avant du vaisseau.
+
 #### 9.3.1 Couleur par stage de mission
 
 **Pourquoi** — La donnée existe déjà (`MissionEphemerisPoint.stageName`)

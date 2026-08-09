@@ -22,6 +22,7 @@ public final class MissionEphemeris {
   private final Vector3D[] positions;
   private final Vector3D[] velocities;
   private final String[] stageNames;
+  private final boolean[] propulsive;
   private final double[] masses;
   private final double[] altitudes;
   private final boolean complete;
@@ -63,6 +64,7 @@ public final class MissionEphemeris {
     positions = new Vector3D[n];
     velocities = new Vector3D[n];
     stageNames = new String[n];
+    propulsive = new boolean[n];
     masses = new double[n];
     altitudes = new double[n];
 
@@ -72,11 +74,12 @@ public final class MissionEphemeris {
       positions[i] = p.position();
       velocities[i] = p.velocity();
       stageNames[i] = p.stageName();
+      propulsive[i] = p.propulsive();
       masses[i] = p.mass();
       altitudes[i] = p.altitudeMeters();
     }
 
-    displayTrail = TrajectoryPolyline.of(times, positions);
+    displayTrail = TrajectoryPolyline.of(times, positions, stageNames, propulsive);
   }
 
   /**
@@ -161,7 +164,8 @@ public final class MissionEphemeris {
     double alt = altitudes[i0] + tau * (altitudes[i1] - altitudes[i0]);
 
     // Mass and stage: floor semantics
-    return new MissionEphemerisPoint(date, p, v, stageNames[i0], masses[i0], alt);
+    return new MissionEphemerisPoint(
+        date, p, v, stageNames[i0], propulsive[i0], masses[i0], alt);
   }
 
   /**
@@ -208,6 +212,7 @@ public final class MissionEphemeris {
         positions[index],
         velocities[index],
         stageNames[index],
+        propulsive[index],
         masses[index],
         altitudes[index]);
   }

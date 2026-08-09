@@ -14,6 +14,7 @@ import com.smousseur.orbitlab.engine.AssetFactory;
 import com.smousseur.orbitlab.engine.view.JmeVectorAdapter;
 import com.smousseur.orbitlab.simulation.mission.MissionId;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.TrajectoryPolyline;
+import com.smousseur.orbitlab.ui.mission.MissionPhaseShading;
 import java.nio.FloatBuffer;
 import java.util.Objects;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
@@ -39,6 +40,9 @@ public final class MissionTrajectoryRenderer {
   private final ColorRGBA color;
 
   private Geometry lineGeometry;
+  private TrajectoryPolyline boundTrail;
+  private ColorRGBA[] runColors;
+  private PhaseNodeMarkers markers;
 
   public MissionTrajectoryRenderer(
       MissionId missionId, RenderContext renderContext, ColorRGBA color) {
@@ -57,17 +61,24 @@ public final class MissionTrajectoryRenderer {
     mesh.setMode(Mesh.Mode.LineStrip);
     FloatBuffer pb = BufferUtils.createFloatBuffer(MAX_VERTICES * 3);
     mesh.setBuffer(VertexBuffer.Type.Position, 3, pb);
+    mesh.setBuffer(VertexBuffer.Type.Color, 4, BufferUtils.createFloatBuffer(MAX_VERTICES * 4));
     mesh.updateBound();
     mesh.updateCounts();
 
-    Material mat = AssetFactory.get().material(color);
-    mat.setColor("Color", color);
+    // White, because Unshaded multiplies Color by the vertex colour: keeping the mission colour
+    // here would turn the buffer into a multiplier, and a burn has to brighten *above* the mission
+    // colour, which a multiplier cannot do.
+    Material mat = AssetFactory.get().material(ColorRGBA.White);
+    mat.setBoolean("VertexColor", true);
     mat.getAdditionalRenderState().setLineWidth(LINE_WIDTH);
 
     // Keyed on the id, not the name: duplicate names must not produce colliding geometry names.
     lineGeometry = new Geometry("MissionTrajectory-" + missionId, mesh);
     lineGeometry.setMaterial(mat);
     nearOrbitsNode.attachChild(lineGeometry);
+
+    markers = new PhaseNodeMarkers(renderContext);
+    markers.initialize(nearOrbitsNode, missionId);
   }
 
   /**
@@ -78,6 +89,9 @@ public final class MissionTrajectoryRenderer {
   public void setVisible(boolean visible) {
     if (lineGeometry != null) {
       lineGeometry.setCullHint(visible ? Spatial.CullHint.Inherit : Spatial.CullHint.Always);
+    }
+    if (markers != null) {
+      markers.setVisible(visible);
     }
   }
 
@@ -116,6 +130,11 @@ public final class MissionTrajectoryRenderer {
   public void update(TrajectoryPolyline trail, int upTo, Vector3D tip) {
     if (trail == null || trail.size() == 0) return;
 
+    if (trail != boundTrail) {
+      bindColors(trail);
+      boundTrail = trail;
+    }
+
     Mesh mesh = lineGeometry.getMesh();
     VertexBuffer vb = mesh.getBuffer(VertexBuffer.Type.Position);
     FloatBuffer fb = (FloatBuffer) vb.getData();
@@ -127,10 +146,10 @@ public final class MissionTrajectoryRenderer {
     Vector3D origin = tip != null ? tip : trail.positionAt(last);
 
     for (int i = 0; i <= last; i++) {
-      putVertex(fb, trail.positionAt(i).subtract(origin));
+      putVertex(fb, trail.positionAt(i).subtract(origin), renderContext);
     }
     if (tip != null) {
-      putVertex(fb, Vector3D.ZERO); // the tip is the origin
+      putVertex(fb, Vector3D.ZERO, renderContext); // the tip is the origin
     }
     fb.flip();
 
@@ -140,10 +159,58 @@ public final class MissionTrajectoryRenderer {
     mesh.updateCounts();
     mesh.updateBound();
     vb.setUpdateNeeded();
+
+    // The line's own local translation, not a second computation of it: reusing the value that was
+    // just set is what makes it impossible for the two geometries to disagree about the origin.
+    markers.update(trail, runColors, last, origin, lineGeometry.getLocalTranslation());
   }
 
-  /** Converts one spacecraft-relative offset into render units and appends it to the buffer. */
-  private void putVertex(FloatBuffer fb, Vector3D offsetFromOrigin) {
+  /**
+   * Writes the whole colour buffer for a newly bound trail.
+   *
+   * <p>Once per trail, not once per frame. The colours depend only on the polyline, which is
+   * immutable and handed out as one shared instance ({@code MissionEphemeris.displayTrail()}), so an
+   * identity check is both sufficient and cheap — and it re-fires exactly when it should, on the new
+   * ephemeris a wizard edit produces.
+   *
+   * <p>Slot {@code size()} is filled too. It is the slot the interpolated tip occupies once the
+   * spacecraft reaches the end of the trail, and leaving it black would put one dark vertex at the
+   * head of a completed mission's line.
+   *
+   * <p><b>The tip's own colour is an approximation, deliberately.</b> The tip sits between vertices
+   * {@code last} and {@code last + 1} and is drawn with the colour written at slot {@code last + 1},
+   * which is the colour of the <em>next</em> sample. Those differ only across a phase boundary, for
+   * at most one sampling step, over the final two pixels of the line. Tracking it exactly would mean
+   * re-uploading the buffer whenever the head advances, which is the per-frame cost this design
+   * exists to avoid.
+   */
+  private void bindColors(TrajectoryPolyline trail) {
+    runColors = MissionPhaseShading.shade(color, trail.runs());
+    VertexBuffer vb = lineGeometry.getMesh().getBuffer(VertexBuffer.Type.Color);
+    FloatBuffer cb = (FloatBuffer) vb.getData();
+    cb.clear();
+    for (int i = 0; i < trail.size(); i++) {
+      putColor(cb, runColors[trail.runOf(i)]);
+    }
+    putColor(cb, runColors[trail.runOf(trail.size() - 1)]);
+    // Limit to capacity rather than to the written length: Mesh.updateCounts() derives the vertex
+    // count from the Position buffer, and an attribute buffer only has to be at least that long.
+    cb.position(cb.capacity());
+    cb.flip();
+    vb.setUpdateNeeded();
+  }
+
+  private static void putColor(FloatBuffer cb, ColorRGBA c) {
+    cb.put(c.r).put(c.g).put(c.b).put(c.a);
+  }
+
+  /**
+   * Converts one origin-relative offset into render units and appends it to the buffer.
+   *
+   * <p>Shared with {@link PhaseNodeMarkers}: a marker has to be produced by the very same conversion
+   * as the line it sits on, or it drifts off the trace by the difference between the two.
+   */
+  static void putVertex(FloatBuffer fb, Vector3D offsetFromOrigin, RenderContext renderContext) {
     Vector3D scaled = RenderTransform.scaleMetersToUnits(offsetFromOrigin, renderContext);
     Vector3D jme = renderContext.axisConvention().icrfToJme(scaled);
     fb.put((float) jme.getX()).put((float) jme.getY()).put((float) jme.getZ());
@@ -153,6 +220,9 @@ public final class MissionTrajectoryRenderer {
   public void cleanup() {
     if (lineGeometry != null) {
       lineGeometry.removeFromParent();
+    }
+    if (markers != null) {
+      markers.cleanup();
     }
   }
 }

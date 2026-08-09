@@ -14,7 +14,8 @@ sont en anglais, cf. `CLAUDE.md`).
 | [`navigation/01-breadcrumb.md`](navigation/01-breadcrumb.md) | Design complet du breadcrumb HUD | Valide, **non commencé** (item `NAV-4`) |
 | [`graphics-effects/hover-effects.md`](graphics-effects/hover-effects.md) | Design du hover planète ↔ orbite | Valide, non implémenté (item `NAV-5`) |
 | [`graphics-effects/spacecraft-view-artefacts.md`](graphics-effects/spacecraft-view-artefacts.md) | Diagnostic des trois artefacts de la vue spacecraft + correctifs | **Rediagnostiqué le 2026-08-09**, cause A corrigée, B et C ouvertes (item `RND-1`) |
-| [`graphics-effects/effects-roadmap.md`](graphics-effects/effects-roadmap.md) | Backlog d'effets graphiques | Valide **sauf §1 et 3 premiers items** — voir bandeau du document |
+| [`graphics-effects/mission-phase-encoding.md`](graphics-effects/mission-phase-encoding.md) | Lecture des phases de vol sur la trajectoire (marqueurs + paliers de saturation) | **Implémenté le 2026-08-10** (item `RND-3`) — remplace `effects-roadmap.md` §9.3.1 et §9.3.2 ; réglage fin du contraste reporté à `RND-4` |
+| [`graphics-effects/effects-roadmap.md`](graphics-effects/effects-roadmap.md) | Backlog d'effets graphiques | Valide **sauf §1, 3 premiers items et §9.3.1–9.3.2** — voir bandeau du document |
 | [`atmosphere/01-impacts-fonctionnels-techniques.md`](atmosphere/01-impacts-fonctionnels-techniques.md) | Étude d'impact du drag atmosphérique | Valide (items `PHY-1` à `PHY-3`) |
 | [`launchers/01-ariane-62.md`](launchers/01-ariane-62.md) | Design de l'ajout d'Ariane 62 au catalogue des lanceurs | **Implémenté et mesuré le 2026-08-09** (item `MIS-1`) |
 | [`brainstorm/leo-rendezvous-preparation.md`](brainstorm/leo-rendezvous-preparation.md) | Préparation du rendez-vous orbital TLE | Valide (item `MIS-6`) |

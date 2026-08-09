@@ -111,6 +111,7 @@ class MissionTrajectoryOriginTest {
         position,
         new Vector3D(0, 7_500, 0),
         "test",
+        false,
         1_000.0,
         400_000.0);
   }

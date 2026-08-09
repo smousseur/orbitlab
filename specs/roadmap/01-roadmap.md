@@ -314,8 +314,9 @@ pas été faits : baisser `FAR_MIN` (`Δz ∝ z²/near`, le far ne compte pas) e
 ouvertes, aucune n'étant un artefact de la vue spacecraft au sens ci-dessus :
 le raccord terminal qui pivote d'environ 2° à chaque pas d'échantillonnage
 (spec §4.3), et `setDepthWrite(false)` contre les batailles ligne ↔ ligne aux
-croisements de boucles (spec §6). À rattacher à `RND-3`/`RND-4` ou à doter d'un
-identifiant propre le jour où l'un des deux gêne.
+croisements de boucles (spec §6). `RND-3` étant clos sans les traiter, ils
+relèvent désormais de `RND-4`, ou d'un identifiant propre le jour où l'un des
+deux gêne.
 
 **Spec.** [`specs/graphics-effects/spacecraft-view-artefacts.md`](../graphics-effects/spacecraft-view-artefacts.md)
 §9.1 à §9.3 (ce qui a été fait, et les écarts avec ce qui était prévu).
@@ -352,19 +353,55 @@ question plus étroite qu'il n'y paraît — il ne dit que si la chaîne venait 
 fichier, et vaut faux pour un PNG dont le renderer génère les mips à l'upload.
 Le signal décisif est `MinFilter.usesMipMapLevels()`.
 
-#### RND-3 — Couleur par stage, passé / futur, marqueur « now » — ★4 ◆2 M
+#### ~~RND-3 — Couleur par stage, passé / futur, marqueur « now »~~ — **RÉSOLU le 2026-08-10**
 
 **Pourquoi.** `MissionEphemerisPoint` porte déjà un `stageName` que rien
-n'exploite visuellement : on ne voit pas où finit l'ascension verticale, où
-commence la gravity turn, où le transfert s'allume. Beaucoup de signal pour zéro
-coût GPU.
+n'exploitait visuellement : on ne voyait pas où finit l'ascension verticale, où
+commence la gravity turn, où le transfert s'allume.
 
-**À faire.** Buffer `VertexBuffer.Type.Color` dans `OrbitLineFactory`, table
-`stageName → ColorRGBA`, alpha modulé par `t ≶ clock.now()` (re-upload du seul
-color buffer, la trajectoire est bornée à 8192 points), billboard additif à la
-position courante.
+**Ce qui a été fait.** Les phases descendent jusqu'au sommet sous forme de
+*runs* (`PhaseRun`, segments contigus de même étape) portés par
+`TrajectoryPolyline` ; `MissionPhaseShading` en dérive une couleur par run ;
+`MissionTrajectoryRenderer` les pousse dans un `VertexBuffer.Type.Color` écrit
+**une fois par trail** ; `PhaseNodeMarkers` dessine un point par transition
+franchie.
 
-**Spec.** [`effects-roadmap.md`](../graphics-effects/effects-roadmap.md) §9.3.
+**Trois écarts avec ce que cet item annonçait.**
+
+1. **Pas de table `stageName → ColorRGBA`.** Les noms d'étapes sont des chaînes
+   libres décidées mission par mission ; une table aurait été à étendre à chaque
+   nouveau type de mission et aurait échoué en silence sur une faute de frappe.
+   La couleur vient du **rang du run dans le vol**, plus `isPropulsive()`.
+2. **L'alpha passé / futur est abandonné, pas reporté.** Il n'a rien à moduler :
+   `MissionOrchestratorAppState` borne le tracé à `indexUpTo(now)`, donc rien
+   n'est dessiné en avant du vaisseau. Dessiner la trajectoire *planifiée* est
+   une fonctionnalité à part entière, pas un effet de rendu — à ouvrir sous son
+   propre identifiant si elle est voulue.
+3. **Le marqueur « now » n'a pas lieu d'être** : la position courante porte déjà
+   le modèle 3D du lanceur, son icône billboard et son libellé (`LodView`).
+
+**Ce qui n'était pas demandé et s'est avéré être le canal principal.** Les
+marqueurs de transition. Les poussées font ~2 % de la durée d'un vol et moins de
+1 % de la longueur d'arc dessinée : les colorer, c'est peindre trois traits de
+deux pixels sur une spirale de deux mille. La couleur ne peut porter que ce qui
+est long ; l'évènementiel passe par le marqueur.
+
+**Un défaut trouvé à l'écran, pas en test.** La première règle ne classait que
+les coasts. Or seuls `CoastingStage` et `StageSeparationStage` sont non
+propulsifs, donc une LEO n'a qu'un seul vrai coast : la règle ne produisait que
+deux couleurs, et l'ascension — la partie qu'on regarde le plus — était plate.
+Le test de lisibilité passait parce qu'il était écrit sur un profil à trois
+coasts qu'une LEO ne produit jamais. Corrigé en classant **tous** les runs, à pas
+fixe compté à rebours depuis l'orbite finale, et doublé d'un test de contraste
+entre voisins qui aurait attrapé le défaut.
+
+**Reste à affiner, sous `RND-4`.** Le contraste entre phases reste modeste sur
+une ligne GL de 2 px ; le réglage fin (`MUTING_STEP`) attend le ribbon
+billboardé, qui donnera la surface nécessaire pour le juger.
+
+**Spec.** [`mission-phase-encoding.md`](../graphics-effects/mission-phase-encoding.md),
+qui remplace [`effects-roadmap.md`](../graphics-effects/effects-roadmap.md)
+§9.3.1 et §9.3.2.
 
 #### RND-4 — Ribbon billboardé — ★4 ◆3 M
 

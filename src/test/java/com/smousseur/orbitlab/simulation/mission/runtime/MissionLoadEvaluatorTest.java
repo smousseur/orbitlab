@@ -29,7 +29,13 @@ class MissionLoadEvaluatorTest {
     for (int i = 0; i < stages.size(); i++) {
       points.add(
           new MissionEphemerisPoint(
-              t.shiftedBy(i), Vector3D.ZERO, Vector3D.ZERO, stages.get(i), 1_000.0, altitudes.get(i)));
+              t.shiftedBy(i),
+              Vector3D.ZERO,
+              Vector3D.ZERO,
+              stages.get(i),
+              false,
+              1_000.0,
+              altitudes.get(i)));
     }
     return new MissionEphemeris(points);
   }

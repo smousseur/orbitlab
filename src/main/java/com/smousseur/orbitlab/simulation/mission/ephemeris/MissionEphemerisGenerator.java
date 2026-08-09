@@ -145,7 +145,7 @@ public final class MissionEphemerisGenerator {
       Vector3D vel = state.getPVCoordinates().getVelocity();
       double alt = mission.computeAltitudeMeters(state);
       return new MissionEphemerisPoint(
-          state.getDate(), pos, vel, stage.getName(), state.getMass(), alt);
+          state.getDate(), pos, vel, stage.getName(), stage.isPropulsive(), state.getMass(), alt);
     }
   }
 }
