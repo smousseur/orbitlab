@@ -103,8 +103,10 @@ public class FloatingOriginAppState extends BaseAppState {
         }
         orbitCam.setFarFloor(PLANET_MODE_FAR_MIN);
 
-        // Offset the near frame so the spacecraft sits at the near-view origin. The trajectory
-        // trail lives under nearOrbitsNode (child of nearFrame) and inherits the translation.
+        // Offset the near frame so the spacecraft sits at the near-view origin. Both of the frame's
+        // children cancel this offset with the matching +p: the spacecraft anchor under
+        // nearBodiesNode, and the trajectory line under nearOrbitsNode, which carries it on the
+        // geometry itself so its vertices can stay spacecraft-relative.
         sceneGraph.nearFrame().setLocalTranslation(nearFrameOffset(view.getFocusedMission()));
       }
     }

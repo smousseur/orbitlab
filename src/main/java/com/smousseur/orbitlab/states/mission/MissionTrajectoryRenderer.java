@@ -11,6 +11,7 @@ import com.jme3.util.BufferUtils;
 import com.smousseur.orbitlab.app.view.RenderContext;
 import com.smousseur.orbitlab.app.view.RenderTransform;
 import com.smousseur.orbitlab.engine.AssetFactory;
+import com.smousseur.orbitlab.engine.view.JmeVectorAdapter;
 import com.smousseur.orbitlab.simulation.mission.MissionId;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.TrajectoryPolyline;
 import java.nio.FloatBuffer;
@@ -88,9 +89,29 @@ public final class MissionTrajectoryRenderer {
    * implementation walked backwards from the end and stopped after the budget, so on a mission
    * longer than the budget the ascent silently disappeared from the line.
    *
+   * <p><b>Vertices are written relative to the spacecraft, and the geometry carries the spacecraft's
+   * position.</b> Writing them in absolute GCRF units put ~6778 in a {@code float} — one {@code ulp}
+   * is already half a metre there — while the near frame translated the geometry by {@code −p} of
+   * the same magnitude, so the GPU cancelled two large operands and what survived was the rounding:
+   * about a metre, redrawn <em>differently</em> on every frame because {@code p} moves ~130 m per
+   * frame. Seen from 500 m away that is some four pixels of shimmer, and it is why the line danced
+   * around a spacecraft model that was itself rock steady (spec {@code
+   * specs/graphics-effects/spacecraft-view-artefacts.md} §4).
+   *
+   * <p>Subtracting the tip in {@code double} first bounds a vertex's error by its distance to the
+   * spacecraft instead of by its distance to the geocentre, which is the standard camera-relative
+   * property: the error a vertex subtends at the camera stays bounded wherever the mission flies.
+   * The translation put back on the geometry goes through {@link
+   * JmeVectorAdapter#toJmeBodyRelativePosition}, the same path {@code SpacecraftPresenter} and
+   * {@code FloatingOriginAppState} use, so {@code nearFrame(−p) + line(+p)} is exactly zero rather
+   * than nearly zero. It costs nothing — the whole buffer was already rewritten every frame — and it
+   * needs no branch per view mode: in {@code PLANET} view the near frame sits at the origin and the
+   * geometry's own translation carries the line to its absolute position.
+   *
    * @param trail the display polyline, already bounded to the vertex budget
    * @param upTo index of the last vertex to draw, from {@link TrajectoryPolyline#indexUpTo}
-   * @param tip the interpolated position at the current instant, drawn as the final vertex
+   * @param tip the interpolated position at the current instant, drawn as the final vertex and used
+   *     as the origin the vertices are expressed against
    */
   public void update(TrajectoryPolyline trail, int upTo, Vector3D tip) {
     if (trail == null || trail.size() == 0) return;
@@ -101,22 +122,29 @@ public final class MissionTrajectoryRenderer {
     fb.clear();
 
     int last = Math.min(upTo, trail.size() - 1);
+    // Fall back to the last drawn sample when there is no tip: the origin has to be a point of the
+    // line, not the geocentre, or the precision this whole method buys is given straight back.
+    Vector3D origin = tip != null ? tip : trail.positionAt(last);
+
     for (int i = 0; i <= last; i++) {
-      putVertex(fb, trail.positionAt(i));
+      putVertex(fb, trail.positionAt(i).subtract(origin));
     }
     if (tip != null) {
-      putVertex(fb, tip);
+      putVertex(fb, Vector3D.ZERO); // the tip is the origin
     }
     fb.flip();
+
+    lineGeometry.setLocalTranslation(
+        JmeVectorAdapter.toJmeBodyRelativePosition(origin, renderContext));
 
     mesh.updateCounts();
     mesh.updateBound();
     vb.setUpdateNeeded();
   }
 
-  /** Converts one GCRF position into render units and appends it to the vertex buffer. */
-  private void putVertex(FloatBuffer fb, Vector3D positionGcrf) {
-    Vector3D scaled = RenderTransform.scaleMetersToUnits(positionGcrf, renderContext);
+  /** Converts one spacecraft-relative offset into render units and appends it to the buffer. */
+  private void putVertex(FloatBuffer fb, Vector3D offsetFromOrigin) {
+    Vector3D scaled = RenderTransform.scaleMetersToUnits(offsetFromOrigin, renderContext);
     Vector3D jme = renderContext.axisConvention().icrfToJme(scaled);
     fb.put((float) jme.getX()).put((float) jme.getY()).put((float) jme.getZ());
   }

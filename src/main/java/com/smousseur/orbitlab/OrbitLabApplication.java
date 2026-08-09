@@ -159,7 +159,7 @@ public class OrbitLabApplication extends SimpleApplication {
     getStateManager().getState(PickState.class).addCollisionRoot(guiPost, PickState.PICK_LAYER_GUI);
 
     // Near frustum: NearCameraSyncAppState owns the near cam's depth range and FoV every frame.
-    stateManager.attach(new NearCameraSyncAppState(nearCam));
+    stateManager.attach(new NearCameraSyncAppState(applicationContext, nearCam));
   }
 
   @Override

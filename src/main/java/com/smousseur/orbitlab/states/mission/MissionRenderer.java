@@ -38,8 +38,9 @@ public final class MissionRenderer {
    * com.smousseur.orbitlab.states.camera.OrbitCameraAppState}; the near viewport tracks it through
    * {@link com.smousseur.orbitlab.states.camera.NearCameraSyncAppState} (position scaled by 1e6).
    * {@code 5e-7} ≈ 500 m, which places the camera well inside the LOD-3D threshold ({@code radius ×
-   * lodMultiplier} = 0.05 × 500 = 25 km in km units) and outside the near viewport's 10 m near clip
-   * plane, so the 3D model appears immediately.
+   * lodMultiplier} = 0.05 × 500 = 25 km in km units) and outside the near viewport's clip plane —
+   * 100 m at this distance, since {@code NearCameraSyncAppState} derives it from the focus distance
+   * — so the 3D model appears immediately.
    */
   private static final float SPACECRAFT_FOCUS_DISTANCE_SOLAR_UNITS = 5e-7f;
 

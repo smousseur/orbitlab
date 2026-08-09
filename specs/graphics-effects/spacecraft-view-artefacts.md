@@ -5,9 +5,11 @@
 > observés aujourd'hui ne sont plus ceux qui y étaient décrits, et la cause
 > dominante n'est pas celle qui y était retenue.
 >
-> **État des correctifs.** Cause A **corrigée le 2026-08-09** (§3, §9.1).
-> Causes B et C ouvertes. Ce document sert de base de décision pour l'item
-> `RND-1` de la roadmap, dont il révise le contenu et le coût.
+> **État des correctifs.** Causes A, B et C **corrigées le 2026-08-09**
+> (§9.1, §9.2, §9.3), et **vérifiées à l'écran** par le protocole du §8.
+> Restent ouverts le raccord terminal (§4.3), le `setDepthWrite(false)` de §6,
+> et les niveaux 3-4 du catalogue. L'item `RND-1` de la roadmap, que ce document
+> instruisait, est clos.
 
 ## 1. Symptômes observés
 
@@ -29,8 +31,8 @@ Elles n'ont ni la même origine, ni le même correctif :
 | # | Cause | Symptôme produit | Confiance | État |
 |---|---|---|:-:|:-:|
 | A | Offset de floating origin en retard d'une frame, lu par le calcul de LOD | Modèle 3D qui disparaît en accéléré | Établie par lecture de code | **Corrigée** |
-| B | Sommets de la ligne en coordonnées GCRF absolues, annulation catastrophique en `float32` | Ligne qui saute / danse autour du vaisseau | Dérivée, quantifiée, non observée | Ouverte |
-| C | Plan near à 10 m ⇒ ~270 km de résolution de profondeur à la distance de la Terre | Ligne qui scintille **là où elle croise le disque terrestre** | Dérivée, quantifiée, non observée | Ouverte |
+| B | Sommets de la ligne en coordonnées GCRF absolues, annulation catastrophique en `float32` | Ligne qui saute / danse autour du vaisseau | Dérivée, quantifiée, **mesurée en test** | **Corrigée** |
+| C | Plan near à 10 m ⇒ ~270 km de résolution de profondeur à la distance de la Terre | Ligne qui scintille **là où elle croise le disque terrestre** | Dérivée, quantifiée, **mesurée en test** | **Corrigée** |
 
 Le §8 donne le protocole d'observation qui sépare B de C en trente secondes.
 
@@ -154,6 +156,9 @@ rejetée par le test `screen.z ∉ [0,1]`. D'où l'impression que le vaisseau
 
 ## 4. Cause B — la ligne saute
 
+> **Corrigée le 2026-08-09**, sauf §4.3. Le §4 décrit l'état d'avant correctif ;
+> ce qui a été fait est en §9.2.
+
 ### 4.1 Le mécanisme
 
 `MissionTrajectoryRenderer.putVertex` (`:117-122`) écrit les sommets en
@@ -208,6 +213,10 @@ Il s'aggrave si l'horizon de mission force la décimation de
 passe alors à plusieurs milliers de km.
 
 ## 5. Cause C — la ligne scintille sur le disque terrestre
+
+> **Corrigée le 2026-08-09.** Le §5 décrit l'état d'avant correctif — les
+> facteurs cités dans les extraits de code ci-dessous sont les anciens ; ce qui
+> a été fait est en §9.3.
 
 ### 5.1 Chiffres réels du frustum near
 
@@ -320,9 +329,9 @@ que sur la Terre.**
 | Niveau | Correctif | Cause | Difficulté | Effet |
 |---|---|:-:|:-:|---|
 | 1 | ~~`FloatingOriginAppState` devient propriétaire de l'offset et passe **avant** l'orchestrateur~~ **fait** | A | ★ | Supprime la disparition du modèle |
-| 1 | `NEAR_MIN` / facteur near resserrés | C | ★ | ×20 à ×100 de résolution de profondeur |
+| 1 | ~~`NEAR_MIN` / facteur near resserrés~~ **fait** | C | ★ | ×10 de résolution de profondeur (274 → 27 km) |
 | 1 | `setDepthWrite(false)` sur le matériau ligne | C | ★ | Supprime les batailles ligne ↔ ligne |
-| 2 | Sommets de trajectoire relatifs au vaisseau | B | ★★ | Supprime le tremblement |
+| 2 | ~~Sommets de trajectoire relatifs au vaisseau~~ **fait** | B | ★★ | Supprime le tremblement |
 | 2 | Densifier le raccord terminal de la ligne | B (§4.3) | ★★ | Supprime le pivotement périodique |
 | 3 | Near/far pilotés par le contenu réel de la near viewport | C | ★★ | Rend les constantes inutiles |
 | 3 | Ribbon billboardé (`RND-4`) | §6 | ★★★ | Épaisseur stable + AA explicite |
@@ -415,6 +424,32 @@ Pour §4.3, ajouter au raccord terminal quelques points interpolés entre
 d'affichage est décimée), ou simplement faire commencer le raccord au dernier
 sommet **de l'éphéméride** plutôt que de la polyline.
 
+#### Fait le 2026-08-09
+
+Le §9.2 tel quel, dans `MissionTrajectoryRenderer.update` : soustraction de
+`tip` en `double` avant le cast, sommet terminal écrit à `Vector3D.ZERO`, et
+`lineGeometry.setLocalTranslation(toJmeBodyRelativePosition(tip, ctx))` — le
+même chemin de conversion que l'ancre, donc l'annulation reste exacte. Repli
+sur `trail[upTo]` quand `tip` est absent : prendre le géocentre pour origine
+rendrait la précision gagnée.
+
+`MissionTrajectoryOriginTest` verrouille les trois propriétés — sommets bornés
+par l'étendue du tracé, sommet voisin placé au millimètre, sommet terminal
+exactement sur l'origine near.
+
+**Le §4.3 (raccord terminal) n'est pas fait** : c'est un défaut distinct, un
+pivotement périodique et non un tremblement continu, et il survivra à ce
+correctif-ci.
+
+**Mesure obtenue en écrivant le test.** Avant correctif, un sommet à 1,5 km du
+vaisseau est dessiné 0,19 m à côté de sa vraie place — dans la bande du
+demi-mètre annoncée au §4.1. Un détail non prévu : un décalage de *exactement*
+1 km ne montre rien du tout. À 6778 unités le pas du `float` vaut 2⁻¹¹ unité,
+dont 1 unité est un multiple exact, si bien que les deux quantifications se
+compensent. Il faut un décalage hors réseau — ce que sont les vrais
+échantillons — pour que le défaut apparaisse. Toute mesure future de cet
+artefact doit en tenir compte.
+
 ### 9.3 Cause C — resserrer le near
 
 ```java
@@ -435,14 +470,48 @@ centre de la Terre et où le contenu le plus proche est sa surface, 6378 km plus
 près que l'origine. Un near piloté par le contenu (niveau 3) lève l'hypothèse ;
 tant qu'on ne l'écrit pas, le facteur doit rester conditionné au mode de vue.
 
+#### Fait le 2026-08-09
+
+Le facteur est bien conditionné au mode : `SPACECRAFT_NEAR_FACTOR = 0.2f`
+contre `DEFAULT_NEAR_FACTOR = 0.0005f` ailleurs, `NEAR_MIN = 0.005f`, `FAR_MIN`
+inchangé (§5.3). Le calcul est sorti dans `NearCameraSyncAppState.nearPlane`,
+qui prend le `ViewMode` en paramètre ; l'état reçoit désormais
+l'`ApplicationContext` pour le lire.
+
+`NearFrustumDepthTest` verrouille ce que le plan achète, pas sa valeur : le
+budget de profondeur au niveau de la Terre, la marge devant le modèle, et la
+non-régression de la limite ci-dessus (en `PLANET`, le plan reste devant la
+surface). Un quatrième test consigne §7.2 — diviser le far par deux ne déplace
+pas le pas de profondeur d'un millième.
+
+**Le chiffre du §5.2 est confirmé par la mesure** : avec l'ancien facteur, le
+test rapporte 273,8 km par pas et 1,46 pas de dégagement pour une orbite à
+400 km. Le diagnostic refait tenait.
+
+**Écart avec ce qui était prévu ici, dans le sens de la prudence.** Le §9.3
+plafonne le facteur (« le facteur doit rester ≤ 0,3 ») mais pas son produit, et
+raisonne à la distance de focus de 500 m. La limite connue mord plus tôt qu'à
+la Terre : en dézoomant de `d` km vers le nadir depuis un vaisseau à 400 km, le
+sol sous la caméra n'est plus qu'à `400 − d`, qui décroît pendant que `0,2·d`
+croît. Le test les fait se croiser à **334 km** — au-delà, le plan near
+creuserait un trou dans la planète sous la caméra, soit un artefact échangé
+contre un pire. D'où un `SPACECRAFT_NEAR_MAX = 1f` : inactif en deçà de 5 km de
+dézoom, donc tout le bénéfice est conservé, et même quand il s'engage le pas de
+profondeur à la Terre vaut ~2,7 km contre les 274 km visés. Le sweep est
+verrouillé par `NearFrustumDepthTest`.
+
 ## 10. Recommandation
 
-1. **D'abord** : faire tourner le §8. Trente secondes, et cela verrouille ou
-   invalide B et C, qui sont dérivées et non observées. Les manipulations 1 et
-   2 servent maintenant de recette du correctif A : le modèle doit rester
-   affiché à ×300 et au-delà.
-2. **Ensuite, dans l'ordre** : ~~§9.1 (cause A)~~ **fait le 2026-08-09**, puis
-   §9.3 (cause C, trois lignes), puis §9.2 (cause B, le seul travail réel).
+1. **Le §8 a été passé en recette, et il est concluant.** Il ne l'a pas été
+   *avant* de coder, faute de pouvoir l'être : il demande l'application en
+   marche et un œil humain. Les correctifs ont donc été écrits sur la foi des
+   symptômes rapportés et de deux mesures obtenues sans OpenGL (§9.2, §9.3),
+   qui reproduisent exactement les chiffres dérivés ici — puis vérifiés à
+   l'écran. L'ordre était inconfortable ; le résultat tient.
+2. **Ensuite, dans l'ordre** : ~~§9.1 (cause A)~~, ~~§9.3 (cause C)~~,
+   ~~§9.2 (cause B)~~ — **les trois faites le 2026-08-09**. Reste, par ordre de
+   rapport : `setDepthWrite(false)` (§9, niveau 1), le raccord terminal (§4.3),
+   puis les niveaux 3-4.
 3. **Conséquence sur la roadmap** : `RND-1` était coté ◆1 / taille S sur la
    base d'un diagnostic qui ne couvrait qu'une des trois causes, et dont deux
    des trois correctifs sont sans effet (§7). Le périmètre réel est

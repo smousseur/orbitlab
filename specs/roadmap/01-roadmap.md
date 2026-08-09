@@ -27,6 +27,7 @@ lisez qu'une section, lisez le §3.
 | **Skybox étoilée** | `states/scene/SkyboxAppState.java`, cubemap sous `resources/textures/skybox/` |
 | **Éclairage Lambert avec terminator** | `MatDefs/Light/WrapLighting.j3md` + `AssetFactory.applyLambert` |
 | **MSAA 4×** | `OrbitLabApplication.java:58` — `settings.setSamples(4)` |
+| **`RND-1` — artefacts de la vue spacecraft** (3 causes racines) | `FloatingOriginAppState`, `NearCameraSyncAppState.nearPlane`, `MissionTrajectoryRenderer.update` ; `NearFrameOriginTest`, `NearFrustumDepthTest`, `MissionTrajectoryOriginTest` |
 
 **Reste ouvert de l'ancienne roadmap** : la vue détail avec résultats
 d'optimisation (`AchievedOrbit` n'est référencé par aucun fichier de `ui/`) et
@@ -74,7 +75,7 @@ découverte.
 | ID | Item | ★ | ◆ | Taille |
 |---|---|:-:|:-:|:-:|
 | MIS-8 | **Horizon de mission explicite** (fin de mission aujourd'hui codée en dur) | 5 | 2 | M |
-| RND-1 | Corriger les artefacts visuels de la vue spacecraft | 4 | 2 | M |
+| ~~RND-1~~ | ~~Corriger les artefacts visuels de la vue spacecraft~~ — **résolu le 2026-08-09** | 4 | 2 | M |
 | FX-1 | Bloom sur le Soleil | 3 | 1 | S |
 | RND-2 | Filtrage anisotrope | 2 | 1 | S |
 | MIS-1 | Deuxième lanceur au catalogue | 3 | 1 | S |
@@ -197,7 +198,7 @@ opportuniste, ou à décider quoi sacrifier quand une phase déborde.
 | ID | Item | ★ | ◆ | Taille | Dépend de |
 |---|---|:-:|:-:|:-:|---|
 | MIS-8 | Horizon de mission explicite | 5 | 2 | M | — |
-| RND-1 | Corriger les artefacts visuels de la vue spacecraft | 4 | 2 | M | — |
+| ~~RND-1~~ | ~~Corriger les artefacts visuels de la vue spacecraft~~ — résolu | 4 | 2 | M | — |
 | FX-1 | Bloom sur le Soleil (+ tone mapping) | 3 | 1 | S | — |
 | MIS-1 | Deuxième lanceur au catalogue | 3 | 1 | S | — |
 | RND-3 | Couleur par stage + passé/futur + marqueur « now » | 4 | 2 | M | — |
@@ -262,42 +263,54 @@ l'ordre d'exécution. Pour savoir par quoi commencer, voir le §3.*
 
 ### RND — Rendu et lisibilité
 
-#### RND-1 — Corriger les artefacts visuels de la vue spacecraft — ★4 ◆2 M
+#### ~~RND-1 — Corriger les artefacts visuels de la vue spacecraft — ★4 ◆2 M~~ — **RÉSOLU le 2026-08-09**
 
-**Pourquoi.** C'est le défaut le plus visible de l'application, et un
+**Pourquoi.** C'était le défaut le plus visible de l'application, et un
 **prérequis d'hygiène** : tout enrichissement de la ligne (RND-3, RND-4) ou de
-l'approche planétaire (missions lunaires) empile du travail sur un rendu qui
-bataille déjà.
+l'approche planétaire (missions lunaires) empilait du travail sur un rendu qui
+bataillait déjà.
 
-**État (rediagnostiqué le 2026-08-09).** Trois causes racines indépendantes,
-pas une :
+**Trois causes racines indépendantes, pas une** — rediagnostiquées puis
+corrigées le 2026-08-09, chacune par un mécanisme distinct :
 
-- ~~**A — le modèle 3D du vaisseau disparaît en accéléré.**~~ **Corrigé le
-  2026-08-09.** `MissionOrchestrator` était mis à jour *avant* `FloatingOrigin` :
-  le calcul de LOD lisait une position monde en retard d'une frame, donc croyait
-  le vaisseau à `v × Δt_sim` de l'origine, et basculait en icône au-delà de
-  ~×100. Ce n'était pas du z-fighting. `FloatingOrigin` est désormais
-  propriétaire de l'offset, le dérive de l'éphéméride et passe en premier.
-- **B — la ligne de trajectoire saute.** Ses sommets sont en GCRF absolu
-  (~6778 en unités km) alors que `nearFrame` la translate de `−p` : annulation
-  catastrophique en `float32`, ~1 m d'erreur renouvelée à chaque frame, soit
-  ~4 px de tremblement à 500 m de distance.
-- **C — la ligne scintille sur le disque terrestre.** En vue spacecraft, `near`
-  et `far` sont collés à leurs planchers (10 m / 100 000 km) : **~274 km** de
-  résolution de profondeur à la distance de la Terre, pas 300–500 m comme
-  estimé précédemment.
+- ~~**A — le modèle 3D du vaisseau disparaît en accéléré.**~~ `MissionOrchestrator`
+  était mis à jour *avant* `FloatingOrigin` : le calcul de LOD lisait une
+  position monde en retard d'une frame, donc croyait le vaisseau à `v × Δt_sim`
+  de l'origine, et basculait en icône au-delà de ~×100. Ce n'était pas du
+  z-fighting. `FloatingOrigin` est désormais propriétaire de l'offset, le dérive
+  de l'éphéméride et passe en premier.
+- ~~**B — la ligne de trajectoire saute.**~~ Sommets en GCRF absolu (~6778 en
+  unités km) contre une translation `−p` de même ordre : annulation
+  catastrophique en `float32`. Les sommets sont maintenant relatifs au vaisseau,
+  soustraction en `double` avant le cast, et la géométrie porte `+p` par le même
+  chemin de conversion que l'ancre — l'annulation est donc exacte.
+- ~~**C — la ligne scintille sur le disque terrestre.**~~ `near` et `far`
+  collés à leurs planchers (10 m / 100 000 km) donnaient **~274 km** de
+  résolution de profondeur à la Terre, pas 300–500 m comme estimé
+  précédemment. Facteur near à `0.2f` en vue spacecraft, plafonné à 1 km :
+  ~27 km par pas, ×10.
 
-**Deux correctifs annoncés par l'ancienne version sont sans effet** : baisser
-`FAR_MIN` (`Δz ∝ z²/near`, le far ne compte pas) et `setPolyOffset` sur la
-ligne (JME n'active que `GL_POLYGON_OFFSET_FILL`, jamais `..._LINE`).
+**Vérification.** Trois classes de test verrouillent les invariants sans OpenGL
+(`NearFrameOriginTest`, `NearFrustumDepthTest`, `MissionTrajectoryOriginTest`),
+et elles ont d'abord **mesuré** les deux chiffres dérivés par la spec : 273,8 km
+par pas de profondeur, et 0,19 m de décalage pour un sommet à 1,5 km du
+vaisseau. Le protocole d'observation en application (§8 de la spec) a été passé
+ensuite et est concluant.
 
-**Reste à faire.** Resserrer le facteur near à `0.2f` avec
-`NEAR_MIN = 0.005f` (C) ; rendre les sommets de trajectoire relatifs au
-vaisseau, soustraction en `double` avant le cast `float` (B). Seul le dernier
-est un vrai travail.
+**Deux correctifs annoncés par l'ancienne version étaient sans effet**, et n'ont
+pas été faits : baisser `FAR_MIN` (`Δz ∝ z²/near`, le far ne compte pas) et
+`setPolyOffset` sur la ligne (JME n'active que `GL_POLYGON_OFFSET_FILL`, jamais
+`..._LINE`).
+
+**Reliquat, hors périmètre de cet item.** Deux améliorations de la ligne restent
+ouvertes, aucune n'étant un artefact de la vue spacecraft au sens ci-dessus :
+le raccord terminal qui pivote d'environ 2° à chaque pas d'échantillonnage
+(spec §4.3), et `setDepthWrite(false)` contre les batailles ligne ↔ ligne aux
+croisements de boucles (spec §6). À rattacher à `RND-3`/`RND-4` ou à doter d'un
+identifiant propre le jour où l'un des deux gêne.
 
 **Spec.** [`specs/graphics-effects/spacecraft-view-artefacts.md`](../graphics-effects/spacecraft-view-artefacts.md)
-§9 (correctifs) et §8 (protocole d'observation à passer avant de coder).
+§9.1 à §9.3 (ce qui a été fait, et les écarts avec ce qui était prévu).
 
 #### RND-2 — Filtrage anisotrope — ★2 ◆1 S
 
@@ -837,9 +850,11 @@ Gardé hors phases, à remonter si le besoin se manifeste :
   atmosphérique Fresnel, anneaux de Saturne, ombres portées, trace au sol
   (ground track), enveloppe d'incertitude autour du nominal.
 - **Profondeur** — logarithmic depth buffer ou reverse-Z, troisième viewport
-  « mid ». À rouvrir si `RND-1` ne suffit pas une fois les missions lunaires en
-  place (Terre + Lune + vaisseau dans le même cadre est précisément le cas qui
-  fait exploser le ratio far/near).
+  « mid ». `RND-1` suffit aujourd'hui ; à rouvrir une fois les missions lunaires
+  en place (Terre + Lune + vaisseau dans le même cadre est précisément le cas
+  qui fait exploser le ratio far/near). Le plan near y est piloté par la
+  distance à l'origine, ce qui suppose que le contenu le plus proche s'y trouve —
+  hypothèse qui tombe justement dans ce cas-là.
 - **Missions** — Molniya / HEO, déorbitage et rentrée, déploiement de
   constellation, points de Lagrange, interplanétaire, gravity assist.
 - **Plateforme** — mode batch headless, analytics et graphes post-mission,
@@ -878,7 +893,9 @@ et [`specs/brainstorm/missions.md`](../brainstorm/missions.md).
    clic actuel.
 4. **Troisième viewport** — le décide-t-on avec `PHY-4` (les missions lunaires
    exposent d'un coup trois échelles) ou attend-on de constater les artefacts ?
-   Recommandation : attendre, mais garder `RND-1` mesuré pour pouvoir comparer.
+   Recommandation : attendre. La mesure de comparaison existe désormais —
+   `NearFrustumDepthTest` chiffre le budget de profondeur du viewport near, et
+   c'est le test à rejouer avec la Lune dans le cadre.
 5. **Cible du rendez-vous** — ISS livrée en dur (option A de la spec) suffit au
    MVP. L'import de TLE arbitraire (option B) est une feature UI à part entière,
    à ne pas glisser dans `MIS-6`.
