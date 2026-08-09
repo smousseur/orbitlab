@@ -84,7 +84,7 @@ découverte.
 | ~~FX-1~~ | ~~Bloom sur le Soleil~~ — **résolu le 2026-08-09** | 3 | 1 | S |
 | ~~RND-2~~ | ~~Filtrage anisotrope~~ — **résolu le 2026-08-09** | 2 | 1 | S |
 | ~~MIS-1~~ | ~~Deuxième lanceur au catalogue~~ — **résolu le 2026-08-09** | 3 | 1 | S |
-| RND-3 | Couleur par stage + passé/futur + marqueur « now » | 4 | 2 | M |
+| ~~RND-3~~ | ~~Couleur par stage + passé/futur + marqueur « now »~~ — **résolu le 2026-08-10** | 4 | 2 | M |
 | UI-1 | Vue détail mission (orbite atteinte, message d'erreur) | 4 | 2 | M |
 
 **Fin de phase quand** : plus aucun scintillement en vue vaisseau et le modèle
@@ -206,7 +206,7 @@ opportuniste, ou à décider quoi sacrifier quand une phase déborde.
 | ~~RND-1~~ | ~~Corriger les artefacts visuels de la vue spacecraft~~ — résolu | 4 | 2 | M | — |
 | ~~FX-1~~ | ~~Bloom sur le Soleil~~ — résolu (le tone mapping n'en faisait pas partie, voir détail) | 3 | 1 | S | — |
 | ~~MIS-1~~ | ~~Deuxième lanceur au catalogue~~ — résolu (mesh Ariane 5 faute d'Ariane 6, voir détail) | 3 | 1 | S | — |
-| RND-3 | Couleur par stage + passé/futur + marqueur « now » | 4 | 2 | M | — |
+| ~~RND-3~~ | ~~Couleur par stage + passé/futur + marqueur « now »~~ — résolu | 4 | 2 | M | — |
 | UI-1 | Vue détail mission (orbite atteinte, message d'erreur) | 4 | 2 | M | — |
 | NAV-1 | Transitions de caméra entre vues | 4 | 2 | M | — |
 | MIS-7 | `EarthOrbitMission` paramétrable → polaire / SSO / MEO | 4 | 2 | M | — |
