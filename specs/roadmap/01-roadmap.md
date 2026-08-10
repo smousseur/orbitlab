@@ -30,11 +30,13 @@ lisez qu'une section, lisez le §3.
 | **`RND-1` — artefacts de la vue spacecraft** (3 causes racines) | `FloatingOriginAppState`, `NearCameraSyncAppState.nearPlane`, `MissionTrajectoryRenderer.update` ; `NearFrameOriginTest`, `NearFrustumDepthTest`, `MissionTrajectoryOriginTest` |
 | **`FX-1` — halo du Soleil** (couronne géométrique + bloom résiduel) | `engine/scene/body/CoronaView.java`, `MatDefs/Fx/Corona.*`, `states/fx/PostFxAppState.java`, `states/fx/SmoothBloomFilter.java`, `AssetFactory.applyGlow` |
 | **`MIS-1` — deuxième lanceur** (Ariane 62 au catalogue + mesh choisi par lanceur) | `vehicle/catalog/Launchers.java` (commit `f9ea80c`), `engine/scene/spacecraft/LauncherAssets.java`, `MissionRenderer.modelPathFor` |
+| **`UI-1` — vue détail mission** (orbite atteinte, écart à la cible, stages, erreur lisible) | `ui/mission/MissionTargetOrbit.java`, `ui/mission/MissionResultText.java`, `ui/mission/detail/`, `PanelFooter.addResultLine`, `MissionEntry.lastError` ; specs `mission-detail/01-vue-detail.md` |
 
-**Reste ouvert de l'ancienne roadmap** : la vue détail avec résultats
-d'optimisation (`AchievedOrbit` n'est référencé par aucun fichier de `ui/`) et
-le feedback de progression pendant l'optimisation. Repris ici en `UI-1` et
-`UI-2`.
+**Reste ouvert de l'ancienne roadmap** : le feedback de progression pendant
+l'optimisation, repris ici en `UI-2`. La vue détail avec résultats
+d'optimisation, l'autre reliquat, est **résolue le 2026-08-10** (`UI-1`) — et
+son diagnostic était trop optimiste : `AchievedOrbit` n'était pas seulement non
+lu par `ui/`, il était **jeté** par l'orchestrateur, qui n'en gardait rien.
 
 **Corrections d'hypothèses par rapport aux specs graphiques** — `effects-roadmap.md`
 §1 décrit un rendu « tout `Unshaded`, aucun shader custom, pas de skybox ». Ce
@@ -67,15 +69,14 @@ eux. Le §4 sert à arbitrer un échange, pas à planifier.
 Les durées sont des ordres de grandeur pour une personne, sans marge de
 découverte.
 
-### Phase 1 — Hygiène visuelle, horizon de mission, dette panel · ~1,5 semaine
+### ~~Phase 1 — Hygiène visuelle, horizon de mission, dette panel~~ · **soldée le 2026-08-10**
 
 > Que ce qui est déjà à l'écran soit propre, honnête et dise quelque chose,
 > avant d'ajouter quoi que ce soit. `MIS-8` était le seul item de la phase qui
 > soit un préalable pour d'autres : il fixe le substrat temporel sur lequel
 > `NAV-2` (phase 2) et les missions longues (phases 4 et 5) vont s'appuyer.
-> **Il est livré**, donc plus rien dans cette phase ne bloque les suivantes :
-> les deux items restants (`RND-3`, `UI-1`) peuvent être pris dans n'importe
-> quel ordre.
+>
+> **Les sept items sont livrés.** La phase 2 peut démarrer sans reliquat.
 
 | ID | Item | ★ | ◆ | Taille |
 |---|---|:-:|:-:|:-:|
@@ -85,12 +86,13 @@ découverte.
 | ~~RND-2~~ | ~~Filtrage anisotrope~~ — **résolu le 2026-08-09** | 2 | 1 | S |
 | ~~MIS-1~~ | ~~Deuxième lanceur au catalogue~~ — **résolu le 2026-08-09** | 3 | 1 | S |
 | ~~RND-3~~ | ~~Couleur par stage + passé/futur + marqueur « now »~~ — **résolu le 2026-08-10** | 4 | 2 | M |
-| UI-1 | Vue détail mission (orbite atteinte, message d'erreur) | 4 | 2 | M |
+| ~~UI-1~~ | ~~**Vue détail mission** (orbite atteinte, message d'erreur)~~ — **résolu le 2026-08-10** | 4 | 2 | M |
 
-**Fin de phase quand** : plus aucun scintillement en vue vaisseau et le modèle
-3D y reste visible quelle que soit la vitesse d'horloge, une mission calculée
-affiche ce qu'elle a atteint, et sa durée est une décision explicite plutôt
-qu'une constante.
+**Fin de phase — atteinte.** Plus aucun scintillement en vue vaisseau et le
+modèle 3D y reste visible quelle que soit la vitesse d'horloge (`RND-1`) ; une
+mission calculée affiche ce qu'elle a atteint, orbite et écart à la cible, et
+dit pourquoi quand elle échoue (`UI-1`) ; sa durée est une décision explicite
+plutôt qu'une constante (`MIS-8`).
 
 ### Phase 2 — Navigation, temps, caméra · ~2 semaines
 
@@ -207,7 +209,7 @@ opportuniste, ou à décider quoi sacrifier quand une phase déborde.
 | ~~FX-1~~ | ~~Bloom sur le Soleil~~ — résolu (le tone mapping n'en faisait pas partie, voir détail) | 3 | 1 | S | — |
 | ~~MIS-1~~ | ~~Deuxième lanceur au catalogue~~ — résolu (mesh Ariane 5 faute d'Ariane 6, voir détail) | 3 | 1 | S | — |
 | ~~RND-3~~ | ~~Couleur par stage + passé/futur + marqueur « now »~~ — résolu | 4 | 2 | M | — |
-| UI-1 | Vue détail mission (orbite atteinte, message d'erreur) | 4 | 2 | M | — |
+| ~~UI-1~~ | ~~Vue détail mission (orbite atteinte, message d'erreur)~~ — résolu | 4 | 2 | M | — |
 | NAV-1 | Transitions de caméra entre vues | 4 | 2 | M | — |
 | MIS-7 | `EarthOrbitMission` paramétrable → polaire / SSO / MEO | 4 | 2 | M | — |
 | ~~RND-2~~ | ~~Filtrage anisotrope (MSAA déjà actif)~~ — résolu | 2 | 1 | S | — |
@@ -925,12 +927,16 @@ comme un chantier séparé.
 
 ### UI — Panel et plomberie mission
 
-#### UI-1 — Vue détail mission — ★4 ◆2 M
+#### ~~UI-1 — Vue détail mission~~ — ★4 ◆2 M — **résolu le 2026-08-10**
 
-> Spec détaillée : [`specs/mission-detail/01-vue-detail.md`](../mission-detail/01-vue-detail.md)
-> (validée le 2026-08-10). Elle corrige trois hypothèses de cette fiche : `AchievedOrbit`
-> n'est pas stocké mais **jeté** par l'orchestrateur, `StagePerformance` ne porte **aucune
-> durée**, et l'objectif d'une mission GEO est la **GTO**, pas l'orbite GEO.
+> Spec détaillée : [`specs/mission-detail/01-vue-detail.md`](../mission-detail/01-vue-detail.md).
+> Elle corrige trois hypothèses de cette fiche : `AchievedOrbit` n'est pas stocké mais
+> **jeté** par l'orchestrateur, `StagePerformance` ne porte **aucune durée**, et l'objectif
+> d'une mission GEO est la **GTO**, pas l'orbite GEO.
+>
+> Le texte qui suit est conservé tel qu'écrit avant le chantier, pour la traçabilité ; son
+> §7 recense ce que l'implémentation a démenti, dont un décompte de stages GEO (12, pas 8)
+> qui a coûté une hauteur de fenêtre.
 
 **Pourquoi.** `MissionOptimizerResult` et `AchievedOrbit` sont calculés et
 stockés — et **aucun fichier de `ui/` ne les lit**. L'application optimise des
