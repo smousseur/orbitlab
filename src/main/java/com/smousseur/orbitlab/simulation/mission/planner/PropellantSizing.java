@@ -7,8 +7,8 @@ import com.smousseur.orbitlab.simulation.mission.runtime.MultiStageLoadOptimizer
  * Propellant-sizing metadata attached to a {@link MissionPlan} produced by {@link
  * MinimizedLoadPlanner}. A projection of {@link MultiStageLoadOptimizer.Result} <em>minus</em> its
  * embedded {@link MissionComputeResult}, which is hoisted to {@link MissionPlan#computation()} so
- * there is a single path to the computation ({@code plan.computation()}), never a second one through
- * the sizing.
+ * there is a single path to the computation ({@code plan.computation()}), never a second one
+ * through the sizing.
  *
  * @param lambdas the resolved per-stage scale factors, {@code 1} on unscaled stages
  * @param passes the coordinate sweeps performed

@@ -10,13 +10,14 @@ import org.orekit.utils.Constants;
 /**
  * Detects a trajectory that has sunk irrecoverably below the Earth's surface — a re-entry. Mass
  * sibling of {@link MassDepletionDetector}: same shape, same statelessness, one scalar switching
- * function, and the decision of what to do about it left to the handler {@link ReentryGuard} attaches.
+ * function, and the decision of what to do about it left to the handler {@link ReentryGuard}
+ * attaches.
  *
- * <p>The switching function is the spherical altitude of {@link MinAltitudeTracker} offset by {@link
- * ReentryGuard#SUBSURFACE_FLOOR}, i.e. it goes negative once the trajectory is 50 km <em>under</em>
- * the WGS84 equatorial reference sphere. See {@link ReentryGuard#SUBSURFACE_FLOOR} for why the floor
- * sits that deep — the short version is that a floor at 0 m would already be breached on the launch
- * pad.
+ * <p>The switching function is the spherical altitude of {@link MinAltitudeTracker} offset by
+ * {@link ReentryGuard#SUBSURFACE_FLOOR}, i.e. it goes negative once the trajectory is 50 km
+ * <em>under</em> the WGS84 equatorial reference sphere. See {@link ReentryGuard#SUBSURFACE_FLOOR}
+ * for why the floor sits that deep — the short version is that a floor at 0 m would already be
+ * breached on the launch pad.
  */
 public class ReentryDetector extends AbstractDetector<ReentryDetector> {
 

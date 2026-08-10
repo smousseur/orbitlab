@@ -7,15 +7,16 @@ import java.util.Objects;
 /**
  * Configuration for the adaptive sliding window ephemeris system.
  *
- * <p>Controls how the ephemeris worker sizes and repositions per-body buffers based on
- * the current simulation clock speed. The window adapts by increasing the sample step at
- * higher speeds to keep the total point count bounded.
+ * <p>Controls how the ephemeris worker sizes and repositions per-body buffers based on the current
+ * simulation clock speed. The window adapts by increasing the sample step at higher speeds to keep
+ * the total point count bounded.
  *
  * @param speedMaxAbs the maximum absolute clock speed to plan for (speeds above this are clamped)
  * @param lookaheadRealSeconds the real-time lookahead duration used to size the window
  * @param minPointsEachSide the minimum number of sample points on each side of the center
  * @param maxPointsEachSide the maximum number of sample points on each side of the center
- * @param marginRatio the fraction of points used as comfort margin before triggering a rebuild (0, 0.5)
+ * @param marginRatio the fraction of points used as comfort margin before triggering a rebuild (0,
+ *     0.5)
  * @param stepSecondsByBody the base sample step in seconds for each celestial body
  */
 public record SlidingWindowConfig(
@@ -68,8 +69,8 @@ public record SlidingWindowConfig(
   /**
    * Computes an adaptive window plan for the given body and clock speed.
    *
-   * <p>At higher clock speeds, the sample step is increased (in power-of-two multiples of the
-   * base step) to keep the number of points bounded, while the margin is scaled proportionally.
+   * <p>At higher clock speeds, the sample step is increased (in power-of-two multiples of the base
+   * step) to keep the number of points bounded, while the margin is scaled proportionally.
    *
    * @param body the celestial body to plan for
    * @param clockSpeedAbs the absolute value of the current clock speed multiplier
@@ -139,8 +140,8 @@ public record SlidingWindowConfig(
   }
 
   /**
-   * Creates a default sliding window configuration for the solar system with per-body
-   * base sample steps ranging from 3 hours (Mercury) to 14 days (Pluto).
+   * Creates a default sliding window configuration for the solar system with per-body base sample
+   * steps ranging from 3 hours (Mercury) to 14 days (Pluto).
    *
    * @return a default solar system sliding window configuration
    */

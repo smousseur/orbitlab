@@ -3,8 +3,8 @@ package com.smousseur.orbitlab.simulation.mission.vehicle.model.stage;
 import java.util.Objects;
 
 /**
- * Physical capabilities of a launcher stage. Formalizes what a stage CAN do in a flight profile
- * and is the input of the future profile derivation (objective + launcher → stages).
+ * Physical capabilities of a launcher stage. Formalizes what a stage CAN do in a flight profile and
+ * is the input of the future profile derivation (objective + launcher → stages).
  *
  * @param ignition how the stage is ignited
  * @param restartCount number of relights after first ignition (0 = not restartable)

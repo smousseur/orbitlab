@@ -69,8 +69,8 @@ public final class NearCameraSyncAppState extends BaseAppState {
    * one artefact traded for a worse one.
    *
    * <p>1 km pushes that crossing out to the last kilometre before the surface, and costs nothing
-   * where it matters: the cap is inactive below 5 km of zoom, so the whole spacecraft view keeps the
-   * 100 m plane, and even when it does engage the depth step at the Earth's distance is ~2.7 km
+   * where it matters: the cap is inactive below 5 km of zoom, so the whole spacecraft view keeps
+   * the 100 m plane, and even when it does engage the depth step at the Earth's distance is ~2.7 km
    * against the 274 km this fix set out to remove.
    */
   private static final float SPACECRAFT_NEAR_MAX = 1f;
@@ -78,8 +78,8 @@ public final class NearCameraSyncAppState extends BaseAppState {
   /**
    * Near-plane factor everywhere else. Deliberately far more conservative than {@link
    * #SPACECRAFT_NEAR_FACTOR}, because the assumption that licenses that one does not hold here: in
-   * planet view the origin is the body's <em>centre</em> and the closest content is its surface,
-   * a planetary radius nearer. The two factors merge the day the near plane is driven by the actual
+   * planet view the origin is the body's <em>centre</em> and the closest content is its surface, a
+   * planetary radius nearer. The two factors merge the day the near plane is driven by the actual
    * content of the viewport (spec §9.3, "limite connue").
    */
   private static final float DEFAULT_NEAR_FACTOR = 0.0005f;

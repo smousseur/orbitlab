@@ -44,11 +44,7 @@ public class StepLaunchSite implements StepValues {
   public StepLaunchSite() {
     root = new Container(new BoxLayout(Axis.Y, FillMode.None));
     root.setBackground(null);
-    root.setPreferredSize(
-        new Vector3f(
-            FormStyles.CONTENT_WIDTH,
-            FormStyles.CONTENT_HEIGHT,
-            0));
+    root.setPreferredSize(new Vector3f(FormStyles.CONTENT_WIDTH, FormStyles.CONTENT_HEIGHT, 0));
 
     Label title = root.addChild(new Label("LAUNCH SITE", FormStyles.STYLE));
     title.setFont(UiKit.orbitron(13));

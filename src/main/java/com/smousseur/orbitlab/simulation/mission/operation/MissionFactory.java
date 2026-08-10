@@ -52,10 +52,10 @@ public final class MissionFactory {
   }
 
   /**
-   * Resolves the immutable {@link MissionSpec} from the wizard values: launcher and payload resolved
-   * from the catalogs, the payload instantiated with the mass entered by the user, and propellant
-   * loads sized analytically. Carries no stage decomposition — that is {@link MissionComposer}'s
-   * job.
+   * Resolves the immutable {@link MissionSpec} from the wizard values: launcher and payload
+   * resolved from the catalogs, the payload instantiated with the mass entered by the user, and
+   * propellant loads sized analytically. Carries no stage decomposition — that is {@link
+   * MissionComposer}'s job.
    *
    * @param values the raw wizard values
    * @param type the selected mission type
@@ -118,8 +118,7 @@ public final class MissionFactory {
             PropellantBudget.loadsForGeo(launcher, payloadModel, payloadMass, parkingAlt, latitude);
         Spacecraft payload = payloadModel.toSpacecraft(payloadMass, geoLoads.akmLoad());
         LaunchConfiguration configuration =
-            new LaunchConfiguration(
-                launcher, geoLoads.launcherLoads(), payload, payloadModel.id());
+            new LaunchConfiguration(launcher, geoLoads.launcherLoads(), payload, payloadModel.id());
         yield new MissionSpec.Geo(
             name,
             configuration,
@@ -137,8 +136,8 @@ public final class MissionFactory {
 
   /**
    * Reads the optional mission-duration override. Returns {@code null} — which the spec records
-   * normalise into {@link MissionHorizon#defaultFor(MissionType)} — when the key is absent, blank or
-   * unusable, so a malformed value degrades to the derived default instead of failing the whole
+   * normalise into {@link MissionHorizon#defaultFor(MissionType)} — when the key is absent, blank
+   * or unusable, so a malformed value degrades to the derived default instead of failing the whole
    * mission creation.
    *
    * @param values the raw wizard values

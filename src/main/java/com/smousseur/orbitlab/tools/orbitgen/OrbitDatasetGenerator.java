@@ -42,8 +42,8 @@ public class OrbitDatasetGenerator {
   /**
    * Creates a new orbit dataset generator that writes output files to the specified directory.
    *
-   * <p>Initializes a thread pool sized to the number of available processors, loads
-   * the ephemeris dataset from the default location, and creates an orbit path cache.
+   * <p>Initializes a thread pool sized to the number of available processors, loads the ephemeris
+   * dataset from the default location, and creates an orbit path cache.
    *
    * @param outputDir the directory where orbit binary files will be written
    */
@@ -65,9 +65,9 @@ public class OrbitDatasetGenerator {
   /**
    * Generates orbit binary files for all configured orbital bodies asynchronously.
    *
-   * <p>For each body, computes one full orbital period and writes the resulting
-   * heliocentric positions to a binary file named {@code <BODY>-orbit.bin} in the
-   * output directory. The executor is shut down after all bodies have been processed.
+   * <p>For each body, computes one full orbital period and writes the resulting heliocentric
+   * positions to a binary file named {@code <BODY>-orbit.bin} in the output directory. The executor
+   * is shut down after all bodies have been processed.
    */
   public void generate() {
     AtomicInteger counter = new AtomicInteger(0);

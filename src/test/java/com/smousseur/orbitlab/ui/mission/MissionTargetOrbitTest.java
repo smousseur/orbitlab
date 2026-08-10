@@ -71,8 +71,16 @@ class MissionTargetOrbitTest {
   void geoTargetUsesTheRequestedFinalInclinationNotTheSiteLatitude() {
     MissionSpec.Geo spec =
         new MissionSpec.Geo(
-            "GEO inclined", falconHeavy(), PARKING_ALT, GEO_ALT, 3.0, "Kourou", SITE_LAT, -52.77,
-            0.0, null);
+            "GEO inclined",
+            falconHeavy(),
+            PARKING_ALT,
+            GEO_ALT,
+            3.0,
+            "Kourou",
+            SITE_LAT,
+            -52.77,
+            0.0,
+            null);
 
     assertEquals(FastMath.toRadians(3.0), MissionTargetOrbit.of(spec).inclination(), 1e-12);
   }

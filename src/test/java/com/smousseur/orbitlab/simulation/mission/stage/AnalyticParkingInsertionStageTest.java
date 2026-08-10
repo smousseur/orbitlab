@@ -81,8 +81,7 @@ class AnalyticParkingInsertionStageTest {
 
     OrbitlabException thrown =
         assertThrows(
-            OrbitlabException.class,
-            () -> stage.propagateStandalone(tooHigh, missionWith(stack)));
+            OrbitlabException.class, () -> stage.propagateStandalone(tooHigh, missionWith(stack)));
 
     assertTrue(
         thrown.getMessage().contains("retrograde"),
@@ -98,9 +97,8 @@ class AnalyticParkingInsertionStageTest {
    * Physics.computeBurnDurationCapped} caps both burns to 0 s while the plan still asks for real
    * ΔV. Before the guard, the stage flew that plan: a 2 666 s ballistic coast from a sub-orbital
    * state, i.e. a re-entry no detector on this chain stops, on which the integrator's step control
-   * collapses and the propagation never returns. Observed on the I7 GEO multi-stage sweep at
-   * {@code λ(S1) = 0.3}, where it hung for four hours instead of reporting an infeasible λ in
-   * seconds.
+   * collapses and the propagation never returns. Observed on the I7 GEO multi-stage sweep at {@code
+   * λ(S1) = 0.3}, where it hung for four hours instead of reporting an infeasible λ in seconds.
    */
   @Test
   void depletedStage_refusesThePlanInsteadOfFlyingZeroLengthBurns() {

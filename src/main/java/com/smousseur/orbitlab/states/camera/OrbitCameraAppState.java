@@ -182,7 +182,8 @@ public final class OrbitCameraAppState extends BaseAppState
    */
   public void setOrientation(CameraOrientation orientation) {
     this.yawRad = orientation.yawRad();
-    this.pitchRad = FastMath.clamp(orientation.pitchRad(), config.pitchMinRad(), config.pitchMaxRad());
+    this.pitchRad =
+        FastMath.clamp(orientation.pitchRad(), config.pitchMinRad(), config.pitchMaxRad());
   }
 
   /**

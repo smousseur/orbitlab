@@ -60,9 +60,9 @@ public record ActiveStageInfo(
   }
 
   /**
-   * Returns the mass floor at which the active vehicle's propellant is fully consumed (its dry
-   * mass plus the reference mass of everything above). Below this mass, a burn is consuming
-   * propellant that does not exist.
+   * Returns the mass floor at which the active vehicle's propellant is fully consumed (its dry mass
+   * plus the reference mass of everything above). Below this mass, a burn is consuming propellant
+   * that does not exist.
    */
   public double depletionFloor() {
     return vehicle.dryMass() + massAbove;

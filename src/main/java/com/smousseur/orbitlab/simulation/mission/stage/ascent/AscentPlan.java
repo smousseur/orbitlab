@@ -9,16 +9,16 @@ import org.orekit.time.AbsoluteDate;
  *
  * <p><b>Why it exists.</b> The ascent is one propagation today but becomes three phases (spec
  * {@code specs/mission-stages/01-separations-implicites.md} §4.2): {@code Gravity turn (S1) → S1
- * separation → Gravity turn (S2)}. Those phases only reproduce today's trajectory if they agree
- * to the millisecond on when the first stage stops thrusting, when it is dropped, and when the
- * second ignites — so the dates must be computed <b>once</b>, not re-derived per phase. This
- * record is that single computation; {@link
+ * separation → Gravity turn (S2)}. Those phases only reproduce today's trajectory if they agree to
+ * the millisecond on when the first stage stops thrusting, when it is dropped, and when the second
+ * ignites — so the dates must be computed <b>once</b>, not re-derived per phase. This record is
+ * that single computation; {@link
  * com.smousseur.orbitlab.simulation.mission.maneuver.GravityTurnManeuver#plan} is the only place
  * that produces one.
  *
- * <p><b>Date arithmetic is deliberately literal.</b> The accessors below reproduce the exact
- * chain of {@link AbsoluteDate#shiftedBy(double)} calls the single-propagator configuration used,
- * epsilon by epsilon. {@code AbsoluteDate} stores its offset in two parts, so {@code
+ * <p><b>Date arithmetic is deliberately literal.</b> The accessors below reproduce the exact chain
+ * of {@link AbsoluteDate#shiftedBy(double)} calls the single-propagator configuration used, epsilon
+ * by epsilon. {@code AbsoluteDate} stores its offset in two parts, so {@code
  * a.shiftedBy(x).shiftedBy(y)} and {@code a.shiftedBy(x + y)} are not the same bits: collapsing
  * these chains would move the burn boundaries by femtoseconds and take the refactor off its
  * iso-trajectory guarantee for no gain.
@@ -85,8 +85,8 @@ public record AscentPlan(
 
   /**
    * Mass floor guarding the whole ascent: the post-jettison stack floor. A single detector at this
-   * floor covers both burns — during burn 1 the mass stays above the first stage's own floor,
-   * which is above this one (spec 06 I4a).
+   * floor covers both burns — during burn 1 the mass stays above the first stage's own floor, which
+   * is above this one (spec 06 I4a).
    */
   public double depletionFloor() {
     return secondStage.depletionFloor();

@@ -64,11 +64,9 @@ class ZenithThrustAttitudeProviderTest {
     AbsoluteDate date = AbsoluteDate.J2000_EPOCH;
 
     Attitude att1 =
-        p.getAttitude(
-            (d, f) -> tpv(d, new Vector3D(7_000_000, 0, 0), Vector3D.ZERO), date, gcrf);
+        p.getAttitude((d, f) -> tpv(d, new Vector3D(7_000_000, 0, 0), Vector3D.ZERO), date, gcrf);
     Attitude att2 =
-        p.getAttitude(
-            (d, f) -> tpv(d, new Vector3D(0, 7_000_000, 0), Vector3D.ZERO), date, gcrf);
+        p.getAttitude((d, f) -> tpv(d, new Vector3D(0, 7_000_000, 0), Vector3D.ZERO), date, gcrf);
 
     double angleDiff = Rotation.distance(att1.getRotation(), att2.getRotation());
     assertTrue(angleDiff > 0.5, "Orthogonal positions should give very different zenith attitudes");
@@ -81,8 +79,7 @@ class ZenithThrustAttitudeProviderTest {
     AbsoluteDate date = AbsoluteDate.J2000_EPOCH;
 
     Attitude att =
-        p.getAttitude(
-            (d, f) -> tpv(d, new Vector3D(0, 0, 7_000_000), Vector3D.ZERO), date, gcrf);
+        p.getAttitude((d, f) -> tpv(d, new Vector3D(0, 0, 7_000_000), Vector3D.ZERO), date, gcrf);
 
     Rotation rot = att.getRotation();
     assertFalse(Double.isNaN(rot.getQ0()));
@@ -98,8 +95,7 @@ class ZenithThrustAttitudeProviderTest {
     Vector3D pos = new Vector3D(7_000_000, 0, 0);
 
     Attitude att1 =
-        p.getAttitude(
-            (d, f) -> tpv(d, pos, Vector3D.ZERO), AbsoluteDate.J2000_EPOCH, gcrf);
+        p.getAttitude((d, f) -> tpv(d, pos, Vector3D.ZERO), AbsoluteDate.J2000_EPOCH, gcrf);
     Attitude att2 =
         p.getAttitude(
             (d, f) -> tpv(d, pos, Vector3D.ZERO), AbsoluteDate.J2000_EPOCH.shiftedBy(3600), gcrf);

@@ -47,8 +47,8 @@ import org.orekit.utils.Constants;
  *
  * <p><b>Total by construction.</b> {@link OrbitElements#mean(Orbit)} returns an {@code Optional}
  * because a fixed point may fail to converge, and <b>no mission may fail because a centring
- * refinement did not converge</b> — the mission flies perfectly well on the un-centred aim. An empty
- * mean therefore falls back on the closed form rather than throwing. That is what keeps this
+ * refinement did not converge</b> — the mission flies perfectly well on the un-centred aim. An
+ * empty mean therefore falls back on the closed form rather than throwing. That is what keeps this
  * targeting path free of any new failure mode.
  */
 public final class FlownBandAim {
@@ -123,10 +123,10 @@ public final class FlownBandAim {
    * The offset {@code a·f = (3/2)·J2·RE²/a} between the mean-element apsides and the radii actually
    * flown — 9 746 m at 400 km, 9 467 m at 600 km, 1 567 m at GEO.
    *
-   * <p>Measured against the long suites 2026-08-05 it over-predicts by ~230 m on both profiles
-   * (9 234 and 9 097 m observed). That residual is 5 % of the ~4.9 km worst case this centring
-   * leaves, and it is deliberately <b>not</b> calibrated away: fitting a correction on two points
-   * would buy 230 m of accuracy at the price of a constant nobody could re-derive.
+   * <p>Measured against the long suites 2026-08-05 it over-predicts by ~230 m on both profiles (9
+   * 234 and 9 097 m observed). That residual is 5 % of the ~4.9 km worst case this centring leaves,
+   * and it is deliberately <b>not</b> calibrated away: fitting a correction on two points would buy
+   * 230 m of accuracy at the price of a constant nobody could re-derive.
    *
    * <p>Because {@code f} varies as {@code (RE/a)²}, the whole centring is a LEO concern: what is
    * worth 9.7 km at 400 km is worth 1.6 km at geostationary altitude.

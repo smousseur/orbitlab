@@ -79,14 +79,14 @@ public record OrbitElements(
    * is, the mission orbit rather than the instantaneous snapshot.
    *
    * <p>Eckstein-Hechler, not Brouwer-Lyddane: measured against a theory-free referee (equinoctial
-   * averaging of the osculating elements over one period under the 8x8 field), EH lands within
-   * ~200 m across the whole useful eccentricity range, where BL either diverges or, worse, returns
-   * a mean perigee that varies by 8 216 m depending on the sampling anomaly (spec
-   * orbit-reporting/01 section 3.2.1).
+   * averaging of the osculating elements over one period under the 8x8 field), EH lands within ~200
+   * m across the whole useful eccentricity range, where BL either diverges or, worse, returns a
+   * mean perigee that varies by 8 216 m depending on the sampling anomaly (spec orbit-reporting/01
+   * section 3.2.1).
    *
    * <p><b>Residual.</b> The conversion removes ~97% of the short-period oscillation, not 100%:
-   * measured 2026-08-05, the mean perigee of one and the same orbit still varies by ~625 m at
-   * 400 km depending on the sampling instant (571 m at 600 km, 482 m at 1000 km). That is
+   * measured 2026-08-05, the mean perigee of one and the same orbit still varies by ~625 m at 400
+   * km depending on the sampling instant (571 m at 600 km, 482 m at 1000 km). That is
    * Eckstein-Hechler's own modelling residual, not a convergence defect. Report it to the
    * kilometre, not to the metre.
    *
@@ -106,14 +106,10 @@ public record OrbitElements(
       // Fresh on every call: the converter carries an iteration counter, hence state.
       FixedPointConverter converter =
           new FixedPointConverter(
-              new EcksteinHechlerTheory(provider),
-              CONVERGENCE_THRESHOLD,
-              MAX_ITERATIONS,
-              DAMPING);
+              new EcksteinHechlerTheory(provider), CONVERGENCE_THRESHOLD, MAX_ITERATIONS, DAMPING);
       return Optional.of(elementsOf(converter.convertToMean(rebased)));
     } catch (RuntimeException e) {
-      logger.debug(
-          "Mean orbit unavailable ({}): {}", e.getClass().getSimpleName(), e.getMessage());
+      logger.debug("Mean orbit unavailable ({}): {}", e.getClass().getSimpleName(), e.getMessage());
       return Optional.empty();
     }
   }
@@ -131,8 +127,7 @@ public record OrbitElements(
   private static OrbitElements elementsOf(Orbit orbit) {
     double a = orbit.getA();
     double e = orbit.getE();
-    return new OrbitElements(
-        a, e, orbit.getI(), a * (1.0 - e) - RE, a * (1.0 + e) - RE);
+    return new OrbitElements(a, e, orbit.getI(), a * (1.0 - e) - RE, a * (1.0 + e) - RE);
   }
 
   /** Compact log line, shared by every reporting site. */

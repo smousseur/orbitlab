@@ -60,8 +60,8 @@ import org.orekit.utils.Constants;
  * <ul>
  *   <li>Burn 1 starts at {@code epoch + 1 ms}, not centered on periapsis — for a burn of a few
  *       seconds on an orbit with period ~2700 s the resulting phase slip is &lt;0.1%.
- *   <li>Burn 2 coast is half-period minus half of burn 2's duration to center burn 2 on the apoapsis
- *       passage.
+ *   <li>Burn 2 coast is half-period minus half of burn 2's duration to center burn 2 on the
+ *       apoapsis passage.
  *   <li>J2 short-period altitude oscillation (~3 km) is not compensated.
  * </ul>
  */
@@ -72,8 +72,8 @@ public class AnalyticParkingInsertionStage extends MissionStage {
   /**
    * Retrograde ΔV tolerated before a burn is rejected as an assumption violation (m/s). Sized to
    * separate "the entry apoapsis is numerically level with the target, so this burn is a no-op"
-   * from a real geometry breakdown: on the reference GEO profile burn 1 runs at +20 to +59 m/s,
-   * and the run that exposed the flaw sat at −57 m/s.
+   * from a real geometry breakdown: on the reference GEO profile burn 1 runs at +20 to +59 m/s, and
+   * the run that exposed the flaw sat at −57 m/s.
    */
   private static final double DV_SIGN_TOLERANCE = 1.0;
 
@@ -84,14 +84,14 @@ public class AnalyticParkingInsertionStage extends MissionStage {
    *
    * <p><b>Why refusing rather than under-burning.</b> {@link Physics#computeBurnDurationCapped}
    * caps a burn at depletion on the premise that the shortfall shows up later as a missed
-   * objective. That premise does not hold here. Observed on the I7 GEO multi-stage sweep at
-   * {@code λ(S1) = 0.3}: the gravity turn tripped the {@code DepletionGuard} on its second burn and
-   * handed this stage a stack sitting exactly on its dry mass, so both burns were capped to
-   * {@code 0 s} while the plan still asked for 372 and 107 m/s. Nothing refused, and the phase went
-   * on to propagate 2 666 s of pure ballistics from 36 km at 7 603 m/s — a re-entering trajectory,
-   * which no detector on this chain stops: the integrator follows it below the surface, the step
-   * control collapses as {@code r → 0} and the evaluation never returns. The outer loop would have
-   * read this λ as infeasible in seconds; instead it hung for hours.
+   * objective. That premise does not hold here. Observed on the I7 GEO multi-stage sweep at {@code
+   * λ(S1) = 0.3}: the gravity turn tripped the {@code DepletionGuard} on its second burn and handed
+   * this stage a stack sitting exactly on its dry mass, so both burns were capped to {@code 0 s}
+   * while the plan still asked for 372 and 107 m/s. Nothing refused, and the phase went on to
+   * propagate 2 666 s of pure ballistics from 36 km at 7 603 m/s — a re-entering trajectory, which
+   * no detector on this chain stops: the integrator follows it below the surface, the step control
+   * collapses as {@code r → 0} and the evaluation never returns. The outer loop would have read
+   * this λ as infeasible in seconds; instead it hung for hours.
    *
    * <p>This is the capability sibling of {@code DV_SIGN_TOLERANCE}: that one guards the sign of the
    * ΔV, this one guards the ability to deliver it.
@@ -136,7 +136,8 @@ public class AnalyticParkingInsertionStage extends MissionStage {
   public SpacecraftState propagateStandalone(SpacecraftState currentState, Mission mission) {
     BurnPlan plan = computeBurnPlan(currentState, mission.getVehicle());
 
-    // 8×8 gravity, matching the ephemeris generator (bilan 11 §3.9): this standalone flight advances
+    // 8×8 gravity, matching the ephemeris generator (bilan 11 §3.9): this standalone flight
+    // advances
     // the state the next stage plans from, so a Newtonian point-mass field here would diverge from
     // the flown 8×8 trajectory and break the apogee-node geometry the GEO plane change relies on.
     NumericalPropagator propagator =
@@ -183,11 +184,7 @@ public class AnalyticParkingInsertionStage extends MissionStage {
                   + "retrograde burn (ΔV1 %.1f m/s, ΔV2 %.1f m/s — both must be prograde). The "
                   + "entry apoapsis is above the target, which breaks the raising-Hohmann "
                   + "geometry this stage assumes",
-              getName(),
-              targetAltitude / 1000.0,
-              (r1 - EARTH_RADIUS) / 1000.0,
-              dv1Raw,
-              dv2Raw));
+              getName(), targetAltitude / 1000.0, (r1 - EARTH_RADIUS) / 1000.0, dv1Raw, dv2Raw));
     }
     // Within tolerance the entry apoapsis is level with the target: the correct response is no
     // burn at all, not a retrograde one.
@@ -255,13 +252,13 @@ public class AnalyticParkingInsertionStage extends MissionStage {
     if (!(dv > 0)) {
       return; // nothing to deliver — the burn is a deliberate no-op
     }
-    double required =
-        Physics.computeBurnDuration(dv, mass, propulsion.isp(), propulsion.thrust());
+    double required = Physics.computeBurnDuration(dv, mass, propulsion.isp(), propulsion.thrust());
     if (cappedDuration >= required * (1.0 - BURN_CAPACITY_TOLERANCE)) {
       return;
     }
     double ve = propulsion.isp() * Constants.G0_STANDARD_GRAVITY;
-    double burnt = FastMath.min(propulsion.thrust() / ve * cappedDuration, FastMath.max(0.0, remainingFuel));
+    double burnt =
+        FastMath.min(propulsion.thrust() / ve * cappedDuration, FastMath.max(0.0, remainingFuel));
     double delivered = burnt > 0 ? ve * FastMath.log(mass / (mass - burnt)) : 0.0;
     throw new OrbitlabException(
         String.format(

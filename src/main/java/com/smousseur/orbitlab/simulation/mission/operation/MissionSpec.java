@@ -7,8 +7,8 @@ import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchConfiguration;
 import java.util.Objects;
 
 /**
- * Immutable description of the mission the user configured in the wizard, independent of how it will
- * be flown. It captures the <em>what</em> — targets, vehicle configuration, launch site — and
+ * Immutable description of the mission the user configured in the wizard, independent of how it
+ * will be flown. It captures the <em>what</em> — targets, vehicle configuration, launch site — and
  * deliberately omits the <em>how</em>: the stage decomposition, which is a function of the chosen
  * {@link OptimizationType optimization mode} and is resolved later by {@link MissionComposer}.
  *
@@ -82,9 +82,9 @@ public sealed interface MissionSpec permits MissionSpec.Leo, MissionSpec.Geo {
   MissionHorizon horizon();
 
   /**
-   * Returns a copy of this spec with the launcher's per-stage propellant loads replaced, keeping the
-   * launcher model and the payload (including a GEO payload's fixed AKM load) unchanged. Used by the
-   * propellant-sizing planner to rebuild the mission at each candidate load array.
+   * Returns a copy of this spec with the launcher's per-stage propellant loads replaced, keeping
+   * the launcher model and the payload (including a GEO payload's fixed AKM load) unchanged. Used
+   * by the propellant-sizing planner to rebuild the mission at each candidate load array.
    *
    * @param launcherLoads the per-stage launcher loads (kg), same order as the launcher stages
    * @return a spec identical to this one but flying the given launcher loads
@@ -92,8 +92,8 @@ public sealed interface MissionSpec permits MissionSpec.Leo, MissionSpec.Geo {
   MissionSpec withLauncherLoads(double[] launcherLoads);
 
   /**
-   * LEO insertion spec. A circular target has {@code perigeeAltitude == apogeeAltitude}; an elliptic
-   * target keeps a distinct apogee.
+   * LEO insertion spec. A circular target has {@code perigeeAltitude == apogeeAltitude}; an
+   * elliptic target keeps a distinct apogee.
    *
    * @param name the mission name
    * @param configuration the launch configuration

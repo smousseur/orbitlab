@@ -17,14 +17,14 @@ import org.orekit.time.AbsoluteDate;
 /**
  * Writes a single celestial body's ephemeris data to a binary file in the V1 format.
  *
- * <p>The output file contains a header with metadata, a chunk index for fast lookup,
- * and a sequence of data chunks. Each chunk holds position/velocity and rotation samples
- * compressed with Zstd. Chunks are computed in parallel via a shared thread pool and
- * written sequentially to ensure deterministic file layout.
+ * <p>The output file contains a header with metadata, a chunk index for fast lookup, and a sequence
+ * of data chunks. Each chunk holds position/velocity and rotation samples compressed with Zstd.
+ * Chunks are computed in parallel via a shared thread pool and written sequentially to ensure
+ * deterministic file layout.
  */
 final class BodyFileWriterV1 {
 
-  private static final byte[] MAGIC = new byte[] {'O','R','B','L','_','E','P','H'};
+  private static final byte[] MAGIC = new byte[] {'O', 'R', 'B', 'L', '_', 'E', 'P', 'H'};
 
   private final GeneratorConfigV1 cfg;
   private final SolarSystemBody body;
@@ -58,9 +58,9 @@ final class BodyFileWriterV1 {
   /**
    * Generates all ephemeris chunks for the body and writes them to the output binary file.
    *
-   * <p>Chunks are computed concurrently using the shared compute pool with backpressure
-   * controlled by semaphores, then written in sequential order. After all chunks are written,
-   * the file header and chunk index are patched with final offsets and CRC checksums.
+   * <p>Chunks are computed concurrently using the shared compute pool with backpressure controlled
+   * by semaphores, then written in sequential order. After all chunks are written, the file header
+   * and chunk index are patched with final offsets and CRC checksums.
    *
    * @throws Exception if chunk computation or file I/O fails
    */
@@ -83,8 +83,9 @@ final class BodyFileWriterV1 {
             StandardOpenOption.READ,
             StandardOpenOption.WRITE)) {
 
-      // Build placeholder header (index offsets unknown yet, but we can write placeholders then rewrite later).
-      byte[] headerPlaceholder = buildHeaderBytes(chunkDur, chunkCount, 0L, 0L, /*headerCrc*/0);
+      // Build placeholder header (index offsets unknown yet, but we can write placeholders then
+      // rewrite later).
+      byte[] headerPlaceholder = buildHeaderBytes(chunkDur, chunkCount, 0L, 0L, /*headerCrc*/ 0);
       long headerSize = headerPlaceholder.length;
 
       long chunkIndexOffset = headerSize;
@@ -109,7 +110,8 @@ final class BodyFileWriterV1 {
 
       while (nextToWrite < chunkCount) {
 
-        while (nextToSubmit < chunkCount && (nextToSubmit - nextToWrite) < cfg.maxChunksInFlightPerBody()) {
+        while (nextToSubmit < chunkCount
+            && (nextToSubmit - nextToWrite) < cfg.maxChunksInFlightPerBody()) {
           bodyInFlight.acquire();
           globalInFlight.acquire();
 
@@ -150,9 +152,11 @@ final class BodyFileWriterV1 {
       ch.write(idx);
 
       // Rewrite header with correct offsets + CRC.
-      byte[] headerFinal = buildHeaderBytes(chunkDur, chunkCount, chunkIndexOffset, chunksOffset, /*headerCrc*/0);
-      int headerCrc = crc32(headerFinal, /*excludeLastU32*/true);
-      headerFinal = buildHeaderBytes(chunkDur, chunkCount, chunkIndexOffset, chunksOffset, headerCrc);
+      byte[] headerFinal =
+          buildHeaderBytes(chunkDur, chunkCount, chunkIndexOffset, chunksOffset, /*headerCrc*/ 0);
+      int headerCrc = crc32(headerFinal, /*excludeLastU32*/ true);
+      headerFinal =
+          buildHeaderBytes(chunkDur, chunkCount, chunkIndexOffset, chunksOffset, headerCrc);
 
       ch.position(0);
       ch.write(ByteBuffer.wrap(headerFinal));
@@ -161,7 +165,11 @@ final class BodyFileWriterV1 {
   }
 
   private byte[] buildHeaderBytes(
-      double chunkDurSeconds, int chunkCount, long chunkIndexOffset, long chunksOffset, int headerCrc32) {
+      double chunkDurSeconds,
+      int chunkCount,
+      long chunkIndexOffset,
+      long chunksOffset,
+      int headerCrc32) {
 
     LittleEndianWriter w = new LittleEndianWriter(512);
 
@@ -201,9 +209,11 @@ final class BodyFileWriterV1 {
    * Holds the computed result of a single ephemeris chunk.
    *
    * @param chunkId the zero-based index of this chunk
-   * @param chunkStartOffsetSeconds the time offset in seconds from the dataset start to this chunk's beginning
+   * @param chunkStartOffsetSeconds the time offset in seconds from the dataset start to this
+   *     chunk's beginning
    * @param chunkBytes the serialized chunk data (header + PV block + rotation block)
    * @param chunkCrc32 the CRC-32 checksum of {@code chunkBytes}
    */
-  record ChunkResult(int chunkId, double chunkStartOffsetSeconds, byte[] chunkBytes, int chunkCrc32) {}
+  record ChunkResult(
+      int chunkId, double chunkStartOffsetSeconds, byte[] chunkBytes, int chunkCrc32) {}
 }

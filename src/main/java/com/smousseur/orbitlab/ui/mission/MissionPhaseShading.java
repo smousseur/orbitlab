@@ -25,10 +25,10 @@ import java.util.Objects;
  * <p><b>A fixed step counted backwards from the final orbit.</b> Not a ramp spread over the run
  * count: that makes the step shrink as a mission gains phases, so a GEO with eleven runs would
  * dissolve into invisibility precisely because it has more to say. Counting back from the end in
- * fixed increments gives a contrast between neighbours that does not depend on the mission's length,
- * and keeps the last run on the palette colour exactly. The levels are walked as a triangle (see
- * {@link #MUTING_LEVELS}), so two runs six apart share a tone; they are far apart on screen, and
- * that is the price of a guarantee that adjacent ones never do.
+ * fixed increments gives a contrast between neighbours that does not depend on the mission's
+ * length, and keeps the last run on the palette colour exactly. The levels are walked as a triangle
+ * (see {@link #MUTING_LEVELS}), so two runs six apart share a tone; they are far apart on screen,
+ * and that is the price of a guarantee that adjacent ones never do.
  *
  * <p><b>Rank, not name.</b> There is no {@code stageName → colour} table to maintain. Stage names
  * are free-form per-mission strings; a table keyed on them would need extending for every new

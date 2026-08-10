@@ -321,8 +321,7 @@ public class TransferProblem implements TrajectoryProblem {
     // Historical behavior: max(π/8, adaptive). The tuning adds a hard cap on top,
     // letting GTO/GEO tighten β across the search without disturbing the LEO defaults.
     this.betaMax =
-        FastMath.min(
-            tuning.betaMaxRad(), FastMath.max(FastMath.PI / 8.0, betaMaxAdaptive));
+        FastMath.min(tuning.betaMaxRad(), FastMath.max(FastMath.PI / 8.0, betaMaxAdaptive));
 
     // Niveau 2.3 — bound t1 by a fraction of the current orbital period so
     // CMA-ES can explore the full pre-burn coast window without depending on

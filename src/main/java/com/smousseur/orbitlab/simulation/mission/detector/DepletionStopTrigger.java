@@ -53,8 +53,8 @@ public class DepletionStopTrigger
 
   /**
    * Flame-out as an increasing event: {@code g = floor − mass} rises through zero when the
-   * propellant runs out. Maneuver triggers stop the firing on increasing g crossings, which is
-   * why {@link MassDepletionDetector} (decreasing g at depletion) cannot be used directly here.
+   * propellant runs out. Maneuver triggers stop the firing on increasing g crossings, which is why
+   * {@link MassDepletionDetector} (decreasing g at depletion) cannot be used directly here.
    */
   public static class FlameOutDetector extends AbstractDetector<FlameOutDetector> {
 

@@ -43,8 +43,7 @@ public record LaunchConfiguration(
    * @param propellantLoads the propellant load per stage (kg), same order as the launcher stages
    * @param payload the payload placed on top of the stack
    */
-  public LaunchConfiguration(
-      LauncherModel launcher, double[] propellantLoads, Spacecraft payload) {
+  public LaunchConfiguration(LauncherModel launcher, double[] propellantLoads, Spacecraft payload) {
     this(launcher, propellantLoads, payload, null);
   }
 
@@ -55,9 +54,9 @@ public record LaunchConfiguration(
 
   /**
    * Reports whether this configuration remembers which catalog model its payload came from. Only
-   * the wizard path sets it, and it is what lets the wizard reopen prefilled on the very payload the
-   * user picked: the {@link Spacecraft} alone does not identify its model — two inert models differ
-   * only by a default dry mass the user overrides.
+   * the wizard path sets it, and it is what lets the wizard reopen prefilled on the very payload
+   * the user picked: the {@link Spacecraft} alone does not identify its model — two inert models
+   * differ only by a default dry mass the user overrides.
    *
    * @return {@code true} when {@link #payloadId()} is usable
    */

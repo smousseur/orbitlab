@@ -11,6 +11,7 @@ sont en anglais, cf. `CLAUDE.md`).
 |---|---|---|
 | [`roadmap/01-roadmap.md`](roadmap/01-roadmap.md) | Roadmap générale, priorisée | À jour |
 | [`bugs.md`](bugs.md) | Registre des bugs ouverts hors chantier | À jour — un item (`BUG-1`, jitter Pluton) |
+| [`dette-technique.md`](dette-technique.md) | État de la dette technique mesuré, et règles pour ne pas l'aggraver | **Établi le 2026-08-10** au commit `b027d1d` — 11 items (`DT-1` à `DT-11`), aucun corrigé ; §6 (conseils) ne se périme pas |
 | [`camera/01-view-transitions.md`](camera/01-view-transitions.md) | Design complet des transitions de caméra | **Implémenté le 2026-08-10** (item `NAV-1`) — valide **sauf §2, §3.5, §3.6 et §8**, voir bandeau du document |
 | [`navigation/01-breadcrumb.md`](navigation/01-breadcrumb.md) | Design complet du breadcrumb HUD | Valide, **non commencé** (item `NAV-4`) |
 | [`graphics-effects/hover-effects.md`](graphics-effects/hover-effects.md) | Design du hover planète ↔ orbite | Valide, non implémenté (item `NAV-5`) |

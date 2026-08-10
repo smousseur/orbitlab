@@ -65,9 +65,7 @@ class MissionAscentWiringTest {
             (Mission)
                 LEOMission.ellipticWithOptimizedTransfer(
                     "LEO elliptic", falconHeavy(), TARGET_ALT, 800_000.0)),
-        Arguments.of(
-            "GEO",
-            (Mission) new GEOMission("GEO", TARGET_ALT, GEOMission.GEO_ALTITUDE)),
+        Arguments.of("GEO", (Mission) new GEOMission("GEO", TARGET_ALT, GEOMission.GEO_ALTITUDE)),
         // A second launcher holds the property where a single one could not: the three-phase
         // ascent is a property of every mission, not a shape Falcon Heavy's figures happen to
         // produce (spec specs/launchers/01-ariane-62.md §6.2).

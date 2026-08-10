@@ -16,7 +16,8 @@ import java.util.Objects;
  *
  * @param stageName the name of the stage that produced this stretch, for labelling
  * @param propulsive whether that stage burns propellant
- * @param firstVertex index of this run's first vertex <em>in the polyline</em>, after any decimation
+ * @param firstVertex index of this run's first vertex <em>in the polyline</em>, after any
+ *     decimation
  * @param vertexCount how many vertices this run spans, after any decimation. A run of fewer than
  *     {@link #MIN_DRAWABLE_VERTICES} draws no segment at all — {@code StageSeparationStage} is
  *     instantaneous and yields one — so consumers that shade the line by run must not let it take a

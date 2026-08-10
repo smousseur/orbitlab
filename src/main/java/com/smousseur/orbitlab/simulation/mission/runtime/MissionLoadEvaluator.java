@@ -20,31 +20,31 @@ import org.orekit.time.AbsoluteDate;
  * <p><b>Reconstruction.</b> The λ scaling is applied to the heuristic loads over the liquid stages
  * only (SOLID stages and the payload AKM stay off λ, {@link PropellantLoadOptimizer#scaledLoads});
  * the scaled loads are handed to an injected {@code missionBuilder} that assembles a fresh {@link
- * Mission} — a fresh one every time, because {@link MissionOptimizer#optimize()} mutates the mission
- * it optimizes.
+ * Mission} — a fresh one every time, because {@link MissionOptimizer#optimize()} mutates the
+ * mission it optimizes.
  *
  * <p><b>Feasibility.</b> The mission is feasible when all three hold:
  *
  * <ul>
- *   <li><b>ephemeris complete</b> — the flown (8×8, rendered) trajectory actually reached the end of
- *       every stage ({@link MissionEphemeris#isComplete()}). A burn that ran its tank dry mid-mission
- *       truncates the flight yet can still leave the terminal coast looking on-target, so the
- *       objective check below is not enough on its own (bilan 11 §3.9 prérequis);
- *   <li><b>objective</b> — the final coast orbit lands within {@code objectiveToleranceRatio} of the
- *       target perigee and apogee, measured from the ephemeris exactly as the mission optimization
- *       tests do (min/max altitude of the terminal {@code "Coasting"} stage). The target is the
- *       mission's own {@link OrbitInsertionObjective} by default; missions whose recorded objective
- *       is not the flown final orbit must pass an explicit feasibility objective — {@code
- *       GEOMission} records {@code (parking, GEO)}, the two mission phases, while the flown end
- *       state is circular GEO;
+ *   <li><b>ephemeris complete</b> — the flown (8×8, rendered) trajectory actually reached the end
+ *       of every stage ({@link MissionEphemeris#isComplete()}). A burn that ran its tank dry
+ *       mid-mission truncates the flight yet can still leave the terminal coast looking on-target,
+ *       so the objective check below is not enough on its own (bilan 11 §3.9 prérequis);
+ *   <li><b>objective</b> — the final coast orbit lands within {@code objectiveToleranceRatio} of
+ *       the target perigee and apogee, measured from the ephemeris exactly as the mission
+ *       optimization tests do (min/max altitude of the terminal {@code "Coasting"} stage). The
+ *       target is the mission's own {@link OrbitInsertionObjective} by default; missions whose
+ *       recorded objective is not the flown final orbit must pass an explicit feasibility objective
+ *       — {@code GEOMission} records {@code (parking, GEO)}, the two mission phases, while the
+ *       flown end state is circular GEO;
  *   <li><b>residual floor</b> — the end-of-mission residual is at least {@code residualFloorRatio}
- *       of the <em>sized stage's</em> load (spec 09 §5, "≥ 1 % de la charge par étage liquide"). The
- *       denominator is the load of the λ-scaled top stage, not the whole stack: on an S1-dominated
- *       stack the stack-wide residual ratio is meaningless (~0.3 %), but against the sized stage's
- *       own load it is the real margin (~10 % at the heuristic load). Without this floor the loop
- *       drives the sized stage to exact flame-out (residual 0), and the ephemeris replay trips the
- *       {@code DepletionGuard} on a truncated burn — a knife-edge solution that defeats I7's realism
- *       goal (observed on the first FH LEO integration run).
+ *       of the <em>sized stage's</em> load (spec 09 §5, "≥ 1 % de la charge par étage liquide").
+ *       The denominator is the load of the λ-scaled top stage, not the whole stack: on an
+ *       S1-dominated stack the stack-wide residual ratio is meaningless (~0.3 %), but against the
+ *       sized stage's own load it is the real margin (~10 % at the heuristic load). Without this
+ *       floor the loop drives the sized stage to exact flame-out (residual 0), and the ephemeris
+ *       replay trips the {@code DepletionGuard} on a truncated burn — a knife-edge solution that
+ *       defeats I7's realism goal (observed on the first FH LEO integration run).
  * </ul>
  *
  * <p>The residual of the sized stage is read from its own entry in {@link
@@ -77,9 +77,9 @@ public final class MissionLoadEvaluator implements PropellantLoadOptimizer.Evalu
    * <p><b>The exact value carries little information</b> (bilan 11 §3.4). Measured on FH LEO, the
    * sized stage's residual does not decrease continuously as the load tightens — it falls off a
    * cliff: 10.3 % of its load at {@code λ*}, exactly 0 one bisection step below (a 2.6 % lighter
-   * load), with the objective met on both sides. Only the termination mode changes, from a commanded
-   * cutoff to depletion. Any floor in {@code (0, 0.103]} therefore yields the same {@code λ*}: this
-   * is a binary flame-out detector rather than a tuning knob.
+   * load), with the objective met on both sides. Only the termination mode changes, from a
+   * commanded cutoff to depletion. Any floor in {@code (0, 0.103]} therefore yields the same {@code
+   * λ*}: this is a binary flame-out detector rather than a tuning knob.
    */
   public static final double DEFAULT_RESIDUAL_FLOOR_RATIO = 0.01;
 
@@ -98,8 +98,8 @@ public final class MissionLoadEvaluator implements PropellantLoadOptimizer.Evalu
   private final OrbitInsertionObjective feasibilityObjective;
 
   /**
-   * Creates an evaluator with the spec-09 defaults (±7 % objective, 40 000 inner evals, deterministic
-   * seed).
+   * Creates an evaluator with the spec-09 defaults (±7 % objective, 40 000 inner evals,
+   * deterministic seed).
    *
    * @param missionBuilder assembles a fresh mission from a per-stage launcher load array
    * @param heuristicLoads the baseline per-stage loads (kg), same order as the launcher stages
@@ -161,8 +161,8 @@ public final class MissionLoadEvaluator implements PropellantLoadOptimizer.Evalu
    * @param optimizerMaxEvaluations the inner CMA-ES evaluation budget per stage
    * @param seed the CMA-ES master seed, or {@code null} for non-deterministic
    * @param objectiveToleranceRatio the ± band on perigee/apogee the objective must land within
-   * @param residualFloorRatio the minimum end-of-mission residual as a fraction of the sized stage's
-   *     load; keeps the sized stage off flame-out
+   * @param residualFloorRatio the minimum end-of-mission residual as a fraction of the sized
+   *     stage's load; keeps the sized stage off flame-out
    * @param feasibilityObjective the orbit the terminal coast is measured against, or {@code null}
    *     to use the mission's own {@link OrbitInsertionObjective}. Required for missions whose
    *     recorded objective is not the flown final orbit (a GEO mission records {@code (parking,
@@ -213,8 +213,8 @@ public final class MissionLoadEvaluator implements PropellantLoadOptimizer.Evalu
    * Per-stage overload driving the multi-stage coordinate sweep ({@link MultiStageLoadOptimizer}):
    * each scaled stage carries its own factor instead of sharing one.
    *
-   * <p>The returned evaluation's {@code lambda} field is {@link Double#NaN} — a vector has no single
-   * factor — and the sweep tags it with the coordinate it is currently bisecting.
+   * <p>The returned evaluation's {@code lambda} field is {@link Double#NaN} — a vector has no
+   * single factor — and the sweep tags it with the coordinate it is currently bisecting.
    *
    * <p><b>Residual floor with several stages under λ.</b> The floor still guards the top scaled
    * stage only. Extending it to the lower stages would need a per-stage notion the model does not
@@ -285,8 +285,8 @@ public final class MissionLoadEvaluator implements PropellantLoadOptimizer.Evalu
   /**
    * Whether the terminal coast orbit meets the insertion objective within tolerance, measured from
    * the ephemeris the same way the mission optimization tests do: the min and max altitude of the
-   * final {@code "Coasting"} stage must land within {@code toleranceRatio} of the target perigee and
-   * apogee respectively.
+   * final {@code "Coasting"} stage must land within {@code toleranceRatio} of the target perigee
+   * and apogee respectively.
    *
    * @param ephemeris the computed mission ephemeris
    * @param objective the orbit insertion objective (perigee/apogee targets)
@@ -316,11 +316,11 @@ public final class MissionLoadEvaluator implements PropellantLoadOptimizer.Evalu
   }
 
   /**
-   * Whether the sized stage's <em>own</em> residual clears the floor: {@code residual ≥ floorRatio ·
-   * load}, both read from the stage's entry in {@link MissionPerformanceReport#stagePropellants()}
-   * (bilan 10 §6). This keeps the sized (λ-scaled top) stage off flame-out — the whole-stack
-   * residual ratio is meaningless on an S1-dominated stack, but against the sized stage's own load
-   * it is the real margin (spec 09 §5).
+   * Whether the sized stage's <em>own</em> residual clears the floor: {@code residual ≥ floorRatio
+   * · load}, both read from the stage's entry in {@link
+   * MissionPerformanceReport#stagePropellants()} (bilan 10 §6). This keeps the sized (λ-scaled top)
+   * stage off flame-out — the whole-stack residual ratio is meaningless on an S1-dominated stack,
+   * but against the sized stage's own load it is the real margin (spec 09 §5).
    *
    * <p>Reading the stage's own entry rather than {@link
    * MissionPerformanceReport#totalPropellantResidual()} makes the predicate exact even when the
@@ -332,7 +332,8 @@ public final class MissionLoadEvaluator implements PropellantLoadOptimizer.Evalu
    * the pre-bilan-10 approximation, valid only when the sized stage is the final active one.
    *
    * @param report the mission performance report
-   * @param sizedStageIndex the stack index of the λ-scaled top stage, or negative when there is none
+   * @param sizedStageIndex the stack index of the λ-scaled top stage, or negative when there is
+   *     none
    * @param floorRatio the minimum residual as a fraction of that stage's own load
    * @return {@code true} when the residual is at or above the floor
    */
@@ -346,7 +347,8 @@ public final class MissionLoadEvaluator implements PropellantLoadOptimizer.Evalu
         .map(sp -> !(sp.loaded() > 0) || sp.residual() >= floorRatio * sp.loaded())
         .orElseGet(
             () -> {
-              // No per-stage split available (hand-built report): fall back to the stack-wide total.
+              // No per-stage split available (hand-built report): fall back to the stack-wide
+              // total.
               double load = report.totalPropellantLoaded();
               return !(load > 0) || report.totalPropellantResidual() >= floorRatio * load;
             });

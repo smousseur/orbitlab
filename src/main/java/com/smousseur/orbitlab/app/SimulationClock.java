@@ -40,7 +40,7 @@ public final class SimulationClock {
    *
    * @param oldTime the previous simulation time
    * @param newTime the new simulation time
-   * @param cause   what triggered the time change
+   * @param cause what triggered the time change
    */
   public record TimeChanged(AbsoluteDate oldTime, AbsoluteDate newTime, ChangeCause cause)
       implements ClockEvent {

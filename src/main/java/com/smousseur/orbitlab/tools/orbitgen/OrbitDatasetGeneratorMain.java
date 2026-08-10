@@ -13,6 +13,7 @@ import java.util.logging.Logger;
  * CLI entry point for generating pre-computed orbital path dataset files.
  *
  * <p>Usage:
+ *
  * <pre>
  *   OrbitDatasetGeneratorMain &lt;orekit-data.zip&gt; &lt;outputDir&gt;
  * </pre>
@@ -25,8 +26,8 @@ public final class OrbitDatasetGeneratorMain {
   /**
    * Entry point for orbit dataset generation.
    *
-   * <p>Initializes Orekit, validates the command-line arguments, and runs the
-   * {@link OrbitDatasetGenerator} to produce binary orbit files for all configured bodies.
+   * <p>Initializes Orekit, validates the command-line arguments, and runs the {@link
+   * OrbitDatasetGenerator} to produce binary orbit files for all configured bodies.
    *
    * @param args command-line arguments: {@code <orekit-data.zip> <outputDir>}
    * @throws Exception if initialization or generation fails

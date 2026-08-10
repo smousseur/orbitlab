@@ -130,8 +130,8 @@ public class AssetFactory {
    * <p>This is what makes {@code BloomFilter} in {@code GlowMode.Objects} pick the spatial up: that
    * mode re-renders the scene through the {@code Glow} technique, and a material that declares
    * neither a glow colour nor a glow map outputs black there and contributes nothing. Which
-   * parameter carries it depends on the material definition, so both spellings are handled: the
-   * PBR definitions the GLTF loader assigns call it {@code Emissive}, {@code Unshaded} and {@code
+   * parameter carries it depends on the material definition, so both spellings are handled: the PBR
+   * definitions the GLTF loader assigns call it {@code Emissive}, {@code Unshaded} and {@code
    * Lighting} call it {@code GlowColor}. A material that has neither is left alone — it simply will
    * not bloom.
    *
@@ -140,13 +140,13 @@ public class AssetFactory {
    * material — and for a star that is only the inward bleed over the limb, the halo itself being
    * geometry: see {@code CoronaView} and {@code PostFxAppState}.
    *
-   * <p><b>The disc is brought in line with its own halo.</b> On the PBR definitions the lit pass and
-   * the glow pass do not agree out of the box: the lit surface computes {@code emissive.rgb *
+   * <p><b>The disc is brought in line with its own halo.</b> On the PBR definitions the lit pass
+   * and the glow pass do not agree out of the box: the lit surface computes {@code emissive.rgb *
    * pow(emissive.a, EmissivePower) * EmissiveIntensity} while {@code PBRGlow.frag} computes plain
    * {@code EmissiveMap * Emissive}, ignoring both extra factors. With the stock {@code
    * EmissiveIntensity} of 2 the disc therefore saturates a stop ahead of the halo it casts, and
-   * lands visibly paler than it. Neutralising the factor makes both passes read the same product, so
-   * one tint governs the whole appearance and the halo is the disc's own colour rather than a
+   * lands visibly paler than it. Neutralising the factor makes both passes read the same product,
+   * so one tint governs the whole appearance and the halo is the disc's own colour rather than a
    * darker version of it.
    *
    * @param spatial the root spatial whose geometries should glow
@@ -200,11 +200,11 @@ public class AssetFactory {
    * Creates the material for a star's corona: a procedural radial glow, additive, that writes no
    * depth but still tests against it.
    *
-   * <p>Keeping the depth <em>test</em> is what does the masking, for free. The quad is camera-facing
-   * and centred on the star, so the near hemisphere of the star's own sphere lies in front of the
-   * quad's plane: every fragment inside the limb fails the test and only the annulus outside the
-   * silhouette is drawn. No stencil, no discard, no second pass — and anything that passes in front
-   * of the star occludes its glow correctly as a consequence.
+   * <p>Keeping the depth <em>test</em> is what does the masking, for free. The quad is
+   * camera-facing and centred on the star, so the near hemisphere of the star's own sphere lies in
+   * front of the quad's plane: every fragment inside the limb fails the test and only the annulus
+   * outside the silhouette is drawn. No stencil, no discard, no second pass — and anything that
+   * passes in front of the star occludes its glow correctly as a consequence.
    *
    * @param color glow colour; its alpha is the overall strength
    * @param coreRatio where the star's limb falls as a fraction of the quad's half-width, i.e. the

@@ -59,7 +59,8 @@ class NearFrustumDepthTest {
     float near = NearCameraSyncAppState.nearPlane(ViewMode.SPACECRAFT, SPACECRAFT_FOCUS_KM);
 
     // The model is ~100 m across and centred on the near origin, so the closest geometry the camera
-    // must still see is at (focus distance − 50 m). Clipping it would trade one artefact for a worse
+    // must still see is at (focus distance − 50 m). Clipping it would trade one artefact for a
+    // worse
     // one.
     assertTrue(
         near < SPACECRAFT_FOCUS_KM - 0.05f,
@@ -108,7 +109,8 @@ class NearFrustumDepthTest {
 
   @Test
   void loweringTheFarPlaneChangesNothing() {
-    // Recorded because the previous diagnostic prescribed exactly this, and it was the one fix in it
+    // Recorded because the previous diagnostic prescribed exactly this, and it was the one fix in
+    // it
     // that could not work: Δz ∝ z²/near as soon as far ≫ near (spec §5.3, §7.2).
     float near = NearCameraSyncAppState.nearPlane(ViewMode.SPACECRAFT, SPACECRAFT_FOCUS_KM);
 

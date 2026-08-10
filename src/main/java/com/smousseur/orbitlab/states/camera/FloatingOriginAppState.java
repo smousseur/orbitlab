@@ -44,8 +44,8 @@ public class FloatingOriginAppState extends BaseAppState {
    * Last near-frame offset that could be computed, kept as the fallback for the frames where it
    * cannot. A focused mission loses its ephemeris while it is being recomputed; snapping the offset
    * back to zero for those frames would drop the near-view origin onto the centre of the Earth and
-   * put the camera inside the planet. Holding the last known position leaves the view where the user
-   * left it until the new trajectory lands.
+   * put the camera inside the planet. Holding the last known position leaves the view where the
+   * user left it until the new trajectory lands.
    */
   private final Vector3f lastNearOffset = new Vector3f();
 
@@ -114,7 +114,8 @@ public class FloatingOriginAppState extends BaseAppState {
     // The far plane otherwise tracks the camera distance, which a transition drives down by four
     // orders of magnitude while the mode is still SOLAR: it would collapse to its 10-unit absolute
     // minimum somewhere around the middle of a fly-in, sweeping the Sun and every orbit line out of
-    // the far viewport one by one, and drop them all back in when the mode finally flipped. The cost
+    // the far viewport one by one, and drop them all back in when the mode finally flipped. The
+    // cost
     // is a coarser depth range in the far viewport for the 2.5 s a transition lasts, which that
     // viewport already lives with permanently in planet view.
     orbitCam.setFarFloor(view.isPlanetScale() ? PLANET_MODE_FAR_MIN : 0f);
@@ -122,8 +123,8 @@ public class FloatingOriginAppState extends BaseAppState {
 
   /**
    * Translation to apply to the near frame so that the focused spacecraft lands on the near-view
-   * origin: the negation of its position at the current instant, in near render units. Falls back to
-   * {@link #lastNearOffset} when no mission is focused or its trajectory is not available.
+   * origin: the negation of its position at the current instant, in near render units. Falls back
+   * to {@link #lastNearOffset} when no mission is focused or its trajectory is not available.
    *
    * <p><b>Why this reads the ephemeris and not the spacecraft's scene anchor.</b> It used to read
    * the anchor, which made this state a <em>consumer</em> of what {@code
@@ -147,9 +148,7 @@ public class FloatingOriginAppState extends BaseAppState {
    */
   private Vector3f nearFrameOffset(MissionId missionId) {
     MissionEntry entry =
-        missionId == null
-            ? null
-            : context.missionContext().findMission(missionId).orElse(null);
+        missionId == null ? null : context.missionContext().findMission(missionId).orElse(null);
     MissionEphemeris ephemeris = entry == null ? null : entry.getEphemeris().orElse(null);
     if (ephemeris == null) {
       return lastNearOffset;

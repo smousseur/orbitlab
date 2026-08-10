@@ -9,16 +9,19 @@ import java.util.Objects;
 /**
  * Immutable configuration for the V1 ephemeris dataset generator.
  *
- * <p>Specifies all parameters needed to generate ephemeris files: input data paths,
- * output directory, the list of bodies to process, time range, parallelism settings,
- * compression level, and per-body sampling parameters.
+ * <p>Specifies all parameters needed to generate ephemeris files: input data paths, output
+ * directory, the list of bodies to process, time range, parallelism settings, compression level,
+ * and per-body sampling parameters.
  *
- * @param orekitDataZipPath path to the Orekit data zip file used for celestial mechanics computations
- * @param orekitDataIdSha256Hex SHA-256 hex digest of the Orekit data zip, embedded in output files for provenance
+ * @param orekitDataZipPath path to the Orekit data zip file used for celestial mechanics
+ *     computations
+ * @param orekitDataIdSha256Hex SHA-256 hex digest of the Orekit data zip, embedded in output files
+ *     for provenance
  * @param outputDir directory where generated ephemeris binary files are written
  * @param bodiesInOrder ordered list of solar system bodies to generate data for
  * @param datasetStartTaiOffsetSeconds TAI offset in seconds for the dataset start epoch
- * @param datasetEndTaiOffsetSecondsExclusive TAI offset in seconds for the exclusive dataset end epoch
+ * @param datasetEndTaiOffsetSecondsExclusive TAI offset in seconds for the exclusive dataset end
+ *     epoch
  * @param computeThreads number of threads in the shared compute pool
  * @param maxBodiesInParallel maximum number of bodies processed concurrently
  * @param maxChunksInFlightPerBody maximum number of in-flight chunks per body (bounds memory)
@@ -51,9 +54,9 @@ public record GeneratorConfigV1(
   /**
    * Creates a default V1 configuration with conservative sampling rates and 30-day chunks.
    *
-   * <p>Computes the SHA-256 hash of the Orekit data zip for provenance tracking.
-   * The default configuration uses 6 compute threads, allows 2 bodies in parallel,
-   * and applies Zstd compression level 3.
+   * <p>Computes the SHA-256 hash of the Orekit data zip for provenance tracking. The default
+   * configuration uses 6 compute threads, allows 2 bodies in parallel, and applies Zstd compression
+   * level 3.
    *
    * @param orekitZip path to the Orekit data zip file
    * @param outputDir directory where generated files will be written

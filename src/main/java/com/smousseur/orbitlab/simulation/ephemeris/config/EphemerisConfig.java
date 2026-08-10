@@ -7,14 +7,15 @@ import java.util.Objects;
 /**
  * Immutable configuration for ephemeris computation and buffering.
  *
- * <p>Defines the sample step size, window extent (points back and forward), and the known
- * sidereal orbital periods for each solar system body. Use {@link #defaultSolarSystem()} to
- * obtain a configuration with reasonable defaults.
+ * <p>Defines the sample step size, window extent (points back and forward), and the known sidereal
+ * orbital periods for each solar system body. Use {@link #defaultSolarSystem()} to obtain a
+ * configuration with reasonable defaults.
  *
  * @param sampleStepSeconds the time interval between consecutive ephemeris samples in seconds
  * @param windowPointsBack the number of sample points before the center of the window
  * @param windowPointsForward the number of sample points after the center of the window
- * @param orbitalPeriodSecondsByBody the approximate sidereal orbital period for each body in seconds
+ * @param orbitalPeriodSecondsByBody the approximate sidereal orbital period for each body in
+ *     seconds
  */
 public record EphemerisConfig(
     double sampleStepSeconds,
@@ -61,9 +62,9 @@ public record EphemerisConfig(
   }
 
   /**
-   * Creates a default configuration with approximate sidereal orbital periods for all
-   * solar system bodies, a 10-minute sample step, and a window spanning roughly 33 hours
-   * back and 66 hours forward.
+   * Creates a default configuration with approximate sidereal orbital periods for all solar system
+   * bodies, a 10-minute sample step, and a window spanning roughly 33 hours back and 66 hours
+   * forward.
    *
    * @return a default solar system ephemeris configuration
    */

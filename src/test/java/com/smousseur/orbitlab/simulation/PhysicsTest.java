@@ -126,20 +126,20 @@ class PhysicsTest {
   @Test
   void computeRadialVelocity_pureRadial_equalsVelocityMagnitude() {
     Frame gcrf = OrekitService.get().gcrf();
-    PVCoordinates pv =
-        new PVCoordinates(new Vector3D(7_000_000, 0, 0), new Vector3D(1000, 0, 0));
+    PVCoordinates pv = new PVCoordinates(new Vector3D(7_000_000, 0, 0), new Vector3D(1000, 0, 0));
     SpacecraftState state =
-        new SpacecraftState(new CartesianOrbit(pv, gcrf, AbsoluteDate.J2000_EPOCH, Constants.WGS84_EARTH_MU));
+        new SpacecraftState(
+            new CartesianOrbit(pv, gcrf, AbsoluteDate.J2000_EPOCH, Constants.WGS84_EARTH_MU));
     assertEquals(1000.0, Physics.computeRadialVelocity(state), 1e-6);
   }
 
   @Test
   void computeRadialVelocity_pureTangential_returnsZero() {
     Frame gcrf = OrekitService.get().gcrf();
-    PVCoordinates pv =
-        new PVCoordinates(new Vector3D(7_000_000, 0, 0), new Vector3D(0, 7500, 0));
+    PVCoordinates pv = new PVCoordinates(new Vector3D(7_000_000, 0, 0), new Vector3D(0, 7500, 0));
     SpacecraftState state =
-        new SpacecraftState(new CartesianOrbit(pv, gcrf, AbsoluteDate.J2000_EPOCH, Constants.WGS84_EARTH_MU));
+        new SpacecraftState(
+            new CartesianOrbit(pv, gcrf, AbsoluteDate.J2000_EPOCH, Constants.WGS84_EARTH_MU));
     assertEquals(0.0, Physics.computeRadialVelocity(state), 1e-6);
   }
 
@@ -148,8 +148,7 @@ class PhysicsTest {
   @Test
   void applyPitchKick_zeroAngle_velocityUnchanged() {
     Frame gcrf = OrekitService.get().gcrf();
-    PVCoordinates pv =
-        new PVCoordinates(new Vector3D(6_600_000, 0, 0), new Vector3D(0, 100, 200));
+    PVCoordinates pv = new PVCoordinates(new Vector3D(6_600_000, 0, 0), new Vector3D(0, 100, 200));
     SpacecraftState state =
         new SpacecraftState(
                 new CartesianOrbit(pv, gcrf, AbsoluteDate.J2000_EPOCH, Constants.WGS84_EARTH_MU))
@@ -167,8 +166,7 @@ class PhysicsTest {
   @Test
   void applyPitchKick_massPreserved() {
     Frame gcrf = OrekitService.get().gcrf();
-    PVCoordinates pv =
-        new PVCoordinates(new Vector3D(6_600_000, 0, 0), new Vector3D(0, 0, 300));
+    PVCoordinates pv = new PVCoordinates(new Vector3D(6_600_000, 0, 0), new Vector3D(0, 0, 300));
     SpacecraftState state =
         new SpacecraftState(
                 new CartesianOrbit(pv, gcrf, AbsoluteDate.J2000_EPOCH, Constants.WGS84_EARTH_MU))
@@ -181,8 +179,7 @@ class PhysicsTest {
   @Test
   void applyPitchKick_positionUnchanged() {
     Frame gcrf = OrekitService.get().gcrf();
-    PVCoordinates pv =
-        new PVCoordinates(new Vector3D(6_600_000, 0, 0), new Vector3D(0, 0, 300));
+    PVCoordinates pv = new PVCoordinates(new Vector3D(6_600_000, 0, 0), new Vector3D(0, 0, 300));
     SpacecraftState state =
         new SpacecraftState(
                 new CartesianOrbit(pv, gcrf, AbsoluteDate.J2000_EPOCH, Constants.WGS84_EARTH_MU))

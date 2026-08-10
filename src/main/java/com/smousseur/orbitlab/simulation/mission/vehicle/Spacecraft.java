@@ -22,8 +22,8 @@ public record Spacecraft(
   }
 
   /**
-   * Historical default payload (150 kg, no usable propellant). Kept for the legacy mission path
-   * and test fixtures; wizard payloads come from the {@code Payloads} catalog.
+   * Historical default payload (150 kg, no usable propellant). Kept for the legacy mission path and
+   * test fixtures; wizard payloads come from the {@code Payloads} catalog.
    */
   public static final Spacecraft LEGACY =
       new Spacecraft(150, 0, PropulsionSystem.getSpacecraftPropulsion());

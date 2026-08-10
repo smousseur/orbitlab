@@ -6,8 +6,8 @@ import java.util.Objects;
 import java.util.Optional;
 
 /**
- * Aggregated mass and ΔV accounting of a computed mission. Instrument for calibrating the
- * analytic propellant budget (residual propellant, measured ascent losses) — spec 06 §4.7.
+ * Aggregated mass and ΔV accounting of a computed mission. Instrument for calibrating the analytic
+ * propellant budget (residual propellant, measured ascent losses) — spec 06 §4.7.
  *
  * <p>Residual propellant is reported twice, at two different granularities:
  *

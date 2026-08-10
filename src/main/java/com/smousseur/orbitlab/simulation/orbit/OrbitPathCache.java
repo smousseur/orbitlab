@@ -39,7 +39,8 @@ public final class OrbitPathCache {
    *
    * @param pvSource the ephemeris data source for sampling body positions
    * @param ephemerisConfig the ephemeris configuration providing orbital periods
-   * @param orbitWindowConfig the orbit window configuration controlling point counts and step limits
+   * @param orbitWindowConfig the orbit window configuration controlling point counts and step
+   *     limits
    * @param executor the executor on which to run asynchronous path computations
    */
   public OrbitPathCache(

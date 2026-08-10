@@ -16,8 +16,8 @@ import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.orekit.time.AbsoluteDate;
 
 /**
- * MVC presenter that drives a {@link BodyView} by computing and applying the planet's
- * position and rotation from ephemeris data at a given simulation time.
+ * MVC presenter that drives a {@link BodyView} by computing and applying the planet's position and
+ * rotation from ephemeris data at a given simulation time.
  *
  * @param body the solar system body this presenter manages
  * @param view the view that renders the planet

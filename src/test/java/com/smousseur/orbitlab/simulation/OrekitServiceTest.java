@@ -40,8 +40,10 @@ class OrekitServiceTest {
     double maxStep = OrekitService.burnLimitedMaxStep(light);
     double burnToZero = burnToZeroSeconds(981_000, 348, lightMass);
 
-    assertTrue(maxStep < OrekitService.SAFE_MAX_STEP, "a fast-depleting burn must tighten the step");
-    assertTrue(maxStep < burnToZero, "max step must stay below the mass-depletion time (invariant)");
+    assertTrue(
+        maxStep < OrekitService.SAFE_MAX_STEP, "a fast-depleting burn must tighten the step");
+    assertTrue(
+        maxStep < burnToZero, "max step must stay below the mass-depletion time (invariant)");
     assertEquals(burnToZero / 1.5, maxStep, 1e-6, "tightened step keeps a 1/1.5 mass margin");
   }
 

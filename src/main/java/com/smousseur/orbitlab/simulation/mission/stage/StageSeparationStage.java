@@ -17,16 +17,16 @@ import org.orekit.time.AbsoluteDate;
  * Explicit separation of the spent active stage between two mission stages (spec 06 I5, decision
  * S4). On entry the state mass drops to the exact reference mass of the stack above, so {@code
  * resolveActiveStage} activates the next vehicle (e.g. the payload's kick motor once the upper
- * stage separates) without any ε-boundary ambiguity. A short settling coast follows before the
- * next stage configures its burn.
+ * stage separates) without any ε-boundary ambiguity. A short settling coast follows before the next
+ * stage configures its burn.
  *
  * <p><b>Which stage gets dropped.</b> The stage jettisoned is whichever one the mass accounting
- * says is active — an assumption that only holds while the flight profile consumes the stages
- * below it exactly as calibrated. Pass an {@code expectedStageIndex} to make that assumption
- * explicit: the separation then refuses to drop the wrong stage and fails fast instead of silently
- * degrading the rest of the profile (bilan 10 §6 follow-up — on the GEO profile a lighter upper
- * stage makes the gravity turn stop before S1 is dry, leaving S1 active, so an unchecked "S2
- * separation" jettisoned S1 and let S2 masquerade as the payload's kick motor).
+ * says is active — an assumption that only holds while the flight profile consumes the stages below
+ * it exactly as calibrated. Pass an {@code expectedStageIndex} to make that assumption explicit:
+ * the separation then refuses to drop the wrong stage and fails fast instead of silently degrading
+ * the rest of the profile (bilan 10 §6 follow-up — on the GEO profile a lighter upper stage makes
+ * the gravity turn stop before S1 is dry, leaving S1 active, so an unchecked "S2 separation"
+ * jettisoned S1 and let S2 masquerade as the payload's kick motor).
  */
 public class StageSeparationStage extends MissionStage {
   private static final Logger logger = LogManager.getLogger(StageSeparationStage.class);
@@ -55,11 +55,10 @@ public class StageSeparationStage extends MissionStage {
    * @param name the human-readable name of this stage
    * @param separationCoastDuration the settling coast after separation (s), typically the
    *     launcher's interstage coast
-   * @param expectedStageIndex the stack index of the stage this separation is designed to
-   *     jettison, or {@link #ANY_STAGE} to accept whichever stage is active
+   * @param expectedStageIndex the stack index of the stage this separation is designed to jettison,
+   *     or {@link #ANY_STAGE} to accept whichever stage is active
    */
-  public StageSeparationStage(
-      String name, double separationCoastDuration, int expectedStageIndex) {
+  public StageSeparationStage(String name, double separationCoastDuration, int expectedStageIndex) {
     this(name, separationCoastDuration, expectedStageIndex, true);
   }
 
@@ -80,8 +79,8 @@ public class StageSeparationStage extends MissionStage {
    * @param name the human-readable name of this stage
    * @param separationCoastDuration the settling coast after separation (s), typically the
    *     launcher's interstage coast
-   * @param expectedStageIndex the stack index of the stage this separation is designed to
-   *     jettison, or {@link #ANY_STAGE} to accept whichever stage is active
+   * @param expectedStageIndex the stack index of the stage this separation is designed to jettison,
+   *     or {@link #ANY_STAGE} to accept whichever stage is active
    * @param logJettison whether firing logs the jettison; {@code false} on an optimization chain
    */
   public StageSeparationStage(
@@ -127,7 +126,8 @@ public class StageSeparationStage extends MissionStage {
 
   @Override
   public void configure(NumericalPropagator propagator, Mission mission) {
-    // The coast is measured from the propagator's own entry state, not from mission.getCurrentState():
+    // The coast is measured from the propagator's own entry state, not from
+    // mission.getCurrentState():
     // the two are the same state (the runner sets both), but only the propagator's is private to
     // this run. Once the ascent is optimized as a chain, this method runs on the parallel CMA-ES
     // exploration threads, which share the mission (spec 01 §5.4).

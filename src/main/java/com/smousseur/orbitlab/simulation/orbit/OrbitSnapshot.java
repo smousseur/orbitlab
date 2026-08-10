@@ -9,9 +9,9 @@ import java.util.Objects;
 /**
  * An immutable snapshot of a celestial body's computed orbit positions at a specific point in time.
  *
- * <p>Contains a sequence of heliocentric position vectors centered on a reference date,
- * along with the orbital period and sampling step used to generate them. Each snapshot
- * carries a version number for change detection.
+ * <p>Contains a sequence of heliocentric position vectors centered on a reference date, along with
+ * the orbital period and sampling step used to generate them. Each snapshot carries a version
+ * number for change detection.
  *
  * @param body the celestial body this snapshot represents
  * @param centerDate the center date around which positions are computed

@@ -32,8 +32,9 @@ import org.orekit.time.AbsoluteDate;
  * Per-vertex phase colours on the drawn trajectory (spec {@code
  * specs/graphics-effects/mission-phase-encoding.md} §5.3).
  *
- * <p>No JME application: {@link Node} and {@link Geometry} are pure math, and the asset manager only
- * ever builds an unshaded material — the same arrangement {@link MissionTrajectoryOriginTest} uses.
+ * <p>No JME application: {@link Node} and {@link Geometry} are pure math, and the asset manager
+ * only ever builds an unshaded material — the same arrangement {@link MissionTrajectoryOriginTest}
+ * uses.
  */
 class MissionTrajectoryColorTest {
 

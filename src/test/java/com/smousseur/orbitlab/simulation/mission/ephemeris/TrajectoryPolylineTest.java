@@ -12,13 +12,13 @@ import org.junit.jupiter.api.Test;
 import org.orekit.time.AbsoluteDate;
 
 /**
- * The display product's two guarantees (spec {@code
- * specs/mission-horizon/01-horizon-explicite.md} §6): it never exceeds the vertex budget, and it
- * always spans the whole flown trajectory — first and last sample included.
+ * The display product's two guarantees (spec {@code specs/mission-horizon/01-horizon-explicite.md}
+ * §6): it never exceeds the vertex budget, and it always spans the whole flown trajectory — first
+ * and last sample included.
  *
  * <p>The second one is the regression under test. The renderer used to walk the ephemeris backwards
- * from the end and stop after the budget, so on a long mission the ascent silently vanished from the
- * drawn line. Any decimation is acceptable; dropping the beginning is not.
+ * from the end and stop after the budget, so on a long mission the ascent silently vanished from
+ * the drawn line. Any decimation is acceptable; dropping the beginning is not.
  */
 class TrajectoryPolylineTest {
 
@@ -83,7 +83,9 @@ class TrajectoryPolylineTest {
         "the trail must end where the spacecraft is");
   }
 
-  /** Decimation must stay monotonic in time, or {@code indexUpTo}'s binary search is meaningless. */
+  /**
+   * Decimation must stay monotonic in time, or {@code indexUpTo}'s binary search is meaningless.
+   */
   @Test
   void overTheBudget_timesStayIncreasing() {
     TrajectoryPolyline trail = polylineOf(43_200);
@@ -113,7 +115,9 @@ class TrajectoryPolylineTest {
     assertEquals(99, trail.indexUpTo(T0.shiftedBy(5_000.0)));
   }
 
-  /** A renderer holds the trail across frames, so the ephemeris must hand out one shared instance. */
+  /**
+   * A renderer holds the trail across frames, so the ephemeris must hand out one shared instance.
+   */
   @Test
   void missionEphemeris_returnsTheSameTrailEveryTime() {
     MissionEphemeris ephemeris =
@@ -154,9 +158,9 @@ class TrajectoryPolylineTest {
   }
 
   /**
-   * The regression this class exists to prevent, in its phase form. A vertical ascent is ~15 samples
-   * at the 1 s burn step; on a long horizon the stride exceeds that, and a plain stride would delete
-   * the whole phase from the drawn line, transition marker included.
+   * The regression this class exists to prevent, in its phase form. A vertical ascent is ~15
+   * samples at the 1 s burn step; on a long horizon the stride exceeds that, and a plain stride
+   * would delete the whole phase from the drawn line, transition marker included.
    */
   @Test
   void aRunShorterThanTheStrideKeepsItsFirstVertex() {

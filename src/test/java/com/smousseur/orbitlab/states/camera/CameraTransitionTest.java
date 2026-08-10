@@ -161,7 +161,8 @@ class CameraTransitionTest {
             FLAT,
             new CameraOrientation(1f, 0f));
 
-    // Full lead window in, the orientation has arrived while the pivot is barely a third of the way.
+    // Full lead window in, the orientation has arrived while the pivot is barely a third of the
+    // way.
     t.advance(DURATION * LEAD);
     assertEquals(1f, t.orientationProgress(), TOLERANCE);
     assertEquals(LEAD, t.easedProgress(), TOLERANCE);

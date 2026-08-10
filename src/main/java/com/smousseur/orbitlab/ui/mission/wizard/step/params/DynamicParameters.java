@@ -57,8 +57,8 @@ public abstract class DynamicParameters {
    * shows while the user leaves it on auto.
    *
    * <p>It lives here, and not in {@code StepParameters}, because the number is a function of the
-   * target orbit: only the type's own panel knows which of its fields carry the semi-major axis. The
-   * step asks, the panel answers.
+   * target orbit: only the type's own panel knows which of its fields carry the semi-major axis.
+   * The step asks, the panel answers.
    *
    * <p>A display estimate, computed on the orbit being <em>aimed at</em>. The horizon that is
    * actually flown resolves against the orbit <em>achieved</em>, which the wizard cannot know; the
@@ -69,8 +69,8 @@ public abstract class DynamicParameters {
   public abstract double defaultHorizonDays();
 
   /**
-   * Days spanned by {@code revolutions} turns of a circular-equivalent orbit of the given semi-major
-   * axis, via the Keplerian period {@code 2π√(a³/µ)}.
+   * Days spanned by {@code revolutions} turns of a circular-equivalent orbit of the given
+   * semi-major axis, via the Keplerian period {@code 2π√(a³/µ)}.
    *
    * @param revolutions the number of revolutions
    * @param semiMajorAxisMeters the semi-major axis in meters, measured from Earth's centre

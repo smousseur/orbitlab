@@ -106,8 +106,7 @@ public class BillboardIconView {
     container.addMouseListener(
         new DefaultMouseListener() {
           @Override
-          public void mouseButtonEvent(
-              MouseButtonEvent event, Spatial target, Spatial capture) {
+          public void mouseButtonEvent(MouseButtonEvent event, Spatial target, Spatial capture) {
             if (event.isPressed() && event.getButtonIndex() == MouseInput.BUTTON_LEFT) {
               onClick.run();
             }

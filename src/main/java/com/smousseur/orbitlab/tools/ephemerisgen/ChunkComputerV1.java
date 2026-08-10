@@ -19,12 +19,12 @@ import org.orekit.utils.PVCoordinates;
 /**
  * Computes a single ephemeris data chunk for a celestial body in the V1 binary format.
  *
- * <p>Each chunk contains position/velocity (PV) samples and rotation (quaternion) samples
- * for a fixed time window. Samples are serialized as little-endian IEEE 754 doubles,
- * compressed with Zstd, and packaged with CRC-32 integrity checksums.
+ * <p>Each chunk contains position/velocity (PV) samples and rotation (quaternion) samples for a
+ * fixed time window. Samples are serialized as little-endian IEEE 754 doubles, compressed with
+ * Zstd, and packaged with CRC-32 integrity checksums.
  *
- * <p>This class implements {@link Callable} so it can be submitted to an executor for
- * parallel chunk computation.
+ * <p>This class implements {@link Callable} so it can be submitted to an executor for parallel
+ * chunk computation.
  */
 final class ChunkComputerV1 implements Callable<BodyFileWriterV1.ChunkResult> {
 

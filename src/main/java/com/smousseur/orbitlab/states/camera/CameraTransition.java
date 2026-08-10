@@ -9,11 +9,11 @@ import java.util.function.Supplier;
 /**
  * One camera transition in flight: the endpoints it interpolates between, and how far along it is.
  *
- * <p>Mutable — {@link #advance(float)} is called once per frame — and deliberately free of any
- * JME3 or Orekit dependency beyond {@link Vector3f}, so the interpolation can be pinned by a plain
- * unit test. Everything that has to look at the scene graph lives behind the two pivot suppliers,
- * which {@link CameraTransitionAppState} provides and re-evaluates on every frame: the simulation
- * clock keeps running during a transition, so both endpoints are moving targets.
+ * <p>Mutable — {@link #advance(float)} is called once per frame — and deliberately free of any JME3
+ * or Orekit dependency beyond {@link Vector3f}, so the interpolation can be pinned by a plain unit
+ * test. Everything that has to look at the scene graph lives behind the two pivot suppliers, which
+ * {@link CameraTransitionAppState} provides and re-evaluates on every frame: the simulation clock
+ * keeps running during a transition, so both endpoints are moving targets.
  *
  * <p>The orientation is the exception — it is fixed at construction. Over 2.5 real seconds the
  * bearing from one body to another moves by less than a thousandth of a degree even at ×1000, and
@@ -134,12 +134,12 @@ final class CameraTransition {
    * The camera distance for the current frame.
    *
    * <p>Interpolated <em>geometrically</em>, not linearly: the targets span nine orders of magnitude
-   * (800 units for the whole system down to {@code 5e-7} for a spacecraft, both in solar units), and
-   * a linear ramp between two such numbers spends almost its entire duration in the neighbourhood of
-   * the larger one before collapsing over the last few frames — the transition would read as a
-   * stall followed by a jump cut. A constant ratio per unit of eased progress is also what the
-   * camera's own zoom already does (see {@code OrbitCameraAppState.applyWheelZoom}, an exponential
-   * dolly), so a transition and a wheel zoom covering the same span now feel alike.
+   * (800 units for the whole system down to {@code 5e-7} for a spacecraft, both in solar units),
+   * and a linear ramp between two such numbers spends almost its entire duration in the
+   * neighbourhood of the larger one before collapsing over the last few frames — the transition
+   * would read as a stall followed by a jump cut. A constant ratio per unit of eased progress is
+   * also what the camera's own zoom already does (see {@code OrbitCameraAppState.applyWheelZoom},
+   * an exponential dolly), so a transition and a wheel zoom covering the same span now feel alike.
    *
    * @return the interpolated distance
    */

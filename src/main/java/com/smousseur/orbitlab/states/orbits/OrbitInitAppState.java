@@ -23,12 +23,12 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 /**
- * Application state that loads precomputed orbital path data from disk and builds the
- * initial orbit line geometry for each configured celestial body.
+ * Application state that loads precomputed orbital path data from disk and builds the initial orbit
+ * line geometry for each configured celestial body.
  *
- * <p>During initialization, reads binary orbit dataset files containing heliocentric
- * position samples and creates colored line-strip geometries attached to the scene graph's
- * orbit layer. This provides the static visual representation of planetary orbits.
+ * <p>During initialization, reads binary orbit dataset files containing heliocentric position
+ * samples and creates colored line-strip geometries attached to the scene graph's orbit layer. This
+ * provides the static visual representation of planetary orbits.
  */
 public class OrbitInitAppState extends BaseAppState {
 
@@ -68,7 +68,8 @@ public class OrbitInitAppState extends BaseAppState {
   private List<Vector3D> readOrbitData(SolarSystemBody body) throws IOException {
     Path orbitFile = this.datasetDir.resolve(body.name() + "-orbit.bin");
     if (!Files.isRegularFile(orbitFile)) {
-      logger.info("No orbit dataset file for {} — will be computed at runtime: {}", body, orbitFile);
+      logger.info(
+          "No orbit dataset file for {} — will be computed at runtime: {}", body, orbitFile);
       return null;
     }
     List<Vector3D> results = new ArrayList<>();

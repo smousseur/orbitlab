@@ -66,9 +66,9 @@ public class MissionWizardWidget implements AutoCloseable {
 
   /**
    * Opens the wizard, prefilled on the values of an existing mission when {@code initialValues} is
-   * non-null — the edit mode. Editing differs from creating on three points: the header says so, the
-   * last step confirms with "Update" rather than "Create", and the mission type is locked, since a
-   * mission's stages, propellant budget and eligible payloads all derive from it.
+   * non-null — the edit mode. Editing differs from creating on three points: the header says so,
+   * the last step confirms with "Update" rather than "Create", and the mission type is locked,
+   * since a mission's stages, propellant budget and eligible payloads all derive from it.
    *
    * <p>The type on display is the one {@code context.missionContext()} currently selects, so a
    * caller opening the wizard on a mission must select that mission's type first: every step reads
@@ -221,9 +221,9 @@ public class MissionWizardWidget implements AutoCloseable {
   /**
    * Keeps the wizard open on a parameter the application cannot use, the offending field marked.
    *
-   * <p>Both checks run, and neither short-circuits the other: a user who has a bad date <em>and</em>
-   * a bad duration should see both fields marked at once rather than discover the second only after
-   * fixing the first.
+   * <p>Both checks run, and neither short-circuits the other: a user who has a bad date
+   * <em>and</em> a bad duration should see both fields marked at once rather than discover the
+   * second only after fixing the first.
    */
   private boolean parametersRefused() {
     Optional<String> dateError = stepParameters.validateLaunchDate();
@@ -265,8 +265,8 @@ public class MissionWizardWidget implements AutoCloseable {
   }
 
   /**
-   * Sets what the last step's confirmation button does with the aggregated values — create a mission
-   * or update the one the wizard was opened on.
+   * Sets what the last step's confirmation button does with the aggregated values — create a
+   * mission or update the one the wizard was opened on.
    *
    * @param action the submit handler, or {@code null} to ignore submissions
    */

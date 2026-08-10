@@ -53,8 +53,8 @@ public final class SimulationClockAppState extends BaseAppState implements Actio
   }
 
   /**
-   * Sets the multiplier used when increasing or decreasing simulation speed via keyboard input.
-   * The speed is multiplied by this factor on speed-up and divided by it on speed-down.
+   * Sets the multiplier used when increasing or decreasing simulation speed via keyboard input. The
+   * speed is multiplied by this factor on speed-up and divided by it on speed-down.
    *
    * @param speedFactor the speed multiplier, must be finite and greater than 1.0
    * @throws IllegalArgumentException if the factor is not finite or is less than or equal to 1.0
@@ -67,8 +67,8 @@ public final class SimulationClockAppState extends BaseAppState implements Actio
   }
 
   /**
-   * Sets the time jump interval in seconds used when seeking forward or backward via
-   * the arrow keys.
+   * Sets the time jump interval in seconds used when seeking forward or backward via the arrow
+   * keys.
    *
    * @param seekStepSeconds the seek step in seconds, must be finite and positive
    * @throws IllegalArgumentException if the value is not finite or is less than or equal to zero

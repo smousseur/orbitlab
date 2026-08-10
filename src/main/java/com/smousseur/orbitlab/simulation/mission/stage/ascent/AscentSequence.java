@@ -72,8 +72,7 @@ public final class AscentSequence {
             constraints,
             AscentInstrumentation.REPLAY),
         separation(profile.interstageCoastDuration()),
-        new GravityTurnSecondBurnStage(
-            SECOND_BURN_NAME, planRef, AscentInstrumentation.REPLAY));
+        new GravityTurnSecondBurnStage(SECOND_BURN_NAME, planRef, AscentInstrumentation.REPLAY));
   }
 
   /**

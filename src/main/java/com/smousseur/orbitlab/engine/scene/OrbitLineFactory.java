@@ -24,9 +24,9 @@ import org.orekit.time.AbsoluteDate;
 /**
  * Factory for creating and updating JME3 line-strip geometries that represent orbital paths.
  *
- * <p>Supports both heliocentric and body-relative orbit visualizations by converting
- * positions from ICRF meters to JME render units and axes. All methods are static;
- * this class cannot be instantiated.
+ * <p>Supports both heliocentric and body-relative orbit visualizations by converting positions from
+ * ICRF meters to JME render units and axes. All methods are static; this class cannot be
+ * instantiated.
  */
 public final class OrbitLineFactory {
 
@@ -36,11 +36,11 @@ public final class OrbitLineFactory {
   private OrbitLineFactory() {}
 
   /**
-   * Builds a heliocentric line-strip geometry from an orbit path.
-   * The orbit positions are rendered relative to the solar system origin.
+   * Builds a heliocentric line-strip geometry from an orbit path. The orbit positions are rendered
+   * relative to the solar system origin.
    *
-   * @param path      the orbit path containing heliocentric positions
-   * @param color     the color of the line strip
+   * @param path the orbit path containing heliocentric positions
+   * @param color the color of the line strip
    * @param lineWidth the width of the rendered line
    * @return a JME3 geometry representing the orbit as a line strip
    */
@@ -50,12 +50,12 @@ public final class OrbitLineFactory {
   }
 
   /**
-   * Builds a closed line-loop geometry from a list of position vectors, rendered
-   * relative to a given solar system body.
+   * Builds a closed line-loop geometry from a list of position vectors, rendered relative to a
+   * given solar system body.
    *
-   * @param body      the solar system body used for naming the geometry
-   * @param pts       the list of position vectors in meters
-   * @param color     the color of the line loop
+   * @param body the solar system body used for naming the geometry
+   * @param pts the list of position vectors in meters
+   * @param color the color of the line loop
    * @param lineWidth the width of the rendered line
    * @return a JME3 geometry representing the orbit as a closed line loop
    */
@@ -88,14 +88,15 @@ public final class OrbitLineFactory {
   }
 
   /**
-   * Builds a line-strip geometry from an orbit path, optionally centered on a given body.
-   * When a center body is provided, each position is adjusted by subtracting the center
-   * body's heliocentric position at the corresponding time step.
+   * Builds a line-strip geometry from an orbit path, optionally centered on a given body. When a
+   * center body is provided, each position is adjusted by subtracting the center body's
+   * heliocentric position at the corresponding time step.
    *
-   * @param path       the orbit path containing heliocentric positions and timing data
-   * @param centerBody the body to use as the reference center, or {@code null} for heliocentric coordinates
-   * @param color      the color of the line strip
-   * @param lineWidth  the width of the rendered line
+   * @param path the orbit path containing heliocentric positions and timing data
+   * @param centerBody the body to use as the reference center, or {@code null} for heliocentric
+   *     coordinates
+   * @param color the color of the line strip
+   * @param lineWidth the width of the rendered line
    * @return a JME3 geometry representing the orbit as a line strip
    */
   public static Geometry buildBodyRelativeLineStrip(

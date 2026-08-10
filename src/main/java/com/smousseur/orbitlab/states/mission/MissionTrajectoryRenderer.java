@@ -103,13 +103,13 @@ public final class MissionTrajectoryRenderer {
    * implementation walked backwards from the end and stopped after the budget, so on a mission
    * longer than the budget the ascent silently disappeared from the line.
    *
-   * <p><b>Vertices are written relative to the spacecraft, and the geometry carries the spacecraft's
-   * position.</b> Writing them in absolute GCRF units put ~6778 in a {@code float} — one {@code ulp}
-   * is already half a metre there — while the near frame translated the geometry by {@code −p} of
-   * the same magnitude, so the GPU cancelled two large operands and what survived was the rounding:
-   * about a metre, redrawn <em>differently</em> on every frame because {@code p} moves ~130 m per
-   * frame. Seen from 500 m away that is some four pixels of shimmer, and it is why the line danced
-   * around a spacecraft model that was itself rock steady (spec {@code
+   * <p><b>Vertices are written relative to the spacecraft, and the geometry carries the
+   * spacecraft's position.</b> Writing them in absolute GCRF units put ~6778 in a {@code float} —
+   * one {@code ulp} is already half a metre there — while the near frame translated the geometry by
+   * {@code −p} of the same magnitude, so the GPU cancelled two large operands and what survived was
+   * the rounding: about a metre, redrawn <em>differently</em> on every frame because {@code p}
+   * moves ~130 m per frame. Seen from 500 m away that is some four pixels of shimmer, and it is why
+   * the line danced around a spacecraft model that was itself rock steady (spec {@code
    * specs/graphics-effects/spacecraft-view-artefacts.md} §4).
    *
    * <p>Subtracting the tip in {@code double} first bounds a vertex's error by its distance to the
@@ -118,9 +118,9 @@ public final class MissionTrajectoryRenderer {
    * The translation put back on the geometry goes through {@link
    * JmeVectorAdapter#toJmeBodyRelativePosition}, the same path {@code SpacecraftPresenter} and
    * {@code FloatingOriginAppState} use, so {@code nearFrame(−p) + line(+p)} is exactly zero rather
-   * than nearly zero. It costs nothing — the whole buffer was already rewritten every frame — and it
-   * needs no branch per view mode: in {@code PLANET} view the near frame sits at the origin and the
-   * geometry's own translation carries the line to its absolute position.
+   * than nearly zero. It costs nothing — the whole buffer was already rewritten every frame — and
+   * it needs no branch per view mode: in {@code PLANET} view the near frame sits at the origin and
+   * the geometry's own translation carries the line to its absolute position.
    *
    * @param trail the display polyline, already bounded to the vertex budget
    * @param upTo index of the last vertex to draw, from {@link TrajectoryPolyline#indexUpTo}
@@ -169,20 +169,20 @@ public final class MissionTrajectoryRenderer {
    * Writes the whole colour buffer for a newly bound trail.
    *
    * <p>Once per trail, not once per frame. The colours depend only on the polyline, which is
-   * immutable and handed out as one shared instance ({@code MissionEphemeris.displayTrail()}), so an
-   * identity check is both sufficient and cheap — and it re-fires exactly when it should, on the new
-   * ephemeris a wizard edit produces.
+   * immutable and handed out as one shared instance ({@code MissionEphemeris.displayTrail()}), so
+   * an identity check is both sufficient and cheap — and it re-fires exactly when it should, on the
+   * new ephemeris a wizard edit produces.
    *
    * <p>Slot {@code size()} is filled too. It is the slot the interpolated tip occupies once the
    * spacecraft reaches the end of the trail, and leaving it black would put one dark vertex at the
    * head of a completed mission's line.
    *
    * <p><b>The tip's own colour is an approximation, deliberately.</b> The tip sits between vertices
-   * {@code last} and {@code last + 1} and is drawn with the colour written at slot {@code last + 1},
-   * which is the colour of the <em>next</em> sample. Those differ only across a phase boundary, for
-   * at most one sampling step, over the final two pixels of the line. Tracking it exactly would mean
-   * re-uploading the buffer whenever the head advances, which is the per-frame cost this design
-   * exists to avoid.
+   * {@code last} and {@code last + 1} and is drawn with the colour written at slot {@code last +
+   * 1}, which is the colour of the <em>next</em> sample. Those differ only across a phase boundary,
+   * for at most one sampling step, over the final two pixels of the line. Tracking it exactly would
+   * mean re-uploading the buffer whenever the head advances, which is the per-frame cost this
+   * design exists to avoid.
    */
   private void bindColors(TrajectoryPolyline trail) {
     runColors = MissionPhaseShading.shade(color, trail.runs());
@@ -207,8 +207,9 @@ public final class MissionTrajectoryRenderer {
   /**
    * Converts one origin-relative offset into render units and appends it to the buffer.
    *
-   * <p>Shared with {@link PhaseNodeMarkers}: a marker has to be produced by the very same conversion
-   * as the line it sits on, or it drifts off the trace by the difference between the two.
+   * <p>Shared with {@link PhaseNodeMarkers}: a marker has to be produced by the very same
+   * conversion as the line it sits on, or it drifts off the trace by the difference between the
+   * two.
    */
   static void putVertex(FloatBuffer fb, Vector3D offsetFromOrigin, RenderContext renderContext) {
     Vector3D scaled = RenderTransform.scaleMetersToUnits(offsetFromOrigin, renderContext);

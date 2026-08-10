@@ -36,7 +36,9 @@ class AdaptiveConvergenceCheckerTest {
     PointValuePair bad = pair(2.0); // cost > BAD_BASIN_KILL_THRESHOLD (1.0)
     // Need iterationCount > 300 to trigger early kill
     burn(checker, 301, 2.0);
-    assertTrue(checker.converged(301, bad, bad), "Early kill should activate after 301 iterations with bad cost");
+    assertTrue(
+        checker.converged(301, bad, bad),
+        "Early kill should activate after 301 iterations with bad cost");
   }
 
   @Test
@@ -55,7 +57,8 @@ class AdaptiveConvergenceCheckerTest {
     // Reach 101 iterations (past the 100 min)
     burn(checker, 100, 0.5);
     // At 101st call: cost=0.5 > 0.1 and iterationCount=101 < 500 → false
-    assertFalse(checker.converged(100, mediocre, mediocre),
+    assertFalse(
+        checker.converged(100, mediocre, mediocre),
         "Should not converge when cost > acceptable and iters < 500");
   }
 
@@ -66,7 +69,8 @@ class AdaptiveConvergenceCheckerTest {
     // Reach 100 iterations
     burn(checker, 100, 0.05);
     // At 101st call: diff=0 <= absoluteTolerance → converge
-    assertTrue(checker.converged(100, good, good),
+    assertTrue(
+        checker.converged(100, good, good),
         "Should converge when cost < acceptable and diff <= absoluteTolerance");
   }
 
@@ -85,7 +89,8 @@ class AdaptiveConvergenceCheckerTest {
     // Reach 100 iterations with cost below acceptable
     burn(checker, 100, 0.05);
     // Large diff between previous (0.5) and current (0.05): 0.45 >> 1e-6
-    assertFalse(checker.converged(100, pair(0.5), pair(0.05)),
+    assertFalse(
+        checker.converged(100, pair(0.5), pair(0.05)),
         "Should not converge when diff is above tolerance");
   }
 
@@ -95,7 +100,8 @@ class AdaptiveConvergenceCheckerTest {
     // Run past 300 iters but with cost BELOW the bad-basin threshold (1.0)
     burn(checker, 301, 0.5); // 0.5 < 1.0
     // Should NOT early-kill; cost (0.5) > acceptable (0.1), iters (302) < 500 → false
-    assertFalse(checker.converged(301, pair(0.5), pair(0.5)),
+    assertFalse(
+        checker.converged(301, pair(0.5), pair(0.5)),
         "Early kill should not activate when cost is below bad-basin threshold");
   }
 }

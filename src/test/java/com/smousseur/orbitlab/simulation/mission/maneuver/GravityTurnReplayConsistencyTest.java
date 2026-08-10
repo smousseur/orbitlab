@@ -215,8 +215,8 @@ class GravityTurnReplayConsistencyTest {
    * by both passes, so the gravity turn starts from the same state either way.
    *
    * <p>This fixture used to assert the opposite — that the optimize pass (point-mass {@code
-   * createSimplePropagator}) and the ephemeris pass (8×8) produced post-ascent states ~0.4 m /
-   * 0.1 m/s apart, the seed of the ~5° GEO inclinaison divergence. {@code
+   * createSimplePropagator}) and the ephemeris pass (8×8) produced post-ascent states ~0.4 m / 0.1
+   * m/s apart, the seed of the ~5° GEO inclinaison divergence. {@code
    * ConstantThrustStage.propagateStandalone} now builds the 8×8 propagator, the difference is
    * exactly zero, and this fixture holds it there: it turns red the day a point-mass propagator
    * reappears on the optimize path — which is how the divergence would come back.
@@ -453,8 +453,7 @@ class GravityTurnReplayConsistencyTest {
                     Launchers.FALCON_HEAVY.ascentProfile(),
                     GravityTurnConstraints.forTarget(PARKING_ALT))
                 .getFirst();
-    SpacecraftState optimize =
-        firstBurn.buildProblem(optimizeMission).propagate(variables);
+    SpacecraftState optimize = firstBurn.buildProblem(optimizeMission).propagate(variables);
 
     SpacecraftState replay = replayThreePhaseAscent(geoMission(), gt.entry(), variables);
 

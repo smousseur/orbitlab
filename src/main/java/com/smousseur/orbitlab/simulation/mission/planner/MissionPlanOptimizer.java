@@ -19,13 +19,13 @@ import org.orekit.time.AbsoluteDate;
 /**
  * Turns a {@link MissionEntry} into a computed {@link MissionPlan}, choosing the {@link
  * MissionPlanner} that matches the entry's {@link OptimizationType}. The stage composition is
- * already resolved upstream by {@link MissionComposer} (the entry holds the mission composed for its
- * mode); this class owns the orthogonal <em>load-handling</em> axis:
+ * already resolved upstream by {@link MissionComposer} (the entry holds the mission composed for
+ * its mode); this class owns the orthogonal <em>load-handling</em> axis:
  *
  * <ul>
- *   <li>{@link OptimizationType#FAST} / {@link OptimizationType#BALANCED} — {@link FixedLoadPlanner}:
- *       fly the mission at its budgeted loads, a single CMA-ES pass. FAST flies the analytic
- *       composition, BALANCED the CMA-ES transfer; the planner is the same.
+ *   <li>{@link OptimizationType#FAST} / {@link OptimizationType#BALANCED} — {@link
+ *       FixedLoadPlanner}: fly the mission at its budgeted loads, a single CMA-ES pass. FAST flies
+ *       the analytic composition, BALANCED the CMA-ES transfer; the planner is the same.
  *   <li>{@link OptimizationType#PRECISE} — {@link MinimizedLoadPlanner}: size the propellant first,
  *       wrapping many mission optimizations in the coordinate-wise load sweep. Requires a {@link
  *       MissionSpec} (to rebuild the mission per candidate load array); a legacy entry with no spec

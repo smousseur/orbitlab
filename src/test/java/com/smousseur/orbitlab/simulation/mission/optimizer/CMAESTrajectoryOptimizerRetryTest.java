@@ -378,15 +378,10 @@ class CMAESTrajectoryOptimizerRetryTest {
     assertTrue(
         result.bestCost() <= ACCEPTABLE_COST,
         () ->
-            "Expected final cost <= "
-                + ACCEPTABLE_COST
-                + " after retry, got "
-                + result.bestCost());
+            "Expected final cost <= " + ACCEPTABLE_COST + " after retry, got " + result.bestCost());
     double[] bestVars = result.bestVariables();
     double dist = Math.sqrt(bestVars[0] * bestVars[0] + bestVars[1] * bestVars[1]);
-    assertTrue(
-        dist < 0.2,
-        () -> "Expected solution near origin after retry, got distance " + dist);
+    assertTrue(dist < 0.2, () -> "Expected solution near origin after retry, got distance " + dist);
   }
 
   @Test

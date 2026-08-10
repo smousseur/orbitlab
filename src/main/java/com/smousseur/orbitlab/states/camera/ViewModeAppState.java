@@ -10,11 +10,11 @@ import com.smousseur.orbitlab.app.ApplicationContext;
 import java.util.Objects;
 
 /**
- * Application state that handles toggling the camera view mode via keyboard input.
+ * Application state that handles toggling the camera view mode via keyboard input. *
  *
- * <p>Listens for the 'R' key press and resets the focus view, cycling through available
- * view modes (e.g., solar system view, planet view). The view mode determines which
- * celestial body the camera orbits around and how the floating origin is applied.
+ * <p>Listens for the 'R' key press and resets the focus view, cycling through available view modes
+ * (e.g., solar system view, planet view). The view mode determines which celestial body the camera
+ * orbits around and how the floating origin is applied.
  */
 public final class ViewModeAppState extends BaseAppState implements ActionListener {
 

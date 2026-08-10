@@ -20,9 +20,7 @@ class SolarSystemBodyConfigCompletenessTest {
     EphemerisConfig cfg = EphemerisConfig.defaultSolarSystem();
     for (SolarSystemBody b : SolarSystemBody.values()) {
       if (b == SolarSystemBody.SUN) continue;
-      assertDoesNotThrow(
-          () -> cfg.orbitalPeriodSeconds(b),
-          "Missing orbital period for " + b);
+      assertDoesNotThrow(() -> cfg.orbitalPeriodSeconds(b), "Missing orbital period for " + b);
     }
   }
 
@@ -30,9 +28,7 @@ class SolarSystemBodyConfigCompletenessTest {
   void allBodies_haveSlidingWindowStep() {
     SlidingWindowConfig cfg = SlidingWindowConfig.defaultSolarSystem();
     for (SolarSystemBody b : SolarSystemBody.values()) {
-      assertDoesNotThrow(
-          () -> cfg.stepSeconds(b),
-          "Missing sliding window step for " + b);
+      assertDoesNotThrow(() -> cfg.stepSeconds(b), "Missing sliding window step for " + b);
     }
   }
 
@@ -41,27 +37,21 @@ class SolarSystemBodyConfigCompletenessTest {
     OrbitWindowConfig cfg = OrbitWindowConfig.defaultSolarSystem();
     for (SolarSystemBody b : SolarSystemBody.values()) {
       if (b == SolarSystemBody.SUN) continue;
-      assertTrue(
-          cfg.bodyPoints(b) > 0,
-          "Missing or zero orbit points for " + b);
+      assertTrue(cfg.bodyPoints(b) > 0, "Missing or zero orbit points for " + b);
     }
   }
 
   @Test
   void allBodies_havePlanetRadius() {
     for (SolarSystemBody b : SolarSystemBody.values()) {
-      assertDoesNotThrow(
-          () -> PlanetRadius.radiusFor(b),
-          "Missing radius for " + b);
+      assertDoesNotThrow(() -> PlanetRadius.radiusFor(b), "Missing radius for " + b);
     }
   }
 
   @Test
   void allBodies_havePlanetColor() {
     for (SolarSystemBody b : SolarSystemBody.values()) {
-      assertNotNull(
-          PlanetColors.colorFor(b),
-          "Missing color for " + b);
+      assertNotNull(PlanetColors.colorFor(b), "Missing color for " + b);
     }
   }
 }

@@ -118,7 +118,8 @@ class OrbitRuntimeSlotTest {
     AtomicInteger callCount = new AtomicInteger(0);
 
     slot.requestRebuildIfNeeded(
-        now, s -> true, // predicate doesn't matter if snapshot is null
+        now,
+        s -> true, // predicate doesn't matter if snapshot is null
         (body, date) -> {
           assertEquals(SolarSystemBody.EARTH, body);
           assertEquals(now, date);
@@ -139,7 +140,8 @@ class OrbitRuntimeSlotTest {
     AtomicInteger callCount = new AtomicInteger(0);
 
     slot.requestRebuildIfNeeded(
-        now, s -> true, // in comfort
+        now,
+        s -> true, // in comfort
         (body, date) -> callCount.incrementAndGet());
 
     assertEquals(0, callCount.get());
@@ -156,7 +158,8 @@ class OrbitRuntimeSlotTest {
     AtomicInteger callCount = new AtomicInteger(0);
 
     slot.requestRebuildIfNeeded(
-        now, s -> false, // out of comfort
+        now,
+        s -> false, // out of comfort
         (body, date) -> {
           assertEquals(SolarSystemBody.EARTH, body);
           assertEquals(now, date);

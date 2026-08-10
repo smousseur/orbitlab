@@ -33,8 +33,8 @@ public final class TrajectoryPolyline {
    * own.
    *
    * <p>At the derived default horizon the raw ephemeris already fits (~5 200 points for a 3-day LEO
-   * mission at the 1 s / 60 s sampling steps), so nothing is dropped. Decimation only engages on the
-   * long horizons a user sets by hand.
+   * mission at the 1 s / 60 s sampling steps), so nothing is dropped. Decimation only engages on
+   * the long horizons a user sets by hand.
    */
   public static final int MAX_POINTS = 8192;
 
@@ -186,8 +186,8 @@ public final class TrajectoryPolyline {
   /**
    * Index of the last vertex at or before {@code date} — the end of the prefix to draw.
    *
-   * <p>Allocation-free, which is the point: this is called once per frame per visible mission, where
-   * the previous API allocated a fresh list of up to 86 400 positions each time.
+   * <p>Allocation-free, which is the point: this is called once per frame per visible mission,
+   * where the previous API allocated a fresh list of up to 86 400 positions each time.
    *
    * @param date the current simulation date
    * @return an index within {@code [0, size() - 1]}, clamped at both ends

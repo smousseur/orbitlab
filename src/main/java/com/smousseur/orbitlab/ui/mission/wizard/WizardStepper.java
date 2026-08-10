@@ -81,8 +81,7 @@ public class WizardStepper {
       Container line = (Container) connectorWrap.getChild(1);
       boolean done = i < activeStep.index();
       line.setBackground(
-          new QuadBackgroundComponent(
-              done ? FormStyles.SUCCESS : FormStyles.BORDER));
+          new QuadBackgroundComponent(done ? FormStyles.SUCCESS : FormStyles.BORDER));
     }
   }
 
@@ -99,8 +98,7 @@ public class WizardStepper {
     Container circle = new Container(new BoxLayout(Axis.Y, FillMode.None));
     circle.setPreferredSize(new Vector3f(CIRCLE_SIZE, CIRCLE_SIZE, 0));
     circle.setBackground(UiKit.wizardBg9("step-dot-default", 14));
-    Label number =
-        circle.addChild(new Label(String.valueOf(step.index() + 1), FormStyles.STYLE));
+    Label number = circle.addChild(new Label(String.valueOf(step.index() + 1), FormStyles.STYLE));
     number.setFont(UiKit.orbitron(13));
     number.setTextHAlignment(HAlignment.Center);
     number.setTextVAlignment(VAlignment.Center);

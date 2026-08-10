@@ -6,9 +6,9 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * Thread-safe global registry for the active {@link EphemerisSource}.
  *
- * <p>At most one ephemeris source is active at a time. Components that need ephemeris data
- * retrieve the current source via {@link #get()}, while the application lifecycle publishes
- * and clears the source as the dataset becomes available or is shut down.
+ * <p>At most one ephemeris source is active at a time. Components that need ephemeris data retrieve
+ * the current source via {@link #get()}, while the application lifecycle publishes and clears the
+ * source as the dataset becomes available or is shut down.
  */
 public final class EphemerisSourceRegistry {
   private static final AtomicReference<EphemerisSource> REF = new AtomicReference<>();

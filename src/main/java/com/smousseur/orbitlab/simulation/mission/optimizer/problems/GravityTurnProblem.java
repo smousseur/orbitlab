@@ -149,8 +149,8 @@ public class GravityTurnProblem implements TrajectoryProblem {
   /**
    * Creates a gravity turn optimization problem with an explicit way of flying a candidate — the
    * three explicit ascent phases, once the mission is built on {@code AscentSequence} (spec {@code
-   * specs/mission-stages/01-separations-implicites.md} §5.4). The cost function is unchanged
-   * either way: only the propagation differs.
+   * specs/mission-stages/01-separations-implicites.md} §5.4). The cost function is unchanged either
+   * way: only the propagation differs.
    *
    * @param maneuver the gravity turn maneuver decoding the variables (burn 1 duration, staging)
    * @param initialState the spacecraft state at the beginning of the gravity turn
@@ -266,10 +266,12 @@ public class GravityTurnProblem implements TrajectoryProblem {
 
     double cost = 0.0;
 
-    // 2. Apogee window — this is the key for staging. Asymmetric on purpose: see W_APOGEE_OVERSHOOT.
+    // 2. Apogee window — this is the key for staging. Asymmetric on purpose: see
+    // W_APOGEE_OVERSHOOT.
     if (apogee < constraints.targetApogee()) {
       cost +=
-          W_APOGEE_SHORTFALL * sq((constraints.targetApogee() - apogee) / constraints.targetApogee());
+          W_APOGEE_SHORTFALL
+              * sq((constraints.targetApogee() - apogee) / constraints.targetApogee());
     } else if (apogee > constraints.maxApogee()) {
       cost +=
           W_APOGEE_OVERSHOOT * sq((apogee - constraints.maxApogee()) / constraints.targetApogee());

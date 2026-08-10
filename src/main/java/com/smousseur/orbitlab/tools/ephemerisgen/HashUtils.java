@@ -5,9 +5,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 
-/**
- * Utility class for computing cryptographic hash digests of files.
- */
+/** Utility class for computing cryptographic hash digests of files. */
 public final class HashUtils {
 
   /**

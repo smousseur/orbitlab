@@ -48,7 +48,8 @@ public final class DatasetEphemerisSource
    *
    * @param datasetDir the directory containing {@code .bin} ephemeris dataset files (one per body)
    * @param chunksInCachePerBody the maximum number of decoded chunks to cache per body
-   * @throws OrbitlabException if the directory does not exist or any body file is missing or invalid
+   * @throws OrbitlabException if the directory does not exist or any body file is missing or
+   *     invalid
    * @throws IllegalArgumentException if {@code chunksInCachePerBody} is less than 1
    */
   public DatasetEphemerisSource(Path datasetDir, int chunksInCachePerBody) {

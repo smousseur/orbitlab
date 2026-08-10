@@ -21,17 +21,17 @@ import org.apache.logging.log4j.Logger;
  * <p><b>Why not a CMA-ES outer loop.</b> With {@code n} between 1 and 3, coordinate descent spends
  * ~27 evaluations for {@code n=2} and ~39 for {@code n=3}, where CMA-ES would need several hundred
  * before its covariance adaptation pays for itself — and the existing CMA-ES stack could not be
- * reused anyway, since it is built around {@code TrajectoryProblem} (propagate to a
- * {@code SpacecraftState}, grade that state) while an outer evaluation returns a mission result
- * plus a feasibility flag. Coordinate descent also exploits the monotonicity CMA-ES would throw
- * away, and every step stays readable in the log.
+ * reused anyway, since it is built around {@code TrajectoryProblem} (propagate to a {@code
+ * SpacecraftState}, grade that state) while an outer evaluation returns a mission result plus a
+ * feasibility flag. Coordinate descent also exploits the monotonicity CMA-ES would throw away, and
+ * every step stays readable in the log.
  *
  * <p><b>No global λ.</b> Scaling all stages by one common factor looks cheaper but cannot work
  * here: the stages carry marginal slack of wildly different magnitude, so a common factor is pinned
  * by the tightest one (the first stage) and the upper stages gain nothing — the same domination
- * that makes a raw total-mass objective meaningless when one stage weighs 1.2 M kg and another
- * 8.6 t. The same reasoning governs when to stop: <b>progress is measured per coordinate, against
- * that coordinate's own load</b>. Measuring it on the scaled stages' total — which the first stage
+ * that makes a raw total-mass objective meaningless when one stage weighs 1.2 M kg and another 8.6
+ * t. The same reasoning governs when to stop: <b>progress is measured per coordinate, against that
+ * coordinate's own load</b>. Measuring it on the scaled stages' total — which the first stage
  * dominates — let a pass that reclaimed 3 % of the upper stage read as 0.0035 % and end the sweep
  * (observed on FH LEO, 2026-08-06); no gain on an upper stage could ever have earned another pass.
  *
@@ -41,11 +41,11 @@ import org.apache.logging.log4j.Logger;
  * whose width is the bisection's own convergence criterion, so a full re-bisection would have
  * returned the same {@code λ} — for six or seven mission optimizations instead of one. Measured on
  * both Falcon Heavy profiles, the second pass returned its starting point on every coordinate while
- * costing 26 % (LEO) and 34 % (GEO) of the run. A feasible probe means the coupling below has opened
- * real slack, and the bisection runs from the probe, already a known-feasible point one step down.
- * The first pass is excluded: it is the one that decides {@code λ*}, and its schedule of evaluated
- * {@code λ} is left untouched so the recorded references stay comparable. Note the equivalence
- * argument assumes feasibility is monotone in {@code λ}, which {@link
+ * costing 26 % (LEO) and 34 % (GEO) of the run. A feasible probe means the coupling below has
+ * opened real slack, and the bisection runs from the probe, already a known-feasible point one step
+ * down. The first pass is excluded: it is the one that decides {@code λ*}, and its schedule of
+ * evaluated {@code λ} is left untouched so the recorded references stay comparable. Note the
+ * equivalence argument assumes feasibility is monotone in {@code λ}, which {@link
  * PropellantLoadOptimizer#minimize} documents as only approximately true — the same assumption the
  * bisection already rests on everywhere else.
  *
@@ -75,8 +75,9 @@ public final class MultiStageLoadOptimizer {
    * ends the search: the coordinates have stopped moving each other and further passes would only
    * re-measure the same point.
    *
-   * <p>Per coordinate, never against the scaled stages' total — an upper stage weighing a thousandth
-   * of the stack could otherwise never clear the floor whatever it reclaimed (see {@link #minimize}).
+   * <p>Per coordinate, never against the scaled stages' total — an upper stage weighing a
+   * thousandth of the stack could otherwise never clear the floor whatever it reclaimed (see {@link
+   * #minimize}).
    */
   public static final double DEFAULT_MIN_PASS_GAIN = 0.01;
 
@@ -143,8 +144,8 @@ public final class MultiStageLoadOptimizer {
    * <p><b>Absolute, not relative</b> (bilan 11 §3.1). The step has to be commensurable with the
    * bisection's own convergence criterion, which is an absolute bracket width; a relative step
    * shrinks below that width as soon as {@code λ < 1}, so the probe lands <em>inside</em> the
-   * unresolved bracket and re-asks a question the bisection just declined to answer. Measured on
-   * FH LEO: at {@code λ = 0.43125} with a converged bracket of {@code [0.4203, 0.43125]}, a 2 %
+   * unresolved bracket and re-asks a question the bisection just declined to answer. Measured on FH
+   * LEO: at {@code λ = 0.43125} with a converged bracket of {@code [0.4203, 0.43125]}, a 2 %
    * relative step probed {@code 0.4226} — strictly inside it, hence an uninformative failure.
    */
   public double diagonalStep() {
@@ -384,7 +385,8 @@ public final class MultiStageLoadOptimizer {
     int[] movable = movableCoordinates(coordinates, lambdas);
     if (movable.length < 2) {
       // A corner needs two coordinates. With one, the diagonal degenerates into a single-coordinate
-      // step the bisection has just bracketed — a full mission optimization spent on a known answer.
+      // step the bisection has just bracketed — a full mission optimization spent on a known
+      // answer.
       logger.info(
           "Diagonal probe skipped: {} movable coordinate(s) of {} scaled, a corner needs two",
           movable.length,
@@ -470,10 +472,10 @@ public final class MultiStageLoadOptimizer {
    *
    * <p>A coordinate still sitting at {@code λmax} has just been proven unable to take a single step
    * down; stepping it anyway makes the probe fail for a reason unrelated to the corner hypothesis,
-   * and the probe returns one bit that cannot be attributed. One already at {@code λmin} has no room
-   * left. Excluding both is what keeps a refused probe interpretable — at the price of missing a
-   * corner whose feasible direction requires moving a pinned coordinate, which is why the refusal is
-   * logged as "no slack found", never as "the sweep is optimal".
+   * and the probe returns one bit that cannot be attributed. One already at {@code λmin} has no
+   * room left. Excluding both is what keeps a refused probe interpretable — at the price of missing
+   * a corner whose feasible direction requires moving a pinned coordinate, which is why the refusal
+   * is logged as "no slack found", never as "the sweep is optimal".
    */
   private int[] movableCoordinates(int[] coordinates, double[] lambdas) {
     return Arrays.stream(coordinates)

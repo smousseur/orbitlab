@@ -21,11 +21,11 @@ import org.orekit.time.AbsoluteDate;
  * Groups a {@link Mission} with its optimization result and ephemeris. This is a mutable holder
  * because the optimization result and ephemeris are set asynchronously after creation.
  *
- * <p>This is also where mission <em>identity</em> lives: the entry is the only object whose lifetime
- * matches "the mission as the user manages it". Both the {@link Mission} and the {@link MissionSpec}
- * are replaced or copied during a run — see {@link MissionId} for why an id on either would be
- * unstable. Everything that designates a mission (registries, events, UI callbacks) keys on {@link
- * #id()}; the mission name is a display label and may be duplicated.
+ * <p>This is also where mission <em>identity</em> lives: the entry is the only object whose
+ * lifetime matches "the mission as the user manages it". Both the {@link Mission} and the {@link
+ * MissionSpec} are replaced or copied during a run — see {@link MissionId} for why an id on either
+ * would be unstable. Everything that designates a mission (registries, events, UI callbacks) keys
+ * on {@link #id()}; the mission name is a display label and may be duplicated.
  *
  * <p>Thread safety: volatile fields are written from the optimization thread and read from the JME
  * update thread.
@@ -312,8 +312,8 @@ public final class MissionEntry {
    * <p>This runs on the JME update thread (the panel's mode control calls it directly), so a
    * composition failure must not escape: the toggle is rolled back — previous mission, previous
    * mode, previous result and ephemeris all kept — and the failure is surfaced by marking the
-   * retained mission {@code FAILED}, the same signal the orchestrator uses when a computation
-   * blows up. A fresh {@code OPTIMIZE} clears it. Mirrors the {@code RuntimeException} net around
+   * retained mission {@code FAILED}, the same signal the orchestrator uses when a computation blows
+   * up. A fresh {@code OPTIMIZE} clears it. Mirrors the {@code RuntimeException} net around
    * composition in {@code MissionWizardAppState.createMission()}.
    *
    * @param optimizationType the optimization type
@@ -377,8 +377,8 @@ public final class MissionEntry {
   }
 
   /**
-   * Composes {@code spec} for {@code mode}, absorbing a failure rather than letting it escape to the
-   * render loop.
+   * Composes {@code spec} for {@code mode}, absorbing a failure rather than letting it escape to
+   * the render loop.
    *
    * @param change what was being applied, for the failure log ("Edit", "Mode switch to PRECISE")
    * @return the recomposed mission, or {@code null} when composition failed

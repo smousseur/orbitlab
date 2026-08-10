@@ -210,11 +210,12 @@ public final class CameraTransitionAppState extends BaseAppState {
    * Hands the view over to the target focus, on the same frame the pivot reached it.
    *
    * <p>The switch is visually free because the two moves cancel. Flipping the focus makes {@link
-   * FloatingOriginAppState} translate the far root so the new anchor body lands on the origin, which
-   * shifts the whole scene by minus the pivot we just interpolated to; clearing the camera's target
-   * on the same frame drops its pivot back to that origin by the same amount. The camera therefore
-   * keeps looking at the same point in space, and the scene has not moved relative to it. Both halves
-   * are required — losing either one is a one-frame jump of the full distance between the two bodies.
+   * FloatingOriginAppState} translate the far root so the new anchor body lands on the origin,
+   * which shifts the whole scene by minus the pivot we just interpolated to; clearing the camera's
+   * target on the same frame drops its pivot back to that origin by the same amount. The camera
+   * therefore keeps looking at the same point in space, and the scene has not moved relative to it.
+   * Both halves are required — losing either one is a one-frame jump of the full distance between
+   * the two bodies.
    */
   private void finish(CameraTransition transition) {
     TransitionTarget target = transition.target();
@@ -319,8 +320,8 @@ public final class CameraTransitionAppState extends BaseAppState {
    * translation, for two reasons. The local values are the ones {@code PlanetPoseAppState} has
    * already written this frame, whereas world transforms are only refreshed after every state has
    * run, so reading them here would lag by a frame. And the offset {@link FloatingOriginAppState}
-   * applies is fully determined by the focus, which is frozen for the duration of a transition:
-   * the far root carries minus the focused body's own position, so subtracting it here reproduces
+   * applies is fully determined by the focus, which is frozen for the duration of a transition: the
+   * far root carries minus the focused body's own position, so subtracting it here reproduces
    * exactly what will be drawn — the focused body at the origin, everything else around it.
    */
   private Vector3f bodyPivot(SolarSystemBody body) {
@@ -341,15 +342,15 @@ public final class CameraTransitionAppState extends BaseAppState {
    */
   private Vector3f spacecraftPivot(TransitionTarget.Spacecraft target) {
     Vector3f pivot = bodyPivot(target.parentBody());
-    MissionEntry entry =
-        context.missionContext().findMission(target.missionId()).orElse(null);
+    MissionEntry entry = context.missionContext().findMission(target.missionId()).orElse(null);
     MissionEphemeris ephemeris = entry == null ? null : entry.getEphemeris().orElse(null);
     if (ephemeris == null) {
       return pivot;
     }
     Vector3D position = ephemeris.displayPointAt(context.clock().now()).position();
     Vector3f planetUnits =
-        JmeVectorAdapter.toJmeBodyRelativePosition(position, MissionRenderer.renderContextFor(entry));
+        JmeVectorAdapter.toJmeBodyRelativePosition(
+            position, MissionRenderer.renderContextFor(entry));
     return pivot.addLocal(
         planetUnits.divideLocal((float) RenderContext.ratioSolarToPlanetPerUnit()));
   }

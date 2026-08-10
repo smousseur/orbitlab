@@ -44,8 +44,8 @@ import org.orekit.time.AbsoluteDate;
  * through the same conversion the anchor uses, so it cancels the near frame's {@code −p} exactly —
  * the property {@code NearFrameOriginTest} pins for the spacecraft itself.
  *
- * <p>No JME application: {@link Node} and {@link Geometry} are pure math here, and the asset manager
- * only ever builds an unshaded material.
+ * <p>No JME application: {@link Node} and {@link Geometry} are pure math here, and the asset
+ * manager only ever builds an unshaded material.
  */
 class MissionTrajectoryOriginTest {
 

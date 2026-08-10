@@ -107,8 +107,8 @@ final class BodyFile implements Closeable {
   /**
    * Returns the decoded chunk for the given index, using the cache when possible.
    *
-   * <p>If the chunk is not already cached, it is read from disk, decoded, and placed into the
-   * LRU cache before being returned.
+   * <p>If the chunk is not already cached, it is read from disk, decoded, and placed into the LRU
+   * cache before being returned.
    *
    * @param chunkId the zero-based chunk index
    * @return the decoded chunk containing position/velocity and rotation data

@@ -90,8 +90,8 @@ class TimeConverterTest {
 
   /**
    * The field feeds a Lemur key handler: anything thrown here escapes into the input loop, so
-   * parsing must be total whatever is typed. Whether an entry is refused as a bad format or accepted
-   * and then refused by the coverage bounds is not the point.
+   * parsing must be total whatever is typed. Whether an entry is refused as a bad format or
+   * accepted and then refused by the coverage bounds is not the point.
    */
   @Test
   void parseUtcDate_neverThrowsOnHostileInput() {

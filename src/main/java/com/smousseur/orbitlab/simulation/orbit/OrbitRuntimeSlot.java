@@ -11,9 +11,9 @@ import org.orekit.time.AbsoluteDate;
 /**
  * Thread-safe runtime container for a single celestial body's orbit visualization data.
  *
- * <p>Holds the current {@link OrbitSnapshot} and manages concurrent access between the
- * render thread (reader) and the orbit computation thread (writer). Provides anti-spam
- * logic to prevent overlapping rebuild jobs via a compare-and-set in-flight flag.
+ * <p>Holds the current {@link OrbitSnapshot} and manages concurrent access between the render
+ * thread (reader) and the orbit computation thread (writer). Provides anti-spam logic to prevent
+ * overlapping rebuild jobs via a compare-and-set in-flight flag.
  */
 public final class OrbitRuntimeSlot {
   private final SolarSystemBody body;
@@ -75,9 +75,7 @@ public final class OrbitRuntimeSlot {
     return inFlight.compareAndSet(false, true);
   }
 
-  /**
-   * Releases the in-flight flag, signaling that the rebuild job has completed.
-   */
+  /** Releases the in-flight flag, signaling that the rebuild job has completed. */
   public void endJob() {
     inFlight.set(false);
   }

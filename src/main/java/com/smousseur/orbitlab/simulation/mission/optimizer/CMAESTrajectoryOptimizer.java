@@ -29,14 +29,14 @@ import org.orekit.propagation.SpacecraftState;
  *
  * <p>If the final cost is still above {@link TrajectoryProblem#getAcceptableCost()} after a full
  * exploration + refinement pass, the optimizer retries up to {@link #DEFAULT_MAX_RETRIES} times
- * with progressively more exploration runs, larger initial sigma, and seeded starting points
- * biased away from any saturated bound observed on the previous attempt.
+ * with progressively more exploration runs, larger initial sigma, and seeded starting points biased
+ * away from any saturated bound observed on the previous attempt.
  *
  * <p><b>Plateau detection</b>: refinement passes and retries that fail to improve the best cost by
  * more than {@link #STAGNATION_RELATIVE_EPS} (relative) are cut short — when every phase lands on
- * the same optimum, the cost floor is structural (e.g. irreducible penalty terms) and the
- * remaining budget would only re-find it. The first retry is never skipped: a flat first attempt
- * says nothing about what broader exploration can reach (see the trap-problem retry test).
+ * the same optimum, the cost floor is structural (e.g. irreducible penalty terms) and the remaining
+ * budget would only re-find it. The first retry is never skipped: a flat first attempt says nothing
+ * about what broader exploration can reach (see the trap-problem retry test).
  *
  * <p><b>Consensus early-stop</b>: when at least {@link #CONSENSUS_MIN_RUNS} exploration runs
  * started from different points, genuinely <em>descended</em> (best cost below their start-point
@@ -73,9 +73,9 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
   private static final double[] RETRY_SIGMA_SCALE = {1.0, 1.3, 1.6};
 
   /**
-   * Relative cost improvement below which a refinement pass or a retry is considered stagnant.
-   * Kept strict (parts-per-million) so only a true plateau is cut: a retry that relaxes bounds
-   * (e.g. β1 anti-saturation) and still cannot move the cost has genuinely hit the floor.
+   * Relative cost improvement below which a refinement pass or a retry is considered stagnant. Kept
+   * strict (parts-per-million) so only a true plateau is cut: a retry that relaxes bounds (e.g. β1
+   * anti-saturation) and still cannot move the cost has genuinely hit the floor.
    */
   private static final double STAGNATION_RELATIVE_EPS = 1e-6;
 
@@ -86,8 +86,8 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
   private static final double CONSENSUS_RELATIVE_EPS = 1e-4;
 
   /**
-   * Minimum relative descent from a run's start-point cost for it to count toward the consensus.
-   * A run that barely moved (flat landscape, or warm start already at the optimum) carries no
+   * Minimum relative descent from a run's start-point cost for it to count toward the consensus. A
+   * run that barely moved (flat landscape, or warm start already at the optimum) carries no
    * evidence that the shared value is a genuine attractor.
    */
   private static final double CONSENSUS_DESCENT_RATIO = 0.01;
@@ -172,7 +172,8 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
     this.numExplorationRuns = numExplorationRuns;
     this.maxRetries = maxRetries;
     this.rng = new MersenneTwister(seed);
-    this.executor = new CMAESRunExecutor(problem, stopFitness, absoluteTolerance, relativeTolerance);
+    this.executor =
+        new CMAESRunExecutor(problem, stopFitness, absoluteTolerance, relativeTolerance);
     logger.info("CMA-ES optimizer initialized with seed={}", seed);
   }
 
@@ -201,7 +202,8 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
       int idx = FastMath.min(attempt, RETRY_SIGMA_SCALE.length - 1);
       int explorationRuns = numExplorationRuns + RETRY_EXPLORATION_RUNS_BONUS[idx];
       double[] attemptSigma = scaleSigma(baseSigma, RETRY_SIGMA_SCALE[idx]);
-      List<double[]> seededStartPoints = buildSeededStartPoints(attempt, previousSaturated, lower, upper);
+      List<double[]> seededStartPoints =
+          buildSeededStartPoints(attempt, previousSaturated, lower, upper);
 
       if (attempt > 0) {
         logger.info(
@@ -287,7 +289,8 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
       double[] bestVars, double bestCost, int evaluations, boolean consensusPlateau) {}
 
   /** Pre-computed configuration for one parallel exploration run. */
-  private record RunConfig(double[] startPoint, double[] runSigma, int populationSize, int budget) {}
+  private record RunConfig(
+      double[] startPoint, double[] runSigma, int populationSize, int budget) {}
 
   private SinglePassResult runSinglePass(
       int explorationRuns,
@@ -314,7 +317,8 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
     // can be executed concurrently — the Hohmann warm-start lives in run 0,
     // additional seededStartPoints come next, and remaining slots get
     // perturbGlobal seeds around the analytical guess.
-    int parallelBudget = FastMath.min(evalsPerExploration, remainingEvals / FastMath.max(1, explorationRuns));
+    int parallelBudget =
+        FastMath.min(evalsPerExploration, remainingEvals / FastMath.max(1, explorationRuns));
     List<RunConfig> configs = new ArrayList<>(explorationRuns);
     for (int run = 0; run < explorationRuns; run++) {
       double[] startPoint;
@@ -423,7 +427,8 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
         }
         boolean descended =
             startCosts[run] - cost > CONSENSUS_DESCENT_RATIO * FastMath.abs(startCosts[run]);
-        boolean agrees = FastMath.abs(cost - bestCost) <= CONSENSUS_RELATIVE_EPS * FastMath.abs(bestCost);
+        boolean agrees =
+            FastMath.abs(cost - bestCost) <= CONSENSUS_RELATIVE_EPS * FastMath.abs(bestCost);
         if (descended && agrees) {
           consensus++;
         }
@@ -442,7 +447,9 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
     // ── Phase 2: Refinement cascade ──────────────────────────────────────
     if (bestVars != null && bestCost > problem.getAcceptableCost()) {
       logger.info(
-          "Refinement cascade starting from cost={}, remaining budget={}", bestCost, remainingEvals);
+          "Refinement cascade starting from cost={}, remaining budget={}",
+          bestCost,
+          remainingEvals);
 
       int refinePassBudget = remainingEvals / REFINEMENT_PASSES;
 
@@ -543,8 +550,7 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
 
   /**
    * Returns a starting point where each component is shifted toward the {@code position} fraction
-   * of its [lower, upper] range, falling back to the existing guess when the bounds are
-   * degenerate.
+   * of its [lower, upper] range, falling back to the existing guess when the bounds are degenerate.
    */
   private static double[] blend(double[] guess, double[] lower, double[] upper, double position) {
     double[] out = new double[guess.length];

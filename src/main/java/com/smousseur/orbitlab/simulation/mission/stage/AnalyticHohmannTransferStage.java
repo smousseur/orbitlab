@@ -122,7 +122,8 @@ public class AnalyticHohmannTransferStage extends MissionStage {
   public SpacecraftState propagateStandalone(SpacecraftState currentState, Mission mission) {
     AnalyticBurnPlan plan = computeBurnPlan(currentState, mission.getVehicle());
 
-    // 8×8 gravity, matching the ephemeris generator (bilan 11 §3.9): this standalone flight advances
+    // 8×8 gravity, matching the ephemeris generator (bilan 11 §3.9): this standalone flight
+    // advances
     // the state the next stage plans from, so a Newtonian point-mass field here would diverge from
     // the flown 8×8 trajectory.
     NumericalPropagator propagator =

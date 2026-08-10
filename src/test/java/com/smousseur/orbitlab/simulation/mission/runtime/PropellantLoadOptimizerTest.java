@@ -18,16 +18,17 @@ import org.junit.jupiter.api.Test;
 
 /**
  * Unit test of the I7 outer sizing loop (spec 09 §6 task 1). Exercises the bisection against a
- * synthetic monotone feasibility function — feasible iff {@code λ ≥ threshold} — so it validates the
- * search logic (minimal feasible λ, bracket invariant, evaluation budget, warm-start threading)
+ * synthetic monotone feasibility function — feasible iff {@code λ ≥ threshold} — so it validates
+ * the search logic (minimal feasible λ, bracket invariant, evaluation budget, warm-start threading)
  * without any propagation.
  */
 class PropellantLoadOptimizerTest {
 
   /**
    * Records every call and returns feasibility from a monotone threshold: feasible iff {@code λ ≥
-   * threshold}. This is exactly the monotonicity the real feasibility predicate has (more propellant
-   * ⇒ more likely to reach the objective), so the bisection's bracket invariant must hold.
+   * threshold}. This is exactly the monotonicity the real feasibility predicate has (more
+   * propellant ⇒ more likely to reach the objective), so the bisection's bracket invariant must
+   * hold.
    */
   private static final class ThresholdEvaluator implements PropellantLoadOptimizer.Evaluator {
     final double threshold;
@@ -141,7 +142,8 @@ class PropellantLoadOptimizerTest {
       assertTrue(
           result.evaluations() <= PropellantLoadOptimizer.DEFAULT_MAX_EVALUATIONS,
           () -> "budget exceeded at threshold " + evaluator.threshold);
-      assertEquals(evaluator.lambdas.size(), result.evaluations(), "evaluation count matches calls");
+      assertEquals(
+          evaluator.lambdas.size(), result.evaluations(), "evaluation count matches calls");
     }
   }
 
@@ -181,9 +183,12 @@ class PropellantLoadOptimizerTest {
 
   @Test
   void constructor_rejectsInvalidSettings() {
-    assertThrows(IllegalArgumentException.class, () -> new PropellantLoadOptimizer(1.0, 0.3, 0.02, 10));
-    assertThrows(IllegalArgumentException.class, () -> new PropellantLoadOptimizer(0.3, 1.0, 0.0, 10));
-    assertThrows(IllegalArgumentException.class, () -> new PropellantLoadOptimizer(0.3, 1.0, 0.02, 1));
+    assertThrows(
+        IllegalArgumentException.class, () -> new PropellantLoadOptimizer(1.0, 0.3, 0.02, 10));
+    assertThrows(
+        IllegalArgumentException.class, () -> new PropellantLoadOptimizer(0.3, 1.0, 0.0, 10));
+    assertThrows(
+        IllegalArgumentException.class, () -> new PropellantLoadOptimizer(0.3, 1.0, 0.02, 1));
   }
 
   // ── λ → loads mapping ───────────────────────────────────────────────────
@@ -292,7 +297,10 @@ class PropellantLoadOptimizerTest {
                 StageRole.UPPER));
     LauncherModel launcher =
         new LauncherModel(
-            "SOLID_TOP", "Solid top stage", List.of(liquidCore, solidTop), new AscentProfile(7, 3, 2));
+            "SOLID_TOP",
+            "Solid top stage",
+            List.of(liquidCore, solidTop),
+            new AscentProfile(7, 3, 2));
 
     assertArrayEquals(
         new boolean[] {false, false}, PropellantLoadOptimizer.lambdaScaledMask(launcher));

@@ -24,9 +24,9 @@ import org.junit.jupiter.api.Test;
  *
  * <p><b>This started as a measurement probe with no accuracy assertion</b>, because whether the
  * entry could close a mission at all was genuinely unknown: aggregating the boosters and the
- * Vulcain into one stage makes it flame out around 128 s instead of the ~8 min the real core
- * burns. The spec recorded three admissible outcomes, including "it does not close", and forbade
- * inventing a tolerance before reading the numbers.
+ * Vulcain into one stage makes it flame out around 128 s instead of the ~8 min the real core burns.
+ * The spec recorded three admissible outcomes, including "it does not close", and forbade inventing
+ * a tolerance before reading the numbers.
  *
  * <p><b>Measured 2026-08-09: it closes, and comfortably</b> — 400 km requested, flown band
  * 399.6–400.8 km, 21.7 % of the sized upper-stage load left over. The risk the spec quantified
@@ -45,11 +45,11 @@ public class Ariane62MissionTest extends AbstractTrajectoryOptimizerTest {
   private static final double TARGET_ALTITUDE = 400_000.0;
 
   /**
-   * Bracket on the aggregated first stage's flame-out, in seconds from lift-off. Measured at
-   * 128.2 s; the ±10 s band is wide enough to survive an optimizer re-tune and tight enough to
-   * catch a change in the aggregate's mass, thrust or ISP. It exists because that instant is the
-   * one documented modelling distortion of this entry — the real Ariane 62 core burns ~490 s — and
-   * a claim carried only by a Javadoc is a claim nothing checks.
+   * Bracket on the aggregated first stage's flame-out, in seconds from lift-off. Measured at 128.2
+   * s; the ±10 s band is wide enough to survive an optimizer re-tune and tight enough to catch a
+   * change in the aggregate's mass, thrust or ISP. It exists because that instant is the one
+   * documented modelling distortion of this entry — the real Ariane 62 core burns ~490 s — and a
+   * claim carried only by a Javadoc is a claim nothing checks.
    */
   private static final double STAGING_INSTANT_S = 128.2;
 
@@ -95,8 +95,7 @@ public class Ariane62MissionTest extends AbstractTrajectoryOptimizerTest {
         "no '" + AscentSequence.SEPARATION_NAME + "' samples: the ascent never reached staging");
 
     double stagingInstant = separation.time().durationFrom(liftOff.time());
-    logger.info(
-        "[A62] S1 flame-out at T+{} s (real Ariane 62 core burn ~490 s)", stagingInstant);
+    logger.info("[A62] S1 flame-out at T+{} s (real Ariane 62 core burn ~490 s)", stagingInstant);
     Assertions.assertEquals(
         STAGING_INSTANT_S,
         stagingInstant,
@@ -118,7 +117,9 @@ public class Ariane62MissionTest extends AbstractTrajectoryOptimizerTest {
     }
   }
 
-  /** The first sample tagged with the given stage, or {@code null} if the mission never got there. */
+  /**
+   * The first sample tagged with the given stage, or {@code null} if the mission never got there.
+   */
   private static MissionEphemerisPoint firstPointOfStage(
       MissionEphemeris ephemeris, String stageName) {
     for (MissionEphemerisPoint pt : ephemeris.allPoints()) {

@@ -47,8 +47,8 @@ final class EphemerisV1Parser {
   /**
    * Decoded position/velocity data block from a chunk.
    *
-   * <p>The {@code raw} array stores interleaved position and velocity components as
-   * {@code [px, py, pz, vx, vy, vz]} for each of the {@code n} samples.
+   * <p>The {@code raw} array stores interleaved position and velocity components as {@code [px, py,
+   * pz, vx, vy, vz]} for each of the {@code n} samples.
    *
    * @param t0 the start time offset of this block in seconds from the dataset epoch
    * @param dt the time step between consecutive samples in seconds
@@ -60,8 +60,8 @@ final class EphemerisV1Parser {
   /**
    * Decoded rotation data block from a chunk.
    *
-   * <p>The {@code rawQuat} array stores quaternion components as {@code [q0, q1, q2, q3]} for
-   * each of the {@code n} samples.
+   * <p>The {@code rawQuat} array stores quaternion components as {@code [q0, q1, q2, q3]} for each
+   * of the {@code n} samples.
    *
    * @param t0 the start time offset of this block in seconds from the dataset epoch
    * @param dt the time step between consecutive samples in seconds

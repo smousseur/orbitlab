@@ -59,9 +59,9 @@ public final class Launchers {
    * applies to its three cores, and is what the mission stage list can actually fly (spec {@code
    * specs/launchers/01-ariane-62.md} §2).
    *
-   * <p><b>What the aggregation costs, stated because it is not visible in the figures.</b> At
-   * 9 960 kN and 300 s the block flames out around 128 s — measured at T+128.2 s. That is faithful
-   * to the boosters (~130 s) and wrong for the core, which really burns ~8 min, so the ascent
+   * <p><b>What the aggregation costs, stated because it is not visible in the figures.</b> At 9 960
+   * kN and 300 s the block flames out around 128 s — measured at T+128.2 s. That is faithful to the
+   * boosters (~130 s) and wrong for the core, which really burns ~8 min, so the ascent
    * <em>shape</em> is not this vehicle's. Neither knob can move it: stretching the burn to 300 s
    * would need the aggregate thrust below the lift-off weight.
    *
@@ -73,8 +73,8 @@ public final class Launchers {
    * would hand over near 0.44 instead.
    *
    * <p>Ariane 64 is deliberately absent: with four boosters the distortion grows until the model
-   * separates A64 from A62 by 3 % where reality separates them by a factor 2.5 in GTO capacity
-   * (§3 of the spec).
+   * separates A64 from A62 by 3 % where reality separates them by a factor 2.5 in GTO capacity (§3
+   * of the spec).
    */
   public static final LauncherModel ARIANE_62 =
       new LauncherModel(

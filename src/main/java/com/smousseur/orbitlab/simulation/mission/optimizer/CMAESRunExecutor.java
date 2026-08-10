@@ -16,15 +16,15 @@ import org.orekit.propagation.SpacecraftState;
 /**
  * Executes a single CMA-ES optimization run for a {@link TrajectoryProblem}.
  *
- * <p>Wraps objective function evaluation (with exception penalty), CMAESOptimizer construction,
- * and result capture. Delegates convergence decisions to {@link AdaptiveConvergenceChecker}.
+ * <p>Wraps objective function evaluation (with exception penalty), CMAESOptimizer construction, and
+ * result capture. Delegates convergence decisions to {@link AdaptiveConvergenceChecker}.
  *
  * <p>An optional cross-run stop signal lets parallel exploration runs cut each other short: a run
  * that <em>completes</em> (checker convergence or budget exhaustion) with a best cost at or below
  * the problem's acceptable cost flips the signal, and every other run aborts at its next
- * evaluation. The signal is deliberately not raised mid-run at the first threshold crossing: a
- * good analytical seed can start below the acceptable cost, and claiming victory there would end
- * the phase without any optimization having happened (observed: the transfer stage returning its
+ * evaluation. The signal is deliberately not raised mid-run at the first threshold crossing: a good
+ * analytical seed can start below the acceptable cost, and claiming victory there would end the
+ * phase without any optimization having happened (observed: the transfer stage returning its
  * Hohmann seed verbatim, angles unexplored).
  */
 final class CMAESRunExecutor {
@@ -88,10 +88,10 @@ final class CMAESRunExecutor {
    * @param maxEvals maximum number of objective function evaluations
    * @param earlyKill if true, the convergence checker will kill runs stuck in bad basins
    * @param seed seed for the MersenneTwister driving CMA-ES sampling (run-local, thread-safe)
-   * @param crossRunStop shared stop signal between parallel runs, or {@code null} for a
-   *     sequential pass. This run sets it when it completes with a best cost at or below the
-   *     acceptable cost; when it is set by a concurrent run, this run aborts at its next
-   *     evaluation and returns its best-so-far.
+   * @param crossRunStop shared stop signal between parallel runs, or {@code null} for a sequential
+   *     pass. This run sets it when it completes with a best cost at or below the acceptable cost;
+   *     when it is set by a concurrent run, this run aborts at its next evaluation and returns its
+   *     best-so-far.
    * @return the result containing the best parameters, cost, and evaluation count. An aborted run
    *     that never completed an evaluation reports {@code Double.MAX_VALUE} as its best cost.
    */

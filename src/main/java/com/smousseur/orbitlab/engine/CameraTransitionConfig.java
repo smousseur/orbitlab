@@ -27,8 +27,8 @@ public record CameraTransitionConfig(
   }
 
   /**
-   * Creates the default transition tuning: 2.5 s of {@link Easing#SMOOTHSTEP}, with the camera
-   * done turning after the first 35 %.
+   * Creates the default transition tuning: 2.5 s of {@link Easing#SMOOTHSTEP}, with the camera done
+   * turning after the first 35 %.
    *
    * <p>The orientation deliberately leads rather than sharing the pivot's schedule. Interpolated
    * over the whole duration it would only frame the destination on the very last frames, which is

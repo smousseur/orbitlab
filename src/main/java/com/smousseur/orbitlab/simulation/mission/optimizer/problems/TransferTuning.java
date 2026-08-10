@@ -15,9 +15,9 @@ import org.hipparchus.util.FastMath;
  *     of the initial orbit period
  * @param alphaMaxRad symmetric bound on the in-plane thrust angle {@code α1} (rad)
  * @param betaMaxRad hard cap on the out-of-plane thrust angle bound {@code β1} (rad); applied on
- *     top of the historical π/8 floor + adaptive growth — set to a large value (≥ π/2) to leave
- *     the historical floor as the active constraint, or to a small value to tighten {@code β1}
- *     across the whole exploration
+ *     top of the historical π/8 floor + adaptive growth — set to a large value (≥ π/2) to leave the
+ *     historical floor as the active constraint, or to a small value to tighten {@code β1} across
+ *     the whole exploration
  * @param acceptableCost convergence threshold below which CMA-ES retries stop firing
  * @param failureBaseCost base penalty value applied when the propagation cannot grade the candidate
  *     (e.g. burn 1 catastrophically failed); kept at 1e3 to dominate any nominal cost while

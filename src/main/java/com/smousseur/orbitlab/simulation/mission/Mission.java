@@ -32,8 +32,8 @@ public abstract class Mission {
    * specs/mission-horizon/01-horizon-explicite.md}). Written by {@code MissionComposer}, which is
    * its only writer, from the {@code MissionSpec} the user configured.
    *
-   * <p><b>The default is the legacy constant, deliberately.</b> A mission built outside the composer
-   * — every test mission, and the direct {@code generate()} calls in {@code
+   * <p><b>The default is the legacy constant, deliberately.</b> A mission built outside the
+   * composer — every test mission, and the direct {@code generate()} calls in {@code
    * GravityTurnFloorProbeTest} — keeps exactly the one-sidereal-day trailing coast it had before
    * this field existed. That confines the behavioural change of this work to the missions the
    * application actually composes, instead of quietly moving every measurement in the test suite.

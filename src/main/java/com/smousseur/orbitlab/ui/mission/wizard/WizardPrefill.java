@@ -26,7 +26,8 @@ public final class WizardPrefill {
    *
    * @param entry the mission entry to reopen the wizard on
    * @return the values keyed by {@link FormField#key()}, ready for {@link
-   *     MissionWizardWidget#MissionWizardWidget(com.smousseur.orbitlab.app.ApplicationContext, Map)}
+   *     MissionWizardWidget#MissionWizardWidget(com.smousseur.orbitlab.app.ApplicationContext,
+   *     Map)}
    * @throws IllegalArgumentException if the entry carries no spec — a legacy entry has no wizard
    *     values to go back to, which is why the roster does not offer to edit it
    */
@@ -37,7 +38,9 @@ public final class WizardPrefill {
             .orElseThrow(
                 () ->
                     new IllegalArgumentException(
-                        "Mission [" + entry.id().shortForm() + "] carries no spec to prefill from"));
+                        "Mission ["
+                            + entry.id().shortForm()
+                            + "] carries no spec to prefill from"));
 
     Map<String, Object> values = new LinkedHashMap<>();
     values.put(FormField.MISSION_TYPE.key(), spec.type().name());

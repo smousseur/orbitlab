@@ -17,7 +17,9 @@ import org.hipparchus.util.FastMath;
  */
 public final class MissionResultText {
 
-  /** What a value that does not apply looks like: a non-propulsive stage's ΔV, a missing reading. */
+  /**
+   * What a value that does not apply looks like: a non-propulsive stage's ΔV, a missing reading.
+   */
   public static final String NOT_APPLICABLE = "-";
 
   private static final double ONE_TONNE_KG = 1000.0;
@@ -48,9 +50,9 @@ public final class MissionResultText {
   }
 
   /**
-   * The signed deviation of an achieved orbit from a target, e.g. {@code "miss +0 / +114 m
-   * +0.0012 deg"}. Signs are always explicit: an unsigned deviation reads as a magnitude and hides
-   * whether the orbit came in high or low.
+   * The signed deviation of an achieved orbit from a target, e.g. {@code "miss +0 / +114 m +0.0012
+   * deg"}. Signs are always explicit: an unsigned deviation reads as a magnitude and hides whether
+   * the orbit came in high or low.
    *
    * @param achieved the achieved elements, in whichever convention the caller is reporting
    * @param target the requested orbit

@@ -101,8 +101,7 @@ public final class MissionRenderer {
         .thenApply(spatial -> AssetFactory.get().applyLambert(spatial, 0.3f))
         .thenAccept(model3dView::onModelLoaded);
 
-    trajectoryRenderer =
-        new MissionTrajectoryRenderer(entry.id(), renderContext, trajectoryColor);
+    trajectoryRenderer = new MissionTrajectoryRenderer(entry.id(), renderContext, trajectoryColor);
     trajectoryRenderer.initialize(context.sceneGraph().nearOrbitsNode());
   }
 
@@ -116,8 +115,8 @@ public final class MissionRenderer {
    * mode toggle or a wizard edit; a legacy entry carries none and falls back.
    *
    * <p>Static, and public, for the same reason as {@link #renderContextFor(MissionEntry)}: {@link
-   * MissionOrchestratorAppState} evaluates it on an entry whose renderer already exists, to find out
-   * whether that renderer still draws the right vehicle.
+   * MissionOrchestratorAppState} evaluates it on an entry whose renderer already exists, to find
+   * out whether that renderer still draws the right vehicle.
    *
    * @param entry the mission entry
    * @return the GLTF asset path to draw that mission's spacecraft with
@@ -200,8 +199,9 @@ public final class MissionRenderer {
   }
 
   /**
-   * Detaches all visual elements from the scene. Registration in {@link ApplicationContext} is owned
-   * by {@link MissionOrchestratorAppState}, which deregisters this renderer before calling here.
+   * Detaches all visual elements from the scene. Registration in {@link ApplicationContext} is
+   * owned by {@link MissionOrchestratorAppState}, which deregisters this renderer before calling
+   * here.
    */
   public void cleanup() {
     if (view != null) {

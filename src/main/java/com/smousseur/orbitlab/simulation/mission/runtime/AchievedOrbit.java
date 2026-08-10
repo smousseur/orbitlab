@@ -19,14 +19,14 @@ import org.orekit.utils.Constants;
  * convention, the one you compare against a TLE or against a requirement stated in mean elements.
  *
  * <p><b>Trap not to reproduce in the UI.</b> An instantaneously circular orbit has a <em>mean</em>
- * eccentricity of order {@code f = (3/2)*J2*(RE/a)^2}: the two cannot be circular at the same
- * time. Measured 2026-08-05 on a 400 km insertion aimed circular: osculating 400 000 x 400 114 m,
- * mean 390 612 x 409 712 m. Those ~9.4 km are <b>not</b> an insertion miss, and a UI showing only
- * the mean orbit would make perfect targeting look like a failure.
+ * eccentricity of order {@code f = (3/2)*J2*(RE/a)^2}: the two cannot be circular at the same time.
+ * Measured 2026-08-05 on a 400 km insertion aimed circular: osculating 400 000 x 400 114 m, mean
+ * 390 612 x 409 712 m. Those ~9.4 km are <b>not</b> an insertion miss, and a UI showing only the
+ * mean orbit would make perfect targeting look like a failure.
  *
  * <p>Either component may be {@code null} when the corresponding reading was unavailable — see
- * {@link #of(SpacecraftState)}. Read them through {@link #hasOsculating()} / {@link #hasMean()},
- * or through the formatting helpers.
+ * {@link #of(SpacecraftState)}. Read them through {@link #hasOsculating()} / {@link #hasMean()}, or
+ * through the formatting helpers.
  *
  * @param osculating the osculating elements, or {@code null} if even that reading failed
  * @param mean the mean elements, or {@code null} if the conversion did not converge

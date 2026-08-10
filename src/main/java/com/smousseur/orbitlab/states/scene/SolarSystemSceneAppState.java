@@ -7,12 +7,12 @@ import com.smousseur.orbitlab.engine.scene.graph.SceneGraph;
 import java.util.Objects;
 
 /**
- * Application state that manages the top-level visibility of the solar system scene,
- * including planet nodes and orbit line overlays.
+ * Application state that manages the top-level visibility of the solar system scene, including
+ * planet nodes and orbit line overlays.
  *
- * <p>Controls whether the solar system scene graph is visible and provides a method
- * to toggle orbit path visibility independently. When enabled, the solar system is shown;
- * when disabled, it is hidden. On cleanup, the scene is fully detached from the parent node.
+ * <p>Controls whether the solar system scene graph is visible and provides a method to toggle orbit
+ * path visibility independently. When enabled, the solar system is shown; when disabled, it is
+ * hidden. On cleanup, the scene is fully detached from the parent node.
  */
 public final class SolarSystemSceneAppState extends BaseAppState {
 

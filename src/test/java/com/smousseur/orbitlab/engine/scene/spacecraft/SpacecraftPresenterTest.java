@@ -19,8 +19,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 /**
- * Pure unit tests for {@link SpacecraftPresenter}. No Orekit / no JME3 scene graph — the view is
- * a stub that records the last position and rotation set on it.
+ * Pure unit tests for {@link SpacecraftPresenter}. No Orekit / no JME3 scene graph — the view is a
+ * stub that records the last position and rotation set on it.
  */
 class SpacecraftPresenterTest {
 
@@ -78,7 +78,8 @@ class SpacecraftPresenterTest {
     // With smoothing half-life 0.15s and dt=0.016s, alpha ≈ 0.07 — small but non-zero.
     // The resulting rotation must differ from the first sample (slerp moved it) AND not be
     // identical to the raw target (slerp did not snap to it).
-    assertTrue(dot(afterFirst, afterSecond) < 0.9999999f, "second rotation should differ from first");
+    assertTrue(
+        dot(afterFirst, afterSecond) < 0.9999999f, "second rotation should differ from first");
     assertTrue(
         dot(afterFirst, afterSecond) > 0.9f,
         "second rotation should still be close to first after one frame of smoothing");

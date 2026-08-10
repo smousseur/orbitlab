@@ -36,14 +36,14 @@ import org.orekit.time.AbsoluteDate;
 import org.orekit.utils.PVCoordinates;
 
 /**
- * Application state that dynamically recomputes and updates orbital path geometries at runtime
- * as simulation time progresses.
+ * Application state that dynamically recomputes and updates orbital path geometries at runtime as
+ * simulation time progresses.
  *
- * <p>For each tracked celestial body, maintains an {@link OrbitRuntimeSlot} that monitors
- * whether the current orbit window still covers the simulation time. When the window drifts
- * outside a comfort margin, a background job is submitted to recompute orbit positions using
- * Keplerian propagation. Completed snapshots are applied to the scene graph's orbit line
- * geometries on the render thread.
+ * <p>For each tracked celestial body, maintains an {@link OrbitRuntimeSlot} that monitors whether
+ * the current orbit window still covers the simulation time. When the window drifts outside a
+ * comfort margin, a background job is submitted to recompute orbit positions using Keplerian
+ * propagation. Completed snapshots are applied to the scene graph's orbit line geometries on the
+ * render thread.
  */
 public final class OrbitRuntimeAppState extends BaseAppState {
 

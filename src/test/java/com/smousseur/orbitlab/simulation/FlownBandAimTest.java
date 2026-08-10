@@ -63,8 +63,8 @@ class FlownBandAimTest {
 
   /**
    * The aim must lift the orbit by roughly TWICE the offset: it moves the semi-major axis at half
-   * its own rate, so centring the band on {@code a·f} costs {@code 2·a·f} of shaping radius. This is
-   * the property that distinguishes this criterion from the mean-perigee one it replaced, which
+   * its own rate, so centring the band on {@code a·f} costs {@code 2·a·f} of shaping radius. This
+   * is the property that distinguishes this criterion from the mean-perigee one it replaced, which
    * lifted by only {@code a·f} and left the request at the top of the band.
    */
   @Test

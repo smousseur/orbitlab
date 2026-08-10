@@ -131,7 +131,9 @@ public class ClockDisplay {
     dateField.setSize(dateField.getPreferredSize());
     dateField.setLocalTranslation(textX, textY, 1f);
     dateField.getActionMap().put(new KeyAction(KeyInput.KEY_RETURN), (src, key) -> commitEdit());
-    dateField.getActionMap().put(new KeyAction(KeyInput.KEY_NUMPADENTER), (src, key) -> commitEdit());
+    dateField
+        .getActionMap()
+        .put(new KeyAction(KeyInput.KEY_NUMPADENTER), (src, key) -> commitEdit());
     dateField.getActionMap().put(new KeyAction(KeyInput.KEY_ESCAPE), (src, key) -> endEdit());
     dateField
         .getControl(GuiControl.class)
@@ -186,8 +188,7 @@ public class ClockDisplay {
     hintBorder.setLocalTranslation(hintX, hintTopY, 4f);
 
     hintFill = new Panel(HINT_WIDTH - 2f, HINT_HEIGHT - 2f, TimelineStyles.STYLE);
-    hintFill.setBackground(
-        new QuadBackgroundComponent(new ColorRGBA(0.06f, 0.14f, 0.22f, 0.96f)));
+    hintFill.setBackground(new QuadBackgroundComponent(new ColorRGBA(0.06f, 0.14f, 0.22f, 0.96f)));
     hintFill.setSize(hintFill.getPreferredSize());
     hintFill.setLocalTranslation(hintX + 1f, hintTopY - 1f, 4.5f);
 
@@ -195,15 +196,14 @@ public class ClockDisplay {
     hintTitle.setLocalTranslation(hintX + HINT_PAD, hintTopY - HINT_PAD, 5f);
 
     hintDetail = hintLabel(AppStyles.TL_TEXT_DIM);
-    hintDetail.setLocalTranslation(
-        hintX + HINT_PAD, hintTopY - HINT_PAD - HINT_LINE_HEIGHT, 5f);
+    hintDetail.setLocalTranslation(hintX + HINT_PAD, hintTopY - HINT_PAD - HINT_LINE_HEIGHT, 5f);
   }
 
   /**
    * Updates the date label text. Call once per frame.
    *
-   * <p>While editing, the label is left untouched — refreshing it would fight the keyboard — and the
-   * call is used instead to clear a rejection state as soon as the entry is edited again.
+   * <p>While editing, the label is left untouched — refreshing it would fight the keyboard — and
+   * the call is used instead to clear a rejection state as soon as the entry is edited again.
    */
   public void update(AbsoluteDate now) {
     if (editing) {
@@ -306,8 +306,7 @@ public class ClockDisplay {
     label.setBackground(null);
     label.setTextHAlignment(HAlignment.Left);
     label.setTextVAlignment(VAlignment.Top);
-    label.setPreferredSize(
-        new Vector3f(HINT_WIDTH - 2f * HINT_PAD, HINT_LINE_HEIGHT, 0f));
+    label.setPreferredSize(new Vector3f(HINT_WIDTH - 2f * HINT_PAD, HINT_LINE_HEIGHT, 0f));
     label.setSize(label.getPreferredSize());
     return label;
   }

@@ -181,8 +181,8 @@ public final class SceneGraph {
    * Returns the sky root node, rendered by the dedicated sky pre-view.
    *
    * <p>This node must keep an identity transform: JME's sky shader derives the cube map lookup
-   * direction from the inverse world matrix, so any rotation applied here would rotate the starfield
-   * with respect to the scene axes.
+   * direction from the inverse world matrix, so any rotation applied here would rotate the
+   * starfield with respect to the scene axes.
    *
    * @return the sky root node
    */

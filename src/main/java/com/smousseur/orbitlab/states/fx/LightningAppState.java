@@ -13,9 +13,9 @@ import com.smousseur.orbitlab.core.SolarSystemBody;
 /**
  * Application state that manages scene lighting to simulate sunlight in the solar system.
  *
- * <p>Adds an ambient light for baseline illumination and a directional light representing
- * sunlight. Each frame, the directional light is oriented to point from the Sun toward the
- * currently focused celestial body, ensuring realistic lighting as the view changes.
+ * <p>Adds an ambient light for baseline illumination and a directional light representing sunlight.
+ * Each frame, the directional light is oriented to point from the Sun toward the currently focused
+ * celestial body, ensuring realistic lighting as the view changes.
  */
 public class LightningAppState extends BaseAppState {
   private final ApplicationContext context;

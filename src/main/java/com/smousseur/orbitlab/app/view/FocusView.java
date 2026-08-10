@@ -21,15 +21,16 @@ public class FocusView {
    * Where a camera transition is heading, while it is still playing; {@code null} the rest of the
    * time.
    *
-   * <p>A transition holds {@link #mode} and {@link #body} on their source values until its very last
-   * frame, because the floating origin centres the rendered frame on them and moving that ground
-   * mid-interpolation would break it. But a scene drawn strictly from the source is wrong for the
-   * whole 2.5 s: the camera is already most of the way to somewhere else, and everything keyed on
-   * the focus — the far clip floor, satellite visibility — would only catch up on the final frame,
-   * as a pop. These two fields let those rules answer for <em>either</em> end.
+   * <p>A transition holds {@link #mode} and {@link #body} on their source values until its very
+   * last frame, because the floating origin centres the rendered frame on them and moving that
+   * ground mid-interpolation would break it. But a scene drawn strictly from the source is wrong
+   * for the whole 2.5 s: the camera is already most of the way to somewhere else, and everything
+   * keyed on the focus — the far clip floor, satellite visibility — would only catch up on the
+   * final frame, as a pop. These two fields let those rules answer for <em>either</em> end.
    *
-   * <p>Not everything may take the union. Anything drawn in the near viewport is positioned relative
-   * to the frame's centre and is only correct for the source — see {@link #isMissionVisible}.
+   * <p>Not everything may take the union. Anything drawn in the near viewport is positioned
+   * relative to the frame's centre and is only correct for the source — see {@link
+   * #isMissionVisible}.
    */
   private ViewMode pendingMode;
 
@@ -88,8 +89,8 @@ public class FocusView {
 
   /**
    * Switches the focus to spacecraft view mode, centering on a mission's spacecraft. The parent
-   * body is retained so the planet-scale render context (HUD markers, orbits, Earth-3D in the
-   * near view) keeps working.
+   * body is retained so the planet-scale render context (HUD markers, orbits, Earth-3D in the near
+   * view) keeps working.
    *
    * @param missionId the id of the mission to follow
    * @param parentBody the body the mission is currently orbiting (e.g. Earth for LEO)

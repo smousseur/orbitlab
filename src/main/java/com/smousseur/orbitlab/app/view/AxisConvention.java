@@ -8,10 +8,11 @@ import java.util.Objects;
  * Defines how vectors expressed in Orekit ICRF axes are mapped into JME world axes.
  *
  * <p>Convention chosen for OrbitLab:
+ *
  * <ul>
- *   <li>JME is Y-up</li>
- *   <li>We map ICRF Z (celestial north) to JME Y (up)</li>
- *   <li>We keep a right-handed basis by applying: jmeZ = -icrfY</li>
+ *   <li>JME is Y-up
+ *   <li>We map ICRF Z (celestial north) to JME Y (up)
+ *   <li>We keep a right-handed basis by applying: jmeZ = -icrfY
  * </ul>
  *
  * <p>So: (jmeX, jmeY, jmeZ) = (icrfX, icrfZ, -icrfY)

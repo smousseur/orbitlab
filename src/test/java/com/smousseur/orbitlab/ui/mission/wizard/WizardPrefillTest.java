@@ -18,8 +18,8 @@ import org.orekit.time.AbsoluteDate;
 
 /**
  * Round-trip guard for the wizard's edit mode: reopening a mission and validating it unchanged must
- * yield the same spec. Anything the prefill drops silently re-defaults on the way back, which is how
- * an edit would quietly change a mission the user did not touch.
+ * yield the same spec. Anything the prefill drops silently re-defaults on the way back, which is
+ * how an edit would quietly change a mission the user did not touch.
  */
 class WizardPrefillTest {
 
@@ -75,10 +75,7 @@ class WizardPrefillTest {
     assertEquals(original.payloadId(), reopened.payloadId(), "payload catalog id");
     assertEquals(original.payload().dryMass(), reopened.payload().dryMass(), 1e-9, "payload mass");
     assertEquals(
-        original.payload().propellantLoad(),
-        reopened.payload().propellantLoad(),
-        1e-9,
-        "AKM load");
+        original.payload().propellantLoad(), reopened.payload().propellantLoad(), 1e-9, "AKM load");
     assertArrayEquals(original.propellantLoads(), reopened.propellantLoads(), 1e-9, "loads");
   }
 
@@ -92,8 +89,8 @@ class WizardPrefillTest {
 
   @Test
   void leoSpec_survivesTheRoundTrip() {
-    MissionSpec.Leo original = (MissionSpec.Leo) MissionFactory.specFromWizardValues(
-        leoValues(), MissionType.LEO);
+    MissionSpec.Leo original =
+        (MissionSpec.Leo) MissionFactory.specFromWizardValues(leoValues(), MissionType.LEO);
     MissionSpec.Leo reopened =
         (MissionSpec.Leo) reopen(entryFor(leoValues(), MissionType.LEO), MissionType.LEO);
 
@@ -105,8 +102,8 @@ class WizardPrefillTest {
 
   @Test
   void geoSpec_survivesTheRoundTrip() {
-    MissionSpec.Geo original = (MissionSpec.Geo) MissionFactory.specFromWizardValues(
-        geoValues(), MissionType.GEO);
+    MissionSpec.Geo original =
+        (MissionSpec.Geo) MissionFactory.specFromWizardValues(geoValues(), MissionType.GEO);
     MissionSpec.Geo reopened =
         (MissionSpec.Geo) reopen(entryFor(geoValues(), MissionType.GEO), MissionType.GEO);
 

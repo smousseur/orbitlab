@@ -54,14 +54,14 @@ public final class MissionEphemerisGenerator {
    * Re-propagates the mission from initialState through all stages, sampling the trajectory and
    * coasting for {@code finalCoastSeconds} past the last stage.
    *
-   * <p>The caller passes a <b>resolved duration</b>, not a {@link MissionHorizon}: deciding how long
-   * a mission should be recorded is an intent, and a generator has no business knowing the intent
-   * (spec {@code specs/mission-horizon/01-horizon-explicite.md} §4). {@code MissionOptimizer}
-   * resolves it, because that is where the achieved orbit is already in hand.
+   * <p>The caller passes a <b>resolved duration</b>, not a {@link MissionHorizon}: deciding how
+   * long a mission should be recorded is an intent, and a generator has no business knowing the
+   * intent (spec {@code specs/mission-horizon/01-horizon-explicite.md} §4). {@code
+   * MissionOptimizer} resolves it, because that is where the achieved orbit is already in hand.
    *
    * <p>The sampling step is not a parameter either: each stage advertises its own through {@link
-   * com.smousseur.orbitlab.simulation.mission.MissionStage#sampleStepSeconds}, so burns are recorded
-   * at 1 s and coasts at 60 s.
+   * com.smousseur.orbitlab.simulation.mission.MissionStage#sampleStepSeconds}, so burns are
+   * recorded at 1 s and coasts at 60 s.
    *
    * @param mission the mission with optimization results injected into stages
    * @param initialState the spacecraft state at T_start

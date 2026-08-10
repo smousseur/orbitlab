@@ -56,8 +56,8 @@ class OrbitElementsTest {
   /**
    * Short-period residual the conversion leaves behind. Measured 2026-08-05: 625 m at 400 km, 571 m
    * at 600 km, 482 m at 1000 km — i.e. ~97% of the osculating oscillation removed, not 100%. This
-   * is not a convergence defect: at threshold 1e-15 and 5000 iterations the result is bit-identical.
-   * It is Eckstein-Hechler's own modelling residual.
+   * is not a convergence defect: at threshold 1e-15 and 5000 iterations the result is
+   * bit-identical. It is Eckstein-Hechler's own modelling residual.
    *
    * <p>The bar stays 19 times below the ~19 km osculating oscillation, so it would fail loudly if
    * the conversion started returning osculating elements in disguise, which is the only defect it
@@ -114,8 +114,8 @@ class OrbitElementsTest {
    * Two reporting sites depend on this string (the insertion log of the optimization tests and
    * {@code MissionOptimizer}). Pinning it here keeps a format change from going unnoticed.
    *
-   * <p>Scientific notation for the eccentricity is not a whim: the measured insertions sit at
-   * e ≈ 5e-6, which {@code %f} would render as "0.000005".
+   * <p>Scientific notation for the eccentricity is not a whim: the measured insertions sit at e ≈
+   * 5e-6, which {@code %f} would render as "0.000005".
    */
   @Test
   void format_rendersApsidesEccentricityAndInclination() {
@@ -135,8 +135,7 @@ class OrbitElementsTest {
             Constants.WGS84_EARTH_MU);
 
     assertEquals(
-        "431219 x 568781 m (e=1.000e-02, i=5.7296 deg)",
-        OrbitElements.osculating(orbit).format());
+        "431219 x 568781 m (e=1.000e-02, i=5.7296 deg)", OrbitElements.osculating(orbit).format());
   }
 
   /**
@@ -228,9 +227,9 @@ class OrbitElementsTest {
   }
 
   /**
-   * The degraded mode of spec section 3.4: an input the theory cannot handle yields an empty
-   * {@code Optional}, never an exception. No mission must fail because a log could not be
-   * computed. A hyperbolic orbit is the clearest such case: the theory means nothing on it.
+   * The degraded mode of spec section 3.4: an input the theory cannot handle yields an empty {@code
+   * Optional}, never an exception. No mission must fail because a log could not be computed. A
+   * hyperbolic orbit is the clearest such case: the theory means nothing on it.
    */
   @Test
   void mean_returnsEmptyRatherThanThrowing() {

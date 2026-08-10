@@ -230,15 +230,13 @@ public class MissionOptimizer {
         }
         mission.setCurrentState(propagated);
         double duration = propagated.getDate().durationFrom(stageEntryDate);
-        stagePerformances.add(
-            buildStagePerformance(stage, massIn, propagated.getMass(), duration));
+        stagePerformances.add(buildStagePerformance(stage, massIn, propagated.getMass(), duration));
       } else {
         logger.info("Propagating non-optimizable stage '{}'...", stage.getName());
         SpacecraftState propagated = stage.propagateStandalone(mission.getCurrentState(), mission);
         mission.setCurrentState(propagated);
         double duration = propagated.getDate().durationFrom(stageEntryDate);
-        stagePerformances.add(
-            buildStagePerformance(stage, massIn, propagated.getMass(), duration));
+        stagePerformances.add(buildStagePerformance(stage, massIn, propagated.getMass(), duration));
         logger.info("Stage '{}' done.", stage.getName());
       }
     }

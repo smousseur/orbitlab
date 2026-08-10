@@ -43,8 +43,8 @@ public final class EphemerisDatasetGeneratorMain {
    * Entry point for ephemeris dataset generation.
    *
    * <p>Expects exactly two arguments: the path to the Orekit data zip file and the output
-   * directory. Configures logging, builds a {@link GeneratorConfigV1} with tuned per-body
-   * sampling parameters, and runs the full generation pipeline.
+   * directory. Configures logging, builds a {@link GeneratorConfigV1} with tuned per-body sampling
+   * parameters, and runs the full generation pipeline.
    *
    * @param args command-line arguments: {@code <orekit-data.zip> <outputDir>}
    * @throws Exception if generation fails

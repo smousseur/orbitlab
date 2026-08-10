@@ -20,13 +20,13 @@ import org.orekit.utils.PVCoordinates;
 import org.orekit.utils.PVCoordinatesProvider;
 
 /**
- * Attitude provider that smoothly transitions the spacecraft thrust direction from vertical (zenith)
- * to horizontal (prograde tangential) over a configurable time window. This implements the classic
- * gravity turn maneuver used during launch ascent.
+ * Attitude provider that smoothly transitions the spacecraft thrust direction from vertical
+ * (zenith) to horizontal (prograde tangential) over a configurable time window. This implements the
+ * classic gravity turn maneuver used during launch ascent.
  *
  * <p>The transition follows a power-law profile: the interpolation factor between zenith and
- * horizontal directions is raised to the configured exponent, allowing control over how quickly
- * the vehicle pitches over.
+ * horizontal directions is raised to the configured exponent, allowing control over how quickly the
+ * vehicle pitches over.
  */
 public class GravityTurnAttitudeProvider implements AttitudeProvider {
 
@@ -38,7 +38,8 @@ public class GravityTurnAttitudeProvider implements AttitudeProvider {
    * Creates a gravity turn attitude provider.
    *
    * @param kickDate the date at which the pitch-over begins
-   * @param transitionTime the total duration of the transition from vertical to horizontal (seconds)
+   * @param transitionTime the total duration of the transition from vertical to horizontal
+   *     (seconds)
    * @param exponent the power-law exponent controlling the pitch-over profile (1.0 = linear)
    */
   public GravityTurnAttitudeProvider(

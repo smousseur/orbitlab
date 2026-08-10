@@ -6,8 +6,8 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * Global thread-safe registry for the active {@link EphemerisService} instance.
  *
- * <p>Allows application states to publish and retrieve the current ephemeris service without
- * direct coupling. Uses an {@link AtomicReference} for lock-free concurrent access.
+ * <p>Allows application states to publish and retrieve the current ephemeris service without direct
+ * coupling. Uses an {@link AtomicReference} for lock-free concurrent access.
  */
 public final class EphemerisServiceRegistry {
   private static final AtomicReference<EphemerisService> REF = new AtomicReference<>();

@@ -8,8 +8,8 @@ import org.orekit.utils.Constants;
  * Defines the target constraints for gravity turn optimization.
  *
  * <p>These constraints specify the mission target altitude, the acceptable apogee window, the
- * minimum tangential velocity, and the flight path angle window that the gravity turn must
- * achieve before handing off to the transfer stage.
+ * minimum tangential velocity, and the flight path angle window that the gravity turn must achieve
+ * before handing off to the transfer stage.
  *
  * @param targetAltitude mission target orbital altitude in meters
  * @param targetApogee desired apogee altitude in meters at the end of the gravity turn

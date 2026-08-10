@@ -42,8 +42,10 @@ import org.orekit.time.AbsoluteDate;
  */
 public class AnalyticPlaneTrimAtNodeStage extends MissionStage {
   private static final Logger logger = LogManager.getLogger(AnalyticPlaneTrimAtNodeStage.class);
+
   /** Skip the burn below this residual plane error (rad): already good enough. */
   private static final double SKIP_PLANE_ERROR_RAD = FastMath.toRadians(0.03);
+
   /** Skip the burn below this ΔV (m/s): not worth firing the motor. */
   private static final double SKIP_DV_THRESHOLD = 0.5;
 
@@ -101,7 +103,8 @@ public class AnalyticPlaneTrimAtNodeStage extends MissionStage {
     }
 
     NumericalPropagator propagator =
-        OrekitService.get().createOptimizationPropagator(burnLimitedMaxStep(currentState, mission.getVehicle()));
+        OrekitService.get()
+            .createOptimizationPropagator(burnLimitedMaxStep(currentState, mission.getVehicle()));
     propagator.setInitialState(currentState);
     ReentryGuard.armQuiet(propagator);
     addBurn(propagator, currentState, plan, mission.getVehicle());

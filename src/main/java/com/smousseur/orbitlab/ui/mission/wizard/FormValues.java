@@ -35,7 +35,8 @@ public final class FormValues {
    * @param fallback the value to return when the field is absent or unparsable
    * @return the parsed number, or {@code fallback}
    */
-  public static double number(Map<String, Object> values, FormField<Double> field, double fallback) {
+  public static double number(
+      Map<String, Object> values, FormField<Double> field, double fallback) {
     Object raw = values.get(field.key());
     if (raw == null) {
       return fallback;

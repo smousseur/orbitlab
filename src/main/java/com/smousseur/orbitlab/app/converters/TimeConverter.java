@@ -49,9 +49,9 @@ public final class TimeConverter {
    * Converts a {@link LocalDateTime} interpreted as UTC to an Orekit {@link AbsoluteDate}.
    *
    * <p>Built from calendar components rather than from a {@link Date}: Orekit's {@code
-   * AbsoluteDate(Date, TimeScale)} splits the epoch milliseconds with {@code /} and {@code %}, which
-   * both truncate towards zero, so any instant before 1970 yields a negative seconds-in-day and
-   * throws.
+   * AbsoluteDate(Date, TimeScale)} splits the epoch milliseconds with {@code /} and {@code %},
+   * which both truncate towards zero, so any instant before 1970 yields a negative seconds-in-day
+   * and throws.
    */
   public static AbsoluteDate fromUtcLocalDateTime(LocalDateTime utcDateTime) {
     Objects.requireNonNull(utcDateTime, "utcDateTime");
@@ -87,8 +87,8 @@ public final class TimeConverter {
   }
 
   /**
-   * Parses a user-entered UTC date, accepting the two formats the application itself produces plus a
-   * date-only shorthand:
+   * Parses a user-entered UTC date, accepting the two formats the application itself produces plus
+   * a date-only shorthand:
    *
    * <ul>
    *   <li>{@code yyyy-MM-dd HH:mm:ss} — what {@link #formatDate(AbsoluteDate)} displays

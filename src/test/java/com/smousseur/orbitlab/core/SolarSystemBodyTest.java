@@ -15,10 +15,7 @@ class SolarSystemBodyTest {
   void planets_haveParentSun() {
     for (SolarSystemBody body : SolarSystemBody.values()) {
       if (body == SolarSystemBody.SUN || body.isSatellite()) continue;
-      assertEquals(
-          SolarSystemBody.SUN,
-          body.parent(),
-          body + " should orbit the Sun");
+      assertEquals(SolarSystemBody.SUN, body.parent(), body + " should orbit the Sun");
     }
   }
 

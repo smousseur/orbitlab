@@ -11,8 +11,8 @@ import org.orekit.time.AbsoluteDate;
  * {@link MissionEphemeris#displayPointAt} is the single answer to "where is this spacecraft now?",
  * shared by the floating-origin state and the mission orchestrator so the two cannot disagree (spec
  * {@code specs/graphics-effects/spacecraft-view-artefacts.md} §9.1). It must therefore answer for
- * <em>any</em> date, including outside the recorded span, where {@link MissionEphemeris#interpolate}
- * is not meant to be called.
+ * <em>any</em> date, including outside the recorded span, where {@link
+ * MissionEphemeris#interpolate} is not meant to be called.
  */
 class MissionEphemerisDisplayPointTest {
 
@@ -38,7 +38,8 @@ class MissionEphemerisDisplayPointTest {
   void beforeLaunchTheSpacecraftIsOnItsPad() {
     MissionEphemeris eph = straightDrift();
 
-    assertEquals(eph.firstPoint().position(), eph.displayPointAt(T0.shiftedBy(-3_600.0)).position());
+    assertEquals(
+        eph.firstPoint().position(), eph.displayPointAt(T0.shiftedBy(-3_600.0)).position());
     assertEquals(eph.firstPoint().position(), eph.displayPointAt(T0).position());
   }
 

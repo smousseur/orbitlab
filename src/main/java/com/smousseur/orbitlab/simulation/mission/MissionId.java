@@ -5,20 +5,21 @@ import java.util.UUID;
 
 /**
  * Stable, globally unique identity of a mission. This is the key every registry, event and UI
- * callback uses to designate a mission; the mission <em>name</em> is a display label only and may be
- * duplicated or (later) renamed without breaking any lookup.
+ * callback uses to designate a mission; the mission <em>name</em> is a display label only and may
+ * be duplicated or (later) renamed without breaking any lookup.
  *
  * <p>The value is a random UUID rather than a counter because mission files are meant to be
- * exchanged: two missions created independently on two installations can end up in the same library,
- * and no counter can guarantee uniqueness without a coordination point that does not exist here.
+ * exchanged: two missions created independently on two installations can end up in the same
+ * library, and no counter can guarantee uniqueness without a coordination point that does not exist
+ * here.
  *
  * <p>Identity is carried by {@link com.smousseur.orbitlab.simulation.mission.context.MissionEntry},
  * not by {@link Mission} or {@link
  * com.smousseur.orbitlab.simulation.mission.operation.MissionSpec}: both of those are recomposable
  * artifacts <em>under</em> a stable identity. {@code MissionEntry.setOptimizationType} replaces the
  * {@code Mission} object on every FAST↔PRECISE toggle, and {@code MissionSpec.withLauncherLoads}
- * mints one spec per candidate during the propellant sweep — an id living on either would change (or
- * be duplicated) mid-flight and desynchronize the renderer and the camera focus.
+ * mints one spec per candidate during the propellant sweep — an id living on either would change
+ * (or be duplicated) mid-flight and desynchronize the renderer and the camera focus.
  */
 public record MissionId(UUID value) {
 

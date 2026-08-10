@@ -10,8 +10,8 @@ package com.smousseur.orbitlab.simulation.mission.vehicle;
  *
  * @param stageIndex zero-based index of the stage in the vehicle stack
  * @param loaded the propellant loaded into this stage at lift-off (kg)
- * @param residual the propellant left in this stage when it stopped flying — at mission end for
- *     the final active stage, at jettison for a stage dropped early, zero for a stage burnt to its
+ * @param residual the propellant left in this stage when it stopped flying — at mission end for the
+ *     final active stage, at jettison for a stage dropped early, zero for a stage burnt to its
  *     depletion floor (kg)
  */
 public record StagePropellant(int stageIndex, double loaded, double residual) {

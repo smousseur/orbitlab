@@ -10,9 +10,9 @@ import org.orekit.utils.PVCoordinates;
 /**
  * Stateless diagnostics for the spacecraft state at the end of an optimized stage.
  *
- * <p>Used to compare the actual gravity-turn handoff state with the ideal Hohmann
- * starting state for the mission's target altitude — see
- * {@code specs/optimizer/03-robustness-roadmap.md} §0.1 (« État de fin de GT »).
+ * <p>Used to compare the actual gravity-turn handoff state with the ideal Hohmann starting state
+ * for the mission's target altitude — see {@code specs/optimizer/03-robustness-roadmap.md} §0.1 («
+ * État de fin de GT »).
  */
 public final class StageEndStateDiagnostic {
 
@@ -54,13 +54,13 @@ public final class StageEndStateDiagnostic {
   }
 
   /**
-   * Returns the ideal handoff state at the end of a gravity turn so that a pure
-   * tangential ballistic arc reaches {@code targetAltitude}.
+   * Returns the ideal handoff state at the end of a gravity turn so that a pure tangential
+   * ballistic arc reaches {@code targetAltitude}.
    *
-   * <p>Vis-viva on a Hohmann transfer arc connecting the current altitude
-   * (assumed to be the GT exit) to the target circular orbit. The ideal {@code vRad}
-   * and {@code fpa} are zero by definition (handoff at periapsis of the transfer
-   * ellipse), and {@code vTan} is the periapsis velocity of that ellipse.
+   * <p>Vis-viva on a Hohmann transfer arc connecting the current altitude (assumed to be the GT
+   * exit) to the target circular orbit. The ideal {@code vRad} and {@code fpa} are zero by
+   * definition (handoff at periapsis of the transfer ellipse), and {@code vTan} is the periapsis
+   * velocity of that ellipse.
    *
    * @param targetAltitude target circular orbit altitude (m)
    * @param currentAltitude actual GT exit altitude (m)
@@ -77,8 +77,8 @@ public final class StageEndStateDiagnostic {
   /**
    * Formats actual vs. ideal as a single-line diagnostic.
    *
-   * <p>Example:
-   * {@code alt=348142 m | vTan=7320 m/s (Δ=+12) | vRad=132 m/s (Δ=+132) | FPA=2.10° (Δ=+2.10°)}
+   * <p>Example: {@code alt=348142 m | vTan=7320 m/s (Δ=+12) | vRad=132 m/s (Δ=+132) | FPA=2.10°
+   * (Δ=+2.10°)}
    *
    * @param actual measured end state
    * @param ideal computed Hohmann reference at the same altitude

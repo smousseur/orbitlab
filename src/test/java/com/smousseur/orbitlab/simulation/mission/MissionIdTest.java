@@ -51,8 +51,8 @@ class MissionIdTest {
   /**
    * Guards the deliberate choice documented on {@link MissionId#toString()}: the lossless form is
    * the one that must land in accidental string contexts (concatenation, log placeholders). A
-   * regression to the abbreviation here would silently corrupt anything persisted through
-   * {@code toString()}.
+   * regression to the abbreviation here would silently corrupt anything persisted through {@code
+   * toString()}.
    */
   @Test
   void toStringIsTheCanonicalFormNotTheAbbreviation() {

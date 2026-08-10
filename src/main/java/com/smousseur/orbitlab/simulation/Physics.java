@@ -10,9 +10,8 @@ import org.orekit.utils.PVCoordinates;
 /**
  * Utility class providing orbital mechanics and flight dynamics computations.
  *
- * <p>Includes methods for radial velocity calculation, burn duration estimation via the
- * Tsiolkovsky equation, thrust direction construction, launch azimuth determination,
- * and pitch kick maneuvers.
+ * <p>Includes methods for radial velocity calculation, burn duration estimation via the Tsiolkovsky
+ * equation, thrust direction construction, launch azimuth determination, and pitch kick maneuvers.
  */
 public final class Physics {
   private Physics() {}
@@ -68,8 +67,8 @@ public final class Physics {
   }
 
   /**
-   * Builds a thrust direction vector in the TNW (tangential, normal, out-of-plane) frame
-   * from in-plane and out-of-plane angles.
+   * Builds a thrust direction vector in the TNW (tangential, normal, out-of-plane) frame from
+   * in-plane and out-of-plane angles.
    *
    * <p>When both angles are zero, the result is pure tangential prograde thrust.
    *

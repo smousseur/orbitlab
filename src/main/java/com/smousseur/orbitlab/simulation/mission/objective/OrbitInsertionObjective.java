@@ -12,8 +12,8 @@ import com.smousseur.orbitlab.simulation.mission.Mission;
  *
  * <p>Read as <b>mean</b> elements by the analytic trim that shapes the final orbit (spec
  * orbit-reporting/02), so the flown perigee excursion is centred on these altitudes rather than
- * perched at the top of the J2 short-period oscillation. The record itself is unchanged and
- * carries no convention: every other reader still treats these as osculating targets.
+ * perched at the top of the J2 short-period oscillation. The record itself is unchanged and carries
+ * no convention: every other reader still treats these as osculating targets.
  *
  * @param body the central body
  * @param perigeeAltitude target perigee altitude in meters

@@ -78,7 +78,8 @@ public final class MissionWizardAppState extends BaseAppState {
     // suffixed so the list stays readable, and the mission is created either way.
     String name = availableName(missionContext, requestedName, null);
     if (!name.equals(requestedName)) {
-      logger.warn("Mission name '{}' is already in use, creating '{}' instead", requestedName, name);
+      logger.warn(
+          "Mission name '{}' is already in use, creating '{}' instead", requestedName, name);
       values = new HashMap<>(values);
       values.put(FormField.MISSION_NAME.key(), name);
     }
@@ -118,14 +119,12 @@ public final class MissionWizardAppState extends BaseAppState {
     if (entry == null) {
       // Deleted while the wizard was open.
       logger.warn(
-          "Mission update ignored: mission [{}] no longer exists",
-          request.missionId().shortForm());
+          "Mission update ignored: mission [{}] no longer exists", request.missionId().shortForm());
       return;
     }
     MissionSpec currentSpec = entry.spec().orElse(null);
     if (currentSpec == null) {
-      logger.warn(
-          "Mission update ignored: mission [{}] carries no spec", entry.id().shortForm());
+      logger.warn("Mission update ignored: mission [{}] carries no spec", entry.id().shortForm());
       return;
     }
 
@@ -235,7 +234,9 @@ public final class MissionWizardAppState extends BaseAppState {
         "Mission Wizard opened{}", editedId == null ? "" : " on [" + editedId.shortForm() + "]");
   }
 
-  /** Hands the aggregated wizard values to the create or the update path, then closes the wizard. */
+  /**
+   * Hands the aggregated wizard values to the create or the update path, then closes the wizard.
+   */
   private void submit(MissionId editedMissionId, Map<String, Object> values) {
     EventBus bus = context.eventBus();
     if (editedMissionId == null) {

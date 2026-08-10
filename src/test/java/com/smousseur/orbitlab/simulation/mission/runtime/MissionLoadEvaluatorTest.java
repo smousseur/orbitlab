@@ -15,8 +15,8 @@ import org.orekit.time.AbsoluteDate;
 
 /**
  * Fast unit test of the I7 feasibility predicate (spec 09 §6 task 2) — the {@code objectiveMet} and
- * {@code residualSufficient} decisions — exercised on synthetic ephemerides and performance reports,
- * with no propagation.
+ * {@code residualSufficient} decisions — exercised on synthetic ephemerides and performance
+ * reports, with no propagation.
  */
 class MissionLoadEvaluatorTest {
 
@@ -70,11 +70,9 @@ class MissionLoadEvaluatorTest {
     OrbitInsertionObjective target =
         OrbitInsertionObjective.circular(SolarSystemBody.EARTH, 400_000, 0.0);
     // Max altitude exactly +7 %: within tolerance.
-    assertTrue(
-        MissionLoadEvaluator.objectiveMet(coastEphemeris(400_000, 428_000), target, TOL));
+    assertTrue(MissionLoadEvaluator.objectiveMet(coastEphemeris(400_000, 428_000), target, TOL));
     // Max altitude +8 %: out of tolerance.
-    assertFalse(
-        MissionLoadEvaluator.objectiveMet(coastEphemeris(400_000, 432_000), target, TOL));
+    assertFalse(MissionLoadEvaluator.objectiveMet(coastEphemeris(400_000, 432_000), target, TOL));
   }
 
   @Test
@@ -82,19 +80,16 @@ class MissionLoadEvaluatorTest {
     OrbitInsertionObjective target =
         OrbitInsertionObjective.circular(SolarSystemBody.EARTH, 400_000, 0.0);
     // Min altitude −10 % (360 km) breaks the perigee band even though the apogee is fine.
-    assertFalse(
-        MissionLoadEvaluator.objectiveMet(coastEphemeris(360_000, 401_000), target, TOL));
+    assertFalse(MissionLoadEvaluator.objectiveMet(coastEphemeris(360_000, 401_000), target, TOL));
   }
 
   @Test
   void objectiveMet_ellipticTarget_usesPerigeeAndApogeeSeparately() {
     OrbitInsertionObjective target =
         new OrbitInsertionObjective(SolarSystemBody.EARTH, 300_000, 600_000, 0.0);
-    assertTrue(
-        MissionLoadEvaluator.objectiveMet(coastEphemeris(295_000, 610_000), target, TOL));
+    assertTrue(MissionLoadEvaluator.objectiveMet(coastEphemeris(295_000, 610_000), target, TOL));
     // Apogee undershoots by more than 7 %.
-    assertFalse(
-        MissionLoadEvaluator.objectiveMet(coastEphemeris(295_000, 550_000), target, TOL));
+    assertFalse(MissionLoadEvaluator.objectiveMet(coastEphemeris(295_000, 550_000), target, TOL));
   }
 
   @Test
@@ -120,8 +115,7 @@ class MissionLoadEvaluatorTest {
     // reports incomplete, so the evaluator's feasibility AND rejects it even if the coast looks
     // on-target.
     MissionEphemeris onTargetButTruncated =
-        new MissionEphemeris(
-            coastEphemeris(399_000, 401_000).allPoints(), /* complete= */ false);
+        new MissionEphemeris(coastEphemeris(399_000, 401_000).allPoints(), /* complete= */ false);
     assertFalse(onTargetButTruncated.isComplete());
     // The objective check alone would still pass — which is exactly why completeness is a separate,
     // dominating condition.
@@ -150,7 +144,8 @@ class MissionLoadEvaluatorTest {
   @Test
   void residualSufficient_marginAboveFloorOfSizedStageLoad_true() {
     // Heuristic-like point: 284 kg residual on a 2844 kg sized-stage load = 10 % ≥ 1 %.
-    assertTrue(MissionLoadEvaluator.residualSufficient(reportOf(2_844.0, 284.0, 0.0, 0.0), 1, 0.01));
+    assertTrue(
+        MissionLoadEvaluator.residualSufficient(reportOf(2_844.0, 284.0, 0.0, 0.0), 1, 0.01));
   }
 
   @Test
@@ -161,7 +156,8 @@ class MissionLoadEvaluatorTest {
 
   @Test
   void residualSufficient_dividesBySizedStageNotWholeStack() {
-    // 284 kg over the whole 1.24 M stack is 0.02 % (would fail a stack-wide 1 % floor), but over the
+    // 284 kg over the whole 1.24 M stack is 0.02 % (would fail a stack-wide 1 % floor), but over
+    // the
     // 2844 kg sized stage it is 10 % — the floor must use the sized-stage denominator.
     MissionPerformanceReport report = reportOf(2_844.0, 284.0, 0.0, 0.0);
     assertTrue(MissionLoadEvaluator.residualSufficient(report, 1, 0.01));

@@ -87,9 +87,9 @@ public final class PostFxAppState extends BaseAppState {
    *
    * <p>Deliberately modest now that {@code CoronaView} carries the Sun's halo. What is left for the
    * bloom is the one thing geometry cannot do — bleed <em>inwards</em> over the limb and soften the
-   * edge of the disc — and that needs a suggestion, not a wash. Raising it blows the disc out, since
-   * the composite is an addition onto something already near the top of the range, and the channels
-   * clip one by one until the granulation is gone.
+   * edge of the disc — and that needs a suggestion, not a wash. Raising it blows the disc out,
+   * since the composite is an addition onto something already near the top of the range, and the
+   * channels clip one by one until the granulation is gone.
    */
   private static final float BLOOM_INTENSITY = 1.2f;
 
@@ -97,10 +97,10 @@ public final class PostFxAppState extends BaseAppState {
    * Spacing of the blur's nine taps, and the reason it is 1.
    *
    * <p>{@code HGaussianBlur.frag} computes {@code blurSize = m_Scale / m_Size} with {@code m_Size}
-   * the width of the downsampled buffer, so this value <em>is</em> the tap spacing in texels of that
-   * buffer. At 1 the nine taps are contiguous and the kernel is the Gaussian it claims to be. Above
-   * that they skip texels and each output texel becomes a weighted sum of nine point samples off a
-   * sparse grid — a comb rather than a blur, leaving periodic structure at the tap spacing.
+   * the width of the downsampled buffer, so this value <em>is</em> the tap spacing in texels of
+   * that buffer. At 1 the nine taps are contiguous and the kernel is the Gaussian it claims to be.
+   * Above that they skip texels and each output texel becomes a weighted sum of nine point samples
+   * off a sparse grid — a comb rather than a blur, leaving periodic structure at the tap spacing.
    */
   private static final float BLUR_SCALE = 1f;
 
@@ -128,13 +128,13 @@ public final class PostFxAppState extends BaseAppState {
    * DOWN_SAMPLING_FACTOR} screen pixels — some ±8 px here, at any window size.
    *
    * <p>That is far narrower than this used to be, and the narrowness is the point. Every texel of
-   * this buffer is magnified back up at the composite, so it is also a <em>floor</em>: no halo finer
-   * than a texel can be represented, and a magnified single texel is a square tent. Reach and floor
-   * are the same number, which is the trap the Sun's halo fell into when the bloom had to carry it —
-   * wide enough for a close-up meant a floor of some 16 px, and any body projecting smaller than
-   * that got the magnification footprint instead of a halo: a square. {@code CoronaView} now carries
-   * the reach in world units, where no floor exists, which frees this to sit low enough that its own
-   * floor is never met.
+   * this buffer is magnified back up at the composite, so it is also a <em>floor</em>: no halo
+   * finer than a texel can be represented, and a magnified single texel is a square tent. Reach and
+   * floor are the same number, which is the trap the Sun's halo fell into when the bloom had to
+   * carry it — wide enough for a close-up meant a floor of some 16 px, and any body projecting
+   * smaller than that got the magnification footprint instead of a halo: a square. {@code
+   * CoronaView} now carries the reach in world units, where no floor exists, which frees this to
+   * sit low enough that its own floor is never met.
    *
    * <p>Not animatable, whatever the temptation: {@code setDownSamplingFactor} calls {@code
    * reInitFilter}, which reallocates the filter's framebuffers.

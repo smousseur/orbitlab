@@ -60,7 +60,8 @@ class MissionEntryFailureTest {
     // Orekit rebuilds exceptions without a message often enough that "SimpleName: null" would be a
     // routine sight in the UI.
     String described = MissionEntry.describeFailure(new IllegalStateException());
-    assertFalse(described.contains("null"), () -> "must not surface a null message, got " + described);
+    assertFalse(
+        described.contains("null"), () -> "must not surface a null message, got " + described);
     assertTrue(described.contains("IllegalStateException"));
   }
 

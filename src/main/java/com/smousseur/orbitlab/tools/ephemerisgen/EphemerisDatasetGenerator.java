@@ -20,10 +20,10 @@ import org.orekit.time.TimeScalesFactory;
 /**
  * Generates a complete ephemeris dataset for all configured solar system bodies.
  *
- * <p>This generator initializes Orekit, sets up thread pools for parallel computation,
- * and delegates per-body file writing to {@link BodyFileWriterV1}. Bodies are processed
- * concurrently up to the configured parallelism limit, while chunk computation within
- * each body is further parallelized with backpressure to bound memory usage.
+ * <p>This generator initializes Orekit, sets up thread pools for parallel computation, and
+ * delegates per-body file writing to {@link BodyFileWriterV1}. Bodies are processed concurrently up
+ * to the configured parallelism limit, while chunk computation within each body is further
+ * parallelized with backpressure to bound memory usage.
  */
 public final class EphemerisDatasetGenerator {
 
@@ -32,7 +32,8 @@ public final class EphemerisDatasetGenerator {
   /**
    * Creates a new ephemeris dataset generator with the given configuration.
    *
-   * @param cfg the generator configuration specifying bodies, output paths, and parallelism settings
+   * @param cfg the generator configuration specifying bodies, output paths, and parallelism
+   *     settings
    */
   public EphemerisDatasetGenerator(GeneratorConfigV1 cfg) {
     this.cfg = Objects.requireNonNull(cfg, "cfg");
@@ -41,10 +42,9 @@ public final class EphemerisDatasetGenerator {
   /**
    * Generates ephemeris binary files for all configured bodies.
    *
-   * <p>Initializes Orekit data from the configured zip file, creates the output directory,
-   * and writes one binary ephemeris file per body. Bodies are processed in parallel up to
-   * {@link GeneratorConfigV1#maxBodiesInParallel()}, and this method blocks until all
-   * bodies are complete.
+   * <p>Initializes Orekit data from the configured zip file, creates the output directory, and
+   * writes one binary ephemeris file per body. Bodies are processed in parallel up to {@link
+   * GeneratorConfigV1#maxBodiesInParallel()}, and this method blocks until all bodies are complete.
    *
    * @throws Exception if Orekit initialization, computation, or file I/O fails
    */

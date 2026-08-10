@@ -13,8 +13,8 @@ import java.util.Optional;
 /**
  * Service interface for retrieving interpolated ephemeris data for celestial bodies.
  *
- * <p>Provides non-blocking access to body position, velocity, and rotation samples in the
- * ICRF frame. Implementations typically delegate to a {@link SlidingWindowEphemerisBuffer}.
+ * <p>Provides non-blocking access to body position, velocity, and rotation samples in the ICRF
+ * frame. Implementations typically delegate to a {@link SlidingWindowEphemerisBuffer}.
  */
 public interface EphemerisService {
   /**

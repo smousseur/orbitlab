@@ -6,20 +6,21 @@ import org.orekit.time.AbsoluteDate;
 /**
  * Utility class providing orbit windowing policies for computing and caching orbital paths.
  *
- * <p>Contains pure functions for step size calculation, comfort margin determination,
- * comfort zone checks, and center snapping to avoid excessive rebuild frequency.
+ * <p>Contains pure functions for step size calculation, comfort margin determination, comfort zone
+ * checks, and center snapping to avoid excessive rebuild frequency.
  */
 public final class OrbitPolicy {
   private OrbitPolicy() {}
 
   /**
-   * Computes the time step between orbit sample points by dividing the orbital period
-   * by the desired number of points.
+   * Computes the time step between orbit sample points by dividing the orbital period by the
+   * desired number of points.
    *
    * @param periodSeconds the orbital period in seconds
    * @param nPoints the desired number of sample points (must be at least 2)
    * @return the step size in seconds
-   * @throws IllegalArgumentException if periodSeconds is not positive/finite or nPoints is less than 2
+   * @throws IllegalArgumentException if periodSeconds is not positive/finite or nPoints is less
+   *     than 2
    */
   public static double stepSeconds(double periodSeconds, int nPoints) {
     if (!Double.isFinite(periodSeconds) || periodSeconds <= 0.0) {
@@ -32,11 +33,11 @@ public final class OrbitPolicy {
   }
 
   /**
-   * Computes the comfort margin in seconds, defining how far the simulation time can drift
-   * from the snapshot center before a rebuild is triggered.
+   * Computes the comfort margin in seconds, defining how far the simulation time can drift from the
+   * snapshot center before a rebuild is triggered.
    *
-   * <p>The margin is computed as {@code marginPoints * stepSeconds}, then clamped between
-   * {@code mMinSeconds} and {@code periodSeconds * mMaxFraction}.
+   * <p>The margin is computed as {@code marginPoints * stepSeconds}, then clamped between {@code
+   * mMinSeconds} and {@code periodSeconds * mMaxFraction}.
    *
    * @param periodSeconds the orbital period in seconds
    * @param stepSeconds the time step between sample points in seconds
@@ -76,8 +77,8 @@ public final class OrbitPolicy {
   /**
    * Checks whether a given time falls within the comfort zone of an orbit snapshot.
    *
-   * <p>The time {@code t} is considered in the comfort zone if the absolute distance from
-   * the snapshot's center date is at most {@code comfortMarginSeconds}.
+   * <p>The time {@code t} is considered in the comfort zone if the absolute distance from the
+   * snapshot's center date is at most {@code comfortMarginSeconds}.
    *
    * @param snapshot the current orbit snapshot (may be null, which returns false)
    * @param t the time to check
@@ -98,8 +99,8 @@ public final class OrbitPolicy {
   }
 
   /**
-   * Snaps a time to the nearest grid point aligned to a reference anchor, preventing
-   * unnecessary rebuilds on small time changes.
+   * Snaps a time to the nearest grid point aligned to a reference anchor, preventing unnecessary
+   * rebuilds on small time changes.
    *
    * <p>The snap step is typically {@code snapPoints * stepSeconds}.
    *

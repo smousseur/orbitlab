@@ -50,8 +50,8 @@ class LateIgnitionReproTest {
 
   /**
    * Exact reproduction of the transfer-stage replay that died with "spacecraft mass is not
-   * positive: -2,483 kg": burn 1 at t1 ≈ 1 585 s, circularization burn at ~4 315 s, depletion
-   * guard and 1 s sampler, propagated far past the burns.
+   * positive: -2,483 kg": burn 1 at t1 ≈ 1 585 s, circularization burn at ~4 315 s, depletion guard
+   * and 1 s sampler, propagated far past the burns.
    */
   @Test
   void transferReplayIngredients_burnStopsOnSchedule() {
@@ -62,8 +62,7 @@ class LateIgnitionReproTest {
     propagator.setInitialState(state);
     propagator.addForceModel(
         new ConstantThrustManeuver(
-            date.shiftedBy(1_585.7415985515743), 2.879144822549304, 981_000, 348,
-            Vector3D.PLUS_I));
+            date.shiftedBy(1_585.7415985515743), 2.879144822549304, 981_000, 348, Vector3D.PLUS_I));
     propagator.addForceModel(
         new ConstantThrustManeuver(
             date.shiftedBy(4_315.152), 0.3767549809418964, 981_000, 348, Vector3D.PLUS_I));

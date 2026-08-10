@@ -4,8 +4,8 @@ import com.jme3.math.ColorRGBA;
 import com.smousseur.orbitlab.core.SolarSystemBody;
 
 /**
- * Provides characteristic display colors for each solar system body,
- * used for orbit lines and planet icon rendering.
+ * Provides characteristic display colors for each solar system body, used for orbit lines and
+ * planet icon rendering.
  */
 public final class PlanetColors {
 

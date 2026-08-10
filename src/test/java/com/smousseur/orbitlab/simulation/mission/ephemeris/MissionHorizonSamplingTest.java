@@ -47,9 +47,9 @@ class MissionHorizonSamplingTest {
 
   /**
    * A phase that declares itself propulsive and ends after a fixed duration, without actually
-   * burning anything. {@code sampleStepSeconds} keys on {@link MissionStage#isPropulsive()}, so this
-   * is exactly the input the rule reads — and the trajectory stays a clean coast, which makes the
-   * sample counts predictable.
+   * burning anything. {@code sampleStepSeconds} keys on {@link MissionStage#isPropulsive()}, so
+   * this is exactly the input the rule reads — and the trajectory stays a clean coast, which makes
+   * the sample counts predictable.
    */
   private static final class InertBurnStage extends MissionStage {
     private final double durationSeconds;
@@ -111,7 +111,8 @@ class MissionHorizonSamplingTest {
 
   /**
    * And the same rule as it actually lands in an ephemeris: a 120 s burn recorded second by second,
-   * a 600 s coast recorded once a minute. This is the 60x that makes a multi-day horizon affordable.
+   * a 600 s coast recorded once a minute. This is the 60x that makes a multi-day horizon
+   * affordable.
    */
   @Test
   void generatedEphemeris_recordsBurnsFinelyAndCoastsCoarsely() {
@@ -163,10 +164,10 @@ class MissionHorizonSamplingTest {
    * leaking into an optimized stage.
    *
    * <p><b>The trailing coast itself agrees to the millimetre, not exactly.</b> Measured: 1.3 µm on
-   * the first shared samples. That is not the horizon perturbing the trajectory — it is the adaptive
-   * integrator picking a different step sequence when handed a different target date, which is
-   * expected and harmless for a phase that is, by construction, past everything the optimizer
-   * produced.
+   * the first shared samples. That is not the horizon perturbing the trajectory — it is the
+   * adaptive integrator picking a different step sequence when handed a different target date,
+   * which is expected and harmless for a phase that is, by construction, past everything the
+   * optimizer produced.
    */
   @Test
   void horizon_extendsTheTailWithoutReachingAnythingBefore() {
@@ -216,7 +217,8 @@ class MissionHorizonSamplingTest {
   private static MissionEphemeris generateWithCoast(SpacecraftState entry, double coastSeconds) {
     Mission mission =
         missionWith(
-            List.of(new InertBurnStage("Burn", 60.0), new CoastingStage("Trailing", (Double) null)));
+            List.of(
+                new InertBurnStage("Burn", 60.0), new CoastingStage("Trailing", (Double) null)));
     mission.setCurrentState(entry);
     return new MissionEphemerisGenerator().generate(mission, entry, coastSeconds);
   }

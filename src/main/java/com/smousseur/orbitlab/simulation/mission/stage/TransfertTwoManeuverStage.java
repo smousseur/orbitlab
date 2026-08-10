@@ -18,12 +18,12 @@ import org.orekit.propagation.numerical.NumericalPropagator;
 import org.orekit.time.AbsoluteDate;
 
 /**
- * CMA-ES-optimized two-burn transfer to a circular target orbit (spec 06 I6). Burn 1 (4
- * variables: t1, dt1, α1, β1) is optimized with flame-out-aware bounds — dt1 may explore up to
- * the actual depletion of the active stage, infeasible candidates being truncated by the quiet
- * depletion guard — and the circularization burn at the next apoapsis is resolved
- * deterministically from the post-burn-1 state, seeded by the analytic Hohmann solution.
- * Profiles opt in to this stage in place of {@link AnalyticHohmannTransferStage}.
+ * CMA-ES-optimized two-burn transfer to a circular target orbit (spec 06 I6). Burn 1 (4 variables:
+ * t1, dt1, α1, β1) is optimized with flame-out-aware bounds — dt1 may explore up to the actual
+ * depletion of the active stage, infeasible candidates being truncated by the quiet depletion guard
+ * — and the circularization burn at the next apoapsis is resolved deterministically from the
+ * post-burn-1 state, seeded by the analytic Hohmann solution. Profiles opt in to this stage in
+ * place of {@link AnalyticHohmannTransferStage}.
  */
 public class TransfertTwoManeuverStage extends MissionStage
     implements OptimizableMissionStage<TransferTwoManeuverProblem> {

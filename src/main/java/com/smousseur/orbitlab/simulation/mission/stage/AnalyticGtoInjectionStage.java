@@ -27,11 +27,11 @@ import org.orekit.time.AbsoluteDate;
 import org.orekit.utils.Constants;
 
 /**
- * Finite-burn perigee injection raising the apogee to a target altitude (parking orbit → GTO).
- * The plan reuses the Hohmann stage's Newton iteration on the aimed apogee radius so the
- * finite-burn apogee lands on target despite steering and gravity losses. The stage ends at burn
- * cutoff: the spent upper stage separates right after ({@link StageSeparationStage}) and the
- * payload's kick motor performs the apogee circularization (spec 06 I5).
+ * Finite-burn perigee injection raising the apogee to a target altitude (parking orbit → GTO). The
+ * plan reuses the Hohmann stage's Newton iteration on the aimed apogee radius so the finite-burn
+ * apogee lands on target despite steering and gravity losses. The stage ends at burn cutoff: the
+ * spent upper stage separates right after ({@link StageSeparationStage}) and the payload's kick
+ * motor performs the apogee circularization (spec 06 I5).
  *
  * <p><b>Node-aware injection (bilan 11 §3.10).</b> The downstream apogee circularization ({@link
  * AnalyticApogeeCircularizationStage}) removes the whole launch-site inclination (~5.2° from
@@ -52,10 +52,10 @@ public class AnalyticGtoInjectionStage extends MissionStage {
   /**
    * Newton iterations on the aimed apogee radius.
    *
-   * <p>Four is enough because the iteration only ever has room to move while the burn is <em>not</em>
-   * propellant-limited, and there it converges to under 100 m in two or three steps. Once {@link
-   * Physics#computeBurnDurationCapped} clamps the duration to depletion, no iteration count helps —
-   * the loop breaks out on that condition instead (bilan 11 §3.7).
+   * <p>Four is enough because the iteration only ever has room to move while the burn is
+   * <em>not</em> propellant-limited, and there it converges to under 100 m in two or three steps.
+   * Once {@link Physics#computeBurnDurationCapped} clamps the duration to depletion, no iteration
+   * count helps — the loop breaks out on that condition instead (bilan 11 §3.7).
    */
   private static final int AIM_ITERATIONS = 4;
 
@@ -138,9 +138,11 @@ public class AnalyticGtoInjectionStage extends MissionStage {
   public SpacecraftState propagateStandalone(SpacecraftState currentState, Mission mission) {
     InjectionPlan plan = computePlan(currentState, mission.getVehicle());
 
-    // 8×8 gravity, matching the ephemeris generator (bilan 11 §3.9): this standalone flight advances
+    // 8×8 gravity, matching the ephemeris generator (bilan 11 §3.9): this standalone flight
+    // advances
     // the state the next stage plans from, so a Newtonian point-mass field here would diverge from
-    // the flown 8×8 trajectory and break the apogee-node geometry the downstream plane change relies
+    // the flown 8×8 trajectory and break the apogee-node geometry the downstream plane change
+    // relies
     // on — the GTO injection is precisely where that geometry is set.
     NumericalPropagator propagator =
         OrekitService.get()
@@ -155,7 +157,8 @@ public class AnalyticGtoInjectionStage extends MissionStage {
 
   /**
    * @param leadCoast unpowered coast from the entry state to the injection point, sized so the
-   *     transfer apogee lands on an equatorial node (0 for the nominal node-start / equatorial case)
+   *     transfer apogee lands on an equatorial node (0 for the nominal node-start / equatorial
+   *     case)
    * @param dt1 injection burn duration
    * @param burnDirectionInertial constant inertial thrust direction of the injection burn
    * @param dv1 injection ΔV magnitude
@@ -163,7 +166,9 @@ public class AnalyticGtoInjectionStage extends MissionStage {
   private record InjectionPlan(
       double leadCoast, double dt1, Vector3D burnDirectionInertial, double dv1) {}
 
-  /** Result of aiming the injection burn at the apogee <em>radius</em> from a given injection state. */
+  /**
+   * Result of aiming the injection burn at the apogee <em>radius</em> from a given injection state.
+   */
   private record AimResult(
       double dt1, Vector3D burnDirectionInertial, double dv1, SpacecraftState apogeeState) {}
 
@@ -171,9 +176,9 @@ public class AnalyticGtoInjectionStage extends MissionStage {
    * Plans the injection burn, targeting the equatorial node at apogee (bilan 11 §3.10).
    *
    * <p>The apogee <em>radius</em> aim and the node targeting are nearly orthogonal knobs — the
-   * former is set by the burn ΔV magnitude, the latter by <em>when</em> the burn fires — so they are
-   * solved in sequence: radius first at the current phase, then a lead-in coast to null the flown
-   * apogee's latitude.
+   * former is set by the burn ΔV magnitude, the latter by <em>when</em> the burn fires — so they
+   * are solved in sequence: radius first at the current phase, then a lead-in coast to null the
+   * flown apogee's latitude.
    */
   private InjectionPlan computePlan(SpacecraftState entryState, Vehicle vehicle) {
     double sinInclination = FastMath.sin(entryState.getOrbit().getI());
@@ -193,7 +198,8 @@ public class AnalyticGtoInjectionStage extends MissionStage {
     // Off-node: the transfer apogee would fall at latitude ≈ −i·sin(u_inj), where the AKM plane
     // change has no authority. Coast to the next equatorial node — where the antipodal apogee is
     // near the equator by construction, and where a small lead coast has room to move the apogee
-    // either way (impossible from the entry epoch, which can only coast forward). Then secant-refine
+    // either way (impossible from the entry epoch, which can only coast forward). Then
+    // secant-refine
     // to null the finite-burn/J2 residual off-node.
     double period = entryState.getOrbit().getKeplerianPeriod();
     double nodeLead = timeToNextNode(entryState);
@@ -245,7 +251,8 @@ public class AnalyticGtoInjectionStage extends MissionStage {
       }
       double step = -latitude / slope;
       // Stay in the node's basin: the latitude is sinusoidal in the lead coast, so an unclamped
-      // secant could leap into the far node's basin and stall. The residual is small, so is the step.
+      // secant could leap into the far node's basin and stall. The residual is small, so is the
+      // step.
       step = FastMath.max(-period / 8.0, FastMath.min(period / 8.0, step));
       leadPrev = leadCoast;
       latPrev = latitude;
@@ -301,8 +308,7 @@ public class AnalyticGtoInjectionStage extends MissionStage {
     Vector3D deltaV1 = Vector3D.ZERO;
     SpacecraftState stateAtApogee = null;
     double remainingFuel = FastMath.max(0.0, stage1.remainingFuel(state.getMass()));
-    double massFlow =
-        propulsion1.thrust() / (propulsion1.isp() * Constants.G0_STANDARD_GRAVITY);
+    double massFlow = propulsion1.thrust() / (propulsion1.isp() * Constants.G0_STANDARD_GRAVITY);
     double depletionDuration = remainingFuel / massFlow;
     for (int iter = 0; iter < AIM_ITERATIONS; iter++) {
       double aTransfer = (r1Mag + r2Aim) / 2.0;
@@ -363,12 +369,7 @@ public class AnalyticGtoInjectionStage extends MissionStage {
                 "[%s] injection out of reach: burning all %.0f kg left in the active stage "
                     + "(%.3f s at full thrust, Δv %.0f m/s) still leaves the apogee %.0f km short "
                     + "of the %.0f km target — the stage cannot perform this injection",
-                getName(),
-                remainingFuel,
-                dt1,
-                dv1,
-                bias / 1000.0,
-                targetApogeeAltitude / 1000.0));
+                getName(), remainingFuel, dt1, dv1, bias / 1000.0, targetApogeeAltitude / 1000.0));
       }
       // Solver failure: the burn still had propellant margin, so the aim had room to move and the
       // iteration simply ran out of steps. This one *would* warrant a larger AIM_ITERATIONS.
@@ -411,8 +412,8 @@ public class AnalyticGtoInjectionStage extends MissionStage {
    *
    * <p>Re-entry-guarded: a re-entering parking orbit would otherwise hang this coast. On a stop the
    * returned state is early rather than at {@code dt}; the aim built from it is then refused by
-   * {@link #aimApogeeRadius}'s capability check, so the truncation surfaces as a clean infeasibility
-   * instead of a four-hour propagation.
+   * {@link #aimApogeeRadius}'s capability check, so the truncation surfaces as a clean
+   * infeasibility instead of a four-hour propagation.
    */
   private static SpacecraftState coastForward(SpacecraftState state, double dt) {
     NumericalPropagator propagator =
@@ -433,8 +434,7 @@ public class AnalyticGtoInjectionStage extends MissionStage {
     propagator.setInitialState(state);
     ReentryGuard.armQuiet(propagator);
     RecordAndContinue recorder = new RecordAndContinue();
-    propagator.addEventDetector(
-        new NodeDetector(OrekitService.get().gcrf()).withHandler(recorder));
+    propagator.addEventDetector(new NodeDetector(OrekitService.get().gcrf()).withHandler(recorder));
     double period = state.getOrbit().getKeplerianPeriod();
     propagator.propagate(state.getDate().shiftedBy(period * 1.1));
     for (RecordAndContinue.Event event : recorder.getEvents()) {

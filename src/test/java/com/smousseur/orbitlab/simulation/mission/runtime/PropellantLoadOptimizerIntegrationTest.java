@@ -67,8 +67,8 @@ public class PropellantLoadOptimizerIntegrationTest {
    * 5.23°. The budget credits the ascent with {@code 465·cos(latitude)} of Earth-rotation assist,
    * so the mismatch withheld 140 m/s the flight actually gets, and inverse Tsiolkovsky turned that
    * into propellant loaded into the sized top stage and carried dead: measured on the Falcon Heavy
-   * 400 km profile, the S2 load fell from 2 844 kg to 1 963 kg and its residual from 36.7 % to
-   * 13.1 % for the same final orbit (400 000 × 400 110 m). The heuristic baseline λ scales from is
+   * 400 km profile, the S2 load fell from 2 844 kg to 1 963 kg and its residual from 36.7 % to 13.1
+   * % for the same final orbit (400 000 × 400 110 m). The heuristic baseline λ scales from is
    * therefore tighter than it was, and λ* moves with it — the previously recorded 0.475 was
    * measured against the over-sized baseline.
    */

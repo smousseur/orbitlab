@@ -22,14 +22,14 @@ import org.junit.jupiter.api.Test;
  * LodView.updateScreen} first of all (spec {@code
  * specs/graphics-effects/spacecraft-view-artefacts.md} §3).
  *
- * <p>Two independent producers write that origin every frame: {@code SpacecraftPresenter} places the
- * anchor at {@code +p}, and {@code FloatingOriginAppState} translates the near frame by {@code −p}.
- * These tests pin the two properties that make the sum vanish:
+ * <p>Two independent producers write that origin every frame: {@code SpacecraftPresenter} places
+ * the anchor at {@code +p}, and {@code FloatingOriginAppState} translates the near frame by {@code
+ * −p}. These tests pin the two properties that make the sum vanish:
  *
  * <ol>
- *   <li>Both go through {@link JmeVectorAdapter#toJmeBodyRelativePosition}, so the two {@code float}
- *       triples are bit-for-bit opposite and cancel exactly — not to within a tolerance. At LEO
- *       magnitudes one {@code ulp} is already half a metre, so "almost" would not do.
+ *   <li>Both go through {@link JmeVectorAdapter#toJmeBodyRelativePosition}, so the two {@code
+ *       float} triples are bit-for-bit opposite and cancel exactly — not to within a tolerance. At
+ *       LEO magnitudes one {@code ulp} is already half a metre, so "almost" would not do.
  *   <li>The offset has to be written <em>before</em> the world position is read back. The second
  *       test measures what an out-of-order frame costs; the production guard against it is the
  *       attach order in {@code OrbitLabApplication}, which is not exercisable headlessly.
@@ -51,7 +51,8 @@ class NearFrameOriginTest {
 
   @BeforeEach
   void setUp() {
-    // nearRoot → nearFrame → nearBodiesNode → anchor, as assembled in SceneGraph and MissionRenderer.
+    // nearRoot → nearFrame → nearBodiesNode → anchor, as assembled in SceneGraph and
+    // MissionRenderer.
     nearFrame = new Node("nearFrame");
     Node nearBodiesNode = new Node("nearBodiesNode");
     anchor = new Node("Anchor-mission");
@@ -82,7 +83,8 @@ class NearFrameOriginTest {
   void offsetWrittenLast_theSpacecraftMeasuresAWholeFrameOfTravelAway() {
     // The defect this ordering exists to prevent: the near frame still carries the offset computed
     // for the previous frame while the anchor already holds the current position. At ×300 the clock
-    // advances ~5 s per frame, so the spacecraft measures ~38 km off an origin it is sitting on, its
+    // advances ~5 s per frame, so the spacecraft measures ~38 km off an origin it is sitting on,
+    // its
     // projected radius collapses under the LOD threshold, and the 3D model drops to its 2D icon.
     Vector3D previousFrame = LEO_GCRF;
     Vector3D currentFrame = LEO_GCRF.add(new Vector3D(0, 0, 38_000.0)); // ~5 s of LEO travel

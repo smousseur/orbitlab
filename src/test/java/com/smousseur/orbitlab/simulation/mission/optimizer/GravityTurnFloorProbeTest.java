@@ -139,8 +139,7 @@ class GravityTurnFloorProbeTest {
     AbsoluteDate epoch = epoch();
     SpacecraftState initial = mission.getInitialState(epoch);
     mission.setCurrentState(initial);
-    SpacecraftState postVa =
-        mission.getStages().getFirst().propagateStandalone(initial, mission);
+    SpacecraftState postVa = mission.getStages().getFirst().propagateStandalone(initial, mission);
     GravityTurnManeuver maneuver =
         new GravityTurnManeuver(
             mission.getVehicle(),
@@ -156,9 +155,9 @@ class GravityTurnFloorProbeTest {
   }
 
   /**
-   * Flies the whole mission with the gravity turn pinned to {@code vars}, mirroring the
-   * {@code MissionOptimizer} loop with the CMA-ES call replaced by the forced result. The final
-   * coast is skipped: the post-trim orbit already carries the perigee and apogee it would reveal.
+   * Flies the whole mission with the gravity turn pinned to {@code vars}, mirroring the {@code
+   * MissionOptimizer} loop with the CMA-ES call replaced by the forced result. The final coast is
+   * skipped: the post-trim orbit already carries the perigee and apogee it would reveal.
    */
   private static Flight fly(LEOMission mission, double[] vars, double stagingComplete) {
     SpacecraftState initial = mission.getInitialState(epoch());
@@ -226,10 +225,7 @@ class GravityTurnFloorProbeTest {
   private static double[] perigeeApogee(SpacecraftState state) {
     KeplerianOrbit orbit =
         new KeplerianOrbit(
-            state.getPVCoordinates(),
-            state.getFrame(),
-            state.getDate(),
-            Constants.WGS84_EARTH_MU);
+            state.getPVCoordinates(), state.getFrame(), state.getDate(), Constants.WGS84_EARTH_MU);
     double a = orbit.getA();
     double e = orbit.getE();
     return new double[] {a * (1.0 - e) - RE, a * (1.0 + e) - RE};
@@ -259,11 +255,11 @@ class GravityTurnFloorProbeTest {
    *
    * <ul>
    *   <li><b>gravity-turn cost vs MECO</b> — whether CMA-ES found the minimum of its own objective,
-   *       or stopped against the cliff. Monotone increasing from the floor means the pin is real;
-   *       a lower point above the floor means the cliff censors the population and traps the search;
+   *       or stopped against the cliff. Monotone increasing from the floor means the pin is real; a
+   *       lower point above the floor means the cliff censors the population and traps the search;
    *   <li><b>final mass vs MECO</b> — whether that objective is the right one. The vehicle, the
-   *       loads and the jettison sequence are identical at every point of the scan, so final mass is
-   *       an exact inverse proxy for total propellant burnt.
+   *       loads and the jettison sequence are identical at every point of the scan, so final mass
+   *       is an exact inverse proxy for total propellant burnt.
    * </ul>
    */
   /**
@@ -293,8 +289,7 @@ class GravityTurnFloorProbeTest {
     SpacecraftState initial = mission.getInitialState(epoch());
     mission.setCurrentState(initial);
     SpacecraftState postVa = mission.getStages().getFirst().propagateStandalone(initial, mission);
-    OptimizableMissionStage<?> firstBurn =
-        (OptimizableMissionStage<?>) mission.getStages().get(1);
+    OptimizableMissionStage<?> firstBurn = (OptimizableMissionStage<?>) mission.getStages().get(1);
 
     List<HandOff> out = new ArrayList<>();
     for (double offset : TRANSITION_OFFSETS) {
@@ -324,18 +319,17 @@ class GravityTurnFloorProbeTest {
   }
 
   /**
-   * Prediction A1 and A2, on both profiles: does the cost rise monotonically from the staging
-   * floor (the pin is a real optimum), or is there a cheaper candidate above it that the penalty
-   * cliff hides from CMA-ES (the pin is a search trap)? And is the apogee ceiling already saturated
-   * at the floor, which would explain why no second burn can help?
+   * Prediction A1 and A2, on both profiles: does the cost rise monotonically from the staging floor
+   * (the pin is a real optimum), or is there a cheaper candidate above it that the penalty cliff
+   * hides from CMA-ES (the pin is a search trap)? And is the apogee ceiling already saturated at
+   * the floor, which would explain why no second burn can help?
    */
   @Test
   void defautA_gravityTurnCostCurve() {
     for (String tag : new String[] {"FH-400", "LEO-200x1000"}) {
       LEOMission mission = "FH-400".equals(tag) ? falconHeavyBudgetLoads() : elliptic200x1000();
       LEOMission twin = "FH-400".equals(tag) ? falconHeavyBudgetLoads() : elliptic200x1000();
-      double stagingComplete =
-          stagingCompleteTime(twin, Launchers.FALCON_HEAVY.ascentProfile());
+      double stagingComplete = stagingCompleteTime(twin, Launchers.FALCON_HEAVY.ascentProfile());
       logger.info("[A/{}] stagingCompleteTime = {} s", tag, fmt(stagingComplete, 5));
 
       List<HandOff> curve = gravityTurnCurve(mission, stagingComplete);
@@ -392,8 +386,7 @@ class GravityTurnFloorProbeTest {
         // Past a few seconds of second burn the hand-off is so far outside the apogee window that
         // the analytic transfer has no apside to aim at ("No apogee found within one transfer
         // half-period"). That is the measurement, not an error: the point is infeasible.
-        logger.info(
-            "[A3] t=floor+{} s: mission infeasible — {}", fmt(offset, 1), e.getMessage());
+        logger.info("[A3] t=floor+{} s: mission infeasible — {}", fmt(offset, 1), e.getMessage());
       }
     }
     summarize("A3/FH-400", flights, stagingComplete);
@@ -427,8 +420,7 @@ class GravityTurnFloorProbeTest {
                   loads,
                   Payloads.EARTH_OBSERVATION_SAT.toSpacecraft(10_000, 0.0)),
               400_000);
-      double stagingComplete =
-          stagingCompleteTime(twin, Launchers.FALCON_HEAVY.ascentProfile());
+      double stagingComplete = stagingCompleteTime(twin, Launchers.FALCON_HEAVY.ascentProfile());
 
       double[] vars = {stagingComplete, FH_400_RETAINED[1]};
       Flight flight = fly(mission, vars, stagingComplete);
@@ -473,8 +465,7 @@ class GravityTurnFloorProbeTest {
                   loads,
                   Payloads.EARTH_OBSERVATION_SAT.toSpacecraft(10_000, 0.0)),
               400_000);
-      double stagingComplete =
-          stagingCompleteTime(twin, Launchers.FALCON_HEAVY.ascentProfile());
+      double stagingComplete = stagingCompleteTime(twin, Launchers.FALCON_HEAVY.ascentProfile());
       Flight flight = fly(mission, new double[] {stagingComplete, exponent}, stagingComplete);
       logger.info(
           "[A-exp] exponent={} | handoff vRad={} m/s | {}",
@@ -484,7 +475,9 @@ class GravityTurnFloorProbeTest {
     }
   }
 
-  /** Radial velocity implied by the recorded hand-off (m/s), the quantity the transfer must cancel. */
+  /**
+   * Radial velocity implied by the recorded hand-off (m/s), the quantity the transfer must cancel.
+   */
   private static double radialVelocity(Flight flight) {
     return flight.handOffVRad();
   }
@@ -494,9 +487,9 @@ class GravityTurnFloorProbeTest {
   /**
    * Replays the elliptic 200/1000 mission at the variables the failing run retained, and prints the
    * perigee and apogee <b>after every stage</b>. That is the measurement separating the three
-   * candidate causes: a hand-off apogee the gravity turn was asked to place below the target perigee
-   * (constraint spec), a fixed absolute loss in the perigee-raising burn (targeting), or the 30 km
-   * guard rail.
+   * candidate causes: a hand-off apogee the gravity turn was asked to place below the target
+   * perigee (constraint spec), a fixed absolute loss in the perigee-raising burn (targeting), or
+   * the 30 km guard rail.
    */
   @Test
   void defautB_perStageOrbitOfTheFailingEllipticRun() {
@@ -522,7 +515,10 @@ class GravityTurnFloorProbeTest {
         .forEach(
             (name, pa) ->
                 logger.info(
-                    "[B] after '{}': perigee={} m, apogee={} m", name, fmt(pa[0], 0), fmt(pa[1], 0)));
+                    "[B] after '{}': perigee={} m, apogee={} m",
+                    name,
+                    fmt(pa[0], 0),
+                    fmt(pa[1], 0)));
   }
 
   /**
@@ -552,10 +548,10 @@ class GravityTurnFloorProbeTest {
    * insertion, the gap between the osculating orbit — the one the analytic stages aim at and hit to
    * the metre — and the mean orbit, the one the user asked for.
    *
-   * <p>The prediction under test: insertion falling at the top of the J2 oscillation, the mean orbit
-   * should read around {@code target − a*f}, i.e. ~9.7 km below target at 400 km. If the sign flips,
-   * or differs between profiles, insertion does not land at the same point of the oscillation from
-   * one profile to the next and section 2 of the spec has to be rewritten.
+   * <p>The prediction under test: insertion falling at the top of the J2 oscillation, the mean
+   * orbit should read around {@code target − a*f}, i.e. ~9.7 km below target at 400 km. If the sign
+   * flips, or differs between profiles, insertion does not land at the same point of the
+   * oscillation from one profile to the next and section 2 of the spec has to be rewritten.
    *
    * <p>Measured 2026-08-05: −9 388 m on FH-400 (96% of a*f) and −7 363 m on the elliptic profile
    * (78%), negative on both. The prediction holds.
@@ -570,8 +566,7 @@ class GravityTurnFloorProbeTest {
 
   private static void meanOrbitProbe(
       String tag, LEOMission mission, LEOMission twin, double[] vars, double targetPerigee) {
-    double stagingComplete =
-        stagingCompleteTime(twin, Launchers.FALCON_HEAVY.ascentProfile());
+    double stagingComplete = stagingCompleteTime(twin, Launchers.FALCON_HEAVY.ascentProfile());
     Flight flight = fly(mission, vars, stagingComplete);
 
     KeplerianOrbit insertion =
@@ -625,8 +620,7 @@ class GravityTurnFloorProbeTest {
   void flownBandCentringAndCost() {
     bandProbe(
         "FH-400", falconHeavyBudgetLoads(), falconHeavyBudgetLoads(), FH_400_RETAINED, 400_000);
-    bandProbe(
-        "LEO-200x1000", elliptic200x1000(), elliptic200x1000(), ELLIPTIC_RETAINED, 200_000);
+    bandProbe("LEO-200x1000", elliptic200x1000(), elliptic200x1000(), ELLIPTIC_RETAINED, 200_000);
   }
 
   private static void bandProbe(
@@ -701,11 +695,7 @@ class GravityTurnFloorProbeTest {
   }
 
   private static void coastProbe(
-      String tag,
-      LEOMission mission,
-      LEOMission twin,
-      double[] vars,
-      double targetPerigee) {
+      String tag, LEOMission mission, LEOMission twin, double[] vars, double targetPerigee) {
     AscentProfile profile = Launchers.FALCON_HEAVY.ascentProfile();
     double stagingComplete = stagingCompleteTime(twin, profile);
     fly(mission, vars, stagingComplete);

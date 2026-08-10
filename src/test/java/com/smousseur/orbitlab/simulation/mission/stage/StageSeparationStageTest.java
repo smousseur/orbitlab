@@ -93,7 +93,8 @@ class StageSeparationStageTest {
   void enter_wrongStageActive_throwsInsteadOfDroppingIt() {
     // Three-stage stack; the separation is meant to drop S2 (index 1), but the mass says S1
     // (index 0) is still active with propellant aboard — the I7 GEO failure mode.
-    LaunchVehicle s1 = new LaunchVehicle(66_000, 1_233_000, 1_233_000, new PropulsionSystem(311, 2e7));
+    LaunchVehicle s1 =
+        new LaunchVehicle(66_000, 1_233_000, 1_233_000, new PropulsionSystem(311, 2e7));
     VehicleStack stack = new VehicleStack(List.of(s1, S2, AKM_SAT));
     StageSeparationStage separation = new StageSeparationStage("S2 separation", 2.0, 1);
 
@@ -113,7 +114,8 @@ class StageSeparationStageTest {
 
   @Test
   void enter_anyStage_keepsLegacyUncheckedBehaviour() {
-    LaunchVehicle s1 = new LaunchVehicle(66_000, 1_233_000, 1_233_000, new PropulsionSystem(311, 2e7));
+    LaunchVehicle s1 =
+        new LaunchVehicle(66_000, 1_233_000, 1_233_000, new PropulsionSystem(311, 2e7));
     VehicleStack stack = new VehicleStack(List.of(s1, S2, AKM_SAT));
     StageSeparationStage separation =
         new StageSeparationStage("S2 separation", 2.0, StageSeparationStage.ANY_STAGE);

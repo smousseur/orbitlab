@@ -9,10 +9,10 @@ import org.orekit.utils.Constants;
 
 /**
  * Analytic propellant sizing — "just enough" loads per mission (spec 06 §4.3). Inverse Tsiolkovsky
- * computed top-down from the payload: every stage below the launcher's top stage flies fully
- * loaded (v1 — the gravity turn consumes them entirely anyway), only the top stage and the
- * payload's AKM are sized from the ΔV budget. A safety margin absorbs finite-burn and steering
- * losses; loads are clamped to capacity (an infeasibility diagnostic is a later increment).
+ * computed top-down from the payload: every stage below the launcher's top stage flies fully loaded
+ * (v1 — the gravity turn consumes them entirely anyway), only the top stage and the payload's AKM
+ * are sized from the ΔV budget. A safety margin absorbs finite-burn and steering losses; loads are
+ * clamped to capacity (an infeasibility diagnostic is a later increment).
  */
 public final class PropellantBudget {
   private PropellantBudget() {}
@@ -23,10 +23,10 @@ public final class PropellantBudget {
   /**
    * Gravity + steering losses of the ascent (m/s). Calibrated on two MissionPerformanceReport
    * points of the FH LEO 400 km budget run (1 600 → 37.9 % S2 residual, 1 400 → 26.2 %; the
-   * residual converges slowly because consumption shrinks with the load, slope ≈ 0.31 kg/kg).
-   * 1 260 is the fixed point for a ~12 % residual on the reference mission, and stays above the
-   * measured real losses (≈ 1 100 m/s). Do not tighten further without the MassDepletionDetector
-   * guard: the headroom over actual consumption is down to ~1 s of upper-stage burn.
+   * residual converges slowly because consumption shrinks with the load, slope ≈ 0.31 kg/kg). 1 260
+   * is the fixed point for a ~12 % residual on the reference mission, and stays above the measured
+   * real losses (≈ 1 100 m/s). Do not tighten further without the MassDepletionDetector guard: the
+   * headroom over actual consumption is down to ~1 s of upper-stage burn.
    */
   public static final double ASCENT_LOSSES_MS = 1_260.0;
 
@@ -63,8 +63,8 @@ public final class PropellantBudget {
 
   /**
    * Launcher loads and AKM load for a GEO mission (parking → GTO → GEO). The split GEO profile
-   * (spec 06 I5) assigns the ascent residual and the GTO injection to the launcher's top stage,
-   * and the apogee circularization + plane change to the payload's kick motor.
+   * (spec 06 I5) assigns the ascent residual and the GTO injection to the launcher's top stage, and
+   * the apogee circularization + plane change to the payload's kick motor.
    *
    * @param launcher the launcher model
    * @param payload the payload model (provides the AKM characteristics)
@@ -85,9 +85,7 @@ public final class PropellantBudget {
     if (payload.akmPropellantCapacity() > 0) {
       double exhaustVelocity = payload.akmPropulsion().isp() * G0;
       double raw =
-          payloadDryMass
-              * (FastMath.exp(dvApogee / exhaustVelocity) - 1.0)
-              * (1.0 + SAFETY_MARGIN);
+          payloadDryMass * (FastMath.exp(dvApogee / exhaustVelocity) - 1.0) * (1.0 + SAFETY_MARGIN);
       akmLoad = FastMath.min(raw, payload.akmPropellantCapacity());
     }
 
@@ -99,11 +97,10 @@ public final class PropellantBudget {
 
   /**
    * Sizes the top stage for the ΔV left over by the fully-loaded lower stages. Fixed-point
-   * iteration: the lower stages' ΔV depends on the mass above them, which depends on the sized
-   * top load. Solid top stages fly full (no sizing degree of freedom).
+   * iteration: the lower stages' ΔV depends on the mass above them, which depends on the sized top
+   * load. Solid top stages fly full (no sizing degree of freedom).
    */
-  private static double[] sizeTopStage(
-      LauncherModel launcher, double payloadMass, double dvTotal) {
+  private static double[] sizeTopStage(LauncherModel launcher, double payloadMass, double dvTotal) {
     List<StageModel> stages = launcher.stages();
     int n = stages.size();
     double[] loads = new double[n];
@@ -143,8 +140,8 @@ public final class PropellantBudget {
   }
 
   /**
-   * Ideal ascent ΔV to a circular orbit (m/s): orbital speed plus gravity/steering losses minus
-   * the Earth-rotation assist at the launch latitude.
+   * Ideal ascent ΔV to a circular orbit (m/s): orbital speed plus gravity/steering losses minus the
+   * Earth-rotation assist at the launch latitude.
    */
   static double ascentDeltaV(double targetAltitude, double launchLatitudeDeg) {
     double r = RE + targetAltitude;
@@ -161,8 +158,8 @@ public final class PropellantBudget {
   }
 
   /**
-   * Combined circularization + plane-change ΔV at the GTO apogee (m/s). The plane change equals
-   * the launch latitude (inclination of a due-east parking orbit).
+   * Combined circularization + plane-change ΔV at the GTO apogee (m/s). The plane change equals the
+   * launch latitude (inclination of a due-east parking orbit).
    */
   static double apogeeCircularizationDeltaV(double parkingAltitude, double launchLatitudeDeg) {
     double rLeo = RE + parkingAltitude;

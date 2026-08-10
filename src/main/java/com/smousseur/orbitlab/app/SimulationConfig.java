@@ -12,13 +12,13 @@ import java.util.Objects;
 /**
  * Immutable configuration for the orbital simulation session.
  *
- * <p>Defines which solar system bodies to simulate, ephemeris computation settings,
- * sliding window buffer parameters, and orbit rendering window configuration.
+ * <p>Defines which solar system bodies to simulate, ephemeris computation settings, sliding window
+ * buffer parameters, and orbit rendering window configuration.
  *
- * @param orbitBodies         the set of solar system bodies whose orbits are simulated
- * @param ephemerisConfig     configuration for ephemeris computation
+ * @param orbitBodies the set of solar system bodies whose orbits are simulated
+ * @param ephemerisConfig configuration for ephemeris computation
  * @param slidingWindowConfig configuration for the sliding window ephemeris buffer
- * @param orbitWindowConfig   configuration for the orbit visualization window
+ * @param orbitWindowConfig configuration for the orbit visualization window
  */
 public record SimulationConfig(
     EnumSet<SolarSystemBody> orbitBodies,

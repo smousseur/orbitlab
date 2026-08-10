@@ -38,14 +38,13 @@ class AchievedOrbitTest {
   }
 
   /**
-   * The trap documented on {@link AchievedOrbit}, pinned to a measurement: an
-   * <em>instantaneously circular</em> orbit is not circular in mean elements. Its mean eccentricity
-   * is about {@code f = (3/2)*J2*(RE/a)^2}, so its mean perigee sits roughly {@code a*f} below the
-   * osculating one.
+   * The trap documented on {@link AchievedOrbit}, pinned to a measurement: an <em>instantaneously
+   * circular</em> orbit is not circular in mean elements. Its mean eccentricity is about {@code f =
+   * (3/2)*J2*(RE/a)^2}, so its mean perigee sits roughly {@code a*f} below the osculating one.
    *
-   * <p>Measured 2026-08-05 on the real Falcon Heavy 400 km insertion: osculating
-   * 400 000 x 400 114 m, mean 390 612 x 409 712 m, i.e. −9 388 m for an {@code a*f} of 9 746 m.
-   * This test replays the same physics on a synthetic orbit.
+   * <p>Measured 2026-08-05 on the real Falcon Heavy 400 km insertion: osculating 400 000 x 400 114
+   * m, mean 390 612 x 409 712 m, i.e. −9 388 m for an {@code a*f} of 9 746 m. This test replays the
+   * same physics on a synthetic orbit.
    *
    * <p>If this test starts failing, it is not a mission's targeting that moved — it is the
    * osculating-to-mean conversion. That confusion is exactly what the assertion exists to prevent.

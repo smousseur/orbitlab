@@ -106,10 +106,7 @@ public class GravityTurnFirstBurnStage extends GravityTurnBurnStage
     SpacecraftState entryState = mission.getCurrentState();
     GravityTurnManeuver maneuver = createManeuver(mission, entryState.getMass());
     return new GravityTurnProblem(
-        maneuver,
-        entryState,
-        constraints,
-        new AscentChainPropagation(this, maneuver, mission));
+        maneuver, entryState, constraints, new AscentChainPropagation(this, maneuver, mission));
   }
 
   @Override
@@ -135,7 +132,8 @@ public class GravityTurnFirstBurnStage extends GravityTurnBurnStage
 
     // Apply the pitch kick here (bilan 11 §3.9): the generator replays the turn from the pre-kick
     // entry state it saved, so without this the ascent would fly from an un-kicked velocity — 3°
-    // off on Falcon Heavy. The optimize pass runs this very phase, so both passes start identically.
+    // off on Falcon Heavy. The optimize pass runs this very phase, so both passes start
+    // identically.
     // The kick preserves date, position and mass; only the velocity heading changes.
     SpacecraftState kickedState = maneuver.applyKick(entryState);
     propagator.setInitialState(kickedState);
@@ -194,8 +192,7 @@ public class GravityTurnFirstBurnStage extends GravityTurnBurnStage
             constraints,
             instrumentation),
         AscentSequence.silentSeparation(interstageCoastDuration),
-        new GravityTurnSecondBurnStage(
-            AscentSequence.SECOND_BURN_NAME, planRef, instrumentation));
+        new GravityTurnSecondBurnStage(AscentSequence.SECOND_BURN_NAME, planRef, instrumentation));
   }
 
   private GravityTurnManeuver createManeuver(Mission mission, double entryMass) {
@@ -222,8 +219,8 @@ public class GravityTurnFirstBurnStage extends GravityTurnBurnStage
    * from somewhere else — a hand-injected result, a replay of a stale optimization, a future caller
    * bypassing the problem. Such a schedule is degenerate rather than dangerous (zero-length second
    * burn, ascent ending at the jettison coast), but flying it silently would hide where it came
-   * from. Removing it together with the penalty was tried and reverted; see
-   * {@code GravityTurnProblem} and 02-baseline-n2.md §12.
+   * from. Removing it together with the penalty was tried and reverted; see {@code
+   * GravityTurnProblem} and 02-baseline-n2.md §12.
    */
   private void checkStagingInvariant(AscentPlan plan) {
     if (plan.transitionTime() < plan.stagingCompleteTime()) {

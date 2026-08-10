@@ -64,8 +64,8 @@ class MissionDisplayPanelRulesTest {
   }
 
   /**
-   * The reason mission identity moved off the name: two missions may legitimately share a label, and
-   * the rules engine must still track them as distinct. Under the previous name-keyed
+   * The reason mission identity moved off the name: two missions may legitimately share a label,
+   * and the rules engine must still track them as distinct. Under the previous name-keyed
    * implementation, the second mission's status transition would have overwritten the first's entry
    * in the status map and R1 would have mis-fired.
    */
@@ -199,11 +199,13 @@ class MissionDisplayPanelRulesTest {
     bus.publishUiNavigation(new EventBus.UiNavigationEvent.OpenMissionWizard());
 
     // Three distinct queues drain independently.
-    assertEquals(EventBus.UiNavigationEvent.OpenMissionWizard.class, bus.pollOpenWizard().getClass());
+    assertEquals(
+        EventBus.UiNavigationEvent.OpenMissionWizard.class, bus.pollOpenWizard().getClass());
     assertEquals(
         EventBus.UiNavigationEvent.OpenMissionManagement.class,
         bus.pollOpenManagement().getClass());
-    assertEquals(EventBus.UiNavigationEvent.OpenMissionWizard.class, bus.pollOpenWizard().getClass());
+    assertEquals(
+        EventBus.UiNavigationEvent.OpenMissionWizard.class, bus.pollOpenWizard().getClass());
     assertNull(bus.pollOpenWizard());
     assertNull(bus.pollOpenManagement());
     assertNull(bus.pollCreateMission());

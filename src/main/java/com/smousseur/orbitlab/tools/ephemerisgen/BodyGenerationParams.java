@@ -9,10 +9,14 @@ package com.smousseur.orbitlab.tools.ephemerisgen;
  * @param dtRotSeconds time step in seconds between consecutive rotation (attitude) samples
  * @param chunkDurationSeconds duration in seconds of each data chunk in the output file
  */
-public record BodyGenerationParams(double dtPvSeconds, double dtRotSeconds, double chunkDurationSeconds) {
+public record BodyGenerationParams(
+    double dtPvSeconds, double dtRotSeconds, double chunkDurationSeconds) {
   public BodyGenerationParams {
-    if (!Double.isFinite(dtPvSeconds) || dtPvSeconds <= 0) throw new IllegalArgumentException("dtPvSeconds");
-    if (!Double.isFinite(dtRotSeconds) || dtRotSeconds <= 0) throw new IllegalArgumentException("dtRotSeconds");
-    if (!Double.isFinite(chunkDurationSeconds) || chunkDurationSeconds <= 0) throw new IllegalArgumentException("chunkDurationSeconds");
+    if (!Double.isFinite(dtPvSeconds) || dtPvSeconds <= 0)
+      throw new IllegalArgumentException("dtPvSeconds");
+    if (!Double.isFinite(dtRotSeconds) || dtRotSeconds <= 0)
+      throw new IllegalArgumentException("dtRotSeconds");
+    if (!Double.isFinite(chunkDurationSeconds) || chunkDurationSeconds <= 0)
+      throw new IllegalArgumentException("chunkDurationSeconds");
   }
 }

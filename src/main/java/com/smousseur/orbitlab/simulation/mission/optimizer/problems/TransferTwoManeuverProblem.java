@@ -16,9 +16,8 @@ import org.orekit.utils.Constants;
  *
  * <p>This is a special case of {@link TransferProblem} where the target orbit is circular: burn 1
  * is followed by a deterministic prograde circularization burn at apoapsis (computed by the
- * maneuver class). Because burn 2 is deterministic, CMA-ES only needs to find the burn 1
- * parameters that produce a transfer orbit from which the circularization yields the best
- * circular orbit.
+ * maneuver class). Because burn 2 is deterministic, CMA-ES only needs to find the burn 1 parameters
+ * that produce a transfer orbit from which the circularization yields the best circular orbit.
  *
  * <p>The cost function (inherited from {@link TransferProblem}) evaluates the <b>final</b> orbit
  * after both burns against the target apsides — both equal to the target circular altitude.

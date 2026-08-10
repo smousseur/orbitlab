@@ -164,8 +164,7 @@ public final class MissionEphemeris {
     double alt = altitudes[i0] + tau * (altitudes[i1] - altitudes[i0]);
 
     // Mass and stage: floor semantics
-    return new MissionEphemerisPoint(
-        date, p, v, stageNames[i0], propulsive[i0], masses[i0], alt);
+    return new MissionEphemerisPoint(date, p, v, stageNames[i0], propulsive[i0], masses[i0], alt);
   }
 
   /**

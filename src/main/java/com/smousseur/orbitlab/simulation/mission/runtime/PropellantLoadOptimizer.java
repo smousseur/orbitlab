@@ -91,11 +91,11 @@ public final class PropellantLoadOptimizer {
   public record Evaluation(double lambda, boolean feasible, MissionComputeResult result) {}
 
   /**
-   * Rebuilds the mission with {@code loads(λ)}, optimizes it and reports feasibility. Implementations
-   * warm-start the internal CMA-ES from {@code previous} — the immediately preceding evaluation,
-   * whose {@link MissionComputeResult#optimizerResult()} holds each stage's {@code bestVariables} —
-   * so the bisection's repeated calls do not restart the inner optimizer from scratch (spec 09 §1,
-   * §2). This mission reconstruction is spec 09 §6 task 2.
+   * Rebuilds the mission with {@code loads(λ)}, optimizes it and reports feasibility.
+   * Implementations warm-start the internal CMA-ES from {@code previous} — the immediately
+   * preceding evaluation, whose {@link MissionComputeResult#optimizerResult()} holds each stage's
+   * {@code bestVariables} — so the bisection's repeated calls do not restart the inner optimizer
+   * from scratch (spec 09 §1, §2). This mission reconstruction is spec 09 §6 task 2.
    */
   @FunctionalInterface
   public interface Evaluator {
@@ -103,8 +103,8 @@ public final class PropellantLoadOptimizer {
      * Evaluates the mission at scale factor {@code λ}.
      *
      * @param lambda the scale factor to apply to the heuristic liquid-stage loads
-     * @param previous the last evaluation performed (nearest {@code λ}), or {@code null} on the very
-     *     first call; a warm-start source for the internal optimizer
+     * @param previous the last evaluation performed (nearest {@code λ}), or {@code null} on the
+     *     very first call; a warm-start source for the internal optimizer
      * @return the evaluation outcome at {@code λ}
      */
     Evaluation evaluate(double lambda, Evaluation previous);
@@ -113,10 +113,10 @@ public final class PropellantLoadOptimizer {
   /**
    * Outcome of the bisection.
    *
-   * @param feasible whether a feasible load was found (false only when even the heuristic {@code
-   *     λ = λmax} load fails — an under-dotée mission)
-   * @param lambda the minimal feasible scale factor found within tolerance (equals {@code λmax} when
-   *     infeasible)
+   * @param feasible whether a feasible load was found (false only when even the heuristic {@code λ
+   *     = λmax} load fails — an under-dotée mission)
+   * @param lambda the minimal feasible scale factor found within tolerance (equals {@code λmax}
+   *     when infeasible)
    * @param evaluations the number of evaluations spent (bounded by {@code maxEvaluations})
    * @param best the evaluation at {@link #lambda()} — the tightest feasible load, or the failing
    *     {@code λmax} probe when {@link #feasible()} is false
@@ -139,10 +139,10 @@ public final class PropellantLoadOptimizer {
    * {@code λ} it may stochastically land on a wasteful solution that empties the sized stage
    * (residual 0, below the floor) even though a thriftier solution with margin exists. A {@code λ}
    * can therefore read "infeasible" while a slightly larger one reads "feasible" with generous
-   * residual (observed on the FH LEO integration run). The consequence is benign: {@code λ*} stays a
-   * genuinely feasible load with margin, but it may be <em>conservative</em> (a smaller feasible load
-   * might exist) and can shift with the seed. Making it exact would require a propellant-aware inner
-   * cost — out of scope here.
+   * residual (observed on the FH LEO integration run). The consequence is benign: {@code λ*} stays
+   * a genuinely feasible load with margin, but it may be <em>conservative</em> (a smaller feasible
+   * load might exist) and can shift with the seed. Making it exact would require a propellant-aware
+   * inner cost — out of scope here.
    *
    * @param evaluator rebuilds + optimizes the mission at a given {@code λ}
    * @return the minimal feasible scaling and the evaluation that achieved it
@@ -163,7 +163,8 @@ public final class PropellantLoadOptimizer {
     // nothing to shrink, so report infeasible rather than bisect toward an ever-smaller load.
     Evaluation hi = evaluator.evaluate(lambdaMax, null);
     evaluations++;
-    logger.info("Probe λ={} (upper bound / heuristic loads): feasible={}", lambdaMax, hi.feasible());
+    logger.info(
+        "Probe λ={} (upper bound / heuristic loads): feasible={}", lambdaMax, hi.feasible());
     if (!hi.feasible()) {
       logger.warn(
           "Heuristic loads (λ={}) infeasible — mission under-dotée, nothing to shrink; aborting"
@@ -262,9 +263,9 @@ public final class PropellantLoadOptimizer {
 
   /**
    * Applies the scale factor to the liquid-stage loads, leaving the non-scaled stages untouched.
-   * {@code load_i(λ) = λ · load_i^heuristic} where {@code lambdaScaled[i]} is true, otherwise {@code
-   * load_i^heuristic}. Because {@code λ ≤ 1} and the heuristic loads never exceed capacity, no upper
-   * clamp is needed; the result is floored at zero for safety.
+   * {@code load_i(λ) = λ · load_i^heuristic} where {@code lambdaScaled[i]} is true, otherwise
+   * {@code load_i^heuristic}. Because {@code λ ≤ 1} and the heuristic loads never exceed capacity,
+   * no upper clamp is needed; the result is floored at zero for safety.
    *
    * @param lambda the scale factor
    * @param heuristicLoads the baseline per-stage loads (kg), same order as the launcher stages
@@ -317,9 +318,10 @@ public final class PropellantLoadOptimizer {
    * freedom) and the payload AKM never appears in the launcher loads.
    *
    * <p><b>Opt-in, per profile</b> — {@link #lambdaScaledMask} (top stage only) stays the default.
-   * Measured on Falcon Heavy: this mask reclaims 67 t on GEO ({@code λ₀ = 0.9453}) and <b>nothing</b>
-   * on LEO ({@code λ₀ = 1.0000}), so which mask to use is a property of the profile, not a setting
-   * to standardize. See {@link #lambdaScaledMask} for why LEO's first stage cannot move.
+   * Measured on Falcon Heavy: this mask reclaims 67 t on GEO ({@code λ₀ = 0.9453}) and
+   * <b>nothing</b> on LEO ({@code λ₀ = 1.0000}), so which mask to use is a property of the profile,
+   * not a setting to standardize. See {@link #lambdaScaledMask} for why LEO's first stage cannot
+   * move.
    *
    * @param launcher the launcher model
    * @return a per-stage boolean mask, {@code true} on every variable-load stage
@@ -339,17 +341,17 @@ public final class PropellantLoadOptimizer {
    * stage stay off the scaling, and the payload AKM is sized separately and never appears in the
    * launcher loads.
    *
-   * <p><b>Deviation from spec 09 §1</b> (which puts every non-SOLID, non-AKM stage under {@code λ}),
-   * kept on the strength of a measurement, not of an assumption. Re-run on Falcon Heavy LEO with
-   * every variable-load stage under its own {@code λ}, the first stage settles at {@code λ₀ = 1}
-   * exactly: nothing to reclaim. The mechanism is a load transfer, not a broken ascent — taking
+   * <p><b>Deviation from spec 09 §1</b> (which puts every non-SOLID, non-AKM stage under {@code
+   * λ}), kept on the strength of a measurement, not of an assumption. Re-run on Falcon Heavy LEO
+   * with every variable-load stage under its own {@code λ}, the first stage settles at {@code λ₀ =
+   * 1} exactly: nothing to reclaim. The mechanism is a load transfer, not a broken ascent — taking
    * 1.1 % off S1 alone, with S2 held at its own optimum, drops S2's residual from 127 kg to zero.
    * S1's propellant is repaid in full by the stage above it, which has no margin to pay with.
    *
    * <p>This is a property of the profile, not of first stages: on GEO the same measurement yields
    * {@code λ₀ = 0.9453}, 67 t reclaimed, because there S2 does the heavy lifting (a 10.6 t GTO
-   * injection) and the gravity turn sits pinned on its staging floor with propellant to spare.
-   * The stage carrying a reliably reclaimable margin on <em>every</em> profile is the one {@link
+   * injection) and the gravity turn sits pinned on its staging floor with propellant to spare. The
+   * stage carrying a reliably reclaimable margin on <em>every</em> profile is the one {@link
    * com.smousseur.orbitlab.simulation.mission.vehicle.PropellantBudget} actually sizes — the top
    * stage — which is why {@code λ} is restricted to it by default. Use {@link #allVariableLoadMask}
    * when a profile's lower stages are suspected of carrying slack, and measure rather than assume.

@@ -19,12 +19,12 @@ import org.junit.jupiter.api.Test;
 class MissionPhaseShadingTest {
 
   /**
-   * Two adjacent phases must differ by at least this much in RGB, or the encoding says nothing where
-   * it is read most — along the ascent, which is a run of consecutive burns.
+   * Two adjacent phases must differ by at least this much in RGB, or the encoding says nothing
+   * where it is read most — along the ascent, which is a run of consecutive burns.
    *
-   * <p>This is the guarantee the first version of this class lacked. It ranked only the coasts, so a
-   * LEO — which has exactly one real coast — came out in two flat tones and the whole ascent in one
-   * of them.
+   * <p>This is the guarantee the first version of this class lacked. It ranked only the coasts, so
+   * a LEO — which has exactly one real coast — came out in two flat tones and the whole ascent in
+   * one of them.
    */
   private static final float MIN_ADJACENT_CONTRAST = 0.10f;
 
@@ -100,8 +100,7 @@ class MissionPhaseShadingTest {
   void adjacentPhasesAlwaysDifferOnALongGeoSequence() {
     ColorRGBA[] shades =
         MissionPhaseShading.shade(
-            MISSION,
-            runs(true, true, true, false, true, true, false, true, true, true, false));
+            MISSION, runs(true, true, true, false, true, true, false, true, true, true, false));
 
     for (int i = 1; i < shades.length; i++) {
       float d = distance(shades[i - 1], shades[i]);

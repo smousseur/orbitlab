@@ -15,13 +15,13 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * Thread-safe sliding window buffer of time-stamped position/velocity and rotation samples
- * for a single celestial body, stored in the ICRF frame.
+ * Thread-safe sliding window buffer of time-stamped position/velocity and rotation samples for a
+ * single celestial body, stored in the ICRF frame.
  *
- * <p>Designed for a single-writer (ephemeris worker thread) / multiple-reader (render thread
- * and others) concurrency model. The writer atomically publishes new snapshots via
- * {@link #rebuildWindow} or {@link #ensureWindow}, and readers interpolate from the current
- * snapshot via {@link #trySampleInterpolated} without blocking.
+ * <p>Designed for a single-writer (ephemeris worker thread) / multiple-reader (render thread and
+ * others) concurrency model. The writer atomically publishes new snapshots via {@link
+ * #rebuildWindow} or {@link #ensureWindow}, and readers interpolate from the current snapshot via
+ * {@link #trySampleInterpolated} without blocking.
  */
 public final class SlidingWindowEphemerisBuffer {
 
@@ -61,8 +61,8 @@ public final class SlidingWindowEphemerisBuffer {
   /**
    * Attempts to produce an interpolated body sample at the given time.
    *
-   * <p>This is a non-blocking operation. Returns empty if no snapshot exists or if the
-   * requested time falls outside the current window boundaries.
+   * <p>This is a non-blocking operation. Returns empty if no snapshot exists or if the requested
+   * time falls outside the current window boundaries.
    *
    * @param t the time at which to interpolate
    * @return the interpolated body sample, or empty if unavailable
@@ -98,11 +98,11 @@ public final class SlidingWindowEphemerisBuffer {
   }
 
   /**
-   * Rebuilds the entire buffer window centered on the given date using explicit parameters,
-   * and publishes the result atomically.
+   * Rebuilds the entire buffer window centered on the given date using explicit parameters, and
+   * publishes the result atomically.
    *
-   * <p>Preferred over {@link #rebuildWindow(AbsoluteDate)} when per-body tuning of step size
-   * and window extent is needed. Intended to be called from the worker thread.
+   * <p>Preferred over {@link #rebuildWindow(AbsoluteDate)} when per-body tuning of step size and
+   * window extent is needed. Intended to be called from the worker thread.
    *
    * @param centerDate the center of the new window
    * @param stepSeconds the time interval between consecutive samples in seconds
@@ -159,8 +159,10 @@ public final class SlidingWindowEphemerisBuffer {
       return new BodySample(t, new PVCoordinates(s.pos[i0], s.vel[i0]), s.rot[i0]);
     }
 
-    Vector3D p = EphemerisInterpolator.hermitePosition(s.pos[i0], s.vel[i0], s.pos[i1], s.vel[i1], dt, tau);
-    Vector3D v = EphemerisInterpolator.hermiteVelocity(s.pos[i0], s.vel[i0], s.pos[i1], s.vel[i1], dt, tau);
+    Vector3D p =
+        EphemerisInterpolator.hermitePosition(s.pos[i0], s.vel[i0], s.pos[i1], s.vel[i1], dt, tau);
+    Vector3D v =
+        EphemerisInterpolator.hermiteVelocity(s.pos[i0], s.vel[i0], s.pos[i1], s.vel[i1], dt, tau);
     Rotation r = EphemerisInterpolator.slerp(s.rot[i0], s.rot[i1], tau);
 
     return new BodySample(t, new PVCoordinates(p, v), r);
@@ -170,12 +172,13 @@ public final class SlidingWindowEphemerisBuffer {
    * Ensures the buffer window remains valid for the current simulation time.
    *
    * <p>This method implements the sliding window maintenance logic:
+   *
    * <ul>
-   *   <li>If {@code forceFullRebuild} is true (e.g., after a seek), a full rebuild is performed.</li>
-   *   <li>If {@code now} falls within the comfort zone of the current window, no action is taken.</li>
+   *   <li>If {@code forceFullRebuild} is true (e.g., after a seek), a full rebuild is performed.
+   *   <li>If {@code now} falls within the comfort zone of the current window, no action is taken.
    *   <li>If {@code now} leaves the comfort zone, the window is repositioned on a stable grid
-   *       aligned to the session anchor; a slide is attempted if the shift is small, otherwise
-   *       a full rebuild is triggered.</li>
+   *       aligned to the session anchor; a slide is attempted if the shift is small, otherwise a
+   *       full rebuild is triggered.
    * </ul>
    *
    * <p>Intended to be called from the worker thread.

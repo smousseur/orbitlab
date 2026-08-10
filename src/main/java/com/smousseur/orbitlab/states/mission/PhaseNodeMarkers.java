@@ -23,21 +23,21 @@ import org.hipparchus.geometry.euclidean.threed.Vector3D;
  * One point per phase transition of a mission, drawn on the trajectory line.
  *
  * <p><b>Why points in the 3D node and not GUI billboards.</b> A trajectory node passes behind the
- * central body constantly — it is the nominal case, not an edge case. A Lemur billboard lives in the
- * GUI overlay and is not depth-tested against the scene, so it would draw over the planet while the
- * line it belongs to correctly disappears behind it. A {@code Points} geometry attached beside the
- * line inherits the depth test for free. The load profile agrees: {@code BillboardIconView} serves
- * one icon per body, a dozen in all, where this is a dozen markers <em>per mission</em>.
+ * central body constantly — it is the nominal case, not an edge case. A Lemur billboard lives in
+ * the GUI overlay and is not depth-tested against the scene, so it would draw over the planet while
+ * the line it belongs to correctly disappears behind it. A {@code Points} geometry attached beside
+ * the line inherits the depth test for free. The load profile agrees: {@code BillboardIconView}
+ * serves one icon per body, a dozen in all, where this is a dozen markers <em>per mission</em>.
  *
  * <p>Point size is honoured without a custom shader: {@code Unshaded.j3md} declares {@code
  * PointSize}, {@code Unshaded.vert} writes {@code gl_PointSize} from it, and JME's {@code
- * GLRenderer} enables {@code GL_VERTEX_PROGRAM_POINT_SIZE} unconditionally on desktop. Unlike {@code
- * glLineWidth}, this is not driver-dependent. The cost is that a point is a flat square: {@code
- * PointSprite} no longer exists in the 3.9 {@code Unshaded}, so there is no texture and no rounded,
- * antialiased dot.
+ * GLRenderer} enables {@code GL_VERTEX_PROGRAM_POINT_SIZE} unconditionally on desktop. Unlike
+ * {@code glLineWidth}, this is not driver-dependent. The cost is that a point is a flat square:
+ * {@code PointSprite} no longer exists in the 3.9 {@code Unshaded}, so there is no texture and no
+ * rounded, antialiased dot.
  *
- * <p>Owned by {@link MissionTrajectoryRenderer}, which passes it the origin it has already
- * computed — the marker must be produced by the same conversion as the line, not by a second one.
+ * <p>Owned by {@link MissionTrajectoryRenderer}, which passes it the origin it has already computed
+ * — the marker must be produced by the same conversion as the line, not by a second one.
  */
 final class PhaseNodeMarkers {
 
@@ -105,7 +105,8 @@ final class PhaseNodeMarkers {
 
     for (int r = 0; r < runs.size(); r++) {
       int vertex = runs.get(r).firstVertex();
-      // Runs are ordered by firstVertex, so the first unreached one ends the drawn set. A marker for
+      // Runs are ordered by firstVertex, so the first unreached one ends the drawn set. A marker
+      // for
       // a phase the spacecraft has not started would contradict the trail semantics of the line.
       if (vertex > upTo) {
         break;
@@ -125,7 +126,9 @@ final class PhaseNodeMarkers {
     cv.setUpdateNeeded();
   }
 
-  /** Sizes the buffers to the run count; the bind is rare, so this is not a per-frame allocation. */
+  /**
+   * Sizes the buffers to the run count; the bind is rare, so this is not a per-frame allocation.
+   */
   private void allocate(int runCount) {
     Mesh mesh = geometry.getMesh();
     mesh.setBuffer(VertexBuffer.Type.Position, 3, BufferUtils.createFloatBuffer(runCount * 3));

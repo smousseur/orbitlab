@@ -225,7 +225,8 @@ class GravityTurnProblemTest {
     GravityTurnProblem p = problemWithRealInitialState();
 
     // Circular states are the cleanest way to place an apogee exactly: apogee = altitude.
-    double overshootCost = p.computeCost(circularStateAfter(constraints.maxApogee() + deviation, 200.0));
+    double overshootCost =
+        p.computeCost(circularStateAfter(constraints.maxApogee() + deviation, 200.0));
     double shortfallCost =
         p.computeCost(circularStateAfter(constraints.targetApogee() - deviation, 200.0));
 

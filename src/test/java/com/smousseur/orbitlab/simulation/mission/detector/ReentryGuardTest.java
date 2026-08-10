@@ -38,7 +38,9 @@ import org.orekit.utils.PVCoordinates;
  */
 class ReentryGuardTest {
 
-  /** Wall-clock budget for a guarded propagation. Generous — the point is to bound, not to profile. */
+  /**
+   * Wall-clock budget for a guarded propagation. Generous — the point is to bound, not to profile.
+   */
   private static final Duration TIMEOUT = Duration.ofSeconds(30);
 
   @BeforeAll
@@ -60,8 +62,8 @@ class ReentryGuardTest {
   }
 
   /**
-   * The state observed on the I7 GEO multi-stage sweep at {@code λ(S1) = 0.3}: 36 km altitude at
-   * 7 603 m/s horizontal. Sub-circular at that radius, so the entry point is the apogee and the
+   * The state observed on the I7 GEO multi-stage sweep at {@code λ(S1) = 0.3}: 36 km altitude at 7
+   * 603 m/s horizontal. Sub-circular at that radius, so the entry point is the apogee and the
    * perigee sits ~800 km <em>inside</em> the Earth — a re-entry, and the trajectory the parking
    * insertion flew for 2 666 s before the evaluation hung for four hours.
    */
@@ -104,8 +106,7 @@ class ReentryGuardTest {
         () -> "the propagation must stop short of its cutoff, flew the full " + flown + " s");
 
     double altitude =
-        end.getPVCoordinates().getPosition().getNorm()
-            - Constants.WGS84_EARTH_EQUATORIAL_RADIUS;
+        end.getPVCoordinates().getPosition().getNorm() - Constants.WGS84_EARTH_EQUATORIAL_RADIUS;
     assertEquals(
         ReentryGuard.SUBSURFACE_FLOOR,
         altitude,
@@ -116,8 +117,8 @@ class ReentryGuardTest {
   /**
    * The end-to-end contract: a re-entering phase flown through {@link StageChainRunner} comes back
    * flagged <em>truncated</em>, which is what {@code MissionEphemerisGenerator} turns into {@code
-   * complete=false} and {@code MissionLoadEvaluator} reads as infeasible. Not an exception — a clean
-   * shortfall.
+   * complete=false} and {@code MissionLoadEvaluator} reads as infeasible. Not an exception — a
+   * clean shortfall.
    */
   @Test
   void stageChainRunner_flagsTheReentringStageTruncated() {
@@ -127,8 +128,7 @@ class ReentryGuardTest {
     mission.setCurrentState(entry);
 
     List<StageChainRunner.StageRun> runs = new ArrayList<>();
-    StageChainRunner runner =
-        StageChainRunner.sampling(null, 0.0, run -> runs.add(run));
+    StageChainRunner runner = StageChainRunner.sampling(null, 0.0, run -> runs.add(run));
 
     assertTimeoutPreemptively(
         TIMEOUT,
@@ -150,8 +150,8 @@ class ReentryGuardTest {
   /**
    * The non-regression proof at detector level: a detector whose {@code g} never changes sign does
    * not touch the integration — event detection runs by interpolation over already-accepted steps,
-   * and only a detected event truncates one. So a guarded nominal propagation must land on the exact
-   * same state as an unguarded one, not merely a close one.
+   * and only a detected event truncates one. So a guarded nominal propagation must land on the
+   * exact same state as an unguarded one, not merely a close one.
    */
   @Test
   void nominalCircularOrbit_neverTriggers() {
@@ -173,8 +173,7 @@ class ReentryGuardTest {
     assertEquals(
         0.0,
         Vector3D.distance(
-            actual.getPVCoordinates().getPosition(),
-            reference.getPVCoordinates().getPosition()),
+            actual.getPVCoordinates().getPosition(), reference.getPVCoordinates().getPosition()),
         0.0,
         "arming the guard must not move a single metre of a nominal trajectory");
   }
@@ -222,8 +221,7 @@ class ReentryGuardTest {
   void verticalClimbFromTheWorstPad_neverTriggers() {
     SpacecraftState onThePad = padState(62.9); // Plesetsk, −17.0 km spherical
     Vector3D up = onThePad.getPVCoordinates().getPosition().normalize().scalarMultiply(500.0);
-    SpacecraftState climbing =
-        stateAt(onThePad.getPVCoordinates().getPosition(), up, 500_000.0);
+    SpacecraftState climbing = stateAt(onThePad.getPVCoordinates().getPosition(), up, 500_000.0);
     AbsoluteDate endDate = climbing.getDate().shiftedBy(60.0);
 
     NumericalPropagator propagator =

@@ -8,9 +8,9 @@ import java.nio.charset.StandardCharsets;
 /**
  * A sequential byte writer that encodes primitive values in little-endian byte order.
  *
- * <p>Provides convenience methods for writing unsigned 32-bit and 64-bit integers,
- * 64-bit floating-point values, length-prefixed UTF-8 strings, and raw byte arrays.
- * The accumulated bytes can be retrieved as a single array via {@link #toByteArray()}.
+ * <p>Provides convenience methods for writing unsigned 32-bit and 64-bit integers, 64-bit
+ * floating-point values, length-prefixed UTF-8 strings, and raw byte arrays. The accumulated bytes
+ * can be retrieved as a single array via {@link #toByteArray()}.
  */
 final class LittleEndianWriter {
 

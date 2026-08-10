@@ -61,17 +61,15 @@ public record CameraOrientation(float yawRad, float pitchRad) {
   }
 
   /**
-   * The orientation that looks along a direction of travel, so whatever lies at the far end of it is
-   * straight ahead. The camera is put on the near side of the pivot — the opposite of where it is
-   * heading — which is what turns a transition into a fly-to rather than a drift past.
+   * The orientation that looks along a direction of travel, so whatever lies at the far end of it
+   * is straight ahead. The camera is put on the near side of the pivot — the opposite of where it
+   * is heading — which is what turns a transition into a fly-to rather than a drift past.
    *
    * @param travelDirection the direction the pivot is travelling in
    * @return the matching orientation
    */
   public static CameraOrientation facingAlong(Vector3f travelDirection) {
-    return travelDirection == null
-        ? defaults()
-        : fromOffsetDirection(travelDirection.negate());
+    return travelDirection == null ? defaults() : fromOffsetDirection(travelDirection.negate());
   }
 
   /**

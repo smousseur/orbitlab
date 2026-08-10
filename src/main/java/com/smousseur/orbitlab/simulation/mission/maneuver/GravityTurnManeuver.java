@@ -87,9 +87,9 @@ public class GravityTurnManeuver {
   /**
    * Decodes raw CMA-ES optimization variables into the fully dated ascent schedule. The burn
    * durations are derived from the propellant remaining at gravity turn entry, and every date the
-   * ascent hangs off is fixed here — this is the single place they are computed, which is what
-   * lets the ascent be flown either as one propagation or as three phases without drifting (spec
-   * 01 §5.1).
+   * ascent hangs off is fixed here — this is the single place they are computed, which is what lets
+   * the ascent be flown either as one propagation or as three phases without drifting (spec 01
+   * §5.1).
    *
    * @param entryState the state at gravity turn entry; only its date is read, and the pitch kick
    *     preserves it, so the pre-kick and kicked states give the same plan
@@ -151,8 +151,7 @@ public class GravityTurnManeuver {
     Maneuver burn1 =
         new Maneuver(
             null,
-            new DepletionStopTrigger(
-                plan.firstIgnitionDate(), plan.firstStage().depletionFloor()),
+            new DepletionStopTrigger(plan.firstIgnitionDate(), plan.firstStage().depletionFloor()),
             new BasicConstantThrustPropulsionModel(
                 propulsion1.thrust(), propulsion1.isp(), Vector3D.PLUS_I, "GT-burn1"));
     propagator.addForceModel(burn1);
@@ -191,8 +190,8 @@ public class GravityTurnManeuver {
   /**
    * Returns the depletion floor guarding this maneuver: the post-jettison stack floor. A single
    * detector at this floor covers both burns — during burn 1 the mass stays above stage 1's own
-   * floor, which is above this one. Burn 2's window is transition-time-driven, not fuel-capped,
-   * so this is where a wrong mass accounting would burn nonexistent propellant (spec 06 I4a).
+   * floor, which is above this one. Burn 2's window is transition-time-driven, not fuel-capped, so
+   * this is where a wrong mass accounting would burn nonexistent propellant (spec 06 I4a).
    */
   public double getDepletionFloor() {
     return nextStage.depletionFloor();
@@ -247,9 +246,9 @@ public class GravityTurnManeuver {
   }
 
   /**
-   * Returns the altitude tracker attached to the most recent {@link #propagateForOptimization}
-   * call on the calling thread, or {@code null} if no propagation has been performed on this thread
-   * yet. Stored per-thread so parallel CMA-ES exploration runs don't overwrite each other's tracker.
+   * Returns the altitude tracker attached to the most recent {@link #propagateForOptimization} call
+   * on the calling thread, or {@code null} if no propagation has been performed on this thread yet.
+   * Stored per-thread so parallel CMA-ES exploration runs don't overwrite each other's tracker.
    *
    * @return the last altitude tracker for this thread, or {@code null}
    */

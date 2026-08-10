@@ -75,9 +75,9 @@ public interface TrajectoryProblem {
   }
 
   /**
-   * Initial sigma for a specific retry attempt. Default returns {@link #getInitialSigma()}; problems
-   * that relax bounds on retry should also override this so the exploration scale tracks the new
-   * box width.
+   * Initial sigma for a specific retry attempt. Default returns {@link #getInitialSigma()};
+   * problems that relax bounds on retry should also override this so the exploration scale tracks
+   * the new box width.
    */
   default double[] getInitialSigmaForAttempt(int attempt, double[] previousBestVars) {
     return getInitialSigma();

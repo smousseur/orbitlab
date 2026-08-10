@@ -38,10 +38,9 @@ import org.orekit.utils.PVCoordinates;
  *
  * <ul>
  *   <li>ΔV vector = (target-shape velocity at the achieved apogee radius, target inclination plane)
- *       − v(apogee). The target shape is the ellipse (aimed shaping radius, achieved apogee),
- *       where the shaping radius is resolved by {@link
- *       com.smousseur.orbitlab.simulation.FlownBandAim} so the <b>flown</b> altitude band is
- *       centred on the requested orbit (spec orbit-reporting/02).
+ *       − v(apogee). The target shape is the ellipse (aimed shaping radius, achieved apogee), where
+ *       the shaping radius is resolved by {@link com.smousseur.orbitlab.simulation.FlownBandAim} so
+ *       the <b>flown</b> altitude band is centred on the requested orbit (spec orbit-reporting/02).
  *   <li>If {@code ||ΔV|| < SKIP_DV_THRESHOLD} the burn is skipped and the stage transitions
  *       immediately.
  *   <li>Otherwise the finite burn is scheduled centered on the impulsive apogee using a {@link
@@ -53,12 +52,12 @@ import org.orekit.utils.PVCoordinates;
  * apogee (not necessarily the requested apogee) in the target-inclination plane. With a J2-aware
  * Hohmann upstream the apogee radius is already close to the target.
  *
- * <p><b>The osculating insertion is therefore no longer circular on a circular target</b>, and
- * that is deliberate: an orbit that is instantaneously circular and one that is circular on
- * average are incompatible to the order of {@code f = (3/2)·J2·(RE/a)²} — you have to choose which
- * one you want (spec orbit-reporting/01 section 2.2). Aiming at the osculating one perches the
- * mission at the top of the J2 short-period oscillation, where the flown perigee can only fall,
- * by the whole ~19 km amplitude; aiming at the mean one centres that excursion on the request.
+ * <p><b>The osculating insertion is therefore no longer circular on a circular target</b>, and that
+ * is deliberate: an orbit that is instantaneously circular and one that is circular on average are
+ * incompatible to the order of {@code f = (3/2)·J2·(RE/a)²} — you have to choose which one you want
+ * (spec orbit-reporting/01 section 2.2). Aiming at the osculating one perches the mission at the
+ * top of the J2 short-period oscillation, where the flown perigee can only fall, by the whole ~19
+ * km amplitude; aiming at the mean one centres that excursion on the request.
  */
 public class AnalyticTrimBurnStage extends MissionStage {
   private static final Logger logger = LogManager.getLogger(AnalyticTrimBurnStage.class);
@@ -123,7 +122,8 @@ public class AnalyticTrimBurnStage extends MissionStage {
       return currentState;
     }
 
-    // 8×8 gravity, matching the ephemeris generator (bilan 11 §3.9): this standalone flight advances
+    // 8×8 gravity, matching the ephemeris generator (bilan 11 §3.9): this standalone flight
+    // advances
     // the state the next stage plans from, so a Newtonian point-mass field here would diverge from
     // the flown 8×8 trajectory that the whole GEO plane strategy is measured against.
     NumericalPropagator propagator =

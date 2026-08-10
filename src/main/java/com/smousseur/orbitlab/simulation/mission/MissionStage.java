@@ -47,8 +47,8 @@ public abstract class MissionStage {
   }
 
   /**
-   * Called when this stage becomes the active stage of the mission. Subclasses may override this
-   * to perform entry actions such as applying a pitch kick or jettisoning a stage. The default
+   * Called when this stage becomes the active stage of the mission. Subclasses may override this to
+   * perform entry actions such as applying a pitch kick or jettisoning a stage. The default
    * implementation returns the previous state unchanged.
    *
    * @param previousState the spacecraft state at the end of the previous stage
@@ -92,9 +92,9 @@ public abstract class MissionStage {
    * Returns the integrator max step to use when propagating this stage, sized to keep the
    * late-ignition invariant (spec 06 I6, bilan 08 §3.1). The default steps at {@link
    * OrekitService#COAST_MAX_STEP} for a non-propulsive (burn-free) stage and at the conservative
-   * {@link OrekitService#SAFE_MAX_STEP} for a propulsive one. Stages whose upper-stage burn can grow
-   * light under a varying I7 load override this to size the step from their actual burns, so the
-   * proven Falcon Heavy stepping is preserved while a lighter load auto-tightens.
+   * {@link OrekitService#SAFE_MAX_STEP} for a propulsive one. Stages whose upper-stage burn can
+   * grow light under a varying I7 load override this to size the step from their actual burns, so
+   * the proven Falcon Heavy stepping is preserved while a lighter load auto-tightens.
    *
    * @param entryState the spacecraft state at the start of this stage
    * @param mission the parent mission
@@ -105,14 +105,14 @@ public abstract class MissionStage {
   }
 
   /**
-   * Returns the step at which the ephemeris samples this stage, in seconds. Deliberately shaped like
-   * {@link #maxStepSeconds}: a phase is the unit that knows how fast its own dynamics are, so it is
-   * the unit that decides how finely it must be recorded.
+   * Returns the step at which the ephemeris samples this stage, in seconds. Deliberately shaped
+   * like {@link #maxStepSeconds}: a phase is the unit that knows how fast its own dynamics are, so
+   * it is the unit that decides how finely it must be recorded.
    *
    * <p>The default splits on {@link #isPropulsive()} — {@link #BURN_SAMPLE_STEP} for a burn, {@link
    * #COAST_SAMPLE_STEP} for a coast. That single distinction covers the trailing coast without a
-   * special case, because the last stage of every mission is a non-propulsive {@code CoastingStage}.
-   * A stage with unusual dynamics for its class may override this.
+   * special case, because the last stage of every mission is a non-propulsive {@code
+   * CoastingStage}. A stage with unusual dynamics for its class may override this.
    *
    * <p>Returning {@code 0} disables sampling for the stage.
    *
@@ -132,21 +132,22 @@ public abstract class MissionStage {
    * OrekitService#burnLimitedMaxStep} caps at {@link OrekitService#SAFE_MAX_STEP}, so a heavy load
    * (Falcon Heavy) keeps its 30 s stepping unchanged and only a lighter I7 load auto-tightens.
    *
-   * <p>Analytic stages that host a burn override {@link #maxStepSeconds} with this <em>and</em> pass
-   * the SAME value to every {@code create*Propagator(...)} that hosts one of their burns — their
-   * {@code propagateStandalone} and Newton/secant plan propagators, not only {@code maxStepSeconds}.
-   * Otherwise the optimizer/plan crashes on a light load while only the ephemeris is protected.
+   * <p>Analytic stages that host a burn override {@link #maxStepSeconds} with this <em>and</em>
+   * pass the SAME value to every {@code create*Propagator(...)} that hosts one of their burns —
+   * their {@code propagateStandalone} and Newton/secant plan propagators, not only {@code
+   * maxStepSeconds}. Otherwise the optimizer/plan crashes on a light load while only the ephemeris
+   * is protected.
    *
    * @param entryState the spacecraft state at the start of the burn-hosting propagation
    * @param vehicle the mission vehicle stack
-   * @return the largest integrator max step in seconds that keeps the invariant for the active stage
+   * @return the largest integrator max step in seconds that keeps the invariant for the active
+   *     stage
    */
   protected static double burnLimitedMaxStep(SpacecraftState entryState, Vehicle vehicle) {
     ActiveStageInfo stage = vehicle.resolveActiveStage(entryState.getMass());
     PropulsionSystem propulsion = stage.propulsion();
     return OrekitService.burnLimitedMaxStep(
-        new OrekitService.BurnSpec(
-            propulsion.thrust(), propulsion.isp(), stage.depletionFloor()));
+        new OrekitService.BurnSpec(propulsion.thrust(), propulsion.isp(), stage.depletionFloor()));
   }
 
   /**

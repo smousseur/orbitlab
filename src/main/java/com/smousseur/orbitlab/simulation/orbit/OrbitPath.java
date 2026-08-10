@@ -11,8 +11,8 @@ import java.util.Objects;
  * An immutable sequence of heliocentric positions representing the orbital path of a celestial body
  * over a specific time range.
  *
- * <p>Positions are stored in meters relative to the Sun's position (heliocentric coordinates)
- * in the ICRF frame.
+ * <p>Positions are stored in meters relative to the Sun's position (heliocentric coordinates) in
+ * the ICRF frame.
  *
  * @param body the celestial body whose orbit this path describes
  * @param start the start time of the orbital path

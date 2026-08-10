@@ -8,8 +8,7 @@ import org.orekit.time.AbsoluteDate;
 /**
  * Shared interpolation utilities for ephemeris data (position, velocity, rotation).
  *
- * <p>Used by {@link SlidingWindowEphemerisBuffer} and
- * {@code DatasetEphemerisSource.DecodedChunk}.
+ * <p>Used by {@link SlidingWindowEphemerisBuffer} and {@code DatasetEphemerisSource.DecodedChunk}.
  */
 public final class EphemerisInterpolator {
 
@@ -129,7 +128,8 @@ public final class EphemerisInterpolator {
       // Quaternions are very close — linear interpolation is accurate enough.
       double a = 1.0 - t;
       double b = t;
-      return new Rotation(a * q00 + b * q10, a * q01 + b * q11, a * q02 + b * q12, a * q03 + b * q13, true);
+      return new Rotation(
+          a * q00 + b * q10, a * q01 + b * q11, a * q02 + b * q12, a * q03 + b * q13, true);
     }
 
     double theta0 = Math.acos(dot);
@@ -140,6 +140,7 @@ public final class EphemerisInterpolator {
     double sA = Math.sin(theta0 - theta) / sinTheta0;
     double sB = sinTheta / sinTheta0;
 
-    return new Rotation(sA * q00 + sB * q10, sA * q01 + sB * q11, sA * q02 + sB * q12, sA * q03 + sB * q13, true);
+    return new Rotation(
+        sA * q00 + sB * q10, sA * q01 + sB * q11, sA * q02 + sB * q12, sA * q03 + sB * q13, true);
   }
 }

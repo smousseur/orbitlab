@@ -25,9 +25,7 @@ import org.orekit.utils.Constants;
  * business knowing the intent.
  */
 public sealed interface MissionHorizon
-    permits MissionHorizon.Revolutions,
-        MissionHorizon.FixedDuration,
-        MissionHorizon.TrailingCoast {
+    permits MissionHorizon.Revolutions, MissionHorizon.FixedDuration, MissionHorizon.TrailingCoast {
 
   /**
    * Shared logger. Public by necessity — an interface field cannot be private — but not part of the
@@ -39,9 +37,9 @@ public sealed interface MissionHorizon
   double SECONDS_PER_DAY = 86_400.0;
 
   /**
-   * Hard cap on the trailing coast. Beyond a month the answer is an out-of-memory ephemeris (roadmap
-   * {@code MIS-9}), not a bigger array: at the 60 s coast sampling step, 30 days already cost
-   * ~43 000 points (~7 MB) per mission.
+   * Hard cap on the trailing coast. Beyond a month the answer is an out-of-memory ephemeris
+   * (roadmap {@code MIS-9}), not a bigger array: at the 60 s coast sampling step, 30 days already
+   * cost ~43 000 points (~7 MB) per mission.
    */
   double MAX_COAST_SECONDS = 30.0 * SECONDS_PER_DAY;
 
@@ -59,9 +57,9 @@ public sealed interface MissionHorizon
   int DEFAULT_GEO_REVOLUTIONS = 3;
 
   /**
-   * The horizon a mission of this type gets when the user did not set one. Both defaults land on
-   * ~3 days: long enough to watch the orbital plane precess, and already the right order of
-   * magnitude for the lunar and rendezvous profiles that will follow.
+   * The horizon a mission of this type gets when the user did not set one. Both defaults land on ~3
+   * days: long enough to watch the orbital plane precess, and already the right order of magnitude
+   * for the lunar and rendezvous profiles that will follow.
    *
    * @param type the mission type
    * @return the derived default horizon
@@ -127,8 +125,8 @@ public sealed interface MissionHorizon
 
     /**
      * The Keplerian period at {@code state}, or {@code 0} when the state carries no bound orbit.
-     * Built from the PV coordinates rather than read off {@code state.getOrbit()}, which throws on a
-     * state propagated as absolute PVA.
+     * Built from the PV coordinates rather than read off {@code state.getOrbit()}, which throws on
+     * a state propagated as absolute PVA.
      */
     private static double keplerianPeriodOf(SpacecraftState state) {
       try {
@@ -217,7 +215,8 @@ public sealed interface MissionHorizon
 
     public TrailingCoast {
       if (seconds < 0.0 || !Double.isFinite(seconds)) {
-        throw new IllegalArgumentException("Trailing coast must be finite and >= 0, got " + seconds);
+        throw new IllegalArgumentException(
+            "Trailing coast must be finite and >= 0, got " + seconds);
       }
     }
 

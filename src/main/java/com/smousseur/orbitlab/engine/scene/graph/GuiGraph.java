@@ -5,9 +5,9 @@ import com.jme3.scene.Node;
 import java.util.Objects;
 
 /**
- * Manages the GUI scene graph hierarchy for overlay elements such as the timeline widget
- * and planet billboard icons. This graph is attached to the JME3 GUI root node and renders
- * in screen-space coordinates.
+ * Manages the GUI scene graph hierarchy for overlay elements such as the timeline widget and planet
+ * billboard icons. This graph is attached to the JME3 GUI root node and renders in screen-space
+ * coordinates.
  */
 public class GuiGraph {
   private final Node guiRoot = new Node("guiRoot");
@@ -85,8 +85,7 @@ public class GuiGraph {
   }
 
   /**
-   * Returns the node for modal overlays (wizard, dialogs).
-   * Renders on top of all other GUI nodes.
+   * Returns the node for modal overlays (wizard, dialogs). Renders on top of all other GUI nodes.
    *
    * @return the modal node
    */

@@ -66,7 +66,8 @@ final class DecodedChunk {
   }
 
   /**
-   * Samples the body rotation at the given time offset using spherical linear interpolation (SLERP).
+   * Samples the body rotation at the given time offset using spherical linear interpolation
+   * (SLERP).
    *
    * @param offsetSeconds elapsed seconds from the dataset start epoch
    * @return the interpolated rotation quaternion

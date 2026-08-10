@@ -31,7 +31,8 @@ public class MinAltitudeTracker extends AbstractDetector<MinAltitudeTracker> {
   }
 
   /**
-   * Creates a tracker that records altitude extremes, optionally activating only after a given date.
+   * Creates a tracker that records altitude extremes, optionally activating only after a given
+   * date.
    *
    * @param altitudeThreshold minimum altitude threshold (m)
    * @param maxAltitudeThreshold maximum altitude threshold (m)

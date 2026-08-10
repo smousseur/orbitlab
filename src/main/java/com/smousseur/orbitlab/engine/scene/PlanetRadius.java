@@ -4,8 +4,8 @@ import com.smousseur.orbitlab.core.SolarSystemBody;
 import org.orekit.utils.Constants;
 
 /**
- * Provides the mean equatorial radius in meters for each solar system body.
- * Uses the WGS84 constant for Earth; other values are standard IAU approximations.
+ * Provides the mean equatorial radius in meters for each solar system body. Uses the WGS84 constant
+ * for Earth; other values are standard IAU approximations.
  */
 public final class PlanetRadius {
 

@@ -92,8 +92,9 @@ class AnalyticGtoInjectionStageTest {
         () -> "message must name a capability limit, got: " + thrown.getMessage());
     assertFalse(
         thrown.getMessage().contains("did not converge"),
-        () -> "a propellant-capped burn must not be reported as a solver failure, got: "
-            + thrown.getMessage());
+        () ->
+            "a propellant-capped burn must not be reported as a solver failure, got: "
+                + thrown.getMessage());
     assertTrue(
         thrown.getMessage().contains("GTO injection"),
         () -> "message must name the stage, got: " + thrown.getMessage());
@@ -105,7 +106,8 @@ class AnalyticGtoInjectionStageTest {
   @Test
   void adequatelyFuelledStage_planConverges() {
     // The same stage with a realistic GTO-injection load reaches the target and must not throw.
-    LaunchVehicle s2 = new LaunchVehicle(4_000, 107_500, 12_000, new PropulsionSystem(348, 981_000));
+    LaunchVehicle s2 =
+        new LaunchVehicle(4_000, 107_500, 12_000, new PropulsionSystem(348, 981_000));
     Spacecraft payload = new Spacecraft(2_000, 2_000, 1_500, new PropulsionSystem(320, 400));
     VehicleStack stack = new VehicleStack(List.of(s2, payload));
 
@@ -123,10 +125,12 @@ class AnalyticGtoInjectionStageTest {
   void inclinedOffNodeParking_landsTheTransferApogeeOnTheEquator() {
     // Node-aware injection (bilan 11 §3.10): the downstream apogee plane change only has authority
     // when apogee sits on an equatorial node. From an inclined parking orbit taken deliberately off
-    // a node (argument of latitude 45°), the un-targeted antipodal apogee would fall several degrees
+    // a node (argument of latitude 45°), the un-targeted antipodal apogee would fall several
+    // degrees
     // off the equator; node-aware injection must nudge its lead coast so the flown transfer apogee
     // lands back on the equator.
-    LaunchVehicle s2 = new LaunchVehicle(4_000, 107_500, 12_000, new PropulsionSystem(348, 981_000));
+    LaunchVehicle s2 =
+        new LaunchVehicle(4_000, 107_500, 12_000, new PropulsionSystem(348, 981_000));
     Spacecraft payload = new Spacecraft(2_000, 2_000, 1_500, new PropulsionSystem(320, 400));
     VehicleStack stack = new VehicleStack(List.of(s2, payload));
 

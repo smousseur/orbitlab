@@ -7,8 +7,8 @@ import java.util.List;
 /**
  * Cyclic palette of 8 distinct trajectory colors used to identify missions across the Display
  * Panel, the management modal and the 3D scene. {@link ColorRGBA} does not provide a stable
- * componentwise {@code equals}, so reference- and value-based comparisons go through
- * {@link #containsColor}.
+ * componentwise {@code equals}, so reference- and value-based comparisons go through {@link
+ * #containsColor}.
  */
 public final class MissionColorPalette {
 

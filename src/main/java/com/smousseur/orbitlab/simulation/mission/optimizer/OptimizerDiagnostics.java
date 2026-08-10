@@ -8,9 +8,9 @@ import org.apache.logging.log4j.Logger;
 /**
  * Stateless diagnostics helpers for inspecting CMA-ES results post-mortem.
  *
- * <p>Used by {@code MissionOptimizer} after each stage optimization to surface
- * pathologies (parameters saturated at their bounds) that would otherwise remain
- * opaque. See {@code specs/optimizer/03-robustness-roadmap.md} §0.1.
+ * <p>Used by {@code MissionOptimizer} after each stage optimization to surface pathologies
+ * (parameters saturated at their bounds) that would otherwise remain opaque. See {@code
+ * specs/optimizer/03-robustness-roadmap.md} §0.1.
  */
 public final class OptimizerDiagnostics {
 
@@ -75,8 +75,8 @@ public final class OptimizerDiagnostics {
    * <p>Example: {@code t1=12% | dt1=48% | α1=100%[HIGH-SAT] | β1=63%}.
    *
    * @param flags result of {@link #evaluateBounds}
-   * @param paramNames human-readable parameter names (same length as {@code flags});
-   *     pass {@code null} or shorter to fall back to {@code x0, x1, ...}
+   * @param paramNames human-readable parameter names (same length as {@code flags}); pass {@code
+   *     null} or shorter to fall back to {@code x0, x1, ...}
    * @return formatted string
    */
   public static String formatBoundReport(List<BoundFlag> flags, String[] paramNames) {
@@ -85,8 +85,7 @@ public final class OptimizerDiagnostics {
       BoundFlag f = flags.get(i);
       String name = nameOf(paramNames, i);
       if (i > 0) sb.append(" | ");
-      sb.append(
-          String.format(Locale.ROOT, "%s=%.0f%%", name, f.normalized() * 100.0));
+      sb.append(String.format(Locale.ROOT, "%s=%.0f%%", name, f.normalized() * 100.0));
       if (f.lowSat()) sb.append("[LOW-SAT]");
       if (f.highSat()) sb.append("[HIGH-SAT]");
     }
@@ -103,8 +102,7 @@ public final class OptimizerDiagnostics {
    */
   public static void logBoundReport(
       Logger logger, String stageName, List<BoundFlag> flags, String[] paramNames) {
-    logger.info(
-        "Stage '{}' bound usage: {}", stageName, formatBoundReport(flags, paramNames));
+    logger.info("Stage '{}' bound usage: {}", stageName, formatBoundReport(flags, paramNames));
     for (int i = 0; i < flags.size(); i++) {
       BoundFlag f = flags.get(i);
       if (f.lowSat() || f.highSat()) {
@@ -123,8 +121,8 @@ public final class OptimizerDiagnostics {
   }
 
   /**
-   * Returns a compact list of saturated parameter names (e.g. {@code "[α1, β1]"}).
-   * Empty string when no saturation occurred.
+   * Returns a compact list of saturated parameter names (e.g. {@code "[α1, β1]"}). Empty string
+   * when no saturation occurred.
    */
   public static String saturationSummary(List<BoundFlag> flags, String[] paramNames) {
     StringBuilder sb = new StringBuilder("[");

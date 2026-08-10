@@ -15,7 +15,8 @@ import org.junit.jupiter.api.Test;
 class MultiStageLoadOptimizerTest {
 
   /** Feasible iff every scaled coordinate clears its own threshold — separable, fully monotone. */
-  private static final class PerStageThresholdEvaluator implements MultiStageLoadOptimizer.Evaluator {
+  private static final class PerStageThresholdEvaluator
+      implements MultiStageLoadOptimizer.Evaluator {
     final double[] thresholds;
     final boolean[] scaled;
     final List<double[]> calls = new ArrayList<>();
@@ -125,7 +126,10 @@ class MultiStageLoadOptimizerTest {
     // stage (index 1) must be the one moving there — the order PropellantBudget sizes in.
     double[] firstBisectionCall = evaluator.calls.get(1);
     assertEquals(
-        PropellantLoadOptimizer.DEFAULT_LAMBDA_MIN, firstBisectionCall[1], 1e-12, "top stage first");
+        PropellantLoadOptimizer.DEFAULT_LAMBDA_MIN,
+        firstBisectionCall[1],
+        1e-12,
+        "top stage first");
     assertEquals(1.0, firstBisectionCall[0], 1e-12, "lower stage still at its heuristic load");
   }
 
@@ -139,18 +143,17 @@ class MultiStageLoadOptimizerTest {
 
     new MultiStageLoadOptimizer().minimize(evaluator, scaled, new double[] {100_000, 10_000});
 
-    long allOnes =
-        evaluator.calls.stream().filter(c -> c[0] == 1.0 && c[1] == 1.0).count();
+    long allOnes = evaluator.calls.stream().filter(c -> c[0] == 1.0 && c[1] == 1.0).count();
     assertEquals(1, allOnes, "the all-heuristic point must be evaluated exactly once");
   }
 
   // ── Refinement passes: probe the endpoint before re-bisecting ─────────────
 
   /**
-   * Feasible iff {@code λ0 ≥ floor0} and {@code λ1 ≥ threshold1 − coupling·(1 − λ0)}: lightening the
-   * lower stage relaxes what the upper one needs. This is the coupling the refinement passes exist
-   * for — a separable evaluator can never exercise them, because a second sweep provably finds
-   * nothing there.
+   * Feasible iff {@code λ0 ≥ floor0} and {@code λ1 ≥ threshold1 − coupling·(1 − λ0)}: lightening
+   * the lower stage relaxes what the upper one needs. This is the coupling the refinement passes
+   * exist for — a separable evaluator can never exercise them, because a second sweep provably
+   * finds nothing there.
    */
   private static final class CoupledEvaluator implements MultiStageLoadOptimizer.Evaluator {
     final List<double[]> calls = new ArrayList<>();
@@ -204,8 +207,10 @@ class MultiStageLoadOptimizerTest {
     assertTrue(probed, "the refinement pass must probe exactly one tolerance below the current λ");
 
     // And the answer must be the one the full bisection gave.
-    assertTrue(finalLambdas[0] >= 0.55 && finalLambdas[0] - 0.55 <= TOL, "λ0 still at its threshold");
-    assertTrue(finalLambdas[1] >= 0.78 && finalLambdas[1] - 0.78 <= TOL, "λ1 still at its threshold");
+    assertTrue(
+        finalLambdas[0] >= 0.55 && finalLambdas[0] - 0.55 <= TOL, "λ0 still at its threshold");
+    assertTrue(
+        finalLambdas[1] >= 0.78 && finalLambdas[1] - 0.78 <= TOL, "λ1 still at its threshold");
   }
 
   @Test

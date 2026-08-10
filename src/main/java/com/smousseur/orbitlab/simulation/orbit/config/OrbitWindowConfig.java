@@ -8,9 +8,9 @@ import java.util.Objects;
 /**
  * Configuration for orbit path windowing and caching.
  *
- * <p>Controls the number of sample points per body, the comfort margin and snap granularity
- * for rebuild decisions, and the allowed step size range. Use {@link #defaultSolarSystem()}
- * for reasonable defaults.
+ * <p>Controls the number of sample points per body, the comfort margin and snap granularity for
+ * rebuild decisions, and the allowed step size range. Use {@link #defaultSolarSystem()} for
+ * reasonable defaults.
  *
  * @param pointsByBody the number of orbit sample points per celestial body
  * @param marginPoints the number of margin points for comfort zone calculations
@@ -33,8 +33,8 @@ public record OrbitWindowConfig(
   }
 
   /**
-   * Returns the configured number of orbit sample points for the given body,
-   * falling back to a default value if the body is not explicitly configured.
+   * Returns the configured number of orbit sample points for the given body, falling back to a
+   * default value if the body is not explicitly configured.
    *
    * @param body the celestial body
    * @return the number of sample points to use for the body's orbit path
@@ -59,8 +59,8 @@ public record OrbitWindowConfig(
   }
 
   /**
-   * Creates a default orbit window configuration for the solar system with 4096 points per
-   * body, 512 margin points, 64 snap points, and a 2-day minimum window size.
+   * Creates a default orbit window configuration for the solar system with 4096 points per body,
+   * 512 margin points, 64 snap points, and a 2-day minimum window size.
    *
    * @return a default solar system orbit window configuration
    */

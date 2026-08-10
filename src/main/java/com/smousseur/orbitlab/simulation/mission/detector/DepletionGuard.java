@@ -7,9 +7,9 @@ import org.orekit.propagation.numerical.NumericalPropagator;
 
 /**
  * Fail-fast propellant guard (spec 06 I4a). Arms a {@link MassDepletionDetector} that stops the
- * propagation with an error log when the spacecraft mass crosses the depletion floor of the
- * burning stage. Burn windows are still date-based at this increment, so crossing the floor means
- * the upstream mass accounting is wrong (a burn scheduled longer than the propellant allows) — no
+ * propagation with an error log when the spacecraft mass crosses the depletion floor of the burning
+ * stage. Burn windows are still date-based at this increment, so crossing the floor means the
+ * upstream mass accounting is wrong (a burn scheduled longer than the propellant allows) — no
  * nominal trajectory is expected to trigger it. Depletion-driven burn termination (real MECO by
  * flame-out) is the next increment (I4b).
  */
@@ -44,8 +44,8 @@ public final class DepletionGuard {
 
   /**
    * Arms the guard without the error log. Use on optimization propagations, where infeasible
-   * candidates legitimately cross the floor: the truncation itself penalizes them through the
-   * cost function, and an error per candidate would flood the logs.
+   * candidates legitimately cross the floor: the truncation itself penalizes them through the cost
+   * function, and an error per candidate would flood the logs.
    *
    * @param propagator the propagator to guard
    * @param depletionFloor the mass floor (kg) below which the burning stage is out of propellant

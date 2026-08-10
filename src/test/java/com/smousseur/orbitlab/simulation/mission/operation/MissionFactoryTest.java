@@ -47,8 +47,8 @@ class MissionFactoryTest {
   }
 
   /**
-   * Exit criteria of spec 06 I2 (vehicle mass reflects the entered payload) and I3 (loads sized
-   * per mission: S1 full, S2 well under capacity for LEO 400 km).
+   * Exit criteria of spec 06 I2 (vehicle mass reflects the entered payload) and I3 (loads sized per
+   * mission: S1 full, S2 well under capacity for LEO 400 km).
    */
   @Test
   void leoFromWizard_payloadReflected_andS2SizedByBudget() {

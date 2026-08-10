@@ -61,7 +61,8 @@ class AscentSequenceTest {
   void firstBurn_ownsTheOptimizationAndKeepsTheHistoricalKey() {
     OptimizableMissionStage<?> firstBurn =
         assertInstanceOf(
-            GravityTurnFirstBurnStage.class, AscentSequence.gravityTurn(PROFILE, CONSTRAINTS).getFirst());
+            GravityTurnFirstBurnStage.class,
+            AscentSequence.gravityTurn(PROFILE, CONSTRAINTS).getFirst());
 
     // The result map is keyed by string: keeping "Gravity turn" leaves results stored before the
     // split (including in a running session) valid.
@@ -80,7 +81,8 @@ class AscentSequenceTest {
 
     OrbitlabException failure =
         assertThrows(
-            OrbitlabException.class, () -> secondBurn.maxStepSeconds(null, null),
+            OrbitlabException.class,
+            () -> secondBurn.maxStepSeconds(null, null),
             "a burn phase with no plan has no schedule to fly");
     assertTrue(
         failure.getMessage().contains(AscentSequence.SECOND_BURN_NAME),

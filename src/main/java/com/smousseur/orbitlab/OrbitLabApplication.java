@@ -54,8 +54,8 @@ public class OrbitLabApplication extends SimpleApplication {
    * this a global setting rather than a per-texture pass.
    *
    * <p>It sharpens planetary surfaces seen at a grazing angle, where a mipmapped filter alone has
-   * to pick its level from the more compressed of the two UV axes and therefore blurs the axis
-   * that needed no reduction. Sampling is adaptive, so face-on surfaces cost nothing extra.
+   * to pick its level from the more compressed of the two UV axes and therefore blurs the axis that
+   * needed no reduction. Sampling is adaptive, so face-on surfaces cost nothing extra.
    *
    * <p>Deliberately 8 and not the 16 the driver allows: past 8 the returns fall off sharply while
    * the sample count keeps doubling on exactly the oblique fragments that are already the most
@@ -63,8 +63,8 @@ public class OrbitLabApplication extends SimpleApplication {
    *
    * <p><b>This does not touch the orbit lines.</b> Anisotropy is a texture-sampling state and the
    * trajectories are GL line primitives — no texture, nothing to filter. Their aliasing is not
-   * addressable from {@code AppSettings} at all (MSAA does not reliably antialias lines, and
-   * {@code glLineWidth > 1} is silently clamped to 1 px in a core profile); that is RND-4's job.
+   * addressable from {@code AppSettings} at all (MSAA does not reliably antialias lines, and {@code
+   * glLineWidth > 1} is silently clamped to 1 px in a core profile); that is RND-4's job.
    */
   private static final int ANISOTROPIC_FILTER_LEVEL = 8;
 

@@ -19,16 +19,16 @@ import org.orekit.time.AbsoluteDate;
  *
  * <p><b>Why it is extracted.</b> This traversal was the body of {@link
  * com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemerisGenerator}. Splitting the
- * ascent into explicit phases (spec {@code specs/mission-stages/01-separations-implicites.md}
- * §5.4) requires the <b>optimize</b> pass to fly the same chain the <b>ephemeris</b> pass replays:
- * two implementations of "walk the stages" would let the two passes drift apart in how often the
+ * ascent into explicit phases (spec {@code specs/mission-stages/01-separations-implicites.md} §5.4)
+ * requires the <b>optimize</b> pass to fly the same chain the <b>ephemeris</b> pass replays: two
+ * implementations of "walk the stages" would let the two passes drift apart in how often the
  * integrator restarts, which is exactly the optimize-vs-ephemeris divergence closed by bilan 11
  * §3.9. One implementation, used by both, cannot drift.
  *
  * <p><b>Stateless by contract.</b> CMA-ES explores in parallel, so a runner instance carries no
  * per-run state: everything mutable lives in the caller's sampler and listener, and each {@code
- * run} threads its state through locals. A runner may be shared or created per run indifferently
- * — but a sampler or listener that accumulates must not be shared across concurrent runs.
+ * run} threads its state through locals. A runner may be shared or created per run indifferently —
+ * but a sampler or listener that accumulates must not be shared across concurrent runs.
  */
 public final class StageChainRunner {
   private static final Logger logger = LogManager.getLogger(StageChainRunner.class);
@@ -87,9 +87,9 @@ public final class StageChainRunner {
       boolean propagationFailed) {
 
     /**
-     * Seconds by which the stage stopped short of its own scheduled cutoff — a positive value
-     * means another STOP event fired first (in practice a depletion guard). Zero when the end date
-     * is not the stage's own cutoff.
+     * Seconds by which the stage stopped short of its own scheduled cutoff — a positive value means
+     * another STOP event fired first (in practice a depletion guard). Zero when the end date is not
+     * the stage's own cutoff.
      */
     public double shortfallSeconds() {
       return endDateIsStageCutoff ? endDate.durationFrom(finalState.getDate()) : 0.0;
@@ -183,8 +183,10 @@ public final class StageChainRunner {
       mission.setCurrentState(currentState);
       SpacecraftState stageEntry = currentState;
 
-      // Create and configure propagator. The stage sizes its own max step (bilan 08 §3.1): burn-free
-      // stages coast at the large cap (a big saving on the multi-hour final coast), burn stages keep
+      // Create and configure propagator. The stage sizes its own max step (bilan 08 §3.1):
+      // burn-free
+      // stages coast at the large cap (a big saving on the multi-hour final coast), burn stages
+      // keep
       // the late-ignition invariant against their own upper-stage burns for a light I7 load.
       double maxStep = stage.maxStepSeconds(stageEntry, mission);
       NumericalPropagator propagator = OrekitService.get().createOptimizationPropagator(maxStep);

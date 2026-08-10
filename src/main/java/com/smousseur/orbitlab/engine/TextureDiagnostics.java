@@ -20,14 +20,14 @@ import org.apache.logging.log4j.Logger;
  * Read-only reporting of the texture sampling state, so that anisotropic filtering can be decided
  * on measurements rather than on assumptions.
  *
- * <p>Anisotropic filtering is not a setting that either "works" or "does not": it is silently
- * inert under two independent conditions, and the two failure modes look identical on screen —
- * nothing changes. This class separates them.
+ * <p>Anisotropic filtering is not a setting that either "works" or "does not": it is silently inert
+ * under two independent conditions, and the two failure modes look identical on screen — nothing
+ * changes. This class separates them.
  *
  * <ul>
  *   <li><b>The driver cap.</b> A requested level is clamped to {@link Limits#TextureAnisotropy}
- *       without any error. Asking for 16 on a context that caps at 8 yields 8, so an A/B between
- *       8 and 16 that shows no difference proves nothing until the cap is known.
+ *       without any error. Asking for 16 on a context that caps at 8 yields 8, so an A/B between 8
+ *       and 16 that shows no difference proves nothing until the cap is known.
  *   <li><b>The minification filter.</b> Anisotropic filtering only ever refines the choice of
  *       mipmap sample. On a texture whose {@link Texture.MinFilter} does not use mipmap levels
  *       there is no such choice to refine, and the level is ignored outright.
@@ -36,15 +36,15 @@ import org.apache.logging.log4j.Logger;
  * <p><b>Why the filter, and not the image, is the authority on mipmaps.</b> The obvious check —
  * {@link Image#hasMipmaps()} — answers a narrower question than it appears to: whether the mip
  * chain came down from the asset file. It is false for an ordinary PNG whose mips the renderer
- * generates at upload time, which is the normal case here and is perfectly fine for anisotropy.
- * The decisive signal is {@link Texture.MinFilter#usesMipMapLevels()}: when it holds, {@link
- * Texture#setMinFilter} has already flagged the image as needing generated mipmaps, so the chain
- * is guaranteed to exist by the time the texture is sampled. {@code Image.isMipmapsGenerated()}
- * is deliberately not consulted — it is the renderer's own upload bookkeeping and is still false
- * at the point this runs.
+ * generates at upload time, which is the normal case here and is perfectly fine for anisotropy. The
+ * decisive signal is {@link Texture.MinFilter#usesMipMapLevels()}: when it holds, {@link
+ * Texture#setMinFilter} has already flagged the image as needing generated mipmaps, so the chain is
+ * guaranteed to exist by the time the texture is sampled. {@code Image.isMipmapsGenerated()} is
+ * deliberately not consulted — it is the renderer's own upload bookkeeping and is still false at
+ * the point this runs.
  *
- * <p>Reporting only, by design. Nothing here changes a filter, a level, or a texture: the point
- * of the exercise is to learn what the asset pipeline actually produces before deciding where a
+ * <p>Reporting only, by design. Nothing here changes a filter, a level, or a texture: the point of
+ * the exercise is to learn what the asset pipeline actually produces before deciding where a
  * setting belongs.
  */
 public final class TextureDiagnostics {
@@ -88,8 +88,8 @@ public final class TextureDiagnostics {
    *
    * <p>Logged at DEBUG. This survey has already been run and settled the question it was written
    * for (every planetary texture is {@code Trilinear}, none carries a level of its own, hence the
-   * single renderer-wide default set at boot); it stays available for the day an asset changes or
-   * a new body arrives, without adding a dozen lines to every normal startup.
+   * single renderer-wide default set at boot); it stays available for the day an asset changes or a
+   * new body arrives, without adding a dozen lines to every normal startup.
    *
    * @param label how to name this model in the log, typically the body's display name
    * @param spatial the root of the loaded model
@@ -135,7 +135,9 @@ public final class TextureDiagnostics {
         texture.getMagFilter(),
         image != null && image.hasMipmaps(),
         image != null && image.isGeneratedMipmapsRequired(),
-        texture.getAnisotropicFilter() == 0 ? "0 (renderer default)" : texture.getAnisotropicFilter(),
+        texture.getAnisotropicFilter() == 0
+            ? "0 (renderer default)"
+            : texture.getAnisotropicFilter(),
         mipmapped ? "EFFECTIVE" : "INERT (min filter uses no mipmap levels)");
   }
 }

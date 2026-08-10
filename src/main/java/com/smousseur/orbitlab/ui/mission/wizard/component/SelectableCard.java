@@ -51,8 +51,7 @@ public class SelectableCard {
     root = new Container(new BoxLayout(Axis.Y, FillMode.None), FormStyles.STYLE);
     root.setPreferredSize(new Vector3f(width, height, 0));
 
-    Container content =
-        new Container(new BoxLayout(Axis.Y, FillMode.None), FormStyles.STYLE);
+    Container content = new Container(new BoxLayout(Axis.Y, FillMode.None), FormStyles.STYLE);
     content.setBackground(null);
 
     Container iconNode;
