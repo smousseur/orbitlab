@@ -12,7 +12,7 @@ import org.orekit.time.AbsoluteDate;
  * when the ephemeris is built.
  *
  * <p><b>Why this is a separate product.</b> One array used to serve two consumers with incompatible
- * needs (spec {@code specs/mission-horizon/01-horizon-explicite.md} §6). The flight recorder —
+ * needs (spec {@code docs/mission-horizon/01-horizon-explicite.md} §6). The flight recorder —
  * telemetry, the completeness verdict, post-flight analysis — wants fidelity wherever the dynamics
  * are fast, and that is {@link MissionEphemeris}. The display polyline wants at most a few thousand
  * points, because the screen is ~2000 px wide, and that is this class.

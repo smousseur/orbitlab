@@ -70,7 +70,7 @@ public sealed interface MissionSpec permits MissionSpec.Leo, MissionSpec.Geo {
 
   /**
    * Returns the restitution horizon: how far past insertion the mission is sampled and displayed
-   * (spec {@code specs/mission-horizon/01-horizon-explicite.md}). Never {@code null} — a spec built
+   * (spec {@code docs/mission-horizon/01-horizon-explicite.md}). Never {@code null} — a spec built
    * without one falls back to {@link MissionHorizon#defaultFor(MissionType)}.
    *
    * <p>It lives on the spec rather than on the built mission because it is <em>user intent</em>: it

@@ -730,7 +730,7 @@ Allège la scène, met l'accent sur le moment courant.
 
 L'optimizer de
 `simulation/mission/optimizer/` produit déjà des sweeps de
-robustesse (cf. `specs/optimizer/03-robustness-roadmap.md`). Render
+robustesse (cf. `docs/optimizer/03-robustness-roadmap.md`). Render
 l'enveloppe min/max comme un tube semi-transparent autour du
 trajectoire nominale → effet "couloir de vol" très parlant.
 

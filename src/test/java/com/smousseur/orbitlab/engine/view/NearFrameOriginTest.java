@@ -20,7 +20,7 @@ import org.junit.jupiter.api.Test;
  * The near-view origin must land <em>exactly</em> on the focused spacecraft, because that is the
  * position everything downstream measures against — the LOD distance in {@code
  * LodView.updateScreen} first of all (spec {@code
- * specs/graphics-effects/spacecraft-view-artefacts.md} §3).
+ * docs/graphics-effects/spacecraft-view-artefacts.md} §3).
  *
  * <p>Two independent producers write that origin every frame: {@code SpacecraftPresenter} places
  * the anchor at {@code +p}, and {@code FloatingOriginAppState} translates the near frame by {@code

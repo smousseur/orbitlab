@@ -1,4 +1,4 @@
-# specs/dette-technique.md — état de la dette technique
+# docs/dette-technique.md — état de la dette technique
 
 Photographie de la qualité du code au **2026-08-10**, commit `b027d1d`. Ce
 document est un état des lieux mesuré, pas une roadmap : les items qui méritent
@@ -249,7 +249,7 @@ de tests existante sait couvrir, puisqu'elle couvre déjà `runtime`, `stage` et
 ### DT-8 — Violations de la règle de langue
 
 `CLAUDE.md` : tout commentaire, toute Javadoc et toute chaîne de code sont en
-anglais, sans exception ; seul `specs/` est en français.
+anglais, sans exception ; seul `docs/` est en français.
 
 | Site | Contenu |
 |---|---|

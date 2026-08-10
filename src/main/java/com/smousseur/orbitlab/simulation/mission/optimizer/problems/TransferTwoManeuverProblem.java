@@ -97,7 +97,7 @@ public class TransferTwoManeuverProblem extends TransferProblem {
   }
 
   // ════════════════════════════════════════════════════════════════════════
-  // Post-mortem diagnostics — see specs/optimizer/03-robustness-roadmap.md §0.1
+  // Post-mortem diagnostics — see docs/optimizer/03-robustness-roadmap.md §0.1
   // ════════════════════════════════════════════════════════════════════════
 
   /**

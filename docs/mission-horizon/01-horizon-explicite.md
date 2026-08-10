@@ -1,7 +1,7 @@
 # MIS-8 — Horizon de mission explicite
 
 > Statut : spec validée, implémentation en cours. 2026-08-08.
-> Fiche roadmap : [`specs/roadmap/01-roadmap.md`](../roadmap/01-roadmap.md) §6, `MIS-8` — ★5 ◆2 M.
+> Fiche roadmap : [`docs/roadmap/01-roadmap.md`](../roadmap/01-roadmap.md) §6, `MIS-8` — ★5 ◆2 M.
 
 ---
 

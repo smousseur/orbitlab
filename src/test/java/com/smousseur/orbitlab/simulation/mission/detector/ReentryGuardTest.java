@@ -28,7 +28,7 @@ import org.orekit.utils.Constants;
 import org.orekit.utils.PVCoordinates;
 
 /**
- * Closes the defect class of spec {@code specs/mission-stages/03-garde-rentree.md}: a propagation
+ * Closes the defect class of spec {@code docs/mission-stages/03-garde-rentree.md}: a propagation
  * whose trajectory re-enters used to run forever — the integrator follows it under the surface and
  * the adaptive step collapses as {@code r → 0}.
  *

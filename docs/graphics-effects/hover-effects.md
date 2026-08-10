@@ -334,7 +334,7 @@ chaîner exit puis enter même si la première animation n'est pas finie
 
 ## 9. Liens
 
-- Backlog général : `specs/graphics-effects/effects-roadmap.md`
+- Backlog général : `docs/graphics-effects/effects-roadmap.md`
   (sections §3.2 « Lambert » et §9.5.3 « mise en avant mission
   sélectionnée » partagent la même idée de highlight / dim).
 - Convention AppState et bus : `CLAUDE.md` § « ApplicationContext »

@@ -57,7 +57,7 @@ public final class Launchers {
    * representation: {@code VehicleStack} resolves exactly one active stage, changed only by an
    * explicit jettison. Aggregating them is the same convention {@link #FALCON_HEAVY} already
    * applies to its three cores, and is what the mission stage list can actually fly (spec {@code
-   * specs/launchers/01-ariane-62.md} §2).
+   * docs/launchers/01-ariane-62.md} §2).
    *
    * <p><b>What the aggregation costs, stated because it is not visible in the figures.</b> At 9 960
    * kN and 300 s the block flames out around 128 s — measured at T+128.2 s. That is faithful to the

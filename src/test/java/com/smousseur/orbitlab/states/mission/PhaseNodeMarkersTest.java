@@ -29,7 +29,7 @@ import org.junit.jupiter.api.Test;
 import org.orekit.time.AbsoluteDate;
 
 /**
- * Transition markers (spec {@code specs/graphics-effects/mission-phase-encoding.md} §5.4).
+ * Transition markers (spec {@code docs/graphics-effects/mission-phase-encoding.md} §5.4).
  *
  * <p>The load-bearing rule is that a marker only appears once the spacecraft has reached it. The
  * line is a trail that grows behind the vehicle; a marker announcing a phase that has not started

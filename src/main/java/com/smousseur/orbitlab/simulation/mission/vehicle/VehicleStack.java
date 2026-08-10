@@ -55,7 +55,7 @@ public record VehicleStack(List<Vehicle> vehicles) implements Vehicle {
    * could happen mid-phase. That second resolution always returned the first one, so it was
    * unreachable defensive code writing a false claim about the model — that an intra-phase staging
    * is supported somewhere. It is not, anywhere (spec {@code
-   * specs/mission-stages/01-separations-implicites.md} S4).
+   * docs/mission-stages/01-separations-implicites.md} S4).
    *
    * @param currentMass the current spacecraft mass from SpacecraftState
    * @return the active vehicle information

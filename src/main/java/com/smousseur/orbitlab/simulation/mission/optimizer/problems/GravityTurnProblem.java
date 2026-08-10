@@ -68,7 +68,7 @@ public class GravityTurnProblem implements TrajectoryProblem {
   //
   // THAT FAILURE MODE IS GONE. The jettison is a phase of its own ("S1 separation"), so it happens
   // whatever the MECO; a transition time below the floor now just yields a zero-length second burn
-  // (spec specs/mission-stages/01-separations-implicites.md §6).
+  // (spec docs/mission-stages/01-separations-implicites.md §6).
   //
   // THE PENALTY IS KEPT ANYWAY, for the reason the measurement gave when it was removed and the
   // optimization tests re-run (étape 5, see 02-baseline-n2.md §12). Below the floor, transitionTime
@@ -149,7 +149,7 @@ public class GravityTurnProblem implements TrajectoryProblem {
   /**
    * Creates a gravity turn optimization problem with an explicit way of flying a candidate — the
    * three explicit ascent phases, once the mission is built on {@code AscentSequence} (spec {@code
-   * specs/mission-stages/01-separations-implicites.md} §5.4). The cost function is unchanged either
+   * docs/mission-stages/01-separations-implicites.md} §5.4). The cost function is unchanged either
    * way: only the propagation differs.
    *
    * @param maneuver the gravity turn maneuver decoding the variables (burn 1 duration, staging)

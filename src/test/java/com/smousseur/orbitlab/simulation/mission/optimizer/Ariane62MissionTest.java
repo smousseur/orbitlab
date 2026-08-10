@@ -20,7 +20,7 @@ import org.junit.jupiter.api.Test;
 
 /**
  * The Ariane 62 catalog entry flies a LEO mission, and stages where the model says it does (spec
- * {@code specs/launchers/01-ariane-62.md} §5).
+ * {@code docs/launchers/01-ariane-62.md} §5).
  *
  * <p><b>This started as a measurement probe with no accuracy assertion</b>, because whether the
  * entry could close a mission at all was genuinely unknown: aggregating the boosters and the

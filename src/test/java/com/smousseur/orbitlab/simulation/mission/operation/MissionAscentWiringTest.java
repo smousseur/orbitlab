@@ -23,7 +23,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 /**
  * Every mission profile flies the ascent as three explicit phases (étape 3 of spec {@code
- * specs/mission-stages/01-separations-implicites.md} §8).
+ * docs/mission-stages/01-separations-implicites.md} §8).
  *
  * <p>Cheap on purpose: no propagation, no optimizer. It holds the property the numeric fixtures
  * cannot — that <b>all four</b> construction sites were switched over, not just the one a test
@@ -68,7 +68,7 @@ class MissionAscentWiringTest {
         Arguments.of("GEO", (Mission) new GEOMission("GEO", TARGET_ALT, GEOMission.GEO_ALTITUDE)),
         // A second launcher holds the property where a single one could not: the three-phase
         // ascent is a property of every mission, not a shape Falcon Heavy's figures happen to
-        // produce (spec specs/launchers/01-ariane-62.md §6.2).
+        // produce (spec docs/launchers/01-ariane-62.md §6.2).
         Arguments.of(
             "LEO circular, Ariane 62 (analytic Hohmann transfer)",
             (Mission) new LEOMission("LEO Ariane 62", ariane62(), TARGET_ALT)));

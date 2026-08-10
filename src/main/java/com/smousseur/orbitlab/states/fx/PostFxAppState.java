@@ -59,7 +59,7 @@ import java.util.Objects;
  *       new one.
  *   <li>Depth and multisampling now come from the processor's framebuffer instead of the window's.
  *       The depth attachment is 24-bit as before — the depth budget reasoned about in {@code
- *       specs/graphics-effects/spacecraft-view-artefacts.md} §5.3 is unchanged — and the sample
+ *       docs/graphics-effects/spacecraft-view-artefacts.md} §5.3 is unchanged — and the sample
  *       count is taken from the {@link AppSettings} so the MSAA level stays the one asked for at
  *       startup.
  * </ul>

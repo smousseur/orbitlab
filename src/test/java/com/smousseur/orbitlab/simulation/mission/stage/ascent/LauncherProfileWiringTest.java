@@ -16,7 +16,7 @@ import org.junit.jupiter.api.Test;
 
 /**
  * The flight profile a mission flies comes from <b>its own launcher</b>, not from a default shared
- * by the catalog (spec {@code specs/launchers/01-ariane-62.md} §6.2).
+ * by the catalog (spec {@code docs/launchers/01-ariane-62.md} §6.2).
  *
  * <p>{@code AscentProfile} has been a field of {@code LauncherModel} since the catalog existed, but
  * with a single launcher in it no test could tell a wired profile from a hardcoded one: every

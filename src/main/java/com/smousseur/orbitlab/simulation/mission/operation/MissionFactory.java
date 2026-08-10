@@ -73,7 +73,7 @@ public final class MissionFactory {
 
     // Absent means "auto": the wizard omits the key while the user leaves the derived default in
     // place, so an unedited (or reopened) mission gets MissionHorizon.defaultFor(type) rather than
-    // a frozen number (spec specs/mission-horizon/01-horizon-explicite.md §7).
+    // a frozen number (spec docs/mission-horizon/01-horizon-explicite.md §7).
     MissionHorizon horizon = horizonOrNull(values, type);
 
     LauncherModel launcher = Launchers.byId(String.valueOf(values.get("LAUNCHER_TYPE")));

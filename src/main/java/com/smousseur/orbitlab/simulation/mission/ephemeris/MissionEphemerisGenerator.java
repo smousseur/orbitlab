@@ -56,7 +56,7 @@ public final class MissionEphemerisGenerator {
    *
    * <p>The caller passes a <b>resolved duration</b>, not a {@link MissionHorizon}: deciding how
    * long a mission should be recorded is an intent, and a generator has no business knowing the
-   * intent (spec {@code specs/mission-horizon/01-horizon-explicite.md} §4). {@code
+   * intent (spec {@code docs/mission-horizon/01-horizon-explicite.md} §4). {@code
    * MissionOptimizer} resolves it, because that is where the achieved orbit is already in hand.
    *
    * <p>The sampling step is not a parameter either: each stage advertises its own through {@link

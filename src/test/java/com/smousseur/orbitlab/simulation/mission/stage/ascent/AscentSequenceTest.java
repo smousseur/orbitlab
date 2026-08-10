@@ -18,7 +18,7 @@ import org.junit.jupiter.api.Test;
 
 /**
  * Structure of the explicit three-phase ascent (spec {@code
- * specs/mission-stages/01-separations-implicites.md} §4.2, §10). These fixtures need no propagation
+ * docs/mission-stages/01-separations-implicites.md} §4.2, §10). These fixtures need no propagation
  * — they hold the two properties the split exists for:
  *
  * <ul>

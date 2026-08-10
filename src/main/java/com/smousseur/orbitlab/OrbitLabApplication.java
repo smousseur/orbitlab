@@ -112,7 +112,7 @@ public class OrbitLabApplication extends SimpleApplication {
     // matters here: FloatingOriginAppState owns the frame offsets, and every state that reads a
     // world position back out of the scene graph must come after it. MissionOrchestratorAppState
     // does exactly that (the LOD measures the camera-to-spacecraft distance), so it must not be
-    // moved back above this line — cf. specs/graphics-effects/spacecraft-view-artefacts.md §3.
+    // moved back above this line — cf. docs/graphics-effects/spacecraft-view-artefacts.md §3.
     stateManager.attach(new FloatingOriginAppState(applicationContext));
 
     // The orbit camera writes the far camera's pose for this frame, and it belongs BEFORE its

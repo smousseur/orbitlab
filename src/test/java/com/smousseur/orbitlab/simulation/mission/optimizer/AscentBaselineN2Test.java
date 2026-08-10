@@ -37,7 +37,7 @@ import org.orekit.utils.PVCoordinates;
 
 /**
  * N2 non-regression baseline of the ascent, for the explicit-staging migration (spec {@code
- * specs/mission-stages/01-separations-implicites.md} §7.1, étape 0).
+ * docs/mission-stages/01-separations-implicites.md} §7.1, étape 0).
  *
  * <p>Splitting the gravity turn into {@code Gravity turn (S1) → S1 separation → Gravity turn (S2)}
  * restarts the adaptive integrator at each new phase boundary, so the refactor cannot be
@@ -100,7 +100,7 @@ public class AscentBaselineN2Test extends AbstractTrajectoryOptimizerTest {
 
   // ── Recorded baseline, post-split (2026-08-03, seed 42, étape 3) ─────────
   // Full snapshots (ΔV, per-stage accounting, ephemeris point counts) are in
-  // specs/mission-stages/02-baseline-n2.md §9.3.
+  // docs/mission-stages/02-baseline-n2.md §9.3.
   // Set a profile back to null to re-capture it after a deliberate behavior change (étape 5).
   //
   // Re-baselined at étape 3 because CMA-ES stopped at a different point of the same basin — both

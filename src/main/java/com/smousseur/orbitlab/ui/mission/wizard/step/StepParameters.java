@@ -98,7 +98,7 @@ public class StepParameters implements StepValues {
    * Whether the duration field still shows the derived default. This is the whole of the "auto"
    * state: while it holds, {@link #getValues()} omits the key entirely, which is what makes the
    * wizard's auto mode survive a round-trip through the raw value map without a flag of its own
-   * (spec {@code specs/mission-horizon/01-horizon-explicite.md} §7).
+   * (spec {@code docs/mission-horizon/01-horizon-explicite.md} §7).
    */
   private boolean horizonAuto = true;
 

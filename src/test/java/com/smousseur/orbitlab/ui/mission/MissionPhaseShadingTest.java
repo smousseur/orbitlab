@@ -10,7 +10,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 /**
- * The phase shading rule (spec {@code specs/graphics-effects/mission-phase-encoding.md} §5.2).
+ * The phase shading rule (spec {@code docs/graphics-effects/mission-phase-encoding.md} §5.2).
  *
  * <p>The load-bearing property is the last one: modulating a mission's own colour must never bring
  * it close enough to another mission's to make the two traces confusable. The palette identifies

@@ -3,7 +3,7 @@ build/
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
 !**/src/test/**/build/
-docs/**
+docs/superpowers/**
 src/main/resources/models/**
 src/test/resources/orekit-data.zip
 dataset/**

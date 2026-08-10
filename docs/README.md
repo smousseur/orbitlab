@@ -1,4 +1,4 @@
-# specs/ — index
+# docs/ — index
 
 **Point d'entrée : [`roadmap/01-roadmap.md`](roadmap/01-roadmap.md).** Il porte la
 priorisation, les notes valeur/difficulté et les dépendances. Les autres
@@ -30,10 +30,13 @@ sont en anglais, cf. `CLAUDE.md`).
 - Un document de design décrit **un** chantier et survit à son implémentation
   (traçabilité des écarts). Quand il devient faux, on le corrige ou on le
   supprime — on ne laisse pas un document mentir.
+- Ce dossier s'appelait `specs/` jusqu'au 2026-08-10 ; il a été fusionné dans
+  `docs/`. Pour remonter l'historique antérieur au déplacement, interroger
+  l'ancien chemin (`git log --follow -- specs/<fichier>`).
 - Les documents supprimés restent dans l'historique git ; les liens vers
-  `specs/optimizer/*` et `specs/mission-rework/*` que l'on croise encore dans
+  `docs/optimizer/*` et `docs/mission-rework/*` que l'on croise encore dans
   les anciens textes pointent vers des documents retirés au commit `73a3781`
-  (`git log --diff-filter=D -- specs/` pour les retrouver).
+  (`git log --diff-filter=D -- specs/` pour les retrouver — chemin d'époque).
 - Les notes ★ (valeur) et ◆ (difficulté) n'ont de sens que dans la roadmap ;
   les tableaux locaux des specs plus anciennes ont leurs propres échelles,
   antérieures et non recalées.

@@ -222,8 +222,8 @@ The application renders two stacked viewports:
 ## Code Style and Patterns
 
 - **Language**: All code comments and Javadoc are written in **English**, without exception — including
-  design rationale, which is often long in this codebase. Only the design documents under `specs/`
-  are written in French. Do not infer the code's language from the specs': they differ deliberately.
+  design rationale, which is often long in this codebase. Only the design documents under `docs/`
+  are written in French. Do not infer the code's language from the docs': they differ deliberately.
 - **Records**: Prefer Java records for immutable data (`SimulationConfig`, clock events, `BodySample`, etc.)
 - **Sealed interfaces**: Used for type-safe event hierarchies (e.g., `ClockEvent`)
 - **Singletons**: Use the holder pattern (`private static final class Holder { static final T INSTANCE = new T(); }`)
@@ -282,7 +282,7 @@ The application renders two stacked viewports:
 - **Branch naming**: Feature branches follow `feature_<name>` or `claude/<description>-<id>` conventions
 - **Commit messages**: Imperative mood, descriptive (e.g., `Add backup computations to avoid local minimums in CMAES optimization`)
 - **Merge strategy**: Feature branches are merged via pull requests
-- **Excluded from git** (see `.gitignore`): `build/`, `.gradle/`, `gradle/`, `docs/`, `dataset/`, `src/main/resources/models/**` (large GLTF bodies). Note that `src/main/resources/` itself is **not** excluded — shaders, fonts, UI textures, the skybox and `orekit-data.zip` are all tracked
+- **Excluded from git** (see `.gitignore`): `build/`, `.gradle/`, `gradle/`, `docs/superpowers/**`, `dataset/`, `src/main/resources/models/**` (large GLTF bodies). Note that `src/main/resources/` itself is **not** excluded — shaders, fonts, UI textures, the skybox and `orekit-data.zip` are all tracked, and `docs/` **is** tracked apart from `docs/superpowers/`
 
 ---
 
@@ -290,4 +290,4 @@ The application renders two stacked viewports:
 
 - `src/main/resources/models/` — GLTF models of the celestial bodies (too large for version control; must be provided separately). The rest of `src/main/resources/` **is** tracked, including the custom shaders under `MatDefs/`
 - `dataset/` — Mission and test data files
-- `docs/` — Generated documentation
+- `docs/superpowers/` — Locally generated implementation plans

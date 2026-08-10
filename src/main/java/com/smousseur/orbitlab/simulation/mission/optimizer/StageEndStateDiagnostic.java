@@ -11,7 +11,7 @@ import org.orekit.utils.PVCoordinates;
  * Stateless diagnostics for the spacecraft state at the end of an optimized stage.
  *
  * <p>Used to compare the actual gravity-turn handoff state with the ideal Hohmann starting state
- * for the mission's target altitude — see {@code specs/optimizer/03-robustness-roadmap.md} §0.1 («
+ * for the mission's target altitude — see {@code docs/optimizer/03-robustness-roadmap.md} §0.1 («
  * État de fin de GT »).
  */
 public final class StageEndStateDiagnostic {

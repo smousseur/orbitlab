@@ -7,7 +7,7 @@ import java.util.Objects;
 
 /**
  * Turns a mission's phase runs into per-run colours, all derived from that mission's single palette
- * entry (spec {@code specs/graphics-effects/mission-phase-encoding.md} §5.2).
+ * entry (spec {@code docs/graphics-effects/mission-phase-encoding.md} §5.2).
  *
  * <p><b>The modulation only ever climbs toward the palette colour.</b> The final run — the longest
  * segment of any mission, around two thirds of the drawn line — is exactly {@link

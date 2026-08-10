@@ -1,4 +1,4 @@
-# specs/bugs.md — registre des bugs ouverts
+# docs/bugs.md — registre des bugs ouverts
 
 Bugs constatés à l'usage, hors du périmètre d'un chantier en cours. Un item
 sort d'ici soit corrigé, soit promu en item de roadmap quand il s'avère être un

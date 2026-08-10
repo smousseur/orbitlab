@@ -30,7 +30,7 @@ public abstract class MissionStage {
    * revolution — under 4° of arc per segment, indistinguishable from a smooth ellipse on screen —
    * while cutting the point count of a multi-day coast by 60x. That factor is what makes any
    * realistic mission horizon affordable in memory (spec {@code
-   * specs/mission-horizon/01-horizon-explicite.md} §5).
+   * docs/mission-horizon/01-horizon-explicite.md} §5).
    */
   protected static final double COAST_SAMPLE_STEP = 60.0;
 

@@ -45,7 +45,7 @@ public final class NearCameraSyncAppState extends BaseAppState {
    * Near-plane factor in spacecraft view. The depth resolution of the near viewport is {@code Δz =
    * 2⁻²⁴ · z² · (1/near − 1/far)}, so with {@code far ≫ near} the near plane alone decides it — the
    * far plane contributes nothing measurable, which is why it is left alone here (spec {@code
-   * specs/graphics-effects/spacecraft-view-artefacts.md} §5.3).
+   * docs/graphics-effects/spacecraft-view-artefacts.md} §5.3).
    *
    * <p>At the 500 m focus distance the old factor of {@code 5e-4} pinned the near plane to its 10 m
    * floor, giving ~274 km per depth step at the Earth's distance: a 400 km LEO trajectory sat about

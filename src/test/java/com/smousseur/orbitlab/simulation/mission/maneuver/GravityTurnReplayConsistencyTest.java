@@ -316,7 +316,7 @@ class GravityTurnReplayConsistencyTest {
 
   /**
    * Étape 0 of the explicit-staging migration (spec {@code
-   * specs/mission-stages/01-separations-implicites.md} §7.1/§8): the numeric reference of the
+   * docs/mission-stages/01-separations-implicites.md} §7.1/§8): the numeric reference of the
    * gravity turn at <b>fixed variables</b>, so the split into {@code Gravity turn (S1) → S1
    * separation → Gravity turn (S2)} can be checked without running CMA-ES.
    *

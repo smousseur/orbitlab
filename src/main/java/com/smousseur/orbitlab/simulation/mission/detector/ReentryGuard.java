@@ -7,7 +7,7 @@ import org.orekit.propagation.numerical.NumericalPropagator;
 import org.orekit.utils.Constants;
 
 /**
- * Fail-fast re-entry guard (spec {@code specs/mission-stages/03-garde-rentree.md}). Arms a {@link
+ * Fail-fast re-entry guard (spec {@code docs/mission-stages/03-garde-rentree.md}). Arms a {@link
  * ReentryDetector} that stops a propagation whose trajectory has sunk irrecoverably below the
  * Earth's surface.
  *

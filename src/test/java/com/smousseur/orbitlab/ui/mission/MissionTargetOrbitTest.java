@@ -16,7 +16,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 /**
- * The target orbit as the user asked for it (spec {@code specs/mission-detail/01-vue-detail.md}
+ * The target orbit as the user asked for it (spec {@code docs/mission-detail/01-vue-detail.md}
  * section 4.1).
  */
 class MissionTargetOrbitTest {

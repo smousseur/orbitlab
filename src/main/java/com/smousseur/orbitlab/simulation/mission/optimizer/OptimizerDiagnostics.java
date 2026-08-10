@@ -10,7 +10,7 @@ import org.apache.logging.log4j.Logger;
  *
  * <p>Used by {@code MissionOptimizer} after each stage optimization to surface pathologies
  * (parameters saturated at their bounds) that would otherwise remain opaque. See {@code
- * specs/optimizer/03-robustness-roadmap.md} §0.1.
+ * docs/optimizer/03-robustness-roadmap.md} §0.1.
  */
 public final class OptimizerDiagnostics {
 

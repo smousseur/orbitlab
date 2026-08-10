@@ -32,7 +32,7 @@ import org.orekit.time.AbsoluteDate;
  * <p><b>Why it owns the optimization.</b> The turn is optimized as a whole — {@code transitionTime}
  * is the MECO of the <em>second</em> burn — so the problem must fly all three phases. It does so
  * through the same {@code StageChainRunner} the ephemeris pass uses (spec {@code
- * specs/mission-stages/01-separations-implicites.md} §5.4), which is what keeps the two passes on
+ * docs/mission-stages/01-separations-implicites.md} §5.4), which is what keeps the two passes on
  * the same sequence of integrator restarts. {@link #advancesByReplay()} then tells {@code
  * MissionOptimizer} not to advance the mission from {@code problem.propagate()}, since the loop
  * itself walks the two phases that follow.

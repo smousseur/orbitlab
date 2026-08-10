@@ -27,7 +27,7 @@ class LaunchersTest {
 
   /**
    * The Ariane 62 flight profile, and the reasoning behind each figure (spec {@code
-   * specs/launchers/01-ariane-62.md} §4.2). The pitch kick is deliberately identical to Falcon
+   * docs/launchers/01-ariane-62.md} §4.2). The pitch kick is deliberately identical to Falcon
    * Heavy's: nothing justifies an offset, and inventing one to make the catalog look more varied
    * would put an unfounded number in it.
    */

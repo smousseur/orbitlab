@@ -265,7 +265,7 @@ public class MissionOptimizer {
     // Resolve the restitution horizon here rather than in the generator: this is the one place that
     // holds both ends of what the policy needs — the launch date and the insertion state — and it
     // already reads the achieved orbit off the very same state a few lines above. The generator
-    // receives seconds, not an intent (spec specs/mission-horizon/01-horizon-explicite.md §4).
+    // receives seconds, not an intent (spec docs/mission-horizon/01-horizon-explicite.md §4).
     //
     // mission.getCurrentState() is the insertion state at this point: the trailing CoastingStage
     // does not override propagateStandalone, so the stage walk above left the state at the end of
@@ -292,7 +292,7 @@ public class MissionOptimizer {
    * propellant discarded with the spent stage — so they report zero consumption and zero ΔV.
    *
    * <p><b>No stage spans a jettison any more</b> (spec {@code
-   * specs/mission-stages/01-separations-implicites.md}, S2), so the entry stage's Isp is the only
+   * docs/mission-stages/01-separations-implicites.md}, S2), so the entry stage's Isp is the only
    * Isp burnt during the stage and this accounting is exact. It used to be an approximation: the
    * ascent was one stage carrying burn 1, a 66 t jettison and burn 2, and a single Tsiolkovsky
    * across a mass drop is not an approximation but a category error — on the Falcon Heavy LEO

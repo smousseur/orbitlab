@@ -19,7 +19,7 @@ import org.junit.jupiter.api.Test;
 
 /**
  * What a mission entry must remember about a computation, and what it must forget when the
- * composition is replaced (spec {@code specs/mission-detail/01-vue-detail.md} section 3).
+ * composition is replaced (spec {@code docs/mission-detail/01-vue-detail.md} section 3).
  */
 class MissionEntryFailureTest {
 

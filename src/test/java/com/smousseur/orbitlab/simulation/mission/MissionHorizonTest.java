@@ -18,7 +18,7 @@ import org.orekit.utils.PVCoordinates;
 
 /**
  * The restitution horizon's resolution rules (spec {@code
- * specs/mission-horizon/01-horizon-explicite.md} §3). Pure: nothing here propagates.
+ * docs/mission-horizon/01-horizon-explicite.md} §3). Pure: nothing here propagates.
  */
 class MissionHorizonTest {
 

@@ -10,7 +10,7 @@ import org.orekit.utils.Constants;
 
 /**
  * How far past insertion a mission is sampled and displayed — the mission's <b>restitution
- * horizon</b> (spec {@code specs/mission-horizon/01-horizon-explicite.md}).
+ * horizon</b> (spec {@code docs/mission-horizon/01-horizon-explicite.md}).
  *
  * <p><b>Not the optimization horizon.</b> This decides only how much of the trailing coast is flown
  * for the ephemeris, and it cannot move an optimizer baseline — that is structural, not merely

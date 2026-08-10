@@ -29,7 +29,7 @@ public abstract class Mission {
 
   /**
    * How far past insertion this mission is sampled (spec {@code
-   * specs/mission-horizon/01-horizon-explicite.md}). Written by {@code MissionComposer}, which is
+   * docs/mission-horizon/01-horizon-explicite.md}). Written by {@code MissionComposer}, which is
    * its only writer, from the {@code MissionSpec} the user configured.
    *
    * <p><b>The default is the legacy constant, deliberately.</b> A mission built outside the

@@ -65,7 +65,7 @@ public final class FormField<T> {
    * <b>absence</b> is meaningful: it is how the wizard says "auto", so {@code MissionFactory} falls
    * back to {@code MissionHorizon.defaultFor(type)} and reopening the mission restores the auto
    * state without any extra flag to carry (spec {@code
-   * specs/mission-horizon/01-horizon-explicite.md} §7).
+   * docs/mission-horizon/01-horizon-explicite.md} §7).
    */
   public static final FormField<Double> MISSION_HORIZON_DAYS =
       new FormField<>("MISSION_HORIZON_DAYS", Double.class);

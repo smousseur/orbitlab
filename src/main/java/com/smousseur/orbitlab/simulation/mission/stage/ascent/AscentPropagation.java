@@ -14,7 +14,7 @@ import org.orekit.propagation.SpacecraftState;
  *       com.smousseur.orbitlab.simulation.mission.maneuver.GravityTurnManeuver#asPropagation} — the
  *       pre-split single propagator carrying burn 1, the jettison detector and burn 2. Kept as the
  *       numeric reference the migration's non-regression fixtures compare against (spec {@code
- *       specs/mission-stages/02-baseline-n2.md} §5).
+ *       docs/mission-stages/02-baseline-n2.md} §5).
  * </ul>
  *
  * <p>Injecting the strategy is what let the split land in two commits rather than one: the phases

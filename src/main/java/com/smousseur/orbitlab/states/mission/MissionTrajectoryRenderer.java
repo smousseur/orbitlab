@@ -110,7 +110,7 @@ public final class MissionTrajectoryRenderer {
    * the rounding: about a metre, redrawn <em>differently</em> on every frame because {@code p}
    * moves ~130 m per frame. Seen from 500 m away that is some four pixels of shimmer, and it is why
    * the line danced around a spacecraft model that was itself rock steady (spec {@code
-   * specs/graphics-effects/spacecraft-view-artefacts.md} §4).
+   * docs/graphics-effects/spacecraft-view-artefacts.md} §4).
    *
    * <p>Subtracting the tip in {@code double} first bounds a vertex's error by its distance to the
    * spacecraft instead of by its distance to the geocentre, which is the standard camera-relative

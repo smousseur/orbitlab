@@ -9,7 +9,7 @@ import java.util.List;
 
 /**
  * Builds the explicit three-phase ascent that replaces the single {@code Gravity turn} stage (spec
- * {@code specs/mission-stages/01-separations-implicites.md} §5.1):
+ * {@code docs/mission-stages/01-separations-implicites.md} §5.1):
  *
  * <pre>
  *   Gravity turn (S1) → S1 separation → Gravity turn (S2)

@@ -8,7 +8,7 @@ import org.orekit.time.AbsoluteDate;
  * durations derived from them, and every date the ascent hangs off.
  *
  * <p><b>Why it exists.</b> The ascent is one propagation today but becomes three phases (spec
- * {@code specs/mission-stages/01-separations-implicites.md} §4.2): {@code Gravity turn (S1) → S1
+ * {@code docs/mission-stages/01-separations-implicites.md} §4.2): {@code Gravity turn (S1) → S1
  * separation → Gravity turn (S2)}. Those phases only reproduce today's trajectory if they agree to
  * the millisecond on when the first stage stops thrusting, when it is dropped, and when the second
  * ignites — so the dates must be computed <b>once</b>, not re-derived per phase. This record is

@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.orekit.time.AbsoluteDate;
 
 /**
- * The display product's two guarantees (spec {@code specs/mission-horizon/01-horizon-explicite.md}
+ * The display product's two guarantees (spec {@code docs/mission-horizon/01-horizon-explicite.md}
  * §6): it never exceeds the vertex budget, and it always spans the whole flown trajectory — first
  * and last sample included.
  *

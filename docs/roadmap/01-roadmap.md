@@ -1,9 +1,9 @@
 # Roadmap OrbitLab — révision 2026-08-08
 
-Ce document remplace `specs/roadmap/01-short-term.md` (supprimé : ses phases 0
-et 1 sont soldées, cf. §1). Il est **la** porte d'entrée du dossier `specs/` :
+Ce document remplace `docs/roadmap/01-short-term.md` (supprimé : ses phases 0
+et 1 sont soldées, cf. §1). Il est **la** porte d'entrée du dossier `docs/` :
 chaque item renvoie vers la spec détaillée quand elle existe, et l'index
-complet des documents est dans [`specs/README.md`](../README.md).
+complet des documents est dans [`docs/README.md`](../README.md).
 
 **Comment le lire.** Le plan, c'est le **§3** — six phases dans l'ordre. Le §4
 est un classement valeur/difficulté qui sert à arbitrer, pas à planifier ; le
@@ -321,7 +321,7 @@ croisements de boucles (spec §6). `RND-3` étant clos sans les traiter, ils
 relèvent désormais de `RND-4`, ou d'un identifiant propre le jour où l'un des
 deux gêne.
 
-**Spec.** [`specs/graphics-effects/spacecraft-view-artefacts.md`](../graphics-effects/spacecraft-view-artefacts.md)
+**Spec.** [`docs/graphics-effects/spacecraft-view-artefacts.md`](../graphics-effects/spacecraft-view-artefacts.md)
 §9.1 à §9.3 (ce qui a été fait, et les écarts avec ce qui était prévu).
 
 #### ~~RND-2 — Filtrage anisotrope — ★2 ◆1 S~~ — **RÉSOLU le 2026-08-09**
@@ -420,7 +420,7 @@ ensuite les tirets animés, le halo additif et le hover (`NAV-5`).
 
 #### ~~NAV-1 — Transitions de caméra~~ — ★4 ◆2 M — **résolu le 2026-08-10**
 
-> Spec de départ : [`specs/camera/01-view-transitions.md`](../camera/01-view-transitions.md).
+> Spec de départ : [`docs/camera/01-view-transitions.md`](../camera/01-view-transitions.md).
 > Le texte ci-dessous est conservé tel qu'écrit avant le chantier ; ce qui suit recense
 > ce que l'implémentation a démenti ou ajouté.
 >
@@ -460,7 +460,7 @@ ensuite les tirets animés, le halo additif et le hover (`NAV-5`).
 > « un seul corps, sur l'origine » du near viewport. Les missions n'apparaissent qu'à la
 > dernière frame d'un `SOLAR → PLANET`, volontairement : leur trajectoire est dessinée
 > dans le near viewport, dont l'origine est encore la source. Et voir
-> [`specs/bugs.md`](../bugs.md) pour le jitter sur Pluton.
+> [`docs/bugs.md`](../bugs.md) pour le jitter sur Pluton.
 
 **Pourquoi.** Aujourd'hui tout changement de vue est un cut sec en un frame :
 l'utilisateur perd le fil spatial entre « d'où je viens » et « où je suis ».
@@ -474,7 +474,7 @@ des entrées, ordre d'attachement des AppStates. Rien n'existe encore côté cod
 être attaché **avant** `FloatingOriginAppState`, sinon un sursaut apparaît au
 basculement de mode.
 
-**Spec.** [`specs/camera/01-view-transitions.md`](../camera/01-view-transitions.md).
+**Spec.** [`docs/camera/01-view-transitions.md`](../camera/01-view-transitions.md).
 
 #### NAV-2 — Timeline indexée sur le temps + marqueurs d'événements — ★4 ◆3 M
 
@@ -512,7 +512,7 @@ Spec complète et non commencée (`ui/breadcrumb/` et
 utile une fois les missions lunaires en place : la hiérarchie
 `Soleil > Terre > Lune > mission` est exactement ce que le widget sait afficher.
 
-**Spec.** [`specs/navigation/01-breadcrumb.md`](../navigation/01-breadcrumb.md).
+**Spec.** [`docs/navigation/01-breadcrumb.md`](../navigation/01-breadcrumb.md).
 
 #### NAV-5 — Hover « wow » — ★3 ◆2 M
 
@@ -520,7 +520,7 @@ Spec complète. À faire **après** `RND-4` : le boost d'épaisseur à ×2 sur h
 repose sur `setLineWidth`, qui ne marchera pas sur les drivers en profil core.
 Avec le ribbon, la spec devient applicable telle qu'écrite.
 
-**Spec.** [`specs/graphics-effects/hover-effects.md`](../graphics-effects/hover-effects.md).
+**Spec.** [`docs/graphics-effects/hover-effects.md`](../graphics-effects/hover-effects.md).
 
 ---
 
@@ -617,7 +617,7 @@ toucher aux baselines, et donc de la livrer tôt.
 doit voir la nouvelle surface. Un `IsotropicDrag` construit une fois pour toutes
 ne le verra pas.
 
-**Spec.** [`specs/atmosphere/01-impacts-fonctionnels-techniques.md`](../atmosphere/01-impacts-fonctionnels-techniques.md) §5 phases 0–3.
+**Spec.** [`docs/atmosphere/01-impacts-fonctionnels-techniques.md`](../atmosphere/01-impacts-fonctionnels-techniques.md) §5 phases 0–3.
 
 #### PHY-2 — Atmosphère par défaut + recalibrage — ★5 ◆4 L
 
@@ -678,7 +678,7 @@ existait mais **n'était démontré par aucun second cas**.
   coast interétage de 5 s pour le chill-down du Vinci). Le câblage est donc
   désormais exercé par deux lanceurs aux profils réellement distincts. Le coût de
   l'agrégation est chiffré dans le Javadoc de `Launchers.ARIANE_62` et dans
-  [`specs/launchers/01-ariane-62.md`](../launchers/01-ariane-62.md) : la forme de
+  [`docs/launchers/01-ariane-62.md`](../launchers/01-ariane-62.md) : la forme de
   l'ascension n'est pas celle de ce lanceur, mais la mission se ferme (LEO 400 km
   à moins de 1,2 km de la cible, 21,7 % de l'ULPM en réserve).
 - **Le rendu** — `engine/scene/spacecraft/LauncherAssets.java` associe chaque id
@@ -748,7 +748,7 @@ Deux briques partagées, à écrire une fois :
 - **LVLH** — service qui transforme un état chaser en `(δr, δv)` relatif via
   `LOFType.LVLH`. Utile au coût terminal, au rendu, et plus tard à HCW.
 
-**Spec.** [`specs/brainstorm/leo-rendezvous-preparation.md`](../brainstorm/leo-rendezvous-preparation.md) §3.5, §3.6.
+**Spec.** [`docs/brainstorm/leo-rendezvous-preparation.md`](../brainstorm/leo-rendezvous-preparation.md) §3.5, §3.6.
 
 #### MIS-4 — Survol lunaire (TLI + flyby) — ★5 ◆4 L
 
@@ -762,7 +762,7 @@ coast ~3 jours sous influence lunaire croissante, objectif de survol
 correction CMA-ES. Le timing du TLI est très contraint : sans `MIS-2`,
 l'optimiseur cherche dans le vide.
 
-**Spec.** [`specs/brainstorm/missions.md`](../brainstorm/missions.md) §8 (à
+**Spec.** [`docs/brainstorm/missions.md`](../brainstorm/missions.md) §8 (à
 étendre : la spec traite TLI+LOI d'un bloc, le flyby seul est un palier
 intermédiaire moins cher qui mérite d'être livré d'abord).
 
@@ -801,7 +801,7 @@ HCW au MVP, ISS seule comme cible.
 rendez-vous est une spirale illisible ; en LVLH, c'est une figure compacte
 autour de la cible. C'est le bénéfice visuel n°1 de la feature.
 
-**Spec.** [`specs/brainstorm/leo-rendezvous-preparation.md`](../brainstorm/leo-rendezvous-preparation.md).
+**Spec.** [`docs/brainstorm/leo-rendezvous-preparation.md`](../brainstorm/leo-rendezvous-preparation.md).
 
 #### ~~MIS-8 — Horizon de mission explicite — ★5 ◆2 M~~ — **RÉSOLU le 2026-08-09**
 
@@ -918,7 +918,7 @@ d'optimiseur. C'est ce qui permet de faire ce chantier en phase 1 sans risque.
 `simulation/mission/operation/MissionSpec.java`,
 `ui/mission/wizard/step/StepParameters.java`.
 
-**Spec.** [`specs/mission-horizon/01-horizon-explicite.md`](../mission-horizon/01-horizon-explicite.md).
+**Spec.** [`docs/mission-horizon/01-horizon-explicite.md`](../mission-horizon/01-horizon-explicite.md).
 Elle tranche la question ouverte n°1 (dérivé *et* champ wizard), et elle corrige deux
 constats de cette fiche : le coast final n'est **jamais** volé pendant l'optimisation
 (la passe d'optim emprunte `StageChainRunner.plain()`, dont le coast final vaut zéro),
@@ -972,7 +972,7 @@ comme un chantier séparé.
 
 #### ~~UI-1 — Vue détail mission~~ — ★4 ◆2 M — **résolu le 2026-08-10**
 
-> Spec détaillée : [`specs/mission-detail/01-vue-detail.md`](../mission-detail/01-vue-detail.md).
+> Spec détaillée : [`docs/mission-detail/01-vue-detail.md`](../mission-detail/01-vue-detail.md).
 > Elle corrige trois hypothèses de cette fiche : `AchievedOrbit` n'est pas stocké mais
 > **jeté** par l'orchestrateur, `StagePerformance` ne porte **aucune durée**, et l'objectif
 > d'une mission GEO est la **GTO**, pas l'orbite GEO.
@@ -1064,8 +1064,8 @@ Gardé hors phases, à remonter si le besoin se manifeste :
   aujourd'hui la même `GEOMission` analytique ; seul le levier ergols agit
   réellement sur GEO).
 
-Détail et notation dans [`specs/brainstorm/features-long-terme.md`](../brainstorm/features-long-terme.md)
-et [`specs/brainstorm/missions.md`](../brainstorm/missions.md).
+Détail et notation dans [`docs/brainstorm/features-long-terme.md`](../brainstorm/features-long-terme.md)
+et [`docs/brainstorm/missions.md`](../brainstorm/missions.md).
 
 ---
 

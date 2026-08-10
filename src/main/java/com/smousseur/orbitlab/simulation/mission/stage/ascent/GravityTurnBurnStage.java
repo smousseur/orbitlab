@@ -16,7 +16,7 @@ import org.orekit.time.AbsoluteDate;
 
 /**
  * One powered phase of the explicit three-phase ascent (spec {@code
- * specs/mission-stages/01-separations-implicites.md} §5.2): {@code Gravity turn (S1) → S1
+ * docs/mission-stages/01-separations-implicites.md} §5.2): {@code Gravity turn (S1) → S1
  * separation → Gravity turn (S2)}. Both burns share everything but their propulsion and their
  * cutoff, which is what the two subclasses supply.
  *

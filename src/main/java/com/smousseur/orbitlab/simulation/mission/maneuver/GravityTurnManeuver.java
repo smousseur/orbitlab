@@ -41,7 +41,7 @@ import org.orekit.utils.Constants;
  * the jettison detector and burn 2 — the way the ascent was flown before it became {@code Gravity
  * turn (S1) → S1 separation → Gravity turn (S2)}. No mission uses them: they are kept because the
  * migration's non-regression fixtures are defined <em>against</em> them (spec {@code
- * specs/mission-stages/02-baseline-n2.md} §5), and étape 5 still has a behaviour change to measure
+ * docs/mission-stages/02-baseline-n2.md} §5), and étape 5 still has a behaviour change to measure
  * from that reference.
  */
 public class GravityTurnManeuver {
@@ -308,7 +308,7 @@ public class GravityTurnManeuver {
    * candidate flies the same ascent and ends at the same jettison coast. The optimizer's staging
    * penalty still keeps CMA-ES out of it — not as a guard rail any more, but because exploring a
    * plateau costs budget for nothing (measured: +47 % evaluations on the LEO profile when it was
-   * removed, spec {@code specs/mission-stages/02-baseline-n2.md} §12).
+   * removed, spec {@code docs/mission-stages/02-baseline-n2.md} §12).
    *
    * @return the earliest transition time that completes staging, in seconds
    */

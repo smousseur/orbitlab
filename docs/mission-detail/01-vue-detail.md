@@ -1,7 +1,7 @@
 # UI-1 — Vue détail mission
 
 > Statut : **implémentée et vérifiée à l'écran le 2026-08-10**.
-> Fiche roadmap : [`specs/roadmap/01-roadmap.md`](../roadmap/01-roadmap.md) §6, `UI-1` — ★4 ◆2 M.
+> Fiche roadmap : [`docs/roadmap/01-roadmap.md`](../roadmap/01-roadmap.md) §6, `UI-1` — ★4 ◆2 M.
 >
 > **Corrections apportées à cette spec pendant l'implémentation** (§7) : le
 > décompte des stages GEO était faux (12, pas 8), d'où une hauteur de fenêtre
@@ -304,7 +304,7 @@ la compilation et non par un décalage numérique.
 
 ## 7. Écarts constatés à l'implémentation
 
-Consignés ici pour la traçabilité voulue par [`specs/README.md`](../README.md) :
+Consignés ici pour la traçabilité voulue par [`docs/README.md`](../README.md) :
 ce document décrit un chantier et survit à son implémentation.
 
 ### 7.1 Une mission GEO compte 12 stages, pas 8

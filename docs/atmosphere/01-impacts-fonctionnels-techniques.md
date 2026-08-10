@@ -24,8 +24,8 @@
 
 Trois pressions convergent :
 
-1. **Roadmap optimiseur.** `specs/optimizer/03-robustness-roadmap.md` §"Questions ouvertes à trancher" identifie déjà la traînée comme un point de blocage à 185 km : *« est-ce que le propagateur d'optimisation modélise l'atmosphère ? Si non, il faut soit l'ajouter, soit fixer un floor d'altitude minimal de coast plus haut »*. Le bornage adaptatif des contraintes est limité tant qu'on n'a pas une trajectoire physiquement réaliste en bas LEO.
-2. **Roadmap features long-terme.** `specs/brainstorm/features-long-terme.md` cite trois features dont l'atmosphère est pré-requis structurel : #13 (modèles de force avancés), #15 (réentrée atmosphérique avec heating), #22 (météo spatiale).
+1. **Roadmap optimiseur.** `docs/optimizer/03-robustness-roadmap.md` §"Questions ouvertes à trancher" identifie déjà la traînée comme un point de blocage à 185 km : *« est-ce que le propagateur d'optimisation modélise l'atmosphère ? Si non, il faut soit l'ajouter, soit fixer un floor d'altitude minimal de coast plus haut »*. Le bornage adaptatif des contraintes est limité tant qu'on n'a pas une trajectoire physiquement réaliste en bas LEO.
+2. **Roadmap features long-terme.** `docs/brainstorm/features-long-terme.md` cite trois features dont l'atmosphère est pré-requis structurel : #13 (modèles de force avancés), #15 (réentrée atmosphérique avec heating), #22 (météo spatiale).
 3. **Réalisme et crédibilité scientifique.** Sans atmosphère, la simulation surestime systématiquement les performances en ascension et ignore la décroissance orbitale en très basse orbite. La validation contre données réelles (#12) reste structurellement biaisée.
 
 ### 1.3 Périmètre du document
@@ -80,7 +80,7 @@ L'introduction du drag réécrit certaines hypothèses du coût.
 - L'apogée atteinte pour un même `(transitionTime, exponent)` sera **plus basse** : la pénalité `apogee < targetApogee` se déclenche plus souvent → l'optimiseur cherche à allonger / pencher davantage le profil.
 - La vitesse tangentielle de fin de GT (`vTangential`) sera également plus basse → la pénalité `vTangential < minVtan` mord plus.
 - Le terme `W_P · (massConsumed/initialMass)` augmente naturellement parce qu'il faut plus de propergol pour atteindre la cible. **Les pondérations peuvent rester valides**, mais les coûts absolus de référence pour `acceptableCost` sont à recalibrer.
-- Le `periapsisFloor` (`100 km` par défaut) doit être relevé : à 100 km la densité atmosphérique fait déjà chuter l'orbite en heures. Cf. `specs/optimizer/02-altitude-dependent-design.md` §2.4 : `periapsisFloor = max(120 km, targetAlt − 100 km)`.
+- Le `periapsisFloor` (`100 km` par défaut) doit être relevé : à 100 km la densité atmosphérique fait déjà chuter l'orbite en heures. Cf. `docs/optimizer/02-altitude-dependent-design.md` §2.4 : `periapsisFloor = max(120 km, targetAlt − 100 km)`.
 
 #### 2.3.2 `TransferTwoManeuverProblem`
 
@@ -120,7 +120,7 @@ Recommandation : option 3 par défaut, démarrer en option 2 si la pression UI e
 ### 2.5 Comportements émergents à anticiper
 
 - Une mission optimisée avant le merge "drag-on" peut **échouer** après le merge (apogée trop basse, propergol insuffisant). → Stratégie de migration : conserver le code "no-drag" derrière un flag, ou re-baseline les tests d'intégration. Voir §5.
-- Les cibles GTO (cf. `specs/optimizer/03-robustness-roadmap.md` §5) commencent typiquement par un parking 200–400 km : **le parking subit le drag**. La tenue du parking jusqu'à l'injection est une nouvelle contrainte.
+- Les cibles GTO (cf. `docs/optimizer/03-robustness-roadmap.md` §5) commencent typiquement par un parking 200–400 km : **le parking subit le drag**. La tenue du parking jusqu'à l'injection est une nouvelle contrainte.
 - Les missions interplanétaires partent souvent depuis un parking LEO 200–250 km : même conséquence.
 
 ## 3. Impacts techniques
@@ -246,7 +246,7 @@ Les tests d'intégration impactés :
 
 - `LEOMissionOptimizationTest` valide actuellement une insertion à 400 km à ±7 % près. À 400 km le drag est faible (< 1 % d'écart de Δv typique) → ce test continuera vraisemblablement de passer, mais la marge va se serrer. **Action** : lancer le test avec drag activé et observer la marge réelle avant de durcir le critère.
 - `AbstractTrajectoryOptimizerTest.propagateMission()` → dépend du propagateur configuré. Si on active le drag par défaut, **toutes** les missions de test sont impactées.
-- Suite d'altitude paramétrique (`LEOAltitudeSweepTest` planifiée dans `specs/optimizer/03-robustness-roadmap.md` §4) : doit obligatoirement intégrer un mode "drag-on" pour 185–300 km.
+- Suite d'altitude paramétrique (`LEOAltitudeSweepTest` planifiée dans `docs/optimizer/03-robustness-roadmap.md` §4) : doit obligatoirement intégrer un mode "drag-on" pour 185–300 km.
 
 Tests à créer :
 
@@ -297,7 +297,7 @@ Avant d'écrire la première ligne de code :
 
 ## 5. Plan de mise en œuvre suggéré
 
-> Basé sur le pattern phasé de `specs/optimizer/03-robustness-roadmap.md`.
+> Basé sur le pattern phasé de `docs/optimizer/03-robustness-roadmap.md`.
 
 ### Phase 0 — Prototype isolé
 
@@ -348,7 +348,7 @@ Avant d'écrire la première ligne de code :
 ### Phase 8 — Préparer la suite (sans implémenter)
 
 - Réserver l'extensibilité pour réentrée (#15) : structure du `MaxQDetector` réutilisable pour heating ; `AtmosphericInterfaceDetector` est déjà le hook entrée atmosphère.
-- Documenter dans `specs/atmosphere/02-...` le plan reentry, le plan SRP/lunisolaire, le plan météo spatiale.
+- Documenter dans `docs/atmosphere/02-...` le plan reentry, le plan SRP/lunisolaire, le plan météo spatiale.
 
 ## 6. Compléments
 
@@ -356,11 +356,11 @@ Avant d'écrire la première ligne de code :
 
 | Spec | Recouvrement |
 |---|---|
-| `specs/optimizer/02-altitude-dependent-design.md` | §1 (`apogeeMin_safe`), §2.4 (`periapsisFloor adaptatif`) deviennent **physiquement justifiés** au lieu d'empiriques. |
-| `specs/optimizer/03-robustness-roadmap.md` | Question ouverte §"Drag" tranchée par ce doc. |
-| `specs/brainstorm/features-long-terme.md` #13 | Ce doc est le **premier livrable** de #13 (drag) ; SRP/lunisolaire suivront. |
-| `specs/brainstorm/features-long-terme.md` #15 | Pré-requis structurel : atmosphère, détecteur d'interface. |
-| `specs/brainstorm/features-long-terme.md` #22 | Pré-requis : indices solaires (F10.7/Kp) consommés par NRLMSISE-00. |
+| `docs/optimizer/02-altitude-dependent-design.md` | §1 (`apogeeMin_safe`), §2.4 (`periapsisFloor adaptatif`) deviennent **physiquement justifiés** au lieu d'empiriques. |
+| `docs/optimizer/03-robustness-roadmap.md` | Question ouverte §"Drag" tranchée par ce doc. |
+| `docs/brainstorm/features-long-terme.md` #13 | Ce doc est le **premier livrable** de #13 (drag) ; SRP/lunisolaire suivront. |
+| `docs/brainstorm/features-long-terme.md` #15 | Pré-requis structurel : atmosphère, détecteur d'interface. |
+| `docs/brainstorm/features-long-terme.md` #22 | Pré-requis : indices solaires (F10.7/Kp) consommés par NRLMSISE-00. |
 
 ### 6.2 Risques techniques notables
 

@@ -29,7 +29,7 @@ import org.orekit.time.AbsoluteDate;
 
 /**
  * Precision of the drawn trajectory in spacecraft view (spec {@code
- * specs/graphics-effects/spacecraft-view-artefacts.md} §4, §9.2).
+ * docs/graphics-effects/spacecraft-view-artefacts.md} §4, §9.2).
  *
  * <p>The line used to be written in absolute GCRF units — ~6778 in a {@code float}, where one
  * {@code ulp} is already half a metre — while its world matrix carried the near frame's {@code −p}

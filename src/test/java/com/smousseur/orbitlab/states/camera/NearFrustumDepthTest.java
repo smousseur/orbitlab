@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test;
 
 /**
  * Depth resolution of the near viewport (spec {@code
- * specs/graphics-effects/spacecraft-view-artefacts.md} §5). The trajectory line scintillates where
+ * docs/graphics-effects/spacecraft-view-artefacts.md} §5). The trajectory line scintillates where
  * it crosses the Earth's disc because the depth buffer cannot separate it from the surface, and the
  * only quantity that governs that separation is the near plane:
  *

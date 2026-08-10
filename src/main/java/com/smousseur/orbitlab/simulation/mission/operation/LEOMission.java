@@ -235,7 +235,7 @@ public class LEOMission extends EarthMission {
   /**
    * The ascent — vertical climb then the three explicit gravity-turn phases ({@code Gravity turn
    * (S1) → S1 separation → Gravity turn (S2)}, spec {@code
-   * specs/mission-stages/01-separations-implicites.md} §4.2) — followed by the orbital phases of a
+   * docs/mission-stages/01-separations-implicites.md} §4.2) — followed by the orbital phases of a
    * given profile. Shared by the three LEO variants so none of them can drift on how the launcher
    * stages.
    *

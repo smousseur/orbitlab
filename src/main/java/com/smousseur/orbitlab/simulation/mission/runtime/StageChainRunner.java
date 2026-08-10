@@ -19,7 +19,7 @@ import org.orekit.time.AbsoluteDate;
  *
  * <p><b>Why it is extracted.</b> This traversal was the body of {@link
  * com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemerisGenerator}. Splitting the
- * ascent into explicit phases (spec {@code specs/mission-stages/01-separations-implicites.md} §5.4)
+ * ascent into explicit phases (spec {@code docs/mission-stages/01-separations-implicites.md} §5.4)
  * requires the <b>optimize</b> pass to fly the same chain the <b>ephemeris</b> pass replays: two
  * implementations of "walk the stages" would let the two passes drift apart in how often the
  * integrator restarts, which is exactly the optimize-vs-ephemeris divergence closed by bilan 11
@@ -44,7 +44,7 @@ public final class StageChainRunner {
    * far below anything that would hang the optimizer.
    *
    * <p>The value is deliberately left where it was by the mission-horizon work (spec {@code
-   * specs/mission-horizon/01-horizon-explicite.md} §9): it is a genuine safety net on the stage
+   * docs/mission-horizon/01-horizon-explicite.md} §9): it is a genuine safety net on the stage
    * path, not an arbitrary restitution horizon, and moving it would change what an event-terminated
    * coast does. It is logged when it fires instead, so its use stops being invisible.
    */
@@ -132,7 +132,7 @@ public final class StageChainRunner {
    *
    * <p>The sampling step is <b>not</b> a parameter: each stage advertises its own through {@link
    * MissionStage#sampleStepSeconds}, so a burn is recorded at 1 s where the dynamics are fast and a
-   * coast at 60 s where they are not (spec {@code specs/mission-horizon/01-horizon-explicite.md}
+   * coast at 60 s where they are not (spec {@code docs/mission-horizon/01-horizon-explicite.md}
    * §5). A single step for the whole chain cannot serve both an 8-minute ascent and a 3-day coast.
    *
    * @param sampler receives every sample, or {@code null} to fly the chain without sampling
@@ -193,7 +193,7 @@ public final class StageChainRunner {
       propagator.setInitialState(stageEntry);
 
       // Re-entry guard on every phase of every mission, on both passes (spec
-      // specs/mission-stages/03-garde-rentree.md). Armed here rather than phase by phase because
+      // docs/mission-stages/03-garde-rentree.md). Armed here rather than phase by phase because
       // this is the single place that builds a flown-phase propagator: a stage added tomorrow is
       // covered without having to remember. Loud only on the sampling (ephemeris/replay) runner —
       // the plain runner is the CMA-ES path, where an infeasible candidate re-entering is a normal
