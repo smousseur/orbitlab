@@ -119,6 +119,68 @@ class FocusViewTest {
   }
 
   @Test
+  void aPendingTransitionMakesTheViewPlanetScaleEarly() {
+    // The far clip floor keys on this. Held to the source alone it would collapse mid-fly-in and
+    // sweep the whole system out of the far viewport, then drop it back on the final frame.
+    assertFalse(focusView.isPlanetScale());
+
+    focusView.beginTransition(ViewMode.PLANET, SolarSystemBody.EARTH);
+    assertTrue(focusView.isPlanetScale());
+    assertEquals(ViewMode.SOLAR, focusView.getMode(), "the focus itself must not have moved");
+
+    focusView.endTransition();
+    assertFalse(focusView.isPlanetScale());
+  }
+
+  @Test
+  void aPendingTransitionKeepsTheViewPlanetScaleOnTheWayOut() {
+    focusView.viewPlanet(SolarSystemBody.EARTH);
+    focusView.beginTransition(ViewMode.SOLAR, SolarSystemBody.SUN);
+
+    assertTrue(focusView.isPlanetScale(), "flying out is still planet scale until it lands");
+  }
+
+  @Test
+  void satellitesOfTheDestinationShowDuringTheApproach() {
+    focusView.beginTransition(ViewMode.PLANET, SolarSystemBody.EARTH);
+
+    assertTrue(focusView.isSatelliteVisible(SolarSystemBody.MOON));
+  }
+
+  @Test
+  void satellitesOfTheSourceKeepShowingOnTheWayOut() {
+    focusView.viewPlanet(SolarSystemBody.EARTH);
+    focusView.beginTransition(ViewMode.SOLAR, SolarSystemBody.SUN);
+
+    assertTrue(focusView.isSatelliteVisible(SolarSystemBody.MOON));
+  }
+
+  @Test
+  void unrelatedSatellitesStayHiddenDuringATransition() {
+    focusView.beginTransition(ViewMode.PLANET, SolarSystemBody.MARS);
+
+    assertFalse(focusView.isSatelliteVisible(SolarSystemBody.MOON));
+  }
+
+  @Test
+  void missionsIgnoreATransitionsDestination() {
+    // Deliberately NOT symmetric with the satellites above: a mission's trajectory is drawn in the
+    // near viewport, whose origin is still the transition's source. Showing an Earth mission while
+    // the frame is centred on the Sun would draw its orbit around the Sun.
+    focusView.beginTransition(ViewMode.PLANET, SolarSystemBody.EARTH);
+
+    assertFalse(focusView.isMissionVisible(SolarSystemBody.EARTH));
+  }
+
+  @Test
+  void missionsOfTheSourceKeepShowingOnTheWayOut() {
+    focusView.viewPlanet(SolarSystemBody.EARTH);
+    focusView.beginTransition(ViewMode.SOLAR, SolarSystemBody.SUN);
+
+    assertTrue(focusView.isMissionVisible(SolarSystemBody.EARTH));
+  }
+
+  @Test
   void viewPlanetClearsFocusedMission() {
     focusView.viewSpacecraft(leo1, SolarSystemBody.EARTH);
     focusView.viewPlanet(SolarSystemBody.MARS);

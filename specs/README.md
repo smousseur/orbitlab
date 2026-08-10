@@ -7,10 +7,11 @@ documents sont le détail technique dans lequel il puise.
 Les documents de ce dossier sont rédigés en **français** (le code et sa Javadoc
 sont en anglais, cf. `CLAUDE.md`).
 
-| Document | Rôle | Statut au 2026-08-08 |
+| Document | Rôle | Statut au 2026-08-10 |
 |---|---|---|
 | [`roadmap/01-roadmap.md`](roadmap/01-roadmap.md) | Roadmap générale, priorisée | À jour |
-| [`camera/01-view-transitions.md`](camera/01-view-transitions.md) | Design complet des transitions de caméra | Valide, **non implémenté** (item `NAV-1`) |
+| [`bugs.md`](bugs.md) | Registre des bugs ouverts hors chantier | À jour — un item (`BUG-1`, jitter Pluton) |
+| [`camera/01-view-transitions.md`](camera/01-view-transitions.md) | Design complet des transitions de caméra | **Implémenté le 2026-08-10** (item `NAV-1`) — valide **sauf §2, §3.5, §3.6 et §8**, voir bandeau du document |
 | [`navigation/01-breadcrumb.md`](navigation/01-breadcrumb.md) | Design complet du breadcrumb HUD | Valide, **non commencé** (item `NAV-4`) |
 | [`graphics-effects/hover-effects.md`](graphics-effects/hover-effects.md) | Design du hover planète ↔ orbite | Valide, non implémenté (item `NAV-5`) |
 | [`graphics-effects/spacecraft-view-artefacts.md`](graphics-effects/spacecraft-view-artefacts.md) | Diagnostic des trois artefacts de la vue spacecraft + correctifs | **Rediagnostiqué le 2026-08-09**, cause A corrigée, B et C ouvertes (item `RND-1`) |

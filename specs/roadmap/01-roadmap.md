@@ -31,6 +31,7 @@ lisez qu'une section, lisez le §3.
 | **`FX-1` — halo du Soleil** (couronne géométrique + bloom résiduel) | `engine/scene/body/CoronaView.java`, `MatDefs/Fx/Corona.*`, `states/fx/PostFxAppState.java`, `states/fx/SmoothBloomFilter.java`, `AssetFactory.applyGlow` |
 | **`MIS-1` — deuxième lanceur** (Ariane 62 au catalogue + mesh choisi par lanceur) | `vehicle/catalog/Launchers.java` (commit `f9ea80c`), `engine/scene/spacecraft/LauncherAssets.java`, `MissionRenderer.modelPathFor` |
 | **`UI-1` — vue détail mission** (orbite atteinte, écart à la cible, stages, erreur lisible) | `ui/mission/MissionTargetOrbit.java`, `ui/mission/MissionResultText.java`, `ui/mission/detail/`, `PanelFooter.addResultLine`, `MissionEntry.lastError` ; specs `mission-detail/01-vue-detail.md` |
+| **`NAV-1` — transitions de caméra** (pivot, distance et orientation animés, entrées bloquées) | `states/camera/CameraTransitionAppState.java`, `CameraTransition.java`, `CameraOrientation.java`, `engine/CameraTransitionConfig.java`, `engine/Easing.java`, `app/view/TransitionTarget.java` ; `CameraTransitionTest`, `CameraOrientationTest` |
 
 **Reste ouvert de l'ancienne roadmap** : le feedback de progression pendant
 l'optimisation, repris ici en `UI-2`. La vue détail avec résultats
@@ -102,7 +103,7 @@ plutôt qu'une constante (`MIS-8`).
 
 | ID | Item | ★ | ◆ | Taille |
 |---|---|:-:|:-:|:-:|
-| NAV-1 | Transitions de caméra entre vues | 4 | 2 | M |
+| ~~NAV-1~~ | ~~Transitions de caméra entre vues~~ — résolu | 4 | 2 | M |
 | NAV-2 | Timeline indexée sur le temps + marqueurs d'événements | 4 | 3 | M |
 | NAV-3 | Scrub continu (glisser sur la piste) | 3 | 2 | S |
 | RND-4 | Ribbon billboardé (orbites + trajectoires) | 4 | 3 | M |
@@ -210,7 +211,7 @@ opportuniste, ou à décider quoi sacrifier quand une phase déborde.
 | ~~MIS-1~~ | ~~Deuxième lanceur au catalogue~~ — résolu (mesh Ariane 5 faute d'Ariane 6, voir détail) | 3 | 1 | S | — |
 | ~~RND-3~~ | ~~Couleur par stage + passé/futur + marqueur « now »~~ — résolu | 4 | 2 | M | — |
 | ~~UI-1~~ | ~~Vue détail mission (orbite atteinte, message d'erreur)~~ — résolu | 4 | 2 | M | — |
-| NAV-1 | Transitions de caméra entre vues | 4 | 2 | M | — |
+| ~~NAV-1~~ | ~~Transitions de caméra entre vues~~ — résolu | 4 | 2 | M | — |
 | MIS-7 | `EarthOrbitMission` paramétrable → polaire / SSO / MEO | 4 | 2 | M | — |
 | ~~RND-2~~ | ~~Filtrage anisotrope (MSAA déjà actif)~~ — résolu | 2 | 1 | S | — |
 | FX-2 | Éclipses / pénombre inter-corps | 4 | 3 | M | — |
@@ -417,7 +418,49 @@ ensuite les tirets animés, le halo additif et le hover (`NAV-5`).
 
 ### NAV — Caméra, timeline, navigation
 
-#### NAV-1 — Transitions de caméra — ★4 ◆2 M
+#### ~~NAV-1 — Transitions de caméra~~ — ★4 ◆2 M — **résolu le 2026-08-10**
+
+> Spec de départ : [`specs/camera/01-view-transitions.md`](../camera/01-view-transitions.md).
+> Le texte ci-dessous est conservé tel qu'écrit avant le chantier ; ce qui suit recense
+> ce que l'implémentation a démenti ou ajouté.
+>
+> **Écarts à la spec.**
+> - **Distance interpolée géométriquement**, pas linéairement (spec §3.5). Les cibles
+>   couvrent neuf ordres de grandeur (800 unités solaires pour le système, `5e-7` pour un
+>   spacecraft) : un lerp linéaire passe l'essentiel de sa durée près de la grande valeur
+>   puis s'effondre sur quelques frames.
+> - **Le pivot spacecraft inclut l'offset orbital.** La spec §3.6 le disait sub-pixel ;
+>   il vaut ~7000 km, quatre ordres de grandeur au-dessus de la distance d'arrivée. En
+>   visant le parent, `PLANET → SPACECRAFT` plongeait au centre de la Terre.
+> - **Pivots lus sur les translations locales**, pas `getWorldTranslation()`, et pivot
+>   source pris sur la caméra plutôt que supposé à l'origine (pour ne pas casser une vue
+>   pannée).
+> - **Orientation animée** (v2, hors spec initiale qui la déclarait « conservée ») :
+>   alignée sur la direction de trajet pour Planet/Spacecraft, retour à l'orientation par
+>   défaut pour Solar, convergence sur les 35 % premiers de la durée. Sans elle la
+>   transition vise du vide pendant tout le trajet.
+>
+> **Trois bugs révélés — pas créés — par le chantier**, tous corrigés :
+> 1. `LodView` promouvait en 3D n'importe quel corps sur le seul critère de la taille
+>    projetée, et retirait son icône ; or `SceneGraph.showBodySpatial` cule tous les
+>    ancres near sauf celui du corps focus. Une planète visée par une transition
+>    disparaissait donc complètement sur la dernière seconde de l'approche. D'où le
+>    paramètre `allow3d` de `BodyView.updateScreen`.
+> 2. `farFloor` était posé par branche de mode : pendant un fly-in le mode reste SOLAR,
+>    le plan far suivait la distance jusqu'à son plancher de 10 unités et balayait le
+>    Soleil et les orbites hors du viewport. `FocusView` connaît désormais la destination
+>    en cours et `isPlanetScale()` répond pour l'un ou l'autre bout.
+> 3. **`OrbitCameraAppState` était attaché en dernier**, donc après ses consommateurs :
+>    jME rafraîchit les transformées monde à la demande, si bien que `PlanetHudMarkers` et
+>    `MissionOrchestrator` appariaient une position fraîche avec la caméra de la frame
+>    précédente. Latent tant que la caméra ne bougeait qu'à la souris. Il est maintenant
+>    attaché juste après `FloatingOriginAppState`.
+>
+> **Reste ouvert.** Le pop icône → modèle 3D à l'arrivée (8 px → ~220 px) est inhérent au
+> « un seul corps, sur l'origine » du near viewport. Les missions n'apparaissent qu'à la
+> dernière frame d'un `SOLAR → PLANET`, volontairement : leur trajectoire est dessinée
+> dans le near viewport, dont l'origine est encore la source. Et voir
+> [`specs/bugs.md`](../bugs.md) pour le jitter sur Pluton.
 
 **Pourquoi.** Aujourd'hui tout changement de vue est un cut sec en un frame :
 l'utilisateur perd le fil spatial entre « d'où je viens » et « où je suis ».

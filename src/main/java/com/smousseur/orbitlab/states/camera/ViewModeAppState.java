@@ -65,6 +65,8 @@ public final class ViewModeAppState extends BaseAppState implements ActionListen
     if (!ACTION_TOGGLE_VIEW_MODE.equals(name) || !isPressed) {
       return;
     }
-    context.focusView().reset();
+    // Not a direct reset: CameraTransitionAppState animates the way back out and owns the guards
+    // that make a keypress during a transition, or while already in solar view, a no-op.
+    context.cameraTransition().requestSolar();
   }
 }

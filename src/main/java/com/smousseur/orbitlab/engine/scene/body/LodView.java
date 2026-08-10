@@ -86,10 +86,19 @@ public final class LodView implements BodyView {
    * Updates the LOD state by switching between the 3D model and icon views based on the camera's
    * distance to the body anchor.
    *
+   * <p><b>{@code allow3d} is a veto, not a hint.</b> Every planet's 3D model is parked on the near
+   * viewport's origin and {@code SceneGraph.showBodySpatial} culls all but the one the scene is
+   * centred on, so a body this view promotes without permission is dropped by that cull — while the
+   * branch below has already taken its icon away. The body then draws nowhere at all. That is
+   * invisible in a static view, where the only body you can get close to is the focused one, and
+   * plainly visible during a camera transition, which flies at a body that will not be focused
+   * until the last frame: it used to vanish partway through the approach and pop back on arrival.
+   *
    * @param cam the active camera used for distance calculation and screen projection
+   * @param allow3d whether this body is allowed to occupy the near viewport
    */
   @Override
-  public void updateScreen(Camera cam) {
+  public void updateScreen(Camera cam, boolean allow3d) {
     Vector3f bodyPos = farAnchor.getWorldTranslation();
     float distance = cam.getLocation().distance(bodyPos);
     if (distance <= 0f) distance = 1e-6f;
@@ -103,7 +112,7 @@ public final class LodView implements BodyView {
     // Icon is 16 px wide => 8 px half-size. Hysteresis band 6↔10 px prevents
     // boundary flicker when the projected radius hovers around the threshold.
     float threshold = lastShow3d ? 6f : 10f;
-    boolean show3d = projectedRadiusPx >= threshold;
+    boolean show3d = allow3d && projectedRadiusPx >= threshold;
     lastShow3d = show3d;
 
     if (show3d) {

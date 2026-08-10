@@ -44,8 +44,12 @@ public interface BodyView {
    * the current camera.
    *
    * @param cam the active camera
+   * @param allow3d whether this body may be promoted to its 3D model at all. The near viewport
+   *     draws a single body, sitting on its origin, so only the body the scene is currently centred
+   *     on can be shown in 3D; every other one has to stay an icon however large it projects. A
+   *     view that answers {@code false} here keeps its icon regardless of the camera distance.
    */
-  void updateScreen(Camera cam);
+  void updateScreen(Camera cam, boolean allow3d);
 
   /**
    * Sets the visibility of this body view.

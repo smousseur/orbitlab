@@ -13,6 +13,7 @@ import com.smousseur.orbitlab.engine.AssetFactory;
 import com.smousseur.orbitlab.engine.TextureDiagnostics;
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.states.InitAppState;
+import com.smousseur.orbitlab.states.camera.CameraTransitionAppState;
 import com.smousseur.orbitlab.states.camera.FloatingOriginAppState;
 import com.smousseur.orbitlab.states.camera.NearCameraSyncAppState;
 import com.smousseur.orbitlab.states.camera.OrbitCameraAppState;
@@ -101,12 +102,42 @@ public class OrbitLabApplication extends SimpleApplication {
     stateManager.attach(new EphemerisAppState(applicationContext));
     stateManager.attach(new PlanetPoseAppState(applicationContext));
     stateManager.attach(new ViewModeAppState(applicationContext));
+    // Before FloatingOriginAppState, and that is a requirement, not a preference: on the frame a
+    // transition ends it flips the focus, and the floating origin has to re-centre the scene within
+    // that same frame for the two moves to cancel — cf. CameraTransitionAppState.finish().
+    CameraTransitionAppState cameraTransition = new CameraTransitionAppState(applicationContext);
+    applicationContext.setCameraTransition(cameraTransition);
+    stateManager.attach(cameraTransition);
     // Attach order IS update order (AppStateManager walks the states in insertion order), and it
     // matters here: FloatingOriginAppState owns the frame offsets, and every state that reads a
     // world position back out of the scene graph must come after it. MissionOrchestratorAppState
     // does exactly that (the LOD measures the camera-to-spacecraft distance), so it must not be
     // moved back above this line — cf. specs/graphics-effects/spacecraft-view-artefacts.md §3.
     stateManager.attach(new FloatingOriginAppState(applicationContext));
+
+    // The orbit camera writes the far camera's pose for this frame, and it belongs BEFORE its
+    // consumers. MissionOrchestratorAppState and PlanetHudMarkersAppState both measure a
+    // camera-to-body distance and project world positions onto the screen; jME refreshes world
+    // transforms on demand, so the positions they read are this frame's, but cam.getLocation() is
+    // only written here — leaving them to pair a fresh position with last frame's camera. That was
+    // invisible while the camera only ever moved at the speed a hand drags a mouse, and stopped
+    // being invisible when transitions started moving it several degrees and several percent of
+    // its distance per frame: the HUD icons lagged the scene they annotate.
+    //
+    // It still has to come after FloatingOriginAppState, which owns the frame offsets it reads and
+    // sets the far-plane floor it applies.
+    MissionWizardAppState wizardState = new MissionWizardAppState(applicationContext);
+    flyCam.setEnabled(false);
+    OrbitCameraAppState orbitCam =
+        new OrbitCameraAppState(
+            applicationContext,
+            () -> Vector3f.ZERO,
+            // A transition drives the pivot and the distance itself; letting the mouse in at the
+            // same time would fight it. Same switch as the wizard's, for the same reason.
+            () -> wizardState.isWizardVisible() || cameraTransition.isActive());
+    applicationContext.setOrbitCamera(orbitCam);
+    stateManager.attach(orbitCam);
+
     stateManager.attach(new MissionOrchestratorAppState(applicationContext));
     stateManager.attach(new PlanetHudMarkersAppState(applicationContext));
     stateManager.attach(new SolarSystemSceneAppState(applicationContext));
@@ -117,16 +148,7 @@ public class OrbitLabApplication extends SimpleApplication {
     stateManager.attach(new MissionDisplayPanelAppState(applicationContext));
     stateManager.attach(new MissionPanelWidgetAppState(applicationContext));
     stateManager.attach(new LightningAppState(applicationContext));
-
-    MissionWizardAppState wizardState = new MissionWizardAppState(applicationContext);
     stateManager.attach(wizardState);
-
-    flyCam.setEnabled(false);
-
-    OrbitCameraAppState orbitCam =
-        new OrbitCameraAppState(
-            applicationContext, () -> Vector3f.ZERO, wizardState::isWizardVisible);
-    stateManager.attach(orbitCam);
 
     cam.setLocation(new Vector3f(0f, 0f, 9000f));
     cam.lookAt(Vector3f.ZERO, Vector3f.UNIT_Y);

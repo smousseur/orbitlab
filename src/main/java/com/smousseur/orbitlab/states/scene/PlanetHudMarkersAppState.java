@@ -65,7 +65,10 @@ public class PlanetHudMarkersAppState extends BaseAppState {
       SolarSystemBody body = presenter.body();
       BodyView view = presenter.view();
       if (!body.isSatellite() || focusView.isSatelliteVisible(body)) {
-        view.updateScreen(projectionCam);
+        // Only the body the scene is centred on may take the near viewport, so it is the only one
+        // allowed a 3D model. During a transition that is still the source body, not the one being
+        // flown at — see LodView.updateScreen.
+        view.updateScreen(projectionCam, body == focusView.getBody());
       }
     }
   }

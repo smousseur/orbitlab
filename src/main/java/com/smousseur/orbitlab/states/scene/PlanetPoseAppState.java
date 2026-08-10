@@ -160,11 +160,9 @@ public final class PlanetPoseAppState extends BaseAppState {
   }
 
   private void onSelectPlanet(SolarSystemBody body) {
-    FocusView focusView = context.focusView();
-    double radius = PlanetRadius.radiusFor(body);
-    double distance = radius * 5 / RenderContext.SOLAR_METERS_PER_UNIT;
-    focusView.setCameraDistance((float) distance);
-    focusView.viewPlanet(body);
+    // The focus switch and the framing distance both belong to CameraTransitionAppState, which
+    // animates its way there and drops the click if a transition is already playing.
+    context.cameraTransition().requestPlanet(body);
   }
 
   @Override

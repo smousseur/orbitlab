@@ -1,5 +1,26 @@
 # Spec — Transitions de caméra entre vues
 
+> **Implémenté le 2026-08-10 (`NAV-1`). Ce document n'a pas été récrit : il décrit
+> le design de départ, et quatre de ses décisions ont été démenties en codant.**
+> Le détail des écarts est dans la fiche `NAV-1` de
+> [`roadmap/01-roadmap.md`](../roadmap/01-roadmap.md) ; en résumé, à ne pas lire ici
+> comme s'ils étaient vrais :
+>
+> - **§2 et §8, « orientation conservée » — faux.** Le yaw et le pitch sont animés
+>   depuis la v2 : sans ça la transition vise du vide pendant tout le trajet. Alignés
+>   sur la direction de trajet pour Planet/Spacecraft, retour à l'orientation par
+>   défaut pour Solar, convergence sur les 35 % premiers de la durée
+>   (`CameraOrientation`, `CameraTransitionConfig.orientationLeadFraction`).
+> - **§3.5, distance en `lerp` — remplacé** par une interpolation géométrique.
+> - **§3.6, « le spacecraft est à <1 km du parent, sub-pixel » — faux** : ~7000 km,
+>   soit quatre ordres de grandeur au-dessus de la distance d'arrivée. Le pivot
+>   spacecraft ajoute l'offset orbital lu sur l'éphéméride.
+> - **§3.6, pivots via `getWorldTranslation()` — remplacé** par les translations
+>   locales, et le pivot source est pris sur la caméra plutôt que supposé à l'origine.
+>
+> §3.7 (continuité au switch) et §3.8 (blocage centralisé des entrées) ont tenu tels
+> quels. Le §7 reste le plan de vérification à l'écran.
+
 ## 1. Contexte
 
 Aujourd'hui, les changements de vue dans OrbitLab sont **instantanés** :

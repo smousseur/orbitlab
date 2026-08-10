@@ -4,7 +4,6 @@ import com.jme3.math.ColorRGBA;
 import com.jme3.renderer.Camera;
 import com.jme3.scene.Node;
 import com.smousseur.orbitlab.app.ApplicationContext;
-import com.smousseur.orbitlab.app.view.FocusView;
 import com.smousseur.orbitlab.app.view.RenderContext;
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.engine.AssetFactory;
@@ -39,8 +38,12 @@ public final class MissionRenderer {
    * lodMultiplier} = 0.05 × 500 = 25 km in km units) and outside the near viewport's clip plane —
    * 100 m at this distance, since {@code NearCameraSyncAppState} derives it from the focus distance
    * — so the 3D model appears immediately.
+   *
+   * <p>Public because it is applied by {@link
+   * com.smousseur.orbitlab.states.camera.CameraTransitionAppState}, which now owns the framing of
+   * every focus target so it can animate its way to it.
    */
-  private static final float SPACECRAFT_FOCUS_DISTANCE_SOLAR_UNITS = 5e-7f;
+  public static final float SPACECRAFT_FOCUS_DISTANCE_SOLAR_UNITS = 5e-7f;
 
   private final MissionEntry entry;
   private final ApplicationContext context;
@@ -154,10 +157,9 @@ public final class MissionRenderer {
   }
 
   private void onSpacecraftSelected() {
-    FocusView focusView = context.focusView();
-    SolarSystemBody parentBody = renderContext.targetBody().orElse(focusView.getBody());
-    focusView.setCameraDistance(SPACECRAFT_FOCUS_DISTANCE_SOLAR_UNITS);
-    focusView.viewSpacecraft(entry.id(), parentBody);
+    SolarSystemBody parentBody =
+        renderContext.targetBody().orElseGet(() -> context.focusView().getBody());
+    context.cameraTransition().requestSpacecraft(entry.id(), parentBody);
   }
 
   /**
@@ -191,7 +193,9 @@ public final class MissionRenderer {
   public void updateFromEphemeris(
       MissionEphemerisPoint point, TrajectoryPolyline trail, int upTo, Camera cam, float tpf) {
     presenter.updatePose(point.position(), point.velocity(), tpf, renderContext);
-    view.updateScreen(cam);
+    // Always allowed its 3D model: a spacecraft anchor hangs off the near bodies node with its own
+    // body-relative position, so it does not compete for the near origin the way the planets do.
+    view.updateScreen(cam, true);
     trajectoryRenderer.update(trail, upTo, point.position());
   }
 

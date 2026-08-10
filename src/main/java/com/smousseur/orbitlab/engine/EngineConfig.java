@@ -8,10 +8,12 @@ import java.util.Objects;
  *
  * @param systemRadiusWorldUnits the radius of the visible solar system in JME world units (must be finite and positive)
  * @param orbitCamera            the orbit camera tuning configuration
+ * @param cameraTransition       the tuning of the animated focus transitions
  */
 public record EngineConfig(
     float systemRadiusWorldUnits,
-    OrbitCameraConfig orbitCamera
+    OrbitCameraConfig orbitCamera,
+    CameraTransitionConfig cameraTransition
 ) {
 
   public EngineConfig {
@@ -19,6 +21,7 @@ public record EngineConfig(
       throw new IllegalArgumentException("systemRadiusWorldUnits must be finite and > 0");
     }
     Objects.requireNonNull(orbitCamera, "orbitCamera");
+    Objects.requireNonNull(cameraTransition, "cameraTransition");
   }
 
   /**
@@ -30,6 +33,6 @@ public record EngineConfig(
   public static EngineConfig defaultSolarSystem() {
     float systemRadius = 20_000f;
     OrbitCameraConfig cam = OrbitCameraConfig.defaultForSystemRadius(systemRadius);
-    return new EngineConfig(systemRadius, cam);
+    return new EngineConfig(systemRadius, cam, CameraTransitionConfig.defaults());
   }
 }

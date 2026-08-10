@@ -13,6 +13,8 @@ import com.smousseur.orbitlab.engine.scene.graph.SceneGraph;
 import com.smousseur.orbitlab.engine.scene.planet.PlanetPresenter;
 import com.smousseur.orbitlab.simulation.mission.MissionId;
 import com.smousseur.orbitlab.simulation.mission.context.MissionContext;
+import com.smousseur.orbitlab.states.camera.CameraTransitionAppState;
+import com.smousseur.orbitlab.states.camera.OrbitCameraAppState;
 import com.smousseur.orbitlab.states.mission.MissionRenderer;
 import java.util.Collections;
 import java.util.EnumMap;
@@ -41,6 +43,8 @@ public class ApplicationContext {
   private final MissionContext missionContext;
   private Camera nearCamera;
   private Camera skyCamera;
+  private OrbitCameraAppState orbitCamera;
+  private CameraTransitionAppState cameraTransition;
 
   /**
    * Creates a new application context and attaches the scene and GUI graphs to the provided JME3
@@ -248,6 +252,43 @@ public class ApplicationContext {
    */
   public void setNearCamera(Camera nearCamera) {
     this.nearCamera = nearCamera;
+  }
+
+  /**
+   * Returns the orbit camera state, which owns the far camera's pose.
+   *
+   * @return the orbit camera state, or {@code null} before the application has registered it
+   */
+  public OrbitCameraAppState orbitCamera() {
+    return orbitCamera;
+  }
+
+  /**
+   * Registers the orbit camera state. Called by the application once the state exists, so other
+   * states can drive the camera without reaching for it through {@code getState}.
+   *
+   * @param orbitCamera the orbit camera state
+   */
+  public void setOrbitCamera(OrbitCameraAppState orbitCamera) {
+    this.orbitCamera = orbitCamera;
+  }
+
+  /**
+   * Returns the camera transition state, the single entry point for changing the camera's focus.
+   *
+   * @return the camera transition state, or {@code null} before the application has registered it
+   */
+  public CameraTransitionAppState cameraTransition() {
+    return cameraTransition;
+  }
+
+  /**
+   * Registers the camera transition state.
+   *
+   * @param cameraTransition the camera transition state
+   */
+  public void setCameraTransition(CameraTransitionAppState cameraTransition) {
+    this.cameraTransition = cameraTransition;
   }
 
   /**

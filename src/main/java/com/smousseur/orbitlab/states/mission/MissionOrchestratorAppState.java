@@ -162,6 +162,12 @@ public final class MissionOrchestratorAppState extends BaseAppState {
   }
 
   private void resetFocusIfFollowing(MissionId missionId) {
+    // A camera transition still on its way to that spacecraft has not applied its target yet, so
+    // the focus test below cannot see it: it has to be dropped explicitly or it would focus a
+    // deleted mission on its last frame.
+    context.cameraTransition().cancelIfTargeting(missionId);
+    // Deliberately not a transition: this is not a navigation the user asked for, and it must not
+    // be droppable by the guards a request goes through.
     if (missionId.equals(context.focusView().getFocusedMission())) {
       context.focusView().reset();
     }

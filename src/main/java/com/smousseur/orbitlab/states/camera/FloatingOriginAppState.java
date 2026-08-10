@@ -75,7 +75,6 @@ public class FloatingOriginAppState extends BaseAppState {
         sceneGraph.nearFrame().setLocalTranslation(0f, 0f, 0f);
         sceneGraph.showBodySpatial(SolarSystemBody.SUN);
         solarRoot.setLocalTranslation(0, 0, 0);
-        orbitCam.setFarFloor(0f);
       }
       case PLANET -> {
         sceneGraph.setSolarVisible(true);
@@ -85,8 +84,6 @@ public class FloatingOriginAppState extends BaseAppState {
         if (planetSpatial != null) {
           solarRoot.setLocalTranslation(planetSpatial.getLocalTranslation().negate());
         }
-        // Ensure the far frustum is large enough to encompass distant orbits and bodies.
-        orbitCam.setFarFloor(PLANET_MODE_FAR_MIN);
       }
       case SPACECRAFT -> {
         // Keep the far scene visible so that orbit lines of other planets remain drawn.
@@ -101,7 +98,6 @@ public class FloatingOriginAppState extends BaseAppState {
         if (planetSpatial != null) {
           solarRoot.setLocalTranslation(planetSpatial.getLocalTranslation().negate());
         }
-        orbitCam.setFarFloor(PLANET_MODE_FAR_MIN);
 
         // Offset the near frame so the spacecraft sits at the near-view origin. Both of the frame's
         // children cancel this offset with the matching +p: the spacecraft anchor under
@@ -110,6 +106,18 @@ public class FloatingOriginAppState extends BaseAppState {
         sceneGraph.nearFrame().setLocalTranslation(nearFrameOffset(view.getFocusedMission()));
       }
     }
+
+    // Keep the far frustum large enough to encompass distant orbits and bodies whenever either end
+    // of the view is planet scale — the destination of a transition counts, and that is the whole
+    // point of asking FocusView rather than switching on the mode above.
+    //
+    // The far plane otherwise tracks the camera distance, which a transition drives down by four
+    // orders of magnitude while the mode is still SOLAR: it would collapse to its 10-unit absolute
+    // minimum somewhere around the middle of a fly-in, sweeping the Sun and every orbit line out of
+    // the far viewport one by one, and drop them all back in when the mode finally flipped. The cost
+    // is a coarser depth range in the far viewport for the 2.5 s a transition lasts, which that
+    // viewport already lives with permanently in planet view.
+    orbitCam.setFarFloor(view.isPlanetScale() ? PLANET_MODE_FAR_MIN : 0f);
   }
 
   /**

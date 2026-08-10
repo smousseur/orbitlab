@@ -17,6 +17,24 @@ public class FocusView {
   private float cameraDistance;
   private final EngineConfig engineConfig;
 
+  /**
+   * Where a camera transition is heading, while it is still playing; {@code null} the rest of the
+   * time.
+   *
+   * <p>A transition holds {@link #mode} and {@link #body} on their source values until its very last
+   * frame, because the floating origin centres the rendered frame on them and moving that ground
+   * mid-interpolation would break it. But a scene drawn strictly from the source is wrong for the
+   * whole 2.5 s: the camera is already most of the way to somewhere else, and everything keyed on
+   * the focus — the far clip floor, satellite visibility — would only catch up on the final frame,
+   * as a pop. These two fields let those rules answer for <em>either</em> end.
+   *
+   * <p>Not everything may take the union. Anything drawn in the near viewport is positioned relative
+   * to the frame's centre and is only correct for the source — see {@link #isMissionVisible}.
+   */
+  private ViewMode pendingMode;
+
+  private SolarSystemBody pendingBody;
+
   public FocusView(EngineConfig engineConfig) {
     this.engineConfig = engineConfig;
   }
@@ -29,6 +47,24 @@ public class FocusView {
    */
   public boolean isFocused(SolarSystemBody body) {
     return this.mode == ViewMode.PLANET && this.body == body;
+  }
+
+  /**
+   * Declares where a camera transition is heading, so the visibility rules can account for the
+   * destination while the focus itself is still on the source.
+   *
+   * @param mode the view mode the transition will end in
+   * @param body the body it will be centred on
+   */
+  public void beginTransition(ViewMode mode, SolarSystemBody body) {
+    this.pendingMode = mode;
+    this.pendingBody = body;
+  }
+
+  /** Clears the pending destination. Called when a transition completes or is cancelled. */
+  public void endTransition() {
+    this.pendingMode = null;
+    this.pendingBody = null;
   }
 
   /** Resets the focus to the default state: solar view centered on the Sun. */
@@ -137,11 +173,19 @@ public class FocusView {
    * itself. The clause read {@code mode == PLANET} alone until spacecraft mode was added and this
    * predicate was not revisited, which is what made the Moon disappear on entering a mission.
    *
+   * <p>A transition's destination counts too. Flying in from the solar view towards the Earth, the
+   * Moon would otherwise stay hidden for the whole approach and appear on the last frame; it is
+   * drawn from its own far-frame position, so it is correct to show at any point along the way.
+   *
    * @param body the satellite body
    * @return true if the satellite should be visible
    */
   public boolean isSatelliteVisible(SolarSystemBody body) {
-    return isPlanetScale() && (this.body == body || this.body == body.parent());
+    return isPlanetScale() && (orbits(this.body, body) || orbits(pendingBody, body));
+  }
+
+  private static boolean orbits(SolarSystemBody centre, SolarSystemBody satellite) {
+    return centre != null && (centre == satellite || centre == satellite.parent());
   }
 
   /**
@@ -157,15 +201,30 @@ public class FocusView {
    * <p>Missions around the focused body stay visible in spacecraft mode too, so following one of
    * them does not hide its siblings.
    *
+   * <p><b>Unlike {@link #isSatelliteVisible}, this deliberately ignores a transition's
+   * destination.</b> A mission is drawn in the near viewport, whose origin is wherever the floating
+   * origin has centred the frame — the transition's <em>source</em> for its whole duration. Showing
+   * a mission bound for the Earth while the frame is still centred on the Sun would draw its
+   * trajectory around the Sun. It has to wait for the focus to actually flip.
+   *
    * @param missionBody the body the mission's render context is centred on
    * @return true if the mission should be shown
    */
   public boolean isMissionVisible(SolarSystemBody missionBody) {
-    return isPlanetScale() && this.body == missionBody;
+    return isPlanetScaleMode(mode) && this.body == missionBody;
   }
 
-  /** Whether the current mode draws the planet-scale scene at all. */
-  private boolean isPlanetScale() {
+  /**
+   * Whether the planet-scale scene is drawn at all — counting a transition's destination, so the
+   * scene being flown into is already set up rather than snapping in on the final frame.
+   *
+   * @return true if either end of the current view is planet scale
+   */
+  public boolean isPlanetScale() {
+    return isPlanetScaleMode(mode) || isPlanetScaleMode(pendingMode);
+  }
+
+  private static boolean isPlanetScaleMode(ViewMode mode) {
     return mode == ViewMode.PLANET || mode == ViewMode.SPACECRAFT;
   }
 }

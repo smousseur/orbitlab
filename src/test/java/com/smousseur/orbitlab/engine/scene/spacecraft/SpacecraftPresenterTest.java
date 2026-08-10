@@ -148,7 +148,7 @@ class SpacecraftPresenterTest {
     }
 
     @Override
-    public void updateScreen(Camera cam) {}
+    public void updateScreen(Camera cam, boolean allow3d) {}
 
     @Override
     public void setVisible(boolean visible) {}

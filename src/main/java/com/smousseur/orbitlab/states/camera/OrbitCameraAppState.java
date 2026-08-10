@@ -164,13 +164,33 @@ public final class OrbitCameraAppState extends BaseAppState
   }
 
   /**
+   * Returns the camera's current turntable orientation.
+   *
+   * @return the current yaw and pitch
+   */
+  public CameraOrientation orientation() {
+    return new CameraOrientation(yawRad, pitchRad);
+  }
+
+  /**
+   * Sets the camera's turntable orientation, clamping the pitch to the configured limits.
+   *
+   * <p>Driven frame by frame by {@link CameraTransitionAppState} while a transition plays; the
+   * mouse is locked out for the duration, so the two never write it on the same frame.
+   *
+   * @param orientation the orientation to apply
+   */
+  public void setOrientation(CameraOrientation orientation) {
+    this.yawRad = orientation.yawRad();
+    this.pitchRad = FastMath.clamp(orientation.pitchRad(), config.pitchMinRad(), config.pitchMaxRad());
+  }
+
+  /**
    * Resets the camera orientation and distance to their default values as defined by the
-   * configuration. The yaw is set to zero and the pitch is set to -20 degrees.
+   * configuration and by {@link CameraOrientation#defaults()}.
    */
   public void reset() {
-    yawRad = 0f;
-    pitchRad = (float) (-20.0 * Math.PI / 180.0);
-    pitchRad = FastMath.clamp(pitchRad, config.pitchMinRad(), config.pitchMaxRad());
+    setOrientation(CameraOrientation.defaults());
     float distance =
         FastMath.clamp(config.defaultDistance(), config.minDistance(), config.maxDistance());
     context.focusView().setCameraDistance(distance);
