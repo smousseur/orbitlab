@@ -105,6 +105,10 @@ public class MissionOptimizer {
 
     for (MissionStage stage : mission.getStages()) {
       double massIn = mission.getCurrentState().getMass();
+      // Captured with massIn, before either branch propagates: the two branches below both leave
+      // the flown end state in `propagated`, so this is the only reading of the entry instant that
+      // is valid for both.
+      AbsoluteDate stageEntryDate = mission.getCurrentState().getDate();
       logger.info("Current mass = {}", massIn);
       captureJettisonedResidual(stage, massIn, jettisonedResiduals);
       if (stage instanceof OptimizableMissionStage<?> optimizable) {
@@ -225,12 +229,16 @@ public class MissionOptimizer {
           propagated = problem.propagate(result.bestVariables());
         }
         mission.setCurrentState(propagated);
-        stagePerformances.add(buildStagePerformance(stage, massIn, propagated.getMass()));
+        double duration = propagated.getDate().durationFrom(stageEntryDate);
+        stagePerformances.add(
+            buildStagePerformance(stage, massIn, propagated.getMass(), duration));
       } else {
         logger.info("Propagating non-optimizable stage '{}'...", stage.getName());
         SpacecraftState propagated = stage.propagateStandalone(mission.getCurrentState(), mission);
         mission.setCurrentState(propagated);
-        stagePerformances.add(buildStagePerformance(stage, massIn, propagated.getMass()));
+        double duration = propagated.getDate().durationFrom(stageEntryDate);
+        stagePerformances.add(
+            buildStagePerformance(stage, massIn, propagated.getMass(), duration));
         logger.info("Stage '{}' done.", stage.getName());
       }
     }
@@ -294,9 +302,10 @@ public class MissionOptimizer {
    * jettison being its own non-propulsive phase is what makes the formula below correct rather than
    * indicative; a future stage that dropped mass mid-burn would silently reintroduce the error.
    */
-  private StagePerformance buildStagePerformance(MissionStage stage, double massIn, double massOut) {
+  private StagePerformance buildStagePerformance(
+      MissionStage stage, double massIn, double massOut, double durationSeconds) {
     if (!stage.isPropulsive()) {
-      return new StagePerformance(stage.getName(), massIn, massOut, 0.0, 0.0);
+      return new StagePerformance(stage.getName(), massIn, massOut, 0.0, 0.0, durationSeconds);
     }
     Vehicle vehicle = mission.getVehicle();
     double dryIn = vehicle.resolveActiveStage(massIn).remainingDryMass();
@@ -311,7 +320,8 @@ public class MissionOptimizer {
               * Constants.G0_STANDARD_GRAVITY
               * FastMath.log(massIn / (massIn - propellantConsumed));
     }
-    return new StagePerformance(stage.getName(), massIn, massOut, propellantConsumed, deltaV);
+    return new StagePerformance(
+        stage.getName(), massIn, massOut, propellantConsumed, deltaV, durationSeconds);
   }
 
   /**
@@ -370,12 +380,13 @@ public class MissionOptimizer {
   private static void logReport(MissionPerformanceReport report) {
     for (StagePerformance sp : report.stages()) {
       logger.info(
-          "Stage '{}': massIn={} kg, massOut={} kg, propellant={} kg, dV={} m/s",
+          "Stage '{}': massIn={} kg, massOut={} kg, propellant={} kg, dV={} m/s, duration={} s",
           sp.stageName(),
           FastMath.round(sp.massIn()),
           FastMath.round(sp.massOut()),
           FastMath.round(sp.propellantConsumed()),
-          FastMath.round(sp.deltaV()));
+          FastMath.round(sp.deltaV()),
+          FastMath.round(sp.durationSeconds()));
     }
     logger.info(
         "Mission performance: total dV={} m/s, propellant loaded={} kg, residual={} kg ({}%)",

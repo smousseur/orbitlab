@@ -171,6 +171,9 @@ public final class MissionOrchestratorAppState extends BaseAppState {
     Mission mission = entry.mission();
     mission.setStatus(MissionStatus.COMPUTING);
     entry.setEphemeris(null); // invalidate previous
+    // Cleared on entry rather than on success: a mission relaunched after a failure would otherwise
+    // keep displaying the previous error for the whole duration of the new computation.
+    entry.clearLastError();
 
     optimizationExecutor.submit(
         () -> {
@@ -193,12 +196,21 @@ public final class MissionOrchestratorAppState extends BaseAppState {
             entry.setMission(result.mission());
             entry.setOptimizerResult(result.optimizerResult());
             entry.setEphemeris(result.ephemeris());
+            // Reporting-only, but the reason MissionComputeResult carries them rather than merely
+            // logging them: the panel displays both without recomputing anything.
+            entry.setAchievedOrbit(result.achievedOrbit());
+            entry.setPerformanceReport(result.performanceReport());
             logger.info(
                 "Computation completed for mission '{}' [{}]",
                 mission.getName(),
                 entry.id().shortForm());
           } catch (Exception e) {
+            // Status first, error last. Mission.status is a plain field, so the volatile write to
+            // lastError is the only publication edge this thread has: a render thread that sees the
+            // error is then guaranteed to see FAILED too. Reversed, it could read the new error
+            // beside a stale COMPUTING and display "Computing..." forever.
             mission.setStatus(MissionStatus.FAILED);
+            entry.setLastError(MissionEntry.describeFailure(e));
             logger.error(
                 "Computation failed for mission '{}' [{}]",
                 mission.getName(),

@@ -8,7 +8,9 @@ import com.smousseur.orbitlab.simulation.mission.OptimizationType;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemeris;
 import com.smousseur.orbitlab.simulation.mission.operation.MissionComposer;
 import com.smousseur.orbitlab.simulation.mission.operation.MissionSpec;
+import com.smousseur.orbitlab.simulation.mission.runtime.AchievedOrbit;
 import com.smousseur.orbitlab.simulation.mission.runtime.MissionOptimizerResult;
+import com.smousseur.orbitlab.simulation.mission.runtime.MissionPerformanceReport;
 import java.util.Objects;
 import java.util.Optional;
 import org.apache.logging.log4j.LogManager;
@@ -47,6 +49,14 @@ public final class MissionEntry {
   private volatile OptimizationType optimizationType = OptimizationType.FAST;
   private volatile MissionOptimizerResult optimizerResult;
   private volatile MissionEphemeris ephemeris;
+  // Written on the mission-optimizer thread when a computation lands, read on the JME update
+  // thread by the panel. MissionComputeResult carries both, and until this existed the
+  // orchestrator dropped them on the floor.
+  private volatile AchievedOrbit achievedOrbit;
+  private volatile MissionPerformanceReport performanceReport;
+  // The last failure, already formatted for display. Both sites that set MissionStatus.FAILED fill
+  // it in; before this field, the exception only ever reached the log.
+  private volatile String lastError;
   private volatile boolean visible = false;
   private volatile AbsoluteDate scheduledDate;
   private volatile ColorRGBA color;
@@ -151,6 +161,83 @@ public final class MissionEntry {
    */
   public void setEphemeris(MissionEphemeris ephemeris) {
     this.ephemeris = ephemeris;
+  }
+
+  /**
+   * Returns the orbit the last computation achieved, in both conventions.
+   *
+   * @return an optional containing the achieved orbit, or empty when nothing was computed
+   */
+  public Optional<AchievedOrbit> getAchievedOrbit() {
+    return Optional.ofNullable(achievedOrbit);
+  }
+
+  /**
+   * Stores the orbit reported by the computation.
+   *
+   * @param achievedOrbit the achieved orbit
+   */
+  public void setAchievedOrbit(AchievedOrbit achievedOrbit) {
+    this.achievedOrbit = achievedOrbit;
+  }
+
+  /**
+   * Returns the mass and ΔV accounting of the last computation.
+   *
+   * @return an optional containing the report, or empty when nothing was computed
+   */
+  public Optional<MissionPerformanceReport> getPerformanceReport() {
+    return Optional.ofNullable(performanceReport);
+  }
+
+  /**
+   * Stores the performance report produced by the computation.
+   *
+   * @param performanceReport the report
+   */
+  public void setPerformanceReport(MissionPerformanceReport performanceReport) {
+    this.performanceReport = performanceReport;
+  }
+
+  /**
+   * Returns the failure that put this mission in {@code FAILED}, already formatted for display.
+   *
+   * @return an optional containing the message, or empty when the last attempt did not fail
+   */
+  public Optional<String> getLastError() {
+    return Optional.ofNullable(lastError);
+  }
+
+  /**
+   * Records a failure message. Callers format it through {@link #describeFailure(Throwable)}.
+   *
+   * @param lastError the message to record
+   */
+  public void setLastError(String lastError) {
+    this.lastError = lastError;
+  }
+
+  /** Forgets the previous failure, so a relaunched computation does not display a stale error. */
+  public void clearLastError() {
+    this.lastError = null;
+  }
+
+  /**
+   * Formats a failure for display, identically wherever it is caught.
+   *
+   * <p>Deliberately the raw exception rather than a table of friendly messages: a mapping keyed on
+   * exception classes would be an association resolved at runtime, and a case that drifted out of
+   * sync would state something false about a mission. The raw text is never wrong.
+   *
+   * @param e the failure
+   * @return {@code "SimpleName: message"}, or the exception's {@code toString()} when it carries no
+   *     message — Orekit rebuilds exceptions without one often enough to matter
+   */
+  public static String describeFailure(Throwable e) {
+    String message = e.getMessage();
+    return message == null || message.isBlank()
+        ? e.toString()
+        : e.getClass().getSimpleName() + ": " + message;
   }
 
   /**
@@ -308,6 +395,7 @@ public final class MissionEntry {
           optimizationType,
           e.getMessage(),
           e);
+      this.lastError = describeFailure(e);
       mission.setStatus(MissionStatus.FAILED);
       return null;
     }
@@ -316,11 +404,15 @@ public final class MissionEntry {
   /**
    * Adopts a freshly composed mission and invalidates everything the previous one produced. The
    * recomposed mission starts in {@code DRAFT}, so status-gated consumers stop rendering it until a
-   * fresh {@code OPTIMIZE} recomputes it.
+   * fresh {@code OPTIMIZE} recomputes it — and the detail view must not keep reporting an orbit
+   * that is no longer flown, nor an error from a composition that no longer exists.
    */
   private void publish(Mission recomposed) {
     this.mission = recomposed;
     this.optimizerResult = null;
     this.ephemeris = null;
+    this.achievedOrbit = null;
+    this.performanceReport = null;
+    this.lastError = null;
   }
 }

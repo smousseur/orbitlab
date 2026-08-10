@@ -12,6 +12,12 @@ package com.smousseur.orbitlab.simulation.mission.runtime;
  * @param massOut the spacecraft mass at stage exit (kg)
  * @param propellantConsumed the propellant burnt during the stage (kg), jettisons excluded
  * @param deltaV the ΔV delivered by the stage (m/s)
+ * @param durationSeconds the wall-clock mission time the stage spanned (s)
  */
 public record StagePerformance(
-    String stageName, double massIn, double massOut, double propellantConsumed, double deltaV) {}
+    String stageName,
+    double massIn,
+    double massOut,
+    double propellantConsumed,
+    double deltaV,
+    double durationSeconds) {}

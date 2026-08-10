@@ -927,6 +927,11 @@ comme un chantier séparé.
 
 #### UI-1 — Vue détail mission — ★4 ◆2 M
 
+> Spec détaillée : [`specs/mission-detail/01-vue-detail.md`](../mission-detail/01-vue-detail.md)
+> (validée le 2026-08-10). Elle corrige trois hypothèses de cette fiche : `AchievedOrbit`
+> n'est pas stocké mais **jeté** par l'orchestrateur, `StagePerformance` ne porte **aucune
+> durée**, et l'objectif d'une mission GEO est la **GTO**, pas l'orbite GEO.
+
 **Pourquoi.** `MissionOptimizerResult` et `AchievedOrbit` sont calculés et
 stockés — et **aucun fichier de `ui/` ne les lit**. L'application optimise des
 trajectoires sans jamais dire ce qu'elle a obtenu. `PanelFooter` affiche

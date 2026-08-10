@@ -15,12 +15,14 @@ import com.simsilica.lemur.event.MouseEventControl;
 import com.smousseur.orbitlab.app.ApplicationContext;
 import com.smousseur.orbitlab.engine.events.EventBus;
 import com.smousseur.orbitlab.simulation.mission.MissionId;
+import com.smousseur.orbitlab.simulation.mission.MissionStatus;
 import com.smousseur.orbitlab.simulation.mission.OptimizationType;
 import com.smousseur.orbitlab.simulation.mission.context.MissionContext;
 import com.smousseur.orbitlab.simulation.mission.context.MissionEntry;
 import com.smousseur.orbitlab.ui.form.ConfirmDialog;
 import com.smousseur.orbitlab.ui.form.FormStyles;
 import com.smousseur.orbitlab.ui.form.ModalBackdrop;
+import com.smousseur.orbitlab.ui.mission.detail.MissionDetailView;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -37,7 +39,14 @@ public class MissionPanelWidget implements AutoCloseable {
   private static final Logger logger = LogManager.getLogger(MissionPanelWidget.class);
 
   private static final float WINDOW_WIDTH = 720f;
-  private static final float WINDOW_HEIGHT = 520f;
+  // 640 rather than 520, for two reasons that stack. The footer's result line costs 22 px and the
+  // list needs its full 345 px for five rows, which alone would call for 545. On top of that the
+  // detail screen has to hold a GEO mission's stage chain: 12 stages (vertical ascent, three
+  // gravity-turn phases, then parking through the final coast) is 234 px of table under 158 px of
+  // header, orbit block and totals, so 392 px of content against the 412 this height leaves once
+  // the detail view's own 20 px margins are taken. BoxLayout in FillMode.None neither shrinks nor
+  // clips its children, so a content area too short does not scroll — it draws over the footer.
+  private static final float WINDOW_HEIGHT = 640f;
   private static final float HEADER_HEIGHT = 88f;
   private static final float CONTENT_HEIGHT = WINDOW_HEIGHT - HEADER_HEIGHT - PanelFooter.HEIGHT;
 
@@ -55,6 +64,17 @@ public class MissionPanelWidget implements AutoCloseable {
   private ConfirmDialog confirmDialog;
 
   private MissionId selectedMissionId;
+
+  /** Which of the two content screens the panel is showing. */
+  private enum Screen {
+    LIST,
+    DETAIL
+  }
+
+  private Screen screen = Screen.LIST;
+  private MissionId detailMissionId;
+  private Container detailNode;
+
   private List<String> lastSnapshot = List.of();
   private boolean visible = false;
 
@@ -85,6 +105,7 @@ public class MissionPanelWidget implements AutoCloseable {
     listView.setRowListener(buildRowListener());
 
     footer = new PanelFooter(WINDOW_WIDTH);
+    footer.setOnShowDetails(entry -> showDetail(entry.id()));
 
     root.addChild(header.getNode());
     root.addChild(listView.getNode());
@@ -211,6 +232,9 @@ public class MissionPanelWidget implements AutoCloseable {
     if (missionId.equals(selectedMissionId)) {
       selectedMissionId = null;
     }
+    if (missionId.equals(detailMissionId)) {
+      showList();
+    }
     missionContext.removeMission(missionId);
     eventBus.publishMissionAction(missionId, EventBus.MissionAction.DELETE);
   }
@@ -224,11 +248,64 @@ public class MissionPanelWidget implements AutoCloseable {
     refresh();
   }
 
+  private void showDetail(MissionId missionId) {
+    detailMissionId = missionId;
+    screen = Screen.DETAIL;
+    refresh();
+  }
+
+  private void showList() {
+    detailMissionId = null;
+    screen = Screen.LIST;
+    refresh();
+  }
+
+  /**
+   * Detaches whichever content screen is currently mounted between the header and the footer. Both
+   * screens are rebuilt from scratch on every refresh, so nothing is lost by removing them.
+   */
+  private void clearContent() {
+    listView.getNode().removeFromParent();
+    if (detailNode != null) {
+      detailNode.removeFromParent();
+      detailNode = null;
+    }
+  }
+
   private void refresh() {
     List<MissionEntry> entries = missionContext.getMissions();
-    listView.refresh(entries, selectedMissionId);
     MissionEntry selected = missionContext.findMission(selectedMissionId).orElse(null);
     footer.setSelectedMission(selected);
+
+    MissionEntry detailed =
+        screen == Screen.DETAIL ? missionContext.findMission(detailMissionId).orElse(null) : null;
+    // Two ways the detail screen goes stale under us. It can vanish (deletion), and it can restart
+    // a computation: submitForComputation() clears the ephemeris but leaves achievedOrbit and
+    // performanceReport in place, so a detail view left open would keep drawing the previous run's
+    // orbit and stage table under a COMPUTING header, with nothing marking them stale. Falling back
+    // to the list is the same net that clears a stale selectedMissionId in update().
+    if (screen == Screen.DETAIL
+        && (detailed == null || detailed.mission().getStatus() == MissionStatus.COMPUTING)) {
+      screen = Screen.LIST;
+      detailMissionId = null;
+      detailed = null;
+    }
+
+    clearContent();
+
+    if (screen == Screen.DETAIL) {
+      MissionDetailView detail = new MissionDetailView(detailed, WINDOW_WIDTH, CONTENT_HEIGHT);
+      detail.setOnBack(this::showList);
+      detailNode = detail.getNode();
+      root.addChild(detailNode);
+    } else {
+      listView.refresh(entries, selectedMissionId);
+      root.addChild(listView.getNode());
+    }
+
+    // Lemur appends children, so re-adding the content would leave it below the footer.
+    footer.getNode().removeFromParent();
+    root.addChild(footer.getNode());
   }
 
   private List<String> buildSnapshot() {
@@ -237,11 +314,14 @@ public class MissionPanelWidget implements AutoCloseable {
     List<String> snapshot = new ArrayList<>(entries.size() + 2);
     snapshot.add("sel=" + (selectedMissionId == null ? "" : selectedMissionId));
     snapshot.add("tel=" + (telemetered == null ? "" : telemetered));
+    snapshot.add("screen=" + screen + ":" + (detailMissionId == null ? "" : detailMissionId));
     for (MissionEntry entry : entries) {
       // Keyed on the id so two homonymous missions produce distinct snapshot lines. The
-      // optimization
-      // type is part of the snapshot because the footer's details line shows it: a mode set outside
-      // this panel must still redraw the selection details.
+      // optimization type is part of the snapshot because the footer's details line shows it: a
+      // mode set outside this panel must still redraw the selection details. The result markers
+      // are there for the same reason at the result line: a FAILED -> FAILED recomputation with a
+      // different message, or a result landing while the status is already READY, changes what the
+      // footer and the detail view must say without changing the status.
       snapshot.add(
           entry.id()
               + ":"
@@ -249,7 +329,11 @@ public class MissionPanelWidget implements AutoCloseable {
               + ":"
               + entry.isVisible()
               + ":"
-              + entry.getOptimizationType());
+              + entry.getOptimizationType()
+              + ":"
+              + entry.getAchievedOrbit().isPresent()
+              + ":"
+              + entry.getLastError().orElse(""));
     }
     return snapshot;
   }
