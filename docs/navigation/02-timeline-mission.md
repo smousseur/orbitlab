@@ -79,6 +79,7 @@ marqueurs, et §8 le paie explicitement.
 | Hover | Tooltip : nom d'étape + date + `T+`. |
 | Click sur la piste | `clock.seek(date)`. |
 | Drag continu | **Hors périmètre** — c'est `NAV-3`. |
+| Traitement visuel | **Capsule jumelle** — 600 × 72, texture 9-slice de la capsule, chrome cyan, couleur de mission réservée au contenu (§6). |
 | Emplacement | Bande horizontale **au-dessus de la capsule**, même largeur, même centrage (§11). |
 | Toggle | Bouton compact ancré **à gauche, juste au-dessus de la capsule** (§11). |
 | Capsule existante | Inchangée. `ScrubberTrack` reste indexé sur la vitesse ; la cohabitation piste-vitesse / piste-temps que redoutait `NAV-3` est résolue par la séparation des widgets. |
@@ -145,36 +146,106 @@ pile sur la borne doivent être discernables, sinon le widget ment :
 | **Avant** | `now < t0` | Chevron pointant **vers l'extérieur** épinglé à `x0`, teinte atténuée, libellé `T−<écart>` (mission à venir). |
 | **Après** | `now > t1` | Idem à `x0 + W`, libellé `T+<écart au-delà de la fin>`. |
 
+Le chevron est `glyph-step-fw.png` / `glyph-step-bw.png` (10 × 12) teinté
+`TL_AMBER` — deux flèches déjà livrées, et une forme franchement distincte de la
+tête de lecture pleine.
+
 L'écart est formaté avec la même règle de troncature que les libellés de
 graduation (§7.2) : `3 j 04 h`, `18 min 20 s`, `4,2 s`. Il est affiché **près du
 chevron**, pas dans un coin : c'est une propriété de l'indicateur.
 
+**Chevron et écart tiennent sur une pastille opaque à eux** (`Panel` de fond,
+`rgba(4,10,18,.88)`, filet ambre, hauteur 16 px), et cette pastille est **ancrée
+sur la borne, largeur ajustée à son contenu**. Constaté en maquettant : sans
+fond, l'écart ambre posé sur la phase finale d'une LEO — un vert clair qui
+occupe 99,7 % de la piste — est illisible ; et une pastille dimensionnée « au
+jugé » sur la longueur du texte déborde hors de la capsule. L'ancrage sur la
+borne, avec la largeur qui suit le texte, règle les deux d'un coup.
+
 ---
 
-## 6. Anatomie du widget
+## 6. Anatomie du widget — « capsule jumelle »
 
-De haut en bas, dans une bande unique :
+Traitement retenu le 2026-08-11 après maquettage aux dimensions réelles, contre
+deux autres étudiés (réglette sans coque, carte `FormStyles`) : voir §15.
+
+Une **seconde capsule** de 600 × 72, même texture 9-slice que la capsule
+temporelle, posée 8 px au-dessus d'elle. Le chrome reste cyan ; la couleur de
+mission n'apparaît que dans le contenu — pastille, segments, marqueurs. Deux
+missions successives ne changent donc pas la couleur du widget, seulement celle
+de ce qu'il montre.
 
 ```
-┌──────────────────────────────────────────────────────────────┐
-│  ⌖ LEO-1                                    [⏮ début]        │  ligne d'entête
-│  ██▓▓░░░░░░░░░░▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒  │  barre de phases
-│   ▲ ▲   ▲                        ▲                           │  marqueurs
-│  ┃                    ▼                                      │  tête de lecture
-│  T+0     T+6 h     T+12 h     T+18 h     T+24 h              │  graduations
+┌──────────────────────────────────────────────────────────────┐ capsule.png (9-slice)
+│  ● GEO-1   17 h 03 · 11 phases                  [⏮ DÉBUT]    │  entête, y = 3…23
+│  ██▓▓░░░░░░▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒  │  phases,  y = 28…38
+│   ▼×4      ▼×2                    ▼                          │  marqueurs, y = 40
+│  │    │    │    │    │    │    │    │    │    │    │         │  ticks,    y = 50
+│  T+0      T+3 h      T+6 h      T+9 h     T+12 h    T+15 h   │  libellés, y = 63
 └──────────────────────────────────────────────────────────────┘
+        x0 = 14                                    x0 + W = 586
 ```
 
-- **Ligne d'entête** — pastille de couleur de la mission + son nom, et le bouton
-  « début de mission » aligné à droite.
-- **Barre de phases** — un rectangle par `PhaseRun`, largeur proportionnelle à
-  sa durée, couleur donnée par `shade(...)`. Les runs de durée négligeable
-  produisent un rectangle sous-pixel : ils ne sont pas dessinés, et c'est voulu
-  (§2). Aucune largeur minimale — une largeur plancher ferait mentir la barre
-  sur les durées.
-- **Marqueurs** — §8.
-- **Tête de lecture** — §5.3.
-- **Graduations** — §7.
+### 6.1 Géométrie
+
+| Grandeur | Valeur | Origine |
+|---|---|---|
+| Largeur | 600 px | celle de la capsule (`TimelineWidget.CAPSULE_WIDTH`) |
+| Hauteur | 72 px | entête + rail + marqueurs + graduations |
+| Marge latérale | 14 px | `TimelineWidget.CAPSULE_PAD_X` |
+| Largeur de piste `W` | 572 px | `600 − 2 × 14` |
+| Écart à la capsule | 8 px | ancrage `BOTTOM_MARGIN_PX + CAPSULE_HEIGHT + 8` |
+
+### 6.2 Composition, du fond vers l'avant
+
+La convention de `z` prolonge celle de `ScrubberTrack` (track 1, fill 2, ticks 3,
+playhead 4).
+
+| z | Élément | Construction Lemur | Texture |
+|:-:|---|---|---|
+| 0 | coque | fond du `Container` racine | `capsule.png` 54 × 54, inset 26 |
+| 1 | rail de fond | `Panel` 572 × 4 | `scrubber-track.png` 8 × 8, inset 2 |
+| 2 | segments de phase | un `Panel` par `PhaseRun` dessinable, `QuadBackgroundComponent(shade[i])` | — |
+| 3 | graduations | `Panel` 1 × 10 / 1 × 6 | `tick-major.png`, `tick-minor.png` |
+| 4 | marqueurs | `Label` + `IconComponent` teinté | `event-marker-cyan.png` 8 × 6 |
+| 5 | halo de la tête | `Panel` 32 × 32 | `playhead-glow.png` |
+| 6 | tête de lecture | `Panel` 12 × 16 | `playhead.png` |
+| 7 | pastille `now` épinglé | `Panel` + `Label`, §5.3 | `glyph-step-fw/bw.png` |
+| 9 | zone de capture | `Panel` transparent sur toute la piste + `CursorEventControl` | — |
+| 10 | tooltip | `Container`, §9.1 | — |
+
+**Aucune texture nouvelle.** Six de celles employées ici sont livrées dans le
+pack de handoff et ne sont référencées nulle part dans `src/main/java`
+aujourd'hui : `event-marker-cyan/amber/rose.png`, `playhead-glow.png`,
+`capsule-border.png`, `capsule-glow.png`. Le pack avait anticipé une piste à
+marqueurs d'événements.
+
+### 6.3 Contenu des bandes
+
+- **Entête** — pastille 8 px de `MissionEntry.getColor()`, nom de mission en
+  `rajdhani(12)` sur `TL_TEXT_MAIN`, résumé `« 17 h 03 · 11 phases »` en
+  `mono(10)` sur `TL_TEXT_MUTED`, et le bouton « début » aligné à droite
+  (`btn-hover.png` en 9-slice inset 3, `mono(10)`).
+- **Barre de phases** — un rectangle de 10 px de haut par `PhaseRun`, largeur
+  proportionnelle à sa durée, couleur `shade[i]`. Les runs de durée négligeable
+  produisent un rectangle sous-pixel : **ils ne sont pas dessinés**, et c'est
+  voulu (§2). Aucune largeur plancher — elle ferait mentir la barre sur les
+  durées.
+- **Marqueurs** — §8. **Tête de lecture** — §5.3. **Graduations** — §7.
+
+### 6.4 Deux mécaniques Lemur dont dépend tout ce qui précède
+
+1. **`attachChild()` court-circuite le layout, `addChild()` s'y soumet.** Un
+   `Container` a un layout par défaut ; une piste où `x = f(temps)` ne peut pas
+   le subir. C'est déjà ainsi que la capsule pose ses composants à des `x`
+   calculés (`TimelineWidget.java:73-101`). Tout le contenu de ce widget est
+   `attachChild` + `setLocalTranslation`, et chaque spatial reçoit son
+   `setSize(getPreferredSize())` explicite.
+2. **Teinter une texture passe par `IconComponent.setColor`**, pas par le fond
+   du `Panel`. `LiveIndicator.java:52-58` est le modèle : `IconComponent` +
+   `setIconSize` + `setColor`, porté par un `Label` vide. C'est ce qui permet de
+   teindre le marqueur unique aux couleurs de `MissionPhaseShading` au lieu de
+   se limiter aux trois teintes livrées.
 
 ---
 
@@ -220,8 +291,9 @@ l'identique.
 chronologique et on regroupe tout marqueur situé à moins de `MIN_SPACING_PX`
 (défaut **8 px**) du précédent marqueur retenu :
 
-- un groupe se dessine comme un marqueur unique, forme distincte (double
-  chevron ou pastille portant le compte),
+- un groupe se dessine comme un marqueur unique en teinte de chrome
+  (`TL_CYAN`, et non une couleur de phase, puisqu'il en couvre plusieurs),
+  suivi du compte en `mono(9)` — `×4`,
 - sa position est celle de sa **première** transition — pas le barycentre : le
   cluster doit pointer le début de la séquence, qui est ce qu'on cherche quand
   on clique,
@@ -229,9 +301,18 @@ chronologique et on regroupe tout marqueur situé à moins de `MIN_SPACING_PX`
   son `T+`,
 - un click sur un groupe fait `seek` vers sa première transition.
 
-Sur une GEO, l'ascension complète produit typiquement un unique groupe de 4–6
-transitions collé au bord gauche, et c'est une lecture honnête : ces événements
-sont effectivement simultanés à l'échelle de la mission.
+**Le marqueur d'un groupe est contraint à `x ≥ x0 + largeur/2`.** Mesuré sur la
+maquette : sur la GEO de référence, la première grappe rassemble 4 transitions
+étalées sur 5,2 px et son ancre tombe à **0,14 px** du début du rail — donc sous
+la bordure du 9-slice, qui la rognerait de moitié. C'est la grappe la plus
+intéressante de la mission (ascension, largage, insertion parking) : elle ne
+peut pas être celle qu'on ne voit pas. La même borne s'applique à droite.
+
+Sur une GEO, l'ascension complète produit un unique groupe de 4 à 6 transitions
+collé au bord gauche, et c'est une lecture honnête : ces événements sont
+effectivement simultanés à l'échelle de la mission. Le cas est nominal, pas
+limite — une LEO à horizon 3 jours regroupe ses cinq transitions dans les
+**1,7 premiers pixels**.
 
 ---
 
@@ -335,7 +416,7 @@ collectés restent affichés.
 
 **Le widget** occupe une bande de la **largeur de la capsule** (600 px), centrée
 horizontalement comme elle, posée **juste au-dessus** — ancrage
-`BOTTOM_MARGIN_PX + CAPSULE_HEIGHT + GAP`. Hauteur visée : ~70 px.
+`BOTTOM_MARGIN_PX + CAPSULE_HEIGHT + 8`. Hauteur : 72 px (§6.1).
 
 Justification : c'est du temps, et le temps est en bas de cet écran. Le
 haut-gauche est pris (`MissionPanelTrigger` + panneau d'affichage), le
@@ -459,3 +540,17 @@ ici, avec leur argumentaire ; ils sont les premiers candidats à révision.
 Décidés en amont et consignés pour mémoire : widget unique piloté par le focus,
 fenêtre = éphéméride, pas de widget sans éphéméride, écart affiché quand `now`
 sort de la fenêtre, pré-roll de 10 s avec pause et retour à ×1.
+
+**Traitement visuel — tranché le 2026-08-11 : « capsule jumelle » (§6).** Trois
+traitements ont été maquettés aux dimensions réelles, avec les textures du pack
+et les couleurs calculées par un portage fidèle de `MissionPhaseShading` :
+
+| Traitement | Verdict |
+|---|---|
+| **Capsule jumelle** ✅ | Aucun asset ni vocabulaire nouveau ; l'adjacence à la capsule dit que les deux objets parlent du temps. Coût : ~130 px de HUD en bas d'écran. |
+| Réglette sans coque | Plus légère, mais illisible au-dessus d'un limbe éclairé — cas nominal, pas limite — et rien n'y signale qu'elle est cliquable. |
+| Carte `FormStyles` | Cohérente avec la famille missions, mais met deux grammaires visuelles à 8 px l'une de l'autre, et son layout ne sert à rien puisque le rail reste en placement absolu. |
+
+Maquetter a produit deux règles que la rédaction seule n'avait pas vues : la
+borne de position des marqueurs de grappe (§8) et la pastille opaque de
+l'indicateur épinglé (§5.3).
