@@ -14,6 +14,7 @@ sont en anglais, cf. `CLAUDE.md`).
 | [`dette-technique.md`](dette-technique.md) | État de la dette technique mesuré, et règles pour ne pas l'aggraver | **Établi le 2026-08-10** au commit `b027d1d` — 11 items (`DT-1` à `DT-11`), aucun corrigé ; §6 (conseils) ne se périme pas |
 | [`camera/01-view-transitions.md`](camera/01-view-transitions.md) | Design complet des transitions de caméra | **Implémenté le 2026-08-10** (item `NAV-1`) — valide **sauf §2, §3.5, §3.6 et §8**, voir bandeau du document |
 | [`navigation/01-breadcrumb.md`](navigation/01-breadcrumb.md) | Design complet du breadcrumb HUD | Valide, **non commencé** (item `NAV-4`) |
+| [`navigation/02-timeline-mission.md`](navigation/02-timeline-mission.md) | Design de la timeline de mission indexée sur le temps (widget séparé, marqueurs de phases) | **Rédigé le 2026-08-11**, non commencé (item `NAV-2`) — traitement visuel « capsule jumelle » retenu après maquettage (§6) ; §15 liste les arbitrages restants |
 | [`graphics-effects/hover-effects.md`](graphics-effects/hover-effects.md) | Design du hover planète ↔ orbite | Valide, non implémenté (item `NAV-5`) |
 | [`graphics-effects/spacecraft-view-artefacts.md`](graphics-effects/spacecraft-view-artefacts.md) | Diagnostic des trois artefacts de la vue spacecraft + correctifs | **Rediagnostiqué le 2026-08-09**, cause A corrigée, B et C ouvertes (item `RND-1`) |
 | [`graphics-effects/mission-phase-encoding.md`](graphics-effects/mission-phase-encoding.md) | Lecture des phases de vol sur la trajectoire (marqueurs + paliers de saturation) | **Implémenté le 2026-08-10** (item `RND-3`) — remplace `effects-roadmap.md` §9.3.1 et §9.3.2 ; réglage fin du contraste reporté à `RND-4` |
@@ -33,6 +34,10 @@ sont en anglais, cf. `CLAUDE.md`).
 - Ce dossier s'appelait `specs/` jusqu'au 2026-08-10 ; il a été fusionné dans
   `docs/`. Pour remonter l'historique antérieur au déplacement, interroger
   l'ancien chemin (`git log --follow -- specs/<fichier>`).
+- Les figures vont dans `docs/<chantier>/images/`, nommées d'après le document
+  qu'elles illustrent (`02-timeline-capsule-jumelle.png` pour
+  `02-timeline-mission.md`). Une maquette porte une légende qui dit ce qui la
+  sépare du rendu réel — sinon elle finit par être lue comme une capture.
 - Les documents supprimés restent dans l'historique git ; les liens vers
   `docs/optimizer/*` et `docs/mission-rework/*` que l'on croise encore dans
   les anciens textes pointent vers des documents retirés au commit `73a3781`
