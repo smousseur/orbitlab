@@ -488,8 +488,9 @@ arbitraire, la piste l'était aussi et aurait été à refaire. `MissionHorizon`
 donne maintenant cette durée, donc la piste peut s'indexer dessus directement.
 
 **À faire, dans l'ordre.**
-1. Trancher la fenêtre représentée : durée de la mission sélectionnée, ou
-   fenêtre glissante autour de `now()` ? (cf. question ouverte n°2.)
+1. ~~Trancher la fenêtre représentée~~ **tranché** : durée de l'éphéméride de la
+   mission suivie (focus télémétrie), dans un **widget séparé** de la capsule.
+   La question ouverte n°2 est close par là.
 2. Fonction temps ↔ position, puis marqueurs aux transitions de stages de la
    mission sélectionnée.
 3. Hover → tooltip (stage + timestamp), click → `clock.seek(...)`.
@@ -498,12 +499,15 @@ Synergie forte avec `RND-3` : mêmes frontières de stages, mêmes couleurs — 
 timeline et la trajectoire 3D doivent partager la table de couleurs, pas en
 avoir deux.
 
+**Spec.** [`docs/navigation/02-timeline-mission.md`](../navigation/02-timeline-mission.md).
+
 #### NAV-3 — Scrub continu — ★3 ◆2 S
 
 Subordonné à NAV-2. Attention au débit : chaque `seek` reconstruit toute la
 fenêtre éphéméride (`EphemerisWorker.onSeek`) — n'émettre qu'au relâchement, ou
-étrangler. Trancher la cohabitation piste-vitesse / piste-temps sur le même
-widget (recommandé : deux pistes distinctes).
+étrangler. La cohabitation piste-vitesse / piste-temps ne se pose plus : la
+piste temporelle vit dans son propre widget (`NAV-2`), la capsule garde la
+sienne.
 
 #### NAV-4 — Breadcrumb de navigation 3D — ★3 ◆2 M
 
@@ -1076,11 +1080,14 @@ et [`docs/brainstorm/missions.md`](../brainstorm/missions.md).
    2026-08-09 : les deux.** `MissionHorizon.Revolutions` fournit le dérivé,
    pré-rempli comme défaut, et le wizard laisse basculer en manuel
    (`FixedDuration`) — la bascule revenant au dérivé quand on la relâche.
-2. **Fenêtre de la piste temporelle (NAV-2)** — durée de la mission
-   sélectionnée, ou fenêtre glissante autour de `now()` ? La première est plus
-   lisible pour analyser une mission, la seconde reste utile quand aucune
-   mission n'est sélectionnée. Probablement les deux, avec bascule — mais à
-   trancher avant de coder la fonction temps ↔ position.
+2. ~~**Fenêtre de la piste temporelle (NAV-2)** — durée de la mission
+   sélectionnée, ou fenêtre glissante autour de `now()` ?~~ **Tranchée le
+   2026-08-11 : la durée de la mission, dans un widget séparé.** La piste
+   temporelle quitte la capsule ; sa fenêtre est celle de l'éphéméride de la
+   mission suivie, et sans éphéméride le widget ne s'affiche pas — donc pas de
+   fenêtre glissante, pas de bascule. La capsule garde son `ScrubberTrack`
+   indexé sur la vitesse, ce qui clôt aussi la cohabitation que `NAV-3`
+   redoutait. Voir [`docs/navigation/02-timeline-mission.md`](../navigation/02-timeline-mission.md).
 3. **Auto-optimisation après création** — toujours ouverte depuis la révision
    précédente. Aujourd'hui `createMission()` ajoute l'entrée en `DRAFT` sans
    déclencher de calcul. `UI-2` (progression) est un préalable raisonnable :
