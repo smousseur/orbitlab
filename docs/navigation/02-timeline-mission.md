@@ -175,6 +175,19 @@ mission n'apparaît que dans le contenu — pastille, segments, marqueurs. Deux
 missions successives ne changent donc pas la couleur du widget, seulement celle
 de ce qu'il montre.
 
+![Maquette de la timeline de mission posée au-dessus de la capsule temporelle : entête « GEO-1 · 17 h 03 · 11 phases » et bouton DÉBUT, barre de phases teintée, grappes de marqueurs ×4 et ×2 tassées à gauche, graduations T+0 à T+15 h](images/02-timeline-capsule-jumelle.png)
+
+*Maquette au 1:1 (600 px de large), composée avec les textures réelles de
+`interface/timeline/`. Les couleurs de phases viennent d'un portage fidèle de
+`MissionPhaseShading` sur une GEO de 11 phases — durées §2, plausibles et non
+mesurées. Un seul écart avec le rendu final : les polices sont substituées
+(`rajdhani` et `share-tech-mono` sont des polices bitmap `.fnt`, non
+reproductibles hors du moteur). Les deux grappes visibles à gauche — `×4` et
+`×2` — portent déjà la contrainte de bord du §8 ; sans elle, la première serait
+à moitié sous la bordure de la coque.*
+
+Les ordonnées de chaque bande, que la maquette ne donne pas :
+
 ```
 ┌──────────────────────────────────────────────────────────────┐ capsule.png (9-slice)
 │  ● GEO-1   17 h 03 · 11 phases                  [⏮ DÉBUT]    │  entête, y = 3…23

@@ -34,6 +34,10 @@ sont en anglais, cf. `CLAUDE.md`).
 - Ce dossier s'appelait `specs/` jusqu'au 2026-08-10 ; il a été fusionné dans
   `docs/`. Pour remonter l'historique antérieur au déplacement, interroger
   l'ancien chemin (`git log --follow -- specs/<fichier>`).
+- Les figures vont dans `docs/<chantier>/images/`, nommées d'après le document
+  qu'elles illustrent (`02-timeline-capsule-jumelle.png` pour
+  `02-timeline-mission.md`). Une maquette porte une légende qui dit ce qui la
+  sépare du rendu réel — sinon elle finit par être lue comme une capture.
 - Les documents supprimés restent dans l'historique git ; les liens vers
   `docs/optimizer/*` et `docs/mission-rework/*` que l'on croise encore dans
   les anciens textes pointent vers des documents retirés au commit `73a3781`
