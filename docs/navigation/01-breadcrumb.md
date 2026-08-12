@@ -5,6 +5,8 @@
 > (`PopupList`) passe en V2 (§7), et les **missions n'apparaissent plus du tout
 > dans le breadcrumb** — elles ont leurs widgets dédiés (panneau de liste,
 > panneau de détail, télémétrie). Le nœud racine s'appelle **`Solar system`**.
+> Le widget occupe une **bande dédiée en haut d'écran**, sous laquelle le menu
+> applicatif d'`UI-4` et le reste du HUD s'ancrent (§5.5).
 
 ## 1. Contexte
 
@@ -68,8 +70,8 @@ Justifications :
 | Missions | **Absentes du breadcrumb**, à tous les niveaux. Elles sont couvertes par leurs widgets dédiés (`MissionPanelWidgetAppState`, `MissionDisplayPanelAppState`, `TelemetryWidgetAppState`). |
 | Nœud racine | Libellé **`Solar system`** (et non « Sun »). Nœud par défaut, **toujours présent**, toujours le premier segment. |
 | Langue des libellés | Anglais, comme le reste de l'UI. Les segments corps utilisent `SolarSystemBody.displayName()` (`Earth`, `Moon`, …) ; la racine est le libellé fixe `Solar system`. |
-| Position écran | Haut centré (HUD persistant). Le haut-gauche est pris par le menu applicatif d'`UI-4` : les deux cohabitent, la marge d'ancrage vient de la même constante partagée. |
-| Visibilité | Toujours visible (pas de toggle V1). Avec `UI-4`, le breadcrumb devient le **second** élément de HUD permanent — d'où la contrainte de style ci-dessous. |
+| Position écran | **Bande dédiée en haut d'écran, pleine largeur**, segments centrés dedans. La bande est le premier élément du HUD : **tout le reste s'ancre en dessous**, à commencer par le menu applicatif d'`UI-4` (haut-gauche), qui n'est donc plus collé au bord haut. Voir §5.5 pour la chaîne d'ancrage. |
+| Visibilité | Toujours visible (pas de toggle V1). La bande est donc réservée en permanence : aucun autre widget ne peut occuper cette hauteur, y compris quand le breadcrumb se réduit au seul segment `Solar system`. |
 | Habillage | Un **sélecteur Lemur déclaré dans `FormStyles`**, jamais des overrides d'attributs à la construction. C'est la règle qui sort d'`UI-4` (cf. le cas `MissionPanelTrigger`) : un widget qui adopte `FormStyles.STYLE` n'en réécrit pas `background` / `color` / `font` / `insets`. |
 | Click sur `Solar system` | Reset complet, équivalent touche `R` (`focusView.reset()`). |
 | Distance caméra à l'arrivée | Même logique que le click 3D (réutilise `PlanetPoseAppState.onSelectPlanet`). |
@@ -152,10 +154,13 @@ dernier segment est actionnable.
 ### 5.1 Fichiers à créer
 
 - `src/main/java/com/smousseur/orbitlab/ui/breadcrumb/BreadcrumbWidget.java`
-  - Container Lemur. Méthodes :
+  - Container Lemur occupant la bande haute. Méthodes :
     `setFocus(ViewMode mode, SolarSystemBody body)`,
-    `layoutTopCenter(int screenWidth)`,
+    `layoutTopBand(int screenWidth)` — étire la bande sur toute la largeur et
+    centre les segments dedans,
     `attachTo(Node)`.
+  - Expose `AppStyles.BREADCRUMB_BAND_HEIGHT_PX` (hauteur fixe, indépendante
+    du contenu) : c'est la constante dont dépend tout le reste du HUD (§5.5).
   - Construit la chaîne d'ancêtres en remontant `SolarSystemBody.parent()`
     depuis `body`, puis préfixe le segment racine `Solar system`. Le corps
     `SUN` n'est **jamais** rendu comme segment nommé « Sun » : il *est* la
@@ -168,7 +173,7 @@ dernier segment est actionnable.
 - `src/main/java/com/smousseur/orbitlab/states/scene/BreadcrumbWidgetAppState.java`
   - `AbstractAppState` (calqué sur `TimelineWidgetAppState`).
   - `initialize` : crée le widget, l'attache à
-    `context.guiGraph().getBreadcrumbNode()`, le pose en haut centré.
+    `context.guiGraph().getBreadcrumbNode()`, le pose en bande haute.
   - `update(tpf)` : détecte un changement `(mode, body)` et reconstruit le
     breadcrumb.
   - Câble les click handlers vers `PlanetPoseAppState` (segments corps) et
@@ -177,8 +182,13 @@ dernier segment est actionnable.
 ### 5.2 Fichiers à modifier
 
 - `src/main/java/com/smousseur/orbitlab/engine/scene/graph/GuiGraph.java`
-  - Ajouter un `breadcrumbNode` (entre `timelineNode` et `modalNode`) +
-    getter.
+  - Ajouter un `breadcrumbNode` **attaché juste après `timelineNode`**, donc
+    *avant* `missionPanelNode` et `modalNode` (`GuiGraph.java:23-27` — l'ordre
+    d'attache fait le z-order, le dernier est au-dessus) + getter.
+  - La bande ne recouvre rien par construction, mais l'ordre doit être fixé
+    quand même : le menu d'`UI-4` et son déroulé, comme toute surface
+    transitoire, passent **au-dessus** du chrome permanent si un déroulé
+    déborde jamais vers le haut. `modalNode` reste topmost.
 - `src/main/java/com/smousseur/orbitlab/OrbitLabApplication.java`
   - Enregistrer le nouveau `BreadcrumbWidgetAppState`.
 - `src/main/java/com/smousseur/orbitlab/states/scene/PlanetPoseAppState.java`
@@ -202,21 +212,62 @@ dernier segment est actionnable.
 
 - `ui/AppStyles`, `ui/FormStyles`, `ui/UiKit` pour fonts et palettes — via un
   sélecteur, pas par overrides (§3).
-- Constante de marge HUD partagée avec le menu d'`UI-4` (`AppStyles.HUD_MARGIN_PX`),
-  pour que les deux ancrages permanents s'alignent au lieu de diverger comme
-  `MissionDisplayPanelWidget.MARGIN_PX` l'a fait.
+- `AppStyles.HUD_MARGIN_PX` pour la marge, partagée avec le menu d'`UI-4`
+  (§5.5).
 - Pattern d'attachement HUD : `states/time/TimelineWidgetAppState` +
   `ui/timeline/TimelineWidget`.
 - Pattern de click Lemur :
   `button.addClickCommands(s -> handler())`
   (cf. `ui/timeline/components/TransportControls.java`).
 
+### 5.5 Chaîne d'ancrage vertical du HUD
+
+La bande devient l'origine verticale du HUD haut-gauche. L'empilement cible :
+
+```
+┌────────────────────────────────────────────────┐
+│            Solar system  >  Earth              │  bande breadcrumb (pleine largeur)
+├────────────────────────────────────────────────┤
+│ [ Menu ▾ ]                                     │  menu UI-4
+│ ┌──────────────┐                               │
+│ │ panneau des  │                               │  MissionDisplayPanelWidget
+│ │ missions     │                               │
+```
+
+Chaque élément se pose sous le précédent via une constante, jamais une valeur
+devinée :
+
+| Élément | Ancrage vertical |
+|---|---|
+| Bande breadcrumb | bord haut de l'écran, hauteur `AppStyles.BREADCRUMB_BAND_HEIGHT_PX` |
+| Menu `UI-4` | `BREADCRUMB_BAND_HEIGHT_PX + AppStyles.HUD_MARGIN_PX` |
+| `MissionDisplayPanelWidget` | sous le menu, via la constante partagée qu'`UI-4` doit introduire |
+
+**Conséquence sur l'ordre des chantiers.** `NAV-4` et `UI-4` étaient réputés
+indépendants ; ils ne le sont plus tout à fait. `UI-4` prévoit déjà de
+remplacer les deux marges divergentes (`MissionDisplayPanelWidget.MARGIN_PX =
+5f` et `TRIGGER_HEIGHT = 28f` devinée, contre `AppStyles.HUD_MARGIN_PX = 16f`
+côté trigger) par une constante partagée. Si `UI-4` passe en premier, cette
+constante doit être écrite en prévoyant un décalage d'origine — sinon la bande
+du breadcrumb repoussera un menu qui se croit collé au bord haut, et il faudra
+reprendre les mêmes lignes une seconde fois. Le couplage est de l'ordre du
+« ne pas faire deux fois », pas d'une dépendance technique : chacun des deux
+se fait sans l'autre.
+
+**Ce qui n'est pas décidé ici.** Le fond de la bande (aplat discret ou
+transparent) sort du sélecteur `BreadcrumbStyles` et se tranche au maquettage,
+comme le traitement « capsule jumelle » de `NAV-2`. La seule contrainte ferme :
+la hauteur est fixe et ne dépend pas de la profondeur de la hiérarchie
+affichée, sans quoi tout ce qui s'ancre en dessous bougerait au changement de
+focus.
+
 ---
 
 ## 6. Vérification (test end-to-end)
 
-1. Lancer l'app → breadcrumb visible en haut centré, affichant `Solar system`,
-   segment non cliquable, aucun bouton ▼.
+1. Lancer l'app → bande breadcrumb visible en haut d'écran sur toute la
+   largeur, affichant `Solar system` centré, segment non cliquable, aucun
+   bouton ▼.
 2. Click 3D sur Earth → breadcrumb devient `Solar system > Earth`, `Earth` en
    surbrillance non cliquable.
 3. Click 3D sur Moon → `Solar system > Earth > Moon`.
@@ -230,6 +281,14 @@ dernier segment est actionnable.
    `Solar system > Earth`, **le nom de la mission n'apparaît nulle part** ;
    `Earth` devient cliquable et le click repasse en `PLANET` Earth.
 8. Démarrer/arrêter une mission → le breadcrumb ne change pas.
+9. **Ancrage (§5.5)** : le menu applicatif et, sous lui, le panneau des
+   missions se posent bien **sous** la bande, sans la recouvrir ni laisser de
+   trou. Vérifier aux deux extrêmes de profondeur — `Solar system` seul puis
+   `Solar system > Earth > Moon` : la hauteur de bande ne bouge pas, donc rien
+   dessous ne bouge non plus.
+10. Ouvrir le déroulé du menu → il passe **au-dessus** de la bande si jamais il
+    la recouvre (ordre `GuiGraph`, §5.2), et le wizard (`modalNode`) reste
+    au-dessus de tout.
 
 ---
 
