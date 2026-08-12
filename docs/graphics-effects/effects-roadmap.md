@@ -30,8 +30,11 @@
 > (§6.3)** à un uniform d'occultation multipliant le terme `diff` du fragment
 > shader. Voir `roadmap/01-roadmap.md` item `FX-2`.
 >
-> Le reste du document (tiers 2 à 4, et tout le §9 sur les trajectoires) est
-> valide.
+> Le reste du document (tiers 2 à 4, et le §9 sur les trajectoires) est valide,
+> **sauf §9.3.1, §9.3.2 et §9.4.1**, remplacés respectivement par
+> [`mission-phase-encoding.md`](mission-phase-encoding.md) et
+> [`ribbon-lines.md`](ribbon-lines.md) — chacun porte son propre bandeau sur
+> place.
 
 ## 1. Contexte
 
@@ -629,6 +632,15 @@ solaire, body-relative pour LEO). Placer deux billboards (icônes
 billboards).
 
 ### 9.4 Tier 2 — Ribbon, trace au sol, animation
+
+> **§9.4.1 est périmé — voir [`ribbon-lines.md`](ribbon-lines.md), qui le
+> remplace.** Le « pourquoi » ci-dessous reste juste ; le « comment » se trompe
+> sur deux points. Il conclut au CPU sur un chiffre faux (« orbite ~256 pts » —
+> `OrbitWindowConfig.defaultSolarSystem()` en configure **4 096 par corps, sur
+> dix corps**), et il compare les deux traitements sur le seul coût de calcul,
+> en manquant l'asymétrie décisive : les orbites planétaires sont aujourd'hui
+> une géométrie **statique**, et un ribbon CPU les rend dynamiques. Le choix
+> retenu est l'expansion en vertex shader.
 
 #### 9.4.1 Ribbon billboardé (épaisseur stable)
 

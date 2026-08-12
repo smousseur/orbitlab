@@ -1,5 +1,14 @@
 # Spec — Hover « wow » sur les planètes et leurs orbites
 
+> **Note du 2026-08-12 — la moitié « orbite » de cette spec dépend de `RND-4`.**
+> Le §2 promet de « doubler la largeur visible de l'orbite » survolée : avec les
+> lignes GL actuelles c'est intenable, `glLineWidth > 1` étant ramené à 1 px en
+> profil core. [`ribbon-lines.md`](ribbon-lines.md) §11.2 fait de cette largeur
+> un uniform de matériau, ce qui rend la promesse tenable en deux appels. La
+> conséquence sur le §2 ci-dessous — « sans introduire de shader custom » — est
+> qu'il y en aura un, mais qu'il ne sera pas écrit pour le hover : il sera déjà
+> là. Le reste du document est valide.
+
 ## 1. Contexte
 
 L'effet de hover actuel est extrêmement discret : seul le **billboard 2D**
