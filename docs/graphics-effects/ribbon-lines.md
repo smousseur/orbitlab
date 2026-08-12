@@ -364,6 +364,29 @@ c'est la seule forme possible.
 Pour une orbite fermée (`LineLoop` aujourd'hui), la paire du premier point est
 répétée en fin de bande pour refermer le ruban.
 
+**Le ruban est centré sur les positions réelles**, et c'est un invariant, pas
+une conséquence heureuse : les deux sommets d'une paire sont décalés de `+n·h`
+et `−n·h` autour du **même** point de la polyligne (§4.0), et le fondu du §7.6
+est lui aussi symétrique — la couverture tombe à zéro à `WidthPx/2 + 0,5 px` de
+part et d'autre. La trajectoire calculée passe donc exactement par l'axe du
+ruban, et les marqueurs de phase, qui sont des `Points` centrés sur leur
+position, restent dessus sans correction.
+
+L'alternative — décaler d'un seul côté, `side ∈ {0,1}` — est plus simple d'un
+signe et **fausse** : elle déplacerait le tracé d'une demi-largeur, donc d'une
+quantité qui dépend du zoom, et gonflerait le rayon apparent d'une orbite vue
+de face. Écartée pour cette raison, pas par convention.
+
+Ce que cela ne corrige pas, parce que ce n'est pas corrigible : une largeur
+exprimée en pixels couvre une distance réelle qui croît avec la profondeur. En
+vue solaire au recul initial (caméra à 9 000 unités, FoV vertical 45°, 720 px de
+haut), un pixel vaut ~10 unités, soit ~10 millions de km ; un ruban de 2,5 px
+déborde donc de ±15 millions de km autour de l'orbite vraie — et l'orbite
+terrestre elle-même n'y fait que ~14 px de rayon. Ce n'est pas un défaut du
+ruban : une ligne GL d'un pixel déborde déjà de ±5 millions de km au même zoom.
+La différence tient à la symétrie — le débordement est de part et d'autre, donc
+il épaissit le trait sans déplacer ce qu'il représente.
+
 Le dessin d'un préfixe — ce que fait la trajectoire de mission avec `upTo` —
 reste ce qu'il est aujourd'hui : on écrit `2 × (upTo + 1)` sommets et
 `updateCounts()` dérive le compte du buffer de positions.
@@ -559,7 +582,8 @@ là que sont les erreurs qui coûtent cher (`RibbonMeshBuilderTest`) :
 
 - pour `N` points, la bande contient `2N` sommets, et `2(N−1)` triangles ;
 - les deux sommets d'une paire portent la **même position** et des `side`
-  opposés ;
+  opposés — c'est la forme testable de « le ruban est centré sur la trajectoire »
+  (§7.1), le décalage lui-même n'existant qu'à l'exécution du shader ;
 - la tangente d'un sommet intérieur est colinéaire à `p[i+1] − p[i−1]` ; celles
   des extrémités au segment unique disponible ;
 - une polyligne fermée referme la bande (dernière paire = première paire) ;
