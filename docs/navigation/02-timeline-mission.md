@@ -440,6 +440,17 @@ seule la bande basse peut accueillir sans recouvrir la scène.
 widget, sur le motif de `MissionPanelTrigger` (`ui/mission/panel/MissionPanelTrigger.java`) :
 même style, même `setEnabled(boolean)` pour l'état grisé.
 
+> **Réserve ajoutée le 2026-08-12 — ne pas recopier `MissionPanelTrigger` en
+> l'état.** L'item `UI-4` de la roadmap le remplace par un menu, précisément
+> parce que son habillage réécrit `FormStyles.STYLE` au lieu de le suivre, et
+> parce que son `setEnabled(boolean)` grise le bouton quand le panneau est
+> *fermé* alors que son Javadoc annonce l'inverse. `UI-4` est planifié **avant**
+> `NAV-2` pour cette raison. Le motif à reprendre reste valable — un bouton
+> compact, ancré, avec un état visuel d'indisponibilité — mais l'habillage doit
+> venir du sélecteur Lemur remis en ordre par `UI-4`, pas d'une copie des
+> lignes 26-30. Reste ouvert, à trancher en faisant `NAV-2` : ce toggle
+> peut aussi devenir une entrée du menu plutôt qu'un bouton local.
+
 - Il est **grisé et inopérant** quand les conditions §10.1 (2 à 5) ne sont pas
   réunies : sans mission suivie, il n'y a rien à ouvrir, et un bouton qui
   n'ouvre rien doit le dire avant le click.
