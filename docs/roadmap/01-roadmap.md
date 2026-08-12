@@ -530,9 +530,11 @@ sienne.
 #### NAV-4 — Breadcrumb de navigation 3D — ★3 ◆2 M
 
 Spec complète et non commencée (`ui/breadcrumb/` et
-`states/scene/BreadcrumbWidgetAppState.java` absents). Devient nettement plus
-utile une fois les missions lunaires en place : la hiérarchie
-`Soleil > Terre > Lune > mission` est exactement ce que le widget sait afficher.
+`states/scene/BreadcrumbWidgetAppState.java` absents). Périmètre V1 réduit
+le 2026-08-12 à la seule hiérarchie du corps courant, missions exclues
+(elles ont leurs widgets dédiés) : `Solar system > Earth > Moon`. Devient
+nettement plus utile une fois les missions lunaires en place, où cette
+hiérarchie prend sa profondeur. Le dropdown des fils est reporté en V2.
 
 **Spec.** [`docs/navigation/01-breadcrumb.md`](../navigation/01-breadcrumb.md).
 
