@@ -68,8 +68,9 @@ Justifications :
 | Missions | **Absentes du breadcrumb**, à tous les niveaux. Elles sont couvertes par leurs widgets dédiés (`MissionPanelWidgetAppState`, `MissionDisplayPanelAppState`, `TelemetryWidgetAppState`). |
 | Nœud racine | Libellé **`Solar system`** (et non « Sun »). Nœud par défaut, **toujours présent**, toujours le premier segment. |
 | Langue des libellés | Anglais, comme le reste de l'UI. Les segments corps utilisent `SolarSystemBody.displayName()` (`Earth`, `Moon`, …) ; la racine est le libellé fixe `Solar system`. |
-| Position écran | Haut centré (HUD persistant). |
-| Visibilité | Toujours visible (pas de toggle V1). |
+| Position écran | Haut centré (HUD persistant). Le haut-gauche est pris par le menu applicatif d'`UI-4` : les deux cohabitent, la marge d'ancrage vient de la même constante partagée. |
+| Visibilité | Toujours visible (pas de toggle V1). Avec `UI-4`, le breadcrumb devient le **second** élément de HUD permanent — d'où la contrainte de style ci-dessous. |
+| Habillage | Un **sélecteur Lemur déclaré dans `FormStyles`**, jamais des overrides d'attributs à la construction. C'est la règle qui sort d'`UI-4` (cf. le cas `MissionPanelTrigger`) : un widget qui adopte `FormStyles.STYLE` n'en réécrit pas `background` / `color` / `font` / `insets`. |
 | Click sur `Solar system` | Reset complet, équivalent touche `R` (`focusView.reset()`). |
 | Distance caméra à l'arrivée | Même logique que le click 3D (réutilise `PlanetPoseAppState.onSelectPlanet`). |
 | Style des segments | Texte + séparateur `>`. Segment du focus courant en surbrillance et non cliquable. Segments ancêtres cliquables. |
@@ -160,8 +161,10 @@ dernier segment est actionnable.
     `SUN` n'est **jamais** rendu comme segment nommé « Sun » : il *est* la
     racine.
 - `src/main/java/com/smousseur/orbitlab/ui/breadcrumb/BreadcrumbStyles.java`
-  *(optionnel)* — couleurs et tailles dérivées de `FormStyles` / `AppStyles`,
-  plus la constante du libellé racine `Solar system`.
+  — déclare le **sélecteur Lemur** des segments (état courant / ancêtre /
+  séparateur) dans `FormStyles`, plus la constante du libellé racine
+  `Solar system`. Non optionnel : c'est ce qui évite de refaire l'erreur
+  d'habillage relevée par `UI-4` sur `MissionPanelTrigger`.
 - `src/main/java/com/smousseur/orbitlab/states/scene/BreadcrumbWidgetAppState.java`
   - `AbstractAppState` (calqué sur `TimelineWidgetAppState`).
   - `initialize` : crée le widget, l'attache à
@@ -197,7 +200,11 @@ dernier segment est actionnable.
 
 ### 5.4 Réutilisations
 
-- `ui/AppStyles`, `ui/FormStyles`, `ui/UiKit` pour fonts et palettes.
+- `ui/AppStyles`, `ui/FormStyles`, `ui/UiKit` pour fonts et palettes — via un
+  sélecteur, pas par overrides (§3).
+- Constante de marge HUD partagée avec le menu d'`UI-4` (`AppStyles.HUD_MARGIN_PX`),
+  pour que les deux ancrages permanents s'alignent au lieu de diverger comme
+  `MissionDisplayPanelWidget.MARGIN_PX` l'a fait.
 - Pattern d'attachement HUD : `states/time/TimelineWidgetAppState` +
   `ui/timeline/TimelineWidget`.
 - Pattern de click Lemur :
