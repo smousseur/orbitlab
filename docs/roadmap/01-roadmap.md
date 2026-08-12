@@ -412,7 +412,11 @@ qui remplace [`effects-roadmap.md`](../graphics-effects/effects-roadmap.md)
 stable, antialiasing par alpha-fade des bords, lisibilité à distance. Débloque
 ensuite les tirets animés, le halo additif et le hover (`NAV-5`).
 
-**Spec.** [`effects-roadmap.md`](../graphics-effects/effects-roadmap.md) §9.4.1.
+**Spec.** [`ribbon-lines.md`](../graphics-effects/ribbon-lines.md) — remplace
+[`effects-roadmap.md`](../graphics-effects/effects-roadmap.md) §9.4.1. Traitement
+retenu : expansion en **vertex shader**, pas côté CPU (comparatif chiffré en §5
+du document) ; les orbites planétaires sont une géométrie statique de 40 960
+sommets qu'un ribbon CPU rendrait dynamique.
 
 ---
 
