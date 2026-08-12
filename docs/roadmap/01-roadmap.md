@@ -530,9 +530,20 @@ sienne.
 #### NAV-4 — Breadcrumb de navigation 3D — ★3 ◆2 M
 
 Spec complète et non commencée (`ui/breadcrumb/` et
-`states/scene/BreadcrumbWidgetAppState.java` absents). Devient nettement plus
-utile une fois les missions lunaires en place : la hiérarchie
-`Soleil > Terre > Lune > mission` est exactement ce que le widget sait afficher.
+`states/scene/BreadcrumbWidgetAppState.java` absents). Périmètre V1 réduit
+le 2026-08-12 à la seule hiérarchie du corps courant, missions exclues
+(elles ont leurs widgets dédiés) : `Solar system > Earth > Moon`. Devient
+nettement plus utile une fois les missions lunaires en place, où cette
+hiérarchie prend sa profondeur. Le dropdown des fils est reporté en V2.
+
+**Couplage avec `UI-4`.** Le breadcrumb occupe une **bande pleine largeur en
+haut d'écran**, sous laquelle tout le HUD haut-gauche s'ancre — le menu
+applicatif d'`UI-4` n'est donc plus collé au bord haut. Les deux items restent
+faisables séparément, mais la constante de marge partagée qu'`UI-4` doit
+introduire (en remplacement de `MissionDisplayPanelWidget.MARGIN_PX = 5f` et du
+`TRIGGER_HEIGHT = 28f` deviné) doit prévoir ce décalage d'origine, sinon les
+mêmes lignes se reprennent deux fois. Chaîne d'ancrage détaillée en
+[`navigation/01-breadcrumb.md`](../navigation/01-breadcrumb.md) §5.5.
 
 **Spec.** [`docs/navigation/01-breadcrumb.md`](../navigation/01-breadcrumb.md).
 
