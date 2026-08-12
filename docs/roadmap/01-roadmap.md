@@ -95,22 +95,27 @@ mission calculée affiche ce qu'elle a atteint, orbite et écart à la cible, et
 dit pourquoi quand elle échoue (`UI-1`) ; sa durée est une décision explicite
 plutôt qu'une constante (`MIS-8`).
 
-### Phase 2 — Navigation, temps, caméra · ~2 semaines
+### Phase 2 — Navigation, temps, caméra · ~2,5 semaines
 
 > Rendre la scène et la timeline parcourables. C'est le bloc « timeline et
 > navigation 3D » + « transitions de caméra ». `NAV-3` suit `NAV-2` ; `NAV-4`
-> peut se faire à tout moment.
+> peut se faire à tout moment. `UI-4` passe **avant** `NAV-2` : la spec de la
+> piste temporelle demande explicitement de recopier `MissionPanelTrigger`
+> (style et `setEnabled`), donc dans l'autre ordre on duplique ce qu'il faut
+> corriger.
 
 | ID | Item | ★ | ◆ | Taille |
 |---|---|:-:|:-:|:-:|
 | ~~NAV-1~~ | ~~Transitions de caméra entre vues~~ — résolu | 4 | 2 | M |
+| UI-4 | **Menu applicatif haut-gauche** (remplace le bouton « Missions ») | 3 | 2 | M |
 | NAV-2 | Timeline indexée sur le temps + marqueurs d'événements | 4 | 3 | M |
 | NAV-3 | Scrub continu (glisser sur la piste) | 3 | 2 | S |
 | RND-4 | Ribbon billboardé (orbites + trajectoires) | 4 | 3 | M |
 | NAV-4 | Breadcrumb de navigation 3D | 3 | 2 | M |
 
 **Fin de phase quand** : on atteint n'importe quel instant d'une mission à la
-souris, et on change de corps focalisé sans cut.
+souris, on change de corps focalisé sans cut, et le seul élément de HUD visible
+en permanence ne détonne plus avec le reste de l'interface.
 
 ### Phase 3 — Socle physique et mission partagé · ~4,5 semaines
 
@@ -218,6 +223,7 @@ opportuniste, ou à décider quoi sacrifier quand une phase déborde.
 | FX-3 | Particules de tuyère | 4 | 2 | M | — |
 | NAV-4 | Breadcrumb de navigation 3D | 3 | 2 | M | — |
 | UI-2 | Feedback de progression pendant l'optimisation | 3 | 2 | M | — |
+| UI-4 | Menu applicatif haut-gauche (remplace le bouton « Missions ») | 3 | 2 | M | — (à faire **avant** NAV-2) |
 | NAV-2 | Timeline indexée sur le temps + marqueurs d'événements | 4 | 3 | M | — |
 | NAV-3 | Scrub continu (glisser sur la piste) | 3 | 2 | S | NAV-2 |
 | RND-4 | Ribbon billboardé (orbites + trajectoires) | 4 | 3 | M | — |
@@ -255,7 +261,15 @@ PHY-1 (drag off par défaut) ── PHY-2 (drag par défaut + recalibrage)
                             └─ PHY-3 (MaxQ, télémétrie)
 
 RND-4 (ribbon) ── NAV-5 (hover)
+
+UI-4 (menu haut-gauche) ┄┄ NAV-2 (son toggle est spécifié « sur le motif
+                        ┊    de MissionPanelTrigger » → le faire après duplique)
+                        ┄┄ UI-3 (ses deux entrées de menu ont besoin d'un hôte)
 ```
+
+Les traits pointillés autour d'`UI-4` ne sont pas des dépendances techniques :
+`NAV-2` et `UI-3` se font sans lui. C'est un ordre qui évite de refaire deux
+fois le même travail.
 
 Trois nœuds commandaient tout le reste : **MIS-8** (le plus en amont, et le
 moins cher — tout ce qui durait plus d'un jour simulé butait dessus), **PHY-4**
@@ -1043,6 +1057,63 @@ dès la v1, même s'il ne vaut que `NONE` — sans lui, un scénario d'avant la
 bascule se rejoue après avec une physique différente et personne ne le voit
 passer. C'est aussi la raison pour laquelle stocker la trajectoire échantillonnée
 serait un piège : elle deviendrait fausse sans que rien ne le signale.
+
+#### UI-4 — Menu applicatif haut-gauche — ★3 ◆2 M *(ajout)*
+
+**Pourquoi.** Le haut-gauche n'a qu'un point d'entrée : `MissionPanelTrigger`,
+un bouton « Missions » qui bascule le panneau d'affichage. Trois défauts, dont
+un seul est cosmétique.
+
+1. **Le skin.** Le bouton est construit avec `FormStyles.STYLE`, puis réécrit à
+   la main les quatre attributs que ce style fournit — `background`, `color`,
+   `font`, `insets` (`ui/mission/panel/MissionPanelTrigger.java:26-30`). Là où
+   le sélecteur `button` de `FormStyles` pose un fond `btn-ghost`, il porte un
+   aplat `UiKit.gradientBackground(AppStyles.ICE_ACCENT)`. C'est le seul bouton
+   de l'application dans ce cas, et c'est le seul élément de HUD visible en
+   permanence : d'où l'impression d'un élément importé d'une autre interface.
+2. **L'état grisé dit le contraire de ce qu'il fait.** Le Javadoc de
+   `setEnabled(boolean)` présente le grisé comme « le panneau est déjà ouvert »
+   (l. 45-48), alors que `MissionDisplayPanelAppState.togglePanel()` grise
+   quand le panneau se **ferme** (l. 82-91). L'un des deux est faux depuis
+   toujours. Un menu n'a de toute façon pas à porter cet état : c'est une coche
+   sur une entrée, pas une opacité sur le bouton d'ouverture.
+3. **Un bouton unique ne tient pas la charge à venir.** `UI-3` a besoin de
+   « deux entrées de menu » (charger / enregistrer un scénario) et il n'existe
+   aucun hôte pour les recevoir. Symptôme du même manque :
+   `MissionDisplayPanelAppState.publishOpenWizard()` est écrit et **n'est
+   appelé de nulle part** (l. 97-99) — la création de mission n'a pas d'entrée
+   depuis le HUD, seulement depuis le panneau de gestion.
+
+**À faire.**
+
+- Un menu ancré haut-gauche (bouton-titre + liste déroulante) à la place du
+  trigger, habillé par un **sélecteur Lemur déclaré dans `FormStyles`**, pas
+  par des overrides à la construction. La règle qui sort de ce chantier :
+  un widget qui adopte `FormStyles.STYLE` n'en réécrit pas les attributs ; s'il
+  lui faut une autre allure, c'est un sélecteur de plus.
+- Entrées v1 : *Afficher le panneau des missions* (bascule, avec coche),
+  *Gérer les missions…* (`OpenMissionManagement`), *Nouvelle mission…*
+  (`OpenMissionWizard` — ce qui donne enfin un appelant à `publishOpenWizard`).
+  Les entrées d'`UI-3` s'y ajouteront ensuite sans nouveau chantier d'UI.
+- Aligner l'ancrage du panneau d'affichage sur celui du menu :
+  `MissionDisplayPanelWidget` code aujourd'hui `MARGIN_PX = 5f` et une hauteur
+  de déclencheur devinée `TRIGGER_HEIGHT = 28f` (l. 34-35), tandis que le
+  trigger se pose à `AppStyles.HUD_MARGIN_PX = 16f`. Deux marges différentes
+  pour deux éléments empilés : à remplacer par une constante partagée.
+- Un test sur la logique du menu (ouverture, fermeture, état coché) séparée du
+  cycle de vie JME, comme `MissionDisplayPanelRules` l'a fait pour le panneau.
+
+**Ordre.** À faire **avant** `NAV-2` : la spec de la piste temporelle demande
+que son toggle soit construit « sur le motif de `MissionPanelTrigger` : même
+style, même `setEnabled(boolean)` »
+([`navigation/02-timeline-mission.md`](../navigation/02-timeline-mission.md) §11).
+Dans l'ordre inverse, `NAV-2` recopie le skin *et* la sémantique inversée, et
+il y a deux boutons à reprendre au lieu d'un.
+
+**Ce qu'on ne fait pas.** Pas de barre de menus complète de type application de
+bureau (Fichier / Édition / Affichage…) : un seul point d'entrée déroulant.
+Savoir si le toggle de la piste temporelle devient une entrée du menu ou reste
+un bouton local à son widget se tranche en faisant `NAV-2`, pas ici.
 
 ---
 
