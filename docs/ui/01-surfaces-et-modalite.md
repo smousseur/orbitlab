@@ -127,9 +127,10 @@ rien**, pas parce qu'on l'a monté d'un cran.
 - **A1 — déplaçable, ouverte au centre** ✅ *(retenue)*.
 - **A2 — ancrée, non déplaçable** *(écartée)*. Zéro infrastructure nouvelle,
   placement déterministe. Mais 720×640 sous le panneau d'affichage est
-  intenable en hauteur (34 + 8 + 240 + 8 + 640 = 930 px avant marges), donc ce
-  serait un dock à droite — et l'utilisateur ne peut toujours pas dégager la
-  fenêtre de ce qu'il veut regarder.
+  intenable en hauteur — `HUD_MENU_HEIGHT_PX` vaut 54 dans le code livré, donc
+  54 + 8 + 240 + 8 + 640 = 950 px avant marges — donc ce serait un dock à
+  droite, et l'utilisateur ne peut toujours pas dégager la fenêtre de ce qu'il
+  veut regarder.
 - **A3 — fixe au centre, moins le voile** *(écartée)*. Le plus petit diff
   possible, et le pire résultat : une fenêtre non modale qui occupe le centre
   de la vue 3D et qu'on ne peut ni bouger ni contourner. Autant garder la
@@ -336,8 +337,9 @@ indisponible selon le contexte. Il attend toujours `UI-3`.
 - **Modifié** — `MissionPanelWidget` (plus de backdrop, couche `WINDOW`, header
   saisissable, placement une fois au lieu d'à chaque frame) ·
   `MissionPanelWidgetAppState` (attache à `missionPanelNode`, mémorise la
-  position, s'inscrit au registre) · `MissionWizardAppState` et
-  `MissionWizardWidget` (inscription, `ESC` → confirmation d'abandon) ·
+  position, s'inscrit au registre) · `MissionWizardAppState` (inscription,
+  `ESC` → confirmation d'abandon ; le widget du wizard, lui, ne change que de
+  couche) ·
   `MissionDisplayPanelAppState` (`ESC` délègue au registre et ne quitte plus ;
   entrées `Mission management` et `Quit`) · `MissionDisplayPanelWidget`,
   `AppMenu`, `ConfirmDialog`, `TimelineWidget`, `TelemetryWidget` (lisent leur
