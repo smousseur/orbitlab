@@ -32,10 +32,10 @@ import java.util.function.Consumer;
  * state back with {@link #setOpen(boolean)}, {@link #setChecked(String, boolean)} and {@link
  * #setEnabled(String, boolean)}.
  *
- * <p>Everything the widget shows comes from the {@code form} style: the title is a bare {@code
- * Button(FormStyles.STYLE)} and the entries carry the {@code menu.item} selector. The only calls
- * that touch a skin attribute here are hover, check and disabled transitions — see {@code
- * docs/menu/01-menu-applicatif.md} §6.1.
+ * <p>Everything the widget shows comes from the {@code form} style: the title carries {@code
+ * menu.title.button} and the entries {@code menu.item}. The title's hover is the style's own
+ * {@code highlightColor}, so the only calls that touch a skin attribute here are an entry's hover,
+ * check and disabled transitions — see {@code docs/menu/01-menu-applicatif.md} §6.1.
  */
 public final class AppMenu implements AutoCloseable {
 
@@ -46,7 +46,7 @@ public final class AppMenu implements AutoCloseable {
   private static final float TITLE_WIDTH = 176f;
 
   private static final float DROPDOWN_WIDTH = 236f;
-  private static final float ITEM_HEIGHT = 38f;
+  private static final float ITEM_HEIGHT = 32f;
   private static final float ICON_SIZE = 16f;
   private static final float CHECK_SIZE = 14f;
   private static final float CARET_WIDTH = 12f;
@@ -65,6 +65,12 @@ public final class AppMenu implements AutoCloseable {
   private static final float CARET_HALF_GAP = 3f;
 
   private static final float SEPARATOR_HEIGHT = 1f;
+
+  /**
+   * Breathing room kept above and below a separator. The entries' hover frames are full-bleed, so
+   * without it the rule would sit flush against the row it parts from the group below.
+   */
+  private static final float SEPARATOR_GAP = 6f;
 
   /** Vertical gap between the title button and the dropdown it opens. */
   private static final float DROPDOWN_GAP = 4f;
@@ -100,11 +106,8 @@ public final class AppMenu implements AutoCloseable {
     Objects.requireNonNull(items, "items");
     this.parent = context.guiGraph().getMissionPanelNode();
 
-    title = new Button("ORBITLAB", FormStyles.STYLE);
+    title = new Button("ORBITLAB", new ElementId("menu.title.button"), FormStyles.STYLE);
     title.setPreferredSize(new Vector3f(TITLE_WIDTH, AppStyles.HUD_MENU_HEIGHT_PX, 0));
-    // Lemur's own Button defaults turn a hovered label yellow; the HUD's permanent entry point
-    // says so with its background instead.
-    title.setHighlightColor(FormStyles.TEXT_PRIMARY);
     addTrailingLayer(title);
     IconComponent globe =
         UiKit.tintedIcon("wizard/icon-brand-globe", ICON_SIZE, FormStyles.TEXT_PRIMARY);
@@ -120,16 +123,18 @@ public final class AppMenu implements AutoCloseable {
     caret.setOffset(new Vector3f(CARET_HALF_GAP, 0f, 0f));
     title.getControl(GuiControl.class).setComponent(LAYER_TRAILING, caret);
     title.addClickCommands(src -> onTitleClicked.run());
-    attachTitleHover();
     parent.attachChild(title);
 
     dropdown =
         new Container(
             new BoxLayout(Axis.Y, FillMode.None), new ElementId("menu"), FormStyles.STYLE);
+    orderMenuLayers(dropdown);
     dropdown.setPreferredSize(new Vector3f(DROPDOWN_WIDTH, dropdownHeight(items), 0));
     for (AppMenuItem item : items) {
       if (item.separatorBefore()) {
+        dropdown.addChild(UiKit.vSpacer(SEPARATOR_GAP));
         dropdown.addChild(separator());
+        dropdown.addChild(UiKit.vSpacer(SEPARATOR_GAP));
       }
       ItemView view = new ItemView(item);
       itemsById.put(item.id(), view);
@@ -212,8 +217,10 @@ public final class AppMenu implements AutoCloseable {
   }
 
   /**
-   * Inserts a {@link #LAYER_TRAILING} layer between the leading icon and the text of a label-like
-   * element, so a right-aligned glyph can be set and cleared without disturbing either.
+   * Inserts a {@link #LAYER_TRAILING} layer between the leading icon and the text, leaving Lemur's
+   * default order untouched otherwise. This is what the title chip uses: it wears the {@code
+   * button} selector exactly as every other button of the form style does, and gains only a place
+   * to hang its caret.
    */
   private static void addTrailingLayer(Label label) {
     label
@@ -228,10 +235,36 @@ public final class AppMenu implements AutoCloseable {
             Label.LAYER_TEXT);
   }
 
+  /**
+   * Re-orders an element's component stack so the skin is drawn <i>before</i> the insets, then
+   * appends the content layers.
+   *
+   * <p>Lemur's default is the reverse — insets first — which makes them an outer margin: the
+   * background is painted inside them and the element's own bounds stay empty around it. The
+   * dropdown wants padding, not margin. An entry's hover frame has to cover its whole row, or two
+   * consecutive frames stand 14 px apart with the insets showing between them; and the shell has to
+   * reach its own edges rather than shrink onto the list. Only the two elements of the dropdown are
+   * treated this way — the title chip keeps the stack the form style gives it.
+   *
+   * @param panel the element whose stack is re-ordered
+   * @param contentLayers the layers that sit inside the insets, in draw order
+   */
+  private static void orderMenuLayers(Panel panel, String... contentLayers) {
+    String[] order = new String[3 + contentLayers.length];
+    order[0] = Panel.LAYER_BORDER;
+    order[1] = Panel.LAYER_BACKGROUND;
+    order[2] = Panel.LAYER_INSETS;
+    System.arraycopy(contentLayers, 0, order, 3, contentLayers.length);
+    panel.getControl(GuiControl.class).setLayerOrder(order);
+  }
+
   private static float dropdownHeight(List<AppMenuItem> items) {
     float height = 2 * DROPDOWN_PAD_Y;
     for (AppMenuItem item : items) {
-      height += ITEM_HEIGHT + (item.separatorBefore() ? SEPARATOR_HEIGHT : 0f);
+      height += ITEM_HEIGHT;
+      if (item.separatorBefore()) {
+        height += SEPARATOR_HEIGHT + 2 * SEPARATOR_GAP;
+      }
     }
     return height;
   }
@@ -249,22 +282,6 @@ public final class AppMenu implements AutoCloseable {
     rule.setBackground(new QuadBackgroundComponent(FormStyles.BORDER));
     rule.setAlpha(0.3f);
     return rule;
-  }
-
-  private void attachTitleHover() {
-    MouseEventControl.addListenersToSpatial(
-        title,
-        new DefaultMouseListener() {
-          @Override
-          public void mouseEntered(MouseMotionEvent event, Spatial target, Spatial capture) {
-            title.setBackground(UiKit.wizardBg9("btn-ghost-hover", 8));
-          }
-
-          @Override
-          public void mouseExited(MouseMotionEvent event, Spatial target, Spatial capture) {
-            title.setBackground(UiKit.wizardBg9("btn-ghost", 8));
-          }
-        });
   }
 
   /** One rendered entry, plus the state transitions the style cannot express. */
@@ -292,7 +309,8 @@ public final class AppMenu implements AutoCloseable {
       icon.setMargin(ICON_HALF_GAP, 0f);
       icon.setOffset(new Vector3f(-ICON_HALF_GAP, 0f, 0f));
       button.setIcon(icon);
-      addTrailingLayer(button);
+      orderMenuLayers(
+          button, Label.LAYER_ICON, LAYER_TRAILING, Label.LAYER_SHADOW_TEXT, Label.LAYER_TEXT);
 
       // The row skin comes from the style, transparent, and never leaves the entry: Lemur clones a
       // styled component per element, so tinting this one only lights up this row.

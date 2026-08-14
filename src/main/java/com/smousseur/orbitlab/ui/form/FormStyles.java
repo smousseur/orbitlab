@@ -131,6 +131,15 @@ public final class FormStyles {
     // above. Only the dropdown and its entries are a look the form style did not already carry —
     // "s'il lui faut une autre allure, c'est un sélecteur de plus", never an override at
     // construction (docs/menu/01-menu-applicatif.md §6.1).
+    // Title chip: the shape of any form button — same insets, same font, same text colour, all
+    // inherited from the "button" selector above — except that the HUD's one permanently visible
+    // entry point is never a ghost. It wears the hover skin at rest, and answers the mouse with its
+    // label alone: a chip that appeared and disappeared under the cursor would read as a widget
+    // that comes and goes.
+    Attributes menuTitle = styles.getSelector("menu.title.button", STYLE);
+    menuTitle.set("background", UiKit.wizardBg9("btn-ghost-hover", 8));
+    menuTitle.set("highlightColor", ACCENT_BRIGHT);
+
     Attributes menu = styles.getSelector("menu", STYLE);
     // The shell's 9-slice carries a 16-pixel margin of its own, which would push the entries that
     // far in from both edges and leave a selection floating in the middle of the dropdown. The

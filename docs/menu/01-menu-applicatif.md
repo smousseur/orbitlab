@@ -380,7 +380,27 @@ Le périmètre de §6.6 est tenu à deux détails près, tous deux découverts e
    ait à connaître leurs identifiants. Trois fabriques
    (`action`, `toggle`, `withSeparatorBefore`) gardent la construction lisible.
 
-2. **`ESC` : le menu doit prendre la touche à `SimpleApplication`.** §3 fait
+2. **Le bouton-titre a son sélecteur, `menu.title.button`.** §6.1 le voulait
+   nu — `new Button("ORBITLAB", FormStyles.STYLE)`, rien à déclarer. Deux
+   choses l'en ont écarté. La première est que `btn-ghost` est un fond
+   *fantôme* : le seul élément de HUD visible en permanence disparaissait sur
+   un ciel sombre et ne réapparaissait qu'au survol, ce qui le faisait lire
+   comme un widget qui va et vient. Il porte donc `btn-ghost-hover` **au
+   repos**. La seconde est que le survol devait alors dire autre chose que le
+   fond : c'est `highlightColor`, l'attribut que Lemur prévoit exactement pour
+   ça, et le survol ne change plus que la couleur du libellé. Le sélecteur
+   hérite de `button` (insets, police, `TEXT_PRIMARY`) et n'écrit que ces deux
+   lignes — la règle du chantier est tenue, c'est bien « un sélecteur de plus »
+   et non un override à la construction.
+
+   Corollaire mesuré au passage : dans une pile de composants Lemur, les
+   `insets` viennent **avant** le fond, donc le fond est peint *à l'intérieur*
+   d'eux. Le déroulé et ses entrées inversent cet ordre (`AppMenu.orderMenuLayers`),
+   sans quoi le cadre de survol d'une entrée ne couvre pas sa ligne et deux
+   cadres consécutifs restent séparés de 14 px. Le bouton-titre, lui, garde
+   l'ordre par défaut.
+
+3. **`ESC` : le menu doit prendre la touche à `SimpleApplication`.** §3 fait
    fermer le menu par `ESC` sans dire que JME lie déjà cette touche à
    `SIMPLEAPP_Exit` — un `ESC` quitte l'application aujourd'hui, et l'écouteur
    qui le fait est privé, donc impossible à désinscrire. `MissionDisplayPanelAppState`

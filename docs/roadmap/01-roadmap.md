@@ -99,28 +99,35 @@ plutôt qu'une constante (`MIS-8`).
 
 > Rendre la scène et la timeline parcourables. C'est le bloc « timeline et
 > navigation 3D » + « transitions de caméra ». `NAV-3` suit `NAV-2` ; `NAV-4`
-> peut se faire à tout moment. `UI-4` passe **avant** `NAV-2` : la spec de la
-> piste temporelle demande explicitement de recopier `MissionPanelTrigger`
-> (style et `setEnabled`), donc dans l'autre ordre on duplique ce qu'il faut
-> corriger.
+> peut se faire à tout moment. `UI-4` est passé **avant** `NAV-2`, et c'était
+> l'ordre à tenir : la spec de la piste temporelle demandait de recopier
+> `MissionPanelTrigger` (style et `setEnabled`), qui n'existe plus. `NAV-2`
+> trouve à la place un sélecteur Lemur et une sémantique de coche.
 
 | ID | Item | ★ | ◆ | Taille |
 |---|---|:-:|:-:|:-:|
 | ~~NAV-1~~ | ~~Transitions de caméra entre vues~~ — résolu | 4 | 2 | M |
-| UI-4 | **Menu applicatif haut-gauche** (remplace le bouton « Missions ») | 3 | 2 | M |
+| ~~UI-4~~ | ~~**Menu applicatif haut-gauche** (remplace le bouton « Missions »)~~ — **résolu le 2026-08-14** | 3 | 2 | M |
 | NAV-2 | Timeline indexée sur le temps + marqueurs d'événements | 4 | 3 | M |
 | NAV-3 | Scrub continu (glisser sur la piste) | 3 | 2 | S |
 | RND-4 | Ribbon billboardé (orbites + trajectoires) | 4 | 3 | M |
 | NAV-4 | Breadcrumb de navigation 3D | 3 | 2 | M |
-| UI-4 | Menu HUD + bascules d'affichage (labels, orbites) | 3 | 2 | M |
 
-**Pourquoi `UI-4` est ici.** C'est la phase où l'on commence à *regarder* la
-scène pour de bon ; les deux premières bascules qu'il apporte — labels et
-orbites — sont exactement ce qu'on veut couper pour cadrer une transition
-(`NAV-1`) ou lire une trajectoire (`RND-4`). Il n'a aucune dépendance et peut
-donc glisser ailleurs sans coût, mais plus tard il coûte plus cher : chaque
-fonction globale livrée sans contenant se pose en bouton supplémentaire à côté
-du bouton « Missions ».
+> **Les bascules d'affichage ne sont pas dans `UI-4`.** La table portait une
+> seconde ligne `UI-4` — « menu HUD + bascules d'affichage (labels, orbites) » —
+> antérieure à la spec ; celle-ci a arrêté un périmètre v1 de trois entrées
+> (*Mission panel*, *Manage missions…*, *New mission…*) et rien d'autre. La
+> ligne est retirée pour ne pas laisser un même identifiant à la fois livré et
+> à faire. Ce qu'`UI-4` garantit, c'est l'**hôte** : couper les labels ou les
+> orbites est désormais une entrée à ajouter, plus un chantier d'UI.
+
+**Pourquoi `UI-4` était ici.** C'est la phase où l'on commence à *regarder* la
+scène pour de bon, et où couper les labels ou les orbites devient ce qu'on veut
+faire pour cadrer une transition (`NAV-1`) ou lire une trajectoire (`RND-4`).
+Il n'avait aucune dépendance et aurait pu glisser ailleurs sans coût, mais plus
+tard il aurait coûté plus cher : chaque fonction globale livrée sans contenant
+se pose en bouton supplémentaire à côté du bouton « Missions ». Le contenant
+existe maintenant.
 
 **Fin de phase quand** : on atteint n'importe quel instant d'une mission à la
 souris, on change de corps focalisé sans cut, et le seul élément de HUD visible
@@ -232,7 +239,7 @@ opportuniste, ou à décider quoi sacrifier quand une phase déborde.
 | FX-3 | Particules de tuyère | 4 | 2 | M | — |
 | NAV-4 | Breadcrumb de navigation 3D | 3 | 2 | M | — |
 | UI-2 | Feedback de progression pendant l'optimisation | 3 | 2 | M | — |
-| UI-4 | Menu applicatif haut-gauche (remplace le bouton « Missions ») | 3 | 2 | M | — (à faire **avant** NAV-2) |
+| ~~UI-4~~ | ~~Menu applicatif haut-gauche (remplace le bouton « Missions »)~~ — résolu | 3 | 2 | M | — |
 | NAV-2 | Timeline indexée sur le temps + marqueurs d'événements | 4 | 3 | M | — |
 | NAV-3 | Scrub continu (glisser sur la piste) | 3 | 2 | S | NAV-2 |
 | RND-4 | Ribbon billboardé (orbites + trajectoires) | 4 | 3 | M | — |
@@ -1051,9 +1058,24 @@ bascule se rejoue après avec une physique différente et personne ne le voit
 passer. C'est aussi la raison pour laquelle stocker la trajectoire échantillonnée
 serait un piège : elle deviendrait fausse sans que rien ne le signale.
 
-#### UI-4 — Menu applicatif haut-gauche — ★3 ◆2 M *(ajout)*
+#### ~~UI-4 — Menu applicatif haut-gauche — ★3 ◆2 M *(ajout)*~~ — **RÉSOLU le 2026-08-14**
 
-**Pourquoi.** Le haut-gauche n'a qu'un point d'entrée : `MissionPanelTrigger`,
+> **Ce qui a été livré.** Un menu `ORBITLAB` ancré haut-gauche — bouton-titre
+> `menu.title.button` et déroulé `wizard-shell` — avec les trois entrées v1
+> (*Mission panel* à coche, *Manage missions…*, *New mission…*, qui donne enfin
+> un appelant à `publishOpenWizard`). `AppMenuModel` porte la logique hors JME,
+> couverte par `AppMenuModelTest`. `MissionPanelTrigger` et son `setEnabled`
+> menteur sont supprimés, et l'ancrage du panneau d'affichage passe par
+> `AppStyles.HUD_MENU_HEIGHT_PX` / `HUD_STACK_GAP_PX` au lieu de ses trois
+> constantes locales : les deux widgets empilés partagent enfin une marge.
+>
+> Trois écarts au document de spec, tous détaillés dans son §9 : le
+> bouton-titre a son propre sélecteur au lieu d'être un `Button` nu (le fond
+> `btn-ghost` disparaissait sur un ciel sombre), `AppMenuItem` porte un
+> `separatorBefore`, et `ESC` a dû être repris à `SimpleApplication` qui le
+> liait à la sortie de l'application.
+
+**Pourquoi.** Le haut-gauche n'avait qu'un point d'entrée : `MissionPanelTrigger`,
 un bouton « Missions » qui bascule le panneau d'affichage. Trois défauts, dont
 un seul est cosmétique.
 
@@ -1096,12 +1118,13 @@ un seul est cosmétique.
 - Un test sur la logique du menu (ouverture, fermeture, état coché) séparée du
   cycle de vie JME, comme `MissionDisplayPanelRules` l'a fait pour le panneau.
 
-**Ordre.** À faire **avant** `NAV-2` : la spec de la piste temporelle demande
-que son toggle soit construit « sur le motif de `MissionPanelTrigger` : même
-style, même `setEnabled(boolean)` »
+**Ordre — tenu.** Il fallait passer **avant** `NAV-2`, dont la spec demande que
+son toggle soit construit « sur le motif de `MissionPanelTrigger` : même style,
+même `setEnabled(boolean)` »
 ([`navigation/02-timeline-mission.md`](../navigation/02-timeline-mission.md) §11).
-Dans l'ordre inverse, `NAV-2` recopie le skin *et* la sémantique inversée, et
-il y a deux boutons à reprendre au lieu d'un.
+Ce motif n'existe plus : `NAV-2` trouvera un sélecteur Lemur et une coche, et
+n'aura donc ni skin ni sémantique inversée à recopier. Ce §11 est à relire au
+moment de faire `NAV-2`.
 
 **Ce qu'on ne fait pas.** Pas de barre de menus complète de type application de
 bureau (Fichier / Édition / Affichage…) : un seul point d'entrée déroulant.
