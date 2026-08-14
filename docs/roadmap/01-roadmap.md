@@ -108,6 +108,7 @@ plutôt qu'une constante (`MIS-8`).
 |---|---|:-:|:-:|:-:|
 | ~~NAV-1~~ | ~~Transitions de caméra entre vues~~ — résolu | 4 | 2 | M |
 | ~~UI-4~~ | ~~**Menu applicatif haut-gauche** (remplace le bouton « Missions »)~~ — **résolu le 2026-08-14** | 3 | 2 | M |
+| UI-5 | **Surfaces, modalité et pile de renvoi `ESC`** — découle d'`UI-4` | 3 | 2 | M |
 | NAV-2 | Timeline indexée sur le temps + marqueurs d'événements | 4 | 3 | M |
 | NAV-3 | Scrub continu (glisser sur la piste) | 3 | 2 | S |
 | RND-4 | Ribbon billboardé (orbites + trajectoires) | 4 | 3 | M |
@@ -240,6 +241,7 @@ opportuniste, ou à décider quoi sacrifier quand une phase déborde.
 | NAV-4 | Breadcrumb de navigation 3D | 3 | 2 | M | — |
 | UI-2 | Feedback de progression pendant l'optimisation | 3 | 2 | M | — |
 | ~~UI-4~~ | ~~Menu applicatif haut-gauche (remplace le bouton « Missions »)~~ — résolu | 3 | 2 | M | — |
+| UI-5 | Surfaces, modalité et pile de renvoi `ESC` | 3 | 2 | M | UI-4 (livré) |
 | NAV-2 | Timeline indexée sur le temps + marqueurs d'événements | 4 | 3 | M | — |
 | NAV-3 | Scrub continu (glisser sur la piste) | 3 | 2 | S | NAV-2 |
 | RND-4 | Ribbon billboardé (orbites + trajectoires) | 4 | 3 | M | — |
@@ -1136,6 +1138,52 @@ trois variantes maquettées sur les textures déjà présentes dans le dépôt, 
 « chip formulaire » retenue le 2026-08-14 (§5) avec le libellé `ORBITLAB`, une
 icône par entrée et aucun raccourci clavier (§8), et le périmètre exact du diff
 (§6.6).
+
+#### UI-5 — Surfaces, modalité et pile de renvoi `ESC` — ★3 ◆2 M
+
+**Pourquoi.** `UI-4` livré, le menu applicatif est injoignable dès qu'une des
+fenêtres qu'il ouvre est à l'écran. La question posée était « faut-il le faire
+passer au-dessus de tout ? » ; la réponse est non, et le diagnostic est ailleurs :
+`ModalBackdrop` est appliqué indifféremment à trois surfaces de natures
+différentes. `ConfirmDialog` est bloquant par essence, le wizard porte un état
+non enregistré, mais le **panneau de gestion est un navigateur sur des données**
+qui ne bloque l'écran que par héritage. C'est lui qui force le contournement
+visible aujourd'hui : `onEdit` ferme le panneau avant d'ouvrir le wizard « sinon
+il s'empilerait par-dessus », et `MissionWizardAppState.submit()` republie
+`OpenMissionManagement` pour revenir en arrière. Deux surfaces qui se rouvrent
+mutuellement par événements, faute de pouvoir coexister.
+
+Deux défauts s'y ajoutent, mesurés en écrivant la spec :
+
+1. **`ESC` quitte l'application au milieu d'un wizard.** `UI-4` a pris la touche
+   à `SimpleApplication` en écrivant qu'elle appartient désormais au HUD ;
+   personne ne s'y est inscrit, donc `MissionDisplayPanelAppState` appelle
+   `stop()` dès que le menu est fermé.
+2. **L'échelle de `z` est écrite en dur dans cinq fichiers, et trois surfaces
+   sont à `z = 0`.** Elles ne se recouvrent pas par chance de placement.
+   `GuiGraph` porte un commentaire `// topmost` sur `modalNode` qui décrit une
+   intention que rien n'applique : le tri du bucket GUI est global sur le `z`
+   monde, pas sur l'ordre d'attache.
+
+**À faire.** Le panneau de gestion devient une fenêtre non modale déplaçable
+(Lemur fournit déjà `DragHandler` ; il reste à le borner). `ESC` devient
+uniformément « renvoie la surface du dessus », par un registre porté par
+`ApplicationContext` — la règle « pas de `getState()` » interdit que les trois
+`AppState` concernés s'interrogent. Quitter devient une entrée de menu avec
+confirmation. Une classe `UiLayers` reprend l'échelle de profondeur, et l'ordre
+de renvoi **est** cette échelle : la surface que `ESC` ferme est, par
+construction, celle qui est devant.
+
+**Ce qu'on ne fait pas.** Pas de gestionnaire de fenêtres (redimensionnement,
+minimisation, empilement par focus, position persistée sur disque). Pas de
+fusion du panneau de gestion et du panneau d'affichage — elle devient plus
+facile après ce chantier, mais elle n'en fait pas partie.
+
+**Spec.** [`docs/ui/01-surfaces-et-modalite.md`](../ui/01-surfaces-et-modalite.md) —
+trois options pesées pour le panneau de gestion et trois pour le sort d'`ESC`
+(§4), décision et raisons (§5), échelle de couches et registre de surfaces
+(§6.1–6.2), périmètre exact du diff (§6.6), et trois risques à vérifier à
+l'écran plutôt que par un test (§9).
 
 ---
 
