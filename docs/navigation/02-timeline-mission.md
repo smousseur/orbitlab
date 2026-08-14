@@ -5,6 +5,11 @@ d'événements », ★4 ◆3 M). Ce document couvre le **nouveau widget** ; il n
 modifie pas la capsule temporelle existante, sauf sur un point précis
 (§12.1, désynchronisation de la vitesse).
 
+> **Révisé le 2026-08-14 — §11 est tranché.** Le toggle garde son emplacement,
+> perd son état grisé et prend la condition de présence de la télémétrie.
+> Conséquence de la livraison d'`UI-4`, qui a supprimé le `MissionPanelTrigger`
+> dont ce document demandait de recopier le motif. Le reste est inchangé.
+
 ## 1. Contexte
 
 La capsule en bas d'écran (`ui/timeline/TimelineWidget.java`) porte cinq
@@ -81,7 +86,7 @@ marqueurs, et §8 le paie explicitement.
 | Drag continu | **Hors périmètre** — c'est `NAV-3`. |
 | Traitement visuel | **Capsule jumelle** — 600 × 72, texture 9-slice de la capsule, chrome cyan, couleur de mission réservée au contenu (§6). |
 | Emplacement | Bande horizontale **au-dessus de la capsule**, même largeur, même centrage (§11). |
-| Toggle | Bouton compact ancré **à gauche, juste au-dessus de la capsule** (§11). |
+| Toggle | Bouton compact ancré **à gauche, juste au-dessus de la capsule**, présent exactement quand la télémétrie l'est — jamais grisé (§11). |
 | Capsule existante | Inchangée. `ScrubberTrack` reste indexé sur la vitesse ; la cohabitation piste-vitesse / piste-temps que redoutait `NAV-3` est résolue par la séparation des widgets. |
 
 ---
@@ -429,31 +434,61 @@ collectés restent affichés.
 
 **Le widget** occupe une bande de la **largeur de la capsule** (600 px), centrée
 horizontalement comme elle, posée **juste au-dessus** — ancrage
-`BOTTOM_MARGIN_PX + CAPSULE_HEIGHT + 8`. Hauteur : 72 px (§6.1).
+`BOTTOM_MARGIN_PX + CAPSULE_HEIGHT + AppStyles.HUD_STACK_GAP_PX`. Hauteur :
+72 px (§6.1).
 
 Justification : c'est du temps, et le temps est en bas de cet écran. Le
-haut-gauche est pris (`MissionPanelTrigger` + panneau d'affichage), le
+haut-gauche est pris (menu applicatif d'`UI-4` + panneau d'affichage), le
 haut-droit par la télémétrie (268 × 215 px), et la piste est un objet large que
 seule la bande basse peut accueillir sans recouvrir la scène.
 
 **Le toggle** est un bouton compact ancré à gauche, à la même hauteur que le
-widget, sur le motif de `MissionPanelTrigger` (`ui/mission/panel/MissionPanelTrigger.java`) :
-même style, même `setEnabled(boolean)` pour l'état grisé.
+widget. Il n'est **jamais grisé : il est présent ou absent**, et sa condition de
+présence est celle de la télémétrie.
 
-> **Réserve ajoutée le 2026-08-12 — ne pas recopier `MissionPanelTrigger` en
-> l'état.** L'item `UI-4` de la roadmap le remplace par un menu, précisément
-> parce que son habillage réécrit `FormStyles.STYLE` au lieu de le suivre, et
-> parce que son `setEnabled(boolean)` grise le bouton quand le panneau est
-> *fermé* alors que son Javadoc annonce l'inverse. `UI-4` est planifié **avant**
-> `NAV-2` pour cette raison. Le motif à reprendre reste valable — un bouton
-> compact, ancré, avec un état visuel d'indisponibilité — mais l'habillage doit
-> venir du sélecteur Lemur remis en ordre par `UI-4`, pas d'une copie des
-> lignes 26-30. Reste ouvert, à trancher en faisant `NAV-2` : ce toggle
-> peut aussi devenir une entrée du menu plutôt qu'un bouton local.
+> **Tranché le 2026-08-14, en livrant `UI-4`.** La rédaction initiale demandait
+> de construire ce toggle « sur le motif de `MissionPanelTrigger` : même style,
+> même `setEnabled(boolean)` », et la réserve du 2026-08-12 disait de ne pas le
+> recopier en l'état. La classe n'existe plus : `UI-4` l'a supprimée, parce que
+> son habillage réécrivait `FormStyles.STYLE` au lieu de le suivre et que son
+> `setEnabled(boolean)` grisait le bouton quand le panneau était *fermé* alors
+> que son Javadoc annonçait l'inverse.
+>
+> Ce qu'`UI-4` a appris vaut plus que le nom d'une classe : le bon correctif
+> d'un état grisé menteur n'est pas de le recâbler, c'est de ne pas avoir
+> d'état grisé. Le menu a remplacé l'opacité par une coche ; ici, §10.1 donne
+> mieux encore. Ses points 2 à 5 sont, mot pour mot, le test de
+> `TelemetryWidgetAppState.update` : **la piste est ouvrable exactement quand la
+> télémétrie est à l'écran.** Le toggle prend donc à la télémétrie non pas son
+> emplacement, mais sa **condition d'existence** — et le besoin d'un état
+> d'indisponibilité disparaît au lieu d'être implémenté.
+>
+> Deux options ont été pesées et écartées à ce moment-là. **Le loger dans le
+> widget de télémétrie** obtenait le même gain de fond, et de façon structurelle
+> plutôt que par une condition réévaluée chaque frame ; mais il éloignait la
+> commande de son effet (haut-droit contre bas-centre), faisait lire comme
+> par-mission un état qui est une préférence de session, et rendait la piste
+> inatteignable le jour où la télémétrie gagnerait un masquage utilisateur — une
+> commande ne doit pas n'être joignable qu'à travers une surface masquable
+> indépendamment. **En faire une entrée du menu applicatif** était devenu bon
+> marché — `AppMenuItem.toggle` fournit la coche, `AppMenuModel.setEnabled`
+> l'entrée désactivée, l'un et l'autre testés — mais mettait une commande de la
+> famille formulaire aux commandes d'un widget de la famille capsule, alors
+> qu'`UI-4` §5 vient d'attribuer la capsule au temps et le formulaire aux
+> missions et à l'application.
+>
+> Reste à écrire, et c'est tout : un bouton compact, habillé par un **sélecteur
+> Lemur** — famille capsule, `timeline/btn-hover` et `timeline/btn-active`, pas
+> `FormStyles` — et jamais par des overrides à la construction. C'est la règle
+> qui sort d'`UI-4` ; `menu.title.button` en est l'exemple à reprendre dans son
+> principe, pas dans ses valeurs.
 
-- Il est **grisé et inopérant** quand les conditions §10.1 (2 à 5) ne sont pas
-  réunies : sans mission suivie, il n'y a rien à ouvrir, et un bouton qui
-  n'ouvre rien doit le dire avant le click.
+- Il est **absent** quand les conditions §10.1 (2 à 5) ne sont pas réunies :
+  sans mission suivie, sans éphéméride, il n'y a rien à ouvrir. Le HUD change
+  déjà de forme à cet instant — la télémétrie apparaît et disparaît sur
+  exactement les mêmes conditions — donc un bouton qui la suit se lit comme
+  cohérent, pas comme surgissant. Corollaire : la piste s'en va avec lui, il
+  n'existe pas d'état « piste ouverte, commande introuvable ».
 - Il n'est **pas** placé à l'intérieur de la capsule : celle-ci a une mise en
   page à offsets calculés en chaîne (`TimelineWidget.java:73-101`, dividers
   compris) qu'une insertion obligerait à recalculer entièrement, pour un gain
@@ -463,6 +498,9 @@ même style, même `setEnabled(boolean)` pour l'état grisé.
 
 L'état du toggle est porté par l'`AppState`, pas par `MissionEntry` : c'est une
 préférence d'affichage de session, elle survit au changement de mission suivie.
+Elle survit aussi à la disparition du bouton — le point 1 de §10.1 reste vrai
+pendant que 2 à 5 sont faux, donc revenir à une mission suivie retrouve la piste
+dans l'état où on l'avait laissée, sans second click.
 
 ---
 
@@ -559,7 +597,11 @@ ici, avec leur argumentaire ; ils sont les premiers candidats à révision.
    révise sans toucher au reste : `TimeAxis` est l'unique porteur de la
    projection.
 2. **Toggle à gauche au-dessus de la capsule** plutôt que dans la capsule ou en
-   action de ligne (§11).
+   action de ligne (§11). **Confirmé le 2026-08-14** en livrant `UI-4`, et
+   complété : le bouton n'a pas d'état grisé, il partage la condition de
+   présence de la télémétrie. Le loger *dans* le widget de télémétrie, et en
+   faire une entrée du menu applicatif, ont été pesés à cette occasion et
+   écartés — argumentaire en §11.
 
 Décidés en amont et consignés pour mémoire : widget unique piloté par le focus,
 fenêtre = éphéméride, pas de widget sans éphéméride, écart affiché quand `now`
