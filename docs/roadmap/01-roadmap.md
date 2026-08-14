@@ -1126,6 +1126,12 @@ bureau (Fichier / Édition / Affichage…) : un seul point d'entrée déroulant.
 Savoir si le toggle de la piste temporelle devient une entrée du menu ou reste
 un bouton local à son widget se tranche en faisant `NAV-2`, pas ici.
 
+**Spec.** [`docs/menu/01-menu-applicatif.md`](../menu/01-menu-applicatif.md) —
+trois variantes maquettées sur les textures déjà présentes dans le dépôt, la
+« chip formulaire » retenue le 2026-08-14 (§5) avec le libellé `ORBITLAB`, une
+icône par entrée et aucun raccourci clavier (§8), et le périmètre exact du diff
+(§6.6).
+
 ---
 
 ## 7. Backlog non planifié
