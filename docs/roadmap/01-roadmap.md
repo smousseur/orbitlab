@@ -1128,7 +1128,9 @@ un bouton local à son widget se tranche en faisant `NAV-2`, pas ici.
 
 **Spec.** [`docs/menu/01-menu-applicatif.md`](../menu/01-menu-applicatif.md) —
 trois variantes maquettées sur les textures déjà présentes dans le dépôt, la
-« chip formulaire » retenue (§5), et le périmètre exact du diff (§6.6).
+« chip formulaire » retenue le 2026-08-14 (§5) avec le libellé `ORBITLAB`, une
+icône par entrée et aucun raccourci clavier (§8), et le périmètre exact du diff
+(§6.6).
 
 ---
 

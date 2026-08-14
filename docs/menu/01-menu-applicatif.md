@@ -1,12 +1,15 @@
-# Spec — Menu applicatif haut-gauche (`UI-4`) — propositions
+# Spec — Menu applicatif haut-gauche (`UI-4`)
 
-> **Rédigé le 2026-08-14, non commencé** (item `UI-4` de la roadmap, phase 2,
-> ★3 ◆2 M). Ce document est un document de **propositions** : §4 maquette trois
-> variantes construites avec les textures déjà présentes dans
-> `src/main/resources/interface/`, §5 tranche et §6 décrit ce que la variante
-> retenue implique dans le code. Les points 1 à 4 de la fiche roadmap (skin,
-> état grisé menteur, absence d'hôte pour les entrées d'`UI-3`, ancrage) sont
-> tous couverts.
+> **Rédigé et tranché le 2026-08-14, non commencé** (item `UI-4` de la roadmap,
+> phase 2, ★3 ◆2 M). §4 conserve les trois variantes maquettées sur les textures
+> déjà présentes dans `src/main/resources/interface/` ; **la variante A (« chip
+> formulaire ») est retenue** (§5), et §6 décrit ce qu'elle implique dans le
+> code. Les points 1 à 4 de la fiche roadmap (skin, état grisé menteur, absence
+> d'hôte pour les entrées d'`UI-3`, ancrage) sont tous couverts.
+>
+> **Arbitrages tranchés le 2026-08-14** — variante **A** ; libellé du
+> bouton-titre **`ORBITLAB`** ; **pas de raccourci clavier** ; **une icône par
+> entrée** dès la v1. Aucune question ouverte ne reste (§8).
 
 ---
 
@@ -90,25 +93,33 @@ pas un nouvel asset.
 
 ---
 
-## 3. Décisions communes aux trois variantes
+## 3. Décisions de conception
 
-Ces points ne dépendent pas de l'habillage retenu.
+Comportement, contenu et ergonomie du menu. Ces points ne dépendent pas de
+l'habillage : ils valaient pour les trois variantes de §4, à l'exception du
+libellé du bouton-titre, tranché avec la variante (§5).
 
 | Sujet | Décision |
 |---|---|
 | Forme générale | Bouton-titre ancré haut-gauche + liste déroulante. **Pas** de barre de menus type bureautique (Fichier / Édition / Affichage) — un seul point d'entrée, comme le dit la fiche roadmap. |
+| Libellé du bouton-titre | **`ORBITLAB`**, précédé du glyphe `icon-brand-globe` et suivi du chevron. Le HUD n'affiche aujourd'hui le nom de l'application nulle part ; le seul élément permanent du haut d'écran le porte. |
 | Entrées v1 | *Mission panel* (bascule, avec coche) · *Manage missions…* (`OpenMissionManagement`) · *New mission…* (`OpenMissionWizard` — ce qui donne enfin un appelant à `publishOpenWizard`). |
+| Icônes des entrées | **Une icône par entrée dès la v1**, 16 px, alignée à gauche du libellé, avec 6 px entre les deux. Teinte uniforme — `TEXT_SECONDARY` au repos, `ACCENT_BRIGHT` sur l'entrée cochée — jamais les couleurs natives des assets (cf. §2.2). Les entrées d'`UI-3` arriveront donc dans une gouttière d'icônes déjà en place. |
 | Langue | Anglais, comme le reste de l'UI. |
 | État de la bascule | **Une coche sur l'entrée**, jamais une opacité sur le bouton-titre. `MissionPanelTrigger.setEnabled(boolean)` disparaît : le défaut 2 n'est pas corrigé, il devient sans objet. La coche lit `MissionDisplayPanelWidget.isVisible()`, source de vérité unique. |
 | Ouverture / fermeture | Click sur le bouton-titre bascule. Click sur une entrée exécute **et** ferme. Click hors du menu ferme. `ESC` ferme. |
 | Entrées désactivées | Affichées en `TEXT_LO`, non cliquables, **le menu reste ouvert** si on clique dessus. Aucune entrée n'est désactivée en v1 ; la règle existe pour `UI-3` (pas de *Save scenario…* sans mission). |
-| Habillage | Un **sélecteur Lemur déclaré dans `FormStyles`** (ou `TimelineStyles` en variante B), jamais d'override d'attribut à la construction. C'est la règle que ce chantier est censé établir — cf. §6.1. |
+| Raccourci clavier | **Aucun raccourci d'ouverture.** Le menu s'ouvre à la souris ; `R` (`ViewModeAppState`) reste le seul binding du HUD, on n'en sème pas un deuxième pour une cible de 148×34 px toujours visible. `ESC` ferme un menu **déjà ouvert** : c'est une sortie de surface, pas un raccourci à mémoriser. |
+| Habillage | Un **sélecteur Lemur déclaré dans `FormStyles`**, jamais d'override d'attribut à la construction. C'est la règle que ce chantier est censé établir — cf. §6.1. |
 | Ancrage | Une constante partagée remplace `MARGIN_PX = 5` / `TRIGGER_HEIGHT = 28` du panneau d'affichage. Chaîne : bande breadcrumb (`NAV-4`) → menu → panneau. Voir §6.3 et la figure `01-menu-ancrage.png`. |
 | Logique testable | Un modèle pur, hors cycle de vie JME, testé unitairement — comme `MissionDisplayPanelRules` l'a fait pour le panneau. Voir §6.4. |
 
 ---
 
-## 4. Les trois variantes
+## 4. Les trois variantes étudiées
+
+Les trois ont été maquettées avant l'arbitrage ; **A est retenue**, B et C sont
+conservées ici pour garder trace de ce qui a été pesé.
 
 ![Trois variantes du menu applicatif](images/01-menu-variantes.png)
 
@@ -119,7 +130,7 @@ Ce qui les sépare du rendu final : le fond étoilé est décoratif, l'anticrén
 des polices diffère de celui de JME, et les états survol/coché sont montrés
 simultanément alors qu'ils ne coexistent pas à l'écran.*
 
-### 4.1 Variante A — « Chip formulaire »
+### 4.1 Variante A — « Chip formulaire » ✅ *(retenue)*
 
 Bouton-titre `btn-ghost` 148×34, globe 16 px, libellé `ORBITLAB` en Sora 12,
 chevron `icon-caret-down` teinté `ACCENT_BRIGHT`. Déroulé sur `wizard-shell`
@@ -138,7 +149,7 @@ chevron `icon-caret-down` teinté `ACCENT_BRIGHT`. Déroulé sur `wizard-shell`
   comme identité applicative dans un HUD qui n'en a aucune, mais `MENU` reste
   possible sans rien changer d'autre.
 
-### 4.2 Variante B — « Capsule console »
+### 4.2 Variante B — « Capsule console » *(écartée)*
 
 Bouton-titre `capsule` **148×52** (hauteur imposée par l'inset, cf. §2.1),
 globe teinté `TL_CYAN`, libellé `MENU` en Rajdhani 14, chevron cyan. Déroulé
@@ -172,10 +183,11 @@ icônes 20 px, libellé en tooltip sur `input`.
 
 ---
 
-## 5. Recommandation
+## 5. Décision
 
-**Variante A**, avec le libellé `ORBITLAB` (repli `MENU` si l'on préfère un
-verbe à une marque — c'est le seul point réellement discutable).
+**Variante A, tranchée le 2026-08-14**, avec le libellé `ORBITLAB` — le repli
+`MENU` a été écarté : le HUD n'affiche le nom de l'application nulle part, et
+c'est le bon endroit pour le porter.
 
 Quatre raisons, par ordre de poids :
 
@@ -196,10 +208,10 @@ Quatre raisons, par ordre de poids :
    application. Chaque famille garde un domaine, au lieu d'être un simple
    héritage de deux lots de textures.
 
-Si l'arbitrage penche malgré tout pour « un seul langage sur tout le HUD
-permanent », la variante B est jouable telle quelle — mais alors il faut
-l'assumer jusqu'au bout et prévoir de repasser le **panneau d'affichage** en
-capsule, ce qui sort du périmètre d'`UI-4`.
+Ce qui rouvrirait le sujet : décider que tout le HUD permanent parle capsule.
+La variante B est jouable telle quelle, mais il faudrait alors l'assumer
+jusqu'au bout et repasser aussi le **panneau d'affichage** en capsule — ce qui
+sort du périmètre d'`UI-4` et n'est pas retenu ici.
 
 ---
 
@@ -222,8 +234,13 @@ item.set("font", UiKit.sora(12));
 item.set("insets", new Insets3f(7, 16, 7, 16));
 ```
 
+Une entrée est une ligne `BoxLayout(Axis.X)` : icône 16 px teintée, 6 px de
+gouttière, libellé, puis la coche alignée à droite pour la seule entrée
+bascule. Toutes les entrées portant une icône (§3), la gouttière est constante
+et les libellés restent alignés quoi qu'ajoute `UI-3`.
+
 L'entrée survolée reçoit `UiKit.textureBg("row-hover", 8)`, l'entrée cochée
-`TEXT_PRIMARY` + `icon-check-white`. **Aucun `setBackground` / `setColor` /
+`TEXT_PRIMARY`, son icône `ACCENT_BRIGHT` et la coche `icon-check-white`. **Aucun `setBackground` / `setColor` /
 `setFont` / `setInsetsComponent` à la construction** en dehors de ces
 transitions d'état : c'est la règle qui sort du chantier, et elle vaut ensuite
 pour le breadcrumb (`NAV-4` §3) et le toggle de la piste temporelle (`NAV-2`
@@ -234,7 +251,7 @@ pour le breadcrumb (`NAV-4` §3) et le toggle de la piste temporelle (`NAV-2`
 | Classe | Emplacement | Rôle |
 |---|---|---|
 | `AppMenu` | `ui/menu/` | Widget Lemur : bouton-titre + déroulé, purement présentation, callbacks vers l'`AppState`. |
-| `AppMenuItem` | `ui/menu/` | Record d'une entrée : `id`, `label`, `iconName`, `kind` (`ACTION` ou `TOGGLE`). |
+| `AppMenuItem` | `ui/menu/` | Record d'une entrée : `id`, `label`, `iconName` (**obligatoire**, cf. §3), `kind` (`ACTION` ou `TOGGLE`). |
 | `AppMenuModel` | `states/mission/` (ou `states/hud/`) | Logique pure : ouvert/fermé, coches, entrées actives. Testable sans JME. |
 | `MissionPanelTrigger` | — | **Supprimée.** `MissionDisplayPanelAppState` instancie `AppMenu` à la place. |
 
@@ -320,20 +337,30 @@ premier), et non dans `modalNode` — un menu n'est pas une modale.
 - **Pas de barre de menus complète** (Fichier / Édition / Affichage…).
 - **Pas de sous-menus** : la v1 est une liste plate. Les entrées d'`UI-3` s'y
   ajoutent à plat, séparateur compris.
-- **Pas de raccourci clavier** dans la v1 (voir §8).
+- **Pas de raccourci clavier d'ouverture** (§3). Seul `ESC` ferme un menu déjà
+  ouvert.
 - **Le toggle de la piste temporelle de `NAV-2` n'est pas tranché ici** :
   entrée de menu ou bouton local à son widget, ça se décide en faisant `NAV-2`.
   Ce que `UI-4` doit garantir, c'est qu'il ne recopiera plus ni le skin ni la
   sémantique inversée de `MissionPanelTrigger`.
 - **Pas de reprise du panneau d'affichage** au-delà de son ancrage.
 
-## 8. Questions ouvertes
+## 8. Arbitrages tranchés
 
-1. **Libellé du bouton-titre** : `ORBITLAB` (identité, recommandé) ou `MENU`
-   (verbe) ? Aucun coût technique dans un sens ou dans l'autre.
-2. **Raccourci clavier d'ouverture** — `M` sur le motif de `R`
-   (`states/camera/ViewModeAppState.java:35-42`) ? À trancher quand un deuxième
-   raccourci HUD apparaîtra, pour ne pas semer les bindings un par un.
-3. **Icônes dans les entrées** : la maquette en met une par entrée. Un menu de
-   trois entrées s'en passe ; à six entrées (après `UI-3`) elles aident. On les
-   met dès la v1 ou on attend d'en avoir besoin ?
+Aucune question n'est ouverte : les trois qui l'étaient à la rédaction ont été
+tranchées le 2026-08-14, le jour même.
+
+1. ~~**Libellé du bouton-titre** : `ORBITLAB` ou `MENU` ?~~ **`ORBITLAB`.**
+   Le HUD n'affiche le nom de l'application nulle part ailleurs.
+2. ~~**Raccourci clavier d'ouverture** — `M` sur le motif de `R` ?~~ **Aucun
+   raccourci.** Ouverture à la souris uniquement ; `R`
+   (`states/camera/ViewModeAppState.java:35-42`) reste le seul binding du HUD.
+   `ESC` ferme un menu déjà ouvert et ne compte pas comme un binding à
+   mémoriser.
+3. ~~**Icônes dans les entrées** dès la v1, ou seulement quand `UI-3` fera
+   passer le menu à six entrées ?~~ **Dès la v1**, une par entrée, 16 px,
+   teinte uniforme (§3). Les entrées d'`UI-3` arriveront dans une gouttière
+   déjà en place, sans reprise de la mise en page.
+
+Ce qui reste hors de ce document et sera tranché ailleurs : le sort du toggle
+de la piste temporelle (§7), décidé en faisant `NAV-2`.
