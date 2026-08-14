@@ -2,6 +2,7 @@ package com.smousseur.orbitlab.ui.form;
 
 import com.jme3.input.event.MouseButtonEvent;
 import com.jme3.input.event.MouseMotionEvent;
+import com.jme3.math.ColorRGBA;
 import com.jme3.math.Vector3f;
 import com.jme3.renderer.Camera;
 import com.jme3.scene.Spatial;
@@ -34,9 +35,21 @@ public class ModalBackdrop {
    *     picks and renders higher z first)
    */
   public ModalBackdrop(float z) {
+    this(z, FormStyles.BACKDROP);
+  }
+
+  /**
+   * @param z depth of the backdrop, used to stack a modal on top of another one (the GUI bucket
+   *     picks and renders higher z first)
+   * @param tint colour of the overlay; a fully transparent one turns the backdrop into a pure click
+   *     catcher, which is what a dropdown menu needs — it must swallow the click that dismisses it
+   *     (including one aimed at the 3D scene, which must not select a body) without dimming the
+   *     screen the way a modal does
+   */
+  public ModalBackdrop(float z, ColorRGBA tint) {
     this.z = z;
     backdrop = new Container();
-    backdrop.setBackground(UiKit.gradientBackground(FormStyles.BACKDROP));
+    backdrop.setBackground(UiKit.gradientBackground(tint));
     backdrop.setLocalTranslation(0, 0, z);
 
     MouseEventControl.addListenersToSpatial(

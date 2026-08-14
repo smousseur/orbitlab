@@ -58,7 +58,8 @@ src/
 │   │   ├── ephemeris/                # Celestial body position computation state
 │   │   ├── fx/                       # Visual effects (lighting, post-processing chain)
 │   │   ├── mission/                  # Mission orchestration, trajectory rendering, list panel,
-│   │   │                             #   display panel, telemetry widget and wizard states
+│   │   │                             #   display panel, app-menu model, telemetry widget and
+│   │   │                             #   wizard states
 │   │   ├── orbits/                   # Orbit visualization states (init + runtime)
 │   │   ├── scene/                    # Scene management (solar system, planet pose, HUD markers)
 │   │   └── time/                     # Clock and timeline widget states
@@ -98,6 +99,7 @@ src/
 │   │                                 #   PropellantType, IgnitionMode, ShutdownMode)
 │   ├── ui/                           # Lemur-based GUI widgets (AppStyles, UiKit)
 │   │   ├── form/                     # Form/modal styling (FormStyles, ModalBackdrop)
+│   │   ├── menu/                     # Top-left application menu (AppMenu, AppMenuItem)
 │   │   ├── mission/
 │   │   │   ├── component/            # Shared mission-UI widgets (PaginationBar)
 │   │   │   ├── display/              # Mission trajectory display panel (rows, header/footer)
@@ -131,7 +133,7 @@ src/
     │   │                             #   propellant budget, launch configuration)
     │   ├── orbit/                    # Orbit path, cache, policy, snapshot, runtime slot tests
     │   └── source/                   # Source-layer tests (LRU cache)
-    ├── states/mission/               # Mission display panel rules tests
+    ├── states/mission/               # Mission display panel rules and app-menu model tests
     ├── tools/ephemerisgen/           # Smoke tests for ephemeris datasets
     └── ui/mission/                   # Mission color palette tests
 ```

@@ -126,6 +126,32 @@ public final class FormStyles {
     b.set("font", UiKit.sora(13));
     b.set("insets", new Insets3f(10, 22, 10, 22));
 
+    // Top-left application menu. The title button needs nothing of its own: it is a plain
+    // Button(FormStyles.STYLE) and takes btn-ghost, Sora 13 and TEXT_PRIMARY from the selector
+    // above. Only the dropdown and its entries are a look the form style did not already carry —
+    // "s'il lui faut une autre allure, c'est un sélecteur de plus", never an override at
+    // construction (docs/menu/01-menu-applicatif.md §6.1).
+    Attributes menu = styles.getSelector("menu", STYLE);
+    // The shell's 9-slice carries a 16-pixel margin of its own, which would push the entries that
+    // far in from both edges and leave a selection floating in the middle of the dropdown. The
+    // padding around the list is the selector's insets, and nothing else.
+    TbtQuadBackgroundComponent menuBg = shellBg();
+    clearMargin(menuBg);
+    menu.set("background", menuBg);
+    menu.set("insets", new Insets3f(8, 6, 8, 6));
+
+    Attributes menuItem = styles.getSelector("menu.item", STYLE);
+    // The hover skin is laid at rest too, fully transparent. An entry with no background has no
+    // geometry, and a row with no geometry cannot be picked: the mouse would only find the letters
+    // of its label, so the highlight would come and go over the text and nowhere else.
+    TbtQuadBackgroundComponent menuItemBg = UiKit.textureBg("row-hover", 8);
+    menuItemBg.setMargin(0f, 0f);
+    menuItemBg.setColor(new ColorRGBA(1f, 1f, 1f, 0f));
+    menuItem.set("background", menuItemBg);
+    menuItem.set("color", TEXT_SECONDARY);
+    menuItem.set("font", UiKit.sora(12));
+    menuItem.set("insets", new Insets3f(7, 12, 7, 12));
+
     Attributes tf = styles.getSelector("textField", STYLE);
     tf.set("background", inputBg());
     tf.set("color", TEXT_PRIMARY);

@@ -4,6 +4,7 @@ import com.jme3.asset.AssetManager;
 import com.jme3.asset.AssetNotFoundException;
 import com.jme3.font.BitmapFont;
 import com.jme3.math.ColorRGBA;
+import com.jme3.math.Vector2f;
 import com.jme3.math.Vector3f;
 import com.jme3.texture.Texture;
 import com.jme3.texture.Texture2D;
@@ -36,6 +37,7 @@ public final class UiKit {
   private static final String FONT_ORBITRON = "fonts/orbitron-semibold-%d.fnt";
   private static final String FONT_IBM_PLEX_MONO = "fonts/ibmplexmono-regular-%d.fnt";
   private static final String FONT_SORA = "fonts/sora-medium-%d.fnt";
+  public static final String INTERFACE_DIR = "interface";
   public static final String WIZARD_DIR = "interface/wizard";
   public static final String MISSIONS_DIR = "interface/missions";
   public static final String ROSTER_DIR = MISSIONS_DIR + "/roster";
@@ -223,6 +225,31 @@ public final class UiKit {
   /** Builds a Lemur {@link IconComponent} pointing at a wizard v2 texture. */
   public static IconComponent wizardIconComponent(String name) {
     return new IconComponent(WIZARD_DIR + "/" + name + ".png");
+  }
+
+  /**
+   * Builds a square {@link IconComponent} of a fixed pixel size, tinted to a single colour.
+   *
+   * <p>The tint is what lets icons drawn in their own accent (the mission action glyphs are cyan,
+   * magenta and amber) sit in one list without turning it into a Christmas tree.
+   *
+   * @param name texture path relative to {@code interface/}, without the {@code .png} extension
+   * @param size side of the icon in pixels, independent of the texture's own resolution
+   * @param tint colour multiplied into the texture
+   */
+  public static IconComponent tintedIcon(String name, float size, ColorRGBA tint) {
+    return tintedIcon(name, size, size, tint);
+  }
+
+  /**
+   * Same as {@link #tintedIcon(String, float, ColorRGBA)} for a glyph that is not square, such as
+   * the caret.
+   */
+  public static IconComponent tintedIcon(String name, float width, float height, ColorRGBA tint) {
+    IconComponent icon = new IconComponent(INTERFACE_DIR + "/" + name + ".png");
+    icon.setIconSize(new Vector2f(width, height));
+    icon.setColor(tint);
+    return icon;
   }
 
   /** Loads {@code orbitron-semibold} at the given pixel size, falling back to Lemur's default. */

@@ -15,6 +15,7 @@ import com.smousseur.orbitlab.simulation.mission.MissionId;
 import com.smousseur.orbitlab.simulation.mission.MissionStatus;
 import com.smousseur.orbitlab.simulation.mission.context.MissionContext;
 import com.smousseur.orbitlab.simulation.mission.context.MissionEntry;
+import com.smousseur.orbitlab.ui.AppStyles;
 import com.smousseur.orbitlab.ui.UiKit;
 import com.smousseur.orbitlab.ui.form.FormStyles;
 import java.util.ArrayList;
@@ -31,9 +32,6 @@ public final class MissionDisplayPanelWidget implements AutoCloseable {
   static final float WINDOW_WIDTH = 420f;
   static final float WINDOW_HEIGHT = 240f;
   static final float BODY_HEIGHT = 120f;
-  private static final float MARGIN_PX = 5f;
-  private static final float TRIGGER_HEIGHT = 28f;
-  private static final float TRIGGER_GAP = 8f;
   private static final int PAGE_SIZE = 3;
 
   private final MissionContext missionContext;
@@ -172,10 +170,18 @@ public final class MissionDisplayPanelWidget implements AutoCloseable {
     this.rowListener = Objects.requireNonNull(listener, "listener");
   }
 
-  /** Position the panel top-left, sitting just below the trigger button. */
-  public void layoutTopLeft(int screenHeight) {
-    float y = screenHeight - MARGIN_PX - TRIGGER_HEIGHT - TRIGGER_GAP;
-    root.setLocalTranslation(MARGIN_PX, y, 0f);
+  /**
+   * Positions the panel top-left, directly under the application menu it is opened from. The three
+   * numbers are shared with the menu rather than guessed here: the panel used to sit 11 px to the
+   * left of the button above it, on a trigger height that matched nothing on screen.
+   *
+   * @param screenHeight height of the render surface in pixels
+   * @param topOffset pixels between the top of the screen and the top of the menu's title button
+   */
+  public void layoutTopLeft(int screenHeight, float topOffset) {
+    float y =
+        screenHeight - topOffset - AppStyles.HUD_MENU_HEIGHT_PX - AppStyles.HUD_STACK_GAP_PX;
+    root.setLocalTranslation(AppStyles.HUD_MARGIN_PX, y, 0f);
   }
 
   /** Called every frame; rebuilds the body only when the snapshot key changes. */

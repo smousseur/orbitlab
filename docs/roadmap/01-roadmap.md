@@ -112,6 +112,15 @@ plutôt qu'une constante (`MIS-8`).
 | NAV-3 | Scrub continu (glisser sur la piste) | 3 | 2 | S |
 | RND-4 | Ribbon billboardé (orbites + trajectoires) | 4 | 3 | M |
 | NAV-4 | Breadcrumb de navigation 3D | 3 | 2 | M |
+| UI-4 | Menu HUD + bascules d'affichage (labels, orbites) | 3 | 2 | M |
+
+**Pourquoi `UI-4` est ici.** C'est la phase où l'on commence à *regarder* la
+scène pour de bon ; les deux premières bascules qu'il apporte — labels et
+orbites — sont exactement ce qu'on veut couper pour cadrer une transition
+(`NAV-1`) ou lire une trajectoire (`RND-4`). Il n'a aucune dépendance et peut
+donc glisser ailleurs sans coût, mais plus tard il coûte plus cher : chaque
+fonction globale livrée sans contenant se pose en bouton supplémentaire à côté
+du bouton « Missions ».
 
 **Fin de phase quand** : on atteint n'importe quel instant d'une mission à la
 souris, on change de corps focalisé sans cut, et le seul élément de HUD visible
@@ -261,15 +270,7 @@ PHY-1 (drag off par défaut) ── PHY-2 (drag par défaut + recalibrage)
                             └─ PHY-3 (MaxQ, télémétrie)
 
 RND-4 (ribbon) ── NAV-5 (hover)
-
-UI-4 (menu haut-gauche) ┄┄ NAV-2 (son toggle est spécifié « sur le motif
-                        ┊    de MissionPanelTrigger » → le faire après duplique)
-                        ┄┄ UI-3 (ses deux entrées de menu ont besoin d'un hôte)
 ```
-
-Les traits pointillés autour d'`UI-4` ne sont pas des dépendances techniques :
-`NAV-2` et `UI-3` se font sans lui. C'est un ordre qui évite de refaire deux
-fois le même travail.
 
 Trois nœuds commandaient tout le reste : **MIS-8** (le plus en amont, et le
 moins cher — tout ce qui durait plus d'un jour simulé butait dessus), **PHY-4**
@@ -426,11 +427,7 @@ qui remplace [`effects-roadmap.md`](../graphics-effects/effects-roadmap.md)
 stable, antialiasing par alpha-fade des bords, lisibilité à distance. Débloque
 ensuite les tirets animés, le halo additif et le hover (`NAV-5`).
 
-**Spec.** [`ribbon-lines.md`](../graphics-effects/ribbon-lines.md) — remplace
-[`effects-roadmap.md`](../graphics-effects/effects-roadmap.md) §9.4.1. Traitement
-retenu : expansion en **vertex shader**, pas côté CPU (comparatif chiffré en §5
-du document) ; les orbites planétaires sont une géométrie statique de 40 960
-sommets qu'un ribbon CPU rendrait dynamique.
+**Spec.** [`effects-roadmap.md`](../graphics-effects/effects-roadmap.md) §9.4.1.
 
 ---
 
@@ -506,9 +503,8 @@ arbitraire, la piste l'était aussi et aurait été à refaire. `MissionHorizon`
 donne maintenant cette durée, donc la piste peut s'indexer dessus directement.
 
 **À faire, dans l'ordre.**
-1. ~~Trancher la fenêtre représentée~~ **tranché** : durée de l'éphéméride de la
-   mission suivie (focus télémétrie), dans un **widget séparé** de la capsule.
-   La question ouverte n°2 est close par là.
+1. Trancher la fenêtre représentée : durée de la mission sélectionnée, ou
+   fenêtre glissante autour de `now()` ? (cf. question ouverte n°2.)
 2. Fonction temps ↔ position, puis marqueurs aux transitions de stages de la
    mission sélectionnée.
 3. Hover → tooltip (stage + timestamp), click → `clock.seek(...)`.
@@ -517,33 +513,19 @@ Synergie forte avec `RND-3` : mêmes frontières de stages, mêmes couleurs — 
 timeline et la trajectoire 3D doivent partager la table de couleurs, pas en
 avoir deux.
 
-**Spec.** [`docs/navigation/02-timeline-mission.md`](../navigation/02-timeline-mission.md).
-
 #### NAV-3 — Scrub continu — ★3 ◆2 S
 
 Subordonné à NAV-2. Attention au débit : chaque `seek` reconstruit toute la
 fenêtre éphéméride (`EphemerisWorker.onSeek`) — n'émettre qu'au relâchement, ou
-étrangler. La cohabitation piste-vitesse / piste-temps ne se pose plus : la
-piste temporelle vit dans son propre widget (`NAV-2`), la capsule garde la
-sienne.
+étrangler. Trancher la cohabitation piste-vitesse / piste-temps sur le même
+widget (recommandé : deux pistes distinctes).
 
 #### NAV-4 — Breadcrumb de navigation 3D — ★3 ◆2 M
 
 Spec complète et non commencée (`ui/breadcrumb/` et
-`states/scene/BreadcrumbWidgetAppState.java` absents). Périmètre V1 réduit
-le 2026-08-12 à la seule hiérarchie du corps courant, missions exclues
-(elles ont leurs widgets dédiés) : `Solar system > Earth > Moon`. Devient
-nettement plus utile une fois les missions lunaires en place, où cette
-hiérarchie prend sa profondeur. Le dropdown des fils est reporté en V2.
-
-**Couplage avec `UI-4`.** Le breadcrumb occupe une **bande pleine largeur en
-haut d'écran**, sous laquelle tout le HUD haut-gauche s'ancre — le menu
-applicatif d'`UI-4` n'est donc plus collé au bord haut. Les deux items restent
-faisables séparément, mais la constante de marge partagée qu'`UI-4` doit
-introduire (en remplacement de `MissionDisplayPanelWidget.MARGIN_PX = 5f` et du
-`TRIGGER_HEIGHT = 28f` deviné) doit prévoir ce décalage d'origine, sinon les
-mêmes lignes se reprennent deux fois. Chaîne d'ancrage détaillée en
-[`navigation/01-breadcrumb.md`](../navigation/01-breadcrumb.md) §5.5.
+`states/scene/BreadcrumbWidgetAppState.java` absents). Devient nettement plus
+utile une fois les missions lunaires en place : la hiérarchie
+`Soleil > Terre > Lune > mission` est exactement ce que le widget sait afficher.
 
 **Spec.** [`docs/navigation/01-breadcrumb.md`](../navigation/01-breadcrumb.md).
 
@@ -1193,3 +1175,10 @@ et [`docs/brainstorm/missions.md`](../brainstorm/missions.md).
 5. **Cible du rendez-vous** — ISS livrée en dur (option A de la spec) suffit au
    MVP. L'import de TLE arbitraire (option B) est une feature UI à part entière,
    à ne pas glisser dans `MIS-6`.
+6. **Persistance des bascules d'affichage (UI-4)** — volatiles, remises à leur
+   défaut à chaque lancement, ou conservées ? Si conservées, elles n'ont rien à
+   faire dans le fichier de scénario de `UI-3` : ce sont des préférences
+   **utilisateur**, pas des données de mission — deux fichiers, pas un, sans
+   quoi rejouer le scénario d'un tiers reconfigure l'écran de celui qui
+   l'ouvre. À trancher au moment de `UI-3` ; `UI-4` peut être livré volatile
+   sans créer de dette.

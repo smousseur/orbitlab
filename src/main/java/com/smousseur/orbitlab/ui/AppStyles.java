@@ -103,6 +103,15 @@ public final class AppStyles {
   /** Margin in pixels between the screen edge and any HUD widget. */
   public static final float HUD_MARGIN_PX = 16f;
 
+  /**
+   * Height in pixels of the top-left application menu's title button — the first link of the HUD
+   * anchoring chain, which every widget stacked under it measures from.
+   */
+  public static final float HUD_MENU_HEIGHT_PX = 54f;
+
+  /** Vertical gap in pixels between two HUD widgets stacked in the same corner. */
+  public static final float HUD_STACK_GAP_PX = 8f;
+
   // -------------------------------------------------------------------------
 
   private AppStyles() {}

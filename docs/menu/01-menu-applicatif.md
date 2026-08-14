@@ -1,7 +1,8 @@
 # Spec — Menu applicatif haut-gauche (`UI-4`)
 
-> **Rédigé et tranché le 2026-08-14, non commencé** (item `UI-4` de la roadmap,
-> phase 2, ★3 ◆2 M). §4 conserve les trois variantes maquettées sur les textures
+> **Rédigé, tranché et livré le 2026-08-14** (item `UI-4` de la roadmap,
+> phase 2, ★3 ◆2 M). §9 note les deux écarts entre le code livré et §6.
+> §4 conserve les trois variantes maquettées sur les textures
 > déjà présentes dans `src/main/resources/interface/` ; **la variante A (« chip
 > formulaire ») est retenue** (§5), et §6 décrit ce qu'elle implique dans le
 > code. Les points 1 à 4 de la fiche roadmap (skin, état grisé menteur, absence
@@ -364,3 +365,30 @@ tranchées le 2026-08-14, le jour même.
 
 Ce qui reste hors de ce document et sera tranché ailleurs : le sort du toggle
 de la piste temporelle (§7), décidé en faisant `NAV-2`.
+
+---
+
+## 9. Écarts du code livré
+
+Le périmètre de §6.6 est tenu à deux détails près, tous deux découverts en
+écrivant le code.
+
+1. **`AppMenuItem` porte un cinquième composant, `separatorBefore`.** §4.1
+   demande un séparateur avant *New mission…* et §6.2 ne donnait pas d'endroit
+   où l'écrire. Le mettre sur l'entrée garde la liste déclarative : les entrées
+   d'`UI-3` diront elles-mêmes si elles ouvrent un groupe, sans que `AppMenu`
+   ait à connaître leurs identifiants. Trois fabriques
+   (`action`, `toggle`, `withSeparatorBefore`) gardent la construction lisible.
+
+2. **`ESC` : le menu doit prendre la touche à `SimpleApplication`.** §3 fait
+   fermer le menu par `ESC` sans dire que JME lie déjà cette touche à
+   `SIMPLEAPP_Exit` — un `ESC` quitte l'application aujourd'hui, et l'écouteur
+   qui le fait est privé, donc impossible à désinscrire. `MissionDisplayPanelAppState`
+   supprime le mapping et pose le sien : menu ouvert, `ESC` le ferme ; sinon il
+   appelle `stop()`. Le comportement existant est préservé à l'identique, mais
+   la touche appartient désormais au HUD — c'est là que `NAV-4` et les futures
+   surfaces viendront s'inscrire plutôt que d'en poser une seconde.
+
+`AppMenuModel` est placé dans `states/mission/`, la première des deux
+possibilités de §6.2 : c'est le paquet de l'`AppState` qui l'instancie et de
+`MissionDisplayPanelRulesTest`, à côté duquel `AppMenuModelTest` se range.
