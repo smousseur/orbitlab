@@ -266,6 +266,12 @@ opportuniste, ou à décider quoi sacrifier quand une phase déborde.
 | PHY-3 | Détecteurs MaxQ / interface + télémétrie + UI fidélité | 3 | 2 | M | PHY-1 |
 | PHY-2 | Atmosphère par défaut + recalibrage optimiseur | 5 | 4 | L | PHY-1 |
 | MIS-6 | Rendezvous / phasing sur cible TLE | 5 | 5 | XL | MIS-2, MIS-3, MIS-7 |
+| RND-5 | Repère d'affichage des trajectoires (bascule inertiel / tournant) — *confort, hors phases* | 2 | 2 | S | — |
+
+**`RND-5` n'est dans aucune phase, délibérément.** C'est un confort de lecture, pas
+un préalable : rien n'en dépend, il ne corrige aucun défaut (§6, fiche `RND-5`), et
+il est là pour être pioché un jour de creux. Le laisser hors des phases est plus
+honnête que de le glisser en fin de phase 6 où il ferait semblant d'être planifié.
 
 ---
 
@@ -446,7 +452,32 @@ qui remplace [`effects-roadmap.md`](../graphics-effects/effects-roadmap.md)
 stable, antialiasing par alpha-fade des bords, lisibilité à distance. Débloque
 ensuite les tirets animés, le halo additif et le hover (`NAV-5`).
 
-**Spec.** [`effects-roadmap.md`](../graphics-effects/effects-roadmap.md) §9.4.1.
+**Spec.** [`effects-roadmap.md`](../graphics-effects/effects-roadmap.md) §9.4.1,
+remplacé par [`ribbon-lines.md`](../graphics-effects/ribbon-lines.md).
+
+#### RND-5 — Repère d'affichage des trajectoires — ★2 ◆2 S
+
+**Pourquoi.** Une trajectoire de mission est dessinée en repère inertiel (GCRF)
+pendant que le globe tourne sous elle : six heures après le décollage, le pied de
+l'ascension est à 90° de longitude du pas de tir. **Ce n'est pas un défaut** —
+vérifié dans le code, les trois maillons sont corrects — mais rien dans l'image ne
+dit au lecteur laquelle des deux choses bouge.
+
+**Ce que c'est.** Une bascule globale à deux valeurs dans le menu applicatif,
+**défaut inertiel** (la convention de tous les outils de trajectoire, et le
+comportement actuel). En repère tournant, la trace repart du pas de tir et s'y
+ancre, au prix de la lecture orbitale : l'ellipse devient un enroulement.
+
+**Ce qui rend l'item petit** : les sommets en repère lié au corps sont cuits une
+fois à la construction de l'éphéméride, et l'affichage n'ajoute qu'une rotation de
+nœud par frame. La tête de la traînée retombe exactement sur le vaisseau sans
+traitement particulier, donc ni la caméra, ni le globe, ni le repère flottant ne
+sont touchés.
+
+**Indépendant de `RND-4`**, dans les deux sens : le ruban change la primitive
+dessinée, cette bascule change le contenu du buffer.
+
+**Spec.** [`trajectory-display-frame.md`](../graphics-effects/trajectory-display-frame.md).
 
 ---
 

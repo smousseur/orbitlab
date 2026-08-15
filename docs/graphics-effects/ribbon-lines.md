@@ -686,3 +686,12 @@ garantit qu'elle reste visible. Gratuit, mais il faut décider de la valeur.
 - **La cohabitation ruban / `FilterPostProcessor` est le seul inconnu
   technique** (§7.7). Elle se lève au lot 1, et c'est pour cela que le lot 1
   existe.
+- **Le raccord terminal n'est traité nulle part dans ce document.** La roadmap
+  l'a reversé à `RND-4` en clôturant `RND-1` (« relèvent désormais de `RND-4` »),
+  mais le §7.5 ci-dessus traite les jointures *entre segments*, pas le pivotement
+  d'environ 2° du dernier segment à chaque pas d'échantillonnage
+  ([`spacecraft-view-artefacts.md`](spacecraft-view-artefacts.md) §4.3). Le
+  ruban ne le corrige pas et ne l'aggrave pas : à densifier au lot 3 ou à sortir
+  sous son propre identifiant, mais pas à oublier une seconde fois. L'autre
+  reliquat reversé au même moment, `setDepthWrite(false)`, est lui bien couvert
+  (§7.7).
