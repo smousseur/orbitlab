@@ -13,6 +13,7 @@ public class GuiGraph {
   private final Node guiRoot = new Node("guiRoot");
   private final Node guiFrame = new Node("guiFrame");
   private final Node timelineNode = new Node("timelineNode");
+  private final Node breadcrumbNode = new Node("breadcrumbNode");
   private final Node planetBillboardsNode = new Node("planetBillboardsNode");
   private final Node telemetryNode = new Node("telemetryNode");
   private final Node missionPanelNode = new Node("missionPanelNode");
@@ -21,6 +22,7 @@ public class GuiGraph {
   public GuiGraph() {
     guiRoot.attachChild(guiFrame);
     guiFrame.attachChild(timelineNode);
+    guiFrame.attachChild(breadcrumbNode);
     guiFrame.attachChild(planetBillboardsNode);
     guiFrame.attachChild(telemetryNode);
     guiFrame.attachChild(missionPanelNode);
@@ -55,6 +57,20 @@ public class GuiGraph {
    */
   public Node getTimelineNode() {
     return timelineNode;
+  }
+
+  /**
+   * Returns the node designated for the breadcrumb band at the top of the screen.
+   *
+   * <p>Attached early, so everything transitory renders in front of it: the band is permanent
+   * chrome and reserves its own height, but the application menu's dropdown opens downwards from
+   * just under it and must win if it ever reaches back up. {@code modalNode} stays topmost
+   * regardless.
+   *
+   * @return the breadcrumb node
+   */
+  public Node getBreadcrumbNode() {
+    return breadcrumbNode;
   }
 
   /**

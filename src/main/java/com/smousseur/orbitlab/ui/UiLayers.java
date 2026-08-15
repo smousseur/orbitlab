@@ -3,9 +3,9 @@ package com.smousseur.orbitlab.ui;
 /**
  * Depth scale of the GUI bucket, and the single place that holds it.
  *
- * <p>Every GUI surface shares one depth space. {@code GuiGraph} attaches five nodes to its frame
- * and translates none of them, so a node's position in the graph decides nothing: the bucket sorts
- * on world {@code z}, in rendering as in picking, and the higher {@code z} wins both.
+ * <p>Every GUI surface shares one depth space. {@code GuiGraph} attaches its nodes to one frame and
+ * translates none of them, so a node's position in the graph decides nothing: the bucket sorts on
+ * world {@code z}, in rendering as in picking, and the higher {@code z} wins both.
  *
  * <p>The scale also orders dismissal. {@code HudSurfaces} ranks registered surfaces by their layer,
  * so the surface {@code ESC} sends away is by construction the one drawn in front. One ordering,
@@ -14,9 +14,9 @@ package com.smousseur.orbitlab.ui;
 public final class UiLayers {
 
   /**
-   * Permanent HUD: timeline, telemetry, planet billboards. The time capsule stacks its own
-   * components up to a local {@code z} of 5; the mission timeline posed above it goes to 10 (its
-   * hover tooltip), so that tooltip ties with {@link #PANEL} in world {@code z}.
+   * Permanent HUD: breadcrumb band, timeline, telemetry, planet billboards. The time capsule stacks
+   * its own components up to a local {@code z} of 5; the mission timeline posed above it goes to 10
+   * (its hover tooltip), so that tooltip ties with {@link #PANEL} in world {@code z}.
    *
    * <p>The tie is never observable: the mission display panel is anchored top-left under the
    * application menu, while the mission timeline is a 600 px band at bottom-centre, so the two

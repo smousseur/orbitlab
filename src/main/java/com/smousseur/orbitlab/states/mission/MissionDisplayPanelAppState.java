@@ -78,7 +78,9 @@ public final class MissionDisplayPanelAppState extends BaseAppState implements A
   @Override
   protected void initialize(Application app) {
     int sh = app.getCamera().getHeight();
-    float topOffset = AppStyles.HUD_MARGIN_PX;
+    // Under the breadcrumb band, not against the top edge: the band is permanent and reserves its
+    // own height (docs/navigation/01-breadcrumb.md §5.5).
+    float topOffset = AppStyles.HUD_TOP_OFFSET_PX;
 
     menu = new AppMenu(context, MENU_ITEMS);
     menu.layoutTopLeft(sh, topOffset);

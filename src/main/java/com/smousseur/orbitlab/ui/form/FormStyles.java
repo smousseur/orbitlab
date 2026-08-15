@@ -29,6 +29,17 @@ public final class FormStyles {
   /** Inner content height: WINDOW_HEIGHT (660) - HEADER_HEIGHT (120) - FOOTER_HEIGHT (72). */
   public static final float CONTENT_HEIGHT = 468f;
 
+  /**
+   * Horizontal inset of a form button. Public because it is also where such a button's skin
+   * <i>starts</i>: the {@code form} style draws backgrounds inside the insets, so the visible left
+   * edge of the application menu's chip stands this far in from the element's own origin. The
+   * breadcrumb reads it to line its segments up with that edge without measuring pixels.
+   */
+  public static final float BUTTON_INSET_X = 22f;
+
+  /** Vertical inset of a form button. */
+  public static final float BUTTON_INSET_Y = 10f;
+
   // =================================================================
   //  FORM COLOUR PALETTE
   // =================================================================
@@ -124,7 +135,7 @@ public final class FormStyles {
     b.set("background", UiKit.wizardBg9("btn-ghost", 8));
     b.set("color", TEXT_PRIMARY);
     b.set("font", UiKit.sora(13));
-    b.set("insets", new Insets3f(10, 22, 10, 22));
+    b.set("insets", new Insets3f(BUTTON_INSET_Y, BUTTON_INSET_X, BUTTON_INSET_Y, BUTTON_INSET_X));
 
     // Top-left application menu. The title button needs nothing of its own: it is a plain
     // Button(FormStyles.STYLE) and takes btn-ghost, Sora 13 and TEXT_PRIMARY from the selector

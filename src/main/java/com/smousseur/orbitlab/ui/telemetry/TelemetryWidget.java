@@ -233,7 +233,9 @@ public class TelemetryWidget implements AutoCloseable {
   public void layoutTopRight(int screenWidth, int screenHeight) {
     var size = root.getPreferredSize();
     float x = screenWidth - size.x - MARGIN_PX;
-    float y = screenHeight - MARGIN_PX;
+    // The breadcrumb band owns the top of the screen across its full width, so the top-right corner
+    // anchors under it exactly as the application menu does on the other side.
+    float y = screenHeight - AppStyles.HUD_TOP_OFFSET_PX;
     root.setLocalTranslation(x, y, UiLayers.HUD);
   }
 

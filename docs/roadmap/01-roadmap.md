@@ -36,6 +36,7 @@ lisez qu'une section, lisez le §3.
 | **`NAV-2` — timeline indexée sur le temps** (capsule jumelle, barre de phases, marqueurs déclusterisés, graduations `T+`, seek au clic) | `ui/timeline/mission/`, `states/time/MissionTimelineAppState.java`, `states/time/MissionTimelineVisibility.java` ; `TimeAxisTest`, `TimeAxisTickTest`, `PhaseMarkerClusterTest`, `MissionTimelineVisibilityTest`, `SpeedStepperIndexTest` |
 | **`NAV-3` — scrub continu** (drag sur la piste, seuil de 3 px, émission étranglée à 10 Hz, état de lecture restauré au lâcher) | `ui/timeline/mission/ScrubGesture.java` + câblage du listener de `MissionTimelineWidget` ; `ScrubGestureTest` |
 | **`RND-4` — ribbon billboardé** (orbites et trajectoires en rubans face-caméra, largeur en pixels, fondu d'un pixel exact, expansion en vertex shader) | `MatDefs/Fx/Ribbon.j3md` + `.vert` / `.frag`, `engine/scene/RibbonMeshBuilder.java`, `OrbitLineFactory`, `MissionTrajectoryRenderer`, `AssetFactory.createRibbon` ; `RibbonMeshBuilderTest` |
+| **`NAV-4` — breadcrumb** (bande haute permanente, chaîne d'ancêtres du corps focalisé, remontée en un clic) | `ui/breadcrumb/BreadcrumbWidget.java` + `BreadcrumbStyles.java`, `states/scene/BreadcrumbWidgetAppState.java`, `GuiGraph.getBreadcrumbNode`, `AppStyles.BREADCRUMB_BAND_HEIGHT_PX` / `HUD_TOP_OFFSET_PX` |
 
 **Reste ouvert de l'ancienne roadmap** : le feedback de progression pendant
 l'optimisation, repris ici en `UI-2`. La vue détail avec résultats
@@ -101,7 +102,7 @@ mission calculée affiche ce qu'elle a atteint, orbite et écart à la cible, et
 dit pourquoi quand elle échoue (`UI-1`) ; sa durée est une décision explicite
 plutôt qu'une constante (`MIS-8`).
 
-### Phase 2 — Navigation, temps, caméra · ~2,5 semaines
+### ~~Phase 2 — Navigation, temps, caméra~~ · **soldée le 2026-08-15**
 
 > Rendre la scène et la timeline parcourables. C'est le bloc « timeline et
 > navigation 3D » + « transitions de caméra ». `NAV-3` suit `NAV-2` ; `NAV-4`
@@ -109,6 +110,8 @@ plutôt qu'une constante (`MIS-8`).
 > l'ordre à tenir : la spec de la piste temporelle demandait de recopier
 > `MissionPanelTrigger` (style et `setEnabled`), qui n'existe plus. `NAV-2`
 > trouve à la place un sélecteur Lemur et une sémantique de coche.
+>
+> **Les sept items sont livrés.** La phase 3 peut démarrer sans reliquat.
 
 | ID | Item | ★ | ◆ | Taille |
 |---|---|:-:|:-:|:-:|
@@ -118,7 +121,7 @@ plutôt qu'une constante (`MIS-8`).
 | ~~NAV-2~~ | ~~Timeline indexée sur le temps + marqueurs d'événements~~ — **résolu le 2026-08-15** | 4 | 3 | M |
 | ~~NAV-3~~ | ~~Scrub continu (glisser sur la piste)~~ — **résolu le 2026-08-15** | 3 | 2 | S |
 | ~~RND-4~~ | ~~Ribbon billboardé (orbites + trajectoires)~~ — **résolu le 2026-08-15** | 4 | 3 | M |
-| NAV-4 | Breadcrumb de navigation 3D | 3 | 2 | M |
+| ~~NAV-4~~ | ~~Breadcrumb de navigation 3D~~ — **résolu le 2026-08-15** | 3 | 2 | M |
 
 > **Les bascules d'affichage ne sont pas dans `UI-4`.** La table portait une
 > seconde ligne `UI-4` — « menu HUD + bascules d'affichage (labels, orbites) » —
@@ -136,16 +139,18 @@ tard il aurait coûté plus cher : chaque fonction globale livrée sans contenan
 se pose en bouton supplémentaire à côté du bouton « Missions ». Le contenant
 existe maintenant.
 
-**Fin de phase quand** : on atteint n'importe quel instant d'une mission à la
-souris, on change de corps focalisé sans cut, et le seul élément de HUD visible
-en permanence ne détonne plus avec le reste de l'interface.
+**Fin de phase — atteinte.** On atteint n'importe quel instant d'une mission à la
+souris, au clic comme au glisser (`NAV-2`, `NAV-3`) ; on change de corps focalisé
+sans cut (`NAV-1`), et désormais sans passer par la vue 3D pour retrouver le
+parent (`NAV-4`) ; le HUD permanent a un contenant, une modalité et une pile de
+renvoi plutôt qu'une collection de boutons (`UI-4`, `UI-5`), et une trajectoire
+reste lisible à toute distance (`RND-4`).
 
-> **État au 2026-08-15 : six items sur sept résolus.** Les trois critères de fin
-> de phase sont atteints — `NAV-2` et `NAV-3` donnent l'accès à n'importe quel
-> instant d'une mission au clic comme au glisser, `NAV-1` donne le changement de
-> focus sans cut, `UI-4` et `UI-5` donnent le HUD et sa modalité, et `RND-4`
-> donne enfin une trajectoire lisible à toute distance. Reste **`NAV-4`**
-> (breadcrumb), non bloquant pour les phases suivantes.
+> **Ce que la phase laisse pour plus tard**, et qui n'appartient à aucun de ses
+> items : le réglage à l'œil de `MUTING_STEP` sur le ruban (fiche `RND-3`), la
+> section interaction de `MissionTimelineWidget` qui mériterait d'être extraite
+> (fiche `NAV-3`), et la descente vers les fils du breadcrumb, explicitement
+> reportée en V2 par sa spec (fiche `NAV-4`).
 
 ### Phase 3 — Socle physique et mission partagé · ~4,5 semaines
 
@@ -251,7 +256,7 @@ opportuniste, ou à décider quoi sacrifier quand une phase déborde.
 | ~~RND-2~~ | ~~Filtrage anisotrope (MSAA déjà actif)~~ — résolu | 2 | 1 | S | — |
 | FX-2 | Éclipses / pénombre inter-corps | 4 | 3 | M | — |
 | FX-3 | Particules de tuyère | 4 | 2 | M | — |
-| NAV-4 | Breadcrumb de navigation 3D | 3 | 2 | M | — |
+| ~~NAV-4~~ | ~~Breadcrumb de navigation 3D~~ — résolu | 3 | 2 | M | — |
 | UI-2 | Feedback de progression pendant l'optimisation | 3 | 2 | M | — |
 | ~~UI-4~~ | ~~Menu applicatif haut-gauche (remplace le bouton « Missions »)~~ — résolu | 3 | 2 | M | — |
 | ~~UI-5~~ | ~~Surfaces, modalité et pile de renvoi `ESC`~~ — résolu | 3 | 2 | M | UI-4 (livré) |
@@ -494,9 +499,11 @@ seconde pour une donnée inchangée.
 **Ce qui reste à juger à l'œil, et ne peut pas l'être autrement.** La
 cohabitation du fondu alpha avec le `FilterPostProcessor` (spec §7.7, le seul
 inconnu technique du lot), et les largeurs de départ — 2,5 px pour une orbite,
-3,5 px pour une trajectoire (spec §7.4, lot 4). Ce qui *a* été vérifié :
-l'application démarre en profil Core / GLSL 1.50 et les shaders compilent sans
-erreur.
+3,5 px pour une trajectoire (spec §7.4, lot 4). Ce qui *a* été vérifié : une
+session de 24 minutes en profil Core / GLSL 1.50, orbites planétaires **et**
+trajectoire d'une LEO calculée puis rendue, sans une seule exception au log —
+donc shaders compilés, uniforms liés, et les deux consommateurs exercés en
+conditions réelles.
 
 **Ce que cela ouvre**, et qui était la vraie valeur de l'item : la largeur et la
 couleur sont des uniforms, donc `NAV-5` et la mise en avant de la mission active
@@ -692,14 +699,64 @@ section interaction forme désormais un bloc qui aurait sa place en collaborateu
 à côté de `PhaseBar`, `PhaseMarkers` et `TimelineTooltip`. Non fait, hors
 périmètre de l'item.
 
-#### NAV-4 — Breadcrumb de navigation 3D — ★3 ◆2 M
+#### ~~NAV-4 — Breadcrumb de navigation 3D — ★3 ◆2 M~~ — **RÉSOLU le 2026-08-15**
 
-Spec complète et non commencée (`ui/breadcrumb/` et
-`states/scene/BreadcrumbWidgetAppState.java` absents). Devient nettement plus
-utile une fois les missions lunaires en place : la hiérarchie
-`Soleil > Terre > Lune > mission` est exactement ce que le widget sait afficher.
+**Livré.** `ui/breadcrumb/BreadcrumbWidget.java` (la bande et ses segments),
+`ui/breadcrumb/BreadcrumbStyles.java` (quatre sélecteurs Lemur déclarés dans le
+style `form`, aucun override d'attribut à la construction) et
+`states/scene/BreadcrumbWidgetAppState.java` (poll de `(mode, body)`,
+reconstruction sur changement seul). Côté hôte : un `breadcrumbNode` dans
+`GuiGraph`, et deux constantes dans `AppStyles` —
+`BREADCRUMB_BAND_HEIGHT_PX` et `HUD_TOP_OFFSET_PX`, dont dépendent maintenant le
+menu applicatif, le panneau des missions et la télémétrie.
 
-**Spec.** [`docs/navigation/01-breadcrumb.md`](../navigation/01-breadcrumb.md).
+**`NAV-1` avait déjà réglé la moitié du travail.** La spec §5.2 demandait de
+rendre public `PlanetPoseAppState.onSelectPlanet` ; entre-temps ce clic 3D a été
+routé vers `CameraTransitionAppState.requestPlanet`, qui est devenu le point
+d'entrée unique du changement de focus. Le widget s'y branche tel quel :
+`PlanetPoseAppState` n'est pas touché, et un segment cliqué est **exactement** le
+clic 3D — même animation, mêmes gardes — comme le segment racine est exactement
+la touche `R`.
+
+**Trois décisions prises à l'écran, contre la lettre de la spec.**
+
+1. **Segments alignés à gauche**, pas centrés (spec §3 et §5.1). Une rangée
+   centrée glisse latéralement à chaque changement de focus et se relit comme un
+   autre widget ; alignée, elle démarre sur la verticale du menu et n'en bouge
+   plus. Le texte — pas le cadre — est posé sur le bord gauche visible de la
+   pastille `ORBITLAB`, dérivé de `HUD_MARGIN_PX + FormStyles.BUTTON_INSET_X`
+   plutôt que mesuré, l'inset du bouton étant sorti en constante pour cela.
+2. **L'écart sous la bande est `HUD_STACK_GAP_PX` (8 px)**, quand la table de la
+   spec §5.5 posait `BREADCRUMB_BAND_HEIGHT_PX + HUD_MARGIN_PX`. Ce qui sépare la
+   bande de la ligne du dessous est un empilement de widgets, pas un bord d'écran.
+3. **Le fond de bande est tranché** — bleu très sombre à 10 % d'alpha : c'est la
+   seule valeur que la spec §5.5 renvoyait explicitement au maquettage. Elle tient
+   en une ligne du sélecteur.
+
+**Un point de la spec étendu.** §5.5 ne cadrait que la chaîne haut-gauche ; la
+télémétrie, ancrée haut-droite à `screenHeight − HUD_MARGIN_PX`, serait passée
+sous la bande. Elle mesure désormais depuis la même constante. Le seul rescapé
+est le plafond de `WindowDragHandler`, laissé à la marge HUD **délibérément** :
+réserver toute la chaîne d'ancrage sur toute la largeur ne laissait que deux
+pixels de course verticale à la fenêtre de gestion, et ce compromis est déjà
+écrit dans `clamp`. La bande peut donc recouvrir le coin gauche d'un en-tête
+traîné tout en haut.
+
+**Vérifié.** Application lancée, captures aux trois profondeurs (`Solar system`,
+`> Earth`, `> Earth > Moon`) : hauteur de bande constante, menu et panneau posés
+dessous sans trou ni recouvrement, segment courant en accent, ancêtres en
+secondaire. **Non vérifié faute de souris scriptable** : le clic sur un segment
+et le cas `SPACECRAFT` (§6, points 4, 5 et 7 de la spec).
+
+**Reste ouvert.** La chaîne d'ancêtres et la règle « qui est cliquable » n'ont
+pas de test unitaire, alors qu'elles sont du modèle pur et se testeraient comme
+`AppMenuModelTest`. Et la descente vers les fils reste la V2 de la spec (§7) :
+c'est elle qui rendra le widget vraiment utile une fois les missions lunaires en
+place, `Solar system > Earth > Moon` étant déjà exactement ce qu'il affiche.
+
+**Spec.** [`docs/navigation/01-breadcrumb.md`](../navigation/01-breadcrumb.md) —
+à relire avant la V2 : ses §3 et §5.1 décrivent encore des segments centrés, et
+son §5.2 un `PlanetPoseAppState` à modifier.
 
 #### NAV-5 — Hover « wow » — ★3 ◆2 M
 

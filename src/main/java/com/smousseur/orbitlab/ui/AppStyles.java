@@ -5,6 +5,7 @@ import com.jme3.asset.AssetNotFoundException;
 import com.jme3.font.BitmapFont;
 import com.jme3.math.ColorRGBA;
 import com.simsilica.lemur.GuiGlobals;
+import com.smousseur.orbitlab.ui.breadcrumb.BreadcrumbStyles;
 import com.smousseur.orbitlab.ui.form.FormStyles;
 import com.smousseur.orbitlab.ui.timeline.TimelineStyles;
 import org.apache.logging.log4j.LogManager;
@@ -14,8 +15,8 @@ import org.apache.logging.log4j.Logger;
  * Central registry for OrbitLab's Lemur GUI visual tokens and style initialization.
  *
  * <p>All shared HUD colours and layout constants are defined here so every widget stays visually
- * consistent. Individual style classes ({@link TimelineStyles}, {@link FormStyles}) reference these
- * tokens instead of repeating raw literals.
+ * consistent. Individual style classes ({@link TimelineStyles}, {@link FormStyles}, {@link
+ * BreadcrumbStyles}) reference these tokens instead of repeating raw literals.
  *
  * <p>Call {@link #init(AssetManager)} once from {@code OrbitLabApplication.simpleInitApp()} after
  * {@code GuiGlobals.initialize()} and {@code BaseStyles.loadGlassStyle()}.
@@ -104,13 +105,33 @@ public final class AppStyles {
   public static final float HUD_MARGIN_PX = 16f;
 
   /**
-   * Height in pixels of the top-left application menu's title button — the first link of the HUD
+   * Height in pixels of the breadcrumb band running across the top of the screen. Fixed, and
+   * deliberately independent of the depth of the hierarchy it displays: it is the origin of the
+   * HUD's vertical anchoring chain, so a height that varied with the focus would move everything
+   * below it every time the camera changed body ({@code docs/navigation/01-breadcrumb.md} §5.5).
+   */
+  public static final float BREADCRUMB_BAND_HEIGHT_PX = 36f;
+
+  /**
+   * Height in pixels of the top-left application menu's title button — the second link of the HUD
    * anchoring chain, which every widget stacked under it measures from.
    */
   public static final float HUD_MENU_HEIGHT_PX = 54f;
 
   /** Vertical gap in pixels between two HUD widgets stacked in the same corner. */
   public static final float HUD_STACK_GAP_PX = 8f;
+
+  /**
+   * Pixels between the top of the screen and the first HUD widget under the breadcrumb band. The
+   * band is reserved permanently — no other widget may occupy that height — so nothing anchored to
+   * the top edge measures from the edge itself.
+   *
+   * <p>What separates the two is the stacking gap, not the screen-edge margin: the band is a widget
+   * above them, not an edge to keep clear of, and the row below reads as detached from it at 16 px.
+   * Declared after the two constants it sums, which is what the language requires of a field
+   * initialised from its own class.
+   */
+  public static final float HUD_TOP_OFFSET_PX = BREADCRUMB_BAND_HEIGHT_PX + HUD_STACK_GAP_PX;
 
   // -------------------------------------------------------------------------
 
@@ -143,5 +164,8 @@ public final class AppStyles {
     UiKit.init(assetManager);
     FormStyles.init(assetManager);
     TimelineStyles.init(assetManager);
+    // No asset manager: the breadcrumb selectors state only what differs from the form style they
+    // extend, and fonts are not part of it.
+    BreadcrumbStyles.init();
   }
 }
