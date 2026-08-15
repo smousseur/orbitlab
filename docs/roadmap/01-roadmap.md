@@ -275,11 +275,25 @@ opportuniste, ou à décider quoi sacrifier quand une phase déborde.
 | PHY-2 | Atmosphère par défaut + recalibrage optimiseur | 5 | 4 | L | PHY-1 |
 | MIS-6 | Rendezvous / phasing sur cible TLE | 5 | 5 | XL | MIS-2, MIS-3, MIS-7 |
 | RND-5 | Repère d'affichage des trajectoires (bascule inertiel / tournant) — *confort, hors phases* | 2 | 2 | S | — |
+| UI-6 | Fenêtres déplaçables, empilement par focus, modalité du wizard — *hors phases* | 3 | 2 | M | UI-5 (livré) |
+| UI-7 | Tooltips sur les contrôles + socle de survol partagé (absorbe `BUG-4`) — *hors phases* | 3 | 2 | M | — |
 
 **`RND-5` n'est dans aucune phase, délibérément.** C'est un confort de lecture, pas
 un préalable : rien n'en dépend, il ne corrige aucun défaut (§6, fiche `RND-5`), et
 il est là pour être pioché un jour de creux. Le laisser hors des phases est plus
 honnête que de le glisser en fin de phase 6 où il ferait semblant d'être planifié.
+
+**`UI-6` non plus, et pour une raison différente.** Il ne dépend de rien et rien
+n'en dépend, mais il n'est pas gratuit dans le temps : chaque surface livrée d'ici
+là est une fenêtre de plus à reprendre. Le bon moment n'est donc pas « un jour de
+creux » mais « avant la prochaine fenêtre », et c'est `UI-3` (persistance) qui la
+posera vraisemblablement. À piocher à ce moment-là, ou plus tôt si le nombre de
+fenêtres ouvertes simultanément devient gênant à l'usage.
+
+**`UI-7` obéit à la même logique, en plus marqué.** Son coût est proportionnel au
+nombre de contrôles à reprendre — 22 sites de survol aujourd'hui, un de plus à
+chaque widget livré entre-temps. Il ne bloque rien, mais c'est le seul item de la
+liste dont le prix augmente mécaniquement avec le temps.
 
 ---
 
@@ -1432,6 +1446,223 @@ l'écran plutôt que par un test (§9).
 
 ---
 
+#### UI-6 — Fenêtres déplaçables, empilement par focus, modalité du wizard — ★3 ◆2 M *(ajout)*
+
+**Pourquoi.** `UI-5` a livré la mécanique et ne l'a appliquée qu'à une surface :
+le panneau de gestion se déplace par son bandeau, borné par `WindowDragHandler`.
+Sa fiche range explicitement l'**empilement par focus** dans son « ce qu'on ne
+fait pas ». C'est cet écart qu'on solde ici, plus la généralisation du glisser aux
+autres fenêtres.
+
+État des lieux — cinq natures de surface, trois comportements :
+
+| Surface | Couche | Déplaçable | Bandeau |
+|---|---|---|---|
+| Panneau de gestion (`MissionPanelWidget`) | `WINDOW` (20) | oui | `PanelHeader`, 88 px |
+| Panneau d'affichage (`MissionDisplayPanelWidget`) | `PANEL` (10) | non — ré-ancré haut-gauche (`:183`) | `DisplayPanelHeader`, 36 px |
+| Wizard (`MissionWizardWidget`) | `MODAL` (101) | non — modal, centré (`:281`) | — |
+| `ConfirmDialog` | `DIALOG` (201) | non, et c'est correct | — |
+| HUD (capsule, timeline, télémétrie, breadcrumb) | `HUD` (0) | non, et c'est correct | — |
+
+« Toutes les fenêtres » désigne donc les deux panneaux, plus le wizard s'il cesse
+d'être modal. Le HUD est ancré par nature et un dialogue bloquant n'a pas à fuir.
+Il faut un critère mécanique plutôt qu'un arbitrage par widget : **est une fenêtre
+ce qui porte un bandeau de préhension.** Poser ce critère dans le code — une
+interface, ou un composant `Window` qui impose le bandeau — évite d'avoir à
+retrancher la question à chaque nouveau widget.
+
+**Le point dur : « actualiser le z » casse un invariant énoncé.** Dans
+`UiLayers`, l'échelle de profondeur **est aussi** l'ordre de renvoi d'`ESC` —
+`HudSurfaces.topmostOpen()` classe sur `layer()`, et `UI-5` en a fait une
+propriété revendiquée (« one ordering, two uses »). Deux conséquences immédiates :
+
+1. Remonter une fenêtre au clic change la cible d'`ESC`.
+2. `HudSurface.layer()` est un `float` figé dans le record, fixé une fois pour
+   toutes à l'enregistrement (`HudSurface.java:18-19`). Un `z` qui bouge à chaud
+   laisserait le registre classer sur une valeur périmée — donc `layer` doit
+   devenir une valeur lue à la demande, comme `openCheck` l'est déjà, ou être
+   remplacée par la lecture du `z` réel du spatial.
+
+Sur le fond, deux issues :
+
+- **(a) assumer** que les deux ordres restent le même : `ESC` renvoie ce qui est
+  devant, et ce qui est devant est ce qu'on vient de cliquer. Cohérent, et ne
+  coûte que le point 2 ci-dessus.
+- **(b) dissocier** ordre de rendu et ordre de renvoi. Contredit `UI-5` et double
+  l'état à tenir, pour un gain qui reste à formuler.
+
+Recommandation : **(a)**, avec une contrainte non négociable — *le rehaussement
+réordonne à l'intérieur d'une bande, jamais entre bandes.* Une fenêtre ne doit
+jamais passer devant le menu applicatif ni devant un modal. Concrètement
+`z = WINDOW + k`, avec `k` un ordinal compact borné par l'écart à la bande
+suivante (`MENU_CATCHER − WINDOW = 20`), soit vingt fenêtres empilables — très
+au-delà du besoin. Corollaire : si le panneau d'affichage devient déplaçable, il
+doit **rejoindre la bande `WINDOW`**. Laisser deux fenêtres qui peuvent se
+recouvrir dans deux bandes distinctes, c'est garder un ordre figé sous un
+mécanisme censé le libérer.
+
+**À faire.**
+
+1. **Extraire le trio qui fait une fenêtre** — bandeau, `WindowDragHandler`,
+   placement initial puis clamp au redimensionnement — hors de
+   `MissionPanelWidget`. Il en existe un exemplaire, il en faut deux, et la
+   troisième copie est prévisible (le wizard) : c'est exactement le cas où
+   `dette-technique.md` §6.3 demande de factoriser à la deuxième.
+2. **Rendre le panneau d'affichage déplaçable**, en corrigeant le piège déjà
+   rencontré : il se **repositionne** sur son ancrage
+   (`MissionDisplayPanelWidget:183`), donc il reviendrait se coller en haut à
+   gauche à chaque reconstruction de liste. La règle inverse est déjà écrite et
+   appliquée à l'autre fenêtre — placer à la première frame, ne plus y toucher
+   (`MissionPanelWidget:395`).
+3. **Registre d'empilement** porté par `ApplicationContext` (la règle « pas de
+   `getState()` » interdit que les `AppState` concernés s'interrogent) : il
+   connaît les fenêtres ouvertes, attribue les `k`, les réattribue au clic et les
+   compacte à la fermeture. Le clic doit être capté sur la **racine** de la
+   fenêtre et sans consommer l'événement : cliquer une ligne de mission doit
+   remonter la fenêtre *et* sélectionner la ligne.
+4. **Aucune persistance.** Position et ordre repartent du défaut à chaque
+   lancement. `UI-5` a déjà exclu la position sur disque, et la question plus
+   large des préférences utilisateur est ouverte en §8.6 — la rouvrir ici
+   mélangerait deux chantiers.
+
+**La modalité du wizard.** Deux faits, pas une préférence :
+
+- **Pour la garder modale** — le wizard porte un état non enregistré ; c'est
+  l'argument qu'`UI-5` a retenu et rien ne l'a périmé. Une fenêtre non modale
+  qu'on peut perdre derrière une autre avec un formulaire à moitié rempli est un
+  piège, et `confirmDiscard` ne protège que la fermeture explicite.
+- **Contre** — `OrbitLabApplication:141` coupe l'entrée souris de la caméra tant
+  que `isWizardVisible()`. Tel quel, un wizard non modal **gèlerait la navigation
+  3D** pendant toute sa présence à l'écran, c'est-à-dire précisément quand on
+  voudrait regarder la scène. Démodaliser impose donc de revoir cette condition :
+  la caméra doit céder la souris quand le curseur survole une surface, pas quand
+  une surface existe.
+
+Le besoin derrière la question — *consulter la liste des missions pendant la
+création* — mérite d'être constaté avant de payer les deux changements. S'il ne
+se manifeste pas, garder le wizard modal est la réponse la moins chère ; et
+l'écrire noir sur blanc évite de rouvrir le débat tous les trois mois. Question
+rangée en **§8.7**.
+
+**Ce qu'on ne fait pas.** Redimensionnement, réduction en barre, ancrage
+magnétique aux bords, positions persistées sur disque, fusion des deux panneaux
+mission. Même périmètre exclu qu'`UI-5`, à ceci près que l'empilement par focus
+en sort.
+
+**Validation.** Testables sans contexte GL : l'attribution des ordinaux (bande
+respectée, pas de collision, compactage stable à la fermeture d'une fenêtre du
+milieu) et le classement de `HudSurfaces` sous un `layer` devenu mobile. Le clamp
+l'est déjà (`WindowDragHandlerTest`, 11 tests). À vérifier à l'écran, comme
+`UI-5` l'avait fait pour les mêmes raisons : que le picking suive le nouveau `z`
+sans reconstruction, qu'une fenêtre remontée passe bien **sous** le menu
+applicatif, et que deux fenêtres qui se recouvrent supportent le clic alterné
+sans scintillement d'ordre.
+
+**Spec.** À écrire avant de coder — `docs/ui/02-fenetres-et-empilement.md`. Les
+deux points qui la justifient : le choix (a)/(b) sur l'unicité de l'ordre, et le
+sort du wizard. Le reste est de l'exécution.
+
+---
+
+#### UI-7 — Tooltips sur les contrôles, et le socle de survol qui les porte — ★3 ◆2 M *(ajout)*
+
+**Pourquoi.** Plusieurs contrôles n'ont pour toute étiquette qu'une icône, et
+rien ne dit ce qu'ils font tant qu'on ne les a pas cliqués : les trois icônes de
+ligne du panneau d'affichage (télémétrie, visibilité, engrenage —
+`DisplayRowIcons`), les actions de ligne du panneau de gestion (`RowActionIcons`),
+les chevrons de pagination (`PaginationBar`), et surtout le contrôle segmenté
+*Fast / Balanced / Precise* (`ModeSegmentedControl`), dont les trois pictogrammes
+n'ont aucune chance d'être devinés. Le critère est celui-là, et il vaut mieux
+qu'une liste : **un contrôle doit une infobulle dès que son étiquette est une
+icône, ou qu'elle est tronquée.** Les entrées de menu, qui portent un libellé,
+n'en ont pas besoin.
+
+**« Mutualiser ce comportement » est en réalité le cœur de l'item.** Une
+infobulle se déclenche sur le couple `mouseEntered` / `mouseExited` — exactement
+celui que 22 fichiers de `ui/` recâblent déjà à la main pour leurs effets de
+survol ([`BUG-4`](../bugs.md#bug-4--hover-des-widgets-non-uniforme)). Livrer les
+infobulles sur leur propre listener donnerait 23 sites au lieu de 22, et deux
+écouteurs concurrents sur les mêmes spatiaux. Les deux chantiers n'en font donc
+qu'un, et l'ordre est imposé : **le helper de survol partagé d'abord, l'infobulle
+comme premier client de ce helper.** À ce titre `UI-7` absorbe `BUG-4`, selon la
+convention de `docs/bugs.md` (un bug qui s'avère être un chantier est promu en
+item de roadmap).
+
+**L'antériorité existe, mais elle n'est pas réutilisable telle quelle.**
+`TimelineTooltip` (dans `ui/timeline/mission/`) est une infobulle qui marche et
+qui a été pensée — mais pour un seul emplacement. Quatre de ses choix sont
+locaux, et chacun est un point de conception à reprendre :
+
+| Choix de `TimelineTooltip` | Pourquoi il ne se généralise pas |
+|---|---|
+| Classe *package-private*, attachée à la racine du widget avec un `z` **local** (`Z_TOOLTIP = 10f`) | Le bucket GUI trie sur le `z` **monde**. Une infobulle héritant du `z` de son panneau (`PANEL` = 10) passerait derrière la fenêtre de gestion (`WINDOW` = 20). |
+| La carte s'ouvre **vers le haut**, et le Javadoc explique pourquoi (`:59-64`) | Le raisonnement est juste, et il est propre à la bande la plus basse de l'écran. Ailleurs, il faut décider selon la place disponible. |
+| Largeur estimée au caractère (`CHAR_WIDTH = 5.4f`) | Exact au pixel pour la police bitmap monospace à 10 px, faux pour toute autre. L'UI en utilise plusieurs (IBM Plex Mono 11, Sora 13). |
+| Reconstruite seulement quand le texte change (`:80-83`) | Celui-là se garde : c'est la protection contre une allocation de labels par frame, et une infobulle ancrée au contrôle en aura d'autant moins besoin. |
+
+**Décisions à prendre — c'est la spec, pas l'implémentation.**
+
+1. **Une couche à elle.** Une infobulle doit passer devant tout, y compris devant
+   un dialogue bloquant dont elle décrit un bouton : `UiLayers.TOOLTIP` au-dessus
+   de `DIALOG` (201), donc 300. **Et elle ne s'enregistre pas dans
+   `HudSurfaces`** : `UI-5` a posé que la couche *est* l'ordre de renvoi d'`ESC`,
+   or `ESC` n'a pas à « fermer » une infobulle — elle disparaît d'elle-même. C'est
+   la première surface devant tout et absente du registre ; le noter dans le
+   Javadoc d'`UiLayers` évite qu'on l'y inscrive par symétrie.
+2. **Ancrée au contrôle, pas au curseur.** `TimelineTooltip` suit le curseur parce
+   qu'elle décrit une *position* sur une piste. Une infobulle de bouton décrit le
+   bouton : elle doit se poser à côté de lui et ne plus bouger, sans quoi elle
+   tremble sous la main. Placement avec bascule (au-dessus / en dessous / à
+   gauche / à droite) selon la place restante, plutôt qu'un clamp — un clamp la
+   ferait glisser sous le curseur.
+3. **Le délai, et donc qui tient l'horloge.** Une infobulle immédiate est
+   agressive, un survol de traversée ne doit rien déclencher : ~500 ms d'attente,
+   et une période « chaude » où passer d'un bouton au voisin affiche sans
+   attendre. Les listeners Lemur ne reçoivent pas de `tpf` : soit un `AppState`
+   unique fait avancer le gestionnaire d'infobulles, soit on échantillonne
+   `nanoTime` dans les événements. Le premier est plus honnête et reste un seul
+   `AppState`.
+4. **Mesure du texte.** Sortir de l'estimation au caractère, ou la rendre
+   dépendante de la police. **Piège connu** : les polices bitmap du HUD échouent
+   *en silence* sur une taille non embarquée ou un glyphe absent — le signe moins
+   U+2212 en particulier. Un texte d'infobulle est du texte arbitraire, donc
+   c'est exactement là que ça se reproduira ; fixer le jeu de caractères autorisé,
+   ou vérifier la police retenue, fait partie de la décision.
+
+**À faire.**
+
+1. Le helper de survol partagé (le composant que `BUG-4` réclame) : un point
+   d'entrée unique qui pose *un* listener et distribue à ses clients — skin de
+   survol, infobulle, curseur. Contrat d'états à écrire d'abord : *idle /
+   survolé / actif-sélectionné / désactivé / focus*, lesquels s'excluent, et ce
+   que chacun modifie.
+2. Le gestionnaire d'infobulles : une instance, portée par `ApplicationContext`
+   (pas de `getState()`), qui détient la carte unique, son délai et son
+   placement. Une seule infobulle à l'écran à la fois — c'est aussi ce qui évite
+   d'en avoir deux orphelines quand un panneau se reconstruit sous le curseur.
+3. Migration des 22 sites, et pose des textes sur les contrôles listés plus haut.
+4. **Un contrôle désactivé garde son infobulle**, et c'est même là qu'elle sert le
+   plus — elle peut dire *pourquoi* il est désactivé. À noter parce que le code
+   actuel fait l'inverse à un endroit : `ModeSegmentedControl:105-108` sort avant
+   de poser le moindre listener quand le segment est inerte.
+
+**Ce qu'on ne fait pas.** Pas d'infobulle riche (mise en forme, icône, lien),
+pas d'aide contextuelle ni de tour guidé, pas de raccourci clavier affiché dans
+la carte tant qu'il n'existe pas de table de raccourcis, pas de traduction.
+
+**Validation.** Testable sans contexte GL : la machine à états du délai (rien
+avant 500 ms, affichage après, période chaude entre deux contrôles voisins), le
+choix de placement selon la place restante (les quatre bascules, aux quatre
+coins de l'écran), et l'unicité de la carte. À l'écran : qu'une infobulle
+ouverte sur un bouton de dialogue passe bien devant le dialogue, et qu'un
+panneau reconstruit sous le curseur n'en laisse pas une derrière lui.
+
+**Spec.** À écrire — `docs/ui/03-survol-et-infobulles.md`. Le contrat d'états du
+§1 est le livrable qui compte : sans lui, la mutualisation reproduira les
+divergences actuelles avec de nouvelles valeurs.
+
+---
+
 ## 7. Backlog non planifié
 
 Gardé hors phases, à remonter si le besoin se manifeste :
@@ -1498,3 +1729,11 @@ et [`docs/brainstorm/missions.md`](../brainstorm/missions.md).
    quoi rejouer le scénario d'un tiers reconfigure l'écran de celui qui
    l'ouvre. À trancher au moment de `UI-3` ; `UI-4` peut être livré volatile
    sans créer de dette.
+7. **Modalité du wizard de création (UI-6)** — reste-t-il modal ? L'argument
+   d'`UI-5` (état non enregistré, perdable derrière une autre fenêtre) tient
+   toujours ; le coût de la bascule n'est pas dans le wizard mais dans la
+   caméra, qui refuse aujourd'hui la souris tant que le wizard *existe* et non
+   tant qu'il est *survolé* (`OrbitLabApplication:141`). À ne trancher que sur
+   un besoin constaté — consulter la liste des missions pendant la création.
+   Recommandation par défaut : le garder modal et l'écrire, plutôt que de
+   laisser la question ouverte indéfiniment.
