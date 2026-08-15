@@ -180,6 +180,27 @@ public final class MissionTimelineWidget implements AutoCloseable {
 
   private boolean pinnedPast;
 
+  /** The click-vs-drag decision for the capture panel's three intents ({@code NAV-3}). */
+  private final ScrubGesture gesture = new ScrubGesture();
+
+  /**
+   * Where the drag has put the indicator, in the widget's local track space. A plain {@code float}
+   * paired with {@link ScrubGesture#isDragging()} rather than a nullable {@code Float}: the gesture
+   * already owns the "is there a drag" bit, and a second, weaker encoding of it would be one more
+   * thing to keep in agreement. Meaningless while no drag is in progress, and never read then.
+   */
+  private float dragX;
+
+  /**
+   * The clock's play state captured when the drag began, to be restored when it ends.
+   *
+   * <p><b>The speed is deliberately not captured with it.</b> START resets the speed to ×1 because
+   * it is a "go back to the beginning and look at the launch" command; a scrub is not, and
+   * resetting the speed on every drag would silently overwrite a setting the user made — many times
+   * per session, since dragging is the cheapest gesture on this widget.
+   */
+  private boolean resumePlaying;
+
   /**
    * Builds the widget's shell and its content. Nothing is on screen until {@link #setVisible} is
    * called: the root is not attached to the GUI node here.
@@ -290,10 +311,21 @@ public final class MissionTimelineWidget implements AutoCloseable {
   /**
    * Moves the playhead, or pins it to the bound it has passed.
    *
+   * <p><b>A drag owns the indicator outright.</b> While one is in progress the clock is not the
+   * authority on where the playhead belongs: seeks go out at {@link ScrubGesture#EMIT_INTERVAL_MS},
+   * so a frame landing between two emissions would read a {@code now} that is up to 100 ms of
+   * cursor travel stale and pull the playhead back to the last emitted position. At 60 frames for
+   * 10 emissions that is not a subtle discrepancy — it is a visible 10 Hz stutter under a cursor
+   * moving smoothly. So the drag position wins, and the clock catches up on release.
+   *
    * @param now the current simulation date
    */
   public void updateNow(AbsoluteDate now) {
     if (axis == null) {
+      return;
+    }
+    if (gesture.isDragging()) {
+      moveIndicator(dragX);
       return;
     }
     double beforeStart = axis.start().durationFrom(now);
@@ -303,10 +335,7 @@ public final class MissionTimelineWidget implements AutoCloseable {
     } else if (afterEnd > 0) {
       showPinned(true, afterEnd);
     } else {
-      hidePinned();
-      float x = axis.timeToX(now);
-      moveTo(playhead, x - PLAYHEAD_WIDTH / 2f, PLAYHEAD_TOP, Z_PLAYHEAD);
-      moveTo(halo, x - HALO_SIZE / 2f, HALO_TOP, Z_HALO);
+      moveIndicator(axis.timeToX(now));
     }
   }
 
@@ -323,6 +352,7 @@ public final class MissionTimelineWidget implements AutoCloseable {
     if (visible) {
       parent.attachChild(root);
     } else {
+      abandonScrub();
       tooltip.hide();
       root.removeFromParent();
     }
@@ -346,6 +376,7 @@ public final class MissionTimelineWidget implements AutoCloseable {
 
   @Override
   public void close() {
+    abandonScrub();
     tooltip.close();
     phaseBar.close();
     markers.clear();
@@ -555,6 +586,23 @@ public final class MissionTimelineWidget implements AutoCloseable {
     pinned = true;
   }
 
+  /**
+   * Puts the solid indicator at a track position, unpinning it first if it was pinned to a bound.
+   *
+   * <p>The clamp is what keeps a drag that runs off the end of the capture band from carrying the
+   * playhead out of the rail: {@link TimeAxis#xToTime} already clamps the date it reads, so without
+   * the same clamp here the pixel and the date would disagree for as long as the cursor stays
+   * outside.
+   *
+   * @param trackX the position in the widget's local track space, clamped into the track
+   */
+  private void moveIndicator(float trackX) {
+    hidePinned();
+    float x = Math.max(axis.x0(), Math.min(trackX, axis.x0() + axis.width()));
+    moveTo(playhead, x - PLAYHEAD_WIDTH / 2f, PLAYHEAD_TOP, Z_PLAYHEAD);
+    moveTo(halo, x - HALO_SIZE / 2f, HALO_TOP, Z_HALO);
+  }
+
   private void hidePinned() {
     badgeFrame.removeFromParent();
     badgeFill.removeFromParent();
@@ -593,10 +641,12 @@ public final class MissionTimelineWidget implements AutoCloseable {
    * (§9.1) a single branch instead of a z-order argument, and it costs one pass over a handful of
    * clusters per cursor move.
    *
-   * <p>Only the discrete gestures are wired. A continuous drag would re-emit a seek every frame,
-   * and each seek rebuilds the entire planetary ephemeris window ({@code EphemerisWorker.onSeek});
-   * acceptable once, unacceptable continuously — which is why the drag belongs to {@code NAV-3},
-   * where it will have to emit on release or throttle.
+   * <p><b>All three intents share one press, and {@link ScrubGesture} is what tells them apart.</b>
+   * A rail click, a cluster click and a drag are indistinguishable at button-down — every one of
+   * them is a press at some x — so nothing can be decided there and the seek moves to the release.
+   * The listener below is therefore a pure translation layer: it turns Lemur events into gesture
+   * calls, and gesture verdicts into clock and playhead operations. It holds no state of its own,
+   * which is exactly what makes the state machine unit-testable without a render loop.
    *
    * <p>The listener's third parameter is named {@code captured} rather than {@code capture} on
    * purpose: {@code capture} is this widget's own capture panel, and letting the callback parameter
@@ -613,6 +663,31 @@ public final class MissionTimelineWidget implements AutoCloseable {
               return;
             }
             float trackX = toTrackX(event.getX());
+            switch (gesture.move(trackX, System.currentTimeMillis())) {
+              case BEGIN_DRAG -> {
+                // Taking the play state here, and only here, is what makes the capture a single
+                // event: move() promotes the gesture to a drag exactly once.
+                resumePlaying = clock.isPlaying();
+                clock.pause();
+                dragTo(trackX);
+                clock.seek(axis.xToTime(trackX));
+                event.setConsumed();
+              }
+              case EMIT -> {
+                dragTo(trackX);
+                clock.seek(axis.xToTime(trackX));
+                event.setConsumed();
+              }
+              case TRACK_ONLY -> {
+                // Between two emissions the playhead still follows the cursor at frame rate: the
+                // throttle bounds the seeks, not the feedback.
+                dragTo(trackX);
+                event.setConsumed();
+              }
+              case NONE -> {
+                // Plain hover, or a press that has not cleared the drag threshold yet.
+              }
+            }
             // Anchored on 0 — the capsule's own top edge — so TimelineTooltip clears the WHOLE
             // widget upward and the card sits entirely over the 3D scene.
             //
@@ -624,28 +699,106 @@ public final class MissionTimelineWidget implements AutoCloseable {
             // tooltip is describing, and the context a reader wants precisely while reading a
             // phase name and a date off it. The extra distance costs nothing: the card is
             // anchored to a fixed band, not chasing the pointer vertically.
+            //
+            // Shown on every branch, drag included: a scrub is the moment one most wants to read
+            // the phase and the date being scrubbed to, and the content rules are the hover ones.
             tooltip.show(tooltipLines(trackX), event.getX() - root.getWorldTranslation().x, 0f);
           }
 
+          /**
+           * Leaving the 28 px capture band is a normal part of a drag — the pointer is being swept
+           * along a rail, not kept inside a box — and Lemur keeps delivering motion to the capture
+           * spatial for the whole press, which is what {@code ScrubberTrack}'s own drag already
+           * relies on. So the exit only takes the tooltip down when nothing is being dragged;
+           * otherwise it would blink off the moment the gesture became interesting.
+           */
           @Override
           public void cursorExited(CursorMotionEvent event, Spatial target, Spatial captured) {
-            tooltip.hide();
+            if (!gesture.isDragging()) {
+              tooltip.hide();
+            }
           }
 
           @Override
           public void cursorButtonEvent(CursorButtonEvent event, Spatial target, Spatial captured) {
-            if (axis == null || !event.isPressed() || event.getButtonIndex() != 0) {
+            if (axis == null || event.getButtonIndex() != 0) {
               return;
             }
             float trackX = toTrackX(event.getX());
-            PhaseMarkerCluster cluster = markers.clusterAt(trackX);
-            clock.seek(
-                cluster != null
-                    ? trail.timeAt(trail.runs().get(cluster.firstRunIndex()).firstVertex())
-                    : axis.xToTime(trackX));
-            event.setConsumed();
+            if (event.isPressed()) {
+              // ScrubGesture.press() documents that it restarts from a drag as readily as from
+              // idle, which means a press can legitimately arrive while a drag is still on the
+              // books — a button-up dropped because the window lost focus mid-sweep, say. The
+              // state machine drops that drag silently; the pause it took is this class's to
+              // undo, and undoing it here is what keeps "paused" and "dragging" from ever coming
+              // apart. A no-op in the nominal case, where no gesture is in progress.
+              abandonScrub();
+              gesture.press(trackX, System.currentTimeMillis());
+              event.setConsumed();
+              return;
+            }
+            switch (gesture.release()) {
+              case CLICK -> {
+                seekToClick(trackX);
+                event.setConsumed();
+              }
+              case COMMIT -> {
+                // The released x, not the last emitted one: the landing must be where the user let
+                // go, to the pixel, however recently the throttle happened to fire.
+                clock.seek(axis.xToTime(trackX));
+                clock.setPlaying(resumePlaying);
+                event.setConsumed();
+              }
+              case NONE -> {
+                // A release with no gesture behind it — a press that started elsewhere, or one
+                // this widget has already abandoned.
+              }
+            }
           }
         });
+  }
+
+  /**
+   * The discrete {@code NAV-2} click, unchanged by {@code NAV-3}: a cluster under the cursor seeks
+   * to its <em>first</em> transition rather than to the clicked pixel (§8), because the point of
+   * clicking a group of markers is to land on the event, and the group's own x is an artefact of
+   * declustering. Elsewhere, the pixel is the date.
+   *
+   * @param trackX the released position in the widget's local track space
+   */
+  private void seekToClick(float trackX) {
+    PhaseMarkerCluster cluster = markers.clusterAt(trackX);
+    clock.seek(
+        cluster != null
+            ? trail.timeAt(trail.runs().get(cluster.firstRunIndex()).firstVertex())
+            : axis.xToTime(trackX));
+  }
+
+  /**
+   * Records the drag position and moves the indicator onto it, so {@link #updateNow} keeps drawing
+   * it there on the frames that carry no cursor motion.
+   *
+   * @param trackX the cursor position in the widget's local track space
+   */
+  private void dragTo(float trackX) {
+    dragX = trackX;
+    moveIndicator(trackX);
+  }
+
+  /**
+   * Drops any gesture in progress and undoes the one side effect a drag has on the application: the
+   * pause it took to scrub.
+   *
+   * <p>This is the only exit from a drag that is not a release, and it is not a nicety. The widget
+   * leaves the screen whenever the followed mission stops being available — a recompute clears the
+   * ephemeris, the focus disarms — and if that lands mid-drag, a clock left paused would be paused
+   * by a widget that is no longer on screen to explain it. The user would be left with a frozen
+   * simulation and nothing to click to unfreeze it but the transport controls of another capsule.
+   */
+  private void abandonScrub() {
+    if (gesture.cancel()) {
+      clock.setPlaying(resumePlaying);
+    }
   }
 
   /** Converts a screen x into the widget's local track space. */
