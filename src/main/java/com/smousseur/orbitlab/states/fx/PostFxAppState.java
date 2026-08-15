@@ -72,9 +72,9 @@ import java.util.Objects;
  * bloom with it, and the whole sky turns milky. {@code GlowMode.Objects} re-renders the scene
  * through the materials' {@code Glow} technique instead, so only what a material explicitly
  * declares as emissive can glow. The Sun is the only body that declares anything (see {@code
- * PlanetPoseAppState}); the planets carry {@code WrapLighting}, which has no {@code Glow} technique
- * at all and is skipped, and the orbit lines carry {@code Unshaded} without a {@code GlowColor},
- * whose {@code Glow} technique outputs black.
+ * PlanetPoseAppState}); the planets carry {@code WrapLighting} and the orbit and trajectory ribbons
+ * carry {@code Ribbon}, neither of which declares a {@code Glow} technique at all, so the pass
+ * skips them.
  *
  * <p>The corona is excluded on the same principle, and on purpose: {@code Corona.j3md} declares no
  * {@code Glow} technique, so the glow it already is does not get blurred and added back on top of

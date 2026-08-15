@@ -223,6 +223,42 @@ public class AssetFactory {
   }
 
   /**
+   * Creates the material for a camera-facing ribbon: a line whose width is expressed in screen
+   * pixels and whose edges fade over exactly one pixel (spec {@code
+   * docs/graphics-effects/ribbon-lines.md} §7.3, §7.7).
+   *
+   * <p>The render state is the whole of the design that is not in the shader:
+   *
+   * <ul>
+   *   <li><b>Face culling off</b> — the ribbon turns to face the camera in the vertex shader, so
+   *       which way a triangle winds is decided at draw time and cannot be known here. Culling
+   *       either face would make the line blink out at the orientations where the winding flips.
+   *   <li><b>Depth test on</b> — a mission trajectory must keep disappearing behind the central
+   *       body, which writes depth in the same viewport.
+   *   <li><b>Depth write off</b> — two ribbons that cross blend instead of one erasing the other.
+   *       On threads this is the readable behaviour, and it removes any dependence on JME's
+   *       per-geometry sorting, which cannot order two interleaved curves anyway.
+   * </ul>
+   *
+   * @param color the uniform colour; multiplied by the vertex colour when {@code vertexColor} is
+   *     set
+   * @param widthPx the ribbon's width in screen pixels
+   * @param vertexColor whether the mesh carries a per-vertex colour buffer
+   * @return the ribbon material
+   */
+  public Material createRibbon(ColorRGBA color, float widthPx, boolean vertexColor) {
+    Material material = new Material(assetManager, "MatDefs/Fx/Ribbon.j3md");
+    material.setColor("Color", color);
+    material.setFloat("WidthPx", widthPx);
+    material.setBoolean("VertexColor", vertexColor);
+    RenderState state = material.getAdditionalRenderState();
+    state.setBlendMode(RenderState.BlendMode.Alpha);
+    state.setFaceCullMode(RenderState.FaceCullMode.Off);
+    state.setDepthWrite(false);
+    return material;
+  }
+
+  /**
    * Creates an unshaded material with alpha blending enabled and depth write disabled.
    *
    * @param color the color (with alpha channel) to apply to the material

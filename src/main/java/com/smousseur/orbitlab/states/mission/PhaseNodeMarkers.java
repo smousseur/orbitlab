@@ -41,7 +41,7 @@ import org.hipparchus.geometry.euclidean.threed.Vector3D;
  */
 final class PhaseNodeMarkers {
 
-  /** Screen pixels. Large enough to read against a 2 px line, small enough not to hide it. */
+  /** Screen pixels. Large enough to read against the 3,5 px ribbon, small enough not to hide it. */
   private static final float POINT_SIZE = 7f;
 
   private final RenderContext renderContext;

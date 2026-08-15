@@ -56,8 +56,7 @@ public class OrbitInitAppState extends BaseAppState {
           continue; // no dataset file for this body — runtime will compute it
         }
         Geometry orbitGeometry =
-            OrbitLineFactory.buildBodyRelativeLineStrip(
-                body, pts, PlanetColors.colorFor(body), 1.f);
+            OrbitLineFactory.buildBodyRelativeLineStrip(body, pts, PlanetColors.colorFor(body));
         orbitLayer.orbitNode(body).attachChild(orbitGeometry);
       } catch (IOException e) {
         logger.warn("Failed to read orbit dataset for {} — skipping: {}", body, e.getMessage());

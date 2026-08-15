@@ -35,6 +35,7 @@ lisez qu'une section, lisez le §3.
 | **`UI-5` — surfaces, modalité et pile de renvoi `ESC`** (fenêtre non modale déplaçable, `ESC` renvoie la surface du dessus, `Quit` en entrée de menu) | `app/HudSurface.java`, `app/HudSurfaces.java`, `ui/UiLayers.java`, `ui/form/WindowDragHandler.java` ; `HudSurfacesTest`, `AppMenuModelTest`, `WindowDragHandlerTest` |
 | **`NAV-2` — timeline indexée sur le temps** (capsule jumelle, barre de phases, marqueurs déclusterisés, graduations `T+`, seek au clic) | `ui/timeline/mission/`, `states/time/MissionTimelineAppState.java`, `states/time/MissionTimelineVisibility.java` ; `TimeAxisTest`, `TimeAxisTickTest`, `PhaseMarkerClusterTest`, `MissionTimelineVisibilityTest`, `SpeedStepperIndexTest` |
 | **`NAV-3` — scrub continu** (drag sur la piste, seuil de 3 px, émission étranglée à 10 Hz, état de lecture restauré au lâcher) | `ui/timeline/mission/ScrubGesture.java` + câblage du listener de `MissionTimelineWidget` ; `ScrubGestureTest` |
+| **`RND-4` — ribbon billboardé** (orbites et trajectoires en rubans face-caméra, largeur en pixels, fondu d'un pixel exact, expansion en vertex shader) | `MatDefs/Fx/Ribbon.j3md` + `.vert` / `.frag`, `engine/scene/RibbonMeshBuilder.java`, `OrbitLineFactory`, `MissionTrajectoryRenderer`, `AssetFactory.createRibbon` ; `RibbonMeshBuilderTest` |
 
 **Reste ouvert de l'ancienne roadmap** : le feedback de progression pendant
 l'optimisation, repris ici en `UI-2`. La vue détail avec résultats
@@ -44,7 +45,9 @@ lu par `ui/`, il était **jeté** par l'orchestrateur, qui n'en gardait rien.
 
 **Corrections d'hypothèses par rapport aux specs graphiques** — `effects-roadmap.md`
 §1 décrit un rendu « tout `Unshaded`, aucun shader custom, pas de skybox ». Ce
-n'est plus vrai : le projet possède désormais son propre shader d'éclairage.
+n'est plus vrai, et de loin : le dépôt compte désormais **trois** matériaux
+maison — `WrapLighting` (éclairage), `Corona` (halo stellaire) et `Ribbon`
+(orbites et trajectoires).
 Deux conséquences notées plus bas : les éclipses (`FX-2`) descendent de ◆4 à ◆3,
 et l'item « Lambert sur les planètes » disparaît de la roadmap (fait).
 
@@ -114,7 +117,7 @@ plutôt qu'une constante (`MIS-8`).
 | ~~UI-5~~ | ~~**Surfaces, modalité et pile de renvoi `ESC`** — découle d'`UI-4`~~ — **résolu le 2026-08-15** | 3 | 2 | M |
 | ~~NAV-2~~ | ~~Timeline indexée sur le temps + marqueurs d'événements~~ — **résolu le 2026-08-15** | 4 | 3 | M |
 | ~~NAV-3~~ | ~~Scrub continu (glisser sur la piste)~~ — **résolu le 2026-08-15** | 3 | 2 | S |
-| RND-4 | Ribbon billboardé (orbites + trajectoires) | 4 | 3 | M |
+| ~~RND-4~~ | ~~Ribbon billboardé (orbites + trajectoires)~~ — **résolu le 2026-08-15** | 4 | 3 | M |
 | NAV-4 | Breadcrumb de navigation 3D | 3 | 2 | M |
 
 > **Les bascules d'affichage ne sont pas dans `UI-4`.** La table portait une
@@ -137,12 +140,12 @@ existe maintenant.
 souris, on change de corps focalisé sans cut, et le seul élément de HUD visible
 en permanence ne détonne plus avec le reste de l'interface.
 
-> **État au 2026-08-15 : cinq items sur sept résolus.** Les deux premiers
-> critères de fin de phase sont atteints — `NAV-2` et `NAV-3` donnent l'accès à
-> n'importe quel instant d'une mission au clic comme au glisser, `NAV-1` donne
-> le changement de focus sans cut, `UI-4` et `UI-5` donnent le HUD et sa
-> modalité. Restent **`RND-4`** (ribbon billboardé) et **`NAV-4`** (breadcrumb),
-> ni l'un ni l'autre bloquant pour les phases suivantes.
+> **État au 2026-08-15 : six items sur sept résolus.** Les trois critères de fin
+> de phase sont atteints — `NAV-2` et `NAV-3` donnent l'accès à n'importe quel
+> instant d'une mission au clic comme au glisser, `NAV-1` donne le changement de
+> focus sans cut, `UI-4` et `UI-5` donnent le HUD et sa modalité, et `RND-4`
+> donne enfin une trajectoire lisible à toute distance. Reste **`NAV-4`**
+> (breadcrumb), non bloquant pour les phases suivantes.
 
 ### Phase 3 — Socle physique et mission partagé · ~4,5 semaines
 
@@ -254,10 +257,10 @@ opportuniste, ou à décider quoi sacrifier quand une phase déborde.
 | ~~UI-5~~ | ~~Surfaces, modalité et pile de renvoi `ESC`~~ — résolu | 3 | 2 | M | UI-4 (livré) |
 | ~~NAV-2~~ | ~~Timeline indexée sur le temps + marqueurs d'événements~~ — résolu | 4 | 3 | M | — |
 | ~~NAV-3~~ | ~~Scrub continu (glisser sur la piste)~~ — résolu (le débit redouté n'existait pas, voir détail) | 3 | 2 | S | NAV-2 |
-| RND-4 | Ribbon billboardé (orbites + trajectoires) | 4 | 3 | M | — |
+| ~~RND-4~~ | ~~Ribbon billboardé (orbites + trajectoires)~~ — résolu | 4 | 3 | M | — |
 | MIS-3 | Solveur de Lambert + repère LVLH | 4 | 3 | M | — |
 | MIS-2 | Fenêtres de lancement | 4 | 3 | M | MIS-7 |
-| NAV-5 | Hover « wow » planètes + orbites | 3 | 2 | M | RND-4 (conseillé) |
+| NAV-5 | Hover « wow » planètes + orbites | 3 | 2 | M | RND-4 (livré) |
 | UI-3 | Persistance des missions / format de scénario | 4 | 3 | M | — |
 | PHY-4 | Socle multi-corps (3ᵉ corps, SOI, repères) | 5 | 4 | L | — |
 | MIS-5 | Mise en orbite lunaire (LOI) | 5 | 3 | M | MIS-4 |
@@ -294,7 +297,7 @@ MIS-7 (mission Terre paramétrable)
 PHY-1 (drag off par défaut) ── PHY-2 (drag par défaut + recalibrage)
                             └─ PHY-3 (MaxQ, télémétrie)
 
-RND-4 (ribbon) ── NAV-5 (hover)
+RND-4 (ribbon) ✔ résolu ── NAV-5 (hover) — débloqué : la largeur est un uniform
 ```
 
 Trois nœuds commandaient tout le reste : **MIS-8** (le plus en amont, et le
@@ -357,9 +360,16 @@ pas été faits : baisser `FAR_MIN` (`Δz ∝ z²/near`, le far ne compte pas) e
 ouvertes, aucune n'étant un artefact de la vue spacecraft au sens ci-dessus :
 le raccord terminal qui pivote d'environ 2° à chaque pas d'échantillonnage
 (spec §4.3), et `setDepthWrite(false)` contre les batailles ligne ↔ ligne aux
-croisements de boucles (spec §6). `RND-3` étant clos sans les traiter, ils
-relèvent désormais de `RND-4`, ou d'un identifiant propre le jour où l'un des
-deux gêne.
+croisements de boucles (spec §6).
+
+**Où ils en sont, `RND-4` étant clos à son tour.** `setDepthWrite(false)` est
+**fait** : le matériau `Ribbon` l'impose, deux rubans qui se croisent se mélangent
+au lieu que l'un efface l'autre. Le raccord terminal, lui, **reste ouvert et sans
+identifiant** : le ruban traite les jointures *entre segments* (spec ribbon §7.5)
+et ne dit rien du pivotement du dernier segment, qu'il ne corrige ni n'aggrave.
+C'est la deuxième fois qu'il est reversé faute de propriétaire ; il lui en faut un
+le jour où il gêne — densification de l'échantillonnage de tête, ou interpolation
+de la tangente terminale.
 
 **Spec.** [`docs/graphics-effects/spacecraft-view-artefacts.md`](../graphics-effects/spacecraft-view-artefacts.md)
 §9.1 à §9.3 (ce qui a été fait, et les écarts avec ce qui était prévu).
@@ -372,7 +382,8 @@ textures planétaires vues en biseau.
 **Attention — ce que le MSAA ne fait pas.** Il n'antialiase pas les lignes GL de
 manière fiable, et `glLineWidth > 1` est silencieusement plafonné à 1 px sur les
 drivers en profil core. L'aliasing des orbites ne se règle donc **pas** par les
-réglages `AppSettings` : c'est `RND-4` (ribbon) qui le règle. Ne pas attendre de
+réglages `AppSettings` : c'est `RND-4` (ribbon) qui l'a réglé, en remplaçant la
+primitive par un ruban qui porte son propre fondu de bord. Ne pas attendre de
 `RND-2` qu'il « nettoie les orbites ».
 
 **Ce qui a été fait.** Une ligne au boot,
@@ -438,19 +449,59 @@ coasts qu'une LEO ne produit jamais. Corrigé en classant **tous** les runs, à 
 fixe compté à rebours depuis l'orbite finale, et doublé d'un test de contraste
 entre voisins qui aurait attrapé le défaut.
 
-**Reste à affiner, sous `RND-4`.** Le contraste entre phases reste modeste sur
-une ligne GL de 2 px ; le réglage fin (`MUTING_STEP`) attend le ribbon
-billboardé, qui donnera la surface nécessaire pour le juger.
+**Reste à affiner** — et l'obstacle est levé. Le contraste entre phases était
+modeste sur une ligne GL d'un pixel ; `RND-4` a livré le ruban, donc la surface
+nécessaire pour juger `MUTING_STEP`. Le réglage lui-même n'est pas fait : il se
+décide à l'œil sur un trait de 3,5 px, avec le test de contraste existant pour
+arbitre.
 
 **Spec.** [`mission-phase-encoding.md`](../graphics-effects/mission-phase-encoding.md),
 qui remplace [`effects-roadmap.md`](../graphics-effects/effects-roadmap.md)
 §9.3.1 et §9.3.2.
 
-#### RND-4 — Ribbon billboardé — ★4 ◆3 M
+#### ~~RND-4 — Ribbon billboardé — ★4 ◆3 M~~ — **RÉSOLU le 2026-08-15**
 
 **Pourquoi.** Seule vraie réponse au plafonnement de `glLineWidth` : épaisseur
 stable, antialiasing par alpha-fade des bords, lisibilité à distance. Débloque
 ensuite les tirets animés, le halo additif et le hover (`NAV-5`).
+
+**Ce qui a été fait.** Les deux consommateurs de lignes passent au ruban de
+triangles face-caméra, **expansé en vertex shader** comme le recommandait la spec
+§6 : `MatDefs/Fx/Ribbon.j3md` + `.vert` / `.frag` (3ᵉ matériau maison, après
+`WrapLighting` et `Corona`), `engine/scene/RibbonMeshBuilder.java` pour la
+construction du maillage, `OrbitLineFactory` et `MissionTrajectoryRenderer` pour
+les deux appelants, `AssetFactory.createRibbon` pour l'état de rendu.
+`RibbonMeshBuilderTest` couvre les six propriétés du §10 de la spec.
+
+**L'arbitrage GPU contre CPU a tenu**, et c'est le seul point qui méritait d'être
+tranché : le coût par frame des dix orbites planétaires reste **nul**, leur
+buffer étant toujours écrit à la seule reconstruction de fenêtre. Une expansion
+côté CPU aurait créé de toutes pièces 81 920 sommets recalculés soixante fois par
+seconde pour une donnée inchangée.
+
+**Deux écarts avec la spec, tous deux des ajouts.**
+
+1. **La profondeur est plafonnée au near plane**, extrait de la matrice de
+   projection, au lieu d'utiliser `−z` en espace vue tel quel. La spec §4.0
+   signale que le sommet passant derrière la caméra est un cas nominal en vue
+   spacecraft, mais ne donne pas de parade : `−z` y devient négatif, retourne la
+   demi-largeur et vrille le quad qui enjambe le near plane.
+2. **La tangente de repli préserve le sens de la polyligne.** Sur deux points
+   confondus — cas réel, le sommet de tête de la trajectoire de mission — prendre
+   la première corde non nulle venue peut donner une tangente inversée, donc un
+   nœud papillon au sommet.
+
+**Ce qui reste à juger à l'œil, et ne peut pas l'être autrement.** La
+cohabitation du fondu alpha avec le `FilterPostProcessor` (spec §7.7, le seul
+inconnu technique du lot), et les largeurs de départ — 2,5 px pour une orbite,
+3,5 px pour une trajectoire (spec §7.4, lot 4). Ce qui *a* été vérifié :
+l'application démarre en profil Core / GLSL 1.50 et les shaders compilent sans
+erreur.
+
+**Ce que cela ouvre**, et qui était la vraie valeur de l'item : la largeur et la
+couleur sont des uniforms, donc `NAV-5` et la mise en avant de la mission active
+sont des `setFloat` ; l'abscisse curviligne est déjà dans le maillage, donc les
+tirets animés sont trois lignes de fragment. Voir la spec §11.
 
 **Spec.** [`effects-roadmap.md`](../graphics-effects/effects-roadmap.md) §9.4.1,
 remplacé par [`ribbon-lines.md`](../graphics-effects/ribbon-lines.md).
@@ -652,9 +703,11 @@ utile une fois les missions lunaires en place : la hiérarchie
 
 #### NAV-5 — Hover « wow » — ★3 ◆2 M
 
-Spec complète. À faire **après** `RND-4` : le boost d'épaisseur à ×2 sur hover
-repose sur `setLineWidth`, qui ne marchera pas sur les drivers en profil core.
-Avec le ribbon, la spec devient applicable telle qu'écrite.
+Spec complète, et **le préalable est levé** : le boost d'épaisseur à ×2 sur hover
+reposait sur `setLineWidth`, sans effet sur les drivers en profil core. `RND-4`
+étant livré, la largeur et l'alpha sont des uniforms du matériau `Ribbon` — la
+spec est applicable telle qu'écrite, et les deux animations de 150 ms qu'elle
+demande sont deux `setFloat` par frame, sans reconstruction de géométrie.
 
 **Spec.** [`docs/graphics-effects/hover-effects.md`](../graphics-effects/hover-effects.md).
 

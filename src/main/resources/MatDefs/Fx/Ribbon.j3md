@@ -1,0 +1,43 @@
+MaterialDef Ribbon {
+
+    MaterialParameters {
+        // Uniform colour of the ribbon. Multiplied by the vertex colour when there is one, exactly
+        // as Unshaded does, so a mission can leave this white and let its per-run shades brighten
+        // above the mission colour rather than be attenuated by it.
+        Color Color : 1.0 1.0 1.0 1.0
+
+        // Width of the ribbon in *screen pixels*, at any distance and in either viewport. This is
+        // the parameter glLineWidth pretended to be: in a core profile anything above 1 is silently
+        // clamped back to 1, which is why the orbits were one-pixel threads whatever was asked for.
+        // Being a uniform, it is also the whole point of the GPU expansion — hover (NAV-5) and
+        // mission highlighting are a setFloat, not a rebuilt geometry.
+        Float WidthPx : 2.5
+
+        // Whether the mesh carries a per-vertex colour buffer. Mission trajectories do (one shade
+        // per phase run); planetary orbits do not, their colour being uniform.
+        Boolean VertexColor
+    }
+
+    // Deliberately no Glow technique, for the reason Corona.j3md gives: PostFxAppState runs the
+    // bloom in GlowMode.Objects, which re-renders the scene through that technique. A material
+    // without one is skipped by the pass, which is what we want — a ribbon that declared one would
+    // be blurred and added back on top of itself.
+    Technique {
+        VertexShader   GLSL150: MatDefs/Fx/Ribbon.vert
+        FragmentShader GLSL150: MatDefs/Fx/Ribbon.frag
+
+        WorldParameters {
+            // The expansion happens in view space, before projection (see Ribbon.vert), so the two
+            // halves of the usual WorldViewProjectionMatrix are needed separately.
+            WorldViewMatrix
+            ProjectionMatrix
+            // Bound per viewport, which is what makes one material give the same pixel width in the
+            // far viewport (1 unit = 1e9 m) and in the near one (1 unit = 1e3 m) with no switch.
+            Resolution
+        }
+
+        Defines {
+            HAS_VERTEXCOLOR : VertexColor
+        }
+    }
+}

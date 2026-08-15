@@ -2,15 +2,15 @@ package com.smousseur.orbitlab.states.mission;
 
 import com.jme3.material.Material;
 import com.jme3.math.ColorRGBA;
+import com.jme3.renderer.queue.RenderQueue;
 import com.jme3.scene.Geometry;
 import com.jme3.scene.Mesh;
 import com.jme3.scene.Node;
 import com.jme3.scene.Spatial;
-import com.jme3.scene.VertexBuffer;
-import com.jme3.util.BufferUtils;
 import com.smousseur.orbitlab.app.view.RenderContext;
 import com.smousseur.orbitlab.app.view.RenderTransform;
 import com.smousseur.orbitlab.engine.AssetFactory;
+import com.smousseur.orbitlab.engine.scene.RibbonMeshBuilder;
 import com.smousseur.orbitlab.engine.view.JmeVectorAdapter;
 import com.smousseur.orbitlab.simulation.mission.MissionId;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.TrajectoryPolyline;
@@ -20,24 +20,47 @@ import java.util.Objects;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 
 /**
- * Renders a mission's trajectory as a line strip. Receives the pre-computed {@link
+ * Renders a mission's trajectory as a camera-facing ribbon. Receives the pre-computed {@link
  * TrajectoryPolyline} and a prefix bound, and flushes that prefix to a JME mesh each frame. This is
  * a plain object managed by {@link MissionRenderer}, not an AppState.
+ *
+ * <p>The primitive is a {@code TriangleStrip} expanded by {@code MatDefs/Fx/Ribbon.j3md} rather
+ * than a {@code LineStrip} (spec {@code docs/graphics-effects/ribbon-lines.md}). The architecture
+ * below is unchanged — one allocation, a prefix written each frame, an identity guard on the
+ * polyline for the colours — and what changes is that two vertices are written per point instead of
+ * one, with a tangent, and that the width finally means something: {@code glLineWidth(2)} was
+ * clamped back to 1 px by the core profile, which also made the per-run shading of {@code RND-3}
+ * nearly unreadable on a trace one pixel wide.
  */
 public final class MissionTrajectoryRenderer {
 
   /**
-   * Vertex capacity: the polyline's budget plus one slot for the interpolated tip at {@code now}.
+   * Point capacity: the polyline's budget plus one slot for the interpolated tip at {@code now}.
    * Sized from {@link TrajectoryPolyline#MAX_POINTS} rather than from a constant of its own, so the
    * producer and the buffer cannot drift apart.
    */
-  private static final int MAX_VERTICES = TrajectoryPolyline.MAX_POINTS + 1;
+  private static final int MAX_POINTS = TrajectoryPolyline.MAX_POINTS + 1;
 
-  private static final float LINE_WIDTH = 2f;
+  /**
+   * Width of a mission trace, in screen pixels (§7.4). Wider than a planetary orbit: it is the
+   * object of attention, it carries the phase colours, and it is drawn against a planet rather than
+   * against the sky.
+   */
+  private static final float TRAJECTORY_WIDTH_PX = 3.5f;
 
   private final MissionId missionId;
   private final RenderContext renderContext;
   private final ColorRGBA color;
+
+  /**
+   * Staging for one frame's points, in render units, before the builder expands them into pairs.
+   *
+   * <p>It exists because a tangent needs its two neighbours: the conversion can no longer stream
+   * straight into the vertex buffer one point at a time. Allocated once — the whole point of this
+   * class is that the per-frame path allocates nothing but the {@code Vector3D} the conversion
+   * already produced.
+   */
+  private final float[] points = new float[MAX_POINTS * 3];
 
   private Geometry lineGeometry;
   private TrajectoryPolyline boundTrail;
@@ -52,29 +75,24 @@ public final class MissionTrajectoryRenderer {
   }
 
   /**
-   * Creates the line mesh, material, and geometry, and attaches them to the given node.
+   * Creates the ribbon mesh, material, and geometry, and attaches them to the given node.
    *
    * @param nearOrbitsNode the scene node for near-viewport orbit lines
    */
   public void initialize(Node nearOrbitsNode) {
-    Mesh mesh = new Mesh();
-    mesh.setMode(Mesh.Mode.LineStrip);
-    FloatBuffer pb = BufferUtils.createFloatBuffer(MAX_VERTICES * 3);
-    mesh.setBuffer(VertexBuffer.Type.Position, 3, pb);
-    mesh.setBuffer(VertexBuffer.Type.Color, 4, BufferUtils.createFloatBuffer(MAX_VERTICES * 4));
-    mesh.updateBound();
-    mesh.updateCounts();
+    Mesh mesh = RibbonMeshBuilder.allocate(MAX_POINTS, false, true);
 
-    // White, because Unshaded multiplies Color by the vertex colour: keeping the mission colour
-    // here would turn the buffer into a multiplier, and a burn has to brighten *above* the mission
-    // colour, which a multiplier cannot do.
-    Material mat = AssetFactory.get().material(ColorRGBA.White);
-    mat.setBoolean("VertexColor", true);
-    mat.getAdditionalRenderState().setLineWidth(LINE_WIDTH);
+    // White, because the ribbon shader multiplies Color by the vertex colour just as Unshaded did:
+    // keeping the mission colour here would turn the buffer into a multiplier, and a burn has to
+    // brighten *above* the mission colour, which a multiplier cannot do.
+    Material mat = AssetFactory.get().createRibbon(ColorRGBA.White, TRAJECTORY_WIDTH_PX, true);
 
     // Keyed on the id, not the name: duplicate names must not produce colliding geometry names.
     lineGeometry = new Geometry("MissionTrajectory-" + missionId, mesh);
     lineGeometry.setMaterial(mat);
+    // The edge fade is an alpha ramp, so the trace belongs in the transparent bucket — where it is
+    // still depth-tested, and therefore still disappears behind the central body.
+    lineGeometry.setQueueBucket(RenderQueue.Bucket.Transparent);
     nearOrbitsNode.attachChild(lineGeometry);
 
     markers = new PhaseNodeMarkers(renderContext);
@@ -135,30 +153,31 @@ public final class MissionTrajectoryRenderer {
       boundTrail = trail;
     }
 
-    Mesh mesh = lineGeometry.getMesh();
-    VertexBuffer vb = mesh.getBuffer(VertexBuffer.Type.Position);
-    FloatBuffer fb = (FloatBuffer) vb.getData();
-    fb.clear();
-
     int last = Math.min(upTo, trail.size() - 1);
     // Fall back to the last drawn sample when there is no tip: the origin has to be a point of the
     // line, not the geocentre, or the precision this whole method buys is given straight back.
     Vector3D origin = tip != null ? tip : trail.positionAt(last);
 
+    int count = 0;
     for (int i = 0; i <= last; i++) {
-      putVertex(fb, trail.positionAt(i).subtract(origin), renderContext);
+      putPoint(points, count++, trail.positionAt(i).subtract(origin), renderContext);
     }
     if (tip != null) {
-      putVertex(fb, Vector3D.ZERO, renderContext); // the tip is the origin
+      putPoint(points, count++, Vector3D.ZERO, renderContext); // the tip is the origin
     }
-    fb.flip();
+    if (count == 1) {
+      // One point is not a ribbon. Repeating it gives a band of zero area — nothing rasterises,
+      // which is what a single-vertex LineStrip did too, and the builder's degenerate-tangent
+      // guard keeps it free of NaN.
+      System.arraycopy(points, 0, points, 3, 3);
+      count = 2;
+    }
+
+    Mesh mesh = lineGeometry.getMesh();
+    RibbonMeshBuilder.write(mesh, points, count, false);
 
     lineGeometry.setLocalTranslation(
         JmeVectorAdapter.toJmeBodyRelativePosition(origin, renderContext));
-
-    mesh.updateCounts();
-    mesh.updateBound();
-    vb.setUpdateNeeded();
 
     // The line's own local translation, not a second computation of it: reusing the value that was
     // just set is what makes it impossible for the two geometries to disagree about the origin.
@@ -175,7 +194,9 @@ public final class MissionTrajectoryRenderer {
    *
    * <p>Slot {@code size()} is filled too. It is the slot the interpolated tip occupies once the
    * spacecraft reaches the end of the trail, and leaving it black would put one dark vertex at the
-   * head of a completed mission's line.
+   * head of a completed mission's line. Each colour lands in the buffer twice, once per edge of the
+   * ribbon, which {@link RibbonMeshBuilder#writeColors} does; the tail of the buffer is padded with
+   * the last colour rather than left at zero, for the same reason.
    *
    * <p><b>The tip's own colour is an approximation, deliberately.</b> The tip sits between vertices
    * {@code last} and {@code last + 1} and is drawn with the colour written at slot {@code last +
@@ -186,35 +207,46 @@ public final class MissionTrajectoryRenderer {
    */
   private void bindColors(TrajectoryPolyline trail) {
     runColors = MissionPhaseShading.shade(color, trail.runs());
-    VertexBuffer vb = lineGeometry.getMesh().getBuffer(VertexBuffer.Type.Color);
-    FloatBuffer cb = (FloatBuffer) vb.getData();
-    cb.clear();
+    int count = trail.size() + 1;
+    float[] rgba = new float[count * 4];
     for (int i = 0; i < trail.size(); i++) {
-      putColor(cb, runColors[trail.runOf(i)]);
+      putColor(rgba, i, runColors[trail.runOf(i)]);
     }
-    putColor(cb, runColors[trail.runOf(trail.size() - 1)]);
-    // Limit to capacity rather than to the written length: Mesh.updateCounts() derives the vertex
-    // count from the Position buffer, and an attribute buffer only has to be at least that long.
-    cb.position(cb.capacity());
-    cb.flip();
-    vb.setUpdateNeeded();
+    putColor(rgba, trail.size(), runColors[trail.runOf(trail.size() - 1)]);
+    RibbonMeshBuilder.writeColors(lineGeometry.getMesh(), rgba, count);
   }
 
-  private static void putColor(FloatBuffer cb, ColorRGBA c) {
-    cb.put(c.r).put(c.g).put(c.b).put(c.a);
+  private static void putColor(float[] rgba, int i, ColorRGBA c) {
+    rgba[i * 4] = c.r;
+    rgba[i * 4 + 1] = c.g;
+    rgba[i * 4 + 2] = c.b;
+    rgba[i * 4 + 3] = c.a;
   }
 
   /**
-   * Converts one origin-relative offset into render units and appends it to the buffer.
+   * Converts one origin-relative offset into render units and stores it at slot {@code i}.
    *
-   * <p>Shared with {@link PhaseNodeMarkers}: a marker has to be produced by the very same
-   * conversion as the line it sits on, or it drifts off the trace by the difference between the
-   * two.
+   * <p>Shares its conversion with {@link PhaseNodeMarkers} through {@link #toRenderUnits}: a marker
+   * has to be produced by the very same arithmetic as the ribbon it sits on, or it drifts off the
+   * trace by the difference between the two.
    */
+  private static void putPoint(
+      float[] xyz, int i, Vector3D offsetFromOrigin, RenderContext renderContext) {
+    Vector3D jme = toRenderUnits(offsetFromOrigin, renderContext);
+    xyz[i * 3] = (float) jme.getX();
+    xyz[i * 3 + 1] = (float) jme.getY();
+    xyz[i * 3 + 2] = (float) jme.getZ();
+  }
+
+  /** Converts one origin-relative offset into render units and appends it to the buffer. */
   static void putVertex(FloatBuffer fb, Vector3D offsetFromOrigin, RenderContext renderContext) {
-    Vector3D scaled = RenderTransform.scaleMetersToUnits(offsetFromOrigin, renderContext);
-    Vector3D jme = renderContext.axisConvention().icrfToJme(scaled);
+    Vector3D jme = toRenderUnits(offsetFromOrigin, renderContext);
     fb.put((float) jme.getX()).put((float) jme.getY()).put((float) jme.getZ());
+  }
+
+  private static Vector3D toRenderUnits(Vector3D offsetFromOrigin, RenderContext renderContext) {
+    Vector3D scaled = RenderTransform.scaleMetersToUnits(offsetFromOrigin, renderContext);
+    return renderContext.axisConvention().icrfToJme(scaled);
   }
 
   /** Detaches the trajectory geometry from the scene. */

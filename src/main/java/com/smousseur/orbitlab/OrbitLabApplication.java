@@ -63,9 +63,11 @@ public class OrbitLabApplication extends SimpleApplication {
    * expensive. 16 is available if a side-by-side ever justifies it.
    *
    * <p><b>This does not touch the orbit lines.</b> Anisotropy is a texture-sampling state and the
-   * trajectories are GL line primitives — no texture, nothing to filter. Their aliasing is not
-   * addressable from {@code AppSettings} at all (MSAA does not reliably antialias lines, and {@code
-   * glLineWidth > 1} is silently clamped to 1 px in a core profile); that is RND-4's job.
+   * trajectories carry no texture. Their aliasing was never addressable from {@code AppSettings}
+   * either — MSAA does not reliably antialias lines, and {@code glLineWidth > 1} is silently
+   * clamped to 1 px in a core profile — and it is no longer a rendering-settings question at all:
+   * RND-4 replaced the line primitives with camera-facing ribbons that carry their own edge fade
+   * ({@code MatDefs/Fx/Ribbon.j3md}, spec {@code docs/graphics-effects/ribbon-lines.md}).
    */
   private static final int ANISOTROPIC_FILTER_LEVEL = 8;
 
