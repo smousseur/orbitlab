@@ -6,7 +6,9 @@ import com.jme3.font.BitmapFont;
 import com.jme3.texture.Texture;
 import com.jme3.texture.Texture2D;
 import com.simsilica.lemur.GuiGlobals;
+import com.simsilica.lemur.HAlignment;
 import com.simsilica.lemur.Insets3f;
+import com.simsilica.lemur.VAlignment;
 import com.simsilica.lemur.component.TbtQuadBackgroundComponent;
 import com.simsilica.lemur.style.Attributes;
 import com.simsilica.lemur.style.Styles;
@@ -31,6 +33,13 @@ public final class TimelineStyles {
 
   /** The Lemur style identifier used to apply timeline-specific visual styling. */
   public static final String STYLE = "timeline";
+
+  /**
+   * Element id of the mission timeline's toggle. Registered as a selector so the button is built
+   * with {@code new Button(text, new ElementId(TRIGGER_ELEMENT), STYLE)} and carries no visual
+   * override of its own — the rule {@code UI-4} left behind (spec §11).
+   */
+  public static final String TRIGGER_ELEMENT = "timeline.trigger.button";
 
   private static final String TEX_PREFIX = "interface/timeline/";
 
@@ -106,6 +115,18 @@ public final class TimelineStyles {
   }
 
   /**
+   * The toggle's skin in either state. A Lemur selector cannot express "checked", so the on state
+   * is a transition the widget applies — the same shape {@code AppMenu.ItemView} uses for hover and
+   * check — while both skins still come from this style rather than from literals at the call site.
+   *
+   * @param active whether the mission timeline is open
+   * @return a new background component, or {@code null} when the texture is missing
+   */
+  public static TbtQuadBackgroundComponent triggerBackground(boolean active) {
+    return buttonBackground(active ? "btn-active.png" : "btn-hover.png");
+  }
+
+  /**
    * Initializes and registers the timeline styles with the global Lemur style system.
    *
    * @param am the JME3 asset manager, used to load textures and fonts
@@ -147,6 +168,16 @@ public final class TimelineStyles {
     button.set("fontSize", 12f);
     button.set("insets", new Insets3f(0, 0, 0, 0));
     button.set("background", null);
+
+    Attributes trigger = styles.getSelector(TRIGGER_ELEMENT, STYLE);
+    trigger.set("color", AppStyles.TL_TEXT_DIM);
+    trigger.set("highlightColor", AppStyles.TL_CYAN);
+    trigger.set("font", UiKit.mono(10));
+    trigger.set("fontSize", 10f);
+    trigger.set("insets", new Insets3f(0, 0, 0, 0));
+    trigger.set("textHAlignment", HAlignment.Center);
+    trigger.set("textVAlignment", VAlignment.Center);
+    trigger.set("background", triggerBackground(false));
   }
 
   private static Texture2D loadTexSafe(String name) {

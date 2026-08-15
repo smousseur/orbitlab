@@ -2,7 +2,6 @@ package com.smousseur.orbitlab.ui.mission.display;
 
 import com.jme3.math.ColorRGBA;
 import com.jme3.math.Vector3f;
-import com.jme3.renderer.Camera;
 import com.jme3.scene.Node;
 import com.simsilica.lemur.Axis;
 import com.simsilica.lemur.Container;
@@ -30,7 +29,7 @@ import java.util.Objects;
  */
 public final class MissionDisplayPanelWidget implements AutoCloseable {
 
-  static final float WINDOW_WIDTH = 420f;
+  static final float WINDOW_WIDTH = 380f;
   static final float WINDOW_HEIGHT = 240f;
   static final float BODY_HEIGHT = 120f;
   private static final int PAGE_SIZE = 3;
@@ -180,8 +179,7 @@ public final class MissionDisplayPanelWidget implements AutoCloseable {
    * @param topOffset pixels between the top of the screen and the top of the menu's title button
    */
   public void layoutTopLeft(int screenHeight, float topOffset) {
-    float y =
-        screenHeight - topOffset - AppStyles.HUD_MENU_HEIGHT_PX - AppStyles.HUD_STACK_GAP_PX;
+    float y = screenHeight - topOffset - AppStyles.HUD_MENU_HEIGHT_PX - AppStyles.HUD_STACK_GAP_PX;
     root.setLocalTranslation(AppStyles.HUD_MARGIN_PX, y, UiLayers.PANEL);
   }
 

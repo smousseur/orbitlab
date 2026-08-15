@@ -14,8 +14,14 @@ package com.smousseur.orbitlab.ui;
 public final class UiLayers {
 
   /**
-   * Permanent HUD: timeline, telemetry, planet billboards. The timeline stacks its own components
-   * up to a local {@code z} of 5, which is why the next layer starts at 10.
+   * Permanent HUD: timeline, telemetry, planet billboards. The time capsule stacks its own
+   * components up to a local {@code z} of 5; the mission timeline posed above it goes to 10 (its
+   * hover tooltip), so that tooltip ties with {@link #PANEL} in world {@code z}.
+   *
+   * <p>The tie is never observable: the mission display panel is anchored top-left under the
+   * application menu, while the mission timeline is a 600 px band at bottom-centre, so the two
+   * surfaces do not overlap. Should a future HUD surface reach into that band, it is this scale —
+   * not the widget's internal stack — that has to be revisited.
    */
   public static final float HUD = 0f;
 
@@ -26,8 +32,8 @@ public final class UiLayers {
   public static final float WINDOW = 20f;
 
   /**
-   * Full-screen click catcher of the open application menu. Deliberately below the title button,
-   * so clicking the title while the menu is open toggles it instead of being swallowed.
+   * Full-screen click catcher of the open application menu. Deliberately below the title button, so
+   * clicking the title while the menu is open toggles it instead of being swallowed.
    */
   public static final float MENU_CATCHER = 40f;
 

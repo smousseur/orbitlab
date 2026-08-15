@@ -89,6 +89,35 @@ public class SpeedStepper {
     return Math.copySign(ABS_SPEED[a], i);
   }
 
+  /**
+   * The inverse of {@link #mapIndexToSpeed(int)}: the stepper index that best represents a clock
+   * speed.
+   *
+   * <p>Exists because the clock, not the capsule, owns the speed (spec §12.1). Any caller of {@code
+   * SimulationClock.setSpeed} outside the capsule — the mission timeline's "go to mission start"
+   * button is the first — would otherwise leave the capsule displaying the previous value.
+   *
+   * <p>Snaps to the nearest table entry: a speed the stepper cannot itself produce still has to
+   * show something, and the nearest step is the only honest answer. A magnitude of 1 maps to index
+   * 0 whatever its sign, because {@code mapIndexToSpeed} never yields −1.
+   *
+   * @param speed the clock speed, in simulated seconds per application second
+   * @return an index within {@link #MIN_INDEX}…{@link #MAX_INDEX}
+   */
+  public static int speedToIndex(double speed) {
+    double magnitude = Math.abs(speed);
+    int best = 0;
+    double bestError = Double.MAX_VALUE;
+    for (int i = 0; i < ABS_SPEED.length; i++) {
+      double error = Math.abs(ABS_SPEED[i] - magnitude);
+      if (error < bestError) {
+        bestError = error;
+        best = i;
+      }
+    }
+    return speed < 0 ? -best : best;
+  }
+
   /** Returns a human-readable label for the given speed index, e.g. "+1×", "+5m/s", "-1h/s". */
   static String formatSpeedLabel(int i) {
     if (i == 0) return "+1×";

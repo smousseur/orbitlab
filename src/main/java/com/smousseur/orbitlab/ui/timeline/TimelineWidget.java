@@ -9,12 +9,15 @@ import com.simsilica.lemur.Panel;
 import com.simsilica.lemur.component.QuadBackgroundComponent;
 import com.simsilica.lemur.component.TbtQuadBackgroundComponent;
 import com.smousseur.orbitlab.app.ApplicationContext;
+import com.smousseur.orbitlab.app.HudSurfaces;
 import com.smousseur.orbitlab.app.SimulationClock;
 import com.smousseur.orbitlab.ui.AppStyles;
 import com.smousseur.orbitlab.ui.UiLayers;
 import com.smousseur.orbitlab.ui.timeline.components.*;
 
 import java.util.Objects;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /**
  * Lemur-based "Capsule console" timeline rendered at the bottom of the HUD.
@@ -32,11 +35,23 @@ import java.util.Objects;
  */
 public class TimelineWidget implements AutoCloseable {
 
-  private static final float CAPSULE_WIDTH = 600f;
-  private static final float CAPSULE_HEIGHT = 52f;
+  private static final Logger logger = LogManager.getLogger(TimelineWidget.class);
+
+  /**
+   * Geometry of the time capsule, public because it is the anchor every widget stacked above it
+   * measures from — the mission timeline sits {@code BOTTOM_MARGIN_PX + CAPSULE_HEIGHT +
+   * HUD_STACK_GAP_PX} up and shares this width and centring. Re-deriving these numbers at the other
+   * end would let a resize of the capsule silently desynchronise whatever is stacked on it, with no
+   * signal from the compiler.
+   */
+  public static final float CAPSULE_WIDTH = 600f;
+
+  public static final float CAPSULE_HEIGHT = 52f;
+
+  public static final float BOTTOM_MARGIN_PX = AppStyles.HUD_MARGIN_PX + 10f;
+
   private static final float CAPSULE_PAD_X = 14f;
   private static final float DIVIDER_HEIGHT = CAPSULE_HEIGHT - 20f;
-  private static final float BOTTOM_MARGIN_PX = AppStyles.HUD_MARGIN_PX + 10f;
 
   private final SimulationClock clock;
   private final Container root;
@@ -46,6 +61,7 @@ public class TimelineWidget implements AutoCloseable {
   private final ClockDisplay clockDisplay;
   private final SpeedStepper speedStepper;
   private final ScrubberTrack scrubberTrack;
+  private final AutoCloseable speedSubscription;
 
   private int speedIndex = 0;
   private Mode currentMode = Mode.LIVE;
@@ -101,8 +117,43 @@ public class TimelineWidget implements AutoCloseable {
     scrubberTrack =
         new ScrubberTrack(root, CAPSULE_HEIGHT, scrubberStart, scrubberEnd, this::applySpeedIndex);
 
+    speedIndex = SpeedStepper.speedToIndex(clock.speed());
+    speedStepper.refresh(speedIndex);
     refreshMode();
     scrubberTrack.refresh(speedIndex);
+
+    // The clock owns the speed; this widget only displays it. Subscribing is what keeps the
+    // stepper and the scrubber honest when something other than this widget calls setSpeed —
+    // the mission timeline's "go to mission start" button being the first such caller (spec
+    // §12.1). Routing that reset through an EventBus message instead would have worked, but it
+    // would have left the next external caller desynchronised and added an event to work around
+    // a defect rather than fixing it.
+    //
+    // Events are published on the thread that called setSpeed, and every caller in this
+    // application is on the render thread, so touching Lemur elements from here is safe.
+    speedSubscription =
+        clock.subscribe(
+            event -> {
+              if (event instanceof SimulationClock.SpeedChanged changed) {
+                syncSpeedIndex(changed.newSpeed());
+              }
+            });
+  }
+
+  /**
+   * Re-derives the displayed speed index from the clock. A no-op when the widget is the origin of
+   * the change: {@link #applySpeedIndex(int)} writes the field before calling the clock.
+   *
+   * @param speed the clock's new speed
+   */
+  private void syncSpeedIndex(double speed) {
+    int next = SpeedStepper.speedToIndex(speed);
+    if (next == speedIndex) {
+      return;
+    }
+    speedIndex = next;
+    speedStepper.refresh(next);
+    scrubberTrack.refresh(next);
   }
 
   /**
@@ -130,6 +181,7 @@ public class TimelineWidget implements AutoCloseable {
 
   @Override
   public void close() {
+    HudSurfaces.closeQuietly(speedSubscription, logger);
     root.removeFromParent();
   }
 

@@ -32,6 +32,7 @@ import com.smousseur.orbitlab.states.scene.PlanetHudMarkersAppState;
 import com.smousseur.orbitlab.states.scene.PlanetPoseAppState;
 import com.smousseur.orbitlab.states.scene.SkyboxAppState;
 import com.smousseur.orbitlab.states.scene.SolarSystemSceneAppState;
+import com.smousseur.orbitlab.states.time.MissionTimelineAppState;
 import com.smousseur.orbitlab.states.time.SimulationClockAppState;
 import com.smousseur.orbitlab.states.time.TimelineWidgetAppState;
 import com.smousseur.orbitlab.ui.AppStyles;
@@ -145,6 +146,7 @@ public class OrbitLabApplication extends SimpleApplication {
     stateManager.attach(new OrbitRuntimeAppState(applicationContext));
     stateManager.attach(new TimelineWidgetAppState(applicationContext));
     stateManager.attach(new TelemetryWidgetAppState(applicationContext));
+    stateManager.attach(new MissionTimelineAppState(applicationContext));
     stateManager.attach(new MissionDisplayPanelAppState(applicationContext));
     stateManager.attach(new MissionPanelWidgetAppState(applicationContext));
     stateManager.attach(new LightningAppState(applicationContext));
