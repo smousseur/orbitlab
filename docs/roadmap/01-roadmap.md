@@ -32,6 +32,9 @@ lisez qu'une section, lisez le §3.
 | **`MIS-1` — deuxième lanceur** (Ariane 62 au catalogue + mesh choisi par lanceur) | `vehicle/catalog/Launchers.java` (commit `f9ea80c`), `engine/scene/spacecraft/LauncherAssets.java`, `MissionRenderer.modelPathFor` |
 | **`UI-1` — vue détail mission** (orbite atteinte, écart à la cible, stages, erreur lisible) | `ui/mission/MissionTargetOrbit.java`, `ui/mission/MissionResultText.java`, `ui/mission/detail/`, `PanelFooter.addResultLine`, `MissionEntry.lastError` ; specs `mission-detail/01-vue-detail.md` |
 | **`NAV-1` — transitions de caméra** (pivot, distance et orientation animés, entrées bloquées) | `states/camera/CameraTransitionAppState.java`, `CameraTransition.java`, `CameraOrientation.java`, `engine/CameraTransitionConfig.java`, `engine/Easing.java`, `app/view/TransitionTarget.java` ; `CameraTransitionTest`, `CameraOrientationTest` |
+| **`UI-5` — surfaces, modalité et pile de renvoi `ESC`** (fenêtre non modale déplaçable, `ESC` renvoie la surface du dessus, `Quit` en entrée de menu) | `app/HudSurface.java`, `app/HudSurfaces.java`, `ui/UiLayers.java`, `ui/form/WindowDragHandler.java` ; `HudSurfacesTest`, `AppMenuModelTest`, `WindowDragHandlerTest` |
+| **`NAV-2` — timeline indexée sur le temps** (capsule jumelle, barre de phases, marqueurs déclusterisés, graduations `T+`, seek au clic) | `ui/timeline/mission/`, `states/time/MissionTimelineAppState.java`, `states/time/MissionTimelineVisibility.java` ; `TimeAxisTest`, `TimeAxisTickTest`, `PhaseMarkerClusterTest`, `MissionTimelineVisibilityTest`, `SpeedStepperIndexTest` |
+| **`NAV-3` — scrub continu** (drag sur la piste, seuil de 3 px, émission étranglée à 10 Hz, état de lecture restauré au lâcher) | `ui/timeline/mission/ScrubGesture.java` + câblage du listener de `MissionTimelineWidget` ; `ScrubGestureTest` |
 
 **Reste ouvert de l'ancienne roadmap** : le feedback de progression pendant
 l'optimisation, repris ici en `UI-2`. La vue détail avec résultats
@@ -108,9 +111,9 @@ plutôt qu'une constante (`MIS-8`).
 |---|---|:-:|:-:|:-:|
 | ~~NAV-1~~ | ~~Transitions de caméra entre vues~~ — résolu | 4 | 2 | M |
 | ~~UI-4~~ | ~~**Menu applicatif haut-gauche** (remplace le bouton « Missions »)~~ — **résolu le 2026-08-14** | 3 | 2 | M |
-| UI-5 | **Surfaces, modalité et pile de renvoi `ESC`** — découle d'`UI-4` ; **codé le 2026-08-15, en attente de vérification à l'écran** | 3 | 2 | M |
-| NAV-2 | Timeline indexée sur le temps + marqueurs d'événements | 4 | 3 | M |
-| NAV-3 | Scrub continu (glisser sur la piste) | 3 | 2 | S |
+| ~~UI-5~~ | ~~**Surfaces, modalité et pile de renvoi `ESC`** — découle d'`UI-4`~~ — **résolu le 2026-08-15** | 3 | 2 | M |
+| ~~NAV-2~~ | ~~Timeline indexée sur le temps + marqueurs d'événements~~ — **résolu le 2026-08-15** | 4 | 3 | M |
+| ~~NAV-3~~ | ~~Scrub continu (glisser sur la piste)~~ — **résolu le 2026-08-15** | 3 | 2 | S |
 | RND-4 | Ribbon billboardé (orbites + trajectoires) | 4 | 3 | M |
 | NAV-4 | Breadcrumb de navigation 3D | 3 | 2 | M |
 
@@ -133,6 +136,13 @@ existe maintenant.
 **Fin de phase quand** : on atteint n'importe quel instant d'une mission à la
 souris, on change de corps focalisé sans cut, et le seul élément de HUD visible
 en permanence ne détonne plus avec le reste de l'interface.
+
+> **État au 2026-08-15 : cinq items sur sept résolus.** Les deux premiers
+> critères de fin de phase sont atteints — `NAV-2` et `NAV-3` donnent l'accès à
+> n'importe quel instant d'une mission au clic comme au glisser, `NAV-1` donne
+> le changement de focus sans cut, `UI-4` et `UI-5` donnent le HUD et sa
+> modalité. Restent **`RND-4`** (ribbon billboardé) et **`NAV-4`** (breadcrumb),
+> ni l'un ni l'autre bloquant pour les phases suivantes.
 
 ### Phase 3 — Socle physique et mission partagé · ~4,5 semaines
 
@@ -241,9 +251,9 @@ opportuniste, ou à décider quoi sacrifier quand une phase déborde.
 | NAV-4 | Breadcrumb de navigation 3D | 3 | 2 | M | — |
 | UI-2 | Feedback de progression pendant l'optimisation | 3 | 2 | M | — |
 | ~~UI-4~~ | ~~Menu applicatif haut-gauche (remplace le bouton « Missions »)~~ — résolu | 3 | 2 | M | — |
-| UI-5 | Surfaces, modalité et pile de renvoi `ESC` — codé, non vérifié à l'écran | 3 | 2 | M | UI-4 (livré) |
-| NAV-2 | Timeline indexée sur le temps + marqueurs d'événements | 4 | 3 | M | — |
-| NAV-3 | Scrub continu (glisser sur la piste) | 3 | 2 | S | NAV-2 |
+| ~~UI-5~~ | ~~Surfaces, modalité et pile de renvoi `ESC`~~ — résolu | 3 | 2 | M | UI-4 (livré) |
+| ~~NAV-2~~ | ~~Timeline indexée sur le temps + marqueurs d'événements~~ — résolu | 4 | 3 | M | — |
+| ~~NAV-3~~ | ~~Scrub continu (glisser sur la piste)~~ — résolu (le débit redouté n'existait pas, voir détail) | 3 | 2 | S | NAV-2 |
 | RND-4 | Ribbon billboardé (orbites + trajectoires) | 4 | 3 | M | — |
 | MIS-3 | Solveur de Lambert + repère LVLH | 4 | 3 | M | — |
 | MIS-2 | Fenêtres de lancement | 4 | 3 | M | MIS-7 |
@@ -263,7 +273,7 @@ opportuniste, ou à décider quoi sacrifier quand une phase déborde.
 
 ```
 MIS-8 (horizon de mission) ✔ résolu — ses trois aval sont débloqués
-   ├── NAV-2 (piste temporelle) ── NAV-3 (scrub)
+   ├── NAV-2 (piste temporelle) ✔ ── NAV-3 (scrub) ✔ — les deux résolus
    ├── MIS-4 / MIS-5 (lunaire : coast TLI ~3 j > horizon actuel)
    └── MIS-6 (rendezvous : phasing sur N révolutions)
 
@@ -500,9 +510,37 @@ basculement de mode.
 
 **Spec.** [`docs/camera/01-view-transitions.md`](../camera/01-view-transitions.md).
 
-#### NAV-2 — Timeline indexée sur le temps + marqueurs d'événements — ★4 ◆3 M
+#### ~~NAV-2 — Timeline indexée sur le temps + marqueurs d'événements — ★4 ◆3 M~~ — **RÉSOLU le 2026-08-15**
 
-**Pourquoi.** `ScrubberTrack` n'a aujourd'hui aucune notion de date : ses 21
+> **Livré conforme à la spec, sans écart de conception.** Une seconde capsule de
+> 600 × 72 posée 8 px au-dessus de la capsule temporelle, montrant la mission du
+> focus télémétrie sur un axe **linéaire** : barre de phases teintée par
+> `MissionPhaseShading` — la même table que la trajectoire 3D, jamais une
+> seconde —, marqueurs de transition déclusterisés, graduations `T+`, tête de
+> lecture, pastille d'écart quand `now` sort de la fenêtre, tooltip au survol et
+> `seek` au clic. Sans éphéméride, le widget ne s'affiche pas ; le toggle partage
+> la condition de présence de la télémétrie et n'a donc **pas** d'état grisé.
+>
+> **Le seul code existant modifié** est celui qu'annonçait la spec §12.1 :
+> `TimelineWidget` s'abonne désormais à `SpeedChanged` et redérive son index
+> depuis l'horloge, via un `SpeedStepper.speedToIndex(double)` ajouté pour ça.
+> Le défaut était latent — la capsule n'écoutait personne — et ce chantier
+> aurait été le premier à le déclencher, en remettant la vitesse à ×1.
+>
+> **Quatre défauts trouvés en cours de route**, dont deux que ni le compilateur
+> ni les tests ne pouvaient voir : `UiKit.mono(9)` retombe **en silence** sur la
+> police par défaut de Lemur (share-tech-mono n'est fourni qu'en 10/11/12/14), et
+> `U+2212 MINUS SIGN` n'a pas de glyphe dans le `.fnt` — le `T−` de la pastille
+> épinglée se serait affiché `T `. Les deux autres étaient un repli de choix de
+> pas qui violait son propre invariant sur une fenêtre de 400 jours, et un
+> débordement `int` dans le compte de graduations au-delà de ~68 ans.
+>
+> **Constaté à l'écran** sur une LEO à horizon 3 jours : la barre est quasi
+> monochrome et les six transitions tiennent en une grappe `×3` collée au bord
+> gauche. C'est le comportement que le §2 de la spec annonce, pas un défaut de
+> rendu — et c'est exactement ce que la déclusterisation existe pour rattraper.
+
+**Pourquoi.** `ScrubberTrack` n'avait aucune notion de date : ses 21
 graduations sont décoratives et indexées sur la **vitesse**. Une timeline de
 simulation orbitale qui ne représente pas le temps est une anomalie.
 
@@ -522,12 +560,55 @@ Synergie forte avec `RND-3` : mêmes frontières de stages, mêmes couleurs — 
 timeline et la trajectoire 3D doivent partager la table de couleurs, pas en
 avoir deux.
 
-#### NAV-3 — Scrub continu — ★3 ◆2 S
+**Spec.** [`docs/navigation/02-timeline-mission.md`](../navigation/02-timeline-mission.md) —
+le fait qui commande le design (les phases propulsées font ~2 % d'une GEO, §2),
+la fonction temps ↔ position (§5), l'anatomie de la capsule jumelle et ses trois
+traitements maquettés (§6, §15), la déclusterisation des marqueurs (§8) et le
+piège de désynchronisation de la vitesse (§12.1).
 
-Subordonné à NAV-2. Attention au débit : chaque `seek` reconstruit toute la
-fenêtre éphéméride (`EphemerisWorker.onSeek`) — n'émettre qu'au relâchement, ou
-étrangler. Trancher la cohabitation piste-vitesse / piste-temps sur le même
-widget (recommandé : deux pistes distinctes).
+#### ~~NAV-3 — Scrub continu — ★3 ◆2 S~~ — **RÉSOLU le 2026-08-15**
+
+**La mise en garde de cette fiche était fausse, et c'est ce qui a fait le
+chantier.** Elle annonçait que « chaque `seek` reconstruit toute la fenêtre
+éphéméride (`EphemerisWorker.onSeek`) ». Le mécanisme existe, le débit non :
+`onSeek` ne fait que poser la date dans un `AtomicReference`, et le tick du
+worker — 200 ms fixes, thread démon — commence par `pendingSeek.getAndSet(null)`.
+Les positions intermédiaires sont donc **déjà écrasées par construction** : 60
+seeks en une seconde en produisent 5, et seule la dernière compte. L'application
+n'a par ailleurs que deux abonnés à l'horloge, dont un qui ne fait que ce
+transfert. L'étranglement que cette fiche demandait d'écrire était déjà là, une
+couche plus bas.
+
+Le throttle a été gardé quand même, à ~10 Hz, mais comme **borne délibérée** et
+non comme rustine : le widget ne dépend plus de ce que cette coalescence reste
+vraie, et les futurs consommateurs de `seek` héritent d'un débit sain.
+
+**La cohabitation piste-vitesse / piste-temps ne s'est jamais posée** : `NAV-2`
+l'avait close en séparant les widgets (cf. question ouverte n°2). Le
+`ScrubberTrack` de la capsule reste indexé sur la vitesse et n'est pas touché.
+
+**Livré.** `ScrubGesture` (sans dépendance JME, 14 tests) est un automate
+`IDLE`/`PRESSED`/`DRAGGING` : sous un seuil de **3 px** le relâchement rejoue le
+clic discret de `NAV-2` — rail *ou* grappe, avec sa sémantique de première
+transition intacte — au-delà le geste s'engage en drag et n'en revient jamais.
+Pendant le glissement la tête de lecture suit le curseur **à la fréquence
+d'image**, pas l'horloge : la laisser suivre l'horloge la faisait revenir à la
+dernière position émise entre deux émissions, donc trembler à 10 Hz. L'horloge
+est mise en pause au franchissement du seuil et **rend au lâcher l'état de
+lecture qu'elle avait trouvé** ; la vitesse n'est jamais touchée, contrairement
+au bouton « début de mission », parce qu'un scrub ne doit pas écraser un réglage
+posé par l'utilisateur à chaque geste.
+
+**Un défaut fermé en passant.** Un appui arrivant alors qu'un drag est encore
+ouvert — bouton relâché hors fenêtre, le cas que `ScrubberTrack` ne gère pas non
+plus — aurait laissé l'horloge en pause sans que rien ne glisse à l'écran. Le
+geste est donc abandonné avant chaque nouvel appui, ce qui rend « en pause » et
+« en train de glisser » indissociables.
+
+**Reste ouvert.** `MissionTimelineWidget` est passé de 689 à 842 lignes ; sa
+section interaction forme désormais un bloc qui aurait sa place en collaborateur
+à côté de `PhaseBar`, `PhaseMarkers` et `TimelineTooltip`. Non fait, hors
+périmètre de l'item.
 
 #### NAV-4 — Breadcrumb de navigation 3D — ★3 ◆2 M
 
@@ -1139,24 +1220,30 @@ trois variantes maquettées sur les textures déjà présentes dans le dépôt, 
 icône par entrée et aucun raccourci clavier (§8), et le périmètre exact du diff
 (§6.6).
 
-#### UI-5 — Surfaces, modalité et pile de renvoi `ESC` — ★3 ◆2 M
+#### ~~UI-5 — Surfaces, modalité et pile de renvoi `ESC` — ★3 ◆2 M~~ — **RÉSOLU le 2026-08-15**
 
-> **Codé le 2026-08-15, non vérifié à l'écran.** Le panneau de gestion est
-> devenu une fenêtre non modale déplaçable par son bandeau, bornée à l'écran et
-> sous le bouton du menu ; `ESC` renvoie la surface du dessus via un registre
-> porté par `ApplicationContext` et ne quitte plus l'application ; `Quit` est
-> une entrée de menu avec confirmation. `UiLayers` porte seul l'échelle de
-> profondeur, et cette échelle **est** l'ordre de renvoi. La chorégraphie qui
-> faisait se rouvrir mutuellement le panneau et le wizard a disparu.
+> **Livré et vérifié à l'écran.** Le panneau de gestion est devenu une fenêtre
+> non modale déplaçable par son bandeau, bornée à l'écran et sous le bouton du
+> menu ; `ESC` renvoie la surface du dessus via un registre porté par
+> `ApplicationContext` et ne quitte plus l'application ; `Quit` est une entrée de
+> menu avec confirmation. `UiLayers` porte seul l'échelle de profondeur, et cette
+> échelle **est** l'ordre de renvoi. La chorégraphie qui faisait se rouvrir
+> mutuellement le panneau et le wizard a disparu.
 >
 > 34 tests unitaires au vert (`HudSurfaces` 11, `AppMenuModel` 12,
-> `WindowDragHandler` 11) et compilation propre, **mais rien n'a été lancé** :
-> les modèles de `src/main/resources/models/` ne sont pas dans le dépôt. Le
-> glisser, le clamp aux bords et le picking après changement de couche restent à
-> confirmer en lançant l'application. La spec §10 consigne six écarts, dont deux
-> que la conception n'avait pas vus : un `AppState` a besoin de **lire** la
+> `WindowDragHandler` 11). Les trois points que la spec §9 renvoyait à un essai
+> plutôt qu'à un test — le glisser, le clamp aux bords, le picking après
+> changement de couche — sont confirmés. La spec §10 consigne six écarts, dont
+> deux que la conception n'avait pas vus : un `AppState` a besoin de **lire** la
 > surface d'un autre (d'où `HudSurfaces.isOpen(String)`), et la position
 > d'ouverture centrée dépassait sa propre borne haute en 1280×720.
+>
+> **Suite constatée en livrant `NAV-2`.** Le Javadoc de `UiLayers.HUD` affirmait
+> que la timeline empile ses composants jusqu'à `z = 5` « d'où le palier suivant
+> à 10 ». La piste de mission monte à 10, donc sa tooltip est à égalité avec
+> `PANEL` en `z` monde. L'égalité n'est pas observable — le panneau d'affichage
+> est ancré en haut-gauche, la piste est une bande de 600 px en bas-centre — mais
+> le commentaire, lui, était devenu faux et a été corrigé.
 
 **Pourquoi.** `UI-4` livré, le menu applicatif est injoignable dès qu'une des
 fenêtres qu'il ouvre est à l'écran. La question posée était « faut-il le faire
