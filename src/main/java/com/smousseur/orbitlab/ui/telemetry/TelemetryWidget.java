@@ -21,6 +21,7 @@ import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemeris;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemerisPoint;
 import com.smousseur.orbitlab.ui.AppStyles;
 import com.smousseur.orbitlab.ui.UiKit;
+import com.smousseur.orbitlab.ui.UiLayers;
 import com.smousseur.orbitlab.ui.form.FormStyles;
 import java.util.Objects;
 import org.orekit.time.AbsoluteDate;
@@ -233,7 +234,7 @@ public class TelemetryWidget implements AutoCloseable {
     var size = root.getPreferredSize();
     float x = screenWidth - size.x - MARGIN_PX;
     float y = screenHeight - MARGIN_PX;
-    root.setLocalTranslation(x, y, 0f);
+    root.setLocalTranslation(x, y, UiLayers.HUD);
   }
 
   @Override

@@ -108,7 +108,7 @@ plutôt qu'une constante (`MIS-8`).
 |---|---|:-:|:-:|:-:|
 | ~~NAV-1~~ | ~~Transitions de caméra entre vues~~ — résolu | 4 | 2 | M |
 | ~~UI-4~~ | ~~**Menu applicatif haut-gauche** (remplace le bouton « Missions »)~~ — **résolu le 2026-08-14** | 3 | 2 | M |
-| UI-5 | **Surfaces, modalité et pile de renvoi `ESC`** — découle d'`UI-4` | 3 | 2 | M |
+| UI-5 | **Surfaces, modalité et pile de renvoi `ESC`** — découle d'`UI-4` ; **codé le 2026-08-15, en attente de vérification à l'écran** | 3 | 2 | M |
 | NAV-2 | Timeline indexée sur le temps + marqueurs d'événements | 4 | 3 | M |
 | NAV-3 | Scrub continu (glisser sur la piste) | 3 | 2 | S |
 | RND-4 | Ribbon billboardé (orbites + trajectoires) | 4 | 3 | M |
@@ -241,7 +241,7 @@ opportuniste, ou à décider quoi sacrifier quand une phase déborde.
 | NAV-4 | Breadcrumb de navigation 3D | 3 | 2 | M | — |
 | UI-2 | Feedback de progression pendant l'optimisation | 3 | 2 | M | — |
 | ~~UI-4~~ | ~~Menu applicatif haut-gauche (remplace le bouton « Missions »)~~ — résolu | 3 | 2 | M | — |
-| UI-5 | Surfaces, modalité et pile de renvoi `ESC` | 3 | 2 | M | UI-4 (livré) |
+| UI-5 | Surfaces, modalité et pile de renvoi `ESC` — codé, non vérifié à l'écran | 3 | 2 | M | UI-4 (livré) |
 | NAV-2 | Timeline indexée sur le temps + marqueurs d'événements | 4 | 3 | M | — |
 | NAV-3 | Scrub continu (glisser sur la piste) | 3 | 2 | S | NAV-2 |
 | RND-4 | Ribbon billboardé (orbites + trajectoires) | 4 | 3 | M | — |
@@ -1140,6 +1140,23 @@ icône par entrée et aucun raccourci clavier (§8), et le périmètre exact du 
 (§6.6).
 
 #### UI-5 — Surfaces, modalité et pile de renvoi `ESC` — ★3 ◆2 M
+
+> **Codé le 2026-08-15, non vérifié à l'écran.** Le panneau de gestion est
+> devenu une fenêtre non modale déplaçable par son bandeau, bornée à l'écran et
+> sous le bouton du menu ; `ESC` renvoie la surface du dessus via un registre
+> porté par `ApplicationContext` et ne quitte plus l'application ; `Quit` est
+> une entrée de menu avec confirmation. `UiLayers` porte seul l'échelle de
+> profondeur, et cette échelle **est** l'ordre de renvoi. La chorégraphie qui
+> faisait se rouvrir mutuellement le panneau et le wizard a disparu.
+>
+> 34 tests unitaires au vert (`HudSurfaces` 11, `AppMenuModel` 12,
+> `WindowDragHandler` 11) et compilation propre, **mais rien n'a été lancé** :
+> les modèles de `src/main/resources/models/` ne sont pas dans le dépôt. Le
+> glisser, le clamp aux bords et le picking après changement de couche restent à
+> confirmer en lançant l'application. La spec §10 consigne six écarts, dont deux
+> que la conception n'avait pas vus : un `AppState` a besoin de **lire** la
+> surface d'un autre (d'où `HudSurfaces.isOpen(String)`), et la position
+> d'ouverture centrée dépassait sa propre borne haute en 1280×720.
 
 **Pourquoi.** `UI-4` livré, le menu applicatif est injoignable dès qu'une des
 fenêtres qu'il ouvre est à l'écran. La question posée était « faut-il le faire

@@ -41,6 +41,7 @@ public class ApplicationContext {
 
   private final FocusView focusView;
   private final MissionContext missionContext;
+  private final HudSurfaces hudSurfaces = new HudSurfaces();
   private Camera nearCamera;
   private Camera skyCamera;
   private OrbitCameraAppState orbitCamera;
@@ -234,6 +235,17 @@ public class ApplicationContext {
    */
   public MissionContext missionContext() {
     return missionContext;
+  }
+
+  /**
+   * Returns the registry of dismissible HUD surfaces. Each app state registers the surface it owns
+   * and closes the handle in its {@code cleanup()}; the state that owns the {@code ESC} key asks
+   * this registry which surface to send away.
+   *
+   * @return the HUD surface registry
+   */
+  public HudSurfaces hudSurfaces() {
+    return hudSurfaces;
   }
 
   /**

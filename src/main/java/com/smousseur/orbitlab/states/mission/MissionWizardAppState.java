@@ -3,6 +3,8 @@ package com.smousseur.orbitlab.states.mission;
 import com.jme3.app.Application;
 import com.jme3.app.state.BaseAppState;
 import com.smousseur.orbitlab.app.ApplicationContext;
+import com.smousseur.orbitlab.app.HudSurface;
+import com.smousseur.orbitlab.app.HudSurfaces;
 import com.smousseur.orbitlab.app.converters.TimeConverter;
 import com.smousseur.orbitlab.engine.events.EventBus;
 import com.smousseur.orbitlab.simulation.mission.MissionId;
@@ -10,6 +12,8 @@ import com.smousseur.orbitlab.simulation.mission.operation.MissionFactory;
 import com.smousseur.orbitlab.simulation.mission.operation.MissionSpec;
 import com.smousseur.orbitlab.simulation.mission.context.MissionContext;
 import com.smousseur.orbitlab.simulation.mission.context.MissionEntry;
+import com.smousseur.orbitlab.ui.UiLayers;
+import com.smousseur.orbitlab.ui.form.ConfirmDialog;
 import com.smousseur.orbitlab.ui.mission.wizard.FormField;
 import com.smousseur.orbitlab.ui.mission.wizard.MissionWizardWidget;
 import com.smousseur.orbitlab.ui.mission.wizard.WizardPrefill;
@@ -26,6 +30,12 @@ public final class MissionWizardAppState extends BaseAppState {
 
   private final ApplicationContext context;
   private MissionWizardWidget widget;
+  private AutoCloseable surfaceHandle;
+  private ConfirmDialog discardDialog;
+  private AutoCloseable discardDialogHandle;
+
+  /** True while the open wizard is editing an existing mission, which changes what we ask. */
+  private boolean editing;
 
   public MissionWizardAppState(ApplicationContext context) {
     this.context = context;
@@ -36,11 +46,24 @@ public final class MissionWizardAppState extends BaseAppState {
   }
 
   @Override
-  protected void initialize(Application app) {}
+  protected void initialize(Application app) {
+    surfaceHandle =
+        context
+            .hudSurfaces()
+            .register(
+                new HudSurface(
+                    HudSurface.MISSION_WIZARD,
+                    UiLayers.MODAL,
+                    this::isWizardVisible,
+                    this::confirmDiscard));
+  }
 
   @Override
   protected void cleanup(Application app) {
+    closeDiscardDialog();
     closeWizard();
+    HudSurfaces.closeQuietly(surfaceHandle, logger);
+    surfaceHandle = null;
   }
 
   @Override
@@ -64,9 +87,54 @@ public final class MissionWizardAppState extends BaseAppState {
     if (edit != null) {
       updateMission(edit);
     }
+    if (discardDialog != null) {
+      discardDialog.update(getApplication().getCamera());
+    }
     if (widget != null) {
       widget.update(tpf, getApplication().getCamera());
     }
+  }
+
+  /**
+   * Asks before throwing away an open wizard. ESC is easy to hit by accident on a form four steps
+   * deep, which is the whole reason the key stopped quitting the application; closing the wizard
+   * without asking would just move the same loss one level down.
+   *
+   * <p>The question is asked every time, with no "has anything been typed" tracking: that
+   * bookkeeping would exist only to save one click in the single case where the user opens the
+   * wizard and leaves it untouched. The Cancel button stays immediate — it is already explicit.
+   */
+  private void confirmDiscard() {
+    if (widget == null || discardDialog != null) return;
+
+    discardDialog = new ConfirmDialog(editing ? "Discard changes?" : "Discard this mission?");
+    discardDialog.setOnCancel(this::closeDiscardDialog);
+    discardDialog.setOnConfirm(
+        () -> {
+          closeDiscardDialog();
+          closeWizard();
+        });
+    discardDialog.attachTo(context.guiGraph().getModalNode());
+    // Registered only now: before attachTo, isVisible() would report open with nothing yet on
+    // screen, which HudSurface's contract does not allow.
+    discardDialogHandle =
+        context
+            .hudSurfaces()
+            .register(
+                new HudSurface(
+                    HudSurface.DISCARD_DIALOG,
+                    UiLayers.DIALOG,
+                    discardDialog::isVisible,
+                    this::closeDiscardDialog));
+  }
+
+  private void closeDiscardDialog() {
+    if (discardDialog != null) {
+      discardDialog.close();
+      discardDialog = null;
+    }
+    HudSurfaces.closeQuietly(discardDialogHandle, logger);
+    discardDialogHandle = null;
   }
 
   private void createMission(EventBus.UiNavigationEvent.CreateMission createMission) {
@@ -209,13 +277,9 @@ public final class MissionWizardAppState extends BaseAppState {
       edited = context.missionContext().findMission(missionId).orElse(null);
       MissionSpec spec = edited == null ? null : edited.spec().orElse(null);
       if (spec == null) {
-        // The roster only offers Edit on spec-carrying missions, so this is a race (deleted between
-        // click and poll). The panel closed itself on the click: reopen it rather than leave the
-        // user on a bare scene.
+        // Race: deleted between the click and the poll. The management window is still open behind
+        // this, so there is nothing to reopen — it was never closed.
         logger.warn("Edit ignored: mission [{}] is not editable", missionId.shortForm());
-        context
-            .eventBus()
-            .publishUiNavigation(new EventBus.UiNavigationEvent.OpenMissionManagement());
         return;
       }
       // Every wizard step reads the mission type from the context, so it must designate the edited
@@ -226,6 +290,7 @@ public final class MissionWizardAppState extends BaseAppState {
     Map<String, Object> initialValues = edited == null ? null : WizardPrefill.fromEntry(edited);
     MissionId editedId = edited == null ? null : edited.id();
 
+    editing = editedId != null;
     widget = new MissionWizardWidget(context, initialValues);
     widget.setOnCancel(this::closeWizard);
     widget.setOnSubmit(values -> submit(editedId, values));
@@ -249,13 +314,17 @@ public final class MissionWizardAppState extends BaseAppState {
           new EventBus.UiNavigationEvent.UpdateMission(editedMissionId, values));
     }
     closeWizard();
-    bus.publishUiNavigation(new EventBus.UiNavigationEvent.OpenMissionManagement());
   }
 
   private void closeWizard() {
+    // No reachable path closes the wizard while the discard question is up — the dialog's backdrop
+    // shields every control that could — but that invariant lives in two other files. Draining it
+    // here makes it hold by construction, and the confirm path already orders it this way.
+    closeDiscardDialog();
     if (widget != null) {
       widget.close();
       widget = null;
+      editing = false;
       logger.info("Mission Wizard closed");
     }
   }

@@ -1,8 +1,10 @@
 # Spec — Surfaces, modalité et pile de renvoi (`UI-5`)
 
 > **Rédigé et tranché le 2026-08-15**, à la suite immédiate d'`UI-4`
-> (`menu/01-menu-applicatif.md`), non commencé. Item `UI-5` de la roadmap,
-> phase 2, ★3 ◆2 M.
+> (`menu/01-menu-applicatif.md`). Item `UI-5` de la roadmap, phase 2, ★3 ◆2 M.
+> **Code écrit le même jour, compilé, 34 tests unitaires au vert — mais aucune
+> vérification à l'écran** : elle demande les modèles absents du dépôt. §10 liste
+> les six écarts et ce qui reste à confirmer en lançant l'application.
 >
 > **Question d'origine** — `UI-4` livré, le menu applicatif est injoignable dès
 > qu'une fenêtre du menu est ouverte. Faut-il le faire passer au-dessus de tout ?
@@ -128,9 +130,10 @@ rien**, pas parce qu'on l'a monté d'un cran.
 - **A2 — ancrée, non déplaçable** *(écartée)*. Zéro infrastructure nouvelle,
   placement déterministe. Mais 720×640 sous le panneau d'affichage est
   intenable en hauteur — `HUD_MENU_HEIGHT_PX` vaut 54 dans le code livré, donc
-  54 + 8 + 240 + 8 + 640 = 950 px avant marges — donc ce serait un dock à
-  droite, et l'utilisateur ne peut toujours pas dégager la fenêtre de ce qu'il
-  veut regarder.
+  54 + 8 + 240 + 8 + 640 = 950 px avant marges, contre les **720 px** que
+  `OrbitLabApplication` demande par défaut. Ce serait donc un dock à droite, et
+  l'utilisateur ne peut toujours pas dégager la fenêtre de ce qu'il veut
+  regarder.
 - **A3 — fixe au centre, moins le voile** *(écartée)*. Le plus petit diff
   possible, et le pire résultat : une fenêtre non modale qui occupe le centre
   de la vue 3D et qu'on ne peut ni bouger ni contourner. Autant garder la
@@ -271,12 +274,20 @@ laisse sortir la fenêtre de l'écran.
 D'où `WindowDragHandler` dans `ui/form/`, une sous-classe qui contraint la
 translation après coup :
 
-- le header reste **entièrement** à l'écran, en largeur et en hauteur, donc la
-  fenêtre est toujours rattrapable ;
-- son bord haut ne monte pas au-dessus de
-  `topOffset + HUD_MENU_HEIGHT_PX + HUD_STACK_GAP_PX` — sinon le header passe
-  sous le bouton `ORBITLAB`, qui est 30 unités de `z` devant, et devient
-  inattrapable. On réutilise la chaîne d'ancrage d'`UI-4` §6.3 telle quelle.
+- **la fenêtre entière reste à l'écran tant qu'elle y tient**, sur les deux axes.
+  Une fenêtre trop haute pour la place disponible retombe sur une garantie de
+  header : son corps déborde par le bas plutôt que d'être bloquée par sa propre
+  hauteur, et sa zone de prise reste atteignable ;
+- son bord haut ne monte pas au-dessus de `screenHeight - HUD_MARGIN_PX`.
+
+> **La borne haute ne réserve pas la place du menu**, et c'est un arbitrage
+> mesuré à l'écran, pas un oubli — voir §10, écart 7. Réserver toute la chaîne
+> d'ancrage (`HUD_MARGIN_PX + HUD_MENU_HEIGHT_PX + HUD_STACK_GAP_PX`, 78 px)
+> revenait à taxer la largeur entière de l'écran pour protéger un bouton de
+> 176 px, sur un budget vertical qui ne vaut que `screenHeight - windowHeight`.
+> En 1280×720, la fenêtre de 640 px se retrouvait avec **2 px** de course
+> verticale utile. Le bouton peut désormais recouvrir le coin gauche du header ;
+> les ~540 px restants d'un header large de 720 suffisent à la reprendre.
 
 Trois conséquences dans `MissionPanelWidget` :
 
@@ -312,7 +323,7 @@ cas.
 
 **`Quit`, en fin de liste, séparateur avant**, icône `wizard/icon-close-red` —
 aucun asset à créer, conformément à la contrainte que s'était donnée `UI-4`.
-Clic → `ConfirmDialog("Quit OrbitLab ?")` → `stop()`. L'entrée s'ajoute à
+Clic → `ConfirmDialog("Quit OrbitLab?")` → `stop()`. L'entrée s'ajoute à
 `MENU_ITEMS` et à `AppMenuModel` sans rien changer d'autre : c'est le troisième
 cas d'usage qui valide la liste déclarative d'`UI-4`.
 
@@ -389,18 +400,132 @@ ont été tranchées le 2026-08-15, le jour même.
 
 ## 9. Risques à vérifier à l'implémentation
 
-Trois points que la conception ne peut pas trancher sur pièces, et qui devront
-être vérifiés à l'écran plutôt que par un test.
+Trois points que la conception ne pouvait pas trancher sur pièces. Leur état
+après écriture du code est indiqué en tête de chaque point.
 
-1. **Cohabitation `MouseEventControl` / `CursorEventControl`.** La racine de la
-   fenêtre porte déjà un `MouseEventControl` qui consomme les clics, et le
-   glisser passe par `CursorEventControl`. Les deux familles sont alimentées par
-   la même `PickEventSession`. Si la consommation du bouton étouffe le
-   `cursorButtonEvent` du header, il faut restreindre le consommateur au corps
-   de la fenêtre plutôt qu'à sa racine.
-2. **Le clamp.** Bornes en fenêtré, en plein écran, et au redimensionnement
-   pendant qu'une fenêtre est posée près d'un bord.
-3. **Le picking après changement de couche.** Le panneau d'affichage passe de
-   `z = 0` à `z = 10` et la fenêtre de 101 à 20 : vérifier qu'aucune surface du
-   HUD ne devient inatteignable, en particulier là où la fenêtre peut être
-   glissée par-dessus la timeline et la télémétrie.
+1. ~~**Cohabitation `MouseEventControl` / `CursorEventControl`.**~~ **Levé sans
+   mesure, en lisant Lemur.** La crainte était que le consommateur de clics posé
+   sur la racine de la fenêtre étouffe le `cursorButtonEvent` du header et
+   bloque le glisser. `PickEventSession.buttonEvent` (Lemur 1.16) dit le
+   contraire, deux fois : un événement bouton n'est délivré qu'à la **cible
+   touchée** et à la capture, sans aucune remontée aux parents — un contrôle
+   posé sur la racine ne voit donc jamais un clic tombé sur le header ; et sur
+   une même entité, Lemur **ignore délibérément** le drapeau « consommé » du
+   `MouseEventControl` avant de servir le `CursorEventControl`, avec un
+   commentaire dans la source expliquant que c'est voulu (le cas du pouce de
+   slider). Le bouclier reste donc sur la racine, intact.
+2. **Le clamp** — *arithmétique couverte par un test, intégration à vérifier à
+   l'écran.* `WindowDragHandlerTest` (11 cas) monte un `Node` nu porteur d'un
+   `GuiControl`, sans contexte JME : les quatre bornes, la garantie « le bandeau
+   au minimum », les deux branches du repli de taille et la position d'ouverture
+   en 1280×720 y sont vérifiées. Ce que le test ne couvre pas : le glisser réel
+   à travers la répartition d'événements de Lemur.
+3. **Le picking après changement de couche** — *à vérifier à l'écran.* Le
+   panneau d'affichage passe de `z = 0` à `z = 10` et la fenêtre de 101 à 20 :
+   vérifier qu'aucune surface du HUD ne devient inatteignable, en particulier là
+   où la fenêtre peut être glissée par-dessus la timeline et la télémétrie.
+
+---
+
+## 10. Écarts du code livré
+
+Code écrit le 2026-08-15, compilé et couvert par 34 tests unitaires
+(`HudSurfacesTest` 11, `AppMenuModelTest` 12, `WindowDragHandlerTest` 11).
+**Aucune vérification à l'écran n'a été faite** : elle demande les modèles de
+`src/main/resources/models/`, absents du dépôt. Tout ce qui touche au rendu, au
+picking et au glisser reste donc à confirmer en lançant l'application.
+
+Sept écarts : six découverts en écrivant le code, le septième au premier
+lancement.
+
+1. **Un `AppState` doit pouvoir *lire* la surface d'un autre.** §6.2 ne prévoyait
+   que l'inscription et le renvoi. La coche de *Mission management* a imposé un
+   troisième usage : `MissionDisplayPanelAppState` doit savoir si la fenêtre —
+   possédée par `MissionPanelWidgetAppState` — est à l'écran, sans passer par
+   `getState`. D'où `HudSurfaces.isOpen(String)` et six constantes de nom sur
+   `HudSurface` (`MISSION_MANAGEMENT`, `APP_MENU`, `QUIT_DIALOG`,
+   `DELETE_DIALOG`, `MISSION_WIZARD`, `DISCARD_DIALOG`) : un nom sur lequel deux
+   états doivent s'accorder ne peut pas rester un littéral aux deux bouts.
+
+2. **`OpenMissionManagement` est devenu une bascule**, ce qu'implique une entrée
+   de menu à coche. Deux effets de bord non prévus : le bouton *Manage* du
+   panneau d'affichage publie le même événement et bascule donc aussi ; et les
+   deux republications de cet événement dans `MissionWizardAppState` — celle de
+   `submit()` et celle du repli de course de `openWizard()` — **fermaient**
+   désormais une fenêtre qui n'avait jamais été fermée. Les deux sont
+   supprimées ; §6.6 n'avait prévu que la première.
+
+3. **La confirmation de suppression devait s'inscrire elle aussi.** §6.2 le
+   demandait en une incise, le périmètre de §6.6 l'oubliait. Sans elle, dès la
+   fenêtre inscrite en couche 20, un `ESC` au-dessus du dialogue de suppression
+   aurait renvoyé la fenêtre *derrière*. Même chose pour la confirmation
+   d'abandon du wizard.
+
+4. **`GuiControl.getSize()` vaut zéro à la première image.** `revalidate()`
+   s'exécute dans `guiNode.updateLogicalState`, donc **après**
+   `stateManager.update` : l'`AppState` construit, attache et place la fenêtre
+   dans la même passe, où la taille rendue n'existe pas encore. `clamp` retombe
+   sur `getPreferredSize()` quand la taille rendue est nulle — sans quoi la
+   borne horizontale valait `screenWidth - 0`, c'est-à-dire aucune borne.
+
+5. **La position centrée devait être bornée elle aussi.** §4.2 disait « ouverte
+   au centre » et §6.3 n'y voyait rien à contraindre. `place()` borne donc les
+   deux branches — utile même après l'écart 7, pour le cas d'une position
+   mémorisée sur une surface de rendu différente.
+
+6. **`HudSurfaces.closeQuietly(AutoCloseable, Logger)`.** Le patron « fermer une
+   poignée sans faire échouer le démantèlement » est apparu en trois copies
+   identiques avant d'en gagner deux de plus ; il est remonté sur la classe qui
+   fabrique les poignées, là où vit le contrat. Le dépôt suivait déjà cette
+   forme dans `EphemerisAppState` : journaliser et continuer, jamais relancer —
+   une exception qui s'échappe d'un `cleanup()` laisse derrière elle tout ce que
+   l'état n'avait pas encore relâché.
+
+7. **Les bornes verticales étaient sur-contraintes — trouvé à l'écran.**
+   Premier retour d'usage : « on ne peut déplacer la fenêtre qu'horizontalement ».
+   Le glisser n'était pas en cause — une reproduction sans affichage, pilotant
+   le vrai `DragHandler` de Lemur, montre les deux axes qui répondent
+   normalement. C'était l'arithmétique des bornes :
+
+   | | horizontal | vertical |
+   |---|---|---|
+   | Écran | 1280 | 720 |
+   | Fenêtre | 720 | 640 |
+   | Réservé par la borne | 0 | 78 |
+   | **Course utile** | **560 px** | **2 px** |
+
+   Deux décisions se cumulaient. La borne haute réservait toute la chaîne
+   d'ancrage du HUD sur la largeur entière de l'écran, pour empêcher le header
+   de passer sous un bouton de menu large de 176 px ; et la borne basse ne
+   garantissait que le header, jamais le corps de la fenêtre. Résultat : la
+   fenêtre s'ouvrait plaquée à sa borne haute, refusait de monter, et chaque
+   pixel de descente la faisait sortir par le bas. Elle bougeait — mais jamais
+   d'une façon utile.
+
+   Corrigé en deux temps : la borne haute ne réserve plus que `HUD_MARGIN_PX`
+   (le menu peut recouvrir le coin du header, le reste suffit à le reprendre),
+   et la borne basse garde **la fenêtre entière** à l'écran tant qu'elle y
+   tient, la garantie « header seulement » ne servant plus que de repli pour une
+   fenêtre trop haute. La course verticale passe de 2 à **64 px**, corps
+   entièrement visible sur toute la course, et la position centrée redevient
+   légale sans clampage. Un test de non-régression échoue si la course
+   redescend sous 32 px.
+
+   **La leçon, pour les fenêtres suivantes :** une borne qui protège un élément
+   de HUD doit coûter à la mesure de cet élément, pas à la mesure de l'écran. Le
+   budget vertical d'une fenêtre ne vaut que `screenHeight - windowHeight` ;
+   ici 80 px, dont 78 étaient dépensés par la borne.
+
+### Deux dettes assumées, non traitées
+
+- **Le bloc « ouvrir une `ConfirmDialog` » existe en trois exemplaires** (quitter,
+  supprimer, abandonner) : même garde, mêmes callbacks, même inscription, même
+  méthode de fermeture. Une fabrique `ConfirmDialogs.open(...)` rendant une
+  poignée fermable les réduirait à un appel. Hors périmètre ici ; le bon moment
+  est le quatrième appelant.
+- **`MissionPanelWidget` fait 437 lignes et porte quatre sujets** : construction
+  de l'arbre Lemur, état des écrans liste/détail, placement de la fenêtre,
+  inscription de son dialogue. La couture nette est le placement
+  (`initialPosition`, `placed`, `lastWidth`, `lastHeight`, `place`,
+  `getPosition`, `setInitialPosition`) : un collaborateur `WindowPlacement`
+  l'extrairait sans toucher au reste.

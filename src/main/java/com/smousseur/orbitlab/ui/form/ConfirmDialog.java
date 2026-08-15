@@ -20,29 +20,24 @@ import com.simsilica.lemur.component.InsetsComponent;
 import com.simsilica.lemur.event.DefaultMouseListener;
 import com.simsilica.lemur.event.MouseEventControl;
 import com.smousseur.orbitlab.ui.UiKit;
+import com.smousseur.orbitlab.ui.UiLayers;
 import java.util.Objects;
 
 /**
- * Minimal confirmation modal: a single message line and a Cancel / OK button pair. Deliberately has
- * no close button — the only ways out are the two buttons, so the caller always learns the outcome.
+ * Minimal confirmation modal: a single message line and a Cancel / OK button pair. It has no close
+ * button — the ways out are the two buttons and ESC, which is the keyboard equivalent of Cancel, so
+ * the caller always learns the outcome.
  *
- * <p>Its own {@link ModalBackdrop} sits above whatever modal opened it (see {@link #BACKDROP_Z})
- * and swallows every mouse event, which is what makes the dialog modal against an already-modal
- * panel: the widget underneath keeps rendering but cannot be clicked. Clicking the backdrop does
- * nothing — dismissing has to be an explicit Cancel.
+ * <p>Its own {@link ModalBackdrop} sits above whatever modal opened it (see {@link
+ * UiLayers#DIALOG_BACKDROP}) and swallows every mouse event, which is what makes the dialog modal
+ * against an already-modal panel: the widget underneath keeps rendering but cannot be clicked.
+ * Clicking the backdrop still does nothing — dismissing with the mouse has to be an explicit
+ * Cancel.
  *
  * <p>The dialog does not touch the simulation clock: opening one leaves time running exactly as it
  * was.
  */
 public class ConfirmDialog implements AutoCloseable {
-
-  /**
-   * Backdrop depth. Above the 100/101 pair used by the mission panel and the wizard so this dialog
-   * and its click shield always render — and pick — in front of them.
-   */
-  private static final float BACKDROP_Z = 200f;
-
-  private static final float DIALOG_Z = BACKDROP_Z + 1f;
 
   private static final float WIDTH = 380f;
   private static final float HEIGHT = 150f;
@@ -67,7 +62,7 @@ public class ConfirmDialog implements AutoCloseable {
     Objects.requireNonNull(message, "message");
 
     // No click callback: the backdrop only shields, it never dismisses.
-    backdrop = new ModalBackdrop(BACKDROP_Z);
+    backdrop = new ModalBackdrop(UiLayers.DIALOG_BACKDROP);
 
     root = new Container(new BoxLayout(Axis.Y, FillMode.None), FormStyles.STYLE);
     root.setPreferredSize(new Vector3f(WIDTH, HEIGHT, 0));
@@ -150,7 +145,7 @@ public class ConfirmDialog implements AutoCloseable {
   private void centerOnScreen(int screenWidth, int screenHeight) {
     float x = Math.round((screenWidth - WIDTH) / 2f);
     float y = Math.round((screenHeight + HEIGHT) / 2f);
-    root.setLocalTranslation(x, y, DIALOG_Z);
+    root.setLocalTranslation(x, y, UiLayers.DIALOG);
   }
 
   private static Button newButton(String text, ColorRGBA color) {

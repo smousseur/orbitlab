@@ -15,6 +15,7 @@ import com.simsilica.lemur.component.TbtQuadBackgroundComponent;
 import com.simsilica.lemur.core.GuiComponent;
 import com.smousseur.orbitlab.app.ApplicationContext;
 import com.smousseur.orbitlab.ui.UiKit;
+import com.smousseur.orbitlab.ui.UiLayers;
 import com.smousseur.orbitlab.ui.mission.wizard.step.*;
 import java.util.EnumMap;
 import java.util.LinkedHashMap;
@@ -277,6 +278,6 @@ public class MissionWizardWidget implements AutoCloseable {
   private void centerOnScreen(int screenWidth, int screenHeight) {
     float x = Math.round((screenWidth - WINDOW_WIDTH) / 2f);
     float y = Math.round((screenHeight + WINDOW_HEIGHT) / 2f);
-    root.setLocalTranslation(x, y, 101f);
+    root.setLocalTranslation(x, y, UiLayers.MODAL);
   }
 }

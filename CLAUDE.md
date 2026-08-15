@@ -37,7 +37,8 @@ The application visualizes the solar system, computes spacecraft orbits, and sim
 src/
 ├── main/java/com/smousseur/orbitlab/
 │   ├── OrbitLabApplication.java      # Main entry point (extends JME3 SimpleApplication)
-│   ├── app/                          # Application layer (context, config, clock)
+│   ├── app/                          # Application layer (context, config, clock,
+│   │   │                             #   HudSurface/HudSurfaces — the ESC dismissal registry)
 │   │   ├── converters/               # Time/value converters
 │   │   └── view/                     # View-mode + render-frame abstractions
 │   │                                 #   (FocusView, RenderContext, RenderFrame,
@@ -97,8 +98,9 @@ src/
 │   │               │                 #   AscentProfile)
 │   │               └── stage/        # Stage model (StageModel, StageCapabilities, StageRole,
 │   │                                 #   PropellantType, IgnitionMode, ShutdownMode)
-│   ├── ui/                           # Lemur-based GUI widgets (AppStyles, UiKit)
-│   │   ├── form/                     # Form/modal styling (FormStyles, ModalBackdrop)
+│   ├── ui/                           # Lemur-based GUI widgets (AppStyles, UiKit, UiLayers)
+│   │   ├── form/                     # Form/modal styling (FormStyles, ModalBackdrop,
+│   │   │                             #   ConfirmDialog, WindowDragHandler)
 │   │   ├── menu/                     # Top-left application menu (AppMenu, AppMenuItem)
 │   │   ├── mission/
 │   │   │   ├── component/            # Shared mission-UI widgets (PaginationBar)
@@ -115,7 +117,7 @@ src/
 │       ├── ephemerisgen/             # Ephemeris dataset generator
 │       └── orbitgen/                 # Orbit dataset generator
 └── test/java/com/smousseur/orbitlab/
-    ├── app/                          # Unit tests for clock, converters
+    ├── app/                          # Unit tests for clock, converters, HudSurfaces registry
     │   └── view/                     # FocusView and RenderTransform tests
     ├── core/                         # SolarSystemBody tests
     ├── engine/scene/spacecraft/      # SpacecraftPresenter tests
@@ -135,7 +137,9 @@ src/
     │   └── source/                   # Source-layer tests (LRU cache)
     ├── states/mission/               # Mission display panel rules and app-menu model tests
     ├── tools/ephemerisgen/           # Smoke tests for ephemeris datasets
-    └── ui/mission/                   # Mission color palette tests
+    └── ui/
+        ├── form/                     # WindowDragHandler clamp tests (headless GuiControl)
+        └── mission/                  # Mission color palette tests
 ```
 
 ---

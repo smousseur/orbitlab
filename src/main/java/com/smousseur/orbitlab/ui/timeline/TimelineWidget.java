@@ -11,6 +11,7 @@ import com.simsilica.lemur.component.TbtQuadBackgroundComponent;
 import com.smousseur.orbitlab.app.ApplicationContext;
 import com.smousseur.orbitlab.app.SimulationClock;
 import com.smousseur.orbitlab.ui.AppStyles;
+import com.smousseur.orbitlab.ui.UiLayers;
 import com.smousseur.orbitlab.ui.timeline.components.*;
 
 import java.util.Objects;
@@ -124,7 +125,7 @@ public class TimelineWidget implements AutoCloseable {
     Vector3f size = root.getPreferredSize();
     float x = (screenWidth - size.x) * 0.5f;
     float y = BOTTOM_MARGIN_PX + size.y;
-    root.setLocalTranslation(x, y, 0f);
+    root.setLocalTranslation(x, y, UiLayers.HUD);
   }
 
   @Override

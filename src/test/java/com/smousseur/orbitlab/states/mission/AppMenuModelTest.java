@@ -19,13 +19,15 @@ class AppMenuModelTest {
   private static final String PANEL = "missionPanel";
   private static final String MANAGE = "manageMissions";
   private static final String NEW = "newMission";
+  private static final String QUIT = "quit";
 
   private static AppMenuModel newModel() {
     return new AppMenuModel(
         List.of(
             AppMenuItem.toggle(PANEL, "Mission panel", "missions/icon-action-view"),
-            AppMenuItem.action(MANAGE, "Manage missions...", "missions/icon-action-manage"),
-            AppMenuItem.action(NEW, "New mission...", "wizard/icon-plus").withSeparatorBefore()));
+            AppMenuItem.toggle(MANAGE, "Mission management", "missions/icon-action-manage"),
+            AppMenuItem.action(NEW, "New mission...", "wizard/icon-plus").withSeparatorBefore(),
+            AppMenuItem.action(QUIT, "Quit", "wizard/icon-close-red").withSeparatorBefore()));
   }
 
   @Test
@@ -110,16 +112,41 @@ class AppMenuModelTest {
   void onlyToggleEntriesCarryACheck() {
     AppMenuModel model = newModel();
 
-    assertThrows(IllegalArgumentException.class, () -> model.setChecked(MANAGE, true));
+    assertThrows(IllegalArgumentException.class, () -> model.setChecked(NEW, true));
     assertThrows(IllegalArgumentException.class, () -> model.setChecked("saveScenario", true));
-    assertFalse(model.isChecked(MANAGE));
+    assertFalse(model.isChecked(NEW));
   }
 
   @Test
   void itemsKeepTheirDeclarationOrder() {
     AppMenuModel model = newModel();
 
-    assertEquals(List.of(PANEL, MANAGE, NEW), model.items().stream().map(AppMenuItem::id).toList());
+    assertEquals(
+        List.of(PANEL, MANAGE, NEW, QUIT), model.items().stream().map(AppMenuItem::id).toList());
+  }
+
+  @Test
+  void quitIsAPlainActionThatClosesTheMenu() {
+    AppMenuModel model = newModel();
+    model.toggle();
+
+    assertEquals(Optional.of(QUIT), model.select(QUIT));
+    assertFalse(model.isOpen());
+    assertThrows(IllegalArgumentException.class, () -> model.setChecked(QUIT, true));
+  }
+
+  @Test
+  void bothSurfaceEntriesCarryTheirOwnCheck() {
+    AppMenuModel model = newModel();
+
+    model.setChecked(PANEL, true);
+    model.setChecked(MANAGE, true);
+    assertTrue(model.isChecked(PANEL));
+    assertTrue(model.isChecked(MANAGE));
+
+    model.setChecked(PANEL, false);
+    assertFalse(model.isChecked(PANEL));
+    assertTrue(model.isChecked(MANAGE));
   }
 
   @Test

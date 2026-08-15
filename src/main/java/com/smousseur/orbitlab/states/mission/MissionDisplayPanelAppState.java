@@ -9,17 +9,23 @@ import com.jme3.input.controls.ActionListener;
 import com.jme3.input.controls.KeyTrigger;
 import com.jme3.scene.Node;
 import com.smousseur.orbitlab.app.ApplicationContext;
+import com.smousseur.orbitlab.app.HudSurface;
+import com.smousseur.orbitlab.app.HudSurfaces;
 import com.smousseur.orbitlab.engine.events.EventBus;
 import com.smousseur.orbitlab.simulation.mission.MissionId;
 import com.smousseur.orbitlab.simulation.mission.MissionStatus;
 import com.smousseur.orbitlab.simulation.mission.context.MissionContext;
 import com.smousseur.orbitlab.simulation.mission.context.MissionEntry;
 import com.smousseur.orbitlab.ui.AppStyles;
+import com.smousseur.orbitlab.ui.UiLayers;
+import com.smousseur.orbitlab.ui.form.ConfirmDialog;
 import com.smousseur.orbitlab.ui.mission.display.MissionDisplayPanelWidget;
 import com.smousseur.orbitlab.ui.menu.AppMenu;
 import com.smousseur.orbitlab.ui.menu.AppMenuItem;
 import java.util.List;
 import java.util.Objects;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /**
  * Owns the top-left {@link AppMenu} and the non-modal {@link MissionDisplayPanelWidget}. Drains
@@ -28,22 +34,28 @@ import java.util.Objects;
  */
 public final class MissionDisplayPanelAppState extends BaseAppState implements ActionListener {
 
-  /** Toggles the mission display panel; carries the menu's only check mark. */
+  private static final Logger logger = LogManager.getLogger(MissionDisplayPanelAppState.class);
+
+  /** Toggles the mission display panel; carries a check mark, like {@code Mission management}. */
   private static final String ITEM_MISSION_PANEL = "missionPanel";
 
-  /** Opens the mission management modal. */
+  /** Toggles the mission management window; carries a check mark like the display panel. */
   private static final String ITEM_MANAGE_MISSIONS = "manageMissions";
 
   /** Opens the mission creation wizard. */
   private static final String ITEM_NEW_MISSION = "newMission";
 
+  /** Quits the application, behind a confirmation. */
+  private static final String ITEM_QUIT = "quit";
+
   private static final List<AppMenuItem> MENU_ITEMS =
       List.of(
           AppMenuItem.toggle(ITEM_MISSION_PANEL, "Mission panel", "missions/icon-action-view"),
-          AppMenuItem.action(
-              ITEM_MANAGE_MISSIONS, "Manage missions...", "missions/icon-action-manage"),
+          AppMenuItem.toggle(
+              ITEM_MANAGE_MISSIONS, "Mission management", "missions/icon-action-manage"),
           AppMenuItem.action(ITEM_NEW_MISSION, "New mission...", "wizard/icon-plus")
-              .withSeparatorBefore());
+              .withSeparatorBefore(),
+          AppMenuItem.action(ITEM_QUIT, "Quit", "wizard/icon-close-red").withSeparatorBefore());
 
   private static final String ACTION_DISMISS = "hud.dismiss";
 
@@ -55,6 +67,9 @@ public final class MissionDisplayPanelAppState extends BaseAppState implements A
   private MissionDisplayPanelWidget widget;
   private Node parentNode;
   private InputManager inputManager;
+  private AutoCloseable menuSurfaceHandle;
+  private AutoCloseable quitDialogHandle;
+  private ConfirmDialog quitDialog;
 
   public MissionDisplayPanelAppState(ApplicationContext context) {
     this.context = Objects.requireNonNull(context, "context");
@@ -79,6 +94,19 @@ public final class MissionDisplayPanelAppState extends BaseAppState implements A
         });
     menu.setOnItemClicked(id -> menuModel.select(id).ifPresent(this::runMenuAction));
 
+    menuSurfaceHandle =
+        context
+            .hudSurfaces()
+            .register(
+                new HudSurface(
+                    HudSurface.APP_MENU,
+                    UiLayers.MENU_DROPDOWN,
+                    menuModel::isOpen,
+                    () -> {
+                      menuModel.close();
+                      syncMenu();
+                    }));
+
     parentNode = context.guiGraph().getMissionPanelNode();
     widget = new MissionDisplayPanelWidget(context);
     widget.layoutTopLeft(sh, topOffset);
@@ -89,10 +117,10 @@ public final class MissionDisplayPanelAppState extends BaseAppState implements A
     widget.setVisible(false);
     syncMenu();
 
-    // ESC dismisses the open menu. SimpleApplication binds the same key to quitting the
-    // application, and its listener cannot be unregistered from here, so this one owns the key
-    // outright and forwards to stop() when there is no menu to close — the app keeps exiting on
-    // ESC exactly as before.
+    // ESC sends away the topmost open surface, and nothing else. SimpleApplication binds the same
+    // key to quitting the application and its listener cannot be unregistered from here, so this
+    // one owns the key outright; quitting has moved to the menu's Quit entry, behind a
+    // confirmation (docs/ui/01-surfaces-et-modalite.md §6.2).
     inputManager = app.getInputManager();
     if (inputManager.hasMapping(SimpleApplication.INPUT_MAPPING_EXIT)) {
       inputManager.deleteMapping(SimpleApplication.INPUT_MAPPING_EXIT);
@@ -111,6 +139,9 @@ public final class MissionDisplayPanelAppState extends BaseAppState implements A
     if (menu != null) {
       menu.update(getApplication().getCamera());
     }
+    if (quitDialog != null) {
+      quitDialog.update(getApplication().getCamera());
+    }
   }
 
   @Override
@@ -120,6 +151,9 @@ public final class MissionDisplayPanelAppState extends BaseAppState implements A
       inputManager.deleteMapping(ACTION_DISMISS);
       inputManager = null;
     }
+    closeQuitDialog();
+    HudSurfaces.closeQuietly(menuSurfaceHandle, logger);
+    menuSurfaceHandle = null;
     if (widget != null) {
       widget.close();
       widget = null;
@@ -141,12 +175,7 @@ public final class MissionDisplayPanelAppState extends BaseAppState implements A
     if (!ACTION_DISMISS.equals(name) || !isPressed) {
       return;
     }
-    if (menuModel.isOpen()) {
-      menuModel.close();
-      syncMenu();
-      return;
-    }
-    getApplication().stop();
+    context.hudSurfaces().dismissTopmost();
   }
 
   /** Runs the action an enabled entry stands for. The model has already closed the menu. */
@@ -155,6 +184,7 @@ public final class MissionDisplayPanelAppState extends BaseAppState implements A
       case ITEM_MISSION_PANEL -> togglePanel();
       case ITEM_MANAGE_MISSIONS -> publishOpenManagement();
       case ITEM_NEW_MISSION -> publishOpenWizard();
+      case ITEM_QUIT -> confirmQuit();
       default -> throw new IllegalStateException("Unwired menu item: " + itemId);
     }
     syncMenu();
@@ -162,11 +192,18 @@ public final class MissionDisplayPanelAppState extends BaseAppState implements A
 
   /**
    * Pushes the model's state onto the widget. The check mark of <i>Mission panel</i> is read back
-   * from the panel itself, which is the only place that knows whether it is on screen.
+   * from the panel itself, which is the only place that knows whether it is on screen; the one of
+   * <i>Mission management</i> is read from the surface registry, since {@code CLAUDE.md} forbids
+   * asking {@code MissionPanelWidgetAppState} directly.
+   *
+   * <p>{@code syncMenu()} runs only on menu interactions, so both marks are correct every time the
+   * dropdown opens — the only moment they are visible.
    */
   private void syncMenu() {
     if (menu == null) return;
     menuModel.setChecked(ITEM_MISSION_PANEL, widget != null && widget.isVisible());
+    menuModel.setChecked(
+        ITEM_MANAGE_MISSIONS, context.hudSurfaces().isOpen(HudSurface.MISSION_MANAGEMENT));
     menu.setOpen(menuModel.isOpen());
     for (AppMenuItem item : menuModel.items()) {
       menu.setEnabled(item.id(), menuModel.isEnabled(item.id()));
@@ -185,12 +222,53 @@ public final class MissionDisplayPanelAppState extends BaseAppState implements A
     }
   }
 
+  /**
+   * Asks for the mission management window. The event is a toggle, so the <i>Manage</i> button of
+   * the display panel closes the window when it is already on screen.
+   */
   private void publishOpenManagement() {
     context.eventBus().publishUiNavigation(new EventBus.UiNavigationEvent.OpenMissionManagement());
   }
 
   private void publishOpenWizard() {
     context.eventBus().publishUiNavigation(new EventBus.UiNavigationEvent.OpenMissionWizard());
+  }
+
+  /**
+   * Opens the quit confirmation. The dialog registers itself as a surface, so ESC cancels it the
+   * same way the Cancel button does.
+   */
+  private void confirmQuit() {
+    if (quitDialog != null) return;
+
+    quitDialog = new ConfirmDialog("Quit OrbitLab?");
+    quitDialog.setOnCancel(this::closeQuitDialog);
+    quitDialog.setOnConfirm(
+        () -> {
+          closeQuitDialog();
+          getApplication().stop();
+        });
+    quitDialog.attachTo(context.guiGraph().getModalNode());
+    // Registered only now: before attachTo, isVisible() (and the dialog itself) would report
+    // open with nothing yet on screen, which HudSurface's contract does not allow.
+    quitDialogHandle =
+        context
+            .hudSurfaces()
+            .register(
+                new HudSurface(
+                    HudSurface.QUIT_DIALOG,
+                    UiLayers.DIALOG,
+                    quitDialog::isVisible,
+                    this::closeQuitDialog));
+  }
+
+  private void closeQuitDialog() {
+    if (quitDialog != null) {
+      quitDialog.close();
+      quitDialog = null;
+    }
+    HudSurfaces.closeQuietly(quitDialogHandle, logger);
+    quitDialogHandle = null;
   }
 
   private MissionDisplayPanelWidget.RowListener buildRowListener() {

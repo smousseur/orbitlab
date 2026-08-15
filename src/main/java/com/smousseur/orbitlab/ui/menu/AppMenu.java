@@ -15,6 +15,7 @@ import com.simsilica.lemur.style.ElementId;
 import com.smousseur.orbitlab.app.ApplicationContext;
 import com.smousseur.orbitlab.ui.AppStyles;
 import com.smousseur.orbitlab.ui.UiKit;
+import com.smousseur.orbitlab.ui.UiLayers;
 import com.smousseur.orbitlab.ui.form.FormStyles;
 import com.smousseur.orbitlab.ui.form.ModalBackdrop;
 import java.util.LinkedHashMap;
@@ -75,14 +76,6 @@ public final class AppMenu implements AutoCloseable {
   /** Vertical gap between the title button and the dropdown it opens. */
   private static final float DROPDOWN_GAP = 4f;
 
-  // Depths inside missionPanelNode. The menu is not a modal, so it stays out of modalNode and
-  // simply outranks the display panel (z = 0) it sits on top of. The catcher is deliberately below
-  // the title button: clicking the title while the menu is open must reach the button and toggle
-  // it, not be swallowed as an outside click.
-  private static final float CATCHER_Z = 40f;
-  private static final float TITLE_Z = 50f;
-  private static final float DROPDOWN_Z = 60f;
-
   /** Extra component layer, holding the trailing glyph: the title's caret, an entry's check. */
   private static final String LAYER_TRAILING = "trailing";
 
@@ -141,7 +134,7 @@ public final class AppMenu implements AutoCloseable {
       dropdown.addChild(view.button);
     }
 
-    catcher = new ModalBackdrop(CATCHER_Z, new ColorRGBA(0f, 0f, 0f, 0f));
+    catcher = new ModalBackdrop(UiLayers.MENU_CATCHER, new ColorRGBA(0f, 0f, 0f, 0f));
     catcher.setOnClick(() -> onDismiss.run());
   }
 
@@ -169,11 +162,11 @@ public final class AppMenu implements AutoCloseable {
    */
   public void layoutTopLeft(int screenHeight, float topOffset) {
     float titleTop = screenHeight - topOffset;
-    title.setLocalTranslation(AppStyles.HUD_MARGIN_PX, titleTop, TITLE_Z);
+    title.setLocalTranslation(AppStyles.HUD_MARGIN_PX, titleTop, UiLayers.MENU_TITLE);
     dropdown.setLocalTranslation(
         AppStyles.HUD_MARGIN_PX,
         titleTop - AppStyles.HUD_MENU_HEIGHT_PX - DROPDOWN_GAP,
-        DROPDOWN_Z);
+        UiLayers.MENU_DROPDOWN);
   }
 
   /** Shows or hides the dropdown and its outside-click catcher. */

@@ -17,6 +17,7 @@ import com.smousseur.orbitlab.simulation.mission.context.MissionContext;
 import com.smousseur.orbitlab.simulation.mission.context.MissionEntry;
 import com.smousseur.orbitlab.ui.AppStyles;
 import com.smousseur.orbitlab.ui.UiKit;
+import com.smousseur.orbitlab.ui.UiLayers;
 import com.smousseur.orbitlab.ui.form.FormStyles;
 import java.util.ArrayList;
 import java.util.List;
@@ -181,7 +182,7 @@ public final class MissionDisplayPanelWidget implements AutoCloseable {
   public void layoutTopLeft(int screenHeight, float topOffset) {
     float y =
         screenHeight - topOffset - AppStyles.HUD_MENU_HEIGHT_PX - AppStyles.HUD_STACK_GAP_PX;
-    root.setLocalTranslation(AppStyles.HUD_MARGIN_PX, y, 0f);
+    root.setLocalTranslation(AppStyles.HUD_MARGIN_PX, y, UiLayers.PANEL);
   }
 
   /** Called every frame; rebuilds the body only when the snapshot key changes. */

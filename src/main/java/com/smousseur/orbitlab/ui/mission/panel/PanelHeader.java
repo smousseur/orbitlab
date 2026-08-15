@@ -19,7 +19,9 @@ import com.smousseur.orbitlab.ui.form.FormStyles;
 
 public class PanelHeader {
 
-  private static final float HEIGHT = 88f;
+  /** Height of the header band, also the grab area of the window and its minimum on-screen part. */
+  public static final float HEIGHT = 88f;
+
   private static final float PAD_X = 32f;
   private static final float PAD_Y = 20f;
   private static final float CLOSE_ICON_SIZE = 14f;

@@ -24,7 +24,7 @@ public class GuiGraph {
     guiFrame.attachChild(planetBillboardsNode);
     guiFrame.attachChild(telemetryNode);
     guiFrame.attachChild(missionPanelNode);
-    guiFrame.attachChild(modalNode); // topmost
+    guiFrame.attachChild(modalNode); // by convention, not by attach order: see UiLayers
   }
 
   /**

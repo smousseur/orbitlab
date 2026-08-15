@@ -10,18 +10,22 @@ import com.simsilica.lemur.Container;
 import com.simsilica.lemur.FillMode;
 import com.simsilica.lemur.Insets3f;
 import com.simsilica.lemur.component.BoxLayout;
+import com.simsilica.lemur.event.CursorEventControl;
 import com.simsilica.lemur.event.DefaultMouseListener;
 import com.simsilica.lemur.event.MouseEventControl;
 import com.smousseur.orbitlab.app.ApplicationContext;
+import com.smousseur.orbitlab.app.HudSurface;
+import com.smousseur.orbitlab.app.HudSurfaces;
 import com.smousseur.orbitlab.engine.events.EventBus;
 import com.smousseur.orbitlab.simulation.mission.MissionId;
 import com.smousseur.orbitlab.simulation.mission.MissionStatus;
 import com.smousseur.orbitlab.simulation.mission.OptimizationType;
 import com.smousseur.orbitlab.simulation.mission.context.MissionContext;
 import com.smousseur.orbitlab.simulation.mission.context.MissionEntry;
+import com.smousseur.orbitlab.ui.UiLayers;
 import com.smousseur.orbitlab.ui.form.ConfirmDialog;
 import com.smousseur.orbitlab.ui.form.FormStyles;
-import com.smousseur.orbitlab.ui.form.ModalBackdrop;
+import com.smousseur.orbitlab.ui.form.WindowDragHandler;
 import com.smousseur.orbitlab.ui.mission.detail.MissionDetailView;
 import java.util.ArrayList;
 import java.util.List;
@@ -30,10 +34,13 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 /**
- * Modal mission panel: orchestrates a {@link PanelHeader}, a {@link MissionListView} and a {@link
- * PanelFooter} attached to the shared modal layer through a {@link ModalBackdrop}. Per-row actions
- * (Edit / Compute / Visualize / Delete) are routed to {@link MissionContext} and the {@link
- * EventBus}.
+ * Non-modal mission management window: orchestrates a {@link PanelHeader}, a {@link MissionListView}
+ * and a {@link PanelFooter} on the {@link UiLayers#WINDOW} layer. Per-row actions (Edit / Compute /
+ * Visualize / Delete) are routed to {@link MissionContext} and the {@link EventBus}.
+ *
+ * <p>It carries no backdrop: the scene below stays live and only the window's own bounds swallow
+ * clicks. Its delete confirmation is another matter — a {@link ConfirmDialog} is blocking by nature
+ * and keeps its own veil on the modal layer, above this window.
  */
 public class MissionPanelWidget implements AutoCloseable {
   private static final Logger logger = LogManager.getLogger(MissionPanelWidget.class);
@@ -47,21 +54,31 @@ public class MissionPanelWidget implements AutoCloseable {
   // the detail view's own 20 px margins are taken. BoxLayout in FillMode.None neither shrinks nor
   // clips its children, so a content area too short does not scroll — it draws over the footer.
   private static final float WINDOW_HEIGHT = 640f;
-  private static final float HEADER_HEIGHT = 88f;
-  private static final float CONTENT_HEIGHT = WINDOW_HEIGHT - HEADER_HEIGHT - PanelFooter.HEIGHT;
+  private static final float CONTENT_HEIGHT =
+      WINDOW_HEIGHT - PanelHeader.HEIGHT - PanelFooter.HEIGHT;
 
   private static final String DELETE_CONFIRM_MESSAGE = "Are you sure ?";
 
   private final MissionContext missionContext;
   private final EventBus eventBus;
+  private final HudSurfaces hudSurfaces;
 
-  private final ModalBackdrop backdrop;
   private final Container root;
   private final MissionListView listView;
   private final PanelFooter footer;
 
-  private Node modalNode;
+  /** Modal node the delete confirmation is attached to; resolved once, at construction. */
+  private final Node modalNode;
+
   private ConfirmDialog confirmDialog;
+  private AutoCloseable confirmDialogHandle;
+
+  /** Position the window opens at; null means "centre it". Set by the app state on reopening. */
+  private Vector3f initialPosition;
+
+  private boolean placed = false;
+  private int lastWidth;
+  private int lastHeight;
 
   private MissionId selectedMissionId;
 
@@ -85,10 +102,9 @@ public class MissionPanelWidget implements AutoCloseable {
     Objects.requireNonNull(context, "context");
     this.missionContext = context.missionContext();
     this.eventBus = context.eventBus();
+    this.hudSurfaces = context.hudSurfaces();
+    this.modalNode = context.guiGraph().getModalNode();
     this.selectedMissionId = missionContext.getSelectedMissionId();
-
-    backdrop = new ModalBackdrop();
-    backdrop.setOnClick(() -> onClose.run());
 
     root = new Container(new BoxLayout(Axis.Y, FillMode.None), FormStyles.STYLE);
     root.setPreferredSize(new Vector3f(WINDOW_WIDTH, WINDOW_HEIGHT, 0));
@@ -99,6 +115,11 @@ public class MissionPanelWidget implements AutoCloseable {
 
     PanelHeader header = new PanelHeader(WINDOW_WIDTH);
     header.setOnClose(() -> onClose.run());
+
+    // The window moves by its header. The close icon keeps its own listener: button events are
+    // delivered to the picked spatial, and the icon is picked before the band behind it.
+    CursorEventControl.addListenersToSpatial(
+        header.getNode(), new WindowDragHandler(root, PanelHeader.HEIGHT));
 
     listView = new MissionListView(WINDOW_WIDTH, CONTENT_HEIGHT);
     listView.setOnNewMission(() -> onNewMission.run());
@@ -111,7 +132,8 @@ public class MissionPanelWidget implements AutoCloseable {
     root.addChild(listView.getNode());
     root.addChild(footer.getNode());
 
-    // Mouse on the modal shell must not leak through to the backdrop.
+    // The window has no backdrop of its own, so this is what stops a click inside it from reaching
+    // the 3D scene and selecting a body: only its own bounds swallow clicks.
     MouseEventControl.addListenersToSpatial(
         root,
         new DefaultMouseListener() {
@@ -124,17 +146,20 @@ public class MissionPanelWidget implements AutoCloseable {
     refresh();
   }
 
-  public void attachTo(Node modalNode) {
-    this.modalNode = modalNode;
-    modalNode.attachChild(backdrop.getNode());
-    modalNode.attachChild(root);
+  /**
+   * Attaches the window to the mission panel layer. It is not modal: the scene below stays live,
+   * and only the window's own bounds swallow clicks.
+   *
+   * @param parentNode the node this window lives in — {@code guiGraph().getMissionPanelNode()}
+   */
+  public void attachTo(Node parentNode) {
+    parentNode.attachChild(root);
     visible = true;
   }
 
   @Override
   public void close() {
     closeConfirmDialog();
-    backdrop.getNode().removeFromParent();
     root.removeFromParent();
     visible = false;
   }
@@ -145,8 +170,7 @@ public class MissionPanelWidget implements AutoCloseable {
 
   public void update(float tpf, Camera cam) {
     if (!visible) return;
-    backdrop.update(cam);
-    centerOnScreen(cam.getWidth(), cam.getHeight());
+    place(cam.getWidth(), cam.getHeight());
     if (confirmDialog != null) {
       confirmDialog.update(cam);
     }
@@ -179,9 +203,6 @@ public class MissionPanelWidget implements AutoCloseable {
       @Override
       public void onEdit(MissionId missionId) {
         logger.info("Editing mission [{}]", missionId.shortForm());
-        // Closed first, like "+ New mission" does: the wizard is a modal of its own and would
-        // otherwise stack on top of this panel. Submitting the edit reopens it.
-        onClose.run();
         eventBus.publishUiNavigation(new EventBus.UiNavigationEvent.OpenMissionWizard(missionId));
       }
 
@@ -205,7 +226,10 @@ public class MissionPanelWidget implements AutoCloseable {
 
   /**
    * Opens the confirmation dialog for a deletion. Nothing is removed until the user clicks OK; the
-   * dialog's own backdrop shields this panel meanwhile, so no second confirmation can stack.
+   * dialog's own backdrop shields this window meanwhile, so no second confirmation can stack.
+   *
+   * <p>The dialog registers itself as a surface, so ESC cancels it the same way the Cancel button
+   * does — and, being the higher layer, it is sent away before the window underneath it.
    */
   private void confirmDelete(MissionId missionId) {
     if (confirmDialog != null) return;
@@ -218,6 +242,15 @@ public class MissionPanelWidget implements AutoCloseable {
           deleteMission(missionId);
         });
     confirmDialog.attachTo(modalNode);
+    // Registered only now: before attachTo, isVisible() would report open with nothing yet on
+    // screen, which HudSurface's contract does not allow.
+    confirmDialogHandle =
+        hudSurfaces.register(
+            new HudSurface(
+                HudSurface.DELETE_DIALOG,
+                UiLayers.DIALOG,
+                confirmDialog::isVisible,
+                this::closeConfirmDialog));
   }
 
   private void closeConfirmDialog() {
@@ -225,6 +258,8 @@ public class MissionPanelWidget implements AutoCloseable {
       confirmDialog.close();
       confirmDialog = null;
     }
+    HudSurfaces.closeQuietly(confirmDialogHandle, logger);
+    confirmDialogHandle = null;
   }
 
   private void deleteMission(MissionId missionId) {
@@ -337,9 +372,62 @@ public class MissionPanelWidget implements AutoCloseable {
     return snapshot;
   }
 
-  private void centerOnScreen(int screenWidth, int screenHeight) {
-    float x = Math.round((screenWidth - WINDOW_WIDTH) / 2f);
-    float y = Math.round((screenHeight + WINDOW_HEIGHT) / 2f);
-    root.setLocalTranslation(x, y, 101f);
+  /**
+   * Sets where the window appears when it is next shown. Passing {@code null} centres it.
+   *
+   * @param position a translation previously read from {@link #getPosition()}
+   */
+  public void setInitialPosition(Vector3f position) {
+    this.initialPosition = position == null ? null : position.clone();
+  }
+
+  /**
+   * Returns the window's current translation, so the app state can reopen it where the user left
+   * it. The window itself keeps no memory across instances.
+   *
+   * @return a copy of the current local translation
+   */
+  public Vector3f getPosition() {
+    return root.getLocalTranslation().clone();
+  }
+
+  /**
+   * Places the window on its first frame, then leaves it alone — {@link WindowDragHandler} owns its
+   * translation from that point on. A resize is the one event that moves it again, and it only
+   * clamps: the window is pulled back inside the new bounds without cancelling where the user put
+   * it.
+   *
+   * <p>Both first-placement branches are clamped. A remembered position was recorded against
+   * whatever surface the window was last closed on, and resizing while the window is closed changes
+   * the bounds without this method ever seeing the resize — {@code lastWidth} and {@code lastHeight}
+   * are seeded on the first call, so the resize branch never fires for it. The centred position
+   * needs it too: at the application's own 1280×720 it lands above the top bound, and the first
+   * pixel of the first drag would then snap the window away from the cursor. Centring a window
+   * taller than the bounds allow therefore yields a position that is horizontally centred and
+   * vertically pinned to the top bound, which is what the user can actually reach.
+   */
+  private void place(int screenWidth, int screenHeight) {
+    if (!placed) {
+      placed = true;
+      lastWidth = screenWidth;
+      lastHeight = screenHeight;
+      if (initialPosition != null) {
+        // z comes from the layer, never from the remembered position: a position captured before
+        // the window was ever placed would carry z = 0 and reopen behind the display panel.
+        root.setLocalTranslation(initialPosition.x, initialPosition.y, UiLayers.WINDOW);
+      } else {
+        root.setLocalTranslation(
+            Math.round((screenWidth - WINDOW_WIDTH) / 2f),
+            Math.round((screenHeight + WINDOW_HEIGHT) / 2f),
+            UiLayers.WINDOW);
+      }
+      WindowDragHandler.clamp(root, screenWidth, screenHeight, PanelHeader.HEIGHT);
+      return;
+    }
+    if (screenWidth != lastWidth || screenHeight != lastHeight) {
+      lastWidth = screenWidth;
+      lastHeight = screenHeight;
+      WindowDragHandler.clamp(root, screenWidth, screenHeight, PanelHeader.HEIGHT);
+    }
   }
 }

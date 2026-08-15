@@ -10,6 +10,7 @@ import com.simsilica.lemur.Container;
 import com.simsilica.lemur.event.DefaultMouseListener;
 import com.simsilica.lemur.event.MouseEventControl;
 import com.smousseur.orbitlab.ui.UiKit;
+import com.smousseur.orbitlab.ui.UiLayers;
 
 /**
  * Semi-transparent overlay rendered behind a modal dialog. Consumes mouse events so they never
@@ -18,7 +19,7 @@ import com.smousseur.orbitlab.ui.UiKit;
 public class ModalBackdrop {
 
   /** Depth of a first-level modal's backdrop; its window sits one unit in front. */
-  private static final float DEFAULT_Z = 100f;
+  private static final float DEFAULT_Z = UiLayers.MODAL_BACKDROP;
 
   private final Container backdrop;
   private final float z;
