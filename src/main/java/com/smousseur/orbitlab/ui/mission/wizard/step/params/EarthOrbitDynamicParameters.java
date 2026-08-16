@@ -114,6 +114,25 @@ public class EarthOrbitDynamicParameters extends DynamicParameters {
     }
 
     this.container = createContainer();
+    initialiseInclination();
+  }
+
+  /**
+   * Fills the inclination field with the value the profile starts on.
+   *
+   * <p>Not folded into {@link #refreshDerivedInclination()}, which by design does nothing on an
+   * {@link MissionProfile.InclinationMode#EXPLICIT} profile — the whole point there being that the
+   * value stops following anything the moment the panel exists. Without this, POLAR and MEO would
+   * open on an empty field.
+   */
+  private void initialiseInclination() {
+    if (profile.inclinationMode() == MissionProfile.InclinationMode.EXPLICIT) {
+      inclinationField.setText(
+          formatDegrees(
+              profile.initialInclinationDeg(launchLatitudeDeg.getAsDouble(), targetAltitude())));
+      refreshReachableHelper();
+      return;
+    }
     refreshDerivedInclination();
   }
 
@@ -459,9 +478,18 @@ public class EarthOrbitDynamicParameters extends DynamicParameters {
       refreshDerivedInclination();
       return;
     }
+    double inclinationDeg;
+    try {
+      inclinationDeg = Double.parseDouble(raw.toString().trim());
+    } catch (NumberFormatException e) {
+      // A value map assembled by hand can carry anything. Falling back on the profile's own start
+      // keeps the panel usable; validateInclination() is what refuses an entry, not this.
+      initialiseInclination();
+      return;
+    }
     inclinationAuto = false;
     clearInclinationRejection();
-    inclinationField.setText(formatDegrees(Double.parseDouble(raw.toString().trim())));
+    inclinationField.setText(formatDegrees(inclinationDeg));
   }
 
   private static String formatKm(double km) {
