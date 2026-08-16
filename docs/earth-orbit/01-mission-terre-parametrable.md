@@ -242,6 +242,35 @@ recalculer `toRadians(latitude)`. Douze appels dans le main, une trentaine dans 
 Le point d'entrée historique reste disponible : une fabrique `dueEast(site)` construit le
 `LaunchPlane` d'inclinaison égale à la latitude, qui est le comportement d'aujourd'hui.
 
+### 3.4 Dans quel repère l'inclinaison est-elle exprimée ?
+
+Question sans objet tant qu'on ne visait rien ; elle en a un dès qu'on vise. **Aujourd'hui la
+réponse est « GCRF », par accident** : c'est le repère des états propagés, et l'inclinaison lue
+l'est donc aussi.
+
+L'ennui est que l'équateur GCRF est celui de J2000, pas celui de la date. Mesuré au 2026-01-01 : le
+pôle ITRF vu depuis GCRF est incliné de **0,1454°**. Une mission dont la géométrie de lancement est
+rigoureusement identique voit donc son inclinaison GCRF varier avec la date de lancement, sur une
+plage crête-à-crête de 0,29°, uniquement parce que son nœud tourne sous un équateur de référence
+décalé.
+
+Vérifié : deux lancements à 6 h d'écart (90,286° de RAAN) donnent **0,2060°** d'écart d'inclinaison,
+contre `0,1454 · √2 = 0,2056°` prédits ; à un jour sidéral d'écart, l'écart retombe à 0,0000°. Rien
+n'a bougé physiquement — c'est le repère de lecture qui a tourné.
+
+| Cible | Sensibilité à 0,145° d'erreur de repère |
+|---|---|
+| LEO, GEO | invisible : rien ne visait l'inclinaison, la latitude servait de valeur constatée |
+| Polaire | invisible : 0,145° sur 90°, sans effet fonctionnel |
+| **SSO** | **1,8 % d'erreur sur la précession du nœud, soit ~6°/an de dérive** |
+
+**Décision.** `LaunchPlane` déclare son repère, et l'inclinaison visée comme celle mesurée sont
+exprimées dans le **même**. Le choix (équateur de la date, ou GCRF assumé avec la correction portée
+par la formule SSO) se tranche en `P1.c`, avec `T4` — la précession mesurée — comme arbitre : c'est
+la seule des deux lectures qui a un sens physique observable. Jusque-là, `T3` vérifie la formule,
+pas le repère : ses ±0,02° portent sur l'arithmétique de `sunSynchronousInclination`, et il serait
+malhonnête de les lire comme une précision d'inclinaison volée tant que §3.4 n'est pas tranché.
+
 ---
 
 ## 4. Le pilotage du plan pendant l'ascension
@@ -459,8 +488,8 @@ rien : elle produit un chiffre pour §1.1.1 et disparaît avec P1.a-bis.
 | **T1** | `AscentPlaneControlTest` | inclinaison atteinte en fin d'ascension pour i ∈ {28,5° ; 51,6° ; 90° ; 98,19°} depuis Kourou, **et signe du nœud** (§4.1) | ≤ 1° avant trim |
 | **T1b** | idem, après insertion complète | inclinaison de l'orbite atteinte | ≤ 0,1° |
 | **T2** | `EarthOrbitNonRegressionTest` | un spec plein est reproduit la trajectoire `LEOMission` actuelle (4 cas circulaires, 3 elliptiques) | éléments orbitaux identiques |
-| **T3** | `SunSynchronousInclinationTest` | formule contre les trois valeurs de référence §5 | ± 0,02° |
-| **T4** | `SunSynchronousPrecessionTest` | dérive du RAAN sur l'horizon de mission | 0,9856°/j, tolérance fixée sur la mesure `T1` |
+| **T3** | `SunSynchronousInclinationTest` | formule contre les trois valeurs de référence §5 — arithmétique seule, pas le repère (§3.4) | ± 0,02° |
+| **T4** | `SunSynchronousPrecessionTest` | dérive du RAAN sur l'horizon de mission — **arbitre du repère de §3.4** | 0,9856°/j, tolérance fixée sur la mesure `T1` |
 | **T5** | `PolarCoverageTest` | latitude max de la trace au sol d'une orbite i = 90° | ≥ 89° |
 | **T6** | `EarthOrbitValidationTest` | chaque règle §8 lève, avec le bon message | — |
 | **T7** | `PropellantBudgetAzimuthTest` | assistance signée ; une SSO depuis Kourou est dimensionnée plus lourde qu'un LEO plein est de même altitude | signe et ordre |
@@ -503,7 +532,7 @@ revalider. Il est isolé pour pouvoir être coupé sans toucher au reste.
 | **P1.a** | `LaunchPlane`, `MissionSpec.EarthOrbit`, `EarthOrbitMission`, corrections §1.1a/b, `T2`, `T6` | renommage livré, aucune trajectoire déplacée |
 | **P1.a-bis** | correction §1.1c seule + ré-enregistrement des références N2, tolérances inchangées | 1 964 m / 4,62 m/s de déplacement assumé et documenté |
 | **P1.b** | Attitude à plan commandé, trim de plan dans la composition, budget azimuté, `T1`, `T1b`, `T5`, `T7` | **polaire vole** |
-| **P1.c** | `sunSynchronousInclination`, `T3`, `T4` | **SSO vole** |
+| **P1.c** | `sunSynchronousInclination`, arbitrage du repère (§3.4), `T3`, `T4` | **SSO vole** |
 | **P1.d** *(optionnel)* | Règle de composition §6.1, `T8` | **MEO vole** |
 
 P2 démarre après `P1.b` sans attendre `P1.c` : à ce stade le spec est stable et le wizard a tout ce
