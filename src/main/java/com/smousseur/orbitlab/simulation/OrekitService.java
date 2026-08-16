@@ -1,6 +1,8 @@
 package com.smousseur.orbitlab.simulation;
 
 import com.smousseur.orbitlab.core.SolarSystemBody;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.hipparchus.ode.nonstiff.DormandPrince853Integrator;
 import org.orekit.bodies.CelestialBody;
@@ -31,8 +33,8 @@ import org.orekit.utils.IERSConventions;
 public final class OrekitService {
   private final AtomicBoolean initialized = new AtomicBoolean(false);
 
-  /** Cached gravity providers — created once, reused for every propagator. */
-  private volatile ForceModel gravityModel;
+  /** Gravity providers, cached per central body — created once, reused for every propagator. */
+  private final Map<SolarSystemBody, ForceModel> gravityModels = new ConcurrentHashMap<>();
 
   private OrekitService() {}
 
@@ -207,21 +209,36 @@ public final class OrekitService {
     NumericalPropagator propagator = new NumericalPropagator(integrator);
     propagator.setOrbitType(OrbitType.CARTESIAN);
     propagator.setMu(Constants.WGS84_EARTH_MU);
-    propagator.addForceModel(getGravityModel());
+    propagator.addForceModel(getGravityModel(SolarSystemBody.EARTH));
     return propagator;
   }
 
-  private ForceModel getGravityModel() {
-    if (gravityModel == null) {
-      synchronized (this) {
-        if (gravityModel == null) {
+  /**
+   * The 8×8 gravity model of the given body, resolved once and shared by every propagator.
+   *
+   * <p><b>The shared instance is an invariant, not an optimisation</b> (spec {@code
+   * docs/multi-corps/03-conception-L1.md} §3.3): it is what makes bit-for-bit equality with the L0
+   * baseline achievable, and therefore what lets the gate demand a zero tolerance. {@code
+   * computeIfAbsent} is atomic and evaluates the mapping function at most once per key, which is
+   * exactly that guarantee — do not replace it with an explicit lock or a pre-warm.
+   *
+   * <p>The mapping function must not modify the map. Building a {@code
+   * HolmesFeatherstoneAttractionModel} does not; a future lunar resolution that fell back to
+   * another body would, and would deadlock. That is an L4 concern.
+   *
+   * @param body the central body whose gravity model is requested
+   * @return the shared gravity force model for that body
+   */
+  private ForceModel getGravityModel(SolarSystemBody body) {
+    return gravityModels.computeIfAbsent(
+        body,
+        b -> {
+          // Ignores b: at L1 only the Earth is ever requested. The mapping point is now in the
+          // right place for L4, which will add the lunar resolution here — not anticipated now.
           NormalizedSphericalHarmonicsProvider provider =
               GravityFieldFactory.getNormalizedProvider(8, 8);
-          gravityModel = new HolmesFeatherstoneAttractionModel(itrf(), provider);
-        }
-      }
-    }
-    return gravityModel;
+          return new HolmesFeatherstoneAttractionModel(itrf(), provider);
+        });
   }
 
   /**
