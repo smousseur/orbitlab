@@ -540,6 +540,76 @@ qu'il lui faut.
 
 ---
 
+## 11.1 Bilan de P1.a → P1.c (livré le 2026-08-16)
+
+`P1.a`, `P1.a-bis`, `P1.b` et `P1.c` sont livrés. `P1.d` (MEO) ne l'est pas. Les mesures ci-dessous
+remplacent les estimations correspondantes du corps de la spec.
+
+### Ce que le pilotage donne (`T1`, `AscentPlaneControlTest`, Kourou, variables fixes)
+
+| Inclinaison commandée | Atteinte à MECO | Autorité | Résidu | Perte de pilotage |
+|---|---|---|---|---|
+| 28,50° | 27,03° | **93,6 %** | 1,47° | 49 m/s |
+| 51,60° | 49,13° | **94,7 %** | 2,47° | 158 m/s |
+| 90,00° | 86,76° | **96,2 %** | 3,24° | 425 m/s |
+| 98,19° | 94,96° | **96,5 %** | 3,23° | 487 m/s |
+
+Contre **0,02 %** d'autorité avant MIS-7. §4 fonctionne.
+
+### Trois estimations de cette spec corrigées par la mesure
+
+**(1) La tolérance de 1° de `T1` (§9.2) n'est pas atteignable, et ne pouvait pas l'être.** Le
+pilotage de §4.1 vise la direction prograde *dans le plan cible* : la poussée est donc en
+permanence **dans** ce plan, et n'annule jamais la composante de vitesse qui lui est perpendiculaire.
+Cette composante est fixée au kick et ne bouge plus ; le résidu vaut exactement
+
+```
+résidu = asin( 465 · cos φ · |cos A| / |v_MECO| )
+```
+
+vérifié à 0,03° près sur les quatre cibles. Conséquence contre-intuitive et importante : **le résidu
+est maximal pour un tir polaire** (`A = 0`, tout l'entraînement est hors plan) et minimal près de
+l'équatorial — l'inverse de « plus le changement de plan est grand, plus c'est dur ». `T1` assère
+donc ce modèle fermé plutôt qu'une borne plate, ce qui est strictement plus fort : une borne à 4°
+laisserait passer un pilotage qui aurait cessé de fonctionner, le modèle non.
+
+Le résidu est absorbé par le trim, comme §4.3 le prévoyait. `T5` le mesure : 86,76° après
+l'ascension, **89,9999°** après le trim, trace au sol jusqu'à 89,891° (§9.2 demandait ≥ 89°). Coût
+au nœud : 1 028 m/s.
+
+**(2) La perte de pilotage de §7 n'a pas besoin d'un terme explicite.** Elle vaut 91 à 92 % de la
+correction d'assistance signée que le budget facture déjà. §7 laissait la question ouverte
+(« si elle dépasse la marge, elle devient un terme explicite ») : elle ne la dépasse pas, elle *est*
+déjà dedans. Ajouter un terme compterait la même physique deux fois et surdimensionnerait toute
+mission inclinée.
+
+**(3) Le repère de §3.4 est tranché, et l'écart annoncé était de deux ordres de grandeur trop
+grand.** `T4` mesure à 700 km sur 3,2 jours : **0,98776 °/j** lu en GCRF, **0,98786 °/j** lu dans
+l'équateur de la date — **0,01 % d'écart, pas 1,8 %**. Le décalage de repère tombe là où §3.4 le
+prédisait, dans l'**inclinaison** (0,021° de dérive en GCRF contre 0,013° de date), et s'annule dans
+le **taux**, qui est ce qu'est physiquement l'héliosynchronisme. `LaunchPlane.inclinationFrame()`
+garde donc GCRF. Reste un écart de 0,22 % au 0,9856 °/j visé, identique dans les deux repères : c'est
+l'approximation J2 de la formule face à un champ complet, soit ~0,8°/an de dérive d'heure solaire
+locale — que le maintien à poste d'une vraie SSO corrige, et que la simulation ne modélise pas.
+
+### Le prix de §1.1c, mesuré
+
+890,733 m et 5,781 m/s à MECO sur `GravityTurnReplayConsistencyTest` (profil GEO, burn2 = 2 s), soit
+89× et 116× les tolérances N2. Les 1 964 m / 4,62 m/s de §1.1.1 étaient mesurés sur le profil LEO à
+burn2 = 250 s : vols différents, chiffres différents, même conclusion. Le calendrier et le plan ne
+bougent pas — seul le cap. Références ré-enregistrées **à tolérances inchangées** ; l'ascension à
+trois phases reproduit la référence mono-propagateur à 0,000 m.
+
+### Ce qui reste dû
+
+`AscentBaselineN2Test` a ses deux profils remis à `null` — son propre mécanisme de re-capture
+documenté. Une exécution lente est due pour les ré-enregistrer, ainsi que la vérification de
+non-régression de §9 sur `LEOMissionOptimizationTest`, `GEOMissionOptimizationTest`,
+`Ariane62MissionTest` et `GravityTurnFloorProbeTest`. `T1b` (inclinaison après insertion complète) et
+`P1.d` ne sont pas faits.
+
+---
+
 ## 12. Ce que P1 ne fait pas
 
 Cartes wizard polaire / SSO / MEO ; catalogue de sites de lancement (P1 passe des coordonnées à la
