@@ -7,11 +7,11 @@ import com.smousseur.orbitlab.simulation.mission.operation.LaunchPlane;
 import java.util.Locale;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.hipparchus.util.FastMath;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.orekit.frames.Frame;
 import org.orekit.frames.FramesFactory;
 import org.orekit.orbits.KeplerianOrbit;
@@ -38,21 +38,15 @@ import org.orekit.utils.IERSConventions;
  * whether it does, and the propagation is run under the real gravity field, where J2 is one term
  * among many.
  *
- * <p><b>The frame question, and its answer.</b> §3.4 left open whether the target inclination should
- * be expressed in GCRF — the frame the states are propagated in, whose equator is J2000's — or in
- * the equator of the date, and named this fixture as the arbiter: nodal precession is the only one
- * of the two readings with an observable physical meaning. It therefore measures the drift in
- * <em>both</em> frames. The answer, at 700 km over 3.2 days, is that <b>the choice does not
+ * <p><b>The frame question, and its answer.</b> §3.4 left open whether the target inclination
+ * should be expressed in GCRF — the frame the states are propagated in, whose equator is J2000's —
+ * or in the equator of the date, and named this fixture as the arbiter: nodal precession is the
+ * only one of the two readings with an observable physical meaning. It therefore measures the drift
+ * in <em>both</em> frames. The answer, at 700 km over 3.2 days, is that <b>the choice does not
  * matter</b>: the two frames give 0.98776 and 0.98786°/day, 0.01 % apart, against the 1.8 % §3.4
  * feared. The frame offset lands in the <em>inclination</em> (0.021° of drift in GCRF against
  * 0.013° of date) and cancels out of the rate. {@code LaunchPlane.inclinationFrame()} keeps GCRF,
  * and this fixture is what would notice if that ever stopped being harmless.
- *
- * <p><b>Slow</b> — a multi-day propagation. Opt-in like the other integration loops:
- *
- * <pre>{@code
- * gradlew test --tests "*SunSynchronousPrecessionTest" -Dorbitlab.slowTests=true
- * }</pre>
  */
 class SunSynchronousPrecessionTest {
   private static final Logger logger = LogManager.getLogger(SunSynchronousPrecessionTest.class);
@@ -73,8 +67,8 @@ class SunSynchronousPrecessionTest {
   /**
    * Tolerance on the measured drift rate, in degrees per day. <b>Set from the measurement</b>, not
    * chosen in advance (spec §7, §10): what is asserted is that the orbit precesses with the Sun to
-   * a few percent, which is what distinguishes a sun-synchronous orbit from a merely polar one —
-   * a polar orbit's node does not drift at all.
+   * a few percent, which is what distinguishes a sun-synchronous orbit from a merely polar one — a
+   * polar orbit's node does not drift at all.
    */
   private static final double TOLERANCE_DEG_PER_DAY = 0.05;
 
@@ -83,9 +77,6 @@ class SunSynchronousPrecessionTest {
     Assumptions.assumeTrue(
         OrekitService.class.getClassLoader().getResource("orekit-data.zip") != null,
         "orekit-data.zip not on classpath — skipping");
-    Assumptions.assumeTrue(
-        Boolean.getBoolean("orbitlab.slowTests"),
-        "multi-day propagation — run with -Dorbitlab.slowTests=true");
     OrekitService.get().initialize();
   }
 
@@ -176,11 +167,12 @@ class SunSynchronousPrecessionTest {
     KeplerianOrbit finish = readAsKeplerian(end, readFrame);
 
     double deltaRaan =
-        FastMath.toDegrees(normalizeSigned(finish.getRightAscensionOfAscendingNode()
-            - start.getRightAscensionOfAscendingNode()));
+        FastMath.toDegrees(
+            normalizeSigned(
+                finish.getRightAscensionOfAscendingNode()
+                    - start.getRightAscensionOfAscendingNode()));
     return new Drift(
-        deltaRaan / SPAN_DAYS,
-        FastMath.toDegrees(FastMath.abs(finish.getI() - start.getI())));
+        deltaRaan / SPAN_DAYS, FastMath.toDegrees(FastMath.abs(finish.getI() - start.getI())));
   }
 
   private static KeplerianOrbit readAsKeplerian(SpacecraftState state, Frame frame) {

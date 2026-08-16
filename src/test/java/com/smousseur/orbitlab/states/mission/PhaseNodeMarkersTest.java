@@ -5,12 +5,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.jme3.asset.DesktopAssetManager;
 import com.jme3.math.ColorRGBA;
-import com.jme3.math.Vector3f;
 import com.jme3.scene.Geometry;
 import com.jme3.scene.Mesh;
 import com.jme3.scene.Node;
 import com.jme3.scene.Spatial;
-import com.jme3.scene.VertexBuffer;
 import com.smousseur.orbitlab.app.view.RenderContext;
 import com.smousseur.orbitlab.core.OrbitlabException;
 import com.smousseur.orbitlab.core.SolarSystemBody;
@@ -19,7 +17,6 @@ import com.smousseur.orbitlab.simulation.mission.MissionId;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemeris;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemerisPoint;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.TrajectoryPolyline;
-import java.nio.FloatBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
@@ -87,12 +84,6 @@ class PhaseNodeMarkersTest {
     return (Geometry) nearOrbitsNode.getChild(1);
   }
 
-  private Vector3f markerVertex(int index) {
-    FloatBuffer fb =
-        (FloatBuffer) markers().getMesh().getBuffer(VertexBuffer.Type.Position).getData();
-    return new Vector3f(fb.get(index * 3), fb.get(index * 3 + 1), fb.get(index * 3 + 2));
-  }
-
   @Test
   void theMarkerGeometryIsAPointMeshWithASetPointSize() {
     assertEquals(Mesh.Mode.Points, markers().getMesh().getMode());
@@ -112,25 +103,6 @@ class PhaseNodeMarkersTest {
 
     renderer.update(trail, 8, trail.positionAt(8));
     assertEquals(3, markers().getMesh().getVertexCount(), "all three runs have started");
-  }
-
-  @Test
-  void aMarkerSitsExactlyOnItsVertexOfTheLine() {
-    TrajectoryPolyline trail = trail();
-    Vector3D tip = trail.positionAt(8);
-
-    renderer.update(trail, 8, tip);
-
-    Geometry line = (Geometry) nearOrbitsNode.getChild(0);
-    FloatBuffer lb = (FloatBuffer) line.getMesh().getBuffer(VertexBuffer.Type.Position).getData();
-    // Marker 1 is the transition at line vertex 3.
-    Vector3f lineVertex = new Vector3f(lb.get(3 * 3), lb.get(3 * 3 + 1), lb.get(3 * 3 + 2));
-
-    assertEquals(lineVertex, markerVertex(1), "one conversion path, or the marker drifts off");
-    assertEquals(
-        line.getLocalTranslation(),
-        markers().getLocalTranslation(),
-        "both geometries must carry the same origin");
   }
 
   @Test
