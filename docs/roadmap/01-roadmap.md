@@ -37,6 +37,7 @@ lisez qu'une section, lisez le §3.
 | **`NAV-3` — scrub continu** (drag sur la piste, seuil de 3 px, émission étranglée à 10 Hz, état de lecture restauré au lâcher) | `ui/timeline/mission/ScrubGesture.java` + câblage du listener de `MissionTimelineWidget` ; `ScrubGestureTest` |
 | **`RND-4` — ribbon billboardé** (orbites et trajectoires en rubans face-caméra, largeur en pixels, fondu d'un pixel exact, expansion en vertex shader) | `MatDefs/Fx/Ribbon.j3md` + `.vert` / `.frag`, `engine/scene/RibbonMeshBuilder.java`, `OrbitLineFactory`, `MissionTrajectoryRenderer`, `AssetFactory.createRibbon` ; `RibbonMeshBuilderTest` |
 | **`NAV-4` — breadcrumb** (bande haute permanente, chaîne d'ancêtres du corps focalisé, remontée en un clic) | `ui/breadcrumb/BreadcrumbWidget.java` + `BreadcrumbStyles.java`, `states/scene/BreadcrumbWidgetAppState.java`, `GuiGraph.getBreadcrumbNode`, `AppStyles.BREADCRUMB_BAND_HEIGHT_PX` / `HUD_TOP_OFFSET_PX` |
+| **`MIS-7` — `EarthOrbitMission` paramétrable** (plan d'ascension commandé, SSO calculée, cinq profils au wizard) | `mission/operation/EarthOrbitMission.java` (ex-`LEOMission`), `LaunchPlane.java`, `NodeBranch.java`, `MissionSpec.EarthOrbit`, `Physics.sunSynchronousInclination`, `ui/mission/wizard/MissionProfile.java`, `step/params/EarthOrbitDynamicParameters.java` (commits `27f4a60`, `56eb362`) ; `EarthOrbitNonRegressionTest`, `AscentPlaneControlTest`, `SunSynchronousInclinationTest`, `SunSynchronousPrecessionTest`, `PolarCoverageTest`, `MeoMissionTest`, `MissionProfileTest`, `WizardPrefillTest` |
 
 **Reste ouvert de l'ancienne roadmap** : le feedback de progression pendant
 l'optimisation, repris ici en `UI-2`. La vue détail avec résultats
@@ -163,7 +164,7 @@ reste lisible à toute distance (`RND-4`).
 
 | ID | Item | ★ | ◆ | Taille | Sert à |
 |---|---|:-:|:-:|:-:|---|
-| MIS-7 | `EarthOrbitMission` paramétrable | 4 | 2 | M | MIS-2, MIS-6, + polaire/SSO/MEO gratuits |
+| ~~MIS-7~~ | ~~`EarthOrbitMission` paramétrable~~ — **résolu le 2026-08-16** | 4 | 2 | M | MIS-2, MIS-6, + polaire/SSO/MEO gratuits |
 | PHY-4 | Socle multi-corps (3ᵉ corps, SOI, repères) | 5 | 4 | L | MIS-4, MIS-5 |
 | MIS-2 | Fenêtres de lancement | 4 | 3 | M | MIS-4, MIS-6 |
 | MIS-3 | Solveur de Lambert + repère LVLH | 4 | 3 | M | MIS-6, ciblage lunaire |
@@ -252,7 +253,7 @@ opportuniste, ou à décider quoi sacrifier quand une phase déborde.
 | ~~RND-3~~ | ~~Couleur par stage + passé/futur + marqueur « now »~~ — résolu | 4 | 2 | M | — |
 | ~~UI-1~~ | ~~Vue détail mission (orbite atteinte, message d'erreur)~~ — résolu | 4 | 2 | M | — |
 | ~~NAV-1~~ | ~~Transitions de caméra entre vues~~ — résolu | 4 | 2 | M | — |
-| MIS-7 | `EarthOrbitMission` paramétrable → polaire / SSO / MEO | 4 | 2 | M | — |
+| ~~MIS-7~~ | ~~`EarthOrbitMission` paramétrable → polaire / SSO / MEO~~ — résolu (branche de nœud et catalogue de sites reportés, voir détail) | 4 | 2 | M | — |
 | ~~RND-2~~ | ~~Filtrage anisotrope (MSAA déjà actif)~~ — résolu | 2 | 1 | S | — |
 | FX-2 | Éclipses / pénombre inter-corps | 4 | 3 | M | — |
 | FX-3 | Particules de tuyère | 4 | 2 | M | — |
@@ -264,7 +265,7 @@ opportuniste, ou à décider quoi sacrifier quand une phase déborde.
 | ~~NAV-3~~ | ~~Scrub continu (glisser sur la piste)~~ — résolu (le débit redouté n'existait pas, voir détail) | 3 | 2 | S | NAV-2 |
 | ~~RND-4~~ | ~~Ribbon billboardé (orbites + trajectoires)~~ — résolu | 4 | 3 | M | — |
 | MIS-3 | Solveur de Lambert + repère LVLH | 4 | 3 | M | — |
-| MIS-2 | Fenêtres de lancement | 4 | 3 | M | MIS-7 |
+| MIS-2 | Fenêtres de lancement | 4 | 3 | M | MIS-7 (livré) |
 | NAV-5 | Hover « wow » planètes + orbites | 3 | 2 | M | RND-4 (livré) |
 | UI-3 | Persistance des missions / format de scénario | 4 | 3 | M | — |
 | PHY-4 | Socle multi-corps (3ᵉ corps, SOI, repères) | 5 | 4 | L | — |
@@ -273,7 +274,7 @@ opportuniste, ou à décider quoi sacrifier quand une phase déborde.
 | PHY-1 | Atmosphère : brique drag, désactivée par défaut | 4 | 3 | L | — |
 | PHY-3 | Détecteurs MaxQ / interface + télémétrie + UI fidélité | 3 | 2 | M | PHY-1 |
 | PHY-2 | Atmosphère par défaut + recalibrage optimiseur | 5 | 4 | L | PHY-1 |
-| MIS-6 | Rendezvous / phasing sur cible TLE | 5 | 5 | XL | MIS-2, MIS-3, MIS-7 |
+| MIS-6 | Rendezvous / phasing sur cible TLE | 5 | 5 | XL | MIS-2, MIS-3, MIS-7 (livré) |
 | RND-5 | Repère d'affichage des trajectoires (bascule inertiel / tournant) — *confort, hors phases* | 2 | 2 | S | — |
 | UI-6 | Fenêtres déplaçables, empilement par focus, modalité du wizard — *hors phases* | 3 | 2 | M | UI-5 (livré) |
 | UI-7 | Tooltips sur les contrôles + socle de survol partagé (absorbe `BUG-4`) — *hors phases* | 3 | 2 | M | — |
@@ -305,7 +306,7 @@ MIS-8 (horizon de mission) ✔ résolu — ses trois aval sont débloqués
    ├── MIS-4 / MIS-5 (lunaire : coast TLI ~3 j > horizon actuel)
    └── MIS-6 (rendezvous : phasing sur N révolutions)
 
-MIS-7 (mission Terre paramétrable)
+MIS-7 (mission Terre paramétrable) ✔ résolu — MIS-2 est débloqué
    └── MIS-2 (fenêtres de lancement)
           ├── MIS-4 (survol lunaire) ──── MIS-5 (orbite lunaire)
           │      ▲
@@ -326,6 +327,12 @@ ni un rendez-vous ne convergent — la cible n'est jamais au bon endroit).
 
 `MIS-8` étant livré, il n'en reste que deux : **PHY-4** et **MIS-2** sont
 désormais les seuls verrous du haut du graphe.
+
+**Et ils sont indépendants l'un de l'autre.** `MIS-7` étant livré le 2026-08-16,
+plus rien n'est en amont de `MIS-2`. Quant à `PHY-4`, aucun de ses lots ne
+réclame de fenêtre de lancement : ils se testent tous à géométrie Terre-Lune
+figée (découpage §1). Les deux verrous peuvent donc s'ouvrir dans n'importe quel
+ordre — c'est `MIS-4` qui a besoin des deux à la fois.
 
 ---
 
@@ -919,6 +926,15 @@ d'un corps.
 une propagation N-corps complète ni l'optimisation multi-arcs. Si `MIS-4`
 demande plus, c'est ici que ça se verra.
 
+**Découpage.** [`docs/multi-corps/01-decoupage.md`](../multi-corps/01-decoupage.md)
+— six lots, chacun fermé par un test exécutable : baseline mesurée, corps central
+explicite (refactor à trajectoire identique), 3ᵉ corps en perturbation, éphéméride
+multi-arcs à un seul arc, bascule de SOI testée **hors mission**, rendu bi-échelle,
+puis un arc lunaire de bout en bout. Le document relève aussi les trois coutures
+que le code impose : la Terre en dur sur une trentaine de sites, les **seize**
+endroits qui construisent un propagateur de vol, et une éphéméride dont les points
+ne portent aucun repère.
+
 ---
 
 ### MIS — Missions
@@ -967,23 +983,63 @@ lunaires, qui voudront un étage supérieur cryogénique » — l'ULPM/Vinci de
 l'Ariane 62 le fournit, avec un coast déclaré compatible d'une remontée jusqu'à
 l'apogée GTO (5 h 15) là où l'étage du Falcon Heavy s'arrête à 2 h.
 
-#### MIS-7 — `EarthOrbitMission` paramétrable — ★4 ◆2 M *(ajout)*
+#### ~~MIS-7 — `EarthOrbitMission` paramétrable — ★4 ◆2 M~~ — **RÉSOLU le 2026-08-16**
 
 **Pourquoi.** Trois types de mission — polaire, SSO, MEO — sont à ★4/★5
-d'intérêt et quasi gratuits en physique : il ne manque que `launchAzimuth` et
-`targetInclination` comme paramètres au lieu de valeurs implicites Kourou.
-`missions.md` recommandait déjà ce refactor avant d'écrire ces missions ; il est
-en plus un **prérequis du rendez-vous** (matcher le plan de la cible, c'est
-exactement choisir un azimut et une inclinaison).
+d'intérêt et quasi gratuits en physique : il ne manquait que l'inclinaison comme
+paramètre au lieu de valeurs implicites Kourou. C'était en plus un **prérequis
+du rendez-vous** (matcher le plan de la cible, c'est exactement choisir un azimut
+et une inclinaison).
 
-**À faire.** Généraliser `LEOMission` en mission Terre paramétrée par
-`(launchSite, launchAzimuth, targetAltitude, targetInclination, targetEccentricity)`,
-contrainte d'inclinaison dans le coût (`beta1` est déjà partiellement disponible
-dans `TransferTwoManeuverProblem`), formule analytique SSO
-`cos(i) = -((Re+h)^{7/2} · n_prec) / (3/2 · J2 · Re² · √µ)`.
+**Spec.** [`docs/earth-orbit/01-mission-terre-parametrable.md`](../earth-orbit/01-mission-terre-parametrable.md)
+(P1, physique) et [`02-wizard-orbites-terrestres.md`](../earth-orbit/02-wizard-orbites-terrestres.md)
+(P2, UI). Les deux portent leur bilan de livraison.
 
-**Bonus mesurable** : une fois fait, les cartes wizard polaire / SSO / MEO sont
-essentiellement de la saisie de paramètres.
+**Ce qui a été livré, en deux temps.**
+
+- **P1 — la physique** (commit `27f4a60`). `LEOMission` devient
+  `EarthOrbitMission`, `MissionSpec.Leo` devient `MissionSpec.EarthOrbit` ;
+  `LaunchPlane` et `NodeBranch` portent le plan visé ; l'attitude gagne un mode
+  à **plan commandé** et le trim de plan entre dans la composition dès que le
+  plan est commandé ; `Physics.sunSynchronousInclination` calcule la SSO ;
+  `PropellantBudget` applique une assistance de rotation **signée**.
+- **P2 — le wizard** (commit `56eb362`). `MissionProfile` — cinq profils
+  (LEO, polaire, SSO, MEO, GEO) **dérivés du spec, pas stockés** —, champ
+  d'inclinaison, réordonnancement des étapes, refus MEO remonté à l'écran.
+  Aucune physique touchée.
+
+**Le résultat contredit l'énoncé d'origine sur un point, et c'est le plus
+instructif.** « Il ne manque que `launchAzimuth` » était faux : la mesure a montré
+que **l'azimut n'avait aucune autorité réelle sur le plan orbital** (le kick ne
+tourne presque rien, la suite le fige). C'est le pilotage à plan commandé, et non
+un paramètre d'azimut, qui donne les 94-96 % d'autorité mesurés. Trois autres
+estimations de la spec ont été démenties par la mesure (§13 de la spec P1) : le
+terme de pilotage explicite n'est pas dû, les « 1,8 % de repère » valent 0,01 %,
+et le MEO n'était pas qu'une affaire de coast.
+
+**Un résidu structurel, assumé.** La poussée reste dans le plan cible, donc elle
+n'annule jamais la vitesse hors plan : le résidu d'inclinaison a une forme fermée
+et il est **maximal au polaire**. `AscentPlaneControlTest` assère ce modèle, pas
+une borne — la tolérance de 1° qu'espérait la spec est inatteignable par
+construction.
+
+**Non-régression tenue sans toucher une tolérance.** `EarthOrbitNonRegressionTest`
+garde 7 cibles × 2 modes en ascension identique **au bit près**, et une clé
+d'inclinaison absente continue de produire `LaunchPlane.dueEast(latitude)`. Les
+références `AscentBaselineN2Test` ont été **ré-enregistrées** (graine 42), à
+tolérances inchangées ; leur écart de 19,2 km sur le périgée LEO n'est pas une
+dérive MIS-7 mais l'**étalement de l'ensemble acceptable de CMA-ES** — deux
+candidats jugés équivalents par la fonction de coût sont distants de 19 km. C'est
+une propriété de la fonction de coût, antérieure à MIS-7, et qui mérite sa propre
+fiche.
+
+**Reporté, pas oublié** : la branche de nœud n'est pas exposée à l'UI (toute
+mission créée part sur `ASCENDING`, ce qui est la bonne branche pour une SSO) ;
+le catalogue de sites de lancement n'est pas extrait ; le défaut d'horizon MEO
+reste à 48 révolutions (~24 jours), honnête mais perfectible — le changer
+déplacerait la bande d'altitude que mesure `MeoMissionTest`. Enfin `T1b`
+(inclinaison après insertion complète) n'est pas écrit ; `MeoMissionTest` en donne
+l'équivalent sur le seul profil MEO.
 
 #### MIS-2 — Fenêtres de lancement — ★4 ◆3 M
 
