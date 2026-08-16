@@ -1,5 +1,6 @@
 package com.smousseur.orbitlab.simulation.mission.operation;
 
+import com.smousseur.orbitlab.core.OrbitlabException;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionHorizon;
 import com.smousseur.orbitlab.simulation.mission.MissionType;
@@ -90,10 +91,7 @@ public final class MissionFactory {
         double apogeeKm = doubleValue(values, "LEO_APOGEE_ALT");
         double perigeeAlt = Math.min(perigeeKm, apogeeKm) * 1000.0;
         double apogeeAlt = Math.max(perigeeKm, apogeeKm) * 1000.0;
-        // No inclination field in the wizard yet (MIS-7 P2): every mission created here targets
-        // the site's free due-east plane, which is exactly what it flew before MIS-7. The spec
-        // record already carries the plane, so P2 is a form field and nothing else.
-        LaunchPlane plane = LaunchPlane.dueEast(latitude);
+        LaunchPlane plane = launchPlane(values, latitude);
         double azimuth = plane.launchAzimuth(FastMath.toRadians(latitude));
         // The budget has to agree with the chain MissionComposer will pick (spec §6.1): a target
         // beyond the ascent's reach is flown through a parking orbit and circularized at apogee, so
@@ -193,6 +191,41 @@ public final class MissionFactory {
     Spacecraft payload = payloadModel.toSpacecraft(payloadMass, loads.akmLoad());
     return new LaunchConfiguration(
         launcher, loads.launcherLoads(), payload, payloadModel.id());
+  }
+
+  /**
+   * Resolves the plane the ascent is asked to reach (spec {@code
+   * docs/earth-orbit/02-wizard-orbites-terrestres.md} §2.0).
+   *
+   * <p><b>An absent key is not a missing value, it is the due-east answer.</b> The wizard omits
+   * {@code TARGET_INCLINATION} while the inclination is still the one the site gives for free, and
+   * this method then derives the plane from the latitude in double — not from the rounded degrees a
+   * form field would have carried. Those two differ by thousandths of a degree, which is far too
+   * little to change the plane, and quite enough to move the azimuth, the signed launch assist and
+   * therefore every propellant load. Every caller assembling values by hand, and every test written
+   * before P2, lands in this branch and keeps its trajectory bit-for-bit.
+   *
+   * <p><b>An unusable value is refused, never clamped</b> (spec {@code
+   * 01-mission-terre-parametrable.md} §8): a mission that quietly flies a plane other than the one
+   * asked for is the defect MIS-7 exists to remove.
+   *
+   * @param values the raw wizard values
+   * @param latitude the launch site latitude in degrees
+   * @return the target plane
+   * @throws OrbitlabException if the inclination is unreadable, or unreachable from the site
+   */
+  private static LaunchPlane launchPlane(Map<String, Object> values, double latitude) {
+    Object raw = values.get("TARGET_INCLINATION");
+    if (raw == null || raw.toString().isBlank()) {
+      return LaunchPlane.dueEast(latitude);
+    }
+    double inclinationDeg;
+    try {
+      inclinationDeg = Double.parseDouble(raw.toString().trim());
+    } catch (NumberFormatException e) {
+      throw new OrbitlabException("Target inclination is not a number: " + raw);
+    }
+    return LaunchPlane.ofDegrees(inclinationDeg).requireReachableFrom(latitude);
   }
 
   /**

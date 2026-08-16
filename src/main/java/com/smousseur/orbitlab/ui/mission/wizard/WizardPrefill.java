@@ -2,10 +2,12 @@ package com.smousseur.orbitlab.ui.mission.wizard;
 
 import com.smousseur.orbitlab.app.converters.TimeConverter;
 import com.smousseur.orbitlab.simulation.mission.context.MissionEntry;
+import com.smousseur.orbitlab.simulation.mission.operation.LaunchPlane;
 import com.smousseur.orbitlab.simulation.mission.operation.MissionSpec;
 import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchConfiguration;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import org.hipparchus.util.FastMath;
 
 /**
  * Turns a mission back into the wizard form values it came from, so the wizard can reopen on an
@@ -44,6 +46,9 @@ public final class WizardPrefill {
 
     Map<String, Object> values = new LinkedHashMap<>();
     values.put(FormField.MISSION_TYPE.key(), spec.type().name());
+    // Derived, not read back: the profile is a way of offering parameters, so no spec component
+    // carries it (spec docs/earth-orbit/02-wizard-orbites-terrestres.md §2.1).
+    values.put(FormField.MISSION_PROFILE.key(), MissionProfile.of(spec).name());
     values.put(FormField.MISSION_NAME.key(), spec.name());
     // Absent when the mission was never scheduled: the field then keeps its "now" default rather
     // than showing a date the mission does not have.
@@ -69,11 +74,30 @@ public final class WizardPrefill {
       case MissionSpec.EarthOrbit earthOrbit -> {
         values.put(FormField.LEO_PERIGEE_ALT.key(), toKilometers(earthOrbit.perigeeAltitude()));
         values.put(FormField.LEO_APOGEE_ALT.key(), toKilometers(earthOrbit.apogeeAltitude()));
+        putInclinationIfCommanded(values, earthOrbit);
       }
       case MissionSpec.Geo geo ->
           values.put(FormField.GTO_PARKING_ALT.key(), toKilometers(geo.parkingAltitude()));
     }
     return values;
+  }
+
+  /**
+   * Writes the target inclination back — but only when the mission actually asked for one.
+   *
+   * <p>The predicate is {@code LaunchPlane.commands}, the very one the model uses to decide whether
+   * the ascent is flown to a commanded plane. A mission left on its site's free plane must come back
+   * with <b>no</b> inclination key, so that revalidating an untouched edit rebuilds {@code
+   * dueEast(latitude)} from the latitude rather than from the degrees printed in a field: publishing
+   * the derived value would move the azimuth, the launch assist and every propellant load (spec
+   * {@code docs/earth-orbit/02-wizard-orbites-terrestres.md} §2.0).
+   */
+  private static void putInclinationIfCommanded(
+      Map<String, Object> values, MissionSpec.EarthOrbit spec) {
+    LaunchPlane plane = spec.launchPlane();
+    if (plane.commands(FastMath.toRadians(spec.latitude()))) {
+      values.put(FormField.TARGET_INCLINATION.key(), plane.targetInclinationDeg());
+    }
   }
 
   /** Specs hold altitudes in meters, every wizard altitude widget works in kilometers. */

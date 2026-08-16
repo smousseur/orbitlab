@@ -61,6 +61,31 @@ public final class FormField<T> {
       new FormField<>("PAYLOAD_MASS", Double.class);
 
   /**
+   * Target orbit inclination in <b>degrees</b>, written only when it is an intention rather than
+   * whatever the site gives for free. Its <b>absence</b> is meaningful, exactly as {@link
+   * #MISSION_HORIZON_DAYS}'s is: it means "the plane a due-east launch reaches", and {@code
+   * MissionFactory} then builds {@code LaunchPlane.dueEast(latitude)} from the latitude in double
+   * rather than from the rounded number a form field shows.
+   *
+   * <p>That distinction is the non-regression seam of spec {@code
+   * docs/earth-orbit/02-wizard-orbites-terrestres.md} §2.0: publishing the derived value would move
+   * the azimuth by a few thousandths of a degree, hence the signed launch assist {@code
+   * PropellantBudget} charges, hence the propellant loads — a trajectory shift that no inclination
+   * assertion would ever catch, because the plane itself would still be right.
+   */
+  public static final FormField<Double> TARGET_INCLINATION =
+      new FormField<>("TARGET_INCLINATION", Double.class);
+
+  /**
+   * The {@link MissionProfile} the mission was created on, by name. UI-only: no spec component
+   * corresponds to it, and {@code MissionFactory} ignores the key entirely — the profile is a way of
+   * offering parameters, not a property of the mission (spec {@code
+   * docs/earth-orbit/02-wizard-orbites-terrestres.md} §1).
+   */
+  public static final FormField<String> MISSION_PROFILE =
+      new FormField<>("MISSION_PROFILE", String.class);
+
+  /**
    * Total mission duration in days, written only when the user overrode the derived default. Its
    * <b>absence</b> is meaningful: it is how the wizard says "auto", so {@code MissionFactory} falls
    * back to {@code MissionHorizon.defaultFor(type)} and reopening the mission restores the auto

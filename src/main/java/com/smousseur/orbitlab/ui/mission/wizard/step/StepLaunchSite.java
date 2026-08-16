@@ -101,6 +101,20 @@ public class StepLaunchSite implements StepValues {
     return root;
   }
 
+  /**
+   * The latitude currently entered, in degrees.
+   *
+   * <p>Read off the field rather than off the selected cosmodrome, because the coordinates stay
+   * editable after a site is picked. The parameters step calls this on every frame to bound its
+   * inclination field, so a hand-typed latitude moves the bound with it (spec {@code
+   * docs/earth-orbit/02-wizard-orbites-terrestres.md} §5).
+   *
+   * @return the launch latitude in degrees, or 0 while the field holds something unreadable
+   */
+  public double currentLatitude() {
+    return parseDoubleOrZero(latField.getText());
+  }
+
   @Override
   public Map<String, Object> getValues() {
     return Map.of(
