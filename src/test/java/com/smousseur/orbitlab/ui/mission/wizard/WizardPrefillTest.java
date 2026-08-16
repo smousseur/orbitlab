@@ -133,6 +133,67 @@ class WizardPrefillTest {
     assertFalse(WizardPrefill.fromEntry(entry).containsKey("LAUNCH_DATE"));
   }
 
+  // --- MIS-7 P2: the target plane across the round trip (spec 02 §2.0 and §2.1) ---
+
+  private static Map<String, Object> polarValues() {
+    Map<String, Object> values = leoValues();
+    values.put("LEO_PERIGEE_ALT", 550.0);
+    values.put("LEO_APOGEE_ALT", 550.0);
+    values.put("TARGET_INCLINATION", 90.0);
+    return values;
+  }
+
+  /**
+   * The rule that protects every calibrated trajectory: a mission left on its site's free plane must
+   * come back with <b>no</b> inclination key, so revalidating an untouched edit rebuilds the plane
+   * from the latitude rather than from a rounded field. Publishing it would move the azimuth, the
+   * launch assist and every propellant load, and no inclination assertion would notice.
+   */
+  @Test
+  void dueEastMission_comesBackWithoutAnInclinationKey() {
+    Map<String, Object> prefilled = WizardPrefill.fromEntry(entryFor(leoValues(), MissionType.LEO));
+    assertFalse(prefilled.containsKey("TARGET_INCLINATION"));
+    assertEquals(MissionProfile.LEO.name(), prefilled.get("MISSION_PROFILE"));
+  }
+
+  /** And the loads it rebuilds are the ones it flew, which is what "bit-for-bit" has to mean. */
+  @Test
+  void dueEastMission_rebuildsTheSameVehicle() {
+    MissionSpec original = MissionFactory.specFromWizardValues(leoValues(), MissionType.LEO);
+    MissionSpec reopened = reopen(entryFor(leoValues(), MissionType.LEO), MissionType.LEO);
+
+    assertArrayEquals(
+        original.configuration().propellantLoads(),
+        reopened.configuration().propellantLoads(),
+        0.0,
+        "an untouched edit must not resize the vehicle");
+  }
+
+  @Test
+  void polarMission_reopensPolar() {
+    MissionEntry entry = entryFor(polarValues(), MissionType.LEO);
+    Map<String, Object> prefilled = WizardPrefill.fromEntry(entry);
+
+    assertEquals(90.0, (Double) prefilled.get("TARGET_INCLINATION"), 1e-9);
+    assertEquals(MissionProfile.POLAR.name(), prefilled.get("MISSION_PROFILE"));
+
+    MissionSpec.EarthOrbit reopened =
+        (MissionSpec.EarthOrbit) reopen(entry, MissionType.LEO);
+    assertEquals(
+        90.0, Math.toDegrees(reopened.targetInclination()), 1e-9, "inclination after the round trip");
+  }
+
+  /** The sizing follows the plane, so a polar mission must not come back budgeted as a due-east one. */
+  @Test
+  void polarMission_keepsItsHeavierBudget() {
+    MissionSpec.EarthOrbit original =
+        (MissionSpec.EarthOrbit) MissionFactory.specFromWizardValues(polarValues(), MissionType.LEO);
+    MissionSpec.EarthOrbit reopened =
+        (MissionSpec.EarthOrbit) reopen(entryFor(polarValues(), MissionType.LEO), MissionType.LEO);
+
+    assertSameVehicle(original, reopened);
+  }
+
   /** Legacy entries carry no spec, which is exactly why the roster does not offer to edit them. */
   @Test
   void legacyEntry_hasNothingToPrefillFrom() {
