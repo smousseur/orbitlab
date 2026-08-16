@@ -246,6 +246,39 @@ The application renders two stacked viewports:
 
 ---
 
+## Design Documents
+
+Design work in this repo is recorded in numbered French documents under
+`docs/<chantier>/` (`01-decoupage.md`, `02-baseline-L0.md`, `03-conception-L1.md`, …).
+
+> **Rule: work the design out in the conversation first, then write the document.**
+> A generated design doc is hard to review — the reader has to reconstruct the reasoning
+> and the alternatives from prose. The same content is easy to review when the decisions
+> were made one at a time in chat and the document merely records them.
+
+The exchange, in order:
+
+1. **Explore the code first and bring measured facts, not impressions.** Counts, file
+   and line references, existing patterns to imitate. Facts that contradict the spec —
+   "the découpage says sixteen sites, the real count is twenty" — are the most valuable
+   thing to surface, and they must be surfaced before any question is asked.
+2. **One question at a time**, multiple choice where the options are genuinely distinct,
+   with a recommendation and its reasoning. Never a list of questions in one message.
+3. **Propose 2–3 approaches with trade-offs** before settling on one.
+4. **Present the design section by section**, asking after each whether it holds. This is
+   where a proposal that narrows or widens what was previously agreed gets raised
+   explicitly, as a question — not folded silently into the document.
+5. **Write the file only once the sections are agreed.** The document introduces no
+   decision that was not made in the conversation. If writing it reveals a new question,
+   ask it rather than resolving it in the text.
+6. **Report corrections made while writing**, especially any statement that was wrong in
+   the conversation and is right in the document.
+
+This applies to design and specification documents. Short factual notes, bug entries and
+measurement logs are written directly.
+
+---
+
 ## Testing
 
 **Framework:** JUnit 5 (Jupiter)
