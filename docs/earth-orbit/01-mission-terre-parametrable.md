@@ -1,6 +1,8 @@
 # MIS-7 — Mission Terre paramétrable · P1 : simulation et tests unitaires
 
-> Statut : spec proposée, 2026-08-16.
+> Statut : spec proposée, 2026-08-16. **`T0` exécuté le 2026-08-16 : §2 est confirmé, la
+> construction peut commencer** (`AscentAzimuthAuthorityTest`, 6 fixtures vertes — mesures reportées
+> en §2 et §9).
 > Fiche roadmap : [`docs/roadmap/01-roadmap.md`](../roadmap/01-roadmap.md) §6, `MIS-7` — ★4 ◆2 M.
 > Découpage : **P1** (cette spec) = physique, modèle et TU, sans une ligne d'UI.
 > **P2** = cartes du wizard, catalogue de sites, champs de paramètres.
@@ -35,8 +37,8 @@ L'inventaire est meilleur que ce que la fiche laisse croire sur un point, et bie
 
 | Brique | Où | État |
 |---|---|---|
-| Formule d'azimut | `Physics.getLaunchAzimuth(lat, i)` | existe, deux bugs (§1.1) |
-| Kick de tangage azimuté | `Physics.applyPitchKick(state, kick, azimut)` | existe, sans autorité (§2) |
+| Formule d'azimut | `Physics.getLaunchAzimuth(lat, i)` | existe, deux défauts (§1.1a, §1.1b) |
+| Kick de tangage azimuté | `Physics.applyPitchKick(state, kick, azimut)` | existe, sans autorité (§2), base est/ouest inversée (§1.1c) |
 | Ascension paramétrée | `AscentSequence.gravityTurn(profile, constraints, lat, i)` | **existe, jamais appelée** |
 | Terme d'inclinaison dans le coût | `TransferProblem` (`errI`, `W_INC`) | existe et actif |
 | Angle hors-plan CMA-ES | `beta1`, variable [3] de `TransferTwoManeuverProblem` | existe et actif |
@@ -51,7 +53,7 @@ arguments**. Le paramétrage a été câblé, jamais branché.
 Partout ailleurs, l'inclinaison cible est écrite `FastMath.toRadians(latitude)` : le code ne demande
 pas une inclinaison, il constate celle qu'un tir plein est donne gratuitement depuis Kourou.
 
-### 1.1 Deux défauts dans `Physics.getLaunchAzimuth`, inertes aujourd'hui
+### 1.1 Trois défauts dans le chemin de l'azimut, invisibles aujourd'hui
 
 ```java
 double result = FastMath.PI / 2;                       // 90° = plein est
@@ -69,8 +71,52 @@ les javadoc de `AscentSequence.gravityTurn` et de `GravityTurnFirstBurnStage` an
 `@param targetInclination the target orbit inclination (degrees)`. L'un des deux ment. Comme les
 seuls appelants passent `0.0`, personne ne l'a vu.
 
-Ces deux corrections sont gratuites et n'ont **aucun** effet sur les trajectoires actuelles, tous
-les appelants passant par la branche `(0, 0)`. Elles sont dans P1 par hygiène, pas par nécessité.
+**(c) `applyPitchKick` a l'est et l'ouest inversés.** Trouvé par `T0`, pas par lecture. La base
+horizontale locale y est construite `east = zenith × north`, qui vaut **l'ouest** : à l'équateur
+`r̂ = x̂`, `n̂ = ẑ`, et `x̂ × ẑ = −ŷ` alors que l'est géographique est `+ŷ = ẑ × r̂`.
+
+Les azimuts du kick sont donc comptés **dans le sens trigonométrique** depuis le nord : 0° = nord et
+180° = sud restent justes (le miroir est sur le seul axe est-ouest), mais **90° pointe plein
+ouest**. L'azimut standard que renvoie `getLaunchAzimuth` est donc mirroré à la seconde où on le
+donne au kick : `A → −A`.
+
+Mesure `T0.5` : un kick commandé plein est imprime −2,456 m/s le long de l'est géographique, sur
+2,457 m/s d'impulsion totale. C'est bien l'ouest, à 0,001 m/s près.
+
+(a) et (b) n'ont **aucun** effet sur les trajectoires actuelles : tous les appelants passent par
+`(0, 0)`, où ces deux branches ne sont pas empruntées. Ils sont dans P1 par hygiène.
+
+**(c) est un prérequis dur de §4** — sans la correction, un plan commandé volerait le miroir de tout
+plan prograde incliné — et c'est le seul des trois qui mord aujourd'hui.
+
+### 1.1.1 Corriger (c) est une recalibration, pas une correction de bug
+
+`T0.6` la chiffre sans toucher au code de production, en se servant du miroir lui-même : puisque la
+base a l'est et l'ouest inversés, commander −90° aujourd'hui produit exactement le kick qu'une base
+correcte produirait pour une commande plein est. On vole les deux et on différencie.
+
+| Écart à MECO entre la trajectoire volée et sa version corrigée | Mesuré | Tolérance N2 |
+|---|---|---|
+| Position | **1 964,5 m** | 10 m |
+| Vitesse | **4,6235 m/s** | 0,05 m/s |
+| Inclinaison | 0,0000° | — |
+
+196 fois la tolérance de position, 92 fois celle de vitesse. Les références figées par
+`AscentBaselineN2Test` et `GravityTurnReplayConsistencyTest` **bougeront**. L'inclinaison, elle, ne
+bouge pas : le miroir est symétrique par rapport au méridien du site, il change le nœud et pas le
+plan — ce qui est précisément pourquoi aucune assertion existante ne l'a jamais vu.
+
+**Décision.** (c) est corrigé dans un **pas dédié et isolé** (`P1.a-bis`, §11), dont le seul contenu
+est la correction de la base et le ré-enregistrement des références, à **tolérances inchangées**.
+Deux choses à ne pas confondre, et §9 en dépend : ré-enregistrer une valeur de référence mesurée
+après un changement assumé est légitime et se documente ; élargir une tolérance pour faire passer un
+test est l'échec que §9 proscrit.
+
+> **L'alternative écartée.** On pouvait laisser la base fausse et nier l'azimut (`A → −A`) à
+> l'entrée du kick : zéro trajectoire déplacée, zéro référence à refaire. Rejeté — cela fige une
+> convention fausse dans le code au moment précis où MIS-7 la rend structurante, et le prochain
+> lecteur de `applyPitchKick` n'aurait aucun moyen de savoir laquelle des deux erreurs compense
+> l'autre.
 
 ---
 
@@ -86,18 +132,19 @@ ne change pas le plan de l'orbite atteinte**.
 composante radiale** vers l'azimut demandé. La composante tangentielle — l'entraînement terrestre —
 est reconduite telle quelle.
 
-Ordres de grandeur, Falcon Heavy depuis Kourou (`AscentProfile(7,0 s ; 3° ; 2 s)`) :
+Falcon Heavy depuis Kourou (`AscentProfile(7,0 s ; 3° ; 2 s)`). Colonne « estimé » = le calcul de
+coin de table qui a motivé `T0` ; colonne « mesuré » = `T0.1` et `T0.5`, 2026-08-16.
 
-| Quantité | Valeur |
-|---|---|
-| Poussée / poids au décollage | 22,8 MN / 13,84 MN = 1,65 |
-| Accélération nette pendant la montée verticale | ≈ 6,4 m/s² |
-| Vitesse radiale à la fin des 7 s | ≈ 45 m/s |
-| Composante horizontale créée par le kick de 3° | ≈ **2,3 m/s** |
-| Entraînement terrestre à 5,23° de latitude | ≈ **463 m/s** |
-| Déviation de cap obtenue | ≈ **0,3°** |
+| Quantité | Estimé | Mesuré |
+|---|---|---|
+| Vitesse à l'entrée du gravity turn | ≈ 465 m/s | **465,5 m/s** |
+| Entraînement terrestre, composante est | ≈ 463 m/s | **463,2 m/s** |
+| Impulsion horizontale créée par le kick de 3° | ≈ 2,3 m/s | **2,457 m/s** |
+| Déviation de cap entre azimut 90° et 0° | ≈ 0,3° | **0,304°** |
+| Écart d'inclinaison correspondant | — | **0,0022°** |
 
-Un azimut commandé à 0° (plein nord) déplace le cap réel de moins d'un tiers de degré.
+Un azimut commandé à 0° (plein nord) déplace le cap réel de trois dixièmes de degré, et
+l'inclinaison de deux millièmes.
 
 ### 2.2 Et ce qui suit le fige
 
@@ -116,15 +163,24 @@ Rattraper le plan après coup, à l'insertion : un changement de 85° (Kourou �
 orbite circulaire à 400 km coûte `2 · 7,67 · sin(42,5°) ≈ 10,4 km/s`. Hors de portée de n'importe
 quel lanceur du catalogue. Le plan **doit** être établi pendant l'ascension.
 
-### 2.4 Ce paragraphe est une hypothèse, et le premier test la falsifie
+### 2.4 Ce paragraphe était une hypothèse — `T0` l'a mesurée
 
-Tout ce qui précède est du raisonnement sur le code plus des ordres de grandeur analytiques, pas
-une mesure. **Le premier travail de P1 est le test `T0` (§9), écrit avant toute modification** : il
-mesure l'inclinaison atteinte pour un azimut commandé à 90° puis à 0°, sur le code actuel.
+Tout ce qui précède était du raisonnement sur le code plus des ordres de grandeur, pas une mesure.
+`AscentAzimuthAuthorityTest` (§9) l'a mesuré sur le code actuel, à variables fixes, sans optimiseur,
+l'azimut étant la seule différence entre deux runs. Inclinaison atteinte à MECO :
 
-- écart < 1° → §2 est confirmé, §4 est nécessaire, on construit ;
-- écart significatif → §4 tombe, MIS-7 redevient le « juste un paramètre » de la fiche, et cette
-  spec est corrigée avant d'écrire la moindre ligne.
+| Azimut commandé | Atteignable si autorité | Obtenu | Autorité |
+|---|---|---|---|
+| 90° — est, ce que volent les missions | 5,23° | 5,2964° | référence |
+| 0° — nord, commande polaire | 90,00° | 5,2971° | **0,00 %** |
+| 180° — sud, branche descendante | 90,00° | 5,3131° | **0,02 %** |
+| −8,22° — SSO 700 km | 98,19° | 5,2970° | **0,00 %** |
+
+Et par la surcharge paramétrée d'`AscentSequence`, chaîne à trois phases complète (`T0.3`) : 0,0007°
+d'écart pour une commande polaire.
+
+**§2 est confirmé : l'autorité est nulle à la résolution de la mesure.** §4 est donc nécessaire, et
+MIS-7 n'est pas le changement « juste un paramètre » de la fiche roadmap.
 
 ---
 
@@ -210,6 +266,12 @@ il interpole `zénith → û_h` avec :
 La différence tient en une ligne, et elle est essentielle : `vTangential` suit le plan **subi**,
 `û_h` vise le plan **voulu**. La poussée acquiert une composante hors du plan courant tant que les
 deux diffèrent — c'est ce qui donne enfin de l'autorité.
+
+> **`û_A` se construit sur la même base locale `(n̂, ê)` que le kick — donc le défaut §1.1c doit
+> être corrigé d'abord.** Tant que `ê` vaut l'ouest, un plan commandé à azimut 45° serait volé à
+> −45° : plan miroir, inclinaison correcte, nœud à l'opposé. L'erreur ne se verrait sur aucune
+> assertion d'inclinaison — d'où l'ordre imposé en §11 (§1.1c en P1.a, autorité en P1.b) et le
+> contrôle de signe dans `T1`.
 
 ### 4.2 Règle de non-régression : plan non commandé ⇒ trajectoire identique au bit près
 
@@ -367,13 +429,34 @@ existe pour supprimer.
 
 ## 9. Les tests — le livrable de P1
 
-`T0` est écrit **avant** toute modification. `T2` est la porte de non-régression et doit rester
-verte à chaque étape.
+`T0` est écrit **avant** toute modification — c'est fait. `T2` est la porte de non-régression et doit
+rester verte à chaque étape.
+
+### 9.1 `T0` — livré et vert (2026-08-16)
+
+`AscentAzimuthAuthorityTest`, six fixtures, variables fixes, aucun optimiseur : le seul paramètre
+qui varie d'un run à l'autre est l'azimut commandé.
+
+| Fixture | Ce qu'elle mesure | Résultat |
+|---|---|---|
+| `T0.1` | le kick seul, sans propagation (§2.1) | 0,304° de cap, 0,0022° d'inclinaison pour 90° commandés |
+| `T0.2` | le gravity turn entier jusqu'à MECO (§2.2) | **≤ 0,02 % d'autorité** sur quatre azimuts |
+| `T0.3` | la même question via la surcharge paramétrée d'`AscentSequence` | 0,0007° pour une commande polaire |
+| `T0.4` | les deux défauts de `getLaunchAzimuth` (§1.1a, §1.1b) | confirmés |
+| `T0.5` | la base horizontale locale du kick (§1.1c) | est/ouest inversés, −2,456 m/s sur 2,457 |
+| `T0.6` | le prix de la correction de §1.1c sur les références N2 | 1 964,5 m et 4,6235 m/s à MECO |
+
+**Ces fixtures sont écrites pour mourir.** Elles caractérisent l'ascension telle qu'elle vole
+*aujourd'hui* : `T0.1`–`T0.3` passent au rouge quand P1.b donne l'autorité, `T0.4` et `T0.5` quand
+P1.a et P1.a-bis corrigent les défauts. Le rouge est le signal de fin d'étape, et chaque fixture le
+dit dans son message d'échec — elles sont alors supprimées, remplacées par `T1`. `T0.6` n'assère
+rien : elle produit un chiffre pour §1.1.1 et disparaît avec P1.a-bis.
+
+### 9.2 Le reste de P1
 
 | # | Test | Assertion | Tolérance |
 |---|---|---|---|
-| **T0** | `AscentAzimuthAuthorityTest` | inclinaison atteinte avec azimut commandé 90° puis 0°, sur le code actuel | mesure, pas de seuil — falsifie ou confirme §2 |
-| **T1** | `AscentPlaneControlTest` | inclinaison atteinte en fin d'ascension pour i ∈ {28,5° ; 51,6° ; 90° ; 98,19°} depuis Kourou | ≤ 1° avant trim |
+| **T1** | `AscentPlaneControlTest` | inclinaison atteinte en fin d'ascension pour i ∈ {28,5° ; 51,6° ; 90° ; 98,19°} depuis Kourou, **et signe du nœud** (§4.1) | ≤ 1° avant trim |
 | **T1b** | idem, après insertion complète | inclinaison de l'orbite atteinte | ≤ 0,1° |
 | **T2** | `EarthOrbitNonRegressionTest` | un spec plein est reproduit la trajectoire `LEOMission` actuelle (4 cas circulaires, 3 elliptiques) | éléments orbitaux identiques |
 | **T3** | `SunSynchronousInclinationTest` | formule contre les trois valeurs de référence §5 | ± 0,02° |
@@ -416,8 +499,9 @@ revalider. Il est isolé pour pouvoir être coupé sans toucher au reste.
 
 | Lot | Contenu | Sortie |
 |---|---|---|
-| **P1.0** | `T0` sur le code actuel | confirme ou infirme §2 — **point de décision** |
-| **P1.a** | `LaunchPlane`, `MissionSpec.EarthOrbit`, `EarthOrbitMission`, corrections §1.1, `T2`, `T6` | renommage livré, aucune trajectoire déplacée |
+| **P1.0** ✔ | `T0` sur le code actuel | **fait** — §2 confirmé, autorité ≤ 0,02 % |
+| **P1.a** | `LaunchPlane`, `MissionSpec.EarthOrbit`, `EarthOrbitMission`, corrections §1.1a/b, `T2`, `T6` | renommage livré, aucune trajectoire déplacée |
+| **P1.a-bis** | correction §1.1c seule + ré-enregistrement des références N2, tolérances inchangées | 1 964 m / 4,62 m/s de déplacement assumé et documenté |
 | **P1.b** | Attitude à plan commandé, trim de plan dans la composition, budget azimuté, `T1`, `T1b`, `T5`, `T7` | **polaire vole** |
 | **P1.c** | `sunSynchronousInclination`, `T3`, `T4` | **SSO vole** |
 | **P1.d** *(optionnel)* | Règle de composition §6.1, `T8` | **MEO vole** |
