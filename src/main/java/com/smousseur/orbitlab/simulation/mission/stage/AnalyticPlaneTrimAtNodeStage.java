@@ -34,11 +34,24 @@ import org.orekit.time.AbsoluteDate;
  * down toward ~0.10-0.15°.
  *
  * <p>The stage detects the next node itself (equatorial crossing, {@link NodeDetector}) and centers
- * the burn on it, so it does not depend on a preceding coast. The burn is a <em>pure</em> plane
- * rotation — it preserves the speed at the node, so it changes neither the orbit's energy nor its
- * shape, only the plane. For an equatorial target ({@code targetInclination = 0}) the equatorial
- * node is exactly the node of the plane change; a non-zero target inclination is handled
- * approximately (the equatorial node approximates the target-plane node for small tilts).
+ * the burn on it, so it does not depend on a preceding coast. For an equatorial target ({@code
+ * targetInclination = 0}) the equatorial node is exactly the node of the plane change; a non-zero
+ * target inclination is handled approximately (the equatorial node approximates the target-plane
+ * node for small tilts).
+ *
+ * <p><b>The burn preserves energy, not shape.</b> The target velocity keeps the node speed, so the
+ * semi-major axis is untouched. But it is aimed <em>purely transverse</em> — {@code nIdeal × rNode}
+ * is perpendicular to the radius — so whatever radial velocity the state carries is folded into the
+ * transverse direction instead of being kept: {@code |h| = r·v_transverse} grows and the
+ * eccentricity drops. This is a pure plane rotation <em>only at an apsis</em>, where the velocity is
+ * already transverse.
+ *
+ * <p>In the regime this stage is written for — a ~0.25° residual on the near-circular orbit left by
+ * apogee circularization — the radial velocity is negligible and so is the effect. Away from it the
+ * cost grows with the flight path angle, because the burn also has to flatten it. Measured on the
+ * eccentric ascent state of {@code PolarCoverageTest} (e = 0.21, 3.24° of plane error): 1028 m/s
+ * spent where a pure rotation costs 350-460 m/s, eccentricity pulled from 0.206 to 0.137. Whether
+ * that out-of-envelope use is acceptable is {@code docs/bugs.md} BUG-6, not a defect of this class.
  */
 public class AnalyticPlaneTrimAtNodeStage extends MissionStage {
   private static final Logger logger = LogManager.getLogger(AnalyticPlaneTrimAtNodeStage.class);
@@ -134,9 +147,10 @@ public class AnalyticPlaneTrimAtNodeStage extends MissionStage {
       return null;
     }
 
-    // Pure plane change: keep the node speed, rotate the velocity into the target plane. The
-    // target-plane prograde direction at the node is nIdeal × rNode (sign-matched to the current
-    // velocity). Because the magnitude is unchanged, the burn touches neither energy nor shape.
+    // Keep the node speed, rotate the velocity into the target plane. The target-plane prograde
+    // direction at the node is nIdeal × rNode (sign-matched to the current velocity). The magnitude
+    // is unchanged, so the energy is too — but this direction is purely transverse, so the shape is
+    // not preserved away from an apsis (class javadoc, docs/bugs.md BUG-6).
     double vMag = vNode.getNorm();
     Vector3D vTargetDir = Vector3D.crossProduct(nIdeal, rNode).normalize();
     if (vTargetDir.dotProduct(vNode) < 0) {

@@ -2,6 +2,7 @@ package com.smousseur.orbitlab.simulation.mission.operation;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.smousseur.orbitlab.simulation.OrbitElements;
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.Physics;
 import com.smousseur.orbitlab.simulation.mission.Mission;
@@ -78,15 +79,27 @@ class PolarCoverageTest {
     double coverageAfterAscent = maxGroundTrackLatitudeDeg(afterAscent);
     double coverageAfterTrim = maxGroundTrackLatitudeDeg(afterTrim);
 
+    // The orbit and mass lines carry no assertion: they exist so this profile can be recorded in a
+    // reference table alongside the optimized ones (PHY-4 lot L0, docs/multi-corps/02-baseline-L0).
+    // They go through OrbitElements.format() precisely so the line is character-for-character
+    // comparable to the "Achieved orbit" line every other profile is read from.
     logger.info("T5 polar coverage from Kourou (φ = {}°):", fmt(LAT_DEG, 2));
     logger.info(
         "  after the ascent alone -> inclination {}°, ground track reaches {}°",
         fmt(Physics.inclinationDeg(afterAscent), 4),
         fmt(coverageAfterAscent, 3));
     logger.info(
-        "  after the plane trim   -> inclination {}°, ground track reaches {}° (Δv spent: {} kg)",
+        "      orbit {}, mass {} kg",
+        OrbitElements.osculating(afterAscent.getOrbit()).format(),
+        fmt(afterAscent.getMass(), 3));
+    logger.info(
+        "  after the plane trim   -> inclination {}°, ground track reaches {}°",
         fmt(Physics.inclinationDeg(afterTrim), 4),
-        fmt(coverageAfterTrim, 3),
+        fmt(coverageAfterTrim, 3));
+    logger.info(
+        "      orbit {}, mass {} kg (propellant spent: {} kg)",
+        OrbitElements.osculating(afterTrim.getOrbit()).format(),
+        fmt(afterTrim.getMass(), 3),
         fmt(afterAscent.getMass() - afterTrim.getMass(), 1));
 
     assertTrue(

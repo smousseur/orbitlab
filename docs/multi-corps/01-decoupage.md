@@ -131,7 +131,14 @@ d'optimisation, qui sont lents) et consigner dans ce dossier : orbites atteintes
 LEO/GEO/MEO/polaire, masses restantes, durées de calcul. Rien d'autre. Aucun code
 de production.
 
-**Fermeture.** Un tableau de référence versionné.
+**Fermeture.** Un tableau de référence versionné : **`02-baseline-L0.md`**, mesuré
+le 2026-08-16 au commit `8f54206`, avec les logs bruts sous `baseline/`. Il couvre
+cinq profils (LEO-400, GEO, MEO, Ariane 62, polaire), distingue les deux qui ont
+un état MECO enregistré de ceux qui n'ont qu'un agrégat, et consigne six
+anomalies héritées qu'il ne faut pas attribuer à PHY-4 — dont deux qui changent
+la façon d'écrire les tests des lots suivants : sur MEO les passes d'optimisation
+et d'éphéméride divergent de façon **reproductible**, et les comptes
+d'évaluations CMA-ES ne sont, eux, **pas** reproductibles.
 
 ### L1 — Le corps central devient explicite
 

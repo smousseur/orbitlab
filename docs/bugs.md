@@ -15,6 +15,7 @@ la frontière entre les deux derniers doit rester lisible.
 | [`BUG-3`](#bug-3--orientation-des-modèles-3d-des-planètes) | Orientation des modèles 3D des planètes | 2026-08-15 | Ouvert, diagnostic à faire |
 | [`BUG-4`](#bug-4--hover-des-widgets-non-uniforme) | Hover des widgets non uniforme | 2026-08-15 | **Promu** en `UI-7` le 2026-08-16 |
 | [`BUG-5`](#bug-5--pop-du-modèle-3d-au-changement-de-focus) | Pop du modèle 3D au changement de focus | 2026-08-15 | Ouvert, mécanisme identifié |
+| [`BUG-6`](#bug-6--plane-trim-employé-hors-de-son-enveloppe-par-lascension-polaire) | Plane trim employé hors de son enveloppe par l'ascension polaire | 2026-08-16 | Ouvert, mécanisme mesuré — **importance : mineure côté code, à trancher côté physique** |
 
 ---
 
@@ -395,3 +396,87 @@ place* de la source. C'est la même contrainte qui fait que
 
 Aucune instrumentation. Ce qui précède est une lecture de l'ordre d'exécution,
 pas une observation frame par frame.
+
+---
+
+## BUG-6 — Plane trim employé hors de son enveloppe par l'ascension polaire
+
+**Constaté.** En mesurant la baseline L0 de PHY-4
+([`multi-corps/02-baseline-L0.md`](multi-corps/02-baseline-L0.md) §5.6), le
+`AnalyticPlaneTrimAtNodeStage` de `PolarCoverageTest` dépense **1 028 m/s et
+10 349 kg** — 26 % de la masse — pour un changement de plan de 3,24°, et fait
+tomber l'excentricité de 0,206 à 0,137 au passage.
+
+### Le mécanisme, mesuré
+
+La vitesse visée par l'étage est construite comme `nIdeal × rNode`, donc
+**perpendiculaire au rayon** : purement transverse. Faire tourner vers elle une
+vitesse qui possède une composante radiale conserve `|v|` — donc le demi-grand
+axe — mais augmente `|h| = r·v_transverse`, donc abaisse `e`. La manœuvre
+circularise en même temps qu'elle tourne, et paie les deux.
+
+| | avant trim | après trim |
+|---|---|---|
+| demi-grand axe | 7 867 901 m | 7 865 032 m (préservé à 0,036 %) |
+| excentricité | 0,2061 | 0,1369 |
+| périgée × apogée | −131 589 × 3 111 118 m | 410 084 × 2 563 706 m |
+
+Une rotation pure de 3,24° coûterait `2·v·sin(1,62°)`, soit 350 à 462 m/s. La
+rotation totale déduite de `2·v·sin(Ψ/2) = 1028` vaut Ψ ≈ 7,4° : 3,24° de plan,
+et ≈ 6,6° en quadrature — l'angle de pente que la manœuvre aplatit. Les 10 349 kg
+donnent une Isp implicite de 347,8 s : le ΔV logué est réel, pas un plan non tenu.
+
+Le javadoc de la classe affirmait l'inverse (« changes neither the orbit's energy
+nor its shape »). **Corrigé le 2026-08-16** — la classe dit maintenant ce qu'elle
+fait. C'est la seule partie de cet item qui soit close.
+
+### Importance : mineure côté production, moyenne côté fidélité du test
+
+**Aucun chemin de production n'est concerné, et c'est le cœur de l'évaluation.**
+`EarthOrbitMission.ascentThen` insère le plane trim **après** les phases
+orbitales (`EarthOrbitMission.java:349-359`) : en vol réel, il s'exécute sur une
+orbite déjà circularisée, où la vitesse *est* transverse et où l'effet
+disparaît. Les mesures le confirment sur les deux profils qui l'exercent
+réellement :
+
+| Profil | Contexte du trim | Coût |
+|---|---|---|
+| GEO | après circularisation d'apogée | **3,3 kg, 4,2 m/s** |
+| MEO | résidu 0,0026° | **sauté** |
+| Polaire (`PolarCoverageTest`) | après l'ascension seule, e = 0,21 | **10 349 kg, 1 028 m/s** |
+
+C'est donc la **fixture** qui est hors enveloppe, pas l'étage :
+`PolarCoverageTest.trimPlane` appelle `propagateStandalone` directement sur
+l'état de fin d'ascension, en sautant les phases orbitales que la mission réelle
+vole avant. La démonstration qualitative de T5 reste valide — le trim fait bien
+passer la couverture de 86,9° à 89,9°, et c'est ce que MIS-7 voulait montrer —
+mais **le coût qu'elle affiche n'est pas celui d'une mission polaire réelle**.
+
+Le risque concret, et la raison de tracer l'item : quelqu'un lit les 10 349 kg de
+la ligne polaire de la baseline comme un coût de mission. C'est faux d'un facteur
+qui reste à établir.
+
+### Correction, et pourquoi elle ne doit pas être faite maintenant
+
+Faire voler les phases orbitales à la fixture avant le trim la remettrait dans
+l'enveloppe de production. C'est un effort faible.
+
+**Mais cela déplacerait les chiffres polaires de la baseline L0**, qui vient
+d'être enregistrée et sur laquelle les lots L1 à L6 de PHY-4 vont s'appuyer
+pendant des semaines. Corriger maintenant, c'est bouger la référence en cours de
+chantier — exactement ce que le §3 du découpage interdit. À faire après PHY-4,
+ou pendant, mais alors avec un ré-enregistrement explicite et daté de la
+baseline.
+
+### Non vérifié
+
+- **Le coût réel d'un plane trim polaire en production n'a pas été mesuré.** Il
+  faudrait faire tourner une mission polaire complète via `EarthOrbitMission` et
+  lire la ligne « Plane trim » de son rapport. Tant que ce n'est pas fait, on
+  sait que 10 349 kg est faux, pas ce qui est juste.
+- **L'angle de pente au nœud n'a pas été lu directement**, il est déduit de la
+  décomposition en quadrature du ΔV. La déduction est cohérente avec `e = 0,21`,
+  elle n'est pas une mesure.
+- **Le seuil `SKIP_PLANE_ERROR_RAD` (0,03°) n'a pas été réexaminé** à la lumière
+  de ce qui précède : rien ne dit qu'un seuil pensé pour un résidu de
+  circularisation convienne à un résidu d'ascension.
