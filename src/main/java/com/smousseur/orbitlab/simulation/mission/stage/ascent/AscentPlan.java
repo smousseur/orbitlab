@@ -1,6 +1,7 @@
 package com.smousseur.orbitlab.simulation.mission.stage.ascent;
 
 import com.smousseur.orbitlab.simulation.mission.vehicle.ActiveStageInfo;
+import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.orekit.time.AbsoluteDate;
 
 /**
@@ -32,6 +33,10 @@ import org.orekit.time.AbsoluteDate;
  * @param maxStepSeconds integrator max step keeping the late-ignition invariant for the ascent
  * @param firstStage the vehicle stage active at gravity-turn entry (the one jettisoned)
  * @param secondStage the vehicle stage active after jettison
+ * @param commandedPlaneNormal unit normal of the plane the ascent steers into, or {@code null} when
+ *     no plane is commanded and the turn follows whatever plane the kick left behind (spec {@code
+ *     docs/earth-orbit/01-mission-terre-parametrable.md} §4); callers test {@link
+ *     #hasCommandedPlane()} rather than the value
  */
 public record AscentPlan(
     AbsoluteDate kickDate,
@@ -42,7 +47,8 @@ public record AscentPlan(
     double burn2Duration,
     double maxStepSeconds,
     ActiveStageInfo firstStage,
-    ActiveStageInfo secondStage) {
+    ActiveStageInfo secondStage,
+    Vector3D commandedPlaneNormal) {
 
   /**
    * Settling offset placed before every ignition and after the jettison. Orekit brackets an event
@@ -90,5 +96,16 @@ public record AscentPlan(
    */
   public double depletionFloor() {
     return secondStage.depletionFloor();
+  }
+
+  /**
+   * Whether this ascent steers into a commanded plane rather than following the one the pitch kick
+   * left behind. Drives which {@code GravityTurnAttitudeProvider} the burn phases install, and is
+   * the seam that keeps the calibrated due-east trajectories bit-for-bit (spec §4.2).
+   *
+   * @return {@code true} when a target plane normal is carried
+   */
+  public boolean hasCommandedPlane() {
+    return commandedPlaneNormal != null;
   }
 }

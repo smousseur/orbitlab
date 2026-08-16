@@ -138,7 +138,7 @@ class GravityTurnReplayConsistencyTest {
 
     // The maneuver the GEO gravity-turn stage builds internally (launch latitude / target
     // inclination are 0 on that stage, as in GEOMission.buildStages).
-    double azimuth = Physics.getLaunchAzimuth(0.0, 0.0);
+    double azimuth = Physics.getLaunchAzimuth();
     GravityTurnManeuver maneuver =
         new GravityTurnManeuver(
             mission.getVehicle(),
@@ -262,7 +262,7 @@ class GravityTurnReplayConsistencyTest {
     // The historical VA mismatch magnitude (bilan 11 §3.9), reproduced synthetically.
     SpacecraftState nudgedEntry = displaced(entry, 0.4, 0.1);
 
-    double azimuth = Physics.getLaunchAzimuth(0.0, 0.0);
+    double azimuth = Physics.getLaunchAzimuth();
     GravityTurnManeuver maneuver =
         new GravityTurnManeuver(
             geoMission().getVehicle(),
@@ -385,7 +385,7 @@ class GravityTurnReplayConsistencyTest {
       GEOMission mission, SpacecraftState entry, double[] variables) {
     List<MissionStage> ascent =
         AscentSequence.gravityTurn(
-            Launchers.FALCON_HEAVY.ascentProfile(), GravityTurnConstraints.forTarget(PARKING_ALT));
+            Launchers.FALCON_HEAVY.ascentProfile(), GravityTurnConstraints.forTarget(PARKING_ALT), LAT);
     ((GravityTurnFirstBurnStage) ascent.getFirst())
         .applyOptimization(new OptimizationResult(variables, 0.0, entry, 1, entry));
     mission.setCurrentState(entry);
@@ -451,7 +451,7 @@ class GravityTurnReplayConsistencyTest {
         (GravityTurnFirstBurnStage)
             AscentSequence.gravityTurn(
                     Launchers.FALCON_HEAVY.ascentProfile(),
-                    GravityTurnConstraints.forTarget(PARKING_ALT))
+                    GravityTurnConstraints.forTarget(PARKING_ALT), LAT)
                 .getFirst();
     SpacecraftState optimize = firstBurn.buildProblem(optimizeMission).propagate(variables);
 
@@ -487,7 +487,7 @@ class GravityTurnReplayConsistencyTest {
         (GravityTurnFirstBurnStage)
             AscentSequence.gravityTurn(
                     Launchers.FALCON_HEAVY.ascentProfile(),
-                    GravityTurnConstraints.forTarget(PARKING_ALT))
+                    GravityTurnConstraints.forTarget(PARKING_ALT), LAT)
                 .getFirst();
     double[] variables = {gt.maneuver().getStagingCompleteTime() + 2.0, 0.32};
     SpacecraftState preKick = gt.entry();

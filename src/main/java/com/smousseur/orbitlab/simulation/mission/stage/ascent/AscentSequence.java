@@ -1,6 +1,7 @@
 package com.smousseur.orbitlab.simulation.mission.stage.ascent;
 
 import com.smousseur.orbitlab.simulation.mission.MissionStage;
+import com.smousseur.orbitlab.simulation.mission.operation.LaunchPlane;
 import com.smousseur.orbitlab.simulation.mission.optimizer.problems.GravityTurnConstraints;
 import com.smousseur.orbitlab.simulation.mission.stage.StageSeparationStage;
 import com.smousseur.orbitlab.simulation.mission.stage.ascent.GravityTurnBurnStage.AscentInstrumentation;
@@ -49,17 +50,24 @@ public final class AscentSequence {
   /**
    * Builds the three ascent phases a mission flies, sharing one plan reference.
    *
+   * <p><b>The plane arguments are live as of MIS-7.</b> This overload existed before it and was
+   * never called: both concrete missions went through the two-argument one, which passed {@code (0,
+   * 0)}. Handing it a {@link LaunchPlane} that differs from the site's free plane now switches the
+   * ascent to the commanded-plane attitude (spec {@code
+   * docs/earth-orbit/01-mission-terre-parametrable.md} §4); handing it the free plane keeps the
+   * historical trajectory bit-for-bit.
+   *
    * @param profile the launcher's flight profile (pitch kick, interstage coast)
    * @param constraints the apogee, velocity and flight-path-angle targets of the turn
-   * @param launchLatitude the launch site latitude (degrees)
-   * @param targetInclination the target orbit inclination (degrees)
+   * @param launchPlane the target orbital plane
+   * @param launchLatitudeDeg the launch site latitude (<b>degrees</b>)
    * @return the three phases, in order
    */
   public static List<MissionStage> gravityTurn(
       AscentProfile profile,
       GravityTurnConstraints constraints,
-      double launchLatitude,
-      double targetInclination) {
+      LaunchPlane launchPlane,
+      double launchLatitudeDeg) {
     AscentPlanRef planRef = new AscentPlanRef();
     return List.of(
         new GravityTurnFirstBurnStage(
@@ -67,8 +75,8 @@ public final class AscentSequence {
             planRef,
             profile.pitchKickAngleDeg(),
             profile.interstageCoastDuration(),
-            launchLatitude,
-            targetInclination,
+            launchPlane,
+            launchLatitudeDeg,
             constraints,
             AscentInstrumentation.REPLAY),
         separation(profile.interstageCoastDuration()),
@@ -76,16 +84,18 @@ public final class AscentSequence {
   }
 
   /**
-   * Builds the three ascent phases for a launch straight into the target plane (no inclination
-   * change), the shape the LEO and GEO profiles use today.
+   * Builds the three ascent phases for a launch into the site's free due-east plane — no plane
+   * commanded, no inclination change, the shape every profile in the catalog flew before MIS-7.
    *
    * @param profile the launcher's flight profile
    * @param constraints the apogee, velocity and flight-path-angle targets of the turn
+   * @param launchLatitudeDeg the launch site latitude (degrees)
    * @return the three phases, in order
    */
   public static List<MissionStage> gravityTurn(
-      AscentProfile profile, GravityTurnConstraints constraints) {
-    return gravityTurn(profile, constraints, 0.0, 0.0);
+      AscentProfile profile, GravityTurnConstraints constraints, double launchLatitudeDeg) {
+    return gravityTurn(
+        profile, constraints, LaunchPlane.dueEast(launchLatitudeDeg), launchLatitudeDeg);
   }
 
   /**

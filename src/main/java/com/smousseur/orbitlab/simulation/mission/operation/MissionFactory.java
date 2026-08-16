@@ -12,6 +12,7 @@ import com.smousseur.orbitlab.simulation.mission.vehicle.Spacecraft;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.LauncherModel;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.PayloadModel;
 import java.util.Map;
+import org.hipparchus.util.FastMath;
 
 /**
  * Builds missions from the wizard's raw form values. Extracted from the wizard AppState so the
@@ -92,14 +93,26 @@ public final class MissionFactory {
         // The AKM has no role on a LEO mission: flown empty. Loads sized on the apogee
         // (conservative for elliptic targets).
         Spacecraft payload = payloadModel.toSpacecraft(payloadMass, 0.0);
-        double[] loads = PropellantBudget.loadsForLeo(launcher, payload, apogeeAlt, latitude);
+        // No inclination field in the wizard yet (MIS-7 P2): every mission created here targets
+        // the site's free due-east plane, which is exactly what it flew before MIS-7. The spec
+        // record already carries the plane, so P2 is a form field and nothing else.
+        LaunchPlane plane = LaunchPlane.dueEast(latitude);
+        double[] loads =
+            PropellantBudget.loadsForLeo(
+                launcher,
+                payload,
+                apogeeAlt,
+                latitude,
+                plane.launchAzimuth(FastMath.toRadians(latitude)));
         LaunchConfiguration configuration =
             new LaunchConfiguration(launcher, loads, payload, payloadModel.id());
-        yield new MissionSpec.Leo(
+        yield new MissionSpec.EarthOrbit(
             name,
             configuration,
             perigeeAlt,
             apogeeAlt,
+            plane.targetInclination(),
+            plane.nodeBranch(),
             siteName,
             latitude,
             longitude,

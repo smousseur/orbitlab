@@ -5,7 +5,7 @@ import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemeris;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemerisPoint;
 import com.smousseur.orbitlab.simulation.mission.operation.GEOMission;
-import com.smousseur.orbitlab.simulation.mission.operation.LEOMission;
+import com.smousseur.orbitlab.simulation.mission.operation.EarthOrbitMission;
 import com.smousseur.orbitlab.simulation.mission.runtime.MissionComputeResult;
 import com.smousseur.orbitlab.simulation.mission.runtime.MissionOptimizer;
 import com.smousseur.orbitlab.simulation.mission.runtime.StagePerformance;
@@ -157,8 +157,8 @@ public class AscentBaselineN2Test extends AbstractTrajectoryOptimizerTest {
 
   @Test
   void leo400Baseline() {
-    LEOMission mission =
-        new LEOMission(
+    EarthOrbitMission mission =
+        new EarthOrbitMission(
             "Falcon Heavy",
             new LaunchConfiguration(
                 Launchers.FALCON_HEAVY, new double[] {600_000, 100_000}, Spacecraft.LEGACY),

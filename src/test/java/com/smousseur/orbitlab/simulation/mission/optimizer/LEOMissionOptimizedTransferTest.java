@@ -1,7 +1,7 @@
 package com.smousseur.orbitlab.simulation.mission.optimizer;
 
 import com.smousseur.orbitlab.simulation.OrekitService;
-import com.smousseur.orbitlab.simulation.mission.operation.LEOMission;
+import com.smousseur.orbitlab.simulation.mission.operation.EarthOrbitMission;
 import com.smousseur.orbitlab.simulation.mission.vehicle.*;
 import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Launchers;
 import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Payloads;
@@ -14,7 +14,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 /**
  * Mirror of {@link LEOMissionOptimizationTest} flying the CMA-ES-optimized transfer (spec 06 I6,
- * {@link LEOMission#circularWithOptimizedTransfer}) instead of the analytic Hohmann profile. Same
+ * {@link EarthOrbitMission#circularWithOptimizedTransfer}) instead of the analytic Hohmann profile. Same
  * launcher configuration (Falcon Heavy fully loaded) and same targets, so any divergence between
  * the two classes isolates the transfer mode. This is the multi-altitude sweep required before
  * deciding whether the optimized transfer becomes the LEO default (bilan 08 §3.2).
@@ -38,8 +38,8 @@ public class LEOMissionOptimizedTransferTest extends AbstractTrajectoryOptimizer
   @ParameterizedTest(name = "targetAltitude={0}m")
   @ValueSource(doubles = {600_000})
   void testCircularMissions(double targetAltitude) {
-    LEOMission mission =
-        LEOMission.circularWithOptimizedTransfer(
+    EarthOrbitMission mission =
+        EarthOrbitMission.circularWithOptimizedTransfer(
             "LEO mission (optimized transfer)", defaultConfiguration(), targetAltitude);
     testMission(mission, targetAltitude, targetAltitude);
   }
@@ -49,8 +49,8 @@ public class LEOMissionOptimizedTransferTest extends AbstractTrajectoryOptimizer
     Spacecraft payload = Payloads.EARTH_OBSERVATION_SAT.toSpacecraft(10_000, 0.0);
     double[] loads =
         PropellantBudget.loadsForLeo(Launchers.FALCON_HEAVY, payload, 400_000, LAUNCH_LATITUDE_DEG);
-    LEOMission mission =
-        LEOMission.circularWithOptimizedTransfer(
+    EarthOrbitMission mission =
+        EarthOrbitMission.circularWithOptimizedTransfer(
             "Falcon Heavy (optimized transfer)",
             new LaunchConfiguration(Launchers.FALCON_HEAVY, loads, payload),
             400_000);
@@ -60,7 +60,7 @@ public class LEOMissionOptimizedTransferTest extends AbstractTrajectoryOptimizer
   /**
    * Same elliptic targets as the analytic {@link LEOMissionOptimizationTest#testEllipticMissions},
    * now flown through the CMA-ES-optimized single-burn transfer ({@link
-   * LEOMission#ellipticWithOptimizedTransfer}). The single burn shapes the post-gravity-turn state
+   * EarthOrbitMission#ellipticWithOptimizedTransfer}). The single burn shapes the post-gravity-turn state
    * directly onto the target ellipse — {@link
    * com.smousseur.orbitlab.simulation.mission.stage.TransfertManeuverStage} grades apogee, perigee
    * and eccentricity — instead of the deterministic apoapsis circularization {@code
@@ -70,8 +70,8 @@ public class LEOMissionOptimizedTransferTest extends AbstractTrajectoryOptimizer
   @ParameterizedTest(name = "perigee={0}m, apogee={1}m")
   @CsvSource({"600_000, 800_000"})
   void testEllipticMissions(double perigeeAltitude, double apogeeAltitude) {
-    LEOMission mission =
-        LEOMission.ellipticWithOptimizedTransfer(
+    EarthOrbitMission mission =
+        EarthOrbitMission.ellipticWithOptimizedTransfer(
             "LEO mission (optimized elliptic transfer)",
             defaultConfiguration(),
             perigeeAltitude,

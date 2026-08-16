@@ -3,6 +3,8 @@ package com.smousseur.orbitlab.simulation;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.hipparchus.util.FastMath;
 import org.orekit.orbits.CartesianOrbit;
+import org.orekit.orbits.KeplerianOrbit;
+import org.orekit.orbits.OrbitType;
 import org.orekit.propagation.SpacecraftState;
 import org.orekit.utils.Constants;
 import org.orekit.utils.PVCoordinates;
@@ -86,32 +88,51 @@ public final class Physics {
   }
 
   /**
-   * Returns the default launch azimuth for an equatorial due-east launch (90 degrees).
+   * Returns the due-east launch azimuth (90°), the heading of every profile that asks for no
+   * particular plane and simply takes the one the site's latitude gives for free.
    *
-   * @return the launch azimuth in radians
+   * <p><b>The general derivation no longer lives here</b> (spec {@code
+   * docs/earth-orbit/01-mission-terre-parametrable.md} §1.1 and §3.1). The two-argument overload
+   * this class used to carry mixed units with its callers — it consumed radians while the ascent
+   * documented degrees — and mis-guarded the equatorial polar case, both invisibly, because every
+   * caller passed {@code (0, 0)}. Azimuth derivation is now {@code LaunchPlane}'s, the one type that
+   * also knows which of the two branches reaching an inclination is being flown and whether the site
+   * reaches it at all.
+   *
+   * @return the launch azimuth in radians, clockwise from north
    */
   public static double getLaunchAzimuth() {
-    return getLaunchAzimuth(0, 0);
+    return FastMath.PI / 2;
   }
 
   /**
-   * Gets launch azimuth.
+   * Builds the unit horizontal direction pointing at a given azimuth from a given position, in the
+   * local topocentric basis {@code (north, east)}.
    *
-   * @param launchLatitude the launch latitude
-   * @param targetInclination the target inclination
-   * @return the launch azimuth
+   * <p><b>The one place that basis is written.</b> The pitch kick and the commanded-plane attitude
+   * both need it, and they must agree: a launch commanded at azimuth {@code A} whose kick and whose
+   * target plane disagreed on where east is would fly a mirrored plane with a perfectly correct
+   * inclination, which no inclination assertion can catch (spec {@code
+   * docs/earth-orbit/01-mission-terre-parametrable.md} §4.1).
+   *
+   * @param position the position the local frame is built at (inertial)
+   * @param azimuth the azimuth in radians, clockwise from north — 90° is due east
+   * @return the unit horizontal direction at that azimuth
    */
-  public static double getLaunchAzimuth(double launchLatitude, double targetInclination) {
-    double result = FastMath.PI / 2; // 90° = due east
-    if (launchLatitude != 0 && targetInclination != 0) {
-      double cosLat = FastMath.cos(launchLatitude);
-      if (FastMath.abs(cosLat) < 1e-10) {
-        throw new IllegalArgumentException(
-            "Launch latitude too close to a pole, azimuth is undefined: " + launchLatitude);
-      }
-      result = FastMath.asin(FastMath.cos(targetInclination) / cosLat);
-    }
-    return result;
+  public static Vector3D localHorizontalDirection(Vector3D position, double azimuth) {
+    Vector3D zenith = position.normalize();
+    Vector3D northPole = Vector3D.PLUS_K;
+    Vector3D north =
+        northPole
+            .subtract(new Vector3D(Vector3D.dotProduct(northPole, zenith), zenith))
+            .normalize();
+    // NOTE (spec §1.1c): this is west, not east — zenith × north = −(north × zenith). Left as it
+    // stands here on purpose: extracting the basis is a pure refactor, and correcting it moves every
+    // recorded ascent baseline, so it is a step of its own (P1.a-bis).
+    Vector3D east = Vector3D.crossProduct(zenith, north).normalize();
+    return new Vector3D(
+        FastMath.cos(azimuth), north,
+        FastMath.sin(azimuth), east);
   }
 
   /**
@@ -129,20 +150,8 @@ public final class Physics {
     Vector3D pos = state.getPVCoordinates().getPosition();
     Vector3D vel = state.getPVCoordinates().getVelocity();
 
-    // Local topocentric frame
     Vector3D zenith = pos.normalize();
-    Vector3D northPole = Vector3D.PLUS_K;
-    Vector3D north =
-        northPole
-            .subtract(new Vector3D(Vector3D.dotProduct(northPole, zenith), zenith))
-            .normalize();
-    Vector3D east = Vector3D.crossProduct(zenith, north).normalize();
-
-    // Kick direction in horizontal plane
-    Vector3D azimuthDir =
-        new Vector3D(
-            FastMath.cos(launchAzimuth), north,
-            FastMath.sin(launchAzimuth), east);
+    Vector3D azimuthDir = localHorizontalDirection(pos, launchAzimuth);
 
     // Instead of rotating velocity, compute the NEW thrust direction
     // and apply an instantaneous delta-v in that direction.
@@ -168,6 +177,21 @@ public final class Physics {
         new CartesianOrbit(newPV, state.getFrame(), state.getDate(), state.getOrbit().getMu());
 
     return new SpacecraftState(newOrbit).withMass(state.getMass());
+  }
+
+  /**
+   * Reads the osculating inclination of a state's orbit, in degrees.
+   *
+   * <p>The value is expressed in the frame the state is propagated in, which is the frame {@code
+   * LaunchPlane.inclinationFrame()} declares for the target — the two are only comparable because
+   * they are the same (spec {@code docs/earth-orbit/01-mission-terre-parametrable.md} §3.4).
+   *
+   * @param state the spacecraft state
+   * @return the osculating inclination in degrees
+   */
+  public static double inclinationDeg(SpacecraftState state) {
+    KeplerianOrbit orbit = (KeplerianOrbit) OrbitType.KEPLERIAN.convertType(state.getOrbit());
+    return FastMath.toDegrees(orbit.getI());
   }
 
   /**

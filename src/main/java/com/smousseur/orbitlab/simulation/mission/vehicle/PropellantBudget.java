@@ -1,5 +1,6 @@
 package com.smousseur.orbitlab.simulation.mission.vehicle;
 
+import com.smousseur.orbitlab.simulation.Physics;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.LauncherModel;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.PayloadModel;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.stage.StageModel;
@@ -47,7 +48,7 @@ public final class PropellantBudget {
   public record GeoLoads(double[] launcherLoads, double akmLoad) {}
 
   /**
-   * Per-stage loads for a LEO mission.
+   * Per-stage loads for an Earth-orbit mission launched due east — the site's free plane.
    *
    * @param launcher the launcher model
    * @param payload the payload as flown (its mass anchors the top-down sizing)
@@ -57,7 +58,27 @@ public final class PropellantBudget {
    */
   public static double[] loadsForLeo(
       LauncherModel launcher, Spacecraft payload, double targetAltitude, double launchLatitudeDeg) {
-    double dvTotal = ascentDeltaV(targetAltitude, launchLatitudeDeg);
+    return loadsForLeo(
+        launcher, payload, targetAltitude, launchLatitudeDeg, Physics.getLaunchAzimuth());
+  }
+
+  /**
+   * Per-stage loads for an Earth-orbit mission launched at a given azimuth.
+   *
+   * @param launcher the launcher model
+   * @param payload the payload as flown (its mass anchors the top-down sizing)
+   * @param targetAltitude the target orbit altitude (m); use the apogee for elliptic targets
+   * @param launchLatitudeDeg the launch site latitude (degrees)
+   * @param launchAzimuth the launch azimuth (radians, clockwise from north)
+   * @return the propellant load per stage, same order as the launcher stages
+   */
+  public static double[] loadsForLeo(
+      LauncherModel launcher,
+      Spacecraft payload,
+      double targetAltitude,
+      double launchLatitudeDeg,
+      double launchAzimuth) {
+    double dvTotal = ascentDeltaV(targetAltitude, launchLatitudeDeg, launchAzimuth);
     return sizeTopStage(launcher, payload.getMass(), dvTotal);
   }
 
@@ -140,14 +161,45 @@ public final class PropellantBudget {
   }
 
   /**
-   * Ideal ascent ΔV to a circular orbit (m/s): orbital speed plus gravity/steering losses minus the
-   * Earth-rotation assist at the launch latitude.
+   * Ideal ascent ΔV to a circular orbit launched due east (m/s).
+   *
+   * @param targetAltitude the target orbit altitude (m)
+   * @param launchLatitudeDeg the launch site latitude (degrees)
+   * @return the ascent ΔV in m/s
    */
   static double ascentDeltaV(double targetAltitude, double launchLatitudeDeg) {
+    return ascentDeltaV(targetAltitude, launchLatitudeDeg, Physics.getLaunchAzimuth());
+  }
+
+  /**
+   * Ideal ascent ΔV to a circular orbit (m/s): orbital speed plus gravity/steering losses minus the
+   * Earth-rotation assist.
+   *
+   * <p><b>The assist is signed and projected on the azimuth</b> (spec {@code
+   * docs/earth-orbit/01-mission-terre-parametrable.md} §7). It used to be {@code 465 · cos φ}, the
+   * full eastward entrainment, credited whatever the heading — correct due east and wrong
+   * everywhere else. A polar launch from Kourou uses none of it (the entrainment is perpendicular to
+   * the flight), and a retrograde sun-synchronous one <em>pays</em> for it. Getting this wrong is
+   * not a margin detail: on an inverse-Tsiolkovsky budget, the 529 m/s error of an SSO from Kourou
+   * is tonnes on the upper-stage load.
+   *
+   * <p>What is <em>not</em> in here is the steering loss of turning the plane during the climb (spec
+   * §4.1). It has no closed form; {@link #SAFETY_MARGIN} absorbs it, and {@code
+   * AscentPlaneControlTest} measures it. No value is hard-coded until it is measured.
+   *
+   * @param targetAltitude the target orbit altitude (m)
+   * @param launchLatitudeDeg the launch site latitude (degrees)
+   * @param launchAzimuth the launch azimuth (radians, clockwise from north)
+   * @return the ascent ΔV in m/s
+   */
+  static double ascentDeltaV(
+      double targetAltitude, double launchLatitudeDeg, double launchAzimuth) {
     double r = RE + targetAltitude;
-    return FastMath.sqrt(MU / r)
-        + ASCENT_LOSSES_MS
-        - EQUATORIAL_ROTATION_MS * FastMath.cos(FastMath.toRadians(launchLatitudeDeg));
+    double assist =
+        EQUATORIAL_ROTATION_MS
+            * FastMath.cos(FastMath.toRadians(launchLatitudeDeg))
+            * FastMath.sin(launchAzimuth);
+    return FastMath.sqrt(MU / r) + ASCENT_LOSSES_MS - assist;
   }
 
   /** Hohmann perigee-injection ΔV from a circular parking orbit to a GEO-apogee transfer (m/s). */

@@ -30,12 +30,16 @@ import org.junit.jupiter.api.Test;
 class AscentSequenceTest {
 
   private static final AscentProfile PROFILE = new AscentProfile(7.0, 3.0, 2.0);
+
+  /** Kourou, the site every profile in the catalog flies from. */
+  private static final double LAT_DEG = 5.23;
+
   private static final GravityTurnConstraints CONSTRAINTS =
       GravityTurnConstraints.forTarget(400_000.0);
 
   @Test
   void ascent_isThreePhasesWithTheJettisonInTheMiddle() {
-    List<MissionStage> ascent = AscentSequence.gravityTurn(PROFILE, CONSTRAINTS);
+    List<MissionStage> ascent = AscentSequence.gravityTurn(PROFILE, CONSTRAINTS, LAT_DEG);
 
     assertEquals(3, ascent.size(), "the ascent is burn 1, separation, burn 2");
     assertEquals(AscentSequence.FIRST_BURN_NAME, ascent.get(0).getName());
@@ -48,7 +52,7 @@ class AscentSequenceTest {
 
   @Test
   void separationPhase_isNonPropulsiveAndDeclaresTheStageItDrops() {
-    MissionStage separation = AscentSequence.gravityTurn(PROFILE, CONSTRAINTS).get(1);
+    MissionStage separation = AscentSequence.gravityTurn(PROFILE, CONSTRAINTS, LAT_DEG).get(1);
 
     StageSeparationStage jettison = assertInstanceOf(StageSeparationStage.class, separation);
     assertFalse(jettison.isPropulsive(), "a jettison burns nothing: no propellant, no ΔV reported");
@@ -62,7 +66,7 @@ class AscentSequenceTest {
     OptimizableMissionStage<?> firstBurn =
         assertInstanceOf(
             GravityTurnFirstBurnStage.class,
-            AscentSequence.gravityTurn(PROFILE, CONSTRAINTS).getFirst());
+            AscentSequence.gravityTurn(PROFILE, CONSTRAINTS, LAT_DEG).getFirst());
 
     // The result map is keyed by string: keeping "Gravity turn" leaves results stored before the
     // split (including in a running session) valid.

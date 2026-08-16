@@ -27,6 +27,19 @@ import org.orekit.utils.PVCoordinatesProvider;
  * <p>The transition follows a power-law profile: the interpolation factor between zenith and
  * horizontal directions is raised to the configured exponent, allowing control over how quickly the
  * vehicle pitches over.
+ *
+ * <p><b>Two modes, and the difference is the whole of MIS-7 §4.</b> By default the horizontal
+ * target is {@code vTangential.normalize()}: the thrust stays in the instantaneous {@code (r, v)}
+ * plane, which is structurally incapable of changing the orbital plane — measured at ≤ 0.02 % of
+ * authority over the commanded azimuth (spec {@code
+ * docs/earth-orbit/01-mission-terre-parametrable.md} §2). Given a commanded plane normal {@code ĥ},
+ * the horizontal target becomes {@code (ĥ × r̂).normalize()} instead — the prograde direction
+ * <em>in the target plane</em> — so the thrust acquires an out-of-plane component for as long as the
+ * flown plane differs from the wanted one. That is what gives the azimuth authority at last.
+ *
+ * <p><b>The default mode is byte-for-byte the pre-MIS-7 code</b> (spec §4.2). The two horizontal
+ * targets are not numerically identical even when the planes coincide, so the commanded mode is
+ * strictly opt-in and the calibrated due-east trajectories never take it.
  */
 public class GravityTurnAttitudeProvider implements AttitudeProvider {
 
@@ -35,7 +48,13 @@ public class GravityTurnAttitudeProvider implements AttitudeProvider {
   private final double exponent;
 
   /**
-   * Creates a gravity turn attitude provider.
+   * Unit normal of the commanded orbital plane, or {@code null} in the historical mode. Nullable
+   * rather than {@code Optional}: it is read on every integrator substep.
+   */
+  private final Vector3D commandedPlaneNormal;
+
+  /**
+   * Creates a gravity turn attitude provider following the flown plane — the historical behaviour.
    *
    * @param kickDate the date at which the pitch-over begins
    * @param transitionTime the total duration of the transition from vertical to horizontal
@@ -44,9 +63,28 @@ public class GravityTurnAttitudeProvider implements AttitudeProvider {
    */
   public GravityTurnAttitudeProvider(
       AbsoluteDate kickDate, double transitionTime, double exponent) {
+    this(kickDate, transitionTime, exponent, null);
+  }
+
+  /**
+   * Creates a gravity turn attitude provider steering into a commanded orbital plane.
+   *
+   * @param kickDate the date at which the pitch-over begins
+   * @param transitionTime the total duration of the transition from vertical to horizontal
+   *     (seconds)
+   * @param exponent the power-law exponent controlling the pitch-over profile (1.0 = linear)
+   * @param commandedPlaneNormal the unit normal of the target plane, or {@code null} to follow the
+   *     flown plane
+   */
+  public GravityTurnAttitudeProvider(
+      AbsoluteDate kickDate,
+      double transitionTime,
+      double exponent,
+      Vector3D commandedPlaneNormal) {
     this.kickDate = kickDate;
     this.transitionTime = transitionTime;
     this.exponent = exponent;
+    this.commandedPlaneNormal = commandedPlaneNormal;
   }
 
   @Override
@@ -62,7 +100,11 @@ public class GravityTurnAttitudeProvider implements AttitudeProvider {
     double vRadial = Vector3D.dotProduct(vel, zenith);
     Vector3D vTangential = vel.subtract(new Vector3D(vRadial, zenith));
     Vector3D horizDir;
-    if (vTangential.getNormSq() > 1e-6) {
+    if (commandedPlaneNormal != null) {
+      // Prograde direction IN the target plane, not in the flown one: this is what carries the
+      // thrust out of the current plane and turns it toward the commanded one.
+      horizDir = Vector3D.crossProduct(commandedPlaneNormal, zenith).normalize();
+    } else if (vTangential.getNormSq() > 1e-6) {
       horizDir = vTangential.normalize();
     } else {
       // Fallback: use velocity direction if no tangential component yet
@@ -103,7 +145,13 @@ public class GravityTurnAttitudeProvider implements AttitudeProvider {
     T vRadial = FieldVector3D.dotProduct(vel, zenith);
     FieldVector3D<T> vTangential = vel.subtract(new FieldVector3D<>(vRadial, zenith));
     FieldVector3D<T> horizDir;
-    if (vTangential.getNormSq().getReal() > 1e-6) {
+    if (commandedPlaneNormal != null) {
+      // Same commanded-plane target as the real-valued path above.
+      horizDir =
+          FieldVector3D.crossProduct(
+                  new FieldVector3D<>(pos.getX().getField(), commandedPlaneNormal), zenith)
+              .normalize();
+    } else if (vTangential.getNormSq().getReal() > 1e-6) {
       horizDir = vTangential.normalize();
     } else {
       horizDir = vel.normalize();

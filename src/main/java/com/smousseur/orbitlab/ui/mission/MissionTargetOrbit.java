@@ -35,9 +35,14 @@ public record MissionTargetOrbit(
   public static MissionTargetOrbit of(MissionSpec spec) {
     Objects.requireNonNull(spec, "spec");
     return switch (spec) {
-      case MissionSpec.Leo leo ->
+      case MissionSpec.EarthOrbit earthOrbit ->
+          // The inclination now comes from the spec's target plane, not from the site latitude.
+          // They coincide on a due-east launch — which is what every mission flew before MIS-7 —
+          // and diverge the moment a plane is asked for, which is the point.
           new MissionTargetOrbit(
-              leo.perigeeAltitude(), leo.apogeeAltitude(), FastMath.toRadians(leo.latitude()));
+              earthOrbit.perigeeAltitude(),
+              earthOrbit.apogeeAltitude(),
+              earthOrbit.targetInclination());
       case MissionSpec.Geo geo ->
           new MissionTargetOrbit(
               geo.targetAltitude(),

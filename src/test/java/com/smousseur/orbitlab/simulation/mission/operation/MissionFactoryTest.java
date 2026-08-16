@@ -53,7 +53,7 @@ class MissionFactoryTest {
   @Test
   void leoFromWizard_payloadReflected_andS2SizedByBudget() {
     Mission mission = MissionFactory.fromWizardValues(baseValues(), MissionType.LEO);
-    assertInstanceOf(LEOMission.class, mission);
+    assertInstanceOf(EarthOrbitMission.class, mission);
 
     List<Vehicle> vehicles = stackOf(mission);
     assertEquals(S1_CAPACITY, vehicles.get(0).propellantLoad(), 1e-6, "S1 flies full in v1");

@@ -5,7 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.mission.Mission;
-import com.smousseur.orbitlab.simulation.mission.operation.LEOMission;
+import com.smousseur.orbitlab.simulation.mission.operation.EarthOrbitMission;
 import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchConfiguration;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Spacecraft;
 import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Launchers;
@@ -68,7 +68,7 @@ class LauncherProfileWiringTest {
 
   private static double verticalAscentDuration(LauncherModel launcher) {
     Mission mission =
-        new LEOMission(
+        new EarthOrbitMission(
             "profile wiring",
             LaunchConfiguration.fullyLoaded(launcher, Spacecraft.LEGACY),
             TARGET_ALT);

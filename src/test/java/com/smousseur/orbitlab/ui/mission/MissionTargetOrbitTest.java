@@ -5,7 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.mission.context.MissionEntry;
-import com.smousseur.orbitlab.simulation.mission.operation.LEOMission;
+import com.smousseur.orbitlab.simulation.mission.operation.EarthOrbitMission;
 import com.smousseur.orbitlab.simulation.mission.operation.MissionSpec;
 import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchConfiguration;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Spacecraft;
@@ -39,8 +39,8 @@ class MissionTargetOrbitTest {
 
   @Test
   void leoTargetIsTheRequestedEllipseAtTheSiteLatitude() {
-    MissionSpec.Leo spec =
-        new MissionSpec.Leo(
+    MissionSpec.EarthOrbit spec =
+        MissionSpec.EarthOrbit.dueEast(
             "LEO", falconHeavy(), 400_000.0, 600_000.0, "Kourou", SITE_LAT, -52.77, 0.0, null);
 
     MissionTargetOrbit target = MissionTargetOrbit.of(spec);
@@ -87,7 +87,7 @@ class MissionTargetOrbitTest {
 
   @Test
   void legacyEntryWithoutSpecHasNoDisplayableTarget() {
-    MissionEntry legacy = new MissionEntry(new LEOMission("legacy", falconHeavy(), 400_000.0));
+    MissionEntry legacy = new MissionEntry(new EarthOrbitMission("legacy", falconHeavy(), 400_000.0));
     assertTrue(MissionTargetOrbit.forEntry(legacy).isEmpty());
   }
 }

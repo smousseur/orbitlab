@@ -101,7 +101,7 @@ public class GEOMission extends EarthMission {
     super(
         name,
         vehicle,
-        buildStages(profile, parkingAltitude, targetAltitude, finalInclination),
+        buildStages(profile, parkingAltitude, targetAltitude, latitude, finalInclination),
         new OrbitInsertionObjective(
             SolarSystemBody.EARTH, parkingAltitude, targetAltitude, FastMath.toRadians(latitude)));
     this.latitude = latitude;
@@ -140,6 +140,7 @@ public class GEOMission extends EarthMission {
       AscentProfile profile,
       double parkingAltitude,
       double targetAltitude,
+      double latitude,
       double finalInclination) {
     List<MissionStage> stages = new ArrayList<>();
     stages.add(new VerticalAscentStage("Vertical Ascent", profile.verticalAscentDuration()));
@@ -147,7 +148,8 @@ public class GEOMission extends EarthMission {
     // below are now two instances of the same class with expected stack indices 0 and 1 — the
     // launcher's staging is stated once, in one place, instead of half-implied by a detector.
     stages.addAll(
-        AscentSequence.gravityTurn(profile, GravityTurnConstraints.forTarget(parkingAltitude)));
+        AscentSequence.gravityTurn(
+            profile, GravityTurnConstraints.forTarget(parkingAltitude), latitude));
     stages.addAll(
         List.of(
             new AnalyticParkingInsertionStage("Parking", parkingAltitude),

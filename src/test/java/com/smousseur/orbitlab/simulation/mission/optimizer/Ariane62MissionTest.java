@@ -3,7 +3,7 @@ package com.smousseur.orbitlab.simulation.mission.optimizer;
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemeris;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemerisPoint;
-import com.smousseur.orbitlab.simulation.mission.operation.LEOMission;
+import com.smousseur.orbitlab.simulation.mission.operation.EarthOrbitMission;
 import com.smousseur.orbitlab.simulation.mission.runtime.MissionComputeResult;
 import com.smousseur.orbitlab.simulation.mission.stage.ascent.AscentSequence;
 import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchConfiguration;
@@ -68,8 +68,8 @@ public class Ariane62MissionTest extends AbstractTrajectoryOptimizerTest {
             Launchers.ARIANE_62, payload, TARGET_ALTITUDE, LAUNCH_LATITUDE_DEG);
     logger.info("[A62] Budget loads: S1 {} kg, S2 {} kg", loads[0], loads[1]);
 
-    LEOMission mission =
-        new LEOMission(
+    EarthOrbitMission mission =
+        new EarthOrbitMission(
             "Ariane 62 (budget loads)",
             new LaunchConfiguration(Launchers.ARIANE_62, loads, payload),
             TARGET_ALTITUDE);

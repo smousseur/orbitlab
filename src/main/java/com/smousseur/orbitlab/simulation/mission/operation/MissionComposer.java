@@ -44,7 +44,7 @@ public final class MissionComposer {
     Objects.requireNonNull(mode, "mode");
     Mission mission =
         switch (spec) {
-          case MissionSpec.Leo leo -> composeLeo(leo, mode);
+          case MissionSpec.EarthOrbit earthOrbit -> composeEarthOrbit(earthOrbit, mode);
           case MissionSpec.Geo geo -> composeGeo(geo, mode);
         };
     // This composer is the ONLY writer of a mission's restitution horizon (spec
@@ -55,15 +55,17 @@ public final class MissionComposer {
     return mission;
   }
 
-  private static Mission composeLeo(MissionSpec.Leo spec, OptimizationType mode) {
+  private static Mission composeEarthOrbit(MissionSpec.EarthOrbit spec, OptimizationType mode) {
+    LaunchPlane plane = spec.launchPlane();
     if (mode == OptimizationType.FAST) {
       // Analytic Hohmann transfer — the historical default. Kept byte-for-byte identical to the
       // pre-toggle path (non-regression baseline).
-      return new LEOMission(
+      return new EarthOrbitMission(
           spec.name(),
           spec.configuration(),
           spec.perigeeAltitude(),
           spec.apogeeAltitude(),
+          plane,
           spec.latitude(),
           spec.longitude(),
           spec.altitude());
@@ -82,18 +84,20 @@ public final class MissionComposer {
     boolean circular =
         Math.abs(spec.apogeeAltitude() - spec.perigeeAltitude()) < CIRCULAR_TOLERANCE_M;
     return circular
-        ? LEOMission.circularWithOptimizedTransfer(
+        ? EarthOrbitMission.circularWithOptimizedTransfer(
             spec.name(),
             spec.configuration(),
             spec.perigeeAltitude(),
+            plane,
             spec.latitude(),
             spec.longitude(),
             spec.altitude())
-        : LEOMission.ellipticWithOptimizedTransfer(
+        : EarthOrbitMission.ellipticWithOptimizedTransfer(
             spec.name(),
             spec.configuration(),
             spec.perigeeAltitude(),
             spec.apogeeAltitude(),
+            plane,
             spec.latitude(),
             spec.longitude(),
             spec.altitude());
