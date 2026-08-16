@@ -6,6 +6,7 @@ import com.smousseur.orbitlab.simulation.mission.objective.MissionObjective;
 import com.smousseur.orbitlab.simulation.mission.objective.OrbitInsertionObjective;
 import com.smousseur.orbitlab.simulation.mission.optimizer.problems.GravityTurnConstraints;
 import com.smousseur.orbitlab.simulation.mission.stage.AnalyticHohmannTransferStage;
+import com.smousseur.orbitlab.simulation.mission.stage.AnalyticPlaneTrimAtNodeStage;
 import com.smousseur.orbitlab.simulation.mission.stage.AnalyticTrimBurnStage;
 import com.smousseur.orbitlab.simulation.mission.stage.CoastingStage;
 import com.smousseur.orbitlab.simulation.mission.stage.TransfertManeuverStage;
@@ -20,6 +21,7 @@ import com.smousseur.orbitlab.simulation.mission.vehicle.model.AscentProfile;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import org.hipparchus.util.FastMath;
 
 /**
  * Concrete Earth-orbit insertion mission: vertical ascent → gravity turn (S1) → S1 separation →
@@ -345,6 +347,17 @@ public class EarthOrbitMission extends EarthMission {
     stages.add(new VerticalAscentStage("Vertical Ascent", profile.verticalAscentDuration()));
     stages.addAll(AscentSequence.gravityTurn(profile, constraints, launchPlane, latitude));
     stages.addAll(List.of(orbitalPhases));
+    if (launchPlane.commands(FastMath.toRadians(latitude))) {
+      // Steering the plane during the climb does not land it to the tenth of a degree: the initial
+      // entrainment is not in the target plane and a finite thrust does not bring it there at once
+      // (spec §4.3). The residual is cleaned up at a node, where a plane change is efficient and
+      // drift-free — the same short out-of-plane burn GEO already uses for the ~0.25° its apogee
+      // circularization leaves behind.
+      //
+      // Only when a plane is commanded: on a due-east launch there is no residual to clean, and the
+      // stage would spend propellant deciding so.
+      stages.add(new AnalyticPlaneTrimAtNodeStage("Plane trim", launchPlane.targetInclination()));
+    }
     stages.add(new CoastingStage("Coasting", null));
     return List.copyOf(stages);
   }
