@@ -41,7 +41,8 @@ public enum MissionProfile {
       new AltitudeRange(200, 2_000, 550),
       false,
       InclinationMode.AUTO,
-      Double.NaN),
+      Double.NaN,
+      Availability.AVAILABLE),
 
   /** A low orbit crossing both poles, which is a {@link #LEO} whose inclination is asked for. */
   POLAR(
@@ -53,7 +54,8 @@ public enum MissionProfile {
       new AltitudeRange(200, 2_000, 550),
       false,
       InclinationMode.EXPLICIT,
-      90.0),
+      90.0,
+      Availability.AVAILABLE),
 
   /**
    * A circular orbit whose nodal precession keeps pace with the Sun. The one profile whose
@@ -69,7 +71,8 @@ public enum MissionProfile {
       new AltitudeRange(600, 800, 700),
       true,
       InclinationMode.DERIVED,
-      Double.NaN),
+      Double.NaN,
+      Availability.AVAILABLE),
 
   /**
    * A medium Earth orbit — the Galileo/GPS band. Past {@code MissionComposer}'s direct-chain
@@ -85,7 +88,8 @@ public enum MissionProfile {
       new AltitudeRange(2_000, 35_000, 20_200),
       true,
       InclinationMode.EXPLICIT,
-      55.0),
+      55.0,
+      Availability.CONSTRAINED),
 
   /** The geostationary belt, and the only profile backed by {@link MissionType#GEO}. */
   GEO(
@@ -97,7 +101,21 @@ public enum MissionProfile {
       new AltitudeRange(200, 2_000, 550),
       false,
       InclinationMode.NONE,
-      Double.NaN);
+      Double.NaN,
+      Availability.AVAILABLE);
+
+  /** What the card's badge says about flying this profile. */
+  public enum Availability {
+    /** Any launcher and payload of the catalog can be offered. */
+    AVAILABLE,
+
+    /**
+     * The catalog constrains it. Only the MEO: past the ascent's reach, it needs an upper stage that
+     * holds a 2 h 58 coast or a payload whose kick motor takes the apogee burn over, and {@code
+     * MissionComposer} refuses the rest by name (spec {@code 01} §6).
+     */
+    CONSTRAINED
+  }
 
   /** How the parameters panel treats the inclination of a profile. */
   public enum InclinationMode {
@@ -147,6 +165,7 @@ public enum MissionProfile {
   private final boolean circular;
   private final InclinationMode inclinationMode;
   private final double defaultInclinationDeg;
+  private final Availability availability;
 
   MissionProfile(
       MissionType missionType,
@@ -157,7 +176,9 @@ public enum MissionProfile {
       AltitudeRange altitudes,
       boolean circular,
       InclinationMode inclinationMode,
-      double defaultInclinationDeg) {
+      double defaultInclinationDeg,
+      Availability availability) {
+    this.availability = availability;
     this.missionType = missionType;
     this.title = title;
     this.subtitle = subtitle;
@@ -226,6 +247,13 @@ public enum MissionProfile {
    */
   public InclinationMode inclinationMode() {
     return inclinationMode;
+  }
+
+  /**
+   * @return what the card's badge reports about flying this profile
+   */
+  public Availability availability() {
+    return availability;
   }
 
   /**

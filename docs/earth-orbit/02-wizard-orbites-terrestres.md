@@ -143,14 +143,28 @@ parvient par un callback du widget — **pas** par `MissionContext`, qui est du 
 n'a pas à connaître un enum d'UI. `MissionContext.setSelectedMissionType` continue d'être écrit par
 `StepMissionType`, pour `StepLauncher` qui n'a besoin que du type.
 
+**La ligne d'inclinaison est horizontale**, l'aide à droite du champ et non dessous. C'est une
+contrainte de place, pas un goût : la racine de l'étape est fixée à `FormStyles.CONTENT_HEIGHT`,
+rien ne clippe dans ce wizard, et un débordement atterrit sur le pied de page. Budget mesuré sur les
+constantes : 468 px de hauteur utile, 205 px pris par le nom de mission et le couple date / durée,
+donc 263 px pour le panneau ; deux curseurs en coûtent 180, et la ligne compacte 57. Le profil
+circulaire, à un seul curseur, aurait eu la place d'une ligne à trois étages — mais une mise en page
+qui tient partout vaut mieux que deux qui tiennent chacune une fois.
+
 ---
 
 ## 4. La validation : une seule implémentation de la règle
 
-`StepParameters` **n'implémente pas** `[|φ|, 180° − |φ|]`. Il appelle
-`LaunchPlane.ofDegrees(i).requireReachableFrom(latitude)` dans un `try/catch` et affiche le message
-de l'exception, qui nomme déjà la plage atteignable et le minimum. Une seule écriture de la règle,
-et ce que lit l'utilisateur est exactement ce que dit le modèle.
+`StepParameters` **n'implémente pas** `[|φ|, 180° − |φ|]`. Le contrôle *est*
+`LaunchPlane.ofDegrees(i).requireReachableFrom(latitude)`, dans un `try/catch`. Une seule écriture
+de la règle, et la borne qui s'applique à l'utilisateur est par construction celle du modèle.
+
+**La formulation, elle, appartient au wizard.** Le message du modèle est une phrase complète qui
+nomme la valeur, la latitude, la plage et pourquoi le minimum est la latitude — ce qu'il faut pour
+un log, et trois fois trop large pour la ligne à côté du champ. L'aide affichée porte donc la forme
+courte (« unreachable — this site reaches 5.24° to 174.77° ») et la valeur retournée porte celle du
+modèle, qui est ce qui atteint le log. Le refus du lanceur (§6), lui, s'affiche mot pour mot : il a
+une largeur de bloc et non de ligne.
 
 Le nouveau `validateInclination()` suit le contrat de `validateLaunchDate()` : il renvoie un
 `Optional<String>`, marque le champ, et `parametersRefused()` l'ajoute à la liste sans

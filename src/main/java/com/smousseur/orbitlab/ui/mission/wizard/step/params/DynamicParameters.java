@@ -17,6 +17,7 @@ import com.smousseur.orbitlab.simulation.mission.MissionHorizon;
 import com.smousseur.orbitlab.ui.UiKit;
 import com.smousseur.orbitlab.ui.form.FormStyles;
 import java.util.Map;
+import java.util.Optional;
 import org.orekit.utils.Constants;
 
 import static com.smousseur.orbitlab.ui.mission.wizard.step.StepParameters.*;
@@ -67,6 +68,20 @@ public abstract class DynamicParameters {
    * @return the derived horizon in days
    */
   public abstract double defaultHorizonDays();
+
+  /**
+   * Checks the target plane against the launch site, on the contract of {@code
+   * StepParameters.validateLaunchDate()}: it marks the offending field and returns the reason, so
+   * the wizard stays open on a parameter the application cannot use.
+   *
+   * <p>Empty by default: a panel whose target has no inclination to choose — the geostationary belt
+   * is equatorial by definition — has nothing to check.
+   *
+   * @return the reason the inclination was refused, or empty when it is usable
+   */
+  public Optional<String> validateInclination() {
+    return Optional.empty();
+  }
 
   /**
    * Days spanned by {@code revolutions} turns of a circular-equivalent orbit of the given

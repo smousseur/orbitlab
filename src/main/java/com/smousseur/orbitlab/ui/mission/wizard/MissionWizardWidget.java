@@ -1,6 +1,10 @@
 package com.smousseur.orbitlab.ui.mission.wizard;
 
+import com.smousseur.orbitlab.simulation.mission.MissionType;
+import com.smousseur.orbitlab.simulation.mission.OptimizationType;
 import com.smousseur.orbitlab.simulation.mission.context.MissionContext;
+import com.smousseur.orbitlab.simulation.mission.operation.MissionComposer;
+import com.smousseur.orbitlab.simulation.mission.operation.MissionFactory;
 import com.smousseur.orbitlab.ui.form.FormStyles;
 import com.smousseur.orbitlab.ui.form.ModalBackdrop;
 
@@ -140,13 +144,18 @@ public class MissionWizardWidget implements AutoCloseable {
     root.addChild(footer.getNode());
 
     MissionContext missionContext = context.missionContext();
-    stepMissionType =
-        new StepMissionType(missionContext, missionContext.getSelectedMissionType(), editMode);
-    stepPanels.put(MissionWizardStep.MISSION, stepMissionType.getNode());
-    stepParameters = new StepParameters(missionContext);
-    stepPanels.put(MissionWizardStep.PARAMETERS, stepParameters.getNode());
     stepLaunchSite = new StepLaunchSite();
     stepPanels.put(MissionWizardStep.SITE, stepLaunchSite.getNode());
+    // The latitude is read live, not captured: the coordinate fields stay editable after a
+    // cosmodrome is picked, and the inclination bounds have to follow them (spec
+    // docs/earth-orbit/02-wizard-orbites-terrestres.md §5).
+    stepParameters = new StepParameters(missionContext, stepLaunchSite::currentLatitude);
+    stepPanels.put(MissionWizardStep.PARAMETERS, stepParameters.getNode());
+    stepMissionType =
+        new StepMissionType(missionContext, initialProfile(missionContext, initialValues), editMode);
+    stepPanels.put(MissionWizardStep.MISSION, stepMissionType.getNode());
+    stepParameters.setProfile(stepMissionType.selectedProfile());
+    stepMissionType.setOnProfileSelected(stepParameters::setProfile);
     stepLauncher = new StepLauncher(missionContext);
     stepPanels.put(MissionWizardStep.LAUNCHER, stepLauncher.getNode());
 
@@ -209,7 +218,14 @@ public class MissionWizardWidget implements AutoCloseable {
         showStep(MissionWizardStep.PARAMETERS);
         return;
       }
-      onSubmit.accept(getAllValues());
+      Map<String, Object> values = getAllValues();
+      Optional<String> refusal = compositionRefused(values);
+      if (refusal.isPresent()) {
+        stepLauncher.showRefusal(refusal.get());
+        return;
+      }
+      stepLauncher.clearRefusal();
+      onSubmit.accept(values);
       return;
     }
     if (currentStep == MissionWizardStep.PARAMETERS && parametersRefused()) {
@@ -222,16 +238,50 @@ public class MissionWizardWidget implements AutoCloseable {
   /**
    * Keeps the wizard open on a parameter the application cannot use, the offending field marked.
    *
-   * <p>Both checks run, and neither short-circuits the other: a user who has a bad date
-   * <em>and</em> a bad duration should see both fields marked at once rather than discover the
-   * second only after fixing the first.
+   * <p>Every check runs, and none short-circuits the others: a user who has a bad date <em>and</em>
+   * a bad duration should see both fields marked at once rather than discover the second only after
+   * fixing the first.
    */
   private boolean parametersRefused() {
     Optional<String> dateError = stepParameters.validateLaunchDate();
     dateError.ifPresent(reason -> logger.info("Wizard: launch date refused ({})", reason));
     Optional<String> horizonError = stepParameters.validateHorizon();
     horizonError.ifPresent(reason -> logger.info("Wizard: mission duration refused ({})", reason));
-    return dateError.isPresent() || horizonError.isPresent();
+    Optional<String> inclinationError = stepParameters.validateInclination();
+    inclinationError.ifPresent(
+        reason -> logger.info("Wizard: target inclination refused ({})", reason));
+    return dateError.isPresent() || horizonError.isPresent() || inclinationError.isPresent();
+  }
+
+  /**
+   * Builds the mission the confirmation button would create, and reports why it cannot be built.
+   *
+   * <p><b>Why here and not at creation.</b> Some refusals depend on the whole form: a target beyond
+   * the ascent's reach needs an upper stage that holds the coast to apogee, or a payload whose kick
+   * motor takes the burn over — so the target chosen at step 3 is only refutable once the vehicle is
+   * picked at step 4 (spec {@code docs/earth-orbit/02-wizard-orbites-terrestres.md} §6). Left to
+   * {@code MissionWizardAppState}, the exception lands in a log line with the wizard already closed
+   * and no mission created, which is indistinguishable from the application ignoring the user.
+   *
+   * <p>Nothing is propagated: composing resolves the catalogs, sizes the propellant analytically and
+   * assembles the stages. The mission built here is thrown away — the submit path rebuilds it, from
+   * the same values.
+   *
+   * @param values the aggregated form values
+   * @return the refusal, worded by the model, or empty when the mission composes
+   */
+  private Optional<String> compositionRefused(Map<String, Object> values) {
+    try {
+      MissionComposer.compose(
+          MissionFactory.specFromWizardValues(
+              values, stepMissionType.selectedProfile().missionType()),
+          OptimizationType.FAST);
+      return Optional.empty();
+    } catch (RuntimeException e) {
+      String reason = e.getMessage() == null ? e.toString() : e.getMessage();
+      logger.info("Wizard: mission refused at the launcher step ({})", reason);
+      return Optional.of(reason);
+    }
   }
 
   /** Aggregates values from every step. Throws if two steps publish the same key. */
@@ -256,9 +306,32 @@ public class MissionWizardWidget implements AutoCloseable {
   }
 
   public void goToStep(MissionWizardStep step) {
-    if (step == MissionWizardStep.MISSION || stepMissionType.isMissionTypeSelected()) {
-      showStep(step);
+    showStep(step);
+  }
+
+  /**
+   * The card the wizard opens on: the one the edited mission was built from, or the mission type the
+   * context currently selects when creating.
+   *
+   * <p>Reopening reads the profile the prefill derived from the spec — no spec component carries it
+   * (spec {@code docs/earth-orbit/02-wizard-orbites-terrestres.md} §2.1) — and falls back on the
+   * type alone if the values predate P2 or name a profile this build does not know.
+   */
+  private static MissionProfile initialProfile(
+      MissionContext missionContext, Map<String, Object> initialValues) {
+    if (initialValues != null) {
+      Object raw = initialValues.get(FormField.MISSION_PROFILE.key());
+      if (raw != null) {
+        try {
+          return MissionProfile.valueOf(raw.toString());
+        } catch (IllegalArgumentException ignored) {
+          // Falls through to the type-based reading below.
+        }
+      }
     }
+    return missionContext.getSelectedMissionType() == MissionType.GEO
+        ? MissionProfile.GEO
+        : MissionProfile.LEO;
   }
 
   public void setOnCancel(Runnable action) {

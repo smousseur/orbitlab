@@ -207,6 +207,56 @@ class MissionFactoryTest {
         OrbitlabException.class, () -> MissionFactory.specFromWizardValues(values, MissionType.LEO));
   }
 
+  // --- MIS-7 P2.e: what the wizard's launcher step dry-runs before submitting (spec 02 §6) ---
+
+  private static Map<String, Object> meoValues(String launcherId, String payloadId) {
+    Map<String, Object> values = baseValues();
+    values.put("LAUNCHER_TYPE", launcherId);
+    values.put("PAYLOAD_TYPE", payloadId);
+    values.put("PAYLOAD_MASS", 2_000.0);
+    values.put("LEO_PERIGEE_ALT", 20_200.0);
+    values.put("LEO_APOGEE_ALT", 20_200.0);
+    values.put("TARGET_INCLINATION", 55.0);
+    return values;
+  }
+
+  /**
+   * The refusal the wizard shows on its launcher step: a Falcon Heavy upper stage declares 2 h of
+   * coast against the 2 h 58 the transfer to 20 200 km needs, and an inert payload has no kick motor
+   * to take the apogee burn over. What matters as much as the refusal is its <b>wording</b> — it is
+   * shown verbatim, so it has to name the stage and both durations for the user to know the way out.
+   */
+  @Test
+  void mediumEarthOrbit_onAShortCoastStageWithoutAkm_isRefusedByName() {
+    Map<String, Object> values = meoValues("FALCON_HEAVY", "EARTH_OBS_SAT");
+    OrbitlabException error =
+        assertThrows(
+            OrbitlabException.class,
+            () -> MissionFactory.fromWizardValues(values, MissionType.LEO));
+
+    String message = error.getMessage();
+    assertTrue(message.contains("2.98 h"), () -> "transfer coast not named: " + message);
+    assertTrue(message.contains("2.00 h"), () -> "declared coast not named: " + message);
+    assertTrue(message.contains("kick motor"), () -> "no way out offered: " + message);
+  }
+
+  /** The same target on a stage that holds the coast composes — through the parking chain. */
+  @Test
+  void mediumEarthOrbit_onALongCoastStage_composes() {
+    Mission mission =
+        MissionFactory.fromWizardValues(
+            meoValues("ARIANE_62", "EARTH_OBS_SAT"), MissionType.LEO);
+    assertInstanceOf(GEOMission.class, mission, "a MEO is flown through the parking chain");
+  }
+
+  /** And so does one whose payload can take the apogee burn over, short stage or not. */
+  @Test
+  void mediumEarthOrbit_withAnApogeeKickMotor_composes() {
+    Mission mission =
+        MissionFactory.fromWizardValues(meoValues("FALCON_HEAVY", "GEO_SAT"), MissionType.LEO);
+    assertInstanceOf(GEOMission.class, mission);
+  }
+
   /**
    * The budget has to follow the plane, not the latitude: a polar launch loses the whole 463 m/s of
    * eastward entrainment the due-east one banks (spec 01 §7), so it is sized heavier. This is what

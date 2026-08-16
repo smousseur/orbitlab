@@ -51,10 +51,14 @@ public class StepLauncher implements StepValues {
   private static final float COL_GAP = 16f;
   private static final float LABEL_FIELD_GAP = 6f;
 
+  /** Characters per line of the refusal message, sized on the step's width at 11 px monospace. */
+  private static final int REFUSAL_WRAP_COLUMNS = 96;
+
   private final Container root;
   private final MissionContext missionContext;
   private final List<SelectableCard> launcherCards = new ArrayList<>();
   private final Label subtitle;
+  private Label refusalLabel;
   private final PopupList payloadType;
   private final TextField massField;
   private String selectedLauncher;
@@ -119,6 +123,8 @@ public class StepLauncher implements StepValues {
                 }
               }
               selectedLauncher = launcher.id();
+              // A refusal named this vehicle; picking another one is the user answering it.
+              clearRefusal();
             }
           });
     }
@@ -152,9 +158,12 @@ public class StepLauncher implements StepValues {
     massField.setInsets(new Insets3f(0, 0, 10, 0));
     payloadRow.addChild(massField);
     payloadType.setOnSelect(
-        selectedName ->
-            findByDisplayName(selectedName)
-                .ifPresent(payload -> massField.setText(defaultMassText(payload))));
+        selectedName -> {
+          findByDisplayName(selectedName)
+              .ifPresent(payload -> massField.setText(defaultMassText(payload)));
+          // Same reasoning as the launcher cards: a kick motor is one of the two ways out.
+          clearRefusal();
+        });
 
     payloadRow.addChild(UiKit.vSpacer(3 * LABEL_FIELD_GAP));
     Label kgLabel = payloadRow.addChild(new Label("kg", FormStyles.STYLE));
@@ -166,7 +175,56 @@ public class StepLauncher implements StepValues {
 
     root.addChild(payloadRow);
 
+    root.addChild(UiKit.vSpacer(ROW_GAP));
+    refusalLabel = root.addChild(new Label("", FormStyles.STYLE));
+    refusalLabel.setFont(UiKit.ibmPlexMono(11));
+    refusalLabel.setColor(FormStyles.DANGER);
+
     applyMissionType(missionContext.getSelectedMissionType());
+  }
+
+  /**
+   * Shows why the mission cannot be composed, on the step where the answer is (spec {@code
+   * docs/earth-orbit/02-wizard-orbites-terrestres.md} §6).
+   *
+   * <p>A target beyond the ascent's reach — a MEO — is only refutable once the vehicle is known, and
+   * the vehicle is picked here, last. The message comes from {@code MissionComposer} unchanged: it
+   * names the stage, the coast the transfer needs and the coast the stage declares, so the way out
+   * ("fly Ariane 62, or a payload with a kick motor") is in the refusal itself. Until P2 it reached
+   * a log line and the user saw the wizard close on no mission at all.
+   *
+   * @param message the refusal, as the model worded it
+   */
+  public void showRefusal(String message) {
+    refusalLabel.setText(wrap(message, REFUSAL_WRAP_COLUMNS));
+  }
+
+  /** Clears any refusal on display; harmless when there is none. */
+  public void clearRefusal() {
+    if (!refusalLabel.getText().isEmpty()) {
+      refusalLabel.setText("");
+    }
+  }
+
+  /**
+   * Breaks a message onto lines short enough for the step's width. Lemur's labels do not wrap, and
+   * this one carries a full sentence rather than a field helper.
+   */
+  private static String wrap(String message, int columns) {
+    StringBuilder wrapped = new StringBuilder();
+    int lineLength = 0;
+    for (String word : message.split(" ")) {
+      if (lineLength > 0 && lineLength + 1 + word.length() > columns) {
+        wrapped.append('\n');
+        lineLength = 0;
+      } else if (lineLength > 0) {
+        wrapped.append(' ');
+        lineLength++;
+      }
+      wrapped.append(word);
+      lineLength += word.length();
+    }
+    return wrapped.toString();
   }
 
   public Container getNode() {

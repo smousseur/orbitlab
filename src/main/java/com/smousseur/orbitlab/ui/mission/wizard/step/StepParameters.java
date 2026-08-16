@@ -22,14 +22,16 @@ import com.smousseur.orbitlab.ui.UiKit;
 import com.smousseur.orbitlab.ui.form.FormStyles;
 import com.smousseur.orbitlab.ui.mission.wizard.FormField;
 import com.smousseur.orbitlab.ui.mission.wizard.FormValues;
+import com.smousseur.orbitlab.ui.mission.wizard.MissionProfile;
 import com.smousseur.orbitlab.ui.mission.wizard.StepValues;
 import com.smousseur.orbitlab.ui.mission.wizard.step.params.DynamicParameters;
+import com.smousseur.orbitlab.ui.mission.wizard.step.params.EarthOrbitDynamicParameters;
 import com.smousseur.orbitlab.ui.mission.wizard.step.params.GEODynamicParameters;
-import com.smousseur.orbitlab.ui.mission.wizard.step.params.LEODynamicParameters;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.DoubleSupplier;
 import org.orekit.time.AbsoluteDate;
 
 public class StepParameters implements StepValues {
@@ -112,19 +114,32 @@ public class StepParameters implements StepValues {
   private String rejectedHorizon;
 
   private DynamicParameters dynamicParameters;
-  private final EnumMap<MissionType, DynamicParameters> dynamicParametersMap =
-      new EnumMap<>(MissionType.class);
+  private final EnumMap<MissionProfile, DynamicParameters> dynamicParametersMap =
+      new EnumMap<>(MissionProfile.class);
   private final Container dynamicParametersContainer;
-  private MissionType shownMissionType;
+  private MissionProfile shownProfile;
 
-  public StepParameters(MissionContext missionContext) {
+  /**
+   * The card the user picked. Held here rather than in {@code MissionContext}: the profile is a
+   * wizard concept, and the mission context belongs to the simulation layer (spec {@code
+   * docs/earth-orbit/02-wizard-orbites-terrestres.md} §3). The mission <em>type</em> keeps going
+   * through the context, for the launcher step that only needs that much.
+   */
+  private MissionProfile selectedProfile = MissionProfile.LEO;
+
+  /**
+   * Builds the parameters step.
+   *
+   * @param missionContext the context carrying the selected mission type
+   * @param launchLatitudeDeg the live launch latitude, for the inclination field's bounds
+   */
+  public StepParameters(MissionContext missionContext, DoubleSupplier launchLatitudeDeg) {
     this.missionContext = missionContext;
     root = new Container(new BoxLayout(Axis.Y, FillMode.None));
     root.setBackground(new QuadBackgroundComponent(new ColorRGBA(0, 0, 0, 0)));
     root.setPreferredSize(new Vector3f(FormStyles.CONTENT_WIDTH, FormStyles.CONTENT_HEIGHT, 0));
 
-    titleLabel =
-        new Label("PARAMETERS " + missionContext.getSelectedMissionType(), FormStyles.STYLE);
+    titleLabel = new Label("PARAMETERS " + selectedProfile.title(), FormStyles.STYLE);
     Label title = root.addChild(titleLabel);
     title.setFont(UiKit.orbitron(13));
     title.setColor(FormStyles.TEXT_PRIMARY);
@@ -145,12 +160,13 @@ public class StepParameters implements StepValues {
 
     root.addChild(UiKit.vSpacer(ROW_GAP));
 
-    // --- Dynamic parameters ---
-    LEODynamicParameters leoParams = new LEODynamicParameters(200, 2000);
-    GEODynamicParameters geoParams = new GEODynamicParameters(200, 2000);
-    dynamicParametersMap.put(MissionType.LEO, leoParams);
-    dynamicParametersMap.put(MissionType.GEO, geoParams);
-    dynamicParameters = leoParams;
+    // --- Dynamic parameters, one panel per card ---
+    for (MissionProfile profile : MissionProfile.earthOrbitProfiles()) {
+      dynamicParametersMap.put(
+          profile, new EarthOrbitDynamicParameters(profile, launchLatitudeDeg));
+    }
+    dynamicParametersMap.put(MissionProfile.GEO, new GEODynamicParameters(200, 2000));
+    dynamicParameters = dynamicParametersMap.get(selectedProfile);
     dynamicParametersContainer = new Container(new BoxLayout(Axis.Y, FillMode.None));
     dynamicParametersContainer.setBackground(null);
     root.addChild(dynamicParametersContainer);
@@ -447,9 +463,9 @@ public class StepParameters implements StepValues {
       launchDateField.setText(launchDate);
       clearLaunchDateRejection();
     }
-    // Applied to the parameters of the type carried by the values, not to the ones currently on
+    // Applied to the parameters of the profile carried by the values, not to the ones currently on
     // screen: the panel is swapped by update(), which has not necessarily run yet.
-    DynamicParameters target = dynamicParametersMap.get(missionTypeOf(values));
+    DynamicParameters target = dynamicParametersMap.get(profileOf(values));
     if (target != null) {
       target.applyValues(values);
     }
@@ -473,22 +489,40 @@ public class StepParameters implements StepValues {
     applyAutoIndicator();
   }
 
-  /** Reads the mission type out of the raw values, falling back on the one the context selects. */
-  private MissionType missionTypeOf(Map<String, Object> values) {
-    String raw = FormValues.string(values, FormField.MISSION_TYPE);
-    if (raw == null) {
-      return missionContext.getSelectedMissionType();
+  /**
+   * Switches the step to the card the user picked, and tells the mission context about the type
+   * behind it. Called by the wizard rather than polled, because the profile lives here and not in
+   * {@code MissionContext}.
+   *
+   * @param profile the selected profile
+   */
+  public void setProfile(MissionProfile profile) {
+    this.selectedProfile = profile;
+  }
+
+  /**
+   * Reads the profile out of the raw values, falling back on the one on screen. A value map written
+   * before P2 carries no profile at all, only a type; it then resolves to GEO or to the currently
+   * selected Earth-orbit card, which is the historical behaviour.
+   */
+  private MissionProfile profileOf(Map<String, Object> values) {
+    String raw = FormValues.string(values, FormField.MISSION_PROFILE);
+    if (raw != null) {
+      try {
+        return MissionProfile.valueOf(raw);
+      } catch (IllegalArgumentException ignored) {
+        // Falls through to the type-based reading below.
+      }
     }
-    try {
-      return MissionType.valueOf(raw);
-    } catch (IllegalArgumentException e) {
-      return missionContext.getSelectedMissionType();
+    String type = FormValues.string(values, FormField.MISSION_TYPE);
+    if (MissionType.GEO.name().equals(type)) {
+      return MissionProfile.GEO;
     }
+    return selectedProfile;
   }
 
   public void update(float tpf) {
-    MissionType selectedMissionType = missionContext.getSelectedMissionType();
-    titleLabel.setText("PARAMETERS " + selectedMissionType);
+    titleLabel.setText("PARAMETERS " + selectedProfile.title());
     if (rejectedLaunchDate != null && !rejectedLaunchDate.equals(launchDateField.getText())) {
       clearLaunchDateRejection();
     }
@@ -564,6 +598,17 @@ public class StepParameters implements StepValues {
     return Optional.empty();
   }
 
+  /**
+   * Checks the target inclination against the launch site, on the contract of {@link
+   * #validateLaunchDate()}. Delegated to the panel on screen, which is the only one that knows
+   * whether its profile has an inclination to check at all.
+   *
+   * @return the reason the inclination was refused, or empty when it is usable
+   */
+  public Optional<String> validateInclination() {
+    return dynamicParameters.validateInclination();
+  }
+
   private String rejectHorizon(String text, String message) {
     rejectedHorizon = text;
     horizonField.setColor(FormStyles.DANGER);
@@ -579,18 +624,17 @@ public class StepParameters implements StepValues {
   }
 
   private void updateDynamicParameters(float tpf) {
-    MissionType selectedMissionType = missionContext.getSelectedMissionType();
-    if (selectedMissionType != shownMissionType) {
+    if (selectedProfile != shownProfile) {
       DynamicParameters next =
-          Optional.ofNullable(dynamicParametersMap.get(selectedMissionType))
+          Optional.ofNullable(dynamicParametersMap.get(selectedProfile))
               .orElseThrow(
                   () ->
                       new OrbitlabException(
-                          "No dynamic parameters for mission type " + selectedMissionType));
+                          "No dynamic parameters for mission profile " + selectedProfile));
       dynamicParametersContainer.clearChildren();
       dynamicParametersContainer.addChild(next.getContainer());
       dynamicParameters = next;
-      shownMissionType = selectedMissionType;
+      shownProfile = selectedProfile;
     }
     dynamicParameters.update(tpf);
   }
