@@ -644,11 +644,10 @@ coast contre 2 h déclarées) et devient un cas de refus dans `T6`. `T2` garde t
 
 ### Ce qui reste dû
 
-`AscentBaselineN2Test` a ses deux profils remis à `null` — son propre mécanisme de re-capture
-documenté. Une exécution lente est due pour les ré-enregistrer, ainsi que la vérification de
-non-régression de §9 sur `LEOMissionOptimizationTest`, `GEOMissionOptimizationTest`,
-`Ariane62MissionTest` et `GravityTurnFloorProbeTest`. `T1b` (inclinaison après insertion complète)
-n'est pas fait — `T8` en donne l'équivalent sur le seul profil MEO.
+`AscentBaselineN2Test` est ré-enregistré et vert (voir §13). Restent : `T1b` (inclinaison après
+insertion complète), dont `T8` donne l'équivalent sur le seul profil MEO ; et l'étalement de
+19 km de l'ensemble acceptable de CMA-ES révélé par la re-capture LEO, qui n'est pas un sujet MIS-7
+mais mérite sa propre fiche.
 
 P1 est donc complet : `P1.a`, `P1.a-bis`, `P1.b`, `P1.c` et `P1.d`. P2 (UI) peut démarrer.
 
@@ -713,9 +712,31 @@ S'y ajoute `LaunchPlaneTest`, qui assère la dérivation d'azimut que `T0.4` car
    l'apogée. Invisible tant que la cible était équatoriale, ruineux à 55°.
 
 Rien de tout cela n'a été obtenu en élargissant une tolérance existante. Les seules références
-déplacées sont celles de `GravityTurnReplayConsistencyTest`, ré-enregistrées à tolérances inchangées
-dans un pas isolé, et les deux profils de `AscentBaselineN2Test` remis à `null` — son propre
-mécanisme de re-capture, dont l'exécution lente reste due.
+déplacées sont celles de `GravityTurnReplayConsistencyTest` et les deux profils de
+`AscentBaselineN2Test`, toutes ré-enregistrées **à tolérances inchangées**.
+
+### Les références N2, ré-enregistrées (2026-08-16, graine 42)
+
+|  | `transitionTime` | masse MECO | périgée final | inclinaison |
+|---|---|---|---|---|
+| LEO 400 | 308,0116 → **307,1932** | +181,6 kg | 381 147,8 → **400 314,5** | 5,30476 → 5,30303 |
+| GEO | 329,5599 → **329,1242** | +93,1 kg | 35 784 682,9 → **35 786 247,8** | 0,000034 → 0,000034 |
+
+Le GEO ne bouge presque pas, et il le devait : le miroir est symétrique par rapport au méridien du
+site, il change le nœud et pas le plan — l'inclinaison est identique à quatre décimales de plus. Ses
+rayons finaux se déplacent de 1 565 m, soit 4,4·10⁻⁵ en relatif, deux ordres de grandeur sous
+`ORBIT_RELATIVE_TOLERANCE`.
+
+**Le périgée LEO, lui, bouge de 19,2 km**, et c'est le chiffre sur lequel il ne faut pas se tromper.
+C'est 5 % sur une tolérance de 0,1 %, et c'est une amélioration : 400 314 m pour 400 000 m demandés,
+là où l'ancienne référence était 18,9 km trop bas. **Ce n'est pas MIS-7 qui a amélioré le ciblage.**
+Les deux profils convergent ~500× sous le coût acceptable (0,000086 ici), donc CMA-ES rend le
+**premier** candidat assez bon et non un optimum ; la correction de la base a déplacé le paysage
+assez pour qu'un autre candidat arrive premier. Ce que mesurent réellement ces 19,2 km, c'est
+l'**étalement de l'ensemble acceptable** : deux candidats que la fonction de coût juge équivalents
+sont distants de 19 km de périgée. C'est une propriété de la fonction de coût, antérieure à MIS-7,
+et qui mérite un examen à elle seule — le `transitionTime` retenu a d'ailleurs bougé de 0,818 s,
+au-delà de sa propre tolérance de 0,5 s, pour la même raison.
 
 ---
 
