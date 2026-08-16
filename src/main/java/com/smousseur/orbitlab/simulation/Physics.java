@@ -1,5 +1,7 @@
 package com.smousseur.orbitlab.simulation;
 
+import com.smousseur.orbitlab.core.OrbitlabException;
+import java.util.Locale;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.hipparchus.util.FastMath;
 import org.orekit.orbits.CartesianOrbit;
@@ -181,6 +183,79 @@ public final class Physics {
         new CartesianOrbit(newPV, state.getFrame(), state.getDate(), state.getOrbit().getMu());
 
     return new SpacecraftState(newOrbit).withMass(state.getMass());
+  }
+
+  /**
+   * Mean motion of the Earth about the Sun (rad/s), the nodal precession a sun-synchronous orbit
+   * must match: {@code 2π / 365.2422 days}.
+   */
+  public static final double SUN_SYNCHRONOUS_PRECESSION_RAD_S = 1.99106e-7;
+
+  /**
+   * The inclination that makes an orbit sun-synchronous — its node precessing eastward at exactly
+   * the rate the Earth orbits the Sun, so the local solar time of each pass stays fixed (spec
+   * {@code docs/earth-orbit/01-mission-terre-parametrable.md} §5).
+   *
+   * <p>The J2 secular nodal drift of an orbit is
+   *
+   * <pre>
+   *   dΩ/dt = −3/2 · J2 · (Re/p)² · n · cos i        with p = a(1 − e²), n = √(µ/a³)
+   * </pre>
+   *
+   * <p>which, set equal to the Earth's mean motion and solved for the inclination, gives
+   *
+   * <pre>
+   *   cos i = − a^{7/2} (1 − e²)² · n_prec / (3/2 · J2 · Re² · √µ)
+   * </pre>
+   *
+   * <p>The right-hand side is negative, so a sun-synchronous orbit is always <b>retrograde</b> —
+   * which is why the sun-synchronous azimuths of {@code LaunchPlane} point west of north.
+   *
+   * <p><b>Nothing else about an SSO is special.</b> It is an ordinary circular {@code
+   * MissionSpec.EarthOrbit} whose inclination happens to come from this formula rather than from a
+   * form field: same stage chain, same insertion objective, no dedicated mission type (spec §5).
+   *
+   * @param semiMajorAxis the orbit's semi-major axis in meters (geocentric, not an altitude)
+   * @param eccentricity the orbit's eccentricity; 0 for a circular orbit
+   * @return the sun-synchronous inclination in radians
+   * @throws OrbitlabException if no inclination is sun-synchronous at that semi-major axis
+   */
+  public static double sunSynchronousInclination(double semiMajorAxis, double eccentricity) {
+    double j2 = -Constants.WGS84_EARTH_C20;
+    double re = Constants.WGS84_EARTH_EQUATORIAL_RADIUS;
+    double mu = Constants.WGS84_EARTH_MU;
+
+    double numerator =
+        FastMath.pow(semiMajorAxis, 3.5)
+            * sq(1.0 - sq(eccentricity))
+            * SUN_SYNCHRONOUS_PRECESSION_RAD_S;
+    double denominator = 1.5 * j2 * sq(re) * FastMath.sqrt(mu);
+    double cosInclination = -numerator / denominator;
+
+    if (FastMath.abs(cosInclination) > 1.0) {
+      // Beyond ~12 300 km of semi-major axis the J2 drift can no longer keep up with the Sun at any
+      // inclination: the orbit is simply too high for the oblateness torque available.
+      throw new OrbitlabException(
+          String.format(
+              Locale.ROOT,
+              "No sun-synchronous inclination exists at semi-major axis %.0f m (e = %.4f):"
+                  + " the required cos i is %.4f, outside [-1, 1]",
+              semiMajorAxis,
+              eccentricity,
+              cosInclination));
+    }
+    return FastMath.acos(cosInclination);
+  }
+
+  /**
+   * The sun-synchronous inclination of a circular orbit at a given altitude.
+   *
+   * @param altitude the circular orbit altitude above the equatorial radius, in meters
+   * @return the sun-synchronous inclination in radians
+   */
+  public static double sunSynchronousInclinationForAltitude(double altitude) {
+    return sunSynchronousInclination(
+        Constants.WGS84_EARTH_EQUATORIAL_RADIUS + altitude, 0.0);
   }
 
   /**
