@@ -63,9 +63,16 @@ class EarthOrbitNonRegressionTest {
   /** The four circular targets of §9.2, in meters. */
   private static final double[] CIRCULAR_TARGETS = {200_000.0, 400_000.0, 700_000.0, 1_000_000.0};
 
-  /** The three elliptic targets of §9.2, as (perigee, apogee) pairs in meters. */
+  /**
+   * The three elliptic targets of §9.2, as (perigee, apogee) pairs in meters.
+   *
+   * <p>All three stay under the direct chain's apogee ceiling, deliberately. A fourth shape tried
+   * here — 300 km × 35 786 km on a Falcon Heavy — is not a non-regression case but an infeasible
+   * one: its trim has to coast 5 h 15 to apogee against the 2 h its upper stage declares. The §6.1
+   * rule refuses it, and {@code EarthOrbitValidationTest} is where that refusal is asserted.
+   */
   private static final double[][] ELLIPTIC_TARGETS = {
-    {200_000.0, 400_000.0}, {400_000.0, 1_000_000.0}, {300_000.0, 35_786_000.0}
+    {200_000.0, 400_000.0}, {400_000.0, 1_000_000.0}, {300_000.0, 1_500_000.0}
   };
 
   @BeforeAll

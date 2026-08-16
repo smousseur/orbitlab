@@ -78,10 +78,61 @@ public class GEOMission extends EarthMission {
       double finalInclination) {
     this(
         name,
+        configuration,
+        parkingAltitude,
+        targetAltitude,
+        LaunchPlane.dueEast(latitude),
+        latitude,
+        longitude,
+        altitude,
+        finalInclination);
+  }
+
+  /**
+   * Creates a high-orbit mission whose <em>ascent</em> is steered into a given plane.
+   *
+   * <p><b>The ascent plane and the final inclination are two different things here</b>, and this
+   * constructor exists because MIS-7 made the difference matter. A geostationary mission climbs due
+   * east, reaches the parking orbit at the site latitude, and cancels that inclination with the
+   * apogee burn — the plane change is <em>part of</em> the circularization, which is why {@code
+   * finalInclination} is 0 while the ascent flies 5.23°. It could not be otherwise: no launch from
+   * Kourou reaches an equatorial plane directly.
+   *
+   * <p>A medium Earth orbit at 55° is the opposite case. That plane <em>is</em> reachable from the
+   * site, so flying the ascent due east and rotating 50° at apogee would be paying kilometres per
+   * second for something the climb gives away — measured on this very chain before the plane was
+   * wired through: the circularization asked for 2 969 m/s instead of 1 404, burnt the kick motor
+   * dry, and still left the orbit at 34.5° with a perigee of 3 391 km. Steering the ascent into 55°
+   * leaves the apogee burn nothing to do but circularize.
+   *
+   * @param name the mission name
+   * @param configuration the launcher model, propellant loads and payload
+   * @param parkingAltitude the parking orbit altitude in meters
+   * @param targetAltitude the final circular orbit altitude in meters
+   * @param ascentPlane the plane the ascent is steered into; {@link LaunchPlane#dueEast} for the
+   *     geostationary profile, whose plane change belongs to the apogee burn
+   * @param latitude the launch site latitude in degrees
+   * @param longitude the launch site longitude in degrees
+   * @param altitude the launch site altitude in meters
+   * @param finalInclination the inclination of the orbit finally delivered, in degrees
+   */
+  public GEOMission(
+      String name,
+      LaunchConfiguration configuration,
+      double parkingAltitude,
+      double targetAltitude,
+      LaunchPlane ascentPlane,
+      double latitude,
+      double longitude,
+      double altitude,
+      double finalInclination) {
+    this(
+        name,
         configuration.toVehicleStack(),
         configuration.ascentProfile(),
         parkingAltitude,
         targetAltitude,
+        ascentPlane,
         latitude,
         longitude,
         altitude,
@@ -94,6 +145,7 @@ public class GEOMission extends EarthMission {
       AscentProfile profile,
       double parkingAltitude,
       double targetAltitude,
+      LaunchPlane ascentPlane,
       double latitude,
       double longitude,
       double altitude,
@@ -101,9 +153,13 @@ public class GEOMission extends EarthMission {
     super(
         name,
         vehicle,
-        buildStages(profile, parkingAltitude, targetAltitude, latitude, finalInclination),
+        buildStages(
+            profile, parkingAltitude, targetAltitude, ascentPlane, latitude, finalInclination),
         new OrbitInsertionObjective(
-            SolarSystemBody.EARTH, parkingAltitude, targetAltitude, FastMath.toRadians(latitude)));
+            SolarSystemBody.EARTH,
+            parkingAltitude,
+            targetAltitude,
+            ascentPlane.targetInclination()));
     this.latitude = latitude;
     this.longitude = longitude;
     this.altitude = altitude;
@@ -140,6 +196,7 @@ public class GEOMission extends EarthMission {
       AscentProfile profile,
       double parkingAltitude,
       double targetAltitude,
+      LaunchPlane ascentPlane,
       double latitude,
       double finalInclination) {
     List<MissionStage> stages = new ArrayList<>();
@@ -149,7 +206,7 @@ public class GEOMission extends EarthMission {
     // launcher's staging is stated once, in one place, instead of half-implied by a detector.
     stages.addAll(
         AscentSequence.gravityTurn(
-            profile, GravityTurnConstraints.forTarget(parkingAltitude), latitude));
+            profile, GravityTurnConstraints.forTarget(parkingAltitude), ascentPlane, latitude));
     stages.addAll(
         List.of(
             new AnalyticParkingInsertionStage("Parking", parkingAltitude),

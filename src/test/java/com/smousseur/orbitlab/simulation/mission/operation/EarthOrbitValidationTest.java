@@ -1,13 +1,17 @@
 package com.smousseur.orbitlab.simulation.mission.operation;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.smousseur.orbitlab.core.OrbitlabException;
+import com.smousseur.orbitlab.simulation.mission.OptimizationType;
 import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchConfiguration;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Spacecraft;
 import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Launchers;
+import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Payloads;
+import com.smousseur.orbitlab.simulation.mission.vehicle.model.LauncherModel;
 import org.hipparchus.util.FastMath;
 import org.junit.jupiter.api.Test;
 
@@ -29,6 +33,7 @@ class EarthOrbitValidationTest {
 
   private static final double KOUROU_LAT = 5.23;
   private static final double KOUROU_LON = -52.77;
+  private static final OptimizationType FAST = OptimizationType.FAST;
 
   private static LaunchConfiguration falconHeavy() {
     return LaunchConfiguration.fullyLoaded(Launchers.FALCON_HEAVY, Spacecraft.LEGACY);
@@ -100,6 +105,133 @@ class EarthOrbitValidationTest {
   @Test
   void anEllipticTarget_isAccepted() {
     assertDoesNotThrow(() -> spec(400_000.0, 600_000.0, KOUROU_LAT, KOUROU_LAT));
+  }
+
+  // ── The coast rule of §6 / §6.1 ──────────────────────────────────────────
+
+  /**
+   * A target beyond the ascent's reach needs a parking orbit and a long coast to apogee. Where
+   * neither the upper stage nor a kick motor can hold it, the mission is refused at composition —
+   * naming the stage and the duration it is short of, so the way out ("fly Ariane 62, or take a
+   * payload with a kick motor") is in the failure itself.
+   */
+  @Test
+  void aMeoOnFalconHeavyWithoutAKickMotor_isRefusedNamingTheStageAndTheCoast() {
+    MissionSpec.EarthOrbit meo =
+        new MissionSpec.EarthOrbit(
+            "MEO",
+            LaunchConfiguration.fullyLoaded(Launchers.FALCON_HEAVY, Spacecraft.LEGACY),
+            20_200_000.0,
+            20_200_000.0,
+            FastMath.toRadians(55.0),
+            NodeBranch.ASCENDING,
+            "Kourou",
+            KOUROU_LAT,
+            KOUROU_LON,
+            0.0,
+            null);
+
+    OrbitlabException failure =
+        assertThrows(
+            OrbitlabException.class,
+            () -> MissionComposer.compose(meo, OptimizationType.FAST));
+
+    assertTrue(
+        failure.getMessage().contains("S2 (Merlin Vacuum)"),
+        () -> "the message must name the stage that is short: " + failure.getMessage());
+    // 2.98 h is spec §6's 2 h 58 for 400 km → 20 200 km; 2.00 h is what the catalog declares for
+    // this stage. Both must be in the message: the gap between them is the whole diagnosis.
+    assertTrue(
+        failure.getMessage().contains("2.98 h") && failure.getMessage().contains("2.00 h"),
+        () ->
+            "the message must give the coast needed and the coast declared: "
+                + failure.getMessage());
+    assertTrue(
+        failure.getMessage().contains("kick motor"),
+        () -> "the message must name the way out: " + failure.getMessage());
+  }
+
+  /**
+   * The same target on Ariane 62 composes: its upper stage declares 6 h against the 2 h 58 needed.
+   * This is the "reserved to Ariane 62" of §6 turned into a property of the catalog rather than a
+   * rule someone has to remember.
+   */
+  @Test
+  void theSameMeoOnAriane62_composes() {
+    assertDoesNotThrow(() -> MissionComposer.compose(meoSpec(Launchers.ARIANE_62), FAST));
+  }
+
+  /**
+   * And the other way out of §6: a Falcon Heavy carrying a payload with its own kick motor, which
+   * is exactly how it reaches GEO on a coast it could never hold itself.
+   */
+  @Test
+  void aMeoOnFalconHeavyWithAKickMotor_composes() {
+    Spacecraft withAkm = Payloads.GEO_SAT.toSpacecraft(Payloads.GEO_SAT.defaultDryMass(), 1_500.0);
+    MissionSpec.EarthOrbit meo =
+        new MissionSpec.EarthOrbit(
+            "MEO with AKM",
+            new LaunchConfiguration(
+                Launchers.FALCON_HEAVY, new double[] {1_233_000, 107_500}, withAkm),
+            20_200_000.0,
+            20_200_000.0,
+            FastMath.toRadians(55.0),
+            NodeBranch.ASCENDING,
+            "Kourou",
+            KOUROU_LAT,
+            KOUROU_LON,
+            0.0,
+            null);
+
+    assertDoesNotThrow(() -> MissionComposer.compose(meo, FAST));
+  }
+
+  /**
+   * The elliptic shape the rule caught in {@code EarthOrbitNonRegressionTest}: a GTO-apogee ellipse
+   * on a Falcon Heavy with no kick motor. Its trim has to coast to apogee, which the stage cannot.
+   */
+  @Test
+  void aGtoApogeeEllipseOnFalconHeavy_isRefusedForTheSameReason() {
+    MissionSpec.EarthOrbit ellipse =
+        MissionSpec.EarthOrbit.dueEast(
+            "GTO ellipse",
+            falconHeavy(),
+            300_000.0,
+            35_786_000.0,
+            "Kourou",
+            KOUROU_LAT,
+            KOUROU_LON,
+            0.0,
+            null);
+
+    assertThrows(
+        OrbitlabException.class, () -> MissionComposer.compose(ellipse, FAST));
+  }
+
+  /** A LEO target must never be routed through the parking chain. */
+  @Test
+  void everyLeoTarget_staysOnTheDirectChain() {
+    for (double apogee : new double[] {200_000.0, 400_000.0, 1_000_000.0, 1_999_000.0}) {
+      assertFalse(
+          MissionComposer.needsParkingOrbit(apogee),
+          () -> apogee + " m must stay on the direct chain");
+    }
+    assertTrue(MissionComposer.needsParkingOrbit(20_200_000.0), "a MEO needs the parking chain");
+  }
+
+  private static MissionSpec.EarthOrbit meoSpec(LauncherModel launcher) {
+    return new MissionSpec.EarthOrbit(
+        "MEO",
+        LaunchConfiguration.fullyLoaded(launcher, Spacecraft.LEGACY),
+        20_200_000.0,
+        20_200_000.0,
+        FastMath.toRadians(55.0),
+        NodeBranch.ASCENDING,
+        "Kourou",
+        KOUROU_LAT,
+        KOUROU_LON,
+        0.0,
+        null);
   }
 
   /** The historical factory must never trip its own validation, whatever the site. */

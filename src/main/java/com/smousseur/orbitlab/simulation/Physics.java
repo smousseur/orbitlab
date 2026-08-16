@@ -186,6 +186,27 @@ public final class Physics {
   }
 
   /**
+   * Time a Hohmann transfer takes to coast from its perigee to its apogee — half the period of the
+   * transfer ellipse.
+   *
+   * <p>This is the quantity an upper stage has to survive shut down between the injection burn and
+   * the circularization, and it is what decides which chain a high-orbit mission can be flown with
+   * (spec {@code docs/earth-orbit/01-mission-terre-parametrable.md} §6): 400 km → 20 200 km takes
+   * about 2 h 58, which an Ariane 62 upper stage can hold and a Falcon Heavy one cannot.
+   *
+   * @param perigeeAltitude the transfer perigee altitude in meters
+   * @param apogeeAltitude the transfer apogee altitude in meters
+   * @return the coast duration from perigee to apogee, in seconds
+   */
+  public static double hohmannTransferDuration(double perigeeAltitude, double apogeeAltitude) {
+    double re = Constants.WGS84_EARTH_EQUATORIAL_RADIUS;
+    double semiMajorAxis = re + 0.5 * (perigeeAltitude + apogeeAltitude);
+    return FastMath.PI
+        * FastMath.sqrt(
+            semiMajorAxis * semiMajorAxis * semiMajorAxis / Constants.WGS84_EARTH_MU);
+  }
+
+  /**
    * Mean motion of the Earth about the Sun (rad/s), the nodal precession a sun-synchronous orbit
    * must match: {@code 2π / 365.2422 days}.
    */

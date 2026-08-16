@@ -600,13 +600,57 @@ burn2 = 250 s : vols différents, chiffres différents, même conclusion. Le cal
 bougent pas — seul le cap. Références ré-enregistrées **à tolérances inchangées** ; l'ascension à
 trois phases reproduit la référence mono-propagateur à 0,000 m.
 
+### `P1.d` — le MEO vole (livré le 2026-08-16)
+
+La règle §6.1 est en place dans `MissionComposer`, sur un **plafond d'apogée** (2 000 km) et non sur
+un test de coast. La raison est dans la ligne 2 du tableau de §6.1, qui mentionne « ou étage à long
+coast » : si la ligne 1 testait déjà le coast, cette clause serait morte. Et à cible *circulaire* un
+test de coast n'a rien à mesurer — périgée et apogée coïncident, la durée de transfert est nulle
+quelle que soit l'altitude. Ce qui interdit à un MEO la chaîne directe n'est pas une durée, c'est la
+**portée de l'ascension** : aucun gravity turn ne place un apogée à 20 200 km. Le coast garde son
+rôle une ligne plus bas, pour décider *qui* peut voler la chaîne parking.
+
+| Depuis Kourou | Coast à l'apogée | Étage supérieur | Résultat |
+|---|---|---|---|
+| MEO 20 200 km, Falcon Heavy, sans AKM | 2,98 h | 2,00 h | **refus nommant l'étage et les deux durées** |
+| MEO 20 200 km, Falcon Heavy, avec AKM | 2,98 h | délégué | chaîne parking |
+| MEO 20 200 km, Ariane 62 | 2,98 h | 6,00 h | chaîne parking |
+
+**Ce que P1.d a révélé, et qui n'est pas dans §6.** `GEOMission` volait son ascension **plein est**
+et corrigeait le plan à l'apogée. C'est juste pour le GEO — aucun tir depuis un site n'atteint
+directement le plan équatorial, donc le changement de plan *fait partie* de la circularisation — et
+faux pour un MEO à 55°, plan que le site atteint. Mesuré sur la chaîne avant correction : la
+circularisation demandait **2 969 m/s au lieu de 1 404**, vidait le moteur d'apogée, et laissait
+l'orbite à **34,5° avec un périgée de 3 391 km**. `GEOMission` distingue désormais le *plan
+d'ascension* de l'*inclinaison finale* ; le GEO passe `dueEast` et ne bouge pas.
+
+`T8` (`MeoMissionTest`), Ariane 62, charge GEO_SAT, plan commandé à 55° :
+
+| Grandeur | Obtenu | Tolérance §9.2 |
+|---|---|---|
+| Bande d'altitude volée | 19 637 – 20 202 km | ± 7 % (± 1 414 km) |
+| Inclinaison finale | **55,0027°** | ± 0,5° |
+| ΔV de circularisation | 1 478 m/s | — |
+| Inclinaison de visée à l'apogée | 0,42° | — |
+
+Le budget suit la règle : `MissionFactory` dimensionne pour la chaîne que `MissionComposer` va
+composer, et `PropellantBudget.loadsForHighOrbit` prend l'altitude cible et le changement de plan à
+l'apogée en arguments — **zéro** pour un MEO, dont l'ascension a déjà volé le plan, contre la
+latitude du site pour un GEO. Les deux d'accord, sinon la mission est budgétée pour une chaîne et
+vole l'autre.
+
+Effet de bord assumé : le cas elliptique 300 km × 35 786 km de `T2` était non physique (5 h 15 de
+coast contre 2 h déclarées) et devient un cas de refus dans `T6`. `T2` garde trois ellipses tenables.
+
 ### Ce qui reste dû
 
 `AscentBaselineN2Test` a ses deux profils remis à `null` — son propre mécanisme de re-capture
 documenté. Une exécution lente est due pour les ré-enregistrer, ainsi que la vérification de
 non-régression de §9 sur `LEOMissionOptimizationTest`, `GEOMissionOptimizationTest`,
-`Ariane62MissionTest` et `GravityTurnFloorProbeTest`. `T1b` (inclinaison après insertion complète) et
-`P1.d` ne sont pas faits.
+`Ariane62MissionTest` et `GravityTurnFloorProbeTest`. `T1b` (inclinaison après insertion complète)
+n'est pas fait — `T8` en donne l'équivalent sur le seul profil MEO.
+
+P1 est donc complet : `P1.a`, `P1.a-bis`, `P1.b`, `P1.c` et `P1.d`. P2 (UI) peut démarrer.
 
 ---
 

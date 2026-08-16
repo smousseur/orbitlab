@@ -100,7 +100,49 @@ public final class PropellantBudget {
       double payloadDryMass,
       double parkingAltitude,
       double launchLatitudeDeg) {
-    double dvApogee = apogeeCircularizationDeltaV(parkingAltitude, launchLatitudeDeg);
+    return loadsForHighOrbit(
+        launcher,
+        payload,
+        payloadDryMass,
+        parkingAltitude,
+        GEO_ALTITUDE_M,
+        launchLatitudeDeg,
+        launchLatitudeDeg,
+        Physics.getLaunchAzimuth());
+  }
+
+  /**
+   * Launcher loads and AKM load for any high circular orbit reached through a parking orbit —
+   * geostationary, medium Earth, or anything else the direct chain cannot reach (spec {@code
+   * docs/earth-orbit/01-mission-terre-parametrable.md} §6).
+   *
+   * <p><b>The plane change is an argument, and that is the point.</b> A GEO mission cancels the
+   * whole launch inclination at apogee, which is why {@link #loadsForGeo} passes the site latitude
+   * for it. A MEO does not: since MIS-7 the ascent is <em>steered</em> into the target plane, so
+   * what is left at apogee is the residual and not the latitude. Charging a 55° MEO for a 5.23°
+   * plane change it has already flown would size its kick motor for a burn it never makes.
+   *
+   * @param launcher the launcher model
+   * @param payload the payload model (provides the AKM characteristics)
+   * @param payloadDryMass the dry mass entered at mission creation (kg)
+   * @param parkingAltitude the parking orbit altitude (m)
+   * @param targetAltitude the final circular orbit altitude (m)
+   * @param launchLatitudeDeg the launch site latitude (degrees)
+   * @param planeChangeDeg the plane change performed at apogee (degrees)
+   * @param launchAzimuth the launch azimuth (radians, clockwise from north)
+   * @return the launcher loads and the AKM load
+   */
+  public static GeoLoads loadsForHighOrbit(
+      LauncherModel launcher,
+      PayloadModel payload,
+      double payloadDryMass,
+      double parkingAltitude,
+      double targetAltitude,
+      double launchLatitudeDeg,
+      double planeChangeDeg,
+      double launchAzimuth) {
+    double dvApogee =
+        apogeeCircularizationDeltaV(parkingAltitude, targetAltitude, planeChangeDeg);
 
     double akmLoad = 0.0;
     if (payload.akmPropellantCapacity() > 0) {
@@ -111,7 +153,8 @@ public final class PropellantBudget {
     }
 
     double dvTotal =
-        ascentDeltaV(parkingAltitude, launchLatitudeDeg) + gtoInjectionDeltaV(parkingAltitude);
+        ascentDeltaV(parkingAltitude, launchLatitudeDeg, launchAzimuth)
+            + transferInjectionDeltaV(parkingAltitude, targetAltitude);
     double[] launcherLoads = sizeTopStage(launcher, payloadDryMass + akmLoad, dvTotal);
     return new GeoLoads(launcherLoads, akmLoad);
   }
@@ -204,9 +247,21 @@ public final class PropellantBudget {
 
   /** Hohmann perigee-injection ΔV from a circular parking orbit to a GEO-apogee transfer (m/s). */
   static double gtoInjectionDeltaV(double parkingAltitude) {
+    return transferInjectionDeltaV(parkingAltitude, GEO_ALTITUDE_M);
+  }
+
+  /**
+   * Hohmann perigee-injection ΔV from a circular parking orbit to a transfer reaching a given
+   * apogee (m/s).
+   *
+   * @param parkingAltitude the parking orbit altitude (m)
+   * @param targetAltitude the transfer apogee altitude (m)
+   * @return the injection ΔV in m/s
+   */
+  static double transferInjectionDeltaV(double parkingAltitude, double targetAltitude) {
     double rLeo = RE + parkingAltitude;
-    double rGeo = RE + GEO_ALTITUDE_M;
-    return FastMath.sqrt(MU / rLeo) * (FastMath.sqrt(2.0 * rGeo / (rLeo + rGeo)) - 1.0);
+    double rTarget = RE + targetAltitude;
+    return FastMath.sqrt(MU / rLeo) * (FastMath.sqrt(2.0 * rTarget / (rLeo + rTarget)) - 1.0);
   }
 
   /**
@@ -214,12 +269,25 @@ public final class PropellantBudget {
    * launch latitude (inclination of a due-east parking orbit).
    */
   static double apogeeCircularizationDeltaV(double parkingAltitude, double launchLatitudeDeg) {
+    return apogeeCircularizationDeltaV(parkingAltitude, GEO_ALTITUDE_M, launchLatitudeDeg);
+  }
+
+  /**
+   * Combined circularization + plane-change ΔV at the apogee of a transfer orbit (m/s).
+   *
+   * @param parkingAltitude the parking orbit altitude (m)
+   * @param targetAltitude the final circular orbit altitude (m)
+   * @param planeChangeDeg the plane rotation performed by the same burn (degrees)
+   * @return the apogee burn ΔV in m/s
+   */
+  static double apogeeCircularizationDeltaV(
+      double parkingAltitude, double targetAltitude, double planeChangeDeg) {
     double rLeo = RE + parkingAltitude;
-    double rGeo = RE + GEO_ALTITUDE_M;
-    double semiMajor = 0.5 * (rLeo + rGeo);
-    double vApogee = FastMath.sqrt(MU * (2.0 / rGeo - 1.0 / semiMajor));
-    double vCircular = FastMath.sqrt(MU / rGeo);
-    double planeChange = FastMath.toRadians(launchLatitudeDeg);
+    double rTarget = RE + targetAltitude;
+    double semiMajor = 0.5 * (rLeo + rTarget);
+    double vApogee = FastMath.sqrt(MU * (2.0 / rTarget - 1.0 / semiMajor));
+    double vCircular = FastMath.sqrt(MU / rTarget);
+    double planeChange = FastMath.toRadians(planeChangeDeg);
     return FastMath.sqrt(
         vApogee * vApogee
             + vCircular * vCircular
