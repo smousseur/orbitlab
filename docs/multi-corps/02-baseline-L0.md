@@ -224,6 +224,14 @@ L'écart naît en amont, au ciblage de nœud de l'injection GTO, et se propage.
 Les étages analytiques **replanifient** au lieu de rejouer. Cause non
 diagnostiquée en L0.
 
+> **Diagnostiquée depuis, en L1** — voir `03-conception-L1.md` §5.7. En deux mots :
+> `CoastingStage` et `StageSeparationStage` ne surchargent pas
+> `propagateStandalone`, dont le défaut renvoie `enter()` et **n'avance pas le
+> temps**. La passe d'optimisation ne vole donc pas les coasts, et l'étage
+> analytique en aval replanifie depuis l'état d'avant-coast. La divergence existe
+> **aussi sur GEO**, que ce paragraphe ne mentionnait pas. Aucun chiffre de ce
+> document n'est modifié : seule la cause est désormais connue.
+
 **Conséquence directe pour L1 et L3 :** tout test d'égalité portant sur MEO doit
 déclarer *de quelle passe* il parle. Comparer une passe d'optimisation d'avant à
 une passe d'éphéméride d'après produira un écart de 3 m/s sans qu'aucun code de
