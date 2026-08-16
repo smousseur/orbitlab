@@ -126,10 +126,14 @@ public final class Physics {
         northPole
             .subtract(new Vector3D(Vector3D.dotProduct(northPole, zenith), zenith))
             .normalize();
-    // NOTE (spec §1.1c): this is west, not east — zenith × north = −(north × zenith). Left as it
-    // stands here on purpose: extracting the basis is a pure refactor, and correcting it moves every
-    // recorded ascent baseline, so it is a step of its own (P1.a-bis).
-    Vector3D east = Vector3D.crossProduct(zenith, north).normalize();
+    // Geographic east (spec §1.1c). This used to read zenith × north, which is WEST: at the equator
+    // r̂ = x̂, n̂ = ẑ and x̂ × ẑ = −ŷ, while east is +ŷ. The kick's azimuths were therefore
+    // counter-clockwise from north — 0° and 180° right, 90° pointing due west — and every standard
+    // azimuth handed to it was mirrored, A → −A. It stayed invisible because every mission commands
+    // 90°, where the kick has no authority anyway: the ~2.5 m/s it misplaced were lost in 463 m/s
+    // of eastward entrainment, and the mirror is symmetric about the site meridian, so it moved the
+    // node and not the plane — which is why no inclination assertion ever saw it.
+    Vector3D east = Vector3D.crossProduct(north, zenith).normalize();
     return new Vector3D(
         FastMath.cos(azimuth), north,
         FastMath.sin(azimuth), east);

@@ -84,14 +84,33 @@ class GravityTurnReplayConsistencyTest {
 
   // ── Étape 0 baseline of the explicit-staging migration (spec 01 §7.1) ─────
   // Recorded on the pre-split code (commit 1d53e83), fixed variables, no optimizer involved.
+  //
+  // RE-RECORDED at MIS-7 P1.a-bis (spec docs/earth-orbit/01-mission-terre-parametrable.md §1.1.1),
+  // after correcting the pitch kick's local horizontal basis, which had east and west swapped and so
+  // mirrored every commanded azimuth about the site meridian. The correction is a deliberate
+  // behaviour change, not a bug fix with no consequence, and the displacement it inflicts on this
+  // fixture was measured before being accepted:
+  //
+  //   Δposition 890.733 m   (tolerance 10 m)
+  //   Δvelocity   5.781 m/s (tolerance 0.05 m/s)
+  //
+  // 89× the position tolerance and 116× the velocity one. The schedule did NOT move — burn 1
+  // duration, staging completion, MECO date and MECO mass are unchanged to the last recorded digit,
+  // as they must be: the basis touches the heading, not the propellant. Nor did the plane: the
+  // mirror is symmetric about the site meridian, so it moves the node and not the inclination, which
+  // is exactly why nothing in the suite had ever caught it.
+  //
+  // The tolerances below are UNTOUCHED. Re-recording a measured reference after an assumed change is
+  // legitimate and is documented here; widening a tolerance to make a test pass is the failure spec
+  // §9 forbids, and the two must not be confused.
   private static final double REF_BURN1_DURATION_S = 149.979660;
   private static final double REF_STAGING_COMPLETE_S = 151.979660;
   private static final double REF_EXIT_DT_S = 153.979660;
   private static final double REF_EXIT_MASS_KG = 17360.267;
   private static final Vector3D REF_EXIT_POSITION =
-      new Vector3D(-3949439.705160, -5013991.353815, 589230.976026);
+      new Vector3D(-3948760.923784, -5014568.081480, 589237.742790);
   private static final Vector3D REF_EXIT_VELOCITY =
-      new Vector3D(6221.798395, -5155.808070, -48.249486);
+      new Vector3D(6226.572243, -5159.065669, -48.116619);
 
   @BeforeAll
   static void setup() {

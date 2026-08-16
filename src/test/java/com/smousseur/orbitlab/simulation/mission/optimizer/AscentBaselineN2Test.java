@@ -118,7 +118,27 @@ public class AscentBaselineN2Test extends AbstractTrajectoryOptimizerTest {
   // spec file, and the split's fidelity at FIXED variables (0.001 m) in
   // GravityTurnReplayConsistencyTest.
 
-  private static final Baseline LEO_400_BASELINE =
+  // ── STALE as of MIS-7 P1.a-bis (2026-08-16) ──────────────────────────────
+  // Correcting the pitch kick's local horizontal basis (spec
+  // docs/earth-orbit/01-mission-terre-parametrable.md §1.1c) mirrors the launch heading about the
+  // site meridian and moves the ascent well past these tolerances: measured on the fast fixture
+  // GravityTurnReplayConsistencyTest, 890.733 m of position and 5.781 m/s of velocity at MECO,
+  // against 10 m and 0.05 m/s. The schedule and the plane are untouched by it, the heading is not.
+  //
+  // Both profiles are therefore set to null — this class's own documented re-capture mechanism (see
+  // the note above): the next slow run compares nothing and instead PRINTS the material to record,
+  // both to the log and to build/baseline/<profile>-n2.txt. Recording it is a slow run away:
+  //
+  //   gradlew test --tests "*AscentBaselineN2Test" -Dorbitlab.slowTests=true
+  //
+  // The tolerances stay exactly as they are. Re-recording a measured reference after an assumed
+  // behaviour change is legitimate; widening a tolerance to make a test pass is not (spec §9).
+  private static final Baseline LEO_400_BASELINE = null;
+
+  private static final Baseline GEO_BASELINE = null;
+
+  /** Pre-P1.a-bis reference, kept for the diff when the profiles above are re-recorded. */
+  private static final Baseline LEO_400_BASELINE_PRE_MIS7 =
       new Baseline(
           308.011551,
           new MecoState(
@@ -134,7 +154,8 @@ public class AscentBaselineN2Test extends AbstractTrajectoryOptimizerTest {
           new OrbitShape(381147.8, 419095.3, 5.304759),
           6.7);
 
-  private static final Baseline GEO_BASELINE =
+  /** Pre-P1.a-bis reference, kept for the diff when the profiles above are re-recorded. */
+  private static final Baseline GEO_BASELINE_PRE_MIS7 =
       new Baseline(
           329.559947,
           new MecoState(
