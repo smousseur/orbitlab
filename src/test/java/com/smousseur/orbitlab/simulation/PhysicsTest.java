@@ -101,25 +101,8 @@ class PhysicsTest {
     assertEquals(FastMath.PI / 2, Physics.getLaunchAzimuth(), 1e-12);
   }
 
-  @Test
-  void getLaunchAzimuth_bothZero_returnsPiOver2() {
-    assertEquals(FastMath.PI / 2, Physics.getLaunchAzimuth(0, 0), 1e-12);
-  }
-
-  @Test
-  void getLaunchAzimuth_45degLatSameInclination_returnsPiOver2() {
-    // cos(45°) / cos(45°) = 1 → asin(1) = PI/2
-    double lat = FastMath.toRadians(45.0);
-    double incl = FastMath.toRadians(45.0);
-    assertEquals(FastMath.PI / 2, Physics.getLaunchAzimuth(lat, incl), 1e-10);
-  }
-
-  @Test
-  void getLaunchAzimuth_poleLatitude_throwsException() {
-    assertThrows(
-        IllegalArgumentException.class,
-        () -> Physics.getLaunchAzimuth(FastMath.PI / 2, FastMath.toRadians(45.0)));
-  }
+  // The general derivation asin(cos i / cos φ) — the site-latitude case, the pole guard and the
+  // branch choice — now belongs to LaunchPlane, and is covered by LaunchPlaneTest (MIS-7 §3.1).
 
   // --- computeRadialVelocity ---
 

@@ -1,13 +1,13 @@
 package com.smousseur.orbitlab.simulation.mission.stage.ascent;
 
 import com.smousseur.orbitlab.core.OrbitlabException;
-import com.smousseur.orbitlab.simulation.Physics;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionStage;
 import com.smousseur.orbitlab.simulation.mission.OptimizableMissionStage;
 import com.smousseur.orbitlab.simulation.mission.detector.DepletionStopTrigger;
 import com.smousseur.orbitlab.simulation.mission.detector.MinAltitudeTracker;
 import com.smousseur.orbitlab.simulation.mission.maneuver.GravityTurnManeuver;
+import com.smousseur.orbitlab.simulation.mission.operation.LaunchPlane;
 import com.smousseur.orbitlab.simulation.mission.optimizer.OptimizationResult;
 import com.smousseur.orbitlab.simulation.mission.optimizer.problems.GravityTurnConstraints;
 import com.smousseur.orbitlab.simulation.mission.optimizer.problems.GravityTurnProblem;
@@ -15,9 +15,11 @@ import com.smousseur.orbitlab.simulation.mission.vehicle.PropulsionSystem;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
+import org.hipparchus.util.FastMath;
 import org.orekit.forces.maneuvers.Maneuver;
 import org.orekit.forces.maneuvers.propulsion.BasicConstantThrustPropulsionModel;
 import org.orekit.propagation.SpacecraftState;
@@ -51,8 +53,8 @@ public class GravityTurnFirstBurnStage extends GravityTurnBurnStage
 
   private final double pitchKickAngleDeg;
   private final double interstageCoastDuration;
-  private final double launchLatitude;
-  private final double targetInclination;
+  private final LaunchPlane launchPlane;
+  private final double launchLatitudeDeg;
   private final GravityTurnConstraints constraints;
 
   private OptimizationResult optimizationResult;
@@ -64,8 +66,9 @@ public class GravityTurnFirstBurnStage extends GravityTurnBurnStage
    * @param planRef the reference the three ascent phases share
    * @param pitchKickAngleDeg the pitch kick opening the turn (degrees)
    * @param interstageCoastDuration the unpowered coast between jettison and second ignition (s)
-   * @param launchLatitude the launch site latitude (degrees)
-   * @param targetInclination the target orbit inclination (degrees)
+   * @param launchPlane the target orbital plane, which derives the azimuth and decides whether the
+   *     ascent flies the commanded-plane attitude
+   * @param launchLatitudeDeg the launch site latitude (<b>degrees</b>)
    * @param constraints the apogee, velocity and flight-path-angle targets of the turn
    * @param instrumentation the guards this phase arms (replay or optimize)
    */
@@ -74,15 +77,15 @@ public class GravityTurnFirstBurnStage extends GravityTurnBurnStage
       AscentPlanRef planRef,
       double pitchKickAngleDeg,
       double interstageCoastDuration,
-      double launchLatitude,
-      double targetInclination,
+      LaunchPlane launchPlane,
+      double launchLatitudeDeg,
       GravityTurnConstraints constraints,
       AscentInstrumentation instrumentation) {
     super(name, planRef, instrumentation);
     this.pitchKickAngleDeg = pitchKickAngleDeg;
     this.interstageCoastDuration = interstageCoastDuration;
-    this.launchLatitude = launchLatitude;
-    this.targetInclination = targetInclination;
+    this.launchPlane = Objects.requireNonNull(launchPlane, "launchPlane");
+    this.launchLatitudeDeg = launchLatitudeDeg;
     this.constraints = constraints;
   }
 
@@ -187,8 +190,8 @@ public class GravityTurnFirstBurnStage extends GravityTurnBurnStage
             planRef,
             pitchKickAngleDeg,
             interstageCoastDuration,
-            launchLatitude,
-            targetInclination,
+            launchPlane,
+            launchLatitudeDeg,
             constraints,
             instrumentation),
         AscentSequence.silentSeparation(interstageCoastDuration),
@@ -197,13 +200,14 @@ public class GravityTurnFirstBurnStage extends GravityTurnBurnStage
 
   private GravityTurnManeuver createManeuver(Mission mission, double entryMass) {
     Vehicle vehicle = mission.getVehicle();
-    double launchAzimuth = Physics.getLaunchAzimuth(launchLatitude, targetInclination);
+    double launchLatitude = FastMath.toRadians(launchLatitudeDeg);
     return new GravityTurnManeuver(
         vehicle,
         entryMass,
         Math.toRadians(pitchKickAngleDeg),
-        launchAzimuth,
-        interstageCoastDuration);
+        launchPlane.launchAzimuth(launchLatitude),
+        interstageCoastDuration,
+        launchPlane.commands(launchLatitude));
   }
 
   /**

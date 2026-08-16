@@ -8,7 +8,7 @@ import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemerisPoint;
 import com.smousseur.orbitlab.simulation.mission.objective.OrbitInsertionObjective;
 import com.smousseur.orbitlab.simulation.mission.operation.GEOMission;
-import com.smousseur.orbitlab.simulation.mission.operation.LEOMission;
+import com.smousseur.orbitlab.simulation.mission.operation.EarthOrbitMission;
 import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchConfiguration;
 import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Launchers;
 import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Payloads;
@@ -61,7 +61,7 @@ public class PropellantLoadOptimizerIntegrationTest {
   /**
    * Same launch latitude the optimized-transfer LEO mission flies from — {@code
    * EarthMission.DEFAULT_LATITUDE}, the Kourou site the three-argument {@code
-   * LEOMission.circularWithOptimizedTransfer} below builds.
+   * EarthOrbitMission.circularWithOptimizedTransfer} below builds.
    *
    * <p>It was 45.96° (Baikonur) until 2026-08-05, while the mission it sizes has always flown from
    * 5.23°. The budget credits the ascent with {@code 465·cos(latitude)} of Earth-rotation assist,
@@ -138,7 +138,7 @@ public class PropellantLoadOptimizerIntegrationTest {
     // runs per spec 09 §2) with the scaled loads and optimizes it end to end.
     Function<double[], Mission> missionBuilder =
         loads ->
-            LEOMission.circularWithOptimizedTransfer(
+            EarthOrbitMission.circularWithOptimizedTransfer(
                 "I7 LEO 400 km",
                 new LaunchConfiguration(launcher, loads, payload),
                 TARGET_ALTITUDE_M);
@@ -355,7 +355,7 @@ public class PropellantLoadOptimizerIntegrationTest {
 
     Function<double[], Mission> missionBuilder =
         loads ->
-            LEOMission.circularWithOptimizedTransfer(
+            EarthOrbitMission.circularWithOptimizedTransfer(
                 "I7 LEO 400 km multi-stage",
                 new LaunchConfiguration(launcher, loads, payload),
                 TARGET_ALTITUDE_M);

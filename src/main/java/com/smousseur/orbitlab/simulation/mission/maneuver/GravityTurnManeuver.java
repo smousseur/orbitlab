@@ -53,6 +53,7 @@ public class GravityTurnManeuver {
   private final double pitchKickAngleRad;
   private final double launchAzimuth;
   private final double interstageCoastDuration;
+  private final boolean commandedPlane;
   private final ActiveStageInfo activeStage;
   private final ActiveStageInfo nextStage;
   // Stored per-thread so parallel CMA-ES exploration runs can call propagateForOptimization()
@@ -75,11 +76,35 @@ public class GravityTurnManeuver {
       double pitchKickAngleRad,
       double launchAzimuth,
       double interstageCoastDuration) {
+    this(vehicle, entryMass, pitchKickAngleRad, launchAzimuth, interstageCoastDuration, false);
+  }
+
+  /**
+   * Creates a gravity turn maneuver, optionally steering into the plane the azimuth defines.
+   *
+   * @param vehicle the vehicle performing the maneuver (must have at least two stages)
+   * @param entryMass the actual spacecraft mass at gravity turn entry (kg); already reflects any
+   *     propellant burnt during the vertical ascent
+   * @param pitchKickAngleRad the initial pitch kick angle in radians
+   * @param launchAzimuth the launch azimuth angle in radians (measured from north)
+   * @param interstageCoastDuration unpowered coast between jettison and next-stage ignition (s)
+   * @param commandedPlane {@code true} to steer the turn into the plane the azimuth defines, {@code
+   *     false} to follow the plane the kick leaves behind — the historical, calibrated behaviour
+   *     (spec {@code docs/earth-orbit/01-mission-terre-parametrable.md} §4.2)
+   */
+  public GravityTurnManeuver(
+      Vehicle vehicle,
+      double entryMass,
+      double pitchKickAngleRad,
+      double launchAzimuth,
+      double interstageCoastDuration,
+      boolean commandedPlane) {
     this.vehicle = vehicle;
     this.entryMass = entryMass;
     this.pitchKickAngleRad = pitchKickAngleRad;
     this.launchAzimuth = launchAzimuth;
     this.interstageCoastDuration = interstageCoastDuration;
+    this.commandedPlane = commandedPlane;
     this.activeStage = vehicle.resolveActiveStage(entryMass);
     this.nextStage = vehicle.resolveActiveStage(activeStage.massAfterJettison());
   }
@@ -116,7 +141,33 @@ public class GravityTurnManeuver {
         burn2Duration,
         maxStepSeconds(),
         activeStage,
-        nextStage);
+        nextStage,
+        commandedPlaneNormal(entryState));
+  }
+
+  /**
+   * The unit normal of the plane this ascent steers into, or {@code null} when none is commanded.
+   *
+   * <p>Built once, at the kick, from the site direction {@code r̂₀} and the commanded azimuth (spec
+   * §4.1):
+   *
+   * <pre>
+   *   û_A = cos A · n̂ + sin A · ê      the commanded horizontal direction
+   *   ĥ   = (r̂₀ × û_A).normalize()     the normal of the plane it opens
+   * </pre>
+   *
+   * <p>Only the <em>position</em> of the entry state is read, and the pitch kick preserves it, so
+   * the pre-kick and post-kick states yield the same plane — which is what lets the optimize pass
+   * (which plans from the pre-kick state) and the replay pass (which plans from the kicked one) fly
+   * the same ascent.
+   */
+  private Vector3D commandedPlaneNormal(SpacecraftState entryState) {
+    if (!commandedPlane) {
+      return null;
+    }
+    Vector3D site = entryState.getPosition();
+    Vector3D horizontal = Physics.localHorizontalDirection(site, launchAzimuth);
+    return Vector3D.crossProduct(site.normalize(), horizontal).normalize();
   }
 
   /**
@@ -140,7 +191,11 @@ public class GravityTurnManeuver {
    */
   public void configure(NumericalPropagator propagator, AscentPlan plan) {
     GravityTurnAttitudeProvider attitudeProvider =
-        new GravityTurnAttitudeProvider(plan.kickDate(), plan.transitionTime(), plan.exponent());
+        new GravityTurnAttitudeProvider(
+            plan.kickDate(),
+            plan.transitionTime(),
+            plan.exponent(),
+            plan.commandedPlaneNormal());
     propagator.setAttitudeProvider(attitudeProvider);
 
     // Burn 1 — active stage propulsion, flame-out semantics (spec 06 I4b): the engine thrusts

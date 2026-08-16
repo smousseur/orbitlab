@@ -10,7 +10,7 @@ import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemeris;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemerisGenerator;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemerisPoint;
 import com.smousseur.orbitlab.simulation.mission.maneuver.GravityTurnManeuver;
-import com.smousseur.orbitlab.simulation.mission.operation.LEOMission;
+import com.smousseur.orbitlab.simulation.mission.operation.EarthOrbitMission;
 import com.smousseur.orbitlab.simulation.mission.optimizer.problems.GravityTurnProblem;
 import com.smousseur.orbitlab.simulation.mission.stage.ascent.AscentSequence;
 import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchConfiguration;
@@ -86,18 +86,18 @@ class GravityTurnFloorProbeTest {
   // ── Missions under probe ─────────────────────────────────────────────────
 
   /** Exactly the mission of {@code LEOMissionOptimizationTest#testFalconHeavyBudgetLoads}. */
-  private static LEOMission falconHeavyBudgetLoads() {
+  private static EarthOrbitMission falconHeavyBudgetLoads() {
     Spacecraft payload = Payloads.EARTH_OBSERVATION_SAT.toSpacecraft(10_000, 0.0);
     double[] loads = PropellantBudget.loadsForLeo(Launchers.FALCON_HEAVY, payload, 400_000, 45.96);
-    return new LEOMission(
+    return new EarthOrbitMission(
         "FH budget loads (probe)",
         new LaunchConfiguration(Launchers.FALCON_HEAVY, loads, payload),
         400_000);
   }
 
   /** Exactly the failing row of {@code LEOMissionOptimizationTest#testEllipticMissions}. */
-  private static LEOMission elliptic200x1000() {
-    return new LEOMission("LEO 200/1000 (probe)", 200_000, 1_000_000);
+  private static EarthOrbitMission elliptic200x1000() {
+    return new EarthOrbitMission("LEO 200/1000 (probe)", 200_000, 1_000_000);
   }
 
   // ── Flight record ────────────────────────────────────────────────────────
@@ -135,7 +135,7 @@ class GravityTurnFloorProbeTest {
    * Earliest MECO that completes staging, rebuilt the way the ascent phases do: fly the mission's
    * vertical ascent, then read the maneuver the gravity turn would build from that entry mass.
    */
-  private static double stagingCompleteTime(LEOMission mission, AscentProfile profile) {
+  private static double stagingCompleteTime(EarthOrbitMission mission, AscentProfile profile) {
     AbsoluteDate epoch = epoch();
     SpacecraftState initial = mission.getInitialState(epoch);
     mission.setCurrentState(initial);
@@ -145,7 +145,7 @@ class GravityTurnFloorProbeTest {
             mission.getVehicle(),
             postVa.getMass(),
             FastMath.toRadians(profile.pitchKickAngleDeg()),
-            Physics.getLaunchAzimuth(0.0, 0.0),
+            Physics.getLaunchAzimuth(),
             profile.interstageCoastDuration());
     return maneuver.getStagingCompleteTime();
   }
@@ -159,7 +159,7 @@ class GravityTurnFloorProbeTest {
    * MissionOptimizer} loop with the CMA-ES call replaced by the forced result. The final coast is
    * skipped: the post-trim orbit already carries the perigee and apogee it would reveal.
    */
-  private static Flight fly(LEOMission mission, double[] vars, double stagingComplete) {
+  private static Flight fly(EarthOrbitMission mission, double[] vars, double stagingComplete) {
     SpacecraftState initial = mission.getInitialState(epoch());
     mission.setCurrentState(initial);
 
@@ -285,7 +285,7 @@ class GravityTurnFloorProbeTest {
    * transfer and trim propagate up to a full orbit apiece, which turned 64 points into 36 minutes
    * for measurements that do not depend on them.
    */
-  private static List<HandOff> gravityTurnCurve(LEOMission mission, double stagingComplete) {
+  private static List<HandOff> gravityTurnCurve(EarthOrbitMission mission, double stagingComplete) {
     SpacecraftState initial = mission.getInitialState(epoch());
     mission.setCurrentState(initial);
     SpacecraftState postVa = mission.getStages().getFirst().propagateStandalone(initial, mission);
@@ -327,8 +327,8 @@ class GravityTurnFloorProbeTest {
   @Test
   void defautA_gravityTurnCostCurve() {
     for (String tag : new String[] {"FH-400", "LEO-200x1000"}) {
-      LEOMission mission = "FH-400".equals(tag) ? falconHeavyBudgetLoads() : elliptic200x1000();
-      LEOMission twin = "FH-400".equals(tag) ? falconHeavyBudgetLoads() : elliptic200x1000();
+      EarthOrbitMission mission = "FH-400".equals(tag) ? falconHeavyBudgetLoads() : elliptic200x1000();
+      EarthOrbitMission twin = "FH-400".equals(tag) ? falconHeavyBudgetLoads() : elliptic200x1000();
       double stagingComplete = stagingCompleteTime(twin, Launchers.FALCON_HEAVY.ascentProfile());
       logger.info("[A/{}] stagingCompleteTime = {} s", tag, fmt(stagingComplete, 5));
 
@@ -407,13 +407,13 @@ class GravityTurnFloorProbeTest {
     for (double lat : new double[] {45.96, 5.23}) {
       Spacecraft payload = Payloads.EARTH_OBSERVATION_SAT.toSpacecraft(10_000, 0.0);
       double[] loads = PropellantBudget.loadsForLeo(Launchers.FALCON_HEAVY, payload, 400_000, lat);
-      LEOMission mission =
-          new LEOMission(
+      EarthOrbitMission mission =
+          new EarthOrbitMission(
               "FH sized at " + lat + "°",
               new LaunchConfiguration(Launchers.FALCON_HEAVY, loads, payload),
               400_000);
-      LEOMission twin =
-          new LEOMission(
+      EarthOrbitMission twin =
+          new EarthOrbitMission(
               "twin",
               new LaunchConfiguration(
                   Launchers.FALCON_HEAVY,
@@ -449,16 +449,16 @@ class GravityTurnFloorProbeTest {
     logger.info("[A-exp] loads sized at 5.23 deg: S2={} kg", fmt(loads[loads.length - 1], 1));
 
     for (double exponent : new double[] {0.35446500155493776, 0.38613687144408326}) {
-      LEOMission mission =
-          new LEOMission(
+      EarthOrbitMission mission =
+          new EarthOrbitMission(
               "FH tight loads, exponent " + exponent,
               new LaunchConfiguration(
                   Launchers.FALCON_HEAVY,
                   loads,
                   Payloads.EARTH_OBSERVATION_SAT.toSpacecraft(10_000, 0.0)),
               400_000);
-      LEOMission twin =
-          new LEOMission(
+      EarthOrbitMission twin =
+          new EarthOrbitMission(
               "twin",
               new LaunchConfiguration(
                   Launchers.FALCON_HEAVY,
@@ -565,7 +565,7 @@ class GravityTurnFloorProbeTest {
   }
 
   private static void meanOrbitProbe(
-      String tag, LEOMission mission, LEOMission twin, double[] vars, double targetPerigee) {
+      String tag, EarthOrbitMission mission, EarthOrbitMission twin, double[] vars, double targetPerigee) {
     double stagingComplete = stagingCompleteTime(twin, Launchers.FALCON_HEAVY.ascentProfile());
     Flight flight = fly(mission, vars, stagingComplete);
 
@@ -624,7 +624,7 @@ class GravityTurnFloorProbeTest {
   }
 
   private static void bandProbe(
-      String tag, LEOMission mission, LEOMission twin, double[] vars, double targetPerigee) {
+      String tag, EarthOrbitMission mission, EarthOrbitMission twin, double[] vars, double targetPerigee) {
     double stagingComplete = stagingCompleteTime(twin, Launchers.FALCON_HEAVY.ascentProfile());
     Flight flight = fly(mission, vars, stagingComplete);
 
@@ -695,7 +695,7 @@ class GravityTurnFloorProbeTest {
   }
 
   private static void coastProbe(
-      String tag, LEOMission mission, LEOMission twin, double[] vars, double targetPerigee) {
+      String tag, EarthOrbitMission mission, EarthOrbitMission twin, double[] vars, double targetPerigee) {
     AscentProfile profile = Launchers.FALCON_HEAVY.ascentProfile();
     double stagingComplete = stagingCompleteTime(twin, profile);
     fly(mission, vars, stagingComplete);

@@ -62,7 +62,8 @@ class AscentPlanTest {
         TRANSITION_TIME - BURN1_DURATION - INTERSTAGE_COAST,
         30.0,
         first,
-        second);
+        second,
+        null);
   }
 
   /** The literal expressions {@code GravityTurnManeuver.configure} used before the split. */

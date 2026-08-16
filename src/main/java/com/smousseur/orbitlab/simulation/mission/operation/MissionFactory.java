@@ -12,6 +12,7 @@ import com.smousseur.orbitlab.simulation.mission.vehicle.Spacecraft;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.LauncherModel;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.PayloadModel;
 import java.util.Map;
+import org.hipparchus.util.FastMath;
 
 /**
  * Builds missions from the wizard's raw form values. Extracted from the wizard AppState so the
@@ -89,17 +90,27 @@ public final class MissionFactory {
         double apogeeKm = doubleValue(values, "LEO_APOGEE_ALT");
         double perigeeAlt = Math.min(perigeeKm, apogeeKm) * 1000.0;
         double apogeeAlt = Math.max(perigeeKm, apogeeKm) * 1000.0;
-        // The AKM has no role on a LEO mission: flown empty. Loads sized on the apogee
-        // (conservative for elliptic targets).
-        Spacecraft payload = payloadModel.toSpacecraft(payloadMass, 0.0);
-        double[] loads = PropellantBudget.loadsForLeo(launcher, payload, apogeeAlt, latitude);
+        // No inclination field in the wizard yet (MIS-7 P2): every mission created here targets
+        // the site's free due-east plane, which is exactly what it flew before MIS-7. The spec
+        // record already carries the plane, so P2 is a form field and nothing else.
+        LaunchPlane plane = LaunchPlane.dueEast(latitude);
+        double azimuth = plane.launchAzimuth(FastMath.toRadians(latitude));
+        // The budget has to agree with the chain MissionComposer will pick (spec §6.1): a target
+        // beyond the ascent's reach is flown through a parking orbit and circularized at apogee, so
+        // it is sized for an injection plus an apogee burn — not for one direct ascent.
         LaunchConfiguration configuration =
-            new LaunchConfiguration(launcher, loads, payload, payloadModel.id());
-        yield new MissionSpec.Leo(
+            MissionComposer.needsParkingOrbit(apogeeAlt)
+                ? highOrbitConfiguration(
+                    launcher, payloadModel, payloadMass, perigeeAlt, apogeeAlt, latitude, azimuth)
+                : directConfiguration(launcher, payloadModel, payloadMass, apogeeAlt, latitude,
+                    azimuth);
+        yield new MissionSpec.EarthOrbit(
             name,
             configuration,
             perigeeAlt,
             apogeeAlt,
+            plane.targetInclination(),
+            plane.nodeBranch(),
             siteName,
             latitude,
             longitude,
@@ -132,6 +143,56 @@ public final class MissionFactory {
             horizon);
       }
     };
+  }
+
+  /**
+   * The historical sizing: one ascent straight to the target, AKM flown empty because a direct
+   * chain has no burn for it. Loads are sized on the apogee, which is conservative for an ellipse.
+   */
+  private static LaunchConfiguration directConfiguration(
+      LauncherModel launcher,
+      PayloadModel payloadModel,
+      double payloadMass,
+      double apogeeAlt,
+      double latitude,
+      double azimuth) {
+    Spacecraft payload = payloadModel.toSpacecraft(payloadMass, 0.0);
+    double[] loads =
+        PropellantBudget.loadsForLeo(launcher, payload, apogeeAlt, latitude, azimuth);
+    return new LaunchConfiguration(launcher, loads, payload, payloadModel.id());
+  }
+
+  /**
+   * Sizing for a target the ascent cannot reach directly (spec §6): parking orbit, injection burn,
+   * coast to apogee, circularization there. The AKM is loaded when the payload has one — it is what
+   * lets a launcher whose upper stage cannot hold the coast fly the mission at all.
+   *
+   * <p>The plane change charged at apogee is <b>zero</b>, unlike a GEO mission's. Since MIS-7 the
+   * ascent is steered into the target plane, so what reaches apogee is already in it, give or take
+   * the residual the plane trim cleans up. Charging the launch latitude here would size the kick
+   * motor for a burn the mission does not make.
+   */
+  private static LaunchConfiguration highOrbitConfiguration(
+      LauncherModel launcher,
+      PayloadModel payloadModel,
+      double payloadMass,
+      double perigeeAlt,
+      double apogeeAlt,
+      double latitude,
+      double azimuth) {
+    PropellantBudget.GeoLoads loads =
+        PropellantBudget.loadsForHighOrbit(
+            launcher,
+            payloadModel,
+            payloadMass,
+            MissionComposer.parkingAltitudeFor(perigeeAlt),
+            apogeeAlt,
+            latitude,
+            0.0,
+            azimuth);
+    Spacecraft payload = payloadModel.toSpacecraft(payloadMass, loads.akmLoad());
+    return new LaunchConfiguration(
+        launcher, loads.launcherLoads(), payload, payloadModel.id());
   }
 
   /**

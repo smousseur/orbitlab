@@ -540,6 +540,119 @@ qu'il lui faut.
 
 ---
 
+## 11.1 Bilan de P1.a → P1.c (livré le 2026-08-16)
+
+`P1.a`, `P1.a-bis`, `P1.b` et `P1.c` sont livrés. `P1.d` (MEO) ne l'est pas. Les mesures ci-dessous
+remplacent les estimations correspondantes du corps de la spec.
+
+### Ce que le pilotage donne (`T1`, `AscentPlaneControlTest`, Kourou, variables fixes)
+
+| Inclinaison commandée | Atteinte à MECO | Autorité | Résidu | Perte de pilotage |
+|---|---|---|---|---|
+| 28,50° | 27,03° | **93,6 %** | 1,47° | 49 m/s |
+| 51,60° | 49,13° | **94,7 %** | 2,47° | 158 m/s |
+| 90,00° | 86,76° | **96,2 %** | 3,24° | 425 m/s |
+| 98,19° | 94,96° | **96,5 %** | 3,23° | 487 m/s |
+
+Contre **0,02 %** d'autorité avant MIS-7. §4 fonctionne.
+
+### Trois estimations de cette spec corrigées par la mesure
+
+**(1) La tolérance de 1° de `T1` (§9.2) n'est pas atteignable, et ne pouvait pas l'être.** Le
+pilotage de §4.1 vise la direction prograde *dans le plan cible* : la poussée est donc en
+permanence **dans** ce plan, et n'annule jamais la composante de vitesse qui lui est perpendiculaire.
+Cette composante est fixée au kick et ne bouge plus ; le résidu vaut exactement
+
+```
+résidu = asin( 465 · cos φ · |cos A| / |v_MECO| )
+```
+
+vérifié à 0,03° près sur les quatre cibles. Conséquence contre-intuitive et importante : **le résidu
+est maximal pour un tir polaire** (`A = 0`, tout l'entraînement est hors plan) et minimal près de
+l'équatorial — l'inverse de « plus le changement de plan est grand, plus c'est dur ». `T1` assère
+donc ce modèle fermé plutôt qu'une borne plate, ce qui est strictement plus fort : une borne à 4°
+laisserait passer un pilotage qui aurait cessé de fonctionner, le modèle non.
+
+Le résidu est absorbé par le trim, comme §4.3 le prévoyait. `T5` le mesure : 86,76° après
+l'ascension, **89,9999°** après le trim, trace au sol jusqu'à 89,891° (§9.2 demandait ≥ 89°). Coût
+au nœud : 1 028 m/s.
+
+**(2) La perte de pilotage de §7 n'a pas besoin d'un terme explicite.** Elle vaut 91 à 92 % de la
+correction d'assistance signée que le budget facture déjà. §7 laissait la question ouverte
+(« si elle dépasse la marge, elle devient un terme explicite ») : elle ne la dépasse pas, elle *est*
+déjà dedans. Ajouter un terme compterait la même physique deux fois et surdimensionnerait toute
+mission inclinée.
+
+**(3) Le repère de §3.4 est tranché, et l'écart annoncé était de deux ordres de grandeur trop
+grand.** `T4` mesure à 700 km sur 3,2 jours : **0,98776 °/j** lu en GCRF, **0,98786 °/j** lu dans
+l'équateur de la date — **0,01 % d'écart, pas 1,8 %**. Le décalage de repère tombe là où §3.4 le
+prédisait, dans l'**inclinaison** (0,021° de dérive en GCRF contre 0,013° de date), et s'annule dans
+le **taux**, qui est ce qu'est physiquement l'héliosynchronisme. `LaunchPlane.inclinationFrame()`
+garde donc GCRF. Reste un écart de 0,22 % au 0,9856 °/j visé, identique dans les deux repères : c'est
+l'approximation J2 de la formule face à un champ complet, soit ~0,8°/an de dérive d'heure solaire
+locale — que le maintien à poste d'une vraie SSO corrige, et que la simulation ne modélise pas.
+
+### Le prix de §1.1c, mesuré
+
+890,733 m et 5,781 m/s à MECO sur `GravityTurnReplayConsistencyTest` (profil GEO, burn2 = 2 s), soit
+89× et 116× les tolérances N2. Les 1 964 m / 4,62 m/s de §1.1.1 étaient mesurés sur le profil LEO à
+burn2 = 250 s : vols différents, chiffres différents, même conclusion. Le calendrier et le plan ne
+bougent pas — seul le cap. Références ré-enregistrées **à tolérances inchangées** ; l'ascension à
+trois phases reproduit la référence mono-propagateur à 0,000 m.
+
+### `P1.d` — le MEO vole (livré le 2026-08-16)
+
+La règle §6.1 est en place dans `MissionComposer`, sur un **plafond d'apogée** (2 000 km) et non sur
+un test de coast. La raison est dans la ligne 2 du tableau de §6.1, qui mentionne « ou étage à long
+coast » : si la ligne 1 testait déjà le coast, cette clause serait morte. Et à cible *circulaire* un
+test de coast n'a rien à mesurer — périgée et apogée coïncident, la durée de transfert est nulle
+quelle que soit l'altitude. Ce qui interdit à un MEO la chaîne directe n'est pas une durée, c'est la
+**portée de l'ascension** : aucun gravity turn ne place un apogée à 20 200 km. Le coast garde son
+rôle une ligne plus bas, pour décider *qui* peut voler la chaîne parking.
+
+| Depuis Kourou | Coast à l'apogée | Étage supérieur | Résultat |
+|---|---|---|---|
+| MEO 20 200 km, Falcon Heavy, sans AKM | 2,98 h | 2,00 h | **refus nommant l'étage et les deux durées** |
+| MEO 20 200 km, Falcon Heavy, avec AKM | 2,98 h | délégué | chaîne parking |
+| MEO 20 200 km, Ariane 62 | 2,98 h | 6,00 h | chaîne parking |
+
+**Ce que P1.d a révélé, et qui n'est pas dans §6.** `GEOMission` volait son ascension **plein est**
+et corrigeait le plan à l'apogée. C'est juste pour le GEO — aucun tir depuis un site n'atteint
+directement le plan équatorial, donc le changement de plan *fait partie* de la circularisation — et
+faux pour un MEO à 55°, plan que le site atteint. Mesuré sur la chaîne avant correction : la
+circularisation demandait **2 969 m/s au lieu de 1 404**, vidait le moteur d'apogée, et laissait
+l'orbite à **34,5° avec un périgée de 3 391 km**. `GEOMission` distingue désormais le *plan
+d'ascension* de l'*inclinaison finale* ; le GEO passe `dueEast` et ne bouge pas.
+
+`T8` (`MeoMissionTest`), Ariane 62, charge GEO_SAT, plan commandé à 55° :
+
+| Grandeur | Obtenu | Tolérance §9.2 |
+|---|---|---|
+| Bande d'altitude volée | 19 637 – 20 202 km | ± 7 % (± 1 414 km) |
+| Inclinaison finale | **55,0027°** | ± 0,5° |
+| ΔV de circularisation | 1 478 m/s | — |
+| Inclinaison de visée à l'apogée | 0,42° | — |
+
+Le budget suit la règle : `MissionFactory` dimensionne pour la chaîne que `MissionComposer` va
+composer, et `PropellantBudget.loadsForHighOrbit` prend l'altitude cible et le changement de plan à
+l'apogée en arguments — **zéro** pour un MEO, dont l'ascension a déjà volé le plan, contre la
+latitude du site pour un GEO. Les deux d'accord, sinon la mission est budgétée pour une chaîne et
+vole l'autre.
+
+Effet de bord assumé : le cas elliptique 300 km × 35 786 km de `T2` était non physique (5 h 15 de
+coast contre 2 h déclarées) et devient un cas de refus dans `T6`. `T2` garde trois ellipses tenables.
+
+### Ce qui reste dû
+
+`AscentBaselineN2Test` est ré-enregistré et vert (voir §13). Restent : `T1b` (inclinaison après
+insertion complète), dont `T8` donne l'équivalent sur le seul profil MEO ; et l'étalement de
+19 km de l'ensemble acceptable de CMA-ES révélé par la re-capture LEO, qui n'est pas un sujet MIS-7
+mais mérite sa propre fiche.
+
+P1 est donc complet : `P1.a`, `P1.a-bis`, `P1.b`, `P1.c` et `P1.d`. P2 (UI) peut démarrer.
+
+---
+
 ## 12. Ce que P1 ne fait pas
 
 Cartes wizard polaire / SSO / MEO ; catalogue de sites de lancement (P1 passe des coordonnées à la
@@ -549,3 +662,142 @@ défauts d'horizon ; libellés et validation côté formulaire.
 
 Et hors des deux phases : les fenêtres de lancement (`MIS-2`, qui consomme ce que P1 produit), le
 RAAN cible, et le drag (`PHY-1`) — une SSO réelle décroît, la nôtre non.
+
+---
+
+## 13. Bilan de la session du 2026-08-16
+
+P1 est livré en entier — `P1.a`, `P1.a-bis`, `P1.b`, `P1.c`, `P1.d` — sur la branche
+`feature_mis7-earth-orbit`, six commits, suite complète verte. Les chiffres sont en §11.1 ; ce qui
+suit est l'inventaire de ce qui a bougé.
+
+### Ce qui a été construit
+
+| Lot | Contenu livré |
+|---|---|
+| `P1.a` | `LaunchPlane` + `NodeBranch` ; `MissionSpec.Leo` → `MissionSpec.EarthOrbit` (constructeur compact validant) ; `LEOMission` → `EarthOrbitMission` ; suppression de `Physics.getLaunchAzimuth(lat, i)` ; extraction de `Physics.localHorizontalDirection` |
+| `P1.a-bis` | correction de la base est/ouest du kick, seule, plus ré-enregistrement des références |
+| `P1.b` | attitude à plan commandé (`GravityTurnAttitudeProvider`, second constructeur) ; normale de plan portée par `AscentPlan` ; trim de plan dans la composition dès que le plan est commandé ; assistance signée dans `PropellantBudget` |
+| `P1.c` | `Physics.sunSynchronousInclination` + `LaunchPlane.sunSynchronous(altitude)` ; `LaunchPlane.inclinationFrame()` déclare GCRF, arbitrage à l'appui |
+| `P1.d` | règle de composition §6.1 dans `MissionComposer` ; `GEOMission` distingue plan d'ascension et inclinaison finale ; `PropellantBudget.loadsForHighOrbit` paramétré en altitude cible et changement de plan |
+
+### Les tests
+
+`T0` (`AscentAzimuthAuthorityTest`) est **supprimé** : ses six mesures sont consignées en §2 et §9.1,
+et ce qu'il caractérisait n'existe plus. Il avait été écrit pour mourir ; il est mort à l'heure.
+
+| # | Fixture | État |
+|---|---|---|
+| `T1` | `AscentPlaneControlTest` | vert — autorité, modèle du résidu, branches de nœud, perte de pilotage |
+| `T1b` | — | **non fait** ; `T8` en donne l'équivalent sur le seul profil MEO |
+| `T2` | `EarthOrbitNonRegressionTest` | vert — 7 cibles × 2 modes, ascension bit-à-bit identique |
+| `T3` | `SunSynchronousInclinationTest` | vert — écart max 0,007° |
+| `T4` | `SunSynchronousPrecessionTest` | vert — arbitre du repère §3.4 |
+| `T5` | `PolarCoverageTest` | vert — trace au sol à 89,891° après trim |
+| `T6` | `EarthOrbitValidationTest` | vert — règles §8 **et** refus de coast §6.1 |
+| `T7` | `PropellantBudgetAzimuthTest` | vert — les trois cas du tableau §7 |
+| `T8` | `MeoMissionTest` | vert — 19 637–20 202 km, i = 55,0027° |
+
+S'y ajoute `LaunchPlaneTest`, qui assère la dérivation d'azimut que `T0.4` caractérisait cassée.
+
+### Quatre fois où la spec s'est trompée, et la mesure a tranché
+
+1. **La tolérance de 1° de `T1`** (§9.2) est structurellement inatteignable : la poussée reste dans
+   le plan cible, donc n'annule jamais la vitesse hors plan. Le résidu a une forme fermée, et il est
+   **maximal au polaire**. `T1` assère le modèle, pas une borne.
+2. **Le terme de pilotage explicite** de §7 n'est pas dû : la perte vaut 91-92 % de la correction
+   d'assistance signée déjà facturée.
+3. **Les 1,8 % de repère** de §3.4 sont 0,01 %. L'écart tombe dans l'inclinaison, pas dans le taux.
+4. **Le MEO n'était pas qu'une affaire de coast** : `GEOMission` volait plein est et corrigeait à
+   l'apogée. Invisible tant que la cible était équatoriale, ruineux à 55°.
+
+Rien de tout cela n'a été obtenu en élargissant une tolérance existante. Les seules références
+déplacées sont celles de `GravityTurnReplayConsistencyTest` et les deux profils de
+`AscentBaselineN2Test`, toutes ré-enregistrées **à tolérances inchangées**.
+
+### Les références N2, ré-enregistrées (2026-08-16, graine 42)
+
+|  | `transitionTime` | masse MECO | périgée final | inclinaison |
+|---|---|---|---|---|
+| LEO 400 | 308,0116 → **307,1932** | +181,6 kg | 381 147,8 → **400 314,5** | 5,30476 → 5,30303 |
+| GEO | 329,5599 → **329,1242** | +93,1 kg | 35 784 682,9 → **35 786 247,8** | 0,000034 → 0,000034 |
+
+Le GEO ne bouge presque pas, et il le devait : le miroir est symétrique par rapport au méridien du
+site, il change le nœud et pas le plan — l'inclinaison est identique à quatre décimales de plus. Ses
+rayons finaux se déplacent de 1 565 m, soit 4,4·10⁻⁵ en relatif, deux ordres de grandeur sous
+`ORBIT_RELATIVE_TOLERANCE`.
+
+**Le périgée LEO, lui, bouge de 19,2 km**, et c'est le chiffre sur lequel il ne faut pas se tromper.
+C'est 5 % sur une tolérance de 0,1 %, et c'est une amélioration : 400 314 m pour 400 000 m demandés,
+là où l'ancienne référence était 18,9 km trop bas. **Ce n'est pas MIS-7 qui a amélioré le ciblage.**
+Les deux profils convergent ~500× sous le coût acceptable (0,000086 ici), donc CMA-ES rend le
+**premier** candidat assez bon et non un optimum ; la correction de la base a déplacé le paysage
+assez pour qu'un autre candidat arrive premier. Ce que mesurent réellement ces 19,2 km, c'est
+l'**étalement de l'ensemble acceptable** : deux candidats que la fonction de coût juge équivalents
+sont distants de 19 km de périgée. C'est une propriété de la fonction de coût, antérieure à MIS-7,
+et qui mérite un examen à elle seule — le `transitionTime` retenu a d'ailleurs bougé de 0,818 s,
+au-delà de sa propre tolérance de 0,5 s, pour la même raison.
+
+---
+
+## 14. P2 — ce qu'il reste à faire
+
+**La promesse de la fiche roadmap est maintenant vraie.** Tout ce qui suit est de la saisie de
+paramètres : le modèle porte l'inclinaison et la branche de nœud, la composition choisit la chaîne,
+et les refus sont déjà écrits avec leurs messages. P2 n'a aucune physique à toucher.
+
+### 14.1 Le strict minimum pour que polaire et SSO soient accessibles
+
+1. **`FormField`** — deux clés à ajouter : l'inclinaison cible et la branche de nœud. Une troisième
+   si la SSO est un mode plutôt qu'un type (voir 14.2).
+2. **`LEODynamicParameters`** — un champ d'inclinaison à côté des deux curseurs d'altitude, bornes
+   `[|φ|, 180° − |φ|]`, exactement la règle que `LaunchPlane.requireReachableFrom` applique déjà.
+   En mode SSO le champ devient **dérivé et non saisissable** : `LaunchPlane.sunSynchronous(altitude)`
+   le calcule, et il doit se recalculer quand l'altitude bouge.
+3. **`MissionFactory`, une ligne.** La couture est déjà en place :
+   ```java
+   LaunchPlane plane = LaunchPlane.dueEast(latitude);   // ← P2 remplace ceci par la valeur du formulaire
+   ```
+   Tout l'aval — budget azimuté, chaîne composée, trim de plan — suit tout seul.
+4. **`WizardPrefill`** — réécrire l'inclinaison et la branche dans les valeurs à la réouverture,
+   sans quoi éditer une mission polaire la ramènerait plein est.
+5. **Affichage** — rien à faire côté cible : `MissionTargetOrbit` lit déjà `spec.targetInclination()`
+   au lieu de la latitude du site.
+
+### 14.2 Les décisions que P2 doit prendre
+
+**Nouveaux `MissionType`, ou presets d'un même type ?** `StepMissionType` a aujourd'hui deux cartes
+en dur (`leoCard`, `geoCard`) et se verrouille en édition. Polaire, SSO et MEO sont, dans le modèle,
+des `EarthOrbit` avec une autre inclinaison — ils **n'ont pas besoin** d'un type. Mais `MissionType`
+porte deux choses qu'ils utiliseraient : `requiresPayloadPropulsion()` (le MEO en a besoin sur
+Falcon Heavy) et les défauts d'horizon de `MissionHorizon.defaultFor`. Trancher entre « quatre
+cartes, un seul type derrière » et « quatre types » est la première décision de P2.
+
+**Catalogue de sites.** `StepLaunchSite` porte cinq sites dans un `record SiteData` privé à la classe
+UI. §12 prévoit un catalogue ; le modèle de `Launchers` et `Payloads` (constantes + `byId` + `all()`)
+est le patron évident, et il rendrait `siteName` non nullable au passage.
+
+### 14.3 Les deux pièges d'enchaînement, trouvés en lisant le wizard
+
+L'ordre des étapes est **`MISSION → PARAMETERS → SITE → LAUNCHER`**, et il est à l'envers de ce dont
+P2 a besoin :
+
+- **L'inclinaison se saisit avant la latitude qui la borne.** À l'étape `PARAMETERS`, le site n'est
+  pas encore choisi : impossible de borner le champ à `[|φ|, 180° − |φ|]`, ni même de dire à
+  l'utilisateur pourquoi 5° est refusé. Trois issues : déplacer `SITE` avant `PARAMETERS` ; borner
+  à la volée quand le site change et re-valider en revenant ; ou valider seulement au pied du
+  formulaire, ce qui est la moins bonne — l'erreur arrive loin de sa cause.
+- **Le refus MEO dépend du lanceur, choisi en dernier.** Une cible à 20 200 km saisie à l'étape 2
+  n'est réfutable qu'à l'étape 4, et le message que `MissionComposer` lève est parfait pour ça (il
+  nomme l'étage, la durée exigée et la durée déclarée) — encore faut-il que `StepLauncher` le capte
+  et le montre, plutôt que de le laisser remonter à la création de la mission.
+
+Le premier piège concerne polaire et SSO, donc P2 tout entier ; le second seulement le MEO, qui peut
+être livré après.
+
+### 14.4 Ce que P2 ne doit pas faire
+
+Ne pas rouvrir la physique du plan : §4.4 tient toujours, `GravityTurnProblem` reste indifférent au
+plan et CMA-ES ne cherche pas l'orientation. Ne pas retoucher les tolérances des tests de
+non-régression pour faire passer une saisie. Et ne pas exposer le RAAN cible ni les fenêtres de tir :
+c'est `MIS-2`, qui consomme ce que P1 produit.

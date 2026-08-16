@@ -89,10 +89,10 @@ class WizardPrefillTest {
 
   @Test
   void leoSpec_survivesTheRoundTrip() {
-    MissionSpec.Leo original =
-        (MissionSpec.Leo) MissionFactory.specFromWizardValues(leoValues(), MissionType.LEO);
-    MissionSpec.Leo reopened =
-        (MissionSpec.Leo) reopen(entryFor(leoValues(), MissionType.LEO), MissionType.LEO);
+    MissionSpec.EarthOrbit original =
+        (MissionSpec.EarthOrbit) MissionFactory.specFromWizardValues(leoValues(), MissionType.LEO);
+    MissionSpec.EarthOrbit reopened =
+        (MissionSpec.EarthOrbit) reopen(entryFor(leoValues(), MissionType.LEO), MissionType.LEO);
 
     assertSameSite(original, reopened);
     assertSameVehicle(original, reopened);

@@ -103,7 +103,11 @@ public abstract class GravityTurnBurnStage extends MissionStage {
     AscentPlan plan = planRef.require(getName());
 
     propagator.setAttitudeProvider(
-        new GravityTurnAttitudeProvider(plan.kickDate(), plan.transitionTime(), plan.exponent()));
+        new GravityTurnAttitudeProvider(
+            plan.kickDate(),
+            plan.transitionTime(),
+            plan.exponent(),
+            plan.commandedPlaneNormal()));
     configureBurn(propagator, plan);
     instrumentation.arm(propagator, plan, getName());
 

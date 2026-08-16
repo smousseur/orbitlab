@@ -22,6 +22,22 @@ public record Spacecraft(
   }
 
   /**
+   * Whether this payload can fly a burn of its own — an apogee kick motor with propellant in it.
+   *
+   * <p>What it buys is <b>coast</b>, not thrust: a payload that carries its own circularization can
+   * be dropped on a transfer orbit and left to reach apogee hours later, past anything the launcher's
+   * upper stage is specified to survive shut down. It is why a Falcon Heavy reaches GEO at all, on a
+   * 5 h 15 coast to apogee its 2 h stage could never hold, and it is the second row of the
+   * composition rule in {@code MissionComposer} (spec {@code
+   * docs/earth-orbit/01-mission-terre-parametrable.md} §6.1).
+   *
+   * @return {@code true} when the payload carries usable propellant
+   */
+  public boolean hasApogeeKickMotor() {
+    return propellantLoad > 0.0;
+  }
+
+  /**
    * Historical default payload (150 kg, no usable propellant). Kept for the legacy mission path and
    * test fixtures; wizard payloads come from the {@code Payloads} catalog.
    */

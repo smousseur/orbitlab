@@ -31,8 +31,8 @@ class MissionEntryFailureTest {
     OrekitService.get().initialize();
   }
 
-  private static MissionSpec.Leo leoSpec() {
-    return new MissionSpec.Leo(
+  private static MissionSpec.EarthOrbit leoSpec() {
+    return MissionSpec.EarthOrbit.dueEast(
         "Detail view fixture",
         LaunchConfiguration.fullyLoaded(Launchers.FALCON_HEAVY, Spacecraft.LEGACY),
         400_000.0,

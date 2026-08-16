@@ -1,7 +1,7 @@
 package com.smousseur.orbitlab.simulation.mission.optimizer;
 
 import com.smousseur.orbitlab.simulation.OrekitService;
-import com.smousseur.orbitlab.simulation.mission.operation.LEOMission;
+import com.smousseur.orbitlab.simulation.mission.operation.EarthOrbitMission;
 import com.smousseur.orbitlab.simulation.mission.runtime.MissionComputeResult;
 import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchConfiguration;
 import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Launchers;
@@ -36,21 +36,21 @@ public class LEOMissionOptimizationTest extends AbstractTrajectoryOptimizerTest 
   @ParameterizedTest(name = "targetAltitude={0}m")
   @ValueSource(doubles = {300_000, 600_000, 800_000, 1_000_000})
   void testCircularMissions(double targetAltitude) {
-    LEOMission mission = new LEOMission("LEO mission", targetAltitude);
+    EarthOrbitMission mission = new EarthOrbitMission("LEO mission", targetAltitude);
     testMission(mission, targetAltitude, targetAltitude);
   }
 
   @ParameterizedTest(name = "perigee={0}m, apogee={1}m")
   @CsvSource({"300_000, 600_000", "600_000, 800_000", "200_000, 1_000_000"})
   void testEllipticMissions(double perigeeAltitude, double apogeeAltitude) {
-    LEOMission mission = new LEOMission("LEO mission", perigeeAltitude, apogeeAltitude);
+    EarthOrbitMission mission = new EarthOrbitMission("LEO mission", perigeeAltitude, apogeeAltitude);
     testMission(mission, perigeeAltitude, apogeeAltitude);
   }
 
   @Test
   void testFalconHeavy() {
-    LEOMission mission =
-        new LEOMission(
+    EarthOrbitMission mission =
+        new EarthOrbitMission(
             "Falcon Heavy",
             new LaunchConfiguration(
                 Launchers.FALCON_HEAVY, new double[] {600_000, 100_000}, Spacecraft.LEGACY),
@@ -69,8 +69,8 @@ public class LEOMissionOptimizationTest extends AbstractTrajectoryOptimizerTest 
     Spacecraft payload = Payloads.EARTH_OBSERVATION_SAT.toSpacecraft(10_000, 0.0);
     double[] loads =
         PropellantBudget.loadsForLeo(Launchers.FALCON_HEAVY, payload, 400_000, LAUNCH_LATITUDE_DEG);
-    LEOMission mission =
-        new LEOMission(
+    EarthOrbitMission mission =
+        new EarthOrbitMission(
             "Falcon Heavy (budget loads)",
             new LaunchConfiguration(Launchers.FALCON_HEAVY, loads, payload),
             400_000);

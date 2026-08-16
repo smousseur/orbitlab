@@ -61,7 +61,7 @@ class MissionEntryTest {
     assertTrue(entry.getOptimizerResult().isEmpty());
     assertEquals(
         600_000,
-        ((MissionSpec.Leo) entry.spec().orElseThrow()).perigeeAltitude(),
+        ((MissionSpec.EarthOrbit) entry.spec().orElseThrow()).perigeeAltitude(),
         1e-6,
         "the entry now flies the edited spec");
   }

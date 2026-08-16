@@ -54,16 +54,16 @@ class MissionAscentWiringTest {
     return Stream.of(
         Arguments.of(
             "LEO circular (analytic Hohmann transfer)",
-            (Mission) new LEOMission("LEO analytic", falconHeavy(), TARGET_ALT)),
+            (Mission) new EarthOrbitMission("LEO analytic", falconHeavy(), TARGET_ALT)),
         Arguments.of(
             "LEO circular (optimized transfer)",
             (Mission)
-                LEOMission.circularWithOptimizedTransfer(
+                EarthOrbitMission.circularWithOptimizedTransfer(
                     "LEO optimized", falconHeavy(), TARGET_ALT)),
         Arguments.of(
             "LEO elliptic (optimized transfer)",
             (Mission)
-                LEOMission.ellipticWithOptimizedTransfer(
+                EarthOrbitMission.ellipticWithOptimizedTransfer(
                     "LEO elliptic", falconHeavy(), TARGET_ALT, 800_000.0)),
         Arguments.of("GEO", (Mission) new GEOMission("GEO", TARGET_ALT, GEOMission.GEO_ALTITUDE)),
         // A second launcher holds the property where a single one could not: the three-phase
@@ -71,7 +71,7 @@ class MissionAscentWiringTest {
         // produce (spec docs/launchers/01-ariane-62.md §6.2).
         Arguments.of(
             "LEO circular, Ariane 62 (analytic Hohmann transfer)",
-            (Mission) new LEOMission("LEO Ariane 62", ariane62(), TARGET_ALT)));
+            (Mission) new EarthOrbitMission("LEO Ariane 62", ariane62(), TARGET_ALT)));
   }
 
   @ParameterizedTest(name = "{0}")

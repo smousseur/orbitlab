@@ -1,9 +1,11 @@
 package com.smousseur.orbitlab.simulation.mission.operation;
 
+import com.smousseur.orbitlab.core.OrbitlabException;
 import com.smousseur.orbitlab.simulation.mission.MissionHorizon;
 import com.smousseur.orbitlab.simulation.mission.MissionType;
 import com.smousseur.orbitlab.simulation.mission.OptimizationType;
 import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchConfiguration;
+import java.util.Locale;
 import java.util.Objects;
 
 /**
@@ -16,7 +18,7 @@ import java.util.Objects;
  * lets the optimization toggle recompose the stages (analytic ↔ CMA-ES) after the wizard closes,
  * instead of freezing one composition at creation time.
  */
-public sealed interface MissionSpec permits MissionSpec.Leo, MissionSpec.Geo {
+public sealed interface MissionSpec permits MissionSpec.EarthOrbit, MissionSpec.Geo {
 
   /**
    * @return the human-readable mission name
@@ -92,31 +94,49 @@ public sealed interface MissionSpec permits MissionSpec.Leo, MissionSpec.Geo {
   MissionSpec withLauncherLoads(double[] launcherLoads);
 
   /**
-   * LEO insertion spec. A circular target has {@code perigeeAltitude == apogeeAltitude}; an
-   * elliptic target keeps a distinct apogee.
+   * Earth-orbit insertion spec: any orbit reached by an ascent followed by a transfer, whatever its
+   * plane. A circular target has {@code perigeeAltitude == apogeeAltitude}; an elliptic target keeps
+   * a distinct apogee. A polar or sun-synchronous target is this same record with another
+   * inclination — no dedicated mission type, no dedicated objective (spec {@code
+   * docs/earth-orbit/01-mission-terre-parametrable.md} §3.2 and §5).
+   *
+   * <p><b>The eccentricity stays implicit.</b> The (perigee, apogee) pair already carries it, and
+   * {@link MissionComposer} reads that pair to choose between the circular and the elliptic
+   * composition. A third, redundant parameter would be a source of inconsistency rather than a
+   * generalisation.
+   *
+   * <p><b>The compact constructor validates</b> (spec §8): an inclination the site cannot reach, or
+   * an apogee below the perigee, is refused here — at construction, where the caller still knows
+   * what it asked for — instead of surfacing as a mission that propagates into something else.
    *
    * @param name the mission name
    * @param configuration the launch configuration
    * @param perigeeAltitude the target perigee altitude in meters
    * @param apogeeAltitude the target apogee altitude in meters
+   * @param targetInclination the target orbit inclination in <b>radians</b>, in the frame {@link
+   *     LaunchPlane#inclinationFrame()} declares
+   * @param nodeBranch which of the two azimuths reaching that inclination is flown; {@code null} is
+   *     normalised to {@link NodeBranch#ASCENDING}
    * @param siteName the launch site display name, or {@code null} when unnamed
    * @param latitude the launch site latitude in degrees
    * @param longitude the launch site longitude in degrees
    * @param altitude the launch site altitude in meters
    * @param horizon the restitution horizon, or {@code null} for the derived default
    */
-  record Leo(
+  record EarthOrbit(
       String name,
       LaunchConfiguration configuration,
       double perigeeAltitude,
       double apogeeAltitude,
+      double targetInclination,
+      NodeBranch nodeBranch,
       String siteName,
       double latitude,
       double longitude,
       double altitude,
       MissionHorizon horizon)
       implements MissionSpec {
-    public Leo {
+    public EarthOrbit {
       Objects.requireNonNull(name, "name");
       Objects.requireNonNull(configuration, "configuration");
       // Normalised here rather than at every call site: a spec assembled by hand (tests, any
@@ -124,6 +144,65 @@ public sealed interface MissionSpec permits MissionSpec.Leo, MissionSpec.Geo {
       if (horizon == null) {
         horizon = MissionHorizon.defaultFor(MissionType.LEO);
       }
+      if (nodeBranch == null) {
+        nodeBranch = NodeBranch.ASCENDING;
+      }
+      if (apogeeAltitude < perigeeAltitude) {
+        throw new OrbitlabException(
+            String.format(
+                Locale.ROOT,
+                "Target apogee %.0f m is below the target perigee %.0f m",
+                apogeeAltitude,
+                perigeeAltitude));
+      }
+      new LaunchPlane(targetInclination, nodeBranch).requireReachableFrom(latitude);
+    }
+
+    /**
+     * The historical shape: the plane a due-east launch from the site reaches for free, inclination
+     * equal to the latitude. Every call site that predates MIS-7 means this one.
+     *
+     * @param name the mission name
+     * @param configuration the launch configuration
+     * @param perigeeAltitude the target perigee altitude in meters
+     * @param apogeeAltitude the target apogee altitude in meters
+     * @param siteName the launch site display name, or {@code null} when unnamed
+     * @param latitude the launch site latitude in degrees
+     * @param longitude the launch site longitude in degrees
+     * @param altitude the launch site altitude in meters
+     * @param horizon the restitution horizon, or {@code null} for the derived default
+     * @return the spec, targeting the site's free plane
+     */
+    public static EarthOrbit dueEast(
+        String name,
+        LaunchConfiguration configuration,
+        double perigeeAltitude,
+        double apogeeAltitude,
+        String siteName,
+        double latitude,
+        double longitude,
+        double altitude,
+        MissionHorizon horizon) {
+      LaunchPlane plane = LaunchPlane.dueEast(latitude);
+      return new EarthOrbit(
+          name,
+          configuration,
+          perigeeAltitude,
+          apogeeAltitude,
+          plane.targetInclination(),
+          plane.nodeBranch(),
+          siteName,
+          latitude,
+          longitude,
+          altitude,
+          horizon);
+    }
+
+    /**
+     * @return the target plane, as {@code EarthOrbitMission} and the composer consume it
+     */
+    public LaunchPlane launchPlane() {
+      return new LaunchPlane(targetInclination, nodeBranch);
     }
 
     @Override
@@ -133,7 +212,7 @@ public sealed interface MissionSpec permits MissionSpec.Leo, MissionSpec.Geo {
 
     @Override
     public MissionSpec withLauncherLoads(double[] launcherLoads) {
-      return new Leo(
+      return new EarthOrbit(
           name,
           new LaunchConfiguration(
               configuration.launcher(),
@@ -142,6 +221,8 @@ public sealed interface MissionSpec permits MissionSpec.Leo, MissionSpec.Geo {
               configuration.payloadId()),
           perigeeAltitude,
           apogeeAltitude,
+          targetInclination,
+          nodeBranch,
           siteName,
           latitude,
           longitude,

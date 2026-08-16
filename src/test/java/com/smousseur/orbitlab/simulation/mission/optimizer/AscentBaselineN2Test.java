@@ -5,7 +5,7 @@ import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemeris;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemerisPoint;
 import com.smousseur.orbitlab.simulation.mission.operation.GEOMission;
-import com.smousseur.orbitlab.simulation.mission.operation.LEOMission;
+import com.smousseur.orbitlab.simulation.mission.operation.EarthOrbitMission;
 import com.smousseur.orbitlab.simulation.mission.runtime.MissionComputeResult;
 import com.smousseur.orbitlab.simulation.mission.runtime.MissionOptimizer;
 import com.smousseur.orbitlab.simulation.mission.runtime.StagePerformance;
@@ -57,19 +57,16 @@ import org.orekit.utils.PVCoordinates;
  * <em>at fixed variables</em> belongs to a different, faster fixture: {@code
  * GravityTurnReplayConsistencyTest#threePhaseAscent_reproducesThePreSplitBaseline}.
  *
- * <p><b>Slow.</b> Each fixture is a complete mission optimization (LEO ~1 min, GEO ~2 min), so the
- * class is opt-in like the other integration loops:
- *
- * <pre>{@code
- * gradlew test --tests "*AscentBaselineN2Test" -Dorbitlab.slowTests=true
- * }</pre>
+ * <p><b>Each fixture is a complete mission optimization</b>, measured at 7 s (LEO) and 11 s (GEO)
+ * of optimizer wall clock on 2026-08-16 — the figures the class javadoc used to quote, ~1 min and
+ * ~2 min, predate the explicit-staging split. It runs with the rest of the suite; if it ever grows
+ * back to the minute, gate it the way the other integration loops are gated rather than deleting
+ * its coverage.
  *
  * <p>The two fixtures are the ones the N1 hard criteria already fly: {@code
  * LEOMissionOptimizationTest#testFalconHeavy} (Falcon Heavy, LEO 400 km) and {@code
  * GEOMissionOptimizationTest#testGEOMission} (Falcon Heavy, parking 400 km → GEO).
  */
-@EnabledIfSystemProperty(named = "orbitlab.slowTests", matches = "true")
-@Disabled
 public class AscentBaselineN2Test extends AbstractTrajectoryOptimizerTest {
   private static final Logger logger = LogManager.getLogger(AscentBaselineN2Test.class);
 
@@ -118,37 +115,67 @@ public class AscentBaselineN2Test extends AbstractTrajectoryOptimizerTest {
   // spec file, and the split's fidelity at FIXED variables (0.001 m) in
   // GravityTurnReplayConsistencyTest.
 
+  // ── RE-RECORDED at MIS-7 P1.a-bis (2026-08-16, seed 42) ──────────────────
+  // Correcting the pitch kick's local horizontal basis (spec
+  // docs/earth-orbit/01-mission-terre-parametrable.md §1.1c) mirrors the launch heading about the
+  // site meridian, and moves the ascent well past these tolerances — 890.733 m of position and
+  // 5.781 m/s of velocity at MECO on GravityTurnReplayConsistencyTest, against 10 m and 0.05 m/s.
+  // Both profiles were therefore re-captured. The tolerances below are UNTOUCHED: re-recording a
+  // measured reference after an assumed behaviour change is legitimate and is documented here;
+  // widening a tolerance to make a test pass is the failure spec §9 forbids.
+  //
+  // What moved, against the 2026-08-03 (étape 3) values:
+  //
+  //          transitionTime      MECO mass        final perigee        inclination
+  //   LEO    308.0116 → 307.1932    +181.6 kg   381 147.8 → 400 314.5     5.30476 → 5.30303
+  //   GEO    329.5599 → 329.1242     +93.1 kg  35 784 682.9 → 35 786 247.8  0.000034 → 0.000034
+  //
+  // GEO barely moved, as it must: the mirror is symmetric about the site meridian, so it changes
+  // the node and not the plane, and GEO's inclination is not even to four more decimals. Its final
+  // radii shifted 1 565 m, 4.4e-5 in relative terms — inside ORBIT_RELATIVE_TOLERANCE with two
+  // orders of magnitude to spare.
+  //
+  // LEO's PERIGEE MOVED 19.2 km, and that is the number to be careful about. It is a 5 % move on a
+  // 0.1 % tolerance, and it is an improvement: 400 314 m against a 400 000 m request, where the old
+  // reference sat 18.9 km low. Do NOT read it as MIS-7 having improved the targeting. Both profiles
+  // converge ~500x below the acceptable cost (0.000086 here), so CMA-ES returns the FIRST
+  // good-enough candidate rather than an optimum, and the basis correction moved the landscape
+  // enough that a different candidate is now first. What the 19.2 km actually measures is the
+  // SPREAD of the acceptable set: two candidates the cost function considers equally good are 19 km
+  // apart in perigee. That is a property of the cost function, it predates MIS-7, and it is worth a
+  // look of its own — the retained transitionTime also moved 0.818 s, past its own 0.5 s tolerance,
+  // for the same reason.
   private static final Baseline LEO_400_BASELINE =
       new Baseline(
-          308.011551,
+          307.193166,
           new MecoState(
-              315.011551,
-              36186.452,
-              new Vector3D(-3065525.477058, -5678591.744206, 577908.469625),
-              new Vector3D(6965.770440, -3782.373805, -187.967853)),
+              314.193166,
+              36368.082,
+              new Vector3D(-3065580.683126, -5677159.212400, 577919.103944),
+              new Vector3D(6963.051876, -3780.275135, -187.406132)),
           new MecoState(
-              315.011551,
-              36186.452,
-              new Vector3D(-3065525.477058, -5678591.744206, 577908.469625),
-              new Vector3D(6965.770440, -3782.373805, -187.967853)),
-          new OrbitShape(381147.8, 419095.3, 5.304759),
-          6.7);
+              314.193166,
+              36368.082,
+              new Vector3D(-3065580.683126, -5677159.212400, 577919.103944),
+              new Vector3D(6963.051876, -3780.275135, -187.406132)),
+          new OrbitShape(400314.5, 419164.8, 5.303026),
+          7.1);
 
   private static final Baseline GEO_BASELINE =
       new Baseline(
-          329.559947,
+          329.124209,
           new MecoState(
-              336.559947,
-              64486.788,
-              new Vector3D(-2969976.035658, -5651391.213123, 569847.404613),
-              new Vector3D(7058.646244, -3728.703702, -198.238346)),
+              336.124209,
+              64579.867,
+              new Vector3D(-2971529.637513, -5650537.034819, 569924.139212),
+              new Vector3D(7056.046315, -3730.610941, -197.768295)),
           new MecoState(
-              336.559947,
-              64486.788,
-              new Vector3D(-2969976.035658, -5651391.213123, 569847.404613),
-              new Vector3D(7058.646244, -3728.703702, -198.238346)),
-          new OrbitShape(35784682.9, 35789627.6, 0.000034),
-          9.2);
+              336.124209,
+              64579.867,
+              new Vector3D(-2971529.637513, -5650537.034819, 569924.139212),
+              new Vector3D(7056.046315, -3730.610941, -197.768295)),
+          new OrbitShape(35786247.8, 35791193.0, 0.000034),
+          11.4);
 
   @BeforeAll
   static void init() {
@@ -157,8 +184,8 @@ public class AscentBaselineN2Test extends AbstractTrajectoryOptimizerTest {
 
   @Test
   void leo400Baseline() {
-    LEOMission mission =
-        new LEOMission(
+    EarthOrbitMission mission =
+        new EarthOrbitMission(
             "Falcon Heavy",
             new LaunchConfiguration(
                 Launchers.FALCON_HEAVY, new double[] {600_000, 100_000}, Spacecraft.LEGACY),
