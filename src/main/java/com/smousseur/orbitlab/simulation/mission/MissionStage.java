@@ -1,6 +1,7 @@
 package com.smousseur.orbitlab.simulation.mission;
 
 import com.smousseur.orbitlab.simulation.OrekitService;
+import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
 import com.smousseur.orbitlab.simulation.mission.vehicle.ActiveStageInfo;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropulsionSystem;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
@@ -102,6 +103,21 @@ public abstract class MissionStage {
    */
   public double maxStepSeconds(SpacecraftState entryState, Mission mission) {
     return isPropulsive() ? OrekitService.SAFE_MAX_STEP : OrekitService.COAST_MAX_STEP;
+  }
+
+  /**
+   * The gravitational context this stage propagates in. Inherits the mission's by default.
+   *
+   * <p>Deliberately shaped like {@link #maxStepSeconds}: a phase is the unit that knows what it
+   * flies around, so it is the unit that declares it. Nothing overrides this in L1 — the lot is a
+   * pure refactor (spec {@code docs/multi-corps/03-conception-L1.md} §3.1). L4 is where a stage
+   * first declares another body, and this is the seam it will use.
+   *
+   * @param mission the parent mission
+   * @return the central body context for this stage
+   */
+  public GravitationalContext gravitationalContext(Mission mission) {
+    return mission.gravitationalContext();
   }
 
   /**

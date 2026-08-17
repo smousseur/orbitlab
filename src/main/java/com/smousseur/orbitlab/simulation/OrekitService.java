@@ -1,6 +1,7 @@
 package com.smousseur.orbitlab.simulation;
 
 import com.smousseur.orbitlab.core.SolarSystemBody;
+import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -165,6 +166,17 @@ public final class OrekitService {
    * @return a new numerical propagator with Newtonian gravity only
    */
   public NumericalPropagator createTestPropagator(double maxStep) {
+    return createTestPropagator(GravitationalContext.earth(), maxStep);
+  }
+
+  /**
+   * Creates a Newtonian-only propagator around the given central body.
+   *
+   * @param body the central body context
+   * @param maxStep integrator maximum step in seconds (must satisfy the late-ignition invariant)
+   * @return a new numerical propagator with Newtonian gravity only
+   */
+  public NumericalPropagator createTestPropagator(GravitationalContext body, double maxStep) {
     double minStep = 0.001;
     double absTol = 1e-8;
     double relTol = 1e-10;
@@ -173,7 +185,7 @@ public final class OrekitService {
         new DormandPrince853Integrator(minStep, maxStep, absTol, relTol);
 
     NumericalPropagator propagator = new NumericalPropagator(integrator);
-    propagator.addForceModel(new NewtonianAttraction(Constants.WGS84_EARTH_MU));
+    propagator.addForceModel(new NewtonianAttraction(body.mu()));
     return propagator;
   }
 
@@ -199,6 +211,23 @@ public final class OrekitService {
    * @return a new numerical propagator with 8x8 gravity field
    */
   public NumericalPropagator createOptimizationPropagator(double maxStep) {
+    return createOptimizationPropagator(GravitationalContext.earth(), maxStep);
+  }
+
+  /**
+   * Creates an optimization-fidelity (8×8 gravity) propagator around the given central body.
+   *
+   * <p><b>The order of the three calls below is load-bearing</b> — {@code setOrbitType}, then
+   * {@code setMu}, then {@code addForceModel}. Orekit is not indifferent to it everywhere, and a
+   * tidier-looking permutation would cost the L0 baseline (spec {@code
+   * docs/multi-corps/03-conception-L1.md} §7).
+   *
+   * @param body the central body context
+   * @param maxStep integrator maximum step in seconds (must satisfy the late-ignition invariant)
+   * @return a new numerical propagator with the body's 8x8 gravity field
+   */
+  public NumericalPropagator createOptimizationPropagator(
+      GravitationalContext body, double maxStep) {
     double minStep = 0.001;
     double absTol = 1e-8;
     double relTol = 1e-10;
@@ -208,8 +237,8 @@ public final class OrekitService {
 
     NumericalPropagator propagator = new NumericalPropagator(integrator);
     propagator.setOrbitType(OrbitType.CARTESIAN);
-    propagator.setMu(Constants.WGS84_EARTH_MU);
-    propagator.addForceModel(getGravityModel(SolarSystemBody.EARTH));
+    propagator.setMu(body.mu());
+    propagator.addForceModel(getGravityModel(body.body()));
     return propagator;
   }
 

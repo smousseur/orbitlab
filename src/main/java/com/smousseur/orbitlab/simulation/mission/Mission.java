@@ -1,6 +1,7 @@
 package com.smousseur.orbitlab.simulation.mission;
 
 import com.smousseur.orbitlab.simulation.OrekitService;
+import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
 import com.smousseur.orbitlab.simulation.mission.objective.MissionObjective;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
 import java.util.List;
@@ -69,14 +70,28 @@ public abstract class Mission {
   public abstract SpacecraftState getInitialState(AbsoluteDate initialDate);
 
   /**
-   * Computes the geodetic altitude of the spacecraft above the Earth's surface.
+   * The gravitational context this mission's stages fly in unless they say otherwise.
+   *
+   * <p>Shaped exactly like {@link MissionStage#maxStepSeconds}: a default carried by the mission,
+   * overridable per stage. In L1 nothing overrides it — that is the definition of the lot (spec
+   * {@code docs/multi-corps/03-conception-L1.md} §3.1). L4 is where a stage first declares another
+   * body.
+   *
+   * @return the central body context
+   */
+  public GravitationalContext gravitationalContext() {
+    return GravitationalContext.earth();
+  }
+
+  /**
+   * Computes the geodetic altitude of the spacecraft above the central body's reference shape.
    *
    * @param state the spacecraft state to evaluate
-   * @return the altitude in meters above the WGS84 reference ellipsoid
+   * @return the altitude in meters above the reference shape
    */
   public double computeAltitudeMeters(SpacecraftState state) {
-    OneAxisEllipsoid earth = OrekitService.get().getEarthEllipsoid();
-    GeodeticPoint gp = earth.transform(state.getPosition(), state.getFrame(), state.getDate());
+    OneAxisEllipsoid shape = gravitationalContext().shape();
+    GeodeticPoint gp = shape.transform(state.getPosition(), state.getFrame(), state.getDate());
     return gp.getAltitude();
   }
 
