@@ -25,6 +25,14 @@ public final class MissionEphemeris {
   private final boolean[] propulsive;
   private final double[] masses;
   private final double[] altitudes;
+
+  /**
+   * The frame each sample is expressed in (PHY-4 / L3). One entry per sample rather than a table of
+   * spans, for the reason {@link MissionEphemerisPoint#arc()} gives; the storage is one reference
+   * per point, about 1% of a point's footprint.
+   */
+  private final TrajectoryArc[] arcs;
+
   private final boolean complete;
 
   /**
@@ -67,6 +75,7 @@ public final class MissionEphemeris {
     propulsive = new boolean[n];
     masses = new double[n];
     altitudes = new double[n];
+    arcs = new TrajectoryArc[n];
 
     for (int i = 0; i < n; i++) {
       MissionEphemerisPoint p = points.get(i);
@@ -77,6 +86,7 @@ public final class MissionEphemeris {
       propulsive[i] = p.propulsive();
       masses[i] = p.mass();
       altitudes[i] = p.altitudeMeters();
+      arcs[i] = p.arc();
     }
 
     displayTrail = TrajectoryPolyline.of(times, positions, stageNames, propulsive);
@@ -135,8 +145,22 @@ public final class MissionEphemeris {
    * <ul>
    *   <li>Position/velocity: cubic Hermite via EphemerisInterpolator
    *   <li>Altitude: linear interpolation between alt[i0] and alt[i1]
-   *   <li>Stage name, mass: floor semantics (value of point[i0])
+   *   <li>Stage name, mass, arc: floor semantics (value of point[i0])
    * </ul>
+   *
+   * <p><b>Across an arc boundary nothing is interpolated at all</b> (PHY-4 / L3, spec {@code
+   * docs/multi-corps/05-conception-L3.md} §3.3). A cubic Hermite between two positions expressed in
+   * different frames is not an approximation, it is meaningless — it would blend a geocentric vector
+   * with a selenocentric one. The bracketing point is returned unchanged instead, which extends to
+   * the arc the floor semantics this method already applies to the stage name and the mass.
+   *
+   * <p>Two consequences, both wanted. The spacecraft holds still for at most one sampling step at
+   * the crossing, rather than being drawn somewhere it never was. And the render context — derived
+   * from the returned point by {@code MissionRenderer.renderContextFor} — flips <em>atomically</em>
+   * at the incoming sample: there is no frame on which the states reading it could hold different
+   * arcs. Converting the two states into a common frame and interpolating properly is L4's work,
+   * with L4's millimetre target; doing it here would be doing it early, untested, on a path called
+   * three times per frame.
    *
    * @param date the target date
    * @return the interpolated ephemeris point
@@ -146,7 +170,7 @@ public final class MissionEphemeris {
     int[] interval = EphemerisInterpolator.findInterval(times, date);
     int i0 = interval[0], i1 = interval[1];
 
-    if (i0 == i1) {
+    if (i0 == i1 || !arcs[i0].equals(arcs[i1])) {
       return pointAt(i0);
     }
 
@@ -164,7 +188,8 @@ public final class MissionEphemeris {
     double alt = altitudes[i0] + tau * (altitudes[i1] - altitudes[i0]);
 
     // Mass and stage: floor semantics
-    return new MissionEphemerisPoint(date, p, v, stageNames[i0], propulsive[i0], masses[i0], alt);
+    return new MissionEphemerisPoint(
+        date, p, v, stageNames[i0], propulsive[i0], masses[i0], alt, arcs[i0]);
   }
 
   /**
@@ -213,6 +238,7 @@ public final class MissionEphemeris {
         stageNames[index],
         propulsive[index],
         masses[index],
-        altitudes[index]);
+        altitudes[index],
+        arcs[index]);
   }
 }

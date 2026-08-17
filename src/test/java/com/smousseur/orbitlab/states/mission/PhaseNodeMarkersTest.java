@@ -16,6 +16,7 @@ import com.smousseur.orbitlab.engine.AssetFactory;
 import com.smousseur.orbitlab.simulation.mission.MissionId;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemeris;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemerisPoint;
+import com.smousseur.orbitlab.simulation.mission.ephemeris.TrajectoryArc;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.TrajectoryPolyline;
 import java.util.ArrayList;
 import java.util.List;
@@ -75,7 +76,8 @@ class PhaseNodeMarkersTest {
               names[i],
               burns[i],
               1_000.0,
-              400_000.0));
+              400_000.0,
+              TrajectoryArc.earth()));
     }
     return new MissionEphemeris(points).displayTrail();
   }

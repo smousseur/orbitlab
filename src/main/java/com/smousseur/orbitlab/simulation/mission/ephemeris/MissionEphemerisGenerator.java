@@ -1,5 +1,6 @@
 package com.smousseur.orbitlab.simulation.mission.ephemeris;
 
+import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionHorizon;
 import com.smousseur.orbitlab.simulation.mission.MissionStage;
@@ -140,12 +141,28 @@ public final class MissionEphemerisGenerator {
           run.finalState().getDate());
     }
 
+    /**
+     * Turns one flown state into a sample.
+     *
+     * <p>The gravitational context is read <b>once, from the stage</b>, and serves twice: it names
+     * the arc the sample belongs to, and it provides the reference shape the altitude is measured
+     * against (PHY-4 / L3, spec {@code docs/multi-corps/05-conception-L3.md} §3.4). Reading it twice
+     * would let the two disagree about which body the point is describing.
+     */
     private MissionEphemerisPoint pointOf(MissionStage stage, SpacecraftState state) {
       Vector3D pos = state.getPosition();
       Vector3D vel = state.getPVCoordinates().getVelocity();
-      double alt = mission.computeAltitudeMeters(state);
+      GravitationalContext context = stage.gravitationalContext(mission);
+      double alt = mission.computeAltitudeMeters(state, context);
       return new MissionEphemerisPoint(
-          state.getDate(), pos, vel, stage.getName(), stage.isPropulsive(), state.getMass(), alt);
+          state.getDate(),
+          pos,
+          vel,
+          stage.getName(),
+          stage.isPropulsive(),
+          state.getMass(),
+          alt,
+          TrajectoryArc.of(context));
     }
   }
 }

@@ -31,7 +31,14 @@ class MissionEphemerisDisplayPointTest {
 
   private static MissionEphemerisPoint point(double seconds, double x, Vector3D velocity) {
     return new MissionEphemerisPoint(
-        T0.shiftedBy(seconds), new Vector3D(x, 0, 0), velocity, "drift", false, 1_000.0, 621_000.0);
+        T0.shiftedBy(seconds),
+        new Vector3D(x, 0, 0),
+        velocity,
+        "drift",
+        false,
+        1_000.0,
+        621_000.0,
+        TrajectoryArc.earth());
   }
 
   @Test

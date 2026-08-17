@@ -14,6 +14,14 @@ import org.orekit.time.AbsoluteDate;
  *     time. Carried on the sample rather than looked up later because the drawable polyline never
  *     sees a {@code MissionStage}, and because {@code stageName} — a free-form per-mission string —
  *     cannot be classified reliably after the fact.
+ * @param altitudeMeters the geodetic altitude above the reference shape of {@code arc}'s body — not
+ *     necessarily the Earth's
+ * @param arc the frame {@code position} and {@code velocity} are expressed in (PHY-4 / L3, spec
+ *     {@code docs/multi-corps/05-conception-L3.md} §2). Carried <b>on the point</b> rather than in a
+ *     side table because four consumers hold a bare point and each needs the frame: {@code
+ *     FloatingOriginAppState}, the spacecraft anchor, {@code CameraTransitionAppState} and the
+ *     telemetry widget. Reading it here means they read the same field of the same object, which
+ *     turns the bit-for-bit agreement they depend on from a coincidence into a property.
  */
 public record MissionEphemerisPoint(
     AbsoluteDate time,
@@ -22,11 +30,13 @@ public record MissionEphemerisPoint(
     String stageName,
     boolean propulsive,
     double mass,
-    double altitudeMeters) {
+    double altitudeMeters,
+    TrajectoryArc arc) {
   public MissionEphemerisPoint {
     Objects.requireNonNull(time, "time");
     Objects.requireNonNull(position, "position");
     Objects.requireNonNull(velocity, "velocity");
     Objects.requireNonNull(stageName, "stageName");
+    Objects.requireNonNull(arc, "arc");
   }
 }

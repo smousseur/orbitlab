@@ -158,9 +158,24 @@ class TrajectoryPolylineTest {
     MissionEphemeris ephemeris =
         new MissionEphemeris(
             java.util.List.of(
-                new MissionEphemerisPoint(T0, Vector3D.ZERO, Vector3D.PLUS_I, "S", false, 1.0, 0.0),
                 new MissionEphemerisPoint(
-                    T0.shiftedBy(1.0), Vector3D.PLUS_I, Vector3D.PLUS_I, "S", false, 1.0, 0.0)));
+                    T0,
+                    Vector3D.ZERO,
+                    Vector3D.PLUS_I,
+                    "S",
+                    false,
+                    1.0,
+                    0.0,
+                    TrajectoryArc.earth()),
+                new MissionEphemerisPoint(
+                    T0.shiftedBy(1.0),
+                    Vector3D.PLUS_I,
+                    Vector3D.PLUS_I,
+                    "S",
+                    false,
+                    1.0,
+                    0.0,
+                    TrajectoryArc.earth())));
 
     assertSame(ephemeris.displayTrail(), ephemeris.displayTrail());
     assertEquals(2, ephemeris.displayTrail().size());
