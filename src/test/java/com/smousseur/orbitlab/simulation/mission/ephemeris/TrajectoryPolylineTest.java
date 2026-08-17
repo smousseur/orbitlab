@@ -260,6 +260,70 @@ class TrajectoryPolylineTest {
         "run 1 must start on the raw sample where the stage actually changed");
   }
 
+  // ════════════════════════════════════════════════════════════════════════
+  // Arcs — the second partition (PHY-4 / L3, spec docs/multi-corps/05-conception-L3.md §4)
+  // ════════════════════════════════════════════════════════════════════════
+
+  /**
+   * The degenerate case, and the only one production reaches until L4: one arc for the whole line.
+   */
+  @Test
+  void aSingleArcSpansTheWholeTrail() {
+    TrajectoryPolyline trail = polylineOf(new int[] {10, 20, 5}, new boolean[] {true, false, true});
+
+    assertEquals(1, trail.arcs().size());
+    assertEquals(TrajectoryArc.earth(), trail.arcs().get(0).arc());
+    assertEquals(0, trail.arcs().get(0).firstVertex());
+    assertEquals(trail.size(), trail.arcs().get(0).vertexCount());
+    for (int i = 0; i < trail.size(); i++) {
+      int index = i;
+      assertEquals(0, trail.arcOf(index), () -> "vertex " + index + " left the only arc");
+    }
+  }
+
+  /**
+   * An arc boundary is a change of frame: a stride that skipped it would join two vertices
+   * expressed about different bodies with a straight segment. The boundary sits at an odd raw index
+   * a stride of this size cannot land on by chance.
+   */
+  @Test
+  void anArcBoundaryIsKeptEvenWhenTheStrideWouldSkipIt() {
+    int n = 400_000;
+    int boundary = 123_457;
+    TrajectoryPolyline trail =
+        polylineOf(new int[] {n}, new boolean[] {false}, new int[] {boundary});
+
+    assertTrue(trail.size() <= TrajectoryPolyline.MAX_POINTS, "budget exceeded");
+    assertEquals(2, trail.arcs().size(), "the crossing must not be decimated away");
+    assertEquals(
+        new Vector3D(boundary, 0, 0),
+        trail.positionAt(trail.arcs().get(1).firstVertex()),
+        "the second arc must open on the raw sample where the frame actually changed");
+  }
+
+  /**
+   * The reason arcs are a partition of their own rather than a term added to the run criterion: a
+   * sphere-of-influence crossing falls inside a phase, and folding it into the runs would split
+   * that phase into two homonymous ones — two transition markers drawn, one phase too many
+   * reported by the timeline.
+   */
+  @Test
+  void arcsAndRunsArePartitionedIndependently() {
+    // Runs open at 0, 10 and 30; the arc changes at 15, inside the second run.
+    TrajectoryPolyline trail =
+        polylineOf(new int[] {10, 20, 5}, new boolean[] {true, false, true}, new int[] {15});
+
+    assertEquals(3, trail.runs().size(), "the arc boundary must not open a run");
+    assertEquals(2, trail.arcs().size());
+    assertEquals(15, trail.arcs().get(1).firstVertex());
+    assertEquals(1, trail.runOf(15), "vertex 15 is still inside the second run");
+
+    for (int i = 0; i < trail.size(); i++) {
+      int index = i;
+      assertEquals(i < 15 ? 0 : 1, trail.arcOf(index), () -> "vertex " + index + " in the wrong arc");
+    }
+  }
+
   @Test
   void everyRunStartIsAKeptVertexEvenWhenAllRunsAreShort() {
     int[] lengths = new int[40];
