@@ -15,6 +15,7 @@ import org.orekit.data.ZipJarCrawler;
 import org.orekit.forces.ForceModel;
 import org.orekit.forces.gravity.HolmesFeatherstoneAttractionModel;
 import org.orekit.forces.gravity.NewtonianAttraction;
+import org.orekit.forces.gravity.ThirdBodyAttraction;
 import org.orekit.forces.gravity.potential.GravityFieldFactory;
 import org.orekit.forces.gravity.potential.NormalizedSphericalHarmonicsProvider;
 import org.orekit.frames.Frame;
@@ -36,6 +37,9 @@ public final class OrekitService {
 
   /** Gravity providers, cached per central body — created once, reused for every propagator. */
   private final Map<SolarSystemBody, ForceModel> gravityModels = new ConcurrentHashMap<>();
+
+  /** Third-body attractions, cached per perturbing body. Same contract as {@link #gravityModels}. */
+  private final Map<SolarSystemBody, ForceModel> thirdBodyModels = new ConcurrentHashMap<>();
 
   private OrekitService() {}
 
@@ -147,7 +151,7 @@ public final class OrekitService {
   /**
    * Creates a Newtonian-only propagator around the given central body.
    *
-   * @param body the central body context
+   * @param body the gravitational context: central body, plus any third bodies it declares
    * @param maxStep integrator maximum step in seconds (must satisfy the late-ignition invariant)
    * @return a new numerical propagator with Newtonian gravity only
    */
@@ -161,6 +165,7 @@ public final class OrekitService {
 
     NumericalPropagator propagator = new NumericalPropagator(integrator);
     propagator.addForceModel(new NewtonianAttraction(body.mu()));
+    addPerturbers(propagator, body);
     return propagator;
   }
 
@@ -170,9 +175,10 @@ public final class OrekitService {
    * <p><b>The order of the three calls below is load-bearing</b> — {@code setOrbitType}, then
    * {@code setMu}, then {@code addForceModel}. Orekit is not indifferent to it everywhere, and a
    * tidier-looking permutation would cost the L0 baseline (spec {@code
-   * docs/multi-corps/03-conception-L1.md} §7).
+   * docs/multi-corps/03-conception-L1.md} §7). L2 extends that by one line: the central field is
+   * added first, then the perturbers in the canonical order of the context's {@code EnumSet}.
    *
-   * @param body the central body context
+   * @param body the gravitational context: central body, plus any third bodies it declares
    * @param maxStep integrator maximum step in seconds (must satisfy the late-ignition invariant)
    * @return a new numerical propagator with the body's 8x8 gravity field
    */
@@ -189,7 +195,26 @@ public final class OrekitService {
     propagator.setOrbitType(OrbitType.CARTESIAN);
     propagator.setMu(body.mu());
     propagator.addForceModel(getGravityModel(body.body()));
+    addPerturbers(propagator, body);
     return propagator;
+  }
+
+  /**
+   * Adds one {@link ThirdBodyAttraction} per body the context declares as a perturber, in the
+   * canonical order the context guarantees.
+   *
+   * <p>An empty perturber set adds nothing at all — not an identity force, not a zero term. That is
+   * what makes L2's non-regression structural rather than measured: an unperturbed propagation has
+   * the very same force list, in the very same order, as before the lot (spec {@code
+   * docs/multi-corps/04-conception-L2.md} §4.1).
+   *
+   * @param propagator the propagator being built
+   * @param context the gravitational context whose perturbers are to be mounted
+   */
+  private void addPerturbers(NumericalPropagator propagator, GravitationalContext context) {
+    for (SolarSystemBody perturber : context.perturbers()) {
+      propagator.addForceModel(getThirdBodyModel(perturber));
+    }
   }
 
   /**
@@ -218,6 +243,26 @@ public final class OrekitService {
               GravityFieldFactory.getNormalizedProvider(8, 8);
           return new HolmesFeatherstoneAttractionModel(itrf(), provider);
         });
+  }
+
+  /**
+   * The third-body attraction of the given body, resolved once and shared by every propagator.
+   *
+   * <p>Cached for the same reason as {@link #getGravityModel}, not for speed: CMA-ES explorations
+   * run in parallel ({@code CMAESTrajectoryOptimizer:314}), and {@code computeIfAbsent} guarantees a
+   * single instance per body rather than merely a coherent value.
+   *
+   * <p><b>A constraint this hands to L4:</b> {@link ThirdBodyAttraction} expresses the perturbing
+   * body's position in the propagation frame and assumes that frame is centred on the central body.
+   * Every propagation here is Earth-centred GCRF, so it holds today. A lunar arc still propagated in
+   * GCRF would get the indirect term wrong — and wrong silently, since the magnitude would stay
+   * plausible (spec {@code docs/multi-corps/04-conception-L2.md} §7).
+   *
+   * @param body the perturbing body
+   * @return the shared third-body attraction force model for that body
+   */
+  private ForceModel getThirdBodyModel(SolarSystemBody body) {
+    return thirdBodyModels.computeIfAbsent(body, b -> new ThirdBodyAttraction(body(b)));
   }
 
   /**

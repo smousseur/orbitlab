@@ -2,38 +2,71 @@ package com.smousseur.orbitlab.simulation.gravity;
 
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.simulation.OrekitService;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.EnumSet;
 import java.util.Objects;
+import java.util.Set;
 import org.orekit.bodies.OneAxisEllipsoid;
 import org.orekit.frames.Frame;
 import org.orekit.utils.Constants;
 
 /**
- * The central body a propagation is flown around: everything a force model, an altitude or a node
- * detector needs, and nothing else.
+ * The gravitational environment a propagation is flown in: the central body it orbits, the third
+ * bodies that perturb it, and everything a force model, an altitude or a node detector needs from
+ * either — nothing else.
  *
  * <p>Introduced by PHY-4 / L1 (spec {@code docs/multi-corps/03-conception-L1.md}) to turn the
  * central body from a constant read at the bottom of {@link OrekitService} into a datum carried by
- * the stage. In L1 nothing declares anything but the Earth; L4 is where a stage first declares
- * another body.
+ * the stage. PHY-4 / L2 (spec {@code docs/multi-corps/04-conception-L2.md}) added {@link
+ * #perturbers()}: L1 had left open where the third-body list would live, and the answer is here
+ * rather than in a second stage declaration, because a lunar arc in L4 will declare a central body
+ * and its perturbers together — separating them now would only mean rejoining them later.
+ *
+ * <p>Nothing in production declares a perturber: L2 is opt-in and no stage opts in (spec L2 §4.1).
+ * L6 is the first real declarant.
  *
  * @param body the central body
  * @param mu the gravitational parameter the <b>propagator</b> integrates with (m³/s²)
  * @param inertialFrame the body-centred inertial frame — GCRF for the Earth
  * @param bodyFixedFrame the body-fixed rotating frame — ITRF for the Earth
  * @param shape the reference shape; a sphere is an ellipsoid of zero flattening
+ * @param perturbers the third bodies whose attraction perturbs the propagation, possibly empty;
+ *     always held as an unmodifiable {@link EnumSet} — see the compact constructor for why
  */
 public record GravitationalContext(
     SolarSystemBody body,
     double mu,
     Frame inertialFrame,
     Frame bodyFixedFrame,
-    OneAxisEllipsoid shape) {
+    OneAxisEllipsoid shape,
+    Set<SolarSystemBody> perturbers) {
 
+  /**
+   * Validates and canonicalises the perturber set.
+   *
+   * <p><b>The set is copied into an {@link EnumSet}, and that is a numerical decision, not a
+   * tidiness one.</b> The order force models are added to a propagator is the order their
+   * accelerations are summed, which decides the last bit. An {@code EnumSet} iterates in ordinal
+   * order, so {@code withPerturbers(SUN, MOON)} and {@code withPerturbers(MOON, SUN)} build the
+   * same propagator to the float. A {@code List} would make a numerical result depend on the order
+   * of the caller's arguments, for nothing gained.
+   *
+   * <p><b>The central body is rejected, not ignored.</b> Declaring the Earth as a perturber of a
+   * geocentric propagation is a caller bug, and it is the easiest one to commit in L4 by copying an
+   * Earth context to adapt it to a lunar arc. Silently dropping it would hide that.
+   */
   public GravitationalContext {
     Objects.requireNonNull(body, "body");
     Objects.requireNonNull(inertialFrame, "inertialFrame");
     Objects.requireNonNull(bodyFixedFrame, "bodyFixedFrame");
     Objects.requireNonNull(shape, "shape");
+    Objects.requireNonNull(perturbers, "perturbers");
+    if (perturbers.contains(body)) {
+      throw new IllegalArgumentException(
+          "the central body " + body + " cannot be its own perturber");
+    }
+    perturbers = Collections.unmodifiableSet(canonical(perturbers));
   }
 
   /**
@@ -60,6 +93,32 @@ public record GravitationalContext(
     return shape.getEquatorialRadius();
   }
 
+  /**
+   * The same central body, perturbed by the given third bodies. This is how a stage opts in: it
+   * overrides {@code MissionStage.gravitationalContext(Mission)} and returns {@code
+   * earth().withPerturbers(MOON, SUN)}. No site of propagator construction has to change — the
+   * context already travels there through the seam L1 installed.
+   *
+   * @param bodies the perturbing bodies; none of them may be the central body
+   * @return a context identical to this one but for its perturbers
+   */
+  public GravitationalContext withPerturbers(SolarSystemBody... bodies) {
+    return new GravitationalContext(
+        body, mu, inertialFrame, bodyFixedFrame, shape, canonical(Arrays.asList(bodies)));
+  }
+
+  /**
+   * Copies into an {@link EnumSet}, which {@code EnumSet.copyOf} cannot do for an empty non-enum
+   * collection — hence the explicit branch rather than a bare {@code copyOf}.
+   */
+  private static EnumSet<SolarSystemBody> canonical(Iterable<SolarSystemBody> bodies) {
+    EnumSet<SolarSystemBody> set = EnumSet.noneOf(SolarSystemBody.class);
+    for (SolarSystemBody perturber : bodies) {
+      set.add(Objects.requireNonNull(perturber, "perturber"));
+    }
+    return set;
+  }
+
   private static final class Holder {
     private static final GravitationalContext EARTH =
         new GravitationalContext(
@@ -71,6 +130,11 @@ public record GravitationalContext(
             Constants.WGS84_EARTH_MU,
             OrekitService.get().gcrf(),
             OrekitService.get().itrf(),
-            OrekitService.get().getEarthEllipsoid());
+            OrekitService.get().getEarthEllipsoid(),
+            // Unperturbed, and that is what every existing mission flies. This instance is no
+            // longer the only Earth context — withPerturbers derives others — but it is still the
+            // only one WITHOUT a perturber, which is what keeps the L1 gate's 0.0 tolerance
+            // meaningful (spec L2 §2.3).
+            EnumSet.noneOf(SolarSystemBody.class));
   }
 }
