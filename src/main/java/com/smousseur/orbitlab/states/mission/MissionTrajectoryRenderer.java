@@ -49,7 +49,6 @@ public final class MissionTrajectoryRenderer {
   private static final float TRAJECTORY_WIDTH_PX = 3.5f;
 
   private final MissionId missionId;
-  private final RenderContext renderContext;
   private final ColorRGBA color;
 
   /**
@@ -67,10 +66,8 @@ public final class MissionTrajectoryRenderer {
   private ColorRGBA[] runColors;
   private PhaseNodeMarkers markers;
 
-  public MissionTrajectoryRenderer(
-      MissionId missionId, RenderContext renderContext, ColorRGBA color) {
+  public MissionTrajectoryRenderer(MissionId missionId, ColorRGBA color) {
     this.missionId = Objects.requireNonNull(missionId, "missionId");
-    this.renderContext = Objects.requireNonNull(renderContext, "renderContext");
     this.color = Objects.requireNonNull(color, "color");
   }
 
@@ -95,7 +92,7 @@ public final class MissionTrajectoryRenderer {
     lineGeometry.setQueueBucket(RenderQueue.Bucket.Transparent);
     nearOrbitsNode.attachChild(lineGeometry);
 
-    markers = new PhaseNodeMarkers(renderContext);
+    markers = new PhaseNodeMarkers();
     markers.initialize(nearOrbitsNode, missionId);
   }
 
@@ -144,8 +141,13 @@ public final class MissionTrajectoryRenderer {
    * @param upTo index of the last vertex to draw, from {@link TrajectoryPolyline#indexUpTo}
    * @param tip the interpolated position at the current instant, drawn as the final vertex and used
    *     as the origin the vertices are expressed against
+   * @param renderContext the context of the sample being drawn, derived from its arc by {@code
+   *     MissionRenderer.renderContextFor} — a parameter and no longer a field of this class, so that
+   *     the line and the near-frame offset cannot be built from two different contexts (spec {@code
+   *     docs/multi-corps/05-conception-L3.md} §3.2)
    */
-  public void update(TrajectoryPolyline trail, int upTo, Vector3D tip) {
+  public void update(
+      TrajectoryPolyline trail, int upTo, Vector3D tip, RenderContext renderContext) {
     if (trail == null || trail.size() == 0) return;
 
     if (trail != boundTrail) {
@@ -181,7 +183,8 @@ public final class MissionTrajectoryRenderer {
 
     // The line's own local translation, not a second computation of it: reusing the value that was
     // just set is what makes it impossible for the two geometries to disagree about the origin.
-    markers.update(trail, runColors, last, origin, lineGeometry.getLocalTranslation());
+    markers.update(
+        trail, runColors, last, origin, lineGeometry.getLocalTranslation(), renderContext);
   }
 
   /**

@@ -16,6 +16,7 @@ import com.smousseur.orbitlab.engine.AssetFactory;
 import com.smousseur.orbitlab.simulation.mission.MissionId;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemeris;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemerisPoint;
+import com.smousseur.orbitlab.simulation.mission.ephemeris.TrajectoryArc;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.TrajectoryPolyline;
 import java.util.ArrayList;
 import java.util.List;
@@ -55,7 +56,7 @@ class PhaseNodeMarkersTest {
   @BeforeEach
   void setUp() {
     nearOrbitsNode = new Node("nearOrbitsNode");
-    renderer = new MissionTrajectoryRenderer(MissionId.newId(), ctx, MISSION);
+    renderer = new MissionTrajectoryRenderer(MissionId.newId(), MISSION);
     renderer.initialize(nearOrbitsNode);
   }
 
@@ -75,7 +76,8 @@ class PhaseNodeMarkersTest {
               names[i],
               burns[i],
               1_000.0,
-              400_000.0));
+              400_000.0,
+              TrajectoryArc.earth()));
     }
     return new MissionEphemeris(points).displayTrail();
   }
@@ -95,13 +97,13 @@ class PhaseNodeMarkersTest {
   void onlyReachedTransitionsAreDrawn() {
     TrajectoryPolyline trail = trail();
 
-    renderer.update(trail, 0, trail.positionAt(0));
+    renderer.update(trail, 0, trail.positionAt(0), ctx);
     assertEquals(1, markers().getMesh().getVertexCount(), "only the launch node has been reached");
 
-    renderer.update(trail, 4, trail.positionAt(4));
+    renderer.update(trail, 4, trail.positionAt(4), ctx);
     assertEquals(2, markers().getMesh().getVertexCount(), "the second run has started");
 
-    renderer.update(trail, 8, trail.positionAt(8));
+    renderer.update(trail, 8, trail.positionAt(8), ctx);
     assertEquals(3, markers().getMesh().getVertexCount(), "all three runs have started");
   }
 

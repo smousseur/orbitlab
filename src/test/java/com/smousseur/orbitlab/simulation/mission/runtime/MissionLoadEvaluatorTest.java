@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemeris;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemerisPoint;
+import com.smousseur.orbitlab.simulation.mission.ephemeris.TrajectoryArc;
 import com.smousseur.orbitlab.simulation.mission.objective.OrbitInsertionObjective;
 import com.smousseur.orbitlab.simulation.mission.vehicle.StagePropellant;
 import java.util.ArrayList;
@@ -35,7 +36,8 @@ class MissionLoadEvaluatorTest {
               stages.get(i),
               false,
               1_000.0,
-              altitudes.get(i)));
+              altitudes.get(i),
+              TrajectoryArc.earth()));
     }
     return new MissionEphemeris(points);
   }

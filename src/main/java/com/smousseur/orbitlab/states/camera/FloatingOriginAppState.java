@@ -13,6 +13,7 @@ import com.smousseur.orbitlab.engine.view.JmeVectorAdapter;
 import com.smousseur.orbitlab.simulation.mission.MissionId;
 import com.smousseur.orbitlab.simulation.mission.context.MissionEntry;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemeris;
+import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemerisPoint;
 import com.smousseur.orbitlab.states.mission.MissionRenderer;
 import java.util.Objects;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
@@ -153,12 +154,15 @@ public class FloatingOriginAppState extends BaseAppState {
     if (ephemeris == null) {
       return lastNearOffset;
     }
-    Vector3D position = ephemeris.displayPointAt(context.clock().now()).position();
+    // One point, read once: it carries both the position and the arc the context is derived from,
+    // so this state and the orchestrator cannot disagree about either (PHY-4 / L3, spec
+    // docs/multi-corps/05-conception-L3.md §3.1).
+    MissionEphemerisPoint point = ephemeris.displayPointAt(context.clock().now());
     // negateLocal, not negate: the anchor is placed at the un-negated value of the very same
     // conversion, so the two floats must stay exact opposites (cf. toJmeBodyRelativePosition).
     return lastNearOffset.set(
         JmeVectorAdapter.toJmeBodyRelativePosition(
-                position, MissionRenderer.renderContextFor(entry))
+                point.position(), MissionRenderer.renderContextFor(point))
             .negateLocal());
   }
 

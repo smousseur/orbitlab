@@ -10,6 +10,7 @@ import com.smousseur.orbitlab.simulation.mission.context.MissionContext;
 import com.smousseur.orbitlab.simulation.mission.context.MissionEntry;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemeris;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemerisPoint;
+import com.smousseur.orbitlab.simulation.mission.ephemeris.TrajectoryArc;
 import java.util.List;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.junit.jupiter.api.Test;
@@ -41,7 +42,14 @@ class MissionTimelineVisibilityTest {
     List<MissionEphemerisPoint> points =
         List.of(
             new MissionEphemerisPoint(
-                t0, new Vector3D(7.0e6, 0, 0), new Vector3D(0, 7500, 0), "Ascent", true, 5.0e5, 0),
+                t0,
+                new Vector3D(7.0e6, 0, 0),
+                new Vector3D(0, 7500, 0),
+                "Ascent",
+                true,
+                5.0e5,
+                0,
+                TrajectoryArc.earth()),
             new MissionEphemerisPoint(
                 t0.shiftedBy(600),
                 new Vector3D(0, 7.0e6, 0),
@@ -49,7 +57,8 @@ class MissionTimelineVisibilityTest {
                 "Coast",
                 false,
                 4.0e5,
-                4.0e5));
+                4.0e5,
+                TrajectoryArc.earth()));
     return new MissionEphemeris(points, complete);
   }
 

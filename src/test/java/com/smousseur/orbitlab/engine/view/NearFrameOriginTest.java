@@ -97,6 +97,40 @@ class NearFrameOriginTest {
     assertTrue(measuredKm > 16f, "beyond 16 km the LOD drops the 3D model for its icon");
   }
 
+  /**
+   * <b>The cancellation does not depend on which body the context names</b> — and after PHY-4 / L3
+   * the context is derived from the sample's arc, so it is worth pinning rather than assuming.
+   *
+   * <p>{@link JmeVectorAdapter#toJmeBodyRelativePosition} reads only {@code unitsPerMeter()} and
+   * {@code axisConvention()}, and both are the same for every planet-scale context. A lunar arc
+   * therefore produces exactly the same {@code float} triple as the Earth one, and the anchor still
+   * lands on the origin at zero tolerance.
+   *
+   * <p>This test is the executable form of what spec {@code
+   * docs/multi-corps/05-conception-L3.md} §1.1-C states: switching the render context onto the arc
+   * fixes <em>which body the coordinates are about</em>, not where the line lands on screen. Putting
+   * a lunar arc in its right place is L5's work, and this assertion is what will have to change when
+   * L5 does it — deliberately, rather than by surprise.
+   */
+  @Test
+  void aLunarArcCancelsJustAsExactly() {
+    RenderContext lunar = RenderContext.planet(SolarSystemBody.MOON);
+
+    assertEquals(
+        JmeVectorAdapter.toJmeBodyRelativePosition(LEO_GCRF, ctx),
+        JmeVectorAdapter.toJmeBodyRelativePosition(LEO_GCRF, lunar),
+        "the conversion is blind to the body — that is L5's problem, not L3's");
+
+    nearFrame.setLocalTranslation(
+        JmeVectorAdapter.toJmeBodyRelativePosition(LEO_GCRF, lunar).negateLocal());
+    presenter.updatePose(LEO_GCRF, new Vector3D(0, 7_500, 0), 0.016f, lunar);
+
+    Vector3f world = anchor.getWorldTranslation();
+    assertEquals(0f, world.x, "exact cancellation, no tolerance");
+    assertEquals(0f, world.y, "exact cancellation, no tolerance");
+    assertEquals(0f, world.z, "exact cancellation, no tolerance");
+  }
+
   /** Mirrors {@code LodView}: the position is applied to the anchor node, nothing else. */
   private record AnchorBodyView(Node anchor) implements BodyView {
 

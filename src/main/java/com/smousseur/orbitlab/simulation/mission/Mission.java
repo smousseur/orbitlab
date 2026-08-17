@@ -84,19 +84,34 @@ public abstract class Mission {
   }
 
   /**
-   * Computes the geodetic altitude of the spacecraft above the central body's reference shape.
+   * Computes the geodetic altitude of the spacecraft above the reference shape of {@code context}'s
+   * central body.
+   *
+   * <p><b>The context is a parameter, not read from this mission</b> (PHY-4 / L3, spec {@code
+   * docs/multi-corps/05-conception-L3.md} §3.4). L1 put the seam on {@link MissionStage}, but this
+   * method kept reading the mission's own context: a stage declaring another body would have had its
+   * altitude measured against the mission's shape. There is no overload defaulting to {@link
+   * #gravitationalContext()} for a state, deliberately — the caller that samples a trajectory must
+   * say which body the altitude is above, and the compiler is what makes it.
    *
    * @param state the spacecraft state to evaluate
-   * @return the altitude in meters above the reference shape
+   * @param context the gravitational context whose reference shape the altitude is measured against
+   * @return the altitude in meters above that shape
    */
-  public double computeAltitudeMeters(SpacecraftState state) {
-    OneAxisEllipsoid shape = gravitationalContext().shape();
+  public double computeAltitudeMeters(SpacecraftState state, GravitationalContext context) {
+    OneAxisEllipsoid shape = context.shape();
     GeodeticPoint gp = shape.transform(state.getPosition(), state.getFrame(), state.getDate());
     return gp.getAltitude();
   }
 
+  /**
+   * The altitude of the current state above this mission's own central body — what the objective
+   * judges, which is a mission-level question and not a per-stage one.
+   *
+   * @return the altitude in meters
+   */
   public double computeAltitudeMeters() {
-    return computeAltitudeMeters(currentState);
+    return computeAltitudeMeters(currentState, gravitationalContext());
   }
 
   /**

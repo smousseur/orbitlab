@@ -90,7 +90,7 @@ public final class MissionOrchestratorAppState extends BaseAppState {
 
       // Lazy-create renderer on the first visible frame
       if (renderer == null) {
-        renderer = createRenderer(entry);
+        renderer = createRenderer(entry, eph);
       }
 
       // Visibility rules
@@ -226,8 +226,17 @@ public final class MissionOrchestratorAppState extends BaseAppState {
         });
   }
 
-  private MissionRenderer createRenderer(MissionEntry entry) {
-    RenderContext renderContext = MissionRenderer.renderContextFor(entry);
+  /**
+   * Builds the renderer for a mission, in the context of the arc it <b>starts</b> in.
+   *
+   * <p>That construction-time context only ever serves what does not depend on the body — the scale
+   * the spacecraft mesh is sized with, and the parent body a click hands the camera (spec {@code
+   * docs/multi-corps/05-conception-L3.md} §3.1). Everything drawn per frame derives its own context
+   * from the sample being drawn. L5, which must place a lunar arc and not merely name it, is where
+   * the first sample stops being a good enough answer.
+   */
+  private MissionRenderer createRenderer(MissionEntry entry, MissionEphemeris ephemeris) {
+    RenderContext renderContext = MissionRenderer.renderContextFor(ephemeris.firstPoint());
     ColorRGBA color = entry.getColor();
     if (color == null) color = ColorRGBA.Cyan;
 

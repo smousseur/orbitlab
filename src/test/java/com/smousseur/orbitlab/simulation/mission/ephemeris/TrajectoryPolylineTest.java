@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.smousseur.orbitlab.core.SolarSystemBody;
 import java.util.Arrays;
 import java.util.List;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
@@ -34,6 +35,16 @@ class TrajectoryPolylineTest {
    * propulsive flag is {@code propulsive[k]}. Sample {@code i} sits at {@code (i, 0, 0)}.
    */
   private static TrajectoryPolyline polylineOf(int[] lengths, boolean[] propulsive) {
+    return polylineOf(lengths, propulsive, null);
+  }
+
+  /**
+   * As above, with the arc column chosen by the caller. {@code arcBoundaries} lists the raw sample
+   * indices at which a new arc opens; {@code null} means one arc for the whole trail, which is what
+   * every mission produces until L4.
+   */
+  private static TrajectoryPolyline polylineOf(
+      int[] lengths, boolean[] propulsive, int[] arcBoundaries) {
     int n = 0;
     for (int len : lengths) {
       n += len;
@@ -51,7 +62,27 @@ class TrajectoryPolylineTest {
         burns[i] = propulsive[k];
       }
     }
-    return TrajectoryPolyline.of(times, positions, names, burns);
+    return TrajectoryPolyline.of(times, positions, names, burns, arcsOf(n, arcBoundaries));
+  }
+
+  /**
+   * An arc column: the Earth arc up to the first boundary, then an alternate arc after each one.
+   * Two distinct arcs suffice — what the partition reads is {@link TrajectoryArc#equals}, not which
+   * body it names.
+   */
+  private static TrajectoryArc[] arcsOf(int n, int[] boundaries) {
+    TrajectoryArc[] arcs = new TrajectoryArc[n];
+    Arrays.fill(arcs, TrajectoryArc.earth());
+    if (boundaries == null) {
+      return arcs;
+    }
+    TrajectoryArc other = new TrajectoryArc(SolarSystemBody.MOON, TrajectoryArc.earth().frame());
+    for (int b = 0; b < boundaries.length; b++) {
+      int end = b + 1 < boundaries.length ? boundaries[b + 1] : n;
+      TrajectoryArc arc = b % 2 == 0 ? other : TrajectoryArc.earth();
+      Arrays.fill(arcs, boundaries[b], end, arc);
+    }
+    return arcs;
   }
 
   @Test
@@ -81,6 +112,41 @@ class TrajectoryPolylineTest {
         new Vector3D(n - 1, 0, 0),
         trail.positionAt(trail.size() - 1),
         "the trail must end where the spacecraft is");
+  }
+
+  /**
+   * The exact vertex selection, pinned — the net for the decimation budget formula (spec {@code
+   * docs/multi-corps/05-conception-L3.md} §4.1).
+   *
+   * <p>The other over-budget tests here assert bounds and endpoints, which a stride that shifted by
+   * one would still satisfy. This one pins the stride itself, and the fixture is sized to make a
+   * single lost slot of budget impossible to miss: {@code n} is exactly twice the budget a
+   * single-run trail gets, so the stride sits on the knife edge. Losing one slot takes {@code
+   * ceil(n / budget)} from 2 to 3 and roughly a third of the vertices with it.
+   *
+   * <p>That matters because L3 adds a second set of forced vertices — the arc starts — and the
+   * budget must reserve headroom for the <b>union</b> of run starts and arc starts, not for their
+   * sum. With a single arc the union changes nothing, so this test must read identically before and
+   * after the lot; written as a sum, it would not.
+   */
+  @Test
+  void overTheBudget_theKeptVerticesArePinned() {
+    // One run, so the budget is MAX_POINTS - 1 run start - 1 final sample.
+    int budget = TrajectoryPolyline.MAX_POINTS - 2;
+    TrajectoryPolyline trail = polylineOf(2 * budget);
+
+    assertEquals(budget + 1, trail.size(), "the stride moved");
+    assertEquals(new Vector3D(0, 0, 0), trail.positionAt(0));
+    assertEquals(new Vector3D(2, 0, 0), trail.positionAt(1), "stride of 2");
+    assertEquals(new Vector3D(4, 0, 0), trail.positionAt(2));
+    assertEquals(
+        new Vector3D(2 * budget - 2, 0, 0),
+        trail.positionAt(trail.size() - 2),
+        "the last strided vertex");
+    assertEquals(
+        new Vector3D(2 * budget - 1, 0, 0),
+        trail.positionAt(trail.size() - 1),
+        "the forced final sample");
   }
 
   /**
@@ -123,9 +189,24 @@ class TrajectoryPolylineTest {
     MissionEphemeris ephemeris =
         new MissionEphemeris(
             java.util.List.of(
-                new MissionEphemerisPoint(T0, Vector3D.ZERO, Vector3D.PLUS_I, "S", false, 1.0, 0.0),
                 new MissionEphemerisPoint(
-                    T0.shiftedBy(1.0), Vector3D.PLUS_I, Vector3D.PLUS_I, "S", false, 1.0, 0.0)));
+                    T0,
+                    Vector3D.ZERO,
+                    Vector3D.PLUS_I,
+                    "S",
+                    false,
+                    1.0,
+                    0.0,
+                    TrajectoryArc.earth()),
+                new MissionEphemerisPoint(
+                    T0.shiftedBy(1.0),
+                    Vector3D.PLUS_I,
+                    Vector3D.PLUS_I,
+                    "S",
+                    false,
+                    1.0,
+                    0.0,
+                    TrajectoryArc.earth())));
 
     assertSame(ephemeris.displayTrail(), ephemeris.displayTrail());
     assertEquals(2, ephemeris.displayTrail().size());
@@ -177,6 +258,70 @@ class TrajectoryPolylineTest {
         new Vector3D(15, 0, 0),
         trail.positionAt(runs.get(1).firstVertex()),
         "run 1 must start on the raw sample where the stage actually changed");
+  }
+
+  // ════════════════════════════════════════════════════════════════════════
+  // Arcs — the second partition (PHY-4 / L3, spec docs/multi-corps/05-conception-L3.md §4)
+  // ════════════════════════════════════════════════════════════════════════
+
+  /**
+   * The degenerate case, and the only one production reaches until L4: one arc for the whole line.
+   */
+  @Test
+  void aSingleArcSpansTheWholeTrail() {
+    TrajectoryPolyline trail = polylineOf(new int[] {10, 20, 5}, new boolean[] {true, false, true});
+
+    assertEquals(1, trail.arcs().size());
+    assertEquals(TrajectoryArc.earth(), trail.arcs().get(0).arc());
+    assertEquals(0, trail.arcs().get(0).firstVertex());
+    assertEquals(trail.size(), trail.arcs().get(0).vertexCount());
+    for (int i = 0; i < trail.size(); i++) {
+      int index = i;
+      assertEquals(0, trail.arcOf(index), () -> "vertex " + index + " left the only arc");
+    }
+  }
+
+  /**
+   * An arc boundary is a change of frame: a stride that skipped it would join two vertices
+   * expressed about different bodies with a straight segment. The boundary sits at an odd raw index
+   * a stride of this size cannot land on by chance.
+   */
+  @Test
+  void anArcBoundaryIsKeptEvenWhenTheStrideWouldSkipIt() {
+    int n = 400_000;
+    int boundary = 123_457;
+    TrajectoryPolyline trail =
+        polylineOf(new int[] {n}, new boolean[] {false}, new int[] {boundary});
+
+    assertTrue(trail.size() <= TrajectoryPolyline.MAX_POINTS, "budget exceeded");
+    assertEquals(2, trail.arcs().size(), "the crossing must not be decimated away");
+    assertEquals(
+        new Vector3D(boundary, 0, 0),
+        trail.positionAt(trail.arcs().get(1).firstVertex()),
+        "the second arc must open on the raw sample where the frame actually changed");
+  }
+
+  /**
+   * The reason arcs are a partition of their own rather than a term added to the run criterion: a
+   * sphere-of-influence crossing falls inside a phase, and folding it into the runs would split
+   * that phase into two homonymous ones — two transition markers drawn, one phase too many
+   * reported by the timeline.
+   */
+  @Test
+  void arcsAndRunsArePartitionedIndependently() {
+    // Runs open at 0, 10 and 30; the arc changes at 15, inside the second run.
+    TrajectoryPolyline trail =
+        polylineOf(new int[] {10, 20, 5}, new boolean[] {true, false, true}, new int[] {15});
+
+    assertEquals(3, trail.runs().size(), "the arc boundary must not open a run");
+    assertEquals(2, trail.arcs().size());
+    assertEquals(15, trail.arcs().get(1).firstVertex());
+    assertEquals(1, trail.runOf(15), "vertex 15 is still inside the second run");
+
+    for (int i = 0; i < trail.size(); i++) {
+      int index = i;
+      assertEquals(i < 15 ? 0 : 1, trail.arcOf(index), () -> "vertex " + index + " in the wrong arc");
+    }
   }
 
   @Test
