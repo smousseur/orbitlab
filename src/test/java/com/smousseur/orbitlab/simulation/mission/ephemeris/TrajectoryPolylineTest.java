@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.smousseur.orbitlab.core.SolarSystemBody;
 import java.util.Arrays;
 import java.util.List;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
@@ -34,6 +35,16 @@ class TrajectoryPolylineTest {
    * propulsive flag is {@code propulsive[k]}. Sample {@code i} sits at {@code (i, 0, 0)}.
    */
   private static TrajectoryPolyline polylineOf(int[] lengths, boolean[] propulsive) {
+    return polylineOf(lengths, propulsive, null);
+  }
+
+  /**
+   * As above, with the arc column chosen by the caller. {@code arcBoundaries} lists the raw sample
+   * indices at which a new arc opens; {@code null} means one arc for the whole trail, which is what
+   * every mission produces until L4.
+   */
+  private static TrajectoryPolyline polylineOf(
+      int[] lengths, boolean[] propulsive, int[] arcBoundaries) {
     int n = 0;
     for (int len : lengths) {
       n += len;
@@ -51,7 +62,27 @@ class TrajectoryPolylineTest {
         burns[i] = propulsive[k];
       }
     }
-    return TrajectoryPolyline.of(times, positions, names, burns);
+    return TrajectoryPolyline.of(times, positions, names, burns, arcsOf(n, arcBoundaries));
+  }
+
+  /**
+   * An arc column: the Earth arc up to the first boundary, then an alternate arc after each one.
+   * Two distinct arcs suffice — what the partition reads is {@link TrajectoryArc#equals}, not which
+   * body it names.
+   */
+  private static TrajectoryArc[] arcsOf(int n, int[] boundaries) {
+    TrajectoryArc[] arcs = new TrajectoryArc[n];
+    Arrays.fill(arcs, TrajectoryArc.earth());
+    if (boundaries == null) {
+      return arcs;
+    }
+    TrajectoryArc other = new TrajectoryArc(SolarSystemBody.MOON, TrajectoryArc.earth().frame());
+    for (int b = 0; b < boundaries.length; b++) {
+      int end = b + 1 < boundaries.length ? boundaries[b + 1] : n;
+      TrajectoryArc arc = b % 2 == 0 ? other : TrajectoryArc.earth();
+      Arrays.fill(arcs, boundaries[b], end, arc);
+    }
+    return arcs;
   }
 
   @Test

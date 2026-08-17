@@ -89,7 +89,7 @@ public final class MissionEphemeris {
       arcs[i] = p.arc();
     }
 
-    displayTrail = TrajectoryPolyline.of(times, positions, stageNames, propulsive);
+    displayTrail = TrajectoryPolyline.of(times, positions, stageNames, propulsive, arcs);
   }
 
   /**

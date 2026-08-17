@@ -184,6 +184,16 @@ class MissionPolylineBaselineTest {
     assertEquals(RAW_POINTS, ephemeris.size(), "the raw sample count moved");
     assertEquals(TRAIL_SIZE, trail.size(), "the drawn vertex count moved");
     assertPinned(verticesOf(trail), LEO_400_VERTICES);
+
+    // A LEO mission is one arc, and stays one until L4 produces a second. Pinned here rather than
+    // merely asserted as a size, because an arc that split would also change the forced-vertex
+    // union and therefore the stride — the two failures would arrive together, and this names one.
+    assertEquals(1, trail.arcs().size(), "nothing produces a second arc yet");
+    assertEquals(TrajectoryArc.earth(), trail.arcs().get(0).arc());
+    assertEquals(0, trail.arcs().get(0).firstVertex());
+    assertEquals(TRAIL_SIZE, trail.arcs().get(0).vertexCount(), "the arc must span the whole line");
+    assertEquals(TrajectoryArc.earth(), ephemeris.firstPoint().arc());
+    assertEquals(TrajectoryArc.earth(), ephemeris.lastPoint().arc());
   }
 
   private static void assertPinned(List<Vertex> actual, List<Vertex> expected) {
