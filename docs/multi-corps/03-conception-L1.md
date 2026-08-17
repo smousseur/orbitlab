@@ -446,3 +446,82 @@ lit en diagonale doit pouvoir l'être.
   répondre pour la Lune.
 - Les sites du §4.1 se réveillent **quand un arc non terrestre a besoin d'eux**,
   pas avant.
+
+---
+
+## 9. Fermeture — L1 est clos
+
+**Mesuré le 2026-08-17**, commit `4c997a6`, branche `feature_phy4_l1_corps_central`,
+GraalVM 21.0.5. Suite complète relancée avec `-Dorbitlab.slowTests=true`.
+
+### 9.1 Le verdict
+
+| | |
+|---|---|
+| Suite complète | **735 tests, 0 échec, 0 erreur**, 10 sautés (2 smoke tests de dataset, 1 sonde `orbitlab.probe`) |
+| Classes exécutées | 103 |
+| Gate `CentralBodyBaselineTest` | 4 tests, **62 frontières à tolérance `0.0`**, vert à chacun des 6 commits du lot |
+
+**L'égalité stricte a été atteinte.** Le §5.5 réservait le droit d'écrire une
+raison si elle ne l'était pas ; il n'y a rien à écrire.
+
+### 9.2 La référence forte, chiffre pour chiffre
+
+`AscentBaselineN2Test` est le seul test qui enregistre un état MECO structuré. Ses
+valeurs après L1, confrontées au §3 de `02-baseline-L0.md` :
+
+| | Baseline L0 (2026-08-16) | Après L1 (2026-08-17) |
+|---|---|---|
+| LEO-400, `transitionTime` / exposant | 307,193166 / 0,127161 | **identiques** |
+| LEO-400, MECO | t+314,193166 s, 36 368,082 kg | **identiques** |
+| LEO-400, masse finale | 35 306,788 kg | **identique** |
+| GEO, MECO | t+336,124209 s, 64 579,867 kg | **identiques** |
+| Δpos optimisation ↔ éphéméride | 0,000 m | **0,000 m** |
+
+L'invariant du §3 de la baseline — « rejouer la mission pour l'éphéméride refait
+exactement le vol optimisé » — est préservé.
+
+### 9.3 Un trou de la baseline comblé au passage
+
+Le §7.3 de `02-baseline-L0.md` listait comme trou connu : « Aucune mesure de
+`PropellantLoadOptimizerIntegrationTest`, dont le temps d'exécution est un point
+de surveillance ouvert depuis I7. »
+
+**Mesuré : 2 774 s, soit 46 min**, 4 tests, 0 échec. C'est un temps de paroi sur
+une seule machine, à ne comparer qu'à lui-même (§7.4 de la baseline). Le second
+poste est `LEOMissionOptimizedTransferTest` à 444 s.
+
+### 9.4 Ce que le lot a livré
+
+Six commits, tous compilant et gate vert :
+
+| Commit | Contenu |
+|---|---|
+| `552a540`, `de32bc0`, `84aa480` | le gate : mesure, épinglage, seconde passe |
+| `a722300` | `GravitationalContext` et le cache par corps, sans appelant |
+| `53ac53c` | fabriques contextuelles et les deux déclarations, purement additif |
+| `85d8dce` | les 20 sites, les 3 `NodeDetector`, la garde, l'altitude |
+| `82a054d` | suppression des surcharges Terre-implicites — le filet |
+| `a0a5d1d`, `4c997a6` | documentation des sites laissés, ordre des imports |
+
+Diff de production : **33 fichiers, +383 / −152**. L'audit du §7 est passé : aucun
+renommage, aucun reformatage, aucune correction de javadoc non liée.
+
+### 9.5 Trois écarts au plan, tous documentés plus haut
+
+1. La fixture LEO-400 du plan volait un Falcon Heavy pleinement chargé ; la
+   baseline vole des chargements explicites. Corrigé (§5.2).
+2. Le polaire ne peut pas voler sa chaîne complète (§5.2), et le gate ne couvre
+   que 15 des 20 sites (§5.7) — trous connus et écrits.
+3. Le plan prévoyait un commit ne compilant pas. Remplacé par une exigence plus
+   forte : chaque commit compile et le gate est vert à chacun.
+
+### 9.6 Ce que L1 laisse ouvert, et qui n'est pas de son ressort
+
+**La passe d'optimisation ne vole pas les coasts** (§5.7). Le verdict « aucun
+nombre n'a bougé » repose donc en partie sur une passe dont la physique n'a jamais
+été validée. C'est une propriété préexistante, mesurée en L0 et seulement
+expliquée ici ; la corriger déplacerait la baseline en cours de chantier, ce que
+le §3 du découpage interdit. **À rouvrir hors PHY-4.**
+
+L2 et L3 peuvent démarrer.
