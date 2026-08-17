@@ -84,6 +84,41 @@ class TrajectoryPolylineTest {
   }
 
   /**
+   * The exact vertex selection, pinned — the net for the decimation budget formula (spec {@code
+   * docs/multi-corps/05-conception-L3.md} §4.1).
+   *
+   * <p>The other over-budget tests here assert bounds and endpoints, which a stride that shifted by
+   * one would still satisfy. This one pins the stride itself, and the fixture is sized to make a
+   * single lost slot of budget impossible to miss: {@code n} is exactly twice the budget a
+   * single-run trail gets, so the stride sits on the knife edge. Losing one slot takes {@code
+   * ceil(n / budget)} from 2 to 3 and roughly a third of the vertices with it.
+   *
+   * <p>That matters because L3 adds a second set of forced vertices — the arc starts — and the
+   * budget must reserve headroom for the <b>union</b> of run starts and arc starts, not for their
+   * sum. With a single arc the union changes nothing, so this test must read identically before and
+   * after the lot; written as a sum, it would not.
+   */
+  @Test
+  void overTheBudget_theKeptVerticesArePinned() {
+    // One run, so the budget is MAX_POINTS - 1 run start - 1 final sample.
+    int budget = TrajectoryPolyline.MAX_POINTS - 2;
+    TrajectoryPolyline trail = polylineOf(2 * budget);
+
+    assertEquals(budget + 1, trail.size(), "the stride moved");
+    assertEquals(new Vector3D(0, 0, 0), trail.positionAt(0));
+    assertEquals(new Vector3D(2, 0, 0), trail.positionAt(1), "stride of 2");
+    assertEquals(new Vector3D(4, 0, 0), trail.positionAt(2));
+    assertEquals(
+        new Vector3D(2 * budget - 2, 0, 0),
+        trail.positionAt(trail.size() - 2),
+        "the last strided vertex");
+    assertEquals(
+        new Vector3D(2 * budget - 1, 0, 0),
+        trail.positionAt(trail.size() - 1),
+        "the forced final sample");
+  }
+
+  /**
    * Decimation must stay monotonic in time, or {@code indexUpTo}'s binary search is meaningless.
    */
   @Test
