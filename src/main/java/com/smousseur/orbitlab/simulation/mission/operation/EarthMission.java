@@ -39,6 +39,15 @@ public abstract class EarthMission extends Mission {
 
   protected abstract double getAltitude();
 
+  /**
+   * {@inheritDoc}
+   *
+   * <p><b>Earth by construction, not by omission.</b> PHY-4 / L1 made the central body an explicit
+   * datum carried by the stage, but drew its seam at the <em>propagation</em>, not at the launch
+   * (spec {@code docs/multi-corps/03-conception-L1.md} §4). This method builds the initial state of
+   * a lift-off from a rotating ground: nothing in PHY-4 launches from a body other than the Earth,
+   * and the arc that changes central body is downstream, in L4. Left hardcoded deliberately.
+   */
   @Override
   public SpacecraftState getInitialState(AbsoluteDate initialDate) {
     OneAxisEllipsoid earth = OrekitService.get().getEarthEllipsoid();

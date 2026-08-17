@@ -542,6 +542,8 @@ public class TransferProblem implements TrajectoryProblem {
 
     KeplerianOrbit finalOrbit = (KeplerianOrbit) OrbitType.KEPLERIAN.convertType(state.getOrbit());
 
+    // Earth-fixed on purpose (PHY-4 / L1, spec docs/multi-corps/03-conception-L1.md §4.1):
+    // multi-arc optimization is out of PHY-4 (docs/multi-corps/01-decoupage.md §1).
     OneAxisEllipsoid earth = OrekitService.get().getEarthEllipsoid();
     double apoAlt = computeGeodeticAltitude(finalOrbit, FastMath.PI, earth); // ν = π
     double periAlt = computeGeodeticAltitude(finalOrbit, 0.0, earth); // ν = 0

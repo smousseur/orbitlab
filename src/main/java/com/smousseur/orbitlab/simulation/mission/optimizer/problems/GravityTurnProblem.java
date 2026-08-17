@@ -256,6 +256,9 @@ public class GravityTurnProblem implements TrajectoryProblem {
     double vRadial = Vector3D.dotProduct(vel, zenith);
     double vTangential = FastMath.sqrt(vNorm * vNorm - vRadial * vRadial);
 
+    // Earth-fixed on purpose (PHY-4 / L1, spec docs/multi-corps/03-conception-L1.md §4.1):
+    // multi-arc optimization is out of PHY-4 (docs/multi-corps/01-decoupage.md §1). This µ moves
+    // when a CMA-ES cost function has to grade a candidate that crosses an SOI switch.
     KeplerianOrbit orb =
         new KeplerianOrbit(pv, state.getFrame(), state.getDate(), Constants.WGS84_EARTH_MU);
     double ecc = orb.getE();

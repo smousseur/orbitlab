@@ -63,6 +63,9 @@ public record GravityTurnConstraints(
     return new Pair<>(apogeeTarget, apogeeMax);
   }
 
+  // Earth-fixed on purpose (PHY-4 / L1, spec docs/multi-corps/03-conception-L1.md §4.1):
+  // multi-arc optimization is explicitly out of PHY-4 (docs/multi-corps/01-decoupage.md §1). These
+  // constants move when an optimizer has to cross an SOI switch, not before.
   private static double getVTanMin(double apogeeTarget, double targetAltitude) {
     double rGtEnd = Constants.WGS84_EARTH_EQUATORIAL_RADIUS + apogeeTarget;
     double rTarget = Constants.WGS84_EARTH_EQUATORIAL_RADIUS + targetAltitude;

@@ -52,6 +52,11 @@ public record AchievedOrbit(OrbitElements osculating, OrbitElements mean) {
    * <b>here</b>, at the boundary, rather than resting on the fact that nothing throws today.
    */
   public static AchievedOrbit of(SpacecraftState state) {
+    // Off-flight reporting, left Earth-fixed by PHY-4 / L1 (spec
+    // docs/multi-corps/03-conception-L1.md §4.1). Note for whoever makes it contextual: this µ is
+    // the PROPAGATOR's, while OrbitElements.mean() deliberately rebases on the potential
+    // provider's. Mixing the two shifts the elements by about a metre, which reads as J2 (spec
+    // orbit-reporting/01 §3.3) — so a single "central body µ" must not be made to serve both.
     try {
       KeplerianOrbit orbit =
           new KeplerianOrbit(

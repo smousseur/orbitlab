@@ -37,6 +37,10 @@ public final class PropellantBudget {
   /** Mirrors GEOMission.GEO_ALTITUDE without depending on the operation package. */
   private static final double GEO_ALTITUDE_M = 35_786_000.0;
 
+  // Off-flight sizing, left Earth-fixed by PHY-4 / L1 (spec docs/multi-corps/03-conception-L1.md
+  // §4.1): propellant budgeting runs before any propagation and never sees an arc, so the L1 seam
+  // does not run through it. It becomes contextual when a mission has to be sized around another
+  // body — no earlier than L6.
   private static final double MU = Constants.WGS84_EARTH_MU;
   private static final double RE = Constants.WGS84_EARTH_EQUATORIAL_RADIUS;
   private static final double G0 = Constants.G0_STANDARD_GRAVITY;
