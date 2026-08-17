@@ -1,16 +1,13 @@
 package com.smousseur.orbitlab.simulation.mission.runtime;
 
-import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionStage;
 import com.smousseur.orbitlab.simulation.mission.OptimizableMissionStage;
-import com.smousseur.orbitlab.simulation.mission.detector.ReentryGuard;
 import java.util.List;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.orekit.propagation.SpacecraftState;
-import org.orekit.propagation.numerical.NumericalPropagator;
 import org.orekit.time.AbsoluteDate;
 
 /**
@@ -51,10 +48,19 @@ public final class StageChainRunner {
    */
   public static final double FALLBACK_DURATION_SECONDS = 7200.0;
 
-  /** Receives every fixed-step sample of the flown trajectory, tagged with its stage. */
+  /**
+   * Receives every fixed-step sample of the flown trajectory, tagged with its stage and with the
+   * gravitational context it was actually flown in.
+   *
+   * <p><b>The context is a parameter and not something the receiver reads back off the stage</b>
+   * (PHY-4 / L4, spec {@code docs/multi-corps/06-conception-L4.md} §3.6). Once a stage may cross a
+   * sphere of influence halfway through, what it <em>declares</em> and what it is <em>flying</em>
+   * stop being the same thing, and asking the stage would write the wrong body into the arc L3 added
+   * for exactly this purpose.
+   */
   @FunctionalInterface
   public interface StepSampler {
-    void sample(MissionStage stage, SpacecraftState state);
+    void sample(MissionStage stage, GravitationalContext context, SpacecraftState state);
   }
 
   /** Observes the chain stage by stage, without taking part in flying it. */
@@ -78,6 +84,8 @@ public final class StageChainRunner {
    *     opposed to an open-ended coast or the fallback duration — only then does stopping early
    *     mean something
    * @param propagationFailed whether the propagation threw
+   * @param exitContext the gravitational context the stage <em>ended</em> in, which is the one it
+   *     declared unless it crossed a sphere of influence on the way (PHY-4 / L4 §3.6)
    */
   public record StageRun(
       MissionStage stage,
@@ -85,7 +93,8 @@ public final class StageChainRunner {
       SpacecraftState finalState,
       AbsoluteDate endDate,
       boolean endDateIsStageCutoff,
-      boolean propagationFailed) {
+      boolean propagationFailed,
+      GravitationalContext exitContext) {
 
     /**
      * Seconds by which the stage stopped short of its own scheduled cutoff — a positive value means
@@ -184,69 +193,20 @@ public final class StageChainRunner {
       mission.setCurrentState(currentState);
       SpacecraftState stageEntry = currentState;
 
-      // Create and configure propagator. The stage sizes its own max step (bilan 08 §3.1):
-      // burn-free
-      // stages coast at the large cap (a big saving on the multi-hour final coast), burn stages
-      // keep
-      // the late-ignition invariant against their own upper-stage burns for a light I7 load.
-      double maxStep = stage.maxStepSeconds(stageEntry, mission);
-      GravitationalContext body = stage.gravitationalContext(mission);
-      NumericalPropagator propagator =
-          OrekitService.get().createOptimizationPropagator(body, maxStep);
-      propagator.setInitialState(stageEntry);
+      // The stage is flown by StageLegRunner, which owns everything from building the propagator to
+      // returning the state it ended on — one leg per gravitational context it passed through, and
+      // exactly one when it declares no sphere-of-influence transition (PHY-4 / L4 §4).
+      StageLegRunner legRunner =
+          new StageLegRunner(sampler, abortOnFailure, endDateResolver(isLastStage));
+      StageLegRunner.StageFlight flight = legRunner.fly(stage, stageEntry, mission);
 
-      // Re-entry guard on every phase of every mission, on both passes (spec
-      // docs/mission-stages/03-garde-rentree.md). Armed here rather than phase by phase because
-      // this is the single place that builds a flown-phase propagator: a stage added tomorrow is
-      // covered without having to remember. Loud only on the sampling (ephemeris/replay) runner —
-      // the plain runner is the CMA-ES path, where an infeasible candidate re-entering is a normal
-      // outcome and one line per candidate would flood the output.
-      if (abortOnFailure) {
-        ReentryGuard.armQuiet(propagator, body);
-      } else {
-        ReentryGuard.arm(propagator, stage.getName(), body);
-      }
-
-      stage.configure(propagator, mission);
-
-      if (sampler != null) {
-        double sampleStep = stage.sampleStepSeconds(stageEntry, mission);
-        if (sampleStep > 0.0) {
-          propagator.getMultiplexer().add(sampleStep, state -> sampler.sample(stage, state));
-        }
-      }
-
-      // Propagate to the exact end date configured by the stage. Using the precise end date
-      // avoids numerical issues where adaptive-step integrators might miss ConstantThrustManeuver
-      // boundary events when propagating far past the actual stage duration.
-      //
-      // Only a stage whose own cutoff defines endDate can be judged "reached its end": an
-      // open-ended final coast, and a stage falling back to the safety net, have no real cutoff to
-      // compare against.
-      AbsoluteDate endDate;
-      boolean endDateIsStageCutoff = false;
-      if (isLastStage && lastStageCoastSeconds > 0.0) {
-        endDate = stageEntry.getDate().shiftedBy(lastStageCoastSeconds);
-      } else if (stage.getConfiguredEndDate() != null) {
-        endDate = stage.getConfiguredEndDate();
-        endDateIsStageCutoff = true;
-      } else {
-        // Reachable: an event-terminated coast (CoastingStage with stopAtNode) configures no date.
-        // Loud, because a stage bounded by the net rather than by its own cutoff is a fact worth
-        // seeing in the log — the net has been silent since it was written.
-        logger.warn(
-            "Stage '{}' configured no end date; bounding it by the {} s safety net",
-            stage.getName(),
-            FALLBACK_DURATION_SECONDS);
-        endDate = stageEntry.getDate().shiftedBy(FALLBACK_DURATION_SECONDS);
-      }
-
-      SpacecraftState finalState;
+      SpacecraftState finalState = flight.lastLeg().exitState();
       boolean failed = false;
-      try {
-        finalState = propagator.propagate(endDate);
-      } catch (Exception e) {
-        logger.warn("Propagation failed for stage '{}': {}", stage.getName(), e.getMessage());
+      if (flight.failure() != null) {
+        logger.warn(
+            "Propagation failed for stage '{}': {}",
+            stage.getName(),
+            flight.failure().getMessage());
         if (abortOnFailure) {
           return entryState;
         }
@@ -256,13 +216,56 @@ public final class StageChainRunner {
 
       if (listener != null) {
         listener.onStageEnd(
-            new StageRun(stage, stageEntry, finalState, endDate, endDateIsStageCutoff, failed));
+            new StageRun(
+                stage,
+                stageEntry,
+                finalState,
+                flight.endDate(),
+                flight.endDateIsStageCutoff(),
+                failed,
+                flight.lastLeg().context()));
       }
 
       currentState = finalState;
       mission.setCurrentState(currentState);
     }
-
     return currentState;
+  }
+
+  /**
+   * How far a stage is propagated. Handed to {@link StageLegRunner} as a callback because a stage
+   * only publishes its cutoff from inside {@code configure()} — see {@link
+   * StageLegRunner.EndDateResolver}.
+   *
+   * <p>Propagating to the exact end date configured by the stage avoids numerical issues where
+   * adaptive-step integrators might miss {@code ConstantThrustManeuver} boundary events when
+   * propagating far past the actual stage duration.
+   *
+   * <p>Only a stage whose own cutoff defines the end date can be judged "reached its end": an
+   * open-ended final coast, and a stage falling back to the safety net, have no real cutoff to
+   * compare against.
+   *
+   * @param isLastStage whether the stage is the last of the chain
+   * @return the resolver for that stage
+   */
+  private StageLegRunner.EndDateResolver endDateResolver(boolean isLastStage) {
+    return (stage, stageEntry) -> {
+      if (isLastStage && lastStageCoastSeconds > 0.0) {
+        return new StageLegRunner.EndDate(
+            stageEntry.getDate().shiftedBy(lastStageCoastSeconds), false);
+      }
+      if (stage.getConfiguredEndDate() != null) {
+        return new StageLegRunner.EndDate(stage.getConfiguredEndDate(), true);
+      }
+      // Reachable: an event-terminated coast (CoastingStage with stopAtNode) configures no date.
+      // Loud, because a stage bounded by the net rather than by its own cutoff is a fact worth
+      // seeing in the log — the net has been silent since it was written.
+      logger.warn(
+          "Stage '{}' configured no end date; bounding it by the {} s safety net",
+          stage.getName(),
+          FALLBACK_DURATION_SECONDS);
+      return new StageLegRunner.EndDate(
+          stageEntry.getDate().shiftedBy(FALLBACK_DURATION_SECONDS), false);
+    };
   }
 }

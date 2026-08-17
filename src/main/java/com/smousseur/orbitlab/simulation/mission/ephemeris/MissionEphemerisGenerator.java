@@ -102,8 +102,8 @@ public final class MissionEphemerisGenerator {
     }
 
     @Override
-    public void sample(MissionStage stage, SpacecraftState state) {
-      points.add(pointOf(stage, state));
+    public void sample(MissionStage stage, GravitationalContext context, SpacecraftState state) {
+      points.add(pointOf(stage, context, state));
     }
 
     @Override
@@ -131,8 +131,9 @@ public final class MissionEphemerisGenerator {
         complete = false;
       }
 
-      // Add the final state of this stage as a sample point
-      points.add(pointOf(run.stage(), run.finalState()));
+      // Add the final state of this stage as a sample point, in the context it ENDED in — which is
+      // the one it declared unless it crossed a sphere of influence on the way (PHY-4 / L4 §3.6).
+      points.add(pointOf(run.stage(), run.exitContext(), run.finalState()));
 
       logger.info(
           "Stage '{}': {} points, ended at {}",
@@ -144,15 +145,19 @@ public final class MissionEphemerisGenerator {
     /**
      * Turns one flown state into a sample.
      *
-     * <p>The gravitational context is read <b>once, from the stage</b>, and serves twice: it names
-     * the arc the sample belongs to, and it provides the reference shape the altitude is measured
-     * against (PHY-4 / L3, spec {@code docs/multi-corps/05-conception-L3.md} §3.4). Reading it twice
-     * would let the two disagree about which body the point is describing.
+     * <p>The gravitational context serves twice: it names the arc the sample belongs to, and it
+     * provides the reference shape the altitude is measured against (PHY-4 / L3, spec {@code
+     * docs/multi-corps/05-conception-L3.md} §3.4). Reading it twice would let the two disagree about
+     * which body the point is describing.
+     *
+     * <p>It is <b>handed in by the runner</b> rather than read off the stage since PHY-4 / L4: a
+     * stage that crosses a sphere of influence declares one context and flies two, and asking the
+     * stage would tag the second arc's points with the first arc's body (spec L4 §3.6).
      */
-    private MissionEphemerisPoint pointOf(MissionStage stage, SpacecraftState state) {
+    private MissionEphemerisPoint pointOf(
+        MissionStage stage, GravitationalContext context, SpacecraftState state) {
       Vector3D pos = state.getPosition();
       Vector3D vel = state.getPVCoordinates().getVelocity();
-      GravitationalContext context = stage.gravitationalContext(mission);
       double alt = mission.computeAltitudeMeters(state, context);
       return new MissionEphemerisPoint(
           state.getDate(),

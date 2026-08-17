@@ -1,10 +1,12 @@
 package com.smousseur.orbitlab.simulation.mission;
 
+import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
 import com.smousseur.orbitlab.simulation.mission.vehicle.ActiveStageInfo;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropulsionSystem;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
+import java.util.Set;
 import org.orekit.propagation.SpacecraftState;
 import org.orekit.propagation.numerical.NumericalPropagator;
 import org.orekit.time.AbsoluteDate;
@@ -118,6 +120,28 @@ public abstract class MissionStage {
    */
   public GravitationalContext gravitationalContext(Mission mission) {
     return mission.gravitationalContext();
+  }
+
+  /**
+   * The bodies whose sphere of influence this stage watches, and across which it is allowed to
+   * change central body mid-flight. Empty by default: nothing in production declares one, which is
+   * what keeps the L1 and L3 gates green by construction (PHY-4 / L4, spec {@code
+   * docs/multi-corps/06-conception-L4.md} §3.1).
+   *
+   * <p>Third declaration of the shape {@link #maxStepSeconds} and {@link #gravitationalContext}
+   * already have: a phase is the unit that knows what it flies around, so it is the unit that says
+   * where that may change.
+   *
+   * <p><b>A propulsive stage may not declare one</b>, and that is a decision rather than an
+   * oversight (spec L4 §3.3): a burn is rebuilt from the stage entry date with its full duration and
+   * its attitude is bound to the frame, so re-configuring it on the far side of a boundary would fly
+   * it again, re-oriented. A lunar transfer crosses ballistically, so nothing is lost.
+   *
+   * @param mission the parent mission
+   * @return the bodies whose SOI boundary may cut this stage, possibly empty
+   */
+  public Set<SolarSystemBody> soiTransitions(Mission mission) {
+    return Set.of();
   }
 
   /**

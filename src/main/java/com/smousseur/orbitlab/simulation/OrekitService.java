@@ -5,6 +5,7 @@ import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import org.hipparchus.CalculusFieldElement;
 import org.hipparchus.ode.nonstiff.DormandPrince853Integrator;
 import org.orekit.bodies.CelestialBody;
 import org.orekit.bodies.CelestialBodyFactory;
@@ -18,10 +19,15 @@ import org.orekit.forces.gravity.NewtonianAttraction;
 import org.orekit.forces.gravity.ThirdBodyAttraction;
 import org.orekit.forces.gravity.potential.GravityFieldFactory;
 import org.orekit.forces.gravity.potential.NormalizedSphericalHarmonicsProvider;
+import org.orekit.frames.FieldTransform;
 import org.orekit.frames.Frame;
 import org.orekit.frames.FramesFactory;
+import org.orekit.frames.Transform;
+import org.orekit.frames.TransformProvider;
 import org.orekit.orbits.OrbitType;
 import org.orekit.propagation.numerical.NumericalPropagator;
+import org.orekit.time.AbsoluteDate;
+import org.orekit.time.FieldAbsoluteDate;
 import org.orekit.utils.Constants;
 import org.orekit.utils.IERSConventions;
 
@@ -40,6 +46,9 @@ public final class OrekitService {
 
   /** Third-body attractions, cached per perturbing body. Same contract as {@link #gravityModels}. */
   private final Map<SolarSystemBody, ForceModel> thirdBodyModels = new ConcurrentHashMap<>();
+
+  /** Body-centred frames with ICRF axes, cached per body. Same contract as {@link #gravityModels}. */
+  private final Map<SolarSystemBody, Frame> bodyCentredFrames = new ConcurrentHashMap<>();
 
   private OrekitService() {}
 
@@ -88,6 +97,64 @@ public final class OrekitService {
    */
   public Frame gcrf() {
     return FramesFactory.getGCRF();
+  }
+
+  /**
+   * The inertial frame centred on the given body, with <b>ICRF axes</b>: a pure translation of GCRF
+   * to that body's centre. This is the frame a trajectory arc around that body is expressed in
+   * (PHY-4 / L4, spec {@code docs/multi-corps/06-conception-L4.md} §2.2).
+   *
+   * <p><b>Deliberately not {@code CelestialBody.getInertiallyOrientedFrame()}</b>, although that is
+   * Orekit's own selenocentric inertial frame. Measured: its axes are the IAU lunar pole, 22.08°
+   * from GCRF on 2026-03-01, and drifting (22.08° → 22.43° → 22.94° over two years). Three
+   * consequences decided against it:
+   *
+   * <ul>
+   *   <li>{@code JmeVectorAdapter.toJmeBodyRelativePosition} applies {@code icrfToJme}
+   *       unconditionally and documents its input as ICRF axes: a lunar arc in pole axes would be
+   *       drawn 22° askew, silently;
+   *   <li>a pure translation makes the arc conversion <b>exact</b> — round trip measured at 0 m,
+   *       against 2.4e-7 m through Orekit's frame;
+   *   <li>and Orekit's frame declares {@code rotationRate = 0} while its axes move with the date,
+   *       so a propagation integrated there and converted back lands 2 974 m away after 6 h, where
+   *       this frame lands 0.246 m away. The 3 km are bookkeeping, not physics.
+   * </ul>
+   *
+   * <p>The Earth resolves to {@link #gcrf()}, which <em>is</em> the geocentric realisation of ICRF:
+   * one method serves both bodies and the Earth arc keeps the very same frame instance, which is
+   * what keeps the L1 gate's strict equality achievable. That branch does not re-enter the map —
+   * the {@code computeIfAbsent} warning of spec L1 §7 applies and must not be "tidied" away.
+   *
+   * @param body the body to centre on
+   * @return the body-centred, ICRF-oriented inertial frame
+   */
+  public Frame bodyCentredIcrfFrame(SolarSystemBody body) {
+    if (body == SolarSystemBody.EARTH) {
+      return gcrf();
+    }
+    return bodyCentredFrames.computeIfAbsent(
+        body, b -> new Frame(gcrf(), new BodyCentredTranslation(body(b)), b + "/ICRF", true));
+  }
+
+  /**
+   * Translates GCRF to a celestial body's centre without touching the axes. Velocity and
+   * acceleration of the origin travel with the transform, which is what makes the frame usable for
+   * propagation: the origin's acceleration is accounted for by the indirect term of {@link
+   * ThirdBodyAttraction}, exactly as it is in Orekit's own body-centred frames.
+   */
+  private record BodyCentredTranslation(CelestialBody body) implements TransformProvider {
+
+    @Override
+    public Transform getTransform(AbsoluteDate date) {
+      return new Transform(date, body.getPVCoordinates(date, FramesFactory.getGCRF()).negate());
+    }
+
+    @Override
+    public <T extends CalculusFieldElement<T>> FieldTransform<T> getTransform(
+        FieldAbsoluteDate<T> date) {
+      return new FieldTransform<>(
+          date, body.getPVCoordinates(date, FramesFactory.getGCRF()).negate());
+    }
   }
 
   // ── Integrator max-step sizing (late-ignition invariant, spec 06 I6 / bilan 08 §3.1) ──
@@ -178,9 +245,16 @@ public final class OrekitService {
    * docs/multi-corps/03-conception-L1.md} §7). L2 extends that by one line: the central field is
    * added first, then the perturbers in the canonical order of the context's {@code EnumSet}.
    *
+   * <p><b>A body with no harmonic field gets none</b>, and its central term is still whole: {@code
+   * setMu} mounts a {@link NewtonianAttraction} of its own when no attraction model is present, and
+   * that term is what the missing non-central field would have complemented. Before PHY-4 / L4 this
+   * call was unconditional, so a lunar context mounted the <b>Earth's</b> 8×8 field expressed in
+   * ITRF and propagated without complaint (spec {@code docs/multi-corps/06-conception-L4.md}
+   * §1.2-D) — the one defect of that lot able to produce a plausible, wrong trajectory.
+   *
    * @param body the gravitational context: central body, plus any third bodies it declares
    * @param maxStep integrator maximum step in seconds (must satisfy the late-ignition invariant)
-   * @return a new numerical propagator with the body's 8x8 gravity field
+   * @return a new numerical propagator with the body's gravity field
    */
   public NumericalPropagator createOptimizationPropagator(
       GravitationalContext body, double maxStep) {
@@ -194,7 +268,10 @@ public final class OrekitService {
     NumericalPropagator propagator = new NumericalPropagator(integrator);
     propagator.setOrbitType(OrbitType.CARTESIAN);
     propagator.setMu(body.mu());
-    propagator.addForceModel(getGravityModel(body.body()));
+    ForceModel nonCentralField = nonCentralField(body.body());
+    if (nonCentralField != null) {
+      propagator.addForceModel(nonCentralField);
+    }
     addPerturbers(propagator, body);
     return propagator;
   }
@@ -218,7 +295,16 @@ public final class OrekitService {
   }
 
   /**
-   * The 8×8 gravity model of the given body, resolved once and shared by every propagator.
+   * The non-central part of the given body's gravity potential — its 8×8 harmonic field — resolved
+   * once and shared by every propagator, or {@code null} when that body has no field at all.
+   *
+   * <p><b>Only the Earth has one here, and that is a property of the data, not a shortcut.</b>
+   * {@code orekit-data.zip} carries exactly one potential file, {@code Potential/eigen-6s.gfc},
+   * which is terrestrial. Asking {@link GravityFieldFactory} for a lunar field would silently hand
+   * back that same Earth model expressed in ITRF — measured in spec {@code
+   * docs/multi-corps/06-conception-L4.md} §1.2-D, where it propagated a lunar arc without raising
+   * anything. The {@code null} is therefore the honest answer, and {@link
+   * #createOptimizationPropagator} is the single caller that reads it.
    *
    * <p><b>The shared instance is an invariant, not an optimisation</b> (spec {@code
    * docs/multi-corps/03-conception-L1.md} §3.3): it is what makes bit-for-bit equality with the L0
@@ -226,19 +312,19 @@ public final class OrekitService {
    * computeIfAbsent} is atomic and evaluates the mapping function at most once per key, which is
    * exactly that guarantee — do not replace it with an explicit lock or a pre-warm.
    *
-   * <p>The mapping function must not modify the map. Building a {@code
-   * HolmesFeatherstoneAttractionModel} does not; a future lunar resolution that fell back to
-   * another body would, and would deadlock. That is an L4 concern.
+   * <p>The mapping function must not modify the map, so the Earth test sits <em>outside</em> it: a
+   * resolution that fell back to another body from inside would deadlock (spec L1 §7).
    *
-   * @param body the central body whose gravity model is requested
-   * @return the shared gravity force model for that body
+   * @param body the central body whose non-central field is requested
+   * @return the shared force model for that body, or {@code null} if it has no harmonic field
    */
-  private ForceModel getGravityModel(SolarSystemBody body) {
+  private ForceModel nonCentralField(SolarSystemBody body) {
+    if (body != SolarSystemBody.EARTH) {
+      return null;
+    }
     return gravityModels.computeIfAbsent(
         body,
         b -> {
-          // Ignores b: at L1 only the Earth is ever requested. The mapping point is now in the
-          // right place for L4, which will add the lunar resolution here — not anticipated now.
           NormalizedSphericalHarmonicsProvider provider =
               GravityFieldFactory.getNormalizedProvider(8, 8);
           return new HolmesFeatherstoneAttractionModel(itrf(), provider);

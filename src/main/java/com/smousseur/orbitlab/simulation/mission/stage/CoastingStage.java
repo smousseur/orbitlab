@@ -1,6 +1,5 @@
 package com.smousseur.orbitlab.simulation.mission.stage;
 
-import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionStage;
 import org.hipparchus.ode.events.Action;
@@ -44,8 +43,13 @@ public class CoastingStage extends MissionStage {
   @Override
   public void configure(NumericalPropagator propagator, Mission mission) {
     if (stopAtNode) {
+      // The node is measured in the frame this stage flies in, not in GCRF. PHY-4 / L1 §3.4
+      // announced three NodeDetector sites switched to the context and only two were; this is the
+      // third, and it is the stage a sphere-of-influence crossing actually happens in. For an Earth
+      // stage it is the very same frame instance, which is what lets the L1 gate prove the change
+      // moved nothing (spec docs/multi-corps/06-conception-L4.md §3.7).
       propagator.addEventDetector(
-          new NodeDetector(OrekitService.get().gcrf())
+          new NodeDetector(gravitationalContext(mission).inertialFrame())
               .withHandler(
                   (s, detector, increasing) -> {
                     mission.transitionToNextStage(s);

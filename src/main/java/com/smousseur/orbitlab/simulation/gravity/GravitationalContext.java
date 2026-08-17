@@ -1,6 +1,7 @@
 package com.smousseur.orbitlab.simulation.gravity;
 
 import com.smousseur.orbitlab.core.SolarSystemBody;
+import com.smousseur.orbitlab.engine.scene.PlanetRadius;
 import com.smousseur.orbitlab.simulation.OrekitService;
 import java.util.Arrays;
 import java.util.Collections;
@@ -84,6 +85,33 @@ public record GravitationalContext(
   }
 
   /**
+   * The Moon context: point-mass gravity, a selenocentric frame with ICRF axes, and a spherical
+   * reference shape.
+   *
+   * <p>Introduced by PHY-4 / L4 (spec {@code docs/multi-corps/06-conception-L4.md} §2.1). Three of
+   * its five components are not what one would guess:
+   *
+   * <ul>
+   *   <li>the frame is {@link OrekitService#bodyCentredIcrfFrame}, <b>not</b> {@code
+   *       CelestialBody.getInertiallyOrientedFrame()} — see that method for the three measurements
+   *       that decided it;
+   *   <li>{@code mu} is Orekit's own {@code getGM()}, so the propagator's central term and the
+   *       {@link org.orekit.forces.gravity.ThirdBodyAttraction} another arc would mount for the
+   *       Moon agree by construction;
+   *   <li>the shape is a sphere — an ellipsoid of zero flattening, which is what L1 §2.2 chose the
+   *       concrete {@code OneAxisEllipsoid} type for.
+   * </ul>
+   *
+   * <p>Unperturbed, like {@link #earth()}: the declaring stage adds the perturbers through {@link
+   * #withPerturbers}, and a switch derives them mechanically (spec L4 §4.2).
+   *
+   * @return the shared Moon context
+   */
+  public static GravitationalContext moon() {
+    return Holder.MOON;
+  }
+
+  /**
    * The equatorial radius of the reference shape (m), as the re-entry guard's spherical switching
    * function needs it.
    *
@@ -135,6 +163,21 @@ public record GravitationalContext(
             // longer the only Earth context — withPerturbers derives others — but it is still the
             // only one WITHOUT a perturber, which is what keeps the L1 gate's 0.0 tolerance
             // meaningful (spec L2 §2.3).
+            EnumSet.noneOf(SolarSystemBody.class));
+
+    private static final GravitationalContext MOON =
+        new GravitationalContext(
+            SolarSystemBody.MOON,
+            OrekitService.get().body(SolarSystemBody.MOON).getGM(),
+            OrekitService.get().bodyCentredIcrfFrame(SolarSystemBody.MOON),
+            OrekitService.get().body(SolarSystemBody.MOON).getBodyOrientedFrame(),
+            new OneAxisEllipsoid(
+                PlanetRadius.radiusFor(SolarSystemBody.MOON),
+                // A sphere. The Moon's flattening is about 1/830 and nothing in PHY-4 reads it:
+                // the shape serves the altitude of a sample and the re-entry guard's radius, and
+                // both are within metres of the spherical answer at the altitudes flown.
+                0.0,
+                OrekitService.get().body(SolarSystemBody.MOON).getBodyOrientedFrame()),
             EnumSet.noneOf(SolarSystemBody.class));
   }
 }

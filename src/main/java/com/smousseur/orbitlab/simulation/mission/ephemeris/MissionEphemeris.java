@@ -168,9 +168,15 @@ public final class MissionEphemeris {
    */
   public MissionEphemerisPoint interpolate(AbsoluteDate date) {
     int[] interval = EphemerisInterpolator.findInterval(times, date);
-    int i0 = interval[0], i1 = interval[1];
+    int i0 = interval[0];
+    int i1 = interval[1];
 
-    if (i0 == i1 || !arcs[i0].equals(arcs[i1])) {
+    // Exact hit. Only here may the index be normalised: when the interval brackets strictly, i0 is
+    // the lower bound of a real span and walking back off it would bracket across the boundary.
+    if (i0 == i1) {
+      return pointAt(floorOfEqualDates(i0));
+    }
+    if (!arcs[i0].equals(arcs[i1])) {
       return pointAt(i0);
     }
 
@@ -228,6 +234,28 @@ public final class MissionEphemeris {
       result.add(pointAt(i));
     }
     return result;
+  }
+
+  /**
+   * The lowest index sharing {@code times[index]}, which matters exactly once: at an arc boundary.
+   *
+   * <p>PHY-4 / L4 writes the boundary as <b>two samples at the same date</b>, one per frame — the
+   * outgoing state in the frame being left, the incoming one in the frame being entered (spec {@code
+   * docs/multi-corps/06-conception-L4.md} §5). {@code Arrays.binarySearch}, which {@link
+   * EphemerisInterpolator#findInterval} rests on, returns <em>some</em> matching index among equal
+   * keys and does not say which. Normalising to the lowest makes the answer the <b>outgoing</b>
+   * point, which is the floor semantics this method already applies to the stage name, the mass and
+   * the arc: the flip happens at the next sample, exactly as L3 §3.3 wrote it.
+   *
+   * <p>The behaviour was never actually at risk — the three readers query the same array at the same
+   * date, so they get the same index whichever it is. What is closed here is the contract.
+   */
+  private int floorOfEqualDates(int index) {
+    int i = index;
+    while (i > 0 && times[i - 1].equals(times[i])) {
+      i--;
+    }
+    return i;
   }
 
   private MissionEphemerisPoint pointAt(int index) {

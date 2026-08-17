@@ -131,4 +131,55 @@ class MissionEphemerisDisplayPointTest {
         1e-3,
         "halfway between the two samples of the second arc");
   }
+
+  // ════════════════════════════════════════════════════════════════════════
+  // The duplicated boundary sample (PHY-4 / L4, spec docs/multi-corps/06-conception-L4.md §5)
+  // ════════════════════════════════════════════════════════════════════════
+
+  /**
+   * The boundary as L4 actually writes it: one instant, two samples — the outgoing state in the
+   * frame being left, the incoming one in the frame being entered, at the very same date.
+   */
+  private static MissionEphemeris driftAcrossADuplicatedBoundary() {
+    Vector3D velocity = new Vector3D(100.0, 0.0, 0.0);
+    TrajectoryArc other = new TrajectoryArc(SolarSystemBody.MOON, TrajectoryArc.earth().frame());
+    return new MissionEphemeris(
+        List.of(
+            point(0, 7_000_000.0, velocity),
+            point(10, 7_001_000.0, velocity),
+            point(10, 1_001_000.0, velocity, other),
+            point(20, 1_002_000.0, velocity, other)));
+  }
+
+  /**
+   * At the boundary instant itself, the answer is the <b>outgoing</b> sample.
+   *
+   * <p>{@code Arrays.binarySearch} returns some matching index among equal keys and does not say
+   * which, so without the normalisation added by L4 this date would answer with either sample.
+   * Floor semantics picks the outgoing one, which is what makes the arc flip at the next sample
+   * exactly as L3 §3.3 wrote it.
+   */
+  @Test
+  void atTheDuplicatedInstantTheOutgoingSampleWins() {
+    MissionEphemeris eph = driftAcrossADuplicatedBoundary();
+
+    MissionEphemerisPoint atBoundary = eph.displayPointAt(T0.shiftedBy(10.0));
+
+    assertEquals(TrajectoryArc.earth(), atBoundary.arc());
+    assertEquals(7_001_000.0, atBoundary.position().getX(), 1e-9);
+  }
+
+  /** Either side of it, interpolation stays inside one frame and never blends the two. */
+  @Test
+  void eitherSideOfTheDuplicatedInstantStaysInOneFrame() {
+    MissionEphemeris eph = driftAcrossADuplicatedBoundary();
+
+    MissionEphemerisPoint before = eph.displayPointAt(T0.shiftedBy(5.0));
+    assertEquals(TrajectoryArc.earth(), before.arc());
+    assertEquals(7_000_500.0, before.position().getX(), 1e-3);
+
+    MissionEphemerisPoint after = eph.displayPointAt(T0.shiftedBy(15.0));
+    assertEquals(SolarSystemBody.MOON, after.arc().body());
+    assertEquals(1_001_500.0, after.position().getX(), 1e-3);
+  }
 }
