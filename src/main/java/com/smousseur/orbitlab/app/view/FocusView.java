@@ -3,6 +3,7 @@ package com.smousseur.orbitlab.app.view;
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.engine.EngineConfig;
 import com.smousseur.orbitlab.simulation.mission.MissionId;
+import java.util.Set;
 
 /**
  * Mutable state holder that tracks the current camera focus: which view mode is active and which
@@ -190,14 +191,20 @@ public class FocusView {
   }
 
   /**
-   * Returns whether a mission drawn around {@code missionBody} should be visible given the current
-   * view mode and focus.
+   * Returns whether a mission whose trajectory flies about {@code arcBodies} should be visible given
+   * the current view mode and focus.
    *
-   * <p>A mission is rendered in the planet-scale context of the body its objective targets, so it
-   * only belongs on screen while that same body is the one being looked at. Focusing another body
-   * of the system — the Moon, in particular, which shares the near viewport with Earth — must hide
-   * it: its trajectory is expressed about Earth and would otherwise be drawn into a scene it does
-   * not belong to.
+   * <p>A mission can be drawn about any body one of its arcs is centred on: PHY-4 / L5 converts
+   * every vertex into the frame of whichever of them is being looked at, so a lunar transfer is
+   * legitimate viewed from the Earth it launched from as well as from the Moon it arrives at.
+   * Focusing a body it never flies about — Mars, or the Earth for a mission around Mars — must hide
+   * it: there is no table for that body and its coordinates mean nothing there.
+   *
+   * <p><b>Why not the objective's body</b>, which is what this took until L5. With the view body
+   * following the arc, a lunar mission (objective {@code MOON}, first arc {@code EARTH}) would be
+   * hidden for the whole of its terrestrial ascent and appear only at the sphere-of-influence
+   * crossing. The old rule does not merely become incomplete, it becomes wrong (spec {@code
+   * docs/multi-corps/07-conception-L5.md} §5.4).
    *
    * <p>Missions around the focused body stay visible in spacecraft mode too, so following one of
    * them does not hide its siblings.
@@ -208,11 +215,12 @@ public class FocusView {
    * a mission bound for the Earth while the frame is still centred on the Sun would draw its
    * trajectory around the Sun. It has to wait for the focus to actually flip.
    *
-   * @param missionBody the body the mission's render context is centred on
+   * @param arcBodies the bodies the mission's trajectory can be expressed about, from {@code
+   *     TrajectoryPolyline.arcBodies()}
    * @return true if the mission should be shown
    */
-  public boolean isMissionVisible(SolarSystemBody missionBody) {
-    return isPlanetScaleMode(mode) && this.body == missionBody;
+  public boolean isMissionVisible(Set<SolarSystemBody> arcBodies) {
+    return isPlanetScaleMode(mode) && arcBodies.contains(this.body);
   }
 
   /**

@@ -1,5 +1,6 @@
 package com.smousseur.orbitlab.simulation.mission.ephemeris;
 
+import com.smousseur.orbitlab.core.SolarSystemBody;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -227,9 +228,9 @@ class MissionPolylineBaselineTest {
         stage,
         propulsive,
         trail.timeAt(index).durationFrom(launch),
-        trail.positionAt(index).getX(),
-        trail.positionAt(index).getY(),
-        trail.positionAt(index).getZ());
+        trail.positionAt(index, SolarSystemBody.EARTH).getX(),
+        trail.positionAt(index, SolarSystemBody.EARTH).getY(),
+        trail.positionAt(index, SolarSystemBody.EARTH).getZ());
   }
 
   /**

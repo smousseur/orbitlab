@@ -1,9 +1,13 @@
 package com.smousseur.orbitlab.simulation.mission.ephemeris;
 
+import com.smousseur.orbitlab.core.SolarSystemBody;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.orekit.time.AbsoluteDate;
 
@@ -38,21 +42,30 @@ public final class TrajectoryPolyline {
    */
   public static final int MAX_POINTS = 8192;
 
-  private final Vector3D[] positions;
   private final AbsoluteDate[] times;
   private final short[] runOf;
   private final List<PhaseRun> runs;
   private final short[] arcOf;
   private final List<ArcRun> arcs;
 
+  /**
+   * The vertices, one table per body they can be drawn about — every distinct arc body of this
+   * trajectory, and no other (spec {@code docs/multi-corps/07-conception-L5.md} §3.4).
+   *
+   * <p>A trajectory of a single arc holds <b>one</b> table, and it is the sampled array itself, not
+   * a copy: the identity is what makes L5 a structural non-regression rather than a measured one,
+   * and it is also why a single-arc polyline never touches Orekit.
+   */
+  private final Map<SolarSystemBody, Vector3D[]> positionsByRenderBody;
+
   private TrajectoryPolyline(
-      Vector3D[] positions,
+      Map<SolarSystemBody, Vector3D[]> positionsByRenderBody,
       AbsoluteDate[] times,
       short[] runOf,
       List<PhaseRun> runs,
       short[] arcOf,
       List<ArcRun> arcs) {
-    this.positions = positions;
+    this.positionsByRenderBody = positionsByRenderBody;
     this.times = times;
     this.runOf = runOf;
     this.runs = runs;
@@ -72,10 +85,11 @@ public final class TrajectoryPolyline {
    * extracted to fix. The stride is therefore computed against a budget reduced by the number of
    * runs, so the forced vertices cannot push the result over {@link #MAX_POINTS}.
    *
-   * <p><b>Every arc start is forced too</b>, for a different reason: an arc boundary is a change of
-   * frame, so a stride that skipped it would join two vertices expressed about different bodies with
-   * a straight segment. The headroom reserved for the forced vertices is therefore computed on the
-   * <b>union</b> of the run starts and the arc starts, never on their sum — with a single arc the
+   * <p><b>Both sides of every arc boundary are forced too</b>, so that each arc's vertex range
+   * actually contains its own boundary rather than stopping up to a stride short of it (spec {@code
+   * docs/multi-corps/07-conception-L5.md} §4.1). The headroom reserved for the forced vertices is
+   * therefore computed on the <b>union</b> of the run starts and the arc boundaries, never on their
+   * sum — with a single arc the
    * arc start is vertex 0, which is already a run start, so the union is the run starts and the
    * decimation is bit-for-bit what it was before PHY-4 / L3 (spec {@code
    * docs/multi-corps/05-conception-L3.md} §4.1). Written as a sum, the budget would lose a slot and
@@ -121,7 +135,7 @@ public final class TrajectoryPolyline {
     // Headroom for the forced vertices: at most one per distinct forced index plus the final
     // sample. Without it the forced adds could push the kept count past the budget the renderer
     // sizes its buffer from. The union, not the sum — see the method javadoc.
-    int[] forced = union(runStart, arcStart);
+    int[] forced = union(runStart, arcBoundaries(arcStart));
     int budget = Math.max(1, MAX_POINTS - forced.length - 1);
     int stride = (n + budget - 1) / budget;
 
@@ -187,6 +201,31 @@ public final class TrajectoryPolyline {
       }
     }
     return Arrays.copyOf(starts, count);
+  }
+
+  /**
+   * Both sides of every arc boundary: each arc's first sample, and the last sample of the arc
+   * before it. Ascending and deduplicated; for a single arc it is {@code {0}}, which is already a
+   * run start, so the union below is unchanged and so is the stride.
+   *
+   * <p><b>Why the outgoing side is forced too</b> (spec {@code
+   * docs/multi-corps/07-conception-L5.md} §4.1). L4 §5 flagged this as a debt on the grounds that a
+   * decimated trace would otherwise join two vertices expressed about different bodies with a
+   * straight segment. That reason is now void: L5 converts every vertex into the render body's
+   * frame, so the segment across a boundary is geometrically sound, merely coarser. What forcing it
+   * still buys is that {@link ArcRun#vertexCount()} of the outgoing arc actually contains its own
+   * boundary — a written debt one chooses not to pay gets paid twice.
+   */
+  private static int[] arcBoundaries(int[] arcStart) {
+    int[] both = new int[arcStart.length * 2];
+    int count = 0;
+    for (int i = 0; i < arcStart.length; i++) {
+      if (i > 0 && arcStart[i] - 1 > both[count - 1]) {
+        both[count++] = arcStart[i] - 1;
+      }
+      both[count++] = arcStart[i];
+    }
+    return Arrays.copyOf(both, count);
   }
 
   /**
@@ -262,7 +301,50 @@ public final class TrajectoryPolyline {
     }
 
     return new TrajectoryPolyline(
-        p, t, runPart.indexOf(), List.copyOf(runs), arcPart.indexOf(), List.copyOf(arcs));
+        renderTables(p, t, arcPart.indexOf(), arcs),
+        t,
+        runPart.indexOf(),
+        List.copyOf(runs),
+        arcPart.indexOf(),
+        List.copyOf(arcs));
+  }
+
+  /**
+   * One table of vertices per distinct arc body: the whole trajectory expressed about that body,
+   * ready to be drawn without any per-frame conversion.
+   *
+   * <p><b>The single-body case returns the sampled array itself.</b> No copy, no Orekit call, no
+   * arithmetic — which is what makes every trajectory that exists today bit-for-bit what it was, by
+   * identity of reference rather than by a measured equality (spec {@code
+   * docs/multi-corps/07-conception-L5.md} §3.4). It is also what keeps the four test classes that
+   * build polylines without initialising {@code OrekitService} working.
+   *
+   * <p>Beyond one body the conversion is a pure translation between two body-centred ICRF frames,
+   * done here — once, at build time, off the render thread — rather than per frame. The render
+   * thread cannot do it: {@code EphemerisConfig} buffers 33 h back and 66 h forward, while a lunar
+   * transfer's trace spans three to five days, so a per-frame lookup through {@code
+   * EphemerisService} would silently fail on the oldest vertices (spec §1.7).
+   */
+  private static Map<SolarSystemBody, Vector3D[]> renderTables(
+      Vector3D[] p, AbsoluteDate[] t, short[] arcOf, List<ArcRun> arcs) {
+    Map<SolarSystemBody, TrajectoryArc> targets = new EnumMap<>(SolarSystemBody.class);
+    for (ArcRun run : arcs) {
+      targets.putIfAbsent(run.arc().body(), run.arc());
+    }
+    if (targets.size() == 1) {
+      Map.Entry<SolarSystemBody, TrajectoryArc> only = targets.entrySet().iterator().next();
+      return Map.of(only.getKey(), p);
+    }
+
+    Map<SolarSystemBody, Vector3D[]> tables = new EnumMap<>(SolarSystemBody.class);
+    for (Map.Entry<SolarSystemBody, TrajectoryArc> target : targets.entrySet()) {
+      Vector3D[] table = new Vector3D[p.length];
+      for (int j = 0; j < p.length; j++) {
+        table[j] = arcs.get(arcOf[j]).arc().convertPosition(p[j], t[j], target.getValue());
+      }
+      tables.put(target.getKey(), table);
+    }
+    return Map.copyOf(tables);
   }
 
   /**
@@ -319,18 +401,45 @@ public final class TrajectoryPolyline {
    * @return the number of vertices, at least 1
    */
   public int size() {
-    return positions.length;
+    return times.length;
   }
 
   /**
-   * Returns the vertex at the given index, in meters, expressed in the frame of {@link
-   * #arcOf(int)} — GCRF for as long as nothing produces a second arc.
+   * Returns the vertex at the given index, in meters, expressed about {@code renderBody} — that is,
+   * in that body's ICRF-oriented inertial frame, whatever arc the vertex was flown in.
+   *
+   * <p><b>There is deliberately no single-argument overload.</b> The whole point of L5 is that a
+   * vertex no longer has one true frame, and while an Earth-implicit overload existed a forgotten
+   * call site would compile and draw a lunar arc about the Earth in silence. Same rule, same reason,
+   * as the one L3 §2.2 applied to {@code MissionEphemerisPoint}.
    *
    * @param index the vertex index
-   * @return the position
+   * @param renderBody the body every drawn coordinate of this frame is expressed about
+   * @return the position, in {@code renderBody}'s frame
+   * @throws IllegalArgumentException if this trajectory has no arc about that body — a render path
+   *     asking for one must fail loudly rather than be served the wrong table. {@code
+   *     FocusView.isMissionVisible} is what guarantees the case does not arise.
    */
-  public Vector3D positionAt(int index) {
-    return positions[index];
+  public Vector3D positionAt(int index, SolarSystemBody renderBody) {
+    Vector3D[] table = positionsByRenderBody.get(renderBody);
+    if (table == null) {
+      throw new IllegalArgumentException(
+          "this trajectory has no arc about " + renderBody + "; it flies " + arcBodies());
+    }
+    return table[index];
+  }
+
+  /**
+   * The bodies this trajectory can be drawn about: one per distinct arc central body.
+   *
+   * <p>This is what decides whether the mission belongs on screen at all — a lunar transfer is
+   * legitimate viewed from the Earth, whose arc it starts in, as well as from the Moon (spec {@code
+   * docs/multi-corps/07-conception-L5.md} §5.4).
+   *
+   * @return the render bodies, never empty
+   */
+  public Set<SolarSystemBody> arcBodies() {
+    return positionsByRenderBody.keySet();
   }
 
   /**

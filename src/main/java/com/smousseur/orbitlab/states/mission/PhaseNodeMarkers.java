@@ -10,6 +10,7 @@ import com.jme3.scene.Spatial;
 import com.jme3.scene.VertexBuffer;
 import com.jme3.util.BufferUtils;
 import com.smousseur.orbitlab.app.view.RenderContext;
+import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.engine.AssetFactory;
 import com.smousseur.orbitlab.simulation.mission.MissionId;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.PhaseRun;
@@ -79,6 +80,9 @@ final class PhaseNodeMarkers {
    * @param translation the local translation the line carries, so both land in the same place
    * @param renderContext the context the line was just converted with — passed rather than held, so
    *     a marker cannot be produced by a different context than the ribbon it sits on
+   * @param renderBody the body the vertices are read about, taken from the ribbon's own derivation
+   *     rather than re-derived here, for the reason {@code translation} is passed in: a marker built
+   *     from a second computation of the same thing drifts off the trace by the difference
    */
   void update(
       TrajectoryPolyline trail,
@@ -86,7 +90,8 @@ final class PhaseNodeMarkers {
       int upTo,
       Vector3D origin,
       Vector3f translation,
-      RenderContext renderContext) {
+      RenderContext renderContext,
+      SolarSystemBody renderBody) {
     List<PhaseRun> runs = trail.runs();
     if (trail != boundTrail) {
       allocate(runs.size());
@@ -110,7 +115,7 @@ final class PhaseNodeMarkers {
         break;
       }
       MissionTrajectoryRenderer.putVertex(
-          pb, trail.positionAt(vertex).subtract(origin), renderContext);
+          pb, trail.positionAt(vertex, renderBody).subtract(origin), renderContext);
       ColorRGBA c = runColors[r];
       cb.put(c.r).put(c.g).put(c.b).put(c.a);
     }

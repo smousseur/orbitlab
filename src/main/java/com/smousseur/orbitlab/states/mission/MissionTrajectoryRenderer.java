@@ -9,6 +9,7 @@ import com.jme3.scene.Node;
 import com.jme3.scene.Spatial;
 import com.smousseur.orbitlab.app.view.RenderContext;
 import com.smousseur.orbitlab.app.view.RenderTransform;
+import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.engine.AssetFactory;
 import com.smousseur.orbitlab.engine.scene.RibbonMeshBuilder;
 import com.smousseur.orbitlab.engine.view.JmeVectorAdapter;
@@ -155,14 +156,22 @@ public final class MissionTrajectoryRenderer {
       boundTrail = trail;
     }
 
+    // The body every coordinate of this frame is expressed about — the vertices, the origin they
+    // are subtracted from, and the translation the geometry carries. Derived once and passed down,
+    // so nothing below can read a different table than the one the origin came from.
+    SolarSystemBody renderBody =
+        renderContext
+            .targetBody()
+            .orElseThrow(() -> new IllegalStateException("a mission is drawn at planet scale"));
+
     int last = Math.min(upTo, trail.size() - 1);
     // Fall back to the last drawn sample when there is no tip: the origin has to be a point of the
     // line, not the geocentre, or the precision this whole method buys is given straight back.
-    Vector3D origin = tip != null ? tip : trail.positionAt(last);
+    Vector3D origin = tip != null ? tip : trail.positionAt(last, renderBody);
 
     int count = 0;
     for (int i = 0; i <= last; i++) {
-      putPoint(points, count++, trail.positionAt(i).subtract(origin), renderContext);
+      putPoint(points, count++, trail.positionAt(i, renderBody).subtract(origin), renderContext);
     }
     if (tip != null) {
       putPoint(points, count++, Vector3D.ZERO, renderContext); // the tip is the origin
@@ -184,7 +193,13 @@ public final class MissionTrajectoryRenderer {
     // The line's own local translation, not a second computation of it: reusing the value that was
     // just set is what makes it impossible for the two geometries to disagree about the origin.
     markers.update(
-        trail, runColors, last, origin, lineGeometry.getLocalTranslation(), renderContext);
+        trail,
+        runColors,
+        last,
+        origin,
+        lineGeometry.getLocalTranslation(),
+        renderContext,
+        renderBody);
   }
 
   /**

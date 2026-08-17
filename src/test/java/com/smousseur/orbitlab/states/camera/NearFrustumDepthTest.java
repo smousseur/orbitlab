@@ -18,6 +18,15 @@ import org.junit.jupiter.api.Test;
  * 500 m from the spacecraft — one depth step at the Earth's distance is ~274 km, and a 400 km LEO
  * orbit is barely one and a half steps above the surface: the line wins or loses the depth test per
  * pixel and per frame. These tests pin the near plane by what it buys, not by its value.
+ *
+ * <p><b>The third viewport, and why there is none</b> (spec {@code
+ * docs/multi-corps/07-conception-L5.md} §5.3). Roadmap open question n° 4 asked whether Earth + Moon
+ * + spacecraft in one frame forces a third "mid" viewport, reverse-Z or a logarithmic depth buffer,
+ * and named this class as the instrument to decide it. The measurement below says no. One depth step
+ * at the Moon's distance is ~88 000 km, fourteen Earth radii — but nothing out there is competing
+ * for depth: the near viewport draws exactly one globe, on the origin, where the step is ~27 km. The
+ * far end of the trajectory disputes depth only with itself. What was actually broken was the far
+ * <em>clip</em> plane, and that is one constant.
  */
 class NearFrustumDepthTest {
 
@@ -29,6 +38,12 @@ class NearFrustumDepthTest {
 
   /** Camera-to-spacecraft distance in spacecraft view: {@code 5e-7} solar units = 500 m. */
   private static final float SPACECRAFT_FOCUS_KM = 0.5f;
+
+  /** Mean Earth-Moon distance, in km units: the far end of a lunar transfer. */
+  private static final double LUNAR_DISTANCE_KM = 384_400.0;
+
+  /** The far floor before PHY-4 / L5, kept so the two can be compared rather than described. */
+  private static final float PREVIOUS_FAR_MIN = 100_000f;
 
   /** One depth-buffer step at distance {@code z}, for a 24-bit buffer. All lengths in km units. */
   private static double depthStepKm(double z, double near, double far) {
@@ -105,6 +120,58 @@ class NearFrustumDepthTest {
     assertTrue(
         near < distanceToCentre - EARTH_SURFACE_DISTANCE_KM,
         () -> "the near plane clips the planet's surface: " + near + " km");
+  }
+
+  @Test
+  void theFarPlaneCoversTheWholeLunarTransfer() {
+    // The defect this floor actually fixes, and the only one of the three lunar cases that was
+    // visible rather than merely imprecise: at 100 000 km, everything past a quarter of the way to
+    // the Moon was clipped out of the near viewport before any depth question arose.
+    assertTrue(
+        NearCameraSyncAppState.FAR_MIN > LUNAR_DISTANCE_KM,
+        () ->
+            "a lunar transfer reaches "
+                + LUNAR_DISTANCE_KM
+                + " km and the near viewport clips at "
+                + NearCameraSyncAppState.FAR_MIN
+                + " km");
+  }
+
+  @Test
+  void raisingTheFarFloorCostsNothingWhereTheDepthBudgetIsSpent() {
+    // The licence for the value above, and the mirror image of loweringTheFarPlaneChangesNothing:
+    // Δz ∝ z²/near as soon as far ≫ near, so the floor can be sized by what has to stay in frame
+    // rather than traded against depth precision. Asserted where the budget is actually tight — the
+    // LEO trajectory over the Earth's disc, which is what §5 of the spec was written about.
+    float near = NearCameraSyncAppState.nearPlane(ViewMode.SPACECRAFT, SPACECRAFT_FOCUS_KM);
+
+    double before = depthStepKm(EARTH_DISTANCE_KM, near, PREVIOUS_FAR_MIN);
+    double after = depthStepKm(EARTH_DISTANCE_KM, near, NearCameraSyncAppState.FAR_MIN);
+
+    assertEquals(
+        before,
+        after,
+        before * 1e-3,
+        "raising the far floor five-fold must not move the depth step by even a tenth of a percent");
+  }
+
+  @Test
+  void atLunarDistanceOneDepthStepIsEnormous_andThatIsAccepted() {
+    // Pinned, not fixed. Recorded the way PHY-4 / L2 kept its tidal acceleration in a logged
+    // reference: a reader who computes this number and finds it alarming must be able to see that
+    // it was measured and accepted, with the reason attached, rather than missed.
+    //
+    // Nothing out at the Moon's distance competes for depth. SceneGraph.showBodySpatial culls every
+    // near-viewport globe but one, and that one sits on the origin — where the step is ~27 km, the
+    // figure this class already pins. The far end of the trace disputes depth with itself alone.
+    float near = NearCameraSyncAppState.nearPlane(ViewMode.SPACECRAFT, SPACECRAFT_FOCUS_KM);
+    double step = depthStepKm(LUNAR_DISTANCE_KM, near, NearCameraSyncAppState.FAR_MIN);
+
+    assertEquals(
+        88_000.0,
+        step,
+        1_000.0,
+        "the measured depth step at the Moon's distance, which no third viewport is bought to fix");
   }
 
   @Test

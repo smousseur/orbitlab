@@ -97,13 +97,13 @@ class PhaseNodeMarkersTest {
   void onlyReachedTransitionsAreDrawn() {
     TrajectoryPolyline trail = trail();
 
-    renderer.update(trail, 0, trail.positionAt(0), ctx);
+    renderer.update(trail, 0, trail.positionAt(0, SolarSystemBody.EARTH), ctx);
     assertEquals(1, markers().getMesh().getVertexCount(), "only the launch node has been reached");
 
-    renderer.update(trail, 4, trail.positionAt(4), ctx);
+    renderer.update(trail, 4, trail.positionAt(4, SolarSystemBody.EARTH), ctx);
     assertEquals(2, markers().getMesh().getVertexCount(), "the second run has started");
 
-    renderer.update(trail, 8, trail.positionAt(8), ctx);
+    renderer.update(trail, 8, trail.positionAt(8, SolarSystemBody.EARTH), ctx);
     assertEquals(3, markers().getMesh().getVertexCount(), "all three runs have started");
   }
 

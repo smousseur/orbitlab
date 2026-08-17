@@ -12,9 +12,15 @@ import com.smousseur.orbitlab.app.view.RenderContext;
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.engine.scene.body.BodyView;
 import com.smousseur.orbitlab.engine.scene.spacecraft.SpacecraftPresenter;
+import com.smousseur.orbitlab.simulation.OrekitService;
+import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemerisPoint;
+import com.smousseur.orbitlab.simulation.mission.ephemeris.TrajectoryArc;
+import com.smousseur.orbitlab.states.mission.MissionRenderer;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.orekit.time.AbsoluteDate;
 
 /**
  * The near-view origin must land <em>exactly</em> on the focused spacecraft, because that is the
@@ -98,32 +104,77 @@ class NearFrameOriginTest {
   }
 
   /**
-   * <b>The cancellation does not depend on which body the context names</b> — and after PHY-4 / L3
-   * the context is derived from the sample's arc, so it is worth pinning rather than assuming.
+   * <b>The adapter is blind to which body the context names</b>, and that fact is what makes the
+   * cancellation robust: {@link JmeVectorAdapter#toJmeBodyRelativePosition} reads only {@code
+   * unitsPerMeter()} and {@code axisConvention()}, and both are the same for every planet-scale
+   * context. Whatever body the render context ends up naming on a given frame, the two producers
+   * still yield the same {@code float} triple.
    *
-   * <p>{@link JmeVectorAdapter#toJmeBodyRelativePosition} reads only {@code unitsPerMeter()} and
-   * {@code axisConvention()}, and both are the same for every planet-scale context. A lunar arc
-   * therefore produces exactly the same {@code float} triple as the Earth one, and the anchor still
-   * lands on the origin at zero tolerance.
-   *
-   * <p>This test is the executable form of what spec {@code
-   * docs/multi-corps/05-conception-L3.md} §1.1-C states: switching the render context onto the arc
-   * fixes <em>which body the coordinates are about</em>, not where the line lands on screen. Putting
-   * a lunar arc in its right place is L5's work, and this assertion is what will have to change when
-   * L5 does it — deliberately, rather than by surprise.
+   * <p>L3 §1.1-C stated it and added that L5 would have to change this assertion. It did not have
+   * to, and that is worth recording: L5 leaves the adapter alone and converts the <em>input</em>
+   * instead — which is the next test.
    */
   @Test
-  void aLunarArcCancelsJustAsExactly() {
+  void aLunarContextCancelsJustAsExactly() {
     RenderContext lunar = RenderContext.planet(SolarSystemBody.MOON);
 
     assertEquals(
         JmeVectorAdapter.toJmeBodyRelativePosition(LEO_GCRF, ctx),
         JmeVectorAdapter.toJmeBodyRelativePosition(LEO_GCRF, lunar),
-        "the conversion is blind to the body — that is L5's problem, not L3's");
+        "the adapter names a body but never reads it");
 
     nearFrame.setLocalTranslation(
         JmeVectorAdapter.toJmeBodyRelativePosition(LEO_GCRF, lunar).negateLocal());
     presenter.updatePose(LEO_GCRF, new Vector3D(0, 7_500, 0), 0.016f, lunar);
+
+    Vector3f world = anchor.getWorldTranslation();
+    assertEquals(0f, world.x, "exact cancellation, no tolerance");
+    assertEquals(0f, world.y, "exact cancellation, no tolerance");
+    assertEquals(0f, world.z, "exact cancellation, no tolerance");
+  }
+
+  /**
+   * The PHY-4 / L5 form of the invariant, and the one risk of that lot (spec {@code
+   * docs/multi-corps/07-conception-L5.md} §10).
+   *
+   * <p>A sample flown about the Moon is no longer drawn where its raw coordinates say: looking at
+   * the Earth, it is first re-expressed about the Earth, moving it by the best part of 400 000 km.
+   * Both producers of the near origin therefore have to take that <em>converted</em> value, and take
+   * the same one — {@code MissionRenderer.renderPositionOf} is the single path, exactly as {@code
+   * toJmeBodyRelativePosition} is the single path for the scale. Two conversions instead of one
+   * would leave a kink between the last ribbon vertex and the spacecraft model, in the middle of the
+   * screen.
+   *
+   * <p>The first assertion is what gives the rest its meaning: it checks the conversion actually
+   * moves the point, so the cancellation below is not the trivial identity the previous test covers.
+   */
+  @Test
+  void aConvertedSampleCancelsJustAsExactly() {
+    Assumptions.assumeTrue(
+        OrekitService.class.getClassLoader().getResource("orekit-data.zip") != null,
+        "orekit-data.zip not on classpath — skipping");
+    OrekitService.get().initialize();
+
+    // A perilune pass, expressed about the Moon, drawn while the camera looks at the Earth.
+    MissionEphemerisPoint sample =
+        new MissionEphemerisPoint(
+            AbsoluteDate.J2000_EPOCH,
+            new Vector3D(1_837_000.0, -420_000.0, 96_000.0),
+            new Vector3D(0, 1_600, 0),
+            "lunar coast",
+            false,
+            4_200.0,
+            100_000.0,
+            TrajectoryArc.forBody(SolarSystemBody.MOON));
+
+    Vector3D drawn = MissionRenderer.renderPositionOf(sample, SolarSystemBody.EARTH);
+    assertTrue(
+        drawn.subtract(sample.position()).getNorm() > 3e8,
+        "the conversion must actually move the sample, or this test proves nothing");
+
+    nearFrame.setLocalTranslation(
+        JmeVectorAdapter.toJmeBodyRelativePosition(drawn, ctx).negateLocal());
+    presenter.updatePose(drawn, sample.velocity(), 0.016f, ctx);
 
     Vector3f world = anchor.getWorldTranslation();
     assertEquals(0f, world.x, "exact cancellation, no tolerance");

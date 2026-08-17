@@ -100,22 +100,25 @@ public final class MissionOrchestratorAppState extends BaseAppState {
         continue;
       }
 
-      // A mission is drawn in the planet-scale context of the body its objective targets, so it
-      // only belongs on screen while the camera is looking at that body — not in the solar view,
-      // and not while focusing another body that shares the same near viewport, the Moon being the
-      // case that surfaced this. Deciding it here rather than inside the renderer is what makes the
-      // rule cover the trajectory line as well: setVisible() hides both, whereas the mode test that
-      // used to live in updateFromEphemeris() hid the spacecraft alone and left the line drawn.
-      if (!context.focusView().isMissionVisible(entry.mission().getObjective().body())) {
-        renderer.setVisible(false);
-        continue;
-      }
-
       // Within the ephemeris the point is interpolated and the trail stops at the current instant;
       // past its end the mission is over, so both settle on the last sample. The trail itself is
       // the same shared, pre-decimated polyline in both cases — nothing is allocated here, where
       // the previous code built a fresh list of up to 86 400 positions per frame and per mission.
       TrajectoryPolyline trail = eph.displayTrail();
+
+      // A mission can be drawn about any body one of its arcs is centred on — L5 converts its
+      // vertices into whichever of them is being looked at — but about no other: not in the solar
+      // view, and not while focusing a body its trajectory never visits. Asking the trail rather
+      // than the objective is what keeps a lunar transfer on screen during its terrestrial ascent
+      // (spec docs/multi-corps/07-conception-L5.md §5.4). Deciding it here rather than inside the
+      // renderer is what makes the rule cover the trajectory line as well: setVisible() hides both,
+      // whereas the mode test that used to live in updateFromEphemeris() hid the spacecraft alone
+      // and left the line drawn.
+      if (!context.focusView().isMissionVisible(trail.arcBodies())) {
+        renderer.setVisible(false);
+        continue;
+      }
+
       boolean within = now.compareTo(eph.endDate()) <= 0;
       MissionEphemerisPoint pt = eph.displayPointAt(now);
       int upTo = within ? trail.indexUpTo(now) : trail.size() - 1;
@@ -229,14 +232,15 @@ public final class MissionOrchestratorAppState extends BaseAppState {
   /**
    * Builds the renderer for a mission, in the context of the arc it <b>starts</b> in.
    *
-   * <p>That construction-time context only ever serves what does not depend on the body — the scale
-   * the spacecraft mesh is sized with, and the parent body a click hands the camera (spec {@code
-   * docs/multi-corps/05-conception-L3.md} §3.1). Everything drawn per frame derives its own context
-   * from the sample being drawn. L5, which must place a lunar arc and not merely name it, is where
-   * the first sample stops being a good enough answer.
+   * <p>That construction-time context serves the <b>scale</b> the spacecraft mesh is sized with, and
+   * nothing else — L5 took the second use away, a click now framing the arc the spacecraft is
+   * actually in (spec {@code docs/multi-corps/07-conception-L5.md} §5.2). Since the scale is the same
+   * for every planet-scale context whatever the body, the first sample's arc is a good enough answer
+   * and stays one.
    */
   private MissionRenderer createRenderer(MissionEntry entry, MissionEphemeris ephemeris) {
-    RenderContext renderContext = MissionRenderer.renderContextFor(ephemeris.firstPoint());
+    RenderContext renderContext =
+        RenderContext.planet(ephemeris.firstPoint().arc().body());
     ColorRGBA color = entry.getColor();
     if (color == null) color = ColorRGBA.Cyan;
 

@@ -3,11 +3,13 @@ package com.smousseur.orbitlab.simulation.mission.ephemeris;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.junit.jupiter.api.Test;
 import org.orekit.time.AbsoluteDate;
@@ -90,8 +92,8 @@ class TrajectoryPolylineTest {
     TrajectoryPolyline trail = polylineOf(1_000);
 
     assertEquals(1_000, trail.size());
-    assertEquals(new Vector3D(0, 0, 0), trail.positionAt(0));
-    assertEquals(new Vector3D(999, 0, 0), trail.positionAt(999));
+    assertEquals(new Vector3D(0, 0, 0), trail.positionAt(0, SolarSystemBody.EARTH));
+    assertEquals(new Vector3D(999, 0, 0), trail.positionAt(999, SolarSystemBody.EARTH));
   }
 
   @Test
@@ -107,10 +109,10 @@ class TrajectoryPolylineTest {
     assertTrue(
         trail.size() <= TrajectoryPolyline.MAX_POINTS,
         () -> "budget exceeded: " + trail.size() + " > " + TrajectoryPolyline.MAX_POINTS);
-    assertEquals(new Vector3D(0, 0, 0), trail.positionAt(0), "the ascent must not be dropped");
+    assertEquals(new Vector3D(0, 0, 0), trail.positionAt(0, SolarSystemBody.EARTH), "the ascent must not be dropped");
     assertEquals(
         new Vector3D(n - 1, 0, 0),
-        trail.positionAt(trail.size() - 1),
+        trail.positionAt(trail.size() - 1, SolarSystemBody.EARTH),
         "the trail must end where the spacecraft is");
   }
 
@@ -136,16 +138,16 @@ class TrajectoryPolylineTest {
     TrajectoryPolyline trail = polylineOf(2 * budget);
 
     assertEquals(budget + 1, trail.size(), "the stride moved");
-    assertEquals(new Vector3D(0, 0, 0), trail.positionAt(0));
-    assertEquals(new Vector3D(2, 0, 0), trail.positionAt(1), "stride of 2");
-    assertEquals(new Vector3D(4, 0, 0), trail.positionAt(2));
+    assertEquals(new Vector3D(0, 0, 0), trail.positionAt(0, SolarSystemBody.EARTH));
+    assertEquals(new Vector3D(2, 0, 0), trail.positionAt(1, SolarSystemBody.EARTH), "stride of 2");
+    assertEquals(new Vector3D(4, 0, 0), trail.positionAt(2, SolarSystemBody.EARTH));
     assertEquals(
         new Vector3D(2 * budget - 2, 0, 0),
-        trail.positionAt(trail.size() - 2),
+        trail.positionAt(trail.size() - 2, SolarSystemBody.EARTH),
         "the last strided vertex");
     assertEquals(
         new Vector3D(2 * budget - 1, 0, 0),
-        trail.positionAt(trail.size() - 1),
+        trail.positionAt(trail.size() - 1, SolarSystemBody.EARTH),
         "the forced final sample");
   }
 
@@ -256,7 +258,7 @@ class TrajectoryPolylineTest {
     assertEquals(0, runs.get(0).firstVertex());
     assertEquals(
         new Vector3D(15, 0, 0),
-        trail.positionAt(runs.get(1).firstVertex()),
+        trail.positionAt(runs.get(1).firstVertex(), SolarSystemBody.EARTH),
         "run 1 must start on the raw sample where the stage actually changed");
   }
 
@@ -282,6 +284,86 @@ class TrajectoryPolylineTest {
   }
 
   /**
+   * PHY-4 / L5's non-regression, and it is an identity rather than an equality (spec {@code
+   * docs/multi-corps/07-conception-L5.md} §3.4). A trajectory of a single arc holds exactly one
+   * vertex table and it <em>is</em> the sampled array: no copy, no arithmetic, and no Orekit call —
+   * which is also why this class can keep building polylines without initialising {@code
+   * OrekitService}. Nothing L5 does can move a vertex of a trajectory that has one arc, and this is
+   * the reason stated as a test rather than as an argument.
+   */
+  @Test
+  void aSingleArcTrajectoryHandsBackTheSampledVectorsThemselves() {
+    int n = 5;
+    AbsoluteDate[] times = new AbsoluteDate[n];
+    Vector3D[] positions = new Vector3D[n];
+    String[] names = new String[n];
+    boolean[] burns = new boolean[n];
+    for (int i = 0; i < n; i++) {
+      times[i] = T0.shiftedBy((double) i);
+      positions[i] = new Vector3D(i, 0, 0);
+      names[i] = "S0";
+    }
+    TrajectoryPolyline trail =
+        TrajectoryPolyline.of(times, positions, names, burns, arcsOf(n, null));
+
+    for (int i = 0; i < n; i++) {
+      assertSame(
+          positions[i],
+          trail.positionAt(i, SolarSystemBody.EARTH),
+          "vertex " + i + " was rebuilt where it should have been passed through");
+    }
+  }
+
+  @Test
+  void arcBodiesListsEveryBodyTheTrajectoryCanBeDrawnAbout() {
+    assertEquals(Set.of(SolarSystemBody.EARTH), polylineOf(10).arcBodies());
+
+    TrajectoryPolyline crossing =
+        polylineOf(new int[] {30}, new boolean[] {false}, new int[] {15});
+    assertEquals(Set.of(SolarSystemBody.EARTH, SolarSystemBody.MOON), crossing.arcBodies());
+  }
+
+  /**
+   * Asking for a body the trajectory never flies about is a programming error, not a degraded case:
+   * there is no table, and serving the nearest one would draw the line somewhere meaningless. {@code
+   * FocusView.isMissionVisible} is what guarantees the render path never asks.
+   */
+  @Test
+  void aBodyTheTrajectoryNeverFliesAboutIsRefused() {
+    TrajectoryPolyline trail = polylineOf(10);
+
+    assertThrows(
+        IllegalArgumentException.class, () -> trail.positionAt(0, SolarSystemBody.MARS));
+  }
+
+  /**
+   * Both sides of a boundary are forced vertices, so the outgoing arc's range contains the boundary
+   * instead of stopping up to a stride short of it — the debt L4 §5 left, paid with the reason L5
+   * §4.1 gives it. The fixture decimates hard: the stride cannot land on either side by chance.
+   */
+  @Test
+  void bothSidesOfAnArcBoundaryAreKept() {
+    int n = 400_000;
+    int boundary = 123_457;
+    TrajectoryPolyline trail =
+        polylineOf(new int[] {n}, new boolean[] {false}, new int[] {boundary});
+
+    int opensAt = trail.arcs().get(1).firstVertex();
+    assertEquals(
+        new Vector3D(boundary, 0, 0),
+        trail.positionAt(opensAt, SolarSystemBody.EARTH),
+        "the incoming arc opens on the boundary sample");
+    assertEquals(
+        new Vector3D(boundary - 1, 0, 0),
+        trail.positionAt(opensAt - 1, SolarSystemBody.EARTH),
+        "and the outgoing arc ends on the sample just before it");
+    assertEquals(
+        opensAt,
+        trail.arcs().get(0).vertexCount(),
+        "so the outgoing arc's range reaches its own boundary");
+  }
+
+  /**
    * An arc boundary is a change of frame: a stride that skipped it would join two vertices
    * expressed about different bodies with a straight segment. The boundary sits at an odd raw index
    * a stride of this size cannot land on by chance.
@@ -297,7 +379,7 @@ class TrajectoryPolylineTest {
     assertEquals(2, trail.arcs().size(), "the crossing must not be decimated away");
     assertEquals(
         new Vector3D(boundary, 0, 0),
-        trail.positionAt(trail.arcs().get(1).firstVertex()),
+        trail.positionAt(trail.arcs().get(1).firstVertex(), SolarSystemBody.EARTH),
         "the second arc must open on the raw sample where the frame actually changed");
   }
 

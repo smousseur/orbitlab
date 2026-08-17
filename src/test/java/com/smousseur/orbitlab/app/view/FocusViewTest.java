@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.Set;
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.engine.EngineConfig;
 import com.smousseur.orbitlab.simulation.mission.MissionId;
@@ -81,25 +82,43 @@ class FocusViewTest {
   @Test
   void isMissionVisibleOnlyAroundTheFocusedBody() {
     focusView.viewPlanet(SolarSystemBody.EARTH);
-    assertTrue(focusView.isMissionVisible(SolarSystemBody.EARTH));
+    assertTrue(focusView.isMissionVisible(Set.of(SolarSystemBody.EARTH)));
 
     // The reported bug: focusing the Moon kept Earth-centred missions on screen, because the rule
     // tested the view mode and never which body was being looked at.
     focusView.viewPlanet(SolarSystemBody.MOON);
-    assertFalse(focusView.isMissionVisible(SolarSystemBody.EARTH));
+    assertFalse(focusView.isMissionVisible(Set.of(SolarSystemBody.EARTH)));
   }
 
   @Test
   void isMissionVisibleIsFalseInSolarMode() {
-    assertFalse(focusView.isMissionVisible(SolarSystemBody.EARTH));
+    assertFalse(focusView.isMissionVisible(Set.of(SolarSystemBody.EARTH)));
   }
 
   @Test
   void isMissionVisibleKeepsSiblingMissionsWhileFollowingOne() {
     focusView.viewSpacecraft(leo1, SolarSystemBody.EARTH);
 
-    assertTrue(focusView.isMissionVisible(SolarSystemBody.EARTH));
-    assertFalse(focusView.isMissionVisible(SolarSystemBody.MARS));
+    assertTrue(focusView.isMissionVisible(Set.of(SolarSystemBody.EARTH)));
+    assertFalse(focusView.isMissionVisible(Set.of(SolarSystemBody.MARS)));
+  }
+
+  @Test
+  void isMissionVisibleAboutAnyBodyTheTrajectoryFliesAbout() {
+    // PHY-4 / L5: a lunar transfer flies about the Earth and then about the Moon, and every vertex
+    // is converted into whichever of the two is being looked at. Both viewings are legitimate.
+    // Keeping the objective's body as the criterion would have hidden such a mission for the whole
+    // of its terrestrial ascent and shown it only at the sphere-of-influence crossing.
+    Set<SolarSystemBody> transfer = Set.of(SolarSystemBody.EARTH, SolarSystemBody.MOON);
+
+    focusView.viewPlanet(SolarSystemBody.EARTH);
+    assertTrue(focusView.isMissionVisible(transfer), "the arc it launched from");
+
+    focusView.viewPlanet(SolarSystemBody.MOON);
+    assertTrue(focusView.isMissionVisible(transfer), "the arc it arrives in");
+
+    focusView.viewPlanet(SolarSystemBody.MARS);
+    assertFalse(focusView.isMissionVisible(transfer), "a body it never flies about");
   }
 
   @Test
@@ -169,7 +188,7 @@ class FocusViewTest {
     // the frame is centred on the Sun would draw its orbit around the Sun.
     focusView.beginTransition(ViewMode.PLANET, SolarSystemBody.EARTH);
 
-    assertFalse(focusView.isMissionVisible(SolarSystemBody.EARTH));
+    assertFalse(focusView.isMissionVisible(Set.of(SolarSystemBody.EARTH)));
   }
 
   @Test
@@ -177,7 +196,7 @@ class FocusViewTest {
     focusView.viewPlanet(SolarSystemBody.EARTH);
     focusView.beginTransition(ViewMode.SOLAR, SolarSystemBody.SUN);
 
-    assertTrue(focusView.isMissionVisible(SolarSystemBody.EARTH));
+    assertTrue(focusView.isMissionVisible(Set.of(SolarSystemBody.EARTH)));
   }
 
   @Test

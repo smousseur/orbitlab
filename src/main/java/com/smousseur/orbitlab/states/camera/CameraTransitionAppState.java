@@ -342,20 +342,23 @@ public final class CameraTransitionAppState extends BaseAppState {
    * recomputed), which is the same degradation {@code FloatingOriginAppState} accepts.
    */
   private Vector3f spacecraftPivot(TransitionTarget.Spacecraft target) {
-    Vector3f pivot = bodyPivot(target.parentBody());
     MissionEntry entry = context.missionContext().findMission(target.missionId()).orElse(null);
     MissionEphemeris ephemeris = entry == null ? null : entry.getEphemeris().orElse(null);
     if (ephemeris == null) {
-      return pivot;
+      return bodyPivot(target.parentBody());
     }
-    // The context comes from the sample, not from the entry — the same point that gives the
-    // position gives the arc it is expressed in (PHY-4 / L3, spec §3.1).
+    // Both halves come from the sample, and the pair is what makes this correct: the offset is
+    // expressed about the arc's body, so the body it is added to has to be that same one. Taking
+    // the parent captured at click time instead left the two disagreeing by the whole Earth-Moon
+    // distance for a spacecraft that had crossed into the lunar sphere of influence since
+    // (spec docs/multi-corps/07-conception-L5.md §5.2).
     MissionEphemerisPoint point = ephemeris.displayPointAt(context.clock().now());
+    SolarSystemBody arcBody = point.arc().body();
     Vector3f planetUnits =
         JmeVectorAdapter.toJmeBodyRelativePosition(
-            point.position(), MissionRenderer.renderContextFor(point));
-    return pivot.addLocal(
-        planetUnits.divideLocal((float) RenderContext.ratioSolarToPlanetPerUnit()));
+            point.position(), RenderContext.planet(arcBody));
+    return bodyPivot(arcBody)
+        .addLocal(planetUnits.divideLocal((float) RenderContext.ratioSolarToPlanetPerUnit()));
   }
 
   /** The body anchor's position under the far bodies node, or the origin if it has none yet. */

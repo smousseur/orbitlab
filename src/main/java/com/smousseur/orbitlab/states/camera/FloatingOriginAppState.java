@@ -7,6 +7,7 @@ import com.jme3.scene.Node;
 import com.jme3.scene.Spatial;
 import com.smousseur.orbitlab.app.ApplicationContext;
 import com.smousseur.orbitlab.app.view.FocusView;
+import com.smousseur.orbitlab.app.view.RenderContext;
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.engine.scene.graph.SceneGraph;
 import com.smousseur.orbitlab.engine.view.JmeVectorAdapter;
@@ -90,12 +91,25 @@ public class FloatingOriginAppState extends BaseAppState {
         // Keep the far scene visible so that orbit lines of other planets remain drawn.
         // The 2D HUD icons are handled independently by PlanetHudMarkersAppState.
         sceneGraph.setSolarVisible(true);
-        sceneGraph.showBodySpatial(view.getBody());
 
-        // Keep the far root centered on the parent body — the projection camera used by
-        // PlanetHudMarkersAppState is a clone of the far camera and needs the parent at origin
+        // One point, read once, and everything below derives from it: the body the scene is
+        // centred on and the offset that puts the spacecraft on the origin cannot disagree
+        // because they are two readings of the same object (spec L3 §3.1).
+        MissionEphemerisPoint point = displayPoint(view.getFocusedMission());
+        SolarSystemBody renderBody =
+            point == null ? view.getBody() : MissionRenderer.renderBodyOf(point, view);
+
+        // The near viewport holds exactly one globe, parked on the origin of nearBodiesNode, and
+        // it has to be the body the spacecraft's coordinates are about — otherwise the Earth is
+        // drawn where the Moon should be, 1 837 km from a spacecraft at perilune (spec
+        // docs/multi-corps/07-conception-L5.md §3.2). That constraint is also the mechanism: the
+        // globe then lands at |p| from the spacecraft, which is exactly where it belongs.
+        sceneGraph.showBodySpatial(renderBody);
+
+        // Keep the far root centered on that same body — the projection camera used by
+        // PlanetHudMarkersAppState is a clone of the far camera and needs it at the origin
         // to place the other planet icons correctly around it.
-        Spatial planetSpatial = sceneGraph.getBodySpatial(view.getBody());
+        Spatial planetSpatial = sceneGraph.getBodySpatial(renderBody);
         if (planetSpatial != null) {
           solarRoot.setLocalTranslation(planetSpatial.getLocalTranslation().negate());
         }
@@ -104,7 +118,7 @@ public class FloatingOriginAppState extends BaseAppState {
         // children cancel this offset with the matching +p: the spacecraft anchor under
         // nearBodiesNode, and the trajectory line under nearOrbitsNode, which carries it on the
         // geometry itself so its vertices can stay spacecraft-relative.
-        sceneGraph.nearFrame().setLocalTranslation(nearFrameOffset(view.getFocusedMission()));
+        sceneGraph.nearFrame().setLocalTranslation(nearFrameOffset(point, renderBody));
       }
     }
 
@@ -144,26 +158,40 @@ public class FloatingOriginAppState extends BaseAppState {
    * and {@link JmeVectorAdapter#toJmeBodyRelativePosition} with the same context, so the offset and
    * the anchor stay bit-for-bit opposite and cancel exactly.
    *
-   * @param missionId the focused mission, may be {@code null}
+   * @param point the focused mission's sample at the current instant, may be {@code null}
+   * @param renderBody the body the near scene is centred on, derived from that same point
    * @return the near-frame translation, never {@code null}
    */
-  private Vector3f nearFrameOffset(MissionId missionId) {
-    MissionEntry entry =
-        missionId == null ? null : context.missionContext().findMission(missionId).orElse(null);
-    MissionEphemeris ephemeris = entry == null ? null : entry.getEphemeris().orElse(null);
-    if (ephemeris == null) {
+  private Vector3f nearFrameOffset(MissionEphemerisPoint point, SolarSystemBody renderBody) {
+    if (point == null) {
       return lastNearOffset;
     }
-    // One point, read once: it carries both the position and the arc the context is derived from,
-    // so this state and the orchestrator cannot disagree about either (PHY-4 / L3, spec
-    // docs/multi-corps/05-conception-L3.md §3.1).
-    MissionEphemerisPoint point = ephemeris.displayPointAt(context.clock().now());
     // negateLocal, not negate: the anchor is placed at the un-negated value of the very same
     // conversion, so the two floats must stay exact opposites (cf. toJmeBodyRelativePosition).
     return lastNearOffset.set(
         JmeVectorAdapter.toJmeBodyRelativePosition(
-                point.position(), MissionRenderer.renderContextFor(point))
+                MissionRenderer.renderPositionOf(point, renderBody),
+                RenderContext.planet(renderBody))
             .negateLocal());
+  }
+
+  /**
+   * The focused mission's sample at the current instant, or {@code null} when there is no mission or
+   * its trajectory is being recomputed.
+   *
+   * <p>Read here rather than inside {@link #nearFrameOffset} because the body the scene is centred
+   * on is derived from the same sample: two lookups could, on the frame a trajectory is replaced,
+   * return points from different arcs and centre the scene on one body while offsetting it by the
+   * other's coordinates.
+   *
+   * @param missionId the focused mission, may be {@code null}
+   * @return the sample, or {@code null}
+   */
+  private MissionEphemerisPoint displayPoint(MissionId missionId) {
+    MissionEntry entry =
+        missionId == null ? null : context.missionContext().findMission(missionId).orElse(null);
+    MissionEphemeris ephemeris = entry == null ? null : entry.getEphemeris().orElse(null);
+    return ephemeris == null ? null : ephemeris.displayPointAt(context.clock().now());
   }
 
   @Override
