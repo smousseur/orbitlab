@@ -2,6 +2,7 @@ package com.smousseur.orbitlab.simulation.mission.stage;
 
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.Physics;
+import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionStage;
 import com.smousseur.orbitlab.simulation.mission.detector.DepletionGuard;
@@ -76,7 +77,8 @@ public class AnalyticPlaneTrimAtNodeStage extends MissionStage {
   @Override
   public void configure(NumericalPropagator propagator, Mission mission) {
     SpacecraftState state = mission.getCurrentState();
-    PlaneTrim plan = computePlaneTrim(state, mission.getVehicle());
+    PlaneTrim plan =
+        computePlaneTrim(state, mission.getVehicle(), gravitationalContext(mission));
 
     if (plan == null) {
       this.configuredEndDate = state.getDate();
@@ -110,16 +112,18 @@ public class AnalyticPlaneTrimAtNodeStage extends MissionStage {
 
   @Override
   public SpacecraftState propagateStandalone(SpacecraftState currentState, Mission mission) {
-    PlaneTrim plan = computePlaneTrim(currentState, mission.getVehicle());
+    GravitationalContext body = gravitationalContext(mission);
+    PlaneTrim plan = computePlaneTrim(currentState, mission.getVehicle(), body);
     if (plan == null) {
       return currentState;
     }
 
     NumericalPropagator propagator =
         OrekitService.get()
-            .createOptimizationPropagator(burnLimitedMaxStep(currentState, mission.getVehicle()));
+            .createOptimizationPropagator(
+                body, burnLimitedMaxStep(currentState, mission.getVehicle()));
     propagator.setInitialState(currentState);
-    ReentryGuard.armQuiet(propagator);
+    ReentryGuard.armQuiet(propagator, body);
     addBurn(propagator, currentState, plan, mission.getVehicle());
     return propagator.propagate(plan.burnStart().shiftedBy(plan.dt()));
   }
@@ -127,8 +131,9 @@ public class AnalyticPlaneTrimAtNodeStage extends MissionStage {
   private record PlaneTrim(
       AbsoluteDate burnStart, double dt, Vector3D directionInertial, double dv) {}
 
-  private PlaneTrim computePlaneTrim(SpacecraftState state, Vehicle vehicle) {
-    SpacecraftState stateAtNode = detectStateAtNode(state);
+  private PlaneTrim computePlaneTrim(
+      SpacecraftState state, Vehicle vehicle, GravitationalContext body) {
+    SpacecraftState stateAtNode = detectStateAtNode(state, body);
     if (stateAtNode == null) {
       logger.info("Plane trim: no node found within one period, skipping.");
       return null;
@@ -193,17 +198,17 @@ public class AnalyticPlaneTrimAtNodeStage extends MissionStage {
    * Coasts to the next node (equatorial crossing) and returns the state there, or {@code null} if
    * none is found within a little over one period. Burn-free, so it steps at the large coast cap.
    */
-  private static SpacecraftState detectStateAtNode(SpacecraftState state) {
+  private static SpacecraftState detectStateAtNode(SpacecraftState state, GravitationalContext body) {
     NumericalPropagator coastPropagator =
-        OrekitService.get().createOptimizationPropagator(OrekitService.COAST_MAX_STEP);
+        OrekitService.get().createOptimizationPropagator(body, OrekitService.COAST_MAX_STEP);
     coastPropagator.setInitialState(state);
     // On a re-entering orbit the coast stops early, no node is recorded and this returns null —
     // the caller already treats that as "no plane trim to fly" (spec 03-garde-rentree §4.1).
-    ReentryGuard.armQuiet(coastPropagator);
+    ReentryGuard.armQuiet(coastPropagator, body);
 
     RecordAndContinue recorder = new RecordAndContinue();
     coastPropagator.addEventDetector(
-        new NodeDetector(OrekitService.get().gcrf()).withHandler(recorder));
+        new NodeDetector(body.inertialFrame()).withHandler(recorder));
 
     double period = state.getOrbit().getKeplerianPeriod();
     coastPropagator.propagate(state.getDate().shiftedBy(period * 1.1));

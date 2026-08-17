@@ -131,6 +131,9 @@ public sealed interface MissionHorizon
     private static double keplerianPeriodOf(SpacecraftState state) {
       try {
         KeplerianOrbit orbit =
+            // Off-flight computation, left Earth-fixed by PHY-4 / L1 (spec
+            // docs/multi-corps/03-conception-L1.md §4.1): a restitution horizon is a display
+            // choice, not a propagation. Wake it when an arc can be non-terrestrial — L3/L4.
             new KeplerianOrbit(
                 state.getPVCoordinates(),
                 state.getFrame(),

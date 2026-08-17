@@ -92,6 +92,9 @@ public abstract class DynamicParameters {
    * @return the duration in days
    */
   protected static double revolutionDays(int revolutions, double semiMajorAxisMeters) {
+    // UI display, left Earth-fixed by PHY-4 / L1 (spec docs/multi-corps/03-conception-L1.md §4.1):
+    // the wizard only ever configures Earth orbits. It becomes contextual when the wizard can
+    // target another body, which no PHY-4 lot delivers.
     double a = semiMajorAxisMeters;
     double period = 2.0 * Math.PI * Math.sqrt(a * a * a / Constants.WGS84_EARTH_MU);
     return revolutions * period / MissionHorizon.SECONDS_PER_DAY;

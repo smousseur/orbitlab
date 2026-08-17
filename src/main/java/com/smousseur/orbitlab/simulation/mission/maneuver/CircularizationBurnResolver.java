@@ -2,6 +2,7 @@ package com.smousseur.orbitlab.simulation.mission.maneuver;
 
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.Physics;
+import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
 import com.smousseur.orbitlab.simulation.mission.detector.ReentryGuard;
 import com.smousseur.orbitlab.simulation.mission.vehicle.ActiveStageInfo;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropulsionSystem;
@@ -22,9 +23,11 @@ import org.orekit.propagation.numerical.NumericalPropagator;
 final class CircularizationBurnResolver {
 
   private final Vehicle vehicle;
+  protected final GravitationalContext body;
 
-  CircularizationBurnResolver(Vehicle vehicle) {
+  CircularizationBurnResolver(Vehicle vehicle, GravitationalContext body) {
     this.vehicle = vehicle;
+    this.body = body;
   }
 
   /**
@@ -42,7 +45,7 @@ final class CircularizationBurnResolver {
    */
   TransfertTwoManeuver.ResolvedCircularizationBurn resolveCircularizationBurn(
       SpacecraftState stateAfterBurn1) {
-    double dtApoapsis = detectTimeToApoapsis(stateAfterBurn1);
+    double dtApoapsis = detectTimeToApoapsis(stateAfterBurn1, body);
     if (Double.isNaN(dtApoapsis)) {
       return null;
     }
@@ -96,16 +99,17 @@ final class CircularizationBurnResolver {
    *
    * @return time from stateAfterBurn1 to next apoapsis (s), or NaN on failure
    */
-  private static double detectTimeToApoapsis(SpacecraftState stateAfterBurn1) {
+  private static double detectTimeToApoapsis(
+      SpacecraftState stateAfterBurn1, GravitationalContext body) {
     // Burn-free coast: nothing ignites, so step at the large coast cap (the apoapsis found is set
     // by the detector's root-finder + dense output, not by the integration step). See bilan 08
     // §3.1.
     NumericalPropagator coastPropagator =
-        OrekitService.get().createOptimizationPropagator(OrekitService.COAST_MAX_STEP);
+        OrekitService.get().createOptimizationPropagator(body, OrekitService.COAST_MAX_STEP);
     coastPropagator.setInitialState(stateAfterBurn1);
     // On a re-entering post-burn-1 orbit the coast stops early, no apoapsis is recorded and this
     // returns NaN — the failure value the caller already handles (spec 03-garde-rentree §4.1).
-    ReentryGuard.armQuiet(coastPropagator);
+    ReentryGuard.armQuiet(coastPropagator, body);
 
     RecordAndContinue recorder = new RecordAndContinue();
     ApsideDetector apsideDetector =

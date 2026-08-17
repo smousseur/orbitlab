@@ -1,5 +1,6 @@
 package com.smousseur.orbitlab.simulation.mission.detector;
 
+import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.smousseur.orbitlab.simulation.OrekitService;
@@ -52,7 +53,7 @@ class DepletionGuardTest {
     // 500 kg of propellant above the floor, but a 60 s window would burn ~2 040 kg.
     SpacecraftState state = leoState(date, FLOOR + 500);
 
-    NumericalPropagator propagator = OrekitService.get().createTestPropagator();
+    NumericalPropagator propagator = OrekitService.get().createTestPropagator(GravitationalContext.earth(), OrekitService.SAFE_MAX_STEP);
     propagator.setInitialState(state);
     propagator.addForceModel(
         new ConstantThrustManeuver(date.shiftedBy(1.0e-3), 60.0, THRUST, ISP, Vector3D.PLUS_I));
@@ -72,7 +73,7 @@ class DepletionGuardTest {
     // 5 000 kg of propellant above the floor: the 60 s burn (~2 040 kg) fits comfortably.
     SpacecraftState state = leoState(date, FLOOR + 5_000);
 
-    NumericalPropagator propagator = OrekitService.get().createTestPropagator();
+    NumericalPropagator propagator = OrekitService.get().createTestPropagator(GravitationalContext.earth(), OrekitService.SAFE_MAX_STEP);
     propagator.setInitialState(state);
     propagator.addForceModel(
         new ConstantThrustManeuver(date.shiftedBy(1.0e-3), 60.0, THRUST, ISP, Vector3D.PLUS_I));

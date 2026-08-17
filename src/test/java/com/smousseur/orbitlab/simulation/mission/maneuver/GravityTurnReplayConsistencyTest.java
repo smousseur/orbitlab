@@ -1,5 +1,6 @@
 package com.smousseur.orbitlab.simulation.mission.maneuver;
 
+import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.smousseur.orbitlab.simulation.OrekitService;
@@ -164,7 +165,8 @@ class GravityTurnReplayConsistencyTest {
             postVa.getMass(),
             Math.toRadians(PITCH_KICK_DEG),
             azimuth,
-            INTERSTAGE_COAST);
+            INTERSTAGE_COAST,
+            GravitationalContext.earth());
     return new GtSetup(maneuver, postVa);
   }
 
@@ -175,7 +177,7 @@ class GravityTurnReplayConsistencyTest {
       GravityTurnManeuver maneuver, SpacecraftState start, double[] variables) {
     AscentPlan plan = maneuver.plan(start, variables);
     NumericalPropagator prop =
-        OrekitService.get().createOptimizationPropagator(plan.maxStepSeconds());
+        OrekitService.get().createOptimizationPropagator(GravitationalContext.earth(), plan.maxStepSeconds());
     prop.setInitialState(start);
     maneuver.configure(prop, plan); // single source of truth, shared with the optimize path
     DepletionGuard.arm(prop, maneuver.getDepletionFloor(), "GT"); // loud, as GravityTurnStage does
@@ -205,7 +207,7 @@ class GravityTurnReplayConsistencyTest {
     // Ephemeris pass: the generator flies every stage under createOptimizationPropagator (8×8).
     mission.setCurrentState(initial);
     NumericalPropagator p8 =
-        OrekitService.get().createOptimizationPropagator(va.maxStepSeconds(initial, mission));
+        OrekitService.get().createOptimizationPropagator(GravitationalContext.earth(), va.maxStepSeconds(initial, mission));
     p8.setInitialState(initial);
     va.configure(p8, mission);
     AbsoluteDate end =
@@ -288,7 +290,8 @@ class GravityTurnReplayConsistencyTest {
             va.burn1Mass(),
             Math.toRadians(PITCH_KICK_DEG),
             azimuth,
-            INTERSTAGE_COAST);
+            INTERSTAGE_COAST,
+            GravitationalContext.earth());
     double[] variables = {maneuver.getStagingCompleteTime() + 2.0, 0.32};
 
     // Same maneuver, same config, same variables: the ONLY difference is the entry state.
@@ -516,7 +519,7 @@ class GravityTurnReplayConsistencyTest {
     mission.setCurrentState(preKick); // the generator sets this to the pre-kick opt.getEntryState()
 
     NumericalPropagator propagator =
-        OrekitService.get().createOptimizationPropagator(stage.maxStepSeconds(preKick, mission));
+        OrekitService.get().createOptimizationPropagator(GravitationalContext.earth(), stage.maxStepSeconds(preKick, mission));
     propagator.setInitialState(preKick); // exactly what the generator does before configure
     stage.configure(propagator, mission);
 

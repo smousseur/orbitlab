@@ -1,5 +1,6 @@
 package com.smousseur.orbitlab.simulation.mission.maneuver;
 
+import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.smousseur.orbitlab.simulation.OrekitService;
@@ -58,7 +59,7 @@ class LateIgnitionReproTest {
     AbsoluteDate date = new AbsoluteDate(2026, 1, 1, 12, 2, 41.09, TimeScalesFactory.getUTC());
     SpacecraftState state = postGravityTurnState(date);
 
-    NumericalPropagator propagator = OrekitService.get().createOptimizationPropagator();
+    NumericalPropagator propagator = OrekitService.get().createOptimizationPropagator(GravitationalContext.earth(), OrekitService.SAFE_MAX_STEP);
     propagator.setInitialState(state);
     propagator.addForceModel(
         new ConstantThrustManeuver(
@@ -91,7 +92,7 @@ class LateIgnitionReproTest {
                     Constants.WGS84_EARTH_MU))
             .withMass(16_238.0);
 
-    NumericalPropagator propagator = OrekitService.get().createOptimizationPropagator();
+    NumericalPropagator propagator = OrekitService.get().createOptimizationPropagator(GravitationalContext.earth(), OrekitService.SAFE_MAX_STEP);
     propagator.setInitialState(state);
     propagator.addForceModel(
         new ConstantThrustManeuver(date.shiftedBy(1_585.7), 2.88, 981_000, 348, Vector3D.PLUS_I));

@@ -2,6 +2,7 @@ package com.smousseur.orbitlab.simulation.mission.maneuver;
 
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.Physics;
+import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
 import com.smousseur.orbitlab.simulation.mission.attitude.GravityTurnAttitudeProvider;
 import com.smousseur.orbitlab.simulation.mission.detector.DepletionGuard;
 import com.smousseur.orbitlab.simulation.mission.detector.DepletionStopTrigger;
@@ -49,6 +50,7 @@ public class GravityTurnManeuver {
   private static final Logger logger = LogManager.getLogger(GravityTurnManeuver.class);
 
   private final Vehicle vehicle;
+  private final GravitationalContext body;
   private final double entryMass;
   private final double pitchKickAngleRad;
   private final double launchAzimuth;
@@ -75,8 +77,9 @@ public class GravityTurnManeuver {
       double entryMass,
       double pitchKickAngleRad,
       double launchAzimuth,
-      double interstageCoastDuration) {
-    this(vehicle, entryMass, pitchKickAngleRad, launchAzimuth, interstageCoastDuration, false);
+      double interstageCoastDuration,
+      GravitationalContext body) {
+    this(vehicle, entryMass, pitchKickAngleRad, launchAzimuth, interstageCoastDuration, false, body);
   }
 
   /**
@@ -98,13 +101,15 @@ public class GravityTurnManeuver {
       double pitchKickAngleRad,
       double launchAzimuth,
       double interstageCoastDuration,
-      boolean commandedPlane) {
+      boolean commandedPlane,
+      GravitationalContext body) {
     this.vehicle = vehicle;
     this.entryMass = entryMass;
     this.pitchKickAngleRad = pitchKickAngleRad;
     this.launchAzimuth = launchAzimuth;
     this.interstageCoastDuration = interstageCoastDuration;
     this.commandedPlane = commandedPlane;
+    this.body = body;
     this.activeStage = vehicle.resolveActiveStage(entryMass);
     this.nextStage = vehicle.resolveActiveStage(activeStage.massAfterJettison());
   }
@@ -278,7 +283,7 @@ public class GravityTurnManeuver {
     AscentPlan plan = plan(kickedState, variables);
 
     NumericalPropagator propagator =
-        OrekitService.get().createOptimizationPropagator(plan.maxStepSeconds());
+        OrekitService.get().createOptimizationPropagator(body, plan.maxStepSeconds());
     propagator.setInitialState(kickedState);
     configure(propagator, plan);
     // Quiet guard: infeasible candidates crossing the floor are truncated (and thus penalized by
@@ -286,7 +291,7 @@ public class GravityTurnManeuver {
     DepletionGuard.armQuiet(propagator, getDepletionFloor());
     // Same rationale one level down: a candidate whose turn is too aggressive flies back into the
     // ground, and the tracker below only *records* that — it does not stop.
-    ReentryGuard.armQuiet(propagator);
+    ReentryGuard.armQuiet(propagator, body);
     MinAltitudeTracker tracker = new MinAltitudeTracker(0.0, Double.POSITIVE_INFINITY);
     propagator.addEventDetector(tracker);
     this.lastAltitudeTracker.set(tracker);

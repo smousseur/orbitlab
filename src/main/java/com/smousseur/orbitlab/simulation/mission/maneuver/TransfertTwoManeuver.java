@@ -2,6 +2,7 @@ package com.smousseur.orbitlab.simulation.mission.maneuver;
 
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.Physics;
+import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
 import com.smousseur.orbitlab.simulation.mission.detector.DepletionGuard;
 import com.smousseur.orbitlab.simulation.mission.detector.MinAltitudeTracker;
 import com.smousseur.orbitlab.simulation.mission.detector.ReentryGuard;
@@ -53,8 +54,8 @@ public class TransfertTwoManeuver extends TransferManeuver {
    *
    * @param vehicle the vehicle performing the transfer
    */
-  public TransfertTwoManeuver(Vehicle vehicle, double targetAltitude) {
-    this(vehicle, targetAltitude, FailFastEnvelope.defaults());
+  public TransfertTwoManeuver(Vehicle vehicle, double targetAltitude, GravitationalContext body) {
+    this(vehicle, targetAltitude, FailFastEnvelope.defaults(), body);
   }
 
   /**
@@ -63,9 +64,13 @@ public class TransfertTwoManeuver extends TransferManeuver {
    * <p>The envelope is consumed by {@link #propagateForOptimization} to short-circuit Step 3 when
    * the post-burn-1 orbit lies outside the configured eccentricity / semi-major-axis bounds.
    */
-  public TransfertTwoManeuver(Vehicle vehicle, double targetAltitude, FailFastEnvelope failFast) {
-    super(vehicle, targetAltitude);
-    this.circularizationBurnResolver = new CircularizationBurnResolver(vehicle);
+  public TransfertTwoManeuver(
+      Vehicle vehicle,
+      double targetAltitude,
+      FailFastEnvelope failFast,
+      GravitationalContext body) {
+    super(vehicle, targetAltitude, body);
+    this.circularizationBurnResolver = new CircularizationBurnResolver(vehicle, body);
     this.failFast = failFast;
   }
 
@@ -122,13 +127,13 @@ public class TransfertTwoManeuver extends TransferManeuver {
 
     // ── Step 3: Full propagation with both burns ──
     NumericalPropagator propagator =
-        OrekitService.get().createOptimizationPropagator(maxStepSeconds(initialState));
+        OrekitService.get().createOptimizationPropagator(body, maxStepSeconds(initialState));
     propagator.setInitialState(initialState);
     MinAltitudeTracker tracker = configure(propagator, initialState, params, circBurn);
     // dt1 may explore up to full depletion (spec 06 I6): truncate infeasible candidates quietly.
     DepletionGuard.armQuiet(
         propagator, vehicle.resolveActiveStage(initialState.getMass()).depletionFloor());
-    ReentryGuard.armQuiet(propagator);
+    ReentryGuard.armQuiet(propagator, body);
 
     double totalTime = totalDuration(params, circBurn);
     AbsoluteDate endDate = initialState.getDate().shiftedBy(totalTime);

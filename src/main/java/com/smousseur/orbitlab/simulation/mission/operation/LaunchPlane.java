@@ -151,6 +151,12 @@ public record LaunchPlane(double targetInclination, NodeBranch nodeBranch) {
    * meeting a full gravity field, and it is worth ≈ 0.8°/year of local-solar-time drift — well
    * inside what a real SSO corrects by station-keeping, which this simulation does not model.
    *
+   * <p><b>Earth by construction, not by omission</b> (PHY-4 / L1, spec {@code
+   * docs/multi-corps/03-conception-L1.md} §4.1). A launch plane is defined by a launch site on a
+   * rotating ground, and nothing in PHY-4 lifts off from another body; L1's seam runs through the
+   * propagation, not the launch. This becomes contextual when a mission launches from somewhere
+   * other than the Earth, not before.
+   *
    * @return the inclination reference frame
    */
   public static Frame inclinationFrame() {

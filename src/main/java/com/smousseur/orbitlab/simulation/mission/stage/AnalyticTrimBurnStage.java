@@ -3,6 +3,7 @@ package com.smousseur.orbitlab.simulation.mission.stage;
 import com.smousseur.orbitlab.simulation.FlownBandAim;
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.Physics;
+import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionStage;
 import com.smousseur.orbitlab.simulation.mission.detector.DepletionGuard;
@@ -83,7 +84,7 @@ public class AnalyticTrimBurnStage extends MissionStage {
   @Override
   public void configure(NumericalPropagator propagator, Mission mission) {
     SpacecraftState state = mission.getCurrentState();
-    TrimBurn plan = computeTrimBurn(state, mission.getVehicle());
+    TrimBurn plan = computeTrimBurn(state, mission.getVehicle(), gravitationalContext(mission));
 
     if (plan == null) {
       this.configuredEndDate = state.getDate();
@@ -117,7 +118,8 @@ public class AnalyticTrimBurnStage extends MissionStage {
 
   @Override
   public SpacecraftState propagateStandalone(SpacecraftState currentState, Mission mission) {
-    TrimBurn plan = computeTrimBurn(currentState, mission.getVehicle());
+    TrimBurn plan =
+        computeTrimBurn(currentState, mission.getVehicle(), gravitationalContext(mission));
     if (plan == null) {
       return currentState;
     }
@@ -126,11 +128,13 @@ public class AnalyticTrimBurnStage extends MissionStage {
     // advances
     // the state the next stage plans from, so a Newtonian point-mass field here would diverge from
     // the flown 8×8 trajectory that the whole GEO plane strategy is measured against.
+    GravitationalContext body = gravitationalContext(mission);
     NumericalPropagator propagator =
         OrekitService.get()
-            .createOptimizationPropagator(burnLimitedMaxStep(currentState, mission.getVehicle()));
+            .createOptimizationPropagator(
+                body, burnLimitedMaxStep(currentState, mission.getVehicle()));
     propagator.setInitialState(currentState);
-    ReentryGuard.armQuiet(propagator);
+    ReentryGuard.armQuiet(propagator, body);
     addBurn(propagator, currentState, plan, mission.getVehicle());
     return propagator.propagate(plan.burnStart().shiftedBy(plan.dt()));
   }
@@ -138,8 +142,9 @@ public class AnalyticTrimBurnStage extends MissionStage {
   private record TrimBurn(
       AbsoluteDate burnStart, double dt, Vector3D directionInertial, double dv) {}
 
-  private TrimBurn computeTrimBurn(SpacecraftState state, Vehicle vehicle) {
-    SpacecraftState stateAtApogee = detectStateAtApogee(state);
+  private TrimBurn computeTrimBurn(
+      SpacecraftState state, Vehicle vehicle, GravitationalContext body) {
+    SpacecraftState stateAtApogee = detectStateAtApogee(state, body);
     if (stateAtApogee == null) {
       logger.info("Trim burn: no apogee detected within one period, skipping.");
       return null;
@@ -221,15 +226,15 @@ public class AnalyticTrimBurnStage extends MissionStage {
    *
    * <p>Package-private so {@link AnalyticApogeeCircularizationStage} reuses the same detection.
    */
-  static SpacecraftState detectStateAtApogee(SpacecraftState state) {
+  static SpacecraftState detectStateAtApogee(SpacecraftState state, GravitationalContext body) {
     // Burn-free coast: nothing ignites, so step at the large coast cap (the apogee found is set by
     // the detector's root-finder + dense output, not by the integration step). See bilan 08 §3.1.
     NumericalPropagator coastPropagator =
-        OrekitService.get().createOptimizationPropagator(OrekitService.COAST_MAX_STEP);
+        OrekitService.get().createOptimizationPropagator(body, OrekitService.COAST_MAX_STEP);
     coastPropagator.setInitialState(state);
     // On a re-entering orbit the coast stops early, no apogee is recorded and this returns null —
     // which both callers already turn into an explicit failure (spec 03-garde-rentree §4.1).
-    ReentryGuard.armQuiet(coastPropagator);
+    ReentryGuard.armQuiet(coastPropagator, body);
 
     RecordAndContinue recorder = new RecordAndContinue();
     ApsideDetector apsideDetector = new ApsideDetector(state.getOrbit()).withHandler(recorder);

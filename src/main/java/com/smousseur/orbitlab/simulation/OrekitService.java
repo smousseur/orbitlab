@@ -1,6 +1,9 @@
 package com.smousseur.orbitlab.simulation;
 
 import com.smousseur.orbitlab.core.SolarSystemBody;
+import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.hipparchus.ode.nonstiff.DormandPrince853Integrator;
 import org.orekit.bodies.CelestialBody;
@@ -31,8 +34,8 @@ import org.orekit.utils.IERSConventions;
 public final class OrekitService {
   private final AtomicBoolean initialized = new AtomicBoolean(false);
 
-  /** Cached gravity providers — created once, reused for every propagator. */
-  private volatile ForceModel gravityModel;
+  /** Gravity providers, cached per central body — created once, reused for every propagator. */
+  private final Map<SolarSystemBody, ForceModel> gravityModels = new ConcurrentHashMap<>();
 
   private OrekitService() {}
 
@@ -142,27 +145,13 @@ public final class OrekitService {
   }
 
   /**
-   * Creates a simple numerical propagator using only Newtonian two-body attraction, with the
-   * conservative {@link #SAFE_MAX_STEP} max step.
+   * Creates a Newtonian-only propagator around the given central body.
    *
-   * <p>Suitable for quick, low-fidelity orbit propagations where gravitational perturbations are
-   * not needed.
-   *
-   * @return a new numerical propagator with Newtonian gravity only
-   */
-  public NumericalPropagator createTestPropagator() {
-    return createTestPropagator(SAFE_MAX_STEP);
-  }
-
-  /**
-   * Creates a simple Newtonian propagator with an explicit integrator max step. Size {@code
-   * maxStep} with {@link #burnLimitedMaxStep} from the burns the caller will configure, or use
-   * {@link #COAST_MAX_STEP} for a burn-free coast.
-   *
+   * @param body the central body context
    * @param maxStep integrator maximum step in seconds (must satisfy the late-ignition invariant)
    * @return a new numerical propagator with Newtonian gravity only
    */
-  public NumericalPropagator createTestPropagator(double maxStep) {
+  public NumericalPropagator createTestPropagator(GravitationalContext body, double maxStep) {
     double minStep = 0.001;
     double absTol = 1e-8;
     double relTol = 1e-10;
@@ -171,32 +160,24 @@ public final class OrekitService {
         new DormandPrince853Integrator(minStep, maxStep, absTol, relTol);
 
     NumericalPropagator propagator = new NumericalPropagator(integrator);
-    propagator.addForceModel(new NewtonianAttraction(Constants.WGS84_EARTH_MU));
+    propagator.addForceModel(new NewtonianAttraction(body.mu()));
     return propagator;
   }
 
   /**
-   * Creates a numerical propagator tuned for optimization loops, with the conservative {@link
-   * #SAFE_MAX_STEP} max step.
+   * Creates an optimization-fidelity (8×8 gravity) propagator around the given central body.
    *
-   * <p>Uses a low-degree (8x8) spherical harmonics gravity model, which is fast enough for
-   * iterative trajectory optimization while remaining faithful to the runtime propagator.
+   * <p><b>The order of the three calls below is load-bearing</b> — {@code setOrbitType}, then
+   * {@code setMu}, then {@code addForceModel}. Orekit is not indifferent to it everywhere, and a
+   * tidier-looking permutation would cost the L0 baseline (spec {@code
+   * docs/multi-corps/03-conception-L1.md} §7).
    *
-   * @return a new numerical propagator with 8x8 gravity field
-   */
-  public NumericalPropagator createOptimizationPropagator() {
-    return createOptimizationPropagator(SAFE_MAX_STEP);
-  }
-
-  /**
-   * Creates an optimization-fidelity (8×8 gravity) propagator with an explicit integrator max step.
-   * Size {@code maxStep} with {@link #burnLimitedMaxStep} from the burns the caller will configure,
-   * or use {@link #COAST_MAX_STEP} for a burn-free coast.
-   *
+   * @param body the central body context
    * @param maxStep integrator maximum step in seconds (must satisfy the late-ignition invariant)
-   * @return a new numerical propagator with 8x8 gravity field
+   * @return a new numerical propagator with the body's 8x8 gravity field
    */
-  public NumericalPropagator createOptimizationPropagator(double maxStep) {
+  public NumericalPropagator createOptimizationPropagator(
+      GravitationalContext body, double maxStep) {
     double minStep = 0.001;
     double absTol = 1e-8;
     double relTol = 1e-10;
@@ -206,22 +187,37 @@ public final class OrekitService {
 
     NumericalPropagator propagator = new NumericalPropagator(integrator);
     propagator.setOrbitType(OrbitType.CARTESIAN);
-    propagator.setMu(Constants.WGS84_EARTH_MU);
-    propagator.addForceModel(getGravityModel());
+    propagator.setMu(body.mu());
+    propagator.addForceModel(getGravityModel(body.body()));
     return propagator;
   }
 
-  private ForceModel getGravityModel() {
-    if (gravityModel == null) {
-      synchronized (this) {
-        if (gravityModel == null) {
+  /**
+   * The 8×8 gravity model of the given body, resolved once and shared by every propagator.
+   *
+   * <p><b>The shared instance is an invariant, not an optimisation</b> (spec {@code
+   * docs/multi-corps/03-conception-L1.md} §3.3): it is what makes bit-for-bit equality with the L0
+   * baseline achievable, and therefore what lets the gate demand a zero tolerance. {@code
+   * computeIfAbsent} is atomic and evaluates the mapping function at most once per key, which is
+   * exactly that guarantee — do not replace it with an explicit lock or a pre-warm.
+   *
+   * <p>The mapping function must not modify the map. Building a {@code
+   * HolmesFeatherstoneAttractionModel} does not; a future lunar resolution that fell back to
+   * another body would, and would deadlock. That is an L4 concern.
+   *
+   * @param body the central body whose gravity model is requested
+   * @return the shared gravity force model for that body
+   */
+  private ForceModel getGravityModel(SolarSystemBody body) {
+    return gravityModels.computeIfAbsent(
+        body,
+        b -> {
+          // Ignores b: at L1 only the Earth is ever requested. The mapping point is now in the
+          // right place for L4, which will add the lunar resolution here — not anticipated now.
           NormalizedSphericalHarmonicsProvider provider =
               GravityFieldFactory.getNormalizedProvider(8, 8);
-          gravityModel = new HolmesFeatherstoneAttractionModel(itrf(), provider);
-        }
-      }
-    }
-    return gravityModel;
+          return new HolmesFeatherstoneAttractionModel(itrf(), provider);
+        });
   }
 
   /**

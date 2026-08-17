@@ -1,5 +1,6 @@
 package com.smousseur.orbitlab.simulation.mission.stage;
 
+import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.smousseur.orbitlab.core.OrbitlabException;

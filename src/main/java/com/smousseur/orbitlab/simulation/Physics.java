@@ -199,6 +199,10 @@ public final class Physics {
    * @return the coast duration from perigee to apogee, in seconds
    */
   public static double hohmannTransferDuration(double perigeeAltitude, double apogeeAltitude) {
+    // Off-flight helper, left Earth-fixed by PHY-4 / L1 (spec docs/multi-corps/03-conception-L1.md
+    // §4.1). Note for whoever makes it contextual: this µ is the PROPAGATOR's, while
+    // OrbitElements.mean() deliberately rebases on the potential provider's — mixing the two shifts
+    // the elements by about a metre, which reads as J2 (spec orbit-reporting/01 §3.3).
     double re = Constants.WGS84_EARTH_EQUATORIAL_RADIUS;
     double semiMajorAxis = re + 0.5 * (perigeeAltitude + apogeeAltitude);
     return FastMath.PI

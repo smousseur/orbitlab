@@ -220,6 +220,21 @@ différence entre une bissection et une lecture.
 | **MEO** | `{378.663107 ; 0.131995}` | 12 étages : parking, GTO, circularisation, trim, plane trim |
 | **Polaire** | burn2 `250 s` ; `0.32` | le seul profil reproductible au bit près en L0 |
 
+**Deux fixtures corrigées à l'écriture du gate.** LEO-400 vole les chargements
+explicites `{600 000, 100 000}` de la baseline §3, et **non** un Falcon Heavy
+pleinement chargé : à pleine charge et aux variables de la baseline, la
+trajectoire rentre dans l'atmosphère pendant le virage gravitationnel S2. Le
+polaire, lui, vole bien `fullyLoaded` — les deux profils sont délibérément des
+véhicules différents.
+
+**Le polaire ne vole pas sa chaîne complète**, et ne le peut pas :
+`AnalyticHohmannTransferStage` lève « No apogee found within one transfer
+half-period », parce que son ascension finit sur un arc suborbital à périgée
+−131 km. C'est l'anomalie §5.6 de la baseline, que celle-ci **interdit** de
+corriger pendant PHY-4. Le gate vole donc ce que `PolarCoverageTest` vole : les
+phases de virage gravitationnel puis le plane trim. Il y gagne quand même : ses
+frontières retombent **exactement** sur les chiffres du §4 de la baseline.
+
 Les trois premières lignes donnent un `transitionTime` absolu, **arrondi à ce que
 la baseline imprime** ; le polaire donne une durée de second allumage, parce que
 c'est sous cette forme que sa fixture la fige déjà
@@ -239,8 +254,22 @@ se replanifient donc à l'intérieur de la passe du gate, ce qui est déterminis
 dans une passe donnée (§6 de la baseline) et constitue précisément l'anomalie
 §5.2 entre deux passes différentes. D'où l'exigence du §5.4 ci-dessous.
 
-Ce sont des **chaînes complètes**, pas des ascensions : les douze sites
-analytiques sont la majorité du lot (§1).
+Ce sont des **chaînes complètes**, pas des ascensions.
+
+**Correction mesurée le 2026-08-16, après écriture du gate.** Ce paragraphe
+affirmait qu'une chaîne complète couvrait les douze sites analytiques. C'est faux,
+et l'erreur était de raisonnement, pas de mesure : `StageChainRunner.run`
+**n'appelle jamais `propagateStandalone`** — il fait `enter()` → propagateur du
+runner → `configure()`. Or six des douze sites analytiques ne vivent que dans
+`propagateStandalone`, qui est le chemin de la passe d'optimisation
+(`MissionOptimizer:227,236`).
+
+Le cas qui l'a rendu visible : `AnalyticParkingInsertionStage` n'a **qu'un seul**
+site de construction, et il est dans `propagateStandalone`. L'étage apparaissait
+comme frontière épinglée sur GEO et sur MEO — le gate donnait donc l'apparence de
+le garder sans jamais exécuter la ligne que L1 modifie.
+
+D'où le §5.7 : le gate vole **deux passes**, pas une.
 
 ### 5.3 Les littéraux ne se recopient pas depuis la baseline
 
@@ -283,12 +312,71 @@ fait l'objet d'un javadoc nommant la cause, pas d'un `delta`.
 
 ### 5.6 Ce que le test exclut
 
-Le **coast final ouvert** (2 037 556 s, 48 révolutions sur MEO) : son point
-d'arrivée est un choix d'horizon, pas de la physique. Le gate s'arrête au dernier
-étage propulsif.
-
-Et, par construction, **aucun compte d'évaluations, aucun coût d'exploration
+Par construction, **aucun compte d'évaluations, aucun coût d'exploration
 perdante, aucun temps** — la règle du §6 de la baseline.
+
+**Rectification mesurée.** Ce paragraphe annonçait que le gate s'arrêterait au
+dernier étage propulsif, le coast final ouvert étant un choix d'horizon et non de
+la physique. Le gate épingle en fait une frontière de coast final : le dernier
+`CoastingStage` ne configure aucune date, et `StageChainRunner` le borne par son
+filet de sécurité de 7 200 s en logguant un `WARN`. C'est déterministe, donc
+épinglable, et c'est plus strict que ce qui était prévu — mais c'est bien un
+horizon, pas de la physique. Un lot qui déplacerait ce filet déplacerait cette
+frontière **légitimement**. Le `WARN` par exécution est attendu, ce n'est pas un
+défaut.
+
+### 5.7 Deux passes, et le diagnostic du §5.2 de la baseline
+
+Le gate épingle **62 frontières** : chaque profil est volé une fois par la passe
+de rejeu (`StageChainRunner.sampling`, chemin `configure()`) et une fois par la
+passe d'optimisation (`propagateStandalone`, à la manière de
+`MissionOptimizer:105-240`).
+
+**Couverture atteinte : 15 des 20 sites de `main`**, contre 8 pour la seule passe
+de rejeu. Les cinq restants sont inaccessibles à ce gate pour une même raison
+structurelle — ils sont sur des chemins CMA-ES ou de transfert optimisé
+qu'aucune chaîne `OptimizationType.FAST` n'emprunte :
+
+| Site non couvert | Chemin |
+|---|---|
+| `GravityTurnManeuver:281` | `propagateForOptimization`, la fonction de coût CMA-ES elle-même |
+| `TransfertTwoManeuver:125` | chaîne circulaire `BALANCED` |
+| `CircularizationBurnResolver:104` | atteint seulement via `TransfertTwoManeuver` |
+| `TransferManeuver:104`, `:185` | chaîne elliptique `BALANCED` |
+
+Les couvrir demanderait un cinquième profil composé en `BALANCED`, ou un run
+CMA-ES — que le §5 interdit précisément à ce gate. **Trou connu et écrit**, à
+combler par les tests d'optimisation de l'étape 5 de l'ordonnancement, dont la
+tolérance est lâche. Un lecteur de L4 qui touche à ces cinq sites doit le savoir.
+
+#### La cause du §5.2 de la baseline, enfin identifiée
+
+La baseline écrit « L'écart naît en amont, au ciblage de nœud de l'injection GTO
+[…] Cause non diagnostiquée en L0. » Voler les deux passes côte à côte la donne :
+
+**`CoastingStage` et `StageSeparationStage` ne surchargent pas
+`propagateStandalone`.** Le défaut de `MissionStage` renvoie `enter()`, qui
+n'avance pas le temps. **La passe d'optimisation ne vole donc pas les coasts.**
+L'étage analytique en aval replanifie son ciblage de nœud depuis l'état
+d'avant-coast, et tout ce qui suit hérite du décalage.
+
+Mesuré par le gate :
+
+| | passe de rejeu | passe d'optimisation |
+|---|---|---|
+| GEO, « GTO injection » | t+6 979,2 s, x = +5 363 171 m | t+4 209,2 s, x = **−5 376 099 m** |
+| MEO, « GTO injection » | t+8 339,2 s | t+5 565,1 s |
+
+Une demi-orbite d'écart, 2 770 s d'avance. **Et la divergence existe aussi sur
+GEO**, que le §5.2 de la baseline ne mentionne pas. Le contrôle qui confirme le
+mécanisme : LEO et le polaire, qui n'ont aucun coast avant leurs étages
+analytiques, coïncident entre passes à 10⁻⁸ m près.
+
+**Ce n'est pas un sujet L1 et ce lot ne doit pas y toucher** — c'est une propriété
+préexistante, mesurée en L0 et seulement expliquée ici. Elle est consignée parce
+qu'elle change la lecture d'un chiffre : le verdict « aucun nombre n'a bougé »
+repose désormais en partie sur une passe dont la physique n'a jamais été validée.
+À rouvrir hors PHY-4.
 
 ---
 
@@ -358,3 +446,82 @@ lit en diagonale doit pouvoir l'être.
   répondre pour la Lune.
 - Les sites du §4.1 se réveillent **quand un arc non terrestre a besoin d'eux**,
   pas avant.
+
+---
+
+## 9. Fermeture — L1 est clos
+
+**Mesuré le 2026-08-17**, commit `4c997a6`, branche `feature_phy4_l1_corps_central`,
+GraalVM 21.0.5. Suite complète relancée avec `-Dorbitlab.slowTests=true`.
+
+### 9.1 Le verdict
+
+| | |
+|---|---|
+| Suite complète | **735 tests, 0 échec, 0 erreur**, 10 sautés (2 smoke tests de dataset, 1 sonde `orbitlab.probe`) |
+| Classes exécutées | 103 |
+| Gate `CentralBodyBaselineTest` | 4 tests, **62 frontières à tolérance `0.0`**, vert à chacun des 6 commits du lot |
+
+**L'égalité stricte a été atteinte.** Le §5.5 réservait le droit d'écrire une
+raison si elle ne l'était pas ; il n'y a rien à écrire.
+
+### 9.2 La référence forte, chiffre pour chiffre
+
+`AscentBaselineN2Test` est le seul test qui enregistre un état MECO structuré. Ses
+valeurs après L1, confrontées au §3 de `02-baseline-L0.md` :
+
+| | Baseline L0 (2026-08-16) | Après L1 (2026-08-17) |
+|---|---|---|
+| LEO-400, `transitionTime` / exposant | 307,193166 / 0,127161 | **identiques** |
+| LEO-400, MECO | t+314,193166 s, 36 368,082 kg | **identiques** |
+| LEO-400, masse finale | 35 306,788 kg | **identique** |
+| GEO, MECO | t+336,124209 s, 64 579,867 kg | **identiques** |
+| Δpos optimisation ↔ éphéméride | 0,000 m | **0,000 m** |
+
+L'invariant du §3 de la baseline — « rejouer la mission pour l'éphéméride refait
+exactement le vol optimisé » — est préservé.
+
+### 9.3 Un trou de la baseline comblé au passage
+
+Le §7.3 de `02-baseline-L0.md` listait comme trou connu : « Aucune mesure de
+`PropellantLoadOptimizerIntegrationTest`, dont le temps d'exécution est un point
+de surveillance ouvert depuis I7. »
+
+**Mesuré : 2 774 s, soit 46 min**, 4 tests, 0 échec. C'est un temps de paroi sur
+une seule machine, à ne comparer qu'à lui-même (§7.4 de la baseline). Le second
+poste est `LEOMissionOptimizedTransferTest` à 444 s.
+
+### 9.4 Ce que le lot a livré
+
+Six commits, tous compilant et gate vert :
+
+| Commit | Contenu |
+|---|---|
+| `552a540`, `de32bc0`, `84aa480` | le gate : mesure, épinglage, seconde passe |
+| `a722300` | `GravitationalContext` et le cache par corps, sans appelant |
+| `53ac53c` | fabriques contextuelles et les deux déclarations, purement additif |
+| `85d8dce` | les 20 sites, les 3 `NodeDetector`, la garde, l'altitude |
+| `82a054d` | suppression des surcharges Terre-implicites — le filet |
+| `a0a5d1d`, `4c997a6` | documentation des sites laissés, ordre des imports |
+
+Diff de production : **33 fichiers, +383 / −152**. L'audit du §7 est passé : aucun
+renommage, aucun reformatage, aucune correction de javadoc non liée.
+
+### 9.5 Trois écarts au plan, tous documentés plus haut
+
+1. La fixture LEO-400 du plan volait un Falcon Heavy pleinement chargé ; la
+   baseline vole des chargements explicites. Corrigé (§5.2).
+2. Le polaire ne peut pas voler sa chaîne complète (§5.2), et le gate ne couvre
+   que 15 des 20 sites (§5.7) — trous connus et écrits.
+3. Le plan prévoyait un commit ne compilant pas. Remplacé par une exigence plus
+   forte : chaque commit compile et le gate est vert à chacun.
+
+### 9.6 Ce que L1 laisse ouvert, et qui n'est pas de son ressort
+
+**La passe d'optimisation ne vole pas les coasts** (§5.7). Le verdict « aucun
+nombre n'a bougé » repose donc en partie sur une passe dont la physique n'a jamais
+été validée. C'est une propriété préexistante, mesurée en L0 et seulement
+expliquée ici ; la corriger déplacerait la baseline en cours de chantier, ce que
+le §3 du découpage interdit. **À rouvrir hors PHY-4.**
+
+L2 et L3 peuvent démarrer.

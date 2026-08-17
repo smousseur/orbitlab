@@ -2,6 +2,7 @@ package com.smousseur.orbitlab.simulation.mission.stage;
 
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.Physics;
+import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionStage;
 import com.smousseur.orbitlab.simulation.mission.detector.DepletionGuard;
@@ -98,7 +99,8 @@ public class AnalyticHohmannTransferStage extends MissionStage {
   @Override
   public void configure(NumericalPropagator propagator, Mission mission) {
     SpacecraftState state = mission.getCurrentState();
-    AnalyticBurnPlan plan = computeBurnPlan(state, mission.getVehicle());
+    AnalyticBurnPlan plan =
+        computeBurnPlan(state, mission.getVehicle(), gravitationalContext(mission));
 
     addBurns(propagator, state, plan, mission.getVehicle());
 
@@ -120,7 +122,8 @@ public class AnalyticHohmannTransferStage extends MissionStage {
 
   @Override
   public SpacecraftState propagateStandalone(SpacecraftState currentState, Mission mission) {
-    AnalyticBurnPlan plan = computeBurnPlan(currentState, mission.getVehicle());
+    GravitationalContext body = gravitationalContext(mission);
+    AnalyticBurnPlan plan = computeBurnPlan(currentState, mission.getVehicle(), body);
 
     // 8×8 gravity, matching the ephemeris generator (bilan 11 §3.9): this standalone flight
     // advances
@@ -128,9 +131,10 @@ public class AnalyticHohmannTransferStage extends MissionStage {
     // the flown 8×8 trajectory.
     NumericalPropagator propagator =
         OrekitService.get()
-            .createOptimizationPropagator(burnLimitedMaxStep(currentState, mission.getVehicle()));
+            .createOptimizationPropagator(
+                body, burnLimitedMaxStep(currentState, mission.getVehicle()));
     propagator.setInitialState(currentState);
-    ReentryGuard.armQuiet(propagator);
+    ReentryGuard.armQuiet(propagator, body);
     addBurns(propagator, currentState, plan, mission.getVehicle());
 
     return propagator.propagate(currentState.getDate().shiftedBy(plan.totalDuration()));
@@ -150,7 +154,8 @@ public class AnalyticHohmannTransferStage extends MissionStage {
       double dv1,
       double dv2) {}
 
-  private AnalyticBurnPlan computeBurnPlan(SpacecraftState state, Vehicle vehicle) {
+  private AnalyticBurnPlan computeBurnPlan(
+      SpacecraftState state, Vehicle vehicle, GravitationalContext body) {
     double mu = state.getOrbit().getMu();
 
     Vector3D r1 = state.getPVCoordinates().getPosition();
@@ -198,6 +203,7 @@ public class AnalyticHohmannTransferStage extends MissionStage {
           FastMath.PI * FastMath.sqrt(aTransfer * aTransfer * aTransfer / mu);
       stateAtApogee =
           simulateBurn1AndFindApogee(
+              body,
               state,
               deltaV1.normalize(),
               dt1,
@@ -282,6 +288,7 @@ public class AnalyticHohmannTransferStage extends MissionStage {
    * late-ignition invariant on a light I7 load (spec 09 §4).
    */
   static SpacecraftState simulateBurn1AndFindApogee(
+      GravitationalContext body,
       SpacecraftState state,
       Vector3D burn1DirectionInertial,
       double dt1,
@@ -289,11 +296,12 @@ public class AnalyticHohmannTransferStage extends MissionStage {
       double isp,
       double transferHalfPeriod,
       double maxStep) {
-    NumericalPropagator propagator = OrekitService.get().createOptimizationPropagator(maxStep);
+    NumericalPropagator propagator =
+        OrekitService.get().createOptimizationPropagator(body, maxStep);
     propagator.setInitialState(state);
     // A re-entering aim would otherwise grind here; on a stop no apogee is recorded and the throw
     // below reports it as a plan failure, which the optimizer reads as infeasible.
-    ReentryGuard.armQuiet(propagator);
+    ReentryGuard.armQuiet(propagator, body);
 
     AbsoluteDate burnStart = state.getDate().shiftedBy(1.0e-3);
     Rotation inertialToBody = new Rotation(burn1DirectionInertial, Vector3D.PLUS_I);

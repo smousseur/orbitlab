@@ -1,5 +1,6 @@
 package com.smousseur.orbitlab.simulation.mission.detector;
 
+import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.smousseur.orbitlab.simulation.OrekitService;
@@ -92,9 +93,9 @@ class ReentryGuardTest {
             TIMEOUT,
             () -> {
               NumericalPropagator propagator =
-                  OrekitService.get().createOptimizationPropagator(OrekitService.COAST_MAX_STEP);
+                  OrekitService.get().createOptimizationPropagator(GravitationalContext.earth(), OrekitService.COAST_MAX_STEP);
               propagator.setInitialState(entry);
-              ReentryGuard.armQuiet(propagator);
+              ReentryGuard.armQuiet(propagator, GravitationalContext.earth());
               return propagator.propagate(entry.getDate().shiftedBy(requestedDuration));
             },
             "the guard must stop the propagation; a timeout here means it ran under the surface");
@@ -159,14 +160,14 @@ class ReentryGuardTest {
     AbsoluteDate endDate = entry.getDate().shiftedBy(3_600.0);
 
     NumericalPropagator bare =
-        OrekitService.get().createOptimizationPropagator(OrekitService.COAST_MAX_STEP);
+        OrekitService.get().createOptimizationPropagator(GravitationalContext.earth(), OrekitService.COAST_MAX_STEP);
     bare.setInitialState(entry);
     SpacecraftState reference = bare.propagate(endDate);
 
     NumericalPropagator guarded =
-        OrekitService.get().createOptimizationPropagator(OrekitService.COAST_MAX_STEP);
+        OrekitService.get().createOptimizationPropagator(GravitationalContext.earth(), OrekitService.COAST_MAX_STEP);
     guarded.setInitialState(entry);
-    ReentryGuard.armQuiet(guarded);
+    ReentryGuard.armQuiet(guarded, GravitationalContext.earth());
     SpacecraftState actual = guarded.propagate(endDate);
 
     assertEquals(0.0, actual.getDate().durationFrom(endDate), 0.0, "the full hour must be flown");
@@ -186,7 +187,7 @@ class ReentryGuardTest {
    */
   @Test
   void launchPadLatitudes_clearTheFloorBeforeLiftoff() {
-    ReentryDetector detector = new ReentryDetector();
+    ReentryDetector detector = new ReentryDetector(GravitationalContext.earth().equatorialRadius());
 
     for (double latitudeDeg : new double[] {0.0, 5.2, 28.5, 34.7, 45.9, 62.9, 90.0}) {
       SpacecraftState onThePad = padState(latitudeDeg);
@@ -225,9 +226,9 @@ class ReentryGuardTest {
     AbsoluteDate endDate = climbing.getDate().shiftedBy(60.0);
 
     NumericalPropagator propagator =
-        OrekitService.get().createOptimizationPropagator(OrekitService.SAFE_MAX_STEP);
+        OrekitService.get().createOptimizationPropagator(GravitationalContext.earth(), OrekitService.SAFE_MAX_STEP);
     propagator.setInitialState(climbing);
-    ReentryGuard.armQuiet(propagator);
+    ReentryGuard.armQuiet(propagator, GravitationalContext.earth());
     SpacecraftState end = propagator.propagate(endDate);
 
     assertEquals(

@@ -207,7 +207,8 @@ public class GravityTurnFirstBurnStage extends GravityTurnBurnStage
         Math.toRadians(pitchKickAngleDeg),
         launchPlane.launchAzimuth(launchLatitude),
         interstageCoastDuration,
-        launchPlane.commands(launchLatitude));
+        launchPlane.commands(launchLatitude),
+        gravitationalContext(mission));
   }
 
   /**
