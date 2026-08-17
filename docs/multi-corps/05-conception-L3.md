@@ -530,3 +530,62 @@ entière et à la sélection de sommets qu'elle commande.
   consulté que pour décider s'il faut soustraire une cible.
 - **La question ouverte n° 4 est tranchée** : par point (§2.3), sur un critère qui
   n'est pas celui que le découpage anticipait (§1.1-D).
+
+---
+
+## 10. Fermeture — L3 est implémenté
+
+Mesuré le **2026-08-17**, branche `feature_phy4_l3_arcs`, GraalVM 21.0.5.
+
+### 10.1 Le verdict
+
+| | |
+|---|---|
+| Suite par défaut | **756 tests, 0 échec, 0 erreur**, 17 sautés, 107 classes |
+| Diff de production | **13 fichiers, +448 / −82** |
+| Diff de test | 8 fichiers, +654 / −12 |
+| Gate L1 `CentralBodyBaselineTest` | vert à chaque étape, 62 frontières à `0.0` |
+| Gate L3 `MissionPolylineBaselineTest` | vert **à l'identique** aux étapes 2, 3, 4 |
+| Sites de construction du point | **7 en test**, exactement l'inventaire du §1 |
+
+Les cinq étapes du §7 ont été livrées en cinq commits, chacun compilant et
+laissant les deux gates verts.
+
+### 10.2 L'égalité géométrique, mesurée
+
+Le polyline de la mission LEO-400 est **identique après le lot** : 9 992 points
+bruts, 5 000 sommets, 7 runs, mêmes indices d'ouverture, mêmes positions au
+flottant. C'est le §4.1 vérifié — l'union et non la somme — et non seulement
+raisonné.
+
+**La mission décime**, ce que le §6.4 ne savait pas en écrivant le plan : 9 992
+points contre un budget de 8 192, à l'horizon **par défaut**. Le chemin du stride
+est donc exercé par une trajectoire réelle et pas seulement par les fixtures
+synthétiques.
+
+### 10.3 Les deux risques du §8, tous deux clos par la mesure
+
+1. **`TrajectoryArc.earth()` et l'initialisation Orekit.** `FramesFactory.getGCRF()`
+   ne demande aucune donnée : les quatre tests sans `@BeforeAll` passent, isolés du
+   reste de la suite. La solution de repli prévue n'a pas servi.
+2. **La formule du budget.** Écrite en union dès le premier jet, et les deux tests
+   épinglés l'ont confirmée sans jamais rougir.
+
+### 10.4 Trois écarts au plan
+
+1. **La fixture est recopiée, pas extraite** (§6.4). L1 avait écrit la règle
+   inverse dans le javadoc de son gate, et sa raison porte sur l'avenir. Corrigé
+   dans le corps du document.
+2. **Le §8 disait que le risque de budget ne se manifesterait que « sur les
+   horizons longs que peu de tests exercent ».** Démenti par la mesure du §10.2.
+   Corrigé.
+3. **Le §6.1 ne listait pas le test de sélection épinglé** ; il a été ajouté, et
+   c'est lui le filet unitaire du §4.1.
+
+### 10.5 Ce que L3 n'a pas eu besoin de faire
+
+Aucun étage, aucune force, aucun propagateur, aucun des vingt sites de
+construction de L1. La règle de visibilité n'a pas bougé (§5.1) et la conversion
+d'arc n'existe pas (§5.2) — les deux sont des décisions écrites, pas des oublis.
+
+L4 et L5 peuvent démarrer.
