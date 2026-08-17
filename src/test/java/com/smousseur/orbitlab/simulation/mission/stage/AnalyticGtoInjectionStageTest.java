@@ -1,5 +1,6 @@
 package com.smousseur.orbitlab.simulation.mission.stage;
 
+import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.smousseur.orbitlab.core.OrbitlabException;
@@ -153,7 +154,7 @@ class AnalyticGtoInjectionStageTest {
     AnalyticGtoInjectionStage stage = new AnalyticGtoInjectionStage("GTO injection", GEO_ALTITUDE);
     SpacecraftState afterInjection = stage.propagateStandalone(parkingState, missionWith(stack));
 
-    SpacecraftState apogee = AnalyticTrimBurnStage.detectStateAtApogee(afterInjection);
+    SpacecraftState apogee = AnalyticTrimBurnStage.detectStateAtApogee(afterInjection, GravitationalContext.earth());
     assertNotNull(apogee, "the transfer apogee must be reachable after the injection burn");
 
     Vector3D r = apogee.getPVCoordinates().getPosition();

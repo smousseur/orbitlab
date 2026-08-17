@@ -1,5 +1,6 @@
 package com.smousseur.orbitlab.simulation.mission.runtime;
 
+import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionStage;
@@ -189,7 +190,9 @@ public final class StageChainRunner {
       // keep
       // the late-ignition invariant against their own upper-stage burns for a light I7 load.
       double maxStep = stage.maxStepSeconds(stageEntry, mission);
-      NumericalPropagator propagator = OrekitService.get().createOptimizationPropagator(maxStep);
+      GravitationalContext body = stage.gravitationalContext(mission);
+      NumericalPropagator propagator =
+          OrekitService.get().createOptimizationPropagator(body, maxStep);
       propagator.setInitialState(stageEntry);
 
       // Re-entry guard on every phase of every mission, on both passes (spec
@@ -199,9 +202,9 @@ public final class StageChainRunner {
       // the plain runner is the CMA-ES path, where an infeasible candidate re-entering is a normal
       // outcome and one line per candidate would flood the output.
       if (abortOnFailure) {
-        ReentryGuard.armQuiet(propagator);
+        ReentryGuard.armQuiet(propagator, body);
       } else {
-        ReentryGuard.arm(propagator, stage.getName());
+        ReentryGuard.arm(propagator, stage.getName(), body);
       }
 
       stage.configure(propagator, mission);

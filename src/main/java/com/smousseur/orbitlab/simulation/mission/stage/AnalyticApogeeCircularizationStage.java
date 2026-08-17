@@ -1,5 +1,6 @@
 package com.smousseur.orbitlab.simulation.mission.stage;
 
+import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.Physics;
 import com.smousseur.orbitlab.simulation.mission.Mission;
@@ -69,7 +70,8 @@ public class AnalyticApogeeCircularizationStage extends MissionStage {
   @Override
   public void configure(NumericalPropagator propagator, Mission mission) {
     SpacecraftState state = mission.getCurrentState();
-    CircularizationPlan plan = computePlan(state, mission.getVehicle());
+    CircularizationPlan plan =
+        computePlan(state, mission.getVehicle(), gravitationalContext(mission));
 
     addBurn(propagator, state, plan, mission.getVehicle());
 
@@ -91,16 +93,18 @@ public class AnalyticApogeeCircularizationStage extends MissionStage {
 
   @Override
   public SpacecraftState propagateStandalone(SpacecraftState currentState, Mission mission) {
-    CircularizationPlan plan = computePlan(currentState, mission.getVehicle());
+    GravitationalContext body = gravitationalContext(mission);
+    CircularizationPlan plan = computePlan(currentState, mission.getVehicle(), body);
 
     // Same gravity model as the plan simulation and the ephemeris generation: the hours-long
     // burn is planned against its own finite-burn drift, a Newtonian standalone flight would
     // diverge from that plan by tens of km.
     NumericalPropagator propagator =
         OrekitService.get()
-            .createOptimizationPropagator(burnLimitedMaxStep(currentState, mission.getVehicle()));
+            .createOptimizationPropagator(
+                body, burnLimitedMaxStep(currentState, mission.getVehicle()));
     propagator.setInitialState(currentState);
-    ReentryGuard.armQuiet(propagator);
+    ReentryGuard.armQuiet(propagator, body);
     addBurn(propagator, currentState, plan, mission.getVehicle());
     return propagator.propagate(plan.burnStart().shiftedBy(plan.dt()));
   }
@@ -108,8 +112,9 @@ public class AnalyticApogeeCircularizationStage extends MissionStage {
   private record CircularizationPlan(
       AbsoluteDate burnStart, double dt, Vector3D directionInertial, double dv) {}
 
-  private CircularizationPlan computePlan(SpacecraftState state, Vehicle vehicle) {
-    SpacecraftState stateAtApogee = AnalyticTrimBurnStage.detectStateAtApogee(state);
+  private CircularizationPlan computePlan(
+      SpacecraftState state, Vehicle vehicle, GravitationalContext body) {
+    SpacecraftState stateAtApogee = AnalyticTrimBurnStage.detectStateAtApogee(state, body);
     if (stateAtApogee == null) {
       throw new IllegalStateException("No apogee found for the circularization burn");
     }
@@ -192,7 +197,8 @@ public class AnalyticApogeeCircularizationStage extends MissionStage {
               dt,
               propulsion.thrust(),
               propulsion.isp(),
-              maxStep);
+              maxStep,
+              body);
       KeplerianOrbit postBurn =
           new KeplerianOrbit(
               endState.getPVCoordinates(), endState.getFrame(), endState.getDate(), mu);
@@ -256,10 +262,12 @@ public class AnalyticApogeeCircularizationStage extends MissionStage {
       double dt,
       double thrust,
       double isp,
-      double maxStep) {
-    NumericalPropagator propagator = OrekitService.get().createOptimizationPropagator(maxStep);
+      double maxStep,
+      GravitationalContext body) {
+    NumericalPropagator propagator =
+        OrekitService.get().createOptimizationPropagator(body, maxStep);
     propagator.setInitialState(state);
-    ReentryGuard.armQuiet(propagator);
+    ReentryGuard.armQuiet(propagator, body);
     Rotation inertialToBody = new Rotation(directionInertial, Vector3D.PLUS_I);
     FrameAlignedProvider attitude = new FrameAlignedProvider(inertialToBody, state.getFrame());
     propagator.addForceModel(

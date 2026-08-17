@@ -1,5 +1,6 @@
 package com.smousseur.orbitlab.simulation.mission.maneuver;
 
+import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.smousseur.orbitlab.simulation.OrekitService;
@@ -164,7 +165,8 @@ class GravityTurnReplayConsistencyTest {
             postVa.getMass(),
             Math.toRadians(PITCH_KICK_DEG),
             azimuth,
-            INTERSTAGE_COAST);
+            INTERSTAGE_COAST,
+            GravitationalContext.earth());
     return new GtSetup(maneuver, postVa);
   }
 
@@ -288,7 +290,8 @@ class GravityTurnReplayConsistencyTest {
             va.burn1Mass(),
             Math.toRadians(PITCH_KICK_DEG),
             azimuth,
-            INTERSTAGE_COAST);
+            INTERSTAGE_COAST,
+            GravitationalContext.earth());
     double[] variables = {maneuver.getStagingCompleteTime() + 2.0, 0.32};
 
     // Same maneuver, same config, same variables: the ONLY difference is the entry state.

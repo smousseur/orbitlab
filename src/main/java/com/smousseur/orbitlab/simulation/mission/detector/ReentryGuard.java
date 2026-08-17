@@ -1,5 +1,6 @@
 package com.smousseur.orbitlab.simulation.mission.detector;
 
+import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hipparchus.ode.events.Action;
@@ -64,9 +65,10 @@ public final class ReentryGuard {
    * @param propagator the propagator to guard
    * @param context short label for the log (stage or maneuver name)
    */
-  public static void arm(NumericalPropagator propagator, String context) {
+  public static void arm(NumericalPropagator propagator, String context, GravitationalContext body) {
+    double radius = body.equatorialRadius();
     propagator.addEventDetector(
-        new ReentryDetector()
+        new ReentryDetector(radius)
             .withHandler(
                 (state, detector, increasing) -> {
                   logger.warn(
@@ -75,9 +77,7 @@ public final class ReentryGuard {
                       context,
                       state.getDate(),
                       Math.round(
-                          (Constants.WGS84_EARTH_EQUATORIAL_RADIUS
-                                  - state.getPVCoordinates().getPosition().getNorm())
-                              / 1000.0),
+                          (radius - state.getPVCoordinates().getPosition().getNorm()) / 1000.0),
                       Math.round(-SUBSURFACE_FLOOR / 1000.0));
                   return Action.STOP;
                 }));
@@ -91,8 +91,9 @@ public final class ReentryGuard {
    *
    * @param propagator the propagator to guard
    */
-  public static void armQuiet(NumericalPropagator propagator) {
+  public static void armQuiet(NumericalPropagator propagator, GravitationalContext body) {
     propagator.addEventDetector(
-        new ReentryDetector().withHandler((state, detector, increasing) -> Action.STOP));
+        new ReentryDetector(body.equatorialRadius())
+            .withHandler((state, detector, increasing) -> Action.STOP));
   }
 }

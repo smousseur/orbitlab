@@ -5,7 +5,6 @@ import org.orekit.propagation.events.AbstractDetector;
 import org.orekit.propagation.events.EventDetectionSettings;
 import org.orekit.propagation.events.handlers.ContinueOnEvent;
 import org.orekit.propagation.events.handlers.EventHandler;
-import org.orekit.utils.Constants;
 
 /**
  * Detects a trajectory that has sunk irrecoverably below the Earth's surface — a re-entry. Mass
@@ -21,27 +20,44 @@ import org.orekit.utils.Constants;
  */
 public class ReentryDetector extends AbstractDetector<ReentryDetector> {
 
+  /** Reference sphere radius the switching function is measured against (m). */
+  private final double equatorialRadius;
+
   /**
-   * Creates a re-entry detector.
+   * Creates a re-entry detector referenced to the given equatorial radius.
    *
    * <p>Checked every 10 s like {@link MinAltitudeTracker}: a re-entering trajectory sinks through
    * the floor monotonically, so the interval only has to be short enough to catch the single sign
    * change, not to resolve a narrow feature. The 1 s date convergence is deliberately loose — the
    * caller acts on the <em>fact</em> of the crossing, never on its epoch, and every root-finding
    * iteration on a doomed candidate is wasted work.
+   *
+   * @param equatorialRadius the reference sphere radius (m), from the stage's gravitational context
    */
-  public ReentryDetector() {
+  public ReentryDetector(double equatorialRadius) {
     super(10.0, 1.0, DEFAULT_MAX_ITER, new ContinueOnEvent());
+    this.equatorialRadius = equatorialRadius;
   }
 
-  private ReentryDetector(EventDetectionSettings settings, EventHandler handler) {
+  /**
+   * Copy constructor used by {@link #create}.
+   *
+   * <p><b>The radius must travel through here</b>, and that is the whole reason this constructor
+   * takes it: {@link AbstractDetector} rebuilds the detector through {@link #create} as soon as a
+   * handler is attached with {@code withHandler}. A radius left out of the copy would be silently
+   * lost on that first call and the switching function would fall back to a default — a failure
+   * that shows up as a wrong trajectory, never as an error.
+   */
+  private ReentryDetector(
+      EventDetectionSettings settings, EventHandler handler, double equatorialRadius) {
     super(settings, handler);
+    this.equatorialRadius = equatorialRadius;
   }
 
   @Override
   protected ReentryDetector create(
       EventDetectionSettings detectionSettings, EventHandler newHandler) {
-    return new ReentryDetector(detectionSettings, newHandler);
+    return new ReentryDetector(detectionSettings, newHandler, equatorialRadius);
   }
 
   /**
@@ -52,7 +68,7 @@ public class ReentryDetector extends AbstractDetector<ReentryDetector> {
   @Override
   public double g(SpacecraftState state) {
     double sphericalAltitude =
-        state.getPVCoordinates().getPosition().getNorm() - Constants.WGS84_EARTH_EQUATORIAL_RADIUS;
+        state.getPVCoordinates().getPosition().getNorm() - equatorialRadius;
     return sphericalAltitude - ReentryGuard.SUBSURFACE_FLOOR;
   }
 }

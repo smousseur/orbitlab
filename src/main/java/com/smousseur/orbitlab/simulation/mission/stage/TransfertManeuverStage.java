@@ -117,6 +117,7 @@ public class TransfertManeuverStage extends MissionStage
   private TransferManeuver createManeuver(Mission mission) {
     // The apogee is the reference altitude the maneuver's in-flight tracker uses to bound the
     // max-altitude excursion; for an elliptic target that is the apside actually reached.
-    return new TransferManeuver(mission.getVehicle(), apogeeAltitude);
+    return new TransferManeuver(
+        mission.getVehicle(), apogeeAltitude, gravitationalContext(mission));
   }
 }

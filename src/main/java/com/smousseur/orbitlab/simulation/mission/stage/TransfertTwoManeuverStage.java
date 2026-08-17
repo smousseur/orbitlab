@@ -119,6 +119,7 @@ public class TransfertTwoManeuverStage extends MissionStage
   }
 
   private TransfertTwoManeuver createManeuver(Mission mission) {
-    return new TransfertTwoManeuver(mission.getVehicle(), targetAltitude);
+    return new TransfertTwoManeuver(
+        mission.getVehicle(), targetAltitude, gravitationalContext(mission));
   }
 }

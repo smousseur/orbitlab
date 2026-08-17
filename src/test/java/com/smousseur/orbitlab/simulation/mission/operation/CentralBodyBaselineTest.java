@@ -1,5 +1,6 @@
 package com.smousseur.orbitlab.simulation.mission.operation;
 
+import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.smousseur.orbitlab.simulation.OrekitService;
@@ -1199,7 +1200,8 @@ class CentralBodyBaselineTest {
         FastMath.toRadians(profile.pitchKickAngleDeg()),
         plane.launchAzimuth(latitude),
         profile.interstageCoastDuration(),
-        plane.commands(latitude));
+        plane.commands(latitude),
+        GravitationalContext.earth());
   }
 
   private static AbsoluteDate epoch() {
