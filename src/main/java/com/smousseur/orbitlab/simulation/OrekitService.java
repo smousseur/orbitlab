@@ -145,31 +145,6 @@ public final class OrekitService {
   }
 
   /**
-   * Creates a simple numerical propagator using only Newtonian two-body attraction, with the
-   * conservative {@link #SAFE_MAX_STEP} max step.
-   *
-   * <p>Suitable for quick, low-fidelity orbit propagations where gravitational perturbations are
-   * not needed.
-   *
-   * @return a new numerical propagator with Newtonian gravity only
-   */
-  public NumericalPropagator createTestPropagator() {
-    return createTestPropagator(SAFE_MAX_STEP);
-  }
-
-  /**
-   * Creates a simple Newtonian propagator with an explicit integrator max step. Size {@code
-   * maxStep} with {@link #burnLimitedMaxStep} from the burns the caller will configure, or use
-   * {@link #COAST_MAX_STEP} for a burn-free coast.
-   *
-   * @param maxStep integrator maximum step in seconds (must satisfy the late-ignition invariant)
-   * @return a new numerical propagator with Newtonian gravity only
-   */
-  public NumericalPropagator createTestPropagator(double maxStep) {
-    return createTestPropagator(GravitationalContext.earth(), maxStep);
-  }
-
-  /**
    * Creates a Newtonian-only propagator around the given central body.
    *
    * @param body the central body context
@@ -187,31 +162,6 @@ public final class OrekitService {
     NumericalPropagator propagator = new NumericalPropagator(integrator);
     propagator.addForceModel(new NewtonianAttraction(body.mu()));
     return propagator;
-  }
-
-  /**
-   * Creates a numerical propagator tuned for optimization loops, with the conservative {@link
-   * #SAFE_MAX_STEP} max step.
-   *
-   * <p>Uses a low-degree (8x8) spherical harmonics gravity model, which is fast enough for
-   * iterative trajectory optimization while remaining faithful to the runtime propagator.
-   *
-   * @return a new numerical propagator with 8x8 gravity field
-   */
-  public NumericalPropagator createOptimizationPropagator() {
-    return createOptimizationPropagator(SAFE_MAX_STEP);
-  }
-
-  /**
-   * Creates an optimization-fidelity (8×8 gravity) propagator with an explicit integrator max step.
-   * Size {@code maxStep} with {@link #burnLimitedMaxStep} from the burns the caller will configure,
-   * or use {@link #COAST_MAX_STEP} for a burn-free coast.
-   *
-   * @param maxStep integrator maximum step in seconds (must satisfy the late-ignition invariant)
-   * @return a new numerical propagator with 8x8 gravity field
-   */
-  public NumericalPropagator createOptimizationPropagator(double maxStep) {
-    return createOptimizationPropagator(GravitationalContext.earth(), maxStep);
   }
 
   /**
