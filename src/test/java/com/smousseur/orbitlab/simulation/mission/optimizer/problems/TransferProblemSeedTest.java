@@ -1,7 +1,7 @@
 package com.smousseur.orbitlab.simulation.mission.optimizer.problems;
 
-import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
 import com.smousseur.orbitlab.simulation.OrekitService;
+import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
 import com.smousseur.orbitlab.simulation.mission.maneuver.TransfertTwoManeuver;
 import com.smousseur.orbitlab.simulation.mission.vehicle.ActiveStageInfo;
 import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchConfiguration;
