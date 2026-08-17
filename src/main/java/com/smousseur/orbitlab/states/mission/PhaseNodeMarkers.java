@@ -44,14 +44,8 @@ final class PhaseNodeMarkers {
   /** Screen pixels. Large enough to read against the 3,5 px ribbon, small enough not to hide it. */
   private static final float POINT_SIZE = 7f;
 
-  private final RenderContext renderContext;
-
   private Geometry geometry;
   private TrajectoryPolyline boundTrail;
-
-  PhaseNodeMarkers(RenderContext renderContext) {
-    this.renderContext = Objects.requireNonNull(renderContext, "renderContext");
-  }
 
   /**
    * Creates the point mesh and attaches it beside the trajectory line.
@@ -80,15 +74,19 @@ final class PhaseNodeMarkers {
    * @param trail the mission's display polyline
    * @param runColors one colour per run, from {@code MissionPhaseShading}
    * @param upTo index of the last vertex flown, from {@link TrajectoryPolyline#indexUpTo}
-   * @param origin the position the line's vertices are expressed against, in GCRF meters
+   * @param origin the position the line's vertices are expressed against, in the frame of the arc
+   *     being drawn
    * @param translation the local translation the line carries, so both land in the same place
+   * @param renderContext the context the line was just converted with — passed rather than held, so
+   *     a marker cannot be produced by a different context than the ribbon it sits on
    */
   void update(
       TrajectoryPolyline trail,
       ColorRGBA[] runColors,
       int upTo,
       Vector3D origin,
-      Vector3f translation) {
+      Vector3f translation,
+      RenderContext renderContext) {
     List<PhaseRun> runs = trail.runs();
     if (trail != boundTrail) {
       allocate(runs.size());

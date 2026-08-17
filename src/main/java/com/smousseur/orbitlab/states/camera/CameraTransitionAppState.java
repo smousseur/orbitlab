@@ -17,6 +17,7 @@ import com.smousseur.orbitlab.engine.view.JmeVectorAdapter;
 import com.smousseur.orbitlab.simulation.mission.MissionId;
 import com.smousseur.orbitlab.simulation.mission.context.MissionEntry;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemeris;
+import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemerisPoint;
 import com.smousseur.orbitlab.states.mission.MissionRenderer;
 import java.util.Objects;
 import java.util.function.Supplier;
@@ -347,10 +348,12 @@ public final class CameraTransitionAppState extends BaseAppState {
     if (ephemeris == null) {
       return pivot;
     }
-    Vector3D position = ephemeris.displayPointAt(context.clock().now()).position();
+    // The context comes from the sample, not from the entry — the same point that gives the
+    // position gives the arc it is expressed in (PHY-4 / L3, spec §3.1).
+    MissionEphemerisPoint point = ephemeris.displayPointAt(context.clock().now());
     Vector3f planetUnits =
         JmeVectorAdapter.toJmeBodyRelativePosition(
-            position, MissionRenderer.renderContextFor(entry));
+            point.position(), MissionRenderer.renderContextFor(point));
     return pivot.addLocal(
         planetUnits.divideLocal((float) RenderContext.ratioSolarToPlanetPerUnit()));
   }
