@@ -9,9 +9,13 @@ import com.simsilica.lemur.GuiGlobals;
 import com.simsilica.lemur.event.PickState;
 import com.simsilica.lemur.style.BaseStyles;
 import com.smousseur.orbitlab.app.ApplicationContext;
+import com.smousseur.orbitlab.core.PropertiesService;
 import com.smousseur.orbitlab.engine.AssetFactory;
 import com.smousseur.orbitlab.engine.TextureDiagnostics;
+import com.smousseur.orbitlab.engine.events.EventBus;
 import com.smousseur.orbitlab.simulation.OrekitService;
+import com.smousseur.orbitlab.simulation.mission.context.MissionEntry;
+import com.smousseur.orbitlab.simulation.mission.operation.LunarTransferMission;
 import com.smousseur.orbitlab.states.InitAppState;
 import com.smousseur.orbitlab.states.camera.CameraTransitionAppState;
 import com.smousseur.orbitlab.states.camera.FloatingOriginAppState;
@@ -37,6 +41,9 @@ import com.smousseur.orbitlab.states.time.MissionTimelineAppState;
 import com.smousseur.orbitlab.states.time.SimulationClockAppState;
 import com.smousseur.orbitlab.states.time.TimelineWidgetAppState;
 import com.smousseur.orbitlab.ui.AppStyles;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.orekit.time.AbsoluteDate;
 
 /**
  * Main entry point for the OrbitLab application.
@@ -71,6 +78,11 @@ public class OrbitLabApplication extends SimpleApplication {
    * ({@code MatDefs/Fx/Ribbon.j3md}, spec {@code docs/graphics-effects/ribbon-lines.md}).
    */
   private static final int ANISOTROPIC_FILTER_LEVEL = 8;
+
+  private static final Logger LOGGER = LogManager.getLogger(OrbitLabApplication.class);
+
+  /** Days the lunar demonstration walks forward looking for a flyable encounter geometry. */
+  private static final int LUNAR_DEMO_DAYS = 30;
 
   /**
    * Application entry point. Configures window settings and starts the JME3 application loop.
@@ -219,6 +231,47 @@ public class OrbitLabApplication extends SimpleApplication {
     // its composite pass clears the screen, and they would otherwise be wiped out. Attached last so
     // both viewports it re-routes already exist.
     stateManager.attach(new PostFxAppState(nearViewport, skyViewport, farViewport));
+
+    loadLunarDemoIfRequested(applicationContext);
+  }
+
+  /**
+   * Loads the PHY-4 acceptance flight when {@code mission.lunarDemo} is on (spec {@code
+   * docs/multi-corps/08-conception-L6.md} §2, decision 5).
+   *
+   * <p><b>Through the legacy {@code MissionEntry(Mission)} door</b>, which had no caller in {@code
+   * main} until now: the entry carries no {@code MissionSpec}, so it cannot be re-composed by an
+   * optimization-mode toggle nor edited in the wizard, and {@code MissionPlanOptimizer} takes its
+   * fixed-load branch. That is exactly right for an acceptance fixture, and it is what keeps the
+   * wizard, {@code MissionType} and {@code MissionComposer} out of this lot entirely.
+   *
+   * <p>The compute request is published rather than called: {@code MissionOrchestratorAppState} owns
+   * that transition, and going around it would be the one {@code getState()}-shaped shortcut this
+   * codebase forbids.
+   */
+  private void loadLunarDemoIfRequested(ApplicationContext applicationContext) {
+    if (!Boolean.parseBoolean(PropertiesService.get().getProperty("mission.lunarDemo"))) {
+      return;
+    }
+    LunarTransferMission mission = new LunarTransferMission("Translunar transfer");
+    // A few epochs of a lunar month cannot deliver the aimed perilune at all, and the injection
+    // refuses those rather than flying a plan below the surface (spec §12). Walk to the first one it
+    // accepts instead of loading a mission that will fail on a background thread.
+    AbsoluteDate flyable = mission.firstFlyableDate(applicationContext.clock().now(), LUNAR_DEMO_DAYS);
+    if (flyable == null) {
+      LOGGER.warn(
+          "mission.lunarDemo is on, but no epoch in the next {} days can deliver the aimed perilune;"
+              + " not loading the demonstration mission",
+          LUNAR_DEMO_DAYS);
+      return;
+    }
+    MissionEntry entry = new MissionEntry(mission);
+    entry.setScheduledDate(flyable);
+    entry.setVisible(true);
+    applicationContext.missionContext().addMission(entry);
+    applicationContext
+        .eventBus()
+        .publishMissionAction(entry.id(), EventBus.MissionAction.OPTIMIZE);
   }
 
   @Override

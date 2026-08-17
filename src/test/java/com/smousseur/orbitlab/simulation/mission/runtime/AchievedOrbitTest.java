@@ -4,8 +4,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.simulation.OrbitElements;
 import com.smousseur.orbitlab.simulation.OrekitService;
+import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
 import org.hipparchus.util.FastMath;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
@@ -98,6 +100,75 @@ class AchievedOrbitTest {
             String.format(
                 "mean perigee sits %.0f m below the osculating one, expected about a*f=%.0f m",
                 drop, af));
+  }
+
+  /**
+   * PHY-4 / L6 §5.1 — the µ comes off the state, so an orbit achieved around another body is
+   * reported against that body's µ instead of the Earth's.
+   *
+   * <p>The two halves matter equally. The terrestrial half is the non-regression, and it is an
+   * <b>identity</b>: {@code GravitationalContext.earth().mu()} <em>is</em> {@code
+   * Constants.WGS84_EARTH_MU}, so no terrestrial mission can read a different number than it did
+   * before this change. The lunar half is the defect actually fixed: with the Earth constant the
+   * same selenocentric state reports a semi-major axis wrong by the µ ratio (~81), which is not a
+   * slightly-off reading but a meaningless one.
+   */
+  @Test
+  void of_readsTheMuOffTheState_soANonTerrestrialOrbitIsReportedAgainstItsOwnBody() {
+    double a = 1_737_400.0 + 100_000.0;
+    double lunarMu = OrekitService.get().body(SolarSystemBody.MOON).getGM();
+
+    // A state as GravitationalContext.moon() would leave it: setMu(context.mu()) is the only thing
+    // that puts the number on the orbit, so declaring it here reproduces exactly that.
+    SpacecraftState lunar = circular(a, lunarMu);
+
+    AchievedOrbit fromLunar = AchievedOrbit.of(lunar);
+    assertTrue(fromLunar.hasOsculating(), "osculating elements unavailable on a lunar state");
+    assertEquals(a, fromLunar.osculating().semiMajorAxis(), 1.0);
+
+    // What the pre-L6 line did to that same PV: the Earth µ on a selenocentric orbit. Computed here
+    // rather than through AchievedOrbit.of, since the point is precisely that of() no longer does
+    // it — and the reading has to be visibly wrong, otherwise the assertion above proves nothing.
+    //
+    // The bar is derived, not recorded. Vis-viva gives a = 1/(2/r − v²/µ); with µ_E ≈ 81·µ_L the
+    // velocity term is two orders of magnitude below 2/r, so a collapses towards r/2 whatever the
+    // orbit — the wrong µ does not shift the semi-major axis, it halves it.
+    double asReadWithTheEarthMu =
+        new KeplerianOrbit(
+                lunar.getPVCoordinates(),
+                lunar.getFrame(),
+                lunar.getDate(),
+                Constants.WGS84_EARTH_MU)
+            .getA();
+    assertEquals(
+        0.5 * a,
+        asReadWithTheEarthMu,
+        0.01 * a,
+        "the Earth µ on a selenocentric PV must collapse the semi-major axis towards r/2");
+
+    // And the terrestrial non-regression, which is an identity and not a tolerance: earth()'s µ IS
+    // the constant the line used to hold, so a terrestrial state reads exactly as before.
+    assertEquals(
+        Constants.WGS84_EARTH_MU,
+        GravitationalContext.earth().mu(),
+        0.0,
+        "if this ever differs, the L6 §5.1 non-regression argument no longer holds");
+  }
+
+  /** A circular equatorial orbit of semi-major axis {@code a}, declared with the given µ. */
+  private static SpacecraftState circular(double a, double mu) {
+    return new SpacecraftState(
+        new KeplerianOrbit(
+            a,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            PositionAngleType.TRUE,
+            FramesFactory.getGCRF(),
+            AbsoluteDate.J2000_EPOCH,
+            mu));
   }
 
   /**

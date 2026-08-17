@@ -165,7 +165,7 @@ reste lisible à toute distance (`RND-4`).
 | ID | Item | ★ | ◆ | Taille | Sert à |
 |---|---|:-:|:-:|:-:|---|
 | ~~MIS-7~~ | ~~`EarthOrbitMission` paramétrable~~ — **résolu le 2026-08-16** | 4 | 2 | M | MIS-2, MIS-6, + polaire/SSO/MEO gratuits |
-| PHY-4 | Socle multi-corps (3ᵉ corps, SOI, repères) | 5 | 4 | L | MIS-4, MIS-5 |
+| ~~PHY-4~~ | ~~Socle multi-corps (3ᵉ corps, SOI, repères)~~ — **résolu le 2026-08-18** | 5 | 4 | L | MIS-4, MIS-5 |
 | MIS-2 | Fenêtres de lancement | 4 | 3 | M | MIS-4, MIS-6 |
 | MIS-3 | Solveur de Lambert + repère LVLH | 4 | 3 | M | MIS-6, ciblage lunaire |
 | PHY-1 | Atmosphère : la brique, **off** par défaut | 4 | 3 | L | PHY-2, PHY-3 |
@@ -268,7 +268,7 @@ opportuniste, ou à décider quoi sacrifier quand une phase déborde.
 | MIS-2 | Fenêtres de lancement | 4 | 3 | M | MIS-7 (livré) |
 | NAV-5 | Hover « wow » planètes + orbites | 3 | 2 | M | RND-4 (livré) |
 | UI-3 | Persistance des missions / format de scénario | 4 | 3 | M | — |
-| PHY-4 | Socle multi-corps (3ᵉ corps, SOI, repères) | 5 | 4 | L | — |
+| ~~PHY-4~~ | ~~Socle multi-corps (3ᵉ corps, SOI, repères)~~ — **résolu le 2026-08-18** | 5 | 4 | L | — |
 | MIS-5 | Mise en orbite lunaire (LOI) | 5 | 3 | M | MIS-4 |
 | MIS-4 | Survol lunaire (TLI + flyby) | 5 | 4 | L | PHY-4, MIS-2 |
 | PHY-1 | Atmosphère : brique drag, désactivée par défaut | 4 | 3 | L | — |
@@ -325,14 +325,12 @@ moins cher — tout ce qui durait plus d'un jour simulé butait dessus), **PHY-4
 (sans lui, rien de lunaire) et **MIS-2** (sans fenêtre de lancement, ni la Lune
 ni un rendez-vous ne convergent — la cible n'est jamais au bon endroit).
 
-`MIS-8` étant livré, il n'en reste que deux : **PHY-4** et **MIS-2** sont
-désormais les seuls verrous du haut du graphe.
+`MIS-8` puis `PHY-4` étant livrés, **il n'en reste qu'un : `MIS-2`**. Plus rien
+n'est en amont de lui depuis `MIS-7` (2026-08-16), et `PHY-4` s'est fermé le
+2026-08-18 sans jamais en dépendre — aucun de ses six lots ne réclamait de fenêtre
+de lancement, tous se testaient à géométrie Terre-Lune imposée (découpage §1).
 
-**Et ils sont indépendants l'un de l'autre.** `MIS-7` étant livré le 2026-08-16,
-plus rien n'est en amont de `MIS-2`. Quant à `PHY-4`, aucun de ses lots ne
-réclame de fenêtre de lancement : ils se testent tous à géométrie Terre-Lune
-figée (découpage §1). Les deux verrous peuvent donc s'ouvrir dans n'importe quel
-ordre — c'est `MIS-4` qui a besoin des deux à la fois.
+`MIS-4` attendait les deux ; il n'attend plus que `MIS-2`.
 
 ---
 
@@ -905,11 +903,11 @@ pour une future rentrée), extension de `TelemetryWidgetAppState` avec Q et drag
 instantané, sélecteur Off / Statique / Réaliste dans `StepParameters`. Le profil
 `Q(t)` est le meilleur objet pédagogique que l'atmosphère apporte.
 
-#### PHY-4 — Socle multi-corps — ★5 ◆4 L
+#### ~~PHY-4 — Socle multi-corps — ★5 ◆4 L~~ — **RÉSOLU le 2026-08-18**
 
-**Pourquoi.** C'est le prérequis dur des deux missions lunaires. Aujourd'hui
-tout est propagé dans un repère central unique et purement gravitationnel autour
-d'un corps.
+**Pourquoi.** C'était le prérequis dur des deux missions lunaires. Tout était
+propagé dans un repère central unique et purement gravitationnel autour d'un
+corps.
 
 **À faire.**
 - `ThirdBodyAttraction` (Lune, Soleil) dans les propagateurs concernés.
@@ -934,6 +932,39 @@ puis un arc lunaire de bout en bout. Le document relève aussi les trois couture
 que le code impose : la Terre en dur sur une trentaine de sites, les **seize**
 endroits qui construisent un propagateur de vol, et une éphéméride dont les points
 ne portent aucun repère.
+
+### Ce qui a été livré
+
+Les six lots, chacun avec son document de conception dans `docs/multi-corps/` et
+sa section de fermeture chiffrée. Le dernier
+([`08-conception-L6.md`](../multi-corps/08-conception-L6.md)) vole un transfert
+translunaire complet : orbite de parking à 185 km, injection impulsionnelle sur
+un seed Lambert visé en plan B, bascule Terre → Lune à 74 h, **périlune volé à
+100,4 km pour 100 visés**, discontinuité de **0,000000 m** à la frontière d'arc.
+Suite complète : **808 tests, 0 échec**.
+
+**Les deux gates ont tenu du premier au dernier lot** —
+`CentralBodyBaselineTest` à `0.0` sur ses 62 frontières et
+`MissionPolylineBaselineTest` à l'identique. C'était la promesse du découpage et
+c'est ce qui a rendu le chantier sûr : chaque lot pouvait bouger la couture sans
+risquer une mission terrestre.
+
+**Le troisième viewport n'a pas été nécessaire** (question ouverte n° 4, §7) :
+`L5` §5.3 l'a écarté sur mesure, `L6` §12.5 l'a confirmé à l'écran sur la
+première trajectoire lunaire réelle.
+
+**Trois estimations du découpage démenties**, toutes dans le sens de la
+simplicité : la Terre en dur ne concernait que **deux** sites sur le chemin d'un
+vol lunaire et non une trentaine ; le rendu bi-échelle s'est fait sans découper
+le ruban ; et l'architecture « un corps garé sur l'origine », annoncée comme
+l'obstacle, s'est révélée être le mécanisme.
+
+**Ce qui reste ouvert** : la bande morte ε de la bascule n'est pas calibrée — il
+faut pour cela une trajectoire **capturée**, qui reste dans la sphère, donc
+`MIS-4`. Et
+[`BUG-7`](../bugs.md#bug-7--les-gates-de-non-régression-tombent-quand-un-test-lunaire-les-précède-dans-le-même-jvm),
+trouvé pendant `L6` mais antérieur à lui : les gates tombent quand un test
+lunaire les précède dans le même JVM.
 
 ---
 
@@ -1069,8 +1100,14 @@ Deux briques partagées, à écrire une fois :
 #### MIS-4 — Survol lunaire (TLI + flyby) — ★5 ◆4 L
 
 **Pourquoi.** Premier objectif au-delà de l'orbite terrestre. Fort en spectacle
-(la trajectoire traverse l'échelle Terre-Lune), fort en pédagogie, et c'est le
-palier qui valide `PHY-4` sur un cas réel.
+(la trajectoire traverse l'échelle Terre-Lune), fort en pédagogie.
+
+**Le socle est là.** `PHY-4` est fermé depuis le 2026-08-18 et son dernier lot a
+livré un transfert translunaire complet — orbite de parking, injection
+impulsionnelle sur seed Lambert, bascule de sphère d'influence, périlune à 100 km
+— volé par les tests et affiché à l'écran. Ce que `MIS-4` ajoute à cela n'est
+donc plus la physique multi-arcs mais la **mission** : un `TLIBurnStage` de
+production à poussée finie, la fenêtre de lancement, et l'optimisation.
 
 **À faire.** `TLIBurnStage` (depuis l'apogée d'une orbite de parking),
 coast ~3 jours sous influence lunaire croissante, objectif de survol
@@ -1770,11 +1807,13 @@ et [`docs/brainstorm/missions.md`](../brainstorm/missions.md).
    déclencher de calcul. `UI-2` (progression) est un préalable raisonnable :
    déclencher automatiquement un calcul long sans indicateur serait pire que le
    clic actuel.
-4. **Troisième viewport** — le décide-t-on avec `PHY-4` (les missions lunaires
-   exposent d'un coup trois échelles) ou attend-on de constater les artefacts ?
-   Recommandation : attendre. La mesure de comparaison existe désormais —
-   `NearFrustumDepthTest` chiffre le budget de profondeur du viewport near, et
-   c'est le test à rejouer avec la Lune dans le cadre.
+4. ~~**Troisième viewport**~~ — **tranchée le 2026-08-18 : non.** `PHY-4 / L5`
+   §5.3 l'a écarté sur mesure — un seul globe est dessiné, dans la région de
+   l'origine où le pas de profondeur vaut 27 km, et le bout lointain du trait ne
+   dispute la profondeur qu'à lui-même — puis `L6` §12.5 a confirmé sur la
+   première trajectoire lunaire réelle : un globe et un trait tiennent dans la
+   near viewport à l'échelle Terre-Lune, sans reverse-Z ni depth log. La question
+   ne rouvre qu'avec **deux globes dans le même cadre**, c'est-à-dire `MIS-6`.
 5. **Cible du rendez-vous** — ISS livrée en dur (option A de la spec) suffit au
    MVP. L'import de TLE arbitraire (option B) est une feature UI à part entière,
    à ne pas glisser dans `MIS-6`.

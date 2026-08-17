@@ -41,6 +41,19 @@ public class SoiCrossingDetector extends AbstractDetector<SoiCrossingDetector> {
    */
   public static final double EXIT_DEAD_BAND = 1.5e-4;
 
+  /**
+   * Date convergence of the root localisation (s). The crossing date is therefore known to about a
+   * millisecond, which is about a metre at transfer speed.
+   *
+   * <p><b>Public because a caller has to bound the gap between two dates with it</b> (PHY-4 / L6,
+   * spec {@code docs/multi-corps/08-conception-L6.md} §12): the state handed to the handler and the
+   * state {@code propagate()} returns are both taken at the localised root, but re-interpolated
+   * independently, so they can differ by up to this threshold. Measured 51 ps on L4's synthetic
+   * fixture and <b>524 µs</b> on the first real translunar flight — an amplitude the fixture could
+   * not show, and which no constant unrelated to this threshold can bound.
+   */
+  public static final double DATE_CONVERGENCE_SECONDS = 1.0e-3;
+
   private final SphereOfInfluence soi;
   private final double radiusScale;
 
@@ -55,7 +68,7 @@ public class SoiCrossingDetector extends AbstractDetector<SoiCrossingDetector> {
    * @param radiusScale 1.0 to detect entering, {@code 1 + EXIT_DEAD_BAND} to detect leaving
    */
   public SoiCrossingDetector(SphereOfInfluence soi, double radiusScale) {
-    super(10.0, 1.0e-3, DEFAULT_MAX_ITER, new ContinueOnEvent());
+    super(10.0, DATE_CONVERGENCE_SECONDS, DEFAULT_MAX_ITER, new ContinueOnEvent());
     this.soi = soi;
     this.radiusScale = radiusScale;
   }

@@ -5,7 +5,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.orekit.orbits.KeplerianOrbit;
 import org.orekit.propagation.SpacecraftState;
-import org.orekit.utils.Constants;
 
 /**
  * The orbit a mission achieved, in the two conventions that both make sense — and that do not say
@@ -52,18 +51,27 @@ public record AchievedOrbit(OrbitElements osculating, OrbitElements mean) {
    * <b>here</b>, at the boundary, rather than resting on the fact that nothing throws today.
    */
   public static AchievedOrbit of(SpacecraftState state) {
-    // Off-flight reporting, left Earth-fixed by PHY-4 / L1 (spec
-    // docs/multi-corps/03-conception-L1.md §4.1). Note for whoever makes it contextual: this µ is
-    // the PROPAGATOR's, while OrbitElements.mean() deliberately rebases on the potential
-    // provider's. Mixing the two shifts the elements by about a metre, which reads as J2 (spec
-    // orbit-reporting/01 §3.3) — so a single "central body µ" must not be made to serve both.
+    // The µ comes off the state's own orbit, not from an Earth constant (PHY-4 / L6, spec
+    // docs/multi-corps/08-conception-L6.md §5.1). createOptimizationPropagator does
+    // setOrbitType(CARTESIAN) then setMu(context.mu()), so the propagated state already carries the
+    // µ of the body it was flown around: an orbit achieved around the Moon is reported against the
+    // lunar µ, and every terrestrial mission keeps the very same double, since
+    // GravitationalContext.earth() IS Constants.WGS84_EARTH_MU. The non-regression is therefore an
+    // identity of the constant, not a measurement — AnalyticGtoInjectionStage already reads its µ
+    // this way.
+    //
+    // Note for whoever touches the other µ: this one is the PROPAGATOR's, while
+    // OrbitElements.mean() deliberately rebases on the potential provider's. Mixing the two shifts
+    // the elements by about a metre, which reads as J2 (spec orbit-reporting/01 §3.3) — so a single
+    // "central body µ" must not be made to serve both, and making this one contextual does not make
+    // that one contextual.
     try {
       KeplerianOrbit orbit =
           new KeplerianOrbit(
               state.getPVCoordinates(),
               state.getFrame(),
               state.getDate(),
-              Constants.WGS84_EARTH_MU);
+              state.getOrbit().getMu());
       return new AchievedOrbit(
           OrbitElements.osculating(orbit), OrbitElements.mean(orbit).orElse(null));
     } catch (RuntimeException e) {

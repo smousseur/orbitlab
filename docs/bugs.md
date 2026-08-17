@@ -16,6 +16,7 @@ la frontière entre les deux derniers doit rester lisible.
 | [`BUG-4`](#bug-4--hover-des-widgets-non-uniforme) | Hover des widgets non uniforme | 2026-08-15 | **Promu** en `UI-7` le 2026-08-16 |
 | [`BUG-5`](#bug-5--pop-du-modèle-3d-au-changement-de-focus) | Pop du modèle 3D au changement de focus | 2026-08-15 | Ouvert, mécanisme identifié |
 | [`BUG-6`](#bug-6--plane-trim-employé-hors-de-son-enveloppe-par-lascension-polaire) | Plane trim employé hors de son enveloppe par l'ascension polaire | 2026-08-16 | Ouvert, mécanisme mesuré — **importance : mineure côté code, à trancher côté physique** |
+| [`BUG-7`](#bug-7--les-gates-de-non-régression-tombent-quand-un-test-lunaire-les-précède-dans-le-même-jvm) | Les gates de non-régression tombent quand un test lunaire les précède dans le même JVM | 2026-08-18 | Ouvert, reproductible, piste identifiée — **fiabilité de l'instrument, pas de la physique** |
 
 ---
 
@@ -480,3 +481,79 @@ baseline.
 - **Le seuil `SKIP_PLANE_ERROR_RAD` (0,03°) n'a pas été réexaminé** à la lumière
   de ce qui précède : rien ne dit qu'un seuil pensé pour un résidu de
   circularisation convienne à un résidu d'ascension.
+
+---
+
+## BUG-7 — Les gates de non-régression tombent quand un test lunaire les précède dans le même JVM
+
+**Constaté le 2026-08-18**, pendant PHY-4 / L6. `CentralBodyBaselineTest` et
+`MissionPolylineBaselineTest` échouent **de façon déterministe** — trois
+assertions rouges — quand `SoiCrossingDetectorTest` s'exécute avant eux dans le
+même JVM :
+
+```bash
+JAVA_HOME="$HOME/.jdks/graalvm-jdk-21.0.5" ./gradlew cleanTest test --tests "*SoiCrossingDetectorTest*" --tests "*CentralBodyBaselineTest*" --tests "*MissionPolylineBaselineTest*"
+```
+
+3 échecs sur 3 exécutions. Les écarts sont de dernier bit, là où L1 §5.5 exige
+`0.0` :
+
+| Grandeur | Attendu | Obtenu | Écart |
+|---|---|---|---|
+| `x` (LEO-400, étage `Trim`) | 3 129 196,368 272 180 m | 3 129 196,368 271 845 m | 3,3 × 10⁻⁷ m |
+| `t` (même frontière) | 8 546,404 567 668 282 s | 8 546,404 567 668 333 s | 5,1 × 10⁻¹⁴ s |
+
+**Chacun des deux gates passe seul, et la suite complète passe** (`./gradlew
+test` : 808 tests verts), parce qu'elle fork plusieurs JVM et sépare les
+protagonistes. Le défaut n'est donc visible que sur une sélection partielle —
+c'est-à-dire exactement dans la boucle de travail quotidienne.
+
+**Ce n'est pas PHY-4 / L6 qui l'introduit.** Reproduit à l'identique sur `main`
+au commit `08ac325`, antérieur au lot. C'est L4 qui a amené le test lunaire ; le
+défaut dormait depuis.
+
+### Piste principale : les caches temporels partagés d'Orekit
+
+`SoiCrossingDetectorTest` propage jusqu'à six jours avec la Lune en
+perturbateur, sur une plage de dates qu'aucun autre test ne visite. Orekit sert
+l'éphéméride JPL et l'historique EOP à travers des `GenericTimeStampedCache`,
+qui choisissent un créneau et interpolent depuis les N échantillons voisins. Une
+propagation terrestre ultérieure peut alors interpoler **depuis un voisinage
+différent**, ce qui déplace le résultat du dernier bit — puis l'intégration
+amplifie ce bit sur la durée du vol.
+
+C'est cohérent avec l'amplitude observée (5 × 10⁻¹⁴ s sur 8 546 s, soit 6 ×
+10⁻¹⁸ en relatif) et avec le fait que **seul l'ordre d'exécution** change quoi
+que ce soit. Ce n'est pas vérifié.
+
+### Ce qu'il faut trancher
+
+Trois issues, et le choix n'est pas évident :
+
+1. **Isoler les gates** — `@Isolated` de JUnit, ou un `forkEvery` / une tâche
+   Gradle dédiée. Ne touche à aucune assertion, mais rend la propreté du gate
+   dépendante d'une configuration de build.
+2. **Donner aux gates une tolérance minuscule et justifiée.** L1 §5.5 a choisi
+   `0.0` **délibérément** et a écrit que toute exception devait être écrite
+   plutôt qu'absorbée : cette option demande donc sa propre entrée dans
+   `docs/multi-corps/`, pas seulement un littéral changé.
+3. **Réinitialiser les caches concernés entre tests**, s'il existe un moyen
+   supporté de le faire.
+
+### Non vérifié
+
+- **Le mécanisme.** La piste ci-dessus est cohérente, elle n'est pas démontrée.
+  Le confirmer demanderait d'instrumenter le cache ou de reproduire l'effet avec
+  deux propagations nues, sans le reste du harnais.
+- **L'étendue.** Seul `SoiCrossingDetectorTest` a été identifié comme
+  contaminant. `SoiRoundTripFlightTest` et `LunarTransferFlightTest` n'ont pas
+  fait tomber les gates dans les sélections essayées, mais l'échantillon est
+  petit et l'absence n'est pas une preuve.
+- **Si d'autres tests à tolérance serrée sont touchés.** Seuls les deux gates
+  ont été regardés.
+
+> **Piège de mesure, à connaître avant de reproduire.** Relancer `./gradlew test
+> --tests …` avec le même filtre après un succès rend `> Task :test UP-TO-DATE`
+> et n'exécute **rien**, en affichant un BUILD SUCCESSFUL vert. Une séquence
+> « rouge puis vert puis vert » est en général « exécuté-échec, exécuté-succès,
+> sauté ». Toute mesure passe par `cleanTest`.

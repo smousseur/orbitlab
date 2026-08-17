@@ -50,6 +50,21 @@ final class StageLegRunner {
   static final int MAX_LEGS_PER_STAGE = 8;
 
   /**
+   * How far apart the crossing date and the date {@code propagate()} returns may be and still be read
+   * as the same stop (s).
+   *
+   * <p><b>It is twice the detector's own date convergence, and that is not a padded guess</b> (PHY-4 /
+   * L6, spec {@code docs/multi-corps/08-conception-L6.md} §12). Both states are taken at the localised
+   * root but re-interpolated independently, so nothing can hold them closer together than the
+   * precision the root itself is known to. L4 wrote {@code 1.0e-6} here after measuring 51 ps on its
+   * synthetic fixture; the first real translunar flight measured <b>524 µs</b> and the crossing was
+   * silently read as an ordinary end of leg — one arc instead of two, no warning, and a coast that
+   * stopped three days in while reporting itself complete. A tolerance unrelated to what sets the gap
+   * cannot bound it, however generous it looks.
+   */
+  static final double BOUNDARY_STOP_TOLERANCE = 2.0 * SoiCrossingDetector.DATE_CONVERGENCE_SECONDS;
+
+  /**
    * One propagation of one stage in one gravitational context.
    *
    * @param context the environment this leg was flown in
@@ -207,7 +222,8 @@ final class StageLegRunner {
 
       Crossing crossing = crossed.get();
       boolean stoppedOnBoundary =
-          crossing != null && Math.abs(exit.getDate().durationFrom(crossing.date())) < 1.0e-6;
+          crossing != null
+              && Math.abs(exit.getDate().durationFrom(crossing.date())) < BOUNDARY_STOP_TOLERANCE;
 
       if (!stoppedOnBoundary) {
         legs.add(new Leg(context, legEntry, exit, null));

@@ -1,5 +1,6 @@
 package com.smousseur.orbitlab.simulation.mission.runtime;
 
+import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemeris;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemerisPoint;
@@ -288,6 +289,15 @@ public final class MissionLoadEvaluator implements PropellantLoadOptimizer.Evalu
    * final {@code "Coasting"} stage must land within {@code toleranceRatio} of the target perigee
    * and apogee respectively.
    *
+   * <p><b>Only the arc the coast ends in is measured</b> (PHY-4 / L6, spec {@code
+   * docs/multi-corps/08-conception-L6.md} §5.2). A terminal coast may cross a sphere of influence
+   * and therefore span two arcs, whose altitudes are measured against different bodies: mixing a
+   * geocentric ~380 000 km with a selenocentric ~1 000 km would not make the predicate approximate,
+   * it would make it meaningless. On a single-arc coast — every mission in production today — the
+   * last point's arc body is the only one there is, so this restriction changes nothing by
+   * construction rather than by measurement. It is a guard and not a javadoc warning on purpose: a
+   * silent net is discovered months later (the lesson L4 §4.4 wrote for its leg cap).
+   *
    * @param ephemeris the computed mission ephemeris
    * @param objective the orbit insertion objective (perigee/apogee targets)
    * @param toleranceRatio the ± band, as a fraction of each target altitude
@@ -295,10 +305,11 @@ public final class MissionLoadEvaluator implements PropellantLoadOptimizer.Evalu
    */
   public static boolean objectiveMet(
       MissionEphemeris ephemeris, OrbitInsertionObjective objective, double toleranceRatio) {
+    SolarSystemBody finalArcBody = finalCoastArcBody(ephemeris);
     double minAltitude = Double.POSITIVE_INFINITY;
     double maxAltitude = Double.NEGATIVE_INFINITY;
     for (MissionEphemerisPoint point : ephemeris.allPoints()) {
-      if (FINAL_COAST_STAGE.equals(point.stageName())) {
+      if (FINAL_COAST_STAGE.equals(point.stageName()) && point.arc().body() == finalArcBody) {
         minAltitude = Math.min(minAltitude, point.altitudeMeters());
         maxAltitude = Math.max(maxAltitude, point.altitudeMeters());
       }
@@ -313,6 +324,22 @@ public final class MissionLoadEvaluator implements PropellantLoadOptimizer.Evalu
         Math.abs(minAltitude - objective.perigeeAltitude())
             <= toleranceRatio * objective.perigeeAltitude();
     return apogeeOk && perigeeOk;
+  }
+
+  /**
+   * The arc body of the <em>last</em> terminal-coast sample, or {@code null} when the coast produced
+   * none. Reading the last one rather than the first is what makes the predicate judge the orbit the
+   * mission ended in: a translunar coast starts geocentric and ends selenocentric, and it is the
+   * arrival orbit an insertion objective is about.
+   */
+  private static SolarSystemBody finalCoastArcBody(MissionEphemeris ephemeris) {
+    SolarSystemBody body = null;
+    for (MissionEphemerisPoint point : ephemeris.allPoints()) {
+      if (FINAL_COAST_STAGE.equals(point.stageName())) {
+        body = point.arc().body();
+      }
+    }
+    return body;
   }
 
   /**

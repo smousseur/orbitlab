@@ -94,6 +94,50 @@ class MissionLoadEvaluatorTest {
     assertFalse(MissionLoadEvaluator.objectiveMet(coastEphemeris(295_000, 550_000), target, TOL));
   }
 
+  /**
+   * PHY-4 / L6 §5.2 — a terminal coast that crosses a sphere of influence spans two arcs, and only
+   * the one it ends in is measured.
+   *
+   * <p>The geocentric half of a translunar coast sits around 380 000 km and its selenocentric half
+   * around 1 000 km. Scanning both together would not make the predicate approximate: it would put
+   * {@code min = 1 000 km} beside {@code max = 380 000 km} and judge a perfectly flown lunar arrival
+   * against a target it never described. The single-arc case is unchanged by construction — the last
+   * point's arc body is then the only body there is — and the tests above are what pin that.
+   */
+  @Test
+  void objectiveMet_twoArcCoast_measuresOnlyTheArcItEndsIn() {
+    // A lunar arrival: 380 000 km of geocentric coast, then a selenocentric arc at 100 km.
+    List<MissionEphemerisPoint> points = new ArrayList<>();
+    AbsoluteDate t = AbsoluteDate.J2000_EPOCH;
+    points.add(coastPoint(t, 380_000_000.0, TrajectoryArc.earth()));
+    points.add(coastPoint(t.shiftedBy(60), 320_000_000.0, TrajectoryArc.earth()));
+    points.add(coastPoint(t.shiftedBy(120), 102_000.0, TrajectoryArc.forBody(SolarSystemBody.MOON)));
+    points.add(coastPoint(t.shiftedBy(180), 98_000.0, TrajectoryArc.forBody(SolarSystemBody.MOON)));
+    MissionEphemeris translunar = new MissionEphemeris(points);
+
+    OrbitInsertionObjective perilune =
+        OrbitInsertionObjective.circular(SolarSystemBody.MOON, 100_000, 0.0);
+    assertTrue(
+        MissionLoadEvaluator.objectiveMet(translunar, perilune, TOL),
+        "the lunar arc alone must be measured; including the geocentric one makes the predicate"
+            + " meaningless rather than merely loose");
+
+    // And the geocentric half is genuinely ignored rather than accidentally in tolerance: an
+    // objective describing it is refused.
+    assertFalse(
+        MissionLoadEvaluator.objectiveMet(
+            translunar,
+            OrbitInsertionObjective.circular(SolarSystemBody.EARTH, 380_000_000, 0.0),
+            TOL));
+  }
+
+  /** A terminal-coast point at the given altitude, on the given arc. */
+  private static MissionEphemerisPoint coastPoint(
+      AbsoluteDate date, double altitude, TrajectoryArc arc) {
+    return new MissionEphemerisPoint(
+        date, Vector3D.ZERO, Vector3D.ZERO, "Coasting", false, 1_000.0, altitude, arc);
+  }
+
   @Test
   void objectiveMet_noTerminalCoastSamples_false() {
     OrbitInsertionObjective target =
