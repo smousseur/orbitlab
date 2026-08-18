@@ -18,26 +18,27 @@ import org.orekit.propagation.SpacecraftState;
 import org.orekit.time.AbsoluteDate;
 
 /**
- * The acceptance flight of PHY-4: a translunar transfer from a parking orbit to a perilune, flown as
- * two arcs across the lunar sphere of influence (spec {@code
+ * The acceptance flight of PHY-4: a translunar transfer from a parking orbit to a perilune, flown
+ * as two arcs across the lunar sphere of influence (spec {@code
  * docs/multi-corps/08-conception-L6.md} §3).
  *
- * <p><b>It is not a mission of the product, and that is deliberate.</b> There is no wizard profile, no
- * {@code MissionType}, no {@code MissionSpec} and no launch window: the découpage puts a real {@code
- * TLIBurnStage} in {@code MIS-4}, and what this class exists for is to give the multi-arc machinery of
- * L3, L4 and L5 one real trajectory to be judged on. It reaches the application through the legacy
- * {@code MissionEntry(Mission)} door, behind the {@code mission.lunarDemo} property.
+ * <p><b>It is not a mission of the product, and that is deliberate.</b> There is no wizard profile,
+ * no {@code MissionType}, no {@code MissionSpec} and no launch window: the découpage puts a real
+ * {@code TLIBurnStage} in {@code MIS-4}, and what this class exists for is to give the multi-arc
+ * machinery of L3, L4 and L5 one real trajectory to be judged on. It reaches the application
+ * through the legacy {@code MissionEntry(Mission)} door, behind the {@code mission.lunarDemo}
+ * property.
  *
  * <p><b>Nor does it launch.</b> {@link #getInitialState} <em>is</em> the parking orbit, built by
- * {@link TranslunarInjectionPlan#parkingState} to contain the Moon's direction at arrival. That is
- * what dispenses with a launch window — there is no ground site to wait for — and it is also what
- * keeps {@code PropellantBudget}, {@code LaunchPlane} and {@code EarthMission} out of this lot
- * entirely, all three of them still Earth-hardcoded (L1 §4.1).
+ * TranslunarInjectionPlanWindowProblem#parkingState to contain the Moon's direction at arrival.
+ * That is what dispenses with a launch window — there is no ground site to wait for — and it is
+ * also what keeps {@code PropellantBudget}, {@code LaunchPlane} and {@code EarthMission} out of
+ * this lot entirely, all three of them still Earth-hardcoded (L1 §4.1).
  *
  * <p><b>Two stages, and both of them minimal.</b> The injection applies an impulse and settles; the
- * coast declares the lunar sphere and flies until the horizon. The perturbers are declared once here
- * rather than twice on the stages, because {@link Mission#gravitationalContext()} is already the
- * default a stage inherits.
+ * coast declares the lunar sphere and flies until the horizon. The perturbers are declared once
+ * here rather than twice on the stages, because {@link Mission#gravitationalContext()} is already
+ * the default a stage inherits.
  */
 public class LunarTransferMission extends Mission {
   private static final Logger logger = LogManager.getLogger(LunarTransferMission.class);
@@ -49,10 +50,10 @@ public class LunarTransferMission extends Mission {
    * Total mission duration (s).
    *
    * <p><b>Four and a half days, and the half day is measured rather than prudential.</b> L4 §11.2
-   * measured a 54 h dwell inside the lunar sphere; with the four-day time of flight the crossing falls
-   * near 3.25 d and perilune near 4.0 d, so an exit cannot happen before ~5.5 d. Stopping at 4.5 d
-   * makes the arc sequence exactly {@code [EARTH, MOON]} instead of leaving it to the geometry of the
-   * shot, and puts perilune well inside — "propagated to perilune", literally.
+   * measured a 54 h dwell inside the lunar sphere; with the four-day time of flight the crossing
+   * falls near 3.25 d and perilune near 4.0 d, so an exit cannot happen before ~5.5 d. Stopping at
+   * 4.5 d makes the arc sequence exactly {@code [EARTH, MOON]} instead of leaving it to the
+   * geometry of the shot, and puts perilune well inside — "propagated to perilune", literally.
    *
    * <p>It also keeps the trail undecimated: at the 60 s coast sampling step this is ~6 545 points
    * against {@code TrajectoryPolyline}'s 8 192 budget, so the drawn trace is the flown trace vertex
@@ -88,8 +89,7 @@ public class LunarTransferMission extends Mission {
         new Spacecraft(
             DRY_MASS, PROPELLANT_LOAD, PROPELLANT_LOAD, PropulsionSystem.getSpacecraftPropulsion()),
         stages(perileneAltitude),
-        new OrbitInsertionObjective(
-            SolarSystemBody.MOON, perileneAltitude, perileneAltitude, 0.0));
+        new OrbitInsertionObjective(SolarSystemBody.MOON, perileneAltitude, perileneAltitude, 0.0));
     this.perileneAltitude = perileneAltitude;
     setHorizon(new MissionHorizon.FixedDuration(MISSION_DURATION_SECONDS));
   }
@@ -127,18 +127,19 @@ public class LunarTransferMission extends Mission {
   }
 
   /**
-   * The first date at or after {@code from} whose encounter geometry can deliver this mission's aimed
-   * perilune, or {@code null} when none of the next {@code days} can.
+   * The first date at or after {@code from} whose encounter geometry can deliver this mission's
+   * aimed perilune, or {@code null} when none of the next {@code days} can.
    *
-   * <p><b>Not a launch window, and the distinction is not cosmetic.</b> A launch window is about when a
-   * ground site rotates under a plane; there is no site here, and §4.1 builds the parking orbit to fit
-   * the Moon at any epoch. What varies is something else: with the aim point on the lunar surface the
-   * flown closest approach still has a floor, measured at 135 km at one epoch of a lunar month against
-   * a 100 km target, so a few epochs cannot serve a given perilune at all. The injection refuses those
-   * rather than flying a plan below the surface, and this walks past them.
+   * <p><b>Not a launch window, and the distinction is not cosmetic.</b> A launch window is about
+   * when a ground site rotates under a plane; there is no site here, and §4.1 builds the parking
+   * orbit to fit the Moon at any epoch. What varies is something else: with the aim point on the
+   * lunar surface the flown closest approach still has a floor, measured at 135 km at one epoch of
+   * a lunar month against a 100 km target, so a few epochs cannot serve a given perilune at all.
+   * The injection refuses those rather than flying a plan below the surface, and this walks past
+   * them.
    *
-   * <p>It costs one aim solve per rejected day — a few seconds each — so it is for the demonstration
-   * door and not for a flight path with a deadline.
+   * <p>It costs one aim solve per rejected day — a few seconds each — so it is for the
+   * demonstration door and not for a flight path with a deadline.
    *
    * @param from the first date to try
    * @param days how many daily steps to try
@@ -150,7 +151,7 @@ public class LunarTransferMission extends Mission {
       try {
         SpacecraftState parking = getInitialState(candidate);
         setCurrentState(parking);
-        getStages().get(0).enter(parking, this);
+        getStages().getFirst().enter(parking, this);
         return candidate;
       } catch (RuntimeException refused) {
         logger.info(
@@ -166,8 +167,10 @@ public class LunarTransferMission extends Mission {
   private static List<MissionStage> stages(double perileneAltitude) {
     return List.of(
         new TranslunarInjectionStage("Translunar injection", perileneAltitude),
-        // Named "Coasting" because MissionLoadEvaluator.FINAL_COAST_STAGE matches on that name, and a
-        // mission whose terminal coast is invisible to the feasibility predicate would be a trap for
+        // Named "Coasting" because MissionLoadEvaluator.FINAL_COAST_STAGE matches on that name, and
+        // a
+        // mission whose terminal coast is invisible to the feasibility predicate would be a trap
+        // for
         // whoever wires this into the sizing path later.
         new TranslunarCoastStage("Coasting"));
   }

@@ -1,6 +1,5 @@
 package com.smousseur.orbitlab.simulation.mission;
 
-import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
 import com.smousseur.orbitlab.simulation.mission.objective.MissionObjective;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
@@ -28,20 +27,7 @@ public abstract class Mission {
   private AbsoluteDate initialDate;
   private MissionStatus status = MissionStatus.DRAFT;
 
-  /**
-   * How far past insertion this mission is sampled (spec {@code
-   * docs/mission-horizon/01-horizon-explicite.md}). Written by {@code MissionComposer}, which is
-   * its only writer, from the {@code MissionSpec} the user configured.
-   *
-   * <p><b>The default is the legacy constant, deliberately.</b> A mission built outside the
-   * composer — every test mission, and the direct {@code generate()} calls in {@code
-   * GravityTurnFloorProbeTest} — keeps exactly the one-sidereal-day trailing coast it had before
-   * this field existed. That confines the behavioural change of this work to the missions the
-   * application actually composes, instead of quietly moving every measurement in the test suite.
-   *
-   * <p>It is a {@code TrailingCoast} and not a {@code FixedDuration} precisely so that "exactly" is
-   * literal: a total duration would subtract the ascent and shorten the coast by ~600 s.
-   */
+  /** How far past insertion this mission is sampled */
   private MissionHorizon horizon = new MissionHorizon.TrailingCoast(86_164.0);
 
   /**
@@ -85,14 +71,7 @@ public abstract class Mission {
 
   /**
    * Computes the geodetic altitude of the spacecraft above the reference shape of {@code context}'s
-   * central body.
-   *
-   * <p><b>The context is a parameter, not read from this mission</b> (PHY-4 / L3, spec {@code
-   * docs/multi-corps/05-conception-L3.md} §3.4). L1 put the seam on {@link MissionStage}, but this
-   * method kept reading the mission's own context: a stage declaring another body would have had its
-   * altitude measured against the mission's shape. There is no overload defaulting to {@link
-   * #gravitationalContext()} for a state, deliberately — the caller that samples a trajectory must
-   * say which body the altitude is above, and the compiler is what makes it.
+   * central body
    *
    * @param state the spacecraft state to evaluate
    * @param context the gravitational context whose reference shape the altitude is measured against

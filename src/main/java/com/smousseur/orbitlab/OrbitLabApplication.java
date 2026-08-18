@@ -16,6 +16,10 @@ import com.smousseur.orbitlab.engine.events.EventBus;
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.mission.context.MissionEntry;
 import com.smousseur.orbitlab.simulation.mission.operation.LunarTransferMission;
+import com.smousseur.orbitlab.simulation.mission.window.LaunchWindow;
+import com.smousseur.orbitlab.simulation.mission.window.LaunchWindowSearch;
+import com.smousseur.orbitlab.simulation.mission.window.LaunchWindowSolver;
+import com.smousseur.orbitlab.simulation.mission.window.problem.TranslunarInjectionPlanWindowProblem;
 import com.smousseur.orbitlab.states.InitAppState;
 import com.smousseur.orbitlab.states.camera.CameraTransitionAppState;
 import com.smousseur.orbitlab.states.camera.FloatingOriginAppState;
@@ -45,6 +49,9 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.orekit.time.AbsoluteDate;
 
+import java.time.Duration;
+import java.util.List;
+
 /**
  * Main entry point for the OrbitLab application.
  *
@@ -57,26 +64,6 @@ public class OrbitLabApplication extends SimpleApplication {
   /** Global application instance. */
   public static OrbitLabApplication app;
 
-  /**
-   * Anisotropic filtering level applied to every texture that does not carry one of its own, which
-   * as of today is all of them — see {@link TextureDiagnostics}, whose boot report is what makes
-   * this a global setting rather than a per-texture pass.
-   *
-   * <p>It sharpens planetary surfaces seen at a grazing angle, where a mipmapped filter alone has
-   * to pick its level from the more compressed of the two UV axes and therefore blurs the axis that
-   * needed no reduction. Sampling is adaptive, so face-on surfaces cost nothing extra.
-   *
-   * <p>Deliberately 8 and not the 16 the driver allows: past 8 the returns fall off sharply while
-   * the sample count keeps doubling on exactly the oblique fragments that are already the most
-   * expensive. 16 is available if a side-by-side ever justifies it.
-   *
-   * <p><b>This does not touch the orbit lines.</b> Anisotropy is a texture-sampling state and the
-   * trajectories carry no texture. Their aliasing was never addressable from {@code AppSettings}
-   * either — MSAA does not reliably antialias lines, and {@code glLineWidth > 1} is silently
-   * clamped to 1 px in a core profile — and it is no longer a rendering-settings question at all:
-   * RND-4 replaced the line primitives with camera-facing ribbons that carry their own edge fade
-   * ({@code MatDefs/Fx/Ribbon.j3md}, spec {@code docs/graphics-effects/ribbon-lines.md}).
-   */
   private static final int ANISOTROPIC_FILTER_LEVEL = 8;
 
   private static final Logger LOGGER = LogManager.getLogger(OrbitLabApplication.class);
@@ -118,38 +105,16 @@ public class OrbitLabApplication extends SimpleApplication {
     stateManager.attach(new EphemerisAppState(applicationContext));
     stateManager.attach(new PlanetPoseAppState(applicationContext));
     stateManager.attach(new ViewModeAppState(applicationContext));
-    // Before FloatingOriginAppState, and that is a requirement, not a preference: on the frame a
-    // transition ends it flips the focus, and the floating origin has to re-centre the scene within
-    // that same frame for the two moves to cancel — cf. CameraTransitionAppState.finish().
     CameraTransitionAppState cameraTransition = new CameraTransitionAppState(applicationContext);
     applicationContext.setCameraTransition(cameraTransition);
     stateManager.attach(cameraTransition);
-    // Attach order IS update order (AppStateManager walks the states in insertion order), and it
-    // matters here: FloatingOriginAppState owns the frame offsets, and every state that reads a
-    // world position back out of the scene graph must come after it. MissionOrchestratorAppState
-    // does exactly that (the LOD measures the camera-to-spacecraft distance), so it must not be
-    // moved back above this line — cf. docs/graphics-effects/spacecraft-view-artefacts.md §3.
     stateManager.attach(new FloatingOriginAppState(applicationContext));
-
-    // The orbit camera writes the far camera's pose for this frame, and it belongs BEFORE its
-    // consumers. MissionOrchestratorAppState and PlanetHudMarkersAppState both measure a
-    // camera-to-body distance and project world positions onto the screen; jME refreshes world
-    // transforms on demand, so the positions they read are this frame's, but cam.getLocation() is
-    // only written here — leaving them to pair a fresh position with last frame's camera. That was
-    // invisible while the camera only ever moved at the speed a hand drags a mouse, and stopped
-    // being invisible when transitions started moving it several degrees and several percent of
-    // its distance per frame: the HUD icons lagged the scene they annotate.
-    //
-    // It still has to come after FloatingOriginAppState, which owns the frame offsets it reads and
-    // sets the far-plane floor it applies.
     MissionWizardAppState wizardState = new MissionWizardAppState(applicationContext);
     flyCam.setEnabled(false);
     OrbitCameraAppState orbitCam =
         new OrbitCameraAppState(
             applicationContext,
             () -> Vector3f.ZERO,
-            // A transition drives the pivot and the distance itself; letting the mouse in at the
-            // same time would fight it. Same switch as the wizard's, for the same reason.
             () -> wizardState.isWizardVisible() || cameraTransition.isActive());
     applicationContext.setOrbitCamera(orbitCam);
     stateManager.attach(orbitCam);
@@ -187,18 +152,12 @@ public class OrbitLabApplication extends SimpleApplication {
     farViewport.detachScene(rootNode);
     farViewport.attachScene(sceneGraph.getFarRoot());
 
-    // Sky pre-view: rendered before everything else, it owns the background color.
-    // It needs its own camera because JME's sky shader places the sky mesh at its raw model
-    // radius (10) in view space: the far camera's dynamic near plane grows with the zoom
-    // distance and would clip the skybox away entirely past ~10 000 world units.
-    // SkyboxAppState keeps this camera's rotation and FoV in sync with the far camera.
     Camera skyCam = farCam.clone();
     applicationContext.setSkyCamera(skyCam);
     ViewPort skyViewport = renderManager.createPreView("SkyView", skyCam);
     skyViewport.setClearFlags(true, true, true);
     skyViewport.attachScene(sceneGraph.getSkyRoot());
 
-    // The far viewport must no longer clear the color buffer, otherwise it erases the sky.
     farViewport.setClearFlags(false, true, true);
 
     Camera nearCam = farCam.clone();
@@ -209,69 +168,55 @@ public class OrbitLabApplication extends SimpleApplication {
     nearViewport.attachScene(sceneGraph.getNearRoot());
 
     // Re-order the GUI viewport so it renders AFTER NearView.
-    // The default guiViewPort is rendered before post-views, so NearView
-    // was drawing on top of the GUI. Fix: detach guiNode from the default
-    // guiViewPort and create a new post-view for the GUI that comes after NearView.
     guiViewPort.detachScene(guiNode);
     ViewPort guiPost = renderManager.createPostView("GuiPost", cam);
     guiPost.setClearFlags(false, false, false);
     guiPost.attachScene(guiNode);
 
-    // Re-register the GUI picking with Lemur so mouse events (click, hover, etc.)
-    // work in the new GUI viewport instead of the now-empty default guiViewPort.
     getStateManager().getState(PickState.class).removeCollisionRoot(guiViewPort);
     getStateManager().getState(PickState.class).addCollisionRoot(guiPost, PickState.PICK_LAYER_GUI);
 
-    // Near frustum: NearCameraSyncAppState owns the near cam's depth range and FoV every frame.
     stateManager.attach(new NearCameraSyncAppState(applicationContext, nearCam));
 
-    // Post-processing. The filter chain hangs off NearView because that is the viewport that draws
-    // the bodies' 3D models — the far viewport only carries their position anchors and the orbit
-    // lines. The sky and far viewports are handed to it so it can route them into its framebuffer:
-    // its composite pass clears the screen, and they would otherwise be wiped out. Attached last so
-    // both viewports it re-routes already exist.
     stateManager.attach(new PostFxAppState(nearViewport, skyViewport, farViewport));
 
     loadLunarDemoIfRequested(applicationContext);
   }
 
-  /**
-   * Loads the PHY-4 acceptance flight when {@code mission.lunarDemo} is on (spec {@code
-   * docs/multi-corps/08-conception-L6.md} §2, decision 5).
-   *
-   * <p><b>Through the legacy {@code MissionEntry(Mission)} door</b>, which had no caller in {@code
-   * main} until now: the entry carries no {@code MissionSpec}, so it cannot be re-composed by an
-   * optimization-mode toggle nor edited in the wizard, and {@code MissionPlanOptimizer} takes its
-   * fixed-load branch. That is exactly right for an acceptance fixture, and it is what keeps the
-   * wizard, {@code MissionType} and {@code MissionComposer} out of this lot entirely.
-   *
-   * <p>The compute request is published rather than called: {@code MissionOrchestratorAppState} owns
-   * that transition, and going around it would be the one {@code getState()}-shaped shortcut this
-   * codebase forbids.
-   */
   private void loadLunarDemoIfRequested(ApplicationContext applicationContext) {
     if (!Boolean.parseBoolean(PropertiesService.get().getProperty("mission.lunarDemo"))) {
       return;
     }
     LunarTransferMission mission = new LunarTransferMission("Translunar transfer");
-    // A few epochs of a lunar month cannot deliver the aimed perilune at all, and the injection
-    // refuses those rather than flying a plan below the surface (spec §12). Walk to the first one it
-    // accepts instead of loading a mission that will fail on a background thread.
-    AbsoluteDate flyable = mission.firstFlyableDate(applicationContext.clock().now(), LUNAR_DEMO_DAYS);
-    if (flyable == null) {
+    AbsoluteDate now = applicationContext.clock().now();
+
+    TranslunarInjectionPlanWindowProblem problem =
+        new TranslunarInjectionPlanWindowProblem(mission.getVehicle().getMass());
+    LaunchWindowSearch search =
+        new LaunchWindowSearch(
+            now,
+            Duration.ofDays(LUNAR_DEMO_DAYS),
+            problem.coarseStep(),
+            Duration.ofMinutes(10),
+            4000,
+            1);
+    LaunchWindowSolver solver = new LaunchWindowSolver(problem);
+    List<LaunchWindow> windows = solver.solve(search);
+    if (windows.isEmpty()) {
       LOGGER.warn(
           "mission.lunarDemo is on, but no epoch in the next {} days can deliver the aimed perilune;"
               + " not loading the demonstration mission",
           LUNAR_DEMO_DAYS);
       return;
     }
+
     MissionEntry entry = new MissionEntry(mission);
-    entry.setScheduledDate(flyable);
+    AbsoluteDate scheduledDate = windows.getFirst().best().epoch();
+    LOGGER.info("Scheduled date for lunar demo mission: {}", scheduledDate);
+    entry.setScheduledDate(scheduledDate);
     entry.setVisible(true);
     applicationContext.missionContext().addMission(entry);
-    applicationContext
-        .eventBus()
-        .publishMissionAction(entry.id(), EventBus.MissionAction.OPTIMIZE);
+    applicationContext.eventBus().publishMissionAction(entry.id(), EventBus.MissionAction.OPTIMIZE);
   }
 
   @Override

@@ -33,29 +33,14 @@ import org.orekit.time.AbsoluteDate;
 public final class MissionEntry {
   private static final Logger logger = LogManager.getLogger(MissionEntry.class);
 
-  // Final and assigned once for both constructors: identity must survive every mission and spec
-  // replacement this entry goes through.
   private final MissionId id = MissionId.newId();
-  // Non-null only when the entry was built from a spec: that is what lets setOptimizationType
-  // recompose the mission for a new mode. Entries wrapping a pre-built mission (legacy path) leave
-  // it null and cannot recompose.
-  // Volatile + non-final: replaced on the JME thread when the user re-edits the mission in the
-  // wizard. Null-ness, on the other hand, is fixed at construction — a legacy entry never gains a
-  // spec, so `spec == null` stays a reliable "cannot recompose" test.
   private volatile MissionSpec spec;
-  // Volatile + non-final: replaced on the JME thread when the mode toggles, read on the
-  // mission-optimizer thread.
   private volatile Mission mission;
   private volatile OptimizationType optimizationType = OptimizationType.FAST;
   private volatile MissionOptimizerResult optimizerResult;
   private volatile MissionEphemeris ephemeris;
-  // Written on the mission-optimizer thread when a computation lands, read on the JME update
-  // thread by the panel. MissionComputeResult carries both, and until this existed the
-  // orchestrator dropped them on the floor.
   private volatile AchievedOrbit achievedOrbit;
   private volatile MissionPerformanceReport performanceReport;
-  // The last failure, already formatted for display. Both sites that set MissionStatus.FAILED fill
-  // it in; before this field, the exception only ever reached the log.
   private volatile String lastError;
   private volatile boolean visible = false;
   private volatile AbsoluteDate scheduledDate;

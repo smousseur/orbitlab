@@ -9,10 +9,10 @@ import java.util.Set;
  * lunar sphere of influence and is allowed to change central body at it.
  *
  * <p><b>The class exists for one line</b>, and that is written rather than apologised for. L4 §3.1
- * deliberately refused to derive {@code soiTransitions} from the perturber set — doing so would arm a
- * detector on a GEO mission that only wanted the lunar perturbation, and make {@code
- * withPerturbers(MOON)} say two things at once. So the declaration cannot come from the mission, the
- * way the perturbers themselves do, and a stage has to carry it.
+ * deliberately refused to derive {@code soiTransitions} from the perturber set — doing so would arm
+ * a detector on a GEO mission that only wanted the lunar perturbation, and make {@code
+ * withPerturbers(MOON)} say two things at once. So the declaration cannot come from the mission,
+ * the way the perturbers themselves do, and a stage has to carry it.
  *
  * <p><b>This is the first production stage in the repository to declare a transition</b>, which is
  * what makes L6 the first lot where any mission produces a second arc — and therefore the first
@@ -28,7 +28,7 @@ public class TranslunarCoastStage extends CoastingStage {
    * @param name the human-readable name of this stage
    */
   public TranslunarCoastStage(String name) {
-    super(name, (Double) null);
+    super(name, null);
   }
 
   @Override
