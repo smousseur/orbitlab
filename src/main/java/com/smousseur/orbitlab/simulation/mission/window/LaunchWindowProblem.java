@@ -59,6 +59,27 @@ public interface LaunchWindowProblem {
   Duration coarseStep();
 
   /**
+   * The time resolution this problem's optimum and edges are worth refining to, which only the
+   * problem can know either.
+   *
+   * <p><b>The same argument as {@link #coarseStep()}, on the other axis, and it is not the same
+   * number.</b> The sweep step must resolve the <em>minimum</em>; this must resolve the
+   * <em>window</em>, and the two scales can be four orders of magnitude apart: an Earth launch has
+   * one alignment per sidereal day, so it is bracketed by an hourly sweep, while the slot around it
+   * is minutes wide and the instant is decided to the second. A default of a tenth of the sweep
+   * step would ask for six minutes there — coarser than the window itself, which is the silent kind
+   * of wrong.
+   *
+   * <p>The default is that tenth, because it is right whenever the merit function has one scale
+   * only, which is the common case.
+   *
+   * @return the refinement resolution
+   */
+  default Duration refinementPrecision() {
+    return coarseStep().dividedBy(10L);
+  }
+
+  /**
    * Confirms a refined candidate under the full model — the expensive second tier.
    *
    * <p>The default does nothing, which is the honest answer for a problem whose {@link #evaluate}

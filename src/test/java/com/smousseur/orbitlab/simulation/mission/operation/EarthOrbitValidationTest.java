@@ -1,6 +1,7 @@
 package com.smousseur.orbitlab.simulation.mission.operation;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -245,5 +246,54 @@ class EarthOrbitValidationTest {
                   "T6", falconHeavy(), 400_000.0, 400_000.0, "site", lat, KOUROU_LON, 0.0, null),
           () -> "the free plane of latitude " + lat + "° must be reachable from it");
     }
+  }
+
+  // --- MIS-2: the target node, which is optional and must survive a reload ---
+
+  @Test
+  void noTargetNode_isTheDefault() {
+    // Every spec that predates MIS-2 goes through the eleven-argument form, and a mission that
+    // names no plane must keep launching at the date it was given.
+    assertFalse(spec(400_000.0, 400_000.0, 51.6, KOUROU_LAT).hasTargetRaan());
+  }
+
+  @Test
+  void targetNode_isCarriedAndReadThroughThePredicate() {
+    MissionSpec.EarthOrbit spec = specWithRaan(120.0);
+
+    assertTrue(spec.hasTargetRaan());
+    assertEquals(120.0, spec.targetRaan(), 0.0);
+  }
+
+  @Test
+  void aNonFiniteTargetNode_isRefused() {
+    assertThrows(OrbitlabException.class, () -> specWithRaan(Double.NaN));
+    assertThrows(OrbitlabException.class, () -> specWithRaan(Double.POSITIVE_INFINITY));
+  }
+
+  @Test
+  void resizingThePropellantLoads_keepsTheTargetNode() {
+    // The sizing planner rebuilds the spec at every candidate load array; a node lost there would
+    // silently turn a mission waiting for a plane into one launching whenever.
+    MissionSpec resized = specWithRaan(120.0).withLauncherLoads(new double[] {1_000.0, 500.0});
+
+    assertTrue(((MissionSpec.EarthOrbit) resized).hasTargetRaan());
+    assertEquals(120.0, ((MissionSpec.EarthOrbit) resized).targetRaan(), 0.0);
+  }
+
+  private static MissionSpec.EarthOrbit specWithRaan(Double raanDeg) {
+    return new MissionSpec.EarthOrbit(
+        "T6",
+        falconHeavy(),
+        400_000.0,
+        400_000.0,
+        FastMath.toRadians(51.6),
+        NodeBranch.ASCENDING,
+        raanDeg,
+        "Kourou",
+        KOUROU_LAT,
+        KOUROU_LON,
+        0.0,
+        null);
   }
 }

@@ -98,6 +98,10 @@ public final class WizardPrefill {
     if (plane.commands(FastMath.toRadians(spec.latitude()))) {
       values.put(FormField.TARGET_INCLINATION.key(), plane.targetInclinationDeg());
     }
+    // The node has no derived form to be confused with, so it comes back whenever it was asked for.
+    if (spec.hasTargetRaan()) {
+      values.put(FormField.TARGET_RAAN.key(), spec.targetRaan());
+    }
   }
 
   /** Specs hold altitudes in meters, every wizard altitude widget works in kilometers. */

@@ -38,6 +38,9 @@ public class EarthOrbitDynamicParameters extends DynamicParameters {
 
   private static final float INCLINATION_FIELD_W = 120f;
 
+  /** Narrower than the inclination's: the two share one row, and the helper needs what is left. */
+  private static final float RAAN_FIELD_W = 90f;
+
   /** The helper line while the inclination is derived from the launch site. */
   private static final String AUTO_HELPER = "free plane of the launch site — due east";
 
@@ -66,6 +69,12 @@ public class EarthOrbitDynamicParameters extends DynamicParameters {
 
   private TextField inclinationField;
   private Label inclinationHelper;
+
+  /**
+   * The target node, blank by default. Blank is not an unset number but a statement: no plane is
+   * being waited for, so the mission launches at the date the user typed (MIS-2).
+   */
+  private TextField raanField;
 
   /**
    * Whether the inclination still shows the value this panel derived. The whole of the "auto" state,
@@ -158,13 +167,18 @@ public class EarthOrbitDynamicParameters extends DynamicParameters {
   }
 
   /**
-   * The inclination field, its unit and the line that says where the number comes from.
+   * The target plane: the inclination, the node, their units and the line that says where the
+   * inclination comes from.
    *
    * <p><b>The helper sits beside the field, not under it</b>, and that is a constraint rather than a
    * taste: the step's root is pinned to {@code FormStyles.CONTENT_HEIGHT} and nothing in this wizard
    * clips, so an overflow lands on the footer. Two altitude sliders plus a three-storey inclination
    * block does not fit; two sliders plus this one does. The circular profiles, with a single slider,
    * would have had the room — but one layout that fits everywhere beats two that each fit once.
+   *
+   * <p><b>Which is also why the node shares this row instead of taking its own.</b> A third storey
+   * is exactly what the paragraph above says does not fit on an elliptic profile, so the RAAN goes
+   * in beside the inclination, behind an inline label, and the helper keeps the rest of the width.
    */
   private Container buildInclinationRow() {
     Container column = new Container(new BoxLayout(Axis.Y, FillMode.None));
@@ -183,10 +197,20 @@ public class EarthOrbitDynamicParameters extends DynamicParameters {
     row.addChild(inclinationField);
     row.addChild(UiKit.hSpacer(8f));
 
-    Label unit = new Label("deg", FormStyles.STYLE);
-    unit.setFont(UiKit.ibmPlexMono(11));
-    unit.setColor(FormStyles.TEXT_LO);
-    row.addChild(centeredInRow(unit));
+    row.addChild(centeredInRow(degreesLabel()));
+
+    row.addChild(UiKit.hSpacer(16f));
+
+    Label raanLabel = new Label("RAAN", FormStyles.STYLE);
+    raanLabel.setFont(UiKit.ibmPlexMono(11));
+    raanLabel.setColor(FormStyles.TEXT_SECONDARY);
+    row.addChild(centeredInRow(raanLabel));
+    row.addChild(UiKit.hSpacer(8f));
+
+    raanField = newInputField("", RAAN_FIELD_W, FIELD_H);
+    row.addChild(raanField);
+    row.addChild(UiKit.hSpacer(8f));
+    row.addChild(centeredInRow(degreesLabel()));
 
     row.addChild(UiKit.hSpacer(16f));
 
@@ -197,6 +221,14 @@ public class EarthOrbitDynamicParameters extends DynamicParameters {
 
     column.addChild(row);
     return column;
+  }
+
+  /** The unit that follows both plane fields. */
+  private static Label degreesLabel() {
+    Label unit = new Label("deg", FormStyles.STYLE);
+    unit.setFont(UiKit.ibmPlexMono(11));
+    unit.setColor(FormStyles.TEXT_LO);
+    return unit;
   }
 
   /**
@@ -276,7 +308,7 @@ public class EarthOrbitDynamicParameters extends DynamicParameters {
               profile.initialInclinationDeg(launchLatitudeDeg.getAsDouble(), targetAltitude()));
     } catch (RuntimeException e) {
       // No sun-synchronous inclination at this altitude. The field keeps what it shows and the
-      // helper carries the reason; validateInclination() is what refuses the step.
+      // helper carries the reason; validateTargetPlane() is what refuses the step.
       setInclinationHelper(e.getMessage(), FormStyles.DANGER);
       return;
     }
@@ -326,7 +358,11 @@ public class EarthOrbitDynamicParameters extends DynamicParameters {
    * @return the reason the inclination was refused, or empty when it is usable
    */
   @Override
-  public Optional<String> validateInclination() {
+  public Optional<String> validateTargetPlane() {
+    Optional<String> node = validateRaan();
+    if (node.isPresent()) {
+      return node;
+    }
     if (profile.inclinationMode() == MissionProfile.InclinationMode.NONE) {
       return Optional.empty();
     }
@@ -345,6 +381,31 @@ public class EarthOrbitDynamicParameters extends DynamicParameters {
       return Optional.of(rejectInclination(text, reachableBand(latitude), e.getMessage()));
     }
     clearInclinationRejection();
+    return Optional.empty();
+  }
+
+  /**
+   * Refuses a node that is not a number. Blank passes: it is how the field says "no plane to wait
+   * for", and it is the default state of every mission that does not meet something in orbit.
+   *
+   * <p>Refused rather than ignored, unlike the inclination's unreadable case, because there is no
+   * value to fall back on: an inclination has a derived default, a node does not, so degrading
+   * would silently turn "meet this plane" into "launch whenever".
+   */
+  private Optional<String> validateRaan() {
+    String text = raanField.getText().trim();
+    if (text.isEmpty()) {
+      raanField.setColor(FormStyles.TEXT_PRIMARY);
+      return Optional.empty();
+    }
+    try {
+      Double.parseDouble(text);
+    } catch (NumberFormatException e) {
+      raanField.setColor(FormStyles.DANGER);
+      setInclinationHelper("RAAN — expected degrees", FormStyles.DANGER);
+      return Optional.of("Target RAAN is not a number: " + text);
+    }
+    raanField.setColor(FormStyles.TEXT_PRIMARY);
     return Optional.empty();
   }
 
@@ -412,7 +473,27 @@ public class EarthOrbitDynamicParameters extends DynamicParameters {
     if (publishesInclination()) {
       values.put(FormField.TARGET_INCLINATION.key(), parsedInclinationDeg());
     }
+    // Absent when blank, and that absence is the mission saying it waits for no plane. Publishing a
+    // default here would make every mission sit through a launch window it never asked for.
+    parsedRaanDeg().ifPresent(raan -> values.put(FormField.TARGET_RAAN.key(), raan));
     return values;
+  }
+
+  /**
+   * @return the node the field holds, or empty when it is blank or unreadable — {@link
+   *     #validateTargetPlane()} is what refuses the unreadable case, this only declines to publish
+   *     it
+   */
+  private Optional<Double> parsedRaanDeg() {
+    String text = raanField.getText().trim();
+    if (text.isEmpty()) {
+      return Optional.empty();
+    }
+    try {
+      return Optional.of(Double.parseDouble(text));
+    } catch (NumberFormatException e) {
+      return Optional.empty();
+    }
   }
 
   private boolean publishesInclination() {
@@ -425,7 +506,7 @@ public class EarthOrbitDynamicParameters extends DynamicParameters {
 
   /**
    * The field's value, or the derived one when it cannot be read. An unreadable entry never reaches
-   * here in practice — {@code validateInclination()} holds the step — but degrading to the derived
+   * here in practice — {@code validateTargetPlane()} holds the step — but degrading to the derived
    * value keeps a programmatic caller from building a spec out of {@code NaN}.
    */
   private double parsedInclinationDeg() {
@@ -455,6 +536,10 @@ public class EarthOrbitDynamicParameters extends DynamicParameters {
           altitudeMax);
     }
     applyInclination(values);
+    // Same rule as the inclination's: the key's absence means the mission waits for no plane, so
+    // the field goes back to blank rather than keeping whatever the previous edit showed.
+    Object raan = values.get(FormField.TARGET_RAAN.key());
+    raanField.setText(raan == null ? "" : raan.toString().trim());
   }
 
   /**
@@ -483,7 +568,7 @@ public class EarthOrbitDynamicParameters extends DynamicParameters {
       inclinationDeg = Double.parseDouble(raw.toString().trim());
     } catch (NumberFormatException e) {
       // A value map assembled by hand can carry anything. Falling back on the profile's own start
-      // keeps the panel usable; validateInclination() is what refuses an entry, not this.
+      // keeps the panel usable; validateTargetPlane() is what refuses an entry, not this.
       initialiseInclination();
       return;
     }

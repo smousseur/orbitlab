@@ -109,6 +109,7 @@ public final class MissionFactory {
             apogeeAlt,
             plane.targetInclination(),
             plane.nodeBranch(),
+            targetRaanOrNull(values),
             siteName,
             latitude,
             longitude,
@@ -226,6 +227,34 @@ public final class MissionFactory {
       throw new OrbitlabException("Target inclination is not a number: " + raw);
     }
     return LaunchPlane.ofDegrees(inclinationDeg).requireReachableFrom(latitude);
+  }
+
+  /**
+   * Reads the optional target node.
+   *
+   * <p>Absent means the mission waits for no plane, which is the common case and not a defect: an
+   * inclination is reached at every instant of the day, so only a mission meeting something that
+   * already exists has a window to sit through (MIS-2).
+   *
+   * <p>A malformed entry is refused rather than degraded to "no target". The horizon may fall back
+   * on its derived default because a duration is a preference; a node that could not be read is an
+   * intention that would be silently dropped, and the mission would launch at the typed date as if
+   * nothing had been asked for.
+   *
+   * @param values the raw wizard values
+   * @return the target RAAN in degrees, or {@code null} when none was asked for
+   * @throws OrbitlabException if the key is present but not a number
+   */
+  private static Double targetRaanOrNull(Map<String, Object> values) {
+    Object raw = values.get("TARGET_RAAN");
+    if (raw == null || raw.toString().isBlank()) {
+      return null;
+    }
+    try {
+      return Double.parseDouble(raw.toString().trim());
+    } catch (NumberFormatException e) {
+      throw new OrbitlabException("Target RAAN is not a number: " + raw);
+    }
   }
 
   /**

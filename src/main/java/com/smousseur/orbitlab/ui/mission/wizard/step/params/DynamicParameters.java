@@ -79,7 +79,7 @@ public abstract class DynamicParameters {
    *
    * @return the reason the inclination was refused, or empty when it is usable
    */
-  public Optional<String> validateInclination() {
+  public Optional<String> validateTargetPlane() {
     return Optional.empty();
   }
 

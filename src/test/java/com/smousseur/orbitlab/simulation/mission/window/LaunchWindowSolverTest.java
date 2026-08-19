@@ -10,6 +10,10 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.orekit.time.AbsoluteDate;
@@ -172,6 +176,28 @@ class LaunchWindowSolverTest {
     @Override
     LaunchWindowCandidate at(AbsoluteDate epoch, double offsetSeconds) {
       return LaunchWindowCandidate.refused(epoch, "no geometry at any epoch");
+    }
+  }
+
+  /**
+   * The same parabola as {@link SingleDip}, without the recording — an immutable problem, so it can
+   * be evaluated from several threads at once and the reentrancy test measures the solver rather
+   * than an {@code ArrayList}.
+   */
+  private static final class SharedDip implements LaunchWindowProblem {
+    @Override
+    public String name() {
+      return "SharedDip";
+    }
+
+    @Override
+    public Duration coarseStep() {
+      return Duration.ofMinutes(10);
+    }
+
+    @Override
+    public LaunchWindowCandidate evaluate(AbsoluteDate epoch) {
+      return LaunchWindowCandidate.of(epoch, SingleDip.cost(offsetOf(epoch)));
     }
   }
 
@@ -704,6 +730,43 @@ class LaunchWindowSolverTest {
           cells,
           1.0e-9,
           "every evaluation is snapped to the precision grid, at T+" + offsetOf(date) + " s");
+    }
+  }
+
+  @Test
+  @DisplayName("One solver serves concurrent searches without mixing them")
+  void theSolverIsReentrant() throws Exception {
+    // Two searches of different widths, interleaved across four threads on one solver. Each must
+    // come back with the answer it gives alone: a per-search state held on the solver would not
+    // throw here, it would quietly answer one search with the other's grid.
+    SharedDip problem = new SharedDip();
+    LaunchWindowSolver solver = new LaunchWindowSolver(problem);
+    LaunchWindowSearch narrow = LaunchWindowSearch.over(T0, Duration.ofHours(4), problem, 3_050.0);
+    LaunchWindowSearch wide =
+        new LaunchWindowSearch(
+            T0, Duration.ofHours(8), Duration.ofMinutes(10), Duration.ofMinutes(1), 3_200.0, 1);
+
+    List<LaunchWindow> expectedNarrow = solver.solve(narrow);
+    List<LaunchWindow> expectedWide = solver.solve(wide);
+    assertFalse(
+        expectedNarrow.equals(expectedWide), "the two searches must differ for this to prove much");
+
+    ExecutorService pool = Executors.newFixedThreadPool(4);
+    try {
+      List<Callable<List<LaunchWindow>>> jobs = new ArrayList<>();
+      for (int i = 0; i < 40; i++) {
+        LaunchWindowSearch search = i % 2 == 0 ? narrow : wide;
+        jobs.add(() -> solver.solve(search));
+      }
+      List<Future<List<LaunchWindow>>> results = pool.invokeAll(jobs);
+      for (int i = 0; i < results.size(); i++) {
+        assertEquals(
+            i % 2 == 0 ? expectedNarrow : expectedWide,
+            results.get(i).get(),
+            "concurrent search " + i + " came back with another search's answer");
+      }
+    } finally {
+      pool.shutdownNow();
     }
   }
 

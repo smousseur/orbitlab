@@ -605,8 +605,8 @@ public class StepParameters implements StepValues {
    *
    * @return the reason the inclination was refused, or empty when it is usable
    */
-  public Optional<String> validateInclination() {
-    return dynamicParameters.validateInclination();
+  public Optional<String> validateTargetPlane() {
+    return dynamicParameters.validateTargetPlane();
   }
 
   private String rejectHorizon(String text, String message) {

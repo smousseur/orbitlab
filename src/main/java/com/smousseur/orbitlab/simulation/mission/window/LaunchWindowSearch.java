@@ -90,18 +90,18 @@ public record LaunchWindowSearch(
   }
 
   /**
-   * The usual search: the problem's own sweep step, a precision a tenth of it, and one window.
+   * The usual search: both of the problem's own scales, and one window.
    *
    * @param start the first date considered
    * @param span how far past {@code start} to look
-   * @param problem the problem whose sampling scale is adopted
+   * @param problem the problem whose sampling and refinement scales are adopted
    * @param maxDeltaV the acceptance budget (m/s)
    * @return the search
    */
   public static LaunchWindowSearch over(
       AbsoluteDate start, Duration span, LaunchWindowProblem problem, double maxDeltaV) {
-    Duration step = problem.coarseStep();
-    return new LaunchWindowSearch(start, span, step, step.dividedBy(10L), maxDeltaV, 1);
+    return new LaunchWindowSearch(
+        start, span, problem.coarseStep(), problem.refinementPrecision(), maxDeltaV, 1);
   }
 
   /**

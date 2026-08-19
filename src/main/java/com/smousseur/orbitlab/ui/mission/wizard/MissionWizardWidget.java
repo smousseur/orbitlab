@@ -247,7 +247,7 @@ public class MissionWizardWidget implements AutoCloseable {
     dateError.ifPresent(reason -> logger.info("Wizard: launch date refused ({})", reason));
     Optional<String> horizonError = stepParameters.validateHorizon();
     horizonError.ifPresent(reason -> logger.info("Wizard: mission duration refused ({})", reason));
-    Optional<String> inclinationError = stepParameters.validateInclination();
+    Optional<String> inclinationError = stepParameters.validateTargetPlane();
     inclinationError.ifPresent(
         reason -> logger.info("Wizard: target inclination refused ({})", reason));
     return dateError.isPresent() || horizonError.isPresent() || inclinationError.isPresent();
