@@ -230,6 +230,22 @@ The application renders two stacked viewports:
 - **Language**: All code comments and Javadoc are written in **English**, without exception — including
   design rationale, which is often long in this codebase. Only the design documents under `docs/`
   are written in French. Do not infer the code's language from the docs': they differ deliberately.
+- **Inline comments are the exception, not the habit.** This rule covers comments *inside* method
+  bodies (`//` and inline `/* */`); it does **not** cover Javadoc on classes, methods, records or
+  fields, which stays welcome and is where long rationale belongs. An inline comment is written only
+  when the code cannot carry the information by itself:
+    - a **why** that is invisible locally — a non-obvious ordering, a deliberate deviation from the
+      obvious implementation, a guard whose reason lives in another class;
+    - the **provenance of a magic value** — where a constant, a tolerance or a threshold comes from;
+    - a **workaround** for a library or driver defect, with what it works around;
+    - an **invariant or precondition** the reader must hold to follow the next lines.
+
+  Everything else is noise and must not be written: restating what the line already says, narrating
+  the change being made (`// fixed the sign`, `// now uses the cache`, `// added for MIS-2`), marking
+  the shape of the code (`// loop over the stages`, `// getters`), or leaving commented-out code.
+  A comment that only exists because the code is unclear is a request to rename or extract, not to
+  comment. And when a change *is* worth explaining, its place is the commit message or the design
+  document under `docs/`, never a scar left in the source.
 - **Records**: Prefer Java records for immutable data (`SimulationConfig`, clock events, `BodySample`, etc.)
 - **Sealed interfaces**: Used for type-safe event hierarchies (e.g., `ClockEvent`)
 - **Singletons**: Use the holder pattern (`private static final class Holder { static final T INSTANCE = new T(); }`)
