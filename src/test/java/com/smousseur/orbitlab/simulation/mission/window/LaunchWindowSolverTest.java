@@ -102,7 +102,7 @@ class LaunchWindowSolverTest {
   }
 
   /** Two dips of different depths, as the minimum of two parabolas — no plateau, no ties. */
-  private static final class TwoDips extends RecordingProblem {
+  private static class TwoDips extends RecordingProblem {
     static final double SHALLOW_VERTEX = 10_800.0;
     static final double DEEP_VERTEX = 32_400.0;
 
@@ -386,6 +386,210 @@ class LaunchWindowSolverTest {
                     5));
 
     assertThrows(UnsupportedOperationException.class, () -> windows.remove(0));
+  }
+
+  // ── the acceptance threshold ──────────────────────────────────────────────
+
+  @Test
+  @DisplayName("A margin cuts the same slot an absolute budget of the same value would")
+  void aMarginCutsTheSlotAnEquivalentBudgetWould() {
+    // The equivalence is the specification: 50 m/s over a 3 000 m/s floor is the 3 050 m/s budget,
+    // said without knowing the floor. Asserting one against the other rather than against numbers
+    // is what makes this a test of the anchoring and not of the parabola.
+    SingleDip absolute = new SingleDip();
+    LaunchWindow byBudget =
+        new LaunchWindowSolver(absolute)
+            .solve(LaunchWindowSearch.over(T0, Duration.ofHours(4), absolute, 3_050.0))
+            .get(0);
+
+    SingleDip relative = new SingleDip();
+    LaunchWindowSearch search =
+        LaunchWindowSearch.over(T0, Duration.ofHours(4), relative, 1.0e9).withMargin(50.0);
+    LaunchWindow byMargin = new LaunchWindowSolver(relative).solve(search).get(0);
+
+    assertEquals(
+        offsetOf(byBudget.opening()),
+        offsetOf(byMargin.opening()),
+        search.precisionSeconds(),
+        "the opening must not depend on which of the two ways the threshold was said");
+    assertEquals(
+        offsetOf(byBudget.closing()), offsetOf(byMargin.closing()), search.precisionSeconds());
+    assertEquals(offsetOf(byBudget.date()), offsetOf(byMargin.date()), search.precisionSeconds());
+  }
+
+  @Test
+  @DisplayName("Budget and margin both bite: the lower of the two cuts the slot")
+  void theLowerOfTheTwoThresholdsCutsTheSlot() {
+    SingleDip problem = new SingleDip();
+    LaunchWindowSearch search =
+        LaunchWindowSearch.over(T0, Duration.ofHours(4), problem, 3_020.0).withMargin(50.0);
+
+    LaunchWindow window = new LaunchWindowSolver(problem).solve(search).get(0);
+
+    // Budget 3 020 against a floor of 3 000 + margin 50 = 3 050: the budget wins.
+    assertEquals(
+        SingleDip.crossing(3_020.0, -1),
+        offsetOf(window.opening()),
+        2.0 * search.precisionSeconds());
+    assertEquals(
+        SingleDip.crossing(3_020.0, +1),
+        offsetOf(window.closing()),
+        2.0 * search.precisionSeconds());
+
+    SingleDip other = new SingleDip();
+    LaunchWindow byMargin =
+        new LaunchWindowSolver(other)
+            .solve(LaunchWindowSearch.over(T0, Duration.ofHours(4), other, 3_050.0).withMargin(10.0))
+            .get(0);
+
+    // And the other way round: budget 3 050 against 3 000 + 10, the margin wins.
+    assertEquals(
+        SingleDip.crossing(3_010.0, -1),
+        offsetOf(byMargin.opening()),
+        2.0 * search.precisionSeconds());
+  }
+
+  @Test
+  @DisplayName("The margin is anchored on the screening cost, not on the confirmed one")
+  void theMarginIsAnchoredOnTheScreeningTier() {
+    // The translunar shape: confirmation comes back 40 m/s cheaper than the screen. Anchoring the
+    // margin on it would move the threshold down by 40 while the edge walk still reads screening
+    // costs, and the slot would collapse to almost nothing. Both tiers must be compared to their
+    // own kind.
+    SingleDip confirming =
+        new SingleDip() {
+          @Override
+          public LaunchWindowCandidate confirm(LaunchWindowCandidate candidate) {
+            return LaunchWindowCandidate.of(candidate.epoch(), candidate.deltaV() - 40.0);
+          }
+        };
+    LaunchWindowSearch search =
+        LaunchWindowSearch.over(T0, Duration.ofHours(4), confirming, 1.0e9).withMargin(50.0);
+
+    LaunchWindow window = new LaunchWindowSolver(confirming).solve(search).get(0);
+
+    assertEquals(
+        SingleDip.crossing(3_050.0, -1),
+        offsetOf(window.opening()),
+        2.0 * search.precisionSeconds(),
+        "the threshold is the screened floor + 50, not the confirmed floor + 50");
+    assertEquals(
+        SingleDip.crossing(3_050.0, +1),
+        offsetOf(window.closing()),
+        2.0 * search.precisionSeconds());
+  }
+
+  @Test
+  @DisplayName("A refused optimum does not become the anchor: the margin follows the cheapest that flies")
+  void theAnchorIsTheCheapestFlyableMinimum() {
+    // The deep dip is refused by the full model. Anchoring the margin on it anyway would put the
+    // threshold at 3 050 and price the shallow dip (3 200) out of its own search — "no window"
+    // reported for a month that has one. The anchor is therefore the first minimum the
+    // confirmation accepts, not the first one the sweep finds.
+    TwoDips problem =
+        new TwoDips() {
+          @Override
+          public LaunchWindowCandidate confirm(LaunchWindowCandidate candidate) {
+            confirmations++;
+            if (Math.abs(offsetOf(candidate.epoch()) - TwoDips.DEEP_VERTEX) < 1_800.0) {
+              return LaunchWindowCandidate.refused(candidate.epoch(), "the pad is down that week");
+            }
+            return candidate;
+          }
+        };
+    LaunchWindowSearch search =
+        new LaunchWindowSearch(
+            T0,
+            Duration.ofHours(12),
+            Duration.ofMinutes(15),
+            Duration.ofMinutes(1),
+            1.0e9,
+            50.0,
+            5);
+
+    List<LaunchWindow> windows = new LaunchWindowSolver(problem).solve(search);
+
+    assertEquals(1, windows.size(), "the shallow dip is still an opportunity");
+    assertEquals(
+        TwoDips.SHALLOW_VERTEX,
+        offsetOf(windows.get(0).date()),
+        2.0 * search.precisionSeconds());
+    // 3 200 + 200·((t − 10 800)/1 800)² = 3 250 at t = 10 800 ± 900.
+    assertEquals(
+        TwoDips.SHALLOW_VERTEX - 900.0,
+        offsetOf(windows.get(0).opening()),
+        2.0 * search.precisionSeconds());
+    assertEquals(
+        TwoDips.SHALLOW_VERTEX + 900.0,
+        offsetOf(windows.get(0).closing()),
+        2.0 * search.precisionSeconds());
+  }
+
+  @Test
+  @DisplayName("A minimum dearer than the threshold is never handed to the expensive tier")
+  void aMinimumPastTheThresholdIsNotConfirmed() {
+    // Where the saving is: the shallow dip costs 200 m/s more than the deep one, so a 50 m/s margin
+    // rules it out on the screening alone. Confirming it would be paying the expensive tier for an
+    // answer already known.
+    TwoDips problem =
+        new TwoDips() {
+          @Override
+          public LaunchWindowCandidate confirm(LaunchWindowCandidate candidate) {
+            confirmations++;
+            return candidate;
+          }
+        };
+    LaunchWindowSearch search =
+        new LaunchWindowSearch(
+            T0,
+            Duration.ofHours(12),
+            Duration.ofMinutes(15),
+            Duration.ofMinutes(1),
+            1.0e9,
+            50.0,
+            5);
+
+    List<LaunchWindow> windows = new LaunchWindowSolver(problem).solve(search);
+
+    assertEquals(1, windows.size(), "only the deep dip is within 50 m/s of the best");
+    assertEquals(
+        TwoDips.DEEP_VERTEX, offsetOf(windows.get(0).date()), 2.0 * search.precisionSeconds());
+    assertEquals(1, problem.confirmations, "the dearer minimum must not be confirmed");
+  }
+
+  // ── overlapping slots ─────────────────────────────────────────────────────
+
+  @Test
+  @DisplayName("Two minima whose slots reach each other are reported as one window")
+  void overlappingSlotsAreFusedIntoOne() {
+    // At a 12 000 m/s threshold the composite of the two parabolas never leaves the budget between
+    // the dips — it peaks at 10 300 where they cross — so the two edge walks run through each
+    // other. That is one open slot with two local minima, not two slots, and offering it twice
+    // would spend the maxWindows budget on the same interval.
+    TwoDips problem = new TwoDips();
+    LaunchWindowSearch search =
+        new LaunchWindowSearch(
+            T0,
+            Duration.ofHours(24),
+            Duration.ofMinutes(15),
+            Duration.ofMinutes(1),
+            12_000.0,
+            5);
+
+    List<LaunchWindow> windows = new LaunchWindowSolver(problem).solve(search);
+
+    assertEquals(1, windows.size(), "one interval, even though two minima were bracketed");
+    assertEquals(
+        TwoDips.DEEP_VERTEX,
+        offsetOf(windows.get(0).date()),
+        2.0 * search.precisionSeconds(),
+        "the surviving optimum is the cheaper of the two");
+    assertEquals(0.0, offsetOf(windows.get(0).opening()), 1.0e-6, "open from the range start");
+    // 3 000 + 200·((t − 32 400)/1 800)² = 12 000 at t = 32 400 + 1 800·√45.
+    assertEquals(
+        32_400.0 + 1_800.0 * Math.sqrt(45.0),
+        offsetOf(windows.get(0).closing()),
+        2.0 * search.precisionSeconds());
   }
 
   // ── the two tiers ─────────────────────────────────────────────────────────

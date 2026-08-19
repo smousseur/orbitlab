@@ -1,9 +1,5 @@
 package com.smousseur.orbitlab.simulation.mission.window;
 
-import org.orekit.time.AbsoluteDate;
-
-import java.time.Duration;
-
 import java.time.Duration;
 import org.orekit.time.AbsoluteDate;
 

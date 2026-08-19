@@ -71,6 +71,19 @@ public class OrbitLabApplication extends SimpleApplication {
   /** Days the lunar demonstration walks forward looking for a flyable encounter geometry. */
   private static final int LUNAR_DEMO_DAYS = 30;
 
+  /** Injection cost above which the lunar demonstration does not offer an epoch (m/s). */
+  private static final double LUNAR_DEMO_BUDGET = 4_000.0;
+
+  /**
+   * How much dearer than the month's cheapest epoch the demonstration still accepts (m/s).
+   *
+   * <p>Five, because the criterion was measured swinging only 14 m/s over a month (3 182.8 to
+   * 3 196.9, {@code TranslunarInjectionPlanWindowProblemTest}) on a 3 183 m/s floor: the 4 000 m/s
+   * budget sits above the whole month and cuts nothing, so without a margin the slot would be the
+   * searched range itself.
+   */
+  private static final double LUNAR_DEMO_MARGIN = 5.0;
+
   /**
    * Application entry point. Configures window settings and starts the JME3 application loop.
    *
@@ -191,14 +204,15 @@ public class OrbitLabApplication extends SimpleApplication {
     AbsoluteDate now = applicationContext.clock().now();
 
     TranslunarInjectionPlanWindowProblem problem =
-        new TranslunarInjectionPlanWindowProblem(mission.getVehicle().getMass());
+        new TranslunarInjectionPlanWindowProblem(mission);
     LaunchWindowSearch search =
         new LaunchWindowSearch(
             now,
             Duration.ofDays(LUNAR_DEMO_DAYS),
             problem.coarseStep(),
             Duration.ofMinutes(10),
-            4000,
+            LUNAR_DEMO_BUDGET,
+            LUNAR_DEMO_MARGIN,
             1);
     LaunchWindowSolver solver = new LaunchWindowSolver(problem);
     List<LaunchWindow> windows = solver.solve(search);

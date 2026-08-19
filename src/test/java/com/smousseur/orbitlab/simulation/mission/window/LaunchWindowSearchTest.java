@@ -175,5 +175,37 @@ class LaunchWindowSearchTest {
     assertEquals(valid().step(), search.step());
     assertEquals(valid().precision(), search.precision());
     assertEquals(valid().maxDeltaV(), search.maxDeltaV());
+    assertEquals(valid().margin(), search.margin());
+  }
+
+  @Test
+  @DisplayName("The form without a margin is bound by the absolute budget alone")
+  void theFormWithoutAMarginIsBoundByTheBudgetAlone() {
+    // An infinite margin is what "no relative cap" means arithmetically: min(budget, best + inf)
+    // is the budget, so the solver needs no special case and the older callers keep their meaning.
+    assertEquals(Double.POSITIVE_INFINITY, valid().margin());
+  }
+
+  @Test
+  @DisplayName("A non-positive or NaN margin is refused, an infinite one is not")
+  void theMarginMustBePositive() {
+    assertThrows(OrbitlabException.class, () -> valid().withMargin(0.0));
+    assertThrows(OrbitlabException.class, () -> valid().withMargin(-10.0));
+    assertThrows(OrbitlabException.class, () -> valid().withMargin(Double.NaN));
+    assertEquals(Double.POSITIVE_INFINITY, valid().withMargin(Double.POSITIVE_INFINITY).margin());
+  }
+
+  @Test
+  @DisplayName("withMargin changes the margin and nothing else")
+  void withMarginPreservesTheRest() {
+    LaunchWindowSearch search = valid().withMargin(50.0);
+
+    assertEquals(50.0, search.margin());
+    assertEquals(valid().start(), search.start());
+    assertEquals(valid().span(), search.span());
+    assertEquals(valid().step(), search.step());
+    assertEquals(valid().precision(), search.precision());
+    assertEquals(valid().maxDeltaV(), search.maxDeltaV());
+    assertEquals(valid().maxWindows(), search.maxWindows());
   }
 }
