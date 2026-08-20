@@ -8,9 +8,7 @@ import java.time.Duration;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
-import org.hipparchus.util.FastMath;
 import org.orekit.time.AbsoluteDate;
-import org.orekit.utils.Constants;
 
 /**
  * Turns a configured mission and an earliest date into the launch opportunity it should fly (MIS-2)
@@ -68,14 +66,7 @@ public final class EarthLaunchWindowPlanner {
     if (!spec.hasTargetRaan()) {
       return Optional.empty();
     }
-    EarthLaunchWindowProblem problem =
-        new EarthLaunchWindowProblem(
-            spec.latitude(),
-            spec.longitude(),
-            spec.altitude(),
-            spec.launchPlane(),
-            FastMath.toRadians(spec.targetRaan()),
-            semiMajorAxis(spec));
+    EarthLaunchWindowProblem problem = EarthLaunchWindowRequest.from(spec).toProblem();
     LaunchWindowSearch search =
         new LaunchWindowSearch(
             earliest,
@@ -88,14 +79,43 @@ public final class EarthLaunchWindowPlanner {
             Double.POSITIVE_INFINITY,
             MARGIN,
             CANDIDATES);
-
-    List<LaunchWindow> windows = new LaunchWindowSolver(problem).solve(search);
-    return windows.stream().min(Comparator.comparing(LaunchWindow::date));
+    return new LaunchWindowSolver(problem)
+        .solve(search)
+        .stream()
+        .min(Comparator.comparing(LaunchWindow::date));
   }
 
-  /** The target ellipse's semi-major axis, which sets the speed a plane change is paid at. */
-  private static double semiMajorAxis(MissionSpec.EarthOrbit spec) {
-    return Constants.WGS84_EARTH_EQUATORIAL_RADIUS
-        + 0.5 * (spec.perigeeAltitude() + spec.apogeeAltitude());
+  /**
+   * The next {@code count} opportunities at or after {@code earliest}, in chronological order.
+   *
+   * <p><b>Chronological and not by cost</b>, because that is what a timeline draws; {@link
+   * LaunchWindowSolver} orders by cost, which on this criterion ranks copies of the same
+   * opportunity a metre per second apart.
+   *
+   * <p>The horizon is not a parameter: {@link LaunchWindowSearch#forOpportunities} derives it from
+   * the problem's recurrence, so a caller counts opportunities and never days.
+   *
+   * <p><b>The cut to {@code count} is made here, on the date, and not by the search.</b> The
+   * factory deliberately asks the solver for one slot more than wanted, because the solver's own
+   * truncation is by cost; sorting by date and cutting here is what makes "the next three" mean the
+   * next three.
+   *
+   * @param request the mission's window inputs
+   * @param earliest the date the user asked for, read as a floor
+   * @param count how many opportunities to keep
+   * @return the opportunities found, possibly fewer than asked for, never null
+   */
+  public static List<LaunchWindow> nextOpportunities(
+      EarthLaunchWindowRequest request, AbsoluteDate earliest, int count) {
+    EarthLaunchWindowProblem problem = request.toProblem();
+    LaunchWindowSearch search =
+        LaunchWindowSearch.forOpportunities(
+            earliest, problem, count, Double.POSITIVE_INFINITY, MARGIN);
+    return new LaunchWindowSolver(problem)
+        .solve(search)
+        .stream()
+        .sorted(Comparator.comparing(LaunchWindow::date))
+        .limit(count)
+        .toList();
   }
 }

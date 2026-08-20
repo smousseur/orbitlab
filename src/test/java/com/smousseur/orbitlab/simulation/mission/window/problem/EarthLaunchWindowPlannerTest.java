@@ -10,6 +10,7 @@ import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchConfiguration;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Spacecraft;
 import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Launchers;
 import com.smousseur.orbitlab.simulation.mission.window.LaunchWindow;
+import java.util.List;
 import java.util.Optional;
 import org.hipparchus.util.FastMath;
 import org.junit.jupiter.api.BeforeAll;
@@ -120,5 +121,20 @@ class EarthLaunchWindowPlannerTest {
         "still inside the slot, so the launch is now — waited "
             + still.get().date().durationFrom(justAfter)
             + " s");
+  }
+
+  @Test
+  @DisplayName("The request built from a spec describes the same window as the spec itself")
+  void theRequestIsFaithfulToTheSpec() {
+    MissionSpec.EarthOrbit spec = spec(120.0);
+    Optional<LaunchWindow> fromSpec = EarthLaunchWindowPlanner.nextOpportunity(spec, epoch());
+    List<LaunchWindow> fromRequest =
+        EarthLaunchWindowPlanner.nextOpportunities(
+            EarthLaunchWindowRequest.from(spec), epoch(), 1);
+
+    assertTrue(fromSpec.isPresent());
+    assertEquals(1, fromRequest.size());
+    assertEquals(
+        0.0, fromRequest.getFirst().date().durationFrom(fromSpec.get().date()), 2.0);
   }
 }
