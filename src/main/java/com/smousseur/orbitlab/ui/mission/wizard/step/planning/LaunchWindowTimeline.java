@@ -19,6 +19,7 @@ import com.smousseur.orbitlab.app.converters.TimeConverter;
 import com.smousseur.orbitlab.simulation.mission.window.LaunchWindow;
 import com.smousseur.orbitlab.ui.UiKit;
 import com.smousseur.orbitlab.ui.form.FormStyles;
+import com.smousseur.orbitlab.ui.mission.wizard.step.StepParameters;
 import com.smousseur.orbitlab.ui.timeline.mission.TimeAxis;
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -59,10 +60,11 @@ import org.orekit.time.AbsoluteDate;
 public final class LaunchWindowTimeline {
 
   /**
-   * Track width. The wizard's full-width field is 752 px ({@code StepParameters.FIELD_W}), so the
-   * two frames line up with the fields of the main page rather than floating over them.
+   * Track width, taken from the wizard's own full-width field so the two frames line up with the
+   * fields of the main page rather than floating over them — and so widening the step moves the
+   * axis with it instead of unaligning it silently.
    */
-  private static final float TRACK_W = 752f;
+  private static final float TRACK_W = StepParameters.FIELD_W;
 
   /** Height of the opportunities frame: room for an 18 px marker and its air. */
   private static final float AXIS_FRAME_H = 30f;

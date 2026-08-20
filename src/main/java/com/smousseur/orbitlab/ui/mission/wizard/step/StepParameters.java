@@ -29,6 +29,7 @@ import com.smousseur.orbitlab.ui.mission.wizard.StepValues;
 import com.smousseur.orbitlab.ui.mission.wizard.step.params.DynamicParameters;
 import com.smousseur.orbitlab.ui.mission.wizard.step.params.EarthOrbitDynamicParameters;
 import com.smousseur.orbitlab.ui.mission.wizard.step.params.GEODynamicParameters;
+import com.smousseur.orbitlab.ui.mission.wizard.step.planning.PlanningInputs;
 import com.smousseur.orbitlab.ui.mission.wizard.step.planning.PlanningPage;
 import java.util.EnumMap;
 import java.util.HashMap;
@@ -40,7 +41,13 @@ import org.orekit.time.AbsoluteDate;
 
 public class StepParameters implements StepValues {
 
-  private static final float FIELD_W = 752f;
+  /**
+   * Width of a full-width field of this step, and thereby the width of the step's content column.
+   * Public because the planning page's timeline sets its track to it: the axis lines up with the
+   * fields of the main page, so widening the wizard cannot silently unalign the two.
+   */
+  public static final float FIELD_W = 752f;
+
   public static final float FIELD_H = 36f;
   public static final float ROW_GAP = 16f;
   public static final float LABEL_FIELD_GAP = 6f;
@@ -735,40 +742,57 @@ public class StepParameters implements StepValues {
     updateHorizon();
     applyPlanningIndicator();
     planningPage.update(tpf);
-    planningPage.refresh(
-        currentWindowRequest(), TimeConverter.parseUtcDate(launchDateField.getText()).orElse(null));
+    // Only while the planning page is mounted. The request carries the target semi-major axis, so
+    // dragging an altitude slider on the fields page changes it every frame and would force a full
+    // solve — some 250 evaluations, each an ITRF to GCRF transform — on the render thread, for a
+    // page nobody is looking at. Nothing is lost by waiting: showPage(PLANNING) runs from a click
+    // command, so the next update() refreshes before the page is ever drawn.
+    if (page == Page.PLANNING) {
+      planningPage.refresh(
+          currentWindowInputs(),
+          TimeConverter.parseUtcDate(launchDateField.getText()).orElse(null));
+    }
   }
 
   /**
    * The window inputs, assembled from the three places that hold them: the site step, the panel on
    * screen, and this step's own planning page.
    *
-   * <p><b>Null as soon as one of them cannot supply its part.</b> An unreadable pad is not worth a
-   * wrong answer: a window computed at latitude 0 because the user was mid-keystroke would be a
+   * <p><b>Absent as soon as one of them cannot supply its part.</b> An unreadable pad is not worth
+   * a wrong answer: a window computed at latitude 0 because the user was mid-keystroke would be a
    * false answer presented as a true one (spec {@code docs/mission-window/02-timeline-wizard.md}
    * §6).
    *
-   * @return the request, or null while the form cannot describe one
+   * <p><b>And it says which part.</b> This step is the layer that knows: the pad comes from the
+   * site step and the plane from the panel on screen, and {@code targetOrbit} declines an
+   * inclination the pad cannot reach exactly as it declines an unreadable one. Reporting both as a
+   * single absence is what made the planning page name the launch site for a refusal that was the
+   * target orbit's, which is a false statement on screen.
+   *
+   * @return the request, or the reason the form cannot describe one
    */
-  private EarthLaunchWindowRequest currentWindowRequest() {
-    Optional<Double> raan = planningPage.parsedRaanDeg();
+  private PlanningInputs currentWindowInputs() {
     Optional<SiteCoordinates> site = launchSite.get();
-    if (raan.isEmpty() || site.isEmpty()) {
-      return null;
+    if (site.isEmpty()) {
+      return PlanningInputs.missing(PlanningInputs.Gap.NO_SITE);
     }
     Optional<DynamicParameters.TargetOrbit> orbit =
         dynamicParameters.targetOrbit(site.get().latitude());
-    return orbit
-        .map(
-            target ->
-                new EarthLaunchWindowRequest(
-                    site.get().latitude(),
-                    site.get().longitude(),
-                    site.get().altitude(),
-                    target.plane(),
-                    raan.get(),
-                    target.semiMajorAxis()))
-        .orElse(null);
+    if (orbit.isEmpty()) {
+      return PlanningInputs.missing(PlanningInputs.Gap.NO_TARGET);
+    }
+    Optional<Double> raan = planningPage.parsedRaanDeg();
+    if (raan.isEmpty()) {
+      return PlanningInputs.missing(PlanningInputs.Gap.NO_NODE);
+    }
+    return PlanningInputs.of(
+        new EarthLaunchWindowRequest(
+            site.get().latitude(),
+            site.get().longitude(),
+            site.get().altitude(),
+            orbit.get().plane(),
+            raan.get(),
+            orbit.get().semiMajorAxis()));
   }
 
   /**

@@ -49,7 +49,7 @@ public enum MissionProfile {
       MissionType.LEO,
       "POLAR",
       "Polar Orbit",
-      "i = 90°",
+      "i = 90 deg",
       "interface/wizard/icon-mission-polar.png",
       new AltitudeRange(200, 2_000, 550),
       false,

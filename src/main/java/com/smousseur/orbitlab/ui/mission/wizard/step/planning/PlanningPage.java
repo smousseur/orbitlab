@@ -18,7 +18,6 @@ import com.simsilica.lemur.component.BoxLayout;
 import com.simsilica.lemur.component.InsetsComponent;
 import com.simsilica.lemur.component.QuadBackgroundComponent;
 import com.smousseur.orbitlab.app.converters.TimeConverter;
-import com.smousseur.orbitlab.simulation.mission.window.problem.EarthLaunchWindowRequest;
 import com.smousseur.orbitlab.ui.UiKit;
 import com.smousseur.orbitlab.ui.form.FormStyles;
 import com.smousseur.orbitlab.ui.mission.wizard.FormField;
@@ -212,17 +211,36 @@ public final class PlanningPage {
   /**
    * Recomputes the timeline, at most once per change of inputs.
    *
-   * <p>The page supplies the third argument itself: it owns the node field, so it is the only one
-   * that knows whether a node was asked for at all — which is what separates "no plane is waited
-   * for", the quiet common case, from "a plane was asked for and could not be served".
-   *
-   * @param request the window inputs, or null when the form cannot describe them
+   * @param inputs the window inputs the step assembled, or the reason it could not
    * @param floor the launch date read as a floor, or null when the field does not parse
    */
-  public void refresh(EarthLaunchWindowRequest request, AbsoluteDate floor) {
-    model.refresh(request, floor, parsedRaanDeg().isPresent());
+  public void refresh(PlanningInputs inputs, AbsoluteDate floor) {
+    model.refresh(withNodeGap(inputs), floor);
     timeline.render(model.state());
     showFloor(floor);
+  }
+
+  /**
+   * Substitutes the node's own gap when the field cannot serve one, because this page owns that
+   * field and the step cannot tell the two ways it fails apart — {@code parsedRaanDeg()} declines
+   * a blank entry and an unreadable one alike.
+   *
+   * <p><b>The node outranks whatever else is missing.</b> Blank is the quiet common case and must
+   * stay quiet even when the pad is mid-keystroke; unreadable is refused elsewhere in the same
+   * breath, so the axis has to erase and say so rather than announce that no plane is being waited
+   * for under a field painted red (spec {@code docs/mission-window/02-timeline-wizard.md} §6).
+   *
+   * @param inputs what the step assembled
+   * @return the same inputs, or the node's absence in their place
+   */
+  private PlanningInputs withNodeGap(PlanningInputs inputs) {
+    String text = raanField.getText();
+    if (RaanEntry.refusal(text).isPresent()) {
+      return PlanningInputs.missing(PlanningInputs.Gap.UNREADABLE_NODE);
+    }
+    return RaanEntry.parse(text).isPresent()
+        ? inputs
+        : PlanningInputs.missing(PlanningInputs.Gap.NO_NODE);
   }
 
   /**

@@ -39,10 +39,10 @@ public class EarthOrbitDynamicParameters extends DynamicParameters {
   private static final float INCLINATION_FIELD_W = 120f;
 
   /** The helper line while the inclination is derived from the launch site. */
-  private static final String AUTO_HELPER = "free plane of the launch site — due east";
+  private static final String AUTO_HELPER = "free plane of the launch site - due east";
 
   /** And while it is derived from the altitude. */
-  private static final String DERIVED_HELPER = "sun-synchronous — derived from the altitude";
+  private static final String DERIVED_HELPER = "sun-synchronous - derived from the altitude";
 
   private final MissionProfile profile;
   private final DoubleSupplier launchLatitudeDeg;
@@ -401,7 +401,7 @@ public class EarthOrbitDynamicParameters extends DynamicParameters {
   private static String reachableBand(double latitudeDeg) {
     double minimum = FastMath.abs(latitudeDeg);
     return String.format(
-        Locale.ROOT, "unreachable — this site reaches %.2f° to %.2f°", minimum, 180.0 - minimum);
+        Locale.ROOT, "unreachable - this site reaches %.2f to %.2f deg", minimum, 180.0 - minimum);
   }
 
   /**

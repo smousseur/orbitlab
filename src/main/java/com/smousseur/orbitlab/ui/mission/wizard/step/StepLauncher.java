@@ -39,7 +39,7 @@ public class StepLauncher implements StepValues {
 
   private static final String SUBTITLE = "// vehicle configuration";
   private static final String SUBTITLE_PROPELLED =
-      SUBTITLE + " · this mission requires a payload with an apogee kick motor";
+      SUBTITLE + " - this mission requires a payload with an apogee kick motor";
 
   private static final float CARD_W = 264;
   private static final float CARD_H = 112f;
