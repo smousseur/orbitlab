@@ -47,6 +47,30 @@ class LaunchWindowSearchTest {
     };
   }
 
+  private static LaunchWindowProblem fakeProblem(Duration recurrence, Duration coarseStep) {
+    return new LaunchWindowProblem() {
+      @Override
+      public String name() {
+        return "fake";
+      }
+
+      @Override
+      public LaunchWindowCandidate evaluate(AbsoluteDate epoch) {
+        return LaunchWindowCandidate.of(epoch, 0.0);
+      }
+
+      @Override
+      public Duration coarseStep() {
+        return coarseStep;
+      }
+
+      @Override
+      public Duration recurrence() {
+        return recurrence;
+      }
+    };
+  }
+
   private static LaunchWindowSearch valid() {
     return new LaunchWindowSearch(
         T0, Duration.ofDays(60), Duration.ofHours(6), Duration.ofMinutes(36), 3200.0, 1);
@@ -213,5 +237,30 @@ class LaunchWindowSearchTest {
     assertEquals(valid().precision(), search.precision());
     assertEquals(valid().maxDeltaV(), search.maxDeltaV());
     assertEquals(valid().maxWindows(), search.maxWindows());
+  }
+
+  @Test
+  @DisplayName("The horizon comes from the problem's recurrence, never from the caller")
+  void theHorizonScalesWithTheProblemsRecurrence() {
+    LaunchWindowSearch shortLived =
+        LaunchWindowSearch.forOpportunities(
+            AbsoluteDate.J2000_EPOCH,
+            fakeProblem(Duration.ofMinutes(10), Duration.ofMinutes(1)),
+            3,
+            Double.POSITIVE_INFINITY,
+            50.0);
+    LaunchWindowSearch longLived =
+        LaunchWindowSearch.forOpportunities(
+            AbsoluteDate.J2000_EPOCH,
+            fakeProblem(Duration.ofHours(10), Duration.ofHours(1)),
+            3,
+            Double.POSITIVE_INFINITY,
+            50.0);
+
+    // Three recurrences plus a twelfth: 3 * 600 + 50, and 3 * 36000 + 3000.
+    assertEquals(Duration.ofSeconds(1850), shortLived.span());
+    assertEquals(Duration.ofSeconds(111_000), longLived.span());
+    assertEquals(3, shortLived.maxWindows());
+    assertEquals(Duration.ofMinutes(1), shortLived.step());
   }
 }

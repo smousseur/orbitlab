@@ -105,6 +105,34 @@ public record LaunchWindowSearch(
   }
 
   /**
+   * A search sized to show a given number of opportunities, on the problem's own three scales.
+   *
+   * <p><b>A count and not a duration.</b> The caller that wants "the next three" — the wizard's
+   * timeline — must not be the one deciding what three is worth: three opportunities is three days
+   * on an Earth plane alignment and three months on a translunar injection, and only {@link
+   * LaunchWindowProblem#recurrence()} knows which. A horizon written by the caller draws an empty
+   * axis the day the problem changes.
+   *
+   * <p>The span is {@code count} recurrences plus a twelfth of one. On an exactly periodic
+   * criterion the recurrences alone would do; the extra twelfth covers the slot whose opening falls
+   * inside the range while its optimum falls just past it.
+   *
+   * @param start the first date considered
+   * @param problem the problem whose three scales are adopted
+   * @param count how many opportunities to look for
+   * @param maxDeltaV the absolute acceptance budget (m/s)
+   * @param margin how much dearer than the cheapest epoch an offered one may be (m/s)
+   * @return the search
+   */
+  public static LaunchWindowSearch forOpportunities(
+      AbsoluteDate start, LaunchWindowProblem problem, int count, double maxDeltaV, double margin) {
+    Duration recurrence = problem.recurrence();
+    Duration span = recurrence.multipliedBy(count).plus(recurrence.dividedBy(12L));
+    return new LaunchWindowSearch(
+        start, span, problem.coarseStep(), problem.refinementPrecision(), maxDeltaV, margin, count);
+  }
+
+  /**
    * @return a copy of this search returning up to {@code count} windows
    */
   public LaunchWindowSearch withMaxWindows(int count) {
