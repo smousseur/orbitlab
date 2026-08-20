@@ -146,10 +146,13 @@ public class MissionWizardWidget implements AutoCloseable {
     MissionContext missionContext = context.missionContext();
     stepLaunchSite = new StepLaunchSite();
     stepPanels.put(MissionWizardStep.SITE, stepLaunchSite.getNode());
-    // The latitude is read live, not captured: the coordinate fields stay editable after a
-    // cosmodrome is picked, and the inclination bounds have to follow them (spec
-    // docs/earth-orbit/02-wizard-orbites-terrestres.md §5).
-    stepParameters = new StepParameters(missionContext, stepLaunchSite::currentLatitude);
+    // The latitude and the pad are read live, not captured: the coordinate fields stay editable
+    // after a cosmodrome is picked, and the inclination bounds (spec
+    // docs/earth-orbit/02-wizard-orbites-terrestres.md §5) as well as the launch window have to
+    // follow them.
+    stepParameters =
+        new StepParameters(
+            missionContext, stepLaunchSite::currentLatitude, stepLaunchSite::currentSite);
     stepPanels.put(MissionWizardStep.PARAMETERS, stepParameters.getNode());
     stepMissionType =
         new StepMissionType(missionContext, initialProfile(missionContext, initialValues), editMode);

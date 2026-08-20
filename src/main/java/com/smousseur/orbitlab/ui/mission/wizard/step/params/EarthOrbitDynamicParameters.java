@@ -340,21 +340,56 @@ public class EarthOrbitDynamicParameters extends DynamicParameters {
       return Optional.empty();
     }
     String text = inclinationField.getText().trim();
-    double inclinationDeg;
+    double latitude = launchLatitudeDeg.getAsDouble();
     try {
-      inclinationDeg = Double.parseDouble(text);
+      currentPlane(latitude);
     } catch (NumberFormatException e) {
       String message = "expected an inclination in degrees";
       return Optional.of(rejectInclination(text, message, message));
-    }
-    double latitude = launchLatitudeDeg.getAsDouble();
-    try {
-      LaunchPlane.ofDegrees(inclinationDeg).requireReachableFrom(latitude);
     } catch (OrbitlabException e) {
       return Optional.of(rejectInclination(text, reachableBand(latitude), e.getMessage()));
     }
     clearInclinationRejection();
     return Optional.empty();
+  }
+
+  /**
+   * The plane the inclination field describes, checked against the site that has to reach it.
+   *
+   * <p>The one construction shared by the step's two readers of this field — {@link
+   * #validateTargetPlane()}, which refuses what the site cannot reach, and {@link
+   * #targetOrbit(double)}, which hands the plane to the launch window. Written once so the window is
+   * planned for the very plane the wizard accepted.
+   *
+   * @param latitudeDeg the launch site latitude in degrees
+   * @return the plane
+   * @throws NumberFormatException if the field does not read as a number
+   * @throws OrbitlabException if the site cannot reach that inclination
+   */
+  private LaunchPlane currentPlane(double latitudeDeg) {
+    double inclinationDeg = Double.parseDouble(inclinationField.getText().trim());
+    return LaunchPlane.ofDegrees(inclinationDeg).requireReachableFrom(latitudeDeg);
+  }
+
+  /**
+   * The target this panel describes: the plane of its inclination field, and the semi-major axis of
+   * its two altitude sliders.
+   *
+   * <p>Empty on every state {@link #validateTargetPlane()} refuses — an unreadable entry or a plane
+   * out of the site's reach — because a window planned on either would be an answer to a question
+   * the user has not finished asking.
+   */
+  @Override
+  public Optional<TargetOrbit> targetOrbit(double latitudeDeg) {
+    try {
+      return Optional.of(
+          new TargetOrbit(
+              currentPlane(latitudeDeg),
+              // The sliders are in kilometres: a = R + 1000 × (perigee + apogee) / 2.
+              Constants.WGS84_EARTH_EQUATORIAL_RADIUS + 500.0 * (perigeeKm() + apogeeKm())));
+    } catch (OrbitlabException | NumberFormatException unreachable) {
+      return Optional.empty();
+    }
   }
 
   @Override

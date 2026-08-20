@@ -17,12 +17,14 @@ import com.smousseur.orbitlab.core.OrbitlabException;
 import com.smousseur.orbitlab.simulation.mission.MissionHorizon;
 import com.smousseur.orbitlab.simulation.mission.MissionType;
 import com.smousseur.orbitlab.simulation.mission.context.MissionContext;
+import com.smousseur.orbitlab.simulation.mission.window.problem.EarthLaunchWindowRequest;
 import com.smousseur.orbitlab.ui.EphemerisWindow;
 import com.smousseur.orbitlab.ui.UiKit;
 import com.smousseur.orbitlab.ui.form.FormStyles;
 import com.smousseur.orbitlab.ui.mission.wizard.FormField;
 import com.smousseur.orbitlab.ui.mission.wizard.FormValues;
 import com.smousseur.orbitlab.ui.mission.wizard.MissionProfile;
+import com.smousseur.orbitlab.ui.mission.wizard.SiteCoordinates;
 import com.smousseur.orbitlab.ui.mission.wizard.StepValues;
 import com.smousseur.orbitlab.ui.mission.wizard.step.params.DynamicParameters;
 import com.smousseur.orbitlab.ui.mission.wizard.step.params.EarthOrbitDynamicParameters;
@@ -33,6 +35,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.DoubleSupplier;
+import java.util.function.Supplier;
 import org.orekit.time.AbsoluteDate;
 
 public class StepParameters implements StepValues {
@@ -89,6 +92,10 @@ public class StepParameters implements StepValues {
   private Page page = Page.FIELDS;
 
   private final MissionContext missionContext;
+
+  /** The pad the window is planned from, read live for the same reason the latitude is. */
+  private final Supplier<Optional<SiteCoordinates>> launchSite;
+
   private final Label titleLabel;
 
   private final TextField missionNameField;
@@ -175,9 +182,16 @@ public class StepParameters implements StepValues {
    *
    * @param missionContext the context carrying the selected mission type
    * @param launchLatitudeDeg the live launch latitude, for the inclination field's bounds
+   * @param launchSite the live pad coordinates, for the launch window — empty while any of the
+   *     three fields is unreadable, which is what keeps a window from being computed on a
+   *     substituted zero
    */
-  public StepParameters(MissionContext missionContext, DoubleSupplier launchLatitudeDeg) {
+  public StepParameters(
+      MissionContext missionContext,
+      DoubleSupplier launchLatitudeDeg,
+      Supplier<Optional<SiteCoordinates>> launchSite) {
     this.missionContext = missionContext;
+    this.launchSite = launchSite;
     root = new Container(new BoxLayout(Axis.Y, FillMode.None));
     root.setBackground(new QuadBackgroundComponent(new ColorRGBA(0, 0, 0, 0)));
     root.setPreferredSize(new Vector3f(FormStyles.CONTENT_WIDTH, FormStyles.CONTENT_HEIGHT, 0));
@@ -493,7 +507,7 @@ public class StepParameters implements StepValues {
    * absent there rather than greyed: nothing could ever light it.
    */
   private void updatePlanningIndicator() {
-    boolean shown = selectedProfile != MissionProfile.GEO;
+    boolean shown = hasTargetNode();
     if (shown == planningIndicatorShown) {
       return;
     }
@@ -505,6 +519,17 @@ public class StepParameters implements StepValues {
       dateRow.removeChild(planningIndicator);
     }
     planningIndicatorShown = shown;
+  }
+
+  /**
+   * Whether the card on screen has a target node at all — the one predicate {@link
+   * #updatePlanningIndicator()} and {@link #validateTargetNode()} must share, since one decides
+   * whether the entry point is shown and the other whether a refusal can be raised.
+   *
+   * @return whether the selected profile carries a target node
+   */
+  private boolean hasTargetNode() {
+    return selectedProfile != MissionProfile.GEO;
   }
 
   /** Hands the duration back to the derived policy, clearing any refused entry. */
@@ -701,6 +726,40 @@ public class StepParameters implements StepValues {
     updateHorizon();
     applyPlanningIndicator();
     planningPage.update(tpf);
+    planningPage.refresh(
+        currentWindowRequest(), TimeConverter.parseUtcDate(launchDateField.getText()).orElse(null));
+  }
+
+  /**
+   * The window inputs, assembled from the three places that hold them: the site step, the panel on
+   * screen, and this step's own planning page.
+   *
+   * <p><b>Null as soon as one of them cannot supply its part.</b> An unreadable pad is not worth a
+   * wrong answer: a window computed at latitude 0 because the user was mid-keystroke would be a
+   * false answer presented as a true one (spec {@code docs/mission-window/02-timeline-wizard.md}
+   * §6).
+   *
+   * @return the request, or null while the form cannot describe one
+   */
+  private EarthLaunchWindowRequest currentWindowRequest() {
+    Optional<Double> raan = planningPage.parsedRaanDeg();
+    Optional<SiteCoordinates> site = launchSite.get();
+    if (raan.isEmpty() || site.isEmpty()) {
+      return null;
+    }
+    Optional<DynamicParameters.TargetOrbit> orbit =
+        dynamicParameters.targetOrbit(site.get().latitude());
+    return orbit
+        .map(
+            target ->
+                new EarthLaunchWindowRequest(
+                    site.get().latitude(),
+                    site.get().longitude(),
+                    site.get().altitude(),
+                    target.plane(),
+                    raan.get(),
+                    target.semiMajorAxis()))
+        .orElse(null);
   }
 
   /**
@@ -802,7 +861,7 @@ public class StepParameters implements StepValues {
    * @return the reason the node was refused, or empty when it is usable or has no meaning here
    */
   private Optional<String> validateTargetNode() {
-    if (selectedProfile == MissionProfile.GEO) {
+    if (!hasTargetNode()) {
       planningPage.clearRejection();
       return Optional.empty();
     }

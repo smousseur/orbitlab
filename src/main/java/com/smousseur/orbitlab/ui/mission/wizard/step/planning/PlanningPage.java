@@ -17,12 +17,14 @@ import com.simsilica.lemur.VAlignment;
 import com.simsilica.lemur.component.BoxLayout;
 import com.simsilica.lemur.component.InsetsComponent;
 import com.simsilica.lemur.component.QuadBackgroundComponent;
+import com.smousseur.orbitlab.simulation.mission.window.problem.EarthLaunchWindowRequest;
 import com.smousseur.orbitlab.ui.UiKit;
 import com.smousseur.orbitlab.ui.form.FormStyles;
 import com.smousseur.orbitlab.ui.mission.wizard.FormField;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import org.orekit.time.AbsoluteDate;
 
 /**
  * The parameters step's second page: what decides <em>when</em> the mission leaves.
@@ -47,6 +49,8 @@ public final class PlanningPage {
   private final Container root;
   private final TextField raanField;
   private final Label raanHelper;
+
+  private final PlanningModel model = new PlanningModel();
 
   /** Entry that was refused, kept so the error state clears as soon as it is edited. */
   private String rejectedRaan;
@@ -136,6 +140,20 @@ public final class PlanningPage {
     if (rejectedRaan != null && !rejectedRaan.equals(raanField.getText())) {
       clearRejection();
     }
+  }
+
+  /**
+   * Recomputes the timeline, at most once per change of inputs.
+   *
+   * <p>The page supplies the third argument itself: it owns the node field, so it is the only one
+   * that knows whether a node was asked for at all — which is what separates "no plane is waited
+   * for", the quiet common case, from "a plane was asked for and could not be served".
+   *
+   * @param request the window inputs, or null when the form cannot describe them
+   * @param floor the launch date read as a floor, or null when the field does not parse
+   */
+  public void refresh(EarthLaunchWindowRequest request, AbsoluteDate floor) {
+    model.refresh(request, floor, parsedRaanDeg().isPresent());
   }
 
   /**
