@@ -113,23 +113,39 @@ public record LaunchWindowSearch(
    * LaunchWindowProblem#recurrence()} knows which. A horizon written by the caller draws an empty
    * axis the day the problem changes.
    *
-   * <p>The span is {@code count} recurrences plus a twelfth of one. On an exactly periodic
-   * criterion the recurrences alone would do; the extra twelfth covers the slot whose opening falls
-   * inside the range while its optimum falls just past it.
+   * <p>The span is {@code count} recurrences plus a twelfth of one. {@code count} recurrences
+   * already hold {@code count} optima on an exactly periodic criterion; the extra twelfth is slack
+   * for the one whose refinement bracket would otherwise be clipped by the end of the range.
+   *
+   * <p><b>{@code maxWindows} is {@code count + 1}, and that is not an off-by-one.</b> {@link
+   * LaunchWindowSolver} truncates by <em>cost</em> — it sorts the merged slots on their optimum's
+   * Δv before cutting — while a caller counting opportunities wants them <em>in time</em>. That
+   * slack twelfth lets the span hold one opportunity more than asked for whenever the first falls
+   * inside it, and asking for exactly {@code count} would then let the solver drop whichever is
+   * dearest. On a criterion whose consecutive opportunities differ by less than a metre per second
+   * that choice is effectively arbitrary, and the one dropped can be the soonest — the very one a
+   * timeline exists to show. Asking for one more hands the chronological cut back to the caller,
+   * which is where it belongs; the span cannot hold {@code count + 2}, so one more is enough.
    *
    * @param start the first date considered
    * @param problem the problem whose three scales are adopted
-   * @param count how many opportunities to look for
+   * @param count how many opportunities the caller means to keep
    * @param maxDeltaV the absolute acceptance budget (m/s)
    * @param margin how much dearer than the cheapest epoch an offered one may be (m/s)
-   * @return the search
+   * @return the search, offering up to {@code count + 1} slots for the caller to cut down
    */
   public static LaunchWindowSearch forOpportunities(
       AbsoluteDate start, LaunchWindowProblem problem, int count, double maxDeltaV, double margin) {
     Duration recurrence = problem.recurrence();
     Duration span = recurrence.multipliedBy(count).plus(recurrence.dividedBy(12L));
     return new LaunchWindowSearch(
-        start, span, problem.coarseStep(), problem.refinementPrecision(), maxDeltaV, margin, count);
+        start,
+        span,
+        problem.coarseStep(),
+        problem.refinementPrecision(),
+        maxDeltaV,
+        margin,
+        count + 1);
   }
 
   /**

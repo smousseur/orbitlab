@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.smousseur.orbitlab.core.OrbitlabException;
 import java.time.Duration;
+import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.orekit.time.AbsoluteDate;
@@ -260,7 +261,56 @@ class LaunchWindowSearchTest {
     // Three recurrences plus a twelfth: 3 * 600 + 50, and 3 * 36000 + 3000.
     assertEquals(Duration.ofSeconds(1850), shortLived.span());
     assertEquals(Duration.ofSeconds(111_000), longLived.span());
-    assertEquals(3, shortLived.maxWindows());
     assertEquals(Duration.ofMinutes(1), shortLived.step());
+    assertEquals(Duration.ofSeconds(6), shortLived.precision());
+    // One more than asked for, so the cost-ordered truncation cannot decide the chronology.
+    assertEquals(4, shortLived.maxWindows());
+  }
+
+  @Test
+  @DisplayName("Every opportunity the span holds is offered, the soonest included")
+  void theSoonestOpportunitySurvivesTheCostOrderedCut() {
+    Duration recurrence = Duration.ofHours(1);
+    double phase = 60.0;
+    // A periodic term places one optimum per hour; a slight downward drift makes each successive
+    // optimum a little cheaper than the last, so a cost-ordered cut to three would drop the first.
+    LaunchWindowProblem drifting =
+        new LaunchWindowProblem() {
+          @Override
+          public String name() {
+            return "drifting";
+          }
+
+          @Override
+          public LaunchWindowCandidate evaluate(AbsoluteDate epoch) {
+            double t = epoch.durationFrom(AbsoluteDate.J2000_EPOCH);
+            double periodic = 1.0 - Math.cos(2.0 * Math.PI * (t - phase) / recurrence.toSeconds());
+            return LaunchWindowCandidate.of(epoch, periodic + 0.1 - 0.001 * t / 3600.0);
+          }
+
+          @Override
+          public Duration coarseStep() {
+            return Duration.ofMinutes(1);
+          }
+
+          @Override
+          public Duration recurrence() {
+            return recurrence;
+          }
+        };
+
+    LaunchWindowSearch search =
+        LaunchWindowSearch.forOpportunities(
+            AbsoluteDate.J2000_EPOCH, drifting, 3, Double.POSITIVE_INFINITY, 1.0);
+    List<LaunchWindow> windows = new LaunchWindowSolver(drifting).solve(search);
+
+    // 3 h 5 min of span over an hourly criterion phased at t = 60 s: four optima fit.
+    assertEquals(4, windows.size());
+    double soonest =
+        windows.stream()
+            .mapToDouble(window -> window.date().durationFrom(AbsoluteDate.J2000_EPOCH))
+            .min()
+            .orElseThrow();
+    assertEquals(phase, soonest, 10.0);
   }
 }
