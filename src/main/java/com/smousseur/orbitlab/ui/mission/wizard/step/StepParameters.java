@@ -27,6 +27,7 @@ import com.smousseur.orbitlab.ui.mission.wizard.StepValues;
 import com.smousseur.orbitlab.ui.mission.wizard.step.params.DynamicParameters;
 import com.smousseur.orbitlab.ui.mission.wizard.step.params.EarthOrbitDynamicParameters;
 import com.smousseur.orbitlab.ui.mission.wizard.step.params.GEODynamicParameters;
+import com.smousseur.orbitlab.ui.mission.wizard.step.planning.PlanningPage;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
@@ -112,6 +113,8 @@ public class StepParameters implements StepValues {
 
   /** Same, for the duration field. */
   private String rejectedHorizon;
+
+  private final PlanningPage planningPage = new PlanningPage();
 
   private DynamicParameters dynamicParameters;
   private final EnumMap<MissionProfile, DynamicParameters> dynamicParametersMap =
@@ -443,6 +446,7 @@ public class StepParameters implements StepValues {
     Map<String, Object> values = new HashMap<>();
     values.put(FormField.MISSION_NAME.key(), missionNameField.getText());
     values.putAll(dynamicParameters.getDynamicValues());
+    values.putAll(planningPage.getValues());
     values.put(FormField.LAUNCH_DATE.key(), launchDateField.getText());
     // Published only when overridden: an absent key IS the auto state, which is what lets a mission
     // reopened in the wizard come back on auto without a second key to carry it.
@@ -469,6 +473,7 @@ public class StepParameters implements StepValues {
     if (target != null) {
       target.applyValues(values);
     }
+    planningPage.applyValues(values);
     applyHorizon(values);
   }
 
@@ -603,10 +608,16 @@ public class StepParameters implements StepValues {
    * #validateLaunchDate()}. Delegated to the panel on screen, which is the only one that knows
    * whether its profile has an inclination to check at all.
    *
-   * @return the reason the inclination was refused, or empty when it is usable
+   * <p>Covers the target node too, which lives on the planning page rather than on the panel: both
+   * describe the plane being aimed at, so one refusal serves them both.
+   *
+   * @return the reason the inclination or the node was refused, or empty when both are usable
    */
   public Optional<String> validateTargetPlane() {
-    return dynamicParameters.validateTargetPlane();
+    Optional<String> inclination = dynamicParameters.validateTargetPlane();
+    Optional<String> node = planningPage.validateTargetNode();
+    // Both run, neither short-circuits: a user with two bad fields should see both marked.
+    return inclination.isPresent() ? inclination : node;
   }
 
   private String rejectHorizon(String text, String message) {
