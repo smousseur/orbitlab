@@ -2,7 +2,7 @@ package com.smousseur.orbitlab.simulation.mission.maneuver;
 
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.Physics;
-import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
+import com.smousseur.orbitlab.simulation.flight.FlightContext;
 import com.smousseur.orbitlab.simulation.mission.detector.DepletionGuard;
 import com.smousseur.orbitlab.simulation.mission.detector.MinAltitudeTracker;
 import com.smousseur.orbitlab.simulation.mission.detector.ReentryGuard;
@@ -46,7 +46,7 @@ public class TransferManeuver {
   private static final double EARTH_RADIUS = Constants.WGS84_EARTH_EQUATORIAL_RADIUS;
 
   protected final Vehicle vehicle;
-  protected final GravitationalContext body;
+  protected final FlightContext context;
   protected final double targetAltitude;
 
   /**
@@ -57,10 +57,10 @@ public class TransferManeuver {
    * @param vehicle the vehicle performing the transfer
    * @param targetAltitude reference altitude used by the altitude tracker (m)
    */
-  public TransferManeuver(Vehicle vehicle, double targetAltitude, GravitationalContext body) {
+  public TransferManeuver(Vehicle vehicle, double targetAltitude, FlightContext context) {
     this.vehicle = vehicle;
     this.targetAltitude = targetAltitude;
-    this.body = body;
+    this.context = context;
   }
 
   /**
@@ -104,13 +104,13 @@ public class TransferManeuver {
     }
 
     NumericalPropagator propagator =
-        OrekitService.get().createOptimizationPropagator(body, maxStepSeconds(initialState));
+        OrekitService.get().createOptimizationPropagator(context, maxStepSeconds(initialState));
     propagator.setInitialState(initialState);
     MinAltitudeTracker tracker = configure(propagator, initialState, params);
     // dt1 may explore up to full depletion (spec 06 I6): truncate infeasible candidates quietly.
     DepletionGuard.armQuiet(
         propagator, vehicle.resolveActiveStage(initialState.getMass()).depletionFloor());
-    ReentryGuard.armQuiet(propagator, body);
+    ReentryGuard.armQuiet(propagator, context.gravity());
 
     double totalTime = totalDuration(params);
     AbsoluteDate endDate = initialState.getDate().shiftedBy(totalTime);
@@ -185,11 +185,11 @@ public class TransferManeuver {
    */
   protected SpacecraftState propagateBurn1(SpacecraftState initialState, Burn1Params params) {
     NumericalPropagator burn1Propagator =
-        OrekitService.get().createOptimizationPropagator(body, maxStepSeconds(initialState));
+        OrekitService.get().createOptimizationPropagator(context, maxStepSeconds(initialState));
     burn1Propagator.setInitialState(initialState);
     DepletionGuard.armQuiet(
         burn1Propagator, vehicle.resolveActiveStage(initialState.getMass()).depletionFloor());
-    ReentryGuard.armQuiet(burn1Propagator, body);
+    ReentryGuard.armQuiet(burn1Propagator, context.gravity());
 
     AbsoluteDate burn1Start = initialState.getDate().shiftedBy(params.t1);
     AbsoluteDate burn1End = burn1Start.shiftedBy(params.dt1);

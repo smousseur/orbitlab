@@ -2,7 +2,7 @@ package com.smousseur.orbitlab.simulation.mission.maneuver;
 
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.Physics;
-import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
+import com.smousseur.orbitlab.simulation.flight.FlightContext;
 import com.smousseur.orbitlab.simulation.mission.detector.DepletionGuard;
 import com.smousseur.orbitlab.simulation.mission.detector.MinAltitudeTracker;
 import com.smousseur.orbitlab.simulation.mission.detector.ReentryGuard;
@@ -54,8 +54,8 @@ public class TransfertTwoManeuver extends TransferManeuver {
    *
    * @param vehicle the vehicle performing the transfer
    */
-  public TransfertTwoManeuver(Vehicle vehicle, double targetAltitude, GravitationalContext body) {
-    this(vehicle, targetAltitude, FailFastEnvelope.defaults(), body);
+  public TransfertTwoManeuver(Vehicle vehicle, double targetAltitude, FlightContext context) {
+    this(vehicle, targetAltitude, FailFastEnvelope.defaults(), context);
   }
 
   /**
@@ -68,9 +68,9 @@ public class TransfertTwoManeuver extends TransferManeuver {
       Vehicle vehicle,
       double targetAltitude,
       FailFastEnvelope failFast,
-      GravitationalContext body) {
-    super(vehicle, targetAltitude, body);
-    this.circularizationBurnResolver = new CircularizationBurnResolver(vehicle, body);
+      FlightContext context) {
+    super(vehicle, targetAltitude, context);
+    this.circularizationBurnResolver = new CircularizationBurnResolver(vehicle, context);
     this.failFast = failFast;
   }
 
@@ -127,13 +127,13 @@ public class TransfertTwoManeuver extends TransferManeuver {
 
     // ── Step 3: Full propagation with both burns ──
     NumericalPropagator propagator =
-        OrekitService.get().createOptimizationPropagator(body, maxStepSeconds(initialState));
+        OrekitService.get().createOptimizationPropagator(context, maxStepSeconds(initialState));
     propagator.setInitialState(initialState);
     MinAltitudeTracker tracker = configure(propagator, initialState, params, circBurn);
     // dt1 may explore up to full depletion (spec 06 I6): truncate infeasible candidates quietly.
     DepletionGuard.armQuiet(
         propagator, vehicle.resolveActiveStage(initialState.getMass()).depletionFloor());
-    ReentryGuard.armQuiet(propagator, body);
+    ReentryGuard.armQuiet(propagator, context.gravity());
 
     double totalTime = totalDuration(params, circBurn);
     AbsoluteDate endDate = initialState.getDate().shiftedBy(totalTime);

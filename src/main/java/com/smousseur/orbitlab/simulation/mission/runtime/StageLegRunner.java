@@ -2,6 +2,7 @@ package com.smousseur.orbitlab.simulation.mission.runtime;
 
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.simulation.OrekitService;
+import com.smousseur.orbitlab.simulation.flight.FlightContext;
 import com.smousseur.orbitlab.simulation.gravity.ArcTransition;
 import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
 import com.smousseur.orbitlab.simulation.gravity.SoiCrossingDetector;
@@ -65,7 +66,12 @@ final class StageLegRunner {
   static final double BOUNDARY_STOP_TOLERANCE = 2.0 * SoiCrossingDetector.DATE_CONVERGENCE_SECONDS;
 
   /**
-   * One propagation of one stage in one gravitational context.
+   * One propagation of one stage in one flight context.
+   *
+   * <p>The context recorded is the <b>whole</b> environment, gravity and drag alike (PHY-1 / L1,
+   * spec {@code docs/atmosphere/04-conception-L1.md} §3.5): what the leg was actually flown in is
+   * what a later report has to be able to state, and a leg that recorded only its gravity would
+   * make that a re-derivation rather than a field read.
    *
    * @param context the environment this leg was flown in
    * @param entryState the state it started from, expressed in {@code context}'s frame
@@ -74,7 +80,7 @@ final class StageLegRunner {
    *     the leg ran to the stage's end date
    */
   record Leg(
-      GravitationalContext context,
+      FlightContext context,
       SpacecraftState entryState,
       SpacecraftState exitState,
       SolarSystemBody crossedBoundary) {}
@@ -152,7 +158,7 @@ final class StageLegRunner {
    */
   StageFlight fly(MissionStage stage, SpacecraftState stageEntry, Mission mission) {
 
-    GravitationalContext context = stage.gravitationalContext(mission);
+    FlightContext context = stage.flightContext(stageEntry, mission);
     Set<SolarSystemBody> transitions = stage.soiTransitions(mission);
 
     if (!transitions.isEmpty() && stage.isPropulsive()) {
@@ -170,7 +176,7 @@ final class StageLegRunner {
     // true by contract. The comparison inside convert() is REFERENCE equality, so a state already in
     // the declared frame is returned untouched and no existing trajectory crosses an identity
     // transform — which is what keeps the L1 gate bit-identical (spec L4 §3.5).
-    SpacecraftState legEntry = ArcTransition.convert(stageEntry, context);
+    SpacecraftState legEntry = ArcTransition.convert(stageEntry, context.gravity());
 
     // Sized once, from the stage entry, exactly as the chain runner sized it. A switch only happens
     // on a non-propulsive stage (spec L4 §3.3), where this is COAST_MAX_STEP whatever the state.
@@ -189,22 +195,22 @@ final class StageLegRunner {
       // measured against the body actually being flown around. Loud only on the sampling pass — see
       // ReentryGuard for why.
       if (quietReentryGuard) {
-        ReentryGuard.armQuiet(propagator, context);
+        ReentryGuard.armQuiet(propagator, context.gravity());
       } else {
-        ReentryGuard.arm(propagator, stage.getName(), context);
+        ReentryGuard.arm(propagator, stage.getName(), context.gravity());
       }
 
       stage.configure(propagator, mission);
 
       if (sampler != null && sampleStep > 0.0) {
-        GravitationalContext legContext = context;
+        FlightContext legContext = context;
         propagator
             .getMultiplexer()
             .add(sampleStep, state -> sampler.sample(stage, legContext, state));
       }
 
       AtomicReference<Crossing> crossed = new AtomicReference<>();
-      armBoundaries(propagator, context, transitions, crossed);
+      armBoundaries(propagator, context.gravity(), transitions, crossed);
 
       // Resolved once, on the first leg: a stage publishes its cutoff from configure(), and every
       // later leg propagates to that same absolute date.
@@ -250,8 +256,10 @@ final class StageLegRunner {
         return new StageFlight(legs, endDate.date(), endDate.isStageCutoff(), null);
       }
 
-      context = ArcTransition.across(context, crossing.body());
-      legEntry = ArcTransition.convert(exit, context);
+      // The aerodynamic half crosses untouched: it names a model, and the model is resolved
+      // against the new central body's shape when the next propagator is built (spec §1.2).
+      context = context.withGravity(ArcTransition.across(context.gravity(), crossing.body()));
+      legEntry = ArcTransition.convert(exit, context.gravity());
     }
   }
 

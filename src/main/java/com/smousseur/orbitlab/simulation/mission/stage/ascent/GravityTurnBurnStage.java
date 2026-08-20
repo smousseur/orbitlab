@@ -1,7 +1,7 @@
 package com.smousseur.orbitlab.simulation.mission.stage.ascent;
 
 import com.smousseur.orbitlab.simulation.OrekitService;
-import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
+import com.smousseur.orbitlab.simulation.flight.FlightContext;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionStage;
 import com.smousseur.orbitlab.simulation.mission.attitude.GravityTurnAttitudeProvider;
@@ -156,11 +156,12 @@ public abstract class GravityTurnBurnStage extends MissionStage {
     // Used by the MissionOptimizer loop, which advances an advancesByReplay() ascent phase by
     // phase. Flies exactly what StageChainRunner would fly for this phase.
     SpacecraftState entryState = enter(currentState, mission);
-    GravitationalContext body = gravitationalContext(mission);
+    FlightContext context = flightContext(entryState, mission);
     NumericalPropagator propagator =
-        OrekitService.get().createOptimizationPropagator(body, maxStepSeconds(entryState, mission));
+        OrekitService.get()
+            .createOptimizationPropagator(context, maxStepSeconds(entryState, mission));
     propagator.setInitialState(entryState);
-    ReentryGuard.armQuiet(propagator, body);
+    ReentryGuard.armQuiet(propagator, context.gravity());
     configure(propagator, mission);
     return propagator.propagate(getConfiguredEndDate());
   }

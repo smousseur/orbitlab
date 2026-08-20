@@ -3,7 +3,7 @@ package com.smousseur.orbitlab.simulation.mission.stage;
 import com.smousseur.orbitlab.core.OrbitlabException;
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.Physics;
-import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
+import com.smousseur.orbitlab.simulation.flight.FlightContext;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionStage;
 import com.smousseur.orbitlab.simulation.mission.detector.DepletionGuard;
@@ -141,13 +141,13 @@ public class AnalyticParkingInsertionStage extends MissionStage {
     // advances
     // the state the next stage plans from, so a Newtonian point-mass field here would diverge from
     // the flown 8×8 trajectory and break the apogee-node geometry the GEO plane change relies on.
-    GravitationalContext body = gravitationalContext(mission);
+    FlightContext context = flightContext(currentState, mission);
     NumericalPropagator propagator =
         OrekitService.get()
             .createOptimizationPropagator(
-                body, burnLimitedMaxStep(currentState, mission.getVehicle()));
+                context, burnLimitedMaxStep(currentState, mission.getVehicle()));
     propagator.setInitialState(currentState);
-    ReentryGuard.armQuiet(propagator, body);
+    ReentryGuard.armQuiet(propagator, context.gravity());
     addBurns(propagator, currentState, plan, mission.getVehicle());
 
     return propagator.propagate(currentState.getDate().shiftedBy(plan.totalDuration()));

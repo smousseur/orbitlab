@@ -1,7 +1,7 @@
 package com.smousseur.orbitlab.simulation.mission.optimizer.problems;
 
 import com.smousseur.orbitlab.simulation.OrekitService;
-import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
+import com.smousseur.orbitlab.simulation.flight.FlightContext;
 import com.smousseur.orbitlab.simulation.mission.maneuver.TransfertTwoManeuver;
 import com.smousseur.orbitlab.simulation.mission.vehicle.ActiveStageInfo;
 import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchConfiguration;
@@ -88,7 +88,7 @@ public class TransferProblemSeedTest {
         LaunchConfiguration.fullyLoaded(Launchers.FALCON_HEAVY, Spacecraft.LEGACY).toVehicleStack();
     ActiveStageInfo activeStage = vehicle.resolveActiveStage(state.getMass());
     return new TransferTwoManeuverProblem(
-        new TransfertTwoManeuver(vehicle, targetAltitude, GravitationalContext.earth()),
+        new TransfertTwoManeuver(vehicle, targetAltitude, FlightContext.earth()),
         state,
         targetAltitude,
         activeStage.propulsion(),

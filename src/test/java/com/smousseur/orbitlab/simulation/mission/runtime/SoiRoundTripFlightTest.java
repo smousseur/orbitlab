@@ -1,7 +1,9 @@
 package com.smousseur.orbitlab.simulation.mission.runtime;
 
+import com.smousseur.orbitlab.simulation.flight.FlightContext;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -129,7 +131,7 @@ class SoiRoundTripFlightTest {
   }
 
   /** Every sample the runner produced, with the context it was flown in. */
-  private record Sample(AbsoluteDate date, GravitationalContext context, Vector3D position) {}
+  private record Sample(AbsoluteDate date, FlightContext context, Vector3D position) {}
 
   private static List<Sample> flyThroughTheLegRunner(MissionStage coast, SpacecraftState start) {
     List<Sample> samples = new ArrayList<>();
@@ -147,9 +149,8 @@ class SoiRoundTripFlightTest {
   private static SpacecraftState flyStraightThrough(SpacecraftState start, double seconds) {
     NumericalPropagator propagator =
         OrekitService.get()
-            .createOptimizationPropagator(
-                GravitationalContext.earth()
-                    .withPerturbers(SolarSystemBody.MOON, SolarSystemBody.SUN),
+            .createOptimizationPropagator(new FlightContext(
+                GravitationalContext.earth().withPerturbers(SolarSystemBody.MOON, SolarSystemBody.SUN)),
                 OrekitService.COAST_MAX_STEP);
     propagator.setInitialState(start);
     return propagator.propagate(start.getDate().shiftedBy(seconds));
@@ -165,8 +166,8 @@ class SoiRoundTripFlightTest {
 
     List<SolarSystemBody> arcBodies = new ArrayList<>();
     for (Sample sample : samples) {
-      if (arcBodies.isEmpty() || arcBodies.get(arcBodies.size() - 1) != sample.context().body()) {
-        arcBodies.add(sample.context().body());
+      if (arcBodies.isEmpty() || arcBodies.get(arcBodies.size() - 1) != sample.context().gravity().body()) {
+        arcBodies.add(sample.context().gravity().body());
       }
     }
     logger.info("Arcs flown, in order: {}", arcBodies);
@@ -240,7 +241,7 @@ class SoiRoundTripFlightTest {
 
     List<Sample> boundaries = new ArrayList<>();
     for (int i = 1; i < samples.size(); i++) {
-      if (samples.get(i - 1).context().body() != samples.get(i).context().body()) {
+      if (samples.get(i - 1).context().gravity().body() != samples.get(i).context().gravity().body()) {
         boundaries.add(samples.get(i));
       }
     }
@@ -268,7 +269,7 @@ class SoiRoundTripFlightTest {
   /** The last sample flown in the given arc body's context. */
   private static Sample lastSampleOfArc(List<Sample> samples, SolarSystemBody body) {
     for (int i = samples.size() - 1; i >= 0; i--) {
-      if (samples.get(i).context().body() == body) {
+      if (samples.get(i).context().gravity().body() == body) {
         return samples.get(i);
       }
     }
@@ -278,6 +279,7 @@ class SoiRoundTripFlightTest {
   private static Vector3D inGcrf(Sample sample) {
     return sample
         .context()
+        .gravity()
         .inertialFrame()
         .getTransformTo(OrekitService.get().gcrf(), sample.date())
         .transformPosition(sample.position());
@@ -293,7 +295,7 @@ class SoiRoundTripFlightTest {
     for (int i = 1; i < samples.size(); i++) {
       Sample previous = samples.get(i - 1);
       Sample current = samples.get(i);
-      if (previous.context().body() == current.context().body()) {
+      if (previous.context().gravity().body() == current.context().gravity().body()) {
         continue;
       }
       boundaries++;
@@ -307,12 +309,14 @@ class SoiRoundTripFlightTest {
       Vector3D previousInGcrf =
           previous
               .context()
+              .gravity()
               .inertialFrame()
               .getTransformTo(OrekitService.get().gcrf(), previous.date())
               .transformPosition(previous.position());
       Vector3D currentInGcrf =
           current
               .context()
+              .gravity()
               .inertialFrame()
               .getTransformTo(OrekitService.get().gcrf(), current.date())
               .transformPosition(current.position());
@@ -339,7 +343,7 @@ class SoiRoundTripFlightTest {
   /** The first sample flown in the given arc body's context. */
   private static Sample firstSampleOfArc(List<Sample> samples, SolarSystemBody body) {
     for (Sample sample : samples) {
-      if (sample.context().body() == body) {
+      if (sample.context().gravity().body() == body) {
         return sample;
       }
     }
@@ -356,20 +360,20 @@ class SoiRoundTripFlightTest {
     for (int i = 1; i < samples.size(); i++) {
       Sample previous = samples.get(i - 1);
       Sample current = samples.get(i);
-      if (previous.context().body() == current.context().body()) {
+      if (previous.context().gravity().body() == current.context().gravity().body()) {
         continue;
       }
       Vector3D moon =
           OrekitService.get()
               .body(SolarSystemBody.MOON)
-              .getPosition(previous.date(), previous.context().inertialFrame());
+              .getPosition(previous.date(), previous.context().gravity().inertialFrame());
       double distance = previous.position().subtract(moon).getNorm();
       double radius = soi.radiusAt(previous.date());
 
       logger.info(
           "Crossing {} -> {} at {} km from the Moon, sphere at {} km",
-          previous.context().body(),
-          current.context().body(),
+          previous.context().gravity().body(),
+          current.context().gravity().body(),
           Math.round(distance / 1000.0),
           Math.round(radius / 1000.0));
 
@@ -422,7 +426,11 @@ class SoiRoundTripFlightTest {
             .fly(plainCoast, start, mission);
 
     assertEquals(1, flight.legs().size());
-    assertSame(GravitationalContext.earth(), flight.lastLeg().context());
+    assertSame(
+        GravitationalContext.earth(),
+        flight.lastLeg().context().gravity(),
+        "the leg carries the shared instance, not a copy of it");
+    assertFalse(flight.lastLeg().context().hasDrag(), "no mission asks for an atmosphere yet");
     assertSame(start, flight.legs().get(0).entryState(), "no conversion when the frame is the same");
     assertEquals(null, flight.lastLeg().crossedBoundary());
     assertNotEquals(start.getDate(), flight.lastLeg().exitState().getDate());

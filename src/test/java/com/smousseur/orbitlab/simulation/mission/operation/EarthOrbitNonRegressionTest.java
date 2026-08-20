@@ -1,6 +1,6 @@
 package com.smousseur.orbitlab.simulation.mission.operation;
 
-import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
+import com.smousseur.orbitlab.simulation.flight.FlightContext;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -253,7 +253,7 @@ class EarthOrbitNonRegressionTest {
         plane.launchAzimuth(latitude),
         profile.interstageCoastDuration(),
         plane.commands(latitude),
-        GravitationalContext.earth());
+        FlightContext.earth());
   }
 
   private static GravityTurnFirstBurnStage firstBurnOf(Mission mission) {

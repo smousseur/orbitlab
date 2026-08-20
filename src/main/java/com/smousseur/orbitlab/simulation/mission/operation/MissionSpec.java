@@ -1,6 +1,7 @@
 package com.smousseur.orbitlab.simulation.mission.operation;
 
 import com.smousseur.orbitlab.core.OrbitlabException;
+import com.smousseur.orbitlab.simulation.flight.AtmosphereModel;
 import com.smousseur.orbitlab.simulation.mission.MissionHorizon;
 import com.smousseur.orbitlab.simulation.mission.MissionType;
 import com.smousseur.orbitlab.simulation.mission.OptimizationType;
@@ -84,6 +85,20 @@ public sealed interface MissionSpec permits MissionSpec.EarthOrbit, MissionSpec.
   MissionHorizon horizon();
 
   /**
+   * Returns the atmosphere this mission is flown against (spec {@code
+   * docs/atmosphere/04-conception-L1.md} §3.2). Never {@code null} — a spec built without one falls
+   * back to {@link AtmosphereModel#NONE}, which mounts no drag force at all.
+   *
+   * <p>It lives on the spec for the same reason {@link #horizon()} does: it is <em>user intent</em>,
+   * and it must survive the recompositions {@code MissionEntry} performs on a mode toggle or a
+   * wizard edit, both of which replace the {@link com.smousseur.orbitlab.simulation.mission.Mission}
+   * and neither of which replaces the spec.
+   *
+   * @return the atmosphere model
+   */
+  AtmosphereModel atmosphere();
+
+  /**
    * Returns a copy of this spec with the launcher's per-stage propellant loads replaced, keeping
    * the launcher model and the payload (including a GEO payload's fixed AKM load) unchanged. Used
    * by the propellant-sizing planner to rebuild the mission at each candidate load array.
@@ -125,6 +140,8 @@ public sealed interface MissionSpec permits MissionSpec.EarthOrbit, MissionSpec.
    * @param longitude the launch site longitude in degrees
    * @param altitude the launch site altitude in meters
    * @param horizon the restitution horizon, or {@code null} for the derived default
+   * @param atmosphere the atmosphere to fly against, or {@code null} for {@link
+   *     AtmosphereModel#NONE}
    */
   record EarthOrbit(
       String name,
@@ -138,7 +155,8 @@ public sealed interface MissionSpec permits MissionSpec.EarthOrbit, MissionSpec.
       double latitude,
       double longitude,
       double altitude,
-      MissionHorizon horizon)
+      MissionHorizon horizon,
+      AtmosphereModel atmosphere)
       implements MissionSpec {
     public EarthOrbit {
       Objects.requireNonNull(name, "name");
@@ -147,6 +165,9 @@ public sealed interface MissionSpec permits MissionSpec.EarthOrbit, MissionSpec.
       // programmatic path) gets the derived default without having to know it exists.
       if (horizon == null) {
         horizon = MissionHorizon.defaultFor(MissionType.LEO);
+      }
+      if (atmosphere == null) {
+        atmosphere = AtmosphereModel.NONE;
       }
       if (nodeBranch == null) {
         nodeBranch = NodeBranch.ASCENDING;
@@ -205,7 +226,55 @@ public sealed interface MissionSpec permits MissionSpec.EarthOrbit, MissionSpec.
           latitude,
           longitude,
           altitude,
-          horizon);
+          horizon,
+          null);
+    }
+
+    /**
+     * The form every call site that predates PHY-1 means: no atmosphere, so the mission flies in
+     * vacuum. Shaped exactly like the {@code targetRaan}-less form above — a parameter a caller has
+     * no opinion on is one it does not have to name.
+     *
+     * @param name the mission name
+     * @param configuration the launch configuration
+     * @param perigeeAltitude the target perigee altitude in meters
+     * @param apogeeAltitude the target apogee altitude in meters
+     * @param targetInclination the target orbit inclination in radians
+     * @param nodeBranch which of the two azimuths is flown
+     * @param targetRaan the target ascending node in degrees, or {@code null}
+     * @param siteName the launch site display name, or {@code null} when unnamed
+     * @param latitude the launch site latitude in degrees
+     * @param longitude the launch site longitude in degrees
+     * @param altitude the launch site altitude in meters
+     * @param horizon the restitution horizon, or {@code null} for the derived default
+     */
+    public EarthOrbit(
+        String name,
+        LaunchConfiguration configuration,
+        double perigeeAltitude,
+        double apogeeAltitude,
+        double targetInclination,
+        NodeBranch nodeBranch,
+        Double targetRaan,
+        String siteName,
+        double latitude,
+        double longitude,
+        double altitude,
+        MissionHorizon horizon) {
+      this(
+          name,
+          configuration,
+          perigeeAltitude,
+          apogeeAltitude,
+          targetInclination,
+          nodeBranch,
+          targetRaan,
+          siteName,
+          latitude,
+          longitude,
+          altitude,
+          horizon,
+          null);
     }
 
     /**
@@ -292,7 +361,8 @@ public sealed interface MissionSpec permits MissionSpec.EarthOrbit, MissionSpec.
           latitude,
           longitude,
           altitude,
-          horizon);
+          horizon,
+          atmosphere);
     }
   }
 
@@ -309,6 +379,8 @@ public sealed interface MissionSpec permits MissionSpec.EarthOrbit, MissionSpec.
    * @param longitude the launch site longitude in degrees
    * @param altitude the launch site altitude in meters
    * @param horizon the restitution horizon, or {@code null} for the derived default
+   * @param atmosphere the atmosphere to fly against, or {@code null} for {@link
+   *     AtmosphereModel#NONE}
    */
   record Geo(
       String name,
@@ -320,7 +392,8 @@ public sealed interface MissionSpec permits MissionSpec.EarthOrbit, MissionSpec.
       double latitude,
       double longitude,
       double altitude,
-      MissionHorizon horizon)
+      MissionHorizon horizon,
+      AtmosphereModel atmosphere)
       implements MissionSpec {
     public Geo {
       Objects.requireNonNull(name, "name");
@@ -329,6 +402,48 @@ public sealed interface MissionSpec permits MissionSpec.EarthOrbit, MissionSpec.
       if (horizon == null) {
         horizon = MissionHorizon.defaultFor(MissionType.GEO);
       }
+      if (atmosphere == null) {
+        atmosphere = AtmosphereModel.NONE;
+      }
+    }
+
+    /**
+     * The form every call site that predates PHY-1 means: no atmosphere.
+     *
+     * @param name the mission name
+     * @param configuration the launch configuration
+     * @param parkingAltitude the parking orbit altitude in meters
+     * @param targetAltitude the geostationary target altitude in meters
+     * @param finalInclination the target final inclination in degrees
+     * @param siteName the launch site display name, or {@code null} when unnamed
+     * @param latitude the launch site latitude in degrees
+     * @param longitude the launch site longitude in degrees
+     * @param altitude the launch site altitude in meters
+     * @param horizon the restitution horizon, or {@code null} for the derived default
+     */
+    public Geo(
+        String name,
+        LaunchConfiguration configuration,
+        double parkingAltitude,
+        double targetAltitude,
+        double finalInclination,
+        String siteName,
+        double latitude,
+        double longitude,
+        double altitude,
+        MissionHorizon horizon) {
+      this(
+          name,
+          configuration,
+          parkingAltitude,
+          targetAltitude,
+          finalInclination,
+          siteName,
+          latitude,
+          longitude,
+          altitude,
+          horizon,
+          null);
     }
 
     @Override
@@ -352,7 +467,8 @@ public sealed interface MissionSpec permits MissionSpec.EarthOrbit, MissionSpec.
           latitude,
           longitude,
           altitude,
-          horizon);
+          horizon,
+          atmosphere);
     }
   }
 }

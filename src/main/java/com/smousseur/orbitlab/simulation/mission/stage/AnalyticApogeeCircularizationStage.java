@@ -2,7 +2,7 @@ package com.smousseur.orbitlab.simulation.mission.stage;
 
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.Physics;
-import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
+import com.smousseur.orbitlab.simulation.flight.FlightContext;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionStage;
 import com.smousseur.orbitlab.simulation.mission.detector.DepletionGuard;
@@ -71,7 +71,7 @@ public class AnalyticApogeeCircularizationStage extends MissionStage {
   public void configure(NumericalPropagator propagator, Mission mission) {
     SpacecraftState state = mission.getCurrentState();
     CircularizationPlan plan =
-        computePlan(state, mission.getVehicle(), gravitationalContext(mission));
+        computePlan(state, mission.getVehicle(), flightContext(state, mission));
 
     addBurn(propagator, state, plan, mission.getVehicle());
 
@@ -93,8 +93,8 @@ public class AnalyticApogeeCircularizationStage extends MissionStage {
 
   @Override
   public SpacecraftState propagateStandalone(SpacecraftState currentState, Mission mission) {
-    GravitationalContext body = gravitationalContext(mission);
-    CircularizationPlan plan = computePlan(currentState, mission.getVehicle(), body);
+    FlightContext context = flightContext(currentState, mission);
+    CircularizationPlan plan = computePlan(currentState, mission.getVehicle(), context);
 
     // Same gravity model as the plan simulation and the ephemeris generation: the hours-long
     // burn is planned against its own finite-burn drift, a Newtonian standalone flight would
@@ -102,9 +102,9 @@ public class AnalyticApogeeCircularizationStage extends MissionStage {
     NumericalPropagator propagator =
         OrekitService.get()
             .createOptimizationPropagator(
-                body, burnLimitedMaxStep(currentState, mission.getVehicle()));
+                context, burnLimitedMaxStep(currentState, mission.getVehicle()));
     propagator.setInitialState(currentState);
-    ReentryGuard.armQuiet(propagator, body);
+    ReentryGuard.armQuiet(propagator, context.gravity());
     addBurn(propagator, currentState, plan, mission.getVehicle());
     return propagator.propagate(plan.burnStart().shiftedBy(plan.dt()));
   }
@@ -113,8 +113,8 @@ public class AnalyticApogeeCircularizationStage extends MissionStage {
       AbsoluteDate burnStart, double dt, Vector3D directionInertial, double dv) {}
 
   private CircularizationPlan computePlan(
-      SpacecraftState state, Vehicle vehicle, GravitationalContext body) {
-    SpacecraftState stateAtApogee = AnalyticTrimBurnStage.detectStateAtApogee(state, body);
+      SpacecraftState state, Vehicle vehicle, FlightContext context) {
+    SpacecraftState stateAtApogee = AnalyticTrimBurnStage.detectStateAtApogee(state, context);
     if (stateAtApogee == null) {
       throw new IllegalStateException("No apogee found for the circularization burn");
     }
@@ -198,7 +198,7 @@ public class AnalyticApogeeCircularizationStage extends MissionStage {
               propulsion.thrust(),
               propulsion.isp(),
               maxStep,
-              body);
+              context);
       KeplerianOrbit postBurn =
           new KeplerianOrbit(
               endState.getPVCoordinates(), endState.getFrame(), endState.getDate(), mu);
@@ -263,11 +263,11 @@ public class AnalyticApogeeCircularizationStage extends MissionStage {
       double thrust,
       double isp,
       double maxStep,
-      GravitationalContext body) {
+      FlightContext context) {
     NumericalPropagator propagator =
-        OrekitService.get().createOptimizationPropagator(body, maxStep);
+        OrekitService.get().createOptimizationPropagator(context, maxStep);
     propagator.setInitialState(state);
-    ReentryGuard.armQuiet(propagator, body);
+    ReentryGuard.armQuiet(propagator, context.gravity());
     Rotation inertialToBody = new Rotation(directionInertial, Vector3D.PLUS_I);
     FrameAlignedProvider attitude = new FrameAlignedProvider(inertialToBody, state.getFrame());
     propagator.addForceModel(

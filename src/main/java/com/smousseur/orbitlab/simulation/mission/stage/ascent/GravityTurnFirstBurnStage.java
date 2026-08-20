@@ -107,7 +107,7 @@ public class GravityTurnFirstBurnStage extends GravityTurnBurnStage
   @Override
   public GravityTurnProblem buildProblem(Mission mission) {
     SpacecraftState entryState = mission.getCurrentState();
-    GravityTurnManeuver maneuver = createManeuver(mission, entryState.getMass());
+    GravityTurnManeuver maneuver = createManeuver(mission, entryState);
     return new GravityTurnProblem(
         maneuver, entryState, constraints, new AscentChainPropagation(this, maneuver, mission));
   }
@@ -125,13 +125,13 @@ public class GravityTurnFirstBurnStage extends GravityTurnBurnStage
     // Deliberately computed rather than read from the plan: this phase is the one that publishes
     // the plan, and the MissionOptimizer loop asks for the step before configure() has run. The
     // value is the same by construction — AscentPlan.maxStepSeconds() is this very number.
-    return createManeuver(mission, entryState.getMass()).maxStepSeconds();
+    return createManeuver(mission, entryState).maxStepSeconds();
   }
 
   @Override
   protected void prepare(NumericalPropagator propagator, Mission mission) {
     SpacecraftState entryState = propagator.getInitialState();
-    GravityTurnManeuver maneuver = createManeuver(mission, entryState.getMass());
+    GravityTurnManeuver maneuver = createManeuver(mission, entryState);
 
     // Apply the pitch kick here (bilan 11 §3.9): the generator replays the turn from the pre-kick
     // entry state it saved, so without this the ascent would fly from an un-kicked velocity — 3°
@@ -198,17 +198,17 @@ public class GravityTurnFirstBurnStage extends GravityTurnBurnStage
         new GravityTurnSecondBurnStage(AscentSequence.SECOND_BURN_NAME, planRef, instrumentation));
   }
 
-  private GravityTurnManeuver createManeuver(Mission mission, double entryMass) {
+  private GravityTurnManeuver createManeuver(Mission mission, SpacecraftState entryState) {
     Vehicle vehicle = mission.getVehicle();
     double launchLatitude = FastMath.toRadians(launchLatitudeDeg);
     return new GravityTurnManeuver(
         vehicle,
-        entryMass,
+        entryState.getMass(),
         Math.toRadians(pitchKickAngleDeg),
         launchPlane.launchAzimuth(launchLatitude),
         interstageCoastDuration,
         launchPlane.commands(launchLatitude),
-        gravitationalContext(mission));
+        flightContext(entryState, mission));
   }
 
   /**

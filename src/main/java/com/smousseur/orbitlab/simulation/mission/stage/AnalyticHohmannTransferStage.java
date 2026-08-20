@@ -2,7 +2,7 @@ package com.smousseur.orbitlab.simulation.mission.stage;
 
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.Physics;
-import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
+import com.smousseur.orbitlab.simulation.flight.FlightContext;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionStage;
 import com.smousseur.orbitlab.simulation.mission.detector.DepletionGuard;
@@ -100,7 +100,7 @@ public class AnalyticHohmannTransferStage extends MissionStage {
   public void configure(NumericalPropagator propagator, Mission mission) {
     SpacecraftState state = mission.getCurrentState();
     AnalyticBurnPlan plan =
-        computeBurnPlan(state, mission.getVehicle(), gravitationalContext(mission));
+        computeBurnPlan(state, mission.getVehicle(), flightContext(state, mission));
 
     addBurns(propagator, state, plan, mission.getVehicle());
 
@@ -122,8 +122,8 @@ public class AnalyticHohmannTransferStage extends MissionStage {
 
   @Override
   public SpacecraftState propagateStandalone(SpacecraftState currentState, Mission mission) {
-    GravitationalContext body = gravitationalContext(mission);
-    AnalyticBurnPlan plan = computeBurnPlan(currentState, mission.getVehicle(), body);
+    FlightContext context = flightContext(currentState, mission);
+    AnalyticBurnPlan plan = computeBurnPlan(currentState, mission.getVehicle(), context);
 
     // 8×8 gravity, matching the ephemeris generator (bilan 11 §3.9): this standalone flight
     // advances
@@ -132,9 +132,9 @@ public class AnalyticHohmannTransferStage extends MissionStage {
     NumericalPropagator propagator =
         OrekitService.get()
             .createOptimizationPropagator(
-                body, burnLimitedMaxStep(currentState, mission.getVehicle()));
+                context, burnLimitedMaxStep(currentState, mission.getVehicle()));
     propagator.setInitialState(currentState);
-    ReentryGuard.armQuiet(propagator, body);
+    ReentryGuard.armQuiet(propagator, context.gravity());
     addBurns(propagator, currentState, plan, mission.getVehicle());
 
     return propagator.propagate(currentState.getDate().shiftedBy(plan.totalDuration()));
@@ -155,7 +155,7 @@ public class AnalyticHohmannTransferStage extends MissionStage {
       double dv2) {}
 
   private AnalyticBurnPlan computeBurnPlan(
-      SpacecraftState state, Vehicle vehicle, GravitationalContext body) {
+      SpacecraftState state, Vehicle vehicle, FlightContext context) {
     double mu = state.getOrbit().getMu();
 
     Vector3D r1 = state.getPVCoordinates().getPosition();
@@ -203,7 +203,7 @@ public class AnalyticHohmannTransferStage extends MissionStage {
           FastMath.PI * FastMath.sqrt(aTransfer * aTransfer * aTransfer / mu);
       stateAtApogee =
           simulateBurn1AndFindApogee(
-              body,
+              context,
               state,
               deltaV1.normalize(),
               dt1,
@@ -288,7 +288,7 @@ public class AnalyticHohmannTransferStage extends MissionStage {
    * late-ignition invariant on a light I7 load (spec 09 §4).
    */
   static SpacecraftState simulateBurn1AndFindApogee(
-      GravitationalContext body,
+      FlightContext context,
       SpacecraftState state,
       Vector3D burn1DirectionInertial,
       double dt1,
@@ -297,11 +297,11 @@ public class AnalyticHohmannTransferStage extends MissionStage {
       double transferHalfPeriod,
       double maxStep) {
     NumericalPropagator propagator =
-        OrekitService.get().createOptimizationPropagator(body, maxStep);
+        OrekitService.get().createOptimizationPropagator(context, maxStep);
     propagator.setInitialState(state);
     // A re-entering aim would otherwise grind here; on a stop no apogee is recorded and the throw
     // below reports it as a plan failure, which the optimizer reads as infeasible.
-    ReentryGuard.armQuiet(propagator, body);
+    ReentryGuard.armQuiet(propagator, context.gravity());
 
     AbsoluteDate burnStart = state.getDate().shiftedBy(1.0e-3);
     Rotation inertialToBody = new Rotation(burn1DirectionInertial, Vector3D.PLUS_I);

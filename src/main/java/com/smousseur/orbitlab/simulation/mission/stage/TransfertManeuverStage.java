@@ -70,7 +70,7 @@ public class TransfertManeuverStage extends MissionStage
     SpacecraftState state = mission.getCurrentState();
     ActiveStageInfo activeStage = mission.getVehicle().resolveActiveStage(state.getMass());
     return new TransferProblem(
-        createManeuver(mission),
+        createManeuver(mission, state),
         state,
         perigeeAltitude,
         apogeeAltitude,
@@ -82,7 +82,7 @@ public class TransfertManeuverStage extends MissionStage
   @Override
   public double maxStepSeconds(SpacecraftState entryState, Mission mission) {
     // Replay uses the same late-ignition invariant the optimizer's own propagator uses.
-    return createManeuver(mission).maxStepSeconds(entryState);
+    return createManeuver(mission, entryState).maxStepSeconds(entryState);
   }
 
   @Override
@@ -93,7 +93,7 @@ public class TransfertManeuverStage extends MissionStage
     }
 
     SpacecraftState state = mission.getCurrentState();
-    TransferManeuver maneuver = createManeuver(mission);
+    TransferManeuver maneuver = createManeuver(mission, state);
     TransferManeuver.Burn1Params params = maneuver.decode(optimizationResult.bestVariables());
 
     maneuver.configure(propagator, state, params);
@@ -114,10 +114,10 @@ public class TransfertManeuverStage extends MissionStage
                 }));
   }
 
-  private TransferManeuver createManeuver(Mission mission) {
+  private TransferManeuver createManeuver(Mission mission, SpacecraftState entryState) {
     // The apogee is the reference altitude the maneuver's in-flight tracker uses to bound the
     // max-altitude excursion; for an elliptic target that is the apside actually reached.
     return new TransferManeuver(
-        mission.getVehicle(), apogeeAltitude, gravitationalContext(mission));
+        mission.getVehicle(), apogeeAltitude, flightContext(entryState, mission));
   }
 }

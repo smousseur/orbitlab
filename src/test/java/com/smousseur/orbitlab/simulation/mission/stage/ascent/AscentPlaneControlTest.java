@@ -1,6 +1,6 @@
 package com.smousseur.orbitlab.simulation.mission.stage.ascent;
 
-import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
+import com.smousseur.orbitlab.simulation.flight.FlightContext;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.smousseur.orbitlab.simulation.OrekitService;
@@ -399,7 +399,7 @@ class AscentPlaneControlTest {
             plane.launchAzimuth(LAT_RAD),
             profile.interstageCoastDuration(),
             plane.commands(LAT_RAD),
-            GravitationalContext.earth());
+            FlightContext.earth());
     double[] variables = {reference.getStagingCompleteTime() + BURN2_SECONDS, TURN_EXPONENT};
     ((GravityTurnFirstBurnStage) ascent.getFirst())
         .applyOptimization(new OptimizationResult(variables, 0.0, entry, 1, entry));

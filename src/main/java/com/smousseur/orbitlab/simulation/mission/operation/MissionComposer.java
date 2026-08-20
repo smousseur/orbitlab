@@ -104,6 +104,9 @@ public final class MissionComposer {
     // rather than threading it through the constructor chains, is what makes it survive a mode
     // toggle or a wizard edit: both replace the Mission, neither replaces the spec.
     mission.setHorizon(spec.horizon());
+    // Same rule, same single writer, for the atmosphere choice (spec
+    // docs/atmosphere/04-conception-L1.md section 3.2).
+    mission.setAtmosphere(spec.atmosphere());
     return mission;
   }
 

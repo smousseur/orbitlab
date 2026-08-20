@@ -2,6 +2,7 @@ package com.smousseur.orbitlab.simulation.mission.vehicle.model.stage;
 
 import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchVehicle;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropulsionSystem;
+import com.smousseur.orbitlab.simulation.mission.vehicle.model.AerodynamicProperties;
 
 import java.util.Objects;
 
@@ -15,13 +16,27 @@ import java.util.Objects;
  * @param propellantCapacity the maximum propellant mass the tank can hold (kg)
  * @param propulsion the propulsion system of the stage
  * @param capabilities the physical capabilities of the stage
+ * @param aerodynamics the frontal area and drag coefficient of the stage, or {@code null} when the
+ *     model declares none — the stage then flies its phase without drag (spec {@code
+ *     docs/atmosphere/04-conception-L1.md} §3.3)
  */
 public record StageModel(
     String name,
     double dryMass,
     double propellantCapacity,
     PropulsionSystem propulsion,
-    StageCapabilities capabilities) {
+    StageCapabilities capabilities,
+    AerodynamicProperties aerodynamics) {
+
+  /** A stage model that declares no aerodynamics, as every fixture assembling one by hand does. */
+  public StageModel(
+      String name,
+      double dryMass,
+      double propellantCapacity,
+      PropulsionSystem propulsion,
+      StageCapabilities capabilities) {
+    this(name, dryMass, propellantCapacity, propulsion, capabilities, null);
+  }
 
   public StageModel {
     Objects.requireNonNull(name, "name");
@@ -50,7 +65,8 @@ public record StageModel(
     if (!capabilities.variableLoad() && propellantLoad != propellantCapacity) {
       throw new IllegalArgumentException("solid stage flies full: load must equal capacity");
     }
-    return new LaunchVehicle(dryMass, propellantCapacity, propellantLoad, propulsion);
+    return new LaunchVehicle(
+        dryMass, propellantCapacity, propellantLoad, propulsion, aerodynamics);
   }
 
   /** Instantiates this stage loaded at full capacity. */

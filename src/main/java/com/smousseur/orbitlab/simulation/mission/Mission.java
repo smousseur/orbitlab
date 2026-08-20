@@ -1,5 +1,6 @@
 package com.smousseur.orbitlab.simulation.mission;
 
+import com.smousseur.orbitlab.simulation.flight.AtmosphereModel;
 import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
 import com.smousseur.orbitlab.simulation.mission.objective.MissionObjective;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
@@ -29,6 +30,15 @@ public abstract class Mission {
 
   /** How far past insertion this mission is sampled */
   private MissionHorizon horizon = new MissionHorizon.TrailingCoast(86_164.0);
+
+  /**
+   * Which atmosphere this mission is flown against. {@link AtmosphereModel#NONE} until PHY-2 lets a
+   * user choose otherwise — and the default is written here <em>as well as</em> in the spec's
+   * compact constructor, deliberately: a mission assembled without going through {@code
+   * MissionComposer} (the optimizer test base class, the fixtures) would otherwise carry {@code
+   * null} (spec {@code docs/atmosphere/04-conception-L1.md} §3.2).
+   */
+  private AtmosphereModel atmosphere = AtmosphereModel.NONE;
 
   /**
    * Creates a new mission with the specified name, vehicle, stages, and objective.
@@ -153,6 +163,28 @@ public abstract class Mission {
    */
   public void setHorizon(MissionHorizon horizon) {
     this.horizon = Objects.requireNonNull(horizon, "horizon");
+  }
+
+  /**
+   * Returns the atmosphere this mission's stages are flown against. Never {@code null}; {@link
+   * AtmosphereModel#NONE} means no {@code DragForce} is mounted at all.
+   *
+   * @return the atmosphere model
+   */
+  public AtmosphereModel getAtmosphere() {
+    return atmosphere;
+  }
+
+  /**
+   * Sets the atmosphere model. Called by {@code MissionComposer} right after composition, from the
+   * spec's choice; nothing else writes it — the same single-writer rule as {@link
+   * #setHorizon(MissionHorizon)}, and for the same reason: the choice is user intent and must
+   * survive the recompositions a mode toggle or a wizard edit performs.
+   *
+   * @param atmosphere the atmosphere model to apply
+   */
+  public void setAtmosphere(AtmosphereModel atmosphere) {
+    this.atmosphere = Objects.requireNonNull(atmosphere, "atmosphere");
   }
 
   public MissionStatus getStatus() {

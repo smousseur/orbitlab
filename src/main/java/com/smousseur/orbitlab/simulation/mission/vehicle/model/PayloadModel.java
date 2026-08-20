@@ -14,13 +14,26 @@ import java.util.Objects;
  * @param defaultDryMass the dry mass (kg) pre-filling the wizard mass field
  * @param akmPropellantCapacity the apogee-kick-motor tank size (kg); 0 for an inert payload
  * @param akmPropulsion the AKM propulsion; null for an inert payload
+ * @param aerodynamics the frontal area and drag coefficient of the payload, or {@code null} when
+ *     the model declares none (spec {@code docs/atmosphere/04-conception-L1.md} §3.3)
  */
 public record PayloadModel(
     String id,
     String displayName,
     double defaultDryMass,
     double akmPropellantCapacity,
-    PropulsionSystem akmPropulsion) {
+    PropulsionSystem akmPropulsion,
+    AerodynamicProperties aerodynamics) {
+
+  /** A payload model declaring no aerodynamics, as every hand-assembled fixture does. */
+  public PayloadModel(
+      String id,
+      String displayName,
+      double defaultDryMass,
+      double akmPropellantCapacity,
+      PropulsionSystem akmPropulsion) {
+    this(id, displayName, defaultDryMass, akmPropellantCapacity, akmPropulsion, null);
+  }
 
   public PayloadModel {
     Objects.requireNonNull(id, "id");
@@ -63,6 +76,6 @@ public record PayloadModel(
       throw new IllegalArgumentException(
           "akmLoad must be within [0, " + akmPropellantCapacity + "]: " + akmLoad);
     }
-    return new Spacecraft(dryMass, akmPropellantCapacity, akmLoad, akmPropulsion);
+    return new Spacecraft(dryMass, akmPropellantCapacity, akmLoad, akmPropulsion, aerodynamics);
   }
 }

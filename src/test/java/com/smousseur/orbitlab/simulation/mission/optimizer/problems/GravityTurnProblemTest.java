@@ -1,6 +1,6 @@
 package com.smousseur.orbitlab.simulation.mission.optimizer.problems;
 
-import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
+import com.smousseur.orbitlab.simulation.flight.FlightContext;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.smousseur.orbitlab.simulation.OrekitService;
@@ -31,7 +31,7 @@ class GravityTurnProblemTest {
     OrekitService.get().initialize();
     Vehicle vehicle = LaunchVehicle.getLauncherStage1Vehicle();
     maneuver = new GravityTurnManeuver(
-            vehicle, vehicle.getMass(), 0.0, Math.PI / 2, 0.0, GravitationalContext.earth());
+            vehicle, vehicle.getMass(), 0.0, Math.PI / 2, 0.0, FlightContext.earth());
   }
 
   @Test

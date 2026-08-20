@@ -2,6 +2,7 @@ package com.smousseur.orbitlab.simulation.mission.vehicle;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import com.smousseur.orbitlab.simulation.mission.vehicle.model.AerodynamicProperties;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.orekit.utils.Constants;
@@ -229,5 +230,98 @@ class VehicleTest {
     assertSame(akmSat, kick.vehicle(), "the payload must be active right at the boundary mass");
     assertEquals(1_500, kick.remainingFuel(afterSeparation), 1e-9);
     assertEquals(400, kick.propulsion().thrust(), 1e-9);
+  }
+
+  // --- aerodynamics (PHY-1 / L1, spec docs/atmosphere/04-conception-L1.md section 5.3) ---
+
+  /**
+   * The aerodynamics follows the active stage, and <b>changes at the jettison</b>. The continuum-flow
+   * section of a first stage giving way to the free-molecular section of an upper stage is an
+   * assertion here, not an intention stated in a comment.
+   */
+  @Test
+  void aerodynamics_followTheActiveStage_andChangeAtJettison() {
+    AerodynamicProperties s1Aero = new AerodynamicProperties(31.6, 0.4);
+    AerodynamicProperties s2Aero = new AerodynamicProperties(10.5, 2.2);
+    LaunchVehicle s1 =
+        new LaunchVehicle(
+            66_000, 1_233_000, 1_233_000, new PropulsionSystem(296, 22_800_000), s1Aero);
+    LaunchVehicle s2 =
+        new LaunchVehicle(
+            4_000, 107_500, 107_500, new PropulsionSystem(348, 981_000), s2Aero);
+    Spacecraft sc = Spacecraft.LEGACY;
+    VehicleStack stack = new VehicleStack(List.of(s1, s2, sc));
+
+    assertSame(s1Aero, stack.resolveActiveStage(stack.getMass()).aerodynamics());
+
+    double afterJettison = s2.getMass() + sc.getMass();
+    assertSame(s2Aero, stack.resolveActiveStage(afterJettison).aerodynamics());
+  }
+
+  /**
+   * A stage that declares nothing does not drag — <b>even when another stage of the same stack
+   * declares something</b>. There is no inheritance up or down the stack, so a partially populated
+   * catalog is predictable rather than dangerous.
+   */
+  @Test
+  void aerodynamics_absentOnOneStage_doNotLeakFromAnother() {
+    LaunchVehicle s1 =
+        new LaunchVehicle(
+            66_000,
+            1_233_000,
+            1_233_000,
+            new PropulsionSystem(296, 22_800_000),
+            new AerodynamicProperties(31.6, 0.4));
+    LaunchVehicle s2 = LaunchVehicle.getLauncherStage2Vehicle();
+    Spacecraft sc = Spacecraft.LEGACY;
+    VehicleStack stack = new VehicleStack(List.of(s1, s2, sc));
+
+    assertNotNull(stack.resolveActiveStage(stack.getMass()).aerodynamics());
+    assertNull(
+        stack.resolveActiveStage(s2.getMass() + sc.getMass()).aerodynamics(),
+        "an undeclared stage flies its phase without drag");
+  }
+
+  /**
+   * {@code VehicleStack} does not override {@link Vehicle#aerodynamics()}, and the {@code null} it
+   * inherits is the honest answer: a stack has no single frontal area, and nothing in production
+   * asks one for it — drag resolves through {@code resolveActiveStage}. An override would be
+   * unreachable code stating something false about the model.
+   */
+  @Test
+  void vehicleStack_aerodynamics_isNull_becauseAStackHasNoFrontalArea() {
+    LaunchVehicle s1 =
+        new LaunchVehicle(
+            66_000,
+            1_233_000,
+            1_233_000,
+            new PropulsionSystem(296, 22_800_000),
+            new AerodynamicProperties(31.6, 0.4));
+    VehicleStack stack = new VehicleStack(List.of(s1, Spacecraft.LEGACY));
+
+    assertNull(stack.aerodynamics());
+    assertNotNull(stack.resolveActiveStage(stack.getMass()).aerodynamics());
+  }
+
+  /** The catalog values are wired end to end: model to flying instance to active stage. */
+  @Test
+  void catalogAerodynamics_reachTheFlyingStack() {
+    VehicleStack stack =
+        LaunchConfiguration.fullyLoaded(
+                com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Launchers.FALCON_HEAVY,
+                com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Payloads.GEO_SAT
+                    .toSpacecraft(2_000, 2_000))
+            .toVehicleStack();
+
+    AerodynamicProperties liftOff = stack.resolveActiveStage(stack.getMass()).aerodynamics();
+    assertNotNull(liftOff);
+    assertEquals(31.6, liftOff.crossSection(), 1e-9);
+    assertEquals(0.4, liftOff.dragCoefficient(), 1e-9);
+
+    AerodynamicProperties payload =
+        stack.resolveActiveStage(stack.vehicles().getLast().getMass()).aerodynamics();
+    assertNotNull(payload);
+    assertEquals(6.25, payload.crossSection(), 1e-9);
+    assertEquals(291.0, payload.ballisticCoefficient(4_000), 1.0);
   }
 }

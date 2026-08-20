@@ -1,7 +1,7 @@
 package com.smousseur.orbitlab.simulation.mission.stage.ascent;
 
 import com.smousseur.orbitlab.simulation.OrekitService;
-import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
+import com.smousseur.orbitlab.simulation.flight.FlightContext;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionStage;
 import com.smousseur.orbitlab.simulation.mission.detector.DepletionGuard;
@@ -93,11 +93,11 @@ public class ConstantThrustStage extends MissionStage {
   public SpacecraftState propagateStandalone(SpacecraftState currentState, Mission mission) {
     SpacecraftState stateAfterEnter = enter(currentState, mission);
 
-    GravitationalContext body = gravitationalContext(mission);
+    FlightContext context = flightContext(stateAfterEnter, mission);
     NumericalPropagator propagator =
         OrekitService.get()
             .createOptimizationPropagator(
-                body, burnLimitedMaxStep(currentState, mission.getVehicle()));
+                context, burnLimitedMaxStep(currentState, mission.getVehicle()));
     propagator.setInitialState(stateAfterEnter);
 
     ActiveStageInfo activeStage =
@@ -113,7 +113,7 @@ public class ConstantThrustStage extends MissionStage {
             Vector3D.PLUS_I);
     propagator.addForceModel(burn);
     DepletionGuard.arm(propagator, activeStage.depletionFloor(), getName());
-    ReentryGuard.armQuiet(propagator, body);
+    ReentryGuard.armQuiet(propagator, context.gravity());
 
     return propagator.propagate(stateAfterEnter.getDate().shiftedBy(this.duration));
   }

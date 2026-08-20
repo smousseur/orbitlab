@@ -66,7 +66,10 @@ public class TranslunarInjectionStage extends MissionStage {
 
     TranslunarInjectionPlan plan =
         TranslunarInjectionPlan.solve(
-            previousState, targetPerileneAltitude, exhaustVelocity, gravitationalContext(mission));
+            previousState,
+            targetPerileneAltitude,
+            exhaustVelocity,
+            flightContext(previousState, mission));
 
     SpacecraftState injected = plan.applyTo(previousState, exhaustVelocity);
     double floor = active.depletionFloor();

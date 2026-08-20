@@ -1,5 +1,6 @@
 package com.smousseur.orbitlab.simulation.mission.vehicle;
 
+import com.smousseur.orbitlab.simulation.mission.vehicle.model.AerodynamicProperties;
 import java.util.List;
 
 /**
@@ -37,6 +38,24 @@ public interface Vehicle {
    * @return the propulsion system
    */
   PropulsionSystem propulsion();
+
+  /**
+   * The frontal area and drag coefficient of this vehicle, or {@code null} when it declares none.
+   *
+   * <p><b>Declaring nothing means not dragging</b>, and that is the whole contract (spec {@code
+   * docs/atmosphere/04-conception-L1.md} §3.1). It makes a partially populated catalog predictable
+   * rather than dangerous: a stage with no aerodynamic data flies its phase without drag, instead
+   * of borrowing a neighbour's section or inventing one. No exception, no default value, no {@code
+   * NaN}.
+   *
+   * <p>The aerodynamics is resolved through {@link #resolveActiveStage(double)}, never off the
+   * stack as a whole — see {@code VehicleStack}, which deliberately does not override this.
+   *
+   * @return the aerodynamic properties of this vehicle, or {@code null}
+   */
+  default AerodynamicProperties aerodynamics() {
+    return null;
+  }
 
   /**
    * Returns the total mass of this vehicle (dry mass plus propellant loaded).

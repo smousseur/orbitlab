@@ -8,6 +8,13 @@ import java.util.List;
  * the currently active (bottom) vehicle. Mass and propulsion queries delegate to the constituent
  * vehicles.
  *
+ * <p><b>{@link #aerodynamics()} is deliberately not overridden</b>, so a stack inherits the {@code
+ * null} of {@link Vehicle}: a stack has no single frontal area — the flow sees the bottom stage —
+ * and no production path ever asks one for it, since drag resolves through {@link
+ * #resolveActiveStage(double)}. An override here would be one more piece of unreachable defensive
+ * code stating something false about the model, which is exactly the mistake recorded below (spec
+ * {@code docs/atmosphere/04-conception-L1.md} §3.1).
+ *
  * @param vehicles the ordered list of vehicle stages (index 0 = bottom vehicle)
  */
 public record VehicleStack(List<Vehicle> vehicles) implements Vehicle {

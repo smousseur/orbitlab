@@ -3,7 +3,7 @@ package com.smousseur.orbitlab.simulation.mission.optimizer;
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.OrbitElements;
 import com.smousseur.orbitlab.simulation.Physics;
-import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
+import com.smousseur.orbitlab.simulation.flight.FlightContext;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionStage;
 import com.smousseur.orbitlab.simulation.mission.OptimizableMissionStage;
@@ -148,7 +148,7 @@ class GravityTurnFloorProbeTest {
             FastMath.toRadians(profile.pitchKickAngleDeg()),
             Physics.getLaunchAzimuth(),
             profile.interstageCoastDuration(),
-            GravitationalContext.earth());
+            FlightContext.earth());
     return maneuver.getStagingCompleteTime();
   }
 

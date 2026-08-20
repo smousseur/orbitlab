@@ -1,6 +1,9 @@
 package com.smousseur.orbitlab.simulation;
 
 import com.smousseur.orbitlab.core.SolarSystemBody;
+import com.smousseur.orbitlab.simulation.flight.AtmosphereModel;
+import com.smousseur.orbitlab.simulation.flight.DragContext;
+import com.smousseur.orbitlab.simulation.flight.FlightContext;
 import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -14,11 +17,18 @@ import org.orekit.data.DataContext;
 import org.orekit.data.DataProvidersManager;
 import org.orekit.data.ZipJarCrawler;
 import org.orekit.forces.ForceModel;
+import org.orekit.forces.drag.DragForce;
+import org.orekit.forces.drag.IsotropicDrag;
 import org.orekit.forces.gravity.HolmesFeatherstoneAttractionModel;
 import org.orekit.forces.gravity.NewtonianAttraction;
 import org.orekit.forces.gravity.ThirdBodyAttraction;
 import org.orekit.forces.gravity.potential.GravityFieldFactory;
 import org.orekit.forces.gravity.potential.NormalizedSphericalHarmonicsProvider;
+import org.orekit.models.earth.atmosphere.Atmosphere;
+import org.orekit.models.earth.atmosphere.HarrisPriester;
+import org.orekit.models.earth.atmosphere.NRLMSISE00;
+import org.orekit.models.earth.atmosphere.NRLMSISE00InputParameters;
+import org.orekit.models.earth.atmosphere.data.CssiSpaceWeatherData;
 import org.orekit.frames.FieldTransform;
 import org.orekit.frames.Frame;
 import org.orekit.frames.FramesFactory;
@@ -49,6 +59,17 @@ public final class OrekitService {
 
   /** Body-centred frames with ICRF axes, cached per body. Same contract as {@link #gravityModels}. */
   private final Map<SolarSystemBody, Frame> bodyCentredFrames = new ConcurrentHashMap<>();
+
+  /** Atmospheres, cached per (model, central body). Same contract as {@link #gravityModels}. */
+  private final Map<AtmosphereKey, Atmosphere> atmospheres = new ConcurrentHashMap<>();
+
+  /**
+   * The identity of a cached atmosphere. An {@link AtmosphereModel} alone does not name one: an
+   * {@code Atmosphere} is built against a body shape, so the same model around two bodies is two
+   * objects — which is exactly what lets a {@link DragContext} carry only the enum and stay correct
+   * across a sphere-of-influence crossing (spec {@code docs/atmosphere/04-conception-L1.md} §1.2).
+   */
+  private record AtmosphereKey(AtmosphereModel model, SolarSystemBody body) {}
 
   private OrekitService() {}
 
@@ -251,13 +272,19 @@ public final class OrekitService {
   }
 
   /**
-   * Creates a Newtonian-only propagator around the given central body.
+   * Creates a point-mass-gravity propagator around the given central body: a {@link
+   * NewtonianAttraction} for the central term, plus whatever else the context declares.
    *
-   * @param body the gravitational context: central body, plus any third bodies it declares
+   * <p><b>It mounts the drag too</b>, although it has no caller in {@code src/main} — only tests
+   * use it. Letting it ignore a {@link DragContext} would re-open the one failure mode this lot is
+   * built to exclude: drag asked for and not flown (spec {@code
+   * docs/atmosphere/04-conception-L1.md} §3.4).
+   *
+   * @param context the flight context: central body, third bodies, and any atmosphere
    * @param maxStep integrator maximum step in seconds (must satisfy the late-ignition invariant)
-   * @return a new numerical propagator with Newtonian gravity only
+   * @return a new numerical propagator with point-mass gravity
    */
-  public NumericalPropagator createTestPropagator(GravitationalContext body, double maxStep) {
+  public NumericalPropagator createTestPropagator(FlightContext context, double maxStep) {
     double minStep = 0.001;
     double absTol = 1e-8;
     double relTol = 1e-10;
@@ -266,8 +293,9 @@ public final class OrekitService {
         new DormandPrince853Integrator(minStep, maxStep, absTol, relTol);
 
     NumericalPropagator propagator = new NumericalPropagator(integrator);
-    propagator.addForceModel(new NewtonianAttraction(body.mu()));
-    addPerturbers(propagator, body);
+    propagator.addForceModel(new NewtonianAttraction(context.gravity().mu()));
+    addPerturbers(propagator, context.gravity());
+    addDrag(propagator, context);
     return propagator;
   }
 
@@ -287,12 +315,16 @@ public final class OrekitService {
    * ITRF and propagated without complaint (spec {@code docs/multi-corps/06-conception-L4.md}
    * §1.2-D) — the one defect of that lot able to produce a plausible, wrong trajectory.
    *
-   * @param body the gravitational context: central body, plus any third bodies it declares
+   * <p><b>The drag comes last</b>, after the central field and the third bodies. An absent {@link
+   * DragContext} adds nothing at all — not a zero force — so a drag-off propagator has exactly the
+   * force list it had before PHY-1, in the same order, and the lot's non-regression is a property of
+   * the type rather than a measurement (spec {@code docs/atmosphere/04-conception-L1.md} §1.1).
+   *
+   * @param context the flight context: central body, third bodies, and any atmosphere
    * @param maxStep integrator maximum step in seconds (must satisfy the late-ignition invariant)
    * @return a new numerical propagator with the body's gravity field
    */
-  public NumericalPropagator createOptimizationPropagator(
-      GravitationalContext body, double maxStep) {
+  public NumericalPropagator createOptimizationPropagator(FlightContext context, double maxStep) {
     double minStep = 0.001;
     double absTol = 1e-8;
     double relTol = 1e-10;
@@ -300,14 +332,16 @@ public final class OrekitService {
     DormandPrince853Integrator integrator =
         new DormandPrince853Integrator(minStep, maxStep, absTol, relTol);
 
+    GravitationalContext gravity = context.gravity();
     NumericalPropagator propagator = new NumericalPropagator(integrator);
     propagator.setOrbitType(OrbitType.CARTESIAN);
-    propagator.setMu(body.mu());
-    ForceModel nonCentralField = nonCentralField(body.body());
+    propagator.setMu(gravity.mu());
+    ForceModel nonCentralField = nonCentralField(gravity.body());
     if (nonCentralField != null) {
       propagator.addForceModel(nonCentralField);
     }
-    addPerturbers(propagator, body);
+    addPerturbers(propagator, gravity);
+    addDrag(propagator, context);
     return propagator;
   }
 
@@ -327,6 +361,85 @@ public final class OrekitService {
     for (SolarSystemBody perturber : context.perturbers()) {
       propagator.addForceModel(getThirdBodyModel(perturber));
     }
+  }
+
+  /**
+   * Adds the {@link DragForce} the context asks for — and nothing when it asks for none.
+   *
+   * <p><b>Two ways to mount nothing, and both are correct.</b> A context with no {@link
+   * DragContext} is a mission flown in vacuum. A context that carries one around a body with no
+   * atmosphere — a lunar arc whose drag context crossed the boundary with it — resolves to a {@code
+   * null} atmosphere and mounts nothing either. That second case is what makes the aerodynamic half
+   * portable across a sphere-of-influence crossing instead of a datum to be dropped and mourned
+   * (spec {@code docs/atmosphere/04-conception-L1.md} §1.2).
+   *
+   * @param propagator the propagator being built
+   * @param context the flight context whose drag is to be mounted
+   */
+  private void addDrag(NumericalPropagator propagator, FlightContext context) {
+    if (!context.hasDrag()) {
+      return;
+    }
+    DragContext drag = context.drag();
+    Atmosphere atmosphere = atmosphereFor(drag.model(), context.gravity());
+    if (atmosphere == null) {
+      return;
+    }
+    propagator.addForceModel(
+        new DragForce(
+            atmosphere,
+            new IsotropicDrag(drag.aero().crossSection(), drag.aero().dragCoefficient())));
+  }
+
+  /**
+   * The atmosphere of the given model around the given central body, resolved once and shared by
+   * every propagator, or {@code null} when that body has no atmosphere.
+   *
+   * <p><b>Only the Earth has one here</b>, exactly as only the Earth has a harmonic field: the
+   * {@code null} is the honest answer for the Moon, and it is the single line that lets a drag
+   * context travel unchanged across an SOI boundary. Same shape as {@link
+   * #nonCentralField(SolarSystemBody)}, deliberately.
+   *
+   * <p><b>The shared instance is an invariant, not an optimisation</b>, for the same reason the
+   * gravity models are: CMA-ES evaluates candidates in parallel, and {@code computeIfAbsent}
+   * guarantees one instance per key rather than merely a coherent value. It matters more here —
+   * {@link NRLMSISE00} is driven by a space-weather file that would otherwise be parsed once per
+   * propagator.
+   *
+   * <p>The Earth test sits <em>outside</em> the mapping function, as it does for the gravity field:
+   * a mapping function must not touch the map it is computing into.
+   *
+   * @param model the atmosphere model asked for; never {@link AtmosphereModel#NONE}, which {@link
+   *     DragContext} refuses to hold
+   * @param gravity the gravitational context the atmosphere is built against
+   * @return the shared atmosphere, or {@code null} when the central body has none
+   */
+  private Atmosphere atmosphereFor(AtmosphereModel model, GravitationalContext gravity) {
+    if (gravity.body() != SolarSystemBody.EARTH) {
+      return null;
+    }
+    return atmospheres.computeIfAbsent(
+        new AtmosphereKey(model, gravity.body()),
+        key ->
+            switch (key.model()) {
+              case HARRIS_PRIESTER ->
+                  new HarrisPriester(body(SolarSystemBody.SUN), gravity.shape());
+              case NRLMSISE ->
+                  new NRLMSISE00(spaceWeather(), body(SolarSystemBody.SUN), gravity.shape());
+              case NONE ->
+                  throw new IllegalStateException(
+                      "NONE never reaches here: DragContext refuses to hold it");
+            });
+  }
+
+  /**
+   * The solar and geomagnetic indices {@link NRLMSISE00} is driven by, read from the CSSI space
+   * weather file carried by {@code orekit-data.zip}.
+   *
+   * @return the input parameters for NRLMSISE-00
+   */
+  private NRLMSISE00InputParameters spaceWeather() {
+    return new CssiSpaceWeatherData(CssiSpaceWeatherData.DEFAULT_SUPPORTED_NAMES);
   }
 
   /**

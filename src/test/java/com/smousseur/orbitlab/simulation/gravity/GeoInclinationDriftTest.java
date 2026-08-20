@@ -1,5 +1,6 @@
 package com.smousseur.orbitlab.simulation.gravity;
 
+import com.smousseur.orbitlab.simulation.flight.FlightContext;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -177,7 +178,7 @@ class GeoInclinationDriftTest {
             context.mu());
 
     NumericalPropagator propagator =
-        OrekitService.get().createOptimizationPropagator(context, OrekitService.COAST_MAX_STEP);
+        OrekitService.get().createOptimizationPropagator(new FlightContext(context), OrekitService.COAST_MAX_STEP);
     propagator.setInitialState(new SpacecraftState(initial));
 
     long start = System.nanoTime();

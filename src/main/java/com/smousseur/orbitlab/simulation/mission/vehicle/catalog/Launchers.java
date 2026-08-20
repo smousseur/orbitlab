@@ -1,6 +1,7 @@
 package com.smousseur.orbitlab.simulation.mission.vehicle.catalog;
 
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropulsionSystem;
+import com.smousseur.orbitlab.simulation.mission.vehicle.model.AerodynamicProperties;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.AscentProfile;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.LauncherModel;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.stage.*;
@@ -34,7 +35,13 @@ public final class Launchers {
                       ShutdownMode.COMMANDED,
                       PropellantType.CRYOGENIC,
                       0.0,
-                      StageRole.CORE)),
+                      StageRole.CORE),
+                  // Frontal area of the block as aggregated: three 3.66 m cores flying side by
+                  // side, so 3 × π·1.83² (Falcon Heavy core diameter verified 2026-08-20). The
+                  // fairing is not modeled — it does not exceed the aggregate section. Cd 0.4 is
+                  // the middle of the usual 0.3–0.5 bracket for a slender launcher in continuum
+                  // flow, referred to that same area; NO transonic peak is represented.
+                  new AerodynamicProperties(31.6, 0.4)),
               new StageModel(
                   "S2 (Merlin Vacuum)",
                   4_000,
@@ -46,7 +53,13 @@ public final class Launchers {
                       ShutdownMode.COMMANDED,
                       PropellantType.CRYOGENIC,
                       7_200.0,
-                      StageRole.UPPER))),
+                      StageRole.UPPER),
+                  // π·1.83² for the single 3.66 m core. Cd 2.2 is the standard satellite-drag
+                  // value: an upper stage ignites above 70 km, where the flow is already
+                  // free-molecular rather than continuous. Numerically it barely matters — the
+                  // density there is four orders of magnitude below what S1 crosses (spec
+                  // docs/atmosphere/04-conception-L1.md §4.1).
+                  new AerodynamicProperties(10.5, 2.2))),
           new AscentProfile(7.0, 3.0, 2.0));
 
   /**
@@ -101,7 +114,11 @@ public final class Launchers {
                       // aggregate the same way: the field reads "liquid, finite coast".
                       PropellantType.CRYOGENIC,
                       0.0,
-                      StageRole.CORE)),
+                      StageRole.CORE),
+                  // Same aggregation rule as the Falcon Heavy S1: the section of the block as it
+                  // flies, π·2.7² for the 5.4 m LLPM plus 2 × π·1.7² for the P120C boosters
+                  // (ESA Ariane 6 overview, diameters verified 2026-08-20). Cd 0.4, continuum.
+                  new AerodynamicProperties(41.1, 0.4)),
               new StageModel(
                   "S2 (ULPM, Vinci)",
                   6_000,
@@ -113,7 +130,10 @@ public final class Launchers {
                       ShutdownMode.COMMANDED,
                       PropellantType.CRYOGENIC,
                       21_600.0,
-                      StageRole.UPPER))),
+                      StageRole.UPPER),
+                  // π·2.7² for the 5.4 m ULPM, and the free-molecular Cd of the Falcon Heavy S2 —
+                  // same regime, same reason.
+                  new AerodynamicProperties(22.9, 2.2))),
           // Shorter vertical rise than Falcon Heavy's 7 s (lift-off T/W ~1.99 against ~1.65, the
           // pad is cleared sooner); same pitch kick, deliberately — nothing justifies an offset.
           // The 5 s interstage coast is the chill-down Vinci needs and the Merlin Vacuum does not.

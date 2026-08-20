@@ -1,5 +1,7 @@
 package com.smousseur.orbitlab.simulation.mission.vehicle;
 
+import com.smousseur.orbitlab.simulation.mission.vehicle.model.AerodynamicProperties;
+
 /**
  * Snapshot of the active vehicle resolved from the current spacecraft mass. Provides all the
  * information needed by maneuvers and mission stages without explicit vehicle-index lookups.
@@ -15,6 +17,18 @@ public record ActiveStageInfo(
   /** Returns the propulsion system of the active vehicle. */
   public PropulsionSystem propulsion() {
     return vehicle.propulsion();
+  }
+
+  /**
+   * Returns the aerodynamics of the active vehicle, or {@code null} when it declares none.
+   *
+   * <p>This is the only place drag is resolved from: aerodynamics lives on the hardware, and the
+   * hardware in the flow is whichever stage the current mass says is still attached. It changes at
+   * a jettison, and only there — a first stage's continuum-flow section gives way to an upper
+   * stage's free-molecular one at the separation, not gradually.
+   */
+  public AerodynamicProperties aerodynamics() {
+    return vehicle.aerodynamics();
   }
 
   /** Returns the dry mass of the active vehicle. */

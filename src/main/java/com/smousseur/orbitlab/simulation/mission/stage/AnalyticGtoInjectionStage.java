@@ -3,7 +3,7 @@ package com.smousseur.orbitlab.simulation.mission.stage;
 import com.smousseur.orbitlab.core.OrbitlabException;
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.Physics;
-import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
+import com.smousseur.orbitlab.simulation.flight.FlightContext;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionStage;
 import com.smousseur.orbitlab.simulation.mission.detector.DepletionGuard;
@@ -116,7 +116,7 @@ public class AnalyticGtoInjectionStage extends MissionStage {
   public void configure(NumericalPropagator propagator, Mission mission) {
     SpacecraftState state = mission.getCurrentState();
     InjectionPlan plan =
-        computePlan(state, mission.getVehicle(), gravitationalContext(mission));
+        computePlan(state, mission.getVehicle(), flightContext(state, mission));
 
     addBurn(propagator, state, plan, mission.getVehicle());
 
@@ -139,7 +139,7 @@ public class AnalyticGtoInjectionStage extends MissionStage {
   @Override
   public SpacecraftState propagateStandalone(SpacecraftState currentState, Mission mission) {
     InjectionPlan plan =
-        computePlan(currentState, mission.getVehicle(), gravitationalContext(mission));
+        computePlan(currentState, mission.getVehicle(), flightContext(currentState, mission));
 
     // 8×8 gravity, matching the ephemeris generator (bilan 11 §3.9): this standalone flight
     // advances
@@ -147,13 +147,13 @@ public class AnalyticGtoInjectionStage extends MissionStage {
     // the flown 8×8 trajectory and break the apogee-node geometry the downstream plane change
     // relies
     // on — the GTO injection is precisely where that geometry is set.
-    GravitationalContext body = gravitationalContext(mission);
+    FlightContext context = flightContext(currentState, mission);
     NumericalPropagator propagator =
         OrekitService.get()
             .createOptimizationPropagator(
-                body, burnLimitedMaxStep(currentState, mission.getVehicle()));
+                context, burnLimitedMaxStep(currentState, mission.getVehicle()));
     propagator.setInitialState(currentState);
-    ReentryGuard.armQuiet(propagator, body);
+    ReentryGuard.armQuiet(propagator, context.gravity());
     addBurn(propagator, currentState, plan, mission.getVehicle());
 
     return propagator.propagate(
@@ -186,7 +186,7 @@ public class AnalyticGtoInjectionStage extends MissionStage {
    * flown apogee's latitude.
    */
   private InjectionPlan computePlan(
-      SpacecraftState entryState, Vehicle vehicle, GravitationalContext body) {
+      SpacecraftState entryState, Vehicle vehicle, FlightContext context) {
     double sinInclination = FastMath.sin(entryState.getOrbit().getI());
 
     // Aim at the current phase first. In the nominal GEO flow the preceding CoastingStage
@@ -194,7 +194,7 @@ public class AnalyticGtoInjectionStage extends MissionStage {
     // equator and this returns immediately with no lead coast. An equatorial parking orbit (i≈0,
     // e.g. the unit tests) has its apogee on the equator whatever the phase and is likewise left as
     // is — keeping both on the exact pre-node-aware path.
-    AimResult here = aimApogeeRadius(entryState, vehicle, body);
+    AimResult here = aimApogeeRadius(entryState, vehicle, context);
     double latHere = apogeeLatitudeRad(here.apogeeState());
     if (sinInclination < NEAR_EQUATORIAL_SIN_I
         || FastMath.abs(latHere) < NODE_LATITUDE_TOLERANCE_RAD) {
@@ -208,7 +208,7 @@ public class AnalyticGtoInjectionStage extends MissionStage {
     // secant-refine
     // to null the finite-burn/J2 residual off-node.
     double period = entryState.getOrbit().getKeplerianPeriod();
-    double nodeLead = timeToNextNode(entryState, body);
+    double nodeLead = timeToNextNode(entryState, context);
     if (Double.isNaN(nodeLead)) {
       logger.warn(
           "[{}] node targeting: no equatorial node found within a period; flying the un-nudged "
@@ -226,8 +226,8 @@ public class AnalyticGtoInjectionStage extends MissionStage {
     AimResult bestAim = here;
 
     for (int iter = 0; iter < NODE_AIM_ITERATIONS; iter++) {
-      SpacecraftState injectionState = coastForward(entryState, leadCoast, body);
-      AimResult aim = aimApogeeRadius(injectionState, vehicle, body);
+      SpacecraftState injectionState = coastForward(entryState, leadCoast, context);
+      AimResult aim = aimApogeeRadius(injectionState, vehicle, context);
       double latitude = apogeeLatitudeRad(aim.apogeeState());
 
       logger.info(
@@ -289,7 +289,7 @@ public class AnalyticGtoInjectionStage extends MissionStage {
    * failure (bilan 11 §3.7) — when the apogee cannot be reached.
    */
   private AimResult aimApogeeRadius(
-      SpacecraftState state, Vehicle vehicle, GravitationalContext body) {
+      SpacecraftState state, Vehicle vehicle, FlightContext context) {
     double mu = state.getOrbit().getMu();
     Vector3D r1 = state.getPVCoordinates().getPosition();
     Vector3D v1 = state.getPVCoordinates().getVelocity();
@@ -334,7 +334,7 @@ public class AnalyticGtoInjectionStage extends MissionStage {
           FastMath.PI * FastMath.sqrt(aTransfer * aTransfer * aTransfer / mu);
       stateAtApogee =
           AnalyticHohmannTransferStage.simulateBurn1AndFindApogee(
-              body,
+              context,
               state,
               deltaV1.normalize(),
               dt1,
@@ -424,11 +424,11 @@ public class AnalyticGtoInjectionStage extends MissionStage {
    * infeasibility instead of a four-hour propagation.
    */
   private static SpacecraftState coastForward(
-      SpacecraftState state, double dt, GravitationalContext body) {
+      SpacecraftState state, double dt, FlightContext context) {
     NumericalPropagator propagator =
-        OrekitService.get().createOptimizationPropagator(body, OrekitService.COAST_MAX_STEP);
+        OrekitService.get().createOptimizationPropagator(context, OrekitService.COAST_MAX_STEP);
     propagator.setInitialState(state);
-    ReentryGuard.armQuiet(propagator, body);
+    ReentryGuard.armQuiet(propagator, context.gravity());
     return propagator.propagate(state.getDate().shiftedBy(dt));
   }
 
@@ -437,13 +437,14 @@ public class AnalyticGtoInjectionStage extends MissionStage {
    * found within a little over one period (an equatorial orbit has none). Burn-free, so it steps at
    * the large coast cap.
    */
-  private static double timeToNextNode(SpacecraftState state, GravitationalContext body) {
+  private static double timeToNextNode(SpacecraftState state, FlightContext context) {
     NumericalPropagator propagator =
-        OrekitService.get().createOptimizationPropagator(body, OrekitService.COAST_MAX_STEP);
+        OrekitService.get().createOptimizationPropagator(context, OrekitService.COAST_MAX_STEP);
     propagator.setInitialState(state);
-    ReentryGuard.armQuiet(propagator, body);
+    ReentryGuard.armQuiet(propagator, context.gravity());
     RecordAndContinue recorder = new RecordAndContinue();
-    propagator.addEventDetector(new NodeDetector(body.inertialFrame()).withHandler(recorder));
+    propagator.addEventDetector(
+        new NodeDetector(context.gravity().inertialFrame()).withHandler(recorder));
     double period = state.getOrbit().getKeplerianPeriod();
     propagator.propagate(state.getDate().shiftedBy(period * 1.1));
     for (RecordAndContinue.Event event : recorder.getEvents()) {

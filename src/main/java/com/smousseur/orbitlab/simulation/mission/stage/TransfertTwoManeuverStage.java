@@ -61,7 +61,7 @@ public class TransfertTwoManeuverStage extends MissionStage
     SpacecraftState state = mission.getCurrentState();
     ActiveStageInfo activeStage = mission.getVehicle().resolveActiveStage(state.getMass());
     return new TransferTwoManeuverProblem(
-        createManeuver(mission),
+        createManeuver(mission, state),
         state,
         targetAltitude,
         activeStage.propulsion(),
@@ -72,7 +72,7 @@ public class TransfertTwoManeuverStage extends MissionStage
   @Override
   public double maxStepSeconds(SpacecraftState entryState, Mission mission) {
     // Replay uses the same late-ignition invariant the optimizer's own propagator uses.
-    return createManeuver(mission).maxStepSeconds(entryState);
+    return createManeuver(mission, entryState).maxStepSeconds(entryState);
   }
 
   @Override
@@ -83,7 +83,7 @@ public class TransfertTwoManeuverStage extends MissionStage
     }
 
     SpacecraftState state = mission.getCurrentState();
-    TransfertTwoManeuver maneuver = createManeuver(mission);
+    TransfertTwoManeuver maneuver = createManeuver(mission, state);
     double[] variables = optimizationResult.bestVariables();
     TransferManeuver.Burn1Params params = maneuver.decode(variables);
 
@@ -118,8 +118,8 @@ public class TransfertTwoManeuverStage extends MissionStage
                 }));
   }
 
-  private TransfertTwoManeuver createManeuver(Mission mission) {
+  private TransfertTwoManeuver createManeuver(Mission mission, SpacecraftState entryState) {
     return new TransfertTwoManeuver(
-        mission.getVehicle(), targetAltitude, gravitationalContext(mission));
+        mission.getVehicle(), targetAltitude, flightContext(entryState, mission));
   }
 }

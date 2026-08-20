@@ -1,15 +1,25 @@
 package com.smousseur.orbitlab.simulation.mission.vehicle;
 
+import com.smousseur.orbitlab.simulation.mission.vehicle.model.AerodynamicProperties;
+
 /**
  * Represents a spacecraft payload with its own dry mass, propellant capacity, and propulsion
  * system. Typically used as the uppermost element in a {@link VehicleStack}.
  *
  * @param dryMass the structural mass of the spacecraft without propellant (kg)
  * @param propellantCapacity the maximum propellant mass the spacecraft can carry (kg)
+ * @param propellantLoad the propellant mass actually loaded (kg)
  * @param propulsion the spacecraft's propulsion system
+ * @param aerodynamics the frontal area and drag coefficient of the payload, or {@code null} when it
+ *     declares none — a payload that declares none does not drag (spec {@code
+ *     docs/atmosphere/04-conception-L1.md} §3.1)
  */
 public record Spacecraft(
-    double dryMass, double propellantCapacity, double propellantLoad, PropulsionSystem propulsion)
+    double dryMass,
+    double propellantCapacity,
+    double propellantLoad,
+    PropulsionSystem propulsion,
+    AerodynamicProperties aerodynamics)
     implements Vehicle {
   public Spacecraft {
     if (propellantLoad > propellantCapacity) {
@@ -17,8 +27,17 @@ public record Spacecraft(
     }
   }
 
+  /** A payload flying without declared aerodynamics — the historical shape, and the fixtures'. */
+  public Spacecraft(
+      double dryMass,
+      double propellantCapacity,
+      double propellantLoad,
+      PropulsionSystem propulsion) {
+    this(dryMass, propellantCapacity, propellantLoad, propulsion, null);
+  }
+
   public Spacecraft(double dryMass, double propellantCapacity, PropulsionSystem propulsion) {
-    this(dryMass, propellantCapacity, propellantCapacity, propulsion);
+    this(dryMass, propellantCapacity, propellantCapacity, propulsion, null);
   }
 
   /**

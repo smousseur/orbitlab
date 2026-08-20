@@ -3,6 +3,7 @@ package com.smousseur.orbitlab.simulation.mission.maneuver;
 import com.smousseur.orbitlab.core.OrbitlabException;
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.simulation.OrekitService;
+import com.smousseur.orbitlab.simulation.flight.FlightContext;
 import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -213,14 +214,14 @@ public record TranslunarInjectionPlan(
    * @param targetPerileneAltitude the perilune altitude above the lunar sphere to reach (m)
    * @param exhaustVelocity the impulse's effective exhaust velocity {@code Isp·g0} (m/s), for the
    *     mass drop
-   * @param context the gravitational context the transfer is flown in
+   * @param context the flight context the transfer is flown in
    * @return the solved plan
    */
   public static TranslunarInjectionPlan solve(
       SpacecraftState parking,
       double targetPerileneAltitude,
       double exhaustVelocity,
-      GravitationalContext context) {
+      FlightContext context) {
 
     AbsoluteDate arrival = parking.getDate().shiftedBy(TIME_OF_FLIGHT_SECONDS);
     Vector3D moonAtArrival = moonPosition(arrival);
@@ -360,7 +361,7 @@ public record TranslunarInjectionPlan(
       Vector3D offsetDirection,
       double targetRadius,
       double exhaustVelocity,
-      GravitationalContext context,
+      FlightContext context,
       double targetPerileneAltitude) {
 
     Attempt at =
@@ -438,7 +439,7 @@ public record TranslunarInjectionPlan(
       Vector3D offsetDirection,
       double offset,
       double exhaustVelocity,
-      GravitationalContext context) {
+      FlightContext context) {
 
     Vector3D aimPoint = moonAtArrival.add(offsetDirection.scalarMultiply(offset));
     LambertBoundaryConditions conditions = boundaryConditions(parking, arrival, aimPoint);
@@ -511,7 +512,7 @@ public record TranslunarInjectionPlan(
       Attempt converged,
       AbsoluteDate arrival,
       double exhaustVelocity,
-      GravitationalContext context) {
+      FlightContext context) {
 
     SpacecraftState injected = applyImpulse(parking, converged.deltaV(), exhaustVelocity);
     LambertBoundaryConditions conditions =
@@ -568,7 +569,7 @@ public record TranslunarInjectionPlan(
    * the same flight in a single geocentric frame (spec §1.6).
    */
   private static double perileneRadius(
-      SpacecraftState injected, AbsoluteDate arrival, GravitationalContext context) {
+      SpacecraftState injected, AbsoluteDate arrival, FlightContext context) {
     double searchEnd = arrival.durationFrom(injected.getDate()) + PERILUNE_SEARCH_MARGIN_SECONDS;
 
     NumericalPropagator propagator = propagator(context, injected);
@@ -691,7 +692,7 @@ public record TranslunarInjectionPlan(
   }
 
   private static NumericalPropagator propagator(
-      GravitationalContext context, SpacecraftState initial) {
+      FlightContext context, SpacecraftState initial) {
     NumericalPropagator propagator =
         OrekitService.get().createOptimizationPropagator(context, OrekitService.COAST_MAX_STEP);
     propagator.setInitialState(initial);

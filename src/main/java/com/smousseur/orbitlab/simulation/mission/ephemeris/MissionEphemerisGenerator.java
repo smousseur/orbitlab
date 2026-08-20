@@ -1,5 +1,6 @@
 package com.smousseur.orbitlab.simulation.mission.ephemeris;
 
+import com.smousseur.orbitlab.simulation.flight.FlightContext;
 import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionHorizon;
@@ -102,8 +103,8 @@ public final class MissionEphemerisGenerator {
     }
 
     @Override
-    public void sample(MissionStage stage, GravitationalContext context, SpacecraftState state) {
-      points.add(pointOf(stage, context, state));
+    public void sample(MissionStage stage, FlightContext context, SpacecraftState state) {
+      points.add(pointOf(stage, context.gravity(), state));
     }
 
     @Override
@@ -133,7 +134,7 @@ public final class MissionEphemerisGenerator {
 
       // Add the final state of this stage as a sample point, in the context it ENDED in — which is
       // the one it declared unless it crossed a sphere of influence on the way (PHY-4 / L4 §3.6).
-      points.add(pointOf(run.stage(), run.exitContext(), run.finalState()));
+      points.add(pointOf(run.stage(), run.exitContext().gravity(), run.finalState()));
 
       logger.info(
           "Stage '{}': {} points, ended at {}",

@@ -1,5 +1,6 @@
 package com.smousseur.orbitlab.simulation;
 
+import com.smousseur.orbitlab.simulation.flight.FlightContext;
 import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -157,7 +158,7 @@ class SunSynchronousPrecessionTest {
             Constants.WGS84_EARTH_MU);
 
     NumericalPropagator propagator =
-        OrekitService.get().createOptimizationPropagator(GravitationalContext.earth(), OrekitService.COAST_MAX_STEP);
+        OrekitService.get().createOptimizationPropagator(FlightContext.earth(), OrekitService.COAST_MAX_STEP);
     propagator.setInitialState(new SpacecraftState(initial));
 
     double span = SPAN_DAYS * SECONDS_PER_DAY;

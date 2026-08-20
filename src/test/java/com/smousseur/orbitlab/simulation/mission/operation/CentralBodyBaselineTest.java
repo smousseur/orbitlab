@@ -1,6 +1,6 @@
 package com.smousseur.orbitlab.simulation.mission.operation;
 
-import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
+import com.smousseur.orbitlab.simulation.flight.FlightContext;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.smousseur.orbitlab.simulation.OrekitService;
@@ -1201,7 +1201,7 @@ class CentralBodyBaselineTest {
         plane.launchAzimuth(latitude),
         profile.interstageCoastDuration(),
         plane.commands(latitude),
-        GravitationalContext.earth());
+        FlightContext.earth());
   }
 
   private static AbsoluteDate epoch() {

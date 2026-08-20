@@ -1,6 +1,6 @@
 package com.smousseur.orbitlab.simulation.mission.runtime;
 
-import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
+import com.smousseur.orbitlab.simulation.flight.FlightContext;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionStage;
 import com.smousseur.orbitlab.simulation.mission.OptimizableMissionStage;
@@ -50,7 +50,7 @@ public final class StageChainRunner {
 
   /**
    * Receives every fixed-step sample of the flown trajectory, tagged with its stage and with the
-   * gravitational context it was actually flown in.
+   * flight context it was actually flown in.
    *
    * <p><b>The context is a parameter and not something the receiver reads back off the stage</b>
    * (PHY-4 / L4, spec {@code docs/multi-corps/06-conception-L4.md} §3.6). Once a stage may cross a
@@ -60,7 +60,7 @@ public final class StageChainRunner {
    */
   @FunctionalInterface
   public interface StepSampler {
-    void sample(MissionStage stage, GravitationalContext context, SpacecraftState state);
+    void sample(MissionStage stage, FlightContext context, SpacecraftState state);
   }
 
   /** Observes the chain stage by stage, without taking part in flying it. */
@@ -84,8 +84,10 @@ public final class StageChainRunner {
    *     opposed to an open-ended coast or the fallback duration — only then does stopping early
    *     mean something
    * @param propagationFailed whether the propagation threw
-   * @param exitContext the gravitational context the stage <em>ended</em> in, which is the one it
-   *     declared unless it crossed a sphere of influence on the way (PHY-4 / L4 §3.6)
+   * @param exitContext the flight context the stage <em>ended</em> in, which is the one it declared
+   *     unless it crossed a sphere of influence on the way (PHY-4 / L4 §3.6). Whole rather than
+   *     gravitational since PHY-1 / L1 §3.5: what a mission report has to state is what was flown,
+   *     drag included
    */
   public record StageRun(
       MissionStage stage,
@@ -94,7 +96,7 @@ public final class StageChainRunner {
       AbsoluteDate endDate,
       boolean endDateIsStageCutoff,
       boolean propagationFailed,
-      GravitationalContext exitContext) {
+      FlightContext exitContext) {
 
     /**
      * Seconds by which the stage stopped short of its own scheduled cutoff — a positive value means

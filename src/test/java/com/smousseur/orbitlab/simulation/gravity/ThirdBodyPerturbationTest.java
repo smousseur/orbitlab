@@ -1,5 +1,7 @@
 package com.smousseur.orbitlab.simulation.gravity;
 
+import com.smousseur.orbitlab.simulation.flight.FlightContext;
+import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -109,7 +111,7 @@ class ThirdBodyPerturbationTest {
     List<ForceModel> optimization = forcesOf(GravitationalContext.earth());
     List<ForceModel> newtonian =
         OrekitService.get()
-            .createTestPropagator(GravitationalContext.earth(), OrekitService.COAST_MAX_STEP)
+            .createTestPropagator(FlightContext.earth(), OrekitService.COAST_MAX_STEP)
             .getAllForceModels();
 
     assertEquals(List.of(), thirdBodyNames(optimization), "the 8x8 factory must mount no perturber");
@@ -148,8 +150,8 @@ class ThirdBodyPerturbationTest {
   void theNewtonianFactory_honoursPerturbersToo() {
     List<ForceModel> forces =
         OrekitService.get()
-            .createTestPropagator(
-                GravitationalContext.earth().withPerturbers(SolarSystemBody.MOON),
+            .createTestPropagator(new FlightContext(
+                GravitationalContext.earth().withPerturbers(SolarSystemBody.MOON)),
                 OrekitService.COAST_MAX_STEP)
             .getAllForceModels();
 
@@ -269,7 +271,7 @@ class ThirdBodyPerturbationTest {
 
   private static List<ForceModel> forcesOf(GravitationalContext context) {
     NumericalPropagator propagator =
-        OrekitService.get().createOptimizationPropagator(context, OrekitService.COAST_MAX_STEP);
+        OrekitService.get().createOptimizationPropagator(new FlightContext(context), OrekitService.COAST_MAX_STEP);
     return propagator.getAllForceModels();
   }
 

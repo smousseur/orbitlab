@@ -1,5 +1,6 @@
 package com.smousseur.orbitlab.simulation.gravity;
 
+import com.smousseur.orbitlab.simulation.flight.FlightContext;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -42,7 +43,7 @@ class LunarContextTest {
   void lunarPropagatorHasNoTerrestrialField() {
     NumericalPropagator propagator =
         OrekitService.get()
-            .createOptimizationPropagator(GravitationalContext.moon(), OrekitService.COAST_MAX_STEP);
+            .createOptimizationPropagator(FlightContext.moon(), OrekitService.COAST_MAX_STEP);
 
     for (ForceModel force : propagator.getAllForceModels()) {
       assertFalse(
@@ -65,12 +66,10 @@ class LunarContextTest {
   void earthPropagatorIsUnchanged() {
     NumericalPropagator first =
         OrekitService.get()
-            .createOptimizationPropagator(
-                GravitationalContext.earth(), OrekitService.COAST_MAX_STEP);
+            .createOptimizationPropagator(FlightContext.earth(), OrekitService.COAST_MAX_STEP);
     NumericalPropagator second =
         OrekitService.get()
-            .createOptimizationPropagator(
-                GravitationalContext.earth(), OrekitService.COAST_MAX_STEP);
+            .createOptimizationPropagator(FlightContext.earth(), OrekitService.COAST_MAX_STEP);
 
     assertEquals(2, first.getAllForceModels().size(), "harmonic field plus central term");
     assertTrue(first.getAllForceModels().get(0) instanceof HolmesFeatherstoneAttractionModel);

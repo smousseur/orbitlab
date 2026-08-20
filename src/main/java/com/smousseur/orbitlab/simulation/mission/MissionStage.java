@@ -2,7 +2,11 @@ package com.smousseur.orbitlab.simulation.mission;
 
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.simulation.OrekitService;
+import com.smousseur.orbitlab.simulation.flight.AtmosphereModel;
+import com.smousseur.orbitlab.simulation.flight.DragContext;
+import com.smousseur.orbitlab.simulation.flight.FlightContext;
 import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
+import com.smousseur.orbitlab.simulation.mission.vehicle.model.AerodynamicProperties;
 import com.smousseur.orbitlab.simulation.mission.vehicle.ActiveStageInfo;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropulsionSystem;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
@@ -120,6 +124,42 @@ public abstract class MissionStage {
    */
   public GravitationalContext gravitationalContext(Mission mission) {
     return mission.gravitationalContext();
+  }
+
+  /**
+   * The complete environment this stage propagates in: its gravitational context, plus the drag
+   * context resolved from the mission's atmosphere choice and the hardware actually in the flow.
+   *
+   * <p><b>Two independent yes are needed for there to be drag</b> (spec {@code
+   * docs/atmosphere/04-conception-L1.md} §3.3):
+   *
+   * <ul>
+   *   <li>the mission's {@link Mission#getAtmosphere() atmosphere} is not {@link
+   *       AtmosphereModel#NONE} — the switch, user intent, written in exactly one place;
+   *   <li>the vehicle stage active at {@code entryState} declares aerodynamics — physical
+   *       existence, carried by the catalog. A stage declaring none does not drag, which is what
+   *       makes a partially populated catalog predictable instead of dangerous.
+   * </ul>
+   *
+   * <p>The active stage is resolved from the <b>entry</b> state rather than the current one, for
+   * the reason {@code VehicleStack} states: the active stage changes only by an explicit jettison,
+   * so any state within the phase resolves the same hardware. Same shape and same justification as
+   * {@link #maxStepSeconds} — a phase is the unit that knows what it flies, so it is the unit that
+   * declares it.
+   *
+   * @param entryState the spacecraft state at the start of this stage
+   * @param mission the parent mission
+   * @return the flight context for this stage
+   */
+  public FlightContext flightContext(SpacecraftState entryState, Mission mission) {
+    GravitationalContext gravity = gravitationalContext(mission);
+    AtmosphereModel model = mission.getAtmosphere();
+    if (model == AtmosphereModel.NONE) {
+      return new FlightContext(gravity);
+    }
+    AerodynamicProperties aero =
+        mission.getVehicle().resolveActiveStage(entryState.getMass()).aerodynamics();
+    return new FlightContext(gravity, aero == null ? null : new DragContext(aero, model));
   }
 
   /**
