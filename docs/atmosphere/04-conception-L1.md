@@ -394,8 +394,10 @@ le dire au lieu de se donner une source.
 | `EARTH_OBS_SAT` | 10 000 kg | bus 3,0 × 3,0 m | **9,0 m²** | 505 kg/m² |
 | `GEO_SAT` | 4 000 kg au départ (2 t sec + 2 t AKM) | bus 2,5 × 2,5 m | **6,25 m²** | 291 kg/m² |
 
-Les trois coefficients balistiques **encadrent** le 455 kg/m² de la table L0 §2.2 sans
-avoir été calés dessus. C'est délibéré : caler S pour retomber sur 455 rendrait la
+Les trois coefficients balistiques **encadrent** le 455 kg/m² du bloc décroissance du
+[log du prototype L0](baseline/prototype-L0.log) sans avoir été calés dessus. (La
+table de [L0 §2.2](03-baseline-L0.md), elle, est mesurée à B = 101 kg/m² : la
+référence a été corrigée le 2026-08-20, cf. [`05-conception-L2.md`](05-conception-L2.md) §6.) C'est délibéré : caler S pour retomber sur 455 rendrait la
 mesure de décroissance du lot suivant auto-réalisatrice, ce que le découpage écarte
 déjà en demandant cette mesure « comme une bande, pas comme un point ».
 

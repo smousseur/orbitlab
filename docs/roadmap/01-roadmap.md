@@ -169,7 +169,7 @@ reste lisible à toute distance (`RND-4`).
 | ~~PHY-4~~ | ~~Socle multi-corps (3ᵉ corps, SOI, repères)~~ — **résolu le 2026-08-18** | 5 | 4 | L | MIS-4, MIS-5 |
 | ~~MIS-2~~ | ~~Fenêtres de lancement~~ — **résolu le 2026-08-20** | 4 | 3 | M | MIS-4, MIS-6 |
 | ~~MIS-3~~ | ~~Solveur de Lambert + repère LVLH~~ — **dissous le 2026-08-20** | 4 | 3 | M | — (reversé en `MIS-4` et `MIS-6`) |
-| PHY-1 | Atmosphère : la brique, **off** par défaut | 4 | 3 | L | PHY-2, PHY-3 |
+| ~~PHY-1~~ | ~~Atmosphère : la brique, **off** par défaut~~ — **résolu le 2026-08-21** | 4 | 3 | L | PHY-2, PHY-3 |
 | UI-2 | Feedback de progression pendant l'optimisation | 3 | 2 | M | confort des phases 4 et 5 |
 | UI-3 | Persistance des missions / format de scénario | 4 | 3 | M | **outil de dev** des phases 4 et 5 |
 
@@ -277,9 +277,9 @@ opportuniste, ou à décider quoi sacrifier quand une phase déborde.
 | ~~PHY-4~~ | ~~Socle multi-corps (3ᵉ corps, SOI, repères)~~ — **résolu le 2026-08-18** | 5 | 4 | L | — |
 | MIS-5 | Mise en orbite lunaire (LOI) | 5 | 3 | M | MIS-4 |
 | MIS-4 | Survol lunaire (TLI + flyby) | 5 | 4 | L | PHY-4 (livré), MIS-2 (livré) |
-| PHY-1 | Atmosphère : brique drag, désactivée par défaut | 4 | 3 | L | — |
-| PHY-3 | Détecteurs MaxQ / interface + télémétrie + UI fidélité | 3 | 2 | M | PHY-1 |
-| PHY-2 | Atmosphère par défaut + recalibrage optimiseur | 5 | 4 | L | PHY-1 |
+| ~~PHY-1~~ | ~~Atmosphère : brique drag, désactivée par défaut~~ — **résolu le 2026-08-21** | 4 | 3 | L | — |
+| PHY-3 | Détecteurs MaxQ / interface + télémétrie + UI fidélité | 3 | 2 | M | PHY-1 (livré) |
+| PHY-2 | Atmosphère par défaut + recalibrage optimiseur | 5 | 4 | L | PHY-1 (livré) |
 | MIS-6 | Rendezvous / phasing sur cible TLE | 5 | 5 | XL | MIS-2 (livré), MIS-7 (livré) |
 | RND-5 | Repère d'affichage des trajectoires (bascule inertiel / tournant) — *confort, hors phases* | 2 | 2 | S | — |
 | UI-6 | Fenêtres déplaçables, empilement par focus, modalité du wizard — *hors phases* | 3 | 2 | M | UI-5 (livré) |
@@ -319,7 +319,7 @@ MIS-7 (mission Terre paramétrable) ✔ résolu — MIS-2 est débloqué
           │   PHY-4 (multi-corps)
           └── MIS-6 (rendezvous) ◄── source éphéméride TLE
 
-PHY-1 (drag off par défaut) ── PHY-2 (drag par défaut + recalibrage)
+PHY-1 (drag off par défaut) ✔ résolu ── PHY-2 (drag par défaut + recalibrage)
                             └─ PHY-3 (MaxQ, télémétrie)
 
 RND-4 (ribbon) ✔ résolu ── NAV-5 (hover) — débloqué : la largeur est un uniform
@@ -881,7 +881,7 @@ couleur thrust/coast sur la trajectoire) : même information, deux canaux.
 
 ### PHY — Physique
 
-#### PHY-1 — Atmosphère : la brique, désactivée par défaut — ★4 ◆3 L
+#### ~~PHY-1 — Atmosphère : la brique, désactivée par défaut — ★4 ◆3 L~~ — **RÉSOLU le 2026-08-21**
 
 **Périmètre.** Trois lots : baseline mesurée et prototype jetable, la brique
 éteinte (record `AerodynamicProperties` au catalogue agrégé sur l'étage actif,
@@ -908,10 +908,27 @@ surface figée à l'entrée d'étage est exacte. Le détail est au §2.2 du déc
 catalogue (296 s Falcon Heavy, 300 s Ariane 62), qui compensent déjà la traînée
 dans la mauvaise variable. PHY-1 en chiffre la dette sans y toucher.
 
+**Livré.** Les trois lots sont fermés. `L2` a volé le chemin drag-on et l'a confronté à
+l'analytique : accélération exacte **au bit** contre `0,5·ρ·v_rel²·Cd·S/m` sur deux états
+(l'oubli de la co-rotation vaut +13,7 % au module à l'équateur et 3,57° de direction au
+pôle), décroissance d'un parking 250 km sur 24 h à **1 %** de la formule séculaire, sanity
+800 km à deux bornes. Le lot n'a écrit **aucune ligne de production** : le câblage de `L1`
+suffisait.
+
+**Ce que `PHY-2` reçoit** : l'écart Harris-Priester / NRLMSISE-00 (**22,6 %**), la dette
+des ISP proxy (**408 m/s** Falcon Heavy S1, **671 m/s** Ariane 62 S1 — au-dessus des
+100–300 m/s de traînée annoncés, donc le proxy paie plus que la seule traînée), les deux
+contraintes dures de `L0` (une borne d'altitude est nécessaire à la terminaison,
+`ReentryGuard` est inopérant avec traînée) et trois approximations de catalogue. Le
+surcoût compute demandé n'est **pas** un pourcentage : mesuré le 2026-08-21, une
+optimisation LEO-400 drag-on ne traîne pas, elle devient **infaisable** — pleins
+dimensionnés sans atmosphère, S2 épuisé avant coupure, transfert impossible.
+
 **Spec.** Découpage : [`docs/atmosphere/02-decoupage.md`](../atmosphere/02-decoupage.md)
 (amendé le 2026-08-20, §9). Baseline mesurée :
 [`docs/atmosphere/03-baseline-L0.md`](../atmosphere/03-baseline-L0.md). Conception de
 la brique éteinte : [`docs/atmosphere/04-conception-L1.md`](../atmosphere/04-conception-L1.md).
+Le vol allumé : [`docs/atmosphere/05-conception-L2.md`](../atmosphere/05-conception-L2.md).
 Étude d'impacts (2026-05-05, à lire avec le §2.2 du découpage) :
 [`docs/atmosphere/01-impacts-fonctionnels-techniques.md`](../atmosphere/01-impacts-fonctionnels-techniques.md).
 

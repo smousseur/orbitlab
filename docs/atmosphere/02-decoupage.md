@@ -457,6 +457,12 @@ demander une atmosphère, aucune ne le fait, et rien n'a bougé d'un bit.
 
 ### L2 — Le vol allumé
 
+> **Conçu le 2026-08-20** : [`05-conception-L2.md`](05-conception-L2.md). Deux points
+> de ce bloc y sont amendés — la sanity 800 km gagne une seconde borne, « non nul »,
+> faute de quoi elle passerait aussi sans traînée montée (§1.2), et la mesure
+> analytique est volée sur **deux** états au lieu d'un, l'équatorial pinçant le module
+> et le polaire la direction (§1.3).
+
 **Propriété rendue vraie.** Le chemin drag-on a tourné, et ce qu'il produit a été
 confronté à des valeurs connues par ailleurs.
 
@@ -496,10 +502,14 @@ d'atmosphère.
 
 ## 6. Ce qui reste à trancher au raffinement
 
-1. **La mission de test de `L2`** : un profil existant recomposé avec une
-   atmosphère, ou une mission dédiée ? La première évite un fixture de plus ; la
-   seconde évite qu'un profil serve à la fois de référence drag-off et de sujet
-   drag-on.
+1. ~~**La mission de test de `L2`** : un profil existant recomposé avec une
+   atmosphère, ou une mission dédiée ?~~ **Tranché en `L2`**
+   ([`05-conception-L2.md`](05-conception-L2.md) §1.1), et pas par préférence : toute
+   mission terrestre part du pas de tir, donc « recomposer un profil » signifie voler
+   une ascension depuis 0 km — ce qui rend Harris-Priester inutilisable, traverse le
+   régime pathologique de [L0 §2.1 et §2.2](03-baseline-L0.md) et fait dépendre le
+   verdict d'une ré-optimisation CMA-ES. `L2` vole un fixture orbital dédié, plus un
+   fixture propagateur pour la mesure analytique.
 2. ~~**Le plancher d'application du modèle.**~~ **Tranché par mesure en `L0`**
    ([`03-baseline-L0.md`](03-baseline-L0.md) §2.1) : Harris-Priester est valide sur
    **[100 km, 1000 km]**, lève une exception en dessous et rend 0,0 en silence
@@ -552,14 +562,18 @@ doit faire et que `PHY-1` s'est interdit : relever le `periapsisFloor`, absorber
 pertes dans `dt1MaxPhysical`, reprendre les 296 s et 300 s du catalogue,
 re-baseliner la suite d'optimisation, basculer le défaut.
 
-**Et deux approximations que `L1` fait entrer au catalogue** — à corriger ou à
+**Et trois approximations que `L1` fait entrer au catalogue** — à corriger ou à
 assumer explicitement avant de basculer le défaut
 ([`04-conception-L1.md`](04-conception-L1.md) §6) :
 
 - **aucun pic transsonique** : un Cd unique par étage ne représente pas Mach 1, là
   où la traînée d'ascension est maximale ;
 - **trois géométries de bus conventionnelles** pour les charges utiles, sans matériel
-  publié derrière, et sans panneaux solaires déployés.
+  publié derrière, et sans panneaux solaires déployés ;
+- **le Cd libre-moléculaire du S2 est appliqué en régime continu** — le catalogue le
+  justifie par « un étage supérieur s'allume au-dessus de 70 km », et le seul profil
+  qui ait été volé avec traînée l'allume à **58 km** ([`05-conception-L2.md`](05-conception-L2.md)
+  §4.2, mesuré le 2026-08-21).
 
 **Et deux contraintes dures, découvertes par la mesure en `L0`** — celles-là ne sont
 pas des entrées à consulter mais des obstacles à lever avant de basculer le défaut
