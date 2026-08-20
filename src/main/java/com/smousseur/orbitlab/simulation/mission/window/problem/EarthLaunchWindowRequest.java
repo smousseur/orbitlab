@@ -1,5 +1,6 @@
 package com.smousseur.orbitlab.simulation.mission.window.problem;
 
+import com.smousseur.orbitlab.core.OrbitlabException;
 import com.smousseur.orbitlab.simulation.mission.operation.LaunchPlane;
 import com.smousseur.orbitlab.simulation.mission.operation.MissionSpec;
 import java.util.Objects;
@@ -18,6 +19,11 @@ import org.orekit.utils.Constants;
  * <p><b>It is also a memoisation key.</b> The wizard recomputes on a polled loop and must not
  * search again while nothing has changed; a record's {@code equals} is that test, and {@link
  * LaunchPlane} being a record too, the equality is by value all the way down.
+ *
+ * <p><b>{@link #from} is the intended construction path.</b> The canonical constructor is for a
+ * caller that genuinely only has raw coordinates to assemble; five positional {@code double}s in a
+ * row is a transposition hazard nothing in the type system can reject, so reaching for the
+ * constructor over a spec that already exists trades a compiler-checked read for a silent risk.
  *
  * @param latitude the launch site latitude in degrees
  * @param longitude the launch site longitude in degrees
@@ -43,8 +49,12 @@ public record EarthLaunchWindowRequest(
    *
    * @param spec the mission being scheduled; it must name a target node
    * @return the request describing its window
+   * @throws OrbitlabException if the mission names no target node
    */
   public static EarthLaunchWindowRequest from(MissionSpec.EarthOrbit spec) {
+    if (!spec.hasTargetRaan()) {
+      throw new OrbitlabException("the mission names no target node: " + spec.name());
+    }
     return new EarthLaunchWindowRequest(
         spec.latitude(),
         spec.longitude(),

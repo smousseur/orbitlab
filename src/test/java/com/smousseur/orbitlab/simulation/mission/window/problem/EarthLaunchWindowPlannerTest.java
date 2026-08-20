@@ -18,13 +18,17 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.orekit.time.AbsoluteDate;
 import org.orekit.time.TimeScalesFactory;
+import org.orekit.utils.Constants;
 
 /**
  * MIS-2 — what the wizard's launch date becomes once a mission names a target node.
  *
- * <p>The three properties asserted here are the ones a user would notice: a mission that waits for
+ * <p>The properties asserted here are the ones a user would notice: a mission that waits for
  * nothing keeps its date, a mission that waits for a plane gets the next opening, and asking again
- * from inside a window does not push the launch to tomorrow.
+ * from inside a window does not push the launch to tomorrow. The remaining tests cover the newer
+ * {@link EarthLaunchWindowRequest} adapter: that it reaches the same optimum as the spec it is read
+ * from, and that its semi-major axis is genuinely derived from both altitudes rather than copying
+ * one of them.
  */
 class EarthLaunchWindowPlannerTest {
 
@@ -42,11 +46,16 @@ class EarthLaunchWindowPlannerTest {
   }
 
   private static MissionSpec.EarthOrbit spec(Double raanDeg) {
+    return spec(raanDeg, 400_000.0, 400_000.0);
+  }
+
+  private static MissionSpec.EarthOrbit spec(
+      Double raanDeg, double perigeeAltitude, double apogeeAltitude) {
     return new MissionSpec.EarthOrbit(
         "MIS-2",
         LaunchConfiguration.fullyLoaded(Launchers.FALCON_HEAVY, Spacecraft.LEGACY),
-        400_000.0,
-        400_000.0,
+        perigeeAltitude,
+        apogeeAltitude,
         FastMath.toRadians(51.6),
         NodeBranch.ASCENDING,
         raanDeg,
@@ -124,8 +133,8 @@ class EarthLaunchWindowPlannerTest {
   }
 
   @Test
-  @DisplayName("The request built from a spec describes the same window as the spec itself")
-  void theRequestIsFaithfulToTheSpec() {
+  @DisplayName("The request built from a spec reaches the same optimum as the spec itself")
+  void theRequestReachesTheSameOptimumAsTheSpec() {
     MissionSpec.EarthOrbit spec = spec(120.0);
     Optional<LaunchWindow> fromSpec = EarthLaunchWindowPlanner.nextOpportunity(spec, epoch());
     List<LaunchWindow> fromRequest =
@@ -136,5 +145,18 @@ class EarthLaunchWindowPlannerTest {
     assertEquals(1, fromRequest.size());
     assertEquals(
         0.0, fromRequest.getFirst().date().durationFrom(fromSpec.get().date()), 2.0);
+  }
+
+  @Test
+  @DisplayName("The semi-major axis is the target ellipse's, not one of its altitudes")
+  void theSemiMajorAxisIsDerivedFromBothAltitudes() {
+    // Deliberately elliptical: on a circular target 0.5 * (perigee + apogee) and perigee are the
+    // same number, so a dropped factor would pass unseen.
+    MissionSpec.EarthOrbit elliptical = spec(120.0, 200_000.0, 600_000.0);
+
+    assertEquals(
+        Constants.WGS84_EARTH_EQUATORIAL_RADIUS + 400_000.0,
+        EarthLaunchWindowRequest.from(elliptical).semiMajorAxis(),
+        1.0);
   }
 }

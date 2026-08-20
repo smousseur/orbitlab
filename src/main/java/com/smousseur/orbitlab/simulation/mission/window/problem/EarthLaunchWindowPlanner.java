@@ -57,6 +57,12 @@ public final class EarthLaunchWindowPlanner {
    * <p><b>Closed form throughout</b> — some ninety evaluations of a vector angle, microseconds each
    * — which is why the caller may run it on the render thread where the mission is created.
    *
+   * <p><b>This method keeps its own span rather than deriving one through {@link
+   * LaunchWindowSearch#forOpportunities}, and deliberately.</b> It is the path every mission
+   * created through the wizard is scheduled on, and its 26 h, 50 m/s and five candidates are a
+   * measured, non-regressing triple. {@code nextOpportunities} derives its horizon because that one
+   * must scale with the count; this one must not move.
+   *
    * @param spec the mission being scheduled
    * @param earliest the date the user asked for, read as a floor
    * @return the window to fly, or empty when the mission waits for no plane
