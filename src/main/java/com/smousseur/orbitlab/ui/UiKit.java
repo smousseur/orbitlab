@@ -3,6 +3,8 @@ package com.smousseur.orbitlab.ui;
 import com.jme3.asset.AssetManager;
 import com.jme3.asset.AssetNotFoundException;
 import com.jme3.font.BitmapFont;
+import com.jme3.material.Material;
+import com.jme3.material.RenderState;
 import com.jme3.math.ColorRGBA;
 import com.jme3.math.Vector2f;
 import com.jme3.math.Vector3f;
@@ -197,6 +199,38 @@ public final class UiKit {
   /** Builds a flat (non 9-slice) background from a wizard v2 texture. */
   public static QuadBackgroundComponent rosterFlat(String name) {
     return flat(ROSTER_DIR, name);
+  }
+
+  /**
+   * Returns a roster texture for a caller that needs the texture itself rather than a background —
+   * a geometry it will transform, which no {@code QuadBackgroundComponent} can be.
+   *
+   * @param name the texture name, without directory or extension
+   * @return the cached texture, or {@code null} on a missing asset
+   */
+  public static Texture2D rosterTexture(String name) {
+    return loadTexture(ROSTER_DIR, name);
+  }
+
+  /**
+   * Builds a material drawing a monochrome icon as a coloured alpha mask.
+   *
+   * <p>Not {@code Unshaded}: that shader multiplies its colour by the texel, which cannot tint a
+   * black icon. See {@code MatDefs/Ui/IconMask.frag}.
+   *
+   * @param textureName the roster texture whose alpha carries the shape
+   * @param tint the colour to draw it in
+   * @return the material, or {@code null} when the texture is missing
+   */
+  public static Material iconMaskMaterial(String textureName, ColorRGBA tint) {
+    Texture2D tex = rosterTexture(textureName);
+    if (tex == null) return null;
+    Material mat = new Material(assetManager, "MatDefs/Ui/IconMask.j3md");
+    mat.setTexture("MaskMap", tex);
+    mat.setColor("Color", tint.clone());
+    mat.getAdditionalRenderState().setBlendMode(RenderState.BlendMode.Alpha);
+    mat.getAdditionalRenderState().setDepthWrite(false);
+    return mat;
   }
 
   /** Builds a flat (non 9-slice) background from a wizard v2 texture. */

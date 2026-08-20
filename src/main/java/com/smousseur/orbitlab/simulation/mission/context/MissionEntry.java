@@ -6,6 +6,7 @@ import com.smousseur.orbitlab.simulation.mission.MissionId;
 import com.smousseur.orbitlab.simulation.mission.MissionStatus;
 import com.smousseur.orbitlab.simulation.mission.OptimizationType;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemeris;
+import com.smousseur.orbitlab.simulation.mission.progress.MissionProgress;
 import com.smousseur.orbitlab.simulation.mission.operation.MissionComposer;
 import com.smousseur.orbitlab.simulation.mission.operation.MissionSpec;
 import com.smousseur.orbitlab.simulation.mission.runtime.AchievedOrbit;
@@ -42,6 +43,7 @@ public final class MissionEntry {
   private volatile AchievedOrbit achievedOrbit;
   private volatile MissionPerformanceReport performanceReport;
   private volatile String lastError;
+  private volatile MissionProgress progress;
   private volatile boolean visible = false;
   private volatile AbsoluteDate scheduledDate;
   private volatile ColorRGBA color;
@@ -205,6 +207,28 @@ public final class MissionEntry {
   /** Forgets the previous failure, so a relaunched computation does not display a stale error. */
   public void clearLastError() {
     this.lastError = null;
+  }
+
+  /**
+   * Returns the advancement of the computation currently attached to this mission.
+   *
+   * <p>Absent whenever no computation is attached — and legitimately absent for an instant
+   * <em>during</em> one, since the orchestrator clears it after the terminal status is published.
+   * A reader seeing {@code COMPUTING} with no progress must fall back rather than wait.
+   *
+   * @return an optional containing the live progress, or empty
+   */
+  public Optional<MissionProgress> getProgress() {
+    return Optional.ofNullable(progress);
+  }
+
+  /**
+   * Attaches or detaches the advancement of a computation.
+   *
+   * @param progress the progress to attach, or {@code null} to detach
+   */
+  public void setProgress(MissionProgress progress) {
+    this.progress = progress;
   }
 
   /**

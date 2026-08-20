@@ -183,6 +183,15 @@ public class MissionPanelWidget implements AutoCloseable {
       lastSnapshot = snapshot;
       refresh();
     }
+
+    // Advancement is deliberately absent from the snapshot: a computation leaves the status alone,
+    // so the list is not rebuilt while it runs and the two widgets below mutate their own spinner
+    // and label in place. Putting an evaluation counter in the snapshot would rebuild every row at
+    // the counter's own rate, for as long as the computation lasts.
+    if (screen == Screen.LIST) {
+      listView.update(tpf);
+    }
+    footer.update(tpf);
   }
 
   public void setOnClose(Runnable action) {

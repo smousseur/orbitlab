@@ -3,6 +3,7 @@ package com.smousseur.orbitlab.simulation.mission.planner;
 import com.smousseur.orbitlab.core.OrbitlabException;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.objective.OrbitInsertionObjective;
+import com.smousseur.orbitlab.simulation.mission.progress.MissionProgressListener;
 import java.util.Objects;
 import java.util.function.Function;
 
@@ -34,6 +35,9 @@ public final class MinimizedLoadPlanner implements MissionPlanner {
   private final double residualFloorRatio;
   // The orbit the terminal coast is measured against; null → the mission's own objective.
   private final OrbitInsertionObjective feasibilityObjective;
+
+  /** Progress sink handed to both the sweep and the mission optimizations it wraps, or null. */
+  private final MissionProgressListener progress;
 
   /**
    * Creates a planner with the spec-09 defaults, measuring feasibility against the mission's own
@@ -89,6 +93,38 @@ public final class MinimizedLoadPlanner implements MissionPlanner {
       double objectiveToleranceRatio,
       double residualFloorRatio,
       OrbitInsertionObjective feasibilityObjective) {
+    this(
+        missionBuilder,
+        heuristicLoads,
+        lambdaScaled,
+        launchEpoch,
+        optimizerMaxEvaluations,
+        seed,
+        objectiveToleranceRatio,
+        residualFloorRatio,
+        feasibilityObjective,
+        null);
+  }
+
+  /**
+   * Creates a planner reporting its advancement to a progress sink.
+   *
+   * <p>See {@link #MinimizedLoadPlanner(Function, double[], boolean[], AbsoluteDate, int, Long,
+   * double, double, OrbitInsertionObjective) the overload above} for the other parameters.
+   *
+   * @param progress the sink, or {@code null}
+   */
+  public MinimizedLoadPlanner(
+      Function<double[], Mission> missionBuilder,
+      double[] heuristicLoads,
+      boolean[] lambdaScaled,
+      AbsoluteDate launchEpoch,
+      int optimizerMaxEvaluations,
+      Long seed,
+      double objectiveToleranceRatio,
+      double residualFloorRatio,
+      OrbitInsertionObjective feasibilityObjective,
+      MissionProgressListener progress) {
     this.missionBuilder = Objects.requireNonNull(missionBuilder, "missionBuilder");
     this.heuristicLoads = heuristicLoads.clone();
     this.lambdaScaled = lambdaScaled.clone();
@@ -101,6 +137,7 @@ public final class MinimizedLoadPlanner implements MissionPlanner {
     this.objectiveToleranceRatio = objectiveToleranceRatio;
     this.residualFloorRatio = residualFloorRatio;
     this.feasibilityObjective = feasibilityObjective;
+    this.progress = progress;
   }
 
   @Override
@@ -115,9 +152,11 @@ public final class MinimizedLoadPlanner implements MissionPlanner {
             seed,
             objectiveToleranceRatio,
             residualFloorRatio,
-            feasibilityObjective);
+            feasibilityObjective,
+            progress);
     MultiStageLoadOptimizer.Result result =
-        new MultiStageLoadOptimizer().minimize(evaluator::evaluate, lambdaScaled, heuristicLoads);
+        new MultiStageLoadOptimizer()
+            .minimize(evaluator::evaluate, lambdaScaled, heuristicLoads, progress);
     if (!result.feasible()) {
       throw new OrbitlabException(
           "Propellant sizing infeasible: the heuristic loads themselves fail — mission under-dotée,"

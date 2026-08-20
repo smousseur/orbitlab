@@ -1,5 +1,6 @@
 package com.smousseur.orbitlab.simulation.mission.optimizer;
 
+import com.smousseur.orbitlab.simulation.mission.progress.MissionProgressListener;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -56,6 +57,7 @@ final class CMAESRunExecutor {
   private final double stopFitness;
   private final double absoluteTolerance;
   private final double relativeTolerance;
+  private final MissionProgressListener progress;
 
   /**
    * Creates a new executor for running CMA-ES optimization passes.
@@ -64,16 +66,21 @@ final class CMAESRunExecutor {
    * @param stopFitness fitness value at which the optimizer stops immediately
    * @param absoluteTolerance absolute convergence tolerance
    * @param relativeTolerance relative convergence tolerance
+   * @param progress the sink counting evaluations, or {@code null}. Called from every exploration
+   *     thread, which is why the objective wrapper below is the only place it is invoked from: it
+   *     is the single point every candidate goes through.
    */
   CMAESRunExecutor(
       TrajectoryProblem problem,
       double stopFitness,
       double absoluteTolerance,
-      double relativeTolerance) {
+      double relativeTolerance,
+      MissionProgressListener progress) {
     this.problem = problem;
     this.stopFitness = stopFitness;
     this.absoluteTolerance = absoluteTolerance;
     this.relativeTolerance = relativeTolerance;
+    this.progress = progress;
   }
 
   /**
@@ -112,6 +119,9 @@ final class CMAESRunExecutor {
         candidate -> {
           if (crossRunStop != null && crossRunStop.get()) {
             throw new RunAbortedException();
+          }
+          if (progress != null) {
+            progress.onEvaluation();
           }
           try {
             SpacecraftState state = problem.propagate(candidate);

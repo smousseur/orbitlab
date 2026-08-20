@@ -1,5 +1,7 @@
 package com.smousseur.orbitlab.simulation.mission.runtime;
 
+import com.smousseur.orbitlab.simulation.mission.progress.MissionProgressEvent;
+import com.smousseur.orbitlab.simulation.mission.progress.MissionProgressListener;
 import com.smousseur.orbitlab.simulation.mission.vehicle.StagePropellant;
 import java.util.Arrays;
 import java.util.Locale;
@@ -203,10 +205,45 @@ public final class MultiStageLoadOptimizer {
    * @return the minimal feasible per-stage scaling found
    */
   public Result minimize(Evaluator evaluator, boolean[] lambdaScaled, double[] heuristicLoads) {
+    return minimize(evaluator, lambdaScaled, heuristicLoads, null);
+  }
+
+  /**
+   * Runs the coordinate-wise sweep, reporting its position to a progress sink.
+   *
+   * <p>The sink is told where the sweep is <em>before</em> each evaluation rather than after, so
+   * the reported index reads as the load being worked on. This is the only monotone, bounded
+   * reading the whole optimization chain offers: the trajectory levels below recycle once per
+   * evaluation and are deliberately not reported (see {@code MissionProgressListener#evaluationsOnly}).
+   *
+   * @param evaluator rebuilds + optimizes the mission at a given load vector
+   * @param lambdaScaled which coordinates carry their own λ
+   * @param heuristicLoads the baseline per-stage loads (kg)
+   * @param progress the sink, or {@code null}
+   * @return the sweep result
+   */
+  public Result minimize(
+      Evaluator evaluator,
+      boolean[] lambdaScaled,
+      double[] heuristicLoads,
+      MissionProgressListener progress) {
     Objects.requireNonNull(evaluator, "evaluator");
     if (lambdaScaled.length != heuristicLoads.length) {
       throw new IllegalArgumentException("lambdaScaled and heuristicLoads length mismatch");
     }
+    // Pass 0 while the heuristic point is probed, before the sweep proper starts.
+    int[] reportedPass = {1};
+    int[] reportedLoad = {0};
+    Evaluator observed =
+        progress == null
+            ? evaluator
+            : (candidate, previous) -> {
+              reportedLoad[0]++;
+              progress.onProgress(
+                  new MissionProgressEvent.SizingAdvanced(
+                      reportedPass[0], maxPasses, reportedLoad[0], maxEvaluations));
+              return evaluator.evaluate(candidate, previous);
+            };
     int[] coordinates = scaledCoordinatesTopDown(lambdaScaled);
     if (coordinates.length == 0) {
       throw new IllegalArgumentException("no stage is under λ — nothing to size");
@@ -228,7 +265,7 @@ public final class MultiStageLoadOptimizer {
 
     // Heuristic point. If it already fails there is nothing to shrink — same short-circuit the
     // scalar optimizer applies, and the only case that reports infeasible.
-    PropellantLoadOptimizer.Evaluation current = evaluator.evaluate(lambdas.clone(), null);
+    PropellantLoadOptimizer.Evaluation current = observed.evaluate(lambdas.clone(), null);
     int evaluations = 1;
     logger.info("Probe heuristic loads (all λ={}): feasible={}", lambdaMax, current.feasible());
     if (!current.feasible()) {
@@ -238,6 +275,7 @@ public final class MultiStageLoadOptimizer {
 
     int passes = 0;
     for (int pass = 1; pass <= maxPasses; pass++) {
+      reportedPass[0] = pass;
       double scaledMassBefore = scaledMass(lambdas, heuristicLoads, lambdaScaled);
       double[] lambdasBeforePass = lambdas.clone();
 
@@ -255,7 +293,7 @@ public final class MultiStageLoadOptimizer {
             format(lambdas[index]),
             format(lambdas));
 
-        CoordinateAdapter adapter = new CoordinateAdapter(evaluator, lambdas, index);
+        CoordinateAdapter adapter = new CoordinateAdapter(observed, lambdas, index);
         // Captured before the slack probe, which may itself lower the coordinate.
         double before = lambdas[index];
 
@@ -399,7 +437,7 @@ public final class MultiStageLoadOptimizer {
         diagonal[index] = Math.max(lambdaMin, lambdas[index] - diagonalStep());
       }
       PropellantLoadOptimizer.Evaluation diagonalEval =
-          evaluator.evaluate(diagonal.clone(), current);
+          observed.evaluate(diagonal.clone(), current);
       evaluations++;
       logger.info(
           "Diagonal probe (λ −{} on the {} movable coordinate(s) {}, others held): λ={} →"

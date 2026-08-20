@@ -6,6 +6,7 @@ import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemeris;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemerisPoint;
 import com.smousseur.orbitlab.simulation.mission.objective.MissionObjective;
 import com.smousseur.orbitlab.simulation.mission.objective.OrbitInsertionObjective;
+import com.smousseur.orbitlab.simulation.mission.progress.MissionProgressListener;
 import com.smousseur.orbitlab.simulation.mission.vehicle.StagePropellant;
 import java.util.Objects;
 import java.util.function.Function;
@@ -99,6 +100,12 @@ public final class MissionLoadEvaluator implements PropellantLoadOptimizer.Evalu
   private final OrbitInsertionObjective feasibilityObjective;
 
   /**
+   * Sink the inner mission optimizations report their evaluations to, or {@code null}. Their stage
+   * and attempt transitions are deliberately dropped upstream of this field.
+   */
+  private final MissionProgressListener innerProgress;
+
+  /**
    * Creates an evaluator with the spec-09 defaults (±7 % objective, 40 000 inner evals,
    * deterministic seed).
    *
@@ -179,6 +186,41 @@ public final class MissionLoadEvaluator implements PropellantLoadOptimizer.Evalu
       double objectiveToleranceRatio,
       double residualFloorRatio,
       OrbitInsertionObjective feasibilityObjective) {
+    this(
+        missionBuilder,
+        heuristicLoads,
+        lambdaScaled,
+        launchEpoch,
+        optimizerMaxEvaluations,
+        seed,
+        objectiveToleranceRatio,
+        residualFloorRatio,
+        feasibilityObjective,
+        null);
+  }
+
+  /**
+   * Creates an evaluator whose inner mission optimizations count their evaluations into a progress
+   * sink.
+   *
+   * <p>See {@link #MissionLoadEvaluator(Function, double[], boolean[], AbsoluteDate, int, Long,
+   * double, double, OrbitInsertionObjective) the overload above} for the other parameters.
+   *
+   * @param progress the sink, or {@code null}. Only its evaluation counting is wired: an inner
+   *     optimization's stage and attempt transitions would recycle once per load evaluation under a
+   *     sweep position that is the reading actually worth showing.
+   */
+  public MissionLoadEvaluator(
+      Function<double[], Mission> missionBuilder,
+      double[] heuristicLoads,
+      boolean[] lambdaScaled,
+      AbsoluteDate launchEpoch,
+      int optimizerMaxEvaluations,
+      Long seed,
+      double objectiveToleranceRatio,
+      double residualFloorRatio,
+      OrbitInsertionObjective feasibilityObjective,
+      MissionProgressListener progress) {
     this.missionBuilder = Objects.requireNonNull(missionBuilder, "missionBuilder");
     this.heuristicLoads = heuristicLoads.clone();
     this.lambdaScaled = lambdaScaled.clone();
@@ -197,6 +239,7 @@ public final class MissionLoadEvaluator implements PropellantLoadOptimizer.Evalu
     this.objectiveToleranceRatio = objectiveToleranceRatio;
     this.residualFloorRatio = residualFloorRatio;
     this.feasibilityObjective = feasibilityObjective;
+    this.innerProgress = MissionProgressListener.evaluationsOnly(progress);
   }
 
   @Override
@@ -236,7 +279,8 @@ public final class MissionLoadEvaluator implements PropellantLoadOptimizer.Evalu
 
     MissionComputeResult result;
     try {
-      result = new MissionOptimizer(mission, optimizerMaxEvaluations, seed).optimize();
+      result =
+          new MissionOptimizer(mission, optimizerMaxEvaluations, seed, innerProgress).optimize();
     } catch (RuntimeException e) {
       // An under-dotée load whose ascent/transfer cannot reach orbit makes the inner optimizer
       // fail. That is a feasibility signal (keep λ up), not an error to bubble up.

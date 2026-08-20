@@ -7,6 +7,7 @@ import com.smousseur.orbitlab.simulation.mission.context.MissionEntry;
 import com.smousseur.orbitlab.simulation.mission.objective.OrbitInsertionObjective;
 import com.smousseur.orbitlab.simulation.mission.operation.MissionComposer;
 import com.smousseur.orbitlab.simulation.mission.operation.MissionSpec;
+import com.smousseur.orbitlab.simulation.mission.progress.MissionProgressListener;
 import com.smousseur.orbitlab.simulation.mission.runtime.MissionComputeResult;
 import com.smousseur.orbitlab.simulation.mission.runtime.MissionLoadEvaluator;
 import com.smousseur.orbitlab.simulation.mission.runtime.PropellantLoadOptimizer;
@@ -48,13 +49,27 @@ public class MissionPlanOptimizer {
   private final MissionEntry entry;
   private final AbsoluteDate launchEpoch;
 
+  /** Progress sink carried down to whichever planner the mode selects, or {@code null}. */
+  private final MissionProgressListener progress;
+
   /**
    * @param entry the mission entry to compute (its mission is already composed for its mode)
    * @param launchEpoch the launch date the mission's initial state is built at
    */
   public MissionPlanOptimizer(MissionEntry entry, AbsoluteDate launchEpoch) {
+    this(entry, launchEpoch, null);
+  }
+
+  /**
+   * @param entry the mission entry to compute (its mission is already composed for its mode)
+   * @param launchEpoch the launch date the mission's initial state is built at
+   * @param progress the sink the selected planner reports its advancement to, or {@code null}
+   */
+  public MissionPlanOptimizer(
+      MissionEntry entry, AbsoluteDate launchEpoch, MissionProgressListener progress) {
     this.entry = Objects.requireNonNull(entry, "entry");
     this.launchEpoch = Objects.requireNonNull(launchEpoch, "launchEpoch");
+    this.progress = progress;
   }
 
   /**
@@ -78,7 +93,7 @@ public class MissionPlanOptimizer {
     // MissionOptimizer reads mission.getCurrentState() as the launch epoch, so seed the launch
     // state before the planner runs (the optimizer re-records the launch date on the mission).
     mission.setCurrentState(mission.getInitialState(launchEpoch));
-    return new FixedLoadPlanner(mission, MAX_EVALUATIONS, SEED);
+    return new FixedLoadPlanner(mission, MAX_EVALUATIONS, SEED, progress);
   }
 
   private MissionPlanner minimizedLoadPlanner(MissionSpec spec) {
@@ -108,10 +123,21 @@ public class MissionPlanOptimizer {
           SEED,
           GEO_FEASIBILITY_TOLERANCE_M / geo.targetAltitude(),
           MissionLoadEvaluator.DEFAULT_RESIDUAL_FLOOR_RATIO,
-          feasibility);
+          feasibility,
+          progress);
     }
     // LEO records the flown final orbit as its objective, so the mission's own objective and the
     // default tolerance apply.
-    return new MinimizedLoadPlanner(missionBuilder, heuristicLoads, lambdaScaled, launchEpoch);
+    return new MinimizedLoadPlanner(
+        missionBuilder,
+        heuristicLoads,
+        lambdaScaled,
+        launchEpoch,
+        MAX_EVALUATIONS,
+        SEED,
+        MissionLoadEvaluator.DEFAULT_OBJECTIVE_TOLERANCE_RATIO,
+        MissionLoadEvaluator.DEFAULT_RESIDUAL_FLOOR_RATIO,
+        null,
+        progress);
   }
 }

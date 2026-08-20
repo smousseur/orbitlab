@@ -39,12 +39,17 @@ lisez qu'une section, lisez le §3.
 | **`NAV-4` — breadcrumb** (bande haute permanente, chaîne d'ancêtres du corps focalisé, remontée en un clic) | `ui/breadcrumb/BreadcrumbWidget.java` + `BreadcrumbStyles.java`, `states/scene/BreadcrumbWidgetAppState.java`, `GuiGraph.getBreadcrumbNode`, `AppStyles.BREADCRUMB_BAND_HEIGHT_PX` / `HUD_TOP_OFFSET_PX` |
 | **`MIS-7` — `EarthOrbitMission` paramétrable** (plan d'ascension commandé, SSO calculée, cinq profils au wizard) | `mission/operation/EarthOrbitMission.java` (ex-`LEOMission`), `LaunchPlane.java`, `NodeBranch.java`, `MissionSpec.EarthOrbit`, `Physics.sunSynchronousInclination`, `ui/mission/wizard/MissionProfile.java`, `step/params/EarthOrbitDynamicParameters.java` (commits `27f4a60`, `56eb362`) ; `EarthOrbitNonRegressionTest`, `AscentPlaneControlTest`, `SunSynchronousInclinationTest`, `SunSynchronousPrecessionTest`, `PolarCoverageTest`, `MeoMissionTest`, `MissionProfileTest`, `WizardPrefillTest` |
 | **`MIS-2` — fenêtres de lancement** (balayage grossier + section dorée, trois échelles portées par le problème, timeline à deux échelles dans le wizard) | `simulation/mission/window/` (`LaunchWindowProblem`, `LaunchWindowSearch`, `LaunchWindowSolver`, `LaunchWindow`, `LaunchWindowCandidate`), `window/problem/` (`EarthLaunchWindowProblem`, `EarthLaunchWindowRequest`, `EarthLaunchWindowPlanner`, `TranslunarInjectionPlanWindowProblem`), `ui/mission/wizard/step/planning/` (`PlanningPage`, `PlanningModel`, `PlanningState`, `LaunchWindowTimeline`, `RaanEntry`, `ZoomScale`), `step/RefusedPage.java`, `step/LaunchDateProvenance.java` ; `LaunchWindowSolverTest`, `LaunchWindowSearchTest`, `EarthLaunchWindowProblemTest`, `EarthLaunchWindowPlannerTest`, `PlanningModelTest`, `RaanEntryTest`, `RefusedPageTest`, `ZoomScaleTest`, `LaunchDateProvenanceTest` |
+| **`UI-2` — feedback de progression** (spinner géométrique, position dans la séquence, compteur d'évaluations, distinction file/calcul) | `simulation/mission/progress/` (`MissionProgress`, `MissionProgressEvent`, `MissionProgressListener`, `ProgressPhase`, `OptimizationStep`), listener nullable câblé de `MissionPlanOptimizer` à `CMAESRunExecutor`, `ui/mission/MissionProgressText.java`, `ui/mission/component/SpinnerIcon.java` + `SpinnerRotation.java`, `MatDefs/Ui/IconMask.j3md`, `MissionEntry.getProgress` ; `MissionProgressTest`, `MissionProgressTextTest`, `SpinnerRotationTest` ; spec [`mission-progress/01-feedback-optimisation.md`](../mission-progress/01-feedback-optimisation.md) |
 
-**Reste ouvert de l'ancienne roadmap** : le feedback de progression pendant
-l'optimisation, repris ici en `UI-2`. La vue détail avec résultats
-d'optimisation, l'autre reliquat, est **résolue le 2026-08-10** (`UI-1`) — et
-son diagnostic était trop optimiste : `AchievedOrbit` n'était pas seulement non
-lu par `ui/`, il était **jeté** par l'orchestrateur, qui n'en gardait rien.
+**Reliquats de l'ancienne roadmap : les deux sont soldés.** La vue détail avec
+résultats d'optimisation est **résolue le 2026-08-10** (`UI-1`) — et son
+diagnostic était trop optimiste : `AchievedOrbit` n'était pas seulement non lu
+par `ui/`, il était **jeté** par l'orchestrateur, qui n'en gardait rien. Le
+feedback de progression pendant l'optimisation est **résolu le 2026-08-21**
+(`UI-2`), et son énoncé était incomplet sur deux points : l'exécuteur étant
+mono-thread, une deuxième mission lancée est en **file** et non en calcul, ce que
+l'affichage ne distinguait pas ; et un compteur d'évaluations nu n'apprend rien
+de plus qu'un spinner, faute de dénominateur atteignable.
 
 **Corrections d'hypothèses par rapport aux specs graphiques** — `effects-roadmap.md`
 §1 décrit un rendu « tout `Unshaded`, aucun shader custom, pas de skybox ». Ce
@@ -170,8 +175,12 @@ reste lisible à toute distance (`RND-4`).
 | ~~MIS-2~~ | ~~Fenêtres de lancement~~ — **résolu le 2026-08-20** | 4 | 3 | M | MIS-4, MIS-6 |
 | ~~MIS-3~~ | ~~Solveur de Lambert + repère LVLH~~ — **dissous le 2026-08-20** | 4 | 3 | M | — (reversé en `MIS-4` et `MIS-6`) |
 | ~~PHY-1~~ | ~~Atmosphère : la brique, **off** par défaut~~ — **résolu le 2026-08-21** | 4 | 3 | L | PHY-2, PHY-3 |
-| UI-2 | Feedback de progression pendant l'optimisation | 3 | 2 | M | confort des phases 4 et 5 |
+| ~~UI-2~~ | ~~Feedback de progression pendant l'optimisation~~ — **résolu le 2026-08-21** | 3 | 2 | M | confort des phases 4 et 5 |
 | UI-3 | Persistance des missions / format de scénario | 4 | 3 | M | **outil de dev** des phases 4 et 5 |
+
+> **`UI-3` est le dernier item de la phase.** Les six autres sont soldés — cinq
+> livrés, un dissous — et la fin de phase ne tient plus qu'à la survie d'une
+> mission à la fermeture de l'application.
 
 **Pourquoi `UI-3` est ici et pas en phase 6.** Il n'a aucune dépendance, et son
 bénéfice principal à ce stade n'est pas la feature mais l'outillage : sans lui,
@@ -264,7 +273,7 @@ opportuniste, ou à décider quoi sacrifier quand une phase déborde.
 | FX-2 | Éclipses / pénombre inter-corps | 4 | 3 | M | — |
 | FX-3 | Particules de tuyère | 4 | 2 | M | — |
 | ~~NAV-4~~ | ~~Breadcrumb de navigation 3D~~ — résolu | 3 | 2 | M | — |
-| UI-2 | Feedback de progression pendant l'optimisation | 3 | 2 | M | — |
+| ~~UI-2~~ | ~~Feedback de progression pendant l'optimisation~~ — **résolu le 2026-08-21** (file d'attente distinguée, quatrième MatDef maison, voir détail) | 3 | 2 | M | — |
 | ~~UI-4~~ | ~~Menu applicatif haut-gauche (remplace le bouton « Missions »)~~ — résolu | 3 | 2 | M | — |
 | ~~UI-5~~ | ~~Surfaces, modalité et pile de renvoi `ESC`~~ — résolu | 3 | 2 | M | UI-4 (livré) |
 | ~~NAV-2~~ | ~~Timeline indexée sur le temps + marqueurs d'événements~~ — résolu | 4 | 3 | M | — |
@@ -1476,7 +1485,37 @@ Et pour `FAILED` : un message lisible — ce qui suppose d'**ajouter le champ**
 endroits qui passent en `FAILED` (`MissionEntry.setOptimizationType` et
 `MissionOrchestratorAppState`), où l'exception n'est aujourd'hui que loguée.
 
-#### UI-2 — Feedback de progression pendant l'optimisation — ★3 ◆2 M
+#### ~~UI-2 — Feedback de progression pendant l'optimisation — ★3 ◆2 M~~ — **RÉSOLU le 2026-08-21**
+
+> **Ce qui a été livré.** Un paquet `simulation/mission/progress/` porté par un
+> `MissionProgressListener` **nullable** câblé de `MissionPlanOptimizer` jusqu'à
+> `CMAESRunExecutor` — voie froide à événements scellés pour les transitions,
+> voie chaude sans allocation pour le compteur, qui s'incrémente depuis les
+> threads du pool CMA-ES. Dans la fenêtre de gestion : un spinner géométrique et
+> la position dans la séquence en colonne de statut, la ligne détaillée au pied
+> de la mission sélectionnée. Le HUD n'est pas touché, la fenêtre étant non
+> modale. 23 tests, tous hors JME.
+>
+> **Quatre écarts à cet énoncé**, détaillés au §1.3, §3.2 et §5.2 de la spec.
+> (1) La fiche demandait « spinner + compteur » ; le compteur seul ne dit rien de
+> plus que le spinner, faute d'un dénominateur atteignable — 40 000 est un
+> plafond que les trois sorties anticipées rendent, de l'aveu du code lui-même,
+> normalement inatteignable — donc ce qui est affiché est la **position dans la
+> séquence**, le compteur restant comme signal de vie. (2) L'exécuteur est
+> mono-thread : une deuxième mission lancée est en **file**, et l'affichage le
+> dit désormais, sans que `MissionStatus` gagne une valeur (15 sites l'auraient
+> traitée à l'identique de `COMPUTING`). (3) En mode PRECISE la progression
+> s'arrête au niveau **charge** — la seule fraction bornée et monotone du
+> système — les niveaux étage et tentative recyclant jusqu'à 135 fois.
+> (4) `icon-spinner.png` est en RGB noir pur : `Unshaded` multipliant sa couleur
+> par le texel, la teinte était impossible telle quelle, d'où un **quatrième
+> matériau maison**, `MatDefs/Ui/IconMask`, qui lit la texture comme masque
+> d'alpha. Repeindre l'asset en blanc reste l'alternative, non retenue.
+>
+> **Ce qui reste ouvert** : l'annulation d'un calcul. Elle n'était pas dans la
+> fiche et le mécanisme existe à moitié — il faudrait retenir le `Future` que
+> l'orchestrateur jette, et un drapeau lu dans la fonction objectif à côté du
+> `crossRunStop` qui y vit déjà.
 
 **Contrainte mesurée à respecter** : le coût d'une évaluation varie d'un facteur
 ~5 et n'est pas prévisible → une barre linéaire en nombre d'évaluations sera
@@ -1484,6 +1523,8 @@ par moments franchement fausse. Indicateur **indéterminé** (spinner) + compteu
 d'évaluations en texte. Devient plus important à mesure que les optimisations
 s'allongent (lunaire, rendez-vous) — d'où son placement en phase 3, avant
 elles.
+
+**Spec.** [`docs/mission-progress/01-feedback-optimisation.md`](../mission-progress/01-feedback-optimisation.md)
 
 #### UI-3 — Persistance / format de scénario — ★4 ◆3 M *(ajout)*
 
@@ -1931,11 +1972,13 @@ et [`docs/brainstorm/missions.md`](../brainstorm/missions.md).
    fenêtre glissante, pas de bascule. La capsule garde son `ScrubberTrack`
    indexé sur la vitesse, ce qui clôt aussi la cohabitation que `NAV-3`
    redoutait. Voir [`docs/navigation/02-timeline-mission.md`](../navigation/02-timeline-mission.md).
-3. **Auto-optimisation après création** — toujours ouverte depuis la révision
-   précédente. Aujourd'hui `createMission()` ajoute l'entrée en `DRAFT` sans
-   déclencher de calcul. `UI-2` (progression) est un préalable raisonnable :
-   déclencher automatiquement un calcul long sans indicateur serait pire que le
-   clic actuel.
+3. **Auto-optimisation après création** — toujours ouverte, mais **son préalable
+   est levé depuis le 2026-08-21**. Aujourd'hui `createMission()` ajoute l'entrée
+   en `DRAFT` sans déclencher de calcul ; l'argument qui bloquait — déclencher
+   automatiquement un calcul long sans indicateur serait pire que le clic actuel
+   — ne tient plus, `UI-2` ayant livré l'indicateur, et jusqu'à la distinction
+   entre une mission en file et une mission en calcul. Reste à trancher la
+   question elle-même, qui n'est plus technique.
 4. ~~**Troisième viewport**~~ — **tranchée le 2026-08-18 : non.** `PHY-4 / L5`
    §5.3 l'a écarté sur mesure — un seul globe est dessiné, dans la région de
    l'origine où le pas de profondeur vaut 27 km, et le bout lointain du trait ne

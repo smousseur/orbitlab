@@ -16,6 +16,7 @@ import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemeris;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemerisPoint;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.TrajectoryPolyline;
 import com.smousseur.orbitlab.simulation.mission.planner.MissionPlanOptimizer;
+import com.smousseur.orbitlab.simulation.mission.progress.MissionProgress;
 import com.smousseur.orbitlab.simulation.mission.runtime.MissionComputeResult;
 import java.util.HashSet;
 import java.util.List;
@@ -184,9 +185,16 @@ public final class MissionOrchestratorAppState extends BaseAppState {
     // keep displaying the previous error for the whole duration of the new computation.
     entry.clearLastError();
 
+    // Attached here, on the render thread, and QUEUED until the task actually starts: the executor
+    // is single-threaded, so a mission submitted while another computes waits its turn. Without
+    // this distinction it would display a spinner turning over nothing.
+    MissionProgress progress = new MissionProgress();
+    entry.setProgress(progress);
+
     optimizationExecutor.submit(
         () -> {
           try {
+            progress.start();
             logger.info(
                 "Starting computation for mission '{}' [{}]",
                 mission.getName(),
@@ -197,7 +205,7 @@ public final class MissionOrchestratorAppState extends BaseAppState {
             // The planner is selected from the entry's optimization mode; FAST reproduces the
             // legacy fixed-load path (analytic composition, single CMA-ES pass at budgeted loads).
             MissionComputeResult result =
-                new MissionPlanOptimizer(entry, launchDate).compute().computation();
+                new MissionPlanOptimizer(entry, launchDate, progress).compute().computation();
 
             // Adopt the mission actually flown: for a fixed-load run it is the entry's own mission;
             // for PRECISE it is the sizing sweep's winning internal mission (scaled loads, solved
@@ -225,6 +233,11 @@ public final class MissionOrchestratorAppState extends BaseAppState {
                 mission.getName(),
                 entry.id().shortForm(),
                 e);
+          } finally {
+            // Last, after the terminal status and after lastError: the display reads the progress
+            // only while the status says COMPUTING, so clearing it early would leave a window
+            // showing a stale phase under a status that has already moved on.
+            entry.setProgress(null);
           }
         });
   }

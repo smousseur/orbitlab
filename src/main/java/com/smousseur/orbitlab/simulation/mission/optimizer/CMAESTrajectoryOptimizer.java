@@ -1,6 +1,9 @@
 package com.smousseur.orbitlab.simulation.mission.optimizer;
 
 import com.smousseur.orbitlab.core.OrbitlabException;
+import com.smousseur.orbitlab.simulation.mission.progress.MissionProgressEvent;
+import com.smousseur.orbitlab.simulation.mission.progress.MissionProgressListener;
+import com.smousseur.orbitlab.simulation.mission.progress.OptimizationStep;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -94,6 +97,9 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
 
   private final CMAESRunExecutor executor;
 
+  /** Progress sink, or {@code null} when nothing observes this optimizer. */
+  private final MissionProgressListener progress;
+
   /**
    * Creates an optimizer with default exploration runs, retries, tolerances, and stop fitness, and
    * a non-deterministic master seed (current default behavior).
@@ -116,7 +122,25 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
    * @param seed master seed driving all CMA-ES randomness in this optimizer instance
    */
   public CMAESTrajectoryOptimizer(TrajectoryProblem problem, int maxEvaluations, long seed) {
-    this(problem, maxEvaluations, 4, DEFAULT_MAX_RETRIES, 1e-6, 1e-4, 1e-6, seed);
+    this(problem, maxEvaluations, seed, null);
+  }
+
+  /**
+   * Creates an optimizer with default exploration runs, retries, tolerances, and stop fitness, an
+   * explicit master seed, and a progress sink.
+   *
+   * @param problem the trajectory problem to optimize
+   * @param maxEvaluations total budget of objective function evaluations across all phases (per
+   *     retry attempt)
+   * @param seed master seed driving all CMA-ES randomness in this optimizer instance
+   * @param progress the sink reporting attempts, steps and evaluations, or {@code null}
+   */
+  public CMAESTrajectoryOptimizer(
+      TrajectoryProblem problem,
+      int maxEvaluations,
+      long seed,
+      MissionProgressListener progress) {
+    this(problem, maxEvaluations, 4, DEFAULT_MAX_RETRIES, 1e-6, 1e-4, 1e-6, seed, progress);
   }
 
   /**
@@ -167,13 +191,43 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
       double relativeTolerance,
       double absoluteTolerance,
       long seed) {
+    this(
+        problem,
+        maxEvaluations,
+        numExplorationRuns,
+        maxRetries,
+        stopFitness,
+        relativeTolerance,
+        absoluteTolerance,
+        seed,
+        null);
+  }
+
+  /**
+   * Creates an optimizer with full control over exploration, retry, and convergence parameters, an
+   * explicit master seed, and a progress sink.
+   *
+   * @param seed master seed driving all CMA-ES randomness in this optimizer instance
+   * @param progress the sink reporting attempts, steps and evaluations, or {@code null}
+   */
+  public CMAESTrajectoryOptimizer(
+      TrajectoryProblem problem,
+      int maxEvaluations,
+      int numExplorationRuns,
+      int maxRetries,
+      double stopFitness,
+      double relativeTolerance,
+      double absoluteTolerance,
+      long seed,
+      MissionProgressListener progress) {
     this.problem = problem;
     this.maxEvaluations = maxEvaluations;
     this.numExplorationRuns = numExplorationRuns;
     this.maxRetries = maxRetries;
     this.rng = new MersenneTwister(seed);
+    this.progress = progress;
     this.executor =
-        new CMAESRunExecutor(problem, stopFitness, absoluteTolerance, relativeTolerance);
+        new CMAESRunExecutor(problem, stopFitness, absoluteTolerance, relativeTolerance, progress);
     logger.info("CMA-ES optimizer initialized with seed={}", seed);
   }
 
@@ -193,6 +247,7 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
     int attemptsRun = 0;
     int totalAttempts = maxRetries + 1;
     for (int attempt = 0; attempt < totalAttempts; attempt++) {
+      report(new MissionProgressEvent.AttemptStarted(attempt + 1, totalAttempts));
       // Per-attempt bounds and sigma — problems may relax β1 (or other parameters) on retry
       // when the previous attempt saturated; default impl returns the un-relaxed bounds.
       double[] lower = problem.getLowerBoundsForAttempt(attempt, globalBestVars);
@@ -310,6 +365,8 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
 
     int explorationBudget = (int) (maxEvaluations * 0.4);
     int evalsPerExploration = explorationBudget / explorationRuns;
+
+    report(new MissionProgressEvent.StepStarted(OptimizationStep.EXPLORATION));
 
     // ── Phase 1: Exploration (parallel) ──────────────────────────────────
     // Pre-compute every run's config sequentially (uses this.rng, which is not
@@ -446,6 +503,7 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
 
     // ── Phase 2: Refinement cascade ──────────────────────────────────────
     if (bestVars != null && bestCost > problem.getAcceptableCost()) {
+      report(new MissionProgressEvent.StepStarted(OptimizationStep.REFINEMENT));
       logger.info(
           "Refinement cascade starting from cost={}, remaining budget={}",
           bestCost,
@@ -497,6 +555,12 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
     }
 
     return new SinglePassResult(bestVars, bestCost, totalEvals, false);
+  }
+
+  private void report(MissionProgressEvent event) {
+    if (progress != null) {
+      progress.onProgress(event);
+    }
   }
 
   /** Cost of a single point, with the same exception penalty semantics as an optimization run. */

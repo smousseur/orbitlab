@@ -18,7 +18,10 @@ import com.smousseur.orbitlab.simulation.mission.OptimizationType;
 import com.smousseur.orbitlab.simulation.mission.context.MissionEntry;
 import com.smousseur.orbitlab.simulation.mission.operation.MissionSpec;
 import com.smousseur.orbitlab.simulation.mission.runtime.AchievedOrbit;
+import com.smousseur.orbitlab.simulation.mission.progress.MissionProgress;
 import com.smousseur.orbitlab.ui.UiKit;
+import com.smousseur.orbitlab.ui.mission.MissionProgressText;
+import com.smousseur.orbitlab.ui.mission.component.SpinnerIcon;
 import com.smousseur.orbitlab.ui.form.FormStyles;
 import com.smousseur.orbitlab.ui.mission.MissionResultText;
 import com.smousseur.orbitlab.ui.mission.MissionTargetOrbit;
@@ -71,9 +74,34 @@ public class PanelFooter {
   private static final String COMPUTING_TEXT = "Computing...";
   private static final String DETAILS_LABEL = "DETAILS >";
 
+  /**
+   * Width the result line is pinned to while a computation runs. {@code centerOnButtonHeight}
+   * otherwise sizes the label from its own glyphs, which would make the row reflow every time the
+   * evaluation counter gained a digit.
+   */
+  private static final float RESULT_COMPUTING_W = 470f;
+
+  /** Same reason as {@code MissionRow}: rewriting a label's text remeasures its glyphs. */
+  private static final float TEXT_REFRESH_SECONDS = 0.25f;
+
+  /**
+   * The spinner is drawn smaller here than in the list: the result line is only {@code
+   * DETAILS_BTN_H} tall, and an icon wider than its line would be the one thing setting the row's
+   * height.
+   */
+  private static final float FOOTER_SPINNER_SIZE = 18f;
+
   private final Container root;
   private final Container summary;
   private Consumer<MissionEntry> onShowDetails = entry -> {};
+
+  /** Set only while the selected mission is computing; null otherwise. */
+  private MissionEntry computingEntry;
+
+  private SpinnerIcon spinner;
+  private Label resultLabel;
+  private String resultTextValue;
+  private float sinceTextRefresh;
 
   public PanelFooter(float width) {
     float innerWidth = width - 2 * PAD_X;
@@ -108,6 +136,10 @@ public class PanelFooter {
    */
   public void setSelectedMission(MissionEntry entry) {
     summary.clearChildren();
+    computingEntry = null;
+    spinner = null;
+    resultLabel = null;
+    sinceTextRefresh = 0f;
 
     if (entry == null) {
       Label hint = summary.addChild(new Label("Select a mission to see details", FormStyles.STYLE));
@@ -162,6 +194,14 @@ public class PanelFooter {
   private void addResultLine(MissionEntry entry) {
     Container row = summary.addChild(newRow());
 
+    boolean computing = entry.mission().getStatus() == MissionStatus.COMPUTING;
+    if (computing) {
+      computingEntry = entry;
+      spinner = new SpinnerIcon(FOOTER_SPINNER_SIZE, DETAILS_BTN_H, FormStyles.WARNING);
+      row.addChild(spinner.getNode());
+      row.addChild(UiKit.hSpacer(KEY_VALUE_GAP));
+    }
+
     Label text = row.addChild(new Label(resultText(entry), FormStyles.STYLE));
     text.setFont(UiKit.ibmPlexMono(11));
     text.setColor(
@@ -169,6 +209,11 @@ public class PanelFooter {
             ? FormStyles.DANGER
             : FormStyles.TEXT_SECONDARY);
     centerOnButtonHeight(text, DETAILS_BTN_H);
+    if (computing) {
+      resultLabel = text;
+      resultTextValue = text.getText();
+      text.setPreferredSize(new Vector3f(RESULT_COMPUTING_W, DETAILS_BTN_H, 0));
+    }
 
     if (hasDetailsToShow(entry)) {
       row.addChild(UiKit.hSpacer(FIELD_GAP + 50));
@@ -185,6 +230,34 @@ public class PanelFooter {
    * @param label the label to grow, already carrying its final font
    * @param buttonHeight the height of the button it sits beside
    */
+  /**
+   * Advances what the footer animates. A no-op unless the selected mission is computing.
+   *
+   * @param tpf the frame time in seconds
+   */
+  public void update(float tpf) {
+    if (spinner == null) {
+      return;
+    }
+    MissionProgress progress = computingEntry.getProgress().orElse(null);
+    spinner.setTint(
+        progress != null && progress.state() == MissionProgress.State.QUEUED
+            ? FormStyles.TEXT_LO
+            : FormStyles.WARNING);
+    spinner.update(tpf);
+
+    sinceTextRefresh += tpf;
+    if (sinceTextRefresh < TEXT_REFRESH_SECONDS) {
+      return;
+    }
+    sinceTextRefresh = 0f;
+    String text = progress == null ? COMPUTING_TEXT : MissionProgressText.detailLine(progress);
+    if (!text.equals(resultTextValue)) {
+      resultTextValue = text;
+      resultLabel.setText(text);
+    }
+  }
+
   private static void centerOnButtonHeight(Label label, float buttonHeight) {
     // Read after the font is set: the preferred width is measured from the glyphs.
     label.setPreferredSize(new Vector3f(label.getPreferredSize().x, buttonHeight, 0));
@@ -197,7 +270,10 @@ public class PanelFooter {
           "ERROR  " + entry.getLastError().orElse("computation failed"), RESULT_MAX_CHARS);
     }
     if (entry.mission().getStatus() == MissionStatus.COMPUTING) {
-      return COMPUTING_TEXT;
+      return entry
+          .getProgress()
+          .map(MissionProgressText::detailLine)
+          .orElse(COMPUTING_TEXT);
     }
     return achievedSummary(entry).orElse(NO_RESULT);
   }

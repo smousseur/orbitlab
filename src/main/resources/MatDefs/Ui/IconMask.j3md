@@ -1,0 +1,23 @@
+MaterialDef IconMask {
+
+    MaterialParameters {
+        // The colour the icon is drawn in. Unlike Unshaded's Color, it *replaces* the texture's
+        // RGB instead of multiplying it — see the fragment shader for why that is the whole point.
+        Color Color : 1.0 1.0 1.0 1.0
+
+        // Monochrome icon whose shape is carried by its alpha channel alone.
+        Texture2D MaskMap
+    }
+
+    // Deliberately no Glow technique, same reason as Corona.j3md and Ribbon.j3md: PostFxAppState
+    // runs its bloom in GlowMode.Objects and re-renders the scene through that technique. A
+    // material without one is skipped by the pass — a HUD icon has no business being bloomed.
+    Technique {
+        VertexShader   GLSL150: MatDefs/Ui/IconMask.vert
+        FragmentShader GLSL150: MatDefs/Ui/IconMask.frag
+
+        WorldParameters {
+            WorldViewProjectionMatrix
+        }
+    }
+}

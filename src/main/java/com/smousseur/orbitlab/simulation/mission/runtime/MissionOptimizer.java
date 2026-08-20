@@ -15,6 +15,8 @@ import com.smousseur.orbitlab.simulation.mission.optimizer.OptimizationResult;
 import com.smousseur.orbitlab.simulation.mission.optimizer.OptimizerDiagnostics;
 import com.smousseur.orbitlab.simulation.mission.optimizer.StageEndStateDiagnostic;
 import com.smousseur.orbitlab.simulation.mission.optimizer.TrajectoryProblem;
+import com.smousseur.orbitlab.simulation.mission.progress.MissionProgressEvent;
+import com.smousseur.orbitlab.simulation.mission.progress.MissionProgressListener;
 import com.smousseur.orbitlab.simulation.mission.stage.StageSeparationStage;
 import com.smousseur.orbitlab.simulation.mission.vehicle.ActiveStageInfo;
 import com.smousseur.orbitlab.simulation.mission.vehicle.StagePropellant;
@@ -52,6 +54,9 @@ public class MissionOptimizer {
   private final int maxEvaluations;
   private final Long seed;
 
+  /** Progress sink handed down to each stage's CMA-ES optimizer, or {@code null}. */
+  private final MissionProgressListener progress;
+
   /**
    * Creates a mission optimizer with a specified evaluation budget per stage and a
    * non-deterministic CMA-ES seed.
@@ -60,7 +65,19 @@ public class MissionOptimizer {
    * @param maxEvaluations maximum number of objective function evaluations per optimizable stage
    */
   public MissionOptimizer(Mission mission, int maxEvaluations) {
-    this(mission, maxEvaluations, DEFAULT_SEED);
+    this(mission, maxEvaluations, DEFAULT_SEED, null);
+  }
+
+  /**
+   * Creates a mission optimizer with the built-in deterministic seed and a progress sink.
+   *
+   * @param mission the mission whose stages will be optimized
+   * @param maxEvaluations maximum number of objective function evaluations per optimizable stage
+   * @param progress the sink, or {@code null}
+   */
+  public MissionOptimizer(
+      Mission mission, int maxEvaluations, MissionProgressListener progress) {
+    this(mission, maxEvaluations, DEFAULT_SEED, progress);
   }
 
   /**
@@ -73,9 +90,24 @@ public class MissionOptimizer {
    * @param seed master seed for CMA-ES randomness, or null for non-deterministic
    */
   public MissionOptimizer(Mission mission, int maxEvaluations, Long seed) {
+    this(mission, maxEvaluations, seed, null);
+  }
+
+  /**
+   * Creates a mission optimizer reporting its advancement to a progress sink.
+   *
+   * @param mission the mission whose stages will be optimized
+   * @param maxEvaluations maximum number of objective function evaluations per optimizable stage
+   * @param seed master seed for CMA-ES randomness, or null for non-deterministic
+   * @param progress the sink told which optimizable stage is being entered, and handed down to each
+   *     stage's CMA-ES optimizer, or {@code null}
+   */
+  public MissionOptimizer(
+      Mission mission, int maxEvaluations, Long seed, MissionProgressListener progress) {
     this.mission = mission;
     this.maxEvaluations = maxEvaluations;
     this.seed = seed;
+    this.progress = progress;
   }
 
   /**
@@ -103,6 +135,9 @@ public class MissionOptimizer {
     }
     MersenneTwister seedRng = new MersenneTwister(effectiveSeed);
 
+    int optimizableCount = countOptimizableStages();
+    int optimizableIndex = 0;
+
     for (MissionStage stage : mission.getStages()) {
       double massIn = mission.getCurrentState().getMass();
       // Captured with massIn, before either branch propagates: the two branches below both leave
@@ -113,6 +148,11 @@ public class MissionOptimizer {
       captureJettisonedResidual(stage, massIn, jettisonedResiduals);
       if (stage instanceof OptimizableMissionStage<?> optimizable) {
         logger.info("Optimizing stage '{}'...", stage.getName());
+        optimizableIndex++;
+        if (progress != null) {
+          progress.onProgress(
+              new MissionProgressEvent.StageEntered(optimizableIndex, optimizableCount));
+        }
 
         // Captured BEFORE the optimizer runs. A problem that flies real mission stages (the ascent
         // chain, spec 01 §5.4) advances the shared mission as it goes — and does so from the
@@ -124,7 +164,7 @@ public class MissionOptimizer {
         TrajectoryProblem problem = optimizable.buildProblem(mission);
         long stageSeed = seedRng.nextLong();
         CMAESTrajectoryOptimizer optimizer =
-            new CMAESTrajectoryOptimizer(problem, maxEvaluations, stageSeed);
+            new CMAESTrajectoryOptimizer(problem, maxEvaluations, stageSeed, progress);
         OptimizationResult result = optimizer.optimize();
         mission.setCurrentState(entryState);
 
@@ -300,6 +340,16 @@ public class MissionOptimizer {
    * jettison being its own non-propulsive phase is what makes the formula below correct rather than
    * indicative; a future stage that dropped mass mid-burn would silently reintroduce the error.
    */
+  private int countOptimizableStages() {
+    int count = 0;
+    for (MissionStage stage : mission.getStages()) {
+      if (stage instanceof OptimizableMissionStage<?>) {
+        count++;
+      }
+    }
+    return count;
+  }
+
   private StagePerformance buildStagePerformance(
       MissionStage stage, double massIn, double massOut, double durationSeconds) {
     if (!stage.isPropulsive()) {

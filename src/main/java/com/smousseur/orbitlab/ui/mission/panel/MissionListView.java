@@ -23,6 +23,7 @@ import com.smousseur.orbitlab.simulation.mission.context.MissionEntry;
 import com.smousseur.orbitlab.ui.UiKit;
 import com.smousseur.orbitlab.ui.form.FormStyles;
 import com.smousseur.orbitlab.ui.mission.component.PaginationBar;
+import java.util.ArrayList;
 import java.util.List;
 
 public class MissionListView {
@@ -68,6 +69,12 @@ public class MissionListView {
 
   private int pageIndex = 0;
   private List<MissionEntry> lastEntries = List.of();
+
+  /**
+   * The rows currently on screen, retained because they animate. Before UI-2 a row was built and
+   * only its node kept: nothing outside a rebuild ever touched a row again.
+   */
+  private final List<MissionRow> rows = new ArrayList<>();
   private MissionId lastSelectedId;
 
   public MissionListView(float width, float height) {
@@ -137,6 +144,17 @@ public class MissionListView {
     this.rowListener = listener != null ? listener : noopRowListener();
   }
 
+  /**
+   * Advances what the visible rows animate, without rebuilding any of them.
+   *
+   * @param tpf the frame time in seconds
+   */
+  public void update(float tpf) {
+    for (MissionRow row : rows) {
+      row.update(tpf);
+    }
+  }
+
   public void refresh(List<MissionEntry> entries, MissionId selectedMissionId) {
     this.lastEntries = entries;
     this.lastSelectedId = selectedMissionId;
@@ -145,6 +163,7 @@ public class MissionListView {
 
   private void rebuildList() {
     listContainer.clearChildren();
+    rows.clear();
 
     int total = lastEntries.size();
     int pageCount = Math.max(1, (total + PAGE_SIZE - 1) / PAGE_SIZE);
@@ -173,6 +192,7 @@ public class MissionListView {
       MissionEntry entry = lastEntries.get(i);
       boolean selected = entry.id().equals(lastSelectedId);
       MissionRow row = new MissionRow(entry, columns, selected, rowListener);
+      rows.add(row);
       listContainer.addChild(row.getNode());
       if (i < to - 1) {
         listContainer.addChild(divider());
