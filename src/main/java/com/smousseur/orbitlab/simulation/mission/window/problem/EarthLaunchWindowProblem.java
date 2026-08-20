@@ -85,6 +85,15 @@ public class EarthLaunchWindowProblem implements LaunchWindowProblem {
    */
   private static final Duration PRECISION = Duration.ofSeconds(1);
 
+  /**
+   * Recurrence. The pad meets a fixed plane once per <b>sidereal</b> day, the criterion following
+   * the Earth's inertial rotation rather than the solar day. Derived from the rotation rate rather
+   * than written out, so the 86 164 s of the measurement has a single source.
+   */
+  private static final Duration RECURRENCE =
+      Duration.ofMillis(
+          Math.round(2.0 * FastMath.PI / Constants.WGS84_EARTH_ANGULAR_VELOCITY * 1000.0));
+
   private final TopocentricFrame pad;
   private final double azimuth;
   private final Vector3D targetNormal;
@@ -140,6 +149,11 @@ public class EarthLaunchWindowProblem implements LaunchWindowProblem {
   @Override
   public Duration refinementPrecision() {
     return PRECISION;
+  }
+
+  @Override
+  public Duration recurrence() {
+    return RECURRENCE;
   }
 
   @Override

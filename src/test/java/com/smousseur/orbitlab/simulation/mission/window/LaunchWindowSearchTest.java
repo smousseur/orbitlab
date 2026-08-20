@@ -38,6 +38,12 @@ class LaunchWindowSearchTest {
       public Duration coarseStep() {
         return step;
       }
+
+      /** Unused by these guards: set equal to the step for a self-consistent fixture. */
+      @Override
+      public Duration recurrence() {
+        return step;
+      }
     };
   }
 

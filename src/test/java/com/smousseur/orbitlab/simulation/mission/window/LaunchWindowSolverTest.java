@@ -64,6 +64,12 @@ class LaunchWindowSolverTest {
       return coarseStep;
     }
 
+    /** Unused by this suite: these synthetic dips exist for one search, not a periodic one. */
+    @Override
+    public Duration recurrence() {
+      return Duration.ofDays(1);
+    }
+
     @Override
     public final LaunchWindowCandidate evaluate(AbsoluteDate epoch) {
       evaluated.add(epoch);
@@ -193,6 +199,12 @@ class LaunchWindowSolverTest {
     @Override
     public Duration coarseStep() {
       return Duration.ofMinutes(10);
+    }
+
+    /** Unused by the reentrancy test: same single, non-periodic dip as {@link SingleDip}. */
+    @Override
+    public Duration recurrence() {
+      return Duration.ofDays(1);
     }
 
     @Override

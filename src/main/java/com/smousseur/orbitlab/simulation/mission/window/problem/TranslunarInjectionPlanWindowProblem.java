@@ -56,6 +56,12 @@ public class TranslunarInjectionPlanWindowProblem implements LaunchWindowProblem
    */
   private static final Duration COARSE_STEP = Duration.ofHours(6);
 
+  /**
+   * Recurrence. The injection cost follows the Moon's direction, so it repeats with the sidereal
+   * month — 27.321 661 d, the period the criterion's own geometry turns on.
+   */
+  private static final Duration RECURRENCE = Duration.ofSeconds(2_360_591);
+
   private final LunarTransferMission mission;
 
   /**
@@ -74,6 +80,11 @@ public class TranslunarInjectionPlanWindowProblem implements LaunchWindowProblem
   @Override
   public Duration coarseStep() {
     return COARSE_STEP;
+  }
+
+  @Override
+  public Duration recurrence() {
+    return RECURRENCE;
   }
 
   @Override

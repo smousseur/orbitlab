@@ -80,6 +80,22 @@ public interface LaunchWindowProblem {
   }
 
   /**
+   * The interval after which the same opportunity comes back, which only the problem can know.
+   *
+   * <p><b>The third scale, and the one a consumer sizes a horizon on.</b> {@link #coarseStep()}
+   * says how finely to sample and {@link #refinementPrecision()} how finely to resolve; this says
+   * how far one has to look to see anything at all. A caller picking its own horizon — a wizard
+   * timeline showing "three days", say — would draw an empty axis on a monthly criterion, which is
+   * the same silent failure {@link #coarseStep()} guards against on the other axis.
+   *
+   * <p>An order of magnitude, not a promise of periodicity: it sizes searches, it does not assert
+   * that the windows are evenly spaced.
+   *
+   * @return the interval between two consecutive opportunities
+   */
+  Duration recurrence();
+
+  /**
    * Confirms a refined candidate under the full model — the expensive second tier.
    *
    * <p>The default does nothing, which is the honest answer for a problem whose {@link #evaluate}

@@ -249,6 +249,24 @@ class EarthLaunchWindowProblemTest {
   }
 
   @Test
+  @DisplayName("The recurrence is one sidereal day, derived from the rotation rate")
+  void theRecurrenceIsOneSiderealDay() {
+    EarthLaunchWindowProblem problem =
+        new EarthLaunchWindowProblem(
+            5.23,
+            -52.77,
+            0.0,
+            new LaunchPlane(FastMath.toRadians(51.6), NodeBranch.ASCENDING),
+            FastMath.toRadians(120.0),
+            Constants.WGS84_EARTH_EQUATORIAL_RADIUS + 400_000.0);
+
+    // Orekit's WGS84_EARTH_ANGULAR_VELOCITY is rounded to 7.292115e-5 (7 significant figures),
+    // so 2·pi/omega lands 0.0101 s from the textbook 86 164.0905 s; the tolerance absorbs that
+    // upstream rounding rather than the true sidereal day.
+    assertEquals(86_164.0905, problem.recurrence().toMillis() / 1000.0, 0.02);
+  }
+
+  @Test
   @DisplayName("The search adopts both of the problem's scales, an hour and a second")
   void theSearchAdoptsBothScales() {
     // The sweep only has to bracket a minimum that recurs daily; the refinement has to resolve a
