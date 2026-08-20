@@ -50,8 +50,8 @@ public final class PlanningPage {
    */
   private static final float DATE_ECHO_W = 240f;
 
-  private static final String RAAN_HELPER = "empty — no plane is waited for";
-  private static final String RAAN_FORMAT_HELPER = "RAAN — expected degrees";
+  private static final String RAAN_HELPER = "empty - no plane is waited for";
+  private static final String RAAN_FORMAT_HELPER = "RAAN - expected degrees";
 
   private static final String DATE_PLANNED_HELPER = "UTC - read as a floor by the planner";
   private static final String DATE_TYPED_HELPER = "UTC - typed on the fields page";

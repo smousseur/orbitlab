@@ -314,7 +314,7 @@ public class EarthOrbitDynamicParameters extends DynamicParameters {
     double minimum = FastMath.abs(launchLatitudeDeg.getAsDouble());
     setInclinationHelper(
         String.format(
-            Locale.ROOT, "reachable from this site: %.2f° to %.2f°", minimum, 180.0 - minimum),
+            Locale.ROOT, "reachable from this site: %.2f to %.2f deg", minimum, 180.0 - minimum),
         FormStyles.TEXT_LO);
   }
 

@@ -46,7 +46,7 @@ public class StepParameters implements StepValues {
   public static final float LABEL_FIELD_GAP = 6f;
   public static final float LABEL_ICON_SIZE = 14f;
 
-  private static final String LAUNCH_DATE_HELPER = "UTC · Orekit epoch";
+  private static final String LAUNCH_DATE_HELPER = "UTC - Orekit epoch";
   private static final String LAUNCH_DATE_PLANNED_HELPER = "UTC - next opening of the target plane";
   private static final String LAUNCH_DATE_FORMAT_HELPER =
       "expected format : yyyy-MM-dd HH:mm:ss (UTC)";
