@@ -47,6 +47,7 @@ public class StepParameters implements StepValues {
   public static final float LABEL_ICON_SIZE = 14f;
 
   private static final String LAUNCH_DATE_HELPER = "UTC · Orekit epoch";
+  private static final String LAUNCH_DATE_PLANNED_HELPER = "UTC - next opening of the target plane";
   private static final String LAUNCH_DATE_FORMAT_HELPER =
       "expected format : yyyy-MM-dd HH:mm:ss (UTC)";
 
@@ -154,6 +155,12 @@ public class StepParameters implements StepValues {
 
   /** The last text this step wrote into the duration field, to tell a prefill from a user edit. */
   private String lastAutoHorizonText = "";
+
+  /** Whether the launch date currently shown was written by the planner rather than typed. */
+  private boolean plannedDate;
+
+  /** The last text the planner wrote into the field, to tell a re-write from a user edit. */
+  private String lastPlannedDateText = "";
 
   /** Entry that was refused, kept so the error state clears as soon as it is edited. */
   private String rejectedLaunchDate;
@@ -285,6 +292,7 @@ public class StepParameters implements StepValues {
     pageHost.setPreferredSize(new Vector3f(FormStyles.CONTENT_WIDTH, FormStyles.CONTENT_HEIGHT, 0));
     pageHost.addChild(root);
     planningPage.setOnBack(() -> showPage(Page.FIELDS));
+    planningPage.setOnDateChosen(this::applyPlannedDate);
 
     updateDynamicParameters(0);
     refreshHorizonFromDerived();
@@ -720,6 +728,7 @@ public class StepParameters implements StepValues {
     if (rejectedLaunchDate != null && !rejectedLaunchDate.equals(launchDateField.getText())) {
       clearLaunchDateRejection();
     }
+    applyLaunchDateProvenance();
     updateDynamicParameters(tpf);
     updatePlanningIndicator();
     // After the panel swap, so the derived duration is read off the parameters now on screen.
@@ -797,7 +806,62 @@ public class StepParameters implements StepValues {
   private void clearLaunchDateRejection() {
     rejectedLaunchDate = null;
     launchDateField.setColor(FormStyles.TEXT_PRIMARY);
-    launchDateHelper.setText(LAUNCH_DATE_HELPER);
+    // Not the default line unconditionally: the refusal was hiding a provenance, not replacing it,
+    // so a single clear would otherwise relabel a planned date as a typed one.
+    applyLaunchDateProvenance();
+  }
+
+  /**
+   * Takes the instant a clicked opportunity carries as the mission's launch date.
+   *
+   * <p>Written into the very field the user types into, and nowhere else. The field is read as a
+   * floor when the mission is created — {@code MissionWizardAppState} hands it to {@code
+   * EarthLaunchWindowPlanner}, which schedules the mission at the next opening — and a date sitting
+   * on an optimum resolves to itself, which is measured rather than assumed by {@code
+   * EarthLaunchWindowPlannerTest.anOptimumTakenAsAFloorReturnsItself}. So the click introduces no
+   * meaning the field did not already have; it only puts the floor where it belongs (spec {@code
+   * docs/mission-window/02-timeline-wizard.md} §4).
+   *
+   * @param date the chosen opportunity's optimal instant
+   */
+  private void applyPlannedDate(AbsoluteDate date) {
+    String text = TimeConverter.formatDate(date);
+    launchDateField.setText(text);
+    lastPlannedDateText = text;
+    plannedDate = true;
+    clearLaunchDateRejection();
+  }
+
+  /**
+   * Says under the field where its date comes from, and drops the planner's claim the moment the
+   * text stops being the one it wrote.
+   *
+   * <p>Runs on every frame, like the duration's own provenance line, hence the no-op guard in
+   * {@link #setLaunchDateHelper}. A standing refusal keeps its reason on the line: it hides the
+   * provenance rather than ending it, so clearing the refusal restores whichever line was due.
+   */
+  private void applyLaunchDateProvenance() {
+    LaunchDateProvenance.Source source =
+        LaunchDateProvenance.read(
+            plannedDate,
+            lastPlannedDateText,
+            launchDateField.getText(),
+            rejectedLaunchDate != null);
+    switch (source) {
+      case REFUSED -> {}
+      case PLANNED -> setLaunchDateHelper(LAUNCH_DATE_PLANNED_HELPER);
+      case TYPED -> {
+        plannedDate = false;
+        setLaunchDateHelper(LAUNCH_DATE_HELPER);
+      }
+    }
+  }
+
+  /** Writes the launch date's provenance line, skipping the no-op: this runs on every frame. */
+  private void setLaunchDateHelper(String text) {
+    if (!text.equals(launchDateHelper.getText())) {
+      launchDateHelper.setText(text);
+    }
     launchDateHelper.setColor(FormStyles.TEXT_LO);
   }
 

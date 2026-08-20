@@ -17,6 +17,7 @@ import com.simsilica.lemur.VAlignment;
 import com.simsilica.lemur.component.BoxLayout;
 import com.simsilica.lemur.component.InsetsComponent;
 import com.simsilica.lemur.component.QuadBackgroundComponent;
+import com.smousseur.orbitlab.app.converters.TimeConverter;
 import com.smousseur.orbitlab.simulation.mission.window.problem.EarthLaunchWindowRequest;
 import com.smousseur.orbitlab.ui.UiKit;
 import com.smousseur.orbitlab.ui.form.FormStyles;
@@ -24,6 +25,7 @@ import com.smousseur.orbitlab.ui.mission.wizard.FormField;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Consumer;
 import org.orekit.time.AbsoluteDate;
 
 /**
@@ -43,13 +45,26 @@ public final class PlanningPage {
   private static final float BACK_BTN_W = 90f;
   private static final float BACK_BTN_H = 22f;
 
+  /**
+   * Room for the 19 characters of {@code yyyy-MM-dd HH:mm:ss} at {@code ibmPlexMono(13)}, and air.
+   */
+  private static final float DATE_ECHO_W = 240f;
+
   private static final String RAAN_HELPER = "empty — no plane is waited for";
   private static final String RAAN_FORMAT_HELPER = "RAAN — expected degrees";
+
+  private static final String DATE_PLANNED_HELPER = "UTC - read as a floor by the planner";
+  private static final String DATE_TYPED_HELPER = "UTC - typed on the fields page";
+
+  /** Shown when the floor does not parse; the axis says why on its own line. */
+  private static final String NO_DATE = "--";
 
   private final Container root;
   private final TextField raanField;
   private final Label raanHelper;
   private final LaunchWindowTimeline timeline;
+  private final TextField dateEcho;
+  private final Label dateEchoHelper;
 
   private final PlanningModel model = new PlanningModel();
 
@@ -57,6 +72,7 @@ public final class PlanningPage {
   private String rejectedRaan;
 
   private Runnable onBack = () -> {};
+  private Consumer<AbsoluteDate> onDateChosen = date -> {};
 
   public PlanningPage() {
     root = new Container(new BoxLayout(Axis.Y, FillMode.None));
@@ -98,17 +114,40 @@ public final class PlanningPage {
     timeline = new LaunchWindowTimeline();
     timeline.setOnSelected(this::onWindowSelected);
     root.addChild(timeline.getNode());
+
+    root.addChild(UiKit.vSpacer(ROW_GAP));
+    root.addChild(fieldLabelRow("LAUNCH DATE", "lbl-clock", LABEL_ICON_SIZE, LABEL_FIELD_GAP));
+    root.addChild(UiKit.vSpacer(LABEL_FIELD_GAP));
+    dateEcho = newInputField("", DATE_ECHO_W, FIELD_H);
+    UiKit.makeReadOnly(dateEcho);
+    root.addChild(dateEcho);
+
+    root.addChild(UiKit.vSpacer(LABEL_FIELD_GAP));
+    dateEchoHelper = new Label(DATE_TYPED_HELPER, FormStyles.STYLE);
+    dateEchoHelper.setFont(UiKit.ibmPlexMono(11));
+    dateEchoHelper.setColor(FormStyles.TEXT_LO);
+    root.addChild(dateEchoHelper);
   }
 
   /**
-   * Points the zoom pane at the opportunity that was clicked. The date it holds is not written into
-   * the wizard's launch date field here — that is a step of its own.
+   * Points the zoom pane at the opportunity that was clicked, then hands its optimal instant to
+   * whoever owns the launch date.
+   *
+   * <p><b>The axis re-anchors on the next frame, and that is the intended image.</b> The instant
+   * just written becomes the floor, so the chosen opportunity moves to the head of the axis, as
+   * many later ones come into view as were skipped, and the floor's rule ends up under the selected
+   * marker — which is exactly what has just happened. Remembering the original date to hold the
+   * axis still would be the second source of truth about "when" that spec {@code
+   * docs/mission-window/02-timeline-wizard.md} §4 exists to refuse.
    *
    * @param index the opportunity clicked on the axis
    */
   private void onWindowSelected(int index) {
     model.select(index);
     timeline.render(model.state());
+    if (model.state() instanceof PlanningState.Windows windows) {
+      onDateChosen.accept(windows.current().date());
+    }
   }
 
   /** The back band, on {@code MissionDetailView}'s recipe: accent text, no chrome, no insets. */
@@ -147,6 +186,17 @@ public final class PlanningPage {
   }
 
   /**
+   * What a click on an opportunity writes. The page holds no date of its own: the launch date field
+   * on the main page is the single channel between the wizard and the planner (spec {@code
+   * docs/mission-window/02-timeline-wizard.md} §4).
+   *
+   * @param action the sink for the chosen instant
+   */
+  public void setOnDateChosen(Consumer<AbsoluteDate> action) {
+    this.onDateChosen = action != null ? action : date -> {};
+  }
+
+  /**
    * Clears the refusal as soon as the node is edited, so the red does not outlive the mistake — the
    * same contract every other refusable field of this wizard holds, {@code
    * StepParameters.rejectedLaunchDate} being the reference.
@@ -172,6 +222,33 @@ public final class PlanningPage {
   public void refresh(EarthLaunchWindowRequest request, AbsoluteDate floor) {
     model.refresh(request, floor, parsedRaanDeg().isPresent());
     timeline.render(model.state());
+    showFloor(floor);
+  }
+
+  /**
+   * Echoes the launch date the step is working from, and says which of the two things it is: the
+   * floor a window is being searched from, or the instant the mission simply leaves at.
+   *
+   * <p><b>Read-only on purpose</b> ({@link UiKit#makeReadOnly}, the recipe the derived inclination
+   * already uses). The floor is edited on the fields page: changing it is changing the question
+   * asked, while this page only answers it. Made editable here the field would have two owners, and
+   * the page that recomputes from it on every frame would be fighting the page that holds it (spec
+   * {@code docs/mission-window/02-timeline-wizard.md} §3).
+   *
+   * @param floor the launch date read as a floor, or null when the field does not parse
+   */
+  private void showFloor(AbsoluteDate floor) {
+    String text = floor != null ? TimeConverter.formatDate(floor) : NO_DATE;
+    if (!text.equals(dateEcho.getText())) {
+      dateEcho.setText(text);
+    }
+    // Windows, and not merely a node being typed: until opportunities are actually found, nothing
+    // is moving this date and calling it a floor would promise a planning that is not happening.
+    boolean planned = model.state() instanceof PlanningState.Windows;
+    String helper = planned ? DATE_PLANNED_HELPER : DATE_TYPED_HELPER;
+    if (!helper.equals(dateEchoHelper.getText())) {
+      dateEchoHelper.setText(helper);
+    }
   }
 
   /**
