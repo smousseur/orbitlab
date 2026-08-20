@@ -3,6 +3,8 @@ package com.smousseur.orbitlab.ui.mission.wizard.step.planning;
 import com.smousseur.orbitlab.core.OrbitlabException;
 import com.smousseur.orbitlab.simulation.mission.window.LaunchWindow;
 import java.util.List;
+import java.util.Objects;
+import org.orekit.time.AbsoluteDate;
 
 /**
  * What the planning page has to draw. Three cases and no fourth, which is what makes the page's
@@ -27,12 +29,15 @@ public sealed interface PlanningState {
   /**
    * The opportunities found, in chronological order.
    *
+   * @param floor the date the user asked for, which the opportunities are at or after
    * @param windows the slots, never empty
    * @param selected the index of the one the zoom pane shows
    */
-  record Windows(List<LaunchWindow> windows, int selected) implements PlanningState {
+  record Windows(AbsoluteDate floor, List<LaunchWindow> windows, int selected)
+      implements PlanningState {
 
     public Windows {
+      Objects.requireNonNull(floor, "floor");
       windows = List.copyOf(windows);
       if (windows.isEmpty()) {
         throw new OrbitlabException("an empty window list is Unavailable, not Windows");

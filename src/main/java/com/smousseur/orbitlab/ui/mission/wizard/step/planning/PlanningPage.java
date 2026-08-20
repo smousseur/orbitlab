@@ -49,6 +49,7 @@ public final class PlanningPage {
   private final Container root;
   private final TextField raanField;
   private final Label raanHelper;
+  private final LaunchWindowTimeline timeline;
 
   private final PlanningModel model = new PlanningModel();
 
@@ -92,6 +93,22 @@ public final class PlanningPage {
     raanHelper.setFont(UiKit.ibmPlexMono(11));
     raanHelper.setColor(FormStyles.TEXT_LO);
     root.addChild(raanHelper);
+
+    root.addChild(UiKit.vSpacer(ROW_GAP));
+    timeline = new LaunchWindowTimeline();
+    timeline.setOnSelected(this::onWindowSelected);
+    root.addChild(timeline.getNode());
+  }
+
+  /**
+   * Points the zoom pane at the opportunity that was clicked. The date it holds is not written into
+   * the wizard's launch date field here — that is a step of its own.
+   *
+   * @param index the opportunity clicked on the axis
+   */
+  private void onWindowSelected(int index) {
+    model.select(index);
+    timeline.render(model.state());
   }
 
   /** The back band, on {@code MissionDetailView}'s recipe: accent text, no chrome, no insets. */
@@ -154,6 +171,7 @@ public final class PlanningPage {
    */
   public void refresh(EarthLaunchWindowRequest request, AbsoluteDate floor) {
     model.refresh(request, floor, parsedRaanDeg().isPresent());
+    timeline.render(model.state());
   }
 
   /**

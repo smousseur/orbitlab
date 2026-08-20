@@ -75,7 +75,7 @@ public final class PlanningModel {
     if (state instanceof PlanningState.Windows windows
         && index >= 0
         && index < windows.windows().size()) {
-      state = new PlanningState.Windows(windows.windows(), index);
+      state = new PlanningState.Windows(windows.floor(), windows.windows(), index);
     }
   }
 
@@ -99,7 +99,7 @@ public final class PlanningModel {
           EarthLaunchWindowPlanner.nextOpportunities(request, floor, OPPORTUNITIES_SHOWN);
       return windows.isEmpty()
           ? new PlanningState.Unavailable(NO_WINDOW)
-          : new PlanningState.Windows(windows, 0);
+          : new PlanningState.Windows(floor, windows, 0);
     } catch (OrbitlabException refused) {
       // A plane the pad cannot reach. The parameters step refuses it too, but this runs on every
       // frame, so it sees the state between the bad keystroke and the Next that rejects it.

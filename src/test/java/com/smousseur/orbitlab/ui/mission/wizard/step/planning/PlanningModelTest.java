@@ -131,6 +131,18 @@ class PlanningModelTest {
   }
 
   @Test
+  @DisplayName("select keeps the requested date, which the axis draws its origin from")
+  void selectKeepsTheFloor() {
+    PlanningModel model = new PlanningModel();
+    model.refresh(kourou(120.0), epoch(), true);
+
+    model.select(2);
+
+    PlanningState.Windows windows = assertInstanceOf(PlanningState.Windows.class, model.state());
+    assertEquals(epoch(), windows.floor());
+  }
+
+  @Test
   @DisplayName("select out of range is ignored")
   void selectOutOfRangeIsIgnored() {
     PlanningModel model = new PlanningModel();
