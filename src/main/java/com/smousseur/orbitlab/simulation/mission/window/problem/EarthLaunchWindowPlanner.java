@@ -1,5 +1,7 @@
 package com.smousseur.orbitlab.simulation.mission.window.problem;
 
+import com.smousseur.orbitlab.simulation.OrekitService;
+import com.smousseur.orbitlab.simulation.mission.operation.LaunchPlane;
 import com.smousseur.orbitlab.simulation.mission.operation.MissionSpec;
 import com.smousseur.orbitlab.simulation.mission.window.LaunchWindow;
 import com.smousseur.orbitlab.simulation.mission.window.LaunchWindowSearch;
@@ -9,6 +11,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import org.orekit.time.AbsoluteDate;
+import org.orekit.utils.Constants;
 
 /**
  * Turns a configured mission and an earliest date into the launch opportunity it should fly (MIS-2)
@@ -49,13 +52,55 @@ public final class EarthLaunchWindowPlanner {
    */
   private static final int CANDIDATES = 5;
 
+  /**
+   * The request {@link #warmUp()} solves: Kourou, 51.6°, 400 km circular — the wizard's default site
+   * and a plane that site can reach. The numbers matter only in that they must pose a solvable
+   * problem; what is being warmed is code paths and Orekit caches, not an answer anyone reads.
+   */
+  private static final EarthLaunchWindowRequest WARM_UP_REQUEST =
+      new EarthLaunchWindowRequest(
+          5.236,
+          -52.769,
+          14.0,
+          LaunchPlane.ofDegrees(51.6),
+          0.0,
+          Constants.WGS84_EARTH_EQUATORIAL_RADIUS + 400_000.0);
+
   private EarthLaunchWindowPlanner() {}
+
+  /**
+   * Solves one throwaway window, so that the first one a user asks for is not the first one this JVM
+   * has ever computed.
+   *
+   * <p><b>The second tier of a measured freeze.</b> {@link OrekitService#warmUpFrames()} pays the
+   * large one — 8 483 ms for the first ITRF. Once ITRF is warm, a first full {@link
+   * #nextOpportunities} still costs 549 ms — 641 ms re-measured through this method — where
+   * subsequent ones cost 4–9 ms. That half second is JIT and the caches a first solve fills, not
+   * data loading, and the only way to absorb it is to solve once for nobody. The criterion itself
+   * was never the cost: 250 evaluations measure 28 ms all told. Measured end to end, a user's first
+   * solve falls from <b>9 134 ms without this warm-up to 40 ms with it</b>.
+   *
+   * <p><b>Why the solve is warmed here and the frame there.</b> {@link OrekitService} owns frames,
+   * propagators and gravity models, and this package already depends on it; a warm-up reaching the
+   * other way would make {@code simulation} depend on {@code simulation.mission.window}. The frame
+   * touch belongs there because the frame does, the solve belongs here because the solve does.
+   *
+   * <p><b>Synchronous, like the frame warm-up</b> — it starts no thread of its own, so a test that
+   * calls it decides when it runs. The application calls it off the render thread; see {@code
+   * OrbitLabApplication.startFrameWarmUp}.
+   */
+  public static void warmUp() {
+    nextOpportunities(WARM_UP_REQUEST, AbsoluteDate.J2000_EPOCH, 1);
+  }
 
   /**
    * The first opportunity at or after {@code earliest} for a mission that names a target node.
    *
-   * <p><b>Closed form throughout</b> — some ninety evaluations of a vector angle, microseconds each
-   * — which is why the caller may run it on the render thread where the mission is created.
+   * <p><b>Closed form throughout</b> — some ninety evaluations of a vector angle, microseconds each,
+   * a few milliseconds for the solve — which is why the caller may run it on the render thread where
+   * the mission is created. That holds <em>once the frames are warm</em>: the first ITRF of a JVM
+   * costs 8 483 ms and lands on whatever thread reaches it first, which is why {@link #warmUp()}
+   * exists and why the application calls it off the render thread at startup.
    *
    * <p><b>This method keeps its own span rather than deriving one through {@link
    * LaunchWindowSearch#forOpportunities}, and deliberately.</b> It is the path every mission

@@ -73,6 +73,41 @@ public final class OrekitService {
   }
 
   /**
+   * Pays, on the calling thread, the one-off cost of building the terrestrial frame chain.
+   *
+   * <p><b>Why this method exists.</b> {@link #initialize()} ends on {@link FramesFactory#getICRF()},
+   * which is celestial and cheap; the <em>terrestrial</em> chain is neither. The first {@link
+   * #itrf()} makes Orekit load and index the Earth-orientation parameters that ITRF hangs on, and
+   * that happens exactly once per JVM — on whichever thread happens to ask first. Measured here,
+   * first call each:
+   *
+   * <ul>
+   *   <li>{@link #initialize()} — 784 ms;
+   *   <li><b>{@link #itrf()} — 8 483 ms</b>, re-measured at 8 199 ms through this method;
+   *   <li>{@link #gcrf()} afterwards — 0 ms;
+   *   <li>{@link #getEarthEllipsoid()} afterwards — 2.8 ms.
+   * </ul>
+   *
+   * <p><b>Which thread pays is the whole point.</b> The three users of {@link #itrf()} — the Earth
+   * gravity field, an Earth mission, the launch window criterion — all reach it lazily, so the bill
+   * lands wherever the first of them runs. In this application that has always been the render
+   * thread: before the launch window feature it was an Earth mission at creation, and the feature
+   * only moved the same eight and a half seconds earlier, into the wizard. Eight seconds on the
+   * render thread is a frozen window, so the application starts this off it (see {@code
+   * OrbitLabApplication.startFrameWarmUp}). Nothing here is an optimisation of the arithmetic: every
+   * path warmed works without it, merely slowly, once.
+   *
+   * <p><b>Synchronous, and deliberately not spawned.</b> This method does not start a thread and is
+   * not called from {@link #initialize()}: tests initialize Orekit in {@code @BeforeAll} and share a
+   * JVM, where a background thread touching these caches would deepen {@code BUG-7} (cross-test
+   * contamination) rather than help. The caller chooses the thread.
+   */
+  public void warmUpFrames() {
+    itrf();
+    getEarthEllipsoid();
+  }
+
+  /**
    * Returns the International Celestial Reference Frame (ICRF).
    *
    * @return the ICRF frame

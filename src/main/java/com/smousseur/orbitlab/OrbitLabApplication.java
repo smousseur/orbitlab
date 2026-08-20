@@ -19,6 +19,7 @@ import com.smousseur.orbitlab.simulation.mission.operation.LunarTransferMission;
 import com.smousseur.orbitlab.simulation.mission.window.LaunchWindow;
 import com.smousseur.orbitlab.simulation.mission.window.LaunchWindowSearch;
 import com.smousseur.orbitlab.simulation.mission.window.LaunchWindowSolver;
+import com.smousseur.orbitlab.simulation.mission.window.problem.EarthLaunchWindowPlanner;
 import com.smousseur.orbitlab.simulation.mission.window.problem.TranslunarInjectionPlanWindowProblem;
 import com.smousseur.orbitlab.states.InitAppState;
 import com.smousseur.orbitlab.states.camera.CameraTransitionAppState;
@@ -68,6 +69,9 @@ public class OrbitLabApplication extends SimpleApplication {
 
   private static final Logger LOGGER = LogManager.getLogger(OrbitLabApplication.class);
 
+  /** Name of the frame warm-up thread, so a thread dump taken during it explains itself. */
+  private static final String FRAME_WARM_UP_THREAD_NAME = "orekit-frame-warmup";
+
   /** Days the lunar demonstration walks forward looking for a flyable encounter geometry. */
   private static final int LUNAR_DEMO_DAYS = 30;
 
@@ -104,6 +108,7 @@ public class OrbitLabApplication extends SimpleApplication {
   public void simpleInitApp() {
     GuiGlobals.initialize(this);
     OrekitService.get().initialize();
+    startFrameWarmUp();
     BaseStyles.loadGlassStyle();
     GuiGlobals.getInstance().getStyles().setDefaultStyle("base");
     AssetFactory.init(assetManager);
@@ -194,6 +199,50 @@ public class OrbitLabApplication extends SimpleApplication {
     stateManager.attach(new PostFxAppState(nearViewport, skyViewport, farViewport));
 
     loadLunarDemoIfRequested(applicationContext);
+  }
+
+  /**
+   * Starts the Orekit terrestrial-frame warm-up on a daemon thread.
+   *
+   * <p><b>What it buys.</b> The first {@link OrekitService#itrf()} of a JVM costs 8 483 ms — Orekit
+   * loading the Earth-orientation data the terrestrial chain hangs on — and every user of that frame
+   * reaches it lazily, so the bill lands on whoever asks first. In this application that is the
+   * render thread, whether through a mission being created or through the wizard's planning page. A
+   * second tier of 549 ms, JIT and first-solve caching, follows it; {@link
+   * EarthLaunchWindowPlanner#warmUp()} absorbs that one. Neither is a property of the launch window
+   * criterion, which measures 4–9 ms per solve once warm.
+   *
+   * <p><b>Background rather than blocking, and that is a trade decided.</b> Blocking {@code
+   * simpleInitApp} would guarantee no freeze but would add nine seconds to every start. Started
+   * here, startup stays exactly as fast as it was; a user who reaches the wizard within the first
+   * nine seconds still waits, which is rare and in any case strictly better than the state before
+   * this warm-up, where every user waited.
+   *
+   * <p><b>Daemon</b>, so that a warm-up still running cannot hold up JVM shutdown, and <b>named</b>,
+   * so that a thread dump taken during those nine seconds explains itself. A failure is logged and
+   * swallowed: everything it warms works without it, only slowly, so it must never be able to take
+   * the application down.
+   */
+  private void startFrameWarmUp() {
+    Thread thread = new Thread(OrbitLabApplication::warmUpFrames, FRAME_WARM_UP_THREAD_NAME);
+    thread.setDaemon(true);
+    thread.start();
+  }
+
+  private static void warmUpFrames() {
+    long startNanos = System.nanoTime();
+    try {
+      OrekitService.get().warmUpFrames();
+      EarthLaunchWindowPlanner.warmUp();
+      LOGGER.info(
+          "Earth frame warm-up finished in {} ms", (System.nanoTime() - startNanos) / 1_000_000L);
+    } catch (RuntimeException e) {
+      LOGGER.warn(
+          "Earth frame warm-up failed after {} ms; frames and launch windows still work, but the"
+              + " first use of either will pay the cost on its own thread",
+          (System.nanoTime() - startNanos) / 1_000_000L,
+          e);
+    }
   }
 
   private void loadLunarDemoIfRequested(ApplicationContext applicationContext) {
