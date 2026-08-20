@@ -205,6 +205,9 @@ public class MissionWizardWidget implements AutoCloseable {
     content.clearChildren();
     Container panel = stepPanels.get(step);
     if (panel != null) content.addChild(panel);
+    if (step == MissionWizardStep.PARAMETERS) {
+      stepParameters.onStepEntered();
+    }
     stepper.setActiveStep(step);
     footer.setStep(step);
     logger.debug("Wizard: showing step {}", step);
@@ -216,6 +219,9 @@ public class MissionWizardWidget implements AutoCloseable {
       // the user jump over it.
       if (parametersRefused()) {
         showStep(MissionWizardStep.PARAMETERS);
+        // Revealed again after the step is shown, not only inside the check: entering a step opens
+        // it on its fields page, which would undo the page the refusal had just selected.
+        stepParameters.revealRefusal();
         return;
       }
       Map<String, Object> values = getAllValues();
@@ -241,6 +247,11 @@ public class MissionWizardWidget implements AutoCloseable {
    * <p>Every check runs, and none short-circuits the others: a user who has a bad date <em>and</em>
    * a bad duration should see both fields marked at once rather than discover the second only after
    * fixing the first.
+   *
+   * <p>Marking is not enough to be seen, though: the step has two pages and mounts one at a time, so
+   * a refusal is also revealed on the page that carries it. Without that, refusing a field of the
+   * fields page while the planning page is up leaves nothing on screen changed and the Next button
+   * looking dead.
    */
   private boolean parametersRefused() {
     Optional<String> dateError = stepParameters.validateLaunchDate();
@@ -249,7 +260,11 @@ public class MissionWizardWidget implements AutoCloseable {
     horizonError.ifPresent(reason -> logger.info("Wizard: mission duration refused ({})", reason));
     Optional<String> planeError = stepParameters.validateTargetPlane();
     planeError.ifPresent(reason -> logger.info("Wizard: target plane refused ({})", reason));
-    return dateError.isPresent() || horizonError.isPresent() || planeError.isPresent();
+    boolean refused = dateError.isPresent() || horizonError.isPresent() || planeError.isPresent();
+    if (refused) {
+      stepParameters.revealRefusal();
+    }
+    return refused;
   }
 
   /**

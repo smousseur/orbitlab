@@ -84,6 +84,19 @@ public abstract class DynamicParameters {
   }
 
   /**
+   * Whether a field of this panel currently carries a refusal, so the step can mount the page
+   * holding it without running the checks a second time.
+   *
+   * <p>False by default, on the same reasoning as {@link #validateTargetPlane()}: a panel with
+   * nothing refusable has nothing standing.
+   *
+   * @return whether a field of this panel is marked as refused
+   */
+  public boolean hasRejection() {
+    return false;
+  }
+
+  /**
    * Days spanned by {@code revolutions} turns of a circular-equivalent orbit of the given
    * semi-major axis, via the Keplerian period {@code 2π√(a³/µ)}.
    *

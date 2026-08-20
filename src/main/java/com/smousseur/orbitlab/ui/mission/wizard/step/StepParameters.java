@@ -78,13 +78,53 @@ public class StepParameters implements StepValues {
    */
   private static final String HORIZON_MANUAL_HELPER = "total duration since takeoff";
 
+  /** Which of the step's two pages is mounted. */
+  private enum Page {
+    FIELDS,
+    PLANNING
+  }
+
   private final Container root;
+  private final Container pageHost;
+  private Page page = Page.FIELDS;
+
   private final MissionContext missionContext;
   private final Label titleLabel;
 
   private final TextField missionNameField;
   private final TextField launchDateField;
   private final Label launchDateHelper;
+
+  /** The row holding the launch-date field and the indicator, so the latter can be detached. */
+  private final Container dateRow;
+
+  /** The indicator's container, detached on GEO where no node can ever be set. */
+  private final Container planningIndicator;
+
+  /** The gap before the indicator, detached with it so GEO leaves no phantom column width. */
+  private final Container planningGap;
+
+  /** Whether {@link #planningIndicator} is currently a child of {@link #dateRow}. */
+  private boolean planningIndicatorShown = true;
+
+  /** The word {@code planning}: a text-only control, and the click target that opens the page. */
+  private Button planningButton;
+
+  /** The lit/unlit dot beside it — lit exactly when a target node is set. */
+  private Panel planningDot;
+
+  private boolean planningHovered;
+
+  /**
+   * Whether the indicator has ever been painted, so its first paint cannot be mistaken for a no-op
+   * by the guard in {@link #applyPlanningIndicator()}.
+   *
+   * <p>Nothing today reaches that case: the style paints a button {@code TEXT_PRIMARY}, and the
+   * first colour this indicator computes is never that one. It is kept as the defence it would have
+   * to be the day the style default and an indicator state coincide, which would otherwise leave the
+   * dot showing a plain style background for the life of the wizard.
+   */
+  private boolean planningPainted;
 
   private final TextField horizonField;
   private final Label horizonHelper;
@@ -195,7 +235,14 @@ public class StepParameters implements StepValues {
 
     Container columns = new Container(new BoxLayout(Axis.X, FillMode.None));
     columns.setBackground(null);
-    columns.addChild(fieldColumn("LAUNCH DATE", "lbl-clock", launchDateField, launchDateHelper));
+    dateRow = new Container(new BoxLayout(Axis.X, FillMode.None));
+    dateRow.setBackground(null);
+    dateRow.addChild(launchDateField);
+    planningGap = UiKit.hSpacer(16f);
+    dateRow.addChild(planningGap);
+    planningIndicator = buildPlanningIndicator();
+    dateRow.addChild(planningIndicator);
+    columns.addChild(fieldColumn("LAUNCH DATE", "lbl-clock", dateRow, launchDateHelper));
     columns.addChild(UiKit.hSpacer(COLUMN_GAP));
     columns.addChild(
         fieldColumn("MISSION DURATION", "lbl-clock", buildHorizonRow(), horizonHelper));
@@ -219,6 +266,12 @@ public class StepParameters implements StepValues {
             }
           });
     }
+    pageHost = new Container(new BoxLayout(Axis.Y, FillMode.None));
+    pageHost.setBackground(null);
+    pageHost.setPreferredSize(new Vector3f(FormStyles.CONTENT_WIDTH, FormStyles.CONTENT_HEIGHT, 0));
+    pageHost.addChild(root);
+    planningPage.setOnBack(() -> showPage(Page.FIELDS));
+
     updateDynamicParameters(0);
     refreshHorizonFromDerived();
   }
@@ -363,6 +416,97 @@ public class StepParameters implements StepValues {
     autoButton.setColor(word);
   }
 
+  /**
+   * The planning control: a status dot and the word {@code planning}, no button chrome — the same
+   * grammar as the duration's AUTO indicator, and for the same reason. It says the state as well as
+   * opening the page: the dot is lit exactly when a target node is set, which is exactly when the
+   * launch date is governed by a window rather than by what was typed.
+   */
+  private Container buildPlanningIndicator() {
+    Container indicator = new Container(new BoxLayout(Axis.X, FillMode.None));
+    indicator.setBackground(null);
+
+    planningDot = new Panel(AUTO_DOT_SIZE, AUTO_DOT_SIZE, FormStyles.STYLE);
+    indicator.addChild(centeredInRow(planningDot));
+    indicator.addChild(UiKit.hSpacer(7f));
+
+    planningButton = new Button("planning", FormStyles.STYLE);
+    planningButton.setBackground(null);
+    planningButton.setInsets(new Insets3f(0, 0, 0, 0));
+    planningButton.setFont(UiKit.ibmPlexMono(11));
+    planningButton.addClickCommands(source -> showPage(Page.PLANNING));
+    MouseEventControl.addListenersToSpatial(
+        planningButton,
+        new DefaultMouseListener() {
+          @Override
+          public void mouseEntered(MouseMotionEvent event, Spatial target, Spatial capture) {
+            planningHovered = true;
+            applyPlanningIndicator();
+          }
+
+          @Override
+          public void mouseExited(MouseMotionEvent event, Spatial target, Spatial capture) {
+            planningHovered = false;
+            applyPlanningIndicator();
+          }
+        });
+    indicator.addChild(centeredInRow(planningButton));
+
+    applyPlanningIndicator();
+    return indicator;
+  }
+
+  /**
+   * Paints the planning indicator from the node the page holds: dot lit and word in the accent while
+   * a plane is being waited for, both dimmed while none is.
+   *
+   * <p>Unlike {@link #applyAutoIndicator()}, which only ever runs on a change, this one is called
+   * from {@link #update(float)} — the node lives on the other page and can be edited without this
+   * step hearing about it. The entry is therefore parsed on every frame, which is cheap; what the
+   * guard skips is the repaint, which loads a background component, re-attaches it and invalidates
+   * the row's layout, the way {@link #setHorizonHelper} skips its own. The word's colour is enough
+   * to detect the no-op: the accent means, and only means, that a node is set.
+   */
+  private void applyPlanningIndicator() {
+    boolean planned = planningPage.parsedRaanDeg().isPresent();
+    ColorRGBA word;
+    if (planned) {
+      word = FormStyles.ACCENT_BRIGHT;
+    } else {
+      word = planningHovered ? FormStyles.TEXT_SECONDARY : FormStyles.TEXT_LO;
+    }
+    if (planningPainted && word.equals(planningButton.getColor())) {
+      return;
+    }
+    planningPainted = true;
+
+    QuadBackgroundComponent dotBg = UiKit.wizardFlat("slider-thumb");
+    dotBg.setColor(planned ? FormStyles.ACCENT_BRIGHT : FormStyles.BORDER);
+    planningDot.setBackground(dotBg);
+    planningButton.setColor(word);
+  }
+
+  /**
+   * Attaches or detaches the planning indicator to match the card on screen. A GEO mission carries
+   * no target node — {@code MissionSpec.Geo} has no such component and {@code
+   * MissionWizardAppState.scheduledDateFor} only schedules an {@code EarthOrbit} — so the control is
+   * absent there rather than greyed: nothing could ever light it.
+   */
+  private void updatePlanningIndicator() {
+    boolean shown = selectedProfile != MissionProfile.GEO;
+    if (shown == planningIndicatorShown) {
+      return;
+    }
+    if (shown) {
+      dateRow.addChild(planningGap);
+      dateRow.addChild(planningIndicator);
+    } else {
+      dateRow.removeChild(planningGap);
+      dateRow.removeChild(planningIndicator);
+    }
+    planningIndicatorShown = shown;
+  }
+
   /** Hands the duration back to the derived policy, clearing any refused entry. */
   private void resetHorizonToDerived() {
     horizonAuto = true;
@@ -438,7 +582,27 @@ public class StepParameters implements StepValues {
   }
 
   public Container getNode() {
-    return root;
+    return pageHost;
+  }
+
+  /**
+   * Mounts one of the step's two pages.
+   *
+   * <p>A step is always entered by its main page — see {@link #onStepEntered()} — so the only thing
+   * that mounts the planning page without a click is a refusal on a field the planning page holds.
+   */
+  private void showPage(Page target) {
+    if (page == target) {
+      return;
+    }
+    pageHost.clearChildren();
+    pageHost.addChild(target == Page.FIELDS ? root : planningPage.getNode());
+    page = target;
+  }
+
+  /** Called by the wizard whenever this step is shown: a step opens on its fields. */
+  public void onStepEntered() {
+    showPage(Page.FIELDS);
   }
 
   @Override
@@ -532,8 +696,11 @@ public class StepParameters implements StepValues {
       clearLaunchDateRejection();
     }
     updateDynamicParameters(tpf);
+    updatePlanningIndicator();
     // After the panel swap, so the derived duration is read off the parameters now on screen.
     updateHorizon();
+    applyPlanningIndicator();
+    planningPage.update(tpf);
   }
 
   /**
@@ -611,13 +778,55 @@ public class StepParameters implements StepValues {
    * <p>Covers the target node too, which lives on the planning page rather than on the panel: both
    * describe the plane being aimed at, so one refusal serves them both.
    *
+   * <p>Marking only: which page the marks are then shown on is {@link #revealRefusal()}'s, so that
+   * the choice weighs every refused field of the step and not just the two this method makes.
+   *
    * @return the reason the inclination or the node was refused, or empty when both are usable
    */
   public Optional<String> validateTargetPlane() {
     Optional<String> inclination = dynamicParameters.validateTargetPlane();
-    Optional<String> node = planningPage.validateTargetNode();
     // Both run, neither short-circuits: a user with two bad fields should see both marked.
+    Optional<String> node = validateTargetNode();
     return inclination.isPresent() ? inclination : node;
+  }
+
+  /**
+   * Checks the target node, where the card has one to check.
+   *
+   * <p>GEO has none: {@code MissionSpec.Geo} carries no node component, which is why the planning
+   * indicator is detached there. Without this gate a node typed on another card would still be read
+   * and could refuse a GEO mission over a field whose entry point that card has just removed. The
+   * standing refusal is cleared rather than left, on the same reasoning: a mark must not outlive the
+   * field able to show it.
+   *
+   * @return the reason the node was refused, or empty when it is usable or has no meaning here
+   */
+  private Optional<String> validateTargetNode() {
+    if (selectedProfile == MissionProfile.GEO) {
+      planningPage.clearRejection();
+      return Optional.empty();
+    }
+    return planningPage.validateTargetNode();
+  }
+
+  /**
+   * Mounts the page holding whichever field was refused, reading the marks the validators left
+   * rather than running them again.
+   *
+   * <p>It exists because entering a step resets it to its fields page ({@link #onStepEntered()}),
+   * which would otherwise clobber the page a refusal had just selected — the wizard refuses on the
+   * launcher step too, since the stepper lets the parameters be flown over.
+   */
+  public void revealRefusal() {
+    switch (RefusedPage.choose(
+        rejectedLaunchDate != null,
+        rejectedHorizon != null,
+        dynamicParameters.hasRejection(),
+        planningPage.hasRejection())) {
+      case FIELDS -> showPage(Page.FIELDS);
+      case PLANNING -> showPage(Page.PLANNING);
+      case NONE -> {}
+    }
   }
 
   private String rejectHorizon(String text, String message) {

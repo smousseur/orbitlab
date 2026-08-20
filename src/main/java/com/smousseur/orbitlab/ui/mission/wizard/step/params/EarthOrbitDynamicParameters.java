@@ -357,6 +357,11 @@ public class EarthOrbitDynamicParameters extends DynamicParameters {
     return Optional.empty();
   }
 
+  @Override
+  public boolean hasRejection() {
+    return rejectedInclination != null;
+  }
+
   /** The band this site reaches, phrased for a line that has to fit beside the field. */
   private static String reachableBand(double latitudeDeg) {
     double minimum = FastMath.abs(latitudeDeg);

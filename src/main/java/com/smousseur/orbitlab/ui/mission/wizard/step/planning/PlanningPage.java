@@ -205,7 +205,20 @@ public final class PlanningPage {
     return RaanEntry.parse(raanField.getText());
   }
 
-  private void clearRejection() {
+  /**
+   * @return whether the node currently carries a refusal, so the step can mount the page holding it
+   *     without running the check a second time
+   */
+  public boolean hasRejection() {
+    return rejectedRaan != null;
+  }
+
+  /**
+   * Takes the refusal off the node. Public because the node does not exist on every card: the step
+   * skips the check where there is no node to check, and a mark left standing from another card
+   * would outlive the field able to show it.
+   */
+  public void clearRejection() {
     rejectedRaan = null;
     raanField.setColor(FormStyles.TEXT_PRIMARY);
     raanHelper.setText(RAAN_HELPER);
