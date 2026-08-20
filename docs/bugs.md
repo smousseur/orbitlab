@@ -17,6 +17,7 @@ la frontière entre les deux derniers doit rester lisible.
 | [`BUG-5`](#bug-5--pop-du-modèle-3d-au-changement-de-focus) | Pop du modèle 3D au changement de focus | 2026-08-15 | Ouvert, mécanisme identifié |
 | [`BUG-6`](#bug-6--plane-trim-employé-hors-de-son-enveloppe-par-lascension-polaire) | Plane trim employé hors de son enveloppe par l'ascension polaire | 2026-08-16 | Ouvert, mécanisme mesuré — **importance : mineure côté code, à trancher côté physique** |
 | [`BUG-7`](#bug-7--les-gates-de-non-régression-tombent-quand-un-test-lunaire-les-précède-dans-le-même-jvm) | Les gates de non-régression tombent quand un test lunaire les précède dans le même JVM | 2026-08-18 | Ouvert, reproductible, piste identifiée — **fiabilité de l'instrument, pas de la physique** |
+| [`BUG-8`](#bug-8--inclinaison-figée-invalidée-en-silence-par-un-changement-de-site) | Inclinaison figée invalidée en silence par un changement de site | 2026-08-20 | Ouvert, mécanisme identifié — **ergonomie, le modèle est sain** |
 
 ---
 
@@ -557,3 +558,73 @@ Trois issues, et le choix n'est pas évident :
 > et n'exécute **rien**, en affichant un BUILD SUCCESSFUL vert. Une séquence
 > « rouge puis vert puis vert » est en général « exécuté-échec, exécuté-succès,
 > sauté ». Toute mesure passe par `cleanTest`.
+
+---
+
+## BUG-8 — Inclinaison figée invalidée en silence par un changement de site
+
+**Constaté.** Wizard de création de mission, carte `LEO`, pas de tir Cape
+Canaveral, nœud cible 50°. La page `PLANNING` n'affiche aucune opportunité et
+donne pour motif `target plane unreadable, or out of this site's reach`. Rien,
+avant cela, n'a signalé que quoi que ce soit était invalide.
+
+**Le modèle n'est pas en cause, c'est mesuré.** Sondé directement,
+`EarthLaunchWindowPlanner.nextOpportunities` depuis Canaveral (28,562°,
+−80,577°, 3 m) vers un nœud à 50°, cible 400 km :
+
+| Plan visé | Résultat |
+|---|---|
+| plein est (i = 28,562°) | **3 créneaux**, un par jour sidéral, 6,73 m/s au creux, 7 min 01 s de large |
+| i = 28,6° explicite | 3 créneaux, 7,46 m/s |
+| i = 51,6° explicite | 3 créneaux, 11,53 m/s |
+| i = 5,24° — celle de Kourou | **refusé** : `Inclination 5.240° is unreachable from latitude 28.562°` |
+
+Une seule entrée fait échouer la chaîne, et c'est une inclinaison **inférieure à
+la latitude du pas de tir**.
+
+### Mécanisme (identifié dans le code, non reproduit pas à pas dans l'IHM)
+
+`MissionProfile.LEO` est en `InclinationMode.AUTO` : l'inclinaison vaut la
+latitude du site et la suit — **jusqu'à la première frappe de l'utilisateur**,
+qui pose `inclinationAuto = false` et fige la valeur. À partir de là,
+`refreshDerivedInclination()` ne la rafraîchit plus.
+
+Il suffit donc de saisir une inclinaison pendant que Kourou est sélectionné —
+c'est le **site par défaut**, à 5,236° — puis de passer le site à Canaveral :
+la valeur figée sort de la bande `[28,562° ; 151,438°]` que ce pas de tir
+atteint sans changement de plan. `LaunchPlane.requireReachableFrom` la refuse,
+`EarthOrbitDynamicParameters.targetOrbit` rend alors du vide, et la page
+planning affiche le motif ci-dessus.
+
+**Le défaut n'est pas le refus, il est son silence.** L'étape ne marque le champ
+en rouge que dans `validateTargetPlane()`, qui ne tourne qu'à la pression de
+`Next`. Entre le changement de site et cette pression, le formulaire porte une
+valeur invalide sans rien en dire, et la seule chose qui parle est une page
+secondaire que rien n'oblige à ouvrir.
+
+### Pistes, aucune tranchée
+
+1. **Réarmer l'auto au changement de site.** Le plus simple, mais il écrase une
+   saisie explicite de l'utilisateur — exactement ce que le mode AUTO existe
+   pour respecter.
+2. **Ramener la valeur figée dans la bande atteignable** au changement de site.
+   Ne perd pas l'intention, la déforme.
+3. **Marquer le champ en direct** plutôt qu'à `Next`, sur le motif de
+   `rejectedLaunchDate`/`rejectedRaan` qui effacent leur rouge à la frappe. Ne
+   corrige rien mais rend le problème visible là où il naît — probablement le
+   minimum à faire quelle que soit la suite.
+
+### Non vérifié
+
+- **La séquence exacte dans l'IHM.** Le mécanisme est lu dans le code et le
+  refus est mesuré côté modèle ; la suite de clics qui y mène n'a pas été rejouée
+  pas à pas. Il reste possible qu'un autre chemin produise le même état.
+- **Si la ligne d'aide sous le champ dit déjà la bande atteignable** pendant que
+  la valeur en est sortie. `refreshReachableHelper` existe, mais on n'a pas
+  vérifié qu'il tourne encore quand l'auto est désarmé.
+- **L'étendue aux autres cartes.** `POLAR` (90°) et le profil héliosynchrone
+  (~98°) restent atteignables depuis n'importe quelle latitude, donc `LEO`
+  paraît seule exposée — non vérifié.
+- **La réouverture d'une mission** dont la spec porte une inclinaison basse,
+  suivie d'un changement de site, devrait produire le même état par un autre
+  chemin. Non essayé.
