@@ -214,10 +214,12 @@ logique de précision, il mérite son propre raisonnement.
   ±N h (`ribbon-lines.md` §11.6, `effects-roadmap.md` §9.5.5). Cette bascule ne le
   traite pas, et le rend même plus désirable : un enroulement s'accumule visuellement
   plus vite qu'une ellipse qui se superpose à elle-même.
-- **LVLH / repère cible.** `MIS-3` le prévoit déjà et `MIS-6` (rendez-vous) ne se lit
-  que là. Un troisième repère d'affichage arrivera donc. Ça ne justifie pas de
-  construire une abstraction maintenant — ça justifie d'appeler la chose « repère
-  d'affichage » plutôt que « bascule ECEF », pour ne pas fermer la porte.
+- **LVLH / repère cible.** `MIS-6` (rendez-vous) ne se lit que là, donc un troisième
+  repère d'affichage arrivera. Ça ne justifie pas de construire une abstraction
+  maintenant — ça justifie d'appeler la chose « repère d'affichage » plutôt que
+  « bascule ECEF », pour ne pas fermer la porte. C'est d'ailleurs le raisonnement
+  qui a fait **dissoudre `MIS-3`** le 2026-08-20, l'item qui portait LVLH avant :
+  il est reversé dans `MIS-6`, son seul consommateur.
 - **Corps autres que la Terre.** Le §4.1 dit d'où viendrait le repère, rien de plus :
   aucune mission non terrestre n'existe encore.
 

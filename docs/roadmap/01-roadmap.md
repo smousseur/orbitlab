@@ -168,7 +168,7 @@ reste lisible à toute distance (`RND-4`).
 | ~~MIS-7~~ | ~~`EarthOrbitMission` paramétrable~~ — **résolu le 2026-08-16** | 4 | 2 | M | MIS-2, MIS-6, + polaire/SSO/MEO gratuits |
 | ~~PHY-4~~ | ~~Socle multi-corps (3ᵉ corps, SOI, repères)~~ — **résolu le 2026-08-18** | 5 | 4 | L | MIS-4, MIS-5 |
 | ~~MIS-2~~ | ~~Fenêtres de lancement~~ — **résolu le 2026-08-20** | 4 | 3 | M | MIS-4, MIS-6 |
-| MIS-3 | Solveur de Lambert + repère LVLH | 4 | 3 | M | MIS-6, ciblage lunaire |
+| ~~MIS-3~~ | ~~Solveur de Lambert + repère LVLH~~ — **dissous le 2026-08-20** | 4 | 3 | M | — (reversé en `MIS-4` et `MIS-6`) |
 | PHY-1 | Atmosphère : la brique, **off** par défaut | 4 | 3 | L | PHY-2, PHY-3 |
 | UI-2 | Feedback de progression pendant l'optimisation | 3 | 2 | M | confort des phases 4 et 5 |
 | UI-3 | Persistance des missions / format de scénario | 4 | 3 | M | **outil de dev** des phases 4 et 5 |
@@ -179,6 +179,11 @@ mettre au point une mission lunaire ou un rendez-vous impose de re-saisir la
 mission dans le wizard **à chaque lancement de l'application**. Un save/load
 livré avant les phases 4 et 5 se rembourse pendant celles-ci ; livré après, il
 ne rembourse rien.
+
+**Pourquoi `MIS-3` a disparu de la phase.** Il n'a pas été livré, il a été
+**dissous** : `PHY-4` a livré Lambert au passage, et la moitié `LVLH` n'a aucun
+consommateur avant `MIS-6`. Ce qui restait a été reversé dans les deux items qui
+en ont besoin. Le raisonnement complet est dans la fiche `MIS-3` au §6.
 
 **Fin de phase quand** : une trajectoire peut sortir de la sphère d'influence
 terrestre, une date de lancement est choisie parce qu'elle est bonne, et une
@@ -265,7 +270,7 @@ opportuniste, ou à décider quoi sacrifier quand une phase déborde.
 | ~~NAV-2~~ | ~~Timeline indexée sur le temps + marqueurs d'événements~~ — résolu | 4 | 3 | M | — |
 | ~~NAV-3~~ | ~~Scrub continu (glisser sur la piste)~~ — résolu (le débit redouté n'existait pas, voir détail) | 3 | 2 | S | NAV-2 |
 | ~~RND-4~~ | ~~Ribbon billboardé (orbites + trajectoires)~~ — résolu | 4 | 3 | M | — |
-| MIS-3 | Solveur de Lambert + repère LVLH | 4 | 3 | M | — |
+| ~~MIS-3~~ | ~~Solveur de Lambert + repère LVLH~~ — **dissous le 2026-08-20** (Lambert déjà livré par `PHY-4`, LVLH sans consommateur avant `MIS-6`, voir détail) | 4 | 3 | M | — |
 | ~~MIS-2~~ | ~~Fenêtres de lancement~~ — résolu (cible TLE et précession J2 reportées en `MIS-6`, voir détail) | 4 | 3 | M | MIS-7 (livré) |
 | NAV-5 | Hover « wow » planètes + orbites | 3 | 2 | M | RND-4 (livré) |
 | UI-3 | Persistance des missions / format de scénario | 4 | 3 | M | — |
@@ -275,7 +280,7 @@ opportuniste, ou à décider quoi sacrifier quand une phase déborde.
 | PHY-1 | Atmosphère : brique drag, désactivée par défaut | 4 | 3 | L | — |
 | PHY-3 | Détecteurs MaxQ / interface + télémétrie + UI fidélité | 3 | 2 | M | PHY-1 |
 | PHY-2 | Atmosphère par défaut + recalibrage optimiseur | 5 | 4 | L | PHY-1 |
-| MIS-6 | Rendezvous / phasing sur cible TLE | 5 | 5 | XL | MIS-2 (livré), MIS-3, MIS-7 (livré) |
+| MIS-6 | Rendezvous / phasing sur cible TLE | 5 | 5 | XL | MIS-2 (livré), MIS-7 (livré) |
 | RND-5 | Repère d'affichage des trajectoires (bascule inertiel / tournant) — *confort, hors phases* | 2 | 2 | S | — |
 | UI-6 | Fenêtres déplaçables, empilement par focus, modalité du wizard — *hors phases* | 3 | 2 | M | UI-5 (livré) |
 | UI-7 | Tooltips sur les contrôles + socle de survol partagé (absorbe `BUG-4`) — *hors phases* | 3 | 2 | M | — |
@@ -312,8 +317,7 @@ MIS-7 (mission Terre paramétrable) ✔ résolu — MIS-2 est débloqué
           ├── MIS-4 (survol lunaire) ──── MIS-5 (orbite lunaire)
           │      ▲
           │   PHY-4 (multi-corps)
-          └── MIS-6 (rendezvous) ◄── MIS-3 (Lambert + LVLH)
-                                  ◄── source éphéméride TLE
+          └── MIS-6 (rendezvous) ◄── source éphéméride TLE
 
 PHY-1 (drag off par défaut) ── PHY-2 (drag par défaut + recalibrage)
                             └─ PHY-3 (MaxQ, télémétrie)
@@ -332,10 +336,17 @@ ni un rendez-vous ne convergent — la cible n'est jamais au bon endroit).
 testaient à géométrie Terre-Lune imposée (découpage §1).
 
 `MIS-4` attendait les deux et n'attend donc plus personne : il est le prochain
-item que rien n'a en amont. `MIS-6`, lui, attend encore `MIS-3` (Lambert + LVLH)
-et une **source éphéméride TLE** — celle-ci reste bien de son ressort, et non un
-reliquat de `MIS-2`, pour la raison écrite au §10 de
+item que rien n'a en amont. `MIS-6` n'attend plus qu'une **source éphéméride
+TLE** — celle-ci reste bien de son ressort, et non un reliquat de `MIS-2`, pour
+la raison écrite au §10 de
 [`docs/mission-window/01-basics.md`](../mission-window/01-basics.md).
+
+**Le quatrième nœud a disparu du graphe sans être livré.** `MIS-3` (Lambert +
+LVLH) y figurait comme un amont de `MIS-6` ; il a été **dissous le 2026-08-20**
+parce qu'il n'avait plus de contenu propre — le solveur de Lambert est arrivé
+comme sous-produit de `PHY-4`, et le repère LVLH n'a aucun consommateur avant
+`MIS-6` lui-même. Un nœud qui ne bloque plus rien ne doit pas rester dans le
+graphe : la fiche au §6 dit où chaque moitié a été reversée.
 
 ---
 
@@ -872,22 +883,37 @@ couleur thrust/coast sur la trajectoire) : même information, deux canaux.
 
 #### PHY-1 — Atmosphère : la brique, désactivée par défaut — ★4 ◆3 L
 
-**Périmètre.** Phases 0 à 3 de la spec atmosphère : prototype isolé, record
-`AerodynamicProperties` (optionnel sur `Spacecraft` / `LaunchVehicle`, agrégé par
-`VehicleStack` sur l'étage actif), `AtmosphereModel` enum + factories
-`OrekitService` surchargées avec cache, câblage du contexte aéro dans
-`GravityTurnManeuver.propagateForOptimization` et
-`TransfertTwoManeuver.propagateForOptimization`.
+**Périmètre.** Trois lots : baseline mesurée et prototype jetable, la brique
+éteinte (record `AerodynamicProperties` au catalogue agrégé sur l'étage actif,
+enum `AtmosphereModel` avec cache, `DragForce` conditionnel, choix porté par
+`MissionSpec`), puis **un vol réellement volé avec traînée**. Le lot de
+renommage `GravitationalContext` → `FlightContext` initialement prévu a été
+dissous le 2026-08-20 : `FlightContext` **compose** `GravitationalContext`
+`(gravity, drag)` au lieu de le remplacer, donc il n'y a rien à renommer.
 
 **Contrainte non négociable.** `AtmosphereModel.NONE` ⇒ propagation **identique
 au bit près** à aujourd'hui. C'est ce qui permet de livrer la brique sans
-toucher aux baselines, et donc de la livrer tôt.
+toucher aux baselines, et donc de la livrer tôt. La composition la rend
+**structurelle** : `drag == null` ⇒ aucun `DragForce` monté, donc la liste de
+forces est identique par construction et les gates ne font que le confirmer.
 
-**Piège Orekit signalé par la spec** : à la séparation d'étage, le `DragForce`
-doit voir la nouvelle surface. Un `IsotropicDrag` construit une fois pour toutes
-ne le verra pas.
+**Deux affirmations de l'étude d'impacts sont périmées** et ne doivent pas être
+reprises : le chantier ne se réduit pas à `GravityTurnManeuver` et
+`TransfertTwoManeuver` (21 sites de construction de propagateur, mais un sillon
+commun installé par `PHY-4`), et le piège Orekit de la séparation d'étage
+n'existe pas ici — `StageLegRunner` construit un propagateur par étage, donc une
+surface figée à l'entrée d'étage est exacte. Le détail est au §2.2 du découpage.
 
-**Spec.** [`docs/atmosphere/01-impacts-fonctionnels-techniques.md`](../atmosphere/01-impacts-fonctionnels-techniques.md) §5 phases 0–3.
+**Ce que PHY-1 s'interdit et lègue à `PHY-2`** : reprendre les ISP « proxy » du
+catalogue (296 s Falcon Heavy, 300 s Ariane 62), qui compensent déjà la traînée
+dans la mauvaise variable. PHY-1 en chiffre la dette sans y toucher.
+
+**Spec.** Découpage : [`docs/atmosphere/02-decoupage.md`](../atmosphere/02-decoupage.md)
+(amendé le 2026-08-20, §9). Baseline mesurée :
+[`docs/atmosphere/03-baseline-L0.md`](../atmosphere/03-baseline-L0.md). Conception de
+la brique éteinte : [`docs/atmosphere/04-conception-L1.md`](../atmosphere/04-conception-L1.md).
+Étude d'impacts (2026-05-05, à lire avec le §2.2 du découpage) :
+[`docs/atmosphere/01-impacts-fonctionnels-techniques.md`](../atmosphere/01-impacts-fonctionnels-techniques.md).
 
 #### PHY-2 — Atmosphère par défaut + recalibrage — ★5 ◆4 L
 
@@ -1117,19 +1143,57 @@ fonction de l'époque, et elle arrive avec la source éphéméride TLE — c'est
 en `MIS-6`, où le graphe de dépendances la range. La couture qui l'accueillera est
 en place.
 
-#### MIS-3 — Solveur de Lambert + repère LVLH — ★4 ◆3 M
+#### ~~MIS-3 — Solveur de Lambert + repère LVLH — ★4 ◆3 M~~ — **DISSOUS le 2026-08-20**
 
-Deux briques partagées, à écrire une fois :
+> **Dissous, pas livré, et pas abandonné non plus** : les deux moitiés ont été
+> reversées, l'une parce qu'elle existe déjà, l'autre parce qu'elle n'a pas
+> encore de consommateur. La fiche est conservée pour que la décision ne se
+> re-pose pas, et pour corriger deux affirmations fausses qu'elle portait.
 
-- **Lambert** — `org.orekit.utils.IodLambert` couvre le mono-révolution ; le
-  multi-révolution est à vérifier et, à défaut, à implémenter (Izzo 2014, court
-  et robuste). Sert de **seed analytique** au CMA-ES exactement comme le seed
-  Hohmann aujourd'hui : l'optimiseur corrige J2, poussée finie et masse variable
-  au lieu de découvrir le transfert depuis rien. Sert aussi au ciblage lunaire.
-- **LVLH** — service qui transforme un état chaser en `(δr, δv)` relatif via
-  `LOFType.LVLH`. Utile au coût terminal, au rendu, et plus tard à HCW.
+**Ce que la fiche annonçait** : deux briques partagées, « à écrire une fois » —
+un solveur de Lambert servant de seed analytique au CMA-ES et au ciblage
+lunaire, et un service exprimant un état chaser en `(δr, δv)` relatif dans
+`LOFType.LVLH`.
 
-**Spec.** [`docs/brainstorm/leo-rendezvous-preparation.md`](../brainstorm/leo-rendezvous-preparation.md) §3.5, §3.6.
+**Deux mesures ont vidé la fiche de son contenu.**
+
+1. **Lambert n'est pas à écrire : il est en production depuis `PHY-4`.** La
+   fiche citait `org.orekit.utils.IodLambert` — c'est l'outil d'*initial orbit
+   determination*, pas celui qu'utilise le dépôt. Le lot L6 de `PHY-4` s'appuie
+   sur `org.orekit.control.heuristics.lambert`, plus récent :
+   `TranslunarInjectionPlan` y prend son seed keplérien
+   ([:478](../../src/main/java/com/smousseur/orbitlab/simulation/mission/maneuver/TranslunarInjectionPlan.java))
+   puis le reconverge sous propagateur numérique par
+   `LambertDifferentialCorrector`
+   ([:534](../../src/main/java/com/smousseur/orbitlab/simulation/mission/maneuver/TranslunarInjectionPlan.java)).
+2. **Le multi-révolution n'est pas à implémenter non plus.** La fiche prévoyait
+   Izzo 2014 « à défaut » ; la signature native est
+   `solve(boolean posigrade, int nRev, LambertBoundaryConditions)` — `nRev` est
+   un paramètre du solveur. Le dépôt le passe à `0` en dur, ce qui rend le
+   multi-révolution **non vérifié**, mais vérifier n'est pas implémenter.
+
+**Ce qui restait, et où c'est parti.**
+
+- **Le seed Lambert générique** → **`MIS-4`**. Ce qui reste est une extraction :
+  l'appel est aujourd'hui noyé dans une classe lunaire de 711 lignes qui fixe
+  `posigrade = true` et `nRev = 0`. Le généraliser sans le consommateur qui en
+  fixera la forme reviendrait à deviner une signature, et `MIS-4` est
+  précisément ce consommateur — son `TLIBurnStage` de production en a besoin.
+- **Le repère LVLH** → **`MIS-6`**. Orekit fournit `LOFType.LVLH` (et ses
+  variantes `LVLH_CCSDS`, `VVLH`), et le dépôt pratique déjà l'idiome
+  `LOFType` + `LofOffset` en quatre endroits, tous en `TNW`. La conversion tient
+  en une dizaine de lignes ; ce qui manque n'est pas le code mais la **décision
+  de forme** — δr/δv bruts pour le coût terminal, figure à tracer pour le rendu,
+  ou entrée HCW — et elle appartient aux consommateurs, qui sont tous en `MIS-6`
+  ou hors MVP (§3.2 pt 5 et §3.5 pt 5 de la spec).
+
+**Le report ne coûte rien**, et c'est ce qui distingue ce cas de `UI-6` / `UI-7`
+(§4) : aucune couture ne s'accumule d'ici là, puisque le repère est fourni par la
+bibliothèque et qu'aucun état relatif n'existe dans `simulation/`.
+[`trajectory-display-frame.md`](../graphics-effects/trajectory-display-frame.md)
+§8 disait déjà la même chose du côté rendu.
+
+**Spec.** [`docs/brainstorm/leo-rendezvous-preparation.md`](../brainstorm/leo-rendezvous-preparation.md) §3.5, §3.6 — toujours la référence, désormais lue depuis `MIS-4` et `MIS-6`.
 
 #### MIS-4 — Survol lunaire (TLI + flyby) — ★5 ◆4 L
 
@@ -1149,6 +1213,13 @@ coast ~3 jours sous influence lunaire croissante, objectif de survol
 correction CMA-ES. Le timing du TLI est très contraint : sans `MIS-2`,
 l'optimiseur cherchait dans le vide — c'est levé depuis le 2026-08-20, et
 `TranslunarInjectionPlanWindowProblem` est déjà en place pour dater l'injection.
+
+**Hérité de `MIS-3`, dissous le 2026-08-20 : le seed Lambert générique.**
+L'appel existe mais il est enfermé dans `TranslunarInjectionPlan`, avec
+`posigrade = true` et `nRev = 0` en dur. C'est ici qu'il devient une brique
+partagée, parce que c'est ici qu'il a son premier consommateur de production —
+la forme de l'API se lit sur `TLIBurnStage`, pas dans l'abstrait. Le
+multi-révolution (`nRev ≥ 1`) reste à vérifier ; il est natif, il n'est pas testé.
 
 **Spec.** [`docs/brainstorm/missions.md`](../brainstorm/missions.md) §8 (à
 étendre : la spec traite TLI+LOI d'un bloc, le flyby seul est un palier
@@ -1180,6 +1251,12 @@ lignes et a déjà tranché l'essentiel.
 4. **Coût** `‖Δr‖ + ‖Δv‖ + ΣΔv + corridor + ergols`, cible MVP Δr < 10 km,
    `‖Δv_rel‖` < 10 m/s.
 5. **Rendu de la cible** : `TargetObjectRenderer`, aujourd'hui inexistant.
+6. **Repère LVLH**, hérité de `MIS-3` dissous le 2026-08-20. `LOFType.LVLH` est
+   fourni par Orekit et le dépôt pratique déjà `LOFType` + `LofOffset` ailleurs :
+   le code tient en une dizaine de lignes. Ce qui appartient à cet item est la
+   **forme** que prend le service — δr/δv bruts pour le coût terminal du point 4,
+   ou figure relative pour le stretch ci-dessous — et elle ne se décide qu'ici,
+   faute de consommateur avant.
 
 **Tranché dans la spec, à ne pas rouvrir** : pas de Pontryagin (dans le cas
 impulsif il ne rapporte rien sur une méthode directe), pas d'approche terminale
