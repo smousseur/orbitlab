@@ -77,6 +77,18 @@ public final class FormField<T> {
       new FormField<>("TARGET_INCLINATION", Double.class);
 
   /**
+   * Right ascension of the target plane's ascending node, in <b>degrees</b>, written only when the
+   * mission is aiming at a plane that already exists — a station to meet, a constellation slot to
+   * fill. Its <b>absence</b> is meaningful, as {@link #TARGET_INCLINATION}'s is: it means no plane
+   * is being waited for, and the mission then launches at the date the user typed rather than at
+   * the next opening of a window (MIS-2).
+   *
+   * <p>An inclination alone does not need a window — every instant of the day reaches it — which is
+   * why this is a second field and not a mode of the first.
+   */
+  public static final FormField<Double> TARGET_RAAN = new FormField<>("TARGET_RAAN", Double.class);
+
+  /**
    * The {@link MissionProfile} the mission was created on, by name. UI-only: no spec component
    * corresponds to it, and {@code MissionFactory} ignores the key entirely — the profile is a way of
    * offering parameters, not a property of the mission (spec {@code

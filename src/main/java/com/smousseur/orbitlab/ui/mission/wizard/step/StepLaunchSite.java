@@ -8,11 +8,13 @@ import com.smousseur.orbitlab.ui.UiKit;
 import com.smousseur.orbitlab.ui.form.FormStyles;
 import com.smousseur.orbitlab.ui.mission.wizard.FormField;
 import com.smousseur.orbitlab.ui.mission.wizard.FormValues;
+import com.smousseur.orbitlab.ui.mission.wizard.SiteCoordinates;
 import com.smousseur.orbitlab.ui.mission.wizard.StepValues;
 import com.smousseur.orbitlab.ui.mission.wizard.component.PopupList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 
 public class StepLaunchSite implements StepValues {
 
@@ -113,6 +115,34 @@ public class StepLaunchSite implements StepValues {
    */
   public double currentLatitude() {
     return parseDoubleOrZero(latField.getText());
+  }
+
+  /**
+   * The pad's three coordinates, or empty when any of the three fields does not read as a number.
+   *
+   * <p><b>Empty rather than zero, and that is a deliberate departure from {@link
+   * #currentLatitude()}.</b> A latitude falling back to 0 only widens the inclination band the
+   * parameters step allows, which is harmless; a launch window computed at latitude 0 is a wrong
+   * answer presented as a right one. The two conventions differ because what they feed differs.
+   *
+   * @return the coordinates, or empty while any field is unreadable
+   */
+  public Optional<SiteCoordinates> currentSite() {
+    Optional<Double> latitude = parseDouble(latField.getText());
+    Optional<Double> longitude = parseDouble(lonField.getText());
+    Optional<Double> altitude = parseDouble(altField.getText());
+    if (latitude.isEmpty() || longitude.isEmpty() || altitude.isEmpty()) {
+      return Optional.empty();
+    }
+    return Optional.of(new SiteCoordinates(latitude.get(), longitude.get(), altitude.get()));
+  }
+
+  private static Optional<Double> parseDouble(String text) {
+    try {
+      return Optional.of(Double.parseDouble(text.trim()));
+    } catch (NumberFormatException | NullPointerException e) {
+      return Optional.empty();
+    }
   }
 
   @Override

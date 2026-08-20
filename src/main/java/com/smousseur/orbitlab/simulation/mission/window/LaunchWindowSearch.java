@@ -1,9 +1,8 @@
 package com.smousseur.orbitlab.simulation.mission.window;
 
 import com.smousseur.orbitlab.core.OrbitlabException;
-import org.orekit.time.AbsoluteDate;
-
 import java.time.Duration;
+import org.orekit.time.AbsoluteDate;
 
 /**
  * The search criteria: where to look, how finely, and what counts as acceptable.
@@ -17,12 +16,23 @@ import java.time.Duration;
  * <p><b>{@code maxDeltaV} is what makes a window a window.</b> Without an acceptance threshold a
  * merit function has minima but no edges, and the answer degenerates to a list of instants.
  *
+ * <p><b>{@code margin} is the same threshold said relatively, and it exists because an absolute one
+ * is blind on a flat criterion.</b> The translunar cost was measured swinging 14 m/s over a month
+ * on a 3 183 m/s floor: any budget a mission would actually write down sits above the whole month,
+ * so every epoch is "acceptable" and the slot degenerates to the searched range. A margin says
+ * <em>how much more than the best</em> an epoch may cost, which is a decision that survives being
+ * ported to a criterion of a different amplitude. Both bite at once — the effective threshold is
+ * the lower of the two — so a caller can cap a search by what the tanks hold, by what it is willing
+ * to waste, or by both.
+ *
  * @param start the first date considered
  * @param span how far past {@code start} the search runs
  * @param step the coarse sweep step; must come from {@link LaunchWindowProblem#coarseStep()} unless
  *     the caller knows better
  * @param precision the time resolution the optimum and the edges are refined to
  * @param maxDeltaV the cost above which an epoch is not offered (m/s)
+ * @param margin how much dearer than the cheapest epoch of the search an epoch may be and still be
+ *     offered (m/s); {@link Double#POSITIVE_INFINITY} to be bound by {@code maxDeltaV} alone
  * @param maxWindows how many slots to return, cheapest first
  */
 public record LaunchWindowSearch(
@@ -31,6 +41,7 @@ public record LaunchWindowSearch(
     Duration step,
     Duration precision,
     double maxDeltaV,
+    double margin,
     int maxWindows) {
 
   public LaunchWindowSearch {
@@ -50,31 +61,106 @@ public record LaunchWindowSearch(
     if (!(maxDeltaV > 0.0)) {
       throw new OrbitlabException("the delta-v budget must be positive, got " + maxDeltaV);
     }
+    if (!(margin > 0.0)) {
+      throw new OrbitlabException("the delta-v margin must be positive, got " + margin);
+    }
     if (maxWindows < 1) {
       throw new OrbitlabException("at least one window must be asked for, got " + maxWindows);
     }
   }
 
   /**
-   * The usual search: the problem's own sweep step, a precision a tenth of it, and one window.
+   * A search bound by an absolute budget alone.
+   *
+   * @param start the first date considered
+   * @param span how far past {@code start} the search runs
+   * @param step the coarse sweep step
+   * @param precision the time resolution the optimum and the edges are refined to
+   * @param maxDeltaV the cost above which an epoch is not offered (m/s)
+   * @param maxWindows how many slots to return, cheapest first
+   */
+  public LaunchWindowSearch(
+      AbsoluteDate start,
+      Duration span,
+      Duration step,
+      Duration precision,
+      double maxDeltaV,
+      int maxWindows) {
+    this(start, span, step, precision, maxDeltaV, Double.POSITIVE_INFINITY, maxWindows);
+  }
+
+  /**
+   * The usual search: both of the problem's own scales, and one window.
    *
    * @param start the first date considered
    * @param span how far past {@code start} to look
-   * @param problem the problem whose sampling scale is adopted
+   * @param problem the problem whose sampling and refinement scales are adopted
    * @param maxDeltaV the acceptance budget (m/s)
    * @return the search
    */
   public static LaunchWindowSearch over(
       AbsoluteDate start, Duration span, LaunchWindowProblem problem, double maxDeltaV) {
-    Duration step = problem.coarseStep();
-    return new LaunchWindowSearch(start, span, step, step.dividedBy(10L), maxDeltaV, 1);
+    return new LaunchWindowSearch(
+        start, span, problem.coarseStep(), problem.refinementPrecision(), maxDeltaV, 1);
+  }
+
+  /**
+   * A search sized to show a given number of opportunities, on the problem's own three scales.
+   *
+   * <p><b>A count and not a duration.</b> The caller that wants "the next three" — the wizard's
+   * timeline — must not be the one deciding what three is worth: three opportunities is three days
+   * on an Earth plane alignment and three months on a translunar injection, and only {@link
+   * LaunchWindowProblem#recurrence()} knows which. A horizon written by the caller draws an empty
+   * axis the day the problem changes.
+   *
+   * <p>The span is {@code count} recurrences plus a twelfth of one. {@code count} recurrences
+   * already hold {@code count} optima on an exactly periodic criterion; the extra twelfth is slack
+   * for the one whose refinement bracket would otherwise be clipped by the end of the range.
+   *
+   * <p><b>{@code maxWindows} is {@code count + 1}, and that is not an off-by-one.</b> {@link
+   * LaunchWindowSolver} truncates by <em>cost</em> — it sorts the merged slots on their optimum's
+   * Δv before cutting — while a caller counting opportunities wants them <em>in time</em>. That
+   * slack twelfth lets the span hold one opportunity more than asked for whenever the first falls
+   * inside it, and asking for exactly {@code count} would then let the solver drop whichever is
+   * dearest. On a criterion whose consecutive opportunities differ by less than a metre per second
+   * that choice is effectively arbitrary, and the one dropped can be the soonest — the very one a
+   * timeline exists to show. Asking for one more hands the chronological cut back to the caller,
+   * which is where it belongs; the span cannot hold {@code count + 2}, so one more is enough.
+   *
+   * @param start the first date considered
+   * @param problem the problem whose three scales are adopted
+   * @param count how many opportunities the caller means to keep
+   * @param maxDeltaV the absolute acceptance budget (m/s)
+   * @param margin how much dearer than the cheapest epoch an offered one may be (m/s)
+   * @return the search, offering up to {@code count + 1} slots for the caller to cut down
+   */
+  public static LaunchWindowSearch forOpportunities(
+      AbsoluteDate start, LaunchWindowProblem problem, int count, double maxDeltaV, double margin) {
+    Duration recurrence = problem.recurrence();
+    Duration span = recurrence.multipliedBy(count).plus(recurrence.dividedBy(12L));
+    return new LaunchWindowSearch(
+        start,
+        span,
+        problem.coarseStep(),
+        problem.refinementPrecision(),
+        maxDeltaV,
+        margin,
+        count + 1);
   }
 
   /**
    * @return a copy of this search returning up to {@code count} windows
    */
   public LaunchWindowSearch withMaxWindows(int count) {
-    return new LaunchWindowSearch(start, span, step, precision, maxDeltaV, count);
+    return new LaunchWindowSearch(start, span, step, precision, maxDeltaV, margin, count);
+  }
+
+  /**
+   * @param margin how much dearer than the cheapest epoch an offered one may be (m/s)
+   * @return a copy of this search capped relatively as well as absolutely
+   */
+  public LaunchWindowSearch withMargin(double margin) {
+    return new LaunchWindowSearch(start, span, step, precision, maxDeltaV, margin, maxWindows);
   }
 
   /**

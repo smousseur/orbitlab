@@ -17,32 +17,44 @@ import com.smousseur.orbitlab.core.OrbitlabException;
 import com.smousseur.orbitlab.simulation.mission.MissionHorizon;
 import com.smousseur.orbitlab.simulation.mission.MissionType;
 import com.smousseur.orbitlab.simulation.mission.context.MissionContext;
+import com.smousseur.orbitlab.simulation.mission.window.problem.EarthLaunchWindowRequest;
 import com.smousseur.orbitlab.ui.EphemerisWindow;
 import com.smousseur.orbitlab.ui.UiKit;
 import com.smousseur.orbitlab.ui.form.FormStyles;
 import com.smousseur.orbitlab.ui.mission.wizard.FormField;
 import com.smousseur.orbitlab.ui.mission.wizard.FormValues;
 import com.smousseur.orbitlab.ui.mission.wizard.MissionProfile;
+import com.smousseur.orbitlab.ui.mission.wizard.SiteCoordinates;
 import com.smousseur.orbitlab.ui.mission.wizard.StepValues;
 import com.smousseur.orbitlab.ui.mission.wizard.step.params.DynamicParameters;
 import com.smousseur.orbitlab.ui.mission.wizard.step.params.EarthOrbitDynamicParameters;
 import com.smousseur.orbitlab.ui.mission.wizard.step.params.GEODynamicParameters;
+import com.smousseur.orbitlab.ui.mission.wizard.step.planning.PlanningInputs;
+import com.smousseur.orbitlab.ui.mission.wizard.step.planning.PlanningPage;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.DoubleSupplier;
+import java.util.function.Supplier;
 import org.orekit.time.AbsoluteDate;
 
 public class StepParameters implements StepValues {
 
-  private static final float FIELD_W = 752f;
+  /**
+   * Width of a full-width field of this step, and thereby the width of the step's content column.
+   * Public because the planning page's timeline sets its track to it: the axis lines up with the
+   * fields of the main page, so widening the wizard cannot silently unalign the two.
+   */
+  public static final float FIELD_W = 752f;
+
   public static final float FIELD_H = 36f;
   public static final float ROW_GAP = 16f;
   public static final float LABEL_FIELD_GAP = 6f;
   public static final float LABEL_ICON_SIZE = 14f;
 
-  private static final String LAUNCH_DATE_HELPER = "UTC · Orekit epoch";
+  private static final String LAUNCH_DATE_HELPER = "UTC - Orekit epoch";
+  private static final String LAUNCH_DATE_PLANNED_HELPER = "UTC - next opening of the target plane";
   private static final String LAUNCH_DATE_FORMAT_HELPER =
       "expected format : yyyy-MM-dd HH:mm:ss (UTC)";
 
@@ -77,13 +89,57 @@ public class StepParameters implements StepValues {
    */
   private static final String HORIZON_MANUAL_HELPER = "total duration since takeoff";
 
+  /** Which of the step's two pages is mounted. */
+  private enum Page {
+    FIELDS,
+    PLANNING
+  }
+
   private final Container root;
+  private final Container pageHost;
+  private Page page = Page.FIELDS;
+
   private final MissionContext missionContext;
+
+  /** The pad the window is planned from, read live for the same reason the latitude is. */
+  private final Supplier<Optional<SiteCoordinates>> launchSite;
+
   private final Label titleLabel;
 
   private final TextField missionNameField;
   private final TextField launchDateField;
   private final Label launchDateHelper;
+
+  /** The row holding the launch-date field and the indicator, so the latter can be detached. */
+  private final Container dateRow;
+
+  /** The indicator's container, detached on GEO where no node can ever be set. */
+  private final Container planningIndicator;
+
+  /** The gap before the indicator, detached with it so GEO leaves no phantom column width. */
+  private final Container planningGap;
+
+  /** Whether {@link #planningIndicator} is currently a child of {@link #dateRow}. */
+  private boolean planningIndicatorShown = true;
+
+  /** The word {@code planning}: a text-only control, and the click target that opens the page. */
+  private Button planningButton;
+
+  /** The lit/unlit dot beside it — lit exactly when a target node is set. */
+  private Panel planningDot;
+
+  private boolean planningHovered;
+
+  /**
+   * Whether the indicator has ever been painted, so its first paint cannot be mistaken for a no-op
+   * by the guard in {@link #applyPlanningIndicator()}.
+   *
+   * <p>Nothing today reaches that case: the style paints a button {@code TEXT_PRIMARY}, and the
+   * first colour this indicator computes is never that one. It is kept as the defence it would have
+   * to be the day the style default and an indicator state coincide, which would otherwise leave the
+   * dot showing a plain style background for the life of the wizard.
+   */
+  private boolean planningPainted;
 
   private final TextField horizonField;
   private final Label horizonHelper;
@@ -107,11 +163,19 @@ public class StepParameters implements StepValues {
   /** The last text this step wrote into the duration field, to tell a prefill from a user edit. */
   private String lastAutoHorizonText = "";
 
+  /** Whether the launch date currently shown was written by the planner rather than typed. */
+  private boolean plannedDate;
+
+  /** The last text the planner wrote into the field, to tell a re-write from a user edit. */
+  private String lastPlannedDateText = "";
+
   /** Entry that was refused, kept so the error state clears as soon as it is edited. */
   private String rejectedLaunchDate;
 
   /** Same, for the duration field. */
   private String rejectedHorizon;
+
+  private final PlanningPage planningPage = new PlanningPage();
 
   private DynamicParameters dynamicParameters;
   private final EnumMap<MissionProfile, DynamicParameters> dynamicParametersMap =
@@ -132,9 +196,16 @@ public class StepParameters implements StepValues {
    *
    * @param missionContext the context carrying the selected mission type
    * @param launchLatitudeDeg the live launch latitude, for the inclination field's bounds
+   * @param launchSite the live pad coordinates, for the launch window — empty while any of the
+   *     three fields is unreadable, which is what keeps a window from being computed on a
+   *     substituted zero
    */
-  public StepParameters(MissionContext missionContext, DoubleSupplier launchLatitudeDeg) {
+  public StepParameters(
+      MissionContext missionContext,
+      DoubleSupplier launchLatitudeDeg,
+      Supplier<Optional<SiteCoordinates>> launchSite) {
     this.missionContext = missionContext;
+    this.launchSite = launchSite;
     root = new Container(new BoxLayout(Axis.Y, FillMode.None));
     root.setBackground(new QuadBackgroundComponent(new ColorRGBA(0, 0, 0, 0)));
     root.setPreferredSize(new Vector3f(FormStyles.CONTENT_WIDTH, FormStyles.CONTENT_HEIGHT, 0));
@@ -192,7 +263,14 @@ public class StepParameters implements StepValues {
 
     Container columns = new Container(new BoxLayout(Axis.X, FillMode.None));
     columns.setBackground(null);
-    columns.addChild(fieldColumn("LAUNCH DATE", "lbl-clock", launchDateField, launchDateHelper));
+    dateRow = new Container(new BoxLayout(Axis.X, FillMode.None));
+    dateRow.setBackground(null);
+    dateRow.addChild(launchDateField);
+    planningGap = UiKit.hSpacer(16f);
+    dateRow.addChild(planningGap);
+    planningIndicator = buildPlanningIndicator();
+    dateRow.addChild(planningIndicator);
+    columns.addChild(fieldColumn("LAUNCH DATE", "lbl-clock", dateRow, launchDateHelper));
     columns.addChild(UiKit.hSpacer(COLUMN_GAP));
     columns.addChild(
         fieldColumn("MISSION DURATION", "lbl-clock", buildHorizonRow(), horizonHelper));
@@ -216,6 +294,13 @@ public class StepParameters implements StepValues {
             }
           });
     }
+    pageHost = new Container(new BoxLayout(Axis.Y, FillMode.None));
+    pageHost.setBackground(null);
+    pageHost.setPreferredSize(new Vector3f(FormStyles.CONTENT_WIDTH, FormStyles.CONTENT_HEIGHT, 0));
+    pageHost.addChild(root);
+    planningPage.setOnBack(() -> showPage(Page.FIELDS));
+    planningPage.setOnDateChosen(this::applyPlannedDate);
+
     updateDynamicParameters(0);
     refreshHorizonFromDerived();
   }
@@ -360,6 +445,108 @@ public class StepParameters implements StepValues {
     autoButton.setColor(word);
   }
 
+  /**
+   * The planning control: a status dot and the word {@code planning}, no button chrome — the same
+   * grammar as the duration's AUTO indicator, and for the same reason. It says the state as well as
+   * opening the page: the dot is lit exactly when a target node is set, which is exactly when the
+   * launch date is governed by a window rather than by what was typed.
+   */
+  private Container buildPlanningIndicator() {
+    Container indicator = new Container(new BoxLayout(Axis.X, FillMode.None));
+    indicator.setBackground(null);
+
+    planningDot = new Panel(AUTO_DOT_SIZE, AUTO_DOT_SIZE, FormStyles.STYLE);
+    indicator.addChild(centeredInRow(planningDot));
+    indicator.addChild(UiKit.hSpacer(7f));
+
+    planningButton = new Button("planning", FormStyles.STYLE);
+    planningButton.setBackground(null);
+    planningButton.setInsets(new Insets3f(0, 0, 0, 0));
+    planningButton.setFont(UiKit.ibmPlexMono(11));
+    planningButton.addClickCommands(source -> showPage(Page.PLANNING));
+    MouseEventControl.addListenersToSpatial(
+        planningButton,
+        new DefaultMouseListener() {
+          @Override
+          public void mouseEntered(MouseMotionEvent event, Spatial target, Spatial capture) {
+            planningHovered = true;
+            applyPlanningIndicator();
+          }
+
+          @Override
+          public void mouseExited(MouseMotionEvent event, Spatial target, Spatial capture) {
+            planningHovered = false;
+            applyPlanningIndicator();
+          }
+        });
+    indicator.addChild(centeredInRow(planningButton));
+
+    applyPlanningIndicator();
+    return indicator;
+  }
+
+  /**
+   * Paints the planning indicator from the node the page holds: dot lit and word in the accent while
+   * a plane is being waited for, both dimmed while none is.
+   *
+   * <p>Unlike {@link #applyAutoIndicator()}, which only ever runs on a change, this one is called
+   * from {@link #update(float)} — the node lives on the other page and can be edited without this
+   * step hearing about it. The entry is therefore parsed on every frame, which is cheap; what the
+   * guard skips is the repaint, which loads a background component, re-attaches it and invalidates
+   * the row's layout, the way {@link #setHorizonHelper} skips its own. The word's colour is enough
+   * to detect the no-op: the accent means, and only means, that a node is set.
+   */
+  private void applyPlanningIndicator() {
+    boolean planned = planningPage.parsedRaanDeg().isPresent();
+    ColorRGBA word;
+    if (planned) {
+      word = FormStyles.ACCENT_BRIGHT;
+    } else {
+      word = planningHovered ? FormStyles.TEXT_SECONDARY : FormStyles.TEXT_LO;
+    }
+    if (planningPainted && word.equals(planningButton.getColor())) {
+      return;
+    }
+    planningPainted = true;
+
+    QuadBackgroundComponent dotBg = UiKit.wizardFlat("slider-thumb");
+    dotBg.setColor(planned ? FormStyles.ACCENT_BRIGHT : FormStyles.BORDER);
+    planningDot.setBackground(dotBg);
+    planningButton.setColor(word);
+  }
+
+  /**
+   * Attaches or detaches the planning indicator to match the card on screen. A GEO mission carries
+   * no target node — {@code MissionSpec.Geo} has no such component and {@code
+   * MissionWizardAppState.scheduledDateFor} only schedules an {@code EarthOrbit} — so the control is
+   * absent there rather than greyed: nothing could ever light it.
+   */
+  private void updatePlanningIndicator() {
+    boolean shown = hasTargetNode();
+    if (shown == planningIndicatorShown) {
+      return;
+    }
+    if (shown) {
+      dateRow.addChild(planningGap);
+      dateRow.addChild(planningIndicator);
+    } else {
+      dateRow.removeChild(planningGap);
+      dateRow.removeChild(planningIndicator);
+    }
+    planningIndicatorShown = shown;
+  }
+
+  /**
+   * Whether the card on screen has a target node at all — the one predicate {@link
+   * #updatePlanningIndicator()} and {@link #validateTargetNode()} must share, since one decides
+   * whether the entry point is shown and the other whether a refusal can be raised.
+   *
+   * @return whether the selected profile carries a target node
+   */
+  private boolean hasTargetNode() {
+    return selectedProfile != MissionProfile.GEO;
+  }
+
   /** Hands the duration back to the derived policy, clearing any refused entry. */
   private void resetHorizonToDerived() {
     horizonAuto = true;
@@ -435,7 +622,27 @@ public class StepParameters implements StepValues {
   }
 
   public Container getNode() {
-    return root;
+    return pageHost;
+  }
+
+  /**
+   * Mounts one of the step's two pages.
+   *
+   * <p>A step is always entered by its main page — see {@link #onStepEntered()} — so the only thing
+   * that mounts the planning page without a click is a refusal on a field the planning page holds.
+   */
+  private void showPage(Page target) {
+    if (page == target) {
+      return;
+    }
+    pageHost.clearChildren();
+    pageHost.addChild(target == Page.FIELDS ? root : planningPage.getNode());
+    page = target;
+  }
+
+  /** Called by the wizard whenever this step is shown: a step opens on its fields. */
+  public void onStepEntered() {
+    showPage(Page.FIELDS);
   }
 
   @Override
@@ -443,6 +650,7 @@ public class StepParameters implements StepValues {
     Map<String, Object> values = new HashMap<>();
     values.put(FormField.MISSION_NAME.key(), missionNameField.getText());
     values.putAll(dynamicParameters.getDynamicValues());
+    values.putAll(planningPage.getValues());
     values.put(FormField.LAUNCH_DATE.key(), launchDateField.getText());
     // Published only when overridden: an absent key IS the auto state, which is what lets a mission
     // reopened in the wizard come back on auto without a second key to carry it.
@@ -469,6 +677,7 @@ public class StepParameters implements StepValues {
     if (target != null) {
       target.applyValues(values);
     }
+    planningPage.applyValues(values);
     applyHorizon(values);
   }
 
@@ -526,9 +735,64 @@ public class StepParameters implements StepValues {
     if (rejectedLaunchDate != null && !rejectedLaunchDate.equals(launchDateField.getText())) {
       clearLaunchDateRejection();
     }
+    applyLaunchDateProvenance();
     updateDynamicParameters(tpf);
+    updatePlanningIndicator();
     // After the panel swap, so the derived duration is read off the parameters now on screen.
     updateHorizon();
+    applyPlanningIndicator();
+    planningPage.update(tpf);
+    // Only while the planning page is mounted. The request carries the target semi-major axis, so
+    // dragging an altitude slider on the fields page changes it every frame and would force a full
+    // solve — some 250 evaluations, each an ITRF to GCRF transform — on the render thread, for a
+    // page nobody is looking at. Nothing is lost by waiting: showPage(PLANNING) runs from a click
+    // command, so the next update() refreshes before the page is ever drawn.
+    if (page == Page.PLANNING) {
+      planningPage.refresh(
+          currentWindowInputs(),
+          TimeConverter.parseUtcDate(launchDateField.getText()).orElse(null));
+    }
+  }
+
+  /**
+   * The window inputs, assembled from the three places that hold them: the site step, the panel on
+   * screen, and this step's own planning page.
+   *
+   * <p><b>Absent as soon as one of them cannot supply its part.</b> An unreadable pad is not worth
+   * a wrong answer: a window computed at latitude 0 because the user was mid-keystroke would be a
+   * false answer presented as a true one (spec {@code docs/mission-window/02-timeline-wizard.md}
+   * §6).
+   *
+   * <p><b>And it says which part.</b> This step is the layer that knows: the pad comes from the
+   * site step and the plane from the panel on screen, and {@code targetOrbit} declines an
+   * inclination the pad cannot reach exactly as it declines an unreadable one. Reporting both as a
+   * single absence is what made the planning page name the launch site for a refusal that was the
+   * target orbit's, which is a false statement on screen.
+   *
+   * @return the request, or the reason the form cannot describe one
+   */
+  private PlanningInputs currentWindowInputs() {
+    Optional<SiteCoordinates> site = launchSite.get();
+    if (site.isEmpty()) {
+      return PlanningInputs.missing(PlanningInputs.Gap.NO_SITE);
+    }
+    Optional<DynamicParameters.TargetOrbit> orbit =
+        dynamicParameters.targetOrbit(site.get().latitude());
+    if (orbit.isEmpty()) {
+      return PlanningInputs.missing(PlanningInputs.Gap.NO_TARGET);
+    }
+    Optional<Double> raan = planningPage.parsedRaanDeg();
+    if (raan.isEmpty()) {
+      return PlanningInputs.missing(PlanningInputs.Gap.NO_NODE);
+    }
+    return PlanningInputs.of(
+        new EarthLaunchWindowRequest(
+            site.get().latitude(),
+            site.get().longitude(),
+            site.get().altitude(),
+            orbit.get().plane(),
+            raan.get(),
+            orbit.get().semiMajorAxis()));
   }
 
   /**
@@ -566,7 +830,62 @@ public class StepParameters implements StepValues {
   private void clearLaunchDateRejection() {
     rejectedLaunchDate = null;
     launchDateField.setColor(FormStyles.TEXT_PRIMARY);
-    launchDateHelper.setText(LAUNCH_DATE_HELPER);
+    // Not the default line unconditionally: the refusal was hiding a provenance, not replacing it,
+    // so a single clear would otherwise relabel a planned date as a typed one.
+    applyLaunchDateProvenance();
+  }
+
+  /**
+   * Takes the instant a clicked opportunity carries as the mission's launch date.
+   *
+   * <p>Written into the very field the user types into, and nowhere else. The field is read as a
+   * floor when the mission is created — {@code MissionWizardAppState} hands it to {@code
+   * EarthLaunchWindowPlanner}, which schedules the mission at the next opening — and a date sitting
+   * on an optimum resolves to itself, which is measured rather than assumed by {@code
+   * EarthLaunchWindowPlannerTest.anOptimumTakenAsAFloorReturnsItself}. So the click introduces no
+   * meaning the field did not already have; it only puts the floor where it belongs (spec {@code
+   * docs/mission-window/02-timeline-wizard.md} §4).
+   *
+   * @param date the chosen opportunity's optimal instant
+   */
+  private void applyPlannedDate(AbsoluteDate date) {
+    String text = TimeConverter.formatDate(date);
+    launchDateField.setText(text);
+    lastPlannedDateText = text;
+    plannedDate = true;
+    clearLaunchDateRejection();
+  }
+
+  /**
+   * Says under the field where its date comes from, and drops the planner's claim the moment the
+   * text stops being the one it wrote.
+   *
+   * <p>Runs on every frame, like the duration's own provenance line, hence the no-op guard in
+   * {@link #setLaunchDateHelper}. A standing refusal keeps its reason on the line: it hides the
+   * provenance rather than ending it, so clearing the refusal restores whichever line was due.
+   */
+  private void applyLaunchDateProvenance() {
+    LaunchDateProvenance.Source source =
+        LaunchDateProvenance.read(
+            plannedDate,
+            lastPlannedDateText,
+            launchDateField.getText(),
+            rejectedLaunchDate != null);
+    switch (source) {
+      case REFUSED -> {}
+      case PLANNED -> setLaunchDateHelper(LAUNCH_DATE_PLANNED_HELPER);
+      case TYPED -> {
+        plannedDate = false;
+        setLaunchDateHelper(LAUNCH_DATE_HELPER);
+      }
+    }
+  }
+
+  /** Writes the launch date's provenance line, skipping the no-op: this runs on every frame. */
+  private void setLaunchDateHelper(String text) {
+    if (!text.equals(launchDateHelper.getText())) {
+      launchDateHelper.setText(text);
+    }
     launchDateHelper.setColor(FormStyles.TEXT_LO);
   }
 
@@ -603,10 +922,58 @@ public class StepParameters implements StepValues {
    * #validateLaunchDate()}. Delegated to the panel on screen, which is the only one that knows
    * whether its profile has an inclination to check at all.
    *
-   * @return the reason the inclination was refused, or empty when it is usable
+   * <p>Covers the target node too, which lives on the planning page rather than on the panel: both
+   * describe the plane being aimed at, so one refusal serves them both.
+   *
+   * <p>Marking only: which page the marks are then shown on is {@link #revealRefusal()}'s, so that
+   * the choice weighs every refused field of the step and not just the two this method makes.
+   *
+   * @return the reason the inclination or the node was refused, or empty when both are usable
    */
-  public Optional<String> validateInclination() {
-    return dynamicParameters.validateInclination();
+  public Optional<String> validateTargetPlane() {
+    Optional<String> inclination = dynamicParameters.validateTargetPlane();
+    // Both run, neither short-circuits: a user with two bad fields should see both marked.
+    Optional<String> node = validateTargetNode();
+    return inclination.isPresent() ? inclination : node;
+  }
+
+  /**
+   * Checks the target node, where the card has one to check.
+   *
+   * <p>GEO has none: {@code MissionSpec.Geo} carries no node component, which is why the planning
+   * indicator is detached there. Without this gate a node typed on another card would still be read
+   * and could refuse a GEO mission over a field whose entry point that card has just removed. The
+   * standing refusal is cleared rather than left, on the same reasoning: a mark must not outlive the
+   * field able to show it.
+   *
+   * @return the reason the node was refused, or empty when it is usable or has no meaning here
+   */
+  private Optional<String> validateTargetNode() {
+    if (!hasTargetNode()) {
+      planningPage.clearRejection();
+      return Optional.empty();
+    }
+    return planningPage.validateTargetNode();
+  }
+
+  /**
+   * Mounts the page holding whichever field was refused, reading the marks the validators left
+   * rather than running them again.
+   *
+   * <p>It exists because entering a step resets it to its fields page ({@link #onStepEntered()}),
+   * which would otherwise clobber the page a refusal had just selected — the wizard refuses on the
+   * launcher step too, since the stepper lets the parameters be flown over.
+   */
+  public void revealRefusal() {
+    switch (RefusedPage.choose(
+        rejectedLaunchDate != null,
+        rejectedHorizon != null,
+        dynamicParameters.hasRejection(),
+        planningPage.hasRejection())) {
+      case FIELDS -> showPage(Page.FIELDS);
+      case PLANNING -> showPage(Page.PLANNING);
+      case NONE -> {}
+    }
   }
 
   private String rejectHorizon(String text, String message) {

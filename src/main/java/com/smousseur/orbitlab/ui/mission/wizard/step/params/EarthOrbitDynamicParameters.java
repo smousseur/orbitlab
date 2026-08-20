@@ -39,10 +39,10 @@ public class EarthOrbitDynamicParameters extends DynamicParameters {
   private static final float INCLINATION_FIELD_W = 120f;
 
   /** The helper line while the inclination is derived from the launch site. */
-  private static final String AUTO_HELPER = "free plane of the launch site — due east";
+  private static final String AUTO_HELPER = "free plane of the launch site - due east";
 
   /** And while it is derived from the altitude. */
-  private static final String DERIVED_HELPER = "sun-synchronous — derived from the altitude";
+  private static final String DERIVED_HELPER = "sun-synchronous - derived from the altitude";
 
   private final MissionProfile profile;
   private final DoubleSupplier launchLatitudeDeg;
@@ -158,13 +158,17 @@ public class EarthOrbitDynamicParameters extends DynamicParameters {
   }
 
   /**
-   * The inclination field, its unit and the line that says where the number comes from.
+   * The target plane: the inclination, its unit and the line that says where it comes from.
    *
    * <p><b>The helper sits beside the field, not under it</b>, and that is a constraint rather than a
    * taste: the step's root is pinned to {@code FormStyles.CONTENT_HEIGHT} and nothing in this wizard
    * clips, so an overflow lands on the footer. Two altitude sliders plus a three-storey inclination
    * block does not fit; two sliders plus this one does. The circular profiles, with a single slider,
    * would have had the room — but one layout that fits everywhere beats two that each fit once.
+   *
+   * <p>The target node used to share this row for that same lack of height, and has since moved to
+   * the planning page, where the launch window it governs is shown (spec {@code
+   * docs/mission-window/02-timeline-wizard.md} §1).
    */
   private Container buildInclinationRow() {
     Container column = new Container(new BoxLayout(Axis.Y, FillMode.None));
@@ -183,10 +187,7 @@ public class EarthOrbitDynamicParameters extends DynamicParameters {
     row.addChild(inclinationField);
     row.addChild(UiKit.hSpacer(8f));
 
-    Label unit = new Label("deg", FormStyles.STYLE);
-    unit.setFont(UiKit.ibmPlexMono(11));
-    unit.setColor(FormStyles.TEXT_LO);
-    row.addChild(centeredInRow(unit));
+    row.addChild(centeredInRow(degreesLabel()));
 
     row.addChild(UiKit.hSpacer(16f));
 
@@ -197,6 +198,14 @@ public class EarthOrbitDynamicParameters extends DynamicParameters {
 
     column.addChild(row);
     return column;
+  }
+
+  /** The unit that follows the inclination field. */
+  private static Label degreesLabel() {
+    Label unit = new Label("deg", FormStyles.STYLE);
+    unit.setFont(UiKit.ibmPlexMono(11));
+    unit.setColor(FormStyles.TEXT_LO);
+    return unit;
   }
 
   /**
@@ -276,7 +285,7 @@ public class EarthOrbitDynamicParameters extends DynamicParameters {
               profile.initialInclinationDeg(launchLatitudeDeg.getAsDouble(), targetAltitude()));
     } catch (RuntimeException e) {
       // No sun-synchronous inclination at this altitude. The field keeps what it shows and the
-      // helper carries the reason; validateInclination() is what refuses the step.
+      // helper carries the reason; validateTargetPlane() is what refuses the step.
       setInclinationHelper(e.getMessage(), FormStyles.DANGER);
       return;
     }
@@ -305,7 +314,7 @@ public class EarthOrbitDynamicParameters extends DynamicParameters {
     double minimum = FastMath.abs(launchLatitudeDeg.getAsDouble());
     setInclinationHelper(
         String.format(
-            Locale.ROOT, "reachable from this site: %.2f° to %.2f°", minimum, 180.0 - minimum),
+            Locale.ROOT, "reachable from this site: %.2f to %.2f deg", minimum, 180.0 - minimum),
         FormStyles.TEXT_LO);
   }
 
@@ -326,21 +335,17 @@ public class EarthOrbitDynamicParameters extends DynamicParameters {
    * @return the reason the inclination was refused, or empty when it is usable
    */
   @Override
-  public Optional<String> validateInclination() {
+  public Optional<String> validateTargetPlane() {
     if (profile.inclinationMode() == MissionProfile.InclinationMode.NONE) {
       return Optional.empty();
     }
     String text = inclinationField.getText().trim();
-    double inclinationDeg;
+    double latitude = launchLatitudeDeg.getAsDouble();
     try {
-      inclinationDeg = Double.parseDouble(text);
+      currentPlane(latitude);
     } catch (NumberFormatException e) {
       String message = "expected an inclination in degrees";
       return Optional.of(rejectInclination(text, message, message));
-    }
-    double latitude = launchLatitudeDeg.getAsDouble();
-    try {
-      LaunchPlane.ofDegrees(inclinationDeg).requireReachableFrom(latitude);
     } catch (OrbitlabException e) {
       return Optional.of(rejectInclination(text, reachableBand(latitude), e.getMessage()));
     }
@@ -348,11 +353,55 @@ public class EarthOrbitDynamicParameters extends DynamicParameters {
     return Optional.empty();
   }
 
+  /**
+   * The plane the inclination field describes, checked against the site that has to reach it.
+   *
+   * <p>The one construction shared by the step's two readers of this field — {@link
+   * #validateTargetPlane()}, which refuses what the site cannot reach, and {@link
+   * #targetOrbit(double)}, which hands the plane to the launch window. Written once so the window is
+   * planned for the very plane the wizard accepted.
+   *
+   * @param latitudeDeg the launch site latitude in degrees
+   * @return the plane
+   * @throws NumberFormatException if the field does not read as a number
+   * @throws OrbitlabException if the site cannot reach that inclination
+   */
+  private LaunchPlane currentPlane(double latitudeDeg) {
+    double inclinationDeg = Double.parseDouble(inclinationField.getText().trim());
+    return LaunchPlane.ofDegrees(inclinationDeg).requireReachableFrom(latitudeDeg);
+  }
+
+  /**
+   * The target this panel describes: the plane of its inclination field, and the semi-major axis of
+   * its two altitude sliders.
+   *
+   * <p>Empty on every state {@link #validateTargetPlane()} refuses — an unreadable entry or a plane
+   * out of the site's reach — because a window planned on either would be an answer to a question
+   * the user has not finished asking.
+   */
+  @Override
+  public Optional<TargetOrbit> targetOrbit(double latitudeDeg) {
+    try {
+      return Optional.of(
+          new TargetOrbit(
+              currentPlane(latitudeDeg),
+              // The sliders are in kilometres: a = R + 1000 × (perigee + apogee) / 2.
+              Constants.WGS84_EARTH_EQUATORIAL_RADIUS + 500.0 * (perigeeKm() + apogeeKm())));
+    } catch (OrbitlabException | NumberFormatException unreachable) {
+      return Optional.empty();
+    }
+  }
+
+  @Override
+  public boolean hasRejection() {
+    return rejectedInclination != null;
+  }
+
   /** The band this site reaches, phrased for a line that has to fit beside the field. */
   private static String reachableBand(double latitudeDeg) {
     double minimum = FastMath.abs(latitudeDeg);
     return String.format(
-        Locale.ROOT, "unreachable — this site reaches %.2f° to %.2f°", minimum, 180.0 - minimum);
+        Locale.ROOT, "unreachable - this site reaches %.2f to %.2f deg", minimum, 180.0 - minimum);
   }
 
   /**
@@ -425,7 +474,7 @@ public class EarthOrbitDynamicParameters extends DynamicParameters {
 
   /**
    * The field's value, or the derived one when it cannot be read. An unreadable entry never reaches
-   * here in practice — {@code validateInclination()} holds the step — but degrading to the derived
+   * here in practice — {@code validateTargetPlane()} holds the step — but degrading to the derived
    * value keeps a programmatic caller from building a spec out of {@code NaN}.
    */
   private double parsedInclinationDeg() {
@@ -483,7 +532,7 @@ public class EarthOrbitDynamicParameters extends DynamicParameters {
       inclinationDeg = Double.parseDouble(raw.toString().trim());
     } catch (NumberFormatException e) {
       // A value map assembled by hand can carry anything. Falling back on the profile's own start
-      // keeps the panel usable; validateInclination() is what refuses an entry, not this.
+      // keeps the panel usable; validateTargetPlane() is what refuses an entry, not this.
       initialiseInclination();
       return;
     }

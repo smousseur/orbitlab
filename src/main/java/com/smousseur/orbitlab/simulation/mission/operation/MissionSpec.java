@@ -117,6 +117,9 @@ public sealed interface MissionSpec permits MissionSpec.EarthOrbit, MissionSpec.
    *     LaunchPlane#inclinationFrame()} declares
    * @param nodeBranch which of the two azimuths reaching that inclination is flown; {@code null} is
    *     normalised to {@link NodeBranch#ASCENDING}
+   * @param targetRaan the right ascension of the target plane's ascending node in <b>degrees</b>,
+   *     or {@code null} when the mission waits for no plane — read through {@link
+   *     #hasTargetRaan()}
    * @param siteName the launch site display name, or {@code null} when unnamed
    * @param latitude the launch site latitude in degrees
    * @param longitude the launch site longitude in degrees
@@ -130,6 +133,7 @@ public sealed interface MissionSpec permits MissionSpec.EarthOrbit, MissionSpec.
       double apogeeAltitude,
       double targetInclination,
       NodeBranch nodeBranch,
+      Double targetRaan,
       String siteName,
       double latitude,
       double longitude,
@@ -156,6 +160,66 @@ public sealed interface MissionSpec permits MissionSpec.EarthOrbit, MissionSpec.
                 perigeeAltitude));
       }
       new LaunchPlane(targetInclination, nodeBranch).requireReachableFrom(latitude);
+      if (targetRaan != null && !Double.isFinite(targetRaan)) {
+        throw new OrbitlabException("Target RAAN is not a number: " + targetRaan);
+      }
+    }
+
+    /**
+     * The form every call site that predates MIS-2 means: no target plane to wait for, so the
+     * mission launches when it was told to.
+     *
+     * @param name the mission name
+     * @param configuration the launch configuration
+     * @param perigeeAltitude the target perigee altitude in meters
+     * @param apogeeAltitude the target apogee altitude in meters
+     * @param targetInclination the target orbit inclination in radians
+     * @param nodeBranch which of the two azimuths is flown
+     * @param siteName the launch site display name, or {@code null} when unnamed
+     * @param latitude the launch site latitude in degrees
+     * @param longitude the launch site longitude in degrees
+     * @param altitude the launch site altitude in meters
+     * @param horizon the restitution horizon, or {@code null} for the derived default
+     */
+    public EarthOrbit(
+        String name,
+        LaunchConfiguration configuration,
+        double perigeeAltitude,
+        double apogeeAltitude,
+        double targetInclination,
+        NodeBranch nodeBranch,
+        String siteName,
+        double latitude,
+        double longitude,
+        double altitude,
+        MissionHorizon horizon) {
+      this(
+          name,
+          configuration,
+          perigeeAltitude,
+          apogeeAltitude,
+          targetInclination,
+          nodeBranch,
+          null,
+          siteName,
+          latitude,
+          longitude,
+          altitude,
+          horizon);
+    }
+
+    /**
+     * Whether this mission is aiming at a plane that already exists, and therefore has a launch
+     * window to wait for.
+     *
+     * <p>The absence is the common case and it is not a defect: an inclination alone is reached at
+     * every instant of the day, so a mission that only names one launches whenever it likes. A RAAN
+     * is what makes the launch date a consequence rather than a choice (MIS-2).
+     *
+     * @return {@code true} when a target node was asked for
+     */
+    public boolean hasTargetRaan() {
+      return targetRaan != null;
     }
 
     /**
@@ -223,6 +287,7 @@ public sealed interface MissionSpec permits MissionSpec.EarthOrbit, MissionSpec.
           apogeeAltitude,
           targetInclination,
           nodeBranch,
+          targetRaan,
           siteName,
           latitude,
           longitude,

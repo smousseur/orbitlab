@@ -8,10 +8,12 @@ import com.smousseur.orbitlab.app.HudSurfaces;
 import com.smousseur.orbitlab.app.converters.TimeConverter;
 import com.smousseur.orbitlab.engine.events.EventBus;
 import com.smousseur.orbitlab.simulation.mission.MissionId;
-import com.smousseur.orbitlab.simulation.mission.operation.MissionFactory;
-import com.smousseur.orbitlab.simulation.mission.operation.MissionSpec;
 import com.smousseur.orbitlab.simulation.mission.context.MissionContext;
 import com.smousseur.orbitlab.simulation.mission.context.MissionEntry;
+import com.smousseur.orbitlab.simulation.mission.operation.MissionFactory;
+import com.smousseur.orbitlab.simulation.mission.operation.MissionSpec;
+import com.smousseur.orbitlab.simulation.mission.window.LaunchWindow;
+import com.smousseur.orbitlab.simulation.mission.window.problem.EarthLaunchWindowPlanner;
 import com.smousseur.orbitlab.ui.UiLayers;
 import com.smousseur.orbitlab.ui.form.ConfirmDialog;
 import com.smousseur.orbitlab.ui.mission.wizard.FormField;
@@ -164,13 +166,53 @@ public final class MissionWizardAppState extends BaseAppState {
       MissionSpec spec =
           MissionFactory.specFromWizardValues(values, missionContext.getSelectedMissionType());
       MissionEntry missionEntry = new MissionEntry(spec);
-      missionEntry.setScheduledDate(missionDate.get());
+      missionEntry.setScheduledDate(scheduledDateFor(spec, missionDate.get()));
       missionContext.addMission(missionEntry);
       logger.info("Mission '{}' created [{}]", name, missionEntry.id().shortForm());
     } catch (RuntimeException e) {
       // A bad wizard value must not crash the render loop; the mission is simply not created.
       logger.error("Mission creation failed for '{}': {}", name, e.getMessage());
     }
+  }
+
+  /**
+   * The date the mission is actually scheduled at: the one the user typed, unless the mission names
+   * a target plane, in which case it is the next opening of that plane's launch window (MIS-2).
+   *
+   * <p><b>The typed date becomes a floor.</b> A pad meets a given node once per sidereal day and
+   * the rest of the day costs kilometres per second, so "launch on the 4th at 12:00" can only mean
+   * "on the 4th at 12:00 or as soon after as the geometry allows". This is what gives the wizard's
+   * launch-date field a meaning it did not have.
+   *
+   * <p>Run here, on the render thread, because it is closed form — some ninety evaluations of an
+   * angle between two vectors. Nothing propagates.
+   *
+   * @param spec the mission being scheduled
+   * @param requested the date read from the wizard
+   * @return the date to schedule
+   */
+  private static AbsoluteDate scheduledDateFor(MissionSpec spec, AbsoluteDate requested) {
+    if (!(spec instanceof MissionSpec.EarthOrbit earthOrbit) || !earthOrbit.hasTargetRaan()) {
+      return requested;
+    }
+    Optional<LaunchWindow> window = EarthLaunchWindowPlanner.nextOpportunity(earthOrbit, requested);
+    if (window.isEmpty()) {
+      // A sidereal day always holds an alignment, so this is a broken configuration rather than an
+      // unlucky one. The mission is still created, at the date it asked for.
+      logger.warn(
+          "No launch window found for RAAN {}° within a day of {}; keeping the requested date",
+          earthOrbit.targetRaan(),
+          requested);
+      return requested;
+    }
+    logger.info(
+        "Launch window for RAAN {}°: {} (requested {}, slot {} at {} m/s)",
+        earthOrbit.targetRaan(),
+        window.get().date(),
+        requested,
+        window.get().duration(),
+        Math.round(window.get().best().deltaV()));
+    return window.get().date();
   }
 
   /**
@@ -220,7 +262,7 @@ public final class MissionWizardAppState extends BaseAppState {
         // scheduled date is left alone so the entry keeps describing the mission it still flies.
         return;
       }
-      entry.setScheduledDate(missionDate.get());
+      entry.setScheduledDate(scheduledDateFor(spec, missionDate.get()));
       logger.info("Mission '{}' updated [{}]", name, entry.id().shortForm());
     } catch (RuntimeException e) {
       // Same net as at creation: a bad wizard value must not crash the render loop. The mission is

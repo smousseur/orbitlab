@@ -38,6 +38,7 @@ lisez qu'une section, lisez le §3.
 | **`RND-4` — ribbon billboardé** (orbites et trajectoires en rubans face-caméra, largeur en pixels, fondu d'un pixel exact, expansion en vertex shader) | `MatDefs/Fx/Ribbon.j3md` + `.vert` / `.frag`, `engine/scene/RibbonMeshBuilder.java`, `OrbitLineFactory`, `MissionTrajectoryRenderer`, `AssetFactory.createRibbon` ; `RibbonMeshBuilderTest` |
 | **`NAV-4` — breadcrumb** (bande haute permanente, chaîne d'ancêtres du corps focalisé, remontée en un clic) | `ui/breadcrumb/BreadcrumbWidget.java` + `BreadcrumbStyles.java`, `states/scene/BreadcrumbWidgetAppState.java`, `GuiGraph.getBreadcrumbNode`, `AppStyles.BREADCRUMB_BAND_HEIGHT_PX` / `HUD_TOP_OFFSET_PX` |
 | **`MIS-7` — `EarthOrbitMission` paramétrable** (plan d'ascension commandé, SSO calculée, cinq profils au wizard) | `mission/operation/EarthOrbitMission.java` (ex-`LEOMission`), `LaunchPlane.java`, `NodeBranch.java`, `MissionSpec.EarthOrbit`, `Physics.sunSynchronousInclination`, `ui/mission/wizard/MissionProfile.java`, `step/params/EarthOrbitDynamicParameters.java` (commits `27f4a60`, `56eb362`) ; `EarthOrbitNonRegressionTest`, `AscentPlaneControlTest`, `SunSynchronousInclinationTest`, `SunSynchronousPrecessionTest`, `PolarCoverageTest`, `MeoMissionTest`, `MissionProfileTest`, `WizardPrefillTest` |
+| **`MIS-2` — fenêtres de lancement** (balayage grossier + section dorée, trois échelles portées par le problème, timeline à deux échelles dans le wizard) | `simulation/mission/window/` (`LaunchWindowProblem`, `LaunchWindowSearch`, `LaunchWindowSolver`, `LaunchWindow`, `LaunchWindowCandidate`), `window/problem/` (`EarthLaunchWindowProblem`, `EarthLaunchWindowRequest`, `EarthLaunchWindowPlanner`, `TranslunarInjectionPlanWindowProblem`), `ui/mission/wizard/step/planning/` (`PlanningPage`, `PlanningModel`, `PlanningState`, `LaunchWindowTimeline`, `RaanEntry`, `ZoomScale`), `step/RefusedPage.java`, `step/LaunchDateProvenance.java` ; `LaunchWindowSolverTest`, `LaunchWindowSearchTest`, `EarthLaunchWindowProblemTest`, `EarthLaunchWindowPlannerTest`, `PlanningModelTest`, `RaanEntryTest`, `RefusedPageTest`, `ZoomScaleTest`, `LaunchDateProvenanceTest` |
 
 **Reste ouvert de l'ancienne roadmap** : le feedback de progression pendant
 l'optimisation, repris ici en `UI-2`. La vue détail avec résultats
@@ -166,7 +167,7 @@ reste lisible à toute distance (`RND-4`).
 |---|---|:-:|:-:|:-:|---|
 | ~~MIS-7~~ | ~~`EarthOrbitMission` paramétrable~~ — **résolu le 2026-08-16** | 4 | 2 | M | MIS-2, MIS-6, + polaire/SSO/MEO gratuits |
 | ~~PHY-4~~ | ~~Socle multi-corps (3ᵉ corps, SOI, repères)~~ — **résolu le 2026-08-18** | 5 | 4 | L | MIS-4, MIS-5 |
-| MIS-2 | Fenêtres de lancement | 4 | 3 | M | MIS-4, MIS-6 |
+| ~~MIS-2~~ | ~~Fenêtres de lancement~~ — **résolu le 2026-08-20** | 4 | 3 | M | MIS-4, MIS-6 |
 | MIS-3 | Solveur de Lambert + repère LVLH | 4 | 3 | M | MIS-6, ciblage lunaire |
 | PHY-1 | Atmosphère : la brique, **off** par défaut | 4 | 3 | L | PHY-2, PHY-3 |
 | UI-2 | Feedback de progression pendant l'optimisation | 3 | 2 | M | confort des phases 4 et 5 |
@@ -265,16 +266,16 @@ opportuniste, ou à décider quoi sacrifier quand une phase déborde.
 | ~~NAV-3~~ | ~~Scrub continu (glisser sur la piste)~~ — résolu (le débit redouté n'existait pas, voir détail) | 3 | 2 | S | NAV-2 |
 | ~~RND-4~~ | ~~Ribbon billboardé (orbites + trajectoires)~~ — résolu | 4 | 3 | M | — |
 | MIS-3 | Solveur de Lambert + repère LVLH | 4 | 3 | M | — |
-| MIS-2 | Fenêtres de lancement | 4 | 3 | M | MIS-7 (livré) |
+| ~~MIS-2~~ | ~~Fenêtres de lancement~~ — résolu (cible TLE et précession J2 reportées en `MIS-6`, voir détail) | 4 | 3 | M | MIS-7 (livré) |
 | NAV-5 | Hover « wow » planètes + orbites | 3 | 2 | M | RND-4 (livré) |
 | UI-3 | Persistance des missions / format de scénario | 4 | 3 | M | — |
 | ~~PHY-4~~ | ~~Socle multi-corps (3ᵉ corps, SOI, repères)~~ — **résolu le 2026-08-18** | 5 | 4 | L | — |
 | MIS-5 | Mise en orbite lunaire (LOI) | 5 | 3 | M | MIS-4 |
-| MIS-4 | Survol lunaire (TLI + flyby) | 5 | 4 | L | PHY-4, MIS-2 |
+| MIS-4 | Survol lunaire (TLI + flyby) | 5 | 4 | L | PHY-4 (livré), MIS-2 (livré) |
 | PHY-1 | Atmosphère : brique drag, désactivée par défaut | 4 | 3 | L | — |
 | PHY-3 | Détecteurs MaxQ / interface + télémétrie + UI fidélité | 3 | 2 | M | PHY-1 |
 | PHY-2 | Atmosphère par défaut + recalibrage optimiseur | 5 | 4 | L | PHY-1 |
-| MIS-6 | Rendezvous / phasing sur cible TLE | 5 | 5 | XL | MIS-2, MIS-3, MIS-7 (livré) |
+| MIS-6 | Rendezvous / phasing sur cible TLE | 5 | 5 | XL | MIS-2 (livré), MIS-3, MIS-7 (livré) |
 | RND-5 | Repère d'affichage des trajectoires (bascule inertiel / tournant) — *confort, hors phases* | 2 | 2 | S | — |
 | UI-6 | Fenêtres déplaçables, empilement par focus, modalité du wizard — *hors phases* | 3 | 2 | M | UI-5 (livré) |
 | UI-7 | Tooltips sur les contrôles + socle de survol partagé (absorbe `BUG-4`) — *hors phases* | 3 | 2 | M | — |
@@ -307,7 +308,7 @@ MIS-8 (horizon de mission) ✔ résolu — ses trois aval sont débloqués
    └── MIS-6 (rendezvous : phasing sur N révolutions)
 
 MIS-7 (mission Terre paramétrable) ✔ résolu — MIS-2 est débloqué
-   └── MIS-2 (fenêtres de lancement)
+   └── MIS-2 (fenêtres de lancement) ✔ résolu — MIS-4 et MIS-6 sont débloqués
           ├── MIS-4 (survol lunaire) ──── MIS-5 (orbite lunaire)
           │      ▲
           │   PHY-4 (multi-corps)
@@ -325,12 +326,16 @@ moins cher — tout ce qui durait plus d'un jour simulé butait dessus), **PHY-4
 (sans lui, rien de lunaire) et **MIS-2** (sans fenêtre de lancement, ni la Lune
 ni un rendez-vous ne convergent — la cible n'est jamais au bon endroit).
 
-`MIS-8` puis `PHY-4` étant livrés, **il n'en reste qu'un : `MIS-2`**. Plus rien
-n'est en amont de lui depuis `MIS-7` (2026-08-16), et `PHY-4` s'est fermé le
-2026-08-18 sans jamais en dépendre — aucun de ses six lots ne réclamait de fenêtre
-de lancement, tous se testaient à géométrie Terre-Lune imposée (découpage §1).
+**Les trois sont fermés** : `MIS-8` le 2026-08-09, `PHY-4` le 2026-08-18,
+`MIS-2` le 2026-08-20. `PHY-4` s'est d'ailleurs fermé sans jamais dépendre de
+`MIS-2` — aucun de ses six lots ne réclamait de fenêtre de lancement, tous se
+testaient à géométrie Terre-Lune imposée (découpage §1).
 
-`MIS-4` attendait les deux ; il n'attend plus que `MIS-2`.
+`MIS-4` attendait les deux et n'attend donc plus personne : il est le prochain
+item que rien n'a en amont. `MIS-6`, lui, attend encore `MIS-3` (Lambert + LVLH)
+et une **source éphéméride TLE** — celle-ci reste bien de son ressort, et non un
+reliquat de `MIS-2`, pour la raison écrite au §10 de
+[`docs/mission-window/01-basics.md`](../mission-window/01-basics.md).
 
 ---
 
@@ -1072,7 +1077,7 @@ déplacerait la bande d'altitude que mesure `MeoMissionTest`. Enfin `T1b`
 (inclinaison après insertion complète) n'est pas écrit ; `MeoMissionTest` en donne
 l'équivalent sur le seul profil MEO.
 
-#### MIS-2 — Fenêtres de lancement — ★4 ◆3 M
+#### ~~MIS-2 — Fenêtres de lancement — ★4 ◆3 M~~ — **RÉSOLU le 2026-08-20**
 
 **Pourquoi.** Sans elle, ni le rendez-vous ni la Lune ne convergent : la cible
 n'est jamais au bon endroit au moment du lancement. C'est aussi ce qui donne
@@ -1082,6 +1087,35 @@ enfin un sens au champ « date de lancement » du wizard.
 créneaux (alignement de plan, RAAN cible, précession J2 ~5°/jour pour l'ISS,
 géométrie Terre-Lune ~mensuelle). UI : timeline des créneaux ouverts dans le
 wizard, avec le Δv associé.
+
+**Ce qui a été livré.** Le solveur en trois passes — balayage grossier au pas du
+problème, encadrement par triplet, section dorée puis bissection sur le seuil
+d'acceptation — avec **une seule implémentation** et un point d'extension unique,
+`LaunchWindowProblem`, qui porte ses trois échelles (pas de balayage, précision
+d'affinage, récurrence). Deux critères : l'alignement de plan terrestre, fermé,
+et l'injection translunaire, criblée en forme fermée puis confirmée par l'étape
+de vol. Côté wizard, une sous-page `PLANNING` de l'étape des paramètres, à deux
+échelles empilées, dont le clic écrit l'instant optimal dans le champ
+`LAUNCH DATE` — lu comme un **plancher** à la création, l'aller-retour étant
+mesuré à 0,0 s de dérive.
+
+Mesures principales : créneau de **3 min 52 s** à 51,6° depuis Kourou, récurrence
+d'**un jour sidéral**, plancher de coût non nul (1,1 m/s depuis Kourou, 35,9 m/s
+depuis 45°) dû à l'écart entre latitudes géodésique et géocentrique — ce qui rend
+le seuil **relatif** indispensable. Specs :
+[`docs/mission-window/01-basics.md`](../mission-window/01-basics.md) et
+[`02-timeline-wizard.md`](../mission-window/02-timeline-wizard.md).
+
+**Ce qui n'a pas été livré, et pourquoi ce n'est pas un reliquat.** La
+**précession J2** citée ci-dessus n'est pas modélisée : un RAAN saisi est un
+*nombre*, pas une orbite, et le plan qu'il décrit reste fixe. Un plan réellement
+en orbite régresse de 5,00°/jour à 400 km et 51,6°, soit ~570 m/s d'écart sur les
+26 h que balaie le planificateur — dix fois la marge qui définit le créneau. Le
+champ veut donc dire « le plan tel qu'il sera au décollage ». Suivre une cible qui
+précesse est une **seconde implémentation de l'interface**, dont la normale est
+fonction de l'époque, et elle arrive avec la source éphéméride TLE — c'est-à-dire
+en `MIS-6`, où le graphe de dépendances la range. La couture qui l'accueillera est
+en place.
 
 #### MIS-3 — Solveur de Lambert + repère LVLH — ★4 ◆3 M
 
@@ -1113,7 +1147,8 @@ production à poussée finie, la fenêtre de lancement, et l'optimisation.
 coast ~3 jours sous influence lunaire croissante, objectif de survol
 (altitude de périlune visée, distance minimale d'approche). Seed patched-conic,
 correction CMA-ES. Le timing du TLI est très contraint : sans `MIS-2`,
-l'optimiseur cherche dans le vide.
+l'optimiseur cherchait dans le vide — c'est levé depuis le 2026-08-20, et
+`TranslunarInjectionPlanWindowProblem` est déjà en place pour dater l'injection.
 
 **Spec.** [`docs/brainstorm/missions.md`](../brainstorm/missions.md) §8 (à
 étendre : la spec traite TLI+LOI d'un bloc, le flyby seul est un palier

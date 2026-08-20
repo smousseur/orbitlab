@@ -207,6 +207,47 @@ class MissionFactoryTest {
         OrbitlabException.class, () -> MissionFactory.specFromWizardValues(values, MissionType.LEO));
   }
 
+  // --- MIS-2: the target node ---
+
+  @Test
+  void noTargetNode_meansNoWindowToWaitFor() {
+    assertFalse(earthOrbitSpec(baseValues()).hasTargetRaan());
+  }
+
+  @Test
+  void blankTargetNode_isAnAbsentOne() {
+    Map<String, Object> values = baseValues();
+    values.put("TARGET_RAAN", "  ");
+    assertFalse(earthOrbitSpec(values).hasTargetRaan());
+  }
+
+  @Test
+  void targetNode_isCarriedToTheSpec() {
+    Map<String, Object> values = baseValues();
+    values.put("TARGET_RAAN", 120.0);
+    assertEquals(120.0, earthOrbitSpec(values).targetRaan(), 1e-9);
+  }
+
+  @Test
+  void targetNodeGivenAsText_isRead() {
+    Map<String, Object> values = baseValues();
+    values.put("TARGET_RAAN", "42.5");
+    assertEquals(42.5, earthOrbitSpec(values).targetRaan(), 1e-9);
+  }
+
+  /**
+   * Refused rather than degraded to "no target": the horizon may fall back on a derived default
+   * because a duration is a preference, but a node that could not be read is an intention, and
+   * dropping it would launch the mission at the typed date as if nothing had been asked for.
+   */
+  @Test
+  void unreadableTargetNode_isRefused() {
+    Map<String, Object> values = baseValues();
+    values.put("TARGET_RAAN", "iss");
+    assertThrows(
+        OrbitlabException.class, () -> MissionFactory.specFromWizardValues(values, MissionType.LEO));
+  }
+
   // --- MIS-7 P2.e: what the wizard's launcher step dry-runs before submitting (spec 02 §6) ---
 
   private static Map<String, Object> meoValues(String launcherId, String payloadId) {

@@ -146,10 +146,13 @@ public class MissionWizardWidget implements AutoCloseable {
     MissionContext missionContext = context.missionContext();
     stepLaunchSite = new StepLaunchSite();
     stepPanels.put(MissionWizardStep.SITE, stepLaunchSite.getNode());
-    // The latitude is read live, not captured: the coordinate fields stay editable after a
-    // cosmodrome is picked, and the inclination bounds have to follow them (spec
-    // docs/earth-orbit/02-wizard-orbites-terrestres.md §5).
-    stepParameters = new StepParameters(missionContext, stepLaunchSite::currentLatitude);
+    // The latitude and the pad are read live, not captured: the coordinate fields stay editable
+    // after a cosmodrome is picked, and the inclination bounds (spec
+    // docs/earth-orbit/02-wizard-orbites-terrestres.md §5) as well as the launch window have to
+    // follow them.
+    stepParameters =
+        new StepParameters(
+            missionContext, stepLaunchSite::currentLatitude, stepLaunchSite::currentSite);
     stepPanels.put(MissionWizardStep.PARAMETERS, stepParameters.getNode());
     stepMissionType =
         new StepMissionType(missionContext, initialProfile(missionContext, initialValues), editMode);
@@ -205,6 +208,9 @@ public class MissionWizardWidget implements AutoCloseable {
     content.clearChildren();
     Container panel = stepPanels.get(step);
     if (panel != null) content.addChild(panel);
+    if (step == MissionWizardStep.PARAMETERS) {
+      stepParameters.onStepEntered();
+    }
     stepper.setActiveStep(step);
     footer.setStep(step);
     logger.debug("Wizard: showing step {}", step);
@@ -216,6 +222,9 @@ public class MissionWizardWidget implements AutoCloseable {
       // the user jump over it.
       if (parametersRefused()) {
         showStep(MissionWizardStep.PARAMETERS);
+        // Revealed again after the step is shown, not only inside the check: entering a step opens
+        // it on its fields page, which would undo the page the refusal had just selected.
+        stepParameters.revealRefusal();
         return;
       }
       Map<String, Object> values = getAllValues();
@@ -241,16 +250,24 @@ public class MissionWizardWidget implements AutoCloseable {
    * <p>Every check runs, and none short-circuits the others: a user who has a bad date <em>and</em>
    * a bad duration should see both fields marked at once rather than discover the second only after
    * fixing the first.
+   *
+   * <p>Marking is not enough to be seen, though: the step has two pages and mounts one at a time, so
+   * a refusal is also revealed on the page that carries it. Without that, refusing a field of the
+   * fields page while the planning page is up leaves nothing on screen changed and the Next button
+   * looking dead.
    */
   private boolean parametersRefused() {
     Optional<String> dateError = stepParameters.validateLaunchDate();
     dateError.ifPresent(reason -> logger.info("Wizard: launch date refused ({})", reason));
     Optional<String> horizonError = stepParameters.validateHorizon();
     horizonError.ifPresent(reason -> logger.info("Wizard: mission duration refused ({})", reason));
-    Optional<String> inclinationError = stepParameters.validateInclination();
-    inclinationError.ifPresent(
-        reason -> logger.info("Wizard: target inclination refused ({})", reason));
-    return dateError.isPresent() || horizonError.isPresent() || inclinationError.isPresent();
+    Optional<String> planeError = stepParameters.validateTargetPlane();
+    planeError.ifPresent(reason -> logger.info("Wizard: target plane refused ({})", reason));
+    boolean refused = dateError.isPresent() || horizonError.isPresent() || planeError.isPresent();
+    if (refused) {
+      stepParameters.revealRefusal();
+    }
+    return refused;
   }
 
   /**

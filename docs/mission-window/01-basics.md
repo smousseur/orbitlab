@@ -551,73 +551,59 @@ public class LaunchWindowSolver {
 
 ## 6. Le premier problème concret — et une remarque qui compte pour la Lune
 
-Voici l'implémentation translunaire, à base de Lambert fermé (aucune propagation) :
+Voici l'implémentation translunaire, livrée sous le nom
+`simulation/mission/window/problem/TranslunarInjectionPlanWindowProblem` — le paquet `problem`
+existe pour que le paquet `window` reste l'ossature et n'accumule pas les cibles.
+
+Elle est construite **sur la mission**, et pas sur une masse. C'est ce qui lui permet de porter les
+deux étages sans dupliquer une seule règle : le criblage lit la masse du véhicule, la confirmation
+appelle l'étage d'injection de la mission elle-même.
 
 ```java
-package com.smousseur.orbitlab.simulation.mission.window;
+public class TranslunarInjectionPlanWindowProblem implements LaunchWindowProblem {
 
-import com.smousseur.orbitlab.core.OrbitlabException;
-import com.smousseur.orbitlab.simulation.mission.maneuver.TranslunarInjectionPlan;
-import java.time.Duration;
-import org.orekit.time.AbsoluteDate;
-
-/**
- * The Earth-Moon problem: what a translunar injection costs at a given epoch, read off the
- * closed-form Lambert seed with no propagation at all.
- *
- * <p><b>The cost varies for one reason, and it is worth naming</b>: the lunar distance swings from
- * 363 300 to 405 500 km over an anomalistic month, which the vis-viva turns into a few tens of m/s
- * on the injection. That, plus the epochs {@link TranslunarInjectionPlan#transferPlaneNormal}
- * refuses outright, is the whole shape of the merit function — monthly, smooth, with one minimum
- * per revolution around perigee of the lunar orbit.
- *
- * <p><b>What this problem does <em>not</em> yet model</b>, and the honest limit of the first
- * increment: {@link TranslunarInjectionPlan} builds its parking plane <em>to fit</em> the Moon at
- * arrival, so it has no plane to wait for. A real MIS-4 launches from a site into a plane fixed by
- * the ascent, and the dominant criterion becomes the alignment of that fixed plane with the Moon's
- * direction at arrival — twice per sidereal month per site. That criterion is a second
- * implementation of this same interface, and the reason the interface exists.
- */
-public class TranslunarWindowProblem implements LaunchWindowProblem {
-
-  /**
-   * Sweep step. Six hours resolves a monthly criterion by a factor of a hundred and twenty, and
-   * keeps a sixty-day search at 240 closed-form evaluations — milliseconds.
-   */
+  /** Sweep step: six hours resolves a monthly criterion by a factor of a hundred and twenty. */
   private static final Duration COARSE_STEP = Duration.ofHours(6);
 
-  private final double mass;
-
-  /**
-   * @param mass the spacecraft mass at injection (kg)
-   */
-  public TranslunarWindowProblem(double mass) {
-    this.mass = mass;
-  }
-
-  @Override
-  public String name() {
-    return "Translunar injection";
-  }
-
-  @Override
-  public Duration coarseStep() {
-    return COARSE_STEP;
-  }
+  private final LunarTransferMission mission;
 
   @Override
   public LaunchWindowCandidate evaluate(AbsoluteDate epoch) {
     try {
       return LaunchWindowCandidate.of(
-          epoch, TranslunarInjectionPlan.keplerianInjectionDeltaV(epoch, mass));
+          epoch,
+          TranslunarInjectionPlan.keplerianInjectionDeltaV(epoch, mission.getVehicle().getMass()));
     } catch (OrbitlabException refused) {
       // The declination guard, and any other closed-form refusal: data, not a failure.
+      return LaunchWindowCandidate.refused(epoch, refused.getMessage());
+    }
+  }
+
+  @Override
+  public LaunchWindowCandidate confirm(LaunchWindowCandidate candidate) {
+    AbsoluteDate epoch = candidate.epoch();
+    try {
+      SpacecraftState parking = mission.getInitialState(epoch);
+      SpacecraftState injected = mission.getStages().getFirst().enter(parking, mission);
+      double deltaV = injected.getPVCoordinates().getVelocity()
+          .subtract(parking.getPVCoordinates().getVelocity()).getNorm();
+      return LaunchWindowCandidate.of(epoch, deltaV);
+    } catch (OrbitlabException refused) {
       return LaunchWindowCandidate.refused(epoch, refused.getMessage());
     }
   }
 }
 ```
 
+**Pourquoi la confirmation appelle l'étage de la mission et non `TranslunarInjectionPlan.solve`.**
+Ce qui refuse une époque ici n'est pas le seed, qui converge toujours, mais le plancher de périlune
+*volé* — 135 km mesurés à une époque du mois contre une cible à 100 km — et le plancher de dépletion
+de l'étage actif. Les deux verdicts vivent dans `TranslunarInjectionStage.enter` : l'appeler est ce
+qui garantit qu'une époque offerte est une époque que la mission sait voler. Une réimplémentation
+dans le problème pourrait diverger, et la divergence se paierait en mission `FAILED` sur le thread
+d'optimisation *après* avoir été programmée. Le coût confirmé est lu comme le saut de vitesse à
+travers l'étage, parce que `enter` rend un état et pas un plan — l'impulsion étant appliquée à date
+et position fixes, c'est le même nombre.
 
 Elle réclame **une seule couture publique** dans `TranslunarInjectionPlan`, plutôt que d'ouvrir `keplerianSeedVelocity` et `boundaryConditions` qui sont package-private à dessein :
 
@@ -664,7 +650,9 @@ Elle réclame **une seule couture publique** dans `TranslunarInjectionPlan`, plu
 ```
 
 
-Et le jour où vous voudrez le verdict réel (le plancher de périlune que raconte `LunarTransferMission.firstFlyableDate`), c'est `confirm(...)` qui le porte — sur les deux ou trois candidats survivants, pas sur les 240 échantillons. C'est ce que `firstFlyableDate` fait aujourd'hui en marche forcée, un jour après l'autre, et que ce solveur remplacera.
+`LunarTransferMission.firstFlyableDate` disparaît avec cette confirmation : elle faisait la même
+chose en marche forcée, un jour après l'autre, en s'arrêtant à la première date qui passe au lieu de
+la meilleure du mois.
 
 ---
 
@@ -679,3 +667,194 @@ Trois propriétés, toutes sans propagation, sur un problème **synthétique** (
 Puis un seul test sur la Lune : *le Δv de la meilleure date d'un mois est inférieur à celui d'une date prise au hasard*, ce qui vérifie le câblage sans figer un chiffre d'éphéméride.
 
 **Ce que je ne ferais pas maintenant** : la timeline du wizard. Elle lit `List<LaunchWindow>` et rien d'autre ; tant que le solveur ne rend pas des créneaux mesurés sur un vrai plan de parking fixe, elle afficherait une géométrie qui n'a pas encore de sens opérationnel.
+
+---
+
+## 8. Ce qui a été livré, et ce que la mesure dit
+
+Le paquet `window` (ossature) et `window/problem` (cibles) sont en place, la démonstration lunaire
+programme sa date par le solveur, et la confirmation vole l'étage d'injection de la mission. Les
+chiffres qui suivent viennent de `TranslunarInjectionPlanWindowProblemTest` sur janvier 2026, plage
+de 30 jours, pas de 6 h, précision 10 min, budget 4 000 m/s, marge 5 m/s.
+
+| Mesure | Valeur |
+|---|---|
+| Évaluations fermées du criblage | **199** |
+| Confirmations propagées | **1** — deux minima encadrés, un seul assez bon marché pour être confirmé |
+| Durée du test complet | **14,7 s**, init Orekit comprise |
+| Écart criblage → confirmé | **6 m/s** (3 183 → 3 177) |
+| Refus sur le mois | **aucun** — les 30° d'inclinaison de parking couvrent la déclinaison lunaire |
+| Créneau rendu | **12,9 j sur 30**, de T+2,8 j à T+15,7 j, seuil effectif 3 187,8 m/s |
+
+**Trois enseignements, et le deuxième corrige le document.**
+
+*Le deux-étages tient.* Six m/s d'écart sur 3 180, soit 0,2 % : le seed de Lambert visant le centre
+lunaire classe correctement les époques tout en coûtant quatre ordres de grandeur de moins que le
+vol. Il *sur*-estime, de surcroît, donc la confirmation ne peut pas faire sortir un créneau du
+budget par surprise.
+
+*Le critère translunaire n'a pas de fenêtre, et le §6 le disait trop faiblement.* Le coût criblé va
+de **3 182,8 à 3 196,9 m/s sur le mois, soit 14 m/s d'amplitude** — pas les « quelques dizaines »
+annoncées. Sur 3 180 m/s, aucun budget d'acceptation qu'une mission écrirait vraiment ne découpe un
+intervalle là-dedans. Ce que ce problème livre est donc la **meilleure date du mois** et le
+**verdict de faisabilité** ; le créneau de 12,9 jours ci-dessus n'existe que parce qu'une marge de
+5 m/s a été demandée, et sa largeur dit la platitude du critère plus qu'elle ne dit une contrainte
+opérationnelle. Un vrai créneau demande un critère qui a du relief — l'alignement de plan d'un site
+de tir fixe, la deuxième implémentation.
+
+*Le seuil doit se dire relativement.* `LaunchWindowSearch.margin` est le combien-de-plus-que-le-
+meilleur, en m/s ; le seuil effectif est le plus bas des deux, `min(maxDeltaV, ancre + marge)`. Deux
+décisions de mise en œuvre valent d'être écrites :
+
+- **L'ancre est un coût *criblé*, pas confirmé.** C'est la marche de bord qui consomme le seuil, et
+  elle ne lit que des coûts criblés : ancrer sur le confirmé décalerait les deux de la surcharge de
+  confirmation — 6 à 8 m/s ici, contre une marge que l'appelant met à 5.
+- **Les minima sont confirmés du moins cher au plus cher, et le premier accepté fixe l'ancre.** Les
+  suivants au-delà du seuil ne sont jamais confirmés : c'est là qu'est l'économie (2 confirmations
+  → 1, 378 évaluations → 199 sur la démonstration). Et l'ancre étant le premier minimum *que le
+  modèle complet accepte*, un optimum refusé n'entraîne pas toute la recherche avec lui — sans quoi
+  un mois dont la meilleure date est infaisable serait rendu vide.
+
+Les créneaux qui se recouvrent sont fusionnés, l'optimum le moins cher étant conservé : deux minima
+dont les bords se rejoignent sont **un** intervalle sur lequel le coût ne sort jamais du budget,
+donc une seule opportunité. Sans cela `maxWindows` dépensait son quota sur le même intervalle rendu
+deux fois.
+
+**Le solveur ne porte plus rien.** La grille, le cache d'évaluations et les critères vivent dans une
+classe imbriquée `Run`, une par appel ; `LaunchWindowSolver` ne garde que son problème. Une instance
+est donc réutilisable et réentrante, et deux threads peuvent la solliciter en même temps — ce qui
+compte parce que ces recherches partent d'où une mission est programmée : le thread de rendu par le
+wizard, le thread d'init pour la démonstration lunaire, le thread d'optimisation le jour où un
+créneau sera recalculé au lancement. Le défaut évité n'aurait pas levé d'exception : le second appel
+remettait le cache à zéro sous le premier, qui rendait alors un créneau mesuré sur deux recherches
+différentes. **Ce qui n'est pas rendu thread-safe pour autant, c'est le problème** — un critère
+fermé est immuable et partageable, un `confirm` qui vole une étape de mission ne l'est pas, et la
+règle appartient au problème.
+
+---
+
+## 9. Le deuxième problème : la fenêtre terrestre
+
+`EarthLaunchWindowProblem` est la cible que l'interface attendait — la première dont le critère a
+un créneau et pas seulement un classement. L'inclinaison de la mission *étant* l'inclinaison cible,
+le seul désaccord entre le plan que le pas de tir atteint à l'instant *t* et le plan visé est le
+**RAAN**, qui balaie un tour complet par jour sidéral. Le coût est le changement de plan impulsionnel
+`2·v·sin(θ/2)` de l'angle résiduel entre les deux normales.
+
+Mesures (Kourou, 51,6°, orbite à 400 km, `EarthLaunchWindowProblemTest`) :
+
+| Mesure | Valeur | Prédiction indépendante |
+|---|---|---|
+| Pente du coût près de l'alignement | 0,438 m/s par seconde | `v·sin(i)·ω⊕` |
+| Créneau pour 50 m/s de marge | **3 min 52 s** | `2·marge/pente` = 3 min 48 s |
+| Récurrence | **1 jour sidéral** (86 164 s à 60 s près) | — |
+| Coût à un demi-jour sidéral | 12 020 m/s | `2·v·sin(i)` = 12 020 m/s |
+| Plancher à l'optimum | 1,1 m/s depuis Kourou, 35,9 m/s depuis 45° | écart géodésique/géocentrique |
+| Coût d'une recherche d'un jour | 85 évaluations fermées | — |
+
+**Trois choses que ces chiffres tranchent.**
+
+*Le §5.a se trompait deux fois.* L'alignement revient **une** fois par jour sidéral et non deux :
+le site traverse bien le plan cible deux fois par jour, mais les deux passages sont servis par les
+deux azimuts, et `NodeBranch` est fixé par la mission. Et le pas de balayage n'a pas à être en
+minutes : ce qui est large de quelques minutes est le *créneau*, pas le *minimum*. La fonction est
+en cosinus, lisse, un minimum par jour sidéral — un pas d'une heure l'échantillonne vingt-quatre
+fois par période, et ce sont la section dorée et la bissection de bord qui descendent à la seconde.
+
+*Le vrai piège était sur l'autre axe.* `over(...)` dérivait `precision = pas/10`, soit six minutes
+pour un pas d'une heure — plus grossier que le créneau lui-même, et silencieusement. D'où
+`LaunchWindowProblem.refinementPrecision()`, exactement l'argument qui a mis `coarseStep()` sur le
+problème, appliqué à la résolution : le problème connaît ses deux échelles, et elles diffèrent ici
+de quatre ordres de grandeur.
+
+*Le plancher rend la marge relative indispensable.* L'azimut vient de la latitude **géodésique** par
+trigonométrie sphérique (`LaunchPlane.launchAzimuth`), tandis que le plan est élevé sur la position
+inertielle réelle du pas de tir, de latitude géocentrique plus basse. Le plan atteint est donc
+incliné d'une fraction de degré à côté de la cible, et aucun instant du jour ne referme cet écart :
+1,1 m/s depuis Kourou, 35,9 m/s depuis 45°. C'est un décalage **constant dans le temps**, qui ne
+déplace pas le minimum — un seuil absolu devrait donc être informé de ce plancher, et réinformé pour
+chaque pas de tir. Le seuil relatif du §8 l'absorbe sans rien savoir.
+
+Ce problème ne refuse rien et ne confirme rien : une inclinaison inatteignable est écartée à la
+construction, et la forme fermée *est* la vérité pour un alignement de plan.
+
+---
+
+## 10. Le câblage : ce que devient la date de lancement du wizard
+
+**Une correction d'abord.** Le §8 disait que la ligne à remplacer était le
+`entry.getScheduledDate().orElseGet(clock::now)` de `MissionOrchestratorAppState:194`. C'est faux :
+le wizard **a déjà** un champ LAUNCH DATE, et `MissionWizardAppState` appelle déjà
+`setScheduledDate` avec ce qu'il contient, à la création comme à l'édition. Le `orElseGet` n'est
+donc que le repli des entrées sans date — la démonstration lunaire, un appel programmatique. La
+vraie couture est dans `MissionWizardAppState`, et elle ne remplace pas la date saisie : **elle la
+lit comme un plancher**.
+
+Le trajet complet :
+
+| Étage | Ce qui est ajouté |
+|---|---|
+| `FormField.TARGET_RAAN` | la clé, en degrés ; son absence est signifiante |
+| `EarthOrbitDynamicParameters` | le champ, sur la ligne de l'inclinaison |
+| `MissionFactory` | `targetRaanOrNull(values)` |
+| `MissionSpec.EarthOrbit` | la composante `Double targetRaan` + `hasTargetRaan()` |
+| `WizardPrefill` | le retour du champ à la réouverture |
+| `EarthLaunchWindowPlanner` | spec + date plancher → le créneau à voler |
+| `MissionWizardAppState` | `scheduledDateFor(spec, date saisie)` |
+
+**Trois décisions valent d'être écrites.**
+
+*Le nul est le cas courant.* `targetRaan` est nullable et se lit par `hasTargetRaan()` — la règle
+« `Optional` est un type de retour, jamais un champ » du `CLAUDE.md`, et le précédent est `siteName`
+juste à côté. Une inclinaison seule est atteinte à chaque instant du jour : seule une mission qui
+rejoint un plan **existant** a un créneau à attendre. Publier une valeur par défaut ferait patienter
+toutes les autres pour rien. Un constructeur à onze arguments conserve la forme d'avant MIS-2, si
+bien qu'aucun appelant existant ne bouge.
+
+*Un nœud illisible est refusé, pas dégradé.* L'horizon peut retomber sur son défaut dérivé parce
+qu'une durée est une préférence ; un nœud qu'on n'a pas su lire est une **intention**, et le laisser
+tomber ferait partir la mission à la date saisie comme si rien n'avait été demandé. Le champ passe
+en rouge et l'étape est refusée.
+
+*Le plus tôt, pas le moins cher.* `LaunchWindowSolver` ordonne par coût, ce qui est la bonne réponse
+générale ; ici les alignements de deux jours consécutifs diffèrent de moins d'un m/s — c'est la même
+opportunité, répétée — donc trier par coût repousserait le tir d'un jour pour rien. Le planificateur
+prend le plus tôt.
+
+**Un comportement de bord qui tombe juste tout seul**, et qui valide après coup le seuil relatif du
+§8 : si la date demandée tombe *dans* un créneau, la borne de la plage de recherche est un minimum
+de la grille et le solveur la retient — le tir a lieu tout de suite. Si elle tombe dix minutes après
+l'ouverture, ce même minimum de bord coûte ~260 m/s, sort de la marge ancrée sur le vrai alignement
+du lendemain, et le solveur le retire : la réponse est le créneau du lendemain. Aucune de ces deux
+branches n'est écrite dans le planificateur ; elles découlent du seuil relatif. Les deux sont
+testées.
+
+**Ce que le champ RAAN veut dire — et ce qu'il ne veut pas dire.** Un RAAN saisi est un **nombre, pas
+une orbite** : le plan qu'il décrit est fixe dans le repère d'inclinaison et y reste. Un plan qui est
+réellement en orbite, lui, précesse — la formule séculaire J2 `dΩ/dt = −3/2·J2·(Re/p)²·n·cos i`
+donne **5,00 °/jour** pour une orbite à 400 km et 51,6°, ce qui confirme le « ~5°/jour » de la fiche
+MIS-2. Sur les 26 h que balaie `EarthLaunchWindowPlanner`, cela fait 5,4° de nœud, donc 4,25° entre
+les plans, donc **~570 m/s** (dérivé, non mesuré) — plus de dix fois la marge de 50 m/s qui définit
+le créneau.
+
+Autrement dit : une mission qui saisit le RAAN de l'ISS à sa création et part vingt heures plus tard
+rejoint **exactement** le plan saisi, et rate l'ISS. Le champ veut donc dire « le plan tel qu'il sera
+au décollage », et tant qu'il n'y a pas de cible réelle c'est à l'utilisateur de le saisir ainsi.
+Suivre une cible qui précesse est une **seconde implémentation** de l'interface, dont la normale est
+fonction de l'époque au lieu d'être une constante : quelques lignes, aucune structure à reprendre.
+
+---
+
+**Ce qui reste ouvert** :
+
+1. **La timeline du wizard.** Elle lit `List<LaunchWindow>` et rien d'autre, et elle a enfin quelque
+   chose à montrer : un créneau de quatre minutes qui revient chaque jour sidéral. Le planificateur
+   ne rend aujourd'hui qu'une date au champ LAUNCH DATE ; l'intervalle est calculé puis jeté. Le
+   point à trancher avant d'écrire quoi que ce soit est la place : l'étape des paramètres est déjà
+   à saturation verticale (cf. §10), donc la timeline ne peut pas y être une ligne de plus.
+2. **Une cible TLE**, qui fournirait le RAAN au lieu de le faire saisir. **Ce n'est pas un reste de
+   MIS-2**, contrairement à ce que ce document a d'abord dit : le graphe de dépendances de la
+   roadmap fait entrer la « source éphéméride TLE » dans **MIS-6**, et la mention de la précession
+   J2 dans la fiche MIS-2 décrit ce que le critère devra encaisser le jour où il y aura une cible,
+   pas un livrable autonome. Sans mission de rendez-vous, un chargeur de TLE n'alimente rien — et
+   la couture qui l'accueillera est déjà en place (paragraphe ci-dessus).

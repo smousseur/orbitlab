@@ -169,6 +169,35 @@ class WizardPrefillTest {
         "an untouched edit must not resize the vehicle");
   }
 
+  // --- MIS-2: the target node across the same round trip ---
+
+  @Test
+  void missionWithoutATargetNode_comesBackWithoutTheKey() {
+    assertFalse(
+        WizardPrefill.fromEntry(entryFor(leoValues(), MissionType.LEO)).containsKey("TARGET_RAAN"));
+  }
+
+  /**
+   * The node has no derived form to be confused with — unlike the inclination, whose absence means
+   * "the site's free plane" — so it comes back whenever it was asked for, and a reopened mission
+   * keeps waiting for the same plane.
+   */
+  @Test
+  void missionWithATargetNode_reopensWithIt() {
+    Map<String, Object> values = leoValues();
+    values.put("TARGET_INCLINATION", 51.6);
+    values.put("TARGET_RAAN", 120.0);
+    MissionEntry entry = entryFor(values, MissionType.LEO);
+
+    Map<String, Object> prefilled = WizardPrefill.fromEntry(entry);
+
+    assertEquals(120.0, (Double) prefilled.get("TARGET_RAAN"), 1e-9);
+    assertEquals(
+        120.0,
+        ((MissionSpec.EarthOrbit) reopen(entry, MissionType.LEO)).targetRaan(),
+        1e-9);
+  }
+
   @Test
   void polarMission_reopensPolar() {
     MissionEntry entry = entryFor(polarValues(), MissionType.LEO);

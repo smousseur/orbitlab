@@ -1,9 +1,5 @@
 package com.smousseur.orbitlab.simulation.mission.window;
 
-import org.orekit.time.AbsoluteDate;
-
-import java.time.Duration;
-
 import java.time.Duration;
 import org.orekit.time.AbsoluteDate;
 
@@ -61,6 +57,43 @@ public interface LaunchWindowProblem {
    * @return the coarse sampling step
    */
   Duration coarseStep();
+
+  /**
+   * The time resolution this problem's optimum and edges are worth refining to, which only the
+   * problem can know either.
+   *
+   * <p><b>The same argument as {@link #coarseStep()}, on the other axis, and it is not the same
+   * number.</b> The sweep step must resolve the <em>minimum</em>; this must resolve the
+   * <em>window</em>, and the two scales can be four orders of magnitude apart: an Earth launch has
+   * one alignment per sidereal day, so it is bracketed by an hourly sweep, while the slot around it
+   * is minutes wide and the instant is decided to the second. A default of a tenth of the sweep
+   * step would ask for six minutes there — coarser than the window itself, which is the silent kind
+   * of wrong.
+   *
+   * <p>The default is that tenth, because it is right whenever the merit function has one scale
+   * only, which is the common case.
+   *
+   * @return the refinement resolution
+   */
+  default Duration refinementPrecision() {
+    return coarseStep().dividedBy(10L);
+  }
+
+  /**
+   * The interval after which the same opportunity comes back, which only the problem can know.
+   *
+   * <p><b>The third scale, and the one a consumer sizes a horizon on.</b> {@link #coarseStep()}
+   * says how finely to sample and {@link #refinementPrecision()} how finely to resolve; this says
+   * how far one has to look to see anything at all. A caller picking its own horizon — a wizard
+   * timeline showing "three days", say — would draw an empty axis on a monthly criterion, which is
+   * the same silent failure {@link #coarseStep()} guards against on the other axis.
+   *
+   * <p>An order of magnitude, not a promise of periodicity: it sizes searches, it does not assert
+   * that the windows are evenly spaced.
+   *
+   * @return the interval between two consecutive opportunities
+   */
+  Duration recurrence();
 
   /**
    * Confirms a refined candidate under the full model — the expensive second tier.

@@ -14,6 +14,7 @@ import com.simsilica.lemur.event.CursorEventControl;
 import com.simsilica.lemur.event.CursorMotionEvent;
 import com.simsilica.lemur.event.DefaultCursorListener;
 import com.smousseur.orbitlab.simulation.mission.MissionHorizon;
+import com.smousseur.orbitlab.simulation.mission.operation.LaunchPlane;
 import com.smousseur.orbitlab.ui.UiKit;
 import com.smousseur.orbitlab.ui.form.FormStyles;
 import java.util.Map;
@@ -79,8 +80,43 @@ public abstract class DynamicParameters {
    *
    * @return the reason the inclination was refused, or empty when it is usable
    */
-  public Optional<String> validateInclination() {
+  public Optional<String> validateTargetPlane() {
     return Optional.empty();
+  }
+
+  /**
+   * The target plane and semi-major axis this panel describes, for the launch window.
+   *
+   * <p>Empty on a profile that has no target node to wait for — GEO, whose spec carries neither a
+   * RAAN nor a node branch — and empty when the entries on screen do not describe a reachable
+   * plane, which is a transient state while the user types.
+   *
+   * @param latitudeDeg the live launch latitude, which a due-east plane is derived from
+   * @return the plane and the semi-major axis in meters, or empty
+   */
+  public Optional<TargetOrbit> targetOrbit(double latitudeDeg) {
+    return Optional.empty();
+  }
+
+  /**
+   * A target orbit reduced to what a launch window needs of it.
+   *
+   * @param plane the plane the ascent flies to
+   * @param semiMajorAxis meters
+   */
+  public record TargetOrbit(LaunchPlane plane, double semiMajorAxis) {}
+
+  /**
+   * Whether a field of this panel currently carries a refusal, so the step can mount the page
+   * holding it without running the checks a second time.
+   *
+   * <p>False by default, on the same reasoning as {@link #validateTargetPlane()}: a panel with
+   * nothing refusable has nothing standing.
+   *
+   * @return whether a field of this panel is marked as refused
+   */
+  public boolean hasRejection() {
+    return false;
   }
 
   /**
