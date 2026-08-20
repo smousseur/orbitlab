@@ -2,6 +2,7 @@ package com.smousseur.orbitlab.ui.mission.wizard.step.planning;
 
 import static com.smousseur.orbitlab.ui.UiKit.fieldLabelRow;
 import static com.smousseur.orbitlab.ui.UiKit.newInputField;
+import static com.smousseur.orbitlab.ui.mission.wizard.step.StepParameters.*;
 
 import com.jme3.math.ColorRGBA;
 import com.jme3.math.Vector3f;
@@ -37,10 +38,6 @@ import java.util.Optional;
 public final class PlanningPage {
 
   private static final float RAAN_FIELD_W = 110f;
-  private static final float FIELD_H = 36f;
-  private static final float LABEL_FIELD_GAP = 6f;
-  private static final float LABEL_ICON_SIZE = 14f;
-  private static final float ROW_GAP = 16f;
   private static final float BACK_BTN_W = 90f;
   private static final float BACK_BTN_H = 22f;
 
@@ -50,6 +47,9 @@ public final class PlanningPage {
   private final Container root;
   private final TextField raanField;
   private final Label raanHelper;
+
+  /** Entry that was refused, kept so the error state clears as soon as it is edited. */
+  private String rejectedRaan;
 
   private Runnable onBack = () -> {};
 
@@ -126,10 +126,28 @@ public final class PlanningPage {
   }
 
   /**
+   * Clears the refusal as soon as the node is edited, so the red does not outlive the mistake — the
+   * same contract every other refusable field of this wizard holds, {@code
+   * StepParameters.rejectedLaunchDate} being the reference.
+   *
+   * @param tpf the frame time, unused: nothing on this page animates
+   */
+  public void update(float tpf) {
+    if (rejectedRaan != null && !rejectedRaan.equals(raanField.getText())) {
+      clearRejection();
+    }
+  }
+
+  /**
    * Publishes the node, and only when it reads as a number.
    *
    * <p>Absent when blank, and that absence is the mission saying it waits for no plane. Publishing a
    * default here would make every mission sit through a launch window it never asked for.
+   *
+   * <p><b>Not scoped to a profile.</b> This page is shared by every card, so a GEO submit can carry
+   * the key; it stays inert only because {@code MissionFactory.specFromWizardValues} reads it in its
+   * {@code case LEO} branch alone and {@code MissionSpec.Geo} has no node component. That scoping is
+   * the factory's, not this page's — a node field added elsewhere would not inherit it.
    *
    * @return the values this page owns
    */
@@ -159,24 +177,24 @@ public final class PlanningPage {
    * value to fall back on: an inclination has a derived default, a node does not, so degrading would
    * silently turn "meet this plane" into "launch whenever".
    *
+   * <p>What counts as usable is {@link RaanEntry}'s to say; this only paints the answer.
+   *
    * @return the reason the node was refused, or empty when it is usable
    */
   public Optional<String> validateTargetNode() {
-    String text = raanField.getText().trim();
-    if (text.isEmpty()) {
+    String text = raanField.getText();
+    Optional<String> refusal = RaanEntry.refusal(text);
+    if (refusal.isEmpty()) {
       clearRejection();
-      return Optional.empty();
+      return refusal;
     }
-    try {
-      Double.parseDouble(text);
-    } catch (NumberFormatException e) {
-      raanField.setColor(FormStyles.DANGER);
-      raanHelper.setText(RAAN_FORMAT_HELPER);
-      raanHelper.setColor(FormStyles.DANGER);
-      return Optional.of("Target RAAN is not a number: " + text);
-    }
-    clearRejection();
-    return Optional.empty();
+    // The raw text, not the trimmed one: update() compares it against the field as typed, and a
+    // trimmed copy would never match, clearing the refusal a frame after it was raised.
+    rejectedRaan = text;
+    raanField.setColor(FormStyles.DANGER);
+    raanHelper.setText(RAAN_FORMAT_HELPER);
+    raanHelper.setColor(FormStyles.DANGER);
+    return refusal;
   }
 
   /**
@@ -184,18 +202,11 @@ public final class PlanningPage {
    *     #validateTargetNode()} is what refuses the unreadable case, this only declines to publish it
    */
   public Optional<Double> parsedRaanDeg() {
-    String text = raanField.getText().trim();
-    if (text.isEmpty()) {
-      return Optional.empty();
-    }
-    try {
-      return Optional.of(Double.parseDouble(text));
-    } catch (NumberFormatException e) {
-      return Optional.empty();
-    }
+    return RaanEntry.parse(raanField.getText());
   }
 
   private void clearRejection() {
+    rejectedRaan = null;
     raanField.setColor(FormStyles.TEXT_PRIMARY);
     raanHelper.setText(RAAN_HELPER);
     raanHelper.setColor(FormStyles.TEXT_LO);
