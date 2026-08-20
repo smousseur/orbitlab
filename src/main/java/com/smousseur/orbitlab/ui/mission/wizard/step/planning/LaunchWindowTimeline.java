@@ -39,8 +39,10 @@ import org.orekit.time.AbsoluteDate;
  * make the slot 0.4 px: it is not small, it is invisible, and no tuning saves a single axis (spec
  * {@code docs/mission-window/02-timeline-wizard.md} §2). So the day scale draws an opportunity as
  * an <em>instant</em> — a marker, whose width nobody reads as a duration, so it lies about nothing
- * — and the true width appears only in the zoom pane, where the slot takes about 39 % of a ±5 min
- * frame and its width means what it says: the operational margin.
+ * — and the true width appears only in the zoom pane, where it means what it says: the operational
+ * margin. That pane's own scale is not fixed either, because the slot is not: {@link ZoomScale}
+ * picks the rung that shows the selected slot without the captions colliding, and the note beside
+ * the heading names it.
  *
  * <p><b>No cost curve.</b> A V-shaped trace in the zoom pane was considered and dropped: Lemur has
  * no line primitive and a custom mesh is out of proportion here. The three cost-bearing figures of
@@ -64,7 +66,7 @@ public final class LaunchWindowTimeline {
    * fields of the main page rather than floating over them — and so widening the step moves the
    * axis with it instead of unaligning it silently.
    */
-  private static final float TRACK_W = StepParameters.FIELD_W;
+  static final float TRACK_W = StepParameters.FIELD_W;
 
   /** Height of the opportunities frame: room for an 18 px marker and its air. */
   private static final float AXIS_FRAME_H = 30f;
@@ -103,13 +105,6 @@ public final class LaunchWindowTimeline {
   private static final float MARKER_H = 18f;
 
   /**
-   * Half the span the zoom pane covers, in seconds. Five minutes: the measured slot is 232 s, so it
-   * takes about 39 % of the frame — wide enough to be read as an interval, narrow enough that the
-   * margin still looks like a margin.
-   */
-  private static final double ZOOM_HALF_SPAN_S = 300.0;
-
-  /**
    * Right-hand padding of the opportunities axis, as a fraction of the floor-to-last-closing
    * interval. A twelfth, so the last marker sits inside the frame instead of on its edge.
    */
@@ -127,7 +122,7 @@ public final class LaunchWindowTimeline {
    * advances 6 px at the size they are drawn at ({@code ibmplexmono-regular-10.fnt}). A caption
    * narrower than its text is clipped, not wrapped, so each carries a couple of characters of air.
    */
-  private static final float CAPTION_CHAR_W = 6f;
+  static final float CAPTION_CHAR_W = 6f;
 
   /** The 19 characters of {@code yyyy-MM-dd HH:mm:ss}, plus air. */
   private static final float FLOOR_LABEL_W = 21 * CAPTION_CHAR_W;
@@ -135,14 +130,11 @@ public final class LaunchWindowTimeline {
   /** The 5 characters of {@code MM-dd}, plus air. */
   private static final float DAY_LABEL_W = 7 * CAPTION_CHAR_W;
 
-  /** The 8 characters of {@code HH:mm:ss}, plus air. */
-  private static final float TIME_LABEL_W = 10 * CAPTION_CHAR_W;
-
-  /** The 15 characters of {@code closes HH:mm:ss}, plus air. */
-  private static final float BOUND_LABEL_W = 17 * CAPTION_CHAR_W;
-
-  /** The 10 characters of {@code span 99.9 d}, plus air. */
-  private static final float SPAN_NOTE_W = 13 * CAPTION_CHAR_W;
+  /**
+   * The 10 characters of {@code span 99.9 d}, plus air — and the widest note the zoom heading can
+   * produce is {@code +/- 30 min}, one character narrower still.
+   */
+  static final float SPAN_NOTE_W = 13 * CAPTION_CHAR_W;
 
   /** Gap kept clear between the floor caption and the first day graduation drawn after it. */
   private static final float GRADUATION_MIN_GAP = 10f;
@@ -183,6 +175,7 @@ public final class LaunchWindowTimeline {
 
   private final Container root;
   private final Label spanNote;
+  private final Label zoomNote;
   private final Container axisFrame;
   private final Container axisGraduations;
   private final Container zoomFrame;
@@ -211,8 +204,7 @@ public final class LaunchWindowTimeline {
 
     root.addChild(UiKit.vSpacer(SECTION_GAP));
 
-    Label zoomNote = dimNote();
-    zoomNote.setText("+/- 5 min");
+    zoomNote = dimNote();
     root.addChild(sectionHeader("SELECTED WINDOW", zoomNote));
 
     root.addChild(UiKit.vSpacer(LABEL_FRAME_GAP));
@@ -261,6 +253,7 @@ public final class LaunchWindowTimeline {
 
   private void renderEmpty(String note, ColorRGBA color) {
     spanNote.setText(NO_VALUE);
+    zoomNote.setText(NO_VALUE);
     attach(axisGraduations, caption(note, TRACK_W, color, HAlignment.Left), 0f, 0f, Z_CONTENT);
     paintReadout(NO_VALUE, NO_VALUE, NO_VALUE, NO_VALUE);
   }
@@ -272,11 +265,31 @@ public final class LaunchWindowTimeline {
 
     spanNote.setText(
         String.format(Locale.ROOT, "span %.1f d", span / Duration.ofDays(1).toSeconds()));
+    LaunchWindow selected = windows.get(state.selected());
+    double halfSpan = ZoomScale.halfSpanSeconds(zoomSpanSeconds(selected));
+    zoomNote.setText(ZoomScale.formatHalfSpan(halfSpan));
+
     paintAxis(floor, windows, state.selected(), span);
     paintDayGraduations(floor, span);
-    paintZoom(windows.get(state.selected()));
-    paintZoomGraduations(windows.get(state.selected()));
+    paintZoom(selected, halfSpan);
+    paintZoomGraduations(selected, halfSpan);
     paintSelectedReadout(state);
+  }
+
+  /**
+   * The width the zoom pane has to show: twice the greater distance from the optimum to a bound.
+   *
+   * <p>The optimum is the cheapest candidate of the slot and not its midpoint: the solver bisects
+   * outward from it, so the two halves are usually equal, but a fusion of two slots keeps one
+   * optimum and a slot truncated by the end of the search range keeps none of its symmetry. Sizing
+   * on the greater half is what keeps the far bound off the pane's edge. It cannot do more: a slot
+   * leaning hard one way brings its near bound's caption toward the centre, and no pane centred on
+   * the optimum can push it back out.
+   */
+  private static double zoomSpanSeconds(LaunchWindow window) {
+    double before = window.date().durationFrom(window.opening());
+    double after = window.closing().durationFrom(window.date());
+    return 2.0 * Math.max(before, after);
   }
 
   /**
@@ -342,10 +355,10 @@ public final class LaunchWindowTimeline {
     }
   }
 
-  private void paintZoom(LaunchWindow window) {
+  private void paintZoom(LaunchWindow window, double halfSpan) {
     float inner = ZOOM_FRAME_H - 2f * EDGE;
-    float openX = trackX(zoomFraction(window, window.opening()));
-    float closeX = trackX(zoomFraction(window, window.closing()));
+    float openX = trackX(zoomFraction(window, window.opening(), halfSpan));
+    float closeX = trackX(zoomFraction(window, window.closing(), halfSpan));
     float width = Math.max(EDGE, closeX - openX);
 
     attach(zoomFrame, rule(width, inner, SLOT_FILL), openX, EDGE, Z_CONTENT);
@@ -364,48 +377,45 @@ public final class LaunchWindowTimeline {
         Z_OVERLAY);
   }
 
-  private void paintZoomGraduations(LaunchWindow window) {
+  private void paintZoomGraduations(LaunchWindow window, double halfSpan) {
     AbsoluteDate optimum = window.date();
-    attach(
-        zoomGraduations,
-        caption(
-            time(optimum.shiftedBy(-ZOOM_HALF_SPAN_S)),
-            TIME_LABEL_W,
-            FormStyles.TEXT_LO,
-            HAlignment.Left),
-        0f,
-        0f,
-        Z_CONTENT);
-    attach(
-        zoomGraduations,
-        caption(
-            time(optimum.shiftedBy(ZOOM_HALF_SPAN_S)),
-            TIME_LABEL_W,
-            FormStyles.TEXT_LO,
-            HAlignment.Right),
-        TRACK_W - TIME_LABEL_W,
-        0f,
-        Z_CONTENT);
+    ZoomScale.ZoomCaptions captions =
+        ZoomScale.captions(
+            window.opening().durationFrom(optimum),
+            window.closing().durationFrom(optimum),
+            halfSpan);
 
-    attachCentred(
-        zoomGraduations,
+    attachCaption(
+        captions.paneStart(),
+        time(optimum.shiftedBy(-halfSpan)),
+        FormStyles.TEXT_LO,
+        HAlignment.Left);
+    attachCaption(
+        captions.paneEnd(),
+        time(optimum.shiftedBy(halfSpan)),
+        FormStyles.TEXT_LO,
+        HAlignment.Right);
+
+    attachCaption(
+        captions.opens(),
         "opens " + time(window.opening()),
-        BOUND_LABEL_W,
-        zoomFraction(window, window.opening()));
-    attachCentred(zoomGraduations, time(optimum), TIME_LABEL_W, 0.5);
-    attachCentred(
-        zoomGraduations,
+        FormStyles.ACCENT_BRIGHT,
+        HAlignment.Center);
+    attachCaption(
+        captions.optimum(), time(optimum), FormStyles.ACCENT_BRIGHT, HAlignment.Center);
+    attachCaption(
+        captions.closes(),
         "closes " + time(window.closing()),
-        BOUND_LABEL_W,
-        zoomFraction(window, window.closing()));
+        FormStyles.ACCENT_BRIGHT,
+        HAlignment.Center);
   }
 
-  private void attachCentred(Container host, String text, float width, double fraction) {
-    float left = clamp(trackX(fraction) - width / 2f, 0f, TRACK_W - width);
+  private void attachCaption(
+      ZoomScale.CaptionSpan span, String text, ColorRGBA color, HAlignment alignment) {
     attach(
-        host,
-        caption(text, width, FormStyles.ACCENT_BRIGHT, HAlignment.Center),
-        left,
+        zoomGraduations,
+        caption(text, span.width(), color, alignment),
+        span.left(),
         0f,
         Z_CONTENT);
   }
@@ -493,8 +503,8 @@ public final class LaunchWindowTimeline {
     return TRACK_W * (float) clamp01(fraction);
   }
 
-  private static double zoomFraction(LaunchWindow window, AbsoluteDate date) {
-    return (date.durationFrom(window.date()) + ZOOM_HALF_SPAN_S) / (2.0 * ZOOM_HALF_SPAN_S);
+  private static double zoomFraction(LaunchWindow window, AbsoluteDate date, double halfSpan) {
+    return ZoomScale.fraction(date.durationFrom(window.date()), halfSpan);
   }
 
   private static String time(AbsoluteDate date) {
