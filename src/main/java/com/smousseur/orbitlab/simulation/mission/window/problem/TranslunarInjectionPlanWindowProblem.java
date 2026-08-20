@@ -57,10 +57,12 @@ public class TranslunarInjectionPlanWindowProblem implements LaunchWindowProblem
   private static final Duration COARSE_STEP = Duration.ofHours(6);
 
   /**
-   * Recurrence. The injection cost follows the Moon's direction, so it repeats with the sidereal
-   * month — 27.321 661 d, the period the criterion's own geometry turns on.
+   * Recurrence. The injection cost is set by the lunar distance, which this class's own criterion
+   * describes as swinging "from 363 300 to 405 500 km over an anomalistic month", one minimum per
+   * revolution around the lunar perigee. That period — 27.554 550 d — and not the sidereal month,
+   * because it is the return to perigee that brings the distance back.
    */
-  private static final Duration RECURRENCE = Duration.ofSeconds(2_360_591);
+  private static final Duration RECURRENCE = Duration.ofSeconds(2_380_713);
 
   private final LunarTransferMission mission;
 
