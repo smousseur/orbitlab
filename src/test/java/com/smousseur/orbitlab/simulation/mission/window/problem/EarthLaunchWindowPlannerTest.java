@@ -28,7 +28,8 @@ import org.orekit.utils.Constants;
  * from inside a window does not push the launch to tomorrow. The remaining tests cover the newer
  * {@link EarthLaunchWindowRequest} adapter: that it reaches the same optimum as the spec it is read
  * from, and that its semi-major axis is genuinely derived from both altitudes rather than copying
- * one of them.
+ * one of them; and the wizard timeline's own two needs: that successive opportunities are spaced a
+ * sidereal day apart, and that an optimum handed back as a floor resolves to itself.
  */
 class EarthLaunchWindowPlannerTest {
 
@@ -158,5 +159,35 @@ class EarthLaunchWindowPlannerTest {
         Constants.WGS84_EARTH_EQUATORIAL_RADIUS + 400_000.0,
         EarthLaunchWindowRequest.from(elliptical).semiMajorAxis(),
         1.0);
+  }
+
+  @Test
+  @DisplayName("Three opportunities come back one sidereal day apart")
+  void threeOpportunitiesAreOneSiderealDayApart() {
+    List<LaunchWindow> windows =
+        EarthLaunchWindowPlanner.nextOpportunities(
+            EarthLaunchWindowRequest.from(spec(120.0)), epoch(), 3);
+
+    assertEquals(3, windows.size());
+    for (int i = 1; i < windows.size(); i++) {
+      double gap = windows.get(i).date().durationFrom(windows.get(i - 1).date());
+      assertTrue(gap > 0.0, "the opportunities must be in chronological order");
+      assertEquals(SIDEREAL_DAY, gap, 60.0);
+    }
+  }
+
+  @Test
+  @DisplayName("Asking again from a window's optimum returns that same instant")
+  void anOptimumTakenAsAFloorReturnsItself() {
+    MissionSpec.EarthOrbit spec = spec(120.0);
+    List<LaunchWindow> windows =
+        EarthLaunchWindowPlanner.nextOpportunities(
+            EarthLaunchWindowRequest.from(spec), epoch(), 3);
+    AbsoluteDate chosen = windows.get(1).date();
+
+    Optional<LaunchWindow> again = EarthLaunchWindowPlanner.nextOpportunity(spec, chosen);
+
+    assertTrue(again.isPresent());
+    assertEquals(0.0, again.get().date().durationFrom(chosen), 2.0);
   }
 }
