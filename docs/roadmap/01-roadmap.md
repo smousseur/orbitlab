@@ -1329,9 +1329,11 @@ partagée, parce que c'est ici qu'il a son premier consommateur de production �
 la forme de l'API se lit sur `TLIBurnStage`, pas dans l'abstrait. Le
 multi-révolution (`nRev ≥ 1`) reste à vérifier ; il est natif, il n'est pas testé.
 
-**Spec.** [`docs/brainstorm/missions.md`](../brainstorm/missions.md) §8 (à
-étendre : la spec traite TLI+LOI d'un bloc, le flyby seul est un palier
-intermédiaire moins cher qui mérite d'être livré d'abord).
+**Spec.** [`docs/lunar-flyby/01-decoupage.md`](../lunar-flyby/01-decoupage.md)
+— voir son §2.2 : **cinq affirmations de cette fiche y sont corrigées**, dont la
+« correction CMA-ES » annoncée ci-dessus et le seed Lambert reversé ici depuis
+`MIS-3`. Le §8 de [`docs/brainstorm/missions.md`](../brainstorm/missions.md)
+reste la source d'origine, antérieure à `PHY-4`.
 
 #### MIS-5 — Mise en orbite lunaire (LOI) — ★5 ◆3 M
 
@@ -1718,6 +1720,9 @@ dès la v1, même s'il ne vaut que `NONE` — sans lui, un scénario d'avant la
 bascule se rejoue après avec une physique différente et personne ne le voit
 passer. C'est aussi la raison pour laquelle stocker la trajectoire échantillonnée
 serait un piège : elle deviendrait fausse sans que rien ne le signale.
+
+**Spec.** [`docs/scenario/01-persistance-missions.md`](../scenario/01-persistance-missions.md)
+— voir son §11 : quatre affirmations de cette fiche y sont corrigées par des mesures.
 
 #### ~~UI-4 — Menu applicatif haut-gauche — ★3 ◆2 M *(ajout)*~~ — **RÉSOLU le 2026-08-14**
 
