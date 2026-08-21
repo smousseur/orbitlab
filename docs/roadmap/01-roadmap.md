@@ -5,7 +5,7 @@ et 1 sont soldées, cf. §1). Il est **la** porte d'entrée du dossier `docs/` :
 chaque item renvoie vers la spec détaillée quand elle existe, et l'index
 complet des documents est dans [`docs/README.md`](../README.md).
 
-**Comment le lire.** Le plan, c'est le **§3** — six phases dans l'ordre. Le §4
+**Comment le lire.** Le plan, c'est le **§3** — sept phases dans l'ordre. Le §4
 est un classement valeur/difficulté qui sert à arbitrer, pas à planifier ; le
 §6 est un recueil de fiches par item, à ouvrir au moment de coder. Si vous ne
 lisez qu'une section, lisez le §3.
@@ -76,7 +76,7 @@ et l'item « Lambert sur les planètes » disparaît de la roadmap (fait).
 
 ## 3. La roadmap
 
-**C'est cette section qui dit quoi faire, et dans quel ordre.** Six phases, à
+**C'est cette section qui dit quoi faire, et dans quel ordre.** Sept phases, à
 prendre dans l'ordre ; à l'intérieur d'une phase, l'ordre des lignes est
 indicatif — les items d'une même phase sont volontairement peu couplés entre
 eux. Le §4 sert à arbitrer un échange, pas à planifier.
@@ -219,19 +219,47 @@ Seul item de sa phase parce qu'il en vaut plusieurs : source éphéméride TLE
 bufferisée, abstraction `EphemerisTarget`, deux nouveaux stages, nouveau coût,
 rendu de la cible. Découpage détaillé en §6.
 
-### Phase 6 — Réalisme et spectacle · ~2,5 semaines
+### Phase 6 — Réalisme et spectacle · ~4 semaines
 
 | ID | Item | ★ | ◆ | Taille |
 |---|---|:-:|:-:|:-:|
 | PHY-2 | Atmosphère par défaut + recalibrage optimiseur | 5 | 4 | L |
 | PHY-3 | Détecteurs MaxQ / interface + télémétrie + UI fidélité | 3 | 2 | M |
 | FX-3 | Particules de tuyère | 4 | 2 | M |
+| PHY-5 | Étages largués : objets propagés et modèles 3D | 4 | 3 | L |
 | NAV-5 | Hover « wow » planètes + orbites | 3 | 2 | M |
 
 **Note pour `PHY-2`** : les scénarios écrits en phase 3 par `UI-3` datent d'avant
 la bascule du drag. Le champ « modèle d'atmosphère » du format doit donc exister
 **dès `UI-3`**, même s'il ne vaut que `NONE` à ce moment-là — sinon les scénarios
 d'avant deviennent silencieusement faux au moment du basculement.
+
+**Note pour `PHY-5`** : il est ici et pas plus tôt parce que sa valeur dépend de
+`PHY-2`. Sans traînée, un étage largué en orbite ne redescend jamais et un booster
+suborbital retombe sans ralentir : on obtiendrait deux points qui s'écartent, pas
+une séparation. Sa vraie contrainte de date n'est cependant pas technique — voir
+la fiche au §6 : les maillages par étage n'existent pas, et ce n'est pas du code.
+
+### Phase 7 — Retour sur Terre · ~2,5 semaines
+
+> La phase qui ferme la boucle. Jusqu'ici une trajectoire part et ne revient
+> jamais ; ces deux items la ramènent. Tous deux sont **strictement en aval de
+> `PHY-2`** — sans traînée par défaut, une rentrée n'est pas une rentrée, c'est
+> une collision avec une sphère. C'est la seule raison pour laquelle `MIS-11` ne
+> tient pas compagnie au reste du lunaire en phase 4.
+
+| ID | Item | ★ | ◆ | Taille |
+|---|---|:-:|:-:|:-:|
+| MIS-10 | Déorbitage contrôlé et rentrée atmosphérique | 5 | 3 | M |
+| MIS-11 | Mission de type Artemis (survol lunaire et retour) | 5 | 4 | L |
+
+**`MIS-10` d'abord**, et pas seulement parce qu'il est le moins cher des deux :
+c'est lui qui répare la garde de rentrée et pose la terminaison de descente, que
+`MIS-11` réutilise tels quels pour sa dernière heure de vol. Pris dans l'autre
+ordre, `MIS-11` paie le même travail au milieu d'un chantier ◆4.
+
+**Fin de phase quand** : un vaisseau parti de la Terre y revient, à un endroit
+qu'on a choisi.
 
 ### Pourquoi l'atmosphère est coupée en deux, à cheval sur les phases 3 et 6
 
@@ -281,11 +309,14 @@ opportuniste, ou à décider quoi sacrifier quand une phase déborde.
 | ~~RND-4~~ | ~~Ribbon billboardé (orbites + trajectoires)~~ — résolu | 4 | 3 | M | — |
 | ~~MIS-3~~ | ~~Solveur de Lambert + repère LVLH~~ — **dissous le 2026-08-20** (Lambert déjà livré par `PHY-4`, LVLH sans consommateur avant `MIS-6`, voir détail) | 4 | 3 | M | — |
 | ~~MIS-2~~ | ~~Fenêtres de lancement~~ — résolu (cible TLE et précession J2 reportées en `MIS-6`, voir détail) | 4 | 3 | M | MIS-7 (livré) |
+| PHY-5 | Étages largués propagés + maillages par étage | 4 | 3 | L | — (mais sans valeur avant PHY-2) |
 | NAV-5 | Hover « wow » planètes + orbites | 3 | 2 | M | RND-4 (livré) |
 | UI-3 | Persistance des missions / format de scénario | 4 | 3 | M | — |
 | ~~PHY-4~~ | ~~Socle multi-corps (3ᵉ corps, SOI, repères)~~ — **résolu le 2026-08-18** | 5 | 4 | L | — |
 | MIS-5 | Mise en orbite lunaire (LOI) | 5 | 3 | M | MIS-4 |
+| MIS-10 | Déorbitage contrôlé et rentrée atmosphérique | 5 | 3 | M | PHY-2, PHY-3 |
 | MIS-4 | Survol lunaire (TLI + flyby) | 5 | 4 | L | PHY-4 (livré), MIS-2 (livré) |
+| MIS-11 | Mission Artemis : survol lunaire et retour | 5 | 4 | L | MIS-4, MIS-10 |
 | ~~PHY-1~~ | ~~Atmosphère : brique drag, désactivée par défaut~~ — **résolu le 2026-08-21** | 4 | 3 | L | — |
 | PHY-3 | Détecteurs MaxQ / interface + télémétrie + UI fidélité | 3 | 2 | M | PHY-1 (livré) |
 | PHY-2 | Atmosphère par défaut + recalibrage optimiseur | 5 | 4 | L | PHY-1 (livré) |
@@ -331,6 +362,13 @@ MIS-7 (mission Terre paramétrable) ✔ résolu — MIS-2 est débloqué
 PHY-1 (drag off par défaut) ✔ résolu ── PHY-2 (drag par défaut + recalibrage)
                             └─ PHY-3 (MaxQ, télémétrie)
 
+PHY-2 + PHY-3 ── MIS-10 (déorbitage + rentrée)
+                     └── MIS-11 (Artemis : survol lunaire + retour)
+                            ▲
+                         MIS-4 (survol lunaire)
+
+PHY-5 (étages largués) — aucun amont dur, mais sans PHY-2 il ne montre rien
+
 RND-4 (ribbon) ✔ résolu ── NAV-5 (hover) — débloqué : la largeur est un uniform
 ```
 
@@ -356,6 +394,13 @@ parce qu'il n'avait plus de contenu propre — le solveur de Lambert est arrivé
 comme sous-produit de `PHY-4`, et le repère LVLH n'a aucun consommateur avant
 `MIS-6` lui-même. Un nœud qui ne bloque plus rien ne doit pas rester dans le
 graphe : la fiche au §6 dit où chaque moitié a été reversée.
+
+**Le graphe a désormais une queue, et elle est entièrement commandée par `PHY-2`.**
+`MIS-10` et `MIS-11` sont les deux premiers items du document à dépendre de
+l'atmosphère *allumée* et non de la brique : `PHY-1` leur donne le modèle de
+traînée, il ne leur donne pas une trajectoire qui redescend. `PHY-5`, lui, n'a
+aucun amont dur — son calendrier est décidé par la disponibilité de maillages par
+étage, qui ne sont pas du code et n'apparaissent donc dans aucun graphe.
 
 ---
 
@@ -1025,6 +1070,43 @@ lunaire les précède dans le même JVM.
 
 ---
 
+#### PHY-5 — Étages largués : objets propagés et modèles 3D — ★4 ◆3 L *(ajout)*
+
+**Pourquoi.** Aujourd'hui un étage largué **n'existe pas**. `StageSeparationStage`
+est une chute de masse et rien d'autre : l'état passe à la masse de référence de
+la pile au-dessus, `resolveActiveStage` active le véhicule suivant, et l'étage
+abandonné disparaît de la simulation à l'instant précis où il devient intéressant.
+La séparation est le seul moment d'un vol où les images réelles montrent deux
+objets ; chez nous, elle ne montre rien.
+
+**À faire.**
+- **Un objet propagé par étage largué** : masse sèche, coefficient balistique
+  propre, état initial hérité de l'état de séparation, propagation autonome
+  jusqu'à l'impact ou la décroissance.
+- **Une éphéméride par objet.** C'est ici qu'est le coût réel, et il n'est pas
+  dans la physique : `MissionEphemeris` décrit **une** trajectoire, et le renderer
+  en suppose une par mission. Le passage à N est le même exercice que `PHY-4 / L3`
+  a fait pour les arcs (un repère par échantillon), mais sur l'autre axe.
+- **Des maillages par étage.** Il n'y a qu'**un mesh par lanceur** aujourd'hui
+  (`LauncherAssets` : `heavy_falcon.gltf`, `ariane/scene.gltf`), la pile entière
+  d'un seul tenant. Et `src/main/resources/models/` n'est pas versionné : les
+  modèles par étage sont un livrable **hors code**, à produire ou à sourcer avant
+  que l'item soit démarrable. C'est cette contrainte qui décide de sa date, pas sa
+  difficulté.
+- **La séparation elle-même** : impulsion de séparation, deux corps qui s'écartent,
+  et un débris qui garde son identité dans le breadcrumb et la télémétrie.
+
+**Pourquoi `PHY` et pas `RND`.** La moitié visible est du rendu, mais ce qui manque
+n'est pas un dessin : c'est un **objet propagé**. Tant que la simulation n'a qu'une
+trajectoire par mission, le rendu n'a rien à montrer.
+
+**Ce que l'item s'interdit.** L'optimiseur ne voit pas les débris. Un étage largué
+est propagé pour l'affichage et la pédagogie, jamais dans la boucle CMA-ES : sinon
+le coût d'une évaluation est multiplié par le nombre d'étages, pour un résultat qui
+n'entre dans aucune fonction objectif.
+
+---
+
 ### MIS — Missions
 
 #### ~~MIS-1 — Deuxième lanceur au catalogue — ★3 ◆1 S~~ — **RÉSOLU le 2026-08-09**
@@ -1293,6 +1375,84 @@ rendez-vous est une spirale illisible ; en LVLH, c'est une figure compacte
 autour de la cible. C'est le bénéfice visuel n°1 de la feature.
 
 **Spec.** [`docs/brainstorm/leo-rendezvous-preparation.md`](../brainstorm/leo-rendezvous-preparation.md).
+
+#### MIS-10 — Déorbitage contrôlé et rentrée atmosphérique — ★5 ◆3 M *(ajout)*
+
+**Promu du backlog.** L'item figurait au §7 depuis l'origine (« Molniya / HEO,
+déorbitage et rentrée, … ») ; il en sort parce que son préalable est enfin daté.
+Une fiche de brainstorm existe déjà —
+[`docs/brainstorm/missions.md`](../brainstorm/missions.md) §6, cotée ★5 ◆3 — mais
+elle est **périmée sur un point** : elle range `ReentryDetector` dans « ce qui
+manque », alors qu'il existe
+([`ReentryDetector.java`](../../src/main/java/com/smousseur/orbitlab/simulation/mission/detector/ReentryDetector.java))
+et qu'il est armé en production sur chaque leg d'étage.
+
+**La garde de rentrée est à réparer avant tout le reste.** `PHY-1 / L0` §2.3 a
+rejoué quatre rentrées par traînée avec `ReentryGuard.armQuiet` armé, exactement
+comme `StageLegRunner` l'arme en vol : la garde **ne change rien** — pas un pas
+d'intégration, pas une seconde sur la date d'échec. La cause est son plancher,
+`SUBSURFACE_FLOOR = −50 km`, choisi parce que l'altitude *sphérique* d'un pas de
+tir est déjà négative (la Terre est aplatie de 21,4 km) ; or l'intégrateur meurt à
+−9 km et −30 km, c'est-à-dire **au-dessus** du plancher. Un détecteur inopérant
+dans le seul régime pour lequel il existe est le premier livrable de l'item, pas un
+détail d'intégration.
+
+**À faire.**
+- `DeorbitBurnStage` : burn rétrograde abaissant le périgée sous ~80 km. La brique
+  existe — c'est un `ConstantThrustStage` en direction opposée.
+- `ReentryObjective` : point d'impact visé, fenêtre d'entrée, heure de rentrée.
+- Terminaison propre : `AtmosphericInterfaceDetector` (livré par `PHY-3`) pour
+  marquer l'entrée, et une borne d'altitude qui arrête la propagation **avant** que
+  l'intégrateur ne cède — la même borne que `PHY-1 / L0` §2.2 réclame déjà pour des
+  raisons de temps de calcul.
+- L'empreinte au sol du point d'impact ; la trace au sol du §7 cesse ici d'être un
+  ornement.
+
+**Le coût compute est le risque, et il est mesuré.** Entre 200 km et 130 km
+d'altitude initiale, une descente sous traînée passe de 452 pas d'intégration à
+**982 497** (`PHY-1 / L0` §2.3). Un déorbitage vise précisément ce régime : l'item
+doit borner son temps de calcul par construction, pas espérer qu'il tienne.
+
+**La désintégration n'est pas dans le périmètre** — voir la question ouverte n°8,
+qui sépare les trois paliers et leurs coûts très inégaux.
+
+#### MIS-11 — Mission de type Artemis : survol lunaire et retour — ★5 ◆4 L *(ajout)*
+
+**Pourquoi.** C'est la mission qui ferme la boucle : partir de la Terre, contourner
+la Lune, revenir. Aucune autre mission du document ne revient.
+
+**L'aller est presque acquis.** `MIS-4` livre le TLI de production et le survol ;
+`PHY-4 / L6` a déjà volé un translunaire complet — parking à 185 km, injection sur
+seed Lambert, bascule de sphère d'influence à 74 h, périlune volé à 100,4 km pour
+100 visés. La branche aller de `MIS-11` n'est donc pas un chantier neuf, c'est un
+`MIS-4` **contraint** : le survol y est visé pour que la branche retour existe, et
+non pour lui-même.
+
+**Une correction sur l'énoncé.** Artemis, comme Apollo, ne repasse **pas** par une
+orbite basse au retour : c'est une **entrée directe** depuis la trajectoire de
+retour. Se mettre en LEO en revenant de la Lune coûte ~3,1 km/s de freinage — donc
+un étage de plus à dimensionner — ou une **aérocapture**, c'est-à-dire un passage
+atmosphérique dosé, qui exige la traînée de `PHY-2` *et* un modèle thermique que
+personne n'a écrit ici. Les trois lectures donnent trois missions différentes ;
+c'est la question ouverte n°9, à trancher avant d'écrire la spec.
+
+**À faire.**
+- `FreeReturnObjective` : viser le périlune **et** le périgée de la branche retour
+  d'un seul coup. C'est la contrainte qui définit la mission, et elle n'a aucun
+  équivalent dans les objectifs actuels, tous mono-orbite.
+- Un horizon de mission de l'ordre de dix jours — `MissionHorizon` (livré par
+  `MIS-8`) le porte déjà, c'est l'objet même de cet item.
+- Une trajectoire à **trois** arcs (Terre → Lune → Terre) là où le lunaire en a
+  deux. `PHY-4 / L3` a posé le repère par échantillon, donc le troisième arc ne
+  devrait rien coûter — à vérifier : ce sera la première bascule de sphère
+  d'influence dans le sens du retour, et la bande morte ε que `PHY-4 / L6` laisse
+  ouverte n'a toujours pas de calibrage.
+- La rentrée finale : `MIS-10` tel quel. C'est la raison de l'ordre des deux items
+  dans la phase.
+
+**Spec.** [`docs/brainstorm/missions.md`](../brainstorm/missions.md) §8 traite le
+lunaire d'un bloc (TLI + LOI) et ne dit **rien** du retour ; à étendre avant de
+commencer.
 
 #### ~~MIS-8 — Horizon de mission explicite — ★5 ◆2 M~~ — **RÉSOLU le 2026-08-09**
 
@@ -1939,8 +2099,9 @@ Gardé hors phases, à remonter si le besoin se manifeste :
   qui fait exploser le ratio far/near). Le plan near y est piloté par la
   distance à l'origine, ce qui suppose que le contenu le plus proche s'y trouve —
   hypothèse qui tombe justement dans ce cas-là.
-- **Missions** — Molniya / HEO, déorbitage et rentrée, déploiement de
-  constellation, points de Lagrange, interplanétaire, gravity assist.
+- **Missions** — Molniya / HEO, déploiement de constellation, points de
+  Lagrange, interplanétaire, gravity assist. **Le déorbitage et la rentrée ont
+  quitté cette liste** : ils sont devenus `MIS-10`, en phase 7.
 - **Plateforme** — mode batch headless, analytics et graphes post-mission,
   replays cinématiques, catalogue de débris TLE, validation contre données
   réelles (JPL Horizons), scripting.
@@ -2004,3 +2165,24 @@ et [`docs/brainstorm/missions.md`](../brainstorm/missions.md).
    un besoin constaté — consulter la liste des missions pendant la création.
    Recommandation par défaut : le garder modal et l'écrire, plutôt que de
    laisser la question ouverte indéfiniment.
+8. **Jusqu'où va la rentrée (MIS-10)** — la « désintégration » recouvre trois
+   paliers de coûts sans commune mesure. (a) La trajectoire s'arrête à
+   l'interface atmosphérique et on affiche le point d'impact prédit : c'est le
+   périmètre écrit dans la fiche. (b) La traînée plasma, qui est un **effet** et
+   non une physique — elle est déjà spécifiée dans
+   [`docs/graphics-effects/effects-roadmap.md`](../graphics-effects/effects-roadmap.md)
+   §5.5, cotée difficulté 4 / wow 5 dans le barème de ce document (attention, son
+   ★ est la difficulté, à l'inverse d'ici). (c) La désintégration réelle — flux
+   thermique, ablation, fragmentation — qui est de la R&D. Recommandation : (a)
+   dans `MIS-10`, (b) comme item `FX` distinct une fois `MIS-10` volé, (c) au
+   backlog. `PHY-1 / L1` §4 note d'ailleurs que l'approximation « panneaux
+   repliés » du coefficient balistique cesse d'être vraie pour une rentrée de fin
+   de vie — la physique de (c) commence donc avant le flux thermique.
+9. **Entrée directe, capture propulsive ou aérocapture (MIS-11)** — l'énoncé
+   demandait « retour en LEO puis retour sur Terre », ce qui n'est ni Apollo ni
+   Artemis. L'entrée directe est la moins chère et la plus fidèle au nom de
+   l'item ; la capture propulsive en LEO coûte ~3,1 km/s, donc un étage de plus à
+   dimensionner, et a un vrai intérêt pédagogique — elle montre *pourquoi*
+   personne ne le fait ; l'aérocapture est la plus spectaculaire et ajoute un
+   modèle thermique à un chantier déjà ◆4. À trancher avant la spec : les trois
+   ne décrivent pas la même mission, ni le même lanceur.
