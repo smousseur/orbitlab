@@ -45,6 +45,18 @@ public record HudSurface(
    */
   public static final String DISCARD_DIALOG = "discardDialog";
 
+  /**
+   * Name of the scenario browser. A modal, so it stands where the wizard does: above the management
+   * window, below any dialog opened on top of it. Registered and read by its own app state only.
+   */
+  public static final String SCENARIO_BROWSER = "scenarioBrowser";
+
+  /**
+   * Name of the scenario browser's confirmation — replacing a session, or overwriting a file.
+   * Registered and read by the scenario app state only.
+   */
+  public static final String SCENARIO_DIALOG = "scenarioDialog";
+
   public HudSurface {
     Objects.requireNonNull(name, "name");
     Objects.requireNonNull(openCheck, "openCheck");

@@ -119,7 +119,7 @@ public final class PaginationBar {
     chevron.setBackground(UiKit.flat(glyph));
     /*
        Label label = new Label(glyph, FormStyles.STYLE);
-       label.setFont(UiKit.sora(14));
+       label.setFont(UiKit.sora(13));
        label.setColor(FormStyles.TEXT_LO);
        label.setTextHAlignment(HAlignment.Center);
        label.setTextVAlignment(VAlignment.Center);

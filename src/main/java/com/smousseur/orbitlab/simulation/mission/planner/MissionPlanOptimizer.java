@@ -10,10 +10,13 @@ import com.smousseur.orbitlab.simulation.mission.operation.MissionSpec;
 import com.smousseur.orbitlab.simulation.mission.progress.MissionProgressListener;
 import com.smousseur.orbitlab.simulation.mission.runtime.MissionComputeResult;
 import com.smousseur.orbitlab.simulation.mission.runtime.MissionLoadEvaluator;
+import com.smousseur.orbitlab.simulation.mission.runtime.MissionSolutions;
 import com.smousseur.orbitlab.simulation.mission.runtime.PropellantLoadOptimizer;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.LauncherModel;
 import java.util.Objects;
 import java.util.function.Function;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.hipparchus.util.FastMath;
 import org.orekit.time.AbsoluteDate;
 
@@ -34,6 +37,8 @@ import org.orekit.time.AbsoluteDate;
  * </ul>
  */
 public class MissionPlanOptimizer {
+  private static final Logger logger = LogManager.getLogger(MissionPlanOptimizer.class);
+
   private static final int MAX_EVALUATIONS = MissionLoadEvaluator.DEFAULT_OPTIMIZER_MAX_EVALUATIONS;
 
   /** Deterministic CMA-ES master seed, matching the legacy inline optimizer path. */
@@ -82,10 +87,51 @@ public class MissionPlanOptimizer {
   }
 
   private MissionPlanner planner() {
+    MissionPlanner replay = entry.getPendingSolutions().map(this::replayPlanner).orElse(null);
+    if (replay != null) {
+      return replay;
+    }
     if (entry.getOptimizationType() == OptimizationType.PRECISE) {
       return entry.spec().map(this::minimizedLoadPlanner).orElseGet(this::fixedLoadPlanner);
     }
     return fixedLoadPlanner();
+  }
+
+  /**
+   * Selects the replay path, or {@code null} to fall back on a real optimization.
+   *
+   * <p>The replay is all or nothing (spec {@code docs/scenario/01-persistance-missions.md} §5.1):
+   * solutions that do not describe exactly this composition — a mode changed since the save, a
+   * stage renamed, a composition a later lot moved — are dropped whole rather than applied to the
+   * stages that still match. Falling back is not a silent degradation: it is the same computation
+   * the user asked for, merely paid for in full.
+   */
+  private MissionPlanner replayPlanner(MissionSolutions solutions) {
+    Mission mission = entry.mission();
+    if (!solutions.covers(mission)) {
+      logger.warn(
+          "Mission '{}' carries solutions that do not match its composition; optimizing instead of"
+              + " replaying",
+          mission.getName());
+      return null;
+    }
+    MissionSpec spec = entry.spec().orElse(null);
+    if (solutions.hasLauncherLoads() && spec == null) {
+      logger.warn(
+          "Mission '{}' carries flown loads but no spec to apply them to; optimizing instead of"
+              + " replaying",
+          mission.getName());
+      return null;
+    }
+    return new ReplayPlanner(
+        mission,
+        spec,
+        entry.getOptimizationType(),
+        solutions,
+        launchEpoch,
+        MAX_EVALUATIONS,
+        SEED,
+        progress);
   }
 
   private MissionPlanner fixedLoadPlanner() {

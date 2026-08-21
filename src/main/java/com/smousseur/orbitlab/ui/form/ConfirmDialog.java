@@ -75,7 +75,7 @@ public class ConfirmDialog implements AutoCloseable {
 
     Label messageLabel = root.addChild(new Label(message, FormStyles.STYLE));
     messageLabel.setPreferredSize(new Vector3f(innerWidth, MESSAGE_HEIGHT, 0));
-    messageLabel.setFont(UiKit.sora(15));
+    messageLabel.setFont(UiKit.sora(13));
     messageLabel.setColor(FormStyles.TEXT_PRIMARY);
     messageLabel.setTextHAlignment(HAlignment.Center);
     messageLabel.setTextVAlignment(VAlignment.Center);

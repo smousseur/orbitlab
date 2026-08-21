@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.Objects;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.orekit.time.AbsoluteDate;
 
 /**
  * Non-modal mission management window: orchestrates a {@link PanelHeader}, a {@link MissionListView}
@@ -365,6 +366,11 @@ public class MissionPanelWidget implements AutoCloseable {
       // are there for the same reason at the result line: a FAILED -> FAILED recomputation with a
       // different message, or a result landing while the status is already READY, changes what the
       // footer and the detail view must say without changing the status.
+      //
+      // The composition revision stands for everything a wizard edit rewrites at once — the name in
+      // the row, the type and the site in the footer, the stage chain in the detail view — none of
+      // which moves the status or the result markers. Listing those fields here instead would go
+      // stale the next time one of the three surfaces renders one more of them.
       snapshot.add(
           entry.id()
               + ":"
@@ -376,7 +382,13 @@ public class MissionPanelWidget implements AutoCloseable {
               + ":"
               + entry.getAchievedOrbit().isPresent()
               + ":"
-              + entry.getLastError().orElse(""));
+              + entry.getLastError().orElse("")
+              + ":"
+              + entry.compositionRevision()
+              // Set beside applySpec() on the edit path, and on its own by a launch-window
+              // computation; the footer's schedule line shows it either way.
+              + ":"
+              + entry.getScheduledDate().map(AbsoluteDate::toString).orElse(""));
     }
     return snapshot;
   }

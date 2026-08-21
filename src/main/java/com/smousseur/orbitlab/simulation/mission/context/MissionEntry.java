@@ -12,8 +12,10 @@ import com.smousseur.orbitlab.simulation.mission.operation.MissionSpec;
 import com.smousseur.orbitlab.simulation.mission.runtime.AchievedOrbit;
 import com.smousseur.orbitlab.simulation.mission.runtime.MissionOptimizerResult;
 import com.smousseur.orbitlab.simulation.mission.runtime.MissionPerformanceReport;
+import com.smousseur.orbitlab.simulation.mission.runtime.MissionSolutions;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.orekit.time.AbsoluteDate;
@@ -47,6 +49,30 @@ public final class MissionEntry {
   private volatile boolean visible = false;
   private volatile AbsoluteDate scheduledDate;
   private volatile ColorRGBA color;
+
+  /**
+   * How many times {@link #mission} has been replaced. Read by the UI as a "everything derived from
+   * the mission is stale" marker: a wizard edit or a mode toggle rebuilds the name, the type, the
+   * launch site and the whole stage chain at once, and none of those show up in the status,
+   * visibility or result fields a panel would otherwise watch. Enumerating the changed fields
+   * instead would have to be extended every time a panel renders one more of them.
+   */
+  private final AtomicInteger compositionRevision = new AtomicInteger();
+
+  /**
+   * The per-stage launcher loads the last computation actually flew (kg), or {@code null} when they
+   * were the budgeted ones. Only a {@code PRECISE} sizing sweep <em>searches</em> for loads; in
+   * every other mode {@code PropellantBudget} derives them and recomputing costs nothing, so there
+   * is nothing worth remembering (spec {@code docs/scenario/01-persistance-missions.md} §2.3).
+   */
+  private volatile double[] flownLauncherLoads;
+
+  /**
+   * Solved vectors waiting to be flown instead of searched for, posted by a scenario load and read
+   * by {@code MissionPlanOptimizer} on the next computation. {@code null} for every mission that
+   * was not loaded from a file.
+   */
+  private volatile MissionSolutions pendingSolutions;
 
   /**
    * Creates a mission entry from a spec, composing the mission for the default {@link
@@ -112,6 +138,19 @@ public final class MissionEntry {
    */
   public void setMission(Mission mission) {
     this.mission = Objects.requireNonNull(mission, "mission");
+    compositionRevision.incrementAndGet();
+  }
+
+  /**
+   * How many times the wrapped mission has been replaced — by a wizard edit, a mode toggle, or the
+   * adoption of the mission a sizing sweep actually flew. A UI that caches anything read off {@link
+   * #mission()} or {@link #spec()} can compare this against the value it drew with to know its copy
+   * is stale, without watching each displayed field individually.
+   *
+   * @return the composition revision, starting at 0
+   */
+  public int compositionRevision() {
+    return compositionRevision.get();
   }
 
   /**
@@ -304,6 +343,49 @@ public final class MissionEntry {
   }
 
   /**
+   * Returns the per-stage launcher loads the last computation flew, when they were searched for
+   * rather than derived.
+   *
+   * @return the flown loads in kilograms, or {@code null} outside {@code PRECISE}
+   */
+  public double[] getFlownLauncherLoads() {
+    double[] loads = flownLauncherLoads;
+    return loads == null ? null : loads.clone();
+  }
+
+  /**
+   * Records the loads a sizing sweep resolved, so a scenario can be saved on the vehicle that
+   * actually flew rather than on the one the budget would rebuild today.
+   *
+   * @param flownLauncherLoads the flown loads in kilograms, or {@code null} to forget them
+   */
+  public void setFlownLauncherLoads(double[] flownLauncherLoads) {
+    this.flownLauncherLoads = flownLauncherLoads == null ? null : flownLauncherLoads.clone();
+  }
+
+  /**
+   * Returns the solutions a scenario load left for the next computation to fly.
+   *
+   * @return an optional containing the pending solutions, or empty for an ordinary mission
+   */
+  public Optional<MissionSolutions> getPendingSolutions() {
+    return Optional.ofNullable(pendingSolutions);
+  }
+
+  /**
+   * Posts solutions to be replayed instead of searched for on the next computation.
+   *
+   * <p>Set after the mode has been applied, never before: {@link
+   * #setOptimizationType(OptimizationType)} recomposes and therefore drops them, together with
+   * everything else the previous composition produced.
+   *
+   * @param pendingSolutions the solutions to replay, or {@code null} to drop them
+   */
+  public void setPendingSolutions(MissionSolutions pendingSolutions) {
+    this.pendingSolutions = pendingSolutions;
+  }
+
+  /**
    * Gets optimization type.
    *
    * @return the optimization type
@@ -418,10 +500,16 @@ public final class MissionEntry {
    */
   private void publish(Mission recomposed) {
     this.mission = recomposed;
+    compositionRevision.incrementAndGet();
     this.optimizerResult = null;
     this.ephemeris = null;
     this.achievedOrbit = null;
     this.performanceReport = null;
     this.lastError = null;
+    // Both derive from the composition being replaced. Keeping them would replay the vectors of a
+    // composition that no longer exists — and MissionSolutions.covers() would not always catch it,
+    // since two compositions can share their stage keys.
+    this.flownLauncherLoads = null;
+    this.pendingSolutions = null;
   }
 }

@@ -37,6 +37,7 @@ répétées. Trois d'entre elles décident de l'ordre des lots :
 | `WizardPrefill` ↔ `MissionFactory` forment déjà un aller-retour exact (§1.1) | le lot format est **purement additif** : il ne modifie aucun fichier existant |
 | Aucun chemin de rejeu n'existe, mais les étages ne relisent que `bestVariables()` (§1.4) | le rejeu est un lot à part entière, et c'est le seul qui touche le cœur d'optimisation |
 | `WizardPrefill` n'écrit pas `MISSION_HORIZON_DAYS` (§1.6) | c'est un **changement de comportement**, donc son propre lot, avant le format |
+| Le résultat du dimensionnement `PRECISE` est jeté par l'orchestrateur (§1.8) | `L2` commence par le **retenir** : on ne peut pas persister en `L3` une donnée que le calcul ne conserve pas |
 
 ---
 
@@ -65,7 +66,7 @@ lents et **c'est l'utilisateur qui les lance**. Aucun lot ne se ferme sur une ex
 |---|---|---|---|
 | **L0** | L'horizon revient du préremplissage | oui, une ligne | `WizardPrefillTest` |
 | **L1** | Le format et son aller-retour | non (purement additif) | 3 classes de test, hors JME |
-| **L2** | Le rejeu | oui, opt-in : aucun appelant avant `L3` | 1 test unitaire + 1 test lent |
+| **L2** | Rétention du dimensionnement, puis le rejeu | oui, opt-in : aucun appelant avant `L3` | 2 tests unitaires + 1 test lent |
 | **L3** | Magasin disque et logique de session | non (aucun appelant avant `L4`) | 2 classes de test, sur `@TempDir` |
 | **L4** | Les deux entrées de menu et la fenêtre | oui, c'est la livraison | `ScenarioBrowserModelTest` + essai manuel |
 
@@ -121,7 +122,7 @@ existant n'est modifié :
   `MissionSpec`, comparé au spec d'origine **y compris `configuration().propellantLoads()`**.
   C'est lui qui interdit une dérive silencieuse du dimensionnement.
 
-### L2 — Le rejeu
+### L2 — Rétention du dimensionnement, puis le rejeu
 
 **Propriété rendue vraie.** Une mission dont on connaît les vecteurs vole sans CMA-ES et
 atteint la même orbite que l'optimisation qui les a produits. Aucun appelant : `L3` en
@@ -130,15 +131,32 @@ fournira un.
 **Entrées.** Rien de `L1` — le rejeu ignore le format. C'est délibéré : le cœur
 d'optimisation ne connaît pas les fichiers.
 
+**Premier temps du lot : retenir ce que le calcul jette.** `MinimizedLoadPlanner` résout les
+facteurs d'échelle et l'orchestrateur les perd sur `.compute().computation()` — mesure §1.8
+de la conception. Tant que la donnée n'est pas retenue, `L3` n'a rien à écrire pour une
+mission `PRECISE`. C'est une plomberie **purement additive** : personne ne lit ce champ
+aujourd'hui, donc rien ne change de comportement.
+
 **Sorties.**
 
 | Fichier | Rôle |
 |---|---|
-| `simulation/mission/runtime/MissionSolutions.java` *(créé)* | record `(Map<String,double[]> vectors, double[] lambdas)`, plus `boolean covers(Mission)` — vrai quand chaque `OptimizableMissionStage` de la composition a sa clé |
-| `simulation/mission/planner/ReplayPlanner.java` *(créé)* | `MissionPlanner` qui applique les λ puis délègue à un `MissionOptimizer` alimenté par les vecteurs |
+| `simulation/mission/context/MissionEntry.java` *(modifié)* | deux champs volatils : `flownLauncherLoads` (kg par étage, nul hors `PRECISE`) et `pendingSolutions` ; l'un posé au calcul, l'autre au chargement, **tous deux effacés par `publish()`** |
+| `states/mission/MissionOrchestratorAppState.java` *(modifié)* | `submitForComputation` garde le `MissionPlan` au lieu de ne prendre que `.computation()`, et pose `flownLauncherLoads` = `spec.configuration().propellantLoads()` × `plan.sizing().lambdas()`, terme à terme |
+| `simulation/mission/runtime/MissionSolutions.java` *(créé)* | record `(Map<String,double[]> vectors, double[] launcherLoads)`, plus `boolean covers(Mission)` — vrai quand chaque `OptimizableMissionStage` de la composition a sa clé |
+| `simulation/mission/planner/ReplayPlanner.java` *(créé)* | `MissionPlanner` qui applique `spec.withLauncherLoads(...)` quand des charges volées sont présentes, puis délègue à un `MissionOptimizer` alimenté par les vecteurs |
 | `simulation/mission/runtime/MissionOptimizer.java` *(modifié)* | au point qui produit le `OptimizationResult` (l. 165-167), une solution fournie remplace le `CMAESTrajectoryOptimizer` |
 | `simulation/mission/planner/MissionPlanOptimizer.java` *(modifié)* | sélectionne `ReplayPlanner` quand l'entrée porte des solutions en attente |
-| `simulation/mission/context/MissionEntry.java` *(modifié)* | champ `volatile MissionSolutions pendingSolutions`, posé au chargement, **effacé par `publish()`** |
+
+**La multiplication est faite ici, jamais au chargement** (conception §2.3) : `plan.sizing()`
+et les charges budgétées sont l'un et l'autre en main à cet instant, et le fichier ne portera
+que des kilogrammes absolus — auto-suffisants, indépendants de ce que `PropellantBudget`
+produira plus tard.
+
+Elle ne s'écrit pas en ligne dans l'`AppState`, où rien ne la testerait : c'est une méthode
+`double[] applyTo(double[] budgetedLoads)` sur `PropellantSizing`, qui est déjà le record
+propriétaire des λ et qui vérifie au passage que les deux tableaux ont la même longueur.
+L'`AppState` n'écrit alors qu'un appel.
 
 **Le résultat de rejeu n'est pas bricolé.** `problem.propagate(variables)` puis
 `problem.computeCost(state)` sont tous deux au contrat de `TrajectoryProblem` ; le résultat
@@ -157,6 +175,8 @@ partager leurs clés d'étage.
 
 - `MissionSolutionsTest` — le tout-ou-rien, sans propagation : clé manquante, clé en trop,
   recouvrement exact. C'est une fonction pure, elle se teste comme telle.
+- `PropellantSizingTest` — `applyTo` : produit terme à terme, `1` laissant l'étage inchangé,
+  refus d'une longueur discordante.
 - `ScenarioReplayTest`, **opt-in sous `-Dorbitlab.slowTests=true`** : optimiser une mission
   LEO, capturer ses vecteurs, rejouer, et vérifier que l'orbite atteinte est identique à la
   tolérance du propagateur. Étend `AbstractTrajectoryOptimizerTest`. **Lancé par
@@ -174,11 +194,11 @@ son refus par mission ; rien de tout cela n'est encore atteignable depuis l'écr
 | Fichier | Rôle |
 |---|---|
 | `simulation/mission/scenario/ScenarioStore.java` | le disque, et lui seul : `list()`, `read(name)`, `write(name, file)`, `exists(name)`, sur `~/.orbitlab/scenarios/<nom>.json`. Le nom est restreint à `[A-Za-z0-9 _-]` et **refusé** hors de ce jeu, jamais assaini |
-| `simulation/mission/scenario/ScenarioSession.java` | la logique, sans disque et sans JME : `ScenarioFile capture(List<MissionEntry>, AbsoluteDate clockDate)` et `ScenarioLoadReport restore(ScenarioFile)` |
+| `simulation/mission/scenario/ScenarioSession.java` | la logique, sans disque et sans JME : `ScenarioFile capture(List<MissionEntry>, AbsoluteDate clockDate)` — qui lit `flownLauncherLoads` sur chaque entrée et le laisse nul hors `PRECISE` — et `ScenarioLoadReport restore(ScenarioFile)` |
 | `simulation/mission/scenario/ScenarioLoadReport.java` | ce que `restore` rend : les `MissionEntry` reconstruites, la date d'horloge, et les rejets — un `(nom, motif)` par mission écartée |
 
 **C'est ici, et pas dans `L1`, que `ScenarioSolution` devient `MissionSolutions`.** Les deux
-records portent la même paire `(vectors, lambdas)` et ce n'est pas une redondance : l'un est
+records portent la même paire `(vectors, launcherLoads)` et ce n'est pas une redondance : l'un est
 un format de fichier qu'on ne casse pas, l'autre est un type de domaine que le cœur
 d'optimisation possède. `ScenarioSession` est le seul point qui les met en regard, parce
 qu'il est le seul lot qui dépende à la fois de `L1` et de `L2`.

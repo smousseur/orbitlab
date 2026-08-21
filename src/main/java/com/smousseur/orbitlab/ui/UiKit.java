@@ -90,7 +90,7 @@ public final class UiKit {
   /**
    * Loads {@code share-tech-mono} at the given pixel size, falling back to Lemur's default.
    *
-   * @param size pixel size (must match a bundled variant: 10, 12, 14)
+   * @param size pixel size (must match a bundled variant: 10, 11, 12, 14)
    * @return the bitmap font, never {@code null}
    */
   public static BitmapFont mono(int size) {
@@ -286,17 +286,39 @@ public final class UiKit {
     return icon;
   }
 
-  /** Loads {@code orbitron-semibold} at the given pixel size, falling back to Lemur's default. */
+  /**
+   * Loads {@code orbitron-semibold} at the given pixel size.
+   *
+   * <p><b>An unbundled size does not fail, it falls back</b> to Lemur's default face — a silent
+   * substitution that only shows up on screen, and only to someone who knows what the font should
+   * look like. Bundled variants: <b>13, 16</b>.
+   *
+   * @param size pixel size (must match a bundled variant)
+   * @return the bitmap font, never {@code null}
+   */
   public static BitmapFont orbitron(int size) {
     return AppStyles.loadFontSafe(assetManager, String.format(FONT_ORBITRON, size));
   }
 
-  /** Loads {@code ibmplexmono-regular} at the given pixel size, falling back to Lemur's default. */
+  /**
+   * Loads {@code ibmplexmono-regular} at the given pixel size. Bundled variants: <b>10, 11, 13</b>;
+   * see {@link #orbitron(int)} for what an unbundled one costs.
+   *
+   * @param size pixel size (must match a bundled variant)
+   * @return the bitmap font, never {@code null}
+   */
   public static BitmapFont ibmPlexMono(int size) {
     return AppStyles.loadFontSafe(assetManager, String.format(FONT_IBM_PLEX_MONO, size));
   }
 
-  /** Loads {@code sora-medium} at the given pixel size, falling back to Lemur's default. */
+  /**
+   * Loads {@code sora-medium} at the given pixel size. Bundled variants: <b>1, 8, 10, 12, 13</b> —
+   * the 1 px one is the invisible slider-thumb label, not a mistake. See {@link #orbitron(int)} for
+   * what an unbundled size costs.
+   *
+   * @param size pixel size (must match a bundled variant)
+   * @return the bitmap font, never {@code null}
+   */
   public static BitmapFont sora(int size) {
     return AppStyles.loadFontSafe(assetManager, String.format(FONT_SORA, size));
   }

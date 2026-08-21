@@ -34,6 +34,7 @@ import com.smousseur.orbitlab.states.mission.MissionDisplayPanelAppState;
 import com.smousseur.orbitlab.states.mission.MissionOrchestratorAppState;
 import com.smousseur.orbitlab.states.mission.MissionPanelWidgetAppState;
 import com.smousseur.orbitlab.states.mission.MissionWizardAppState;
+import com.smousseur.orbitlab.states.mission.ScenarioAppState;
 import com.smousseur.orbitlab.states.mission.TelemetryWidgetAppState;
 import com.smousseur.orbitlab.states.orbits.OrbitInitAppState;
 import com.smousseur.orbitlab.states.orbits.OrbitRuntimeAppState;
@@ -148,6 +149,7 @@ public class OrbitLabApplication extends SimpleApplication {
     stateManager.attach(new MissionTimelineAppState(applicationContext));
     stateManager.attach(new MissionDisplayPanelAppState(applicationContext));
     stateManager.attach(new MissionPanelWidgetAppState(applicationContext));
+    stateManager.attach(new ScenarioAppState(applicationContext));
     stateManager.attach(new LightningAppState(applicationContext));
     stateManager.attach(wizardState);
 

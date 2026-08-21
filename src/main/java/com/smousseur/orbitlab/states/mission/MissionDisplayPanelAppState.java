@@ -12,6 +12,7 @@ import com.smousseur.orbitlab.app.ApplicationContext;
 import com.smousseur.orbitlab.app.HudSurface;
 import com.smousseur.orbitlab.app.HudSurfaces;
 import com.smousseur.orbitlab.engine.events.EventBus;
+import com.smousseur.orbitlab.engine.events.ScenarioBrowserMode;
 import com.smousseur.orbitlab.simulation.mission.MissionId;
 import com.smousseur.orbitlab.simulation.mission.MissionStatus;
 import com.smousseur.orbitlab.simulation.mission.context.MissionContext;
@@ -45,6 +46,12 @@ public final class MissionDisplayPanelAppState extends BaseAppState implements A
   /** Opens the mission creation wizard. */
   private static final String ITEM_NEW_MISSION = "newMission";
 
+  /** Opens the scenario browser to read a saved session. */
+  private static final String ITEM_OPEN_SCENARIO = "openScenario";
+
+  /** Opens the scenario browser to write the current session. */
+  private static final String ITEM_SAVE_SCENARIO = "saveScenario";
+
   /** Quits the application, behind a confirmation. */
   private static final String ITEM_QUIT = "quit";
 
@@ -55,6 +62,9 @@ public final class MissionDisplayPanelAppState extends BaseAppState implements A
               ITEM_MANAGE_MISSIONS, "Mission management", "missions/icon-action-manage"),
           AppMenuItem.action(ITEM_NEW_MISSION, "New mission...", "wizard/icon-plus")
               .withSeparatorBefore(),
+          AppMenuItem.action(ITEM_OPEN_SCENARIO, "Open scenario...", "scenario/icon-open")
+              .withSeparatorBefore(),
+          AppMenuItem.action(ITEM_SAVE_SCENARIO, "Save scenario...", "scenario/icon-save"),
           AppMenuItem.action(ITEM_QUIT, "Quit", "wizard/icon-close-red").withSeparatorBefore());
 
   private static final String ACTION_DISMISS = "hud.dismiss";
@@ -186,6 +196,8 @@ public final class MissionDisplayPanelAppState extends BaseAppState implements A
       case ITEM_MISSION_PANEL -> togglePanel();
       case ITEM_MANAGE_MISSIONS -> publishOpenManagement();
       case ITEM_NEW_MISSION -> publishOpenWizard();
+      case ITEM_OPEN_SCENARIO -> publishOpenScenarioBrowser(ScenarioBrowserMode.OPEN);
+      case ITEM_SAVE_SCENARIO -> publishOpenScenarioBrowser(ScenarioBrowserMode.SAVE);
       case ITEM_QUIT -> confirmQuit();
       default -> throw new IllegalStateException("Unwired menu item: " + itemId);
     }
@@ -234,6 +246,16 @@ public final class MissionDisplayPanelAppState extends BaseAppState implements A
 
   private void publishOpenWizard() {
     context.eventBus().publishUiNavigation(new EventBus.UiNavigationEvent.OpenMissionWizard());
+  }
+
+  /**
+   * Asks for the scenario browser. Which mode it opens in is decided here and nowhere else — the
+   * window is built per opening and never switches mode once up.
+   */
+  private void publishOpenScenarioBrowser(ScenarioBrowserMode mode) {
+    context
+        .eventBus()
+        .publishUiNavigation(new EventBus.UiNavigationEvent.OpenScenarioBrowser(mode));
   }
 
   /**

@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import com.smousseur.orbitlab.app.converters.TimeConverter;
 import com.smousseur.orbitlab.simulation.OrekitService;
+import com.smousseur.orbitlab.simulation.mission.MissionHorizon;
 import com.smousseur.orbitlab.simulation.mission.MissionType;
 import com.smousseur.orbitlab.simulation.mission.context.MissionEntry;
 import com.smousseur.orbitlab.simulation.mission.operation.MissionFactory;
@@ -221,6 +222,59 @@ class WizardPrefillTest {
         (MissionSpec.EarthOrbit) reopen(entryFor(polarValues(), MissionType.LEO), MissionType.LEO);
 
     assertSameVehicle(original, reopened);
+  }
+
+  // --- UI-3 L0: the forced horizon comes back (spec docs/scenario/01-persistance-missions.md §4.3) ---
+
+  /**
+   * Until this was written the prefill never emitted the key, so reopening a mission on a forced
+   * horizon quietly brought it back to "auto" — and every scenario saved through the prefill would
+   * have lost it with it.
+   */
+  @Test
+  void forcedHorizon_comesBack() {
+    Map<String, Object> values = leoValues();
+    values.put("MISSION_HORIZON_DAYS", 4.5);
+    MissionEntry entry = entryFor(values, MissionType.LEO);
+
+    assertEquals(
+        4.5, (Double) WizardPrefill.fromEntry(entry).get("MISSION_HORIZON_DAYS"), 1e-9);
+
+    MissionHorizon reopened = reopen(entry, MissionType.LEO).horizon();
+    assertInstanceOf(MissionHorizon.FixedDuration.class, reopened);
+    assertEquals(
+        4.5 * MissionHorizon.SECONDS_PER_DAY,
+        ((MissionHorizon.FixedDuration) reopened).seconds(),
+        1e-6);
+  }
+
+  /** "Auto" is the absence of the key, so an untouched mission must come back with no key. */
+  @Test
+  void autoHorizon_staysAuto() {
+    MissionEntry entry = entryFor(leoValues(), MissionType.LEO);
+
+    assertFalse(WizardPrefill.fromEntry(entry).containsKey("MISSION_HORIZON_DAYS"));
+    assertInstanceOf(
+        MissionHorizon.Revolutions.class, reopen(entry, MissionType.LEO).horizon());
+  }
+
+  /**
+   * The predicate is on the horizon <b>type</b>, never on its value. A GEO mission defaults to 3
+   * revolutions, which is about the three days a user might have typed; comparing durations would
+   * bring a forced horizon back as "auto", and the absence of the key would stop meaning what
+   * {@code FormField.MISSION_HORIZON_DAYS} documents it to mean.
+   */
+  @Test
+  void forcedHorizonWorthTheDerivedDefault_isStillForced() {
+    Map<String, Object> values = geoValues();
+    values.put("MISSION_HORIZON_DAYS", (double) MissionHorizon.DEFAULT_GEO_REVOLUTIONS);
+
+    assertTrue(
+        WizardPrefill.fromEntry(entryFor(values, MissionType.GEO))
+            .containsKey("MISSION_HORIZON_DAYS"));
+    assertFalse(
+        WizardPrefill.fromEntry(entryFor(geoValues(), MissionType.GEO))
+            .containsKey("MISSION_HORIZON_DAYS"));
   }
 
   /** Legacy entries carry no spec, which is exactly why the roster does not offer to edit them. */

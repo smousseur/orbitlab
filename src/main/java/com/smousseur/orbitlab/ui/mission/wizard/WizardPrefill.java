@@ -1,6 +1,7 @@
 package com.smousseur.orbitlab.ui.mission.wizard;
 
 import com.smousseur.orbitlab.app.converters.TimeConverter;
+import com.smousseur.orbitlab.simulation.mission.MissionHorizon;
 import com.smousseur.orbitlab.simulation.mission.context.MissionEntry;
 import com.smousseur.orbitlab.simulation.mission.operation.LaunchPlane;
 import com.smousseur.orbitlab.simulation.mission.operation.MissionSpec;
@@ -70,6 +71,9 @@ public final class WizardPrefill {
     }
     values.put(FormField.PAYLOAD_MASS.key(), configuration.payload().dryMass());
 
+    if (spec.horizon() instanceof MissionHorizon.FixedDuration(double seconds)) {
+      values.put(FormField.MISSION_HORIZON_DAYS.key(), seconds / MissionHorizon.SECONDS_PER_DAY);
+    }
     switch (spec) {
       case MissionSpec.EarthOrbit earthOrbit -> {
         values.put(FormField.LEO_PERIGEE_ALT.key(), toKilometers(earthOrbit.perigeeAltitude()));
@@ -86,11 +90,11 @@ public final class WizardPrefill {
    * Writes the target inclination back — but only when the mission actually asked for one.
    *
    * <p>The predicate is {@code LaunchPlane.commands}, the very one the model uses to decide whether
-   * the ascent is flown to a commanded plane. A mission left on its site's free plane must come back
-   * with <b>no</b> inclination key, so that revalidating an untouched edit rebuilds {@code
-   * dueEast(latitude)} from the latitude rather than from the degrees printed in a field: publishing
-   * the derived value would move the azimuth, the launch assist and every propellant load (spec
-   * {@code docs/earth-orbit/02-wizard-orbites-terrestres.md} §2.0).
+   * the ascent is flown to a commanded plane. A mission left on its site's free plane must come
+   * back with <b>no</b> inclination key, so that revalidating an untouched edit rebuilds {@code
+   * dueEast(latitude)} from the latitude rather than from the degrees printed in a field:
+   * publishing the derived value would move the azimuth, the launch assist and every propellant
+   * load (spec {@code docs/earth-orbit/02-wizard-orbites-terrestres.md} §2.0).
    */
   private static void putInclinationIfCommanded(
       Map<String, Object> values, MissionSpec.EarthOrbit spec) {

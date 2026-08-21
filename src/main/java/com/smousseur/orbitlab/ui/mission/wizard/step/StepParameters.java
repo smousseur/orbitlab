@@ -17,6 +17,7 @@ import com.smousseur.orbitlab.core.OrbitlabException;
 import com.smousseur.orbitlab.simulation.mission.MissionHorizon;
 import com.smousseur.orbitlab.simulation.mission.MissionType;
 import com.smousseur.orbitlab.simulation.mission.context.MissionContext;
+import com.smousseur.orbitlab.simulation.mission.context.MissionEntry;
 import com.smousseur.orbitlab.simulation.mission.window.problem.EarthLaunchWindowRequest;
 import com.smousseur.orbitlab.ui.EphemerisWindow;
 import com.smousseur.orbitlab.ui.UiKit;
@@ -33,8 +34,10 @@ import com.smousseur.orbitlab.ui.mission.wizard.step.planning.PlanningInputs;
 import com.smousseur.orbitlab.ui.mission.wizard.step.planning.PlanningPage;
 import java.util.EnumMap;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 import org.orekit.time.AbsoluteDate;
@@ -192,6 +195,14 @@ public class StepParameters implements StepValues {
   private MissionProfile selectedProfile = MissionProfile.LEO;
 
   /**
+   * The text this step last wrote into the name field, or {@code null} once the field holds
+   * something the step did not write. A default is only ever replaced by another default: switching
+   * cards renames {@code LEO-001} into {@code SSO-001}, but leaves a name the user typed — or the
+   * one a reopened mission was prefilled with — exactly as it is.
+   */
+  private String generatedName;
+
+  /**
    * Builds the parameters step.
    *
    * @param missionContext the context carrying the selected mission type
@@ -226,7 +237,8 @@ public class StepParameters implements StepValues {
     // --- Mission Name ---
     root.addChild(fieldLabelRow("MISSION NAME", "lbl-edit", LABEL_ICON_SIZE, LABEL_FIELD_GAP));
     root.addChild(UiKit.vSpacer(LABEL_FIELD_GAP));
-    missionNameField = newInputField("ORBITLAB-LEO-001", FIELD_W, FIELD_H);
+    generatedName = defaultMissionName(selectedProfile);
+    missionNameField = newInputField(generatedName, FIELD_W, FIELD_H);
     root.addChild(missionNameField);
 
     root.addChild(UiKit.vSpacer(ROW_GAP));
@@ -665,6 +677,8 @@ public class StepParameters implements StepValues {
     String name = FormValues.string(values, FormField.MISSION_NAME);
     if (name != null) {
       missionNameField.setText(name);
+      // A prefilled name is the mission's, not a proposal: it must survive a card switch untouched.
+      generatedName = null;
     }
     String launchDate = FormValues.string(values, FormField.LAUNCH_DATE);
     if (launchDate != null) {
@@ -707,6 +721,36 @@ public class StepParameters implements StepValues {
    */
   public void setProfile(MissionProfile profile) {
     this.selectedProfile = profile;
+    if (generatedName != null && generatedName.equals(missionNameField.getText())) {
+      generatedName = defaultMissionName(profile);
+      missionNameField.setText(generatedName);
+    }
+  }
+
+  /**
+   * The name a new mission of this profile is proposed under: {@code <PROFILE>-<NNN>}, {@code NNN}
+   * being the smallest index no existing mission already answers to.
+   *
+   * <p>Names are only display labels — {@code MissionEntry} keys on its own id and tolerates
+   * duplicates — so this scans for a free one rather than enforcing uniqueness. Filling the gap left
+   * by a deleted mission is the point: proposing {@code LEO-004} after {@code LEO-002} was removed
+   * would read as a mission that went missing.
+   *
+   * @param profile the card currently selected
+   * @return the proposed name
+   */
+  private String defaultMissionName(MissionProfile profile) {
+    Set<String> taken = new HashSet<>();
+    for (MissionEntry entry : missionContext.getMissions()) {
+      taken.add(entry.mission().getName());
+    }
+    for (int index = 1; ; index++) {
+      // %03d widens past 999 on its own, and the loop ends because the roster is finite.
+      String candidate = String.format("%s-%03d", profile.name(), index);
+      if (!taken.contains(candidate)) {
+        return candidate;
+      }
+    }
   }
 
   /**

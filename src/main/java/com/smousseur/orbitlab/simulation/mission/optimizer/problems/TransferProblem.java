@@ -73,11 +73,25 @@ public class TransferProblem implements TrajectoryProblem {
   protected static final double W_ALT_MAX = 1.0;
 
   // ── Propellant-awareness tie-breaker (I7, bilan 10 §5.1) ──
-  // Penalizes Δv spent beyond the analytic Hohmann reference, as a fraction of the tank's
-  // Δv capacity. Small enough that orbit precision always dominates the gradient; large
-  // enough that a wasteful basin (flame-out, wasted1 ~250 m/s) grades worse than a sober
-  // basin of equal precision — restores feasibility monotonicity for the outer λ-bisection.
+  // Penalizes Δv spent beyond the analytic Hohmann reference, as a fraction of the Δv the
+  // mission can actually waste. Small enough that orbit precision always dominates the
+  // gradient; large enough that a wasteful basin (flame-out, wasted1 ~250 m/s) grades worse
+  // than a sober basin of equal precision — restores feasibility monotonicity for the outer
+  // λ-bisection.
+  //
+  // It must stay strictly above TransferTuning.acceptableCost, because the term's own maximum
+  // is what decides whether a flame-out can be mistaken for a converged solution: the search
+  // stops as soon as the total cost drops under that threshold (CMAESRunExecutor's cross-run
+  // stop). Normalizing by dvAvailable — as this term did until the 550 km LEO run of
+  // 2026-08-21 — made that maximum W_PROPELLANT · (1 − dvHohmann/dvAvailable), i.e. mission
+  // dependent: at a tank ratio of 0.448 it capped at 2.76e-3, under the 3e-3 threshold, so
+  // total flame-out graded as "target reached" and the λ sweep then rejected every load for a
+  // zero residual. See dvSpendableMargin for the normalizer that removes the dependency.
   private static final double W_PROPELLANT = 5e-3;
+
+  // Floor on the spendable-margin normalizer (m/s). It only guards the degenerate 0/0 of a
+  // tank holding exactly the Hohmann Δv, where there is no slack to grade waste against.
+  private static final double MIN_SPENDABLE_MARGIN_MS = 1.0;
 
   // ── Constraint thresholds ──
   private static final double ALT_MIN = 80_000;
@@ -105,9 +119,22 @@ public class TransferProblem implements TrajectoryProblem {
   private final double dt1MaxPhysical;
 
   // Analytic Hohmann Δv (burn 1 + burn 2) and tank Δv capacity down to the depletion
-  // floor — reference and normalizer for the propellant-awareness cost term (I7).
+  // floor — the reference the propellant-awareness cost term (I7) grades waste against.
   private final double dvHohmannTotal;
   private final double dvAvailable;
+
+  /**
+   * Normalizer of the I7 propellant term: the Δv this mission can waste at most, {@code
+   * dvAvailable − dvHohmannTotal}, floored at {@link #MIN_SPENDABLE_MARGIN_MS}.
+   *
+   * <p>Grading waste against this rather than against the whole tank is what makes the term's
+   * scale mission-independent: {@code excessDv} is bounded by this same margin, so burning the
+   * tank dry always costs exactly {@link #W_PROPELLANT}, whatever the ratio between the Hohmann
+   * reference and the tank. Against {@code dvAvailable} the maximum shrank with the tank ratio
+   * and, past 0.4, fell below the convergence threshold — a flame-out then read as a converged
+   * solution and the search stopped on it.
+   */
+  private final double dvSpendableMargin;
 
   // Propulsion characteristics (kept for post-mortem Δv breakdown diagnostics)
   protected final double thrust;
@@ -309,6 +336,9 @@ public class TransferProblem implements TrajectoryProblem {
                   + "Hohmann Δv ≈ %.0f m/s exceeds available Δv ≈ %.0f m/s",
               perigeeAltitude, apogeeAltitude, dvHohmannTotal, dvAvailable));
     }
+    // The check above guarantees a non-negative margin; the floor only covers the equality case.
+    this.dvSpendableMargin =
+        FastMath.max(dvAvailable - dvHohmannTotal, MIN_SPENDABLE_MARGIN_MS);
 
     // Niveau 2.1 — adaptive β1 bound. apoDefect quantifies how much apogee
     // raising remains; out-of-plane authority should grow with that defect.
@@ -382,10 +412,14 @@ public class TransferProblem implements TrajectoryProblem {
         FastMath.toDegrees(targetInclination),
         W_I);
     logger.info(
-        "Propellant-aware term (I7): W_PROPELLANT={}, Hohmann Δv ref={} m/s, Δv available={} m/s",
+        "Propellant-aware term (I7): W_PROPELLANT={}, Hohmann Δv ref={} m/s, Δv available={} m/s,"
+            + " spendable margin={} m/s (flame-out grades {}, acceptable cost {})",
         W_PROPELLANT,
         dvHohmannTotal,
-        dvAvailable);
+        dvAvailable,
+        dvSpendableMargin,
+        W_PROPELLANT,
+        tuning.acceptableCost());
   }
 
   @Override
@@ -590,7 +624,7 @@ public class TransferProblem implements TrajectoryProblem {
     // overlong burns) that would otherwise drain the sized stage to a zero residual.
     double consumedDv = computeConsumedDv(state);
     double excessDv = FastMath.max(0.0, consumedDv - dvHohmannTotal);
-    double propellantTerm = W_PROPELLANT * excessDv / dvAvailable;
+    double propellantTerm = propellantTerm(excessDv);
     logger.debug(
         "Propellant term: consumedΔv={} m/s, HohmannΔv={} m/s, excessΔv={} m/s, contribution={}",
         consumedDv,
@@ -599,6 +633,23 @@ public class TransferProblem implements TrajectoryProblem {
         propellantTerm);
 
     return objective + W_BARRIER * barrier + W_ALT_MAX * altMaxPenalty + propellantTerm;
+  }
+
+  /**
+   * The I7 propellant-awareness contribution for a given wasted Δv, capped at {@link
+   * #W_PROPELLANT}.
+   *
+   * <p>The cap is the term's contract rather than a safety net: it is what lets {@link
+   * TransferTuning#acceptableCost()} be chosen against a known ceiling. It normally binds only at
+   * exact flame-out, where {@code excessDv} equals {@link #dvSpendableMargin}; a propagation that
+   * somehow reported a mass below the depletion floor would otherwise let this tie-breaker outweigh
+   * the orbital objective it is meant to defer to.
+   *
+   * @param excessDv the Δv consumed beyond the analytic Hohmann reference (m/s, ≥ 0)
+   * @return the cost contribution, in {@code [0, W_PROPELLANT]}
+   */
+  private double propellantTerm(double excessDv) {
+    return W_PROPELLANT * FastMath.min(1.0, excessDv / dvSpendableMargin);
   }
 
   /** Δv actually delivered between the initial state and {@code state} (rocket equation). */
@@ -615,7 +666,8 @@ public class TransferProblem implements TrajectoryProblem {
    * @param hohmannDv the analytic Hohmann reference Δv (burn 1 + burn 2), m/s
    * @param excessDv the wasted part ({@code max(0, consumed − Hohmann)}), m/s
    * @param availableDv the tank Δv capacity down to the depletion floor, m/s
-   * @param costContribution the {@code W_PROPELLANT · excessDv / availableDv} cost term
+   * @param costContribution the {@code W_PROPELLANT · excessDv / (availableDv − hohmannDv)} cost
+   *     term, capped at {@code W_PROPELLANT}
    */
   public record PropellantReport(
       double consumedDv,
@@ -640,7 +692,7 @@ public class TransferProblem implements TrajectoryProblem {
     double consumedDv = computeConsumedDv(state);
     double excessDv = FastMath.max(0.0, consumedDv - dvHohmannTotal);
     return new PropellantReport(
-        consumedDv, dvHohmannTotal, excessDv, dvAvailable, W_PROPELLANT * excessDv / dvAvailable);
+        consumedDv, dvHohmannTotal, excessDv, dvAvailable, propellantTerm(excessDv));
   }
 
   private double computeFailurePenalty() {

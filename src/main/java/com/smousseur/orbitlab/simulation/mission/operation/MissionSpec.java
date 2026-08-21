@@ -89,10 +89,10 @@ public sealed interface MissionSpec permits MissionSpec.EarthOrbit, MissionSpec.
    * docs/atmosphere/04-conception-L1.md} §3.2). Never {@code null} — a spec built without one falls
    * back to {@link AtmosphereModel#NONE}, which mounts no drag force at all.
    *
-   * <p>It lives on the spec for the same reason {@link #horizon()} does: it is <em>user intent</em>,
-   * and it must survive the recompositions {@code MissionEntry} performs on a mode toggle or a
-   * wizard edit, both of which replace the {@link com.smousseur.orbitlab.simulation.mission.Mission}
-   * and neither of which replaces the spec.
+   * <p>It lives on the spec for the same reason {@link #horizon()} does: it is <em>user
+   * intent</em>, and it must survive the recompositions {@code MissionEntry} performs on a mode
+   * toggle or a wizard edit, both of which replace the {@link
+   * com.smousseur.orbitlab.simulation.mission.Mission} and neither of which replaces the spec.
    *
    * @return the atmosphere model
    */
@@ -110,8 +110,8 @@ public sealed interface MissionSpec permits MissionSpec.EarthOrbit, MissionSpec.
 
   /**
    * Earth-orbit insertion spec: any orbit reached by an ascent followed by a transfer, whatever its
-   * plane. A circular target has {@code perigeeAltitude == apogeeAltitude}; an elliptic target keeps
-   * a distinct apogee. A polar or sun-synchronous target is this same record with another
+   * plane. A circular target has {@code perigeeAltitude == apogeeAltitude}; an elliptic target
+   * keeps a distinct apogee. A polar or sun-synchronous target is this same record with another
    * inclination — no dedicated mission type, no dedicated objective (spec {@code
    * docs/earth-orbit/01-mission-terre-parametrable.md} §3.2 and §5).
    *
@@ -133,8 +133,7 @@ public sealed interface MissionSpec permits MissionSpec.EarthOrbit, MissionSpec.
    * @param nodeBranch which of the two azimuths reaching that inclination is flown; {@code null} is
    *     normalised to {@link NodeBranch#ASCENDING}
    * @param targetRaan the right ascension of the target plane's ascending node in <b>degrees</b>,
-   *     or {@code null} when the mission waits for no plane — read through {@link
-   *     #hasTargetRaan()}
+   *     or {@code null} when the mission waits for no plane — read through {@link #hasTargetRaan()}
    * @param siteName the launch site display name, or {@code null} when unnamed
    * @param latitude the launch site latitude in degrees
    * @param longitude the launch site longitude in degrees

@@ -107,7 +107,8 @@ public final class EventBus {
       permits UiNavigationEvent.OpenMissionWizard,
           UiNavigationEvent.CreateMission,
           UiNavigationEvent.UpdateMission,
-          UiNavigationEvent.OpenMissionManagement {
+          UiNavigationEvent.OpenMissionManagement,
+          UiNavigationEvent.OpenScenarioBrowser {
 
     /**
      * Request to open the mission wizard, either blank or on an existing mission.
@@ -159,6 +160,21 @@ public final class EventBus {
 
     /** Request to open the mission management modal. */
     record OpenMissionManagement() implements UiNavigationEvent {}
+
+    /**
+     * Request to open the scenario browser, in one of its two modes.
+     *
+     * <p>The mode travels with the event rather than being asked of the window afterwards: the two
+     * menu entries are the only thing that decides it, and the window is built and destroyed on
+     * each opening.
+     *
+     * @param mode whether the browser opens to read a scenario or to write one
+     */
+    record OpenScenarioBrowser(ScenarioBrowserMode mode) implements UiNavigationEvent {
+      public OpenScenarioBrowser {
+        Objects.requireNonNull(mode, "mode");
+      }
+    }
   }
 
   private final ConcurrentLinkedQueue<UiNavigationEvent.OpenMissionWizard> openWizardQueue =
@@ -168,6 +184,8 @@ public final class EventBus {
   private final ConcurrentLinkedQueue<UiNavigationEvent.UpdateMission> updateMissionQueue =
       new ConcurrentLinkedQueue<>();
   private final ConcurrentLinkedQueue<UiNavigationEvent.OpenMissionManagement> openManagementQueue =
+      new ConcurrentLinkedQueue<>();
+  private final ConcurrentLinkedQueue<UiNavigationEvent.OpenScenarioBrowser> openScenarioQueue =
       new ConcurrentLinkedQueue<>();
 
   /**
@@ -182,6 +200,7 @@ public final class EventBus {
       case UiNavigationEvent.CreateMission c -> createMissionQueue.add(c);
       case UiNavigationEvent.UpdateMission u -> updateMissionQueue.add(u);
       case UiNavigationEvent.OpenMissionManagement m -> openManagementQueue.add(m);
+      case UiNavigationEvent.OpenScenarioBrowser s -> openScenarioQueue.add(s);
     }
   }
 
@@ -203,6 +222,11 @@ public final class EventBus {
   /** Poll one open-management request; returns null if none. */
   public UiNavigationEvent.OpenMissionManagement pollOpenManagement() {
     return openManagementQueue.poll();
+  }
+
+  /** Poll one open-scenario-browser request; returns null if none. */
+  public UiNavigationEvent.OpenScenarioBrowser pollOpenScenarioBrowser() {
+    return openScenarioQueue.poll();
   }
 
   // -------------------------------------------------------------------------

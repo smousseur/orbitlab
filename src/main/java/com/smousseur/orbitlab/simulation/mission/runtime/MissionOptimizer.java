@@ -58,6 +58,12 @@ public class MissionOptimizer {
   private final MissionProgressListener progress;
 
   /**
+   * Solved variables to fly instead of searching for them, or {@code null} for a real optimization
+   * (spec {@code docs/scenario/01-persistance-missions.md} §5).
+   */
+  private final MissionSolutions solutions;
+
+  /**
    * Creates a mission optimizer with a specified evaluation budget per stage and a
    * non-deterministic CMA-ES seed.
    *
@@ -104,10 +110,35 @@ public class MissionOptimizer {
    */
   public MissionOptimizer(
       Mission mission, int maxEvaluations, Long seed, MissionProgressListener progress) {
+    this(mission, maxEvaluations, seed, progress, null);
+  }
+
+  /**
+   * Creates an optimizer that <b>replays</b> known solutions instead of searching for them.
+   *
+   * <p>Each stage whose key the solutions carry is propagated once at its recorded vector; the cost
+   * is the problem's own, and the result reports {@code evaluations = 0}, which reads honestly as
+   * "not optimized". A stage the solutions do not carry still goes through CMA-ES — the caller is
+   * responsible for the all-or-nothing rule ({@link MissionSolutions#covers(Mission)}), because
+   * flying half a replay and optimizing the other half would produce a trajectory nobody asked for.
+   *
+   * @param mission the mission whose stages will be flown
+   * @param maxEvaluations the per-stage CMA-ES budget, unused for a stage that is replayed
+   * @param seed master seed for CMA-ES randomness, or null for non-deterministic
+   * @param progress the sink, or {@code null}
+   * @param solutions the solved variables per stage key, or {@code null} to optimize
+   */
+  public MissionOptimizer(
+      Mission mission,
+      int maxEvaluations,
+      Long seed,
+      MissionProgressListener progress,
+      MissionSolutions solutions) {
     this.mission = mission;
     this.maxEvaluations = maxEvaluations;
     this.seed = seed;
     this.progress = progress;
+    this.solutions = solutions;
   }
 
   /**
@@ -162,100 +193,21 @@ public class MissionOptimizer {
         SpacecraftState entryState = mission.getCurrentState();
 
         TrajectoryProblem problem = optimizable.buildProblem(mission);
-        long stageSeed = seedRng.nextLong();
-        CMAESTrajectoryOptimizer optimizer =
-            new CMAESTrajectoryOptimizer(problem, maxEvaluations, stageSeed, progress);
-        OptimizationResult result = optimizer.optimize();
+        double[] provided = providedVectorFor(optimizable);
+        OptimizationResult result = solveStage(problem, provided, seedRng, entryState);
         mission.setCurrentState(entryState);
 
-        // Store the entry state so the runtime can start from exactly the same point
-        result =
-            new OptimizationResult(
-                result.bestVariables(),
-                result.bestCost(),
-                result.bestState(),
-                result.evaluations(),
-                entryState);
         results.put(optimizable.optimizationKey(), result);
         logger.info(
-            "Stage '{}' optimized: cost={}, values={}, evaluations={}",
+            "Stage '{}' {}: cost={}, values={}, evaluations={}",
             stage.getName(),
+            provided != null ? "replayed" : "optimized",
             result.bestCost(),
             result.bestVariables(),
             result.evaluations());
 
-        // ── Phase 0.1 instrumentation: bound saturation ───────────────────
-        String[] paramNames = paramNamesFor(problem);
-        List<OptimizerDiagnostics.BoundFlag> boundFlags =
-            OptimizerDiagnostics.evaluateBounds(
-                result.bestVariables(), problem.getLowerBounds(), problem.getUpperBounds());
-        OptimizerDiagnostics.logBoundReport(logger, stage.getName(), boundFlags, paramNames);
-
-        if (problem instanceof TransferTwoManeuverProblem transferProblem) {
-          // Re-propagate on the calling thread: TransferTwoManeuverProblem's lastResult is
-          // ThreadLocal so post-optimization callers running on a different thread (the parallel
-          // exploration workers) wouldn't see the worker-thread state.
-          transferProblem.propagate(result.bestVariables());
-          TransferResult transferResult = transferProblem.getLastTransferResult();
-          logger.info(
-              "Post burn1 orbit: {}",
-              transferResult != null ? transferResult.orbitPostBurn1() : null);
-          TransfertTwoManeuver.ResolvedCircularizationBurn burn =
-              transferResult != null ? transferResult.circularizationBurn() : null;
-          logger.info("Circularization burn: {}", burn);
-
-          // ── Phase 0.1: Δv decomposition + active barriers ──
-          TransferTwoManeuverProblem.DvBreakdown dv =
-              transferProblem.computeDvBreakdown(result.bestVariables());
-          logger.info(
-              "Transfert Δv breakdown: total1={} m/s, useful1={} m/s, wasted1={} m/s, dv2={} m/s",
-              dv.dvBurn1Total(),
-              dv.dvBurn1Useful(),
-              dv.dvBurn1Wasted(),
-              dv.dvBurn2());
-          TransferTwoManeuverProblem.BarrierReport barriers =
-              transferProblem.diagnoseBarriers(result.bestVariables());
-          logger.info(
-              "Transfert barriers: peri={}({}), altMin={}({}), altMax={}({})",
-              barriers.periapsisFloor(),
-              barriers.periapsisContribution(),
-              barriers.altMin(),
-              barriers.altMinContribution(),
-              barriers.altMax(),
-              barriers.altMaxContribution());
-
-          // ── I7 §5.1: propellant-awareness contribution of the retained solution ──
-          TransferProblem.PropellantReport prop =
-              transferProblem.diagnosePropellant(result.bestVariables());
-          logger.info(
-              "Transfert propellant term: consumedΔv={} m/s, HohmannΔv={} m/s, excessΔv={} m/s, "
-                  + "availableΔv={} m/s, costContribution={}",
-              prop.consumedDv(),
-              prop.hohmannDv(),
-              prop.excessDv(),
-              prop.availableDv(),
-              prop.costContribution());
-        }
-
-        if (problem instanceof GravityTurnProblem) {
-          // ── Phase 0.1: GT exit state vs. ideal Hohmann handoff ──
-          StageEndStateDiagnostic.EndState actual =
-              StageEndStateDiagnostic.from(result.bestState());
-          double targetAlt = resolveTargetAltitude(mission);
-          if (Double.isFinite(targetAlt)) {
-            StageEndStateDiagnostic.EndState ideal =
-                StageEndStateDiagnostic.idealHohmannHandoff(targetAlt, actual.altitude());
-            logger.info(
-                "Gravity turn end-state vs ideal Hohmann: {}",
-                StageEndStateDiagnostic.format(actual, ideal));
-          } else {
-            logger.info(
-                "Gravity turn end-state: alt={} m, vTan={} m/s, vRad={} m/s, FPA={}°",
-                actual.altitude(),
-                actual.vTan(),
-                actual.vRad(),
-                actual.fpaDeg());
-          }
+        if (provided == null) {
+          logStageDiagnostics(stage, problem, result);
         }
 
         SpacecraftState propagated;
@@ -340,6 +292,124 @@ public class MissionOptimizer {
    * jettison being its own non-propulsive phase is what makes the formula below correct rather than
    * indicative; a future stage that dropped mass mid-burn would silently reintroduce the error.
    */
+
+  /**
+   * The vector this stage is to be flown at, or {@code null} when it has to be searched for.
+   */
+  private double[] providedVectorFor(OptimizableMissionStage<?> stage) {
+    return solutions == null ? null : solutions.vectorFor(stage.optimizationKey());
+  }
+
+  /**
+   * Produces the stage result, either by searching for it or by flying the vector it is given.
+   *
+   * <p>The replay branch is not an approximation of the other: {@code propagate} and {@code
+   * computeCost} are both on {@link TrajectoryProblem}'s contract, so what comes out is a complete
+   * {@link OptimizationResult} whose {@code evaluations = 0} reads as "not optimized" (spec {@code
+   * docs/scenario/01-persistance-missions.md} §5).
+   *
+   * <p>Both branches record {@code entryState} rather than whatever the problem left behind, so the
+   * runtime restarts a stage from exactly the point the loop entered it.
+   */
+  private OptimizationResult solveStage(
+      TrajectoryProblem problem,
+      double[] provided,
+      MersenneTwister seedRng,
+      SpacecraftState entryState) {
+    if (provided != null) {
+      SpacecraftState best = problem.propagate(provided);
+      return new OptimizationResult(provided, problem.computeCost(best), best, 0, entryState);
+    }
+    long stageSeed = seedRng.nextLong();
+    OptimizationResult found =
+        new CMAESTrajectoryOptimizer(problem, maxEvaluations, stageSeed, progress).optimize();
+    return new OptimizationResult(
+        found.bestVariables(), found.bestCost(), found.bestState(), found.evaluations(), entryState);
+  }
+
+  /**
+   * The instrumentation that only makes sense facing a real optimization: bound saturation, the
+   * transfer Δv decomposition and its barriers, the gravity-turn exit state. Every one of them
+   * re-propagates to write a log line, which is why a replay skips the lot — it would pay the
+   * propagations of an optimization it did not run, to report on a search that did not happen.
+   */
+  private void logStageDiagnostics(
+      MissionStage stage, TrajectoryProblem problem, OptimizationResult result) {
+    // ── Phase 0.1 instrumentation: bound saturation ───────────────────
+    String[] paramNames = paramNamesFor(problem);
+    List<OptimizerDiagnostics.BoundFlag> boundFlags =
+        OptimizerDiagnostics.evaluateBounds(
+            result.bestVariables(), problem.getLowerBounds(), problem.getUpperBounds());
+    OptimizerDiagnostics.logBoundReport(logger, stage.getName(), boundFlags, paramNames);
+
+    if (problem instanceof TransferTwoManeuverProblem transferProblem) {
+      // Re-propagate on the calling thread: TransferTwoManeuverProblem's lastResult is
+      // ThreadLocal so post-optimization callers running on a different thread (the parallel
+      // exploration workers) wouldn't see the worker-thread state.
+      transferProblem.propagate(result.bestVariables());
+      TransferResult transferResult = transferProblem.getLastTransferResult();
+      logger.info(
+          "Post burn1 orbit: {}",
+          transferResult != null ? transferResult.orbitPostBurn1() : null);
+      TransfertTwoManeuver.ResolvedCircularizationBurn burn =
+          transferResult != null ? transferResult.circularizationBurn() : null;
+      logger.info("Circularization burn: {}", burn);
+
+      // ── Phase 0.1: Δv decomposition + active barriers ──
+      TransferTwoManeuverProblem.DvBreakdown dv =
+          transferProblem.computeDvBreakdown(result.bestVariables());
+      logger.info(
+          "Transfert Δv breakdown: total1={} m/s, useful1={} m/s, wasted1={} m/s, dv2={} m/s",
+          dv.dvBurn1Total(),
+          dv.dvBurn1Useful(),
+          dv.dvBurn1Wasted(),
+          dv.dvBurn2());
+      TransferTwoManeuverProblem.BarrierReport barriers =
+          transferProblem.diagnoseBarriers(result.bestVariables());
+      logger.info(
+          "Transfert barriers: peri={}({}), altMin={}({}), altMax={}({})",
+          barriers.periapsisFloor(),
+          barriers.periapsisContribution(),
+          barriers.altMin(),
+          barriers.altMinContribution(),
+          barriers.altMax(),
+          barriers.altMaxContribution());
+
+      // ── I7 §5.1: propellant-awareness contribution of the retained solution ──
+      TransferProblem.PropellantReport prop =
+          transferProblem.diagnosePropellant(result.bestVariables());
+      logger.info(
+          "Transfert propellant term: consumedΔv={} m/s, HohmannΔv={} m/s, excessΔv={} m/s, "
+              + "availableΔv={} m/s, costContribution={}",
+          prop.consumedDv(),
+          prop.hohmannDv(),
+          prop.excessDv(),
+          prop.availableDv(),
+          prop.costContribution());
+    }
+
+    if (problem instanceof GravityTurnProblem) {
+      // ── Phase 0.1: GT exit state vs. ideal Hohmann handoff ──
+      StageEndStateDiagnostic.EndState actual =
+          StageEndStateDiagnostic.from(result.bestState());
+      double targetAlt = resolveTargetAltitude(mission);
+      if (Double.isFinite(targetAlt)) {
+        StageEndStateDiagnostic.EndState ideal =
+            StageEndStateDiagnostic.idealHohmannHandoff(targetAlt, actual.altitude());
+        logger.info(
+            "Gravity turn end-state vs ideal Hohmann: {}",
+            StageEndStateDiagnostic.format(actual, ideal));
+      } else {
+        logger.info(
+            "Gravity turn end-state: alt={} m, vTan={} m/s, vRad={} m/s, FPA={}°",
+            actual.altitude(),
+            actual.vTan(),
+            actual.vRad(),
+            actual.fpaDeg());
+      }
+    }
+  }
+
   private int countOptimizableStages() {
     int count = 0;
     for (MissionStage stage : mission.getStages()) {

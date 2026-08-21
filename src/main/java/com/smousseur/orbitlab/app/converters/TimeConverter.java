@@ -33,6 +33,8 @@ public final class TimeConverter {
       DateTimeFormatter.ofPattern("uuuu-MM-dd HH:mm:ss").withResolverStyle(ResolverStyle.STRICT);
   private static final DateTimeFormatter PARSE_DATE_ONLY_FORMATTER =
       DateTimeFormatter.ofPattern("uuuu-MM-dd").withResolverStyle(ResolverStyle.STRICT);
+  private static final DateTimeFormatter ISO_FORMATTER =
+      DateTimeFormatter.ofPattern("uuuu-MM-dd'T'HH:mm:ss'Z'");
   private static final int DATE_ONLY_LENGTH = "yyyy-MM-dd".length();
 
   private TimeConverter() {}
@@ -66,12 +68,19 @@ public final class TimeConverter {
   }
 
   /**
-   * Convenience method for HUD/debug display, formatted like: 2026-01-08T12:34:56Z
+   * Formats an instant as ISO UTC, like {@code 2026-01-08T12:34:56Z}.
    *
-   * <p>Uses seconds precision (LocalDateTime's {@code toString()} includes nanos only if present).
+   * <p>The seconds field is always written, even at zero. {@link LocalDateTime#toString()} omits
+   * it on a whole minute — {@code 2026-01-08T12:00Z} — which {@link #parseUtcDate(String)} then
+   * refuses, so the two were not inverse for one date in sixty. They are the round trip the
+   * scenario format is built on (spec {@code docs/scenario/01-persistance-missions.md} §3.1, rule
+   * 3), so the omission is not affordable here.
+   *
+   * @param date the date to format
+   * @return the ISO UTC text
    */
   public static String toUtcIsoString(AbsoluteDate date) {
-    return toUtcLocalDateTime(date) + "Z";
+    return toUtcLocalDateTime(date).format(ISO_FORMATTER);
   }
 
   /**

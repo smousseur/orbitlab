@@ -10,8 +10,8 @@
 
 La fiche `UI-3` de [`docs/roadmap/01-roadmap.md`](../roadmap/01-roadmap.md) §6 annonce que
 « `MissionSpec` est immuable et sérialise déjà les paramètres du wizard — le plus dur est
-fait ». C'est vrai dans l'esprit et faux dans le détail. Six mesures, dont quatre corrigent
-la fiche.
+fait ». C'est vrai dans l'esprit et faux dans le détail. Sept mesures, dont quatre corrigent
+la fiche et une corrige ce document (§1.8, ajoutée après coup).
 
 ### 1.1 Le portail de sérialisation existe, et ce n'est pas `MissionSpec`
 
@@ -77,6 +77,22 @@ et Lemur n'en fournit pas ; en revanche le motif « fenêtre-liste » est fourni
 `ui/mission/panel/` (1 711 lignes) et `ui/form/` (`ModalBackdrop`, `ConfirmDialog`,
 `WindowDragHandler`).
 
+### 1.8 Le résultat du dimensionnement `PRECISE` est jeté
+
+`MinimizedLoadPlanner:165` emballe les facteurs d'échelle résolus dans un
+`PropellantSizing`, mais `MissionOrchestratorAppState:208` écrit
+`.compute().computation()` : le `.sizing()` du `MissionPlan` tombe par terre. **Aucune ligne
+de `src/main` ne lit `PropellantSizing` ni `.sizing()`**, et `MissionEntry` n'a pas de champ
+pour les recevoir. Les λ sont calculés, journalisés, puis perdus.
+
+Ce qui survit, c'est leur **produit** : `entry.setMission(result.mission())` adopte la
+mission interne gagnante, dont le `VehicleStack` porte les charges effectivement volées. Mais
+uniquement sur `entry.mission()` — jamais sur `entry.spec()`, qui garde délibérément les
+charges budgétées pour qu'une bascule de mode recompose depuis l'original.
+
+Cette mesure est postérieure à la première rédaction et elle **corrige le §2.3**, qui parlait
+de persister les λ comme s'ils étaient disponibles.
+
 ---
 
 ## 2. Périmètre : ce que le fichier porte
@@ -92,7 +108,8 @@ fermeture de l'application ») et c'est la seule forme où le fichier décrit ce
 | Mode d'optimisation | `MissionEntry.optimizationType` | **oui** | il change la composition des étages, donc la trajectoire |
 | Modèle d'atmosphère | `MissionSpec.atmosphere()` | **oui**, même à `NONE` | sans lui, un scénario d'avant `PHY-2` se rejoue après avec une autre physique et personne ne le voit passer |
 | Couleur, visibilité | `MissionEntry` | **oui** | sans elles, un scénario rouvert ne ressemble pas à celui qu'on a enregistré |
-| Vecteurs solution par clé d'étage, et facteurs λ | résultat d'optimisation | **oui** | ce qui permet le rejeu (§5) ; seul composant du résultat que les étages relisent (§1.4) |
+| Vecteurs solution par clé d'étage | résultat d'optimisation | **oui** | ce qui permet le rejeu (§5) ; seul composant du résultat que les étages relisent (§1.4) |
+| Charges lanceur **volées**, en `PRECISE` uniquement | résultat du balayage de dimensionnement | **oui** | en `PRECISE` elles ne sont pas dérivées, elles sont cherchées (§2.3) |
 | Date de l'horloge de simulation | `SimulationClock` | **oui** | sans elle l'écran est vide à l'ouverture (§2.2) |
 | Charges ergol par étage, payload instancié | `LaunchConfiguration` | **non** | **dérivés** : `PropellantBudget` les recalcule. Les figer rejouerait un vieux dimensionnement après un changement de budget |
 | `MissionEphemeris` | `MissionEntry` | **non** | dérivé, 14 à 420 Mo par mission (`MIS-8`), périmé dès que le propagateur change |
@@ -115,24 +132,67 @@ restée sur « maintenant », donnerait donc une liste de missions `READY` et un
 Restaurer la date d'horloge est la seule façon que « le fichier décrit ce qu'on voit » soit
 vrai.
 
-### 2.3 Pourquoi les λ sont dans la solution et non dans le véhicule
+### 2.3 En `PRECISE`, les charges volées sont dans la solution
 
-En `PRECISE`, `MinimizedLoadPlanner` résout des facteurs d'échelle par étage
-(`PropellantSizing.lambdas`) : la mission qui a volé n'est pas celle composée aux charges
-budgétées. Les λ ne décrivent pas le véhicule — que le tableau ci-dessus exclut — ils sont le
-**résultat d'une optimisation**, au même titre que les vecteurs de trajectoire, et c'est à ce
-titre qu'ils sont persistés. Rejouer devient : recomposer aux charges budgétées, appliquer
-`spec.withLauncherLoads(charges × λ)` qui existe déjà, injecter les vecteurs, propager une
-fois. Cinq nombres pour éviter le balayage complet, dans le mode où recalculer coûte le plus
-cher.
+En `PRECISE`, `MinimizedLoadPlanner` résout des facteurs d'échelle par étage : la mission qui
+a volé n'est pas celle composée aux charges budgétées. Ces charges-là ne décrivent pas le
+véhicule — ce que le tableau ci-dessus exclut — elles sont le **résultat d'une optimisation**,
+au même titre que les vecteurs de trajectoire, et c'est à ce titre qu'elles sont persistées.
+La règle du §2.1 n'admet donc pas d'exception ici : en `FAST` et `BALANCED` les charges sont
+bien dérivées et ne sont pas écrites ; en `PRECISE` elles sont cherchées, et elles le sont.
+
+Rejouer devient : recomposer aux charges budgétées, appliquer
+`spec.withLauncherLoads(charges volées)` — qui existe déjà et prend des kilogrammes absolus —
+injecter les vecteurs, propager une fois. Quelques nombres pour éviter le balayage complet,
+dans le mode où recalculer coûte le plus cher.
+
+**Ce sont les charges en kilogrammes qui sont écrites, pas les λ.** Le rapport λ a deux
+dépendances cachées que la valeur absolue n'a pas :
+
+1. **Sa base est datée.** `MissionPlanOptimizer:100` prend
+   `heuristicLoads = spec.configuration().propellantLoads()`, c'est-à-dire ce que
+   `PropellantBudget` produisait le jour de l'enregistrement. Rejouer `charges budgétées × λ`
+   après une amélioration du budget donnerait un troisième jeu de charges : ni celui qui a
+   volé, ni celui qu'on recalculerait aujourd'hui.
+2. **Son masque est daté.** `PropellantLoadOptimizer.lambdaScaledMask(launcher)` décide quels
+   étages portent un λ. Un changement de masque et le tableau ne veut plus dire la même
+   chose, sans que rien ne le signale.
+
+La multiplication reste donc faite **à l'enregistrement**, à l'instant où le λ et sa base
+sont l'un et l'autre en main sans ambiguïté, et jamais au chargement. Le prix assumé : une
+mission `PRECISE` rechargée après une amélioration de `PropellantBudget` rejoue les charges
+d'alors. C'est le comportement voulu — c'est la mission qui a volé —, et un recalcul complet
+reste à un geste.
+
+**Prérequis, et il n'existe pas encore.** Le §1.8 mesure que le résultat du dimensionnement
+est jeté par l'orchestrateur. Il faut donc d'abord le **retenir** : `MissionEntry` porte un
+`volatile double[] flownLauncherLoads`, posé par
+`MissionOrchestratorAppState.submitForComputation()` depuis `plan.sizing()` — produit terme à
+terme de `spec.configuration().propellantLoads()` par `PropellantSizing.lambdas()`, dont le
+tableau a la longueur des étages du lanceur et vaut `1` sur les étages non mis à l'échelle.
+Le champ est nul hors `PRECISE`, et effacé par `publish()` comme tout ce qui dérive de la
+composition précédente.
 
 ---
 
 ## 3. Le format v1
 
-Un `ScenarioFile` sérialisé par Jackson, dont le `ScenarioMission` est **scellé en miroir
-exact de `MissionSpec`** (`EarthOrbit` / `Geo`), discriminé par le `type` déjà présent. Le
-miroir n'est pas une coquetterie : c'est ce qui rend le mapper du §4 évident à relire.
+Un `ScenarioFile` sérialisé par Jackson, dont le `ScenarioMission` est **scellé sur la même
+hiérarchie que `MissionSpec`** — mêmes deux branches, `EarthOrbit` et `Geo`, discriminées par
+le `type` que `MissionSpec.type()` rend déjà.
+
+Le miroir porte sur la **hiérarchie**, pas sur les composants, qui diffèrent délibérément :
+unités du wizard et non du spec (§3.1, règle 2), `ScenarioVehicle` en trois champs au lieu
+d'une `LaunchConfiguration` résolue (§2), et cinq données qui viennent de `MissionEntry` et
+n'existent pas dans le spec (§1.2). Ce qu'il achète est ailleurs : `ScenarioMapper` fait un
+`switch` **exhaustif sans branche par défaut**, et le jour où `MIS-4` ajoutera un
+`MissionSpec.LunarFlyby`, la compilation échouera tant que le `ScenarioMission.LunarFlyby`
+correspondant n'existera pas. Un nouveau type de mission ne peut donc pas devenir
+silencieusement non persistable.
+
+> **Piège de lecture** : la branche s'appelle `EarthOrbit` mais son discriminant vaut
+> `"LEO"`, parce que `MissionSpec.EarthOrbit.type()` rend `MissionType.LEO`. C'est un
+> héritage de nommage du modèle, pas une incohérence du format.
 
 ```json
 {
@@ -163,7 +223,7 @@ miroir n'est pas une coquetterie : c'est ce qui rend le mapper du §4 évident �
       "visible": true,
       "solution": {
         "vectors": { "Gravity turn (S1)": [0.31, 12.4, 148.0] },
-        "lambdas": null
+        "launcherLoads": null
       }
     }
   ]
@@ -180,7 +240,7 @@ Records, dans `simulation/mission/scenario/` :
 | `ScenarioMission.Geo` | `parkingKm` |
 | `ScenarioSite` | `name`, `latitudeDeg`, `longitudeDeg`, `altitudeM` |
 | `ScenarioVehicle` | `launcherId`, `payloadId`, `payloadDryMassKg` |
-| `ScenarioSolution` | `vectors` (clé d'étage → `double[]`), `lambdas` |
+| `ScenarioSolution` | `vectors` (clé d'étage → `double[]`), `launcherLoads` (kg par étage, nul hors `PRECISE`) |
 
 Les composants absents sont des **champs nullables**, jamais des `Optional` : la règle du
 projet est qu'`Optional` est un type de retour et rien d'autre.
@@ -260,8 +320,10 @@ diagnostic — saturation de bornes, décomposition Δv, barrières, état de fi
 sont **sautés** en rejeu : ils re-propagent plusieurs fois pour écrire des journaux qui n'ont
 de sens que face à une optimisation.
 
-En `PRECISE`, le planner de rejeu applique d'abord `spec.withLauncherLoads(charges × λ)`
-avant d'injecter les vecteurs (§2.3).
+En `PRECISE`, le planner de rejeu applique d'abord `spec.withLauncherLoads(chargesVolées)`
+avant d'injecter les vecteurs (§2.3). Les charges sont lues telles quelles dans le fichier :
+aucune multiplication n'a lieu au chargement, précisément pour que le rejeu ne dépende pas de
+ce que `PropellantBudget` produit aujourd'hui.
 
 ### 5.1 Le rejeu est tout ou rien
 
@@ -362,7 +424,9 @@ Cinq tests, tous hors JME et hors propagation :
 4. **`WizardPrefillTest`** — l'horizon forcé revient (§4.3).
 5. **Bout en bout `entry → JSON → spec`** — le spec reconstruit est comparé à l'original,
    **charges ergol comprises**. C'est ce test qui interdit une dérive silencieuse du
-   dimensionnement.
+   dimensionnement. Un second cas couvre `PRECISE` : une entrée portant des charges volées
+   distinctes des charges budgétées revient sur les charges volées, et non sur ce que
+   `PropellantBudget` recalculerait (§2.3).
 
 Le rejeu d'une vraie trajectoire coûte des minutes : test opt-in sous
 `-Dorbitlab.slowTests=true`, comme les boucles d'optimisation existantes.

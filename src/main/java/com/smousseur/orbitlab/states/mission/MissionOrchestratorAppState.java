@@ -15,7 +15,9 @@ import com.smousseur.orbitlab.simulation.mission.MissionStatus;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemeris;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemerisPoint;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.TrajectoryPolyline;
+import com.smousseur.orbitlab.simulation.mission.planner.MissionPlan;
 import com.smousseur.orbitlab.simulation.mission.planner.MissionPlanOptimizer;
+import com.smousseur.orbitlab.simulation.mission.planner.PropellantSizing;
 import com.smousseur.orbitlab.simulation.mission.progress.MissionProgress;
 import com.smousseur.orbitlab.simulation.mission.runtime.MissionComputeResult;
 import java.util.HashSet;
@@ -204,8 +206,13 @@ public final class MissionOrchestratorAppState extends BaseAppState {
 
             // The planner is selected from the entry's optimization mode; FAST reproduces the
             // legacy fixed-load path (analytic composition, single CMA-ES pass at budgeted loads).
-            MissionComputeResult result =
-                new MissionPlanOptimizer(entry, launchDate, progress).compute().computation();
+            MissionPlan plan = new MissionPlanOptimizer(entry, launchDate, progress).compute();
+            MissionComputeResult result = plan.computation();
+            // In PRECISE the loads were searched, not derived, and the sizing is the only place
+            // they exist as such: kept here as absolute kilograms so a scenario saves the vehicle
+            // that flew rather than one today's budget would rebuild (spec
+            // docs/scenario/01-persistance-missions.md §2.3).
+            entry.setFlownLauncherLoads(flownLoads(entry, plan));
 
             // Adopt the mission actually flown: for a fixed-load run it is the entry's own mission;
             // for PRECISE it is the sizing sweep's winning internal mission (scaled loads, solved
@@ -240,6 +247,25 @@ public final class MissionOrchestratorAppState extends BaseAppState {
             entry.setProgress(null);
           }
         });
+  }
+
+
+  /**
+   * The launcher loads a plan actually flew, or {@code null} when they were the budgeted ones.
+   *
+   * <p>Only {@code MinimizedLoadPlanner} attaches a sizing, so this returns {@code null} in every
+   * mode but {@code PRECISE} — which is exactly the rule the scenario format applies: loads that
+   * were derived are recomputed on load, loads that were searched are remembered.
+   */
+  private static double[] flownLoads(MissionEntry entry, MissionPlan plan) {
+    PropellantSizing sizing = plan.sizing();
+    if (sizing == null) {
+      return null;
+    }
+    return entry
+        .spec()
+        .map(spec -> sizing.applyTo(spec.configuration().propellantLoads()))
+        .orElse(null);
   }
 
   /**

@@ -19,7 +19,12 @@ class AppMenuModelTest {
   private static final String PANEL = "missionPanel";
   private static final String MANAGE = "manageMissions";
   private static final String NEW = "newMission";
+  private static final String OPEN_SCENARIO = "openScenario";
+  private static final String SAVE_SCENARIO = "saveScenario";
   private static final String QUIT = "quit";
+
+  /** An id the menu will never carry, for the cases that exercise an unknown entry. */
+  private static final String UNKNOWN = "noSuchEntry";
 
   private static AppMenuModel newModel() {
     return new AppMenuModel(
@@ -27,6 +32,9 @@ class AppMenuModelTest {
             AppMenuItem.toggle(PANEL, "Mission panel", "missions/icon-action-view"),
             AppMenuItem.toggle(MANAGE, "Mission management", "missions/icon-action-manage"),
             AppMenuItem.action(NEW, "New mission...", "wizard/icon-plus").withSeparatorBefore(),
+            AppMenuItem.action(OPEN_SCENARIO, "Open scenario...", "scenario/icon-open")
+                .withSeparatorBefore(),
+            AppMenuItem.action(SAVE_SCENARIO, "Save scenario...", "scenario/icon-save"),
             AppMenuItem.action(QUIT, "Quit", "wizard/icon-close-red").withSeparatorBefore()));
   }
 
@@ -78,7 +86,7 @@ class AppMenuModelTest {
     AppMenuModel model = newModel();
     model.toggle();
 
-    assertEquals(Optional.empty(), model.select("saveScenario"));
+    assertEquals(Optional.empty(), model.select(UNKNOWN));
     assertTrue(model.isOpen());
   }
 
@@ -89,7 +97,7 @@ class AppMenuModelTest {
     assertTrue(model.isEnabled(PANEL));
     assertTrue(model.isEnabled(MANAGE));
     assertTrue(model.isEnabled(NEW));
-    assertFalse(model.isEnabled("saveScenario"));
+    assertFalse(model.isEnabled(UNKNOWN));
 
     model.setEnabled(NEW, false);
     assertFalse(model.isEnabled(NEW));
@@ -113,7 +121,7 @@ class AppMenuModelTest {
     AppMenuModel model = newModel();
 
     assertThrows(IllegalArgumentException.class, () -> model.setChecked(NEW, true));
-    assertThrows(IllegalArgumentException.class, () -> model.setChecked("saveScenario", true));
+    assertThrows(IllegalArgumentException.class, () -> model.setChecked(UNKNOWN, true));
     assertFalse(model.isChecked(NEW));
   }
 
@@ -122,7 +130,8 @@ class AppMenuModelTest {
     AppMenuModel model = newModel();
 
     assertEquals(
-        List.of(PANEL, MANAGE, NEW, QUIT), model.items().stream().map(AppMenuItem::id).toList());
+        List.of(PANEL, MANAGE, NEW, OPEN_SCENARIO, SAVE_SCENARIO, QUIT),
+        model.items().stream().map(AppMenuItem::id).toList());
   }
 
   @Test
@@ -147,6 +156,38 @@ class AppMenuModelTest {
     model.setChecked(PANEL, false);
     assertFalse(model.isChecked(PANEL));
     assertTrue(model.isChecked(MANAGE));
+  }
+
+  /**
+   * The two scenario entries are plain actions: they open a window that is built and destroyed on
+   * each use, so there is no lasting state for a check mark to reflect — unlike the panel and the
+   * management window above them.
+   */
+  @Test
+  void theTwoScenarioEntriesAreCheckLessActions() {
+    AppMenuModel model = newModel();
+    model.toggle();
+
+    assertEquals(Optional.of(OPEN_SCENARIO), model.select(OPEN_SCENARIO));
+    assertFalse(model.isOpen());
+
+    model.toggle();
+    assertEquals(Optional.of(SAVE_SCENARIO), model.select(SAVE_SCENARIO));
+    assertFalse(model.isOpen());
+
+    assertThrows(IllegalArgumentException.class, () -> model.setChecked(OPEN_SCENARIO, true));
+    assertThrows(IllegalArgumentException.class, () -> model.setChecked(SAVE_SCENARIO, true));
+  }
+
+  /** Both are separated from the mission entries above and from Quit below. */
+  @Test
+  void theScenarioBlockStandsOnItsOwn() {
+    AppMenuModel model = newModel();
+    List<AppMenuItem> items = model.items();
+
+    assertTrue(items.get(3).separatorBefore(), "a rule opens the scenario block");
+    assertFalse(items.get(4).separatorBefore(), "the two entries stay together");
+    assertTrue(items.get(5).separatorBefore(), "and Quit stays apart");
   }
 
   @Test
