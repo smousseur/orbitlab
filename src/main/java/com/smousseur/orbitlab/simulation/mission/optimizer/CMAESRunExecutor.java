@@ -91,6 +91,15 @@ final class CMAESRunExecutor {
    *
    * @param startPoint initial parameter vector for the optimization
    * @param sigma initial standard deviations for each parameter dimension
+   * @param lower lower bounds of the search box for this attempt
+   * @param upper upper bounds of the search box for this attempt. Taken from the caller rather
+   *     than re-read off the problem: {@code CMAESTrajectoryOptimizer} may widen the box on a
+   *     retry ({@code TrajectoryProblem.getUpperBoundsForAttempt}), and reading {@code
+   *     problem.getUpperBounds()} here silently confined every retry to the base box while the
+   *     sigma and the start points were already sized on the widened one — start points that then
+   *     fell outside the box CMA-ES was given, which rejects them before the first evaluation
+   *     (observed 2026-08-22: two exploration runs out of six returning {@code Double.MAX_VALUE}
+   *     with zero evaluations)
    * @param populationSize CMA-ES population size per generation
    * @param maxEvals maximum number of objective function evaluations
    * @param earlyKill if true, the convergence checker will kill runs stuck in bad basins
@@ -105,6 +114,8 @@ final class CMAESRunExecutor {
   RunResult execute(
       double[] startPoint,
       double[] sigma,
+      double[] lower,
+      double[] upper,
       int populationSize,
       int maxEvals,
       boolean earlyKill,
@@ -167,7 +178,7 @@ final class CMAESRunExecutor {
           new InitialGuess(startPoint),
           new CMAESOptimizer.Sigma(sigma),
           new CMAESOptimizer.PopulationSize(populationSize),
-          new SimpleBounds(problem.getLowerBounds(), problem.getUpperBounds()));
+          new SimpleBounds(lower, upper));
     } catch (RunAbortedException e) {
       logger.debug("CMA-ES run aborted: a concurrent run completed below the acceptable cost");
     } catch (org.hipparchus.exception.MathRuntimeException e) {

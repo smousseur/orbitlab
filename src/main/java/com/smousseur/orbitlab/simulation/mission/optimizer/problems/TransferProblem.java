@@ -93,6 +93,27 @@ public class TransferProblem implements TrajectoryProblem {
   // tank holding exactly the Hohmann Δv, where there is no slack to grade waste against.
   private static final double MIN_SPENDABLE_MARGIN_MS = 1.0;
 
+  // ── Depletion barrier ──
+  // W_PROPELLANT alone grades waste linearly and caps at 5e-3, which leaves flame-out only
+  // marginally worse than a sober transfer: measured on the 550 km LEO run of 2026-08-22, exact
+  // depletion cost 5.000000e-3 (the cap, with a ~7e-10 orbital part) against 4.44e-3 for the
+  // sober solution — a 13 % edge. CMA-ES does not resolve a 13 % gap reliably across independent
+  // runs, so five λ evaluations out of seven landed on depletion, and the λ-bisection read their
+  // zero residual as infeasible on loads where a sober trajectory exists (λ=0.7375 feasible at
+  // 16.9 % residual, λ=0.7156 infeasible at 0 %).
+  //
+  // The linear term keeps its tie-breaking role in the sober regime; this barrier only engages
+  // over the last tenth of the spendable margin, where burning more stops being a preference and
+  // becomes the outer loop's residual floor being violated. At exact flame-out it charges 5e-2,
+  // an order of magnitude above any nominal cost, which is what puts the two basins out of
+  // exploration-noise range of each other.
+  private static final double W_DEPLETION = 5e-3;
+
+  // Fraction of the spendable margin left unspent below which the barrier engages. Kept clear of
+  // the observed sober regime (waste at 23 % to 35 % of the margin) so the calibration of the
+  // solutions worth keeping is untouched.
+  private static final double DEPLETION_BARRIER_MARGIN_FRACTION = 0.10;
+
   // ── Constraint thresholds ──
   private static final double ALT_MIN = 80_000;
   private static final double PERIAPSIS_FLOOR_MIN = 120_000;
@@ -632,7 +653,31 @@ public class TransferProblem implements TrajectoryProblem {
         excessDv,
         propellantTerm);
 
-    return objective + W_BARRIER * barrier + W_ALT_MAX * altMaxPenalty + propellantTerm;
+    return objective
+        + W_BARRIER * barrier
+        + W_ALT_MAX * altMaxPenalty
+        + propellantTerm
+        + depletionBarrier(excessDv);
+  }
+
+  /**
+   * Soft barrier on the spendable Δv margin left unspent, engaging only over its last {@link
+   * #DEPLETION_BARRIER_MARGIN_FRACTION}.
+   *
+   * <p>Where {@link #propellantTerm(double)} expresses a preference between solutions of equal
+   * precision, this expresses a <b>rejection</b>: a candidate that burns the sized stage dry
+   * satisfies no load the outer λ-bisection could accept, whatever orbit it reaches. Sharing
+   * {@link #barrierBelow(double, double)} with the periapsis and minimum-altitude barriers keeps
+   * the shape — and the softplus's linear tail past the wall — identical to the constraints
+   * already expressed that way.
+   *
+   * @param excessDv the Δv consumed beyond the analytic Hohmann reference (m/s, ≥ 0)
+   * @return the cost contribution, zero until the remaining margin drops under the fraction
+   */
+  private double depletionBarrier(double excessDv) {
+    return W_DEPLETION
+        * barrierBelow(
+            dvSpendableMargin - excessDv, DEPLETION_BARRIER_MARGIN_FRACTION * dvSpendableMargin);
   }
 
   /**
@@ -667,7 +712,10 @@ public class TransferProblem implements TrajectoryProblem {
    * @param excessDv the wasted part ({@code max(0, consumed − Hohmann)}), m/s
    * @param availableDv the tank Δv capacity down to the depletion floor, m/s
    * @param costContribution the {@code W_PROPELLANT · excessDv / (availableDv − hohmannDv)} cost
-   *     term, capped at {@code W_PROPELLANT}
+   *     term, capped at {@code W_PROPELLANT}. <b>The depletion barrier is not included</b>, so
+   *     subtracting this from the stage's total cost isolates the orbital part only while the
+   *     barrier is inactive — which the total itself reveals, a barrier hit putting the cost an
+   *     order of magnitude above any nominal value.
    */
   public record PropellantReport(
       double consumedDv,

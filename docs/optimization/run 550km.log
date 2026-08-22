@@ -1,0 +1,779 @@
+12:13:02.081 INFO  MissionOrchestratorAppState - Starting computation for mission 'LEO-001' [ffdb0507]
+12:13:02.097 INFO  MultiStageLoadOptimizer - MultiStageLoadOptimizer starting: 1 scaled stage(s) [1] (swept top-down), λ∈[0.3, 1.0], tolerance=0.02, budget=45 evals, ≤3 passes
+12:13:02.113 INFO  MissionOptimizer - MissionOptimizer running with explicit seed=42
+12:13:02.115 INFO  MissionOptimizer - Current mass = 1321554.363128011
+12:13:02.116 INFO  MissionOptimizer - Propagating non-optimizable stage 'Vertical Ascent'...
+12:13:02.993 INFO  MissionOptimizer - Stage 'Vertical Ascent' done.
+12:13:02.993 INFO  MissionOptimizer - Current mass = 1266580.221890977
+12:13:02.993 INFO  MissionOptimizer - Optimizing stage 'Gravity turn (S1)'...
+12:13:03.000 INFO  CMAESTrajectoryOptimizer - CMA-ES optimizer initialized with seed=8004395815503774571
+12:13:13.882 INFO  CMAESTrajectoryOptimizer - Exploration 1/4: cost=0.012673729609091109, evals=613
+12:13:13.890 INFO  CMAESTrajectoryOptimizer - Exploration 2/4: cost=0.014988761791001816, evals=620
+12:13:13.891 INFO  CMAESTrajectoryOptimizer - Exploration 3/4: cost=0.04168970001295068, evals=654
+12:13:13.891 INFO  CMAESTrajectoryOptimizer - Exploration 4/4: cost=0.012917765783832946, evals=599
+12:13:13.891 INFO  CMAESTrajectoryOptimizer - Target reached during exploration: cost=0.012673729609091109
+12:13:13.905 INFO  CMAESTrajectoryOptimizer - Final best cost=0.012673729609091109, total evals=2490, 1 of up to 3 attempt(s) run
+12:13:13.906 INFO  MissionOptimizer - Stage 'Gravity turn (S1)' optimized: cost=0.012673729609091109, values=[155.5834510733708, 0.31281560568749633], evaluations=2490
+12:13:13.908 INFO  MissionOptimizer - Stage 'Gravity turn (S1)' bound usage: transitionTime=25% | exponent=7%
+12:13:13.913 INFO  MissionOptimizer - Gravity turn end-state vs ideal Hohmann: alt=29996 m | vTan=7998.5 m/s (Δ=-40.6) | vRad=179.5 m/s (Δ=+179.5) | FPA=1.29° (Δ=+1.29°)
+12:13:13.914 INFO  GravityTurnFirstBurnStage - [Gravity turn (S1)] staging: burn1 150.0s to first-stage burnout, jettison, then burn2 3.6s (MECO at 155.6s)
+12:13:13.923 INFO  MissionOptimizer - Current mass = 88554.36953912176
+12:13:13.923 INFO  MissionOptimizer - Stage separation 'S1 separation': jettisoning stack stage 0 with 0 kg of propellant aboard
+12:13:13.923 INFO  MissionOptimizer - Propagating non-optimizable stage 'S1 separation'...
+12:13:13.924 INFO  StageSeparationStage - [S1 separation] jettison: mass 88554 kg -> 22554 kg
+12:13:13.924 INFO  MissionOptimizer - Stage 'S1 separation' done.
+12:13:13.924 INFO  MissionOptimizer - Current mass = 22554.363128011173
+12:13:13.924 INFO  MissionOptimizer - Propagating non-optimizable stage 'Gravity turn (S2)'...
+12:13:13.926 INFO  MissionOptimizer - Stage 'Gravity turn (S2)' done.
+12:13:13.926 INFO  MissionOptimizer - Current mass = 21519.299451228337
+12:13:13.926 INFO  MissionOptimizer - Optimizing stage 'Transfert'...
+12:13:13.931 INFO  TransferProblem - J2 altitude offset: 3139.960882378401 m, effective perigee: 553139.9608823784 m, effective apogee: 553139.9608823784 m
+12:13:13.932 INFO  TransferProblem - Initial guess for burn 1: T1=2128.433532978557, dt1=3.555276974045865, dv1=166.04928599787308, dv2≈24.664666176075116
+12:13:13.932 INFO  TransferProblem - Physical dt1 max: 8.764168207195873s (propellant available: 2519.2994512283367kg, Δv available: 424.9211478605481m/s)
+12:13:13.932 INFO  TransferProblem - Adaptive bounds — βMax: 0.39269908169872414 rad (adaptive=0.26517788384475655, π/8 floor active=true), t1Max: 2667.9053964464697s, dt1Max: 14.22110789618346s, periapsisFloor: 275000.0m, W_E: 2.0
+12:13:13.932 INFO  TransferProblem - Inclination target: 0.0913854396344231 rad (5.236°), W_I=50.0
+12:13:13.932 INFO  TransferProblem - Propellant-aware term (I7): W_PROPELLANT=0.005, Hohmann Δv ref=190.7139521739482 m/s, Δv available=424.9211478605481 m/s, spendable margin=234.2071956865999 m/s (flame-out grades 0.005, acceptable cost 0.003)
+12:13:13.933 INFO  CMAESTrajectoryOptimizer - CMA-ES optimizer initialized with seed=-6657214946198437198
+12:13:13.933 INFO  CMAESTrajectoryOptimizer - Niveau 3.2: warm-start with pure analytical seed for run 0, initialGuess for run 1
+12:13:41.771 INFO  CMAESTrajectoryOptimizer - Exploration 1/4: cost=0.039082667436056436, evals=800
+12:14:11.350 INFO  CMAESTrajectoryOptimizer - Exploration 2/4: cost=0.00482154943913961, evals=800
+12:14:11.350 INFO  CMAESTrajectoryOptimizer - Exploration 3/4: cost=0.03623326276245341, evals=800
+12:14:11.350 INFO  CMAESTrajectoryOptimizer - Exploration 4/4: cost=0.009997928701495337, evals=800
+12:14:11.350 INFO  CMAESTrajectoryOptimizer - Refinement cascade starting from cost=0.00482154943913961, remaining budget=4796
+12:15:54.307 INFO  CMAESTrajectoryOptimizer - Refinement 1/3 (sigma×0.1): cost=0.0041344108286012525, evals=1598
+12:17:13.874 INFO  CMAESTrajectoryOptimizer - Refinement 2/3 (sigma×0.03): cost=0.004113701995139864, evals=1598
+12:18:32.241 INFO  CMAESTrajectoryOptimizer - Refinement 3/3 (sigma×0.01): cost=0.004109225703038551, evals=1598
+12:18:32.242 INFO  CMAESTrajectoryOptimizer - Attempt 1 converged in its box: the refinement cascade improved on its exploration and then exhausted it at cost=0.004109225703038551; a retry would search the same box
+12:18:32.297 INFO  CMAESTrajectoryOptimizer - Final best cost=0.004109225703038551, total evals=7998, 1 of up to 3 attempt(s) run
+12:18:32.297 WARN  CMAESTrajectoryOptimizer - Final cost 0.004109225703038551 above acceptable 0.003 after 1 of up to 3 attempt(s) — see the phase logs above for why the search stopped
+12:18:32.297 INFO  MissionOptimizer - Stage 'Transfert' optimized: cost=0.004109225703038551, values=[2421.8000035368264, 3.0733410956120424, 1.025143848322288, -0.12424791187032992], evaluations=7998
+12:18:32.297 INFO  MissionOptimizer - Stage 'Transfert' bound usage: t1=91% | dt1=10% | α1=83% | β1=34%
+12:18:32.348 INFO  MissionOptimizer - Post burn1 orbit: Keplerian parameters: {a: 6722659.535269808; e: 0.0313998646709513; i: 5.194093286367734; pa: 6.691833303561375; raan: -16.634379925800623; v: -115.35174871774969;}
+12:18:32.351 INFO  MissionOptimizer - Circularization burn: ResolvedCircularizationBurn[dtCoast=4478.168910922729, dt2=2.480126425601984, dvNeeded=119.98656764328916]
+12:18:32.366 INFO  MissionOptimizer - Transfert Δv breakdown: total1=143.06147101288644 m/s, useful1=73.67311339541111 m/s, wasted1=69.38835761747534 m/s, dv2=119.98656764328916 m/s
+12:18:32.422 INFO  MissionOptimizer - Transfert barriers: peri=false(0.0), altMin=false(0.0), altMax=false(0.0)
+12:18:32.484 INFO  MissionOptimizer - Transfert propellant term: consumedΔv=263.04803864808883 m/s, HohmannΔv=190.7139521739482 m/s, excessΔv=72.33408647414063 m/s, availableΔv=424.9211478605481 m/s, costContribution=0.0015442327948568494
+12:18:32.534 INFO  MissionOptimizer - Current mass = 19922.930309579162
+12:18:32.534 INFO  MissionOptimizer - Propagating non-optimizable stage 'Trim'...
+12:18:32.797 INFO  AnalyticTrimBurnStage - Trim burn plan: dv=5.445088835302147 m/s, dt=0.1104950337884496s, apogee altitude 550.352305922851 km, flown-band aim lift 19215.590684862807 m
+12:18:32.827 INFO  MissionOptimizer - Stage 'Trim' done.
+12:18:32.827 INFO  MissionOptimizer - Current mass = 19891.168016652144
+12:18:32.827 INFO  MissionOptimizer - Propagating non-optimizable stage 'Coasting'...
+12:18:32.828 INFO  MissionOptimizer - Stage 'Coasting' done.
+12:18:32.829 INFO  MissionOptimizer - Stage 'Vertical Ascent': massIn=1321554 kg, massOut=1266580 kg, propellant=54974 kg, dV=123 m/s, duration=7 s
+12:18:32.830 INFO  MissionOptimizer - Stage 'Gravity turn (S1)': massIn=1266580 kg, massOut=88554 kg, propellant=1178026 kg, dV=7723 m/s, duration=150 s
+12:18:32.830 INFO  MissionOptimizer - Stage 'S1 separation': massIn=88554 kg, massOut=22554 kg, propellant=0 kg, dV=0 m/s, duration=0 s
+12:18:32.830 INFO  MissionOptimizer - Stage 'Gravity turn (S2)': massIn=22554 kg, massOut=21519 kg, propellant=1035 kg, dV=160 m/s, duration=6 s
+12:18:32.830 INFO  MissionOptimizer - Stage 'Transfert': massIn=21519 kg, massOut=19923 kg, propellant=1596 kg, dV=263 m/s, duration=6906 s
+12:18:32.830 INFO  MissionOptimizer - Stage 'Trim': massIn=19923 kg, massOut=19891 kg, propellant=32 kg, dV=5 m/s, duration=5769 s
+12:18:32.830 INFO  MissionOptimizer - Stage 'Coasting': massIn=19891 kg, massOut=19891 kg, propellant=0 kg, dV=0 m/s, duration=0 s
+12:18:32.830 INFO  MissionOptimizer - Mission performance: total dV=8275 m/s, propellant loaded=1236554 kg, residual=891 kg (0.1%)
+12:18:32.830 INFO  MissionOptimizer - Stage propellant [0]: loaded=1233000 kg, consumed=1233000 kg, residual=0 kg (0.0% of its load)
+12:18:32.830 INFO  MissionOptimizer - Stage propellant [1]: loaded=3554 kg, consumed=2663 kg, residual=891 kg (25.1% of its load)
+12:18:32.830 INFO  MissionOptimizer - Stage propellant [2]: loaded=0 kg, consumed=0 kg, residual=0 kg (0.0% of its load)
+12:18:32.831 INFO  MissionOptimizer - Achieved orbit (osculating): 550352 x 569216 m (e=1.359e-03, i=5.2341 deg)
+12:18:32.831 INFO  MissionOptimizer - Achieved orbit (mean):       559696 x 559727 m (e=2.280e-06, i=5.2309 deg)
+12:18:32.833 INFO  MissionOptimizer - Restitution horizon: 48 revolutions -> 276055 s of trailing coast
+12:18:32.834 INFO  MissionEphemerisGenerator - Generating ephemeris for stage 'Vertical Ascent'
+12:18:32.840 INFO  MissionEphemerisGenerator - Stage 'Vertical Ascent': 9 points, ended at 2026-08-22T10:13:00.000Z
+12:18:32.840 INFO  MissionEphemerisGenerator - Generating ephemeris for stage 'Gravity turn (S1)'
+12:18:32.841 INFO  GravityTurnFirstBurnStage - [Gravity turn (S1)] staging: burn1 150.0s to first-stage burnout, jettison, then burn2 3.6s (MECO at 155.6s)
+12:18:32.849 INFO  MissionEphemerisGenerator - Stage 'Gravity turn (S1)': 160 points, ended at 2026-08-22T10:15:29.981659526315771244Z
+12:18:32.849 INFO  MissionEphemerisGenerator - Generating ephemeris for stage 'S1 separation'
+12:18:32.849 INFO  StageSeparationStage - [S1 separation] jettison: mass 88554 kg -> 22554 kg
+12:18:32.850 INFO  MissionEphemerisGenerator - Stage 'S1 separation': 162 points, ended at 2026-08-22T10:15:31.981659526315771244Z
+12:18:32.850 INFO  MissionEphemerisGenerator - Generating ephemeris for stage 'Gravity turn (S2)'
+12:18:32.850 INFO  MissionEphemerisGenerator - Stage 'Gravity turn (S2)': 167 points, ended at 2026-08-22T10:15:35.583451073370810048Z
+12:18:32.850 INFO  MissionEphemerisGenerator - Generating ephemeris for stage 'Transfert'
+12:18:32.982 INFO  MissionEphemerisGenerator - Stage 'Transfert': 7074 points, ended at 2026-08-22T12:10:41.105833054095086272Z
+12:18:32.982 INFO  MissionEphemerisGenerator - Generating ephemeris for stage 'Trim'
+12:18:32.986 INFO  AnalyticTrimBurnStage - Trim burn plan: dv=5.445088834769483 m/s, dt=0.11049503377761323s, apogee altitude 550.3523059228621 km, flown-band aim lift 19215.590684855357 m
+12:18:33.034 INFO  MissionEphemerisGenerator - Stage 'Trim': 12845 points, ended at 2026-08-22T13:46:50.2365838699593838Z
+12:18:33.034 INFO  MissionEphemerisGenerator - Generating ephemeris for stage 'Coasting'
+12:18:33.214 INFO  MissionEphemerisGenerator - Stage 'Coasting': 17447 points, ended at 2026-08-25T18:27:45.630847857854485112Z
+12:18:33.214 INFO  MissionEphemerisGenerator - Total ephemeris points: 17447 (complete=true, final coast 276055 s)
+12:18:33.247 INFO  MissionLoadEvaluator - λ=[1.0, 1.0] evaluation: objectiveMet=true, sized stage [1] residual=891 kg of its 3554 kg load (0.2507250904188826 vs floor 0.01), ephemerisComplete=true → feasible=true
+12:18:33.248 INFO  MultiStageLoadOptimizer - Probe heuristic loads (all λ=1.0): feasible=true
+12:18:33.248 INFO  MultiStageLoadOptimizer - Pass 1/3 — stage 1 from λ=1.0000 (others fixed at [1.0000, 1.0000])
+12:18:33.249 INFO  MissionOptimizer - MissionOptimizer running with explicit seed=42
+12:18:33.249 INFO  MissionOptimizer - Current mass = 1319066.3089384034
+12:18:33.249 INFO  MissionOptimizer - Propagating non-optimizable stage 'Vertical Ascent'...
+12:18:33.250 INFO  MissionOptimizer - Stage 'Vertical Ascent' done.
+12:18:33.250 INFO  MissionOptimizer - Current mass = 1264092.1677013692
+12:18:33.250 INFO  MissionOptimizer - Optimizing stage 'Gravity turn (S1)'...
+12:18:33.251 INFO  CMAESTrajectoryOptimizer - CMA-ES optimizer initialized with seed=8004395815503774571
+12:18:38.069 INFO  CMAESTrajectoryOptimizer - Exploration 1/4: cost=0.01178589430526228, evals=589
+12:18:38.072 INFO  CMAESTrajectoryOptimizer - Exploration 2/4: cost=0.1258316527632931, evals=583
+12:18:38.076 INFO  CMAESTrajectoryOptimizer - Exploration 3/4: cost=0.011919849055885967, evals=651
+12:18:38.076 INFO  CMAESTrajectoryOptimizer - Exploration 4/4: cost=0.015640107054212385, evals=548
+12:18:38.076 INFO  CMAESTrajectoryOptimizer - Target reached during exploration: cost=0.01178589430526228
+12:18:38.082 INFO  CMAESTrajectoryOptimizer - Final best cost=0.01178589430526228, total evals=2375, 1 of up to 3 attempt(s) run
+12:18:38.082 INFO  MissionOptimizer - Stage 'Gravity turn (S1)' optimized: cost=0.01178589430526228, values=[153.9256156239311, 0.3161498788221047], evaluations=2375
+12:18:38.082 INFO  MissionOptimizer - Stage 'Gravity turn (S1)' bound usage: transitionTime=25% | exponent=7%
+12:18:38.083 INFO  MissionOptimizer - Gravity turn end-state vs ideal Hohmann: alt=30005 m | vTan=8010.0 m/s (Δ=-29.2) | vRad=173.3 m/s (Δ=+173.3) | FPA=1.24° (Δ=+1.24°)
+12:18:38.083 INFO  GravityTurnFirstBurnStage - [Gravity turn (S1)] staging: burn1 150.0s to first-stage burnout, jettison, then burn2 1.9s (MECO at 153.9s)
+12:18:38.088 INFO  MissionOptimizer - Current mass = 86066.31553104943
+12:18:38.088 INFO  MissionOptimizer - Stage separation 'S1 separation': jettisoning stack stage 0 with 0 kg of propellant aboard
+12:18:38.088 INFO  MissionOptimizer - Propagating non-optimizable stage 'S1 separation'...
+12:18:38.088 INFO  StageSeparationStage - [S1 separation] jettison: mass 86066 kg -> 20066 kg
+12:18:38.089 INFO  MissionOptimizer - Stage 'S1 separation' done.
+12:18:38.089 INFO  MissionOptimizer - Current mass = 20066.308938403352
+12:18:38.089 INFO  MissionOptimizer - Propagating non-optimizable stage 'Gravity turn (S2)'...
+12:18:38.089 INFO  MissionOptimizer - Stage 'Gravity turn (S2)' done.
+12:18:38.089 INFO  MissionOptimizer - Current mass = 19507.797495587358
+12:18:38.089 INFO  MissionOptimizer - Optimizing stage 'Transfert'...
+12:18:38.089 INFO  TransferProblem - J2 altitude offset: 3139.9609091578304 m, effective perigee: 553139.9609091579 m, effective apogee: 553139.9609091579 m
+12:18:38.090 INFO  MissionLoadEvaluator - λ=[1.0, 0.3] evaluation failed to optimize (com.smousseur.orbitlab.core.OrbitlabException: Target orbit (perigee 550000 m, apogee 550000 m) infeasible with current vehicle stack: Hohmann Δv ≈ 179 m/s exceeds available Δv ≈ 90 m/s); treating as infeasible
+12:18:38.090 INFO  PropellantLoadOptimizer - Probe λ=0.3 (lower bound): feasible=false
+12:18:38.090 INFO  MissionOptimizer - MissionOptimizer running with explicit seed=42
+12:18:38.090 INFO  MissionOptimizer - Current mass = 1320310.3360332074
+12:18:38.090 INFO  MissionOptimizer - Propagating non-optimizable stage 'Vertical Ascent'...
+12:18:38.091 INFO  MissionOptimizer - Stage 'Vertical Ascent' done.
+12:18:38.091 INFO  MissionOptimizer - Current mass = 1265336.1947961731
+12:18:38.091 INFO  MissionOptimizer - Optimizing stage 'Gravity turn (S1)'...
+12:18:38.092 INFO  CMAESTrajectoryOptimizer - CMA-ES optimizer initialized with seed=8004395815503774571
+12:18:43.557 INFO  CMAESTrajectoryOptimizer - Exploration 1/4: cost=0.012140055791346391, evals=667
+12:18:43.564 INFO  CMAESTrajectoryOptimizer - Exploration 2/4: cost=0.024098649791685068, evals=646
+12:18:43.565 INFO  CMAESTrajectoryOptimizer - Exploration 3/4: cost=0.018698879597806726, evals=710
+12:18:43.565 INFO  CMAESTrajectoryOptimizer - Exploration 4/4: cost=0.025081764091608956, evals=611
+12:18:43.565 INFO  CMAESTrajectoryOptimizer - Target reached during exploration: cost=0.012140055791346391
+12:18:43.572 INFO  CMAESTrajectoryOptimizer - Final best cost=0.012140055791346391, total evals=2638, 1 of up to 3 attempt(s) run
+12:18:43.572 INFO  MissionOptimizer - Stage 'Gravity turn (S1)' optimized: cost=0.012140055791346391, values=[154.6218495322525, 0.31483936483857344], evaluations=2638
+12:18:43.572 INFO  MissionOptimizer - Stage 'Gravity turn (S1)' bound usage: transitionTime=25% | exponent=7%
+12:18:43.572 INFO  MissionOptimizer - Gravity turn end-state vs ideal Hohmann: alt=29994 m | vTan=7999.1 m/s (Δ=-40.0) | vRad=175.6 m/s (Δ=+175.6) | FPA=1.26° (Δ=+1.26°)
+12:18:43.573 INFO  GravityTurnFirstBurnStage - [Gravity turn (S1)] staging: burn1 150.0s to first-stage burnout, jettison, then burn2 2.6s (MECO at 154.6s)
+12:18:43.578 INFO  MissionOptimizer - Current mass = 87310.34194417114
+12:18:43.578 INFO  MissionOptimizer - Stage separation 'S1 separation': jettisoning stack stage 0 with 0 kg of propellant aboard
+12:18:43.578 INFO  MissionOptimizer - Propagating non-optimizable stage 'S1 separation'...
+12:18:43.578 INFO  StageSeparationStage - [S1 separation] jettison: mass 87310 kg -> 21310 kg
+12:18:43.578 INFO  MissionOptimizer - Stage 'S1 separation' done.
+12:18:43.578 INFO  MissionOptimizer - Current mass = 21310.336033207263
+12:18:43.578 INFO  MissionOptimizer - Propagating non-optimizable stage 'Gravity turn (S2)'...
+12:18:43.579 INFO  MissionOptimizer - Stage 'Gravity turn (S2)' done.
+12:18:43.579 INFO  MissionOptimizer - Current mass = 20551.689031409125
+12:18:43.579 INFO  MissionOptimizer - Optimizing stage 'Transfert'...
+12:18:43.579 INFO  TransferProblem - J2 altitude offset: 3139.9608988673913 m, effective perigee: 553139.9608988673 m, effective apogee: 553139.9608988673 m
+12:18:43.579 INFO  TransferProblem - Initial guess for burn 1: T1=2139.245303913077, dt1=3.382643306610833, dv1=165.40932743482244, dv2≈24.74517698812724
+12:18:43.579 INFO  TransferProblem - Physical dt1 max: 5.398033834326368s (propellant available: 1551.6890314091252kg, Δv available: 267.91222646649294m/s)
+12:18:43.579 INFO  TransferProblem - Adaptive bounds — βMax: 0.39269908169872414 rad (adaptive=0.26518882269305355, π/8 floor active=true), t1Max: 2668.4548851202135s, dt1Max: 13.530573226443332s, periapsisFloor: 275000.0m, W_E: 2.0
+12:18:43.579 INFO  TransferProblem - Inclination target: 0.0913854396344231 rad (5.236°), W_I=50.0
+12:18:43.579 INFO  TransferProblem - Propellant-aware term (I7): W_PROPELLANT=0.005, Hohmann Δv ref=190.15450442294969 m/s, Δv available=267.91222646649294 m/s, spendable margin=77.75772204354325 m/s (flame-out grades 0.005, acceptable cost 0.003)
+12:18:43.580 INFO  CMAESTrajectoryOptimizer - CMA-ES optimizer initialized with seed=-6657214946198437198
+12:18:43.580 INFO  CMAESTrajectoryOptimizer - Niveau 3.2: warm-start with pure analytical seed for run 0, initialGuess for run 1
+12:18:48.374 INFO  CMAESTrajectoryOptimizer - Exploration 1/4: cost=0.1056434616359316, evals=800
+12:18:53.031 INFO  CMAESTrajectoryOptimizer - Exploration 2/4: cost=0.04191404615545824, evals=577
+12:19:04.342 INFO  CMAESTrajectoryOptimizer - Exploration 3/4: cost=0.034874966798933836, evals=800
+12:19:04.342 INFO  CMAESTrajectoryOptimizer - Exploration 4/4: cost=0.04686776046930893, evals=800
+12:19:04.342 INFO  CMAESTrajectoryOptimizer - Refinement cascade starting from cost=0.034874966798933836, remaining budget=5019
+12:20:11.354 INFO  CMAESTrajectoryOptimizer - Refinement 1/3 (sigma×0.1): cost=0.034874966798933836, evals=1673
+12:20:11.354 INFO  CMAESTrajectoryOptimizer - Refinement cascade stopped after pass 1: plateau at cost=0.034874966798933836
+12:20:11.354 INFO  TransferProblem - Attempt 1: relaxing β1 lower bound from -0.39269908169872414 to -0.5890486225480862 (previous |β1|=0.39269908169872414)
+12:20:11.354 INFO  TransferProblem - Attempt 1: relaxing β1 lower bound from -0.39269908169872414 to -0.5890486225480862 (previous |β1|=0.39269908169872414)
+12:20:11.355 INFO  CMAESTrajectoryOptimizer - Retry 1/2 triggered: previous cost=0.034874966798933836 > acceptable=0.003, explorationRuns=6, sigmaScale=1.3, anti-saturation=true
+12:20:18.112 INFO  CMAESTrajectoryOptimizer - Exploration 1/6: cost=0.04191404615545824, evals=533
+12:20:30.301 INFO  CMAESTrajectoryOptimizer - Exploration 2/6: cost=0.03157182081226329, evals=533
+12:20:30.301 INFO  CMAESTrajectoryOptimizer - Exploration 3/6: cost=0.06195487106890886, evals=533
+12:20:30.301 INFO  CMAESTrajectoryOptimizer - Exploration 4/6: cost=0.08707738939502184, evals=533
+12:20:30.302 INFO  CMAESTrajectoryOptimizer - Exploration 5/6: cost=0.41906684148474577, evals=533
+12:20:30.302 INFO  CMAESTrajectoryOptimizer - Exploration 6/6: cost=0.03887617516235017, evals=533
+12:20:30.302 INFO  CMAESTrajectoryOptimizer - Refinement cascade starting from cost=0.03157182081226329, remaining budget=4796
+12:20:35.304 INFO  CMAESTrajectoryOptimizer - Refinement 1/3 (sigma×0.1): cost=0.03157182081226329, evals=513
+12:20:35.304 INFO  CMAESTrajectoryOptimizer - Refinement cascade stopped after pass 1: plateau at cost=0.03157182081226329
+12:20:35.304 INFO  TransferProblem - Attempt 2: relaxing β1 lower bound from -0.39269908169872414 to -0.7853981633974483 (previous |β1|=0.3915140893728618)
+12:20:35.304 INFO  TransferProblem - Attempt 2: relaxing β1 lower bound from -0.39269908169872414 to -0.7853981633974483 (previous |β1|=0.3915140893728618)
+12:20:35.304 INFO  CMAESTrajectoryOptimizer - Retry 2/2 triggered: previous cost=0.03157182081226329 > acceptable=0.003, explorationRuns=8, sigmaScale=1.6, anti-saturation=false
+12:20:50.896 INFO  CMAESTrajectoryOptimizer - Exploration 1/8: cost=0.016704652908097667, evals=400
+12:20:50.896 INFO  CMAESTrajectoryOptimizer - Exploration 2/8: cost=1.4267971887969504, evals=400
+12:20:50.897 INFO  CMAESTrajectoryOptimizer - Exploration 3/8: cost=1.865069755986421, evals=400
+12:20:50.897 INFO  CMAESTrajectoryOptimizer - Exploration 4/8: cost=1.2709583978016412, evals=400
+12:20:50.897 INFO  CMAESTrajectoryOptimizer - Exploration 5/8: cost=1.4205557924592283, evals=400
+12:20:50.897 INFO  CMAESTrajectoryOptimizer - Exploration 6/8: cost=1.6762169748961868, evals=400
+12:20:50.897 INFO  CMAESTrajectoryOptimizer - Exploration 7/8: cost=0.5245090649307107, evals=400
+12:20:50.897 INFO  CMAESTrajectoryOptimizer - Exploration 8/8: cost=0.41567747059716986, evals=400
+12:20:50.897 INFO  CMAESTrajectoryOptimizer - Refinement cascade starting from cost=0.016704652908097667, remaining budget=4792
+12:22:04.414 INFO  CMAESTrajectoryOptimizer - Refinement 1/3 (sigma×0.1): cost=0.006065769306782445, evals=1597
+12:23:20.696 INFO  CMAESTrajectoryOptimizer - Refinement 2/3 (sigma×0.03): cost=0.00606576623004872, evals=1597
+12:23:20.696 INFO  CMAESTrajectoryOptimizer - Refinement cascade stopped after pass 2: plateau at cost=0.00606576623004872
+12:23:20.696 INFO  CMAESTrajectoryOptimizer - Attempt 3 converged in its box: the refinement cascade improved on its exploration and then exhausted it at cost=0.00606576623004872; a retry would search the same box
+12:23:20.749 INFO  CMAESTrajectoryOptimizer - Final best cost=0.00606576623004872, total evals=14773, 3 of up to 3 attempt(s) run
+12:23:20.749 WARN  CMAESTrajectoryOptimizer - Final cost 0.00606576623004872 above acceptable 0.003 after 3 of up to 3 attempt(s) — see the phase logs above for why the search stopped
+12:23:20.749 INFO  MissionOptimizer - Stage 'Transfert' optimized: cost=0.00606576623004872, values=[2623.497485265124, 2.189550587080755, 0.7021047935715289, -0.019433430751592547], evaluations=14773
+12:23:20.749 INFO  MissionOptimizer - Stage 'Transfert' bound usage: t1=98%[HIGH-SAT] | dt1=4%[LOW-SAT] | α1=72% | β1=48%
+12:23:20.749 WARN  MissionOptimizer - Stage 'Transfert' parameter t1 saturated (HIGH): value=2623.497485265124 bounds=[0.0, 2668.4548851202135] norm=0.9831522728355724
+12:23:20.749 WARN  MissionOptimizer - Stage 'Transfert' parameter dt1 saturated (LOW): value=2.189550587080755 bounds=[1.6913216533054165, 13.530573226443332] norm=0.042082806560658804
+12:23:20.798 INFO  MissionOptimizer - Post burn1 orbit: Keplerian parameters: {a: 6736959.218343271; e: 0.029314219144551665; i: 5.153072762185369; pa: 10.885644738143727; raan: -17.915687848469112; v: -105.48920589772533;}
+12:23:20.798 INFO  MissionOptimizer - Circularization burn: ResolvedCircularizationBurn[dtCoast=4347.889857437626, dt2=2.236639741774141, dvNeeded=111.95141738017264]
+12:23:20.813 INFO  MissionOptimizer - Transfert Δv breakdown: total1=106.14830512592279 m/s, useful1=81.02728813159742 m/s, wasted1=25.121016994325373 m/s, dv2=111.95141738017264 m/s
+12:23:20.864 INFO  MissionOptimizer - Transfert barriers: peri=false(0.0), altMin=false(0.0), altMax=false(0.0)
+12:23:20.915 INFO  MissionOptimizer - Transfert propellant term: consumedΔv=218.09972250217987 m/s, HohmannΔv=190.15450442294969 m/s, excessΔv=27.945218079230187 m/s, availableΔv=267.91222646649294 m/s, costContribution=0.001796941663464707
+12:23:20.964 INFO  MissionOptimizer - Current mass = 19279.360773586905
+12:23:20.964 INFO  MissionOptimizer - Propagating non-optimizable stage 'Trim'...
+12:23:20.969 INFO  AnalyticTrimBurnStage - Trim burn plan: dv=10.084580886017651 m/s, dt=0.1978973432579257s, apogee altitude 549.4503645144049 km, flown-band aim lift 19204.292433490977 m
+12:23:20.994 INFO  MissionOptimizer - Stage 'Trim' done.
+12:23:20.994 INFO  MissionOptimizer - Current mass = 19222.474294838757
+12:23:20.994 INFO  MissionOptimizer - Propagating non-optimizable stage 'Coasting'...
+12:23:20.994 INFO  MissionOptimizer - Stage 'Coasting' done.
+12:23:20.994 INFO  MissionOptimizer - Stage 'Vertical Ascent': massIn=1320310 kg, massOut=1265336 kg, propellant=54974 kg, dV=123 m/s, duration=7 s
+12:23:20.994 INFO  MissionOptimizer - Stage 'Gravity turn (S1)': massIn=1265336 kg, massOut=87310 kg, propellant=1178026 kg, dV=7761 m/s, duration=150 s
+12:23:20.994 INFO  MissionOptimizer - Stage 'S1 separation': massIn=87310 kg, massOut=21310 kg, propellant=0 kg, dV=0 m/s, duration=0 s
+12:23:20.994 INFO  MissionOptimizer - Stage 'Gravity turn (S2)': massIn=21310 kg, massOut=20552 kg, propellant=759 kg, dV=124 m/s, duration=5 s
+12:23:20.994 INFO  MissionOptimizer - Stage 'Transfert': massIn=20552 kg, massOut=19279 kg, propellant=1272 kg, dV=218 m/s, duration=6976 s
+12:23:20.994 INFO  MissionOptimizer - Stage 'Trim': massIn=19279 kg, massOut=19222 kg, propellant=57 kg, dV=10 m/s, duration=5786 s
+12:23:20.995 INFO  MissionOptimizer - Stage 'Coasting': massIn=19222 kg, massOut=19222 kg, propellant=0 kg, dV=0 m/s, duration=0 s
+12:23:20.995 INFO  MissionOptimizer - Mission performance: total dV=8236 m/s, propellant loaded=1235310 kg, residual=222 kg (0.0%)
+12:23:20.995 INFO  MissionOptimizer - Stage propellant [0]: loaded=1233000 kg, consumed=1233000 kg, residual=0 kg (0.0% of its load)
+12:23:20.995 INFO  MissionOptimizer - Stage propellant [1]: loaded=2310 kg, consumed=2088 kg, residual=222 kg (9.6% of its load)
+12:23:20.995 INFO  MissionOptimizer - Stage propellant [2]: loaded=0 kg, consumed=0 kg, residual=0 kg (0.0% of its load)
+12:23:20.995 INFO  MissionOptimizer - Achieved orbit (osculating): 549450 x 569204 m (e=1.424e-03, i=5.2281 deg)
+12:23:20.995 INFO  MissionOptimizer - Achieved orbit (mean):       558804 x 559718 m (e=6.594e-05, i=5.2253 deg)
+12:23:20.995 INFO  MissionOptimizer - Restitution horizon: 48 revolutions -> 276028 s of trailing coast
+12:23:20.995 INFO  MissionEphemerisGenerator - Generating ephemeris for stage 'Vertical Ascent'
+12:23:20.996 INFO  MissionEphemerisGenerator - Stage 'Vertical Ascent': 9 points, ended at 2026-08-22T10:13:00.000Z
+12:23:20.996 INFO  MissionEphemerisGenerator - Generating ephemeris for stage 'Gravity turn (S1)'
+12:23:20.996 INFO  GravityTurnFirstBurnStage - [Gravity turn (S1)] staging: burn1 150.0s to first-stage burnout, jettison, then burn2 2.6s (MECO at 154.6s)
+12:23:21.002 INFO  MissionEphemerisGenerator - Stage 'Gravity turn (S1)': 160 points, ended at 2026-08-22T10:15:29.981659526315771244Z
+12:23:21.002 INFO  MissionEphemerisGenerator - Generating ephemeris for stage 'S1 separation'
+12:23:21.002 INFO  StageSeparationStage - [S1 separation] jettison: mass 87310 kg -> 21310 kg
+12:23:21.003 INFO  MissionEphemerisGenerator - Stage 'S1 separation': 162 points, ended at 2026-08-22T10:15:31.981659526315771244Z
+12:23:21.003 INFO  MissionEphemerisGenerator - Generating ephemeris for stage 'Gravity turn (S2)'
+12:23:21.003 INFO  MissionEphemerisGenerator - Stage 'Gravity turn (S2)': 166 points, ended at 2026-08-22T10:15:34.62184953225249728Z
+12:23:21.003 INFO  MissionEphemerisGenerator - Generating ephemeris for stage 'Transfert'
+12:23:21.113 INFO  MissionEphemerisGenerator - Stage 'Transfert': 7143 points, ended at 2026-08-22T12:11:50.435382563748760288Z
+12:23:21.113 INFO  MissionEphemerisGenerator - Generating ephemeris for stage 'Trim'
+12:23:21.117 INFO  AnalyticTrimBurnStage - Trim burn plan: dv=10.084580885978854 m/s, dt=0.1978973432571663s, apogee altitude 549.4503645143863 km, flown-band aim lift 19204.292433481663 m
+12:23:21.175 INFO  MissionEphemerisGenerator - Stage 'Trim': 12931 points, ended at 2026-08-22T13:48:16.572237397718985344Z
+12:23:21.175 INFO  MissionEphemerisGenerator - Generating ephemeris for stage 'Coasting'
+12:23:21.344 INFO  MissionEphemerisGenerator - Stage 'Coasting': 17533 points, ended at 2026-08-25T18:28:44.71342932095313144Z
+12:23:21.344 INFO  MissionEphemerisGenerator - Total ephemeris points: 17533 (complete=true, final coast 276028 s)
+12:23:21.366 INFO  MissionLoadEvaluator - λ=[1.0, 0.65] evaluation: objectiveMet=true, sized stage [1] residual=222 kg of its 2310 kg load (0.09629521058454578 vs floor 0.01), ephemerisComplete=true → feasible=true
+12:23:21.366 INFO  PropellantLoadOptimizer - Bisection eval 2/44: λ=0.65 feasible=true → bracket [0.3, 0.65] (width 0.35000000000000003)
+12:23:21.366 INFO  MissionOptimizer - MissionOptimizer running with explicit seed=42
+12:23:21.366 INFO  MissionOptimizer - Current mass = 1319688.3224858053
+12:23:21.366 INFO  MissionOptimizer - Propagating non-optimizable stage 'Vertical Ascent'...
+12:23:21.367 INFO  MissionOptimizer - Stage 'Vertical Ascent' done.
+12:23:21.367 INFO  MissionOptimizer - Current mass = 1264714.181248771
+12:23:21.367 INFO  MissionOptimizer - Optimizing stage 'Gravity turn (S1)'...
+12:23:21.367 INFO  CMAESTrajectoryOptimizer - CMA-ES optimizer initialized with seed=8004395815503774571
+12:23:26.141 INFO  CMAESTrajectoryOptimizer - Exploration 1/4: cost=0.01209457840502015, evals=613
+12:23:26.142 INFO  CMAESTrajectoryOptimizer - Exploration 2/4: cost=0.04704411073251, evals=583
+12:23:26.147 INFO  CMAESTrajectoryOptimizer - Exploration 3/4: cost=0.012226454432277128, evals=672
+12:23:26.147 INFO  CMAESTrajectoryOptimizer - Exploration 4/4: cost=0.05197706358828752, evals=567
+12:23:26.147 INFO  CMAESTrajectoryOptimizer - Target reached during exploration: cost=0.01209457840502015
+12:23:26.153 INFO  CMAESTrajectoryOptimizer - Final best cost=0.01209457840502015, total evals=2439, 1 of up to 3 attempt(s) run
+12:23:26.154 INFO  MissionOptimizer - Stage 'Gravity turn (S1)' optimized: cost=0.01209457840502015, values=[154.4648005662161, 0.3149041313281269], evaluations=2439
+12:23:26.154 INFO  MissionOptimizer - Stage 'Gravity turn (S1)' bound usage: transitionTime=25% | exponent=7%
+12:23:26.154 INFO  MissionOptimizer - Gravity turn end-state vs ideal Hohmann: alt=29989 m | vTan=8014.6 m/s (Δ=-24.5) | vRad=175.6 m/s (Δ=+175.6) | FPA=1.25° (Δ=+1.25°)
+12:23:26.154 INFO  GravityTurnFirstBurnStage - [Gravity turn (S1)] staging: burn1 150.0s to first-stage burnout, jettison, then burn2 2.5s (MECO at 154.5s)
+12:23:26.159 INFO  MissionOptimizer - Current mass = 86688.32248580533
+12:23:26.159 INFO  MissionOptimizer - Stage separation 'S1 separation': jettisoning stack stage 0 with 0 kg of propellant aboard
+12:23:26.159 INFO  MissionOptimizer - Propagating non-optimizable stage 'S1 separation'...
+12:23:26.159 INFO  StageSeparationStage - [S1 separation] jettison: mass 86688 kg -> 20688 kg
+12:23:26.159 INFO  MissionOptimizer - Stage 'S1 separation' done.
+12:23:26.159 INFO  MissionOptimizer - Current mass = 20688.322485805307
+12:23:26.159 INFO  MissionOptimizer - Propagating non-optimizable stage 'Gravity turn (S2)'...
+12:23:26.160 INFO  MissionOptimizer - Stage 'Gravity turn (S2)' done.
+12:23:26.160 INFO  MissionOptimizer - Current mass = 19974.819913529485
+12:23:26.160 INFO  MissionOptimizer - Optimizing stage 'Transfert'...
+12:23:26.160 INFO  TransferProblem - J2 altitude offset: 3139.9608994645932 m, effective perigee: 553139.9608994646 m, effective apogee: 553139.9608994646 m
+12:23:26.160 INFO  MissionLoadEvaluator - λ=[1.0, 0.475] evaluation failed to optimize (com.smousseur.orbitlab.core.OrbitlabException: Target orbit (perigee 550000 m, apogee 550000 m) infeasible with current vehicle stack: Hohmann Δv ≈ 175 m/s exceeds available Δv ≈ 171 m/s); treating as infeasible
+12:23:26.160 INFO  PropellantLoadOptimizer - Bisection eval 3/44: λ=0.475 feasible=false → bracket [0.475, 0.65] (width 0.17500000000000004)
+12:23:26.161 INFO  MissionOptimizer - MissionOptimizer running with explicit seed=42
+12:23:26.161 INFO  MissionOptimizer - Current mass = 1319999.3292595062
+12:23:26.161 INFO  MissionOptimizer - Propagating non-optimizable stage 'Vertical Ascent'...
+12:23:26.161 INFO  MissionOptimizer - Stage 'Vertical Ascent' done.
+12:23:26.161 INFO  MissionOptimizer - Current mass = 1265025.188022472
+12:23:26.161 INFO  MissionOptimizer - Optimizing stage 'Gravity turn (S1)'...
+12:23:26.162 INFO  CMAESTrajectoryOptimizer - CMA-ES optimizer initialized with seed=8004395815503774571
+12:23:31.670 INFO  CMAESTrajectoryOptimizer - Exploration 1/4: cost=0.012098355006045093, evals=637
+12:23:31.673 INFO  CMAESTrajectoryOptimizer - Exploration 2/4: cost=0.025959799506997228, evals=642
+12:23:31.677 INFO  CMAESTrajectoryOptimizer - Exploration 3/4: cost=0.0121086575563437, evals=711
+12:23:31.677 INFO  CMAESTrajectoryOptimizer - Exploration 4/4: cost=0.015536003117198148, evals=618
+12:23:31.677 INFO  CMAESTrajectoryOptimizer - Target reached during exploration: cost=0.012098355006045093
+12:23:31.683 INFO  CMAESTrajectoryOptimizer - Final best cost=0.012098355006045093, total evals=2612, 1 of up to 3 attempt(s) run
+12:23:31.683 INFO  MissionOptimizer - Stage 'Gravity turn (S1)' optimized: cost=0.012098355006045093, values=[154.4913815041863, 0.31498775848194766], evaluations=2612
+12:23:31.683 INFO  MissionOptimizer - Stage 'Gravity turn (S1)' bound usage: transitionTime=25% | exponent=7%
+12:23:31.684 INFO  MissionOptimizer - Gravity turn end-state vs ideal Hohmann: alt=29980 m | vTan=8004.3 m/s (Δ=-34.8) | vRad=175.2 m/s (Δ=+175.2) | FPA=1.25° (Δ=+1.25°)
+12:23:31.684 INFO  GravityTurnFirstBurnStage - [Gravity turn (S1)] staging: burn1 150.0s to first-stage burnout, jettison, then burn2 2.5s (MECO at 154.5s)
+12:23:31.689 INFO  MissionOptimizer - Current mass = 86999.32925950641
+12:23:31.689 INFO  MissionOptimizer - Stage separation 'S1 separation': jettisoning stack stage 0 with 0 kg of propellant aboard
+12:23:31.689 INFO  MissionOptimizer - Propagating non-optimizable stage 'S1 separation'...
+12:23:31.689 INFO  StageSeparationStage - [S1 separation] jettison: mass 86999 kg -> 20999 kg
+12:23:31.689 INFO  MissionOptimizer - Stage 'S1 separation' done.
+12:23:31.689 INFO  MissionOptimizer - Current mass = 20999.329259506285
+12:23:31.689 INFO  MissionOptimizer - Propagating non-optimizable stage 'Gravity turn (S2)'...
+12:23:31.690 INFO  MissionOptimizer - Stage 'Gravity turn (S2)' done.
+12:23:31.690 INFO  MissionOptimizer - Current mass = 20278.18587741733
+12:23:31.690 INFO  MissionOptimizer - Optimizing stage 'Transfert'...
+12:23:31.690 INFO  TransferProblem - J2 altitude offset: 3139.9609001940034 m, effective perigee: 553139.960900194 m, effective apogee: 553139.960900194 m
+12:23:31.690 INFO  TransferProblem - Initial guess for burn 1: T1=2163.261054180073, dt1=3.323994441666329, dv1=164.71714748751037, dv2≈20.218745085448973
+12:23:31.690 INFO  TransferProblem - Physical dt1 max: 4.446567883895599s (propellant available: 1278.1858774173306kg, Δv available: 222.19070218509236m/s)
+12:23:31.690 INFO  TransferProblem - Adaptive bounds — βMax: 0.39269908169872414 rad (adaptive=0.26457292889902784, π/8 floor active=true), t1Max: 2673.986525400651s, dt1Max: 13.295977766665317s, periapsisFloor: 275000.0m, W_E: 2.0
+12:23:31.690 INFO  TransferProblem - Inclination target: 0.0913854396344231 rad (5.236°), W_I=50.0
+12:23:31.690 INFO  TransferProblem - Propellant-aware term (I7): W_PROPELLANT=0.005, Hohmann Δv ref=184.93589257295935 m/s, Δv available=222.19070218509236 m/s, spendable margin=37.254809612133016 m/s (flame-out grades 0.005, acceptable cost 0.003)
+12:23:31.690 INFO  CMAESTrajectoryOptimizer - CMA-ES optimizer initialized with seed=-6657214946198437198
+12:23:31.690 INFO  CMAESTrajectoryOptimizer - Niveau 3.2: warm-start with pure analytical seed for run 0, initialGuess for run 1
+12:23:36.136 INFO  CMAESTrajectoryOptimizer - Exploration 1/4: cost=0.10540451988192054, evals=800
+12:23:40.059 INFO  CMAESTrajectoryOptimizer - Exploration 2/4: cost=0.0427917006092572, evals=473
+12:23:41.637 INFO  CMAESTrajectoryOptimizer - Exploration 3/4: cost=2.2359600206966115, evals=800
+12:23:51.308 INFO  CMAESTrajectoryOptimizer - Exploration 4/4: cost=0.017539776532846368, evals=800
+12:23:51.308 INFO  CMAESTrajectoryOptimizer - Refinement cascade starting from cost=0.017539776532846368, remaining budget=5123
+12:25:14.362 INFO  CMAESTrajectoryOptimizer - Refinement 1/3 (sigma×0.1): cost=0.005831444969493244, evals=1707
+12:25:21.848 INFO  CMAESTrajectoryOptimizer - Refinement 2/3 (sigma×0.03): cost=0.005831444969493244, evals=425
+12:25:21.848 INFO  CMAESTrajectoryOptimizer - Refinement cascade stopped after pass 2: plateau at cost=0.005831444969493244
+12:25:21.848 INFO  CMAESTrajectoryOptimizer - Attempt 1 converged in its box: the refinement cascade improved on its exploration and then exhausted it at cost=0.005831444969493244; a retry would search the same box
+12:25:21.900 INFO  CMAESTrajectoryOptimizer - Final best cost=0.005831444969493244, total evals=5009, 1 of up to 3 attempt(s) run
+12:25:21.900 WARN  CMAESTrajectoryOptimizer - Final cost 0.005831444969493244 above acceptable 0.003 after 1 of up to 3 attempt(s) — see the phase logs above for why the search stopped
+12:25:21.900 INFO  MissionOptimizer - Stage 'Transfert' optimized: cost=0.005831444969493244, values=[2673.986525400651, 1.9246871896588316, 0.40158694090272457, -0.002095455178381273], evaluations=5009
+12:25:21.900 INFO  MissionOptimizer - Stage 'Transfert' bound usage: t1=100%[HIGH-SAT] | dt1=2%[LOW-SAT] | α1=63% | β1=50%
+12:25:21.900 WARN  MissionOptimizer - Stage 'Transfert' parameter t1 saturated (HIGH): value=2673.986525400651 bounds=[0.0, 2673.986525400651] norm=1.0
+12:25:21.900 WARN  MissionOptimizer - Stage 'Transfert' parameter dt1 saturated (LOW): value=1.9246871896588316 bounds=[1.6619972208331646, 13.295977766665317] norm=0.022579543415153388
+12:25:21.955 INFO  MissionOptimizer - Post burn1 orbit: Keplerian parameters: {a: 6756545.582213489; e: 0.026311379931884114; i: 5.1518418332045375; pa: 12.608356310011544; raan: -18.08002359640107; v: -104.17957213289266;}
+12:25:21.955 INFO  MissionOptimizer - Circularization burn: ResolvedCircularizationBurn[dtCoast=4356.564032653003, dt2=1.989477996103209, dvNeeded=100.40744543105666]
+12:25:21.971 INFO  MissionOptimizer - Transfert Δv breakdown: total1=94.40458249880984 m/s, useful1=86.8937378453873 m/s, wasted1=7.510844653422538 m/s, dv2=100.40744543105666 m/s
+12:25:22.023 INFO  MissionOptimizer - Transfert barriers: peri=false(0.0), altMin=false(0.0), altMax=false(0.0)
+12:25:22.075 INFO  MissionOptimizer - Transfert propellant term: consumedΔv=194.8120279208323 m/s, HohmannΔv=184.93589257295935 m/s, excessΔv=9.876135347872946 m/s, availableΔv=222.19070218509236 m/s, costContribution=0.0013254846086579544
+12:25:22.128 INFO  MissionOptimizer - Current mass = 19153.04154301706
+12:25:22.128 INFO  MissionOptimizer - Propagating non-optimizable stage 'Trim'...
+12:25:22.133 INFO  AnalyticTrimBurnStage - Trim burn plan: dv=10.121332405853837 m/s, dt=0.19731612658572073s, apogee altitude 549.154971477054 km, flown-band aim lift 19198.21573239565 m
+12:25:22.161 INFO  MissionOptimizer - Stage 'Trim' done.
+12:25:22.161 INFO  MissionOptimizer - Current mass = 19096.322137609357
+12:25:22.161 INFO  MissionOptimizer - Propagating non-optimizable stage 'Coasting'...
+12:25:22.161 INFO  MissionOptimizer - Stage 'Coasting' done.
+12:25:22.161 INFO  MissionOptimizer - Stage 'Vertical Ascent': massIn=1319999 kg, massOut=1265025 kg, propellant=54974 kg, dV=123 m/s, duration=7 s
+12:25:22.162 INFO  MissionOptimizer - Stage 'Gravity turn (S1)': massIn=1265025 kg, massOut=86999 kg, propellant=1178026 kg, dV=7771 m/s, duration=150 s
+12:25:22.162 INFO  MissionOptimizer - Stage 'S1 separation': massIn=86999 kg, massOut=20999 kg, propellant=0 kg, dV=0 m/s, duration=0 s
+12:25:22.162 INFO  MissionOptimizer - Stage 'Gravity turn (S2)': massIn=20999 kg, massOut=20278 kg, propellant=721 kg, dV=119 m/s, duration=5 s
+12:25:22.162 INFO  MissionOptimizer - Stage 'Transfert': massIn=20278 kg, massOut=19153 kg, propellant=1125 kg, dV=195 m/s, duration=7034 s
+12:25:22.162 INFO  MissionOptimizer - Stage 'Trim': massIn=19153 kg, massOut=19096 kg, propellant=57 kg, dV=10 m/s, duration=5789 s
+12:25:22.162 INFO  MissionOptimizer - Stage 'Coasting': massIn=19096 kg, massOut=19096 kg, propellant=0 kg, dV=0 m/s, duration=0 s
+12:25:22.162 INFO  MissionOptimizer - Mission performance: total dV=8218 m/s, propellant loaded=1234999 kg, residual=96 kg (0.0%)
+12:25:22.162 INFO  MissionOptimizer - Stage propellant [0]: loaded=1233000 kg, consumed=1233000 kg, residual=0 kg (0.0% of its load)
+12:25:22.162 INFO  MissionOptimizer - Stage propellant [1]: loaded=1999 kg, consumed=1903 kg, residual=96 kg (4.8% of its load)
+12:25:22.162 INFO  MissionOptimizer - Stage propellant [2]: loaded=0 kg, consumed=0 kg, residual=0 kg (0.0% of its load)
+12:25:22.163 INFO  MissionOptimizer - Achieved orbit (osculating): 549155 x 569198 m (e=1.445e-03, i=5.2261 deg)
+12:25:22.163 INFO  MissionOptimizer - Achieved orbit (mean):       558509 x 559718 m (e=8.715e-05, i=5.2234 deg)
+12:25:22.163 INFO  MissionOptimizer - Restitution horizon: 48 revolutions -> 276019 s of trailing coast
+12:25:22.163 INFO  MissionEphemerisGenerator - Generating ephemeris for stage 'Vertical Ascent'
+12:25:22.164 INFO  MissionEphemerisGenerator - Stage 'Vertical Ascent': 9 points, ended at 2026-08-22T10:13:00.000Z
+12:25:22.164 INFO  MissionEphemerisGenerator - Generating ephemeris for stage 'Gravity turn (S1)'
+12:25:22.164 INFO  GravityTurnFirstBurnStage - [Gravity turn (S1)] staging: burn1 150.0s to first-stage burnout, jettison, then burn2 2.5s (MECO at 154.5s)
+12:25:22.171 INFO  MissionEphemerisGenerator - Stage 'Gravity turn (S1)': 160 points, ended at 2026-08-22T10:15:29.981659526315771244Z
+12:25:22.172 INFO  MissionEphemerisGenerator - Generating ephemeris for stage 'S1 separation'
+12:25:22.172 INFO  StageSeparationStage - [S1 separation] jettison: mass 86999 kg -> 20999 kg
+12:25:22.172 INFO  MissionEphemerisGenerator - Stage 'S1 separation': 162 points, ended at 2026-08-22T10:15:31.981659526315771244Z
+12:25:22.172 INFO  MissionEphemerisGenerator - Generating ephemeris for stage 'Gravity turn (S2)'
+12:25:22.172 INFO  MissionEphemerisGenerator - Stage 'Gravity turn (S2)': 166 points, ended at 2026-08-22T10:15:34.491381504186307456Z
+12:25:22.173 INFO  MissionEphemerisGenerator - Generating ephemeris for stage 'Transfert'
+12:25:22.280 INFO  MissionEphemerisGenerator - Stage 'Transfert': 7202 points, ended at 2026-08-22T12:12:48.95610474353716768Z
+12:25:22.280 INFO  MissionEphemerisGenerator - Generating ephemeris for stage 'Trim'
+12:25:22.284 INFO  AnalyticTrimBurnStage - Trim burn plan: dv=10.12133240447983 m/s, dt=0.19731612655869907s, apogee altitude 549.1549714770056 km, flown-band aim lift 19198.215732356533 m
+12:25:22.332 INFO  MissionEphemerisGenerator - Stage 'Trim': 12992 points, ended at 2026-08-22T13:49:17.618979708522976096Z
+12:25:22.332 INFO  MissionEphemerisGenerator - Generating ephemeris for stage 'Coasting'
+12:25:22.497 INFO  MissionEphemerisGenerator - Stage 'Coasting': 17594 points, ended at 2026-08-25T18:29:36.763956338631407072Z
+12:25:22.497 INFO  MissionEphemerisGenerator - Total ephemeris points: 17594 (complete=true, final coast 276019 s)
+12:25:22.514 INFO  MissionLoadEvaluator - λ=[1.0, 0.5625] evaluation: objectiveMet=true, sized stage [1] residual=96 kg of its 1999 kg load (0.04817722601285935 vs floor 0.01), ephemerisComplete=true → feasible=true
+12:25:22.514 INFO  PropellantLoadOptimizer - Bisection eval 4/44: λ=0.5625 feasible=true → bracket [0.475, 0.5625] (width 0.08750000000000002)
+12:25:22.514 INFO  MissionOptimizer - MissionOptimizer running with explicit seed=42
+12:25:22.515 INFO  MissionOptimizer - Current mass = 1319843.8258726557
+12:25:22.515 INFO  MissionOptimizer - Propagating non-optimizable stage 'Vertical Ascent'...
+12:25:22.515 INFO  MissionOptimizer - Stage 'Vertical Ascent' done.
+12:25:22.515 INFO  MissionOptimizer - Current mass = 1264869.6846356215
+12:25:22.515 INFO  MissionOptimizer - Optimizing stage 'Gravity turn (S1)'...
+12:25:22.515 INFO  CMAESTrajectoryOptimizer - CMA-ES optimizer initialized with seed=8004395815503774571
+12:25:28.207 INFO  CMAESTrajectoryOptimizer - Exploration 1/4: cost=0.011948187933573242, evals=703
+12:25:28.215 INFO  CMAESTrajectoryOptimizer - Exploration 2/4: cost=0.042081890241177144, evals=664
+12:25:28.215 INFO  CMAESTrajectoryOptimizer - Exploration 3/4: cost=0.01196772686987162, evals=748
+12:25:28.215 INFO  CMAESTrajectoryOptimizer - Exploration 4/4: cost=0.01525933540491265, evals=671
+12:25:28.215 INFO  CMAESTrajectoryOptimizer - Target reached during exploration: cost=0.011948187933573242
+12:25:28.225 INFO  CMAESTrajectoryOptimizer - Final best cost=0.011948187933573242, total evals=2790, 1 of up to 3 attempt(s) run
+12:25:28.225 INFO  MissionOptimizer - Stage 'Gravity turn (S1)' optimized: cost=0.011948187933573242, values=[154.27711175612433, 0.3155416424443446], evaluations=2790
+12:25:28.226 INFO  MissionOptimizer - Stage 'Gravity turn (S1)' bound usage: transitionTime=25% | exponent=7%
+12:25:28.226 INFO  MissionOptimizer - Gravity turn end-state vs ideal Hohmann: alt=29988 m | vTan=7999.3 m/s (Δ=-39.8) | vRad=174.1 m/s (Δ=+174.1) | FPA=1.25° (Δ=+1.25°)
+12:25:28.226 INFO  GravityTurnFirstBurnStage - [Gravity turn (S1)] staging: burn1 150.0s to first-stage burnout, jettison, then burn2 2.3s (MECO at 154.3s)
+12:25:28.234 INFO  MissionOptimizer - Current mass = 86843.83210337594
+12:25:28.234 INFO  MissionOptimizer - Stage separation 'S1 separation': jettisoning stack stage 0 with 0 kg of propellant aboard
+12:25:28.234 INFO  MissionOptimizer - Propagating non-optimizable stage 'S1 separation'...
+12:25:28.234 INFO  StageSeparationStage - [S1 separation] jettison: mass 86844 kg -> 20844 kg
+12:25:28.234 INFO  MissionOptimizer - Stage 'S1 separation' done.
+12:25:28.234 INFO  MissionOptimizer - Current mass = 20843.825872655798
+12:25:28.234 INFO  MissionOptimizer - Propagating non-optimizable stage 'Gravity turn (S2)'...
+12:25:28.235 INFO  MissionOptimizer - Stage 'Gravity turn (S2)' done.
+12:25:28.235 INFO  MissionOptimizer - Current mass = 20184.275290470454
+12:25:28.235 INFO  MissionOptimizer - Optimizing stage 'Transfert'...
+12:25:28.235 INFO  TransferProblem - J2 altitude offset: 3139.960904518969 m, effective perigee: 553139.960904519 m, effective apogee: 553139.960904519 m
+12:25:28.235 INFO  TransferProblem - Initial guess for burn 1: T1=2143.259357916664, dt1=3.3175187389855263, dv1=165.17205004062816, dv2≈24.812730543410908
+12:25:28.235 INFO  TransferProblem - Physical dt1 max: 4.119870642709116s (propellant available: 1184.275290470454kg, Δv available: 206.34932428474852m/s)
+12:25:28.235 INFO  TransferProblem - Adaptive bounds — βMax: 0.39269908169872414 rad (adaptive=0.2651980006191177, π/8 floor active=true), t1Max: 2668.618421204922s, dt1Max: 13.270074955942105s, periapsisFloor: 275000.0m, W_E: 2.0
+12:25:28.235 INFO  TransferProblem - Inclination target: 0.0913854396344231 rad (5.236°), W_I=50.0
+12:25:28.235 INFO  TransferProblem - Propellant-aware term (I7): W_PROPELLANT=0.005, Hohmann Δv ref=189.98478058403907 m/s, Δv available=206.34932428474852 m/s, spendable margin=16.364543700709447 m/s (flame-out grades 0.005, acceptable cost 0.003)
+12:25:28.236 INFO  CMAESTrajectoryOptimizer - CMA-ES optimizer initialized with seed=-6657214946198437198
+12:25:28.236 INFO  CMAESTrajectoryOptimizer - Niveau 3.2: warm-start with pure analytical seed for run 0, initialGuess for run 1
+12:25:32.537 INFO  CMAESTrajectoryOptimizer - Exploration 1/4: cost=1.3995857592789394, evals=800
+12:25:37.233 INFO  CMAESTrajectoryOptimizer - Exploration 2/4: cost=0.04443804670066282, evals=473
+12:25:41.518 INFO  CMAESTrajectoryOptimizer - Exploration 3/4: cost=1.6285271252928655, evals=800
+12:25:51.191 INFO  CMAESTrajectoryOptimizer - Exploration 4/4: cost=0.05211898095189688, evals=800
+12:25:51.192 INFO  CMAESTrajectoryOptimizer - Refinement cascade starting from cost=0.04443804670066282, remaining budget=5123
+12:27:03.274 INFO  CMAESTrajectoryOptimizer - Refinement 1/3 (sigma×0.1): cost=0.01557056532221622, evals=1707
+12:28:15.911 INFO  CMAESTrajectoryOptimizer - Refinement 2/3 (sigma×0.03): cost=0.008832114858197715, evals=1707
+12:29:39.604 INFO  CMAESTrajectoryOptimizer - Refinement 3/3 (sigma×0.01): cost=0.008831878786161712, evals=1707
+12:29:39.604 INFO  CMAESTrajectoryOptimizer - Attempt 1 converged in its box: the refinement cascade improved on its exploration and then exhausted it at cost=0.008831878786161712; a retry would search the same box
+12:29:39.652 INFO  CMAESTrajectoryOptimizer - Final best cost=0.008831878786161712, total evals=7998, 1 of up to 3 attempt(s) run
+12:29:39.652 WARN  CMAESTrajectoryOptimizer - Final cost 0.008831878786161712 above acceptable 0.003 after 1 of up to 3 attempt(s) — see the phase logs above for why the search stopped
+12:29:39.652 INFO  MissionOptimizer - Stage 'Transfert' optimized: cost=0.008831878786161712, values=[2668.618421204922, 2.095372549642781, 0.2596182943591532, -9.264399811430263E-4], evaluations=7998
+12:29:39.652 INFO  MissionOptimizer - Stage 'Transfert' bound usage: t1=100%[HIGH-SAT] | dt1=4%[LOW-SAT] | α1=58% | β1=50%
+12:29:39.652 WARN  MissionOptimizer - Stage 'Transfert' parameter t1 saturated (HIGH): value=2668.618421204922 bounds=[0.0, 2668.618421204922] norm=1.0
+12:29:39.652 WARN  MissionOptimizer - Stage 'Transfert' parameter dt1 saturated (LOW): value=2.095372549642781 bounds=[1.6587593694927631, 13.270074955942105] norm=0.03760238681821333
+12:29:39.704 INFO  MissionOptimizer - Post burn1 orbit: Keplerian parameters: {a: 6770522.5429777475; e: 0.02425543740854625; i: 5.151806357881225; pa: 2.424930071233183; raan: -18.0893831872896; v: -93.9700818094921;}
+12:29:39.704 INFO  MissionOptimizer - Circularization burn: ResolvedCircularizationBurn[dtCoast=4221.499995640408, dt2=1.8218158150009158, dvNeeded=92.51039859567481]
+12:29:39.719 INFO  MissionOptimizer - Transfert Δv breakdown: total1=103.39013165454804 m/s, useful1=99.9252824876713 m/s, wasted1=3.4648491668767463 m/s, dv2=92.51039859567481 m/s
+12:29:39.767 INFO  MissionOptimizer - Transfert barriers: peri=false(0.0), altMin=false(0.0), altMax=false(0.0)
+12:29:39.817 INFO  MissionOptimizer - Transfert propellant term: consumedΔv=195.90053024297436 m/s, HohmannΔv=189.98478058403907 m/s, excessΔv=5.915749658935283 m/s, availableΔv=206.34932428474852 m/s, costContribution=0.001807489951179885
+12:29:39.875 INFO  MissionOptimizer - Current mass = 19058.261929734042
+12:29:39.875 INFO  MissionOptimizer - Propagating non-optimizable stage 'Trim'...
+12:29:39.879 INFO  AnalyticTrimBurnStage - Trim burn plan: dv=10.210836771083832 m/s, dt=0.19807336305019616s, apogee altitude 547.8536047804616 km, flown-band aim lift 19214.488007215783 m
+12:29:39.912 INFO  MissionOptimizer - Stage 'Trim' done.
+12:29:39.912 INFO  MissionOptimizer - Current mass = 19001.324853305294
+12:29:39.912 INFO  MissionOptimizer - Propagating non-optimizable stage 'Coasting'...
+12:29:39.912 INFO  MissionOptimizer - Stage 'Coasting' done.
+12:29:39.913 INFO  MissionOptimizer - Stage 'Vertical Ascent': massIn=1319844 kg, massOut=1264870 kg, propellant=54974 kg, dV=123 m/s, duration=7 s
+12:29:39.913 INFO  MissionOptimizer - Stage 'Gravity turn (S1)': massIn=1264870 kg, massOut=86844 kg, propellant=1178026 kg, dV=7775 m/s, duration=150 s
+12:29:39.913 INFO  MissionOptimizer - Stage 'S1 separation': massIn=86844 kg, massOut=20844 kg, propellant=0 kg, dV=0 m/s, duration=0 s
+12:29:39.913 INFO  MissionOptimizer - Stage 'Gravity turn (S2)': massIn=20844 kg, massOut=20184 kg, propellant=660 kg, dV=110 m/s, duration=4 s
+12:29:39.913 INFO  MissionOptimizer - Stage 'Transfert': massIn=20184 kg, massOut=19058 kg, propellant=1126 kg, dV=196 m/s, duration=6894 s
+12:29:39.913 INFO  MissionOptimizer - Stage 'Trim': massIn=19058 kg, massOut=19001 kg, propellant=57 kg, dV=10 m/s, duration=5892 s
+12:29:39.913 INFO  MissionOptimizer - Stage 'Coasting': massIn=19001 kg, massOut=19001 kg, propellant=0 kg, dV=0 m/s, duration=0 s
+12:29:39.913 INFO  MissionOptimizer - Mission performance: total dV=8215 m/s, propellant loaded=1234844 kg, residual=1 kg (0.0%)
+12:29:39.913 INFO  MissionOptimizer - Stage propellant [0]: loaded=1233000 kg, consumed=1233000 kg, residual=0 kg (0.0% of its load)
+12:29:39.913 INFO  MissionOptimizer - Stage propellant [1]: loaded=1844 kg, consumed=1843 kg, residual=1 kg (0.1% of its load)
+12:29:39.913 INFO  MissionOptimizer - Stage propellant [2]: loaded=0 kg, consumed=0 kg, residual=0 kg (0.0% of its load)
+12:29:39.914 INFO  MissionOptimizer - Achieved orbit (osculating): 547854 x 569214 m (e=1.540e-03, i=5.2290 deg)
+12:29:39.914 INFO  MissionOptimizer - Achieved orbit (mean):       557207 x 559720 m (e=1.811e-04, i=5.2260 deg)
+12:29:39.914 INFO  MissionOptimizer - Restitution horizon: 48 revolutions -> 275981 s of trailing coast
+12:29:39.914 INFO  MissionEphemerisGenerator - Generating ephemeris for stage 'Vertical Ascent'
+12:29:39.915 INFO  MissionEphemerisGenerator - Stage 'Vertical Ascent': 9 points, ended at 2026-08-22T10:13:00.000Z
+12:29:39.915 INFO  MissionEphemerisGenerator - Generating ephemeris for stage 'Gravity turn (S1)'
+12:29:39.916 INFO  GravityTurnFirstBurnStage - [Gravity turn (S1)] staging: burn1 150.0s to first-stage burnout, jettison, then burn2 2.3s (MECO at 154.3s)
+12:29:39.924 INFO  MissionEphemerisGenerator - Stage 'Gravity turn (S1)': 160 points, ended at 2026-08-22T10:15:29.981659526315771244Z
+12:29:39.924 INFO  MissionEphemerisGenerator - Generating ephemeris for stage 'S1 separation'
+12:29:39.924 INFO  StageSeparationStage - [S1 separation] jettison: mass 86844 kg -> 20844 kg
+12:29:39.924 INFO  MissionEphemerisGenerator - Stage 'S1 separation': 162 points, ended at 2026-08-22T10:15:31.981659526315771244Z
+12:29:39.924 INFO  MissionEphemerisGenerator - Generating ephemeris for stage 'Gravity turn (S2)'
+12:29:39.925 INFO  MissionEphemerisGenerator - Stage 'Gravity turn (S2)': 166 points, ended at 2026-08-22T10:15:34.277111756124327264Z
+12:29:39.925 INFO  MissionEphemerisGenerator - Generating ephemeris for stage 'Transfert'
+12:29:40.036 INFO  MissionEphemerisGenerator - Stage 'Transfert': 7062 points, ended at 2026-08-22T12:10:28.312716965818367504Z
+12:29:40.036 INFO  MissionEphemerisGenerator - Generating ephemeris for stage 'Trim'
+12:29:40.040 INFO  AnalyticTrimBurnStage - Trim burn plan: dv=10.210836769526328 m/s, dt=0.1980733630199501s, apogee altitude 547.8536047804412 km, flown-band aim lift 19214.488007126376 m
+12:29:40.085 INFO  MissionEphemerisGenerator - Stage 'Trim': 12956 points, ended at 2026-08-22T13:48:40.589716688397576Z
+12:29:40.085 INFO  MissionEphemerisGenerator - Generating ephemeris for stage 'Coasting'
+12:29:40.245 INFO  MissionEphemerisGenerator - Stage 'Coasting': 17557 points, ended at 2026-08-25T18:28:21.387513764336009408Z
+12:29:40.245 INFO  MissionEphemerisGenerator - Total ephemeris points: 17557 (complete=true, final coast 275981 s)
+12:29:40.261 INFO  MissionLoadEvaluator - λ=[1.0, 0.51875] evaluation: objectiveMet=true, sized stage [1] residual=1 kg of its 1844 kg load (7.185349359402998E-4 vs floor 0.01), ephemerisComplete=true → feasible=false
+12:29:40.261 INFO  PropellantLoadOptimizer - Bisection eval 5/44: λ=0.51875 feasible=false → bracket [0.51875, 0.5625] (width 0.043749999999999956)
+12:29:40.261 INFO  MissionOptimizer - MissionOptimizer running with explicit seed=42
+12:29:40.261 INFO  MissionOptimizer - Current mass = 1319921.577566081
+12:29:40.262 INFO  MissionOptimizer - Propagating non-optimizable stage 'Vertical Ascent'...
+12:29:40.262 INFO  MissionOptimizer - Stage 'Vertical Ascent' done.
+12:29:40.262 INFO  MissionOptimizer - Current mass = 1264947.4363290467
+12:29:40.262 INFO  MissionOptimizer - Optimizing stage 'Gravity turn (S1)'...
+12:29:40.262 INFO  CMAESTrajectoryOptimizer - CMA-ES optimizer initialized with seed=8004395815503774571
+12:29:45.672 INFO  CMAESTrajectoryOptimizer - Exploration 1/4: cost=0.012126619573573624, evals=685
+12:29:45.679 INFO  CMAESTrajectoryOptimizer - Exploration 2/4: cost=0.016584683729549646, evals=687
+12:29:45.679 INFO  CMAESTrajectoryOptimizer - Exploration 3/4: cost=0.012059463153442014, evals=753
+12:29:45.679 INFO  CMAESTrajectoryOptimizer - Exploration 4/4: cost=0.01669351607159972, evals=687
+12:29:45.679 INFO  CMAESTrajectoryOptimizer - Target reached during exploration: cost=0.012059463153442014
+12:29:45.685 INFO  CMAESTrajectoryOptimizer - Final best cost=0.012059463153442014, total evals=2816, 1 of up to 3 attempt(s) run
+12:29:45.685 INFO  MissionOptimizer - Stage 'Gravity turn (S1)' optimized: cost=0.012059463153442014, values=[154.4176521745595, 0.3151500983895507], evaluations=2816
+12:29:45.685 INFO  MissionOptimizer - Stage 'Gravity turn (S1)' bound usage: transitionTime=25% | exponent=7%
+12:29:45.685 INFO  MissionOptimizer - Gravity turn end-state vs ideal Hohmann: alt=29979 m | vTan=8003.5 m/s (Δ=-35.6) | vRad=174.8 m/s (Δ=+174.8) | FPA=1.25° (Δ=+1.25°)
+12:29:45.686 INFO  GravityTurnFirstBurnStage - [Gravity turn (S1)] staging: burn1 150.0s to first-stage burnout, jettison, then burn2 2.4s (MECO at 154.4s)
+12:29:45.691 INFO  MissionOptimizer - Current mass = 86921.58369358044
+12:29:45.692 INFO  MissionOptimizer - Stage separation 'S1 separation': jettisoning stack stage 0 with 0 kg of propellant aboard
+12:29:45.692 INFO  MissionOptimizer - Propagating non-optimizable stage 'S1 separation'...
+12:29:45.692 INFO  StageSeparationStage - [S1 separation] jettison: mass 86922 kg -> 20922 kg
+12:29:45.692 INFO  MissionOptimizer - Stage 'S1 separation' done.
+12:29:45.692 INFO  MissionOptimizer - Current mass = 20921.57756608104
+12:29:45.692 INFO  MissionOptimizer - Propagating non-optimizable stage 'Gravity turn (S2)'...
+12:29:45.692 INFO  MissionOptimizer - Stage 'Gravity turn (S2)' done.
+12:29:45.692 INFO  MissionOptimizer - Current mass = 20221.62801040858
+12:29:45.693 INFO  MissionOptimizer - Optimizing stage 'Transfert'...
+12:29:45.693 INFO  TransferProblem - J2 altitude offset: 3139.9609015017927 m, effective perigee: 553139.9609015018 m, effective apogee: 553139.9609015018 m
+12:29:45.693 INFO  TransferProblem - Initial guess for burn 1: T1=2160.5904064187894, dt1=3.315563764264037, dv1=164.75992712042807, dv2≈20.97323107676766
+12:29:45.693 INFO  TransferProblem - Physical dt1 max: 4.24981371889818s (propellant available: 1221.6280104085818kg, Δv available: 212.65900597183924m/s)
+12:29:45.693 INFO  TransferProblem - Adaptive bounds — βMax: 0.39269908169872414 rad (adaptive=0.26467571573260473, π/8 floor active=true), t1Max: 2673.135367132173s, dt1Max: 13.262255057056148s, periapsisFloor: 275000.0m, W_E: 2.0
+12:29:45.693 INFO  TransferProblem - Inclination target: 0.0913854396344231 rad (5.236°), W_I=50.0
+12:29:45.693 INFO  TransferProblem - Propellant-aware term (I7): W_PROPELLANT=0.005, Hohmann Δv ref=185.73315819719573 m/s, Δv available=212.65900597183924 m/s, spendable margin=26.9258477746435 m/s (flame-out grades 0.005, acceptable cost 0.003)
+12:29:45.693 INFO  CMAESTrajectoryOptimizer - CMA-ES optimizer initialized with seed=-6657214946198437198
+12:29:45.693 INFO  CMAESTrajectoryOptimizer - Niveau 3.2: warm-start with pure analytical seed for run 0, initialGuess for run 1
+12:29:49.562 INFO  CMAESTrajectoryOptimizer - Exploration 1/4: cost=0.7446643407029403, evals=800
+12:29:54.048 INFO  CMAESTrajectoryOptimizer - Exploration 2/4: cost=0.04331135101714536, evals=473
+12:30:01.280 INFO  CMAESTrajectoryOptimizer - Exploration 3/4: cost=0.06419467842322381, evals=800
+12:30:12.778 INFO  CMAESTrajectoryOptimizer - Exploration 4/4: cost=0.022118856969612015, evals=800
+12:30:12.779 INFO  CMAESTrajectoryOptimizer - Refinement cascade starting from cost=0.022118856969612015, remaining budget=5123
+12:31:33.781 INFO  CMAESTrajectoryOptimizer - Refinement 1/3 (sigma×0.1): cost=0.006540260467558628, evals=1707
+12:31:40.602 INFO  CMAESTrajectoryOptimizer - Refinement 2/3 (sigma×0.03): cost=0.006540260467558628, evals=401
+12:31:40.602 INFO  CMAESTrajectoryOptimizer - Refinement cascade stopped after pass 2: plateau at cost=0.006540260467558628
+12:31:40.602 INFO  CMAESTrajectoryOptimizer - Attempt 1 converged in its box: the refinement cascade improved on its exploration and then exhausted it at cost=0.006540260467558628; a retry would search the same box
+12:31:40.655 INFO  CMAESTrajectoryOptimizer - Final best cost=0.006540260467558628, total evals=4985, 1 of up to 3 attempt(s) run
+12:31:40.655 WARN  CMAESTrajectoryOptimizer - Final cost 0.006540260467558628 above acceptable 0.003 after 1 of up to 3 attempt(s) — see the phase logs above for why the search stopped
+12:31:40.655 INFO  MissionOptimizer - Stage 'Transfert' optimized: cost=0.006540260467558628, values=[2673.135367132173, 1.9674664201533345, 0.3321084709210463, -0.0014865209269387923], evaluations=4985
+12:31:40.655 INFO  MissionOptimizer - Stage 'Transfert' bound usage: t1=100%[HIGH-SAT] | dt1=3%[LOW-SAT] | α1=61% | β1=50%
+12:31:40.655 WARN  MissionOptimizer - Stage 'Transfert' parameter t1 saturated (HIGH): value=2673.135367132173 bounds=[0.0, 2673.135367132173] norm=1.0
+12:31:40.655 WARN  MissionOptimizer - Stage 'Transfert' parameter dt1 saturated (LOW): value=1.9674664201533345 bounds=[1.6577818821320185, 13.262255057056148] norm=0.026686652065386913
+12:31:40.705 INFO  MissionOptimizer - Post burn1 orbit: Keplerian parameters: {a: 6763232.914274506; e: 0.025309412825475823; i: 5.1518279647716545; pa: 9.827775492884584; raan: -18.08469535056426; v: -101.38771367930619;}
+12:31:40.705 INFO  MissionOptimizer - Circularization burn: ResolvedCircularizationBurn[dtCoast=4323.91336360091, dt2=1.9076073295170655, dvNeeded=96.55854343636202]
+12:31:40.722 INFO  MissionOptimizer - Transfert Δv breakdown: total1=96.80668781649578 m/s, useful1=91.51677942567487 m/s, wasted1=5.289908390820912 m/s, dv2=96.55854343636202 m/s
+12:31:40.773 INFO  MissionOptimizer - Transfert barriers: peri=false(0.0), altMin=false(0.0), altMax=false(0.0)
+12:31:40.825 INFO  MissionOptimizer - Transfert propellant term: consumedΔv=193.36523124375137 m/s, HohmannΔv=185.73315819719573 m/s, excessΔv=7.632073046555632 m/s, availableΔv=212.65900597183924 m/s, costContribution=0.0014172391358727946
+12:31:40.877 INFO  MissionOptimizer - Current mass = 19107.720684605916
+12:31:40.877 INFO  MissionOptimizer - Propagating non-optimizable stage 'Trim'...
+12:31:40.881 INFO  AnalyticTrimBurnStage - Trim burn plan: dv=10.196062517352376 m/s, dt=0.19830047924414468s, apogee altitude 548.7852951674982 km, flown-band aim lift 19206.098056335002 m
+12:31:40.910 INFO  MissionOptimizer - Stage 'Trim' done.
+12:31:40.911 INFO  MissionOptimizer - Current mass = 19050.718322617704
+12:31:40.911 INFO  MissionOptimizer - Propagating non-optimizable stage 'Coasting'...
+12:31:40.911 INFO  MissionOptimizer - Stage 'Coasting' done.
+12:31:40.911 INFO  MissionOptimizer - Stage 'Vertical Ascent': massIn=1319922 kg, massOut=1264947 kg, propellant=54974 kg, dV=123 m/s, duration=7 s
+12:31:40.911 INFO  MissionOptimizer - Stage 'Gravity turn (S1)': massIn=1264947 kg, massOut=86922 kg, propellant=1178026 kg, dV=7773 m/s, duration=150 s
+12:31:40.911 INFO  MissionOptimizer - Stage 'S1 separation': massIn=86922 kg, massOut=20922 kg, propellant=0 kg, dV=0 m/s, duration=0 s
+12:31:40.911 INFO  MissionOptimizer - Stage 'Gravity turn (S2)': massIn=20922 kg, massOut=20222 kg, propellant=700 kg, dV=116 m/s, duration=4 s
+12:31:40.911 INFO  MissionOptimizer - Stage 'Transfert': massIn=20222 kg, massOut=19108 kg, propellant=1114 kg, dV=193 m/s, duration=7001 s
+12:31:40.911 INFO  MissionOptimizer - Stage 'Trim': massIn=19108 kg, massOut=19051 kg, propellant=57 kg, dV=10 m/s, duration=5801 s
+12:31:40.911 INFO  MissionOptimizer - Stage 'Coasting': massIn=19051 kg, massOut=19051 kg, propellant=0 kg, dV=0 m/s, duration=0 s
+12:31:40.911 INFO  MissionOptimizer - Mission performance: total dV=8216 m/s, propellant loaded=1234922 kg, residual=51 kg (0.0%)
+12:31:40.911 INFO  MissionOptimizer - Stage propellant [0]: loaded=1233000 kg, consumed=1233000 kg, residual=0 kg (0.0% of its load)
+12:31:40.911 INFO  MissionOptimizer - Stage propellant [1]: loaded=1922 kg, consumed=1871 kg, residual=51 kg (2.6% of its load)
+12:31:40.911 INFO  MissionOptimizer - Stage propellant [2]: loaded=0 kg, consumed=0 kg, residual=0 kg (0.0% of its load)
+12:31:40.911 INFO  MissionOptimizer - Achieved orbit (osculating): 548785 x 569206 m (e=1.472e-03, i=5.2278 deg)
+12:31:40.911 INFO  MissionOptimizer - Achieved orbit (mean):       558139 x 559719 m (e=1.139e-04, i=5.2249 deg)
+12:31:40.912 INFO  MissionOptimizer - Restitution horizon: 48 revolutions -> 276008 s of trailing coast
+12:31:40.912 INFO  MissionEphemerisGenerator - Generating ephemeris for stage 'Vertical Ascent'
+12:31:40.912 INFO  MissionEphemerisGenerator - Stage 'Vertical Ascent': 9 points, ended at 2026-08-22T10:13:00.000Z
+12:31:40.912 INFO  MissionEphemerisGenerator - Generating ephemeris for stage 'Gravity turn (S1)'
+12:31:40.912 INFO  GravityTurnFirstBurnStage - [Gravity turn (S1)] staging: burn1 150.0s to first-stage burnout, jettison, then burn2 2.4s (MECO at 154.4s)
+12:31:40.919 INFO  MissionEphemerisGenerator - Stage 'Gravity turn (S1)': 160 points, ended at 2026-08-22T10:15:29.981659526315771244Z
+12:31:40.919 INFO  MissionEphemerisGenerator - Generating ephemeris for stage 'S1 separation'
+12:31:40.919 INFO  StageSeparationStage - [S1 separation] jettison: mass 86922 kg -> 20922 kg
+12:31:40.919 INFO  MissionEphemerisGenerator - Stage 'S1 separation': 162 points, ended at 2026-08-22T10:15:31.981659526315771244Z
+12:31:40.919 INFO  MissionEphemerisGenerator - Generating ephemeris for stage 'Gravity turn (S2)'
+12:31:40.919 INFO  MissionEphemerisGenerator - Stage 'Gravity turn (S2)': 166 points, ended at 2026-08-22T10:15:34.417652174559492544Z
+12:31:40.919 INFO  MissionEphemerisGenerator - Generating ephemeris for stage 'Transfert'
+12:31:41.030 INFO  MissionEphemerisGenerator - Stage 'Transfert': 7168 points, ended at 2026-08-22T12:12:15.3414566571856028Z
+12:31:41.031 INFO  MissionEphemerisGenerator - Generating ephemeris for stage 'Trim'
+12:31:41.035 INFO  AnalyticTrimBurnStage - Trim burn plan: dv=10.196062516802863 m/s, dt=0.19830047923337032s, apogee altitude 548.7852951674871 km, flown-band aim lift 19206.098056316376 m
+12:31:41.080 INFO  MissionEphemerisGenerator - Stage 'Trim': 12970 points, ended at 2026-08-22T13:48:55.965115984098170592Z
+12:31:41.081 INFO  MissionEphemerisGenerator - Generating ephemeris for stage 'Coasting'
+12:31:41.240 INFO  MissionEphemerisGenerator - Stage 'Coasting': 17572 points, ended at 2026-08-25T18:29:04.314069337979540896Z
+12:31:41.240 INFO  MissionEphemerisGenerator - Total ephemeris points: 17572 (complete=true, final coast 276008 s)
+12:31:41.247 INFO  MissionLoadEvaluator - λ=[1.0, 0.540625] evaluation: objectiveMet=true, sized stage [1] residual=51 kg of its 1922 kg load (0.026394106338960544 vs floor 0.01), ephemerisComplete=true → feasible=true
+12:31:41.247 INFO  PropellantLoadOptimizer - Bisection eval 6/44: λ=0.540625 feasible=true → bracket [0.51875, 0.540625] (width 0.021874999999999978)
+12:31:41.248 INFO  MissionOptimizer - MissionOptimizer running with explicit seed=42
+12:31:41.248 INFO  MissionOptimizer - Current mass = 1319882.7017193683
+12:31:41.248 INFO  MissionOptimizer - Propagating non-optimizable stage 'Vertical Ascent'...
+12:31:41.248 INFO  MissionOptimizer - Stage 'Vertical Ascent' done.
+12:31:41.248 INFO  MissionOptimizer - Current mass = 1264908.560482334
+12:31:41.248 INFO  MissionOptimizer - Optimizing stage 'Gravity turn (S1)'...
+12:31:41.248 INFO  CMAESTrajectoryOptimizer - CMA-ES optimizer initialized with seed=8004395815503774571
+12:31:46.624 INFO  CMAESTrajectoryOptimizer - Exploration 1/4: cost=0.012009267291337705, evals=661
+12:31:46.626 INFO  CMAESTrajectoryOptimizer - Exploration 2/4: cost=0.016995619877156698, evals=686
+12:31:46.627 INFO  CMAESTrajectoryOptimizer - Exploration 3/4: cost=0.012019580103594553, evals=748
+12:31:46.628 INFO  CMAESTrajectoryOptimizer - Exploration 4/4: cost=0.019717817324542752, evals=635
+12:31:46.628 INFO  CMAESTrajectoryOptimizer - Target reached during exploration: cost=0.012009267291337705
+12:31:46.634 INFO  CMAESTrajectoryOptimizer - Final best cost=0.012009267291337705, total evals=2734, 1 of up to 3 attempt(s) run
+12:31:46.634 INFO  MissionOptimizer - Stage 'Gravity turn (S1)' optimized: cost=0.012009267291337705, values=[154.37359325774906, 0.31530019139378296], evaluations=2734
+12:31:46.634 INFO  MissionOptimizer - Stage 'Gravity turn (S1)' bound usage: transitionTime=25% | exponent=7%
+12:31:46.634 INFO  MissionOptimizer - Gravity turn end-state vs ideal Hohmann: alt=29993 m | vTan=8002.7 m/s (Δ=-36.4) | vRad=174.7 m/s (Δ=+174.7) | FPA=1.25° (Δ=+1.25°)
+12:31:46.634 INFO  GravityTurnFirstBurnStage - [Gravity turn (S1)] staging: burn1 150.0s to first-stage burnout, jettison, then burn2 2.4s (MECO at 154.4s)
+12:31:46.639 INFO  MissionOptimizer - Current mass = 86882.70789222576
+12:31:46.639 INFO  MissionOptimizer - Stage separation 'S1 separation': jettisoning stack stage 0 with 0 kg of propellant aboard
+12:31:46.639 INFO  MissionOptimizer - Propagating non-optimizable stage 'S1 separation'...
+12:31:46.639 INFO  StageSeparationStage - [S1 separation] jettison: mass 86883 kg -> 20883 kg
+12:31:46.640 INFO  MissionOptimizer - Stage 'S1 separation' done.
+12:31:46.640 INFO  MissionOptimizer - Current mass = 20882.70171936842
+12:31:46.640 INFO  MissionOptimizer - Propagating non-optimizable stage 'Gravity turn (S2)'...
+12:31:46.640 INFO  MissionOptimizer - Stage 'Gravity turn (S2)' done.
+12:31:46.640 INFO  MissionOptimizer - Current mass = 20195.41709690104
+12:31:46.640 INFO  MissionOptimizer - Optimizing stage 'Transfert'...
+12:31:46.640 INFO  TransferProblem - J2 altitude offset: 3139.9609025593795 m, effective perigee: 553139.9609025593 m, effective apogee: 553139.9609025593 m
+12:31:46.640 INFO  TransferProblem - Initial guess for burn 1: T1=2157.0209916721133, dt1=3.312992246766296, dv1=164.8479192695413, dv2≈21.725533027484744
+12:31:46.640 INFO  TransferProblem - Physical dt1 max: 4.158630888396492s (propellant available: 1195.417096901041kg, Δv available: 208.23263739271016m/s)
+12:31:46.640 INFO  TransferProblem - Adaptive bounds — βMax: 0.39269908169872414 rad (adaptive=0.264778154434423, π/8 floor active=true), t1Max: 2672.242080351704s, dt1Max: 13.251968987065183s, periapsisFloor: 275000.0m, W_E: 2.0
+12:31:46.640 INFO  TransferProblem - Inclination target: 0.0913854396344231 rad (5.236°), W_I=50.0
+12:31:46.640 INFO  TransferProblem - Propellant-aware term (I7): W_PROPELLANT=0.005, Hohmann Δv ref=186.57345229702605 m/s, Δv available=208.23263739271016 m/s, spendable margin=21.65918509568411 m/s (flame-out grades 0.005, acceptable cost 0.003)
+12:31:46.641 INFO  CMAESTrajectoryOptimizer - CMA-ES optimizer initialized with seed=-6657214946198437198
+12:31:46.641 INFO  CMAESTrajectoryOptimizer - Niveau 3.2: warm-start with pure analytical seed for run 0, initialGuess for run 1
+12:31:50.428 INFO  CMAESTrajectoryOptimizer - Exploration 1/4: cost=1.2892026914688517, evals=800
+12:31:54.880 INFO  CMAESTrajectoryOptimizer - Exploration 2/4: cost=0.043752497704768696, evals=473
+12:32:02.799 INFO  CMAESTrajectoryOptimizer - Exploration 3/4: cost=0.9457358054284863, evals=800
+12:32:10.445 INFO  CMAESTrajectoryOptimizer - Exploration 4/4: cost=0.026692735058700817, evals=800
+12:32:10.445 INFO  CMAESTrajectoryOptimizer - Refinement cascade starting from cost=0.026692735058700817, remaining budget=5123
+12:33:31.318 INFO  CMAESTrajectoryOptimizer - Refinement 1/3 (sigma×0.1): cost=0.007137015346405516, evals=1707
+12:33:38.479 INFO  CMAESTrajectoryOptimizer - Refinement 2/3 (sigma×0.03): cost=0.007137015346405516, evals=417
+12:33:38.479 INFO  CMAESTrajectoryOptimizer - Refinement cascade stopped after pass 2: plateau at cost=0.007137015346405516
+12:33:38.479 INFO  CMAESTrajectoryOptimizer - Attempt 1 converged in its box: the refinement cascade improved on its exploration and then exhausted it at cost=0.007137015346405516; a retry would search the same box
+12:33:38.527 INFO  CMAESTrajectoryOptimizer - Final best cost=0.007137015346405516, total evals=5001, 1 of up to 3 attempt(s) run
+12:33:38.528 WARN  CMAESTrajectoryOptimizer - Final cost 0.007137015346405516 above acceptable 0.003 after 1 of up to 3 attempt(s) — see the phase logs above for why the search stopped
+12:33:38.528 INFO  MissionOptimizer - Stage 'Transfert' optimized: cost=0.007137015346405516, values=[2672.242080351704, 2.0024232293708506, 0.29228289068432, -0.0011911037526115566], evaluations=5001
+12:33:38.528 INFO  MissionOptimizer - Stage 'Transfert' bound usage: t1=100%[HIGH-SAT] | dt1=3%[LOW-SAT] | α1=59% | β1=50%
+12:33:38.528 WARN  MissionOptimizer - Stage 'Transfert' parameter t1 saturated (HIGH): value=2672.242080351704 bounds=[0.0, 2672.242080351704] norm=1.0
+12:33:38.528 WARN  MissionOptimizer - Stage 'Transfert' parameter dt1 saturated (LOW): value=2.0024232293708506 bounds=[1.656496123383148, 13.251968987065183] norm=0.02983294515492978
+12:33:38.588 INFO  MissionOptimizer - Post burn1 orbit: Keplerian parameters: {a: 6766982.782323658; e: 0.024750074150942113; i: 5.151820120736745; pa: 7.7047395394579405; raan: -18.08703518505241; v: -99.26298244741197;}
+12:33:38.589 INFO  MissionOptimizer - Circularization burn: ResolvedCircularizationBurn[dtCoast=4297.10983731123, dt2=1.8623178182594533, dvNeeded=94.41073444375252]
+12:33:38.604 INFO  MissionOptimizer - Transfert Δv breakdown: total1=98.6815409419678 m/s, useful1=94.49624977096111 m/s, wasted1=4.185291171006682 m/s, dv2=94.41073444375252 m/s
+12:33:38.659 INFO  MissionOptimizer - Transfert barriers: peri=false(0.0), altMin=false(0.0), altMax=false(0.0)
+12:33:38.712 INFO  MissionOptimizer - Transfert propellant term: consumedΔv=193.0922753806378 m/s, HohmannΔv=186.57345229702605 m/s, excessΔv=6.51882308361175 m/s, availableΔv=208.23263739271016 m/s, costContribution=0.00150486342279579
+12:33:38.766 INFO  MissionOptimizer - Current mass = 19084.47995261034
+12:33:38.766 INFO  MissionOptimizer - Propagating non-optimizable stage 'Trim'...
+12:33:38.772 INFO  AnalyticTrimBurnStage - Trim burn plan: dv=10.237450863919946 m/s, dt=0.1988620527480751s, apogee altitude 548.4902731549461 km, flown-band aim lift 19211.097030339763 m
+12:33:38.802 INFO  MissionOptimizer - Stage 'Trim' done.
+12:33:38.802 INFO  MissionOptimizer - Current mass = 19027.31616384217
+12:33:38.802 INFO  MissionOptimizer - Propagating non-optimizable stage 'Coasting'...
+12:33:38.802 INFO  MissionOptimizer - Stage 'Coasting' done.
+12:33:38.802 INFO  MissionOptimizer - Stage 'Vertical Ascent': massIn=1319883 kg, massOut=1264909 kg, propellant=54974 kg, dV=123 m/s, duration=7 s
+12:33:38.802 INFO  MissionOptimizer - Stage 'Gravity turn (S1)': massIn=1264909 kg, massOut=86883 kg, propellant=1178026 kg, dV=7774 m/s, duration=150 s
+12:33:38.802 INFO  MissionOptimizer - Stage 'S1 separation': massIn=86883 kg, massOut=20883 kg, propellant=0 kg, dV=0 m/s, duration=0 s
+12:33:38.802 INFO  MissionOptimizer - Stage 'Gravity turn (S2)': massIn=20883 kg, massOut=20195 kg, propellant=687 kg, dV=114 m/s, duration=4 s
+12:33:38.802 INFO  MissionOptimizer - Stage 'Transfert': massIn=20195 kg, massOut=19084 kg, propellant=1111 kg, dV=193 m/s, duration=6973 s
+12:33:38.802 INFO  MissionOptimizer - Stage 'Trim': massIn=19084 kg, massOut=19027 kg, propellant=57 kg, dV=10 m/s, duration=5814 s
+12:33:38.802 INFO  MissionOptimizer - Stage 'Coasting': massIn=19027 kg, massOut=19027 kg, propellant=0 kg, dV=0 m/s, duration=0 s
+12:33:38.802 INFO  MissionOptimizer - Mission performance: total dV=8215 m/s, propellant loaded=1234883 kg, residual=27 kg (0.0%)
+12:33:38.802 INFO  MissionOptimizer - Stage propellant [0]: loaded=1233000 kg, consumed=1233000 kg, residual=0 kg (0.0% of its load)
+12:33:38.802 INFO  MissionOptimizer - Stage propellant [1]: loaded=1883 kg, consumed=1855 kg, residual=27 kg (1.5% of its load)
+12:33:38.802 INFO  MissionOptimizer - Stage propellant [2]: loaded=0 kg, consumed=0 kg, residual=0 kg (0.0% of its load)
+12:33:38.802 INFO  MissionOptimizer - Achieved orbit (osculating): 548490 x 569211 m (e=1.494e-03, i=5.2288 deg)
+12:33:38.802 INFO  MissionOptimizer - Achieved orbit (mean):       557844 x 559719 m (e=1.352e-04, i=5.2258 deg)
+12:33:38.802 INFO  MissionOptimizer - Restitution horizon: 48 revolutions -> 276000 s of trailing coast
+12:33:38.802 INFO  MissionEphemerisGenerator - Generating ephemeris for stage 'Vertical Ascent'
+12:33:38.803 INFO  MissionEphemerisGenerator - Stage 'Vertical Ascent': 9 points, ended at 2026-08-22T10:13:00.000Z
+12:33:38.803 INFO  MissionEphemerisGenerator - Generating ephemeris for stage 'Gravity turn (S1)'
+12:33:38.803 INFO  GravityTurnFirstBurnStage - [Gravity turn (S1)] staging: burn1 150.0s to first-stage burnout, jettison, then burn2 2.4s (MECO at 154.4s)
+12:33:38.809 INFO  MissionEphemerisGenerator - Stage 'Gravity turn (S1)': 160 points, ended at 2026-08-22T10:15:29.981659526315771244Z
+12:33:38.809 INFO  MissionEphemerisGenerator - Generating ephemeris for stage 'S1 separation'
+12:33:38.809 INFO  StageSeparationStage - [S1 separation] jettison: mass 86883 kg -> 20883 kg
+12:33:38.809 INFO  MissionEphemerisGenerator - Stage 'S1 separation': 162 points, ended at 2026-08-22T10:15:31.981659526315771244Z
+12:33:38.809 INFO  MissionEphemerisGenerator - Generating ephemeris for stage 'Gravity turn (S2)'
+12:33:38.809 INFO  MissionEphemerisGenerator - Stage 'Gravity turn (S2)': 166 points, ended at 2026-08-22T10:15:34.373593257749064384Z
+12:33:38.810 INFO  MissionEphemerisGenerator - Generating ephemeris for stage 'Transfert'
+12:33:38.922 INFO  MissionEphemerisGenerator - Stage 'Transfert': 7141 points, ended at 2026-08-22T12:11:47.590251968208406208Z
+12:33:38.922 INFO  MissionEphemerisGenerator - Generating ephemeris for stage 'Trim'
+12:33:38.926 INFO  AnalyticTrimBurnStage - Trim burn plan: dv=10.237450863398522 m/s, dt=0.19886205273788046s, apogee altitude 548.4902731549907 km, flown-band aim lift 19211.09703031741 m
+12:33:38.974 INFO  MissionEphemerisGenerator - Stage 'Trim': 12956 points, ended at 2026-08-22T13:48:41.392113420859608896Z
+12:33:38.974 INFO  MissionEphemerisGenerator - Generating ephemeris for stage 'Coasting'
+12:33:39.121 INFO  MissionEphemerisGenerator - Stage 'Coasting': 17557 points, ended at 2026-08-25T18:28:41.0867930381593072Z
+12:33:39.121 INFO  MissionEphemerisGenerator - Total ephemeris points: 17557 (complete=true, final coast 276000 s)
+12:33:39.126 INFO  MissionLoadEvaluator - λ=[1.0, 0.5296875000000001] evaluation: objectiveMet=true, sized stage [1] residual=27 kg of its 1883 kg load (0.014509023687158156 vs floor 0.01), ephemerisComplete=true → feasible=true
+12:33:39.126 INFO  PropellantLoadOptimizer - Bisection eval 7/44: λ=0.5296875000000001 feasible=true → bracket [0.51875, 0.5296875000000001] (width 0.010937500000000044)
+12:33:39.126 INFO  PropellantLoadOptimizer - PropellantLoadOptimizer done: λ*=0.5296875000000001 after 7 evals (converged within tolerance), final bracket width=0.010937500000000044
+12:33:39.126 INFO  MultiStageLoadOptimizer - Pass 1 — stage 1: λ 1.0000 → 0.5297 (7 evals, 8 evals used overall)
+12:33:39.127 INFO  MultiStageLoadOptimizer - Pass 1 done: scaled-stage mass 3554 → 1883 kg (1672 reclaimed), λ=[1.0000, 0.5297]
+12:33:39.127 INFO  MultiStageLoadOptimizer -   stage 0 residual: 0 kg of 1233000 kg loaded (0.0%)
+12:33:39.127 INFO  MultiStageLoadOptimizer -   stage 1 residual: 27 kg of 1883 kg loaded (1.5%)
+12:33:39.127 INFO  MultiStageLoadOptimizer -   stage 2 residual: 0 kg of 0 kg loaded (0.0%)
+12:33:39.127 INFO  MultiStageLoadOptimizer - Stage 1 reclaimed 47.03% of its own load this pass (floor 1.0%) — sweeping again
+12:33:39.127 INFO  MultiStageLoadOptimizer - Pass 2/3 — stage 1 from λ=0.5297 (others fixed at [1.0000, 0.5297])
+12:33:39.127 INFO  MissionOptimizer - MissionOptimizer running with explicit seed=42
+12:33:39.127 INFO  MissionOptimizer - Current mass = 1319811.6144568082
+12:33:39.127 INFO  MissionOptimizer - Propagating non-optimizable stage 'Vertical Ascent'...
+12:33:39.127 INFO  MissionOptimizer - Stage 'Vertical Ascent' done.
+12:33:39.127 INFO  MissionOptimizer - Current mass = 1264837.473219774
+12:33:39.127 INFO  MissionOptimizer - Optimizing stage 'Gravity turn (S1)'...
+12:33:39.128 INFO  CMAESTrajectoryOptimizer - CMA-ES optimizer initialized with seed=8004395815503774571
+12:33:43.267 INFO  CMAESTrajectoryOptimizer - Exploration 1/4: cost=0.011974436518482512, evals=535
+12:33:43.268 INFO  CMAESTrajectoryOptimizer - Exploration 2/4: cost=0.09023228044860529, evals=501
+12:33:43.271 INFO  CMAESTrajectoryOptimizer - Exploration 3/4: cost=0.014634920196274083, evals=582
+12:33:43.271 INFO  CMAESTrajectoryOptimizer - Exploration 4/4: cost=0.11509149563463465, evals=491
+12:33:43.271 INFO  CMAESTrajectoryOptimizer - Target reached during exploration: cost=0.011974436518482512
+12:33:43.277 INFO  CMAESTrajectoryOptimizer - Final best cost=0.011974436518482512, total evals=2113, 1 of up to 3 attempt(s) run
+12:33:43.277 INFO  MissionOptimizer - Stage 'Gravity turn (S1)' optimized: cost=0.011974436518482512, values=[154.29674359668292, 0.3155157059682115], evaluations=2113
+12:33:43.277 INFO  MissionOptimizer - Stage 'Gravity turn (S1)' bound usage: transitionTime=25% | exponent=7%
+12:33:43.277 INFO  MissionOptimizer - Gravity turn end-state vs ideal Hohmann: alt=30004 m | vTan=8001.4 m/s (Δ=-37.7) | vRad=174.5 m/s (Δ=+174.5) | FPA=1.25° (Δ=+1.25°)
+12:33:43.277 INFO  GravityTurnFirstBurnStage - [Gravity turn (S1)] staging: burn1 150.0s to first-stage burnout, jettison, then burn2 2.3s (MECO at 154.3s)
+12:33:43.283 INFO  MissionOptimizer - Current mass = 86811.6206221071
+12:33:43.283 INFO  MissionOptimizer - Stage separation 'S1 separation': jettisoning stack stage 0 with 0 kg of propellant aboard
+12:33:43.283 INFO  MissionOptimizer - Propagating non-optimizable stage 'S1 separation'...
+12:33:43.283 INFO  StageSeparationStage - [S1 separation] jettison: mass 86812 kg -> 20812 kg
+12:33:43.283 INFO  MissionOptimizer - Stage 'S1 separation' done.
+12:33:43.283 INFO  MissionOptimizer - Current mass = 20811.614456808195
+12:33:43.283 INFO  MissionOptimizer - Propagating non-optimizable stage 'Gravity turn (S2)'...
+12:33:43.284 INFO  MissionOptimizer - Stage 'Gravity turn (S2)' done.
+12:33:43.284 INFO  MissionOptimizer - Current mass = 20146.420614021663
+12:33:43.284 INFO  MissionOptimizer - Optimizing stage 'Transfert'...
+12:33:43.284 INFO  TransferProblem - J2 altitude offset: 3139.960904165727 m, effective perigee: 553139.9609041658 m, effective apogee: 553139.9609041658 m
+12:33:43.284 INFO  TransferProblem - Initial guess for burn 1: T1=2151.8739943250575, dt1=3.3072123948624155, dv1=164.96330546887748, dv2≈22.901149278793127
+12:33:43.284 INFO  TransferProblem - Physical dt1 max: 3.988181354377623s (propellant available: 1146.420614021663kg, Δv available: 199.94292702860474m/s)
+12:33:43.284 INFO  TransferProblem - Adaptive bounds — βMax: 0.39269908169872414 rad (adaptive=0.2649381335077633, π/8 floor active=true), t1Max: 2670.8691639279446s, dt1Max: 13.228849579449662s, periapsisFloor: 275000.0m, W_E: 2.0
+12:33:43.284 INFO  TransferProblem - Inclination target: 0.0913854396344231 rad (5.236°), W_I=50.0
+12:33:43.284 INFO  TransferProblem - Propellant-aware term (I7): W_PROPELLANT=0.005, Hohmann Δv ref=187.8644547476706 m/s, Δv available=199.94292702860474 m/s, spendable margin=12.078472280934136 m/s (flame-out grades 0.005, acceptable cost 0.003)
+12:33:43.284 INFO  CMAESTrajectoryOptimizer - CMA-ES optimizer initialized with seed=-6657214946198437198
+12:33:43.284 INFO  CMAESTrajectoryOptimizer - Niveau 3.2: warm-start with pure analytical seed for run 0, initialGuess for run 1
+12:33:47.334 INFO  CMAESTrajectoryOptimizer - Exploration 1/4: cost=1.8170211938223138, evals=800
+12:33:51.516 INFO  CMAESTrajectoryOptimizer - Exploration 2/4: cost=0.04560111736879319, evals=473
+12:33:58.448 INFO  CMAESTrajectoryOptimizer - Exploration 3/4: cost=0.4059327929999231, evals=800
+12:34:04.834 INFO  CMAESTrajectoryOptimizer - Exploration 4/4: cost=0.035157186619181616, evals=800
+12:34:04.835 INFO  CMAESTrajectoryOptimizer - Refinement cascade starting from cost=0.035157186619181616, remaining budget=5123
+12:35:25.305 INFO  CMAESTrajectoryOptimizer - Refinement 1/3 (sigma×0.1): cost=0.008557015928024264, evals=1707
+12:36:48.471 INFO  CMAESTrajectoryOptimizer - Refinement 2/3 (sigma×0.03): cost=0.008557015928024264, evals=1707
+12:36:48.471 INFO  CMAESTrajectoryOptimizer - Refinement cascade stopped after pass 2: plateau at cost=0.008557015928024264
+12:36:48.471 INFO  CMAESTrajectoryOptimizer - Attempt 1 converged in its box: the refinement cascade improved on its exploration and then exhausted it at cost=0.008557015928024264; a retry would search the same box
+12:36:48.521 INFO  CMAESTrajectoryOptimizer - Final best cost=0.008557015928024264, total evals=6291, 1 of up to 3 attempt(s) run
+12:36:48.521 WARN  CMAESTrajectoryOptimizer - Final cost 0.008557015928024264 above acceptable 0.003 after 1 of up to 3 attempt(s) — see the phase logs above for why the search stopped
+12:36:48.521 INFO  MissionOptimizer - Stage 'Transfert' optimized: cost=0.008557015928024264, values=[2670.8691639279446, 2.076017788901225, 0.19705140720762299, -6.706795387590001E-4], evaluations=6291
+12:36:48.521 INFO  MissionOptimizer - Stage 'Transfert' bound usage: t1=100%[HIGH-SAT] | dt1=4%[LOW-SAT] | α1=56% | β1=50%
+12:36:48.521 WARN  MissionOptimizer - Stage 'Transfert' parameter t1 saturated (HIGH): value=2670.8691639279446 bounds=[0.0, 2670.8691639279446] norm=1.0
+12:36:48.521 WARN  MissionOptimizer - Stage 'Transfert' parameter dt1 saturated (LOW): value=2.076017788901225 bounds=[1.6536061974312077, 13.228849579449662] norm=0.03649267471353665
+12:36:48.576 INFO  MissionOptimizer - Post burn1 orbit: Keplerian parameters: {a: 6775504.572654907; e: 0.023448023966703473; i: 5.151806245496387; pa: 3.34053304524889; raan: -18.091328646213746; v: -94.89004924370629;}
+12:36:48.576 INFO  MissionOptimizer - Circularization burn: ResolvedCircularizationBurn[dtCoast=4243.376062604204, dt2=1.7587462882220215, dvNeeded=89.41490981716925]
+12:36:48.591 INFO  MissionOptimizer - Transfert Δv breakdown: total1=102.61601958330148 m/s, useful1=100.63018318225582 m/s, wasted1=1.9858364010456597 m/s, dv2=89.41490981716925 m/s
+12:36:48.643 INFO  MissionOptimizer - Transfert barriers: peri=false(0.0), altMin=false(0.0), altMax=false(0.0)
+12:36:48.696 INFO  MissionOptimizer - Transfert propellant term: consumedΔv=192.03092939572795 m/s, HohmannΔv=187.8644547476706 m/s, excessΔv=4.166474648057346 m/s, availableΔv=199.94292702860474 m/s, costContribution=0.001724752332558698
+12:36:48.749 INFO  MissionOptimizer - Current mass = 19044.100484323262
+12:36:48.749 INFO  MissionOptimizer - Propagating non-optimizable stage 'Trim'...
+12:36:48.753 INFO  AnalyticTrimBurnStage - Trim burn plan: dv=10.252810668864297 m/s, dt=0.153417277346457s, apogee altitude 547.6707123092712 km, flown-band aim lift 19216.88799536042 m
+12:36:48.778 ERROR DepletionGuard - [Trim burn] Propellant depleted before scheduled cutoff at 2026-08-22T13:48:39.183669734209559008Z (floor 19000.0 kg): stopping propagation, upstream mass accounting is wrong
+12:36:48.778 INFO  MissionOptimizer - Stage 'Trim' done.
+12:36:48.778 INFO  MissionOptimizer - Current mass = 18999.999999972068
+12:36:48.778 INFO  MissionOptimizer - Propagating non-optimizable stage 'Coasting'...
+12:36:48.778 INFO  MissionOptimizer - Stage 'Coasting' done.
+12:36:48.778 INFO  MissionOptimizer - Stage 'Vertical Ascent': massIn=1319812 kg, massOut=1264837 kg, propellant=54974 kg, dV=123 m/s, duration=7 s
+12:36:48.778 INFO  MissionOptimizer - Stage 'Gravity turn (S1)': massIn=1264837 kg, massOut=86812 kg, propellant=1178026 kg, dV=7776 m/s, duration=150 s
+12:36:48.778 INFO  MissionOptimizer - Stage 'S1 separation': massIn=86812 kg, massOut=20812 kg, propellant=0 kg, dV=0 m/s, duration=0 s
+12:36:48.778 INFO  MissionOptimizer - Stage 'Gravity turn (S2)': massIn=20812 kg, massOut=20146 kg, propellant=665 kg, dV=111 m/s, duration=4 s
+12:36:48.778 INFO  MissionOptimizer - Stage 'Transfert': massIn=20146 kg, massOut=19044 kg, propellant=1102 kg, dV=192 m/s, duration=6918 s
+12:36:48.778 INFO  MissionOptimizer - Stage 'Trim': massIn=19044 kg, massOut=19000 kg, propellant=44 kg, dV=8 m/s, duration=5867 s
+12:36:48.778 INFO  MissionOptimizer - Stage 'Coasting': massIn=19000 kg, massOut=19000 kg, propellant=0 kg, dV=0 m/s, duration=0 s
+12:36:48.778 INFO  MissionOptimizer - Mission performance: total dV=8211 m/s, propellant loaded=1234812 kg, residual=0 kg (0.0%)
+12:36:48.778 INFO  MissionOptimizer - Stage propellant [0]: loaded=1233000 kg, consumed=1233000 kg, residual=0 kg (0.0% of its load)
+12:36:48.778 INFO  MissionOptimizer - Stage propellant [1]: loaded=1812 kg, consumed=1812 kg, residual=0 kg (0.0% of its load)
+12:36:48.778 INFO  MissionOptimizer - Stage propellant [2]: loaded=0 kg, consumed=0 kg, residual=0 kg (0.0% of its load)
+12:36:48.779 INFO  MissionOptimizer - Achieved orbit (osculating): 547671 x 568169 m (e=1.478e-03, i=5.2126 deg)
+12:36:48.779 INFO  MissionOptimizer - Achieved orbit (mean):       557026 x 558675 m (e=1.188e-04, i=5.2096 deg)
+12:36:48.779 INFO  MissionOptimizer - Restitution horizon: 48 revolutions -> 275944 s of trailing coast
+12:36:48.779 INFO  MissionEphemerisGenerator - Generating ephemeris for stage 'Vertical Ascent'
+12:36:48.780 INFO  MissionEphemerisGenerator - Stage 'Vertical Ascent': 9 points, ended at 2026-08-22T10:13:00.000Z
+12:36:48.780 INFO  MissionEphemerisGenerator - Generating ephemeris for stage 'Gravity turn (S1)'
+12:36:48.780 INFO  GravityTurnFirstBurnStage - [Gravity turn (S1)] staging: burn1 150.0s to first-stage burnout, jettison, then burn2 2.3s (MECO at 154.3s)
+12:36:48.787 INFO  MissionEphemerisGenerator - Stage 'Gravity turn (S1)': 160 points, ended at 2026-08-22T10:15:29.981659526315771244Z
+12:36:48.787 INFO  MissionEphemerisGenerator - Generating ephemeris for stage 'S1 separation'
+12:36:48.787 INFO  StageSeparationStage - [S1 separation] jettison: mass 86812 kg -> 20812 kg
+12:36:48.788 INFO  MissionEphemerisGenerator - Stage 'S1 separation': 162 points, ended at 2026-08-22T10:15:31.981659526315771244Z
+12:36:48.788 INFO  MissionEphemerisGenerator - Generating ephemeris for stage 'Gravity turn (S2)'
+12:36:48.788 INFO  MissionEphemerisGenerator - Stage 'Gravity turn (S2)': 166 points, ended at 2026-08-22T10:15:34.296743596682915712Z
+12:36:48.788 INFO  MissionEphemerisGenerator - Generating ephemeris for stage 'Transfert'
+12:36:48.902 INFO  MissionEphemerisGenerator - Stage 'Transfert': 7086 points, ended at 2026-08-22T12:10:52.376734205947229824Z
+12:36:48.902 INFO  MissionEphemerisGenerator - Generating ephemeris for stage 'Trim'
+12:36:48.906 INFO  AnalyticTrimBurnStage - Trim burn plan: dv=10.252810665586848 m/s, dt=0.15341727725457557s, apogee altitude 547.6707123093605 km, flown-band aim lift 19216.887995179743 m
+12:36:48.953 INFO  MissionEphemerisGenerator - Stage 'Trim': 12954 points, ended at 2026-08-22T13:48:39.183670743518184848Z
+12:36:48.953 INFO  MissionEphemerisGenerator - Generating ephemeris for stage 'Coasting'
+12:36:49.110 INFO  MissionEphemerisGenerator - Stage 'Coasting': 17555 points, ended at 2026-08-25T18:27:43.33293920188271624Z
+12:36:49.110 INFO  MissionEphemerisGenerator - Total ephemeris points: 17555 (complete=true, final coast 275944 s)
+12:36:49.114 INFO  MissionLoadEvaluator - λ=[1.0, 0.5096875000000001] evaluation: objectiveMet=true, sized stage [1] residual=0 kg of its 1812 kg load (0.0 vs floor 0.01), ephemerisComplete=true → feasible=false
+12:36:49.114 INFO  MultiStageLoadOptimizer - Pass 2 — stage 1: probe at λ=0.5097 infeasible, so the minimal feasible λ sits within 0.0200 of 0.5297 — converged in 1 eval instead of a full bisection (9 evals used overall)
+12:36:49.114 INFO  MultiStageLoadOptimizer - Pass 2 done: scaled-stage mass 1883 → 1883 kg (0 reclaimed), λ=[1.0000, 0.5297]
+12:36:49.114 INFO  MultiStageLoadOptimizer -   stage 0 residual: 0 kg of 1233000 kg loaded (0.0%)
+12:36:49.114 INFO  MultiStageLoadOptimizer -   stage 1 residual: 27 kg of 1883 kg loaded (1.5%)
+12:36:49.114 INFO  MultiStageLoadOptimizer -   stage 2 residual: 0 kg of 0 kg loaded (0.0%)
+12:36:49.114 INFO  MultiStageLoadOptimizer - Best per-coordinate gain 0.00% below the 1.0% floor — coordinates have stopped moving each other
+12:36:49.115 INFO  MultiStageLoadOptimizer - Diagonal probe skipped: 1 movable coordinate(s) of 1 scaled, a corner needs two
+12:36:49.115 INFO  MultiStageLoadOptimizer - MultiStageLoadOptimizer done: λ*=[1.0000, 0.5297] after 9 evals over 2 pass(es); scaled-stage mass 3554 → 1883 kg (−1672 kg, −47.0%)
+12:36:49.116 INFO  MissionOrchestratorAppState - Computation completed for mission 'LEO-001' [ffdb0507]
+12:36:49.219 INFO  Model3dView - Loading model for LEO-001
+12:36:49.221 INFO  MissionOrchestratorAppState - Renderer created for mission 'LEO-001' [ffdb0507]
+12:36:49.279 INFO  Model3dView - Loaded model for LEO-001

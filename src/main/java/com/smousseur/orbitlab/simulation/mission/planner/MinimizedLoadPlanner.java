@@ -17,6 +17,11 @@ import org.orekit.time.AbsoluteDate;
  * load sweep ({@link MultiStageLoadOptimizer}), each evaluation a full mission optimization, and
  * reports the resolved per-stage scaling as {@link PropellantSizing}.
  *
+ * <p>The trajectory the plan carries is the one the winning evaluation flew, so the sizing and the
+ * flight are the same computation rather than two that merely agree. Recomputing the winner at a
+ * larger budget was tried and dropped on 2026-08-22: measured over three λ, a second full attempt
+ * re-derived the first one's optimum to ten significant digits without ever improving it.
+ *
  * <p>All the T3 plumbing is enclosed here — the mission builder, the heuristic loads, the scaling
  * mask, the launch epoch and the feasibility settings are assembled into the internal {@link
  * MissionLoadEvaluator} by {@link #plan()}, so the caller supplies inputs, not machinery.
@@ -75,7 +80,7 @@ public final class MinimizedLoadPlanner implements MissionPlanner {
    * @param heuristicLoads the baseline per-stage loads (kg), same order as the launcher stages
    * @param lambdaScaled which stages carry their own λ
    * @param launchEpoch the launch date the mission's initial state is built at
-   * @param optimizerMaxEvaluations the inner CMA-ES evaluation budget per stage
+   * @param optimizerMaxEvaluations the per-stage CMA-ES budget every sweep evaluation runs at
    * @param seed the CMA-ES master seed, or {@code null} for non-deterministic
    * @param objectiveToleranceRatio the ± band on perigee/apogee the objective must land within
    * @param residualFloorRatio the minimum end-of-mission residual as a fraction of the sized
@@ -142,26 +147,29 @@ public final class MinimizedLoadPlanner implements MissionPlanner {
 
   @Override
   public MissionPlan plan() {
-    MissionLoadEvaluator evaluator =
-        new MissionLoadEvaluator(
-            missionBuilder,
-            heuristicLoads,
-            lambdaScaled,
-            launchEpoch,
-            optimizerMaxEvaluations,
-            seed,
-            objectiveToleranceRatio,
-            residualFloorRatio,
-            feasibilityObjective,
-            progress);
     MultiStageLoadOptimizer.Result result =
         new MultiStageLoadOptimizer()
-            .minimize(evaluator::evaluate, lambdaScaled, heuristicLoads, progress);
+            .minimize(evaluator()::evaluate, lambdaScaled, heuristicLoads, progress);
     if (!result.feasible()) {
       throw new OrbitlabException(
           "Propellant sizing infeasible: the heuristic loads themselves fail — mission under-dotée,"
               + " nothing to shrink");
     }
     return new MissionPlan(result.best().result(), PropellantSizing.from(result));
+  }
+
+  /** Builds the evaluator every sweep evaluation runs through; all its settings are fixed. */
+  private MissionLoadEvaluator evaluator() {
+    return new MissionLoadEvaluator(
+        missionBuilder,
+        heuristicLoads,
+        lambdaScaled,
+        launchEpoch,
+        optimizerMaxEvaluations,
+        seed,
+        objectiveToleranceRatio,
+        residualFloorRatio,
+        feasibilityObjective,
+        progress);
   }
 }

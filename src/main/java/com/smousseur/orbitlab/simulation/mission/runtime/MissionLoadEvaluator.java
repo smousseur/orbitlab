@@ -88,6 +88,35 @@ public final class MissionLoadEvaluator implements PropellantLoadOptimizer.Evalu
   /** Default per-stage CMA-ES evaluation budget, matching the mission optimization tests. */
   public static final int DEFAULT_OPTIMIZER_MAX_EVALUATIONS = 40_000;
 
+  /**
+   * Per-stage budget the λ sizing sweep runs at, well under {@link
+   * #DEFAULT_OPTIMIZER_MAX_EVALUATIONS}.
+   *
+   * <p><b>A sweep evaluation answers a yes/no question</b> — does this load reach the orbit with a
+   * residual above the floor — and not "what is the best trajectory at this load". Measured
+   * 2026-08-21 on the FH LEO 550 km run: a transfer whose cost settles above {@code
+   * TransferTuning.acceptableCost} never triggers the early stop, so it spends exploration,
+   * refinement cascade and a retry — 29 129 evaluations and 9 min 31 s, against 5 792 and ~1 min
+   * for the same stage when the early stop fires. Multiplied by the sweep's 45-evaluation budget,
+   * that is the difference between a computation of minutes and one of hours.
+   *
+   * <p>The value is a ceiling on the pathological case rather than a target: a stage that converges
+   * early never reaches it, and is billed what it always was.
+   *
+   * <p><b>The error it can introduce is one-sided, and on the safe side.</b> An evaluation that
+   * reports feasible flew the trajectory and measured it, so it is feasible whatever the budget.
+   * Only the converse can be wrong — a load the full budget would have made work read as
+   * infeasible — and that keeps the bisection's λ <em>up</em>, i.e. sizes the stage with more
+   * propellant than strictly necessary. Never less.
+   *
+   * <p><b>Why no full-budget recomputation of the winner.</b> Tried and dropped on 2026-08-22: at
+   * this budget the transfer already spends two full attempts and plateaus, the second re-deriving
+   * the first's optimum to ten significant digits (λ=1.0, 0.65 and 0.7375, never an improvement).
+   * Paying more bought nothing, and recomputing would have made the flown trajectory a different
+   * one from the one the sizing was validated on.
+   */
+  public static final int DEFAULT_SIZING_MAX_EVALUATIONS = 8_000;
+
   private final Function<double[], Mission> missionBuilder;
   private final double[] heuristicLoads;
   private final boolean[] lambdaScaled;

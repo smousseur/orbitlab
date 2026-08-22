@@ -311,6 +311,146 @@ class CMAESTrajectoryOptimizerRetryTest {
     }
   }
 
+  /**
+   * Ill-conditioned ellipsoid (condition 10⁶) with an unreachable floor: exploration runs out of
+   * budget before following the narrowest axes, and the refinement cascade — smaller sigma, same
+   * box — closes the remaining gap. That is the shape of every transfer stage of the 550 km LEO
+   * run of 2026-08-22 except one.
+   */
+  static final class IllConditionedProblem implements TrajectoryProblem {
+    private int passCount = 0;
+
+    private final ThreadLocal<double[]> lastVars = ThreadLocal.withInitial(() -> new double[4]);
+
+    int passCount() {
+      return passCount;
+    }
+
+    @Override
+    public double getAcceptableCost() {
+      return ACCEPTABLE_COST;
+    }
+
+    @Override
+    public int getNumVariables() {
+      return 4;
+    }
+
+    @Override
+    public double[] buildInitialGuess() {
+      passCount++;
+      return new double[] {-0.8, 0.8, -0.8, 0.8};
+    }
+
+    @Override
+    public double[] getLowerBounds() {
+      return new double[] {-1.0, -1.0, -1.0, -1.0};
+    }
+
+    @Override
+    public double[] getUpperBounds() {
+      return new double[] {1.0, 1.0, 1.0, 1.0};
+    }
+
+    @Override
+    public double[] getInitialSigma() {
+      return new double[] {0.6, 0.6, 0.6, 0.6};
+    }
+
+    @Override
+    public SpacecraftState propagate(double[] variables) {
+      lastVars.set(variables.clone());
+      return null;
+    }
+
+    @Override
+    public double computeCost(SpacecraftState state) {
+      double[] vars = lastVars.get();
+      double cost = 0.1;
+      for (int i = 0; i < vars.length; i++) {
+        double d = vars[i] - 0.3;
+        cost += Math.pow(10.0, 3.0 * i) * d * d;
+      }
+      return cost;
+    }
+  }
+
+  /**
+   * Convex problem whose optimum sits <em>outside</em> the initial search box and inside the
+   * relaxed one — the synthetic form of {@code TransferProblem}'s β1 anti-saturation relaxation.
+   * The first attempt can only reach the wall; the retry is only useful if the widened box reaches
+   * CMA-ES itself, and not merely the sigma and the start points.
+   */
+  static final class OutOfBoxOptimumProblem implements TrajectoryProblem {
+    /** Optimum, outside the base box [-1, 1]² and inside the relaxed box [-3, 3]². */
+    static final double[] OPTIMUM = {2.0, 2.0};
+
+    private static final double RELAXED = 3.0;
+
+    private final ThreadLocal<double[]> lastVars = ThreadLocal.withInitial(() -> new double[2]);
+
+    @Override
+    public double getAcceptableCost() {
+      return ACCEPTABLE_COST;
+    }
+
+    @Override
+    public int getNumVariables() {
+      return 2;
+    }
+
+    @Override
+    public double[] buildInitialGuess() {
+      return new double[] {0.0, 0.0};
+    }
+
+    @Override
+    public double[] getLowerBounds() {
+      return new double[] {-1.0, -1.0};
+    }
+
+    @Override
+    public double[] getUpperBounds() {
+      return new double[] {1.0, 1.0};
+    }
+
+    @Override
+    public double[] getInitialSigma() {
+      return new double[] {0.6, 0.6};
+    }
+
+    @Override
+    public double[] getLowerBoundsForAttempt(int attempt, double[] previousBestVars) {
+      return attempt <= 0 ? getLowerBounds() : new double[] {-RELAXED, -RELAXED};
+    }
+
+    @Override
+    public double[] getUpperBoundsForAttempt(int attempt, double[] previousBestVars) {
+      return attempt <= 0 ? getUpperBounds() : new double[] {RELAXED, RELAXED};
+    }
+
+    @Override
+    public double[] getInitialSigmaForAttempt(int attempt, double[] previousBestVars) {
+      double[] lo = getLowerBoundsForAttempt(attempt, previousBestVars);
+      double[] hi = getUpperBoundsForAttempt(attempt, previousBestVars);
+      return new double[] {0.3 * (hi[0] - lo[0]), 0.3 * (hi[1] - lo[1])};
+    }
+
+    @Override
+    public SpacecraftState propagate(double[] variables) {
+      lastVars.set(variables.clone());
+      return null;
+    }
+
+    @Override
+    public double computeCost(SpacecraftState state) {
+      double[] vars = lastVars.get();
+      double dx = vars[0] - OPTIMUM[0];
+      double dy = vars[1] - OPTIMUM[1];
+      return dx * dx + dy * dy;
+    }
+  }
+
   @Test
   void seedAlreadyBelowAcceptable_isOptimizedNotReturnedVerbatim() {
     AcceptableSeedProblem problem = new AcceptableSeedProblem();
@@ -399,5 +539,47 @@ class CMAESTrajectoryOptimizerRetryTest {
         problem.passCount(),
         "First attempt should succeed without retry; passCount must remain 1 "
             + "(no buildSeededStartPoints, no second runSinglePass).");
+  }
+  @Test
+  void retrySearchesTheRelaxedBoxNotJustTheBaseOne() {
+    OutOfBoxOptimumProblem problem = new OutOfBoxOptimumProblem();
+    // A single exploration run: with four, they all descend to the same corner of the base box and
+    // the consensus early-stop concludes the attempt before any retry can widen it — which is a
+    // property of the consensus, not of the bounds plumbing this test is about.
+    CMAESTrajectoryOptimizer optimizer =
+        new CMAESTrajectoryOptimizer(problem, 5_000, 1, 2, 1e-6, 1e-4, 1e-6);
+
+    OptimizationResult result = optimizer.optimize();
+
+    double[] best = result.bestVariables();
+    assertTrue(
+        result.bestCost() <= ACCEPTABLE_COST,
+        () ->
+            "A retry that relaxes the bounds must hand the widened box to CMA-ES, not only to the "
+                + "sigma and the start points; best cost was "
+                + result.bestCost());
+    assertTrue(
+        best[0] > 1.0 && best[1] > 1.0,
+        () ->
+            "Solution must sit outside the base box the first attempt was confined to, got ["
+                + best[0]
+                + ", "
+                + best[1]
+                + "]");
+  }
+  @Test
+  void noRetryWhenTheRefinementCascadeAlreadyDescended() {
+    IllConditionedProblem problem = new IllConditionedProblem();
+    CMAESTrajectoryOptimizer optimizer = new CMAESTrajectoryOptimizer(problem, 5_000);
+
+    OptimizationResult result = optimizer.optimize();
+
+    assertEquals(
+        1,
+        problem.passCount(),
+        () ->
+            "A cascade that improved on its own exploration has converged in this box; a retry "
+                + "searching the same box only re-derives it. Best cost was "
+                + result.bestCost());
   }
 }
