@@ -1,7 +1,5 @@
 package com.smousseur.orbitlab.simulation.mission.window.problem;
 
-import com.smousseur.orbitlab.simulation.OrekitService;
-import com.smousseur.orbitlab.simulation.Physics;
 import com.smousseur.orbitlab.simulation.mission.operation.LaunchPlane;
 import com.smousseur.orbitlab.simulation.mission.window.LaunchWindowCandidate;
 import com.smousseur.orbitlab.simulation.mission.window.LaunchWindowProblem;
@@ -9,8 +7,6 @@ import java.time.Duration;
 import java.util.Locale;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.hipparchus.util.FastMath;
-import org.orekit.bodies.GeodeticPoint;
-import org.orekit.frames.TopocentricFrame;
 import org.orekit.time.AbsoluteDate;
 import org.orekit.utils.Constants;
 
@@ -94,8 +90,7 @@ public class EarthLaunchWindowProblem implements LaunchWindowProblem {
       Duration.ofMillis(
           Math.round(2.0 * FastMath.PI / Constants.WGS84_EARTH_ANGULAR_VELOCITY * 1000.0));
 
-  private final TopocentricFrame pad;
-  private final double azimuth;
+  private final LaunchSitePlane site;
   private final Vector3D targetNormal;
   private final double orbitalVelocity;
   private final String name;
@@ -119,13 +114,9 @@ public class EarthLaunchWindowProblem implements LaunchWindowProblem {
       double targetRaan,
       double semiMajorAxis) {
     plane.requireReachableFrom(latitude);
-    this.pad =
-        new TopocentricFrame(
-            OrekitService.get().getEarthEllipsoid(),
-            new GeodeticPoint(
-                FastMath.toRadians(latitude), FastMath.toRadians(longitude), altitude),
-            "Launch Pad");
-    this.azimuth = plane.launchAzimuth(FastMath.toRadians(latitude));
+    this.site =
+        new LaunchSitePlane(
+            latitude, longitude, altitude, plane.launchAzimuth(FastMath.toRadians(latitude)));
     this.targetNormal = planeNormal(plane.targetInclination(), targetRaan);
     this.orbitalVelocity = FastMath.sqrt(Constants.WGS84_EARTH_MU / semiMajorAxis);
     this.name =
@@ -166,20 +157,14 @@ public class EarthLaunchWindowProblem implements LaunchWindowProblem {
   /**
    * The unit normal of the plane the site reaches at {@code epoch}, in GCRF.
    *
-   * <p>Built from the pad's inertial position and the horizontal heading at the launch azimuth,
-   * through {@link Physics#localHorizontalDirection} and not a local rewrite of it: that method is
-   * the one place the {@code (north, east)} basis is written, and a second one disagreeing about
-   * where east is would return a mirrored plane whose inclination is perfectly correct — the defect
-   * its own javadoc records.
+   * <p>Delegated to {@link LaunchSitePlane}, which the lunar problem raises its departure plane on
+   * as well: the frame chain and the topocentric basis are asked for in one place rather than two
+   * (MIS-4 / L2 §2.6). Kept here as a method because it is what the tests of this problem build
+   * their target planes from — an alignment is defined as "the plane the pad reaches at that
+   * instant" — so it is part of what they guard.
    */
   Vector3D reachablePlaneNormal(AbsoluteDate epoch) {
-    Vector3D position =
-        OrekitService.get()
-            .itrf()
-            .getTransformTo(OrekitService.get().gcrf(), epoch)
-            .transformPosition(pad.getCartesianPoint());
-    return Vector3D.crossProduct(position, Physics.localHorizontalDirection(position, azimuth))
-        .normalize();
+    return site.normalAt(epoch);
   }
 
   /**
