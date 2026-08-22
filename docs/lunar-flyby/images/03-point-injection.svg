@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="600" viewBox="0 0 980 600" font-family="'DejaVu Sans','Segoe UI',Helvetica,Arial,sans-serif">
+  <rect width="980" height="600" fill="#0a0f1e"/>
+
+  <!-- ============================ panneau 1 ============================ -->
+  <text x="30" y="34" fill="#dce4f2" font-size="15" font-weight="bold">① Vue dans le plan de parking</text>
+  <text x="30" y="54" fill="#8ea4c8" font-size="12.5">regard le long de −ĥ : le plan imposé est celui de la feuille</text>
+
+  <!-- orbite de parking -->
+  <circle cx="250" cy="300" r="120" fill="none" stroke="#6fa8ff" stroke-width="1.8" stroke-opacity="0.6"/>
+
+  <!-- Terre -->
+  <circle cx="250" cy="300" r="15" fill="#24406e" stroke="#4a76c0" stroke-width="1.2"/>
+  <text x="268" y="282" fill="#8ea4c8" font-size="12">Terre</text>
+
+  <!-- rayon vers la projection de la direction lunaire, prolonge jusqu'a la Lune -->
+  <line x1="250" y1="300" x2="358" y2="113" stroke="#c9d6ee" stroke-width="1.2" stroke-opacity="0.55" stroke-dasharray="6 5"/>
+  <circle cx="370" cy="92" r="11" fill="#c8ccd4" stroke="#eef1f6" stroke-width="1.2"/>
+  <text x="390" y="88" fill="#dce4f2" font-size="12.5">Lune à t₀ + τ + ToF</text>
+  <text x="390" y="105" fill="#8ea4c8" font-size="11.5">(hors du plan, de l'angle β — voir ②)</text>
+
+  <!-- p-chapeau sur le cercle -->
+  <circle cx="310" cy="196" r="5" fill="none" stroke="#c9d6ee" stroke-width="1.8"/>
+  <text x="323" y="188" fill="#dce4f2" font-size="13.5" font-weight="bold">p̂</text>
+  <text x="340" y="188" fill="#8ea4c8" font-size="11.5">projection de ûM dans le plan</text>
+
+  <!-- arc de transfert -->
+  <path d="M 209 413 C 400 483 566 244 370 92" fill="none" stroke="#ff7a6b" stroke-width="2" stroke-dasharray="9 6"/>
+  <text x="446" y="402" fill="#ff9c90" font-size="12">arc de transfert</text>
+  <text x="446" y="418" fill="#8ea4c8" font-size="11.5">(Lambert, ToF = 4 j)</text>
+
+  <!-- point d'injection -->
+  <circle cx="209" cy="413" r="6.5" fill="#ffb347"/>
+  <text x="198" y="441" fill="#ffb347" font-size="13.5" font-weight="bold" text-anchor="end">d̂</text>
+  <text x="198" y="458" fill="#dce4f2" font-size="12" text-anchor="end">point d'injection</text>
+
+  <!-- etat d'entree -->
+  <circle cx="130" cy="300" r="6.5" fill="#7ee0a0"/>
+  <text x="118" y="288" fill="#7ee0a0" font-size="13.5" font-weight="bold" text-anchor="end">r̂₀</text>
+  <text x="118" y="305" fill="#dce4f2" font-size="12" text-anchor="end">état d'entrée, t₀</text>
+
+  <!-- sens du mouvement -->
+  <polygon points="156.6,375.6 143.3,365.3 151.5,359.5" fill="#6fa8ff"/>
+  <text x="138" y="396" fill="#6fa8ff" font-size="11.5" text-anchor="end">sens du mouvement</text>
+
+  <!-- arc des 170 degres, de d-chapeau vers p-chapeau -->
+  <path d="M 229 358 A 62 62 0 0 0 281 246" fill="none" stroke="#ffb347" stroke-width="1.8"/>
+  <text x="318" y="340" fill="#ffb347" font-size="13" font-weight="bold">170°</text>
+  <text x="318" y="356" fill="#8ea4c8" font-size="11.5">TRANSFER_ANGLE</text>
+
+  <!-- arc delta, de r-chapeau vers d-chapeau -->
+  <path d="M 208 300 A 42 42 0 0 0 236 340" fill="none" stroke="#7ee0a0" stroke-width="1.8"/>
+  <text x="190" y="332" fill="#7ee0a0" font-size="13" font-weight="bold" text-anchor="end">Δ</text>
+  <text x="190" y="349" fill="#8ea4c8" font-size="11.5" text-anchor="end">coast de parking, τ = Δ / n</text>
+
+  <!-- ============================ separateur ============================ -->
+  <line x1="600" y1="70" x2="600" y2="490" stroke="#22304d" stroke-width="1"/>
+
+  <!-- ============================ panneau 2 ============================ -->
+  <text x="640" y="34" fill="#dce4f2" font-size="15" font-weight="bold">② Vue de profil</text>
+  <text x="640" y="54" fill="#8ea4c8" font-size="12.5">regard le long de p̂ × ĥ : le plan est vu par la tranche</text>
+
+  <!-- plan de parking vu par la tranche -->
+  <line x1="655" y1="330" x2="945" y2="330" stroke="#6fa8ff" stroke-width="1.8" stroke-opacity="0.6"/>
+  <text x="655" y="352" fill="#6fa8ff" font-size="11.5">plan de parking imposé</text>
+
+  <!-- Terre -->
+  <circle cx="720" cy="330" r="15" fill="#24406e" stroke="#4a76c0" stroke-width="1.2"/>
+
+  <!-- normal h -->
+  <line x1="720" y1="330" x2="720" y2="184" stroke="#c9d6ee" stroke-width="1.6"/>
+  <polygon points="720,172 714,188 726,188" fill="#c9d6ee"/>
+  <text x="712" y="164" fill="#dce4f2" font-size="13.5" font-weight="bold" text-anchor="end">ĥ</text>
+  <text x="728" y="164" fill="#8ea4c8" font-size="11.5">= r₀ × v₀ normalisé</text>
+
+  <!-- direction lunaire, hors plan de beta -->
+  <line x1="720" y1="330" x2="915" y2="239" stroke="#c8ccd4" stroke-width="1.8"/>
+  <circle cx="915" cy="239" r="11" fill="#c8ccd4" stroke="#eef1f6" stroke-width="1.2"/>
+  <text x="900" y="222" fill="#dce4f2" font-size="13.5" font-weight="bold" text-anchor="end">ûM</text>
+
+  <!-- projection dans le plan -->
+  <line x1="720" y1="330" x2="915" y2="330" stroke="#c9d6ee" stroke-width="1.6" stroke-dasharray="6 5"/>
+  <line x1="915" y1="239" x2="915" y2="330" stroke="#5d6b86" stroke-width="1.2" stroke-dasharray="4 4"/>
+  <text x="903" y="352" fill="#dce4f2" font-size="13.5" font-weight="bold" text-anchor="end">p̂</text>
+
+  <!-- angle beta -->
+  <path d="M 800 330 A 80 80 0 0 0 792.5 296" fill="none" stroke="#ff7a6b" stroke-width="1.8"/>
+  <text x="810" y="310" fill="#ff7a6b" font-size="13" font-weight="bold">β</text>
+  <text x="824" y="310" fill="#8ea4c8" font-size="11.5">= asin(ĥ · ûM)</text>
+
+  <text x="655" y="396" fill="#ff9c90" font-size="11.5">β = 0 : la Lune est dans le plan. C'est la démo,</text>
+  <text x="655" y="412" fill="#8ea4c8" font-size="11.5">où parkingState fabrique le plan pour qu'il en soit ainsi,</text>
+  <text x="655" y="428" fill="#8ea4c8" font-size="11.5">et où d̂ retombe sur r̂₀ : τ = 0.</text>
+  <text x="655" y="454" fill="#ff9c90" font-size="11.5">β ≠ 0 : le plan est subi. Rien n'est refusé,</text>
+  <text x="655" y="470" fill="#8ea4c8" font-size="11.5">le désalignement se paie en Δv d'injection.</text>
+
+  <!-- ============================ point fixe ============================ -->
+  <line x1="30" y1="500" x2="950" y2="500" stroke="#22304d" stroke-width="1"/>
+  <text x="30" y="526" fill="#dce4f2" font-size="13" font-weight="bold">Le point fixe, une seule boucle pour les deux circularités</text>
+  <text x="30" y="550" fill="#8ea4c8" font-size="12.5">τ ← 0, puis : ûM lue à t₀+τ+ToF → p̂ → d̂ = R(ĥ, −170°)·p̂ → Δ mesuré depuis la position képlérienne à t₀+τ → τ ← τ + Δ/n</text>
+  <text x="30" y="570" fill="#8ea4c8" font-size="12.5">Deux couplages contractants — la Lune à 0,0022 par passe, l'excentricité résiduelle à O(e). Trois passes suffisent, aucune propagation.</text>
+  <text x="30" y="590" fill="#8ea4c8" font-size="12.5">Le wrap de Δ dans [0, 2π) à la première passe sélectionne le premier passage : le coast vaut au plus une révolution, par construction.</text>
+</svg>

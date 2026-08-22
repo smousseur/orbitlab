@@ -5,22 +5,26 @@ import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.flight.FlightContext;
 import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
+import java.util.Locale;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hipparchus.geometry.euclidean.threed.Rotation;
 import org.hipparchus.geometry.euclidean.threed.RotationConvention;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.hipparchus.util.FastMath;
+import org.hipparchus.util.MathUtils;
 import org.orekit.control.heuristics.lambert.LambertBoundaryConditions;
 import org.orekit.control.heuristics.lambert.LambertBoundaryVelocities;
 import org.orekit.control.heuristics.lambert.LambertDifferentialCorrector;
 import org.orekit.control.heuristics.lambert.LambertSolver;
 import org.orekit.frames.Frame;
 import org.orekit.orbits.CartesianOrbit;
+import org.orekit.orbits.KeplerianOrbit;
 import org.orekit.propagation.SpacecraftState;
 import org.orekit.propagation.numerical.NumericalPropagator;
 import org.orekit.time.AbsoluteDate;
 import org.orekit.utils.Constants;
+import org.orekit.utils.PVCoordinates;
 import org.orekit.utils.TimeStampedPVCoordinates;
 
 /**
@@ -38,6 +42,14 @@ import org.orekit.utils.TimeStampedPVCoordinates;
  * from that plane — rather than taking a parking orbit and waiting for the Moon to line up with it.
  * There is no ground site here, so nothing makes that illegitimate, and it is what keeps the
  * découpage's "PHY-4 does not depend on MIS-2" true.
+ *
+ * <p><b>Two ways of getting a parking orbit coexist here, and that is deliberate</b> (MIS-4 / L1,
+ * spec {@code docs/lunar-flyby/03-conception-L1.md} §5 pt 5). {@link #parkingState} <em>fabricates</em>
+ * one to fit the Moon and is what the {@code mission.lunarDemo} acceptance flight keeps flying;
+ * {@link #departureFrom} takes a plane a launch site <em>imposed</em> and finds the injection point
+ * inside it. Everything downstream of the parking state — {@link #solve}, the bisection, the
+ * differential corrector — is common to both, and the declination guard of {@link
+ * #transferPlaneNormal} belongs to the first alone.
  *
  * <p><b>Why the burn is impulsive.</b> Lambert <em>is</em> the impulsive formulation, and for an
  * impulse Tsiolkovsky is exact rather than an approximation. A finite burn would under-deliver and
@@ -119,6 +131,23 @@ public record TranslunarInjectionPlan(
   private static final double PERILUNE_SAMPLE_STEP = 60.0;
 
   /**
+   * Passes of the departure fixed point (spec §2.2).
+   *
+   * <p>The two couplings it closes are strongly contracting: the injection point sweeps 244.9 °/h
+   * at {@link #PARKING_ALTITUDE} against the 0.549 °/h of the arrival direction, a ratio of 0.0022
+   * per pass, and the residual eccentricity of the parking orbit costs {@code O(e)} on the
+   * angle-to-time conversion. Three passes are enough; five is the cap, not the count.
+   */
+  private static final int DEPARTURE_PASSES = 5;
+
+  /**
+   * Phase residual the departure fixed point stops on (rad). Also the width of the dead band the
+   * first pass wraps into {@code [0, 2π)}: a state already sitting on the injection point must
+   * yield a zero coast, not a whole extra revolution bought from a rounding sign.
+   */
+  private static final double DEPARTURE_TOLERANCE_RADIANS = 1.0e-9;
+
+  /**
    * How far past the aim date the perilune search runs (s). Closest approach need not fall exactly
    * on the aim date — the Moon moves, so the aim point is near but not on the relative-velocity
    * perpendicular — and half a day either side brackets it comfortably.
@@ -164,8 +193,13 @@ public record TranslunarInjectionPlan(
   }
 
   /**
-   * The unit normal of the transfer plane: inclined at {@link #PARKING_INCLINATION} and containing
-   * {@code moonDirection}.
+   * The unit normal of the <b>fabricated</b> parking plane of {@link #parkingState}: inclined at
+   * {@link #PARKING_INCLINATION} and containing {@code moonDirection}.
+   *
+   * <p><b>It is not "the transfer plane" in any general sense, and since MIS-4 / L1 it is on the
+   * demo's path alone</b> (spec §3.2). An injection from an imposed plane flies the plane it is
+   * given; the declination guard below, and the 30° constant it compares against, belong to the
+   * orbit this method builds and to nothing else.
    *
    * <p>Writing {@code n = cos(i)·z + sin(i)·(cos φ, sin φ, 0)} and imposing {@code n · uM = 0}
    * gives {@code cos(φ − α) = −cos(i)·uM_z / (sin(i)·p)} with {@code α = atan2(uM_y, uM_x)} and
@@ -203,6 +237,130 @@ public record TranslunarInjectionPlan(
             FastMath.sin(PARKING_INCLINATION) * FastMath.sin(phi),
             FastMath.cos(PARKING_INCLINATION))
         .normalize();
+  }
+
+  /**
+   * Where and when a parking orbit whose plane is <b>imposed</b> injects — MIS-4 / L1 (spec {@code
+   * docs/lunar-flyby/03-conception-L1.md} §2.4).
+   *
+   * <p><b>It carries no state, and that is the point.</b> Exposing the shifted Keplerian state
+   * would invite injecting from it rather than from the state actually flown, and the two differ by
+   * the half-degree of nodal regression the parking coast accumulates (spec §5 pt 1). Both
+   * consumers need the direction only: L4 coasts and reads its own position, L2 builds a circular
+   * orbit from the direction and the radius.
+   *
+   * @param coastDuration the parking coast from the given state to the injection point (s); the
+   *     first passage, so at most one revolution and the 12 s the injection point itself drifts
+   *     during it
+   * @param injectionDate the date the impulse is applied
+   * @param arrivalDate {@code injectionDate + }{@link #TIME_OF_FLIGHT_SECONDS}
+   * @param injectionDirection the unit direction of the injection point, in the parking frame and
+   *     inside the imposed plane
+   * @param planeMisalignment the signed angle of the arrival direction above the parking plane
+   *     (rad), positive towards the plane's normal
+   */
+  public record Departure(
+      double coastDuration,
+      AbsoluteDate injectionDate,
+      AbsoluteDate arrivalDate,
+      Vector3D injectionDirection,
+      double planeMisalignment) {}
+
+  /**
+   * The injection point of a parking orbit whose plane is imposed, and the coast that reaches it —
+   * <b>closed form, no propagation</b> (spec §2).
+   *
+   * <p><b>The arrival direction is projected into the plane rather than met in 3D.</b> Reading "170°
+   * short of the arrival direction" literally has a solution only while {@code cos β ≥ |cos 170°|},
+   * i.e. below 10° of misalignment, which would buy a geometric refusal where a Kourou plane reaches
+   * 33.9° (spec §2.1). The projection is always defined, it reduces <em>exactly</em> to {@link
+   * #parkingState} at zero misalignment, and the true 3D transfer angle it produces — {@code cos θ =
+   * cos 170° · cos β} — moves away from the 180° Lambert singularity as the misalignment grows
+   * rather than towards it.
+   *
+   * <p><b>The coast is the first passage</b>, by construction and not by a guard: starting the
+   * fixed point at zero and wrapping the first angle into {@code [0, 2π)} selects the next crossing
+   * of the injection point rather than the nearest one. That bounds it at one revolution <em>plus
+   * the drift of the injection point during that revolution</em> — the point moves forward with the
+   * Moon at 0.549 °/h, which is 0.81° or 11.9 s of parking phase, measured at 10.5 s. A departure
+   * taken just past its injection point therefore waits 5 302 s, still well inside the 7 200 s
+   * restart window of the upper stage L6 will fly it on.
+   *
+   * @param parking the parking state whose plane is imposed
+   * @return the departure geometry
+   */
+  public static Departure departureFrom(SpacecraftState parking) {
+    Vector3D position = parking.getPosition();
+    Vector3D velocity = parking.getPVCoordinates().getVelocity();
+    Vector3D planeNormal = Vector3D.crossProduct(position, velocity).normalize();
+
+    // Rebuilt from position and velocity alone: the orbit then carries no non-Keplerian
+    // acceleration, so shiftedBy is a pure mean-anomaly advance instead of the quadratic
+    // small-offset expansion Orekit applies to a state coming out of a numerical propagator —
+    // absurd over the 5 292 s of a parking revolution (spec §2.3).
+    KeplerianOrbit keplerian =
+        new KeplerianOrbit(
+            new PVCoordinates(position, velocity),
+            parking.getFrame(),
+            parking.getDate(),
+            parking.getOrbit().getMu());
+    double meanMotion = keplerian.getKeplerianMeanMotion();
+
+    double coast = 0.0;
+    double misalignment = 0.0;
+    Vector3D injectionDirection = position.normalize();
+    for (int pass = 0; pass < DEPARTURE_PASSES; pass++) {
+      Vector3D arrivalDirection =
+          moonPosition(parking.getDate().shiftedBy(coast + TIME_OF_FLIGHT_SECONDS)).normalize();
+      misalignment = planeMisalignment(planeNormal, arrivalDirection);
+      Vector3D inPlane =
+          arrivalDirection
+              .subtract(planeNormal.scalarMultiply(arrivalDirection.dotProduct(planeNormal)))
+              .normalize();
+      injectionDirection =
+          new Rotation(planeNormal, -TRANSFER_ANGLE, RotationConvention.VECTOR_OPERATOR)
+              .applyTo(inPlane);
+
+      double travel =
+          orientedAngle(keplerian.shiftedBy(coast).getPosition(), injectionDirection, planeNormal);
+      if (pass == 0 && travel < -DEPARTURE_TOLERANCE_RADIANS) {
+        travel += MathUtils.TWO_PI;
+      }
+      // Tested before the update rather than after it, so the direction returned is the one the
+      // returned coast actually reaches, and a departure already at its injection point coasts for
+      // exactly zero.
+      if (FastMath.abs(travel) < DEPARTURE_TOLERANCE_RADIANS) {
+        break;
+      }
+      coast += travel / meanMotion;
+    }
+
+    return new Departure(
+        coast,
+        parking.getDate().shiftedBy(coast),
+        parking.getDate().shiftedBy(coast + TIME_OF_FLIGHT_SECONDS),
+        injectionDirection,
+        misalignment);
+  }
+
+  /** The angle from {@code from} to {@code to} measured about {@code axis}, in {@code (−π, π]}. */
+  private static double orientedAngle(Vector3D from, Vector3D to, Vector3D axis) {
+    return FastMath.atan2(
+        Vector3D.crossProduct(from, to).dotProduct(axis), from.dotProduct(to));
+  }
+
+  /**
+   * The signed angle of the arrival direction above an orbital plane (rad), positive towards the
+   * plane's normal — the term L2 weighs its epochs on, computed once here rather than twice there.
+   *
+   * @param planeNormal the unit normal of the plane
+   * @param arrivalDirection the unit direction of the Moon at arrival
+   */
+  private static double planeMisalignment(Vector3D planeNormal, Vector3D arrivalDirection) {
+    // Clamped only against rounding: both arguments are unit vectors, so the product is in [-1, 1]
+    // up to the last bit.
+    return FastMath.asin(
+        FastMath.max(-1.0, FastMath.min(1.0, planeNormal.dotProduct(arrivalDirection))));
   }
 
   /**
@@ -284,11 +442,23 @@ public record TranslunarInjectionPlan(
               AIM_ITERATIONS));
     }
     double miss = measurePlanVersusFlight(parking, best, arrival, exhaustVelocity, context);
+    // The misalignment is logged and not guarded: a ΔV that jumps from 3 178 to 6 000 m/s because
+    // the imposed plane misses the Moon by 23° must be readable in the line rather than deduced
+    // (spec §3.4). Refusing on it belongs to the launch window, which can pick another date.
     logger.info(
-        "TLI plan: dv={} m/s, offset={} km, perilune altitude={} km",
+        "TLI plan: dv={} m/s, offset={} km, perilune altitude={} km, plane misalignment={}°",
         FastMath.round(best.deltaV().getNorm()),
         FastMath.round(best.offset() / 1000.0),
-        FastMath.round(achievedAltitude / 1000.0));
+        FastMath.round(achievedAltitude / 1000.0),
+        String.format(
+            Locale.ROOT,
+            "%.2f",
+            FastMath.toDegrees(
+                planeMisalignment(
+                    Vector3D.crossProduct(
+                            parking.getPosition(), parking.getPVCoordinates().getVelocity())
+                        .normalize(),
+                    moonAtArrival.normalize()))));
 
     return new TranslunarInjectionPlan(
         parking, best.deltaV(), arrival, best.aimPoint(), best.offset(), achievedAltitude, miss);
@@ -321,10 +491,30 @@ public record TranslunarInjectionPlan(
    * @throws OrbitlabException when the geometry at that epoch admits no transfer plane
    */
   public static double keplerianInjectionDeltaV(AbsoluteDate injectionDate, double mass) {
-    SpacecraftState parking = parkingState(injectionDate, mass);
-    AbsoluteDate arrival = injectionDate.shiftedBy(TIME_OF_FLIGHT_SECONDS);
+    return keplerianInjectionDeltaV(
+        parkingState(injectionDate, mass), injectionDate.shiftedBy(TIME_OF_FLIGHT_SECONDS));
+  }
+
+  /**
+   * What the injection costs from a parking orbit one is <b>given</b> — same closed form, one
+   * Lambert solve, no propagation.
+   *
+   * <p><b>The overload exists because the closed form above cannot serve an imposed plane</b>: it
+   * builds its own parking orbit through {@link #parkingState}, which fabricates the plane. This is
+   * the direct companion of {@link #departureFrom} — pass it {@link Departure#arrivalDate()} — and
+   * it is the Lambert term of the lunar launch window (MIS-4 / L2), which the découpage wrote there
+   * and L1 delivers here so that L2 inherits a criterion rather than a piece of mechanism (spec
+   * §3.5).
+   *
+   * @param parking the parking state to inject from, at the injection point
+   * @param arrivalDate the date the Moon's centre is aimed at
+   * @return the magnitude of the injection impulse (m/s)
+   */
+  public static double keplerianInjectionDeltaV(
+      SpacecraftState parking, AbsoluteDate arrivalDate) {
     Vector3D seed =
-        keplerianSeedVelocity(parking, boundaryConditions(parking, arrival, moonPosition(arrival)));
+        keplerianSeedVelocity(
+            parking, boundaryConditions(parking, arrivalDate, moonPosition(arrivalDate)));
     return seed.subtract(parking.getPVCoordinates().getVelocity()).getNorm();
   }
 
@@ -470,14 +660,25 @@ public record TranslunarInjectionPlan(
   /**
    * The Keplerian seed velocity at injection — closed form, no propagation.
    *
-   * <p>Posigrade because the transfer plane's normal has a positive vertical component by
-   * construction ({@link #PARKING_INCLINATION} is well under 90°), and zero full revolutions
-   * because the transfer is a single arc short of half a turn ({@link #TRANSFER_ANGLE}).
+   * <p><b>The posigrade flag is read off the boundary positions, not assumed</b> (MIS-4 / L1, spec
+   * §3.3). It was hardcoded {@code true} and justified by the transfer plane's normal having a
+   * positive vertical component "by construction, {@link #PARKING_INCLINATION} being well under
+   * 90°" — a constant that governs nothing once the parking plane is imposed, which turned the
+   * justification into a tacit assumption on an input. The sign of {@code (r₁ × r₂)·z} says it
+   * instead, and on the fabricated plane it says {@code true}.
+   *
+   * <p>Zero full revolutions, because the transfer is a single arc short of half a turn ({@link
+   * #TRANSFER_ANGLE}). That one stays a constant: generalising it is MIS-6, where a second consumer
+   * would finally fix the shape of the API.
    */
   static Vector3D keplerianSeedVelocity(
       SpacecraftState parking, LambertBoundaryConditions conditions) {
+    boolean posigrade =
+        Vector3D.crossProduct(conditions.getInitialPosition(), conditions.getTerminalPosition())
+                .getZ()
+            >= 0.0;
     return new LambertSolver(parking.getOrbit().getMu())
-        .solve(true, 0, conditions)
+        .solve(posigrade, 0, conditions)
         .getInitialVelocity();
   }
 
@@ -656,11 +857,19 @@ public record TranslunarInjectionPlan(
    * <p>The relative velocity depends on the aim point, so this would be circular. It is closed by
    * reading it off a provisional aim at the Moon's centre — one closed-form Lambert solve, no
    * propagation — and then holding the direction fixed, so the transfer plane never moves either.
+   *
+   * <p><b>The plane is the arc's own, and no longer a plane fabricated from the lunar direction</b>
+   * (MIS-4 / L1, spec §3.1). That fabrication only agreed with the flown arc because {@link
+   * #parkingState} had built the parking orbit from the very same normal; from an imposed plane the
+   * two diverge, and the offset would be laid in a plane the spacecraft does not fly — tilting the
+   * flyby against its own arc, which is precisely what this method exists to avoid. It is frozen on
+   * the provisional centre aim for the same reason the relative velocity is: were it re-derived per
+   * attempt, the offset direction would depend on the offset, and the monotonicity the bisection
+   * rests on would no longer hold by construction.
    */
   private static Vector3D aimOffsetDirection(
       SpacecraftState parking, Vector3D moonAtArrival, AbsoluteDate arrival) {
-    Vector3D moonDirection = moonAtArrival.normalize();
-    Vector3D normal = transferPlaneNormal(moonDirection);
+    Vector3D normal = Vector3D.crossProduct(parking.getPosition(), moonAtArrival).normalize();
     TimeStampedPVCoordinates moon =
         OrekitService.get()
             .body(SolarSystemBody.MOON)
