@@ -364,6 +364,22 @@ public class MissionOptimizer {
           dv.dvBurn1Useful(),
           dv.dvBurn1Wasted(),
           dv.dvBurn2());
+      TransferProblem.CostBreakdown terms = transferProblem.diagnoseCost(result.bestVariables());
+      logger.info(
+          "Transfert cost breakdown: objective={} (apoRel={}, periRel={}, apoAbs={}, periAbs={},"
+              + " ecc={}, vRad={}, incl={}), barrier={}, altMax={}, propellant={}, depletion={}",
+          terms.objective(),
+          terms.apogeeRelative(),
+          terms.perigeeRelative(),
+          terms.apogeeAbsolute(),
+          terms.perigeeAbsolute(),
+          terms.eccentricity(),
+          terms.radialVelocity(),
+          terms.inclination(),
+          terms.barrier(),
+          terms.altMax(),
+          terms.propellant(),
+          terms.depletion());
       TransferTwoManeuverProblem.BarrierReport barriers =
           transferProblem.diagnoseBarriers(result.bestVariables());
       logger.info(

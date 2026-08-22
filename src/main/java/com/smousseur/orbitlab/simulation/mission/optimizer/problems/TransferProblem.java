@@ -251,6 +251,14 @@ public class TransferProblem implements TrajectoryProblem {
     // circularization burn lands) and apply it uniformly to both apsides — preserves
     // the historical LEO behavior (rp == ra) and remains a small constant offset for
     // elliptic targets.
+    //
+    // Raising this offset to FlownBandAim's a·f was tried on 2026-08-22 and reverted: the
+    // achieved apsides track the target one-for-one (a +6 397 m target shift moved them +6 511
+    // and +6 436 m), so the residual is a fixed *relative* bias — 1.436 % on the apogee, 0.515 %
+    // on the perigee, constant to 0.3 % across the shift — that no target can absorb. What the
+    // shift did produce was a genuine double compensation with the Trim stage, which centres on
+    // the raw request: the delivered mean orbit went from 559 649 x 559 722 (circular) to
+    // 559 712 x 566 006 (e = 4.5e-4).
     double rNominal = EARTH_RADIUS + apogeeAltitude;
     double j2 = 1.0826e-3; // J2 coefficient
     double sinI = FastMath.sin(initialOrbit.getI());
@@ -583,18 +591,65 @@ public class TransferProblem implements TrajectoryProblem {
     return lastResult.get();
   }
 
-  @Override
-  public double computeCost(SpacecraftState state) {
-    // Detect penalty states: if propagation failed, the returned state is the initial state
-    // (no time advancement). Combine every available signal (post-burn-1 orbit elements,
-    // in-flight underground excursion) with tuning-driven weights so CMA-ES sees a
-    // continuous gradient instead of a flat plateau. The {@code failureBaseCost} keeps the
-    // failure path well above any nominal cost while remaining finite.
-    double elapsed = state.getDate().durationFrom(initialState.getDate());
-    if (elapsed < 1.0) {
-      return computeFailurePenalty();
+  /**
+   * Per-term decomposition of {@link #computeCost(SpacecraftState)}, in the same units and with
+   * the same weights already applied — each component is what that term contributes to the total,
+   * not the raw error it is built from.
+   *
+   * <p>Produced by the very computation the optimizer runs on, not by a second copy of its
+   * formulas: {@code computeCost} returns {@link #total()} of this record. A decomposition that
+   * merely re-derived the terms could drift from what is actually minimized, and the whole point
+   * of reading it is to trust it.
+   *
+   * @param apogeeRelative {@code W_APO · errApo²}, on the geodetic apogee, relative
+   * @param perigeeRelative {@code W_PERI · errPeri²}, on the geodetic perigee, relative
+   * @param apogeeAbsolute {@code W_APO_ABS · errApoAbs²}, the same apogee error scaled by {@code
+   *     ABS_ERR_SCALE} so it stays meaningful at high altitude
+   * @param perigeeAbsolute {@code W_PERI_ABS · errPeriAbs²}, likewise on the perigee
+   * @param eccentricity {@code weightE · errE²}, deviation from the target eccentricity
+   * @param radialVelocity {@code W_V · errV²}, residual radial velocity over the circular speed
+   * @param inclination {@code W_I · errI²}, plane drift (rad²)
+   * @param barrier {@code W_BARRIER · (periapsis + minimum-altitude barriers)}
+   * @param altMax {@code W_ALT_MAX · altMaxPenalty}
+   * @param propellant the I7 tie-breaker on Δv wasted above the Hohmann reference
+   * @param depletion the barrier on the spendable margin left unspent
+   */
+  public record CostBreakdown(
+      double apogeeRelative,
+      double perigeeRelative,
+      double apogeeAbsolute,
+      double perigeeAbsolute,
+      double eccentricity,
+      double radialVelocity,
+      double inclination,
+      double barrier,
+      double altMax,
+      double propellant,
+      double depletion) {
+
+    /** The orbital objective alone — the seven terms graded on the achieved orbit. */
+    public double objective() {
+      return apogeeRelative
+          + perigeeRelative
+          + apogeeAbsolute
+          + perigeeAbsolute
+          + eccentricity
+          + radialVelocity
+          + inclination;
     }
 
+    /** The cost, identical to what {@link TransferProblem#computeCost(SpacecraftState)} returns. */
+    public double total() {
+      return objective() + barrier + altMax + propellant + depletion;
+    }
+  }
+
+  /**
+   * Decomposes the cost of a graded state. Assumes the nominal path — the caller has already
+   * established that propagation advanced time, which {@link #computeCost(SpacecraftState)} does
+   * before delegating here.
+   */
+  CostBreakdown breakdown(SpacecraftState state) {
     KeplerianOrbit finalOrbit = (KeplerianOrbit) OrbitType.KEPLERIAN.convertType(state.getOrbit());
 
     // Earth-fixed on purpose (PHY-4 / L1, spec docs/multi-corps/03-conception-L1.md §4.1):
@@ -617,17 +672,7 @@ public class TransferProblem implements TrajectoryProblem {
     double errV = Physics.computeRadialVelocity(state) / vCircTarget;
     double errI = finalOrbit.getI() - targetInclination;
 
-    double objective =
-        W_APO * errApo * errApo
-            + W_PERI * errPeri * errPeri
-            + W_APO_ABS * errApoAbs * errApoAbs
-            + W_PERI_ABS * errPeriAbs * errPeriAbs
-            + weightE * errE * errE
-            + W_V * errV * errV
-            + W_I * errI * errI;
-
-    double barrier = 0.0;
-    barrier += barrierBelow(periAlt, periapsisFloor); // périapsis géodésique
+    double barrier = barrierBelow(periAlt, periapsisFloor); // périapsis géodésique
 
     double altMaxPenalty = 0.0;
     TransferResult tr = lastResult.get();
@@ -645,19 +690,48 @@ public class TransferProblem implements TrajectoryProblem {
     // overlong burns) that would otherwise drain the sized stage to a zero residual.
     double consumedDv = computeConsumedDv(state);
     double excessDv = FastMath.max(0.0, consumedDv - dvHohmannTotal);
-    double propellantTerm = propellantTerm(excessDv);
-    logger.debug(
-        "Propellant term: consumedΔv={} m/s, HohmannΔv={} m/s, excessΔv={} m/s, contribution={}",
-        consumedDv,
-        dvHohmannTotal,
-        excessDv,
-        propellantTerm);
 
-    return objective
-        + W_BARRIER * barrier
-        + W_ALT_MAX * altMaxPenalty
-        + propellantTerm
-        + depletionBarrier(excessDv);
+    return new CostBreakdown(
+        W_APO * errApo * errApo,
+        W_PERI * errPeri * errPeri,
+        W_APO_ABS * errApoAbs * errApoAbs,
+        W_PERI_ABS * errPeriAbs * errPeriAbs,
+        weightE * errE * errE,
+        W_V * errV * errV,
+        W_I * errI * errI,
+        W_BARRIER * barrier,
+        W_ALT_MAX * altMaxPenalty,
+        propellantTerm(excessDv),
+        depletionBarrier(excessDv));
+  }
+
+  /**
+   * Re-runs propagation for a parameter vector and decomposes the resulting cost. Pure, no side
+   * effects beyond updating {@code lastResult}.
+   *
+   * @param bestVariables the parameter vector to grade
+   * @return the per-term breakdown, all zeros when the propagation failed to advance time
+   */
+  public CostBreakdown diagnoseCost(double[] bestVariables) {
+    SpacecraftState state = propagate(bestVariables);
+    if (state.getDate().durationFrom(initialState.getDate()) < 1.0) {
+      return new CostBreakdown(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    }
+    return breakdown(state);
+  }
+
+  @Override
+  public double computeCost(SpacecraftState state) {
+    // Detect penalty states: if propagation failed, the returned state is the initial state
+    // (no time advancement). Combine every available signal (post-burn-1 orbit elements,
+    // in-flight underground excursion) with tuning-driven weights so CMA-ES sees a
+    // continuous gradient instead of a flat plateau. The {@code failureBaseCost} keeps the
+    // failure path well above any nominal cost while remaining finite.
+    double elapsed = state.getDate().durationFrom(initialState.getDate());
+    if (elapsed < 1.0) {
+      return computeFailurePenalty();
+    }
+    return breakdown(state).total();
   }
 
   /**

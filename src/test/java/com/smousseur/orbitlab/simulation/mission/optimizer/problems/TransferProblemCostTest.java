@@ -20,7 +20,9 @@ import org.orekit.time.TimeScalesFactory;
 import org.orekit.utils.Constants;
 
 /**
- * Locks the depletion contract of the transfer cost: a candidate that burns its stage to flame-out
+ * Contracts on the transfer cost function.
+ *
+ * <p>Locks the depletion contract: a candidate that burns its stage to flame-out
  * must grade <em>decisively</em> worse than one reaching the same orbit with a real residual left.
  *
  * <p>Measured on the 550 km LEO run of 2026-08-22, where the contract did not hold: five λ
@@ -34,7 +36,7 @@ import org.orekit.utils.Constants;
  * <p>The two candidates below fly the same arrival orbit, so the orbital part of the cost is a
  * shared constant and the comparison isolates the propellant grading.
  */
-public class TransferProblemDepletionCostTest {
+public class TransferProblemCostTest {
   private static final double EARTH_RADIUS = Constants.WGS84_EARTH_EQUATORIAL_RADIUS;
   private static final double TARGET_ALTITUDE = 300_000.0;
   private static final double TARGET_INCLINATION = FastMath.toRadians(45.96);
@@ -75,6 +77,25 @@ public class TransferProblemDepletionCostTest {
                 "Flame-out graded %.6e against %.6e for the sober transfer (ratio %.2f): the "
                     + "propellant grading must reject depletion by at least %.0fx",
                 flameOutCost, soberCost, flameOutCost / soberCost, MIN_REJECTION_RATIO));
+  }
+
+  @Test
+  void theCostBreakdownSumsToTheCostItDecomposes() {
+    SpacecraftState entry = handOffState();
+    TransferProblem problem = problemFor(entry);
+    SpacecraftState arrival =
+        arrivalState(entry, depletionFloorFor(entry) + 0.5 * (TRANSFER_ENTRY_MASS - depletionFloorFor(entry)));
+
+    double cost = problem.computeCost(arrival);
+    TransferProblem.CostBreakdown breakdown = problem.breakdown(arrival);
+
+    System.out.printf("cost=%.9e  breakdown.total=%.9e%n", cost, breakdown.total());
+    Assertions.assertEquals(
+        cost,
+        breakdown.total(),
+        1e-12 * Math.abs(cost),
+        "The breakdown must decompose the cost that is actually optimized, not a copy of its"
+            + " formulas that can drift from it");
   }
 
   private static TransferProblem problemFor(SpacecraftState state) {
