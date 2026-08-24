@@ -1,11 +1,11 @@
 package com.smousseur.orbitlab.tools.ephemerisgen;
 
+import com.smousseur.orbitlab.core.OrbitlabPath;
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.List;
@@ -52,15 +52,14 @@ public final class EphemerisDatasetGeneratorMain {
   public static void main(String[] args) throws Exception {
     configureLogging();
 
-    if (args.length < 2 || args.length > 3) {
-      System.err.println(
-          "Usage: EphemerisDatasetGeneratorMain <orekit-data.zip> <outputDir> [BODY1,BODY2,...]");
-      System.exit(2);
-      return;
-    }
-
-    Path orekitZip = Path.of(args[0]).toAbsolutePath().normalize();
-    Path outputDir = Path.of(args[1]).toAbsolutePath().normalize();
+    Path orekitZip =
+        Path.of(
+            Objects.requireNonNull(
+                    EphemerisDatasetGeneratorMain.class
+                        .getClassLoader()
+                        .getResource("orekit-data.zip"))
+                .toURI());
+    Path outputDir = OrbitlabPath.EPHEMERIS_PATH;
 
     if (!Files.isRegularFile(orekitZip)) {
       throw new IllegalArgumentException("orekit-data.zip not found: " + orekitZip);
@@ -78,8 +77,8 @@ public final class EphemerisDatasetGeneratorMain {
     GeneratorConfigV1 cfg = withPvFirstUnder10GoParams(baseCfg);
 
     // Optional body filter: only generate the specified bodies
-    if (args.length == 3) {
-      cfg = filterBodies(cfg, args[2]);
+    if (args.length == 1) {
+      cfg = filterBodies(cfg, args[0]);
     }
 
     logConfigSummary(cfg);

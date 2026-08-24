@@ -2,6 +2,7 @@ package com.smousseur.orbitlab.tools.orbitgen;
 
 import com.smousseur.orbitlab.app.OrekitTime;
 import com.smousseur.orbitlab.app.SimulationConfig;
+import com.smousseur.orbitlab.core.OrbitlabPath;
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.simulation.orbit.OrbitPath;
 import com.smousseur.orbitlab.simulation.orbit.OrbitPathCache;
@@ -50,7 +51,7 @@ public class OrbitDatasetGenerator {
   public OrbitDatasetGenerator(Path outputDir) {
     this.outputDir = outputDir;
     this.executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
-    Path datasetDir = Path.of("dataset", "ephemeris");
+    Path datasetDir = OrbitlabPath.EPHEMERIS_PATH;
     DatasetEphemerisSource datasetSource = new DatasetEphemerisSource(datasetDir, 32);
     this.simulationConfig = SimulationConfig.defaultSolarSystem();
 

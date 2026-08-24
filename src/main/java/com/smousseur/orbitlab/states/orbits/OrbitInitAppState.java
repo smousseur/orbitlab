@@ -5,6 +5,7 @@ import com.jme3.app.state.BaseAppState;
 import com.jme3.scene.Geometry;
 import com.smousseur.orbitlab.app.ApplicationContext;
 import com.smousseur.orbitlab.core.OrbitlabException;
+import com.smousseur.orbitlab.core.OrbitlabPath;
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.engine.scene.OrbitLineFactory;
 import com.smousseur.orbitlab.engine.scene.PlanetColors;
@@ -35,7 +36,7 @@ public class OrbitInitAppState extends BaseAppState {
   private static final Logger logger = LogManager.getLogger(OrbitInitAppState.class);
   private final SceneGraph.OrbitLayer orbitLayer;
   private final EnumSet<SolarSystemBody> bodies;
-  private final Path datasetDir = Path.of("dataset", "orbits");
+  private final Path datasetDir = OrbitlabPath.ORBITS_PATH;
 
   /**
    * Creates a new orbit initialization state.

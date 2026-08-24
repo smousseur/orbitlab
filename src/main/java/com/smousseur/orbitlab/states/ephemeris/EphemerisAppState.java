@@ -4,6 +4,7 @@ import com.jme3.app.Application;
 import com.jme3.app.state.BaseAppState;
 import com.smousseur.orbitlab.app.ApplicationContext;
 import com.smousseur.orbitlab.app.SimulationClock;
+import com.smousseur.orbitlab.core.OrbitlabPath;
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.simulation.ephemeris.BodySample;
 import com.smousseur.orbitlab.simulation.ephemeris.EphemerisWorker;
@@ -85,7 +86,7 @@ public final class EphemerisAppState extends BaseAppState {
 
   @Override
   protected void initialize(Application app) {
-    Path datasetDir = Path.of("dataset", "ephemeris");
+    Path datasetDir = OrbitlabPath.EPHEMERIS_PATH;
 
     this.source = new DatasetEphemerisSource(datasetDir, /*chunksInCachePerBody*/ 32);
 

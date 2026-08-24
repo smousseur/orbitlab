@@ -1,6 +1,7 @@
 package com.smousseur.orbitlab.simulation.mission.scenario;
 
 import com.smousseur.orbitlab.core.OrbitlabException;
+import com.smousseur.orbitlab.core.OrbitlabPath;
 import com.smousseur.orbitlab.simulation.mission.scenario.model.ScenarioFile;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -21,10 +22,10 @@ import java.util.stream.Stream;
  * scenarios: replaying someone else's scenario must not reconfigure the screen of whoever opens it
  * (§10).
  *
- * <p><b>Names are refused, never sanitised.</b> Silently turning {@code ../../passwd} into
- * {@code passwd} would save a scenario under a name the user did not choose, and would make a later
- * "does it already exist?" answer about a different file than the one about to be written. The
- * allowed set is {@code [A-Za-z0-9 _-]}, which is also what keeps a name a valid file name on every
+ * <p><b>Names are refused, never sanitised.</b> Silently turning {@code ../../passwd} into {@code
+ * passwd} would save a scenario under a name the user did not choose, and would make a later "does
+ * it already exist?" answer about a different file than the one about to be written. The allowed
+ * set is {@code [A-Za-z0-9 _-]}, which is also what keeps a name a valid file name on every
  * platform this runs on.
  */
 public final class ScenarioStore {
@@ -53,7 +54,7 @@ public final class ScenarioStore {
    * @return the user-home store
    */
   public static ScenarioStore inUserHome() {
-    return new ScenarioStore(Path.of(System.getProperty("user.home"), ".orbitlab", "scenarios"));
+    return new ScenarioStore(OrbitlabPath.SCENARIOS_PATH);
   }
 
   /**
@@ -144,7 +145,7 @@ public final class ScenarioStore {
    * later disagree with the one that refuses the write.
    *
    * <p>Spaces are allowed <b>inside</b> a name but a name made only of them is not: the character
-   * set alone would accept {@code "   "}, which names a file no one can refer to and which Windows
+   * set alone would accept {@code " "}, which names a file no one can refer to and which Windows
    * mangles by trimming.
    *
    * @param name the candidate name

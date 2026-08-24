@@ -4,8 +4,6 @@ build/
 !**/src/main/**/build/
 !**/src/test/**/build/
 docs/superpowers/**
-src/main/resources/models/**
-src/test/resources/orekit-data.zip
 dataset/**
 .kotlin
 gradle/**

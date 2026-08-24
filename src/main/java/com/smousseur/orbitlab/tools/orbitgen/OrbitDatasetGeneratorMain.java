@@ -1,7 +1,7 @@
 package com.smousseur.orbitlab.tools.orbitgen;
 
+import com.smousseur.orbitlab.core.OrbitlabPath;
 import com.smousseur.orbitlab.simulation.OrekitService;
-
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -34,25 +34,15 @@ public final class OrbitDatasetGeneratorMain {
    */
   public static void main(String[] args) throws Exception {
     OrekitService.get().initialize();
-    if (args.length != 2) {
-      System.err.println("Usage: OrbitDatasetGeneratorMain <orekit-data.zip> <outputDir>");
-      System.exit(2);
-      return;
-    }
-
-    Path orekitZip = Path.of(args[0]).toAbsolutePath().normalize();
-    Path outputDir = Path.of(args[1]).toAbsolutePath().normalize();
-
-    if (!Files.isRegularFile(orekitZip)) {
-      throw new IllegalArgumentException("orekit-data.zip not found: " + orekitZip);
-    }
+    Path outputDir = OrbitlabPath.ORBITS_PATH;
     Files.createDirectories(outputDir);
 
     LOG.info(() -> "Starting ephemeris dataset generation");
-    LOG.info(() -> "orekitZip = " + orekitZip);
-    LOG.info(() -> "outputDir = " + outputDir);
+    LOG.info(() -> "outputDir = " + outputDir.toAbsolutePath());
 
     Instant startedAt = Instant.now();
+    Files.createDirectories(outputDir);
+
     Runtime.getRuntime()
         .addShutdownHook(
             new Thread(

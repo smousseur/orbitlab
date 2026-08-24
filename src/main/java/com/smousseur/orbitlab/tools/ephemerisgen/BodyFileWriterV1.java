@@ -65,7 +65,7 @@ final class BodyFileWriterV1 {
    * @throws Exception if chunk computation or file I/O fails
    */
   void generateAndWrite() throws Exception {
-    Path out = cfg.outputDir().resolve("ephem").resolve(body.name() + ".bin");
+    Path out = cfg.outputDir().resolve(body.name() + ".bin");
     java.nio.file.Files.createDirectories(out.getParent());
 
     double chunkDur = params.chunkDurationSeconds();
