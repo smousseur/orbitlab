@@ -91,11 +91,11 @@ Grab the archive for your platform from the
 (`orbitlab-vX.Y.Z-windows.zip`, `-linux.zip` or `-macos.zip`), extract it, then run the three
 executables **in this exact order**:
 
-| # | Executable | What it does | Output |
-|:-:|---|---|---|
-| 1️⃣ | `ephemeris-generator` | Computes the ephemeris dataset (position/velocity + rotation of all bodies, 1950 → 2049) | `~/.orbitlab/dataset/ephemeris` |
-| 2️⃣ | `orbits-generator` | Computes the pre-traced orbit paths, **from the ephemeris dataset** | `~/.orbitlab/dataset/orbits` |
-| 3️⃣ | `Orbitlab` | The application itself | — |
+| # | Executable | What it does                                                                                                     | Output |
+|:-:|---|------------------------------------------------------------------------------------------------------------------|---|
+| 1️⃣ | `ephemeris-generator` | Computes the ephemeris dataset (position/velocity + rotation of all bodies, 1950 → 2049) ≈ 2 hours of processing | `~/.orbitlab/dataset/ephemeris` |
+| 2️⃣ | `orbits-generator` | Computes the pre-traced orbit paths, **from the ephemeris dataset** ≈ few seconds of processing                  | `~/.orbitlab/dataset/orbits` |
+| 3️⃣ | `Orbitlab` | The application itself                                                                                           | — |
 
 > The order matters: `orbits-generator` consumes what step 1 produced, and `Orbitlab` renders an
 > **empty scene** if either dataset is missing. Both generators are console applications — keep the
