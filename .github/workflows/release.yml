@@ -263,7 +263,7 @@ jobs:
             Binaries are ad-hoc signed only. If Gatekeeper blocks the launch:
 
             ```
-            xattr -dr com.apple.quarantine /chemin/vers/Orbitlab.app
+            xattr -dr com.apple.quarantine /path/to/Orbitlab.app
             ```
 
             `orbitlab.jar` is the fat JAR, provided for manually launching a `main` class.

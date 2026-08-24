@@ -61,29 +61,59 @@ OrbitLab's mission simulation is actively expanding:
 
 ## 🛠️ Getting Started
 
-### Prerequisites
+### ✅ Prerequisites
 
-- **Java 17+** (the codebase uses records and sealed interfaces)
-- **Gradle** (wrapper included — no installation needed)
-- **Orekit data** — place `orekit-data.zip` in `src/main/resources/` (required for ephemeris and physics; not included in the repo due to size)
+#### Running the released bundles (recommended)
 
-> Download `orekit-data.zip` from the [Orekit data repository](https://gitlab.orekit.org/orekit/orekit-data).
+| Requirement | Details |
+|---|---|
+| **OS** | Windows 10+, Linux x86_64 (glibc 2.31+), macOS 12+ |
+| **GPU / OpenGL** | **OpenGL 3.2 core profile** or newer — the shaders are `GLSL150`. Up-to-date GPU drivers required |
+| **Disk space** | **~10 GB free in your user HOME** for the generated datasets, plus ~400 MB for the extracted bundle |
+| **RAM** | **8 GB minimum, 16 GB recommended** — the ephemeris generator runs with `-Xmx6g`, the orbit generator with `-Xmx4g` |
+| **CPU** | 4 cores minimum; generation and CMA-ES optimization are multi-threaded and scale with core count |
+| **Java** | **None.** Every archive embeds its own Java 21 runtime (Temurin) |
 
-### Build & Run
+> ⚠️ **Software / remote OpenGL** (RDP, plain VNC, `llvmpipe`, some VMs without GPU passthrough) usually
+> exposes only OpenGL 2.1 and will fail to start. A physical display with a real GPU is expected.
+
+#### Building from sources
+
+- **JDK 21+** — the Gradle toolchain targets Java 21
+- **Gradle** — wrapper included, no installation needed
+
+---
+
+### 🚀 Quick start (released bundle)
+
+Grab the archive for your platform from the
+**[Releases page](https://github.com/smousseur/orbitlab/releases)**
+(`orbitlab-vX.Y.Z-windows.zip`, `-linux.zip` or `-macos.zip`), extract it, then run the three
+executables **in this exact order**:
+
+| # | Executable | What it does | Output |
+|:-:|---|---|---|
+| 1️⃣ | `ephemeris-generator` | Computes the ephemeris dataset (position/velocity + rotation of all bodies, 1950 → 2049) | `~/.orbitlab/dataset/ephemeris` |
+| 2️⃣ | `orbits-generator` | Computes the pre-traced orbit paths, **from the ephemeris dataset** | `~/.orbitlab/dataset/orbits` |
+| 3️⃣ | `Orbitlab` | The application itself | — |
+
+> The order matters: `orbits-generator` consumes what step 1 produced, and `Orbitlab` renders an
+> **empty scene** if either dataset is missing. Both generators are console applications — keep the
+> window open, they log their progress and total elapsed time.
+
+Executable locations after extraction:
+
+| Platform | Main app | Generators |
+|---|---|---|
+| **Windows** | `Orbitlab\Orbitlab.exe` | `Orbitlab\ephemeris-generator.exe`, `Orbitlab\orbits-generator.exe` |
+| **Linux** | `Orbitlab/bin/Orbitlab` | `Orbitlab/bin/ephemeris-generator`, `Orbitlab/bin/orbits-generator` |
+| **macOS** | `Orbitlab.app/Contents/MacOS/Orbitlab` | `Orbitlab.app/Contents/MacOS/ephemeris-generator`, `.../orbits-generator` |
+
+<details>
+<summary><b>macOS:</b> Gatekeeper blocks the launch (binaries are ad-hoc signed only)</summary></details>
 
 ```bash
-# Clone
-git clone https://github.com/smousseur/orbitlab.git
-cd orbitlab
-
-# Build
-./gradlew build
-
-# Run all tests
-./gradlew test
-
-# Package as JAR
-./gradlew jar
+xattr -dr com.apple.quarantine /path/to/Orbitlab.app
 ```
 
 ---
