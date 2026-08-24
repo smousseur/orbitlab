@@ -1,0 +1,270 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version format vX.Y.Z (ex: v1.0.0)'
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  JAVA_VERSION: '21'
+  JAVA_DISTRIBUTION: 'temurin'
+  APP_NAME: 'Orbitlab'
+  # Explicit list instead of ALL-MODULE-PATH: ~80 MB less and a reproducible runtime.
+  # If a launcher fails with ClassNotFoundException, switch to ALL-MODULE-PATH and refine.
+  JLINK_MODULES: >-
+    java.base,java.desktop,java.logging,java.management,java.naming,
+    java.net.http,java.prefs,java.scripting,java.sql,java.xml,
+    jdk.unsupported,jdk.crypto.ec
+
+jobs:
+  # ──────────────────────────────────────────────────────────────────────────
+  # 1. Validate the tag and derive the two forms used later:
+  #    "v1.0.0" for file names, "1.0.0" for --app-version
+  #    (jpackage rejects a non-numeric suffix, especially on macOS).
+  # ──────────────────────────────────────────────────────────────────────────
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.v.outputs.tag }}
+      number: ${{ steps.v.outputs.number }}
+    steps:
+      - id: v
+        shell: bash
+        run: |
+          TAG="${{ github.event.inputs.version || github.ref_name }}"
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Unvalid version : '$TAG' (expected vX.Y.Z, ex. v1.0.0)"
+            exit 1
+          fi
+          echo "tag=$TAG"        >> "$GITHUB_OUTPUT"
+          echo "number=${TAG#v}" >> "$GITHUB_OUTPUT"
+          echo "Release $TAG (app-version ${TAG#v})" >> "$GITHUB_STEP_SUMMARY"
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # 2. Build the fat JAR ONCE: it embeds the native libraries for all three
+  #    platforms, so rebuilding it per OS would only produce three identical
+  #    JARs and three opportunities for divergence.
+  # ──────────────────────────────────────────────────────────────────────────
+  fatjar:
+    needs: version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Build fat jar
+        run: ./gradlew --no-daemon shadowJar -PappVersion=${{ needs.version.outputs.number }}
+
+      - name: Contrôle du contenu du jar
+        shell: bash
+        run: |
+          set -euo pipefail
+          JAR=build/libs/orbitlab.jar
+          ls -lh "$JAR"
+          # orekit-data.zip est lu comme ressource par les générateurs : son absence
+          # ne casserait rien à la compilation mais rendrait les exécutables inutilisables.
+          jar tf "$JAR" | grep -q '^orekit-data.zip$' \
+            || { echo "::error::orekit-data.zip absent du fat jar"; exit 1; }
+          echo "Natifs LWJGL embarqués :"
+          jar tf "$JAR" | grep -E '\.(dll|so|dylib)$' | sed 's#.*/##' | sort -u
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fatjar
+          path: build/libs/orbitlab.jar
+          if-no-files-found: error
+          retention-days: 5
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # 3. Une app-image par OS : un seul runtime et un seul jar partagés par les
+  #    trois exécutables (--add-launcher), au lieu de trois copies complètes.
+  # ──────────────────────────────────────────────────────────────────────────
+  package:
+    needs: [version, fatjar]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            platform: windows
+          - os: ubuntu-latest
+            platform: linux
+          - os: macos-latest
+            platform: macos
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Fetching fat jar
+        uses: actions/download-artifact@v4
+        with:
+          name: fatjar
+          path: jpackage-input
+
+      - name: jpackage (app-image + 2 additional lanchers)
+        shell: bash
+        run: |
+          set -euo pipefail
+          # The module list is written across multiple lines in env: YAML therefore
+          # leaves spaces in it, which --add-modules rejects.
+          MODULES="$(echo "${JLINK_MODULES}" | tr -d ' \n')"
+
+          EXTRA=()
+          if [[ "${{ runner.os }}" == "macOS" ]]; then
+            # LWJGL3/GLFW cannot create a window outside the main thread.
+            EXTRA+=(--java-options -XstartOnFirstThread)
+            EXTRA+=(--mac-package-identifier com.smousseur.orbitlab)
+          fi
+
+          jpackage \
+            --type app-image \
+            --name "${APP_NAME}" \
+            --app-version "${{ needs.version.outputs.number }}" \
+            --vendor "com.smousseur" \
+            --description "OrbitLab - orbital mechanics simulation" \
+            --input jpackage-input \
+            --main-jar orbitlab.jar \
+            --main-class com.smousseur.orbitlab.OrbitLabApplication \
+            --java-options -Xmx2g \
+            --add-modules "${MODULES}" \
+            --add-launcher "ephemeris-generator=packaging/ephemeris-generator.properties" \
+            --add-launcher "orbits-generator=packaging/orbits-generator.properties" \
+            --dest build/app
+
+      - name: Control executable files
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "${{ runner.os }}" in
+            Windows) BIN="build/app/${APP_NAME}" ;;
+            Linux)   BIN="build/app/${APP_NAME}/bin" ;;
+            macOS)   BIN="build/app/${APP_NAME}.app/Contents/MacOS" ;;
+          esac
+          ls -l "$BIN"
+          for exe in "${APP_NAME}" ephemeris-generator orbits-generator; do
+            # .exe extension only exists on Windows, therefore we test all 2 forms.
+            [[ -f "$BIN/$exe" || -f "$BIN/$exe.exe" ]] \
+              || { echo "::error::Lanceur manquant : $exe"; exit 1; }
+          done
+          du -sh build/app
+
+      - name: Signature ad-hoc (macOS)
+        if: runner.os == 'macOS'
+        run: codesign --force --deep --sign - "build/app/${APP_NAME}.app"
+
+      - name: Zip (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $name = "orbitlab-${{ needs.version.outputs.tag }}-${{ matrix.platform }}.zip"
+          Compress-Archive -Path build/app/* -DestinationPath $name
+
+      - name: Zip (Linux / macOS)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          NAME="orbitlab-${{ needs.version.outputs.tag }}-${{ matrix.platform }}.zip"
+          # -y keeps symbolic links : macOS runtime has some, and
+          # follow them can cause a broken archive and app.
+          (cd build/app && zip -qry "../../${NAME}" .)
+          ls -lh "${NAME}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bundle-${{ matrix.platform }}
+          path: orbitlab-*.zip
+          if-no-files-found: error
+          retention-days: 5
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # 4. Publication: this job is reached only if all three platforms succeeded.
+  # ──────────────────────────────────────────────────────────────────────────
+  release:
+    needs: [version, package]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetching archives
+        uses: actions/download-artifact@v4
+        with:
+          pattern: bundle-*
+          path: dist
+          merge-multiple: true
+
+      - name: Fetching fat jar
+        uses: actions/download-artifact@v4
+        with:
+          name: fatjar
+          path: dist
+
+      - name: SHA-256 fingerprints
+        working-directory: dist
+        run: |
+          sha256sum orbitlab-*.zip orbitlab.jar | tee SHA256SUMS.txt
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.version.outputs.tag }}
+          name: OrbitLab ${{ needs.version.outputs.tag }}
+          draft: false
+          generate_release_notes: true
+          files: |
+            dist/orbitlab-*.zip
+            dist/orbitlab.jar
+            dist/SHA256SUMS.txt
+          body: |
+            ## OrbitLab ${{ needs.version.outputs.tag }}
+
+            Each archive includes a Java 21 runtime (Temurin): no JDK installation required.
+
+            | Executable | Role |
+            |---|---|
+            | `Orbitlab` | main application |
+            | `ephemeris-generator` | ephemeris dataset → `~/.orbitlab/dataset/ephemeris` |
+            | `orbits-generator` | precomputed orbits → `~/.orbitlab/dataset/orbits` |
+
+            Executable locations after extraction :
+
+            - **Windows** : `Orbitlab\Orbitlab.exe`
+            - **Linux** : `Orbitlab/bin/Orbitlab`
+            - **macOS** : `Orbitlab.app/Contents/MacOS/Orbitlab`
+
+            ### First launch
+
+            Run `ephemeris-generator` **then** `orbits-generator` before launching the application:
+            without the datasets, the scene remains empty. Expect several hours of processing
+            and approximately 10 GB of disk space.
+
+            ### macOS
+
+            Binaries are ad-hoc signed only. If Gatekeeper blocks the launch:
+
+            ```
+            xattr -dr com.apple.quarantine /chemin/vers/Orbitlab.app
+            ```
+
+            `orbitlab.jar` is the fat JAR, provided for manually launching a `main` class.
+            Checksums are available in `SHA256SUMS.txt`.

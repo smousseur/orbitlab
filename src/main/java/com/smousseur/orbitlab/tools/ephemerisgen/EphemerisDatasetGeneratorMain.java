@@ -2,8 +2,13 @@ package com.smousseur.orbitlab.tools.ephemerisgen;
 
 import com.smousseur.orbitlab.core.OrbitlabPath;
 import com.smousseur.orbitlab.core.SolarSystemBody;
+
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.EnumMap;
@@ -36,6 +41,7 @@ import java.util.logging.Logger;
 public final class EphemerisDatasetGeneratorMain {
 
   private static final Logger LOG = Logger.getLogger(EphemerisDatasetGeneratorMain.class.getName());
+  private static final String OREKIT_DATA_RESOURCE = "orekit-data.zip";
 
   private EphemerisDatasetGeneratorMain() {}
 
@@ -52,13 +58,7 @@ public final class EphemerisDatasetGeneratorMain {
   public static void main(String[] args) throws Exception {
     configureLogging();
 
-    Path orekitZip =
-        Path.of(
-            Objects.requireNonNull(
-                    EphemerisDatasetGeneratorMain.class
-                        .getClassLoader()
-                        .getResource("orekit-data.zip"))
-                .toURI());
+    Path orekitZip = extractOrekitData();
     Path outputDir = OrbitlabPath.EPHEMERIS_PATH;
 
     if (!Files.isRegularFile(orekitZip)) {
@@ -98,6 +98,21 @@ public final class EphemerisDatasetGeneratorMain {
     Duration elapsed = Duration.between(startedAt, Instant.now());
     LOG.info(() -> "Generation complete. elapsed=" + formatDuration(elapsed));
     LOG.info(() -> "Output directory: " + outputDir);
+  }
+
+  private static Path extractOrekitData() throws IOException {
+    ClassLoader loader = EphemerisDatasetGeneratorMain.class.getClassLoader();
+    try (InputStream in = loader.getResourceAsStream(OREKIT_DATA_RESOURCE)) {
+      if (in == null) {
+        throw new FileNotFoundException(
+            OREKIT_DATA_RESOURCE + " is not on the classpath; the packaged jar is incomplete");
+      }
+      Path extracted = Files.createTempFile("orekit-data-", ".zip");
+      extracted.toFile().deleteOnExit();
+      Files.copy(in, extracted, StandardCopyOption.REPLACE_EXISTING);
+      LOG.info(() -> "Extracted " + OREKIT_DATA_RESOURCE + " to " + extracted);
+      return extracted;
+    }
   }
 
   private static void configureLogging() {

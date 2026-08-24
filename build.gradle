@@ -1,10 +1,17 @@
 plugins {
     id 'java'
+    id 'com.gradleup.shadow' version '8.3.6'
 }
 
 group = 'com.smousseur'
-version = '1.0.0-SNAPSHOT'
+version = (findProperty('appVersion') ?: '1.0.0-SNAPSHOT')
 ext.jmonkeyengineVersion = '3.9.0-beta1'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
 
 repositories {
     mavenCentral()
@@ -14,8 +21,6 @@ dependencies {
     implementation 'org.orekit:orekit:13.1.1'
     implementation 'org.jmonkeyengine:jme3-core:' + jmonkeyengineVersion
     implementation 'org.jmonkeyengine:jme3-desktop:' + jmonkeyengineVersion
-    // Screen-space filters (BloomFilter and the matdefs it loads). FilterPostProcessor itself
-    // lives in jme3-core, the com.jme3.post.filters.* implementations do not.
     implementation 'org.jmonkeyengine:jme3-effects:' + jmonkeyengineVersion
     implementation 'org.jmonkeyengine:jme3-jogg:' + jmonkeyengineVersion
     runtimeOnly 'org.jmonkeyengine:jme3-plugins:' + jmonkeyengineVersion
@@ -48,13 +53,7 @@ tasks.withType(JavaCompile).configureEach {
 
 test {
     useJUnitPlatform()
-    // Forward the opt-in flag for slow/nightly integration tests (e.g. the I7 propellant-sizing
-    // loop, ~15 min) from the Gradle JVM to the test JVM. Default off, so the normal suite is
-    // unaffected; enable with `-Dorbitlab.slowTests=true`.
     systemProperty 'orbitlab.slowTests', System.getProperty('orbitlab.slowTests', 'false')
-    // Same forwarding for the read-only diagnostic probes (GravityTurnFloorProbeTest): they fly
-    // missions at forced variables, so they cost minutes rather than the optimizer loops' tens of
-    // minutes, but they print rather than assert and have no place in the normal suite.
     systemProperty 'orbitlab.probe', System.getProperty('orbitlab.probe', 'false')
 }
 
@@ -68,4 +67,18 @@ javadoc {
         addStringOption('Xdoclint:none', '-quiet')
     }
     failOnError = false
+}
+
+shadowJar {
+    archiveFileName = 'orbitlab.jar'
+    mergeServiceFiles()          // Orekit / Jackson / log4j use META-INF/services
+    manifest {
+        attributes(
+                'Main-Class': 'com.smousseur.orbitlab.OrbitLabApplication',
+                'Implementation-Version': project.version,
+                'Multi-Release': 'true'   // log4j-api is multi-release
+        )
+    }
+    exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA'
+    exclude 'module-info.class', '**/module-info.class'
 }
