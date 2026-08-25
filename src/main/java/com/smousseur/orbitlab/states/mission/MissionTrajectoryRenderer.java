@@ -47,7 +47,7 @@ public final class MissionTrajectoryRenderer {
    * object of attention, it carries the phase colours, and it is drawn against a planet rather than
    * against the sky.
    */
-  private static final float TRAJECTORY_WIDTH_PX = 3.5f;
+  private static final float TRAJECTORY_WIDTH_PX = 1.5f;
 
   private final MissionId missionId;
   private final ColorRGBA color;
@@ -143,9 +143,9 @@ public final class MissionTrajectoryRenderer {
    * @param tip the interpolated position at the current instant, drawn as the final vertex and used
    *     as the origin the vertices are expressed against
    * @param renderContext the context of the sample being drawn, derived from its arc by {@code
-   *     MissionRenderer.renderContextFor} — a parameter and no longer a field of this class, so that
-   *     the line and the near-frame offset cannot be built from two different contexts (spec {@code
-   *     docs/multi-corps/05-conception-L3.md} §3.2)
+   *     MissionRenderer.renderContextFor} — a parameter and no longer a field of this class, so
+   *     that the line and the near-frame offset cannot be built from two different contexts (spec
+   *     {@code docs/multi-corps/05-conception-L3.md} §3.2)
    */
   public void update(
       TrajectoryPolyline trail, int upTo, Vector3D tip, RenderContext renderContext) {

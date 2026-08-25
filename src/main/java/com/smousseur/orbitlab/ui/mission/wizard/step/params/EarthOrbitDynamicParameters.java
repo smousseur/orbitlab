@@ -28,9 +28,9 @@ import org.orekit.utils.Constants;
  * The parameters of any {@code MissionSpec.EarthOrbit} target — LEO, polar, sun-synchronous or MEO
  * (spec {@code docs/earth-orbit/02-wizard-orbites-terrestres.md} §3).
  *
- * <p>One class rather than four, because the four differ only in data: the altitude band they offer,
- * whether the target is circular, and where the inclination comes from. All three are carried by
- * {@link MissionProfile}, which is what makes the profiles presets instead of types.
+ * <p>One class rather than four, because the four differ only in data: the altitude band they
+ * offer, whether the target is circular, and where the inclination comes from. All three are
+ * carried by {@link MissionProfile}, which is what makes the profiles presets instead of types.
  *
  * <p>Replaces {@code LEODynamicParameters}, whose two altitude sliders it keeps.
  */
@@ -68,8 +68,8 @@ public class EarthOrbitDynamicParameters extends DynamicParameters {
   private Label inclinationHelper;
 
   /**
-   * Whether the inclination still shows the value this panel derived. The whole of the "auto" state,
-   * exactly as {@code StepParameters} holds the mission duration's: while it holds, {@link
+   * Whether the inclination still shows the value this panel derived. The whole of the "auto"
+   * state, exactly as {@code StepParameters} holds the mission duration's: while it holds, {@link
    * #getDynamicValues()} omits the key, and an absent key is what makes {@code MissionFactory}
    * rebuild the site's free plane from the latitude in double (spec §2.0).
    *
@@ -140,8 +140,6 @@ public class EarthOrbitDynamicParameters extends DynamicParameters {
   protected Container createContainer() {
     Container parameters = new Container(new BoxLayout(Axis.Y, FillMode.Even));
     if (profile.isCircular()) {
-      // One slider, and it says so: on a circular target perigee and apogee are the same number, and
-      // offering two would let the user build an ellipse the profile does not describe.
       parameters.addChild(
           getSliderContainer(
               "ORBIT ALTITUDE", perigeeSlider, perigeeField, altitudeMin, altitudeMax));
@@ -160,11 +158,12 @@ public class EarthOrbitDynamicParameters extends DynamicParameters {
   /**
    * The target plane: the inclination, its unit and the line that says where it comes from.
    *
-   * <p><b>The helper sits beside the field, not under it</b>, and that is a constraint rather than a
-   * taste: the step's root is pinned to {@code FormStyles.CONTENT_HEIGHT} and nothing in this wizard
-   * clips, so an overflow lands on the footer. Two altitude sliders plus a three-storey inclination
-   * block does not fit; two sliders plus this one does. The circular profiles, with a single slider,
-   * would have had the room — but one layout that fits everywhere beats two that each fit once.
+   * <p><b>The helper sits beside the field, not under it</b>, and that is a constraint rather than
+   * a taste: the step's root is pinned to {@code FormStyles.CONTENT_HEIGHT} and nothing in this
+   * wizard clips, so an overflow lands on the footer. Two altitude sliders plus a three-storey
+   * inclination block does not fit; two sliders plus this one does. The circular profiles, with a
+   * single slider, would have had the room — but one layout that fits everywhere beats two that
+   * each fit once.
    *
    * <p>The target node used to share this row for that same lack of height, and has since moved to
    * the planning page, where the launch window it governs is shown (spec {@code
@@ -358,8 +357,8 @@ public class EarthOrbitDynamicParameters extends DynamicParameters {
    *
    * <p>The one construction shared by the step's two readers of this field — {@link
    * #validateTargetPlane()}, which refuses what the site cannot reach, and {@link
-   * #targetOrbit(double)}, which hands the plane to the launch window. Written once so the window is
-   * planned for the very plane the wizard accepted.
+   * #targetOrbit(double)}, which hands the plane to the launch window. Written once so the window
+   * is planned for the very plane the wizard accepted.
    *
    * @param latitudeDeg the launch site latitude in degrees
    * @return the plane
@@ -546,6 +545,6 @@ public class EarthOrbitDynamicParameters extends DynamicParameters {
   }
 
   private static String formatDegrees(double degrees) {
-    return String.format(Locale.ROOT, "%.2f", degrees);
+    return String.format(Locale.ROOT, "%.3f", degrees);
   }
 }
