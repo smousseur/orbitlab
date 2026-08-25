@@ -355,6 +355,7 @@ public final class MissionWizardAppState extends BaseAppState {
       bus.publishUiNavigation(
           new EventBus.UiNavigationEvent.UpdateMission(editedMissionId, values));
     }
+    bus.publishUiNavigation(new EventBus.UiNavigationEvent.OpenMissionManagement());
     closeWizard();
   }
 

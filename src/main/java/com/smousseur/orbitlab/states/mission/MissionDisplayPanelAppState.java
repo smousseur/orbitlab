@@ -146,6 +146,9 @@ public final class MissionDisplayPanelAppState extends BaseAppState implements A
     drainTelemetryFocusEvents();
     rules.applyStatusTransitionRules(context.missionContext());
     if (widget != null) {
+      if (context.eventBus().pollOpenMissionDisplay() != null) {
+        widget.show(parentNode);
+      }
       widget.update();
     }
     if (menu != null) {

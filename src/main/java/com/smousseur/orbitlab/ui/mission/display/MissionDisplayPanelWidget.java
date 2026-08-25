@@ -29,7 +29,7 @@ import java.util.Objects;
  */
 public final class MissionDisplayPanelWidget implements AutoCloseable {
 
-  static final float WINDOW_WIDTH = 380f;
+  static final float WINDOW_WIDTH = 350f;
   static final float WINDOW_HEIGHT = 240f;
   static final float BODY_HEIGHT = 120f;
   private static final int PAGE_SIZE = 3;

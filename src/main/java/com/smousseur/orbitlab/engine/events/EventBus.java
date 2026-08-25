@@ -90,6 +90,10 @@ public final class EventBus {
     missionActionQueue.add(new MissionActionRequest(missionId, action));
   }
 
+  public void publishOpenMissionDisplay(UiNavigationEvent.OpenMissionDisplay display) {
+    openMissionDisplay.add(display);
+  }
+
   /** Poll one mission action request; returns null if none. */
   public MissionActionRequest pollMissionAction() {
     return missionActionQueue.poll();
@@ -108,7 +112,8 @@ public final class EventBus {
           UiNavigationEvent.CreateMission,
           UiNavigationEvent.UpdateMission,
           UiNavigationEvent.OpenMissionManagement,
-          UiNavigationEvent.OpenScenarioBrowser {
+          UiNavigationEvent.OpenScenarioBrowser,
+          UiNavigationEvent.OpenMissionDisplay {
 
     /**
      * Request to open the mission wizard, either blank or on an existing mission.
@@ -175,6 +180,8 @@ public final class EventBus {
         Objects.requireNonNull(mode, "mode");
       }
     }
+
+    record OpenMissionDisplay() implements UiNavigationEvent {}
   }
 
   private final ConcurrentLinkedQueue<UiNavigationEvent.OpenMissionWizard> openWizardQueue =
@@ -186,6 +193,8 @@ public final class EventBus {
   private final ConcurrentLinkedQueue<UiNavigationEvent.OpenMissionManagement> openManagementQueue =
       new ConcurrentLinkedQueue<>();
   private final ConcurrentLinkedQueue<UiNavigationEvent.OpenScenarioBrowser> openScenarioQueue =
+      new ConcurrentLinkedQueue<>();
+  private final ConcurrentLinkedQueue<UiNavigationEvent.OpenMissionDisplay> openMissionDisplay =
       new ConcurrentLinkedQueue<>();
 
   /**
@@ -201,6 +210,7 @@ public final class EventBus {
       case UiNavigationEvent.UpdateMission u -> updateMissionQueue.add(u);
       case UiNavigationEvent.OpenMissionManagement m -> openManagementQueue.add(m);
       case UiNavigationEvent.OpenScenarioBrowser s -> openScenarioQueue.add(s);
+      case UiNavigationEvent.OpenMissionDisplay d -> openMissionDisplay.add(d);
     }
   }
 
@@ -227,6 +237,10 @@ public final class EventBus {
   /** Poll one open-scenario-browser request; returns null if none. */
   public UiNavigationEvent.OpenScenarioBrowser pollOpenScenarioBrowser() {
     return openScenarioQueue.poll();
+  }
+
+  public UiNavigationEvent.OpenMissionDisplay pollOpenMissionDisplay() {
+    return openMissionDisplay.poll();
   }
 
   // -------------------------------------------------------------------------

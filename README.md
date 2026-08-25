@@ -52,10 +52,9 @@ Under the hood, OrbitLab uses **CMA-ES trajectory optimization** to find the opt
 
 OrbitLab's mission simulation is actively expanding:
 
-- **GTO (Geostationary Transfer Orbit)** — coming soon
-- **GEO insertion** — high-energy missions to geostationary orbit
-- **Interplanetary missions** — Hohmann transfers and beyond (Mars, Venus, ...)
-- **More vehicle types** — upper stages, orbital tugs
+- **Moon flyby**
+- **Moon orbiting**
+- **Eclipses/Inter-body penumbra**
 
 ---
 

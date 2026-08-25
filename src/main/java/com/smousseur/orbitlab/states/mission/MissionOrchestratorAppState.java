@@ -228,6 +228,9 @@ public final class MissionOrchestratorAppState extends BaseAppState {
                 "Computation completed for mission '{}' [{}]",
                 mission.getName(),
                 entry.id().shortForm());
+            context
+                .eventBus()
+                .publishOpenMissionDisplay(new EventBus.UiNavigationEvent.OpenMissionDisplay());
           } catch (Exception e) {
             // Status first, error last. Mission.status is a plain field, so the volatile write to
             // lastError is the only publication edge this thread has: a render thread that sees the
@@ -248,7 +251,6 @@ public final class MissionOrchestratorAppState extends BaseAppState {
           }
         });
   }
-
 
   /**
    * The launcher loads a plan actually flew, or {@code null} when they were the budgeted ones.
@@ -271,15 +273,14 @@ public final class MissionOrchestratorAppState extends BaseAppState {
   /**
    * Builds the renderer for a mission, in the context of the arc it <b>starts</b> in.
    *
-   * <p>That construction-time context serves the <b>scale</b> the spacecraft mesh is sized with, and
-   * nothing else — L5 took the second use away, a click now framing the arc the spacecraft is
-   * actually in (spec {@code docs/multi-corps/07-conception-L5.md} §5.2). Since the scale is the same
-   * for every planet-scale context whatever the body, the first sample's arc is a good enough answer
-   * and stays one.
+   * <p>That construction-time context serves the <b>scale</b> the spacecraft mesh is sized with,
+   * and nothing else — L5 took the second use away, a click now framing the arc the spacecraft is
+   * actually in (spec {@code docs/multi-corps/07-conception-L5.md} §5.2). Since the scale is the
+   * same for every planet-scale context whatever the body, the first sample's arc is a good enough
+   * answer and stays one.
    */
   private MissionRenderer createRenderer(MissionEntry entry, MissionEphemeris ephemeris) {
-    RenderContext renderContext =
-        RenderContext.planet(ephemeris.firstPoint().arc().body());
+    RenderContext renderContext = RenderContext.planet(ephemeris.firstPoint().arc().body());
     ColorRGBA color = entry.getColor();
     if (color == null) color = ColorRGBA.Cyan;
 
