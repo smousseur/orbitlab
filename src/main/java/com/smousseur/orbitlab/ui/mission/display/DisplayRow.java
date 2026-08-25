@@ -26,7 +26,6 @@ final class DisplayRow {
   private static final float INNER_GAP = 8f;
 
   private static final ColorRGBA ROW_IDLE_TINT = new ColorRGBA(1f, 1f, 1f, 0f);
-  private static final ColorRGBA ROW_HOVER_TINT = new ColorRGBA(1f, 1f, 1f, 0.18f);
   private static final ColorRGBA ROW_SELECT_TINT = new ColorRGBA(1f, 1f, 1f, 0.45f);
 
   private final Container root;
@@ -55,7 +54,9 @@ final class DisplayRow {
     root.addChild(
         DisplayRowIcons.vCenter(
             DisplayRowIcons.telemetryIconButton(
-                s.telemetered(), () -> listener.onToggleTelemetry(s.missionId(), s.telemetered())),
+                swatch,
+                s.telemetered(),
+                () -> listener.onToggleTelemetry(s.missionId(), s.telemetered())),
             HEIGHT));
     root.addChild(UiKit.hSpacer(INNER_GAP));
 
@@ -63,7 +64,7 @@ final class DisplayRow {
     root.addChild(
         DisplayRowIcons.vCenter(
             DisplayRowIcons.visibilityIconButton(
-                s.visible(), () -> listener.onToggleVisibility(s.missionId())),
+                swatch, s.visible(), () -> listener.onToggleVisibility(s.missionId())),
             HEIGHT));
 
     root.addChild(UiKit.hSpacer(INNER_GAP));

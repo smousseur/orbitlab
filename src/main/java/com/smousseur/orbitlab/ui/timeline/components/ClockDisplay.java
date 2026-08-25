@@ -58,7 +58,7 @@ public class ClockDisplay {
   private static final float UTC_LABEL_HEIGHT = 14f;
   private static final float DATE_UTC_GAP = 4f;
 
-  private static final float HINT_WIDTH = 224f;
+  private static final float HINT_WIDTH = 254f;
   private static final float HINT_HEIGHT = 34f;
   private static final float HINT_GAP = 8f;
   private static final float HINT_PAD = 8f;
@@ -180,7 +180,7 @@ public class ClockDisplay {
         });
 
     // Rejection hint, parked above the capsule: there is no room inside it for a date range.
-    float hintX = boxX + BOX_WIDTH - HINT_WIDTH;
+    float hintX = boxX + BOX_WIDTH - (HINT_WIDTH + DATE_TEXT_WIDTH) / 2;
     float hintTopY = HINT_GAP + HINT_HEIGHT;
     hintBorder = new Panel(HINT_WIDTH, HINT_HEIGHT, TimelineStyles.STYLE);
     hintBorder.setBackground(new QuadBackgroundComponent(withAlpha(AppStyles.TL_ROSE, 0.55f)));
@@ -259,12 +259,12 @@ public class ClockDisplay {
     }
     Optional<AbsoluteDate> parsed = TimeConverter.parseUtcDate(dateField.getText());
     if (parsed.isEmpty()) {
-      reject("format de date non reconnu", FORMAT_HINT);
+      reject("unexpected date format", FORMAT_HINT);
       return;
     }
     AbsoluteDate target = parsed.get();
     if (!EphemerisWindow.covers(target)) {
-      reject("date hors couverture ephemeride", EphemerisWindow.rangeLabel().orElse(""));
+      reject("date out of range", EphemerisWindow.rangeLabel().orElse(""));
       return;
     }
     endEdit();

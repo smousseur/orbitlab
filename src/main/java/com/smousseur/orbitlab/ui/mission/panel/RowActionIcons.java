@@ -14,6 +14,7 @@ import com.simsilica.lemur.event.DefaultMouseListener;
 import com.simsilica.lemur.event.MouseEventControl;
 import com.smousseur.orbitlab.ui.UiKit;
 import com.smousseur.orbitlab.ui.form.FormStyles;
+import com.smousseur.orbitlab.ui.mission.component.IconTooltip;
 
 final class RowActionIcons {
 
@@ -34,7 +35,8 @@ final class RowActionIcons {
     return wrap;
   }
 
-  static Container actionIconButton(String iconKey, boolean enabled, Runnable onClick) {
+  static Container actionIconButton(
+      String iconKey, String tooltipText, boolean enabled, Runnable onClick) {
     final String normalTex = "icon-action-" + iconKey;
     final String hoverTex = "icon-action-" + iconKey + "-hover";
     final String disabledTex = "icon-action-" + iconKey + "-disabled";
@@ -48,6 +50,7 @@ final class RowActionIcons {
     }
 
     icon.setBackground(tintedFlat(normalTex));
+    IconTooltip.attach(icon, tooltipText);
     MouseEventControl.addListenersToSpatial(
         icon,
         new DefaultMouseListener() {

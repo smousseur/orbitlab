@@ -217,7 +217,8 @@ class MissionRow {
 
     actions.addChild(
         RowActionIcons.vCenter(
-            RowActionIcons.actionIconButton("edit", editable, () -> listener.onEdit(missionId)),
+            RowActionIcons.actionIconButton(
+                "edit", "edit", editable, () -> listener.onEdit(missionId)),
             HEIGHT));
     actions.addChild(UiKit.hSpacer(RowActionIcons.ICON_GAP));
     actions.addChild(
@@ -229,13 +230,13 @@ class MissionRow {
     actions.addChild(
         RowActionIcons.vCenter(
             RowActionIcons.actionIconButton(
-                "compute", !computing, () -> listener.onCompute(missionId)),
+                "compute", "compute", !computing, () -> listener.onCompute(missionId)),
             HEIGHT));
     actions.addChild(UiKit.hSpacer(RowActionIcons.ICON_GAP));
     actions.addChild(
         RowActionIcons.vCenter(
             RowActionIcons.actionIconButton(
-                "delete", !computing, () -> listener.onDelete(missionId)),
+                "delete", "delete", !computing, () -> listener.onDelete(missionId)),
             HEIGHT));
   }
 

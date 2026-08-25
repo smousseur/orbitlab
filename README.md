@@ -92,7 +92,7 @@ executables **in this exact order**:
 
 | # | Executable | What it does                                                                                                     | Output |
 |:-:|---|------------------------------------------------------------------------------------------------------------------|---|
-| 1️⃣ | `ephemeris-generator` | Computes the ephemeris dataset (position/velocity + rotation of all bodies, 1950 → 2049) ≈ 2 hours of processing | `~/.orbitlab/dataset/ephemeris` |
+| 1️⃣ | `ephemeris-generator` | Computes the ephemeris dataset (position/velocity + rotation of all bodies, 1989 → 2100) ≈ 2 hours of processing | `~/.orbitlab/dataset/ephemeris` |
 | 2️⃣ | `orbits-generator` | Computes the pre-traced orbit paths, **from the ephemeris dataset** ≈ few seconds of processing                  | `~/.orbitlab/dataset/orbits` |
 | 3️⃣ | `Orbitlab` | The application itself                                                                                           | — |
 

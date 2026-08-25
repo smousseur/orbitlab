@@ -5,10 +5,7 @@ import com.jme3.input.event.MouseMotionEvent;
 import com.jme3.math.ColorRGBA;
 import com.jme3.math.Vector3f;
 import com.jme3.scene.Spatial;
-import com.simsilica.lemur.Axis;
-import com.simsilica.lemur.Container;
-import com.simsilica.lemur.FillMode;
-import com.simsilica.lemur.Insets3f;
+import com.simsilica.lemur.*;
 import com.simsilica.lemur.component.BoxLayout;
 import com.simsilica.lemur.component.QuadBackgroundComponent;
 import com.simsilica.lemur.component.TbtQuadBackgroundComponent;
@@ -17,6 +14,7 @@ import com.simsilica.lemur.event.MouseEventControl;
 import com.smousseur.orbitlab.simulation.mission.OptimizationType;
 import com.smousseur.orbitlab.simulation.mission.context.MissionEntry;
 import com.smousseur.orbitlab.ui.UiKit;
+import com.smousseur.orbitlab.ui.mission.component.IconTooltip;
 import java.util.function.Consumer;
 
 /**
@@ -35,7 +33,14 @@ final class ModeSegmentedControl {
   private static final float ICON_SIZE = 15f;
   private static final float BORDER = 1f;
 
+  private static final float TIP_CHAR_W = 10f;
+  private static final float TIP_PAD_X = 8f;
+  private static final float TIP_HEIGHT = 20f;
+  private static final float TIP_GAP = 6f;
+  private static final float TIP_Z = 10f;
+
   private static final ColorRGBA BORDER_COLOR = new ColorRGBA(0.071f, 0.161f, 0.267f, 0.3f);
+  private static final int TIP_MIN_WIDTH = 65;
 
   private ModeSegmentedControl() {}
 
@@ -106,7 +111,7 @@ final class ModeSegmentedControl {
       icon.setBackground(UiKit.rosterFlat(disabledTex));
       return seg;
     }
-
+    IconTooltip.attach(seg, icon, type.name().toLowerCase(), IconTooltip.Placement.ABOVE);
     MouseEventControl.addListenersToSpatial(
         seg,
         new DefaultMouseListener() {
