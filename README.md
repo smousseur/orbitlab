@@ -86,7 +86,7 @@ OrbitLab's mission simulation is actively expanding:
 ### 🚀 Quick start (released bundle)
 
 Grab the archive for your platform from the
-**[Releases page](https://github.com/smousseur/orbitlab/releases)**
+**[Releases page](https://github.com/smousseur/orbitlab/releases/latest)**
 (`orbitlab-vX.Y.Z-windows.zip`, `-linux.zip` or `-macos.zip`), extract it, then run the three
 executables **in this exact order**:
 
