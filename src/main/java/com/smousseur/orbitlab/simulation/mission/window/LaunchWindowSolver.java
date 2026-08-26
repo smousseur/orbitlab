@@ -241,9 +241,10 @@ public class LaunchWindowSolver {
     /**
      * Golden-section search on {@code [low, high]}, contracting to the requested precision.
      *
-     * <p>Unimodality inside the bracket is assumed, and it is the sweep step that buys it: a bracket
-     * two steps wide holds one feature when the step obeys {@link LaunchWindowProblem#coarseStep()}.
-     * That is the single reason the step belongs to the problem and not to the search.
+     * <p>Unimodality inside the bracket is assumed, and it is the sweep step that buys it: a
+     * bracket two steps wide holds one feature when the step obeys {@link
+     * LaunchWindowProblem#coarseStep()}. That is the single reason the step belongs to the problem
+     * and not to the search.
      *
      * @return the offset of the cheapest point found (s from the search start)
      */

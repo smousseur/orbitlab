@@ -34,9 +34,9 @@ import org.orekit.utils.TimeStampedPVCoordinates;
 /**
  * PHY-4 / L6 §7.1 — the geometry of the translunar injection, with no propagation at all.
  *
- * <p>Everything asserted here is closed form: the transfer plane, the parking orbit derived from it,
- * and the Lambert seed. What the flight costs is in {@code LunarTransferFlightTest}; this class runs
- * in milliseconds and is what says <em>why</em> the flight can work before anything is flown.
+ * <p>Everything asserted here is closed form: the transfer plane, the parking orbit derived from
+ * it, and the Lambert seed. What the flight costs is in {@code LunarTransferFlightTest}; this class
+ * runs in milliseconds and is what says <em>why</em> the flight can work before anything is flown.
  *
  * <p><b>MIS-4 / L1 §4.1 extends it rather than opening a class of its own</b> ({@code
  * docs/lunar-flyby/03-conception-L1.md}): the departure from an <em>imposed</em> plane is the same
@@ -64,8 +64,8 @@ class TranslunarInjectionPlanTest {
   /**
    * How far past a full revolution a coast may run (s) — see {@link #assertFirstPassage}. Derived,
    * not recorded: the injection point drifts with the Moon at 0.549 °/h, so it gains 0.81° over the
-   * 5 291 s parking revolution, which is 11.9 s of parking phase. Twenty leaves room for an
-   * imposed orbit that is not perfectly circular.
+   * 5 291 s parking revolution, which is 11.9 s of parking phase. Twenty leaves room for an imposed
+   * orbit that is not perfectly circular.
    */
   private static final double INJECTION_POINT_DRIFT_SECONDS = 20.0;
 
@@ -78,7 +78,8 @@ class TranslunarInjectionPlanTest {
   }
 
   @Test
-  @DisplayName("The parking plane contains the Moon's direction at arrival, at the declared inclination")
+  @DisplayName(
+      "The parking plane contains the Moon's direction at arrival, at the declared inclination")
   void parkingPlaneContainsTheMoonAtArrival() {
     SpacecraftState parking = TranslunarInjectionPlan.parkingState(epoch, 1_000.0);
     AbsoluteDate arrival = epoch.shiftedBy(TranslunarInjectionPlan.TIME_OF_FLIGHT_SECONDS);
@@ -88,7 +89,8 @@ class TranslunarInjectionPlanTest {
         Vector3D.crossProduct(parking.getPosition(), parking.getPVCoordinates().getVelocity())
             .normalize();
 
-    // The plane contains the arrival direction: that is the whole reason no launch window is needed,
+    // The plane contains the arrival direction: that is the whole reason no launch window is
+    // needed,
     // and it is what keeps the transfer in-plane and the delta-v at its Hohmann value.
     assertEquals(
         0.0,
@@ -107,7 +109,8 @@ class TranslunarInjectionPlanTest {
   }
 
   @Test
-  @DisplayName("The injection point sits the declared transfer angle short of the arrival direction")
+  @DisplayName(
+      "The injection point sits the declared transfer angle short of the arrival direction")
   void injectionPointSitsTheTransferAngleShortOfTheMoon() {
     SpacecraftState parking = TranslunarInjectionPlan.parkingState(epoch, 1_000.0);
     AbsoluteDate arrival = epoch.shiftedBy(TranslunarInjectionPlan.TIME_OF_FLIGHT_SECONDS);
@@ -134,13 +137,15 @@ class TranslunarInjectionPlanTest {
         1.0e-6);
     assertEquals(
         0.0,
-        parking.getPosition().dotProduct(parking.getPVCoordinates().getVelocity()) / (radius * 7_800.0),
+        parking.getPosition().dotProduct(parking.getPVCoordinates().getVelocity())
+            / (radius * 7_800.0),
         1.0e-12,
         "a circular orbit has no radial velocity");
   }
 
   @Test
-  @DisplayName("The Lambert seed costs what vis-viva says a near-Hohmann translunar injection costs")
+  @DisplayName(
+      "The Lambert seed costs what vis-viva says a near-Hohmann translunar injection costs")
   void lambertSeedCostsTheViscVivaDeltaV() {
     SpacecraftState parking = TranslunarInjectionPlan.parkingState(epoch, 1_000.0);
     AbsoluteDate arrival = epoch.shiftedBy(TranslunarInjectionPlan.TIME_OF_FLIGHT_SECONDS);
@@ -154,15 +159,15 @@ class TranslunarInjectionPlanTest {
                 parking, arrival, TranslunarInjectionPlan.aimPointFor(parking, arrival, offset)));
     double deltaV = seed.subtract(parking.getPVCoordinates().getVelocity()).getNorm();
 
-    // The reference is derived here and not recorded from a previous run: vis-viva on an ellipse from
+    // The reference is derived here and not recorded from a previous run: vis-viva on an ellipse
+    // from
     // the parking radius to the Moon's distance. Asserting against the implementation's own output
     // would only prove it reproduces yesterday (the discipline L4 §7.2 set).
     double mu = Constants.WGS84_EARTH_MU;
     double rp = parking.getPosition().getNorm();
     double ra = moonPosition(arrival).getNorm();
     double semiMajorAxis = 0.5 * (rp + ra);
-    double expected =
-        FastMath.sqrt(mu * (2.0 / rp - 1.0 / semiMajorAxis)) - FastMath.sqrt(mu / rp);
+    double expected = FastMath.sqrt(mu * (2.0 / rp - 1.0 / semiMajorAxis)) - FastMath.sqrt(mu / rp);
 
     logger.info(
         "Lambert seed delta-v {} m/s against the vis-viva reference {} m/s", deltaV, expected);
@@ -175,12 +180,12 @@ class TranslunarInjectionPlanTest {
   @Test
   @DisplayName("A lunar declination beyond the parking inclination is refused, not approximated")
   void aDeclinationBeyondTheInclinationThrows() {
-    // Fabricated, because the real Moon never gets there: measured [-28.40, +28.32] degrees over 400
+    // Fabricated, because the real Moon never gets there: measured [-28.40, +28.32] degrees over
+    // 400
     // days from 2026-03-01, and 28.6 degrees is the ceiling of the whole 18.6-year cycle. The guard
     // exists BECAUSE the margin to 30 degrees is 1.4 degrees, not because the case is reachable.
     double declination = FastMath.toRadians(35.0);
-    Vector3D beyond =
-        new Vector3D(FastMath.cos(declination), 0.0, FastMath.sin(declination));
+    Vector3D beyond = new Vector3D(FastMath.cos(declination), 0.0, FastMath.sin(declination));
 
     OrbitlabException thrown =
         assertThrows(
@@ -219,7 +224,8 @@ class TranslunarInjectionPlanTest {
   // ── MIS-4 / L1 §4.1 — the departure from an imposed plane ──────────────────
 
   @Test
-  @DisplayName("The injection point lies in the imposed plane, the transfer angle short of the Moon")
+  @DisplayName(
+      "The injection point lies in the imposed plane, the transfer angle short of the Moon")
   void theInjectionPointLiesInTheImposedPlane() {
     for (ImposedPlane plane : IMPOSED_PLANES) {
       SpacecraftState parking = plane.parkingAt(epoch);
@@ -227,7 +233,8 @@ class TranslunarInjectionPlanTest {
       Departure departure = TranslunarInjectionPlan.departureFrom(parking);
       Vector3D injection = departure.injectionDirection();
 
-      assertEquals(1.0, injection.getNorm(), 1.0e-12, plane.name() + ": a direction is a unit vector");
+      assertEquals(
+          1.0, injection.getNorm(), 1.0e-12, plane.name() + ": a direction is a unit vector");
       // Assertion 1. The whole property of the lot: the injection point is in the plane the
       // spacecraft was given, not in one derived from where the Moon happens to be.
       assertEquals(
@@ -259,8 +266,7 @@ class TranslunarInjectionPlanTest {
           "Imposed plane {}: coast {} s, misalignment {}°",
           plane.name(),
           String.format(Locale.ROOT, "%.1f", departure.coastDuration()),
-          String.format(
-              Locale.ROOT, "%.3f", FastMath.toDegrees(departure.planeMisalignment())));
+          String.format(Locale.ROOT, "%.3f", FastMath.toDegrees(departure.planeMisalignment())));
 
       // Assertion 3. The fixed point is internally consistent: the Keplerian position the coast
       // lands on IS the injection point. This is what the whole closed form claims, and the only
@@ -355,8 +361,7 @@ class TranslunarInjectionPlanTest {
       logger.info(
           "Tilt γ = {}° imposes a misalignment of {}°, coast {} s",
           degrees,
-          String.format(
-              Locale.ROOT, "%.3f", FastMath.toDegrees(departure.planeMisalignment())),
+          String.format(Locale.ROOT, "%.3f", FastMath.toDegrees(departure.planeMisalignment())),
           String.format(Locale.ROOT, "%.1f", departure.coastDuration()));
 
       // The band is one degree and it is not slack: the fixture is exact at the demo's arrival
@@ -398,7 +403,8 @@ class TranslunarInjectionPlanTest {
   }
 
   @Test
-  @DisplayName("A non-Keplerian acceleration on the parking state does not move the injection point")
+  @DisplayName(
+      "A non-Keplerian acceleration on the parking state does not move the injection point")
   void aNonKeplerianAccelerationDoesNotMoveTheCoast() {
     // Assertion 7, and without it the regression is invisible. A state coming out of a numerical
     // propagator carries a non-Keplerian acceleration, and Orekit's Orbit.shiftedBy then adds a
@@ -433,7 +439,10 @@ class TranslunarInjectionPlanTest {
 
   /** A parking plane the departure is given rather than allowed to choose. */
   private record ImposedPlane(
-      String name, double inclinationDegrees, double raanDegrees, double argumentOfLatitudeDegrees) {
+      String name,
+      double inclinationDegrees,
+      double raanDegrees,
+      double argumentOfLatitudeDegrees) {
 
     /** The circular parking state this plane carries at {@code date}, at the declared phase. */
     SpacecraftState parkingAt(AbsoluteDate date) {
@@ -489,8 +498,8 @@ class TranslunarInjectionPlanTest {
 
   /**
    * The same state, carrying a fabricated non-Keplerian acceleration — the Keplerian one plus a
-   * cross-track term of J2's order of magnitude at this altitude, which is far above the {@code mu ·
-   * 1e-9} threshold Orekit sets the flag on.
+   * cross-track term of J2's order of magnitude at this altitude, which is far above the {@code mu
+   * · 1e-9} threshold Orekit sets the flag on.
    */
   private static SpacecraftState withFabricatedAcceleration(SpacecraftState state) {
     Vector3D position = state.getPosition();

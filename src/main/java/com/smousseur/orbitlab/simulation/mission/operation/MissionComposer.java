@@ -183,15 +183,16 @@ public final class MissionComposer {
    * profile does it — park low, inject, coast to apogee, circularize there — or refused.
    *
    * <p><b>The coast is the whole question.</b> Between the injection burn and the circularization
-   * the vehicle is shut down for half a transfer period: 2 h 58 for 400 km → 20 200 km. An Ariane 62
-   * upper stage declares 6 h and holds it; a Falcon Heavy one declares 2 h and does not. Where the
-   * stage cannot, the burn can still be delegated to the payload's apogee kick motor, exactly as
-   * the GEO profile already delegates it — which is why a Falcon Heavy reaches GEO at all, with a
-   * 5 h 15 coast it could never survive itself.
+   * the vehicle is shut down for half a transfer period: 2 h 58 for 400 km → 20 200 km. An Ariane
+   * 62 upper stage declares 6 h and holds it; a Falcon Heavy one declares 2 h and does not. Where
+   * the stage cannot, the burn can still be delegated to the payload's apogee kick motor, exactly
+   * as the GEO profile already delegates it — which is why a Falcon Heavy reaches GEO at all, with
+   * a 5 h 15 coast it could never survive itself.
    *
    * <p>When neither holds, the mission is refused here rather than propagated into a stage that
-   * quietly outlives its own specification. The message names the stage and the duration it is short
-   * of, so the answer ("fly Ariane 62, or take a payload with a kick motor") is in the failure.
+   * quietly outlives its own specification. The message names the stage and the duration it is
+   * short of, so the answer ("fly Ariane 62, or take a payload with a kick motor") is in the
+   * failure.
    *
    * <p>The optimization mode is not an argument, for the reason {@link #composeGeo} gives: both
    * CMA-ES transfer stages are written for the direct chain and have no counterpart here, so every
@@ -200,8 +201,7 @@ public final class MissionComposer {
    */
   private static Mission composeHighOrbit(MissionSpec.EarthOrbit spec, LaunchPlane plane) {
     double parkingAltitude = parkingAltitudeFor(spec.perigeeAltitude());
-    double transferCoast =
-        Physics.hohmannTransferDuration(parkingAltitude, spec.apogeeAltitude());
+    double transferCoast = Physics.hohmannTransferDuration(parkingAltitude, spec.apogeeAltitude());
 
     StageModel upperStage = spec.configuration().launcher().stages().getLast();
     boolean stageHoldsTheCoast = upperStage.capabilities().canCoastFor(transferCoast);

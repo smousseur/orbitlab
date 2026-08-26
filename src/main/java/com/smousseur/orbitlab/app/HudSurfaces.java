@@ -83,8 +83,8 @@ public final class HudSurfaces {
   /**
    * Closes a registration handle without letting teardown fail. A handle's {@code close()} only
    * removes an entry from this registry and cannot actually throw, but it is declared to, and an
-   * escaping exception during an app state's {@code cleanup()} would strand whatever that state
-   * had left to release.
+   * escaping exception during an app state's {@code cleanup()} would strand whatever that state had
+   * left to release.
    *
    * @param handle the handle to close, or {@code null}
    * @param logger the caller's logger, used if the impossible happens

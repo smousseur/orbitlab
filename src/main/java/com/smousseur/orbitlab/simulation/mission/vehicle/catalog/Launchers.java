@@ -5,7 +5,6 @@ import com.smousseur.orbitlab.simulation.mission.vehicle.model.AerodynamicProper
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.AscentProfile;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.LauncherModel;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.stage.*;
-
 import java.util.List;
 
 /** Catalog of named launcher models, resolvable by id for the mission wizard. */

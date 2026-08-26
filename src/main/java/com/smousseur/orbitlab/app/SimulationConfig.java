@@ -4,10 +4,9 @@ import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.simulation.ephemeris.config.EphemerisConfig;
 import com.smousseur.orbitlab.simulation.ephemeris.config.SlidingWindowConfig;
 import com.smousseur.orbitlab.simulation.orbit.config.OrbitWindowConfig;
-import org.orekit.time.AbsoluteDate;
-
 import java.util.EnumSet;
 import java.util.Objects;
+import org.orekit.time.AbsoluteDate;
 
 /**
  * Immutable configuration for the orbital simulation session.

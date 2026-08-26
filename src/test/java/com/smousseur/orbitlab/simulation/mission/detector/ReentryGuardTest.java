@@ -1,10 +1,10 @@
 package com.smousseur.orbitlab.simulation.mission.detector;
 
-import com.smousseur.orbitlab.simulation.flight.FlightContext;
-import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.smousseur.orbitlab.simulation.OrekitService;
+import com.smousseur.orbitlab.simulation.flight.FlightContext;
+import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionStage;
 import com.smousseur.orbitlab.simulation.mission.runtime.StageChainRunner;
@@ -94,7 +94,9 @@ class ReentryGuardTest {
             TIMEOUT,
             () -> {
               NumericalPropagator propagator =
-                  OrekitService.get().createOptimizationPropagator(FlightContext.earth(), OrekitService.COAST_MAX_STEP);
+                  OrekitService.get()
+                      .createOptimizationPropagator(
+                          FlightContext.earth(), OrekitService.COAST_MAX_STEP);
               propagator.setInitialState(entry);
               ReentryGuard.armQuiet(propagator, GravitationalContext.earth());
               return propagator.propagate(entry.getDate().shiftedBy(requestedDuration));
@@ -161,12 +163,14 @@ class ReentryGuardTest {
     AbsoluteDate endDate = entry.getDate().shiftedBy(3_600.0);
 
     NumericalPropagator bare =
-        OrekitService.get().createOptimizationPropagator(FlightContext.earth(), OrekitService.COAST_MAX_STEP);
+        OrekitService.get()
+            .createOptimizationPropagator(FlightContext.earth(), OrekitService.COAST_MAX_STEP);
     bare.setInitialState(entry);
     SpacecraftState reference = bare.propagate(endDate);
 
     NumericalPropagator guarded =
-        OrekitService.get().createOptimizationPropagator(FlightContext.earth(), OrekitService.COAST_MAX_STEP);
+        OrekitService.get()
+            .createOptimizationPropagator(FlightContext.earth(), OrekitService.COAST_MAX_STEP);
     guarded.setInitialState(entry);
     ReentryGuard.armQuiet(guarded, GravitationalContext.earth());
     SpacecraftState actual = guarded.propagate(endDate);
@@ -227,7 +231,8 @@ class ReentryGuardTest {
     AbsoluteDate endDate = climbing.getDate().shiftedBy(60.0);
 
     NumericalPropagator propagator =
-        OrekitService.get().createOptimizationPropagator(FlightContext.earth(), OrekitService.SAFE_MAX_STEP);
+        OrekitService.get()
+            .createOptimizationPropagator(FlightContext.earth(), OrekitService.SAFE_MAX_STEP);
     propagator.setInitialState(climbing);
     ReentryGuard.armQuiet(propagator, GravitationalContext.earth());
     SpacecraftState end = propagator.propagate(endDate);

@@ -191,8 +191,8 @@ public class FocusView {
   }
 
   /**
-   * Returns whether a mission whose trajectory flies about {@code arcBodies} should be visible given
-   * the current view mode and focus.
+   * Returns whether a mission whose trajectory flies about {@code arcBodies} should be visible
+   * given the current view mode and focus.
    *
    * <p>A mission can be drawn about any body one of its arcs is centred on: PHY-4 / L5 converts
    * every vertex into the frame of whichever of them is being looked at, so a lunar transfer is

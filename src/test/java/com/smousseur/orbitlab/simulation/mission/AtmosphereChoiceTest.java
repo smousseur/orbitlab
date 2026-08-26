@@ -25,6 +25,7 @@ import com.smousseur.orbitlab.simulation.mission.vehicle.VehicleStack;
 import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Launchers;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.AerodynamicProperties;
 import java.util.List;
+import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
@@ -35,7 +36,6 @@ import org.orekit.time.AbsoluteDate;
 import org.orekit.time.TimeScalesFactory;
 import org.orekit.utils.Constants;
 import org.orekit.utils.PVCoordinates;
-import org.hipparchus.geometry.euclidean.threed.Vector3D;
 
 /**
  * The switch of PHY-1 / L1 (spec {@code docs/atmosphere/04-conception-L1.md} §§3.2–3.3): where the
@@ -69,8 +69,8 @@ class AtmosphereChoiceTest {
 
   /**
    * The default is written twice — here and in the spec — and that is necessary rather than
-   * redundant: a mission assembled without going through {@code MissionComposer} (the optimizer test
-   * base class, the fixtures) never sees the spec's normalisation.
+   * redundant: a mission assembled without going through {@code MissionComposer} (the optimizer
+   * test base class, the fixtures) never sees the spec's normalisation.
    */
   @Test
   @DisplayName("A mission built outside the composer still carries NONE")

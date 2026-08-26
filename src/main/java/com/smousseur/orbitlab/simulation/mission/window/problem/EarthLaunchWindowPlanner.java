@@ -53,8 +53,8 @@ public final class EarthLaunchWindowPlanner {
   private static final int CANDIDATES = 5;
 
   /**
-   * The request {@link #warmUp()} solves: Kourou, 51.6°, 400 km circular — the wizard's default site
-   * and a plane that site can reach. The numbers matter only in that they must pose a solvable
+   * The request {@link #warmUp()} solves: Kourou, 51.6°, 400 km circular — the wizard's default
+   * site and a plane that site can reach. The numbers matter only in that they must pose a solvable
    * problem; what is being warmed is code paths and Orekit caches, not an answer anyone reads.
    */
   private static final EarthLaunchWindowRequest WARM_UP_REQUEST =
@@ -69,8 +69,8 @@ public final class EarthLaunchWindowPlanner {
   private EarthLaunchWindowPlanner() {}
 
   /**
-   * Solves one throwaway window, so that the first one a user asks for is not the first one this JVM
-   * has ever computed.
+   * Solves one throwaway window, so that the first one a user asks for is not the first one this
+   * JVM has ever computed.
    *
    * <p><b>The second tier of a measured freeze.</b> {@link OrekitService#warmUpFrames()} pays the
    * large one — 8 483 ms for the first ITRF. Once ITRF is warm, a first full {@link
@@ -96,11 +96,11 @@ public final class EarthLaunchWindowPlanner {
   /**
    * The first opportunity at or after {@code earliest} for a mission that names a target node.
    *
-   * <p><b>Closed form throughout</b> — some ninety evaluations of a vector angle, microseconds each,
-   * a few milliseconds for the solve — which is why the caller may run it on the render thread where
-   * the mission is created. That holds <em>once the frames are warm</em>: the first ITRF of a JVM
-   * costs 8 483 ms and lands on whatever thread reaches it first, which is why {@link #warmUp()}
-   * exists and why the application calls it off the render thread at startup.
+   * <p><b>Closed form throughout</b> — some ninety evaluations of a vector angle, microseconds
+   * each, a few milliseconds for the solve — which is why the caller may run it on the render
+   * thread where the mission is created. That holds <em>once the frames are warm</em>: the first
+   * ITRF of a JVM costs 8 483 ms and lands on whatever thread reaches it first, which is why {@link
+   * #warmUp()} exists and why the application calls it off the render thread at startup.
    *
    * <p><b>This method keeps its own span rather than deriving one through {@link
    * LaunchWindowSearch#forOpportunities}, and deliberately.</b> It is the path every mission
@@ -131,9 +131,7 @@ public final class EarthLaunchWindowPlanner {
             MARGIN,
             CANDIDATES);
     return new LaunchWindowSolver(problem)
-        .solve(search)
-        .stream()
-        .min(Comparator.comparing(LaunchWindow::date));
+        .solve(search).stream().min(Comparator.comparing(LaunchWindow::date));
   }
 
   /**
@@ -163,10 +161,9 @@ public final class EarthLaunchWindowPlanner {
         LaunchWindowSearch.forOpportunities(
             earliest, problem, count, Double.POSITIVE_INFINITY, MARGIN);
     return new LaunchWindowSolver(problem)
-        .solve(search)
-        .stream()
-        .sorted(Comparator.comparing(LaunchWindow::date))
-        .limit(count)
-        .toList();
+        .solve(search).stream()
+            .sorted(Comparator.comparing(LaunchWindow::date))
+            .limit(count)
+            .toList();
   }
 }

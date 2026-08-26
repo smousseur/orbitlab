@@ -15,8 +15,7 @@ import java.util.Objects;
  * times per stage, from the parallel exploration threads, and must not allocate.
  */
 public sealed interface MissionProgressEvent
-    permits
-        MissionProgressEvent.StageEntered,
+    permits MissionProgressEvent.StageEntered,
         MissionProgressEvent.AttemptStarted,
         MissionProgressEvent.StepStarted,
         MissionProgressEvent.SizingAdvanced {

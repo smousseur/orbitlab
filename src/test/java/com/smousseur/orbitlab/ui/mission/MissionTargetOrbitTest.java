@@ -87,7 +87,8 @@ class MissionTargetOrbitTest {
 
   @Test
   void legacyEntryWithoutSpecHasNoDisplayableTarget() {
-    MissionEntry legacy = new MissionEntry(new EarthOrbitMission("legacy", falconHeavy(), 400_000.0));
+    MissionEntry legacy =
+        new MissionEntry(new EarthOrbitMission("legacy", falconHeavy(), 400_000.0));
     assertTrue(MissionTargetOrbit.forEntry(legacy).isEmpty());
   }
 }

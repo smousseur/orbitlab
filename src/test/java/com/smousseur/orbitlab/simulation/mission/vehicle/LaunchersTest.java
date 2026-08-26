@@ -2,8 +2,6 @@ package com.smousseur.orbitlab.simulation.mission.vehicle;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import java.util.List;
-
 import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Launchers;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.AscentProfile;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.stage.IgnitionMode;
@@ -11,6 +9,7 @@ import com.smousseur.orbitlab.simulation.mission.vehicle.model.stage.PropellantT
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.stage.StageCapabilities;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.stage.StageModel;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.stage.StageRole;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class LaunchersTest {

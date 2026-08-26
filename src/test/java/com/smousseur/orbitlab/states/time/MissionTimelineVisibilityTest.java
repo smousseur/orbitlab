@@ -23,8 +23,8 @@ class MissionTimelineVisibilityTest {
   /**
    * Minimal {@link Mission} stub. Only status is exercised by the visibility rules, so
    * vehicle/stages/objective are intentionally {@code null}. Copied verbatim from {@code
-   * MissionDisplayPanelRulesTest} — that shape is known to compile against the real {@link
-   * Mission} constructor and abstract method.
+   * MissionDisplayPanelRulesTest} — that shape is known to compile against the real {@link Mission}
+   * constructor and abstract method.
    */
   private static final class StubMission extends Mission {
     StubMission(String name) {

@@ -185,8 +185,8 @@ class MissionFactoryTest {
   }
 
   /**
-   * Refused, not clamped (spec 01 §8). The message has to name the reachable band, because it is the
-   * one the wizard shows the user.
+   * Refused, not clamped (spec 01 §8). The message has to name the reachable band, because it is
+   * the one the wizard shows the user.
    */
   @Test
   void unreachableInclination_isRefusedWithTheReachableBand() {
@@ -204,7 +204,8 @@ class MissionFactoryTest {
     Map<String, Object> values = baseValues();
     values.put("TARGET_INCLINATION", "polar");
     assertThrows(
-        OrbitlabException.class, () -> MissionFactory.specFromWizardValues(values, MissionType.LEO));
+        OrbitlabException.class,
+        () -> MissionFactory.specFromWizardValues(values, MissionType.LEO));
   }
 
   // --- MIS-2: the target node ---
@@ -245,7 +246,8 @@ class MissionFactoryTest {
     Map<String, Object> values = baseValues();
     values.put("TARGET_RAAN", "iss");
     assertThrows(
-        OrbitlabException.class, () -> MissionFactory.specFromWizardValues(values, MissionType.LEO));
+        OrbitlabException.class,
+        () -> MissionFactory.specFromWizardValues(values, MissionType.LEO));
   }
 
   // --- MIS-7 P2.e: what the wizard's launcher step dry-runs before submitting (spec 02 §6) ---
@@ -263,9 +265,10 @@ class MissionFactoryTest {
 
   /**
    * The refusal the wizard shows on its launcher step: a Falcon Heavy upper stage declares 2 h of
-   * coast against the 2 h 58 the transfer to 20 200 km needs, and an inert payload has no kick motor
-   * to take the apogee burn over. What matters as much as the refusal is its <b>wording</b> — it is
-   * shown verbatim, so it has to name the stage and both durations for the user to know the way out.
+   * coast against the 2 h 58 the transfer to 20 200 km needs, and an inert payload has no kick
+   * motor to take the apogee burn over. What matters as much as the refusal is its <b>wording</b> —
+   * it is shown verbatim, so it has to name the stage and both durations for the user to know the
+   * way out.
    */
   @Test
   void mediumEarthOrbit_onAShortCoastStageWithoutAkm_isRefusedByName() {
@@ -285,8 +288,7 @@ class MissionFactoryTest {
   @Test
   void mediumEarthOrbit_onALongCoastStage_composes() {
     Mission mission =
-        MissionFactory.fromWizardValues(
-            meoValues("ARIANE_62", "EARTH_OBS_SAT"), MissionType.LEO);
+        MissionFactory.fromWizardValues(meoValues("ARIANE_62", "EARTH_OBS_SAT"), MissionType.LEO);
     assertInstanceOf(GEOMission.class, mission, "a MEO is flown through the parking chain");
   }
 

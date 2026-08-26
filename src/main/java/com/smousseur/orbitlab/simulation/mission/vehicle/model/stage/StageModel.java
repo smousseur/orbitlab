@@ -3,7 +3,6 @@ package com.smousseur.orbitlab.simulation.mission.vehicle.model.stage;
 import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchVehicle;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropulsionSystem;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.AerodynamicProperties;
-
 import java.util.Objects;
 
 /**
@@ -65,8 +64,7 @@ public record StageModel(
     if (!capabilities.variableLoad() && propellantLoad != propellantCapacity) {
       throw new IllegalArgumentException("solid stage flies full: load must equal capacity");
     }
-    return new LaunchVehicle(
-        dryMass, propellantCapacity, propellantLoad, propulsion, aerodynamics);
+    return new LaunchVehicle(dryMass, propellantCapacity, propellantLoad, propulsion, aerodynamics);
   }
 
   /** Instantiates this stage loaded at full capacity. */

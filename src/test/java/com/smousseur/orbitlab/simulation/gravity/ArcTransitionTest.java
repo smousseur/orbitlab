@@ -77,7 +77,8 @@ class ArcTransitionTest {
     logger.info("Arc conversion round trip: dPos = {} m, dVel = {} m/s", dPos, dVel);
 
     // Exactly zero, and not a tolerance: a pure translation has nothing to round on the position.
-    assertEquals(0.0, dPos, "the frames are ICRF-parallel, so this is a translation and its inverse");
+    assertEquals(
+        0.0, dPos, "the frames are ICRF-parallel, so this is a translation and its inverse");
     assertEquals(0.0, dVel, 1.0e-12);
     assertEquals(inGcrf.getMass(), back.getMass());
     assertEquals(0.0, back.getDate().durationFrom(inGcrf.getDate()));
@@ -153,8 +154,7 @@ class ArcTransitionTest {
 
     GravitationalContext lunar =
         ArcTransition.across(
-            GravitationalContext.earth()
-                .withPerturbers(SolarSystemBody.MOON, SolarSystemBody.SUN),
+            GravitationalContext.earth().withPerturbers(SolarSystemBody.MOON, SolarSystemBody.SUN),
             SolarSystemBody.MOON);
     assertTrue(!lunar.perturbers().contains(SolarSystemBody.MOON));
   }

@@ -30,10 +30,10 @@ final class LaunchDateProvenance {
   /**
    * Reads the provenance of the text currently in the field.
    *
-   * <p><b>A refusal hides the provenance without erasing it.</b> A planned date can be refused —
-   * an opportunity falling outside the ephemeris coverage is the case that exists — and the reason
-   * has to take the line while it stands. The claim itself survives, so clearing the refusal shows
-   * the planner's line again rather than silently demoting the date to a typed one.
+   * <p><b>A refusal hides the provenance without erasing it.</b> A planned date can be refused — an
+   * opportunity falling outside the ephemeris coverage is the case that exists — and the reason has
+   * to take the line while it stands. The claim itself survives, so clearing the refusal shows the
+   * planner's line again rather than silently demoting the date to a typed one.
    *
    * @param planned whether the planner's claim still stands
    * @param written the text the planner last wrote, empty when it never wrote any

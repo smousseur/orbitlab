@@ -78,8 +78,10 @@ class MissionSolutionsTest {
     assertFalse(new MissionSolutions(vectors, null).covers(mission));
   }
 
-  /** A surplus key is the same mismatch seen from the other side: the file describes another
-   * composition. */
+  /**
+   * A surplus key is the same mismatch seen from the other side: the file describes another
+   * composition.
+   */
   @Test
   void surplusKey_doesNotCover() {
     Mission mission = leoMission();

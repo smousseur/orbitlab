@@ -13,8 +13,7 @@ class LaunchConfigurationTest {
   void wrongLoadCount_rejected() {
     assertThrows(
         IllegalArgumentException.class,
-        () ->
-            new LaunchConfiguration(Launchers.FALCON_HEAVY, new double[] {600_000}, PAYLOAD));
+        () -> new LaunchConfiguration(Launchers.FALCON_HEAVY, new double[] {600_000}, PAYLOAD));
   }
 
   @Test

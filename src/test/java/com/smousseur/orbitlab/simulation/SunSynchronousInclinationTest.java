@@ -1,6 +1,5 @@
 package com.smousseur.orbitlab.simulation;
 
-import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -19,13 +18,13 @@ import org.orekit.utils.Constants;
  * <b>MIS-7 / P1, test T3</b> — {@link Physics#sunSynchronousInclination} against the three
  * reference values of spec {@code docs/earth-orbit/01-mission-terre-parametrable.md} §5.
  *
- * <p><b>What this fixture does and does not claim.</b> It checks the <em>arithmetic</em>, at ±0.02°,
- * and nothing else. Its tolerance must not be read as a precision on a flown inclination: GCRF's
- * equator is J2000's rather than the date's, worth up to 0.145° of frame offset on an inclination
- * read from a propagated state — seven times this tolerance, and measured at 0.008° of divergence
- * over three days by {@code SunSynchronousPrecessionTest}. What a sun-synchronous orbit actually
- * has to do is precess its node at 0.9856°/day, and that is what T4 measures. This one only
- * guarantees the formula is the right formula.
+ * <p><b>What this fixture does and does not claim.</b> It checks the <em>arithmetic</em>, at
+ * ±0.02°, and nothing else. Its tolerance must not be read as a precision on a flown inclination:
+ * GCRF's equator is J2000's rather than the date's, worth up to 0.145° of frame offset on an
+ * inclination read from a propagated state — seven times this tolerance, and measured at 0.008° of
+ * divergence over three days by {@code SunSynchronousPrecessionTest}. What a sun-synchronous orbit
+ * actually has to do is precess its node at 0.9856°/day, and that is what T4 measures. This one
+ * only guarantees the formula is the right formula.
  */
 class SunSynchronousInclinationTest {
   private static final Logger logger = LogManager.getLogger(SunSynchronousInclinationTest.class);
@@ -74,8 +73,8 @@ class SunSynchronousInclinationTest {
   }
 
   /**
-   * The inclination rises with altitude: a higher orbit feels less oblateness torque, so it needs to
-   * be tilted further from polar to precess at the same rate.
+   * The inclination rises with altitude: a higher orbit feels less oblateness torque, so it needs
+   * to be tilted further from polar to precess at the same rate.
    */
   @Test
   void theInclination_risesWithAltitude() {

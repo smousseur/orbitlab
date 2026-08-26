@@ -25,7 +25,6 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.orekit.orbits.KeplerianOrbit;
-import org.orekit.propagation.SpacecraftState;
 import org.orekit.time.AbsoluteDate;
 import org.orekit.time.TimeScalesFactory;
 import org.orekit.utils.Constants;
@@ -38,15 +37,15 @@ import org.orekit.utils.PVCoordinates;
  * <p><b>What makes a MEO different from a taller LEO.</b> Nothing about the target says so — it is
  * still a circular orbit with an inclination. What says so is the <em>vehicle</em>: reaching it
  * needs a parking orbit and a Hohmann transfer whose coast to apogee lasts 2 h 58, and an upper
- * stage has to survive shut down for all of it. The Ariane 62 ULPM declares 6 h and does; the Falcon
- * Heavy second stage declares 2 h and does not, which {@code EarthOrbitValidationTest} asserts as an
- * explicit refusal. The roadmap fiche called MEO "free" once the inclination was parametrable; it is
- * not, and that is why §6 gave it a lot of its own.
+ * stage has to survive shut down for all of it. The Ariane 62 ULPM declares 6 h and does; the
+ * Falcon Heavy second stage declares 2 h and does not, which {@code EarthOrbitValidationTest}
+ * asserts as an explicit refusal. The roadmap fiche called MEO "free" once the inclination was
+ * parametrable; it is not, and that is why §6 gave it a lot of its own.
  *
  * <p><b>Nothing here is MEO-specific in the code.</b> No mission type, no objective, no stage: the
  * composition rule of §6.1 routes the target to the chain GEO already flies, with 20 200 km and 55°
- * where GEO passes 35 786 km and 0°. This fixture is what checks that the routing produces a mission
- * that actually closes.
+ * where GEO passes 35 786 km and 0°. This fixture is what checks that the routing produces a
+ * mission that actually closes.
  *
  * <p><b>Slow</b> — a complete mission optimization, like the LEO and GEO loops next to it.
  */
@@ -162,8 +161,7 @@ public class MeoMissionTest extends AbstractTrajectoryOptimizerTest {
 
     return new MissionSpec.EarthOrbit(
         "MEO Galileo",
-        new LaunchConfiguration(
-            Launchers.ARIANE_62, loads.launcherLoads(), payload, model.id()),
+        new LaunchConfiguration(Launchers.ARIANE_62, loads.launcherLoads(), payload, model.id()),
         MEO_ALTITUDE,
         MEO_ALTITUDE,
         plane.targetInclination(),

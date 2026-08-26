@@ -2,11 +2,11 @@ package com.smousseur.orbitlab.ui.mission.wizard.component;
 
 import com.jme3.math.ColorRGBA;
 import com.jme3.math.Vector3f;
+import com.simsilica.lemur.Axis;
 import com.simsilica.lemur.Container;
 import com.simsilica.lemur.FillMode;
-import com.simsilica.lemur.Axis;
-import com.simsilica.lemur.Label;
 import com.simsilica.lemur.Insets3f;
+import com.simsilica.lemur.Label;
 import com.simsilica.lemur.component.BoxLayout;
 import com.simsilica.lemur.component.InsetsComponent;
 import com.smousseur.orbitlab.ui.UiKit;

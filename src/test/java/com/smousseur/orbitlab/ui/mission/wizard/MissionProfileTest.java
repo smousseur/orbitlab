@@ -20,8 +20,8 @@ import org.junit.jupiter.api.Test;
  * <b>MIS-7 / P2.a</b> — the mapping between a mission spec and the wizard card it came from (spec
  * {@code docs/earth-orbit/02-wizard-orbites-terrestres.md} §2.1).
  *
- * <p>The profile is <em>derived</em> from the spec rather than stored on it, so this fixture is what
- * stands between a polar mission and reopening as a LEO one. It is also the reason {@code
+ * <p>The profile is <em>derived</em> from the spec rather than stored on it, so this fixture is
+ * what stands between a polar mission and reopening as a LEO one. It is also the reason {@code
  * MissionProfile} carries no Lemur type: a wizard step could not be built headless, this can.
  */
 class MissionProfileTest {
@@ -85,8 +85,8 @@ class MissionProfileTest {
 
   /**
    * The same inclination flown at another altitude is no longer sun-synchronous, and must not be
-   * labelled so — this is the one assertion that keeps the SSO test from being a test of "retrograde
-   * enough".
+   * labelled so — this is the one assertion that keeps the SSO test from being a test of
+   * "retrograde enough".
    */
   @Test
   void sunSynchronousInclinationAtAnotherAltitude_readsAsLeo() {
@@ -105,8 +105,8 @@ class MissionProfileTest {
 
   /**
    * Past the direct-chain ceiling the profile is MEO whatever the inclination — the ceiling is what
-   * {@code MissionComposer} itself routes on, so reading it first is what keeps a 55° MEO from being
-   * shown as an ordinary inclined low orbit.
+   * {@code MissionComposer} itself routes on, so reading it first is what keeps a 55° MEO from
+   * being shown as an ordinary inclined low orbit.
    */
   @Test
   void mediumEarthOrbit_readsAsMeo() {
@@ -165,8 +165,7 @@ class MissionProfileTest {
         MissionProfile.InclinationMode.AUTO, MissionProfile.LEO.inclinationMode(), "LEO mode");
     assertEquals(KOUROU_LAT, MissionProfile.LEO.initialInclinationDeg(KOUROU_LAT, 550_000.0), 1e-9);
     // Southern sites reach the same planes as their northern mirrors: an inclination is positive.
-    assertEquals(
-        34.632, MissionProfile.LEO.initialInclinationDeg(-34.632, 550_000.0), 1e-9);
+    assertEquals(34.632, MissionProfile.LEO.initialInclinationDeg(-34.632, 550_000.0), 1e-9);
   }
 
   @Test

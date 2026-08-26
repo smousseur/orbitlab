@@ -13,8 +13,7 @@ import org.orekit.utils.TimeStampedPVCoordinates;
  * and the same physical state expressed in it.
  *
  * <p>Introduced by PHY-4 / L4 (spec {@code docs/multi-corps/06-conception-L4.md} §4.2). Two
- * operations, and nothing else — the orchestration that calls them lives in {@code
- * StageLegRunner}.
+ * operations, and nothing else — the orchestration that calls them lives in {@code StageLegRunner}.
  */
 public final class ArcTransition {
 
@@ -62,8 +61,7 @@ public final class ArcTransition {
     perturbers.remove(newCentral);
     perturbers.add(from.body());
 
-    return contextFor(newCentral)
-        .withPerturbers(perturbers.toArray(new SolarSystemBody[0]));
+    return contextFor(newCentral).withPerturbers(perturbers.toArray(new SolarSystemBody[0]));
   }
 
   /**

@@ -15,9 +15,9 @@ import com.smousseur.orbitlab.ui.timeline.TimelineStyles;
 import java.util.List;
 
 /**
- * The hover tooltip of the mission track: a small opaque card that follows the cursor and lists
- * the stage name, the absolute UTC date and the {@code T+} offset under it (spec §9.1) — or, over
- * a group of markers, every transition the group stands for (§8).
+ * The hover tooltip of the mission track: a small opaque card that follows the cursor and lists the
+ * stage name, the absolute UTC date and the {@code T+} offset under it (spec §9.1) — or, over a
+ * group of markers, every transition the group stands for (§8).
  *
  * <p>Rebuilt only when its text actually changes. A cursor sweeping the track changes the date on
  * every motion event, so the lines are compared before any Lemur element is touched; without that,
@@ -58,10 +58,10 @@ final class TimelineTooltip {
    *
    * <p><b>The card opens upward, and that is not a preference.</b> The mission track is the
    * bottom-most HUD surface but one: the time capsule sits 8 px below it, and three lines of
-   * tooltip are already 46 px tall. A card hung downward therefore runs past the track's own
-   * bottom edge and lands on the capsule — a different widget showing different information.
-   * Above the track there is only the 3D scene, which is where a tooltip anchored to the bottom
-   * of the screen belongs.
+   * tooltip are already 46 px tall. A card hung downward therefore runs past the track's own bottom
+   * edge and lands on the capsule — a different widget showing different information. Above the
+   * track there is only the 3D scene, which is where a tooltip anchored to the bottom of the screen
+   * belongs.
    *
    * <p>The placement is computed here rather than by the caller because the card's height follows
    * its line count, and that count is only resolved by {@link #rebuild()} below — a caller would

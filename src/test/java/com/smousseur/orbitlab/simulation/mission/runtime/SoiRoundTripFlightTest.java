@@ -1,15 +1,15 @@
 package com.smousseur.orbitlab.simulation.mission.runtime;
 
-import com.smousseur.orbitlab.simulation.flight.FlightContext;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.simulation.OrekitService;
+import com.smousseur.orbitlab.simulation.flight.FlightContext;
 import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
 import com.smousseur.orbitlab.simulation.gravity.SphereOfInfluence;
 import com.smousseur.orbitlab.simulation.mission.Mission;
@@ -82,8 +82,7 @@ class SoiRoundTripFlightTest {
 
     @Override
     public GravitationalContext gravitationalContext(Mission mission) {
-      return GravitationalContext.earth()
-          .withPerturbers(SolarSystemBody.MOON, SolarSystemBody.SUN);
+      return GravitationalContext.earth().withPerturbers(SolarSystemBody.MOON, SolarSystemBody.SUN);
     }
 
     @Override
@@ -149,15 +148,18 @@ class SoiRoundTripFlightTest {
   private static SpacecraftState flyStraightThrough(SpacecraftState start, double seconds) {
     NumericalPropagator propagator =
         OrekitService.get()
-            .createOptimizationPropagator(new FlightContext(
-                GravitationalContext.earth().withPerturbers(SolarSystemBody.MOON, SolarSystemBody.SUN)),
+            .createOptimizationPropagator(
+                new FlightContext(
+                    GravitationalContext.earth()
+                        .withPerturbers(SolarSystemBody.MOON, SolarSystemBody.SUN)),
                 OrekitService.COAST_MAX_STEP);
     propagator.setInitialState(start);
     return propagator.propagate(start.getDate().shiftedBy(seconds));
   }
 
   @Test
-  @DisplayName("Earth to Moon to Earth: three arcs, and the same trajectory as a single geocentric flight")
+  @DisplayName(
+      "Earth to Moon to Earth: three arcs, and the same trajectory as a single geocentric flight")
   void roundTripMatchesTheSingleFrameFlight() {
     SpacecraftState start = flybyFixture();
     CrossingCoast coast = new CrossingCoast("lunar flyby", COAST_SECONDS);
@@ -166,7 +168,8 @@ class SoiRoundTripFlightTest {
 
     List<SolarSystemBody> arcBodies = new ArrayList<>();
     for (Sample sample : samples) {
-      if (arcBodies.isEmpty() || arcBodies.get(arcBodies.size() - 1) != sample.context().gravity().body()) {
+      if (arcBodies.isEmpty()
+          || arcBodies.get(arcBodies.size() - 1) != sample.context().gravity().body()) {
         arcBodies.add(sample.context().gravity().body());
       }
     }
@@ -183,7 +186,8 @@ class SoiRoundTripFlightTest {
     // 4 032 m as physics. At transfer speed 3.6 s IS 3.6 km. Measured properly, the two flights
     // agree to about ten metres either side of the flyby.
     Sample exit = lastSampleOfArc(samples, SolarSystemBody.MOON);
-    SpacecraftState reference = flyStraightThrough(start, exit.date().durationFrom(start.getDate()));
+    SpacecraftState reference =
+        flyStraightThrough(start, exit.date().durationFrom(start.getDate()));
 
     double gapAtExit = inGcrf(exit).subtract(reference.getPosition()).getNorm();
     logger.info(
@@ -241,7 +245,8 @@ class SoiRoundTripFlightTest {
 
     List<Sample> boundaries = new ArrayList<>();
     for (int i = 1; i < samples.size(); i++) {
-      if (samples.get(i - 1).context().gravity().body() != samples.get(i).context().gravity().body()) {
+      if (samples.get(i - 1).context().gravity().body()
+          != samples.get(i).context().gravity().body()) {
         boundaries.add(samples.get(i));
       }
     }
@@ -422,7 +427,8 @@ class SoiRoundTripFlightTest {
         new StageLegRunner(
                 null,
                 true,
-                (stage, entry) -> new StageLegRunner.EndDate(entry.getDate().shiftedBy(3_600.0), true))
+                (stage, entry) ->
+                    new StageLegRunner.EndDate(entry.getDate().shiftedBy(3_600.0), true))
             .fly(plainCoast, start, mission);
 
     assertEquals(1, flight.legs().size());
@@ -431,7 +437,8 @@ class SoiRoundTripFlightTest {
         flight.lastLeg().context().gravity(),
         "the leg carries the shared instance, not a copy of it");
     assertFalse(flight.lastLeg().context().hasDrag(), "no mission asks for an atmosphere yet");
-    assertSame(start, flight.legs().get(0).entryState(), "no conversion when the frame is the same");
+    assertSame(
+        start, flight.legs().get(0).entryState(), "no conversion when the frame is the same");
     assertEquals(null, flight.lastLeg().crossedBoundary());
     assertNotEquals(start.getDate(), flight.lastLeg().exitState().getDate());
   }

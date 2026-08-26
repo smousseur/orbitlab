@@ -1,13 +1,12 @@
 package com.smousseur.orbitlab.simulation.gravity;
 
-import com.smousseur.orbitlab.simulation.flight.FlightContext;
-import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.simulation.OrekitService;
+import com.smousseur.orbitlab.simulation.flight.FlightContext;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -73,8 +72,9 @@ class SoiCrossingDetectorTest {
     AtomicReference<SpacecraftState> crossing = new AtomicReference<>();
     NumericalPropagator propagator =
         OrekitService.get()
-            .createOptimizationPropagator(new FlightContext(
-                GravitationalContext.earth().withPerturbers(SolarSystemBody.MOON)),
+            .createOptimizationPropagator(
+                new FlightContext(
+                    GravitationalContext.earth().withPerturbers(SolarSystemBody.MOON)),
                 OrekitService.COAST_MAX_STEP);
     propagator.setInitialState(start);
     propagator.addEventDetector(
@@ -148,8 +148,9 @@ class SoiCrossingDetectorTest {
     AtomicReference<SpacecraftState> crossing = new AtomicReference<>();
     NumericalPropagator propagator =
         OrekitService.get()
-            .createOptimizationPropagator(new FlightContext(
-                GravitationalContext.moon().withPerturbers(SolarSystemBody.EARTH)),
+            .createOptimizationPropagator(
+                new FlightContext(
+                    GravitationalContext.moon().withPerturbers(SolarSystemBody.EARTH)),
                 OrekitService.COAST_MAX_STEP);
     propagator.setInitialState(start);
     propagator.addEventDetector(

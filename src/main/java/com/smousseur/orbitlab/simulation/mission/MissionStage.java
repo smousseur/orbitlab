@@ -6,10 +6,10 @@ import com.smousseur.orbitlab.simulation.flight.AtmosphereModel;
 import com.smousseur.orbitlab.simulation.flight.DragContext;
 import com.smousseur.orbitlab.simulation.flight.FlightContext;
 import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
-import com.smousseur.orbitlab.simulation.mission.vehicle.model.AerodynamicProperties;
 import com.smousseur.orbitlab.simulation.mission.vehicle.ActiveStageInfo;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropulsionSystem;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
+import com.smousseur.orbitlab.simulation.mission.vehicle.model.AerodynamicProperties;
 import java.util.Set;
 import org.orekit.propagation.SpacecraftState;
 import org.orekit.propagation.numerical.NumericalPropagator;
@@ -173,9 +173,9 @@ public abstract class MissionStage {
    * where that may change.
    *
    * <p><b>A propulsive stage may not declare one</b>, and that is a decision rather than an
-   * oversight (spec L4 §3.3): a burn is rebuilt from the stage entry date with its full duration and
-   * its attitude is bound to the frame, so re-configuring it on the far side of a boundary would fly
-   * it again, re-oriented. A lunar transfer crosses ballistically, so nothing is lost.
+   * oversight (spec L4 §3.3): a burn is rebuilt from the stage entry date with its full duration
+   * and its attitude is bound to the frame, so re-configuring it on the far side of a boundary
+   * would fly it again, re-oriented. A lunar transfer crosses ballistically, so nothing is lost.
    *
    * @param mission the parent mission
    * @return the bodies whose SOI boundary may cut this stage, possibly empty

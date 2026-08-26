@@ -35,8 +35,8 @@ import org.orekit.time.AbsoluteDate;
  * same order — so the L1 gate's 62 boundaries stay at a zero tolerance by construction rather than
  * by measurement, the way L2's empty perturber set did.
  *
- * <p><b>Stateless by contract</b>, for the reason {@link StageChainRunner} gives: CMA-ES explores in
- * parallel, so everything mutable lives in the caller's sampler or in a local of {@link #fly}.
+ * <p><b>Stateless by contract</b>, for the reason {@link StageChainRunner} gives: CMA-ES explores
+ * in parallel, so everything mutable lives in the caller's sampler or in a local of {@link #fly}.
  */
 final class StageLegRunner {
 
@@ -44,24 +44,24 @@ final class StageLegRunner {
 
   /**
    * Most legs one stage may be cut into before the run is bounded and logged. A net rather than a
-   * limit: the dead band of {@link SoiCrossingDetector} is what actually prevents chatter, and eight
-   * legs is far more than a patched-conic transfer can legitimately need. Loud when it fires, for
-   * the reason {@link StageChainRunner#FALLBACK_DURATION_SECONDS} is.
+   * limit: the dead band of {@link SoiCrossingDetector} is what actually prevents chatter, and
+   * eight legs is far more than a patched-conic transfer can legitimately need. Loud when it fires,
+   * for the reason {@link StageChainRunner#FALLBACK_DURATION_SECONDS} is.
    */
   static final int MAX_LEGS_PER_STAGE = 8;
 
   /**
-   * How far apart the crossing date and the date {@code propagate()} returns may be and still be read
-   * as the same stop (s).
+   * How far apart the crossing date and the date {@code propagate()} returns may be and still be
+   * read as the same stop (s).
    *
-   * <p><b>It is twice the detector's own date convergence, and that is not a padded guess</b> (PHY-4 /
-   * L6, spec {@code docs/multi-corps/08-conception-L6.md} §12). Both states are taken at the localised
-   * root but re-interpolated independently, so nothing can hold them closer together than the
-   * precision the root itself is known to. L4 wrote {@code 1.0e-6} here after measuring 51 ps on its
-   * synthetic fixture; the first real translunar flight measured <b>524 µs</b> and the crossing was
-   * silently read as an ordinary end of leg — one arc instead of two, no warning, and a coast that
-   * stopped three days in while reporting itself complete. A tolerance unrelated to what sets the gap
-   * cannot bound it, however generous it looks.
+   * <p><b>It is twice the detector's own date convergence, and that is not a padded guess</b>
+   * (PHY-4 / L6, spec {@code docs/multi-corps/08-conception-L6.md} §12). Both states are taken at
+   * the localised root but re-interpolated independently, so nothing can hold them closer together
+   * than the precision the root itself is known to. L4 wrote {@code 1.0e-6} here after measuring 51
+   * ps on its synthetic fixture; the first real translunar flight measured <b>524 µs</b> and the
+   * crossing was silently read as an ordinary end of leg — one arc instead of two, no warning, and
+   * a coast that stopped three days in while reporting itself complete. A tolerance unrelated to
+   * what sets the gap cannot bound it, however generous it looks.
    */
   static final double BOUNDARY_STOP_TOLERANCE = 2.0 * SoiCrossingDetector.DATE_CONVERGENCE_SECONDS;
 
@@ -148,8 +148,8 @@ final class StageLegRunner {
   }
 
   /**
-   * Flies the stage from {@code stageEntry}, returning one leg per context traversed — at least one,
-   * always.
+   * Flies the stage from {@code stageEntry}, returning one leg per context traversed — at least
+   * one, always.
    *
    * @param stage the stage to fly
    * @param stageEntry the state the stage starts from
@@ -173,7 +173,8 @@ final class StageLegRunner {
 
     // The seam L3 §1 observed nobody was checking: a stage declares a context, the state it is
     // handed is expressed in some frame, and until now nothing tied the two. Aligning here makes it
-    // true by contract. The comparison inside convert() is REFERENCE equality, so a state already in
+    // true by contract. The comparison inside convert() is REFERENCE equality, so a state already
+    // in
     // the declared frame is returned untouched and no existing trajectory crosses an identity
     // transform — which is what keeps the L1 gate bit-identical (spec L4 §3.5).
     SpacecraftState legEntry = ArcTransition.convert(stageEntry, context.gravity());
@@ -267,9 +268,9 @@ final class StageLegRunner {
    * Arms one {@link SoiCrossingDetector} per declared boundary, in {@code STOP}.
    *
    * <p><b>The direction decides the threshold.</b> Entering a sphere is decided at its radius;
-   * leaving is decided at the radius plus the dead band, because a leg that has just switched starts
-   * <em>on</em> the sphere and a detector re-armed on the same radius would see a sign decided by
-   * rounding (spec L4 §4.4).
+   * leaving is decided at the radius plus the dead band, because a leg that has just switched
+   * starts <em>on</em> the sphere and a detector re-armed on the same radius would see a sign
+   * decided by rounding (spec L4 §4.4).
    */
   private static void armBoundaries(
       NumericalPropagator propagator,

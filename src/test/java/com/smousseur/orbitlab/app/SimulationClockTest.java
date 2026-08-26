@@ -1,14 +1,13 @@
 package com.smousseur.orbitlab.app;
 
-import org.junit.jupiter.api.Test;
-import org.orekit.time.AbsoluteDate;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
+import org.orekit.time.AbsoluteDate;
 
 class SimulationClockTest {
 

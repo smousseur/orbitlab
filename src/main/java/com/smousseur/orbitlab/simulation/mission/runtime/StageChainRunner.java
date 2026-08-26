@@ -55,8 +55,8 @@ public final class StageChainRunner {
    * <p><b>The context is a parameter and not something the receiver reads back off the stage</b>
    * (PHY-4 / L4, spec {@code docs/multi-corps/06-conception-L4.md} §3.6). Once a stage may cross a
    * sphere of influence halfway through, what it <em>declares</em> and what it is <em>flying</em>
-   * stop being the same thing, and asking the stage would write the wrong body into the arc L3 added
-   * for exactly this purpose.
+   * stop being the same thing, and asking the stage would write the wrong body into the arc L3
+   * added for exactly this purpose.
    */
   @FunctionalInterface
   public interface StepSampler {

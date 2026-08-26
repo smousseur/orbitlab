@@ -70,8 +70,8 @@ public final class TimeConverter {
   /**
    * Formats an instant as ISO UTC, like {@code 2026-01-08T12:34:56Z}.
    *
-   * <p>The seconds field is always written, even at zero. {@link LocalDateTime#toString()} omits
-   * it on a whole minute — {@code 2026-01-08T12:00Z} — which {@link #parseUtcDate(String)} then
+   * <p>The seconds field is always written, even at zero. {@link LocalDateTime#toString()} omits it
+   * on a whole minute — {@code 2026-01-08T12:00Z} — which {@link #parseUtcDate(String)} then
    * refuses, so the two were not inverse for one date in sixty. They are the round trip the
    * scenario format is built on (spec {@code docs/scenario/01-persistance-missions.md} §3.1, rule
    * 3), so the omission is not affordable here.

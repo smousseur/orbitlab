@@ -25,8 +25,8 @@ import com.smousseur.orbitlab.ui.UiKit;
  * <p><b>Why the box is as tall as the line it sits on, rather than as tall as the icon.</b> The
  * widget centres itself inside a box of the caller's height, so it can be dropped straight into the
  * row's horizontal layout as a sibling of the label, anchored exactly like it. An icon-sized box
- * padded with spacers would instead stack a second container, whose own insets would shift the
- * icon against the text for reasons nothing in the row states. Sharing the label's box removes that
+ * padded with spacers would instead stack a second container, whose own insets would shift the icon
+ * against the text for reasons nothing in the row states. Sharing the label's box removes that
  * source of drift; what it does not remove is the residual optical correction every icon in this
  * row carries, which is why the constructor still takes a lift in pixels.
  *
@@ -74,8 +74,8 @@ public final class SpinnerIcon {
    *     knob and nothing more: the font metrics do not call for one — {@code ibmplexmono-11} has
    *     {@code lineHeight=15}, {@code base=12} and digits inked from {@code yoffset=3} over 10 px,
    *     so a line of digits is centred to within half a pixel — but the row's own icons carry
-   *     comparable corrections ({@code MissionRow.centerVertically} subtracts 6,
-   *     {@code RowActionIcons.vCenter} subtracts 5) and this one is set the same way, by eye.
+   *     comparable corrections ({@code MissionRow.centerVertically} subtracts 6, {@code
+   *     RowActionIcons.vCenter} subtracts 5) and this one is set the same way, by eye.
    * @param tint the colour to draw the icon in
    */
   public SpinnerIcon(float iconSize, float boxHeight, float liftPx, ColorRGBA tint) {

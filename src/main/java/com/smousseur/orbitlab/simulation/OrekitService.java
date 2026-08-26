@@ -24,16 +24,16 @@ import org.orekit.forces.gravity.NewtonianAttraction;
 import org.orekit.forces.gravity.ThirdBodyAttraction;
 import org.orekit.forces.gravity.potential.GravityFieldFactory;
 import org.orekit.forces.gravity.potential.NormalizedSphericalHarmonicsProvider;
-import org.orekit.models.earth.atmosphere.Atmosphere;
-import org.orekit.models.earth.atmosphere.HarrisPriester;
-import org.orekit.models.earth.atmosphere.NRLMSISE00;
-import org.orekit.models.earth.atmosphere.NRLMSISE00InputParameters;
-import org.orekit.models.earth.atmosphere.data.CssiSpaceWeatherData;
 import org.orekit.frames.FieldTransform;
 import org.orekit.frames.Frame;
 import org.orekit.frames.FramesFactory;
 import org.orekit.frames.Transform;
 import org.orekit.frames.TransformProvider;
+import org.orekit.models.earth.atmosphere.Atmosphere;
+import org.orekit.models.earth.atmosphere.HarrisPriester;
+import org.orekit.models.earth.atmosphere.NRLMSISE00;
+import org.orekit.models.earth.atmosphere.NRLMSISE00InputParameters;
+import org.orekit.models.earth.atmosphere.data.CssiSpaceWeatherData;
 import org.orekit.orbits.OrbitType;
 import org.orekit.propagation.numerical.NumericalPropagator;
 import org.orekit.time.AbsoluteDate;
@@ -54,10 +54,14 @@ public final class OrekitService {
   /** Gravity providers, cached per central body — created once, reused for every propagator. */
   private final Map<SolarSystemBody, ForceModel> gravityModels = new ConcurrentHashMap<>();
 
-  /** Third-body attractions, cached per perturbing body. Same contract as {@link #gravityModels}. */
+  /**
+   * Third-body attractions, cached per perturbing body. Same contract as {@link #gravityModels}.
+   */
   private final Map<SolarSystemBody, ForceModel> thirdBodyModels = new ConcurrentHashMap<>();
 
-  /** Body-centred frames with ICRF axes, cached per body. Same contract as {@link #gravityModels}. */
+  /**
+   * Body-centred frames with ICRF axes, cached per body. Same contract as {@link #gravityModels}.
+   */
   private final Map<SolarSystemBody, Frame> bodyCentredFrames = new ConcurrentHashMap<>();
 
   /** Atmospheres, cached per (model, central body). Same contract as {@link #gravityModels}. */
@@ -96,11 +100,11 @@ public final class OrekitService {
   /**
    * Pays, on the calling thread, the one-off cost of building the terrestrial frame chain.
    *
-   * <p><b>Why this method exists.</b> {@link #initialize()} ends on {@link FramesFactory#getICRF()},
-   * which is celestial and cheap; the <em>terrestrial</em> chain is neither. The first {@link
-   * #itrf()} makes Orekit load and index the Earth-orientation parameters that ITRF hangs on, and
-   * that happens exactly once per JVM — on whichever thread happens to ask first. Measured here,
-   * first call each:
+   * <p><b>Why this method exists.</b> {@link #initialize()} ends on {@link
+   * FramesFactory#getICRF()}, which is celestial and cheap; the <em>terrestrial</em> chain is
+   * neither. The first {@link #itrf()} makes Orekit load and index the Earth-orientation parameters
+   * that ITRF hangs on, and that happens exactly once per JVM — on whichever thread happens to ask
+   * first. Measured here, first call each:
    *
    * <ul>
    *   <li>{@link #initialize()} — 784 ms;
@@ -115,12 +119,12 @@ public final class OrekitService {
    * thread: before the launch window feature it was an Earth mission at creation, and the feature
    * only moved the same eight and a half seconds earlier, into the wizard. Eight seconds on the
    * render thread is a frozen window, so the application starts this off it (see {@code
-   * OrbitLabApplication.startFrameWarmUp}). Nothing here is an optimisation of the arithmetic: every
-   * path warmed works without it, merely slowly, once.
+   * OrbitLabApplication.startFrameWarmUp}). Nothing here is an optimisation of the arithmetic:
+   * every path warmed works without it, merely slowly, once.
    *
    * <p><b>Synchronous, and deliberately not spawned.</b> This method does not start a thread and is
-   * not called from {@link #initialize()}: tests initialize Orekit in {@code @BeforeAll} and share a
-   * JVM, where a background thread touching these caches would deepen {@code BUG-7} (cross-test
+   * not called from {@link #initialize()}: tests initialize Orekit in {@code @BeforeAll} and share
+   * a JVM, where a background thread touching these caches would deepen {@code BUG-7} (cross-test
    * contamination) rather than help. The caller chooses the thread.
    */
   public void warmUpFrames() {
@@ -317,8 +321,8 @@ public final class OrekitService {
    *
    * <p><b>The drag comes last</b>, after the central field and the third bodies. An absent {@link
    * DragContext} adds nothing at all — not a zero force — so a drag-off propagator has exactly the
-   * force list it had before PHY-1, in the same order, and the lot's non-regression is a property of
-   * the type rather than a measurement (spec {@code docs/atmosphere/04-conception-L1.md} §1.1).
+   * force list it had before PHY-1, in the same order, and the lot's non-regression is a property
+   * of the type rather than a measurement (spec {@code docs/atmosphere/04-conception-L1.md} §1.1).
    *
    * @param context the flight context: central body, third bodies, and any atmosphere
    * @param maxStep integrator maximum step in seconds (must satisfy the late-ignition invariant)
@@ -483,13 +487,13 @@ public final class OrekitService {
    * The third-body attraction of the given body, resolved once and shared by every propagator.
    *
    * <p>Cached for the same reason as {@link #getGravityModel}, not for speed: CMA-ES explorations
-   * run in parallel ({@code CMAESTrajectoryOptimizer:314}), and {@code computeIfAbsent} guarantees a
-   * single instance per body rather than merely a coherent value.
+   * run in parallel ({@code CMAESTrajectoryOptimizer:314}), and {@code computeIfAbsent} guarantees
+   * a single instance per body rather than merely a coherent value.
    *
    * <p><b>A constraint this hands to L4:</b> {@link ThirdBodyAttraction} expresses the perturbing
    * body's position in the propagation frame and assumes that frame is centred on the central body.
-   * Every propagation here is Earth-centred GCRF, so it holds today. A lunar arc still propagated in
-   * GCRF would get the indirect term wrong — and wrong silently, since the magnitude would stay
+   * Every propagation here is Earth-centred GCRF, so it holds today. A lunar arc still propagated
+   * in GCRF would get the indirect term wrong — and wrong silently, since the magnitude would stay
    * plausible (spec {@code docs/multi-corps/04-conception-L2.md} §7).
    *
    * @param body the perturbing body

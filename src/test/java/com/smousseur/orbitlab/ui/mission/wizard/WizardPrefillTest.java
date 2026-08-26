@@ -145,10 +145,10 @@ class WizardPrefillTest {
   }
 
   /**
-   * The rule that protects every calibrated trajectory: a mission left on its site's free plane must
-   * come back with <b>no</b> inclination key, so revalidating an untouched edit rebuilds the plane
-   * from the latitude rather than from a rounded field. Publishing it would move the azimuth, the
-   * launch assist and every propellant load, and no inclination assertion would notice.
+   * The rule that protects every calibrated trajectory: a mission left on its site's free plane
+   * must come back with <b>no</b> inclination key, so revalidating an untouched edit rebuilds the
+   * plane from the latitude rather than from a rounded field. Publishing it would move the azimuth,
+   * the launch assist and every propellant load, and no inclination assertion would notice.
    */
   @Test
   void dueEastMission_comesBackWithoutAnInclinationKey() {
@@ -194,9 +194,7 @@ class WizardPrefillTest {
 
     assertEquals(120.0, (Double) prefilled.get("TARGET_RAAN"), 1e-9);
     assertEquals(
-        120.0,
-        ((MissionSpec.EarthOrbit) reopen(entry, MissionType.LEO)).targetRaan(),
-        1e-9);
+        120.0, ((MissionSpec.EarthOrbit) reopen(entry, MissionType.LEO)).targetRaan(), 1e-9);
   }
 
   @Test
@@ -207,24 +205,30 @@ class WizardPrefillTest {
     assertEquals(90.0, (Double) prefilled.get("TARGET_INCLINATION"), 1e-9);
     assertEquals(MissionProfile.POLAR.name(), prefilled.get("MISSION_PROFILE"));
 
-    MissionSpec.EarthOrbit reopened =
-        (MissionSpec.EarthOrbit) reopen(entry, MissionType.LEO);
+    MissionSpec.EarthOrbit reopened = (MissionSpec.EarthOrbit) reopen(entry, MissionType.LEO);
     assertEquals(
-        90.0, Math.toDegrees(reopened.targetInclination()), 1e-9, "inclination after the round trip");
+        90.0,
+        Math.toDegrees(reopened.targetInclination()),
+        1e-9,
+        "inclination after the round trip");
   }
 
-  /** The sizing follows the plane, so a polar mission must not come back budgeted as a due-east one. */
+  /**
+   * The sizing follows the plane, so a polar mission must not come back budgeted as a due-east one.
+   */
   @Test
   void polarMission_keepsItsHeavierBudget() {
     MissionSpec.EarthOrbit original =
-        (MissionSpec.EarthOrbit) MissionFactory.specFromWizardValues(polarValues(), MissionType.LEO);
+        (MissionSpec.EarthOrbit)
+            MissionFactory.specFromWizardValues(polarValues(), MissionType.LEO);
     MissionSpec.EarthOrbit reopened =
         (MissionSpec.EarthOrbit) reopen(entryFor(polarValues(), MissionType.LEO), MissionType.LEO);
 
     assertSameVehicle(original, reopened);
   }
 
-  // --- UI-3 L0: the forced horizon comes back (spec docs/scenario/01-persistance-missions.md §4.3) ---
+  // --- UI-3 L0: the forced horizon comes back (spec docs/scenario/01-persistance-missions.md §4.3)
+  // ---
 
   /**
    * Until this was written the prefill never emitted the key, so reopening a mission on a forced
@@ -237,8 +241,7 @@ class WizardPrefillTest {
     values.put("MISSION_HORIZON_DAYS", 4.5);
     MissionEntry entry = entryFor(values, MissionType.LEO);
 
-    assertEquals(
-        4.5, (Double) WizardPrefill.fromEntry(entry).get("MISSION_HORIZON_DAYS"), 1e-9);
+    assertEquals(4.5, (Double) WizardPrefill.fromEntry(entry).get("MISSION_HORIZON_DAYS"), 1e-9);
 
     MissionHorizon reopened = reopen(entry, MissionType.LEO).horizon();
     assertInstanceOf(MissionHorizon.FixedDuration.class, reopened);
@@ -254,8 +257,7 @@ class WizardPrefillTest {
     MissionEntry entry = entryFor(leoValues(), MissionType.LEO);
 
     assertFalse(WizardPrefill.fromEntry(entry).containsKey("MISSION_HORIZON_DAYS"));
-    assertInstanceOf(
-        MissionHorizon.Revolutions.class, reopen(entry, MissionType.LEO).horizon());
+    assertInstanceOf(MissionHorizon.Revolutions.class, reopen(entry, MissionType.LEO).horizon());
   }
 
   /**

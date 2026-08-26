@@ -106,8 +106,8 @@ public final class PlanningModel {
    *
    * <p><b>The {@link OrbitlabException} guard is not a live path from the wizard.</b> The only
    * refusal {@code nextOpportunities} raises is a plane the pad cannot reach, and the parameters
-   * step now turns that into {@link PlanningInputs.Gap#NO_TARGET} before a request is ever built. It
-   * is kept because the precondition belongs to the planner and not to this class: a caller
+   * step now turns that into {@link PlanningInputs.Gap#NO_TARGET} before a request is ever built.
+   * It is kept because the precondition belongs to the planner and not to this class: a caller
    * assembling a request of its own — which is exactly what {@code PlanningModelTest} does — has no
    * other way of being told it was refused, and an exception escaping here would take the render
    * thread down. The reason it reports is the model's own short line, not the exception's.

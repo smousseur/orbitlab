@@ -1,9 +1,6 @@
 package com.smousseur.orbitlab.simulation;
 
 import com.smousseur.orbitlab.core.PropertiesService;
-import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.ObjectMapper;
-
 import java.io.IOException;
 import java.net.CookieManager;
 import java.net.CookiePolicy;
@@ -11,6 +8,8 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 public class SpaceTrackService {
   private static final String LOGIN_URL = "/ajaxauth/login";

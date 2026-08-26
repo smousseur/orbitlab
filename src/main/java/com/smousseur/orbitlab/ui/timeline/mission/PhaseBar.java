@@ -18,21 +18,21 @@ import java.util.List;
 import org.orekit.time.AbsoluteDate;
 
 /**
- * The band of coloured rectangles that says how long each phase of the mission lasted (spec
- * {@code docs/navigation/02-timeline-mission.md} §6.3).
+ * The band of coloured rectangles that says how long each phase of the mission lasted (spec {@code
+ * docs/navigation/02-timeline-mission.md} §6.3).
  *
  * <p><b>No floor width, ever.</b> A run whose duration projects to less than a pixel is not drawn.
  * That is the whole point of an honest axis: on a GEO the entire ascent really is a fraction of a
  * percent of the flight, and giving those runs a minimum width would make the bar lie about the
- * only quantity it encodes. What stays reachable is the marker, which has no duration to lie
- * about — see {@link PhaseMarkerCluster}.
+ * only quantity it encodes. What stays reachable is the marker, which has no duration to lie about
+ * — see {@link PhaseMarkerCluster}.
  *
- * <p>Colours come from {@link MissionPhaseShading#shade}, the same call
- * {@code MissionTrajectoryRenderer} makes for the 3D trajectory. There is deliberately no second
- * table: "this tint means this phase" has to be verifiable by looking at the screen, from one
- * object to the other. The shading was calibrated on 3D arc length, where burns are under 1%,
- * while on a time axis they are around 2%; the same hues therefore take a different share of the
- * track, and that is a property of the two views, not a miscalibration.
+ * <p>Colours come from {@link MissionPhaseShading#shade}, the same call {@code
+ * MissionTrajectoryRenderer} makes for the 3D trajectory. There is deliberately no second table:
+ * "this tint means this phase" has to be verifiable by looking at the screen, from one object to
+ * the other. The shading was calibrated on 3D arc length, where burns are under 1%, while on a time
+ * axis they are around 2%; the same hues therefore take a different share of the track, and that is
+ * a property of the two views, not a miscalibration.
  */
 final class PhaseBar {
 
@@ -119,8 +119,8 @@ final class PhaseBar {
   }
 
   /**
-   * The empty track behind the segments, built once. It is what shows through wherever a run is
-   * too short to draw, which is exactly where it should be visible.
+   * The empty track behind the segments, built once. It is what shows through wherever a run is too
+   * short to draw, which is exactly where it should be visible.
    */
   private void ensureRail(TimeAxis axis) {
     if (rail != null) {

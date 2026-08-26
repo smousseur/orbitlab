@@ -139,8 +139,8 @@ public class StepParameters implements StepValues {
    *
    * <p>Nothing today reaches that case: the style paints a button {@code TEXT_PRIMARY}, and the
    * first colour this indicator computes is never that one. It is kept as the defence it would have
-   * to be the day the style default and an indicator state coincide, which would otherwise leave the
-   * dot showing a plain style background for the life of the wizard.
+   * to be the day the style default and an indicator state coincide, which would otherwise leave
+   * the dot showing a plain style background for the life of the wizard.
    */
   private boolean planningPainted;
 
@@ -498,8 +498,8 @@ public class StepParameters implements StepValues {
   }
 
   /**
-   * Paints the planning indicator from the node the page holds: dot lit and word in the accent while
-   * a plane is being waited for, both dimmed while none is.
+   * Paints the planning indicator from the node the page holds: dot lit and word in the accent
+   * while a plane is being waited for, both dimmed while none is.
    *
    * <p>Unlike {@link #applyAutoIndicator()}, which only ever runs on a change, this one is called
    * from {@link #update(float)} — the node lives on the other page and can be edited without this
@@ -530,8 +530,8 @@ public class StepParameters implements StepValues {
   /**
    * Attaches or detaches the planning indicator to match the card on screen. A GEO mission carries
    * no target node — {@code MissionSpec.Geo} has no such component and {@code
-   * MissionWizardAppState.scheduledDateFor} only schedules an {@code EarthOrbit} — so the control is
-   * absent there rather than greyed: nothing could ever light it.
+   * MissionWizardAppState.scheduledDateFor} only schedules an {@code EarthOrbit} — so the control
+   * is absent there rather than greyed: nothing could ever light it.
    */
   private void updatePlanningIndicator() {
     boolean shown = hasTargetNode();
@@ -732,9 +732,9 @@ public class StepParameters implements StepValues {
    * being the smallest index no existing mission already answers to.
    *
    * <p>Names are only display labels — {@code MissionEntry} keys on its own id and tolerates
-   * duplicates — so this scans for a free one rather than enforcing uniqueness. Filling the gap left
-   * by a deleted mission is the point: proposing {@code LEO-004} after {@code LEO-002} was removed
-   * would read as a mission that went missing.
+   * duplicates — so this scans for a free one rather than enforcing uniqueness. Filling the gap
+   * left by a deleted mission is the point: proposing {@code LEO-004} after {@code LEO-002} was
+   * removed would read as a mission that went missing.
    *
    * @param profile the card currently selected
    * @return the proposed name
@@ -987,8 +987,8 @@ public class StepParameters implements StepValues {
    * <p>GEO has none: {@code MissionSpec.Geo} carries no node component, which is why the planning
    * indicator is detached there. Without this gate a node typed on another card would still be read
    * and could refuse a GEO mission over a field whose entry point that card has just removed. The
-   * standing refusal is cleared rather than left, on the same reasoning: a mark must not outlive the
-   * field able to show it.
+   * standing refusal is cleared rather than left, on the same reasoning: a mark must not outlive
+   * the field able to show it.
    *
    * @return the reason the node was refused, or empty when it is usable or has no meaning here
    */

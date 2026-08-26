@@ -44,12 +44,12 @@ import org.orekit.utils.TimeStampedPVCoordinates;
  * découpage's "PHY-4 does not depend on MIS-2" true.
  *
  * <p><b>Two ways of getting a parking orbit coexist here, and that is deliberate</b> (MIS-4 / L1,
- * spec {@code docs/lunar-flyby/03-conception-L1.md} §5 pt 5). {@link #parkingState} <em>fabricates</em>
- * one to fit the Moon and is what the {@code mission.lunarDemo} acceptance flight keeps flying;
- * {@link #departureFrom} takes a plane a launch site <em>imposed</em> and finds the injection point
- * inside it. Everything downstream of the parking state — {@link #solve}, the bisection, the
- * differential corrector — is common to both, and the declination guard of {@link
- * #transferPlaneNormal} belongs to the first alone.
+ * spec {@code docs/lunar-flyby/03-conception-L1.md} §5 pt 5). {@link #parkingState}
+ * <em>fabricates</em> one to fit the Moon and is what the {@code mission.lunarDemo} acceptance
+ * flight keeps flying; {@link #departureFrom} takes a plane a launch site <em>imposed</em> and
+ * finds the injection point inside it. Everything downstream of the parking state — {@link #solve},
+ * the bisection, the differential corrector — is common to both, and the declination guard of
+ * {@link #transferPlaneNormal} belongs to the first alone.
  *
  * <p><b>Why the burn is impulsive.</b> Lambert <em>is</em> the impulsive formulation, and for an
  * impulse Tsiolkovsky is exact rather than an approximation. A finite burn would under-deliver and
@@ -270,13 +270,13 @@ public record TranslunarInjectionPlan(
    * The injection point of a parking orbit whose plane is imposed, and the coast that reaches it —
    * <b>closed form, no propagation</b> (spec §2).
    *
-   * <p><b>The arrival direction is projected into the plane rather than met in 3D.</b> Reading "170°
-   * short of the arrival direction" literally has a solution only while {@code cos β ≥ |cos 170°|},
-   * i.e. below 10° of misalignment, which would buy a geometric refusal where a Kourou plane reaches
-   * 33.9° (spec §2.1). The projection is always defined, it reduces <em>exactly</em> to {@link
-   * #parkingState} at zero misalignment, and the true 3D transfer angle it produces — {@code cos θ =
-   * cos 170° · cos β} — moves away from the 180° Lambert singularity as the misalignment grows
-   * rather than towards it.
+   * <p><b>The arrival direction is projected into the plane rather than met in 3D.</b> Reading
+   * "170° short of the arrival direction" literally has a solution only while {@code cos β ≥ |cos
+   * 170°|}, i.e. below 10° of misalignment, which would buy a geometric refusal where a Kourou
+   * plane reaches 33.9° (spec §2.1). The projection is always defined, it reduces <em>exactly</em>
+   * to {@link #parkingState} at zero misalignment, and the true 3D transfer angle it produces —
+   * {@code cos θ = cos 170° · cos β} — moves away from the 180° Lambert singularity as the
+   * misalignment grows rather than towards it.
    *
    * <p><b>The coast is the first passage</b>, by construction and not by a guard: starting the
    * fixed point at zero and wrapping the first angle into {@code [0, 2π)} selects the next crossing
@@ -345,8 +345,7 @@ public record TranslunarInjectionPlan(
 
   /** The angle from {@code from} to {@code to} measured about {@code axis}, in {@code (−π, π]}. */
   private static double orientedAngle(Vector3D from, Vector3D to, Vector3D axis) {
-    return FastMath.atan2(
-        Vector3D.crossProduct(from, to).dotProduct(axis), from.dotProduct(to));
+    return FastMath.atan2(Vector3D.crossProduct(from, to).dotProduct(axis), from.dotProduct(to));
   }
 
   /**
@@ -510,8 +509,7 @@ public record TranslunarInjectionPlan(
    * @param arrivalDate the date the Moon's centre is aimed at
    * @return the magnitude of the injection impulse (m/s)
    */
-  public static double keplerianInjectionDeltaV(
-      SpacecraftState parking, AbsoluteDate arrivalDate) {
+  public static double keplerianInjectionDeltaV(SpacecraftState parking, AbsoluteDate arrivalDate) {
     Vector3D seed =
         keplerianSeedVelocity(
             parking, boundaryConditions(parking, arrivalDate, moonPosition(arrivalDate)));
@@ -900,8 +898,7 @@ public record TranslunarInjectionPlan(
         .withMass(mass);
   }
 
-  private static NumericalPropagator propagator(
-      FlightContext context, SpacecraftState initial) {
+  private static NumericalPropagator propagator(FlightContext context, SpacecraftState initial) {
     NumericalPropagator propagator =
         OrekitService.get().createOptimizationPropagator(context, OrekitService.COAST_MAX_STEP);
     propagator.setInitialState(initial);

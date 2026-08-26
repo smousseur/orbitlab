@@ -50,8 +50,8 @@ public class StepMissionType implements StepValues {
    * <p>When {@code locked}, the wizard is editing an existing mission and the cards of the
    * <em>other</em> mission type are inert: a mission's stages, propellant budget and payload
    * eligibility derive from its type, and {@code MissionEntry.applySpec} refuses a spec that would
-   * change it. The cards sharing the edited mission's type stay live, because switching between them
-   * only changes the target — which is precisely what editing a mission means.
+   * change it. The cards sharing the edited mission's type stay live, because switching between
+   * them only changes the target — which is precisely what editing a mission means.
    *
    * @param missionContext the context whose selected type drives the downstream steps
    * @param initialProfile the profile to show as selected
@@ -144,8 +144,8 @@ public class StepMissionType implements StepValues {
   }
 
   /**
-   * Fills the last row up to the full grid width, so a short row's cards keep the size and the
-   * left alignment of a full one instead of being stretched across the step.
+   * Fills the last row up to the full grid width, so a short row's cards keep the size and the left
+   * alignment of a full one instead of being stretched across the step.
    *
    * @param row the row to pad
    * @param used how many of its {@link #CARDS_PER_ROW} slots are taken, {@code 0} meaning full

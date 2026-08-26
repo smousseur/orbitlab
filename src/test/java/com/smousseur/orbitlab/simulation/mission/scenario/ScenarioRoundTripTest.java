@@ -80,8 +80,7 @@ class ScenarioRoundTripTest {
     entry.setScheduledDate(TimeConverter.parseUtcDate(LAUNCH_DATE).orElseThrow());
 
     ScenarioMission dto =
-        ScenarioMapper.toScenarioMission(
-            entry, WizardPrefill.fromEntry(entry), null);
+        ScenarioMapper.toScenarioMission(entry, WizardPrefill.fromEntry(entry), null);
     ScenarioFile file =
         new ScenarioFile(
             ScenarioFile.CURRENT_FORMAT_VERSION,
@@ -90,8 +89,7 @@ class ScenarioRoundTripTest {
             List.of(dto));
 
     ScenarioMission read = ScenarioCodec.read(ScenarioCodec.write(file)).missions().getFirst();
-    return MissionFactory.specFromWizardValues(
-        ScenarioMapper.toMissionValues(read), read.type());
+    return MissionFactory.specFromWizardValues(ScenarioMapper.toMissionValues(read), read.type());
   }
 
   private static void assertSameVehicle(MissionSpec expected, MissionSpec actual) {
@@ -101,10 +99,7 @@ class ScenarioRoundTripTest {
     assertEquals(original.payloadId(), restored.payloadId(), "payload catalog id");
     assertEquals(original.payload().dryMass(), restored.payload().dryMass(), 1e-9, "payload mass");
     assertEquals(
-        original.payload().propellantLoad(),
-        restored.payload().propellantLoad(),
-        1e-9,
-        "AKM load");
+        original.payload().propellantLoad(), restored.payload().propellantLoad(), 1e-9, "AKM load");
     assertArrayEquals(original.propellantLoads(), restored.propellantLoads(), 0.0, "loads");
   }
 
@@ -127,8 +122,7 @@ class ScenarioRoundTripTest {
     assertSameVehicle(original, restored);
     assertEquals(original.perigeeAltitude(), restored.perigeeAltitude(), 1e-6, "perigee");
     assertEquals(original.apogeeAltitude(), restored.apogeeAltitude(), 1e-6, "apogee");
-    assertEquals(
-        original.targetInclination(), restored.targetInclination(), 1e-12, "target plane");
+    assertEquals(original.targetInclination(), restored.targetInclination(), 1e-12, "target plane");
   }
 
   @Test

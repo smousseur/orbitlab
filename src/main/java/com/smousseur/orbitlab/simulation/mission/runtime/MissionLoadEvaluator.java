@@ -105,9 +105,9 @@ public final class MissionLoadEvaluator implements PropellantLoadOptimizer.Evalu
    *
    * <p><b>The error it can introduce is one-sided, and on the safe side.</b> An evaluation that
    * reports feasible flew the trajectory and measured it, so it is feasible whatever the budget.
-   * Only the converse can be wrong — a load the full budget would have made work read as
-   * infeasible — and that keeps the bisection's λ <em>up</em>, i.e. sizes the stage with more
-   * propellant than strictly necessary. Never less.
+   * Only the converse can be wrong — a load the full budget would have made work read as infeasible
+   * — and that keeps the bisection's λ <em>up</em>, i.e. sizes the stage with more propellant than
+   * strictly necessary. Never less.
    *
    * <p><b>Why no full-budget recomputation of the winner.</b> Tried and dropped on 2026-08-22: at
    * this budget the transfer already spends two full attempts and plateaus, the second re-deriving
@@ -400,10 +400,10 @@ public final class MissionLoadEvaluator implements PropellantLoadOptimizer.Evalu
   }
 
   /**
-   * The arc body of the <em>last</em> terminal-coast sample, or {@code null} when the coast produced
-   * none. Reading the last one rather than the first is what makes the predicate judge the orbit the
-   * mission ended in: a translunar coast starts geocentric and ends selenocentric, and it is the
-   * arrival orbit an insertion objective is about.
+   * The arc body of the <em>last</em> terminal-coast sample, or {@code null} when the coast
+   * produced none. Reading the last one rather than the first is what makes the predicate judge the
+   * orbit the mission ended in: a translunar coast starts geocentric and ends selenocentric, and it
+   * is the arrival orbit an insertion objective is about.
    */
   private static SolarSystemBody finalCoastArcBody(MissionEphemeris ephemeris) {
     SolarSystemBody body = null;

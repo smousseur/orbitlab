@@ -4,8 +4,8 @@ import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemeris;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemerisPoint;
-import com.smousseur.orbitlab.simulation.mission.operation.GEOMission;
 import com.smousseur.orbitlab.simulation.mission.operation.EarthOrbitMission;
+import com.smousseur.orbitlab.simulation.mission.operation.GEOMission;
 import com.smousseur.orbitlab.simulation.mission.runtime.MissionComputeResult;
 import com.smousseur.orbitlab.simulation.mission.runtime.MissionOptimizer;
 import com.smousseur.orbitlab.simulation.mission.runtime.StagePerformance;
@@ -25,7 +25,6 @@ import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.hipparchus.util.FastMath;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.orekit.orbits.KeplerianOrbit;
@@ -67,6 +66,7 @@ import org.orekit.utils.PVCoordinates;
  * LEOMissionOptimizationTest#testFalconHeavy} (Falcon Heavy, LEO 400 km) and {@code
  * GEOMissionOptimizationTest#testGEOMission} (Falcon Heavy, parking 400 km → GEO).
  */
+@EnabledIfSystemProperty(named = "orbitlab.slowTests", matches = "true")
 public class AscentBaselineN2Test extends AbstractTrajectoryOptimizerTest {
   private static final Logger logger = LogManager.getLogger(AscentBaselineN2Test.class);
 

@@ -86,8 +86,7 @@ class FlightContextTest {
     DragContext drag =
         new DragContext(new AerodynamicProperties(9.0, 2.2), AtmosphereModel.NRLMSISE);
     FlightContext outbound =
-        new FlightContext(
-            GravitationalContext.earth().withPerturbers(SolarSystemBody.MOON), drag);
+        new FlightContext(GravitationalContext.earth().withPerturbers(SolarSystemBody.MOON), drag);
 
     FlightContext atTheMoon =
         outbound.withGravity(ArcTransition.across(outbound.gravity(), SolarSystemBody.MOON));

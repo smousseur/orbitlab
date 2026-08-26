@@ -97,9 +97,9 @@ public final class Physics {
    * docs/earth-orbit/01-mission-terre-parametrable.md} §1.1 and §3.1). The two-argument overload
    * this class used to carry mixed units with its callers — it consumed radians while the ascent
    * documented degrees — and mis-guarded the equatorial polar case, both invisibly, because every
-   * caller passed {@code (0, 0)}. Azimuth derivation is now {@code LaunchPlane}'s, the one type that
-   * also knows which of the two branches reaching an inclination is being flown and whether the site
-   * reaches it at all.
+   * caller passed {@code (0, 0)}. Azimuth derivation is now {@code LaunchPlane}'s, the one type
+   * that also knows which of the two branches reaching an inclination is being flown and whether
+   * the site reaches it at all.
    *
    * @return the launch azimuth in radians, clockwise from north
    */
@@ -206,8 +206,7 @@ public final class Physics {
     double re = Constants.WGS84_EARTH_EQUATORIAL_RADIUS;
     double semiMajorAxis = re + 0.5 * (perigeeAltitude + apogeeAltitude);
     return FastMath.PI
-        * FastMath.sqrt(
-            semiMajorAxis * semiMajorAxis * semiMajorAxis / Constants.WGS84_EARTH_MU);
+        * FastMath.sqrt(semiMajorAxis * semiMajorAxis * semiMajorAxis / Constants.WGS84_EARTH_MU);
   }
 
   /**
@@ -279,8 +278,7 @@ public final class Physics {
    * @return the sun-synchronous inclination in radians
    */
   public static double sunSynchronousInclinationForAltitude(double altitude) {
-    return sunSynchronousInclination(
-        Constants.WGS84_EARTH_EQUATORIAL_RADIUS + altitude, 0.0);
+    return sunSynchronousInclination(Constants.WGS84_EARTH_EQUATORIAL_RADIUS + altitude, 0.0);
   }
 
   /**

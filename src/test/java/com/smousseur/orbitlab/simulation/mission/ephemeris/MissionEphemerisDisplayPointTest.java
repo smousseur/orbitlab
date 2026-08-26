@@ -37,7 +37,13 @@ class MissionEphemerisDisplayPointTest {
   private static MissionEphemerisPoint point(
       double seconds, double x, Vector3D velocity, TrajectoryArc arc) {
     return new MissionEphemerisPoint(
-        T0.shiftedBy(seconds), new Vector3D(x, 0, 0), velocity, "drift", false, 1_000.0, 621_000.0,
+        T0.shiftedBy(seconds),
+        new Vector3D(x, 0, 0),
+        velocity,
+        "drift",
+        false,
+        1_000.0,
+        621_000.0,
         arc);
   }
 
@@ -74,8 +80,7 @@ class MissionEphemerisDisplayPointTest {
   /** The same drift, with the middle sample opening a second arc. */
   private static MissionEphemeris driftAcrossAnArcBoundary() {
     Vector3D velocity = new Vector3D(100.0, 0.0, 0.0);
-    TrajectoryArc other =
-        new TrajectoryArc(SolarSystemBody.MOON, TrajectoryArc.earth().frame());
+    TrajectoryArc other = new TrajectoryArc(SolarSystemBody.MOON, TrajectoryArc.earth().frame());
     return new MissionEphemeris(
         List.of(
             point(0, 7_000_000.0, velocity),
@@ -85,9 +90,9 @@ class MissionEphemerisDisplayPointTest {
 
   /**
    * <b>Nothing is interpolated across a change of frame.</b> A cubic Hermite between a geocentric
-   * vector and a selenocentric one is not an approximation, it is meaningless. The bracketing sample
-   * is returned unchanged instead — the floor semantics this method already applies to the stage name
-   * and the mass, extended to the arc.
+   * vector and a selenocentric one is not an approximation, it is meaningless. The bracketing
+   * sample is returned unchanged instead — the floor semantics this method already applies to the
+   * stage name and the mass, extended to the arc.
    *
    * <p>Compare with {@link #withinTheSpanThePositionIsInterpolated()}, which is the same geometry
    * inside one arc and does land halfway.
@@ -108,8 +113,8 @@ class MissionEphemerisDisplayPointTest {
 
   /**
    * The consequence that matters to the renderer: the arc — and therefore the render context the
-   * three drawing states derive from it — flips <em>atomically</em> at the incoming sample. There is
-   * no instant at which one of them could hold the old arc and another the new one.
+   * three drawing states derive from it — flips <em>atomically</em> at the incoming sample. There
+   * is no instant at which one of them could hold the old arc and another the new one.
    */
   @Test
   void theArcFlipsAtTheIncomingSampleAndNotBefore() {

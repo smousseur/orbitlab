@@ -54,8 +54,8 @@ public final class MissionProgressText {
   }
 
   /**
-   * The detailed line for the footer of the selected mission, e.g. {@code "1/2  attempt 1/3
-   * exploration   12 480 evals   0:42"}.
+   * The detailed line for the footer of the selected mission, e.g. {@code "1/2 attempt 1/3
+   * exploration 12 480 evals 0:42"}.
    *
    * @param progress the live progress
    * @return the line, never null

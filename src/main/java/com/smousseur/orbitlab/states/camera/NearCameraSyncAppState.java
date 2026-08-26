@@ -43,13 +43,13 @@ public final class NearCameraSyncAppState extends BaseAppState {
    *
    * <p><b>Sized by the content, not by the camera.</b> In spacecraft view {@code distToOrigin} is
    * half a kilometre, so {@code distToOrigin · 10} is nothing and this floor is what the far plane
-   * actually is. At 100 000 km it cut a lunar transfer at a quarter of its length: the trace reaches
-   * 384 400 km and everything past the floor was clipped away before any depth question arose
-   * (spec {@code docs/multi-corps/07-conception-L5.md} §1.3).
+   * actually is. At 100 000 km it cut a lunar transfer at a quarter of its length: the trace
+   * reaches 384 400 km and everything past the floor was clipped away before any depth question
+   * arose (spec {@code docs/multi-corps/07-conception-L5.md} §1.3).
    *
    * <p><b>And raising it is free.</b> The near viewport's depth resolution is {@code Δz = 2⁻²⁴ · z²
-   * · (1/near − 1/far)}, and with {@code near = 0.1} the two terms are {@code 10} against {@code 2 ×
-   * 10⁻⁶}: going from 100 000 to 500 000 km moves the depth step by 8 × 10⁻⁷ %. {@code
+   * · (1/near − 1/far)}, and with {@code near = 0.1} the two terms are {@code 10} against {@code 2
+   * × 10⁻⁶}: going from 100 000 to 500 000 km moves the depth step by 8 × 10⁻⁷ %. {@code
    * NearFrustumDepthTest.loweringTheFarPlaneChangesNothing} already pinned that property in the
    * other direction, and it is what licenses this value.
    */

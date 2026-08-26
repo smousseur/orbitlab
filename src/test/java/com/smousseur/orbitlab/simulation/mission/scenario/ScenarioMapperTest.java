@@ -85,8 +85,7 @@ class ScenarioMapperTest {
 
   private static Map<String, Object> roundTrip(MissionEntry entry) {
     Map<String, Object> values = prefilled(entry);
-    return ScenarioMapper.toMissionValues(
-        ScenarioMapper.toScenarioMission(entry, values, null));
+    return ScenarioMapper.toMissionValues(ScenarioMapper.toScenarioMission(entry, values, null));
   }
 
   @Test

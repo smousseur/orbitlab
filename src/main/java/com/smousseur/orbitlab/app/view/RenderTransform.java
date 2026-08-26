@@ -3,10 +3,9 @@ package com.smousseur.orbitlab.app.view;
 import com.jme3.math.FastMath;
 import com.jme3.math.Quaternion;
 import com.jme3.math.Vector3f;
+import java.util.Objects;
 import org.hipparchus.geometry.euclidean.threed.Rotation;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
-
-import java.util.Objects;
 
 /**
  * Pure math utilities to convert positions between: - Orekit/Hipparchus meters (ICRF axes) -

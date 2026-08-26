@@ -92,9 +92,9 @@ final class CMAESRunExecutor {
    * @param startPoint initial parameter vector for the optimization
    * @param sigma initial standard deviations for each parameter dimension
    * @param lower lower bounds of the search box for this attempt
-   * @param upper upper bounds of the search box for this attempt. Taken from the caller rather
-   *     than re-read off the problem: {@code CMAESTrajectoryOptimizer} may widen the box on a
-   *     retry ({@code TrajectoryProblem.getUpperBoundsForAttempt}), and reading {@code
+   * @param upper upper bounds of the search box for this attempt. Taken from the caller rather than
+   *     re-read off the problem: {@code CMAESTrajectoryOptimizer} may widen the box on a retry
+   *     ({@code TrajectoryProblem.getUpperBoundsForAttempt}), and reading {@code
    *     problem.getUpperBounds()} here silently confined every retry to the base box while the
    *     sigma and the start points were already sized on the widened one — start points that then
    *     fell outside the box CMA-ES was given, which rejects them before the first evaluation

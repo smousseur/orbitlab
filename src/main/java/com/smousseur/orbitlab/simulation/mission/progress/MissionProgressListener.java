@@ -9,8 +9,8 @@ package com.smousseur.orbitlab.simulation.mission.progress;
  * <p>The two methods sit on opposite sides of the cost divide, which is why they are two:
  *
  * <ul>
- *   <li>{@link #onProgress} is cold — a few dozen calls over a whole mission — and carries a
- *       sealed event.
+ *   <li>{@link #onProgress} is cold — a few dozen calls over a whole mission — and carries a sealed
+ *       event.
  *   <li>{@link #onEvaluation} is hot — tens of thousands of calls per stage, issued from the
  *       parallel exploration threads — and must neither allocate nor block.
  * </ul>

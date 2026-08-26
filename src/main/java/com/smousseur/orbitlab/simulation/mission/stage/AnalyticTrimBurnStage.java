@@ -142,8 +142,7 @@ public class AnalyticTrimBurnStage extends MissionStage {
   private record TrimBurn(
       AbsoluteDate burnStart, double dt, Vector3D directionInertial, double dv) {}
 
-  private TrimBurn computeTrimBurn(
-      SpacecraftState state, Vehicle vehicle, FlightContext context) {
+  private TrimBurn computeTrimBurn(SpacecraftState state, Vehicle vehicle, FlightContext context) {
     SpacecraftState stateAtApogee = detectStateAtApogee(state, context);
     if (stateAtApogee == null) {
       logger.info("Trim burn: no apogee detected within one period, skipping.");

@@ -187,11 +187,11 @@ public class StepLauncher implements StepValues {
    * Shows why the mission cannot be composed, on the step where the answer is (spec {@code
    * docs/earth-orbit/02-wizard-orbites-terrestres.md} §6).
    *
-   * <p>A target beyond the ascent's reach — a MEO — is only refutable once the vehicle is known, and
-   * the vehicle is picked here, last. The message comes from {@code MissionComposer} unchanged: it
-   * names the stage, the coast the transfer needs and the coast the stage declares, so the way out
-   * ("fly Ariane 62, or a payload with a kick motor") is in the refusal itself. Until P2 it reached
-   * a log line and the user saw the wizard close on no mission at all.
+   * <p>A target beyond the ascent's reach — a MEO — is only refutable once the vehicle is known,
+   * and the vehicle is picked here, last. The message comes from {@code MissionComposer} unchanged:
+   * it names the stage, the coast the transfer needs and the coast the stage declares, so the way
+   * out ("fly Ariane 62, or a payload with a kick motor") is in the refusal itself. Until P2 it
+   * reached a log line and the user saw the wizard close on no mission at all.
    *
    * @param message the refusal, as the model worded it
    */

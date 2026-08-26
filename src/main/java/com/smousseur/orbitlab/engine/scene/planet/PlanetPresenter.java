@@ -10,7 +10,6 @@ import com.smousseur.orbitlab.engine.view.JmeVectorAdapter;
 import com.smousseur.orbitlab.simulation.ephemeris.service.EphemerisService;
 import com.smousseur.orbitlab.simulation.ephemeris.service.EphemerisServiceRegistry;
 import java.util.Objects;
-
 import org.hipparchus.geometry.euclidean.threed.Rotation;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.orekit.time.AbsoluteDate;

@@ -13,14 +13,14 @@ import org.hipparchus.util.FastMath;
  * inclination behaviour that go with it (spec {@code
  * docs/earth-orbit/02-wizard-orbites-terrestres.md} §2).
  *
- * <p><b>A profile is not a {@link MissionType}.</b> Four of the five profiles map onto the very same
- * type, and onto the very same {@code MissionSpec.EarthOrbit}: a polar orbit is that record with
- * {@code i = 90°}, a sun-synchronous one is it with an inclination derived from the altitude, and a
- * MEO is it with an apogee past the ceiling {@code MissionComposer} routes on. Giving each of them a
- * {@code MissionType} would force the spec to carry its type alongside {@code targetInclination} —
- * a redundant component, of which {@code EarthOrbit(POLAR, i = 28°)} would be a representable and
- * meaningless value. That is the inconsistency spec {@code 01} §3.2 refuses for {@code
- * targetEccentricity}, and the reason profiles live in the UI.
+ * <p><b>A profile is not a {@link MissionType}.</b> Four of the five profiles map onto the very
+ * same type, and onto the very same {@code MissionSpec.EarthOrbit}: a polar orbit is that record
+ * with {@code i = 90°}, a sun-synchronous one is it with an inclination derived from the altitude,
+ * and a MEO is it with an apogee past the ceiling {@code MissionComposer} routes on. Giving each of
+ * them a {@code MissionType} would force the spec to carry its type alongside {@code
+ * targetInclination} — a redundant component, of which {@code EarthOrbit(POLAR, i = 28°)} would be
+ * a representable and meaningless value. That is the inconsistency spec {@code 01} §3.2 refuses for
+ * {@code targetEccentricity}, and the reason profiles live in the UI.
  *
  * <p><b>Deliberately free of Lemur.</b> It carries an icon <em>path</em> and plain numbers, never a
  * widget, so the mapping between a spec and its card is unit-testable where a wizard step is not.
@@ -28,8 +28,8 @@ import org.hipparchus.util.FastMath;
 public enum MissionProfile {
 
   /**
-   * The historical target: any low orbit, plane left to whatever a due-east launch reaches for free.
-   * Its inclination default is therefore not a constant but the site's latitude, and stays on
+   * The historical target: any low orbit, plane left to whatever a due-east launch reaches for
+   * free. Its inclination default is therefore not a constant but the site's latitude, and stays on
    * {@link InclinationMode#AUTO} until the user overrides it (§2.0).
    */
   LEO(
@@ -110,9 +110,9 @@ public enum MissionProfile {
     AVAILABLE,
 
     /**
-     * The catalog constrains it. Only the MEO: past the ascent's reach, it needs an upper stage that
-     * holds a 2 h 58 coast or a payload whose kick motor takes the apogee burn over, and {@code
-     * MissionComposer} refuses the rest by name (spec {@code 01} §6).
+     * The catalog constrains it. Only the MEO: past the ascent's reach, it needs an upper stage
+     * that holds a 2 h 58 coast or a payload whose kick motor takes the apogee burn over, and
+     * {@code MissionComposer} refuses the rest by name (spec {@code 01} §6).
      */
     CONSTRAINED
   }
@@ -270,8 +270,8 @@ public enum MissionProfile {
       // before MIS-7.
       case AUTO, NONE -> FastMath.abs(launchLatitudeDeg);
       case EXPLICIT -> defaultInclinationDeg;
-      case DERIVED -> FastMath.toDegrees(LaunchPlane.sunSynchronous(altitudeMeters)
-          .targetInclination());
+      case DERIVED ->
+          FastMath.toDegrees(LaunchPlane.sunSynchronous(altitudeMeters).targetInclination());
     };
   }
 
@@ -286,14 +286,14 @@ public enum MissionProfile {
    * Recovers the profile a mission was created on, so reopening the wizard lights the right card
    * (§2.1).
    *
-   * <p><b>Derived rather than stored.</b> A spec component carrying the profile could contradict the
-   * inclination beside it; this cannot. The ordering matters: the apogee ceiling is checked first
-   * because it is the one condition {@code MissionComposer} itself routes on, and a MEO at 55° would
-   * otherwise be read as an ordinary low orbit.
+   * <p><b>Derived rather than stored.</b> A spec component carrying the profile could contradict
+   * the inclination beside it; this cannot. The ordering matters: the apogee ceiling is checked
+   * first because it is the one condition {@code MissionComposer} itself routes on, and a MEO at
+   * 55° would otherwise be read as an ordinary low orbit.
    *
-   * <p>The worst this can do is answer {@link #LEO} where {@link #SSO} was meant, on a mission whose
-   * altitude has been edited away from the band. The inclination is then shown as a free value —
-   * which is what it has become — so nothing is lost but the card's label.
+   * <p>The worst this can do is answer {@link #LEO} where {@link #SSO} was meant, on a mission
+   * whose altitude has been edited away from the band. The inclination is then shown as a free
+   * value — which is what it has become — so nothing is lost but the card's label.
    *
    * @param spec the spec to classify
    * @return the profile whose card the wizard should show as selected
@@ -316,9 +316,9 @@ public enum MissionProfile {
   }
 
   /**
-   * Whether a target is the sun-synchronous orbit of its own altitude. Elliptic targets are excluded
-   * outright: the derived inclination is a function of a circular altitude, so comparing it against
-   * an ellipse would be comparing against a number the panel could not have produced.
+   * Whether a target is the sun-synchronous orbit of its own altitude. Elliptic targets are
+   * excluded outright: the derived inclination is a function of a circular altitude, so comparing
+   * it against an ellipse would be comparing against a number the panel could not have produced.
    */
   private static boolean isSunSynchronous(MissionSpec.EarthOrbit spec, double inclinationDeg) {
     if (FastMath.abs(spec.apogeeAltitude() - spec.perigeeAltitude()) > 1.0) {
@@ -326,8 +326,7 @@ public enum MissionProfile {
     }
     try {
       double derived =
-          FastMath.toDegrees(
-              LaunchPlane.sunSynchronous(spec.apogeeAltitude()).targetInclination());
+          FastMath.toDegrees(LaunchPlane.sunSynchronous(spec.apogeeAltitude()).targetInclination());
       return FastMath.abs(inclinationDeg - derived) < SSO_TOLERANCE_DEG;
     } catch (RuntimeException e) {
       // No sun-synchronous inclination exists at that altitude, so the target cannot be one.

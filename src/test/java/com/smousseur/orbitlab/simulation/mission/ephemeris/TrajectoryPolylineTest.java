@@ -109,7 +109,10 @@ class TrajectoryPolylineTest {
     assertTrue(
         trail.size() <= TrajectoryPolyline.MAX_POINTS,
         () -> "budget exceeded: " + trail.size() + " > " + TrajectoryPolyline.MAX_POINTS);
-    assertEquals(new Vector3D(0, 0, 0), trail.positionAt(0, SolarSystemBody.EARTH), "the ascent must not be dropped");
+    assertEquals(
+        new Vector3D(0, 0, 0),
+        trail.positionAt(0, SolarSystemBody.EARTH),
+        "the ascent must not be dropped");
     assertEquals(
         new Vector3D(n - 1, 0, 0),
         trail.positionAt(trail.size() - 1, SolarSystemBody.EARTH),
@@ -318,22 +321,20 @@ class TrajectoryPolylineTest {
   void arcBodiesListsEveryBodyTheTrajectoryCanBeDrawnAbout() {
     assertEquals(Set.of(SolarSystemBody.EARTH), polylineOf(10).arcBodies());
 
-    TrajectoryPolyline crossing =
-        polylineOf(new int[] {30}, new boolean[] {false}, new int[] {15});
+    TrajectoryPolyline crossing = polylineOf(new int[] {30}, new boolean[] {false}, new int[] {15});
     assertEquals(Set.of(SolarSystemBody.EARTH, SolarSystemBody.MOON), crossing.arcBodies());
   }
 
   /**
    * Asking for a body the trajectory never flies about is a programming error, not a degraded case:
-   * there is no table, and serving the nearest one would draw the line somewhere meaningless. {@code
-   * FocusView.isMissionVisible} is what guarantees the render path never asks.
+   * there is no table, and serving the nearest one would draw the line somewhere meaningless.
+   * {@code FocusView.isMissionVisible} is what guarantees the render path never asks.
    */
   @Test
   void aBodyTheTrajectoryNeverFliesAboutIsRefused() {
     TrajectoryPolyline trail = polylineOf(10);
 
-    assertThrows(
-        IllegalArgumentException.class, () -> trail.positionAt(0, SolarSystemBody.MARS));
+    assertThrows(IllegalArgumentException.class, () -> trail.positionAt(0, SolarSystemBody.MARS));
   }
 
   /**
@@ -386,8 +387,8 @@ class TrajectoryPolylineTest {
   /**
    * The reason arcs are a partition of their own rather than a term added to the run criterion: a
    * sphere-of-influence crossing falls inside a phase, and folding it into the runs would split
-   * that phase into two homonymous ones — two transition markers drawn, one phase too many
-   * reported by the timeline.
+   * that phase into two homonymous ones — two transition markers drawn, one phase too many reported
+   * by the timeline.
    */
   @Test
   void arcsAndRunsArePartitionedIndependently() {
@@ -402,7 +403,8 @@ class TrajectoryPolylineTest {
 
     for (int i = 0; i < trail.size(); i++) {
       int index = i;
-      assertEquals(i < 15 ? 0 : 1, trail.arcOf(index), () -> "vertex " + index + " in the wrong arc");
+      assertEquals(
+          i < 15 ? 0 : 1, trail.arcOf(index), () -> "vertex " + index + " in the wrong arc");
     }
   }
 

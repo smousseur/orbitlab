@@ -5,7 +5,6 @@ import com.jme3.app.state.BaseAppState;
 import com.smousseur.orbitlab.core.OrbitlabPath;
 import com.smousseur.orbitlab.simulation.source.DatasetEphemerisSource;
 import com.smousseur.orbitlab.simulation.source.EphemerisSourceRegistry;
-
 import java.nio.file.Path;
 
 /**

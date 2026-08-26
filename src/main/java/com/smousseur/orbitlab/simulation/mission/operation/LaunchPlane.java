@@ -12,8 +12,8 @@ import org.orekit.frames.Frame;
  * The orbital plane a launch is asked to reach, and the azimuth that reaches it (spec {@code
  * docs/earth-orbit/01-mission-terre-parametrable.md} §3.1).
  *
- * <p><b>The user gives an inclination, not an azimuth.</b> The azimuth is a means: it depends on the
- * site latitude, two of them reach the same plane ({@link NodeBranch}), and getting it wrong is
+ * <p><b>The user gives an inclination, not an azimuth.</b> The azimuth is a means: it depends on
+ * the site latitude, two of them reach the same plane ({@link NodeBranch}), and getting it wrong is
  * silent. The inclination is the intention. This record therefore owns the derivation, and is the
  * <em>only</em> place in the code where {@code asin(cos i / cos φ)} is written.
  *
@@ -63,14 +63,15 @@ public record LaunchPlane(double targetInclination, NodeBranch nodeBranch) {
    * @return the free plane of that site
    */
   public static LaunchPlane dueEast(double launchLatitudeDeg) {
-    return new LaunchPlane(FastMath.toRadians(FastMath.abs(launchLatitudeDeg)), NodeBranch.ASCENDING);
+    return new LaunchPlane(
+        FastMath.toRadians(FastMath.abs(launchLatitudeDeg)), NodeBranch.ASCENDING);
   }
 
   /**
    * The plane of a sun-synchronous orbit at a given circular altitude: the inclination is
-   * <b>derived, not asked for</b> (spec §5). The user picks an altitude and gets the one inclination
-   * whose nodal precession keeps pace with the Sun; it is always retrograde, so the azimuth this
-   * plane yields points west of north.
+   * <b>derived, not asked for</b> (spec §5). The user picks an altitude and gets the one
+   * inclination whose nodal precession keeps pace with the Sun; it is always retrograde, so the
+   * azimuth this plane yields points west of north.
    *
    * <p>An SSO needs nothing else — no mission type of its own, no objective of its own. It is an
    * ordinary circular {@link MissionSpec.EarthOrbit} built on this plane.
@@ -122,8 +123,8 @@ public record LaunchPlane(double targetInclination, NodeBranch nodeBranch) {
    *
    * <p><b>Both readings must come from the same frame, and this method is what guarantees it.</b>
    * GCRF is the frame the states are propagated in, so achieved inclinations are GCRF inclinations
-   * by construction; declaring the target's frame here rather than leaving it implicit is what makes
-   * the pair comparable.
+   * by construction; declaring the target's frame here rather than leaving it implicit is what
+   * makes the pair comparable.
    *
    * <p><b>Why GCRF and not the equator of the date.</b> §3.4 raised a real concern: GCRF's equator
    * is J2000's, tilted 0.1454° from the pole of the date, so an inclination <em>read</em> in GCRF
@@ -164,8 +165,8 @@ public record LaunchPlane(double targetInclination, NodeBranch nodeBranch) {
   }
 
   /**
-   * The launch azimuth reaching this plane from a site at the given latitude, measured
-   * <b>clockwise from north</b> — 90° is due east.
+   * The launch azimuth reaching this plane from a site at the given latitude, measured <b>clockwise
+   * from north</b> — 90° is due east.
    *
    * <p>This is spherical trigonometry on a non-rotating Earth: {@code sin A = cos i / cos φ}. It
    * takes no account of the Earth's rotation, which biases the true inertial heading; that bias is
@@ -205,11 +206,11 @@ public record LaunchPlane(double targetInclination, NodeBranch nodeBranch) {
   /**
    * Whether this plane must be <em>flown to</em> rather than merely fallen into.
    *
-   * <p>The distinction is the non-regression seam of spec §4.2: the commanded-plane attitude aims at
-   * the target plane's prograde direction where the historical one follows the current tangential
-   * velocity, and the two are not numerically identical even when the planes coincide. A target that
-   * is already the site's free plane therefore keeps the historical path bit-for-bit, and the
-   * calibrated due-east trajectories cannot drift.
+   * <p>The distinction is the non-regression seam of spec §4.2: the commanded-plane attitude aims
+   * at the target plane's prograde direction where the historical one follows the current
+   * tangential velocity, and the two are not numerically identical even when the planes coincide. A
+   * target that is already the site's free plane therefore keeps the historical path bit-for-bit,
+   * and the calibrated due-east trajectories cannot drift.
    *
    * @param launchLatitude the launch site latitude in radians
    * @return {@code true} when the target plane differs from the site's free due-east plane

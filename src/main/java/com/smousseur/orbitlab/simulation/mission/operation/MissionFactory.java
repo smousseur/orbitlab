@@ -6,10 +6,10 @@ import com.smousseur.orbitlab.simulation.mission.MissionHorizon;
 import com.smousseur.orbitlab.simulation.mission.MissionType;
 import com.smousseur.orbitlab.simulation.mission.OptimizationType;
 import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchConfiguration;
-import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Launchers;
-import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Payloads;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropellantBudget;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Spacecraft;
+import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Launchers;
+import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Payloads;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.LauncherModel;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.PayloadModel;
 import java.util.Map;
@@ -100,8 +100,8 @@ public final class MissionFactory {
             MissionComposer.needsParkingOrbit(apogeeAlt)
                 ? highOrbitConfiguration(
                     launcher, payloadModel, payloadMass, perigeeAlt, apogeeAlt, latitude, azimuth)
-                : directConfiguration(launcher, payloadModel, payloadMass, apogeeAlt, latitude,
-                    azimuth);
+                : directConfiguration(
+                    launcher, payloadModel, payloadMass, apogeeAlt, latitude, azimuth);
         yield new MissionSpec.EarthOrbit(
             name,
             configuration,
@@ -156,8 +156,7 @@ public final class MissionFactory {
       double latitude,
       double azimuth) {
     Spacecraft payload = payloadModel.toSpacecraft(payloadMass, 0.0);
-    double[] loads =
-        PropellantBudget.loadsForLeo(launcher, payload, apogeeAlt, latitude, azimuth);
+    double[] loads = PropellantBudget.loadsForLeo(launcher, payload, apogeeAlt, latitude, azimuth);
     return new LaunchConfiguration(launcher, loads, payload, payloadModel.id());
   }
 
@@ -190,8 +189,7 @@ public final class MissionFactory {
             0.0,
             azimuth);
     Spacecraft payload = payloadModel.toSpacecraft(payloadMass, loads.akmLoad());
-    return new LaunchConfiguration(
-        launcher, loads.launcherLoads(), payload, payloadModel.id());
+    return new LaunchConfiguration(launcher, loads.launcherLoads(), payload, payloadModel.id());
   }
 
   /**

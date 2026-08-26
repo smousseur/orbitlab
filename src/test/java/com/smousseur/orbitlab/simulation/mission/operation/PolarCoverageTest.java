@@ -1,11 +1,11 @@
 package com.smousseur.orbitlab.simulation.mission.operation;
 
-import com.smousseur.orbitlab.simulation.flight.FlightContext;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.smousseur.orbitlab.simulation.OrbitElements;
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.Physics;
+import com.smousseur.orbitlab.simulation.flight.FlightContext;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionStage;
 import com.smousseur.orbitlab.simulation.mission.maneuver.GravityTurnManeuver;
@@ -37,9 +37,9 @@ import org.orekit.time.TimeScalesFactory;
  * <b>MIS-7 / P1, test T5</b> — a polar mission actually covers the poles (spec {@code
  * docs/earth-orbit/01-mission-terre-parametrable.md} §9.2).
  *
- * <p>Inclination is a number; coverage is what a polar orbit is <em>for</em>. This fixture reads the
- * ground track rather than the orbital element, so it fails on anything that would leave the plane
- * short of the poles — including the failure modes an inclination assertion cannot see.
+ * <p>Inclination is a number; coverage is what a polar orbit is <em>for</em>. This fixture reads
+ * the ground track rather than the orbital element, so it fails on anything that would leave the
+ * plane short of the poles — including the failure modes an inclination assertion cannot see.
  *
  * <p><b>Why the plane trim is in the chain, demonstrated.</b> The ascent alone lands the plane
  * within ~3.3° of a polar command (measured by {@code AscentPlaneControlTest}: the thrust stays in
@@ -145,7 +145,8 @@ class PolarCoverageTest {
     double period = state.getOrbit().getKeplerianPeriod();
     double maximum = 0.0;
     for (int sample = 0; sample <= SAMPLES; sample++) {
-      SpacecraftState sampled = propagator.propagate(state.getDate().shiftedBy(period * sample / SAMPLES));
+      SpacecraftState sampled =
+          propagator.propagate(state.getDate().shiftedBy(period * sample / SAMPLES));
       GeodeticPoint subSatellite =
           OrekitService.get()
               .getEarthEllipsoid()

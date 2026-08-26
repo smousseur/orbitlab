@@ -1,10 +1,9 @@
 package com.smousseur.orbitlab.simulation.mission.optimizer;
 
-import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.OrbitElements;
+import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.Physics;
 import com.smousseur.orbitlab.simulation.flight.FlightContext;
-import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionStage;
 import com.smousseur.orbitlab.simulation.mission.OptimizableMissionStage;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemeris;
@@ -329,7 +328,8 @@ class GravityTurnFloorProbeTest {
   @Test
   void defautA_gravityTurnCostCurve() {
     for (String tag : new String[] {"FH-400", "LEO-200x1000"}) {
-      EarthOrbitMission mission = "FH-400".equals(tag) ? falconHeavyBudgetLoads() : elliptic200x1000();
+      EarthOrbitMission mission =
+          "FH-400".equals(tag) ? falconHeavyBudgetLoads() : elliptic200x1000();
       EarthOrbitMission twin = "FH-400".equals(tag) ? falconHeavyBudgetLoads() : elliptic200x1000();
       double stagingComplete = stagingCompleteTime(twin, Launchers.FALCON_HEAVY.ascentProfile());
       logger.info("[A/{}] stagingCompleteTime = {} s", tag, fmt(stagingComplete, 5));
@@ -567,7 +567,11 @@ class GravityTurnFloorProbeTest {
   }
 
   private static void meanOrbitProbe(
-      String tag, EarthOrbitMission mission, EarthOrbitMission twin, double[] vars, double targetPerigee) {
+      String tag,
+      EarthOrbitMission mission,
+      EarthOrbitMission twin,
+      double[] vars,
+      double targetPerigee) {
     double stagingComplete = stagingCompleteTime(twin, Launchers.FALCON_HEAVY.ascentProfile());
     Flight flight = fly(mission, vars, stagingComplete);
 
@@ -626,7 +630,11 @@ class GravityTurnFloorProbeTest {
   }
 
   private static void bandProbe(
-      String tag, EarthOrbitMission mission, EarthOrbitMission twin, double[] vars, double targetPerigee) {
+      String tag,
+      EarthOrbitMission mission,
+      EarthOrbitMission twin,
+      double[] vars,
+      double targetPerigee) {
     double stagingComplete = stagingCompleteTime(twin, Launchers.FALCON_HEAVY.ascentProfile());
     Flight flight = fly(mission, vars, stagingComplete);
 
@@ -697,7 +705,11 @@ class GravityTurnFloorProbeTest {
   }
 
   private static void coastProbe(
-      String tag, EarthOrbitMission mission, EarthOrbitMission twin, double[] vars, double targetPerigee) {
+      String tag,
+      EarthOrbitMission mission,
+      EarthOrbitMission twin,
+      double[] vars,
+      double targetPerigee) {
     AscentProfile profile = Launchers.FALCON_HEAVY.ascentProfile();
     double stagingComplete = stagingCompleteTime(twin, profile);
     fly(mission, vars, stagingComplete);

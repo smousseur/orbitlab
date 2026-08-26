@@ -5,14 +5,13 @@ import com.smousseur.orbitlab.simulation.ephemeris.config.EphemerisConfig;
 import com.smousseur.orbitlab.simulation.ephemeris.config.SlidingWindowConfig;
 import com.smousseur.orbitlab.simulation.source.EphemerisSource;
 import com.smousseur.orbitlab.simulation.source.PrefetchingEphemerisSource;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 import org.hipparchus.geometry.euclidean.threed.Rotation;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.orekit.time.AbsoluteDate;
 import org.orekit.utils.PVCoordinates;
-
-import java.util.Objects;
-import java.util.Optional;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Thread-safe sliding window buffer of time-stamped position/velocity and rotation samples for a

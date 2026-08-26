@@ -1,9 +1,7 @@
 package com.smousseur.orbitlab.simulation.mission.planner;
 
 import com.smousseur.orbitlab.simulation.mission.runtime.MissionComputeResult;
-
 import java.util.Objects;
-import java.util.Optional;
 
 /**
  * Unified outcome of a {@link MissionPlanner}, whatever optimization mode produced it.

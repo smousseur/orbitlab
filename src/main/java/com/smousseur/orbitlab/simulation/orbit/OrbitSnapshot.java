@@ -1,10 +1,9 @@
 package com.smousseur.orbitlab.simulation.orbit;
 
 import com.smousseur.orbitlab.core.SolarSystemBody;
+import java.util.Objects;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.orekit.time.AbsoluteDate;
-
-import java.util.Objects;
 
 /**
  * An immutable snapshot of a celestial body's computed orbit positions at a specific point in time.

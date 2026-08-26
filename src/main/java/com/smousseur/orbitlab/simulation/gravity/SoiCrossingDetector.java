@@ -17,10 +17,10 @@ import org.orekit.propagation.events.handlers.EventHandler;
  *
  * <p><b>One class serves both directions of crossing</b>, and that is a property of the switching
  * function rather than a convenience. The position of the sphere's body is evaluated in {@code
- * state.getFrame()}, so on an Earth arc it is the Moon's geocentric position while on a lunar arc it
- * is the origin itself — the same expression measures the same distance from either side. Orekit's
- * own {@code RelativeDistanceDetector} has this exact shape; it is not reused only because its
- * threshold is a constant and ours breathes with the Earth-Moon distance (spec L4 §3.2).
+ * state.getFrame()}, so on an Earth arc it is the Moon's geocentric position while on a lunar arc
+ * it is the origin itself — the same expression measures the same distance from either side.
+ * Orekit's own {@code RelativeDistanceDetector} has this exact shape; it is not reused only because
+ * its threshold is a constant and ours breathes with the Earth-Moon distance (spec L4 §3.2).
  *
  * <p><b>The dead band lives here, as a scale on the radius.</b> A STOP fires at {@code g = 0}, so
  * the next leg starts <em>on</em> the sphere and a detector re-armed on the same radius sees a sign
@@ -31,13 +31,13 @@ import org.orekit.propagation.events.handlers.EventHandler;
 public class SoiCrossingDetector extends AbstractDetector<SoiCrossingDetector> {
 
   /**
-   * Hysteresis margin on the radius when leaving a sphere of influence. 1.5e-4 is about 10 km at the
-   * lunar sphere's 64 500 km — some ten seconds of dwell at transfer speed, far above the metre the
-   * root finder brackets to, and far below anything that would misdate the exit noticeably.
+   * Hysteresis margin on the radius when leaving a sphere of influence. 1.5e-4 is about 10 km at
+   * the lunar sphere's 64 500 km — some ten seconds of dwell at transfer speed, far above the metre
+   * the root finder brackets to, and far below anything that would misdate the exit noticeably.
    *
-   * <p>The risk is asymmetric and this value errs on the safe side deliberately: too small chatters,
-   * too large only dates the exit late, and a late exit costs bookkeeping rather than physics
-   * because the opposite body perturbs on both sides anyway (spec L4 §4.2).
+   * <p>The risk is asymmetric and this value errs on the safe side deliberately: too small
+   * chatters, too large only dates the exit late, and a late exit costs bookkeeping rather than
+   * physics because the opposite body perturbs on both sides anyway (spec L4 §4.2).
    */
   public static final double EXIT_DEAD_BAND = 1.5e-4;
 

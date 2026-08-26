@@ -1,11 +1,10 @@
 package com.smousseur.orbitlab.simulation.mission.maneuver;
 
-import com.smousseur.orbitlab.simulation.flight.FlightContext;
-import com.smousseur.orbitlab.simulation.flight.FlightContext;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.Physics;
+import com.smousseur.orbitlab.simulation.flight.FlightContext;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionStage;
 import com.smousseur.orbitlab.simulation.mission.detector.DepletionGuard;
@@ -88,7 +87,8 @@ class GravityTurnReplayConsistencyTest {
   // Recorded on the pre-split code (commit 1d53e83), fixed variables, no optimizer involved.
   //
   // RE-RECORDED at MIS-7 P1.a-bis (spec docs/earth-orbit/01-mission-terre-parametrable.md §1.1.1),
-  // after correcting the pitch kick's local horizontal basis, which had east and west swapped and so
+  // after correcting the pitch kick's local horizontal basis, which had east and west swapped and
+  // so
   // mirrored every commanded azimuth about the site meridian. The correction is a deliberate
   // behaviour change, not a bug fix with no consequence, and the displacement it inflicts on this
   // fixture was measured before being accepted:
@@ -99,10 +99,12 @@ class GravityTurnReplayConsistencyTest {
   // 89× the position tolerance and 116× the velocity one. The schedule did NOT move — burn 1
   // duration, staging completion, MECO date and MECO mass are unchanged to the last recorded digit,
   // as they must be: the basis touches the heading, not the propellant. Nor did the plane: the
-  // mirror is symmetric about the site meridian, so it moves the node and not the inclination, which
+  // mirror is symmetric about the site meridian, so it moves the node and not the inclination,
+  // which
   // is exactly why nothing in the suite had ever caught it.
   //
-  // The tolerances below are UNTOUCHED. Re-recording a measured reference after an assumed change is
+  // The tolerances below are UNTOUCHED. Re-recording a measured reference after an assumed change
+  // is
   // legitimate and is documented here; widening a tolerance to make a test pass is the failure spec
   // §9 forbids, and the two must not be confused.
   private static final double REF_BURN1_DURATION_S = 149.979660;
@@ -178,7 +180,8 @@ class GravityTurnReplayConsistencyTest {
       GravityTurnManeuver maneuver, SpacecraftState start, double[] variables) {
     AscentPlan plan = maneuver.plan(start, variables);
     NumericalPropagator prop =
-        OrekitService.get().createOptimizationPropagator(FlightContext.earth(), plan.maxStepSeconds());
+        OrekitService.get()
+            .createOptimizationPropagator(FlightContext.earth(), plan.maxStepSeconds());
     prop.setInitialState(start);
     maneuver.configure(prop, plan); // single source of truth, shared with the optimize path
     DepletionGuard.arm(prop, maneuver.getDepletionFloor(), "GT"); // loud, as GravityTurnStage does
@@ -208,7 +211,9 @@ class GravityTurnReplayConsistencyTest {
     // Ephemeris pass: the generator flies every stage under createOptimizationPropagator (8×8).
     mission.setCurrentState(initial);
     NumericalPropagator p8 =
-        OrekitService.get().createOptimizationPropagator(FlightContext.earth(), va.maxStepSeconds(initial, mission));
+        OrekitService.get()
+            .createOptimizationPropagator(
+                FlightContext.earth(), va.maxStepSeconds(initial, mission));
     p8.setInitialState(initial);
     va.configure(p8, mission);
     AbsoluteDate end =
@@ -408,7 +413,9 @@ class GravityTurnReplayConsistencyTest {
       GEOMission mission, SpacecraftState entry, double[] variables) {
     List<MissionStage> ascent =
         AscentSequence.gravityTurn(
-            Launchers.FALCON_HEAVY.ascentProfile(), GravityTurnConstraints.forTarget(PARKING_ALT), LAT);
+            Launchers.FALCON_HEAVY.ascentProfile(),
+            GravityTurnConstraints.forTarget(PARKING_ALT),
+            LAT);
     ((GravityTurnFirstBurnStage) ascent.getFirst())
         .applyOptimization(new OptimizationResult(variables, 0.0, entry, 1, entry));
     mission.setCurrentState(entry);
@@ -474,7 +481,8 @@ class GravityTurnReplayConsistencyTest {
         (GravityTurnFirstBurnStage)
             AscentSequence.gravityTurn(
                     Launchers.FALCON_HEAVY.ascentProfile(),
-                    GravityTurnConstraints.forTarget(PARKING_ALT), LAT)
+                    GravityTurnConstraints.forTarget(PARKING_ALT),
+                    LAT)
                 .getFirst();
     SpacecraftState optimize = firstBurn.buildProblem(optimizeMission).propagate(variables);
 
@@ -510,7 +518,8 @@ class GravityTurnReplayConsistencyTest {
         (GravityTurnFirstBurnStage)
             AscentSequence.gravityTurn(
                     Launchers.FALCON_HEAVY.ascentProfile(),
-                    GravityTurnConstraints.forTarget(PARKING_ALT), LAT)
+                    GravityTurnConstraints.forTarget(PARKING_ALT),
+                    LAT)
                 .getFirst();
     double[] variables = {gt.maneuver().getStagingCompleteTime() + 2.0, 0.32};
     SpacecraftState preKick = gt.entry();
@@ -520,7 +529,9 @@ class GravityTurnReplayConsistencyTest {
     mission.setCurrentState(preKick); // the generator sets this to the pre-kick opt.getEntryState()
 
     NumericalPropagator propagator =
-        OrekitService.get().createOptimizationPropagator(FlightContext.earth(), stage.maxStepSeconds(preKick, mission));
+        OrekitService.get()
+            .createOptimizationPropagator(
+                FlightContext.earth(), stage.maxStepSeconds(preKick, mission));
     propagator.setInitialState(preKick); // exactly what the generator does before configure
     stage.configure(propagator, mission);
 

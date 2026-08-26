@@ -20,13 +20,13 @@ import org.junit.jupiter.api.Test;
  * pixel and per frame. These tests pin the near plane by what it buys, not by its value.
  *
  * <p><b>The third viewport, and why there is none</b> (spec {@code
- * docs/multi-corps/07-conception-L5.md} §5.3). Roadmap open question n° 4 asked whether Earth + Moon
- * + spacecraft in one frame forces a third "mid" viewport, reverse-Z or a logarithmic depth buffer,
- * and named this class as the instrument to decide it. The measurement below says no. One depth step
- * at the Moon's distance is ~88 000 km, fourteen Earth radii — but nothing out there is competing
- * for depth: the near viewport draws exactly one globe, on the origin, where the step is ~27 km. The
- * far end of the trajectory disputes depth only with itself. What was actually broken was the far
- * <em>clip</em> plane, and that is one constant.
+ * docs/multi-corps/07-conception-L5.md} §5.3). Roadmap open question n° 4 asked whether Earth +
+ * Moon + spacecraft in one frame forces a third "mid" viewport, reverse-Z or a logarithmic depth
+ * buffer, and named this class as the instrument to decide it. The measurement below says no. One
+ * depth step at the Moon's distance is ~88 000 km, fourteen Earth radii — but nothing out there is
+ * competing for depth: the near viewport draws exactly one globe, on the origin, where the step is
+ * ~27 km. The far end of the trajectory disputes depth only with itself. What was actually broken
+ * was the far <em>clip</em> plane, and that is one constant.
  */
 class NearFrustumDepthTest {
 

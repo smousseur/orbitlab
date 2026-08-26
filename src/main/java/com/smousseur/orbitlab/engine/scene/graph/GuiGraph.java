@@ -1,7 +1,6 @@
 package com.smousseur.orbitlab.engine.scene.graph;
 
 import com.jme3.scene.Node;
-
 import java.util.Objects;
 
 /**

@@ -2,7 +2,6 @@ package com.smousseur.orbitlab.engine.scene.body;
 
 import com.jme3.math.ColorRGBA;
 import com.smousseur.orbitlab.app.view.RenderContext;
-
 import java.util.Objects;
 
 /**

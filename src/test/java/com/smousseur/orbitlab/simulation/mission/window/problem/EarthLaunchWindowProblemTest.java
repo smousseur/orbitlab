@@ -44,8 +44,7 @@ class EarthLaunchWindowProblemTest {
 
   private static final double INCLINATION = FastMath.toRadians(51.6);
 
-  private static final double SEMI_MAJOR_AXIS =
-      Constants.WGS84_EARTH_EQUATORIAL_RADIUS + 400_000.0;
+  private static final double SEMI_MAJOR_AXIS = Constants.WGS84_EARTH_EQUATORIAL_RADIUS + 400_000.0;
 
   private static final double SIDEREAL_DAY = 86_164.0905;
 
@@ -68,9 +67,7 @@ class EarthLaunchWindowProblemTest {
    * form of the problem's exact geometry, and therefore an independent prediction of it.
    */
   private static double slopePerSecond() {
-    return orbitalVelocity()
-        * FastMath.sin(INCLINATION)
-        * Constants.WGS84_EARTH_ANGULAR_VELOCITY;
+    return orbitalVelocity() * FastMath.sin(INCLINATION) * Constants.WGS84_EARTH_ANGULAR_VELOCITY;
   }
 
   /** The node of a plane normal: the inverse of {@code EarthLaunchWindowProblem.planeNormal}. */
@@ -88,8 +85,7 @@ class EarthLaunchWindowProblemTest {
     EarthLaunchWindowProblem probe =
         new EarthLaunchWindowProblem(latitude, longitude, 0.0, plane, 0.0, SEMI_MAJOR_AXIS);
     double raan = raanOf(probe.reachablePlaneNormal(alignment));
-    return new EarthLaunchWindowProblem(
-        latitude, longitude, 0.0, plane, raan, SEMI_MAJOR_AXIS);
+    return new EarthLaunchWindowProblem(latitude, longitude, 0.0, plane, raan, SEMI_MAJOR_AXIS);
   }
 
   private static EarthLaunchWindowProblem alignedAt(AbsoluteDate alignment) {
@@ -199,8 +195,7 @@ class EarthLaunchWindowProblemTest {
         atMidLatitude > 5.0 * atKourou,
         "at 45° the gap is an order of magnitude larger, floor is " + atMidLatitude + " m/s");
     assertTrue(
-        atMidLatitude < 50.0,
-        "but it stays tens of m/s, not hundreds: " + atMidLatitude + " m/s");
+        atMidLatitude < 50.0, "but it stays tens of m/s, not hundreds: " + atMidLatitude + " m/s");
   }
 
   @Test
@@ -228,10 +223,11 @@ class EarthLaunchWindowProblemTest {
     double separation = other.date().durationFrom(alignment);
     assertTrue(
         FastMath.abs(separation) > 600.0,
-        "the descending branch cannot align at the same instant, separation is " + separation + " s");
+        "the descending branch cannot align at the same instant, separation is "
+            + separation
+            + " s");
     assertTrue(
-        FastMath.abs(separation) < SIDEREAL_DAY,
-        "but it does align within the same sidereal day");
+        FastMath.abs(separation) < SIDEREAL_DAY, "but it does align within the same sidereal day");
   }
 
   @Test

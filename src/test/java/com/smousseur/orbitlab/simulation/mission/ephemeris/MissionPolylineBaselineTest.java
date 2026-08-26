@@ -1,9 +1,9 @@
 package com.smousseur.orbitlab.simulation.mission.ephemeris;
 
-import com.smousseur.orbitlab.core.SolarSystemBody;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionStage;
@@ -68,8 +68,8 @@ class MissionPolylineBaselineTest {
   /**
    * The trailing coast, passed as a resolved duration rather than left to the mission's horizon.
    *
-   * <p>One sidereal day, which is the legacy default a mission built outside {@code MissionComposer}
-   * carries. Passed explicitly because the horizon resolves itself from {@code
+   * <p>One sidereal day, which is the legacy default a mission built outside {@code
+   * MissionComposer} carries. Passed explicitly because the horizon resolves itself from {@code
    * mission.getCurrentState()}, which this fixture has already moved to the gravity-turn entry
    * state: a gate must not depend on where the arming left the mission.
    */
@@ -86,20 +86,21 @@ class MissionPolylineBaselineTest {
   /**
    * One pinned vertex of the drawn line: where a phase run opens, plus the final one.
    *
-   * <p>The run starts are the interesting vertices and not an arbitrary sample of them: they are the
-   * ones decimation is forced to keep, so they are exactly where a change in the budget formula
+   * <p>The run starts are the interesting vertices and not an arbitrary sample of them: they are
+   * the ones decimation is forced to keep, so they are exactly where a change in the budget formula
    * would show up first. {@code index} is pinned alongside the position because a stride that
    * shifted while keeping the same forced vertices would move it and nothing else.
    */
-  record Vertex(int index, String stage, boolean propulsive, double t, double x, double y, double z) {}
+  record Vertex(
+      int index, String stage, boolean propulsive, double t, double x, double y, double z) {}
 
   // ════════════════════════════════════════════════════════════════════════
   // The pinned polyline — measured on 1a8317d, 2026-08-17, before any L3 change
   // ════════════════════════════════════════════════════════════════════════
 
   /**
-   * <b>The fixture decimates, and that was not a given.</b> 9 992 raw samples against a budget of
-   * 8 192: the drawn line is strided down to 5 000 vertices. So this gate does not merely check that
+   * <b>The fixture decimates, and that was not a given.</b> 9 992 raw samples against a budget of 8
+   * 192: the drawn line is strided down to 5 000 vertices. So this gate does not merely check that
    * an under-budget trail is copied through — it exercises the stride path that spec §4.1 names as
    * the one numerical risk of the lot, on a real trajectory rather than a synthetic one.
    */
@@ -246,8 +247,8 @@ class MissionPolylineBaselineTest {
 
   /**
    * Flies the vertical ascent and hands the gravity turn its fixed variables — the mechanism {@code
-   * EarthOrbitNonRegressionTest.flyAscent} uses. Only the gravity turn takes variables; the analytic
-   * stages plan themselves.
+   * EarthOrbitNonRegressionTest.flyAscent} uses. Only the gravity turn takes variables; the
+   * analytic stages plan themselves.
    */
   private static void armFirstBurn(Mission mission, SpacecraftState initial) {
     mission.setCurrentState(initial);
@@ -279,7 +280,9 @@ class MissionPolylineBaselineTest {
     return new AbsoluteDate(2026, 1, 1, 12, 0, 0.0, TimeScalesFactory.getUTC());
   }
 
-  /** Prints the pinnable form of what was just flown, so the constants above are copied, not typed. */
+  /**
+   * Prints the pinnable form of what was just flown, so the constants above are copied, not typed.
+   */
   private static void logMeasured(MissionEphemeris ephemeris, TrajectoryPolyline trail) {
     StringBuilder sb = new StringBuilder("\n=== MEASURED ===\n");
     sb.append(String.format(Locale.ROOT, "RAW_POINTS = %d;%n", ephemeris.size()));

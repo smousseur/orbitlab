@@ -1,7 +1,6 @@
 package com.smousseur.orbitlab.tools.ephemerisgen;
 
 import com.smousseur.orbitlab.core.SolarSystemBody;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.FileChannel;

@@ -2,13 +2,12 @@ package com.smousseur.orbitlab.simulation.ephemeris.service;
 
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.simulation.ephemeris.BodySample;
-import org.hipparchus.geometry.euclidean.threed.Rotation;
-import org.hipparchus.geometry.euclidean.threed.Vector3D;
-import org.orekit.time.AbsoluteDate;
-
 import java.util.AbstractMap;
 import java.util.Map;
 import java.util.Optional;
+import org.hipparchus.geometry.euclidean.threed.Rotation;
+import org.hipparchus.geometry.euclidean.threed.Vector3D;
+import org.orekit.time.AbsoluteDate;
 
 /**
  * Service interface for retrieving interpolated ephemeris data for celestial bodies.

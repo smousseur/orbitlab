@@ -4,12 +4,11 @@ import com.smousseur.orbitlab.core.OrbitlabException;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.objective.OrbitInsertionObjective;
 import com.smousseur.orbitlab.simulation.mission.progress.MissionProgressListener;
-import java.util.Objects;
-import java.util.function.Function;
-
 import com.smousseur.orbitlab.simulation.mission.runtime.MissionLoadEvaluator;
 import com.smousseur.orbitlab.simulation.mission.runtime.MultiStageLoadOptimizer;
 import com.smousseur.orbitlab.simulation.mission.runtime.PropellantLoadOptimizer;
+import java.util.Objects;
+import java.util.function.Function;
 import org.orekit.time.AbsoluteDate;
 
 /**

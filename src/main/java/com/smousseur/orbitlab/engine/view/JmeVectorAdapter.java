@@ -3,9 +3,8 @@ package com.smousseur.orbitlab.engine.view;
 import com.jme3.math.Vector3f;
 import com.smousseur.orbitlab.app.view.RenderContext;
 import com.smousseur.orbitlab.app.view.RenderTransform;
-import org.hipparchus.geometry.euclidean.threed.Vector3D;
-
 import java.util.Objects;
+import org.hipparchus.geometry.euclidean.threed.Vector3D;
 
 /**
  * Bridge between double-precision Orekit/Hipparchus vectors and JME float vectors.

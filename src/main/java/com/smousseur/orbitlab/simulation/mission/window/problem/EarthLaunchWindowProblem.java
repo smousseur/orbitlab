@@ -150,8 +150,7 @@ public class EarthLaunchWindowProblem implements LaunchWindowProblem {
   @Override
   public LaunchWindowCandidate evaluate(AbsoluteDate epoch) {
     double residual = Vector3D.angle(reachablePlaneNormal(epoch), targetNormal);
-    return LaunchWindowCandidate.of(
-        epoch, 2.0 * orbitalVelocity * FastMath.sin(0.5 * residual));
+    return LaunchWindowCandidate.of(epoch, 2.0 * orbitalVelocity * FastMath.sin(0.5 * residual));
   }
 
   /**

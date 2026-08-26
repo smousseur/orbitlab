@@ -17,14 +17,14 @@ import com.smousseur.orbitlab.simulation.mission.MissionStatus;
 import com.smousseur.orbitlab.simulation.mission.OptimizationType;
 import com.smousseur.orbitlab.simulation.mission.context.MissionEntry;
 import com.smousseur.orbitlab.simulation.mission.operation.MissionSpec;
-import com.smousseur.orbitlab.simulation.mission.runtime.AchievedOrbit;
 import com.smousseur.orbitlab.simulation.mission.progress.MissionProgress;
+import com.smousseur.orbitlab.simulation.mission.runtime.AchievedOrbit;
 import com.smousseur.orbitlab.ui.UiKit;
-import com.smousseur.orbitlab.ui.mission.MissionProgressText;
-import com.smousseur.orbitlab.ui.mission.component.SpinnerIcon;
 import com.smousseur.orbitlab.ui.form.FormStyles;
+import com.smousseur.orbitlab.ui.mission.MissionProgressText;
 import com.smousseur.orbitlab.ui.mission.MissionResultText;
 import com.smousseur.orbitlab.ui.mission.MissionTargetOrbit;
+import com.smousseur.orbitlab.ui.mission.component.SpinnerIcon;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.function.Consumer;
@@ -270,10 +270,7 @@ public class PanelFooter {
           "ERROR  " + entry.getLastError().orElse("computation failed"), RESULT_MAX_CHARS);
     }
     if (entry.mission().getStatus() == MissionStatus.COMPUTING) {
-      return entry
-          .getProgress()
-          .map(MissionProgressText::detailLine)
-          .orElse(COMPUTING_TEXT);
+      return entry.getProgress().map(MissionProgressText::detailLine).orElse(COMPUTING_TEXT);
     }
     return achievedSummary(entry).orElse(NO_RESULT);
   }

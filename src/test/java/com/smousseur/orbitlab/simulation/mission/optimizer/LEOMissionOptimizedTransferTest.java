@@ -14,10 +14,10 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 /**
  * Mirror of {@link LEOMissionOptimizationTest} flying the CMA-ES-optimized transfer (spec 06 I6,
- * {@link EarthOrbitMission#circularWithOptimizedTransfer}) instead of the analytic Hohmann profile. Same
- * launcher configuration (Falcon Heavy fully loaded) and same targets, so any divergence between
- * the two classes isolates the transfer mode. This is the multi-altitude sweep required before
- * deciding whether the optimized transfer becomes the LEO default (bilan 08 §3.2).
+ * {@link EarthOrbitMission#circularWithOptimizedTransfer}) instead of the analytic Hohmann profile.
+ * Same launcher configuration (Falcon Heavy fully loaded) and same targets, so any divergence
+ * between the two classes isolates the transfer mode. This is the multi-altitude sweep required
+ * before deciding whether the optimized transfer becomes the LEO default (bilan 08 §3.2).
  */
 @EnabledIfSystemProperty(named = "orbitlab.slowTests", matches = "true")
 public class LEOMissionOptimizedTransferTest extends AbstractTrajectoryOptimizerTest {
@@ -60,8 +60,8 @@ public class LEOMissionOptimizedTransferTest extends AbstractTrajectoryOptimizer
   /**
    * Same elliptic targets as the analytic {@link LEOMissionOptimizationTest#testEllipticMissions},
    * now flown through the CMA-ES-optimized single-burn transfer ({@link
-   * EarthOrbitMission#ellipticWithOptimizedTransfer}). The single burn shapes the post-gravity-turn state
-   * directly onto the target ellipse — {@link
+   * EarthOrbitMission#ellipticWithOptimizedTransfer}). The single burn shapes the post-gravity-turn
+   * state directly onto the target ellipse — {@link
    * com.smousseur.orbitlab.simulation.mission.stage.TransfertManeuverStage} grades apogee, perigee
    * and eccentricity — instead of the deterministic apoapsis circularization {@code
    * TransfertTwoManeuverStage} is limited to. The downstream trim burn is keyed on the target

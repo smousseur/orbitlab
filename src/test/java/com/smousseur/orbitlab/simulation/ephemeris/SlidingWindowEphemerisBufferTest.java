@@ -1,20 +1,19 @@
 package com.smousseur.orbitlab.simulation.ephemeris;
 
+import static com.smousseur.orbitlab.core.SolarSystemBody.EARTH;
+import static org.junit.jupiter.api.Assertions.*;
+
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.simulation.ephemeris.config.EphemerisConfig;
 import com.smousseur.orbitlab.simulation.source.EphemerisSource;
+import java.util.EnumMap;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.hipparchus.geometry.euclidean.threed.Rotation;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.junit.jupiter.api.Test;
 import org.orekit.time.AbsoluteDate;
 import org.orekit.utils.PVCoordinates;
-
-import java.util.EnumMap;
-import java.util.Optional;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import static com.smousseur.orbitlab.core.SolarSystemBody.EARTH;
-import static org.junit.jupiter.api.Assertions.*;
 
 class SlidingWindowEphemerisBufferTest {
 

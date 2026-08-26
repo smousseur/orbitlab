@@ -1,7 +1,5 @@
 package com.smousseur.orbitlab.ui.mission.wizard;
 
-import com.smousseur.orbitlab.ui.form.FormStyles;
-
 import com.jme3.input.event.MouseButtonEvent;
 import com.jme3.math.Vector3f;
 import com.jme3.scene.Spatial;
@@ -11,6 +9,7 @@ import com.simsilica.lemur.component.QuadBackgroundComponent;
 import com.simsilica.lemur.event.DefaultMouseListener;
 import com.simsilica.lemur.event.MouseEventControl;
 import com.smousseur.orbitlab.ui.UiKit;
+import com.smousseur.orbitlab.ui.form.FormStyles;
 import java.util.function.Consumer;
 
 public class WizardStepper {

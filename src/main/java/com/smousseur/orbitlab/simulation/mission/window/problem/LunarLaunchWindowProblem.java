@@ -44,8 +44,8 @@ import org.orekit.utils.TimeStampedPVCoordinates;
  * Moon at declination δ, {@code ĥ · û_M} vanishes iff {@code |tan δ| ≤ tan i}, twice per turn of
  * node, the two roots separated by {@code 180° − 2·|arcsin(cot i · tan δ)|}: half a day apart when
  * the Moon crosses the equator, some fifty minutes apart at the 2026 maximum seen from Canaveral —
- * where δ reaches 28.415° against i = 28.562° — and merging into a single soft minimum beyond
- * (spec §1.1).
+ * where δ reaches 28.415° against i = 28.562° — and merging into a single soft minimum beyond (spec
+ * §1.1).
  *
  * <p><b>Nothing refuses a site here.</b> A pad whose latitude is below the lunar declination — from
  * Kourou, 87.5% of a lunation — reaches no plane containing the Moon, but that is priced rather
@@ -84,8 +84,7 @@ public class LunarLaunchWindowProblem implements LaunchWindowProblem {
    * source in this package.
    */
   private static final Duration RECURRENCE =
-      Duration.ofMillis(
-          Math.round(FastMath.PI / Constants.WGS84_EARTH_ANGULAR_VELOCITY * 1000.0));
+      Duration.ofMillis(Math.round(FastMath.PI / Constants.WGS84_EARTH_ANGULAR_VELOCITY * 1000.0));
 
   /**
    * The launch azimuth, due east. The chain this problem serves flies {@code i = φ}, where {@code
@@ -248,9 +247,9 @@ public class LunarLaunchWindowProblem implements LaunchWindowProblem {
    * The parking state at the injection point of a lift-off at {@code epoch}, and the geometry that
    * placed it there.
    *
-   * <p>Package-private rather than private, with {@link #injectionAt}, because it is what the
-   * tests of this package read the geometry <em>behind</em> a price with: β is not a term of the
-   * cost — L1 measured that the Lambert term already carries all of it (spec §2.3) — but it is what
+   * <p>Package-private rather than private, with {@link #injectionAt}, because it is what the tests
+   * of this package read the geometry <em>behind</em> a price with: β is not a term of the cost —
+   * L1 measured that the Lambert term already carries all of it (spec §2.3) — but it is what
    * explains one, and a test that could only see the number could not tell a right price from a
    * plausible one.
    *
@@ -268,8 +267,8 @@ public class LunarLaunchWindowProblem implements LaunchWindowProblem {
    *
    * <p><b>The phase is the site's direction, and it is free rather than chosen.</b> The plane is
    * raised as {@code position × horizontal}, so the pad lies in it by construction; it is also the
-   * physically right phase, a due-east launch at {@code i = φ} putting the site at the
-   * northernmost point of the orbit.
+   * physically right phase, a due-east launch at {@code i = φ} putting the site at the northernmost
+   * point of the orbit.
    */
   Injection injectionAt(AbsoluteDate epoch) {
     Vector3D position = site.positionAt(epoch);

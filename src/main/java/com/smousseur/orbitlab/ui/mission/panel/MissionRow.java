@@ -19,13 +19,13 @@ import com.simsilica.lemur.component.TbtQuadBackgroundComponent;
 import com.simsilica.lemur.event.DefaultMouseListener;
 import com.simsilica.lemur.event.MouseEventControl;
 import com.smousseur.orbitlab.simulation.mission.MissionId;
-import com.smousseur.orbitlab.simulation.mission.context.MissionEntry;
 import com.smousseur.orbitlab.simulation.mission.MissionStatus;
+import com.smousseur.orbitlab.simulation.mission.context.MissionEntry;
 import com.smousseur.orbitlab.simulation.mission.progress.MissionProgress;
 import com.smousseur.orbitlab.ui.UiKit;
+import com.smousseur.orbitlab.ui.form.FormStyles;
 import com.smousseur.orbitlab.ui.mission.MissionProgressText;
 import com.smousseur.orbitlab.ui.mission.component.SpinnerIcon;
-import com.smousseur.orbitlab.ui.form.FormStyles;
 
 class MissionRow {
 

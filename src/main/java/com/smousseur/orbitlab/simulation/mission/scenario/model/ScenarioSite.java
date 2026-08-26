@@ -17,4 +17,5 @@ import com.fasterxml.jackson.annotation.JsonInclude;
  *     because the form field is not either
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public record ScenarioSite(String name, double latitudeDeg, double longitudeDeg, double altitudeM) {}
+public record ScenarioSite(
+    String name, double latitudeDeg, double longitudeDeg, double altitudeM) {}

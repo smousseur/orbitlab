@@ -72,7 +72,8 @@ class MissionProgressTextTest {
     progress.onProgress(new MissionProgressEvent.SizingAdvanced(2, 3, 7, 45));
 
     assertEquals("LOAD 7/45", MissionProgressText.statusCell(progress));
-    assertTrue(MissionProgressText.detailLine(progress).startsWith("LOAD 7/45  pass 2/3"), "sizing");
+    assertTrue(
+        MissionProgressText.detailLine(progress).startsWith("LOAD 7/45  pass 2/3"), "sizing");
   }
 
   @Test

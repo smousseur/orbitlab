@@ -4,9 +4,9 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * Live advancement of one mission computation: written by the optimization threads, read by the
- * JME render thread. One instance per computation, held by the {@code MissionEntry} for as long as
- * the computation lasts and dropped when it ends.
+ * Live advancement of one mission computation: written by the optimization threads, read by the JME
+ * render thread. One instance per computation, held by the {@code MissionEntry} for as long as the
+ * computation lasts and dropped when it ends.
  *
  * <p><b>Why the queued state lives here and not in {@code MissionStatus}.</b> The orchestrator's
  * executor is single-threaded, so a second mission set to compute waits its turn while displaying

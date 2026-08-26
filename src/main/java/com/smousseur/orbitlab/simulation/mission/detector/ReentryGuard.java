@@ -5,7 +5,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hipparchus.ode.events.Action;
 import org.orekit.propagation.numerical.NumericalPropagator;
-import org.orekit.utils.Constants;
 
 /**
  * Fail-fast re-entry guard (spec {@code docs/mission-stages/03-garde-rentree.md}). Arms a {@link
@@ -65,7 +64,8 @@ public final class ReentryGuard {
    * @param propagator the propagator to guard
    * @param context short label for the log (stage or maneuver name)
    */
-  public static void arm(NumericalPropagator propagator, String context, GravitationalContext body) {
+  public static void arm(
+      NumericalPropagator propagator, String context, GravitationalContext body) {
     double radius = body.equatorialRadius();
     propagator.addEventDetector(
         new ReentryDetector(radius)

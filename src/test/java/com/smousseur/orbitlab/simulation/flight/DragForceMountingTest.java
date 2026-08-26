@@ -28,9 +28,9 @@ import org.orekit.models.earth.atmosphere.NRLMSISE00;
  * a property of the type, the same demonstration {@code addPerturbers} already carries for an empty
  * perturber set.
  *
- * <p>The literal lists below were <b>measured</b>, not guessed: a {@code NumericalPropagator} always
- * carries a central {@link org.orekit.forces.gravity.NewtonianAttraction} of its own and returns it
- * last, whatever else was added.
+ * <p>The literal lists below were <b>measured</b>, not guessed: a {@code NumericalPropagator}
+ * always carries a central {@link org.orekit.forces.gravity.NewtonianAttraction} of its own and
+ * returns it last, whatever else was added.
  */
 class DragForceMountingTest {
 
@@ -87,9 +87,9 @@ class DragForceMountingTest {
   }
 
   /**
-   * The test factory has no caller in {@code src/main}, and mounts the drag all the same: letting it
-   * ignore a {@link DragContext} would re-open the failure mode "the drag was asked for and was not
-   * flown".
+   * The test factory has no caller in {@code src/main}, and mounts the drag all the same: letting
+   * it ignore a {@link DragContext} would re-open the failure mode "the drag was asked for and was
+   * not flown".
    */
   @Test
   @DisplayName("The test factory mounts the drag too")
@@ -108,9 +108,8 @@ class DragForceMountingTest {
   @Test
   @DisplayName("Both catalogued models resolve against the Earth")
   void bothModelsResolve() {
-    for (AtmosphereModel model : new AtmosphereModel[] {
-      AtmosphereModel.HARRIS_PRIESTER, AtmosphereModel.NRLMSISE
-    }) {
+    for (AtmosphereModel model :
+        new AtmosphereModel[] {AtmosphereModel.HARRIS_PRIESTER, AtmosphereModel.NRLMSISE}) {
       assertEquals(
           List.of("HolmesFeatherstoneAttractionModel", "DragForce", "NewtonianAttraction"),
           namesOf(optimization(earthWithDrag(model))),
@@ -120,16 +119,15 @@ class DragForceMountingTest {
 
   /**
    * The legacy the découpage §3.6 handed to MIS-5, closed: a lunar context <em>carrying</em> a drag
-   * context mounts no {@link DragForce}, because the model resolves against the central body and the
-   * Moon has no atmosphere. That is why the aerodynamic half can cross a boundary untouched.
+   * context mounts no {@link DragForce}, because the model resolves against the central body and
+   * the Moon has no atmosphere. That is why the aerodynamic half can cross a boundary untouched.
    */
   @Test
   @DisplayName("A lunar context carrying a DragContext mounts no DragForce")
   void aLunarContextCarryingADragContext_mountsNothing() {
     FlightContext lunar =
         new FlightContext(
-            GravitationalContext.moon(),
-            new DragContext(AERO, AtmosphereModel.NRLMSISE));
+            GravitationalContext.moon(), new DragContext(AERO, AtmosphereModel.NRLMSISE));
 
     assertTrue(lunar.hasDrag(), "the context does carry one");
     assertEquals(

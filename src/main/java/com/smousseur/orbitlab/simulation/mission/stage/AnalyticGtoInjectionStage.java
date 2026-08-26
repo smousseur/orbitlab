@@ -115,8 +115,7 @@ public class AnalyticGtoInjectionStage extends MissionStage {
   @Override
   public void configure(NumericalPropagator propagator, Mission mission) {
     SpacecraftState state = mission.getCurrentState();
-    InjectionPlan plan =
-        computePlan(state, mission.getVehicle(), flightContext(state, mission));
+    InjectionPlan plan = computePlan(state, mission.getVehicle(), flightContext(state, mission));
 
     addBurn(propagator, state, plan, mission.getVehicle());
 
@@ -288,8 +287,7 @@ public class AnalyticGtoInjectionStage extends MissionStage {
    * burn 1). Refuses the plan — distinguishing a propellant-capped capability limit from a solver
    * failure (bilan 11 §3.7) — when the apogee cannot be reached.
    */
-  private AimResult aimApogeeRadius(
-      SpacecraftState state, Vehicle vehicle, FlightContext context) {
+  private AimResult aimApogeeRadius(SpacecraftState state, Vehicle vehicle, FlightContext context) {
     double mu = state.getOrbit().getMu();
     Vector3D r1 = state.getPVCoordinates().getPosition();
     Vector3D v1 = state.getPVCoordinates().getVelocity();

@@ -3,7 +3,6 @@ package com.smousseur.orbitlab.engine.scene.graph;
 import com.jme3.scene.Node;
 import com.jme3.scene.Spatial;
 import com.smousseur.orbitlab.core.SolarSystemBody;
-
 import java.util.EnumMap;
 import java.util.Map;
 import java.util.Objects;

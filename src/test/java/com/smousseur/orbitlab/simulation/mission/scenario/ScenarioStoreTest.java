@@ -58,7 +58,9 @@ class ScenarioStoreTest {
     assertTrue(Files.isRegularFile(nested.resolve("first.json")));
   }
 
-  /** Opening the browser on a machine that never saved anything must not fail, nor create a folder. */
+  /**
+   * Opening the browser on a machine that never saved anything must not fail, nor create a folder.
+   */
   @Test
   void listsNothingWhenTheFolderDoesNotExist() {
     Path missing = directory.resolve("never-created");

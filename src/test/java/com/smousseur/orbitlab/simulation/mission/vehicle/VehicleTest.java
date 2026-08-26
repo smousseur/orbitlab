@@ -235,9 +235,9 @@ class VehicleTest {
   // --- aerodynamics (PHY-1 / L1, spec docs/atmosphere/04-conception-L1.md section 5.3) ---
 
   /**
-   * The aerodynamics follows the active stage, and <b>changes at the jettison</b>. The continuum-flow
-   * section of a first stage giving way to the free-molecular section of an upper stage is an
-   * assertion here, not an intention stated in a comment.
+   * The aerodynamics follows the active stage, and <b>changes at the jettison</b>. The
+   * continuum-flow section of a first stage giving way to the free-molecular section of an upper
+   * stage is an assertion here, not an intention stated in a comment.
    */
   @Test
   void aerodynamics_followTheActiveStage_andChangeAtJettison() {
@@ -247,8 +247,7 @@ class VehicleTest {
         new LaunchVehicle(
             66_000, 1_233_000, 1_233_000, new PropulsionSystem(296, 22_800_000), s1Aero);
     LaunchVehicle s2 =
-        new LaunchVehicle(
-            4_000, 107_500, 107_500, new PropulsionSystem(348, 981_000), s2Aero);
+        new LaunchVehicle(4_000, 107_500, 107_500, new PropulsionSystem(348, 981_000), s2Aero);
     Spacecraft sc = Spacecraft.LEGACY;
     VehicleStack stack = new VehicleStack(List.of(s1, s2, sc));
 

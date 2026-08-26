@@ -5,23 +5,24 @@ package com.smousseur.orbitlab.ui.mission.wizard.step.planning;
  * land on the track.
  *
  * <p><b>Why the scale cannot be a constant.</b> The slot the pane shows is {@code 2 * margin /
- * slope} with {@code slope = v * sin(i) * omega_earth}, so it grows as {@code 1 / sin i}: 3 min 48 s
- * at the 51.6&deg; that was measured, 6 min 15 s at 28.5&deg;, and 32 min 40 s for a due-east launch
- * from Kourou — which is the wizard's own default site. A fixed &plusmn; 5 min pane held the first
- * and was overrun by the third, and an overrun is not a cosmetic loss: the fraction is clamped to
- * [0, 1] and the caption's left edge to the track, so {@code opens} lands exactly on the pane-start
- * time and {@code closes} on the pane-end time. The half-span therefore has to come from the slot.
+ * slope} with {@code slope = v * sin(i) * omega_earth}, so it grows as {@code 1 / sin i}: 3 min 48
+ * s at the 51.6&deg; that was measured, 6 min 15 s at 28.5&deg;, and 32 min 40 s for a due-east
+ * launch from Kourou — which is the wizard's own default site. A fixed &plusmn; 5 min pane held the
+ * first and was overrun by the third, and an overrun is not a cosmetic loss: the fraction is
+ * clamped to [0, 1] and the caption's left edge to the track, so {@code opens} lands exactly on the
+ * pane-start time and {@code closes} on the pane-end time. The half-span therefore has to come from
+ * the slot.
  *
  * <p><b>Why a ladder and not a multiple of the slot.</b> A pane sized to, say, 1.3 times the slot
  * every time would draw the same picture whatever the inclination, and the slot's width
  * <em>relative to the frame</em> would stop carrying any information. With rungs, a slot filling a
- * &plusmn; 1 min frame and one filling a &plusmn; 30 min frame read differently at a glance, and the
- * frame keeps saying something the three numbers of the readout do not.
+ * &plusmn; 1 min frame and one filling a &plusmn; 30 min frame read differently at a glance, and
+ * the frame keeps saying something the three numbers of the readout do not.
  *
  * <p><b>The two bounds, and where they come from.</b> Both are collisions between captions of the
- * graduation strip, and both are symmetric, so stating them for {@code opens} covers {@code closes}.
- * Write {@code r} for the slot's half-width divided by the half-span, so the opening sits at
- * fraction {@code (1 - r) / 2} of the track.
+ * graduation strip, and both are symmetric, so stating them for {@code opens} covers {@code
+ * closes}. Write {@code r} for the slot's half-width divided by the half-span, so the opening sits
+ * at fraction {@code (1 - r) / 2} of the track.
  *
  * <ul>
  *   <li><b>Lower bound.</b> The {@code opens} caption is {@link #BOUND_LABEL_W} wide and centred on
@@ -37,12 +38,12 @@ package com.smousseur.orbitlab.ui.mission.wizard.step.planning;
  *
  * <p>The window between the two is a factor of 2.977, so a ladder whose consecutive rungs differ by
  * at most 2.5 always lands inside it when the smallest rung meeting the lower bound is picked. That
- * is the invariant {@code ZoomScaleTest} checks, alongside the collision-freedom the ratios exist to
- * produce.
+ * is the invariant {@code ZoomScaleTest} checks, alongside the collision-freedom the ratios exist
+ * to produce.
  *
- * <p>Extracted from the widget so that property can be exercised at all: a Lemur container cannot be
- * built without an initialised {@code AssetManager}, and the arithmetic below is the whole of the
- * decision. The same split as {@code RaanEntry} and {@code RefusedPage}. The widget lays its
+ * <p>Extracted from the widget so that property can be exercised at all: a Lemur container cannot
+ * be built without an initialised {@code AssetManager}, and the arithmetic below is the whole of
+ * the decision. The same split as {@code RaanEntry} and {@code RefusedPage}. The widget lays its
  * captions out from the spans this class returns rather than recomputing them, so the test drives
  * the code that draws.
  */
@@ -63,7 +64,9 @@ final class ZoomScale {
    */
   private static final float CAPTION_GAP = LaunchWindowTimeline.CAPTION_CHAR_W;
 
-  /** Smallest half-span, in half-slots, that keeps {@code opens} clear of the pane-start caption. */
+  /**
+   * Smallest half-span, in half-slots, that keeps {@code opens} clear of the pane-start caption.
+   */
   static final double MIN_HALF_SPAN_RATIO =
       1.0 / (1.0 - 2.0 * (TIME_LABEL_W + CAPTION_GAP + BOUND_LABEL_W / 2f) / TRACK_W);
 
@@ -119,8 +122,8 @@ final class ZoomScale {
   /**
    * The note drawn beside the {@code SELECTED WINDOW} heading.
    *
-   * <p>ASCII only: the bundled {@code ibmplexmono-*} faces stop at glyph id 127, and a missing glyph
-   * draws nothing and reports nothing, so {@code +/-} stands in for the sign.
+   * <p>ASCII only: the bundled {@code ibmplexmono-*} faces stop at glyph id 127, and a missing
+   * glyph draws nothing and reports nothing, so {@code +/-} stands in for the sign.
    *
    * @param halfSpanSeconds a rung, as returned by {@link #halfSpanSeconds(double)}
    * @return the rung named in the largest unit it divides exactly

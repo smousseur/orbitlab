@@ -16,14 +16,14 @@ import java.util.Objects;
  * <p><b>It is present or absent, never greyed.</b> Its condition of existence is the telemetry
  * widget's own: whenever telemetry is on screen there is a followed mission with an ephemeris, and
  * therefore something to open. {@code UI-4} deleted {@code MissionPanelTrigger} because its
- * disabled state lied about what it meant; the fix taken from that is not to re-wire a greyed
- * state but not to have one. The HUD already changes shape at that instant — telemetry appears and
+ * disabled state lied about what it meant; the fix taken from that is not to re-wire a greyed state
+ * but not to have one. The HUD already changes shape at that instant — telemetry appears and
  * disappears on exactly the same conditions — so a button that follows it reads as coherent rather
  * than as popping up.
  *
  * <p>Its skin comes from the {@code timeline.trigger.button} selector, never from overrides at
- * construction. Only the on/off transition touches a skin attribute, the same shape
- * {@code AppMenu.ItemView} uses.
+ * construction. Only the on/off transition touches a skin attribute, the same shape {@code
+ * AppMenu.ItemView} uses.
  *
  * <p>It is deliberately not placed inside the time capsule: that widget lays its components out at
  * offsets computed in a chain ({@code TimelineWidget.java:73-101}, dividers included) which an

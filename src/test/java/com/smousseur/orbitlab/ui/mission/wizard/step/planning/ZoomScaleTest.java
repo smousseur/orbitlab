@@ -15,10 +15,10 @@ import org.junit.jupiter.params.provider.ValueSource;
  * initialised {@code AssetManager}.
  *
  * <p>The assertions are on <b>caption collisions</b> and not on the ratios the ladder was built
- * from. A ratio is an intermediate result; what the reader of the pane sees is whether {@code opens}
- * sits on top of the pane-start time, and that is what broke. Asserting the collision keeps the test
- * true if a label's width, the ladder or the gap is ever changed — the ratios would have to be
- * rewritten, the property would not.
+ * from. A ratio is an intermediate result; what the reader of the pane sees is whether {@code
+ * opens} sits on top of the pane-start time, and that is what broke. Asserting the collision keeps
+ * the test true if a label's width, the ladder or the gap is ever changed — the ratios would have
+ * to be rewritten, the property would not.
  */
 class ZoomScaleTest {
 
@@ -31,8 +31,24 @@ class ZoomScaleTest {
   @ParameterizedTest
   @ValueSource(
       doubles = {
-        10.0, 11.0, 13.9, 14.0, 30.0, 60.0, 120.0, SLOT_51_6_S, 240.0, 375.0, 600.0, 900.0,
-        SLOT_KOUROU_S, 2400.0, 3600.0, 5400.0, 7200.0, 10800.0
+        10.0,
+        11.0,
+        13.9,
+        14.0,
+        30.0,
+        60.0,
+        120.0,
+        SLOT_51_6_S,
+        240.0,
+        375.0,
+        600.0,
+        900.0,
+        SLOT_KOUROU_S,
+        2400.0,
+        3600.0,
+        5400.0,
+        7200.0,
+        10800.0
       })
   @DisplayName("no two captions of the strip overlap, at any slot width")
   void captionsNeverOverlap(double slotSeconds) {

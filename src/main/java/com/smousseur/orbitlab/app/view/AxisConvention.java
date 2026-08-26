@@ -1,8 +1,7 @@
 package com.smousseur.orbitlab.app.view;
 
-import org.hipparchus.geometry.euclidean.threed.Vector3D;
-
 import java.util.Objects;
+import org.hipparchus.geometry.euclidean.threed.Vector3D;
 
 /**
  * Defines how vectors expressed in Orekit ICRF axes are mapped into JME world axes.

@@ -74,7 +74,8 @@ class TranslunarInjectionPlanWindowProblemTest {
     // This one flies: confirm() runs the real aim solve, some thirty four-day propagations per
     // bracketed minimum. Seconds, not milliseconds.
     LunarTransferMission mission = new LunarTransferMission("Translunar transfer");
-    TranslunarInjectionPlanWindowProblem problem = new TranslunarInjectionPlanWindowProblem(mission);
+    TranslunarInjectionPlanWindowProblem problem =
+        new TranslunarInjectionPlanWindowProblem(mission);
     AbsoluteDate epoch = epoch();
     LaunchWindowSearch search =
         new LaunchWindowSearch(

@@ -3,7 +3,6 @@ package com.smousseur.orbitlab.simulation.mission.vehicle;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.AscentProfile;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.LauncherModel;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.stage.StageModel;
-
 import java.util.Objects;
 
 /**

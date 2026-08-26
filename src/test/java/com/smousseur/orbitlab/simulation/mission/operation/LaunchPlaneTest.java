@@ -46,7 +46,9 @@ class LaunchPlaneTest {
         "the site's free plane must give the historical due-east azimuth to the last bit");
   }
 
-  /** The case the old guard got wrong: a polar launch from the equator heads due north, not east. */
+  /**
+   * The case the old guard got wrong: a polar launch from the equator heads due north, not east.
+   */
   @Test
   void polarFromTheEquator_headsDueNorth() {
     double azimuth = LaunchPlane.ofDegrees(90.0).launchAzimuth(0.0);
@@ -64,8 +66,8 @@ class LaunchPlaneTest {
 
   /**
    * A sun-synchronous target is retrograde, so its azimuth is west of north — negative in the
-   * clockwise-from-north convention. The reference value is spec §9.1's SSO case: 700 km, {@code i =
-   * 98.19°} from Kourou.
+   * clockwise-from-north convention. The reference value is spec §9.1's SSO case: 700 km, {@code i
+   * = 98.19°} from Kourou.
    */
   @Test
   void retrogradeTarget_headsWestOfNorth() {
@@ -78,8 +80,7 @@ class LaunchPlaneTest {
   /** The two branches are mirrored about the east–west axis and reach the same plane. */
   @Test
   void descendingBranch_isTheMirrorOfTheAscendingOne() {
-    double ascending =
-        LaunchPlane.ofDegrees(51.6, NodeBranch.ASCENDING).launchAzimuth(KOUROU_RAD);
+    double ascending = LaunchPlane.ofDegrees(51.6, NodeBranch.ASCENDING).launchAzimuth(KOUROU_RAD);
     double descending =
         LaunchPlane.ofDegrees(51.6, NodeBranch.DESCENDING).launchAzimuth(KOUROU_RAD);
 
@@ -93,8 +94,7 @@ class LaunchPlaneTest {
   /** A polar target on the descending branch is the due-south launch of spec §2.4. */
   @Test
   void polarDescendingBranch_headsDueSouth() {
-    double azimuth =
-        LaunchPlane.ofDegrees(90.0, NodeBranch.DESCENDING).launchAzimuth(KOUROU_RAD);
+    double azimuth = LaunchPlane.ofDegrees(90.0, NodeBranch.DESCENDING).launchAzimuth(KOUROU_RAD);
 
     assertEquals(180.0, FastMath.toDegrees(azimuth), 1.0e-9);
   }

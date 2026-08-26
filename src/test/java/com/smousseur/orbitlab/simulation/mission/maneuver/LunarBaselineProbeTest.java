@@ -37,8 +37,8 @@ import org.orekit.utils.TimeStampedPVCoordinates;
 /**
  * MIS-4 / L0 — the throwaway probe of the baseline (spec {@code docs/lunar-flyby/01-decoupage.md}
  * §4, lot L0). It changes no behaviour and asserts almost nothing: it <b>prints numbers</b> that
- * the following lots are designed against, and it is meant to be deleted once
- * {@code 02-baseline-L0.md} has recorded them.
+ * the following lots are designed against, and it is meant to be deleted once {@code
+ * 02-baseline-L0.md} has recorded them.
  *
  * <p>Four of the five measures of the lot live here; the fifth — how many Earth-hardcoded sites a
  * ground-launched lunar flight traverses — is a reading of the call graph and produces no runtime
@@ -74,9 +74,9 @@ class LunarBaselineProbeTest {
   private static AbsoluteDate epoch;
 
   /**
-   * Vehicle mass at injection (kg) — {@code LunarTransferMission}'s 500 kg dry plus its 1 200 kg
-   * of propellant, whose fields are private. Duplicated here rather than exposed: the probe is
-   * deleted at the end of the lot and must not leave a widened API behind it.
+   * Vehicle mass at injection (kg) — {@code LunarTransferMission}'s 500 kg dry plus its 1 200 kg of
+   * propellant, whose fields are private. Duplicated here rather than exposed: the probe is deleted
+   * at the end of the lot and must not leave a widened API behind it.
    */
   private static final double INJECTION_MASS = 1_700.0;
 
@@ -138,12 +138,12 @@ class LunarBaselineProbeTest {
         PropulsionSystem.getSpacecraftPropulsion().isp() * Constants.G0_STANDARD_GRAVITY;
     FlightContext context =
         new FlightContext(
-            GravitationalContext.earth()
-                .withPerturbers(SolarSystemBody.MOON, SolarSystemBody.SUN));
+            GravitationalContext.earth().withPerturbers(SolarSystemBody.MOON, SolarSystemBody.SUN));
 
     logger.info("── L0 measure 1: the aim against the parking altitude ──");
     logger.info("epoch {}, target perilune {} km", epoch, 100);
-    logger.info("  alt(km) |   outcome |   dv(m/s) | plan perilune(km) | kepler miss(km) | wall(s)");
+    logger.info(
+        "  alt(km) |   outcome |   dv(m/s) | plan perilune(km) | kepler miss(km) | wall(s)");
 
     for (double altitude : PARKING_ALTITUDES) {
       SpacecraftState parking = parkingAt(altitude, epoch, INJECTION_MASS);
@@ -151,10 +151,7 @@ class LunarBaselineProbeTest {
       try {
         TranslunarInjectionPlan plan =
             TranslunarInjectionPlan.solve(
-                parking,
-                LunarTransferMission.DEFAULT_PERILUNE_ALTITUDE,
-                exhaustVelocity,
-                context);
+                parking, LunarTransferMission.DEFAULT_PERILUNE_ALTITUDE, exhaustVelocity, context);
         double wall = (System.nanoTime() - startedAt) / 1.0e9;
         logger.info(
             String.format(
@@ -168,8 +165,12 @@ class LunarBaselineProbeTest {
       } catch (OrbitlabException refusal) {
         double wall = (System.nanoTime() - startedAt) / 1.0e9;
         logger.info(
-            String.format(Locale.ROOT, "  %7.0f |   REFUSED | %48s | %7.1f",
-                altitude / 1000.0, refusal.getMessage(), wall));
+            String.format(
+                Locale.ROOT,
+                "  %7.0f |   REFUSED | %48s | %7.1f",
+                altitude / 1000.0,
+                refusal.getMessage(),
+                wall));
       }
     }
   }
@@ -196,9 +197,11 @@ class LunarBaselineProbeTest {
   @DisplayName("L0 measure 3 — does the vehicle leave the lunar sphere, and when")
   void sphereExitAcrossALunation() {
     SphereOfInfluence lunarSphere = SphereOfInfluence.of(SolarSystemBody.MOON);
-    logger.info("── L0 measure 3: the exit from the lunar sphere, horizon {} d ──",
+    logger.info(
+        "── L0 measure 3: the exit from the lunar sphere, horizon {} d ──",
         PROBE_HORIZON_SECONDS / 86_400.0);
-    logger.info("lunar sphere radius at epoch: {} km",
+    logger.info(
+        "lunar sphere radius at epoch: {} km",
         String.format(Locale.ROOT, "%.0f", lunarSphere.radiusAt(epoch) / 1000.0));
 
     for (int day : PROBE_DAYS) {
@@ -212,7 +215,8 @@ class LunarBaselineProbeTest {
         mission.setCurrentState(mission.getInitialState(date));
         result = new MissionOptimizer(mission, MAX_EVALUATIONS, 42L).optimize();
       } catch (OrbitlabException refusal) {
-        logger.info("day {}: REFUSED after {} s — {}",
+        logger.info(
+            "day {}: REFUSED after {} s — {}",
             day,
             String.format(Locale.ROOT, "%.1f", (System.nanoTime() - startedAt) / 1.0e9),
             refusal.getMessage());
@@ -222,7 +226,9 @@ class LunarBaselineProbeTest {
 
       MissionEphemeris ephemeris = result.ephemeris();
       if (ephemeris == null) {
-        logger.info("day {}: no ephemeris produced after {} s", day,
+        logger.info(
+            "day {}: no ephemeris produced after {} s",
+            day,
             String.format(Locale.ROOT, "%.1f", wall));
         continue;
       }
@@ -302,13 +308,13 @@ class LunarBaselineProbeTest {
                     + TranslunarInjectionPlan.PARKING_ALTITUDE));
 
     logger.info("── L0 measure 5: lunar declination against the site latitudes ──");
-    logger.info("plane-change speed at {} km parking: {} m/s",
+    logger.info(
+        "plane-change speed at {} km parking: {} m/s",
         TranslunarInjectionPlan.PARKING_ALTITUDE / 1000.0,
         String.format(Locale.ROOT, "%.1f", parkingSpeed));
 
     reportDeclinationBand("2026 only", epoch.shiftedBy(-89 * 86_400.0), 365, 0.25, parkingSpeed);
-    reportDeclinationBand(
-        "one Metonic-scale cycle (18.6 y)", epoch, 19 * 365, 0.25, parkingSpeed);
+    reportDeclinationBand("one Metonic-scale cycle (18.6 y)", epoch, 19 * 365, 0.25, parkingSpeed);
     reportDuty("one lunation from the pinned epoch", epoch, 27.32, 1.0 / 144.0);
   }
 
@@ -334,8 +340,11 @@ class LunarBaselineProbeTest {
       }
     }
 
-    logger.info("{}: max |declination| = {}° on {}",
-        label, String.format(Locale.ROOT, "%.3f", maxAbsDeclination), at);
+    logger.info(
+        "{}: max |declination| = {}° on {}",
+        label,
+        String.format(Locale.ROOT, "%.3f", maxAbsDeclination),
+        at);
     for (Site site : SITES) {
       double shortfall = FastMath.max(0.0, maxAbsDeclination - site.latitudeDeg());
       double cost = 2.0 * parkingSpeed * FastMath.sin(0.5 * FastMath.toRadians(shortfall));
@@ -343,7 +352,10 @@ class LunarBaselineProbeTest {
           String.format(
               Locale.ROOT,
               "    %-12s i=%6.3f° | worst misalignment %6.3f° | plane change %8.1f m/s",
-              site.name(), site.latitudeDeg(), shortfall, cost));
+              site.name(),
+              site.latitudeDeg(),
+              shortfall,
+              cost));
     }
   }
 
@@ -355,7 +367,10 @@ class LunarBaselineProbeTest {
    * Moon a few hours a month".
    */
   private static void reportDuty(String label, AbsoluteDate from, double days, double stepDays) {
-    logger.info("{} ({} d, {} min step):", label, days,
+    logger.info(
+        "{} ({} d, {} min step):",
+        label,
+        days,
         String.format(Locale.ROOT, "%.0f", stepDays * 1440.0));
     for (Site site : SITES) {
       int inside = 0;
@@ -410,8 +425,7 @@ class LunarBaselineProbeTest {
    */
   private static SpacecraftState parkingAt(
       double altitude, AbsoluteDate injectionDate, double mass) {
-    AbsoluteDate arrival =
-        injectionDate.shiftedBy(TranslunarInjectionPlan.TIME_OF_FLIGHT_SECONDS);
+    AbsoluteDate arrival = injectionDate.shiftedBy(TranslunarInjectionPlan.TIME_OF_FLIGHT_SECONDS);
     Vector3D moonDirection =
         OrekitService.get()
             .body(SolarSystemBody.MOON)
@@ -420,9 +434,7 @@ class LunarBaselineProbeTest {
     Vector3D normal = TranslunarInjectionPlan.transferPlaneNormal(moonDirection);
     Vector3D injectionDirection =
         new Rotation(
-                normal,
-                -TranslunarInjectionPlan.TRANSFER_ANGLE,
-                RotationConvention.VECTOR_OPERATOR)
+                normal, -TranslunarInjectionPlan.TRANSFER_ANGLE, RotationConvention.VECTOR_OPERATOR)
             .applyTo(moonDirection);
 
     double radius = Constants.WGS84_EARTH_EQUATORIAL_RADIUS + altitude;

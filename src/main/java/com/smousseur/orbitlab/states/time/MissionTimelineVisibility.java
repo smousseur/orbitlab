@@ -10,11 +10,11 @@ import java.util.Optional;
  * docs/navigation/02-timeline-mission.md} §10.1), extracted from the app state so they can be
  * tested without a JME lifecycle.
  *
- * <p>Conditions 2 to 5 — a telemetry focus, {@code READY}, visible, and carrying an ephemeris —
- * are word for word the test in {@code TelemetryWidgetAppState.update}. That is deliberate and is
- * what removes the need for a disabled state on the toggle: <b>the track is openable exactly when
- * the telemetry widget is on screen</b>, so the button is present or absent, never greyed (§11).
- * Two HUD widgets talking about two different missions would be a reading trap.
+ * <p>Conditions 2 to 5 — a telemetry focus, {@code READY}, visible, and carrying an ephemeris — are
+ * word for word the test in {@code TelemetryWidgetAppState.update}. That is deliberate and is what
+ * removes the need for a disabled state on the toggle: <b>the track is openable exactly when the
+ * telemetry widget is on screen</b>, so the button is present or absent, never greyed (§11). Two
+ * HUD widgets talking about two different missions would be a reading trap.
  *
  * <p>The ephemeris is checked explicitly rather than being assumed from {@code READY}: the status
  * is a fact about the mission, the missing ephemeris is a fact about the entry, and it is the
@@ -61,17 +61,16 @@ public final class MissionTimelineVisibility {
   /**
    * The mission actually on screen: the available one, gated by the session's toggle.
    *
-   * <p>The toggle is condition 1 and is held by the app state, not by {@code MissionEntry}: it is
-   * a session display preference and survives a change of followed mission. It also stays true
-   * while conditions 2 to 5 are false, so returning to a followed mission finds the track as it
-   * was left, without a second click.
+   * <p>The toggle is condition 1 and is held by the app state, not by {@code MissionEntry}: it is a
+   * session display preference and survives a change of followed mission. It also stays true while
+   * conditions 2 to 5 are false, so returning to a followed mission finds the track as it was left,
+   * without a second click.
    *
    * @param context the mission context
    * @param toggleEnabled whether the user has the track open
    * @return the entry to render, or empty
    */
-  public static Optional<MissionEntry> shownMission(
-      MissionContext context, boolean toggleEnabled) {
+  public static Optional<MissionEntry> shownMission(MissionContext context, boolean toggleEnabled) {
     return toggleEnabled ? availableMission(context) : Optional.empty();
   }
 }

@@ -4,16 +4,15 @@ import static com.smousseur.orbitlab.core.SolarSystemBody.EARTH;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.smousseur.orbitlab.core.SolarSystemBody;
-import java.util.EnumMap;
-import java.util.Map;
-import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.ephemeris.BodySample;
 import com.smousseur.orbitlab.simulation.ephemeris.config.EphemerisConfig;
 import com.smousseur.orbitlab.simulation.orbit.config.OrbitWindowConfig;
 import com.smousseur.orbitlab.simulation.source.EphemerisSource;
+import java.util.EnumMap;
+import java.util.Map;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.hipparchus.geometry.euclidean.threed.Rotation;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.junit.jupiter.api.BeforeAll;

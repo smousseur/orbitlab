@@ -89,9 +89,8 @@ public final class TrajectoryPolyline {
    * actually contains its own boundary rather than stopping up to a stride short of it (spec {@code
    * docs/multi-corps/07-conception-L5.md} §4.1). The headroom reserved for the forced vertices is
    * therefore computed on the <b>union</b> of the run starts and the arc boundaries, never on their
-   * sum — with a single arc the
-   * arc start is vertex 0, which is already a run start, so the union is the run starts and the
-   * decimation is bit-for-bit what it was before PHY-4 / L3 (spec {@code
+   * sum — with a single arc the arc start is vertex 0, which is already a run start, so the union
+   * is the run starts and the decimation is bit-for-bit what it was before PHY-4 / L3 (spec {@code
    * docs/multi-corps/05-conception-L3.md} §4.1). Written as a sum, the budget would lose a slot and
    * the stride could shift on any trajectory near a multiple of the budget.
    *
@@ -348,7 +347,8 @@ public final class TrajectoryPolyline {
   }
 
   /**
-   * One partition of the kept vertices: which stretch each belongs to, and where each stretch opens.
+   * One partition of the kept vertices: which stretch each belongs to, and where each stretch
+   * opens.
    *
    * @param indexOf the stretch index of every kept vertex
    * @param firstVertex the opening vertex of each stretch, valid up to {@code opened}
@@ -410,8 +410,8 @@ public final class TrajectoryPolyline {
    *
    * <p><b>There is deliberately no single-argument overload.</b> The whole point of L5 is that a
    * vertex no longer has one true frame, and while an Earth-implicit overload existed a forgotten
-   * call site would compile and draw a lunar arc about the Earth in silence. Same rule, same reason,
-   * as the one L3 §2.2 applied to {@code MissionEphemerisPoint}.
+   * call site would compile and draw a lunar arc about the Earth in silence. Same rule, same
+   * reason, as the one L3 §2.2 applied to {@code MissionEphemerisPoint}.
    *
    * @param index the vertex index
    * @param renderBody the body every drawn coordinate of this frame is expressed about

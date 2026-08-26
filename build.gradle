@@ -1,6 +1,9 @@
 plugins {
     id 'java'
     id 'com.gradleup.shadow' version '8.3.6'
+    id 'com.diffplug.spotless' version '8.10.0'
+    id 'pmd'
+    id 'jacoco'
 }
 
 group = 'com.smousseur'
@@ -51,10 +54,25 @@ tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
 }
 
+jacoco {
+    toolVersion = '0.8.14'
+}
+
 test {
     useJUnitPlatform()
     systemProperty 'orbitlab.slowTests', System.getProperty('orbitlab.slowTests', 'false')
     systemProperty 'orbitlab.probe', System.getProperty('orbitlab.probe', 'false')
+    finalizedBy jacocoTestReport
+}
+
+jacocoTestReport {
+    dependsOn test
+
+    reports {
+        html.required = true
+        xml.required = true
+        csv.required = false
+    }
 }
 
 javadoc {
@@ -67,6 +85,25 @@ javadoc {
         addStringOption('Xdoclint:none', '-quiet')
     }
     failOnError = false
+}
+
+spotless {
+    java {
+        googleJavaFormat()
+        removeUnusedImports()
+        formatAnnotations()
+    }
+}
+
+pmd {
+    toolVersion = '7.16.0'
+    consoleOutput = true
+    ignoreFailures = true
+
+    ruleSets = [
+            'category/java/errorprone.xml',
+            'category/java/bestpractices.xml'
+    ]
 }
 
 shadowJar {

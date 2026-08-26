@@ -16,7 +16,8 @@ import org.orekit.utils.PVCoordinates;
  */
 public final class StageEndStateDiagnostic {
 
-  // Off-flight diagnostic, left Earth-fixed by PHY-4 / L1 (spec docs/multi-corps/03-conception-L1.md
+  // Off-flight diagnostic, left Earth-fixed by PHY-4 / L1 (spec
+  // docs/multi-corps/03-conception-L1.md
   // §4.1). It reports on a state, it does not fly one, so the L1 seam does not run through it. Wake
   // it when a stage end-state can sit on a non-terrestrial arc — L4.
   private static final double EARTH_RADIUS = Constants.WGS84_EARTH_EQUATORIAL_RADIUS;

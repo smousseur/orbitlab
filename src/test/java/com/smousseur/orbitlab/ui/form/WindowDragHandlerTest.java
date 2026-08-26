@@ -27,7 +27,9 @@ class WindowDragHandlerTest {
   /** {@code PanelHeader.HEIGHT}, the grab band. */
   private static final float HEADER = 88f;
 
-  /** The application's own resolution — {@code OrbitLabApplication} calls setResolution(1280, 720). */
+  /**
+   * The application's own resolution — {@code OrbitLabApplication} calls setResolution(1280, 720).
+   */
   private static final int APP_WIDTH = 1280;
 
   private static final int APP_HEIGHT = 720;

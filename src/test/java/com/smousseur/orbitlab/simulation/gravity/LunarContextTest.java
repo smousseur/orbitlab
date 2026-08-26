@@ -1,6 +1,5 @@
 package com.smousseur.orbitlab.simulation.gravity;
 
-import com.smousseur.orbitlab.simulation.flight.FlightContext;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -9,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.simulation.OrekitService;
+import com.smousseur.orbitlab.simulation.flight.FlightContext;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
@@ -113,8 +113,7 @@ class LunarContextTest {
 
     // The origin really is the Moon centre.
     Vector3D moonInGcrf = CelestialBodyFactory.getMoon().getPosition(date, gcrf);
-    Vector3D originOffset =
-        gcrf.getTransformTo(moonIcrf, date).getTranslation().add(moonInGcrf);
+    Vector3D originOffset = gcrf.getTransformTo(moonIcrf, date).getTranslation().add(moonInGcrf);
     assertEquals(0.0, originOffset.getNorm(), "the translation is exactly minus the Moon position");
   }
 
@@ -126,8 +125,7 @@ class LunarContextTest {
     assertSame(
         OrekitService.get().gcrf(),
         OrekitService.get().bodyCentredIcrfFrame(SolarSystemBody.EARTH));
-    assertSame(
-        OrekitService.get().gcrf(), GravitationalContext.earth().inertialFrame());
+    assertSame(OrekitService.get().gcrf(), GravitationalContext.earth().inertialFrame());
   }
 
   @Test

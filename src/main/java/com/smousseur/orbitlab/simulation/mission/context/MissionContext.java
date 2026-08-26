@@ -5,7 +5,6 @@ import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionId;
 import com.smousseur.orbitlab.simulation.mission.MissionType;
 import com.smousseur.orbitlab.ui.mission.MissionColorPalette;
-
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;

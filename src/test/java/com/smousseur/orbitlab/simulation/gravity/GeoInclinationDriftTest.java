@@ -1,11 +1,11 @@
 package com.smousseur.orbitlab.simulation.gravity;
 
-import com.smousseur.orbitlab.simulation.flight.FlightContext;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.simulation.OrekitService;
+import com.smousseur.orbitlab.simulation.flight.FlightContext;
 import java.util.Locale;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -26,23 +26,25 @@ import org.orekit.time.TimeScalesFactory;
  * <b>PHY-4 / L2 — the third body does the physics it is supposed to do</b> (spec {@code
  * docs/multi-corps/04-conception-L2.md} §5.2).
  *
- * <p>An equatorial geostationary orbit left alone by the Moon and the Sun keeps its plane. Perturbed
- * by both, its inclination grows at a rate quoted across the domain at about <b>0.85 °/year</b> —
- * the reason every operational GEO satellite spends most of its propellant on north-south
- * station-keeping. That is the behaviour this fixture measures, on the very factory the twenty
- * production construction sites call.
+ * <p>An equatorial geostationary orbit left alone by the Moon and the Sun keeps its plane.
+ * Perturbed by both, its inclination grows at a rate quoted across the domain at about <b>0.85
+ * °/year</b> — the reason every operational GEO satellite spends most of its propellant on
+ * north-south station-keeping. That is the behaviour this fixture measures, on the very factory the
+ * twenty production construction sites call.
  *
- * <p><b>Four propagations, where the découpage asked for two.</b> The obvious fixture — one run with
- * the third bodies, one control without — has a blind spot: a half-wired force list, with only one
- * of the two bodies mounted or the same one mounted twice, produces a rate that still lands inside a
- * ±20 % tolerance on the total. Splitting the contributions makes that failure mode visible for the
- * price of one more propagation. Only the combined case is asserted; the two single-body runs are
- * logged, and their near-2:1 ratio is what a reader should check when this fixture ever goes red.
+ * <p><b>Four propagations, where the découpage asked for two.</b> The obvious fixture — one run
+ * with the third bodies, one control without — has a blind spot: a half-wired force list, with only
+ * one of the two bodies mounted or the same one mounted twice, produces a rate that still lands
+ * inside a ±20 % tolerance on the total. Splitting the contributions makes that failure mode
+ * visible for the price of one more propagation. Only the combined case is asserted; the two
+ * single-body runs are logged, and their near-2:1 ratio is what a reader should check when this
+ * fixture ever goes red.
  *
  * <p><b>Why the tolerance is wide, and must stay wide.</b> The 0.85 °/year is a <em>mean</em>. The
- * lunar contribution depends on the orientation of the Moon's node, which regresses over 18.6 years,
- * so the instantaneous rate depends on the epoch. That is not an argument from the literature here —
- * it was measured, by re-running the combined case from successive epochs at a fixed 180-day span:
+ * lunar contribution depends on the orientation of the Moon's node, which regresses over 18.6
+ * years, so the instantaneous rate depends on the epoch. That is not an argument from the
+ * literature here — it was measured, by re-running the combined case from successive epochs at a
+ * fixed 180-day span:
  *
  * <pre>
  *   2026 → 0.9570    2028 → 0.9050    2032 → 0.7834
@@ -56,8 +58,8 @@ import org.orekit.time.TimeScalesFactory;
  *
  * <p><b>Why the span is long, measured rather than argued.</b> Over a short span the fortnightly
  * lunar term is the same order as the accumulated secular drift, so the measured rate reports the
- * start date rather than the physics (spec §1.1-B). Sweeping the span at a fixed epoch shows exactly
- * where that stops:
+ * start date rather than the physics (spec §1.1-B). Sweeping the span at a fixed epoch shows
+ * exactly where that stops:
  *
  * <pre>
  *    30 d → 1.2178     90 d → 0.9209    365 d → 0.9487
@@ -65,8 +67,8 @@ import org.orekit.time.TimeScalesFactory;
  * </pre>
  *
  * <p>The plateau starts around 180 days and holds to within 2 % out to two years. Note what the
- * first line means: the découpage's own suggestion of "a few tens of days" would have measured
- * 1.22 °/year and failed the ±20 % tolerance it proposed in the same sentence.
+ * first line means: the découpage's own suggestion of "a few tens of days" would have measured 1.22
+ * °/year and failed the ±20 % tolerance it proposed in the same sentence.
  */
 class GeoInclinationDriftTest {
   private static final Logger logger = LogManager.getLogger(GeoInclinationDriftTest.class);
@@ -121,7 +123,10 @@ class GeoInclinationDriftTest {
     log(moon);
     log(sun);
     log(both);
-    logger.info("  target: {} +/- {} deg/year", fmt(TARGET_DEG_PER_YEAR, 2), fmt(TOLERANCE_DEG_PER_YEAR, 2));
+    logger.info(
+        "  target: {} +/- {} deg/year",
+        fmt(TARGET_DEG_PER_YEAR, 2),
+        fmt(TOLERANCE_DEG_PER_YEAR, 2));
 
     assertTrue(
         control.degPerYear() < CONTROL_CEILING_DEG_PER_YEAR,
@@ -159,8 +164,9 @@ class GeoInclinationDriftTest {
    * Propagates an equatorial circular orbit at geostationary radius for {@link #SPAN_DAYS} and
    * returns the inclination it has picked up, expressed as a yearly rate.
    *
-   * <p>The inclination is read in GCRF, the frame the states are propagated in, and the orbit starts
-   * at exactly zero there — so the reading is the drift itself, with no baseline to subtract.
+   * <p>The inclination is read in GCRF, the frame the states are propagated in, and the orbit
+   * starts at exactly zero there — so the reading is the drift itself, with no baseline to
+   * subtract.
    */
   private static Drift measure(String label, GravitationalContext context) {
     AbsoluteDate epoch = epoch();
@@ -178,7 +184,8 @@ class GeoInclinationDriftTest {
             context.mu());
 
     NumericalPropagator propagator =
-        OrekitService.get().createOptimizationPropagator(new FlightContext(context), OrekitService.COAST_MAX_STEP);
+        OrekitService.get()
+            .createOptimizationPropagator(new FlightContext(context), OrekitService.COAST_MAX_STEP);
     propagator.setInitialState(new SpacecraftState(initial));
 
     long start = System.nanoTime();

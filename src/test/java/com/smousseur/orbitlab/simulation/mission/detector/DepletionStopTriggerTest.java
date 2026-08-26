@@ -1,10 +1,9 @@
 package com.smousseur.orbitlab.simulation.mission.detector;
 
-import com.smousseur.orbitlab.simulation.flight.FlightContext;
-import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.smousseur.orbitlab.simulation.OrekitService;
+import com.smousseur.orbitlab.simulation.flight.FlightContext;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
@@ -51,7 +50,9 @@ class DepletionStopTriggerTest {
                     Constants.WGS84_EARTH_MU))
             .withMass(FLOOR + 500);
 
-    NumericalPropagator propagator = OrekitService.get().createTestPropagator(FlightContext.earth(), OrekitService.SAFE_MAX_STEP);
+    NumericalPropagator propagator =
+        OrekitService.get()
+            .createTestPropagator(FlightContext.earth(), OrekitService.SAFE_MAX_STEP);
     propagator.setInitialState(state);
     // No date window: the engine ignites at t+1 ms and burns until flame-out.
     propagator.addForceModel(

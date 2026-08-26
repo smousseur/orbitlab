@@ -18,7 +18,8 @@ import org.junit.jupiter.api.Test;
 class HudSurfacesTest {
 
   /** A surface that is open until it is dismissed, recording the order of dismissals. */
-  private static HudSurface tracked(String name, float layer, List<String> log, AtomicBoolean open) {
+  private static HudSurface tracked(
+      String name, float layer, List<String> log, AtomicBoolean open) {
     return new HudSurface(
         name,
         layer,

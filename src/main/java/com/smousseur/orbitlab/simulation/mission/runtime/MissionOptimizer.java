@@ -15,6 +15,9 @@ import com.smousseur.orbitlab.simulation.mission.optimizer.OptimizationResult;
 import com.smousseur.orbitlab.simulation.mission.optimizer.OptimizerDiagnostics;
 import com.smousseur.orbitlab.simulation.mission.optimizer.StageEndStateDiagnostic;
 import com.smousseur.orbitlab.simulation.mission.optimizer.TrajectoryProblem;
+import com.smousseur.orbitlab.simulation.mission.optimizer.problems.GravityTurnProblem;
+import com.smousseur.orbitlab.simulation.mission.optimizer.problems.TransferProblem;
+import com.smousseur.orbitlab.simulation.mission.optimizer.problems.TransferTwoManeuverProblem;
 import com.smousseur.orbitlab.simulation.mission.progress.MissionProgressEvent;
 import com.smousseur.orbitlab.simulation.mission.progress.MissionProgressListener;
 import com.smousseur.orbitlab.simulation.mission.stage.StageSeparationStage;
@@ -26,10 +29,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-
-import com.smousseur.orbitlab.simulation.mission.optimizer.problems.GravityTurnProblem;
-import com.smousseur.orbitlab.simulation.mission.optimizer.problems.TransferProblem;
-import com.smousseur.orbitlab.simulation.mission.optimizer.problems.TransferTwoManeuverProblem;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hipparchus.random.MersenneTwister;
@@ -81,8 +80,7 @@ public class MissionOptimizer {
    * @param maxEvaluations maximum number of objective function evaluations per optimizable stage
    * @param progress the sink, or {@code null}
    */
-  public MissionOptimizer(
-      Mission mission, int maxEvaluations, MissionProgressListener progress) {
+  public MissionOptimizer(Mission mission, int maxEvaluations, MissionProgressListener progress) {
     this(mission, maxEvaluations, DEFAULT_SEED, progress);
   }
 
@@ -293,9 +291,7 @@ public class MissionOptimizer {
    * indicative; a future stage that dropped mass mid-burn would silently reintroduce the error.
    */
 
-  /**
-   * The vector this stage is to be flown at, or {@code null} when it has to be searched for.
-   */
+  /** The vector this stage is to be flown at, or {@code null} when it has to be searched for. */
   private double[] providedVectorFor(OptimizableMissionStage<?> stage) {
     return solutions == null ? null : solutions.vectorFor(stage.optimizationKey());
   }
@@ -324,7 +320,11 @@ public class MissionOptimizer {
     OptimizationResult found =
         new CMAESTrajectoryOptimizer(problem, maxEvaluations, stageSeed, progress).optimize();
     return new OptimizationResult(
-        found.bestVariables(), found.bestCost(), found.bestState(), found.evaluations(), entryState);
+        found.bestVariables(),
+        found.bestCost(),
+        found.bestState(),
+        found.evaluations(),
+        entryState);
   }
 
   /**
@@ -349,8 +349,7 @@ public class MissionOptimizer {
       transferProblem.propagate(result.bestVariables());
       TransferResult transferResult = transferProblem.getLastTransferResult();
       logger.info(
-          "Post burn1 orbit: {}",
-          transferResult != null ? transferResult.orbitPostBurn1() : null);
+          "Post burn1 orbit: {}", transferResult != null ? transferResult.orbitPostBurn1() : null);
       TransfertTwoManeuver.ResolvedCircularizationBurn burn =
           transferResult != null ? transferResult.circularizationBurn() : null;
       logger.info("Circularization burn: {}", burn);
@@ -406,8 +405,7 @@ public class MissionOptimizer {
 
     if (problem instanceof GravityTurnProblem) {
       // ── Phase 0.1: GT exit state vs. ideal Hohmann handoff ──
-      StageEndStateDiagnostic.EndState actual =
-          StageEndStateDiagnostic.from(result.bestState());
+      StageEndStateDiagnostic.EndState actual = StageEndStateDiagnostic.from(result.bestState());
       double targetAlt = resolveTargetAltitude(mission);
       if (Double.isFinite(targetAlt)) {
         StageEndStateDiagnostic.EndState ideal =

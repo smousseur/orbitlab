@@ -39,10 +39,10 @@ import org.orekit.utils.TimeStampedPVCoordinates;
  * the <em>factory</em>, never by a direct {@code new DragForce(…)}: what is tested is the wiring,
  * not Orekit.
  *
- * <p><b>What the assertion is worth.</b> It does not prove the density model — L0 §1 confronted both
- * models to published tables for that. It proves the four things that can be wrong here: the surface
- * and the coefficient of the hardware actually in the flow, the sign, and above all <b>that the
- * velocity used is relative to a rotating atmosphere</b> rather than inertial. That last one is
+ * <p><b>What the assertion is worth.</b> It does not prove the density model — L0 §1 confronted
+ * both models to published tables for that. It proves the four things that can be wrong here: the
+ * surface and the coefficient of the hardware actually in the flow, the sign, and above all <b>that
+ * the velocity used is relative to a rotating atmosphere</b> rather than inertial. That last one is
  * invisible in an orbit result and is the reason this fixture exists.
  *
  * <p><b>Two states, because one would catch half the trap.</b> Both sit on the equator at 250 km,
@@ -56,10 +56,10 @@ import org.orekit.utils.TimeStampedPVCoordinates;
  *       off in magnitude and 3.57° off in direction.
  * </ul>
  *
- * <p>A fixture with only the first would pass on a force that got the direction wrong; one with only
- * the second would pass on a force that ignored co-rotation altogether. Every run logs what the
- * inertial-velocity variant would have given, in the shape {@code ThirdBodyPerturbationTest} logs
- * the linearised tide it never asserts.
+ * <p>A fixture with only the first would pass on a force that got the direction wrong; one with
+ * only the second would pass on a force that ignored co-rotation altogether. Every run logs what
+ * the inertial-velocity variant would have given, in the shape {@code ThirdBodyPerturbationTest}
+ * logs the linearised tide it never asserts.
  */
 class DragAccelerationTest {
   private static final Logger logger = LogManager.getLogger(DragAccelerationTest.class);
@@ -77,11 +77,11 @@ class DragAccelerationTest {
    *
    * <p><b>Set from the measurement, and the measurement is zero.</b> The observed relative error is
    * exactly {@code 0.000000e+00} on both states and both models — the hand-written expression and
-   * Orekit's turn out to do the same algebra in the same order, so the two vectors agree to the last
-   * bit. Every run logs the error rather than trusting that. This line is left non-zero as room for
-   * another epoch or a reordered expression, not as a margin: the failure it exists to catch, an
-   * inertial velocity in place of the relative one, is 13.7 % off — fourteen orders of magnitude
-   * above it.
+   * Orekit's turn out to do the same algebra in the same order, so the two vectors agree to the
+   * last bit. Every run logs the error rather than trusting that. This line is left non-zero as
+   * room for another epoch or a reordered expression, not as a margin: the failure it exists to
+   * catch, an inertial velocity in place of the relative one, is 13.7 % off — fourteen orders of
+   * magnitude above it.
    */
   private static final double RELATIVE_TOLERANCE = 1.0e-14;
 
@@ -148,7 +148,8 @@ class DragAccelerationTest {
     logger.info(
         "  inertial |a|   = {} m/s^2 ({} % off, {} deg apart — NOT asserted)",
         format(inertial.getNorm()),
-        String.format(Locale.ROOT, "%+.1f", 100.0 * (inertial.getNorm() / expected.getNorm() - 1.0)),
+        String.format(
+            Locale.ROOT, "%+.1f", 100.0 * (inertial.getNorm() / expected.getNorm() - 1.0)),
         String.format(Locale.ROOT, "%.2f", FastMath.toDegrees(Vector3D.angle(inertial, expected))));
     logger.info("  relative error against Orekit = {}", format(error));
 

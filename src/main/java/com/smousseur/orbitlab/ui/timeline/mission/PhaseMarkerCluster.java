@@ -9,11 +9,11 @@ import java.util.Objects;
  * (spec {@code docs/navigation/02-timeline-mission.md} §8).
  *
  * <p><b>Why grouping rather than a curved axis.</b> {@link TimeAxis} is linear, so on a GEO the
- * whole ascent — vertical climb, staging, parking insertion, GTO injection — falls inside the
- * first few pixels of the track. Segments that short are invisible by construction and that is
- * correct, because their duration really is negligible at the mission's scale. A marker has no
- * duration, though: letting it inherit that compression would make it unreachable exactly where a
- * user wants to look. Grouping is how the linear axis is paid for.
+ * whole ascent — vertical climb, staging, parking insertion, GTO injection — falls inside the first
+ * few pixels of the track. Segments that short are invisible by construction and that is correct,
+ * because their duration really is negligible at the mission's scale. A marker has no duration,
+ * though: letting it inherit that compression would make it unreachable exactly where a user wants
+ * to look. Grouping is how the linear axis is paid for.
  *
  * <p><b>The group sits on its first transition, not on its barycentre.</b> What one is aiming at
  * when clicking a cluster is the start of the sequence.
@@ -80,9 +80,9 @@ public record PhaseMarkerCluster(float x, List<Integer> runIndices) {
    * apart merge into one group spanning the whole track.
    *
    * <p>The edge clamp of §8 is applied to every cluster, lone markers included: a marker landing
-   * 0.14 px from the rail's start would be cropped in half by the shell's 9-slice border whether
-   * or not it stands for several transitions, and on a GEO that is the most interesting marker of
-   * the flight.
+   * 0.14 px from the rail's start would be cropped in half by the shell's 9-slice border whether or
+   * not it stands for several transitions, and on a GEO that is the most interesting marker of the
+   * flight.
    *
    * @param anchors the transitions, in chronological order
    * @param minSpacingPx the merge distance in pixels

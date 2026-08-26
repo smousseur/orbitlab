@@ -145,8 +145,7 @@ public final class ScenarioBrowserModel {
    * @return {@code true} in save mode when the target name is already listed
    */
   public boolean wouldOverwrite() {
-    return mode == ScenarioBrowserMode.SAVE
-        && targetName().filter(this::contains).isPresent();
+    return mode == ScenarioBrowserMode.SAVE && targetName().filter(this::contains).isPresent();
   }
 
   private boolean contains(String name) {

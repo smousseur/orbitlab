@@ -4,10 +4,11 @@ package com.smousseur.orbitlab.simulation.mission.operation;
  * Which of the two azimuths reaching a given inclination a launch flies (spec {@code
  * docs/earth-orbit/01-mission-terre-parametrable.md} §3.1).
  *
- * <p>An inclination never determines an azimuth on its own: {@code A} and {@code 180° − A} reach the
- * same plane from the same site, one heading north of east, the other south of it. The two differ by
- * where the launch sits relative to the orbit's nodes, hence the name — and by which side of the
- * ground track the first revolution sweeps, which is what a real mission actually picks between.
+ * <p>An inclination never determines an azimuth on its own: {@code A} and {@code 180° − A} reach
+ * the same plane from the same site, one heading north of east, the other south of it. The two
+ * differ by where the launch sits relative to the orbit's nodes, hence the name — and by which side
+ * of the ground track the first revolution sweeps, which is what a real mission actually picks
+ * between.
  */
 public enum NodeBranch {
 

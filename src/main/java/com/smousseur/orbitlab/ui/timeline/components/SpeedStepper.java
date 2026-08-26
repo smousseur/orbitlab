@@ -14,7 +14,6 @@ import com.simsilica.lemur.component.TbtQuadBackgroundComponent;
 import com.smousseur.orbitlab.ui.AppStyles;
 import com.smousseur.orbitlab.ui.timeline.TimelineStyles;
 import com.smousseur.orbitlab.ui.timeline.TimelineWidget;
-
 import java.util.function.IntConsumer;
 
 /**

@@ -17,7 +17,6 @@ import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemeris;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemerisPoint;
 import com.smousseur.orbitlab.states.mission.MissionRenderer;
 import java.util.Objects;
-import org.hipparchus.geometry.euclidean.threed.Vector3D;
 
 /**
  * Application state that implements a floating-origin technique to prevent floating-point precision
@@ -176,8 +175,8 @@ public class FloatingOriginAppState extends BaseAppState {
   }
 
   /**
-   * The focused mission's sample at the current instant, or {@code null} when there is no mission or
-   * its trajectory is being recomputed.
+   * The focused mission's sample at the current instant, or {@code null} when there is no mission
+   * or its trajectory is being recomputed.
    *
    * <p>Read here rather than inside {@link #nearFrameOffset} because the body the scene is centred
    * on is derived from the same sample: two lookups could, on the frame a trajectory is replaced,

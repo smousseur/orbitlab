@@ -102,12 +102,7 @@ class LaunchWindowSearchTest {
         OrbitlabException.class,
         () ->
             new LaunchWindowSearch(
-                T0,
-                Duration.ofDays(-1),
-                Duration.ofHours(6),
-                Duration.ofMinutes(36),
-                3200.0,
-                1));
+                T0, Duration.ofDays(-1), Duration.ofHours(6), Duration.ofMinutes(36), 3200.0, 1));
   }
 
   @Test
@@ -121,7 +116,12 @@ class LaunchWindowSearchTest {
             OrbitlabException.class,
             () ->
                 new LaunchWindowSearch(
-                    T0, Duration.ofHours(1), Duration.ofHours(6), Duration.ofMinutes(1), 3200.0, 1));
+                    T0,
+                    Duration.ofHours(1),
+                    Duration.ofHours(6),
+                    Duration.ofMinutes(1),
+                    3200.0,
+                    1));
     assertTrue(thrown.getMessage().contains("step"));
   }
 
@@ -157,7 +157,12 @@ class LaunchWindowSearchTest {
         OrbitlabException.class,
         () ->
             new LaunchWindowSearch(
-                T0, Duration.ofDays(60), Duration.ofHours(6), Duration.ofMinutes(36), Double.NaN, 1));
+                T0,
+                Duration.ofDays(60),
+                Duration.ofHours(6),
+                Duration.ofMinutes(36),
+                Double.NaN,
+                1));
   }
 
   @Test

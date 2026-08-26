@@ -17,7 +17,8 @@ import java.util.Objects;
  * line.
  *
  * @param arc the frame this stretch's vertices are expressed in
- * @param firstVertex index of this arc's first vertex <em>in the polyline</em>, after any decimation
+ * @param firstVertex index of this arc's first vertex <em>in the polyline</em>, after any
+ *     decimation
  * @param vertexCount how many vertices this arc spans, after any decimation
  */
 public record ArcRun(TrajectoryArc arc, int firstVertex, int vertexCount) {

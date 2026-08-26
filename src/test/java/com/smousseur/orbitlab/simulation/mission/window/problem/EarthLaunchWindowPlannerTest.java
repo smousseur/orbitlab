@@ -139,13 +139,11 @@ class EarthLaunchWindowPlannerTest {
     MissionSpec.EarthOrbit spec = spec(120.0);
     Optional<LaunchWindow> fromSpec = EarthLaunchWindowPlanner.nextOpportunity(spec, epoch());
     List<LaunchWindow> fromRequest =
-        EarthLaunchWindowPlanner.nextOpportunities(
-            EarthLaunchWindowRequest.from(spec), epoch(), 1);
+        EarthLaunchWindowPlanner.nextOpportunities(EarthLaunchWindowRequest.from(spec), epoch(), 1);
 
     assertTrue(fromSpec.isPresent());
     assertEquals(1, fromRequest.size());
-    assertEquals(
-        0.0, fromRequest.getFirst().date().durationFrom(fromSpec.get().date()), 2.0);
+    assertEquals(0.0, fromRequest.getFirst().date().durationFrom(fromSpec.get().date()), 2.0);
   }
 
   @Test
@@ -181,8 +179,7 @@ class EarthLaunchWindowPlannerTest {
   void anOptimumTakenAsAFloorReturnsItself() {
     MissionSpec.EarthOrbit spec = spec(120.0);
     List<LaunchWindow> windows =
-        EarthLaunchWindowPlanner.nextOpportunities(
-            EarthLaunchWindowRequest.from(spec), epoch(), 3);
+        EarthLaunchWindowPlanner.nextOpportunities(EarthLaunchWindowRequest.from(spec), epoch(), 3);
     AbsoluteDate chosen = windows.get(1).date();
 
     Optional<LaunchWindow> again = EarthLaunchWindowPlanner.nextOpportunity(spec, chosen);

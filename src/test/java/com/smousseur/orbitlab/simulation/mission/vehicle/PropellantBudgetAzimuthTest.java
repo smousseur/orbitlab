@@ -134,7 +134,8 @@ class PropellantBudgetAzimuthTest {
         "the unqualified overload is the due-east one, to the bit");
 
     double[] historical =
-        PropellantBudget.loadsForLeo(Launchers.FALCON_HEAVY, Spacecraft.LEGACY, LEO_ALT, KOUROU_DEG);
+        PropellantBudget.loadsForLeo(
+            Launchers.FALCON_HEAVY, Spacecraft.LEGACY, LEO_ALT, KOUROU_DEG);
     double[] explicit =
         PropellantBudget.loadsForLeo(
             Launchers.FALCON_HEAVY,

@@ -18,17 +18,18 @@ import org.junit.jupiter.api.Test;
 
 /**
  * <b>MIS-7 / P1, test T6</b> — every feasibility rule of spec {@code
- * docs/earth-orbit/01-mission-terre-parametrable.md} §8 refuses at spec construction, with a message
- * naming what is reachable.
+ * docs/earth-orbit/01-mission-terre-parametrable.md} §8 refuses at spec construction, with a
+ * message naming what is reachable.
  *
  * <p><b>Refusals, not clamps.</b> A parameter silently corrected produces a mission that flies
- * something other than what was asked for — precisely the defect MIS-7 exists to remove. The spec is
- * the last place the caller still knows what it wanted, so it is where the refusal belongs; by the
- * time the propagation notices, it is running on a background thread with no idea what was intended.
+ * something other than what was asked for — precisely the defect MIS-7 exists to remove. The spec
+ * is the last place the caller still knows what it wanted, so it is where the refusal belongs; by
+ * the time the propagation notices, it is running on a background thread with no idea what was
+ * intended.
  *
- * <p>{@link LaunchPlaneTest} covers the same rules one level down, on the plane itself. This fixture
- * checks that {@link MissionSpec.EarthOrbit} actually enforces them rather than merely storing an
- * inclination.
+ * <p>{@link LaunchPlaneTest} covers the same rules one level down, on the plane itself. This
+ * fixture checks that {@link MissionSpec.EarthOrbit} actually enforces them rather than merely
+ * storing an inclination.
  */
 class EarthOrbitValidationTest {
 
@@ -59,8 +60,7 @@ class EarthOrbitValidationTest {
   @Test
   void inclinationBelowTheSiteLatitude_isRefused() {
     OrbitlabException failure =
-        assertThrows(
-            OrbitlabException.class, () -> spec(400_000.0, 400_000.0, 0.0, KOUROU_LAT));
+        assertThrows(OrbitlabException.class, () -> spec(400_000.0, 400_000.0, 0.0, KOUROU_LAT));
 
     assertTrue(
         failure.getMessage().contains("5.230"),
@@ -134,8 +134,7 @@ class EarthOrbitValidationTest {
 
     OrbitlabException failure =
         assertThrows(
-            OrbitlabException.class,
-            () -> MissionComposer.compose(meo, OptimizationType.FAST));
+            OrbitlabException.class, () -> MissionComposer.compose(meo, OptimizationType.FAST));
 
     assertTrue(
         failure.getMessage().contains("S2 (Merlin Vacuum)"),
@@ -205,8 +204,7 @@ class EarthOrbitValidationTest {
             0.0,
             null);
 
-    assertThrows(
-        OrbitlabException.class, () -> MissionComposer.compose(ellipse, FAST));
+    assertThrows(OrbitlabException.class, () -> MissionComposer.compose(ellipse, FAST));
   }
 
   /** A LEO target must never be routed through the parking chain. */

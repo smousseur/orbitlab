@@ -1,22 +1,21 @@
 package com.smousseur.orbitlab.simulation.ephemeris;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.simulation.ephemeris.config.EphemerisConfig;
 import com.smousseur.orbitlab.simulation.ephemeris.config.SlidingWindowConfig;
 import com.smousseur.orbitlab.simulation.source.EphemerisSource;
-import org.hipparchus.geometry.euclidean.threed.Rotation;
-import org.hipparchus.geometry.euclidean.threed.Vector3D;
-import org.junit.jupiter.api.Test;
-import org.orekit.time.AbsoluteDate;
-import org.orekit.utils.PVCoordinates;
-
 import java.util.EnumMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-
-import static org.junit.jupiter.api.Assertions.*;
+import org.hipparchus.geometry.euclidean.threed.Rotation;
+import org.hipparchus.geometry.euclidean.threed.Vector3D;
+import org.junit.jupiter.api.Test;
+import org.orekit.time.AbsoluteDate;
+import org.orekit.utils.PVCoordinates;
 
 class EphemerisWorkerTest {
 

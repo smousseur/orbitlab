@@ -1,9 +1,9 @@
 package com.smousseur.orbitlab.simulation.mission.operation;
 
-import com.smousseur.orbitlab.simulation.flight.FlightContext;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.smousseur.orbitlab.simulation.OrekitService;
+import com.smousseur.orbitlab.simulation.flight.FlightContext;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionStage;
 import com.smousseur.orbitlab.simulation.mission.OptimizationType;
@@ -40,10 +40,10 @@ import org.orekit.time.TimeScalesFactory;
  * pure refactor: not one number may move. This fixture pins the state at each boundary of the
  * stages it flies, so that a drift is localised to a stage rather than merely detected.
  *
- * <p><b>What it pins, exactly.</b> Every stage of four profiles <em>except</em> the vertical ascent,
- * which is flown to produce the gravity-turn entry state and is therefore upstream of the recording.
- * The polar profile pins four of its eight stages, for the reason {@link #polar_hasNotMoved()}
- * gives. Nothing else is excluded.
+ * <p><b>What it pins, exactly.</b> Every stage of four profiles <em>except</em> the vertical
+ * ascent, which is flown to produce the gravity-turn entry state and is therefore upstream of the
+ * recording. The polar profile pins four of its eight stages, for the reason {@link
+ * #polar_hasNotMoved()} gives. Nothing else is excluded.
  *
  * <p><b>Why pinned literals and not an A/B comparison.</b> {@code EarthOrbitNonRegressionTest}
  * compares two code paths inside one run. That form does not transpose here: after the refactor the
@@ -52,16 +52,16 @@ import org.orekit.time.TimeScalesFactory;
  *
  * <h2>The two passes, and why both are needed</h2>
  *
- * <p>A stage builds propagators in <b>two different places</b>, and flying one does not exercise the
- * other. Pinning a single pass would leave half the lot unguarded, so each profile is flown twice
- * and pinned twice, in constants that never mix.
+ * <p>A stage builds propagators in <b>two different places</b>, and flying one does not exercise
+ * the other. Pinning a single pass would leave half the lot unguarded, so each profile is flown
+ * twice and pinned twice, in constants that never mix.
  *
  * <ul>
  *   <li><b>REPLAY</b> — {@link StageChainRunner#sampling} with a null sampler and a zero trailing
  *       coast. The runner builds one propagator per stage and calls {@code configure()} on it; a
- *       stage's own {@code propagateStandalone} is never reached. This is the ephemeris/replay pass.
- *       {@link StageChainRunner#plain()} would fly the same trajectory but takes no listener, so it
- *       cannot record boundaries at all.
+ *       stage's own {@code propagateStandalone} is never reached. This is the ephemeris/replay
+ *       pass. {@link StageChainRunner#plain()} would fly the same trajectory but takes no listener,
+ *       so it cannot record boundaries at all.
  *   <li><b>STANDALONE</b> — the walk {@code MissionOptimizer} performs: inject the gravity turn's
  *       variables, then advance stage by stage through {@code MissionStage#propagateStandalone},
  *       which is where six of the twelve analytic construction sites live. {@code
@@ -71,31 +71,32 @@ import org.orekit.time.TimeScalesFactory;
  * </ul>
  *
  * <p><b>The two passes do not agree, and must not be conflated</b> — which is precisely why spec
- * §5.4 demands that each profile declare its pass. Baseline §5.2 records the divergence on MEO; this
- * gate measures it on GEO as well, and shows the mechanism. {@code CoastingStage} and {@code
+ * §5.4 demands that each profile declare its pass. Baseline §5.2 records the divergence on MEO;
+ * this gate measures it on GEO as well, and shows the mechanism. {@code CoastingStage} and {@code
  * StageSeparationStage} do not override {@code propagateStandalone}, so it falls back to {@code
- * enter()} and advances no time: in the STANDALONE pass a coast is not flown, and the analytic stage
- * downstream re-plans its own node targeting from the pre-coast state. On GEO the GTO injection
- * lands 2 770 s earlier and half an orbit away. That is a property of the passes, it predates
- * PHY-4, and this gate exists to keep it from moving — not to fix it.
+ * enter()} and advances no time: in the STANDALONE pass a coast is not flown, and the analytic
+ * stage downstream re-plans its own node targeting from the pre-coast state. On GEO the GTO
+ * injection lands 2 770 s earlier and half an orbit away. That is a property of the passes, it
+ * predates PHY-4, and this gate exists to keep it from moving — not to fix it.
  *
  * <p><b>Fixed variables, never an optimizer output.</b> No CMA-ES runs here. Only the gravity turn
- * takes variables; the analytic stages plan themselves, deterministically within one pass.
- * {@code AnalyticHohmannTransferStage} and {@code AnalyticParkingInsertionStage} are named as
- * optimizable in their own javadoc but implement no optimizable interface — in the chains flown here
- * the gravity-turn first burn is the only {@code OptimizableMissionStage}, which is why the
- * STANDALONE walk reduces to the non-optimizable branch of {@code MissionOptimizer}.
+ * takes variables; the analytic stages plan themselves, deterministically within one pass. {@code
+ * AnalyticHohmannTransferStage} and {@code AnalyticParkingInsertionStage} are named as optimizable
+ * in their own javadoc but implement no optimizable interface — in the chains flown here the
+ * gravity-turn first burn is the only {@code OptimizableMissionStage}, which is why the STANDALONE
+ * walk reduces to the non-optimizable branch of {@code MissionOptimizer}.
  *
  * <p><b>One boundary past what the spec describes.</b> Spec §5.6 says the gate stops at the last
- * propulsive stage. The REPLAY pass in fact records the trailing {@code Coasting} too: it configures
- * no end date, so the runner bounds it by its 7 200 s safety net and logs a WARN saying so. That
- * WARN is expected output of this fixture, not a defect. The boundary is deterministic and pinning
- * it is strictly stronger, so it is kept — but it is a coast horizon, not physics, and a future lot
- * that changes the safety net will move it legitimately.
+ * propulsive stage. The REPLAY pass in fact records the trailing {@code Coasting} too: it
+ * configures no end date, so the runner bounds it by its 7 200 s safety net and logs a WARN saying
+ * so. That WARN is expected output of this fixture, not a defect. The boundary is deterministic and
+ * pinning it is strictly stronger, so it is kept — but it is a coast horizon, not physics, and a
+ * future lot that changes the safety net will move it legitimately.
  *
- * <p><b>The fixtures are copied, not shared.</b> {@code MeoMissionTest} and {@code PolarCoverageTest}
- * keep theirs {@code private}, and more importantly a gate must not rest on another test's fixture:
- * a change over there would move the reference over here with nobody seeing it.
+ * <p><b>The fixtures are copied, not shared.</b> {@code MeoMissionTest} and {@code
+ * PolarCoverageTest} keep theirs {@code private}, and more importantly a gate must not rest on
+ * another test's fixture: a change over there would move the reference over here with nobody seeing
+ * it.
  */
 class CentralBodyBaselineTest {
 
@@ -891,6 +892,7 @@ class CentralBodyBaselineTest {
               -6202.174007191841,
               29438.108788332982,
               false));
+
   // ════════════════════════════════════════════════════════════════════════
   // The four profiles, each flown twice
   // ════════════════════════════════════════════════════════════════════════
@@ -925,9 +927,9 @@ class CentralBodyBaselineTest {
    * vertical ascent actually leaves behind.
    *
    * <p><b>It flies the ascent and the plane trim, and nothing between them</b> — which is exactly
-   * what {@code PolarCoverageTest} flies, and what {@code 02-baseline-L0.md} §4 records. This is not
-   * a shortcut: the fixture is knowingly out of envelope (baseline §5.6, {@code bugs.md} BUG-6). Its
-   * ascent ends on a suborbital arc whose perigee is −131 km, and {@code
+   * what {@code PolarCoverageTest} flies, and what {@code 02-baseline-L0.md} §4 records. This is
+   * not a shortcut: the fixture is knowingly out of envelope (baseline §5.6, {@code bugs.md}
+   * BUG-6). Its ascent ends on a suborbital arc whose perigee is −131 km, and {@code
    * AnalyticHohmannTransferStage} refuses to plan from it — "No apogee found within one transfer
    * half-period", thrown from {@code configure()}, which the runner does not catch. Putting the
    * fixture back in envelope would move the polar figures of a baseline five lots are about to rest
@@ -944,7 +946,8 @@ class CentralBodyBaselineTest {
         "POLAR REPLAY",
         fly(
             replay,
-            entry -> maneuverOf(replay, entry, polar).getStagingCompleteTime() + POLAR_BURN2_SECONDS,
+            entry ->
+                maneuverOf(replay, entry, polar).getStagingCompleteTime() + POLAR_BURN2_SECONDS,
             POLAR_TURN_EXPONENT,
             CentralBodyBaselineTest::ascentThenPlaneTrim),
         POLAR_REPLAY);
@@ -1039,7 +1042,8 @@ class CentralBodyBaselineTest {
    * <p>The transition time is a function of the gravity-turn entry state rather than a literal,
    * because the polar fixture expresses it as a second-burn duration added to a staging time the
    * entry mass determines. The three other profiles pass a constant function. The chain is a
-   * function of the mission's stages for the same kind of reason — see {@link #polar_hasNotMoved()}.
+   * function of the mission's stages for the same kind of reason — see {@link
+   * #polar_hasNotMoved()}.
    *
    * @param mission the mission to fly, freshly built
    * @param transitionTime the gravity turn's transition time (s), derived from the turn entry state
@@ -1213,14 +1217,14 @@ class CentralBodyBaselineTest {
   // ════════════════════════════════════════════════════════════════════════
 
   /**
-   * The Falcon Heavy of the <b>LEO-400 baseline</b>: 600 t and 100 t of propellant, <em>not</em> the
-   * tank capacities.
+   * The Falcon Heavy of the <b>LEO-400 baseline</b>: 600 t and 100 t of propellant, <em>not</em>
+   * the tank capacities.
    *
    * <p>These are the loads {@code AscentBaselineN2Test.leo400Baseline} flies and the ones {@code
-   * 02-baseline-L0.md} §3 records against. A fully loaded stack is a different vehicle: flown at the
-   * baseline's fixed variables it re-enters during the second gravity-turn phase, which is how the
-   * mismatch was caught. The polar profile below <em>does</em> want the fully loaded stack, because
-   * that is what its own fixture flies — the two are deliberately different.
+   * 02-baseline-L0.md} §3 records against. A fully loaded stack is a different vehicle: flown at
+   * the baseline's fixed variables it re-enters during the second gravity-turn phase, which is how
+   * the mismatch was caught. The polar profile below <em>does</em> want the fully loaded stack,
+   * because that is what its own fixture flies — the two are deliberately different.
    */
   private static LaunchConfiguration falconHeavyBaselineLoads() {
     return new LaunchConfiguration(
@@ -1265,7 +1269,9 @@ class CentralBodyBaselineTest {
         null);
   }
 
-  /** A copy of {@code PolarCoverageTest}'s mission: a fully loaded Falcon Heavy to 400 km at 90°. */
+  /**
+   * A copy of {@code PolarCoverageTest}'s mission: a fully loaded Falcon Heavy to 400 km at 90°.
+   */
   private static MissionSpec.EarthOrbit polarSpec(LaunchPlane plane) {
     return new MissionSpec.EarthOrbit(
         "T5 polar coverage",

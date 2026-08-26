@@ -1,6 +1,5 @@
 package com.smousseur.orbitlab.app;
 
-import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;

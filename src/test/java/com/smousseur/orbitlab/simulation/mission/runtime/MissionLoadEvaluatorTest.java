@@ -100,9 +100,10 @@ class MissionLoadEvaluatorTest {
    *
    * <p>The geocentric half of a translunar coast sits around 380 000 km and its selenocentric half
    * around 1 000 km. Scanning both together would not make the predicate approximate: it would put
-   * {@code min = 1 000 km} beside {@code max = 380 000 km} and judge a perfectly flown lunar arrival
-   * against a target it never described. The single-arc case is unchanged by construction — the last
-   * point's arc body is then the only body there is — and the tests above are what pin that.
+   * {@code min = 1 000 km} beside {@code max = 380 000 km} and judge a perfectly flown lunar
+   * arrival against a target it never described. The single-arc case is unchanged by construction —
+   * the last point's arc body is then the only body there is — and the tests above are what pin
+   * that.
    */
   @Test
   void objectiveMet_twoArcCoast_measuresOnlyTheArcItEndsIn() {
@@ -111,7 +112,8 @@ class MissionLoadEvaluatorTest {
     AbsoluteDate t = AbsoluteDate.J2000_EPOCH;
     points.add(coastPoint(t, 380_000_000.0, TrajectoryArc.earth()));
     points.add(coastPoint(t.shiftedBy(60), 320_000_000.0, TrajectoryArc.earth()));
-    points.add(coastPoint(t.shiftedBy(120), 102_000.0, TrajectoryArc.forBody(SolarSystemBody.MOON)));
+    points.add(
+        coastPoint(t.shiftedBy(120), 102_000.0, TrajectoryArc.forBody(SolarSystemBody.MOON)));
     points.add(coastPoint(t.shiftedBy(180), 98_000.0, TrajectoryArc.forBody(SolarSystemBody.MOON)));
     MissionEphemeris translunar = new MissionEphemeris(points);
 

@@ -21,8 +21,8 @@ import org.orekit.time.TimeScalesFactory;
  * <p>{@link TrajectoryArc#earth()} states the Earth pairing a <em>second</em> time — {@link
  * GravitationalContext#earth()} already does — because four of the five test classes that build
  * ephemeris points never initialise {@code OrekitService}, and the gravitational context resolves
- * ITRF and the WGS84 ellipsoid, both of which need the data archive. GCRF does not. That duplication
- * is the price, and the first test here is what stops the two from drifting apart.
+ * ITRF and the WGS84 ellipsoid, both of which need the data archive. GCRF does not. That
+ * duplication is the price, and the first test here is what stops the two from drifting apart.
  *
  * <p>The second contract is that the record's <b>equality is arc identity</b>: it is what {@link
  * TrajectoryPolyline} partitions on, and it is why the record is this narrow rather than being the
@@ -122,16 +122,15 @@ class TrajectoryArcTest {
 
     assertSame(
         leo,
-        TrajectoryArc.earth().convertPosition(leo, date, TrajectoryArc.forBody(SolarSystemBody.EARTH)),
+        TrajectoryArc.earth()
+            .convertPosition(leo, date, TrajectoryArc.forBody(SolarSystemBody.EARTH)),
         "identity by reference, not by value");
   }
 
   @Test
   void neitherComponentMayBeNull() {
     assertThrows(
-        NullPointerException.class,
-        () -> new TrajectoryArc(null, TrajectoryArc.earth().frame()));
-    assertThrows(
-        NullPointerException.class, () -> new TrajectoryArc(SolarSystemBody.EARTH, null));
+        NullPointerException.class, () -> new TrajectoryArc(null, TrajectoryArc.earth().frame()));
+    assertThrows(NullPointerException.class, () -> new TrajectoryArc(SolarSystemBody.EARTH, null));
   }
 }

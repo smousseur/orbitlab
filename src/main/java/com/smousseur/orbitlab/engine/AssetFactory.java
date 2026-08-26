@@ -12,12 +12,11 @@ import com.jme3.scene.Spatial;
 import com.jme3.texture.Texture;
 import com.jme3.util.SkyFactory;
 import com.smousseur.orbitlab.core.OrbitlabException;
-import org.jspecify.annotations.NonNull;
-
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jspecify.annotations.NonNull;
 
 /**
  * Singleton factory for creating and managing JME3 assets such as 3D models and materials.

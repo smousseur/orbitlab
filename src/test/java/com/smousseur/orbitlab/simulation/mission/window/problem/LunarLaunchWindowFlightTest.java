@@ -35,15 +35,15 @@ import org.orekit.utils.Constants;
  * <p><b>What it adds to the closed tests next door.</b> Those measure the shape of the screening
  * criterion; nothing in them ever flies. Here the solver's second tier is on, so the epochs it
  * offers have been through the perilune bisection and the depletion floor of the active stage — the
- * two verdicts that decide whether a date is a plan or a wish. The 1 700 kg vehicle leaves some
- * 577 kg after a 3 178 m/s injection at Isp 300, against a 500 kg floor: the confirmation is a real
+ * two verdicts that decide whether a date is a plan or a wish. The 1 700 kg vehicle leaves some 577
+ * kg after a 3 178 m/s injection at Isp 300, against a 500 kg floor: the confirmation is a real
  * test of that floor rather than a formality it passes with room to spare.
  *
- * <p><b>The screen-to-confirmation gap is the closing measurement of the lot.</b> The solver anchors
- * its acceptance margin on the screening tier on both sides, which is only sound while the two
- * tiers differ by less than that margin; the translunar problem next door was measured at 6-8 m/s,
- * and this is the same measurement taken on a suffered plane. It is logged, not asserted: pinning it
- * would pin a number this lot exists to find out.
+ * <p><b>The screen-to-confirmation gap is the closing measurement of the lot.</b> The solver
+ * anchors its acceptance margin on the screening tier on both sides, which is only sound while the
+ * two tiers differ by less than that margin; the translunar problem next door was measured at 6-8
+ * m/s, and this is the same measurement taken on a suffered plane. It is logged, not asserted:
+ * pinning it would pin a number this lot exists to find out.
  *
  * <p><b>Contrainte de méthode</b> (découpage §3): this case flies some thirty four-day propagations
  * per confirmed epoch, so it costs some fifteen seconds, and it is the user who runs it.

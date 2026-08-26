@@ -214,7 +214,8 @@ public final class MultiStageLoadOptimizer {
    * <p>The sink is told where the sweep is <em>before</em> each evaluation rather than after, so
    * the reported index reads as the load being worked on. This is the only monotone, bounded
    * reading the whole optimization chain offers: the trajectory levels below recycle once per
-   * evaluation and are deliberately not reported (see {@code MissionProgressListener#evaluationsOnly}).
+   * evaluation and are deliberately not reported (see {@code
+   * MissionProgressListener#evaluationsOnly}).
    *
    * @param evaluator rebuilds + optimizes the mission at a given load vector
    * @param lambdaScaled which coordinates carry their own λ

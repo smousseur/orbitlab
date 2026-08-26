@@ -139,14 +139,15 @@ class NearFrameOriginTest {
    *
    * <p>A sample flown about the Moon is no longer drawn where its raw coordinates say: looking at
    * the Earth, it is first re-expressed about the Earth, moving it by the best part of 400 000 km.
-   * Both producers of the near origin therefore have to take that <em>converted</em> value, and take
-   * the same one — {@code MissionRenderer.renderPositionOf} is the single path, exactly as {@code
-   * toJmeBodyRelativePosition} is the single path for the scale. Two conversions instead of one
-   * would leave a kink between the last ribbon vertex and the spacecraft model, in the middle of the
-   * screen.
+   * Both producers of the near origin therefore have to take that <em>converted</em> value, and
+   * take the same one — {@code MissionRenderer.renderPositionOf} is the single path, exactly as
+   * {@code toJmeBodyRelativePosition} is the single path for the scale. Two conversions instead of
+   * one would leave a kink between the last ribbon vertex and the spacecraft model, in the middle
+   * of the screen.
    *
    * <p>The first assertion is what gives the rest its meaning: it checks the conversion actually
-   * moves the point, so the cancellation below is not the trivial identity the previous test covers.
+   * moves the point, so the cancellation below is not the trivial identity the previous test
+   * covers.
    */
   @Test
   void aConvertedSampleCancelsJustAsExactly() {

@@ -17,9 +17,9 @@ import org.orekit.time.AbsoluteDate;
 
 /**
  * One powered phase of the explicit three-phase ascent (spec {@code
- * docs/mission-stages/01-separations-implicites.md} §5.2): {@code Gravity turn (S1) → S1
- * separation → Gravity turn (S2)}. Both burns share everything but their propulsion and their
- * cutoff, which is what the two subclasses supply.
+ * docs/mission-stages/01-separations-implicites.md} §5.2): {@code Gravity turn (S1) → S1 separation
+ * → Gravity turn (S2)}. Both burns share everything but their propulsion and their cutoff, which is
+ * what the two subclasses supply.
  *
  * <p><b>The pitch law is anchored on the plan, never on the phase.</b> {@link
  * GravityTurnAttitudeProvider} interpolates on {@code (date − kickDate) / transitionTime}, so a
@@ -105,10 +105,7 @@ public abstract class GravityTurnBurnStage extends MissionStage {
 
     propagator.setAttitudeProvider(
         new GravityTurnAttitudeProvider(
-            plan.kickDate(),
-            plan.transitionTime(),
-            plan.exponent(),
-            plan.commandedPlaneNormal()));
+            plan.kickDate(), plan.transitionTime(), plan.exponent(), plan.commandedPlaneNormal()));
     configureBurn(propagator, plan);
     instrumentation.arm(propagator, plan, getName());
 

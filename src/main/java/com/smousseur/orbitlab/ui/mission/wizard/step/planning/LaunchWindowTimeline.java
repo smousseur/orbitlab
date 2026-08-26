@@ -34,8 +34,8 @@ import org.orekit.time.AbsoluteDate;
 /**
  * The launch window timeline of the planning page, drawn at two stacked scales.
  *
- * <p><b>Why two scales and not one.</b> The measured Earth slot is 232 s wide and recurs every
- * 86 164 s — a ratio of one to 371. On the 752 px this wizard can give an axis, three days of span
+ * <p><b>Why two scales and not one.</b> The measured Earth slot is 232 s wide and recurs every 86
+ * 164 s — a ratio of one to 371. On the 752 px this wizard can give an axis, three days of span
  * make the slot 0.4 px: it is not small, it is invisible, and no tuning saves a single axis (spec
  * {@code docs/mission-window/02-timeline-wizard.md} §2). So the day scale draws an opportunity as
  * an <em>instant</em> — a marker, whose width nobody reads as a duration, so it lies about nothing
@@ -324,10 +324,7 @@ public final class LaunchWindowTimeline {
     attach(
         axisGraduations,
         caption(
-            TimeConverter.formatDate(floor),
-            FLOOR_LABEL_W,
-            FormStyles.WARNING,
-            HAlignment.Left),
+            TimeConverter.formatDate(floor), FLOOR_LABEL_W, FormStyles.WARNING, HAlignment.Left),
         0f,
         0f,
         Z_CONTENT);
@@ -401,8 +398,7 @@ public final class LaunchWindowTimeline {
         "opens " + time(window.opening()),
         FormStyles.ACCENT_BRIGHT,
         HAlignment.Center);
-    attachCaption(
-        captions.optimum(), time(optimum), FormStyles.ACCENT_BRIGHT, HAlignment.Center);
+    attachCaption(captions.optimum(), time(optimum), FormStyles.ACCENT_BRIGHT, HAlignment.Center);
     attachCaption(
         captions.closes(),
         "closes " + time(window.closing()),
@@ -413,11 +409,7 @@ public final class LaunchWindowTimeline {
   private void attachCaption(
       ZoomScale.CaptionSpan span, String text, ColorRGBA color, HAlignment alignment) {
     attach(
-        zoomGraduations,
-        caption(text, span.width(), color, alignment),
-        span.left(),
-        0f,
-        Z_CONTENT);
+        zoomGraduations, caption(text, span.width(), color, alignment), span.left(), 0f, Z_CONTENT);
   }
 
   private void paintSelectedReadout(PlanningState.Windows state) {
@@ -458,8 +450,7 @@ public final class LaunchWindowTimeline {
         Z_CONTENT);
     attach(
         readout,
-        caption(
-            value, READOUT_CELL_W - READOUT_KEY_W, FormStyles.TEXT_PRIMARY, HAlignment.Left),
+        caption(value, READOUT_CELL_W - READOUT_KEY_W, FormStyles.TEXT_PRIMARY, HAlignment.Left),
         left + READOUT_KEY_W,
         0f,
         Z_CONTENT);
@@ -544,8 +535,7 @@ public final class LaunchWindowTimeline {
     return panel;
   }
 
-  private static Label caption(
-      String text, float width, ColorRGBA color, HAlignment alignment) {
+  private static Label caption(String text, float width, ColorRGBA color, HAlignment alignment) {
     Label label = new Label(text, FormStyles.STYLE);
     label.setFont(UiKit.ibmPlexMono(10));
     label.setColor(color);

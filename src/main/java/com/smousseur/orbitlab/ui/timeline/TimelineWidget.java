@@ -14,7 +14,6 @@ import com.smousseur.orbitlab.app.SimulationClock;
 import com.smousseur.orbitlab.ui.AppStyles;
 import com.smousseur.orbitlab.ui.UiLayers;
 import com.smousseur.orbitlab.ui.timeline.components.*;
-
 import java.util.Objects;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;

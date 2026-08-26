@@ -1,5 +1,7 @@
 package com.smousseur.orbitlab.ui.mission.wizard.step.params;
 
+import static com.smousseur.orbitlab.ui.mission.wizard.step.StepParameters.*;
+
 import com.jme3.math.ColorRGBA;
 import com.jme3.math.Vector3f;
 import com.jme3.scene.Spatial;
@@ -20,8 +22,6 @@ import com.smousseur.orbitlab.ui.form.FormStyles;
 import java.util.Map;
 import java.util.Optional;
 import org.orekit.utils.Constants;
-
-import static com.smousseur.orbitlab.ui.mission.wizard.step.StepParameters.*;
 
 public abstract class DynamicParameters {
   protected static final float FIELD_W = 752f;

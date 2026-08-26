@@ -90,8 +90,8 @@ public final class FormField<T> {
 
   /**
    * The {@link MissionProfile} the mission was created on, by name. UI-only: no spec component
-   * corresponds to it, and {@code MissionFactory} ignores the key entirely — the profile is a way of
-   * offering parameters, not a property of the mission (spec {@code
+   * corresponds to it, and {@code MissionFactory} ignores the key entirely — the profile is a way
+   * of offering parameters, not a property of the mission (spec {@code
    * docs/earth-orbit/02-wizard-orbites-terrestres.md} §1).
    */
   public static final FormField<String> MISSION_PROFILE =

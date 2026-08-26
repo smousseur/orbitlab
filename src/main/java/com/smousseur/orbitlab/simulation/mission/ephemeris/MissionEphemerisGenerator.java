@@ -58,8 +58,8 @@ public final class MissionEphemerisGenerator {
    *
    * <p>The caller passes a <b>resolved duration</b>, not a {@link MissionHorizon}: deciding how
    * long a mission should be recorded is an intent, and a generator has no business knowing the
-   * intent (spec {@code docs/mission-horizon/01-horizon-explicite.md} §4). {@code
-   * MissionOptimizer} resolves it, because that is where the achieved orbit is already in hand.
+   * intent (spec {@code docs/mission-horizon/01-horizon-explicite.md} §4). {@code MissionOptimizer}
+   * resolves it, because that is where the achieved orbit is already in hand.
    *
    * <p>The sampling step is not a parameter either: each stage advertises its own through {@link
    * com.smousseur.orbitlab.simulation.mission.MissionStage#sampleStepSeconds}, so burns are
@@ -148,8 +148,8 @@ public final class MissionEphemerisGenerator {
      *
      * <p>The gravitational context serves twice: it names the arc the sample belongs to, and it
      * provides the reference shape the altitude is measured against (PHY-4 / L3, spec {@code
-     * docs/multi-corps/05-conception-L3.md} §3.4). Reading it twice would let the two disagree about
-     * which body the point is describing.
+     * docs/multi-corps/05-conception-L3.md} §3.4). Reading it twice would let the two disagree
+     * about which body the point is describing.
      *
      * <p>It is <b>handed in by the runner</b> rather than read off the stage since PHY-4 / L4: a
      * stage that crosses a sphere of influence declares one context and flies two, and asking the

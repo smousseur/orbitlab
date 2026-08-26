@@ -1,11 +1,10 @@
 package com.smousseur.orbitlab.simulation.mission.stage.ascent;
 
-import com.smousseur.orbitlab.simulation.flight.FlightContext;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.Physics;
-import com.smousseur.orbitlab.simulation.mission.Mission;
+import com.smousseur.orbitlab.simulation.flight.FlightContext;
 import com.smousseur.orbitlab.simulation.mission.MissionStage;
 import com.smousseur.orbitlab.simulation.mission.maneuver.GravityTurnManeuver;
 import com.smousseur.orbitlab.simulation.mission.operation.EarthOrbitMission;
@@ -41,14 +40,14 @@ import org.orekit.time.TimeScalesFactory;
  * cannot change a plane at all. Commanding due north instead of due east moved the achieved
  * inclination by 0.0007°.
  *
- * <p>With the commanded-plane attitude of §4.1, the horizontal target becomes the prograde direction
- * <em>in the target plane</em>, so the thrust leaves the current plane for as long as the two
- * differ. The fixtures below assert what that buys, at <b>fixed variables</b> — no CMA-ES, no seed,
- * the commanded plane being the only difference between two runs.
+ * <p>With the commanded-plane attitude of §4.1, the horizontal target becomes the prograde
+ * direction <em>in the target plane</em>, so the thrust leaves the current plane for as long as the
+ * two differ. The fixtures below assert what that buys, at <b>fixed variables</b> — no CMA-ES, no
+ * seed, the commanded plane being the only difference between two runs.
  *
- * <p><b>The node sign is asserted, not just the inclination</b> (§4.1). An inclination is blind to a
- * mirrored plane: fly azimuth {@code −A} instead of {@code A} and the inclination is exactly right
- * while the orbit sweeps the opposite side of the ground track. That is the failure mode the
+ * <p><b>The node sign is asserted, not just the inclination</b> (§4.1). An inclination is blind to
+ * a mirrored plane: fly azimuth {@code −A} instead of {@code A} and the inclination is exactly
+ * right while the orbit sweeps the opposite side of the ground track. That is the failure mode the
  * east/west basis defect of §1.1c would have produced, and no inclination assertion in the suite
  * could ever have caught it — so this one compares the achieved angular momentum against the
  * commanded plane normal, which is sensitive to both.
@@ -69,8 +68,8 @@ class AscentPlaneControlTest {
 
   /**
    * How much of the commanded plane change the ascent must actually deliver. Spec §9.2 asked for
-   * the achieved inclination within 1° of the commanded one; what the §4.1 law delivers is
-   * <b>94 to 96 %</b> of the swing, with a residual of 1.5° to 3.3° that {@link
+   * the achieved inclination within 1° of the commanded one; what the §4.1 law delivers is <b>94 to
+   * 96 %</b> of the swing, with a residual of 1.5° to 3.3° that {@link
    * #RESIDUAL_MODEL_TOLERANCE_DEG} explains in closed form. Authority is the assertion that carries
    * the claim of §4 — the pre-MIS-7 ascent scored 0.02 % on this very measurement.
    */
@@ -217,8 +216,8 @@ class AscentPlaneControlTest {
    *
    * <p>Which is why the residual is <b>largest for a polar command</b> ({@code A = 0}, the whole
    * entrainment is out of plane) and smallest for a near-equatorial one — the opposite of what a
-   * "bigger plane change is harder" intuition suggests, and a good reason to assert the model rather
-   * than a flat bound.
+   * "bigger plane change is harder" intuition suggests, and a good reason to assert the model
+   * rather than a flat bound.
    *
    * @param plane the commanded plane
    * @param meco the state the ascent ended at
@@ -253,7 +252,10 @@ class AscentPlaneControlTest {
   void theSteeringLoss_isCoveredByTheSignedAssistCorrection() {
     SpacecraftState entry = postVerticalAscentState();
     double dueEastSpeed =
-        flyCommanded(entry, LaunchPlane.dueEast(LAT_DEG)).getPVCoordinates().getVelocity().getNorm();
+        flyCommanded(entry, LaunchPlane.dueEast(LAT_DEG))
+            .getPVCoordinates()
+            .getVelocity()
+            .getNorm();
 
     logger.info("T1 steering loss vs the assist correction the budget already applies:");
 
@@ -289,8 +291,8 @@ class AscentPlaneControlTest {
 
   /**
    * The two branches reaching one inclination must be told apart. They have the same inclination by
-   * construction, so only the node distinguishes them — this is the sharpest form of the sign check,
-   * and it fails outright if the local horizontal basis ever flips back.
+   * construction, so only the node distinguishes them — this is the sharpest form of the sign
+   * check, and it fails outright if the local horizontal basis ever flips back.
    */
   @Test
   void theTwoNodeBranches_flyOppositeNodesAtTheSameInclination() {
@@ -318,11 +320,12 @@ class AscentPlaneControlTest {
 
     assertTrue(
         FastMath.abs(inclinationNorth - inclinationSouth) < PLANE_TOLERANCE_DEG,
-        () -> "both branches must reach the same inclination, got "
-            + fmt(inclinationNorth, 4)
-            + "° and "
-            + fmt(inclinationSouth, 4)
-            + "°");
+        () ->
+            "both branches must reach the same inclination, got "
+                + fmt(inclinationNorth, 4)
+                + "° and "
+                + fmt(inclinationSouth, 4)
+                + "°");
     assertTrue(
         planeSeparation > 10.0,
         () ->
@@ -344,8 +347,8 @@ class AscentPlaneControlTest {
   }
 
   /**
-   * The non-regression counterpart of the above, at this level: a due-east target must still land on
-   * the site latitude, i.e. the commanded machinery must not have leaked into the free plane.
+   * The non-regression counterpart of the above, at this level: a due-east target must still land
+   * on the site latitude, i.e. the commanded machinery must not have leaked into the free plane.
    * {@code EarthOrbitNonRegressionTest} holds the same line on the trajectory itself.
    */
   @Test
@@ -422,8 +425,7 @@ class AscentPlaneControlTest {
   }
 
   private static Vector3D momentum(SpacecraftState state) {
-    return Vector3D.crossProduct(
-            state.getPosition(), state.getPVCoordinates().getVelocity())
+    return Vector3D.crossProduct(state.getPosition(), state.getPVCoordinates().getVelocity())
         .normalize();
   }
 
@@ -431,8 +433,7 @@ class AscentPlaneControlTest {
   private static Vector3D commandedNormal(LaunchPlane plane) {
     Vector3D site = postVerticalAscentState().getPosition();
     return Vector3D.crossProduct(
-            site.normalize(),
-            Physics.localHorizontalDirection(site, plane.launchAzimuth(LAT_RAD)))
+            site.normalize(), Physics.localHorizontalDirection(site, plane.launchAzimuth(LAT_RAD)))
         .normalize();
   }
 

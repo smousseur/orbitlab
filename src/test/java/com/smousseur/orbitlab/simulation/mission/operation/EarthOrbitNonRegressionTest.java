@@ -1,12 +1,12 @@
 package com.smousseur.orbitlab.simulation.mission.operation;
 
-import com.smousseur.orbitlab.simulation.flight.FlightContext;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.Physics;
+import com.smousseur.orbitlab.simulation.flight.FlightContext;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionStage;
 import com.smousseur.orbitlab.simulation.mission.OptimizationType;
@@ -35,17 +35,17 @@ import org.orekit.time.TimeScalesFactory;
  * <b>MIS-7 / P1, test T2 — the non-regression gate</b> (spec {@code
  * docs/earth-orbit/01-mission-terre-parametrable.md} §9.2). It must stay green at every step of P1.
  *
- * <p><b>What it guards.</b> MIS-7 renames {@code LEOMission} to {@link EarthOrbitMission}, threads a
- * {@link LaunchPlane} through the ascent and adds a commanded-plane attitude that can steer the
+ * <p><b>What it guards.</b> MIS-7 renames {@code LEOMission} to {@link EarthOrbitMission}, threads
+ * a {@link LaunchPlane} through the ascent and adds a commanded-plane attitude that can steer the
  * orbital plane. The Falcon Heavy and Ariane 62 calibrations rest on measured due-east
  * trajectories, so a due-east target must keep flying exactly what it flew before — the commanded
  * attitude being opt-in is what makes that possible (spec §4.2), and this fixture is what keeps the
  * door shut.
  *
  * <p><b>The risk it exists for</b> is spec §10's "calibration trap": the temptation, while
- * refactoring, to unify two paths that merely look alike. The two horizontal targets are <em>not</em>
- * numerically identical even when the planes coincide, so "the planes agree, use the new code" would
- * silently move every calibrated trajectory.
+ * refactoring, to unify two paths that merely look alike. The two horizontal targets are
+ * <em>not</em> numerically identical even when the planes coincide, so "the planes agree, use the
+ * new code" would silently move every calibrated trajectory.
  *
  * <p>Everything here runs at <b>fixed variables</b>: no CMA-ES, no seed, no optimizer.
  */
@@ -97,7 +97,8 @@ class EarthOrbitNonRegressionTest {
   void everyDueEastTarget_fliesTheHistoricalAttitude() {
     for (double target : CIRCULAR_TARGETS) {
       for (OptimizationType mode : OptimizationType.values()) {
-        assertNotCommanded(compose(circularSpec(target), mode), "circular " + target + " / " + mode);
+        assertNotCommanded(
+            compose(circularSpec(target), mode), "circular " + target + " / " + mode);
       }
     }
     for (double[] target : ELLIPTIC_TARGETS) {
@@ -138,8 +139,7 @@ class EarthOrbitNonRegressionTest {
   void theComposedChain_matchesTheDirectConstructor() {
     for (double target : CIRCULAR_TARGETS) {
       assertEquals(
-          stageNames(
-              new EarthOrbitMission("direct", falconHeavy(), target, target, LAT, LON, ALT)),
+          stageNames(new EarthOrbitMission("direct", falconHeavy(), target, target, LAT, LON, ALT)),
           stageNames(compose(circularSpec(target), OptimizationType.FAST)),
           () -> "analytic chain differs at " + target + " m");
       assertEquals(
@@ -175,8 +175,7 @@ class EarthOrbitNonRegressionTest {
    */
   @Test
   void theFlownAscent_isIdenticalThroughBothPaths() {
-    SpacecraftState viaSpec =
-        flyAscent(compose(circularSpec(400_000.0), OptimizationType.FAST));
+    SpacecraftState viaSpec = flyAscent(compose(circularSpec(400_000.0), OptimizationType.FAST));
     SpacecraftState viaConstructor =
         flyAscent(new EarthOrbitMission("direct", falconHeavy(), 400_000.0));
 
@@ -236,7 +235,8 @@ class EarthOrbitNonRegressionTest {
     SpacecraftState entry = mission.getInitialState(epoch());
 
     assertFalse(
-        maneuverOf(mission, entry).plan(entry, new double[] {300.0, TURN_EXPONENT})
+        maneuverOf(mission, entry)
+            .plan(entry, new double[] {300.0, TURN_EXPONENT})
             .hasCommandedPlane(),
         () -> label + ": a due-east target must not steer its plane");
   }

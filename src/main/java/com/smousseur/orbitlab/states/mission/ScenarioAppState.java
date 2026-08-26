@@ -136,13 +136,14 @@ public final class ScenarioAppState extends BaseAppState {
     syncBrowser();
   }
 
-  /** Pushes the model onto the window, the way {@code MissionDisplayPanelAppState} syncs its menu. */
+  /**
+   * Pushes the model onto the window, the way {@code MissionDisplayPanelAppState} syncs its menu.
+   */
   private void syncBrowser() {
     if (browser == null || model == null) return;
     List<ScenarioBrowserWidget.Row> rows = new ArrayList<>();
     for (ScenarioBrowserModel.Entry entry : model.entries()) {
-      rows.add(
-          new ScenarioBrowserWidget.Row(entry.name(), entry.savedAt(), entry.missionCount()));
+      rows.add(new ScenarioBrowserWidget.Row(entry.name(), entry.savedAt(), entry.missionCount()));
     }
     browser.setRows(rows, model.selectedName().orElse(null));
     browser.setConfirmEnabled(model.isConfirmEnabled());
@@ -176,8 +177,7 @@ public final class ScenarioAppState extends BaseAppState {
     for (String name : names) {
       try {
         ScenarioFile file = store.read(name);
-        entries.add(
-            new ScenarioBrowserModel.Entry(name, file.savedAt(), file.missions().size()));
+        entries.add(new ScenarioBrowserModel.Entry(name, file.savedAt(), file.missions().size()));
       } catch (RuntimeException e) {
         logger.warn("Scenario '{}' cannot be read: {}", name, e.getMessage());
         entries.add(new ScenarioBrowserModel.Entry(name, null, 0));

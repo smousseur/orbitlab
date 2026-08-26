@@ -35,9 +35,10 @@ import org.apache.logging.log4j.Logger;
 import org.orekit.time.AbsoluteDate;
 
 /**
- * Non-modal mission management window: orchestrates a {@link PanelHeader}, a {@link MissionListView}
- * and a {@link PanelFooter} on the {@link UiLayers#WINDOW} layer. Per-row actions (Edit / Compute /
- * Visualize / Delete) are routed to {@link MissionContext} and the {@link EventBus}.
+ * Non-modal mission management window: orchestrates a {@link PanelHeader}, a {@link
+ * MissionListView} and a {@link PanelFooter} on the {@link UiLayers#WINDOW} layer. Per-row actions
+ * (Edit / Compute / Visualize / Delete) are routed to {@link MissionContext} and the {@link
+ * EventBus}.
  *
  * <p>It carries no backdrop: the scene below stays live and only the window's own bounds swallow
  * clicks. Its delete confirmation is another matter — a {@link ConfirmDialog} is blocking by nature
@@ -420,12 +421,12 @@ public class MissionPanelWidget implements AutoCloseable {
    *
    * <p>Both first-placement branches are clamped. A remembered position was recorded against
    * whatever surface the window was last closed on, and resizing while the window is closed changes
-   * the bounds without this method ever seeing the resize — {@code lastWidth} and {@code lastHeight}
-   * are seeded on the first call, so the resize branch never fires for it. The centred position
-   * needs it too: at the application's own 1280×720 it lands above the top bound, and the first
-   * pixel of the first drag would then snap the window away from the cursor. Centring a window
-   * taller than the bounds allow therefore yields a position that is horizontally centred and
-   * vertically pinned to the top bound, which is what the user can actually reach.
+   * the bounds without this method ever seeing the resize — {@code lastWidth} and {@code
+   * lastHeight} are seeded on the first call, so the resize branch never fires for it. The centred
+   * position needs it too: at the application's own 1280×720 it lands above the top bound, and the
+   * first pixel of the first drag would then snap the window away from the cursor. Centring a
+   * window taller than the bounds allow therefore yields a position that is horizontally centred
+   * and vertically pinned to the top bound, which is what the user can actually reach.
    */
   private void place(int screenWidth, int screenHeight) {
     if (!placed) {

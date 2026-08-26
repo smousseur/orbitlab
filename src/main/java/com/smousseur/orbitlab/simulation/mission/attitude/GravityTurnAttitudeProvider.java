@@ -34,8 +34,8 @@ import org.orekit.utils.PVCoordinatesProvider;
  * authority over the commanded azimuth (spec {@code
  * docs/earth-orbit/01-mission-terre-parametrable.md} §2). Given a commanded plane normal {@code ĥ},
  * the horizontal target becomes {@code (ĥ × r̂).normalize()} instead — the prograde direction
- * <em>in the target plane</em> — so the thrust acquires an out-of-plane component for as long as the
- * flown plane differs from the wanted one. That is what gives the azimuth authority at last.
+ * <em>in the target plane</em> — so the thrust acquires an out-of-plane component for as long as
+ * the flown plane differs from the wanted one. That is what gives the azimuth authority at last.
  *
  * <p><b>The default mode is byte-for-byte the pre-MIS-7 code</b> (spec §4.2). The two horizontal
  * targets are not numerically identical even when the planes coincide, so the commanded mode is

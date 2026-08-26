@@ -75,6 +75,7 @@ public class MissionListView {
    * only its node kept: nothing outside a rebuild ever touched a row again.
    */
   private final List<MissionRow> rows = new ArrayList<>();
+
   private MissionId lastSelectedId;
 
   public MissionListView(float width, float height) {

@@ -107,8 +107,8 @@ final class PhaseMarkers {
 
   /**
    * The cluster whose glyph is under the given track x, if any. Used by the widget to give a
-   * marker's content priority over the bar's on hover, and to seek to a group's first transition
-   * on click (§9.1).
+   * marker's content priority over the bar's on hover, and to seek to a group's first transition on
+   * click (§9.1).
    *
    * @param trackX an x in the widget's local space
    * @return the cluster hit, or {@code null}
@@ -166,8 +166,7 @@ final class PhaseMarkers {
     label.setTextVAlignment(VAlignment.Center);
     label.setPreferredSize(new Vector3f(COUNT_LABEL_WIDTH, COUNT_LABEL_HEIGHT, 0f));
     label.setSize(label.getPreferredSize());
-    label.setLocalTranslation(
-        centreX + MARKER_WIDTH / 2f + COUNT_LABEL_GAP, -bandTop, z);
+    label.setLocalTranslation(centreX + MARKER_WIDTH / 2f + COUNT_LABEL_GAP, -bandTop, z);
     parent.attachChild(label);
     elements.add(label);
   }

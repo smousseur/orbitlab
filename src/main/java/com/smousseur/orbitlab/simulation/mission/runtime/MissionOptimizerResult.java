@@ -1,7 +1,6 @@
 package com.smousseur.orbitlab.simulation.mission.runtime;
 
 import com.smousseur.orbitlab.simulation.mission.optimizer.OptimizationResult;
-
 import java.util.Map;
 import java.util.Optional;
 

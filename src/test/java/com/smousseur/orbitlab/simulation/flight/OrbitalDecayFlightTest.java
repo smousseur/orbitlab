@@ -50,8 +50,8 @@ import org.orekit.utils.TimeStampedPVCoordinates;
  * <p><b>Why the fixture starts in orbit instead of recomposing an existing profile</b> (spec §1.1).
  * Every terrestrial mission starts on the launch pad, so giving {@code LEO-400} an atmosphere would
  * mean flying an ascent from 0 km: Harris-Priester throws below 100 km, and the regime below 200 km
- * costs up to 982 497 integration steps for a single day (L0 §2.2). Both belong to PHY-2, which owns
- * the altitude bound. This fixture never goes below 200 km.
+ * costs up to 982 497 integration steps for a single day (L0 §2.2). Both belong to PHY-2, which
+ * owns the altitude bound. This fixture never goes below 200 km.
  *
  * <p><b>Two things had to be measured before this fixture could assert anything</b>, and both were
  * found by sweeping the coast duration against the analytic expression — with ρ sampled on an
@@ -69,15 +69,16 @@ import org.orekit.utils.TimeStampedPVCoordinates;
  * <p><b>a. The decay is read on mean elements, not osculating ones.</b> The osculating ratio drifts
  * with duration while the mean ratio does not, and that signature names the cause: the drag-on
  * flight runs ahead of its drag-off twin — tens of kilometres of along-track drift after a day — so
- * the two sample the J2 short-period term of {@code a} at different arguments of latitude. That term
- * has a 6 km amplitude here, ten times the signal, and it inflated the osculating difference by 14 %
- * at 24 h while leaving a single revolution untouched. {@link OrbitElements#mean(Orbit)} removes it.
+ * the two sample the J2 short-period term of {@code a} at different arguments of latitude. That
+ * term has a 6 km amplitude here, ten times the signal, and it inflated the osculating difference
+ * by 14 % at 24 h while leaving a single revolution untouched. {@link OrbitElements#mean(Orbit)}
+ * removes it.
  *
  * <p><b>b. ρ is averaged along the trajectory actually flown</b>, sampled on the drag-free twin,
- * rather than along an unperturbed Keplerian orbit. A Keplerian sample reads 17 % low, near-uniformly
- * over the sweep, because the real orbit's altitude history under J2 is not the circle it started on
- * and the density scale height here is only about 40 km. With both corrections the analytic
- * expression lands within 1 % of the flown decay at every duration of the sweep.
+ * rather than along an unperturbed Keplerian orbit. A Keplerian sample reads 17 % low,
+ * near-uniformly over the sweep, because the real orbit's altitude history under J2 is not the
+ * circle it started on and the density scale height here is only about 40 km. With both corrections
+ * the analytic expression lands within 1 % of the flown decay at every duration of the sweep.
  *
  * <p>The drag-off run is therefore not decoration: it is the zero of the measurement, and the path
  * the density is read along.
@@ -104,8 +105,8 @@ class OrbitalDecayFlightTest {
   /**
    * Half-width of the band the flown decay must land in, around the analytic secular rate.
    *
-   * <p><b>The physical width of the target, not the precision of the fixture.</b> Measured here, the
-   * flown decay sits 0.9 % over the analytic expression on Harris-Priester and 1.0 % over it on
+   * <p><b>The physical width of the target, not the precision of the fixture.</b> Measured here,
+   * the flown decay sits 0.9 % over the analytic expression on Harris-Priester and 1.0 % over it on
    * NRLMSISE-00, and stays within 1 % at every duration of the sweep in the class javadoc. What the
    * band leaves room for is a first-order secular formula applied to a real J2 orbit, at another
    * epoch and another catalogue cross-section — not room for a wrong wiring, which cannot land
@@ -120,9 +121,9 @@ class OrbitalDecayFlightTest {
    * Floor on the 800 km drag-on / drag-off gap, in metres of semi-major axis.
    *
    * <p><b>Why a lower bound at all</b> (spec §1.2): the découpage's "under 0.1 %" is a net four
-   * orders of magnitude wider than the signal, so on its own it also passes when no drag was mounted
-   * whatsoever — the one failure mode L1 was built to exclude. Measured here: 0.281 m of decay over
-   * 24 h against an analytic 0.282 m. The floor is a third of that.
+   * orders of magnitude wider than the signal, so on its own it also passes when no drag was
+   * mounted whatsoever — the one failure mode L1 was built to exclude. Measured here: 0.281 m of
+   * decay over 24 h against an analytic 0.282 m. The floor is a third of that.
    */
   private static final double HIGH_ALTITUDE_FLOOR_M = 0.09;
 
@@ -131,7 +132,9 @@ class OrbitalDecayFlightTest {
 
   private static AbsoluteDate epoch;
 
-  /** One flight per (altitude, model): the tests share them rather than re-flying the same coast. */
+  /**
+   * One flight per (altitude, model): the tests share them rather than re-flying the same coast.
+   */
   private static final Map<String, Double> DRAG_ON = new HashMap<>();
 
   private static final Map<Double, DragFreeFlight> DRAG_FREE = new HashMap<>();
@@ -305,8 +308,8 @@ class OrbitalDecayFlightTest {
   }
 
   /**
-   * The secular decay of a circular orbit over the coast: {@code 2π·ρ·a²/B} per revolution, with the
-   * co-rotation of the atmosphere taken out of the relative speed.
+   * The secular decay of a circular orbit over the coast: {@code 2π·ρ·a²/B} per revolution, with
+   * the co-rotation of the atmosphere taken out of the relative speed.
    *
    * <p>ρ is the mean along the drag-free flight — see the class javadoc for why a Keplerian sample
    * reads 17 % low.
@@ -362,9 +365,9 @@ class OrbitalDecayFlightTest {
       double meanSemiMajorAxis, Map<AtmosphereModel, Double> meanDensity) {}
 
   /**
-   * A mission that is already in orbit. Everything else about it is real: the vehicle comes from the
-   * catalog, the stage is a production {@code CoastingStage}, and the atmosphere is read off the
-   * mission exactly as {@code MissionStage.flightContext} reads it in flight.
+   * A mission that is already in orbit. Everything else about it is real: the vehicle comes from
+   * the catalog, the stage is a production {@code CoastingStage}, and the atmosphere is read off
+   * the mission exactly as {@code MissionStage.flightContext} reads it in flight.
    */
   private static final class ParkingMission extends Mission {
     private final SpacecraftState initial;

@@ -145,8 +145,7 @@ public final class PropellantBudget {
       double launchLatitudeDeg,
       double planeChangeDeg,
       double launchAzimuth) {
-    double dvApogee =
-        apogeeCircularizationDeltaV(parkingAltitude, targetAltitude, planeChangeDeg);
+    double dvApogee = apogeeCircularizationDeltaV(parkingAltitude, targetAltitude, planeChangeDeg);
 
     double akmLoad = 0.0;
     if (payload.akmPropellantCapacity() > 0) {
@@ -225,13 +224,13 @@ public final class PropellantBudget {
    * <p><b>The assist is signed and projected on the azimuth</b> (spec {@code
    * docs/earth-orbit/01-mission-terre-parametrable.md} §7). It used to be {@code 465 · cos φ}, the
    * full eastward entrainment, credited whatever the heading — correct due east and wrong
-   * everywhere else. A polar launch from Kourou uses none of it (the entrainment is perpendicular to
-   * the flight), and a retrograde sun-synchronous one <em>pays</em> for it. Getting this wrong is
-   * not a margin detail: on an inverse-Tsiolkovsky budget, the 529 m/s error of an SSO from Kourou
-   * is tonnes on the upper-stage load.
+   * everywhere else. A polar launch from Kourou uses none of it (the entrainment is perpendicular
+   * to the flight), and a retrograde sun-synchronous one <em>pays</em> for it. Getting this wrong
+   * is not a margin detail: on an inverse-Tsiolkovsky budget, the 529 m/s error of an SSO from
+   * Kourou is tonnes on the upper-stage load.
    *
-   * <p>What is <em>not</em> in here is the steering loss of turning the plane during the climb (spec
-   * §4.1). It has no closed form; {@link #SAFETY_MARGIN} absorbs it, and {@code
+   * <p>What is <em>not</em> in here is the steering loss of turning the plane during the climb
+   * (spec §4.1). It has no closed form; {@link #SAFETY_MARGIN} absorbs it, and {@code
    * AscentPlaneControlTest} measures it. No value is hard-coded until it is measured.
    *
    * @param targetAltitude the target orbit altitude (m)

@@ -1,7 +1,6 @@
 package com.smousseur.orbitlab.simulation.orbit.config;
 
 import com.smousseur.orbitlab.core.SolarSystemBody;
-
 import java.util.EnumMap;
 import java.util.Objects;
 

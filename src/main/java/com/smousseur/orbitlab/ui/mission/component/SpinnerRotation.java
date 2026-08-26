@@ -8,8 +8,8 @@ package com.smousseur.orbitlab.ui.mission.component;
  * <p>Both constants come from the icon rather than from taste: {@code icon-spinner.png} carries
  * twelve spokes spaced 30 degrees apart, so a step of one spoke is the only rotation that lands the
  * drawing back on itself, and twelve steps at ten per second give the conventional revolution in
- * 1.2 s. The direction is measured too: the comet's tail trails counter-clockwise from its brightest
- * spoke, so the icon reads as turning clockwise, which is a negative angle about Z.
+ * 1.2 s. The direction is measured too: the comet's tail trails counter-clockwise from its
+ * brightest spoke, so the icon reads as turning clockwise, which is a negative angle about Z.
  */
 public final class SpinnerRotation {
 

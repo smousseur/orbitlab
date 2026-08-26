@@ -6,8 +6,8 @@ import com.jme3.input.InputManager;
 import com.jme3.input.KeyInput;
 import com.jme3.input.controls.ActionListener;
 import com.jme3.input.controls.KeyTrigger;
-import com.smousseur.orbitlab.app.SimulationClock;
 import com.smousseur.orbitlab.app.ApplicationContext;
+import com.smousseur.orbitlab.app.SimulationClock;
 import java.util.Objects;
 import org.orekit.time.AbsoluteDate;
 

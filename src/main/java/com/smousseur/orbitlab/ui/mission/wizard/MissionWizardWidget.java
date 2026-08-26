@@ -1,13 +1,5 @@
 package com.smousseur.orbitlab.ui.mission.wizard;
 
-import com.smousseur.orbitlab.simulation.mission.MissionType;
-import com.smousseur.orbitlab.simulation.mission.OptimizationType;
-import com.smousseur.orbitlab.simulation.mission.context.MissionContext;
-import com.smousseur.orbitlab.simulation.mission.operation.MissionComposer;
-import com.smousseur.orbitlab.simulation.mission.operation.MissionFactory;
-import com.smousseur.orbitlab.ui.form.FormStyles;
-import com.smousseur.orbitlab.ui.form.ModalBackdrop;
-
 import com.jme3.math.Vector3f;
 import com.jme3.renderer.Camera;
 import com.jme3.scene.Node;
@@ -18,8 +10,15 @@ import com.simsilica.lemur.component.QuadBackgroundComponent;
 import com.simsilica.lemur.component.TbtQuadBackgroundComponent;
 import com.simsilica.lemur.core.GuiComponent;
 import com.smousseur.orbitlab.app.ApplicationContext;
+import com.smousseur.orbitlab.simulation.mission.MissionType;
+import com.smousseur.orbitlab.simulation.mission.OptimizationType;
+import com.smousseur.orbitlab.simulation.mission.context.MissionContext;
+import com.smousseur.orbitlab.simulation.mission.operation.MissionComposer;
+import com.smousseur.orbitlab.simulation.mission.operation.MissionFactory;
 import com.smousseur.orbitlab.ui.UiKit;
 import com.smousseur.orbitlab.ui.UiLayers;
+import com.smousseur.orbitlab.ui.form.FormStyles;
+import com.smousseur.orbitlab.ui.form.ModalBackdrop;
 import com.smousseur.orbitlab.ui.mission.wizard.step.*;
 import java.util.EnumMap;
 import java.util.LinkedHashMap;
@@ -155,7 +154,8 @@ public class MissionWizardWidget implements AutoCloseable {
             missionContext, stepLaunchSite::currentLatitude, stepLaunchSite::currentSite);
     stepPanels.put(MissionWizardStep.PARAMETERS, stepParameters.getNode());
     stepMissionType =
-        new StepMissionType(missionContext, initialProfile(missionContext, initialValues), editMode);
+        new StepMissionType(
+            missionContext, initialProfile(missionContext, initialValues), editMode);
     stepPanels.put(MissionWizardStep.MISSION, stepMissionType.getNode());
     stepParameters.setProfile(stepMissionType.selectedProfile());
     stepMissionType.setOnProfileSelected(stepParameters::setProfile);
@@ -251,10 +251,10 @@ public class MissionWizardWidget implements AutoCloseable {
    * a bad duration should see both fields marked at once rather than discover the second only after
    * fixing the first.
    *
-   * <p>Marking is not enough to be seen, though: the step has two pages and mounts one at a time, so
-   * a refusal is also revealed on the page that carries it. Without that, refusing a field of the
-   * fields page while the planning page is up leaves nothing on screen changed and the Next button
-   * looking dead.
+   * <p>Marking is not enough to be seen, though: the step has two pages and mounts one at a time,
+   * so a refusal is also revealed on the page that carries it. Without that, refusing a field of
+   * the fields page while the planning page is up leaves nothing on screen changed and the Next
+   * button looking dead.
    */
   private boolean parametersRefused() {
     Optional<String> dateError = stepParameters.validateLaunchDate();
@@ -275,14 +275,14 @@ public class MissionWizardWidget implements AutoCloseable {
    *
    * <p><b>Why here and not at creation.</b> Some refusals depend on the whole form: a target beyond
    * the ascent's reach needs an upper stage that holds the coast to apogee, or a payload whose kick
-   * motor takes the burn over — so the target chosen at step 3 is only refutable once the vehicle is
-   * picked at step 4 (spec {@code docs/earth-orbit/02-wizard-orbites-terrestres.md} §6). Left to
+   * motor takes the burn over — so the target chosen at step 3 is only refutable once the vehicle
+   * is picked at step 4 (spec {@code docs/earth-orbit/02-wizard-orbites-terrestres.md} §6). Left to
    * {@code MissionWizardAppState}, the exception lands in a log line with the wizard already closed
    * and no mission created, which is indistinguishable from the application ignoring the user.
    *
-   * <p>Nothing is propagated: composing resolves the catalogs, sizes the propellant analytically and
-   * assembles the stages. The mission built here is thrown away — the submit path rebuilds it, from
-   * the same values.
+   * <p>Nothing is propagated: composing resolves the catalogs, sizes the propellant analytically
+   * and assembles the stages. The mission built here is thrown away — the submit path rebuilds it,
+   * from the same values.
    *
    * @param values the aggregated form values
    * @return the refusal, worded by the model, or empty when the mission composes
@@ -327,8 +327,8 @@ public class MissionWizardWidget implements AutoCloseable {
   }
 
   /**
-   * The card the wizard opens on: the one the edited mission was built from, or the mission type the
-   * context currently selects when creating.
+   * The card the wizard opens on: the one the edited mission was built from, or the mission type
+   * the context currently selects when creating.
    *
    * <p>Reopening reads the profile the prefill derived from the spec — no spec component carries it
    * (spec {@code docs/earth-orbit/02-wizard-orbites-terrestres.md} §2.1) — and falls back on the

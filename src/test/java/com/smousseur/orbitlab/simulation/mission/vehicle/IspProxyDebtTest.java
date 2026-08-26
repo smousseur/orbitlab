@@ -18,8 +18,8 @@ import org.junit.jupiter.api.Test;
  *
  * <p>The catalog's two first stages carry a "mean-trajectory" ISP instead of a vacuum one, and say
  * so in their own comments: Falcon Heavy S1 flies 296 s inside a [282 s at sea level, 311 s in
- * vacuum] bracket, Ariane 62 S1 flies 300 s inside [271 s, 331 s]. With no atmosphere modelled, that
- * deficit is what stands in for the losses of a real ascent.
+ * vacuum] bracket, Ariane 62 S1 flies 300 s inside [271 s, 331 s]. With no atmosphere modelled,
+ * that deficit is what stands in for the losses of a real ascent.
  *
  * <p><b>The debt is the Δv that convention is quietly absorbing</b>: {@code g₀·ΔIsp·ln R} over the
  * first stage's own mass ratio. PHY-2 owes it back the day it models the drag and restores a vacuum
@@ -27,17 +27,17 @@ import org.junit.jupiter.api.Test;
  * losses the impact study attributes to a heavy launcher. It says whether the proxy pays roughly
  * what it claims to pay, or nothing like it.
  *
- * <p><b>The mass ratio is read off the stack {@code PropellantBudget} actually sizes</b> rather than
- * off tank capacities. For the first stage the two turn out to coincide — the budget sizes top-down
- * from the payload and leaves the booster full, so S1 flies its 1 233 t (434 t on Ariane 62) — but
- * the figure is computed from the sized stack all the same, so it follows the catalog if a later lot
- * changes how the boosters are loaded.
+ * <p><b>The mass ratio is read off the stack {@code PropellantBudget} actually sizes</b> rather
+ * than off tank capacities. For the first stage the two turn out to coincide — the budget sizes
+ * top-down from the payload and leaves the booster full, so S1 flies its 1 233 t (434 t on Ariane
+ * 62) — but the figure is computed from the sized stack all the same, so it follows the catalog if
+ * a later lot changes how the boosters are loaded.
  *
  * <p><b>Measured 2026-08-21: 408 m/s on Falcon Heavy S1, 671 m/s on Ariane 62 S1.</b> Both sit
- * <em>above</em> the 100–300 m/s of ascent drag the impact study attributes to a heavy launcher, and
- * Ariane 62 more than doubles its upper bound — the wider its sea-level-to-vacuum bracket, the more
- * the mean-trajectory convention absorbs. PHY-2 therefore does not simply hand back what the drag
- * will cost: on these two entries the proxy is paying for more than drag alone.
+ * <em>above</em> the 100–300 m/s of ascent drag the impact study attributes to a heavy launcher,
+ * and Ariane 62 more than doubles its upper bound — the wider its sea-level-to-vacuum bracket, the
+ * more the mean-trajectory convention absorbs. PHY-2 therefore does not simply hand back what the
+ * drag will cost: on these two entries the proxy is paying for more than drag alone.
  *
  * <p>No propagation, no Orekit data — this is arithmetic on the catalog.
  */

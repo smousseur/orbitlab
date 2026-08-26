@@ -17,8 +17,8 @@ import org.orekit.time.AbsoluteDate;
  * @param altitudeMeters the geodetic altitude above the reference shape of {@code arc}'s body — not
  *     necessarily the Earth's
  * @param arc the frame {@code position} and {@code velocity} are expressed in (PHY-4 / L3, spec
- *     {@code docs/multi-corps/05-conception-L3.md} §2). Carried <b>on the point</b> rather than in a
- *     side table because four consumers hold a bare point and each needs the frame: {@code
+ *     {@code docs/multi-corps/05-conception-L3.md} §2). Carried <b>on the point</b> rather than in
+ *     a side table because four consumers hold a bare point and each needs the frame: {@code
  *     FloatingOriginAppState}, the spacecraft anchor, {@code CameraTransitionAppState} and the
  *     telemetry widget. Reading it here means they read the same field of the same object, which
  *     turns the bit-for-bit agreement they depend on from a coincidence into a property.

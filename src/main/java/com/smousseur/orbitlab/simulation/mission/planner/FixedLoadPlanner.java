@@ -3,7 +3,6 @@ package com.smousseur.orbitlab.simulation.mission.planner;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.progress.MissionProgressListener;
 import com.smousseur.orbitlab.simulation.mission.runtime.MissionOptimizer;
-
 import java.util.Objects;
 
 /**

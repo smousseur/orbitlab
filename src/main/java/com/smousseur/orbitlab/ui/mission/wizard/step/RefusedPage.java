@@ -4,8 +4,8 @@ package com.smousseur.orbitlab.ui.mission.wizard.step;
  * Which page of the parameters step a refusal has to reveal.
  *
  * <p>Extracted as a plain function so the choice can be exercised without an initialised {@code
- * AssetManager} — the step itself cannot be built headless, and this is the only decision in it. The
- * same split as {@code MissionDisplayPanelRules} and {@code RaanEntry}.
+ * AssetManager} — the step itself cannot be built headless, and this is the only decision in it.
+ * The same split as {@code MissionDisplayPanelRules} and {@code RaanEntry}.
  */
 final class RefusedPage {
 

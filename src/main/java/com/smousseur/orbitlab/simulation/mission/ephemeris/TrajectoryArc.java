@@ -39,9 +39,9 @@ public record TrajectoryArc(SolarSystemBody body, Frame frame) {
   /**
    * The arc a stage's samples belong to, derived from what that stage declares. This is the one
    * place the pairing <em>central body ↔ frame the positions are actually in</em> is stated, which
-   * matters because nothing else checks it: {@code OrekitService.createOptimizationPropagator} never
-   * sets a propagation frame, so Orekit takes it from the initial orbit (spec L3 §1). An arc built
-   * from the stage's own context is the closest a sample can get to saying what it flew in.
+   * matters because nothing else checks it: {@code OrekitService.createOptimizationPropagator}
+   * never sets a propagation frame, so Orekit takes it from the initial orbit (spec L3 §1). An arc
+   * built from the stage's own context is the closest a sample can get to saying what it flew in.
    *
    * @param context the gravitational context of the stage that produced the samples
    * @return the matching arc
@@ -54,12 +54,13 @@ public record TrajectoryArc(SolarSystemBody body, Frame frame) {
   /**
    * The Earth arc: GCRF, centred on the Earth. Every point of every mission carries it until L4.
    *
-   * <p><b>Resolved from {@link FramesFactory} and not from {@code GravitationalContext.earth()}</b>,
-   * although that would state the pairing once instead of twice. Four of the five test classes that
-   * build ephemeris points never initialise {@code OrekitService}, and the Earth context resolves
-   * ITRF and the WGS84 ellipsoid — both of which need the data archive. GCRF does not: it is
-   * EME2000 plus a fixed frame bias. The price is a second statement of the Earth pairing, and it is
-   * paid by a one-line test asserting the two agree (spec L3 §2.1).
+   * <p><b>Resolved from {@link FramesFactory} and not from {@code
+   * GravitationalContext.earth()}</b>, although that would state the pairing once instead of twice.
+   * Four of the five test classes that build ephemeris points never initialise {@code
+   * OrekitService}, and the Earth context resolves ITRF and the WGS84 ellipsoid — both of which
+   * need the data archive. GCRF does not: it is EME2000 plus a fixed frame bias. The price is a
+   * second statement of the Earth pairing, and it is paid by a one-line test asserting the two
+   * agree (spec L3 §2.1).
    *
    * <p>Holder pattern rather than a {@code static final} field, for the reason {@code
    * GravitationalContext} gives: the frame is built by Orekit, so resolution is deferred to first
@@ -103,11 +104,11 @@ public record TrajectoryArc(SolarSystemBody body, Frame frame) {
    * word: a translation has nothing to round on the position. That is also why the two directions
    * compose back to the identity rather than to something merely close.
    *
-   * <p>Frames are compared by <b>reference</b>, not by {@code equals}. Both come from the same cache
-   * in {@code OrekitService}, so a same-body conversion returns the argument untouched instead of
-   * pushing it through an identity {@code Transform} — which is what keeps a single-arc trajectory
-   * bit-for-bit unconverted (spec {@code docs/multi-corps/07-conception-L5.md} §3.4, and the same
-   * discipline as L4 §3.5).
+   * <p>Frames are compared by <b>reference</b>, not by {@code equals}. Both come from the same
+   * cache in {@code OrekitService}, so a same-body conversion returns the argument untouched
+   * instead of pushing it through an identity {@code Transform} — which is what keeps a single-arc
+   * trajectory bit-for-bit unconverted (spec {@code docs/multi-corps/07-conception-L5.md} §3.4, and
+   * the same discipline as L4 §3.5).
    *
    * @param position a position of this arc, in metres
    * @param date the date that position was sampled at, which decides where the two centres are

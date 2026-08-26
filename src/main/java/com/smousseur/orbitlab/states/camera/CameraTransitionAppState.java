@@ -23,7 +23,6 @@ import java.util.Objects;
 import java.util.function.Supplier;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.hipparchus.geometry.euclidean.threed.Vector3D;
 
 /**
  * Animates the camera between focus states instead of cutting to them.
@@ -355,8 +354,7 @@ public final class CameraTransitionAppState extends BaseAppState {
     MissionEphemerisPoint point = ephemeris.displayPointAt(context.clock().now());
     SolarSystemBody arcBody = point.arc().body();
     Vector3f planetUnits =
-        JmeVectorAdapter.toJmeBodyRelativePosition(
-            point.position(), RenderContext.planet(arcBody));
+        JmeVectorAdapter.toJmeBodyRelativePosition(point.position(), RenderContext.planet(arcBody));
     return bodyPivot(arcBody)
         .addLocal(planetUnits.divideLocal((float) RenderContext.ratioSolarToPlanetPerUnit()));
   }

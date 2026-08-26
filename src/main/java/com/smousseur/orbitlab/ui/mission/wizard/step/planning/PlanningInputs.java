@@ -8,13 +8,13 @@ import java.util.Objects;
  * What the form could hand the planner, or the reason it could not.
  *
  * <p><b>Why a gap and not a bare null.</b> The parameters step is the only layer that knows
- * <em>which</em> input failed — the pad, the target orbit, the node — and a null request throws that
- * knowledge away on the way to {@link PlanningModel}, which then has to guess at a single reason for
- * every absence. Guessing showed the launch site as unreadable when what was actually refused was an
- * inclination the pad cannot reach, which is a false statement on screen.
+ * <em>which</em> input failed — the pad, the target orbit, the node — and a null request throws
+ * that knowledge away on the way to {@link PlanningModel}, which then has to guess at a single
+ * reason for every absence. Guessing showed the launch site as unreadable when what was actually
+ * refused was an inclination the pad cannot reach, which is a false statement on screen.
  *
- * <p><b>It is also the memoisation key</b>, and that is why the gap travels with the request instead
- * of beside it: one {@code equals} decides whether anything moved, exactly as {@link
+ * <p><b>It is also the memoisation key</b>, and that is why the gap travels with the request
+ * instead of beside it: one {@code equals} decides whether anything moved, exactly as {@link
  * EarthLaunchWindowRequest}'s does for the six numbers inside it.
  *
  * <p>The wording of each gap stays in {@link PlanningModel}: the axis caption is a clipped,
@@ -39,7 +39,9 @@ public record PlanningInputs(EarthLaunchWindowRequest request, Gap gap) {
     /** One of the pad's three numbers does not read, so no window can be sited. */
     NO_SITE,
 
-    /** The pad reads, but the target orbit does not: an unreadable entry, or a plane out of reach. */
+    /**
+     * The pad reads, but the target orbit does not: an unreadable entry, or a plane out of reach.
+     */
     NO_TARGET
   }
 

@@ -20,18 +20,18 @@ import org.orekit.utils.Constants;
  * docs/multi-corps/08-conception-L6.md} §3.3): {@link TranslunarInjectionPlan} solved on entry, its
  * ΔV applied at once, then a short settling coast.
  *
- * <p><b>It takes the shape of {@link StageSeparationStage}, not that of the analytic burn stages</b>,
- * and the three consequences are the reason:
+ * <p><b>It takes the shape of {@link StageSeparationStage}, not that of the analytic burn
+ * stages</b>, and the three consequences are the reason:
  *
  * <ul>
- *   <li>{@code propagateStandalone} inherits the default {@code enter(...)}, so the optimize pass and
- *       the ephemeris pass apply the same impulse through the same code, with nothing to keep in
- *       sync;
+ *   <li>{@code propagateStandalone} inherits the default {@code enter(...)}, so the optimize pass
+ *       and the ephemeris pass apply the same impulse through the same code, with nothing to keep
+ *       in sync;
  *   <li>the settling coast gives the stage a {@code configuredEndDate}, which is the only place in
  *       this mission where {@code MissionEphemerisGenerator}'s truncation check has any purchase —
  *       a trailing coast sized by the horizon reports no shortfall by construction (spec §1.9);
- *   <li>{@link #isPropulsive()} stays {@code true}, so the performance report derives the ΔV from the
- *       mass delta rather than reading the impulse as a jettison.
+ *   <li>{@link #isPropulsive()} stays {@code true}, so the performance report derives the ΔV from
+ *       the mass delta rather than reading the impulse as a jettison.
  * </ul>
  *
  * <p><b>It declares no sphere-of-influence transition</b>, and could not: a propulsive stage is
@@ -42,8 +42,8 @@ public class TranslunarInjectionStage extends MissionStage {
   private static final Logger logger = LogManager.getLogger(TranslunarInjectionStage.class);
 
   /**
-   * Settling coast after the impulse (s). Short, and its role is structural rather than physical: it
-   * gives the stage a cutoff to be judged against and a visible phase in the trail, at the 1 s
+   * Settling coast after the impulse (s). Short, and its role is structural rather than physical:
+   * it gives the stage a cutoff to be judged against and a visible phase in the trail, at the 1 s
    * propulsive sampling step.
    */
   public static final double SETTLING_COAST_SECONDS = 60.0;

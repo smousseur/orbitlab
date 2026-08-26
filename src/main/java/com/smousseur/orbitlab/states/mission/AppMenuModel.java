@@ -15,8 +15,8 @@ import java.util.Set;
  * MissionDisplayPanelRules} is for the display panel.
  *
  * <p>The model does not own the truth behind a check mark — the widget the entry commands does. The
- * owning app state pushes that state in through {@link #setChecked(String, boolean)}; the model only
- * remembers it so the view has a single place to read from.
+ * owning app state pushes that state in through {@link #setChecked(String, boolean)}; the model
+ * only remembers it so the view has a single place to read from.
  */
 public final class AppMenuModel {
 

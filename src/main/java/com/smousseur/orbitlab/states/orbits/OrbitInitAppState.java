@@ -4,14 +4,11 @@ import com.jme3.app.Application;
 import com.jme3.app.state.BaseAppState;
 import com.jme3.scene.Geometry;
 import com.smousseur.orbitlab.app.ApplicationContext;
-import com.smousseur.orbitlab.core.OrbitlabException;
 import com.smousseur.orbitlab.core.OrbitlabPath;
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.engine.scene.OrbitLineFactory;
 import com.smousseur.orbitlab.engine.scene.PlanetColors;
 import com.smousseur.orbitlab.engine.scene.graph.SceneGraph;
-import org.hipparchus.geometry.euclidean.threed.Vector3D;
-
 import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
@@ -22,6 +19,7 @@ import java.util.EnumSet;
 import java.util.List;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.hipparchus.geometry.euclidean.threed.Vector3D;
 
 /**
  * Application state that loads precomputed orbital path data from disk and builds the initial orbit

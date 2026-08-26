@@ -88,8 +88,7 @@ class ScenarioReplayTest extends AbstractTrajectoryOptimizerTest {
   void replayReachesTheOrbitTheOptimizationFound() {
     MissionSpec spec = leoSpec();
 
-    MissionPlan optimized =
-        new FixedLoadPlanner(compose(spec), MAX_EVALUATIONS, TEST_SEED).plan();
+    MissionPlan optimized = new FixedLoadPlanner(compose(spec), MAX_EVALUATIONS, TEST_SEED).plan();
     MissionSolutions solutions =
         MissionSolutions.from(optimized.computation().optimizerResult(), null);
 
@@ -130,8 +129,7 @@ class ScenarioReplayTest extends AbstractTrajectoryOptimizerTest {
   @Test
   void replayedStagesReportNoEvaluation() {
     MissionSpec spec = leoSpec();
-    MissionPlan optimized =
-        new FixedLoadPlanner(compose(spec), MAX_EVALUATIONS, TEST_SEED).plan();
+    MissionPlan optimized = new FixedLoadPlanner(compose(spec), MAX_EVALUATIONS, TEST_SEED).plan();
     MissionSolutions solutions =
         MissionSolutions.from(optimized.computation().optimizerResult(), null);
 

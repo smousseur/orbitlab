@@ -2,7 +2,6 @@ package com.smousseur.orbitlab.tools.ephemerisgen;
 
 import com.smousseur.orbitlab.core.OrbitlabPath;
 import com.smousseur.orbitlab.core.SolarSystemBody;
-
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;

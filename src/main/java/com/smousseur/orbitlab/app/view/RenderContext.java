@@ -1,7 +1,6 @@
 package com.smousseur.orbitlab.app.view;
 
 import com.smousseur.orbitlab.core.SolarSystemBody;
-
 import java.util.Objects;
 import java.util.Optional;
 

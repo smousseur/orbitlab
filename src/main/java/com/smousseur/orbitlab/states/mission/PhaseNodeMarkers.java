@@ -17,7 +17,6 @@ import com.smousseur.orbitlab.simulation.mission.ephemeris.PhaseRun;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.TrajectoryPolyline;
 import java.nio.FloatBuffer;
 import java.util.List;
-import java.util.Objects;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 
 /**
@@ -81,8 +80,8 @@ final class PhaseNodeMarkers {
    * @param renderContext the context the line was just converted with — passed rather than held, so
    *     a marker cannot be produced by a different context than the ribbon it sits on
    * @param renderBody the body the vertices are read about, taken from the ribbon's own derivation
-   *     rather than re-derived here, for the reason {@code translation} is passed in: a marker built
-   *     from a second computation of the same thing drifts off the trace by the difference
+   *     rather than re-derived here, for the reason {@code translation} is passed in: a marker
+   *     built from a second computation of the same thing drifts off the trace by the difference
    */
   void update(
       TrajectoryPolyline trail,

@@ -22,15 +22,15 @@ import org.orekit.utils.Constants;
 /**
  * Contracts on the transfer cost function.
  *
- * <p>Locks the depletion contract: a candidate that burns its stage to flame-out
- * must grade <em>decisively</em> worse than one reaching the same orbit with a real residual left.
+ * <p>Locks the depletion contract: a candidate that burns its stage to flame-out must grade
+ * <em>decisively</em> worse than one reaching the same orbit with a real residual left.
  *
  * <p>Measured on the 550 km LEO run of 2026-08-22, where the contract did not hold: five λ
  * evaluations out of seven converged to a cost of {@code 5.000000xxx e-3} — the I7 term pinned at
- * its {@code W_PROPELLANT} cap plus an orbital part of ~7e-10 — i.e. exact flame-out with a
- * perfect osculating orbit, against 4.44e-3 for the sober solution. A 13 % edge is not enough for
- * CMA-ES to prefer the sober basin reliably, and the outer λ-bisection reads the flame-out as a
- * zero residual: λ=0.7375 came back feasible (residual 16.9 %) while λ=0.7156 came back infeasible
+ * its {@code W_PROPELLANT} cap plus an orbital part of ~7e-10 — i.e. exact flame-out with a perfect
+ * osculating orbit, against 4.44e-3 for the sober solution. A 13 % edge is not enough for CMA-ES to
+ * prefer the sober basin reliably, and the outer λ-bisection reads the flame-out as a zero
+ * residual: λ=0.7375 came back feasible (residual 16.9 %) while λ=0.7156 came back infeasible
  * (residual 0 %), on a load where a sober trajectory exists.
  *
  * <p>The two candidates below fly the same arrival orbit, so the orbital part of the cost is a
@@ -45,8 +45,8 @@ public class TransferProblemCostTest {
   private static final double TRANSFER_ENTRY_MASS = 60_709.0;
 
   /**
-   * How much worse flame-out must grade than the sober candidate. An order of magnitude puts it
-   * out of reach of the exploration noise that made the two basins interchangeable.
+   * How much worse flame-out must grade than the sober candidate. An order of magnitude puts it out
+   * of reach of the exploration noise that made the two basins interchangeable.
    */
   private static final double MIN_REJECTION_RATIO = 10.0;
 
@@ -84,7 +84,9 @@ public class TransferProblemCostTest {
     SpacecraftState entry = handOffState();
     TransferProblem problem = problemFor(entry);
     SpacecraftState arrival =
-        arrivalState(entry, depletionFloorFor(entry) + 0.5 * (TRANSFER_ENTRY_MASS - depletionFloorFor(entry)));
+        arrivalState(
+            entry,
+            depletionFloorFor(entry) + 0.5 * (TRANSFER_ENTRY_MASS - depletionFloorFor(entry)));
 
     double cost = problem.computeCost(arrival);
     TransferProblem.CostBreakdown breakdown = problem.breakdown(arrival);

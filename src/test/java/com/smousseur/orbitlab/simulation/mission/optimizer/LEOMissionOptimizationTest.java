@@ -4,14 +4,15 @@ import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.mission.operation.EarthOrbitMission;
 import com.smousseur.orbitlab.simulation.mission.runtime.MissionComputeResult;
 import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchConfiguration;
-import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Launchers;
-import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Payloads;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropellantBudget;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Spacecraft;
 import com.smousseur.orbitlab.simulation.mission.vehicle.StagePropellant;
+import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Launchers;
+import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Payloads;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -43,7 +44,8 @@ public class LEOMissionOptimizationTest extends AbstractTrajectoryOptimizerTest 
   @ParameterizedTest(name = "perigee={0}m, apogee={1}m")
   @CsvSource({"300_000, 600_000", "600_000, 800_000", "200_000, 1_000_000"})
   void testEllipticMissions(double perigeeAltitude, double apogeeAltitude) {
-    EarthOrbitMission mission = new EarthOrbitMission("LEO mission", perigeeAltitude, apogeeAltitude);
+    EarthOrbitMission mission =
+        new EarthOrbitMission("LEO mission", perigeeAltitude, apogeeAltitude);
     testMission(mission, perigeeAltitude, apogeeAltitude);
   }
 
@@ -65,6 +67,7 @@ public class LEOMissionOptimizationTest extends AbstractTrajectoryOptimizerTest 
    * measures S2 alone.
    */
   @Test
+  @EnabledIfSystemProperty(named = "orbitlab.slowTests", matches = "true")
   void testFalconHeavyBudgetLoads() {
     Spacecraft payload = Payloads.EARTH_OBSERVATION_SAT.toSpacecraft(10_000, 0.0);
     double[] loads =

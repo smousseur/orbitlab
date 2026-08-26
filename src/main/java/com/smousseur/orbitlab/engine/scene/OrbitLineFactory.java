@@ -12,10 +12,9 @@ import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.engine.AssetFactory;
 import com.smousseur.orbitlab.simulation.orbit.OrbitPath;
 import com.smousseur.orbitlab.simulation.source.EphemerisSource;
+import com.smousseur.orbitlab.simulation.source.EphemerisSourceRegistry;
 import java.util.List;
 import java.util.Objects;
-
-import com.smousseur.orbitlab.simulation.source.EphemerisSourceRegistry;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.orekit.time.AbsoluteDate;
 

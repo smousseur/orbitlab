@@ -150,9 +150,10 @@ public final class MissionEphemeris {
    *
    * <p><b>Across an arc boundary nothing is interpolated at all</b> (PHY-4 / L3, spec {@code
    * docs/multi-corps/05-conception-L3.md} §3.3). A cubic Hermite between two positions expressed in
-   * different frames is not an approximation, it is meaningless — it would blend a geocentric vector
-   * with a selenocentric one. The bracketing point is returned unchanged instead, which extends to
-   * the arc the floor semantics this method already applies to the stage name and the mass.
+   * different frames is not an approximation, it is meaningless — it would blend a geocentric
+   * vector with a selenocentric one. The bracketing point is returned unchanged instead, which
+   * extends to the arc the floor semantics this method already applies to the stage name and the
+   * mass.
    *
    * <p>Two consequences, both wanted. The spacecraft holds still for at most one sampling step at
    * the crossing, rather than being drawn somewhere it never was. And the render context — derived
@@ -240,15 +241,15 @@ public final class MissionEphemeris {
    * The lowest index sharing {@code times[index]}, which matters exactly once: at an arc boundary.
    *
    * <p>PHY-4 / L4 writes the boundary as <b>two samples at the same date</b>, one per frame — the
-   * outgoing state in the frame being left, the incoming one in the frame being entered (spec {@code
-   * docs/multi-corps/06-conception-L4.md} §5). {@code Arrays.binarySearch}, which {@link
+   * outgoing state in the frame being left, the incoming one in the frame being entered (spec
+   * {@code docs/multi-corps/06-conception-L4.md} §5). {@code Arrays.binarySearch}, which {@link
    * EphemerisInterpolator#findInterval} rests on, returns <em>some</em> matching index among equal
    * keys and does not say which. Normalising to the lowest makes the answer the <b>outgoing</b>
    * point, which is the floor semantics this method already applies to the stage name, the mass and
    * the arc: the flip happens at the next sample, exactly as L3 §3.3 wrote it.
    *
-   * <p>The behaviour was never actually at risk — the three readers query the same array at the same
-   * date, so they get the same index whichever it is. What is closed here is the contract.
+   * <p>The behaviour was never actually at risk — the three readers query the same array at the
+   * same date, so they get the same index whichever it is. What is closed here is the contract.
    */
   private int floorOfEqualDates(int index) {
     int i = index;

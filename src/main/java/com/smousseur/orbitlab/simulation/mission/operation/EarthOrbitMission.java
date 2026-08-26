@@ -29,8 +29,8 @@ import org.hipparchus.util.FastMath;
  * asks for — the site's free due-east plane, or a polar, sun-synchronous or otherwise inclined one.
  *
  * <p><b>Not to be confused with {@link EarthMission}</b>, its superclass, despite the names sitting
- * one word apart. {@code EarthMission} is the launch-pad geometry: it turns a geodetic site into the
- * initial state, and knows nothing of orbits. {@code EarthOrbitMission} is one concrete flight
+ * one word apart. {@code EarthMission} is the launch-pad geometry: it turns a geodetic site into
+ * the initial state, and knows nothing of orbits. {@code EarthOrbitMission} is one concrete flight
  * profile built on top of it, alongside {@link GEOMission}.
  *
  * <p>This class was {@code LEOMission} before MIS-7 (spec {@code
@@ -100,11 +100,7 @@ public class EarthOrbitMission extends EarthMission {
         name,
         configuration.toVehicleStack(),
         buildStages(
-            configuration.ascentProfile(),
-            perigeeAltitude,
-            apogeeAltitude,
-            launchPlane,
-            latitude),
+            configuration.ascentProfile(), perigeeAltitude, apogeeAltitude, launchPlane, latitude),
         perigeeAltitude,
         apogeeAltitude,
         launchPlane,

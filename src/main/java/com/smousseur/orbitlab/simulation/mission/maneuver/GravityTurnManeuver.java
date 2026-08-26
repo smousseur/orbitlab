@@ -13,6 +13,8 @@ import com.smousseur.orbitlab.simulation.mission.stage.ascent.AscentPropagation;
 import com.smousseur.orbitlab.simulation.mission.vehicle.ActiveStageInfo;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropulsionSystem;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.hipparchus.ode.events.Action;
 import org.hipparchus.util.FastMath;
@@ -24,8 +26,6 @@ import org.orekit.propagation.events.DateDetector;
 import org.orekit.propagation.events.EventDetector;
 import org.orekit.propagation.events.handlers.EventHandler;
 import org.orekit.propagation.numerical.NumericalPropagator;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.orekit.time.AbsoluteDate;
 import org.orekit.utils.Constants;
 
@@ -204,10 +204,7 @@ public class GravityTurnManeuver {
   public void configure(NumericalPropagator propagator, AscentPlan plan) {
     GravityTurnAttitudeProvider attitudeProvider =
         new GravityTurnAttitudeProvider(
-            plan.kickDate(),
-            plan.transitionTime(),
-            plan.exponent(),
-            plan.commandedPlaneNormal());
+            plan.kickDate(), plan.transitionTime(), plan.exponent(), plan.commandedPlaneNormal());
     propagator.setAttitudeProvider(attitudeProvider);
 
     // Burn 1 — active stage propulsion, flame-out semantics (spec 06 I4b): the engine thrusts

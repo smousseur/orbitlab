@@ -44,8 +44,8 @@ import org.orekit.time.AbsoluteDate;
  * semi-major axis is untouched. But it is aimed <em>purely transverse</em> — {@code nIdeal × rNode}
  * is perpendicular to the radius — so whatever radial velocity the state carries is folded into the
  * transverse direction instead of being kept: {@code |h| = r·v_transverse} grows and the
- * eccentricity drops. This is a pure plane rotation <em>only at an apsis</em>, where the velocity is
- * already transverse.
+ * eccentricity drops. This is a pure plane rotation <em>only at an apsis</em>, where the velocity
+ * is already transverse.
  *
  * <p>In the regime this stage is written for — a ~0.25° residual on the near-circular orbit left by
  * apogee circularization — the radial velocity is negligible and so is the effect. Away from it the
@@ -77,8 +77,7 @@ public class AnalyticPlaneTrimAtNodeStage extends MissionStage {
   @Override
   public void configure(NumericalPropagator propagator, Mission mission) {
     SpacecraftState state = mission.getCurrentState();
-    PlaneTrim plan =
-        computePlaneTrim(state, mission.getVehicle(), flightContext(state, mission));
+    PlaneTrim plan = computePlaneTrim(state, mission.getVehicle(), flightContext(state, mission));
 
     if (plan == null) {
       this.configuredEndDate = state.getDate();

@@ -23,8 +23,7 @@ class PhaseMarkerClusterTest {
   }
 
   private static List<PhaseMarkerCluster> cluster(List<PhaseMarkerCluster.Anchor> anchors) {
-    return PhaseMarkerCluster.cluster(
-        anchors, PhaseMarkerCluster.MIN_SPACING_PX, MIN_X, MAX_X);
+    return PhaseMarkerCluster.cluster(anchors, PhaseMarkerCluster.MIN_SPACING_PX, MIN_X, MAX_X);
   }
 
   @Test
@@ -41,8 +40,7 @@ class PhaseMarkerClusterTest {
   void aRealisticGeoAscentCollapsesIntoOneGroup() {
     // Four transitions spread over 5.2 px at the very start of the track, as measured on the
     // reference GEO, then two far-apart later ones.
-    List<PhaseMarkerCluster> out =
-        cluster(anchors(14.14f, 16.0f, 17.9f, 19.34f, 240f, 470f));
+    List<PhaseMarkerCluster> out = cluster(anchors(14.14f, 16.0f, 17.9f, 19.34f, 240f, 470f));
     assertEquals(3, out.size());
     assertEquals(4, out.get(0).size());
     assertTrue(out.get(0).isGroup());

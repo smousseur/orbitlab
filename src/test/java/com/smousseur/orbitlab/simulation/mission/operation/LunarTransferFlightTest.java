@@ -26,26 +26,29 @@ import org.orekit.time.AbsoluteDate;
 import org.orekit.time.TimeScalesFactory;
 
 /**
- * PHY-4 / L6 §7.2 — the test of the lot, and the acceptance recipe of the whole item. It flies {@link
- * LunarTransferMission} through {@code MissionOptimizer} and then the ephemeris generator, exactly the
- * way the application's compute path does, and judges the trajectory the application would draw.
+ * PHY-4 / L6 §7.2 — the test of the lot, and the acceptance recipe of the whole item. It flies
+ * {@link LunarTransferMission} through {@code MissionOptimizer} and then the ephemeris generator,
+ * exactly the way the application's compute path does, and judges the trajectory the application
+ * would draw.
  *
- * <p><b>Everything asserted here is read off the ephemeris rather than off a propagation of its own</b>,
- * and that is what gives the assertions their reach: one perilune reading proves at the same time that
- * the arcs carry the right central body, that {@code altitudeMeters} is measured against the lunar
- * reference shape (L3 §3.4, L4 §3.6), and that the sampling actually covers closest approach. A
- * separate propagation would have proved only the physics.
+ * <p><b>Everything asserted here is read off the ephemeris rather than off a propagation of its
+ * own</b>, and that is what gives the assertions their reach: one perilune reading proves at the
+ * same time that the arcs carry the right central body, that {@code altitudeMeters} is measured
+ * against the lunar reference shape (L3 §3.4, L4 §3.6), and that the sampling actually covers
+ * closest approach. A separate propagation would have proved only the physics.
  *
- * <p><b>{@code isComplete()} is asserted but it has little to say</b>, and the design says so rather
- * than letting a reader over-trust it: the terminal coast is sized by the horizon, so
- * {@code StageRun.shortfallSeconds} returns zero for it whatever happened, and only a thrown
- * propagation would clear the flag (spec §1.9). The date of the last sample is the assertion that
- * actually catches a truncated flight.
+ * <p><b>{@code isComplete()} is asserted but it has little to say</b>, and the design says so
+ * rather than letting a reader over-trust it: the terminal coast is sized by the horizon, so {@code
+ * StageRun.shortfallSeconds} returns zero for it whatever happened, and only a thrown propagation
+ * would clear the flag (spec §1.9). The date of the last sample is the assertion that actually
+ * catches a truncated flight.
  */
 class LunarTransferFlightTest {
   private static final Logger logger = LogManager.getLogger(LunarTransferFlightTest.class);
 
-  /** No stage of this mission is optimizable, so CMA-ES never runs and this budget is never spent. */
+  /**
+   * No stage of this mission is optimizable, so CMA-ES never runs and this budget is never spent.
+   */
   private static final int MAX_EVALUATIONS = 1;
 
   /**
@@ -103,8 +106,8 @@ class LunarTransferFlightTest {
         perilune = FastMath.min(perilune, point.altitudeMeters());
       }
     }
-    logger.info("Flown perilune altitude: {} km", String.format(Locale.ROOT, "%.1f",
-        perilune / 1000.0));
+    logger.info(
+        "Flown perilune altitude: {} km", String.format(Locale.ROOT, "%.1f", perilune / 1000.0));
     assertEquals(
         LunarTransferMission.DEFAULT_PERILUNE_ALTITUDE,
         perilune,
@@ -118,9 +121,7 @@ class LunarTransferFlightTest {
     // The real check on truncation. isComplete() cannot see it on a horizon-sized terminal coast
     // (spec §1.9), so the date of the last sample is what does.
     double flownSeconds =
-        ephemeris.allPoints().get(ephemeris.allPoints().size() - 1)
-            .time()
-            .durationFrom(epoch);
+        ephemeris.allPoints().get(ephemeris.allPoints().size() - 1).time().durationFrom(epoch);
     assertEquals(
         LunarTransferMission.MISSION_DURATION_SECONDS,
         flownSeconds,
@@ -150,8 +151,7 @@ class LunarTransferFlightTest {
           previous.arc().body(),
           current.arc().body(),
           FastMath.round(previous.time().durationFrom(epoch) / 3600.0),
-          String.format(Locale.ROOT, "%.6f",
-              previousInGcrf.subtract(currentInGcrf).getNorm()));
+          String.format(Locale.ROOT, "%.6f", previousInGcrf.subtract(currentInGcrf).getNorm()));
       assertEquals(
           0.0,
           previousInGcrf.subtract(currentInGcrf).getNorm(),
@@ -161,7 +161,8 @@ class LunarTransferFlightTest {
     assertEquals(1, boundaries, "exactly one crossing, inbound");
 
     // ── the trail is the flight, vertex for vertex ──────────────────────────
-    // A property no other mission in the repository has: 4.5 days at the 60 s coast step stays under
+    // A property no other mission in the repository has: 4.5 days at the 60 s coast step stays
+    // under
     // the 8 192 vertex budget, so nothing is decimated (spec §3.4).
     logger.info(
         "Trail: {} vertices for {} points",
@@ -184,12 +185,13 @@ class LunarTransferFlightTest {
    *
    * <p><b>This test exists because the application found what the flight test could not.</b> Loaded
    * with {@code mission.lunarDemo} at the simulation clock's own date, the first version of the aim
-   * returned a perilune of <b>−53 km</b> — an impact, computed and flown as though it were a plan. The
-   * geometry test upstream proves the transfer <em>plane</em> resolves at any epoch; nothing proved the
-   * aim did, and a secant seeded on a unit slope does not (spec §12). Bisection on a bracket does, and
-   * this is where that is checked.
+   * returned a perilune of <b>−53 km</b> — an impact, computed and flown as though it were a plan.
+   * The geometry test upstream proves the transfer <em>plane</em> resolves at any epoch; nothing
+   * proved the aim did, and a secant seeded on a unit slope does not (spec §12). Bisection on a
+   * bracket does, and this is where that is checked.
    *
-   * <p>Five epochs spread across a lunar month, which is the period the encounter geometry varies over.
+   * <p>Five epochs spread across a lunar month, which is the period the encounter geometry varies
+   * over.
    */
   @Test
   @DisplayName("Every epoch either reaches the aimed perilune or refuses — none flies an impact")
@@ -215,14 +217,18 @@ class LunarTransferFlightTest {
       } catch (OrbitlabException refusal) {
         // A refusal is a legitimate outcome and it is the point of this test. Not every encounter
         // geometry can deliver a given perilune: with the aim point on the lunar surface the flown
-        // closest approach still has a floor, measured at 135 km at one epoch of this month against a
-        // 100 km target. What must never happen is the alternative — a plan below the surface, flown
+        // closest approach still has a floor, measured at 135 km at one epoch of this month against
+        // a
+        // 100 km target. What must never happen is the alternative — a plan below the surface,
+        // flown
         // as though it were a trajectory, which is what the first version of the aim produced (spec
         // §12).
         refused++;
         assertTrue(
             refusal.getMessage().contains("did not reach"),
-            "day " + day + ": a refusal must say what it could not reach, got: "
+            "day "
+                + day
+                + ": a refusal must say what it could not reach, got: "
                 + refusal.getMessage());
       }
     }

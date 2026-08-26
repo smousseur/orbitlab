@@ -154,8 +154,7 @@ public final class ScenarioSession {
     if (solution == null || solution.vectors() == null || solution.vectors().isEmpty()) {
       return;
     }
-    MissionSolutions solutions =
-        new MissionSolutions(solution.vectors(), solution.launcherLoads());
+    MissionSolutions solutions = new MissionSolutions(solution.vectors(), solution.launcherLoads());
     if (!solutions.covers(entry.mission())) {
       logger.info(
           "Mission '{}' was saved with another stage composition; it will be optimized rather than"

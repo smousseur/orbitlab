@@ -6,9 +6,9 @@ import com.smousseur.orbitlab.simulation.mission.MissionId;
 import com.smousseur.orbitlab.simulation.mission.MissionStatus;
 import com.smousseur.orbitlab.simulation.mission.OptimizationType;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemeris;
-import com.smousseur.orbitlab.simulation.mission.progress.MissionProgress;
 import com.smousseur.orbitlab.simulation.mission.operation.MissionComposer;
 import com.smousseur.orbitlab.simulation.mission.operation.MissionSpec;
+import com.smousseur.orbitlab.simulation.mission.progress.MissionProgress;
 import com.smousseur.orbitlab.simulation.mission.runtime.AchievedOrbit;
 import com.smousseur.orbitlab.simulation.mission.runtime.MissionOptimizerResult;
 import com.smousseur.orbitlab.simulation.mission.runtime.MissionPerformanceReport;
@@ -252,8 +252,8 @@ public final class MissionEntry {
    * Returns the advancement of the computation currently attached to this mission.
    *
    * <p>Absent whenever no computation is attached — and legitimately absent for an instant
-   * <em>during</em> one, since the orchestrator clears it after the terminal status is published.
-   * A reader seeing {@code COMPUTING} with no progress must fall back rather than wait.
+   * <em>during</em> one, since the orchestrator clears it after the terminal status is published. A
+   * reader seeing {@code COMPUTING} with no progress must fall back rather than wait.
    *
    * @return an optional containing the live progress, or empty
    */

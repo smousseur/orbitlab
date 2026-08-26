@@ -60,8 +60,8 @@ public final class MissionRenderer {
    * it; L5 did, and took the second away — {@link #onSpacecraftSelected()} now reads the arc the
    * spacecraft is in right now, and falls back here only when the trajectory is missing. What
    * remains is the metres-per-unit {@link LodView} sizes the spacecraft with, which is the same for
-   * every planet-scale context whatever the body. Everything drawn per frame derives its own context
-   * from the sample.
+   * every planet-scale context whatever the body. Everything drawn per frame derives its own
+   * context from the sample.
    */
   private final RenderContext renderContext;
 
@@ -131,8 +131,7 @@ public final class MissionRenderer {
    * into them. The spec is also stable across the recompositions {@link MissionEntry} performs on a
    * mode toggle or a wizard edit; a legacy entry carries none and falls back.
    *
-   * <p>Static, and public, for the same reason as {@link #renderBodyOf}:
-   * {@link
+   * <p>Static, and public, for the same reason as {@link #renderBodyOf}: {@link
    * MissionOrchestratorAppState} evaluates it on an entry whose renderer already exists, to find
    * out whether that renderer still draws the right vehicle.
    *
@@ -166,19 +165,20 @@ public final class MissionRenderer {
    * com.smousseur.orbitlab.states.camera.FloatingOriginAppState} negates it onto the near frame,
    * {@code MissionOrchestratorAppState} places the anchor at it, {@code CameraTransitionAppState}
    * aims at it — and they must not disagree. All three already call {@link
-   * com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemeris#displayPointAt} at the same
-   * date, so deriving this from the point they already share makes disagreement impossible without
-   * them first disagreeing about the position, which would break everything anyway. Publishing it
-   * once per frame instead would not work: {@code CameraTransitionAppState} is attached before
-   * {@code FloatingOriginAppState}, so it would read the previous frame's value.
+   * com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemeris#displayPointAt} at the
+   * same date, so deriving this from the point they already share makes disagreement impossible
+   * without them first disagreeing about the position, which would break everything anyway.
+   * Publishing it once per frame instead would not work: {@code CameraTransitionAppState} is
+   * attached before {@code FloatingOriginAppState}, so it would read the previous frame's value.
    *
    * <p><b>Why the arc in spacecraft view and the focus elsewhere</b> (spec {@code
    * docs/multi-corps/07-conception-L5.md} §3.1). Following a spacecraft, the near scene is centred
    * on the spacecraft and the one globe the near viewport can hold has to be the body its
    * coordinates are about, or the Earth would be drawn where the Moon should be — 1 837 km from a
-   * spacecraft at perilune. Looking at a planet, the centre is that planet and the trajectory has to
-   * come to it. The switch therefore happens at the arc boundary, atomically, and reverses by itself
-   * when the clock is scrubbed backwards, because it is a function of the sample and not an event.
+   * spacecraft at perilune. Looking at a planet, the centre is that planet and the trajectory has
+   * to come to it. The switch therefore happens at the arc boundary, atomically, and reverses by
+   * itself when the clock is scrubbed backwards, because it is a function of the sample and not an
+   * event.
    *
    * @param point the sample being drawn
    * @param view the current focus
@@ -205,9 +205,9 @@ public final class MissionRenderer {
    *
    * <p>The point-sized half of L5's conversion; {@link
    * com.smousseur.orbitlab.simulation.mission.ephemeris.TrajectoryPolyline#positionAt} is the bulk
-   * half. <b>Both go through {@code TrajectoryArc.convertPosition}</b>, and that is not tidiness: the
-   * vertices are written relative to this very position, so a second conversion path would put a
-   * visible kink between the last vertex and the spacecraft model — at the one place the eye is
+   * half. <b>Both go through {@code TrajectoryArc.convertPosition}</b>, and that is not tidiness:
+   * the vertices are written relative to this very position, so a second conversion path would put
+   * a visible kink between the last vertex and the spacecraft model — at the one place the eye is
    * looking (spec {@code docs/multi-corps/07-conception-L5.md} §3.3).
    *
    * <p>Returns the argument untouched when the bodies agree, which is every trajectory that exists
@@ -217,8 +217,7 @@ public final class MissionRenderer {
    * @param renderBody the body to express it about
    * @return the position in that body's frame, in metres
    */
-  public static Vector3D renderPositionOf(
-      MissionEphemerisPoint point, SolarSystemBody renderBody) {
+  public static Vector3D renderPositionOf(MissionEphemerisPoint point, SolarSystemBody renderBody) {
     return point.arc().body() == renderBody
         ? point.position()
         : point
@@ -227,10 +226,10 @@ public final class MissionRenderer {
   }
 
   /**
-   * Hands the camera the body the spacecraft is <em>currently</em> orbiting, not the one it launched
-   * from: clicking a spacecraft already inside the lunar sphere of influence must frame it against
-   * the Moon. Falls back to the construction-time context while the trajectory is unavailable, the
-   * same degradation {@code FloatingOriginAppState} accepts.
+   * Hands the camera the body the spacecraft is <em>currently</em> orbiting, not the one it
+   * launched from: clicking a spacecraft already inside the lunar sphere of influence must frame it
+   * against the Moon. Falls back to the construction-time context while the trajectory is
+   * unavailable, the same degradation {@code FloatingOriginAppState} accepts.
    */
   private void onSpacecraftSelected() {
     MissionEphemeris ephemeris = entry.getEphemeris().orElse(null);
@@ -269,10 +268,10 @@ public final class MissionRenderer {
    * the same body by construction (spec {@code docs/multi-corps/05-conception-L3.md} §3.2).
    *
    * <p><b>And the position is converted here, once.</b> The sample is expressed about its own arc's
-   * body, which is not necessarily the one the near scene is centred on — looking at the Earth while
-   * the spacecraft is at perilune, an unconverted anchor would be planted 1 837 km from the
-   * geocentre. The converted value feeds the spacecraft's pose and serves as the origin the ribbon's
-   * vertices are written against, so the two cannot come from different frames.
+   * body, which is not necessarily the one the near scene is centred on — looking at the Earth
+   * while the spacecraft is at perilune, an unconverted anchor would be planted 1 837 km from the
+   * geocentre. The converted value feeds the spacecraft's pose and serves as the origin the
+   * ribbon's vertices are written against, so the two cannot come from different frames.
    *
    * @param point the interpolated ephemeris point, whose position also serves as the trail tip
    * @param trail the mission's display polyline, the same instance on every frame

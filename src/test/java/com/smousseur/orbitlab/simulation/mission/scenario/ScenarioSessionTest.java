@@ -104,7 +104,8 @@ class ScenarioSessionTest {
 
     assertEquals(ScenarioFile.CURRENT_FORMAT_VERSION, file.formatVersion());
     assertEquals("2030-02-28T05:30:00Z", file.clockDate());
-    assertEquals(List.of("First", "Second"), file.missions().stream().map(ScenarioMission::name).toList());
+    assertEquals(
+        List.of("First", "Second"), file.missions().stream().map(ScenarioMission::name).toList());
     assertEquals("BALANCED", file.missions().getFirst().optimizationMode());
   }
 
@@ -122,7 +123,10 @@ class ScenarioSessionTest {
     assertEquals(ColorRGBA.Cyan, restored.getColor());
     assertEquals(
         0.0,
-        restored.getScheduledDate().orElseThrow().durationFrom(saved.getScheduledDate().orElseThrow()),
+        restored
+            .getScheduledDate()
+            .orElseThrow()
+            .durationFrom(saved.getScheduledDate().orElseThrow()),
         1e-6);
     assertArrayEquals(
         saved.spec().orElseThrow().configuration().propellantLoads(),
@@ -153,7 +157,11 @@ class ScenarioSessionTest {
         restored.getPendingSolutions().orElseThrow(() -> new AssertionError("no solutions"));
     assertTrue(solutions.covers(restored.mission()));
     assertArrayEquals(
-        saved.getOptimizerResult().orElseThrow().findFor(stageKeys(saved).getFirst()).orElseThrow()
+        saved
+            .getOptimizerResult()
+            .orElseThrow()
+            .findFor(stageKeys(saved).getFirst())
+            .orElseThrow()
             .bestVariables(),
         solutions.vectorFor(stageKeys(restored).getFirst()),
         0.0);
@@ -219,14 +227,17 @@ class ScenarioSessionTest {
         report.rejections().getFirst().reason());
   }
 
-  private static ScenarioMission.EarthOrbit withUnknownLauncher(ScenarioMission.EarthOrbit mission) {
+  private static ScenarioMission.EarthOrbit withUnknownLauncher(
+      ScenarioMission.EarthOrbit mission) {
     return new ScenarioMission.EarthOrbit(
         mission.type(),
         mission.name(),
         mission.launchDate(),
         mission.site(),
         new com.smousseur.orbitlab.simulation.mission.scenario.model.ScenarioVehicle(
-            "LEFT_THE_CATALOG", mission.vehicle().payloadId(), mission.vehicle().payloadDryMassKg()),
+            "LEFT_THE_CATALOG",
+            mission.vehicle().payloadId(),
+            mission.vehicle().payloadDryMassKg()),
         mission.horizonDays(),
         mission.atmosphere(),
         mission.optimizationMode(),
@@ -251,7 +262,9 @@ class ScenarioSessionTest {
     assertTrue(failure.getMessage().contains("99"), failure.getMessage());
   }
 
-  /** A legacy entry has no wizard values to go back to; it is left out rather than failing the save. */
+  /**
+   * A legacy entry has no wizard values to go back to; it is left out rather than failing the save.
+   */
   @Test
   void legacyEntryIsLeftOutOfTheFile() {
     MissionEntry legacy =

@@ -41,9 +41,9 @@ import org.orekit.utils.Constants;
  * plausible bug.
  *
  * <p><b>The inclination these tests predict with is read off the plane, not off the site.</b> The
- * pad reaches a plane inclined at its <em>geocentric</em> latitude, a fraction of a degree under the
- * geodetic one the site is named by, and near the declination maximum that fraction is the whole
- * question — it is what decides whether the two roots still exist at all.
+ * pad reaches a plane inclined at its <em>geocentric</em> latitude, a fraction of a degree under
+ * the geodetic one the site is named by, and near the declination maximum that fraction is the
+ * whole question — it is what decides whether the two roots still exist at all.
  *
  * <p><b>Nothing here confirms</b> (see {@link ScreeningOnly}): a flown perilune costs some four
  * seconds, and it belongs to {@code LunarLaunchWindowFlightTest}.
@@ -139,8 +139,8 @@ class LunarLaunchWindowProblemTest {
 
   /**
    * How far the plane reached at {@code epoch} is from containing the Moon at arrival, expressed as
-   * the residual of the closed form: {@code sin(Ω − α) + cot i · tan δ}, which is zero exactly at an
-   * opportunity.
+   * the residual of the closed form: {@code sin(Ω − α) + cot i · tan δ}, which is zero exactly at
+   * an opportunity.
    *
    * <p>Independent of {@link LunarLaunchWindowProblem.Injection#planeMisalignment()} in everything
    * but the arrival date it reads the Moon at: this one is written in nodes and declinations, that
@@ -244,9 +244,9 @@ class LunarLaunchWindowProblemTest {
   }
 
   /**
-   * An epoch whose arrival declination is under {@code maxDeclination}, searched forward from {@code
-   * from} by whole days — so the "Moon near the equator" case is found in the ephemeris rather than
-   * copied out of an almanac.
+   * An epoch whose arrival declination is under {@code maxDeclination}, searched forward from
+   * {@code from} by whole days — so the "Moon near the equator" case is found in the ephemeris
+   * rather than copied out of an almanac.
    */
   private static AbsoluteDate arrivalNearEquator(AbsoluteDate from, double maxDeclination) {
     for (int day = 0; day < 40; day++) {
@@ -464,8 +464,7 @@ class LunarLaunchWindowProblemTest {
 
     AbsoluteDate inReach =
         arrivalNearEquator(
-            new AbsoluteDate(2026, 1, 1, 0, 0, 0.0, TimeScalesFactory.getUTC()),
-            0.5 * inclination);
+            new AbsoluteDate(2026, 1, 1, 0, 0, 0.0, TimeScalesFactory.getUTC()), 0.5 * inclination);
     Sample bestInReach = cheapest(sweep(problem, inReach, SIDEREAL_DAY, 300.0));
 
     AbsoluteDate outOfReach = inReach.shiftedBy(7.0 * 86_400.0);

@@ -314,8 +314,8 @@ class CMAESTrajectoryOptimizerRetryTest {
   /**
    * Ill-conditioned ellipsoid (condition 10⁶) with an unreachable floor: exploration runs out of
    * budget before following the narrowest axes, and the refinement cascade — smaller sigma, same
-   * box — closes the remaining gap. That is the shape of every transfer stage of the 550 km LEO
-   * run of 2026-08-22 except one.
+   * box — closes the remaining gap. That is the shape of every transfer stage of the 550 km LEO run
+   * of 2026-08-22 except one.
    */
   static final class IllConditionedProblem implements TrajectoryProblem {
     private int passCount = 0;
@@ -540,6 +540,7 @@ class CMAESTrajectoryOptimizerRetryTest {
         "First attempt should succeed without retry; passCount must remain 1 "
             + "(no buildSeededStartPoints, no second runSinglePass).");
   }
+
   @Test
   void retrySearchesTheRelaxedBoxNotJustTheBaseOne() {
     OutOfBoxOptimumProblem problem = new OutOfBoxOptimumProblem();
@@ -567,6 +568,7 @@ class CMAESTrajectoryOptimizerRetryTest {
                 + best[1]
                 + "]");
   }
+
   @Test
   void noRetryWhenTheRefinementCascadeAlreadyDescended() {
     IllConditionedProblem problem = new IllConditionedProblem();

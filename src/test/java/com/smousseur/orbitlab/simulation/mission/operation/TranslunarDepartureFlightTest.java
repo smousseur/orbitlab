@@ -42,10 +42,10 @@ import org.orekit.utils.TimeStampedPVCoordinates;
  * meet <em>while converging</em>, not at its optimum: L0 §5 measured Canaveral's floor at 0.146°
  * over the 18.6-year cycle, but a shot taken off-window is misaligned by a great deal more.
  *
- * <p><b>The ΔV and the misalignment are logged, not asserted.</b> What the misalignment costs is the
- * relief the launch-window criterion of L2 is judged on, and pinning a number here would be pinning
- * L2's answer before L2 has asked the question. This test asserts what L1 owns: that the aim still
- * converges, and that the perilune it converges to is the one asked for.
+ * <p><b>The ΔV and the misalignment are logged, not asserted.</b> What the misalignment costs is
+ * the relief the launch-window criterion of L2 is judged on, and pinning a number here would be
+ * pinning L2's answer before L2 has asked the question. This test asserts what L1 owns: that the
+ * aim still converges, and that the perilune it converges to is the one asked for.
  *
  * <p><b>Contrainte de méthode</b> (découpage §3): this case flies a four-day transfer some thirty
  * times over, so it costs a few seconds, and it is the user who runs it.
@@ -61,8 +61,8 @@ class TranslunarDepartureFlightTest {
 
   /**
    * The band on the perilune the aim converges to (m). The bisection stops at 1 km on the flown
-   * perilune, so this is the same order the demo flight is pinned at rather than a looser one bought
-   * for a misaligned plane.
+   * perilune, so this is the same order the demo flight is pinned at rather than a looser one
+   * bought for a misaligned plane.
    */
   private static final double PERILUNE_BAND = 10_000.0;
 
@@ -93,8 +93,7 @@ class TranslunarDepartureFlightTest {
         PropulsionSystem.getSpacecraftPropulsion().isp() * Constants.G0_STANDARD_GRAVITY;
     FlightContext context =
         new FlightContext(
-            GravitationalContext.earth()
-                .withPerturbers(SolarSystemBody.MOON, SolarSystemBody.SUN));
+            GravitationalContext.earth().withPerturbers(SolarSystemBody.MOON, SolarSystemBody.SUN));
 
     long startedAt = System.nanoTime();
     TranslunarInjectionPlan plan =
@@ -121,8 +120,7 @@ class TranslunarDepartureFlightTest {
         String.format(
             Locale.ROOT,
             "%.1f",
-            TranslunarInjectionPlan.keplerianInjectionDeltaV(
-                atInjection, departure.arrivalDate())),
+            TranslunarInjectionPlan.keplerianInjectionDeltaV(atInjection, departure.arrivalDate())),
         String.format(
             Locale.ROOT,
             "%.1f",
@@ -134,8 +132,7 @@ class TranslunarDepartureFlightTest {
         plan.perileneAltitude(),
         PERILUNE_BAND,
         "the aim must converge to the perilune it was given, misaligned plane or not");
-    assertTrue(
-        plan.deltaV().getNorm() > 0.0, "an injection that costs nothing did not happen");
+    assertTrue(plan.deltaV().getNorm() > 0.0, "an injection that costs nothing did not happen");
     // The same instant, not the same object: the departure reaches it as t₀ + coast + ToF and the
     // plan as (t₀ + coast) + ToF, which differ in the last attoseconds of Orekit's date arithmetic.
     assertEquals(
@@ -179,8 +176,7 @@ class TranslunarDepartureFlightTest {
             .scalarMultiply(FastMath.sqrt(Constants.WGS84_EARTH_MU / radius));
     return new SpacecraftState(
             new CartesianOrbit(
-                new TimeStampedPVCoordinates(
-                    date, direction.scalarMultiply(radius), velocity),
+                new TimeStampedPVCoordinates(date, direction.scalarMultiply(radius), velocity),
                 OrekitService.get().gcrf(),
                 Constants.WGS84_EARTH_MU))
         .withMass(INJECTION_MASS);

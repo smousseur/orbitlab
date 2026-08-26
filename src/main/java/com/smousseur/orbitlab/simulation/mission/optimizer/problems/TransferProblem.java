@@ -145,15 +145,15 @@ public class TransferProblem implements TrajectoryProblem {
   private final double dvAvailable;
 
   /**
-   * Normalizer of the I7 propellant term: the Δv this mission can waste at most, {@code
-   * dvAvailable − dvHohmannTotal}, floored at {@link #MIN_SPENDABLE_MARGIN_MS}.
+   * Normalizer of the I7 propellant term: the Δv this mission can waste at most, {@code dvAvailable
+   * − dvHohmannTotal}, floored at {@link #MIN_SPENDABLE_MARGIN_MS}.
    *
-   * <p>Grading waste against this rather than against the whole tank is what makes the term's
-   * scale mission-independent: {@code excessDv} is bounded by this same margin, so burning the
-   * tank dry always costs exactly {@link #W_PROPELLANT}, whatever the ratio between the Hohmann
-   * reference and the tank. Against {@code dvAvailable} the maximum shrank with the tank ratio
-   * and, past 0.4, fell below the convergence threshold — a flame-out then read as a converged
-   * solution and the search stopped on it.
+   * <p>Grading waste against this rather than against the whole tank is what makes the term's scale
+   * mission-independent: {@code excessDv} is bounded by this same margin, so burning the tank dry
+   * always costs exactly {@link #W_PROPELLANT}, whatever the ratio between the Hohmann reference
+   * and the tank. Against {@code dvAvailable} the maximum shrank with the tank ratio and, past 0.4,
+   * fell below the convergence threshold — a flame-out then read as a converged solution and the
+   * search stopped on it.
    */
   private final double dvSpendableMargin;
 
@@ -366,8 +366,7 @@ public class TransferProblem implements TrajectoryProblem {
               perigeeAltitude, apogeeAltitude, dvHohmannTotal, dvAvailable));
     }
     // The check above guarantees a non-negative margin; the floor only covers the equality case.
-    this.dvSpendableMargin =
-        FastMath.max(dvAvailable - dvHohmannTotal, MIN_SPENDABLE_MARGIN_MS);
+    this.dvSpendableMargin = FastMath.max(dvAvailable - dvHohmannTotal, MIN_SPENDABLE_MARGIN_MS);
 
     // Niveau 2.1 — adaptive β1 bound. apoDefect quantifies how much apogee
     // raising remains; out-of-plane authority should grow with that defect.
@@ -592,14 +591,14 @@ public class TransferProblem implements TrajectoryProblem {
   }
 
   /**
-   * Per-term decomposition of {@link #computeCost(SpacecraftState)}, in the same units and with
-   * the same weights already applied — each component is what that term contributes to the total,
-   * not the raw error it is built from.
+   * Per-term decomposition of {@link #computeCost(SpacecraftState)}, in the same units and with the
+   * same weights already applied — each component is what that term contributes to the total, not
+   * the raw error it is built from.
    *
    * <p>Produced by the very computation the optimizer runs on, not by a second copy of its
    * formulas: {@code computeCost} returns {@link #total()} of this record. A decomposition that
-   * merely re-derived the terms could drift from what is actually minimized, and the whole point
-   * of reading it is to trust it.
+   * merely re-derived the terms could drift from what is actually minimized, and the whole point of
+   * reading it is to trust it.
    *
    * @param apogeeRelative {@code W_APO · errApo²}, on the geodetic apogee, relative
    * @param perigeeRelative {@code W_PERI · errPeri²}, on the geodetic perigee, relative
@@ -740,10 +739,10 @@ public class TransferProblem implements TrajectoryProblem {
    *
    * <p>Where {@link #propellantTerm(double)} expresses a preference between solutions of equal
    * precision, this expresses a <b>rejection</b>: a candidate that burns the sized stage dry
-   * satisfies no load the outer λ-bisection could accept, whatever orbit it reaches. Sharing
-   * {@link #barrierBelow(double, double)} with the periapsis and minimum-altitude barriers keeps
-   * the shape — and the softplus's linear tail past the wall — identical to the constraints
-   * already expressed that way.
+   * satisfies no load the outer λ-bisection could accept, whatever orbit it reaches. Sharing {@link
+   * #barrierBelow(double, double)} with the periapsis and minimum-altitude barriers keeps the shape
+   * — and the softplus's linear tail past the wall — identical to the constraints already expressed
+   * that way.
    *
    * @param excessDv the Δv consumed beyond the analytic Hohmann reference (m/s, ≥ 0)
    * @return the cost contribution, zero until the remaining margin drops under the fraction

@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import com.github.luben.zstd.Zstd;
 import com.smousseur.orbitlab.core.SolarSystemBody;
+import com.smousseur.orbitlab.simulation.OrekitService;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -17,8 +18,6 @@ import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
 import java.util.zip.CRC32;
-
-import com.smousseur.orbitlab.simulation.OrekitService;
 import org.hipparchus.geometry.euclidean.threed.Rotation;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;

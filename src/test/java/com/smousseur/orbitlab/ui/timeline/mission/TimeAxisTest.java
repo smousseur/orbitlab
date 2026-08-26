@@ -76,7 +76,6 @@ class TimeAxisTest {
 
   @Test
   void aNonPositiveWidthIsRejected() {
-    assertThrows(
-        IllegalArgumentException.class, () -> new TimeAxis(T0, T0.shiftedBy(60), 14f, 0f));
+    assertThrows(IllegalArgumentException.class, () -> new TimeAxis(T0, T0.shiftedBy(60), 14f, 0f));
   }
 }

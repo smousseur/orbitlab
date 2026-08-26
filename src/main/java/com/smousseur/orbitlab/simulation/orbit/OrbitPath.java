@@ -1,11 +1,10 @@
 package com.smousseur.orbitlab.simulation.orbit;
 
 import com.smousseur.orbitlab.core.SolarSystemBody;
-import org.hipparchus.geometry.euclidean.threed.Vector3D;
-import org.orekit.time.AbsoluteDate;
-
 import java.util.List;
 import java.util.Objects;
+import org.hipparchus.geometry.euclidean.threed.Vector3D;
+import org.orekit.time.AbsoluteDate;
 
 /**
  * An immutable sequence of heliocentric positions representing the orbital path of a celestial body

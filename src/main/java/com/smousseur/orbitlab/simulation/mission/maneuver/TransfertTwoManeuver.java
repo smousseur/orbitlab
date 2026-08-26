@@ -65,10 +65,7 @@ public class TransfertTwoManeuver extends TransferManeuver {
    * the post-burn-1 orbit lies outside the configured eccentricity / semi-major-axis bounds.
    */
   public TransfertTwoManeuver(
-      Vehicle vehicle,
-      double targetAltitude,
-      FailFastEnvelope failFast,
-      FlightContext context) {
+      Vehicle vehicle, double targetAltitude, FailFastEnvelope failFast, FlightContext context) {
     super(vehicle, targetAltitude, context);
     this.circularizationBurnResolver = new CircularizationBurnResolver(vehicle, context);
     this.failFast = failFast;

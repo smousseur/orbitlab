@@ -32,7 +32,8 @@ import org.orekit.time.AbsoluteDate;
  *
  * <p>It owns the target node, which used to sit on the inclination row, and it is the only producer
  * of {@link FormField#TARGET_RAAN} — {@code StepParameters} merges what this page publishes exactly
- * as it merges the dynamic parameters' own map, so the wizard's duplicate-key guard stays satisfied.
+ * as it merges the dynamic parameters' own map, so the wizard's duplicate-key guard stays
+ * satisfied.
  *
  * <p>The page exists because the parameters step has no vertical room left: its root is pinned to
  * {@link FormStyles#CONTENT_HEIGHT} and nothing in this wizard clips, so an overflow lands on the
@@ -222,8 +223,8 @@ public final class PlanningPage {
 
   /**
    * Substitutes the node's own gap when the field cannot serve one, because this page owns that
-   * field and the step cannot tell the two ways it fails apart — {@code parsedRaanDeg()} declines
-   * a blank entry and an unreadable one alike.
+   * field and the step cannot tell the two ways it fails apart — {@code parsedRaanDeg()} declines a
+   * blank entry and an unreadable one alike.
    *
    * <p><b>The node outranks whatever else is missing.</b> Blank is the quiet common case and must
    * stay quiet even when the pad is mid-keystroke; unreadable is refused elsewhere in the same
@@ -272,13 +273,13 @@ public final class PlanningPage {
   /**
    * Publishes the node, and only when it reads as a number.
    *
-   * <p>Absent when blank, and that absence is the mission saying it waits for no plane. Publishing a
-   * default here would make every mission sit through a launch window it never asked for.
+   * <p>Absent when blank, and that absence is the mission saying it waits for no plane. Publishing
+   * a default here would make every mission sit through a launch window it never asked for.
    *
    * <p><b>Not scoped to a profile.</b> This page is shared by every card, so a GEO submit can carry
-   * the key; it stays inert only because {@code MissionFactory.specFromWizardValues} reads it in its
-   * {@code case LEO} branch alone and {@code MissionSpec.Geo} has no node component. That scoping is
-   * the factory's, not this page's — a node field added elsewhere would not inherit it.
+   * the key; it stays inert only because {@code MissionFactory.specFromWizardValues} reads it in
+   * its {@code case LEO} branch alone and {@code MissionSpec.Geo} has no node component. That
+   * scoping is the factory's, not this page's — a node field added elsewhere would not inherit it.
    *
    * @return the values this page owns
    */
@@ -305,8 +306,8 @@ public final class PlanningPage {
    * for", and it is the default state of every mission that does not meet something in orbit.
    *
    * <p>Refused rather than ignored, unlike the inclination's unreadable case, because there is no
-   * value to fall back on: an inclination has a derived default, a node does not, so degrading would
-   * silently turn "meet this plane" into "launch whenever".
+   * value to fall back on: an inclination has a derived default, a node does not, so degrading
+   * would silently turn "meet this plane" into "launch whenever".
    *
    * <p>What counts as usable is {@link RaanEntry}'s to say; this only paints the answer.
    *
@@ -330,7 +331,8 @@ public final class PlanningPage {
 
   /**
    * @return the node the field holds, or empty when it is blank or unreadable — {@link
-   *     #validateTargetNode()} is what refuses the unreadable case, this only declines to publish it
+   *     #validateTargetNode()} is what refuses the unreadable case, this only declines to publish
+   *     it
    */
   public Optional<Double> parsedRaanDeg() {
     return RaanEntry.parse(raanField.getText());

@@ -15,11 +15,10 @@ import com.simsilica.lemur.component.BoxLayout;
 import com.simsilica.lemur.component.IconComponent;
 import com.simsilica.lemur.component.QuadBackgroundComponent;
 import com.simsilica.lemur.component.TbtQuadBackgroundComponent;
-import java.util.HashMap;
-import java.util.Map;
-
 import com.simsilica.lemur.event.MouseEventControl;
 import com.smousseur.orbitlab.ui.form.FormStyles;
+import java.util.HashMap;
+import java.util.Map;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 

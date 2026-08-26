@@ -97,8 +97,7 @@ class SphereOfInfluenceTest {
     assertEquals(SolarSystemBody.EARTH, SphereOfInfluence.of(SolarSystemBody.MOON).primary());
     assertEquals(SolarSystemBody.SUN, SphereOfInfluence.of(SolarSystemBody.EARTH).primary());
 
-    assertThrows(
-        IllegalArgumentException.class, () -> SphereOfInfluence.of(SolarSystemBody.SUN));
+    assertThrows(IllegalArgumentException.class, () -> SphereOfInfluence.of(SolarSystemBody.SUN));
     assertThrows(
         IllegalArgumentException.class,
         () -> new SphereOfInfluence(SolarSystemBody.MOON, SolarSystemBody.MOON));

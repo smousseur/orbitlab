@@ -136,10 +136,7 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
    * @param progress the sink reporting attempts, steps and evaluations, or {@code null}
    */
   public CMAESTrajectoryOptimizer(
-      TrajectoryProblem problem,
-      int maxEvaluations,
-      long seed,
-      MissionProgressListener progress) {
+      TrajectoryProblem problem, int maxEvaluations, long seed, MissionProgressListener progress) {
     this(problem, maxEvaluations, 4, DEFAULT_MAX_RETRIES, 1e-6, 1e-4, 1e-6, seed, progress);
   }
 
@@ -352,14 +349,13 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
    * Result of one full exploration + refinement pass.
    *
    * @param refinementDescended whether the refinement cascade improved on the exploration's own
-   *     best. It is the signal that this attempt <em>converged</em> rather than merely stopped:
-   *     the cascade found a descent the exploration had not, and then exhausted it. A retry
-   *     searching the same box re-derives that same optimum — measured over the seven transfer
-   *     stages of the 550 km LEO run of 2026-08-22, the six whose cascade descended saw their
-   *     retry return the same cost to ten significant digits, never better, for 41 % to 58 % of
-   *     the stage's budget. The seventh, the only one whose cascade could not improve on its
-   *     exploration, is the only one whose retry paid: a 5.6× improvement that flipped the load's
-   *     feasibility.
+   *     best. It is the signal that this attempt <em>converged</em> rather than merely stopped: the
+   *     cascade found a descent the exploration had not, and then exhausted it. A retry searching
+   *     the same box re-derives that same optimum — measured over the seven transfer stages of the
+   *     550 km LEO run of 2026-08-22, the six whose cascade descended saw their retry return the
+   *     same cost to ten significant digits, never better, for 41 % to 58 % of the stage's budget.
+   *     The seventh, the only one whose cascade could not improve on its exploration, is the only
+   *     one whose retry paid: a 5.6× improvement that flipped the load's feasibility.
    */
   private record SinglePassResult(
       double[] bestVars,

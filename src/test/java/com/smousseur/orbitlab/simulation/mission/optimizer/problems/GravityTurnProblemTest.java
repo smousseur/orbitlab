@@ -1,9 +1,9 @@
 package com.smousseur.orbitlab.simulation.mission.optimizer.problems;
 
-import com.smousseur.orbitlab.simulation.flight.FlightContext;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.smousseur.orbitlab.simulation.OrekitService;
+import com.smousseur.orbitlab.simulation.flight.FlightContext;
 import com.smousseur.orbitlab.simulation.mission.maneuver.GravityTurnManeuver;
 import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchVehicle;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
@@ -30,7 +30,8 @@ class GravityTurnProblemTest {
         "orekit-data.zip not on classpath — skipping");
     OrekitService.get().initialize();
     Vehicle vehicle = LaunchVehicle.getLauncherStage1Vehicle();
-    maneuver = new GravityTurnManeuver(
+    maneuver =
+        new GravityTurnManeuver(
             vehicle, vehicle.getMass(), 0.0, Math.PI / 2, 0.0, FlightContext.earth());
   }
 

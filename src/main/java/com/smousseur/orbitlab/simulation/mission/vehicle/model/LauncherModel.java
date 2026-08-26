@@ -3,7 +3,6 @@ package com.smousseur.orbitlab.simulation.mission.vehicle.model;
 import com.smousseur.orbitlab.simulation.mission.vehicle.*;
 import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Launchers;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.stage.StageModel;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;

@@ -126,9 +126,9 @@ public final class TimeAxis {
   public record Tick(double offsetSeconds, float x, String label) {}
 
   /**
-   * Upper bound on the number of major graduations. The design target is 6 to 10; only the two
-   * gaps in {@link #STEPS} (a window just over 10 min, a window of a few weeks) land under 6, and
-   * no step in the table can be chosen without honouring this bound.
+   * Upper bound on the number of major graduations. The design target is 6 to 10; only the two gaps
+   * in {@link #STEPS} (a window just over 10 min, a window of a few weeks) land under 6, and no
+   * step in the table can be chosen without honouring this bound.
    */
   public static final int MAX_MAJOR_TICKS = 10;
 
@@ -138,8 +138,8 @@ public final class TimeAxis {
    * decimal ladder would offer 2 h or 5 h.
    */
   private static final double[] STEPS = {
-    1, 5, 15, 30, 60, 300, 900, 1800, 3600, 10800, 21600, 43200,
-    86400, 172800, 604800, 1209600, 2592000
+    1, 5, 15, 30, 60, 300, 900, 1800, 3600, 10800, 21600, 43200, 86400, 172800, 604800, 1209600,
+    2592000
   };
 
   /**
@@ -150,8 +150,8 @@ public final class TimeAxis {
    * through the tick budget on a multi-year mission.
    *
    * <p>The fixed count of 21 graduations that {@code ScrubberTrack} draws is deliberately not
-   * reused — a count that does not depend on the window is exactly what made the existing
-   * scrubber decorative.
+   * reused — a count that does not depend on the window is exactly what made the existing scrubber
+   * decorative.
    *
    * @return the step in seconds
    */
@@ -194,10 +194,10 @@ public final class TimeAxis {
    * <p>A multi-decade mission window at the smallest table step (1 s) overflows {@code int}: the
    * true count is in the billions, so a naive {@code (int)} cast would silently saturate and then
    * wrap negative on the {@code + 1}. {@link #tickStepSeconds()} tries that 1 s step first, so an
-   * overflowed count would have looked like a suspiciously good — and wrong — fit, handing
-   * {@link #majorTicks()} a negative size and an {@code IllegalArgumentException} from
-   * {@code ArrayList}. Staying in {@code long} until the step is already known to be small removes
-   * the overflow instead of hiding it.
+   * overflowed count would have looked like a suspiciously good — and wrong — fit, handing {@link
+   * #majorTicks()} a negative size and an {@code IllegalArgumentException} from {@code ArrayList}.
+   * Staying in {@code long} until the step is already known to be small removes the overflow
+   * instead of hiding it.
    */
   private long tickCount(double step) {
     return (long) Math.floor(durationSeconds / step) + 1L;
@@ -264,8 +264,6 @@ public final class TimeAxis {
     }
     long d = (long) (s / 86400.0);
     long h = (long) ((s - d * 86400.0) / 3600.0);
-    return h == 0 && !padSecondUnit
-        ? d + " d"
-        : String.format(Locale.ROOT, fmt, d, "d", h, "h");
+    return h == 0 && !padSecondUnit ? d + " d" : String.format(Locale.ROOT, fmt, d, "d", h, "h");
   }
 }

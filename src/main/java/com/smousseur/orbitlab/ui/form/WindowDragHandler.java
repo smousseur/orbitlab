@@ -41,7 +41,8 @@ public final class WindowDragHandler extends DragHandler {
     }
     this.headerHeight = headerHeight;
     // Set here rather than through super(...): a locator passed to the constructor cannot read a
-    // field, which is what pushes the null check into the drag itself, deep inside Lemur's dispatch.
+    // field, which is what pushes the null check into the drag itself, deep inside Lemur's
+    // dispatch.
     setDraggableLocator(grabbed -> this.window);
   }
 
@@ -106,8 +107,6 @@ public final class WindowDragHandler extends DragHandler {
     float minY = FastMath.clamp(size.y, headerHeight, maxY);
 
     window.setLocalTranslation(
-        FastMath.clamp(position.x, 0f, maxX),
-        FastMath.clamp(position.y, minY, maxY),
-        position.z);
+        FastMath.clamp(position.x, 0f, maxX), FastMath.clamp(position.y, minY, maxY), position.z);
   }
 }

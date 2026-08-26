@@ -47,12 +47,11 @@ import com.smousseur.orbitlab.states.time.MissionTimelineAppState;
 import com.smousseur.orbitlab.states.time.SimulationClockAppState;
 import com.smousseur.orbitlab.states.time.TimelineWidgetAppState;
 import com.smousseur.orbitlab.ui.AppStyles;
+import java.time.Duration;
+import java.util.List;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.orekit.time.AbsoluteDate;
-
-import java.time.Duration;
-import java.util.List;
 
 /**
  * Main entry point for the OrbitLab application.
@@ -82,8 +81,8 @@ public class OrbitLabApplication extends SimpleApplication {
   /**
    * How much dearer than the month's cheapest epoch the demonstration still accepts (m/s).
    *
-   * <p>Five, because the criterion was measured swinging only 14 m/s over a month (3 182.8 to
-   * 3 196.9, {@code TranslunarInjectionPlanWindowProblemTest}) on a 3 183 m/s floor: the 4 000 m/s
+   * <p>Five, because the criterion was measured swinging only 14 m/s over a month (3 182.8 to 3
+   * 196.9, {@code TranslunarInjectionPlanWindowProblemTest}) on a 3 183 m/s floor: the 4 000 m/s
    * budget sits above the whole month and cuts nothing, so without a margin the slot would be the
    * searched range itself.
    */
@@ -207,10 +206,10 @@ public class OrbitLabApplication extends SimpleApplication {
    * Starts the Orekit terrestrial-frame warm-up on a daemon thread.
    *
    * <p><b>What it buys.</b> The first {@link OrekitService#itrf()} of a JVM costs 8 483 ms — Orekit
-   * loading the Earth-orientation data the terrestrial chain hangs on — and every user of that frame
-   * reaches it lazily, so the bill lands on whoever asks first. In this application that is the
-   * render thread, whether through a mission being created or through the wizard's planning page. A
-   * second tier of 549 ms, JIT and first-solve caching, follows it; {@link
+   * loading the Earth-orientation data the terrestrial chain hangs on — and every user of that
+   * frame reaches it lazily, so the bill lands on whoever asks first. In this application that is
+   * the render thread, whether through a mission being created or through the wizard's planning
+   * page. A second tier of 549 ms, JIT and first-solve caching, follows it; {@link
    * EarthLaunchWindowPlanner#warmUp()} absorbs that one. Neither is a property of the launch window
    * criterion, which measures 4–9 ms per solve once warm.
    *
@@ -220,10 +219,10 @@ public class OrbitLabApplication extends SimpleApplication {
    * nine seconds still waits, which is rare and in any case strictly better than the state before
    * this warm-up, where every user waited.
    *
-   * <p><b>Daemon</b>, so that a warm-up still running cannot hold up JVM shutdown, and <b>named</b>,
-   * so that a thread dump taken during those nine seconds explains itself. A failure is logged and
-   * swallowed: everything it warms works without it, only slowly, so it must never be able to take
-   * the application down.
+   * <p><b>Daemon</b>, so that a warm-up still running cannot hold up JVM shutdown, and
+   * <b>named</b>, so that a thread dump taken during those nine seconds explains itself. A failure
+   * is logged and swallowed: everything it warms works without it, only slowly, so it must never be
+   * able to take the application down.
    */
   private void startFrameWarmUp() {
     Thread thread = new Thread(OrbitLabApplication::warmUpFrames, FRAME_WARM_UP_THREAD_NAME);

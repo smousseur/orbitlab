@@ -67,8 +67,7 @@ public class ReentryDetector extends AbstractDetector<ReentryDetector> {
    */
   @Override
   public double g(SpacecraftState state) {
-    double sphericalAltitude =
-        state.getPVCoordinates().getPosition().getNorm() - equatorialRadius;
+    double sphericalAltitude = state.getPVCoordinates().getPosition().getNorm() - equatorialRadius;
     return sphericalAltitude - ReentryGuard.SUBSURFACE_FLOOR;
   }
 }

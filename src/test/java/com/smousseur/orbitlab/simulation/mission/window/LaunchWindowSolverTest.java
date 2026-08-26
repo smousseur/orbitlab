@@ -477,7 +477,8 @@ class LaunchWindowSolverTest {
     SingleDip other = new SingleDip();
     LaunchWindow byMargin =
         new LaunchWindowSolver(other)
-            .solve(LaunchWindowSearch.over(T0, Duration.ofHours(4), other, 3_050.0).withMargin(10.0))
+            .solve(
+                LaunchWindowSearch.over(T0, Duration.ofHours(4), other, 3_050.0).withMargin(10.0))
             .get(0);
 
     // And the other way round: budget 3 050 against 3 000 + 10, the margin wins.
@@ -518,7 +519,8 @@ class LaunchWindowSolverTest {
   }
 
   @Test
-  @DisplayName("A refused optimum does not become the anchor: the margin follows the cheapest that flies")
+  @DisplayName(
+      "A refused optimum does not become the anchor: the margin follows the cheapest that flies")
   void theAnchorIsTheCheapestFlyableMinimum() {
     // The deep dip is refused by the full model. Anchoring the margin on it anyway would put the
     // threshold at 3 050 and price the shallow dip (3 200) out of its own search — "no window"
@@ -549,9 +551,7 @@ class LaunchWindowSolverTest {
 
     assertEquals(1, windows.size(), "the shallow dip is still an opportunity");
     assertEquals(
-        TwoDips.SHALLOW_VERTEX,
-        offsetOf(windows.get(0).date()),
-        2.0 * search.precisionSeconds());
+        TwoDips.SHALLOW_VERTEX, offsetOf(windows.get(0).date()), 2.0 * search.precisionSeconds());
     // 3 200 + 200·((t − 10 800)/1 800)² = 3 250 at t = 10 800 ± 900.
     assertEquals(
         TwoDips.SHALLOW_VERTEX - 900.0,
@@ -607,12 +607,7 @@ class LaunchWindowSolverTest {
     TwoDips problem = new TwoDips();
     LaunchWindowSearch search =
         new LaunchWindowSearch(
-            T0,
-            Duration.ofHours(24),
-            Duration.ofMinutes(15),
-            Duration.ofMinutes(1),
-            12_000.0,
-            5);
+            T0, Duration.ofHours(24), Duration.ofMinutes(15), Duration.ofMinutes(1), 12_000.0, 5);
 
     List<LaunchWindow> windows = new LaunchWindowSolver(problem).solve(search);
 

@@ -28,16 +28,16 @@ import org.orekit.time.TimeScalesFactory;
  * docs/atmosphere/05-conception-L2.md} §4.2). A recorded figure, not a property: nothing here is
  * asserted, and nothing in the lot's closure depends on it.
  *
- * <p><b>Disabled, and meant to be launched by hand.</b> It is the one place in the lot that flies an
- * ascent from the pad with an atmosphere, which is exactly what §1.1 keeps out of every other
- * fixture: L0 §2.2 measured 982 497 integration steps and 487 s for a single day of coast at 130 km,
- * so one CMA-ES candidate dipping low is enough to turn an evaluation from 0.2 s into eight minutes.
- * The altitude bound that would make this safe belongs to PHY-2.
+ * <p><b>Disabled, and meant to be launched by hand.</b> It is the one place in the lot that flies
+ * an ascent from the pad with an atmosphere, which is exactly what §1.1 keeps out of every other
+ * fixture: L0 §2.2 measured 982 497 integration steps and 487 s for a single day of coast at 130
+ * km, so one CMA-ES candidate dipping low is enough to turn an evaluation from 0.2 s into eight
+ * minutes. The altitude bound that would make this safe belongs to PHY-2.
  *
  * <p><b>Every outcome is the measurement</b>, which is why this fixture exists at all rather than
  * being deferred whole: it converges and the ratio of wall times is the overhead the découpage asks
- * for; it hangs and the timeout below prices the missing altitude bound on the real optimiser; or it
- * fails, which is what actually happened.
+ * for; it hangs and the timeout below prices the missing altitude bound on the real optimiser; or
+ * it fails, which is what actually happened.
  *
  * <p><b>Measured 2026-08-21 — the drag-on run does not hang, it does not converge either: it
  * breaks, in 3 min 15 s.</b> In order:
@@ -46,8 +46,8 @@ import org.orekit.time.TimeScalesFactory;
  *   <li>the S1 gravity turn settles at cost <b>0.582</b> against an acceptable 0.0476, three
  *       independent CMA-ES explorations agreeing on it, and ends 58 km up with a 3.65° flight path
  *       angle where the drag-free profile ends flat;
- *   <li>{@code Gravity turn (S2)} then hits its {@code DepletionGuard} before its scheduled cutoff —
- *       the propellant loads were sized by {@code PropellantBudget} for an ascent with no
+ *   <li>{@code Gravity turn (S2)} then hits its {@code DepletionGuard} before its scheduled cutoff
+ *       — the propellant loads were sized by {@code PropellantBudget} for an ascent with no
  *       atmosphere, so the stack no longer reaches orbit;
  *   <li>{@code AnalyticHohmannTransferStage} finally throws {@code minimal step size reached} on a
  *       trajectory that never got to orbit.
@@ -55,9 +55,9 @@ import org.orekit.time.TimeScalesFactory;
  *
  * <p><b>The finding for PHY-2 is therefore not a percentage but a sequence</b>: turning the drag on
  * without re-sizing the propellant budget does not make the optimisation slow, it makes it
- * infeasible. And it exposes one approximation of L1 outside its stated domain — the catalogue gives
- * S2 the free-molecular Cd 2.2 "because an upper stage ignites above 70 km", while this profile
- * ignites it at 58 km, in continuum flow.
+ * infeasible. And it exposes one approximation of L1 outside its stated domain — the catalogue
+ * gives S2 the free-molecular Cd 2.2 "because an upper stage ignites above 70 km", while this
+ * profile ignites it at 58 km, in continuum flow.
  *
  * <p>Nothing here is asserted: an outcome is recorded, not required.
  */

@@ -9,14 +9,14 @@ import org.orekit.forces.drag.DragForce;
 import org.orekit.models.earth.atmosphere.Atmosphere;
 
 /**
- * Reaches the {@link Atmosphere} a propagator was actually built with — the one PHY-1 / L2 reads its
- * densities from.
+ * Reaches the {@link Atmosphere} a propagator was actually built with — the one PHY-1 / L2 reads
+ * its densities from.
  *
  * <p><b>Why the atmosphere is fetched and not rebuilt.</b> {@code OrekitService} resolves the pair
  * (model, central body) behind a private cache, so a test that instantiated its own {@code
  * HarrisPriester} would be checking its own arithmetic against Orekit's rather than checking what
- * the mission flies. Going through a factory-built propagator keeps the measured ρ on the production
- * path; the price is one reflective read, which neither {@link DragForce} nor {@link
+ * the mission flies. Going through a factory-built propagator keeps the measured ρ on the
+ * production path; the price is one reflective read, which neither {@link DragForce} nor {@link
  * AbstractDragForceModel} makes avoidable.
  */
 final class AtmosphereProbe {

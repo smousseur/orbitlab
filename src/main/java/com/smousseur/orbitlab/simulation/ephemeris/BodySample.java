@@ -1,10 +1,9 @@
 package com.smousseur.orbitlab.simulation.ephemeris;
 
+import java.util.Objects;
 import org.hipparchus.geometry.euclidean.threed.Rotation;
 import org.orekit.time.AbsoluteDate;
 import org.orekit.utils.PVCoordinates;
-
-import java.util.Objects;
 
 /**
  * An immutable snapshot of a celestial body's state at a specific point in time.

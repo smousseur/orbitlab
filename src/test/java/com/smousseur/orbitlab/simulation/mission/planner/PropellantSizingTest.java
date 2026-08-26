@@ -43,7 +43,6 @@ class PropellantSizingTest {
   void mismatchedLengths_areRefused() {
     PropellantSizing sizing = new PropellantSizing(new double[] {0.9, 0.75}, 1, 1);
 
-    assertThrows(
-        IllegalArgumentException.class, () -> sizing.applyTo(new double[] {400_000.0}));
+    assertThrows(IllegalArgumentException.class, () -> sizing.applyTo(new double[] {400_000.0}));
   }
 }

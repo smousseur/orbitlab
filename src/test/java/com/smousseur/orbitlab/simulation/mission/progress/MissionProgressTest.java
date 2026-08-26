@@ -90,8 +90,7 @@ class MissionProgressTest {
 
   @Test
   void malformedTransitionsAreRejectedAtTheEvent() {
-    assertThrows(
-        IllegalArgumentException.class, () -> new MissionProgressEvent.StageEntered(3, 2));
+    assertThrows(IllegalArgumentException.class, () -> new MissionProgressEvent.StageEntered(3, 2));
     assertThrows(
         IllegalArgumentException.class, () -> new MissionProgressEvent.AttemptStarted(0, 3));
     assertThrows(

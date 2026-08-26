@@ -36,8 +36,7 @@ public record DragContext(AerodynamicProperties aero, AtmosphereModel model) {
     Objects.requireNonNull(aero, "aero");
     Objects.requireNonNull(model, "model");
     if (model == AtmosphereModel.NONE) {
-      throw new IllegalArgumentException(
-          "NONE is the absence of a DragContext, not a DragContext");
+      throw new IllegalArgumentException("NONE is the absence of a DragContext, not a DragContext");
     }
   }
 }

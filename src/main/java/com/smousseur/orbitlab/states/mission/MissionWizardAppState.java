@@ -19,13 +19,12 @@ import com.smousseur.orbitlab.ui.form.ConfirmDialog;
 import com.smousseur.orbitlab.ui.mission.wizard.FormField;
 import com.smousseur.orbitlab.ui.mission.wizard.MissionWizardWidget;
 import com.smousseur.orbitlab.ui.mission.wizard.WizardPrefill;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.orekit.time.AbsoluteDate;
-
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.orekit.time.AbsoluteDate;
 
 public final class MissionWizardAppState extends BaseAppState {
   private static final Logger logger = LogManager.getLogger(MissionWizardAppState.class);
