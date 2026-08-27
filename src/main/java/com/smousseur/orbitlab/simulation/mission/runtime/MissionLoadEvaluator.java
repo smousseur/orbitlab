@@ -35,10 +35,11 @@ import org.orekit.time.AbsoluteDate;
  *   <li><b>objective</b> — the final coast orbit lands within {@code objectiveToleranceRatio} of
  *       the target perigee and apogee, measured from the ephemeris exactly as the mission
  *       optimization tests do (min/max altitude of the terminal {@code "Coasting"} stage). The
- *       target is the mission's own {@link OrbitInsertionObjective} by default; missions whose
- *       recorded objective is not the flown final orbit must pass an explicit feasibility objective
- *       — {@code GEOMission} records {@code (parking, GEO)}, the two mission phases, while the
- *       flown end state is circular GEO;
+ *       target is the mission's own objective by default; missions whose recorded objective is not
+ *       the flown final orbit must pass an explicit feasibility objective — {@code GEOMission}
+ *       records {@code (parking, GEO)}, the two mission phases, while the flown end state is
+ *       circular GEO. The scoring is routed by {@link ObjectiveEvaluator}, so a mission whose
+ *       objective is a flyby is measured on its own arc rather than refused (MIS-4 / L4 §5);
  *   <li><b>residual floor</b> — the end-of-mission residual is at least {@code residualFloorRatio}
  *       of the <em>sized stage's</em> load (spec 09 §5, "≥ 1 % de la charge par étage liquide").
  *       The denominator is the load of the λ-scaled top stage, not the whole stack: on an
@@ -125,8 +126,8 @@ public final class MissionLoadEvaluator implements PropellantLoadOptimizer.Evalu
   private final Long seed;
   private final double objectiveToleranceRatio;
   private final double residualFloorRatio;
-  // The orbit the terminal coast is measured against; null → the mission's own objective.
-  private final OrbitInsertionObjective feasibilityObjective;
+  // What feasibility is measured against; null → the mission's own objective.
+  private final MissionObjective feasibilityObjective;
 
   /**
    * Sink the inner mission optimizations report their evaluations to, or {@code null}. Their stage
@@ -165,7 +166,7 @@ public final class MissionLoadEvaluator implements PropellantLoadOptimizer.Evalu
    * objective.
    *
    * <p>See {@link #MissionLoadEvaluator(Function, double[], boolean[], AbsoluteDate, int, Long,
-   * double, double, OrbitInsertionObjective) the full overload} for the parameter documentation.
+   * double, double, MissionObjective) the full overload} for the parameter documentation.
    */
   public MissionLoadEvaluator(
       Function<double[], Mission> missionBuilder,
@@ -200,10 +201,12 @@ public final class MissionLoadEvaluator implements PropellantLoadOptimizer.Evalu
    * @param objectiveToleranceRatio the ± band on perigee/apogee the objective must land within
    * @param residualFloorRatio the minimum end-of-mission residual as a fraction of the sized
    *     stage's load; keeps the sized stage off flame-out
-   * @param feasibilityObjective the orbit the terminal coast is measured against, or {@code null}
-   *     to use the mission's own {@link OrbitInsertionObjective}. Required for missions whose
-   *     recorded objective is not the flown final orbit (a GEO mission records {@code (parking,
-   *     GEO)} while its end state is circular GEO)
+   * @param feasibilityObjective what feasibility is measured against, or {@code null} to use the
+   *     mission's own objective. Required for missions whose recorded objective is not the flown
+   *     final orbit (a GEO mission records {@code (parking, GEO)} while its end state is circular
+   *     GEO). Any {@link MissionObjective} kind is accepted since MIS-4 / L4 §5 — {@link
+   *     ObjectiveEvaluator} routes it — which is what puts a lunar flyby on the {@code PRECISE}
+   *     path instead of failing there
    */
   public MissionLoadEvaluator(
       Function<double[], Mission> missionBuilder,
@@ -214,7 +217,7 @@ public final class MissionLoadEvaluator implements PropellantLoadOptimizer.Evalu
       Long seed,
       double objectiveToleranceRatio,
       double residualFloorRatio,
-      OrbitInsertionObjective feasibilityObjective) {
+      MissionObjective feasibilityObjective) {
     this(
         missionBuilder,
         heuristicLoads,
@@ -233,7 +236,7 @@ public final class MissionLoadEvaluator implements PropellantLoadOptimizer.Evalu
    * sink.
    *
    * <p>See {@link #MissionLoadEvaluator(Function, double[], boolean[], AbsoluteDate, int, Long,
-   * double, double, OrbitInsertionObjective) the overload above} for the other parameters.
+   * double, double, MissionObjective) the overload above} for the other parameters.
    *
    * @param progress the sink, or {@code null}. Only its evaluation counting is wired: an inner
    *     optimization's stage and attempt transitions would recycle once per load evaluation under a
@@ -248,7 +251,7 @@ public final class MissionLoadEvaluator implements PropellantLoadOptimizer.Evalu
       Long seed,
       double objectiveToleranceRatio,
       double residualFloorRatio,
-      OrbitInsertionObjective feasibilityObjective,
+      MissionObjective feasibilityObjective,
       MissionProgressListener progress) {
     this.missionBuilder = Objects.requireNonNull(missionBuilder, "missionBuilder");
     this.heuristicLoads = heuristicLoads.clone();
@@ -320,11 +323,14 @@ public final class MissionLoadEvaluator implements PropellantLoadOptimizer.Evalu
       return new PropellantLoadOptimizer.Evaluation(Double.NaN, false, null);
     }
 
-    OrbitInsertionObjective objective =
-        feasibilityObjective != null
-            ? feasibilityObjective
-            : orbitInsertionObjective(mission.getObjective());
-    boolean objectiveMet = objectiveMet(result.ephemeris(), objective, objectiveToleranceRatio);
+    // Routed by kind rather than cast to an insertion (MIS-4 / L4 §5): the insertion branch
+    // delegates straight back to objectiveMet below, so LEO and GEO keep their behaviour bit for
+    // bit, while a flyby is scored on its own arc instead of raising here — outside the try that
+    // absorbs optimization failures, on a thread the user only sees through a FAILED mission.
+    MissionObjective objective =
+        feasibilityObjective != null ? feasibilityObjective : mission.getObjective();
+    boolean objectiveMet =
+        ObjectiveEvaluator.met(result.ephemeris(), objective, objectiveToleranceRatio);
 
     MissionPerformanceReport report = result.performanceReport();
     int sizedStageIndex = sizedStageIndex();
@@ -468,13 +474,5 @@ public final class MissionLoadEvaluator implements PropellantLoadOptimizer.Evalu
       }
     }
     return -1;
-  }
-
-  private static OrbitInsertionObjective orbitInsertionObjective(MissionObjective objective) {
-    if (objective instanceof OrbitInsertionObjective insertion) {
-      return insertion;
-    }
-    throw new IllegalArgumentException(
-        "MissionLoadEvaluator supports orbit-insertion objectives only, got " + objective);
   }
 }

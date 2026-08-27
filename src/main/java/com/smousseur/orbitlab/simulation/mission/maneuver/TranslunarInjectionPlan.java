@@ -5,6 +5,7 @@ import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.flight.FlightContext;
 import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
+import com.smousseur.orbitlab.simulation.mission.vehicle.ActiveStageInfo;
 import java.util.Locale;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -472,6 +473,64 @@ public record TranslunarInjectionPlan(
    */
   public SpacecraftState applyTo(SpacecraftState state, double exhaustVelocity) {
     return applyImpulse(state, deltaV, exhaustVelocity);
+  }
+
+  /**
+   * A solved injection and the state it produces, so a caller gets both from one call: the plan
+   * carries the cost and the perilune it converged to, the state is what the flight continues from.
+   *
+   * @param plan the plan the aim converged to
+   * @param state the post-injection state, above the active stage's depletion floor
+   */
+  public record Injected(TranslunarInjectionPlan plan, SpacecraftState state) {}
+
+  /**
+   * Solves the injection from {@code parking}, applies it, and refuses on the active stage's
+   * depletion floor — the whole verdict on a translunar departure, in one place.
+   *
+   * <p><b>It is shared rather than duplicated</b> (MIS-4 / L4 §7). {@code TranslunarInjectionStage}
+   * flies this on the mission's chain; {@code LunarLaunchWindowProblem.confirm} runs it on a
+   * screened epoch to decide whether a date is a plan or a wish. Those two were the same four lines
+   * written twice until L4, and the drift they invited has a date: L6 replaces the impulsive stage
+   * with a finite-burn one, and a window still confirming against the impulsive model would keep
+   * dating launches by a trajectory the mission no longer flies — some 14 m/s on Ariane 62, which
+   * is the whole monthly benefit the window exists to capture.
+   *
+   * <p>The stage is <b>not</b> what the window calls, and that is the correction L4 makes to L2's
+   * letter: {@code enter} asks its {@code Mission} for the vehicle and the gravitational context
+   * only, and {@code confirm} holds both already. Composing a ground mission to reuse an {@code
+   * enter} would have built an entire mission to call it with a state it did not produce.
+   *
+   * @param parking the state the impulse is applied to
+   * @param targetPeriluneAltitude the perilune altitude above the lunar surface to aim for (m)
+   * @param active the vehicle stage burning the injection — its Isp sizes the impulse, its
+   *     depletion floor decides whether the transfer is within reach
+   * @param context the environment the aim is flown in
+   * @return the plan and the post-injection state
+   * @throws OrbitlabException when the aim does not converge, or when the impulse would take the
+   *     active stage below its depletion floor
+   */
+  public static Injected inject(
+      SpacecraftState parking,
+      double targetPeriluneAltitude,
+      ActiveStageInfo active,
+      FlightContext context) {
+    double exhaustVelocity = active.propulsion().isp() * Constants.G0_STANDARD_GRAVITY;
+    TranslunarInjectionPlan plan = solve(parking, targetPeriluneAltitude, exhaustVelocity, context);
+    SpacecraftState injected = plan.applyTo(parking, exhaustVelocity);
+
+    double floor = active.depletionFloor();
+    if (injected.getMass() < floor) {
+      throw new OrbitlabException(
+          String.format(
+              Locale.ROOT,
+              "the %.0f m/s injection would leave %.0f kg, below the %.0f kg depletion floor of the"
+                  + " active stage — it does not carry the propellant for this transfer",
+              plan.deltaV().getNorm(),
+              injected.getMass(),
+              floor));
+    }
+    return new Injected(plan, injected);
   }
 
   /**

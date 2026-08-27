@@ -1,6 +1,5 @@
 package com.smousseur.orbitlab.simulation.mission.stage;
 
-import com.smousseur.orbitlab.core.OrbitlabException;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionStage;
 import com.smousseur.orbitlab.simulation.mission.maneuver.TranslunarInjectionPlan;
@@ -13,7 +12,6 @@ import org.orekit.propagation.SpacecraftState;
 import org.orekit.propagation.events.DateDetector;
 import org.orekit.propagation.numerical.NumericalPropagator;
 import org.orekit.time.AbsoluteDate;
-import org.orekit.utils.Constants;
 
 /**
  * The impulsive translunar injection of PHY-4 / L6 (spec {@code
@@ -62,37 +60,21 @@ public class TranslunarInjectionStage extends MissionStage {
   @Override
   public SpacecraftState enter(SpacecraftState previousState, Mission mission) {
     ActiveStageInfo active = mission.getVehicle().resolveActiveStage(previousState.getMass());
-    double exhaustVelocity = active.propulsion().isp() * Constants.G0_STANDARD_GRAVITY;
-
-    TranslunarInjectionPlan plan =
-        TranslunarInjectionPlan.solve(
-            previousState,
-            targetPerileneAltitude,
-            exhaustVelocity,
-            flightContext(previousState, mission));
-
-    SpacecraftState injected = plan.applyTo(previousState, exhaustVelocity);
-    double floor = active.depletionFloor();
-    if (injected.getMass() < floor) {
-      throw new OrbitlabException(
-          String.format(
-              "[%s] injection out of reach: the %.0f m/s impulse would leave %.0f kg, below the"
-                  + " %.0f kg depletion floor of the active stage — it does not carry the"
-                  + " propellant for this transfer",
-              getName(), plan.deltaV().getNorm(), injected.getMass(), floor));
-    }
+    TranslunarInjectionPlan.Injected injected =
+        TranslunarInjectionPlan.inject(
+            previousState, targetPerileneAltitude, active, flightContext(previousState, mission));
 
     logger.info(
         "[{}] impulsive injection: dv={} m/s, mass {} -> {} kg, aiming a {} km perilune (plan says"
             + " {} km)",
         getName(),
-        FastMath.round(plan.deltaV().getNorm()),
+        FastMath.round(injected.plan().deltaV().getNorm()),
         FastMath.round(previousState.getMass()),
-        FastMath.round(injected.getMass()),
+        FastMath.round(injected.state().getMass()),
         FastMath.round(targetPerileneAltitude / 1000.0),
-        FastMath.round(plan.perileneAltitude() / 1000.0));
+        FastMath.round(injected.plan().perileneAltitude() / 1000.0));
 
-    return injected;
+    return injected.state();
   }
 
   @Override

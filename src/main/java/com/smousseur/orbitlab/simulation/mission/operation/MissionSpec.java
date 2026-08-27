@@ -19,7 +19,8 @@ import java.util.Objects;
  * lets the optimization toggle recompose the stages (analytic ↔ CMA-ES) after the wizard closes,
  * instead of freezing one composition at creation time.
  */
-public sealed interface MissionSpec permits MissionSpec.EarthOrbit, MissionSpec.Geo {
+public sealed interface MissionSpec
+    permits MissionSpec.EarthOrbit, MissionSpec.Geo, MissionSpec.Lunar {
 
   /**
    * @return the human-readable mission name
@@ -462,6 +463,92 @@ public sealed interface MissionSpec permits MissionSpec.EarthOrbit, MissionSpec.
           parkingAltitude,
           targetAltitude,
           finalInclination,
+          siteName,
+          latitude,
+          longitude,
+          altitude,
+          horizon,
+          atmosphere);
+    }
+  }
+
+  /**
+   * Lunar flyby spec: ground to a perilune, through a parking orbit (MIS-4 / L4 §4).
+   *
+   * <p><b>The parking altitude is a component, and it is not exposed to the wizard.</b> It has to
+   * be one, because three things must agree on it — the launch window, the composed chain and the
+   * propellant budget — and a constant would put the same number in three files. It is kept out of
+   * the wizard because the user has no way to arbitrate the few tens of m/s it is worth: the
+   * injection is 54 m/s cheaper from 400 km than from 185, and the ascent to 400 km costs more than
+   * that back. L5 keeps the single field the découpage gives it, the perilune altitude.
+   *
+   * <p><b>No inclination component.</b> The flight is {@code i = φ}, due east. {@code EarthOrbit}
+   * carries {@code targetInclination} and {@code nodeBranch}, and {@code Geo} carries {@code
+   * finalInclination}, because those two have a choice to offer; this one does not before the
+   * adaptive-inclination lot, and at {@code i = φ} the two azimuths {@code
+   * LaunchPlane.launchAzimuth} distinguishes merge anyway.
+   *
+   * <p><b>No tolerance component either</b> (§4.1). The ± band on the flown perilune is not a
+   * caller's choice but a property of the measurement, so it lives on {@link LunarFlybyMission} as
+   * {@code PERILUNE_TOLERANCE}.
+   *
+   * <p><b>And no launch date.</b> No spec of this repository carries one: the date lives on {@code
+   * MissionEntry.getScheduledDate()}, written by the wizard's planning step. Until L5 exists it is
+   * the caller that dates the shot — a test resolves L2's window and hands its date to the
+   * optimizer as the flight epoch.
+   *
+   * @param name the mission name
+   * @param configuration the launch configuration
+   * @param parkingAltitude the parking orbit altitude in meters
+   * @param periluneAltitude the perilune altitude to fly past the Moon at, in meters
+   * @param siteName the launch site display name, or {@code null} when unnamed
+   * @param latitude the launch site latitude in degrees
+   * @param longitude the launch site longitude in degrees
+   * @param altitude the launch site altitude in meters
+   * @param horizon the restitution horizon, or {@code null} for the derived default
+   * @param atmosphere the atmosphere to fly against, or {@code null} for {@link
+   *     AtmosphereModel#NONE}
+   */
+  record Lunar(
+      String name,
+      LaunchConfiguration configuration,
+      double parkingAltitude,
+      double periluneAltitude,
+      String siteName,
+      double latitude,
+      double longitude,
+      double altitude,
+      MissionHorizon horizon,
+      AtmosphereModel atmosphere)
+      implements MissionSpec {
+    public Lunar {
+      Objects.requireNonNull(name, "name");
+      Objects.requireNonNull(configuration, "configuration");
+      // See EarthOrbit: normalised here so a hand-assembled spec need not know the default exists.
+      if (horizon == null) {
+        horizon = MissionHorizon.defaultFor(MissionType.LUNAR_FLYBY);
+      }
+      if (atmosphere == null) {
+        atmosphere = AtmosphereModel.NONE;
+      }
+    }
+
+    @Override
+    public MissionType type() {
+      return MissionType.LUNAR_FLYBY;
+    }
+
+    @Override
+    public MissionSpec withLauncherLoads(double[] launcherLoads) {
+      return new Lunar(
+          name,
+          new LaunchConfiguration(
+              configuration.launcher(),
+              launcherLoads,
+              configuration.payload(),
+              configuration.payloadId()),
+          parkingAltitude,
+          periluneAltitude,
           siteName,
           latitude,
           longitude,

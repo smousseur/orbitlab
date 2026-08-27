@@ -98,6 +98,7 @@ public final class MissionComposer {
         switch (spec) {
           case MissionSpec.EarthOrbit earthOrbit -> composeEarthOrbit(earthOrbit, mode);
           case MissionSpec.Geo geo -> composeGeo(geo, mode);
+          case MissionSpec.Lunar lunar -> composeLunar(lunar);
         };
     // This composer is the ONLY writer of a mission's restitution horizon (spec
     // docs/mission-horizon/01-horizon-explicite.md). Carrying it on the spec and applying it here,
@@ -239,6 +240,27 @@ public final class MissionComposer {
         spec.longitude(),
         spec.altitude(),
         plane.targetInclinationDeg());
+  }
+
+  /**
+   * The lunar chain (MIS-4 / L4 §3.1): ascent, parking insertion, parking coast to the injection
+   * point, translunar injection, translunar coast.
+   *
+   * <p>The optimization mode is not an argument, for the same reason {@link #composeGeo} gives: no
+   * stage of the lunar half of the chain has a CMA-ES counterpart, so every mode yields the same
+   * composition. What the mission optimizes is its <em>ascent</em>, exactly like any Earth mission,
+   * and that is unaffected by the mode. The mode still differentiates the mission on the
+   * load-handling axis in {@code MissionPlanOptimizer}.
+   */
+  private static Mission composeLunar(MissionSpec.Lunar spec) {
+    return new LunarFlybyMission(
+        spec.name(),
+        spec.configuration(),
+        spec.parkingAltitude(),
+        spec.periluneAltitude(),
+        spec.latitude(),
+        spec.longitude(),
+        spec.altitude());
   }
 
   private static Mission composeGeo(MissionSpec.Geo spec, OptimizationType mode) {

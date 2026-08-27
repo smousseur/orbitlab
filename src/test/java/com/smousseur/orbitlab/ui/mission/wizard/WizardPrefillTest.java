@@ -3,6 +3,7 @@ package com.smousseur.orbitlab.ui.mission.wizard;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.smousseur.orbitlab.app.converters.TimeConverter;
+import com.smousseur.orbitlab.core.OrbitlabException;
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.mission.MissionHorizon;
 import com.smousseur.orbitlab.simulation.mission.MissionType;
@@ -285,5 +286,34 @@ class WizardPrefillTest {
     MissionEntry legacy =
         new MissionEntry(MissionFactory.fromWizardValues(leoValues(), MissionType.LEO));
     assertThrows(IllegalArgumentException.class, () -> WizardPrefill.fromEntry(legacy));
+  }
+
+  /**
+   * MIS-4 / L4 §6.2 — reopening the wizard on a lunar mission refuses by naming L5, the lot that
+   * adds the fields there would be anything to prefill into.
+   */
+  @Test
+  void lunarFlyby_refusesToPrefillNamingItsLot() {
+    MissionSpec.Lunar spec =
+        new MissionSpec.Lunar(
+            "Lunar flyby",
+            LaunchConfiguration.fullyLoaded(
+                com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Launchers.FALCON_HEAVY,
+                com.smousseur.orbitlab.simulation.mission.vehicle.Spacecraft.LEGACY),
+            400_000.0,
+            100_000.0,
+            "Cape Canaveral",
+            28.562,
+            -80.577,
+            3.0,
+            null,
+            null);
+
+    OrbitlabException refused =
+        assertThrows(
+            OrbitlabException.class, () -> WizardPrefill.fromEntry(new MissionEntry(spec)));
+    assertTrue(
+        refused.getMessage().contains("L5"),
+        () -> "the refusal must name the lot that fills it, got: " + refused.getMessage());
   }
 }

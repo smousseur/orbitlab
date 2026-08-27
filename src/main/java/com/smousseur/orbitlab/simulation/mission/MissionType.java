@@ -5,7 +5,13 @@ public enum MissionType {
   LEO(false),
 
   /** Delegates the apogee circularization to the payload's kick motor. */
-  GEO(true);
+  GEO(true),
+
+  /**
+   * Ground to a lunar flyby (MIS-4). The payload is inert: the translunar injection is the last
+   * burn of the chain and nothing is handed over afterwards, so no kick motor is required.
+   */
+  LUNAR_FLYBY(false);
 
   private final boolean requiresPayloadPropulsion;
 

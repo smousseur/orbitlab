@@ -105,6 +105,13 @@ public final class ScenarioMapper {
               visible,
               solution,
               doubleValue(values, "GTO_PARKING_ALT"));
+      // MIS-4 / L4 §6.2 and §10 pt 5. Unlike the two refusals next door this one names no lot,
+      // because none claims it: the découpage never mentions ScenarioMission or this round trip.
+      // Somebody has to fill it in for a lunar mission created in the wizard to survive a save.
+      case LUNAR_FLYBY ->
+          throw new OrbitlabException(
+              "A lunar flyby cannot be persisted to a scenario yet: no ScenarioMission case"
+                  + " describes it, and no lot of the découpage claims one (MIS-4 / L4 §10 pt 5).");
     };
   }
 

@@ -186,4 +186,82 @@ class ObjectiveEvaluatorTest {
         IllegalArgumentException.class,
         () -> new FlybyObjective(SolarSystemBody.MOON, 100_000.0, 0.0));
   }
+
+  /**
+   * MIS-4 / L4 §3.4 — a flight cut off while still descending towards its perilune yields a
+   * perfectly plausible minimum, and selecting by body cannot tell that apart from an approach
+   * actually flown through. The truncated arc below stops one sample short of closest approach: its
+   * minimum lands squarely inside the band, and it must still be refused.
+   */
+  @Test
+  void flyby_minimumAtTheLastSampleOfTheArc_falseEvenInsideTheBand() {
+    List<MissionEphemerisPoint> points = new ArrayList<>();
+    AbsoluteDate t = AbsoluteDate.J2000_EPOCH;
+    TrajectoryArc earth = TrajectoryArc.earth();
+    TrajectoryArc moon = TrajectoryArc.forBody(SolarSystemBody.MOON);
+    points.add(coastPoint(t, 200_000.0, earth));
+    points.add(coastPoint(t.shiftedBy(60), 320_000_000.0, earth));
+    points.add(coastPoint(t.shiftedBy(120), LUNAR_SPHERE_ALTITUDE, moon));
+    points.add(coastPoint(t.shiftedBy(180), 400_000.0, moon));
+    // The horizon runs out here: the approach was still coming down.
+    points.add(coastPoint(t.shiftedBy(240), PERILUNE, moon));
+
+    assertFalse(
+        ObjectiveEvaluator.met(
+            new MissionEphemeris(points),
+            new FlybyObjective(SolarSystemBody.MOON, 100_000.0, BAND),
+            TOL),
+        "a minimum reached at the last sample of the arc is where the flight stopped, not how close"
+            + " it came");
+  }
+
+  /**
+   * The teeth of the test above: one more sample, climbing away, and the very same reading passes.
+   * Without this the guard could be refusing for any reason at all.
+   */
+  @Test
+  void flyby_oneSamplePastClosestApproach_true() {
+    List<MissionEphemerisPoint> points = new ArrayList<>();
+    AbsoluteDate t = AbsoluteDate.J2000_EPOCH;
+    TrajectoryArc earth = TrajectoryArc.earth();
+    TrajectoryArc moon = TrajectoryArc.forBody(SolarSystemBody.MOON);
+    points.add(coastPoint(t, 200_000.0, earth));
+    points.add(coastPoint(t.shiftedBy(60), 320_000_000.0, earth));
+    points.add(coastPoint(t.shiftedBy(120), LUNAR_SPHERE_ALTITUDE, moon));
+    points.add(coastPoint(t.shiftedBy(180), 400_000.0, moon));
+    points.add(coastPoint(t.shiftedBy(240), PERILUNE, moon));
+    points.add(coastPoint(t.shiftedBy(300), 400_000.0, moon));
+
+    assertTrue(
+        ObjectiveEvaluator.met(
+            new MissionEphemeris(points),
+            new FlybyObjective(SolarSystemBody.MOON, 100_000.0, BAND),
+            TOL));
+  }
+
+  /**
+   * The 4.5 d lunar demo must go on passing: it stops inside the sphere of influence, so its arc is
+   * never closed — but perilune falls at ~4.0 d and half a day of climbing samples follow it. That
+   * is exactly why the criterion is "the minimum is the last sample of the arc" and not "the arc
+   * came back out" (§3.4).
+   */
+  @Test
+  void flyby_arcNotClosedButClosestApproachPassed_true() {
+    List<MissionEphemerisPoint> points = new ArrayList<>();
+    AbsoluteDate t = AbsoluteDate.J2000_EPOCH;
+    TrajectoryArc earth = TrajectoryArc.earth();
+    TrajectoryArc moon = TrajectoryArc.forBody(SolarSystemBody.MOON);
+    points.add(coastPoint(t, 200_000.0, earth));
+    points.add(coastPoint(t.shiftedBy(60), 320_000_000.0, earth));
+    points.add(coastPoint(t.shiftedBy(120), LUNAR_SPHERE_ALTITUDE, moon));
+    points.add(coastPoint(t.shiftedBy(180), PERILUNE, moon));
+    points.add(coastPoint(t.shiftedBy(240), 12_000_000.0, moon));
+
+    assertTrue(
+        ObjectiveEvaluator.met(
+            new MissionEphemeris(points),
+            new FlybyObjective(SolarSystemBody.MOON, 100_000.0, BAND),
+            TOL),
+        "the lunar demo stops inside the sphere and must keep passing");
+  }
 }

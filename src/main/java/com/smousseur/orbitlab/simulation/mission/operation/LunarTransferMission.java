@@ -45,11 +45,13 @@ public class LunarTransferMission extends Mission {
   /**
    * The ± band on the flown perilune (m).
    *
-   * <p>An order of magnitude above the 0.9 km the 60 s coast sampling can over-read closest
-   * approach by (spec {@code docs/multi-corps/08-conception-L6.md} §4.3), and above the 1 km the
-   * aim secant converges to.
+   * <p><b>Read from {@link LunarFlybyMission}, which owns it since MIS-4 / L4</b> (spec {@code
+   * docs/lunar-flyby/06-conception-L4.md} §4.1). The band belongs to the mission of the product
+   * because that is the one which survives this chantier; keeping it here would have taken it away
+   * with the demo, which the chantier is meant to delete. The value is unchanged, and so is every
+   * number this class flies.
    */
-  public static final double DEFAULT_PERILUNE_TOLERANCE = 10_000.0;
+  public static final double DEFAULT_PERILUNE_TOLERANCE = LunarFlybyMission.PERILUNE_TOLERANCE;
 
   /**
    * Total mission duration (s).

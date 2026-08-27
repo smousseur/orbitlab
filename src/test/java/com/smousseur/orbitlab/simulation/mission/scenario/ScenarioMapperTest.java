@@ -192,4 +192,24 @@ class ScenarioMapperTest {
     assertThrows(
         OrbitlabException.class, () -> ScenarioMapper.toScenarioMission(entry, broken, null));
   }
+
+  /**
+   * MIS-4 / L4 §6.2 and §10 pt 5 — the one refusal of the lot that names no lot, because the
+   * découpage gives this round trip to none. It has to be filled in for a lunar mission created in
+   * the wizard to survive a save.
+   */
+  @Test
+  void lunarFlyby_isRefusedAndTheGapIsNamed() {
+    Map<String, Object> values = leoValues();
+    values.put("MISSION_TYPE", MissionType.LUNAR_FLYBY.name());
+    MissionEntry entry =
+        new MissionEntry(MissionFactory.specFromWizardValues(leoValues(), MissionType.LEO));
+
+    OrbitlabException refused =
+        assertThrows(
+            OrbitlabException.class, () -> ScenarioMapper.toScenarioMission(entry, values, null));
+    assertTrue(
+        refused.getMessage().contains("ScenarioMission"),
+        () -> "the refusal must name what is missing, got: " + refused.getMessage());
+  }
 }

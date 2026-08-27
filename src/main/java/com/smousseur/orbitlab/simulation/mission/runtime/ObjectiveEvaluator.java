@@ -53,6 +53,9 @@ public final class ObjectiveEvaluator {
    * closest approach within the objective's own band. The maximum is never read (see {@link
    * FlybyObjective}).
    *
+   * <p><b>A minimum reached at the very last sample of the arc is refused</b> (§3.4): see the guard
+   * below for why a truncated flight cannot be told from a completed one by the minimum alone.
+   *
    * <p><b>Points are selected by body alone</b> — not by stage name, and not by the arc's rank in
    * the flown sequence. A round trip flies {@code [EARTH, MOON, EARTH]} and the arc to measure is
    * the middle one, so selecting by rank would have to pick a rank, and the answer would depend on
@@ -79,9 +82,11 @@ public final class ObjectiveEvaluator {
     }
 
     double closestApproach = Double.POSITIVE_INFINITY;
+    double lastOnTheArc = Double.NaN;
     for (MissionEphemerisPoint point : points) {
       if (point.arc().body() == flyby.body()) {
         closestApproach = Math.min(closestApproach, point.altitudeMeters());
+        lastOnTheArc = point.altitudeMeters();
       }
     }
     if (!Double.isFinite(closestApproach)) {
@@ -89,6 +94,19 @@ public final class ObjectiveEvaluator {
     }
     if (closestApproach <= 0.0) {
       return false; // an impact is not a met objective, whatever band was declared
+    }
+    if (lastOnTheArc <= closestApproach) {
+      // The approach was still descending where the recording stops: closest approach was never
+      // passed, so this number is not "how close it came" but "where the flight ran out of
+      // horizon". Selecting the minimum over the arc cannot tell the two apart on its own, and a
+      // truncated flyby yields a perfectly plausible minimum — which is how a horizon too short,
+      // or an accidental capture, would otherwise pass silently (MIS-4 / L4 §3.4).
+      //
+      // It is false and not a throw, by the rule this class already follows: a truncated flight is
+      // a fact of flight, like a body never reached or an impact; the throw stays for an objective
+      // that is malformed. Written as "at or below" rather than "is the last index" so that a
+      // plateau at the minimum refuses too.
+      return false;
     }
     return Math.abs(closestApproach - flyby.closestApproachAltitude()) <= flyby.toleranceMeters();
   }

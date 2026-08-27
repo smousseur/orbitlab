@@ -7,7 +7,6 @@ import com.smousseur.orbitlab.simulation.flight.FlightContext;
 import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
 import com.smousseur.orbitlab.simulation.mission.maneuver.TranslunarInjectionPlan;
 import com.smousseur.orbitlab.simulation.mission.maneuver.TranslunarInjectionPlan.Departure;
-import com.smousseur.orbitlab.simulation.mission.vehicle.ActiveStageInfo;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
 import com.smousseur.orbitlab.simulation.mission.window.LaunchWindowCandidate;
 import com.smousseur.orbitlab.simulation.mission.window.LaunchWindowProblem;
@@ -54,12 +53,31 @@ import org.orekit.utils.TimeStampedPVCoordinates;
  * in {@link #confirm}: the perilune the aim converges to, and the depletion floor of the active
  * stage (spec §1.3).
  *
- * <p><b>What this criterion does not carry</b>, both biased the same way and both closable only by
- * flying the chain in L4: the ascent is outside the model, so the parking orbit is posed at the
- * launch instant on the site's own direction where the real insertion arrives some ten minutes and
- * twenty degrees later — <b>68 s</b> on the optimal date — and the plane is read at that same
- * instant without the ≤ 0.49° of nodal regression the parking coast accumulates, worth another
- * <b>115 s</b>. Some three minutes together, on a window measured at eleven (spec §6).
+ * <p><b>What this criterion does not carry</b>, both biased the same way: the ascent is outside the
+ * model, so the parking orbit is posed at the launch instant on the site's own direction where the
+ * real insertion arrives later, and the plane is read at that same instant without the nodal
+ * regression the parking coast accumulates.
+ *
+ * <p><b>Flown and measured on 2026-08-27</b> by {@code LunarFlybyFlightTest}, Canaveral, 400 km
+ * parking, and <b>one of the two estimates §6 of the spec gives is wrong by a factor of five</b>.
+ *
+ * <ul>
+ *   <li><b>The insertion does not arrive "some ten minutes" later, it arrives 3 011 s later</b> —
+ *       fifty minutes. The spec counted the climb to MECO and forgot that {@code
+ *       AnalyticParkingInsertionStage} carries its own coast to apogee between its two burns, which
+ *       is most of the delay. The <b>68 s</b> of date bias derived from ten minutes is understated
+ *       in the same proportion.
+ *   <li><b>The 0.49° per revolution of nodal regression is right to three digits.</b> Measured
+ *       −0.2956° over a 3 360 s parking coast, which is −0.4886° over the 5 553.6 s revolution.
+ *   <li><b>Together they put the real β 0.664° away from the planned one</b> (−0.6655° against
+ *       −0.0011°), of which J2 explains about 40 %.
+ * </ul>
+ *
+ * <p><b>And none of it reaches the perilune</b>, which is why the chain flies despite the bias:
+ * {@code TranslunarInjectionPlan.solve} re-aims from the state the vehicle is really in at
+ * injection, so the bisection absorbs the whole geometric error. The flight landed 1.0 km off its
+ * 100 km target. Closing the bias would buy a better <em>price</em> for the date the window offers,
+ * not a better trajectory.
  */
 public class LunarLaunchWindowProblem implements LaunchWindowProblem {
   private static final Logger logger = LogManager.getLogger(LunarLaunchWindowProblem.class);
@@ -187,41 +205,25 @@ public class LunarLaunchWindowProblem implements LaunchWindowProblem {
    * four-day propagations, about 4.5 seconds, which is why it runs on the handful of refined
    * candidates and not on the sweep.
    *
-   * <p><b>These four lines are a copy of {@code TranslunarInjectionStage.enter}, and that is the
-   * defect {@link LaunchWindowProblem#confirm} names in its own javadoc</b> — a re-implementation
-   * can drift from the stage, and the drift would surface as a mission failing on the optimizer
-   * thread after having been scheduled. It is unavoidable here: calling the stage takes a {@code
-   * Mission}, and the lunar mission of the product is L4's. L4 hands the confirmation back to the
-   * stage, as the translunar problem next door already does (spec §3.3).
+   * <p><b>Both verdicts come from {@link TranslunarInjectionPlan#inject}, which is also what {@code
+   * TranslunarInjectionStage} flies</b> (MIS-4 / L4 §7). They were the same four lines written
+   * twice until L4, and the drift that invited has a date: L6 replaces the impulsive stage with a
+   * finite-burn one, and a window left confirming against the impulsive model would keep dating
+   * launches by a trajectory the mission no longer flies.
    */
   @Override
   public LaunchWindowCandidate confirm(LaunchWindowCandidate candidate) {
     AbsoluteDate epoch = candidate.epoch();
     try {
       Injection injection = injectionAt(epoch);
-      ActiveStageInfo active = vehicle.resolveActiveStage(massAtInjection);
-      double exhaustVelocity = active.propulsion().isp() * Constants.G0_STANDARD_GRAVITY;
+      TranslunarInjectionPlan.Injected injected =
+          TranslunarInjectionPlan.inject(
+              injection.state(),
+              targetPerileneAltitude,
+              vehicle.resolveActiveStage(massAtInjection),
+              flightContext());
 
-      TranslunarInjectionPlan plan =
-          TranslunarInjectionPlan.solve(
-              injection.state(), targetPerileneAltitude, exhaustVelocity, flightContext());
-      SpacecraftState injected = plan.applyTo(injection.state(), exhaustVelocity);
-
-      double floor = active.depletionFloor();
-      if (injected.getMass() < floor) {
-        String refusal =
-            String.format(
-                Locale.ROOT,
-                "the %.0f m/s injection would leave %.0f kg, below the %.0f kg depletion floor of"
-                    + " the active stage",
-                plan.deltaV().getNorm(),
-                injected.getMass(),
-                floor);
-        logger.info("[{}] {} refused: {}", name(), epoch, refusal);
-        return LaunchWindowCandidate.refused(epoch, refusal);
-      }
-
-      double deltaV = plan.deltaV().getNorm();
+      double deltaV = injected.plan().deltaV().getNorm();
       logger.info(
           "[{}] {} confirmed at {} m/s (screened at {} m/s) — β = {}°, perilune {} km",
           name(),
@@ -229,7 +231,7 @@ public class LunarLaunchWindowProblem implements LaunchWindowProblem {
           FastMath.round(deltaV),
           FastMath.round(candidate.deltaV()),
           String.format(Locale.ROOT, "%.3f", FastMath.toDegrees(injection.planeMisalignment())),
-          String.format(Locale.ROOT, "%.1f", plan.perileneAltitude() / 1000.0));
+          String.format(Locale.ROOT, "%.1f", injected.plan().perileneAltitude() / 1000.0));
       return LaunchWindowCandidate.of(epoch, deltaV);
     } catch (OrbitlabException refused) {
       logger.info("[{}] {} refused: {}", name(), epoch, refused.getMessage());
@@ -247,18 +249,24 @@ public class LunarLaunchWindowProblem implements LaunchWindowProblem {
    * The parking state at the injection point of a lift-off at {@code epoch}, and the geometry that
    * placed it there.
    *
-   * <p>Package-private rather than private, with {@link #injectionAt}, because it is what the tests
-   * of this package read the geometry <em>behind</em> a price with: β is not a term of the cost —
-   * L1 measured that the Lambert term already carries all of it (spec §2.3) — but it is what
-   * explains one, and a test that could only see the number could not tell a right price from a
-   * plausible one.
+   * <p>Exposed rather than private, with {@link #injectionAt}, because it is what a caller reads
+   * the geometry <em>behind</em> a price with: β is not a term of the cost — L1 measured that the
+   * Lambert term already carries all of it (spec §2.3) — but it is what explains one, and a reader
+   * who could only see the number could not tell a right price from a plausible one.
+   *
+   * <p><b>Public since MIS-4 / L4</b>, where the closure flight reads the geometry this problem
+   * <em>planned</em> in order to measure it against the one the chain actually flew — the two
+   * biases §6 below chiffers without flying, three minutes of them, on a window measured at eleven.
+   * That comparison is the only way those numbers stop being an estimate, and it cannot be made
+   * from inside this package: the mission that flies is somewhere else entirely.
    *
    * @param state the circular parking state at the injection point, in the plane the pad reaches
    * @param arrivalDate the date the Moon's centre is aimed at
    * @param planeMisalignment the signed angle of the arrival direction above the parking plane
    *     (rad), positive towards the plane's normal
    */
-  record Injection(SpacecraftState state, AbsoluteDate arrivalDate, double planeMisalignment) {}
+  public record Injection(
+      SpacecraftState state, AbsoluteDate arrivalDate, double planeMisalignment) {}
 
   /**
    * Resolves the whole geometry of a lift-off at {@code epoch}: the plane the pad reaches, the
@@ -270,7 +278,7 @@ public class LunarLaunchWindowProblem implements LaunchWindowProblem {
    * physically right phase, a due-east launch at {@code i = φ} putting the site at the northernmost
    * point of the orbit.
    */
-  Injection injectionAt(AbsoluteDate epoch) {
+  public Injection injectionAt(AbsoluteDate epoch) {
     Vector3D position = site.positionAt(epoch);
     Vector3D normal = site.normalOn(position);
     Departure departure = TranslunarInjectionPlan.departureFrom(circular(normal, position, epoch));

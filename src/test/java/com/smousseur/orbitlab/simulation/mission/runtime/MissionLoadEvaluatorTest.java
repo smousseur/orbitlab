@@ -7,6 +7,7 @@ import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemeris;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemerisPoint;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.TrajectoryArc;
+import com.smousseur.orbitlab.simulation.mission.objective.FlybyObjective;
 import com.smousseur.orbitlab.simulation.mission.objective.OrbitInsertionObjective;
 import com.smousseur.orbitlab.simulation.mission.vehicle.StagePropellant;
 import java.util.ArrayList;
@@ -15,7 +16,6 @@ import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.orekit.time.AbsoluteDate;
-import org.orekit.time.TimeScalesFactory;
 
 /**
  * Fast unit test of the I7 feasibility predicate (spec 09 §6 task 2) — the {@code objectiveMet} and
@@ -241,5 +241,49 @@ class MissionLoadEvaluatorTest {
     MissionPerformanceReport legacy =
         new MissionPerformanceReport(List.of(), 8_000.0, 1_235_844.0, 284.0);
     assertFalse(MissionLoadEvaluator.residualSufficient(legacy, 1, 0.01)); // 284 / 1.24 M < 1 %
+  }
+
+  /**
+   * MIS-4 / L4 §5 — the feasibility objective is a {@code MissionObjective} and no longer an
+   * insertion, which is what opens {@code PRECISE} to a lunar mission instead of throwing on the
+   * optimizer thread, outside the try that absorbs optimization failures, after a full ascent and a
+   * seven-day flight had already been paid for.
+   *
+   * <p>What is asserted here is the seam and not the flight: that a flyby travels through the
+   * constructor, and that the scoring the evaluator now performs is exactly {@link
+   * ObjectiveEvaluator}'s. The flown routing is the closure flight of §8.3.
+   */
+  @Test
+  void feasibilityObjective_takesAFlybyAndScoresItThroughTheEvaluator() {
+    FlybyObjective flyby = new FlybyObjective(SolarSystemBody.MOON, 100_000.0, 10_000.0);
+
+    assertDoesNotThrow(
+        () ->
+            new MissionLoadEvaluator(
+                loads -> {
+                  throw new UnsupportedOperationException("nothing is flown here");
+                },
+                new double[] {1_000.0},
+                new boolean[] {true},
+                AbsoluteDate.J2000_EPOCH,
+                MissionLoadEvaluator.DEFAULT_SIZING_MAX_EVALUATIONS,
+                42L,
+                TOL,
+                MissionLoadEvaluator.DEFAULT_RESIDUAL_FLOOR_RATIO,
+                flyby),
+        "a flyby must be a usable feasibility objective since L4");
+
+    // The two-arc fixture above, read as a flyby: the lunar arc is measured on its own terms, where
+    // objectiveMet would have judged it against a geocentric target.
+    List<MissionEphemerisPoint> points = new ArrayList<>();
+    AbsoluteDate t = AbsoluteDate.J2000_EPOCH;
+    points.add(coastPoint(t, 380_000_000.0, TrajectoryArc.earth()));
+    points.add(coastPoint(t.shiftedBy(60), 320_000_000.0, TrajectoryArc.earth()));
+    points.add(
+        coastPoint(t.shiftedBy(120), 102_000.0, TrajectoryArc.forBody(SolarSystemBody.MOON)));
+    points.add(coastPoint(t.shiftedBy(180), 98_000.0, TrajectoryArc.forBody(SolarSystemBody.MOON)));
+    points.add(
+        coastPoint(t.shiftedBy(240), 140_000.0, TrajectoryArc.forBody(SolarSystemBody.MOON)));
+    assertTrue(ObjectiveEvaluator.met(new MissionEphemeris(points), flyby, TOL));
   }
 }

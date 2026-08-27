@@ -43,7 +43,7 @@ class MissionTargetOrbitTest {
         MissionSpec.EarthOrbit.dueEast(
             "LEO", falconHeavy(), 400_000.0, 600_000.0, "Kourou", SITE_LAT, -52.77, 0.0, null);
 
-    MissionTargetOrbit target = MissionTargetOrbit.of(spec);
+    MissionTargetOrbit target = MissionTargetOrbit.of(spec).orElseThrow();
 
     assertEquals(400_000.0, target.perigeeAltitude(), 1e-6);
     assertEquals(600_000.0, target.apogeeAltitude(), 1e-6);
@@ -56,7 +56,7 @@ class MissionTargetOrbitTest {
         new MissionSpec.Geo(
             "GEO", falconHeavy(), PARKING_ALT, GEO_ALT, 0.0, "Kourou", SITE_LAT, -52.77, 0.0, null);
 
-    MissionTargetOrbit target = MissionTargetOrbit.of(spec);
+    MissionTargetOrbit target = MissionTargetOrbit.of(spec).orElseThrow();
 
     // GEOMission records its objective as (parking, GEO, i = launch latitude). Reading the target
     // from there would report a ~35 000 km perigee miss and a 5.23 deg inclination miss on a
@@ -82,7 +82,33 @@ class MissionTargetOrbitTest {
             0.0,
             null);
 
-    assertEquals(FastMath.toRadians(3.0), MissionTargetOrbit.of(spec).inclination(), 1e-12);
+    assertEquals(
+        FastMath.toRadians(3.0), MissionTargetOrbit.of(spec).orElseThrow().inclination(), 1e-12);
+  }
+
+  /**
+   * MIS-4 / L4 §6.1. A flyby aims at no orbit, so it resolves to nothing rather than to a
+   * degenerate triple: the detail view drops its TARGET line and the panel footer drops its miss,
+   * exactly as they already do for a legacy entry — no new UI case.
+   */
+  @Test
+  void lunarFlybyHasNoDisplayableTargetOrbit() {
+    MissionSpec.Lunar spec =
+        new MissionSpec.Lunar(
+            "Lunar flyby",
+            falconHeavy(),
+            PARKING_ALT,
+            100_000.0,
+            "Kourou",
+            SITE_LAT,
+            -52.77,
+            0.0,
+            null,
+            null);
+
+    assertTrue(
+        MissionTargetOrbit.of(spec).isEmpty(),
+        "a flyby has no (perigee, apogee, inclination) to display");
   }
 
   @Test

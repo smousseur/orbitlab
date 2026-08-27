@@ -57,6 +57,19 @@ public sealed interface MissionHorizon
   int DEFAULT_GEO_REVOLUTIONS = 3;
 
   /**
+   * Derived default for a lunar flyby: seven days.
+   *
+   * <p><b>A duration and not a count of revolutions</b>, because a lunar flight has none worth
+   * counting: the injection state is still geocentric and bound, so {@code Revolutions} would
+   * resolve against the translunar ellipse and yield 12.1 days a turn — representable, harmless,
+   * and meaningless as an intention. Seven days is what the découpage asks for and what L0 measured
+   * the geometry around: the sphere of influence is left at 4.51–4.62 d, so this leaves ~2.4 d of
+   * returning geocentric arc and produces the {@code [EARTH, MOON, EARTH]} sequence the flyby
+   * predicate is written for.
+   */
+  double DEFAULT_LUNAR_FLYBY_SECONDS = 7.0 * SECONDS_PER_DAY;
+
+  /**
    * The horizon a mission of this type gets when the user did not set one. Both defaults land on ~3
    * days: long enough to watch the orbital plane precess, and already the right order of magnitude
    * for the lunar and rendezvous profiles that will follow.
@@ -68,6 +81,7 @@ public sealed interface MissionHorizon
     return switch (type) {
       case LEO -> new Revolutions(DEFAULT_LEO_REVOLUTIONS);
       case GEO -> new Revolutions(DEFAULT_GEO_REVOLUTIONS);
+      case LUNAR_FLYBY -> new FixedDuration(DEFAULT_LUNAR_FLYBY_SECONDS);
     };
   }
 

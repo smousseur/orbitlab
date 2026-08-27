@@ -29,25 +29,34 @@ public record MissionTargetOrbit(
   /**
    * Resolves the displayable target of a spec.
    *
+   * <p><b>A flyby has none, and fabricating one would be worse than showing nothing</b> (MIS-4 / L4
+   * §6.1). There is no (perigee, apogee, inclination) triple to display beside a lunar approach; a
+   * degenerate one would put a false geocentric target next to the achieved orbit, which is exactly
+   * the kind of silence this chantier removes. Both consumers already handle the absence — they
+   * meet it on legacy entries carrying no spec — so this costs no new case in the UI.
+   *
    * @param spec the mission spec
-   * @return the target orbit, never {@code null}
+   * @return the target orbit, or empty when the mission aims at no orbit
    */
-  public static MissionTargetOrbit of(MissionSpec spec) {
+  public static Optional<MissionTargetOrbit> of(MissionSpec spec) {
     Objects.requireNonNull(spec, "spec");
     return switch (spec) {
       case MissionSpec.EarthOrbit earthOrbit ->
           // The inclination now comes from the spec's target plane, not from the site latitude.
           // They coincide on a due-east launch — which is what every mission flew before MIS-7 —
           // and diverge the moment a plane is asked for, which is the point.
-          new MissionTargetOrbit(
-              earthOrbit.perigeeAltitude(),
-              earthOrbit.apogeeAltitude(),
-              earthOrbit.targetInclination());
+          Optional.of(
+              new MissionTargetOrbit(
+                  earthOrbit.perigeeAltitude(),
+                  earthOrbit.apogeeAltitude(),
+                  earthOrbit.targetInclination()));
       case MissionSpec.Geo geo ->
-          new MissionTargetOrbit(
-              geo.targetAltitude(),
-              geo.targetAltitude(),
-              FastMath.toRadians(geo.finalInclination()));
+          Optional.of(
+              new MissionTargetOrbit(
+                  geo.targetAltitude(),
+                  geo.targetAltitude(),
+                  FastMath.toRadians(geo.finalInclination())));
+      case MissionSpec.Lunar lunar -> Optional.empty();
     };
   }
 
@@ -55,11 +64,12 @@ public record MissionTargetOrbit(
    * Resolves the displayable target of an entry.
    *
    * @param entry the mission entry
-   * @return the target orbit, or empty for a legacy entry that carries no spec — there is nothing
-   *     to compare an achieved orbit against, and the view shows the achieved orbit alone
+   * @return the target orbit, or empty for a legacy entry that carries no spec and for a mission
+   *     that aims at no orbit — there is nothing to compare an achieved orbit against, and the view
+   *     shows the achieved orbit alone
    */
   public static Optional<MissionTargetOrbit> forEntry(MissionEntry entry) {
     Objects.requireNonNull(entry, "entry");
-    return entry.spec().map(MissionTargetOrbit::of);
+    return entry.spec().flatMap(MissionTargetOrbit::of);
   }
 }

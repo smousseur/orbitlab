@@ -141,6 +141,14 @@ public final class MissionFactory {
             altitude,
             horizon);
       }
+      // MIS-4 / L4 §6.2: a branch that refuses by naming the lot which will fill it, rather than a
+      // `default` — the point of adding the enum constant is that the compiler keeps pointing at
+      // this site until someone does.
+      case LUNAR_FLYBY ->
+          throw new OrbitlabException(
+              "A lunar flyby cannot be built from wizard values yet — MIS-4 / L5 adds the profile,"
+                  + " the perilune field and the propellant budget. Until then a"
+                  + " MissionSpec.Lunar is assembled directly.");
     };
   }
 
