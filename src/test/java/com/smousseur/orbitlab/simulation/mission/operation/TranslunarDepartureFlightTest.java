@@ -56,8 +56,8 @@ class TranslunarDepartureFlightTest {
   /** The misalignment imposed on the parking plane (rad). */
   private static final double TILT = FastMath.toRadians(5.0);
 
-  /** Perilune altitude aimed for (m) — the target the demo flight flies. */
-  private static final double TARGET_PERILUNE = LunarTransferMission.DEFAULT_PERILUNE_ALTITUDE;
+  /** Perilune altitude aimed for (m) — the target every lunar flight of the repository flies. */
+  private static final double TARGET_PERILUNE = LunarFlybyMission.DEFAULT_PERILUNE_ALTITUDE;
 
   /**
    * The band on the perilune the aim converges to (m). The bisection stops at 1 km on the flown
@@ -124,7 +124,9 @@ class TranslunarDepartureFlightTest {
         String.format(
             Locale.ROOT,
             "%.1f",
-            TranslunarInjectionPlan.keplerianInjectionDeltaV(epoch, INJECTION_MASS)));
+            TranslunarInjectionPlan.keplerianInjectionDeltaV(
+                TranslunarInjectionPlan.parkingState(epoch, INJECTION_MASS),
+                epoch.shiftedBy(TranslunarInjectionPlan.TIME_OF_FLIGHT_SECONDS))));
 
     // ── what L1 owns ────────────────────────────────────────────────────────
     assertEquals(

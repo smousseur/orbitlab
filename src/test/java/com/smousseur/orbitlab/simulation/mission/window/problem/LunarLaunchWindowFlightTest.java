@@ -9,8 +9,9 @@ import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.flight.FlightContext;
 import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
 import com.smousseur.orbitlab.simulation.mission.maneuver.TranslunarInjectionPlan;
-import com.smousseur.orbitlab.simulation.mission.vehicle.PropulsionSystem;
-import com.smousseur.orbitlab.simulation.mission.vehicle.Spacecraft;
+import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchConfiguration;
+import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Launchers;
+import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Payloads;
 import com.smousseur.orbitlab.simulation.mission.window.LaunchWindow;
 import com.smousseur.orbitlab.simulation.mission.window.LaunchWindowSearch;
 import com.smousseur.orbitlab.simulation.mission.window.LaunchWindowSolver;
@@ -36,9 +37,13 @@ import org.orekit.utils.Constants;
  * <p><b>What it adds to the closed tests next door.</b> Those measure the shape of the screening
  * criterion; nothing in them ever flies. Here the solver's second tier is on, so the epochs it
  * offers have been through the perilune bisection and the depletion floor of the active stage — the
- * two verdicts that decide whether a date is a plan or a wish. The 1 700 kg vehicle leaves some 577
- * kg after a 3 178 m/s injection at Isp 300, against a 500 kg floor: the confirmation is a real
- * test of that floor rather than a formality it passes with room to spare.
+ * two verdicts that decide whether a date is a plan or a wish.
+ *
+ * <p><b>Since L6 those verdicts are taken on the launcher that flies, and they decide reachability
+ * as well as cost</b> (spec {@code docs/lunar-flyby/08-conception-L6.md} §9.6). A finite departure
+ * reaches fewer perilunes than an impulse, so an epoch whose aim has no root is refused here rather
+ * than handed on as a date. Screening on a spacecraft kick motor, as this case did until L6, prices
+ * a 75° burn nothing in the chain ever lights.
  *
  * <p><b>The screen-to-confirmation gap is the closing measurement of the lot.</b> The solver
  * anchors its acceptance margin on the screening tier on both sides, which is only sound while the
@@ -65,8 +70,18 @@ class LunarLaunchWindowFlightTest {
    */
   private static final double PERILUNE_BAND = 10_000.0;
 
-  /** Mass at injection (kg) — the figure L0 and L1 measured their tables at. */
-  private static final double INJECTION_MASS = 1_700.0;
+  /**
+   * Mass at injection (kg) — the mass a Falcon Heavy upper stage really arrives with.
+   *
+   * <p><b>It was 1 700 kg on a 3 kN spacecraft motor until L6</b>, chosen because that vehicle
+   * leaves so little above its depletion floor that the confirmation was a real test of the floor
+   * rather than a formality. The finite injection took the choice away: 3 kN sweeps 75° of arc, the
+   * out-of-model regime L6 §1.2 measured, and the aim flown finitely there does not converge at any
+   * epoch of the search — the window came back empty. What replaces the intent rather than
+   * abandoning it is that the real stage is tight too: it arrives at 61 400 kg and cuts off within
+   * a few kilograms of its floor (spec L6 §9.6).
+   */
+  private static final double INJECTION_MASS = 61_400.0;
 
   /** The budget the search accepts an epoch under (m/s), a little above the 3 178 m/s baseline. */
   private static final double MAX_DELTA_V = 3_400.0;
@@ -89,7 +104,9 @@ class LunarLaunchWindowFlightTest {
             CANAVERAL_ALTITUDE,
             TranslunarInjectionPlan.PARKING_ALTITUDE,
             TARGET_PERILUNE,
-            new Spacecraft(500, 1200, 1200, PropulsionSystem.getSpacecraftPropulsion()),
+            LaunchConfiguration.fullyLoaded(
+                    Launchers.FALCON_HEAVY, Payloads.CARGO_MODULE.toSpacecraft(5_000.0, 0.0))
+                .toVehicleStack(),
             INJECTION_MASS);
     AbsoluteDate start = new AbsoluteDate(2026, 3, 31, 0, 0, 0.0, TimeScalesFactory.getUTC());
 
@@ -115,7 +132,13 @@ class LunarLaunchWindowFlightTest {
     // aim converged to. The solver's own confirmation gives back a cost and a verdict only.
     LunarLaunchWindowProblem.Injection injection = problem.injectionAt(window.date());
     double exhaustVelocity =
-        PropulsionSystem.getSpacecraftPropulsion().isp() * Constants.G0_STANDARD_GRAVITY;
+        LaunchConfiguration.fullyLoaded(
+                    Launchers.FALCON_HEAVY, Payloads.CARGO_MODULE.toSpacecraft(5_000.0, 0.0))
+                .toVehicleStack()
+                .resolveActiveStage(INJECTION_MASS)
+                .propulsion()
+                .isp()
+            * Constants.G0_STANDARD_GRAVITY;
     TranslunarInjectionPlan plan =
         TranslunarInjectionPlan.solve(
             injection.state(),
@@ -139,7 +162,7 @@ class LunarLaunchWindowFlightTest {
         String.format(Locale.ROOT, "%.1f", wallSeconds));
     logger.info(
         "at the optimum: β = {}°, screened {} m/s, confirmed {} m/s (gap {} m/s against the 6-8 m/s"
-            + " of the translunar problem), flown perilune {} km, {} kg left against a 500 kg floor",
+            + " of the translunar problem), flown perilune {} km, {} kg left",
         String.format(Locale.ROOT, "%.3f", FastMath.toDegrees(injection.planeMisalignment())),
         String.format(Locale.ROOT, "%.1f", screened),
         String.format(Locale.ROOT, "%.1f", window.best().deltaV()),

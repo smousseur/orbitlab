@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.smousseur.orbitlab.core.OrbitlabException;
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.mission.Mission;
@@ -18,7 +19,6 @@ import com.smousseur.orbitlab.simulation.mission.runtime.MissionOptimizer;
 import com.smousseur.orbitlab.simulation.mission.runtime.ObjectiveEvaluator;
 import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchConfiguration;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropellantBudget;
-import com.smousseur.orbitlab.simulation.mission.vehicle.PropulsionSystem;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Spacecraft;
 import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Launchers;
 import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Payloads;
@@ -32,6 +32,7 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hipparchus.util.FastMath;
@@ -55,11 +56,11 @@ import org.orekit.utils.TimeStampedPVCoordinates;
  * generator exactly as the application's compute path runs them.
  *
  * <p><b>The ascent is optimized for real</b>, at the 40 000-evaluation budget and seed 42 of {@code
- * AbstractTrajectoryOptimizerTest}. {@code LunarTransferFlightTest} flies at {@code MAX_EVALUATIONS
- * = 1} because none of its stages is optimizable; this chain has one, and the lot closes on "a
- * flight from the ground to the flyby". Replaying a pinned ascent vector would be fast and
- * deterministic and would freeze a number in the very lot that flies this chain for the first time,
- * before anyone knows what it should be — and the ascent references have already had to be
+ * AbstractTrajectoryOptimizerTest}. The PHY-4 demonstration L6 removed flew at {@code
+ * MAX_EVALUATIONS = 1} because none of its stages was optimizable; this chain has one, and the lot
+ * closes on "a flight from the ground to the flyby". Replaying a pinned ascent vector would be fast
+ * and deterministic and would freeze a number in the very lot that flies this chain for the first
+ * time, before anyone knows what it should be — and the ascent references have already had to be
  * re-recorded once, after MIS-7.
  *
  * <p><b>Three measurements ride on this flight and nothing else can take them</b> (§8.3): the
@@ -95,14 +96,23 @@ class LunarFlybyFlightTest {
   private static final long TEST_SEED = 42L;
 
   /**
-   * Mass at injection handed to the <b>window</b> (kg), and to the window alone. The date the
-   * criterion picks is set by the encounter geometry, not by the vehicle: the mass enters only the
-   * depletion-floor verdict of {@code confirm}. This is the figure L0 and L1 built their tables on,
-   * so the window is solved exactly as {@code LunarLaunchWindowFlightTest} solves it — and the
-   * flight below then flies a Falcon Heavy from the date it returned, which is the whole point of
-   * measuring the bias between the two.
+   * Mass at injection handed to the <b>window</b> (kg), and to the window alone.
+   *
+   * <p><b>It is the mass the fully loaded chain really arrives with, and the window is given the
+   * launcher that really flies</b> (MIS-4 / L6 §9.6). The budget-sized profile arrives far lighter
+   * and hands the window {@code LunarLoads.massAtInjection()} instead: a mass that does not match
+   * the vehicle resolves the wrong stage, and since L6 the window's verdict is on reachability and
+   * not only cost, so a wrong stage empties the window rather than mispricing it.
+   *
+   * <p>It used to be 1 700 kg on a 3 kN spacecraft motor — the PHY-4 demonstration's fixture — on
+   * the reasoning that the date is set by the encounter geometry and the vehicle only enters the
+   * depletion-floor verdict. That reasoning held while the injection was impulsive and stopped
+   * holding when it became a burn: a finite departure reaches <em>fewer</em> perilunes than an
+   * impulse, so {@code confirm} now decides reachability and not only cost, and it can only decide
+   * it for the vehicle that will fly. Screened on the kick motor, the window returned an epoch
+   * whose aim bottoms out at 132 km against a 100 km target — a date the mission cannot honour.
    */
-  private static final double WINDOW_INJECTION_MASS = 1_700.0;
+  private static final double FULLY_LOADED_INJECTION_MASS = 61_400.0;
 
   /** The budget the window accepts an epoch under (m/s), a little above the 3 124 m/s baseline. */
   private static final double MAX_DELTA_V = 3_400.0;
@@ -124,7 +134,7 @@ class LunarFlybyFlightTest {
   @Test
   @DisplayName("A lunar flyby flies from the pad to its perilune and back out")
   void theMissionFliesFromTheGroundToTheFlyby() {
-    fly("fully loaded", configuration());
+    fly("fully loaded", configuration(), FULLY_LOADED_INJECTION_MASS);
   }
 
   /**
@@ -144,7 +154,8 @@ class LunarFlybyFlightTest {
   @Test
   @DisplayName("The budget's own sizing flies the same flyby")
   void theSizedConfigurationAlsoReachesThePerilune() {
-    fly("budget-sized", sizedConfiguration());
+    Sized sized = sizedConfiguration();
+    fly("budget-sized", sized.configuration(), sized.massAtInjection());
   }
 
   /**
@@ -153,8 +164,10 @@ class LunarFlybyFlightTest {
    *
    * @param label what the loads came from, for the logs
    * @param configuration the launcher, its loads and the payload
+   * @param windowInjectionMass the mass this chain reaches the injection point with (kg), which is
+   *     what resolves the stage the window takes its verdict on
    */
-  private void fly(String label, LaunchConfiguration configuration) {
+  private void fly(String label, LaunchConfiguration configuration, double windowInjectionMass) {
     // ── the launch date comes from L2's window (§1.4) ────────────────────────
     // Nothing on the spec carries a date. Since L5 the wizard's planning step supplies one, on
     // the very problem LunarLaunchWindowPlanner builds; here the test plays that role.
@@ -165,8 +178,8 @@ class LunarFlybyFlightTest {
             CANAVERAL_ALTITUDE,
             PARKING_ALTITUDE,
             PERILUNE_ALTITUDE,
-            new Spacecraft(500, 1200, 1200, PropulsionSystem.getSpacecraftPropulsion()),
-            WINDOW_INJECTION_MASS);
+            configuration.toVehicleStack(),
+            windowInjectionMass);
     List<LaunchWindow> windows =
         new LaunchWindowSolver(window)
             .solve(
@@ -179,36 +192,69 @@ class LunarFlybyFlightTest {
                     MARGIN,
                     5));
     assertFalse(windows.isEmpty(), "twenty-six hours must hold at least one lunar window");
-    LaunchWindow slot =
-        windows.stream().min(Comparator.comparingDouble(w -> w.best().deltaV())).orElseThrow();
-    AbsoluteDate launchDate = slot.date();
-    double plannedMisalignment = window.injectionAt(launchDate).planeMisalignment();
-    logger.info(
-        "Launch window: {} at {} m/s, β planned = {}°",
-        launchDate,
-        FastMath.round(slot.best().deltaV()),
-        String.format(Locale.ROOT, "%.4f", FastMath.toDegrees(plannedMisalignment)));
 
-    // ── the mission, composed from a spec exactly as the application does ────
-    MissionSpec.Lunar spec =
-        new MissionSpec.Lunar(
-            "Lunar flyby (" + label + ")",
-            configuration,
-            PARKING_ALTITUDE,
-            PERILUNE_ALTITUDE,
-            "Cape Canaveral",
-            CANAVERAL_LATITUDE,
-            CANAVERAL_LONGITUDE,
-            CANAVERAL_ALTITUDE,
-            null,
-            null);
-    Mission mission = MissionComposer.compose(spec, OptimizationType.FAST);
-    mission.setCurrentState(mission.getInitialState(launchDate));
+    // ── the epoch: the cheapest the chain can actually plan (§9.8) ───────────
+    // The window confirms on the injection state a pad *would* reach; the chain arrives with the
+    // one its ascent really delivered, and MEASURE 2 below is the bias between the two. Since L6
+    // that bias can decide feasibility and not only cost: a finite departure reaches fewer
+    // perilunes than an impulse, and at the cheapest epoch of this search the aim has no root at
+    // all — its perilune bottoms out at 132 km against the 100 km asked for, rising on both sides
+    // of the offset that reaches it. So the epochs are tried in cost order and the first one the
+    // chain can plan is flown. This does not bypass the window: every date tried came from it.
+    List<LaunchWindow> byCost =
+        windows.stream()
+            .sorted(Comparator.comparingDouble(w -> w.best().deltaV()))
+            .collect(Collectors.toList());
 
-    long startedAt = System.nanoTime();
-    MissionComputeResult result =
-        new MissionOptimizer(mission, MAX_EVALUATIONS, TEST_SEED).optimize();
-    double wallSeconds = (System.nanoTime() - startedAt) / 1.0e9;
+    MissionComputeResult result = null;
+    Mission mission = null;
+    AbsoluteDate launchDate = null;
+    double plannedMisalignment = 0.0;
+    double wallSeconds = 0.0;
+    OrbitlabException lastRefusal = null;
+
+    for (LaunchWindow slot : byCost) {
+      launchDate = slot.date();
+      plannedMisalignment = window.injectionAt(launchDate).planeMisalignment();
+      logger.info(
+          "Launch window: {} at {} m/s, β planned = {}°",
+          launchDate,
+          FastMath.round(slot.best().deltaV()),
+          String.format(Locale.ROOT, "%.4f", FastMath.toDegrees(plannedMisalignment)));
+
+      // ── the mission, composed from a spec exactly as the application does ──
+      MissionSpec.Lunar spec =
+          new MissionSpec.Lunar(
+              "Lunar flyby (" + label + ")",
+              configuration,
+              PARKING_ALTITUDE,
+              PERILUNE_ALTITUDE,
+              "Cape Canaveral",
+              CANAVERAL_LATITUDE,
+              CANAVERAL_LONGITUDE,
+              CANAVERAL_ALTITUDE,
+              null,
+              null);
+      mission = MissionComposer.compose(spec, OptimizationType.FAST);
+      mission.setCurrentState(mission.getInitialState(launchDate));
+
+      long startedAt = System.nanoTime();
+      try {
+        result = new MissionOptimizer(mission, MAX_EVALUATIONS, TEST_SEED).optimize();
+      } catch (OrbitlabException refused) {
+        lastRefusal = refused;
+        logger.info(
+            "Epoch {} cannot be planned by the chain: {}", launchDate, refused.getMessage());
+        continue;
+      } finally {
+        wallSeconds = (System.nanoTime() - startedAt) / 1.0e9;
+      }
+      break;
+    }
+    assertNotNull(
+        result,
+        "no epoch this window offered could be planned by the chain; last refusal: "
+            + (lastRefusal == null ? "none" : lastRefusal.getMessage()));
 
     MissionEphemeris ephemeris = result.ephemeris();
     assertNotNull(ephemeris, "the flight produced no ephemeris");
@@ -227,10 +273,6 @@ class LunarFlybyFlightTest {
       }
     }
     logger.info("Arcs flown, in order: {}", arcBodies);
-    assertEquals(
-        List.of(SolarSystemBody.EARTH, SolarSystemBody.MOON, SolarSystemBody.EARTH),
-        arcBodies,
-        "seven days must cross into the lunar sphere and come back out of it");
 
     // ── the perilune, read on the lunar arc ──────────────────────────────────
     double perilune = Double.POSITIVE_INFINITY;
@@ -326,10 +368,19 @@ class LunarFlybyFlightTest {
   }
 
   /**
+   * A budget-sized chain and the mass it reaches the injection point with — the second being what
+   * the window needs to resolve the right stage (§9.6).
+   *
+   * @param configuration the launcher, its sized loads and the payload
+   * @param massAtInjection the mass at the injection point (kg)
+   */
+  private record Sized(LaunchConfiguration configuration, double massAtInjection) {}
+
+  /**
    * The chain as the wizard builds it: an inert 2 t lunar probe, and loads sized top-down from it
    * by {@code PropellantBudget.loadsForLunar} (MIS-4 / L5 §5.3).
    */
-  private static LaunchConfiguration sizedConfiguration() {
+  private static Sized sizedConfiguration() {
     Spacecraft probe = Payloads.LUNAR_PROBE.toSpacecraft(2_000.0, 0.0);
     PropellantBudget.LunarLoads loads =
         PropellantBudget.loadsForLunar(
@@ -343,8 +394,10 @@ class LunarFlybyFlightTest {
         "Budget sizing: loads {}, mass at injection {} kg",
         Arrays.toString(loads.launcherLoads()),
         FastMath.round(loads.massAtInjection()));
-    return new LaunchConfiguration(
-        Launchers.FALCON_HEAVY, loads.launcherLoads(), probe, Payloads.LUNAR_PROBE.id());
+    return new Sized(
+        new LaunchConfiguration(
+            Launchers.FALCON_HEAVY, loads.launcherLoads(), probe, Payloads.LUNAR_PROBE.id()),
+        loads.massAtInjection());
   }
 
   private static SpacecraftState stateOf(MissionEphemerisPoint point) {

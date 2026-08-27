@@ -270,10 +270,17 @@ public class LunarLaunchWindowProblem implements LaunchWindowProblem {
    * candidates and not on the sweep.
    *
    * <p><b>Both verdicts come from {@link TranslunarInjectionPlan#inject}, which is also what {@code
-   * TranslunarInjectionStage} flies</b> (MIS-4 / L4 §7). They were the same four lines written
-   * twice until L4, and the drift that invited has a date: L6 replaces the impulsive stage with a
-   * finite-burn one, and a window left confirming against the impulsive model would keep dating
-   * launches by a trajectory the mission no longer flies.
+   * TLIBurnStage} flies</b> (MIS-4 / L4 §7). They were the same four lines written twice until L4,
+   * and holding them together is what let L6 turn the injection into a finite burn without the
+   * window drifting behind it: the price quoted here is the <em>commanded</em> ΔV, the one the
+   * mission really burns.
+   *
+   * <p><b>It is a verdict on reachability and not only on cost</b> (spec L6 §9.6). A finite
+   * departure reaches fewer perilunes than an impulsive one: on the flyby's own window an epoch the
+   * impulse aims at 100 km bottoms out at 132 km once burnt, the whole aim map lifted above the
+   * target. This method is what refuses such an epoch instead of handing the mission a date it
+   * cannot honour — and that only means something if {@code vehicle} is the launcher that will fly.
+   * Screening on a spacecraft kick motor prices a 75° burn nothing in the chain ever lights.
    */
   @Override
   public LaunchWindowCandidate confirm(LaunchWindowCandidate candidate) {
@@ -285,14 +292,14 @@ public class LunarLaunchWindowProblem implements LaunchWindowProblem {
     AbsoluteDate epoch = candidate.epoch();
     try {
       Injection injection = injectionAt(epoch);
-      TranslunarInjectionPlan.Injected injected =
+      TranslunarInjectionPlan.Burn burn =
           TranslunarInjectionPlan.inject(
               injection.state(),
               targetPerileneAltitude,
               vehicle.resolveActiveStage(massAtInjection),
               flightContext());
 
-      double deltaV = injected.plan().deltaV().getNorm();
+      double deltaV = burn.commandedDeltaV();
       logger.info(
           "[{}] {} confirmed at {} m/s (screened at {} m/s) — β = {}°, perilune {} km",
           name(),
@@ -300,7 +307,7 @@ public class LunarLaunchWindowProblem implements LaunchWindowProblem {
           FastMath.round(deltaV),
           FastMath.round(candidate.deltaV()),
           String.format(Locale.ROOT, "%.3f", FastMath.toDegrees(injection.planeMisalignment())),
-          String.format(Locale.ROOT, "%.1f", injected.plan().perileneAltitude() / 1000.0));
+          String.format(Locale.ROOT, "%.1f", burn.plan().perileneAltitude() / 1000.0));
       return LaunchWindowCandidate.of(epoch, deltaV);
     } catch (OrbitlabException refused) {
       logger.info("[{}] {} refused: {}", name(), epoch, refused.getMessage());

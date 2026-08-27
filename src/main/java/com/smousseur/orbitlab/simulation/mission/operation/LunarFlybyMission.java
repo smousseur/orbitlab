@@ -7,8 +7,8 @@ import com.smousseur.orbitlab.simulation.mission.objective.FlybyObjective;
 import com.smousseur.orbitlab.simulation.mission.optimizer.problems.GravityTurnConstraints;
 import com.smousseur.orbitlab.simulation.mission.stage.AnalyticParkingInsertionStage;
 import com.smousseur.orbitlab.simulation.mission.stage.ParkingCoastStage;
+import com.smousseur.orbitlab.simulation.mission.stage.TLIBurnStage;
 import com.smousseur.orbitlab.simulation.mission.stage.TranslunarCoastStage;
-import com.smousseur.orbitlab.simulation.mission.stage.TranslunarInjectionStage;
 import com.smousseur.orbitlab.simulation.mission.stage.ascent.AscentSequence;
 import com.smousseur.orbitlab.simulation.mission.stage.ascent.VerticalAscentStage;
 import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchConfiguration;
@@ -21,11 +21,9 @@ import java.util.List;
  * The lunar flyby of the product: a mission that lifts off from a pad, parks, coasts to its
  * injection point, leaves for the Moon and flies past it (MIS-4 / L4).
  *
- * <p><b>It is what {@code LunarTransferMission} is not.</b> The PHY-4 demo starts on a fabricated
- * parking orbit built around where the Moon will be, so it never launches and never waits for a
- * window. This one starts on the pad: the plane is the one the site reaches, the phase is whatever
- * the ascent delivers, and the departure point is found inside that plane rather than chosen to
- * suit the Moon.
+ * <p><b>It starts on the pad</b>, which is what the PHY-4 demonstration L6 removed never did: the
+ * plane is the one the site reaches, the phase is whatever the ascent delivers, and the departure
+ * point is found inside that plane rather than chosen to suit the Moon.
  *
  * <p><b>The parking altitude is a parameter and it is 400 km</b> (spec {@code
  * docs/lunar-flyby/06-conception-L4.md} §2). Not for the cost — the injection is 54 m/s cheaper
@@ -51,14 +49,13 @@ import java.util.List;
 public class LunarFlybyMission extends EarthMission {
 
   /**
-   * The ± band on the flown perilune (m), for this mission and for the PHY-4 demo that reads it
-   * from here.
+   * The ± band on the flown perilune (m).
    *
-   * <p>It lives on the mission of the product rather than on the demo because the demo is the class
-   * meant to die at the end of the chantier: leaving the band there would take it away with her
-   * (§4.1). It is not a component of {@code MissionSpec.Lunar} either — the width is dictated by
-   * the measurement and not chosen by a caller, an order of magnitude above the ~0.9 km the 60 s
-   * coast sampling can over-read closest approach by and the ~1 km the aim secant converges to.
+   * <p>It lives on the mission of the product, which is what let it outlive the PHY-4 demonstration
+   * that used to read it from here (§4.1). It is not a component of {@code MissionSpec.Lunar}
+   * either — the width is dictated by the measurement and not chosen by a caller, an order of
+   * magnitude above the ~0.9 km the 60 s coast sampling can over-read closest approach by and the
+   * ~1 km the aim secant converges to.
    *
    * <p><b>Measured on the ground-launched chain, and the ground adds nothing.</b> The band was
    * written as provisional because a flight starting on the pad carries the dispersion of the
@@ -74,6 +71,14 @@ public class LunarFlybyMission extends EarthMission {
    * neither moved.
    */
   public static final double PERILUNE_TOLERANCE = 10_000.0;
+
+  /**
+   * The perilune altitude a lunar flyby aims for when no caller says otherwise (m).
+   *
+   * <p>Inherited from the PHY-4 demonstration L6 removed, where it was written: it is the target
+   * the pinned lunar flights of L1 and L4 are measured at, so it outlives the class that held it.
+   */
+  public static final double DEFAULT_PERILUNE_ALTITUDE = 100_000.0;
 
   /**
    * The circular parking altitude every lunar mission built from the wizard leaves from (m).
@@ -192,7 +197,7 @@ public class LunarFlybyMission extends EarthMission {
         List.of(
             new AnalyticParkingInsertionStage("Parking", parkingAltitude),
             new ParkingCoastStage(PARKING_COAST_NAME),
-            new TranslunarInjectionStage("Translunar injection", periluneAltitude),
+            new TLIBurnStage("Translunar injection", periluneAltitude),
             new TranslunarCoastStage(FINAL_COAST_NAME)));
     return List.copyOf(stages);
   }

@@ -3,9 +3,11 @@ package com.smousseur.orbitlab.simulation.mission.maneuver;
 import com.smousseur.orbitlab.core.OrbitlabException;
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.simulation.OrekitService;
+import com.smousseur.orbitlab.simulation.Physics;
 import com.smousseur.orbitlab.simulation.flight.FlightContext;
 import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
 import com.smousseur.orbitlab.simulation.mission.vehicle.ActiveStageInfo;
+import com.smousseur.orbitlab.simulation.mission.vehicle.PropulsionSystem;
 import java.util.Locale;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -14,10 +16,12 @@ import org.hipparchus.geometry.euclidean.threed.RotationConvention;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.hipparchus.util.FastMath;
 import org.hipparchus.util.MathUtils;
+import org.orekit.attitudes.FrameAlignedProvider;
 import org.orekit.control.heuristics.lambert.LambertBoundaryConditions;
 import org.orekit.control.heuristics.lambert.LambertBoundaryVelocities;
 import org.orekit.control.heuristics.lambert.LambertDifferentialCorrector;
 import org.orekit.control.heuristics.lambert.LambertSolver;
+import org.orekit.forces.maneuvers.ConstantThrustManeuver;
 import org.orekit.frames.Frame;
 import org.orekit.orbits.CartesianOrbit;
 import org.orekit.orbits.KeplerianOrbit;
@@ -29,34 +33,36 @@ import org.orekit.utils.PVCoordinates;
 import org.orekit.utils.TimeStampedPVCoordinates;
 
 /**
- * The analytically injected translunar burn of PHY-4 / L6 (spec {@code
- * docs/multi-corps/08-conception-L6.md} §4): a patched-conic seed from a parking orbit, aimed so
- * the <em>flown</em> perilune reaches a target altitude.
+ * The translunar injection of a lunar mission: a patched-conic seed from a parking orbit, aimed so
+ * the <em>flown</em> perilune reaches a target altitude (MIS-4 / L6, spec {@code
+ * docs/lunar-flyby/08-conception-L6.md} §4).
  *
- * <p><b>This is an acceptance fixture, not a mission stage of the product.</b> A real {@code
- * TLIBurnStage} — with a launch window, a finite burn and an optimizer — is {@code MIS-4}, which
- * the découpage puts outside PHY-4. What this class exists to do is give the sphere-of-influence
- * machinery of L4 and the two-scale rendering of L5 one real trajectory to be judged on.
- *
- * <p><b>The geometry is built so that no launch window has to be searched.</b> The transfer plane
- * is derived from where the Moon <em>will be</em> at arrival, then the parking orbit is derived
- * from that plane — rather than taking a parking orbit and waiting for the Moon to line up with it.
- * There is no ground site here, so nothing makes that illegitimate, and it is what keeps the
- * découpage's "PHY-4 does not depend on MIS-2" true.
+ * <p><b>The geometry {@link #parkingState} builds needs no launch window.</b> The transfer plane is
+ * derived from where the Moon <em>will be</em> at arrival, then the parking orbit is derived from
+ * that plane — rather than taking a parking orbit and waiting for the Moon to line up with it.
+ * There is no ground site there, so nothing makes it illegitimate.
  *
  * <p><b>Two ways of getting a parking orbit coexist here, and that is deliberate</b> (MIS-4 / L1,
  * spec {@code docs/lunar-flyby/03-conception-L1.md} §5 pt 5). {@link #parkingState}
- * <em>fabricates</em> one to fit the Moon and is what the {@code mission.lunarDemo} acceptance
- * flight keeps flying; {@link #departureFrom} takes a plane a launch site <em>imposed</em> and
- * finds the injection point inside it. Everything downstream of the parking state — {@link #solve},
- * the bisection, the differential corrector — is common to both, and the declination guard of
- * {@link #transferPlaneNormal} belongs to the first alone.
+ * <em>fabricates</em> one to fit the Moon; {@link #departureFrom} takes a plane a launch site
+ * <em>imposed</em> and finds the injection point inside it. Only the second one flies since L6 took
+ * the PHY-4 demonstration away — the first is now a fixture and the non-regression reference of L1.
+ * Everything downstream of the parking state — {@link #solve}, the bisection, the differential
+ * corrector — is common to both, and the declination guard of {@link #transferPlaneNormal} belongs
+ * to the first alone.
  *
- * <p><b>Why the burn is impulsive.</b> Lambert <em>is</em> the impulsive formulation, and for an
- * impulse Tsiolkovsky is exact rather than an approximation. A finite burn would under-deliver and
- * miss the Moon in energy as much as in miss distance, which would need two nested knobs instead of
- * one (spec §8). This lot has nothing to prove about modelling an engine and a great deal to prove
- * about switching central body.
+ * <p><b>The increment sought is impulsive; what is flown to reach it is not</b> (spec L6 §2,
+ * decision i). Lambert <em>is</em> the impulsive formulation, and for an impulse Tsiolkovsky is
+ * exact rather than an approximation, so {@link #solve} keeps searching for one. What a finite burn
+ * loses against it is energy, and {@link #inject} is where that is recovered: it returns a {@link
+ * Burn} to light rather than a state reached, calibrating the commanded ΔV on the specific energy
+ * the impulse would have delivered.
+ *
+ * <p><b>Two knobs, and both see the same departure</b> (spec L6 §9). The inner one is that
+ * calibration; the outer one is the aim bisection, which evaluates each candidate offset by flying
+ * the calibrated burn rather than the impulse. Aiming on the impulse and flying the burn was
+ * implemented first and refuted by measurement: the two departure states differ by 31 km and 7.25
+ * m/s, and the flyby missed its perilune by 3 451 km.
  *
  * @param parkingState the state on the parking orbit the impulse is applied to
  * @param deltaV the impulsive velocity increment, in the parking state's frame
@@ -156,11 +162,34 @@ public record TranslunarInjectionPlan(
   private static final double PERILUNE_SEARCH_MARGIN_SECONDS = 0.5 * 86_400.0;
 
   /**
+   * Secant iterations calibrating the finite burn on the impulsive energy (spec L6 §4.2). Six, the
+   * count {@code AnalyticApogeeCircularizationStage} settled on for the same shape of problem: the
+   * first step is the closed-form slope, the second corrects it, and the map is smooth enough that
+   * what follows is decimals — both profiles of §6.3 converge in three.
+   */
+  private static final int BURN_SECANT_ITERATIONS = 6;
+
+  /**
+   * Convergence threshold on the calibration, expressed as the speed the residual specific energy
+   * is worth at the injection point (m/s). One centimetre per second is two orders of magnitude
+   * below the finite-burn loss the calibration exists to recover — measured at 2.2 m/s on a Falcon
+   * Heavy upper stage and 23.5 m/s on an Ariane 62 ULPM, both at 22.7 t (spec L6 §6.3).
+   */
+  private static final double BURN_TOLERANCE_METERS_PER_SECOND = 0.01;
+
+  /**
    * The parking state a translunar mission starts from.
    *
    * <p>Circular at {@link #PARKING_ALTITUDE}, inclined at {@link #PARKING_INCLINATION}, in the
    * plane that contains the Moon's direction at {@code injectionDate + TIME_OF_FLIGHT_SECONDS}, at
    * the point {@link #TRANSFER_ANGLE} short of that direction.
+   *
+   * <p><b>Nothing in production flies it since L6 removed the PHY-4 demonstration</b>, and it stays
+   * because it is a reference and not a convenience (spec L6 §1.5): {@code
+   * TranslunarDepartureFlightTest} measures the departure from an <em>imposed</em> plane against
+   * the one fabricated here, which is the non-regression reference of L1, and {@code
+   * TranslunarInjectionPlanTest} exercises the declination guard of {@link #transferPlaneNormal}
+   * through it.
    *
    * @param injectionDate the date the impulse is applied
    * @param mass the spacecraft mass at injection (kg)
@@ -380,6 +409,32 @@ public record TranslunarInjectionPlan(
       double targetPerileneAltitude,
       double exhaustVelocity,
       FlightContext context) {
+    return solve(
+        parking,
+        targetPerileneAltitude,
+        exhaustVelocity,
+        (state, deltaV) -> applyImpulse(state, deltaV, exhaustVelocity),
+        context);
+  }
+
+  /**
+   * The same aim, converged against an arbitrary way of executing the candidate ΔV.
+   *
+   * <p><b>The bisection has to fly what the mission will fly</b> (spec L6 §4.2, revised after
+   * measurement): the offset it converges is the one that puts the <em>flown</em> perilune on
+   * target, so evaluating it on an impulse and then flying a finite burn converges the wrong
+   * trajectory. The overload above keeps the impulsive execution, which is what the pinned cases of
+   * L1 fly and what {@link #measurePlanVersusFlight} reports against; {@link #inject} passes the
+   * calibrated burn.
+   *
+   * @param execution how a candidate ΔV becomes the state the transfer is flown from
+   */
+  private static TranslunarInjectionPlan solve(
+      SpacecraftState parking,
+      double targetPerileneAltitude,
+      double exhaustVelocity,
+      Execution execution,
+      FlightContext context) {
 
     AbsoluteDate arrival = parking.getDate().shiftedBy(TIME_OF_FLIGHT_SECONDS);
     Vector3D moonAtArrival = moonPosition(arrival);
@@ -400,7 +455,7 @@ public record TranslunarInjectionPlan(
             moonAtArrival,
             offsetDirection,
             targetRadius,
-            exhaustVelocity,
+            execution,
             context,
             targetPerileneAltitude);
 
@@ -412,8 +467,7 @@ public record TranslunarInjectionPlan(
         iteration++) {
       double offset = 0.5 * (low + high);
       Attempt attempt =
-          attempt(
-              parking, arrival, moonAtArrival, offsetDirection, offset, exhaustVelocity, context);
+          attempt(parking, arrival, moonAtArrival, offsetDirection, offset, execution, context);
       logAim("bisect " + iteration, offset, attempt, targetPerileneAltitude);
 
       if (FastMath.abs(attempt.perileneRadius() - targetRadius)
@@ -475,93 +529,378 @@ public record TranslunarInjectionPlan(
   }
 
   /**
-   * A solved injection and the state it produces, so a caller gets both from one call: the plan
-   * carries the cost and the perilune it converged to, the state is what the flight continues from.
+   * The finite burn that delivers an injection: what to light, in which direction and for how long
+   * (MIS-4 / L6 §4.1).
    *
-   * @param plan the plan the aim converged to
-   * @param state the post-injection state, above the active stage's depletion floor
+   * <p><b>It replaces the post-impulse state the impulsive model used to return</b>, and the change
+   * of kind is the lot: a caller no longer receives what it obtains but what it has to
+   * <em>execute</em>. The state is reached by flying this, not by arithmetic on a velocity.
+   *
+   * @param plan the plan the aim converged to, and the impulsive reference the burn is calibrated
+   *     against
+   * @param direction the unit thrust direction — {@code plan.deltaV()} normalized, inertially
+   *     fixed, which is what makes a scalar calibration sufficient (spec §2, decision a)
+   * @param duration how long to thrust (s)
+   * @param commandedDeltaV the ΔV the burn is commanded for, above the impulsive one by the
+   *     finite-burn loss (m/s)
+   * @param endMass the mass at burn end (kg), above the active stage's depletion floor
    */
-  public record Injected(TranslunarInjectionPlan plan, SpacecraftState state) {}
+  public record Burn(
+      TranslunarInjectionPlan plan,
+      Vector3D direction,
+      double duration,
+      double commandedDeltaV,
+      double endMass) {}
 
   /**
-   * Solves the injection from {@code parking}, applies it, and refuses on the active stage's
-   * depletion floor — the whole verdict on a translunar departure, in one place.
+   * How a candidate ΔV becomes the state the transfer is flown from — the seam the aim bisection
+   * converges through, and the reason the finite layer needs no second aiming loop of its own.
    *
-   * <p><b>It is shared rather than duplicated</b> (MIS-4 / L4 §7). {@code TranslunarInjectionStage}
-   * flies this on the mission's chain; {@code LunarLaunchWindowProblem.confirm} runs it on a
-   * screened epoch to decide whether a date is a plan or a wish. Those two were the same four lines
-   * written twice until L4, and the drift they invited has a date: L6 replaces the impulsive stage
-   * with a finite-burn one, and a window still confirming against the impulsive model would keep
-   * dating launches by a trajectory the mission no longer flies — some 14 m/s on Ariane 62, which
-   * is the whole monthly benefit the window exists to capture.
+   * <p>It exists because the two knobs of decision B have to see the same departure: an aim
+   * converged on an impulse and then flown as a burn misses by thousands of kilometres (spec §4.2).
+   */
+  @FunctionalInterface
+  private interface Execution {
+    /**
+     * @param parking the state at the injection point
+     * @param deltaV the candidate impulsive-equivalent increment
+     * @return the state the transfer continues from
+     */
+    SpacecraftState stateAfter(SpacecraftState parking, Vector3D deltaV);
+  }
+
+  /**
+   * Solves the injection from {@code parking}, calibrates the finite burn that delivers it, and
+   * refuses on the active stage's depletion floor — the whole verdict on a translunar departure, in
+   * one place.
    *
-   * <p>The stage is <b>not</b> what the window calls, and that is the correction L4 makes to L2's
-   * letter: {@code enter} asks its {@code Mission} for the vehicle and the gravitational context
-   * only, and {@code confirm} holds both already. Composing a ground mission to reuse an {@code
-   * enter} would have built an entire mission to call it with a state it did not produce.
+   * <p><b>It is shared rather than duplicated</b> (MIS-4 / L4 §7). {@code TLIBurnStage} flies this
+   * on the mission's chain; {@code LunarLaunchWindowProblem.confirm} runs it on a screened epoch to
+   * decide whether a date is a plan or a wish. Holding them together is what let L6 turn the
+   * injection into a real burn without the window drifting behind it — a window still confirming
+   * against the impulsive model would keep dating launches by a trajectory the mission no longer
+   * flies.
    *
-   * @param parking the state the impulse is applied to
+   * <p><b>The aim is converged on the burn, not on the impulse</b> (spec §4.2, revised after
+   * measurement). {@link #solve}'s bisection evaluates each candidate offset by <em>flying the
+   * calibrated finite departure</em>, so the perilune it converges to is the one this burn reaches.
+   * Aiming with the impulse and flying the burn was tried and refuted: the departure states differ
+   * by 31 km and 7.25 m/s, worth 3 451 km at the Moon. The plan's {@link #deltaV} therefore remains
+   * an impulsive-equivalent aim — {@link #solve} is untouched in its own right, and its pinned
+   * cases still fly the impulse — but the offset it carries was converged against the burn.
+   *
+   * <p><b>{@code parking} is the state at the injection point, not at ignition.</b> The burn is
+   * centred on it, and the advance a caller has to stop its coast at is {@link #ignitionLead}.
+   *
+   * <p><b>The floor is judged on the commanded ΔV</b>, so a transfer that passed impulsively can be
+   * refused here (spec §4.3). That is the under-delivery, paid in propellant rather than in miss
+   * distance; the message quotes both figures so the surcharge is readable in the refusal.
+   *
+   * @param parking the state at the injection point the burn is centred on
    * @param targetPeriluneAltitude the perilune altitude above the lunar surface to aim for (m)
-   * @param active the vehicle stage burning the injection — its Isp sizes the impulse, its
+   * @param active the vehicle stage burning the injection — its propulsion sizes the burn, its
    *     depletion floor decides whether the transfer is within reach
-   * @param context the environment the aim is flown in
-   * @return the plan and the post-injection state
-   * @throws OrbitlabException when the aim does not converge, or when the impulse would take the
+   * @param context the environment the aim and the burn are flown in
+   * @return the burn to light one {@link #ignitionLead} before {@code parking.getDate()}
+   * @throws OrbitlabException when the aim does not converge, or when the burn would take the
    *     active stage below its depletion floor
    */
-  public static Injected inject(
+  public static Burn inject(
+      SpacecraftState ignitionState,
       SpacecraftState parking,
       double targetPeriluneAltitude,
       ActiveStageInfo active,
       FlightContext context) {
     double exhaustVelocity = active.propulsion().isp() * Constants.G0_STANDARD_GRAVITY;
-    TranslunarInjectionPlan plan = solve(parking, targetPeriluneAltitude, exhaustVelocity, context);
-    SpacecraftState injected = plan.applyTo(parking, exhaustVelocity);
+    TranslunarInjectionPlan plan =
+        solve(
+            parking,
+            targetPeriluneAltitude,
+            exhaustVelocity,
+            (state, deltaV) ->
+                calibrateBurn(ignitionState, state, deltaV, active, context, false).endState(),
+            context);
+    return refuseOrReturn(
+        plan, calibrateBurn(ignitionState, parking, plan.deltaV(), active, context, true), active);
+  }
+
+  /**
+   * Assembles the burn and pronounces the depletion floor on the <b>commanded</b> ΔV, so a transfer
+   * that passed impulsively can be refused here (spec §4.3). That is the under-delivery, paid in
+   * propellant rather than in miss distance; the message quotes both figures so the surcharge is
+   * readable in the refusal.
+   */
+  private static Burn refuseOrReturn(
+      TranslunarInjectionPlan plan, Calibrated calibrated, ActiveStageInfo active) {
+    Burn burn =
+        new Burn(
+            plan,
+            plan.deltaV().normalize(),
+            calibrated.duration(),
+            calibrated.commandedDeltaV(),
+            calibrated.endState().getMass());
 
     double floor = active.depletionFloor();
-    if (injected.getMass() < floor) {
+    if (burn.endMass() < floor) {
       throw new OrbitlabException(
           String.format(
               Locale.ROOT,
-              "the %.0f m/s injection would leave %.0f kg, below the %.0f kg depletion floor of the"
-                  + " active stage — it does not carry the propellant for this transfer",
+              "the %.0f m/s injection burn (%.0f m/s impulsive) would leave %.0f kg, below the %.0f"
+                  + " kg depletion floor of the active stage — it does not carry the propellant for"
+                  + " this transfer",
+              burn.commandedDeltaV(),
               plan.deltaV().getNorm(),
-              injected.getMass(),
+              burn.endMass(),
               floor));
     }
-    return new Injected(plan, injected);
+    return burn;
   }
 
   /**
-   * What the injection costs at an epoch, on the Lambert seed alone — <b>closed form, no
-   * propagation, microseconds</b>.
+   * The same verdict for a caller that has no coast of its own to have stopped at the ignition
+   * point: the launch window, which prices an epoch rather than flying it.
    *
-   * <p>The seam MIS-2 screens epochs through ({@code TranslunarInjectionPlanWindowProblem}). It
-   * aims at the Moon's centre rather than at an offset aim point, which is the right call for a
-   * <em>ranking</em> criterion: the offset is worth a handful of m/s against the three-odd km/s of
-   * the injection, and resolving it is what costs the thirty propagations {@link #solve} spends.
-   * The verdict on a screened epoch stays with {@code solve}.
+   * <p>It reconstructs the ignition state by coasting back one {@link #ignitionLead}, then plans
+   * exactly what the stage plans. <b>Pricing on the same model the mission flies is not a
+   * refinement, it is what keeps the window honest</b> (MIS-4 / L4 §7): the finite departure does
+   * not merely cost more, it reaches <em>fewer</em> perilunes. Measured on the flyby's own window,
+   * an epoch the impulsive aim converged at 100 km bottoms out at 132 km once flown finitely — the
+   * whole map lifted above the target — so a window screening impulsively hands the mission a date
+   * it cannot honour (spec L6 §9.6).
    *
-   * @param injectionDate the date the impulse is applied
-   * @param mass the spacecraft mass at injection (kg)
-   * @return the magnitude of the injection impulse (m/s)
-   * @throws OrbitlabException when the geometry at that epoch admits no transfer plane
+   * <p><b>This only says something if the window screens with the launcher that will fly.</b> On a
+   * 3 kN spacecraft motor the injection sweeps 75° of arc, the out-of-model regime §1.2 measured,
+   * and the surcharge computed there is +264 m/s of fixture artefact.
+   *
+   * @param parking the state at the injection point
+   * @param targetPeriluneAltitude the perilune altitude above the lunar surface to aim for (m)
+   * @param active the vehicle stage burning the injection
+   * @param context the environment the aim and the burn are flown in
+   * @return the burn priced at {@code parking}, ignited one {@link #ignitionLead} before it
+   * @throws OrbitlabException when the aim does not converge, or when the burn would take the
+   *     active stage below its depletion floor
    */
-  public static double keplerianInjectionDeltaV(AbsoluteDate injectionDate, double mass) {
-    return keplerianInjectionDeltaV(
-        parkingState(injectionDate, mass), injectionDate.shiftedBy(TIME_OF_FLIGHT_SECONDS));
+  public static Burn inject(
+      SpacecraftState parking,
+      double targetPeriluneAltitude,
+      ActiveStageInfo active,
+      FlightContext context) {
+    double lead = ignitionLead(parking, departureFrom(parking), active);
+    NumericalPropagator backwards =
+        OrekitService.get().createOptimizationPropagator(context, burnMaxStep(active));
+    backwards.setInitialState(parking);
+    SpacecraftState ignitionState = backwards.propagate(parking.getDate().shiftedBy(-lead));
+    return inject(ignitionState, parking, targetPeriluneAltitude, active, context);
   }
 
   /**
-   * What the injection costs from a parking orbit one is <b>given</b> — same closed form, one
-   * Lambert solve, no propagation.
+   * How far ahead of the injection point the burn has to be lit for it to be centred on it (s) —
+   * <b>closed form, no propagation</b> (spec L6 §4.5).
    *
-   * <p><b>The overload exists because the closed form above cannot serve an imposed plane</b>: it
-   * builds its own parking orbit through {@link #parkingState}, which fabricates the plane. This is
-   * the direct companion of {@link #departureFrom} — pass it {@link Departure#arrivalDate()} — and
-   * it is the Lambert term of the lunar launch window (MIS-4 / L2), which the découpage wrote there
-   * and L1 delivers here so that L2 inherits a criterion rather than a piece of mechanism (spec
-   * §3.5).
+   * <p>It is the second public entry of the finite layer, and it exists because centring requires
+   * knowing the burn duration <em>before</em> igniting. The parking coast is what carries it: it
+   * stops here rather than at the injection point, which is what spares the chain the case of a
+   * burn starting before its own stage does (spec §2, decision α).
+   *
+   * <p>The ΔV is evaluated on the parking state advanced Keplerianly to the injection point,
+   * rebuilt from position and velocity for the reason {@link #departureFrom} states. The residual
+   * off-centring that leaves is the gap between the closed-form ΔV and the solved one — of the
+   * order of 0.05 % of the duration, some 0.02 s on a Falcon Heavy upper stage.
+   *
+   * @param parking the parking state the coast starts from
+   * @param departure the geometry {@link #departureFrom} resolved from that same state
+   * @param active the vehicle stage that will burn the injection
+   * @return the advance to subtract from {@link Departure#injectionDate()} (s)
+   */
+  public static double ignitionLead(
+      SpacecraftState parking, Departure departure, ActiveStageInfo active) {
+    KeplerianOrbit keplerian =
+        new KeplerianOrbit(
+            new PVCoordinates(parking.getPosition(), parking.getPVCoordinates().getVelocity()),
+            parking.getFrame(),
+            parking.getDate(),
+            parking.getOrbit().getMu());
+    SpacecraftState atInjection =
+        new SpacecraftState(keplerian.shiftedBy(departure.coastDuration()))
+            .withMass(parking.getMass());
+    double deltaV = keplerianInjectionDeltaV(atInjection, departure.arrivalDate());
+    PropulsionSystem propulsion = active.propulsion();
+    return 0.5
+        * Physics.computeBurnDurationCapped(
+            deltaV,
+            parking.getMass(),
+            propulsion.isp(),
+            propulsion.thrust(),
+            active.remainingFuel(parking.getMass()));
+  }
+
+  /**
+   * The outcome of one calibration: what to burn, and the state it leaves the vehicle in.
+   *
+   * @param duration how long to thrust (s)
+   * @param commandedDeltaV the ΔV the burn is commanded for (m/s)
+   * @param endState the state at cut-off, half a burn past the injection point
+   */
+  private record Calibrated(double duration, double commandedDeltaV, SpacecraftState endState) {}
+
+  /**
+   * Scales the commanded ΔV until the centred finite burn delivers the specific energy the impulse
+   * would have (spec L6 §4.2) — the <b>inner</b> of the lot's two nested knobs.
+   *
+   * <p><b>Energy is the invariant, and a scalar knob is enough to reach it.</b> The thrust
+   * direction is inertially fixed, so the delivered ΔV is exactly parallel to the commanded one —
+   * only an amplitude is missing. Centring cancels the direction error to first order: measured at
+   * 0.11 mrad on the 8.8° arc the flyby actually sweeps, which is 42 km at the Moon.
+   *
+   * <p><b>What it does not do is aim</b>, and that is why the outer knob has to fly what this
+   * returns. Matching the energy fixes the semi-major axis, not the transfer: at cut-off the
+   * vehicle sits 31 km from where the impulse would have left it — 30.8 of them along the track —
+   * and 7.25 m/s faster, the two being exactly the same statement since a lower radius buys speed
+   * at constant energy. An aim converged on the impulse and flown on this misses the perilune by 3
+   * 451 km (spec §4.2, measured 2026-08-27).
+   *
+   * <p>Only the burn is propagated, never the four days of the transfer, which is what keeps it
+   * cheap enough to run inside every evaluation of the aim.
+   */
+  private static Calibrated calibrateBurn(
+      SpacecraftState ignitionState,
+      SpacecraftState parking,
+      Vector3D aimDeltaV,
+      ActiveStageInfo active,
+      FlightContext context,
+      boolean report) {
+    PropulsionSystem propulsion = active.propulsion();
+    double exhaustVelocity = propulsion.isp() * Constants.G0_STANDARD_GRAVITY;
+    double impulsive = aimDeltaV.getNorm();
+    Vector3D direction = aimDeltaV.normalize();
+
+    SpacecraftState reference = applyImpulse(parking, aimDeltaV, exhaustVelocity);
+    double targetEnergy = specificEnergy(reference);
+    double referenceSpeed = reference.getPVCoordinates().getVelocity().getNorm();
+    // Authority of the knob, closed form: adding dv at speed v moves the specific energy by v·dv.
+    // It seeds the secant and rescues it whenever two iterations land on the same residual.
+    double slope = referenceSpeed * impulsive;
+    double tolerance = BURN_TOLERANCE_METERS_PER_SECOND * referenceSpeed;
+
+    double maxStep = burnMaxStep(active);
+    double availableFuel = active.remainingFuel(ignitionState.getMass());
+
+    double beta = 1.0;
+    double betaPrevious = Double.NaN;
+    double residualPrevious = Double.NaN;
+    Calibrated best = null;
+    double bestResidual = Double.POSITIVE_INFINITY;
+    int iterations = 0;
+    for (int iteration = 0; iteration < BURN_SECANT_ITERATIONS; iteration++) {
+      iterations = iteration + 1;
+      double commanded = beta * impulsive;
+      double duration =
+          Physics.computeBurnDurationCapped(
+              commanded,
+              ignitionState.getMass(),
+              propulsion.isp(),
+              propulsion.thrust(),
+              availableFuel);
+      SpacecraftState burnt =
+          flyBurn(ignitionState, direction, duration, propulsion, maxStep, context);
+      double residual = targetEnergy - specificEnergy(burnt);
+
+      if (FastMath.abs(residual) < bestResidual) {
+        bestResidual = FastMath.abs(residual);
+        best = new Calibrated(duration, commanded, burnt);
+      }
+      if (FastMath.abs(residual) < tolerance) {
+        break;
+      }
+
+      double next;
+      if (Double.isNaN(residualPrevious) || FastMath.abs(residual - residualPrevious) < 1.0e-9) {
+        next = beta + residual / slope;
+      } else {
+        next = beta - residual * (beta - betaPrevious) / (residual - residualPrevious);
+      }
+      betaPrevious = beta;
+      residualPrevious = residual;
+      beta = next;
+    }
+
+    if (report) {
+      logger.info(
+          "Injection burn calibrated in {} iteration(s): commanded {} m/s for {} m/s impulsive"
+              + " (+{}), dt = {} s, residual {} m/s",
+          iterations,
+          String.format(Locale.ROOT, "%.1f", best.commandedDeltaV()),
+          String.format(Locale.ROOT, "%.1f", impulsive),
+          String.format(Locale.ROOT, "%.2f", best.commandedDeltaV() - impulsive),
+          String.format(Locale.ROOT, "%.1f", best.duration()),
+          String.format(Locale.ROOT, "%.4f", bestResidual / referenceSpeed));
+    }
+    return best;
+  }
+
+  /**
+   * Flies the burn alone, from the state the mission really ignites at, and returns the state at
+   * cut-off.
+   *
+   * <p><b>It starts where the caller says and nowhere else</b> (spec L6 §9.5). Reconstructing the
+   * ignition point as "half a burn before the injection point" was tried and refuted: the parking
+   * coast stops on an injection date resolved from <em>its</em> entry state, and {@link
+   * #departureFrom} resolved half a burn later lands 2.46 s away. The burn was then calibrated
+   * centred and flown off-centre, which put the flyby 1 150 km inside the Moon.
+   */
+  private static SpacecraftState flyBurn(
+      SpacecraftState ignitionState,
+      Vector3D direction,
+      double duration,
+      PropulsionSystem propulsion,
+      double maxStep,
+      FlightContext context) {
+    NumericalPropagator propagator =
+        OrekitService.get().createOptimizationPropagator(context, maxStep);
+    propagator.setInitialState(ignitionState);
+    FrameAlignedProvider attitude =
+        new FrameAlignedProvider(
+            new Rotation(direction, Vector3D.PLUS_I), ignitionState.getFrame());
+    propagator.addForceModel(
+        new ConstantThrustManeuver(
+            ignitionState.getDate().shiftedBy(1.0e-3),
+            duration,
+            propulsion.thrust(),
+            propulsion.isp(),
+            attitude,
+            Vector3D.PLUS_I));
+    return propagator.propagate(ignitionState.getDate().shiftedBy(duration + 1.0e-3));
+  }
+
+  /**
+   * The integrator max step every propagator hosting this burn must use, as {@code MissionStage}
+   * requires: sized from the active stage's depletion floor, capped at {@code SAFE_MAX_STEP}.
+   */
+  private static double burnMaxStep(ActiveStageInfo active) {
+    PropulsionSystem propulsion = active.propulsion();
+    return OrekitService.burnLimitedMaxStep(
+        new OrekitService.BurnSpec(propulsion.thrust(), propulsion.isp(), active.depletionFloor()));
+  }
+
+  /** The specific orbital energy of a state (J/kg), the invariant the calibration targets. */
+  private static double specificEnergy(SpacecraftState state) {
+    double speed = state.getPVCoordinates().getVelocity().getNorm();
+    return 0.5 * speed * speed - state.getOrbit().getMu() / state.getPosition().getNorm();
+  }
+
+  /**
+   * What the injection costs from a parking orbit one is <b>given</b> — closed form, one Lambert
+   * solve, no propagation, microseconds.
+   *
+   * <p>It aims at the Moon's centre rather than at an offset aim point, which is the right call for
+   * a <em>ranking</em> criterion: the offset is worth a handful of m/s against the three-odd km/s
+   * of the injection, and resolving it is what costs the thirty propagations {@link #solve} spends.
+   * The verdict on a screened epoch stays with {@link #inject}.
+   *
+   * <p>It is the direct companion of {@link #departureFrom} — pass it {@link
+   * Departure#arrivalDate()} — and it carries two loads: the Lambert term of the lunar launch
+   * window (MIS-4 / L2), and the ΔV {@link #ignitionLead} sizes the ignition advance from (L6
+   * §4.5).
    *
    * @param parking the parking state to inject from, at the injection point
    * @param arrivalDate the date the Moon's centre is aimed at
@@ -592,13 +931,27 @@ public record TranslunarInjectionPlan(
   }
 
   /**
-   * Finds an offset bracket around the target perilune by walking outwards from the target radius.
+   * Finds an offset bracket around the target perilune: outwards by doubling, then inwards by
+   * halving if that found nothing.
    *
-   * <p>The map is monotone — aiming further from the Moon's centre passes further from it — so one
-   * side of the bracket is the target radius itself and the other is found by doubling. Doubling
-   * rather than stepping because the ratio between the aim offset and the achieved perilune depends
-   * on the encounter geometry and is not close to one: at the epoch this lot measured, a 12 825 km
-   * aim gave a 103 km perilune.
+   * <p>The outward walk is the one L1 wrote and it goes first, unchanged, so every aim that
+   * converged before this lot converges through the same sequence of attempts. Doubling rather than
+   * stepping because the ratio between the aim offset and the achieved perilune depends on the
+   * encounter geometry and is not close to one: at the epoch L1 measured, a 12 825 km aim gave a
+   * 103 km perilune.
+   *
+   * <p><b>What L6 adds is the second walk, and the reason is that the map is not always
+   * increasing</b> (§9.7). "Aiming further from the Moon's centre passes further from it" holds for
+   * the impulsive departures L1 measured and is false elsewhere: flown finitely, one geometry gave
+   * 132 km of perilune at 1 837 km of offset and 259 km at 230 km — decreasing, so the root lies
+   * inwards. Trying outwards first and inwards only on failure keeps the first case bit-identical
+   * and gives the second one a chance, at the cost of a few propagations on a search that was going
+   * to fail anyway.
+   *
+   * <p><b>The inward walk is not floored at the lunar radius.</b> The floor read "below this the
+   * aim point is inside the Moon and the perilune reading has no meaning", which confuses the
+   * target with the reading: the aim point is a Lambert boundary condition and nothing more — the
+   * flown trajectory misses it by some 26 000 km — while the perilune is measured on the flight.
    */
   private static Bracket bracket(
       SpacecraftState parking,
@@ -606,58 +959,99 @@ public record TranslunarInjectionPlan(
       Vector3D moonAtArrival,
       Vector3D offsetDirection,
       double targetRadius,
-      double exhaustVelocity,
+      Execution execution,
       FlightContext context,
       double targetPerileneAltitude) {
 
     Attempt at =
-        attempt(
+        attempt(parking, arrival, moonAtArrival, offsetDirection, targetRadius, execution, context);
+    logAim("bracket 0", targetRadius, at, targetPerileneAltitude);
+
+    Bracket outwards =
+        walk(
             parking,
             arrival,
             moonAtArrival,
             offsetDirection,
             targetRadius,
-            exhaustVelocity,
-            context);
-    logAim("bracket 0", targetRadius, at, targetPerileneAltitude);
-
-    if (at.perileneRadius() >= targetRadius) {
-      // Already above the target: walk inwards, floored at the lunar radius. Below that the aim
-      // point
-      // is inside the Moon and the perilune reading has no meaning.
-      double high = targetRadius;
-      Attempt atHigh = at;
-      double low = 0.5 * (lunarRadius() + targetRadius);
-      for (int i = 0; i < BRACKET_STEPS; i++) {
-        Attempt low_ =
-            attempt(
-                parking, arrival, moonAtArrival, offsetDirection, low, exhaustVelocity, context);
-        logAim("bracket in " + i, low, low_, targetPerileneAltitude);
-        if (low_.perileneRadius() < targetRadius) {
-          return new Bracket(low, high, low_, atHigh);
-        }
-        high = low;
-        atHigh = low_;
-        low = 0.5 * (lunarRadius() + low);
-      }
-      return new Bracket(low, high, atHigh, atHigh);
+            at,
+            2.0,
+            execution,
+            context,
+            targetPerileneAltitude,
+            "bracket out ");
+    if (outwards != null) {
+      return outwards;
     }
+    Bracket inwards =
+        walk(
+            parking,
+            arrival,
+            moonAtArrival,
+            offsetDirection,
+            targetRadius,
+            at,
+            0.5,
+            execution,
+            context,
+            targetPerileneAltitude,
+            "bracket in ");
+    if (inwards != null) {
+      return inwards;
+    }
+    return new Bracket(targetRadius, targetRadius, at, at);
+  }
 
-    double low = targetRadius;
-    Attempt atLow = at;
-    double high = 2.0 * targetRadius;
+  /**
+   * Walks the offset by a constant factor until two consecutive attempts straddle the target.
+   *
+   * @param factor {@code 2.0} to walk away from the Moon's centre, {@code 0.5} to walk towards it
+   * @return the straddling bracket, or {@code null} when {@link #BRACKET_STEPS} did not find one
+   */
+  private static Bracket walk(
+      SpacecraftState parking,
+      AbsoluteDate arrival,
+      Vector3D moonAtArrival,
+      Vector3D offsetDirection,
+      double startOffset,
+      Attempt startAttempt,
+      double factor,
+      Execution execution,
+      FlightContext context,
+      double targetPerileneAltitude,
+      String label) {
+
+    double targetRadius = lunarRadius() + targetPerileneAltitude;
+    double offset = startOffset;
+    Attempt previous = startAttempt;
     for (int i = 0; i < BRACKET_STEPS; i++) {
-      Attempt high_ =
-          attempt(parking, arrival, moonAtArrival, offsetDirection, high, exhaustVelocity, context);
-      logAim("bracket out " + i, high, high_, targetPerileneAltitude);
-      if (high_.perileneRadius() >= targetRadius) {
-        return new Bracket(low, high, atLow, high_);
+      double previousOffset = offset;
+      offset *= factor;
+      Attempt next =
+          attempt(parking, arrival, moonAtArrival, offsetDirection, offset, execution, context);
+      logAim(label + i, offset, next, targetPerileneAltitude);
+      if (straddles(previous, next, targetRadius)) {
+        return order(previousOffset, previous, offset, next, targetRadius);
       }
-      low = high;
-      atLow = high_;
-      high *= 2.0;
+      previous = next;
     }
-    return new Bracket(low, high, atLow, atLow);
+    return null;
+  }
+
+  /** Whether the target perilune lies between what these two attempts flew. */
+  private static boolean straddles(Attempt one, Attempt other, double targetRadius) {
+    return (one.perileneRadius() - targetRadius) * (other.perileneRadius() - targetRadius) <= 0.0;
+  }
+
+  /**
+   * Orders a straddling pair so that {@code low} is the end that undershoots the target — which is
+   * all the bisection reads, and is unrelated to which offset is numerically the larger.
+   */
+  private static Bracket order(
+      double firstOffset, Attempt first, double secondOffset, Attempt second, double targetRadius) {
+    return first.perileneRadius() < targetRadius
+        ? new Bracket(firstOffset, secondOffset, first, second)
+        : new Bracket(secondOffset, firstOffset, second, first);
   }
 
   private static boolean within(Attempt attempt, double targetRadius) {
@@ -684,7 +1078,7 @@ public record TranslunarInjectionPlan(
       Vector3D moonAtArrival,
       Vector3D offsetDirection,
       double offset,
-      double exhaustVelocity,
+      Execution execution,
       FlightContext context) {
 
     Vector3D aimPoint = moonAtArrival.add(offsetDirection.scalarMultiply(offset));
@@ -701,7 +1095,7 @@ public record TranslunarInjectionPlan(
     // purely
     // to report the plan-versus-flight gap L2 §4.2 asked for.
     Vector3D deltaV = keplerianVelocity.subtract(parking.getPVCoordinates().getVelocity());
-    SpacecraftState injected = applyImpulse(parking, deltaV, exhaustVelocity);
+    SpacecraftState injected = execution.stateAfter(parking, deltaV);
 
     return new Attempt(offset, aimPoint, deltaV, perileneRadius(injected, arrival, context));
   }

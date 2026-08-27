@@ -9,18 +9,10 @@ import com.simsilica.lemur.GuiGlobals;
 import com.simsilica.lemur.event.PickState;
 import com.simsilica.lemur.style.BaseStyles;
 import com.smousseur.orbitlab.app.ApplicationContext;
-import com.smousseur.orbitlab.core.PropertiesService;
 import com.smousseur.orbitlab.engine.AssetFactory;
 import com.smousseur.orbitlab.engine.TextureDiagnostics;
-import com.smousseur.orbitlab.engine.events.EventBus;
 import com.smousseur.orbitlab.simulation.OrekitService;
-import com.smousseur.orbitlab.simulation.mission.context.MissionEntry;
-import com.smousseur.orbitlab.simulation.mission.operation.LunarTransferMission;
-import com.smousseur.orbitlab.simulation.mission.window.LaunchWindow;
-import com.smousseur.orbitlab.simulation.mission.window.LaunchWindowSearch;
-import com.smousseur.orbitlab.simulation.mission.window.LaunchWindowSolver;
 import com.smousseur.orbitlab.simulation.mission.window.problem.EarthLaunchWindowPlanner;
-import com.smousseur.orbitlab.simulation.mission.window.problem.TranslunarInjectionPlanWindowProblem;
 import com.smousseur.orbitlab.states.InitAppState;
 import com.smousseur.orbitlab.states.camera.CameraTransitionAppState;
 import com.smousseur.orbitlab.states.camera.FloatingOriginAppState;
@@ -47,11 +39,8 @@ import com.smousseur.orbitlab.states.time.MissionTimelineAppState;
 import com.smousseur.orbitlab.states.time.SimulationClockAppState;
 import com.smousseur.orbitlab.states.time.TimelineWidgetAppState;
 import com.smousseur.orbitlab.ui.AppStyles;
-import java.time.Duration;
-import java.util.List;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.orekit.time.AbsoluteDate;
 
 /**
  * Main entry point for the OrbitLab application.
@@ -71,22 +60,6 @@ public class OrbitLabApplication extends SimpleApplication {
 
   /** Name of the frame warm-up thread, so a thread dump taken during it explains itself. */
   private static final String FRAME_WARM_UP_THREAD_NAME = "orekit-frame-warmup";
-
-  /** Days the lunar demonstration walks forward looking for a flyable encounter geometry. */
-  private static final int LUNAR_DEMO_DAYS = 30;
-
-  /** Injection cost above which the lunar demonstration does not offer an epoch (m/s). */
-  private static final double LUNAR_DEMO_BUDGET = 4_000.0;
-
-  /**
-   * How much dearer than the month's cheapest epoch the demonstration still accepts (m/s).
-   *
-   * <p>Five, because the criterion was measured swinging only 14 m/s over a month (3 182.8 to 3
-   * 196.9, {@code TranslunarInjectionPlanWindowProblemTest}) on a 3 183 m/s floor: the 4 000 m/s
-   * budget sits above the whole month and cuts nothing, so without a margin the slot would be the
-   * searched range itself.
-   */
-  private static final double LUNAR_DEMO_MARGIN = 5.0;
 
   /**
    * Application entry point. Configures window settings and starts the JME3 application loop.
@@ -198,8 +171,6 @@ public class OrbitLabApplication extends SimpleApplication {
     stateManager.attach(new NearCameraSyncAppState(applicationContext, nearCam));
 
     stateManager.attach(new PostFxAppState(nearViewport, skyViewport, farViewport));
-
-    loadLunarDemoIfRequested(applicationContext);
   }
 
   /**
@@ -244,43 +215,6 @@ public class OrbitLabApplication extends SimpleApplication {
           (System.nanoTime() - startNanos) / 1_000_000L,
           e);
     }
-  }
-
-  private void loadLunarDemoIfRequested(ApplicationContext applicationContext) {
-    if (!Boolean.parseBoolean(PropertiesService.get().getProperty("mission.lunarDemo"))) {
-      return;
-    }
-    LunarTransferMission mission = new LunarTransferMission("Translunar transfer");
-    AbsoluteDate now = applicationContext.clock().now();
-
-    TranslunarInjectionPlanWindowProblem problem =
-        new TranslunarInjectionPlanWindowProblem(mission);
-    LaunchWindowSearch search =
-        new LaunchWindowSearch(
-            now,
-            Duration.ofDays(LUNAR_DEMO_DAYS),
-            problem.coarseStep(),
-            Duration.ofMinutes(10),
-            LUNAR_DEMO_BUDGET,
-            LUNAR_DEMO_MARGIN,
-            1);
-    LaunchWindowSolver solver = new LaunchWindowSolver(problem);
-    List<LaunchWindow> windows = solver.solve(search);
-    if (windows.isEmpty()) {
-      LOGGER.warn(
-          "mission.lunarDemo is on, but no epoch in the next {} days can deliver the aimed perilune;"
-              + " not loading the demonstration mission",
-          LUNAR_DEMO_DAYS);
-      return;
-    }
-
-    MissionEntry entry = new MissionEntry(mission);
-    AbsoluteDate scheduledDate = windows.getFirst().best().epoch();
-    LOGGER.info("Scheduled date for lunar demo mission: {}", scheduledDate);
-    entry.setScheduledDate(scheduledDate);
-    entry.setVisible(true);
-    applicationContext.missionContext().addMission(entry);
-    applicationContext.eventBus().publishMissionAction(entry.id(), EventBus.MissionAction.OPTIMIZE);
   }
 
   @Override

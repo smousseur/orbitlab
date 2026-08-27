@@ -42,8 +42,8 @@ import org.orekit.time.TimeScalesFactory;
  * must keep, not the ΔV the transfer needs.
  *
  * <p><b>It cannot be a test, and it is not one.</b> It costs a whole sweep and it asserts nothing.
- * The pattern and the {@code orbitlab.probe} gate are {@code LunarBaselineProbeTest}'s, and like it
- * this class is meant to be deleted when the chantier closes — not when this lot does.
+ * The pattern and the {@code orbitlab.probe} gate are the ones the L0 baseline probe carried, and
+ * like it this class is meant to be deleted when the chantier closes — not when this lot does.
  *
  * <p>Run with {@code -Dorbitlab.probe=true}.
  */

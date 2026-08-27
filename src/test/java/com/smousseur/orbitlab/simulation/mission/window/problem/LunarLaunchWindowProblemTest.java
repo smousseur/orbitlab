@@ -438,8 +438,7 @@ class LunarLaunchWindowProblemTest {
     AbsoluteDate start = new AbsoluteDate(2026, 3, 31, 0, 0, 0.0, TimeScalesFactory.getUTC());
     Sample best = cheapest(sweep(problem, start, SIDEREAL_DAY, 60.0));
 
-    double onTheBuiltPlane =
-        TranslunarInjectionPlan.keplerianInjectionDeltaV(best.epoch(), INJECTION_MASS);
+    double onTheBuiltPlane = costOnThePlaneBuiltForTheMoon(best.epoch());
 
     logger.info(
         "At the optimum {}: criterion {} m/s on the plane the pad reaches (β = {}°), against {} m/s"
@@ -587,5 +586,16 @@ class LunarLaunchWindowProblemTest {
         problem.recurrence().toNanos() / 1.0e9,
         1.0,
         "two opportunities per sidereal day, so the recurrence is half of one");
+  }
+
+  /**
+   * The closed-form injection cost at an epoch on the plane {@code parkingState} builds around the
+   * Moon — the baseline a suffered plane is measured against. Written out here since L6 removed the
+   * convenience overload that used to fabricate the parking orbit itself.
+   */
+  private static double costOnThePlaneBuiltForTheMoon(AbsoluteDate epoch) {
+    return TranslunarInjectionPlan.keplerianInjectionDeltaV(
+        TranslunarInjectionPlan.parkingState(epoch, INJECTION_MASS),
+        epoch.shiftedBy(TranslunarInjectionPlan.TIME_OF_FLIGHT_SECONDS));
   }
 }

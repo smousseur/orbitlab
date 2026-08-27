@@ -2,20 +2,23 @@ package com.smousseur.orbitlab.simulation.mission;
 
 public enum MissionType {
   /** The AKM has no role here: an AKM-equipped payload simply flies with an empty tank. */
-  LEO(false),
+  LEO("LEO", false),
 
   /** Delegates the apogee circularization to the payload's kick motor. */
-  GEO(true),
+  GEO("GEO", true),
 
   /**
    * Ground to a lunar flyby (MIS-4). The payload is inert: the translunar injection is the last
    * burn of the chain and nothing is handed over afterwards, so no kick motor is required.
    */
-  LUNAR_FLYBY(false);
+  LUNAR_FLYBY("LUNAR FLYBY", false);
 
   private final boolean requiresPayloadPropulsion;
 
-  MissionType(boolean requiresPayloadPropulsion) {
+  private final String displayName;
+
+  MissionType(String displayName, boolean requiresPayloadPropulsion) {
+    this.displayName = displayName;
     this.requiresPayloadPropulsion = requiresPayloadPropulsion;
   }
 
@@ -32,12 +35,11 @@ public enum MissionType {
   }
 
   /**
-   * Returns the human-readable label for this type. Goes through this accessor rather than {@link
-   * #name()} so the UI never depends on the enum constant spelling.
+   * Returns the human-readable label for this type.
    *
    * @return the label shown in the UI
    */
   public String displayName() {
-    return name();
+    return displayName;
   }
 }

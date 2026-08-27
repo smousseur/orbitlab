@@ -14,8 +14,8 @@ import com.smousseur.orbitlab.simulation.mission.OptimizationType;
 import com.smousseur.orbitlab.simulation.mission.objective.FlybyObjective;
 import com.smousseur.orbitlab.simulation.mission.stage.AnalyticParkingInsertionStage;
 import com.smousseur.orbitlab.simulation.mission.stage.ParkingCoastStage;
+import com.smousseur.orbitlab.simulation.mission.stage.TLIBurnStage;
 import com.smousseur.orbitlab.simulation.mission.stage.TranslunarCoastStage;
-import com.smousseur.orbitlab.simulation.mission.stage.TranslunarInjectionStage;
 import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchConfiguration;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Spacecraft;
 import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Launchers;
@@ -93,8 +93,7 @@ class LunarFlybyMissionTest {
     assertInstanceOf(
         AnalyticParkingInsertionStage.class, stages.get(stages.size() - 4), "parking insertion");
     assertInstanceOf(ParkingCoastStage.class, stages.get(stages.size() - 3), "parking coast");
-    assertInstanceOf(
-        TranslunarInjectionStage.class, stages.get(stages.size() - 2), "translunar injection");
+    assertInstanceOf(TLIBurnStage.class, stages.get(stages.size() - 2), "translunar injection");
     assertInstanceOf(TranslunarCoastStage.class, stages.getLast(), "translunar coast");
 
     // §3.3: no separation after the injection, so the chain ends on the coast and nothing
@@ -113,13 +112,12 @@ class LunarFlybyMissionTest {
   }
 
   /**
-   * §4.1 — the demo reads its band from the mission of the product, and the value did not move. If
-   * the closure flight of §8.3 widens the band, this is where both classes learn it at once.
+   * §4.1 — the two figures the whole chantier is measured at, pinned where the mission of the
+   * product holds them. If the closure flight widens the band, this is where it is learnt.
    */
   @Test
-  void theDemoReadsItsPeriluneBandFromTheProductMission() {
-    assertEquals(
-        LunarFlybyMission.PERILUNE_TOLERANCE, LunarTransferMission.DEFAULT_PERILUNE_TOLERANCE, 0.0);
+  void thePeriluneTargetAndBandAreTheOnesTheChantierMeasures() {
     assertEquals(10_000.0, LunarFlybyMission.PERILUNE_TOLERANCE, 0.0);
+    assertEquals(100_000.0, LunarFlybyMission.DEFAULT_PERILUNE_ALTITUDE, 0.0);
   }
 }

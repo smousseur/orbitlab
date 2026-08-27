@@ -6,6 +6,7 @@ import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.detector.ReentryGuard;
 import com.smousseur.orbitlab.simulation.mission.maneuver.TranslunarInjectionPlan;
 import com.smousseur.orbitlab.simulation.mission.maneuver.TranslunarInjectionPlan.Departure;
+import com.smousseur.orbitlab.simulation.mission.vehicle.ActiveStageInfo;
 import java.util.Locale;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -18,14 +19,21 @@ import org.orekit.time.AbsoluteDate;
 
 /**
  * The parking coast of a lunar mission: from insertion round to the point the translunar injection
- * has to leave from, and no further (MIS-4 / L4 §3.2).
+ * has to <em>ignite</em> at, and no further (MIS-4 / L4 §3.2, MIS-4 / L6 §5.1).
+ *
+ * <p><b>It stops at ignition and not at the injection point</b>, which is what centres the finite
+ * burn (spec L6 §2, decision α). Centring requires the burn duration to be known before igniting,
+ * so this coast reads the propulsion of the active stage and subtracts {@link
+ * TranslunarInjectionPlan#ignitionLead} from the injection date. The consequence to hold: {@code
+ * configuredEndDate} means "ignition" here, half a burn short of the geometric departure point.
  *
  * <p><b>Its duration cannot be a constructor argument</b>, which is what closes the reuse of {@link
  * CoastingStage#CoastingStage(String, Double)} — that {@code maxTime} is final and read at {@code
  * configure}. Where the injection point lies depends on the launch date and on the ascent actually
- * flown, so it is only knowable at {@link #enter}. {@link TranslunarInjectionPlan#departureFrom} is
- * in closed form — no propagation, the lunar ephemeris alone — so resolving it once per pass costs
- * nothing (spec {@code docs/lunar-flyby/03-conception-L1.md} §2.2).
+ * flown, so it is only knowable at {@link #enter}. {@link TranslunarInjectionPlan#departureFrom}
+ * and {@code ignitionLead} are both in closed form — no propagation, the lunar ephemeris alone — so
+ * resolving them once per pass costs nothing (spec {@code docs/lunar-flyby/03-conception-L1.md}
+ * §2.2).
  *
  * <p><b>It overrides {@code propagateStandalone}, and that is the whole reason the class
  * exists.</b> A plain coast does not, so in {@code MissionOptimizer}'s stage walk it collapses to
@@ -40,11 +48,11 @@ public class ParkingCoastStage extends CoastingStage {
   private static final Logger logger = LogManager.getLogger(ParkingCoastStage.class);
 
   /**
-   * The injection point this coast ends on, resolved at {@link #enter} and read by both {@link
+   * The ignition point this coast ends on, resolved at {@link #enter} and read by both {@link
    * #configure} and {@link #propagateStandalone}. Absolute rather than a duration, so the two
    * passes cannot disagree on the date arithmetic.
    */
-  private AbsoluteDate injectionDate;
+  private AbsoluteDate ignitionDate;
 
   /**
    * @param name the human-readable name of this stage
@@ -56,20 +64,25 @@ public class ParkingCoastStage extends CoastingStage {
   @Override
   public SpacecraftState enter(SpacecraftState previousState, Mission mission) {
     Departure departure = TranslunarInjectionPlan.departureFrom(previousState);
-    this.injectionDate = departure.injectionDate();
+    ActiveStageInfo active = mission.getVehicle().resolveActiveStage(previousState.getMass());
+    double lead = TranslunarInjectionPlan.ignitionLead(previousState, departure, active);
+    this.ignitionDate = departure.injectionDate().shiftedBy(-lead);
     logger.info(
-        "[{}] coasting {} s to the injection point (β = {}° at arrival)",
+        "[{}] coasting {} s to ignition, {} s ahead of the injection point at {} (β = {}° at"
+            + " arrival)",
         getName(),
-        FastMath.round(departure.coastDuration()),
+        FastMath.round(departure.coastDuration() - lead),
+        String.format(Locale.ROOT, "%.1f", lead),
+        departure.injectionDate(),
         String.format(Locale.ROOT, "%.3f", FastMath.toDegrees(departure.planeMisalignment())));
     return previousState;
   }
 
   @Override
   public void configure(NumericalPropagator propagator, Mission mission) {
-    this.configuredEndDate = injectionDate;
+    this.configuredEndDate = ignitionDate;
     propagator.addEventDetector(
-        new DateDetector(injectionDate)
+        new DateDetector(ignitionDate)
             .withHandler(
                 (state, detector, increasing) -> {
                   mission.transitionToNextStage(state);
@@ -93,6 +106,6 @@ public class ParkingCoastStage extends CoastingStage {
             .createOptimizationPropagator(context, maxStepSeconds(entryState, mission));
     propagator.setInitialState(entryState);
     ReentryGuard.armQuiet(propagator, context.gravity());
-    return propagator.propagate(injectionDate);
+    return propagator.propagate(ignitionDate);
   }
 }

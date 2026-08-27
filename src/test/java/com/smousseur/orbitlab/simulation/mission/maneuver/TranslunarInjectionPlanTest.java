@@ -35,7 +35,7 @@ import org.orekit.utils.TimeStampedPVCoordinates;
  * PHY-4 / L6 §7.1 — the geometry of the translunar injection, with no propagation at all.
  *
  * <p>Everything asserted here is closed form: the transfer plane, the parking orbit derived from
- * it, and the Lambert seed. What the flight costs is in {@code LunarTransferFlightTest}; this class
+ * it, and the Lambert seed. What the flight costs is in {@code LunarFlybyFlightTest}; this class
  * runs in milliseconds and is what says <em>why</em> the flight can work before anything is flown.
  *
  * <p><b>MIS-4 / L1 §4.1 extends it rather than opening a class of its own</b> ({@code

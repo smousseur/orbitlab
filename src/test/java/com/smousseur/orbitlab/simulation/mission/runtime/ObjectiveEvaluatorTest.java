@@ -120,9 +120,8 @@ class ObjectiveEvaluatorTest {
 
   /**
    * An impact is refused whatever band was declared. The band here is wide enough to swallow the
-   * −53 km the first version of the translunar aim computed and flew (spec §12, reported by {@code
-   * LunarTransferFlightTest.theAimConvergesOrRefusesAcrossALunarMonth}), which is the point: the
-   * property must not rest on the tolerance being smaller than the target.
+   * −53 km the first version of the translunar aim computed and flew (spec §12), which is the
+   * point: the property must not rest on the tolerance being smaller than the target.
    */
   @Test
   void flyby_impact_falseEvenUnderABandThatWouldCoverIt() {
