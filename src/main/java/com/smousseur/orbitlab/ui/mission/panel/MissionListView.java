@@ -49,7 +49,7 @@ public class MissionListView {
   private static final float NEW_MISSION_BTN_W = 160f;
   private static final float ACTIONS_BAR_H = 32f;
   private static final float PAGINATION_WIDTH = 150f;
-  private static final int PAGE_SIZE = 5;
+  private static final int PAGE_SIZE = 7;
 
   record ColumnLayout(float name, float type, float status, float actions) {
     float totalWidth() {

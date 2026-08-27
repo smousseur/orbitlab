@@ -122,7 +122,7 @@ public final class MissionDisplayPanelAppState extends BaseAppState implements A
     parentNode = context.guiGraph().getMissionPanelNode();
     widget = new MissionDisplayPanelWidget(context);
     widget.layoutTopLeft(sh, topOffset);
-    widget.setOnManageClicked(this::publishOpenManagement);
+    widget.setOnManageClicked(this::publishToggleManagement);
     widget.setOnHideAll(this::handleHideAll);
     widget.setRowListener(buildRowListener());
     widget.attachTo(parentNode);
@@ -197,7 +197,7 @@ public final class MissionDisplayPanelAppState extends BaseAppState implements A
   private void runMenuAction(String itemId) {
     switch (itemId) {
       case ITEM_MISSION_PANEL -> togglePanel();
-      case ITEM_MANAGE_MISSIONS -> publishOpenManagement();
+      case ITEM_MANAGE_MISSIONS -> publishToggleManagement();
       case ITEM_NEW_MISSION -> publishOpenWizard();
       case ITEM_OPEN_SCENARIO -> publishOpenScenarioBrowser(ScenarioBrowserMode.OPEN);
       case ITEM_SAVE_SCENARIO -> publishOpenScenarioBrowser(ScenarioBrowserMode.SAVE);
@@ -243,8 +243,10 @@ public final class MissionDisplayPanelAppState extends BaseAppState implements A
    * Asks for the mission management window. The event is a toggle, so the <i>Manage</i> button of
    * the display panel closes the window when it is already on screen.
    */
-  private void publishOpenManagement() {
-    context.eventBus().publishUiNavigation(new EventBus.UiNavigationEvent.OpenMissionManagement());
+  private void publishToggleManagement() {
+    context
+        .eventBus()
+        .publishUiNavigation(new EventBus.UiNavigationEvent.ToggleMissionManagement());
   }
 
   private void publishOpenWizard() {

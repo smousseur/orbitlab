@@ -53,6 +53,8 @@ public final class MissionPanelWidgetAppState extends BaseAppState {
   @Override
   public void update(float tpf) {
     if (context.eventBus().pollOpenManagement() != null) {
+      openPanel();
+    } else if (context.eventBus().pollToggleManagement() != null) {
       togglePanel();
     }
     if (panel != null) {

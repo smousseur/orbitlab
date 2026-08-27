@@ -107,12 +107,13 @@ public final class EventBus {
    * has its own queue so independent consumers do not race to drain a shared queue.
    */
   public sealed interface UiNavigationEvent
-      permits UiNavigationEvent.OpenMissionWizard,
-          UiNavigationEvent.CreateMission,
-          UiNavigationEvent.UpdateMission,
+      permits UiNavigationEvent.CreateMission,
+          UiNavigationEvent.OpenMissionDisplay,
           UiNavigationEvent.OpenMissionManagement,
+          UiNavigationEvent.OpenMissionWizard,
           UiNavigationEvent.OpenScenarioBrowser,
-          UiNavigationEvent.OpenMissionDisplay {
+          UiNavigationEvent.ToggleMissionManagement,
+          UiNavigationEvent.UpdateMission {
 
     /**
      * Request to open the mission wizard, either blank or on an existing mission.
@@ -165,6 +166,9 @@ public final class EventBus {
     /** Request to open the mission management modal. */
     record OpenMissionManagement() implements UiNavigationEvent {}
 
+    /** Request to toggle the mission management modal. */
+    record ToggleMissionManagement() implements UiNavigationEvent {}
+
     /**
      * Request to open the scenario browser, in one of its two modes.
      *
@@ -191,6 +195,8 @@ public final class EventBus {
       new ConcurrentLinkedQueue<>();
   private final ConcurrentLinkedQueue<UiNavigationEvent.OpenMissionManagement> openManagementQueue =
       new ConcurrentLinkedQueue<>();
+  private final ConcurrentLinkedQueue<UiNavigationEvent.ToggleMissionManagement>
+      toggleManagementQueue = new ConcurrentLinkedQueue<>();
   private final ConcurrentLinkedQueue<UiNavigationEvent.OpenScenarioBrowser> openScenarioQueue =
       new ConcurrentLinkedQueue<>();
   private final ConcurrentLinkedQueue<UiNavigationEvent.OpenMissionDisplay> openMissionDisplay =
@@ -208,6 +214,7 @@ public final class EventBus {
       case UiNavigationEvent.CreateMission c -> createMissionQueue.add(c);
       case UiNavigationEvent.UpdateMission u -> updateMissionQueue.add(u);
       case UiNavigationEvent.OpenMissionManagement m -> openManagementQueue.add(m);
+      case UiNavigationEvent.ToggleMissionManagement m -> toggleManagementQueue.add(m);
       case UiNavigationEvent.OpenScenarioBrowser s -> openScenarioQueue.add(s);
       case UiNavigationEvent.OpenMissionDisplay d -> openMissionDisplay.add(d);
     }
@@ -231,6 +238,11 @@ public final class EventBus {
   /** Poll one open-management request; returns null if none. */
   public UiNavigationEvent.OpenMissionManagement pollOpenManagement() {
     return openManagementQueue.poll();
+  }
+
+  /** Poll one toggle-management request; returns null if none. */
+  public UiNavigationEvent.ToggleMissionManagement pollToggleManagement() {
+    return toggleManagementQueue.poll();
   }
 
   /** Poll one open-scenario-browser request; returns null if none. */
