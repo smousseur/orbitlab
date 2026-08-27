@@ -11,6 +11,7 @@ import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemeris;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemerisPoint;
 import com.smousseur.orbitlab.simulation.mission.runtime.MissionComputeResult;
 import com.smousseur.orbitlab.simulation.mission.runtime.MissionOptimizer;
+import com.smousseur.orbitlab.simulation.mission.runtime.ObjectiveEvaluator;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -50,13 +51,6 @@ class LunarTransferFlightTest {
    * No stage of this mission is optimizable, so CMA-ES never runs and this budget is never spent.
    */
   private static final int MAX_EVALUATIONS = 1;
-
-  /**
-   * The announced band on the flown perilune (m). An order of magnitude above the 0.9 km the 60 s
-   * coast sampling can over-read closest approach by (spec §4.3), and above the 1 km the aim secant
-   * converges to.
-   */
-  private static final double PERILUNE_BAND = 10_000.0;
 
   private static AbsoluteDate epoch;
 
@@ -111,11 +105,21 @@ class LunarTransferFlightTest {
     assertEquals(
         LunarTransferMission.DEFAULT_PERILUNE_ALTITUDE,
         perilune,
-        PERILUNE_BAND,
+        LunarTransferMission.DEFAULT_PERILUNE_TOLERANCE,
         "the flown perilune must land in the announced band");
 
     // A sanity floor that no tolerance can absorb: the trajectory must not graze or enter the Moon.
     assertTrue(perilune > 0.0, "the trajectory impacted the Moon, got " + perilune + " m");
+
+    // The same reading, taken through the mission's own objective (MIS-4 / L3 §5.2). This is what
+    // proves the production wiring rather than the measurement: that getObjective() describes the
+    // flight that was flown, that selection by body holds on a real ephemeris, and that the
+    // launch-body guard does not fire on a mission starting in Earth orbit. The insertion ratio is
+    // deliberately NaN — the flyby branch must not read it, and any comparison it reached would
+    // turn false and fail here.
+    assertTrue(
+        ObjectiveEvaluator.met(ephemeris, mission.getObjective(), Double.NaN),
+        "the flown flyby must satisfy the mission's own objective");
 
     // ── the trajectory is whole ─────────────────────────────────────────────
     // The real check on truncation. isComplete() cannot see it on a horizon-sized terminal coast

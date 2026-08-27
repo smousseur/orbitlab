@@ -3,6 +3,7 @@ package com.smousseur.orbitlab.simulation.mission.runtime;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.smousseur.orbitlab.core.SolarSystemBody;
+import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemeris;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemerisPoint;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.TrajectoryArc;
@@ -11,8 +12,10 @@ import com.smousseur.orbitlab.simulation.mission.vehicle.StagePropellant;
 import java.util.ArrayList;
 import java.util.List;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.orekit.time.AbsoluteDate;
+import org.orekit.time.TimeScalesFactory;
 
 /**
  * Fast unit test of the I7 feasibility predicate (spec 09 §6 task 2) — the {@code objectiveMet} and
@@ -22,6 +25,11 @@ import org.orekit.time.AbsoluteDate;
 class MissionLoadEvaluatorTest {
 
   private static final double TOL = MissionLoadEvaluator.DEFAULT_OBJECTIVE_TOLERANCE_RATIO; // 0.07
+
+  @BeforeAll
+  static void initOrekit() {
+    OrekitService.get().initialize();
+  }
 
   /** Builds a two-plus-point ephemeris from (stageName, altitude) pairs; positions are dummy. */
   private static MissionEphemeris ephemerisOf(List<String> stages, List<Double> altitudes) {

@@ -15,6 +15,7 @@ import com.smousseur.orbitlab.simulation.mission.window.LaunchWindow;
 import com.smousseur.orbitlab.simulation.mission.window.LaunchWindowSearch;
 import com.smousseur.orbitlab.simulation.mission.window.LaunchWindowSolver;
 import java.time.Duration;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import org.apache.logging.log4j.LogManager;
@@ -108,9 +109,7 @@ class LunarLaunchWindowFlightTest {
 
     assertFalse(windows.isEmpty(), "twenty-six hours must hold at least one lunar window");
     LaunchWindow window =
-        windows.stream()
-            .min((a, b) -> Double.compare(a.best().deltaV(), b.best().deltaV()))
-            .orElseThrow();
+        windows.stream().min(Comparator.comparingDouble(a -> a.best().deltaV())).orElseThrow();
 
     // The same epoch flown again, to read what the confirmation could not return: the perilune the
     // aim converged to. The solver's own confirmation gives back a cost and a verdict only.

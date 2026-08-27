@@ -6,7 +6,7 @@ import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionHorizon;
 import com.smousseur.orbitlab.simulation.mission.MissionStage;
 import com.smousseur.orbitlab.simulation.mission.maneuver.TranslunarInjectionPlan;
-import com.smousseur.orbitlab.simulation.mission.objective.OrbitInsertionObjective;
+import com.smousseur.orbitlab.simulation.mission.objective.FlybyObjective;
 import com.smousseur.orbitlab.simulation.mission.stage.TranslunarCoastStage;
 import com.smousseur.orbitlab.simulation.mission.stage.TranslunarInjectionStage;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropulsionSystem;
@@ -43,6 +43,15 @@ public class LunarTransferMission extends Mission {
   public static final double DEFAULT_PERILUNE_ALTITUDE = 100_000.0;
 
   /**
+   * The ± band on the flown perilune (m).
+   *
+   * <p>An order of magnitude above the 0.9 km the 60 s coast sampling can over-read closest
+   * approach by (spec {@code docs/multi-corps/08-conception-L6.md} §4.3), and above the 1 km the
+   * aim secant converges to.
+   */
+  public static final double DEFAULT_PERILUNE_TOLERANCE = 10_000.0;
+
+  /**
    * Total mission duration (s).
    *
    * <p><b>Four and a half days, and the half day is measured rather than prudential.</b> L4 §11.2
@@ -68,8 +77,6 @@ public class LunarTransferMission extends Mission {
    */
   private static final double PROPELLANT_LOAD = 1_200.0;
 
-  private final double perileneAltitude;
-
   /** Creates the acceptance flight aiming for {@link #DEFAULT_PERILUNE_ALTITUDE}. */
   public LunarTransferMission(String name) {
     this(name, DEFAULT_PERILUNE_ALTITUDE);
@@ -85,8 +92,7 @@ public class LunarTransferMission extends Mission {
         new Spacecraft(
             DRY_MASS, PROPELLANT_LOAD, PROPELLANT_LOAD, PropulsionSystem.getSpacecraftPropulsion()),
         stages(perileneAltitude),
-        new OrbitInsertionObjective(SolarSystemBody.MOON, perileneAltitude, perileneAltitude, 0.0));
-    this.perileneAltitude = perileneAltitude;
+        new FlybyObjective(SolarSystemBody.MOON, perileneAltitude, DEFAULT_PERILUNE_TOLERANCE));
     setHorizon(new MissionHorizon.FixedDuration(MISSION_DURATION_SECONDS));
   }
 
@@ -113,13 +119,6 @@ public class LunarTransferMission extends Mission {
   @Override
   public GravitationalContext gravitationalContext() {
     return GravitationalContext.earth().withPerturbers(SolarSystemBody.MOON, SolarSystemBody.SUN);
-  }
-
-  /**
-   * @return the perilune altitude this mission aims for (m)
-   */
-  public double getPerileneAltitude() {
-    return perileneAltitude;
   }
 
   private static List<MissionStage> stages(double perileneAltitude) {
