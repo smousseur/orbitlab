@@ -324,11 +324,6 @@ public class MissionPanelWidget implements AutoCloseable {
 
     MissionEntry detailed =
         screen == Screen.DETAIL ? missionContext.findMission(detailMissionId).orElse(null) : null;
-    // Two ways the detail screen goes stale under us. It can vanish (deletion), and it can restart
-    // a computation: submitForComputation() clears the ephemeris but leaves achievedOrbit and
-    // performanceReport in place, so a detail view left open would keep drawing the previous run's
-    // orbit and stage table under a COMPUTING header, with nothing marking them stale. Falling back
-    // to the list is the same net that clears a stale selectedMissionId in update().
     if (screen == Screen.DETAIL
         && (detailed == null || detailed.mission().getStatus() == MissionStatus.COMPUTING)) {
       screen = Screen.LIST;

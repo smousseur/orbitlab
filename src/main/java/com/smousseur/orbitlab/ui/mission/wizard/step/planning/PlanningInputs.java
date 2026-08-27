@@ -2,6 +2,7 @@ package com.smousseur.orbitlab.ui.mission.wizard.step.planning;
 
 import com.smousseur.orbitlab.core.OrbitlabException;
 import com.smousseur.orbitlab.simulation.mission.window.problem.EarthLaunchWindowRequest;
+import com.smousseur.orbitlab.simulation.mission.window.problem.LaunchWindowRequest;
 import java.util.Objects;
 
 /**
@@ -15,7 +16,8 @@ import java.util.Objects;
  *
  * <p><b>It is also the memoisation key</b>, and that is why the gap travels with the request
  * instead of beside it: one {@code equals} decides whether anything moved, exactly as {@link
- * EarthLaunchWindowRequest}'s does for the six numbers inside it.
+ * EarthLaunchWindowRequest}'s does for the six numbers inside it. {@link LaunchWindowRequest} being
+ * sealed over records, that value equality survives the lunar branch (MIS-4 / L5 §4.2).
  *
  * <p>The wording of each gap stays in {@link PlanningModel}: the axis caption is a clipped,
  * monospaced ASCII line, so what a gap reads as is a display decision and not the step's.
@@ -23,7 +25,7 @@ import java.util.Objects;
  * @param request the window inputs, or null when {@code gap} says why there are none
  * @param gap what is missing, {@link Gap#NONE} when the request is there
  */
-public record PlanningInputs(EarthLaunchWindowRequest request, Gap gap) {
+public record PlanningInputs(LaunchWindowRequest request, Gap gap) {
 
   /** The ways the form can fail to describe a window, each one different news for the user. */
   public enum Gap {
@@ -56,7 +58,7 @@ public record PlanningInputs(EarthLaunchWindowRequest request, Gap gap) {
    * @param request the inputs the form assembled
    * @return the complete inputs
    */
-  public static PlanningInputs of(EarthLaunchWindowRequest request) {
+  public static PlanningInputs of(LaunchWindowRequest request) {
     return new PlanningInputs(Objects.requireNonNull(request, "request"), Gap.NONE);
   }
 

@@ -141,14 +141,30 @@ public final class MissionFactory {
             altitude,
             horizon);
       }
-      // MIS-4 / L4 §6.2: a branch that refuses by naming the lot which will fill it, rather than a
-      // `default` — the point of adding the enum constant is that the compiler keeps pointing at
-      // this site until someone does.
-      case LUNAR_FLYBY ->
-          throw new OrbitlabException(
-              "A lunar flyby cannot be built from wizard values yet — MIS-4 / L5 adds the profile,"
-                  + " the perilune field and the propellant budget. Until then a"
-                  + " MissionSpec.Lunar is assembled directly.");
+      // MIS-4 / L5 §6.2. The parking altitude is not a wizard field: it comes from the mission's
+      // own constant, the single source the window, the chain and the budget have to agree on.
+      case LUNAR_FLYBY -> {
+        double periluneAlt = doubleValue(values, "LUNAR_PERILUNE_ALT") * 1000.0;
+        double parkingAlt = LunarFlybyMission.DEFAULT_PARKING_ALTITUDE;
+        // Inert by construction: LUNAR_FLYBY does not require payload propulsion, and the
+        // translunar injection is the launcher's last burn — nothing is handed over afterwards.
+        Spacecraft payload = payloadModel.toSpacecraft(payloadMass, 0.0);
+        // Due east: the chain flies i = φ, where the two azimuth branches merge.
+        PropellantBudget.LunarLoads loads =
+            PropellantBudget.loadsForLunar(
+                launcher, payload, parkingAlt, latitude, FastMath.PI / 2);
+        yield new MissionSpec.Lunar(
+            name,
+            new LaunchConfiguration(launcher, loads.launcherLoads(), payload, payloadModel.id()),
+            parkingAlt,
+            periluneAlt,
+            siteName,
+            latitude,
+            longitude,
+            altitude,
+            horizon,
+            null);
+      }
     };
   }
 

@@ -22,6 +22,7 @@ import org.hipparchus.util.FastMath;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.orekit.propagation.SpacecraftState;
 import org.orekit.time.AbsoluteDate;
 import org.orekit.time.TimeScalesFactory;
@@ -44,6 +45,7 @@ import org.orekit.time.TimeScalesFactory;
  * would clear the flag (spec §1.9). The date of the last sample is the assertion that actually
  * catches a truncated flight.
  */
+@EnabledIfSystemProperty(named = "orbitlab.slowTests", matches = "true")
 class LunarTransferFlightTest {
   private static final Logger logger = LogManager.getLogger(LunarTransferFlightTest.class);
 

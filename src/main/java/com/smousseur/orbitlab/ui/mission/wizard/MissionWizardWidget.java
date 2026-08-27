@@ -60,15 +60,6 @@ public class MissionWizardWidget implements AutoCloseable {
   private Consumer<Map<String, Object>> onSubmit = values -> {};
 
   /**
-   * Opens the wizard on a new mission.
-   *
-   * @param context the application context
-   */
-  public MissionWizardWidget(ApplicationContext context) {
-    this(context, null);
-  }
-
-  /**
    * Opens the wizard, prefilled on the values of an existing mission when {@code initialValues} is
    * non-null — the edit mode. Editing differs from creating on three points: the header says so,
    * the last step confirms with "Update" rather than "Create", and the mission type is locked,

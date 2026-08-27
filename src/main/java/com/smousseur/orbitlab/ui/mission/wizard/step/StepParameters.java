@@ -18,7 +18,6 @@ import com.smousseur.orbitlab.simulation.mission.MissionHorizon;
 import com.smousseur.orbitlab.simulation.mission.MissionType;
 import com.smousseur.orbitlab.simulation.mission.context.MissionContext;
 import com.smousseur.orbitlab.simulation.mission.context.MissionEntry;
-import com.smousseur.orbitlab.simulation.mission.window.problem.EarthLaunchWindowRequest;
 import com.smousseur.orbitlab.ui.EphemerisWindow;
 import com.smousseur.orbitlab.ui.UiKit;
 import com.smousseur.orbitlab.ui.form.FormStyles;
@@ -30,6 +29,7 @@ import com.smousseur.orbitlab.ui.mission.wizard.StepValues;
 import com.smousseur.orbitlab.ui.mission.wizard.step.params.DynamicParameters;
 import com.smousseur.orbitlab.ui.mission.wizard.step.params.EarthOrbitDynamicParameters;
 import com.smousseur.orbitlab.ui.mission.wizard.step.params.GEODynamicParameters;
+import com.smousseur.orbitlab.ui.mission.wizard.step.params.LunarDynamicParameters;
 import com.smousseur.orbitlab.ui.mission.wizard.step.planning.PlanningInputs;
 import com.smousseur.orbitlab.ui.mission.wizard.step.planning.PlanningPage;
 import java.util.EnumMap;
@@ -249,6 +249,8 @@ public class StepParameters implements StepValues {
           profile, new EarthOrbitDynamicParameters(profile, launchLatitudeDeg));
     }
     dynamicParametersMap.put(MissionProfile.GEO, new GEODynamicParameters(200, 2000));
+    dynamicParametersMap.put(
+        MissionProfile.LUNAR, new LunarDynamicParameters(MissionProfile.LUNAR.altitudes()));
     dynamicParameters = dynamicParametersMap.get(selectedProfile);
     dynamicParametersContainer = new Container(new BoxLayout(Axis.Y, FillMode.None));
     dynamicParametersContainer.setBackground(null);
@@ -528,13 +530,12 @@ public class StepParameters implements StepValues {
   }
 
   /**
-   * Attaches or detaches the planning indicator to match the card on screen. A GEO mission carries
-   * no target node — {@code MissionSpec.Geo} has no such component and {@code
-   * MissionWizardAppState.scheduledDateFor} only schedules an {@code EarthOrbit} — so the control
-   * is absent there rather than greyed: nothing could ever light it.
+   * Attaches or detaches the planning indicator to match the card on screen. A GEO mission has no
+   * window to sit through — its date is free at every instant — so the control is absent there
+   * rather than greyed: nothing could ever light it.
    */
   private void updatePlanningIndicator() {
-    boolean shown = hasTargetNode();
+    boolean shown = hasLaunchWindow();
     if (shown == planningIndicatorShown) {
       return;
     }
@@ -549,14 +550,28 @@ public class StepParameters implements StepValues {
   }
 
   /**
-   * Whether the card on screen has a target node at all — the one predicate {@link
+   * Whether the card on screen has a launch window at all — the one predicate {@link
    * #updatePlanningIndicator()} and {@link #validateTargetNode()} must share, since one decides
    * whether the entry point is shown and the other whether a refusal can be raised.
+   *
+   * <p><b>The value is what it always was; the name is what became false</b> (MIS-4 / L5 §4.3). A
+   * lunar mission has a window without having a node: what it waits for is a direction its parking
+   * plane must contain, not a plane whose ascending node it must meet.
+   *
+   * @return whether the selected profile has a window to plan
+   */
+  private boolean hasLaunchWindow() {
+    return selectedProfile != MissionProfile.GEO;
+  }
+
+  /**
+   * Whether the card on screen carries a <b>target node</b>, which the planning page shows a field
+   * for. Narrower than {@link #hasLaunchWindow()}: only the Earth-orbit cards have one.
    *
    * @return whether the selected profile carries a target node
    */
   private boolean hasTargetNode() {
-    return selectedProfile != MissionProfile.GEO;
+    return selectedProfile.missionType() == MissionType.LEO;
   }
 
   /** Hands the duration back to the derived policy, clearing any refused entry. */
@@ -771,6 +786,9 @@ public class StepParameters implements StepValues {
     if (MissionType.GEO.name().equals(type)) {
       return MissionProfile.GEO;
     }
+    if (MissionType.LUNAR_FLYBY.name().equals(type)) {
+      return MissionProfile.LUNAR;
+    }
     return selectedProfile;
   }
 
@@ -807,11 +825,13 @@ public class StepParameters implements StepValues {
    * false answer presented as a true one (spec {@code docs/mission-window/02-timeline-wizard.md}
    * §6).
    *
-   * <p><b>And it says which part.</b> This step is the layer that knows: the pad comes from the
-   * site step and the plane from the panel on screen, and {@code targetOrbit} declines an
-   * inclination the pad cannot reach exactly as it declines an unreadable one. Reporting both as a
-   * single absence is what made the planning page name the launch site for a refusal that was the
-   * target orbit's, which is a false statement on screen.
+   * <p><b>And it says which part.</b> The pad is the one input this step alone knows, so it is the
+   * one it keeps: reporting an unreadable inclination as an unreadable launch site is what made the
+   * planning page blame the wrong control, which is a false statement on screen.
+   *
+   * <p><b>The rest belongs to the panel</b> (MIS-4 / L5 §4.3). Only the card on screen knows what
+   * its profile aims at, and the two profiles that have a window aim at things with no component in
+   * common — a plane with a node to meet, and a direction to contain.
    *
    * @return the request, or the reason the form cannot describe one
    */
@@ -820,23 +840,7 @@ public class StepParameters implements StepValues {
     if (site.isEmpty()) {
       return PlanningInputs.missing(PlanningInputs.Gap.NO_SITE);
     }
-    Optional<DynamicParameters.TargetOrbit> orbit =
-        dynamicParameters.targetOrbit(site.get().latitude());
-    if (orbit.isEmpty()) {
-      return PlanningInputs.missing(PlanningInputs.Gap.NO_TARGET);
-    }
-    Optional<Double> raan = planningPage.parsedRaanDeg();
-    if (raan.isEmpty()) {
-      return PlanningInputs.missing(PlanningInputs.Gap.NO_NODE);
-    }
-    return PlanningInputs.of(
-        new EarthLaunchWindowRequest(
-            site.get().latitude(),
-            site.get().longitude(),
-            site.get().altitude(),
-            orbit.get().plane(),
-            raan.get(),
-            orbit.get().semiMajorAxis()));
+    return dynamicParameters.windowInputs(site.get(), planningPage.parsedRaanDeg().orElse(null));
   }
 
   /**
@@ -993,10 +997,11 @@ public class StepParameters implements StepValues {
    * @return the reason the node was refused, or empty when it is usable or has no meaning here
    */
   private Optional<String> validateTargetNode() {
-    if (!hasTargetNode()) {
+    if (!hasLaunchWindow()) {
       planningPage.clearRejection();
       return Optional.empty();
     }
+    // On a card that has a window but no node, the page answers empty on its own.
     return planningPage.validateTargetNode();
   }
 
@@ -1046,6 +1051,9 @@ public class StepParameters implements StepValues {
       dynamicParametersContainer.addChild(next.getContainer());
       dynamicParameters = next;
       shownProfile = selectedProfile;
+      // Here rather than beside updatePlanningIndicator(): both follow the card, and this is the
+      // one place that already knows the card has just changed.
+      planningPage.setNodeShown(hasTargetNode());
     }
     dynamicParameters.update(tpf);
   }

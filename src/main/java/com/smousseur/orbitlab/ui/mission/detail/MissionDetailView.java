@@ -19,6 +19,7 @@ import com.smousseur.orbitlab.simulation.mission.runtime.MissionPerformanceRepor
 import com.smousseur.orbitlab.ui.UiKit;
 import com.smousseur.orbitlab.ui.form.FormStyles;
 import com.smousseur.orbitlab.ui.mission.MissionResultText;
+import com.smousseur.orbitlab.ui.mission.MissionStatusColor;
 import com.smousseur.orbitlab.ui.mission.MissionTargetOrbit;
 import java.util.Locale;
 import java.util.Optional;
@@ -123,7 +124,7 @@ public final class MissionDetailView {
     MissionStatus status = entry.mission().getStatus();
     Label statusLabel = row.addChild(new Label("[ " + status.name() + " ]", FormStyles.STYLE));
     statusLabel.setFont(UiKit.ibmPlexMono(11));
-    statusLabel.setColor(statusColor(status));
+    statusLabel.setColor(MissionStatusColor.forStatus(status));
     centerOnButtonHeight(statusLabel);
   }
 
@@ -274,14 +275,5 @@ public final class MissionDetailView {
     Container row = new Container(new BoxLayout(Axis.X, FillMode.None));
     row.setBackground(null);
     return row;
-  }
-
-  private static ColorRGBA statusColor(MissionStatus status) {
-    return switch (status) {
-      case DRAFT -> FormStyles.TEXT_SECONDARY;
-      case COMPUTING -> FormStyles.WARNING;
-      case READY -> FormStyles.SUCCESS;
-      case FAILED -> FormStyles.DANGER;
-    };
   }
 }

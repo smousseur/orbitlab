@@ -19,6 +19,8 @@ import com.smousseur.orbitlab.simulation.mission.MissionHorizon;
 import com.smousseur.orbitlab.simulation.mission.operation.LaunchPlane;
 import com.smousseur.orbitlab.ui.UiKit;
 import com.smousseur.orbitlab.ui.form.FormStyles;
+import com.smousseur.orbitlab.ui.mission.wizard.SiteCoordinates;
+import com.smousseur.orbitlab.ui.mission.wizard.step.planning.PlanningInputs;
 import java.util.Map;
 import java.util.Optional;
 import org.orekit.utils.Constants;
@@ -105,6 +107,27 @@ public abstract class DynamicParameters {
    * @param semiMajorAxis meters
    */
   public record TargetOrbit(LaunchPlane plane, double semiMajorAxis) {}
+
+  /**
+   * The window inputs this panel describes, or the reason it cannot describe any.
+   *
+   * <p><b>It lives here, and not in {@code StepParameters}, for the reason {@link
+   * #defaultHorizonDays()} does</b>: only the panel on screen knows what its own profile is aiming
+   * at, and the two profiles that have a window aim at things with no component in common — a plane
+   * with a node to meet, and a direction to contain. The step keeps the one gap it alone can see,
+   * an unreadable pad, and delegates the rest (MIS-4 / L5 §4.3).
+   *
+   * <p>The default is {@link PlanningInputs.Gap#NO_NODE}: a profile with nothing to wait for says
+   * so quietly, which is the state the geostationary card is in.
+   *
+   * @param site the launch pad, already read
+   * @param raanDeg the target node in degrees, or {@code null} when the field is blank or
+   *     unreadable — a panel whose profile has no node ignores it
+   * @return the request, or the reason there is none
+   */
+  public PlanningInputs windowInputs(SiteCoordinates site, Double raanDeg) {
+    return PlanningInputs.missing(PlanningInputs.Gap.NO_NODE);
+  }
 
   /**
    * Whether a field of this panel currently carries a refusal, so the step can mount the page

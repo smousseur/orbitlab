@@ -11,11 +11,14 @@ import com.simsilica.lemur.core.VersionedReference;
 import com.smousseur.orbitlab.core.OrbitlabException;
 import com.smousseur.orbitlab.simulation.mission.MissionHorizon;
 import com.smousseur.orbitlab.simulation.mission.operation.LaunchPlane;
+import com.smousseur.orbitlab.simulation.mission.window.problem.EarthLaunchWindowRequest;
 import com.smousseur.orbitlab.ui.UiKit;
 import com.smousseur.orbitlab.ui.form.FormStyles;
 import com.smousseur.orbitlab.ui.mission.wizard.FormField;
 import com.smousseur.orbitlab.ui.mission.wizard.FormValues;
 import com.smousseur.orbitlab.ui.mission.wizard.MissionProfile;
+import com.smousseur.orbitlab.ui.mission.wizard.SiteCoordinates;
+import com.smousseur.orbitlab.ui.mission.wizard.step.planning.PlanningInputs;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -389,6 +392,32 @@ public class EarthOrbitDynamicParameters extends DynamicParameters {
     } catch (OrbitlabException | NumberFormatException unreachable) {
       return Optional.empty();
     }
+  }
+
+  /**
+   * The plane of the inclination field and the semi-major axis of the two sliders, waiting for the
+   * node the planning page holds.
+   *
+   * <p>Moved here from {@code StepParameters} by MIS-4 / L5 §4.3: the step keeps the pad, which is
+   * the only part it alone knows, and the panel keeps the target.
+   */
+  @Override
+  public PlanningInputs windowInputs(SiteCoordinates site, Double raanDeg) {
+    Optional<TargetOrbit> orbit = targetOrbit(site.latitude());
+    if (orbit.isEmpty()) {
+      return PlanningInputs.missing(PlanningInputs.Gap.NO_TARGET);
+    }
+    if (raanDeg == null) {
+      return PlanningInputs.missing(PlanningInputs.Gap.NO_NODE);
+    }
+    return PlanningInputs.of(
+        new EarthLaunchWindowRequest(
+            site.latitude(),
+            site.longitude(),
+            site.altitude(),
+            orbit.get().plane(),
+            raanDeg,
+            orbit.get().semiMajorAxis()));
   }
 
   @Override

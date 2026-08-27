@@ -6,6 +6,7 @@ import com.smousseur.orbitlab.core.OrbitlabException;
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionType;
+import com.smousseur.orbitlab.simulation.mission.OptimizationType;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
 import com.smousseur.orbitlab.simulation.mission.vehicle.VehicleStack;
 import java.util.HashMap;
@@ -46,6 +47,50 @@ class MissionFactoryTest {
 
   private static List<Vehicle> stackOf(Mission mission) {
     return assertInstanceOf(VehicleStack.class, mission.getVehicle()).vehicles();
+  }
+
+  /**
+   * MIS-4 / L5 §6.2 — a lunar flyby built from wizard values, where until this lot the factory
+   * refused by naming the lot that would fill it.
+   */
+  @Test
+  void lunarFromWizard_periluneInMeters_parkingFromTheMissionConstant() {
+    Map<String, Object> values = baseValues();
+    values.put("LAUNCH_SITE_LAT", 28.562);
+    values.put("LAUNCH_SITE_LONG", -80.577);
+    values.put("LAUNCH_SITE_ALT", 3.0);
+    values.put("PAYLOAD_TYPE", "LUNAR_PROBE");
+    values.put("PAYLOAD_MASS", 2_000.0);
+    values.put("LUNAR_PERILUNE_ALT", 100.0);
+
+    MissionSpec spec = MissionFactory.specFromWizardValues(values, MissionType.LUNAR_FLYBY);
+    MissionSpec.Lunar lunar = assertInstanceOf(MissionSpec.Lunar.class, spec);
+    assertEquals(100_000.0, lunar.periluneAltitude(), 1e-6, "perilune in meters");
+    assertEquals(
+        LunarFlybyMission.DEFAULT_PARKING_ALTITUDE,
+        lunar.parkingAltitude(),
+        1e-6,
+        "the parking altitude is the mission's constant, not a wizard field");
+    assertEquals(
+        0.0, lunar.configuration().payload().propellantLoad(), 1e-9, "the payload flies inert");
+    assertInstanceOf(
+        LunarFlybyMission.class, MissionComposer.compose(lunar, OptimizationType.FAST));
+  }
+
+  /** The top stage is sized by the budget, not filled to capacity. */
+  @Test
+  void lunarFromWizard_topStageIsSizedByTheBudget() {
+    Map<String, Object> values = baseValues();
+    values.put("PAYLOAD_TYPE", "LUNAR_PROBE");
+    values.put("PAYLOAD_MASS", 2_000.0);
+    values.put("LUNAR_PERILUNE_ALT", 100.0);
+
+    Mission mission = MissionFactory.fromWizardValues(values, MissionType.LUNAR_FLYBY);
+    List<Vehicle> vehicles = stackOf(mission);
+    assertEquals(S1_CAPACITY, vehicles.get(0).propellantLoad(), 1e-6, "S1 flies full in v1");
+    double s2Load = vehicles.get(1).propellantLoad();
+    assertTrue(s2Load > 0 && s2Load < S2_CAPACITY, () -> "sized S2 load, got " + s2Load);
+    assertEquals(2_000, vehicles.get(2).getMass(), 1e-6, "payload mass as entered, no AKM");
   }
 
   /**

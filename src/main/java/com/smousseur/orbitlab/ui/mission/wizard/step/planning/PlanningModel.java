@@ -2,8 +2,8 @@ package com.smousseur.orbitlab.ui.mission.wizard.step.planning;
 
 import com.smousseur.orbitlab.core.OrbitlabException;
 import com.smousseur.orbitlab.simulation.mission.window.LaunchWindow;
-import com.smousseur.orbitlab.simulation.mission.window.problem.EarthLaunchWindowPlanner;
-import com.smousseur.orbitlab.simulation.mission.window.problem.EarthLaunchWindowRequest;
+import com.smousseur.orbitlab.simulation.mission.window.problem.LaunchWindowPlanner;
+import com.smousseur.orbitlab.simulation.mission.window.problem.LaunchWindowRequest;
 import java.util.List;
 import java.util.Objects;
 import org.orekit.time.AbsoluteDate;
@@ -112,13 +112,13 @@ public final class PlanningModel {
    * other way of being told it was refused, and an exception escaping here would take the render
    * thread down. The reason it reports is the model's own short line, not the exception's.
    */
-  private static PlanningState search(EarthLaunchWindowRequest request, AbsoluteDate floor) {
+  private static PlanningState search(LaunchWindowRequest request, AbsoluteDate floor) {
     if (floor == null) {
       return new PlanningState.Unavailable(NO_FLOOR);
     }
     try {
       List<LaunchWindow> windows =
-          EarthLaunchWindowPlanner.nextOpportunities(request, floor, OPPORTUNITIES_SHOWN);
+          LaunchWindowPlanner.nextOpportunities(request, floor, OPPORTUNITIES_SHOWN);
       return windows.isEmpty()
           ? new PlanningState.Unavailable(NO_WINDOW)
           : new PlanningState.Windows(floor, windows, 0);

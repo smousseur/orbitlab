@@ -1,7 +1,6 @@
 package com.smousseur.orbitlab.ui.mission.wizard;
 
 import com.smousseur.orbitlab.app.converters.TimeConverter;
-import com.smousseur.orbitlab.core.OrbitlabException;
 import com.smousseur.orbitlab.simulation.mission.MissionHorizon;
 import com.smousseur.orbitlab.simulation.mission.context.MissionEntry;
 import com.smousseur.orbitlab.simulation.mission.operation.LaunchPlane;
@@ -83,11 +82,10 @@ public final class WizardPrefill {
       }
       case MissionSpec.Geo geo ->
           values.put(FormField.GTO_PARKING_ALT.key(), toKilometers(geo.parkingAltitude()));
-      // MIS-4 / L4 §6.2. Reopening the wizard on a lunar mission needs the fields L5 adds; there is
-      // nothing to prefill them from before they exist.
+      // MIS-4 / L5 §6.2. Only the perilune: the parking altitude is the mission's own constant and
+      // no field carries it, so writing it back would be a second truth about the same number.
       case MissionSpec.Lunar lunar ->
-          throw new OrbitlabException(
-              "A lunar flyby has no wizard fields to be prefilled into yet — MIS-4 / L5 adds them.");
+          values.put(FormField.LUNAR_PERILUNE_ALT.key(), toKilometers(lunar.periluneAltitude()));
     }
     return values;
   }

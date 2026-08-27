@@ -433,8 +433,7 @@ public record TranslunarInjectionPlan(
           String.format(
               "[TLI] the aim did not reach the %.0f km perilune: best is %.0f km after bracketing"
                   + " [%.0f, %.0f] km and %d bisections. Flying it would deliver a trajectory that"
-                  + " is not the one asked for — and at a negative altitude, an impact presented as"
-                  + " a plan (spec docs/multi-corps/08-conception-L6.md §10)",
+                  + " is not the one asked for — and at a negative altitude, an impact presented as a plan",
               targetPerileneAltitude / 1000.0,
               achievedAltitude / 1000.0,
               bracket.low() / 1000.0,

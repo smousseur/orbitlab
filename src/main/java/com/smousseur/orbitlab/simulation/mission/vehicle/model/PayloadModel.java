@@ -16,6 +16,7 @@ import java.util.Objects;
  * @param akmPropulsion the AKM propulsion; null for an inert payload
  * @param aerodynamics the frontal area and drag coefficient of the payload, or {@code null} when
  *     the model declares none (spec {@code docs/atmosphere/04-conception-L1.md} §3.3)
+ * @param domain where this payload is meant to fly; {@code null} reads as {@link PayloadDomain#ANY}
  */
 public record PayloadModel(
     String id,
@@ -23,7 +24,8 @@ public record PayloadModel(
     double defaultDryMass,
     double akmPropellantCapacity,
     PropulsionSystem akmPropulsion,
-    AerodynamicProperties aerodynamics) {
+    AerodynamicProperties aerodynamics,
+    PayloadDomain domain) {
 
   /** A payload model declaring no aerodynamics, as every hand-assembled fixture does. */
   public PayloadModel(
@@ -32,12 +34,26 @@ public record PayloadModel(
       double defaultDryMass,
       double akmPropellantCapacity,
       PropulsionSystem akmPropulsion) {
-    this(id, displayName, defaultDryMass, akmPropellantCapacity, akmPropulsion, null);
+    this(id, displayName, defaultDryMass, akmPropellantCapacity, akmPropulsion, null, null);
+  }
+
+  /** A payload model stating no domain, which means {@link PayloadDomain#ANY}. */
+  public PayloadModel(
+      String id,
+      String displayName,
+      double defaultDryMass,
+      double akmPropellantCapacity,
+      PropulsionSystem akmPropulsion,
+      AerodynamicProperties aerodynamics) {
+    this(id, displayName, defaultDryMass, akmPropellantCapacity, akmPropulsion, aerodynamics, null);
   }
 
   public PayloadModel {
     Objects.requireNonNull(id, "id");
     Objects.requireNonNull(displayName, "displayName");
+    if (domain == null) {
+      domain = PayloadDomain.ANY;
+    }
     if (!(defaultDryMass > 0)) {
       throw new IllegalArgumentException("defaultDryMass must be positive");
     }

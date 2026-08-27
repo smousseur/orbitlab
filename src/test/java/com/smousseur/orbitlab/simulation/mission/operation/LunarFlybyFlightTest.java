@@ -17,6 +17,7 @@ import com.smousseur.orbitlab.simulation.mission.runtime.MissionComputeResult;
 import com.smousseur.orbitlab.simulation.mission.runtime.MissionOptimizer;
 import com.smousseur.orbitlab.simulation.mission.runtime.ObjectiveEvaluator;
 import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchConfiguration;
+import com.smousseur.orbitlab.simulation.mission.vehicle.PropellantBudget;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropulsionSystem;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Spacecraft;
 import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Launchers;
@@ -27,6 +28,7 @@ import com.smousseur.orbitlab.simulation.mission.window.LaunchWindowSolver;
 import com.smousseur.orbitlab.simulation.mission.window.problem.LunarLaunchWindowProblem;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
@@ -37,6 +39,7 @@ import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.orekit.orbits.KeplerianOrbit;
 import org.orekit.propagation.SpacecraftState;
 import org.orekit.time.AbsoluteDate;
@@ -66,9 +69,16 @@ import org.orekit.utils.TimeStampedPVCoordinates;
  * regression L1 §5 pt 1 computed without flying. They are <b>logged, not asserted</b>: pinning them
  * would pin numbers this lot exists to find out.
  *
- * <p><b>Contrainte de méthode</b> (découpage §3): this flight costs a full CMA-ES ascent plus seven
- * days of propagation, and it is the user who runs it.
+ * <p><b>Two flights since MIS-4 / L5.</b> The one above is L4's and is left untouched — L4 §11
+ * bequeaths it to L6 as the impulsive reference the finite burn will be measured against. The
+ * second flies the same chain on the loads {@code PropellantBudget.loadsForLunar} sizes, which is
+ * what a mission created in the wizard takes off with; see {@link
+ * #theSizedConfigurationAlsoReachesThePerilune()}.
+ *
+ * <p><b>Contrainte de méthode</b> (découpage §3): each flight costs a full CMA-ES ascent plus seven
+ * days of propagation, and it is the user who runs them.
  */
+@EnabledIfSystemProperty(named = "orbitlab.slowTests", matches = "true")
 class LunarFlybyFlightTest {
   private static final Logger logger = LogManager.getLogger(LunarFlybyFlightTest.class);
 
@@ -114,9 +124,40 @@ class LunarFlybyFlightTest {
   @Test
   @DisplayName("A lunar flyby flies from the pad to its perilune and back out")
   void theMissionFliesFromTheGroundToTheFlyby() {
+    fly("fully loaded", configuration());
+  }
+
+  /**
+   * MIS-4 / L5 §7.1 — the same chain, <b>sized by {@code PropellantBudget.loadsForLunar}</b>
+   * instead of flying the launcher's full capacity.
+   *
+   * <p><b>Why a second flight and not an assertion.</b> The budget is a heuristic seed: on {@code
+   * PRECISE} the λ sweep starts from it and an under-sizing is invisible, absorbed by the sweep. On
+   * {@code FAST} — the mode every mission created in the wizard flies ({@code MissionEntry:42}) —
+   * those loads are what takes off. The risk this lot introduces is therefore only visible in a
+   * flight, and only in this mode.
+   *
+   * <p><b>The flight above is left exactly as L4 wrote it</b>, and deliberately: L4 §11 bequeaths
+   * it to L6 as the impulsive reference the finite burn will be measured against, and moving it
+   * would move the next lot's baseline.
+   */
+  @Test
+  @DisplayName("The budget's own sizing flies the same flyby")
+  void theSizedConfigurationAlsoReachesThePerilune() {
+    fly("budget-sized", sizedConfiguration());
+  }
+
+  /**
+   * The flight itself: window, composition, optimization, and the three readings the lot takes off
+   * the ephemeris.
+   *
+   * @param label what the loads came from, for the logs
+   * @param configuration the launcher, its loads and the payload
+   */
+  private void fly(String label, LaunchConfiguration configuration) {
     // ── the launch date comes from L2's window (§1.4) ────────────────────────
-    // Nothing on the spec carries a date; the wizard's planning step will supply one in L5, and
-    // here the test plays that role.
+    // Nothing on the spec carries a date. Since L5 the wizard's planning step supplies one, on
+    // the very problem LunarLaunchWindowPlanner builds; here the test plays that role.
     LunarLaunchWindowProblem window =
         new LunarLaunchWindowProblem(
             CANAVERAL_LATITUDE,
@@ -151,8 +192,8 @@ class LunarFlybyFlightTest {
     // ── the mission, composed from a spec exactly as the application does ────
     MissionSpec.Lunar spec =
         new MissionSpec.Lunar(
-            "Lunar flyby",
-            configuration(),
+            "Lunar flyby (" + label + ")",
+            configuration,
             PARKING_ALTITUDE,
             PERILUNE_ALTITUDE,
             "Cape Canaveral",
@@ -172,9 +213,11 @@ class LunarFlybyFlightTest {
     MissionEphemeris ephemeris = result.ephemeris();
     assertNotNull(ephemeris, "the flight produced no ephemeris");
     logger.info(
-        "Lunar flyby: {} points in {} s of wall time",
+        "Lunar flyby [{}]: {} points in {} s of wall time, loads {}",
+        label,
         ephemeris.allPoints().size(),
-        String.format(Locale.ROOT, "%.1f", wallSeconds));
+        String.format(Locale.ROOT, "%.1f", wallSeconds),
+        Arrays.toString(configuration.propellantLoads()));
 
     // ── the arcs: out, past the Moon, and back ───────────────────────────────
     List<SolarSystemBody> arcBodies = new ArrayList<>();
@@ -280,6 +323,28 @@ class LunarFlybyFlightTest {
   private static LaunchConfiguration configuration() {
     return LaunchConfiguration.fullyLoaded(
         Launchers.FALCON_HEAVY, Payloads.CARGO_MODULE.toSpacecraft(5_000.0, 0.0));
+  }
+
+  /**
+   * The chain as the wizard builds it: an inert 2 t lunar probe, and loads sized top-down from it
+   * by {@code PropellantBudget.loadsForLunar} (MIS-4 / L5 §5.3).
+   */
+  private static LaunchConfiguration sizedConfiguration() {
+    Spacecraft probe = Payloads.LUNAR_PROBE.toSpacecraft(2_000.0, 0.0);
+    PropellantBudget.LunarLoads loads =
+        PropellantBudget.loadsForLunar(
+            Launchers.FALCON_HEAVY,
+            probe,
+            PARKING_ALTITUDE,
+            CANAVERAL_LATITUDE,
+            // Due east: this chain flies i = phi, where the two azimuth branches merge.
+            FastMath.PI / 2);
+    logger.info(
+        "Budget sizing: loads {}, mass at injection {} kg",
+        Arrays.toString(loads.launcherLoads()),
+        FastMath.round(loads.massAtInjection()));
+    return new LaunchConfiguration(
+        Launchers.FALCON_HEAVY, loads.launcherLoads(), probe, Payloads.LUNAR_PROBE.id());
   }
 
   private static SpacecraftState stateOf(MissionEphemerisPoint point) {

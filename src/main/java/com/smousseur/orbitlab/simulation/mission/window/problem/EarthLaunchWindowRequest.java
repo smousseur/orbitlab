@@ -38,7 +38,8 @@ public record EarthLaunchWindowRequest(
     double altitude,
     LaunchPlane plane,
     double targetRaanDeg,
-    double semiMajorAxis) {
+    double semiMajorAxis)
+    implements LaunchWindowRequest {
 
   public EarthLaunchWindowRequest {
     Objects.requireNonNull(plane, "plane");
@@ -69,7 +70,8 @@ public record EarthLaunchWindowRequest(
    * @return the problem this request poses
    * @throws com.smousseur.orbitlab.core.OrbitlabException if the site cannot reach the plane
    */
-  EarthLaunchWindowProblem toProblem() {
+  @Override
+  public EarthLaunchWindowProblem toProblem() {
     return new EarthLaunchWindowProblem(
         latitude, longitude, altitude, plane, FastMath.toRadians(targetRaanDeg), semiMajorAxis);
   }

@@ -2,10 +2,7 @@ package com.smousseur.orbitlab.simulation.mission.operation;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.smousseur.orbitlab.core.OrbitlabException;
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.flight.AtmosphereModel;
@@ -22,9 +19,7 @@ import com.smousseur.orbitlab.simulation.mission.stage.TranslunarInjectionStage;
 import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchConfiguration;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Spacecraft;
 import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Launchers;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
@@ -126,30 +121,5 @@ class LunarFlybyMissionTest {
     assertEquals(
         LunarFlybyMission.PERILUNE_TOLERANCE, LunarTransferMission.DEFAULT_PERILUNE_TOLERANCE, 0.0);
     assertEquals(10_000.0, LunarFlybyMission.PERILUNE_TOLERANCE, 0.0);
-  }
-
-  /**
-   * §6.2 — the factory refuses by naming the lot that will fill it in, rather than by a {@code
-   * default} branch. The refusal is what keeps the compiler pointing here until L5 does.
-   */
-  @Test
-  @DisplayName("The wizard factory refuses a lunar flyby, naming L5")
-  void missionFactory_refusesNamingItsLot() {
-    Map<String, Object> values = new HashMap<>();
-    values.put("MISSION_NAME", "Lunar flyby");
-    values.put("LAUNCH_SITE_LAT", CANAVERAL_LATITUDE);
-    values.put("LAUNCH_SITE_LONG", -80.577);
-    values.put("LAUNCH_SITE_ALT", 3.0);
-    values.put("LAUNCHER_TYPE", "FALCON_HEAVY");
-    values.put("PAYLOAD_TYPE", "EARTH_OBS_SAT");
-    values.put("PAYLOAD_MASS", 8_000.0);
-
-    OrbitlabException refused =
-        assertThrows(
-            OrbitlabException.class,
-            () -> MissionFactory.specFromWizardValues(values, MissionType.LUNAR_FLYBY));
-    assertTrue(
-        refused.getMessage().contains("L5"),
-        () -> "the refusal must name the lot that fills it, got: " + refused.getMessage());
   }
 }

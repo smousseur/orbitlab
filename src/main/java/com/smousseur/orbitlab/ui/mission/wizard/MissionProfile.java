@@ -13,14 +13,14 @@ import org.hipparchus.util.FastMath;
  * inclination behaviour that go with it (spec {@code
  * docs/earth-orbit/02-wizard-orbites-terrestres.md} §2).
  *
- * <p><b>A profile is not a {@link MissionType}.</b> Four of the five profiles map onto the very
- * same type, and onto the very same {@code MissionSpec.EarthOrbit}: a polar orbit is that record
- * with {@code i = 90°}, a sun-synchronous one is it with an inclination derived from the altitude,
- * and a MEO is it with an apogee past the ceiling {@code MissionComposer} routes on. Giving each of
- * them a {@code MissionType} would force the spec to carry its type alongside {@code
- * targetInclination} — a redundant component, of which {@code EarthOrbit(POLAR, i = 28°)} would be
- * a representable and meaningless value. That is the inconsistency spec {@code 01} §3.2 refuses for
- * {@code targetEccentricity}, and the reason profiles live in the UI.
+ * <p><b>A profile is not a {@link MissionType}.</b> Four of the six profiles map onto the very same
+ * type, and onto the very same {@code MissionSpec.EarthOrbit}: a polar orbit is that record with
+ * {@code i = 90°}, a sun-synchronous one is it with an inclination derived from the altitude, and a
+ * MEO is it with an apogee past the ceiling {@code MissionComposer} routes on. Giving each of them
+ * a {@code MissionType} would force the spec to carry its type alongside {@code targetInclination}
+ * — a redundant component, of which {@code EarthOrbit(POLAR, i = 28°)} would be a representable and
+ * meaningless value. That is the inconsistency spec {@code 01} §3.2 refuses for {@code
+ * targetEccentricity}, and the reason profiles live in the UI.
  *
  * <p><b>Deliberately free of Lemur.</b> It carries an icon <em>path</em> and plain numbers, never a
  * widget, so the mapping between a spec and its card is unit-testable where a wizard step is not.
@@ -102,7 +102,32 @@ public enum MissionProfile {
       false,
       InclinationMode.NONE,
       Double.NaN,
-      Availability.AVAILABLE);
+      Availability.AVAILABLE),
+
+  /**
+   * A flyby of the Moon: ascent, parking orbit, translunar injection, and a pass at the perilune
+   * asked for. The one card aimed at another body — and the one whose launch date is not free,
+   * hence {@link Availability#WINDOWED} (MIS-4 / L5 §2).
+   *
+   * <p>Named {@code LUNAR} and not {@code LUNAR_FLYBY} because {@code
+   * StepParameters.defaultMissionName} composes {@code %s-%03d} on the constant: the proposed name
+   * is {@code LUNAR-001}.
+   */
+  LUNAR(
+      MissionType.LUNAR_FLYBY,
+      "LUNAR",
+      "Lunar Flyby",
+      "perilune 100 km",
+      "interface/wizard/icon-mission-lunar.png",
+      // The perilune band, in kilometres. The floor of 50 km holds the ±10 km merit band of
+      // LunarFlybyMission.PERILUNE_TOLERANCE clear of the surface; the ceiling of 500 km is still a
+      // flyby. Neither bound is measured — what the geometry refuses depends on the epoch as much
+      // as on the value asked for (MIS-4 / L5 §2.2).
+      new AltitudeRange(50, 500, 100),
+      false,
+      InclinationMode.NONE,
+      Double.NaN,
+      Availability.WINDOWED);
 
   /** What the card's badge says about flying this profile. */
   public enum Availability {
@@ -114,7 +139,18 @@ public enum MissionProfile {
      * that holds a 2 h 58 coast or a payload whose kick motor takes the apogee burn over, and
      * {@code MissionComposer} refuses the rest by name (spec {@code 01} §6).
      */
-    CONSTRAINED
+    CONSTRAINED,
+
+    /**
+     * The launch date is not free: the mission has to leave inside a window, and the wizard's
+     * planning step is where it is picked.
+     *
+     * <p><b>Not {@link #CONSTRAINED}</b>, whose motive is the catalog and whose wording is the
+     * MEO's. Nothing in the catalog constrains a lunar mission — both launchers fly the injection
+     * with margin — and no site is refused either, the cost of launching outside the window being
+     * priced rather than declared (MIS-4 / L2 §1.3). What binds is the geometry of the encounter.
+     */
+    WINDOWED
   }
 
   /** How the parameters panel treats the inclination of a profile. */
@@ -132,7 +168,10 @@ public enum MissionProfile {
     /** Read-only: computed from the altitude by {@link LaunchPlane#sunSynchronous(double)}. */
     DERIVED,
 
-    /** No inclination field — the profile's own panel owns its parameters (GEO). */
+    /**
+     * No inclination field — the profile's own panel owns its parameters. GEO, whose belt is
+     * equatorial by definition, and LUNAR, which flies {@code i = φ} with no branch to choose.
+     */
     NONE
   }
 
@@ -279,7 +318,12 @@ public enum MissionProfile {
    * @return the profiles backed by {@code MissionSpec.EarthOrbit}, in card order
    */
   public static List<MissionProfile> earthOrbitProfiles() {
-    return Arrays.stream(values()).filter(profile -> profile != GEO).toList();
+    // On what the name says, and not on an exclusion by name: a sixth constant slipping through a
+    // "!= GEO" filter would be handed an EarthOrbitDynamicParameters — a perigee/apogee panel for a
+    // lunar flyby (MIS-4 / L5 §1.4).
+    return Arrays.stream(values())
+        .filter(profile -> profile.missionType() == MissionType.LEO)
+        .toList();
   }
 
   /**
@@ -287,9 +331,7 @@ public enum MissionProfile {
    * (§2.1).
    *
    * <p><b>Derived rather than stored.</b> A spec component carrying the profile could contradict
-   * the inclination beside it; this cannot. The ordering matters: the apogee ceiling is checked
-   * first because it is the one condition {@code MissionComposer} itself routes on, and a MEO at
-   * 55° would otherwise be read as an ordinary low orbit.
+   * the inclination beside it; this cannot.
    *
    * <p>The worst this can do is answer {@link #LEO} where {@link #SSO} was meant, on a mission
    * whose altitude has been edited away from the band. The inclination is then shown as a free
@@ -299,9 +341,25 @@ public enum MissionProfile {
    * @return the profile whose card the wizard should show as selected
    */
   public static MissionProfile of(MissionSpec spec) {
-    if (!(spec instanceof MissionSpec.EarthOrbit earthOrbit)) {
-      return GEO;
-    }
+    // A switch over the sealed hierarchy, and not an instanceof with a fallback: that fallback
+    // answered GEO for a lunar spec, and the verdict only held because WizardPrefill threw before
+    // reaching it. It is the compiler that must point here at the fourth spec type (MIS-4 / L5
+    // §1.3).
+    return switch (spec) {
+      case MissionSpec.Geo ignored -> GEO;
+      case MissionSpec.Lunar ignored -> LUNAR;
+      case MissionSpec.EarthOrbit earthOrbit -> ofEarthOrbit(earthOrbit);
+    };
+  }
+
+  /**
+   * Which of the four Earth-orbit cards a target belongs to.
+   *
+   * <p>The ordering matters: the apogee ceiling is checked first because it is the one condition
+   * {@code MissionComposer} itself routes on, and a MEO at 55° would otherwise be read as an
+   * ordinary low orbit.
+   */
+  private static MissionProfile ofEarthOrbit(MissionSpec.EarthOrbit earthOrbit) {
     if (MissionComposer.needsParkingOrbit(earthOrbit.apogeeAltitude())) {
       return MEO;
     }

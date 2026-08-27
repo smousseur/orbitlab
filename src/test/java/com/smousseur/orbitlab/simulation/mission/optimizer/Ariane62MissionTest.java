@@ -17,6 +17,7 @@ import org.apache.logging.log4j.Logger;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 
 /**
  * The Ariane 62 catalog entry flies a LEO mission, and stages where the model says it does (spec
@@ -35,6 +36,7 @@ import org.junit.jupiter.api.Test;
  * hand-over is near 1.04. The assertions below are therefore the ordinary house criterion, written
  * after the fact on observed numbers rather than guessed before them.
  */
+@EnabledIfSystemProperty(named = "orbitlab.slowTests", matches = "true")
 public class Ariane62MissionTest extends AbstractTrajectoryOptimizerTest {
 
   private static final Logger logger = LogManager.getLogger(Ariane62MissionTest.class);

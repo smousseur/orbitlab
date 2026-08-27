@@ -67,6 +67,14 @@ class ScenarioRoundTripTest {
     return values;
   }
 
+  private static Map<String, Object> lunarValues() {
+    Map<String, Object> values = leoValues();
+    values.put("PAYLOAD_TYPE", "LUNAR_PROBE");
+    values.put("PAYLOAD_MASS", 2_000.0);
+    values.put("LUNAR_PERILUNE_ALT", 100.0);
+    return values;
+  }
+
   private static Map<String, Object> polarValues() {
     Map<String, Object> values = leoValues();
     values.put("LEO_APOGEE_ALT", 400.0);
@@ -135,6 +143,29 @@ class ScenarioRoundTripTest {
     assertSameVehicle(original, restored);
     assertEquals(original.parkingAltitude(), restored.parkingAltitude(), 1e-6, "parking altitude");
     assertEquals(original.targetAltitude(), restored.targetAltitude(), 1e-6, "GEO altitude");
+  }
+
+  /**
+   * MIS-4 / L5 §6.2 — the lunar branch of the format, and the loads are the assertion that matters
+   * here too: they are sized by {@code PropellantBudget.loadsForLunar} from the perilune and the
+   * pad, so a value the file lost on the way shows up as a resized upper stage.
+   */
+  @Test
+  void lunarMission_comesBackIdentical() {
+    MissionSpec.Lunar original =
+        (MissionSpec.Lunar)
+            MissionFactory.specFromWizardValues(lunarValues(), MissionType.LUNAR_FLYBY);
+    MissionSpec.Lunar restored =
+        (MissionSpec.Lunar) throughTheFile(lunarValues(), MissionType.LUNAR_FLYBY);
+
+    assertSameSite(original, restored);
+    assertSameVehicle(original, restored);
+    assertEquals(original.periluneAltitude(), restored.periluneAltitude(), 1e-6, "perilune");
+    assertEquals(
+        original.parkingAltitude(),
+        restored.parkingAltitude(),
+        1e-6,
+        "the parking altitude comes back from the mission's constant, not from the file");
   }
 
   /**

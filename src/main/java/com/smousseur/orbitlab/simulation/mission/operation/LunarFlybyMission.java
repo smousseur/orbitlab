@@ -75,6 +75,17 @@ public class LunarFlybyMission extends EarthMission {
    */
   public static final double PERILUNE_TOLERANCE = 10_000.0;
 
+  /**
+   * The circular parking altitude every lunar mission built from the wizard leaves from (m).
+   *
+   * <p><b>A single source, and that is its whole reason to exist</b> (MIS-4 / L4 §4.1): the launch
+   * window, the chain and the propellant budget have to agree on it, and until L5 nothing held it —
+   * the closure flight passed {@code 400_000} from its own test. It is not offered as a wizard
+   * field either: L0 measured the aim to converge identically from 185 to 400 km, so a slider there
+   * would be a choice with nothing behind it.
+   */
+  public static final double DEFAULT_PARKING_ALTITUDE = 400_000.0;
+
   /** Name of the terminal coast, the one every profile of the repository ends on. */
   private static final String FINAL_COAST_NAME = "Coasting";
 

@@ -23,7 +23,7 @@ import java.util.function.Consumer;
 /**
  * The wizard's first step: one card per {@link MissionProfile}.
  *
- * <p>Four of the five cards are backed by the same {@code MissionType} and the same spec record —
+ * <p>Four of the six cards are backed by the same {@code MissionType} and the same spec record —
  * they are <b>presets</b>, not types (spec {@code docs/earth-orbit/02-wizard-orbites-terrestres.md}
  * §1). What a card actually decides is the parameter panel the next step shows and the inclination
  * it starts from.
@@ -36,7 +36,7 @@ public class StepMissionType implements StepValues {
   private static final float CARD_GAP = 16f;
   private static final float ROW_GAP = 12f;
 
-  /** Cards per row; five profiles therefore lay out as 3 + 2. */
+  /** Cards per row; six profiles therefore lay out as 3 + 3, and the grid comes out square. */
   private static final int CARDS_PER_ROW = 3;
 
   private final Container root;
@@ -59,7 +59,8 @@ public class StepMissionType implements StepValues {
    */
   public StepMissionType(
       MissionContext missionContext, MissionProfile initialProfile, boolean locked) {
-    selectedProfile = initialProfile;
+    this.selectedProfile = initialProfile;
+    missionContext.setSelectedMissionType(initialProfile.missionType());
     root = new Container(new BoxLayout(Axis.Y, FillMode.None));
     root.setBackground(null);
     root.setPreferredSize(new Vector3f(FormStyles.CONTENT_WIDTH, FormStyles.CONTENT_HEIGHT, 0));
@@ -131,15 +132,19 @@ public class StepMissionType implements StepValues {
   }
 
   /**
-   * The MEO badge does not say "available", because the catalog does not make it so: it needs an
-   * upper stage holding a 2 h 58 coast, or a payload whose kick motor takes the apogee burn over
-   * (spec {@code 01} §6). Saying it on the card is what keeps the refusal at the launcher step from
-   * reading as a surprise.
+   * Two cards do not say "available", and for two different reasons — which is why there is one
+   * wording per constant rather than one per variant.
+   *
+   * <p>The MEO's is the catalog: it needs an upper stage holding a 2 h 58 coast, or a payload whose
+   * kick motor takes the apogee burn over (spec {@code 01} §6), and saying so on the card is what
+   * keeps the refusal at the launcher step from reading as a surprise. The lunar one is the
+   * calendar: nothing refuses the mission, but its date is not free (MIS-4 / L5 §2.3).
    */
   private static Badge badgeFor(MissionProfile profile) {
     return switch (profile.availability()) {
       case AVAILABLE -> new Badge("AVAILABLE", Badge.Variant.SUCCESS);
       case CONSTRAINED -> new Badge("LONG-COAST STAGE OR AKM", Badge.Variant.WARNING);
+      case WINDOWED -> new Badge("LAUNCH WINDOW REQUIRED", Badge.Variant.WARNING);
     };
   }
 
@@ -173,9 +178,9 @@ public class StepMissionType implements StepValues {
     if (profile == selectedProfile) {
       return;
     }
+    selectedProfile = profile;
     cards.get(selectedProfile).applyState(SelectableCard.State.IDLE);
     cards.get(profile).applyState(SelectableCard.State.SELECTED);
-    selectedProfile = profile;
     missionContext.setSelectedMissionType(profile.missionType());
     onProfileSelected.accept(profile);
   }

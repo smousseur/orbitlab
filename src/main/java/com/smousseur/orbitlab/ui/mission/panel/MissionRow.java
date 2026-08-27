@@ -25,6 +25,7 @@ import com.smousseur.orbitlab.simulation.mission.progress.MissionProgress;
 import com.smousseur.orbitlab.ui.UiKit;
 import com.smousseur.orbitlab.ui.form.FormStyles;
 import com.smousseur.orbitlab.ui.mission.MissionProgressText;
+import com.smousseur.orbitlab.ui.mission.MissionStatusColor;
 import com.smousseur.orbitlab.ui.mission.component.SpinnerIcon;
 
 class MissionRow {
@@ -125,7 +126,7 @@ class MissionRow {
     statusText = computing ? initialStatusText(entry) : status.name();
     statusLabel = statusCell.addChild(new Label(statusText, FormStyles.STYLE));
     statusLabel.setFont(UiKit.ibmPlexMono(11));
-    statusLabel.setColor(PanelFooter.statusColor(status));
+    statusLabel.setColor(MissionStatusColor.forStatus(status));
     statusLabel.setTextHAlignment(HAlignment.Left);
     statusLabel.setTextVAlignment(VAlignment.Center);
     // Fixed, so rewriting the text never remeasures the cell and never shifts the actions column.
@@ -210,10 +211,8 @@ class MissionRow {
       MissionId missionId,
       MissionStatus status,
       MissionListView.RowListener listener) {
-    boolean computing = status == MissionStatus.COMPUTING;
-    // Editing reopens the wizard on the mission's spec, so a legacy entry — which has none — has
-    // nothing to reopen: the icon stays greyed out rather than leading to a dead end.
-    boolean editable = !computing && entry.spec().isPresent();
+    boolean editableStatus = status != MissionStatus.COMPUTING && status != MissionStatus.CREATING;
+    boolean editable = editableStatus && entry.spec().isPresent();
 
     actions.addChild(
         RowActionIcons.vCenter(
@@ -224,19 +223,19 @@ class MissionRow {
     actions.addChild(
         RowActionIcons.vCenter(
             ModeSegmentedControl.build(
-                entry, !computing, type -> listener.onSetMode(missionId, type)),
+                entry, editableStatus, type -> listener.onSetMode(missionId, type)),
             HEIGHT));
     actions.addChild(UiKit.hSpacer(RowActionIcons.ICON_GAP));
     actions.addChild(
         RowActionIcons.vCenter(
             RowActionIcons.actionIconButton(
-                "compute", "compute", !computing, () -> listener.onCompute(missionId)),
+                "compute", "compute", editableStatus, () -> listener.onCompute(missionId)),
             HEIGHT));
     actions.addChild(UiKit.hSpacer(RowActionIcons.ICON_GAP));
     actions.addChild(
         RowActionIcons.vCenter(
             RowActionIcons.actionIconButton(
-                "delete", "delete", !computing, () -> listener.onDelete(missionId)),
+                "delete", "delete", editableStatus, () -> listener.onDelete(missionId)),
             HEIGHT));
   }
 

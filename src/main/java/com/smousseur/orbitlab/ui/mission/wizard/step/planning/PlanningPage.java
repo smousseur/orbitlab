@@ -6,6 +6,7 @@ import static com.smousseur.orbitlab.ui.mission.wizard.step.StepParameters.*;
 
 import com.jme3.math.ColorRGBA;
 import com.jme3.math.Vector3f;
+import com.jme3.scene.Node;
 import com.simsilica.lemur.Axis;
 import com.simsilica.lemur.Button;
 import com.simsilica.lemur.Container;
@@ -22,6 +23,7 @@ import com.smousseur.orbitlab.ui.UiKit;
 import com.smousseur.orbitlab.ui.form.FormStyles;
 import com.smousseur.orbitlab.ui.mission.wizard.FormField;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
@@ -60,6 +62,8 @@ public final class PlanningPage {
   private static final String NO_DATE = "--";
 
   private final Container root;
+  private final Container nodeBlock;
+  private final List<Node> nodeWidgets;
   private final TextField raanField;
   private final Label raanHelper;
   private final LaunchWindowTimeline timeline;
@@ -70,6 +74,12 @@ public final class PlanningPage {
 
   /** Entry that was refused, kept so the error state clears as soon as it is edited. */
   private String rejectedRaan;
+
+  /**
+   * Whether the card on screen carries a target node. True until told otherwise: every profile but
+   * the lunar one has one, and the page is built before any card is selected.
+   */
+  private boolean nodeShown = true;
 
   private Runnable onBack = () -> {};
   private Consumer<AbsoluteDate> onDateChosen = date -> {};
@@ -88,9 +98,14 @@ public final class PlanningPage {
 
     root.addChild(UiKit.vSpacer(ROW_GAP));
 
-    root.addChild(
+    // One container rather than five children of the root, so setNodeShown() can empty the node in
+    // a single gesture. Its own insets are zeroed: emptied, it must take no room at all.
+    nodeBlock = new Container(new BoxLayout(Axis.Y, FillMode.None));
+    nodeBlock.setBackground(null);
+    nodeBlock.setInsets(new Insets3f(0, 0, 0, 0));
+    nodeBlock.addChild(
         fieldLabelRow("TARGET NODE (RAAN)", "lbl-globe", LABEL_ICON_SIZE, LABEL_FIELD_GAP));
-    root.addChild(UiKit.vSpacer(LABEL_FIELD_GAP));
+    nodeBlock.addChild(UiKit.vSpacer(LABEL_FIELD_GAP));
 
     Container row = new Container(new BoxLayout(Axis.X, FillMode.None));
     row.setBackground(null);
@@ -102,15 +117,18 @@ public final class PlanningPage {
     unit.setFont(UiKit.ibmPlexMono(11));
     unit.setColor(FormStyles.TEXT_LO);
     row.addChild(unit);
-    root.addChild(row);
+    nodeBlock.addChild(row);
 
-    root.addChild(UiKit.vSpacer(LABEL_FIELD_GAP));
+    nodeBlock.addChild(UiKit.vSpacer(LABEL_FIELD_GAP));
     raanHelper = new Label(RAAN_HELPER, FormStyles.STYLE);
     raanHelper.setFont(UiKit.ibmPlexMono(11));
     raanHelper.setColor(FormStyles.TEXT_LO);
-    root.addChild(raanHelper);
+    nodeBlock.addChild(raanHelper);
+    nodeBlock.addChild(UiKit.vSpacer(ROW_GAP));
 
-    root.addChild(UiKit.vSpacer(ROW_GAP));
+    root.addChild(nodeBlock);
+    nodeWidgets = List.copyOf(nodeBlock.getLayout().getChildren());
+
     timeline = new LaunchWindowTimeline();
     timeline.setOnSelected(this::onWindowSelected);
     root.addChild(timeline.getNode());
@@ -181,6 +199,35 @@ public final class PlanningPage {
     return root;
   }
 
+  /**
+   * Shows or hides the target node, which is not a preference but a property of the card on screen:
+   * <b>a lunar mission has a launch window without having a node to wait for</b> (MIS-4 / L5 §4.3).
+   *
+   * <p>Three consequences, and they are one statement — there is no node here. The field leaves the
+   * page; {@link #withNodeGap} stops substituting, without which a blank field would report {@link
+   * PlanningInputs.Gap#NO_NODE} and the lunar timeline would stay dark for ever; and the node is
+   * neither validated nor published, so no entry left over from another card can refuse a mission
+   * over a field that is not on screen.
+   *
+   * @param shown whether the card on screen carries a target node
+   */
+  public void setNodeShown(boolean shown) {
+    if (shown == nodeShown) {
+      return;
+    }
+    nodeShown = shown;
+    // The block is emptied and refilled rather than detached from the root: Lemur's addChild
+    // appends and its box layout takes no index, so a re-attached block would come back below the
+    // timeline instead of above it.
+    if (shown) {
+      nodeWidgets.forEach(nodeBlock::addChild);
+    } else {
+      nodeBlock.clearChildren();
+      // A mark must not outlive the field able to show it.
+      clearRejection();
+    }
+  }
+
   public void setOnBack(Runnable action) {
     this.onBack = action != null ? action : () -> {};
   }
@@ -235,6 +282,9 @@ public final class PlanningPage {
    * @return the same inputs, or the node's absence in their place
    */
   private PlanningInputs withNodeGap(PlanningInputs inputs) {
+    if (!nodeShown) {
+      return inputs;
+    }
     String text = raanField.getText();
     if (RaanEntry.refusal(text).isPresent()) {
       return PlanningInputs.missing(PlanningInputs.Gap.UNREADABLE_NODE);
@@ -276,16 +326,19 @@ public final class PlanningPage {
    * <p>Absent when blank, and that absence is the mission saying it waits for no plane. Publishing
    * a default here would make every mission sit through a launch window it never asked for.
    *
-   * <p><b>Not scoped to a profile.</b> This page is shared by every card, so a GEO submit can carry
-   * the key; it stays inert only because {@code MissionFactory.specFromWizardValues} reads it in
-   * its {@code case LEO} branch alone and {@code MissionSpec.Geo} has no node component. That
-   * scoping is the factory's, not this page's — a node field added elsewhere would not inherit it.
+   * <p><b>Barely scoped to a profile.</b> This page is shared by every card; since MIS-4 / L5 a
+   * card with no node publishes nothing here, but a GEO submit still can, and the key then stays
+   * inert only because {@code MissionFactory.specFromWizardValues} reads it in its {@code case LEO}
+   * branch alone and {@code MissionSpec.Geo} has no node component. That scoping is the factory's,
+   * not this page's — a node field added elsewhere would not inherit it.
    *
    * @return the values this page owns
    */
   public Map<String, Object> getValues() {
     Map<String, Object> values = new HashMap<>();
-    parsedRaanDeg().ifPresent(raan -> values.put(FormField.TARGET_RAAN.key(), raan));
+    if (nodeShown) {
+      parsedRaanDeg().ifPresent(raan -> values.put(FormField.TARGET_RAAN.key(), raan));
+    }
     return values;
   }
 
@@ -314,6 +367,10 @@ public final class PlanningPage {
    * @return the reason the node was refused, or empty when it is usable
    */
   public Optional<String> validateTargetNode() {
+    if (!nodeShown) {
+      clearRejection();
+      return Optional.empty();
+    }
     String text = raanField.getText();
     Optional<String> refusal = RaanEntry.refusal(text);
     if (refusal.isEmpty()) {

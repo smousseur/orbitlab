@@ -1,6 +1,5 @@
 package com.smousseur.orbitlab.ui.mission.panel;
 
-import com.jme3.math.ColorRGBA;
 import com.jme3.math.Vector3f;
 import com.simsilica.lemur.Axis;
 import com.simsilica.lemur.Button;
@@ -23,6 +22,7 @@ import com.smousseur.orbitlab.ui.UiKit;
 import com.smousseur.orbitlab.ui.form.FormStyles;
 import com.smousseur.orbitlab.ui.mission.MissionProgressText;
 import com.smousseur.orbitlab.ui.mission.MissionResultText;
+import com.smousseur.orbitlab.ui.mission.MissionStatusColor;
 import com.smousseur.orbitlab.ui.mission.MissionTargetOrbit;
 import com.smousseur.orbitlab.ui.mission.component.SpinnerIcon;
 import java.util.Locale;
@@ -169,7 +169,7 @@ public class PanelFooter {
     Label statusLabel = row.addChild(new Label("[ " + status.name() + " ]", FormStyles.STYLE));
     statusLabel.setInsetsComponent(new InsetsComponent(new Insets3f(2, 8, 2, 8)));
     statusLabel.setFont(UiKit.ibmPlexMono(11));
-    statusLabel.setColor(statusColor(status));
+    statusLabel.setColor(MissionStatusColor.forStatus(status));
 
     row.addChild(UiKit.hSpacer(ITEM_GAP));
     row.addChild(modeChip(entry.getOptimizationType()));
@@ -194,7 +194,8 @@ public class PanelFooter {
   private void addResultLine(MissionEntry entry) {
     Container row = summary.addChild(newRow());
 
-    boolean computing = entry.mission().getStatus() == MissionStatus.COMPUTING;
+    MissionStatus status = entry.mission().getStatus();
+    boolean computing = status == MissionStatus.COMPUTING;
     if (computing) {
       computingEntry = entry;
       spinner = new SpinnerIcon(FOOTER_SPINNER_SIZE, DETAILS_BTN_H, FormStyles.WARNING);
@@ -204,10 +205,7 @@ public class PanelFooter {
 
     Label text = row.addChild(new Label(resultText(entry), FormStyles.STYLE));
     text.setFont(UiKit.ibmPlexMono(11));
-    text.setColor(
-        entry.mission().getStatus() == MissionStatus.FAILED
-            ? FormStyles.DANGER
-            : FormStyles.TEXT_SECONDARY);
+    text.setColor(status == MissionStatus.FAILED ? FormStyles.DANGER : FormStyles.TEXT_SECONDARY);
     centerOnButtonHeight(text, DETAILS_BTN_H);
     if (computing) {
       resultLabel = text;
@@ -221,15 +219,6 @@ public class PanelFooter {
     }
   }
 
-  /**
-   * Grows a label's box to a button's height and centres its text in it, so the two sit on the same
-   * baseline. {@code BoxLayout} on the X axis aligns the top edges of its children, and a button is
-   * taller than a line of text, so without this its caption is drawn a few pixels low. Same idiom
-   * as {@code MissionRow}, which centres its cells over the row height.
-   *
-   * @param label the label to grow, already carrying its final font
-   * @param buttonHeight the height of the button it sits beside
-   */
   /**
    * Advances what the footer animates. A no-op unless the selected mission is computing.
    *
@@ -384,14 +373,5 @@ public class PanelFooter {
     Container row = new Container(new BoxLayout(Axis.X, FillMode.None));
     row.setBackground(null);
     return row;
-  }
-
-  static ColorRGBA statusColor(MissionStatus status) {
-    return switch (status) {
-      case DRAFT -> FormStyles.TEXT_SECONDARY;
-      case COMPUTING -> FormStyles.WARNING;
-      case READY -> FormStyles.SUCCESS;
-      case FAILED -> FormStyles.DANGER;
-    };
   }
 }

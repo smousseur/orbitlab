@@ -44,6 +44,17 @@ public final class FormField<T> {
       new FormField<>("LEO_APOGEE_ALT", Double.class);
   public static final FormField<Double> GTO_PARKING_ALT =
       new FormField<>("GTO_PARKING_ALT", Double.class);
+
+  /**
+   * Perilune altitude in <b>kilometres</b>, the one parameter a lunar flyby offers (MIS-4 / L5 §3).
+   *
+   * <p>The parking altitude is deliberately not a field beside it: it is {@code
+   * LunarFlybyMission.DEFAULT_PARKING_ALTITUDE}, and MIS-4 / L0 measured the aim to converge
+   * identically from 185 to 400 km — a slider there would be a choice with nothing behind it.
+   */
+  public static final FormField<Double> LUNAR_PERILUNE_ALT =
+      new FormField<>("LUNAR_PERILUNE_ALT", Double.class);
+
   public static final FormField<String> LAUNCH_DATE = new FormField<>("LAUNCH_DATE", String.class);
   public static final FormField<String> LAUNCH_SITE_NAME =
       new FormField<>("LAUNCH_SITE_NAME", String.class);

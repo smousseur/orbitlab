@@ -8,6 +8,7 @@ import com.smousseur.orbitlab.simulation.mission.vehicle.model.AscentProfile;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.LauncherModel;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.stage.*;
 import java.util.List;
+import org.hipparchus.util.FastMath;
 import org.junit.jupiter.api.Test;
 
 class PropellantBudgetTest {
@@ -130,6 +131,89 @@ class PropellantBudgetTest {
         PropellantBudget.loadsForLeo(
             tinyUpper, Payloads.EARTH_OBSERVATION_SAT.toSpacecraft(10_000, 0.0), 400_000, 0.0);
     assertEquals(1_000, loads[1], 1e-6, "required load beyond capacity is clamped");
+  }
+
+  // --- The translunar case (MIS-4 / L5 §5.3) ---
+
+  /** The Hohmann term to the Moon's mean distance, where the ~40 m/s gap of §5.3 lives. */
+  @Test
+  void translunarInjection_from400km_isTheHohmannTerm() {
+    double dv = PropellantBudget.translunarInjectionDeltaV(400_000);
+    assertTrue(dv > 3_050 && dv < 3_110, () -> "Expected ~3 082 m/s, got " + dv);
+  }
+
+  @Test
+  void loadsForLunar_sizesTheTopStageAndTheMassAtInjection() {
+    LauncherModel launcher = Launchers.FALCON_HEAVY;
+    Spacecraft probe = Payloads.LUNAR_PROBE.toSpacecraft(2_000.0, 0.0);
+    PropellantBudget.LunarLoads loads =
+        PropellantBudget.loadsForLunar(launcher, probe, 400_000.0, 28.562, FastMath.PI / 2);
+
+    double[] stageLoads = loads.launcherLoads();
+    assertEquals(launcher.stages().size(), stageLoads.length);
+    for (int i = 0; i < stageLoads.length; i++) {
+      double capacity = launcher.stages().get(i).propellantCapacity();
+      final int stage = i;
+      assertTrue(
+          stageLoads[i] > 0 && stageLoads[i] <= capacity,
+          () -> "stage " + stage + " load outside its capacity: " + stageLoads[stage]);
+    }
+
+    double topDry = launcher.stages().getLast().dryMass();
+    double topLoad = stageLoads[stageLoads.length - 1];
+    assertTrue(
+        loads.massAtInjection() > 2_000.0 + topDry,
+        () -> "the mass at injection must carry propellant, got " + loads.massAtInjection());
+    assertTrue(
+        loads.massAtInjection() <= 2_000.0 + topDry + topLoad + 1e-6,
+        () -> "the stage cannot ignite heavier than it lifted off, got " + loads.massAtInjection());
+  }
+
+  /** A heavier probe costs more propellant, on both readings of the sizing. */
+  @Test
+  void loadsForLunar_isMonotoneInPayloadMass() {
+    LauncherModel launcher = Launchers.FALCON_HEAVY;
+    PropellantBudget.LunarLoads light =
+        PropellantBudget.loadsForLunar(
+            launcher,
+            Payloads.LUNAR_PROBE.toSpacecraft(1_000.0, 0.0),
+            400_000.0,
+            28.562,
+            FastMath.PI / 2);
+    PropellantBudget.LunarLoads heavy =
+        PropellantBudget.loadsForLunar(
+            launcher,
+            Payloads.LUNAR_PROBE.toSpacecraft(4_000.0, 0.0),
+            400_000.0,
+            28.562,
+            FastMath.PI / 2);
+
+    int last = light.launcherLoads().length - 1;
+    assertTrue(
+        heavy.launcherLoads()[last] > light.launcherLoads()[last],
+        "a heavier probe must be sized a heavier top stage");
+    assertTrue(heavy.massAtInjection() > light.massAtInjection());
+  }
+
+  /** Both launchers of the catalog must be able to fly the reference probe. */
+  @Test
+  void loadsForLunar_staysInsideCapacityOnBothLaunchers() {
+    for (LauncherModel launcher : Launchers.all()) {
+      PropellantBudget.LunarLoads loads =
+          PropellantBudget.loadsForLunar(
+              launcher,
+              Payloads.LUNAR_PROBE.toSpacecraft(2_000.0, 0.0),
+              400_000.0,
+              28.562,
+              FastMath.PI / 2);
+      List<StageModel> stages = launcher.stages();
+      for (int i = 0; i < stages.size(); i++) {
+        final int stage = i;
+        assertTrue(
+            loads.launcherLoads()[i] <= stages.get(i).propellantCapacity() + 1e-6,
+            () -> launcher.id() + " stage " + stage + " sized past its capacity");
+      }
+    }
   }
 
   private static StageModel liquidStage(

@@ -135,15 +135,61 @@ class MissionProfileTest {
     assertEquals(MissionProfile.GEO, MissionProfile.of(geo));
   }
 
-  /** Only GEO is flown as a GEO mission; the other four are one and the same spec record. */
+  /**
+   * Two cards carry a type of their own; the other four are one and the same spec record.
+   *
+   * <p><b>The count stays at four, and that is the point</b> (MIS-4 / L5 §2.5). {@code
+   * earthOrbitProfiles()} used to filter by excluding GEO <em>by name</em>, so the sixth constant
+   * would have fallen through it and been handed a perigee/apogee panel. Repairing the filter to
+   * read the mission type leaves this number where it was, which is what says the repair is right.
+   */
   @Test
-  void onlyGeoProfileCarriesTheGeoType() {
+  void onlyGeoAndLunarProfilesCarryTheirOwnType() {
     for (MissionProfile profile : MissionProfile.values()) {
-      MissionType expected = profile == MissionProfile.GEO ? MissionType.GEO : MissionType.LEO;
+      MissionType expected =
+          switch (profile) {
+            case GEO -> MissionType.GEO;
+            case LUNAR -> MissionType.LUNAR_FLYBY;
+            default -> MissionType.LEO;
+          };
       assertEquals(expected, profile.missionType(), profile.name());
     }
     assertEquals(4, MissionProfile.earthOrbitProfiles().size());
     assertFalse(MissionProfile.earthOrbitProfiles().contains(MissionProfile.GEO));
+    assertFalse(MissionProfile.earthOrbitProfiles().contains(MissionProfile.LUNAR));
+  }
+
+  /** MIS-4 / L5 §2.1 — the sixth card, and the one aimed at another body. */
+  @Test
+  void lunarProfileIsFlownAsALunarFlyby() {
+    assertEquals(MissionType.LUNAR_FLYBY, MissionProfile.LUNAR.missionType());
+    assertEquals(MissionProfile.Availability.WINDOWED, MissionProfile.LUNAR.availability());
+    assertEquals(MissionProfile.InclinationMode.NONE, MissionProfile.LUNAR.inclinationMode());
+    // i = phi: the chain flies the plane the pad reaches, and NONE means the panel offers no field.
+    assertEquals(28.562, MissionProfile.LUNAR.initialInclinationDeg(28.562, 400_000.0), 1e-9);
+  }
+
+  /**
+   * MIS-4 / L5 §1.3 — the defect the sixth constant makes visible. {@code of} answered GEO for a
+   * lunar spec, and the verdict of L4 §1.2 only held because {@code WizardPrefill} threw before
+   * reaching it. Now that the prefill fills, the wrong card would light in silence.
+   */
+  @Test
+  void lunarSpecLightsTheLunarCard() {
+    MissionSpec.Lunar lunar =
+        new MissionSpec.Lunar(
+            "fixture",
+            LaunchConfiguration.fullyLoaded(
+                Launchers.FALCON_HEAVY, Payloads.LUNAR_PROBE.toSpacecraft(2_000.0, 0.0)),
+            400_000.0,
+            100_000.0,
+            "Cape Canaveral",
+            28.562,
+            -80.577,
+            3.0,
+            null,
+            null);
+    assertEquals(MissionProfile.LUNAR, MissionProfile.of(lunar));
   }
 
   /** A profile's default altitude has to be one its own sliders can show. */

@@ -64,6 +64,14 @@ class ScenarioMapperTest {
     return values;
   }
 
+  private static Map<String, Object> lunarValues() {
+    Map<String, Object> values = leoValues();
+    values.put("PAYLOAD_TYPE", "LUNAR_PROBE");
+    values.put("PAYLOAD_MASS", 2_000.0);
+    values.put("LUNAR_PERILUNE_ALT", 100.0);
+    return values;
+  }
+
   private static MissionEntry entryFor(Map<String, Object> values, MissionType type) {
     MissionEntry entry = new MissionEntry(MissionFactory.specFromWizardValues(values, type));
     entry.setScheduledDate(TimeConverter.parseUtcDate(LAUNCH_DATE).orElseThrow());
@@ -97,6 +105,12 @@ class ScenarioMapperTest {
   @Test
   void geoValues_surviveTheRoundTrip() {
     MissionEntry entry = entryFor(geoValues(), MissionType.GEO);
+    assertEquals(prefilled(entry), roundTrip(entry));
+  }
+
+  @Test
+  void lunarValues_surviveTheRoundTrip() {
+    MissionEntry entry = entryFor(lunarValues(), MissionType.LUNAR_FLYBY);
     assertEquals(prefilled(entry), roundTrip(entry));
   }
 
@@ -194,22 +208,23 @@ class ScenarioMapperTest {
   }
 
   /**
-   * MIS-4 / L4 §6.2 and §10 pt 5 — the one refusal of the lot that names no lot, because the
-   * découpage gives this round trip to none. It has to be filled in for a lunar mission created in
-   * the wizard to survive a save.
+   * MIS-4 / L5 §6.2 — the gap L4 §10 pt 5 flagged and no lot of the découpage claimed. It is closed
+   * here because the property this lot makes true is "the lunar mission is created in the wizard",
+   * and a mission that vanishes on save does not make it true.
    */
   @Test
-  void lunarFlyby_isRefusedAndTheGapIsNamed() {
-    Map<String, Object> values = leoValues();
-    values.put("MISSION_TYPE", MissionType.LUNAR_FLYBY.name());
-    MissionEntry entry =
-        new MissionEntry(MissionFactory.specFromWizardValues(leoValues(), MissionType.LEO));
+  void lunarFlyby_carriesItsPeriluneThroughTheDto() {
+    MissionEntry entry = entryFor(lunarValues(), MissionType.LUNAR_FLYBY);
 
-    OrbitlabException refused =
-        assertThrows(
-            OrbitlabException.class, () -> ScenarioMapper.toScenarioMission(entry, values, null));
-    assertTrue(
-        refused.getMessage().contains("ScenarioMission"),
-        () -> "the refusal must name what is missing, got: " + refused.getMessage());
+    ScenarioMission mission = ScenarioMapper.toScenarioMission(entry, prefilled(entry), null);
+    ScenarioMission.Lunar lunar = assertInstanceOf(ScenarioMission.Lunar.class, mission);
+    assertEquals(MissionType.LUNAR_FLYBY, lunar.type());
+    assertEquals(100.0, lunar.periluneKm(), 1e-9);
+
+    Map<String, Object> back = ScenarioMapper.toMissionValues(lunar);
+    assertEquals(100.0, (Double) back.get("LUNAR_PERILUNE_ALT"), 1e-9);
+    assertEquals("LUNAR_PROBE", back.get("PAYLOAD_TYPE"));
+    // The parking altitude is the mission's own constant; the file names no number for it.
+    assertFalse(back.containsKey("GTO_PARKING_ALT"));
   }
 }

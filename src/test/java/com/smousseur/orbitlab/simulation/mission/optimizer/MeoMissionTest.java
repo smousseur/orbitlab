@@ -24,6 +24,7 @@ import org.hipparchus.util.FastMath;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.orekit.orbits.KeplerianOrbit;
 import org.orekit.time.AbsoluteDate;
 import org.orekit.time.TimeScalesFactory;
@@ -49,6 +50,7 @@ import org.orekit.utils.PVCoordinates;
  *
  * <p><b>Slow</b> — a complete mission optimization, like the LEO and GEO loops next to it.
  */
+@EnabledIfSystemProperty(named = "orbitlab.slowTests", matches = "true")
 public class MeoMissionTest extends AbstractTrajectoryOptimizerTest {
   private static final Logger logger = LogManager.getLogger(MeoMissionTest.class);
 

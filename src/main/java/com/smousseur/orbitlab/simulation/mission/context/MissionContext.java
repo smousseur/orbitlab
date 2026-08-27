@@ -1,7 +1,6 @@
 package com.smousseur.orbitlab.simulation.mission.context;
 
 import com.jme3.math.ColorRGBA;
-import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionId;
 import com.smousseur.orbitlab.simulation.mission.MissionType;
 import com.smousseur.orbitlab.ui.mission.MissionColorPalette;
@@ -25,17 +24,6 @@ public final class MissionContext {
   private volatile MissionId selectedMissionId;
   private volatile MissionId telemetryFocusMissionId;
   private volatile MissionType selectedMissionType = MissionType.LEO;
-
-  /**
-   * Adds a mission to the registry and returns its entry.
-   *
-   * @param mission the mission to register
-   */
-  public void addMission(Mission mission) {
-    MissionEntry entry = new MissionEntry(mission);
-    assignColor(entry);
-    missions.add(entry);
-  }
 
   public void addMission(MissionEntry entry) {
     if (entry.getColor() == null) {

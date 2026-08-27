@@ -105,13 +105,22 @@ public final class ScenarioMapper {
               visible,
               solution,
               doubleValue(values, "GTO_PARKING_ALT"));
-      // MIS-4 / L4 §6.2 and §10 pt 5. Unlike the two refusals next door this one names no lot,
-      // because none claims it: the découpage never mentions ScenarioMission or this round trip.
-      // Somebody has to fill it in for a lunar mission created in the wizard to survive a save.
+      // MIS-4 / L5 §6.2. The parking altitude is absent on purpose: it is the mission's own
+      // constant, no wizard field carries it, and the factory reads it back from there.
       case LUNAR_FLYBY ->
-          throw new OrbitlabException(
-              "A lunar flyby cannot be persisted to a scenario yet: no ScenarioMission case"
-                  + " describes it, and no lot of the découpage claims one (MIS-4 / L4 §10 pt 5).");
+          new ScenarioMission.Lunar(
+              type,
+              name,
+              launchDate,
+              site,
+              vehicle,
+              horizonDays,
+              atmosphere,
+              mode,
+              color,
+              visible,
+              solution,
+              doubleValue(values, "LUNAR_PERILUNE_ALT"));
     };
   }
 
@@ -155,6 +164,7 @@ public final class ScenarioMapper {
         putIfPresent(values, "TARGET_RAAN", earthOrbit.raanDeg());
       }
       case ScenarioMission.Geo geo -> values.put("GTO_PARKING_ALT", geo.parkingKm());
+      case ScenarioMission.Lunar lunar -> values.put("LUNAR_PERILUNE_ALT", lunar.periluneKm());
     }
     return values;
   }

@@ -111,11 +111,19 @@ public class LunarLaunchWindowProblem implements LaunchWindowProblem {
    */
   private static final double DUE_EAST = FastMath.PI / 2;
 
+  /**
+   * Nominal mass a screening geometry is posed with (kg). {@link #evaluate} is mass-free — the
+   * Keplerian injection ΔV and the departure geometry both are — but a {@code SpacecraftState}
+   * needs a positive mass all the same.
+   */
+  private static final double SCREENING_MASS = 1_000.0;
+
   private final LaunchSitePlane site;
   private final double parkingRadius;
   private final double targetPerileneAltitude;
   private final Vehicle vehicle;
   private final double massAtInjection;
+  private final boolean confirming;
   private final String name;
 
   /**
@@ -138,11 +146,67 @@ public class LunarLaunchWindowProblem implements LaunchWindowProblem {
       double targetPerileneAltitude,
       Vehicle vehicle,
       double massAtInjection) {
+    this(
+        latitude,
+        longitude,
+        altitude,
+        parkingAltitude,
+        targetPerileneAltitude,
+        Objects.requireNonNull(vehicle, "vehicle"),
+        massAtInjection,
+        true);
+  }
+
+  /**
+   * The problem as the wizard's timeline poses it: <b>screening only</b>, with no vehicle and
+   * therefore no verdict (MIS-4 / L5 §4.1).
+   *
+   * <p><b>The contract read literally, not a workaround.</b> {@code vehicle} is documented "for
+   * {@link #confirm} alone", and {@link LaunchWindowProblem#confirm} carries a no-op default the
+   * interface calls "the honest answer for a problem whose evaluate is already the truth". The
+   * parameters step runs before the launcher step, so no vehicle exists there — and confirming
+   * would cost 4.5 s a candidate on the render thread, where {@link #evaluate} costs microseconds.
+   *
+   * @param latitude the launch site latitude in degrees, which is also the inclination flown
+   * @param longitude the launch site longitude in degrees
+   * @param altitude the launch site altitude in meters
+   * @param parkingAltitude the circular parking altitude the injection leaves from (m)
+   * @param targetPerileneAltitude the perilune altitude aimed for (m); it names the problem and
+   *     waits for a confirming solve, {@link #evaluate} not reading it
+   * @return the screening problem
+   */
+  public static LunarLaunchWindowProblem screening(
+      double latitude,
+      double longitude,
+      double altitude,
+      double parkingAltitude,
+      double targetPerileneAltitude) {
+    return new LunarLaunchWindowProblem(
+        latitude,
+        longitude,
+        altitude,
+        parkingAltitude,
+        targetPerileneAltitude,
+        null,
+        SCREENING_MASS,
+        false);
+  }
+
+  private LunarLaunchWindowProblem(
+      double latitude,
+      double longitude,
+      double altitude,
+      double parkingAltitude,
+      double targetPerileneAltitude,
+      Vehicle vehicle,
+      double massAtInjection,
+      boolean confirming) {
     this.site = new LaunchSitePlane(latitude, longitude, altitude, DUE_EAST);
     this.parkingRadius = Constants.WGS84_EARTH_EQUATORIAL_RADIUS + parkingAltitude;
     this.targetPerileneAltitude = targetPerileneAltitude;
-    this.vehicle = Objects.requireNonNull(vehicle, "vehicle");
+    this.vehicle = vehicle;
     this.massAtInjection = massAtInjection;
+    this.confirming = confirming;
     this.name =
         String.format(
             Locale.ROOT,
@@ -213,6 +277,11 @@ public class LunarLaunchWindowProblem implements LaunchWindowProblem {
    */
   @Override
   public LaunchWindowCandidate confirm(LaunchWindowCandidate candidate) {
+    if (!confirming) {
+      // Screening mode: no vehicle, no verdict. Said explicitly because this class overrides the
+      // interface's no-op default and would otherwise dereference a vehicle it was never given.
+      return candidate;
+    }
     AbsoluteDate epoch = candidate.epoch();
     try {
       Injection injection = injectionAt(epoch);

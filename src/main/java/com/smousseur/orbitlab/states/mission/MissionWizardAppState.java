@@ -8,20 +8,22 @@ import com.smousseur.orbitlab.app.HudSurfaces;
 import com.smousseur.orbitlab.app.converters.TimeConverter;
 import com.smousseur.orbitlab.engine.events.EventBus;
 import com.smousseur.orbitlab.simulation.mission.MissionId;
+import com.smousseur.orbitlab.simulation.mission.MissionStatus;
 import com.smousseur.orbitlab.simulation.mission.context.MissionContext;
 import com.smousseur.orbitlab.simulation.mission.context.MissionEntry;
 import com.smousseur.orbitlab.simulation.mission.operation.MissionFactory;
 import com.smousseur.orbitlab.simulation.mission.operation.MissionSpec;
 import com.smousseur.orbitlab.simulation.mission.window.LaunchWindow;
 import com.smousseur.orbitlab.simulation.mission.window.problem.EarthLaunchWindowPlanner;
+import com.smousseur.orbitlab.simulation.mission.window.problem.LunarLaunchWindowPlanner;
 import com.smousseur.orbitlab.ui.UiLayers;
 import com.smousseur.orbitlab.ui.form.ConfirmDialog;
 import com.smousseur.orbitlab.ui.mission.wizard.FormField;
 import com.smousseur.orbitlab.ui.mission.wizard.MissionWizardWidget;
 import com.smousseur.orbitlab.ui.mission.wizard.WizardPrefill;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.orekit.time.AbsoluteDate;
@@ -34,6 +36,8 @@ public final class MissionWizardAppState extends BaseAppState {
   private AutoCloseable surfaceHandle;
   private ConfirmDialog discardDialog;
   private AutoCloseable discardDialogHandle;
+
+  private ExecutorService creationExecutor;
 
   /** True while the open wizard is editing an existing mission, which changes what we ask. */
   private boolean editing;
@@ -57,6 +61,13 @@ public final class MissionWizardAppState extends BaseAppState {
                     UiLayers.MODAL,
                     this::isWizardVisible,
                     this::confirmDiscard));
+    creationExecutor =
+        Executors.newSingleThreadExecutor(
+            r -> {
+              Thread t = new Thread(r, "mission-creator");
+              t.setDaemon(true);
+              return t;
+            });
   }
 
   @Override
@@ -65,6 +76,10 @@ public final class MissionWizardAppState extends BaseAppState {
     closeWizard();
     HudSurfaces.closeQuietly(surfaceHandle, logger);
     surfaceHandle = null;
+    if (creationExecutor != null) {
+      creationExecutor.shutdownNow();
+      creationExecutor = null;
+    }
   }
 
   @Override
@@ -116,8 +131,6 @@ public final class MissionWizardAppState extends BaseAppState {
           closeWizard();
         });
     discardDialog.attachTo(context.guiGraph().getModalNode());
-    // Registered only now: before attachTo, isVisible() would report open with nothing yet on
-    // screen, which HudSurface's contract does not allow.
     discardDialogHandle =
         context
             .hudSurfaces()
@@ -143,8 +156,6 @@ public final class MissionWizardAppState extends BaseAppState {
     Map<String, Object> values = createMission.values();
     String requestedName = String.valueOf(values.get(FormField.MISSION_NAME.key()));
 
-    // Names are labels, not keys — a duplicate no longer costs the user their mission. It is
-    // suffixed so the list stays readable, and the mission is created either way.
     String name = availableName(missionContext, requestedName, null);
     if (!name.equals(requestedName)) {
       logger.warn(
@@ -153,21 +164,26 @@ public final class MissionWizardAppState extends BaseAppState {
       values.put(FormField.MISSION_NAME.key(), name);
     }
 
-    // Second line of defence behind the wizard's own validation: this runs in the render loop, and
-    // Orekit's string constructor throws on anything it dislikes — including any date before 1970.
     Object rawDate = values.get("LAUNCH_DATE");
     Optional<AbsoluteDate> missionDate = TimeConverter.parseUtcDate(String.valueOf(rawDate));
     if (missionDate.isEmpty()) {
       logger.error("Mission creation failed for '{}': unusable launch date '{}'", name, rawDate);
       return;
     }
+    Map<String, Object> valuesMap = Collections.unmodifiableMap(values);
     try {
-      MissionSpec spec =
-          MissionFactory.specFromWizardValues(values, missionContext.getSelectedMissionType());
-      MissionEntry missionEntry = new MissionEntry(spec);
-      missionEntry.setScheduledDate(scheduledDateFor(spec, missionDate.get()));
-      missionContext.addMission(missionEntry);
-      logger.info("Mission '{}' created [{}]", name, missionEntry.id().shortForm());
+      creationExecutor.submit(
+          () -> {
+            MissionSpec spec =
+                MissionFactory.specFromWizardValues(
+                    valuesMap, missionContext.getSelectedMissionType());
+            MissionEntry missionEntry = new MissionEntry(spec);
+            missionContext.addMission(missionEntry);
+            missionEntry.mission().setStatus(MissionStatus.CREATING);
+            missionEntry.setScheduledDate(scheduledDateFor(spec, missionDate.get()));
+            missionEntry.mission().setStatus(MissionStatus.DRAFT);
+            logger.info("Mission '{}' created [{}]", name, missionEntry.id().shortForm());
+          });
     } catch (RuntimeException e) {
       // A bad wizard value must not crash the render loop; the mission is simply not created.
       logger.error("Mission creation failed for '{}': {}", name, e.getMessage());
@@ -175,29 +191,70 @@ public final class MissionWizardAppState extends BaseAppState {
   }
 
   /**
-   * The date the mission is actually scheduled at: the one the user typed, unless the mission names
-   * a target plane, in which case it is the next opening of that plane's launch window (MIS-2).
+   * The date the mission is actually scheduled at: the one the user typed, unless the mission has a
+   * window to sit through, in which case it is the next opening of that window (MIS-2).
    *
    * <p><b>The typed date becomes a floor.</b> A pad meets a given node once per sidereal day and
    * the rest of the day costs kilometres per second, so "launch on the 4th at 12:00" can only mean
    * "on the 4th at 12:00 or as soon after as the geometry allows". This is what gives the wizard's
    * launch-date field a meaning it did not have.
    *
-   * <p>Run here, on the render thread, because it is closed form — some ninety evaluations of an
-   * angle between two vectors. Nothing propagates.
+   * <p><b>Two paths, and they do not cost the same</b> (MIS-4 / L5 §6.3). An Earth window is closed
+   * form throughout — some ninety evaluations of an angle between two vectors, 40 ms measured,
+   * nothing propagates — which is why it runs here on the render thread. A lunar one confirms each
+   * refined candidate by flying the aim, some 4.5 s apiece, so creating a lunar mission freezes the
+   * render thread for ten to fifteen seconds. It is paid here, once, rather than on every keystroke
+   * of the parameters step, whose timeline screens only.
    *
    * @param spec the mission being scheduled
    * @param requested the date read from the wizard
    * @return the date to schedule
    */
   private static AbsoluteDate scheduledDateFor(MissionSpec spec, AbsoluteDate requested) {
-    if (!(spec instanceof MissionSpec.EarthOrbit earthOrbit) || !earthOrbit.hasTargetRaan()) {
+    return switch (spec) {
+      case MissionSpec.EarthOrbit earthOrbit -> earthWindow(earthOrbit, requested);
+      case MissionSpec.Lunar lunar -> lunarWindow(lunar, requested);
+      case MissionSpec.Geo ignored -> requested;
+    };
+  }
+
+  /**
+   * The next opening of a lunar window, confirmed on the flown aim.
+   *
+   * @param spec the mission being scheduled
+   * @param requested the date read from the wizard, taken as a floor
+   * @return the date to schedule
+   */
+  private static AbsoluteDate lunarWindow(MissionSpec.Lunar spec, AbsoluteDate requested) {
+    Optional<LaunchWindow> window = LunarLaunchWindowPlanner.nextOpportunity(spec, requested);
+    if (window.isEmpty()) {
+      logger.warn(
+          "No lunar launch window within two days of {}; keeping the requested date", requested);
+      return requested;
+    }
+    logger.info(
+        "Lunar launch window: {} (requested {}, slot {} at {} m/s)",
+        window.get().date(),
+        requested,
+        window.get().duration(),
+        Math.round(window.get().best().deltaV()));
+    return window.get().date();
+  }
+
+  /**
+   * The next opening of an Earth target plane, or the requested date when no plane is waited for.
+   *
+   * @param earthOrbit the mission being scheduled
+   * @param requested the date read from the wizard, taken as a floor
+   * @return the date to schedule
+   */
+  private static AbsoluteDate earthWindow(
+      MissionSpec.EarthOrbit earthOrbit, AbsoluteDate requested) {
+    if (!earthOrbit.hasTargetRaan()) {
       return requested;
     }
     Optional<LaunchWindow> window = EarthLaunchWindowPlanner.nextOpportunity(earthOrbit, requested);
     if (window.isEmpty()) {
-      // A sidereal day always holds an alignment, so this is a broken configuration rather than an
-      // unlucky one. The mission is still created, at the date it asked for.
       logger.warn(
           "No launch window found for RAAN {}° within a day of {}; keeping the requested date",
           earthOrbit.targetRaan(),
@@ -239,8 +296,6 @@ public final class MissionWizardAppState extends BaseAppState {
 
     Map<String, Object> values = request.values();
     String requestedName = String.valueOf(values.get(FormField.MISSION_NAME.key()));
-    // Same cosmetic rule as at creation, except the mission being edited does not count as holding
-    // its own name — keeping it must not turn "Artemis" into "Artemis (2)".
     String name = availableName(missionContext, requestedName, entry.id());
     if (!name.equals(requestedName)) {
       logger.warn("Mission name '{}' is already in use, keeping '{}' instead", requestedName, name);
@@ -254,18 +309,19 @@ public final class MissionWizardAppState extends BaseAppState {
       logger.error("Mission update failed for '{}': unusable launch date '{}'", name, rawDate);
       return;
     }
+
+    Map<String, Object> valuesMap = Collections.unmodifiableMap(values);
     try {
-      MissionSpec spec = MissionFactory.specFromWizardValues(values, currentSpec.type());
-      if (!entry.applySpec(spec)) {
-        // applySpec already logged the composition failure and marked the mission FAILED; the
-        // scheduled date is left alone so the entry keeps describing the mission it still flies.
-        return;
-      }
-      entry.setScheduledDate(scheduledDateFor(spec, missionDate.get()));
-      logger.info("Mission '{}' updated [{}]", name, entry.id().shortForm());
+      creationExecutor.submit(
+          () -> {
+            MissionSpec spec = MissionFactory.specFromWizardValues(valuesMap, currentSpec.type());
+            if (!entry.applySpec(spec)) {
+              return;
+            }
+            entry.setScheduledDate(scheduledDateFor(spec, missionDate.get()));
+            logger.info("Mission '{}' updated [{}]", name, entry.id().shortForm());
+          });
     } catch (RuntimeException e) {
-      // Same net as at creation: a bad wizard value must not crash the render loop. The mission is
-      // simply left as it was.
       logger.error("Mission update failed for '{}': {}", name, e.getMessage());
     }
   }
@@ -318,13 +374,9 @@ public final class MissionWizardAppState extends BaseAppState {
       edited = context.missionContext().findMission(missionId).orElse(null);
       MissionSpec spec = edited == null ? null : edited.spec().orElse(null);
       if (spec == null) {
-        // Race: deleted between the click and the poll. The management window is still open behind
-        // this, so there is nothing to reopen — it was never closed.
         logger.warn("Edit ignored: mission [{}] is not editable", missionId.shortForm());
         return;
       }
-      // Every wizard step reads the mission type from the context, so it must designate the edited
-      // mission before the widget builds them.
       context.missionContext().setSelectedMissionType(spec.type());
     }
 
@@ -359,9 +411,6 @@ public final class MissionWizardAppState extends BaseAppState {
   }
 
   private void closeWizard() {
-    // No reachable path closes the wizard while the discard question is up — the dialog's backdrop
-    // shields every control that could — but that invariant lives in two other files. Draining it
-    // here makes it hold by construction, and the confirm path already orders it this way.
     closeDiscardDialog();
     if (widget != null) {
       widget.close();

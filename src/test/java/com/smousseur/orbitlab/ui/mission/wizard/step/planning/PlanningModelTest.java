@@ -1,6 +1,7 @@
 package com.smousseur.orbitlab.ui.mission.wizard.step.planning;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
@@ -10,7 +11,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.mission.operation.LaunchPlane;
 import com.smousseur.orbitlab.simulation.mission.operation.NodeBranch;
+import com.smousseur.orbitlab.simulation.mission.window.LaunchWindowCandidate;
 import com.smousseur.orbitlab.simulation.mission.window.problem.EarthLaunchWindowRequest;
+import com.smousseur.orbitlab.simulation.mission.window.problem.LunarLaunchWindowProblem;
+import com.smousseur.orbitlab.simulation.mission.window.problem.LunarLaunchWindowRequest;
 import org.hipparchus.util.FastMath;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
@@ -44,6 +48,12 @@ class PlanningModelTest {
 
   private static PlanningInputs missing(PlanningInputs.Gap gap) {
     return PlanningInputs.missing(gap);
+  }
+
+  /** Canaveral, 400 km parking, 100 km perilune — the reference geometry of the chantier. */
+  private static PlanningInputs lunar(double periluneAltitude) {
+    return PlanningInputs.of(
+        new LunarLaunchWindowRequest(28.562, -80.577, 3.0, 400_000.0, periluneAltitude));
   }
 
   @Test
@@ -218,6 +228,41 @@ class PlanningModelTest {
 
     PlanningState.Windows windows = assertInstanceOf(PlanningState.Windows.class, model.state());
     assertEquals(0, windows.selected());
+  }
+
+  /**
+   * MIS-4 / L5 §4.1 — the axis draws a lunar criterion through the same model, and the request
+   * being a record is what keeps the memoisation biting on a page redrawn every frame.
+   */
+  @Test
+  @DisplayName("A lunar request produces opportunities on the same axis")
+  void aLunarRequestIsPlannedToo() {
+    PlanningModel model = new PlanningModel();
+    model.refresh(lunar(100_000.0), epoch());
+
+    PlanningState.Windows windows = assertInstanceOf(PlanningState.Windows.class, model.state());
+    assertFalse(windows.windows().isEmpty(), "the lunar geometry must offer a slot");
+
+    PlanningState held = model.state();
+    model.refresh(lunar(100_000.0), epoch());
+    assertSame(held, model.state(), "an unchanged lunar request must not search again");
+    model.refresh(lunar(200_000.0), epoch());
+    assertNotSame(held, model.state(), "a different perilune is a different request");
+  }
+
+  /**
+   * MIS-4 / L5 §4.1 — what keeps the page at its terrestrial cost. Confirming a candidate flies the
+   * aim: 4.5 s apiece, on the render thread, in a loop polled every frame. The screening problem
+   * carries no vehicle and hands the candidate straight back.
+   */
+  @Test
+  @DisplayName("The screening problem never confirms")
+  void theScreeningProblemNeverConfirms() {
+    LunarLaunchWindowProblem problem =
+        LunarLaunchWindowProblem.screening(28.562, -80.577, 3.0, 400_000.0, 100_000.0);
+    LaunchWindowCandidate candidate = LaunchWindowCandidate.of(epoch(), 3_100.0);
+
+    assertSame(candidate, problem.confirm(candidate));
   }
 
   @Test

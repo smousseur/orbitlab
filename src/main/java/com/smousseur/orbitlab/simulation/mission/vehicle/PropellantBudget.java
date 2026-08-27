@@ -37,6 +37,9 @@ public final class PropellantBudget {
   /** Mirrors GEOMission.GEO_ALTITUDE without depending on the operation package. */
   private static final double GEO_ALTITUDE_M = 35_786_000.0;
 
+  /** Mean Earth-Moon distance (m): the semi-major axis of the lunar orbit, rounded. */
+  private static final double LUNAR_DISTANCE_M = 384_400_000.0;
+
   // Off-flight sizing, left Earth-fixed by PHY-4 / L1 (spec docs/multi-corps/03-conception-L1.md
   // §4.1): propellant budgeting runs before any propagation and never sees an arc, so the L1 seam
   // does not run through it. It becomes contextual when a mission has to be sized around another
@@ -50,6 +53,18 @@ public final class PropellantBudget {
 
   /** Launcher loads plus the payload's apogee-kick-motor load for a GEO mission. */
   public record GeoLoads(double[] launcherLoads, double akmLoad) {}
+
+  /**
+   * Launcher loads plus the mass the translunar injection ignites at, for a lunar mission.
+   *
+   * <p><b>The second component is not an extra.</b> It is the very figure {@code
+   * LunarLaunchWindowProblem}'s confirming solve asks for, and the top-down sizing already knows
+   * it: one definition, two consumers (MIS-4 / L5 §5.3).
+   *
+   * @param launcherLoads the propellant load per stage, same order as the launcher stages
+   * @param massAtInjection the vehicle mass when the injection burn ignites (kg)
+   */
+  public record LunarLoads(double[] launcherLoads, double massAtInjection) {}
 
   /**
    * Per-stage loads for an Earth-orbit mission launched due east — the site's free plane.
@@ -113,6 +128,53 @@ public final class PropellantBudget {
         launchLatitudeDeg,
         launchLatitudeDeg,
         Physics.getLaunchAzimuth());
+  }
+
+  /**
+   * Per-stage loads for a lunar mission: ascent to the parking orbit, then one translunar
+   * injection. <b>Simpler than {@link #loadsForGeo}</b> — the payload is inert, so there is no kick
+   * motor to delegate a burn to and nothing to split the budget with (MIS-4 / L5 §5.3).
+   *
+   * <p><b>The injection ΔV is taken in closed form</b> rather than written as a constant, because
+   * the parking altitude is a component of the spec and a constant would freeze one value of it in
+   * a class whose whole idiom is the closed form. It reads some 40 m/s under the 3 124 m/s L4
+   * measured at 400 km — 1.3 %, the 170° transfer angle and the aim offset not being in the
+   * formula. The 10 % margin is worth 312 m/s at this scale, so the gap is absorbed three times
+   * over, and the window's own 50 m/s acceptance margin absorbs it once more.
+   *
+   * <p><b>A heuristic seed, not a verdict.</b> {@code MissionPlanOptimizer} sweeps λ from these
+   * loads on {@code PRECISE}; on {@code FAST} — what every mission created in the wizard flies —
+   * they are what the vehicle takes off with.
+   *
+   * @param launcher the launcher model
+   * @param payload the payload as flown (its mass anchors the top-down sizing)
+   * @param parkingAltitude the circular parking altitude the injection leaves from (m)
+   * @param launchLatitudeDeg the launch site latitude (degrees)
+   * @param launchAzimuth the launch azimuth (radians, clockwise from north)
+   * @return the launcher loads and the mass at injection
+   */
+  public static LunarLoads loadsForLunar(
+      LauncherModel launcher,
+      Spacecraft payload,
+      double parkingAltitude,
+      double launchLatitudeDeg,
+      double launchAzimuth) {
+    double payloadMass = payload.getMass();
+    double dvInjection = translunarInjectionDeltaV(parkingAltitude);
+    double dvTotal = ascentDeltaV(parkingAltitude, launchLatitudeDeg, launchAzimuth) + dvInjection;
+    double[] loads = sizeTopStage(launcher, payloadMass, dvTotal);
+
+    StageModel top = launcher.stages().getLast();
+    double afterInjection = payloadMass + top.dryMass();
+    double injectionPropellant =
+        afterInjection
+            * (FastMath.exp(dvInjection / (top.propulsion().isp() * G0)) - 1.0)
+            * (1.0 + SAFETY_MARGIN);
+    // The stage cannot ignite heavier than it lifted off loaded. The two sizings share a margin, so
+    // this only bites on a payload the launcher barely lifts — where the load is clamped to
+    // capacity and the ascent has already eaten into what the injection was meant to keep.
+    double loaded = afterInjection + loads[loads.length - 1];
+    return new LunarLoads(loads, FastMath.min(afterInjection + injectionPropellant, loaded));
   }
 
   /**
@@ -265,6 +327,18 @@ public final class PropellantBudget {
     double rLeo = RE + parkingAltitude;
     double rTarget = RE + targetAltitude;
     return FastMath.sqrt(MU / rLeo) * (FastMath.sqrt(2.0 * rTarget / (rLeo + rTarget)) - 1.0);
+  }
+
+  /**
+   * Hohmann perigee-injection ΔV from a circular parking orbit to a transfer reaching the Moon's
+   * mean distance (m/s).
+   *
+   * @param parkingAltitude the parking orbit altitude (m)
+   * @return the translunar injection ΔV in m/s
+   */
+  static double translunarInjectionDeltaV(double parkingAltitude) {
+    // transferInjectionDeltaV works in altitudes, so the lunar distance is handed over as one.
+    return transferInjectionDeltaV(parkingAltitude, LUNAR_DISTANCE_M - RE);
   }
 
   /**

@@ -13,6 +13,7 @@ import org.hipparchus.util.FastMath;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.orekit.orbits.KeplerianOrbit;
 import org.orekit.propagation.SpacecraftState;
 import org.orekit.time.AbsoluteDate;
@@ -20,6 +21,7 @@ import org.orekit.time.TimeScalesFactory;
 import org.orekit.utils.Constants;
 import org.orekit.utils.PVCoordinates;
 
+@EnabledIfSystemProperty(named = "orbitlab.slowTests", matches = "true")
 public class GEOMissionOptimizationTest extends AbstractTrajectoryOptimizerTest {
   private static final Logger logger = LogManager.getLogger(GEOMissionOptimizationTest.class);
   public static final int GEO_ALTITUDE = 35_786_000;

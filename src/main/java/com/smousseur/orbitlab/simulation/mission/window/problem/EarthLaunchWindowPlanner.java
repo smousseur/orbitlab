@@ -144,10 +144,9 @@ public final class EarthLaunchWindowPlanner {
    * <p>The horizon is not a parameter: {@link LaunchWindowSearch#forOpportunities} derives it from
    * the problem's recurrence, so a caller counts opportunities and never days.
    *
-   * <p><b>The cut to {@code count} is made here, on the date, and not by the search.</b> The
-   * factory deliberately asks the solver for one slot more than wanted, because the solver's own
-   * truncation is by cost; sorting by date and cutting here is what makes "the next three" mean the
-   * next three.
+   * <p><b>The computation itself moved to {@link LaunchWindowPlanner} in MIS-4 / L5</b>, where it
+   * serves the lunar timeline too. Nothing of it was Earth-specific: it read only the problem's
+   * three scales. This overload remains as the Earth-typed way in.
    *
    * @param request the mission's window inputs
    * @param earliest the date the user asked for, read as a floor
@@ -156,14 +155,6 @@ public final class EarthLaunchWindowPlanner {
    */
   public static List<LaunchWindow> nextOpportunities(
       EarthLaunchWindowRequest request, AbsoluteDate earliest, int count) {
-    EarthLaunchWindowProblem problem = request.toProblem();
-    LaunchWindowSearch search =
-        LaunchWindowSearch.forOpportunities(
-            earliest, problem, count, Double.POSITIVE_INFINITY, MARGIN);
-    return new LaunchWindowSolver(problem)
-        .solve(search).stream()
-            .sorted(Comparator.comparing(LaunchWindow::date))
-            .limit(count)
-            .toList();
+    return LaunchWindowPlanner.nextOpportunities(request, earliest, count);
   }
 }
