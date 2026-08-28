@@ -9,6 +9,7 @@ import com.simsilica.lemur.*;
 import com.simsilica.lemur.component.BoxLayout;
 import com.simsilica.lemur.core.VersionedReference;
 import com.smousseur.orbitlab.core.OrbitlabException;
+import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
 import com.smousseur.orbitlab.simulation.mission.MissionHorizon;
 import com.smousseur.orbitlab.simulation.mission.operation.LaunchPlane;
 import com.smousseur.orbitlab.simulation.mission.window.problem.EarthLaunchWindowRequest;
@@ -463,11 +464,12 @@ public class EarthOrbitDynamicParameters extends DynamicParameters {
 
   @Override
   public double defaultHorizonDays() {
-    // Semi-major axis of the target ellipse: Earth's radius plus the mean of the two altitudes.
+    // The circular-equivalent altitude of the target ellipse, which its semi-major axis is read at.
     double meanAltitudeKm = 0.5 * (perigeeKm() + apogeeKm());
     return revolutionDays(
         MissionHorizon.DEFAULT_LEO_REVOLUTIONS,
-        Constants.WGS84_EARTH_EQUATORIAL_RADIUS + meanAltitudeKm * 1000.0);
+        meanAltitudeKm * 1000.0,
+        GravitationalContext.earth());
   }
 
   private double perigeeKm() {

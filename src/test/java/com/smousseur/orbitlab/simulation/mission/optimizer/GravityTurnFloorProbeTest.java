@@ -582,8 +582,8 @@ class GravityTurnFloorProbeTest {
             flight.insertionState().getDate(),
             Constants.WGS84_EARTH_MU);
 
-    OrbitElements osculating = OrbitElements.osculating(insertion);
-    Optional<OrbitElements> mean = OrbitElements.mean(insertion);
+    OrbitElements osculating = OrbitElements.osculating(insertion, RE);
+    Optional<OrbitElements> mean = OrbitElements.mean(insertion, RE);
 
     double a = osculating.semiMajorAxis();
     double j2 = -Constants.WGS84_EARTH_C20;

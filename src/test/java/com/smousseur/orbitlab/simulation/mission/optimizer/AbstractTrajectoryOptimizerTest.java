@@ -131,12 +131,14 @@ public class AbstractTrajectoryOptimizerTest {
         "[{}/{} km] Insertion orbit (osculating): {}",
         (int) (perigeeAltitude / 1000),
         (int) (apogeeAltitude / 1000),
-        OrbitElements.osculating(insertionOrbit).format());
+        OrbitElements.osculating(insertionOrbit, Constants.WGS84_EARTH_EQUATORIAL_RADIUS).format());
     logger.info(
         "[{}/{} km] Insertion orbit (mean):       {}",
         (int) (perigeeAltitude / 1000),
         (int) (apogeeAltitude / 1000),
-        OrbitElements.mean(insertionOrbit).map(OrbitElements::format).orElse("unavailable"));
+        OrbitElements.mean(insertionOrbit, Constants.WGS84_EARTH_EQUATORIAL_RADIUS)
+            .map(OrbitElements::format)
+            .orElse("unavailable"));
 
     MissionEphemerisPoint last = ephemeris.lastPoint();
     KeplerianOrbit finalOrbit =

@@ -32,6 +32,7 @@ import org.orekit.propagation.SpacecraftState;
 import org.orekit.propagation.analytical.KeplerianPropagator;
 import org.orekit.time.AbsoluteDate;
 import org.orekit.time.TimeScalesFactory;
+import org.orekit.utils.Constants;
 
 /**
  * <b>MIS-7 / P1, test T5</b> — a polar mission actually covers the poles (spec {@code
@@ -91,7 +92,8 @@ class PolarCoverageTest {
         fmt(coverageAfterAscent, 3));
     logger.info(
         "      orbit {}, mass {} kg",
-        OrbitElements.osculating(afterAscent.getOrbit()).format(),
+        OrbitElements.osculating(afterAscent.getOrbit(), Constants.WGS84_EARTH_EQUATORIAL_RADIUS)
+            .format(),
         fmt(afterAscent.getMass(), 3));
     logger.info(
         "  after the plane trim   -> inclination {}°, ground track reaches {}°",
@@ -99,7 +101,8 @@ class PolarCoverageTest {
         fmt(coverageAfterTrim, 3));
     logger.info(
         "      orbit {}, mass {} kg (propellant spent: {} kg)",
-        OrbitElements.osculating(afterTrim.getOrbit()).format(),
+        OrbitElements.osculating(afterTrim.getOrbit(), Constants.WGS84_EARTH_EQUATORIAL_RADIUS)
+            .format(),
         fmt(afterTrim.getMass(), 3),
         fmt(afterAscent.getMass() - afterTrim.getMass(), 1));
 

@@ -71,8 +71,8 @@ import org.orekit.utils.TimeStampedPVCoordinates;
  * flight runs ahead of its drag-off twin — tens of kilometres of along-track drift after a day — so
  * the two sample the J2 short-period term of {@code a} at different arguments of latitude. That
  * term has a 6 km amplitude here, ten times the signal, and it inflated the osculating difference
- * by 14 % at 24 h while leaving a single revolution untouched. {@link OrbitElements#mean(Orbit)}
- * removes it.
+ * by 14 % at 24 h while leaving a single revolution untouched. {@link OrbitElements#mean(Orbit,
+ * double)} removes it.
  *
  * <p><b>b. ρ is averaged along the trajectory actually flown</b>, sampled on the drag-free twin,
  * rather than along an unperturbed Keplerian orbit. A Keplerian sample reads 17 % low,
@@ -328,7 +328,7 @@ class OrbitalDecayFlightTest {
   }
 
   private static double meanSemiMajorAxis(SpacecraftState state) {
-    return OrbitElements.mean(state.getOrbit())
+    return OrbitElements.mean(state.getOrbit(), Constants.WGS84_EARTH_EQUATORIAL_RADIUS)
         .orElseThrow(() -> new AssertionError("the mean elements must converge"))
         .semiMajorAxis();
   }

@@ -15,6 +15,7 @@ import com.simsilica.lemur.event.CursorButtonEvent;
 import com.simsilica.lemur.event.CursorEventControl;
 import com.simsilica.lemur.event.CursorMotionEvent;
 import com.simsilica.lemur.event.DefaultCursorListener;
+import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
 import com.smousseur.orbitlab.simulation.mission.MissionHorizon;
 import com.smousseur.orbitlab.simulation.mission.operation.LaunchPlane;
 import com.smousseur.orbitlab.ui.UiKit;
@@ -23,7 +24,6 @@ import com.smousseur.orbitlab.ui.mission.wizard.SiteCoordinates;
 import com.smousseur.orbitlab.ui.mission.wizard.step.planning.PlanningInputs;
 import java.util.Map;
 import java.util.Optional;
-import org.orekit.utils.Constants;
 
 public abstract class DynamicParameters {
   protected static final float FIELD_W = 752f;
@@ -143,19 +143,24 @@ public abstract class DynamicParameters {
   }
 
   /**
-   * Days spanned by {@code revolutions} turns of a circular-equivalent orbit of the given
-   * semi-major axis, via the Keplerian period {@code 2π√(a³/µ)}.
+   * Days spanned by {@code revolutions} turns of a circular-equivalent orbit at {@code
+   * altitudeMeters} above {@code body}, via the Keplerian period {@code 2π√(a³/µ)}.
+   *
+   * <p><b>An altitude and not a semi-major axis</b> (MIS-5 / L2, spec {@code
+   * docs/lunar-orbit/04-conception-L2.md} §5): the body radius used to be added by each call site,
+   * so making the µ contextual without moving the radius in here would have left the panel of every
+   * new body writing its own {@code radius +}. The pair (µ, R) belongs to one body, and {@code
+   * GravitationalContext} is that pair.
    *
    * @param revolutions the number of revolutions
-   * @param semiMajorAxisMeters the semi-major axis in meters, measured from Earth's centre
+   * @param altitudeMeters the orbit altitude in meters above the body's equatorial radius
+   * @param body the body the orbit is flown around
    * @return the duration in days
    */
-  protected static double revolutionDays(int revolutions, double semiMajorAxisMeters) {
-    // UI display, left Earth-fixed by PHY-4 / L1 (spec docs/multi-corps/03-conception-L1.md §4.1):
-    // the wizard only ever configures Earth orbits. It becomes contextual when the wizard can
-    // target another body, which no PHY-4 lot delivers.
-    double a = semiMajorAxisMeters;
-    double period = 2.0 * Math.PI * Math.sqrt(a * a * a / Constants.WGS84_EARTH_MU);
+  protected static double revolutionDays(
+      int revolutions, double altitudeMeters, GravitationalContext body) {
+    double a = body.equatorialRadius() + altitudeMeters;
+    double period = 2.0 * Math.PI * Math.sqrt(a * a * a / body.mu());
     return revolutions * period / MissionHorizon.SECONDS_PER_DAY;
   }
 

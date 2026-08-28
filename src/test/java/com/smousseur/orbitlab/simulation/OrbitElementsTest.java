@@ -3,6 +3,8 @@ package com.smousseur.orbitlab.simulation;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.smousseur.orbitlab.core.SolarSystemBody;
+import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
 import java.util.Locale;
 import java.util.Optional;
 import org.apache.logging.log4j.LogManager;
@@ -25,6 +27,9 @@ import org.orekit.utils.Constants;
 class OrbitElementsTest {
 
   private static final double RE = Constants.WGS84_EARTH_EQUATORIAL_RADIUS;
+
+  /** The Moon's equatorial radius, as {@code GravitationalContext.moon()} carries it. */
+  private static final double MOON_RADIUS = 1_737_400.0;
 
   private static final Logger logger = LogManager.getLogger(OrbitElementsTest.class);
 
@@ -101,7 +106,7 @@ class OrbitElementsTest {
             AbsoluteDate.J2000_EPOCH,
             Constants.WGS84_EARTH_MU);
 
-    OrbitElements elements = OrbitElements.osculating(orbit);
+    OrbitElements elements = OrbitElements.osculating(orbit, RE);
 
     assertEquals(a, elements.semiMajorAxis(), 1e-6);
     assertEquals(e, elements.eccentricity(), 1e-12);
@@ -135,7 +140,8 @@ class OrbitElementsTest {
             Constants.WGS84_EARTH_MU);
 
     assertEquals(
-        "431219 x 568781 m (e=1.000e-02, i=5.7296 deg)", OrbitElements.osculating(orbit).format());
+        "431219 x 568781 m (e=1.000e-02, i=5.7296 deg)",
+        OrbitElements.osculating(orbit, RE).format());
   }
 
   /**
@@ -180,11 +186,11 @@ class OrbitElementsTest {
             propagator.propagate(AbsoluteDate.J2000_EPOCH.shiftedBy(i * period / SAMPLES));
         KeplerianOrbit sampled = new KeplerianOrbit(state.getOrbit());
 
-        double oscPerigee = OrbitElements.osculating(sampled).perigeeAltitude();
+        double oscPerigee = OrbitElements.osculating(sampled, RE).perigeeAltitude();
         oscMin = FastMath.min(oscMin, oscPerigee);
         oscMax = FastMath.max(oscMax, oscPerigee);
 
-        Optional<OrbitElements> mean = OrbitElements.mean(sampled);
+        Optional<OrbitElements> mean = OrbitElements.mean(sampled, RE);
         assertTrue(mean.isPresent(), "mean orbit unavailable at sample " + i);
         double meanPerigee = mean.get().perigeeAltitude();
         meanMin = FastMath.min(meanMin, meanPerigee);
@@ -246,6 +252,115 @@ class OrbitElementsTest {
             AbsoluteDate.J2000_EPOCH,
             Constants.WGS84_EARTH_MU);
 
-    assertTrue(OrbitElements.mean(hyperbolic).isEmpty());
+    assertTrue(OrbitElements.mean(hyperbolic, RE).isEmpty());
+  }
+
+  /**
+   * MIS-5 / L2 §7.1 — apsides are counted from the body the arc is flown around, so a 100 km lunar
+   * orbit reports 100 km and not a perilune under the surface.
+   *
+   * <p>The pre-L2 reading is <b>derived here</b> rather than recorded, so the bar is visible: the
+   * class subtracted the Earth radius unconditionally, i.e. exactly {@code RE − RM = 4 640 737 m}
+   * too much, whatever the orbit. Measured before the change on this very state: {@code −4 540 921
+   * x −4 540 553 m}.
+   */
+  @Test
+  void osculating_countsApsidesFromTheArcsBody() {
+    double a = MOON_RADIUS + 100_000.0;
+    double e = 1.0e-4;
+
+    OrbitElements lunar = OrbitElements.osculating(selenocentric(a, e), MOON_RADIUS);
+
+    assertEquals(a * (1.0 - e) - MOON_RADIUS, lunar.perigeeAltitude(), 1.0e-6);
+    assertEquals(a * (1.0 + e) - MOON_RADIUS, lunar.apogeeAltitude(), 1.0e-6);
+    assertEquals(100_000.0, lunar.perigeeAltitude(), 200.0);
+
+    double asReadWithTheEarthRadius =
+        OrbitElements.osculating(selenocentric(a, e), RE).perigeeAltitude();
+    assertEquals(
+        lunar.perigeeAltitude() - (RE - MOON_RADIUS),
+        asReadWithTheEarthRadius,
+        1.0e-6,
+        "the Earth radius on a selenocentric orbit must sink the perilune by RE − RM");
+    assertTrue(
+        asReadWithTheEarthRadius < -4_000_000.0,
+        "the pre-L2 reading must be visibly wrong, otherwise the assertion above proves nothing");
+  }
+
+  /**
+   * MIS-5 / L2 §7.1 — the terrestrial non-regression, asserted <b>at tolerance zero</b> because it
+   * is an identity and not an agreement: {@code GravitationalContext.earth().equatorialRadius()}
+   * <em>is</em> the constant this class used to hold, so a geocentric state reads the same double
+   * as before, bit for bit.
+   *
+   * <p><b>The zero tolerance is safe here, and that needs saying</b> — the repository has a
+   * zero-tolerance pin that turns red or green depending on the {@code --tests} filter ({@code
+   * CentralBodyBaselineTest}), because its strict equality rests on frame caches and a shared 8x8
+   * gravity model, both JVM singletons. This one rests on neither: pure arithmetic on a hand-built
+   * orbit, no cache, no potential, no global state.
+   */
+  @Test
+  void osculating_isBitIdenticalOnAGeocentricState() {
+    double a = RE + 500_000.0;
+    double e = 0.01;
+    KeplerianOrbit orbit =
+        new KeplerianOrbit(
+            a,
+            e,
+            0.1,
+            0.2,
+            0.3,
+            0.4,
+            PositionAngleType.TRUE,
+            FramesFactory.getGCRF(),
+            AbsoluteDate.J2000_EPOCH,
+            Constants.WGS84_EARTH_MU);
+
+    OrbitElements read =
+        OrbitElements.osculating(orbit, GravitationalContext.earth().equatorialRadius());
+
+    assertEquals(a * (1.0 - e) - RE, read.perigeeAltitude(), 0.0);
+    assertEquals(a * (1.0 + e) - RE, read.apogeeAltitude(), 0.0);
+  }
+
+  /**
+   * MIS-5 / L2 §6 — {@code mean()} is an Earth theory and refuses a selenocentric arc by itself.
+   *
+   * <p>The refusal is <b>structural, not incidental</b>, and this test exists because nothing else
+   * states it: the conversion rebases on the potential provider's µ, which is terrestrial, so a
+   * selenocentric state comes out as a near-radial ellipse of eccentricity {@code 1 − µM/µE =
+   * 0.9877} — measured constant at 100, 1 000, 10 000 and 50 000 km — which is outside
+   * Eckstein-Hechler's domain at every altitude. Both ends of the range are checked precisely
+   * because "the orbit is too small" would have been the plausible wrong explanation.
+   *
+   * <p>What depends on it: a lunar mission displays no mean line at all, {@code hasMean()} being
+   * false. If a future Orekit stops throwing here, this test is the alarm and the answer is a
+   * decision, not a wider tolerance.
+   */
+  @Test
+  void mean_refusesASelenocentricState() {
+    assertTrue(
+        OrbitElements.mean(selenocentric(MOON_RADIUS + 100_000.0, 1.0e-4), MOON_RADIUS).isEmpty(),
+        "mean elements must be unavailable on a low lunar orbit");
+    assertTrue(
+        OrbitElements.mean(selenocentric(MOON_RADIUS + 50_000_000.0, 1.0e-4), MOON_RADIUS)
+            .isEmpty(),
+        "mean elements must be unavailable on a high lunar orbit too — the refusal is not a"
+            + " question of the collapsed orbit being smaller than the Earth");
+  }
+
+  /** A selenocentric orbit as {@code GravitationalContext.moon()} would leave one. */
+  private static KeplerianOrbit selenocentric(double a, double e) {
+    return new KeplerianOrbit(
+        a,
+        e,
+        FastMath.toRadians(150.0),
+        0.0,
+        0.0,
+        0.0,
+        PositionAngleType.TRUE,
+        OrekitService.get().bodyCentredIcrfFrame(SolarSystemBody.MOON),
+        AbsoluteDate.J2000_EPOCH,
+        OrekitService.get().body(SolarSystemBody.MOON).getGM());
   }
 }

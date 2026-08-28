@@ -1,9 +1,11 @@
 package com.smousseur.orbitlab.simulation.mission;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.simulation.OrekitService;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.hipparchus.util.FastMath;
@@ -13,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.orekit.orbits.CartesianOrbit;
 import org.orekit.propagation.SpacecraftState;
 import org.orekit.time.AbsoluteDate;
+import org.orekit.utils.AbsolutePVCoordinates;
 import org.orekit.utils.Constants;
 import org.orekit.utils.PVCoordinates;
 
@@ -23,6 +26,9 @@ import org.orekit.utils.PVCoordinates;
 class MissionHorizonTest {
 
   private static final AbsoluteDate LAUNCH = AbsoluteDate.J2000_EPOCH;
+
+  /** The Moon's equatorial radius, as {@code GravitationalContext.moon()} carries it. */
+  private static final double MOON_RADIUS = 1_737_400.0;
 
   @BeforeAll
   static void setup() {
@@ -42,6 +48,17 @@ class MissionHorizonTest {
             OrekitService.get().gcrf(),
             LAUNCH.shiftedBy(ascentSeconds),
             Constants.WGS84_EARTH_MU));
+  }
+
+  /** A circular selenocentric state, declared with the µ a lunar propagator sets on it. */
+  private static SpacecraftState selenocentricState(double a, double lunarMu) {
+    double v = FastMath.sqrt(lunarMu / a);
+    return new SpacecraftState(
+        new CartesianOrbit(
+            new PVCoordinates(new Vector3D(a, 0, 0), new Vector3D(0, v, 0)),
+            OrekitService.get().bodyCentredIcrfFrame(SolarSystemBody.MOON),
+            LAUNCH.shiftedBy(600.0),
+            lunarMu));
   }
 
   /** The Keplerian period of a circular orbit at that altitude, computed independently. */
@@ -96,6 +113,65 @@ class MissionHorizonTest {
                 Constants.WGS84_EARTH_MU));
 
     double coast = new MissionHorizon.Revolutions(48).finalCoastSeconds(LAUNCH, hyperbolic);
+
+    assertEquals(MissionHorizon.UNRESOLVED_FALLBACK_SECONDS, coast, 0.0);
+  }
+
+  /**
+   * MIS-5 / L2 §7.2 — the µ comes off the state, so twelve turns of a lunar orbit last twelve lunar
+   * periods.
+   *
+   * <p>The pre-L2 reading is <b>derived here</b> and not recorded, so the bar is visible. It is not
+   * the {@code √(µE/µM) = 9.017} the arithmetic at fixed {@code a} suggests: the method rebuilds
+   * the orbit from the PV, so the wrong µ collapses {@code a} towards {@code r/2} as well and the
+   * two errors compound. Measured before the change: 3 355.88 s for the 84 809.52 s below, a factor
+   * 25.3.
+   */
+  @Test
+  void revolutions_readTheMuOffTheState() {
+    double a = MOON_RADIUS + 100_000.0;
+    double lunarMu = OrekitService.get().body(SolarSystemBody.MOON).getGM();
+    double lunarPeriod = 2.0 * FastMath.PI * FastMath.sqrt(a * a * a / lunarMu);
+
+    double coast =
+        new MissionHorizon.Revolutions(12)
+            .finalCoastSeconds(LAUNCH, selenocentricState(a, lunarMu));
+
+    assertEquals(12 * lunarPeriod, coast, 1.0);
+
+    // What the Earth constant returned on this very state, derived rather than pinned: vis-viva
+    // gives a' = 1/(2/r − v²/µE), and with v² = µM/r that is a' ≈ r/(2 − µM/µE), i.e. about r/2.
+    double collapsed = 1.0 / (2.0 / a - (lunarMu / a) / Constants.WGS84_EARTH_MU);
+    double asReadWithTheEarthMu =
+        12.0
+            * 2.0
+            * FastMath.PI
+            * FastMath.sqrt(collapsed * collapsed * collapsed / Constants.WGS84_EARTH_MU);
+    assertTrue(
+        coast / asReadWithTheEarthMu > 20.0,
+        () ->
+            "the pre-L2 reading must be visibly wrong; measured factor 25.3, derived here as "
+                + coast / asReadWithTheEarthMu);
+  }
+
+  /**
+   * MIS-5 / L2 §4.1 — a state carrying no orbit carries no µ, and an unreadable µ is an
+   * unresolvable horizon: it takes the fallback that already exists rather than a second one on an
+   * Earth constant, which would silently return the wrong period on a lunar arc.
+   */
+  @Test
+  void revolutions_fallsBackWhenTheStateCarriesNoOrbit() {
+    double r = Constants.WGS84_EARTH_EQUATORIAL_RADIUS + 550_000.0;
+    double v = FastMath.sqrt(Constants.WGS84_EARTH_MU / r);
+    SpacecraftState absolutePva =
+        new SpacecraftState(
+            new AbsolutePVCoordinates(
+                OrekitService.get().gcrf(),
+                LAUNCH.shiftedBy(600.0),
+                new PVCoordinates(new Vector3D(r, 0, 0), new Vector3D(0, v, 0))));
+    assertFalse(absolutePva.isOrbitDefined(), "the fixture must carry no orbit");
+
+    double coast = new MissionHorizon.Revolutions(48).finalCoastSeconds(LAUNCH, absolutePva);
 
     assertEquals(MissionHorizon.UNRESOLVED_FALLBACK_SECONDS, coast, 0.0);
   }

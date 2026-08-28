@@ -95,7 +95,9 @@ public final class FlownBandAim {
 
     double aim = fallback;
     for (int iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
-      Optional<OrbitElements> mean = OrbitElements.mean(aimedOrbit.apply(aim));
+      // Terrestrial by nature, not by omission: this whole centring is a J2 flattening correction,
+      // and its single caller is a geostationary trim burn (MIS-5 / L2 §3.4).
+      Optional<OrbitElements> mean = OrbitElements.mean(aimedOrbit.apply(aim), RE);
       if (mean.isEmpty()) {
         logger.debug(
             "Flown-band aim: mean orbit unavailable at iteration {}; falling back on the"

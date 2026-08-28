@@ -50,7 +50,7 @@ class FlownBandAimTest {
 
       double expected = centreRadius + FlownBandAim.closedFormOffset(centreRadius);
       OrbitElements mean =
-          OrbitElements.mean(aimedOrbit(aim, centreRadius))
+          OrbitElements.mean(aimedOrbit(aim, centreRadius), RE)
               .orElseThrow(() -> new AssertionError("mean unavailable at " + centreRadius));
       double miss = mean.semiMajorAxis() - expected;
       Assertions.assertTrue(
@@ -113,7 +113,7 @@ class FlownBandAimTest {
   @Test
   void fallsBackOnTheClosedFormWhenTheMeanIsUnavailable() {
     Assumptions.assumeTrue(
-        OrbitElements.mean(veryEccentricOrbit()).isEmpty(),
+        OrbitElements.mean(veryEccentricOrbit(), RE).isEmpty(),
         "Eckstein-Hechler accepted the eccentric orbit; the fallback cannot be forced this way");
 
     double centreRadius = RE + 400_000.0;
@@ -132,7 +132,7 @@ class FlownBandAimTest {
 
   private static double meanSemiMajorAxisMiss(double aim, double apsisRadius, double targetMeanA) {
     OrbitElements mean =
-        OrbitElements.mean(aimedOrbit(aim, apsisRadius))
+        OrbitElements.mean(aimedOrbit(aim, apsisRadius), RE)
             .orElseThrow(() -> new AssertionError("mean unavailable for aim " + aim));
     return FastMath.abs(mean.semiMajorAxis() - targetMeanA);
   }

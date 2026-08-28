@@ -6,7 +6,6 @@ import org.apache.logging.log4j.Logger;
 import org.orekit.orbits.KeplerianOrbit;
 import org.orekit.propagation.SpacecraftState;
 import org.orekit.time.AbsoluteDate;
-import org.orekit.utils.Constants;
 
 /**
  * How far past insertion a mission is sampled and displayed — the mission's <b>restitution
@@ -141,18 +140,36 @@ public sealed interface MissionHorizon
      * The Keplerian period at {@code state}, or {@code 0} when the state carries no bound orbit.
      * Built from the PV coordinates rather than read off {@code state.getOrbit()}, which throws on
      * a state propagated as absolute PVA.
+     *
+     * <p><b>The µ comes off the state</b> (MIS-5 / L2, spec {@code
+     * docs/lunar-orbit/04-conception-L2.md} §4), so a revolution counted around another body is a
+     * revolution of that body's orbit. Every propagator {@code OrekitService} builds does {@code
+     * setOrbitType(CARTESIAN)} then {@code setMu(gravity.mu())}, so any state reaching here carries
+     * the µ of the arc it was flown on, and {@code GravitationalContext.earth().mu()} <em>is</em>
+     * {@code Constants.WGS84_EARTH_MU} — the terrestrial non-regression is an identity of the
+     * constant, not a tolerance.
+     *
+     * <p>Measured before the fix: the Earth µ on a 100 km selenocentric orbit returned 279.66 s
+     * against a real period of 7 067.46 s. Not the factor 9.017 the arithmetic at fixed {@code a}
+     * suggests — rebuilding the orbit from the PV collapses {@code a} towards {@code r/2} as well,
+     * so the error is a factor 25.3.
+     *
+     * <p><b>An unreadable µ is an unresolvable horizon</b>, and takes the exit that already exists:
+     * returning 0 makes the caller log and fall back on {@link #UNRESOLVED_FALLBACK_SECONDS}.
+     * Falling back on an Earth constant instead would be a second answer to one question, and would
+     * silently return the wrong period on a lunar arc.
      */
     private static double keplerianPeriodOf(SpacecraftState state) {
+      if (!state.isOrbitDefined()) {
+        return 0.0;
+      }
       try {
         KeplerianOrbit orbit =
-            // Off-flight computation, left Earth-fixed by PHY-4 / L1 (spec
-            // docs/multi-corps/03-conception-L1.md §4.1): a restitution horizon is a display
-            // choice, not a propagation. Wake it when an arc can be non-terrestrial — L3/L4.
             new KeplerianOrbit(
                 state.getPVCoordinates(),
                 state.getFrame(),
                 state.getDate(),
-                Constants.WGS84_EARTH_MU);
+                state.getOrbit().getMu());
         // A hyperbolic trajectory has a < 0 and e > 1, where getKeplerianPeriod() is meaningless:
         // the caller must fall back rather than fly a NaN-length coast.
         if (orbit.getA() <= 0.0 || orbit.getE() >= 1.0) {

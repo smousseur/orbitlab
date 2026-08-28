@@ -28,6 +28,9 @@ class AchievedOrbitTest {
 
   private static final double RE = Constants.WGS84_EARTH_EQUATORIAL_RADIUS;
 
+  /** The Moon's equatorial radius, as {@code GravitationalContext.moon()} carries it. */
+  private static final double MOON_RADIUS = 1_737_400.0;
+
   /** Kourou, {@code EarthMission.DEFAULT_LATITUDE}. */
   private static final double INCLINATION = FastMath.toRadians(5.23);
 
@@ -71,7 +74,7 @@ class AchievedOrbitTest {
                 AbsoluteDate.J2000_EPOCH,
                 Constants.WGS84_EARTH_MU));
 
-    AchievedOrbit achieved = AchievedOrbit.of(state);
+    AchievedOrbit achieved = AchievedOrbit.of(state, RE);
 
     // The osculating orbit is read as it is, with no conversion.
     assertTrue(achieved.hasOsculating(), "osculating elements unavailable");
@@ -115,16 +118,24 @@ class AchievedOrbitTest {
    */
   @Test
   void of_readsTheMuOffTheState_soANonTerrestrialOrbitIsReportedAgainstItsOwnBody() {
-    double a = 1_737_400.0 + 100_000.0;
+    double a = MOON_RADIUS + 100_000.0;
     double lunarMu = OrekitService.get().body(SolarSystemBody.MOON).getGM();
 
     // A state as GravitationalContext.moon() would leave it: setMu(context.mu()) is the only thing
     // that puts the number on the orbit, so declaring it here reproduces exactly that.
     SpacecraftState lunar = circular(a, lunarMu);
 
-    AchievedOrbit fromLunar = AchievedOrbit.of(lunar);
+    AchievedOrbit fromLunar = AchievedOrbit.of(lunar, MOON_RADIUS);
     assertTrue(fromLunar.hasOsculating(), "osculating elements unavailable on a lunar state");
     assertEquals(a, fromLunar.osculating().semiMajorAxis(), 1.0);
+
+    // MIS-5 / L2 §7.4 — and the apside now lands on the Moon's surface, which is the half L6 could
+    // not assert: it repaired the µ and left the radius, so this same reading was 4 640 737 m low.
+    // This is the only test of the lot on the production path.
+    assertEquals(100_000.0, fromLunar.osculating().perigeeAltitude(), 1.0);
+    assertFalse(
+        fromLunar.hasMean(),
+        "Eckstein-Hechler is an Earth theory and must refuse a selenocentric arc (L2 §6)");
 
     // What the pre-L6 line did to that same PV: the Earth µ on a selenocentric orbit. Computed here
     // rather than through AchievedOrbit.of, since the point is precisely that of() no longer does

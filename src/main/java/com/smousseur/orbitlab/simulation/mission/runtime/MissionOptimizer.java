@@ -234,7 +234,7 @@ public class MissionOptimizer {
     MissionPerformanceReport report = buildReport(stagePerformances, jettisonedResiduals);
     logReport(report);
 
-    AchievedOrbit achievedOrbit = AchievedOrbit.of(mission.getCurrentState());
+    AchievedOrbit achievedOrbit = AchievedOrbit.of(mission.getCurrentState(), reportingRadius());
     logAchievedOrbit(achievedOrbit);
 
     // Inject optimization results into stages for replay
@@ -422,6 +422,33 @@ public class MissionOptimizer {
             actual.fpaDeg());
       }
     }
+  }
+
+  /**
+   * The equatorial radius the achieved orbit is reported against — that of the body the last stage
+   * flies around (MIS-5 / L2, spec {@code docs/lunar-orbit/04-conception-L2.md} §3.3).
+   *
+   * <p><b>The stage's context and not the mission's</b>, because {@code
+   * Mission.gravitationalContext()} is terrestrial even on a lunar mission: a mission lifts off
+   * from the Earth, and {@code LunarFlybyMission} overrides it to Earth-with-perturbers. The arc is
+   * declared by the phase, which is the fifth reading of the shape {@code MissionStage} already
+   * carries four times.
+   *
+   * <p><b>The last stage and not the last that advanced.</b> A trailing coast does not move the
+   * state — its {@code propagateStandalone} is the default — but it declares the arc it is about to
+   * fly, which is the arc {@code mission.getCurrentState()} sits on. The two coincide.
+   *
+   * <p>The empty branch is unreachable today and is there because the caller must never throw:
+   * {@code MissionLoadEvaluator} turns any {@code RuntimeException} escaping {@code optimize()}
+   * into "lambda infeasible", so an exception here would move the propellant load retained by the
+   * sizing sweep.
+   */
+  private double reportingRadius() {
+    List<MissionStage> stages = mission.getStages();
+    return (stages.isEmpty()
+            ? mission.gravitationalContext()
+            : stages.getLast().gravitationalContext(mission))
+        .equatorialRadius();
   }
 
   private int countOptimizableStages() {
