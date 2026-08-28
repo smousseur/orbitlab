@@ -11,7 +11,14 @@ public enum MissionType {
    * Ground to a lunar flyby (MIS-4). The payload is inert: the translunar injection is the last
    * burn of the chain and nothing is handed over afterwards, so no kick motor is required.
    */
-  LUNAR_FLYBY("LUNAR FLYBY", false);
+  LUNAR_FLYBY("LUNAR FLYBY", false),
+
+  /**
+   * Ground to a circular lunar orbit (MIS-5). The launcher's top stage is dropped just after the
+   * translunar injection, so the insertion burn is the payload's own: no launcher stage can hold a
+   * four-day coast (découpage §2.3 pt 1), and an inert probe cannot fly this at all.
+   */
+  LUNAR_ORBIT("LUNAR ORBIT", true);
 
   private final boolean requiresPayloadPropulsion;
 

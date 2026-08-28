@@ -260,6 +260,12 @@ class MissionHorizonTest {
     assertEquals(
         new MissionHorizon.Revolutions(MissionHorizon.DEFAULT_GEO_REVOLUTIONS),
         MissionHorizon.defaultFor(MissionType.GEO));
+    // MIS-5 / L3 §6.3 — twelve turns, i.e. 23.6 h of lunar orbit past insertion. A count of
+    // revolutions and not a duration, unlike the flyby: this profile ends bound around the Moon.
+    assertEquals(
+        new MissionHorizon.Revolutions(MissionHorizon.DEFAULT_LUNAR_ORBIT_REVOLUTIONS),
+        MissionHorizon.defaultFor(MissionType.LUNAR_ORBIT));
+    assertEquals(12, MissionHorizon.DEFAULT_LUNAR_ORBIT_REVOLUTIONS);
   }
 
   /** A fresh mission must behave exactly as it did before the horizon existed. */

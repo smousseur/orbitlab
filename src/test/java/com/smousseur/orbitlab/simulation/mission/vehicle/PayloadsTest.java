@@ -63,11 +63,52 @@ class PayloadsTest {
     assertFalse(eligible.contains(Payloads.LUNAR_PROBE), "a lunar probe is not a LEO payload");
   }
 
+  /**
+   * MIS-5 / L3 §2.2 — the orbiter joins this list, and that is the property rather than a leak. A
+   * flyby requires no propulsion, so it excludes none: the orbiter flies it with an empty tank,
+   * exactly as {@code MissionType.LEO}'s javadoc says an AKM-equipped payload does. Keeping it out
+   * would have taken a third axis of eligibility, to forbid something physically licit.
+   */
   @Test
-  void forMissionType_lunarFlyby_keepsTheProbeAndTheUniversalModule() {
+  void forMissionType_lunarFlyby_keepsEveryLunarAndUniversalPayload() {
     assertEquals(
-        List.of(Payloads.CARGO_MODULE, Payloads.LUNAR_PROBE),
+        List.of(Payloads.CARGO_MODULE, Payloads.LUNAR_PROBE, Payloads.LUNAR_ORBITER),
         Payloads.forMissionType(MissionType.LUNAR_FLYBY));
+  }
+
+  /**
+   * MIS-5 / L3 §6.1 — the one mission type the catalog answers with a single model, and the three
+   * refusals are for three different reasons. Asserting only the count would still pass if the two
+   * axes of the filter collapsed into one, which is the defect worth catching here.
+   */
+  @Test
+  void forMissionType_lunarOrbit_offersOnlyTheOrbiter() {
+    List<PayloadModel> eligible = Payloads.forMissionType(MissionType.LUNAR_ORBIT);
+
+    assertEquals(List.of(Payloads.LUNAR_ORBITER), eligible);
+
+    // Universal but inert.
+    assertEquals(PayloadDomain.ANY, Payloads.CARGO_MODULE.domain());
+    assertFalse(Payloads.CARGO_MODULE.hasAkm());
+    // Lunar but inert.
+    assertEquals(PayloadDomain.LUNAR, Payloads.LUNAR_PROBE.domain());
+    assertFalse(Payloads.LUNAR_PROBE.hasAkm());
+    // Propelled but terrestrial.
+    assertTrue(Payloads.GEO_SAT.hasAkm());
+    assertEquals(PayloadDomain.EARTH, Payloads.GEO_SAT.domain());
+  }
+
+  /**
+   * The mirror of {@link #lunarProbe_isInertAndPlacedByItsDomain()}: the orbiter is the first model
+   * that is lunar <em>and</em> propelled, which is what the two axes have to cross to select it.
+   */
+  @Test
+  void lunarOrbiter_isPropelledAndPlacedByItsDomain() {
+    assertTrue(Payloads.LUNAR_ORBITER.hasAkm());
+    assertEquals(PayloadDomain.LUNAR, Payloads.LUNAR_ORBITER.domain());
+    assertEquals(800.0, Payloads.LUNAR_ORBITER.akmPropellantCapacity(), 1e-6);
+    assertEquals(5_500.0, Payloads.LUNAR_ORBITER.akmPropulsion().thrust(), 1e-6);
+    assertEquals(320.0, Payloads.LUNAR_ORBITER.akmPropulsion().isp(), 1e-6);
   }
 
   @Test

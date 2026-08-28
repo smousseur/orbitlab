@@ -69,6 +69,20 @@ public sealed interface MissionHorizon
   double DEFAULT_LUNAR_FLYBY_SECONDS = 7.0 * SECONDS_PER_DAY;
 
   /**
+   * Derived default for a lunar orbit: twelve revolutions, i.e. 23.6 hours past insertion.
+   *
+   * <p><b>Revolutions and not a duration</b>, unlike the flyby above — this profile ends bound
+   * around the Moon, so a revolution is a thing worth counting, and twelve of them is what shows
+   * whether the orbit holds (découpage §4 / L5). Total flight ~5 days, ~7 235 points at the coast
+   * sampling step, under {@code TrajectoryPolyline}'s 8 192-vertex budget.
+   *
+   * <p>This default only became honest with MIS-5 / L2: before it, {@link
+   * Revolutions#finalCoastSeconds} read the period with the Earth µ and would have flown 0.93 hour
+   * instead of 23.6.
+   */
+  int DEFAULT_LUNAR_ORBIT_REVOLUTIONS = 12;
+
+  /**
    * The horizon a mission of this type gets when the user did not set one. Both defaults land on ~3
    * days: long enough to watch the orbital plane precess, and already the right order of magnitude
    * for the lunar and rendezvous profiles that will follow.
@@ -81,6 +95,7 @@ public sealed interface MissionHorizon
       case LEO -> new Revolutions(DEFAULT_LEO_REVOLUTIONS);
       case GEO -> new Revolutions(DEFAULT_GEO_REVOLUTIONS);
       case LUNAR_FLYBY -> new FixedDuration(DEFAULT_LUNAR_FLYBY_SECONDS);
+      case LUNAR_ORBIT -> new Revolutions(DEFAULT_LUNAR_ORBIT_REVOLUTIONS);
     };
   }
 

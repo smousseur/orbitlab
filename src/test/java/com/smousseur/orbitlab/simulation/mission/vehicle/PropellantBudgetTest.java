@@ -216,6 +216,156 @@ class PropellantBudgetTest {
     }
   }
 
+  // --- Lunar orbit insertion (MIS-5 / L3) ---
+
+  /**
+   * MIS-5 / L3 §6.2 — the closed form against the four arrivals L0 flew (spec {@code
+   * docs/lunar-orbit/02-baseline-L0.md} §3): 819.6 to 835.9 m/s at a 100 km perilune.
+   *
+   * <p><b>The assertion is a bound and not an equality</b>, deliberately. The closed form is a 180°
+   * Hohmann where the chain flies a 170° transfer with an aim offset, so it is a simpler model than
+   * the flight and claiming agreement to the metre would misstate what is being checked. What
+   * matters is that it stays under the worst measured case by less than the 10 % margin absorbs.
+   */
+  @Test
+  void lunarInsertionDeltaV_matchesTheMeasuredArrival() {
+    double dv = PropellantBudget.lunarInsertionDeltaV(400_000.0, 100_000.0);
+
+    assertTrue(dv > 780.0 && dv < 840.0, () -> "expected ~821 m/s, got " + dv);
+    double worstMeasured = 835.9;
+    assertTrue(
+        (worstMeasured - dv) / worstMeasured < 0.02,
+        () -> "the closed form must stay within 2 % under L0's worst case, got " + dv);
+
+    double excess = PropellantBudget.lunarArrivalExcessVelocity(400_000.0);
+    assertTrue(excess > 800.0 && excess < 890.0, () -> "expected ~829 m/s, got " + excess);
+  }
+
+  /**
+   * The non-obvious half: the insertion gets <b>cheaper</b> as the target orbit rises, because the
+   * hyperbolic excess matters less where the Moon pulls less. The worst case of a wizard band is
+   * therefore its floor, not its ceiling — which is what the orbiter's tank and engine are sized
+   * against.
+   */
+  @Test
+  void lunarInsertionDeltaV_fallsWithAltitude() {
+    double low = PropellantBudget.lunarInsertionDeltaV(400_000.0, 50_000.0);
+    double mid = PropellantBudget.lunarInsertionDeltaV(400_000.0, 100_000.0);
+    double high = PropellantBudget.lunarInsertionDeltaV(400_000.0, 500_000.0);
+
+    assertTrue(low > mid && mid > high, () -> low + " / " + mid + " / " + high);
+    assertTrue(
+        (low - high) / low > 0.05,
+        () -> "the band must be worth more than 5 % end to end, got " + (low - high) / low);
+  }
+
+  /**
+   * MIS-5 / L3 §4.1 — the three components, and above all the <b>order</b>: the launcher answers to
+   * the dry mass <em>plus</em> the insertion load. Getting that backwards would leave out a quarter
+   * of the payload's mass without raising anything, so the check is that the mass at injection
+   * carries the loaded orbiter and not the bare one.
+   */
+  @Test
+  void loadsForLunarOrbit_sizesTheInsertionThenTheLauncher() {
+    LauncherModel launcher = Launchers.FALCON_HEAVY;
+    PropellantBudget.LunarOrbitLoads loads =
+        PropellantBudget.loadsForLunarOrbit(
+            launcher,
+            Payloads.LUNAR_ORBITER,
+            2_000.0,
+            400_000.0,
+            100_000.0,
+            28.562,
+            FastMath.PI / 2);
+
+    assertTrue(
+        loads.insertionLoad() > 600.0
+            && loads.insertionLoad() <= Payloads.LUNAR_ORBITER.akmPropellantCapacity(),
+        () -> "expected ~658 kg inside the 800 kg tank, got " + loads.insertionLoad());
+
+    double topDry = launcher.stages().getLast().dryMass();
+    assertTrue(
+        loads.massAtInjection() > 2_000.0 + loads.insertionLoad() + topDry,
+        () ->
+            "the injection must lift the loaded orbiter, not the bare one: "
+                + loads.massAtInjection());
+
+    // And the launcher was sized on the same payload: a bare-mass sizing would come out lighter.
+    PropellantBudget.LunarLoads bare =
+        PropellantBudget.loadsForLunar(
+            launcher,
+            Payloads.LUNAR_ORBITER.toSpacecraft(2_000.0, 0.0),
+            400_000.0,
+            28.562,
+            FastMath.PI / 2);
+    int top = loads.launcherLoads().length - 1;
+    assertTrue(
+        loads.launcherLoads()[top] > bare.launcherLoads()[top],
+        "the top stage must be sized on the loaded payload");
+  }
+
+  /**
+   * MIS-5 / L3 §4.2 — this method refuses where its siblings clamp, because a clamped lunar
+   * insertion does not capture at all: the spacecraft sails past the Moon, and there is no degraded
+   * mission to hand back. The message names both figures, since it is what the wizard shows.
+   */
+  @Test
+  void loadsForLunarOrbit_refusesWhenTheTankIsTooSmall() {
+    IllegalArgumentException refused =
+        assertThrows(
+            IllegalArgumentException.class,
+            () ->
+                PropellantBudget.loadsForLunarOrbit(
+                    Launchers.FALCON_HEAVY,
+                    Payloads.LUNAR_ORBITER,
+                    5_000.0,
+                    400_000.0,
+                    100_000.0,
+                    28.562,
+                    FastMath.PI / 2));
+    assertTrue(refused.getMessage().contains("800"), refused.getMessage());
+    assertTrue(refused.getMessage().contains("LUNAR_ORBITER"), refused.getMessage());
+
+    // And an inert payload is refused before any arithmetic: it has no engine to size.
+    assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            PropellantBudget.loadsForLunarOrbit(
+                Launchers.FALCON_HEAVY,
+                Payloads.LUNAR_PROBE,
+                2_000.0,
+                400_000.0,
+                100_000.0,
+                28.562,
+                FastMath.PI / 2));
+  }
+
+  /**
+   * Both launchers of the catalog must fly the orbiter, and Ariane 62 is the binding one — measured
+   * at 81 % of its upper-stage capacity against Falcon Heavy's 13 %.
+   */
+  @Test
+  void loadsForLunarOrbit_staysInsideCapacityOnBothLaunchers() {
+    for (LauncherModel launcher : Launchers.all()) {
+      PropellantBudget.LunarOrbitLoads loads =
+          PropellantBudget.loadsForLunarOrbit(
+              launcher,
+              Payloads.LUNAR_ORBITER,
+              2_000.0,
+              400_000.0,
+              100_000.0,
+              28.562,
+              FastMath.PI / 2);
+      List<StageModel> stages = launcher.stages();
+      for (int i = 0; i < stages.size(); i++) {
+        final int stage = i;
+        assertTrue(
+            loads.launcherLoads()[i] <= stages.get(i).propellantCapacity() + 1e-6,
+            () -> launcher.id() + " stage " + stage + " sized past its capacity");
+      }
+    }
+  }
+
   private static StageModel liquidStage(
       String name, double dryMass, double capacity, double isp, double thrust) {
     return new StageModel(

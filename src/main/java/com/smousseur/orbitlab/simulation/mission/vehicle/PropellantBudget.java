@@ -5,6 +5,7 @@ import com.smousseur.orbitlab.simulation.mission.vehicle.model.LauncherModel;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.PayloadModel;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.stage.StageModel;
 import java.util.List;
+import java.util.Locale;
 import org.hipparchus.util.FastMath;
 import org.orekit.utils.Constants;
 
@@ -14,6 +15,11 @@ import org.orekit.utils.Constants;
  * (v1 — the gravity turn consumes them entirely anyway), only the top stage and the payload's AKM
  * are sized from the ΔV budget. A safety margin absorbs finite-burn and steering losses; loads are
  * clamped to capacity (an infeasibility diagnostic is a later increment).
+ *
+ * <p><b>One method refuses instead of clamping</b>, and it is the exception rather than the new
+ * rule: {@link #loadsForLunarOrbit} throws when the orbiter's tank cannot hold its insertion. A
+ * clamped apogee circularization still yields an orbit; a clamped lunar insertion does not capture
+ * at all (MIS-5 / L3, spec {@code docs/lunar-orbit/05-conception-L3.md} §4.2).
  */
 public final class PropellantBudget {
   private PropellantBudget() {}
@@ -42,11 +48,26 @@ public final class PropellantBudget {
 
   // Off-flight sizing, left Earth-fixed by PHY-4 / L1 (spec docs/multi-corps/03-conception-L1.md
   // §4.1): propellant budgeting runs before any propagation and never sees an arc, so the L1 seam
-  // does not run through it. It becomes contextual when a mission has to be sized around another
-  // body — no earlier than L6.
+  // does not run through it. That comment used to say the class would become contextual once a
+  // mission was sized around another body; MIS-5 / L3 met that case and it did not — the two below
+  // are still right for the ascent and the injection, and the Moon arrived as two more constants.
   private static final double MU = Constants.WGS84_EARTH_MU;
   private static final double RE = Constants.WGS84_EARTH_EQUATORIAL_RADIUS;
   private static final double G0 = Constants.G0_STANDARD_GRAVITY;
+
+  // The lunar pair, for the insertion burn alone (MIS-5 / L3, spec
+  // docs/lunar-orbit/05-conception-L3.md §3.1). The two above stay: the ascent and the translunar
+  // injection are geocentric and are four fifths of the mission's ΔV, so this class does not become
+  // contextual — it gains two constants beside the terrestrial ones.
+  //
+  // From Orekit's constants and not from GravitationalContext.moon(), for the reason this class
+  // already reads Constants.WGS84_EARTH_MU rather than earth().mu(): sizing runs off-flight and
+  // never sees an arc. MOON_EQUATORIAL_RADIUS is bit-identical to what the lunar context carries,
+  // and JPL_SSD_MOON_GM differs from the propagator's µ by 4e-7 relative — under a millimetre per
+  // second on the insertion ΔV, measured. A static final on moon() would also resolve frames at
+  // class-initialisation time, possibly before OrekitService.initialize().
+  private static final double MU_MOON = Constants.JPL_SSD_MOON_GM;
+  private static final double RM = Constants.MOON_EQUATORIAL_RADIUS;
 
   /** Fixed-point iterations of the top-stage sizing (monotone contraction, converges fast). */
   private static final int SIZING_ITERATIONS = 12;
@@ -65,6 +86,24 @@ public final class PropellantBudget {
    * @param massAtInjection the vehicle mass when the injection burn ignites (kg)
    */
   public record LunarLoads(double[] launcherLoads, double massAtInjection) {}
+
+  /**
+   * Launcher loads, the mass the translunar injection ignites at, and the payload's insertion load,
+   * for a mission ending in lunar orbit (MIS-5 / L3, spec {@code
+   * docs/lunar-orbit/05-conception-L3.md} §4).
+   *
+   * <p><b>Three components and not two.</b> The découpage asked for {@code (launcherLoads,
+   * insertionLoad)}, on {@link GeoLoads}'s model — but a GEO mission has no window to confirm,
+   * where {@code LunarLaunchWindowPlanner} needs the mass at injection to build its problem. This
+   * record is therefore {@link LunarLoads} plus the insertion load, not {@link GeoLoads} plus a
+   * mass.
+   *
+   * @param launcherLoads the propellant load per stage, same order as the launcher stages
+   * @param massAtInjection the vehicle mass when the translunar injection ignites (kg)
+   * @param insertionLoad the payload's propellant load for the lunar-orbit insertion (kg)
+   */
+  public record LunarOrbitLoads(
+      double[] launcherLoads, double massAtInjection, double insertionLoad) {}
 
   /**
    * Per-stage loads for an Earth-orbit mission launched due east — the site's free plane.
@@ -175,6 +214,79 @@ public final class PropellantBudget {
     // capacity and the ascent has already eaten into what the injection was meant to keep.
     double loaded = afterInjection + loads[loads.length - 1];
     return new LunarLoads(loads, FastMath.min(afterInjection + injectionPropellant, loaded));
+  }
+
+  /**
+   * Per-stage loads, mass at injection and payload insertion load for a mission ending in a
+   * circular lunar orbit (MIS-5 / L3, spec {@code docs/lunar-orbit/05-conception-L3.md} §4).
+   *
+   * <p><b>The insertion is sized first, and the launcher on the result</b> — {@link #loadsForGeo}'s
+   * order, and it is load-bearing: sizing the launcher on the bare dry mass would leave out the
+   * ~658 kg the orbiter carries for its own burn, a quarter of its mass, <b>without raising
+   * anything</b>. The loads would stay plausible and the vehicle would lift off short.
+   *
+   * <p>Once the insertion load is known the rest is exactly a lunar flight, so this delegates to
+   * {@link #loadsForLunar} with the payload as it will actually fly. One definition of the ascent
+   * and the injection, two profiles.
+   *
+   * <p><b>It refuses where its siblings clamp</b>, and the asymmetry is physical rather than a
+   * change of mind (spec §4.2): a clamped apogee circularization yields a low orbit — wrong,
+   * visible, but an orbit — whereas a clamped lunar insertion does not capture at all and the
+   * spacecraft sails past the Moon. There is no degraded mission to show, so there is nothing to
+   * clamp to. The refusal surfaces through the wizard's dry composition, which turns it into a
+   * worded refusal; this method is on no existing mission's path, and is never called from the
+   * optimizer, where an exception would read as "load infeasible".
+   *
+   * @param launcher the launcher model
+   * @param payload the payload model (provides the insertion propulsion and its capacity)
+   * @param payloadDryMass the dry mass entered at mission creation (kg)
+   * @param parkingAltitude the circular parking orbit the injection leaves from (m)
+   * @param lunarOrbitAltitude the circular lunar orbit to insert into (m above the lunar surface)
+   * @param launchLatitudeDeg the launch site latitude (degrees)
+   * @param launchAzimuth the launch azimuth (radians, clockwise from north)
+   * @return the launcher loads, the mass at injection and the insertion load
+   * @throws IllegalArgumentException when the payload carries no propulsion, or when its tank
+   *     cannot hold the insertion load
+   */
+  public static LunarOrbitLoads loadsForLunarOrbit(
+      LauncherModel launcher,
+      PayloadModel payload,
+      double payloadDryMass,
+      double parkingAltitude,
+      double lunarOrbitAltitude,
+      double launchLatitudeDeg,
+      double launchAzimuth) {
+    if (!payload.hasAkm()) {
+      throw new IllegalArgumentException(
+          "a lunar orbit insertion needs a propelled payload: " + payload.id());
+    }
+    double dvInsertion = lunarInsertionDeltaV(parkingAltitude, lunarOrbitAltitude);
+    double exhaustVelocity = payload.akmPropulsion().isp() * G0;
+    double insertionLoad =
+        payloadDryMass
+            * (FastMath.exp(dvInsertion / exhaustVelocity) - 1.0)
+            * (1.0 + SAFETY_MARGIN);
+    if (insertionLoad > payload.akmPropellantCapacity()) {
+      throw new IllegalArgumentException(
+          String.format(
+              Locale.ROOT,
+              "%s cannot hold the lunar insertion: %.0f kg needed for %.0f m/s at %.0f kg dry,"
+                  + " capacity %.0f kg",
+              payload.id(),
+              insertionLoad,
+              dvInsertion,
+              payloadDryMass,
+              payload.akmPropellantCapacity()));
+    }
+
+    LunarLoads lunar =
+        loadsForLunar(
+            launcher,
+            payload.toSpacecraft(payloadDryMass, insertionLoad),
+            parkingAltitude,
+            launchLatitudeDeg,
+            launchAzimuth);
+    return new LunarOrbitLoads(lunar.launcherLoads(), lunar.massAtInjection(), insertionLoad);
   }
 
   /**
@@ -339,6 +451,65 @@ public final class PropellantBudget {
   static double translunarInjectionDeltaV(double parkingAltitude) {
     // transferInjectionDeltaV works in altitudes, so the lunar distance is handed over as one.
     return transferInjectionDeltaV(parkingAltitude, LUNAR_DISTANCE_M - RE);
+  }
+
+  /**
+   * Hyperbolic excess velocity at the Moon, in patched conics (m/s) — the speed the vehicle keeps
+   * relative to the Moon once the Earth has finished pulling on it.
+   *
+   * <p><b>Derived from the very Hohmann {@link #translunarInjectionDeltaV} already computes</b>, so
+   * the two ends of the transfer are one model rather than two: the speed at the transfer apogee,
+   * subtracted from the Moon's circular speed about the Earth. At the apogee of a Hohmann the
+   * velocity is purely tangential and parallel to the Moon's, which is what makes the scalar
+   * difference legitimate here and nowhere else.
+   *
+   * <p><b>Measured against the four flown arrivals of L0</b> (spec {@code
+   * docs/lunar-orbit/02-baseline-L0.md} §3): this returns 828.7 m/s from a 400 km parking orbit,
+   * against 825.8 to 872.5 measured across a lunation. It sits 2.5 % under the measured mean — the
+   * geometry L0 flies is a 170° transfer with an aim offset, not a 180° Hohmann.
+   *
+   * @param parkingAltitude the circular parking orbit the injection leaves from (m)
+   * @return the arrival excess velocity in m/s
+   */
+  static double lunarArrivalExcessVelocity(double parkingAltitude) {
+    double rParking = RE + parkingAltitude;
+    double semiMajor = 0.5 * (rParking + LUNAR_DISTANCE_M);
+    double vApogee = FastMath.sqrt(MU * (2.0 / LUNAR_DISTANCE_M - 1.0 / semiMajor));
+    double vMoon = FastMath.sqrt(MU / LUNAR_DISTANCE_M);
+    return FastMath.abs(vMoon - vApogee);
+  }
+
+  /**
+   * Lunar-orbit insertion ΔV: the retrograde burn that turns the arrival hyperbola into a circular
+   * orbit at its perilune (m/s).
+   *
+   * <p>Closed form throughout — {@code √(v∞² + 2µ/r) − √(µ/r)} — and <b>not a constant</b>, for the
+   * reason {@link #translunarInjectionDeltaV} gives for itself, only stronger here: the lunar orbit
+   * altitude is a wizard field, and the ΔV <em>falls</em> with it. Freezing 100 km would
+   * overestimate the floor of the band and underestimate a 500 km orbit by 6 %.
+   *
+   * <p><b>Only {@code v∞} carries any error.</b> Fed L0's measured excess velocities this formula
+   * returns 819.8 / 828.1 / 835.9 m/s against 819.6 / 828.1 / 835.9 measured — the hyperbola step
+   * is exact. What the patched conic of {@link #lunarArrivalExcessVelocity} leaves is 820.8 m/s at
+   * 100 km against a measured 819.6 to 835.9: 1.8 % under the worst case, the same order as the 1.3
+   * % the translunar injection already assumes, and absorbed five times over by {@link
+   * #SAFETY_MARGIN}.
+   *
+   * <p><b>What is not in here is the finite-burn loss.</b> L0's measurement is impulsive, and MIS-4
+   * / L6 found that loss worth 1.7 to 5 times a sinc estimate — on a burn lasting 5 % of a
+   * revolution it is not nil. No second margin is invented for it: L4 measures it, and this class
+   * hard-codes no value it has not measured.
+   *
+   * @param parkingAltitude the circular parking orbit the injection leaves from (m)
+   * @param lunarOrbitAltitude the circular lunar orbit to insert into (m above the lunar surface)
+   * @return the insertion ΔV in m/s
+   */
+  static double lunarInsertionDeltaV(double parkingAltitude, double lunarOrbitAltitude) {
+    double excess = lunarArrivalExcessVelocity(parkingAltitude);
+    double r = RM + lunarOrbitAltitude;
+    double vHyperbolic = FastMath.sqrt(excess * excess + 2.0 * MU_MOON / r);
+    double vCircular = FastMath.sqrt(MU_MOON / r);
+    return vHyperbolic - vCircular;
   }
 
   /**
