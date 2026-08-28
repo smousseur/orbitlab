@@ -199,7 +199,7 @@ public final class StageChainRunner {
       // returning the state it ended on — one leg per gravitational context it passed through, and
       // exactly one when it declares no sphere-of-influence transition (PHY-4 / L4 §4).
       StageLegRunner legRunner =
-          new StageLegRunner(sampler, abortOnFailure, endDateResolver(isLastStage));
+          new StageLegRunner(sampler, abortOnFailure, endDateResolver(isLastStage, mission));
       StageLegRunner.StageFlight flight = legRunner.fly(stage, stageEntry, mission);
 
       SpacecraftState finalState = flight.lastLeg().exitState();
@@ -248,9 +248,10 @@ public final class StageChainRunner {
    * compare against.
    *
    * @param isLastStage whether the stage is the last of the chain
+   * @param mission the parent mission, which a stage's declarations are read against
    * @return the resolver for that stage
    */
-  private StageLegRunner.EndDateResolver endDateResolver(boolean isLastStage) {
+  private StageLegRunner.EndDateResolver endDateResolver(boolean isLastStage, Mission mission) {
     return (stage, stageEntry) -> {
       if (isLastStage && lastStageCoastSeconds > 0.0) {
         return new StageLegRunner.EndDate(
@@ -258,6 +259,21 @@ public final class StageChainRunner {
       }
       if (stage.getConfiguredEndDate() != null) {
         return new StageLegRunner.EndDate(stage.getConfiguredEndDate(), true);
+      }
+      // A stage that ends at a sphere-of-influence crossing must still say how far it goes if the
+      // crossing never comes (spec docs/lunar-orbit/03-conception-L1.md §4.2). Falling into the net
+      // below would bound a translunar coast at 7200 s against a boundary some 265 000 s away — and
+      // it would report itself complete, since the net carries isStageCutoff = false. Refused here
+      // and not in StageLegRunner because this is the only place the net is told apart from the
+      // trailing coast, which legitimately carries the same flag.
+      if (stage.soiCrossingEndsStage(mission)) {
+        throw new IllegalStateException(
+            "stage '"
+                + stage.getName()
+                + "' ends at a sphere-of-influence crossing but configured no end date; it would be"
+                + " bounded by the "
+                + FALLBACK_DURATION_SECONDS
+                + " s safety net and still report itself complete");
       }
       // Reachable: an event-terminated coast (CoastingStage with stopAtNode) configures no date.
       // Loud, because a stage bounded by the net rather than by its own cutoff is a fact worth

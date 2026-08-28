@@ -185,6 +185,29 @@ public abstract class MissionStage {
   }
 
   /**
+   * Whether a declared sphere-of-influence crossing <b>ends</b> this stage, rather than merely
+   * cutting it into legs. False by default, which is what leaves MIS-4 and every other profile
+   * unchanged by construction rather than by measurement (MIS-5 / L1, spec {@code
+   * docs/lunar-orbit/03-conception-L1.md} §2.1).
+   *
+   * <p>Fourth declaration of the shape {@link #maxStepSeconds}, {@link #gravitationalContext} and
+   * {@link #soiTransitions} already have: a phase is the unit that knows what it flies around, so it
+   * is the unit that says what a change of central body does to it.
+   *
+   * <p><b>A stage returning {@code true} owes two things, and both are refused rather than
+   * assumed:</b> at least one declared transition, without which the declaration can never be
+   * honoured ({@code StageLegRunner}); and an end date of its own, without which it would be bounded
+   * by {@code StageChainRunner}'s 7200 s safety net — three days short of a lunar sphere, and
+   * reporting itself complete ({@code StageChainRunner}, spec §4.2).
+   *
+   * @param mission the parent mission
+   * @return whether a declared crossing terminates this stage
+   */
+  public boolean soiCrossingEndsStage(Mission mission) {
+    return false;
+  }
+
+  /**
    * Returns the step at which the ephemeris samples this stage, in seconds. Deliberately shaped
    * like {@link #maxStepSeconds}: a phase is the unit that knows how fast its own dynamics are, so
    * it is the unit that decides how finely it must be recorded.

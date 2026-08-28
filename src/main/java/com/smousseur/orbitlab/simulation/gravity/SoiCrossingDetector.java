@@ -74,6 +74,29 @@ public class SoiCrossingDetector extends AbstractDetector<SoiCrossingDetector> {
   }
 
   /**
+   * The detector watching {@code soi}'s boundary from a trajectory flying in {@code from}, with the
+   * direction rule already applied: entering is decided at {@code R(t)}, leaving at {@code R(t)·(1 +
+   * EXIT_DEAD_BAND)}.
+   *
+   * <p><b>The rule lives here because two callers need it</b> (MIS-5 / L1, spec {@code
+   * docs/lunar-orbit/03-conception-L1.md} §5.4). It used to sit in {@code StageLegRunner}'s private
+   * arming loop, which a stage cannot reach; a translunar coast that stops at the sphere has to arm
+   * the very same detector on the optimize pass, and a rule written twice is a rule free to drift on
+   * the only thing that decides where the two passes stop.
+   *
+   * <p>No handler is attached: what to do about the crossing stays the caller's, as it is for the
+   * public constructor.
+   *
+   * @param soi the sphere whose boundary is watched
+   * @param from the gravitational context the trajectory is being flown in
+   * @return the detector for that direction of crossing
+   */
+  public static SoiCrossingDetector crossingFrom(SphereOfInfluence soi, GravitationalContext from) {
+    double scale = from.body() == soi.body() ? 1.0 + EXIT_DEAD_BAND : 1.0;
+    return new SoiCrossingDetector(soi, scale);
+  }
+
+  /**
    * Copy constructor used by {@link #create}.
    *
    * <p><b>Both fields must travel through here.</b> {@link AbstractDetector} rebuilds the detector

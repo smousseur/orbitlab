@@ -160,6 +160,7 @@ final class StageLegRunner {
 
     FlightContext context = stage.flightContext(stageEntry, mission);
     Set<SolarSystemBody> transitions = stage.soiTransitions(mission);
+    boolean endsAtCrossing = stage.soiCrossingEndsStage(mission);
 
     if (!transitions.isEmpty() && stage.isPropulsive()) {
       throw new IllegalStateException(
@@ -169,6 +170,16 @@ final class StageLegRunner {
               + transitions
               + "; a burn cannot straddle a boundary (spec docs/multi-corps/06-conception-L4.md"
               + " §3.3)");
+    }
+
+    // A declaration that can never be honoured: no detector is armed, the stage ends nowhere in
+    // particular, and nothing says so. Refused beside the propulsive contradiction because it is the
+    // same kind of mistake (spec docs/lunar-orbit/03-conception-L1.md §2.2).
+    if (endsAtCrossing && transitions.isEmpty()) {
+      throw new IllegalStateException(
+          "stage '"
+              + stage.getName()
+              + "' declares that a sphere-of-influence crossing ends it but watches no boundary");
     }
 
     // The seam L3 §1 observed nobody was checking: a stage declares a context, the state it is
@@ -239,6 +250,21 @@ final class StageLegRunner {
 
       legs.add(new Leg(context, legEntry, exit, crossing.body()));
 
+      // The crossing IS this stage's end (spec docs/lunar-orbit/03-conception-L1.md §3).
+      //
+      // No outgoing sample: there is no next leg to reopen the arc, and StageChainRunner's listener
+      // already writes the final state in this same context at this same instant, so keeping it
+      // would produce a point twice. "One instant written twice, once per frame" (L4 §5) still
+      // holds — the seam simply moves from between two legs to between two stages, and the next
+      // stage's own ArcTransition.convert writes the other side.
+      //
+      // The cutoff flag drops HERE and not for the stage as a whole: an early stop from any other
+      // cause (the re-entry guard is armed on every leg) leaves `crossing` null and returns above
+      // with the flag intact, so shortfallSeconds() still reports a real truncation.
+      if (endsAtCrossing) {
+        return new StageFlight(legs, endDate.date(), false, null);
+      }
+
       // The outgoing sample, in the frame that is being left. Without it the last recorded point of
       // this arc is the previous sampling step — a whole coast step short of the boundary, hundreds
       // of kilometres at transfer speed. The incoming sample is produced by the next leg's own
@@ -270,7 +296,9 @@ final class StageLegRunner {
    * <p><b>The direction decides the threshold.</b> Entering a sphere is decided at its radius;
    * leaving is decided at the radius plus the dead band, because a leg that has just switched
    * starts <em>on</em> the sphere and a detector re-armed on the same radius would see a sign
-   * decided by rounding (spec L4 §4.4).
+   * decided by rounding (spec L4 §4.4). That rule moved to {@link
+   * SoiCrossingDetector#crossingFrom} in MIS-5 / L1, so the coast that stops at the sphere on the
+   * optimize pass arms the same detector as this one rather than a copy of it.
    */
   private static void armBoundaries(
       NumericalPropagator propagator,
@@ -279,11 +307,8 @@ final class StageLegRunner {
       AtomicReference<Crossing> crossed) {
 
     for (SolarSystemBody boundaryBody : transitions) {
-      SphereOfInfluence soi = SphereOfInfluence.of(boundaryBody);
-      double scale =
-          context.body() == boundaryBody ? 1.0 + SoiCrossingDetector.EXIT_DEAD_BAND : 1.0;
       propagator.addEventDetector(
-          new SoiCrossingDetector(soi, scale)
+          SoiCrossingDetector.crossingFrom(SphereOfInfluence.of(boundaryBody), context)
               .withHandler(
                   (state, detector, increasing) -> {
                     crossed.set(new Crossing(boundaryBody, state.getDate()));
