@@ -33,9 +33,9 @@ import org.orekit.utils.TimeStampedPVCoordinates;
  * MIS-5 / L1 §6.2 — the two shapes of the translunar coast, on a synthetic approach.
  *
  * <p>Twin of {@link ParkingCoastStageTest}, and for the same reason: the stage walk and the
- * ephemeris pass fly the same phase through two different entry points, and nothing but a test keeps
- * them saying the same thing. There the risk was a coast collapsing to zero duration; here it is two
- * passes stopping at two different places on the same boundary.
+ * ephemeris pass fly the same phase through two different entry points, and nothing but a test
+ * keeps them saying the same thing. There the risk was a coast collapsing to zero duration; here it
+ * is two passes stopping at two different places on the same boundary.
  *
  * <p><b>The one-argument constructor is asserted, not assumed.</b> MIS-4's flight is expected to be
  * unchanged to the digit, and the mechanism that keeps it so is that its coast declares nothing and
@@ -138,8 +138,8 @@ class TranslunarCoastStageTest {
 
   /**
    * A state 100 000 km short of the Moon and closing on it, with the Moon's own velocity plus a
-   * relative approach — the shape {@code SoiRoundTripFlightTest} settled on, because a shot aimed at
-   * where the Moon is now misses the one that has moved during the crossing.
+   * relative approach — the shape {@code SoiRoundTripFlightTest} settled on, because a shot aimed
+   * at where the Moon is now misses the one that has moved during the crossing.
    */
   private static SpacecraftState closingOnTheMoon() {
     Frame gcrf = OrekitService.get().gcrf();

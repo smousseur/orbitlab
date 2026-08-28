@@ -26,23 +26,25 @@ import org.orekit.propagation.numerical.NumericalPropagator;
  * docs/lunar-orbit/03-conception-L1.md} §5.1):
  *
  * <ul>
- *   <li>{@link #TranslunarCoastStage(String)} — MIS-4's <em>terminal</em> coast. Open-ended, bounded
- *       by the mission's restitution horizon because it is the last stage of the chain, and cut into
- *       legs at the sphere: the flyby goes out, past the Moon, and back, producing {@code [EARTH,
- *       MOON, EARTH]}.
- *   <li>{@link #TranslunarCoastStage(String, double)} — MIS-5's <em>approach</em> coast. Bounded, and
- *       therefore one that ends at the sphere so that the stages after it can fly selenocentrically.
+ *   <li>{@link #TranslunarCoastStage(String)} — MIS-4's <em>terminal</em> coast. Open-ended,
+ *       bounded by the mission's restitution horizon because it is the last stage of the chain, and
+ *       cut into legs at the sphere: the flyby goes out, past the Moon, and back, producing {@code
+ *       [EARTH, MOON, EARTH]}.
+ *   <li>{@link #TranslunarCoastStage(String, double)} — MIS-5's <em>approach</em> coast. Bounded,
+ *       and therefore one that ends at the sphere so that the stages after it can fly
+ *       selenocentrically.
  * </ul>
  *
- * <p>There is no boolean at the call site: a bound is exactly what a stage ending at a boundary owes
- * (it has to say how far it goes if the boundary never comes), so carrying one <em>is</em> the
+ * <p>There is no boolean at the call site: a bound is exactly what a stage ending at a boundary
+ * owes (it has to say how far it goes if the boundary never comes), so carrying one <em>is</em> the
  * declaration.
  *
  * <p><b>The bounded form overrides {@code propagateStandalone}, and the guard on it is
- * structural.</b> Without the guard MIS-4's coast would fly three days on the optimize pass too, and
- * the damage would land nowhere near the trajectory: {@code MissionOptimizer} reads {@code
+ * structural.</b> Without the guard MIS-4's coast would fly three days on the optimize pass too,
+ * and the damage would land nowhere near the trajectory: {@code MissionOptimizer} reads {@code
  * getCurrentState()} after the stage walk to resolve the restitution horizon, so a coast that
- * advanced the walk by 3.07 d would shorten the recorded flight from 7 d to 3.95 d (spec §1.2 pt 2).
+ * advanced the walk by 3.07 d would shorten the recorded flight from 7 d to 3.95 d (spec §1.2 pt
+ * 2).
  *
  * <p><b>The state it returns is on the Earth side of the boundary, unconverted</b> — exactly what
  * {@code StageLegRunner} returns, whose last leg carries the outgoing context. The two passes
@@ -94,8 +96,9 @@ public class TranslunarCoastStage extends CoastingStage {
    * <p>The open-ended form keeps the inherited no-op, which is what leaves MIS-4's stage walk — and
    * therefore its restitution horizon — untouched.
    *
-   * <p>The bounded form flies to the sphere, at 8×8 gravity like the parking coast and the injection
-   * before it: the two passes have to fly the same field, or the two crossing dates cannot coincide.
+   * <p>The bounded form flies to the sphere, at 8×8 gravity like the parking coast and the
+   * injection before it: the two passes have to fly the same field, or the two crossing dates
+   * cannot coincide.
    */
   @Override
   public SpacecraftState propagateStandalone(SpacecraftState currentState, Mission mission) {

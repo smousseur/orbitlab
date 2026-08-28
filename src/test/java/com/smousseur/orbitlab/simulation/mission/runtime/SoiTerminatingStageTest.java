@@ -40,9 +40,10 @@ import org.orekit.utils.TimeStampedPVCoordinates;
  * MIS-5 / L1 §6.1 — the test of the lot, on a synthetic inbound crossing. A trajectory closing on
  * the Moon, flown by a coast that declares the lunar sphere <b>ends</b> it.
  *
- * <p><b>Its own fixture rather than cases added to {@link SoiRoundTripFlightTest}</b>, whose subject
- * is an Earth → Moon → Earth round trip and whose javadoc claims to be the test of PHY-4 / L4. This
- * one wants a single entry and never leaves; sharing a class would blur what each is pinning.
+ * <p><b>Its own fixture rather than cases added to {@link SoiRoundTripFlightTest}</b>, whose
+ * subject is an Earth → Moon → Earth round trip and whose javadoc claims to be the test of PHY-4 /
+ * L4. This one wants a single entry and never leaves; sharing a class would blur what each is
+ * pinning.
  *
  * <p><b>The case that carries the lot is {@link #theFlagDropsOnlyOnTheBoundary()}.</b> Clearing
  * {@code endDateIsStageCutoff} is what lets a coast stop three days short of its bound and still be
@@ -111,8 +112,8 @@ class SoiTerminatingStageTest {
   /**
    * A state {@code offsetFromMoon} short of the Moon, closing on it — the inbound half of {@link
    * SoiRoundTripFlightTest}'s fixture, and aimed the same way: the velocity is the Moon's plus a
-   * relative approach, because the Moon moves far enough during the crossing that a shot at where it
-   * is now simply misses.
+   * relative approach, because the Moon moves far enough during the crossing that a shot at where
+   * it is now simply misses.
    */
   private static SpacecraftState closingOnTheMoon() {
     Frame gcrf = OrekitService.get().gcrf();
@@ -141,7 +142,8 @@ class SoiTerminatingStageTest {
         .fly(stage, start, mission);
   }
 
-  private static MissionEphemeris flyThroughTheGenerator(MissionStage stage, SpacecraftState start) {
+  private static MissionEphemeris flyThroughTheGenerator(
+      MissionStage stage, SpacecraftState start) {
     Mission mission = new BallisticMission(start, List.of(stage));
     return new MissionEphemerisGenerator().generate(mission, start, 0.0);
   }
@@ -164,9 +166,7 @@ class SoiTerminatingStageTest {
 
     SpacecraftState exit = flight.lastLeg().exitState();
     Vector3D toMoon =
-        OrekitService.get()
-            .body(SolarSystemBody.MOON)
-            .getPosition(exit.getDate(), exit.getFrame());
+        OrekitService.get().body(SolarSystemBody.MOON).getPosition(exit.getDate(), exit.getFrame());
     double distance = exit.getPosition().subtract(toMoon).getNorm();
     double radius = SphereOfInfluence.of(SolarSystemBody.MOON).radiusAt(exit.getDate());
     logger.info(
@@ -174,7 +174,8 @@ class SoiTerminatingStageTest {
         Math.round(exit.getDate().durationFrom(start.getDate()) / 3600.0),
         String.format(java.util.Locale.ROOT, "%.1f", distance - radius));
 
-    // Entering is decided at R(t) exactly — the dead band applies to leaving only — so the stop sits
+    // Entering is decided at R(t) exactly — the dead band applies to leaving only — so the stop
+    // sits
     // on the sphere to the root finder's precision, which is a metre at transfer speed.
     assertEquals(radius, distance, 1_000.0, "the stage must stop ON the sphere");
     assertNotEquals(
@@ -292,8 +293,7 @@ class SoiTerminatingStageTest {
         assertThrows(
             IllegalStateException.class,
             () ->
-                StageChainRunner.sampling(null, 0.0, null)
-                    .run(List.of(unbounded), start, mission));
+                StageChainRunner.sampling(null, 0.0, null).run(List.of(unbounded), start, mission));
 
     assertTrue(thrown.getMessage().contains("unbounded approach"), thrown.getMessage());
     assertTrue(thrown.getMessage().contains("no end date"), thrown.getMessage());

@@ -3,8 +3,8 @@ package com.smousseur.orbitlab.simulation.mission.stage;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionStage;
 import org.hipparchus.ode.events.Action;
-import org.orekit.propagation.events.DateDetector;
 import org.orekit.propagation.SpacecraftState;
+import org.orekit.propagation.events.DateDetector;
 import org.orekit.propagation.events.NodeDetector;
 import org.orekit.propagation.numerical.NumericalPropagator;
 import org.orekit.time.AbsoluteDate;
@@ -49,8 +49,8 @@ public class CoastingStage extends MissionStage {
    * docs/lunar-orbit/03-conception-L1.md} §5.3): {@link #configure} anchors it on the state the
    * chain runner has just published, and a subclass overriding {@code propagateStandalone} anchors
    * it on the state the stage walk hands it. The two are the same state, so the two passes stop on
-   * the same date — a subclass writing {@code shiftedBy(maxTime)} itself would put that agreement at
-   * the mercy of two copies of one expression. Same reasoning as {@code ParkingCoastStage}'s
+   * the same date — a subclass writing {@code shiftedBy(maxTime)} itself would put that agreement
+   * at the mercy of two copies of one expression. Same reasoning as {@code ParkingCoastStage}'s
    * absolute {@code ignitionDate}.
    *
    * @param entry the state this coast starts from

@@ -44,20 +44,20 @@ import org.orekit.time.TimeScalesFactory;
  * <p><b>It starts in parking orbit rather than on the pad</b>, and that is a decision (spec {@code
  * docs/lunar-orbit/03-conception-L1.md} §6.3). No mission declares the terminating predicate before
  * L5, and {@code LunarFlybyMission.buildStages} is private with its stages frozen by {@code
- * List.copyOf}, so a ground launch would mean a permanent copy of the ascent chain in a test — for a
- * chain L5 will not build that way. From parking the copy is three stages, the aim and the sphere
+ * List.copyOf}, so a ground launch would mean a permanent copy of the ascent chain in a test — for
+ * a chain L5 will not build that way. From parking the copy is three stages, the aim and the sphere
  * are real, and the price falls from a CMA-ES ascent to a handful of seconds.
  *
  * <p><b>The parking geometry is {@link TranslunarInjectionPlan#parkingState}</b>, production and
- * public, kept precisely as a reference (MIS-4 / L6 §1.5). It is 185 km / 30° and not the
- * 400 km / 28.562° MIS-5 will fly: reproducing the latter would mean copying {@code
- * transferPlaneNormal}'s trigonometry, which is package-private, into a test — the very duplication
- * this file exists to avoid. The consequence is that the crossing date belongs to MIS-4 / L0's
- * 3.08–3.16 d band rather than to MIS-5 / L0's 3.071–3.148 d, and both are logged against.
+ * public, kept precisely as a reference (MIS-4 / L6 §1.5). It is 185 km / 30° and not the 400 km /
+ * 28.562° MIS-5 will fly: reproducing the latter would mean copying {@code transferPlaneNormal}'s
+ * trigonometry, which is package-private, into a test — the very duplication this file exists to
+ * avoid. The consequence is that the crossing date belongs to MIS-4 / L0's 3.08–3.16 d band rather
+ * than to MIS-5 / L0's 3.071–3.148 d, and both are logged against.
  *
  * <p><b>What is asserted is the boundary, not the date.</b> The band below is wide enough to be
- * independent of the parking configuration and narrow enough to exclude the two ways the stage could
- * stop for the wrong reason — the 7200 s safety net, and its own bound.
+ * independent of the parking configuration and narrow enough to exclude the two ways the stage
+ * could stop for the wrong reason — the 7200 s safety net, and its own bound.
  *
  * <p><b>Contrainte de méthode</b> (découpage §3): this flight is the user's to run.
  */

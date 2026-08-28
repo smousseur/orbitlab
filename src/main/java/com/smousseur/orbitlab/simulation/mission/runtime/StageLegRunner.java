@@ -173,7 +173,8 @@ final class StageLegRunner {
     }
 
     // A declaration that can never be honoured: no detector is armed, the stage ends nowhere in
-    // particular, and nothing says so. Refused beside the propulsive contradiction because it is the
+    // particular, and nothing says so. Refused beside the propulsive contradiction because it is
+    // the
     // same kind of mistake (spec docs/lunar-orbit/03-conception-L1.md §2.2).
     if (endsAtCrossing && transitions.isEmpty()) {
       throw new IllegalStateException(
@@ -296,9 +297,9 @@ final class StageLegRunner {
    * <p><b>The direction decides the threshold.</b> Entering a sphere is decided at its radius;
    * leaving is decided at the radius plus the dead band, because a leg that has just switched
    * starts <em>on</em> the sphere and a detector re-armed on the same radius would see a sign
-   * decided by rounding (spec L4 §4.4). That rule moved to {@link
-   * SoiCrossingDetector#crossingFrom} in MIS-5 / L1, so the coast that stops at the sphere on the
-   * optimize pass arms the same detector as this one rather than a copy of it.
+   * decided by rounding (spec L4 §4.4). That rule moved to {@link SoiCrossingDetector#crossingFrom}
+   * in MIS-5 / L1, so the coast that stops at the sphere on the optimize pass arms the same
+   * detector as this one rather than a copy of it.
    */
   private static void armBoundaries(
       NumericalPropagator propagator,

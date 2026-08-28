@@ -191,14 +191,14 @@ public abstract class MissionStage {
    * docs/lunar-orbit/03-conception-L1.md} §2.1).
    *
    * <p>Fourth declaration of the shape {@link #maxStepSeconds}, {@link #gravitationalContext} and
-   * {@link #soiTransitions} already have: a phase is the unit that knows what it flies around, so it
-   * is the unit that says what a change of central body does to it.
+   * {@link #soiTransitions} already have: a phase is the unit that knows what it flies around, so
+   * it is the unit that says what a change of central body does to it.
    *
    * <p><b>A stage returning {@code true} owes two things, and both are refused rather than
    * assumed:</b> at least one declared transition, without which the declaration can never be
-   * honoured ({@code StageLegRunner}); and an end date of its own, without which it would be bounded
-   * by {@code StageChainRunner}'s 7200 s safety net — three days short of a lunar sphere, and
-   * reporting itself complete ({@code StageChainRunner}, spec §4.2).
+   * honoured ({@code StageLegRunner}); and an end date of its own, without which it would be
+   * bounded by {@code StageChainRunner}'s 7200 s safety net — three days short of a lunar sphere,
+   * and reporting itself complete ({@code StageChainRunner}, spec §4.2).
    *
    * @param mission the parent mission
    * @return whether a declared crossing terminates this stage
