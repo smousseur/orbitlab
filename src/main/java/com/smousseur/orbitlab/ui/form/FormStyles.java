@@ -26,7 +26,7 @@ public final class FormStyles {
   /** Inner content width: WINDOW_WIDTH (880) - 2 * content horizontal inset (32). */
   public static final float CONTENT_WIDTH = 816f;
 
-  /** Inner content height: WINDOW_HEIGHT (660) - HEADER_HEIGHT (120) - FOOTER_HEIGHT (72). */
+  /** Inner content height: WINDOW_HEIGHT (680) - HEADER_HEIGHT (120) - FOOTER_HEIGHT (92). */
   public static final float CONTENT_HEIGHT = 468f;
 
   /**

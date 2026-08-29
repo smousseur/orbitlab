@@ -10,7 +10,6 @@ import com.simsilica.lemur.component.QuadBackgroundComponent;
 import com.simsilica.lemur.component.TbtQuadBackgroundComponent;
 import com.simsilica.lemur.core.GuiComponent;
 import com.smousseur.orbitlab.app.ApplicationContext;
-import com.smousseur.orbitlab.simulation.mission.MissionType;
 import com.smousseur.orbitlab.simulation.mission.OptimizationType;
 import com.smousseur.orbitlab.simulation.mission.context.MissionContext;
 import com.smousseur.orbitlab.simulation.mission.operation.MissionComposer;
@@ -324,6 +323,10 @@ public class MissionWizardWidget implements AutoCloseable {
    * <p>Reopening reads the profile the prefill derived from the spec — no spec component carries it
    * (spec {@code docs/earth-orbit/02-wizard-orbites-terrestres.md} §2.1) — and falls back on the
    * type alone if the values predate P2 or name a profile this build does not know.
+   *
+   * <p>That fallback decides which tab the step opens on since MIS-5 / L6, which is why it now goes
+   * through {@link MissionProfile#defaultFor} rather than through a ternary that answered LEO for
+   * every type but GEO.
    */
   private static MissionProfile initialProfile(
       MissionContext missionContext, Map<String, Object> initialValues) {
@@ -337,9 +340,7 @@ public class MissionWizardWidget implements AutoCloseable {
         }
       }
     }
-    return missionContext.getSelectedMissionType() == MissionType.GEO
-        ? MissionProfile.GEO
-        : MissionProfile.LEO;
+    return MissionProfile.defaultFor(missionContext.getSelectedMissionType());
   }
 
   public void setOnCancel(Runnable action) {

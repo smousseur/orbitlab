@@ -235,9 +235,9 @@ class MissionProfileTest {
    * inventing one.
    *
    * <p>Answering {@code LUNAR} would light the flyby card for an orbit insertion — the exact
-   * fallback whose removal the switch documents — and adding a seventh constant would overflow the
-   * fixed wizard window until L6 turns the grid into tabs. The refusal names the lot that fills it,
-   * as MIS-5 / L3 wrote two others.
+   * fallback whose removal the switch documents. L6 has since made the room for a seventh card;
+   * what is still missing is the card and its parameter field key. The refusal names the lot that
+   * fills it, as MIS-5 / L3 wrote two others.
    */
   @Test
   void lunarOrbitSpecHasNoCardYetAndSaysSo() {
@@ -257,6 +257,36 @@ class MissionProfileTest {
 
     UnsupportedOperationException refused =
         assertThrows(UnsupportedOperationException.class, () -> MissionProfile.of(lunarOrbit));
+    assertTrue(refused.getMessage().contains("L7"), refused.getMessage());
+  }
+
+  /**
+   * MIS-5 / L6 §6 — the card a blank wizard opens on, which since L6 also decides which tab opens.
+   *
+   * <p>The ternary this replaced answered {@link MissionProfile#LEO} for a lunar type, so reopening
+   * the wizard after a lunar mission would have shown the Earth tab.
+   */
+  @Test
+  void defaultForAnswersACardOfTheRightDomain() {
+    assertEquals(MissionProfile.LEO, MissionProfile.defaultFor(MissionType.LEO));
+    assertEquals(MissionProfile.GEO, MissionProfile.defaultFor(MissionType.GEO));
+    assertEquals(MissionProfile.LUNAR, MissionProfile.defaultFor(MissionType.LUNAR_FLYBY));
+    for (MissionType type : MissionType.values()) {
+      if (type == MissionType.LUNAR_ORBIT) {
+        continue;
+      }
+      assertEquals(
+          type, MissionProfile.defaultFor(type).missionType(), "defaultFor changed the type");
+    }
+  }
+
+  /** The same refusal as {@code of}, on the other way into the step. */
+  @Test
+  void defaultForRefusesTheLunarOrbitTypeByName() {
+    UnsupportedOperationException refused =
+        assertThrows(
+            UnsupportedOperationException.class,
+            () -> MissionProfile.defaultFor(MissionType.LUNAR_ORBIT));
     assertTrue(refused.getMessage().contains("L7"), refused.getMessage());
   }
 }

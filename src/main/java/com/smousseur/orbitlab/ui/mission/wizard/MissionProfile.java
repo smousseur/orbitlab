@@ -34,6 +34,7 @@ public enum MissionProfile {
    */
   LEO(
       MissionType.LEO,
+      MissionDomain.EARTH,
       "LEO",
       "Low Earth Orbit",
       "160 - 2 000 km",
@@ -47,6 +48,7 @@ public enum MissionProfile {
   /** A low orbit crossing both poles, which is a {@link #LEO} whose inclination is asked for. */
   POLAR(
       MissionType.LEO,
+      MissionDomain.EARTH,
       "POLAR",
       "Polar Orbit",
       "i = 90 deg",
@@ -64,6 +66,7 @@ public enum MissionProfile {
    */
   SSO(
       MissionType.LEO,
+      MissionDomain.EARTH,
       "SSO",
       "Sun-Synchronous",
       "600 - 800 km",
@@ -81,6 +84,7 @@ public enum MissionProfile {
    */
   MEO(
       MissionType.LEO,
+      MissionDomain.EARTH,
       "MEO",
       "Medium Earth Orbit",
       "20 200 km",
@@ -94,6 +98,7 @@ public enum MissionProfile {
   /** The geostationary belt, and the only profile backed by {@link MissionType#GEO}. */
   GEO(
       MissionType.GEO,
+      MissionDomain.EARTH,
       "GEO",
       "Geostationary Orbit",
       "35 786 km",
@@ -115,6 +120,7 @@ public enum MissionProfile {
    */
   LUNAR(
       MissionType.LUNAR_FLYBY,
+      MissionDomain.LUNAR,
       "LUNAR",
       "Lunar Flyby",
       "perilune 100 km",
@@ -196,6 +202,7 @@ public enum MissionProfile {
   private static final double SSO_TOLERANCE_DEG = 0.05;
 
   private final MissionType missionType;
+  private final MissionDomain domain;
   private final String title;
   private final String subtitle;
   private final String value;
@@ -208,6 +215,7 @@ public enum MissionProfile {
 
   MissionProfile(
       MissionType missionType,
+      MissionDomain domain,
       String title,
       String subtitle,
       String value,
@@ -219,6 +227,7 @@ public enum MissionProfile {
       Availability availability) {
     this.availability = availability;
     this.missionType = missionType;
+    this.domain = domain;
     this.title = title;
     this.subtitle = subtitle;
     this.value = value;
@@ -234,6 +243,19 @@ public enum MissionProfile {
    */
   public MissionType missionType() {
     return missionType;
+  }
+
+  /**
+   * Where this profile flies, which is the tab of the first step that holds its card.
+   *
+   * <p>A constructor argument and not a derivation from {@link #missionType()}: a card that omitted
+   * it would not compile, which is how {@code L7} is prevented from adding a seventh card without
+   * saying which tab it belongs to (MIS-5 / L6 §3).
+   *
+   * @return the domain whose tab shows this card
+   */
+  public MissionDomain domain() {
+    return domain;
   }
 
   /**
@@ -348,16 +370,42 @@ public enum MissionProfile {
     return switch (spec) {
       case MissionSpec.Geo ignored -> GEO;
       case MissionSpec.Lunar ignored -> LUNAR;
-      // No card exists yet, and inventing one here would be worse than refusing: StepMissionType
-      // lays out MissionProfile.values() three per row in a fixed 880 x 660 window, where a
-      // seventh card overflows by more than a hundred pixels until L6 turns the grid into tabs.
-      // Answering LUNAR instead would light the flyby card for an orbit insertion — the exact
-      // fallback whose removal this switch documents. Unreachable until L7 adds the card, since
-      // nothing creates a lunar orbit mission before it.
+      // No card exists yet, and inventing one here would be worse than refusing: answering LUNAR
+      // would light the flyby card for an orbit insertion — the exact fallback whose removal this
+      // switch documents. The room L6 was waiting for now exists, the lunar tab holding one card
+      // and having space for a second; what is still missing is the card itself and the parameter
+      // field key that goes with it. Unreachable until L7 adds them, since nothing creates a lunar
+      // orbit mission before it.
       case MissionSpec.LunarOrbit ignored ->
           throw new UnsupportedOperationException(
               "LUNAR_ORBIT has no wizard card yet: MissionProfile.LUNAR_ORBIT lands in MIS-5 / L7");
       case MissionSpec.EarthOrbit earthOrbit -> ofEarthOrbit(earthOrbit);
+    };
+  }
+
+  /**
+   * The card a wizard opened without prefilled values starts on, given the type the context last
+   * selected.
+   *
+   * <p>Replaces a {@code == GEO ? GEO : LEO} ternary that answered {@link #LEO} for a lunar type —
+   * harmless while the cards were one grid, and no longer so now that the answer also decides which
+   * tab opens (MIS-5 / L6 §6). Four profiles share {@link MissionType#LEO}, and the one this
+   * returns for it is the historical default rather than a preset.
+   *
+   * @param type the mission type the context currently selects
+   * @return the profile whose card the wizard should open on
+   */
+  public static MissionProfile defaultFor(MissionType type) {
+    return switch (type) {
+      case LEO -> LEO;
+      case GEO -> GEO;
+      case LUNAR_FLYBY -> LUNAR;
+      // Unreachable for the same reason as the LunarOrbit branch of of(MissionSpec): the two
+      // callers of MissionContext.setSelectedMissionType read a spec or a card, and neither can
+      // carry LUNAR_ORBIT while MissionFactory and ScenarioMapper both refuse to build one.
+      case LUNAR_ORBIT ->
+          throw new UnsupportedOperationException(
+              "LUNAR_ORBIT has no wizard card yet: MissionProfile.LUNAR_ORBIT lands in MIS-5 / L7");
     };
   }
 

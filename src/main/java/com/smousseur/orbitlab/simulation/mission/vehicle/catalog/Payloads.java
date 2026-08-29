@@ -158,8 +158,18 @@ public final class Payloads {
    * simulation.mission.vehicle.model}, which is a cycle. The switch being exhaustive over the
    * enumeration, the compiler points at this site the day another type appears — which is how MIS-5
    * / L3 found it.
+   *
+   * <p><b>Public for one reader, and it is a test.</b> The wizard's {@code MissionDomain} states
+   * the same taxonomy a second time, so that {@code MissionProfile} keeps out of the catalog and
+   * its static initialisation; {@code MissionDomainTest} pins the two together against this method,
+   * and a test cannot call what it cannot see. Production code outside this class must not read it
+   * — the question it answers about a <em>card</em> is {@code MissionProfile.domain()} (MIS-5 / L6
+   * §3).
+   *
+   * @param type the mission type to classify
+   * @return where a mission of this type flies
    */
-  private static PayloadDomain domainOf(MissionType type) {
+  public static PayloadDomain domainOf(MissionType type) {
     return switch (type) {
       case LEO, GEO -> PayloadDomain.EARTH;
       case LUNAR_FLYBY, LUNAR_ORBIT -> PayloadDomain.LUNAR;
