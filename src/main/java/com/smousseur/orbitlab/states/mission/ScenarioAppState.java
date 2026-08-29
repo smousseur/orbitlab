@@ -274,6 +274,8 @@ public final class ScenarioAppState extends BaseAppState {
    */
   private void openScenario(String name) {
     ScenarioLoadReport report;
+    EventBus eventBus = context.eventBus();
+    eventBus.publishUiNavigation(new EventBus.UiNavigationEvent.OpenMissionManagement());
     try {
       report = ScenarioSession.restore(store.read(name));
     } catch (RuntimeException e) {
@@ -287,7 +289,7 @@ public final class ScenarioAppState extends BaseAppState {
     // Through the event bus rather than by hand: the orchestrator owns the renderers, and it is the
     // only place that can dispose one and drop a camera that was following it.
     for (MissionEntry entry : List.copyOf(missionContext.getMissions())) {
-      context.eventBus().publishMissionAction(entry.id(), EventBus.MissionAction.DELETE);
+      eventBus.publishMissionAction(entry.id(), EventBus.MissionAction.DELETE);
     }
     missionContext.setSelectedMissionId(null);
     missionContext.setTelemetryFocusMissionId(null);
@@ -302,7 +304,7 @@ public final class ScenarioAppState extends BaseAppState {
     // against the context, and a mission not yet in it would simply be dropped.
     for (MissionEntry entry : report.missions()) {
       if (entry.getPendingSolutions().isPresent()) {
-        context.eventBus().publishMissionAction(entry.id(), EventBus.MissionAction.OPTIMIZE);
+        eventBus.publishMissionAction(entry.id(), EventBus.MissionAction.OPTIMIZE);
       }
     }
 
