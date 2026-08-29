@@ -58,7 +58,8 @@ class MoonEclipseOrekitAgreementTest {
     double illumination = illuminationAt(moonPosition, sunPosition);
 
     assertTrue(g < 0.0, "EclipseDetector must report the Moon as shadowed, g=" + g);
-    assertTrue(illumination < 1.0, "illuminationFraction must show some occlusion: " + illumination);
+    assertTrue(
+        illumination < 1.0, "illuminationFraction must show some occlusion: " + illumination);
   }
 
   @Test

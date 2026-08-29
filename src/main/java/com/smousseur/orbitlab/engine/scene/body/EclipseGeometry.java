@@ -57,8 +57,8 @@ public final class EclipseGeometry {
 
   /**
    * The fraction of the Sun's disk that stays visible past an occluder, from the area of
-   * intersection of two circles — the occluder's apparent disk and the Sun's apparent disk,
-   * {@code separationRadians} apart. {@code 1.0} is fully lit, {@code 0.0} is totality; anything in
+   * intersection of two circles — the occluder's apparent disk and the Sun's apparent disk, {@code
+   * separationRadians} apart. {@code 1.0} is fully lit, {@code 0.0} is totality; anything in
    * between is the penumbra.
    *
    * @param separationRadians angular separation between the occluder and the Sun, in radians
@@ -89,8 +89,7 @@ public final class EclipseGeometry {
     double part3 =
         0.5
             * FastMath.sqrt(
-                FastMath.max(
-                    0.0, (-d + rs + ro) * (d + rs - ro) * (d - rs + ro) * (d + rs + ro)));
+                FastMath.max(0.0, (-d + rs + ro) * (d + rs - ro) * (d - rs + ro) * (d + rs + ro)));
     double overlapArea = part1 + part2 - part3;
     double occludedFraction = overlapArea / (FastMath.PI * rs2);
 

@@ -65,7 +65,9 @@ class EclipseGeometryTest {
     double occluderRadius = 0.05;
     double separation = sunRadius + occluderRadius + 0.1; // clear of the sum of the two radii
     assertEquals(
-        1.0, EclipseGeometry.illuminationFraction(separation, occluderRadius, sunRadius), TOLERANCE);
+        1.0,
+        EclipseGeometry.illuminationFraction(separation, occluderRadius, sunRadius),
+        TOLERANCE);
   }
 
   @Test
@@ -82,7 +84,8 @@ class EclipseGeometryTest {
     // Occluder bigger than the Sun, centred on it: full totality.
     double sunRadius = 0.1;
     double occluderRadius = 0.2;
-    assertEquals(0.0, EclipseGeometry.illuminationFraction(0.0, occluderRadius, sunRadius), TOLERANCE);
+    assertEquals(
+        0.0, EclipseGeometry.illuminationFraction(0.0, occluderRadius, sunRadius), TOLERANCE);
   }
 
   @Test
@@ -99,13 +102,13 @@ class EclipseGeometryTest {
   @Test
   void illuminationAtPartialOverlapMatchesTheHandComputedLensArea() {
     // Equal radii, separation equal to that radius: a classic circle-circle intersection case.
-    // overlapArea = 2 * (pi/3) - 0.5 * sqrt(3); sunArea = pi; illumination = 1 - overlapArea/sunArea.
+    // overlapArea = 2 * (pi/3) - 0.5 * sqrt(3); sunArea = pi; illumination = 1 -
+    // overlapArea/sunArea.
     double radius = 1.0;
     double separation = 1.0;
     double overlapArea = 2.0 * (Math.PI / 3.0) - 0.5 * Math.sqrt(3.0);
     double expected = 1.0 - overlapArea / Math.PI;
-    assertEquals(
-        expected, EclipseGeometry.illuminationFraction(separation, radius, radius), 1e-6);
+    assertEquals(expected, EclipseGeometry.illuminationFraction(separation, radius, radius), 1e-6);
   }
 
   @Test

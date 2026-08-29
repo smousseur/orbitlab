@@ -234,11 +234,11 @@ public final class PlanetPoseAppState extends BaseAppState {
    * nearFrame} that frame — zero when a planet is focused, but the negated spacecraft position when
    * a mission is followed. Computing the Earth-Moon delta directly (as done here) is exact for the
    * first case and carries a small, undocumented-until-now error in the second — a spacecraft near
-   * either body offsets its assumed centre by its own orbital radius, a fraction of a degree against
-   * the ~384 000 km Earth-Moon baseline. Reading {@code nearFrame}'s actual offset would fix it, but
-   * that is a cross-state read {@code FloatingOriginAppState}'s own docstring warns is order-
-   * sensitive (the RND-1 lesson); not worth it for an effect that only matters while the eclipsed
-   * body happens to also be the backdrop of an active lunar mission.
+   * either body offsets its assumed centre by its own orbital radius, a fraction of a degree
+   * against the ~384 000 km Earth-Moon baseline. Reading {@code nearFrame}'s actual offset would
+   * fix it, but that is a cross-state read {@code FloatingOriginAppState}'s own docstring warns is
+   * order- sensitive (the RND-1 lesson); not worth it for an effect that only matters while the
+   * eclipsed body happens to also be the backdrop of an active lunar mission.
    *
    * @param presenter the eclipsed body's presenter, whose view receives the occluder
    * @param occluderBody the body doing the occulting
@@ -248,13 +248,17 @@ public final class PlanetPoseAppState extends BaseAppState {
    *     needs
    */
   private void pushEclipseOccluder(
-      PlanetPresenter presenter, SolarSystemBody occluderBody, Vector3D occluderHelio, Vector3D targetHelio) {
+      PlanetPresenter presenter,
+      SolarSystemBody occluderBody,
+      Vector3D occluderHelio,
+      Vector3D targetHelio) {
     RenderContext ctx = RenderContext.planet(presenter.body());
 
     Vector3D occluderPositionMeters = occluderHelio.subtract(targetHelio);
     Vector3f occluderPositionRender =
         JmeVectorAdapter.toJmeBodyRelativePosition(occluderPositionMeters, ctx);
-    float occluderRadiusRender = (float) (PlanetRadius.radiusFor(occluderBody) * ctx.unitsPerMeter());
+    float occluderRadiusRender =
+        (float) (PlanetRadius.radiusFor(occluderBody) * ctx.unitsPerMeter());
 
     double sunDistanceMeters = targetHelio.getNorm();
     Vector3D sunDirectionIcrf = targetHelio.negate().normalize();

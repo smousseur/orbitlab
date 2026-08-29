@@ -308,9 +308,9 @@ public final class MissionRenderer {
    * looking at. The occluder's centre is {@code point.arc()}'s origin, re-expressed in {@code
    * renderBody}'s frame the same way {@code renderPositionOf} already re-expresses the spacecraft
    * itself, so the two agree even when the arc being flown and the body being looked at differ (a
-   * planet-mode view of a spacecraft near the Moon). When they agree — every trajectory before
-   * L6, and every spacecraft-mode view — {@code TrajectoryArc.convertPosition} short-circuits and
-   * this is exactly {@code -point.position()}.
+   * planet-mode view of a spacecraft near the Moon). When they agree — every trajectory before L6,
+   * and every spacecraft-mode view — {@code TrajectoryArc.convertPosition} short-circuits and this
+   * is exactly {@code -point.position()}.
    *
    * <p>The Sun's direction and apparent radius are read off the occulting body's own heliocentric
    * position rather than the spacecraft's: at planetary distances from the Sun the two are
@@ -319,14 +319,18 @@ public final class MissionRenderer {
    * from {@link com.smousseur.orbitlab.simulation.ephemeris.service.EphemerisService}.
    */
   private void pushEclipseOccluder(
-      MissionEphemerisPoint point, SolarSystemBody renderBody, Vector3D position, RenderContext ctx) {
+      MissionEphemerisPoint point,
+      SolarSystemBody renderBody,
+      Vector3D position,
+      RenderContext ctx) {
     SolarSystemBody occluderBody = point.arc().body();
     Vector3D occluderCentreInRenderFrame =
         point.arc().convertPosition(Vector3D.ZERO, point.time(), TrajectoryArc.forBody(renderBody));
     Vector3D occluderPositionMeters = occluderCentreInRenderFrame.subtract(position);
     Vector3f occluderPositionRender =
         JmeVectorAdapter.toJmeBodyRelativePosition(occluderPositionMeters, ctx);
-    float occluderRadiusRender = (float) (PlanetRadius.radiusFor(occluderBody) * ctx.unitsPerMeter());
+    float occluderRadiusRender =
+        (float) (PlanetRadius.radiusFor(occluderBody) * ctx.unitsPerMeter());
 
     EphemerisServiceRegistry.get()
         .orElseThrow(() -> new OrbitlabException("Cannot get EphemerisService"))
@@ -338,9 +342,13 @@ public final class MissionRenderer {
               Vector3D sunDirectionIcrf = occluderHelioPosition.negate().normalize();
               Vector3f sunDirectionRender =
                   JmeVectorAdapter.toVector3f(ctx.axisConvention().icrfToJme(sunDirectionIcrf));
-              float sunApparentRadius = (float) EclipseGeometry.sunApparentRadius(sunDistanceMeters);
+              float sunApparentRadius =
+                  (float) EclipseGeometry.sunApparentRadius(sunDistanceMeters);
               view.setOccluder(
-                  occluderPositionRender, occluderRadiusRender, sunDirectionRender, sunApparentRadius);
+                  occluderPositionRender,
+                  occluderRadiusRender,
+                  sunDirectionRender,
+                  sunApparentRadius);
             });
   }
 

@@ -21,7 +21,8 @@ import org.orekit.utils.PVCoordinates;
 /**
  * Closes L1 of {@code docs/eclipses/01-decoupage.md}: {@link EclipseGeometry#illuminationFraction}
  * must agree with Orekit's own {@link EclipseDetector} — an independent oracle already shipped with
- * the dependency and unused elsewhere in this codebase — on whether a point is in the Earth's shadow.
+ * the dependency and unused elsewhere in this codebase — on whether a point is in the Earth's
+ * shadow.
  */
 class EclipseGeometryOrekitAgreementTest {
 
@@ -40,7 +41,9 @@ class EclipseGeometryOrekitAgreementTest {
     OneAxisEllipsoid earth = new OneAxisEllipsoid(EARTH_RADIUS, 0.0, gcrf);
     OccultationEngine engine =
         new OccultationEngine(
-            OrekitService.get().body(SolarSystemBody.SUN), PlanetRadius.radiusFor(SolarSystemBody.SUN), earth);
+            OrekitService.get().body(SolarSystemBody.SUN),
+            PlanetRadius.radiusFor(SolarSystemBody.SUN),
+            earth);
     penumbraDetector = new EclipseDetector(engine).withPenumbra();
   }
 
@@ -54,7 +57,8 @@ class EclipseGeometryOrekitAgreementTest {
     double illumination = illuminationAt(spacecraftPosition, sunPosition);
 
     assertTrue(g < 0.0, "EclipseDetector must report this point as shadowed, g=" + g);
-    assertTrue(illumination < 0.01, "illuminationFraction must be near total eclipse: " + illumination);
+    assertTrue(
+        illumination < 0.01, "illuminationFraction must be near total eclipse: " + illumination);
   }
 
   @Test
