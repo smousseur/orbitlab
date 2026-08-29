@@ -30,6 +30,7 @@ import com.smousseur.orbitlab.ui.mission.wizard.step.params.DynamicParameters;
 import com.smousseur.orbitlab.ui.mission.wizard.step.params.EarthOrbitDynamicParameters;
 import com.smousseur.orbitlab.ui.mission.wizard.step.params.GEODynamicParameters;
 import com.smousseur.orbitlab.ui.mission.wizard.step.params.LunarDynamicParameters;
+import com.smousseur.orbitlab.ui.mission.wizard.step.params.LunarOrbitDynamicParameters;
 import com.smousseur.orbitlab.ui.mission.wizard.step.planning.PlanningInputs;
 import com.smousseur.orbitlab.ui.mission.wizard.step.planning.PlanningPage;
 import java.util.EnumMap;
@@ -251,6 +252,9 @@ public class StepParameters implements StepValues {
     dynamicParametersMap.put(MissionProfile.GEO, new GEODynamicParameters(200, 2000));
     dynamicParametersMap.put(
         MissionProfile.LUNAR, new LunarDynamicParameters(MissionProfile.LUNAR.altitudes()));
+    dynamicParametersMap.put(
+        MissionProfile.LUNAR_ORBIT,
+        new LunarOrbitDynamicParameters(MissionProfile.LUNAR_ORBIT.altitudes()));
     dynamicParameters = dynamicParametersMap.get(selectedProfile);
     dynamicParametersContainer = new Container(new BoxLayout(Axis.Y, FillMode.None));
     dynamicParametersContainer.setBackground(null);

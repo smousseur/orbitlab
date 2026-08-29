@@ -59,12 +59,22 @@ public final class MissionResultText {
    * @return the formatted deviation
    */
   public static String formatMiss(OrbitElements achieved, MissionTargetOrbit target) {
-    return String.format(
-        Locale.ROOT,
-        "miss %+.0f / %+.0f m  %+.4f deg",
-        achieved.perigeeAltitude() - target.perigeeAltitude(),
-        achieved.apogeeAltitude() - target.apogeeAltitude(),
-        FastMath.toDegrees(achieved.inclination() - target.inclination()));
+    String altitudes =
+        String.format(
+            Locale.ROOT,
+            "miss %+.0f / %+.0f m",
+            achieved.perigeeAltitude() - target.perigeeAltitude(),
+            achieved.apogeeAltitude() - target.apogeeAltitude());
+    // The degree field is dropped rather than printed as NaN: a lunar orbit undergoes its plane
+    // instead of aiming at one, so there is no miss to state (MIS-5 / L7 §5). Every Earth target
+    // commands an inclination, so their line is unchanged to the character.
+    return target.hasInclination()
+        ? altitudes
+            + String.format(
+                Locale.ROOT,
+                "  %+.4f deg",
+                FastMath.toDegrees(achieved.inclination() - target.inclination()))
+        : altitudes;
   }
 
   /**

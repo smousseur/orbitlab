@@ -136,20 +136,22 @@ class MissionProfileTest {
   }
 
   /**
-   * Two cards carry a type of their own; the other four are one and the same spec record.
+   * Three cards carry a type of their own; the other four are one and the same spec record.
    *
    * <p><b>The count stays at four, and that is the point</b> (MIS-4 / L5 §2.5). {@code
    * earthOrbitProfiles()} used to filter by excluding GEO <em>by name</em>, so the sixth constant
    * would have fallen through it and been handed a perigee/apogee panel. Repairing the filter to
-   * read the mission type leaves this number where it was, which is what says the repair is right.
+   * read the mission type leaves this number where it was, which is what says the repair is right —
+   * and the seventh constant, added by MIS-5 / L7, leaves it there again.
    */
   @Test
-  void onlyGeoAndLunarProfilesCarryTheirOwnType() {
+  void onlyTheThreeOwnTypedProfilesCarryTheirOwnType() {
     for (MissionProfile profile : MissionProfile.values()) {
       MissionType expected =
           switch (profile) {
             case GEO -> MissionType.GEO;
             case LUNAR -> MissionType.LUNAR_FLYBY;
+            case LUNAR_ORBIT -> MissionType.LUNAR_ORBIT;
             default -> MissionType.LEO;
           };
       assertEquals(expected, profile.missionType(), profile.name());
@@ -157,6 +159,7 @@ class MissionProfileTest {
     assertEquals(4, MissionProfile.earthOrbitProfiles().size());
     assertFalse(MissionProfile.earthOrbitProfiles().contains(MissionProfile.GEO));
     assertFalse(MissionProfile.earthOrbitProfiles().contains(MissionProfile.LUNAR));
+    assertFalse(MissionProfile.earthOrbitProfiles().contains(MissionProfile.LUNAR_ORBIT));
   }
 
   /** MIS-4 / L5 §2.1 — the sixth card, and the one aimed at another body. */
@@ -234,13 +237,12 @@ class MissionProfileTest {
    * MIS-5 / L5 §5.1 — a lunar orbit spec has no card yet, and {@code of} says so rather than
    * inventing one.
    *
-   * <p>Answering {@code LUNAR} would light the flyby card for an orbit insertion — the exact
-   * fallback whose removal the switch documents. L6 has since made the room for a seventh card;
-   * what is still missing is the card and its parameter field key. The refusal names the lot that
-   * fills it, as MIS-5 / L3 wrote two others.
+   * <p>It answered {@code LUNAR} before the switch replaced the fallback, and then refused by name
+   * for two lots. MIS-5 / L7 gives it the card, and the answer is neither the flyby's nor an
+   * exception.
    */
   @Test
-  void lunarOrbitSpecHasNoCardYetAndSaysSo() {
+  void lunarOrbitSpecResolvesToItsOwnCard() {
     MissionSpec.LunarOrbit lunarOrbit =
         new MissionSpec.LunarOrbit(
             "fixture",
@@ -255,9 +257,8 @@ class MissionProfileTest {
             null,
             null);
 
-    UnsupportedOperationException refused =
-        assertThrows(UnsupportedOperationException.class, () -> MissionProfile.of(lunarOrbit));
-    assertTrue(refused.getMessage().contains("L7"), refused.getMessage());
+    assertEquals(MissionProfile.LUNAR_ORBIT, MissionProfile.of(lunarOrbit));
+    assertNotEquals(MissionProfile.LUNAR, MissionProfile.of(lunarOrbit), "the flyby card lit up");
   }
 
   /**
@@ -271,22 +272,26 @@ class MissionProfileTest {
     assertEquals(MissionProfile.LEO, MissionProfile.defaultFor(MissionType.LEO));
     assertEquals(MissionProfile.GEO, MissionProfile.defaultFor(MissionType.GEO));
     assertEquals(MissionProfile.LUNAR, MissionProfile.defaultFor(MissionType.LUNAR_FLYBY));
+    assertEquals(MissionProfile.LUNAR_ORBIT, MissionProfile.defaultFor(MissionType.LUNAR_ORBIT));
     for (MissionType type : MissionType.values()) {
-      if (type == MissionType.LUNAR_ORBIT) {
-        continue;
-      }
       assertEquals(
           type, MissionProfile.defaultFor(type).missionType(), "defaultFor changed the type");
     }
   }
 
-  /** The same refusal as {@code of}, on the other way into the step. */
+  /** MIS-5 / L7 §2 — the seventh card, and the two values L3's catalogue sizing depends on. */
   @Test
-  void defaultForRefusesTheLunarOrbitTypeByName() {
-    UnsupportedOperationException refused =
-        assertThrows(
-            UnsupportedOperationException.class,
-            () -> MissionProfile.defaultFor(MissionType.LUNAR_ORBIT));
-    assertTrue(refused.getMessage().contains("L7"), refused.getMessage());
+  void theLunarOrbitCardDeclaresItsTabItsBandAndItsWindow() {
+    MissionProfile card = MissionProfile.LUNAR_ORBIT;
+    assertEquals(MissionType.LUNAR_ORBIT, card.missionType());
+    assertEquals(MissionDomain.LUNAR, card.domain());
+    assertEquals(MissionProfile.Availability.WINDOWED, card.availability());
+    // The floor is what Payloads.LUNAR_ORBITER was sized against: 800 kg of capacity cover the
+    // 664 kg the insertion costs at 50 km, and 5 500 N hold the burn at 5.08 % of a revolution
+    // there. Moving it down invalidates a catalogue entry rather than widening a slider.
+    assertEquals(50.0, card.altitudes().minKm());
+    assertEquals(500.0, card.altitudes().maxKm());
+    assertEquals(100.0, card.altitudes().defaultKm());
+    assertEquals("interface/wizard/icon-mission-lunar-orbit.png", card.iconPath());
   }
 }

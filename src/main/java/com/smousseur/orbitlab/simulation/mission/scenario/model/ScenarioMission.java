@@ -36,10 +36,14 @@ import com.smousseur.orbitlab.simulation.mission.MissionType;
 @JsonSubTypes({
   @JsonSubTypes.Type(value = ScenarioMission.EarthOrbit.class, name = "LEO"),
   @JsonSubTypes.Type(value = ScenarioMission.Geo.class, name = "GEO"),
-  @JsonSubTypes.Type(value = ScenarioMission.Lunar.class, name = "LUNAR_FLYBY")
+  @JsonSubTypes.Type(value = ScenarioMission.Lunar.class, name = "LUNAR_FLYBY"),
+  @JsonSubTypes.Type(value = ScenarioMission.LunarOrbit.class, name = "LUNAR_ORBIT")
 })
 public sealed interface ScenarioMission
-    permits ScenarioMission.EarthOrbit, ScenarioMission.Geo, ScenarioMission.Lunar {
+    permits ScenarioMission.EarthOrbit,
+        ScenarioMission.Geo,
+        ScenarioMission.Lunar,
+        ScenarioMission.LunarOrbit {
 
   /**
    * @return the mission type, which is also the JSON discriminator
@@ -207,5 +211,42 @@ public sealed interface ScenarioMission
       boolean visible,
       ScenarioSolution solution,
       double periluneKm)
+      implements ScenarioMission {}
+
+  /**
+   * A saved lunar orbit insertion (MIS-5 / L7 §4).
+   *
+   * <p>The mirror of {@link Lunar}, one component apart, and it omits the parking altitude for the
+   * same reason: it is {@code LunarOrbitMission.DEFAULT_PARKING_ALTITUDE}, no wizard field carries
+   * it, and writing it down would create a second truth about the number the day the constant
+   * moves.
+   *
+   * @param type always {@link MissionType#LUNAR_ORBIT}
+   * @param name the mission name
+   * @param launchDate the launch date in ISO UTC, or {@code null}
+   * @param site the launch site
+   * @param vehicle the launcher and payload
+   * @param horizonDays the forced horizon in days, or {@code null} for "auto"
+   * @param atmosphere the atmosphere model name
+   * @param optimizationMode the optimization mode name
+   * @param color the trajectory colour as {@code #RRGGBB}
+   * @param visible whether the mission was displayed
+   * @param solution the optimization outcome, or {@code null}
+   * @param orbitAltitudeKm the circular lunar orbit aimed for, in kilometres above the surface
+   */
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  record LunarOrbit(
+      MissionType type,
+      String name,
+      String launchDate,
+      ScenarioSite site,
+      ScenarioVehicle vehicle,
+      Double horizonDays,
+      String atmosphere,
+      String optimizationMode,
+      String color,
+      boolean visible,
+      ScenarioSolution solution,
+      double orbitAltitudeKm)
       implements ScenarioMission {}
 }

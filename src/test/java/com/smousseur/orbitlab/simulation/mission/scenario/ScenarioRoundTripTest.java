@@ -75,6 +75,14 @@ class ScenarioRoundTripTest {
     return values;
   }
 
+  private static Map<String, Object> lunarOrbitValues() {
+    Map<String, Object> values = leoValues();
+    values.put("PAYLOAD_TYPE", "LUNAR_ORBITER");
+    values.put("PAYLOAD_MASS", 2_000.0);
+    values.put("LUNAR_ORBIT_ALT", 100.0);
+    return values;
+  }
+
   private static Map<String, Object> polarValues() {
     Map<String, Object> values = leoValues();
     values.put("LEO_APOGEE_ALT", 400.0);
@@ -166,6 +174,36 @@ class ScenarioRoundTripTest {
         restored.parkingAltitude(),
         1e-6,
         "the parking altitude comes back from the mission's constant, not from the file");
+  }
+
+  /**
+   * MIS-5 / L7 §4 — the fourth branch of the format, and the one with a second load to lose.
+   *
+   * <p>A lunar orbit sizes its launcher <em>and</em> the payload's own insertion tank, so a value
+   * the file dropped on the way would show up twice: as a resized upper stage, and as a spacecraft
+   * carrying the wrong propellant into the burn it exists for.
+   */
+  @Test
+  void lunarOrbitMission_comesBackIdentical() {
+    MissionSpec.LunarOrbit original =
+        (MissionSpec.LunarOrbit)
+            MissionFactory.specFromWizardValues(lunarOrbitValues(), MissionType.LUNAR_ORBIT);
+    MissionSpec.LunarOrbit restored =
+        (MissionSpec.LunarOrbit) throughTheFile(lunarOrbitValues(), MissionType.LUNAR_ORBIT);
+
+    assertSameSite(original, restored);
+    assertSameVehicle(original, restored);
+    assertEquals(original.orbitAltitude(), restored.orbitAltitude(), 1e-6, "lunar orbit altitude");
+    assertEquals(
+        original.parkingAltitude(),
+        restored.parkingAltitude(),
+        1e-6,
+        "the parking altitude comes back from the mission's constant, not from the file");
+    assertEquals(
+        original.configuration().payload().propellantLoad(),
+        restored.configuration().payload().propellantLoad(),
+        1e-6,
+        "the insertion load the payload carries");
   }
 
   /**

@@ -55,6 +55,21 @@ public final class FormField<T> {
   public static final FormField<Double> LUNAR_PERILUNE_ALT =
       new FormField<>("LUNAR_PERILUNE_ALT", Double.class);
 
+  /**
+   * Circular lunar orbit altitude in <b>kilometres</b>, the one parameter a lunar orbit offers
+   * (MIS-5 / L7 §4).
+   *
+   * <p>The parking altitude is not a field beside it either, for the reason {@link
+   * #LUNAR_PERILUNE_ALT} gives: it is {@code LunarOrbitMission.DEFAULT_PARKING_ALTITUDE}.
+   *
+   * <p>This key is the reason L5 could compose the mission but not offer it. Four sites — {@code
+   * MissionFactory}, {@code ScenarioMapper}, {@code WizardPrefill} and the panel — read or write
+   * it, and a scenario file carries the name, so it could not be invented in a lot that had no
+   * screen to settle it on.
+   */
+  public static final FormField<Double> LUNAR_ORBIT_ALT =
+      new FormField<>("LUNAR_ORBIT_ALT", Double.class);
+
   public static final FormField<String> LAUNCH_DATE = new FormField<>("LAUNCH_DATE", String.class);
   public static final FormField<String> LAUNCH_SITE_NAME =
       new FormField<>("LAUNCH_SITE_NAME", String.class);

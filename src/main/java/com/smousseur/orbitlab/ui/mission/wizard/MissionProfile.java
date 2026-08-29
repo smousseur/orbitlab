@@ -133,6 +133,33 @@ public enum MissionProfile {
       false,
       InclinationMode.NONE,
       Double.NaN,
+      Availability.WINDOWED),
+
+  /**
+   * A circular orbit around the Moon: the flyby's chain, with the launcher's top stage dropped
+   * after the injection and the insertion burnt by the payload itself (MIS-5 / L7).
+   *
+   * <p><b>The band is inherited, not chosen.</b> {@code Payloads.LUNAR_ORBITER} was sized against
+   * it in L3: its 800 kg of capacity cover "the 664 kg the insertion costs at the floor of the
+   * altitude band", and its 5 500 N keep the burn at 5.08 % of a revolution at 50 km. Moving the
+   * floor down would invalidate a catalogue entry rather than widen a slider.
+   *
+   * <p>{@link Availability#WINDOWED} for its neighbour's reason — the geometry of the encounter,
+   * not the catalogue. The inclination is <em>undergone</em>, so there is no plane to ask for, and
+   * {@code isCircular()} is true of the orbit while being read by nobody: both are inert on a
+   * profile whose panel is its own.
+   */
+  LUNAR_ORBIT(
+      MissionType.LUNAR_ORBIT,
+      MissionDomain.LUNAR,
+      "LUNAR ORBIT",
+      "Circular Lunar Orbit",
+      "50 - 500 km",
+      "interface/wizard/icon-mission-lunar-orbit.png",
+      new AltitudeRange(50, 500, 100),
+      true,
+      InclinationMode.NONE,
+      Double.NaN,
       Availability.WINDOWED);
 
   /** What the card's badge says about flying this profile. */
@@ -370,15 +397,7 @@ public enum MissionProfile {
     return switch (spec) {
       case MissionSpec.Geo ignored -> GEO;
       case MissionSpec.Lunar ignored -> LUNAR;
-      // No card exists yet, and inventing one here would be worse than refusing: answering LUNAR
-      // would light the flyby card for an orbit insertion — the exact fallback whose removal this
-      // switch documents. The room L6 was waiting for now exists, the lunar tab holding one card
-      // and having space for a second; what is still missing is the card itself and the parameter
-      // field key that goes with it. Unreachable until L7 adds them, since nothing creates a lunar
-      // orbit mission before it.
-      case MissionSpec.LunarOrbit ignored ->
-          throw new UnsupportedOperationException(
-              "LUNAR_ORBIT has no wizard card yet: MissionProfile.LUNAR_ORBIT lands in MIS-5 / L7");
+      case MissionSpec.LunarOrbit ignored -> LUNAR_ORBIT;
       case MissionSpec.EarthOrbit earthOrbit -> ofEarthOrbit(earthOrbit);
     };
   }
@@ -400,12 +419,7 @@ public enum MissionProfile {
       case LEO -> LEO;
       case GEO -> GEO;
       case LUNAR_FLYBY -> LUNAR;
-      // Unreachable for the same reason as the LunarOrbit branch of of(MissionSpec): the two
-      // callers of MissionContext.setSelectedMissionType read a spec or a card, and neither can
-      // carry LUNAR_ORBIT while MissionFactory and ScenarioMapper both refuse to build one.
-      case LUNAR_ORBIT ->
-          throw new UnsupportedOperationException(
-              "LUNAR_ORBIT has no wizard card yet: MissionProfile.LUNAR_ORBIT lands in MIS-5 / L7");
+      case LUNAR_ORBIT -> LUNAR_ORBIT;
     };
   }
 

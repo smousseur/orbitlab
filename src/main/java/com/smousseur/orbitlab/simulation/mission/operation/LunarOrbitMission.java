@@ -55,6 +55,20 @@ public class LunarOrbitMission extends EarthMission {
   private static final int UPPER_STAGE_INDEX = 1;
 
   /**
+   * The circular parking orbit the translunar injection leaves from (m).
+   *
+   * <p>Its own constant rather than {@link LunarFlybyMission#DEFAULT_PARKING_ALTITUDE}, which holds
+   * the same number for the same reason: a lunar orbit insertion has nothing to do with a flyby,
+   * and reading the other mission's constant would make this chain follow, in silence, a value
+   * changed for that one.
+   *
+   * <p><b>Not offered as a wizard field</b> (MIS-5 / L7 §3), on MIS-4 / L0's measurement: the aim
+   * converges identically from 185 to 400 km, so a slider there would be a choice with nothing
+   * behind it. 400 km is what the closure flight of L5 actually flew.
+   */
+  public static final double DEFAULT_PARKING_ALTITUDE = 400_000.0;
+
+  /**
    * How far the translunar coast goes if it never reaches the lunar sphere (s).
    *
    * <p><b>A bound, not a duration</b> (MIS-5 / L1 §4): a coast that ends at a boundary owes a

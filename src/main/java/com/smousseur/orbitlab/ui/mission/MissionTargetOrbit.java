@@ -21,19 +21,35 @@ import org.hipparchus.util.FastMath;
  *
  * @param perigeeAltitude the requested perigee altitude (m)
  * @param apogeeAltitude the requested apogee altitude (m)
- * @param inclination the requested inclination (rad)
+ * @param inclination the requested inclination (rad), or {@code NaN} when the mission aims at none
  */
 public record MissionTargetOrbit(
     double perigeeAltitude, double apogeeAltitude, double inclination) {
 
   /**
+   * Whether this target commands a plane.
+   *
+   * <p>A lunar orbit does not: the inclination it reaches around the Moon follows from the arrival
+   * geometry and the epoch, so {@code OrbitInsertionObjective} carries {@code NaN} rather than a
+   * number nothing aimed at. {@code NaN} and not a nullable component, on the marker MIS-5 already
+   * uses for exactly this absence — {@code OrbitInsertionObjective.inclination()} and {@code
+   * MissionOptimizer.resolveTargetAltitude}.
+   *
+   * @return {@code true} when an inclination was asked for
+   */
+  public boolean hasInclination() {
+    return !Double.isNaN(inclination);
+  }
+
+  /**
    * Resolves the displayable target of a spec.
    *
    * <p><b>A flyby has none, and fabricating one would be worse than showing nothing</b> (MIS-4 / L4
-   * §6.1). There is no (perigee, apogee, inclination) triple to display beside a lunar approach; a
-   * degenerate one would put a false geocentric target next to the achieved orbit, which is exactly
-   * the kind of silence this chantier removes. Both consumers already handle the absence — they
-   * meet it on legacy entries carrying no spec — so this costs no new case in the UI.
+   * §6.1). A lunar <em>orbit</em>, by contrast, has one — see the branch below. There is no
+   * (perigee, apogee, inclination) triple to display beside a lunar approach; a degenerate one
+   * would put a false geocentric target next to the achieved orbit, which is exactly the kind of
+   * silence this chantier removes. Both consumers already handle the absence — they meet it on
+   * legacy entries carrying no spec — so this costs no new case in the UI.
    *
    * @param spec the mission spec
    * @return the target orbit, or empty when the mission aims at no orbit
@@ -57,14 +73,14 @@ public record MissionTargetOrbit(
                   geo.targetAltitude(),
                   FastMath.toRadians(geo.finalInclination())));
       case MissionSpec.Lunar lunar -> Optional.empty();
-      // A lunar orbit HAS a target, unlike a flyby, and since MIS-5 / L2 the achieved orbit is
-      // reported against the arc body — so (100 km, 100 km) would be comparable. What is not
-      // displayable is the pair: MissionResultText.formatMiss prints the altitude miss and the
-      // inclination miss in one string, and this mission aims at no inclination. Teaching a
-      // formatter shared with LEO and GEO about absence, in a lot where no screen can be looked
-      // at, buys less than it risks; L7 brings the card and the reader (spec
-      // docs/lunar-orbit/07-conception-L5.md section 3.2).
-      case MissionSpec.LunarOrbit lunarOrbit -> Optional.empty();
+      // Altitudes above the *Moon*, and they are comparable because since MIS-5 / L2 the achieved
+      // orbit is reported against the arc body and L5's terminal coast declares the lunar one. The
+      // inclination is the absent half of the pair L5 could not display: it is undergone, not
+      // aimed at, so the miss line drops its degree field rather than inventing a target for it.
+      case MissionSpec.LunarOrbit lunarOrbit ->
+          Optional.of(
+              new MissionTargetOrbit(
+                  lunarOrbit.orbitAltitude(), lunarOrbit.orbitAltitude(), Double.NaN));
     };
   }
 

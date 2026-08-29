@@ -100,12 +100,9 @@ class MissionDomainTest {
   @Test
   @DisplayName("A tab is reachable in edit mode when it still holds a selectable card")
   void lockingEnablesExactlyTheTabsHoldingTheEditedType() {
+    // Four types since MIS-5 / L7, and no exception among them: the LUNAR_ORBIT skip this loop
+    // carried was the last trace of the card that did not exist.
     for (MissionType edited : MissionType.values()) {
-      if (edited == MissionType.LUNAR_ORBIT) {
-        // No card is backed by it before L7, so no tab can hold one and the wizard cannot open on
-        // such a mission at all — MissionProfile.of and defaultFor both refuse it by name.
-        continue;
-      }
       for (MissionDomain domain : MissionDomain.values()) {
         boolean holdsIt = domain.profiles().stream().anyMatch(p -> p.missionType() == edited);
         assertEquals(holdsIt, domain.enabledUnderLock(edited), domain + " editing " + edited);

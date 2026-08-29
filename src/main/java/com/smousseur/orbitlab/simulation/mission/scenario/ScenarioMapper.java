@@ -121,14 +121,20 @@ public final class ScenarioMapper {
               visible,
               solution,
               doubleValue(values, "LUNAR_PERILUNE_ALT"));
-      // MIS-5 / L5 §6. The spec's shape is fixed since L5, so the mirroring record could be
-      // written — but toMissionValues below is exhaustive on ScenarioMission and would then owe a
-      // branch WRITING the wizard key that MissionFactory owes a branch READING. The two stand or
-      // fall together, and what they wait for is that key, which is L7's. Nothing can reach here
-      // meanwhile, no LUNAR_ORBIT mission being creatable.
       case LUNAR_ORBIT ->
-          throw new UnsupportedOperationException(
-              "LUNAR_ORBIT cannot be saved yet: ScenarioMission.LunarOrbit lands in MIS-5 / L7");
+          new ScenarioMission.LunarOrbit(
+              type,
+              name,
+              launchDate,
+              site,
+              vehicle,
+              horizonDays,
+              atmosphere,
+              mode,
+              color,
+              visible,
+              solution,
+              doubleValue(values, "LUNAR_ORBIT_ALT"));
     };
   }
 
@@ -173,6 +179,8 @@ public final class ScenarioMapper {
       }
       case ScenarioMission.Geo geo -> values.put("GTO_PARKING_ALT", geo.parkingKm());
       case ScenarioMission.Lunar lunar -> values.put("LUNAR_PERILUNE_ALT", lunar.periluneKm());
+      case ScenarioMission.LunarOrbit lunarOrbit ->
+          values.put("LUNAR_ORBIT_ALT", lunarOrbit.orbitAltitudeKm());
     }
     return values;
   }

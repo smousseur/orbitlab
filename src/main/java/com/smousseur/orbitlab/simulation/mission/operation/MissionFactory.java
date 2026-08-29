@@ -165,16 +165,39 @@ public final class MissionFactory {
             horizon,
             null);
       }
-      // MIS-5 / L5 §6. The spec exists since L5; what is missing is the wizard field this branch
-      // would read the lunar orbit altitude from, and that field is L7's — its key is a file format
-      // as much as a label, so it belongs to the lot that has the screen. Unreachable meanwhile,
-      // no card offering the type. Deliberately not the IllegalArgumentException the GEO branch
-      // throws: that one is a user error, this one is a lot that does not exist yet, and the two
-      // must not read alike in a log.
-      case LUNAR_ORBIT ->
-          throw new UnsupportedOperationException(
-              "LUNAR_ORBIT cannot be built from wizard values yet: its parameter field lands in"
-                  + " MIS-5 / L7");
+      // MIS-5 / L7 §4. The parking altitude is the mission's own constant, as the flyby's is.
+      case LUNAR_ORBIT -> {
+        double orbitAlt = doubleValue(values, "LUNAR_ORBIT_ALT") * 1000.0;
+        double parkingAlt = LunarOrbitMission.DEFAULT_PARKING_ALTITUDE;
+        // The order is forced, and it is the flyby's reversed: there, the payload is built inert
+        // and handed to the budget; here the budget is given the model and the dry mass and
+        // *returns* the insertion load the payload is then built with. No propulsion check beside
+        // it — loadsForLunarOrbit performs its own, and words the refusal with the kilos, the
+        // delta-V
+        // and the tank capacity, which is what the wizard's dry composition shows the user.
+        PropellantBudget.LunarOrbitLoads loads =
+            PropellantBudget.loadsForLunarOrbit(
+                launcher,
+                payloadModel,
+                payloadMass,
+                parkingAlt,
+                orbitAlt,
+                latitude,
+                // Due east: the chain flies i = φ, where the two azimuth branches merge.
+                FastMath.PI / 2);
+        Spacecraft payload = payloadModel.toSpacecraft(payloadMass, loads.insertionLoad());
+        yield new MissionSpec.LunarOrbit(
+            name,
+            new LaunchConfiguration(launcher, loads.launcherLoads(), payload, payloadModel.id()),
+            parkingAlt,
+            orbitAlt,
+            siteName,
+            latitude,
+            longitude,
+            altitude,
+            horizon,
+            null);
+      }
     };
   }
 

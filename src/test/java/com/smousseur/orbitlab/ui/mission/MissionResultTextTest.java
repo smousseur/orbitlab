@@ -1,6 +1,7 @@
 package com.smousseur.orbitlab.ui.mission;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.smousseur.orbitlab.simulation.OrbitElements;
@@ -78,6 +79,33 @@ class MissionResultTextTest {
   void massesSwitchToTonnesAboveOneTonne() {
     assertEquals("402.4 t", MissionResultText.formatPropellant(402_351.0));
     assertEquals("284 kg", MissionResultText.formatPropellant(284.0));
+  }
+
+  /**
+   * MIS-5 / L7 §5 — the miss line, whose Earth form must not move by a character.
+   *
+   * <p>This is the one change of the lot that touches a screen already in use: {@code formatMiss}
+   * is shared with LEO, GEO and the four presets, and they all command a plane.
+   */
+  @Test
+  void aTargetCommandingAPlaneKeepsItsDegreeField() {
+    String line =
+        MissionResultText.formatMiss(
+            elements(400_000.0, 400_114.0, 51.6012),
+            new MissionTargetOrbit(400_000.0, 400_000.0, FastMath.toRadians(51.6)));
+    assertEquals("miss +0 / +114 m  +0.0012 deg", line);
+  }
+
+  /** A lunar orbit undergoes its plane, so the degree field is dropped rather than printed NaN. */
+  @Test
+  void aTargetWithNoPlaneDropsTheDegreeField() {
+    String line =
+        MissionResultText.formatMiss(
+            elements(100_000.0, 100_114.0, 87.3),
+            new MissionTargetOrbit(100_000.0, 100_000.0, Double.NaN));
+    assertEquals("miss +0 / +114 m", line);
+    assertFalse(line.contains("NaN"), line);
+    assertTrue(line.chars().allMatch(c -> c >= 32 && c < 127), "bitmap fonts only carry 32-127");
   }
 
   @Test

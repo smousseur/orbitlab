@@ -1,6 +1,7 @@
 package com.smousseur.orbitlab.ui.mission;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.smousseur.orbitlab.simulation.OrekitService;
@@ -120,15 +121,15 @@ class MissionTargetOrbitTest {
   }
 
   /**
-   * MIS-5 / L5 §3.2 — a lunar orbit shows no target, and the reason is not the flyby's.
+   * MIS-5 / L7 §5 — a lunar orbit shows its target, where L5 could only leave it empty.
    *
    * <p>A flyby has no target orbit at all; this one has one, and since L2 the achieved orbit is
-   * reported against the arc body, so the altitudes would be comparable. What cannot be shown is
-   * the pair: {@code formatMiss} prints the altitude miss and the inclination miss in one string,
-   * and this mission aims at no inclination. L7 brings the card and the reader.
+   * reported against the arc body, so the altitudes are comparable. The half that stays absent is
+   * the inclination — undergone, not aimed at — and {@code formatMiss} drops its degree field
+   * rather than inventing a target for it.
    */
   @Test
-  void lunarOrbitTargetIsAbsent() {
+  void lunarOrbitTargetIsTheCircularOrbitWithNoPlane() {
     MissionSpec.LunarOrbit spec =
         new MissionSpec.LunarOrbit(
             "Lunar orbit",
@@ -143,6 +144,10 @@ class MissionTargetOrbitTest {
             null,
             null);
 
-    assertTrue(MissionTargetOrbit.of(spec).isEmpty());
+    MissionTargetOrbit target = MissionTargetOrbit.of(spec).orElseThrow();
+    // Above the Moon, not above the Earth: L5's terminal coast declares the lunar arc.
+    assertEquals(100_000.0, target.perigeeAltitude());
+    assertEquals(100_000.0, target.apogeeAltitude());
+    assertFalse(target.hasInclination(), "a lunar orbit commands no plane");
   }
 }
