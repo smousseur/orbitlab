@@ -14,10 +14,13 @@ import com.smousseur.orbitlab.simulation.mission.MissionType;
  * rather than spec units (kilometres, degrees, days), a three-field {@link ScenarioVehicle} rather
  * than a resolved {@code LaunchConfiguration}, and five values that come from {@code MissionEntry}
  * and have no spec component at all. What it buys is elsewhere: {@code ScenarioMapper} switches
- * exhaustively with no default branch, so the day a new {@code MissionSpec} branch appears, the
- * compilation fails until the matching record exists here. A new mission type cannot silently
- * become unpersistable — which is what happened to the lunar branch, flagged by MIS-4 / L4 §10 pt 5
- * and filled by L5.
+ * exhaustively with no default branch, so a new mission type cannot silently become unpersistable —
+ * which is what happened to the lunar branch, flagged by MIS-4 / L4 §10 pt 5 and filled by MIS-4 /
+ * L5.
+ *
+ * <p><b>The guard fires on {@link MissionType}, not on a new {@code MissionSpec} branch</b>, and
+ * this javadoc used to claim otherwise (MIS-5 / L5 §6): {@code toScenarioMission} switches on the
+ * type. Adding a spec variant compiles here untouched; adding a mission type does not.
  *
  * <p><b>Absence is meaningful</b> and stays so (§3.1, rule 1): {@link #horizonDays()}, and the
  * inclination and node of an {@link EarthOrbit}, are {@code null} — hence omitted from the JSON —

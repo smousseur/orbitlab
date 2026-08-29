@@ -10,6 +10,7 @@ import com.smousseur.orbitlab.simulation.mission.operation.MissionSpec;
 import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchConfiguration;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Spacecraft;
 import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Launchers;
+import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Payloads;
 import org.hipparchus.util.FastMath;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
@@ -116,5 +117,32 @@ class MissionTargetOrbitTest {
     MissionEntry legacy =
         new MissionEntry(new EarthOrbitMission("legacy", falconHeavy(), 400_000.0));
     assertTrue(MissionTargetOrbit.forEntry(legacy).isEmpty());
+  }
+
+  /**
+   * MIS-5 / L5 §3.2 — a lunar orbit shows no target, and the reason is not the flyby's.
+   *
+   * <p>A flyby has no target orbit at all; this one has one, and since L2 the achieved orbit is
+   * reported against the arc body, so the altitudes would be comparable. What cannot be shown is
+   * the pair: {@code formatMiss} prints the altitude miss and the inclination miss in one string,
+   * and this mission aims at no inclination. L7 brings the card and the reader.
+   */
+  @Test
+  void lunarOrbitTargetIsAbsent() {
+    MissionSpec.LunarOrbit spec =
+        new MissionSpec.LunarOrbit(
+            "Lunar orbit",
+            LaunchConfiguration.fullyLoaded(
+                Launchers.FALCON_HEAVY, Payloads.LUNAR_ORBITER.toSpacecraft(2_000.0, 657.7)),
+            PARKING_ALT,
+            100_000.0,
+            "Cape Canaveral",
+            28.562,
+            -80.577,
+            3.0,
+            null,
+            null);
+
+    assertTrue(MissionTargetOrbit.of(spec).isEmpty());
   }
 }

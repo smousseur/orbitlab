@@ -86,6 +86,13 @@ public final class WizardPrefill {
       // no field carries it, so writing it back would be a second truth about the same number.
       case MissionSpec.Lunar lunar ->
           values.put(FormField.LUNAR_PERILUNE_ALT.key(), toKilometers(lunar.periluneAltitude()));
+      // MIS-5 / L5 §5.1. The fourth site waiting on the same thing as MissionFactory and
+      // ScenarioMapper: the wizard field this branch would write the lunar orbit altitude to is
+      // L7's, and its key is a persisted name as much as a label. Doubly unreachable meanwhile —
+      // MissionProfile.of, called at the top of this method, refuses a lunar orbit spec first.
+      case MissionSpec.LunarOrbit lunarOrbit ->
+          throw new UnsupportedOperationException(
+              "LUNAR_ORBIT cannot be prefilled yet: its parameter field lands in MIS-5 / L7");
     }
     return values;
   }

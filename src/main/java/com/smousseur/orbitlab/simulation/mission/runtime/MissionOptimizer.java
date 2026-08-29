@@ -1,5 +1,6 @@
 package com.smousseur.orbitlab.simulation.mission.runtime;
 
+import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionStage;
 import com.smousseur.orbitlab.simulation.mission.MissionStatus;
@@ -595,9 +596,25 @@ public class MissionOptimizer {
     return names;
   }
 
+  /**
+   * The altitude the gravity turn's exit state is diagnosed against, or {@code NaN} when there is
+   * none to diagnose against — in which case the caller logs the raw end state instead.
+   *
+   * <p><b>A non-terrestrial insertion has none</b> (MIS-5 / L5, spec {@code
+   * docs/lunar-orbit/07-conception-L5.md} §6). The diagnostic compares an <em>Earth</em> ascent to
+   * an ideal Earth Hohmann handoff, and it is only ever called under a {@code GravityTurnProblem}
+   * guard, so the ascent really is terrestrial. The objective, since MIS-5, need not be: a lunar
+   * insertion would hand 100 km straight into a terrestrial comparison and print a number that
+   * looks like a measurement. Returning NaN takes the exit that already exists — the one MIS-4
+   * takes, a flyby objective not being an insertion at all.
+   *
+   * <p>Every other {@code OrbitInsertionObjective} of the repository is built on {@code EARTH}, so
+   * this guard changes no existing log line by identity rather than by tolerance.
+   */
   private static double resolveTargetAltitude(Mission mission) {
     MissionObjective objective = mission.getObjective();
-    if (objective instanceof OrbitInsertionObjective insertion) {
+    if (objective instanceof OrbitInsertionObjective insertion
+        && insertion.body() == SolarSystemBody.EARTH) {
       return 0.5 * (insertion.perigeeAltitude() + insertion.apogeeAltitude());
     }
     return Double.NaN;

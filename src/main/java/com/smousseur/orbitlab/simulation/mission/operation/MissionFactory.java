@@ -165,14 +165,16 @@ public final class MissionFactory {
             horizon,
             null);
       }
-      // MIS-5 / L3 §5. A refusal rather than a branch, because this case must yield a
-      // MissionSpec.LunarOrbit and the sealed hierarchy has no such variant until L5. Unreachable
-      // before L7 adds the wizard card, and deliberately not the IllegalArgumentException the GEO
-      // branch throws: that one is a user error, this one is a lot that does not exist yet, and the
-      // two must not read alike in a log.
+      // MIS-5 / L5 §6. The spec exists since L5; what is missing is the wizard field this branch
+      // would read the lunar orbit altitude from, and that field is L7's — its key is a file format
+      // as much as a label, so it belongs to the lot that has the screen. Unreachable meanwhile,
+      // no card offering the type. Deliberately not the IllegalArgumentException the GEO branch
+      // throws: that one is a user error, this one is a lot that does not exist yet, and the two
+      // must not read alike in a log.
       case LUNAR_ORBIT ->
           throw new UnsupportedOperationException(
-              "LUNAR_ORBIT has no spec yet: MissionSpec.LunarOrbit lands in MIS-5 / L5");
+              "LUNAR_ORBIT cannot be built from wizard values yet: its parameter field lands in"
+                  + " MIS-5 / L7");
     };
   }
 

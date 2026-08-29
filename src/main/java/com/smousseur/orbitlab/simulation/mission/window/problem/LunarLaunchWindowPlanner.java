@@ -1,6 +1,7 @@
 package com.smousseur.orbitlab.simulation.mission.window.problem;
 
 import com.smousseur.orbitlab.simulation.mission.operation.MissionSpec;
+import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchConfiguration;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropellantBudget;
 import com.smousseur.orbitlab.simulation.mission.window.LaunchWindow;
 import com.smousseur.orbitlab.simulation.mission.window.LaunchWindowSearch;
@@ -12,8 +13,12 @@ import org.hipparchus.util.FastMath;
 import org.orekit.time.AbsoluteDate;
 
 /**
- * Dates a lunar mission — the one place a {@link MissionSpec.Lunar} meets a <b>confirming</b>
+ * Dates a lunar mission — the one place a lunar {@link MissionSpec} meets a <b>confirming</b>
  * {@link LunarLaunchWindowProblem} (MIS-4 / L5 §6.3).
+ *
+ * <p><b>Two entries, one body</b> (MIS-5 / L5 §5.2). A flyby and an orbit insertion are dated by
+ * the same criterion at the same aimed perilune; what stopped the flyby's planner from serving both
+ * was its signature, not its content.
  *
  * <p><b>This is where the 4.5 s of a confirmation are paid</b>, at the click that creates the
  * mission and not on every keystroke of the parameters step, whose timeline screens only (§4.1).
@@ -60,7 +65,7 @@ public final class LunarLaunchWindowPlanner {
   private LunarLaunchWindowPlanner() {}
 
   /**
-   * The first opportunity at or after {@code earliest} for a lunar mission.
+   * The first opportunity at or after {@code earliest} for a lunar flyby.
    *
    * <p><b>The soonest, not the cheapest</b>, on {@code EarthLaunchWindowPlanner}'s reasoning: the
    * roots of consecutive turns are the same opportunity repeated, so ordering by cost would push
@@ -72,21 +77,74 @@ public final class LunarLaunchWindowPlanner {
    */
   public static Optional<LaunchWindow> nextOpportunity(
       MissionSpec.Lunar spec, AbsoluteDate earliest) {
+    return nextOpportunity(
+        spec.configuration(),
+        spec.latitude(),
+        spec.longitude(),
+        spec.altitude(),
+        spec.parkingAltitude(),
+        spec.periluneAltitude(),
+        earliest);
+  }
+
+  /**
+   * The first opportunity at or after {@code earliest} for a lunar orbit insertion (MIS-5 / L5,
+   * spec {@code docs/lunar-orbit/07-conception-L5.md} §5.2).
+   *
+   * <p><b>The aimed perilune is the lunar orbit altitude</b>, which is why the window needs no lot
+   * of its own: the flyby's criterion — can a shot on this date reach that perilune — is exactly
+   * the verdict an insertion needs, and {@code confirm()} already flies the aim to give it.
+   *
+   * <p><b>The mass at injection needs no separate formula either.</b> The configuration's payload
+   * is the {@code Spacecraft} as it will fly, insertion propellant included, and {@code
+   * Vehicle.getMass()} is dry plus load — so the shared body below reads the right mass without
+   * knowing which lunar profile it is serving. That is what {@code
+   * PropellantBudget.loadsForLunarOrbit} does internally too: it sizes the insertion, then
+   * delegates to {@code loadsForLunar} with the payload as flown.
+   *
+   * @param spec the mission being scheduled
+   * @param earliest the date the user asked for, read as a floor
+   * @return the window to fly, or empty when every candidate of the span was refused
+   */
+  public static Optional<LaunchWindow> nextOpportunity(
+      MissionSpec.LunarOrbit spec, AbsoluteDate earliest) {
+    return nextOpportunity(
+        spec.configuration(),
+        spec.latitude(),
+        spec.longitude(),
+        spec.altitude(),
+        spec.parkingAltitude(),
+        spec.orbitAltitude(),
+        earliest);
+  }
+
+  /**
+   * The shared body of the two entries above: size the loads, build the confirming problem, search,
+   * take the soonest.
+   *
+   * <p><b>The mass at injection is recomputed, not carried.</b> {@code
+   * PropellantBudget.loadsForLunar} is closed-form and deterministic, so reading it back off the
+   * configuration costs microseconds and keeps one definition of the figure (MIS-4 / L5 §5.3).
+   */
+  private static Optional<LaunchWindow> nextOpportunity(
+      LaunchConfiguration configuration,
+      double latitude,
+      double longitude,
+      double altitude,
+      double parkingAltitude,
+      double periluneAltitude,
+      AbsoluteDate earliest) {
     PropellantBudget.LunarLoads loads =
         PropellantBudget.loadsForLunar(
-            spec.configuration().launcher(),
-            spec.configuration().payload(),
-            spec.parkingAltitude(),
-            spec.latitude(),
-            DUE_EAST);
+            configuration.launcher(), configuration.payload(), parkingAltitude, latitude, DUE_EAST);
     LunarLaunchWindowProblem problem =
         new LunarLaunchWindowProblem(
-            spec.latitude(),
-            spec.longitude(),
-            spec.altitude(),
-            spec.parkingAltitude(),
-            spec.periluneAltitude(),
-            spec.configuration().toVehicleStack(),
+            latitude,
+            longitude,
+            altitude,
+            parkingAltitude,
+            periluneAltitude,
+            configuration.toVehicleStack(),
             loads.massAtInjection());
     LaunchWindowSearch search =
         new LaunchWindowSearch(

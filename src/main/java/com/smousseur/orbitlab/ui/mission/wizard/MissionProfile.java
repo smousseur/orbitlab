@@ -348,6 +348,15 @@ public enum MissionProfile {
     return switch (spec) {
       case MissionSpec.Geo ignored -> GEO;
       case MissionSpec.Lunar ignored -> LUNAR;
+      // No card exists yet, and inventing one here would be worse than refusing: StepMissionType
+      // lays out MissionProfile.values() three per row in a fixed 880 x 660 window, where a
+      // seventh card overflows by more than a hundred pixels until L6 turns the grid into tabs.
+      // Answering LUNAR instead would light the flyby card for an orbit insertion — the exact
+      // fallback whose removal this switch documents. Unreachable until L7 adds the card, since
+      // nothing creates a lunar orbit mission before it.
+      case MissionSpec.LunarOrbit ignored ->
+          throw new UnsupportedOperationException(
+              "LUNAR_ORBIT has no wizard card yet: MissionProfile.LUNAR_ORBIT lands in MIS-5 / L7");
       case MissionSpec.EarthOrbit earthOrbit -> ofEarthOrbit(earthOrbit);
     };
   }

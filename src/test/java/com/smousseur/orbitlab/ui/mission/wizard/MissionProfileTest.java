@@ -229,4 +229,34 @@ class MissionProfileTest {
     assertEquals(98.61, at800, 0.02, "800 km");
     assertEquals(at600, MissionProfile.SSO.initialInclinationDeg(45.965, 600_000.0), 1e-12);
   }
+
+  /**
+   * MIS-5 / L5 §5.1 — a lunar orbit spec has no card yet, and {@code of} says so rather than
+   * inventing one.
+   *
+   * <p>Answering {@code LUNAR} would light the flyby card for an orbit insertion — the exact
+   * fallback whose removal the switch documents — and adding a seventh constant would overflow the
+   * fixed wizard window until L6 turns the grid into tabs. The refusal names the lot that fills it,
+   * as MIS-5 / L3 wrote two others.
+   */
+  @Test
+  void lunarOrbitSpecHasNoCardYetAndSaysSo() {
+    MissionSpec.LunarOrbit lunarOrbit =
+        new MissionSpec.LunarOrbit(
+            "fixture",
+            LaunchConfiguration.fullyLoaded(
+                Launchers.FALCON_HEAVY, Payloads.LUNAR_ORBITER.toSpacecraft(2_000.0, 657.7)),
+            400_000.0,
+            100_000.0,
+            "Cape Canaveral",
+            28.562,
+            -80.577,
+            3.0,
+            null,
+            null);
+
+    UnsupportedOperationException refused =
+        assertThrows(UnsupportedOperationException.class, () -> MissionProfile.of(lunarOrbit));
+    assertTrue(refused.getMessage().contains("L7"), refused.getMessage());
+  }
 }

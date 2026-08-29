@@ -57,6 +57,14 @@ public record MissionTargetOrbit(
                   geo.targetAltitude(),
                   FastMath.toRadians(geo.finalInclination())));
       case MissionSpec.Lunar lunar -> Optional.empty();
+      // A lunar orbit HAS a target, unlike a flyby, and since MIS-5 / L2 the achieved orbit is
+      // reported against the arc body — so (100 km, 100 km) would be comparable. What is not
+      // displayable is the pair: MissionResultText.formatMiss prints the altitude miss and the
+      // inclination miss in one string, and this mission aims at no inclination. Teaching a
+      // formatter shared with LEO and GEO about absence, in a lot where no screen can be looked
+      // at, buys less than it risks; L7 brings the card and the reader (spec
+      // docs/lunar-orbit/07-conception-L5.md section 3.2).
+      case MissionSpec.LunarOrbit lunarOrbit -> Optional.empty();
     };
   }
 

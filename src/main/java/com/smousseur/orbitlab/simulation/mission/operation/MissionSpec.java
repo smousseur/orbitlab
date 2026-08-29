@@ -20,7 +20,7 @@ import java.util.Objects;
  * instead of freezing one composition at creation time.
  */
 public sealed interface MissionSpec
-    permits MissionSpec.EarthOrbit, MissionSpec.Geo, MissionSpec.Lunar {
+    permits MissionSpec.EarthOrbit, MissionSpec.Geo, MissionSpec.Lunar, MissionSpec.LunarOrbit {
 
   /**
    * @return the human-readable mission name
@@ -549,6 +549,93 @@ public sealed interface MissionSpec
               configuration.payloadId()),
           parkingAltitude,
           periluneAltitude,
+          siteName,
+          latitude,
+          longitude,
+          altitude,
+          horizon,
+          atmosphere);
+    }
+  }
+
+  /**
+   * Lunar orbit spec: ground to a circular orbit around the Moon, through a parking orbit and a
+   * translunar transfer (MIS-5 / L5, spec {@code docs/lunar-orbit/07-conception-L5.md} §2).
+   *
+   * <p><b>{@code orbitAltitude} and {@code periluneAltitude} are the same number</b>, and this
+   * record carries the first name on purpose. The lunar orbit altitude <em>is</em> the perilune the
+   * injection aims at (découpage §6 pt 1), but a spec carries what the user asked for; translating
+   * it into an aim point is {@link LunarOrbitMission}'s job.
+   *
+   * <p><b>The parking altitude is a component</b>, as on {@link Lunar} and for the same reason:
+   * three things have to agree on it — the launch window, the composed chain and the propellant
+   * budget — and a constant would put the same number in three files. Its value comes from {@code
+   * LunarFlybyMission.DEFAULT_PARKING_ALTITUDE}, which already declares itself the altitude every
+   * lunar mission built from the wizard leaves from.
+   *
+   * <p><b>No inclination component.</b> A lunar orbit's inclination is not aimed at: {@code
+   * TranslunarInjectionPlan} builds its aim direction inside the transfer plane, so the single
+   * scalar degree of freedom is spent entirely on the perilune altitude (découpage §2.2 pt 2). What
+   * the geometry delivers was measured over a lunation by L0: 131.1° to 153.4° in the selenocentric
+   * ICRF-oriented frame, a 22.3° spread. It is undergone, reported, and absent from the objective.
+   *
+   * <p><b>Nothing else is validated</b> beyond the null checks and the two normalisations, exactly
+   * as on {@link Lunar}. The refusal that matters is {@code PropellantBudget.loadsForLunarOrbit}'s,
+   * when the orbiter's tank cannot hold its insertion; an altitude band here would be a second
+   * truth about the range the wizard profile will carry.
+   *
+   * @param name the mission name
+   * @param configuration the launch configuration, payload insertion load included
+   * @param parkingAltitude the parking orbit altitude in meters
+   * @param orbitAltitude the circular lunar orbit altitude in meters above the lunar surface
+   * @param siteName the launch site display name, or {@code null} when unnamed
+   * @param latitude the launch site latitude in degrees
+   * @param longitude the launch site longitude in degrees
+   * @param altitude the launch site altitude in meters
+   * @param horizon the restitution horizon, or {@code null} for the derived default
+   * @param atmosphere the atmosphere to fly against, or {@code null} for {@link
+   *     AtmosphereModel#NONE}
+   */
+  record LunarOrbit(
+      String name,
+      LaunchConfiguration configuration,
+      double parkingAltitude,
+      double orbitAltitude,
+      String siteName,
+      double latitude,
+      double longitude,
+      double altitude,
+      MissionHorizon horizon,
+      AtmosphereModel atmosphere)
+      implements MissionSpec {
+    public LunarOrbit {
+      Objects.requireNonNull(name, "name");
+      Objects.requireNonNull(configuration, "configuration");
+      // See EarthOrbit: normalised here so a hand-assembled spec need not know the default exists.
+      if (horizon == null) {
+        horizon = MissionHorizon.defaultFor(MissionType.LUNAR_ORBIT);
+      }
+      if (atmosphere == null) {
+        atmosphere = AtmosphereModel.NONE;
+      }
+    }
+
+    @Override
+    public MissionType type() {
+      return MissionType.LUNAR_ORBIT;
+    }
+
+    @Override
+    public MissionSpec withLauncherLoads(double[] launcherLoads) {
+      return new LunarOrbit(
+          name,
+          new LaunchConfiguration(
+              configuration.launcher(),
+              launcherLoads,
+              configuration.payload(),
+              configuration.payloadId()),
+          parkingAltitude,
+          orbitAltitude,
           siteName,
           latitude,
           longitude,

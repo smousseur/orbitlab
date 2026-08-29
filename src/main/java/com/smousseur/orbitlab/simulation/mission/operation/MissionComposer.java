@@ -99,6 +99,7 @@ public final class MissionComposer {
           case MissionSpec.EarthOrbit earthOrbit -> composeEarthOrbit(earthOrbit, mode);
           case MissionSpec.Geo geo -> composeGeo(geo, mode);
           case MissionSpec.Lunar lunar -> composeLunar(lunar);
+          case MissionSpec.LunarOrbit lunarOrbit -> composeLunarOrbit(lunarOrbit);
         };
     // This composer is the ONLY writer of a mission's restitution horizon (spec
     // docs/mission-horizon/01-horizon-explicite.md). Carrying it on the spec and applying it here,
@@ -258,6 +259,27 @@ public final class MissionComposer {
         spec.configuration(),
         spec.parkingAltitude(),
         spec.periluneAltitude(),
+        spec.latitude(),
+        spec.longitude(),
+        spec.altitude());
+  }
+
+  /**
+   * The lunar orbit chain (MIS-5 / L5, spec {@code docs/lunar-orbit/07-conception-L5.md} §3): the
+   * lunar chain above, plus an upper-stage jettison, a translunar coast that <em>ends</em> at the
+   * sphere of influence, a selenocentric approach, the insertion burn, and a terminal coast flown
+   * around the Moon.
+   *
+   * <p>The optimization mode is not an argument, for the reason {@link #composeLunar} gives: no
+   * stage of the lunar half of the chain has a CMA-ES counterpart. What this mission optimizes is
+   * its ascent, like any Earth mission.
+   */
+  private static Mission composeLunarOrbit(MissionSpec.LunarOrbit spec) {
+    return new LunarOrbitMission(
+        spec.name(),
+        spec.configuration(),
+        spec.parkingAltitude(),
+        spec.orbitAltitude(),
         spec.latitude(),
         spec.longitude(),
         spec.altitude());

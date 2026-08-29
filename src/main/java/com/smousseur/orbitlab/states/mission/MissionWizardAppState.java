@@ -214,6 +214,7 @@ public final class MissionWizardAppState extends BaseAppState {
     return switch (spec) {
       case MissionSpec.EarthOrbit earthOrbit -> earthWindow(earthOrbit, requested);
       case MissionSpec.Lunar lunar -> lunarWindow(lunar, requested);
+      case MissionSpec.LunarOrbit lunarOrbit -> lunarOrbitWindow(lunarOrbit, requested);
       case MissionSpec.Geo ignored -> requested;
     };
   }
@@ -226,7 +227,28 @@ public final class MissionWizardAppState extends BaseAppState {
    * @return the date to schedule
    */
   private static AbsoluteDate lunarWindow(MissionSpec.Lunar spec, AbsoluteDate requested) {
-    Optional<LaunchWindow> window = LunarLaunchWindowPlanner.nextOpportunity(spec, requested);
+    return lunarWindow(LunarLaunchWindowPlanner.nextOpportunity(spec, requested), requested);
+  }
+
+  /**
+   * The next opening of a lunar window for an orbit insertion, confirmed on the flown aim (MIS-5 /
+   * L5). The aimed perilune is the lunar orbit altitude, so the criterion is the flyby's own.
+   *
+   * <p><b>Not reachable before L7</b>, which adds the wizard card: nothing creates a lunar orbit
+   * mission until then. It is written correctly rather than stubbed because the planner entry it
+   * calls exists, and a placeholder here would be a wrong scheduled date waiting for a caller.
+   *
+   * @param spec the mission being scheduled
+   * @param requested the date read from the wizard, taken as a floor
+   * @return the date to schedule
+   */
+  private static AbsoluteDate lunarOrbitWindow(
+      MissionSpec.LunarOrbit spec, AbsoluteDate requested) {
+    return lunarWindow(LunarLaunchWindowPlanner.nextOpportunity(spec, requested), requested);
+  }
+
+  /** The verdict and the log line shared by the two lunar profiles. */
+  private static AbsoluteDate lunarWindow(Optional<LaunchWindow> window, AbsoluteDate requested) {
     if (window.isEmpty()) {
       logger.warn(
           "No lunar launch window within two days of {}; keeping the requested date", requested);

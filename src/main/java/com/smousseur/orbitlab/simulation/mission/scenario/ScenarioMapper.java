@@ -121,13 +121,14 @@ public final class ScenarioMapper {
               visible,
               solution,
               doubleValue(values, "LUNAR_PERILUNE_ALT"));
-      // MIS-5 / L3 §5. ScenarioMission is sealed on the same hierarchy as MissionSpec, and its
-      // javadoc makes this compilation failure the point: a new mission type cannot be saved
-      // silently. The matching record waits for L5 to fix the shape of the spec it must mirror —
-      // and nothing can reach here meanwhile, since no LUNAR_ORBIT mission can be created.
+      // MIS-5 / L5 §6. The spec's shape is fixed since L5, so the mirroring record could be
+      // written — but toMissionValues below is exhaustive on ScenarioMission and would then owe a
+      // branch WRITING the wizard key that MissionFactory owes a branch READING. The two stand or
+      // fall together, and what they wait for is that key, which is L7's. Nothing can reach here
+      // meanwhile, no LUNAR_ORBIT mission being creatable.
       case LUNAR_ORBIT ->
           throw new UnsupportedOperationException(
-              "LUNAR_ORBIT cannot be saved yet: ScenarioMission.LunarOrbit lands in MIS-5 / L5");
+              "LUNAR_ORBIT cannot be saved yet: ScenarioMission.LunarOrbit lands in MIS-5 / L7");
     };
   }
 
