@@ -159,7 +159,7 @@ reste lisible à toute distance (`RND-4`).
 > (fiche `NAV-3`), et la descente vers les fils du breadcrumb, explicitement
 > reportée en V2 par sa spec (fiche `NAV-4`).
 
-### Phase 3 — Socle physique et mission partagé · ~4,5 semaines
+### ~~Phase 3 — Socle physique et mission partagé~~ · **soldée le 2026-08-21**
 
 > **La phase pivot.** Rien ici n'est spectaculaire pris isolément ; tout est
 > réclamé par les missions lunaires (phase 4) et par le rendez-vous (phase 5).
@@ -167,6 +167,9 @@ reste lisible à toute distance (`RND-4`).
 >
 > Les deux derniers items sont de l'**outillage** plutôt que du socle physique,
 > et c'est délibéré : ils rendent les phases 4 et 5 tenables au quotidien.
+>
+> **Les sept items sont clos** — six livrés, un dissous. La phase 4 peut
+> démarrer sans reliquat.
 
 | ID | Item | ★ | ◆ | Taille | Sert à |
 |---|---|:-:|:-:|:-:|---|
@@ -176,13 +179,9 @@ reste lisible à toute distance (`RND-4`).
 | ~~MIS-3~~ | ~~Solveur de Lambert + repère LVLH~~ — **dissous le 2026-08-20** | 4 | 3 | M | — (reversé en `MIS-4` et `MIS-6`) |
 | ~~PHY-1~~ | ~~Atmosphère : la brique, **off** par défaut~~ — **résolu le 2026-08-21** | 4 | 3 | L | PHY-2, PHY-3 |
 | ~~UI-2~~ | ~~Feedback de progression pendant l'optimisation~~ — **résolu le 2026-08-21** | 3 | 2 | M | confort des phases 4 et 5 |
-| UI-3 | Persistance des missions / format de scénario | 4 | 3 | M | **outil de dev** des phases 4 et 5 |
+| ~~UI-3~~ | ~~Persistance des missions / format de scénario~~ — **résolu le 2026-08-21** | 4 | 3 | M | **outil de dev** des phases 4 et 5 |
 
-> **`UI-3` est le dernier item de la phase.** Les six autres sont soldés — cinq
-> livrés, un dissous — et la fin de phase ne tient plus qu'à la survie d'une
-> mission à la fermeture de l'application.
-
-**Pourquoi `UI-3` est ici et pas en phase 6.** Il n'a aucune dépendance, et son
+**Pourquoi `UI-3` était ici et pas en phase 6.** Il n'avait aucune dépendance, et son
 bénéfice principal à ce stade n'est pas la feature mais l'outillage : sans lui,
 mettre au point une mission lunaire ou un rendez-vous impose de re-saisir la
 mission dans le wizard **à chaque lancement de l'application**. Un save/load
@@ -194,17 +193,20 @@ ne rembourse rien.
 consommateur avant `MIS-6`. Ce qui restait a été reversé dans les deux items qui
 en ont besoin. Le raisonnement complet est dans la fiche `MIS-3` au §6.
 
-**Fin de phase quand** : une trajectoire peut sortir de la sphère d'influence
-terrestre, une date de lancement est choisie parce qu'elle est bonne, et une
-mission survit à la fermeture de l'application.
+**Fin de phase — atteinte.** Une trajectoire peut sortir de la sphère
+d'influence terrestre (`PHY-4`), une date de lancement est choisie parce
+qu'elle est bonne (`MIS-2`), et une mission survit à la fermeture de
+l'application (`UI-3`).
 
 ### Phase 4 — Missions lunaires · ~2 semaines
 
 | ID | Item | ★ | ◆ | Taille |
 |---|---|:-:|:-:|:-:|
-| MIS-4 | Survol lunaire (TLI + flyby) | 5 | 4 | L |
-| MIS-5 | Mise en orbite lunaire (LOI) | 5 | 3 | M |
+| ~~MIS-4~~ | ~~Survol lunaire (TLI + flyby)~~ — **résolu le 2026-08-28** | 5 | 4 | L |
+| ~~MIS-5~~ | ~~Mise en orbite lunaire (LOI)~~ — **résolu le 2026-08-29** | 5 | 3 | M |
 | FX-2 | Éclipses / pénombre inter-corps | 4 | 3 | M |
+
+Deux items sur trois sont livrés ; il ne reste que `FX-2`.
 
 `FX-2` est ici et pas en phase 6 : c'est le moment où la scène a enfin trois
 corps alignés qui s'occultent, et où l'effet se voit.
@@ -311,12 +313,12 @@ opportuniste, ou à décider quoi sacrifier quand une phase déborde.
 | ~~MIS-2~~ | ~~Fenêtres de lancement~~ — résolu (cible TLE et précession J2 reportées en `MIS-6`, voir détail) | 4 | 3 | M | MIS-7 (livré) |
 | PHY-5 | Étages largués propagés + maillages par étage | 4 | 3 | L | — (mais sans valeur avant PHY-2) |
 | NAV-5 | Hover « wow » planètes + orbites | 3 | 2 | M | RND-4 (livré) |
-| UI-3 | Persistance des missions / format de scénario | 4 | 3 | M | — |
+| ~~UI-3~~ | ~~Persistance des missions / format de scénario~~ — **résolu le 2026-08-21** | 4 | 3 | M | — |
 | ~~PHY-4~~ | ~~Socle multi-corps (3ᵉ corps, SOI, repères)~~ — **résolu le 2026-08-18** | 5 | 4 | L | — |
-| MIS-5 | Mise en orbite lunaire (LOI) | 5 | 3 | M | MIS-4 |
+| ~~MIS-5~~ | ~~Mise en orbite lunaire (LOI)~~ — **résolu le 2026-08-29** | 5 | 3 | M | MIS-4 (livré) |
 | MIS-10 | Déorbitage contrôlé et rentrée atmosphérique | 5 | 3 | M | PHY-2, PHY-3 |
-| MIS-4 | Survol lunaire (TLI + flyby) | 5 | 4 | L | PHY-4 (livré), MIS-2 (livré) |
-| MIS-11 | Mission Artemis : survol lunaire et retour | 5 | 4 | L | MIS-4, MIS-10 |
+| ~~MIS-4~~ | ~~Survol lunaire (TLI + flyby)~~ — **résolu le 2026-08-28** | 5 | 4 | L | PHY-4 (livré), MIS-2 (livré) |
+| MIS-11 | Mission Artemis : survol lunaire et retour | 5 | 4 | L | MIS-4 (livré), MIS-10 |
 | ~~PHY-1~~ | ~~Atmosphère : brique drag, désactivée par défaut~~ — **résolu le 2026-08-21** | 4 | 3 | L | — |
 | PHY-3 | Détecteurs MaxQ / interface + télémétrie + UI fidélité | 3 | 2 | M | PHY-1 (livré) |
 | PHY-2 | Atmosphère par défaut + recalibrage optimiseur | 5 | 4 | L | PHY-1 (livré) |
@@ -349,12 +351,12 @@ liste dont le prix augmente mécaniquement avec le temps.
 ```
 MIS-8 (horizon de mission) ✔ résolu — ses trois aval sont débloqués
    ├── NAV-2 (piste temporelle) ✔ ── NAV-3 (scrub) ✔ — les deux résolus
-   ├── MIS-4 / MIS-5 (lunaire : coast TLI ~3 j > horizon actuel)
+   ├── MIS-4 / MIS-5 (lunaire) ✔ résolus — coast TLI géré au-delà de l'horizon initial
    └── MIS-6 (rendezvous : phasing sur N révolutions)
 
 MIS-7 (mission Terre paramétrable) ✔ résolu — MIS-2 est débloqué
    └── MIS-2 (fenêtres de lancement) ✔ résolu — MIS-4 et MIS-6 sont débloqués
-          ├── MIS-4 (survol lunaire) ──── MIS-5 (orbite lunaire)
+          ├── MIS-4 (survol lunaire) ✔ ──── MIS-5 (orbite lunaire) ✔ — les deux résolus
           │      ▲
           │   PHY-4 (multi-corps)
           └── MIS-6 (rendezvous) ◄── source éphéméride TLE
@@ -365,7 +367,7 @@ PHY-1 (drag off par défaut) ✔ résolu ── PHY-2 (drag par défaut + recali
 PHY-2 + PHY-3 ── MIS-10 (déorbitage + rentrée)
                      └── MIS-11 (Artemis : survol lunaire + retour)
                             ▲
-                         MIS-4 (survol lunaire)
+                         MIS-4 (survol lunaire) ✔ résolu
 
 PHY-5 (étages largués) — aucun amont dur, mais sans PHY-2 il ne montre rien
 
@@ -382,9 +384,11 @@ ni un rendez-vous ne convergent — la cible n'est jamais au bon endroit).
 `MIS-2` — aucun de ses six lots ne réclamait de fenêtre de lancement, tous se
 testaient à géométrie Terre-Lune imposée (découpage §1).
 
-`MIS-4` attendait les deux et n'attend donc plus personne : il est le prochain
-item que rien n'a en amont. `MIS-6` n'attend plus qu'une **source éphéméride
-TLE** — celle-ci reste bien de son ressort, et non un reliquat de `MIS-2`, pour
+`MIS-4` attendait les deux et n'attendait donc plus personne : c'était le
+prochain item que rien n'avait en amont, et il est résolu à son tour depuis le
+2026-08-28 — `MIS-5` (orbite lunaire) a suivi le 2026-08-29. `MIS-6` n'attend
+plus qu'une **source éphéméride TLE** — celle-ci reste bien de son ressort, et
+non un reliquat de `MIS-2`, pour
 la raison écrite au §10 de
 [`docs/mission-window/01-basics.md`](../mission-window/01-basics.md).
 
@@ -1303,7 +1307,30 @@ bibliothèque et qu'aucun état relatif n'existe dans `simulation/`.
 
 **Spec.** [`docs/brainstorm/leo-rendezvous-preparation.md`](../brainstorm/leo-rendezvous-preparation.md) §3.5, §3.6 — toujours la référence, désormais lue depuis `MIS-4` et `MIS-6`.
 
-#### MIS-4 — Survol lunaire (TLI + flyby) — ★5 ◆4 L
+#### ~~MIS-4 — Survol lunaire (TLI + flyby) — ★5 ◆4 L~~ — **RÉSOLU le 2026-08-28**
+
+> **Ce qui a été livré.** Sept lots (`L0` à `L6`,
+> [`docs/lunar-flyby/`](../lunar-flyby/)), du seed patched-conic jusqu'à la
+> poussée finie de production : `TLIBurnStage` remplace la démo `PHY-4`,
+> `inject()` calibre le burn par sécante sur l'énergie spécifique de
+> l'impulsion, fenêtre de lancement datée par
+> `TranslunarInjectionPlanWindowProblem`. Vol de clôture : périlune
+> **100,2 km** pour 100 visés, surcharge de poussée finie réelle **+8,1 m/s**.
+>
+> **Cinq écarts mesurés, aucun anticipé par le découpage** — détail dans les
+> fiches de lot : la sortie de sphère d'influence lunaire arrive à **4,5 j** et
+> non 5,5 j (`L0`) ; le « dix minutes » de marge annoncé par `L2` était faux
+> d'un facteur 5 (`L4`) ; et la règle qui a coûté le plus cher à apprendre à
+> `L6` — toute boucle de calibration doit évaluer ses candidats sur ce qui sera
+> **réellement volé** (la combustion finie), pas sur l'impulsion qu'elle
+> approxime — a été violée à quatre niveaux indépendants, chacun invisible à la
+> lecture et passant les assertions partielles.
+>
+> **Reste ouvert, sciemment.** L'offset de visée ne corrige qu'une dimension
+> d'une distance ratée qui en a deux ; à certaines géométries le périlune volé
+> a un plancher (132 km mesuré) au-dessus de la cible — chercher aussi la
+> direction de visée serait un lot en soi, non ouvert. `ParkingCoastStage` ne
+> gère pas un coast plus court que `ignitionLead`.
 
 **Pourquoi.** Premier objectif au-delà de l'orbite terrestre. Fort en spectacle
 (la trajectoire traverse l'échelle Terre-Lune), fort en pédagogie.
@@ -1330,18 +1357,44 @@ la forme de l'API se lit sur `TLIBurnStage`, pas dans l'abstrait. Le
 multi-révolution (`nRev ≥ 1`) reste à vérifier ; il est natif, il n'est pas testé.
 
 **Spec.** [`docs/lunar-flyby/01-decoupage.md`](../lunar-flyby/01-decoupage.md)
-— voir son §2.2 : **cinq affirmations de cette fiche y sont corrigées**, dont la
+à [`08-conception-L6.md`](../lunar-flyby/08-conception-L6.md) — voir son §2.2 :
+**cinq affirmations de cette fiche y sont corrigées**, dont la
 « correction CMA-ES » annoncée ci-dessus et le seed Lambert reversé ici depuis
 `MIS-3`. Le §8 de [`docs/brainstorm/missions.md`](../brainstorm/missions.md)
 reste la source d'origine, antérieure à `PHY-4`.
 
-#### MIS-5 — Mise en orbite lunaire (LOI) — ★5 ◆3 M
+#### ~~MIS-5 — Mise en orbite lunaire (LOI) — ★5 ◆3 M~~ — **RÉSOLU le 2026-08-29**
+
+> **Ce qui a été livré.** Huit lots (`L0` à `L7`,
+> [`docs/lunar-orbit/`](../lunar-orbit/)), directement sur `MIS-4` :
+> `LunarInsertionStage` (burn rétrograde à l'arrivée), `LunarOrbitObjective`
+> (périlune, inclinaison lunaire), jusqu'à la septième carte du wizard, son
+> panneau à un curseur, la branche de fabrique, le scénario, le préremplissage
+> et la cible affichée.
+>
+> **Quatre faits que le découpage ne disait pas.** Le refus de Kourou n'a
+> **aucun mécanisme** — comme pour `MIS-4`, le vrai refus du lot est celui des
+> ergols (`compositionRefused`). `FixedDuration` est un total depuis le
+> décollage et `Revolutions` un coast terminal, deux notions qui coïncident en
+> LEO/GEO et **divergent d'un facteur 5** en lunaire (0,98 j de coast contre
+> 4,0 j de trajet). La bande d'altitude était déjà décidée par `L3` : le
+> catalogue `Payloads.LUNAR_ORBITER` est dimensionné contre 50 km, et ce qui
+> limite n'est jamais le réservoir mais la masse sèche. Et le nom sur disque
+> d'un `ScenarioMission` vit dans une annotation que le compilateur n'exige
+> pas — l'oublier compile, écrit, et échoue à la relecture.
+>
+> **Reste ouvert.** L'essai manuel, et le vol de clôture `LunarOrbitFlightTest`
+> (posé à `L5`), jamais lancé — ces vérifications restent à la charge de
+> l'utilisateur, comme les autres missions d'optimisation longues.
 
 Directement sur `MIS-4` : `LunarInsertionStage` (burn rétrograde à l'arrivée),
 `LunarOrbitObjective` (altitude de périlune, inclinaison lunaire). L'essentiel
 du coût est dans `MIS-4` ; ici on ajoute un stage et un objectif. Rapport
 valeur/effort excellent une fois le survol acquis — raison pour laquelle les
 deux sont séparés.
+
+**Spec.** [`docs/lunar-orbit/01-decoupage.md`](../lunar-orbit/01-decoupage.md)
+à [`09-conception-L7.md`](../lunar-orbit/09-conception-L7.md).
 
 #### MIS-6 — Rendezvous / phasing sur cible TLE — ★5 ◆5 XL
 
@@ -1688,7 +1741,28 @@ elles.
 
 **Spec.** [`docs/mission-progress/01-feedback-optimisation.md`](../mission-progress/01-feedback-optimisation.md)
 
-#### UI-3 — Persistance / format de scénario — ★4 ◆3 M *(ajout)*
+#### ~~UI-3 — Persistance / format de scénario — ★4 ◆3 M *(ajout)*~~ — **RÉSOLU le 2026-08-21**
+
+> **Ce qui a été livré.** Les cinq lots `L0` à `L4` : schéma v1 avec
+> `formatVersion`, (dé)sérialiseurs, `ScenarioStore`, `ScenarioSession.capture`
+> (préremplissage wizard), `ScenarioBrowserWidget` / `ScenarioBrowserModel`
+> (charger / enregistrer) et les deux entrées de menu, avec leurs icônes.
+>
+> **Écarts au découpage, pris en connaissance de cause.**
+> `ScenarioBrowserWidget` ne connaît pas `ScenarioBrowserModel` — l'`AppState`
+> pousse lignes, sélection et activation, comme `AppMenu` ↔ `AppMenuModel` ; un
+> import direct `ui → states` aurait été le premier du dépôt. `restore` refuse
+> une mission dont l'atmosphère n'est pas `NONE` (rien ne peut la remonter
+> avant `PHY-2`). Et une mesure a démenti la conception :
+> `TimeConverter.toUtcIsoString` reposait sur `LocalDateTime.toString()`, qui
+> **omet les secondes à la minute pile** — une date sur soixante ne se relisait
+> pas elle-même ; corrigé par un formateur explicite.
+>
+> **Trou connu.** Les rejets de `ScenarioLoadReport` ne sont que journalisés,
+> aucun écran ne les affiche.
+>
+> **Reste ouvert.** `ScenarioReplayTest` (opt-in, tests lents) et l'essai
+> manuel, seul juge de fin de phase, restent à la charge de l'utilisateur.
 
 **Pourquoi.** Les missions ne survivent pas à la fermeture de l'application. Au
 delà du confort, un format de scénario sérialisable (lanceur, payload, site,
