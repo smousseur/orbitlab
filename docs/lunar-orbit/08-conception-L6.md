@@ -24,8 +24,9 @@ hauteur réelle d'une carte, et le nombre de textures neuves. Ils sont au §1.2.
 | `ui/mission/wizard/MissionDomain` | **neuf** — l'onglet, son libellé, ses trois fonctions pures |
 | `ui/mission/wizard/step/MissionDomainTabs` | **neuf** — la bande et la règle qu'elle compose |
 | `interface/wizard/tab-active.png` | **neuve** — l'onglet ouvert, sans bord bas |
-| `interface/wizard/tab-idle.png` | **neuve** — la même, au fond en retrait |
+| `interface/wizard/tab-idle.png` | **neuve** — la même, au fond en retrait, avec son bord bas |
 | `interface/wizard/tab-panel.png` | **neuve** — le cadre, sans bord haut |
+| `interface/wizard/tab-rule.png` | **neuve** — le trait, au profil de bordure de l'atlas |
 | `ui/mission/wizard/MissionProfile` | `domain()`, `defaultFor()`, et le commentaire de `of()` |
 | `ui/mission/wizard/step/StepMissionType` | la réécriture, la régression de sélection, les cotes |
 | `ui/mission/wizard/MissionWizardWidget` | le repli de `initialProfile` |
@@ -197,8 +198,9 @@ le **dessin**, pas dans la coupe.
 | texture | taille / coupe | dessin |
 |---|---|---|
 | `tab-active` | 20 × 20, coupe 8 | coins hauts arrondis (r = 6), bord `#1a3a5c` à gauche/haut/droite (1,7 px), fond `#0f2847`, les huit rangées basses en pur remplissage |
-| `tab-idle` | idem | la même géométrie, fond `#071526` |
+| `tab-idle` | idem | la même géométrie **et son bord bas**, fond `#071526` |
 | `tab-panel` | 28 × 28, coupe 12, comme `card-mission` | bord à gauche/droite/bas, coins bas arrondis (r = 7), les douze rangées hautes en pur remplissage |
+| `tab-rule` | 8 × 8, coupe 3 | transparente sauf un bord bas, **au même profil que les trois autres** — un pixel plein, un à 70 % |
 
 Les deux couleurs sont celles de l'atlas, relevées au pixel : `#1a3a5c` est exactement
 `FormStyles.BORDER`, `#0f2847` est le fond de `card-mission` et `#071526` celui de `toggle-group`.
@@ -212,24 +214,51 @@ ses régions de coin sans les étirer. Un onglet ainsi rendu s'incurve en s'éca
 se lit comme une pastille **posée sur** le trait, quand un onglet de dossier passe **derrière**. Le
 troisième PNG est le deuxième avec un aplat changé.
 
-### 3.2 La règle, composée plutôt que recouverte
+### 3.2 La règle, portée par ce qui se pose dessus
 
-La bande est faite de deux rangs. Le premier porte les boîtes d'onglet et leurs écarts de 4 px. Le
-second, **haut de 1**, porte la règle : un `QuadBackgroundComponent(FormStyles.BORDER)` sous chaque
-onglet fermé, sous chaque écart et jusqu'au bord droit, et sous l'onglet ouvert un segment **peint au
-fond du cadre** (`#0f2847`). Peint, et non laissé vide : un pixel transparent y laisse voir la coque
-du wizard (`#0b1e35`, plus sombre que l'onglet comme que le cadre), ce qui redessine exactement le
-trait que la jonction existe pour supprimer — le premier rendu l'a montré. Le cadre suit immédiatement, sans écart, et n'a pas de bord haut. La
-ligne est donc continue partout **sauf** là où l'onglet ouvert rejoint son contenu.
+**Chaque pixel de la règle appartient à l'objet qui l'occupe.** La bande est **un seul rang**, haut
+comme un onglet, et le trait qui devient le bord haut du cadre est dessiné sur son dernier pixel par
+l'enfant qui couvre cette colonne :
 
-**Rien ne se superpose.** L'alternative — garder un cadre bordé sur quatre côtés et descendre
-l'onglet de 2 px par-dessus son bord haut — aurait fait dépendre la jonction d'un inset négatif et de
-l'ordre de dessin entre frères. Le wizard porte déjà un tel inset (`WizardStepper:105`,
-`Insets3f(-30, 0, 0, 0)`) et n'a pas besoin d'un second. Composer la règle coûte une texture de plus
-et aucun tour de passe-passe.
+- un onglet **fermé** le dessine dans sa propre texture — `tab-idle` porte un bord bas ;
+- l'onglet **ouvert** y met son propre remplissage — `tab-active` n'en a pas, et c'est la jonction ;
+- les écarts entre onglets et la largeur au-delà sont des **colonnes** de la hauteur d'un onglet,
+  transparentes sauf leur bord bas.
 
-Les largeurs viennent de `Label.getPreferredSize().x` plus le padding, et les segments s'en déduisent.
-Le second rang est reconstruit à la bascule : quatre segments au plus, sans état.
+Le cadre dessous n'a pas de bord haut : rien d'autre ne dessine dans cette bande. Et les colonnes
+sont dans **le même rang** que les onglets, pas dans un rang de 1 px placé dessous — leur trait tombe
+donc sur la même ligne de balayage que le bord bas d'un onglet fermé, sans risque d'être décalé d'un
+pixel.
+
+**Le trait sort d'une texture et non d'une couleur**, et c'est le rendu qui l'a imposé. Un quad plat
+d'un pixel en `#1a3a5c` a la bonne teinte et se lit quand même comme un autre trait : toutes les
+bordures de cet atlas sont dessinées sur **1,7 px avec antialiasing** — un pixel plein puis un à
+environ 70 % —, si bien qu'un pixel dur paraît plus fin et plus clair à côté du cadre qu'il est censé
+prolonger. `tab-rule` porte ce même profil, du même générateur. (`FormStyles.BORDER` était exclu pour
+une autre raison encore : son `alpha = 0,70` composé sur la coque donne un bleu plus clair que le
+`#1a3a5c` des textures.)
+
+**Trois constructions ont été essayées, et les deux qui ont échoué ont échoué pour la même raison :
+elles faisaient dépendre le pixel d'un objet de celui d'un autre.**
+
+1. **Composer** un trait pleine largeur dans un rang séparé, avec un trou peint sous l'onglet ouvert.
+   Il fallait qu'une couleur coïncide exactement avec le fond du cadre, et une largeur relue par
+   `getPreferredSize()` sur une boîte dont le fond — qui porte le padding comme marge — n'était
+   installé qu'après. Deux correctifs, l'un sur la couleur, l'autre sur la largeur ; le trait est
+   resté.
+2. **Recouvrir** : le cadre bordé sur quatre côtés, remonté de 2 px sous la bande, et l'ordre de
+   peinture inversé par la profondeur. Le cadre a disparu de l'écran.
+3. Celle-ci, où l'onglet ouvert dessine lui-même le pixel qui devrait porter le trait. Il n'y a plus
+   de couture entre deux objets à faire tomber juste, parce qu'il n'y a plus de couture.
+
+**Deux faits Lemur relevés au bytecode pendant ces essais**, et qui n'existent nulle part dans le
+dépôt : `GuiControl.getPreferredSize` **lève dès qu'un composant rétrécit** une taille préférée, sur
+n'importe quel axe — un inset négatif est donc refusé par défaut ; et une `setPreferredSize`
+explicite **court-circuite** tout le parcours des composants, contrôle compris, ce qui est la seule
+raison pour laquelle le `Insets3f(-30, …)` de `WizardStepper` vit depuis MIS-7.
+
+La largeur d'un onglet reste de l'arithmétique — libellé plus padding — et elle est **posée** sur la
+boîte plutôt que relue d'une passe de layout qui n'a pas forcément tourné.
 
 ---
 
@@ -239,19 +268,18 @@ Le second rang est reconstruit à la bascule : quatre segments au plus, sans ét
 |---|---|---|
 | titre `MISSION TYPE` | 18 | — |
 | écart | 10 | 12 → 10 |
-| boîte d'onglet (18 d'orbitron + 4 + 4) | 26 | neuf |
-| règle de 1 px = bord haut du cadre | 1 | neuf |
+| bande d'onglets, règle comprise sur son dernier pixel | 26 | neuf |
 | padding haut du cadre | 6 | neuf |
 | rangée 1 | 176 | **inchangée** |
 | `ROW_GAP` | 12 | — |
 | rangée 2 | 176 | |
 | padding bas du cadre | 6 | neuf |
-| **total** | **431 / 440** | contre 421 aujourd'hui |
+| **total** | **430 / 440** | contre 421 aujourd'hui |
 
 **Deux budgets, et c'est le second qui fait foi.** L'aire polie du volet de contenu vaut
 468 − 28 − 16 = 424, mais la racine du step est épinglée à `CONTENT_HEIGHT` et débordait déjà cet
 inset bas avant `L6` : la limite réelle est **440**, ce qui reste avant le bandeau du pied. Le total
-de 431 mange donc 7 px du rembourrage bas du volet et laisse **9 px** avant le pied.
+de 430 mange donc 6 px du rembourrage bas du volet et laisse **10 px** avant le pied.
 
 **La carte ne bouge pas, et c'est le fait 3 qui l'impose.** `CARD_W` et `CARD_H` gardent 256 et 176 :
 la carte n'a pas un pixel à céder, et c'est le **cadre** qui se paie tout seul, à 6 px de padding
@@ -376,7 +404,7 @@ qui en ont une, et refuse `LUNAR_ORBIT` en nommant `L7`.
 **Puis l'essai manuel**, que le découpage exige : la jonction et l'interruption de la règle, le sens
 des textures (déterminé au §1.2 fait 6, mais jamais vu à l'écran), la bascule qui préserve la
 sélection, les deux cartes qui ne restent plus allumées, l'onglet désactivé en édition, et les
-419 px qui ne débordent pas.
+430 px qui ne débordent pas.
 
 ---
 

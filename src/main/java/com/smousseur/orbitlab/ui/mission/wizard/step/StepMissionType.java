@@ -127,7 +127,7 @@ public class StepMissionType implements StepValues {
     root.addChild(UiKit.vSpacer(TITLE_GAP));
 
     // The "// select the target orbit" line the five wizard pages otherwise share is gone from this
-    // one: the tabs say what it said, and its 27 px are what the strip is paid with (L6 §4).
+    // one: the tabs say what it said, and its 26 px are what the strip is paid with (L6 §4).
     tabs =
         new MissionDomainTabs(
             initialProfile.domain(),

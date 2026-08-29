@@ -10,7 +10,6 @@ import com.simsilica.lemur.Container;
 import com.simsilica.lemur.FillMode;
 import com.simsilica.lemur.Label;
 import com.simsilica.lemur.component.BoxLayout;
-import com.simsilica.lemur.component.QuadBackgroundComponent;
 import com.simsilica.lemur.component.TbtQuadBackgroundComponent;
 import com.simsilica.lemur.event.DefaultMouseListener;
 import com.simsilica.lemur.event.MouseEventControl;
@@ -24,50 +23,48 @@ import java.util.Set;
 import java.util.function.Consumer;
 
 /**
- * The domain tabs of the wizard's first step, and the rule they sit on (MIS-5 / L6 §5).
+ * The domain tabs of the wizard's first step (MIS-5 / L6 §5).
  *
- * <p><b>The open tab is welded to the panel below it.</b> {@code tab-active} carries a border on
- * its left, top and right and none at its bottom, and its fill is the panel's own; the panel, in
- * turn, has no top border. The line between them is drawn <em>here</em>, as a second row one pixel
- * high: a coloured segment under every closed tab, under every gap and across the remaining width,
- * and a transparent one under the open tab. The rule is therefore continuous everywhere except
- * where the open tab meets its content, which is what makes it read as a folder rather than as a
- * row of buttons resting on a line.
+ * <p><b>Every pixel of the rule belongs to the object that sits on it.</b> The strip is a single
+ * row as tall as a tab, and the line that becomes the panel's top edge is drawn on its bottom pixel
+ * by whichever child covers that column:
  *
- * <p><b>Nothing overlaps.</b> The alternative was to keep a fully bordered panel and pull the tab
- * two pixels down over its top edge, which would have made the joint depend on a negative inset and
- * on sibling draw order — the wizard already carries one such inset in {@code WizardStepper} and
- * does not need a second. Composing the rule costs one texture more and no layout trick.
+ * <ul>
+ *   <li>a closed tab draws it in its own texture — {@code tab-idle} carries a bottom border;
+ *   <li>the open tab draws its own fill there instead — {@code tab-active} has none, which is the
+ *       joint;
+ *   <li>the gaps between tabs and the width beyond them are filled by {@link #rule} columns, whose
+ *       bottom pixel is the same opaque line.
+ * </ul>
  *
- * <p>Vertical budget: a tab box is one orbitron-13 line (18 px) plus {@link #TAB_PAD_Y} above and
- * below, so 26 px, and the rule adds one — 27 px for the strip, of the 424 the content pane offers.
+ * <p>The panel below carries no top border, so nothing else draws in that band.
+ *
+ * <p><b>Three constructions were tried before this one, and the two that failed failed for the same
+ * reason</b>: they made one object's pixel depend on another's. The first composed a full-width
+ * rule in a separate row and painted a hole under the open tab, which required a colour to match
+ * the panel's exactly and a width recovered from a layout that had not necessarily run. The second
+ * let the panel rise two pixels under the strip and reordered the two by depth, which made the
+ * frame vanish outright. Here the open tab's bottom pixel is the open tab's own fill: there is no
+ * seam between two objects to get right, because there is no seam.
  */
 final class MissionDomainTabs {
 
-  /** Height of the rule that becomes the panel's top border. */
-  private static final float LINE_HEIGHT = 1f;
+  /** One orbitron-13 line plus {@link #TAB_PAD_Y} above and below. */
+  static final float TAB_HEIGHT = 26f;
+
+  /** 9-slice corner inset of {@code tab-rule}, an 8x8 texture. */
+  private static final int RULE_BORDER = 3;
 
   private static final float TAB_PAD_X = 14f;
   private static final float TAB_PAD_Y = 4f;
 
-  /** Space between two tabs, filled by the rule like any other gap. */
+  /** Space between two tabs, where the rule runs on unbroken. */
   private static final float TAB_GAP = 4f;
 
   /** 9-slice corner inset of {@code tab-active} and {@code tab-idle}, both 20x20. */
   private static final int TAB_BORDER = 8;
 
-  /**
-   * The fill of {@code tab-active} and {@code tab-panel} (#0f2847), read off the atlas.
-   *
-   * <p>The row under the open tab has to be <em>painted</em> with it, not left empty: a transparent
-   * pixel there shows the wizard shell behind (#0b1e35, darker than either), which drew exactly the
-   * dark line the joint exists to remove.
-   */
-  private static final ColorRGBA PANEL_FILL = new ColorRGBA(0.059f, 0.157f, 0.278f, 1f);
-
   private final Container root;
-  private final Container lineRow;
-  private final float width;
   private final Set<MissionDomain> enabled;
   private final Map<MissionDomain, Container> boxes = new EnumMap<>(MissionDomain.class);
   private final Map<MissionDomain, Label> labels = new EnumMap<>(MissionDomain.class);
@@ -85,26 +82,26 @@ final class MissionDomainTabs {
     this.active = initial;
     this.enabled = EnumSet.noneOf(MissionDomain.class);
     this.enabled.addAll(enabled);
-    this.width = width;
 
-    root = new Container(new BoxLayout(Axis.Y, FillMode.None), FormStyles.STYLE);
+    root = new Container(new BoxLayout(Axis.X, FillMode.None), FormStyles.STYLE);
     root.setBackground(null);
 
-    Container tabRow = root.addChild(new Container(new BoxLayout(Axis.X, FillMode.None)));
-    tabRow.setBackground(null);
+    float used = 0f;
     MissionDomain[] domains = MissionDomain.values();
     for (int i = 0; i < domains.length; i++) {
       if (i > 0) {
-        tabRow.addChild(UiKit.hSpacer(TAB_GAP));
+        root.addChild(rule(TAB_GAP));
+        used += TAB_GAP;
       }
       MissionDomain domain = domains[i];
       Container box = buildTab(domain);
       boxes.put(domain, box);
-      tabRow.addChild(box);
+      root.addChild(box);
+      used += box.getPreferredSize().x;
     }
-
-    lineRow = root.addChild(new Container(new BoxLayout(Axis.X, FillMode.None)));
-    lineRow.setBackground(null);
+    if (width - used > 0f) {
+      root.addChild(rule(width - used));
+    }
 
     applyStates();
   }
@@ -115,6 +112,10 @@ final class MissionDomainTabs {
     label.setFont(UiKit.orbitron(13));
     box.addChild(label);
     labels.put(domain, label);
+    // Sized here rather than left to the layout: the width is arithmetic — the label plus its
+    // padding — and reading it back off the box answered the bare label until the background, which
+    // carries that padding as its margin, had been installed.
+    box.setPreferredSize(new Vector3f(label.getPreferredSize().x + 2 * TAB_PAD_X, TAB_HEIGHT, 0));
 
     if (enabled.contains(domain)) {
       MouseEventControl.addListenersToSpatial(
@@ -141,6 +142,28 @@ final class MissionDomainTabs {
           });
     }
     return box;
+  }
+
+  /**
+   * A column as tall as a tab, transparent but for the rule along its bottom.
+   *
+   * <p>A column and not a one-pixel row laid beneath the tabs: kept in the same row, its line lands
+   * on the same scanline as a closed tab's bottom border, with no chance of being off by one.
+   *
+   * <p><b>Drawn from a texture, not from a colour.</b> A flat one-pixel quad of {@code #1a3a5c} is
+   * the right hue and still reads as a different line: every border in this atlas is drawn 1.7 px
+   * wide with antialiasing — a full pixel then one at about 70 % — so a hard single pixel looks
+   * thinner and brighter beside the frame it is supposed to continue. {@code tab-rule} carries that
+   * same profile, from the same generator.
+   *
+   * @param columnWidth the width to span
+   * @return the column
+   */
+  private static Container rule(float columnWidth) {
+    Container column = new Container(new BoxLayout(Axis.Y, FillMode.None), FormStyles.STYLE);
+    column.setPreferredSize(new Vector3f(columnWidth, TAB_HEIGHT, 0));
+    column.setBackground(UiKit.wizardBg9("tab-rule", RULE_BORDER));
+    return column;
   }
 
   Container getNode() {
@@ -179,7 +202,6 @@ final class MissionDomainTabs {
       boxes.get(domain).setBackground(skin);
       labels.get(domain).setColor(colorOf(domain, open));
     }
-    rebuildLine();
   }
 
   /**
@@ -192,40 +214,5 @@ final class MissionDomainTabs {
       return FormStyles.TEXT_PRIMARY;
     }
     return enabled.contains(domain) ? FormStyles.TEXT_SECONDARY : FormStyles.TEXT_LO;
-  }
-
-  /**
-   * Lays the rule under the strip, leaving a hole under the open tab.
-   *
-   * <p>The hole is a painted segment, not an absent one — see {@link #PANEL_FILL}.
-   *
-   * <p>Rebuilt on every change rather than resized: the segments are as many as the tabs plus the
-   * remainder, and their widths follow the label widths, which the font decides.
-   */
-  private void rebuildLine() {
-    lineRow.clearChildren();
-    float used = 0f;
-    MissionDomain[] domains = MissionDomain.values();
-    for (int i = 0; i < domains.length; i++) {
-      if (i > 0) {
-        lineRow.addChild(segment(TAB_GAP, FormStyles.BORDER));
-        used += TAB_GAP;
-      }
-      MissionDomain domain = domains[i];
-      float tabWidth = boxes.get(domain).getPreferredSize().x;
-      lineRow.addChild(
-          domain == active ? segment(tabWidth, PANEL_FILL) : segment(tabWidth, FormStyles.BORDER));
-      used += tabWidth;
-    }
-    if (width - used > 0f) {
-      lineRow.addChild(segment(width - used, FormStyles.BORDER));
-    }
-  }
-
-  private static Container segment(float segmentWidth, ColorRGBA color) {
-    Container line = new Container();
-    line.setPreferredSize(new Vector3f(segmentWidth, LINE_HEIGHT, 0));
-    line.setBackground(new QuadBackgroundComponent(color));
-    return line;
   }
 }
