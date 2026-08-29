@@ -10,6 +10,21 @@ MaterialDef Wrap Lighting {
         // illumination ramps from 0 at N.L = 0 to full bright at N.L = FallOffFactor
         // via a Hermite curve. 0 = hard step. 0.1 - 0.3 = soft twilight.
         Float FallOffFactor : 0.3
+
+        // Eclipse occulter (docs/eclipses/01-decoupage.md): centre and radius of the body that may
+        // block sunlight from this one, in this geometry's world space. Radius 0 (the default) can
+        // never intersect anything, so a body with no occulter wired in pays for the per-fragment
+        // test but never changes appearance.
+        Vector3 OccluderPosition : 0.0 0.0 0.0
+        Float OccluderRadius : 0.0
+        // Unit vector toward the Sun, in this geometry's world space — deliberately not the
+        // g_LightData direction the fragment shader's own lighting loop uses, which JME uploads in
+        // view space; the eclipse test needs world space to match vPosWorld without a view-matrix
+        // multiply at the call site.
+        Vector3 SunDirection : 0.0 0.0 1.0
+        // The Sun's angular radius as seen from this body, in radians — needed to turn a hard
+        // eclipse boundary into the real penumbra gradient.
+        Float SunApparentRadius : 0.0
     }
 
     Technique {
@@ -19,6 +34,7 @@ MaterialDef Wrap Lighting {
         FragmentShader GLSL150: MatDefs/Light/WrapLighting.frag
 
         WorldParameters {
+            WorldMatrix
             WorldViewProjectionMatrix
             WorldViewMatrix
             NormalMatrix

@@ -15,6 +15,10 @@ attribute vec2 inTexCoord;
 varying vec2 texCoord;
 varying vec3 vNormal;
 varying vec3 vPos;
+// World-space fragment position, for the eclipse occlusion test: the occulter's position is
+// supplied CPU-side in this body's own world space (docs/eclipses/01-decoupage.md, L1), and testing
+// against vPos (view space) would tie the shader to the camera instead of to that occulter.
+varying vec3 vPosWorld;
 varying vec3 AmbientSum;
 varying vec4 DiffuseSum;
 
@@ -25,6 +29,7 @@ void main() {
     texCoord = inTexCoord;
 
     vPos = TransformWorldView(modelSpacePos).xyz;
+    vPosWorld = TransformWorld(modelSpacePos).xyz;
     vNormal = normalize(TransformNormal(inNormal));
 
 #ifdef MATERIAL_COLORS

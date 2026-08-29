@@ -198,18 +198,28 @@ d'influence terrestre (`PHY-4`), une date de lancement est choisie parce
 qu'elle est bonne (`MIS-2`), et une mission survit à la fermeture de
 l'application (`UI-3`).
 
-### Phase 4 — Missions lunaires · ~2 semaines
+### ~~Phase 4 — Missions lunaires~~ · **soldée le 2026-08-29**
+
+> Aller à la Lune, s'y mettre en orbite, et voir les corps qui s'alignent
+> s'occulter réellement.
+>
+> **Les trois items sont livrés.** La phase 5 peut démarrer sans reliquat.
 
 | ID | Item | ★ | ◆ | Taille |
 |---|---|:-:|:-:|:-:|
 | ~~MIS-4~~ | ~~Survol lunaire (TLI + flyby)~~ — **résolu le 2026-08-28** | 5 | 4 | L |
 | ~~MIS-5~~ | ~~Mise en orbite lunaire (LOI)~~ — **résolu le 2026-08-29** | 5 | 3 | M |
-| FX-2 | Éclipses / pénombre inter-corps | 4 | 3 | M |
+| ~~FX-2~~ | ~~Éclipses / pénombre inter-corps~~ — **résolu le 2026-08-29** | 4 | 3 | M |
 
-Deux items sur trois sont livrés ; il ne reste que `FX-2`.
+`FX-2` était ici et pas en phase 6 pour la raison qui a fini par se vérifier :
+c'est le moment où la scène a enfin des corps alignés qui s'occultent pour de
+bon, et où l'effet se voit — confirmé à l'écran sur l'éclipse solaire réelle
+du 12/08/2026.
 
-`FX-2` est ici et pas en phase 6 : c'est le moment où la scène a enfin trois
-corps alignés qui s'occultent, et où l'effet se voit.
+**Fin de phase — atteinte.** Un survol lunaire part et revient (`MIS-4`), une
+mission peut se mettre en orbite lunaire (`MIS-5`), et les trois corps qui
+s'alignent projettent une ombre qui se voit — vaisseau, Lune, et tache
+d'ombre sur la Terre (`FX-2`).
 
 ### Phase 5 — Rendezvous / phasing · ~3 semaines
 
@@ -300,7 +310,7 @@ opportuniste, ou à décider quoi sacrifier quand une phase déborde.
 | ~~NAV-1~~ | ~~Transitions de caméra entre vues~~ — résolu | 4 | 2 | M | — |
 | ~~MIS-7~~ | ~~`EarthOrbitMission` paramétrable → polaire / SSO / MEO~~ — résolu (branche de nœud et catalogue de sites reportés, voir détail) | 4 | 2 | M | — |
 | ~~RND-2~~ | ~~Filtrage anisotrope (MSAA déjà actif)~~ — résolu | 2 | 1 | S | — |
-| FX-2 | Éclipses / pénombre inter-corps | 4 | 3 | M | — |
+| ~~FX-2~~ | ~~Éclipses / pénombre inter-corps~~ — **résolu le 2026-08-29** | 4 | 3 | M | — |
 | FX-3 | Particules de tuyère | 4 | 2 | M | — |
 | ~~NAV-4~~ | ~~Breadcrumb de navigation 3D~~ — résolu | 3 | 2 | M | — |
 | ~~UI-2~~ | ~~Feedback de progression pendant l'optimisation~~ — **résolu le 2026-08-21** (file d'attente distinguée, quatrième MatDef maison, voir détail) | 3 | 2 | M | — |
@@ -904,28 +914,83 @@ framebuffer partagé, réutilisable par `FX-2` et les god-rays),
 `states/fx/SmoothBloomFilter.java`, `engine/scene/body/CoronaView.java`,
 `resources/MatDefs/Fx/Corona.{j3md,vert,frag}`, `AssetFactory.applyGlow`.
 
-#### FX-2 — Éclipses / pénombre inter-corps — ★4 ◆3 M
+#### ~~FX-2 — Éclipses / pénombre inter-corps — ★4 ◆3 M~~ — **RÉSOLU le 2026-08-29**
 
 **Pourquoi.** Un vaisseau qui traverse le cône d'ombre de la Terre, la Lune qui
-s'éteint en entrant dans l'ombre terrestre : c'est un phénomène *que la
-simulation calcule déjà correctement* et que le rendu ignore.
+s'éteint en entrant dans l'ombre terrestre : un phénomène que la simulation
+calcule déjà correctement — les positions, via l'éphéméride — et que le rendu
+ignorait.
 
-**Réévaluation par rapport à `effects-roadmap.md` §6.3 (qui la classait ◆4).**
-Le document supposait un pipeline `Unshaded` sans shader maison. Ce n'est plus
-le cas : `MatDefs/Light/WrapLighting.frag` est notre shader, et son terme
-d'éclairage tient en une ligne (`color += DiffuseSum.rgb * lightColor.rgb *
-diffuseColor.rgb * diff * lightDir.w`). Deux niveaux de mise en œuvre :
+**Réévaluation par rapport à `effects-roadmap.md` §6.3 (qui la classait ◆4),
+confirmée.** `MatDefs/Light/WrapLighting.frag` est notre seul shader
+d'éclairage, et son terme diffus tient en une ligne — un point d'injection
+unique, partagé par les planètes et par le vaisseau de chaque mission.
 
-- **Niveau 1 — facteur scalaire par corps (◆2).** Un uniform `m_EclipseFactor`
-  multiplie `diff`. Calcul CPU analytique sphère/cône (Orekit fournit la
-  géométrie), une valeur par corps et par frame. Couvre le vaisseau dans l'ombre
-  de la Terre et la Lune éclipsée — les cas où l'occulteur couvre tout le corps.
-- **Niveau 2 — occultation par fragment (◆3).** Passer position et rayon de
-  l'occulteur en uniforms et calculer la fraction occultée dans le fragment
-  shader. Nécessaire pour la **tache d'ombre lunaire sur la Terre** (éclipse
-  solaire vue de l'espace), qui est l'image qui vaut le chantier.
+**Le découpage en « deux niveaux » de l'énoncé initial n'a pas survécu à
+l'implémentation, et c'est un mieux.** Un scalaire CPU pour les petits corps
+puis un chemin fragment séparé pour la Terre aurait dupliqué la géométrie de
+l'occulteur (position, rayon) que les deux cas calculent de toute façon. Le
+découpage retenu — [`docs/eclipses/01-decoupage.md`](../eclipses/01-decoupage.md)
+— construit un seul mécanisme (test sphère/rayon par fragment, formule de
+recouvrement de deux disques avec une vraie pénombre, pas un bord dur) dès le
+premier lot ; les trois lots qui suivent n'ajoutent chacun qu'un occulteur de
+plus, jamais une nouvelle technique :
 
-Livrer le niveau 1 d'abord ; le niveau 2 réutilise le même point d'injection.
+- **L1** — le vaisseau s'assombrit dans l'ombre du corps central de son arc
+  courant (Terre ou Lune selon la mission).
+- **L2** — la Lune s'assombrit dans l'ombre de la Terre, avec dégradé si
+  l'éclipse est partielle (gratuit, le mécanisme étant déjà par-fragment).
+- **L3** — la Terre montre la tache d'ombre de la Lune (éclipse solaire) — le
+  seul des trois qui n'ajoute que du câblage, aucun nouveau code shader.
+  Confirmé à l'écran sur l'éclipse réelle du 12/08/2026 (trace Groenland →
+  Islande → Espagne) : un cœur nettement plus sombre (l'umbra) se détache de
+  la pénombre environnante au zoom, pas un simple lavis uniforme.
+
+**Découverte en cours de route : Orekit porte déjà un détecteur d'éclipse,
+inutilisé dans ce dépôt.** `org.orekit.propagation.events.EclipseDetector` /
+`OccultationEngine` — déjà une dépendance — donnent une géométrie d'éclipse
+réelle (séparation angulaire, rayons apparents), évaluable hors propagation à
+partir d'une position brute. Sert d'oracle indépendant pour L1/L2
+(`EclipseGeometryOrekitAgreementTest`, `MoonEclipseOrekitAgreementTest`)
+plutôt que d'une vérité à réécrire soi-même.
+
+**Deux écarts avec le découpage, tous deux des corrections trouvées en
+implémentant.** Réutiliser `lightDir` (la direction lumière déjà calculée)
+pour le test d'occultation, comme le découpage le prévoyait, s'est révélé
+impossible : cette direction est en repère vue (c'est ainsi que JME
+l'envoie), alors que le test compare des positions en repère monde pour
+éviter une dépendance à la matrice caméra au point d'appel — d'où un
+quatrième uniform (`m_SunDirection`, monde, calculé côté CPU) en plus des
+trois prévus. Et l'occulteur du vaisseau (L1) n'est pas systématiquement
+`-point.position()` : ce n'est exact que quand la caméra regarde le corps que
+le vaisseau orbite réellement ; le cas général passe par
+`TrajectoryArc.convertPosition` pour rester exact même en regardant un autre
+corps pendant qu'une mission vole ailleurs.
+
+**Limitation connue, non résolue : le rendu de la pénombre sur le vaisseau
+est correct mais peu lisible.** Le vaisseau (50 m) est minuscule devant le
+cône d'ombre terrestre : toute sa surface visible traverse la pénombre au même
+instant, donc il s'assombrit en bloc plutôt que de montrer un dégradé — pas de
+ligne de terminateur comme sur un grand corps. Constaté à l'écran : un lavis
+gris terne et peu contrasté plutôt qu'un assombrissement qui se lit clairement
+comme « entre dans l'ombre ». Cause probable : le terme ambiant (`AmbientSum`,
+non affecté par le facteur d'éclipse) reste constant pendant que le terme
+diffus chute, et son plancher devient proportionnellement plus dominant à
+mesure que le vaisseau s'enfonce dans la pénombre — ce qui aplatit le
+contraste de la texture plutôt que de simplement l'assombrir. Pistes non
+essayées :
+- réduire aussi l'ambiant pendant la transition (pas jusqu'à zéro — il
+  représente un plancher de lumière diffusée plausible — mais
+  proportionnellement à l'éclipse), pour préserver le contraste de texture
+  plus loin dans la transition ;
+- appliquer une courbe non linéaire (un gamma < 1, ou un `smoothstep` plus
+  raide) au facteur d'éclipse avant qu'il multiplie le diffus, pour que la
+  transition se lise comme un bord plutôt que comme un fondu progressif
+  uniforme ;
+- poser un plancher de luminosité perçue plutôt qu'une pure multiplication
+  linéaire — l'œil ne perçoit pas l'assombrissement de façon linéaire.
+
+**Spec.** [`docs/eclipses/01-decoupage.md`](../eclipses/01-decoupage.md).
 
 #### FX-3 — Particules de tuyère — ★4 ◆2 M *(ajout)*
 

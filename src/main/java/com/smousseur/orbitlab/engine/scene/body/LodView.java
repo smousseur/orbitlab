@@ -132,4 +132,14 @@ public final class LodView implements BodyView {
   public void detach() {
     iconView.detach();
   }
+
+  @Override
+  public void setOccluder(
+      Vector3f occluderPositionWorld,
+      float occluderRadiusWorld,
+      Vector3f sunDirectionWorld,
+      float sunApparentRadiusRadians) {
+    model3dView.setOccluder(
+        occluderPositionWorld, occluderRadiusWorld, sunDirectionWorld, sunApparentRadiusRadians);
+  }
 }

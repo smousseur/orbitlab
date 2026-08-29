@@ -69,4 +69,25 @@ public interface BodyView {
    * @param screenSizePx the approximate screen size of the body in pixels
    */
   default void updateLodHint(float distanceToCamera, float screenSizePx) {}
+
+  /**
+   * Sets the occulter used by this body's per-fragment eclipse shading (`docs/eclipses/01-decoupage.md`).
+   * {@code occluderPositionWorld} and {@code occluderRadiusWorld} are in this body's own world
+   * space — world units, relative to this body's own anchor. {@code sunDirectionWorld} is a unit
+   * vector in that same world space, not view space: pushing the occulter and light direction
+   * together as world-space data avoids needing a camera or view matrix at the call site, since the
+   * per-fragment test only ever compares vectors expressed about this body's own anchor. Default
+   * implementation is a no-op, for bodies that never receive an occulter (most planets: nothing in
+   * this application ever eclipses them).
+   *
+   * @param occluderPositionWorld the occulting body's centre, in this body's world space
+   * @param occluderRadiusWorld the occulting body's radius, in world units
+   * @param sunDirectionWorld unit vector toward the Sun, in this body's world space
+   * @param sunApparentRadiusRadians the Sun's angular radius as seen from this body, in radians
+   */
+  default void setOccluder(
+      Vector3f occluderPositionWorld,
+      float occluderRadiusWorld,
+      Vector3f sunDirectionWorld,
+      float sunApparentRadiusRadians) {}
 }

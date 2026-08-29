@@ -1,19 +1,25 @@
 package com.smousseur.orbitlab.states.mission;
 
 import com.jme3.math.ColorRGBA;
+import com.jme3.math.Vector3f;
 import com.jme3.renderer.Camera;
 import com.jme3.scene.Node;
 import com.smousseur.orbitlab.app.ApplicationContext;
 import com.smousseur.orbitlab.app.view.FocusView;
 import com.smousseur.orbitlab.app.view.RenderContext;
 import com.smousseur.orbitlab.app.view.ViewMode;
+import com.smousseur.orbitlab.core.OrbitlabException;
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.engine.AssetFactory;
+import com.smousseur.orbitlab.engine.scene.PlanetRadius;
 import com.smousseur.orbitlab.engine.scene.body.BodyRenderConfig;
+import com.smousseur.orbitlab.engine.scene.body.EclipseGeometry;
 import com.smousseur.orbitlab.engine.scene.body.LodView;
 import com.smousseur.orbitlab.engine.scene.body.lod.Model3dView;
 import com.smousseur.orbitlab.engine.scene.spacecraft.LauncherAssets;
 import com.smousseur.orbitlab.engine.scene.spacecraft.SpacecraftPresenter;
+import com.smousseur.orbitlab.engine.view.JmeVectorAdapter;
+import com.smousseur.orbitlab.simulation.ephemeris.service.EphemerisServiceRegistry;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.context.MissionEntry;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemeris;
@@ -293,6 +299,49 @@ public final class MissionRenderer {
     // body-relative position, so it does not compete for the near origin the way the planets do.
     view.updateScreen(cam, true);
     trajectoryRenderer.update(trail, upTo, position, ctx);
+    pushEclipseOccluder(point, renderBody, position, ctx);
+  }
+
+  /**
+   * Pushes the arc's own central body as this spacecraft's eclipse occulter (`docs/eclipses/
+   * 01-decoupage.md`, L1) — not {@code renderBody}: physics does not care what the camera is
+   * looking at. The occluder's centre is {@code point.arc()}'s origin, re-expressed in {@code
+   * renderBody}'s frame the same way {@code renderPositionOf} already re-expresses the spacecraft
+   * itself, so the two agree even when the arc being flown and the body being looked at differ (a
+   * planet-mode view of a spacecraft near the Moon). When they agree — every trajectory before
+   * L6, and every spacecraft-mode view — {@code TrajectoryArc.convertPosition} short-circuits and
+   * this is exactly {@code -point.position()}.
+   *
+   * <p>The Sun's direction and apparent radius are read off the occulting body's own heliocentric
+   * position rather than the spacecraft's: at planetary distances from the Sun the two are
+   * indistinguishable (a spacecraft is never more than a few Earth radii from its central body,
+   * against ~1 AU to the Sun), and the occulting body's heliocentric sample is already available
+   * from {@link com.smousseur.orbitlab.simulation.ephemeris.service.EphemerisService}.
+   */
+  private void pushEclipseOccluder(
+      MissionEphemerisPoint point, SolarSystemBody renderBody, Vector3D position, RenderContext ctx) {
+    SolarSystemBody occluderBody = point.arc().body();
+    Vector3D occluderCentreInRenderFrame =
+        point.arc().convertPosition(Vector3D.ZERO, point.time(), TrajectoryArc.forBody(renderBody));
+    Vector3D occluderPositionMeters = occluderCentreInRenderFrame.subtract(position);
+    Vector3f occluderPositionRender =
+        JmeVectorAdapter.toJmeBodyRelativePosition(occluderPositionMeters, ctx);
+    float occluderRadiusRender = (float) (PlanetRadius.radiusFor(occluderBody) * ctx.unitsPerMeter());
+
+    EphemerisServiceRegistry.get()
+        .orElseThrow(() -> new OrbitlabException("Cannot get EphemerisService"))
+        .trySampleHelioIcrf(occluderBody, point.time())
+        .ifPresent(
+            occluderHelio -> {
+              Vector3D occluderHelioPosition = occluderHelio.getKey();
+              double sunDistanceMeters = occluderHelioPosition.getNorm();
+              Vector3D sunDirectionIcrf = occluderHelioPosition.negate().normalize();
+              Vector3f sunDirectionRender =
+                  JmeVectorAdapter.toVector3f(ctx.axisConvention().icrfToJme(sunDirectionIcrf));
+              float sunApparentRadius = (float) EclipseGeometry.sunApparentRadius(sunDistanceMeters);
+              view.setOccluder(
+                  occluderPositionRender, occluderRadiusRender, sunDirectionRender, sunApparentRadius);
+            });
   }
 
   /**

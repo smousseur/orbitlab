@@ -3,11 +3,13 @@ package com.smousseur.orbitlab.states.scene;
 import com.jme3.app.Application;
 import com.jme3.app.state.BaseAppState;
 import com.jme3.math.ColorRGBA;
+import com.jme3.math.Vector3f;
 import com.jme3.scene.Node;
 import com.smousseur.orbitlab.app.ApplicationContext;
 import com.smousseur.orbitlab.app.SimulationClock;
 import com.smousseur.orbitlab.app.view.FocusView;
 import com.smousseur.orbitlab.app.view.RenderContext;
+import com.smousseur.orbitlab.core.OrbitlabException;
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.engine.AssetFactory;
 import com.smousseur.orbitlab.engine.TextureDiagnostics;
@@ -15,14 +17,19 @@ import com.smousseur.orbitlab.engine.scene.PlanetColors;
 import com.smousseur.orbitlab.engine.scene.PlanetRadius;
 import com.smousseur.orbitlab.engine.scene.body.BodyRenderConfig;
 import com.smousseur.orbitlab.engine.scene.body.CoronaView;
+import com.smousseur.orbitlab.engine.scene.body.EclipseGeometry;
 import com.smousseur.orbitlab.engine.scene.body.LodView;
 import com.smousseur.orbitlab.engine.scene.body.lod.Model3dView;
 import com.smousseur.orbitlab.engine.scene.graph.SceneGraph;
 import com.smousseur.orbitlab.engine.scene.planet.PlanetPresenter;
+import com.smousseur.orbitlab.engine.view.JmeVectorAdapter;
+import com.smousseur.orbitlab.simulation.ephemeris.service.EphemerisServiceRegistry;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
+import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.orekit.time.AbsoluteDate;
 
 /**
@@ -171,6 +178,12 @@ public final class PlanetPoseAppState extends BaseAppState {
     FocusView focusView = context.focusView();
     SceneGraph sceneGraph = context.sceneGraph();
 
+    // Sampled once per frame and reused for both eclipse directions below (docs/eclipses/
+    // 01-decoupage.md, L3): the Moon shadowing the Earth and the Earth shadowing the Moon are the
+    // same pair of positions read the other way around, not two independent lookups.
+    Optional<Vector3D> earthHelio = sampleHelioPosition(SolarSystemBody.EARTH, t);
+    Optional<Vector3D> moonHelio = sampleHelioPosition(SolarSystemBody.MOON, t);
+
     Map<SolarSystemBody, PlanetPresenter> planets = context.getPlanets();
     for (Map.Entry<SolarSystemBody, PlanetPresenter> entry : planets.entrySet()) {
       SolarSystemBody body = entry.getKey();
@@ -186,7 +199,73 @@ public final class PlanetPoseAppState extends BaseAppState {
       }
 
       presenter.updatePose(t);
+
+      if (body == SolarSystemBody.MOON && earthHelio.isPresent() && moonHelio.isPresent()) {
+        pushEclipseOccluder(presenter, SolarSystemBody.EARTH, earthHelio.get(), moonHelio.get());
+      } else if (body == SolarSystemBody.EARTH && earthHelio.isPresent() && moonHelio.isPresent()) {
+        pushEclipseOccluder(presenter, SolarSystemBody.MOON, moonHelio.get(), earthHelio.get());
+      }
     }
+  }
+
+  /**
+   * The given body's heliocentric ICRF position, or empty while the ephemeris buffer has not caught
+   * up to {@code t} yet — the same degradation {@link PlanetPresenter#updatePose} already accepts
+   * for the body's own pose.
+   */
+  private Optional<Vector3D> sampleHelioPosition(SolarSystemBody body, AbsoluteDate t) {
+    return EphemerisServiceRegistry.get()
+        .orElseThrow(() -> new OrbitlabException("Cannot get EphemerisService"))
+        .trySampleHelioIcrf(body, t)
+        .map(Map.Entry::getKey);
+  }
+
+  /**
+   * Pushes {@code occluderBody} as {@code presenter}'s eclipse occulter (`docs/eclipses/
+   * 01-decoupage.md`, L2 for the Moon eclipsed by the Earth, L3 for the Earth showing the Moon's
+   * shadow spot) — the same method for both directions, since the geometry is symmetric: only which
+   * body is doing the occulting and which is receiving the shading changes.
+   *
+   * <p>Reuses {@link EclipseGeometry#sunApparentRadius}, the L1 vessel case's shared static utility
+   * — no duplicated formula.
+   *
+   * <p><b>Scoped to a body shown by its own focus, not a lunar mission's viewpoint.</b> The near
+   * viewport's single globe sits at whatever offset {@code FloatingOriginAppState} gives {@code
+   * nearFrame} that frame — zero when a planet is focused, but the negated spacecraft position when
+   * a mission is followed. Computing the Earth-Moon delta directly (as done here) is exact for the
+   * first case and carries a small, undocumented-until-now error in the second — a spacecraft near
+   * either body offsets its assumed centre by its own orbital radius, a fraction of a degree against
+   * the ~384 000 km Earth-Moon baseline. Reading {@code nearFrame}'s actual offset would fix it, but
+   * that is a cross-state read {@code FloatingOriginAppState}'s own docstring warns is order-
+   * sensitive (the RND-1 lesson); not worth it for an effect that only matters while the eclipsed
+   * body happens to also be the backdrop of an active lunar mission.
+   *
+   * @param presenter the eclipsed body's presenter, whose view receives the occluder
+   * @param occluderBody the body doing the occulting
+   * @param occluderHelio the occulter's heliocentric ICRF position, in meters
+   * @param targetHelio the eclipsed body's own heliocentric ICRF position, in meters — its distance
+   *     from the Sun (the origin of this frame) is what {@link EclipseGeometry#sunApparentRadius}
+   *     needs
+   */
+  private void pushEclipseOccluder(
+      PlanetPresenter presenter, SolarSystemBody occluderBody, Vector3D occluderHelio, Vector3D targetHelio) {
+    RenderContext ctx = RenderContext.planet(presenter.body());
+
+    Vector3D occluderPositionMeters = occluderHelio.subtract(targetHelio);
+    Vector3f occluderPositionRender =
+        JmeVectorAdapter.toJmeBodyRelativePosition(occluderPositionMeters, ctx);
+    float occluderRadiusRender = (float) (PlanetRadius.radiusFor(occluderBody) * ctx.unitsPerMeter());
+
+    double sunDistanceMeters = targetHelio.getNorm();
+    Vector3D sunDirectionIcrf = targetHelio.negate().normalize();
+    Vector3f sunDirectionRender =
+        JmeVectorAdapter.toVector3f(ctx.axisConvention().icrfToJme(sunDirectionIcrf));
+    float sunApparentRadius = (float) EclipseGeometry.sunApparentRadius(sunDistanceMeters);
+
+    presenter
+        .view()
+        .setOccluder(
+            occluderPositionRender, occluderRadiusRender, sunDirectionRender, sunApparentRadius);
   }
 
   @Override

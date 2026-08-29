@@ -1,7 +1,11 @@
 package com.smousseur.orbitlab.engine.scene.body.lod;
 
+import com.jme3.material.Material;
+import com.jme3.math.Vector3f;
+import com.jme3.scene.Geometry;
 import com.jme3.scene.Node;
 import com.jme3.scene.Spatial;
+import com.jme3.scene.SceneGraphVisitorAdapter;
 import com.smousseur.orbitlab.OrbitLabApplication;
 import com.smousseur.orbitlab.app.view.RenderContext;
 import com.smousseur.orbitlab.engine.AssetFactory;
@@ -73,5 +77,34 @@ public class Model3dView {
    */
   public Node getModelBucket() {
     return modelBucket;
+  }
+
+  /**
+   * Pushes the current occulter onto every geometry's material, for the per-fragment eclipse test
+   * in {@code WrapLighting.frag} (`docs/eclipses/01-decoupage.md`, L1). Walks the bucket every call
+   * rather than caching materials: the bucket is empty until the async load completes, so the walk
+   * is a no-op until then, and is otherwise a handful of geometries per body.
+   *
+   * @param occluderPositionWorld the occulting body's centre, in this body's world space
+   * @param occluderRadiusWorld the occulting body's radius, in world units
+   * @param sunDirectionWorld unit vector toward the Sun, in this body's world space
+   * @param sunApparentRadiusRadians the Sun's angular radius as seen from this body, in radians
+   */
+  public void setOccluder(
+      Vector3f occluderPositionWorld,
+      float occluderRadiusWorld,
+      Vector3f sunDirectionWorld,
+      float sunApparentRadiusRadians) {
+    modelBucket.depthFirstTraversal(
+        new SceneGraphVisitorAdapter() {
+          @Override
+          public void visit(Geometry geom) {
+            Material material = geom.getMaterial();
+            material.setVector3("OccluderPosition", occluderPositionWorld);
+            material.setFloat("OccluderRadius", occluderRadiusWorld);
+            material.setVector3("SunDirection", sunDirectionWorld);
+            material.setFloat("SunApparentRadius", sunApparentRadiusRadians);
+          }
+        });
   }
 }
