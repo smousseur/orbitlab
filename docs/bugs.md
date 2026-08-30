@@ -18,6 +18,16 @@ la frontière entre les deux derniers doit rester lisible.
 | [`BUG-6`](#bug-6--plane-trim-employé-hors-de-son-enveloppe-par-lascension-polaire) | Plane trim employé hors de son enveloppe par l'ascension polaire | 2026-08-16 | Ouvert, mécanisme mesuré — **importance : mineure côté code, à trancher côté physique** |
 | [`BUG-7`](#bug-7--les-gates-de-non-régression-tombent-quand-un-test-lunaire-les-précède-dans-le-même-jvm) | Les gates de non-régression tombent quand un test lunaire les précède dans le même JVM | 2026-08-18 | Ouvert, reproductible, piste identifiée — **fiabilité de l'instrument, pas de la physique** |
 | [`BUG-8`](#bug-8--inclinaison-figée-invalidée-en-silence-par-un-changement-de-site) | Inclinaison figée invalidée en silence par un changement de site | 2026-08-20 | Ouvert, mécanisme identifié — **ergonomie, le modèle est sain** |
+| [`BUG-9`](#bug-9--parkingcoaststagetest-teste-la-sémantique-davant-mis-4l6) | `ParkingCoastStageTest` teste la sémantique d'avant MIS-4/L6 | 2026-08-28 | Ouvert, reproductible — **régression de test, pas de production** |
+| [`BUG-10`](#bug-10--reentryguard-inopérant-en-présence-de-traînée) | `ReentryGuard` inopérant en présence de traînée | 2026-08-30 | Ouvert — **sans impact avant PHY-2/MIS-10, aucun vol de production ne l'exerce aujourd'hui** |
+| [`BUG-11`](#bug-11--loptimiseur-saute-les-coasts-que-le-vol-rejoue) | L'optimiseur saute les coasts que le vol rejoue | 2026-08-30 | Ouvert, mécanisme identifié — **traverse PHY-4 → MIS-4 → MIS-5 sans jamais être refermé** |
+| [`BUG-12`](#bug-12--bande-morte-ε-de-franchissement-de-soi-jamais-calibrée) | Bande morte ε de franchissement de SOI jamais calibrée | 2026-08-30 | Ouvert, acceptée par verdict — **redevient un risque actif pour MIS-11** |
+| [`BUG-13`](#bug-13--fenêtre-de-lancement-lunaire-refusée-sans-signal-à-lécran) | Fenêtre de lancement lunaire refusée sans signal à l'écran | 2026-08-30 | Ouvert — famille de `BUG-8`, sous-système distinct |
+| [`BUG-14`](#bug-14--deux-portées-de-recherche-de-fenêtre-divergentes) | Deux portées de recherche de fenêtre divergentes | 2026-08-30 | Ouvert, non mesuré |
+| [`BUG-15`](#bug-15--log-error-trompeur-de-depletionguard-sur-un-rejet-correct) | Log `ERROR` trompeur de `DepletionGuard` sur un rejet correct | 2026-08-30 | Ouvert — **cosmétique** |
+| [`BUG-16`](#bug-16--t1-saturé-contre-sa-borne-sur-la-majorité-des-transferts-mesurés) | `t1` saturé contre sa borne sur la majorité des transferts mesurés | 2026-08-30 | Ouvert, mesuré — artefact de mur de boîte |
+| [`BUG-17`](#bug-17--acceptablecost-mal-calé-depuis-lajout-du-terme-ergols-i7) | `acceptableCost` mal calé depuis l'ajout du terme ergols I7 | 2026-08-30 | Ouvert, correctif proposé non fait |
+| [`BUG-18`](#bug-18--rejets-de-scénario-au-chargement-seulement-journalisés) | Rejets de scénario au chargement, seulement journalisés | 2026-08-30 | Ouvert — **trou connu de `UI-3`** |
 
 ---
 
@@ -628,3 +638,238 @@ secondaire que rien n'oblige à ouvrir.
 - **La réouverture d'une mission** dont la spec porte une inclinaison basse,
   suivie d'un changement de site, devrait produire le même état par un autre
   chemin. Non essayé.
+
+---
+
+## BUG-9 — `ParkingCoastStageTest` teste la sémantique d'avant MIS-4/L6
+
+**Constaté.** `ParkingCoastStageTest:75` compare la durée volée à
+`departure.coastDuration()` à 1 s près. Rouge depuis le 2026-08-28, toujours
+rouge au 2026-08-30 — vérifié directement dans le code, la ligne n'a pas
+bougé.
+
+**Mécanisme, mesuré.** `MIS-4 / L6` (décision α) fait désormais s'arrêter ce
+coast à **l'allumage**, pas à la durée totale résolue par `departure`. L'écart
+est exactement `ignitionLead` : le journal dit « coasting 690 s to ignition,
+19,6 s ahead ». Le test asserte la sémantique d'avant `L6` et n'a jamais été
+mis à jour.
+
+**Ce n'est pas une régression de production.** `ParkingCoastStage` lui-même
+est correct — c'est la sémantique voulue par `L6` — seule l'assertion du test
+est restée sur l'ancien contrat.
+
+### Correction
+
+Comparer la durée volée à `departure.coastDuration() − ignitionLead` (ou à
+l'accesseur équivalent que la classe expose déjà pour l'allumage), pas à
+`coastDuration()` seul.
+
+### Non vérifié
+
+Aucune recherche systématique d'un autre test qui encoderait la même
+sémantique pré-`L6`.
+
+---
+
+## BUG-10 — `ReentryGuard` inopérant en présence de traînée
+
+**Constaté.** `ReentryGuard.SUBSURFACE_FLOOR = −50 km`, armé partout comme en
+vol (`armQuiet`, `StageLegRunner`). Mesuré dans
+[`atmosphere/03-baseline-L0.md`](atmosphere/03-baseline-L0.md) §2.3 : avec la
+traînée active, l'intégrateur meurt à −9 à −30 km — **au-dessus** du plancher.
+Le garde ne se déclenche donc jamais dans son seul régime où une rentrée
+réaliste (et non une chute libre pathologique) est en jeu.
+
+**Pourquoi le plancher est profond, et pourquoi ça ne suffit pas ici.** Le
+plancher a été dimensionné pour arrêter un effondrement `r → 0` en chute
+libre — cf. le javadoc de la classe et [[reentry-guard]] : sans traînée, une
+trajectoire qui plonge le fait vite, et **−50 km** suffit très largement à
+intercepter la chute avant que le pas d'intégration ne s'effondre. Avec la
+traînée, la descente est ralentie et l'intégrateur échoue **plus tôt, à une
+profondeur moindre**, pour une raison numérique distincte (probablement liée
+au modèle atmosphérique lui-même sous 30 km, non instrumenté ici).
+
+**Importance.** Nul aujourd'hui : la traînée est **off** par défaut
+(`PHY-1`), aucun vol de production ne l'exerce. Concerne directement `PHY-2`
+et `MIS-10` (rentrée contrôlée), phases 6-7.
+
+### Non vérifié
+
+- La cause exacte de l'échec de l'intégrateur à −9/−30 km sous traînée.
+- Le plancher ou le mécanisme de garde approprié pour ce régime — probablement
+  distinct de `SUBSURFACE_FLOOR`, pas un simple décalage de sa valeur.
+
+---
+
+## BUG-11 — L'optimiseur saute les coasts que le vol rejoue
+
+**Constaté.** `CoastingStage` et `StageSeparationStage` ne surchargent pas
+`propagateStandalone` : mesuré dans
+[`multi-corps/03-conception-L1.md`](multi-corps/03-conception-L1.md) §5.2, un
+écart d'environ **2 770 s** (près d'une demi-orbite) apparaît entre la
+physique interne du CMA-ES et le vol effectivement rejoué, dès qu'une étape
+analytique de ciblage de nœud suit un coast dans la chaîne.
+
+**Importance.** C'est la racine identifiée d'une anomalie de baseline
+jusque-là inexpliquée en `PHY-4`. Le défaut **traverse `PHY-4` → `MIS-4` →
+`MIS-5`** sans jamais être refermé — chaque chantier l'a mesuré à nouveau sans
+le corriger, faute d'appartenir clairement à son périmètre.
+
+**Pourquoi c'est le candidat le plus sérieux avant Phase 5.** `MIS-6`
+(rendezvous/phasing) et `MIS-11` (retour) sont les deux premiers chantiers où
+le **timing** de la trajectoire rejouée est l'enjeu central plutôt qu'un
+sous-produit — un optimiseur qui raisonne sur une physique décalée d'une
+demi-orbite y devient un défaut de premier ordre, pas une curiosité de
+baseline.
+
+### Piste
+
+Donner à `CoastingStage` et `StageSeparationStage` une implémentation de
+`propagateStandalone` qui propage réellement le coast, au lieu de le sauter —
+alignant la passe d'optimisation sur le vol rejoué.
+
+### Non vérifié
+
+Le coût de calcul d'un coast réellement propagé à chaque évaluation CMA-ES
+n'a pas été mesuré ; il peut être significatif, un coast pouvant durer des
+milliers de secondes et être évalué des milliers de fois par optimisation.
+
+---
+
+## BUG-12 — Bande morte ε de franchissement de SOI jamais calibrée
+
+**Constaté.** La bande morte ε qui décide du franchissement de la sphère
+d'influence a été acceptée **« par verdict »** — un jugement, pas une mesure
+— à travers `PHY-4` → `MIS-4` → `MIS-5`
+([`multi-corps/08-conception-L6.md`](multi-corps/08-conception-L6.md)
+§5.5/§12.4, [`lunar-orbit/09-conception-L7.md`](lunar-orbit/09-conception-L7.md)
+§9). Aucune trajectoire réellement « capturée » (franchissant la frontière
+plus d'une fois) n'a permis de mesurer la valeur empirique attendue.
+
+**Pourquoi c'est encore ouvert.** Aucun vol mesuré jusqu'ici n'a sollicité
+plus d'un franchissement. `MIS-11` (survol lunaire et retour) sera le premier
+à le faire pour de vrai, et c'est là que la valeur actuelle de ε — jamais
+stressée — devient un risque concret plutôt qu'un choix confortable.
+
+### Non vérifié
+
+Aucune mesure empirique n'existe. Le calibrage demande une trajectoire de
+test qui franchisse la frontière SOI dans les deux sens.
+
+---
+
+## BUG-13 — Fenêtre de lancement lunaire refusée sans signal à l'écran
+
+**Constaté.** Pour un site hors de la bande de déclinaison lunaire atteignable
+(exemple mesuré : Kourou, ~87,5 % d'une lunaison hors bande),
+`LunarLaunchWindowProblem` / `LunarOrbitWindowProblem` ne renvoient aucune
+opportunité — seulement un warning loggé. Rien à l'écran ne le signale.
+Nommé comme dernier trou ouvert connu à la clôture de `MIS-5`
+([`lunar-orbit/09-conception-L7.md`](lunar-orbit/09-conception-L7.md) §7/§9).
+
+**Distinct de `BUG-8`.** Sous-système différent (recherche de fenêtre
+lunaire, pas gel d'inclinaison figée), et le défaut touche identiquement
+toutes les cartes lunaires par construction géométrique — il ne dépend pas
+d'un ordre d'interaction utilisateur comme `BUG-8`.
+
+### Piste
+
+Même famille de correctif que `BUG-8` — marquer le champ ou remonter le refus
+visuellement — mais sur un sous-système distinct, à traiter séparément.
+
+### Non vérifié
+
+La séquence exacte dans l'IHM n'a pas été rejouée pas à pas.
+
+---
+
+## BUG-14 — Deux portées de recherche de fenêtre divergentes
+
+**Constaté.** `EarthLaunchWindowPlanner.SEARCH_SPAN` est un littéral en dur
+(`Duration.ofHours(26)`, `EarthLaunchWindowPlanner.java:37`), de même que
+`LunarLaunchWindowPlanner.SEARCH_SPAN` (48 h), alors que `LaunchWindowSearch`
+dérive ailleurs sa portée de `problem.recurrence()`. Signalé dans
+[`mission-window/02-timeline-wizard.md`](mission-window/02-timeline-wizard.md)
+§8 comme « une mesure à faire, pas un nettoyage à trancher » — jamais faite.
+
+### Non vérifié
+
+L'impact concret (une opportunité manquée en bord de portée, pour un site ou
+une inclinaison particulière) n'a jamais été mesuré.
+
+---
+
+## BUG-15 — Log `ERROR` trompeur de `DepletionGuard` sur un rejet correct
+
+**Constaté.** `DepletionGuard` émet `… upstream mass accounting is wrong` en
+routine sur un λ correctement rejeté pour charge sous-dimensionnée
+([`optimization/bilan.md`](optimization/bilan.md), piste 6). Rien n'est
+« wrong » : c'est le verdict attendu de l'algorithme de recherche de charge.
+
+**Importance.** Cosmétique, mais un `ERROR` sur un comportement normal fait
+chercher un bug qui n'existe pas à chaque lecture de log — coût de debug
+récurrent plutôt qu'un défaut fonctionnel.
+
+### Piste
+
+Distinguer, dans `DepletionGuard`, le message pour ce chemin de rejet de
+routine (charge insuffisante détectée pendant la recherche) du message pour
+une véritable incohérence de comptage de masse — et abaisser le premier en
+`INFO`/`WARN`.
+
+---
+
+## BUG-16 — `t1` saturé contre sa borne sur la majorité des transferts mesurés
+
+**Constaté.** Sur 5 des 7 scénarios de transfert mesurés, `t1` sature
+exactement à sa borne supérieure (`norm = 1,0`,
+[`optimization/bilan.md`](optimization/bilan.md), piste 4). C'est un mur de
+boîte (`t1Max = 0,5 × période`) : l'optimiseur voudrait allumer plus tard
+qu'une demi-période et la borne l'en empêche — ce n'est pas un vrai optimum.
+
+**Attention avant de corriger.** Cf. [[cmaes-bounds-are-not-constraints]] :
+déplacer une borne CMA-ES renormalise toute la recherche et perturbe toutes
+les missions, pas seulement celles qui saturent. Toute correction exige une
+re-mesure complète des références, pas un simple changement de littéral.
+
+### Non vérifié
+
+La vraie valeur optimale de `t1` au-delà de la moitié de période n'a jamais
+été mesurée.
+
+---
+
+## BUG-17 — `acceptableCost` mal calé depuis l'ajout du terme ergols I7
+
+**Constaté.** Le seuil `acceptableCost = 3e-3` a été calibré avant l'ajout du
+terme propergol (I7). Le plancher de coût réel mesuré vaut désormais
+~2,64e-3 (partie orbitale) + ~1,4e-3 (partie propergol) —
+[`optimization/bilan.md`](optimization/bilan.md), piste 2. Un `WARN Final
+cost … above acceptable` tombe donc sur pratiquement chaque transfert, et
+aucun arrêt anticipé « Target reached » ne peut s'enclencher.
+
+### Piste, et pourquoi la version naïve est dangereuse
+
+Comparer seulement la **partie orbitale** du coût au seuil plutôt que le
+total. Une simple élévation du seuil au niveau du plancher mesuré laisserait
+repasser l'extinction sèche — exactement le défaut que la barrière propergol
+vient de corriger.
+
+---
+
+## BUG-18 — Rejets de scénario au chargement, seulement journalisés
+
+**Constaté.** À l'ouverture d'un scénario, `ScenarioAppState.openScenario`
+(`:311-318`) journalise chaque rejet (`logger.info` sur le compte, `logger.warn`
+par mission rejetée) mais ne remonte **rien** à l'écran. `ScenarioLoadReport`
+porte l'information ; rien ne la lit côté IHM. Nommé « trou connu » dans
+[`scenario/01-persistance-missions.md`](scenario/01-persistance-missions.md).
+
+**Vérifié au 2026-08-30** directement dans `ScenarioAppState.java` — le
+comportement n'a pas changé depuis la clôture d'`UI-3` (2026-08-21).
+
+### Piste
+
+Un résumé minimal (toast, ligne dans le panel) au retour de
+`ScenarioSession.restore`, listant les missions rejetées et leur motif —
+même contenu que les lignes `WARN` déjà produites, juste remonté à l'écran.

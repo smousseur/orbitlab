@@ -4,6 +4,12 @@ Photographie de la qualité du code au **2026-08-10**, commit `b027d1d`. Ce
 document est un état des lieux mesuré, pas une roadmap : les items qui méritent
 d'être planifiés doivent être promus dans `roadmap/01-roadmap.md`.
 
+**Complément du 2026-08-30.** `DT-12` à `DT-17` viennent d'une revue des
+documents de conception par chantier, pas d'une nouvelle passe de mesure
+statique sur `src/` — la méthode du §1 ne les couvre donc pas. Les items
+purement comportementaux ou de scope trouvés à cette occasion sont dans
+`bugs.md` (`BUG-9` à `BUG-18`) et [`reliquats.md`](reliquats.md).
+
 **Convention.** `DT-n` dans l'ordre de priorité décroissante à la date de
 rédaction, jamais réattribué. Un item sort d'ici corrigé, ou requalifié en
 « accepté » avec la raison. Comme dans `bugs.md`, chaque fiche sépare ce qui est
@@ -52,6 +58,15 @@ aujourd'hui. C'est le sujet de [`DT-1`](#dt-1--aucune-analyse-statique-dans-le-b
 | [`DT-9`](#dt-9--code-mort) | Code mort | Mineur | Trivial | Nul |
 | [`DT-10`](#dt-10--commentaires-redondants) | Commentaires redondants | Mineur | Faible | Nul |
 | [`DT-11`](#dt-11--littéraux-dupliqués-et-todo-non-tracés) | Littéraux dupliqués et TODO non tracés | Mineur | Faible | Nul |
+| [`DT-12`](#dt-12--mesh-ariane-6-absent-ariane-5-utilisé-à-la-place) | Mesh Ariane 6 absent (Ariane 5 utilisé à la place) | Mineur | Faible* | Nul |
+| [`DT-13`](#dt-13--isp-catalogue-déjà-en-double-comptage-latent-avec-la-traînée-à-venir) | Isp catalogue déjà en double-comptage latent avec la traînée à venir | Majeur | Moyen | **Élevé pour `PHY-2`** |
+| [`DT-14`](#dt-14--écart-harris-priester--nrlmsise-00-non-arbitré) | Écart Harris-Priester / NRLMSISE-00 non arbitré | Mineur | Faible | Nul |
+| [`DT-15`](#dt-15--cd-catalogue-s2-hors-domaine-de-validité-déclaré) | `Cd` catalogue S2 hors domaine de validité déclaré | Mineur | Faible | Nul |
+| [`DT-16`](#dt-16--nrev-du-solveur-de-lambert-figé-à-0-partout) | `nRev` du solveur de Lambert figé à 0 partout | Mineur | Moyen | Nul aujourd'hui |
+| [`DT-17`](#dt-17--performance-du-ruban-rnd-4-jamais-mesurée) | Performance du ruban (`RND-4`) jamais mesurée | Mineur | Faible | Nul |
+
+`*` Faible côté code — bloqué par la disponibilité d'un maillage externe, pas
+par du travail de développement.
 
 Aucun item de sévérité **Bloquant** n'a été trouvé.
 
@@ -330,6 +345,99 @@ Ils devraient être des constantes.
 
 ---
 
+### DT-12 — Mesh Ariane 6 absent (Ariane 5 utilisé à la place)
+
+**Mesuré.** `roadmap/01-roadmap.md` §`MIS-1` : le catalogue utilise le maillage
+Ariane 5 pour représenter Ariane 62, faute d'export disponible. Masse,
+propulsion et vol restent corrects — seule la silhouette est fausse.
+
+**Deuxième volet, non mesuré.** La convention de mesh attendue pour tout
+futur candidat (nez sur +Y, échelle ~1 unité) n'a jamais été vérifiée, y
+compris sur le mesh Ariane 5 actuellement utilisé — elle est simplement
+supposée par la chaîne de chargement.
+
+**Inféré.** Bloqué par un actif externe (`src/main/resources/models/` est
+gitignored, cf. `CLAUDE.md`), pas par du code. Rien à corriger avant qu'un
+maillage Ariane 6 existe.
+
+---
+
+### DT-13 — Isp catalogue déjà en double-comptage latent avec la traînée à venir
+
+**Mesuré.** [`atmosphere/05-conception-L2.md`](atmosphere/05-conception-L2.md)
+§4.3 : les Isp « moyenne de trajectoire » du catalogue (296 s Falcon Heavy S1,
+300 s Ariane 62 S1) absorbent déjà une perte de traînée implicite chiffrée à
+**408 m/s** et **671 m/s** respectivement — au-dessus des 100-300 m/s que
+l'étude d'impact originale de l'atmosphère prévoyait comme plage réelle.
+
+**Pourquoi c'est critique pour `PHY-2`, pas pour aujourd'hui.** Tant que la
+traînée reste **off** par défaut (`PHY-1`), cette dette est invisible. Le
+jour où `PHY-2` l'active par défaut, la traînée réelle s'ajoutera à une Isp
+qui la compense déjà partiellement — double-comptage garanti si personne ne
+l'arbitre avant.
+
+**Inféré.** Ré-étalonnage du catalogue à faire **avant** ou **pendant**
+`PHY-2`, pas après : c'est exactement le genre de correction qui doit
+précéder le recalibrage global de l'optimiseur que `PHY-2` prévoit déjà,
+plutôt que de s'y ajouter comme un second passage.
+
+---
+
+### DT-14 — Écart Harris-Priester / NRLMSISE-00 non arbitré
+
+**Mesuré.** [`atmosphere/05-conception-L2.md`](atmosphere/05-conception-L2.md) :
+22,6 % d'écart de densité mesuré entre les deux modèles d'atmosphère déjà
+implémentés par `PHY-1`, sur les cas testés. Aucun des deux n'a été retenu ou
+écarté comme référence.
+
+**Inféré.** Sans arbitrage écrit, le choix du modèle par défaut au moment de
+`PHY-2` sera fait dans l'instant plutôt que sur la base de cette mesure déjà
+disponible.
+
+---
+
+### DT-15 — `Cd` catalogue S2 hors domaine de validité déclaré
+
+**Mesuré.** [`atmosphere/05-conception-L2.md`](atmosphere/05-conception-L2.md)
+§4.2 : le coefficient de traînée catalogue des seconds étages (`Cd = 2,2`,
+régime d'écoulement libre-moléculaire) n'est déclaré valable qu'au-dessus de
+70 km. Le seul profil réel testé allume S2 à **58 km**, en écoulement
+continu — hors de ce domaine.
+
+**Inféré.** Sans conséquence tant que la traînée reste off par défaut ; à
+traiter avant que `PHY-2` fasse voler ce coefficient en production.
+
+---
+
+### DT-16 — `nRev` du solveur de Lambert figé à 0 partout
+
+**Mesuré.** [`lunar-flyby/01-decoupage.md`](lunar-flyby/01-decoupage.md) §6,
+répété à l'identique dans
+[`lunar-orbit/01-decoupage.md`](lunar-orbit/01-decoupage.md) §6 :
+`TranslunarInjectionPlan` et les autres appelants figent `nRev = 0` en dur.
+Le paramètre est natif au solveur mais aucun chemin de production ni aucun
+test n'exerce `nRev ≥ 1`.
+
+**Inféré.** Code mort en pratique côté multi-révolution. Risque nul tant que
+rien ne demande une trajectoire multi-révolution — pertinent si `MIS-6`
+(rendezvous) ou une mission ultérieure en a besoin.
+
+---
+
+### DT-17 — Performance du ruban (`RND-4`) jamais mesurée
+
+**Mesuré.** [`graphics-effects/ribbon-lines.md`](graphics-effects/ribbon-lines.md)
+§13 : les chiffres d'allocation et de coût par frame avancés pour le
+matériau `Ribbon` sont de l'arithmétique sur des tailles de buffer supposées,
+pas un profiling réel en conditions d'usage.
+
+**Inféré.** Faible risque immédiat — la session de 24 minutes citée par
+`RND-4` n'a montré aucune exception ni ralentissement perçu — mais aucun
+chiffre ne garantit que ça tienne à un nombre de trajectoires simultanées
+plus élevé (typiquement, plusieurs missions actives à la fois).
+
+---
+
 ## 4. Ce qui est sain
 
 À consigner autant que le reste, pour ne pas dégrader ce qui tient :
@@ -373,6 +481,14 @@ Par ratio impact/risque décroissant :
 `DT-5`, `DT-10` et le reste de `DT-11` se traitent opportunément, au fil des
 passages dans les fichiers concernés (cf. règle de la trace en
 [§6](#6-conseils--ne-pas-augmenter-la-dette)).
+
+**`DT-12` à `DT-17` ne rentrent pas dans ce classement** — ils viennent d'une
+revue documentaire, pas de la même mesure de code, et leur urgence dépend
+d'un chantier pas encore commencé plutôt que d'un ratio impact/risque
+immédiat. Repère simple : `DT-13`, `DT-14`, `DT-15` sont à trancher **avant
+ou pendant `PHY-2`** (ils s'aggravent silencieusement sinon) ; `DT-12` et
+`DT-16` n'ont aucune urgence propre ; `DT-17` se vérifie au premier profiling
+venu, sans chantier dédié.
 
 ---
 

@@ -2,8 +2,7 @@
 
 Ce document remplace `docs/roadmap/01-short-term.md` (supprimé : ses phases 0
 et 1 sont soldées, cf. §1). Il est **la** porte d'entrée du dossier `docs/` :
-chaque item renvoie vers la spec détaillée quand elle existe, et l'index
-complet des documents est dans [`docs/README.md`](../README.md).
+chaque item renvoie vers la spec détaillée quand elle existe.
 
 **Comment le lire.** Le plan, c'est le **§3** — sept phases dans l'ordre. Le §4
 est un classement valeur/difficulté qui sert à arbitrer, pas à planifier ; le
