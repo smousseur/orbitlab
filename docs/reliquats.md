@@ -149,12 +149,21 @@ Explicitement reporté à `MIS-6`.
 Source : [`lunar-flyby/01-decoupage.md`](lunar-flyby/01-decoupage.md) §6 pt 5,
 confirmé inchangé dans [`multi-corps/08-conception-L6.md`](multi-corps/08-conception-L6.md).
 
-### REL-14 — Vol de clôture de `MIS-5` jamais lancé
+### REL-14 — Vol de clôture de `MIS-5` jamais lancé — **traité le 2026-08-31**
 
 `LunarOrbitFlightTest` (derrière `orbitlab.slowTests`) et l'essai manuel de
-fin de phase restent à la charge de l'utilisateur, jamais exécutés à ce jour
-selon la source.
+fin de phase restaient à la charge de l'utilisateur, jamais exécutés à la date
+de la revue.
 Source : [`lunar-orbit/09-conception-L7.md`](lunar-orbit/09-conception-L7.md) §9.
+
+**Lancés le 2026-08-31**, les deux moitiés : `LunarOrbitFlightTest` est **vert**,
+et l'essai manuel confirme au runtime une trajectoire correcte **du sol jusqu'à
+l'orbite lunaire**. C'est ce que le reliquat attendait — le vol de clôture de
+`MIS-5` a eu lieu, et il tient bout à bout.
+
+Vérification de l'utilisateur, pas une mesure consignée ici : aucun chiffre
+n'est repris dans ce registre, et le lot `MIS-5` reste fermé sur les documents
+qui portent les siens.
 
 ### REL-15 — Horizon par défaut du wizard GEO sous-estime la durée totale d'environ 7 %
 
@@ -222,11 +231,20 @@ modèle d'atmosphère non nul ne peut pas être rechargé aujourd'hui — rien n
 peut le remonter avant `PHY-2`.
 Source : [`scenario/01-persistance-missions.md`](scenario/01-persistance-missions.md).
 
-### REL-23 — Tests longs et essai manuel de `UI-3` jamais lancés
+### REL-23 — Tests longs et essai manuel de `UI-3` jamais lancés — **traité le 2026-08-31**
 
 `ScenarioReplayTest` (opt-in) et l'essai manuel de fin de phase, seul juge
-réel de clôture, restent non exécutés.
+réel de clôture, restaient non exécutés à la date de la revue.
 Source : [`scenario/01-persistance-missions.md`](scenario/01-persistance-missions.md).
+
+**Lancés le 2026-08-31** : `ScenarioReplayTest` est **vert**, et l'essai manuel
+au runtime est concluant. Le juge que la fiche désignait s'est donc prononcé.
+
+**Ce que cela ne referme pas.** Les limitations connues d'`UI-3` gardent leurs
+fiches propres et restent ouvertes — `REL-22` (restauration refusée si
+atmosphère ≠ `NONE`) et [`bugs.md` BUG-18](bugs.md#bug-18--rejets-de-scénario-au-chargement-seulement-journalisés)
+(rejets au chargement seulement journalisés). Cet item-ci ne portait que
+l'exécution, pas leur contenu.
 
 ### REL-24 — Section interaction de `MissionTimelineWidget` à extraire
 

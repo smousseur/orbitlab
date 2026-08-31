@@ -49,7 +49,9 @@ la chose la plus importante de ce document :
 † Le polaire s'arrête à la fin du virage gravitationnel puis du plane trim : il ne
 vole ni circularisation ni transfert, son orbite n'a donc aucune raison d'être la
 cible à 400 km. Cf. §4 et §5.6. N'ayant pas d'optimiseur, il n'a pas non plus de
-ΔV total à rapporter.
+ΔV total à rapporter. **La fixture a été remise dans l'enveloppe le
+2026-08-31** (`bugs.md` BUG-6) : cette ligne décrit celle d'avant, elle n'est plus
+reproductible telle quelle. Voir la note datée du §4.
 
 Durées = temps d'optimisation seul (hors génération d'éphéméride et hors
 démarrage JVM). Elles sont *observées*, jamais assertées — `AscentBaselineN2Test`
@@ -173,6 +175,17 @@ plein est (contrôle)   : trace au sol 5,230°
 ‡ **Ce n'est pas le coût d'une mission polaire réelle** — la fixture applique le
 trim à une géométrie qu'aucune mission ne vole. Cf. §5.6 et `bugs.md` BUG-6.
 
+> **Note du 2026-08-31 — ces chiffres ne décrivent plus la fixture.** `BUG-6` a
+> été corrigé : `PolarCoverageTest` vole désormais `Transfert` et `Trim` avant le
+> plane trim, aux variables CMA-ES gelées de la mission (l'ancien couple 250 s /
+> 0,32 laisse un MECO suborbital dont `AnalyticHohmannTransferStage` ne peut rien
+> planifier). Ce qu'il produit maintenant : ascension seule `i` = 86,5896°, trace
+> 86,718°, masse 54 811,766 kg ; après `Transfert` + `Trim` 398 061 × 431 453 m,
+> `i` = 89,9364°, trace 89,955°, masse 47 387,969 kg ; après plane trim
+> 399 244 × 437 902 m, `i` = 90,0000°, trace 89,892°, masse 47 246,533 kg —
+> **soit 141,4 kg au plane trim, et non 10 349**. Le bloc ci-dessus reste tel
+> quel : c'est la mesure du 2026-08-16, et un lot fermé ne se réécrit pas.
+
 **Le périgée négatif après l'ascension est normal** : `flyAscent` s'arrête à la
 fin de la séquence de virage gravitationnel, sans circularisation ni transfert.
 L'état de MECO est sur un arc suborbital, comme sur tout autre profil au même
@@ -201,7 +214,15 @@ ERROR DepletionGuard - [Trim burn] Propellant depleted before scheduled cutoff
 
 La masse finale MEO n'est pas 2 000,0 kg parce que le vol s'y arrête, mais parce
 que la garde y coupe. L'orbite MEO est donc **limitée par l'ergol**, et le
-message accuse explicitement la comptabilité de masse amont. Le test passe (les
+message accuse explicitement la comptabilité de masse amont.
+
+> **Note du 2026-08-31.** L'accusation était fausse et c'est `bugs.md` BUG-15 :
+> la durée de cet allumage sort de `computeBurnDurationCapped`, qui l'écrête à
+> `remainingFuel / massFlow` et pose donc la masse **exactement** sur le
+> plancher — la garde tire à la coupure prévue, pas avant. Depuis cette date le
+> même événement se journalise en `WARN` et dit ce qu'il est : un étage
+> sous-dimensionné pour le ΔV planifié. Ce qui reste ouvert ici est *pourquoi*
+> le trim MEO l'est. Le test passe (les
 assertions portent sur la bande survolée). Ce point n'est pas diagnostiqué ici,
 et il ne doit pas l'être en L0 — mais il doit être *connu* avant que L1 ne touche
 au corps central, sinon la première dérive MEO lui sera attribuée à tort.
@@ -317,6 +338,16 @@ laquelle L1 à L6 vont s'appuyer pendant des semaines. Ce serait bouger la
 référence en cours de chantier, ce que le §3 du découpage interdit. Et pour L1
 en particulier, il faut savoir dès maintenant que la forme d'orbite du polaire
 est **déjà** gouvernée par cette construction-là, et non par le corps central.
+
+> **Note du 2026-08-31 — corrigé, après la fermeture de PHY-4.** Le chantier est
+> clos depuis le 2026-08-18 et le blocage ci-dessus est levé ; `roadmap/02` place
+> l'item en `J0-A`. Le coût réel a été mesuré sur une mission polaire complète :
+> **141,4 kg et 10,2 m/s**, pour un résidu de plan de 0,0636° — facteur 73 sur la
+> masse. Deux corrections de ce §5.6 au passage : la remise en enveloppe n'était
+> pas un effort faible (il a fallu déplacer aussi les variables d'ascension), et
+> la trace au sol ne peut pas arbitrer le plane trim, le pôle GCRF et le pôle
+> terrestre étant à 0,145376° l'un de l'autre à cette époque. Détail dans
+> [`bugs.md` BUG-6](../bugs.md#bug-6--plane-trim-employé-hors-de-son-enveloppe-par-lascension-polaire).
 
 ---
 

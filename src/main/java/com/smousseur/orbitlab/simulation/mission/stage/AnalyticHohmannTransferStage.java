@@ -389,7 +389,7 @@ public class AnalyticHohmannTransferStage extends MissionStage {
 
     ActiveStageInfo stage1 = vehicle.resolveActiveStage(state.getMass());
     PropulsionSystem propulsion1 = stage1.propulsion();
-    DepletionGuard.arm(propagator, stage1.depletionFloor(), getName());
+    DepletionGuard.armCappedBurn(propagator, stage1.depletionFloor(), getName());
     AbsoluteDate burn1Start = epoch.shiftedBy(1.0e-3);
     // Burn 1 uses a frame-aligned inertial attitude: the ΔV₁ vector has a radial component
     // (cancelling the parking-orbit residual eccentricity at the node) plus the tangential

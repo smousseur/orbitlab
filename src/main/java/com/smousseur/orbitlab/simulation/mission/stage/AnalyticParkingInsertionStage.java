@@ -286,6 +286,9 @@ public class AnalyticParkingInsertionStage extends MissionStage {
 
     ActiveStageInfo stage1 = vehicle.resolveActiveStage(state.getMass());
     PropulsionSystem propulsion1 = stage1.propulsion();
+    // The loud guard, unlike the sibling analytic stages: both burns here go through
+    // requireDeliverable, so a propellant-capped one never reaches this propagator and the floor is
+    // unreachable by construction (docs/bugs.md BUG-15).
     DepletionGuard.arm(propagator, stage1.depletionFloor(), getName());
     AbsoluteDate burn1Start = epoch.shiftedBy(1.0e-3);
     propagator.addForceModel(

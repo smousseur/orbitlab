@@ -926,14 +926,19 @@ class CentralBodyBaselineTest {
    * a reference maneuver rebuilt from the same inputs the first burn phase reads, at the mass the
    * vertical ascent actually leaves behind.
    *
-   * <p><b>It flies the ascent and the plane trim, and nothing between them</b> — which is exactly
-   * what {@code PolarCoverageTest} flies, and what {@code 02-baseline-L0.md} §4 records. This is
-   * not a shortcut: the fixture is knowingly out of envelope (baseline §5.6, {@code bugs.md}
-   * BUG-6). Its ascent ends on a suborbital arc whose perigee is −131 km, and {@code
+   * <p><b>It flies the ascent and the plane trim, and nothing between them</b> — which is what
+   * {@code PolarCoverageTest} flew until 2026-08-31, and what {@code 02-baseline-L0.md} §4 records.
+   * Its ascent ends on a suborbital arc whose perigee is −131 km, and {@code
    * AnalyticHohmannTransferStage} refuses to plan from it — "No apogee found within one transfer
-   * half-period", thrown from {@code configure()}, which the runner does not catch. Putting the
-   * fixture back in envelope would move the polar figures of a baseline five lots are about to rest
-   * on, which §5.6 forbids for the duration of PHY-4.
+   * half-period", thrown from {@code configure()}, which the runner does not catch.
+   *
+   * <p><b>It stays that way now that {@code bugs.md} BUG-6 is closed, and that is a decision.</b>
+   * {@code PolarCoverageTest} moved back into envelope on 2026-08-31 and its figures moved with it;
+   * this gate did not follow. What it guards is that twenty propagator construction sites still
+   * produce the same arithmetic, and a frozen deterministic trajectory does that whether or not it
+   * is a flight anyone would fly. Re-pinning would cost a fresh measurement, buy no guard strength,
+   * and break the continuity with the L1 reference. The values below are an arithmetic fingerprint:
+   * reading a mission cost off them is precisely the mistake BUG-6 records.
    *
    * <p>Its two passes agree to within 4e-8 m, because the chain it flies contains no coast — the
    * one construct the two passes treat differently.

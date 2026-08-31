@@ -258,7 +258,7 @@ public class AnalyticTrimBurnStage extends MissionStage {
       NumericalPropagator propagator, SpacecraftState state, TrimBurn plan, Vehicle vehicle) {
     ActiveStageInfo stageInfo = vehicle.resolveActiveStage(state.getMass());
     PropulsionSystem propulsion = stageInfo.propulsion();
-    DepletionGuard.arm(propagator, stageInfo.depletionFloor(), "Trim burn");
+    DepletionGuard.armCappedBurn(propagator, stageInfo.depletionFloor(), "Trim burn");
 
     // FrameAlignedProvider maps inertial → body. We want body PLUS_I to point along the inertial
     // burn direction, i.e. r(directionInertial) = PLUS_I.

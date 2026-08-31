@@ -160,7 +160,7 @@ public class TLIBurnStage extends MissionStage {
   private void addBurn(
       NumericalPropagator propagator, SpacecraftState state, Burn plan, Vehicle vehicle) {
     ActiveStageInfo active = vehicle.resolveActiveStage(state.getMass());
-    DepletionGuard.arm(propagator, active.depletionFloor(), getName());
+    DepletionGuard.armCappedBurn(propagator, active.depletionFloor(), getName());
 
     PropulsionSystem propulsion = active.propulsion();
     FrameAlignedProvider attitude =

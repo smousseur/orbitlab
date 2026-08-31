@@ -49,11 +49,11 @@ import org.orekit.utils.PVCoordinates;
  * capture (bilan 10 §6) — the stack-wide total would only see the AKM.
  *
  * <p><b>Slow / nightly.</b> Each bisection evaluation is a complete mission optimization (~1.5
- * min), so each loop is ~15 min. They are opt-in: enable with {@code -Dorbitlab.slowTests=true}.
+ * min), so each loop is ~15 min. They are opt-in: enable with {@code -Dorbitlab.fullTests=true}.
  * The per-λ progress, the resolved {@code λ*} and the per-stage load comparison are logged at INFO
  * by {@link PropellantLoadOptimizer} and {@link MissionLoadEvaluator}.
  */
-@EnabledIfSystemProperty(named = "orbitlab.slowTests", matches = "true")
+@EnabledIfSystemProperty(named = "orbitlab.fullTests", matches = "true")
 public class PropellantLoadOptimizerIntegrationTest {
   private static final Logger logger =
       LogManager.getLogger(PropellantLoadOptimizerIntegrationTest.class);

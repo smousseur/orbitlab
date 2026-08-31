@@ -235,6 +235,12 @@ corriger pendant PHY-4. Le gate vole donc ce que `PolarCoverageTest` vole : les
 phases de virage gravitationnel puis le plane trim. Il y gagne quand même : ses
 frontières retombent **exactement** sur les chiffres du §4 de la baseline.
 
+> **Note du 2026-08-31.** `BUG-6` est corrigé : `PolarCoverageTest` vole
+> désormais sa chaîne complète, à des variables d'ascension différentes. Le gate,
+> lui, garde ses épinglages — la phrase « le gate vole ce que `PolarCoverageTest`
+> vole » n'est donc plus vraie depuis cette date, et le javadoc de
+> `polar_hasNotMoved()` dit pourquoi.
+
 Les trois premières lignes donnent un `transitionTime` absolu, **arrondi à ce que
 la baseline imprime** ; le polaire donne une durée de second allumage, parce que
 c'est sous cette forme que sa fixture la fige déjà

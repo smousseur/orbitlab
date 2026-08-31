@@ -47,12 +47,15 @@ import org.orekit.time.AbsoluteDate;
  * eccentricity drops. This is a pure plane rotation <em>only at an apsis</em>, where the velocity
  * is already transverse.
  *
- * <p>In the regime this stage is written for — a ~0.25° residual on the near-circular orbit left by
- * apogee circularization — the radial velocity is negligible and so is the effect. Away from it the
- * cost grows with the flight path angle, because the burn also has to flatten it. Measured on the
- * eccentric ascent state of {@code PolarCoverageTest} (e = 0.21, 3.24° of plane error): 1028 m/s
- * spent where a pure rotation costs 350-460 m/s, eccentricity pulled from 0.206 to 0.137. Whether
- * that out-of-envelope use is acceptable is {@code docs/bugs.md} BUG-6, not a defect of this class.
+ * <p>In the regime this stage is written for — a residual of a few hundredths of a degree on the
+ * near-circular orbit left by apogee circularization or by a transfer — the radial velocity is
+ * negligible and so is the effect. Away from it the cost grows with the flight path angle, because
+ * the burn also has to flatten it. The two ends of that, both measured ({@code docs/bugs.md}
+ * BUG-6): on the eccentric ascent state a test once handed it (e = 0.21, 3.24° of plane error) it
+ * spent 1028 m/s where a pure rotation costs 350-460 m/s, pulling the eccentricity from 0.206 to
+ * 0.137; on the orbit a polar mission actually fires it on (e = 0.0025, 0.064° of plane error) it
+ * spends 10 m/s and 141 kg. Nothing composes the first case — {@code EarthOrbitMission} inserts
+ * this stage after the orbital phases, never before them.
  */
 public class AnalyticPlaneTrimAtNodeStage extends MissionStage {
   private static final Logger logger = LogManager.getLogger(AnalyticPlaneTrimAtNodeStage.class);
@@ -241,7 +244,7 @@ public class AnalyticPlaneTrimAtNodeStage extends MissionStage {
   private void addBurn(
       NumericalPropagator propagator, SpacecraftState state, PlaneTrim plan, Vehicle vehicle) {
     ActiveStageInfo stageInfo = vehicle.resolveActiveStage(state.getMass());
-    DepletionGuard.arm(propagator, stageInfo.depletionFloor(), getName());
+    DepletionGuard.armCappedBurn(propagator, stageInfo.depletionFloor(), getName());
 
     Rotation inertialToBody = new Rotation(plan.directionInertial(), Vector3D.PLUS_I);
     FrameAlignedProvider attitude = new FrameAlignedProvider(inertialToBody, state.getFrame());

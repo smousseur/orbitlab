@@ -281,7 +281,7 @@ public class AnalyticApogeeCircularizationStage extends MissionStage {
       CircularizationPlan plan,
       Vehicle vehicle) {
     ActiveStageInfo stageInfo = vehicle.resolveActiveStage(state.getMass());
-    DepletionGuard.arm(propagator, stageInfo.depletionFloor(), getName());
+    DepletionGuard.armCappedBurn(propagator, stageInfo.depletionFloor(), getName());
 
     Rotation inertialToBody = new Rotation(plan.directionInertial(), Vector3D.PLUS_I);
     FrameAlignedProvider attitude = new FrameAlignedProvider(inertialToBody, state.getFrame());

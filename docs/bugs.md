@@ -15,16 +15,16 @@ la frontière entre les deux derniers doit rester lisible.
 | [`BUG-3`](#bug-3--orientation-des-modèles-3d-des-planètes) | Orientation des modèles 3D des planètes | 2026-08-15 | Ouvert, diagnostic à faire |
 | [`BUG-4`](#bug-4--hover-des-widgets-non-uniforme) | Hover des widgets non uniforme | 2026-08-15 | **Promu** en `UI-7` le 2026-08-16 |
 | [`BUG-5`](#bug-5--pop-du-modèle-3d-au-changement-de-focus) | Pop du modèle 3D au changement de focus | 2026-08-15 | Ouvert, mécanisme identifié |
-| [`BUG-6`](#bug-6--plane-trim-employé-hors-de-son-enveloppe-par-lascension-polaire) | Plane trim employé hors de son enveloppe par l'ascension polaire | 2026-08-16 | Ouvert, mécanisme mesuré — **importance : mineure côté code, à trancher côté physique** |
+| [`BUG-6`](#bug-6--plane-trim-employé-hors-de-son-enveloppe-par-lascension-polaire) | Plane trim employé hors de son enveloppe par l'ascension polaire | 2026-08-16 | **Corrigé le 2026-08-31** — coût réel mesuré (141 kg, pas 10 349), fixture remise dans l'enveloppe |
 | [`BUG-7`](#bug-7--les-gates-de-non-régression-tombent-quand-un-test-lunaire-les-précède-dans-le-même-jvm) | Les gates de non-régression tombent quand un test lunaire les précède dans le même JVM | 2026-08-18 | Ouvert, reproductible, piste identifiée — **fiabilité de l'instrument, pas de la physique** |
 | [`BUG-8`](#bug-8--inclinaison-figée-invalidée-en-silence-par-un-changement-de-site) | Inclinaison figée invalidée en silence par un changement de site | 2026-08-20 | Ouvert, mécanisme identifié — **ergonomie, le modèle est sain** |
-| [`BUG-9`](#bug-9--parkingcoaststagetest-teste-la-sémantique-davant-mis-4l6) | `ParkingCoastStageTest` teste la sémantique d'avant MIS-4/L6 | 2026-08-28 | Ouvert, reproductible — **régression de test, pas de production** |
+| [`BUG-9`](#bug-9--parkingcoaststagetest-teste-la-sémantique-davant-mis-4l6) | `ParkingCoastStageTest` teste la sémantique d'avant MIS-4/L6 | 2026-08-28 | **Corrigé le 2026-08-31** — vert, et aucun autre test ne portait l'ancien contrat |
 | [`BUG-10`](#bug-10--reentryguard-inopérant-en-présence-de-traînée) | `ReentryGuard` inopérant en présence de traînée | 2026-08-30 | Ouvert — **sans impact avant PHY-2/MIS-10, aucun vol de production ne l'exerce aujourd'hui** |
 | [`BUG-11`](#bug-11--loptimiseur-saute-les-coasts-que-le-vol-rejoue) | L'optimiseur saute les coasts que le vol rejoue | 2026-08-30 | Ouvert, mécanisme identifié — **traverse PHY-4 → MIS-4 → MIS-5 sans jamais être refermé** |
 | [`BUG-12`](#bug-12--bande-morte-ε-de-franchissement-de-soi-jamais-calibrée) | Bande morte ε de franchissement de SOI jamais calibrée | 2026-08-30 | Ouvert, acceptée par verdict — **redevient un risque actif pour MIS-11** |
 | [`BUG-13`](#bug-13--fenêtre-de-lancement-lunaire-refusée-sans-signal-à-lécran) | Fenêtre de lancement lunaire refusée sans signal à l'écran | 2026-08-30 | Ouvert — famille de `BUG-8`, sous-système distinct |
 | [`BUG-14`](#bug-14--deux-portées-de-recherche-de-fenêtre-divergentes) | Deux portées de recherche de fenêtre divergentes | 2026-08-30 | Ouvert, non mesuré |
-| [`BUG-15`](#bug-15--log-error-trompeur-de-depletionguard-sur-un-rejet-correct) | Log `ERROR` trompeur de `DepletionGuard` sur un rejet correct | 2026-08-30 | Ouvert — **cosmétique** |
+| [`BUG-15`](#bug-15--log-error-trompeur-de-depletionguard-sur-un-rejet-correct) | Log `ERROR` trompeur de `DepletionGuard` sur un rejet correct | 2026-08-30 | **Corrigé le 2026-08-31** — un allumage écrêté touche le plancher par construction, et le dit maintenant |
 | [`BUG-16`](#bug-16--t1-saturé-contre-sa-borne-sur-la-majorité-des-transferts-mesurés) | `t1` saturé contre sa borne sur la majorité des transferts mesurés | 2026-08-30 | Ouvert, mesuré — artefact de mur de boîte |
 | [`BUG-17`](#bug-17--acceptablecost-mal-calé-depuis-lajout-du-terme-ergols-i7) | `acceptableCost` mal calé depuis l'ajout du terme ergols I7 | 2026-08-30 | Ouvert, correctif proposé non fait |
 | [`BUG-18`](#bug-18--rejets-de-scénario-au-chargement-seulement-journalisés) | Rejets de scénario au chargement, seulement journalisés | 2026-08-30 | Ouvert — **trou connu de `UI-3`** |
@@ -413,7 +413,11 @@ pas une observation frame par frame.
 
 ## BUG-6 — Plane trim employé hors de son enveloppe par l'ascension polaire
 
-**Constaté.** En mesurant la baseline L0 de PHY-4
+**Corrigé le 2026-08-31.** La fixture vole désormais la chaîne de production, et
+le coût réel d'un plane trim polaire — que cette fiche disait ignorer — a été
+mesuré : **141 kg et 10 m/s**, là où elle affichait 10 349 kg et 1 028 m/s.
+
+**Constaté le 2026-08-16.** En mesurant la baseline L0 de PHY-4
 ([`multi-corps/02-baseline-L0.md`](multi-corps/02-baseline-L0.md) §5.6), le
 `AnalyticPlaneTrimAtNodeStage` de `PolarCoverageTest` dépense **1 028 m/s et
 10 349 kg** — 26 % de la masse — pour un changement de plan de 3,24°, et fait
@@ -440,58 +444,94 @@ donnent une Isp implicite de 347,8 s : le ΔV logué est réel, pas un plan non 
 
 Le javadoc de la classe affirmait l'inverse (« changes neither the orbit's energy
 nor its shape »). **Corrigé le 2026-08-16** — la classe dit maintenant ce qu'elle
-fait. C'est la seule partie de cet item qui soit close.
+fait.
 
-### Importance : mineure côté production, moyenne côté fidélité du test
+### Le coût réel, mesuré le 2026-08-31
 
-**Aucun chemin de production n'est concerné, et c'est le cœur de l'évaluation.**
-`EarthOrbitMission.ascentThen` insère le plane trim **après** les phases
-orbitales (`EarthOrbitMission.java:349-359`) : en vol réel, il s'exécute sur une
-orbite déjà circularisée, où la vitesse *est* transverse et où l'effet
-disparaît. Les mesures le confirment sur les deux profils qui l'exercent
-réellement :
+Mission polaire complète : `EarthOrbitMission` 400 km circulaire à 90° depuis
+Kourou, Falcon Heavy pleinement chargé + `LEGACY`, chaîne analytique (`FAST`),
+CMA-ES graine 42, budget 40 000. Lue sur la ligne « Plane trim » de son rapport :
 
-| Profil | Contexte du trim | Coût |
+| | fixture d'avant | mission réelle |
 |---|---|---|
-| GEO | après circularisation d'apogée | **3,3 kg, 4,2 m/s** |
-| MEO | résidu 0,0026° | **sauté** |
-| Polaire (`PolarCoverageTest`) | après l'ascension seule, e = 0,21 | **10 349 kg, 1 028 m/s** |
+| orbite au moment du trim | −131 589 × 3 111 118 m, `e` = 0,206 | 398 061 × 431 453 m, `e` = 0,0025 |
+| erreur de plan à corriger | 3,2411° | 0,0636° |
+| ΔV | 1 028 m/s | **10,2 m/s** |
+| ergol | 10 349 kg | **141,4 kg** |
 
-C'est donc la **fixture** qui est hors enveloppe, pas l'étage :
-`PolarCoverageTest.trimPlane` appelle `propagateStandalone` directement sur
-l'état de fin d'ascension, en sautant les phases orbitales que la mission réelle
-vole avant. La démonstration qualitative de T5 reste valide — le trim fait bien
-passer la couverture de 86,9° à 89,9°, et c'est ce que MIS-7 voulait montrer —
-mais **le coût qu'elle affiche n'est pas celui d'une mission polaire réelle**.
+**Facteur 73 sur la masse, 101 sur le ΔV.** Les 10 349 kg de la ligne polaire de
+la baseline n'étaient donc pas un coût de mission surestimé : ils ne sont pas du
+tout de cet ordre de grandeur. Le reste de la chaîne, pour situer : orbite
+atteinte 399 244 × 437 902 m, `i` = 90,0000°, masse finale 47 246,5 kg, ΔV total
+8 949 m/s.
 
-Le risque concret, et la raison de tracer l'item : quelqu'un lit les 10 349 kg de
-la ligne polaire de la baseline comme un coût de mission. C'est faux d'un facteur
-qui reste à établir.
+### Ce qui a été corrigé
 
-### Correction, et pourquoi elle ne doit pas être faite maintenant
+`PolarCoverageTest` vole maintenant les étages que `EarthOrbitMission` compose,
+dans l'ordre — ascension, `Transfert`, `Trim`, `Plane trim` — et journalise les
+trois états.
 
-Faire voler les phases orbitales à la fixture avant le trim la remettrait dans
-l'enveloppe de production. C'est un effort faible.
+**Il a fallu déplacer l'ascension aussi, ce que cette fiche n'avait pas prévu.**
+La correction qu'elle annonçait — « faire voler les phases orbitales à la fixture
+avant le trim », effort faible — ne marche pas telle quelle. Au couple figé de la
+fixture (second allumage 250 s, exposant 0,32) le MECO est sur un arc suborbital
+de périgée −131 km, et `AnalyticHohmannTransferStage` refuse d'en planifier quoi
+que ce soit : `IllegalStateException: No apogee found within one transfer
+half-period`, vérifié le 2026-08-31 — et déjà écrit noir sur blanc dans
+[`multi-corps/03-conception-L1.md`](multi-corps/03-conception-L1.md) §5.2 le jour
+même où cette fiche annonçait l'effort faible. La fixture gèle donc la sortie CMA-ES de
+cette mission à la graine 42 (`transitionTime` 349,7121685971332, exposant
+0,18590543817939678), comme le profil LEO-400 le fait déjà. Le vol figé
+reproduit la course de l'optimiseur au chiffre près — 47 387,969 kg puis
+47 246,533 kg, même erreur de plan à dix décimales.
 
-**Mais cela déplacerait les chiffres polaires de la baseline L0**, qui vient
-d'être enregistrée et sur laquelle les lots L1 à L6 de PHY-4 vont s'appuyer
-pendant des semaines. Corriger maintenant, c'est bouger la référence en cours de
-chantier — exactement ce que le §3 du découpage interdit. À faire après PHY-4,
-ou pendant, mais alors avec un ré-enregistrement explicite et daté de la
-baseline.
+**Le blocage de calendrier est tombé de lui-même.** Cette fiche interdisait la
+correction « pendant PHY-4 » ; PHY-4 est fermé depuis le 2026-08-18, et
+[`roadmap/02-roadmap-technique.md`](roadmap/02-roadmap-technique.md) place l'item
+en `J0-A`, à faire maintenant.
 
-### Non vérifié
+### Une trouvaille au passage : le pôle inertiel n'est pas le pôle terrestre
 
-- **Le coût réel d'un plane trim polaire en production n'a pas été mesuré.** Il
-  faudrait faire tourner une mission polaire complète via `EarthOrbitMission` et
-  lire la ligne « Plane trim » de son rapport. Tant que ce n'est pas fait, on
-  sait que 10 349 kg est faux, pas ce qui est juste.
-- **L'angle de pente au nœud n'a pas été lu directement**, il est déduit de la
-  décomposition en quadrature du ΔV. La déduction est cohérente avec `e = 0,21`,
-  elle n'est pas une mesure.
-- **Le seuil `SKIP_PLANE_ERROR_RAD` (0,03°) n'a pas été réexaminé** à la lumière
-  de ce qui précède : rien ne dit qu'un seuil pensé pour un résidu de
-  circularisation convienne à un résidu d'ascension.
+L'inclinaison est commandée en GCRF ; la couverture est une propriété du repère
+terrestre. **Les deux pôles sont à 0,145376° l'un de l'autre à l'époque de la
+mission** — précession accumulée depuis J2000, mesurée en transformant le pôle
+ITRF vers GCRF. Conséquence directe :
+
+| état | inclinaison GCRF | latitude max de la trace |
+|---|---|---|
+| après `Transfert` + `Trim` | 89,9364° | **89,955°** |
+| après `Plane trim` | 90,0000° | **89,892°** |
+
+Amener l'inclinaison inertielle à exactement 90° **éloigne** la trace au sol du
+pôle. L'assertion « le plane trim améliore la couverture », que T5 portait, est
+donc fausse — et elle l'était déjà avant la correction : la baseline lit 89,891°
+après un trim à `i` = 89,9999°, soit le même déficit de 0,109°, jamais expliqué.
+T5 asserte désormais la réduction du résidu de plan (0,0636° → 0,0000°) et garde
+la trace au sol pour les deux énoncés qu'elle peut porter : la mission atteint
+les pôles, l'ascension seule non.
+
+### Le seuil `SKIP_PLANE_ERROR_RAD`, réexaminé
+
+Le résidu polaire en enveloppe vaut 0,0636°, soit 2,1 fois le seuil de 0,03° :
+l'étage tire, et le seuil n'est pas ce qui décide. La question que posait cette
+fiche — un seuil pensé pour un résidu de circularisation convient-il à un résidu
+d'ascension ? — ne se pose plus dans ces termes : aucune mission ne présente le
+trim à un résidu d'ascension. Constante inchangée.
+
+### Ce qui reste, et n'est pas fait
+
+- **La baseline L0 n'a pas été ré-enregistrée.** Ses chiffres polaires décrivent
+  la fixture d'avant le 2026-08-31. C'est le document d'un lot fermé : il est
+  annoté, pas réécrit.
+- **`CentralBodyBaselineTest` épingle toujours la chaîne hors enveloppe**
+  (ascension puis plane trim, sans les phases orbitales), décision prise le
+  2026-08-31 : c'est un gate de refactor, il épingle une empreinte arithmétique
+  et non une mission volable. Son javadoc le dit désormais au lieu d'invoquer
+  l'interdiction PHY-4.
+- **L'angle de pente au nœud n'a toujours pas été lu directement**, il reste
+  déduit de la décomposition en quadrature du ΔV. La déduction est cohérente
+  avec `e` = 0,21, elle n'est pas une mesure — et elle ne décrit plus qu'une
+  géométrie que rien ne vole.
 
 ---
 
@@ -643,31 +683,35 @@ secondaire que rien n'oblige à ouvrir.
 
 ## BUG-9 — `ParkingCoastStageTest` teste la sémantique d'avant MIS-4/L6
 
-**Constaté.** `ParkingCoastStageTest:75` compare la durée volée à
-`departure.coastDuration()` à 1 s près. Rouge depuis le 2026-08-28, toujours
-rouge au 2026-08-30 — vérifié directement dans le code, la ligne n'a pas
+**Corrigé le 2026-08-31.** Le test compare désormais la durée volée à
+`departure.coastDuration() − ignitionLead`, la borne que `MIS-4 / L6` a rendue
+vraie. Vérifié : `ParkingCoastStageTest`, 2 tests, 0 échec.
+
+**Constaté le 2026-08-28.** `ParkingCoastStageTest:75` comparait la durée volée
+à `departure.coastDuration()` à 1 s près. Rouge depuis le 2026-08-28, toujours
+rouge au 2026-08-30 — vérifié directement dans le code, la ligne n'avait pas
 bougé.
 
-**Mécanisme, mesuré.** `MIS-4 / L6` (décision α) fait désormais s'arrêter ce
-coast à **l'allumage**, pas à la durée totale résolue par `departure`. L'écart
-est exactement `ignitionLead` : le journal dit « coasting 690 s to ignition,
-19,6 s ahead ». Le test asserte la sémantique d'avant `L6` et n'a jamais été
-mis à jour.
+**Mécanisme, mesuré.** `MIS-4 / L6` (décision α) fait s'arrêter ce coast à
+**l'allumage**, pas à la durée totale résolue par `departure`. L'écart est
+exactement `ignitionLead` : le journal dit « coasting 690 s to ignition, 19,6 s
+ahead ». Le test assertait la sémantique d'avant `L6` et n'avait jamais été mis
+à jour.
 
-**Ce n'est pas une régression de production.** `ParkingCoastStage` lui-même
+**Ce n'était pas une régression de production.** `ParkingCoastStage` lui-même
 est correct — c'est la sémantique voulue par `L6` — seule l'assertion du test
-est restée sur l'ancien contrat.
+était restée sur l'ancien contrat.
 
-### Correction
+### Le point resté non vérifié est maintenant vérifié
 
-Comparer la durée volée à `departure.coastDuration() − ignitionLead` (ou à
-l'accesseur équivalent que la classe expose déjà pour l'allumage), pas à
-`coastDuration()` seul.
-
-### Non vérifié
-
-Aucune recherche systématique d'un autre test qui encoderait la même
-sémantique pré-`L6`.
+La fiche laissait ouverte l'absence de recherche systématique d'un autre test
+encodant la même sémantique pré-`L6`. Faite le 2026-08-31 sur les dix-neuf
+usages de `coastDuration()` du dépôt : **aucun autre ne compare une durée volée
+à cette valeur**. Les seize occurrences de `TranslunarInjectionPlanTest`,
+`LunarFlybyFlightTest` et `TranslunarDepartureFlightTest` portent sur le contrat
+de `Departure` lui-même — combien de coast le plan *résout* — ce qui est
+légitime et que `L6` n'a pas déplacé. Le seul site qui confondait les deux était
+celui-ci.
 
 ---
 
@@ -801,21 +845,85 @@ une inclinaison particulière) n'a jamais été mesuré.
 
 ## BUG-15 — Log `ERROR` trompeur de `DepletionGuard` sur un rejet correct
 
-**Constaté.** `DepletionGuard` émet `… upstream mass accounting is wrong` en
-routine sur un λ correctement rejeté pour charge sous-dimensionnée
+**Corrigé le 2026-08-31.** Le message accusait la comptabilité de masse là où
+rien n'était incohérent. La cause est plus nette que la fiche ne le disait : ce
+n'est pas « pendant la recherche » que le log ment, c'est **chaque fois qu'un
+allumage a été écrêté sur le plancher d'ergol** — ce qui arrive par construction,
+recherche ou pas.
+
+**Constaté le 2026-08-30.** `DepletionGuard` émet `… upstream mass accounting is
+wrong` en routine sur un λ correctement rejeté pour charge sous-dimensionnée
 ([`optimization/bilan.md`](optimization/bilan.md), piste 6). Rien n'est
 « wrong » : c'est le verdict attendu de l'algorithme de recherche de charge.
 
-**Importance.** Cosmétique, mais un `ERROR` sur un comportement normal fait
-chercher un bug qui n'existe pas à chaque lecture de log — coût de debug
-récurrent plutôt qu'un défaut fonctionnel.
+### Le mécanisme, mesuré
 
-### Piste
+`Physics.computeBurnDurationCapped` écrête la durée à `remainingFuel / massFlow`,
+et `ActiveStageInfo.remainingFuel(m) = m − depletionFloor()`. L'écrêtage pose
+donc la masse **exactement sur le plancher** : tout allumage écrêté déclenche le
+`MassDepletionDetector`, à sa propre coupure prévue. Le message affirmait
+l'inverse — « depleted *before scheduled cutoff* » — sans jamais le vérifier.
 
-Distinguer, dans `DepletionGuard`, le message pour ce chemin de rejet de
-routine (charge insuffisante détectée pendant la recherche) du message pour
-une véritable incohérence de comptage de masse — et abaisser le premier en
-`INFO`/`WARN`.
+Relevé sur [`optimization/run 550km.log`](optimization/run%20550km.log) l. 727-732,
+l'unique occurrence du run :
+
+| | |
+|---|---|
+| masse à l'entrée de `Trim` | 19 044,100 kg |
+| plancher | 19 000,0 kg → 44,1 kg d'ergol disponibles |
+| durée planifiée | **0,153417 s** = 44,1 kg / 287,5 kg·s⁻¹ — l'écrêtage, pas Tsiolkovsky |
+| durée qu'aurait demandé le ΔV de 10,25 m/s | ≈ 0,199 s (57,1 kg) |
+| masse finale | 18 999,999999972 kg |
+
+L'allumage s'est donc arrêté **à** sa coupure, et non avant. Un seul contexte
+tire sur tout le run : `[Trim burn]`.
+
+### Ce qui a été corrigé
+
+`DepletionGuard` distingue désormais deux façons d'atteindre le plancher, et
+c'est le site d'armement qui tranche — l'information est statique, il n'y a rien
+à propager :
+
+- `arm(...)` — fenêtre d'allumage que rien n'écrête (phase d'ascension à durée
+  fixe, variable d'optimiseur, durée Tsiolkovsky non bornée). Le plancher est
+  alors inatteignable sauf comptabilité fausse : **`ERROR`, message inchangé**.
+- `armCappedBurn(...)` — durée issue de `computeBurnDurationCapped`. Toucher le
+  plancher est la fin prévue de cet allumage : **`WARN`**, et le message dit ce
+  qui s'est passé (« its duration was capped at the floor, so the stage is short
+  of the ΔV planned ») au lieu d'accuser.
+
+Câblé sur les six étages qui volent une durée écrêtée : `AnalyticTrimBurnStage`,
+`AnalyticPlaneTrimAtNodeStage`, `AnalyticApogeeCircularizationStage`,
+`AnalyticHohmannTransferStage`, `AnalyticGtoInjectionStage`, `TLIBurnStage`.
+
+**Trois sites gardent la garde bruyante, et c'est un choix.**
+`AnalyticParkingInsertionStage` (`requireDeliverable`) et `LunarInsertionStage`
+(`LunarInsertionPlan.requirePropellantFor`) refusent un allumage écrêté *avant*
+de le voler : chez eux le plancher redevient inatteignable par construction. Une
+ligne à chaque site le dit, sans quoi le choix de méthode y paraîtrait
+incohérent. Idem pour `ConstantThrustStage`, `GravityTurnBurnStage` et les deux
+étages de transfert, dont les durées ne sont pas écrêtées.
+
+Deux tests d'unité épinglent le niveau **et** le message des deux chemins
+(`DepletionGuardTest`), en capturant les événements Log4j de la classe — sans
+quoi une assertion de comportement ne verrait rien, les deux chemins faisant
+exactement le même `Action.STOP`.
+
+### Ce que la mesure précise, contre la fiche
+
+Le discriminant n'est pas l'appelant (« pendant la recherche ») mais
+l'ordonnancement de l'allumage. La différence est visible : la baseline PHY-4
+§5.1 montre le **même** événement sur une mission MEO unique, hors de toute
+recherche de charge. Un correctif branché sur « est-ce que je suis dans une
+recherche ? » aurait laissé ce cas-là accuser à tort, et aurait exigé de
+propager un drapeau de contexte jusqu'aux quatorze sites d'armement.
+
+### Ce qui reste, et n'est pas cet item
+
+Le trim MEO tape toujours son plancher d'ergol. Le log dit maintenant ce que
+c'est — un étage sous-dimensionné pour le ΔV planifié — mais **pourquoi** il
+l'est n'est pas diagnostiqué. C'est l'anomalie héritée du §5.1 de la baseline,
+qui reste ouverte.
 
 ---
 

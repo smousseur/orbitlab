@@ -83,6 +83,9 @@ public class LunarInsertionStage extends MissionStage {
   public void configure(NumericalPropagator propagator, Mission mission) {
     SpacecraftState state = mission.getCurrentState();
     ActiveStageInfo active = activeStage(state, mission);
+    // The loud guard, unlike the sibling analytic stages: LunarInsertionPlan.requirePropellantFor
+    // refuses a burn the stage cannot pay for, so a propellant-capped one never reaches this
+    // propagator and the floor is unreachable by construction (docs/bugs.md BUG-15).
     DepletionGuard.arm(propagator, active.depletionFloor(), getName());
     LunarInsertionPlan.addBurn(
         propagator, state, burn.direction(), burn.duration(), active.propulsion());

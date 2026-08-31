@@ -7,6 +7,7 @@ import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.maneuver.TranslunarInjectionPlan;
 import com.smousseur.orbitlab.simulation.mission.maneuver.TranslunarInjectionPlan.Departure;
+import com.smousseur.orbitlab.simulation.mission.vehicle.ActiveStageInfo;
 import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchVehicle;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropulsionSystem;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Spacecraft;
@@ -61,7 +62,10 @@ class ParkingCoastStageTest {
   void propagateStandalone_advancesToTheInjectionPoint() {
     VehicleStack stack = stack();
     SpacecraftState parking = parkingState(stack.getMass());
+    Mission mission = missionWith(stack);
     Departure departure = TranslunarInjectionPlan.departureFrom(parking);
+    ActiveStageInfo active = mission.getVehicle().resolveActiveStage(parking.getMass());
+    double ignitionLead = TranslunarInjectionPlan.ignitionLead(parking, departure, active);
 
     // Teeth: an injection point already underfoot would make the assertion below hold for a stage
     // that does nothing at all.
@@ -70,13 +74,13 @@ class ParkingCoastStageTest {
         "the fixture must have a real coast to fly, got " + departure.coastDuration() + " s");
 
     SpacecraftState flown =
-        new ParkingCoastStage("Parking coast").propagateStandalone(parking, missionWith(stack));
+        new ParkingCoastStage("Parking coast").propagateStandalone(parking, mission);
 
     assertEquals(
-        departure.coastDuration(),
+        departure.coastDuration() - ignitionLead,
         flown.getDate().durationFrom(parking.getDate()),
         1.0,
-        "the stage walk must reach the injection point departureFrom resolved");
+        "the stage walk must reach the ignition point, one ignitionLead short of departureFrom's injection point");
     assertTrue(
         Vector3D.distance(flown.getPosition(), parking.getPosition()) > 1_000_000.0,
         "the state must have travelled, not merely been re-dated");

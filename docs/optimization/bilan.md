@@ -194,6 +194,10 @@ an insertion aimed circular is not circular, and the gap is not a targeting miss
    λ normalement rejetés. Rien n'est *wrong* : la charge est trop petite, c'est le verdict attendu.
    Un ERROR avec ce message sur un rejet de routine fait chercher un bug qui n'existe pas.
 
+   **Fait le 2026-08-31** (`bugs.md` BUG-15). La cause mesurée est plus large que « pendant la
+   recherche » : un allumage écrêté par `computeBurnDurationCapped` touche le plancher par
+   construction, à sa propre coupure. Le message est maintenant un `WARN` qui nomme l'écrêtage.
+
 ## Ce qu'il ne faut pas refaire
 
 - **Déplacer la cible du transfert pour réduire le plancher.** Mesuré, démenti, annulé (§ ci-dessus).

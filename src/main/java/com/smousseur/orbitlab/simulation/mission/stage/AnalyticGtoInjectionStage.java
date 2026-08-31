@@ -458,7 +458,7 @@ public class AnalyticGtoInjectionStage extends MissionStage {
       NumericalPropagator propagator, SpacecraftState state, InjectionPlan plan, Vehicle vehicle) {
     ActiveStageInfo stage1 = vehicle.resolveActiveStage(state.getMass());
     PropulsionSystem propulsion1 = stage1.propulsion();
-    DepletionGuard.arm(propagator, stage1.depletionFloor(), getName());
+    DepletionGuard.armCappedBurn(propagator, stage1.depletionFloor(), getName());
 
     // Frame-aligned inertial attitude: the ΔV vector carries a radial component cancelling the
     // parking-orbit residual eccentricity, so a pure-prograde TNW attitude would miss it. The burn
