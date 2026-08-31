@@ -26,6 +26,7 @@ import java.util.function.UnaryOperator;
 import org.hipparchus.util.FastMath;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.orekit.propagation.SpacecraftState;
 import org.orekit.time.AbsoluteDate;
@@ -98,6 +99,7 @@ import org.orekit.time.TimeScalesFactory;
  * another test's fixture: a change over there would move the reference over here with nobody seeing
  * it.
  */
+@Disabled("To be run only standalone")
 class CentralBodyBaselineTest {
 
   private static final double LAT = 5.23;

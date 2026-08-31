@@ -79,10 +79,9 @@ jobs:
           set -euo pipefail
           JAR=build/libs/orbitlab.jar
           ls -lh "$JAR"
-          # orekit-data.zip est lu comme ressource par les générateurs : son absence
-          # ne casserait rien à la compilation mais rendrait les exécutables inutilisables.
+          # orekit-data.zip is read as a resource by generators
           jar tf "$JAR" | grep -q '^orekit-data.zip$' \
-            || { echo "::error::orekit-data.zip absent du fat jar"; exit 1; }
+            || { echo "::error::Missing orekit-data.zip in fat jar"; exit 1; }
           echo "Natifs LWJGL embarqués :"
           jar tf "$JAR" | grep -E '\.(dll|so|dylib)$' | sed 's#.*/##' | sort -u
 
@@ -94,8 +93,8 @@ jobs:
           retention-days: 5
 
   # ──────────────────────────────────────────────────────────────────────────
-  # 3. Une app-image par OS : un seul runtime et un seul jar partagés par les
-  #    trois exécutables (--add-launcher), au lieu de trois copies complètes.
+  # 3. One app-image per OS : one runtime et one jar shared by
+  #    3 applications (--add-launcher)
   # ──────────────────────────────────────────────────────────────────────────
   package:
     needs: [version, fatjar]
@@ -150,8 +149,8 @@ jobs:
             --main-class com.smousseur.orbitlab.OrbitLabApplication \
             --java-options -Xmx2g \
             --add-modules "${MODULES}" \
-            --add-launcher "ephemeris-generator=packaging/ephemeris-generator.properties" \
-            --add-launcher "orbits-generator=packaging/orbits-generator.properties" \
+            --add-launcher "ephemeris-generator=config/packaging/ephemeris-generator.properties" \
+            --add-launcher "orbits-generator=config/packaging/orbits-generator.properties" \
             --dest build/app
 
       - name: Control executable files

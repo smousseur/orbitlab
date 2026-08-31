@@ -100,10 +100,8 @@ pmd {
     consoleOutput = true
     ignoreFailures = true
 
-    ruleSets = [
-            'category/java/errorprone.xml',
-            'category/java/bestpractices.xml'
-    ]
+    ruleSetFiles = files("$rootDir/config/pmd/ruleset.xml")
+    ruleSets = []
 }
 
 shadowJar {
