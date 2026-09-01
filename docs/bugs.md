@@ -12,7 +12,7 @@ la frontière entre les deux derniers doit rester lisible.
 |---|---|---|---|
 | [`BUG-1`](#bug-1--jitter-du-billboard-et-de-lorbite-de-pluton) | Jitter du billboard et de l'orbite de Pluton | 2026-08-10 | Ouvert, non diagnostiqué |
 | [`BUG-2`](#bug-2--sauts-de-la-skybox-au-zoom) | Sauts de la skybox au zoom | 2026-08-15 | Ouvert, piste identifiée |
-| [`BUG-3`](#bug-3--orientation-des-modèles-3d-des-planètes) | Orientation des modèles 3D des planètes | 2026-08-15 | Ouvert, diagnostic à faire |
+| [`BUG-3`](#bug-3--orientation-des-modèles-3d-des-planètes) | Orientation des modèles 3D des planètes | 2026-08-15 | Ouvert — **diagnostic fait le 2026-09-01**, découpé en 5 lots dans [`docs/orientation-planetes/01-decoupage.md`](orientation-planetes/01-decoupage.md) ; promotion en item de roadmap non tranchée |
 | [`BUG-4`](#bug-4--hover-des-widgets-non-uniforme) | Hover des widgets non uniforme | 2026-08-15 | **Promu** en `UI-7` le 2026-08-16 |
 | [`BUG-5`](#bug-5--pop-du-modèle-3d-au-changement-de-focus) | Pop du modèle 3D au changement de focus | 2026-08-15 | Ouvert, mécanisme identifié |
 | [`BUG-6`](#bug-6--plane-trim-employé-hors-de-son-enveloppe-par-lascension-polaire) | Plane trim employé hors de son enveloppe par l'ascension polaire | 2026-08-16 | **Corrigé le 2026-08-31** — coût réel mesuré (141 kg, pas 10 349), fixture remise dans l'enveloppe |
@@ -233,6 +233,15 @@ Deux défauts distincts, qui ne se corrigent pas au même endroit :
 Établir la liste « corps → défaut (a) ou (b) » est la première chose à faire ;
 elle décide de tout le reste.
 
+> **Fait le 2026-09-01.** La liste est établie, par mesure des maillages et non à
+> l'œil : voir [`docs/orientation-planetes/01-decoupage.md`](orientation-planetes/01-decoupage.md)
+> §2.6. Le découpage du chantier qui en découle (cinq lots) est dans le même
+> document. Deux résultats qui changent la donne par rapport à ce qui est écrit
+> plus haut : les onze modèles se répartissent en **deux familles d'axe** que la
+> correction globale unique ne peut pas satisfaire ensemble (§2.3), et pour cinq
+> corps la couche visible ne tourne pas à la vitesse du repère IAU appliqué, donc
+> **aucune constante ne peut être juste à plus d'une date** (§3).
+
 ### Tips
 
 - **La boucle d'itération.** Ré-exporter depuis Blender à chaque essai coûte trop
@@ -242,12 +251,15 @@ elle décide de tout le reste.
   figer dans le code, ou les cuire dans les `.gltf` et remettre les surcharges à
   l'identité. Les deux fins se valent ; ce qui ne va pas, c'est de chercher les
   valeurs par ré-export.
-- **Attention au dépôt.** `src/main/resources/models/` est gitignored (cf.
-  `CLAUDE.md`). Une correction faite *uniquement* dans Blender n'est pas
-  versionnée : elle sera perdue au prochain poste, et le prochain modèle ajouté
-  réintroduira le bug en silence. Si c'est la voie retenue, documenter la
-  convention attendue (en repère body-fixed, avant `meshCorrectionQ` : +Z = pôle
-  nord, +X = méridien origine) est le minimum.
+- **Attention au dépôt.** ~~`src/main/resources/models/` est gitignored (cf.
+  `CLAUDE.md`).~~ **Faux, corrigé le 2026-09-01** : `.gitignore` n'exclut que
+  `dataset/**`, et `git ls-files` renvoie 52 fichiers suivis sous
+  `src/main/resources/models`. `CLAUDE.md` l'affirmait à tort et a été corrigé.
+  Une correction faite dans Blender est donc bien versionnée — mais un diff
+  binaire dit « 3 Mo ont changé », pas « rotation de 90° autour du pôle » :
+  versionné n'est pas relisible. C'est ce qui fait préférer une valeur dans le
+  code. Documenter la convention attendue (en repère body-fixed, avant
+  `meshCorrectionQ` : +Z = pôle nord, +X = méridien origine) reste le minimum.
 - **Sanity check côté code, à faire en premier parce qu'il coûte dix minutes.**
   La rotation stockée est `ICRF → body`, et elle est appliquée telle quelle au
   maillage (`PlanetPresenter:63`). Orienter un objet dans le monde demande la

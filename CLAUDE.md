@@ -303,7 +303,7 @@ measurement logs are written directly.
 ./gradlew test
 ```
 
-> **AI assistants: do not run `./gradlew test` (or any test task) after code changes on your own initiative.** There is no CI pipeline in this repo (no `.github/workflows`), and the user runs tests manually. Only run tests when the user explicitly asks, or when you need to investigate/debug something to complete the feature you're actively working on.
+> **AI assistants: do not run `./gradlew test` (or any test task) after code changes on your own initiative.** No pipeline ever runs the tests: the only workflow, `.github/workflows/release.yml`, fires on a `vX.Y.Z` tag (or manual dispatch) and runs `shadowJar` plus `jpackage` — no test task anywhere. The user runs tests manually. Only run tests when the user explicitly asks, or when you need to investigate/debug something to complete the feature you're actively working on.
 
 **Test categories:**
 - **Unit tests**: Clock, converters, transforms, orbit path/cache/policy, ephemeris buffer, vehicle/launcher/payload catalogs, propellant budgeting, depletion guard/stop trigger, mission stages
@@ -337,12 +337,11 @@ measurement logs are written directly.
 - **Branch naming**: Feature branches follow `feature_<name>` or `claude/<description>-<id>` conventions
 - **Commit messages**: Imperative mood, descriptive (e.g., `Add backup computations to avoid local minimums in CMAES optimization`)
 - **Merge strategy**: Feature branches are merged via pull requests
-- **Excluded from git** (see `.gitignore`): `build/`, `.gradle/`, `gradle/`, `docs/superpowers/**`, `dataset/`, `src/main/resources/models/**` (large GLTF bodies). Note that `src/main/resources/` itself is **not** excluded — shaders, fonts, UI textures, the skybox and `orekit-data.zip` are all tracked, and `docs/` **is** tracked apart from `docs/superpowers/`
+- **Excluded from git** (see `.gitignore`): `build/`, `.gradle/`, `gradle/`, `docs/superpowers/**`, `dataset/**`. Note that `src/main/resources/` is **not** excluded at all — shaders, fonts, UI textures, the skybox, `orekit-data.zip` **and the GLTF planet models under `models/`** are all tracked, and `docs/` **is** tracked apart from `docs/superpowers/`
 
 ---
 
 ## What Is Not in This Repo
 
-- `src/main/resources/models/` — GLTF models of the celestial bodies (too large for version control; must be provided separately). The rest of `src/main/resources/` **is** tracked, including the custom shaders under `MatDefs/`
 - `dataset/` — Mission and test data files
 - `docs/superpowers/` — Locally generated implementation plans

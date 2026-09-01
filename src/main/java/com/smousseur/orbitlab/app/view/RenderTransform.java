@@ -29,10 +29,20 @@ public final class RenderTransform {
    * Converts an Orekit/Hipparchus rotation in ICRF frame to a JME quaternion suitable for
    * rendering, including the mesh correction for JME's Y-up convention.
    *
+   * <p>The three rotations compose right to left, so {@code bodyMeshCorrection} acts first, on the
+   * raw model coordinates: the asset is brought into the convention the other bodies follow, that
+   * convention is then turned into JME's Y-up one, and the physical body-fixed rotation is applied
+   * last.
+   *
    * @param rotationIcrf the rotation expressed in ICRF axes
+   * @param bodyMeshCorrection the corrective rotation for this body's own model, expressed in the
+   *     model's axes as loaded, or identity when the asset needs none (see {@link
+   *     com.smousseur.orbitlab.engine.scene.PlanetMeshCorrection})
    * @return the equivalent JME quaternion with mesh correction applied
    */
-  public static Quaternion toRenderQuaternion(Rotation rotationIcrf) {
+  public static Quaternion toRenderQuaternion(
+      Rotation rotationIcrf, Quaternion bodyMeshCorrection) {
+    Objects.requireNonNull(bodyMeshCorrection, "bodyMeshCorrection");
     Quaternion qIcrf =
         new Quaternion(
             (float) rotationIcrf.getQ1(),
@@ -40,7 +50,7 @@ public final class RenderTransform {
             (float) rotationIcrf.getQ3(),
             (float) rotationIcrf.getQ0());
     Quaternion physicRotation = icrfToJmeQ.mult(qIcrf).mult(jmeToIcrfQ);
-    return physicRotation.mult(meshCorrectionQ);
+    return physicRotation.mult(meshCorrectionQ).mult(bodyMeshCorrection);
   }
 
   /**

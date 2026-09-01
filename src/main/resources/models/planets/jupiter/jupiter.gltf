@@ -17,10 +17,10 @@
 			"mesh":0,
 			"name":"Sphere_Material_0",
 			"rotation":[
-				-0.70710688829422,
+				0.7071068286895752,
+				0.7071068286895752,
 				0,
-				0,
-				0.7071066498756409
+				3.090862321641907e-08
 			],
 			"scale":[
 				0.003889297368004918,
@@ -66,7 +66,7 @@
 	"images":[
 		{
 			"mimeType":"image/jpeg",
-			"name":"material_baseColor.001",
+			"name":"material_baseColor",
 			"uri":"textures/material_baseColor.jpg"
 		}
 	],

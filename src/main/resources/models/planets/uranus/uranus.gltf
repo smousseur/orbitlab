@@ -3,100 +3,263 @@
 		"generator":"Khronos glTF Blender I/O v4.4.56",
 		"version":"2.0"
 	},
+	"extensionsUsed":[
+		"KHR_materials_specular",
+		"KHR_materials_ior"
+	],
 	"scene":0,
 	"scenes":[
 		{
 			"name":"Scene",
 			"nodes":[
-				0,
-				1
+				7,
+				9
 			]
 		}
 	],
 	"nodes":[
 		{
 			"mesh":0,
-			"name":"Circle_Material.003_0",
-			"rotation":[
-				-0.40720927715301514,
-				-0.03415234014391899,
-				-0.23524925112724304,
-				0.88185715675354
-			],
-			"scale":[
-				0.008015982806682587,
-				0.00801597535610199,
-				0
+			"name":"0",
+			"translation":[
+				-75.28784942626953,
+				-202.9025421142578,
+				1.242113471031189
 			]
 		},
 		{
+			"children":[
+				0
+			],
+			"name":"uranus1_A"
+		},
+		{
 			"mesh":1,
-			"name":"Sphere_Material_0",
+			"name":"uranus2_A_uranus2_B_0"
+		},
+		{
+			"children":[
+				2
+			],
+			"name":"uranus2_A",
+			"scale":[
+				0.6198925971984863,
+				0.6198925971984863,
+				0.6198925971984863
+			],
+			"translation":[
+				-0.0937500149011612,
+				0.0468750074505806,
+				1.52555057866266e-05
+			]
+		},
+		{
+			"children":[
+				1,
+				3
+			],
+			"name":"uranus_Dummy",
 			"rotation":[
-				-0.44220876693725586,
-				0.16426213085651398,
-				0.04455479606986046,
-				0.8806158304214478
+				-0.464974045753479,
+				-0.5327280759811401,
+				0.5327280759811401,
+				0.46497395634651184
+			]
+		},
+		{
+			"children":[
+				4
+			],
+			"name":"RootNode"
+		},
+		{
+			"children":[
+				5
+			],
+			"name":"b956bc82215d4ce5ada5f7ef5a5ff570.fbx",
+			"rotation":[
+				0.70710688829422,
+				0,
+				0,
+				0.7071066498756409
 			],
 			"scale":[
-				0.0008373030577786267,
-				0.0008373030577786267,
-				0.0008373027667403221
+				0.010000000707805157,
+				0.010000000707805157,
+				0.010000001639127731
+			]
+		},
+		{
+			"children":[
+				6
+			],
+			"name":"Sketchfab_model",
+			"rotation":[
+				0,
+				0.7372773885726929,
+				0,
+				0.6755901575088501
+			],
+			"scale":[
+				0.0019570000004023314,
+				0.0019569469150155783,
+				0.0019569469150155783
+			]
+		},
+		{
+			"mesh":2,
+			"name":"miranda_miranda_0"
+		},
+		{
+			"children":[
+				8
+			],
+			"name":"miranda",
+			"translation":[
+				-259390,
+				0.00390625,
+				0.0006103515625
 			]
 		}
 	],
 	"materials":[
 		{
-			"alphaCutoff":0.29731285572052,
-			"alphaMode":"MASK",
 			"doubleSided":true,
-			"name":"Material.001",
-			"pbrMetallicRoughness":{
-				"baseColorTexture":{
-					"index":0
+			"extensions":{
+				"KHR_materials_specular":{
+					"specularColorFactor":[
+						0.20000000298023224,
+						0.20000000298023224,
+						0.20000000298023224
+					],
+					"specularColorTexture":{
+						"index":0,
+						"texCoord":1
+					}
 				},
-				"metallicFactor":0,
-				"roughnessFactor":0.8040408492088318
-			}
-		},
-		{
-			"doubleSided":true,
-			"name":"Material.006",
+				"KHR_materials_ior":{
+					"ior":1000
+				}
+			},
+			"name":"uranus1_A",
 			"pbrMetallicRoughness":{
+				"baseColorFactor":[
+					0.49900001287460327,
+					0.49900001287460327,
+					0.49900001287460327,
+					1
+				],
 				"baseColorTexture":{
 					"index":1
 				},
 				"metallicFactor":0,
-				"roughnessFactor":0.9371004104614258
+				"metallicRoughnessTexture":{
+					"index":2,
+					"texCoord":1
+				}
+			}
+		},
+		{
+			"alphaCutoff":0.19352440536022186,
+			"alphaMode":"MASK",
+			"extensions":{
+				"KHR_materials_specular":{
+					"specularColorFactor":[
+						0.5,
+						0.5,
+						0.5
+					],
+					"specularColorTexture":{
+						"index":3
+					}
+				},
+				"KHR_materials_ior":{
+					"ior":1000
+				}
+			},
+			"name":"uranus2_B",
+			"pbrMetallicRoughness":{
+				"baseColorFactor":[
+					0.4495251774787903,
+					0.4495251774787903,
+					0.4495251774787903,
+					1
+				],
+				"baseColorTexture":{
+					"index":4
+				},
+				"metallicFactor":0,
+				"metallicRoughnessTexture":{
+					"index":5
+				}
+			}
+		},
+		{
+			"doubleSided":true,
+			"extensions":{
+				"KHR_materials_specular":{
+					"specularColorFactor":[
+						0.30000001192092896,
+						0.30000001192092896,
+						0.30000001192092896
+					]
+				},
+				"KHR_materials_ior":{
+					"ior":1000
+				}
+			},
+			"name":"miranda",
+			"pbrMetallicRoughness":{
+				"baseColorTexture":{
+					"index":6
+				},
+				"metallicFactor":0,
+				"roughnessFactor":0.5
 			}
 		}
 	],
 	"meshes":[
 		{
-			"name":"Circle_Material.003_0",
+			"name":"0",
 			"primitives":[
 				{
 					"attributes":{
 						"POSITION":0,
 						"NORMAL":1,
-						"TEXCOORD_0":2
+						"TEXCOORD_0":2,
+						"TEXCOORD_1":3
 					},
-					"indices":3,
+					"indices":4,
 					"material":0
 				}
 			]
 		},
 		{
-			"name":"Sphere_Material_0",
+			"name":"uranus2_A_uranus2_B_0",
 			"primitives":[
 				{
 					"attributes":{
-						"POSITION":4,
-						"NORMAL":5,
-						"TEXCOORD_0":6
+						"POSITION":5,
+						"NORMAL":6,
+						"TEXCOORD_0":7,
+						"TEXCOORD_1":8
 					},
-					"indices":7,
+					"indices":9,
 					"material":1
+				}
+			]
+		},
+		{
+			"name":"miranda_miranda_0",
+			"primitives":[
+				{
+					"attributes":{
+						"POSITION":10,
+						"NORMAL":11,
+						"TEXCOORD_0":12
+					},
+					"indices":13,
+					"material":2
 				}
 			]
 		}
@@ -109,137 +272,264 @@
 		{
 			"sampler":0,
 			"source":1
+		},
+		{
+			"sampler":0,
+			"source":2
+		},
+		{
+			"sampler":0,
+			"source":3
+		},
+		{
+			"sampler":0,
+			"source":4
+		},
+		{
+			"sampler":0,
+			"source":5
+		},
+		{
+			"sampler":0,
+			"source":6
 		}
 	],
 	"images":[
 		{
 			"mimeType":"image/png",
-			"name":"Material.003_baseColor",
-			"uri":"textures/Material_003_baseColor.png"
+			"name":"uranus1_A_specularGlossiness",
+			"uri":"textures/uranus1_A_specularGlossiness.png"
 		},
 		{
-			"mimeType":"image/jpeg",
-			"name":"material_baseColor.002",
-			"uri":"textures/material_baseColor.jpg"
+			"mimeType":"image/png",
+			"name":"uranus1_A_diffuse",
+			"uri":"textures/uranus1_A_diffuse.png"
+		},
+		{
+			"mimeType":"image/png",
+			"name":"uranus1_A_specularGlossiness",
+			"uri":"textures/uranus1_A_specularGlossiness-1.png"
+		},
+		{
+			"mimeType":"image/png",
+			"name":"uranus2_A_diffuse",
+			"uri":"textures/uranus2_A_diffuse.png"
+		},
+		{
+			"mimeType":"image/png",
+			"name":"uranus2_B_diffuse",
+			"uri":"textures/uranus2_B_diffuse.png"
+		},
+		{
+			"mimeType":"image/png",
+			"name":"uranus2_A_diffuse",
+			"uri":"textures/uranus2_A_diffuse-1.png"
+		},
+		{
+			"mimeType":"image/png",
+			"name":"miranda_diffuse",
+			"uri":"textures/miranda_diffuse.png"
 		}
 	],
 	"accessors":[
 		{
 			"bufferView":0,
 			"componentType":5126,
-			"count":1024,
+			"count":15884,
 			"max":[
-				106.43611145019531,
-				106.43608093261719,
-				7.3877636168617755e-06
+				25627.16796875,
+				25765.65234375,
+				25064.87890625
 			],
 			"min":[
-				-106.43611145019531,
-				-106.43608093261719,
-				-6.597256287932396e-06
+				-25476.080078125,
+				-25361.919921875,
+				-25067.427734375
 			],
 			"type":"VEC3"
 		},
 		{
 			"bufferView":1,
 			"componentType":5126,
-			"count":1024,
+			"count":15884,
 			"type":"VEC3"
 		},
 		{
 			"bufferView":2,
 			"componentType":5126,
-			"count":1024,
+			"count":15884,
 			"type":"VEC2"
 		},
 		{
 			"bufferView":3,
-			"componentType":5123,
-			"count":1536,
-			"type":"SCALAR"
+			"componentType":5126,
+			"count":15884,
+			"type":"VEC2"
 		},
 		{
 			"bufferView":4,
-			"componentType":5126,
-			"count":8459,
-			"max":[
-				597.1554565429688,
-				597.155517578125,
-				597.155517578125
-			],
-			"min":[
-				-597.1552734375,
-				-597.1553344726562,
-				-597.155517578125
-			],
-			"type":"VEC3"
+			"componentType":5123,
+			"count":92160,
+			"type":"SCALAR"
 		},
 		{
 			"bufferView":5,
 			"componentType":5126,
-			"count":8459,
+			"count":17666,
+			"max":[
+				142460.453125,
+				142460.453125,
+				45.20074462890625
+			],
+			"min":[
+				-142460.453125,
+				-142460.453125,
+				-45.22225570678711
+			],
 			"type":"VEC3"
 		},
 		{
 			"bufferView":6,
 			"componentType":5126,
-			"count":8459,
-			"type":"VEC2"
+			"count":17666,
+			"type":"VEC3"
 		},
 		{
 			"bufferView":7,
+			"componentType":5126,
+			"count":17666,
+			"type":"VEC2"
+		},
+		{
+			"bufferView":8,
+			"componentType":5126,
+			"count":17666,
+			"type":"VEC2"
+		},
+		{
+			"bufferView":9,
 			"componentType":5123,
-			"count":47973,
+			"count":27648,
+			"type":"SCALAR"
+		},
+		{
+			"bufferView":10,
+			"componentType":5126,
+			"count":181,
+			"max":[
+				787.9999389648438,
+				788,
+				788
+			],
+			"min":[
+				-788.0000610351562,
+				-788,
+				-788
+			],
+			"type":"VEC3"
+		},
+		{
+			"bufferView":11,
+			"componentType":5126,
+			"count":181,
+			"type":"VEC3"
+		},
+		{
+			"bufferView":12,
+			"componentType":5126,
+			"count":181,
+			"type":"VEC2"
+		},
+		{
+			"bufferView":13,
+			"componentType":5123,
+			"count":960,
 			"type":"SCALAR"
 		}
 	],
 	"bufferViews":[
 		{
 			"buffer":0,
-			"byteLength":12288,
+			"byteLength":190608,
 			"byteOffset":0,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":12288,
-			"byteOffset":12288,
+			"byteLength":190608,
+			"byteOffset":190608,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":8192,
-			"byteOffset":24576,
+			"byteLength":127072,
+			"byteOffset":381216,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":3072,
-			"byteOffset":32768,
+			"byteLength":127072,
+			"byteOffset":508288,
+			"target":34962
+		},
+		{
+			"buffer":0,
+			"byteLength":184320,
+			"byteOffset":635360,
 			"target":34963
 		},
 		{
 			"buffer":0,
-			"byteLength":101508,
-			"byteOffset":35840,
+			"byteLength":211992,
+			"byteOffset":819680,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":101508,
-			"byteOffset":137348,
+			"byteLength":211992,
+			"byteOffset":1031672,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":67672,
-			"byteOffset":238856,
+			"byteLength":141328,
+			"byteOffset":1243664,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":95946,
-			"byteOffset":306528,
+			"byteLength":141328,
+			"byteOffset":1384992,
+			"target":34962
+		},
+		{
+			"buffer":0,
+			"byteLength":55296,
+			"byteOffset":1526320,
+			"target":34963
+		},
+		{
+			"buffer":0,
+			"byteLength":2172,
+			"byteOffset":1581616,
+			"target":34962
+		},
+		{
+			"buffer":0,
+			"byteLength":2172,
+			"byteOffset":1583788,
+			"target":34962
+		},
+		{
+			"buffer":0,
+			"byteLength":1448,
+			"byteOffset":1585960,
+			"target":34962
+		},
+		{
+			"buffer":0,
+			"byteLength":1920,
+			"byteOffset":1587408,
 			"target":34963
 		}
 	],
@@ -251,7 +541,7 @@
 	],
 	"buffers":[
 		{
-			"byteLength":402476,
+			"byteLength":1589328,
 			"uri":"uranus.bin"
 		}
 	]
