@@ -304,8 +304,13 @@ les médianes de canaux relevées sur la texture, pas seulement la couleur reten
 ### L0 — La sonde, son rapport et son verdict de conformité
 
 **Propriété rendue vraie.** Depuis les seuls `.gltf`/`.bin`, on obtient pour chaque corps : pôle,
-direction `u=0`, résidu latitude/`v`, sens, dimensions de texture — sans ouvrir Blender et sans
-regarder une capture d'écran.
+direction `u=0`, résidu latitude/`v`, sens — sans ouvrir Blender et sans regarder une capture
+d'écran.
+
+**L'identité de la texture, dimensions comprises, appartient au L1**, pas ici : c'est la garde qui
+en a besoin, et la séparer de la mesure garde `MeshFrame` purement géométrique. Un `MeshFrame` ne
+parle que de sommets et d'UV, et n'a donc rien à dire quand la texture change sous un maillage
+inchangé — ce qui est précisément le trou que la garde du L1 doit fermer.
 
 **Contenu.** Un outil sous `tools/`, aux côtés de `ephemerisgen` et `orbitgen`. Lecture des
 accesseurs `POSITION` et `TEXCOORD_0`, composition de la chaîne de nœuds, les quatre mesures du
@@ -524,7 +529,10 @@ Hors périmètre. Consignés ici pour ne pas être reperdus ; aucun n'a été ar
    (0,065) sont des sphères parfaites — boîte englobante cubique mesurée, mise à l'échelle uniforme.
    Pluton (aplatissement réel ≈ 0) a un maillage aplati de 1 %, Uranus de 2 %. Corrigeable par une
    échelle non uniforme dans le repère du maillage, sans ré-export.
-6. **Miranda est cuite dans l'asset d'Uranus** (`miranda_miranda_0`, texture propre, maillage
-   équirectangulaire propre, lui) : une lune collée à la planète, qui suit sa rotation.
+6. ~~**Miranda est cuite dans l'asset d'Uranus**~~ — **caduc le 2026-09-01.** L'asset a été
+   ré-exporté pendant le chantier (commit `a225025`) : la lune et sa texture ont disparu, les nœuds
+   sont passés de 12 à 8. Le résidu du globe, lui, n'a pas bougé — 49,37° avant comme après — donc
+   Uranus reste hors périmètre pour la raison du §6. Consigné parce que c'est la démonstration de la
+   « cible mouvante » du §7 : la sonde a suivi le changement sans une ligne à retoucher.
 7. **Le facteur de couleur de base est perdu** à la re-matérialisation — Uranus déclare 0,499, et
    est rendu à pleine intensité.

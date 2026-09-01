@@ -28,6 +28,7 @@ la frontière entre les deux derniers doit rester lisible.
 | [`BUG-16`](#bug-16--t1-saturé-contre-sa-borne-sur-la-majorité-des-transferts-mesurés) | `t1` saturé contre sa borne sur la majorité des transferts mesurés | 2026-08-30 | Ouvert, mesuré — artefact de mur de boîte |
 | [`BUG-17`](#bug-17--acceptablecost-mal-calé-depuis-lajout-du-terme-ergols-i7) | `acceptableCost` mal calé depuis l'ajout du terme ergols I7 | 2026-08-30 | Ouvert, correctif proposé non fait |
 | [`BUG-18`](#bug-18--rejets-de-scénario-au-chargement-seulement-journalisés) | Rejets de scénario au chargement, seulement journalisés | 2026-08-30 | Ouvert — **trou connu de `UI-3`** |
+| [`BUG-19`](#bug-19--la-rotation-propre-des-planètes-externes-est-aliasée-par-le-pas-de-la-fenêtre-glissante) | La rotation propre des planètes externes est aliasée par le pas de la fenêtre glissante | 2026-09-02 | Ouvert, **cause racine établie et ampleur mesurée** — Neptune à 4,1 % du taux vrai, Saturne et Uranus à l'envers |
 
 ---
 
@@ -993,3 +994,76 @@ comportement n'a pas changé depuis la clôture d'`UI-3` (2026-08-21).
 Un résumé minimal (toast, ligne dans le panel) au retour de
 `ScenarioSession.restore`, listant les missions rejetées et leur motif —
 même contenu que les lignes `WARN` déjà produites, juste remonté à l'écran.
+
+---
+
+## BUG-19 — La rotation propre des planètes externes est aliasée par le pas de la fenêtre glissante
+
+**Constaté.** Neptune tourne visiblement trop lentement sur elle-même. Mesuré
+ensuite : ce n'est pas propre à Neptune, et Saturne et Uranus tournent **à
+l'envers**.
+
+### Mécanisme, établi
+
+`SlidingWindowEphemerisBuffer.rebuildWindow` ré-échantillonne la source à **un
+seul pas par corps**, puis `interpolate()` fait un SLERP de la rotation sur ce
+même pas. Ce pas
+([`SlidingWindowConfig.defaultSolarSystem`](../src/main/java/com/smousseur/orbitlab/simulation/ephemeris/config/SlidingWindowConfig.java))
+est dimensionné sur le mouvement **orbital** — Neptune met 165 ans à faire le
+tour du Soleil, 7 jours suffisent donc largement pour sa position — mais il sert
+aussi à échantillonner la **rotation propre**, qui tourne en 16 heures.
+
+Le SLERP négocie toujours l'arc le plus court
+([`EphemerisInterpolator.slerp`](../src/main/java/com/smousseur/orbitlab/simulation/ephemeris/EphemerisInterpolator.java),
+`if (dot < 0) negate`). Au-delà d'un demi-tour entre deux échantillons,
+l'information est perdue sans bruit.
+
+### Ampleur mesurée
+
+`W` d'Orekit (`PredefinedIAUPoles`) croisé avec le pas runtime de chaque corps :
+
+| corps | pas runtime | rotation vraie / pas | vue par le SLERP | taux rendu |
+|---|---|---|---|---|
+| Soleil, Mercure, Vénus, Terre, Lune | ≤ 6 h | ≤ 90,2° | idem | exact |
+| Mars | 12 h | 175,4° | idem | exact — **à 4,6° de la falaise** |
+| Jupiter | 1 j | 870,5° | 150,5° | 17,3 % |
+| Saturne | 2 j | 1621,6° | −178,4° | **à l'envers**, 11 % |
+| Uranus | 4 j | −2004,6° | +155,4° | **à l'envers**, 8 % |
+| **Neptune** | **7 j** | **3754,2°** | **154,2°** | **4,1 %** |
+| Pluton | 14 j | 789,1° | 69,1° | 8,8 % |
+
+Neptune est le pire cas des onze, d'où le fait que ce soit là que ça se voie.
+Jupiter à 17 % bouge encore ; Saturne et Uranus tournent à l'envers, ce qui ne
+se remarque que si on sait dans quel sens attendre ; Pluton n'a aucun détail à
+suivre. **Mars est juste par chance** : porter son pas de 12 à 13 h la fait
+basculer.
+
+### Ce qui n'est pas en cause, et ne doit pas être cherché là
+
+- **Le modèle de rotation.** `W = 253,18 + 536,3128492 °/j` pour Neptune, soit
+  16 h 06 min 36 s : la bonne valeur.
+- **Le dataset.** Le générateur sépare déjà correctement les deux cadences,
+  `dtPvSeconds` et `dtRotSeconds` (`BodyGenerationParams`). Neptune y est
+  échantillonné toutes les 1800 s, soit 11,2° par pas, 32 par tour.
+- **La source.** `DecodedChunk.sampleRot` répond juste à n'importe quel instant.
+
+L'information est intacte jusqu'au buffer, et c'est **le buffer qui la détruit**
+en ré-échantillonnant grossièrement ce que la source sait donner finement. Le
+correctif ne demande donc aucune donnée nouvelle ni aucune régénération.
+
+### Piste
+
+Le générateur porte déjà la bonne idée — deux cadences, une pour la position,
+une pour la rotation — que le buffer a fusionnées en une. Restaurer la
+séparation côté runtime : une grille de rotation propre à chaque corps,
+plafonnée à une fraction de sa période de rotation.
+
+**Attention au coût.** Le gros pas existe pour tenir une fenêtre longue à
+mémoire raisonnable ; ramener celui de Neptune sous 8 h multiplierait par 21 le
+nombre d'échantillons. C'est bien deux grilles qu'il faut, pas un pas unique
+raccourci.
+
+**Non tranché :** la fraction de période à retenir, et si le plafond se dérive
+automatiquement du `W_DOT` d'Orekit — auquel cas aucun corps futur ne peut
+retomber dans le piège, y compris Mars si son pas bouge — ou reste une constante
+par corps.

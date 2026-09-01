@@ -13,6 +13,8 @@ import com.smousseur.orbitlab.core.OrbitlabException;
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.engine.AssetFactory;
 import com.smousseur.orbitlab.engine.TextureDiagnostics;
+import com.smousseur.orbitlab.engine.scene.MeshDivergence;
+import com.smousseur.orbitlab.engine.scene.MeshGuard;
 import com.smousseur.orbitlab.engine.scene.PlanetColors;
 import com.smousseur.orbitlab.engine.scene.PlanetRadius;
 import com.smousseur.orbitlab.engine.scene.body.BodyRenderConfig;
@@ -24,11 +26,14 @@ import com.smousseur.orbitlab.engine.scene.graph.SceneGraph;
 import com.smousseur.orbitlab.engine.scene.planet.PlanetPresenter;
 import com.smousseur.orbitlab.engine.view.JmeVectorAdapter;
 import com.smousseur.orbitlab.simulation.ephemeris.service.EphemerisServiceRegistry;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.orekit.time.AbsoluteDate;
 
@@ -42,6 +47,8 @@ import org.orekit.time.AbsoluteDate;
  * all non-Sun bodies.
  */
 public final class PlanetPoseAppState extends BaseAppState {
+
+  private static final Logger logger = LogManager.getLogger(PlanetPoseAppState.class);
 
   /**
    * Emissive tint of the Sun, multiplied into its emissive texture. This decides the colour of the
@@ -151,6 +158,14 @@ public final class PlanetPoseAppState extends BaseAppState {
       }
       CompletableFuture.supplyAsync(model3dView::loadModel, assetExecutor)
           .thenApply(
+              spatial -> {
+                // Before re-materialisation, on the asset as authored: this asks whether the file
+                // still carries what PlanetMeshCorrection was calibrated against, which is a
+                // question about the asset, not about how it ends up shaded.
+                MeshGuard.verify(body, spatial).ifPresent(PlanetPoseAppState::warnDivergence);
+                return spatial;
+              })
+          .thenApply(
               spatial ->
                   body == SolarSystemBody.SUN
                       ? AssetFactory.get().applyGlow(spatial, SUN_GLOW)
@@ -164,6 +179,20 @@ public final class PlanetPoseAppState extends BaseAppState {
               })
           .thenAccept(model3dView::onModelLoaded);
     }
+  }
+
+  /**
+   * Says, once per model load, that an asset no longer matches the frame committed for it — the
+   * detection that lets a mesh be replaced without the body silently ending up drawn turned (see
+   * {@code docs/orientation-planetes/01-decoupage.md}, L1).
+   */
+  private static void warnDivergence(MeshDivergence divergence) {
+    logger.warn(
+        "Mesh asset for {} diverges from its committed calibration: frame moved {}{}."
+            + " Re-run './gradlew meshProbe' and update PlanetMeshCorrection.",
+        divergence.body().displayName(),
+        String.format(Locale.ROOT, "%.1f deg", divergence.frameDeviationDeg()),
+        divergence.textureChanged() ? ", and the base colour texture changed size" : "");
   }
 
   private void onSelectPlanet(SolarSystemBody body) {

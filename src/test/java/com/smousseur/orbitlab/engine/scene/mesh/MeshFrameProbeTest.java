@@ -1,14 +1,18 @@
 package com.smousseur.orbitlab.engine.scene.mesh;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.jme3.math.FastMath;
 import com.jme3.math.Quaternion;
 import com.jme3.math.Vector3f;
+import com.jme3.scene.Geometry;
 import com.jme3.scene.Mesh;
+import com.jme3.scene.Node;
 import com.jme3.scene.VertexBuffer;
 import com.jme3.util.BufferUtils;
+import java.util.List;
 import java.util.function.DoubleUnaryOperator;
 import org.junit.jupiter.api.Test;
 
@@ -70,6 +74,34 @@ class MeshFrameProbeTest {
     assertEquals(360.0, frame.azimuthDegreesPerU(), 1.0);
   }
 
+  @Test
+  void reportsAGeometryItCannotMeasureRatherThanDroppingIt() {
+    Node model = new Node("model");
+    model.attachChild(new Geometry("ring", positionsOnly()));
+    model.attachChild(new Geometry("globe", uvSphere(16, 32, new Quaternion())));
+
+    List<ProbedGeometry> probed = MeshFrameProbe.probe(model);
+
+    ProbedGeometry ring =
+        probed.stream()
+            .filter(geometry -> "ring".equals(geometry.name()))
+            .findFirst()
+            .orElseThrow(
+                () -> new AssertionError("the unmeasurable geometry was dropped: " + probed));
+    assertFalse(ring.hasFrame(), "a geometry with no UV map has no frame to report");
+  }
+
+  /** A mesh with positions but no UV map — a flat ring, in the assets this chantier deals with. */
+  private static Mesh positionsOnly() {
+    Mesh mesh = new Mesh();
+    mesh.setBuffer(
+        VertexBuffer.Type.Position,
+        3,
+        BufferUtils.createFloatBuffer(new float[] {0f, 0f, 0f, 1f, 0f, 0f, 0f, 1f, 0f}));
+    mesh.updateBound();
+    return mesh;
+  }
+
   /**
    * Builds a unit UV sphere in the reference convention — pole on {@code +Z}, {@code u = 0}
    * pointing at {@code −X}, and {@code u} increasing retrograde about the pole at −360°/u, which is
@@ -127,6 +159,7 @@ class MeshFrameProbeTest {
     Mesh mesh = new Mesh();
     mesh.setBuffer(VertexBuffer.Type.Position, 3, BufferUtils.createFloatBuffer(positions));
     mesh.setBuffer(VertexBuffer.Type.TexCoord, 2, BufferUtils.createFloatBuffer(texCoords));
+    mesh.updateBound();
     return mesh;
   }
 

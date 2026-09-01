@@ -1,12 +1,17 @@
 package com.smousseur.orbitlab.engine.scene.mesh;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.jme3.asset.AssetManager;
 import com.jme3.asset.DesktopAssetManager;
 import com.jme3.math.Vector3f;
 import com.jme3.scene.Spatial;
+import com.smousseur.orbitlab.core.SolarSystemBody;
+import com.smousseur.orbitlab.engine.scene.MeshGuard;
+import com.smousseur.orbitlab.engine.scene.PlanetMeshCorrection;
 import java.util.List;
+import java.util.Locale;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -28,6 +33,28 @@ class PlanetMeshFrameFixtureTest {
   @Test
   void theMoonAssetCarriesTheReferenceFrame() {
     assertReferenceFrame(loadPlanet("moon"));
+  }
+
+  /**
+   * The closure of L1, and the only check that the report was transcribed into
+   * {@code PlanetMeshCorrection} without a slip: for every calibrated body, the asset on disk still
+   * carries what was committed for it. A digit wrong in a direction, a texture size off, and this
+   * goes red.
+   *
+   * <p>It is also the guard itself, run against every asset at once — so a silent asset swap is
+   * caught here as well as at startup.
+   */
+  @Test
+  void everyCommittedCalibrationStillMatchesItsAsset() {
+    for (SolarSystemBody body : SolarSystemBody.values()) {
+      if (PlanetMeshCorrection.calibrationFor(body).isEmpty()) {
+        continue;
+      }
+      Spatial model = loadPlanet(body.displayName().toLowerCase(Locale.ROOT));
+      assertTrue(
+          MeshGuard.verify(body, model).isEmpty(),
+          () -> body + " diverges from its committed calibration: " + MeshGuard.verify(body, model));
+    }
   }
 
   private static void assertReferenceFrame(Spatial planet) {

@@ -52,7 +52,8 @@ public final class MeshFrameProbe {
    * as a raised {@link MeshFrame#equirectangularResidualDeg()} rather than as a silent error.
    *
    * @param spatial the loaded model
-   * @return one entry per measurable geometry, in traversal order
+   * @return one entry per geometry, in traversal order — including those nothing could be measured
+   *     on, which are reported with no frame rather than dropped
    */
   public static List<ProbedGeometry> probe(Spatial spatial) {
     spatial.updateGeometricState();
@@ -61,9 +62,11 @@ public final class MeshFrameProbe {
         new SceneGraphVisitorAdapter() {
           @Override
           public void visit(Geometry geometry) {
-            probe(geometry.getMesh())
-                .map(frame -> rotate(frame, geometry.getWorldRotation()))
-                .ifPresent(frame -> probed.add(new ProbedGeometry(geometry.getName(), frame)));
+            MeshFrame frame =
+                probe(geometry.getMesh())
+                    .map(measured -> rotate(measured, geometry.getWorldRotation()))
+                    .orElse(null);
+            probed.add(new ProbedGeometry(geometry.getName(), frame));
           }
         });
     return probed;

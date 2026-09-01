@@ -79,9 +79,7 @@ public sealed interface MeshConformance {
       return new Mirrored(frame.azimuthDegreesPerU());
     }
 
-    Quaternion correction =
-        basis(REFERENCE_PRIME_MERIDIAN, REFERENCE_POLE)
-            .mult(basis(frame.primeMeridian(), frame.pole()).inverse());
+    Quaternion correction = alignment(frame);
     // q and −q are the same rotation; taking the one with a positive scalar part is what makes
     // toAngleAxis answer the shortest turn rather than its 360° complement.
     if (correction.getW() < 0f) {
@@ -93,10 +91,33 @@ public sealed interface MeshConformance {
     return angleDeg <= MAX_ANGLE_DEG ? new Conforming() : new NeedsRotation(angleDeg, axis);
   }
 
-  /** The rotation taking the world axes onto the orthonormal basis built from a frame. */
+  /**
+   * The rotation that brings a measured frame onto the reference one.
+   *
+   * <p>Shared with {@code PlanetMeshCorrection}, which composes it with the body's own λ0: the
+   * verdict below and the correction actually applied at render time must be the same computation,
+   * or a body could be declared conforming while being drawn turned.
+   *
+   * @param frame the measured frame
+   * @return the rotation taking it onto the reference
+   */
+  static Quaternion alignment(MeshFrame frame) {
+    return basis(REFERENCE_PRIME_MERIDIAN, REFERENCE_POLE)
+        .mult(basis(frame.primeMeridian(), frame.pole()).inverse());
+  }
+
+  /**
+   * The rotation taking the world axes onto the orthonormal basis built from a frame.
+   *
+   * <p>The meridian is re-derived from the pole rather than trusted as given: a real mesh does not
+   * measure exactly perpendicular — Mercury's is 3° out, its sphere being irregular enough to score
+   * a 0.87° residual — and feeding a skewed triple to {@code fromAxes} yields a quaternion that is
+   * not a rotation at all.
+   */
   private static Quaternion basis(Vector3f primeMeridian, Vector3f pole) {
-    Vector3f x = primeMeridian.normalize();
     Vector3f z = pole.normalize();
-    return new Quaternion().fromAxes(x, z.cross(x).normalizeLocal(), z);
+    Vector3f y = z.cross(primeMeridian).normalizeLocal();
+    Vector3f x = y.cross(z).normalizeLocal();
+    return new Quaternion().fromAxes(x, y, z);
   }
 }

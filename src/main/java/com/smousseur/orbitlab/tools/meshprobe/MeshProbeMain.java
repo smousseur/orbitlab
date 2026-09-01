@@ -76,6 +76,19 @@ public final class MeshProbeMain {
         continue;
       }
       for (ProbedGeometry geometry : probed) {
+        if (!geometry.hasFrame()) {
+          System.out.printf(
+              Locale.ROOT,
+              "%-9s %-26s %-22s %-22s %8s %10s  %s%n",
+              name,
+              abbreviate(geometry.name()),
+              "-",
+              "-",
+              "-",
+              "-",
+              "NO UV MAP - nothing to measure");
+          continue;
+        }
         MeshFrame frame = geometry.frame();
         System.out.printf(
             Locale.ROOT,
