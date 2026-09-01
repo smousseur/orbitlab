@@ -12,8 +12,7 @@
 		{
 			"name":"Scene",
 			"nodes":[
-				7,
-				9
+				7
 			]
 		}
 	],
@@ -105,21 +104,6 @@
 				0.0019569469150155783,
 				0.0019569469150155783
 			]
-		},
-		{
-			"mesh":2,
-			"name":"miranda_miranda_0"
-		},
-		{
-			"children":[
-				8
-			],
-			"name":"miranda",
-			"translation":[
-				-259390,
-				0.00390625,
-				0.0006103515625
-			]
 		}
 	],
 	"materials":[
@@ -193,29 +177,6 @@
 					"index":5
 				}
 			}
-		},
-		{
-			"doubleSided":true,
-			"extensions":{
-				"KHR_materials_specular":{
-					"specularColorFactor":[
-						0.30000001192092896,
-						0.30000001192092896,
-						0.30000001192092896
-					]
-				},
-				"KHR_materials_ior":{
-					"ior":1000
-				}
-			},
-			"name":"miranda",
-			"pbrMetallicRoughness":{
-				"baseColorTexture":{
-					"index":6
-				},
-				"metallicFactor":0,
-				"roughnessFactor":0.5
-			}
 		}
 	],
 	"meshes":[
@@ -248,20 +209,6 @@
 					"material":1
 				}
 			]
-		},
-		{
-			"name":"miranda_miranda_0",
-			"primitives":[
-				{
-					"attributes":{
-						"POSITION":10,
-						"NORMAL":11,
-						"TEXCOORD_0":12
-					},
-					"indices":13,
-					"material":2
-				}
-			]
 		}
 	],
 	"textures":[
@@ -288,10 +235,6 @@
 		{
 			"sampler":0,
 			"source":5
-		},
-		{
-			"sampler":0,
-			"source":6
 		}
 	],
 	"images":[
@@ -324,11 +267,6 @@
 			"mimeType":"image/png",
 			"name":"uranus2_A_diffuse",
 			"uri":"textures/uranus2_A_diffuse-1.png"
-		},
-		{
-			"mimeType":"image/png",
-			"name":"miranda_diffuse",
-			"uri":"textures/miranda_diffuse.png"
 		}
 	],
 	"accessors":[
@@ -411,40 +349,6 @@
 			"componentType":5123,
 			"count":27648,
 			"type":"SCALAR"
-		},
-		{
-			"bufferView":10,
-			"componentType":5126,
-			"count":181,
-			"max":[
-				787.9999389648438,
-				788,
-				788
-			],
-			"min":[
-				-788.0000610351562,
-				-788,
-				-788
-			],
-			"type":"VEC3"
-		},
-		{
-			"bufferView":11,
-			"componentType":5126,
-			"count":181,
-			"type":"VEC3"
-		},
-		{
-			"bufferView":12,
-			"componentType":5126,
-			"count":181,
-			"type":"VEC2"
-		},
-		{
-			"bufferView":13,
-			"componentType":5123,
-			"count":960,
-			"type":"SCALAR"
 		}
 	],
 	"bufferViews":[
@@ -507,30 +411,6 @@
 			"byteLength":55296,
 			"byteOffset":1526320,
 			"target":34963
-		},
-		{
-			"buffer":0,
-			"byteLength":2172,
-			"byteOffset":1581616,
-			"target":34962
-		},
-		{
-			"buffer":0,
-			"byteLength":2172,
-			"byteOffset":1583788,
-			"target":34962
-		},
-		{
-			"buffer":0,
-			"byteLength":1448,
-			"byteOffset":1585960,
-			"target":34962
-		},
-		{
-			"buffer":0,
-			"byteLength":1920,
-			"byteOffset":1587408,
-			"target":34963
 		}
 	],
 	"samplers":[
@@ -541,7 +421,7 @@
 	],
 	"buffers":[
 		{
-			"byteLength":1589328,
+			"byteLength":1581616,
 			"uri":"uranus.bin"
 		}
 	]

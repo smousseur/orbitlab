@@ -75,6 +75,13 @@ jacocoTestReport {
     }
 }
 
+tasks.register('meshProbe', JavaExec) {
+    group = 'orbitlab'
+    description = 'Reports the frame each planetary mesh carries and whether it conforms to the export convention'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'com.smousseur.orbitlab.tools.meshprobe.MeshProbeMain'
+}
+
 javadoc {
     options {
         encoding = 'UTF-8'
