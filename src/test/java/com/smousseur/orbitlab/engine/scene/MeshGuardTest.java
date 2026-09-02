@@ -62,14 +62,17 @@ class MeshGuardTest {
   }
 
   /**
-   * Uranus carries nothing measurable, so there is nothing to compare and nothing to shout about.
+   * A body with nothing committed for it has nothing to be compared against, and nothing to shout
+   * about. Uranus was that body until its asset was replaced by one the probe can measure; the case
+   * is asked for explicitly now rather than through whichever body happens to be missing, which is
+   * a fact about the table and not about the guard.
    */
   @Test
   void staysSilentForABodyWithNoCommittedCalibration() {
     MeshFrame anything =
         new MeshFrame(new Vector3f(0f, 1f, 0f), new Vector3f(1f, 0f, 0f), 49.4f, -547.7f);
 
-    assertTrue(MeshGuard.check(SolarSystemBody.URANUS, anything, 2048, 2048).isEmpty());
+    assertTrue(MeshGuard.check(SolarSystemBody.URANUS, null, anything, 2048, 2048).isEmpty());
   }
 
   private static PlanetMeshCalibration committed() {

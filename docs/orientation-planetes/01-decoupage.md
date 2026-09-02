@@ -89,6 +89,23 @@ JME voit réellement, pas dans celui du maillage brut.
 Le résidu rejette de lui-même les géométries qui ne sont pas des cartes lat/long : les deux anneaux,
 et le globe d'Uranus lui-même — dont la texture est d'ailleurs carrée (2048×2048) et non 2:1.
 
+> **Complété le 2026-09-02 : « rejeté » ne veut pas dire « immesurable ».** Un anneau n'a pas de
+> carte lat/long et n'en aura jamais, mais il a un **plan**, et un anneau réel est dans le plan
+> équatorial de sa planète à une fraction de degré près. C'est donc **une seule inconnue**, et un
+> degré de liberté de *moins* qu'un globe : un anneau est bandé radialement et uniforme tout autour,
+> donc aucune rotation autour de son axe n'est observable et **il n'y a pas de `λ0` à caler**. La
+> sonde mesure ce plan (`RingPlane`) et le rapport donne l'angle à l'axe du globe. Aucun œil n'est
+> requis.
+>
+> **Mesuré : les deux anneaux sont faux.** Saturne **13,51°** hors du plan équatorial de son propre
+> globe, Uranus **9,93°**. C'est le témoin que la fiche `BUG-3` citait en premier (« le plan des
+> anneaux de Saturne… doit être perpendiculaire à l'axe »), et il est rouge. Consigné en
+> [`BUG-20`](../bugs.md#bug-20--plan-des-anneaux-désaligné-dans-les-assets).
+>
+> **Et c'est le seul défaut du chantier que le code ne peut pas réparer.** La correction par corps
+> tourne le modèle entier, globe et anneau ensemble : elle ne peut donc pas changer l'angle *entre*
+> les deux. C'est une incohérence **interne à l'actif**, et seul un ré-export la règle.
+
 ### 2.3 Deux familles de convention, et un invariant qui ne tient pas
 
 Cinq modèles ont leur pôle sur **+Z** (earth, jupiter, mars, moon, saturn), cinq sur **−Y** (sun,
@@ -381,7 +398,7 @@ où il ne coûte rien.
 
 **Ce que ça ne fait pas.** Ne cale aucune longitude — `λ0` reste conventionnel, c'est L3 qui le
 pose. Ne ré-exporte aucun asset : L1 rend la conformité *exigible et vérifiable*, il ne la produit
-pas. Uranus reste hors périmètre (§6), sans repère écrit à la main.
+pas. Uranus était hors périmètre (§6) ; son ré-export du 2026-09-02 l'y a fait rentrer.
 
 **Fermeture.** **La Terre et la Lune sont inchangées, au quaternion près.** C'est le test le plus
 fort du chantier : ces deux corps sont les références, leur correction est l'identité et doit le
@@ -469,7 +486,7 @@ attendent la passe à l'écran, qui est le travail que ce lot *est*.
 |---|---|---|
 | Terre, Lune | 180° | **mesuré.** Déclarés corrects, et la chaîne peint leur colonne 0 à 180° : c'est donc bien l'origine de leurs cartes |
 | les neuf autres | 180° | **conventionnel.** Le standard des cartes planétaires, point de départ et non résultat |
-| Uranus | — | hors périmètre, pas de calibration du tout |
+| Uranus | 180° | **conventionnel**, depuis son ré-export du 2026-09-02 qui l'a rendu mesurable |
 
 Ancrages à recouper au moment de la passe, exacts par définition et non par observation : Airy-0
 pour Mars, Hun Kal à 20° O pour Mercure, le pic central d'Ariadne pour le sol de Vénus, le point
@@ -537,6 +554,13 @@ Rien de ceci ne bloque L0.
   **le corps sort du périmètre jusqu'à ce qu'un maillage exploitable arrive**, et la sonde le
   signalera à ce moment-là. Écrire un repère à la main pour un asset qu'on va jeter est du travail
   perdu deux fois.
+
+  > **Et il est arrivé, le 2026-09-02.** Le globe d'Uranus a été ré-exporté pendant le chantier :
+  > son résidu est passé de **49,37° à 0,00°** et sa texture de 2048×2048 à 2048×1024, un vrai 2:1.
+  > Le corps est donc rentré dans le périmètre, la sonde l'a dit sans une ligne à retoucher, et son
+  > repère est commité — pôle `(−0,250, −0,793, −0,555)`, `u=0` `(−0,942, +0,067, +0,329)`, une
+  > rotation de 127,5° à rattraper. Son `λ0` reste conventionnel comme les huit autres, et son
+  > anneau, lui, est toujours à 9,93° hors plan.
 
 **Tranché par la mesure le 2026-09-02, en implémentant :**
 
@@ -676,6 +700,11 @@ Hors périmètre. Consignés ici pour ne pas être reperdus ; aucun n'a été ar
    identité. Consigné ici parce que c'est le genre de fait qu'on redécouvre à ses dépens : il est
    épinglé par `TexturePaintingTest`, mais un lecteur qui raisonne sur la composition sans le savoir
    conclura que la Terre est à l'envers.
+10. **Les deux anneaux sont hors du plan équatorial de leur propre globe** — Saturne 13,51°, Uranus
+    9,93°, mesuré le 2026-09-02. Hors périmètre au sens strict (c'est de la géométrie d'actif), mais
+    consigné en [`BUG-20`](../bugs.md#bug-20--plan-des-anneaux-désaligné-dans-les-assets) parce que
+    c'est le seul défaut du chantier hors de portée du code, et parce que c'est exactement le
+    contrôle que `BUG-3` proposait d'utiliser pour valider l'axe.
 9. **Le résidu commité pour Vénus était celui de l'atmosphère** (0,02°) et non celui du globe que la
    garde retient (0,01°) — recopié de la mauvaise ligne du rapport au L1. Sans effet : ni la
    correction ni la garde ne lisent le résidu. Corrigé le 2026-09-02, et signalé parce que c'est

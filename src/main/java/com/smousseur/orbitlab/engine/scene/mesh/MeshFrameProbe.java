@@ -37,6 +37,13 @@ public final class MeshFrameProbe {
   /** Tolerance on {@code u} when selecting the column of lowest {@code u}. */
   private static final float COLUMN_TOLERANCE = 1e-4f;
 
+  /**
+   * Beyond this share of the variance lying along the fitted normal, the geometry is not flat and
+   * has no plane worth reporting. Placed between the two measured populations rather than at a
+   * round number: the repo's two rings score 9e-6 and 2e-15, its spheres about 0.2.
+   */
+  private static final float MAX_FLATNESS = 1e-3f;
+
   private MeshFrameProbe() {}
 
   /**
@@ -53,7 +60,7 @@ public final class MeshFrameProbe {
    *
    * @param spatial the loaded model
    * @return one entry per geometry, in traversal order — including those nothing could be measured
-   *     on, which are reported with no frame rather than dropped
+   *     on, which are reported empty rather than dropped
    */
   public static List<ProbedGeometry> probe(Spatial spatial) {
     spatial.updateGeometricState();
@@ -66,10 +73,18 @@ public final class MeshFrameProbe {
                 probe(geometry.getMesh())
                     .map(measured -> rotate(measured, geometry.getWorldRotation()))
                     .orElse(null);
-            probed.add(new ProbedGeometry(geometry.getName(), frame));
+            RingPlane ring =
+                probeRing(geometry.getMesh())
+                    .map(measured -> rotate(measured, geometry.getWorldRotation()))
+                    .orElse(null);
+            probed.add(new ProbedGeometry(geometry.getName(), frame, ring));
           }
         });
     return probed;
+  }
+
+  private static RingPlane rotate(RingPlane ring, Quaternion rotation) {
+    return new RingPlane(rotation.mult(ring.normal()), ring.flatness());
   }
 
   private static MeshFrame rotate(MeshFrame frame, Quaternion rotation) {
@@ -149,6 +164,96 @@ public final class MeshFrameProbe {
         azimuthDegreesPerU(
             positions, texCoords, count, pole, primeMeridian, equatorLow, equatorHigh);
     return Optional.of(new MeshFrame(pole, primeMeridian, residual, chirality));
+  }
+
+  /**
+   * Measures the plane of a flat annulus — the one thing a ring can be wrong about, and the one
+   * thing {@link #probe(Mesh)} cannot see, a ring having no lat/long unwrap to read.
+   *
+   * @param mesh the mesh to measure
+   * @return its plane, or empty when the geometry is not flat enough to have one
+   */
+  public static Optional<RingPlane> probeRing(Mesh mesh) {
+    FloatBuffer positions = mesh.getFloatBuffer(VertexBuffer.Type.Position);
+    if (positions == null) {
+      return Optional.empty();
+    }
+    int count = positions.limit() / 3;
+    if (count < 3) {
+      return Optional.empty();
+    }
+
+    Vector3f centre = new Vector3f();
+    for (int i = 0; i < count; i++) {
+      centre.addLocal(positions.get(i * 3), positions.get(i * 3 + 1), positions.get(i * 3 + 2));
+    }
+    centre.divideLocal(count);
+
+    double[][] covariance = new double[3][3];
+    Vector3f offset = new Vector3f();
+    for (int i = 0; i < count; i++) {
+      offset
+          .set(positions.get(i * 3), positions.get(i * 3 + 1), positions.get(i * 3 + 2))
+          .subtractLocal(centre);
+      float[] components = {offset.x, offset.y, offset.z};
+      for (int row = 0; row < 3; row++) {
+        for (int column = 0; column < 3; column++) {
+          covariance[row][column] += (double) components[row] * components[column];
+        }
+      }
+    }
+
+    Vector3f normal = leastSpreadDirection(covariance);
+    double alongNormal = 0;
+    double total = 0;
+    for (int i = 0; i < count; i++) {
+      offset
+          .set(positions.get(i * 3), positions.get(i * 3 + 1), positions.get(i * 3 + 2))
+          .subtractLocal(centre);
+      float along = offset.dot(normal);
+      alongNormal += (double) along * along;
+      total += offset.lengthSquared();
+    }
+    if (total <= 0) {
+      return Optional.empty();
+    }
+    float flatness = (float) (alongNormal / total);
+    return flatness > MAX_FLATNESS
+        ? Optional.empty()
+        : Optional.of(new RingPlane(normal, flatness));
+  }
+
+  /**
+   * The direction of least spread of a covariance matrix, which for a flat point set is the normal
+   * of its plane.
+   *
+   * <p>Power iteration on {@code trace·I − C} rather than a library eigen-decomposition: the
+   * dominant eigenvector of that matrix is the least one of {@code C}, the shift keeping every
+   * eigenvalue non-negative, and three by three it converges in a handful of steps. It also keeps
+   * this class free of a linear-algebra dependency it needs nowhere else.
+   */
+  private static Vector3f leastSpreadDirection(double[][] covariance) {
+    double trace = covariance[0][0] + covariance[1][1] + covariance[2][2];
+    // Deliberately not an axis: starting on one would be an exact eigenvector of a mesh built on
+    // the axes, and power iteration cannot leave the eigenvector it starts on.
+    double[] direction = {0.3, 0.5, 0.81};
+    for (int iteration = 0; iteration < 128; iteration++) {
+      double[] next = new double[3];
+      for (int row = 0; row < 3; row++) {
+        next[row] = trace * direction[row];
+        for (int column = 0; column < 3; column++) {
+          next[row] -= covariance[row][column] * direction[column];
+        }
+      }
+      double norm = Math.sqrt(next[0] * next[0] + next[1] * next[1] + next[2] * next[2]);
+      if (norm <= 0) {
+        break;
+      }
+      for (int row = 0; row < 3; row++) {
+        direction[row] = next[row] / norm;
+      }
+    }
+    return new Vector3f((float) direction[0], (float) direction[1], (float) direction[2]);
   }
 
   /**

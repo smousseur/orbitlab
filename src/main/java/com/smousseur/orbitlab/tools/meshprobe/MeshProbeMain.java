@@ -14,6 +14,8 @@ import com.smousseur.orbitlab.engine.scene.mesh.MeshConformance;
 import com.smousseur.orbitlab.engine.scene.mesh.MeshFrame;
 import com.smousseur.orbitlab.engine.scene.mesh.MeshFrameProbe;
 import com.smousseur.orbitlab.engine.scene.mesh.ProbedGeometry;
+import com.smousseur.orbitlab.engine.scene.mesh.RingAlignment;
+import com.smousseur.orbitlab.engine.scene.mesh.RingPlane;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -84,8 +86,12 @@ public final class MeshProbeMain {
         System.out.printf(Locale.ROOT, "%-9s no measurable geometry%n", name);
         continue;
       }
+      Vector3f globePole = globePole(probed);
       for (ProbedGeometry geometry : probed) {
-        if (!geometry.hasFrame()) {
+        // Flatness before the residual: a ring does carry a UV map, so a frame can be measured on
+        // it, and that frame is meaningless. Judging it as a sphere would print four columns of
+        // noise next to a verdict that only says the noise is noise.
+        if (geometry.isRing() || !geometry.hasFrame()) {
           System.out.printf(
               Locale.ROOT,
               "%-9s %-26s %-22s %-22s %8s %10s %11s  %s%n",
@@ -96,7 +102,7 @@ public final class MeshProbeMain {
               "-",
               "-",
               textures.getOrDefault(geometry.name(), "-"),
-              "NO UV MAP - nothing to measure");
+              describeRing(geometry.ring(), globePole));
           continue;
         }
         MeshFrame frame = geometry.frame();
@@ -113,6 +119,53 @@ public final class MeshProbeMain {
             describe(MeshConformance.of(frame)));
       }
     }
+  }
+
+  /**
+   * The pole of the model's globe: the frame with the lowest residual, which is the same rule the
+   * startup guard uses to decide which of several geometries the calibration is about.
+   */
+  private static Vector3f globePole(List<ProbedGeometry> probed) {
+    MeshFrame best = null;
+    for (ProbedGeometry geometry : probed) {
+      if (geometry.hasFrame()
+          && (best == null
+              || geometry.frame().equirectangularResidualDeg()
+                  < best.equirectangularResidualDeg())) {
+        best = geometry.frame();
+      }
+    }
+    return best == null ? null : best.pole();
+  }
+
+  /**
+   * What a flat geometry has to say for itself.
+   *
+   * <p>A ring is not a lat/long map and never becomes one, so the frame probe rejecting it is the
+   * right answer rather than a defect. But it is not unmeasurable: it has a plane, and a real ring
+   * system lies in its planet's equatorial plane to a fraction of a degree. That angle is the whole
+   * of a ring's correctness — there is no longitude on a ring to get wrong — and unlike λ0 it needs
+   * no eye.
+   *
+   * <p>A tilt reported here cannot be fixed by this chantier's per-body correction, which turns the
+   * globe and the ring together: it is a disagreement <em>inside</em> the asset, and only a
+   * re-export can settle it.
+   */
+  private static String describeRing(RingPlane ring, Vector3f globePole) {
+    if (ring == null) {
+      return "NO UV MAP - nothing to measure";
+    }
+    if (globePole == null) {
+      return "flat ring, no globe in this model to compare its plane against";
+    }
+    RingAlignment alignment = RingAlignment.between(ring, globePole);
+    return alignment.isAligned()
+        ? String.format(Locale.ROOT, "ring, equatorial (%.2f deg)", alignment.angleDeg())
+        : String.format(
+            Locale.ROOT,
+            "ring MISALIGNED - turn it %.2f deg about %s, then re-export",
+            alignment.angleDeg(),
+            format(alignment.axis()));
   }
 
   /**

@@ -41,7 +41,34 @@ public final class MeshGuard {
    */
   public static Optional<MeshDivergence> check(
       SolarSystemBody body, MeshFrame measured, int textureWidth, int textureHeight) {
-    PlanetMeshCalibration committed = PlanetMeshCorrection.calibrationFor(body).orElse(null);
+    return check(
+        body,
+        PlanetMeshCorrection.calibrationFor(body).orElse(null),
+        measured,
+        textureWidth,
+        textureHeight);
+  }
+
+  /**
+   * Same check against a calibration supplied rather than looked up.
+   *
+   * <p>The seam exists so the "nothing committed for this body" branch stays reachable from a test.
+   * It stopped being so the day the table filled up, and a branch no test can enter is a branch
+   * that quietly rots.
+   *
+   * @param body the body being loaded
+   * @param committed what was committed for it, or {@code null} when nothing was
+   * @param measured the frame measured on the model as loaded
+   * @param textureWidth width of the base colour texture bound to the globe
+   * @param textureHeight its height
+   * @return what diverged, or empty when the asset still matches or nothing was committed
+   */
+  static Optional<MeshDivergence> check(
+      SolarSystemBody body,
+      PlanetMeshCalibration committed,
+      MeshFrame measured,
+      int textureWidth,
+      int textureHeight) {
     if (committed == null) {
       return Optional.empty();
     }

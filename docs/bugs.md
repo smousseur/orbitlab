@@ -29,6 +29,7 @@ la frontière entre les deux derniers doit rester lisible.
 | [`BUG-17`](#bug-17--acceptablecost-mal-calé-depuis-lajout-du-terme-ergols-i7) | `acceptableCost` mal calé depuis l'ajout du terme ergols I7 | 2026-08-30 | Ouvert, correctif proposé non fait |
 | [`BUG-18`](#bug-18--rejets-de-scénario-au-chargement-seulement-journalisés) | Rejets de scénario au chargement, seulement journalisés | 2026-08-30 | Ouvert — **trou connu de `UI-3`** |
 | [`BUG-19`](#bug-19--la-rotation-propre-des-planètes-externes-est-aliasée-par-le-pas-de-la-fenêtre-glissante) | La rotation propre des planètes externes est aliasée par le pas de la fenêtre glissante | 2026-09-02 | Ouvert, **cause racine établie et ampleur mesurée** — Neptune à 4,1 % du taux vrai, Saturne et Uranus à l'envers |
+| [`BUG-20`](#bug-20--plan-des-anneaux-désaligné-dans-les-assets) | Plan des anneaux désaligné dans les assets | 2026-09-02 | Ouvert, **mesuré** — Saturne 13,51°, Uranus 9,93° hors du plan équatorial de leur propre globe ; hors de portée du code, demande un ré-export |
 
 ---
 
@@ -1085,3 +1086,109 @@ raccourci.
 automatiquement du `W_DOT` d'Orekit — auquel cas aucun corps futur ne peut
 retomber dans le piège, y compris Mars si son pas bouge — ou reste une constante
 par corps.
+
+---
+
+## BUG-20 — Plan des anneaux désaligné dans les assets
+
+**Mesuré le 2026-09-02**, par `./gradlew meshProbe` :
+
+| corps | géométrie | rotation à appliquer à l'anneau, dans les axes du `.gltf` |
+|---|---|---|
+| Saturne | `Circle_ring_0_0` | **13,51°** autour de `(0, +1, 0)` |
+| Uranus | `Circle_Material.003_0_0` | **9,93°** autour de `(−0,702, +0,543, −0,460)` |
+
+L'angle seul ne fait pas une rotation : l'axe voyage avec lui, comme dans le
+verdict d'un globe. Et c'est bien l'**anneau** qu'on tourne, pas le globe — pour
+Saturne le globe est `conforming`, donc c'est l'anneau qui sort du rang. Pour
+Uranus les deux corrections sont indépendantes : tourner le modèle entier de 127,5°
+pour rendre son globe conforme laisse l'écart relatif de l'anneau inchangé.
+
+Un anneau planétaire réel est dans le plan équatorial de sa planète à une fraction
+de degré près. Dix à quatorze degrés n'est pas une tolérance, c'est un
+désalignement.
+
+### Où est l'erreur : dans la rotation du nœud, pas dans le maillage
+
+Vérifié sur les deux modèles. Dans chacun, le globe et l'anneau ont pour axe leur
+**`+Z` local**, et tout l'écart vient de la rotation que le nœud leur applique :
+
+| corps | rotation du nœud globe (x, y, z, w) | rotation du nœud anneau | écart des deux axes |
+|---|---|---|---|
+| Saturne | `1, 0, 0, 1,49e−07` | `−0,9931, 0, −0,1176, 1,49e−07` | **13,510°** |
+| Uranus | `−0,4422, 0,1643, 0,0446, 0,8806` | `−0,4072, −0,0342, −0,2352, 0,8819` | **9,919°** |
+
+Ces écarts reproduisent au centième de degré près l'inclinaison mesurée sur la
+géométrie (13,51° et 9,93°). **Les maillages sont sains** ; c'est la transformation
+d'objet de l'anneau qui est approximative dans la scène source.
+
+### La réparation, et pourquoi elle esquive la question du repère
+
+Ne pas appliquer une rotation d'un angle donné : **recopier sur l'objet anneau la
+rotation de l'objet globe.**
+
+C'est exact plutôt qu'ajusté, et surtout **c'est indifférent au repère**.
+L'exportateur applique la même conversion aux deux objets, qui sont frères et sans
+parent dans les deux fichiers ; rendre leurs rotations égales dans Blender les rend
+égales dans le `.gltf`, quelle que soit la case « +Y Up ». Le piège du §4.2 du
+chantier ne s'applique donc pas ici — il ne s'applique qu'aux corrections
+*absolues*, celles qui visent la convention d'export.
+
+Le surplus de rotation ainsi imposé à l'anneau — sa rotation propre autour de son
+axe — est **invisible** : un anneau est azimutalement uniforme, et la sonde le
+confirme sur l'actif de Saturne, dont l'UV ne varie pratiquement pas avec l'azimut
+(0,9°/u contre 360 pour une sphère), signe d'un dépliage radial.
+
+**Vérification** : après ré-export, les deux nœuds portent le même quaternion
+`rotation`, et `./gradlew meshProbe` dit `ring, equatorial`.
+
+L'angle et l'axe donnés par le rapport restent la solution de repli, pour le cas
+où l'inclinaison serait cuite dans le maillage — ce qu'elle n'est ici sur aucun des
+deux corps.
+
+### Pourquoi le code ne peut rien
+
+La correction par corps de
+[`PlanetMeshCorrection`](../src/main/java/com/smousseur/orbitlab/engine/scene/PlanetMeshCorrection.java)
+tourne **le modèle entier**, globe et anneau ensemble : elle ne peut donc pas
+changer l'angle *entre* les deux. C'est une incohérence **interne à l'actif**, et
+c'est le seul défaut du chantier
+[`docs/orientation-planetes/01-decoupage.md`](orientation-planetes/01-decoupage.md)
+qui soit hors de portée du code. Deux fins possibles :
+
+- **ré-exporter** en alignant l'anneau sur l'équateur du globe, ce qui est la voie
+  normale (§4.2 du chantier) et ne laisse aucune constante ;
+- ou greffer un pivot par géométrie, comme `ShellSpin` le fait pour l'atmosphère
+  de Vénus — mécanisme déjà en place, mais qui entretient une constante de plus
+  pour un actif qu'on va de toute façon remplacer.
+
+### Comment le vérifier
+
+`./gradlew meshProbe` : la ligne de l'anneau donne la rotation à appliquer et dit
+`MISALIGNED` au-delà de 0,5°. Le critère d'arrêt est `ring, equatorial`. Aucun œil
+n'est nécessaire — un anneau n'a pas de longitude, donc son plan est la seule chose
+qu'il peut avoir de faux, et elle se mesure.
+
+**L'axe est exprimé dans les axes du `.gltf`, jamais dans ceux de Blender** : la
+case « +Y Up » de l'exportateur cuit une conversion sans laisser de témoin (§4.2 du
+chantier). Appliquer, ré-exporter, re-sonder — ne pas convertir l'axe à la main.
+
+Les deux centres sont concentriques à ~1 % du rayon du globe près, donc la rotation
+se fait autour de l'origine du modèle : tourner autour d'une autre origine
+déplacerait l'anneau en plus de l'incliner.
+
+C'est d'ailleurs le contrôle que la fiche [`BUG-3`](#bug-3--orientation-des-modèles-3d-des-planètes)
+proposait en premier pour valider l'axe (« le plan des anneaux de Saturne… doit
+être perpendiculaire à l'axe »). Il est rouge, mais il ne dit rien sur l'axe du
+globe : les deux globes concernés sont mesurés par ailleurs, et c'est l'anneau qui
+sort du rang.
+
+### Tips
+
+- **Ne pas lire l'ancienne ligne `NOT A LAT/LONG MAP` comme le défaut.** Un anneau
+  n'est pas une carte lat/long et n'en sera jamais une : ce verdict-là est correct
+  et définitif. Le défaut est ailleurs, dans le plan.
+- **Vérifier au passage l'échelle du nœud.** `uranus.gltf` donne à son anneau une
+  échelle `[0.008, 0.008, 0]` — un facteur **nul** sur Z. Sans effet visible tant
+  que le disque est déjà plat dans son plan local, mais la transformation est
+  singulière et rien ne garantit qu'un shader ou un calcul de normale s'en sorte.

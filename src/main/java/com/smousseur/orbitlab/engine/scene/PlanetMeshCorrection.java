@@ -182,6 +182,12 @@ public final class PlanetMeshCorrection {
                   calibration(
                       frame(0.383f, -0.905f, 0.186f, -0.815f, -0.471f, -0.337f, 0.87f, -362.1f),
                       2048,
+                      1024)),
+              Map.entry(
+                  SolarSystemBody.URANUS,
+                  calibration(
+                      frame(-0.250f, -0.793f, -0.555f, -0.942f, 0.067f, 0.329f, 0.00f, -360.0f),
+                      2048,
                       1024))));
 
   private PlanetMeshCorrection() {}
