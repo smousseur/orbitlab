@@ -47,6 +47,9 @@ import org.orekit.time.AbsoluteDate;
  *       their maps' origin, measured rather than assumed. The Moon is the stronger of the two: in
  *       synchronous rotation, a near side that faces the Earth cannot coexist with a wrong
  *       meridian.
+ *   <li><b>Measured.</b> Jupiter, see {@link #JUPITER_LAMBDA0_DEG}. Not against an anchor — it has
+ *       none — but against the Great Red Spot, whose distance to the sub-solar point is the same
+ *       number in any render of the same instant, whatever the camera.
  *   <li><b>Conventional, and awaiting a look.</b> Every other body. They are given the same origin,
  *       which is the standard for planetary maps, and it is a starting point rather than a result.
  *   <li><b>Out of scope.</b> Uranus, whose globe is not a lat/long unwrap at all, and which
@@ -57,7 +60,23 @@ import org.orekit.time.AbsoluteDate;
  * is exact by definition rather than by observation: Airy-0 for Mars, Hun Kal at 20° W for Mercury,
  * the central peak of Ariadne for Venus's ground, the mean sub-Earth point for the Moon, the
  * sub-Charon meridian for Pluto. The giants and the Sun have none — their prime meridian is a radio
- * convention with no visible feature on it — so their λ0 will stay a documented house value.
+ * convention with no visible feature on it.
+ *
+ * <p><b>But an anchor is not the only thing λ0 can be read against.</b> Jupiter has no anchor and
+ * was measured all the same, because it carries a <em>fiducial</em>: a feature that is merely
+ * identifiable, not definitional. That is the distinction that decides whether a body is reachable
+ * at all — and by it, Saturn is not. Its texture is the equatorial deck, which in visible light
+ * carries no permanent feature to point at, so its λ0 is unobservable rather than merely
+ * unmeasured, and the house value is the honest answer. Venus's ground does have an anchor, but two
+ * things stand before it: its cloud shell is rendered opaque today, so the map to be judged is
+ * never on screen, and no reference render shows a radar surface to compare against.
+ *
+ * <p><b>A rigid texture cannot follow a differentially rotating atmosphere.</b> {@code
+ * visibleLayerDriftDegPerDay} turns the whole map at one rate, but a giant's zones each turn at
+ * their own, so the drift is exact at one latitude and wrong at every other. Choosing System II for
+ * Jupiter pins the Great Red Spot and lets the equatorial zone — which runs in System I, 7.63°/day
+ * faster — slip a whole turn against the texture every 47 days. That is a deliberate trade, not an
+ * oversight: the spot is what anyone looks at.
  */
 public final class PlanetMeshCorrection {
 

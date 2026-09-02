@@ -10,6 +10,7 @@ import com.simsilica.lemur.component.QuadBackgroundComponent;
 import com.simsilica.lemur.component.TbtQuadBackgroundComponent;
 import com.smousseur.orbitlab.app.ApplicationContext;
 import com.smousseur.orbitlab.app.HudSurfaces;
+import com.smousseur.orbitlab.app.OrekitTime;
 import com.smousseur.orbitlab.app.SimulationClock;
 import com.smousseur.orbitlab.ui.AppStyles;
 import com.smousseur.orbitlab.ui.UiLayers;
@@ -25,7 +26,7 @@ import org.apache.logging.log4j.Logger;
  * coordinates the five sub-components that own their own Lemur elements.
  *
  * <ul>
- *   <li>{@link LiveIndicator} — animated dot + LIVE/PAUSED label
+ *   <li>{@link LiveIndicator} — LIVE label and its dot, lit only while the clock shows real time
  *   <li>{@link TransportControls} — step-back, play/pause, step-forward
  *   <li>{@link ClockDisplay} — UTC date label, editable to seek to a typed date
  *   <li>{@link SpeedStepper} — speed ± buttons and label
@@ -63,7 +64,8 @@ public class TimelineWidget implements AutoCloseable {
   private final AutoCloseable speedSubscription;
 
   private int speedIndex = 0;
-  private Mode currentMode = Mode.LIVE;
+  private boolean live;
+  private boolean playing;
 
   /**
    * Creates and attaches the capsule timeline widget to the GUI scene graph.
@@ -118,7 +120,10 @@ public class TimelineWidget implements AutoCloseable {
 
     speedIndex = SpeedStepper.speedToIndex(clock.speed());
     speedStepper.refresh(speedIndex);
-    refreshMode();
+    live = isClockLive();
+    playing = clock.isPlaying();
+    liveIndicator.refresh(live);
+    transportControls.refresh(playing);
     scrubberTrack.refresh(speedIndex);
 
     // The clock owns the speed; this widget only displays it. Subscribing is what keeps the
@@ -163,7 +168,7 @@ public class TimelineWidget implements AutoCloseable {
    */
   public void update(float tpf) {
     clockDisplay.update(clock.now());
-    refreshMode();
+    refreshPlaybackState();
   }
 
   /**
@@ -184,20 +189,34 @@ public class TimelineWidget implements AutoCloseable {
     root.removeFromParent();
   }
 
-  private void refreshMode() {
-    Mode next = clock.isPlaying() ? Mode.LIVE : Mode.PAUSED;
-    if (next != currentMode) {
-      currentMode = next;
-      liveIndicator.refresh(currentMode);
-      transportControls.refresh(clock.isPlaying());
+  /**
+   * Re-derives the live dot and the play/pause glyph from the clock. The two are read separately:
+   * the dot answers "is this the real time now?", the glyph "is the clock advancing?". Deriving
+   * both from the playing state alone — what this widget did — made a pause read as a loss of live
+   * and left the capsule saying the same thing twice.
+   */
+  private void refreshPlaybackState() {
+    boolean nextLive = isClockLive();
+    if (nextLive != live) {
+      live = nextLive;
+      liveIndicator.refresh(live);
     }
+    boolean nextPlaying = clock.isPlaying();
+    if (nextPlaying != playing) {
+      playing = nextPlaying;
+      transportControls.refresh(playing);
+    }
+  }
+
+  private boolean isClockLive() {
+    return LiveIndicator.isLive(clock.isPlaying(), clock.speed(), clock.now(), OrekitTime.utcNow());
   }
 
   private void onLiveReset() {
     speedIndex = 0;
     speedStepper.refresh(0);
     scrubberTrack.refresh(0);
-    refreshMode();
+    refreshPlaybackState();
   }
 
   private void onSpeedDelta(int delta) {
