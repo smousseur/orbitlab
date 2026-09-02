@@ -299,7 +299,7 @@ soient corrects, et cela renseignerait directement sur les exports.
 
 ## BUG-4 — Hover des widgets non uniforme
 
-> **Promu en item de roadmap le 2026-08-16** — [`UI-7`](roadmap/01-roadmap.md#ui-7--tooltips-sur-les-contrôles-et-le-socle-de-survol-qui-les-porte--3-2-m-ajout),
+> **Promu en item de roadmap le 2026-08-16** — [`UI-7`](roadmap/03-roadmap-v3.md#ui-7--infobulles-sur-les-contrôles-et-le-socle-de-survol-qui-les-porte--3-2-m),
 > qui livre le socle de survol partagé réclamé ci-dessous et les infobulles comme
 > premier client de ce socle. La fiche reste ici parce que c'est elle qui porte
 > l'état des lieux ; le « à faire » est désormais dans la roadmap. Conformément à
@@ -519,7 +519,7 @@ reproduit la course de l'optimiseur au chiffre près — 47 387,969 kg puis
 
 **Le blocage de calendrier est tombé de lui-même.** Cette fiche interdisait la
 correction « pendant PHY-4 » ; PHY-4 est fermé depuis le 2026-08-18, et
-[`roadmap/02-roadmap-technique.md`](roadmap/02-roadmap-technique.md) place l'item
+[`roadmap/05-roadmap-technique.md`](roadmap/05-roadmap-technique.md) place l'item
 en `J0-A`, à faire maintenant.
 
 ### Une trouvaille au passage : le pôle inertiel n'est pas le pôle terrestre
@@ -791,7 +791,7 @@ jusque-là inexpliquée en `PHY-4`. Le défaut **traverse `PHY-4` → `MIS-4` �
 `MIS-5`** sans jamais être refermé — chaque chantier l'a mesuré à nouveau sans
 le corriger, faute d'appartenir clairement à son périmètre.
 
-**Pourquoi c'est le candidat le plus sérieux avant Phase 5.** `MIS-6`
+**Pourquoi c'est le candidat le plus sérieux avant `MIS-6`.** `MIS-6`
 (rendezvous/phasing) et `MIS-11` (retour) sont les deux premiers chantiers où
 le **timing** de la trajectoire rejouée est l'enjeu central plutôt qu'un
 sous-produit — un optimiseur qui raisonne sur une physique décalée d'une

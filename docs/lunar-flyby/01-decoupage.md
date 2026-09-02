@@ -5,7 +5,7 @@ Item roadmap : `MIS-4` (★5 ◆4 L), phase 5. Ce document ne conçoit pas en d�
 consomme, par ce qu'il produit et par le test qui le ferme.
 
 Il n'y a pas de conception amont à laquelle il renverrait : la fiche du §6 du
-[roadmap](../roadmap/01-roadmap.md) et le §8 de
+[roadmap](../roadmap/01-roadmap-v1.md) et le §8 de
 [`brainstorm/missions.md`](../brainstorm/missions.md) sont antérieurs à `PHY-4`, et le §2
 ci-dessous les corrige sur cinq points. Ce découpage est donc **la** porte d'entrée du
 chantier.

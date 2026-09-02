@@ -2,7 +2,8 @@
 
 Photographie de la qualité du code au **2026-08-10**, commit `b027d1d`. Ce
 document est un état des lieux mesuré, pas une roadmap : les items qui méritent
-d'être planifiés doivent être promus dans `roadmap/01-roadmap.md`.
+d'être planifiés doivent être promus dans une roadmap de version — voir
+`roadmap/00-index.md`.
 
 **Complément du 2026-08-30.** `DT-12` à `DT-17` viennent d'une revue des
 documents de conception par chantier, pas d'une nouvelle passe de mesure
@@ -347,7 +348,7 @@ Ils devraient être des constantes.
 
 ### DT-12 — Mesh Ariane 6 absent (Ariane 5 utilisé à la place)
 
-**Mesuré.** `roadmap/01-roadmap.md` §`MIS-1` : le catalogue utilise le maillage
+**Mesuré.** `roadmap/01-roadmap-v1.md` §`MIS-1` : le catalogue utilise le maillage
 Ariane 5 pour représenter Ariane 62, faute d'export disponible. Masse,
 propulsion et vol restent corrects — seule la silhouette est fausse.
 

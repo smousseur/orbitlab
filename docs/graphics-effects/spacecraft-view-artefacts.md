@@ -524,7 +524,7 @@ verrouillé par `NearFrustumDepthTest`.
 
 ## 11. Liens
 
-- [`../roadmap/01-roadmap.md`](../roadmap/01-roadmap.md) — item `RND-1`, à
+- [`../roadmap/01-roadmap-v1.md`](../roadmap/01-roadmap-v1.md) — item `RND-1`, à
   recoter (§10.3).
 - [`effects-roadmap.md`](effects-roadmap.md) §9 — backlog rendu trajectoires ;
   §9.4.1 (ribbon) reste la réponse au §6.

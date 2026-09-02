@@ -4,7 +4,7 @@
 > livré** (composition analytique GTO → circularisation d'apogée, carte active
 > dans le wizard), et LEO est stable. Le tableau de priorisation en fin de
 > document n'a pas été recalé — la priorisation qui fait foi est celle de
-> [`roadmap/01-roadmap.md`](../roadmap/01-roadmap.md), qui retient le survol
+> [`roadmap/00-index.md`](../roadmap/00-index.md), qui retient le survol
 > lunaire et la mise en orbite lunaire (§8, scindés en deux paliers), le
 > rendez-vous (§9, détaillé dans
 > [`leo-rendezvous-preparation.md`](leo-rendezvous-preparation.md)) et le

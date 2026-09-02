@@ -3,7 +3,7 @@
 > Statut : spec proposée, 2026-08-16. **`T0` exécuté le 2026-08-16 : §2 est confirmé, la
 > construction peut commencer** (`AscentAzimuthAuthorityTest`, 6 fixtures vertes — mesures reportées
 > en §2 et §9).
-> Fiche roadmap : [`docs/roadmap/01-roadmap.md`](../roadmap/01-roadmap.md) §6, `MIS-7` — ★4 ◆2 M.
+> Fiche roadmap : [`docs/roadmap/01-roadmap-v1.md`](../roadmap/01-roadmap-v1.md) §6, `MIS-7` — ★4 ◆2 M.
 > Découpage : **P1** (cette spec) = physique, modèle et TU, sans une ligne d'UI.
 > **P2** = cartes du wizard, catalogue de sites, champs de paramètres.
 

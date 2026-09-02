@@ -1,6 +1,6 @@
 # UI-2 — Feedback de progression pendant l'optimisation
 
-Spec du chantier `UI-2` de [`docs/roadmap/01-roadmap.md`](../roadmap/01-roadmap.md) §6.
+Spec du chantier `UI-2` de [`docs/roadmap/01-roadmap-v1.md`](../roadmap/01-roadmap-v1.md) §6.
 Rédigée le 2026-08-21, après relevé du code existant.
 
 La fiche de la roadmap tenait en trois lignes : indicateur **indéterminé** plutôt

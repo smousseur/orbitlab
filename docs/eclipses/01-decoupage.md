@@ -1,6 +1,6 @@
 # FX-2 — Éclipses / pénombre inter-corps : découpage haut niveau
 
-Item roadmap : `FX-2` (★4 ◆3 M), dernier item ouvert de la phase 4 (`docs/roadmap/01-roadmap.md`
+Item roadmap : `FX-2` (★4 ◆3 M), dernier item ouvert de la phase 4 (`docs/roadmap/01-roadmap-v1.md`
 §3), fiche de référence au §6 du même document. Ce document ne conçoit rien : il **découpe**.
 Chaque lot y est défini par la propriété qu'il rend vraie et par le test qui la ferme. Le détail de
 conception (noms de classes, signatures, formules) viendra dans les documents `02-…` et suivants,

@@ -8,7 +8,7 @@
 
 ## 1. Ce que le code dit déjà
 
-La fiche `UI-3` de [`docs/roadmap/01-roadmap.md`](../roadmap/01-roadmap.md) §6 annonce que
+La fiche `UI-3` de [`docs/roadmap/01-roadmap-v1.md`](../roadmap/01-roadmap-v1.md) §6 annonce que
 « `MissionSpec` est immuable et sérialise déjà les paramètres du wizard — le plus dur est
 fait ». C'est vrai dans l'esprit et faux dans le détail. Sept mesures, dont quatre corrigent
 la fiche et une corrige ce document (§1.8, ajoutée après coup).

@@ -28,7 +28,7 @@
 > Conséquences sur le reste du document : « aucun shader custom » (§1) est faux,
 > nous en avons un et nous le maîtrisons — ce qui **abaisse le coût des éclipses
 > (§6.3)** à un uniform d'occultation multipliant le terme `diff` du fragment
-> shader. Voir `roadmap/01-roadmap.md` item `FX-2`.
+> shader. Voir `roadmap/01-roadmap-v1.md` item `FX-2`.
 >
 > Le reste du document (tiers 2 à 4, et le §9 sur les trajectoires) est valide,
 > **sauf §9.3.1, §9.3.2 et §9.4.1**, remplacés respectivement par

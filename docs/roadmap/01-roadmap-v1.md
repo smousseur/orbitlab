@@ -1,13 +1,19 @@
-# Roadmap OrbitLab — révision 2026-08-08
+# Roadmap OrbitLab v1.X.X — le système solaire et les missions
 
-Ce document remplace `docs/roadmap/01-short-term.md` (supprimé : ses phases 0
-et 1 sont soldées, cf. §1). Il est **la** porte d'entrée du dossier `docs/` :
-chaque item renvoie vers la spec détaillée quand elle existe.
+> **Cette version est livrée.** Ses quatre phases sont soldées, la `v1.1.0` est
+> taguée depuis le 2026-08-31. Ce qui reste ouvert sous cet en-tête tient dans
+> une seule ligne : **1.1.X**, la stabilisation, décrite au §4.
 
-**Comment le lire.** Le plan, c'est le **§3** — sept phases dans l'ordre. Le §4
-est un classement valeur/difficulté qui sert à arbitrer, pas à planifier ; le
-§6 est un recueil de fiches par item, à ouvrir au moment de coder. Si vous ne
-lisez qu'une section, lisez le §3.
+Ce document remplace `docs/roadmap/01-roadmap.md`, qui portait sept phases pour
+une version unique. Le découpage par version l'a scindé en quatre : la porte
+d'entrée du dossier est désormais [`00-index.md`](00-index.md), et ce
+document-ci ne couvre plus que **v1**.
+
+**Comment le lire.** Le §3 est le compte rendu des quatre phases livrées et le
+§4 la seule chose qui reste à faire ici ; le §6 est le recueil des fiches, à
+ouvrir quand on veut savoir ce qu'un item a réellement livré et ce qu'il a
+laissé derrière lui. Les fiches des items **non livrés** ont suivi leur version :
+voir le §5.
 
 ---
 
@@ -73,15 +79,19 @@ et l'item « Lambert sur les planètes » disparaît de la roadmap (fait).
 
 ---
 
-## 3. La roadmap
+## 3. Les quatre phases livrées
 
-**C'est cette section qui dit quoi faire, et dans quel ordre.** Sept phases, à
-prendre dans l'ordre ; à l'intérieur d'une phase, l'ordre des lignes est
-indicatif — les items d'une même phase sont volontairement peu couplés entre
-eux. Le §4 sert à arbitrer un échange, pas à planifier.
+**C'est le compte rendu de v1**, et non un plan : les quatre phases sont
+soldées, dans l'ordre où elles ont été prises. Chacune garde son énoncé
+d'origine, sa table d'items et son « fin de phase » — c'est ce qui permet, plus
+tard, de savoir ce qui avait été promis et ce qui a réellement été livré. Les
+renvois à une « phase 5 », « phase 6 » ou « phase 7 » qu'on y lit sont ceux du
+plan d'origine à sept phases, conservés tels quels ; le §5 dit ce que chacune
+est devenue.
 
-Les durées sont des ordres de grandeur pour une personne, sans marge de
-découverte.
+Trois phases figuraient dans le document d'origine et n'ont jamais été
+entamées ; elles ont changé de version plutôt que de disparaître. Le §5 dit
+laquelle est allée où.
 
 ### ~~Phase 1 — Hygiène visuelle, horizon de mission, dette panel~~ · **soldée le 2026-08-10**
 
@@ -220,207 +230,83 @@ mission peut se mettre en orbite lunaire (`MIS-5`), et les trois corps qui
 s'alignent projettent une ombre qui se voit — vaisseau, Lune, et tache
 d'ombre sur la Terre (`FX-2`).
 
-### Phase 5 — Rendezvous / phasing · ~3 semaines
+---
 
-| ID | Item | ★ | ◆ | Taille |
-|---|---|:-:|:-:|:-:|
-| MIS-6 | Rendezvous / phasing sur cible TLE | 5 | 5 | XL |
+## 4. La ligne 1.1.X — corrections et stabilisation
 
-Seul item de sa phase parce qu'il en vaut plusieurs : source éphéméride TLE
-bufferisée, abstraction `EphemerisTarget`, deux nouveaux stages, nouveau coût,
-rendu de la cible. Découpage détaillé en §6.
+> **C'est la seule chose qui reste à faire dans ce document.** `v1.1.0` est
+> taguée depuis le 2026-08-31 (`960f168`) et `build.gradle:10` porte
+> `1.1.0-SNAPSHOT` ; la stabilisation commence donc à **1.1.1**.
 
-### Phase 6 — Réalisme et spectacle · ~4 semaines
+La ligne 1.1.X ne livre aucune fonctionnalité. Elle ferme le jalon `J0` de
+[`05-roadmap-technique.md`](05-roadmap-technique.md) — *rendre le dépôt
+mesurable* — et corrige ce qui se voit à l'écran sur du contenu déjà livré.
 
-| ID | Item | ★ | ◆ | Taille |
-|---|---|:-:|:-:|:-:|
-| PHY-2 | Atmosphère par défaut + recalibrage optimiseur | 5 | 4 | L |
-| PHY-3 | Détecteurs MaxQ / interface + télémétrie + UI fidélité | 3 | 2 | M |
-| FX-3 | Particules de tuyère | 4 | 2 | M |
-| PHY-5 | Étages largués : objets propagés et modèles 3D | 4 | 3 | L |
-| NAV-5 | Hover « wow » planètes + orbites | 3 | 2 | M |
+| Item | Registre | Ce qui reste |
+|---|---|---|
+| `J0-B` | `DT-1` | Le lot a curé les règles PMD et est commité (`960f168`), mais **`build.gradle:113` porte toujours `ignoreFailures = true`**. Le troisième temps — celui qui empêche la dette de revenir — n'est pas posé |
+| `J0-C` | `DT-4`, `DT-6`, `DT-8`, `DT-9`, `DT-11` | Nettoyages guidés par l'analyseur curé : singleton à un appelant, exceptions larges, violations de langue, code mort, noms d'étapes en constantes |
+| `J0-D` | les 66 fiches | Re-vérification des trois registres contre le code. La revue du 2026-08-30 en avait trouvé **4 périmées sur 9 relues** ; sans cette passe, les jalons de v2 partent sur ~40 % de fiches douteuses |
+| `BUG-3` | `bugs.md` | Les cinq lots d'[`orientation-planetes/01-decoupage.md`](../orientation-planetes/01-decoupage.md) sont implémentés le 2026-09-02 (`82ba2ff`). Reste **la validation à l'écran corps par corps**, qui arrête les `λ0` de `L3` |
+| `BUG-19` | `bugs.md` | Rotation propre des planètes externes aliasée par le pas de la fenêtre glissante — Neptune à **4,1 % du taux vrai**, Saturne et Uranus **à l'envers**. Cause racine établie, ampleur mesurée |
 
-**Note pour `PHY-2`** : les scénarios écrits en phase 3 par `UI-3` datent d'avant
-la bascule du drag. Le champ « modèle d'atmosphère » du format doit donc exister
-**dès `UI-3`**, même s'il ne vaut que `NONE` à ce moment-là — sinon les scénarios
-d'avant deviennent silencieusement faux au moment du basculement.
+**`J0-A` est fait** : `BUG-6`, `BUG-9` et `BUG-15` sont corrigés le 2026-08-31,
+et `REL-14` / `REL-23` — les deux vols de clôture jamais lancés — ont été
+exécutés le même jour, verts tous les deux.
 
-**Note pour `PHY-5`** : il est ici et pas plus tôt parce que sa valeur dépend de
-`PHY-2`. Sans traînée, un étage largué en orbite ne redescend jamais et un booster
-suborbital retombe sans ralentir : on obtiendrait deux points qui s'écartent, pas
-une séparation. Sa vraie contrainte de date n'est cependant pas technique — voir
-la fiche au §6 : les maillages par étage n'existent pas, et ce n'est pas du code.
+**Ce qui ne peut pas être dans 1.1.X.** `BUG-20` (plan des anneaux désaligné —
+Saturne 13,51°, Uranus 9,93° hors du plan équatorial de leur propre globe) est
+**hors de portée du code** : il demande un ré-export d'asset. Il rejoint `AST-1`
+en [v2](02-roadmap-v2.md), avec les trois autres items bloqués sur des maillages
+absents.
 
-### Phase 7 — Retour sur Terre · ~2,5 semaines
-
-> La phase qui ferme la boucle. Jusqu'ici une trajectoire part et ne revient
-> jamais ; ces deux items la ramènent. Tous deux sont **strictement en aval de
-> `PHY-2`** — sans traînée par défaut, une rentrée n'est pas une rentrée, c'est
-> une collision avec une sphère. C'est la seule raison pour laquelle `MIS-11` ne
-> tient pas compagnie au reste du lunaire en phase 4.
-
-| ID | Item | ★ | ◆ | Taille |
-|---|---|:-:|:-:|:-:|
-| MIS-10 | Déorbitage contrôlé et rentrée atmosphérique | 5 | 3 | M |
-| MIS-11 | Mission de type Artemis (survol lunaire et retour) | 5 | 4 | L |
-
-**`MIS-10` d'abord**, et pas seulement parce qu'il est le moins cher des deux :
-c'est lui qui répare la garde de rentrée et pose la terminaison de descente, que
-`MIS-11` réutilise tels quels pour sa dernière heure de vol. Pris dans l'autre
-ordre, `MIS-11` paie le même travail au milieu d'un chantier ◆4.
-
-**Fin de phase quand** : un vaisseau parti de la Terre y revient, à un endroit
-qu'on a choisi.
-
-### Pourquoi l'atmosphère est coupée en deux, à cheval sur les phases 3 et 6
-
-Le drag renchérit **l'ascension**, donc *toutes* les missions, lunaires et
-rendez-vous compris. Activer le drag par défaut invalide les baselines
-d'optimiseur : chaque type de mission écrit avant devra être recalibré après.
-Deux stratégies, une seule tient :
-
-- livrer l'atmosphère complète *avant* les nouvelles missions → un seul
-  recalibrage, mais la Lune recule de plusieurs semaines derrière un chantier
-  ◆4 risqué ;
-- livrer la **brique** tôt (`PHY-1`, drag activable par mission, **off** par
-  défaut, aucune trajectoire existante modifiée) et **basculer le défaut**
-  (`PHY-2`) une fois les types de missions posés → un seul recalibrage groupé,
-  en fin de parcours, sur un périmètre connu.
-
-La seconde est retenue. `PHY-1` doit donc être écrit avec cette contrainte
-explicite : *drag off ⇒ trajectoire identique au bit près*.
+**Fin de version quand** : PMD casse le build au lieu de le décorer, les trois
+registres sont datés d'une vérification contre le code, et les onze planètes
+tournent au bon taux dans le bon sens.
 
 ---
 
-## 4. Vue d'ensemble — arbitrage
+## 5. Ce que v1 a débloqué, et où sont partis les items non livrés
 
-Les mêmes items, triés par rapport valeur / difficulté décroissant. Ce tableau
-**ne donne pas l'ordre d'exécution** (c'est le §3) : il sert à piocher un item
-opportuniste, ou à décider quoi sacrifier quand une phase déborde.
+Trois nœuds commandaient tout le reste du document d'origine : **`MIS-8`** (le
+plus en amont, et le moins cher — tout ce qui durait plus d'un jour simulé
+butait dessus), **`PHY-4`** (sans lui, rien de lunaire) et **`MIS-2`** (sans
+fenêtre de lancement, ni la Lune ni un rendez-vous ne convergent : la cible
+n'est jamais au bon endroit). **Les trois sont fermés** — `MIS-8` le
+2026-08-09, `PHY-4` le 2026-08-18, `MIS-2` le 2026-08-20.
 
-| ID | Item | ★ | ◆ | Taille | Dépend de |
-|---|---|:-:|:-:|:-:|---|
-| ~~MIS-8~~ | ~~Horizon de mission explicite~~ — résolu | 5 | 2 | M | — |
-| ~~RND-1~~ | ~~Corriger les artefacts visuels de la vue spacecraft~~ — résolu | 4 | 2 | M | — |
-| ~~FX-1~~ | ~~Bloom sur le Soleil~~ — résolu (le tone mapping n'en faisait pas partie, voir détail) | 3 | 1 | S | — |
-| ~~MIS-1~~ | ~~Deuxième lanceur au catalogue~~ — résolu (mesh Ariane 5 faute d'Ariane 6, voir détail) | 3 | 1 | S | — |
-| ~~RND-3~~ | ~~Couleur par stage + passé/futur + marqueur « now »~~ — résolu | 4 | 2 | M | — |
-| ~~UI-1~~ | ~~Vue détail mission (orbite atteinte, message d'erreur)~~ — résolu | 4 | 2 | M | — |
-| ~~NAV-1~~ | ~~Transitions de caméra entre vues~~ — résolu | 4 | 2 | M | — |
-| ~~MIS-7~~ | ~~`EarthOrbitMission` paramétrable → polaire / SSO / MEO~~ — résolu (branche de nœud et catalogue de sites reportés, voir détail) | 4 | 2 | M | — |
-| ~~RND-2~~ | ~~Filtrage anisotrope (MSAA déjà actif)~~ — résolu | 2 | 1 | S | — |
-| ~~FX-2~~ | ~~Éclipses / pénombre inter-corps~~ — **résolu le 2026-08-29** | 4 | 3 | M | — |
-| FX-3 | Particules de tuyère | 4 | 2 | M | — |
-| ~~NAV-4~~ | ~~Breadcrumb de navigation 3D~~ — résolu | 3 | 2 | M | — |
-| ~~UI-2~~ | ~~Feedback de progression pendant l'optimisation~~ — **résolu le 2026-08-21** (file d'attente distinguée, quatrième MatDef maison, voir détail) | 3 | 2 | M | — |
-| ~~UI-4~~ | ~~Menu applicatif haut-gauche (remplace le bouton « Missions »)~~ — résolu | 3 | 2 | M | — |
-| ~~UI-5~~ | ~~Surfaces, modalité et pile de renvoi `ESC`~~ — résolu | 3 | 2 | M | UI-4 (livré) |
-| ~~NAV-2~~ | ~~Timeline indexée sur le temps + marqueurs d'événements~~ — résolu | 4 | 3 | M | — |
-| ~~NAV-3~~ | ~~Scrub continu (glisser sur la piste)~~ — résolu (le débit redouté n'existait pas, voir détail) | 3 | 2 | S | NAV-2 |
-| ~~RND-4~~ | ~~Ribbon billboardé (orbites + trajectoires)~~ — résolu | 4 | 3 | M | — |
-| ~~MIS-3~~ | ~~Solveur de Lambert + repère LVLH~~ — **dissous le 2026-08-20** (Lambert déjà livré par `PHY-4`, LVLH sans consommateur avant `MIS-6`, voir détail) | 4 | 3 | M | — |
-| ~~MIS-2~~ | ~~Fenêtres de lancement~~ — résolu (cible TLE et précession J2 reportées en `MIS-6`, voir détail) | 4 | 3 | M | MIS-7 (livré) |
-| PHY-5 | Étages largués propagés + maillages par étage | 4 | 3 | L | — (mais sans valeur avant PHY-2) |
-| NAV-5 | Hover « wow » planètes + orbites | 3 | 2 | M | RND-4 (livré) |
-| ~~UI-3~~ | ~~Persistance des missions / format de scénario~~ — **résolu le 2026-08-21** | 4 | 3 | M | — |
-| ~~PHY-4~~ | ~~Socle multi-corps (3ᵉ corps, SOI, repères)~~ — **résolu le 2026-08-18** | 5 | 4 | L | — |
-| ~~MIS-5~~ | ~~Mise en orbite lunaire (LOI)~~ — **résolu le 2026-08-29** | 5 | 3 | M | MIS-4 (livré) |
-| MIS-10 | Déorbitage contrôlé et rentrée atmosphérique | 5 | 3 | M | PHY-2, PHY-3 |
-| ~~MIS-4~~ | ~~Survol lunaire (TLI + flyby)~~ — **résolu le 2026-08-28** | 5 | 4 | L | PHY-4 (livré), MIS-2 (livré) |
-| MIS-11 | Mission Artemis : survol lunaire et retour | 5 | 4 | L | MIS-4 (livré), MIS-10 |
-| ~~PHY-1~~ | ~~Atmosphère : brique drag, désactivée par défaut~~ — **résolu le 2026-08-21** | 4 | 3 | L | — |
-| PHY-3 | Détecteurs MaxQ / interface + télémétrie + UI fidélité | 3 | 2 | M | PHY-1 (livré) |
-| PHY-2 | Atmosphère par défaut + recalibrage optimiseur | 5 | 4 | L | PHY-1 (livré) |
-| MIS-6 | Rendezvous / phasing sur cible TLE | 5 | 5 | XL | MIS-2 (livré), MIS-7 (livré) |
-| RND-5 | Repère d'affichage des trajectoires (bascule inertiel / tournant) — *confort, hors phases* | 2 | 2 | S | — |
-| UI-6 | Fenêtres déplaçables, empilement par focus, modalité du wizard — *hors phases* | 3 | 2 | M | UI-5 (livré) |
-| UI-7 | Tooltips sur les contrôles + socle de survol partagé (absorbe `BUG-4`) — *hors phases* | 3 | 2 | M | — |
+Un quatrième a disparu du graphe sans être livré : `MIS-3` (Lambert + LVLH),
+**dissous le 2026-08-20** parce qu'il n'avait plus de contenu propre. Sa fiche
+au §6 dit où chaque moitié a été reversée.
 
-**`RND-5` n'est dans aucune phase, délibérément.** C'est un confort de lecture, pas
-un préalable : rien n'en dépend, il ne corrige aucun défaut (§6, fiche `RND-5`), et
-il est là pour être pioché un jour de creux. Le laisser hors des phases est plus
-honnête que de le glisser en fin de phase 6 où il ferait semblant d'être planifié.
+Les items jamais entamés ont suivi leur version. Le graphe de dépendances
+inter-versions est dans [`00-index.md`](00-index.md) :
 
-**`UI-6` non plus, et pour une raison différente.** Il ne dépend de rien et rien
-n'en dépend, mais il n'est pas gratuit dans le temps : chaque surface livrée d'ici
-là est une fenêtre de plus à reprendre. Le bon moment n'est donc pas « un jour de
-creux » mais « avant la prochaine fenêtre », et c'est `UI-3` (persistance) qui la
-posera vraisemblablement. À piocher à ce moment-là, ou plus tôt si le nombre de
-fenêtres ouvertes simultanément devient gênant à l'usage.
+| Item | Va en | Pourquoi là |
+|---|---|---|
+| `PHY-2`, `PHY-3`, `PHY-5`, `FX-3`, `NAV-5` | [v2](02-roadmap-v2.md) | L'ancienne phase 6, « réalisme et spectacle » |
+| `MIS-10` | [v2](02-roadmap-v2.md) | Un satellite se déorbite **entier** : c'est la mission qui rend `PHY-2` vérifiable |
+| `RND-5` | [v2](02-roadmap-v2.md) | Phasé, alors qu'il était volontairement hors phases — il fait paire avec la trace au sol (`RND-6`) |
+| `MIS-11` | [v3](03-roadmap-v3.md) | Artemis rentre **en capsule** : il attend la séparation de charge utile livrée en v2 |
+| `UI-6`, `UI-7` | [v3](03-roadmap-v3.md) | Phasés, eux aussi — l'argument qui les tenait hors phases (« leur coût augmente avec le temps ») est un argument pour les planifier |
+| `MIS-6` | [v4](04-roadmap-v4.md) | L'ancienne phase 5, déplacée derrière la séparation de charge utile |
+| `MIS-9` | [v4](04-roadmap-v4.md) | Non planifié et conditionnel ; sa fiche le range derrière la généralisation d'`EphemerisSource` que `MIS-6` fait |
 
-**`UI-7` obéit à la même logique, en plus marqué.** Son coût est proportionnel au
-nombre de contrôles à reprendre — 22 sites de survol aujourd'hui, un de plus à
-chaque widget livré entre-temps. Il ne bloque rien, mais c'est le seul item de la
-liste dont le prix augmente mécaniquement avec le temps.
-
----
-
-## 5. Graphe de dépendances (l'essentiel)
-
-```
-MIS-8 (horizon de mission) ✔ résolu — ses trois aval sont débloqués
-   ├── NAV-2 (piste temporelle) ✔ ── NAV-3 (scrub) ✔ — les deux résolus
-   ├── MIS-4 / MIS-5 (lunaire) ✔ résolus — coast TLI géré au-delà de l'horizon initial
-   └── MIS-6 (rendezvous : phasing sur N révolutions)
-
-MIS-7 (mission Terre paramétrable) ✔ résolu — MIS-2 est débloqué
-   └── MIS-2 (fenêtres de lancement) ✔ résolu — MIS-4 et MIS-6 sont débloqués
-          ├── MIS-4 (survol lunaire) ✔ ──── MIS-5 (orbite lunaire) ✔ — les deux résolus
-          │      ▲
-          │   PHY-4 (multi-corps)
-          └── MIS-6 (rendezvous) ◄── source éphéméride TLE
-
-PHY-1 (drag off par défaut) ✔ résolu ── PHY-2 (drag par défaut + recalibrage)
-                            └─ PHY-3 (MaxQ, télémétrie)
-
-PHY-2 + PHY-3 ── MIS-10 (déorbitage + rentrée)
-                     └── MIS-11 (Artemis : survol lunaire + retour)
-                            ▲
-                         MIS-4 (survol lunaire) ✔ résolu
-
-PHY-5 (étages largués) — aucun amont dur, mais sans PHY-2 il ne montre rien
-
-RND-4 (ribbon) ✔ résolu ── NAV-5 (hover) — débloqué : la largeur est un uniform
-```
-
-Trois nœuds commandaient tout le reste : **MIS-8** (le plus en amont, et le
-moins cher — tout ce qui durait plus d'un jour simulé butait dessus), **PHY-4**
-(sans lui, rien de lunaire) et **MIS-2** (sans fenêtre de lancement, ni la Lune
-ni un rendez-vous ne convergent — la cible n'est jamais au bon endroit).
-
-**Les trois sont fermés** : `MIS-8` le 2026-08-09, `PHY-4` le 2026-08-18,
-`MIS-2` le 2026-08-20. `PHY-4` s'est d'ailleurs fermé sans jamais dépendre de
-`MIS-2` — aucun de ses six lots ne réclamait de fenêtre de lancement, tous se
-testaient à géométrie Terre-Lune imposée (découpage §1).
-
-`MIS-4` attendait les deux et n'attendait donc plus personne : c'était le
-prochain item que rien n'avait en amont, et il est résolu à son tour depuis le
-2026-08-28 — `MIS-5` (orbite lunaire) a suivi le 2026-08-29. `MIS-6` n'attend
-plus qu'une **source éphéméride TLE** — celle-ci reste bien de son ressort, et
-non un reliquat de `MIS-2`, pour
-la raison écrite au §10 de
-[`docs/mission-window/01-basics.md`](../mission-window/01-basics.md).
-
-**Le quatrième nœud a disparu du graphe sans être livré.** `MIS-3` (Lambert +
-LVLH) y figurait comme un amont de `MIS-6` ; il a été **dissous le 2026-08-20**
-parce qu'il n'avait plus de contenu propre — le solveur de Lambert est arrivé
-comme sous-produit de `PHY-4`, et le repère LVLH n'a aucun consommateur avant
-`MIS-6` lui-même. Un nœud qui ne bloque plus rien ne doit pas rester dans le
-graphe : la fiche au §6 dit où chaque moitié a été reversée.
-
-**Le graphe a désormais une queue, et elle est entièrement commandée par `PHY-2`.**
-`MIS-10` et `MIS-11` sont les deux premiers items du document à dépendre de
-l'atmosphère *allumée* et non de la brique : `PHY-1` leur donne le modèle de
-traînée, il ne leur donne pas une trajectoire qui redescend. `PHY-5`, lui, n'a
-aucun amont dur — son calendrier est décidé par la disponibilité de maillages par
-étage, qui ne sont pas du code et n'apparaissent donc dans aucun graphe.
+**Pourquoi l'atmosphère a été coupée en deux, et pourquoi ça a tenu.** `PHY-1`
+livrait la brique de traînée **désactivée par défaut** — *drag off ⇒
+trajectoire identique au bit près* — et `PHY-2` bascule le défaut une fois les
+types de missions posés. L'alternative était de livrer l'atmosphère complète
+avant les nouvelles missions : un seul recalibrage aussi, mais la Lune reculait
+de plusieurs semaines derrière un chantier ◆4 risqué. La contrainte du bit près
+a tenu sur toute la phase 3, et c'est ce qui permet à v2 de ne recalibrer
+qu'une fois, sur un périmètre connu.
 
 ---
 
 ## 6. Détail des items
 
-*Fiches de référence, dans l'ordre des familles d'identifiants — pas dans
-l'ordre d'exécution. Pour savoir par quoi commencer, voir le §3.*
+*Fiches des items **livrés** en v1, dans l'ordre des familles d'identifiants.
+Les fiches des items non livrés ont suivi leur version (§5).*
 
 ### RND — Rendu et lisibilité
 
@@ -614,32 +500,6 @@ tirets animés sont trois lignes de fragment. Voir la spec §11.
 
 **Spec.** [`effects-roadmap.md`](../graphics-effects/effects-roadmap.md) §9.4.1,
 remplacé par [`ribbon-lines.md`](../graphics-effects/ribbon-lines.md).
-
-#### RND-5 — Repère d'affichage des trajectoires — ★2 ◆2 S
-
-**Pourquoi.** Une trajectoire de mission est dessinée en repère inertiel (GCRF)
-pendant que le globe tourne sous elle : six heures après le décollage, le pied de
-l'ascension est à 90° de longitude du pas de tir. **Ce n'est pas un défaut** —
-vérifié dans le code, les trois maillons sont corrects — mais rien dans l'image ne
-dit au lecteur laquelle des deux choses bouge.
-
-**Ce que c'est.** Une bascule globale à deux valeurs dans le menu applicatif,
-**défaut inertiel** (la convention de tous les outils de trajectoire, et le
-comportement actuel). En repère tournant, la trace repart du pas de tir et s'y
-ancre, au prix de la lecture orbitale : l'ellipse devient un enroulement.
-
-**Ce qui rend l'item petit** : les sommets en repère lié au corps sont cuits une
-fois à la construction de l'éphéméride, et l'affichage n'ajoute qu'une rotation de
-nœud par frame. La tête de la traînée retombe exactement sur le vaisseau sans
-traitement particulier, donc ni la caméra, ni le globe, ni le repère flottant ne
-sont touchés.
-
-**Indépendant de `RND-4`**, dans les deux sens : le ruban change la primitive
-dessinée, cette bascule change le contenu du buffer.
-
-**Spec.** [`trajectory-display-frame.md`](../graphics-effects/trajectory-display-frame.md).
-
----
 
 ### NAV — Caméra, timeline, navigation
 
@@ -860,18 +720,6 @@ place, `Solar system > Earth > Moon` étant déjà exactement ce qu'il affiche.
 à relire avant la V2 : ses §3 et §5.1 décrivent encore des segments centrés, et
 son §5.2 un `PlanetPoseAppState` à modifier.
 
-#### NAV-5 — Hover « wow » — ★3 ◆2 M
-
-Spec complète, et **le préalable est levé** : le boost d'épaisseur à ×2 sur hover
-reposait sur `setLineWidth`, sans effet sur les drivers en profil core. `RND-4`
-étant livré, la largeur et l'alpha sont des uniforms du matériau `Ribbon` — la
-spec est applicable telle qu'écrite, et les deux animations de 150 ms qu'elle
-demande sont deux `setFloat` par frame, sans reconstruction de géométrie.
-
-**Spec.** [`docs/graphics-effects/hover-effects.md`](../graphics-effects/hover-effects.md).
-
----
-
 ### FX — Effets graphiques
 
 #### ~~FX-1 — Bloom sur le Soleil — ★3 ◆1 S~~ — **RÉSOLU le 2026-08-09**
@@ -991,16 +839,6 @@ essayées :
 
 **Spec.** [`docs/eclipses/01-decoupage.md`](../eclipses/01-decoupage.md).
 
-#### FX-3 — Particules de tuyère — ★4 ◆2 M *(ajout)*
-
-Les vaisseaux glissent en silence, et rien à l'écran ne distingue une phase
-propulsée d'un coast. `ParticleEmitter` (built-in) attaché au node du vaisseau,
-blending additif, débit modulé par la magnitude de poussée, activation pilotée
-par la phase courante via `MissionContext`. Synergie directe avec `RND-3` (code
-couleur thrust/coast sur la trajectoire) : même information, deux canaux.
-
----
-
 ### PHY — Physique
 
 #### ~~PHY-1 — Atmosphère : la brique, désactivée par défaut — ★4 ◆3 L~~ — **RÉSOLU le 2026-08-21**
@@ -1054,25 +892,6 @@ Le vol allumé : [`docs/atmosphere/05-conception-L2.md`](../atmosphere/05-concep
 Étude d'impacts (2026-05-05, à lire avec le §2.2 du découpage) :
 [`docs/atmosphere/01-impacts-fonctionnels-techniques.md`](../atmosphere/01-impacts-fonctionnels-techniques.md).
 
-#### PHY-2 — Atmosphère par défaut + recalibrage — ★5 ◆4 L
-
-Harris-Priester pour l'optimisation, NRLMSISE-00 pour la propagation runtime —
-cohérent avec la philosophie 8×8 / 50×50 déjà en place. Relever le
-`periapsisFloor` (100 km n'a plus de sens avec du drag), absorber les pertes
-dans `dt1MaxPhysical`, re-baseliner `LEOMissionOptimizationTest` et la suite
-paramétrique. C'est **le** chantier qui rend la simulation crédible : sans drag,
-un gravity turn atteint son apogée avec moins d'ergols qu'un vrai lanceur.
-
-Coût compute attendu : +5 % (Harris-Priester) à +50 % (NRLMSISE-00) sur une
-optimisation CMA-ES.
-
-#### PHY-3 — Détecteurs, télémétrie, UI de fidélité — ★3 ◆2 M
-
-`MaxQDetector`, `AtmosphericInterfaceDetector` (ligne de Kármán — hook direct
-pour une future rentrée), extension de `TelemetryWidgetAppState` avec Q et drag
-instantané, sélecteur Off / Statique / Réaliste dans `StepParameters`. Le profil
-`Q(t)` est le meilleur objet pédagogique que l'atmosphère apporte.
-
 #### ~~PHY-4 — Socle multi-corps — ★5 ◆4 L~~ — **RÉSOLU le 2026-08-18**
 
 **Pourquoi.** C'était le prérequis dur des deux missions lunaires. Tout était
@@ -1119,7 +938,7 @@ Suite complète : **808 tests, 0 échec**.
 c'est ce qui a rendu le chantier sûr : chaque lot pouvait bouger la couture sans
 risquer une mission terrestre.
 
-**Le troisième viewport n'a pas été nécessaire** (question ouverte n° 4, §7) :
+**Le troisième viewport n'a pas été nécessaire** (question tranchée n° 3, §7) :
 `L5` §5.3 l'a écarté sur mesure, `L6` §12.5 l'a confirmé à l'écran sur la
 première trajectoire lunaire réelle.
 
@@ -1135,43 +954,6 @@ faut pour cela une trajectoire **capturée**, qui reste dans la sphère, donc
 [`BUG-7`](../bugs.md#bug-7--les-gates-de-non-régression-tombent-quand-un-test-lunaire-les-précède-dans-le-même-jvm),
 trouvé pendant `L6` mais antérieur à lui : les gates tombent quand un test
 lunaire les précède dans le même JVM.
-
----
-
-#### PHY-5 — Étages largués : objets propagés et modèles 3D — ★4 ◆3 L *(ajout)*
-
-**Pourquoi.** Aujourd'hui un étage largué **n'existe pas**. `StageSeparationStage`
-est une chute de masse et rien d'autre : l'état passe à la masse de référence de
-la pile au-dessus, `resolveActiveStage` active le véhicule suivant, et l'étage
-abandonné disparaît de la simulation à l'instant précis où il devient intéressant.
-La séparation est le seul moment d'un vol où les images réelles montrent deux
-objets ; chez nous, elle ne montre rien.
-
-**À faire.**
-- **Un objet propagé par étage largué** : masse sèche, coefficient balistique
-  propre, état initial hérité de l'état de séparation, propagation autonome
-  jusqu'à l'impact ou la décroissance.
-- **Une éphéméride par objet.** C'est ici qu'est le coût réel, et il n'est pas
-  dans la physique : `MissionEphemeris` décrit **une** trajectoire, et le renderer
-  en suppose une par mission. Le passage à N est le même exercice que `PHY-4 / L3`
-  a fait pour les arcs (un repère par échantillon), mais sur l'autre axe.
-- **Des maillages par étage.** Il n'y a qu'**un mesh par lanceur** aujourd'hui
-  (`LauncherAssets` : `heavy_falcon.gltf`, `ariane/scene.gltf`), la pile entière
-  d'un seul tenant. Et `src/main/resources/models/` n'est pas versionné : les
-  modèles par étage sont un livrable **hors code**, à produire ou à sourcer avant
-  que l'item soit démarrable. C'est cette contrainte qui décide de sa date, pas sa
-  difficulté.
-- **La séparation elle-même** : impulsion de séparation, deux corps qui s'écartent,
-  et un débris qui garde son identité dans le breadcrumb et la télémétrie.
-
-**Pourquoi `PHY` et pas `RND`.** La moitié visible est du rendu, mais ce qui manque
-n'est pas un dessin : c'est un **objet propagé**. Tant que la simulation n'a qu'une
-trajectoire par mission, le rendu n'a rien à montrer.
-
-**Ce que l'item s'interdit.** L'optimiseur ne voit pas les débris. Un étage largué
-est propagé pour l'affichage et la pédagogie, jamais dans la boucle CMA-ES : sinon
-le coût d'une évaluation est multiplié par le nombre d'étages, pour un résultat qui
-n'entre dans aucune fonction objectif.
 
 ---
 
@@ -1364,7 +1146,8 @@ lunaire, et un service exprimant un état chaser en `(δr, δv)` relatif dans
   ou hors MVP (§3.2 pt 5 et §3.5 pt 5 de la spec).
 
 **Le report ne coûte rien**, et c'est ce qui distingue ce cas de `UI-6` / `UI-7`
-(§4) : aucune couture ne s'accumule d'ici là, puisque le repère est fourni par la
+(désormais en [v3](03-roadmap-v3.md)) : aucune couture ne s'accumule d'ici là,
+puisque le repère est fourni par la
 bibliothèque et qu'aucun état relatif n'existe dans `simulation/`.
 [`trajectory-display-frame.md`](../graphics-effects/trajectory-display-frame.md)
 §8 disait déjà la même chose du côté rendu.
@@ -1459,119 +1242,6 @@ deux sont séparés.
 
 **Spec.** [`docs/lunar-orbit/01-decoupage.md`](../lunar-orbit/01-decoupage.md)
 à [`09-conception-L7.md`](../lunar-orbit/09-conception-L7.md).
-
-#### MIS-6 — Rendezvous / phasing sur cible TLE — ★5 ◆5 XL
-
-Le plus gros item du document, et le mieux préparé : la spec dédiée fait 528
-lignes et a déjà tranché l'essentiel.
-
-**Décomposition.**
-1. **Source TLE bufferisée.** `TLEPropagator` (SGP4) derrière
-   `SlidingWindowEphemerisBuffer` — **non négociable** : à ×10⁵ de vitesse
-   d'horloge, l'orbite cible défile entièrement entre deux frames, et une ligne
-   d'orbite demande 100–500 points par rafraîchissement. Fenêtre bornée par la
-   validité physique du TLE (±3 à 7 jours), pas de dataset 1990-2101.
-2. **Abstraction `EphemerisTarget`** (scellée : `SolarBody` | `TleTarget`) —
-   l'API est aujourd'hui couplée à l'enum `SolarSystemBody` de bout en bout.
-   C'est le vrai coût de refactor du chantier.
-3. **Stages** phasing (N révolutions entières, `Δa`) puis transfert Lambert.
-4. **Coût** `‖Δr‖ + ‖Δv‖ + ΣΔv + corridor + ergols`, cible MVP Δr < 10 km,
-   `‖Δv_rel‖` < 10 m/s.
-5. **Rendu de la cible** : `TargetObjectRenderer`, aujourd'hui inexistant.
-6. **Repère LVLH**, hérité de `MIS-3` dissous le 2026-08-20. `LOFType.LVLH` est
-   fourni par Orekit et le dépôt pratique déjà `LOFType` + `LofOffset` ailleurs :
-   le code tient en une dizaine de lignes. Ce qui appartient à cet item est la
-   **forme** que prend le service — δr/δv bruts pour le coût terminal du point 4,
-   ou figure relative pour le stretch ci-dessous — et elle ne se décide qu'ici,
-   faute de consommateur avant.
-
-**Tranché dans la spec, à ne pas rouvrir** : pas de Pontryagin (dans le cas
-impulsif il ne rapporte rien sur une méthode directe), pas d'approche terminale
-HCW au MVP, ISS seule comme cible.
-
-**Stretch à fort rendement** : la vue LVLH dédiée. En repère inertiel, un
-rendez-vous est une spirale illisible ; en LVLH, c'est une figure compacte
-autour de la cible. C'est le bénéfice visuel n°1 de la feature.
-
-**Spec.** [`docs/brainstorm/leo-rendezvous-preparation.md`](../brainstorm/leo-rendezvous-preparation.md).
-
-#### MIS-10 — Déorbitage contrôlé et rentrée atmosphérique — ★5 ◆3 M *(ajout)*
-
-**Promu du backlog.** L'item figurait au §7 depuis l'origine (« Molniya / HEO,
-déorbitage et rentrée, … ») ; il en sort parce que son préalable est enfin daté.
-Une fiche de brainstorm existe déjà —
-[`docs/brainstorm/missions.md`](../brainstorm/missions.md) §6, cotée ★5 ◆3 — mais
-elle est **périmée sur un point** : elle range `ReentryDetector` dans « ce qui
-manque », alors qu'il existe
-([`ReentryDetector.java`](../../src/main/java/com/smousseur/orbitlab/simulation/mission/detector/ReentryDetector.java))
-et qu'il est armé en production sur chaque leg d'étage.
-
-**La garde de rentrée est à réparer avant tout le reste.** `PHY-1 / L0` §2.3 a
-rejoué quatre rentrées par traînée avec `ReentryGuard.armQuiet` armé, exactement
-comme `StageLegRunner` l'arme en vol : la garde **ne change rien** — pas un pas
-d'intégration, pas une seconde sur la date d'échec. La cause est son plancher,
-`SUBSURFACE_FLOOR = −50 km`, choisi parce que l'altitude *sphérique* d'un pas de
-tir est déjà négative (la Terre est aplatie de 21,4 km) ; or l'intégrateur meurt à
-−9 km et −30 km, c'est-à-dire **au-dessus** du plancher. Un détecteur inopérant
-dans le seul régime pour lequel il existe est le premier livrable de l'item, pas un
-détail d'intégration.
-
-**À faire.**
-- `DeorbitBurnStage` : burn rétrograde abaissant le périgée sous ~80 km. La brique
-  existe — c'est un `ConstantThrustStage` en direction opposée.
-- `ReentryObjective` : point d'impact visé, fenêtre d'entrée, heure de rentrée.
-- Terminaison propre : `AtmosphericInterfaceDetector` (livré par `PHY-3`) pour
-  marquer l'entrée, et une borne d'altitude qui arrête la propagation **avant** que
-  l'intégrateur ne cède — la même borne que `PHY-1 / L0` §2.2 réclame déjà pour des
-  raisons de temps de calcul.
-- L'empreinte au sol du point d'impact ; la trace au sol du §7 cesse ici d'être un
-  ornement.
-
-**Le coût compute est le risque, et il est mesuré.** Entre 200 km et 130 km
-d'altitude initiale, une descente sous traînée passe de 452 pas d'intégration à
-**982 497** (`PHY-1 / L0` §2.3). Un déorbitage vise précisément ce régime : l'item
-doit borner son temps de calcul par construction, pas espérer qu'il tienne.
-
-**La désintégration n'est pas dans le périmètre** — voir la question ouverte n°8,
-qui sépare les trois paliers et leurs coûts très inégaux.
-
-#### MIS-11 — Mission de type Artemis : survol lunaire et retour — ★5 ◆4 L *(ajout)*
-
-**Pourquoi.** C'est la mission qui ferme la boucle : partir de la Terre, contourner
-la Lune, revenir. Aucune autre mission du document ne revient.
-
-**L'aller est presque acquis.** `MIS-4` livre le TLI de production et le survol ;
-`PHY-4 / L6` a déjà volé un translunaire complet — parking à 185 km, injection sur
-seed Lambert, bascule de sphère d'influence à 74 h, périlune volé à 100,4 km pour
-100 visés. La branche aller de `MIS-11` n'est donc pas un chantier neuf, c'est un
-`MIS-4` **contraint** : le survol y est visé pour que la branche retour existe, et
-non pour lui-même.
-
-**Une correction sur l'énoncé.** Artemis, comme Apollo, ne repasse **pas** par une
-orbite basse au retour : c'est une **entrée directe** depuis la trajectoire de
-retour. Se mettre en LEO en revenant de la Lune coûte ~3,1 km/s de freinage — donc
-un étage de plus à dimensionner — ou une **aérocapture**, c'est-à-dire un passage
-atmosphérique dosé, qui exige la traînée de `PHY-2` *et* un modèle thermique que
-personne n'a écrit ici. Les trois lectures donnent trois missions différentes ;
-c'est la question ouverte n°9, à trancher avant d'écrire la spec.
-
-**À faire.**
-- `FreeReturnObjective` : viser le périlune **et** le périgée de la branche retour
-  d'un seul coup. C'est la contrainte qui définit la mission, et elle n'a aucun
-  équivalent dans les objectifs actuels, tous mono-orbite.
-- Un horizon de mission de l'ordre de dix jours — `MissionHorizon` (livré par
-  `MIS-8`) le porte déjà, c'est l'objet même de cet item.
-- Une trajectoire à **trois** arcs (Terre → Lune → Terre) là où le lunaire en a
-  deux. `PHY-4 / L3` a posé le repère par échantillon, donc le troisième arc ne
-  devrait rien coûter — à vérifier : ce sera la première bascule de sphère
-  d'influence dans le sens du retour, et la bande morte ε que `PHY-4 / L6` laisse
-  ouverte n'a toujours pas de calibrage.
-- La rentrée finale : `MIS-10` tel quel. C'est la raison de l'ordre des deux items
-  dans la phase.
-
-**Spec.** [`docs/brainstorm/missions.md`](../brainstorm/missions.md) §8 traite le
-lunaire d'un bloc (TLI + LOI) et ne dit **rien** du retour ; à étendre avant de
-commencer.
 
 #### ~~MIS-8 — Horizon de mission explicite — ★5 ◆2 M~~ — **RÉSOLU le 2026-08-09**
 
@@ -1696,48 +1366,6 @@ donc l'invariant est structurel et non seulement souhaité ; et `FALLBACK_DURATI
 est bien atteignable, mais par un `CoastingStage(stopAtNode = true)` dont le nœud n'arrive
 pas — d'où la décision de ne pas y toucher.
 
-#### MIS-9 — Éphéméride de mission hors mémoire — **non planifié, conditionnel**
-
-> Corollaire naturel de `MIS-8`, délibérément **non retenu dans une phase**. Ce
-> n'est pas un refus : c'est un item dont la condition de déclenchement n'est
-> pas remplie aujourd'hui, et qui coûterait cher s'il était fait trop tôt.
-
-**L'idée.** Ne plus garder toute la trajectoire en mémoire : la générer en flux
-vers le disque, et n'en charger qu'une fenêtre.
-
-**Pourquoi ce n'est pas la bonne réponse *maintenant*.** Le tableau de `MIS-8`
-montre que le pas d'échantillonnage variable rend tenable tout horizon
-réaliste (30 jours ≈ 7 Mo). Le stockage hors mémoire achèterait le même
-résultat pour dix fois le travail : format, versionnement, IO hors du fil de
-rendu, fenêtre glissante, invalidation à la ré-optimisation, cycle de vie des
-fichiers temporaires. Et il ne réglerait pas le vrai défaut — les deux
-consommateurs aux besoins incompatibles (cf. `MIS-8`), qui restera entier
-quelle que soit la localisation des octets.
-
-**Conditions de déclenchement** (au moins une, et **mesurée**, pas supposée) :
-
-1. un cas d'usage réel demande une résolution fine sur un horizon long — par
-   exemple une décroissance orbitale sur des mois après `PHY-2`, ou une analyse
-   post-mission qui veut chaque seconde de l'ascension **et** 30 jours de
-   dérive ;
-2. le nombre de missions simultanément visibles fait de la somme des
-   éphémérides un poste mémoire mesuré, pas redouté ;
-3. le mode batch (backlog) veut produire des trajectoires sans les afficher.
-
-**Comment le faire le jour venu — et surtout, ce qu'il ne faut pas faire.**
-Ne pas inventer un format de trajectoire mission sur disque. Le projet a déjà
-toute la machinerie pour ça : `SlidingWindowEphemerisBuffer`,
-`EphemerisWorker`, le format V1 zstd de `simulation/source/`, `LruCache`,
-prefetch. Et `MIS-6` conclut déjà que la cible TLE doit passer par cette même
-couche. Trois consommateurs convergent donc — planètes, cibles TLE,
-trajectoires longues — et le geste juste est de **généraliser
-`EphemerisSource` / `EphemerisTarget` une fois**, la trajectoire de mission
-devenant une source parmi d'autres. Ce refactor est déjà compté dans `MIS-6` :
-si `MIS-9` se déclenche, il se fait *après* lui et à son tarif marginal, pas
-comme un chantier séparé.
-
----
-
 ### UI — Panel et plomberie mission
 
 #### ~~UI-1 — Vue détail mission~~ — ★4 ◆2 M — **résolu le 2026-08-10**
@@ -1852,7 +1480,7 @@ le spec et les paramètres optimisés. C'est ce qui garde `UI-3` à ◆3 et le r
 indépendant de toute question de mémoire.
 
 **Couplage avec `PHY-2`, désormais certain.** `UI-3` est en phase 3, la bascule
-du drag en phase 6 : tous les scénarios écrits d'ici là le seront **sans**
+du drag en [v2](02-roadmap-v2.md) : tous les scénarios écrits d'ici là le seront **sans**
 atmosphère. Le champ « modèle d'atmosphère » doit donc figurer dans le format
 dès la v1, même s'il ne vaut que `NONE` — sans lui, un scénario d'avant la
 bascule se rejoue après avec une physique différente et personne ne le voit
@@ -2012,320 +1640,40 @@ l'écran plutôt que par un test (§9).
 
 ---
 
-#### UI-6 — Fenêtres déplaçables, empilement par focus, modalité du wizard — ★3 ◆2 M *(ajout)*
 
-**Pourquoi.** `UI-5` a livré la mécanique et ne l'a appliquée qu'à une surface :
-le panneau de gestion se déplace par son bandeau, borné par `WindowDragHandler`.
-Sa fiche range explicitement l'**empilement par focus** dans son « ce qu'on ne
-fait pas ». C'est cet écart qu'on solde ici, plus la généralisation du glisser aux
-autres fenêtres.
+## 7. Questions tranchées pendant v1
 
-État des lieux — cinq natures de surface, trois comportements :
+*Les questions restées ouvertes ont suivi la version qui les paie ; elles sont
+listées en fin de tableau.*
 
-| Surface | Couche | Déplaçable | Bandeau |
-|---|---|---|---|
-| Panneau de gestion (`MissionPanelWidget`) | `WINDOW` (20) | oui | `PanelHeader`, 88 px |
-| Panneau d'affichage (`MissionDisplayPanelWidget`) | `PANEL` (10) | non — ré-ancré haut-gauche (`:183`) | `DisplayPanelHeader`, 36 px |
-| Wizard (`MissionWizardWidget`) | `MODAL` (101) | non — modal, centré (`:281`) | — |
-| `ConfirmDialog` | `DIALOG` (201) | non, et c'est correct | — |
-| HUD (capsule, timeline, télémétrie, breadcrumb) | `HUD` (0) | non, et c'est correct | — |
-
-« Toutes les fenêtres » désigne donc les deux panneaux, plus le wizard s'il cesse
-d'être modal. Le HUD est ancré par nature et un dialogue bloquant n'a pas à fuir.
-Il faut un critère mécanique plutôt qu'un arbitrage par widget : **est une fenêtre
-ce qui porte un bandeau de préhension.** Poser ce critère dans le code — une
-interface, ou un composant `Window` qui impose le bandeau — évite d'avoir à
-retrancher la question à chaque nouveau widget.
-
-**Le point dur : « actualiser le z » casse un invariant énoncé.** Dans
-`UiLayers`, l'échelle de profondeur **est aussi** l'ordre de renvoi d'`ESC` —
-`HudSurfaces.topmostOpen()` classe sur `layer()`, et `UI-5` en a fait une
-propriété revendiquée (« one ordering, two uses »). Deux conséquences immédiates :
-
-1. Remonter une fenêtre au clic change la cible d'`ESC`.
-2. `HudSurface.layer()` est un `float` figé dans le record, fixé une fois pour
-   toutes à l'enregistrement (`HudSurface.java:18-19`). Un `z` qui bouge à chaud
-   laisserait le registre classer sur une valeur périmée — donc `layer` doit
-   devenir une valeur lue à la demande, comme `openCheck` l'est déjà, ou être
-   remplacée par la lecture du `z` réel du spatial.
-
-Sur le fond, deux issues :
-
-- **(a) assumer** que les deux ordres restent le même : `ESC` renvoie ce qui est
-  devant, et ce qui est devant est ce qu'on vient de cliquer. Cohérent, et ne
-  coûte que le point 2 ci-dessus.
-- **(b) dissocier** ordre de rendu et ordre de renvoi. Contredit `UI-5` et double
-  l'état à tenir, pour un gain qui reste à formuler.
-
-Recommandation : **(a)**, avec une contrainte non négociable — *le rehaussement
-réordonne à l'intérieur d'une bande, jamais entre bandes.* Une fenêtre ne doit
-jamais passer devant le menu applicatif ni devant un modal. Concrètement
-`z = WINDOW + k`, avec `k` un ordinal compact borné par l'écart à la bande
-suivante (`MENU_CATCHER − WINDOW = 20`), soit vingt fenêtres empilables — très
-au-delà du besoin. Corollaire : si le panneau d'affichage devient déplaçable, il
-doit **rejoindre la bande `WINDOW`**. Laisser deux fenêtres qui peuvent se
-recouvrir dans deux bandes distinctes, c'est garder un ordre figé sous un
-mécanisme censé le libérer.
-
-**À faire.**
-
-1. **Extraire le trio qui fait une fenêtre** — bandeau, `WindowDragHandler`,
-   placement initial puis clamp au redimensionnement — hors de
-   `MissionPanelWidget`. Il en existe un exemplaire, il en faut deux, et la
-   troisième copie est prévisible (le wizard) : c'est exactement le cas où
-   `dette-technique.md` §6.3 demande de factoriser à la deuxième.
-2. **Rendre le panneau d'affichage déplaçable**, en corrigeant le piège déjà
-   rencontré : il se **repositionne** sur son ancrage
-   (`MissionDisplayPanelWidget:183`), donc il reviendrait se coller en haut à
-   gauche à chaque reconstruction de liste. La règle inverse est déjà écrite et
-   appliquée à l'autre fenêtre — placer à la première frame, ne plus y toucher
-   (`MissionPanelWidget:395`).
-3. **Registre d'empilement** porté par `ApplicationContext` (la règle « pas de
-   `getState()` » interdit que les `AppState` concernés s'interrogent) : il
-   connaît les fenêtres ouvertes, attribue les `k`, les réattribue au clic et les
-   compacte à la fermeture. Le clic doit être capté sur la **racine** de la
-   fenêtre et sans consommer l'événement : cliquer une ligne de mission doit
-   remonter la fenêtre *et* sélectionner la ligne.
-4. **Aucune persistance.** Position et ordre repartent du défaut à chaque
-   lancement. `UI-5` a déjà exclu la position sur disque, et la question plus
-   large des préférences utilisateur est ouverte en §8.6 — la rouvrir ici
-   mélangerait deux chantiers.
-
-**La modalité du wizard.** Deux faits, pas une préférence :
-
-- **Pour la garder modale** — le wizard porte un état non enregistré ; c'est
-  l'argument qu'`UI-5` a retenu et rien ne l'a périmé. Une fenêtre non modale
-  qu'on peut perdre derrière une autre avec un formulaire à moitié rempli est un
-  piège, et `confirmDiscard` ne protège que la fermeture explicite.
-- **Contre** — `OrbitLabApplication:141` coupe l'entrée souris de la caméra tant
-  que `isWizardVisible()`. Tel quel, un wizard non modal **gèlerait la navigation
-  3D** pendant toute sa présence à l'écran, c'est-à-dire précisément quand on
-  voudrait regarder la scène. Démodaliser impose donc de revoir cette condition :
-  la caméra doit céder la souris quand le curseur survole une surface, pas quand
-  une surface existe.
-
-Le besoin derrière la question — *consulter la liste des missions pendant la
-création* — mérite d'être constaté avant de payer les deux changements. S'il ne
-se manifeste pas, garder le wizard modal est la réponse la moins chère ; et
-l'écrire noir sur blanc évite de rouvrir le débat tous les trois mois. Question
-rangée en **§8.7**.
-
-**Ce qu'on ne fait pas.** Redimensionnement, réduction en barre, ancrage
-magnétique aux bords, positions persistées sur disque, fusion des deux panneaux
-mission. Même périmètre exclu qu'`UI-5`, à ceci près que l'empilement par focus
-en sort.
-
-**Validation.** Testables sans contexte GL : l'attribution des ordinaux (bande
-respectée, pas de collision, compactage stable à la fermeture d'une fenêtre du
-milieu) et le classement de `HudSurfaces` sous un `layer` devenu mobile. Le clamp
-l'est déjà (`WindowDragHandlerTest`, 11 tests). À vérifier à l'écran, comme
-`UI-5` l'avait fait pour les mêmes raisons : que le picking suive le nouveau `z`
-sans reconstruction, qu'une fenêtre remontée passe bien **sous** le menu
-applicatif, et que deux fenêtres qui se recouvrent supportent le clic alterné
-sans scintillement d'ordre.
-
-**Spec.** À écrire avant de coder — `docs/ui/02-fenetres-et-empilement.md`. Les
-deux points qui la justifient : le choix (a)/(b) sur l'unicité de l'ordre, et le
-sort du wizard. Le reste est de l'exécution.
-
----
-
-#### UI-7 — Tooltips sur les contrôles, et le socle de survol qui les porte — ★3 ◆2 M *(ajout)*
-
-**Pourquoi.** Plusieurs contrôles n'ont pour toute étiquette qu'une icône, et
-rien ne dit ce qu'ils font tant qu'on ne les a pas cliqués : les trois icônes de
-ligne du panneau d'affichage (télémétrie, visibilité, engrenage —
-`DisplayRowIcons`), les actions de ligne du panneau de gestion (`RowActionIcons`),
-les chevrons de pagination (`PaginationBar`), et surtout le contrôle segmenté
-*Fast / Balanced / Precise* (`ModeSegmentedControl`), dont les trois pictogrammes
-n'ont aucune chance d'être devinés. Le critère est celui-là, et il vaut mieux
-qu'une liste : **un contrôle doit une infobulle dès que son étiquette est une
-icône, ou qu'elle est tronquée.** Les entrées de menu, qui portent un libellé,
-n'en ont pas besoin.
-
-**« Mutualiser ce comportement » est en réalité le cœur de l'item.** Une
-infobulle se déclenche sur le couple `mouseEntered` / `mouseExited` — exactement
-celui que 22 fichiers de `ui/` recâblent déjà à la main pour leurs effets de
-survol ([`BUG-4`](../bugs.md#bug-4--hover-des-widgets-non-uniforme)). Livrer les
-infobulles sur leur propre listener donnerait 23 sites au lieu de 22, et deux
-écouteurs concurrents sur les mêmes spatiaux. Les deux chantiers n'en font donc
-qu'un, et l'ordre est imposé : **le helper de survol partagé d'abord, l'infobulle
-comme premier client de ce helper.** À ce titre `UI-7` absorbe `BUG-4`, selon la
-convention de `docs/bugs.md` (un bug qui s'avère être un chantier est promu en
-item de roadmap).
-
-**L'antériorité existe, mais elle n'est pas réutilisable telle quelle.**
-`TimelineTooltip` (dans `ui/timeline/mission/`) est une infobulle qui marche et
-qui a été pensée — mais pour un seul emplacement. Quatre de ses choix sont
-locaux, et chacun est un point de conception à reprendre :
-
-| Choix de `TimelineTooltip` | Pourquoi il ne se généralise pas |
-|---|---|
-| Classe *package-private*, attachée à la racine du widget avec un `z` **local** (`Z_TOOLTIP = 10f`) | Le bucket GUI trie sur le `z` **monde**. Une infobulle héritant du `z` de son panneau (`PANEL` = 10) passerait derrière la fenêtre de gestion (`WINDOW` = 20). |
-| La carte s'ouvre **vers le haut**, et le Javadoc explique pourquoi (`:59-64`) | Le raisonnement est juste, et il est propre à la bande la plus basse de l'écran. Ailleurs, il faut décider selon la place disponible. |
-| Largeur estimée au caractère (`CHAR_WIDTH = 5.4f`) | Exact au pixel pour la police bitmap monospace à 10 px, faux pour toute autre. L'UI en utilise plusieurs (IBM Plex Mono 11, Sora 13). |
-| Reconstruite seulement quand le texte change (`:80-83`) | Celui-là se garde : c'est la protection contre une allocation de labels par frame, et une infobulle ancrée au contrôle en aura d'autant moins besoin. |
-
-**Décisions à prendre — c'est la spec, pas l'implémentation.**
-
-1. **Une couche à elle.** Une infobulle doit passer devant tout, y compris devant
-   un dialogue bloquant dont elle décrit un bouton : `UiLayers.TOOLTIP` au-dessus
-   de `DIALOG` (201), donc 300. **Et elle ne s'enregistre pas dans
-   `HudSurfaces`** : `UI-5` a posé que la couche *est* l'ordre de renvoi d'`ESC`,
-   or `ESC` n'a pas à « fermer » une infobulle — elle disparaît d'elle-même. C'est
-   la première surface devant tout et absente du registre ; le noter dans le
-   Javadoc d'`UiLayers` évite qu'on l'y inscrive par symétrie.
-2. **Ancrée au contrôle, pas au curseur.** `TimelineTooltip` suit le curseur parce
-   qu'elle décrit une *position* sur une piste. Une infobulle de bouton décrit le
-   bouton : elle doit se poser à côté de lui et ne plus bouger, sans quoi elle
-   tremble sous la main. Placement avec bascule (au-dessus / en dessous / à
-   gauche / à droite) selon la place restante, plutôt qu'un clamp — un clamp la
-   ferait glisser sous le curseur.
-3. **Le délai, et donc qui tient l'horloge.** Une infobulle immédiate est
-   agressive, un survol de traversée ne doit rien déclencher : ~500 ms d'attente,
-   et une période « chaude » où passer d'un bouton au voisin affiche sans
-   attendre. Les listeners Lemur ne reçoivent pas de `tpf` : soit un `AppState`
-   unique fait avancer le gestionnaire d'infobulles, soit on échantillonne
-   `nanoTime` dans les événements. Le premier est plus honnête et reste un seul
-   `AppState`.
-4. **Mesure du texte.** Sortir de l'estimation au caractère, ou la rendre
-   dépendante de la police. **Piège connu** : les polices bitmap du HUD échouent
-   *en silence* sur une taille non embarquée ou un glyphe absent — le signe moins
-   U+2212 en particulier. Un texte d'infobulle est du texte arbitraire, donc
-   c'est exactement là que ça se reproduira ; fixer le jeu de caractères autorisé,
-   ou vérifier la police retenue, fait partie de la décision.
-
-**À faire.**
-
-1. Le helper de survol partagé (le composant que `BUG-4` réclame) : un point
-   d'entrée unique qui pose *un* listener et distribue à ses clients — skin de
-   survol, infobulle, curseur. Contrat d'états à écrire d'abord : *idle /
-   survolé / actif-sélectionné / désactivé / focus*, lesquels s'excluent, et ce
-   que chacun modifie.
-2. Le gestionnaire d'infobulles : une instance, portée par `ApplicationContext`
-   (pas de `getState()`), qui détient la carte unique, son délai et son
-   placement. Une seule infobulle à l'écran à la fois — c'est aussi ce qui évite
-   d'en avoir deux orphelines quand un panneau se reconstruit sous le curseur.
-3. Migration des 22 sites, et pose des textes sur les contrôles listés plus haut.
-4. **Un contrôle désactivé garde son infobulle**, et c'est même là qu'elle sert le
-   plus — elle peut dire *pourquoi* il est désactivé. À noter parce que le code
-   actuel fait l'inverse à un endroit : `ModeSegmentedControl:105-108` sort avant
-   de poser le moindre listener quand le segment est inerte.
-
-**Ce qu'on ne fait pas.** Pas d'infobulle riche (mise en forme, icône, lien),
-pas d'aide contextuelle ni de tour guidé, pas de raccourci clavier affiché dans
-la carte tant qu'il n'existe pas de table de raccourcis, pas de traduction.
-
-**Validation.** Testable sans contexte GL : la machine à états du délai (rien
-avant 500 ms, affichage après, période chaude entre deux contrôles voisins), le
-choix de placement selon la place restante (les quatre bascules, aux quatre
-coins de l'écran), et l'unicité de la carte. À l'écran : qu'une infobulle
-ouverte sur un bouton de dialogue passe bien devant le dialogue, et qu'un
-panneau reconstruit sous le curseur n'en laisse pas une derrière lui.
-
-**Spec.** À écrire — `docs/ui/03-survol-et-infobulles.md`. Le contrat d'états du
-§1 est le livrable qui compte : sans lui, la mutualisation reproduira les
-divergences actuelles avec de nouvelles valeurs.
-
----
-
-## 7. Backlog non planifié
-
-Gardé hors phases, à remonter si le besoin se manifeste :
-
-- **Rendu** — god-rays, normal maps, lumières de villes côté nuit, halo
-  atmosphérique Fresnel, anneaux de Saturne, ombres portées, trace au sol
-  (ground track), enveloppe d'incertitude autour du nominal.
-- **Profondeur** — logarithmic depth buffer ou reverse-Z, troisième viewport
-  « mid ». `RND-1` suffit aujourd'hui ; à rouvrir une fois les missions lunaires
-  en place (Terre + Lune + vaisseau dans le même cadre est précisément le cas
-  qui fait exploser le ratio far/near). Le plan near y est piloté par la
-  distance à l'origine, ce qui suppose que le contenu le plus proche s'y trouve —
-  hypothèse qui tombe justement dans ce cas-là.
-- **Missions** — Molniya / HEO, déploiement de constellation, points de
-  Lagrange, interplanétaire, gravity assist. **Le déorbitage et la rentrée ont
-  quitté cette liste** : ils sont devenus `MIS-10`, en phase 7.
-- **Plateforme** — mode batch headless, analytics et graphes post-mission,
-  replays cinématiques, catalogue de débris TLE, validation contre données
-  réelles (JPL Horizons), scripting.
-- **Éphéméride hors mémoire** — `MIS-9`, fiche complète en §6 avec ses
-  conditions de déclenchement. Rangé ici et non dans une phase : le pas
-  variable de `MIS-8` le rend inutile pour tout horizon réaliste, et il devra
-  passer par la généralisation d'`EphemerisSource` faite en `MIS-6`.
-- **Optimiseur** — mode CMA-ES pour la composition GEO (les 3 modes composent
-  aujourd'hui la même `GEOMission` analytique ; seul le levier ergols agit
-  réellement sur GEO).
-
-Détail et notation dans [`docs/brainstorm/features-long-terme.md`](../brainstorm/features-long-terme.md)
-et [`docs/brainstorm/missions.md`](../brainstorm/missions.md).
-
----
-
-## 8. Questions ouvertes
-
-1. ~~**Horizon de mission (MIS-8)** — purement dérivé du type de mission, ou
-   réglable dans le wizard avec ce dérivé comme défaut ?~~ **Tranchée le
+1. **Horizon de mission (`MIS-8`)** — purement dérivé du type de mission, ou
+   réglable dans le wizard avec ce dérivé comme défaut ? **Tranchée le
    2026-08-09 : les deux.** `MissionHorizon.Revolutions` fournit le dérivé,
    pré-rempli comme défaut, et le wizard laisse basculer en manuel
    (`FixedDuration`) — la bascule revenant au dérivé quand on la relâche.
-2. ~~**Fenêtre de la piste temporelle (NAV-2)** — durée de la mission
-   sélectionnée, ou fenêtre glissante autour de `now()` ?~~ **Tranchée le
+2. **Fenêtre de la piste temporelle (`NAV-2`)** — durée de la mission
+   sélectionnée, ou fenêtre glissante autour de `now()` ? **Tranchée le
    2026-08-11 : la durée de la mission, dans un widget séparé.** La piste
    temporelle quitte la capsule ; sa fenêtre est celle de l'éphéméride de la
-   mission suivie, et sans éphéméride le widget ne s'affiche pas — donc pas de
-   fenêtre glissante, pas de bascule. La capsule garde son `ScrubberTrack`
-   indexé sur la vitesse, ce qui clôt aussi la cohabitation que `NAV-3`
-   redoutait. Voir [`docs/navigation/02-timeline-mission.md`](../navigation/02-timeline-mission.md).
-3. **Auto-optimisation après création** — toujours ouverte, mais **son préalable
-   est levé depuis le 2026-08-21**. Aujourd'hui `createMission()` ajoute l'entrée
-   en `DRAFT` sans déclencher de calcul ; l'argument qui bloquait — déclencher
-   automatiquement un calcul long sans indicateur serait pire que le clic actuel
-   — ne tient plus, `UI-2` ayant livré l'indicateur, et jusqu'à la distinction
-   entre une mission en file et une mission en calcul. Reste à trancher la
-   question elle-même, qui n'est plus technique.
-4. ~~**Troisième viewport**~~ — **tranchée le 2026-08-18 : non.** `PHY-4 / L5`
-   §5.3 l'a écarté sur mesure — un seul globe est dessiné, dans la région de
+   mission suivie, et sans éphéméride le widget ne s'affiche pas. La capsule
+   garde son `ScrubberTrack` indexé sur la vitesse, ce qui clôt aussi la
+   cohabitation que `NAV-3` redoutait. Voir
+   [`docs/navigation/02-timeline-mission.md`](../navigation/02-timeline-mission.md).
+3. **Troisième viewport** — **tranchée le 2026-08-18 : non.** `PHY-4 / L5` §5.3
+   l'a écarté sur mesure — un seul globe est dessiné, dans la région de
    l'origine où le pas de profondeur vaut 27 km, et le bout lointain du trait ne
    dispute la profondeur qu'à lui-même — puis `L6` §12.5 a confirmé sur la
-   première trajectoire lunaire réelle : un globe et un trait tiennent dans la
-   near viewport à l'échelle Terre-Lune, sans reverse-Z ni depth log. La question
-   ne rouvre qu'avec **deux globes dans le même cadre**, c'est-à-dire `MIS-6`.
-5. **Cible du rendez-vous** — ISS livrée en dur (option A de la spec) suffit au
-   MVP. L'import de TLE arbitraire (option B) est une feature UI à part entière,
-   à ne pas glisser dans `MIS-6`.
-6. **Persistance des bascules d'affichage (UI-4)** — volatiles, remises à leur
-   défaut à chaque lancement, ou conservées ? Si conservées, elles n'ont rien à
-   faire dans le fichier de scénario de `UI-3` : ce sont des préférences
-   **utilisateur**, pas des données de mission — deux fichiers, pas un, sans
-   quoi rejouer le scénario d'un tiers reconfigure l'écran de celui qui
-   l'ouvre. À trancher au moment de `UI-3` ; `UI-4` peut être livré volatile
-   sans créer de dette.
-7. **Modalité du wizard de création (UI-6)** — reste-t-il modal ? L'argument
-   d'`UI-5` (état non enregistré, perdable derrière une autre fenêtre) tient
-   toujours ; le coût de la bascule n'est pas dans le wizard mais dans la
-   caméra, qui refuse aujourd'hui la souris tant que le wizard *existe* et non
-   tant qu'il est *survolé* (`OrbitLabApplication:141`). À ne trancher que sur
-   un besoin constaté — consulter la liste des missions pendant la création.
-   Recommandation par défaut : le garder modal et l'écrire, plutôt que de
-   laisser la question ouverte indéfiniment.
-8. **Jusqu'où va la rentrée (MIS-10)** — la « désintégration » recouvre trois
-   paliers de coûts sans commune mesure. (a) La trajectoire s'arrête à
-   l'interface atmosphérique et on affiche le point d'impact prédit : c'est le
-   périmètre écrit dans la fiche. (b) La traînée plasma, qui est un **effet** et
-   non une physique — elle est déjà spécifiée dans
-   [`docs/graphics-effects/effects-roadmap.md`](../graphics-effects/effects-roadmap.md)
-   §5.5, cotée difficulté 4 / wow 5 dans le barème de ce document (attention, son
-   ★ est la difficulté, à l'inverse d'ici). (c) La désintégration réelle — flux
-   thermique, ablation, fragmentation — qui est de la R&D. Recommandation : (a)
-   dans `MIS-10`, (b) comme item `FX` distinct une fois `MIS-10` volé, (c) au
-   backlog. `PHY-1 / L1` §4 note d'ailleurs que l'approximation « panneaux
-   repliés » du coefficient balistique cesse d'être vraie pour une rentrée de fin
-   de vie — la physique de (c) commence donc avant le flux thermique.
-9. **Entrée directe, capture propulsive ou aérocapture (MIS-11)** — l'énoncé
-   demandait « retour en LEO puis retour sur Terre », ce qui n'est ni Apollo ni
-   Artemis. L'entrée directe est la moins chère et la plus fidèle au nom de
-   l'item ; la capture propulsive en LEO coûte ~3,1 km/s, donc un étage de plus à
-   dimensionner, et a un vrai intérêt pédagogique — elle montre *pourquoi*
-   personne ne le fait ; l'aérocapture est la plus spectaculaire et ajoute un
-   modèle thermique à un chantier déjà ◆4. À trancher avant la spec : les trois
-   ne décrivent pas la même mission, ni le même lanceur.
+   première trajectoire lunaire réelle. **La question ne rouvre qu'avec deux
+   globes dans le même cadre**, c'est-à-dire `MIS-6` : elle est devenue `RND-8`
+   en [v4](04-roadmap-v4.md).
+
+**Les six questions encore ouvertes**, et où elles se paient :
+
+| Question d'origine | Va en | Portée par |
+|---|---|---|
+| Auto-optimisation après création d'une mission | [v3](03-roadmap-v3.md) | `UI-8` (`REL-28`) |
+| Persistance des bascules d'affichage | [v3](03-roadmap-v3.md) | `UI-8` (`REL-29`) |
+| Modalité du wizard de création | [v3](03-roadmap-v3.md) | `UI-6` |
+| Jusqu'où va la rentrée (arrêt à l'interface / plasma / désintégration) | [v2](02-roadmap-v2.md) | `MIS-10` et `FX-4` |
+| Entrée directe, capture propulsive ou aérocapture | [v3](03-roadmap-v3.md) | `MIS-11` |
+| Cible du rendez-vous (ISS en dur ou import TLE) | [v4](04-roadmap-v4.md) | `MIS-6` |

@@ -340,7 +340,7 @@ en particulier, il faut savoir dès maintenant que la forme d'orbite du polaire
 est **déjà** gouvernée par cette construction-là, et non par le corps central.
 
 > **Note du 2026-08-31 — corrigé, après la fermeture de PHY-4.** Le chantier est
-> clos depuis le 2026-08-18 et le blocage ci-dessus est levé ; `roadmap/02` place
+> clos depuis le 2026-08-18 et le blocage ci-dessus est levé ; `roadmap/05-roadmap-technique.md` place
 > l'item en `J0-A`. Le coût réel a été mesuré sur une mission polaire complète :
 > **141,4 kg et 10,2 m/s**, pour un résidu de plan de 0,0636° — facteur 73 sur la
 > masse. Deux corrections de ce §5.6 au passage : la remise en enveloppe n'était

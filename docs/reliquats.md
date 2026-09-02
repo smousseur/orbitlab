@@ -12,7 +12,7 @@ sort d'ici traité, promu en item de roadmap, ou requalifié en « accepté » a
 la raison — comme dans `bugs.md` et `dette-technique.md`.
 
 **Origine de cette revue.** Établi le 2026-08-30 par une lecture complète de
-`roadmap/01-roadmap.md` et des documents de conception par chantier, en
+`roadmap/01-roadmap-v1.md` et des documents de conception par chantier, en
 préparation d'une passe de robustesse avant la Phase 5 (`MIS-6`). Voir
 `bugs.md` (`BUG-9` à `BUG-18`) et `dette-technique.md` (`DT-12` à `DT-17`)
 pour ce qui a été promu hors de cette revue plutôt que laissé ici.
@@ -27,7 +27,7 @@ Le dernier segment du ruban (`RND-4`) pivote d'environ 2° à chaque pas
 d'échantillonnage. Déjà reversé une fois de `RND-1` à `RND-4` faute de
 propriétaire ; `RND-4` a traité les jointures *entre* segments mais rien sur
 le pivotement du segment de tête. Toujours sans identifiant.
-Source : `roadmap/01-roadmap.md` fiche `RND-1` ; confirmé non traité dans
+Source : `roadmap/01-roadmap-v1.md` fiche `RND-1` ; confirmé non traité dans
 [`graphics-effects/ribbon-lines.md`](graphics-effects/ribbon-lines.md) §13.
 
 ### REL-2 — `MUTING_STEP` du ruban, réglage à l'œil jamais fait
@@ -35,7 +35,7 @@ Source : `roadmap/01-roadmap.md` fiche `RND-1` ; confirmé non traité dans
 Le contraste de couleur entre phases (`RND-3`) doit se régler à l'œil sur un
 trait de 3,5 px, l'obstacle technique (ligne GL à 1 px) étant levé par
 `RND-4`. Le réglage lui-même n'a pas été fait.
-Source : `roadmap/01-roadmap.md` fiche `RND-3`.
+Source : `roadmap/01-roadmap-v1.md` fiche `RND-3`.
 
 ### REL-3 — Ruban : fondu alpha et largeurs de départ jugés à l'œil seulement
 
@@ -50,7 +50,7 @@ Source : [`graphics-effects/ribbon-lines.md`](graphics-effects/ribbon-lines.md) 
 Le gain de §4.5 de l'ancien `effects-roadmap.md` porte sur le reste de la
 scène, pas sur le halo lui-même. N'apparaît plus dans le backlog courant de
 la roadmap — orphelin plutôt que fermé.
-Source : `roadmap/01-roadmap.md` fiche `FX-1`.
+Source : `roadmap/01-roadmap-v1.md` fiche `FX-1`.
 
 ### REL-5 — Pénombre du vaisseau peu lisible (`FX-2`), limitation connue
 
@@ -59,7 +59,7 @@ dégradé perceptible — contrairement à un grand corps. Trois pistes
 identifiées (ambiant proportionnel à l'éclipse, courbe non linéaire sur le
 facteur d'éclipse, plancher de luminosité perçue), **aucune essayée**.
 Explicitement titré « limitation connue, non résolue » dans la source.
-Source : `roadmap/01-roadmap.md` fiche `FX-2`.
+Source : `roadmap/01-roadmap-v1.md` fiche `FX-2`.
 
 ### REL-6 — Distinction éclipse totale/annulaire jamais vérifiée à l'écran
 
@@ -88,14 +88,14 @@ l'écart ; à certaines géométries le périlune volé a un plancher physique
 mesuré à **132 km** au-dessus de la cible. Chercher aussi la direction de
 visée est identifié comme un lot à part, non ouvert. Marqué « reste ouvert,
 sciemment » dans la source.
-Source : `roadmap/01-roadmap.md` fiche `MIS-4`.
+Source : `roadmap/01-roadmap-v1.md` fiche `MIS-4`.
 
 ### REL-9 — `ParkingCoastStage` ne gère pas un coast plus court que `ignitionLead`
 
 Distinct de `BUG-9` (qui est le test resté sur l'ancienne sémantique) : ceci
 est un trou fonctionnel dans la classe elle-même pour le cas d'un coast plus
 court que le délai d'allumage.
-Source : `roadmap/01-roadmap.md` fiche `MIS-4`.
+Source : `roadmap/01-roadmap-v1.md` fiche `MIS-4`.
 
 ### REL-10 — Paramètres TLI du wizard non balayés conjointement
 
@@ -222,7 +222,7 @@ Source : [`earth-orbit/02-wizard-orbites-terrestres.md`](earth-orbit/02-wizard-o
 Le `Future` que l'orchestrateur possède est aujourd'hui jeté plutôt que
 retenu ; il faudrait le garder et lire un drapeau dans la fonction objectif,
 à côté de `crossRunStop` qui existe déjà pour un autre usage.
-Source : `roadmap/01-roadmap.md` fiche `UI-2`.
+Source : `roadmap/01-roadmap-v1.md` fiche `UI-2`.
 
 ### REL-22 — Restauration de scénario refusée si atmosphère ≠ `NONE` (`UI-3`)
 
@@ -251,39 +251,41 @@ l'exécution, pas leur contenu.
 Le widget est passé de 689 à 842 lignes au fil de `NAV-2`/`NAV-3` ; sa
 section interaction aurait sa place en collaborateur séparé, à côté de
 `PhaseBar`/`PhaseMarkers`/`TimelineTooltip`.
-Source : `roadmap/01-roadmap.md` fiche `NAV-3`.
+Source : `roadmap/01-roadmap-v1.md` fiche `NAV-3`.
 
 ### REL-25 — Breadcrumb : aucun test unitaire sur la chaîne d'ancêtres
 
 La logique de modèle pur (quel segment est cliquable) n'a aucun test alors
 qu'elle se prêterait au même traitement qu'`AppMenuModelTest`.
-Source : `roadmap/01-roadmap.md` fiche `NAV-4`.
+Source : `roadmap/01-roadmap-v1.md` fiche `NAV-4`.
 
 ### REL-26 — Breadcrumb : clic sur segment et cas `SPACECRAFT` jamais vérifiés à l'écran
 
 Faute de souris scriptable pour le protocole d'observation manuelle — les
 autres profondeurs ont été capturées, celles-ci non.
-Source : `roadmap/01-roadmap.md` fiche `NAV-4`.
+Source : `roadmap/01-roadmap-v1.md` fiche `NAV-4`.
 
 ### REL-27 — Breadcrumb : descente vers les fils reportée en V2
 
 Déjà su au moment de la conception, listé ici pour l'exhaustivité du
 registre plutôt que comme découverte.
-Source : `roadmap/01-roadmap.md` fiche `NAV-4`.
+Source : `roadmap/01-roadmap-v1.md` fiche `NAV-4`.
 
 ### REL-28 — Auto-optimisation après création de mission, jamais tranchée
 
 Le préalable technique (l'indicateur de progression, `UI-2`) est levé depuis
 le 2026-08-21, mais la décision produit — déclencher ou non un calcul
 automatique à la création d'une mission — n'a jamais été prise.
-Source : `roadmap/01-roadmap.md` §8, question 3.
+Source : `roadmap/01-roadmap-v1.md` §7 ; désormais portée par `UI-8` en
+`roadmap/03-roadmap-v3.md` (§5, question 3).
 
 ### REL-29 — Persistance des bascules d'affichage, jamais tranchée malgré son jalon passé
 
 Le texte de la roadmap dit explicitement « à trancher au moment d'`UI-3` » ;
 `UI-3` est clos depuis le 2026-08-21 et sa fiche ne mentionne nulle part
 cette décision.
-Source : `roadmap/01-roadmap.md` §8, question 6.
+Source : `roadmap/01-roadmap-v1.md` §7 ; désormais portée par `UI-8` en
+`roadmap/03-roadmap-v3.md`.
 
 ---
 
