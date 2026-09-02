@@ -50,7 +50,8 @@ class EphemerisWorkerTest {
             8, // minPointsEachSide
             20, // maxPointsEachSide (small to force short windows in test)
             0.25, // marginRatio
-            steps);
+            steps,
+            inertRotationPeriods());
 
     AtomicReference<AbsoluteDate> nowRef = new AtomicReference<>(AbsoluteDate.J2000_EPOCH);
     double speed = 10_000.0;
@@ -113,7 +114,8 @@ class EphemerisWorkerTest {
     steps.put(SolarSystemBody.EARTH, 1_000.0);
     steps.put(SolarSystemBody.MARS, 2_000.0);
 
-    SlidingWindowConfig windowCfg = new SlidingWindowConfig(10_000.0, 5.0, 8, 20, 0.25, steps);
+    SlidingWindowConfig windowCfg =
+        new SlidingWindowConfig(10_000.0, 5.0, 8, 20, 0.25, steps, inertRotationPeriods());
 
     AtomicReference<AbsoluteDate> nowRef = new AtomicReference<>(AbsoluteDate.J2000_EPOCH);
     try (EphemerisWorker worker =
@@ -136,5 +138,17 @@ class EphemerisWorkerTest {
 
       assertTrue(sourceCalls.get() > 0);
     }
+  }
+
+  /**
+   * Rotation periods long enough that the rotation cap never selects the step, so these tests keep
+   * measuring the sliding logic alone. A day against steps of 1 000 and 2 000 s leaves the cap an
+   * order of magnitude above the step it would have to beat.
+   */
+  private static Map<SolarSystemBody, Double> inertRotationPeriods() {
+    Map<SolarSystemBody, Double> periods = new EnumMap<>(SolarSystemBody.class);
+    periods.put(SolarSystemBody.EARTH, 86_400.0);
+    periods.put(SolarSystemBody.MARS, 86_400.0);
+    return periods;
   }
 }

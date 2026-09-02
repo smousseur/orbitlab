@@ -28,8 +28,9 @@ la frontière entre les deux derniers doit rester lisible.
 | [`BUG-16`](#bug-16--t1-saturé-contre-sa-borne-sur-la-majorité-des-transferts-mesurés) | `t1` saturé contre sa borne sur la majorité des transferts mesurés | 2026-08-30 | Ouvert, mesuré — artefact de mur de boîte |
 | [`BUG-17`](#bug-17--acceptablecost-mal-calé-depuis-lajout-du-terme-ergols-i7) | `acceptableCost` mal calé depuis l'ajout du terme ergols I7 | 2026-08-30 | Ouvert, correctif proposé non fait |
 | [`BUG-18`](#bug-18--rejets-de-scénario-au-chargement-seulement-journalisés) | Rejets de scénario au chargement, seulement journalisés | 2026-08-30 | Ouvert — **trou connu de `UI-3`** |
-| [`BUG-19`](#bug-19--la-rotation-propre-des-planètes-externes-est-aliasée-par-le-pas-de-la-fenêtre-glissante) | La rotation propre des planètes externes est aliasée par le pas de la fenêtre glissante | 2026-09-02 | Ouvert, **cause racine établie et ampleur mesurée** — Neptune à 4,1 % du taux vrai, Saturne et Uranus à l'envers |
+| [`BUG-19`](#bug-19--la-rotation-propre-des-planètes-externes-est-aliasée-par-le-pas-de-la-fenêtre-glissante) | La rotation propre des planètes externes est aliasée par le pas de la fenêtre glissante | 2026-09-02 | **Corrigé le 2026-09-02** — les 11 corps rendus à 100,0 % du taux vrai à toutes les vitesses ; la Terre était aussi atteinte, au-delà de ×864 000 |
 | [`BUG-20`](#bug-20--plan-des-anneaux-désaligné-dans-les-assets) | Plan des anneaux désaligné dans les assets | 2026-09-02 | Ouvert, **mesuré** — Saturne 13,51°, Uranus 9,93° hors du plan équatorial de leur propre globe ; hors de portée du code, demande un ré-export |
+| [`BUG-21`](#bug-21--dtrotseconds-aliasé-dans-generatorconfigv1defaultv1) | `dtRotSeconds` aliasé dans `GeneratorConfigV1.defaultV1` | 2026-09-02 | Ouvert, **mesuré, latent** — chemin mort aujourd'hui, mais armé pour la prochaine régénération du dataset |
 
 ---
 
@@ -1152,6 +1153,29 @@ se remarque que si on sait dans quel sens attendre ; Pluton n'a aucun détail à
 suivre. **Mars est juste par chance** : porter son pas de 12 à 13 h la fait
 basculer.
 
+> **Deux corrections à ce tableau, mesurées le 2026-09-02.**
+>
+> **La première ligne mélange des corps.** Le Soleil ne tourne que de **3,55°**
+> par son pas de 6 h. Les 90,2° sont **la Terre seule** — mesuré 90,25°. Après
+> Mars, c'est elle qui est le plus près de la falaise, et non « le groupe des
+> lents ».
+>
+> **Le tableau n'est vrai qu'à basse vitesse.** Il donne le pas de base, mais
+> [`SlidingWindowConfig.plan`](../src/main/java/com/smousseur/orbitlab/simulation/ephemeris/config/SlidingWindowConfig.java)
+> double le pas par puissances de deux au-delà d'un seuil par corps, et
+> `SpeedStepper.ABS_SPEED` monte à ×6 912 000. La Terre franchit alors la falaise :
+
+| corps | vitesse d'horloge | pas | rotation vraie / pas | taux rendu |
+|---|---|---|---|---|
+| **Terre** | ×864 000 | 12 h | −180,5° | **−99,5 %, à l'envers** |
+| **Terre** | ≥ ×1 728 000 | 24 h | −361,0° | **0,3 %, figée** |
+| **Mars** | ≥ ×1 728 000 | 24 h | −350,9° | **−2,6 %, à l'envers** |
+
+Le défaut n'est donc pas « les planètes externes » : c'est **tout corps dont le
+pas effectif dépasse le demi-tour**, et à grande vitesse cela inclut le corps le
+plus regardé de la scène. Un correctif qui n'aurait retouché que les pas de base
+des externes aurait laissé la Terre tourner à l'envers puis se figer.
+
 ### Ce qui n'est pas en cause, et ne doit pas être cherché là
 
 - **Le modèle de rotation.** `W = 253,18 + 536,3128492 °/j` pour Neptune, soit
@@ -1165,22 +1189,91 @@ L'information est intacte jusqu'au buffer, et c'est **le buffer qui la détruit*
 en ré-échantillonnant grossièrement ce que la source sait donner finement. Le
 correctif ne demande donc aucune donnée nouvelle ni aucune régénération.
 
-### Piste
+### Correctif — 2026-09-02
 
-Le générateur porte déjà la bonne idée — deux cadences, une pour la position,
-une pour la rotation — que le buffer a fusionnées en une. Restaurer la
-séparation côté runtime : une grille de rotation propre à chaque corps,
-plafonnée à une fraction de sa période de rotation.
+**Une seule grille, plafonnée — et non les deux grilles que cette fiche
+recommandait.** La piste initiale craignait la mémoire : « ramener le pas de
+Neptune sous 8 h multiplierait par 21 le nombre d'échantillons ». Mesuré, c'est
+l'inverse : à ×1 et ×3 600 une grille unique plafonnée coûte **187 et 211 points
+pour les onze corps, exactement comme avant**, parce que `plan()` demande
+`ceil(10 s / pas)` points et se fait plancher à `minPointsEachSide = 8` de toute
+façon. Deux grilles auraient coûté le double là où une seule ne coûte rien, et le
+même prix en haut. Les deux grilles n'étaient jamais moins chères.
 
-**Attention au coût.** Le gros pas existe pour tenir une fenêtre longue à
-mémoire raisonnable ; ramener celui de Neptune sous 8 h multiplierait par 21 le
-nombre d'échantillons. C'est bien deux grilles qu'il faut, pas un pas unique
-raccourci.
+Ce que la grille unique change, c'est la **portée** de la fenêtre : Neptune passe
+de ±56 j à ±1,34 j, Saturne de ±16 j à ±0,89 j. Ces ±56 jours étaient un
+accident — 8 × 7 jours, soit 480 000 fois le lookahead de 10 s pour lequel la
+fenêtre est dimensionnée — et rien ne les consommait : les quatre lecteurs du
+buffer ont été tracés, **aucun ne lit la rotation ailleurs qu'à `now`**.
+`PlanetPresenter.updatePose` et `MeshCalibrationAppState` lisent à `clock.now()` ;
+`PlanetPoseAppState.sampleHelioPosition` et `MissionRenderer.pushEclipseOccluder`
+prennent `.getKey()`, la position seule, et même eux sont à `now`
+(`eph.displayPointAt(now)`, borné à la fin de mission, donc jamais en avant).
 
-**Non tranché :** la fraction de période à retenir, et si le plafond se dérive
-automatiquement du `W_DOT` d'Orekit — auquel cas aucun corps futur ne peut
-retomber dans le piège, y compris Mars si son pas bouge — ou reste une constante
-par corps.
+**Le correctif tient en une ligne, à un seul endroit.** `rebuildWindow(AbsoluteDate)`
+et les champs `sampleStepSeconds` / `windowPointsBack` / `windowPointsForward`
+d'`EphemerisConfig` ne sont appelés que par les tests ; en production tout passe
+par `ensureWindow` avec un `WindowPlan` issu de `plan()`. Le buffer et le worker
+n'ont pas bougé.
+
+Dans `plan()`, **après le doublement adaptatif** et avant le calcul de `points` :
+
+```
+step = min(step, rotationPeriodSeconds(body) / ROTATION_SAMPLES_PER_TURN)   // 4
+```
+
+L'ordre porte tout le correctif. Plafonner `baseStep` en amont laisserait le
+multiplicateur repasser le pas au-dessus du demi-tour, et c'est exactement par là
+que la Terre partait à l'envers.
+
+**Pourquoi P/4, et pourquoi ce n'est pas un arbitrage de précision.** Le SLERP
+parcourt l'arc à vitesse angulaire constante, ce qui *est* une rotation propre
+uniforme : échantillonné au quart de tour, il reproduit l'attitude vraie à
+**0,0000°** pour neuf corps sur onze, et à 0,0030° pour la Lune, dont le modèle de
+pôle porte de vrais termes de précession. Même à 162°/pas le pire vaut 0,0054°. Un
+gros pas de rotation ne saccade donc rien ; le plafond n'est qu'un dégagement
+avant la falaise des 180°, et P/4 en laisse un facteur deux. P/2 n'est pas un
+réglage mais le mur : la sonde y mesure une erreur de 180,0000°, la branche du
+SLERP y étant un tirage au sort. Au-delà de P/4, resserrer n'achète rien —
+P/6 et P/8 butent sur `maxPointsEachSide` et ne font que tronquer la portée.
+
+**Coût, en points d'échantillonnage pour les onze corps :**
+
+| | ×1 à ×1800 | ×86 400 | ×1 728 000 | ×6 912 000 |
+|---|---|---|---|---|
+| avant | 187 | 1 015 | 3 099 | 3 593 |
+| après (P/4) | **187** | 1 595 | 17 015 | 19 043 |
+
+Gratuit jusqu'à ×1800. Le surcoût de haut de plage ne se paie qu'au rebuild
+complet : en régime établi c'est le glissement qui travaille, proportionnel au
+décalage en pas et non au nombre de points. `maxPointsEachSide = 2 000` mord au
+maximum sur Jupiter et Saturne — leur portée se tronque à 207 et 222 jours au lieu
+de 232, ce qui est la bonne dégradation : une fenêtre plus courte plutôt qu'une
+rotation aliasée.
+
+**Après correctif**, les onze corps rendent **100,0 % de leur taux vrai à chacune
+des 17 vitesses atteignables**. Les sept rotateurs rapides se posent exactement à
+90,00°/pas (le plafond mord), les quatre lents gardent leur pas orbital intact.
+
+**Instruments.** `SlidingWindowRotationSamplingTest` porte trois épinglages :
+la table de périodes confrontée à Orekit corps par corps à 10⁻³ près ; l'invariant
+< 180° sur les 17 vitesses de `SpeedStepper` ; et le même invariant balayé sur tout
+le domaine `[1, speedMaxAbs]`, pour qu'une vitesse ajoutée plus tard ne puisse pas
+rouvrir le défaut. Falsification vérifiée : plafond neutralisé, le test tombe en
+citant « JUPITER turns 870.5 deg per 86400 s step at speed 1 — the SLERP would
+render 150.5 deg », qui reproduit le tableau ci-dessus. `SolarSystemBodyConfigCompletenessTest`
+gagne la garde de complétude de la nouvelle table.
+
+**Ce qui n'a pas été retenu.** La dérivation automatique du `W_DOT` d'Orekit, que
+cette fiche proposait pour qu'« aucun corps futur ne puisse retomber dans le
+piège », ne tient pas cette promesse : le piège n'est pas un mauvais pas de base
+mais le doublement adaptatif, et une valeur lue à chaud n'en protège ni plus ni
+moins qu'une constante. C'est le test de balayage qui la tient, et lui seul couvre
+le doublement. La table reste donc une constante, et `SlidingWindowConfig` reste un
+record pur, sans dépendance à `OrekitService`.
+
+**Voir aussi** [`BUG-21`](#bug-21--dtrotseconds-aliasé-dans-generatorconfigv1defaultv1),
+trouvé en vérifiant la santé du dataset au cours de ce correctif.
 
 ---
 
@@ -1291,3 +1384,61 @@ sort du rang.
   échelle `[0.008, 0.008, 0]` — un facteur **nul** sur Z. Sans effet visible tant
   que le disque est déjà plat dans son plan local, mais la transformation est
   singulière et rien ne garantit qu'un shader ou un calcul de normale s'en sorte.
+
+---
+
+## BUG-21 — `dtRotSeconds` aliasé dans `GeneratorConfigV1.defaultV1`
+
+**Trouvé le 2026-09-02**, en vérifiant que le dataset était bien sain au cours de
+[`BUG-19`](#bug-19--la-rotation-propre-des-planètes-externes-est-aliasée-par-le-pas-de-la-fenêtre-glissante).
+Il l'est — mais pas grâce au chemin qu'on lit en premier.
+
+**Le dataset livré est sain.** Ses cadences de rotation viennent de
+`EphemerisDatasetGeneratorMain.withPvFirstUnder10GoParams`, et aucun corps n'y
+dépasse **11,2° par échantillon** (Neptune, le pire, à 1800 s). Mesuré corps par
+corps.
+
+**Mais ce n'est pas la table que porte
+[`GeneratorConfigV1.defaultV1`](../src/main/java/com/smousseur/orbitlab/tools/ephemerisgen/GeneratorConfigV1.java).**
+Celle-là donne des `dtRotSeconds` dimensionnés comme les `dtPvSeconds`, c'est-à-dire
+sur le mouvement orbital — la faute exacte de `BUG-19`, un cran plus tôt dans la
+chaîne :
+
+| corps | `dtRotSeconds` de `defaultV1` | rotation vraie / échantillon | vue par le SLERP | taux stocké |
+|---|---|---|---|---|
+| Jupiter | 43 200 s (12 h) | 435,3° | 75,3° | 17,3 % |
+| Saturne | 86 400 s (1 j) | 810,8° | 90,8° | 11,2 % |
+| Uranus | 172 800 s (2 j) | 1 002,3° | −77,7° | **−7,7 %, à l'envers** |
+| **Neptune** | **345 600 s (4 j)** | **2 145,3°** | **−14,7°** | **−0,7 %, à l'envers** |
+| Pluton | 604 800 s (7 j) | 394,5° | 34,5° | 8,8 % |
+
+Les six autres corps passent : la Terre à 45,1° par échantillon, Mars à 87,7°, le
+reste sous le degré. Neptune y serait **pire qu'au runtime avant correctif** —
+quasi immobile, et dans le mauvais sens.
+
+**Pourquoi c'est latent et pas actif.** `EphemerisDatasetGeneratorMain` écrase la
+table de `defaultV1` par la sienne à chaque exécution ; le chemin est donc mort.
+Aucune régénération passée n'a pu produire un dataset aliasé.
+
+**Pourquoi ça reste une fiche.** Rien ne signale que la table de `defaultV1` est
+morte, ni qu'elle est fausse. La méthode s'appelle `defaultV1`, elle est publique,
+son Javadoc annonce des « conservative sampling rates », et elle est le point de
+départ obligé de toute nouvelle configuration de génération. Le premier appelant
+qui la prendra au mot regénérera un dataset où Neptune tourne à l'envers — et
+cette fois le correctif de `BUG-19` ne pourra rien, puisque le plafond du runtime
+ne peut pas restituer une information que la source ne porte plus.
+
+### Piste
+
+Trois fins possibles, non tranchées :
+
+- **aligner** les `dtRotSeconds` de `defaultV1` sur ceux de
+  `withPvFirstUnder10GoParams`, ce qui laisse deux tables à garder d'accord ;
+- **supprimer** la table de `defaultV1` et faire de `withPvFirstUnder10GoParams`
+  la seule source, ce qui supprime la question ;
+- **dériver** `dtRotSeconds` d'un plafond de période comme le runtime le fait
+  désormais, ce qui fermerait la famille des deux côtés de la chaîne.
+
+La troisième est la seule qui empêche un corps futur d'y retomber, et c'est aussi
+la seule qui demande de faire remonter la table de périodes de
+`SlidingWindowConfig` dans un endroit que `tools/ephemerisgen` puisse voir.

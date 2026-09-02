@@ -33,6 +33,14 @@ class SolarSystemBodyConfigCompletenessTest {
   }
 
   @Test
+  void allBodies_haveRotationPeriod() {
+    SlidingWindowConfig cfg = SlidingWindowConfig.defaultSolarSystem();
+    for (SolarSystemBody b : SolarSystemBody.values()) {
+      assertDoesNotThrow(() -> cfg.rotationPeriodSeconds(b), "Missing rotation period for " + b);
+    }
+  }
+
+  @Test
   void allNonSunBodies_haveOrbitPoints() {
     OrbitWindowConfig cfg = OrbitWindowConfig.defaultSolarSystem();
     for (SolarSystemBody b : SolarSystemBody.values()) {
