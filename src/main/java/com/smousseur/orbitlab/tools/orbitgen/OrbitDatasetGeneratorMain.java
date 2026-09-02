@@ -53,6 +53,7 @@ public final class OrbitDatasetGeneratorMain {
                 "orbitgen-shutdown-hook"));
     OrbitDatasetGenerator generator = new OrbitDatasetGenerator(outputDir);
     generator.generate();
+    generator.close();
   }
 
   private static String formatDuration(Duration d) {

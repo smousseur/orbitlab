@@ -44,7 +44,13 @@ public final class TimelineStyles {
   private static final String TEX_PREFIX = "interface/timeline/";
 
   /** Rounded corner inset (in pixels) for the capsule 9-slice texture (54×54, R=26). */
-  public static final int CAPSULE_INSET = 26;
+  private static final int CAPSULE_INSET = 26;
+
+  private static final String BACKGROUND_ATTR = "background";
+  private static final String INSETS_ATTR = "insets";
+  private static final String COLOR_ATTR = "color";
+  private static final String FONT_ATTR = "font";
+  private static final String FONT_SIZE_ATTR = "fontSize";
 
   private static AssetManager assetManager;
   private static final Map<String, Texture2D> textureCache = new HashMap<>();
@@ -142,42 +148,42 @@ public final class TimelineStyles {
 
     Attributes container = styles.getSelector("container", STYLE);
     if (capsule != null) {
-      container.set("background", capsule);
+      container.set(BACKGROUND_ATTR, capsule);
     }
-    container.set("insets", new Insets3f(0, 0, 0, 0));
+    container.set(INSETS_ATTR, new Insets3f(0, 0, 0, 0));
 
     BitmapFont defaultLabel = rajdhani(12);
     Attributes label = styles.getSelector("label", STYLE);
-    label.set("color", AppStyles.TL_TEXT_MAIN);
-    label.set("font", defaultLabel);
-    label.set("fontSize", 12f);
+    label.set(COLOR_ATTR, AppStyles.TL_TEXT_MAIN);
+    label.set(FONT_ATTR, defaultLabel);
+    label.set(FONT_SIZE_ATTR, 12f);
 
     // Inline date editing: the field carries no background of its own — the box behind it is drawn
     // by ClockDisplay so that the read-only label and the field share the exact same text origin.
     Attributes textField = styles.getSelector("textField", STYLE);
-    textField.set("color", AppStyles.TL_CYAN);
-    textField.set("font", UiKit.mono(12));
-    textField.set("fontSize", 12f);
-    textField.set("insets", new Insets3f(0, 0, 0, 0));
-    textField.set("background", null);
+    textField.set(COLOR_ATTR, AppStyles.TL_CYAN);
+    textField.set(FONT_ATTR, UiKit.mono(12));
+    textField.set(FONT_SIZE_ATTR, 12f);
+    textField.set(INSETS_ATTR, new Insets3f(0, 0, 0, 0));
+    textField.set(BACKGROUND_ATTR, null);
     textField.set("singleLine", true);
 
     Attributes button = styles.getSelector("button", STYLE);
-    button.set("color", AppStyles.TL_TEXT_DIM);
-    button.set("font", defaultLabel);
-    button.set("fontSize", 12f);
-    button.set("insets", new Insets3f(0, 0, 0, 0));
-    button.set("background", null);
+    button.set(COLOR_ATTR, AppStyles.TL_TEXT_DIM);
+    button.set(FONT_ATTR, defaultLabel);
+    button.set(FONT_SIZE_ATTR, 12f);
+    button.set(INSETS_ATTR, new Insets3f(0, 0, 0, 0));
+    button.set(BACKGROUND_ATTR, null);
 
     Attributes trigger = styles.getSelector(TRIGGER_ELEMENT, STYLE);
-    trigger.set("color", AppStyles.TL_TEXT_DIM);
+    trigger.set(COLOR_ATTR, AppStyles.TL_TEXT_DIM);
     trigger.set("highlightColor", AppStyles.TL_CYAN);
-    trigger.set("font", UiKit.mono(10));
-    trigger.set("fontSize", 10f);
-    trigger.set("insets", new Insets3f(0, 0, 0, 0));
+    trigger.set(FONT_ATTR, UiKit.mono(10));
+    trigger.set(FONT_SIZE_ATTR, 10f);
+    trigger.set(INSETS_ATTR, new Insets3f(0, 0, 0, 0));
     trigger.set("textHAlignment", HAlignment.Center);
     trigger.set("textVAlignment", VAlignment.Center);
-    trigger.set("background", triggerBackground(false));
+    trigger.set(BACKGROUND_ATTR, triggerBackground(false));
   }
 
   private static Texture2D loadTexSafe(String name) {

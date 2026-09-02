@@ -83,7 +83,8 @@ public final class ScenarioStore {
           .sorted(Comparator.naturalOrder())
           .toList();
     } catch (IOException e) {
-      throw new OrbitlabException("Cannot list scenarios in " + directory + ": " + e.getMessage());
+      throw new OrbitlabException(
+          "Cannot list scenarios in " + directory + ": " + e.getMessage(), e);
     }
   }
 
@@ -113,7 +114,7 @@ public final class ScenarioStore {
     try {
       json = Files.readString(path, StandardCharsets.UTF_8);
     } catch (IOException e) {
-      throw new OrbitlabException("Cannot read scenario '" + name + "': " + e.getMessage());
+      throw new OrbitlabException("Cannot read scenario '" + name + "': " + e.getMessage(), e);
     }
     return ScenarioCodec.read(json);
   }
@@ -133,7 +134,7 @@ public final class ScenarioStore {
       Files.createDirectories(directory);
       Files.writeString(path, json, StandardCharsets.UTF_8);
     } catch (IOException e) {
-      throw new OrbitlabException("Cannot write scenario '" + name + "': " + e.getMessage());
+      throw new OrbitlabException("Cannot write scenario '" + name + "': " + e.getMessage(), e);
     }
   }
 

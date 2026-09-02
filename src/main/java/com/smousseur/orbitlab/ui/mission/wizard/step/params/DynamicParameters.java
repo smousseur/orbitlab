@@ -164,7 +164,7 @@ public abstract class DynamicParameters {
     return revolutions * period / MissionHorizon.SECONDS_PER_DAY;
   }
 
-  protected Container getSliderContainer(
+  protected final Container getSliderContainer(
       String label, Slider slider, TextField field, double altitudeMin, double altitudeMax) {
     Container sliderContainer = new Container();
     sliderContainer.addChild(
@@ -226,7 +226,7 @@ public abstract class DynamicParameters {
     return row;
   }
 
-  protected Slider buildSlider(double valueMin, double valueMax, double valueDefault) {
+  protected final Slider buildSlider(double valueMin, double valueMax, double valueDefault) {
     Slider slider =
         new Slider(
             new DefaultRangedValueModel(valueMin, valueMax, valueDefault),
@@ -319,7 +319,7 @@ public abstract class DynamicParameters {
     }
 
     Spatial focused = GuiGlobals.getInstance().getFocusManagerState().getFocus();
-    boolean isFocused = focused == field;
+    boolean isFocused = focused.equals(field);
     if (isFieldFocused && !isFocused) {
       commitAltitudeFieldToSlider(slider, sliderRef, field, valueMin, valueMax);
     }

@@ -54,9 +54,7 @@ final class DisplayRow {
     root.addChild(
         DisplayRowIcons.vCenter(
             DisplayRowIcons.telemetryIconButton(
-                swatch,
-                s.telemetered(),
-                () -> listener.onToggleTelemetry(s.missionId(), s.telemetered())),
+                s.telemetered(), () -> listener.onToggleTelemetry(s.missionId(), s.telemetered())),
             HEIGHT));
     root.addChild(UiKit.hSpacer(INNER_GAP));
 
@@ -64,7 +62,7 @@ final class DisplayRow {
     root.addChild(
         DisplayRowIcons.vCenter(
             DisplayRowIcons.visibilityIconButton(
-                swatch, s.visible(), () -> listener.onToggleVisibility(s.missionId())),
+                s.visible(), () -> listener.onToggleVisibility(s.missionId())),
             HEIGHT));
 
     root.addChild(UiKit.hSpacer(INNER_GAP));

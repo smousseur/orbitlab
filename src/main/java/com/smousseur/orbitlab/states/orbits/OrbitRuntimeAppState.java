@@ -19,9 +19,9 @@ import com.smousseur.orbitlab.simulation.orbit.config.OrbitWindowConfig;
 import com.smousseur.orbitlab.simulation.source.EphemerisSource;
 import com.smousseur.orbitlab.simulation.source.EphemerisSourceRegistry;
 import java.util.EnumMap;
-import java.util.EnumSet;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -50,7 +50,7 @@ public final class OrbitRuntimeAppState extends BaseAppState {
   private static final Logger logger = LogManager.getLogger(OrbitRuntimeAppState.class);
   private final ApplicationContext context;
   private final SceneGraph.OrbitLayer orbitLayer;
-  private final EnumSet<SolarSystemBody> bodies;
+  private final Set<SolarSystemBody> bodies;
 
   private final OrbitWindowConfig windowConfig;
   private final EphemerisConfig ephemerisConfig;

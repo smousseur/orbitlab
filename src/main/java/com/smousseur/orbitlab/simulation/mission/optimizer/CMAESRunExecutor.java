@@ -1,6 +1,7 @@
 package com.smousseur.orbitlab.simulation.mission.optimizer;
 
 import com.smousseur.orbitlab.simulation.mission.progress.MissionProgressListener;
+import java.io.Serial;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -39,6 +40,8 @@ final class CMAESRunExecutor {
    * the acceptable cost. Stackless: it carries no diagnostic value, it only unwinds the run.
    */
   private static final class RunAbortedException extends RuntimeException {
+    @Serial private static final long serialVersionUID = 1L;
+
     RunAbortedException() {
       super(null, null, false, false);
     }

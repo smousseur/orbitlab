@@ -78,14 +78,13 @@ final class BodyFile implements Closeable {
           idx.fileOffsets(),
           idx.byteLengths(),
           chunksInCache);
-    } catch (Exception e) {
+    } catch (IOException | RuntimeException e) {
       try {
         ch.close();
       } catch (IOException suppressed) {
         e.addSuppressed(suppressed);
       }
-      if (e instanceof IOException ioe) throw ioe;
-      throw (RuntimeException) e;
+      throw e;
     }
   }
 
@@ -207,7 +206,7 @@ final class BodyFile implements Closeable {
       }
       return dst.array();
     } catch (IOException e) {
-      throw new OrbitlabException("I/O error reading " + body + " (" + path + "): " + e);
+      throw new OrbitlabException("I/O error reading " + body + " (" + path + "): " + e, e);
     }
   }
 

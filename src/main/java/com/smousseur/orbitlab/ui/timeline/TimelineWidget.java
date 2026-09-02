@@ -205,9 +205,9 @@ public class TimelineWidget implements AutoCloseable {
   }
 
   private void applySpeedIndex(int next) {
-    next = clamp(next, SpeedStepper.MIN_INDEX, SpeedStepper.MAX_INDEX);
-    if (next == speedIndex) return;
-    speedIndex = next;
+    int nextSpeed = clamp(next, SpeedStepper.MIN_INDEX, SpeedStepper.MAX_INDEX);
+    if (nextSpeed == speedIndex) return;
+    speedIndex = nextSpeed;
     clock.setSpeed(SpeedStepper.mapIndexToSpeed(speedIndex));
     speedStepper.refresh(speedIndex);
     scrubberTrack.refresh(speedIndex);

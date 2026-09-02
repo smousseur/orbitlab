@@ -81,7 +81,10 @@ public final class MultiStageLoadOptimizer {
    * thousandth of the stack could otherwise never clear the floor whatever it reclaimed (see {@link
    * #minimize}).
    */
-  public static final double DEFAULT_MIN_PASS_GAIN = 0.01;
+  private static final double DEFAULT_MIN_PASS_GAIN = 0.01;
+
+  private static final String ONE_DECIMAL = "%.1f";
+  private static final String TWO_DECIMALS = "%.2f";
 
   private final double lambdaMin;
   private final double lambdaMax;
@@ -407,15 +410,15 @@ public final class MultiStageLoadOptimizer {
         logger.info(
             "Best per-coordinate gain {}% below the {}% floor — coordinates have stopped moving"
                 + " each other",
-            String.format(Locale.ROOT, "%.2f", 100.0 * bestCoordinateGain),
-            String.format(Locale.ROOT, "%.1f", 100.0 * minPassGain));
+            String.format(Locale.ROOT, TWO_DECIMALS, 100.0 * bestCoordinateGain),
+            String.format(Locale.ROOT, ONE_DECIMAL, 100.0 * minPassGain));
         break;
       }
       logger.info(
           "Stage {} reclaimed {}% of its own load this pass (floor {}%) — sweeping again",
           gainingCoordinate,
-          String.format(Locale.ROOT, "%.2f", 100.0 * bestCoordinateGain),
-          String.format(Locale.ROOT, "%.1f", 100.0 * minPassGain));
+          String.format(Locale.ROOT, TWO_DECIMALS, 100.0 * bestCoordinateGain),
+          String.format(Locale.ROOT, ONE_DECIMAL, 100.0 * minPassGain));
     }
 
     // Diagonal probe: coordinate descent is blind to a feasible direction that is not axis-aligned.
@@ -488,7 +491,7 @@ public final class MultiStageLoadOptimizer {
         Math.round(heuristicScaled - finalScaled),
         String.format(
             Locale.ROOT,
-            "%.1f",
+            ONE_DECIMAL,
             heuristicScaled > 0 ? 100.0 * (1.0 - finalScaled / heuristicScaled) : 0.0));
     return new Result(true, lambdas, evaluations, passes, best);
   }
@@ -539,7 +542,7 @@ public final class MultiStageLoadOptimizer {
           sp.stageIndex(),
           Math.round(sp.residual()),
           Math.round(sp.loaded()),
-          String.format(Locale.ROOT, "%.1f", 100.0 * sp.residualRatio()));
+          String.format(Locale.ROOT, ONE_DECIMAL, 100.0 * sp.residualRatio()));
     }
   }
 
@@ -569,7 +572,7 @@ public final class MultiStageLoadOptimizer {
 
     CoordinateAdapter(Evaluator delegate, double[] lambdas, int index) {
       this.delegate = delegate;
-      this.lambdas = lambdas;
+      this.lambdas = lambdas.clone();
       this.index = index;
     }
 

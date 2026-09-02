@@ -35,13 +35,13 @@ public interface TrajectoryProblem {
 
   /**
    * Returns a pure analytical seed (e.g., Hohmann transfer) used by the optimizer to force at least
-   * one exploration run to start from the closed-form physical solution. Returns {@code null} when
-   * no analytical solution is available for this problem.
+   * one exploration run to start from the closed-form physical solution. Returns an empty array
+   * when no analytical solution is available for this problem.
    *
-   * @return the analytical parameter vector, or {@code null}
+   * @return the analytical parameter vector, empty when there is none
    */
   default double[] buildAnalyticalSeed() {
-    return null;
+    return new double[0];
   }
 
   /** Lower bounds for each parameter. */

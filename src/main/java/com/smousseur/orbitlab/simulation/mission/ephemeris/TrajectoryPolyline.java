@@ -157,7 +157,8 @@ public final class TrajectoryPolyline {
     int[] srcOf = new int[kept];
     Vector3D[] p = new Vector3D[kept];
     AbsoluteDate[] t = new AbsoluteDate[kept];
-    for (int i = 0, j = 0; i < n; i++) {
+    int j = 0;
+    for (int i = 0; i < n; i++) {
       if (!keep[i]) {
         continue;
       }
@@ -233,7 +234,9 @@ public final class TrajectoryPolyline {
    */
   private static int[] union(int[] a, int[] b) {
     int[] merged = new int[a.length + b.length];
-    int i = 0, j = 0, k = 0;
+    int i = 0;
+    int j = 0;
+    int k = 0;
     while (i < a.length || j < b.length) {
       int next;
       if (j == b.length || (i < a.length && a[i] <= b[j])) {
@@ -487,7 +490,8 @@ public final class TrajectoryPolyline {
   }
 
   /**
-   * The arc a vertex belongs to, and therefore the frame {@link #positionAt(int)} returns it in.
+   * The arc a vertex belongs to, and therefore the frame {@link #positionAt(int, SolarSystemBody)}
+   * returns it in.
    *
    * @param index the vertex index
    * @return an index into {@link #arcs()}

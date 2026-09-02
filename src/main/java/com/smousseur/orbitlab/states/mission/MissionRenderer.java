@@ -28,7 +28,6 @@ import com.smousseur.orbitlab.simulation.mission.ephemeris.TrajectoryArc;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.TrajectoryPolyline;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 
 /**
@@ -118,9 +117,8 @@ public final class MissionRenderer {
     anchor.attachChild(view.nearSpatial());
     context.sceneGraph().nearBodiesNode().attachChild(anchor);
 
-    ExecutorService assetExecutor = AssetFactory.get().assetLoadingExecutor();
     Model3dView model3dView = view.getModel3dView();
-    CompletableFuture.supplyAsync(model3dView::loadModel, assetExecutor)
+    CompletableFuture.supplyAsync(model3dView::loadModel, AssetFactory.get().assetLoadingExecutor())
         .thenApply(spatial -> AssetFactory.get().applyLambert(spatial, 0.3f))
         .thenAccept(model3dView::onModelLoaded);
 

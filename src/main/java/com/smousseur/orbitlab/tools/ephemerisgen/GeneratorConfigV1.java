@@ -4,6 +4,7 @@ import com.smousseur.orbitlab.core.SolarSystemBody;
 import java.nio.file.Path;
 import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -41,7 +42,7 @@ public record GeneratorConfigV1(
     int maxChunksInFlightPerBody,
     int maxChunksInFlightGlobal,
     int zstdLevel,
-    EnumMap<SolarSystemBody, BodyGenerationParams> paramsByBody) {
+    Map<SolarSystemBody, BodyGenerationParams> paramsByBody) {
 
   public GeneratorConfigV1 {
     Objects.requireNonNull(orekitDataZipPath, "orekitDataZipPath");
@@ -90,7 +91,7 @@ public record GeneratorConfigV1(
     // so here we keep a placeholder; generator will recompute.
     double datasetEndOffsetPlaceholder = Double.NaN;
 
-    EnumMap<SolarSystemBody, BodyGenerationParams> p = new EnumMap<>(SolarSystemBody.class);
+    Map<SolarSystemBody, BodyGenerationParams> p = new EnumMap<>(SolarSystemBody.class);
 
     double chunk30d = 2_592_000.0;
 

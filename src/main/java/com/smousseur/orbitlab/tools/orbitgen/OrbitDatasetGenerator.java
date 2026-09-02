@@ -13,11 +13,12 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
-import java.util.EnumSet;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.orekit.time.AbsoluteDate;
@@ -37,6 +38,7 @@ public class OrbitDatasetGenerator {
   private final ExecutorService executor;
   private final SimulationConfig simulationConfig;
   private final AbsoluteDate referenceStart = OrekitTime.utcNow(); // AbsoluteDate.J2000_EPOCH;
+  private final DatasetEphemerisSource datasetSource;
 
   /**
    * Creates a new orbit dataset generator that writes output files to the specified directory.
@@ -50,7 +52,7 @@ public class OrbitDatasetGenerator {
     this.outputDir = outputDir;
     this.executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
     Path datasetDir = OrbitlabPath.EPHEMERIS_PATH;
-    DatasetEphemerisSource datasetSource = new DatasetEphemerisSource(datasetDir, 32);
+    this.datasetSource = new DatasetEphemerisSource(datasetDir, 32);
     this.simulationConfig = SimulationConfig.defaultSolarSystem();
 
     this.cache =
@@ -62,33 +64,32 @@ public class OrbitDatasetGenerator {
   }
 
   /**
-   * Generates orbit binary files for all configured orbital bodies asynchronously.
+   * Generates orbit binary files for all configured orbital bodies.
    *
    * <p>For each body, computes one full orbital period and writes the resulting heliocentric
-   * positions to a binary file named {@code <BODY>-orbit.bin} in the output directory. The executor
-   * is shut down after all bodies have been processed.
+   * positions to a binary file named {@code <BODY>-orbit.bin} in the output directory. Bodies are
+   * computed in parallel, but the method only returns once every one of them has been written or
+   * has failed: the ephemeris handles these computations read from belong to this generator, and
+   * {@link #close} pulling them out from under a computation still in flight would fail it with a
+   * closed channel.
    */
   public void generate() {
-    AtomicInteger counter = new AtomicInteger(0);
-    EnumSet<SolarSystemBody> bodies = simulationConfig.orbitBodies();
+    Set<SolarSystemBody> bodies = simulationConfig.orbitBodies();
+    List<CompletableFuture<Void>> pending = new ArrayList<>(bodies.size());
     for (SolarSystemBody body : bodies) {
-      CompletableFuture.supplyAsync(
-              () -> cache.getOrComputeOnePeriod(body, referenceStart).join(), executor)
-          .thenAccept(
-              path -> {
-                writeOrbitFile(body, path);
-                counter.incrementAndGet();
-                if (counter.get() == bodies.size()) {
-                  LOG.info("Orbit dataset generation completed.");
-                  executor.shutdown();
-                }
-              })
-          .exceptionally(
-              ex -> {
-                LOG.severe("Failed to generate orbit file for body: " + body);
-                return null;
-              });
+      pending.add(
+          CompletableFuture.supplyAsync(
+                  () -> cache.getOrComputeOnePeriod(body, referenceStart).join(), executor)
+              .thenAccept(path -> writeOrbitFile(body, path))
+              .exceptionally(
+                  ex -> {
+                    LOG.severe("Failed to generate orbit file for body: " + body);
+                    return null;
+                  }));
     }
+    CompletableFuture.allOf(pending.toArray(new CompletableFuture<?>[0])).join();
+    LOG.info("Orbit dataset generation completed.");
+    executor.shutdown();
   }
 
   private void writeOrbitFile(SolarSystemBody body, OrbitPath path) {
@@ -107,5 +108,15 @@ public class OrbitDatasetGenerator {
     } catch (IOException e) {
       LOG.severe("Failed to create file for body: " + body);
     }
+  }
+
+  /**
+   * Releases the ephemeris dataset handles this generator reads from.
+   *
+   * <p>Only safe once {@link #generate} has returned: the handles are shared by every body
+   * computation, and closing them mid-flight fails the ones still running.
+   */
+  public void close() {
+    datasetSource.close();
   }
 }

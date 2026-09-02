@@ -53,7 +53,7 @@ public class LunarOrbitDynamicParameters extends DynamicParameters {
   }
 
   @Override
-  protected Container createContainer() {
+  protected final Container createContainer() {
     Container parameters = new Container(new BoxLayout(Axis.Y, FillMode.Even));
     parameters.addChild(
         getSliderContainer(

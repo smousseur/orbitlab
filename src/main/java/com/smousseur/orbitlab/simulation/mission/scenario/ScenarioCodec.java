@@ -41,7 +41,7 @@ public final class ScenarioCodec {
     try {
       return MAPPER.writeValueAsString(file);
     } catch (JacksonException e) {
-      throw new OrbitlabException("Cannot write the scenario: " + e.getMessage());
+      throw new OrbitlabException("Cannot write the scenario: " + e.getMessage(), e);
     }
   }
 
@@ -61,7 +61,7 @@ public final class ScenarioCodec {
     try {
       tree = MAPPER.readTree(json);
     } catch (JacksonException e) {
-      throw new OrbitlabException("Cannot read the scenario: " + e.getMessage());
+      throw new OrbitlabException("Cannot read the scenario: " + e.getMessage(), e);
     }
     int version = tree.path("formatVersion").asInt(0);
     if (version > ScenarioFile.CURRENT_FORMAT_VERSION) {
@@ -75,7 +75,7 @@ public final class ScenarioCodec {
     try {
       return MAPPER.treeToValue(tree, ScenarioFile.class);
     } catch (JacksonException e) {
-      throw new OrbitlabException("Cannot read the scenario: " + e.getMessage());
+      throw new OrbitlabException("Cannot read the scenario: " + e.getMessage(), e);
     }
   }
 }

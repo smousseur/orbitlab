@@ -134,8 +134,8 @@ public final class MissionOrchestratorAppState extends BaseAppState {
 
   private void pollMissionActions() {
     EventBus bus = context.eventBus();
-    EventBus.MissionActionRequest request;
-    while ((request = bus.pollMissionAction()) != null) {
+    EventBus.MissionActionRequest request = bus.pollMissionAction();
+    while (request != null) {
       MissionId id = request.missionId();
       switch (request.action()) {
         case OPTIMIZE ->
@@ -163,6 +163,7 @@ public final class MissionOrchestratorAppState extends BaseAppState {
           logger.info("Mission [{}] deleted", id.shortForm());
         }
       }
+      request = bus.pollMissionAction();
     }
   }
 
@@ -261,12 +262,12 @@ public final class MissionOrchestratorAppState extends BaseAppState {
   private static double[] flownLoads(MissionEntry entry, MissionPlan plan) {
     PropellantSizing sizing = plan.sizing();
     if (sizing == null) {
-      return null;
+      return new double[0];
     }
     return entry
         .spec()
         .map(spec -> sizing.applyTo(spec.configuration().propellantLoads()))
-        .orElse(null);
+        .orElseGet(() -> new double[0]);
   }
 
   /**

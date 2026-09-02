@@ -2,6 +2,7 @@ package com.smousseur.orbitlab.simulation.orbit.config;
 
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import java.util.EnumMap;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -18,7 +19,7 @@ import java.util.Objects;
  * @param maxFraction the maximum comfort margin as a fraction of the orbital period
  */
 public record OrbitWindowConfig(
-    EnumMap<SolarSystemBody, Integer> pointsByBody,
+    Map<SolarSystemBody, Integer> pointsByBody,
     int marginPoints,
     int snapPoints,
     int minSizeSeconds,
@@ -64,7 +65,7 @@ public record OrbitWindowConfig(
    * @return a default solar system orbit window configuration
    */
   public static OrbitWindowConfig defaultSolarSystem() {
-    EnumMap<SolarSystemBody, Integer> points = new EnumMap<>(SolarSystemBody.class);
+    Map<SolarSystemBody, Integer> points = new EnumMap<>(SolarSystemBody.class);
 
     points.put(SolarSystemBody.MERCURY, 4096);
     points.put(SolarSystemBody.VENUS, 4096);

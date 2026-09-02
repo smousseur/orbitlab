@@ -73,6 +73,11 @@ public final class FormStyles {
   /** Modal backdrop tint (black @ 60% alpha). */
   public static final ColorRGBA BACKDROP = new ColorRGBA(0f, 0f, 0f, 0.60f);
 
+  private static final String BACKGROUND_ATTR = "background";
+  private static final String INSETS_ATTR = "insets";
+  private static final String COLOR_ATTR = "color";
+  private static final String FONT_ATTR = "font";
+
   private FormStyles() {}
 
   // =================================================================
@@ -124,18 +129,19 @@ public final class FormStyles {
     Styles styles = GuiGlobals.getInstance().getStyles();
 
     Attributes c = styles.getSelector("container", STYLE);
-    c.set("background", null);
-    c.set("insets", new Insets3f(0, 0, 0, 0));
+    c.set(BACKGROUND_ATTR, null);
+    c.set(INSETS_ATTR, new Insets3f(0, 0, 0, 0));
 
     Attributes l = styles.getSelector("label", STYLE);
-    l.set("color", TEXT_PRIMARY);
-    l.set("font", UiKit.sora(13));
+    l.set(COLOR_ATTR, TEXT_PRIMARY);
+    l.set(FONT_ATTR, UiKit.sora(13));
 
     Attributes b = styles.getSelector("button", STYLE);
-    b.set("background", UiKit.wizardBg9("btn-ghost", 8));
-    b.set("color", TEXT_PRIMARY);
-    b.set("font", UiKit.sora(13));
-    b.set("insets", new Insets3f(BUTTON_INSET_Y, BUTTON_INSET_X, BUTTON_INSET_Y, BUTTON_INSET_X));
+    b.set(BACKGROUND_ATTR, UiKit.wizardBg9("btn-ghost", 8));
+    b.set(COLOR_ATTR, TEXT_PRIMARY);
+    b.set(FONT_ATTR, UiKit.sora(13));
+    b.set(
+        INSETS_ATTR, new Insets3f(BUTTON_INSET_Y, BUTTON_INSET_X, BUTTON_INSET_Y, BUTTON_INSET_X));
 
     // Top-left application menu. The title button needs nothing of its own: it is a plain
     // Button(FormStyles.STYLE) and takes btn-ghost, Sora 13 and TEXT_PRIMARY from the selector
@@ -148,7 +154,7 @@ public final class FormStyles {
     // label alone: a chip that appeared and disappeared under the cursor would read as a widget
     // that comes and goes.
     Attributes menuTitle = styles.getSelector("menu.title.button", STYLE);
-    menuTitle.set("background", UiKit.wizardBg9("btn-ghost-hover", 8));
+    menuTitle.set(BACKGROUND_ATTR, UiKit.wizardBg9("btn-ghost-hover", 8));
     menuTitle.set("highlightColor", ACCENT_BRIGHT);
 
     Attributes menu = styles.getSelector("menu", STYLE);
@@ -157,8 +163,8 @@ public final class FormStyles {
     // padding around the list is the selector's insets, and nothing else.
     TbtQuadBackgroundComponent menuBg = shellBg();
     clearMargin(menuBg);
-    menu.set("background", menuBg);
-    menu.set("insets", new Insets3f(8, 6, 8, 6));
+    menu.set(BACKGROUND_ATTR, menuBg);
+    menu.set(INSETS_ATTR, new Insets3f(8, 6, 8, 6));
 
     Attributes menuItem = styles.getSelector("menu.item", STYLE);
     // The hover skin is laid at rest too, fully transparent. An entry with no background has no
@@ -167,25 +173,25 @@ public final class FormStyles {
     TbtQuadBackgroundComponent menuItemBg = UiKit.textureBg("row-hover", 8);
     menuItemBg.setMargin(0f, 0f);
     menuItemBg.setColor(new ColorRGBA(1f, 1f, 1f, 0f));
-    menuItem.set("background", menuItemBg);
-    menuItem.set("color", TEXT_SECONDARY);
-    menuItem.set("font", UiKit.sora(12));
-    menuItem.set("insets", new Insets3f(7, 12, 7, 12));
+    menuItem.set(BACKGROUND_ATTR, menuItemBg);
+    menuItem.set(COLOR_ATTR, TEXT_SECONDARY);
+    menuItem.set(FONT_ATTR, UiKit.sora(12));
+    menuItem.set(INSETS_ATTR, new Insets3f(7, 12, 7, 12));
 
     Attributes tf = styles.getSelector("textField", STYLE);
-    tf.set("background", inputBg());
-    tf.set("color", TEXT_PRIMARY);
-    tf.set("font", UiKit.ibmPlexMono(11));
-    tf.set("insets", new Insets3f(8, 12, 8, 12));
+    tf.set(BACKGROUND_ATTR, inputBg());
+    tf.set(COLOR_ATTR, TEXT_PRIMARY);
+    tf.set(FONT_ATTR, UiKit.ibmPlexMono(11));
+    tf.set(INSETS_ATTR, new Insets3f(8, 12, 8, 12));
 
     Attributes s = styles.getSelector("slider", STYLE);
-    s.set("background", UiKit.wizardFlat("slider-track"));
+    s.set(BACKGROUND_ATTR, UiKit.wizardFlat("slider-track"));
 
     Attributes sThumb = styles.getSelector("slider.thumb.button", STYLE);
     sThumb.set("text", "");
-    sThumb.set("background", UiKit.wizardFlat("slider-thumb"));
-    sThumb.set("color", TEXT_PRIMARY);
-    sThumb.set("font", UiKit.sora(1));
-    sThumb.set("insets", new Insets3f(0, 0, 0, 0));
+    sThumb.set(BACKGROUND_ATTR, UiKit.wizardFlat("slider-thumb"));
+    sThumb.set(COLOR_ATTR, TEXT_PRIMARY);
+    sThumb.set(FONT_ATTR, UiKit.sora(1));
+    sThumb.set(INSETS_ATTR, new Insets3f(0, 0, 0, 0));
   }
 }

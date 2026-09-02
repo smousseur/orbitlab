@@ -2,6 +2,7 @@ package com.smousseur.orbitlab.simulation.ephemeris.config;
 
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import java.util.EnumMap;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -21,7 +22,7 @@ public record EphemerisConfig(
     double sampleStepSeconds,
     int windowPointsBack,
     int windowPointsForward,
-    EnumMap<SolarSystemBody, Double> orbitalPeriodSecondsByBody) {
+    Map<SolarSystemBody, Double> orbitalPeriodSecondsByBody) {
   public EphemerisConfig {
     if (!Double.isFinite(sampleStepSeconds) || sampleStepSeconds <= 0.0) {
       throw new IllegalArgumentException("sampleStepSeconds must be finite and > 0");
@@ -70,7 +71,7 @@ public record EphemerisConfig(
    */
   public static EphemerisConfig defaultSolarSystem() {
     double day = 86400.0;
-    EnumMap<SolarSystemBody, Double> periods = new EnumMap<>(SolarSystemBody.class);
+    Map<SolarSystemBody, Double> periods = new EnumMap<>(SolarSystemBody.class);
     periods.put(SolarSystemBody.MERCURY, 87.9691 * day);
     periods.put(SolarSystemBody.VENUS, 224.701 * day);
     periods.put(SolarSystemBody.EARTH, 365.256363004 * day);

@@ -112,7 +112,7 @@ public final class ScenarioSession {
       } catch (RuntimeException e) {
         rejections.add(
             new ScenarioLoadReport.Rejection(mission.name(), MissionEntry.describeFailure(e)));
-        logger.warn("Mission '{}' was rejected: {}", mission.name(), e.getMessage());
+        logger.warn("Mission '{}' was rejected: {}", mission.name(), e.getMessage(), e);
       }
     }
     return new ScenarioLoadReport(entries, clockDateOf(file), rejections);
@@ -185,7 +185,7 @@ public final class ScenarioSession {
     try {
       model = AtmosphereModel.valueOf(name);
     } catch (IllegalArgumentException e) {
-      throw new OrbitlabException("Unknown atmosphere model: " + name);
+      throw new OrbitlabException("Unknown atmosphere model: " + name, e);
     }
     if (model != AtmosphereModel.NONE) {
       throw new OrbitlabException(
@@ -201,7 +201,7 @@ public final class ScenarioSession {
     try {
       return OptimizationType.valueOf(name);
     } catch (IllegalArgumentException e) {
-      throw new OrbitlabException("Unknown optimization mode: " + name);
+      throw new OrbitlabException("Unknown optimization mode: " + name, e);
     }
   }
 

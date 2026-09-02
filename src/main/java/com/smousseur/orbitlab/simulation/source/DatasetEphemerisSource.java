@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.EnumMap;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import org.apache.logging.log4j.LogManager;
@@ -34,11 +35,13 @@ public final class DatasetEphemerisSource
   private static final AbsoluteDate DATASET_T_START = new AbsoluteDate(1990, 1, 1, 0, 0, 0.0, TAI);
   private static final AbsoluteDate DATASET_T_END_EXCL =
       new AbsoluteDate(2101, 1, 1, 0, 0, 0.0, TAI);
-
   private final Path datasetDir;
-  private final int chunksInCachePerBody;
 
-  private final EnumMap<SolarSystemBody, BodyFile> bodyFiles = new EnumMap<>(SolarSystemBody.class);
+  /**
+   * Open file handles, one per body, owned by this source for its whole lifetime: they are opened
+   * in the constructor and closed only by {@link #close()}. Every other method borrows them.
+   */
+  private final Map<SolarSystemBody, BodyFile> bodyFiles = new EnumMap<>(SolarSystemBody.class);
 
   /**
    * Creates a new dataset ephemeris source backed by binary files in the given directory.
@@ -57,7 +60,6 @@ public final class DatasetEphemerisSource
     if (chunksInCachePerBody < 1) {
       throw new IllegalArgumentException("chunksInCachePerBody must be >= 1");
     }
-    this.chunksInCachePerBody = chunksInCachePerBody;
 
     if (!Files.isDirectory(this.datasetDir)) {
       throw new OrbitlabException("Ephemeris dataset directory not found: " + this.datasetDir);
@@ -73,10 +75,11 @@ public final class DatasetEphemerisSource
       try {
         bodyFiles.put(b, BodyFile.open(b, p, chunksInCachePerBody));
       } catch (IOException e) {
-        throw new OrbitlabException("Failed to open ephemeris dataset file: " + p + " (" + e + ")");
+        throw new OrbitlabException(
+            "Failed to open ephemeris dataset file: " + p + " (" + e.getMessage() + ")", e);
       } catch (RuntimeException e) {
         throw new OrbitlabException(
-            "Invalid ephemeris dataset file: " + p + " (" + e.getMessage() + ")");
+            "Invalid ephemeris dataset file: " + p + " (" + e.getMessage() + ")", e);
       }
     }
   }
@@ -93,7 +96,10 @@ public final class DatasetEphemerisSource
     return Optional.of(DATASET_T_END_EXCL);
   }
 
+  // PMD.CloseResource: the handle is borrowed from bodyFiles, not acquired here. Closing it would
+  // shut the shared FileChannel and make every later sample of that body fail.
   @Override
+  @SuppressWarnings("PMD.CloseResource")
   public BodySample sampleIcrf(SolarSystemBody body, AbsoluteDate date) {
     Objects.requireNonNull(body, "body");
     Objects.requireNonNull(date, "date");
@@ -130,7 +136,9 @@ public final class DatasetEphemerisSource
     return new BodySample(date, pv, rot);
   }
 
+  // PMD.CloseResource: see sampleIcrf — the handle is borrowed from bodyFiles, never owned here.
   @Override
+  @SuppressWarnings("PMD.CloseResource")
   public void prefetch(SolarSystemBody body, AbsoluteDate start, AbsoluteDate end, double speed) {
     Objects.requireNonNull(body, "body");
     Objects.requireNonNull(start, "start");
@@ -171,14 +179,16 @@ public final class DatasetEphemerisSource
 
   @Override
   public void close() {
-    for (BodyFile bf : bodyFiles.values()) {
-      try {
-        bf.close();
-      } catch (Exception ignored) {
-        // ignore
-      }
-    }
+    bodyFiles.forEach(DatasetEphemerisSource::closeQuietly);
     bodyFiles.clear();
+  }
+
+  private static void closeQuietly(SolarSystemBody body, BodyFile file) {
+    try {
+      file.close();
+    } catch (IOException e) {
+      logger.warn("Failed to close ephemeris dataset file for {}: {}", body, e.getMessage(), e);
+    }
   }
 
   private static String fmtDate(AbsoluteDate d) {

@@ -15,6 +15,7 @@ import com.smousseur.orbitlab.simulation.mission.OptimizationType;
 import com.smousseur.orbitlab.simulation.mission.context.MissionEntry;
 import com.smousseur.orbitlab.ui.UiKit;
 import com.smousseur.orbitlab.ui.mission.component.IconTooltip;
+import java.util.Locale;
 import java.util.function.Consumer;
 
 /**
@@ -33,14 +34,7 @@ final class ModeSegmentedControl {
   private static final float ICON_SIZE = 15f;
   private static final float BORDER = 1f;
 
-  private static final float TIP_CHAR_W = 10f;
-  private static final float TIP_PAD_X = 8f;
-  private static final float TIP_HEIGHT = 20f;
-  private static final float TIP_GAP = 6f;
-  private static final float TIP_Z = 10f;
-
   private static final ColorRGBA BORDER_COLOR = new ColorRGBA(0.071f, 0.161f, 0.267f, 0.3f);
-  private static final int TIP_MIN_WIDTH = 65;
 
   private ModeSegmentedControl() {}
 
@@ -81,7 +75,7 @@ final class ModeSegmentedControl {
 
   private static Container segment(
       OptimizationType type, boolean active, boolean enabled, Consumer<OptimizationType> onSelect) {
-    final String base = "mode-" + type.name().toLowerCase();
+    final String base = "mode-" + type.name().toLowerCase(Locale.ROOT);
     final String defaultTex = base + "-default";
     final String activeTex = base + "-active";
     final String hoverTex = base + "-hover";
@@ -111,7 +105,8 @@ final class ModeSegmentedControl {
       icon.setBackground(UiKit.rosterFlat(disabledTex));
       return seg;
     }
-    IconTooltip.attach(seg, icon, type.name().toLowerCase(), IconTooltip.Placement.ABOVE);
+    IconTooltip.attach(
+        seg, icon, type.name().toLowerCase(Locale.ROOT), IconTooltip.Placement.ABOVE);
     MouseEventControl.addListenersToSpatial(
         seg,
         new DefaultMouseListener() {

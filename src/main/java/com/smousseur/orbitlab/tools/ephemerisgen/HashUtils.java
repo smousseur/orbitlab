@@ -19,9 +19,12 @@ public final class HashUtils {
     MessageDigest md = MessageDigest.getInstance("SHA-256");
     try (InputStream in = Files.newInputStream(path)) {
       byte[] buf = new byte[1024 * 1024];
-      int r;
-      while ((r = in.read(buf)) >= 0) {
-        if (r > 0) md.update(buf, 0, r);
+      int r = in.read(buf);
+      while (r >= 0) {
+        if (r > 0) {
+          md.update(buf, 0, r);
+        }
+        r = in.read(buf);
       }
     }
     return toHex(md.digest());

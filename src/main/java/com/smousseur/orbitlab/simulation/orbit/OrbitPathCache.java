@@ -6,9 +6,11 @@ import com.smousseur.orbitlab.simulation.ephemeris.config.EphemerisConfig;
 import com.smousseur.orbitlab.simulation.orbit.config.OrbitWindowConfig;
 import com.smousseur.orbitlab.simulation.source.EphemerisSource;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.orekit.frames.Frame;
@@ -31,7 +33,7 @@ public final class OrbitPathCache {
   private final OrbitWindowConfig orbitWindowConfig;
   private final Executor executor;
 
-  private final ConcurrentHashMap<SolarSystemBody, CompletableFuture<OrbitPath>> cache =
+  private final ConcurrentMap<SolarSystemBody, CompletableFuture<OrbitPath>> cache =
       new ConcurrentHashMap<>();
 
   /**
@@ -82,7 +84,7 @@ public final class OrbitPathCache {
     double step = orbitWindowConfig.clampStepSeconds(rawStep);
 
     int n = (int) Math.ceil(period / step) + 1;
-    ArrayList<Vector3D> positions = new ArrayList<>(n + 1);
+    List<Vector3D> positions = new ArrayList<>(n + 1);
 
     OrekitService orekit = OrekitService.get();
     orekit.initialize();

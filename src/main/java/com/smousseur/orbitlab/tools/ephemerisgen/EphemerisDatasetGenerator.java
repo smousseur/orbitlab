@@ -9,7 +9,6 @@ import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
-import java.util.concurrent.TimeUnit;
 import org.orekit.data.DataContext;
 import org.orekit.data.DataProvidersManager;
 import org.orekit.data.ZipJarCrawler;
@@ -39,6 +38,16 @@ public final class EphemerisDatasetGenerator {
     this.cfg = Objects.requireNonNull(cfg, "cfg");
   }
 
+  private static ExecutorService createComputePool(int threadCount, String threadName) {
+    return Executors.newFixedThreadPool(
+        threadCount,
+        r -> {
+          Thread t = new Thread(r, threadName);
+          t.setDaemon(false);
+          return t;
+        });
+  }
+
   /**
    * Generates ephemeris binary files for all configured bodies.
    *
@@ -62,29 +71,10 @@ public final class EphemerisDatasetGenerator {
 
     double endOffsetSecondsExclusive = tEndExclusive.durationFrom(tStart);
 
-    // Shared compute pool + global in-flight semaphore (memory bound).
-    ExecutorService computePool =
-        Executors.newFixedThreadPool(
-            cfg.computeThreads(),
-            r -> {
-              Thread t = new Thread(r, "ephemgen-compute");
-              t.setDaemon(false);
-              return t;
-            });
-
     Semaphore globalInFlight = new Semaphore(cfg.maxChunksInFlightGlobal(), true);
 
-    // Generate bodies in fixed order, but run up to maxBodiesInParallel writers at once.
-    ExecutorService bodyPool =
-        Executors.newFixedThreadPool(
-            cfg.maxBodiesInParallel(),
-            r -> {
-              Thread t = new Thread(r, "ephemgen-body");
-              t.setDaemon(false);
-              return t;
-            });
-
-    try {
+    try (var computePool = createComputePool(cfg.computeThreads(), "ephemgen-compute");
+        var bodyPool = createComputePool(cfg.maxBodiesInParallel(), "ephemgen-body")) {
       List<SolarSystemBody> bodies = cfg.bodiesInOrder();
       List<Runnable> jobs = new ArrayList<>(bodies.size());
 
@@ -118,13 +108,6 @@ public final class EphemerisDatasetGenerator {
       for (Runnable job : jobs) {
         bodyPool.submit(job);
       }
-
-    } finally {
-      bodyPool.shutdown();
-      bodyPool.awaitTermination(7, TimeUnit.DAYS);
-
-      computePool.shutdown();
-      computePool.awaitTermination(7, TimeUnit.DAYS);
     }
   }
 

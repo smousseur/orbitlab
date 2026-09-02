@@ -269,12 +269,10 @@ public final class LunarInsertionPlan {
     Vector3D direction = velocity.normalize().negate();
     double commanded = impulsive;
     double duration = 0.0;
-    double neededPropellant = 0.0;
     SpacecraftState cutoff = null;
 
     for (int iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
       commanded = impulsive + beta * circularSpeed;
-      neededPropellant = propellantFor(commanded, ignitionState.getMass(), exhaustSpeed);
       duration =
           Physics.computeBurnDurationCapped(
               commanded,

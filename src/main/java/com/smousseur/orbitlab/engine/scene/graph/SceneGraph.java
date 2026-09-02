@@ -48,7 +48,6 @@ public final class SceneGraph {
   private final Node skyRoot = new Node("skyRoot");
 
   private final OrbitLayer farOrbitLayer = new OrbitLayer(farOrbitsNode);
-  private final OrbitLayer nearOrbitLayer = new OrbitLayer(nearOrbitsNode);
 
   public SceneGraph() {
     farRoot.attachChild(farFrame);

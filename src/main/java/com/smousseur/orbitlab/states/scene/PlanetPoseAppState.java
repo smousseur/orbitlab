@@ -33,7 +33,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
@@ -124,7 +123,7 @@ public final class PlanetPoseAppState extends BaseAppState {
     nearBodiesNode.attachChild(nearBucket);
 
     for (SolarSystemBody body : SolarSystemBody.values()) {
-      String name = body.displayName().toLowerCase();
+      String name = body.displayName().toLowerCase(Locale.ROOT);
       BodyRenderConfig config =
           new BodyRenderConfig(
               body.name(),
@@ -146,7 +145,6 @@ public final class PlanetPoseAppState extends BaseAppState {
       bucket.attachChild(view.spatial());
       nearBucket.attachChild(view.nearSpatial());
       context.addPlanet(body, presenter);
-      ExecutorService assetExecutor = AssetFactory.get().assetLoadingExecutor();
       Model3dView model3dView = view.getModel3dView();
       if (body == SolarSystemBody.SUN) {
         // Attached straight away rather than with the model: the corona is our own geometry and
@@ -158,7 +156,8 @@ public final class PlanetPoseAppState extends BaseAppState {
             SUN_CORONA,
             SUN_CORONA_FALLOFF);
       }
-      CompletableFuture.supplyAsync(model3dView::loadModel, assetExecutor)
+      CompletableFuture.supplyAsync(
+              model3dView::loadModel, AssetFactory.get().assetLoadingExecutor())
           .thenApply(
               spatial -> {
                 // Before re-materialisation, on the asset as authored: this asks whether the file

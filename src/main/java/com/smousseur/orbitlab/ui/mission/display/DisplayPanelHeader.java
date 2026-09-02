@@ -33,8 +33,7 @@ final class DisplayPanelHeader {
     float titleWidth = totalWidth - 12 - 10 - DisplayRowIcons.ICON_SIZE - 6 - manageLabelWidth();
     title.setPreferredSize(new Vector3f(titleWidth, HEIGHT, 0));
 
-    root.addChild(
-        DisplayRowIcons.vCenter(DisplayRowIcons.manageIconButton(root, onManage), HEIGHT));
+    root.addChild(DisplayRowIcons.vCenter(DisplayRowIcons.manageIconButton(onManage), HEIGHT));
     root.addChild(UiKit.hSpacer(6));
 
     Label manageLabel = root.addChild(new Label("Manage", FormStyles.STYLE));

@@ -33,26 +33,26 @@ final class DisplayRowIcons {
   }
 
   /** Telemetry toggle icon. {@code active} controls the idle texture (filled vs grayed). */
-  static Container telemetryIconButton(Container parent, boolean active, Runnable onClick) {
+  static Container telemetryIconButton(boolean active, Runnable onClick) {
     String idleTex = active ? "icon-action-telemetry" : "icon-action-telemetry-disabled";
     String hoverTex = "icon-action-telemetry-hover";
-    return toggleIcon(parent, idleTex, hoverTex, "telemetry", onClick);
+    return toggleIcon(idleTex, hoverTex, "telemetry", onClick);
   }
 
   /** Visibility toggle icon. {@code on} controls the idle texture (filled vs grayed). */
-  static Container visibilityIconButton(Container parent, boolean on, Runnable onClick) {
+  static Container visibilityIconButton(boolean on, Runnable onClick) {
     String idleTex = on ? "icon-action-view" : "icon-action-view-disabled";
     String hoverTex = "icon-action-view-hover";
-    return toggleIcon(parent, idleTex, hoverTex, "view", onClick);
+    return toggleIcon(idleTex, hoverTex, "view", onClick);
   }
 
   /** Manage button icon (gear). */
-  static Container manageIconButton(Container parent, Runnable onClick) {
-    return toggleIcon(parent, "icon-action-manage", "icon-action-manage-hover", "manage", onClick);
+  static Container manageIconButton(Runnable onClick) {
+    return toggleIcon("icon-action-manage", "icon-action-manage-hover", "manage", onClick);
   }
 
   private static Container toggleIcon(
-      Container parent, String idleTex, String hoverTex, String tooltipText, Runnable onClick) {
+      String idleTex, String hoverTex, String tooltipText, Runnable onClick) {
     Container icon = new Container();
     icon.setPreferredSize(new Vector3f(ICON_SIZE, ICON_SIZE, 0));
     icon.setBackground(UiKit.missionsFlat(idleTex));

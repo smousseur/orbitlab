@@ -145,7 +145,8 @@ public final class SlidingWindowEphemerisBuffer {
 
   private static BodySample interpolate(Snapshot s, AbsoluteDate t) {
     int[] interval = EphemerisInterpolator.findInterval(s.dates, t);
-    int i0 = interval[0], i1 = interval[1];
+    int i0 = interval[0];
+    int i1 = interval[1];
 
     if (i0 == i1) {
       return new BodySample(t, new PVCoordinates(s.pos[i0], s.vel[i0]), s.rot[i0]);

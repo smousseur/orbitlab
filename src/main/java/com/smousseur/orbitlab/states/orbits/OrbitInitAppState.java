@@ -15,8 +15,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.EnumSet;
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
@@ -33,7 +34,7 @@ public class OrbitInitAppState extends BaseAppState {
 
   private static final Logger logger = LogManager.getLogger(OrbitInitAppState.class);
   private final SceneGraph.OrbitLayer orbitLayer;
-  private final EnumSet<SolarSystemBody> bodies;
+  private final Set<SolarSystemBody> bodies;
   private final Path datasetDir = OrbitlabPath.ORBITS_PATH;
 
   /**
@@ -51,7 +52,7 @@ public class OrbitInitAppState extends BaseAppState {
     for (SolarSystemBody body : bodies) {
       try {
         List<Vector3D> pts = readOrbitData(body);
-        if (pts == null) {
+        if (pts.isEmpty()) {
           continue; // no dataset file for this body — runtime will compute it
         }
         Geometry orbitGeometry =
@@ -68,7 +69,7 @@ public class OrbitInitAppState extends BaseAppState {
     if (!Files.isRegularFile(orbitFile)) {
       logger.info(
           "No orbit dataset file for {} — will be computed at runtime: {}", body, orbitFile);
-      return null;
+      return Collections.emptyList();
     }
     List<Vector3D> results = new ArrayList<>();
     try (var in = new DataInputStream(new BufferedInputStream(Files.newInputStream(orbitFile)))) {

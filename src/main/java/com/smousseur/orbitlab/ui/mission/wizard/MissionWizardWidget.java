@@ -193,7 +193,7 @@ public class MissionWizardWidget implements AutoCloseable {
     stepLauncher.update();
   }
 
-  public void showStep(MissionWizardStep step) {
+  public final void showStep(MissionWizardStep step) {
     currentStep = step;
     content.clearChildren();
     Container panel = stepPanels.get(step);

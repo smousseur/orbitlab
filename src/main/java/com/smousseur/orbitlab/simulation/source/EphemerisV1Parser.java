@@ -146,25 +146,25 @@ final class EphemerisV1Parser {
 
     if (!Double.isFinite(chunkDur) || chunkDur <= 0.0) {
       throw new OrbitlabException(
-          "Invalid chunk duration for " + expectedBody + " (" + path + "): " + chunkDur);
+          errorMsg("Invalid chunk duration for", expectedBody, path, chunkDur));
     }
     if (chunkCountUnsigned < 1 || chunkCountUnsigned > Integer.MAX_VALUE) {
       throw new OrbitlabException(
-          "Invalid chunk count for " + expectedBody + " (" + path + "): " + chunkCountUnsigned);
+          errorMsg("Invalid chunk count for", expectedBody, path, chunkCountUnsigned));
     }
 
     long fileSize = ch.size();
     if (chunkIndexOffset <= 0 || chunkIndexOffset >= fileSize) {
       throw new OrbitlabException(
-          "Invalid chunk index offset for "
-              + expectedBody
-              + " ("
-              + path
-              + "): "
-              + chunkIndexOffset);
+          errorMsg("Invalid chunk index offset for", expectedBody, path, chunkIndexOffset));
     }
 
     return new HeaderV1(chunkDur, (int) chunkCountUnsigned, chunkIndexOffset);
+  }
+
+  private static String errorMsg(
+      String msg, SolarSystemBody expectedBody, Path path, Object value) {
+    return msg + " " + expectedBody + " (" + path + "): " + value;
   }
 
   /**

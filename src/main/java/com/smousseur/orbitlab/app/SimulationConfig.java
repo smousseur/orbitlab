@@ -6,6 +6,7 @@ import com.smousseur.orbitlab.simulation.ephemeris.config.SlidingWindowConfig;
 import com.smousseur.orbitlab.simulation.orbit.config.OrbitWindowConfig;
 import java.util.EnumSet;
 import java.util.Objects;
+import java.util.Set;
 import org.orekit.time.AbsoluteDate;
 
 /**
@@ -20,7 +21,7 @@ import org.orekit.time.AbsoluteDate;
  * @param orbitWindowConfig configuration for the orbit visualization window
  */
 public record SimulationConfig(
-    EnumSet<SolarSystemBody> orbitBodies,
+    Set<SolarSystemBody> orbitBodies,
     EphemerisConfig ephemerisConfig,
     SlidingWindowConfig slidingWindowConfig,
     OrbitWindowConfig orbitWindowConfig) {

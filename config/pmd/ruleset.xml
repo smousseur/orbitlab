@@ -11,10 +11,17 @@
         <exclude name="AvoidLiteralsInIfCondition"/>
         <exclude name="NullAssignment"/>
         <exclude name="AvoidFieldNameMatchingMethodName"/>
+        <exclude name="CompareObjectsWithEquals"/>
+        <exclude name="UseProperClassLoader"/>
+        <exclude name="AvoidDuplicateLiterals"/>
+        <exclude name="NonSerializableClass"/>
+        <exclude name="ReplaceJavaUtilDate"/>
     </rule>
 
     <rule ref="category/java/bestpractices.xml">
         <exclude name="GuardLogStatement"/>
+        <exclude name="UseVarargs" />
+        <exclude name="SystemPrintln" />
     </rule>
 
 </ruleset>

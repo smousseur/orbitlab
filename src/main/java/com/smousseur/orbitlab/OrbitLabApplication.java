@@ -69,7 +69,7 @@ public class OrbitLabApplication extends SimpleApplication {
    */
   public static void main(String[] args) {
     app = new OrbitLabApplication();
-    AppSettings settings = new AppSettings(true);
+    var settings = new AppSettings(true);
     settings.setResolution(1280, 720);
     settings.setTitle("Orbitlab");
     settings.setSamples(4);

@@ -357,10 +357,15 @@ public final class MissionEntry {
    * Records the loads a sizing sweep resolved, so a scenario can be saved on the vehicle that
    * actually flew rather than on the one the budget would rebuild today.
    *
-   * @param flownLauncherLoads the flown loads in kilograms, or {@code null} to forget them
+   * @param flownLauncherLoads the flown loads in kilograms, or {@code null} — as an empty array
+   *     also is, which is what the orchestrator passes when a plan carries no sizing — to forget
+   *     them
    */
   public void setFlownLauncherLoads(double[] flownLauncherLoads) {
-    this.flownLauncherLoads = flownLauncherLoads == null ? null : flownLauncherLoads.clone();
+    this.flownLauncherLoads =
+        flownLauncherLoads == null || flownLauncherLoads.length == 0
+            ? null
+            : flownLauncherLoads.clone();
   }
 
   /**

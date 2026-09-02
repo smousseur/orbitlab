@@ -15,6 +15,8 @@ import org.hipparchus.geometry.euclidean.threed.Vector3D;
  */
 public final class RenderTransform {
 
+  private static final String CTX = "ctx";
+
   private RenderTransform() {}
 
   private static final Quaternion meshCorrectionQ =
@@ -65,17 +67,19 @@ public final class RenderTransform {
       Vector3D objectIcrfMeters, Vector3D targetIcrfMeters, RenderContext ctx) {
 
     Objects.requireNonNull(objectIcrfMeters, "objectIcrfMeters");
-    Objects.requireNonNull(ctx, "ctx");
+    Objects.requireNonNull(ctx, CTX);
 
-    Vector3D meters;
-    switch (ctx.frame()) {
-      case HELIOCENTRIC_ICRF -> meters = objectIcrfMeters;
-      case PLANETOCENTRIC_RELATIVE_ICRF -> {
-        Objects.requireNonNull(targetIcrfMeters, "targetIcrfMeters");
-        meters = objectIcrfMeters.subtract(targetIcrfMeters);
-      }
-      default -> throw new IllegalStateException("Unhandled frame: " + ctx.frame());
-    }
+    // A switch expression rather than a statement: over an enum it is checked for exhaustiveness
+    // at compile time, so a new RenderFrame constant fails the build instead of reaching
+    // scaleMetersToUnits as a null.
+    Vector3D meters =
+        switch (ctx.frame()) {
+          case HELIOCENTRIC_ICRF -> objectIcrfMeters;
+          case PLANETOCENTRIC_RELATIVE_ICRF -> {
+            Objects.requireNonNull(targetIcrfMeters, "targetIcrfMeters");
+            yield objectIcrfMeters.subtract(targetIcrfMeters);
+          }
+        };
 
     return scaleMetersToUnits(meters, ctx);
   }
@@ -101,7 +105,7 @@ public final class RenderTransform {
       Vector3D renderUnitsIcrfAxes, Vector3D targetIcrfMeters, RenderContext ctx) {
 
     Objects.requireNonNull(renderUnitsIcrfAxes, "renderUnitsIcrfAxes");
-    Objects.requireNonNull(ctx, "ctx");
+    Objects.requireNonNull(ctx, CTX);
 
     Vector3D meters = scaleUnitsToMeters(renderUnitsIcrfAxes, ctx);
 
@@ -118,7 +122,7 @@ public final class RenderTransform {
   public static Vector3D toIcrfMetersFromRenderUnitsJmeAxes(
       Vector3D renderUnitsJmeAxes, Vector3D targetIcrfMeters, RenderContext ctx) {
     Objects.requireNonNull(renderUnitsJmeAxes, "renderUnitsJmeAxes");
-    Objects.requireNonNull(ctx, "ctx");
+    Objects.requireNonNull(ctx, CTX);
     Vector3D renderUnitsIcrfAxes = ctx.axisConvention().jmeToIcrf(renderUnitsJmeAxes);
     return toIcrfMetersFromRenderUnitsIcrfAxes(renderUnitsIcrfAxes, targetIcrfMeters, ctx);
   }
@@ -126,7 +130,7 @@ public final class RenderTransform {
   /** Scales a vector expressed in meters into JME units for the given context. */
   public static Vector3D scaleMetersToUnits(Vector3D meters, RenderContext ctx) {
     Objects.requireNonNull(meters, "meters");
-    Objects.requireNonNull(ctx, "ctx");
+    Objects.requireNonNull(ctx, CTX);
     double upm = ctx.unitsPerMeter();
     return new Vector3D(meters.getX() * upm, meters.getY() * upm, meters.getZ() * upm);
   }
@@ -134,7 +138,7 @@ public final class RenderTransform {
   /** Scales a vector expressed in JME units back into meters for the given context. */
   public static Vector3D scaleUnitsToMeters(Vector3D units, RenderContext ctx) {
     Objects.requireNonNull(units, "units");
-    Objects.requireNonNull(ctx, "ctx");
+    Objects.requireNonNull(ctx, CTX);
     double mpu = ctx.metersPerUnit();
     return new Vector3D(units.getX() * mpu, units.getY() * mpu, units.getZ() * mpu);
   }

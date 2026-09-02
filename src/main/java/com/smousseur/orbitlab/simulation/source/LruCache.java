@@ -16,7 +16,7 @@ import java.util.Map;
  */
 final class LruCache<K, V> {
   private final int maxSize;
-  private final LinkedHashMap<K, V> map;
+  private final Map<K, V> map;
 
   /**
    * Creates a new LRU cache with the specified maximum capacity.

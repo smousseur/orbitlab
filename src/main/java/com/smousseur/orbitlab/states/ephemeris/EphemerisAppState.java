@@ -16,6 +16,7 @@ import com.smousseur.orbitlab.simulation.ephemeris.service.EphemerisServiceRegis
 import com.smousseur.orbitlab.simulation.source.DatasetEphemerisSource;
 import java.nio.file.Path;
 import java.util.EnumMap;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import org.apache.logging.log4j.LogManager;
@@ -38,7 +39,7 @@ public final class EphemerisAppState extends BaseAppState {
 
   private final EphemerisService EPHEMERIS_SERVICE = this::trySampleInterpolated;
 
-  private final EnumMap<SolarSystemBody, SlidingWindowEphemerisBuffer> buffers =
+  private final Map<SolarSystemBody, SlidingWindowEphemerisBuffer> buffers =
       new EnumMap<>(SolarSystemBody.class);
 
   private EphemerisWorker worker;

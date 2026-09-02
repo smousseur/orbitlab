@@ -64,6 +64,7 @@ public final class StageChainRunner {
   }
 
   /** Observes the chain stage by stage, without taking part in flying it. */
+  @FunctionalInterface
   public interface StageListener {
 
     /** Called before a stage is entered. */

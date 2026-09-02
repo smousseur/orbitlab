@@ -3,6 +3,7 @@ package com.smousseur.orbitlab.engine.events;
 import com.smousseur.orbitlab.simulation.mission.MissionId;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
@@ -38,8 +39,7 @@ public final class EventBus {
     }
   }
 
-  private final ConcurrentLinkedQueue<MissionActionRequest> missionActionQueue =
-      new ConcurrentLinkedQueue<>();
+  private final Queue<MissionActionRequest> missionActionQueue = new ConcurrentLinkedQueue<>();
 
   /**
    * Publishes a mission action request. Can be called from any thread.
@@ -149,19 +149,19 @@ public final class EventBus {
     record OpenMissionDisplay() implements UiNavigationEvent {}
   }
 
-  private final ConcurrentLinkedQueue<UiNavigationEvent.OpenMissionWizard> openWizardQueue =
+  private final Queue<UiNavigationEvent.OpenMissionWizard> openWizardQueue =
       new ConcurrentLinkedQueue<>();
-  private final ConcurrentLinkedQueue<UiNavigationEvent.CreateMission> createMissionQueue =
+  private final Queue<UiNavigationEvent.CreateMission> createMissionQueue =
       new ConcurrentLinkedQueue<>();
-  private final ConcurrentLinkedQueue<UiNavigationEvent.UpdateMission> updateMissionQueue =
+  private final Queue<UiNavigationEvent.UpdateMission> updateMissionQueue =
       new ConcurrentLinkedQueue<>();
-  private final ConcurrentLinkedQueue<UiNavigationEvent.OpenMissionManagement> openManagementQueue =
+  private final Queue<UiNavigationEvent.OpenMissionManagement> openManagementQueue =
       new ConcurrentLinkedQueue<>();
-  private final ConcurrentLinkedQueue<UiNavigationEvent.ToggleMissionManagement>
-      toggleManagementQueue = new ConcurrentLinkedQueue<>();
-  private final ConcurrentLinkedQueue<UiNavigationEvent.OpenScenarioBrowser> openScenarioQueue =
+  private final Queue<UiNavigationEvent.ToggleMissionManagement> toggleManagementQueue =
       new ConcurrentLinkedQueue<>();
-  private final ConcurrentLinkedQueue<UiNavigationEvent.OpenMissionDisplay> openMissionDisplay =
+  private final Queue<UiNavigationEvent.OpenScenarioBrowser> openScenarioQueue =
+      new ConcurrentLinkedQueue<>();
+  private final Queue<UiNavigationEvent.OpenMissionDisplay> openMissionDisplay =
       new ConcurrentLinkedQueue<>();
 
   /**
@@ -227,7 +227,7 @@ public final class EventBus {
    */
   public record MissionTelemetryFocusRequest(MissionId missionId) {}
 
-  private final ConcurrentLinkedQueue<MissionTelemetryFocusRequest> telemetryFocusQueue =
+  private final Queue<MissionTelemetryFocusRequest> telemetryFocusQueue =
       new ConcurrentLinkedQueue<>();
 
   /**

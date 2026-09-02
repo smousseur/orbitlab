@@ -6,6 +6,7 @@ package com.smousseur.orbitlab.simulation.mission.optimizer;
  * <p>Implementations solve a {@link TrajectoryProblem} by searching for the parameter vector that
  * minimizes the cost function, subject to the problem's bounds and constraints.
  */
+@FunctionalInterface
 public interface TrajectoryOptimizer {
   /**
    * Runs the optimization and returns the best solution found.

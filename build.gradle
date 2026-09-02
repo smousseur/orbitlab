@@ -110,7 +110,7 @@ spotless {
 pmd {
     toolVersion = '7.16.0'
     consoleOutput = true
-    ignoreFailures = true
+    ignoreFailures = false
 
     ruleSetFiles = files("$rootDir/config/pmd/ruleset.xml")
     ruleSets = []

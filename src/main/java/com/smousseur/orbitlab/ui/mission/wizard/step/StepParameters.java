@@ -182,7 +182,7 @@ public class StepParameters implements StepValues {
   private final PlanningPage planningPage = new PlanningPage();
 
   private DynamicParameters dynamicParameters;
-  private final EnumMap<MissionProfile, DynamicParameters> dynamicParametersMap =
+  private final Map<MissionProfile, DynamicParameters> dynamicParametersMap =
       new EnumMap<>(MissionProfile.class);
   private final Container dynamicParametersContainer;
   private MissionProfile shownProfile;
@@ -303,7 +303,7 @@ public class StepParameters implements StepValues {
                 CursorButtonEvent event, Spatial target, Spatial capture) {
               if (event.getButtonIndex() == 0 && event.isPressed()) {
                 Spatial currentFocus = GuiGlobals.getInstance().getFocusManagerState().getFocus();
-                if (currentFocus != null && target != currentFocus) {
+                if (currentFocus != null && !target.equals(currentFocus)) {
                   if (!(target instanceof TextField)) {
                     GuiGlobals.getInstance().requestFocus(null);
                   }

@@ -328,10 +328,11 @@ public final class MissionDisplayPanelAppState extends BaseAppState implements A
   }
 
   private void drainTelemetryFocusEvents() {
-    EventBus.MissionTelemetryFocusRequest req;
     MissionContext mc = context.missionContext();
-    while ((req = context.eventBus().pollTelemetryFocus()) != null) {
+    EventBus.MissionTelemetryFocusRequest req = context.eventBus().pollTelemetryFocus();
+    while (req != null) {
       rules.applyTelemetryFocus(mc, req.missionId());
+      req = context.eventBus().pollTelemetryFocus();
     }
   }
 }

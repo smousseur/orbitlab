@@ -112,8 +112,14 @@ public final class EphemerisInterpolator {
     if (t <= 0.0) return r0;
     if (t >= 1.0) return r1;
 
-    double q00 = r0.getQ0(), q01 = r0.getQ1(), q02 = r0.getQ2(), q03 = r0.getQ3();
-    double q10 = r1.getQ0(), q11 = r1.getQ1(), q12 = r1.getQ2(), q13 = r1.getQ3();
+    double q00 = r0.getQ0();
+    double q01 = r0.getQ1();
+    double q02 = r0.getQ2();
+    double q03 = r0.getQ3();
+    double q10 = r1.getQ0();
+    double q11 = r1.getQ1();
+    double q12 = r1.getQ2();
+    double q13 = r1.getQ3();
 
     double dot = q00 * q10 + q01 * q11 + q02 * q12 + q03 * q13;
     if (dot < 0.0) {

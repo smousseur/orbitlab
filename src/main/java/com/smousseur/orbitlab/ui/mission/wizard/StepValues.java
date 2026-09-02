@@ -3,6 +3,7 @@ package com.smousseur.orbitlab.ui.mission.wizard;
 import java.util.Map;
 
 /** Contract for wizard steps that expose their current widget values. */
+@FunctionalInterface
 public interface StepValues {
 
   /**

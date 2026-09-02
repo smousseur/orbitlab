@@ -10,8 +10,6 @@ import com.smousseur.orbitlab.simulation.mission.optimizer.problems.FailFastEnve
 import com.smousseur.orbitlab.simulation.mission.vehicle.ActiveStageInfo;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropulsionSystem;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.orekit.attitudes.LofOffset;
 import org.orekit.forces.maneuvers.ConstantThrustManeuver;
@@ -42,7 +40,6 @@ import org.orekit.utils.Constants;
  * parameters of burn 1 (the circularization burn is fully determined by the post-burn-1 state).
  */
 public class TransfertTwoManeuver extends TransferManeuver {
-  private static final Logger logger = LogManager.getLogger(TransfertTwoManeuver.class);
   private static final double EARTH_RADIUS = Constants.WGS84_EARTH_EQUATORIAL_RADIUS;
 
   private final CircularizationBurnResolver circularizationBurnResolver;

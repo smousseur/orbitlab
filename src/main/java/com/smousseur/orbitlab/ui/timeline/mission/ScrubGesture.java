@@ -92,25 +92,24 @@ public final class ScrubGesture {
    * @return what the caller should do; see {@link Move}
    */
   public Move move(float x, long nowMillis) {
-    switch (state) {
-      case IDLE:
-        return Move.NONE;
-      case PRESSED:
+    return switch (state) {
+      case IDLE -> Move.NONE;
+      case PRESSED -> {
         if (Math.abs(x - originX) > DRAG_THRESHOLD_PX) {
           state = State.DRAGGING;
           lastEmitMillis = nowMillis;
-          return Move.BEGIN_DRAG;
+          yield Move.BEGIN_DRAG;
         }
-        return Move.NONE;
-      case DRAGGING:
+        yield Move.NONE;
+      }
+      case DRAGGING -> {
         if (nowMillis - lastEmitMillis >= EMIT_INTERVAL_MS) {
           lastEmitMillis = nowMillis;
-          return Move.EMIT;
+          yield Move.EMIT;
         }
-        return Move.TRACK_ONLY;
-      default:
-        throw new AssertionError(state);
-    }
+        yield Move.TRACK_ONLY;
+      }
+    };
   }
 
   /**
@@ -119,20 +118,12 @@ public final class ScrubGesture {
    * @return what the caller should do; see {@link Release}
    */
   public Release release() {
-    Release result;
-    switch (state) {
-      case IDLE:
-        result = Release.NONE;
-        break;
-      case PRESSED:
-        result = Release.CLICK;
-        break;
-      case DRAGGING:
-        result = Release.COMMIT;
-        break;
-      default:
-        throw new AssertionError(state);
-    }
+    Release result =
+        switch (state) {
+          case IDLE -> Release.NONE;
+          case PRESSED -> Release.CLICK;
+          case DRAGGING -> Release.COMMIT;
+        };
     state = State.IDLE;
     return result;
   }

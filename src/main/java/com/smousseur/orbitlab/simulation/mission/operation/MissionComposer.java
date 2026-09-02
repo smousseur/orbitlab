@@ -97,7 +97,7 @@ public final class MissionComposer {
     Mission mission =
         switch (spec) {
           case MissionSpec.EarthOrbit earthOrbit -> composeEarthOrbit(earthOrbit, mode);
-          case MissionSpec.Geo geo -> composeGeo(geo, mode);
+          case MissionSpec.Geo geo -> composeGeo(geo);
           case MissionSpec.Lunar lunar -> composeLunar(lunar);
           case MissionSpec.LunarOrbit lunarOrbit -> composeLunarOrbit(lunarOrbit);
         };
@@ -285,10 +285,13 @@ public final class MissionComposer {
         spec.altitude());
   }
 
-  private static Mission composeGeo(MissionSpec.Geo spec, OptimizationType mode) {
-    // GEO currently has a single (analytic) composition: both CMA-ES transfer stages are LEO-only,
-    // with no GEO equivalent yet. Every mode therefore yields the analytic profile; the mode
-    // still differentiates GEO on the load-handling axis in MissionPlanOptimizer.
+  /**
+   * GEO has a single (analytic) composition, which is why this one takes no {@code mode}: both
+   * CMA-ES transfer stages are LEO-only, with no GEO equivalent yet. Every mode therefore yields
+   * the analytic profile; the mode still differentiates GEO on the load-handling axis in
+   * MissionPlanOptimizer.
+   */
+  private static Mission composeGeo(MissionSpec.Geo spec) {
     return new GEOMission(
         spec.name(),
         spec.configuration(),

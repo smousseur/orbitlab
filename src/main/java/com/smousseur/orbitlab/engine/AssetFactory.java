@@ -28,6 +28,7 @@ import org.jspecify.annotations.NonNull;
  * instance via {@link #get()}.
  */
 public class AssetFactory {
+  private static final String COLOR = "Color";
   private final AssetManager assetManager;
 
   private static final ExecutorService ASSET_LOADING_EXECUTOR =
@@ -203,7 +204,7 @@ public class AssetFactory {
    */
   public Material material(ColorRGBA color) {
     Material material = new Material(assetManager, "Common/MatDefs/Misc/Unshaded.j3md");
-    material.setColor("Color", color);
+    material.setColor(COLOR, color);
     return material;
   }
 
@@ -225,7 +226,7 @@ public class AssetFactory {
    */
   public Material createCorona(ColorRGBA color, float coreRatio, float falloff) {
     Material material = new Material(assetManager, "MatDefs/Fx/Corona.j3md");
-    material.setColor("Color", color);
+    material.setColor(COLOR, color);
     material.setFloat("CoreRatio", coreRatio);
     material.setFloat("Falloff", falloff);
     material.getAdditionalRenderState().setBlendMode(RenderState.BlendMode.AlphaAdditive);
@@ -259,7 +260,7 @@ public class AssetFactory {
    */
   public Material createRibbon(ColorRGBA color, float widthPx, boolean vertexColor) {
     Material material = new Material(assetManager, "MatDefs/Fx/Ribbon.j3md");
-    material.setColor("Color", color);
+    material.setColor(COLOR, color);
     material.setFloat("WidthPx", widthPx);
     material.setBoolean("VertexColor", vertexColor);
     RenderState state = material.getAdditionalRenderState();
@@ -277,7 +278,7 @@ public class AssetFactory {
    */
   public Material alphaMaterial(ColorRGBA color) {
     Material material = new Material(assetManager, "Common/MatDefs/Misc/Unshaded.j3md");
-    material.setColor("Color", color);
+    material.setColor(COLOR, color);
     material.getAdditionalRenderState().setBlendMode(RenderState.BlendMode.Alpha);
     material.getAdditionalRenderState().setDepthWrite(false);
     return material;

@@ -2,6 +2,7 @@ package com.smousseur.orbitlab.simulation.ephemeris.config;
 
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import java.util.EnumMap;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -25,7 +26,7 @@ public record SlidingWindowConfig(
     int minPointsEachSide,
     int maxPointsEachSide,
     double marginRatio,
-    EnumMap<SolarSystemBody, Double> stepSecondsByBody) {
+    Map<SolarSystemBody, Double> stepSecondsByBody) {
   public SlidingWindowConfig {
     if (!Double.isFinite(speedMaxAbs) || speedMaxAbs <= 0.0) {
       throw new IllegalArgumentException("speedMaxAbs must be finite and > 0");
@@ -146,7 +147,7 @@ public record SlidingWindowConfig(
    * @return a default solar system sliding window configuration
    */
   public static SlidingWindowConfig defaultSolarSystem() {
-    EnumMap<SolarSystemBody, Double> steps = new EnumMap<>(SolarSystemBody.class);
+    Map<SolarSystemBody, Double> steps = new EnumMap<>(SolarSystemBody.class);
     steps.put(SolarSystemBody.SUN, 6 * 3600.0);
     steps.put(SolarSystemBody.MERCURY, 3 * 3600.0);
     steps.put(SolarSystemBody.VENUS, 6 * 3600.0);

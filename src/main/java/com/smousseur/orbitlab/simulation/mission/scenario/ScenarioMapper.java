@@ -204,7 +204,7 @@ public final class ScenarioMapper {
       }
       rgb = Integer.parseInt(digits, 16);
     } catch (NumberFormatException e) {
-      throw new OrbitlabException("Mission colour is not a #RRGGBB value: " + hex);
+      throw new OrbitlabException("Mission colour is not a #RRGGBB value: " + hex, e);
     }
     return new ColorRGBA(
         ((rgb >> 16) & 0xFF) / 255f, ((rgb >> 8) & 0xFF) / 255f, (rgb & 0xFF) / 255f, 1f);
@@ -232,7 +232,7 @@ public final class ScenarioMapper {
     try {
       return MissionType.valueOf(raw);
     } catch (IllegalArgumentException e) {
-      throw new OrbitlabException("Unknown mission type: " + raw);
+      throw new OrbitlabException("Unknown mission type: " + raw, e);
     }
   }
 
@@ -300,7 +300,7 @@ public final class ScenarioMapper {
     try {
       return Double.parseDouble(raw.toString().trim());
     } catch (NumberFormatException e) {
-      throw new OrbitlabException("Mission value " + key + " is not a number: " + raw);
+      throw new OrbitlabException("Mission value " + key + " is not a number: " + raw, e);
     }
   }
 }

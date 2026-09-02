@@ -76,7 +76,7 @@ public final class MissionFactory {
     // Absent means "auto": the wizard omits the key while the user leaves the derived default in
     // place, so an unedited (or reopened) mission gets MissionHorizon.defaultFor(type) rather than
     // a frozen number (spec docs/mission-horizon/01-horizon-explicite.md §7).
-    MissionHorizon horizon = horizonOrNull(values, type);
+    MissionHorizon horizon = horizonOrNull(values);
 
     LauncherModel launcher = Launchers.byId(String.valueOf(values.get("LAUNCHER_TYPE")));
     PayloadModel payloadModel = Payloads.byId(String.valueOf(values.get("PAYLOAD_TYPE")));
@@ -279,7 +279,7 @@ public final class MissionFactory {
     try {
       inclinationDeg = Double.parseDouble(raw.toString().trim());
     } catch (NumberFormatException e) {
-      throw new OrbitlabException("Target inclination is not a number: " + raw);
+      throw new OrbitlabException("Target inclination is not a number: " + raw, e);
     }
     return LaunchPlane.ofDegrees(inclinationDeg).requireReachableFrom(latitude);
   }
@@ -308,7 +308,7 @@ public final class MissionFactory {
     try {
       return Double.parseDouble(raw.toString().trim());
     } catch (NumberFormatException e) {
-      throw new OrbitlabException("Target RAAN is not a number: " + raw);
+      throw new OrbitlabException("Target RAAN is not a number: " + raw, e);
     }
   }
 
@@ -319,10 +319,9 @@ public final class MissionFactory {
    * mission creation.
    *
    * @param values the raw wizard values
-   * @param type the mission type, for the default
    * @return the overridden horizon, or {@code null} to take the derived default
    */
-  private static MissionHorizon horizonOrNull(Map<String, Object> values, MissionType type) {
+  private static MissionHorizon horizonOrNull(Map<String, Object> values) {
     Object raw = values.get("MISSION_HORIZON_DAYS");
     if (raw == null || raw.toString().isBlank()) {
       return null;

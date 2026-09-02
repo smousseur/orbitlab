@@ -139,8 +139,8 @@ public record GravitationalContext(
    * Copies into an {@link EnumSet}, which {@code EnumSet.copyOf} cannot do for an empty non-enum
    * collection — hence the explicit branch rather than a bare {@code copyOf}.
    */
-  private static EnumSet<SolarSystemBody> canonical(Iterable<SolarSystemBody> bodies) {
-    EnumSet<SolarSystemBody> set = EnumSet.noneOf(SolarSystemBody.class);
+  private static Set<SolarSystemBody> canonical(Iterable<SolarSystemBody> bodies) {
+    Set<SolarSystemBody> set = EnumSet.noneOf(SolarSystemBody.class);
     for (SolarSystemBody perturber : bodies) {
       set.add(Objects.requireNonNull(perturber, "perturber"));
     }

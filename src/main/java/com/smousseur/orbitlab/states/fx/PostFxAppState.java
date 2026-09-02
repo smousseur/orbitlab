@@ -164,7 +164,7 @@ public final class PostFxAppState extends BaseAppState {
   @Override
   protected void initialize(Application app) {
     processor = new FilterPostProcessor(app.getAssetManager());
-    AppSettings settings = app.getContext().getSettings();
+    var settings = app.getContext().getSettings();
     processor.setNumSamples(settings == null ? 1 : Math.max(1, settings.getSamples()));
 
     bloom = new SmoothBloomFilter(BloomFilter.GlowMode.Objects);

@@ -23,6 +23,7 @@ import com.smousseur.orbitlab.ui.AppStyles;
 import com.smousseur.orbitlab.ui.UiKit;
 import com.smousseur.orbitlab.ui.UiLayers;
 import com.smousseur.orbitlab.ui.form.FormStyles;
+import java.util.Locale;
 import java.util.Objects;
 import org.orekit.time.AbsoluteDate;
 
@@ -215,7 +216,7 @@ public class TelemetryWidget implements AutoCloseable {
   private void updateFields(MissionEphemerisPoint pt, Mission mission) {
     double elapsedS = pt.time().durationFrom(mission.getInitialDate());
     metValue.setText(formatMet(elapsedS));
-    phaseLabel.setText(pt.stageName().toUpperCase());
+    phaseLabel.setText(pt.stageName().toUpperCase(Locale.ROOT));
     setValueUnit(altValue, altUnit, String.format("%.1f", pt.altitudeMeters() / 1000.0), "km");
     setValueUnit(velValue, velUnit, String.format("%.0f", pt.velocity().getNorm()), "m/s");
     setValueUnit(massValue, massUnit, String.format("%.0f", pt.mass()), "kg");

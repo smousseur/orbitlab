@@ -2,6 +2,7 @@ package com.smousseur.orbitlab.simulation.ephemeris.service;
 
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.simulation.ephemeris.BodySample;
+import com.smousseur.orbitlab.simulation.ephemeris.SlidingWindowEphemerisBuffer;
 import java.util.AbstractMap;
 import java.util.Map;
 import java.util.Optional;
@@ -15,6 +16,7 @@ import org.orekit.time.AbsoluteDate;
  * <p>Provides non-blocking access to body position, velocity, and rotation samples in the ICRF
  * frame. Implementations typically delegate to a {@link SlidingWindowEphemerisBuffer}.
  */
+@FunctionalInterface
 public interface EphemerisService {
   /**
    * Attempts to retrieve an interpolated body sample at the given time in the ICRF frame.

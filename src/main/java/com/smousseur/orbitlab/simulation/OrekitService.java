@@ -486,9 +486,9 @@ public final class OrekitService {
   /**
    * The third-body attraction of the given body, resolved once and shared by every propagator.
    *
-   * <p>Cached for the same reason as {@link #getGravityModel}, not for speed: CMA-ES explorations
-   * run in parallel ({@code CMAESTrajectoryOptimizer:314}), and {@code computeIfAbsent} guarantees
-   * a single instance per body rather than merely a coherent value.
+   * <p>Cached not for speed: CMA-ES explorations run in parallel ({@code
+   * CMAESTrajectoryOptimizer:314}), and {@code computeIfAbsent} guarantees a single instance per
+   * body rather than merely a coherent value.
    *
    * <p><b>A constraint this hands to L4:</b> {@link ThirdBodyAttraction} expresses the perturbing
    * body's position in the propagation frame and assumes that frame is centred on the central body.

@@ -333,7 +333,7 @@ public class StepLauncher implements StepValues {
 
   private static String iconFor(String launcherId) {
     String icon = "interface/wizard/icon-launcher-falcon.png";
-    if (launcherId.equals("ARIANE_5_ECA")) {
+    if ("ARIANE_5_ECA".equals(launcherId)) {
       icon = "interface/wizard/icon-launcher-ariane.png";
     }
     return icon;

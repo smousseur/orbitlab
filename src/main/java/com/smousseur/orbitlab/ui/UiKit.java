@@ -38,11 +38,12 @@ public final class UiKit {
   private static final String FONT_ORBITRON = "fonts/orbitron-semibold-%d.fnt";
   private static final String FONT_IBM_PLEX_MONO = "fonts/ibmplexmono-regular-%d.fnt";
   private static final String FONT_SORA = "fonts/sora-medium-%d.fnt";
-  public static final String INTERFACE_DIR = "interface";
-  public static final String WIZARD_DIR = "interface/wizard";
-  public static final String MISSIONS_DIR = "interface/missions";
-  public static final String ROSTER_DIR = MISSIONS_DIR + "/roster";
+  private static final String INTERFACE_DIR = "interface";
+  private static final String WIZARD_DIR = "interface/wizard";
+  private static final String MISSIONS_DIR = "interface/missions";
+  private static final String ROSTER_DIR = MISSIONS_DIR + "/roster";
   private static final String COMMON_DIR = "interface/common";
+  private static final String PNG_EXT = ".png";
 
   private static AssetManager assetManager;
   private static Texture gradientTex;
@@ -146,7 +147,7 @@ public final class UiKit {
     Texture2D cached = textureCache.get(name);
     if (cached != null) return cached;
     try {
-      Texture2D tex = (Texture2D) assetManager.loadTexture(directory + "/" + name + ".png");
+      Texture2D tex = (Texture2D) assetManager.loadTexture(directory + "/" + name + PNG_EXT);
       tex.setMinFilter(Texture.MinFilter.BilinearNoMipMaps);
       tex.setMagFilter(Texture.MagFilter.Bilinear);
       textureCache.put(name, tex);
@@ -252,12 +253,12 @@ public final class UiKit {
    * container on missing asset.
    */
   public static Container wizardIcon(String name, float width, float height) {
-    return iconPlaceholder(WIZARD_DIR + "/" + name + ".png", width, height);
+    return iconPlaceholder(WIZARD_DIR + "/" + name + PNG_EXT, width, height);
   }
 
   /** Builds a Lemur {@link IconComponent} pointing at a wizard v2 texture. */
   public static IconComponent wizardIconComponent(String name) {
-    return new IconComponent(WIZARD_DIR + "/" + name + ".png");
+    return new IconComponent(WIZARD_DIR + "/" + name + PNG_EXT);
   }
 
   /**
@@ -279,7 +280,7 @@ public final class UiKit {
    * the caret.
    */
   public static IconComponent tintedIcon(String name, float width, float height, ColorRGBA tint) {
-    IconComponent icon = new IconComponent(INTERFACE_DIR + "/" + name + ".png");
+    IconComponent icon = new IconComponent(INTERFACE_DIR + "/" + name + PNG_EXT);
     icon.setIconSize(new Vector2f(width, height));
     icon.setColor(tint);
     return icon;

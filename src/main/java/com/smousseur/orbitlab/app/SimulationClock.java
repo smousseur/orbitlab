@@ -1,5 +1,6 @@
 package com.smousseur.orbitlab.app;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
@@ -79,7 +80,7 @@ public final class SimulationClock {
     }
   }
 
-  private final CopyOnWriteArrayList<Consumer<ClockEvent>> listeners = new CopyOnWriteArrayList<>();
+  private final List<Consumer<ClockEvent>> listeners = new CopyOnWriteArrayList<>();
 
   /**
    * Guarded by {@code this}. We synchronize updates and state changes so that: - now/play/speed
@@ -147,7 +148,7 @@ public final class SimulationClock {
    * @param playing {@code true} to start playback, {@code false} to pause
    */
   public void setPlaying(boolean playing) {
-    PlayStateChanged evt = null;
+    PlayStateChanged evt;
     synchronized (this) {
       if (this.playing == playing) {
         return;

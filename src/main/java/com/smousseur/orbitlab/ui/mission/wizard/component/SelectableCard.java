@@ -141,7 +141,7 @@ public class SelectableCard {
     return row;
   }
 
-  public void applyState(State newState) {
+  public final void applyState(State newState) {
     this.state = newState;
     String base = variant == Variant.MISSION ? "card-mission" : "card-launcher";
     int border = variant == Variant.MISSION ? 12 : 10;

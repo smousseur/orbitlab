@@ -14,7 +14,9 @@ import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.logging.ConsoleHandler;
 import java.util.logging.Formatter;
 import java.util.logging.Level;
@@ -148,7 +150,7 @@ public final class EphemerisDatasetGeneratorMain {
 
     double chunkDur = 86_400.0;
 
-    EnumMap<SolarSystemBody, BodyGenerationParams> map = new EnumMap<>(SolarSystemBody.class);
+    Map<SolarSystemBody, BodyGenerationParams> map = new EnumMap<>(SolarSystemBody.class);
 
     map.put(SolarSystemBody.SUN, new BodyGenerationParams(1800.0, 3600.0, chunkDur));
     map.put(SolarSystemBody.MERCURY, new BodyGenerationParams(120.0, 900.0, chunkDur));
@@ -193,7 +195,7 @@ public final class EphemerisDatasetGeneratorMain {
   }
 
   private static GeneratorConfigV1 filterBodies(GeneratorConfigV1 cfg, String bodyNames) {
-    EnumSet<SolarSystemBody> requested = EnumSet.noneOf(SolarSystemBody.class);
+    Set<SolarSystemBody> requested = EnumSet.noneOf(SolarSystemBody.class);
     for (String name : bodyNames.split(",")) {
       requested.add(SolarSystemBody.valueOf(name.trim().toUpperCase(Locale.ROOT)));
     }
@@ -201,7 +203,7 @@ public final class EphemerisDatasetGeneratorMain {
     List<SolarSystemBody> filtered =
         cfg.bodiesInOrder().stream().filter(requested::contains).toList();
 
-    EnumMap<SolarSystemBody, BodyGenerationParams> filteredParams =
+    Map<SolarSystemBody, BodyGenerationParams> filteredParams =
         new EnumMap<>(SolarSystemBody.class);
     for (SolarSystemBody b : filtered) {
       BodyGenerationParams p = cfg.paramsByBody().get(b);

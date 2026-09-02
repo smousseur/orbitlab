@@ -437,7 +437,6 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
     // is running on the dedicated mission-optimizer thread.
     int availableForOptimizer = FastMath.max(1, Runtime.getRuntime().availableProcessors() - 1);
     int poolSize = FastMath.min(explorationRuns, availableForOptimizer);
-    ExecutorService pool = Executors.newFixedThreadPool(poolSize);
     // Pre-draw a sub-seed per run sequentially so that the master seed deterministically reproduces
     // the full exploration phase even when runs execute in parallel.
     long[] runSeeds = new long[configs.size()];
@@ -449,7 +448,7 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
     // then costs the time of the first converged success instead of the slowest run — completion
     // (not first threshold crossing) so a run seeded below the acceptable cost still optimizes.
     AtomicBoolean crossRunStop = new AtomicBoolean(false);
-    try {
+    try (ExecutorService pool = Executors.newFixedThreadPool(poolSize)) {
       List<Future<CMAESRunExecutor.RunResult>> futures = new ArrayList<>(configs.size());
       for (int i = 0; i < configs.size(); i++) {
         RunConfig cfg = configs.get(i);
@@ -490,8 +489,6 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
           remainingEvals -= parallelBudget / 4;
         }
       }
-    } finally {
-      pool.shutdown();
     }
     if (bestVars != null && bestCost <= problem.getAcceptableCost()) {
       logger.info("Target reached during exploration: cost={}", bestCost);
@@ -621,7 +618,7 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
     if (attempt == 0) {
       List<double[]> seeds = new ArrayList<>();
       double[] analyticalSeed = problem.buildAnalyticalSeed();
-      if (analyticalSeed != null) {
+      if (analyticalSeed != null && analyticalSeed.length > 0) {
         seeds.add(analyticalSeed.clone());
         seeds.add(problem.buildInitialGuess());
         logger.info(

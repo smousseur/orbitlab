@@ -519,9 +519,9 @@ public final class MissionTimelineWidget implements AutoCloseable {
   private void rebuildTerminator() {
     if (terminator != null) {
       terminator.removeFromParent();
-      terminator = null;
     }
     if (!truncated) {
+      terminator = null;
       return;
     }
     terminator = new Panel(TERMINATOR_WIDTH, 10f, TimelineStyles.STYLE);

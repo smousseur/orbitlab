@@ -42,6 +42,9 @@ public final class TimeConverter {
   /** Converts an Orekit {@link AbsoluteDate} to a {@link LocalDateTime} for display (UTC). */
   public static LocalDateTime toUtcLocalDateTime(AbsoluteDate date) {
     Objects.requireNonNull(date, "date");
+    // Through java.util.Date rather than AbsoluteDate.toInstant(): the latter round-trips through
+    // an ISO string and LocalDateTime.parse rejects the 23:59:60 of a leap second, which the clock
+    // hands us whenever it is scrubbed onto one.
     Date javaDate = date.toDate(UTC); // Represents an instant
     Instant instant = javaDate.toInstant();
     return LocalDateTime.ofInstant(instant, ZoneOffset.UTC);

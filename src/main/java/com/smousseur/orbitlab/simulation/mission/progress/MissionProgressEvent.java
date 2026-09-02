@@ -27,9 +27,10 @@ public sealed interface MissionProgressEvent
    * @param count how many optimizable stages the mission has
    */
   record StageEntered(int index, int count) implements MissionProgressEvent {
+
     public StageEntered {
       if (index < 1 || count < 1 || index > count) {
-        throw new IllegalArgumentException("stage " + index + " of " + count);
+        throw new IllegalArgumentException(errorMessage("stage", index, count));
       }
     }
   }
@@ -42,9 +43,10 @@ public sealed interface MissionProgressEvent
    * @param count the configured ceiling of attempts, which the early exits rarely let it reach
    */
   record AttemptStarted(int attempt, int count) implements MissionProgressEvent {
+
     public AttemptStarted {
       if (attempt < 1 || count < 1 || attempt > count) {
-        throw new IllegalArgumentException("attempt " + attempt + " of " + count);
+        throw new IllegalArgumentException(errorMessage("attempt", attempt, count));
       }
     }
   }
@@ -55,6 +57,7 @@ public sealed interface MissionProgressEvent
    * @param step the step being entered
    */
   record StepStarted(OptimizationStep step) implements MissionProgressEvent {
+
     public StepStarted {
       Objects.requireNonNull(step, "step");
     }
@@ -72,13 +75,18 @@ public sealed interface MissionProgressEvent
    */
   record SizingAdvanced(int pass, int passCount, int load, int loadBudget)
       implements MissionProgressEvent {
+
     public SizingAdvanced {
       if (pass < 1 || passCount < 1) {
-        throw new IllegalArgumentException("pass " + pass + " of " + passCount);
+        throw new IllegalArgumentException(errorMessage("pass", pass, passCount));
       }
       if (load < 0 || loadBudget < 1) {
-        throw new IllegalArgumentException("load " + load + " of " + loadBudget);
+        throw new IllegalArgumentException(errorMessage("load", load, loadBudget));
       }
     }
+  }
+
+  private static String errorMessage(String element, int index, int count) {
+    return element + " " + index + " of " + count;
   }
 }

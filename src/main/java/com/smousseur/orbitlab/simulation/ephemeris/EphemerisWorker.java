@@ -92,6 +92,15 @@ public final class EphemerisWorker implements AutoCloseable {
     tick();
   }
 
+  /**
+   * Runs one tick, swallowing whatever it throws.
+   *
+   * <p>Catches {@link Throwable} and not merely {@link RuntimeException}: this is the body of a
+   * {@code scheduleAtFixedRate} task, and anything that escapes it suppresses every subsequent
+   * execution. The worker would stop for good, silently, with the failure parked in a {@code
+   * ScheduledFuture} nobody reads — the bodies would simply freeze.
+   */
+  @SuppressWarnings("PMD.AvoidCatchingThrowable")
   private void tickSafe() {
     try {
       tick();

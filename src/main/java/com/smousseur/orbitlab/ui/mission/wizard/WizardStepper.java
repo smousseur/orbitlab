@@ -26,10 +26,6 @@ public class WizardStepper {
   private final Container[] connectors = new Container[MissionWizardStep.COUNT - 1];
   private Consumer<MissionWizardStep> onStepClicked = step -> {};
 
-  public WizardStepper() {
-    this(0f);
-  }
-
   public WizardStepper(float preferredWidth) {
     root = new Container(new BoxLayout(Axis.X, FillMode.None), FormStyles.STYLE);
     root.setPreferredSize(new Vector3f(preferredWidth, STEPPER_HEIGHT, 0));
@@ -68,7 +64,7 @@ public class WizardStepper {
     for (MissionWizardStep step : MissionWizardStep.values()) {
       Container node = stepNodes[step.index()];
       if (step.index() < activeStep.index()) {
-        applyDoneState(node, step);
+        applyDoneState(node);
       } else if (step == activeStep) {
         applyActiveState(node, step);
       } else {
@@ -139,7 +135,7 @@ public class WizardStepper {
     return wrap;
   }
 
-  private void applyDoneState(Container node, MissionWizardStep step) {
+  private void applyDoneState(Container node) {
     Container circleRow = (Container) node.getChild(0);
     Container circle = (Container) circleRow.getChild(1);
     circle.setBackground(UiKit.wizardBg9("step-dot-done", 14));
