@@ -1,6 +1,7 @@
 package com.smousseur.orbitlab.engine.scene;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.jme3.math.Quaternion;
 import com.jme3.math.Vector3f;
@@ -59,13 +60,57 @@ class PlanetMeshCorrectionTest {
     assertIdentity(SolarSystemBody.MOON);
   }
 
+  /**
+   * The hole the alignment checks cannot see, and which the old form of {@link
+   * #assertCorrectionConforms} left open: they neutralise λ0 on purpose, so a chain that dropped a
+   * measured λ0 entirely would still pass every one of them. The invariant here is what {@code
+   * correctionFor} promises — the longitude term is a turn about the reference pole, of exactly the
+   * offset between the body's λ0 and the conventional origin.
+   */
+  @Test
+  void aMeasuredLambda0TurnsThePrimeMeridianByItsOwnOffset() {
+    int checked = 0;
+    for (SolarSystemBody body : SolarSystemBody.values()) {
+      if (PlanetMeshCorrection.calibrationFor(body).isEmpty()) {
+        continue;
+      }
+      PlanetMeshCalibration calibration = PlanetMeshCorrection.calibrationFor(body).orElseThrow();
+      double turnDeg =
+          Math.IEEEremainder(
+              PlanetMeshCorrection.CONVENTIONAL_COLUMN_ZERO_LONGITUDE_DEG
+                  - calibration.lambda0Deg(),
+              360.0);
+      if (Math.abs(turnDeg) < 1e-3) {
+        continue;
+      }
+      Vector3f meridian = calibration.measured().primeMeridian();
+      Vector3f aligned =
+          PlanetMeshCorrection.correctionFor(
+                  calibration, PlanetMeshCorrection.CONVENTIONAL_COLUMN_ZERO_LONGITUDE_DEG)
+              .mult(meridian)
+              .normalize();
+      Vector3f turned =
+          PlanetMeshCorrection.correctionFor(calibration, calibration.lambda0Deg())
+              .mult(meridian)
+              .normalize();
+      double angleDeg = Math.toDegrees(Math.acos(Math.clamp(aligned.dot(turned), -1.0f, 1.0f)));
+      assertEquals(Math.abs(turnDeg), angleDeg, 1e-2, body + " must turn by its own λ0 offset");
+      checked++;
+    }
+    assertTrue(checked > 0, "no body carries a measured λ0 any more; this test has gone vacuous");
+  }
+
   private static void assertCorrectionConforms(SolarSystemBody body) {
     PlanetMeshCalibration calibration = PlanetMeshCorrection.calibrationFor(body).orElseThrow();
     MeshFrame measured = calibration.measured();
     // The alignment alone: λ0 is a longitude offset and is meant to turn the frame away from the
     // reference, so a correction carrying one has nothing to say about whether the axis is right.
+    // Neutralising it means passing the conventional origin, which is the value correctionFor turns
+    // by zero — not the body's own λ0, which only neutralised it back when every body still carried
+    // the house value.
     Quaternion correction =
-        PlanetMeshCorrection.correctionFor(calibration, calibration.lambda0Deg());
+        PlanetMeshCorrection.correctionFor(
+            calibration, PlanetMeshCorrection.CONVENTIONAL_COLUMN_ZERO_LONGITUDE_DEG);
 
     assertAligned(MeshConformance.REFERENCE_POLE, correction.mult(measured.pole()), body + " pole");
     assertAligned(

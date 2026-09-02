@@ -52,9 +52,9 @@ Under the hood, OrbitLab uses **CMA-ES trajectory optimization** to find the opt
 
 OrbitLab's mission simulation is actively expanding:
 
-- **Moon flyby**
-- **Moon orbiting**
-- **Eclipses/Inter-body penumbra**
+- **Simulation of Earth's atmosphere**
+- **Controlled deorbiting**
+- **Stage jettisoning and atmospheric reentry**
 
 ---
 
