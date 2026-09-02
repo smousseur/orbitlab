@@ -71,6 +71,16 @@ public interface BodyView {
   default void updateLodHint(float distanceToCamera, float screenSizePx) {}
 
   /**
+   * Turns a shell of this body's model independently of the model as a whole — a cloud deck that
+   * does not keep the body's own rotation (L4 of {@code
+   * docs/orientation-planetes/01-decoupage.md}). Default implementation is a no-op, for the bodies
+   * whose model is a single globe, which is all of them but Venus.
+   *
+   * @param angleRad the angle in radians about the body's measured pole
+   */
+  default void setShellSpin(float angleRad) {}
+
+  /**
    * Sets the occulter used by this body's per-fragment eclipse shading
    * (`docs/eclipses/01-decoupage.md`). {@code occluderPositionWorld} and {@code
    * occluderRadiusWorld} are in this body's own world space — world units, relative to this body's

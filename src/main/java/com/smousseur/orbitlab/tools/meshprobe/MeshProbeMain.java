@@ -1,0 +1,228 @@
+package com.smousseur.orbitlab.tools.meshprobe;
+
+import com.jme3.asset.AssetManager;
+import com.jme3.asset.DesktopAssetManager;
+import com.jme3.material.Material;
+import com.jme3.math.Vector3f;
+import com.jme3.scene.Geometry;
+import com.jme3.scene.SceneGraphVisitorAdapter;
+import com.jme3.scene.Spatial;
+import com.jme3.texture.Texture;
+import com.smousseur.orbitlab.core.SolarSystemBody;
+import com.smousseur.orbitlab.engine.AssetFactory;
+import com.smousseur.orbitlab.engine.scene.mesh.MeshConformance;
+import com.smousseur.orbitlab.engine.scene.mesh.MeshFrame;
+import com.smousseur.orbitlab.engine.scene.mesh.MeshFrameProbe;
+import com.smousseur.orbitlab.engine.scene.mesh.ProbedGeometry;
+import com.smousseur.orbitlab.engine.scene.mesh.RingAlignment;
+import com.smousseur.orbitlab.engine.scene.mesh.RingPlane;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+/**
+ * CLI entry-point reporting, for every planetary model, the frame its geometry carries and whether
+ * it conforms to the export convention (see {@code docs/orientation-planetes/01-decoupage.md}, L0).
+ *
+ * <p>The report is meant to be read, and its rows copied into the javadoc of whatever ends up
+ * holding a correction — deliberately not generated code, which would relit itself badly and add a
+ * build step for no gain.
+ *
+ * <p>Usage:
+ *
+ * <pre>
+ *   ./gradlew meshProbe
+ * </pre>
+ *
+ * <p>or, against a packaged build:
+ *
+ * <pre>
+ *   java -cp build/libs/orbitlab.jar com.smousseur.orbitlab.tools.meshprobe.MeshProbeMain
+ * </pre>
+ */
+public final class MeshProbeMain {
+
+  private MeshProbeMain() {}
+
+  /**
+   * Entry point. Loads every planetary model through the same JME loader the application uses — so
+   * the frame reported is the one the renderer will actually see, not the one the raw file happens
+   * to hold — and prints one row per measurable geometry.
+   *
+   * @param args ignored
+   */
+  public static void main(String[] args) {
+    // The GLTF loader logs an unsupported-extension warning per material, which would bury a
+    // report whose whole point is to be read.
+    Logger.getLogger("com.jme3").setLevel(Level.SEVERE);
+    AssetManager assetManager = new DesktopAssetManager(true);
+    System.out.printf(
+        Locale.ROOT,
+        "%-9s %-26s %-22s %-22s %8s %10s %11s  %s%n",
+        "body",
+        "geometry",
+        "pole",
+        "u=0",
+        "residual",
+        "deg/u",
+        "texture",
+        "verdict");
+
+    for (SolarSystemBody body : SolarSystemBody.values()) {
+      String name = body.displayName().toLowerCase(Locale.ROOT);
+      Spatial model;
+      try {
+        model = assetManager.loadModel("models/planets/" + name + "/" + name + ".gltf");
+      } catch (RuntimeException e) {
+        System.out.printf(Locale.ROOT, "%-9s NOT LOADED: %s%n", name, e.getMessage());
+        continue;
+      }
+      Map<String, String> textures = textureSizes(model);
+      List<ProbedGeometry> probed = MeshFrameProbe.probe(model);
+      if (probed.isEmpty()) {
+        System.out.printf(Locale.ROOT, "%-9s no measurable geometry%n", name);
+        continue;
+      }
+      Vector3f globePole = globePole(probed);
+      for (ProbedGeometry geometry : probed) {
+        // Flatness before the residual: a ring does carry a UV map, so a frame can be measured on
+        // it, and that frame is meaningless. Judging it as a sphere would print four columns of
+        // noise next to a verdict that only says the noise is noise.
+        if (geometry.isRing() || !geometry.hasFrame()) {
+          System.out.printf(
+              Locale.ROOT,
+              "%-9s %-26s %-22s %-22s %8s %10s %11s  %s%n",
+              name,
+              abbreviate(geometry.name()),
+              "-",
+              "-",
+              "-",
+              "-",
+              textures.getOrDefault(geometry.name(), "-"),
+              describeRing(geometry.ring(), globePole));
+          continue;
+        }
+        MeshFrame frame = geometry.frame();
+        System.out.printf(
+            Locale.ROOT,
+            "%-9s %-26s %-22s %-22s %8.2f %10.1f %11s  %s%n",
+            name,
+            abbreviate(geometry.name()),
+            format(frame.pole()),
+            format(frame.primeMeridian()),
+            frame.equirectangularResidualDeg(),
+            frame.azimuthDegreesPerU(),
+            textures.getOrDefault(geometry.name(), "-"),
+            describe(MeshConformance.of(frame)));
+      }
+    }
+  }
+
+  /**
+   * The pole of the model's globe: the frame with the lowest residual, which is the same rule the
+   * startup guard uses to decide which of several geometries the calibration is about.
+   */
+  private static Vector3f globePole(List<ProbedGeometry> probed) {
+    MeshFrame best = null;
+    for (ProbedGeometry geometry : probed) {
+      if (geometry.hasFrame()
+          && (best == null
+              || geometry.frame().equirectangularResidualDeg()
+                  < best.equirectangularResidualDeg())) {
+        best = geometry.frame();
+      }
+    }
+    return best == null ? null : best.pole();
+  }
+
+  /**
+   * What a flat geometry has to say for itself.
+   *
+   * <p>A ring is not a lat/long map and never becomes one, so the frame probe rejecting it is the
+   * right answer rather than a defect. But it is not unmeasurable: it has a plane, and a real ring
+   * system lies in its planet's equatorial plane to a fraction of a degree. That angle is the whole
+   * of a ring's correctness — there is no longitude on a ring to get wrong — and unlike λ0 it needs
+   * no eye.
+   *
+   * <p>A tilt reported here cannot be fixed by this chantier's per-body correction, which turns the
+   * globe and the ring together: it is a disagreement <em>inside</em> the asset, and only a
+   * re-export can settle it.
+   */
+  private static String describeRing(RingPlane ring, Vector3f globePole) {
+    if (ring == null) {
+      return "NO UV MAP - nothing to measure";
+    }
+    if (globePole == null) {
+      return "flat ring, no globe in this model to compare its plane against";
+    }
+    RingAlignment alignment = RingAlignment.between(ring, globePole);
+    return alignment.isAligned()
+        ? String.format(Locale.ROOT, "ring, equatorial (%.2f deg)", alignment.angleDeg())
+        : String.format(
+            Locale.ROOT,
+            "ring MISALIGNED - turn it %.2f deg about %s, then re-export",
+            alignment.angleDeg(),
+            format(alignment.axis()));
+  }
+
+  /**
+   * Size of each geometry's base colour texture, by geometry name.
+   *
+   * <p>Read here rather than in the probe on purpose: {@link MeshFrame} speaks of vertices and UVs
+   * only, and has deliberately nothing to say about the image laid over them. But the table in
+   * {@code PlanetMeshCorrection} commits the size, because a re-export that keeps the mesh and
+   * swaps the texture leaves the frame identical and the longitude silently wrong — so a report
+   * that omitted it would not be copyable, which is the one thing this report is for.
+   */
+  private static Map<String, String> textureSizes(Spatial model) {
+    Map<String, String> sizes = new HashMap<>();
+    model.depthFirstTraversal(
+        new SceneGraphVisitorAdapter() {
+          @Override
+          public void visit(Geometry geometry) {
+            Material material = geometry.getMaterial();
+            Texture texture =
+                material == null ? null : AssetFactory.extractDiffuseTexture(material);
+            if (texture != null && texture.getImage() != null) {
+              sizes.put(
+                  geometry.getName(),
+                  texture.getImage().getWidth() + "x" + texture.getImage().getHeight());
+            }
+          }
+        });
+    return sizes;
+  }
+
+  private static String describe(MeshConformance verdict) {
+    return switch (verdict) {
+      case MeshConformance.Conforming ignored -> "conforming";
+      case MeshConformance.NeedsRotation rotation ->
+          String.format(
+              Locale.ROOT,
+              "rotate %.1f deg about %s",
+              rotation.angleDeg(),
+              format(rotation.axis()));
+      case MeshConformance.Mirrored mirrored ->
+          String.format(
+              Locale.ROOT,
+              "MIRRORED (%.1f deg/u) - needs a UV flip, no rotation can fix it",
+              mirrored.azimuthDegreesPerU());
+      case MeshConformance.NotALatLongMap notMap ->
+          String.format(
+              Locale.ROOT,
+              "NOT A LAT/LONG MAP (residual %.1f deg) - nothing measurable",
+              notMap.residualDeg());
+    };
+  }
+
+  private static String format(Vector3f v) {
+    return String.format(Locale.ROOT, "(%+.3f,%+.3f,%+.3f)", v.x, v.y, v.z);
+  }
+
+  private static String abbreviate(String name) {
+    return name == null ? "?" : name.length() <= 26 ? name : name.substring(0, 25) + "~";
+  }
+}

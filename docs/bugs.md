@@ -12,7 +12,7 @@ la frontière entre les deux derniers doit rester lisible.
 |---|---|---|---|
 | [`BUG-1`](#bug-1--jitter-du-billboard-et-de-lorbite-de-pluton) | Jitter du billboard et de l'orbite de Pluton | 2026-08-10 | Ouvert, non diagnostiqué |
 | [`BUG-2`](#bug-2--sauts-de-la-skybox-au-zoom) | Sauts de la skybox au zoom | 2026-08-15 | Ouvert, piste identifiée |
-| [`BUG-3`](#bug-3--orientation-des-modèles-3d-des-planètes) | Orientation des modèles 3D des planètes | 2026-08-15 | Ouvert, diagnostic à faire |
+| [`BUG-3`](#bug-3--orientation-des-modèles-3d-des-planètes) | Orientation des modèles 3D des planètes | 2026-08-15 | Ouvert — diagnostic fait le 2026-09-01, **les 5 lots de [`docs/orientation-planetes/01-decoupage.md`](orientation-planetes/01-decoupage.md) sont implémentés le 2026-09-02** ; reste la validation à l'écran corps par corps, qui arrête les `λ0` (L3). Promotion en item de roadmap non tranchée |
 | [`BUG-4`](#bug-4--hover-des-widgets-non-uniforme) | Hover des widgets non uniforme | 2026-08-15 | **Promu** en `UI-7` le 2026-08-16 |
 | [`BUG-5`](#bug-5--pop-du-modèle-3d-au-changement-de-focus) | Pop du modèle 3D au changement de focus | 2026-08-15 | Ouvert, mécanisme identifié |
 | [`BUG-6`](#bug-6--plane-trim-employé-hors-de-son-enveloppe-par-lascension-polaire) | Plane trim employé hors de son enveloppe par l'ascension polaire | 2026-08-16 | **Corrigé le 2026-08-31** — coût réel mesuré (141 kg, pas 10 349), fixture remise dans l'enveloppe |
@@ -28,6 +28,8 @@ la frontière entre les deux derniers doit rester lisible.
 | [`BUG-16`](#bug-16--t1-saturé-contre-sa-borne-sur-la-majorité-des-transferts-mesurés) | `t1` saturé contre sa borne sur la majorité des transferts mesurés | 2026-08-30 | Ouvert, mesuré — artefact de mur de boîte |
 | [`BUG-17`](#bug-17--acceptablecost-mal-calé-depuis-lajout-du-terme-ergols-i7) | `acceptableCost` mal calé depuis l'ajout du terme ergols I7 | 2026-08-30 | Ouvert, correctif proposé non fait |
 | [`BUG-18`](#bug-18--rejets-de-scénario-au-chargement-seulement-journalisés) | Rejets de scénario au chargement, seulement journalisés | 2026-08-30 | Ouvert — **trou connu de `UI-3`** |
+| [`BUG-19`](#bug-19--la-rotation-propre-des-planètes-externes-est-aliasée-par-le-pas-de-la-fenêtre-glissante) | La rotation propre des planètes externes est aliasée par le pas de la fenêtre glissante | 2026-09-02 | Ouvert, **cause racine établie et ampleur mesurée** — Neptune à 4,1 % du taux vrai, Saturne et Uranus à l'envers |
+| [`BUG-20`](#bug-20--plan-des-anneaux-désaligné-dans-les-assets) | Plan des anneaux désaligné dans les assets | 2026-09-02 | Ouvert, **mesuré** — Saturne 13,51°, Uranus 9,93° hors du plan équatorial de leur propre globe ; hors de portée du code, demande un ré-export |
 
 ---
 
@@ -233,35 +235,65 @@ Deux défauts distincts, qui ne se corrigent pas au même endroit :
 Établir la liste « corps → défaut (a) ou (b) » est la première chose à faire ;
 elle décide de tout le reste.
 
+> **Fait le 2026-09-01.** La liste est établie, par mesure des maillages et non à
+> l'œil : voir [`docs/orientation-planetes/01-decoupage.md`](orientation-planetes/01-decoupage.md)
+> §2.6. Le découpage du chantier qui en découle (cinq lots) est dans le même
+> document. Deux résultats qui changent la donne par rapport à ce qui est écrit
+> plus haut : les onze modèles se répartissent en **deux familles d'axe** que la
+> correction globale unique ne peut pas satisfaire ensemble (§2.3), et pour cinq
+> corps la couche visible ne tourne pas à la vitesse du repère IAU appliqué, donc
+> **aucune constante ne peut être juste à plus d'une date** (§3).
+
+> **Les cinq lots sont implémentés le 2026-09-02.** Chaque corps porte son repère mesuré et son
+> terme de longitude, l'échange d'un maillage est signalé au démarrage au lieu d'être absorbé en
+> silence, Jupiter et Saturne tournent au taux de la couche que leur carte représente et non à celui
+> de leur repère radio, et l'atmosphère de Vénus tourne indépendamment de son sol. L'instrument de
+> calage est sur la touche **G** : graticule étiqueté depuis la carte du corps, et point sub-solaire
+> calculé depuis la position du Soleil.
+>
+> **Ce qui reste, et pourquoi ce n'est pas du code.** `λ0` dit quelle longitude porte la colonne
+> gauche d'une image ; aucune inspection de fichier ne peut l'établir. Neuf corps sur onze le
+> portent encore à sa valeur conventionnelle, à confirmer ou corriger à l'œil avec l'instrument. Le
+> ticket reste donc ouvert jusqu'à cette passe.
+>
+> Un détail qui vaut d'être su avant de raisonner sur la chaîne : elle peint l'arête `v = 0` des
+> textures au pôle **sud** du corps, et leur colonne `u = 0` à la longitude **180°** — parce que
+> c'est ainsi que les cartes planétaires standard sont faites, et c'est ce qui explique que la Terre
+> et la Lune tombent juste sans aucune correction.
+
 ### Tips
 
-- **La boucle d'itération.** Ré-exporter depuis Blender à chaque essai coûte trop
-  cher pour chercher onze valeurs. Ajouter d'abord un champ de correction
-  optionnel par corps (un `Quaternion` dans `BodyRenderConfig`, défaut = la
-  constante actuelle), trouver les valeurs empiriquement, **puis** décider : les
-  figer dans le code, ou les cuire dans les `.gltf` et remettre les surcharges à
-  l'identité. Les deux fins se valent ; ce qui ne va pas, c'est de chercher les
-  valeurs par ré-export.
-- **Attention au dépôt.** `src/main/resources/models/` est gitignored (cf.
-  `CLAUDE.md`). Une correction faite *uniquement* dans Blender n'est pas
-  versionnée : elle sera perdue au prochain poste, et le prochain modèle ajouté
-  réintroduira le bug en silence. Si c'est la voie retenue, documenter la
-  convention attendue (en repère body-fixed, avant `meshCorrectionQ` : +Z = pôle
-  nord, +X = méridien origine) est le minimum.
-- **Sanity check côté code, à faire en premier parce qu'il coûte dix minutes.**
-  La rotation stockée est `ICRF → body`, et elle est appliquée telle quelle au
-  maillage (`PlanetPresenter:63`). Orienter un objet dans le monde demande la
-  transformation inverse. Si la convention Hipparchus/JME ne compense pas ce sens
-  quelque part, **toutes** les planètes tournent à l'envers — indétectable sur
-  une sphère texturée sauf à regarder le sens de défilement. Vérifier que la
-  Terre tourne bien d'ouest en est avant de conclure que le défaut est
-  exclusivement dans les assets.
+- ~~**La boucle d'itération.** Ajouter un `Quaternion` par corps dans `BodyRenderConfig`, trouver
+  les valeurs empiriquement…~~ **Périmé le 2026-09-02.** La forme retenue n'est pas un quaternion
+  par corps mais deux termes séparés — le repère *mesuré* par la sonde, et la longueur `λ0` qui,
+  elle, est humaine — parce qu'un échange de maillage n'invalide que le premier. Et les valeurs ne
+  se cherchent plus « empiriquement » : la sonde donne le repère, l'instrument du L2 donne `λ0` en
+  degrés.
+- **Attention au dépôt.** ~~`src/main/resources/models/` est gitignored (cf.
+  `CLAUDE.md`).~~ **Faux, corrigé le 2026-09-01** : `.gitignore` n'exclut que
+  `dataset/**`, et `git ls-files` renvoie 52 fichiers suivis sous
+  `src/main/resources/models`. `CLAUDE.md` l'affirmait à tort et a été corrigé.
+  Une correction faite dans Blender est donc bien versionnée — mais un diff
+  binaire dit « 3 Mo ont changé », pas « rotation de 90° autour du pôle » :
+  versionné n'est pas relisible. C'est ce qui fait préférer une valeur dans le
+  code. Documenter la convention attendue (en repère body-fixed, avant
+  `meshCorrectionQ` : +Z = pôle nord, +X = méridien origine) reste le minimum.
+- ~~**Sanity check côté code** : si la convention Hipparchus/JME ne compense pas le sens de
+  `ICRF → body`, toutes les planètes tournent à l'envers.~~ **Réglé le 2026-09-02, par mesure et
+  non par lecture.** Elle le compense : le quaternion Hipparchus chargé tel quel dans un
+  `Quaternion` JME représente la rotation inverse, les deux conventions se neutralisant. Vérifié à
+  travers toute la chaîne — le taux inertiel de rotation de la texture de la Terre est mesuré à
+  360,9856 °/j, le taux d'Orekit, signe compris.
 
 ### Non vérifié
 
 Aucune observation corps par corps n'a été faite. « Sauf la Terre » est le
 constat de l'utilisateur, pas un relevé : il se peut qu'un ou deux autres corps
 soient corrects, et cela renseignerait directement sur les exports.
+
+> **Toujours vrai au 2026-09-02**, et c'est ce qui reste à faire. La Terre et la Lune sont
+> maintenant déclarées correctes et servent de référence ; les neuf autres n'ont pas été regardés.
+> L'instrument est là pour ça (touche **G**).
 
 ---
 
@@ -981,3 +1013,182 @@ comportement n'a pas changé depuis la clôture d'`UI-3` (2026-08-21).
 Un résumé minimal (toast, ligne dans le panel) au retour de
 `ScenarioSession.restore`, listant les missions rejetées et leur motif —
 même contenu que les lignes `WARN` déjà produites, juste remonté à l'écran.
+
+---
+
+## BUG-19 — La rotation propre des planètes externes est aliasée par le pas de la fenêtre glissante
+
+**Constaté.** Neptune tourne visiblement trop lentement sur elle-même. Mesuré
+ensuite : ce n'est pas propre à Neptune, et Saturne et Uranus tournent **à
+l'envers**.
+
+### Mécanisme, établi
+
+`SlidingWindowEphemerisBuffer.rebuildWindow` ré-échantillonne la source à **un
+seul pas par corps**, puis `interpolate()` fait un SLERP de la rotation sur ce
+même pas. Ce pas
+([`SlidingWindowConfig.defaultSolarSystem`](../src/main/java/com/smousseur/orbitlab/simulation/ephemeris/config/SlidingWindowConfig.java))
+est dimensionné sur le mouvement **orbital** — Neptune met 165 ans à faire le
+tour du Soleil, 7 jours suffisent donc largement pour sa position — mais il sert
+aussi à échantillonner la **rotation propre**, qui tourne en 16 heures.
+
+Le SLERP négocie toujours l'arc le plus court
+([`EphemerisInterpolator.slerp`](../src/main/java/com/smousseur/orbitlab/simulation/ephemeris/EphemerisInterpolator.java),
+`if (dot < 0) negate`). Au-delà d'un demi-tour entre deux échantillons,
+l'information est perdue sans bruit.
+
+### Ampleur mesurée
+
+`W` d'Orekit (`PredefinedIAUPoles`) croisé avec le pas runtime de chaque corps :
+
+| corps | pas runtime | rotation vraie / pas | vue par le SLERP | taux rendu |
+|---|---|---|---|---|
+| Soleil, Mercure, Vénus, Terre, Lune | ≤ 6 h | ≤ 90,2° | idem | exact |
+| Mars | 12 h | 175,4° | idem | exact — **à 4,6° de la falaise** |
+| Jupiter | 1 j | 870,5° | 150,5° | 17,3 % |
+| Saturne | 2 j | 1621,6° | −178,4° | **à l'envers**, 11 % |
+| Uranus | 4 j | −2004,6° | +155,4° | **à l'envers**, 8 % |
+| **Neptune** | **7 j** | **3754,2°** | **154,2°** | **4,1 %** |
+| Pluton | 14 j | 789,1° | 69,1° | 8,8 % |
+
+Neptune est le pire cas des onze, d'où le fait que ce soit là que ça se voie.
+Jupiter à 17 % bouge encore ; Saturne et Uranus tournent à l'envers, ce qui ne
+se remarque que si on sait dans quel sens attendre ; Pluton n'a aucun détail à
+suivre. **Mars est juste par chance** : porter son pas de 12 à 13 h la fait
+basculer.
+
+### Ce qui n'est pas en cause, et ne doit pas être cherché là
+
+- **Le modèle de rotation.** `W = 253,18 + 536,3128492 °/j` pour Neptune, soit
+  16 h 06 min 36 s : la bonne valeur.
+- **Le dataset.** Le générateur sépare déjà correctement les deux cadences,
+  `dtPvSeconds` et `dtRotSeconds` (`BodyGenerationParams`). Neptune y est
+  échantillonné toutes les 1800 s, soit 11,2° par pas, 32 par tour.
+- **La source.** `DecodedChunk.sampleRot` répond juste à n'importe quel instant.
+
+L'information est intacte jusqu'au buffer, et c'est **le buffer qui la détruit**
+en ré-échantillonnant grossièrement ce que la source sait donner finement. Le
+correctif ne demande donc aucune donnée nouvelle ni aucune régénération.
+
+### Piste
+
+Le générateur porte déjà la bonne idée — deux cadences, une pour la position,
+une pour la rotation — que le buffer a fusionnées en une. Restaurer la
+séparation côté runtime : une grille de rotation propre à chaque corps,
+plafonnée à une fraction de sa période de rotation.
+
+**Attention au coût.** Le gros pas existe pour tenir une fenêtre longue à
+mémoire raisonnable ; ramener celui de Neptune sous 8 h multiplierait par 21 le
+nombre d'échantillons. C'est bien deux grilles qu'il faut, pas un pas unique
+raccourci.
+
+**Non tranché :** la fraction de période à retenir, et si le plafond se dérive
+automatiquement du `W_DOT` d'Orekit — auquel cas aucun corps futur ne peut
+retomber dans le piège, y compris Mars si son pas bouge — ou reste une constante
+par corps.
+
+---
+
+## BUG-20 — Plan des anneaux désaligné dans les assets
+
+**Mesuré le 2026-09-02**, par `./gradlew meshProbe` :
+
+| corps | géométrie | rotation à appliquer à l'anneau, dans les axes du `.gltf` |
+|---|---|---|
+| Saturne | `Circle_ring_0_0` | **13,51°** autour de `(0, +1, 0)` |
+| Uranus | `Circle_Material.003_0_0` | **9,93°** autour de `(−0,702, +0,543, −0,460)` |
+
+L'angle seul ne fait pas une rotation : l'axe voyage avec lui, comme dans le
+verdict d'un globe. Et c'est bien l'**anneau** qu'on tourne, pas le globe — pour
+Saturne le globe est `conforming`, donc c'est l'anneau qui sort du rang. Pour
+Uranus les deux corrections sont indépendantes : tourner le modèle entier de 127,5°
+pour rendre son globe conforme laisse l'écart relatif de l'anneau inchangé.
+
+Un anneau planétaire réel est dans le plan équatorial de sa planète à une fraction
+de degré près. Dix à quatorze degrés n'est pas une tolérance, c'est un
+désalignement.
+
+### Où est l'erreur : dans la rotation du nœud, pas dans le maillage
+
+Vérifié sur les deux modèles. Dans chacun, le globe et l'anneau ont pour axe leur
+**`+Z` local**, et tout l'écart vient de la rotation que le nœud leur applique :
+
+| corps | rotation du nœud globe (x, y, z, w) | rotation du nœud anneau | écart des deux axes |
+|---|---|---|---|
+| Saturne | `1, 0, 0, 1,49e−07` | `−0,9931, 0, −0,1176, 1,49e−07` | **13,510°** |
+| Uranus | `−0,4422, 0,1643, 0,0446, 0,8806` | `−0,4072, −0,0342, −0,2352, 0,8819` | **9,919°** |
+
+Ces écarts reproduisent au centième de degré près l'inclinaison mesurée sur la
+géométrie (13,51° et 9,93°). **Les maillages sont sains** ; c'est la transformation
+d'objet de l'anneau qui est approximative dans la scène source.
+
+### La réparation, et pourquoi elle esquive la question du repère
+
+Ne pas appliquer une rotation d'un angle donné : **recopier sur l'objet anneau la
+rotation de l'objet globe.**
+
+C'est exact plutôt qu'ajusté, et surtout **c'est indifférent au repère**.
+L'exportateur applique la même conversion aux deux objets, qui sont frères et sans
+parent dans les deux fichiers ; rendre leurs rotations égales dans Blender les rend
+égales dans le `.gltf`, quelle que soit la case « +Y Up ». Le piège du §4.2 du
+chantier ne s'applique donc pas ici — il ne s'applique qu'aux corrections
+*absolues*, celles qui visent la convention d'export.
+
+Le surplus de rotation ainsi imposé à l'anneau — sa rotation propre autour de son
+axe — est **invisible** : un anneau est azimutalement uniforme, et la sonde le
+confirme sur l'actif de Saturne, dont l'UV ne varie pratiquement pas avec l'azimut
+(0,9°/u contre 360 pour une sphère), signe d'un dépliage radial.
+
+**Vérification** : après ré-export, les deux nœuds portent le même quaternion
+`rotation`, et `./gradlew meshProbe` dit `ring, equatorial`.
+
+L'angle et l'axe donnés par le rapport restent la solution de repli, pour le cas
+où l'inclinaison serait cuite dans le maillage — ce qu'elle n'est ici sur aucun des
+deux corps.
+
+### Pourquoi le code ne peut rien
+
+La correction par corps de
+[`PlanetMeshCorrection`](../src/main/java/com/smousseur/orbitlab/engine/scene/PlanetMeshCorrection.java)
+tourne **le modèle entier**, globe et anneau ensemble : elle ne peut donc pas
+changer l'angle *entre* les deux. C'est une incohérence **interne à l'actif**, et
+c'est le seul défaut du chantier
+[`docs/orientation-planetes/01-decoupage.md`](orientation-planetes/01-decoupage.md)
+qui soit hors de portée du code. Deux fins possibles :
+
+- **ré-exporter** en alignant l'anneau sur l'équateur du globe, ce qui est la voie
+  normale (§4.2 du chantier) et ne laisse aucune constante ;
+- ou greffer un pivot par géométrie, comme `ShellSpin` le fait pour l'atmosphère
+  de Vénus — mécanisme déjà en place, mais qui entretient une constante de plus
+  pour un actif qu'on va de toute façon remplacer.
+
+### Comment le vérifier
+
+`./gradlew meshProbe` : la ligne de l'anneau donne la rotation à appliquer et dit
+`MISALIGNED` au-delà de 0,5°. Le critère d'arrêt est `ring, equatorial`. Aucun œil
+n'est nécessaire — un anneau n'a pas de longitude, donc son plan est la seule chose
+qu'il peut avoir de faux, et elle se mesure.
+
+**L'axe est exprimé dans les axes du `.gltf`, jamais dans ceux de Blender** : la
+case « +Y Up » de l'exportateur cuit une conversion sans laisser de témoin (§4.2 du
+chantier). Appliquer, ré-exporter, re-sonder — ne pas convertir l'axe à la main.
+
+Les deux centres sont concentriques à ~1 % du rayon du globe près, donc la rotation
+se fait autour de l'origine du modèle : tourner autour d'une autre origine
+déplacerait l'anneau en plus de l'incliner.
+
+C'est d'ailleurs le contrôle que la fiche [`BUG-3`](#bug-3--orientation-des-modèles-3d-des-planètes)
+proposait en premier pour valider l'axe (« le plan des anneaux de Saturne… doit
+être perpendiculaire à l'axe »). Il est rouge, mais il ne dit rien sur l'axe du
+globe : les deux globes concernés sont mesurés par ailleurs, et c'est l'anneau qui
+sort du rang.
+
+### Tips
+
+- **Ne pas lire l'ancienne ligne `NOT A LAT/LONG MAP` comme le défaut.** Un anneau
+  n'est pas une carte lat/long et n'en sera jamais une : ce verdict-là est correct
+  et définitif. Le défaut est ailleurs, dans le plan.
+- **Vérifier au passage l'échelle du nœud.** `uranus.gltf` donne à son anneau une
+  échelle `[0.008, 0.008, 0]` — un facteur **nul** sur Z. Sans effet visible tant
+  que le disque est déjà plat dans son plan local, mais la transformation est
+  singulière et rien ne garantit qu'un shader ou un calcul de normale s'en sorte.

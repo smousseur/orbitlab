@@ -10,6 +10,7 @@ import com.smousseur.orbitlab.OrbitLabApplication;
 import com.smousseur.orbitlab.app.view.RenderContext;
 import com.smousseur.orbitlab.engine.AssetFactory;
 import com.smousseur.orbitlab.engine.scene.body.BodyRenderConfig;
+import com.smousseur.orbitlab.engine.scene.body.ShellSpin;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -23,6 +24,7 @@ public class Model3dView {
 
   private final Node modelBucket;
   private final BodyRenderConfig config;
+  private ShellSpin shellSpin;
 
   /**
    * Creates a new 3D view for a body and attaches a model bucket node to the given anchor.
@@ -59,6 +61,34 @@ public class Model3dView {
   public void onModelLoaded(Spatial model3d) {
     logger.info("Loaded model for {}", config.displayName());
     OrbitLabApplication.app.enqueue(() -> modelBucket.attachChild(model3d));
+  }
+
+  /**
+   * Splices a pivot above the named shell of a freshly loaded model so it can be turned
+   * independently of the model as a whole — Venus's cloud deck, which laps its ground every four
+   * days (L4 of {@code docs/orientation-planetes/01-decoupage.md}).
+   *
+   * <p>Call from the loading thread, before {@link #onModelLoaded}: the axis conversion inside
+   * needs the model to still be its own root. A model that carries no such shell is left alone and
+   * {@link #setShellSpin} stays a no-op.
+   *
+   * @param model the loaded model, not yet attached
+   * @param nodeNamePrefix prefix of the shell node's name in the asset
+   * @param axisInModelAxes the spin axis in the model's own axes
+   */
+  public void isolateShell(Spatial model, String nodeNamePrefix, Vector3f axisInModelAxes) {
+    shellSpin = ShellSpin.isolate(model, nodeNamePrefix, axisInModelAxes).orElse(null);
+  }
+
+  /**
+   * Turns this model's independently spinning shell, if it has one.
+   *
+   * @param angleRad the angle in radians about the axis it was isolated on
+   */
+  public void setShellSpin(float angleRad) {
+    if (shellSpin != null) {
+      shellSpin.setAngle(angleRad);
+    }
   }
 
   /**

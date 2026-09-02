@@ -73,6 +73,11 @@ public final class LodView implements BodyView {
     iconView.setVisible(visible);
   }
 
+  @Override
+  public void setShellSpin(float angleRad) {
+    model3dView.setShellSpin(angleRad);
+  }
+
   /**
    * Returns the 3D model view component for this body.
    *

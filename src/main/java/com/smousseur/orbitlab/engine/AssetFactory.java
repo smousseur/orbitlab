@@ -172,7 +172,19 @@ public class AssetFactory {
     return spatial;
   }
 
-  private static Texture extractDiffuseTexture(Material source) {
+  /**
+   * The base colour texture a material carries, whichever spelling its definition uses: the PBR
+   * definitions the GLTF loader assigns call it {@code BaseColorMap}, {@code WrapLighting} and the
+   * stock lighting definitions call it {@code DiffuseMap}.
+   *
+   * <p>Public because {@code MeshGuard} needs the same lookup to read a texture's dimensions at
+   * load time, and which parameter holds the diffuse is exactly the fragile knowledge that must not
+   * exist twice.
+   *
+   * @param source the material to inspect, may be null
+   * @return its base colour texture, or null when it has none
+   */
+  public static Texture extractDiffuseTexture(Material source) {
     if (source == null) {
       return null;
     }

@@ -5,6 +5,7 @@ import com.smousseur.orbitlab.app.view.RenderContext;
 import com.smousseur.orbitlab.app.view.RenderTransform;
 import com.smousseur.orbitlab.core.OrbitlabException;
 import com.smousseur.orbitlab.core.SolarSystemBody;
+import com.smousseur.orbitlab.engine.scene.PlanetMeshCorrection;
 import com.smousseur.orbitlab.engine.scene.body.BodyView;
 import com.smousseur.orbitlab.engine.view.JmeVectorAdapter;
 import com.smousseur.orbitlab.simulation.ephemeris.service.EphemerisService;
@@ -52,14 +53,17 @@ public record PlanetPresenter(SolarSystemBody body, BodyView view) {
         .trySampleHelioIcrf(body, t)
         .ifPresent(
             posRotation -> {
-              // Convertir en JME units/axes selon le contexte SOLAR
+              // Convert into JME units/axes depending on SOLAR context
               Vector3D pos = posRotation.getKey();
               Vector3D jmeUnitsJmeAxes =
                   RenderTransform.toRenderUnitsJmeAxes(pos, null, RenderContext.solar());
               Vector3f p = JmeVectorAdapter.toVector3f(jmeUnitsJmeAxes);
               view.setPositionWorld(p);
               Rotation rotation = posRotation.getValue();
-              view.setRotationWorld(RenderTransform.toRenderQuaternion(rotation));
+              view.setRotationWorld(
+                  RenderTransform.toRenderQuaternion(
+                      rotation, PlanetMeshCorrection.correctionFor(body, t)));
+              view.setShellSpin(PlanetMeshCorrection.atmosphereShellSpinRad(body, t));
             });
   }
 }

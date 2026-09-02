@@ -60,6 +60,11 @@ jacoco {
 
 test {
     useJUnitPlatform()
+    // PlanetMeshFrameFixtureTest loads every planetary model to check its committed calibration.
+    // JME decodes textures into DIRECT buffers, and with no GPU to hand them off to, ten models --
+    // four of them carrying an 8192x4096 map at 134 MB each -- exceed the default direct-memory
+    // ceiling, which is the max heap. A ceiling, not a reservation: this costs nothing when unused.
+    jvmArgs '-XX:MaxDirectMemorySize=2g'
     systemProperty 'orbitlab.slowTests', System.getProperty('orbitlab.slowTests', 'false')
     systemProperty 'orbitlab.probe', System.getProperty('orbitlab.probe', 'false')
     finalizedBy jacocoTestReport
@@ -73,6 +78,13 @@ jacocoTestReport {
         xml.required = true
         csv.required = false
     }
+}
+
+tasks.register('meshProbe', JavaExec) {
+    group = 'orbitlab'
+    description = 'Reports the frame each planetary mesh carries and whether it conforms to the export convention'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'com.smousseur.orbitlab.tools.meshprobe.MeshProbeMain'
 }
 
 javadoc {

@@ -31,6 +31,7 @@ import com.smousseur.orbitlab.states.mission.TelemetryWidgetAppState;
 import com.smousseur.orbitlab.states.orbits.OrbitInitAppState;
 import com.smousseur.orbitlab.states.orbits.OrbitRuntimeAppState;
 import com.smousseur.orbitlab.states.scene.BreadcrumbWidgetAppState;
+import com.smousseur.orbitlab.states.scene.MeshCalibrationAppState;
 import com.smousseur.orbitlab.states.scene.PlanetHudMarkersAppState;
 import com.smousseur.orbitlab.states.scene.PlanetPoseAppState;
 import com.smousseur.orbitlab.states.scene.SkyboxAppState;
@@ -112,6 +113,7 @@ public class OrbitLabApplication extends SimpleApplication {
 
     stateManager.attach(new MissionOrchestratorAppState(applicationContext));
     stateManager.attach(new PlanetHudMarkersAppState(applicationContext));
+    stateManager.attach(new MeshCalibrationAppState(applicationContext));
     stateManager.attach(new SolarSystemSceneAppState(applicationContext));
     stateManager.attach(new OrbitInitAppState(applicationContext));
     stateManager.attach(new OrbitRuntimeAppState(applicationContext));
