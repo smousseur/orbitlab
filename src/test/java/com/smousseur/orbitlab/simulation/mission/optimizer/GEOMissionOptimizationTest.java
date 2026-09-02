@@ -22,7 +22,7 @@ import org.orekit.utils.Constants;
 import org.orekit.utils.PVCoordinates;
 
 @EnabledIfSystemProperty(named = "orbitlab.slowTests", matches = "true")
-public class GEOMissionOptimizationTest extends AbstractTrajectoryOptimizerTest {
+class GEOMissionOptimizationTest extends AbstractTrajectoryOptimizerTest {
   private static final Logger logger = LogManager.getLogger(GEOMissionOptimizationTest.class);
   public static final int GEO_ALTITUDE = 35_786_000;
   public static final int PARKING_ALTITUDE = 400_000;

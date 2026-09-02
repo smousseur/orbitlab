@@ -177,6 +177,7 @@ class DragForceMountingTest {
   }
 
   /** Reads a private Orekit field — neither type exposes what this test has to compare. */
+  @SuppressWarnings("PMD.AvoidAccessibilityAlteration")
   private static Object fieldOf(Object target, Class<?> owner, String name) {
     try {
       java.lang.reflect.Field field = owner.getDeclaredField(name);

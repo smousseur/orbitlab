@@ -58,8 +58,6 @@ class MissionPolylineBaselineTest {
 
   private static final Logger logger = LogManager.getLogger(MissionPolylineBaselineTest.class);
 
-  private static final double LAT = 5.23;
-
   /** The LEO-400 optimum of {@code 02-baseline-L0.md} §3, at full precision. */
   private static final double TRANSITION_TIME = 307.193166;
 

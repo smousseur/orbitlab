@@ -15,6 +15,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
 import java.util.zip.CRC32;
@@ -30,8 +31,6 @@ import org.orekit.frames.Frame;
 import org.orekit.frames.FramesFactory;
 import org.orekit.frames.Transform;
 import org.orekit.time.AbsoluteDate;
-import org.orekit.time.TimeScale;
-import org.orekit.time.TimeScalesFactory;
 import org.orekit.utils.PVCoordinates;
 
 final class EphemerisDatasetFileSmokeTest {
@@ -52,7 +51,6 @@ final class EphemerisDatasetFileSmokeTest {
 
     GeneratorConfigV1 cfg = minimalCfg(orekitZip, outDir);
 
-    TimeScale tai = TimeScalesFactory.getTAI();
     AbsoluteDate tStart = AbsoluteDate.J2000_EPOCH;
 
     double chunkDur = 86_400.0;
@@ -666,7 +664,7 @@ final class EphemerisDatasetFileSmokeTest {
 
     List<SolarSystemBody> bodies = List.of(SolarSystemBody.EARTH);
 
-    EnumMap<SolarSystemBody, BodyGenerationParams> p = new EnumMap<>(SolarSystemBody.class);
+    Map<SolarSystemBody, BodyGenerationParams> p = new EnumMap<>(SolarSystemBody.class);
     p.put(SolarSystemBody.EARTH, new BodyGenerationParams(3_600.0, 7_200.0, 86_400.0));
 
     return new GeneratorConfigV1(orekitZip, sha, outDir, bodies, 0.0, Double.NaN, 6, 1, 2, 8, 3, p);

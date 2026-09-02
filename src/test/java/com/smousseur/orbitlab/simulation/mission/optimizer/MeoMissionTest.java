@@ -51,7 +51,7 @@ import org.orekit.utils.PVCoordinates;
  * <p><b>Slow</b> — a complete mission optimization, like the LEO and GEO loops next to it.
  */
 @EnabledIfSystemProperty(named = "orbitlab.slowTests", matches = "true")
-public class MeoMissionTest extends AbstractTrajectoryOptimizerTest {
+class MeoMissionTest extends AbstractTrajectoryOptimizerTest {
   private static final Logger logger = LogManager.getLogger(MeoMissionTest.class);
 
   /** Galileo / GPS altitude. */

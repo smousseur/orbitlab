@@ -20,7 +20,7 @@ import org.junit.jupiter.params.provider.ValueSource;
  * before deciding whether the optimized transfer becomes the LEO default (bilan 08 §3.2).
  */
 @EnabledIfSystemProperty(named = "orbitlab.slowTests", matches = "true")
-public class LEOMissionOptimizedTransferTest extends AbstractTrajectoryOptimizerTest {
+class LEOMissionOptimizedTransferTest extends AbstractTrajectoryOptimizerTest {
 
   /**
    * The latitude the missions below actually launch from ({@code EarthMission.DEFAULT_LATITUDE},

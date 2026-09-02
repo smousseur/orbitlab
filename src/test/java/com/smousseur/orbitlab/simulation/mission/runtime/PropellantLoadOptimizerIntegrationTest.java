@@ -54,7 +54,7 @@ import org.orekit.utils.PVCoordinates;
  * by {@link PropellantLoadOptimizer} and {@link MissionLoadEvaluator}.
  */
 @EnabledIfSystemProperty(named = "orbitlab.fullTests", matches = "true")
-public class PropellantLoadOptimizerIntegrationTest {
+class PropellantLoadOptimizerIntegrationTest {
   private static final Logger logger =
       LogManager.getLogger(PropellantLoadOptimizerIntegrationTest.class);
 

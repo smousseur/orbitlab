@@ -50,7 +50,7 @@ class OrbitPathCacheTest {
           }
         };
 
-    EnumMap<SolarSystemBody, Double> periods = new EnumMap<>(SolarSystemBody.class);
+    Map<SolarSystemBody, Double> periods = new EnumMap<>(SolarSystemBody.class);
     periods.put(SolarSystemBody.EARTH, 100.0);
 
     EphemerisConfig cfg = new EphemerisConfig(10.0, 2, 2, periods);

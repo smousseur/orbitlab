@@ -8,6 +8,7 @@ import com.smousseur.orbitlab.simulation.ephemeris.config.EphemerisConfig;
 import com.smousseur.orbitlab.simulation.ephemeris.config.SlidingWindowConfig;
 import com.smousseur.orbitlab.simulation.source.EphemerisSource;
 import java.util.EnumMap;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.hipparchus.geometry.euclidean.threed.Rotation;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
@@ -18,7 +19,7 @@ import org.orekit.utils.PVCoordinates;
 class SlidingWindowEphemerisBufferEnsureWindowTest {
 
   private static EphemerisConfig minimalConfig() {
-    EnumMap<SolarSystemBody, Double> periods = new EnumMap<>(SolarSystemBody.class);
+    Map<SolarSystemBody, Double> periods = new EnumMap<>(SolarSystemBody.class);
     periods.put(EARTH, 1000.0);
     return new EphemerisConfig(10.0, 2, 2, periods);
   }

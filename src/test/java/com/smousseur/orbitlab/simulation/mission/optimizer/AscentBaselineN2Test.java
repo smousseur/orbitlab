@@ -67,7 +67,7 @@ import org.orekit.utils.PVCoordinates;
  * GEOMissionOptimizationTest#testGEOMission} (Falcon Heavy, parking 400 km → GEO).
  */
 @EnabledIfSystemProperty(named = "orbitlab.slowTests", matches = "true")
-public class AscentBaselineN2Test extends AbstractTrajectoryOptimizerTest {
+class AscentBaselineN2Test extends AbstractTrajectoryOptimizerTest {
   private static final Logger logger = LogManager.getLogger(AscentBaselineN2Test.class);
 
   /**

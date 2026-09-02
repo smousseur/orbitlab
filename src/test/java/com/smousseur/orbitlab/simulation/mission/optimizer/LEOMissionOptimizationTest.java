@@ -18,7 +18,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 @EnabledIfSystemProperty(named = "orbitlab.slowTests", matches = "true")
-public class LEOMissionOptimizationTest extends AbstractTrajectoryOptimizerTest {
+class LEOMissionOptimizationTest extends AbstractTrajectoryOptimizerTest {
 
   /**
    * The latitude the missions below actually launch from ({@code EarthMission.DEFAULT_LATITUDE},

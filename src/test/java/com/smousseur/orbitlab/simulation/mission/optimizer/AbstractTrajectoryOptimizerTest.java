@@ -22,7 +22,7 @@ import org.orekit.utils.PVCoordinates;
  * Base class for mission optimization tests. Provides helpers for extracting altitude data from
  * pre-computed ephemeris.
  */
-public class AbstractTrajectoryOptimizerTest {
+public abstract class AbstractTrajectoryOptimizerTest {
   private static final Logger logger = LogManager.getLogger(AbstractTrajectoryOptimizerTest.class);
 
   public static final double ORBIT_MARGIN_RATIO = 0.07;

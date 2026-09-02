@@ -52,6 +52,7 @@ final class AtmosphereProbe {
    * @param force the mounted drag force
    * @return its atmosphere
    */
+  @SuppressWarnings("PMD.AvoidAccessibilityAlteration")
   static Atmosphere behind(DragForce force) {
     try {
       Field field = AbstractDragForceModel.class.getDeclaredField("atmosphere");

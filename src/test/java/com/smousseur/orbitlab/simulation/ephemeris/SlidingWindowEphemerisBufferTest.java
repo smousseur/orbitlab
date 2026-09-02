@@ -7,6 +7,7 @@ import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.simulation.ephemeris.config.EphemerisConfig;
 import com.smousseur.orbitlab.simulation.source.EphemerisSource;
 import java.util.EnumMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.hipparchus.geometry.euclidean.threed.Rotation;
@@ -27,7 +28,7 @@ class SlidingWindowEphemerisBufferTest {
           return new BodySample(date, new PVCoordinates(p, v), Rotation.IDENTITY);
         };
 
-    EnumMap<SolarSystemBody, Double> periods = new EnumMap<>(SolarSystemBody.class);
+    Map<SolarSystemBody, Double> periods = new EnumMap<>(SolarSystemBody.class);
     periods.put(SolarSystemBody.EARTH, 1000.0);
 
     EphemerisConfig cfg = new EphemerisConfig(10.0, 5, 5, periods);
@@ -54,7 +55,7 @@ class SlidingWindowEphemerisBufferTest {
     EphemerisSource src =
         (bodyId, date) -> new BodySample(date, PVCoordinates.ZERO, Rotation.IDENTITY);
 
-    EnumMap<SolarSystemBody, Double> periods = new EnumMap<>(SolarSystemBody.class);
+    Map<SolarSystemBody, Double> periods = new EnumMap<>(SolarSystemBody.class);
     periods.put(SolarSystemBody.EARTH, 1000.0);
 
     EphemerisConfig cfg = new EphemerisConfig(10.0, 2, 2, periods);
@@ -75,7 +76,7 @@ class SlidingWindowEphemerisBufferTest {
           return new BodySample(date, PVCoordinates.ZERO, Rotation.IDENTITY);
         };
 
-    EnumMap<SolarSystemBody, Double> periods = new EnumMap<>(SolarSystemBody.class);
+    Map<SolarSystemBody, Double> periods = new EnumMap<>(SolarSystemBody.class);
     periods.put(SolarSystemBody.EARTH, 1000.0);
 
     EphemerisConfig cfg = new EphemerisConfig(10.0, 3, 4, periods);

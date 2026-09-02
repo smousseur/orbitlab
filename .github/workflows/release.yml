@@ -71,7 +71,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
 
       - name: Build fat jar
-        run: ./gradlew --no-daemon shadowJar -PappVersion=${{ needs.version.outputs.number }}
+        run: ./gradlew --no-daemon clean check shadowJar -PappVersion=${{ needs.version.outputs.number }}
 
       - name: Contrôle du contenu du jar
         shell: bash

@@ -26,7 +26,7 @@ import org.orekit.utils.Constants;
  * to periapsis (almost a full period away, beyond {@code t1Max}) and the feasibility {@code dv2}
  * mixed speeds at two different radii.
  */
-public class TransferProblemSeedTest {
+class TransferProblemSeedTest {
   private static final double EARTH_RADIUS = Constants.WGS84_EARTH_EQUATORIAL_RADIUS;
   private static final double TARGET_ALTITUDE = 300_000.0;
   private static final double TARGET_INCLINATION = FastMath.toRadians(45.96);

@@ -1,9 +1,9 @@
 package com.smousseur.orbitlab.simulation.gravity;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.simulation.OrekitService;
@@ -156,7 +156,7 @@ class ArcTransitionTest {
         ArcTransition.across(
             GravitationalContext.earth().withPerturbers(SolarSystemBody.MOON, SolarSystemBody.SUN),
             SolarSystemBody.MOON);
-    assertTrue(!lunar.perturbers().contains(SolarSystemBody.MOON));
+    assertFalse(lunar.perturbers().contains(SolarSystemBody.MOON));
   }
 
   @Test

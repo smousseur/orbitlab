@@ -36,7 +36,7 @@ import org.orekit.utils.Constants;
  * <p>The two candidates below fly the same arrival orbit, so the orbital part of the cost is a
  * shared constant and the comparison isolates the propellant grading.
  */
-public class TransferProblemCostTest {
+class TransferProblemCostTest {
   private static final double EARTH_RADIUS = Constants.WGS84_EARTH_EQUATORIAL_RADIUS;
   private static final double TARGET_ALTITUDE = 300_000.0;
   private static final double TARGET_INCLINATION = FastMath.toRadians(45.96);
@@ -61,10 +61,10 @@ public class TransferProblemCostTest {
     TransferProblem problem = problemFor(entry);
     double depletionFloor = depletionFloorFor(entry);
 
-    double flameOutCost = problem.computeCost(arrivalState(entry, depletionFloor));
+    double flameOutCost = problem.computeCost(arrivalState(depletionFloor));
     double soberCost =
         problem.computeCost(
-            arrivalState(entry, depletionFloor + 0.5 * (TRANSFER_ENTRY_MASS - depletionFloor)));
+            arrivalState(depletionFloor + 0.5 * (TRANSFER_ENTRY_MASS - depletionFloor)));
 
     System.out.printf(
         "flame-out cost=%.6e, sober cost=%.6e, ratio=%.2f%n",
@@ -85,7 +85,6 @@ public class TransferProblemCostTest {
     TransferProblem problem = problemFor(entry);
     SpacecraftState arrival =
         arrivalState(
-            entry,
             depletionFloorFor(entry) + 0.5 * (TRANSFER_ENTRY_MASS - depletionFloorFor(entry)));
 
     double cost = problem.computeCost(arrival);
@@ -127,7 +126,7 @@ public class TransferProblemCostTest {
   }
 
   /** The arrival orbit both candidates reach, 100 s later, at the given final mass. */
-  private static SpacecraftState arrivalState(SpacecraftState entry, double finalMass) {
+  private static SpacecraftState arrivalState(double finalMass) {
     return stateOnOrbit(TARGET_ALTITUDE, TARGET_ALTITUDE, 0.0, finalMass, 100.0);
   }
 

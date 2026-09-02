@@ -22,8 +22,8 @@ class MultiStageLoadOptimizerTest {
     final List<double[]> calls = new ArrayList<>();
 
     PerStageThresholdEvaluator(double[] thresholds, boolean[] scaled) {
-      this.thresholds = thresholds;
-      this.scaled = scaled;
+      this.thresholds = thresholds.clone();
+      this.scaled = scaled.clone();
     }
 
     @Override
@@ -47,7 +47,7 @@ class MultiStageLoadOptimizerTest {
 
     SumBudgetEvaluator(double budget, boolean[] scaled) {
       this.budget = budget;
-      this.scaled = scaled;
+      this.scaled = scaled.clone();
     }
 
     @Override

@@ -121,7 +121,6 @@ class LunarOrbitFlightTest {
 
     MissionComputeResult result = null;
     Mission mission = null;
-    AbsoluteDate launchDate = null;
     double wallSeconds = 0.0;
     AbsoluteDate floor = searchStart;
     OrbitlabException lastRefusal = null;
@@ -131,7 +130,7 @@ class LunarOrbitFlightTest {
       Optional<LaunchWindow> window = LunarLaunchWindowPlanner.nextOpportunity(spec, floor);
       assertTrue(window.isPresent(), "the lunar window offered no opening at or after " + floor);
 
-      launchDate = window.get().date();
+      AbsoluteDate launchDate = window.get().date();
       logger.info(
           "Launch window: {} at {} m/s (attempt {}/{})",
           launchDate,

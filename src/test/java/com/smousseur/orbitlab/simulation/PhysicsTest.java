@@ -33,7 +33,10 @@ class PhysicsTest {
 
   @Test
   void computeBurnDuration_matchesTsiolkovskyFormula() {
-    double isp = 300, mass = 10_000, thrust = 8_400_000, dv = 200;
+    double isp = 300;
+    double mass = 10_000;
+    double thrust = 8_400_000;
+    double dv = 200;
     double ve = isp * Constants.G0_STANDARD_GRAVITY;
     double expected = (mass * ve / thrust) * (1.0 - FastMath.exp(-dv / ve));
     assertEquals(expected, Physics.computeBurnDuration(dv, mass, isp, thrust), 1e-12);

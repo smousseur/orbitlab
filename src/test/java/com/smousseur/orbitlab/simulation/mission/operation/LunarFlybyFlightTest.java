@@ -213,7 +213,8 @@ class LunarFlybyFlightTest {
     double wallSeconds = 0.0;
     OrbitlabException lastRefusal = null;
 
-    for (LaunchWindow slot : byCost) {
+    for (int attempt = 0; attempt < byCost.size() && result == null; attempt++) {
+      LaunchWindow slot = byCost.get(attempt);
       launchDate = slot.date();
       plannedMisalignment = window.injectionAt(launchDate).planeMisalignment();
       logger.info(
@@ -249,7 +250,6 @@ class LunarFlybyFlightTest {
       } finally {
         wallSeconds = (System.nanoTime() - startedAt) / 1.0e9;
       }
-      break;
     }
     assertNotNull(
         result,

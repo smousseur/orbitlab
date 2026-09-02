@@ -112,7 +112,10 @@ class HudSurfacesTest {
     assertEquals(List.of("window", "window"), log);
   }
 
+  // PMD.CloseResource: closing the handle is what this test asserts on, so it happens mid-test
+  // and the assertions have to run after it — neither try-with-resources nor a finally would do.
   @Test
+  @SuppressWarnings("PMD.CloseResource")
   void closingTheHandleUnregistersTheSurface() throws Exception {
     HudSurfaces surfaces = new HudSurfaces();
     List<String> log = new ArrayList<>();

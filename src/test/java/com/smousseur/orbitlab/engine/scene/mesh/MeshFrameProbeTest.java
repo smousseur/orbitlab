@@ -97,7 +97,7 @@ class MeshFrameProbeTest {
     mesh.setBuffer(
         VertexBuffer.Type.Position,
         3,
-        BufferUtils.createFloatBuffer(new float[] {0f, 0f, 0f, 1f, 0f, 0f, 0f, 1f, 0f}));
+        BufferUtils.createFloatBuffer(0f, 0f, 0f, 1f, 0f, 0f, 0f, 1f, 0f));
     mesh.updateBound();
     return mesh;
   }

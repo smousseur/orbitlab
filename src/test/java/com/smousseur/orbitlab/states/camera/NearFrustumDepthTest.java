@@ -91,15 +91,15 @@ class NearFrustumDepthTest {
     // planet would open a hole under the camera from ~333 km out — one artefact traded for a worse
     // one. The guarantee stops at 5 km of clearance, where the camera is landing rather than
     // orbiting.
-    for (float d = 1f; d <= 395f; d += 1f) {
+    for (int km = 1; km <= 395; km++) {
+      float d = km;
       float groundClearance = 400f - d;
       float near = NearCameraSyncAppState.nearPlane(ViewMode.SPACECRAFT, d);
-      float distance = d;
       assertTrue(
           near < groundClearance,
           () ->
               "at "
-                  + distance
+                  + d
                   + " km from the spacecraft the near plane ("
                   + near
                   + " km) cuts into the ground "

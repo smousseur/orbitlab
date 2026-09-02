@@ -37,7 +37,7 @@ import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
  * after the fact on observed numbers rather than guessed before them.
  */
 @EnabledIfSystemProperty(named = "orbitlab.slowTests", matches = "true")
-public class Ariane62MissionTest extends AbstractTrajectoryOptimizerTest {
+class Ariane62MissionTest extends AbstractTrajectoryOptimizerTest {
 
   private static final Logger logger = LogManager.getLogger(Ariane62MissionTest.class);
 

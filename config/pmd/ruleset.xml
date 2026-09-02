@@ -22,6 +22,20 @@
         <exclude name="GuardLogStatement"/>
         <exclude name="UseVarargs" />
         <exclude name="SystemPrintln" />
+        <exclude name="UnitTestAssertionsShouldIncludeMessage"/>
+        <exclude name="UnitTestContainsTooManyAsserts"/>
+        <exclude name="UnitTestShouldIncludeAssert"/>
+        <exclude name="AbstractClassWithoutAbstractMethod"/>
+    </rule>
+    <rule ref="category/java/errorprone.xml/EmptyCatchBlock">
+        <properties>
+            <property name="allowCommentedBlocks" value="true"/>
+        </properties>
+    </rule>
+    <rule ref="category/java/errorprone.xml/CloseResource">
+        <properties>
+            <property name="closeTargets" value="shutdownNow"/>
+        </properties>
     </rule>
 
 </ruleset>
