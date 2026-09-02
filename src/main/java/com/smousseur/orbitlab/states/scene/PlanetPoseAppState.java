@@ -90,6 +90,18 @@ public final class PlanetPoseAppState extends BaseAppState {
   private static final ColorRGBA SUN_CORONA = new ColorRGBA(1f, 0.7f, 0.2f, 0.7f);
 
   /**
+   * Width of the softened band before the shadow, for every body but the Sun.
+   *
+   * <p>It was 0.8 while {@code WrapLighting.frag} used the ramp <em>instead of</em> the Lambert
+   * cosine; now that the ramp multiplies the cosine the same number costs light twice, and 0.8
+   * would put the visible light/dark edge at 57° from the sub-solar point instead of 90° — worse
+   * than what it replaced. Measured against the physical profile: 0.3 puts that edge at 77°, 0.1 at
+   * 86°. This is the value {@code MissionRenderer} already used, and the one the material
+   * definition documents.
+   */
+  private static final float PLANET_TWILIGHT_FALLOFF = 0.3f;
+
+  /**
    * Exponent of the corona's radial decay past the limb. Higher hugs the disc more tightly; 1 would
    * be a linear ramp all the way out to the mesh's edge.
    */
@@ -172,7 +184,7 @@ public final class PlanetPoseAppState extends BaseAppState {
               spatial ->
                   body == SolarSystemBody.SUN
                       ? AssetFactory.get().applyGlow(spatial, SUN_GLOW)
-                      : AssetFactory.get().applyLambert(spatial, 0.8f))
+                      : AssetFactory.get().applyLambert(spatial, PLANET_TWILIGHT_FALLOFF))
           .thenApply(
               spatial -> {
                 // After re-materialisation, so the report describes the textures actually bound at

@@ -94,6 +94,35 @@ public final class PlanetMeshCorrection {
    */
   private static final double JUPITER_SYSTEM_II_DEG_PER_DAY = 870.2700000;
 
+  /**
+   * Longitude Jupiter's asset carries on its texture column {@code u = 0} at J2000 — the first λ0
+   * on this table established by measurement rather than left at {@link
+   * #CONVENTIONAL_COLUMN_ZERO_LONGITUDE_DEG}.
+   *
+   * <p><b>How it was obtained.</b> Two captures of the same instant, 2026-09-02 21:45 UTC: one from
+   * NASA's Eyes on the Solar System, one from this application. In each, the disc's limb was fitted
+   * (an ellipse, since Eyes renders the real oblateness), the terminator was detected line by line
+   * and the solar direction recovered as the plane through those points, and the Great Red Spot's
+   * angular distance from the sub-solar point was read off. That distance is the one quantity in
+   * the comparison that depends on neither camera: it is the spot's local solar time. Eyes gives
+   * <b>28.3°</b>, this application gave <b>70.3°</b>, so the spot was carried 42.0° too far from
+   * local noon — which at its latitude of 19.8° south is 48.4° of longitude, and that is what has
+   * been added to the house value of 180°.
+   *
+   * <p>The 70.3° is corroborated three ways: the arithmetic on the calibration HUD's own readout
+   * ({@code λ0 + 360·u} against the spot at column 0.365 of the base colour map), the same
+   * pixel-fitting pipeline applied to this application's capture, and the spot's position read
+   * against the L2 graticule's labelled meridians, which puts it at 119° where the arithmetic
+   * predicts 119.8°.
+   *
+   * <p><b>Uncertainty is about ±5°</b>, dominated by locating the spot's centre — in the map, and
+   * on a rendered disc where it sits near the limb and the projection is compressed. It is not
+   * worth quoting more precisely than that until a second reading at a distant date separates this
+   * offset from a possible error in {@link #JUPITER_SYSTEM_II_DEG_PER_DAY}: one epoch cannot tell
+   * the two apart, and at −0.266°/day a year of baseline is 97° of lever arm.
+   */
+  private static final float JUPITER_LAMBDA0_DEG = 228.4f;
+
   private static final double SATURN_SYSTEM_I_DEG_PER_DAY = 360.0 * 86400.0 / 36840.0;
 
   /**
@@ -148,11 +177,13 @@ public final class PlanetMeshCorrection {
                       4096,
                       2048)),
               // Pole in the reference family, texture column 0 a quarter turn away. This is the
-              // Great Red Spot symptom that opened the chantier.
+              // Great Red Spot symptom that opened the chantier. Its λ0 is measured, not assumed —
+              // see JUPITER_LAMBDA0_DEG.
               Map.entry(
                   SolarSystemBody.JUPITER,
                   calibration(
                       frame(0f, 0f, 1f, 0f, -1f, 0f, 0.00f, -360.0f),
+                      JUPITER_LAMBDA0_DEG,
                       JUPITER_SYSTEM_II_DEG_PER_DAY - JUPITER_SYSTEM_III_DEG_PER_DAY,
                       4096,
                       2048)),
@@ -204,12 +235,27 @@ public final class PlanetMeshCorrection {
 
   private static PlanetMeshCalibration calibration(
       MeshFrame measured, double driftDegPerDay, int textureWidth, int textureHeight) {
-    return new PlanetMeshCalibration(
+    return calibration(
         measured,
         CONVENTIONAL_COLUMN_ZERO_LONGITUDE_DEG,
         driftDegPerDay,
         textureWidth,
         textureHeight);
+  }
+
+  /**
+   * The overload for an asset whose column 0 has actually been measured, rather than assumed to sit
+   * at the standard map origin. Taking this one is the declaration that a body's λ0 is a reading;
+   * the shorter overloads say it is still the house value.
+   */
+  private static PlanetMeshCalibration calibration(
+      MeshFrame measured,
+      float lambda0Deg,
+      double driftDegPerDay,
+      int textureWidth,
+      int textureHeight) {
+    return new PlanetMeshCalibration(
+        measured, lambda0Deg, driftDegPerDay, textureWidth, textureHeight);
   }
 
   private static MeshFrame frame(

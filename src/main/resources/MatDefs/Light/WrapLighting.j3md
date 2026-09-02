@@ -6,9 +6,12 @@ MaterialDef Wrap Lighting {
         Color Diffuse
         Boolean UseMaterialColors
         // Width of the soft twilight band on the LIT side of the geometric terminator.
-        // The shadow boundary stays anchored at N.L = 0 regardless of this value:
-        // illumination ramps from 0 at N.L = 0 to full bright at N.L = FallOffFactor
-        // via a Hermite curve. 0 = hard step. 0.1 - 0.3 = soft twilight.
+        // The shading is Lambert (N.L) multiplied by a Hermite ramp that reaches 1 at
+        // N.L = FallOffFactor, so the shadow boundary stays anchored at N.L = 0 and this
+        // value only widens the softened band. It costs light on top of the cosine, so
+        // it must stay small: at 0.1 the profile is Lambert to within 5 % everywhere and
+        // the visible edge sits at 86 deg from the sub-solar point, at 0.3 it sits at
+        // 77 deg, and at 0.8 it collapses to 57 deg — a terminator visibly too early.
         Float FallOffFactor : 0.3
 
         // Eclipse occulter (docs/eclipses/01-decoupage.md): centre and radius of the body that may

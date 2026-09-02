@@ -26,14 +26,18 @@ varying vec3 vPosWorld;
 varying vec3 AmbientSum;
 varying vec4 DiffuseSum;
 
-// Twilight falloff on the LIT side only. Shadow boundary stays anchored at
-// N.L = 0 for any fallOff: smoothstep(0, fallOff, N.L) returns 0 for N.L <= 0
-// (strict shadow), ramps via Hermite over N.L in [0, fallOff] (twilight band),
-// and saturates at 1 beyond. fallOff = 0 collapses to a hard step.
+// Lambert cosine, with a Hermite ramp that only softens the last stretch before
+// the shadow. The cosine is what makes a lit sphere read as a sphere: without it
+// the disc is flat out to acos(fallOff) and every degree of shading is crowded
+// into the rest, which moves the light/dark edge the eye sees well inside the
+// geometric terminator. The ramp multiplies rather than replaces it, so the
+// boundary stays anchored at N.L = 0 and fallOff only says how wide the softened
+// band is — keep it small (0.1 - 0.3), since it darkens the twilight zone on top
+// of the cosine that is already darkening it.
 float lightFalloff(in vec3 n, in vec3 l, in float fallOff) {
     float ndotl = dot(n, l);
     // Guard against smoothstep(0, 0, x) which is undefined in GLSL.
-    return smoothstep(0.0, max(fallOff, 1e-5), ndotl);
+    return ndotl * smoothstep(0.0, max(fallOff, 1e-5), ndotl);
 }
 
 // Fraction of the Sun's disk still visible past the occulter, from the area of intersection of two
