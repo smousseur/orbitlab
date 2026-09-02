@@ -114,7 +114,7 @@ public final class PropellantLoadOptimizer {
    * Outcome of the bisection.
    *
    * @param feasible whether a feasible load was found (false only when even the heuristic {@code λ
-   *     = λmax} load fails — an under-dotée mission)
+   *     = λmax} load fails — an under-resourced mission)
    * @param lambda the minimal feasible scale factor found within tolerance (equals {@code λmax}
    *     when infeasible)
    * @param evaluations the number of evaluations spent (bounded by {@code maxEvaluations})
@@ -130,7 +130,7 @@ public final class PropellantLoadOptimizer {
    * lower bound ({@code λmin}) first, then bisects the remaining bracket, always keeping {@code
    * infeasibleλ < feasibleλ}, until the bracket is narrower than the tolerance or the evaluation
    * budget is spent. The two short-circuits: if {@code λmax} is already infeasible the mission is
-   * under-dotée (nothing to shrink); if {@code λmin} is already feasible the search cannot do
+   * under-resourced (nothing to shrink); if {@code λmin} is already feasible the search cannot do
    * better and returns immediately.
    *
    * <p><b>Monotonicity is only approximate.</b> The bisection assumes feasibility is monotone in
@@ -159,7 +159,8 @@ public final class PropellantLoadOptimizer {
 
     int evaluations = 0;
 
-    // Upper bound: the heuristic loads. If even these fail, the mission is under-dotée — there is
+    // Upper bound: the heuristic loads. If even these fail, the mission is under-resourced — there
+    // is
     // nothing to shrink, so report infeasible rather than bisect toward an ever-smaller load.
     Evaluation hi = evaluator.evaluate(lambdaMax, null);
     evaluations++;
@@ -167,7 +168,7 @@ public final class PropellantLoadOptimizer {
         "Probe λ={} (upper bound / heuristic loads): feasible={}", lambdaMax, hi.feasible());
     if (!hi.feasible()) {
       logger.warn(
-          "Heuristic loads (λ={}) infeasible — mission under-dotée, nothing to shrink; aborting"
+          "Heuristic loads (λ={}) infeasible — mission under-resourced, nothing to shrink; aborting"
               + " after {} eval(s)",
           lambdaMax,
           evaluations);

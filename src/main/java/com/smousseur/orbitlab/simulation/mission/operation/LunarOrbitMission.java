@@ -11,6 +11,7 @@ import com.smousseur.orbitlab.simulation.mission.stage.CoastingStage;
 import com.smousseur.orbitlab.simulation.mission.stage.LunarApproachCoastStage;
 import com.smousseur.orbitlab.simulation.mission.stage.LunarInsertionStage;
 import com.smousseur.orbitlab.simulation.mission.stage.ParkingCoastStage;
+import com.smousseur.orbitlab.simulation.mission.stage.StageNames;
 import com.smousseur.orbitlab.simulation.mission.stage.StageSeparationStage;
 import com.smousseur.orbitlab.simulation.mission.stage.TLIBurnStage;
 import com.smousseur.orbitlab.simulation.mission.stage.TranslunarCoastStage;
@@ -89,7 +90,7 @@ public class LunarOrbitMission extends EarthMission {
    * MissionLoadEvaluator.FINAL_COAST_STAGE} compares against it to decide which samples the
    * insertion objective is scored on. The eleven other stage names are read by nothing.
    */
-  private static final String FINAL_COAST_NAME = "Coasting";
+  private static final String FINAL_COAST_NAME = StageNames.TERMINAL_COAST;
 
   /** Name of the parking coast, shaped like {@link LunarFlybyMission#PARKING_COAST_NAME}. */
   public static final String PARKING_COAST_NAME = "Parking coast";
@@ -209,7 +210,7 @@ public class LunarOrbitMission extends EarthMission {
             // the separation refuse to fire when the gravity turn left propellant in S1, which
             // would otherwise jettison S1 in S2's place and hand the insertion to the wrong engine.
             new StageSeparationStage(
-                "S2 separation", profile.interstageCoastDuration(), UPPER_STAGE_INDEX),
+                StageNames.UPPER_SEPARATION, profile.interstageCoastDuration(), UPPER_STAGE_INDEX),
             new TranslunarCoastStage(TRANSLUNAR_COAST_NAME, TRANSLUNAR_COAST_BOUND_SECONDS),
             new LunarApproachCoastStage(APPROACH_COAST_NAME),
             new LunarInsertionStage(INSERTION_NAME),

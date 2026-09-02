@@ -216,7 +216,6 @@ public class StepLaunchSite implements StepValues {
     col.addChild(UiKit.fieldLabelRow(labelText, iconName));
     col.addChild(UiKit.vSpacer(LABEL_FIELD_GAP));
 
-    // On attache le champ qui a été passé
     col.addChild(field);
 
     col.addChild(UiKit.vSpacer(LABEL_FIELD_GAP));

@@ -4,6 +4,8 @@ import com.jme3.app.SimpleApplication;
 import com.jme3.math.Vector3f;
 import com.jme3.renderer.Camera;
 import com.jme3.renderer.ViewPort;
+import com.jme3.scene.Node;
+import com.jme3.scene.Spatial;
 import com.jme3.system.AppSettings;
 import com.simsilica.lemur.GuiGlobals;
 import com.simsilica.lemur.event.PickState;
@@ -11,6 +13,7 @@ import com.simsilica.lemur.style.BaseStyles;
 import com.smousseur.orbitlab.app.ApplicationContext;
 import com.smousseur.orbitlab.engine.AssetFactory;
 import com.smousseur.orbitlab.engine.TextureDiagnostics;
+import com.smousseur.orbitlab.engine.scene.body.lod.Model3dAttacher;
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.mission.window.problem.EarthLaunchWindowPlanner;
 import com.smousseur.orbitlab.states.InitAppState;
@@ -51,10 +54,7 @@ import org.apache.logging.log4j.Logger;
  * configures the GUI (Lemur), and registers all application states that drive the simulation,
  * rendering, and user interaction.
  */
-public class OrbitLabApplication extends SimpleApplication {
-  /** Global application instance. */
-  public static OrbitLabApplication app;
-
+public class OrbitLabApplication extends SimpleApplication implements Model3dAttacher {
   private static final int ANISOTROPIC_FILTER_LEVEL = 8;
 
   private static final Logger LOGGER = LogManager.getLogger(OrbitLabApplication.class);
@@ -68,7 +68,7 @@ public class OrbitLabApplication extends SimpleApplication {
    * @param args command-line arguments (currently unused)
    */
   public static void main(String[] args) {
-    app = new OrbitLabApplication();
+    OrbitLabApplication app = new OrbitLabApplication();
     var settings = new AppSettings(true);
     settings.setResolution(1280, 720);
     settings.setTitle("Orbitlab");
@@ -90,7 +90,7 @@ public class OrbitLabApplication extends SimpleApplication {
     renderer.setDefaultAnisotropicFilter(ANISOTROPIC_FILTER_LEVEL);
     TextureDiagnostics.logRendererCaps(renderer);
 
-    ApplicationContext applicationContext = new ApplicationContext(rootNode, guiNode);
+    ApplicationContext applicationContext = new ApplicationContext(this, rootNode, guiNode);
     stateManager.attach(new InitAppState());
     stateManager.attach(new SkyboxAppState(applicationContext));
     stateManager.attach(new SimulationClockAppState(applicationContext));
@@ -217,6 +217,11 @@ public class OrbitLabApplication extends SimpleApplication {
           (System.nanoTime() - startNanos) / 1_000_000L,
           e);
     }
+  }
+
+  @Override
+  public void attach(Node modelBucket, Spatial model3d) {
+    this.enqueue(() -> modelBucket.attachChild(model3d));
   }
 
   @Override

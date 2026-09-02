@@ -255,7 +255,7 @@ public abstract class DynamicParameters {
     // Replace mouse control with custom drag handler
     CursorEventControl cec = thumb.getControl(CursorEventControl.class);
     if (cec != null) {
-      thumb.removeControl(cec); // Détruit le ButtonDragger privé et les effets de survol
+      thumb.removeControl(cec); // Destroys the private ButtonDragger and the hover effects
     }
 
     CursorEventControl.addListenersToSpatial(

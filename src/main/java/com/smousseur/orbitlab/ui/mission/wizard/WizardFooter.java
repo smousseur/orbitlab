@@ -39,7 +39,7 @@ public class WizardFooter {
   private String nextHoverTex = "btn-primary-hover";
   private String submitLabel = DEFAULT_SUBMIT_LABEL;
 
-  /** Largeur utile du footer (entre ses paddings horizontaux). */
+  /** Usable width of the footer, between its horizontal paddings. */
   private final float innerWidth;
 
   private Runnable onCancel = () -> {};

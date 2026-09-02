@@ -25,7 +25,7 @@ import org.orekit.time.AbsoluteDate;
  * mask, the launch epoch and the feasibility settings are assembled into the internal {@link
  * MissionLoadEvaluator} by {@link #plan()}, so the caller supplies inputs, not machinery.
  *
- * <p>An under-dotée mission (the heuristic loads themselves fail) has nothing to shrink; {@link
+ * <p>An under-resourced mission (the heuristic loads themselves fail) has nothing to shrink; {@link
  * #plan()} raises {@link OrbitlabException} rather than returning a plan with no computation.
  */
 public final class MinimizedLoadPlanner implements MissionPlanner {
@@ -151,7 +151,7 @@ public final class MinimizedLoadPlanner implements MissionPlanner {
             .minimize(evaluator()::evaluate, lambdaScaled, heuristicLoads, progress);
     if (!result.feasible()) {
       throw new OrbitlabException(
-          "Propellant sizing infeasible: the heuristic loads themselves fail — mission under-dotée,"
+          "Propellant sizing infeasible: the heuristic loads themselves fail — mission under-resourced,"
               + " nothing to shrink");
     }
     return new MissionPlan(result.best().result(), PropellantSizing.from(result));

@@ -8,6 +8,7 @@ import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.engine.EngineConfig;
 import com.smousseur.orbitlab.engine.events.EventBus;
 import com.smousseur.orbitlab.engine.scene.body.BodyView;
+import com.smousseur.orbitlab.engine.scene.body.lod.Model3dAttacher;
 import com.smousseur.orbitlab.engine.scene.graph.GuiGraph;
 import com.smousseur.orbitlab.engine.scene.graph.SceneGraph;
 import com.smousseur.orbitlab.engine.scene.planet.PlanetPresenter;
@@ -29,6 +30,7 @@ import java.util.Map;
  * services, providing a single point of access to cross-cutting concerns.
  */
 public class ApplicationContext {
+  private final Model3dAttacher model3dAttacher;
   private final EngineConfig engineConfig = EngineConfig.defaultSolarSystem();
   private final SimulationConfig config;
   private final SimulationClock clock;
@@ -54,13 +56,14 @@ public class ApplicationContext {
    * @param rootNode the JME3 root node for 3D scene rendering
    * @param guiNode the JME3 GUI node for 2D overlay rendering
    */
-  public ApplicationContext(Node rootNode, Node guiNode) {
-    this();
+  public ApplicationContext(Model3dAttacher model3dAttacher, Node rootNode, Node guiNode) {
+    this(model3dAttacher);
     guiGraph.attachTo(guiNode);
     sceneGraph.attachTo(rootNode);
   }
 
-  private ApplicationContext() {
+  private ApplicationContext(Model3dAttacher model3dAttacher) {
+    this.model3dAttacher = model3dAttacher;
     this.config = SimulationConfig.defaultSolarSystem();
     this.eventBus = new EventBus();
     this.clock = new SimulationClock(config.computeClockStart());
@@ -68,6 +71,15 @@ public class ApplicationContext {
     this.guiGraph = new GuiGraph();
     this.focusView = new FocusView(engineConfig);
     this.missionContext = new MissionContext();
+  }
+
+  /**
+   * Returns the hand-off that attaches a loaded 3D model on the JME thread.
+   *
+   * @return the model attacher
+   */
+  public Model3dAttacher model3dAttacher() {
+    return model3dAttacher;
   }
 
   /**

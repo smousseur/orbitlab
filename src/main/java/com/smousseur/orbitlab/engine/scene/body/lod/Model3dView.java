@@ -6,7 +6,6 @@ import com.jme3.scene.Geometry;
 import com.jme3.scene.Node;
 import com.jme3.scene.SceneGraphVisitorAdapter;
 import com.jme3.scene.Spatial;
-import com.smousseur.orbitlab.OrbitLabApplication;
 import com.smousseur.orbitlab.app.view.RenderContext;
 import com.smousseur.orbitlab.engine.AssetFactory;
 import com.smousseur.orbitlab.engine.scene.body.BodyRenderConfig;
@@ -24,6 +23,7 @@ public class Model3dView {
 
   private final Node modelBucket;
   private final BodyRenderConfig config;
+  private final Model3dAttacher model3dAttacher;
   private ShellSpin shellSpin;
 
   /**
@@ -32,7 +32,8 @@ public class Model3dView {
    * @param anchor3d the parent anchor node in the scene graph
    * @param config the render configuration defining model path, radius, and scale
    */
-  public Model3dView(Node anchor3d, BodyRenderConfig config) {
+  public Model3dView(Model3dAttacher model3dAttacher, Node anchor3d, BodyRenderConfig config) {
+    this.model3dAttacher = model3dAttacher;
     this.modelBucket = new Node("ModelBucket-" + config.displayName());
     this.config = config;
     anchor3d.attachChild(modelBucket);
@@ -60,7 +61,7 @@ public class Model3dView {
    */
   public void onModelLoaded(Spatial model3d) {
     logger.info("Loaded model for {}", config.displayName());
-    OrbitLabApplication.app.enqueue(() -> modelBucket.attachChild(model3d));
+    model3dAttacher.attach(modelBucket, model3d);
   }
 
   /**

@@ -27,9 +27,28 @@ rédaction, jamais réattribué. Un item sort d'ici corrigé, ou requalifié en
 | SLOC `src/test` | 12 738 |
 | Ratio test/main | 0,39 |
 
+> **`J0-D`, re-mesuré le 2026-09-02.** Le même instrument, passé sur `b027d1d`,
+> y retrouve **266 / 32 920 / 12 738** : les écarts ci-dessous sont donc des
+> écarts réels et non une différence de méthode.
+>
+> | Grandeur | 2026-08-10 | 2026-09-02 | |
+> |---|---:|---:|---|
+> | Classes `src/main` | 266 | **387** | +45 % |
+> | SLOC `src/main` | 32 920 | **56 854** | +73 % |
+> | SLOC `src/test` | 12 738 | **31 000** | +143 % |
+> | Ratio test/main | 0,39 | **0,55** | la couverture a monté plus vite que le code |
+>
+> **Le dépôt a presque doublé depuis la photographie.** Toute fiche de ce document
+> dont la mesure n'a pas été re-vérifiée ci-dessous décrit un `src/main` qui faisait
+> **58 %** de celui d'aujourd'hui, et un `src/test` qui en faisait 41 %.
+
 **Aucun analyseur statique n'est branché sur le build** — `build.gradle` ne
 déclare que le plugin `java`, et il n'y a pas de CI. Les chiffres ci-dessous ont
 donc été reconstruits à la main :
+
+> **Depuis le 2026-09-02 ce n'est plus vrai** — PMD et Spotless sont branchés et
+> bloquants, voir [`DT-1`](#dt-1--aucune-analyse-statique-dans-le-build). Les
+> mesures ci-dessous restent celles du 2026-08-10, faites à la main.
 
 - longueur de méthodes et de classes par comptage d'accolades ;
 - complexité cognitive **approximée** (mots-clés de branchement pondérés par la
@@ -46,25 +65,25 @@ aujourd'hui. C'est le sujet de [`DT-1`](#dt-1--aucune-analyse-statique-dans-le-b
 
 ## 2. Synthèse
 
-| ID | Item | Sévérité | Effort | Risque de régression |
-|---|---|---|---|---|
-| [`DT-1`](#dt-1--aucune-analyse-statique-dans-le-build) | Aucune analyse statique dans le build | Critique (structurel) | Faible | Nul |
-| [`DT-2`](#dt-2--squelette-dupliqué-sur-les-six-analyticstage) | Squelette dupliqué sur les six `Analytic*Stage` | Majeur | Moyen | **Élevé** |
-| [`DT-3`](#dt-3--complexité-cognitive-de-multistageloadoptimizerminimize) | Complexité de `MultiStageLoadOptimizer.minimize()` | Critique | Moyen | **Élevé** |
-| [`DT-4`](#dt-4--singleton-statique-mutable-orbitlabapplicationapp) | Singleton statique mutable `OrbitLabApplication.app` | Critique | Faible | Faible |
-| [`DT-5`](#dt-5--classes-et-méthodes-trop-longues) | Classes et méthodes trop longues | Majeur | Élevé | Variable |
-| [`DT-6`](#dt-6--gestion-dexception-trop-large) | Gestion d'exception trop large | Majeur | Faible | Faible |
-| [`DT-7`](#dt-7--trou-de-couverture-sur-simulationmissionplanner) | Trou de couverture sur `simulation/mission/planner` | Majeur | Moyen | Nul |
-| [`DT-8`](#dt-8--violations-de-la-règle-de-langue) | Violations de la règle de langue (français dans le code) | Mineur | Trivial | Nul |
-| [`DT-9`](#dt-9--code-mort) | Code mort | Mineur | Trivial | Nul |
-| [`DT-10`](#dt-10--commentaires-redondants) | Commentaires redondants | Mineur | Faible | Nul |
-| [`DT-11`](#dt-11--littéraux-dupliqués-et-todo-non-tracés) | Littéraux dupliqués et TODO non tracés | Mineur | Faible | Nul |
-| [`DT-12`](#dt-12--mesh-ariane-6-absent-ariane-5-utilisé-à-la-place) | Mesh Ariane 6 absent (Ariane 5 utilisé à la place) | Mineur | Faible* | Nul |
-| [`DT-13`](#dt-13--isp-catalogue-déjà-en-double-comptage-latent-avec-la-traînée-à-venir) | Isp catalogue déjà en double-comptage latent avec la traînée à venir | Majeur | Moyen | **Élevé pour `PHY-2`** |
-| [`DT-14`](#dt-14--écart-harris-priester--nrlmsise-00-non-arbitré) | Écart Harris-Priester / NRLMSISE-00 non arbitré | Mineur | Faible | Nul |
-| [`DT-15`](#dt-15--cd-catalogue-s2-hors-domaine-de-validité-déclaré) | `Cd` catalogue S2 hors domaine de validité déclaré | Mineur | Faible | Nul |
-| [`DT-16`](#dt-16--nrev-du-solveur-de-lambert-figé-à-0-partout) | `nRev` du solveur de Lambert figé à 0 partout | Mineur | Moyen | Nul aujourd'hui |
-| [`DT-17`](#dt-17--performance-du-ruban-rnd-4-jamais-mesurée) | Performance du ruban (`RND-4`) jamais mesurée | Mineur | Faible | Nul |
+| ID | Item | Sévérité | Effort | Risque de régression | État |
+|---|---|---|---|---|---|
+| [`DT-1`](#dt-1--aucune-analyse-statique-dans-le-build) | Aucune analyse statique dans le build | Critique (structurel) | Faible | Nul | **Corrigé le 2026-09-02** |
+| [`DT-2`](#dt-2--squelette-dupliqué-sur-les-six-analyticstage) | Squelette dupliqué sur les six `Analytic*Stage` | Majeur | Moyen | **Élevé** | Ouvert |
+| [`DT-3`](#dt-3--complexité-cognitive-de-multistageloadoptimizerminimize) | Complexité de `MultiStageLoadOptimizer.minimize()` | Critique | Moyen | **Élevé** | Ouvert |
+| [`DT-4`](#dt-4--singleton-statique-mutable-orbitlabapplicationapp) | Singleton statique mutable `OrbitLabApplication.app` | Critique | Faible | Faible | **Corrigé le 2026-09-02** |
+| [`DT-5`](#dt-5--classes-et-méthodes-trop-longues) | Classes et méthodes trop longues | Majeur | Élevé | Variable | Ouvert |
+| [`DT-6`](#dt-6--gestion-dexception-trop-large) | Gestion d'exception trop large | Majeur | Faible | Faible | **Corrigé le 2026-09-02** |
+| [`DT-7`](#dt-7--trou-de-couverture-sur-simulationmissionplanner) | Trou de couverture sur `simulation/mission/planner` | Majeur | Moyen | Nul | Ouvert |
+| [`DT-8`](#dt-8--violations-de-la-règle-de-langue) | Violations de la règle de langue (français dans le code) | Mineur | Trivial | Nul | **Corrigé le 2026-09-02** |
+| [`DT-9`](#dt-9--code-mort) | Code mort | Mineur | Trivial | Nul | **Corrigé le 2026-09-02** |
+| [`DT-10`](#dt-10--commentaires-redondants) | Commentaires redondants | Mineur | Faible | Nul | Ouvert |
+| [`DT-11`](#dt-11--littéraux-dupliqués-et-todo-non-tracés) | Littéraux dupliqués et TODO non tracés | Mineur | Faible | Nul | **Partiel le 2026-09-02** |
+| [`DT-12`](#dt-12--mesh-ariane-6-absent-ariane-5-utilisé-à-la-place) | Mesh Ariane 6 absent (Ariane 5 utilisé à la place) | Mineur | Faible* | Nul | Ouvert |
+| [`DT-13`](#dt-13--isp-catalogue-déjà-en-double-comptage-latent-avec-la-traînée-à-venir) | Isp catalogue déjà en double-comptage latent avec la traînée à venir | Majeur | Moyen | **Élevé pour `PHY-2`** | Ouvert |
+| [`DT-14`](#dt-14--écart-harris-priester--nrlmsise-00-non-arbitré) | Écart Harris-Priester / NRLMSISE-00 non arbitré | Mineur | Faible | Nul | Ouvert |
+| [`DT-15`](#dt-15--cd-catalogue-s2-hors-domaine-de-validité-déclaré) | `Cd` catalogue S2 hors domaine de validité déclaré | Mineur | Faible | Nul | Ouvert |
+| [`DT-16`](#dt-16--nrev-du-solveur-de-lambert-figé-à-0-partout) | `nRev` du solveur de Lambert figé à 0 partout | Mineur | Moyen | Nul aujourd'hui | Ouvert |
+| [`DT-17`](#dt-17--performance-du-ruban-rnd-4-jamais-mesurée) | Performance du ruban (`RND-4`) jamais mesurée | Mineur | Faible | Nul | Ouvert |
 
 `*` Faible côté code — bloqué par la disponibilité d'un maillage externe, pas
 par du travail de développement.
@@ -76,6 +95,20 @@ Aucun item de sévérité **Bloquant** n'a été trouvé.
 ## 3. Fiches
 
 ### DT-1 — Aucune analyse statique dans le build
+
+**Corrigé le 2026-09-02.** Le build porte Spotless (`googleJavaFormat`, imports
+triés) et PMD 7.16 avec `ignoreFailures = false` (`build.gradle:109`), sur un
+ruleset maison : `errorprone` et `bestpractices` entières, moins 15 règles
+écartées et 2 reconfigurées. `main` et `test` sont au vert (`5419f63`,
+`4cf19e1`). Le « Mesuré » ci-dessous décrit l'état d'avant.
+
+**Un résidu, documentaire.** `config/pmd/ruleset.xml` ne porte **aucun
+commentaire de raison** sur ses 15 exclusions. Or trois d'entre elles ont été
+écartées après qu'un lot les eut appliquées à la lettre et **cassé le code** :
+`CompareObjectsWithEquals` a introduit 3 NPE, `CloseResource` a fermé un
+`FileChannel` emprunté, `AvoidCatchingThrowable` a rendu l'éphéméride
+silencieusement mortelle. Sans la raison à côté de la balise, la prochaine revue
+de ruleset les réactivera.
 
 **Mesuré.** `build.gradle` déclare `plugins { id 'java' }` et rien d'autre. Pas
 de Spotless, pas d'ErrorProne, pas de PMD, pas de SonarQube. Pas de
@@ -97,6 +130,13 @@ Détail du correctif proposé en [§6](#6-conseils--ne-pas-augmenter-la-dette).
 ---
 
 ### DT-2 — Squelette dupliqué sur les six `Analytic*Stage`
+
+**`J0-D` 2026-09-02 — confirmé, à peine bougé.** Cumul re-mesuré à **2 059
+lignes** contre 2 002 (`AnalyticGtoInjectionStage` 477, `AnalyticHohmannTransferStage`
+432, `AnalyticParkingInsertionStage` 315, `AnalyticApogeeCircularizationStage` 298,
+`AnalyticTrimBurnStage` 276, `AnalyticPlaneTrimAtNodeStage` 261). Le squelette
+dupliqué est intact, et `AnalyticPlaneTrimAtNodeStage` — la sixième, la plus
+récente — l'a recopié une fois de plus.
 
 **Mesuré.** 2 002 lignes cumulées sur six classes de
 `simulation/mission/stage/` : `AnalyticGtoInjectionStage` (469),
@@ -147,6 +187,11 @@ entreprendre sans baseline de non-régression préalable, conformément à la r�
 
 ### DT-3 — Complexité cognitive de `MultiStageLoadOptimizer.minimize()`
 
+**`J0-D` 2026-09-02 — aggravé, mesuré.** `minimize()` fait aujourd'hui
+**245 lignes** (`MultiStageLoadOptimizer:229-473`) contre 225 à la photographie.
+La méthode a grandi de 20 lignes pendant que la fiche qui la signale attendait.
+Sa surcharge courte (`:210`) ne fait que déléguer.
+
 **Mesuré.** `simulation/mission/runtime/MultiStageLoadOptimizer.java:204` —
 225 lignes, complexité cognitive approximée à ~99 (le seuil Sonar par défaut est
 15). C'est le pire point du dépôt, avec un facteur ~2 sur le suivant.
@@ -178,6 +223,20 @@ ergols : baseline obligatoire.
 
 ### DT-4 — Singleton statique mutable `OrbitLabApplication.app`
 
+**Corrigé le 2026-09-02.** Le champ n'existe plus. `Model3dAttacher`
+(`engine/scene/body/lod/`) porte le seul besoin — l'`enqueue` sur le thread JME —
+`OrbitLabApplication` l'implémente, `ApplicationContext` l'expose, et
+`Model3dView` le reçoit par constructeur au lieu de le prendre au global.
+
+**Une interface, et pas l'application passée en paramètre.** C'est le point de la
+correction, et il dépasse la suppression du champ : donner le `SimpleApplication`
+à une vue ferait dépendre `engine/` — la moitié générique — de la seule classe
+qui assemble tout. L'abstraction est donc déclarée **du côté du consommateur**
+(`engine/scene/body/lod/`) et implémentée par l'application. Vérifié après coup :
+plus aucune classe d'`engine/` ne référence `OrbitLabApplication`, et les seules
+dépendances d'`engine/` vers `app/` sont les objets-valeurs `app.view.*`
+(`RenderContext`, `RenderTransform`, `AxisConvention`).
+
 **Mesuré.** `OrbitLabApplication.java:49` déclare `public static
 OrbitLabApplication app;`, affecté ligne 77. Un seul consommateur dans tout le
 dépôt : `engine/scene/body/lod/Model3dView.java:57`, qui s'en sert uniquement
@@ -196,6 +255,28 @@ appelant à reprendre, risque faible.
 ---
 
 ### DT-5 — Classes et méthodes trop longues
+
+**`J0-D` 2026-09-02 — la table ci-dessous est périmée, la conclusion tient.**
+Le même instrument (SLOC hors commentaires) qui retrouve exactement 427 / 398 /
+393 / 336 / 324 sur `b027d1d` mesure aujourd'hui :
+
+| Classe | 2026-08-10 | 2026-09-02 |
+|---|---:|---:|
+| `TranslunarInjectionPlan` | *absente de la table* | **714** |
+| `ui/…/step/StepParameters` | 393 | **619** |
+| `ui/timeline/mission/MissionTimelineWidget` | *absente* | **514** |
+| `optimizer/problems/TransferProblem` | 427 | **473** |
+| `optimizer/CMAESTrajectoryOptimizer` | 398 | **464** |
+| `ui/…/scenario/ScenarioBrowserWidget` | *absente* | **446** |
+| `runtime/MultiStageLoadOptimizer` | 336 | 552 |
+| `states/camera/OrbitCameraAppState` | 324 | sortie du haut de table |
+
+**Trois des six têtes actuelles ne figuraient pas dans la table**, et la nouvelle
+première — `TranslunarInjectionPlan`, née de `MIS-4` — pèse à elle seule 1,7 fois
+l'ancienne. En revanche le nombre de méthodes de plus de 70 lignes n'a **pas**
+bougé (21 à la photographie, 20 aujourd'hui, au même instrument) : le code a
+grossi en largeur, pas en longueur de méthode. `OrbitLabApplication.simpleInitApp()`,
+le cas à part de la fiche, est passé de 129 à 95 lignes.
 
 **Mesuré.** 25 méthodes dépassent 70 lignes. Les classes les plus lourdes, par
 SLOC hors commentaires :
@@ -225,6 +306,16 @@ tient.
 
 ### DT-6 — Gestion d'exception trop large
 
+**Corrigé le 2026-09-02**, les trois sites, chacun comme la fiche le demandait :
+`BodyFile` ferme son canal sur un `catch (IOException | RuntimeException)` avec
+`addSuppressed`, au lieu du transtypage qui serait devenu faux le jour où le
+parser aurait déclaré une autre exception vérifiée ; `DatasetEphemerisSource`
+journalise chaque échec de fermeture au lieu de l'avaler ; et le
+`catch (Throwable)` du worker d'éphéméride est **conservé**, sa raison écrite en
+Javadoc et un `@SuppressWarnings("PMD.AvoidCatchingThrowable")` posé pour que
+l'analyseur ne le signale pas hors contexte — ce que la fiche prévoyait mot pour
+mot.
+
 **Mesuré.** 16 `catch (Exception e)` et 1 `catch (Throwable t)`. Trois sites
 méritent une action, les autres sont des gardes de tâche asynchrone
 défendables :
@@ -244,6 +335,13 @@ d'usage CLI et non de la journalisation détournée.
 ---
 
 ### DT-7 — Trou de couverture sur `simulation/mission/planner`
+
+**`J0-D` 2026-09-02 — deux chiffres à corriger, dont un dans le bon sens.**
+`simulation/mission/planner` compte **7 classes** et non 6, et **l'une d'elles est
+désormais testée** (`PropellantSizingTest`) — le « aucun test » de la fiche est
+faux depuis. Le trou reste réel sur les six autres. Côté UI : `ui/mission/panel`
+compte **8** classes (et non 9), `ui/timeline/components` 5 et `ui/mission/display`
+5, les deux derniers conformes.
 
 **Mesuré.** Ratio test/main global de 0,39, correct pour ce type de projet. Mais
 la répartition est très inégale :
@@ -267,6 +365,32 @@ de tests existante sait couvrir, puisqu'elle couvre déjà `runtime`, `stage` et
 `CLAUDE.md` : tout commentaire, toute Javadoc et toute chaîne de code sont en
 anglais, sans exception ; seul `docs/` est en français.
 
+**Corrigé le 2026-09-02 — et l'énumération ci-dessous sous-comptait.** Des quatre
+sites listés, trois étaient déjà traités (`PlanetPresenter` et les deux messages
+de log) et le quatrième, `WizardStepper:137`, avait été supprimé plutôt que
+traduit. **Cinq sites que la fiche n'avait jamais relevés** restaient :
+
+| Site | Traitement |
+|---|---|
+| `ui/mission/wizard/MissionWizardWidget.java:40` | Javadoc traduite |
+| `ui/mission/wizard/WizardFooter.java:42` | Javadoc traduite |
+| `ui/mission/wizard/WizardStepper.java:34` | commentaire traduit |
+| `ui/…/wizard/step/params/DynamicParameters.java:258` | commentaire traduit |
+| `ui/…/wizard/step/StepLaunchSite.java:219` | **supprimé** — il paraphrasait le `col.addChild(field)` qu'il précédait |
+
+S'y ajoutait `under-dotée`, mot français dans de la prose anglaise, dans quatre
+classes (`MinimizedLoadPlanner`, `MissionLoadEvaluator`, `PropellantLoadOptimizer`
+et son test) — dont un **message d'exception**, donc une chaîne de code et pas un
+commentaire. Remplacé par `under-resourced`.
+
+**Laissé tel quel :** `ui/form/FormStyles.java:149` cite en français une phrase du
+document de conception qu'il référence. C'est une citation attribuée, pas du code
+écrit en français.
+
+**Ce qu'aucun outil ne garde.** PMD n'a pas de règle de langue. Cette fiche
+rouvrira sans avertissement, et c'est le seul item du document que `DT-1` ne
+protège en rien — contrairement à ce qu'annonçait le §5.
+
 | Site | Contenu |
 |---|---|
 | `engine/scene/planet/PlanetPresenter.java:56` | `// Convertir en JME units/axes selon le contexte SOLAR` |
@@ -279,6 +403,12 @@ Les deux derniers sont aussi un cas de [`DT-11`](#dt-11--littéraux-dupliqués-e
 ---
 
 ### DT-9 — Code mort
+
+**Corrigé le 2026-09-02**, et sans passe dédiée : `nearOrbitLayer` n'existe plus,
+et `publishOpenWizard()` est appelée par le menu
+(`MissionDisplayPanelAppState:201`). `UnusedPrivateField` et
+`UnusedPrivateMethod` sont actives et bloquantes depuis `DT-1` : **c'est la seule
+fiche de ce document dont l'outil interdit vraiment le retour.**
 
 **Mesuré**, par référencement croisé sur `src/main` + `src/test`, références de
 méthode `::` incluses :
@@ -295,6 +425,14 @@ après vérification.
 ---
 
 ### DT-10 — Commentaires redondants
+
+**`J0-D` 2026-09-02 — non re-mesuré, et c'est délibéré.** Le comptage des
+paraphrases (42 sur 1 051) demande un jugement ligne à ligne qu'aucun instrument
+ne rend ; le re-faire à la main sur un dépôt qui a grossi de moitié coûterait plus
+que ce que la fiche vaut. Les trois exemples cités sont vérifiés : `ScrubberTrack:89`
+(`// Playhead`) et `DisplayRow:46` sont exacts, `SimulationClockAppState:123`
+(`// Reset speed`) aussi ; en revanche `OrbitCameraAppState:205` et
+`MissionEphemerisGenerator:133` ne portent plus les commentaires cités.
 
 **Mesuré, et c'est le point rassurant du document.** Sur 1 051 lignes de
 commentaire situées dans des corps de méthode, **42 seulement** paraphrasent la
@@ -324,6 +462,33 @@ Les 42 se répartissent en deux familles :
 
 ### DT-11 — Littéraux dupliqués et TODO non tracés
 
+**Noms d'étapes : corrigé le 2026-09-02.**
+`simulation/mission/stage/StageNames` porte `TERMINAL_COAST` et
+`UPPER_SEPARATION` ; les six sites de `"Coasting"` et les deux de
+`"S2 separation"` de `src/main` y renvoient. **Les littéraux des tests restent
+littéraux** : dans un test, la chaîne *est* l'épinglage, et la remplacer par la
+constante ferait passer un test qui n'assure plus rien.
+
+**Deux mesures de la table ci-dessous sont fausses.** `"Coasting"` était compté à
+7 occurrences ; il y en avait 8, dont **2 littéraux vivants** seulement — les six
+autres étaient de la Javadoc, ou déjà des constantes privées, dans trois classes
+qui ne se connaissaient pas (`LunarFlybyMission.FINAL_COAST_NAME`,
+`LunarOrbitMission.FINAL_COAST_NAME`, `MissionLoadEvaluator.FINAL_COAST_STAGE`).
+La dette n'était donc pas « en faire une constante » mais « trois constantes
+existent et ne partagent pas de source ». Et `"S2 separation"`, présenté comme un
+risque d'appariement, **n'est lu par personne** : ses deux sites vivants ne
+servent qu'à l'affichage. Le seul nom réellement porteur est le coast terminal,
+que `MissionLoadEvaluator` compare pour choisir les échantillons notés — une
+faute de frappe n'y échouerait pas, elle noterait la mission sur zéro échantillon.
+
+**Le reste de la table n'est gardé par rien.** `AvoidDuplicateLiterals` est
+écartée du ruleset (bruit sur les API publiques) : `"background"`,
+`"btn-primary"` et `"stepSeconds must be finite and > 0"` restent ouverts, et
+`DT-1` n'y change rien.
+
+**TODO** — `OrbitLineFactory:131` est désormais tracé `TODO(DT-11)`. Les deux
+autres ne le sont pas.
+
 **Littéraux dupliqués** (règle S1192) :
 
 | Littéral | Occurrences | Remarque |
@@ -347,6 +512,10 @@ Ils devraient être des constantes.
 ---
 
 ### DT-12 — Mesh Ariane 6 absent (Ariane 5 utilisé à la place)
+
+**`J0-D` 2026-09-02 — confirmé.** Le catalogue déclare toujours `ARIANE_62`
+(`Launchers:91`) avec sa Javadoc expliquant l'agrégation boosters + Vulcain, et
+aucun maillage Ariane 6 n'est apparu sous `src/main/resources/models`.
 
 **Mesuré.** `roadmap/01-roadmap-v1.md` §`MIS-1` : le catalogue utilise le maillage
 Ariane 5 pour représenter Ariane 62, faute d'export disponible. Masse,
@@ -412,6 +581,12 @@ traiter avant que `PHY-2` fasse voler ce coefficient en production.
 
 ### DT-16 — `nRev` du solveur de Lambert figé à 0 partout
 
+**`J0-D` 2026-09-02 — vrai sur le fond, faux sur la forme.** Le mot `nRev`
+**n'existe nulle part** dans le dépôt : le zéro est un argument positionnel, à
+**un seul site**, `TranslunarInjectionPlan:1131` (`.solve(posigrade, 0, conditions)`).
+« Figé à 0 partout » suggère une dispersion qui n'existe pas — c'est un littéral
+unique, ce qui rend la fiche plus facile à traiter qu'elle ne le dit.
+
 **Mesuré.** [`lunar-flyby/01-decoupage.md`](lunar-flyby/01-decoupage.md) §6,
 répété à l'identique dans
 [`lunar-orbit/01-decoupage.md`](lunar-orbit/01-decoupage.md) §6 :
@@ -468,16 +643,22 @@ sentinelles.
 
 Par ratio impact/risque décroissant :
 
-1. **`DT-1`** — outillage. Aucun risque, et fige immédiatement `DT-8`, `DT-9`,
-   une partie de `DT-11` et les 208 dépassements de largeur.
-2. **`DT-9`, `DT-8`, `DT-4`** — nettoyages triviaux, un seul appelant à reprendre
-   pour `DT-4`.
-3. **`DT-6`** — trois sites, faible risque.
+1. **`DT-1`** — **fait le 2026-09-02**, et l'annonce était trop large : PMD n'a
+   aucune règle de langue, donc `DT-8` n'est gardé par rien, et
+   `AvoidDuplicateLiterals` a dû être écartée, donc `DT-11` non plus. Il fige
+   `DT-9`, et Spotless fige les 208 dépassements de largeur.
+2. **`DT-9`, `DT-8`, `DT-4`** — **faits le 2026-09-02**.
+3. **`DT-6`** — **fait le 2026-09-02**, les trois sites.
 4. **`DT-7`** — tests sur `planner`, aucun risque de régression par
    construction, et prérequis utile aux deux suivants.
 5. **`DT-2`** puis **`DT-3`** — les deux gros chantiers, à faire **après** avoir
    établi une baseline de non-régression, un changement de comportement à la
    fois.
+
+> **`J0-D` 2026-09-02.** Les fiches `DT-13`, `DT-14`, `DT-15` et `DT-17` n'ont pas
+> été re-mesurées : elles portent sur des arbitrages d'atmosphère et une mesure de
+> performance qui n'existent pas encore dans le code, donc rien n'a pu y dériver.
+> `DT-16` l'a été et sa forme est corrigée dans sa fiche.
 
 `DT-5`, `DT-10` et le reste de `DT-11` se traitent opportunément, au fil des
 passages dans les fichiers concernés (cf. règle de la trace en

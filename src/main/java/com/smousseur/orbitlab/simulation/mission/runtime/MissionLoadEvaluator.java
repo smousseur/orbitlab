@@ -7,6 +7,7 @@ import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemerisPoint
 import com.smousseur.orbitlab.simulation.mission.objective.MissionObjective;
 import com.smousseur.orbitlab.simulation.mission.objective.OrbitInsertionObjective;
 import com.smousseur.orbitlab.simulation.mission.progress.MissionProgressListener;
+import com.smousseur.orbitlab.simulation.mission.stage.StageNames;
 import com.smousseur.orbitlab.simulation.mission.vehicle.StagePropellant;
 import java.util.Objects;
 import java.util.function.Function;
@@ -55,9 +56,9 @@ import org.orekit.time.AbsoluteDate;
  * sized stage is not the final active stage — the stack-wide total would then also count the
  * propellant of whatever sits above it and mask an emptied sized stage.
  *
- * <p>An optimization that <em>throws</em> (an under-dotée load whose ascent/transfer cannot reach
- * orbit makes CMA-ES fail) is caught and reported as infeasible — that is the signal the bisection
- * needs to keep λ up, not an error to propagate.
+ * <p>An optimization that <em>throws</em> (an under-resourced load whose ascent/transfer cannot
+ * reach orbit makes CMA-ES fail) is caught and reported as infeasible — that is the signal the
+ * bisection needs to keep λ up, not an error to propagate.
  *
  * <p><b>Warm-start.</b> The {@code previous} evaluation is available for warm-starting, but each
  * rebuilt mission's stages already warm-start their inner CMA-ES from a reliable analytic seed
@@ -69,7 +70,7 @@ public final class MissionLoadEvaluator implements PropellantLoadOptimizer.Evalu
   private static final Logger logger = LogManager.getLogger(MissionLoadEvaluator.class);
 
   /** Terminal coasting stage both LEO and GEO profiles end with — where the orbit is measured. */
-  private static final String FINAL_COAST_STAGE = "Coasting";
+  private static final String FINAL_COAST_STAGE = StageNames.TERMINAL_COAST;
 
   /** Default objective tolerance: the ±7 % band the mission optimization tests assert on. */
   public static final double DEFAULT_OBJECTIVE_TOLERANCE_RATIO = 0.07;
@@ -314,7 +315,7 @@ public final class MissionLoadEvaluator implements PropellantLoadOptimizer.Evalu
       result =
           new MissionOptimizer(mission, optimizerMaxEvaluations, seed, innerProgress).optimize();
     } catch (RuntimeException e) {
-      // An under-dotée load whose ascent/transfer cannot reach orbit makes the inner optimizer
+      // An under-resourced load whose ascent/transfer cannot reach orbit makes the inner optimizer
       // fail. That is a feasibility signal (keep λ up), not an error to bubble up.
       logger.info(
           "λ={} evaluation failed to optimize ({}); treating as infeasible",

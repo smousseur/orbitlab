@@ -121,7 +121,7 @@ class PropellantLoadOptimizerTest {
 
   @Test
   void minimize_upperBoundInfeasible_reportsInfeasibleInOneEval() {
-    // Threshold above λmax: even the heuristic loads fail → under-dotée mission.
+    // Threshold above λmax: even the heuristic loads fail → under-resourced mission.
     ThresholdEvaluator evaluator = new ThresholdEvaluator(1.5);
     PropellantLoadOptimizer.Result result = new PropellantLoadOptimizer().minimize(evaluator);
 

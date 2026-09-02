@@ -109,7 +109,8 @@ public final class MissionRenderer {
             modelPath,
             renderContext);
 
-    view = new LodView(guiNode, config, this::onSpacecraftSelected, null);
+    view =
+        new LodView(guiNode, config, context.model3dAttacher(), this::onSpacecraftSelected, null);
     presenter = new SpacecraftPresenter(config.id(), view);
     presenter.setVisible(true);
 

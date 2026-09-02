@@ -56,7 +56,7 @@ questions sans jalon se re-posent indéfiniment.
 | `BUG-19` | **Ouverte le 2026-09-02** — rotation propre des planètes externes aliasée par le pas de la fenêtre glissante ; Neptune à 4,1 % du taux vrai, Saturne et Uranus à l'envers. Cause racine établie |
 | `BUG-20` | **Ouverte le 2026-09-02** — plan des anneaux désaligné : Saturne 13,51°, Uranus 9,93° hors du plan équatorial de leur propre globe. **Hors de portée du code** |
 
-Le corpus compte donc **68 fiches, dont 63 ouvertes**.
+Le corpus compte donc **69 fiches, dont 58 ouvertes** — le comptage est celui de `J0-D`, le 2026-09-02 ; ce document annonçait 68 et [v1](01-roadmap-v1.md) §4 en annonçait 66.
 
 **`BUG-20` révèle un motif, et il a maintenant un identifiant.** Quatre fiches
 sont bloquées non par du code mais par des maillages absents : `BUG-20`
@@ -71,8 +71,8 @@ pas en jours de travail.
 Une re-vérification de 9 fiches contre le code le 2026-08-30 en avait trouvé
 **4 périmées ou déplacées**. **Les registres sont bâtis sur des documents de
 conception, qui décrivent l'état au moment de leur lot et non l'état du code.**
-D'où `J0-D`, toujours à faire, et d'où le fait que ce document range les fiches
-sans les croire sur parole.
+D'où `J0-D` — **fait le 2026-09-02**, et qui a confirmé la crainte : voir §3.
+Et d'où le fait que ce document range les fiches sans les croire sur parole.
 
 Cette révision-ci en ajoute un exemple : la fiche `PHY-5` affirmait que
 `src/main/resources/models/` *« n'est pas versionné »*. `git ls-files` y compte
@@ -84,14 +84,15 @@ Cette révision-ci en ajoute un exemple : la fiche `PHY-5` affirmait que
 
 | Jalon | Déclencheur | Items | Contenu en une ligne |
 |---|---|:-:|---|
-| [**`J-1.1`**](#3-j-11--rendre-le-dépôt-mesurable) | Maintenant | 4 lots | Instrument au vert, outillage bloquant, registres vérifiés |
+| [**`J-1.1`**](#3-j-11--rendre-le-dépôt-mesurable) | **Fait le 2026-09-02** | 4 lots | Instrument au vert, outillage bloquant, registres vérifiés |
 | [**`J-v2`**](#4-j-v2--avant-et-pendant-la-v2) | Avant `PHY-2` | 6 | Arbitrages atmosphériques, garde de rentrée, assets, ruban |
 | [**`J-v3`**](#5-j-v3--pendant-la-v3) | Avec `MIS-11` et l'UI | 18 | Lunaire, confort et couverture UI, passe de rendu |
 | [**`J-v4`**](#6-j-v4--avant-et-pendant-mis-6) | Avant `MIS-6` | 21 | Trois rangs : 5 bloquants, 6 préalables, 10 d'accompagnement |
 | [hors jalon](#7-ce-qui-reste-hors-jalon) | — | 1 | `DT-10`, à ne pas toucher |
 
-**Le chemin critique est court, et il est au début.** Quatre lots séparent le
-dépôt de l'ouverture de v2. Le gros morceau — les 21 items de `J-v4` — n'arrive
+**Le chemin critique est court, et il est au début.** Il est **franchi** : les
+quatre lots sont faits, et de la ligne 1.1.X il ne reste que `BUG-3` et `BUG-19`,
+qui sont du rendu et non de l'instrument. Le gros morceau — les 21 items de `J-v4` — n'arrive
 qu'en dernier, ce qui laisse trois versions pour le grignoter au lieu de le
 subir d'un bloc.
 
@@ -117,46 +118,89 @@ d'`UI-3`) : lancés, verts.
 robustesse qui démarre avec un test rouge et une fixture fausse ne peut rien
 prouver de ce qu'il corrige.
 
-### `J0-B` — Outillage · sous-système : build · **à moitié fait**
+### `J0-B` — Outillage · sous-système : build · **fait le 2026-09-02**
 
 `DT-1` a été requalifié : l'analyseur **est** branché, il ne servait simplement
 à rien. Le lot a curé les règles — les quatre familles de bruit désactivées, dont
 les deux qui contredisent `CLAUDE.md` (`NullAssignment`, que la règle `Optional`
 impose ; `AvoidFieldNameMatchingMethodName`, qu'un record produit par
-construction) — et il est commité (`960f168`, tag `v1.1.0`).
-
-**Ce qui manque est le troisième temps, et c'est celui qui compte :**
-`build.gradle:113` porte toujours `pmd { ignoreFailures = true }`. Tant qu'il y
-est, l'analyseur décore le build au lieu de le casser.
+construction) — puis posé le troisième temps : `build.gradle:109` porte
+`ignoreFailures = false`, et `main` comme `test` passent (`5419f63`, `4cf19e1`).
 
 > Un `ignoreFailures = false` posé **avant** la curation aurait cassé le build
 > sur les records et sur la règle `Optional`. L'ordre n'était pas négociable ; il
-> a été tenu, il reste à le conclure.
+> a été tenu.
 
-**C'est le seul item du corpus qui empêche les autres de revenir.** Le dépôt a
-grossi de 65 % sans garde-fou mécanique, et `DT-8` a gagné une copie pendant que
-le document qui la proscrit était déjà écrit.
+**Le troisième temps a coûté plus que prévu.** Mettre le dépôt au vert a demandé
+**15 exclusions**, pas quatre — deux règles de test produisaient à elles seules
+2 199 des 2 254 violations. Et l'application littérale de trois autres a **cassé
+du code**, invisible aux tests : 3 NPE par `CompareObjectsWithEquals`, un
+`FileChannel` *emprunté* fermé par `CloseResource`, l'éphéméride rendue
+silencieusement mortelle par `AvoidCatchingThrowable`. Le ruleset ne porte aucune
+raison écrite à côté de ses exclusions — c'est le résidu noté dans `DT-1`.
 
-### `J0-C` — Nettoyages · sous-système : divers, guidé par `J0-B`
+**C'était le seul item du corpus qui empêche les autres de revenir** — mais moins
+largement que ce document l'annonçait. Voir `J0-C`.
 
-`DT-4` (singleton `OrbitLabApplication.app`, un seul appelant), `DT-6` (trois
-sites d'exception large), `DT-8` (cinq sites de langue), `DT-9`
-(`nearOrbitLayer` + les 9 `UnusedPrivateField` trouvés par PMD), `DT-11` partiel
-(les noms d'étapes en constantes — `"Coasting"`, `"S2 separation"` — qui sont les
-seuls littéraux dupliqués à porter un vrai risque d'appariement silencieux).
+### `J0-C` — Nettoyages · sous-système : divers · **fait le 2026-09-02**
 
-**Après `J0-B` et pas avant** : l'outil curé en trouve une partie tout seul, et
-surtout il interdit leur retour. C'est le §6.1 de `dette-technique.md` appliqué à
-la lettre.
+`DT-4` (le champ `OrbitLabApplication.app` supprimé, l'`enqueue` injecté par
+`Model3dAttacher`), `DT-6` (les trois sites d'exception large), `DT-8` (la
+langue), `DT-9` (le code mort), `DT-11` partiel (les noms d'étapes réunis dans
+`simulation/mission/stage/StageNames`).
 
-### `J0-D` — Vérification des registres · aucun code
+**Le motif d'ordonnancement de ce lot était faux pour deux fiches sur cinq.**
+« L'outil curé en trouve une partie tout seul, et surtout il interdit leur
+retour » ne vaut que pour `DT-9`. PMD n'a **aucune règle de langue**, donc `DT-8`
+rouvrira sans avertissement ; et `AvoidDuplicateLiterals` a dû être **écartée**
+du ruleset, donc `DT-11` n'est pas gardé non plus. L'ordre restait bon — le
+passage de PMD avait effectivement traité `DT-6` et `DT-9` en chemin — mais pas
+pour la raison écrite ici.
 
-Re-vérifier les 68 fiches contre le code. Parallélisable avec tout le reste, et à
-faire au fil de l'eau plutôt qu'en bloc.
+**Et les cinq fiches étaient périmées, les cinq.** `DT-4`, `DT-6` et `DT-9`
+étaient faits ou quasi faits avant que le lot commence ; `DT-8` listait quatre
+sites dont trois déjà traités, et en oubliait cinq ; `DT-11` annonçait un risque
+d'appariement silencieux sur `"S2 separation"`, un nom que **personne ne lit**.
+C'est `J0-D` démontré sur un échantillon — à 100 % cette fois, contre les 44 %
+du 2026-08-30.
 
-**Ce que la passe doit produire** : pour chaque fiche, soit une confirmation
-datée, soit une correction, soit une clôture. Sans quoi les jalons de v2 partent
-sur un corpus dont ~40 % est douteux — c'est le taux mesuré, pas une crainte.
+### `J0-D` — Vérification des registres · **fait le 2026-09-02**
+
+Les **69 fiches** ont été relues contre le code — en bloc et non au fil de l'eau,
+contrairement à ce que ce document recommandait. Chaque fiche porteuse d'un énoncé
+vérifiable a reçu un encadré daté dans son registre.
+
+**Le corpus n'était pas douteux à 40 %, il l'était à moins que ça** — et le taux
+n'est pas la bonne mesure. Sur 69 fiches, **une seule est fausse sur le fond**
+(`REL-20`), quatre citent un symbole ou un fichier qui n'existe plus, et une
+quinzaine portent des références de ligne qui ont glissé. Le reste tient. Ce qui
+a réellement dérivé, ce sont les **chiffres** — pas tous dans le sens de
+l'aggravation, `DT-7` et le ratio test/main ayant bougé du bon côté :
+
+| Ce que la passe a trouvé | |
+|---|---|
+| `REL-20` | **Énoncé inversé** : la fiche met en garde contre deux constantes d'horizon distinctes ; il n'y en a qu'**une**, partagée par LEO et MEO. Toucher l'une déplace l'autre |
+| `BUG-4` | **22 fichiers annoncés, 27 mesurés.** La dette de survol a grossi de 5 fichiers depuis la fiche, et une copie neuve du blanc 0,18 est apparue |
+| `DT-3` | `minimize()` est passée de **225 à 245 lignes** pendant que sa fiche attendait |
+| `§1` de `dette-technique.md` | Le dépôt a **grossi de 45 % en classes et 73 % en SLOC** depuis la photographie du 2026-08-10. Le ratio test/main, lui, est monté de 0,39 à 0,55 |
+| `DT-5` | **Trois des six classes les plus lourdes ne figuraient pas dans la table**, dont la nouvelle tête, `TranslunarInjectionPlan` (714 SLOC, 1,7× l'ancienne première) |
+| `DT-7` | Une classe de `planner` est **testée** depuis, là où la fiche dit « aucun test » |
+| `BUG-13`, `BUG-7` | Citent chacune une classe (`LunarOrbitWindowProblem`) ou un test (`LunarTransferFlightTest`) qui **n'existe pas / plus** |
+| `BUG-11` | **Périmètre réduit** : trois coasts lunaires surchargent désormais `propagateStandalone`, le défaut ne concerne plus que deux classes |
+| `DT-16` | Vrai sur le fond, mais « figé à 0 **partout** » désigne **un seul site** |
+
+**Ce que la passe n'a pas fait.** Aucun test n'a été lancé : les fiches dont
+l'énoncé est un comportement mesuré (`BUG-7`, `BUG-10`, `BUG-16`, `BUG-17`,
+`REL-32`) sont confirmées au niveau du code — symboles, constantes et lignes en
+place — et leur mesure reste celle de leur chantier d'origine.
+
+**La leçon, et elle est l'inverse de celle attendue.** Les fiches racontent juste ;
+ce sont leurs **chiffres** qui pourrissent, parce qu'ils datent du jour où la fiche
+a été écrite et que rien ne les recalcule. Un registre qui cite un nombre devrait
+citer avec lui l'instrument qui le reproduit — c'est ce qui a permis, ici, de
+distinguer un vrai écart d'une différence de méthode : le même compteur, passé sur
+`b027d1d`, y retrouve les 266 classes, les 32 920 SLOC et la table de `DT-5` au
+chiffre près.
 
 ---
 

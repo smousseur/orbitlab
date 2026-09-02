@@ -37,7 +37,7 @@ public class MissionWizardWidget implements AutoCloseable {
   private static final float HEADER_PAD_X = 32f;
   private static final float HEADER_PAD_Y = 20f;
 
-  /** Largeur utile à l'intérieur du header (entre ses paddings horizontaux). */
+  /** Usable width inside the header, between its horizontal paddings. */
   private static final float HEADER_INNER_WIDTH = WINDOW_WIDTH - 2 * HEADER_PAD_X;
 
   private final ModalBackdrop backdrop;

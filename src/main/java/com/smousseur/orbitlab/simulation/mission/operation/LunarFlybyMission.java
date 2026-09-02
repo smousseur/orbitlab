@@ -7,6 +7,7 @@ import com.smousseur.orbitlab.simulation.mission.objective.FlybyObjective;
 import com.smousseur.orbitlab.simulation.mission.optimizer.problems.GravityTurnConstraints;
 import com.smousseur.orbitlab.simulation.mission.stage.AnalyticParkingInsertionStage;
 import com.smousseur.orbitlab.simulation.mission.stage.ParkingCoastStage;
+import com.smousseur.orbitlab.simulation.mission.stage.StageNames;
 import com.smousseur.orbitlab.simulation.mission.stage.TLIBurnStage;
 import com.smousseur.orbitlab.simulation.mission.stage.TranslunarCoastStage;
 import com.smousseur.orbitlab.simulation.mission.stage.ascent.AscentSequence;
@@ -92,7 +93,7 @@ public class LunarFlybyMission extends EarthMission {
   public static final double DEFAULT_PARKING_ALTITUDE = 400_000.0;
 
   /** Name of the terminal coast, the one every profile of the repository ends on. */
-  private static final String FINAL_COAST_NAME = "Coasting";
+  private static final String FINAL_COAST_NAME = StageNames.TERMINAL_COAST;
 
   /**
    * Name of the parking coast. Public because it is the only handle a caller has on the phase: the

@@ -273,7 +273,8 @@ public final class MultiStageLoadOptimizer {
     int evaluations = 1;
     logger.info("Probe heuristic loads (all λ={}): feasible={}", lambdaMax, current.feasible());
     if (!current.feasible()) {
-      logger.warn("Heuristic loads infeasible — mission under-dotée, nothing to shrink; aborting");
+      logger.warn(
+          "Heuristic loads infeasible — mission under-resourced, nothing to shrink; aborting");
       return new Result(false, lambdas, evaluations, 0, current);
     }
 

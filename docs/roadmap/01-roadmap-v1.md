@@ -244,15 +244,18 @@ mesurable* — et corrige ce qui se voit à l'écran sur du contenu déjà livr�
 
 | Item | Registre | Ce qui reste |
 |---|---|---|
-| `J0-B` | `DT-1` | Le lot a curé les règles PMD et est commité (`960f168`), mais **`build.gradle:113` porte toujours `ignoreFailures = true`**. Le troisième temps — celui qui empêche la dette de revenir — n'est pas posé |
-| `J0-C` | `DT-4`, `DT-6`, `DT-8`, `DT-9`, `DT-11` | Nettoyages guidés par l'analyseur curé : singleton à un appelant, exceptions larges, violations de langue, code mort, noms d'étapes en constantes |
-| `J0-D` | les 66 fiches | Re-vérification des trois registres contre le code. La revue du 2026-08-30 en avait trouvé **4 périmées sur 9 relues** ; sans cette passe, les jalons de v2 partent sur ~40 % de fiches douteuses |
+| `J0-B` | `DT-1` | **Fait le 2026-09-02** — `ignoreFailures = false`, `main` et `test` au vert (`5419f63`, `4cf19e1`). Reste un résidu documentaire : les 15 exclusions du ruleset ne portent aucune raison écrite |
+| `J0-C` | `DT-4`, `DT-6`, `DT-8`, `DT-9`, `DT-11` | **Fait le 2026-09-02** — champ singleton supprimé, exceptions larges traitées, langue corrigée, code mort disparu, noms d'étapes réunis dans `StageNames`. `DT-11` reste partiel : 2 TODO non tracés |
+| `J0-D` | les 69 fiches | **Fait le 2026-09-02** — le corpus en compte 69 et non 66. Une seule fiche fausse sur le fond (`REL-20`), quatre citant un symbole disparu, et une quinzaine de références de ligne à recaler. Ce sont les **chiffres** qui avaient dérivé, pas les mécanismes |
 | `BUG-3` | `bugs.md` | Les cinq lots d'[`orientation-planetes/01-decoupage.md`](../orientation-planetes/01-decoupage.md) sont implémentés le 2026-09-02 (`82ba2ff`). Reste **la validation à l'écran corps par corps**, qui arrête les `λ0` de `L3` |
 | `BUG-19` | `bugs.md` | Rotation propre des planètes externes aliasée par le pas de la fenêtre glissante — Neptune à **4,1 % du taux vrai**, Saturne et Uranus **à l'envers**. Cause racine établie, ampleur mesurée |
 
 **`J0-A` est fait** : `BUG-6`, `BUG-9` et `BUG-15` sont corrigés le 2026-08-31,
 et `REL-14` / `REL-23` — les deux vols de clôture jamais lancés — ont été
 exécutés le même jour, verts tous les deux.
+
+**`J0-B`, `J0-C` et `J0-D` sont faits le 2026-09-02.** Le jalon `J0` est clos :
+de la ligne 1.1.X il ne reste que `BUG-3` et `BUG-19`.
 
 **Ce qui ne peut pas être dans 1.1.X.** `BUG-20` (plan des anneaux désaligné —
 Saturne 13,51°, Uranus 9,93° hors du plan équatorial de leur propre globe) est

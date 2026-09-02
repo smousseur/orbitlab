@@ -6,6 +6,7 @@ import com.jme3.renderer.Camera;
 import com.jme3.scene.Node;
 import com.jme3.scene.Spatial;
 import com.smousseur.orbitlab.engine.scene.body.lod.BillboardIconView;
+import com.smousseur.orbitlab.engine.scene.body.lod.Model3dAttacher;
 import com.smousseur.orbitlab.engine.scene.body.lod.Model3dView;
 import java.util.Objects;
 import java.util.function.Consumer;
@@ -36,7 +37,11 @@ public final class LodView implements BodyView {
    *     when the 3D model is shown, {@code false} when the icon is shown. May be null.
    */
   public LodView(
-      Node guiNode, BodyRenderConfig config, Runnable onClick, Consumer<Boolean> onLodChanged) {
+      Node guiNode,
+      BodyRenderConfig config,
+      Model3dAttacher model3dAttacher,
+      Runnable onClick,
+      Consumer<Boolean> onLodChanged) {
     Objects.requireNonNull(guiNode, "guiNode");
     Objects.requireNonNull(config, "config");
     this.config = config;
@@ -44,7 +49,7 @@ public final class LodView implements BodyView {
     this.farAnchor = new Node("Anchor-" + config.id());
     this.anchor3d = new Node("BodyAnchor-" + config.id());
     this.iconView = new BillboardIconView(guiNode, config, onClick);
-    this.model3dView = new Model3dView(anchor3d, config);
+    this.model3dView = new Model3dView(model3dAttacher, anchor3d, config);
   }
 
   @Override

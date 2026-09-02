@@ -9,6 +9,7 @@ import com.smousseur.orbitlab.simulation.mission.stage.AnalyticHohmannTransferSt
 import com.smousseur.orbitlab.simulation.mission.stage.AnalyticPlaneTrimAtNodeStage;
 import com.smousseur.orbitlab.simulation.mission.stage.AnalyticTrimBurnStage;
 import com.smousseur.orbitlab.simulation.mission.stage.CoastingStage;
+import com.smousseur.orbitlab.simulation.mission.stage.StageNames;
 import com.smousseur.orbitlab.simulation.mission.stage.TransfertManeuverStage;
 import com.smousseur.orbitlab.simulation.mission.stage.TransfertTwoManeuverStage;
 import com.smousseur.orbitlab.simulation.mission.stage.ascent.AscentSequence;
@@ -354,7 +355,7 @@ public class EarthOrbitMission extends EarthMission {
       // stage would spend propellant deciding so.
       stages.add(new AnalyticPlaneTrimAtNodeStage("Plane trim", launchPlane.targetInclination()));
     }
-    stages.add(new CoastingStage("Coasting", null));
+    stages.add(new CoastingStage(StageNames.TERMINAL_COAST, null));
     return List.copyOf(stages);
   }
 

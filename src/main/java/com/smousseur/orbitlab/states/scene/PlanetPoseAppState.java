@@ -137,6 +137,7 @@ public final class PlanetPoseAppState extends BaseAppState {
           new LodView(
               guiNode,
               config,
+              context.model3dAttacher(),
               () -> onSelectPlanet(body),
               show3d -> sceneGraph.setOrbitVisible(body, !show3d));
       PlanetPresenter presenter = new PlanetPresenter(body, view);

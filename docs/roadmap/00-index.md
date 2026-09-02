@@ -65,7 +65,7 @@ sont dans [v1](01-roadmap-v1.md) §3 et §6.
 
 | Version | ID | Item | ★ | ◆ | Taille |
 |---|---|---|:-:|:-:|:-:|
-| **1.1.X** | — | Finir `J0` : PMD bloquant, nettoyages, vérification des registres | — | — | — |
+| **1.1.X** | — | ~~`J0`~~ — **clos le 2026-09-02** : PMD bloquant, nettoyages, registres vérifiés | — | — | — |
 | **1.1.X** | `BUG-3` | Validation à l'écran de l'orientation des planètes | — | — | S |
 | **1.1.X** | `BUG-19` | Rotation propre des planètes externes aliasée | — | — | M |
 | **v2** | `AST-1` | Lot d'assets 3D *(hors code)* | — | — | — |

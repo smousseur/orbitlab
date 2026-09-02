@@ -35,6 +35,13 @@ la frontière entre les deux derniers doit rester lisible.
 
 ## BUG-1 — Jitter du billboard et de l'orbite de Pluton
 
+> **`J0-D` 2026-09-02 — confirmé, une référence à corriger.** Le mécanisme tient :
+> `buildHeliocentricLineStrip` fige toujours ses sommets en héliocentrique. Mais
+> « lignes ~66, ~130, ~188 : les trois chemins de conversion » est périmé — le
+> fichier a été factorisé (203 lignes) et **il n'y a plus qu'un seul chemin**,
+> `putRenderUnits` (`OrbitLineFactory:179`), appelé par les trois constructeurs.
+> Un correctif n'a donc plus qu'un site à toucher.
+
 **Constaté.** Depuis la vue solaire, cliquer sur Pluton. Pendant l'approche puis
 une fois arrivé, son icône et sa ligne d'orbite tremblent d'une frame à l'autre.
 
@@ -112,6 +119,15 @@ plusieurs milliers — auquel cas la cause serait ailleurs.
 ---
 
 ## BUG-2 — Sauts de la skybox au zoom
+
+> **`J0-D` 2026-09-02 — mécanisme confirmé au chiffre près, lignes d'attache à
+> corriger.** Vérifiés exacts : `SkyboxAppState:75-78`, `updateFrustum` (`:393`),
+> `updateAdaptiveFov` (`:426`), le snapping molette (`:334-337`) et le `0.12f` de
+> `OrbitCameraConfig:68`. En revanche les trois lignes du tableau d'ordre
+> d'attache ont glissé — `SkyboxAppState` est à `OrbitLabApplication:95`,
+> `orbitCam` à `:112`, `NearCameraSyncAppState` à `:173`, et le commentaire cité
+> en `:122-132` est aux lignes `:114-115`. **L'ordre lui-même, qui est tout
+> l'argument, est inchangé.**
 
 **Constaté.** À la molette, le fond étoilé saute — il change d'échelle sur une
 frame puis revient. La scène, elle, ne bouge pas anormalement.
@@ -193,6 +209,15 @@ qui passent sous ce seuil, l'amplitude réelle est plus faible que l'estimation.
 ---
 
 ## BUG-3 — Orientation des modèles 3D des planètes
+
+> **`J0-D` 2026-09-02 — à jour, deux chiffres à reprendre.** `git ls-files` compte
+> **54** fichiers sous `src/main/resources/models`, pas 52 (le tip ci-dessous dit
+> 52 ; `roadmap/05-roadmap-technique.md` §1 dit 54, qui est le bon). Et la section
+> « Ce qui est suspect » plus haut — *« il n'existe aucun endroit où un corps peut
+> corriger son propre maillage »* — est désormais fausse : `RenderTransform:55`
+> compose `physicRotation.mult(meshCorrectionQ).mult(bodyMeshCorrection)`. Les
+> encadrés postérieurs le disent déjà ; la section d'origine est conservée comme
+> état des lieux d'avant le chantier.
 
 **Constaté.** Sauf la Terre, les planètes ne sont pas correctement orientées.
 Référence visuelle : *Eyes on the Solar System* (NASA).
@@ -299,6 +324,16 @@ soient corrects, et cela renseignerait directement sur les exports.
 
 ## BUG-4 — Hover des widgets non uniforme
 
+> **`J0-D` 2026-09-02 — le défaut s'est aggravé, et les quatre repères ont bougé.**
+> Re-mesuré : **27 fichiers** de `ui/` posent leur propre listener de survol, contre
+> les 22 annoncés — l'indicateur de fin de chantier est donc « de 27 à 1 ».
+> Les trois copies du blanc à 0,18 ne sont plus dans les mêmes fichiers :
+> `AppMenu:82` tient, `MissionRow` l'a déplacé en `:42`, `DisplayRow:29` porte
+> maintenant 0,45 (`ROW_SELECT_TINT`, un autre usage), et **une copie neuve est
+> apparue** dans `ScenarioBrowserWidget:87`. Les trois `highlightColor` divergentes
+> tiennent, à `BreadcrumbStyles:88`, `FormStyles:158` (et non 152) et
+> `TimelineStyles:180` (et non 174).
+
 > **Promu en item de roadmap le 2026-08-16** — [`UI-7`](roadmap/03-roadmap-v3.md#ui-7--infobulles-sur-les-contrôles-et-le-socle-de-survol-qui-les-porte--3-2-m),
 > qui livre le socle de survol partagé réclamé ci-dessous et les infobulles comme
 > premier client de ce socle. La fiche reste ici parce que c'est elle qui porte
@@ -372,6 +407,13 @@ méritent d'être traitées en premier.
 ---
 
 ## BUG-5 — Pop du modèle 3D au changement de focus
+
+> **`J0-D` 2026-09-02 — confirmé, une référence à corriger.** Exacts :
+> `PlanetHudMarkersAppState:71` (`body == focusView.getBody()`),
+> `BillboardIconView:27` (16 px), `SceneGraph:95-100` (le cull de tous sauf un),
+> `FocusView` et `NearCameraSyncAppState`. Seul `FloatingOriginAppState:82` a
+> glissé : la ligne porte aujourd'hui la remise à zéro du `nearFrame`, et l'appel
+> à `showBodySpatial` est ailleurs dans la classe.
 
 **Constaté.** En changeant d'objet focus, le modèle 3D du corps visé apparaît
 d'un coup au moment où il passe dans la near view, au lieu de grossir
@@ -569,6 +611,14 @@ trim à un résidu d'ascension. Constante inchangée.
 
 ## BUG-7 — Les gates de non-régression tombent quand un test lunaire les précède dans le même JVM
 
+> **`J0-D` 2026-09-02 — un des tests cités n'existe plus.**
+> `LunarTransferFlightTest`, nommé dans « Non vérifié » comme contaminant possible
+> non confirmé, a été **supprimé par `6f94d8d` (MIS-4 / L6)**. L'échantillon décrit
+> là est donc encore plus petit qu'annoncé. Les autres protagonistes existent
+> tous : les deux gates, `SoiCrossingDetectorTest`, `SoiRoundTripFlightTest`.
+> La reproduction elle-même n'a pas été rejouée — elle exige un `cleanTest`, que
+> cette passe ne lance pas.
+
 **Constaté le 2026-08-18**, pendant PHY-4 / L6. `CentralBodyBaselineTest` et
 `MissionPolylineBaselineTest` échouent **de façon déterministe** — trois
 assertions rouges — quand `SoiCrossingDetectorTest` s'exécute avant eux dans le
@@ -644,6 +694,11 @@ Trois issues, et le choix n'est pas évident :
 ---
 
 ## BUG-8 — Inclinaison figée invalidée en silence par un changement de site
+
+> **`J0-D` 2026-09-02 — confirmé sans réserve.** Les six symboles porteurs sont en
+> place : `inclinationAuto`, `refreshDerivedInclination`, `requireReachableFrom`,
+> `validateTargetPlane`, `rejectedRaan` et `refreshReachableHelper` — ce dernier
+> étant justement celui que la fiche disait n'avoir pas vérifié.
 
 **Constaté.** Wizard de création de mission, carte `LEO`, pas de tir Cape
 Canaveral, nœud cible 50°. La page `PLANNING` n'affiche aucune opportunité et
@@ -749,6 +804,10 @@ celui-ci.
 
 ## BUG-10 — `ReentryGuard` inopérant en présence de traînée
 
+> **`J0-D` 2026-09-02 — confirmé.** `ReentryGuard.SUBSURFACE_FLOOR`, `armQuiet` et
+> `StageLegRunner` sont en place et inchangés. La mesure de `−9/−30 km` vient d'un
+> vol sous traînée, que cette passe ne relance pas.
+
 **Constaté.** `ReentryGuard.SUBSURFACE_FLOOR = −50 km`, armé partout comme en
 vol (`armQuiet`, `StageLegRunner`). Mesuré dans
 [`atmosphere/03-baseline-L0.md`](atmosphere/03-baseline-L0.md) §2.3 : avec la
@@ -778,6 +837,13 @@ et `MIS-10` (rentrée contrôlée), phases 6-7.
 ---
 
 ## BUG-11 — L'optimiseur saute les coasts que le vol rejoue
+
+> **`J0-D` 2026-09-02 — le périmètre a rétréci, le défaut non.** `CoastingStage` nu
+> et `StageSeparationStage` ne surchargent toujours pas `propagateStandalone` :
+> l'énoncé tient. Mais **trois coasts le surchargent désormais** —
+> `ParkingCoastStage`, `TranslunarCoastStage` et `LunarApproachCoastStage` — donc
+> les chaînes lunaires ne sautent plus leurs coasts. Le défaut ne concerne plus que
+> les deux classes nommées, ce qui réduit d'autant le correctif.
 
 **Constaté.** `CoastingStage` et `StageSeparationStage` ne surchargent pas
 `propagateStandalone` : mesuré dans
@@ -836,6 +902,11 @@ test qui franchisse la frontière SOI dans les deux sens.
 
 ## BUG-13 — Fenêtre de lancement lunaire refusée sans signal à l'écran
 
+> **`J0-D` 2026-09-02 — une des deux classes citées n'existe pas.** Le paquet
+> `simulation/mission/window/problem/` contient `LunarLaunchWindowProblem` et
+> `EarthLaunchWindowProblem` ; **`LunarOrbitWindowProblem` n'existe nulle part**
+> dans le dépôt. Le constat porte donc sur une seule classe, pas deux.
+
 **Constaté.** Pour un site hors de la bande de déclinaison lunaire atteignable
 (exemple mesuré : Kourou, ~87,5 % d'une lunaison hors bande),
 `LunarLaunchWindowProblem` / `LunarOrbitWindowProblem` ne renvoient aucune
@@ -860,6 +931,12 @@ La séquence exacte dans l'IHM n'a pas été rejouée pas à pas.
 ---
 
 ## BUG-14 — Deux portées de recherche de fenêtre divergentes
+
+> **`J0-D` 2026-09-02 — confirmé au chiffre et à la ligne près.**
+> `EarthLaunchWindowPlanner:37` porte bien `Duration.ofHours(26)`,
+> `LunarLaunchWindowPlanner:39` porte `ofHours(48)`, et `LaunchWindowSearch:139`
+> dérive toujours sa portée de `problem.recurrence()`. Les trois portées
+> divergentes cohabitent, inchangées.
 
 **Constaté.** `EarthLaunchWindowPlanner.SEARCH_SPAN` est un littéral en dur
 (`Duration.ofHours(26)`, `EarthLaunchWindowPlanner.java:37`), de même que
@@ -961,6 +1038,10 @@ qui reste ouverte.
 
 ## BUG-16 — `t1` saturé contre sa borne sur la majorité des transferts mesurés
 
+> **`J0-D` 2026-09-02 — confirmé.** `t1Max` est toujours déclaré dans
+> `TransferProblem` (`:173`) et la boîte est inchangée. La saturation elle-même
+> vient d'un run d'optimisation, que cette passe ne relance pas.
+
 **Constaté.** Sur 5 des 7 scénarios de transfert mesurés, `t1` sature
 exactement à sa borne supérieure (`norm = 1,0`,
 [`optimization/bilan.md`](optimization/bilan.md), piste 4). C'est un mur de
@@ -981,6 +1062,11 @@ La vraie valeur optimale de `t1` au-delà de la moitié de période n'a jamais
 
 ## BUG-17 — `acceptableCost` mal calé depuis l'ajout du terme ergols I7
 
+> **`J0-D` 2026-09-02 — confirmé, avec sa source.** Le seuil vit dans
+> `TransferTuning:51` (`3e-3`) et `AdaptiveConvergenceChecker` le consomme.
+> `TransferProblem:87` porte déjà en commentaire la mesure qui motive la fiche
+> (« at a tank ratio of 0.448 it capped at 2.76e-3, under the 3e-3 threshold »).
+
 **Constaté.** Le seuil `acceptableCost = 3e-3` a été calibré avant l'ajout du
 terme propergol (I7). Le plancher de coût réel mesuré vaut désormais
 ~2,64e-3 (partie orbitale) + ~1,4e-3 (partie propergol) —
@@ -998,6 +1084,11 @@ vient de corriger.
 ---
 
 ## BUG-18 — Rejets de scénario au chargement, seulement journalisés
+
+> **`J0-D` 2026-09-02 — confirmé, la référence de ligne est toujours exacte.**
+> `ScenarioAppState:311-318` porte bien le `logger.info` de comptage suivi de la
+> boucle `logger.warn` par rejet, et rien entre les deux ne remonte à l'écran.
+> `ScenarioLoadReport` et `ScenarioSession` sont en place.
 
 **Constaté.** À l'ouverture d'un scénario, `ScenarioAppState.openScenario`
 (`:311-318`) journalise chaque rejet (`logger.info` sur le compte, `logger.warn`
@@ -1017,6 +1108,10 @@ même contenu que les lignes `WARN` déjà produites, juste remonté à l'écran
 ---
 
 ## BUG-19 — La rotation propre des planètes externes est aliasée par le pas de la fenêtre glissante
+
+> **`J0-D` 2026-09-02 — confirmé.** `SlidingWindowEphemerisBuffer.rebuildWindow`
+> (`:89`), `EphemerisInterpolator.slerp` (`:111`) et `ChunkComputerV1:156` sont
+> tous à leur place, cette dernière au mot près.
 
 **Constaté.** Neptune tourne visiblement trop lentement sur elle-même. Mesuré
 ensuite : ce n'est pas propre à Neptune, et Saturne et Uranus tournent **à
@@ -1090,6 +1185,10 @@ par corps.
 ---
 
 ## BUG-20 — Plan des anneaux désaligné dans les assets
+
+> **`J0-D` 2026-09-02 — confirmé.** `PlanetMeshCorrection` existe et est référencé
+> par 11 fichiers ; la tâche `meshProbe` est déclarée en `build.gradle:79`. La
+> mesure est reproductible telle que la fiche la décrit.
 
 **Mesuré le 2026-09-02**, par `./gradlew meshProbe` :
 

@@ -10,6 +10,7 @@ import com.smousseur.orbitlab.simulation.mission.stage.AnalyticParkingInsertionS
 import com.smousseur.orbitlab.simulation.mission.stage.AnalyticPlaneTrimAtNodeStage;
 import com.smousseur.orbitlab.simulation.mission.stage.AnalyticTrimBurnStage;
 import com.smousseur.orbitlab.simulation.mission.stage.CoastingStage;
+import com.smousseur.orbitlab.simulation.mission.stage.StageNames;
 import com.smousseur.orbitlab.simulation.mission.stage.StageSeparationStage;
 import com.smousseur.orbitlab.simulation.mission.stage.ascent.AscentSequence;
 import com.smousseur.orbitlab.simulation.mission.stage.ascent.VerticalAscentStage;
@@ -217,7 +218,7 @@ public class GEOMission extends EarthMission {
             // still be the active stage and get jettisoned in S2's place, after which S2 silently
             // takes over the payload kick motor's burns (bilan 10 §6 follow-up, I7 GEO run).
             new StageSeparationStage(
-                "S2 separation", profile.interstageCoastDuration(), UPPER_STAGE_INDEX),
+                StageNames.UPPER_SEPARATION, profile.interstageCoastDuration(), UPPER_STAGE_INDEX),
             // The AKM burn owns its ~5 h lead-in coast to the GTO apogee and centers the burn on it
             // (an hours-long 400 N burn starting AT apogee would ruin the insertion). Its plan runs
             // a Newton on the aimed perigee so the finite-burn apogee inflation lands on target;
@@ -229,7 +230,7 @@ public class GEOMission extends EarthMission {
             // plane residual it cannot correct off-node; a short out-of-plane burn at the node
             // cleans it up.
             new AnalyticPlaneTrimAtNodeStage("Plane trim", FastMath.toRadians(finalInclination)),
-            new CoastingStage("Coasting", null)));
+            new CoastingStage(StageNames.TERMINAL_COAST, null)));
     return List.copyOf(stages);
   }
 }

@@ -31,7 +31,7 @@ public class WizardStepper {
     root.setPreferredSize(new Vector3f(preferredWidth, STEPPER_HEIGHT, 0));
     root.setBackground(null);
 
-    // Centre horizontalement le rang d'étapes dans la largeur disponible.
+    // Centre the row of steps in the available width.
     float stepsWidth =
         MissionWizardStep.COUNT * STEP_TAB_WIDTH + (MissionWizardStep.COUNT - 1) * CONNECTOR_WIDTH;
     float sidePad = Math.max(0f, (preferredWidth - stepsWidth) / 2f);
@@ -123,11 +123,9 @@ public class WizardStepper {
   }
 
   private Container buildConnector() {
-    // Colonne pour placer le trait à la hauteur du centre du cercle.
     Container wrap = new Container(new BoxLayout(Axis.Y, FillMode.None));
     wrap.setBackground(null);
     wrap.setPreferredSize(new Vector3f(CONNECTOR_WIDTH, CIRCLE_SIZE, 0));
-    // Spacer du haut ≈ (CIRCLE_SIZE - CONNECTOR_HEIGHT) / 2 pour centrer verticalement
     wrap.addChild(UiKit.vSpacer((CIRCLE_SIZE - CONNECTOR_HEIGHT) / 2f));
     Container line = wrap.addChild(new Container());
     line.setPreferredSize(new Vector3f(CONNECTOR_WIDTH, CONNECTOR_HEIGHT, 0));

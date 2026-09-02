@@ -17,6 +17,13 @@ préparation d'une passe de robustesse avant la Phase 5 (`MIS-6`). Voir
 `bugs.md` (`BUG-9` à `BUG-18`) et `dette-technique.md` (`DT-12` à `DT-17`)
 pour ce qui a été promu hors de cette revue plutôt que laissé ici.
 
+**Passe `J0-D` du 2026-09-02.** Les 32 fiches ont été relues contre le code. La
+plupart ne portent aucun énoncé vérifiable mécaniquement — ce sont des décisions
+reportées et des mesures consignées dans des documents de conception, pas des
+affirmations sur l'état du code. Les six qui en portent un ont été vérifiées et
+reçoivent un encadré daté ci-dessous ; **une seule est fausse**, `REL-20`, et elle
+l'est dans le sens qui aggrave le travail à faire.
+
 ---
 
 ## Rendu et effets
@@ -92,6 +99,9 @@ Source : `roadmap/01-roadmap-v1.md` fiche `MIS-4`.
 
 ### REL-9 — `ParkingCoastStage` ne gère pas un coast plus court que `ignitionLead`
 
+> **`J0-D` 2026-09-02 — confirmé.** `ignitionLead` existe dans 7 fichiers et
+> `ParkingCoastStage` ne traite toujours pas le cas d'un coast plus court que lui.
+
 Distinct de `BUG-9` (qui est le test resté sur l'ancienne sémantique) : ceci
 est un trou fonctionnel dans la classe elle-même pour le cas d'un coast plus
 court que le délai d'allumage.
@@ -107,6 +117,10 @@ unique flown ; un refus mesuré montre un plancher atteignable jusqu'à
 Source : [`lunar-flyby/07-conception-L5.md`](lunar-flyby/07-conception-L5.md) §8 pts 1, 3.
 
 ### ~~REL-11~~ — Gel du thread de rendu de 10-15 s à la création d'une mission lunaire — **RÉSOLU**
+
+> **`J0-D` 2026-09-02 — toujours résolu.** Les trois témoins tiennent :
+> `MissionStatus.CREATING`, `MissionStatusColor` et le garde-fou `editableStatus`
+> de `MissionRow`. Rien n'a régressé depuis la vérification du 2026-08-30.
 
 > Corrigé par le fix principal dans `MissionWizardAppState`, révision
 > `9e3b8ad6b38be6c3d930bbeedd5940ac9287ed2b`. La classe pose désormais
@@ -184,6 +198,10 @@ Source : [`lunar-orbit/09-conception-L7.md`](lunar-orbit/09-conception-L7.md) §
 
 ### REL-17 — `T1b` (inclinaison après insertion complète) jamais écrit
 
+> **`J0-D` 2026-09-02 — confirmé, au sens fort.** Une recherche sur tout
+> `src/main` et `src/test` ne trouve **aucune** occurrence de `T1b` : le nom
+> n'existe toujours que dans la documentation, exactement comme la fiche le dit.
+
 Seul `MeoMissionTest` en donne un équivalent partiel, pour le seul profil
 MEO. Confirmé par recherche dans le code : le nom n'existe que dans la
 documentation.
@@ -205,6 +223,19 @@ Toute mission part actuellement sur `ASCENDING`. Déféré délibérément.
 Source : [`earth-orbit/02-wizard-orbites-terrestres.md`](earth-orbit/02-wizard-orbites-terrestres.md) §7.
 
 ### REL-20 — Horizon MEO par défaut à 48 révolutions (~24 j), perfectible
+
+> **`J0-D` 2026-09-02 — l'énoncé est inversé, et le vrai cas est pire.** La fiche
+> met en garde contre la confusion entre « deux constantes distinctes qui partagent
+> la même valeur nominale par coïncidence ». Mesuré : il n'y a **qu'une seule
+> constante**. `MissionHorizon` déclare `DEFAULT_LEO_REVOLUTIONS = 48`,
+> `DEFAULT_GEO_REVOLUTIONS = 3` et `DEFAULT_LUNAR_FLYBY_SECONDS` — et **rien pour la
+> MEO** : `MissionProfile.MEO` porte `MissionType.LEO`, que `MissionHorizon:95`
+> résout par `case LEO -> new Revolutions(DEFAULT_LEO_REVOLUTIONS)`.
+>
+> Ce ne sont donc pas deux constantes de même valeur, c'est **une constante et deux
+> durées**, l'écart venant de la période orbitale. Conséquence directe pour qui
+> traitera la fiche : toucher l'horizon MEO déplace **aussi** toute mission LEO, et
+> pas seulement la bande mesurée par `MeoMissionTest`.
 
 Auto-décrit comme « honnête mais perfectible » — le changer déplacerait la
 bande mesurée par `MeoMissionTest`. À ne pas confondre avec l'horizon LEO
@@ -247,6 +278,11 @@ atmosphère ≠ `NONE`) et [`bugs.md` BUG-18](bugs.md#bug-18--rejets-de-scénari
 l'exécution, pas leur contenu.
 
 ### REL-24 — Section interaction de `MissionTimelineWidget` à extraire
+
+> **`J0-D` 2026-09-02 — confirmé à la ligne près.**
+> `ui/timeline/mission/MissionTimelineWidget` fait exactement **842 lignes**, le
+> chiffre de la fiche, et n'a donc pas bougé depuis la revue. Ses collaborateurs
+> `PhaseBar` / `PhaseMarkers` / `TimelineTooltip` sont en place.
 
 Le widget est passé de 689 à 842 lignes au fil de `NAV-2`/`NAV-3` ; sa
 section interaction aurait sa place en collaborateur séparé, à côté de
@@ -310,6 +346,10 @@ non vérifié en pratique, pas seulement en théorie.
 Source : [`optimization/bilan.md`](optimization/bilan.md), piste 5.
 
 ### REL-32 — `ABS_ERR_SCALE = 50 km` mal dimensionné pour la LEO
+
+> **`J0-D` 2026-09-02 — confirmé.** `ABS_ERR_SCALE = 50_000.0` est déclaré à
+> `TransferProblem:67` et consommé à `:665` (`errApoAbs`). La part de 47,8 % dans le
+> coût vient d'un run, que cette passe ne relance pas.
 
 Fait de `apoAbs` le premier terme du coût (47,8 %) pour une erreur qui ne
 vaut que 1,4 % en relatif. À réexaminer en même temps que `REL-30`, dont
