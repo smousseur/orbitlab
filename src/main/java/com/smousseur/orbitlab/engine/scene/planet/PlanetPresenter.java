@@ -62,7 +62,8 @@ public record PlanetPresenter(SolarSystemBody body, BodyView view) {
               Rotation rotation = posRotation.getValue();
               view.setRotationWorld(
                   RenderTransform.toRenderQuaternion(
-                      rotation, PlanetMeshCorrection.correctionFor(body)));
+                      rotation, PlanetMeshCorrection.correctionFor(body, t)));
+              view.setShellSpin(PlanetMeshCorrection.atmosphereShellSpinRad(body, t));
             });
   }
 }

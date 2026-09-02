@@ -2,15 +2,22 @@ package com.smousseur.orbitlab.tools.meshprobe;
 
 import com.jme3.asset.AssetManager;
 import com.jme3.asset.DesktopAssetManager;
+import com.jme3.material.Material;
 import com.jme3.math.Vector3f;
+import com.jme3.scene.Geometry;
+import com.jme3.scene.SceneGraphVisitorAdapter;
 import com.jme3.scene.Spatial;
+import com.jme3.texture.Texture;
 import com.smousseur.orbitlab.core.SolarSystemBody;
+import com.smousseur.orbitlab.engine.AssetFactory;
 import com.smousseur.orbitlab.engine.scene.mesh.MeshConformance;
 import com.smousseur.orbitlab.engine.scene.mesh.MeshFrame;
 import com.smousseur.orbitlab.engine.scene.mesh.MeshFrameProbe;
 import com.smousseur.orbitlab.engine.scene.mesh.ProbedGeometry;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -52,13 +59,14 @@ public final class MeshProbeMain {
     AssetManager assetManager = new DesktopAssetManager(true);
     System.out.printf(
         Locale.ROOT,
-        "%-9s %-26s %-22s %-22s %8s %10s  %s%n",
+        "%-9s %-26s %-22s %-22s %8s %10s %11s  %s%n",
         "body",
         "geometry",
         "pole",
         "u=0",
         "residual",
         "deg/u",
+        "texture",
         "verdict");
 
     for (SolarSystemBody body : SolarSystemBody.values()) {
@@ -70,6 +78,7 @@ public final class MeshProbeMain {
         System.out.printf(Locale.ROOT, "%-9s NOT LOADED: %s%n", name, e.getMessage());
         continue;
       }
+      Map<String, String> textures = textureSizes(model);
       List<ProbedGeometry> probed = MeshFrameProbe.probe(model);
       if (probed.isEmpty()) {
         System.out.printf(Locale.ROOT, "%-9s no measurable geometry%n", name);
@@ -79,29 +88,59 @@ public final class MeshProbeMain {
         if (!geometry.hasFrame()) {
           System.out.printf(
               Locale.ROOT,
-              "%-9s %-26s %-22s %-22s %8s %10s  %s%n",
+              "%-9s %-26s %-22s %-22s %8s %10s %11s  %s%n",
               name,
               abbreviate(geometry.name()),
               "-",
               "-",
               "-",
               "-",
+              textures.getOrDefault(geometry.name(), "-"),
               "NO UV MAP - nothing to measure");
           continue;
         }
         MeshFrame frame = geometry.frame();
         System.out.printf(
             Locale.ROOT,
-            "%-9s %-26s %-22s %-22s %8.2f %10.1f  %s%n",
+            "%-9s %-26s %-22s %-22s %8.2f %10.1f %11s  %s%n",
             name,
             abbreviate(geometry.name()),
             format(frame.pole()),
             format(frame.primeMeridian()),
             frame.equirectangularResidualDeg(),
             frame.azimuthDegreesPerU(),
+            textures.getOrDefault(geometry.name(), "-"),
             describe(MeshConformance.of(frame)));
       }
     }
+  }
+
+  /**
+   * Size of each geometry's base colour texture, by geometry name.
+   *
+   * <p>Read here rather than in the probe on purpose: {@link MeshFrame} speaks of vertices and UVs
+   * only, and has deliberately nothing to say about the image laid over them. But the table in
+   * {@code PlanetMeshCorrection} commits the size, because a re-export that keeps the mesh and
+   * swaps the texture leaves the frame identical and the longitude silently wrong — so a report
+   * that omitted it would not be copyable, which is the one thing this report is for.
+   */
+  private static Map<String, String> textureSizes(Spatial model) {
+    Map<String, String> sizes = new HashMap<>();
+    model.depthFirstTraversal(
+        new SceneGraphVisitorAdapter() {
+          @Override
+          public void visit(Geometry geometry) {
+            Material material = geometry.getMaterial();
+            Texture texture =
+                material == null ? null : AssetFactory.extractDiffuseTexture(material);
+            if (texture != null && texture.getImage() != null) {
+              sizes.put(
+                  geometry.getName(),
+                  texture.getImage().getWidth() + "x" + texture.getImage().getHeight());
+            }
+          }
+        });
+    return sizes;
   }
 
   private static String describe(MeshConformance verdict) {

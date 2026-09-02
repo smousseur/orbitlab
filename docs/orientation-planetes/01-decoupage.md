@@ -6,8 +6,11 @@ demandait la liste « corps → défaut (a) axe faux / (b) longitude fausse », 
 **découpe** le chantier qui en découle. Il ne conçoit pas : noms de classes, signatures et formules
 viendront dans les `02-…` et suivants, lot par lot.
 
-> **Statut : découpage.** Les mesures des §2 et §3 sont fermes et reproductibles (outil décrit au
-> L0).
+> **Statut : les cinq lots sont implémentés (2026-09-02).** Les mesures des §2 et §3 sont fermes et
+> reproductibles (outil décrit au L0). Reste la **validation corps par corps à l'écran**, que
+> l'auteur du projet fait lui-même avec l'instrument du L2 : c'est elle qui arrête les `λ0` du L3.
+> Les sections des lots portent, en fin de section, ce que l'implémentation a mesuré — y compris
+> deux énoncés de ce document qu'elle dément.
 
 > **Deux contraintes posées par l'auteur du projet le 2026-09-01, qui cadrent tout le reste :**
 >
@@ -222,9 +225,19 @@ depuis un ajustement qui n'a pas de sens.
 passer par Blender de toute façon (en-tête, contrainte 2) ; les y orienter coûte le temps d'une
 rotation, et un asset conforme n'a besoin d'aucune valeur dans le code.
 
-> **Convention d'export.** Une fois la chaîne de nœuds glTF composée : pôle nord sur `+Z`, colonne
-> `u = 0` de la texture pointant vers `−X`, résidu latitude/`v` nul, chiralité `−360°/u`. C'est ce
-> que portent `earth.gltf` et `moon.gltf`.
+> **Convention d'export.** Une fois la chaîne de nœuds glTF composée : arête `v = 0` de la texture
+> sur `+Z`, colonne `u = 0` pointant vers `−X`, résidu latitude/`v` nul, chiralité `−360°/u`. C'est
+> ce que portent `earth.gltf` et `moon.gltf`.
+
+> **Corrigé le 2026-09-02, en implémentant le L2.** Cet énoncé disait « pôle **nord** sur `+Z` ».
+> C'est faux, et la sonde ne pouvait pas le savoir : mesuré à travers toute la chaîne, `+Z` est
+> peint au pôle **sud** du corps. Les textures de référence sont stockées rangée sud en premier —
+> établi sur la carte de la Terre elle-même, dont la bande à `v = 0,2` est à 96 % océanique et ne
+> peut donc être que 54° **sud**. La convention d'export est inchangée dans les faits (les fichiers
+> conformes le sont toujours), mais l'énoncé l'était. Conséquence pratique, elle : une carte stockée
+> à l'endroit sur un maillage par ailleurs conforme donnerait un corps **en miroir**, et c'est un
+> défaut que ni la sonde ni la garde ne peuvent voir — seul le L2 le montre, et c'est pourquoi son
+> graticule étiquette ses deux pôles.
 
 Deux précisions qui ne sont pas des détails :
 
@@ -274,6 +287,12 @@ les médianes de canaux relevées sur la texture, pas seulement la couleur reten
 
 1. **La convention.** Les cartes planétaires placent λ=0 en `u=0` ou au centre : `λ0 ∈ {0°, 180°}`.
    Un choix binaire, pas un ajustement continu. Point de départ par défaut.
+
+   > **Tranché par la mesure le 2026-09-02 : c'est 180°.** La chaîne peint la colonne `u = 0` d'un
+   > actif à correction identité à la longitude corps-fixe **180°**, et la Terre et la Lune sont
+   > déclarées correctes : leurs cartes ont donc bien leur bord gauche à 180° O, le standard des
+   > cartes planétaires. Ce qui explique enfin ce qui passait pour une coïncidence — *pourquoi*
+   > l'identité suffit à ces deux corps. `λ0 = 180°` est donc la valeur neutre, et non `0`.
 2. **Le point sub-solaire, à l'écran.** L'instrument du L2 : l'écart lu **est** la correction à
    appliquer à `λ0`, en degrés, et il ne dépend pas de la caméra.
 3. **Le point de référence IAU, pour les corps solides** — exact par définition, mesuré une fois,
@@ -300,6 +319,9 @@ les médianes de canaux relevées sur la texture, pas seulement la couleur reten
 | **L2** | L'instrument de calage à l'écran | oui — graticule + point sub-solaire | l'écart lu à deux azimuts de caméra est le même |
 | **L3** | `λ0` arrêté corps par corps | non — L2 appliqué | les six corps solides calés sur leur ancrage IAU |
 | **L4** | La dérive de la couche visible | non — un terme de plus dans la même composition | l'écart lu au L2 est stable entre deux dates éloignées |
+
+Les cinq sont implémentés au 2026-09-02. Le L3 est le seul dont l'implémentation ne suffit pas à le
+fermer : il demande une passe à l'œil, corps par corps, avec l'instrument du L2.
 
 ### L0 — La sonde, son rapport et son verdict de conformité
 
@@ -367,6 +389,21 @@ rester ; si la nouvelle chaîne leur produit autre chose que l'identité, elle e
 vérifie sans regarder l'écran. Contrôle visuel complémentaire : la Lune montre toujours sa face
 visible.
 
+**Livré le 2026-09-01**, plus une réparation faite le lendemain par le L2 :
+
+- `MeshFrameProbe`, `MeshFrame`, `MeshConformance`, `PlanetMeshCalibration`, la table de
+  `PlanetMeshCorrection`, `MeshGuard` + `MeshDivergence` câblés dans `PlanetPoseAppState`, et le
+  test qui rejoue la sonde sur les dix actifs calibrés.
+- **Le signe de `λ0` était inversé, et son zéro n'était pas le bon.** Le terme tournait dans le sens
+  qui *diminue* la longitude peinte, et il était compté depuis `0` au lieu de 180° (§4.4). Aucune
+  valeur n'avait encore été calibrée contre lui, donc rien d'autre n'est à reprendre — c'est
+  exactement le risque que le §7 attribuait au L1 (« une erreur de composition s'y propage
+  silencieusement »), et il a été pris par le premier lot qui pouvait le voir.
+- L'**empreinte complète de la texture** dans le test n'est pas faite : neuf actifs sur onze sont
+  provisoires, une empreinte commitée passerait au rouge à chaque ré-export légitime, et un test qui
+  casse à chaque changement normal finit désactivé. Les dimensions, elles, sont vérifiées au
+  démarrage. À trancher quand les actifs seront figés.
+
 ### L2 — L'instrument de calage à l'écran
 
 **Propriété rendue vraie.** On lit l'erreur de longitude d'un corps **en degrés**, sur un instrument
@@ -385,6 +422,25 @@ identifiable, où il n'y a de toute façon rien à observer.
 **Fermeture.** L'écart lu sur un même corps à la même date, depuis deux azimuts de caméra très
 différents, est le même — c'est ce qui distingue cet instrument de la comparaison de captures, où
 tourner la caméra suffit à faire coïncider n'importe quelle longitude.
+
+**Livré le 2026-09-02.** Touche **G**, sur le corps focalisé : `MeshCalibrationAppState`,
+`GraticuleView`, `GraticuleMesh`, `TexturePainting`, `CalibrationReading`.
+
+- **Le graticule est construit sur le repère mesuré, pas sur les axes de référence.** C'est ce qui
+  le fait chevaucher la texture : un modèle tourné emporte sa grille avec lui, et l'écart devient
+  visible au lieu de rester invisible. Une grille bâtie sur les axes aurait l'air juste sur un corps
+  faux.
+- **La caméra n'entre nulle part dans le calcul**, ce qui rend la fermeture structurelle plutôt que
+  constatée. Le test la remplace par la variable qui, elle, bouge vraiment : la date. `column 0` est
+  lue identique à cent jours d'écart, la Terre ayant tourné cent fois entre les deux.
+- **Le nombre à regarder en premier n'a besoin d'aucun œil** : `chain offset`, l'écart entre `λ0` et
+  la longitude à laquelle la chaîne peint réellement la colonne 0. Il doit valoir zéro ; s'il ne le
+  vaut pas, le défaut est dans le code et rien de ce qu'on voit sur le globe ne veut dire quoi que
+  ce soit. C'est lui qui a trouvé l'erreur de signe du L1.
+- **Ce que l'instrument ne peut pas faire, et ce n'est pas une limite d'implémentation** : dire si
+  l'image est dessinée là où elle prétend. `λ0` est une propriété de l'image, et deux cartes aux
+  pixels différents et à la géométrie identique peuvent diverger de n'importe quel angle. D'où le
+  L3 en passe corps par corps, à l'œil.
 
 ### L3 — `λ0` arrêté corps par corps
 
@@ -406,6 +462,21 @@ d'observation** pour Jupiter, Saturne et Vénus-nuages, et le resteront pour les
 **Fermeture.** Sur chaque corps solide traité, l'écart lu au L2 est nul à la tolérance de lecture
 près, et recoupe son ancrage IAU.
 
+**État au 2026-09-02.** La structure est en place et deux corps sont clos ; les neuf autres
+attendent la passe à l'écran, qui est le travail que ce lot *est*.
+
+| corps | `λ0` | provenance |
+|---|---|---|
+| Terre, Lune | 180° | **mesuré.** Déclarés corrects, et la chaîne peint leur colonne 0 à 180° : c'est donc bien l'origine de leurs cartes |
+| les neuf autres | 180° | **conventionnel.** Le standard des cartes planétaires, point de départ et non résultat |
+| Uranus | — | hors périmètre, pas de calibration du tout |
+
+Ancrages à recouper au moment de la passe, exacts par définition et non par observation : Airy-0
+pour Mars, Hun Kal à 20° O pour Mercure, le pic central d'Ariadne pour le sol de Vénus, le point
+sub-terrestre moyen pour la Lune, le méridien sub-Charon pour Pluton. Les géantes et le Soleil n'en
+ont aucun — leur méridien origine est une convention radio sans détail visible dessus — et leur
+`λ0` restera une valeur maison documentée.
+
 ### L4 — La dérive de la couche visible
 
 **Propriété rendue vraie.** Jupiter, Saturne et l'atmosphère de Vénus gardent leur calage quand le
@@ -423,6 +494,30 @@ pas un champ de vitesses. Uranus, Neptune et le Soleil restent sur une constante
 
 **Fermeture.** L'écart lu au L2 sur Jupiter est stable entre deux dates séparées de plusieurs mois
 de temps simulé, là où il dériverait de ~97°/an sans ce lot.
+
+**Livré le 2026-09-02.** `correctionFor(corps, date)` remplace la signature sans date ; le terme
+vit dans `PlanetMeshCalibration.visibleLayerDriftDegPerDay`, et Vénus dans `ATMOSPHERE_SHELLS`.
+
+- **Les tests ne regardent jamais les constantes.** Ils mesurent la vitesse à laquelle la texture
+  tourne *en repère inertiel*, à travers toute la chaîne de rendu, et la comparent au taux publié
+  de la couche que la carte représente : Système II pour Jupiter, Système I pour Saturne, les 4,2
+  jours rétrogrades des sommets de nuages pour Vénus. C'est la seule vérification qui distingue une
+  constante juste d'une constante plausible. Le corps témoin est la Terre, dont la carte montre son
+  propre sol et qui doit donc tourner exactement au taux d'Orekit.
+- **Saturne change visiblement de vitesse** : +33,5 °/j, sa carte étant son pont de nuages
+  équatorial, qui fait un tour en 10 h 14 contre 10 h 39 pour la période radio. C'est le seul
+  changement de comportement notable de ce lot sur un corps qui n'était pas signalé faux.
+- **Vénus a désormais deux couches.** `ShellSpin` insère un pivot au-dessus du nœud `atmosphere` de
+  l'actif et le fait tourner de l'excédent — 58 fois le taux du sol, en sens inverse. Le morceau
+  délicat n'est pas la vitesse mais le **changement de base** : l'axe est connu dans les axes du
+  modèle, le pivot est greffé au milieu d'une chaîne de nœuds qui ont leurs propres rotations, et se
+  tromper là fait *pencher* la coquille au lieu de la faire tourner — ce qui, sur un pont de nuages
+  sans détail, est invisible. Trois tests couvrent la greffe.
+- **La dérive a forcé une réparation numérique.** `λ0(t)` croît sans borne : le pont de Saturne est à
+  quelque 320 000° de son époque en 2026, où le pas d'un `float` vaut déjà 0,03°. Passer la
+  différence brute en `float` quantifiait donc l'orientation du corps, de plus en plus grossièrement
+  à mesure que la date avance. Le tour est ramené dans [−180, 180] avant la conversion. C'est le
+  test de taux, à 0,001 °/j près, qui l'a vu.
 
 ---
 
@@ -443,6 +538,15 @@ Rien de ceci ne bloque L0.
   signalera à ce moment-là. Écrire un repère à la main pour un asset qu'on va jeter est du travail
   perdu deux fois.
 
+**Tranché par la mesure le 2026-09-02, en implémentant :**
+
+- ~~`λ0` des géantes, entre convention publiée et chiffre maison~~ — la question du *zéro* est
+  réglée pour tous (180°, §4.4) ; celle du **méridien origine des géantes** ne l'est pas et ne peut
+  pas l'être par mesure, faute d'ancrage : elle reste ouverte, ci-dessous.
+- ~~l'orientation verticale des cartes~~ — les textures de référence sont stockées rangée sud en
+  premier (§4.2). Ce n'était pas une question posée : c'était une hypothèse tacite, et elle était
+  fausse.
+
 **Restent ouverts :**
 
 1. **Le réglage d'export des assets de référence.** `earth.gltf` a une rotation de nœud identité et
@@ -451,10 +555,13 @@ Rien de ceci ne bloque L0.
    un fait — le fichier ne conserve aucune trace du réglage. À confirmer en ré-exportant un corps et
    en lui passant la sonde, ce qui est de toute façon la première chose à faire avant d'appliquer la
    convention à un asset réel.
-2. **`λ0` des géantes.** Arbitraire par nature (§3). À décider si on adopte une convention publiée
-   (Système II pour Jupiter, par exemple) ou si on assume un chiffre maison documenté. Sans objet
-   tant que leurs assets ne sont pas stabilisés.
-3. **La promotion de BUG-3.** `docs/bugs.md` prévoit qu'un item « sort d'ici soit corrigé, soit
+2. **Le méridien origine des géantes.** Arbitraire par nature (§3) : leur méridien IAU est une
+   convention radio sans détail visible dessus, donc aucune passe à l'œil ne peut le poser. À
+   décider si on adopte une convention publiée (Système II pour Jupiter, par exemple) ou si on
+   assume un chiffre maison documenté. Sans objet tant que leurs assets ne sont pas stabilisés.
+3. **L'empreinte complète de la texture dans le test du L1.** Prévue par ce document, non faite,
+   pour la raison donnée en fin de section L1. À trancher quand les actifs seront figés.
+4. **La promotion de BUG-3.** `docs/bugs.md` prévoit qu'un item « sort d'ici soit corrigé, soit
    promu en item de roadmap quand il s'avère être un chantier à part entière ». Cinq lots : c'en
    est un. L'attribution d'un identifiant de roadmap n'a pas été décidée.
 
@@ -502,6 +609,34 @@ verdict de conformité (§4.2) règle l'axe en une commande, l'instrument de cal
 lecture. Avec neuf assets appelés à bouger, c'est là que se trouve le rendement du chantier — pas
 dans les valeurs elles-mêmes, dont on sait d'avance qu'une partie sera jetée.
 
+### Ce qu'il faut faire quand un `.gltf` change
+
+1. **Remplacer les fichiers** sous `models/planets/<corps>/`, en gardant le nom `<corps>.gltf`.
+   Ne rien toucher au code à ce stade : si on ne fait rien de plus, l'application le **dit** au
+   démarrage — la garde du L1 journalise un `WARN` nommant le corps, l'écart angulaire et, le cas
+   échéant, le changement de taille de texture. C'est la détection du §4.1, et c'est le filet qui
+   rend les étapes suivantes non urgentes.
+2. **`./gradlew meshProbe`** et lire la ligne du corps. Le verdict tranche :
+   - `conforming` — le repère est bon, rien à corriger ;
+   - `rotate X deg about (…)` — deux fins possibles, au choix (§4.2) : appliquer la rotation dans
+     Blender et ré-exporter, ce qui est la voie normale et ne laisse aucune constante ; ou recopier
+     la ligne en l'état, ce qui garde l'actif intact ;
+   - `MIRRORED` — **aucune rotation ne peut le réparer**, il faut retourner une coordonnée UV ;
+   - `NOT A LAT/LONG MAP` — le corps sort du périmètre, comme Uranus, et n'a pas d'entrée du tout.
+3. **Si on corrige dans Blender, ne pas traduire l'axe à la main.** L'axe du verdict est exprimé
+   dans les axes du `.gltf`, et la case « +Y Up » de l'exportateur cuit une conversion sans laisser
+   de témoin (§4.2) : le raisonnement sur le repère Blender est donc faux la moitié du temps.
+   Appliquer, ré-exporter, re-sonder, jusqu'à `conforming`. La boucle est de quelques secondes.
+4. **Recopier la ligne** dans `PlanetMeshCorrection.CALIBRATIONS` : pôle, `u=0`, résidu, `deg/u` et
+   la taille de texture, dans cet ordre. Un actif conforme prend `referenceFrame()`.
+5. **`λ0` ne bouge que si l'image a changé.** C'est toute la raison de la structure à deux termes
+   (§4.2) : un modèle plus fidèle qui réutilise la même texture conserve sa longitude intacte. Si
+   la texture change, `λ0` est à re-poser — d'où sa présence dans la garde.
+6. **Trois tests ferment la reprise**, tous sans écran : `PlanetMeshFrameFixtureTest` (l'actif sur
+   disque porte bien ce qui a été commité), `PlanetMeshCorrectionTest` (l'alignement ramène le
+   repère mesuré sur la référence), `TexturePaintingTest` (`chain offset` nul sur tous les corps).
+7. **Puis seulement l'œil**, avec l'instrument du L2, et uniquement si la texture a changé.
+
 ---
 
 ## 8. Constats annexes, mesurés au cours du diagnostic
@@ -536,3 +671,12 @@ Hors périmètre. Consignés ici pour ne pas être reperdus ; aucun n'a été ar
    « cible mouvante » du §7 : la sonde a suivi le changement sans une ligne à retoucher.
 7. **Le facteur de couleur de base est perdu** à la re-matérialisation — Uranus déclare 0,499, et
    est rendu à pleine intensité.
+8. **La chaîne peint l'arête `v = 0` au pôle sud, et la colonne `u = 0` à 180°** (mesuré le
+   2026-09-02). Les deux ensemble font que les cartes standard tombent juste sous la correction
+   identité. Consigné ici parce que c'est le genre de fait qu'on redécouvre à ses dépens : il est
+   épinglé par `TexturePaintingTest`, mais un lecteur qui raisonne sur la composition sans le savoir
+   conclura que la Terre est à l'envers.
+9. **Le résidu commité pour Vénus était celui de l'atmosphère** (0,02°) et non celui du globe que la
+   garde retient (0,01°) — recopié de la mauvaise ligne du rapport au L1. Sans effet : ni la
+   correction ni la garde ne lisent le résidu. Corrigé le 2026-09-02, et signalé parce que c'est
+   précisément le genre d'erreur de transcription que le §4.3 veut rendre visible.

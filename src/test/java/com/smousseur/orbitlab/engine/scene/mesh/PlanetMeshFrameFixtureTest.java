@@ -36,8 +36,8 @@ class PlanetMeshFrameFixtureTest {
   }
 
   /**
-   * The closure of L1, and the only check that the report was transcribed into
-   * {@code PlanetMeshCorrection} without a slip: for every calibrated body, the asset on disk still
+   * The closure of L1, and the only check that the report was transcribed into {@code
+   * PlanetMeshCorrection} without a slip: for every calibrated body, the asset on disk still
    * carries what was committed for it. A digit wrong in a direction, a texture size off, and this
    * goes red.
    *
@@ -53,7 +53,8 @@ class PlanetMeshFrameFixtureTest {
       Spatial model = loadPlanet(body.displayName().toLowerCase(Locale.ROOT));
       assertTrue(
           MeshGuard.verify(body, model).isEmpty(),
-          () -> body + " diverges from its committed calibration: " + MeshGuard.verify(body, model));
+          () ->
+              body + " diverges from its committed calibration: " + MeshGuard.verify(body, model));
     }
   }
 

@@ -12,7 +12,7 @@ la frontière entre les deux derniers doit rester lisible.
 |---|---|---|---|
 | [`BUG-1`](#bug-1--jitter-du-billboard-et-de-lorbite-de-pluton) | Jitter du billboard et de l'orbite de Pluton | 2026-08-10 | Ouvert, non diagnostiqué |
 | [`BUG-2`](#bug-2--sauts-de-la-skybox-au-zoom) | Sauts de la skybox au zoom | 2026-08-15 | Ouvert, piste identifiée |
-| [`BUG-3`](#bug-3--orientation-des-modèles-3d-des-planètes) | Orientation des modèles 3D des planètes | 2026-08-15 | Ouvert — **diagnostic fait le 2026-09-01**, découpé en 5 lots dans [`docs/orientation-planetes/01-decoupage.md`](orientation-planetes/01-decoupage.md) ; promotion en item de roadmap non tranchée |
+| [`BUG-3`](#bug-3--orientation-des-modèles-3d-des-planètes) | Orientation des modèles 3D des planètes | 2026-08-15 | Ouvert — diagnostic fait le 2026-09-01, **les 5 lots de [`docs/orientation-planetes/01-decoupage.md`](orientation-planetes/01-decoupage.md) sont implémentés le 2026-09-02** ; reste la validation à l'écran corps par corps, qui arrête les `λ0` (L3). Promotion en item de roadmap non tranchée |
 | [`BUG-4`](#bug-4--hover-des-widgets-non-uniforme) | Hover des widgets non uniforme | 2026-08-15 | **Promu** en `UI-7` le 2026-08-16 |
 | [`BUG-5`](#bug-5--pop-du-modèle-3d-au-changement-de-focus) | Pop du modèle 3D au changement de focus | 2026-08-15 | Ouvert, mécanisme identifié |
 | [`BUG-6`](#bug-6--plane-trim-employé-hors-de-son-enveloppe-par-lascension-polaire) | Plane trim employé hors de son enveloppe par l'ascension polaire | 2026-08-16 | **Corrigé le 2026-08-31** — coût réel mesuré (141 kg, pas 10 349), fixture remise dans l'enveloppe |
@@ -243,15 +243,31 @@ elle décide de tout le reste.
 > corps la couche visible ne tourne pas à la vitesse du repère IAU appliqué, donc
 > **aucune constante ne peut être juste à plus d'une date** (§3).
 
+> **Les cinq lots sont implémentés le 2026-09-02.** Chaque corps porte son repère mesuré et son
+> terme de longitude, l'échange d'un maillage est signalé au démarrage au lieu d'être absorbé en
+> silence, Jupiter et Saturne tournent au taux de la couche que leur carte représente et non à celui
+> de leur repère radio, et l'atmosphère de Vénus tourne indépendamment de son sol. L'instrument de
+> calage est sur la touche **G** : graticule étiqueté depuis la carte du corps, et point sub-solaire
+> calculé depuis la position du Soleil.
+>
+> **Ce qui reste, et pourquoi ce n'est pas du code.** `λ0` dit quelle longitude porte la colonne
+> gauche d'une image ; aucune inspection de fichier ne peut l'établir. Neuf corps sur onze le
+> portent encore à sa valeur conventionnelle, à confirmer ou corriger à l'œil avec l'instrument. Le
+> ticket reste donc ouvert jusqu'à cette passe.
+>
+> Un détail qui vaut d'être su avant de raisonner sur la chaîne : elle peint l'arête `v = 0` des
+> textures au pôle **sud** du corps, et leur colonne `u = 0` à la longitude **180°** — parce que
+> c'est ainsi que les cartes planétaires standard sont faites, et c'est ce qui explique que la Terre
+> et la Lune tombent juste sans aucune correction.
+
 ### Tips
 
-- **La boucle d'itération.** Ré-exporter depuis Blender à chaque essai coûte trop
-  cher pour chercher onze valeurs. Ajouter d'abord un champ de correction
-  optionnel par corps (un `Quaternion` dans `BodyRenderConfig`, défaut = la
-  constante actuelle), trouver les valeurs empiriquement, **puis** décider : les
-  figer dans le code, ou les cuire dans les `.gltf` et remettre les surcharges à
-  l'identité. Les deux fins se valent ; ce qui ne va pas, c'est de chercher les
-  valeurs par ré-export.
+- ~~**La boucle d'itération.** Ajouter un `Quaternion` par corps dans `BodyRenderConfig`, trouver
+  les valeurs empiriquement…~~ **Périmé le 2026-09-02.** La forme retenue n'est pas un quaternion
+  par corps mais deux termes séparés — le repère *mesuré* par la sonde, et la longueur `λ0` qui,
+  elle, est humaine — parce qu'un échange de maillage n'invalide que le premier. Et les valeurs ne
+  se cherchent plus « empiriquement » : la sonde donne le repère, l'instrument du L2 donne `λ0` en
+  degrés.
 - **Attention au dépôt.** ~~`src/main/resources/models/` est gitignored (cf.
   `CLAUDE.md`).~~ **Faux, corrigé le 2026-09-01** : `.gitignore` n'exclut que
   `dataset/**`, et `git ls-files` renvoie 52 fichiers suivis sous
@@ -261,20 +277,22 @@ elle décide de tout le reste.
   versionné n'est pas relisible. C'est ce qui fait préférer une valeur dans le
   code. Documenter la convention attendue (en repère body-fixed, avant
   `meshCorrectionQ` : +Z = pôle nord, +X = méridien origine) reste le minimum.
-- **Sanity check côté code, à faire en premier parce qu'il coûte dix minutes.**
-  La rotation stockée est `ICRF → body`, et elle est appliquée telle quelle au
-  maillage (`PlanetPresenter:63`). Orienter un objet dans le monde demande la
-  transformation inverse. Si la convention Hipparchus/JME ne compense pas ce sens
-  quelque part, **toutes** les planètes tournent à l'envers — indétectable sur
-  une sphère texturée sauf à regarder le sens de défilement. Vérifier que la
-  Terre tourne bien d'ouest en est avant de conclure que le défaut est
-  exclusivement dans les assets.
+- ~~**Sanity check côté code** : si la convention Hipparchus/JME ne compense pas le sens de
+  `ICRF → body`, toutes les planètes tournent à l'envers.~~ **Réglé le 2026-09-02, par mesure et
+  non par lecture.** Elle le compense : le quaternion Hipparchus chargé tel quel dans un
+  `Quaternion` JME représente la rotation inverse, les deux conventions se neutralisant. Vérifié à
+  travers toute la chaîne — le taux inertiel de rotation de la texture de la Terre est mesuré à
+  360,9856 °/j, le taux d'Orekit, signe compris.
 
 ### Non vérifié
 
 Aucune observation corps par corps n'a été faite. « Sauf la Terre » est le
 constat de l'utilisateur, pas un relevé : il se peut qu'un ou deux autres corps
 soient corrects, et cela renseignerait directement sur les exports.
+
+> **Toujours vrai au 2026-09-02**, et c'est ce qui reste à faire. La Terre et la Lune sont
+> maintenant déclarées correctes et servent de référence ; les neuf autres n'ont pas été regardés.
+> L'instrument est là pour ça (touche **G**).
 
 ---
 

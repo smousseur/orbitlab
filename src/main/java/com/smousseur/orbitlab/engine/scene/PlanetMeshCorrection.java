@@ -4,12 +4,14 @@ import com.jme3.math.FastMath;
 import com.jme3.math.Quaternion;
 import com.jme3.math.Vector3f;
 import com.smousseur.orbitlab.core.SolarSystemBody;
+import com.smousseur.orbitlab.engine.scene.mesh.AtmosphereShell;
 import com.smousseur.orbitlab.engine.scene.mesh.MeshConformance;
 import com.smousseur.orbitlab.engine.scene.mesh.MeshFrame;
 import com.smousseur.orbitlab.engine.scene.mesh.PlanetMeshCalibration;
 import java.util.EnumMap;
 import java.util.Map;
 import java.util.Optional;
+import org.orekit.time.AbsoluteDate;
 
 /**
  * Provides the per-body corrective rotation applied to a planet's 3D mesh before it is oriented by
@@ -31,8 +33,91 @@ import java.util.Optional;
  * reference frame and are declared frozen; Mars and Saturn measure identical to them. A body with a
  * non-identity correction is an asset that has not been brought onto the export convention yet
  * (§4.2 of the chantier), and each says so below.
+ *
+ * <h2>Where λ0 stands, body by body (L3)</h2>
+ *
+ * <p>λ0 is a fact about an <em>image</em>: which body-fixed longitude its left-hand column carries.
+ * No inspection of a file can establish it — two maps with identical pixels dimensions and
+ * identical geometry can disagree by any angle — so it is settled by looking, with the instrument
+ * L2 provides ({@code MeshCalibrationAppState}, the <b>G</b> key).
+ *
+ * <ul>
+ *   <li><b>Settled.</b> The Earth and the Moon. They are declared correct, and the chain paints
+ *       their column 0 at {@link #CONVENTIONAL_COLUMN_ZERO_LONGITUDE_DEG} — so that <em>is</em>
+ *       their maps' origin, measured rather than assumed. The Moon is the stronger of the two: in
+ *       synchronous rotation, a near side that faces the Earth cannot coexist with a wrong
+ *       meridian.
+ *   <li><b>Conventional, and awaiting a look.</b> Every other body. They are given the same origin,
+ *       which is the standard for planetary maps, and it is a starting point rather than a result.
+ *   <li><b>Out of scope.</b> Uranus, whose globe is not a lat/long unwrap at all, and which
+ *       therefore has no calibration here.
+ * </ul>
+ *
+ * <p>Where a body has a defined anchor, that is what the look should be checked against, since it
+ * is exact by definition rather than by observation: Airy-0 for Mars, Hun Kal at 20° W for Mercury,
+ * the central peak of Ariadne for Venus's ground, the mean sub-Earth point for the Moon, the
+ * sub-Charon meridian for Pluto. The giants and the Sun have none — their prime meridian is a radio
+ * convention with no visible feature on it — so their λ0 will stay a documented house value.
  */
 public final class PlanetMeshCorrection {
+
+  /**
+   * Body-fixed longitude the chain paints the texture's column {@code u = 0} at when the correction
+   * is the identity, and therefore the value of λ0 that asks for no turn at all.
+   *
+   * <p><b>It is 180°, and that is not an arbitrary zero point.</b> It is the standard planetary map
+   * origin — an equirectangular map centred on the prime meridian starts its left-hand column at
+   * 180° west — so an asset drawn on a standard map needs no longitude term whatsoever. That is
+   * <em>why</em> the Earth and the Moon come out right under the identity; before L2 measured it,
+   * the two facts looked like a coincidence.
+   *
+   * <p><b>And the turn runs backwards</b>, hence the subtraction in {@link #correctionFor}: {@link
+   * MeshConformance#REFERENCE_POLE} is the direction of the map's {@code v = 0} edge, which this
+   * chain paints at the body's <em>south</em> pole (these textures are stored south-row-first —
+   * measured on {@code earth}'s own map, whose band at {@code v = 0.2} is 96 % ocean and can only
+   * be 54° south). Turning about a southward axis moves longitude the other way.
+   *
+   * <p>Both statements are pinned by {@code TexturePaintingTest}, which replays the whole chain
+   * against Orekit's own body frame rather than trusting either of them in prose.
+   */
+  public static final float CONVENTIONAL_COLUMN_ZERO_LONGITUDE_DEG = 180f;
+
+  /** Rate of a body's own frame, in degrees per day, as Orekit's IAU model turns it. */
+  private static final double JUPITER_SYSTEM_III_DEG_PER_DAY = 870.5360000;
+
+  private static final double SATURN_SYSTEM_III_DEG_PER_DAY = 810.7939024;
+
+  /**
+   * Rate of the layer the texture actually depicts. Jupiter's belts and its Great Red Spot are
+   * catalogued in System II; Saturn's equatorial deck turns in System I, one turn in 10 h 14 min.
+   * Both are published rates, not fits.
+   */
+  private static final double JUPITER_SYSTEM_II_DEG_PER_DAY = 870.2700000;
+
+  private static final double SATURN_SYSTEM_I_DEG_PER_DAY = 360.0 * 86400.0 / 36840.0;
+
+  /**
+   * Venus's cloud tops lap the planet retrograde in about four Earth days, against the 243 days its
+   * ground takes — the super-rotation, and the largest disagreement between a texture and its body
+   * frame anywhere in the solar system.
+   */
+  private static final double VENUS_CLOUD_TOP_DEG_PER_DAY = -360.0 / 4.2;
+
+  private static final double VENUS_SYSTEM_III_DEG_PER_DAY = -1.4813688;
+
+  /**
+   * Shells that turn at their own rate inside a body's model. Venus is the only one: what its globe
+   * geometry carries is the radar map of the ground, and the cloud deck over it is a separate mesh
+   * the exporter named {@code atmosphere}.
+   */
+  private static final Map<SolarSystemBody, AtmosphereShell> ATMOSPHERE_SHELLS =
+      new EnumMap<>(
+          Map.of(
+              SolarSystemBody.VENUS,
+              new AtmosphereShell(
+                  "atmosphere",
+                  CONVENTIONAL_COLUMN_ZERO_LONGITUDE_DEG,
+                  VENUS_CLOUD_TOP_DEG_PER_DAY - VENUS_SYSTEM_III_DEG_PER_DAY)));
 
   /**
    * What each asset was measured to carry, on 2026-09-01, by {@code ./gradlew meshProbe}. Uranus is
@@ -53,16 +138,31 @@ public final class PlanetMeshCorrection {
               Map.entry(SolarSystemBody.MOON, calibration(referenceFrame(), 8192, 4096)),
               // Measured identical to the reference; not observed on screen, see §2.6.
               Map.entry(SolarSystemBody.MARS, calibration(referenceFrame(), 8192, 4096)),
-              Map.entry(SolarSystemBody.SATURN, calibration(referenceFrame(), 4096, 2048)),
+              // Its map is the equatorial cloud deck, which runs 25 minutes a turn ahead of the
+              // radio period Orekit spins the body at (L4).
+              Map.entry(
+                  SolarSystemBody.SATURN,
+                  calibration(
+                      referenceFrame(),
+                      SATURN_SYSTEM_I_DEG_PER_DAY - SATURN_SYSTEM_III_DEG_PER_DAY,
+                      4096,
+                      2048)),
               // Pole in the reference family, texture column 0 a quarter turn away. This is the
               // Great Red Spot symptom that opened the chantier.
               Map.entry(
                   SolarSystemBody.JUPITER,
-                  calibration(frame(0f, 0f, 1f, 0f, -1f, 0f, 0.00f, -360.0f), 4096, 2048)),
-              // Pole on -Y instead of +Z: the whole axis is wrong, not just the longitude.
+                  calibration(
+                      frame(0f, 0f, 1f, 0f, -1f, 0f, 0.00f, -360.0f),
+                      JUPITER_SYSTEM_II_DEG_PER_DAY - JUPITER_SYSTEM_III_DEG_PER_DAY,
+                      4096,
+                      2048)),
+              // Pole on -Y instead of +Z: the whole axis is wrong, not just the longitude. The
+              // frame is the ground globe's, the lower of the model's two residuals; the cloud
+              // shell over it measures the same frame and turns at its own rate, see
+              // ATMOSPHERE_SHELLS.
               Map.entry(
                   SolarSystemBody.VENUS,
-                  calibration(frame(0f, -1f, 0f, -1f, 0f, 0f, 0.02f, -360.0f), 8192, 4096)),
+                  calibration(frame(0f, -1f, 0f, -1f, 0f, 0f, 0.01f, -360.0f), 8192, 4096)),
               Map.entry(
                   SolarSystemBody.PLUTO,
                   calibration(frame(0f, -1f, 0f, -1f, 0f, 0f, 0.31f, -360.0f), 4096, 2048)),
@@ -93,7 +193,17 @@ public final class PlanetMeshCorrection {
 
   private static PlanetMeshCalibration calibration(
       MeshFrame measured, int textureWidth, int textureHeight) {
-    return new PlanetMeshCalibration(measured, 0f, textureWidth, textureHeight);
+    return calibration(measured, 0.0, textureWidth, textureHeight);
+  }
+
+  private static PlanetMeshCalibration calibration(
+      MeshFrame measured, double driftDegPerDay, int textureWidth, int textureHeight) {
+    return new PlanetMeshCalibration(
+        measured,
+        CONVENTIONAL_COLUMN_ZERO_LONGITUDE_DEG,
+        driftDegPerDay,
+        textureWidth,
+        textureHeight);
   }
 
   private static MeshFrame frame(
@@ -123,21 +233,94 @@ public final class PlanetMeshCorrection {
   }
 
   /**
-   * Returns the corrective rotation for the given body's 3D model.
+   * Returns the corrective rotation for the given body's 3D model at a given instant.
+   *
+   * <p><b>Why it takes a date.</b> For a solid surface the correction is a constant, and the date
+   * is ignored. For a cloud deck it cannot be: the map depicts a layer that slips within the frame
+   * Orekit turns the body in, so a constant is only right on one day — Jupiter's belts move a
+   * degree a fortnight and come full circle in under four years.
    *
    * @param body the solar system body
+   * @param date the instant being rendered
    * @return the rotation to apply to the raw mesh, identity when the asset needs no correction
    */
-  public static Quaternion correctionFor(SolarSystemBody body) {
+  public static Quaternion correctionFor(SolarSystemBody body, AbsoluteDate date) {
     PlanetMeshCalibration calibration = CALIBRATIONS.get(body);
     if (calibration == null) {
       return new Quaternion();
     }
+    return correctionFor(calibration, calibration.lambda0DegAt(daysSinceJ2000(calibration, date)));
+  }
+
+  /**
+   * Same rotation, with λ0 supplied rather than read from the table — the seam the L2 instrument
+   * turns to try a longitude out without editing the table and restarting.
+   *
+   * @param calibration the body's committed calibration
+   * @param lambda0Deg the longitude to place the texture's column {@code u = 0} at
+   * @return the rotation to apply to the raw mesh
+   */
+  public static Quaternion correctionFor(PlanetMeshCalibration calibration, double lambda0Deg) {
     // λ0 turns about the reference pole, so it is applied after the alignment, not before: a
-    // longitude offset only means anything once the axis is where it belongs.
+    // longitude offset only means anything once the axis is where it belongs. The turn is measured
+    // from the conventional origin and runs backwards, both for the reason given on
+    // CONVENTIONAL_COLUMN_ZERO_LONGITUDE_DEG.
+    // Brought back into [-180, 180] before it meets a float. A drifting body's λ0 grows without
+    // bound — Saturn's deck is some 320 000 degrees past its epoch by 2026, where a float's step is
+    // already 0.03 deg — so casting the raw difference quantises the body's orientation, coarsening
+    // as the simulation date advances. The turn is modulo a full circle anyway.
+    double turnDeg = Math.IEEEremainder(CONVENTIONAL_COLUMN_ZERO_LONGITUDE_DEG - lambda0Deg, 360.0);
     return new Quaternion()
-        .fromAngleAxis(
-            calibration.lambda0Deg() * FastMath.DEG_TO_RAD, MeshConformance.REFERENCE_POLE)
+        .fromAngleAxis((float) turnDeg * FastMath.DEG_TO_RAD, MeshConformance.REFERENCE_POLE)
         .mult(MeshConformance.alignment(calibration.measured()));
+  }
+
+  /**
+   * Returns the independently turning shell of the given body's model, if it has one.
+   *
+   * @param body the solar system body
+   * @return its shell, or empty for the ten bodies whose model is a single globe
+   */
+  public static Optional<AtmosphereShell> atmosphereShellFor(SolarSystemBody body) {
+    return Optional.ofNullable(ATMOSPHERE_SHELLS.get(body));
+  }
+
+  /**
+   * The angle by which a body's shell has to be turned inside the model, on top of the rotation the
+   * renderer applies to the model as a whole.
+   *
+   * <p>It is the difference between the two layers' longitudes, and it is a difference precisely
+   * because the model already carries the globe's own correction: turning the shell by the surplus
+   * is the same as having given it a correction of its own, and it needs no knowledge of the frame
+   * conversions to be right.
+   *
+   * @param body the solar system body
+   * @param date the instant being rendered
+   * @return the angle in radians about the body's measured pole, zero when there is no shell
+   */
+  public static float atmosphereShellSpinRad(SolarSystemBody body, AbsoluteDate date) {
+    AtmosphereShell shell = ATMOSPHERE_SHELLS.get(body);
+    PlanetMeshCalibration calibration = CALIBRATIONS.get(body);
+    if (shell == null || calibration == null) {
+      return 0f;
+    }
+    double days = date.durationFrom(AbsoluteDate.J2000_EPOCH) / 86400.0;
+    double surplusDeg =
+        calibration.lambda0DegAt(days) - (shell.lambda0Deg() + shell.driftDegPerDay() * days);
+    return (float) Math.IEEEremainder(surplusDeg, 360.0) * FastMath.DEG_TO_RAD;
+  }
+
+  /**
+   * Elapsed days since J2000, or zero for a body that does not drift.
+   *
+   * <p>The short-circuit is not an optimisation. It keeps every body whose map shows a solid
+   * surface — which is all but three — clear of a subtraction of two dates thousands of turns
+   * apart, and clear of needing a date at all.
+   */
+  private static double daysSinceJ2000(PlanetMeshCalibration calibration, AbsoluteDate date) {
+    if (!calibration.hasVisibleLayerDrift()) {
+      return 0.0;
+    }
+    return date.durationFrom(AbsoluteDate.J2000_EPOCH) / 86400.0;
   }
 }

@@ -5,6 +5,7 @@ import com.jme3.app.state.BaseAppState;
 import com.jme3.math.ColorRGBA;
 import com.jme3.math.Vector3f;
 import com.jme3.scene.Node;
+import com.jme3.scene.Spatial;
 import com.smousseur.orbitlab.app.ApplicationContext;
 import com.smousseur.orbitlab.app.SimulationClock;
 import com.smousseur.orbitlab.app.view.FocusView;
@@ -16,6 +17,7 @@ import com.smousseur.orbitlab.engine.TextureDiagnostics;
 import com.smousseur.orbitlab.engine.scene.MeshDivergence;
 import com.smousseur.orbitlab.engine.scene.MeshGuard;
 import com.smousseur.orbitlab.engine.scene.PlanetColors;
+import com.smousseur.orbitlab.engine.scene.PlanetMeshCorrection;
 import com.smousseur.orbitlab.engine.scene.PlanetRadius;
 import com.smousseur.orbitlab.engine.scene.body.BodyRenderConfig;
 import com.smousseur.orbitlab.engine.scene.body.CoronaView;
@@ -163,6 +165,7 @@ public final class PlanetPoseAppState extends BaseAppState {
                 // still carries what PlanetMeshCorrection was calibrated against, which is a
                 // question about the asset, not about how it ends up shaded.
                 MeshGuard.verify(body, spatial).ifPresent(PlanetPoseAppState::warnDivergence);
+                isolateAtmosphereShell(body, model3dView, spatial);
                 return spatial;
               })
           .thenApply(
@@ -179,6 +182,24 @@ public final class PlanetPoseAppState extends BaseAppState {
               })
           .thenAccept(model3dView::onModelLoaded);
     }
+  }
+
+  /**
+   * Gives a body's cloud deck a pivot of its own, while the model is still unattached and private
+   * to this thread — Venus is the only body with one (L4 of {@code
+   * docs/orientation-planetes/01-decoupage.md}). The axis is the pole the probe measured, in the
+   * model's own axes, which is exactly what the committed calibration carries.
+   */
+  private static void isolateAtmosphereShell(
+      SolarSystemBody body, Model3dView model3dView, Spatial spatial) {
+    PlanetMeshCorrection.atmosphereShellFor(body)
+        .ifPresent(
+            shell ->
+                PlanetMeshCorrection.calibrationFor(body)
+                    .ifPresent(
+                        calibration ->
+                            model3dView.isolateShell(
+                                spatial, shell.nodeNamePrefix(), calibration.measured().pole())));
   }
 
   /**
