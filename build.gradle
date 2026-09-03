@@ -7,7 +7,7 @@ plugins {
 }
 
 group = 'com.smousseur'
-version = (findProperty('appVersion') ?: '1.1.1')
+version = (findProperty('appVersion') ?: '1.2.0-SNAPSHOT')
 ext.jmonkeyengineVersion = '3.9.0-beta1'
 
 java {

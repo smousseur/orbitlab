@@ -6,7 +6,7 @@ autonome : elle contient son plan, ses fiches d'items et ses questions ouvertes.
 
 | Document | Version | En une ligne | État |
 |---|---|---|---|
-| [`01-roadmap-v1.md`](01-roadmap-v1.md) | **v1.X.X** | Le système solaire, les missions Terre / GEO / lunaires | Livrée ; reste la ligne **1.1.X** (stabilisation) |
+| [`01-roadmap-v1.md`](01-roadmap-v1.md) | **v1.X.X** | Le système solaire, les missions Terre / GEO / lunaires | Livrée ; **1.1.X** close à 1.1.1, **1.2.0** ouverte (vue rapprochée et anneaux) |
 | [`02-roadmap-v2.md`](02-roadmap-v2.md) | **v2.X.X** | Réalisme : l'atmosphère, les objets qui se séparent, le retour sur Terre | À faire |
 | [`03-roadmap-v3.md`](03-roadmap-v3.md) | **v3.X.X** | Le retour de la Lune, et la maturité de l'interface | À faire |
 | [`04-roadmap-v4.md`](04-roadmap-v4.md) | **v4.X.X** | Rendez-vous orbital et amarrage | À faire |
@@ -65,9 +65,12 @@ sont dans [v1](01-roadmap-v1.md) §3 et §6.
 
 | Version | ID | Item | ★ | ◆ | Taille |
 |---|---|---|:-:|:-:|:-:|
-| **1.1.X** | — | ~~`J0`~~ — **clos le 2026-09-02** : PMD bloquant, nettoyages, registres vérifiés | — | — | — |
-| **1.1.X** | `BUG-3` | Validation à l'écran de l'orientation des planètes | — | — | S |
-| **1.1.X** | `BUG-19` | Rotation propre des planètes externes aliasée | — | — | M |
+| **1.1.X** | — | ~~toute la ligne~~ — **close le 2026-09-03** à 1.1.1 : `J0`, `BUG-19`, et `BUG-3` requalifié « accepté, avec raison » | — | — | — |
+| **1.2.0** | `BUG-22` | Icônes des corps derrière la caméra, dessinées en miroir | — | — | S |
+| **1.2.0** | `BUG-2` | Sauts de la skybox au zoom, en vue solaire | — | — | S |
+| **1.2.0** | `BUG-1` + `BUG-5` | Jitter de la transition et pop du modèle — un seul changement | — | — | M |
+| **1.2.0** | `BUG-20` | Anneaux à remettre dans le plan équatorial *(hors code)* | — | — | S |
+| **1.2.0** | `FX-5` | Ombre de la planète sur ses anneaux | 3 | 2 | S |
 | **v2** | `AST-1` | Lot d'assets 3D *(hors code)* | — | — | — |
 | **v2** | `PHY-2` | Atmosphère par défaut + recalibrage optimiseur | 5 | 4 | L |
 | **v2** | `PHY-3` | Détecteurs MaxQ, télémétrie, UI de fidélité | 3 | 2 | M |
@@ -114,8 +117,7 @@ v2
   RND-5 ──── RND-6 ──── MIS-10
   AST-1 ──┬── PHY-5
           ├── PHY-6
-          ├── DT-12  (maillage Ariane 6)
-          └── BUG-20 (anneaux à ré-exporter)
+          └── DT-12  (maillage Ariane 6)
 
 v3
   UI-6 ──── UI-7 ──── UI-8
@@ -143,9 +145,10 @@ mesure en délai, pas en jours de travail.
 Gardé hors versions, à remonter si le besoin se manifeste :
 
 - **Rendu** — god-rays, normal maps, lumières de villes côté nuit, halo
-  atmosphérique Fresnel, anneaux de Saturne (le rendu ; le maillage est
-  `BUG-20` / `AST-1`), ombres portées, enveloppe d'incertitude autour du
-  nominal. *La trace au sol a quitté cette liste : elle est devenue `RND-6`.*
+  atmosphérique Fresnel, ombres portées, enveloppe d'incertitude autour du
+  nominal. *La trace au sol a quitté cette liste : elle est devenue `RND-6` ;
+  l'ombre du corps sur ses anneaux, `FX-5`, le 2026-09-03 — les maillages
+  d'anneaux existant déjà, il ne restait de cette entrée que l'ombre.*
 - **Profondeur** — les options écartées deux fois par `PHY-4` (troisième
   viewport « mid », depth buffer logarithmique, reverse-Z). *Ce n'est plus
   vraiment du backlog : c'est `RND-8`, avec sa condition de réouverture.*

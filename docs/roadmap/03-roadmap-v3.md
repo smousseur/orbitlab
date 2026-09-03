@@ -101,15 +101,23 @@ sans être tranchées. `UI-8` leur en donne un qui ne peut plus glisser : il **e
 le fichier de préférences dont `REL-29` débat, et `REL-28` se décide dans la même
 séance puisque c'est le même genre de choix.
 
-**`H-RND` est la respiration de la version.** Dix fiches, un seul sous-système,
-aucune dépendance croisée, et la seule passe du corpus dont le résultat se voit
-à l'écran : `BUG-1` (jitter Pluton), `BUG-2` (sauts de skybox), `BUG-5` (pop du
-modèle au changement de focus), `REL-1` (raccord terminal du ruban), `REL-2`
-(`MUTING_STEP`), `REL-3` (fondu alpha et largeurs), `REL-4` (tone mapping),
-`REL-5` (pénombre du vaisseau), `REL-6` (éclipse totale contre annulaire).
-`BUG-3` en sort : ses cinq lots sont implémentés, sa validation à l'écran est
-en [v1](01-roadmap-v1.md#4-la-ligne-11x--corrections-et-stabilisation). Bon
-candidat juste après `MIS-11`, où rien n'est visible pendant des semaines.
+**`H-RND` a été vidée de sa moitié diagnostiquée le 2026-09-03.** `BUG-1`
+(jitter Pluton), `BUG-2` (sauts de skybox), `BUG-5` (pop du modèle) et `FX-5`
+(l'ombre de la planète sur ses anneaux) sont partis dans la **ligne 1.2.0** de
+[v1](01-roadmap-v1.md) §4.2 : une séance de mesure leur a donné à chacun une
+cause chiffrée, et elle a montré que les trois bugs se referment en deux
+changements, pas trois. Ce qui avait un coût prévisible est parti avec eux.
+
+**Restent six fiches, toutes des `REL`, et toutes des réglages à l'œil** :
+`REL-1` (raccord terminal du ruban), `REL-2` (`MUTING_STEP`), `REL-3` (fondu
+alpha et largeurs), `REL-4` (tone mapping), `REL-5` (pénombre du vaisseau),
+`REL-6` (éclipse totale contre annulaire — qui demande d'abord d'observer une
+éclipse annulaire, pas d'écrire du code). Un seul sous-système, aucune
+dépendance croisée, et une durée qui ne se planifie pas : c'est ce qui les a
+laissés ici plutôt qu'en 1.2.0. Bon candidat juste après `MIS-11`, où rien n'est
+visible pendant des semaines.
+
+`BUG-3` en sort aussi, clos par verdict en [v1](01-roadmap-v1.md) §4.1.
 
 ---
 

@@ -89,6 +89,10 @@ public class BillboardIconView {
       return;
     }
     Vector3f world = anchor3d.getWorldTranslation();
+    if (isBehindCamera(cam, world)) {
+      container.setCullHint(Spatial.CullHint.Always);
+      return;
+    }
     Vector3f screen = cam.getScreenCoordinates(world);
     if (screen.z < 0f || screen.z > 1f) {
       container.setCullHint(Spatial.CullHint.Always);
@@ -100,6 +104,31 @@ public class BillboardIconView {
     float y = screen.y + (ICON_SIZE + size.y) * 0.5f;
 
     container.setLocalTranslation(x, y, 0f);
+  }
+
+  /**
+   * Whether a world position sits behind the camera, and must therefore not be projected at all.
+   *
+   * <p><b>The projected depth cannot answer this, and that is {@code BUG-22}.</b> {@code
+   * getScreenCoordinates} divides by a negative {@code w} for a point behind the camera, which
+   * mirrors it onto the screen instead of rejecting it; the depth it returns is {@code 1 +
+   * 2·near/distance}, so the {@code z > 1} test below only sees it while that excess stays above
+   * {@code ulp(1f) = 1.19e-7}. In planet view the near plane drops to its {@code 1e-4} floor as
+   * soon as the camera is closer than about 10 300 km to the pivot ({@code updateFrustum}'s
+   * keep-pivot- visible clamp), and the excess then rounds back to exactly 1 for anything beyond
+   * 22.4 AU: the whole solar system, seen from Pluto, drawn as icons behind the planet the camera
+   * is looking at.
+   *
+   * <p>The sign of the distance along the view axis has no such resolution limit — it is the same
+   * answer at every frustum, which is why the test is made here rather than by tightening the
+   * comparison on {@code screen.z}.
+   *
+   * @param cam the camera the icon is projected with
+   * @param world the body's world position
+   * @return {@code true} when the position is on the camera plane or behind it
+   */
+  static boolean isBehindCamera(Camera cam, Vector3f world) {
+    return cam.getDirection().dot(world.subtract(cam.getLocation())) <= 0f;
   }
 
   private void addEventListener(Container container, Runnable onClick) {

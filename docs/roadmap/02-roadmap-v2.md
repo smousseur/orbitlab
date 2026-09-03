@@ -131,7 +131,6 @@ travail.
 | Ce qui manque | Bloque | État |
 |---|---|---|
 | Un Ariane 6 | `DT-12` | Le catalogue vole une Ariane 62, l'écran montre une **Ariane 5**. Seule la silhouette est fausse — masses, propulsion et profil d'ascension restent ceux du catalogue |
-| Anneaux de Saturne et d'Uranus ré-exportés | `BUG-20` | Mesuré : **13,51°** (Saturne) et **9,93°** (Uranus) hors du plan équatorial de leur propre globe. Hors de portée du code : l'erreur est dans le maillage |
 | Un maillage par étage | `PHY-5` | Il n'y a qu'**un maillage par lanceur** (`heavy_falcon.gltf`, `ariane/scene.gltf`), la pile entière d'un seul tenant |
 | Un maillage par famille de charge utile | `PHY-6` | `PayloadModel` (7 composants) n'en porte **aucun**, et les cinq entrées du catalogue `Payloads` n'ont aucune représentation |
 

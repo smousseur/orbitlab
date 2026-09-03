@@ -10,11 +10,11 @@ la frontière entre les deux derniers doit rester lisible.
 
 | ID | Titre | Constaté | Statut |
 |---|---|---|---|
-| [`BUG-1`](#bug-1--jitter-du-billboard-et-de-lorbite-de-pluton) | Jitter du billboard et de l'orbite de Pluton | 2026-08-10 | Ouvert, non diagnostiqué |
-| [`BUG-2`](#bug-2--sauts-de-la-skybox-au-zoom) | Sauts de la skybox au zoom | 2026-08-15 | Ouvert, piste identifiée |
-| [`BUG-3`](#bug-3--orientation-des-modèles-3d-des-planètes) | Orientation des modèles 3D des planètes | 2026-08-15 | Ouvert — diagnostic fait le 2026-09-01, **les 5 lots de [`docs/orientation-planetes/01-decoupage.md`](orientation-planetes/01-decoupage.md) sont implémentés le 2026-09-02** ; reste la validation à l'écran corps par corps, qui arrête les `λ0` (L3). Promotion en item de roadmap non tranchée |
+| [`BUG-1`](#bug-1--jitter-du-billboard-et-de-lorbite-de-pluton) | Jitter du billboard et de l'orbite de Pluton | 2026-08-10 | Ouvert, **mesuré le 2026-09-03** — mécanisme confirmé, quantum de 244 km (48 px au cadrage d'arrivée), et un second terme trouvé dans la position caméra |
+| [`BUG-2`](#bug-2--sauts-de-la-skybox-au-zoom) | Sauts de la skybox au zoom | 2026-08-15 | Ouvert, **mesuré le 2026-09-03** — invariant cassé démontré sur la bibliothèque ; +5,52° et 41,8 px par cran en vue solaire, sans effet en vue planète |
+| [`BUG-3`](#bug-3--orientation-des-modèles-3d-des-planètes) | Orientation des modèles 3D des planètes | 2026-08-15 | **Accepté par verdict le 2026-09-03** — les 5 lots de [`docs/orientation-planetes/01-decoupage.md`](orientation-planetes/01-decoupage.md) sont implémentés ; la passe `λ0` attend qu'un asset soit figé, ce que rien ne planifie. Ferme la ligne 1.1.X, se rouvrira asset par asset |
 | [`BUG-4`](#bug-4--hover-des-widgets-non-uniforme) | Hover des widgets non uniforme | 2026-08-15 | **Promu** en `UI-7` le 2026-08-16 |
-| [`BUG-5`](#bug-5--pop-du-modèle-3d-au-changement-de-focus) | Pop du modèle 3D au changement de focus | 2026-08-15 | Ouvert, mécanisme identifié |
+| [`BUG-5`](#bug-5--pop-du-modèle-3d-au-changement-de-focus) | Pop du modèle 3D au changement de focus | 2026-08-15 | Ouvert, **mesuré le 2026-09-03** — saut de ×25 à ×29 en une frame, seuil LOD atteint 18 à 21 fois plus loin ; l'hystérésis est hors de cause |
 | [`BUG-6`](#bug-6--plane-trim-employé-hors-de-son-enveloppe-par-lascension-polaire) | Plane trim employé hors de son enveloppe par l'ascension polaire | 2026-08-16 | **Corrigé le 2026-08-31** — coût réel mesuré (141 kg, pas 10 349), fixture remise dans l'enveloppe |
 | [`BUG-7`](#bug-7--les-gates-de-non-régression-tombent-quand-un-test-lunaire-les-précède-dans-le-même-jvm) | Les gates de non-régression tombent quand un test lunaire les précède dans le même JVM | 2026-08-18 | Ouvert, reproductible, piste identifiée — **fiabilité de l'instrument, pas de la physique** |
 | [`BUG-8`](#bug-8--inclinaison-figée-invalidée-en-silence-par-un-changement-de-site) | Inclinaison figée invalidée en silence par un changement de site | 2026-08-20 | Ouvert, mécanisme identifié — **ergonomie, le modèle est sain** |
@@ -29,12 +29,59 @@ la frontière entre les deux derniers doit rester lisible.
 | [`BUG-17`](#bug-17--acceptablecost-mal-calé-depuis-lajout-du-terme-ergols-i7) | `acceptableCost` mal calé depuis l'ajout du terme ergols I7 | 2026-08-30 | Ouvert, correctif proposé non fait |
 | [`BUG-18`](#bug-18--rejets-de-scénario-au-chargement-seulement-journalisés) | Rejets de scénario au chargement, seulement journalisés | 2026-08-30 | Ouvert — **trou connu de `UI-3`** |
 | [`BUG-19`](#bug-19--la-rotation-propre-des-planètes-externes-est-aliasée-par-le-pas-de-la-fenêtre-glissante) | La rotation propre des planètes externes est aliasée par le pas de la fenêtre glissante | 2026-09-02 | **Corrigé le 2026-09-02** — les 11 corps rendus à 100,0 % du taux vrai à toutes les vitesses ; la Terre était aussi atteinte, au-delà de ×864 000 |
-| [`BUG-20`](#bug-20--plan-des-anneaux-désaligné-dans-les-assets) | Plan des anneaux désaligné dans les assets | 2026-09-02 | Ouvert, **mesuré** — Saturne 13,51°, Uranus 9,93° hors du plan équatorial de leur propre globe ; hors de portée du code, demande un ré-export |
+| [`BUG-20`](#bug-20--plan-des-anneaux-désaligné-dans-les-assets) | Plan des anneaux désaligné dans les assets | 2026-09-02 | Ouvert, **mesuré et spécifié** — Saturne 13,51°, Uranus 9,93° hors du plan équatorial de leur propre globe ; `meshProbe` imprime l'angle et l'axe, d'où le passage d'`AST-1`/v2 à la ligne **1.2.0**, où `FX-5` en dépend |
 | [`BUG-21`](#bug-21--dtrotseconds-aliasé-dans-generatorconfigv1defaultv1) | `dtRotSeconds` aliasé dans `GeneratorConfigV1.defaultV1` | 2026-09-02 | Ouvert, **mesuré, latent** — chemin mort aujourd'hui, mais armé pour la prochaine régénération du dataset |
+| [`BUG-22`](#bug-22--les-icônes-des-corps-derrière-la-caméra-sont-dessinées-en-position-miroir) | Les icônes des corps derrière la caméra sont dessinées, en position miroir | 2026-09-03 | **Corrigé le 2026-09-03** — le garde testait une profondeur normalisée dont la résolution dépend du plan near ; il teste maintenant le signe. Épinglé par `BillboardIconVisibilityTest` |
 
 ---
 
 ## BUG-1 — Jitter du billboard et de l'orbite de Pluton
+
+> **Mesure du 2026-09-03 — mécanisme confirmé, un chiffre à corriger, un terme à ajouter.**
+> Instrumenté hors application (`src/test/java/com/smousseur/orbitlab/measure/PlutoJitterMeasureTest`),
+> sur les positions réelles d'Orekit et les conversions de production. **Le quantum vaut 244,1 km et
+> non 488** : l'arrondi porte sur chaque composante, et la plus grande de Pluton est aujourd'hui dans
+> `[2048, 4096[` unités — les 488 km n'arriveront que lorsqu'une composante passera 4096, soit 27,4 UA
+> sur un axe. Résidu réel de l'ancre à la date de référence : **87,8 km**, soit **4,11 % du cadrage
+> d'arrivée et 48 px** sur 720 p. L'ordre de grandeur que la fiche demandait de vérifier est donc le
+> bon — quelques centaines de kilomètres, pas plusieurs milliers — mais le tableau ci-dessous
+> surestime d'un facteur 2.
+>
+> **Un terme manquait.** `applyCameraPose` construit la position de la caméra par
+> `pivotWorld.add(offset)` en `float`, et en vue solaire le pivot porte la magnitude héliocentrique du
+> corps : l'offset entier tient dans une douzaine d'ulp. Sur 4096 directions, l'erreur maximale sur
+> cet offset vaut **206 km, soit 3,47 % du cadrage et 40,7 px**. C'est ce terme-là qui tremble
+> **pendant l'approche**, et il se rejoue dès que la caméra bouge, à n'importe quelle vitesse
+> d'horloge.
+>
+> **Et une prédiction qui contredit en partie le constat.** L'arrondi de l'ancre ne se rejoue que
+> lorsque Pluton parcourt un quantum : mesuré, **0 frame sur 300 à ×1**, 9 sur 300 à ×60, et toutes à
+> partir de **×2798**. Après l'arrivée et à ×1, rien ne devrait donc trembler. À départager à
+> l'écran : le tremblement persiste-t-il horloge en pause ?
+>
+> **Ce n'est pas la distance qui fait de Pluton le pire cas, c'est son rayon.** Neptune a un quantum
+> plus grand (488 km) mais un cadrage 20 fois plus large : 4,2 px. La Terre, 0,5 px.
+>
+> **Ce que la direction 1 rapporterait**, en arithmétique et non en mesure : exprimée relativement au
+> corps focus, la magnitude tombe de ~3000 unités à ~6·10⁻³, où l'ulp vaut 4,66·10⁻¹⁰ unité, soit
+> **0,47 m**. Un facteur 500 000.
+
+> **Vérification à l'écran, le 2026-09-03 — le terme opérant est celui de la caméra, pas celui des
+> sommets.** Constaté par l'auteur : *« le fait que l'horloge soit en pause ou non ne change rien ;
+> les tremblements n'ont lieu que dans la transition caméra »*. C'est exactement ce que la mesure C
+> prédisait — l'arrondi de l'ancre ne se rejoue qu'au-delà de ×2798, donc il est muet à toute vitesse
+> d'usage — et cela désigne le terme B, l'addition `pivotWorld.add(offset)`, qui se rejoue dès que la
+> caméra bouge, et seulement là.
+>
+> **Conséquence : aucune des deux directions ci-dessous ne corrige ce qui est observé.** Elles
+> portent toutes deux sur les sommets d'orbite, dont le terme est réel mais silencieux à l'écran. Ce
+> qu'il faut est que la caméra cesse de travailler à magnitude solaire pendant la transition —
+> recentrer le repère flottant sur le pivot interpolé au lieu d'attendre la dernière frame. C'est
+> **le même changement que la direction 2 de `BUG-5`** : les deux fiches se referment ensemble, ou
+> pas du tout. Réserve à lever au moment de la conception : recentrer sur un pivot qui bouge rejoue
+> l'arrondi du repère à chaque frame, donc le terme des sommets peut ressortir pendant le vol même
+> s'il s'annule à l'arrivée. À mesurer avant de choisir.
+
 
 > **`J0-D` 2026-09-02 — confirmé, une référence à corriger.** Le mécanisme tient :
 > `buildHeliocentricLineStrip` fige toujours ses sommets en héliocentrique. Mais
@@ -120,6 +167,28 @@ plusieurs milliers — auquel cas la cause serait ailleurs.
 ---
 
 ## BUG-2 — Sauts de la skybox au zoom
+
+> **Mesure du 2026-09-03 — mécanisme confirmé, amplitude 3 fois l'estimation, et un cas où il ne se
+> produit pas.** Instrumenté sur un vrai `com.jme3.renderer.Camera`
+> (`src/test/java/com/smousseur/orbitlab/measure/SkyboxFovMeasureTest`), puisque tout l'argument
+> repose sur ce que la bibliothèque fait de `frustumTop` : `setFrustumNear(1 → 0,5)` laisse `top` à
+> 0,267949 et transforme une FoV de 30° en **56,37°**. L'invariant cassé est démontré, pas déduit.
+>
+> **En vue solaire** (d = 800 unités), un cran de molette : FoV appliquée 48,62°, FoV que le ciel
+> affiche **54,14°** — **+5,52°**, les étoiles à ×1,131, et une étoile en bord d'écran qui saute de
+> **41,8 px**. Cinq crans dans la même frame : +31,07° et 165,8 px. **Les « environ 1,7° » supposaient
+> une FoV de 15°** ; à la distance solaire par défaut la FoV adaptative vaut 48,6°, et l'écart suit la
+> tangente.
+>
+> **En vue planète, le défaut ne se produit pas.** `near = d × 0,001` passe sous `nearMin` dès que le
+> cadrage est plus proche qu'une unité solaire — ce qu'est tout focus planétaire — donc `near` est
+> **épinglé à 0,001** et la molette ne le déplace pas. L'écart tombe à 0,15° par cran, 1,6 px : c'est
+> la latence d'une frame, pas un saut. **C'est un défaut de vue solaire**, et c'est ce qui permet de
+> le confirmer à l'écran en deux gestes plutôt qu'en lisant un log.
+>
+> **Deuxième question, chiffrée** : entre 15° et 60°, les étoiles changent d'échelle d'un facteur
+> **4,39**.
+
 
 > **`J0-D` 2026-09-02 — mécanisme confirmé au chiffre près, lignes d'attache à
 > corriger.** Vérifiés exacts : `SkyboxAppState:75-78`, `updateFrustum` (`:393`),
@@ -210,6 +279,23 @@ qui passent sous ce seuil, l'amplitude réelle est plus faible que l'estimation.
 ---
 
 ## BUG-3 — Orientation des modèles 3D des planètes
+
+> **Verdict du 2026-09-03 — accepté, avec raison ; et c'est ce qui ferme la ligne 1.1.X.** La passe
+> `λ0` ne se fera pas tant qu'`AST-1` n'a pas de contenu arrêté : elle est sciemment jetable sur sept
+> maillages sur onze, et `git log` les donne inchangés depuis le 2026-08-24 — seuls `jupiter`, `mars`
+> et `venus` ont été ré-exportés le 2026-09-02. Attendre revenait à attendre une décision sans
+> propriétaire. Le critère de fin de la ligne 1.1.X, lui, était déjà atteint : « les onze planètes
+> tournent au bon taux dans le bon sens » est `BUG-19`, et ce qui restait ici est la **longitude**,
+> que ce critère ne demande pas. Voir [`roadmap/01-roadmap-v1.md`](roadmap/01-roadmap-v1.md) §4.1.
+> La fiche se rouvrira **asset par asset**, quand un asset sera figé.
+>
+> **Et trois énoncés sur Uranus tombent.** `./gradlew meshProbe` mesure son globe à un résidu de
+> **0,00**, avec exactement le repère commité dans `PlanetMeshCorrection` : l'asset du dépôt est donc
+> mesurable, calibré et conforme. Or la Javadoc de cette classe affirme deux fois qu'Uranus est
+> « absent on purpose », « out of scope », résidu 49,4° (`:55` et `:171`), et le découpage attribue le
+> changement à « son ré-export du 2026-09-02 » — que git dément, `uranus/` n'ayant pas bougé depuis
+> le 2026-08-24. Les 49,4° portaient sur un asset d'arbre de travail qui n'est jamais entré dans le
+> dépôt. Correction documentaire à coût nul, à faire rouler avec la 1.2.0.
 
 > **`J0-D` 2026-09-02 — à jour, deux chiffres à reprendre.** `git ls-files` compte
 > **54** fichiers sous `src/main/resources/models`, pas 52 (le tip ci-dessous dit
@@ -408,6 +494,32 @@ méritent d'être traitées en premier.
 ---
 
 ## BUG-5 — Pop du modèle 3D au changement de focus
+
+> **Mesure du 2026-09-03 — amplitude chiffrée, et la troisième cause écartée.**
+> (`src/test/java/com/smousseur/orbitlab/measure/FocusPopMeasureTest`.) Au cadrage d'arrivée, la FoV
+> adaptative vaut 34 à 39° selon le corps, et le disque projette **202 à 235 px de rayon** sur 720 p :
+> la planète occupe 56 à 65 % de la hauteur de l'écran. L'icône qu'elle remplace fait 16 px, donc le
+> saut vaut **×25 à ×29 en une frame** — Pluton étant le pire cas, 235 px et ×29.
+>
+> **Le seuil de 10 px tombe à 92-105 rayons selon le corps**, soit **18 à 21 fois plus loin** que les
+> 5 rayons où la transition se pose. C'est la longueur exacte de l'approche pendant laquelle le veto
+> retient un modèle que le LOD promouvrait de lui-même.
+>
+> **Sans transition, il n'y a pas de pop.** La troisième cause envisagée plus bas — « le seuil 6↔10 px
+> est trop haut » — est écartée par le calcul : un cran de molette déplace le rayon projeté de 12,75 %,
+> le modèle apparaît à 10 px après 8,8 px au cran précédent, soit 2,3 px de changement contre les
+> 16 px de l'icône. La bande d'hystérésis fait 4,3 crans de large.
+>
+> **Reste une observation, non instrumentée** : la synchronie exacte du pop avec la fin de la
+> transition, qui est ce qui départage l'hypothèse du téléversement de texture à la première frame
+> dessinée.
+
+> **Vérification à l'écran, le 2026-09-03.** *« Le pop du modèle 3D semble survenir lors de la
+> dernière frame de la transition »* : la synchronie est donc bien celle du basculement de focus, et
+> l'hypothèse du téléversement de texture à la première frame dessinée n'est pas nécessaire pour
+> expliquer ce qu'on voit. Le veto est la cause. La direction 2 — basculer le repère en cours de
+> route — est aussi ce que réclame `BUG-1` depuis la même vérification.
+
 
 > **`J0-D` 2026-09-02 — confirmé, une référence à corriger.** Exacts :
 > `PlanetHudMarkersAppState:71` (`body == focusView.getBody()`),
@@ -1279,6 +1391,15 @@ trouvé en vérifiant la santé du dataset au cours de ce correctif.
 
 ## BUG-20 — Plan des anneaux désaligné dans les assets
 
+> **Mesure du 2026-09-03 — la sonde imprime le correctif, et la fiche change de version.**
+> `./gradlew meshProbe` sur les assets commités ne dit pas seulement que les anneaux sont
+> désalignés, il dit quoi faire : *« turn it 13.51 deg about (+0.000,+1.000,+0.000), then
+> re-export »* pour Saturne, *« 9.93 deg about (-0.702,+0.543,-0.460) »* pour Uranus. Une rotation
+> de nœud par asset, l'angle et l'axe donnés. Ce n'est donc pas un approvisionnement d'assets : la
+> fiche quitte `AST-1`/v2 pour la ligne **1.2.0**, où `FX-5` — l'ombre de la planète sur ses
+> anneaux — en dépend, une ombre juste sur un anneau désaligné restant fausse. `MeshGuard` signale
+> dès la frame suivante si le ré-export a déplacé autre chose que l'anneau.
+
 > **`J0-D` 2026-09-02 — confirmé.** `PlanetMeshCorrection` existe et est référencé
 > par 11 fichiers ; la tâche `meshProbe` est déclarée en `build.gradle:79`. La
 > mesure est reproductible telle que la fiche la décrit.
@@ -1442,3 +1563,102 @@ Trois fins possibles, non tranchées :
 La troisième est la seule qui empêche un corps futur d'y retomber, et c'est aussi
 la seule qui demande de faire remonter la table de périodes de
 `SlidingWindowConfig` dans un endroit que `tools/ephemerisgen` puisse voir.
+
+---
+
+## BUG-22 — Les icônes des corps derrière la caméra sont dessinées, en position miroir
+
+> **Corrigé le 2026-09-03.** `BillboardIconView.updateScreenPosition` rejette désormais le corps
+> **avant** de le projeter, sur le signe de sa distance le long de l'axe de visée
+> (`isBehindCamera`), et garde le test de profondeur pour les cas de face — trop près du plan near,
+> ou au-delà du plan far. Le raisonnement complet est dans la Javadoc de la méthode, là où le
+> prochain lecteur qui voudra « simplifier » en revenant à `screen.z` le trouvera.
+>
+> **Épinglé par [`BillboardIconVisibilityTest`](../src/test/java/com/smousseur/orbitlab/engine/scene/body/lod/BillboardIconVisibilityTest.java)**,
+> trois cas dans la configuration mesurée ici : le rejet est le même sur le plancher `1e-4` et
+> au-dessus du clamp, un corps de face n'est pas rejeté, et — c'est le test qui porte le bug — la
+> profondeur projetée vaut **exactement `1.0`** sur le plancher, ce qui documente pourquoi le garde
+> précédent ne pouvait rien voir.
+>
+> **Un second site de projection existe et n'est pas touché** : `GraticuleView.place` (`:156`)
+> projette les étiquettes de l'instrument de calage. Il porte déjà un test d'hémisphère contre le
+> centre du globe, plus fort que celui-ci pour son usage, et qui ne laisse passer un point
+> derrière la caméra que si celle-ci passait sous le rayon des étiquettes — ce qu'aucun cadrage de
+> focus ne fait. Laissé tel quel, noté ici pour que la famille soit connue.
+
+**Constaté** le 2026-09-03, en vue Pluton. On voit la surface éclairée de Pluton — donc la caméra
+est du côté Soleil et regarde à l'opposé de lui — et **tout le système solaire apparaît malgré tout
+en arrière-plan, en icônes, sans leurs orbites**. Rien de tout cela ne peut être dans le champ. Le
+défaut apparaît au-delà d'un certain zoom ; plus loin, la vue est correcte.
+
+**Les orbites absentes sont l'indice.** Elles sont de la géométrie et le frustum les élimine
+correctement ; les icônes sont des surfaces GUI placées par
+`BillboardIconView.updateScreenPosition`, qui projette l'ancre avec `Camera.getScreenCoordinates` et
+rejette le résultat sur `screen.z < 0 || screen.z > 1` (`:93`). Un point derrière la caméra se
+projette **en miroir** — d'où des corps posés derrière Pluton au lieu d'être derrière l'observateur —
+et n'est écarté que si ce garde le voit.
+
+### Mécanisme, mesuré
+
+Instrumenté sur un vrai `com.jme3.renderer.Camera`
+(`src/test/java/com/smousseur/orbitlab/measure/HudMarkerBehindCameraMeasureTest`), caméra posée du
+côté Soleil de Pluton et regardant le corps, avec le frustum que `updateFrustum` produit vraiment.
+
+La profondeur qu'un point situé derrière la caméra renvoie vaut, au premier ordre,
+`1 + 2·near/distance`. Or `ulp(1f) = 1,1920929·10⁻⁷` : dès que ce terme passe sous l'ulp, la somme
+**retombe exactement sur 1,0**, et le test `> 1` est faux.
+
+| `near` | corps à 5324 unités | `screen.z` rendu | garde |
+|---|---|---|---|
+| 0,001 | Soleil, planètes | `1.0000002` | rejeté — vue correcte |
+| 0,0001 | Soleil, planètes | `1.0` | **passe — icône dessinée** |
+
+**Il faut deux conditions, pas une.** La première est le zoom. En vue planète, `d × nearFactor` est
+depuis longtemps sous `nearMin`, donc `near` vaut 0,001 — jusqu'à ce que la clause « keep pivot
+visible » d'`updateFrustum` prenne la main : `margin = max(near·2 ; 0,01)` vaut 0,01 unité solaire,
+soit **10 000 km**, et `near` s'effondre alors sur son plancher de `1e-4` :
+
+| distance caméra | `near` | clause active |
+|---|---|---|
+| 11 000 km et au-delà | 0,001 | `nearMin` |
+| 10 500 km | 0,0005 | `d − margin` |
+| 10 000 km et en deçà | **0,0001** | plancher de `d − margin` |
+
+La seconde est **une distance entre corps**. À `near = 1e-4`, le terme `2·near/distance` ne dépasse
+le demi-`ulp` que jusqu'à **3 355 unités, soit 22,4 UA** ; au-delà, l'icône passe. Ce n'est donc pas
+« un seuil de zoom » : le zoom arme la faille, la géométrie décide qui y tombe.
+
+**D'où une sévérité très inégale**, mesurée au cadrage d'arrivée de chaque corps :
+
+| corps focalisé | cadrage | `near` | icônes qui passent |
+|---|---|---|---|
+| **Pluton** | 5 942 km | 1e-4 | **10 sur 10 — le système entier** |
+| **Lune** | 8 687 km | 1e-4 | 2 sur 10 — Neptune et Pluton |
+| les huit autres | 12 199 à 349 555 km | 1e-3 | aucune |
+
+Pluton est le seul corps dont le cadrage d'arrivée réunit les deux conditions **et** qui soit assez
+loin de tout le reste pour que le système entier bascule d'un coup — c'est exactement l'image
+constatée. La Lune les réunit aussi mais ne laisse passer que deux points, faciles à ne pas
+remarquer. Ailleurs, il faut zoomer sous ~10 300 km pour armer la première condition, et seuls
+Neptune et Pluton franchissent alors la seconde.
+
+### Correctif
+
+Le garde teste la mauvaise grandeur. Un point derrière la caméra se reconnaît au **signe**, pas à une
+profondeur normalisée dont la résolution dépend du plan near : `cam.getDirection().dot(world −
+cam.getLocation()) < 0`, ou `Camera.distanceToNearPlane`. Une ligne, et elle est juste quel que soit
+le frustum.
+
+### Un second constat, indépendant, à ne pas corriger dans la foulée
+
+`margin = max(near·2 ; 0,01)` est une marge **absolue exprimée en unités solaires** — 10 000 km —
+appliquée à une vue dont le sujet fait 2 376 km de diamètre. C'est elle qui écrase `near` d'un
+facteur 10 en vue planète, et c'est un réglage calibré pour la vue solaire employé hors de son
+domaine. Le corriger changerait la plage de profondeur du viewport far pour tous les corps ; ça
+demande sa propre mesure, et ce n'est pas nécessaire pour fermer cette fiche.
+
+### Non vérifié
+
+La position miroir exacte à l'écran n'a pas été relevée : la mesure établit que le garde laisse
+passer, pas où l'icône atterrit. Sans importance pour le correctif, qui supprime le cas au lieu de
+le placer.

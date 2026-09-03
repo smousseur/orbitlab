@@ -1,8 +1,10 @@
 # Roadmap OrbitLab v1.X.X — le système solaire et les missions
 
 > **Cette version est livrée.** Ses quatre phases sont soldées, la `v1.1.0` est
-> taguée depuis le 2026-08-31. Ce qui reste ouvert sous cet en-tête tient dans
-> une seule ligne : **1.1.X**, la stabilisation, décrite au §4.
+> taguée depuis le 2026-08-31 et la ligne de stabilisation **1.1.X est close à
+> 1.1.1** depuis le 2026-09-03. Ce qui reste ouvert sous cet en-tête est une
+> ligne neuve, **1.2.0** — la vue rapprochée et l'ombre des anneaux. Les deux
+> sont au §4.
 
 Ce document remplace `docs/roadmap/01-roadmap.md`, qui portait sept phases pour
 une version unique. Le découpage par version l'a scindé en quatre : la porte
@@ -10,7 +12,8 @@ d'entrée du dossier est désormais [`00-index.md`](00-index.md), et ce
 document-ci ne couvre plus que **v1**.
 
 **Comment le lire.** Le §3 est le compte rendu des quatre phases livrées et le
-§4 la seule chose qui reste à faire ici ; le §6 est le recueil des fiches, à
+§4 porte les deux lignes de correction, dont la seule encore ouverte ; le §6 est
+le recueil des fiches, à
 ouvrir quand on veut savoir ce qu'un item a réellement livré et ce qu'il a
 laissé derrière lui. Les fiches des items **non livrés** ont suivi leur version :
 voir le §5.
@@ -232,7 +235,9 @@ d'ombre sur la Terre (`FX-2`).
 
 ---
 
-## 4. La ligne 1.1.X — corrections et stabilisation
+## 4. Les lignes de correction : 1.1.X, close, et 1.2.0, ouverte
+
+### 4.1 La ligne 1.1.X — corrections et stabilisation
 
 > **C'est la seule chose qui reste à faire dans ce document.** `v1.1.0` est
 > taguée depuis le 2026-08-31 (`960f168`) et `build.gradle:10` porte
@@ -257,15 +262,157 @@ exécutés le même jour, verts tous les deux.
 **`J0-B`, `J0-C` et `J0-D` sont faits le 2026-09-02.** Le jalon `J0` est clos :
 de la ligne 1.1.X il ne reste que `BUG-3` et `BUG-19`.
 
-**Ce qui ne peut pas être dans 1.1.X.** `BUG-20` (plan des anneaux désaligné —
+**Ce qui ne pouvait pas être dans 1.1.X.** `BUG-20` (plan des anneaux désaligné —
 Saturne 13,51°, Uranus 9,93° hors du plan équatorial de leur propre globe) est
-**hors de portée du code** : il demande un ré-export d'asset. Il rejoint `AST-1`
-en [v2](02-roadmap-v2.md), avec les trois autres items bloqués sur des maillages
-absents.
+**hors de portée du code** : il demande un ré-export d'asset. Il a rejoint `AST-1`
+en [v2](02-roadmap-v2.md) avec les trois autres items bloqués sur des maillages
+absents — puis l'a quitté le 2026-09-03 pour le §4.2, la sonde `meshProbe`
+imprimant l'angle et l'axe de la rotation à faire. Une fiche dont le correctif est
+mesuré n'attend pas un approvisionnement.
 
 **Fin de version quand** : PMD casse le build au lieu de le décorer, les trois
 registres sont datés d'une vérification contre le code, et les onze planètes
 tournent au bon taux dans le bon sens.
+
+**Close le 2026-09-03, et son critère était atteint.** « Les onze planètes
+tournent au bon taux dans le bon sens » est exactement ce que `BUG-19` a livré en
+1.1.1 ; ce qui restait de `BUG-3` est la **longitude**, que ce critère ne demande
+pas.
+
+`BUG-3` est donc requalifié **« accepté, avec raison »**, comme les registres le
+permettent. La raison : la passe `λ0` est sciemment jetable sur sept maillages
+sur onze — `git log` les donne inchangés depuis le 2026-08-24, seuls `jupiter`,
+`mars` et `venus` ayant été ré-exportés le 2026-09-02 — et leur remplacement
+n'est planifié nulle part, `AST-1` n'ayant pas de contenu arrêté. Attendre aurait
+été attendre une décision sans propriétaire. La passe se rouvrira **asset par
+asset**, quand un asset sera figé ; la Terre, la Lune et Jupiter sont déjà faits.
+
+**La v1 est donc close à 1.1.1.** Ce qui suit est une ligne nouvelle, pas la fin
+de celle-ci.
+
+---
+
+### 4.2 La ligne 1.2.0 — la vue rapprochée, et l'ombre des anneaux
+
+> **Ouverte le 2026-09-03**, sur une séance de mesure des fiches `BUG-1`, `BUG-2`
+> et `BUG-5`, suivie d'une vérification à l'écran qui a produit un défaut neuf,
+> `BUG-22`, et démenti le diagnostic de `BUG-1`.
+
+**Une phrase.** La 1.2.0 répare ce que la vue rapprochée d'un corps montre de
+faux, et donne aux anneaux l'ombre de leur planète.
+
+**Pourquoi une mineure et non une 1.1.2.** Le contenu ci-dessous tombe
+littéralement sous la définition de la ligne 1.1.X — « ne livre aucune
+fonctionnalité, corrige ce qui se voit à l'écran sur du contenu déjà livré » — à
+une fiche près : `FX-5` ajoute un effet qui n'existe pas. C'est elle qui décide
+du numéro.
+
+#### Contenu — six fiches, trois mécanismes
+
+| | fiches | ce que c'est |
+|---|---|---|
+| **Le basculement de focus à la dernière frame** | `BUG-1`, `BUG-5` | Un seul changement : recentrer le repère flottant sur le pivot interpolé au lieu d'attendre `CameraTransitionAppState.finish`. Le tremblement de l'approche et le pop du modèle en découlent tous les deux |
+| **Les clamps d'`updateFrustum`** | `BUG-2`, `BUG-22` | Deux correctifs indépendants dans le même fichier : l'invariant « la caméra far n'est jamais observable avec un `near` sans son `top` », et un garde de face-arrière qui teste le signe au lieu d'une profondeur normalisée |
+| **Les anneaux** | `BUG-20`, `FX-5` | Deux rotations de nœud dont `./gradlew meshProbe` donne l'angle et l'axe, puis un occulteur par géométrie qui réutilise `eclipseIllumination` tel quel |
+
+Trois paires, et dans chacune la seconde fiche est presque gratuite une fois la
+première comprise. C'est l'argument de la version : **six fiches, mais deux
+chantiers de code et une séance d'assets.**
+
+Les mécanismes, les amplitudes et les seuils sont dans [`bugs.md`](../bugs.md) ;
+cette section ne les répète pas. Ce qu'elle ajoute est ce qu'aucune fiche ne
+pouvait dire seule : `BUG-1` et `BUG-5` demandent le **même** changement, `BUG-2`
+et `BUG-22` vivent dans le **même fichier**, et `FX-5` a besoin de `BUG-20`.
+
+#### Ordre
+
+`BUG-20` **précède** `FX-5` : une ombre juste sur un anneau à 13,51° de son plan
+reste fausse, et une bande d'ombre rend justement ce désalignement plus lisible.
+La version ne se clôt donc pas sans une opération dans Blender — l'angle et l'axe
+sont donnés par la sonde, et `MeshGuard` signale dès la frame suivante si le
+ré-export a déplacé autre chose.
+
+Les deux chantiers de code sont indépendants l'un de l'autre et des anneaux.
+
+#### Ce qui n'y est pas, et pourquoi
+
+- **Les six `REL` de rendu** (`REL-1` à `REL-6`) restent dans la passe `H-RND` de
+  [v3](03-roadmap-v3.md). Ce sont des réglages à l'œil, et `REL-6` demande
+  d'abord d'observer une éclipse annulaire : leur durée n'est pas prévisible, et
+  une version dont la fin dépend d'une séance de goût n'a pas de fin.
+- **La marge de 10 000 km** d'`updateFrustum` (`max(near·2 ; 0,01)`, absolue et
+  exprimée en unités solaires alors qu'elle s'applique à une vue dont le sujet
+  fait 2 376 km) : c'est elle qui arme `BUG-22`, mais la corriger déplace la
+  plage de profondeur du viewport far pour tous les corps. Le correctif retenu
+  supprime le cas sans y toucher ; la marge reste un constat écrit dans la fiche,
+  pas un item.
+- **« Le ciel doit-il suivre la FoV du tout ? »** — la deuxième question de
+  `BUG-2`, chiffrée (les étoiles changent d'échelle d'un facteur **4,39** sur la
+  plage de zoom) mais pas tranchée. `BUG-2` corrige le saut, pas le choix de
+  conception.
+- **`BUG-3`**, clos par verdict au §4.1.
+
+#### `FX-5` — L'ombre de la planète sur ses anneaux — ★3 ◆2 S
+
+**Pourquoi.** Saturne éclairée uniformément sur tout son anneau ne lit pas comme
+une planète à anneaux : c'est la bande d'ombre qui donne au disque son épaisseur
+et sa position dans l'espace. L'item vient du backlog non planifié de
+[`00-index.md`](00-index.md), où il traînait sans identifiant.
+
+**Ce que le dépôt porte déjà, mesuré le 2026-09-03.** Trois des quatre morceaux
+sont là :
+
+- **les maillages.** `saturn.gltf` porte un nœud `Circle_ring_0` (matériau
+  `ring`, texture `ring_diffuse.jpg`) et `uranus.gltf` un `Circle_Material.003_0`.
+  Jupiter et Neptune n'ont aucune géométrie d'anneau. La moitié « disque + texture
+  alpha » de l'ancien [`effects-roadmap.md`](../graphics-effects/effects-roadmap.md)
+  §5.3 est donc périmée ;
+- **la formule.** `eclipseIllumination` dans
+  [`WrapLighting.frag`](../../src/main/resources/MatDefs/Light/WrapLighting.frag)
+  calcule la fraction du disque solaire occultée par une **sphère** vue depuis un
+  fragment, pénombre comprise. L'ombre d'une planète sur ses propres anneaux est
+  exactement cette primitive, avec la planète pour occulteur ;
+- **le matériau séparé.** `AssetFactory.applyLambert` instancie un `Material` par
+  géométrie, donc l'anneau peut porter ses propres uniformes sans toucher à ceux
+  du globe.
+
+**Ce qui manque** est donc un seul mécanisme : `Model3dView.setOccluder` écrit
+aujourd'hui sur *toutes* les géométries du bucket et écraserait celui de l'anneau.
+Il faut un occulteur par géométrie, avec la sélection par préfixe de nœud qui
+existe déjà (`ShellSpin.isolate`, utilisée pour la couche nuageuse de Vénus).
+
+**Ce que ça ne fait pas.** L'ombre **des anneaux sur la planète** est un occulteur
+annulaire, que ce shader ne sait pas représenter — §5.3 de l'ancien document
+confond les deux. Elle reste hors item.
+
+**Réserve, et elle est levée par l'ordre.** [`BUG-20`](../bugs.md) bloque la
+justesse, pas l'implémentation : les plans d'anneaux sont à 13,51° (Saturne) et
+9,93° (Uranus) de l'équateur de leur propre globe, et une bande d'ombre rend ce
+désalignement **plus** lisible, pas moins. C'est pourquoi `BUG-20` est dans la
+même version et **précède** cette fiche : l'ombre n'est jugée qu'une fois, sur une
+géométrie juste.
+
+**Un chiffre à vérifier avant de coder.** La Javadoc de `PlanetRadius` annonce un
+rayon équatorial, mais quatre géantes portent le rayon **moyen** : Saturne
+58 232 km contre 60 268 équatorial, soit **3,4 % de moins**. Seule la Terre est sur
+une valeur équatoriale (WGS84). Or c'est le rayon équatorial qui fixe la largeur de
+l'ombre dans le plan des anneaux.
+
+#### Fin de version quand
+
+Quatre énoncés à l'écran :
+
+1. aucune icône n'est dessinée pour un corps situé derrière la caméra, à
+   n'importe quel zoom et sur n'importe quel focus ;
+2. rien ne tremble pendant une transition de focus, Pluton compris ;
+3. le modèle 3D grossit continûment au lieu d'apparaître ;
+4. les anneaux de Saturne et d'Uranus sont dans le plan équatorial de leur globe,
+   et l'ombre de la planète y tombe.
+
+Et deux chiffres, relus avec le harnais qui a servi à ouvrir la version : le
+résidu de quantification **sous 1 px** au cadrage d'arrivée de Pluton — il vaut
+40,7 px aujourd'hui — et le garde de face-arrière qui rejette **10 corps sur 10**
+en focus Pluton, alors qu'il en laisse passer 10 sur 10 aujourd'hui.
 
 ---
 

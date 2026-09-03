@@ -54,17 +54,25 @@ questions sans jalon se re-posent indéfiniment.
 | `BUG-6`, `BUG-9`, `BUG-15` | **Corrigées le 2026-08-31** (lot `J0-A`) |
 | `REL-14`, `REL-23` | **Traitées le 2026-08-31** — les deux vols de clôture jamais lancés ont été exécutés, verts tous les deux |
 | `BUG-19` | **Ouverte le 2026-09-02** — rotation propre des planètes externes aliasée par le pas de la fenêtre glissante ; Neptune à 4,1 % du taux vrai, Saturne et Uranus à l'envers. Cause racine établie |
-| `BUG-20` | **Ouverte le 2026-09-02** — plan des anneaux désaligné : Saturne 13,51°, Uranus 9,93° hors du plan équatorial de leur propre globe. **Hors de portée du code** |
+| `BUG-20` | **Ouverte le 2026-09-02** — plan des anneaux désaligné : Saturne 13,51°, Uranus 9,93° hors du plan équatorial de leur propre globe. Hors de portée du code, mais **`./gradlew meshProbe` en imprime l'angle et l'axe** : partie en 1.2.0 le 2026-09-03, où `FX-5` en dépend |
 
 Le corpus compte donc **69 fiches, dont 58 ouvertes** — le comptage est celui de `J0-D`, le 2026-09-02 ; ce document annonçait 68 et [v1](01-roadmap-v1.md) §4 en annonçait 66.
 
 **`BUG-20` révèle un motif, et il a maintenant un identifiant.** Quatre fiches
-sont bloquées non par du code mais par des maillages absents : `BUG-20`
+étaient bloquées non par du code mais par des maillages absents : `BUG-20`
 (anneaux à ré-exporter), `DT-12` (Ariane 6), et les besoins d'assets de `PHY-5`
 et `PHY-6`. La révision précédente les traitait séparément, dont une comme
-« bloquée, rien à planifier ». Elles sont désormais regroupées sous `AST-1` en
+« bloquée, rien à planifier ». Elles ont été regroupées sous `AST-1` en
 [v2](02-roadmap-v2.md), au motif qu'un approvisionnement se planifie — en délai,
 pas en jours de travail.
+
+**`BUG-20` en est ressorti le 2026-09-03**, et c'est le motif lui-même qui
+s'affaiblit : la sonde `meshProbe` **imprime la correction** (« turn it 13.51 deg
+about (0,1,0), then re-export »). Une fiche dont l'angle et l'axe sont mesurés
+n'attend pas un approvisionnement, elle attend une rotation de nœud ; elle est
+partie en ligne **1.2.0**, où `FX-5` en dépend. Les trois autres restent dans
+`AST-1` : elles attendent des maillages qui n'existent pas, ce qui n'est pas la
+même chose qu'un maillage à tourner.
 
 ### La leçon de la révision précédente, toujours valable
 
@@ -86,7 +94,7 @@ Cette révision-ci en ajoute un exemple : la fiche `PHY-5` affirmait que
 |---|---|:-:|---|
 | [**`J-1.1`**](#3-j-11--rendre-le-dépôt-mesurable) | **Fait le 2026-09-02** | 4 lots | Instrument au vert, outillage bloquant, registres vérifiés |
 | [**`J-v2`**](#4-j-v2--avant-et-pendant-la-v2) | Avant `PHY-2` | 6 | Arbitrages atmosphériques, garde de rentrée, assets, ruban |
-| [**`J-v3`**](#5-j-v3--pendant-la-v3) | Avec `MIS-11` et l'UI | 18 | Lunaire, confort et couverture UI, passe de rendu |
+| [**`J-v3`**](#5-j-v3--pendant-la-v3) | Avec `MIS-11` et l'UI | 15 | Lunaire, confort et couverture UI, passe de rendu |
 | [**`J-v4`**](#6-j-v4--avant-et-pendant-mis-6) | Avant `MIS-6` | 21 | Trois rangs : 5 bloquants, 6 préalables, 10 d'accompagnement |
 | [hors jalon](#7-ce-qui-reste-hors-jalon) | — | 1 | `DT-10`, à ne pas toucher |
 
@@ -103,7 +111,8 @@ subir d'un bloc.
 > **Aucun item de ce jalon ne touche la chaîne de trajectoire.** C'est ce qui le
 > rend intégrable n'importe quand, y compris au milieu d'autre chose.
 
-C'est le contenu de la ligne **1.1.X** de [v1](01-roadmap-v1.md) §4.
+C'était le contenu de la ligne **1.1.X** de [v1](01-roadmap-v1.md) §4.1, close à
+1.1.1 le 2026-09-03.
 
 ### `J0-A` — Instrument au vert · **fait le 2026-08-31**
 
@@ -256,8 +265,9 @@ affiche **une par objet largué**, ce qui arrive plus tôt et va plus loin.
 
 ## 5. `J-v3` — Pendant la v3
 
-Dix-huit items, en trois familles qui correspondent aux trois axes de la
-version.
+Quinze items, en trois familles qui correspondent aux trois axes de la version.
+Elles étaient dix-huit avant que la ligne 1.2.0 emporte `BUG-1`, `BUG-2` et
+`BUG-5` le 2026-09-03.
 
 ### Lunaire — avec `MIS-11` · 6 items
 
@@ -286,16 +296,22 @@ devait être tranchée « au moment d'`UI-3` », clos depuis le 2026-08-21. `UI-
 leur en donne un qui ne peut plus glisser, parce qu'il **est** le fichier dont
 elles débattent.
 
-### Rendu — la passe `H-RND` · 9 items
+### Rendu — la passe `H-RND` · 6 items
 
-`BUG-1` (jitter Pluton), `BUG-2` (sauts de skybox), `BUG-5` (pop du modèle au
-changement de focus), `REL-1` (raccord terminal du ruban), `REL-2`
-(`MUTING_STEP`), `REL-3` (fondu alpha et largeurs), `REL-4` (tone mapping),
-`REL-5` (pénombre du vaisseau), `REL-6` (éclipse totale contre annulaire).
+`REL-1` (raccord terminal du ruban), `REL-2` (`MUTING_STEP`), `REL-3` (fondu
+alpha et largeurs), `REL-4` (tone mapping), `REL-5` (pénombre du vaisseau),
+`REL-6` (éclipse totale contre annulaire).
 
-**C'est le lot le plus cohérent du corpus** : un seul sous-système, aucune
-dépendance croisée, et **la seule passe dont le résultat se voit à l'écran**.
-Bon candidat juste après `MIS-11`, où rien n'est visible pendant des semaines.
+**Le lot a perdu ses trois bugs le 2026-09-03.** `BUG-1`, `BUG-2` et `BUG-5` sont
+partis en ligne **1.2.0** avec `BUG-22`, découvert au même moment : une séance de
+mesure leur a donné à chacun une cause chiffrée, et ce qui a un coût prévisible
+n'a plus de raison d'attendre `MIS-11`. Ce qui reste ici est **entièrement du
+réglage à l'œil**, et c'est exactement pour ça que ça reste : la durée d'une
+séance de goût ne se planifie pas.
+
+**C'est toujours le lot le plus cohérent du corpus** : un seul sous-système,
+aucune dépendance croisée, et le résultat se voit à l'écran. Bon candidat juste
+après `MIS-11`, où rien n'est visible pendant des semaines.
 
 `REL-6` demande d'abord une **observation** et non du code : regarder une
 éclipse annulaire. `BUG-3` a quitté ce lot — ses cinq lots sont implémentés
