@@ -23,19 +23,30 @@ public class FocusView {
    * time.
    *
    * <p>A transition holds {@link #mode} and {@link #body} on their source values until its very
-   * last frame, because the floating origin centres the rendered frame on them and moving that
-   * ground mid-interpolation would break it. But a scene drawn strictly from the source is wrong
-   * for the whole 2.5 s: the camera is already most of the way to somewhere else, and everything
-   * keyed on the focus — the far clip floor, satellite visibility — would only catch up on the
-   * final frame, as a pop. These two fields let those rules answer for <em>either</em> end.
+   * last frame: they are the <em>focus</em>, and the focus is what the user asked for, which does
+   * not change until the move is over. But a scene drawn strictly from the source is wrong for the
+   * whole 2.5 s: the camera is already most of the way to somewhere else, and everything keyed on
+   * the focus — the far clip floor, satellite visibility — would only catch up on the final frame,
+   * as a pop. These two fields let those rules answer for <em>either</em> end.
    *
-   * <p>Not everything may take the union. Anything drawn in the near viewport is positioned
-   * relative to the frame's centre and is only correct for the source — see {@link
-   * #isMissionVisible}.
+   * <p>What the rendered frame is centred on is a <b>third</b> question, and it used to be
+   * conflated with the focus. It is now {@link #renderCentreBody()}, which hands over to the
+   * destination partway through the flight — see {@link #handOverToDestination()}.
    */
   private ViewMode pendingMode;
 
   private SolarSystemBody pendingBody;
+
+  /**
+   * Whether the rendered frame has already been handed over to the transition's destination.
+   *
+   * <p>Set by {@code CameraTransitionAppState} once the destination outweighs the frame's current
+   * centre on screen, and cleared with the rest of the pending state. The floating origin, the near
+   * viewport's single globe and the pivots all follow it, so that the arithmetic that places the
+   * camera runs at the magnitude of its own distance to what it is looking at rather than at the
+   * magnitude of a heliocentric position ({@code BUG-1}).
+   */
+  private boolean centredOnDestination;
 
   public FocusView(EngineConfig engineConfig) {
     this.engineConfig = engineConfig;
@@ -67,6 +78,44 @@ public class FocusView {
   public void endTransition() {
     this.pendingMode = null;
     this.pendingBody = null;
+    this.centredOnDestination = false;
+  }
+
+  /**
+   * Hands the rendered frame over to the transition's destination, for the rest of the flight.
+   *
+   * <p>Called on the frame the destination becomes the larger of the two on screen. The move costs
+   * nothing to look at: the frame's origin and every position expressed in it shift by the same
+   * vector, the camera's pivot included, so the whole scene keeps its geometry relative to the
+   * observer. What it buys is that the camera stops being placed by adding a solar-magnitude pivot
+   * to a small offset — the 46 px of frame-to-frame shake measured on the approach to Pluto — and
+   * that the near viewport's single globe becomes the destination's, which is what lets its model
+   * be drawn before the last frame ({@code BUG-5}).
+   */
+  public void handOverToDestination() {
+    this.centredOnDestination = true;
+  }
+
+  /**
+   * The body the floating origin centres the rendered frame on this frame: the focus, or the
+   * transition's destination once {@link #handOverToDestination()} has fired.
+   *
+   * <p>This, and not {@link #getBody()}, is what anything positioned <em>in</em> the rendered frame
+   * must ask — the near viewport's globe, the pivots, the level-of-detail veto.
+   *
+   * @return the body at the centre of the rendered frame, never {@code null} once focused
+   */
+  public SolarSystemBody renderCentreBody() {
+    return centredOnDestination && pendingBody != null ? pendingBody : body;
+  }
+
+  /**
+   * The mode the rendered frame is built for — the counterpart of {@link #renderCentreBody()}.
+   *
+   * @return the mode the frame is centred for
+   */
+  public ViewMode renderCentreMode() {
+    return centredOnDestination && pendingMode != null ? pendingMode : mode;
   }
 
   /** Resets the focus to the default state: solar view centered on the Sun. */
@@ -209,18 +258,19 @@ public class FocusView {
    * <p>Missions around the focused body stay visible in spacecraft mode too, so following one of
    * them does not hide its siblings.
    *
-   * <p><b>Unlike {@link #isSatelliteVisible}, this deliberately ignores a transition's
-   * destination.</b> A mission is drawn in the near viewport, whose origin is wherever the floating
-   * origin has centred the frame — the transition's <em>source</em> for its whole duration. Showing
-   * a mission bound for the Earth while the frame is still centred on the Sun would draw its
-   * trajectory around the Sun. It has to wait for the focus to actually flip.
+   * <p><b>Unlike {@link #isSatelliteVisible}, this asks the frame's centre and not the union of
+   * both ends.</b> A mission is drawn in the near viewport, whose origin is wherever the floating
+   * origin has centred the frame: showing a mission bound for the Earth while the frame is still
+   * centred on the Sun would draw its trajectory around the Sun. Asking {@link #renderCentreBody()}
+   * is what makes that safe <em>and</em> lets the mission appear as soon as the frame is actually
+   * its body's, rather than on the transition's last frame.
    *
    * @param arcBodies the bodies the mission's trajectory can be expressed about, from {@code
    *     TrajectoryPolyline.arcBodies()}
    * @return true if the mission should be shown
    */
   public boolean isMissionVisible(Set<SolarSystemBody> arcBodies) {
-    return isPlanetScaleMode(mode) && arcBodies.contains(this.body);
+    return isPlanetScaleMode(renderCentreMode()) && arcBodies.contains(renderCentreBody());
   }
 
   /**

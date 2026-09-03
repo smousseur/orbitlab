@@ -182,13 +182,56 @@ class FocusViewTest {
   }
 
   @Test
-  void missionsIgnoreATransitionsDestination() {
+  void missionsIgnoreATransitionsDestinationUntilTheFrameHandsOver() {
     // Deliberately NOT symmetric with the satellites above: a mission's trajectory is drawn in the
     // near viewport, whose origin is still the transition's source. Showing an Earth mission while
     // the frame is centred on the Sun would draw its orbit around the Sun.
     focusView.beginTransition(ViewMode.PLANET, SolarSystemBody.EARTH);
 
     assertFalse(focusView.isMissionVisible(Set.of(SolarSystemBody.EARTH)));
+
+    // Once the frame is the Earth's, its origin is the Earth and the trajectory is correct there.
+    focusView.handOverToDestination();
+
+    assertTrue(focusView.isMissionVisible(Set.of(SolarSystemBody.EARTH)));
+  }
+
+  @Test
+  void theFrameIsCentredOnTheFocusUntilTheHandover() {
+    focusView.viewPlanet(SolarSystemBody.EARTH);
+    focusView.beginTransition(ViewMode.PLANET, SolarSystemBody.MARS);
+
+    assertEquals(SolarSystemBody.EARTH, focusView.renderCentreBody());
+    assertEquals(ViewMode.PLANET, focusView.renderCentreMode());
+
+    focusView.handOverToDestination();
+
+    assertEquals(SolarSystemBody.MARS, focusView.renderCentreBody());
+    // The focus itself has not moved: it is what the user asked for, and it flips at the end.
+    assertEquals(SolarSystemBody.EARTH, focusView.getBody());
+  }
+
+  @Test
+  void theHandoverIsClearedWithTheTransition() {
+    focusView.viewPlanet(SolarSystemBody.EARTH);
+    focusView.beginTransition(ViewMode.PLANET, SolarSystemBody.MARS);
+    focusView.handOverToDestination();
+
+    focusView.endTransition();
+
+    // Nothing pending, so the frame is the focus's again — and the focus is flipped separately by
+    // CameraTransitionAppState.finish on the same frame, which is why this does not snap back.
+    assertEquals(SolarSystemBody.EARTH, focusView.renderCentreBody());
+  }
+
+  @Test
+  void aHandoverWithoutADestinationChangesNothing() {
+    focusView.viewPlanet(SolarSystemBody.EARTH);
+
+    focusView.handOverToDestination();
+
+    assertEquals(SolarSystemBody.EARTH, focusView.renderCentreBody());
+    assertEquals(ViewMode.PLANET, focusView.renderCentreMode());
   }
 
   @Test

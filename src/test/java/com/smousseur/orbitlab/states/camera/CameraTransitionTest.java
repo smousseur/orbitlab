@@ -27,12 +27,11 @@ class CameraTransitionTest {
   }
 
   private static CameraTransition transition(
-      Vector3f from, Vector3f to, float srcDistance, float dstDistance, Easing easing) {
-    return orienting(from, to, srcDistance, dstDistance, easing, FLAT, FLAT);
+      Vector3f to, float srcDistance, float dstDistance, Easing easing) {
+    return orienting(to, srcDistance, dstDistance, easing, FLAT, FLAT);
   }
 
   private static CameraTransition orienting(
-      Vector3f from,
       Vector3f to,
       float srcDistance,
       float dstDistance,
@@ -41,24 +40,26 @@ class CameraTransitionTest {
       CameraOrientation dstOrientation) {
     return new CameraTransition(
         new TransitionTarget.Planet(SolarSystemBody.EARTH),
-        () -> from,
         () -> to,
-        srcDistance,
-        dstDistance,
-        srcOrientation,
-        dstOrientation,
+        new CameraStation(srcDistance, srcOrientation),
+        new CameraStation(dstDistance, dstOrientation),
+        new CameraStation(srcDistance, srcOrientation),
         config(easing));
   }
 
-  private static CameraTransition solarTransition(
-      java.util.function.Supplier<Vector3f> from, java.util.function.Supplier<Vector3f> to) {
+  private static CameraTransition solarTransition(java.util.function.Supplier<Vector3f> to) {
     return new CameraTransition(
-        new TransitionTarget.Solar(), from, to, 1f, 1f, FLAT, FLAT, config(Easing.LINEAR));
+        new TransitionTarget.Solar(),
+        to,
+        new CameraStation(1f, FLAT),
+        new CameraStation(1f, FLAT),
+        new CameraStation(1f, FLAT),
+        config(Easing.LINEAR));
   }
 
   @Test
   void advanceReachesTheEndAndClampsThere() {
-    CameraTransition t = transition(new Vector3f(), new Vector3f(), 1f, 1f, Easing.LINEAR);
+    CameraTransition t = transition(new Vector3f(), 1f, 1f, Easing.LINEAR);
 
     assertFalse(t.isFinished());
     t.advance(1f);
@@ -72,7 +73,7 @@ class CameraTransitionTest {
 
   @Test
   void nonPositiveFrameTimesDoNotMoveTheAnimation() {
-    CameraTransition t = transition(new Vector3f(), new Vector3f(), 1f, 1f, Easing.LINEAR);
+    CameraTransition t = transition(new Vector3f(), 1f, 1f, Easing.LINEAR);
 
     t.advance(0f);
     t.advance(-1f);
@@ -83,7 +84,7 @@ class CameraTransitionTest {
 
   @Test
   void smoothstepIsSymmetricAroundItsMidpoint() {
-    CameraTransition t = transition(new Vector3f(), new Vector3f(), 1f, 1f, Easing.SMOOTHSTEP);
+    CameraTransition t = transition(new Vector3f(), 1f, 1f, Easing.SMOOTHSTEP);
 
     assertEquals(0f, t.easedProgress(), TOLERANCE);
     t.advance(DURATION / 4f);
@@ -97,42 +98,57 @@ class CameraTransitionTest {
   }
 
   @Test
-  void pivotWalksTheStraightLineBetweenItsEndpoints() {
-    CameraTransition t =
-        transition(new Vector3f(2f, 0f, -4f), new Vector3f(6f, 8f, 4f), 1f, 1f, Easing.LINEAR);
+  void pivotIsTheDestinationFromTheFirstFrame() {
+    Vector3f destination = new Vector3f(6f, 8f, 4f);
+    CameraTransition t = transition(destination, 1f, 1f, Easing.LINEAR);
 
-    assertEquals(new Vector3f(2f, 0f, -4f), t.currentPivot());
+    // It does not walk there: what closes in is the distance to it (see BUG-5, the last frame
+    // used to absorb 700 000 km because the two were on different schedules).
+    assertEquals(destination, t.currentPivot());
     t.advance(DURATION / 2f);
-    assertEquals(new Vector3f(4f, 4f, 0f), t.currentPivot());
+    assertEquals(destination, t.currentPivot());
     t.advance(DURATION / 2f);
-    assertEquals(new Vector3f(6f, 8f, 4f), t.currentPivot());
+    assertEquals(destination, t.currentPivot());
   }
 
   @Test
-  void pivotFollowsEndpointsThatMoveDuringTheTransition() {
+  void pivotFollowsADestinationThatMovesDuringTheTransition() {
     AtomicReference<Vector3f> movingTarget = new AtomicReference<>(new Vector3f(10f, 0f, 0f));
-    CameraTransition t = solarTransition(Vector3f::new, movingTarget::get);
+    CameraTransition t = solarTransition(movingTarget::get);
 
     t.advance(DURATION / 2f);
-    assertEquals(new Vector3f(5f, 0f, 0f), t.currentPivot());
+    assertEquals(new Vector3f(10f, 0f, 0f), t.currentPivot());
 
     movingTarget.set(new Vector3f(20f, 0f, 0f));
-    assertEquals(new Vector3f(10f, 0f, 0f), t.currentPivot());
+    assertEquals(new Vector3f(20f, 0f, 0f), t.currentPivot());
   }
 
   @Test
   void anUnusablePivotFallsBackToTheOrigin() {
-    CameraTransition t = solarTransition(() -> null, () -> new Vector3f(Float.NaN, 0f, 0f));
+    CameraTransition t = solarTransition(() -> new Vector3f(Float.NaN, 0f, 0f));
 
     t.advance(DURATION / 2f);
     assertEquals(new Vector3f(), t.currentPivot());
   }
 
   @Test
+  void theFirstFrameRendersTheStationTheCameraAlreadyHolds() {
+    CameraOrientation approach = new CameraOrientation(1.2f, -0.3f);
+    CameraTransition t =
+        orienting(new Vector3f(100f, 0f, 0f), 4669f, 0.006f, Easing.SMOOTHSTEP, approach, FLAT);
+
+    // Nothing may move on the frame the transition starts: the approach station is the camera's
+    // own position restated about the destination, so distance and bearing are already correct.
+    assertEquals(4669f, t.currentDistance(), TOLERANCE);
+    assertEquals(approach.yawRad(), t.currentOrientation().yawRad(), TOLERANCE);
+    assertEquals(approach.pitchRad(), t.currentOrientation().pitchRad(), TOLERANCE);
+  }
+
+  @Test
   void distanceIsInterpolatedGeometrically() {
     // A span of six decades, the order of magnitude between the solar view and a spacecraft: the
     // midpoint must be the geometric mean, not the arithmetic one that would still sit at 500.
-    CameraTransition t = transition(new Vector3f(), new Vector3f(), 1000f, 1e-3f, Easing.LINEAR);
+    CameraTransition t = transition(new Vector3f(), 1000f, 1e-3f, Easing.LINEAR);
 
     assertEquals(1000f, t.currentDistance(), TOLERANCE);
     t.advance(DURATION / 2f);
@@ -143,7 +159,7 @@ class CameraTransitionTest {
 
   @Test
   void distanceFallsBackToALinearRampWhenAnEndpointIsNotPositive() {
-    CameraTransition t = transition(new Vector3f(), new Vector3f(), 0f, 100f, Easing.LINEAR);
+    CameraTransition t = transition(new Vector3f(), 0f, 100f, Easing.LINEAR);
 
     t.advance(DURATION / 2f);
     assertEquals(50f, t.currentDistance(), TOLERANCE);
@@ -152,14 +168,7 @@ class CameraTransitionTest {
   @Test
   void orientationIsDoneTurningBeforeTheTravelIsOver() {
     CameraTransition t =
-        orienting(
-            new Vector3f(),
-            new Vector3f(),
-            1f,
-            1f,
-            Easing.LINEAR,
-            FLAT,
-            new CameraOrientation(1f, 0f));
+        orienting(new Vector3f(), 1f, 1f, Easing.LINEAR, FLAT, new CameraOrientation(1f, 0f));
 
     // Full lead window in, the orientation has arrived while the pivot is barely a third of the
     // way.
@@ -177,14 +186,7 @@ class CameraTransitionTest {
   @Test
   void orientationLeadsTheTravelAtEveryPointOfTheWindow() {
     CameraTransition t =
-        orienting(
-            new Vector3f(),
-            new Vector3f(),
-            1f,
-            1f,
-            Easing.LINEAR,
-            FLAT,
-            new CameraOrientation(1f, 0f));
+        orienting(new Vector3f(), 1f, 1f, Easing.LINEAR, FLAT, new CameraOrientation(1f, 0f));
 
     t.advance(DURATION * LEAD / 2f);
     assertEquals(0.5f, t.orientationProgress(), TOLERANCE);
@@ -197,7 +199,6 @@ class CameraTransitionTest {
     // bearing comes back as -3: the delta is 0.28 rad the short way, 6.0 the wrong way.
     CameraTransition t =
         orienting(
-            new Vector3f(),
             new Vector3f(),
             1f,
             1f,
@@ -217,7 +218,6 @@ class CameraTransitionTest {
     CameraTransition t =
         orienting(
             new Vector3f(),
-            new Vector3f(),
             1f,
             1f,
             Easing.LINEAR,
@@ -230,7 +230,7 @@ class CameraTransitionTest {
 
   @Test
   void theExactEndpointIsKeptForTheFinalSnap() {
-    CameraTransition t = transition(new Vector3f(), new Vector3f(), 800f, 5e-7f, Easing.SMOOTHSTEP);
+    CameraTransition t = transition(new Vector3f(), 800f, 5e-7f, Easing.SMOOTHSTEP);
 
     assertEquals(5e-7f, t.targetDistance(), 1e-12f);
   }

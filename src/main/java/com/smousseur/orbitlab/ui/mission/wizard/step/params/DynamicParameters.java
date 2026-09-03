@@ -319,7 +319,7 @@ public abstract class DynamicParameters {
     }
 
     Spatial focused = GuiGlobals.getInstance().getFocusManagerState().getFocus();
-    boolean isFocused = focused.equals(field);
+    boolean isFocused = focused != null && focused.equals(field);
     if (isFieldFocused && !isFocused) {
       commitAltitudeFieldToSlider(slider, sliderRef, field, valueMin, valueMax);
     }

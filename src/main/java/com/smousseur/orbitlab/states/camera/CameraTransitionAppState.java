@@ -162,22 +162,23 @@ public final class CameraTransitionAppState extends BaseAppState {
       return false;
     }
 
-    // Snapshot rather than a live supplier: the source pivot is fixed in the rendered frame, which
-    // stays centred on the current focus for the whole transition. Taking the camera's own last
-    // pivot rather than assuming the origin is what keeps a panned view from snapping back.
+    // The camera's own last pivot rather than the origin: that is what keeps a panned view from
+    // snapping back when the transition starts.
     Vector3f from = orbitCam.pivotWorldPosition();
     Supplier<Vector3f> dst = pivotSupplier(target);
     CameraOrientation currentOrientation = orbitCam.orientation();
+    float currentDistance = focusView.getCameraDistance();
+    Vector3f destinationNow = dst.get();
 
     active =
         new CameraTransition(
             target,
-            () -> from,
             dst,
-            focusView.getCameraDistance(),
-            targetDistance(target),
-            currentOrientation,
-            targetOrientation(target, from, dst.get(), currentOrientation),
+            approachStation(from, currentDistance, currentOrientation, destinationNow),
+            new CameraStation(
+                targetDistance(target),
+                targetOrientation(target, from, destinationNow, currentOrientation)),
+            new CameraStation(currentDistance, currentOrientation),
             config);
 
     orbitCam.setTarget(active::currentPivot);
@@ -196,6 +197,7 @@ public final class CameraTransitionAppState extends BaseAppState {
       return;
     }
     transition.advance(tpf);
+    handOverWhenTheDestinationOutweighsTheCentre(transition);
     context.focusView().setCameraDistance(transition.currentDistance());
     OrbitCameraAppState orbitCam = context.orbitCamera();
     if (orbitCam != null) {
@@ -207,15 +209,61 @@ public final class CameraTransitionAppState extends BaseAppState {
   }
 
   /**
+   * Moves the rendered frame onto the destination once it has become the larger of the two bodies
+   * on screen — the moment the near viewport's single globe ({@code REL-7}) is better spent on it.
+   *
+   * <p><b>Why the crossing of apparent sizes and not a fraction of the duration.</b> Measured over
+   * the transitions the application can play, the two are never large at once except between the
+   * Earth and its Moon: everywhere else the source falls under the level-of-detail threshold within
+   * a frame or two of the start and the destination only reaches it past two thirds of the way, so
+   * any rule landing in that window is invisible. This one lands in it, and on the Earth-Moon pair
+   * — where no such window exists — it lands where the globe given up is the smaller of the two.
+   *
+   * <p>Only a planet destination hands over. Flying out to the solar view ends far from everything,
+   * and a spacecraft is flown to inside the frame of the body it orbits: neither puts the camera in
+   * the position this exists to avoid, a small offset added to a distant pivot.
+   */
+  private void handOverWhenTheDestinationOutweighsTheCentre(CameraTransition transition) {
+    if (!(transition.target() instanceof TransitionTarget.Planet planet)) {
+      return;
+    }
+    FocusView focusView = context.focusView();
+    SolarSystemBody centre = focusView.renderCentreBody();
+    if (centre == planet.body()) {
+      return;
+    }
+    float distance = transition.currentDistance();
+    Vector3f camera =
+        transition
+            .currentPivot()
+            .addLocal(transition.currentOrientation().offsetDirection().multLocal(distance));
+    // The frame's centre is its origin, by construction of the floating origin.
+    float toCentre = camera.length();
+    if (distance <= 0f || toCentre <= 0f) {
+      return;
+    }
+    // Radii in metres against distances in solar units on both sides: the ratio of the two ratios
+    // is what decides, and it carries no unit.
+    if (PlanetRadius.radiusFor(planet.body()) / distance
+        >= PlanetRadius.radiusFor(centre) / toCentre) {
+      focusView.handOverToDestination();
+    }
+  }
+
+  /**
    * Hands the view over to the target focus, on the same frame the pivot reached it.
    *
-   * <p>The switch is visually free because the two moves cancel. Flipping the focus makes {@link
-   * FloatingOriginAppState} translate the far root so the new anchor body lands on the origin,
-   * which shifts the whole scene by minus the pivot we just interpolated to; clearing the camera's
-   * target on the same frame drops its pivot back to that origin by the same amount. The camera
-   * therefore keeps looking at the same point in space, and the scene has not moved relative to it.
-   * Both halves are required — losing either one is a one-frame jump of the full distance between
-   * the two bodies.
+   * <p>For a planet target there is nothing left to move: the frame was handed over to the
+   * destination earlier in the flight, so flipping the focus makes {@link FloatingOriginAppState}
+   * centre on the body it is already centred on.
+   *
+   * <p>For the others — the solar view, a spacecraft — the frame is still the source's, and the
+   * switch is visually free because the two moves cancel. Flipping the focus makes the far root
+   * translate so the new anchor body lands on the origin, which shifts the whole scene by minus the
+   * pivot; clearing the camera's target on the same frame drops its pivot back to that origin by
+   * the same amount. The camera therefore keeps looking at the same point in space, and the scene
+   * has not moved relative to it. Both halves are required — losing either one is a one-frame jump
+   * of the full distance between the two bodies.
    */
   private void finish(CameraTransition transition) {
     TransitionTarget target = transition.target();
@@ -242,6 +290,24 @@ public final class CameraTransitionAppState extends BaseAppState {
     } else {
       focusView.reset();
     }
+  }
+
+  /**
+   * Where the camera already stands, expressed about the destination rather than about the pivot it
+   * was orbiting — which is what the transition now ramps down from.
+   *
+   * <p>Restating the same point in the destination's terms is what makes the first frame draw
+   * exactly the view already on screen: distance and bearing change, the position does not. When
+   * the two coincide there is no bearing to recover and the camera keeps the one it has.
+   */
+  private CameraStation approachStation(
+      Vector3f pivot, float distance, CameraOrientation orientation, Vector3f destination) {
+    Vector3f cameraNow = pivot.add(orientation.offsetDirection().mult(distance));
+    Vector3f offset = cameraNow.subtractLocal(destination);
+    if (offset.length() < MIN_TRAVEL_FOR_BEARING) {
+      return new CameraStation(distance, orientation);
+    }
+    return new CameraStation(offset.length(), CameraOrientation.fromOffsetDirection(offset));
   }
 
   private boolean isCurrentFocus(TransitionTarget target) {
@@ -320,12 +386,13 @@ public final class CameraTransitionAppState extends BaseAppState {
    * translation, for two reasons. The local values are the ones {@code PlanetPoseAppState} has
    * already written this frame, whereas world transforms are only refreshed after every state has
    * run, so reading them here would lag by a frame. And the offset {@link FloatingOriginAppState}
-   * applies is fully determined by the focus, which is frozen for the duration of a transition: the
-   * far root carries minus the focused body's own position, so subtracting it here reproduces
-   * exactly what will be drawn — the focused body at the origin, everything else around it.
+   * applies is fully determined by the frame's centre: the far root carries minus that body's own
+   * position, so subtracting it here reproduces exactly what will be drawn — the centre at the
+   * origin, everything else around it. Reading the <em>centre</em> and not the focus is what keeps
+   * this correct across the handover, which moves one without the other.
    */
   private Vector3f bodyPivot(SolarSystemBody body) {
-    return bodyLocal(body).subtractLocal(bodyLocal(context.focusView().getBody()));
+    return bodyLocal(body).subtractLocal(bodyLocal(context.focusView().renderCentreBody()));
   }
 
   /**

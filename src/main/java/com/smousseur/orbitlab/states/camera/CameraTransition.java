@@ -18,36 +18,55 @@ import java.util.function.Supplier;
  * <p>The orientation is the exception — it is fixed at construction. Over 2.5 real seconds the
  * bearing from one body to another moves by less than a thousandth of a degree even at ×1000, and
  * chasing a live target would only make the rotation trail behind it for nothing.
+ *
+ * <h2>The pivot is the destination, from the first frame ({@code BUG-5})</h2>
+ *
+ * <p>It used to be a straight line walked between the two endpoints, while the distance collapsed
+ * geometrically. The two schedules disagree, and measurably: on a solar-view focus of Pluto the
+ * camera reached its final <em>distance to the pivot</em> — 5 951 km — while the pivot was still
+ * <b>701 808 km short of Pluto</b>, so the last frame absorbed 700 000 km and took the planet from
+ * 1.7 px of projected radius to 234.7 px. A factor 138 in one frame, and for the whole crossing
+ * before it the destination sat under a pixel: the approach never showed what it was approaching.
+ *
+ * <p>So the destination is the pivot throughout, and what ramps geometrically is the camera's
+ * distance <em>to it</em> — from where the camera happens to stand when the transition starts, down
+ * to the framing it settles at. Remaining travel and framing distance become the same number, which
+ * is the property the old pair could not hold. The bearing does the rest: it interpolates from
+ * where the camera already is, as seen from the destination, so the first frame renders exactly
+ * where the camera already was and nothing jumps at either end.
  */
 final class CameraTransition {
 
   private final TransitionTarget target;
-  private final Supplier<Vector3f> srcPivot;
-  private final Supplier<Vector3f> dstPivot;
-  private final float srcDistance;
-  private final float dstDistance;
-  private final CameraOrientation srcOrientation;
-  private final CameraOrientation dstOrientation;
+  private final Supplier<Vector3f> pivot;
+  private final CameraStation approach;
+  private final CameraStation arrival;
+  private final CameraStation restore;
   private final CameraTransitionConfig config;
 
   private float elapsedSec;
 
+  /**
+   * @param target the focus to apply on the last frame
+   * @param pivot where the destination sits in the rendered frame, re-read every frame
+   * @param approach where the camera stands when the transition starts, expressed about the
+   *     destination — so that the first frame draws exactly the view already on screen
+   * @param arrival where it settles
+   * @param restore where it came from, expressed about the pivot it had then, for a cancellation
+   * @param config the tuning
+   */
   CameraTransition(
       TransitionTarget target,
-      Supplier<Vector3f> srcPivot,
-      Supplier<Vector3f> dstPivot,
-      float srcDistance,
-      float dstDistance,
-      CameraOrientation srcOrientation,
-      CameraOrientation dstOrientation,
+      Supplier<Vector3f> pivot,
+      CameraStation approach,
+      CameraStation arrival,
+      CameraStation restore,
       CameraTransitionConfig config) {
     this.target = Objects.requireNonNull(target, "target");
-    this.srcPivot = Objects.requireNonNull(srcPivot, "srcPivot");
-    this.dstPivot = Objects.requireNonNull(dstPivot, "dstPivot");
-    this.srcDistance = srcDistance;
-    this.dstDistance = dstDistance;
-    this.srcOrientation = Objects.requireNonNull(srcOrientation, "srcOrientation");
-    this.dstOrientation = Objects.requireNonNull(dstOrientation, "dstOrientation");
+    this.pivot = Objects.requireNonNull(pivot, "pivot");
+    this.approach = Objects.requireNonNull(approach, "approach");
+    this.arrival = Objects.requireNonNull(arrival, "arrival");
+    this.restore = Objects.requireNonNull(restore, "restore");
     this.config = Objects.requireNonNull(config, "config");
   }
 
@@ -58,22 +77,22 @@ final class CameraTransition {
 
   /** The exact distance to settle on at the end, free of any interpolation drift. */
   float targetDistance() {
-    return dstDistance;
+    return arrival.distance();
   }
 
   /** The distance the camera started from, restored if the transition is cancelled mid-flight. */
   float sourceDistance() {
-    return srcDistance;
+    return restore.distance();
   }
 
   /** The exact orientation to settle on at the end. */
   CameraOrientation targetOrientation() {
-    return dstOrientation;
+    return arrival.orientation();
   }
 
   /** The orientation the camera started from, restored if the transition is cancelled. */
   CameraOrientation sourceOrientation() {
-    return srcOrientation;
+    return restore.orientation();
   }
 
   /**
@@ -110,15 +129,14 @@ final class CameraTransition {
   }
 
   /**
-   * The pivot for the current frame: a straight line between the two live endpoints, walked at the
-   * eased pace.
+   * The pivot for the current frame: the destination itself, re-read because it keeps moving while
+   * the simulation clock runs. It does not interpolate — see the class docstring for the frame the
+   * measurement rejected.
    *
    * @return a freshly allocated pivot position, in the current rendered frame
    */
   Vector3f currentPivot() {
-    Vector3f from = sanitize(srcPivot.get());
-    Vector3f to = sanitize(dstPivot.get());
-    return from.interpolateLocal(to, easedProgress());
+    return sanitize(pivot.get());
   }
 
   /**
@@ -127,7 +145,7 @@ final class CameraTransition {
    * @return the interpolated orientation
    */
   CameraOrientation currentOrientation() {
-    return srcOrientation.towards(dstOrientation, orientationProgress());
+    return approach.orientation().towards(arrival.orientation(), orientationProgress());
   }
 
   /**
@@ -141,16 +159,19 @@ final class CameraTransition {
    * also what the camera's own zoom already does (see {@code OrbitCameraAppState.applyWheelZoom},
    * an exponential dolly), so a transition and a wheel zoom covering the same span now feel alike.
    *
+   * <p>Since the pivot is the destination, this is the distance to the destination — and that is
+   * what makes the ramp describe the approach instead of merely accompanying it.
+   *
    * @return the interpolated distance
    */
   float currentDistance() {
     float u = easedProgress();
-    if (srcDistance > 0f && dstDistance > 0f) {
-      double logSrc = Math.log(srcDistance);
-      double logDst = Math.log(dstDistance);
-      return (float) Math.exp(logSrc + u * (logDst - logSrc));
+    float from = approach.distance();
+    float to = arrival.distance();
+    if (from > 0f && to > 0f) {
+      return (float) Math.exp(Math.log(from) + u * (Math.log(to) - Math.log(from)));
     }
-    return srcDistance + (dstDistance - srcDistance) * u;
+    return from + (to - from) * u;
   }
 
   /**

@@ -8,6 +8,7 @@ import java.awt.*;
 import java.util.stream.Stream;
 
 public enum MissionStatusColor {
+  UPDATING(FormStyles.TEXT_LO),
   CREATING(FormStyles.TEXT_LO),
   DRAFT(FormStyles.TEXT_SECONDARY),
   COMPUTING(FormStyles.WARNING),
@@ -29,6 +30,6 @@ public enum MissionStatusColor {
         .filter(mc -> mc.name().equals(status.name()))
         .map(MissionStatusColor::getColor)
         .findFirst()
-        .orElseThrow(() -> new OrbitlabException("Unknown mission status: " + status));
+        .orElseThrow(() -> new OrbitlabException("Unknown color for mission status: " + status));
   }
 }

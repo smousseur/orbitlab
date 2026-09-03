@@ -211,7 +211,10 @@ class MissionRow {
       MissionId missionId,
       MissionStatus status,
       MissionListView.RowListener listener) {
-    boolean editableStatus = status != MissionStatus.COMPUTING && status != MissionStatus.CREATING;
+    boolean editableStatus =
+        status != MissionStatus.COMPUTING
+            && status != MissionStatus.CREATING
+            && status != MissionStatus.UPDATING;
     boolean editable = editableStatus && entry.spec().isPresent();
 
     actions.addChild(

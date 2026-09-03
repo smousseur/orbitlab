@@ -76,11 +76,6 @@ public final class OrbitCameraAppState extends BaseAppState
   /** Dynamic minimum far plane, applied after adaptive frustum calculation. */
   private volatile float farFloor = 0f;
 
-  // Adaptive FoV: bounds in radians and curve exponent
-  private final float fovMinRad = (float) Math.toRadians(15.0); // narrow when close
-  private final float fovMaxRad = (float) Math.toRadians(60.0); // wide when far
-  private final float fovCurveK = 0.9f; // 0.6..1.5 : <1 => more narrowing near close range
-
   /**
    * Creates a new orbit camera state.
    *
@@ -136,25 +131,6 @@ public final class OrbitCameraAppState extends BaseAppState
   }
 
   /**
-   * Returns the current zoom level as a normalized value between 0 and 1, where 0 represents the
-   * minimum distance (fully zoomed in) and 1 represents the maximum distance (fully zoomed out).
-   * The mapping uses a logarithmic scale for perceptually uniform zoom behavior.
-   *
-   * @return the normalized zoom level in the range [0, 1]
-   */
-  public float normalizedZoom01() {
-    float distance = context.focusView().getCameraDistance();
-    float d = FastMath.clamp(distance, config.minDistance(), config.maxDistance());
-    float min = config.minDistance();
-    float max = config.maxDistance();
-    float logMin = (float) Math.log(min);
-    float logMax = (float) Math.log(max);
-    float logD = (float) Math.log(d);
-    float t = (logD - logMin) / (logMax - logMin);
-    return FastMath.clamp(t, 0f, 1f);
-  }
-
-  /**
    * Returns a copy of the last computed pivot position in world space.
    *
    * @return a clone of the pivot world position vector
@@ -205,7 +181,7 @@ public final class OrbitCameraAppState extends BaseAppState
 
     // Apply initial pose immediately
     applyCameraPose();
-    updateFrustum();
+    applyFrustum();
   }
 
   @Override
@@ -234,8 +210,7 @@ public final class OrbitCameraAppState extends BaseAppState
     }
     // Always keep pose consistent with moving targets (planets, origin shifting, etc.)
     applyCameraPose();
-    updateFrustum();
-    updateAdaptiveFov();
+    applyFrustum();
   }
 
   @Override
@@ -266,7 +241,7 @@ public final class OrbitCameraAppState extends BaseAppState
     if (ANALOG_WHEEL_UP.equals(name) || ANALOG_WHEEL_DOWN.equals(name)) {
       applyWheelZoom(name, value);
       applyCameraPose();
-      updateFrustum();
+      applyFrustum();
       return;
     }
 
@@ -294,11 +269,11 @@ public final class OrbitCameraAppState extends BaseAppState
     if (orbiting) {
       orbitByMouseDelta(dx, dy);
       applyCameraPose();
-      updateFrustum();
+      applyFrustum();
     } else if (panning) {
       panByMouseDelta(dx, dy);
       applyCameraPose();
-      updateFrustum();
+      applyFrustum();
     }
   }
 
@@ -390,53 +365,13 @@ public final class OrbitCameraAppState extends BaseAppState
     cam.lookAt(pivotWorld, Vector3f.UNIT_Y);
   }
 
-  private void updateFrustum() {
-    float d = context.focusView().getCameraDistance();
-
-    float near = d * config.nearFactor();
-    near = clampFinite(near, config.nearMin(), config.nearMax());
-
-    // Far should scale with distance; avoid forcing far to a huge minimum when close,
-    // otherwise depth precision collapses (z-fighting/"deformation").
-    float far = d * config.farFactor();
-    far = clampFinite(far, 0.001f, config.farMax());
-
-    // Ensure minimum separation/ratio
-    far = Math.max(far, near * 10f);
-
-    // Optionally keep a very small absolute minimum far (but not 1000 when close)
-    far = Math.max(far, 10f);
-
-    // Apply dynamic floor (e.g. for planet view where distant orbits must remain visible)
-    far = Math.max(far, farFloor);
-
-    // Keep pivot visible: near must be < distance (minus a small margin)
-    float margin = Math.max(near * 2f, 0.01f);
-    float maxNear = Math.max(0.0001f, d - margin);
-    if (near > maxNear) {
-      near = maxNear;
-      far = Math.max(far, near * 10f);
-    }
-
-    cam.setFrustumNear(near);
-    cam.setFrustumFar(far);
-  }
-
-  // Adaptive FoV as a function of normalized zoom 0..1 (0 = close, 1 = far)
-  private void updateAdaptiveFov() {
-    float t = normalizedZoom01(); // already clamped 0..1
-    float tt = (float) Math.pow(t, fovCurveK);
-    float fov = FastMath.interpolateLinear(tt, fovMinRad, fovMaxRad);
-    float aspect = (float) cam.getWidth() / Math.max(1f, cam.getHeight());
-    cam.setFrustumPerspective(
-        (float) Math.toDegrees(fov), aspect, cam.getFrustumNear(), cam.getFrustumFar());
-  }
-
-  private static float clampFinite(float v, float min, float max) {
-    if (!Float.isFinite(v)) {
-      return min;
-    }
-    return FastMath.clamp(v, min, max);
+  /**
+   * Writes the far camera's frustum for the current distance — near plane, far plane and adaptive
+   * field of view, in the single call {@link FarFrustum#applyTo} makes. Every path that moves the
+   * camera ends here; see {@link FarFrustum} for why the three cannot be written separately.
+   */
+  private void applyFrustum() {
+    FarFrustum.of(config, context.focusView().getCameraDistance(), farFloor).applyTo(cam);
   }
 
   private Vector3f computePivotWorld() {

@@ -70,7 +70,9 @@ public class FloatingOriginAppState extends BaseAppState {
   @Override
   public void update(float tpf) {
     FocusView view = context.focusView();
-    switch (view.getMode()) {
+    // The frame's centre, not the focus: a transition hands the two apart partway through its
+    // flight (FocusView.handOverToDestination).
+    switch (view.renderCentreMode()) {
       case SOLAR -> {
         sceneGraph.setSolarVisible(true);
         sceneGraph.nearFrame().setLocalTranslation(0f, 0f, 0f);
@@ -80,8 +82,8 @@ public class FloatingOriginAppState extends BaseAppState {
       case PLANET -> {
         sceneGraph.setSolarVisible(true);
         sceneGraph.nearFrame().setLocalTranslation(0f, 0f, 0f);
-        sceneGraph.showBodySpatial(view.getBody());
-        Spatial planetSpatial = sceneGraph.getBodySpatial(view.getBody());
+        sceneGraph.showBodySpatial(view.renderCentreBody());
+        Spatial planetSpatial = sceneGraph.getBodySpatial(view.renderCentreBody());
         if (planetSpatial != null) {
           solarRoot.setLocalTranslation(planetSpatial.getLocalTranslation().negate());
         }

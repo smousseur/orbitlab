@@ -66,9 +66,9 @@ public class PlanetHudMarkersAppState extends BaseAppState {
       BodyView view = presenter.view();
       if (!body.isSatellite() || focusView.isSatelliteVisible(body)) {
         // Only the body the scene is centred on may take the near viewport, so it is the only one
-        // allowed a 3D model. During a transition that is still the source body, not the one being
-        // flown at — see LodView.updateScreen.
-        view.updateScreen(projectionCam, body == focusView.getBody());
+        // allowed a 3D model — and during a transition that centre hands over to the destination
+        // partway through, which is what lets its model appear before the last frame.
+        view.updateScreen(projectionCam, body == focusView.renderCentreBody());
       }
     }
   }

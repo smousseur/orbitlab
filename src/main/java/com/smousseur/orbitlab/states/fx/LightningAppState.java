@@ -7,6 +7,7 @@ import com.jme3.light.DirectionalLight;
 import com.jme3.math.ColorRGBA;
 import com.jme3.math.Vector3f;
 import com.jme3.scene.Node;
+import com.jme3.scene.Spatial;
 import com.smousseur.orbitlab.app.ApplicationContext;
 import com.smousseur.orbitlab.core.SolarSystemBody;
 
@@ -14,10 +15,17 @@ import com.smousseur.orbitlab.core.SolarSystemBody;
  * Application state that manages scene lighting to simulate sunlight in the solar system.
  *
  * <p>Adds an ambient light for baseline illumination and a directional light representing sunlight.
- * Each frame, the directional light is oriented to point from the Sun toward the currently focused
- * celestial body, ensuring realistic lighting as the view changes.
+ * Each frame, the directional light is oriented to point from the Sun towards the body the rendered
+ * frame is centred on, which is the one the near viewport draws.
  */
 public class LightningAppState extends BaseAppState {
+
+  /**
+   * Shortest Sun-to-body baseline that still carries a usable direction, in solar units. Only the
+   * Sun itself falls under it — the closest other body is Mercury, at some 57 units.
+   */
+  private static final float MIN_SUNLIGHT_BASELINE = 1e-6f;
+
   private final ApplicationContext context;
   private Node rootNode;
   private AmbientLight ambientLight;
@@ -42,14 +50,31 @@ public class LightningAppState extends BaseAppState {
     sunLight.setColor(ColorRGBA.White.mult(1.2f));
   }
 
+  /**
+   * Aims the sunlight at the body the rendered frame is centred on.
+   *
+   * <p><b>The frame's centre, not the focus.</b> A transition hands the two apart partway through
+   * its flight, and it is the centre that the near viewport draws: lighting the source instead
+   * leaves the body actually on screen lit from the wrong direction — or not lit at all when the
+   * source is the Sun, since the Sun-to-Sun baseline is zero and {@code normalizeLocal} answers the
+   * zero vector, which switches a directional light off. That is a black globe on approach, and it
+   * is what the guard below prevents rather than merely the focus change.
+   */
   @Override
   public void update(float tpf) {
-    Vector3f sunPosition = context.getBodySpatial(SolarSystemBody.SUN).getWorldTranslation();
-    SolarSystemBody focusBody = context.focusView().getBody();
-    if (focusBody != null) {
-      Vector3f bodyPosition = context.getBodySpatial(focusBody).getWorldTranslation();
-      sunLight.setDirection(bodyPosition.subtract(sunPosition).normalizeLocal());
+    SolarSystemBody centre = context.focusView().renderCentreBody();
+    Spatial sun = context.getBodySpatial(SolarSystemBody.SUN);
+    Spatial centreSpatial = centre == null ? null : context.getBodySpatial(centre);
+    if (sun == null || centreSpatial == null) {
+      return;
     }
+    Vector3f direction = centreSpatial.getWorldTranslation().subtract(sun.getWorldTranslation());
+    if (direction.length() < MIN_SUNLIGHT_BASELINE) {
+      // The frame is centred on the Sun: there is no direction to derive, and writing the zero
+      // vector would put the scene out. Keep the last usable one.
+      return;
+    }
+    sunLight.setDirection(direction.normalizeLocal());
   }
 
   @Override

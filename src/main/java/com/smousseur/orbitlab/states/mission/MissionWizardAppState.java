@@ -340,7 +340,10 @@ public final class MissionWizardAppState extends BaseAppState {
             if (!entry.applySpec(spec)) {
               return;
             }
+
+            entry.mission().setStatus(MissionStatus.UPDATING);
             entry.setScheduledDate(scheduledDateFor(spec, missionDate.get()));
+            entry.mission().setStatus(MissionStatus.DRAFT);
             logger.info("Mission '{}' updated [{}]", name, entry.id().shortForm());
           });
     } catch (RuntimeException e) {
