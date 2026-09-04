@@ -168,6 +168,27 @@ public final class PlanetMeshCorrection {
                   VENUS_CLOUD_TOP_DEG_PER_DAY - VENUS_SYSTEM_III_DEG_PER_DAY)));
 
   /**
+   * Node under which a body's model carries its ring system, by the name its exporter wrote — the
+   * geometry that receives the planet's own shadow (`FX-5`, {@code docs/roadmap/01-roadmap-v1.md}
+   * §4.2).
+   *
+   * <p><b>One entry per body rather than a single shared prefix.</b> Both assets happen to start
+   * their ring node with {@code Circle}, the name Blender gives a circle primitive, so one string
+   * would work today. It would also stop saying <em>which</em> asset was renamed the day a
+   * re-export changes one of them, which is the whole reason this is committed data and not a
+   * literal at the call site.
+   *
+   * <p>Jupiter and Neptune are absent because their models carry no ring geometry at all, not
+   * because their rings are ignored: a body with no entry here is left alone and never pays for the
+   * mechanism.
+   */
+  private static final Map<SolarSystemBody, String> RING_NODES =
+      new EnumMap<>(
+          Map.of(
+              SolarSystemBody.SATURN, "Circle_ring",
+              SolarSystemBody.URANUS, "Circle_Material.003"));
+
+  /**
    * What each asset was measured to carry, on 2026-09-01, by {@code ./gradlew meshProbe}. Uranus is
    * absent on purpose: its globe is not an equirectangular unwrap at all (residual 49.4°), so no
    * frame can be recovered from it and none is invented — it stays out of scope until an asset that
@@ -354,6 +375,16 @@ public final class PlanetMeshCorrection {
    */
   public static Optional<AtmosphereShell> atmosphereShellFor(SolarSystemBody body) {
     return Optional.ofNullable(ATMOSPHERE_SHELLS.get(body));
+  }
+
+  /**
+   * Returns the prefix of the node holding the given body's ring system, if its model has one.
+   *
+   * @param body the solar system body
+   * @return the node name prefix, or empty for the nine bodies whose model carries no ring
+   */
+  public static Optional<String> ringNodePrefixFor(SolarSystemBody body) {
+    return Optional.ofNullable(RING_NODES.get(body));
   }
 
   /**

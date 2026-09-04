@@ -83,6 +83,11 @@ public final class LodView implements BodyView {
     model3dView.setShellSpin(angleRad);
   }
 
+  @Override
+  public void setRingSunlight(Vector3f sunDirectionWorld, float sunApparentRadiusRadians) {
+    model3dView.setRingSunlight(sunDirectionWorld, sunApparentRadiusRadians);
+  }
+
   /**
    * Returns the 3D model view component for this body.
    *

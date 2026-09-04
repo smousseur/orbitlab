@@ -178,6 +178,7 @@ public final class PlanetPoseAppState extends BaseAppState {
                 // question about the asset, not about how it ends up shaded.
                 MeshGuard.verify(body, spatial).ifPresent(PlanetPoseAppState::warnDivergence);
                 isolateAtmosphereShell(body, model3dView, spatial);
+                isolateRing(body, model3dView, spatial);
                 return spatial;
               })
           .thenApply(
@@ -212,6 +213,54 @@ public final class PlanetPoseAppState extends BaseAppState {
                         calibration ->
                             model3dView.isolateShell(
                                 spatial, shell.nodeNamePrefix(), calibration.measured().pole())));
+  }
+
+  /**
+   * Remembers which geometries of a body's model are its ring system, while the model is still
+   * unattached and private to this thread — Saturn and Uranus are the only two, and the node names
+   * are committed data ({@code PlanetMeshCorrection.ringNodePrefixFor}).
+   */
+  private static void isolateRing(SolarSystemBody body, Model3dView model3dView, Spatial spatial) {
+    PlanetMeshCorrection.ringNodePrefixFor(body)
+        .ifPresent(prefix -> model3dView.isolateRing(spatial, prefix));
+  }
+
+  /**
+   * Tells a ringed body where the Sun is, so its globe casts a shadow across its own rings (`FX-5`,
+   * {@code docs/roadmap/01-roadmap-v1.md} §4.2).
+   *
+   * <p><b>Only the Sun travels.</b> The occulter of a ring is the planet the ring belongs to, and
+   * {@code Model3dView} is the one that knows where its own globe sits and at what radius it was
+   * drawn; sending those from here would mean re-deriving, at solar scale, two numbers the view
+   * already holds exactly.
+   *
+   * <p>Guarded on the committed ring table rather than on the view's no-op default, so the nine
+   * bodies without a ring do not pay for an ephemeris sample per frame to reach a method that
+   * discards it.
+   *
+   * <p>Reuses {@link EclipseGeometry#sunApparentRadius}, and reads the same buffer {@link
+   * PlanetPresenter#updatePose} has just read at the same date — a cache hit, not a second
+   * computation. The axis convention is the interface default, {@code ICRF_TO_JME_Y_UP}, identical
+   * in both render contexts: only the units differ between them, and a direction has none.
+   */
+  private void pushRingSunlight(PlanetPresenter presenter, AbsoluteDate t) {
+    SolarSystemBody body = presenter.body();
+    if (PlanetMeshCorrection.ringNodePrefixFor(body).isEmpty()) {
+      return;
+    }
+    sampleHelioPosition(body, t)
+        .ifPresent(
+            helio -> {
+              Vector3f sunDirection =
+                  JmeVectorAdapter.toVector3f(
+                      RenderContext.planet(body)
+                          .axisConvention()
+                          .icrfToJme(helio.negate().normalize()));
+              presenter
+                  .view()
+                  .setRingSunlight(
+                      sunDirection, (float) EclipseGeometry.sunApparentRadius(helio.getNorm()));
+            });
   }
 
   /**
@@ -267,6 +316,8 @@ public final class PlanetPoseAppState extends BaseAppState {
       } else if (body == SolarSystemBody.EARTH && earthHelio.isPresent() && moonHelio.isPresent()) {
         pushEclipseOccluder(presenter, SolarSystemBody.MOON, moonHelio.get(), earthHelio.get());
       }
+
+      pushRingSunlight(presenter, t);
     }
   }
 

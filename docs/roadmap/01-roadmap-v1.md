@@ -354,6 +354,51 @@ Les deux chantiers de code sont indépendants l'un de l'autre et des anneaux.
 
 #### `FX-5` — L'ombre de la planète sur ses anneaux — ★3 ◆2 S
 
+> **Livré et vérifié à l'écran le 2026-09-04.** Un occulteur par géométrie :
+> `Model3dView.isolateRing` retient les `Geometry` de l'anneau pendant le chargement — jamais leurs
+> `Material`, qu'`applyLambert` remplace juste après — et `setRingSunlight` leur pousse la planète
+> comme occulteur. `PlanetPoseAppState` n'envoie que le Soleil ; le centre et le rayon ne quittent
+> pas la vue, qui est seule à savoir où son globe est dessiné et à quelle taille.
+>
+> **Le chiffre à vérifier s'est retourné.** La fiche demandait de passer au rayon équatorial, et
+> comptait quatre géantes sur le rayon moyen : c'est **cinq**, Mars aussi (3 389,5 contre 3 396,2 km).
+> Surtout, `PlanetRadius.radiusFor` est ce qui **dimensionne le globe dessiné** — `loadModel`
+> échelonne par `2 · radiusMeters / PLANET_METERS_PER_UNIT`. Un occulteur au rayon équatorial
+> projetterait une ombre 3,4 % plus large que la silhouette qui la coule. L'ombre prend donc le
+> rayon dessiné, et l'expression est partagée avec celle qui échelonne le modèle pour qu'elles ne
+> puissent pas diverger.
+>
+> **Ce que le test de mesure a dit et qu'aucun raisonnement n'avait vu.** La bande fait `2R` de
+> large à toute époque — la section du cylindre d'ombre ignore la façon dont le plan le coupe — mais
+> sa **portée** vaut `R / sin(ouverture)`. D'où :
+>
+> | corps | ouverture 2026 | l'ombre s'arrête à | anneau | verdict |
+> |---|---|---|---|---|
+> | Saturne | 7,25° | 7,89 R | 1,638–1,965 R | couvre tout l'anneau, jusqu'au solstice de 2032 |
+> | Uranus | 72,97° | 1,05 R | 1,603–1,706 R | **rate l'anneau**, et le rate jusque vers 2042 |
+>
+> Le corps sur lequel l'effet se voit est donc une propriété de la **date**, pas du corps — et c'est
+> Saturne, dont l'anneau est pourtant à 4,8 % de sa luminosité de solstice. La pénombre est
+> négligeable : 56 à 59 km sur Saturne, 10 à 11 km sur Uranus, contre une bande de 116 464 km.
+>
+> **La vérification.** Sur un anneau plat sous une lumière directionnelle, `N·L` est constant sur
+> toute la circonférence, et la texture de Saturne est uniforme en azimut à 5-6 % près (sondée à 360
+> échantillons par rayon) : toute variation le long de l'anneau est donc l'occultation, et rien
+> d'autre. Confirmé à l'écran au 2032-09-10 en laissant tourner l'horloge — **la texture défile avec
+> la planète, un tour en 10,5 s à `+1h/s`, et le coin sombre ne bouge pas.**
+>
+> **Épinglé par** `RingShadowFixtureTest` (5 tests : le nom de nœud committé, le globe non attrapé
+> par le préfixe, l'alignement de l'anneau hérité de `BUG-20`, la capture avant `applyLambert`, et
+> l'exclusion de l'anneau dans `setOccluder`) et mesuré par `RingShadowMeasureTest`.
+>
+> **Deux constats ouverts, hors item, tous deux visibles dans la même image.** *(a)* L'anneau est
+> éclairé comme une surface solide alors que c'est une dalle de particules : entre l'ouverture
+> d'aujourd'hui et le solstice, `N·L · smoothstep` impose un écart de **9,3×** là où la diffusion
+> simple en donne 2,1 à 2,3 — on assombrit d'un facteur ~4 de trop, et précisément à la géométrie
+> actuelle. *(b)* La texture d'anneau de Saturne est un 512×512 déplié en carré vu de face, ce qui
+> laisse **42 px de résolution radiale** pour tout le système : la division de Cassini y est bien
+> (creux à `r/rMax = 0,84`, contraste 2×) mais large de quatre pixels.
+
 **Pourquoi.** Saturne éclairée uniformément sur tout son anneau ne lit pas comme
 une planète à anneaux : c'est la bande d'ombre qui donne au disque son épaisseur
 et sa position dans l'espace. L'item vient du backlog non planifié de

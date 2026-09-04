@@ -81,6 +81,19 @@ public interface BodyView {
   default void setShellSpin(float angleRad) {}
 
   /**
+   * Lights this body's ring system for the frame, so its planet casts a shadow across it (`FX-5`,
+   * {@code docs/roadmap/01-roadmap-v1.md} §4.2).
+   *
+   * <p>Only the Sun is passed. The occulter of a ring is its own planet, whose centre and drawn
+   * radius the view already holds — see {@code Model3dView.setRingSunlight}, which fills them in.
+   * Default implementation is a no-op, for the nine bodies whose model carries no ring.
+   *
+   * @param sunDirectionWorld unit vector toward the Sun, in this body's world space
+   * @param sunApparentRadiusRadians the Sun's angular radius as seen from this body, in radians
+   */
+  default void setRingSunlight(Vector3f sunDirectionWorld, float sunApparentRadiusRadians) {}
+
+  /**
    * Sets the occulter used by this body's per-fragment eclipse shading
    * (`docs/eclipses/01-decoupage.md`). {@code occluderPositionWorld} and {@code
    * occluderRadiusWorld} are in this body's own world space — world units, relative to this body's

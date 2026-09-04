@@ -4,6 +4,7 @@ import com.jme3.math.Quaternion;
 import com.jme3.math.Vector3f;
 import com.jme3.scene.Node;
 import com.jme3.scene.Spatial;
+import com.smousseur.orbitlab.engine.scene.mesh.ModelNodes;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -34,11 +35,8 @@ public record ShellSpin(Node pivot, Vector3f axis) {
   }
 
   /**
-   * Splices a pivot above the first node whose name starts with {@code namePrefix}, searching
-   * parents before children.
-   *
-   * <p>That order matters: an exporter names both the shell's group node and the geometry under it
-   * from the same source name, and the group is the one that carries the whole shell.
+   * Splices a pivot above the first node whose name starts with {@code namePrefix}, as {@link
+   * ModelNodes#firstNamed} finds it.
    *
    * <p>Call before the model is attached: the axis conversion reads world rotations, which are the
    * model's own only while the model is its own root. It is otherwise safe on the asset-loading
@@ -57,7 +55,7 @@ public record ShellSpin(Node pivot, Vector3f axis) {
     Objects.requireNonNull(axisInModelAxes, "axisInModelAxes");
 
     model.updateGeometricState();
-    Spatial shell = firstNamed(model, namePrefix);
+    Spatial shell = ModelNodes.firstNamed(model, namePrefix).orElse(null);
     if (shell == null || shell.getParent() == null) {
       return Optional.empty();
     }
@@ -83,21 +81,5 @@ public record ShellSpin(Node pivot, Vector3f axis) {
    */
   public void setAngle(float angleRad) {
     pivot.setLocalRotation(new Quaternion().fromAngleAxis(angleRad, axis));
-  }
-
-  private static Spatial firstNamed(Spatial root, String namePrefix) {
-    if (root.getName() != null && root.getName().startsWith(namePrefix)) {
-      return root;
-    }
-    if (!(root instanceof Node node)) {
-      return null;
-    }
-    for (Spatial child : node.getChildren()) {
-      Spatial found = firstNamed(child, namePrefix);
-      if (found != null) {
-        return found;
-      }
-    }
-    return null;
   }
 }

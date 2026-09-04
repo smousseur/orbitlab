@@ -10,6 +10,8 @@ import com.smousseur.orbitlab.app.view.RenderContext;
 import com.smousseur.orbitlab.engine.AssetFactory;
 import com.smousseur.orbitlab.engine.scene.body.BodyRenderConfig;
 import com.smousseur.orbitlab.engine.scene.body.ShellSpin;
+import com.smousseur.orbitlab.engine.scene.mesh.ModelNodes;
+import java.util.List;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -25,6 +27,7 @@ public class Model3dView {
   private final BodyRenderConfig config;
   private final Model3dAttacher model3dAttacher;
   private ShellSpin shellSpin;
+  private List<Geometry> ringGeometries = List.of();
 
   /**
    * Creates a new 3D view for a body and attaches a model bucket node to the given anchor.
@@ -47,10 +50,25 @@ public class Model3dView {
    */
   public Spatial loadModel() {
     logger.info("Loading model for {}", config.displayName());
-    return AssetFactory.get()
-        .loadModel(
-            config.modelPath(),
-            2 * (float) (config.radiusMeters() / RenderContext.PLANET_METERS_PER_UNIT));
+    return AssetFactory.get().loadModel(config.modelPath(), 2 * drawnRadiusUnits());
+  }
+
+  /**
+   * Radius of this body's globe as it is actually drawn, in near-view units.
+   *
+   * <p><b>This is the model's scale, halved — the two must not be written twice.</b> {@link
+   * #loadModel} sizes the asset by the diameter this returns, and {@link #setRingSunlight} hands
+   * the same number to the shader as the radius of the sphere casting the ring's shadow. A shadow
+   * band computed from any other radius would overhang or undercut the silhouette that casts it,
+   * which is the one comparison the eye makes on this effect (`FX-5`).
+   *
+   * <p>Deliberately not {@code config.renderContext().unitsPerMeter()}: a planet's render config
+   * carries the <em>solar</em> context, one unit to 10<sup>9</sup> m, while its model is drawn in
+   * the near viewport at one unit to the kilometre. That expression is right where {@code
+   * LodView.updateScreen} uses it, against the far camera, and wrong by a factor of a million here.
+   */
+  private float drawnRadiusUnits() {
+    return (float) (config.radiusMeters() / RenderContext.PLANET_METERS_PER_UNIT);
   }
 
   /**
@@ -82,6 +100,27 @@ public class Model3dView {
   }
 
   /**
+   * Remembers the geometries of a freshly loaded model's ring system, so the planet's own shadow
+   * can be cast on them and on nothing else (`FX-5`).
+   *
+   * <p>Call from the loading thread, before {@link #onModelLoaded}, alongside {@link
+   * #isolateShell}. What is kept is the geometries and not their materials: {@code
+   * AssetFactory.applyLambert} runs later in the same chain and replaces every material in the
+   * model, so a material captured here would be silently orphaned.
+   *
+   * <p>A model that carries no such node is left alone and {@link #setRingSunlight} stays a no-op.
+   *
+   * @param model the loaded model, not yet attached
+   * @param nodeNamePrefix prefix of the ring node's name in the asset
+   */
+  public void isolateRing(Spatial model, String nodeNamePrefix) {
+    ringGeometries =
+        ModelNodes.firstNamed(model, nodeNamePrefix)
+            .map(ModelNodes::geometriesUnder)
+            .orElseGet(List::of);
+  }
+
+  /**
    * Turns this model's independently spinning shell, if it has one.
    *
    * @param angleRad the angle in radians about the axis it was isolated on
@@ -89,6 +128,35 @@ public class Model3dView {
   public void setShellSpin(float angleRad) {
     if (shellSpin != null) {
       shellSpin.setAngle(angleRad);
+    }
+  }
+
+  /**
+   * Casts this body's own globe as the occulter of its ring system, for the frame the given Sun
+   * direction describes (`FX-5`, {@code docs/roadmap/01-roadmap-v1.md} §4.2). A model with no ring
+   * does nothing.
+   *
+   * <p><b>The caller supplies only what it alone knows.</b> Where the Sun is takes an ephemeris;
+   * the other two uniforms do not leave this object. The occulter is the model bucket's own world
+   * translation, which is what {@code vPosWorld} is measured against, so the pair is exact without
+   * assuming the body's anchor sits on the origin. Its radius is {@link #drawnRadiusUnits()}, the
+   * globe as drawn.
+   *
+   * @param sunDirectionWorld unit vector toward the Sun, in this body's world space
+   * @param sunApparentRadiusRadians the Sun's angular radius as seen from this body, in radians
+   */
+  public void setRingSunlight(Vector3f sunDirectionWorld, float sunApparentRadiusRadians) {
+    if (ringGeometries.isEmpty()) {
+      return;
+    }
+    Vector3f globeCentreWorld = modelBucket.getWorldTranslation();
+    float globeRadiusWorld = drawnRadiusUnits();
+    for (Geometry ring : ringGeometries) {
+      Material material = ring.getMaterial();
+      material.setVector3("OccluderPosition", globeCentreWorld);
+      material.setFloat("OccluderRadius", globeRadiusWorld);
+      material.setVector3("SunDirection", sunDirectionWorld);
+      material.setFloat("SunApparentRadius", sunApparentRadiusRadians);
     }
   }
 
@@ -116,6 +184,11 @@ public class Model3dView {
    * rather than caching materials: the bucket is empty until the async load completes, so the walk
    * is a no-op until then, and is otherwise a handful of geometries per body.
    *
+   * <p><b>Ring geometries are skipped.</b> They carry their own occulter — their planet, pushed by
+   * {@link #setRingSunlight} — and there is one set of occulter uniforms per material. No body in
+   * this application is both eclipsed and ringed today, so nothing currently collides; the guard is
+   * what keeps the two mechanisms from silently overwriting each other the day one does.
+   *
    * @param occluderPositionWorld the occulting body's centre, in this body's world space
    * @param occluderRadiusWorld the occulting body's radius, in world units
    * @param sunDirectionWorld unit vector toward the Sun, in this body's world space
@@ -130,6 +203,9 @@ public class Model3dView {
         new SceneGraphVisitorAdapter() {
           @Override
           public void visit(Geometry geom) {
+            if (ringGeometries.contains(geom)) {
+              return;
+            }
             Material material = geom.getMaterial();
             material.setVector3("OccluderPosition", occluderPositionWorld);
             material.setFloat("OccluderRadius", occluderRadiusWorld);

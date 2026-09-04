@@ -29,7 +29,7 @@ la frontière entre les deux derniers doit rester lisible.
 | [`BUG-17`](#bug-17--acceptablecost-mal-calé-depuis-lajout-du-terme-ergols-i7) | `acceptableCost` mal calé depuis l'ajout du terme ergols I7 | 2026-08-30 | Ouvert, correctif proposé non fait |
 | [`BUG-18`](#bug-18--rejets-de-scénario-au-chargement-seulement-journalisés) | Rejets de scénario au chargement, seulement journalisés | 2026-08-30 | Ouvert — **trou connu de `UI-3`** |
 | [`BUG-19`](#bug-19--la-rotation-propre-des-planètes-externes-est-aliasée-par-le-pas-de-la-fenêtre-glissante) | La rotation propre des planètes externes est aliasée par le pas de la fenêtre glissante | 2026-09-02 | **Corrigé le 2026-09-02** — les 11 corps rendus à 100,0 % du taux vrai à toutes les vitesses ; la Terre était aussi atteinte, au-delà de ×864 000 |
-| [`BUG-20`](#bug-20--plan-des-anneaux-désaligné-dans-les-assets) | Plan des anneaux désaligné dans les assets | 2026-09-02 | Ouvert, **mesuré et spécifié** — Saturne 13,51°, Uranus 9,93° hors du plan équatorial de leur propre globe ; `meshProbe` imprime l'angle et l'axe, d'où le passage d'`AST-1`/v2 à la ligne **1.2.0**, où `FX-5` en dépend |
+| [`BUG-20`](#bug-20--plan-des-anneaux-désaligné-dans-les-assets) | Plan des anneaux désaligné dans les assets | 2026-09-02 | **Corrigé le 2026-09-04** — les deux anneaux à `equatorial (0,00°)`. La cause n'était pas dans Blender mais dans l'export : une **échelle nulle** rend la matrice de l'objet singulière et l'exportateur en tire une rotation de nœud fausse. Épinglé par `RingShadowFixtureTest` |
 | [`BUG-21`](#bug-21--dtrotseconds-aliasé-dans-generatorconfigv1defaultv1) | `dtRotSeconds` aliasé dans `GeneratorConfigV1.defaultV1` | 2026-09-02 | Ouvert, **mesuré, latent** — chemin mort aujourd'hui, mais armé pour la prochaine régénération du dataset |
 | [`BUG-22`](#bug-22--les-icônes-des-corps-derrière-la-caméra-sont-dessinées-en-position-miroir) | Les icônes des corps derrière la caméra sont dessinées, en position miroir | 2026-09-03 | **Corrigé le 2026-09-03** — le garde testait une profondeur normalisée dont la résolution dépend du plan near ; il teste maintenant le signe. Épinglé par `BillboardIconVisibilityTest` |
 | [`BUG-23`](#bug-23--les-orbites-externes-portent-plus-de-sommets-que-le-budget-demandé) | Les orbites externes portent plus de sommets que le budget demandé | 2026-09-04 | Ouvert, **mesuré** — la borne de pas à 7 jours fait *monter* le compte : Pluton 12 939 points pour 4 096 demandés (×3,16), Neptune ×2,10, Uranus ×1,07 |
@@ -1542,6 +1542,35 @@ trouvé en vérifiant la santé du dataset au cours de ce correctif.
 ---
 
 ## BUG-20 — Plan des anneaux désaligné dans les assets
+
+> **Corrigé le 2026-09-04.** `./gradlew meshProbe` répond `ring, equatorial (0.00 deg)` pour
+> Saturne comme pour Uranus. Le correctif est celui que la fiche prescrivait — recopier sur le nœud
+> anneau la rotation du nœud globe — mais **la moitié Uranus a d'abord échoué, et pour une raison
+> qui n'était pas dans Blender.**
+>
+> **L'objet anneau d'Uranus porte une échelle nulle sur son propre axe normal**, `(0,008016 ; 0 ;
+> 0,008016)` en local. C'est le seul nœud des onze assets dans ce cas. Une composante nulle rend la
+> matrice de l'objet singulière : `Matrix.decompose()` normalise les colonnes, la colonne nulle le
+> reste, et `mat3_normalized_to_quat` lit ensuite une matrice de rotation privée de son troisième
+> vecteur de base. Le quaternion qu'il écrit est unitaire, déterministe — et n'est pas celui qu'on a
+> posé. **20,336° volés.** La décomposition rejouée sur la rotation du globe et cette échelle
+> reproduit le quaternion du fichier à six décimales ; avec une échelle Y saine, la même rotation
+> ressort exactement sur celle du globe. L'anneau de Saturne, échelle `(0,8168 ; 0,8168 ; 0,8169)`,
+> avait recopié sans perte du premier coup.
+>
+> **Et le défaut a empiré avant de disparaître : 9,93° → 20,25°.** La distance quaternion n'est pas
+> la grandeur mesurée. Avant, les deux nœuds étaient à 39,71° l'un de l'autre mais l'essentiel était
+> du spin autour de l'axe de l'anneau, invisible : 9,93° seulement d'inclinaison. Après le premier
+> ré-export, 20,34° d'écart dont **20,25°** d'inclinaison. Se rapprocher en quaternion peut éloigner
+> le plan.
+>
+> **Ce qui reste, et qui n'est pas dans le dépôt.** L'échelle nulle est toujours dans le `.blend`
+> d'Uranus : le prochain ré-export ré-écrasera la rotation recopiée par un quaternion re-mangé, et
+> le vol dépend de la rotation, donc reposer celle-ci ne le fera jamais tomber à zéro. Le champ
+> `Scale Y` de l'objet anneau doit passer de 0 à 0,008016 avant tout export. `RingShadowFixtureTest`
+> mesure l'alignement à chaque build et deviendrait rouge, mais il ne peut pas réparer la source.
+> Le maillage, lui, est plat à 7,4e-6 contre un rayon de 106,4 : l'aplatir une seconde fois par une
+> échelle n'apportait rien et coûtait la rotation.
 
 > **Mesure du 2026-09-03 — la sonde imprime le correctif, et la fiche change de version.**
 > `./gradlew meshProbe` sur les assets commités ne dit pas seulement que les anneaux sont
