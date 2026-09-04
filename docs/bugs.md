@@ -32,7 +32,8 @@ la frontière entre les deux derniers doit rester lisible.
 | [`BUG-20`](#bug-20--plan-des-anneaux-désaligné-dans-les-assets) | Plan des anneaux désaligné dans les assets | 2026-09-02 | **Corrigé le 2026-09-04** — les deux anneaux à `equatorial (0,00°)`. La cause n'était pas dans Blender mais dans l'export : une **échelle nulle** rend la matrice de l'objet singulière et l'exportateur en tire une rotation de nœud fausse. Épinglé par `RingShadowFixtureTest` |
 | [`BUG-21`](#bug-21--dtrotseconds-aliasé-dans-generatorconfigv1defaultv1) | `dtRotSeconds` aliasé dans `GeneratorConfigV1.defaultV1` | 2026-09-02 | Ouvert, **mesuré, latent** — chemin mort aujourd'hui, mais armé pour la prochaine régénération du dataset |
 | [`BUG-22`](#bug-22--les-icônes-des-corps-derrière-la-caméra-sont-dessinées-en-position-miroir) | Les icônes des corps derrière la caméra sont dessinées, en position miroir | 2026-09-03 | **Corrigé le 2026-09-03** — le garde testait une profondeur normalisée dont la résolution dépend du plan near ; il teste maintenant le signe. Épinglé par `BillboardIconVisibilityTest` |
-| [`BUG-23`](#bug-23--les-orbites-externes-portent-plus-de-sommets-que-le-budget-demandé) | Les orbites externes portent plus de sommets que le budget demandé | 2026-09-04 | Ouvert, **mesuré** — la borne de pas à 7 jours fait *monter* le compte : Pluton 12 939 points pour 4 096 demandés (×3,16), Neptune ×2,10, Uranus ×1,07 |
+| [`BUG-23`](#bug-23--les-orbites-externes-portent-plus-de-sommets-que-le-budget-demandé) | Les orbites externes portent plus de sommets que le budget demandé | 2026-09-04 | **Corrigé le 2026-09-04**, mais pas où la fiche le situait : le code incriminé est le **générateur hors-ligne**, son dépassement est **transitoire**, et le correctif qu'elle proposait aurait laissé 68 % de l'orbite de Pluton non dessinée. Épinglé par `OrbitPathCacheTest` |
+| [`BUG-24`](#bug-24--la-largeur-du-ruban-nest-tenue-quaux-sommets-pas-le-long-dun-segment) | La largeur du ruban n'est tenue qu'aux sommets, pas le long d'un segment | 2026-09-05 | Ouvert, **mesuré** — le gonflement vaut `(L/2)/d` ; à un million de km du trait, Pluton rend **20,1 px** pour 2,5 demandés, Neptune 15,6, la Terre 4,5. C'est la cause que `BUG-23` cherchait |
 
 ---
 
@@ -1848,6 +1849,62 @@ le placer.
 
 ## BUG-23 — Les orbites externes portent plus de sommets que le budget demandé
 
+> **Corrigé le 2026-09-04 — et trois énoncés de la fiche sont démentis.**
+>
+> **1. `OrbitPathCache` n'est pas sur le chemin de rendu.** Son unique appelant en production est
+> `tools/orbitgen/OrbitDatasetGenerator`. Les lignes `:82-86` incriminées ci-dessous sont du code de
+> **générateur hors-ligne** : rien à l'exécution ne les traverse. Ce qu'elles produisent est écrit
+> dans `~/.orbitlab/dataset/orbits/*.bin`, et les comptes y sont bien ceux annoncés — vérifiés sur
+> disque : 4 098 pour les sept corps conformes, 4 387 Uranus, 8 600 Neptune, **12 940 Pluton**. La
+> fiche donne `n` ; la boucle étant `for (i = 0; i <= n; i++)`, les fichiers portent **n+1**, si
+> bien que même les corps « conformes » dépassaient de deux un budget de 4 096.
+>
+> **2. Le correctif proposé aurait laissé les deux tiers de l'orbite de Pluton non dessinés.** Le
+> compte et la couverture sont **le même bouton** : le chemin s'étend sur `n × pas`. Plafonner `n` à
+> 4 096 en gardant le pas borné à 7 jours donne 4 096 × 7 j = 78,5 ans contre une période de
+> 248 ans — **31,7 % de l'ellipse**, le reste effacé.
+>
+> **3. Le « second constat, indépendant » était le code juste.** `OrbitRuntimeAppState:106` prend le
+> pas non borné, et `computeOrbitSnapshot` alloue `bodyPoints` positions en pas de
+> `période / bodyPoints` sur `[Tc − P/2, Tc + P/2]` : budget exact, couverture exacte, pour les onze
+> corps. Les deux chemins ne parlaient pas du même pas parce que l'un des deux avait tort, et ce
+> n'était pas celui-là.
+>
+> **Correctif retenu : aligner le générateur sur le runtime.** `computeOnePeriod` prend désormais
+> `bodyPoints` échantillons de `période / bodyPoints`. `OrbitWindowConfig.clampStepSeconds` est
+> supprimée — elle n'avait plus d'appelant, et sa borne haute ne servait qu'à faire monter le
+> compte. Vingt-deux jours entre deux échantillons sur une orbite de 248 ans font 0,087° d'arc : ce
+> que la borne protégeait n'était pas une résolution dont le ruban avait besoin. Épinglé par
+> `OrbitPathCacheTest.thePathCarriesExactlyItsBudgetAndCoversExactlyOnePeriod`, qui vérifie les
+> trois grandeurs d'un coup — compte, pas, et `compte × pas = période`.
+>
+> **Le dépassement était transitoire, et la section « Non vérifié » est tranchée : non.** Le
+> snapshot est nul à la première frame, donc hors zone de confort, donc une reconstruction est
+> demandée aussitôt ; quand elle atterrit, le ruban est réécrit à 4 096 points — proprement,
+> `TriangleStrip` sans buffer d'indices, le compte dérivant de la limite du buffer de positions.
+> Ensuite la marge de confort de Pluton vaut 512 × 22,1 j ≈ **31 ans de temps simulé** : elle ne se
+> reconstruit plus jamais. En régime établi les onze anneaux portaient donc déjà 4 096 points sur
+> 360°, soit **11,4 points par degré pour tous**. Et le mécanisme prédit le mauvais signe : le
+> recouvrement des quads dépend des points par *pixel*, or l'anneau au plus grand rayon écran a ses
+> sommets les plus écartés. La densité rendrait le ruban de Pluton **plus fin** que les autres.
+>
+> **Ce qui reste ouvert est l'observation d'origine.** L'épaisseur apparente du ruban de Pluton n'a
+> plus de cause identifiée : celle que cette fiche lui donnait est écartée par les mesures
+> ci-dessus. À rouvrir comme investigation distincte, avec `REL-1`/`REL-2`/`REL-3` dans la passe
+> `H-RND` de [v3](roadmap/03-roadmap-v3.md).
+>
+> **Une trace a été ajoutée pour que la question ne se repose pas à l'aveugle.**
+> `OrbitRuntimeAppState.applySnapshot` journalise chaque reconstruction avec le nombre de points, le
+> pas, et le compte de sommets du maillage **avant et après** l'écriture — la différence entre « la
+> reconstruction a atterri » et « le ruban porte encore ce que le générateur a écrit » n'était
+> observable par aucun moyen. Un avertissement, une fois par corps, signale aussi le cas où aucune
+> géométrie ne reçoit la fenêtre : l'orbite n'est alors jamais dessinée, et cet échec-là était
+> entièrement silencieux.
+>
+> **Note d'exploitation.** Les fichiers du dataset restent ceux d'avant : le correctif ne change que
+> ce qu'une **régénération** produit. Sans elle, le démarrage lit encore 12 940 points pour Pluton
+> avant que le runtime ne les remplace.
+
 **Constaté** le 2026-09-04 : le ruban de l'orbite de Pluton paraît nettement plus épais,
 relativement à son icône, que celui des autres planètes.
 
@@ -1915,3 +1972,81 @@ défaut de budget sans effet visuel.
 Même sous-système que `REL-1` (raccord terminal du ruban), `REL-2` (`MUTING_STEP`) et `REL-3`
 (fondu alpha et largeurs) : la passe `H-RND` de [v3](roadmap/03-roadmap-v3.md). Hors du périmètre
 écrit de la 1.2.0, qui ne porte ni fiche ni mécanisme de ruban.
+---
+
+## BUG-24 — La largeur du ruban n'est tenue qu'aux sommets, pas le long d'un segment
+
+**Constaté** le 2026-09-05, en regardant le ruban de Pluton depuis environ un million de
+kilomètres : une bande pleine d'une vingtaine de pixels, à côté d'une icône de 16. C'est
+l'observation qui avait ouvert [`BUG-23`](#bug-23--les-orbites-externes-portent-plus-de-sommets-que-le-budget-demandé),
+et dont la cause proposée là-bas — la densité de sommets — a été écartée par la mesure.
+
+**Ce n'est pas la largeur nominale.** `ORBIT_WIDTH_PX` vaut 2,5, et `Ribbon.j3md` déclare bien
+`Resolution` parmi ses `WorldParameters` : l'uniforme est lié par viewport, ce qui est justement ce
+qui donne la même largeur en pixels dans le viewport far et dans le near.
+
+### Mécanisme
+
+`Ribbon.vert` calcule `halfWorld = halfPx · depth · 2 / (res.y · P[1][1])` **par sommet**, avec la
+profondeur de ce sommet. Reprojetée *à ce sommet*, elle redonne exactement `halfPx`. C'est vrai, et
+c'est tout ce qui est vrai : la garantie ne vaut **qu'aux sommets**.
+
+Les bords du quad sont des droites en espace **monde** entre les deux extrémités dilatées. Au
+milieu d'un segment, l'offset appliqué est donc l'interpolation de deux offsets dimensionnés pour la
+profondeur des *extrémités*. Quand la caméra est bien plus proche du milieu du segment que de ses
+bouts, cet offset est vu à une profondeur bien moindre, et la bande enfle. Le facteur vaut
+
+> **gonflement ≈ (L / 2) / d**, avec `L` la longueur du segment et `d` la distance de la caméra au trait.
+
+### Mesuré
+
+Longueur de segment moyenne au budget de 4 096 points, calculée sur le périmètre réel lu dans
+`~/.orbitlab/dataset/orbits/*.bin`, et largeur rendue qui en découle :
+
+| corps | segment `L` | en km | vs Terre | largeur à `d` = 1 u | à `d` = 0,1 u |
+|---|---|---|---|---|---|
+| Lune | 0,0006 u | 590 | 0,0× | 4,5 px | 4,5 px |
+| Terre | 0,230 u | 229 463 | 1,0× | 4,5 px | 5,2 px |
+| Jupiter | 1,193 u | 1 193 227 | 5,2× | 4,5 px | 26,8 px |
+| Saturne | 2,188 u | 2 188 394 | 9,5× | 4,9 px | 49,2 px |
+| Uranus | 4,408 u | 4 408 114 | 19,2× | 9,9 px | 99,2 px |
+| Neptune | 6,920 u | 6 919 824 | 30,2× | 15,6 px | 155,7 px |
+| **Pluton** | **8,939 u** | **8 938 940** | **39,0×** | **20,1 px** | **201,1 px** |
+
+Largeur honnête, aux sommets : 4,5 px de géométrie pour 2,5 px de couverture pleine.
+
+**La capture confirme le modèle sur deux grandeurs à la fois.** À `d` = 1 unité solaire, il prédit
+un ruban de **20,1 px** — c'est ce que montre l'image — et un rayon projeté de **1,2 px** pour le
+disque de Pluton, donc sous le seuil de LOD, donc une icône : c'est aussi ce que montre l'image. Une
+seule distance rend compte des deux.
+
+**Pourquoi ça se lit comme « épais » et non comme « cassé ».** Le fondu de `Ribbon.frag` est exprimé
+en unités de `halfPx` — `cover = clamp(0.5 · WidthPx + 0.5 − |vSide| · halfPx, 0, 1)` — donc il se
+dilate avec la bande au lieu de rester à un pixel. Le ruban garde exactement sa forme et n'a que
+son échelle de fausse.
+
+### Le couplage avec `BUG-23`, qu'il faut connaître avant de toucher au budget
+
+`L` est le périmètre divisé par le nombre de points : **moins de sommets, c'est des segments plus
+longs, donc plus de gonflement.** Le dataset de Pluton à 12 940 points donnait `L` = 2,83 u ; à
+4 096 il donne 8,94 u, soit 3,16× pire à `d` égal. Sans conséquence à l'écran — la reconstruction
+runtime imposait déjà 4 096 avant la correction de `BUG-23` — mais les deux grandeurs sont liées, et
+un futur ajustement de budget déplace celle-ci.
+
+### Directions de correctif, et l'arbitrage est réel
+
+- **Largeur par fragment** — passer l'axe du segment en espace vue et calculer la distance à l'axe
+  dans le fragment shader, avec la profondeur du fragment. Juste à toute distance, robuste au
+  `w ≤ 0`, coûte deux varyings.
+- **Dilatation en espace écran** — la largeur y est exacte aux deux extrémités, et l'interpolation
+  d'une constante est cette constante. Mais `Ribbon.vert` a écarté cette voie explicitement :
+  *« never in NDC after the divide by w […] the one that explodes when w <= 0 »*, le cas de la vue
+  vaisseau où la trajectoire traverse la caméra. Il faudrait un garde au plan near.
+- **Subdiviser les segments longs** à la construction. Ne touche aucun shader, mais rachète les
+  sommets que `BUG-23` vient de rendre.
+
+### Où ça va
+
+Même sous-système que `REL-1` (raccord terminal du ruban), `REL-2` (`MUTING_STEP`) et `REL-3`
+(fondu alpha et largeurs) : la passe `H-RND` de [v3](roadmap/03-roadmap-v3.md). Le mécanisme touche
+aussi les trajectoires de mission, qui partagent `Ribbon.vert` — non vérifié à ce jour.

@@ -25,8 +25,6 @@ public record OrbitWindowConfig(
     int minSizeSeconds,
     double maxFraction) {
   private static final int DEFAULT_POINTS_COUNT = 16;
-  private static final double DEFAULT_MIN_STEP = 60.0; // 1 minute
-  private static final double DEFAULT_MAX_STEP = 7 * 86400.0; // 7 days
 
   public OrbitWindowConfig {
     Objects.requireNonNull(pointsByBody, "pointsByBody");
@@ -42,20 +40,6 @@ public record OrbitWindowConfig(
   public int bodyPoints(SolarSystemBody body) {
     Objects.requireNonNull(body, "body");
     return pointsByBody.getOrDefault(body, DEFAULT_POINTS_COUNT);
-  }
-
-  /**
-   * Clamps the given step size to the allowed range [1 minute, 7 days].
-   *
-   * @param stepSeconds the raw step size in seconds
-   * @return the clamped step size in seconds
-   * @throws IllegalArgumentException if stepSeconds is not positive or not finite
-   */
-  public double clampStepSeconds(double stepSeconds) {
-    if (!Double.isFinite(stepSeconds) || stepSeconds <= 0.0) {
-      throw new IllegalArgumentException("stepSeconds must be finite and > 0");
-    }
-    return Math.max(DEFAULT_MIN_STEP, Math.min(DEFAULT_MAX_STEP, stepSeconds));
   }
 
   /**

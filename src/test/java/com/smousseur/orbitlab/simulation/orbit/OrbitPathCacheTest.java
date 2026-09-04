@@ -80,4 +80,51 @@ class OrbitPathCacheTest {
       exec.awaitTermination(2, TimeUnit.SECONDS);
     }
   }
+
+  /**
+   * BUG-23: the configured point count is a budget, and the path must carry exactly it. The step
+   * used to be clamped to at most seven days and the count recomputed from the clamped step, which
+   * for a slow body made the count go up — Pluto's dataset held 12 940 points for a budget of 4
+   * 096. The two are one knob: the path spans {@code count * step}, so a count that drifts from the
+   * budget also drifts from covering exactly one period.
+   */
+  @Test
+  void thePathCarriesExactlyItsBudgetAndCoversExactlyOnePeriod() throws Exception {
+    double period = 100.0;
+    int budget = 200;
+
+    EphemerisSource src =
+        (body, date) ->
+            new BodySample(
+                AbsoluteDate.J2000_EPOCH,
+                new PVCoordinates(
+                    new Vector3D(date.durationFrom(AbsoluteDate.J2000_EPOCH), 1.0e7, 0),
+                    Vector3D.PLUS_J),
+                Rotation.IDENTITY);
+
+    Map<SolarSystemBody, Double> periods = new EnumMap<>(SolarSystemBody.class);
+    periods.put(EARTH, period);
+    EphemerisConfig cfg = new EphemerisConfig(10.0, 2, 2, periods);
+    OrbitWindowConfig orbitCfg =
+        new OrbitWindowConfig(new EnumMap<>(Map.of(EARTH, budget)), 512, 64, 2 * 86400, 0.25);
+
+    ExecutorService exec = Executors.newSingleThreadExecutor();
+    try {
+      OrbitPath path =
+          new OrbitPathCache(src, cfg, orbitCfg, exec)
+              .getOrComputeOnePeriod(EARTH, AbsoluteDate.J2000_EPOCH)
+              .get(10, TimeUnit.SECONDS);
+
+      assertEquals(budget, path.positionsHelioMeters().size(), "the count is the budget");
+      assertEquals(period / budget, path.stepSeconds(), 1e-12, "the step follows the count");
+      assertEquals(
+          period,
+          path.positionsHelioMeters().size() * path.stepSeconds(),
+          1e-9,
+          "count * step must span exactly one period, or the ribbon is cut short");
+    } finally {
+      exec.shutdownNow();
+      exec.awaitTermination(2, TimeUnit.SECONDS);
+    }
+  }
 }

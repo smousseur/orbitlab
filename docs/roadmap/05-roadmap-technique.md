@@ -58,6 +58,27 @@ questions sans jalon se re-posent indéfiniment.
 
 Le corpus compte donc **69 fiches, dont 58 ouvertes** — le comptage est celui de `J0-D`, le 2026-09-02 ; ce document annonçait 68 et [v1](01-roadmap-v1.md) §4 en annonçait 66.
 
+### Mouvement du 2026-09-05 — la ligne 1.2.0 est close
+
+**Sept fiches se sont fermées, une s'est ouverte.**
+
+| Fiche | Mouvement |
+|---|---|
+| `BUG-1`, `BUG-2`, `BUG-5`, `BUG-22` | **Corrigées le 2026-09-03** (commit `a93334c`) |
+| `BUG-20` | **Corrigée le 2026-09-04** — pas dans Blender : une échelle nulle rend la matrice de l'objet singulière et l'exportateur en tire une rotation de nœud fausse, 20,336° volés. Le défaut a empiré avant de disparaître, de 9,93° à 20,25° |
+| `FX-5` | **Livrée le 2026-09-04**, vérifiée à l'écran. Le « chiffre à vérifier » de sa fiche s'est retourné : c'est le rayon *dessiné* qui coule l'ombre, et cinq corps portent le rayon moyen, pas quatre |
+| `BUG-23` | **Ouverte et corrigée le 2026-09-04** — le code incriminé était le générateur hors-ligne, le dépassement transitoire, et le correctif proposé aurait effacé les deux tiers de l'orbite de Pluton |
+| `BUG-24` | **Ouverte le 2026-09-05** — la largeur du ruban n'est tenue qu'aux sommets ; gonflement `(L/2)/d`, Pluton à 20,1 px pour 2,5 demandés. C'est la cause que `BUG-23` cherchait |
+
+**Le comptage ci-dessus est celui du 2026-09-02 et ne tient plus.** Il n'est pas
+remplacé ici : recompter le corpus demande de reparcourir les cinq documents, et
+un chiffre recopié de mémoire est exactement ce que la leçon ci-dessous
+interdit.
+
+**Trois fiches sur sept ont été corrigées ailleurs que là où leur fiche les
+situait**, et dans les trois cas c'est la mesure qui l'a dit, pas la relecture.
+C'est la même leçon que la révision précédente, sur un échantillon neuf.
+
 **`BUG-20` révèle un motif, et il a maintenant un identifiant.** Quatre fiches
 étaient bloquées non par du code mais par des maillages absents : `BUG-20`
 (anneaux à ré-exporter), `DT-12` (Ariane 6), et les besoins d'assets de `PHY-5`

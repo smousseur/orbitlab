@@ -3,8 +3,9 @@
 > **Cette version est livrée.** Ses quatre phases sont soldées, la `v1.1.0` est
 > taguée depuis le 2026-08-31 et la ligne de stabilisation **1.1.X est close à
 > 1.1.1** depuis le 2026-09-03. Ce qui reste ouvert sous cet en-tête est une
-> ligne neuve, **1.2.0** — la vue rapprochée et l'ombre des anneaux. Les deux
-> sont au §4.
+> ligne neuve, **1.2.0** — la vue rapprochée et l'ombre des anneaux — **close à
+> son tour le 2026-09-05**. Les deux sont au §4, et il ne reste rien d'ouvert
+> sous cet en-tête.
 
 Ce document remplace `docs/roadmap/01-roadmap.md`, qui portait sept phases pour
 une version unique. Le découpage par version l'a scindé en quatre : la porte
@@ -235,7 +236,7 @@ d'ombre sur la Terre (`FX-2`).
 
 ---
 
-## 4. Les lignes de correction : 1.1.X, close, et 1.2.0, ouverte
+## 4. Les lignes de correction : 1.1.X et 1.2.0, closes toutes deux
 
 ### 4.1 La ligne 1.1.X — corrections et stabilisation
 
@@ -294,6 +295,25 @@ de celle-ci.
 
 ### 4.2 La ligne 1.2.0 — la vue rapprochée, et l'ombre des anneaux
 
+> **Close le 2026-09-05.** Les six fiches annoncées sont faites, plus une
+> septième prise en route, `BUG-23`. L'argument de la version a tenu : six
+> fiches, deux chantiers de code et une séance d'assets.
+>
+> **Ce que la ligne a appris, et qui n'était dans aucune fiche.** Trois des sept
+> ont été corrigées ailleurs que là où leur fiche les situait. `BUG-20` n'était
+> pas un problème Blender mais un export : une échelle nulle rend la matrice de
+> l'objet singulière et l'exportateur en tire une rotation de nœud fausse — la
+> moitié Uranus a d'abord échoué en empirant, de 9,93° à 20,25°. `FX-5` a démenti
+> le chiffre que sa propre fiche demandait de vérifier : c'est le rayon
+> *dessiné* qui coule l'ombre, pas l'équatorial, et cinq corps portent le rayon
+> moyen, pas quatre. `BUG-23` visait un générateur hors-ligne dont le
+> dépassement était transitoire, et le correctif qu'il proposait aurait effacé
+> les deux tiers de l'orbite de Pluton.
+>
+> **Une fiche neuve en est sortie**, `BUG-24` : la largeur du ruban n'est tenue
+> qu'aux sommets, et le gonflement vaut `(L/2)/d`. C'est la cause que `BUG-23`
+> cherchait — sa propre section « Non vérifié » avait raison de douter.
+>
 > **Ouverte le 2026-09-03**, sur une séance de mesure des fiches `BUG-1`, `BUG-2`
 > et `BUG-5`, suivie d'une vérification à l'écran qui a produit un défaut neuf,
 > `BUG-22`, et démenti le diagnostic de `BUG-1`.

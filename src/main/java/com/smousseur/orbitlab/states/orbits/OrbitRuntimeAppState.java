@@ -19,6 +19,7 @@ import com.smousseur.orbitlab.simulation.orbit.config.OrbitWindowConfig;
 import com.smousseur.orbitlab.simulation.source.EphemerisSource;
 import com.smousseur.orbitlab.simulation.source.EphemerisSourceRegistry;
 import java.util.EnumMap;
+import java.util.EnumSet;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -58,6 +59,15 @@ public final class OrbitRuntimeAppState extends BaseAppState {
   private final Map<SolarSystemBody, OrbitRuntimeSlot> slots = new EnumMap<>(SolarSystemBody.class);
   private final Map<SolarSystemBody, Long> lastAppliedVersion =
       new EnumMap<>(SolarSystemBody.class);
+
+  /**
+   * Bodies already reported as having no ribbon to write into. A snapshot that finds no geometry is
+   * computed and dropped on every frame that follows, and the orbit is never drawn at all — the one
+   * failure of this state that used to be entirely silent. Kept so the report is made once and not
+   * sixty times a second.
+   */
+  private final Set<SolarSystemBody> missingGeometryReported =
+      EnumSet.noneOf(SolarSystemBody.class);
 
   private ExecutorService orbitPool;
 
@@ -123,11 +133,7 @@ public final class OrbitRuntimeAppState extends BaseAppState {
       if (s != null) {
         long last = lastAppliedVersion.getOrDefault(body, -1L);
         if (s.version() != last) {
-          Geometry geom = findOrbitGeometry(body);
-          if (geom != null) {
-            OrbitLineFactory.updateGeometryPositionsHelioMeters(geom, s.positions());
-            lastAppliedVersion.put(body, s.version());
-          }
+          applySnapshot(body, s);
         }
       }
 
@@ -210,6 +216,45 @@ public final class OrbitRuntimeAppState extends BaseAppState {
     }
 
     return new OrbitSnapshot(body, centerTc, periodSeconds, stepSeconds, positions, version);
+  }
+
+  /**
+   * Writes a freshly computed window into the body's ribbon, and says so.
+   *
+   * <p><b>The log is the evidence that the runtime window reaches the screen at all</b> ({@code
+   * docs/bugs.md}, BUG-23). What {@code OrbitInitAppState} draws at startup comes from the dataset
+   * file, whose point count is the generator's; this state then recomputes the same orbit at
+   * exactly {@code bodyPoints} and rewrites the mesh. Reading the two vertex counts on either side
+   * of that write is what distinguishes "the rebuild landed" from "the ribbon still carries what
+   * the generator wrote", and the two used to be indistinguishable from outside.
+   *
+   * <p>It fires once per body, on the single rebuild each one gets at startup: past that the
+   * comfort margin runs to decades of simulated time.
+   */
+  private void applySnapshot(SolarSystemBody body, OrbitSnapshot snapshot) {
+    Geometry geom = findOrbitGeometry(body);
+    if (geom == null) {
+      if (missingGeometryReported.add(body)) {
+        logger.warn(
+            "No ribbon geometry named {} to receive {}'s orbit window: it will never be drawn."
+                + " OrbitInitAppState skips a body whose dataset file is missing.",
+            "OrbitLine-" + body.name(),
+            body.displayName());
+      }
+      return;
+    }
+    int verticesBefore = geom.getMesh().getVertexCount();
+    OrbitLineFactory.updateGeometryPositionsHelioMeters(geom, snapshot.positions());
+    lastAppliedVersion.put(body, snapshot.version());
+    logger.info(
+        "Orbit ribbon for {} rebuilt from the runtime window: {} points at {} d, mesh {} -> {}"
+            + " vertices (version {})",
+        body.displayName(),
+        snapshot.positions().length,
+        String.format(java.util.Locale.ROOT, "%.3f", snapshot.stepSeconds() / 86400.0),
+        verticesBefore,
+        geom.getMesh().getVertexCount(),
+        snapshot.version());
   }
 
   private Geometry findOrbitGeometry(SolarSystemBody body) {

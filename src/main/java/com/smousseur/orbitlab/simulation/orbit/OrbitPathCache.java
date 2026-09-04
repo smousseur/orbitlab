@@ -71,6 +71,25 @@ public final class OrbitPathCache {
         id -> CompletableFuture.supplyAsync(() -> computeOnePeriod(id, referenceStart), executor));
   }
 
+  /**
+   * Samples one full period of a body's orbit, at exactly the number of points its configuration
+   * asks for.
+   *
+   * <p><b>The count is the budget and the step follows, not the other way round</b> ({@code
+   * docs/bugs.md}, BUG-23). This used to clamp the step the budget implied to at most seven days
+   * and then recompute the count from the clamped step, which for a body needing a coarser step
+   * than that made the count go <em>up</em>: Pluto's dataset carried 12 940 points for a budget of
+   * 4 096. The two are the same knob — the path spans {@code count * step} — so capping the count
+   * while keeping the clamped step would have left two thirds of that orbit undrawn.
+   *
+   * <p>This is now the same arithmetic {@code OrbitRuntimeAppState.computeOrbitSnapshot} performs
+   * when it rebuilds the same ribbon at runtime: {@code bodyPoints} samples of {@code period /
+   * bodyPoints} over a window centred on the reference date. The two paths draw the same geometry
+   * because they compute it the same way, rather than by agreement.
+   *
+   * <p>Twenty-two days between samples on a 248-year orbit is 0.087 deg of arc, so nothing is lost
+   * to the eye: what the clamp protected against was never a resolution the ribbon needed.
+   */
   private OrbitPath computeOnePeriod(SolarSystemBody body, AbsoluteDate start) {
     if (body == SolarSystemBody.SUN) {
       throw new IllegalArgumentException("OrbitPathCache does not support SUN orbit path");
@@ -80,11 +99,8 @@ public final class OrbitPathCache {
     AbsoluteDate end = start.shiftedBy(period);
 
     int targetPoints = orbitWindowConfig.bodyPoints(body);
-    double rawStep = period / targetPoints;
-    double step = orbitWindowConfig.clampStepSeconds(rawStep);
-
-    int n = (int) Math.ceil(period / step) + 1;
-    List<Vector3D> positions = new ArrayList<>(n + 1);
+    double step = OrbitPolicy.stepSeconds(period, targetPoints);
+    List<Vector3D> positions = new ArrayList<>(targetPoints);
 
     OrekitService orekit = OrekitService.get();
     orekit.initialize();
@@ -104,8 +120,8 @@ public final class OrbitPathCache {
     KeplerianPropagator centerPropagator = new KeplerianPropagator(orbitCenter);
 
     // TODO only propagate from the last ephemeris point and not from start date
-    AbsoluteDate t = start.shiftedBy(-step * n / 2);
-    for (int i = 0; i <= n; i++) {
+    AbsoluteDate t = start.shiftedBy(-period / 2.0);
+    for (int i = 0; i < targetPoints; i++) {
       Vector3D relPos = pvSource.sampleIcrfSafe(body, t, propagator);
       Vector3D pCenter = pvSource.sampleIcrfSafe(center, t, centerPropagator);
       positions.add(relPos.subtract(pCenter));

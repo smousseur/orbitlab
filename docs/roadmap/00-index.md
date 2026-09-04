@@ -6,7 +6,7 @@ autonome : elle contient son plan, ses fiches d'items et ses questions ouvertes.
 
 | Document | Version | En une ligne | État |
 |---|---|---|---|
-| [`01-roadmap-v1.md`](01-roadmap-v1.md) | **v1.X.X** | Le système solaire, les missions Terre / GEO / lunaires | Livrée ; **1.1.X** close à 1.1.1, **1.2.0** ouverte (vue rapprochée et anneaux) |
+| [`01-roadmap-v1.md`](01-roadmap-v1.md) | **v1.X.X** | Le système solaire, les missions Terre / GEO / lunaires | Livrée ; **1.1.X** close à 1.1.1, **1.2.0** close le 2026-09-05 |
 | [`02-roadmap-v2.md`](02-roadmap-v2.md) | **v2.X.X** | Réalisme : l'atmosphère, les objets qui se séparent, le retour sur Terre | À faire |
 | [`03-roadmap-v3.md`](03-roadmap-v3.md) | **v3.X.X** | Le retour de la Lune, et la maturité de l'interface | À faire |
 | [`04-roadmap-v4.md`](04-roadmap-v4.md) | **v4.X.X** | Rendez-vous orbital et amarrage | À faire |
@@ -66,11 +66,7 @@ sont dans [v1](01-roadmap-v1.md) §3 et §6.
 | Version | ID | Item | ★ | ◆ | Taille |
 |---|---|---|:-:|:-:|:-:|
 | **1.1.X** | — | ~~toute la ligne~~ — **close le 2026-09-03** à 1.1.1 : `J0`, `BUG-19`, et `BUG-3` requalifié « accepté, avec raison » | — | — | — |
-| **1.2.0** | `BUG-22` | Icônes des corps derrière la caméra, dessinées en miroir | — | — | S |
-| **1.2.0** | `BUG-2` | Sauts de la skybox au zoom, en vue solaire | — | — | S |
-| **1.2.0** | `BUG-1` + `BUG-5` | Jitter de la transition et pop du modèle — un seul changement | — | — | M |
-| **1.2.0** | `BUG-20` | Anneaux à remettre dans le plan équatorial *(hors code)* | — | — | S |
-| **1.2.0** | `FX-5` | Ombre de la planète sur ses anneaux | 3 | 2 | S |
+| **1.2.0** | — | ~~toute la ligne~~ — **close le 2026-09-05** : `BUG-1`, `BUG-2`, `BUG-5`, `BUG-22`, `BUG-20`, `FX-5`, plus `BUG-23` pris en cours de route. Deux fiches neuves en sont sorties, `BUG-23` (close) et `BUG-24` (ouverte) | — | — | — |
 | **v2** | `AST-1` | Lot d'assets 3D *(hors code)* | — | — | — |
 | **v2** | `PHY-2` | Atmosphère par défaut + recalibrage optimiseur | 5 | 4 | L |
 | **v2** | `PHY-3` | Détecteurs MaxQ, télémétrie, UI de fidélité | 3 | 2 | M |
