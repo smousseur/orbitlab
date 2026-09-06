@@ -132,7 +132,7 @@ rayon par objet.
 ### 1.4 L'Ariane 64 candidate
 
 Un lot de neuf fichiers (pile complète, S2 + coiffe, et sept débris) a été passé
-à la grille du § 1.6 le 5 septembre. **Verdict : accepté.**
+à la grille du § 1.8 le 5 septembre. **Verdict : accepté.**
 
 | Contrôle | Ariane 64 candidate | Falcon actuel | Ariane 5 actuelle |
 |---|---|---|---|
@@ -170,14 +170,20 @@ l'instant du largage, il lui faut cette table, mesurée sur la pile, en unités 
 maillage :
 
 ```
-booster1  (-0.0416, +0.1863, -0.0416)
-booster2  (+0.0416, +0.1863, +0.0416)
-booster3  (-0.0416, +0.1863, +0.0416)
-booster4  (+0.0416, +0.1863, -0.0416)
+booster1  (-0.0416, +0.0051, -0.0416)
+booster2  (+0.0416, +0.0051, +0.0416)
+booster3  (-0.0416, +0.0051, +0.0416)
+booster4  (+0.0416, +0.0051, -0.0416)
 ```
 
 Les quatre forment deux paires diamétralement opposées : `booster1` avec
 `booster2`, `booster3` avec `booster4`.
+
+**Correction apportée le 6 septembre.** Ce tableau portait `y = +0,1863`, qui est
+le centre de la boîte du propulseur dans la pile et non l'offset d'une pièce
+basée à y = 0 — la forme sous laquelle les propulseurs ont finalement été livrés
+(§ 1.6). La valeur juste est **+0,0051** ; les termes x et z sont confirmés au
+chiffre près. Et la correction Blender annoncée ci-dessus **est faite**.
 
 **Fidélité de la silhouette.** Le rapport propulseur / corps du maillage vaut
 **0,698**, contre 0,630 dans les sections du catalogue (3,4 m pour 5,4 m).
@@ -193,7 +199,7 @@ premier chargement.
 
 ### 1.5 Le Falcon Heavy re-sourcé
 
-Un lot de neuf fichiers a été passé à la grille du § 1.6 le 6 septembre.
+Un lot de neuf fichiers a été passé à la grille du § 1.8 le 6 septembre.
 **Verdict : accepté.**
 
 | Contrôle | Falcon Heavy candidat | Falcon actuel |
@@ -247,10 +253,10 @@ heavy_falcon-after_boosters      105 394       h = 1,0000    4,13
 heavy_falcon-after_s1             20 574       h = 0,3832    0,80
 heavy_falcon-core                 84 820       h = 0,6873    3,34
 heavy_falcon-S2                   18 216       h = 0,2133    0,73
-heavy_falcon-booster_left         83 750       h = 0,6531    3,28
-heavy_falcon-booster_right        83 750       h = 0,6531    3,28
-heavy_falcon-fairing_left          1 303       h = 0,1878    0,05
-heavy_falcon-fairing_right         1 055       h = 0,1878    0,03
+heavy_falcon-booster1             83 750       h = 0,6531    3,28
+heavy_falcon-booster2             83 750       h = 0,6531    3,28
+heavy_falcon-fairing1              1 303       h = 0,1878    0,05
+heavy_falcon-fairing2              1 055       h = 0,1878    0,03
 textures                                                     3,64
                                                             29,13 Mo
 ```
@@ -280,13 +286,13 @@ d'équivalent ici. Table de replacement pour `PHY-5`, en unités de maillage :
 ```
 core           ( 0.0000,  0.0000,  0.0000)   deja en place
 S2             ( 0.0000, +0.6166,  0.0000)
-booster_left   (+0.0017, -0.0002, +0.0581)
-booster_right  (-0.0011, -0.0002, -0.0579)
-fairing_left   (+0.0012, +0.8120, +0.0179)
-fairing_right  (+0.0012, +0.8120, -0.0176)
+booster1       (+0.0017, -0.0002, +0.0581)
+booster2       (-0.0011, -0.0002, -0.0579)
+fairing1       (+0.0012, +0.8120, +0.0179)
+fairing2       (+0.0012, +0.8120, -0.0176)
 ```
 
-**`booster_right` est un doublon exact** — `booster_left` tourné de 180° autour
+**`booster2` est un doublon exact** — `booster1` tourné de 180° autour
 de Y, mesuré à 10⁻⁶ unité près, soit 0,1 mm dessiné. Il est **gardé
 délibérément** : 3,2 Mo pour éviter une orientation initiale codée par instance,
 ce qui serait exactement la logique que la décision ci-dessus exclut.
@@ -314,7 +320,288 @@ se pose pas sur ce lot. Et les neuf référencent la même
 vers la **même clé** d'`AssetManager` : chargée une fois, pas neuf. À préserver
 si le lot est un jour réorganisé en sous-dossiers.
 
-### 1.6 L'outil de tri
+### 1.6 Les deux lots livrés, et les mesures d'intégration
+
+Les deux lanceurs ont été livrés corrigés le **6 septembre** et repassés à la
+grille du § 1.8. **Verdict : acceptés tous les deux.** Le Falcon est celui du
+§ 1.5, ses pièces seulement renommées. L'Ariane 64 est un lot de **onze**
+fichiers, qui comble les deux manques que le § 1.5 avait prédits sans pouvoir
+les mesurer : la configuration porteuse corps + S2 + coiffe, et le S2 nu.
+
+| Contrôle | Ariane 64 livrée | Falcon Heavy livré |
+|---|---|---|
+| C1 coques soudées | 39 % | 62 % |
+| C2 séparation par nœuds | 8 groupes | 6 groupes |
+| C3 nez +Y | élancement 6,1:1 | 5,7:1 |
+| C4 hauteur normalisée | 1,0000 | 1,0000 |
+| C5 base à l'origine | +0,0000 | −0,0002 |
+| C6 triangles | 133 750 *(+11 %)* | 274 398 *(×2,3)* |
+| C7 textures | 33 mat., 2 img. | 35 mat., 4 img. |
+
+**Le remontage est exact dans les deux lots, et par translation pure.** Chaque
+pièce retombe sur son groupe de la pile au triangle près, avec un écart maximal
+au plus proche voisin de **0,077 à 0,089 mm** à l'échelle de rendu — Hausdorff
+dans les deux sens, 500 sommets échantillonnés par pièce, c'est-à-dire la
+quantification float32 du ré-export et rien d'autre. La comparaison n'a appliqué
+qu'une **translation** : il n'y a donc aucune rotation par pièce à porter, et la
+table d'offsets plus bas suffit à replacer un débris.
+
+Les configurations de vol ne correspondent à aucun groupe, ce qui est attendu
+puisqu'elles en agrègent plusieurs :
+
+```
+ariane_64-after_boosters      32 436 + 25 572 + 2 x 1 567  =  61 142   exact
+ariane_64-after_s1                     25 572 + 2 x 1 567  =  28 706   exact
+heavy_falcon-after_boosters   84 820 + 18 216 + 1 303 + 1 055 = 105 394  exact
+heavy_falcon-after_s1                  18 216 + 1 303 + 1 055 =  20 574  exact
+```
+
+**Les propulseurs de l'Ariane sont recentrés** : `x[−0,0399, +0,0399]`, `z`
+idem, base à y = 0, sur les quatre. La correction Blender annoncée au § 1.4 est
+faite, et le lot Falcon n'en avait jamais eu besoin.
+
+#### L'inventaire
+
+Onze fichiers pour l'Ariane, neuf pour le Falcon. La colonne « dessiné » est la
+hauteur à l'écran au rayon courant, voir l'échelle ci-après.
+
+```
+ARIANE 64                             tri.   h (u)  dessine   role
+ariane_64.gltf                      133750  1,0000  100,0 m   porteur  T0 -> largage propulseurs
+ariane_64-after_boosters.gltf        61142  1,0000  100,0 m   porteur  -> separation S1
+ariane_64-after_s1.gltf              28706  0,5139   51,4 m   porteur  -> separation charge utile
+ariane_64-core.gltf                  32436  0,5718   57,2 m   debris   corps central
+ariane_64-S2.gltf                    25572  0,2143   21,4 m   debris   S2 nu
+ariane_64-booster1.gltf              18152  0,3624   36,2 m   debris   propulseur 1
+ariane_64-booster2.gltf              18152  0,3624   36,2 m   debris   propulseur 2
+ariane_64-booster3.gltf              18152  0,3624   36,2 m   debris   propulseur 3
+ariane_64-booster4.gltf              18152  0,3624   36,2 m   debris   propulseur 4
+ariane_64-fairing1.gltf               1567  0,3264   32,6 m   debris   demi-coiffe 1
+ariane_64-fairing2.gltf               1567  0,3264   32,6 m   debris   demi-coiffe 2
+                          maillages 11,85 Mo + textures 3,52 Mo = 15,37 Mo
+
+FALCON HEAVY                          tri.   h (u)  dessine   role
+heavy_falcon.gltf                   274398  1,0000  100,0 m   porteur  T0 -> largage propulseurs
+heavy_falcon-after_boosters.gltf    105394  1,0000  100,0 m   porteur  -> separation S1
+heavy_falcon-after_s1.gltf           20574  0,3832   38,3 m   porteur  -> separation charge utile
+heavy_falcon-core.gltf               84820  0,6873   68,7 m   debris   corps central
+heavy_falcon-S2.gltf                 18216  0,2133   21,3 m   debris   S2 nu
+heavy_falcon-booster1.gltf           83750  0,6531   65,3 m   debris   propulseur +z
+heavy_falcon-booster2.gltf           83750  0,6531   65,3 m   debris   propulseur -z
+heavy_falcon-fairing1.gltf            1303  0,1878   18,8 m   debris   demi-coiffe +z
+heavy_falcon-fairing2.gltf            1055  0,1878   18,8 m   debris   demi-coiffe -z
+                          maillages 25,49 Mo + textures 3,64 Mo = 29,13 Mo
+```
+
+**Deux doublons de géométrie, gardés délibérément.** `booster2` est `booster1`
+tourné de 180° autour de Y dans le lot Falcon, et `fairing2` est `fairing1`
+tournée de même dans le lot Ariane — mesuré à 10⁻⁶ unité, soit 0,1 mm dessiné.
+Les garder coûte 3,2 Mo au Falcon et 0,04 Mo à l'Ariane, et évite une
+orientation initiale codée par instance, c'est-à-dire exactement la logique que
+la décision du § 1.5 exclut. Les demi-coiffes du Falcon, elles, ne sont **pas**
+le même maillage : 1 303 contre 1 055 triangles.
+
+#### L'échelle : une seule, pour tous les fichiers d'un lanceur
+
+`Model3dView.loadModel()` appelle `AssetFactory.loadModel(path, 2 ×
+radiusMeters / PLANET_METERS_PER_UNIT)`. Avec `SPACECRAFT_RADIUS_METERS = 50.0`
+et `RenderContext.PLANET_METERS_PER_UNIT = 1e3` :
+
+```
+scale = 2 x 50 / 1000 = 0,1 unite proche      =>   1 unite de maillage = 100 m
+```
+
+**Ce 0,1 s'applique tel quel à tous les fichiers d'un lanceur**, sans
+renormalisation par pièce : c'est ce qui fait sortir les tailles relatives
+justes toutes seules, chaque pièce étant une fraction d'une pile normalisée à 1.
+C'est la règle 3 du § 1.3, désormais vérifiable — toutes les hauteurs sauf les
+piles et les deux `after_boosters` sont inférieures à 1.
+
+L'orientation est celle de tout le monde :
+`SpacecraftPresenter.MODEL_FORWARD_CORRECTION`, +90° autour de X, non
+paramétrable par maillage. Rien à ajouter par fichier.
+
+#### La table de replacement des débris
+
+Translation qui pose une pièce là où elle était dans la pile, origine de la pile
+à sa base. En unités de maillage, et en mètres dessinés au rayon courant.
+
+```
+ARIANE 64            unites de maillage            metres dessines
+core           ( 0,0000,  0,0000,  0,0000)    (  0,00,   0,00,   0,00)
+S2             ( 0,0000, +0,4862,  0,0000)    (  0,00, +48,62,   0,00)
+booster1       (-0,0416, +0,0051, -0,0416)    ( -4,16,  +0,51,  -4,16)
+booster2       (+0,0416, +0,0051, +0,0416)    ( +4,16,  +0,51,  +4,16)
+booster3       (-0,0416, +0,0051, +0,0416)    ( -4,16,  +0,51,  +4,16)
+booster4       (+0,0416, +0,0051, -0,0416)    ( +4,16,  +0,51,  -4,16)
+fairing1       (+0,0049, +0,6737, -0,0079)    ( +0,49, +67,37,  -0,79)
+fairing2       (-0,0049, +0,6737, +0,0079)    ( -0,49, +67,37,  +0,79)
+
+FALCON HEAVY
+core           ( 0,0000,  0,0000,  0,0000)    (  0,00,   0,00,   0,00)
+S2             ( 0,0000, +0,6166,  0,0000)    (  0,00, +61,66,   0,00)
+booster1       (+0,0017, -0,0002, +0,0581)    ( +0,17,  -0,02,  +5,81)
+booster2       (-0,0011, -0,0002, -0,0579)    ( -0,11,  -0,02,  -5,79)
+fairing1       (+0,0012, +0,8120, +0,0179)    ( +0,12, +81,20,  +1,79)
+fairing2       (+0,0012, +0,8120, -0,0176)    ( +0,12, +81,20,  -1,76)
+```
+
+Les demi-coiffes de l'Ariane se séparent selon le plan diagonal x = z et non
+selon un axe, d'où les offsets croisés — ce qui explique aussi qu'elles soient
+le même maillage à 180° près. Celles du Falcon se séparent selon z = 0.
+
+#### Le budget de triangles par phase
+
+Tous débris conservés, ce qui est le majorant :
+
+```
+ARIANE 64                          objets      tri.
+T0 -> largage propulseurs             1      133 750     <- pic
+-> separation S1                      5      133 750
+-> separation charge utile            6      133 750
+apres separation charge utile         6      130 616
+
+FALCON HEAVY
+T0 -> largage propulseurs             1      274 398
+-> separation S1                      3      272 894     <- pic
+-> separation charge utile            4      272 894
+apres separation charge utile         4      270 536
+```
+
+Le total de l'Ariane est **invariant** : rien n'est retiré nulle part, la somme
+des objets vaut toujours la pile. Le Falcon perd 1 504 triangles au largage des
+propulseurs — les bras d'attache du § 1.5. C'est un contrôle d'intégration utile :
+un compte qui s'écarte de ces valeurs signale un fichier chargé en trop ou en
+moins.
+
+**Le § 1.1 annonce « le maximum d'objets simultanés est de trois ».** Mesuré :
+l'Ariane 64 en atteint **six**. Cette phrase précède le découpage du § 2, comme
+le « neuf maillages » que le § 1.1 corrige lui-même ; elle est signalée, pas
+corrigée.
+
+#### La passe de cohérence
+
+Vingt fichiers, aucun défaut :
+
+```
+glTF 2.0, extensionsUsed / extensionsRequired : AUCUNE
+primitives : 100 % mode 4, aucune ligne ni point
+attributs  : NORMAL + POSITION + TEXCOORD_0 sur toutes
+accessors  : min/max declares conformes aux donnees (aucun ecart > 1e-5)
+indices    : aucun hors bornes, aucun triangle degenere
+sommets    : aucun NaN, aucun Inf
+UV         : [-0,05 ; 1,12] avec samplers wrap = REPEAT
+ni animation, ni skin, ni camera
+buffers et textures : tous resolus, aucun `..` dans un URI
+```
+
+Le contrôle des `min`/`max` d'accessor est celui qui comptait : JME construit la
+boîte englobante d'un maillage à partir de ces valeurs **déclarées**, pas des
+données. Un export qui laisse des bornes périmées fait disparaître des objets au
+culling sans rien signaler.
+
+**Un point à regarder au premier rendu.** Les deux lots déclarent
+`doubleSided: true` sur **toutes** leurs primitives — 67 sur la pile Ariane, 162
+sur celle du Falcon. Le chargeur GLTF traduit cela en `FaceCullMode.Off`, mais
+`AssetFactory.applyLambert` construit un `Material` neuf et ne recopie pas le
+render state : le culling arrière revient. C'est déjà le comportement des deux
+lanceurs livrés, sauf que le Falcon d'aujourd'hui est une coque fermée de 430
+triangles ; les candidats apportent des géométries en feuille — grilles de
+guidage, pattes d'atterrissage, et surtout les demi-coiffes, qui sont des
+demi-coques ouvertes. Ce qui est modélisé sans épaisseur disparaîtra vu de son
+mauvais côté. Cela ne se voit que sur l'image.
+
+### 1.7 Ce que la chaîne de rendu fait des matériaux
+
+Ce paragraphe n'est pas sur les assets mais sur le dernier maillon qui les
+reçoit, et il conditionne tout ce que les deux lots donneront à l'écran. Il a
+été découvert en cherchant si une texture échangée était gênante ; la réponse
+est non, et la raison est que **presque rien de ce que portent ces fichiers
+n'arrive à l'image**.
+
+`MissionRenderer` monte le modèle en trois temps :
+
+```java
+CompletableFuture.supplyAsync(model3dView::loadModel, ...)
+    .thenApply(spatial -> AssetFactory.get().applyLambert(spatial, 0.3f))
+    .thenAccept(model3dView::onModelLoaded);
+```
+
+`applyLambert` remplace le matériau de **chaque** géométrie par un
+`WrapLighting.j3md` neuf, et n'en reprend qu'une chose : `extractDiffuseTexture`,
+c'est-à-dire `BaseColorMap`. Partent avec l'ancien matériau le `metallicFactor`,
+le `roughnessFactor`, la `metallicRoughnessTexture`, les normales, l'occlusion,
+l'émissif, le render state — et le `baseColorFactor`, puisque la couleur diffuse
+est écrite en dur à `ColorRGBA.White`.
+
+**Première conséquence : les cartes métallique/rugosité sont du poids mort.**
+Chargées par le loader GLTF, puis jetées avec le matériau qui les portait. Elles
+pèsent 3,48 Mo par lanceur sur disque et 2048×2048 en RGBA le temps du
+chargement.
+
+Un épisode le montre. La carte de l'Ariane est une image magenta uniforme, prise
+pour une texture cassée, et remplacée par celle du Falcon. Or le magenta est
+exactement ce à quoi ressemble une carte metallicRoughness correcte — **G porte
+la rugosité, B le métallique, R n'est pas lu** — et le relevé donne :
+
+```
+_Material_111_metallicRoughness.png (ariane)   R 255 constant  G moy 121,4  B 255 constant
+Material_022_metallicRoughness.png  (falcon)   R = G = B, meme bruit
+canal G du falcon, retourne verticalement, vs celui de l'ariane : 100,00 % identiques
+```
+
+Les deux cartes sont **le même bruit de rugosité**, à un retournement vertical
+près — une des deux chaînes d'export compte les rangées dans l'autre sens. La
+seule vraie différence est le canal B : 255 chez l'Ariane, donc métallique
+neutre et la métallicité réelle portée par le `metallicFactor` de chaque
+matériau, contre 0,476 en moyenne chez le Falcon. L'échange aurait donc divisé
+par deux la métallicité de toute l'Ariane — **si la carte était lue**.
+
+**Seconde conséquence, et c'est celle qui compte : les deux lanceurs sortiront
+blancs.** La couleur des candidats est portée par le `baseColorFactor`, que
+`applyLambert` écrase.
+
+| | matériaux | triangles avec `baseColorTexture` |
+|---|---|---|
+| Falcon Heavy livré aujourd'hui | 1 | **100,0 %** |
+| Ariane 5 livrée aujourd'hui | 9 | 4,2 % |
+| Falcon Heavy candidat | 35 | **0,1 %** |
+| Ariane 64 candidate | 33 | **0,0 %** |
+
+Vingt-huit gris distincts sur l'Ariane, vingt sur le Falcon, des tuyères à 0,004
+aux panneaux à 0,593 : tous aplatis en blanc. Pour l'Ariane, la seule texture de
+base du fichier, `Material_067_baseColor.png`, est portée par un matériau sur 33
+et couvre **32 triangles sur 133 750** — 0,02 %. Aucune information de couleur du
+fichier n'arrive à l'écran.
+
+Pour le Falcon, c'est une **régression visible** : le maillage livré aujourd'hui
+est texturé à 100 %, le candidat sortira blanc uni. Pour l'Ariane 5 → 64, c'est
+un statu quo, 95,8 % étant déjà sans texture.
+
+**La réparation possible, et ce qu'elle coûte.** Reprendre le RGB du
+`baseColorFactor` dans `Diffuse` au lieu de forcer le blanc. `applyLambert` est
+partagé avec les planètes via `PlanetPoseAppState`, donc l'effet y a été
+mesuré :
+
+```
+9 planetes sur 11   baseColorFactor = (1,1,1,1)      -> aucun changement
+neptune             (0,715, 0,715, 0,715, 1)         -> assombrie de 28 %
+venus               un materiau a alpha 0,722        -> ne reprendre que le RGB
+```
+
+Réserve : la part de triangles n'est pas la part de surface. Les 43,9 % du
+Falcon à 0,128 sont les baies moteur — **95,4 % de ces 120 576 triangles sont
+sous y = 0,050**, vérifié primitive par primitive — et les baies pèsent 64 % des
+triangles pour quelques mètres carrés. Le relevé ne prédit donc pas l'apparence ; il établit
+que l'information existe dans les deux lots et qu'elle est aujourd'hui jetée.
+
+**Rien n'est tranché ici.** Le choix — laisser blanc, reporter le
+`baseColorFactor`, ou passer les lanceurs sur une chaîne PBR qui lirait
+réellement leurs matériaux — touche du code partagé avec les planètes et mérite
+son propre passage plutôt que d'être glissé dans l'intégration des assets. Il
+est porté au § 5.
+
+### 1.8 L'outil de tri
 
 Le défaut qui condamne un maillage — une coque unique soudée — **ne se voit pas
 dans un aperçu**. Il ne se lit ni sur la silhouette, ni sur le compte de
@@ -556,10 +843,22 @@ voit explicitement jamais (`PHY-5` : *« L'optimiseur ne voit pas les débris »
    configuration figée le maillage doit être livré. Un satellite GEO au poste,
    replié, ressemble à une boîte ; or le critère de fin de version est
    précisément *« un satellite en orbite ressemble à un satellite »*.
-4. **`..` dans un URI GLTF côté JME3** (§ 1.4).
+4. ~~**`..` dans un URI GLTF côté JME3** (§ 1.4).~~ **Clos le 6 septembre :**
+   la question ne venait que du sous-dossier `debris/` du lot candidat. Les
+   deux lots livrés sont à plat dans un dossier unique et aucun de leurs vingt
+   fichiers ne porte de `..` dans un URI (§ 1.6).
 5. **Le partage des 36 t de masse sèche de l'Ariane 62** entre propulseurs et
    corps, et les Isp et poussées individuelles (§ 2.1).
 6. **Le dépassement du budget C6 sur le Falcon Heavy re-sourcé.** 274 398
    triangles, 2,3 × le plafond, dont 64,3 % dans les trois baies moteur
    (§ 1.5). Une décimation se fait une fois sur la pile et impose de refaire
    les huit autres fichiers du lot. Non tranché.
+7. **Le blanc uni des deux lanceurs** (§ 1.7). Laisser tel quel, reporter le
+   RGB du `baseColorFactor` dans `Diffuse`, ou passer les lanceurs sur une
+   chaîne PBR qui lirait vraiment leurs matériaux. `applyLambert` est partagé
+   avec les planètes, donc le choix ne se glisse pas dans l'intégration des
+   assets.
+8. **La hauteur réelle des deux lanceurs.** `SPACECRAFT_RADIUS_METERS = 50.0`
+   les dessine tous deux à 100 m (§ 1.6). Le rayon par objet que demande le
+   § 1.3 suppose une hauteur vraie, or le catalogue porte des sections et pas
+   des longueurs (§ 4) : elle est à sourcer hors dépôt.

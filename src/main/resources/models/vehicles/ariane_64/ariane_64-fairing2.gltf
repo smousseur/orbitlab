@@ -15,34 +15,40 @@
 	"nodes":[
 		{
 			"mesh":0,
-			"name":"Object_90",
+			"name":"Object_59",
 			"translation":[
-				-0.044546060264110565,
-				-30.52483558654785,
-				0.6614049673080444
+				-0.028900638222694397,
+				-15.349063873291016,
+				-0.21015681326389313
 			]
 		},
 		{
 			"children":[
 				0
 			],
-			"name":"Right Fairing_19",
+			"name":"Fairing_7",
+			"rotation":[
+				0,
+				-0.3363211154937744,
+				0,
+				0.9417473673820496
+			],
 			"scale":[
-				0.026601266115903854,
-				0.026601271703839302,
-				0.026601271703839302
+				0.04389013722538948,
+				0.043890126049518585,
+				0.04389013722538948
 			],
 			"translation":[
-				0.0011849801521748304,
-				0.7531761527061462,
-				-1.811382026062347e-05
+				0,
+				0.608864963054657,
+				0
 			]
 		}
 	],
 	"materials":[
 		{
 			"doubleSided":true,
-			"name":"Material.207",
+			"name":"Material.095",
 			"pbrMetallicRoughness":{
 				"metallicFactor":0,
 				"metallicRoughnessTexture":{
@@ -53,7 +59,7 @@
 	],
 	"meshes":[
 		{
-			"name":"Object_69.006",
+			"name":"Object_50.003",
 			"primitives":[
 				{
 					"attributes":{
@@ -76,69 +82,69 @@
 	"images":[
 		{
 			"mimeType":"image/png",
-			"name":"Material.022_metallicRoughness",
-			"uri":"textures/Material_022_metallicRoughness.png"
+			"name":"Material_111_metallicRoughness",
+			"uri":"textures/Material_111_metallicRoughness.png"
 		}
 	],
 	"accessors":[
 		{
 			"bufferView":0,
 			"componentType":5126,
-			"count":668,
+			"count":917,
 			"max":[
-				1.3214480876922607,
-				9.270753860473633,
-				-1.1920928955078125e-07
+				1,
+				8.912408828735352,
+				1
 			],
 			"min":[
-				-1.3214480876922607,
-				2.2112998962402344,
-				-1.3214483261108398
+				-1,
+				1.476583480834961,
+				-1.1924880638503055e-08
 			],
 			"type":"VEC3"
 		},
 		{
 			"bufferView":1,
 			"componentType":5126,
-			"count":668,
+			"count":917,
 			"type":"VEC3"
 		},
 		{
 			"bufferView":2,
 			"componentType":5126,
-			"count":668,
+			"count":917,
 			"type":"VEC2"
 		},
 		{
 			"bufferView":3,
 			"componentType":5123,
-			"count":3165,
+			"count":4701,
 			"type":"SCALAR"
 		}
 	],
 	"bufferViews":[
 		{
 			"buffer":0,
-			"byteLength":8016,
+			"byteLength":11004,
 			"byteOffset":0,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":8016,
-			"byteOffset":8016,
+			"byteLength":11004,
+			"byteOffset":11004,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":5344,
-			"byteOffset":16032,
+			"byteLength":7336,
+			"byteOffset":22008,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":6330,
-			"byteOffset":21376,
+			"byteLength":9402,
+			"byteOffset":29344,
 			"target":34963
 		}
 	],
@@ -150,8 +156,8 @@
 	],
 	"buffers":[
 		{
-			"byteLength":27708,
-			"uri":"heavy_falcon-fairing_right.bin"
+			"byteLength":38748,
+			"uri":"ariane_64-fairing2.bin"
 		}
 	]
 }
