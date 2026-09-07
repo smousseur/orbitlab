@@ -45,8 +45,9 @@ colonne de droite ; le reste peut glisser.
 | ID | Item | ★ | ◆ | Taille | Après |
 |---|---|:-:|:-:|:-:|---|
 | `AST-1` | **Lot d'assets 3D** *(neuf, hors code)* | — | — | — | — (à lancer en premier : c'est un délai, pas un travail) |
-| `J2` | Trois arbitrages du modèle atmosphérique | — | — | — | — |
-| `PHY-2` | Atmosphère par défaut + recalibrage optimiseur | 5 | 4 | L | `J2` |
+| `PHY-8` | **Propulseurs séparés du corps : Falcon Heavy et Ariane 64** *(neuf)* | 4 | 4 | L | `AST-1` (maillage Ariane 64) |
+| `J2` | Deux arbitrages du modèle atmosphérique | — | — | — | `PHY-8` |
+| `PHY-2` | Atmosphère par défaut + recalibrage optimiseur | 5 | 4 | L | `J2`, `PHY-8` |
 | `PHY-3` | Détecteurs MaxQ, télémétrie, UI de fidélité | 3 | 2 | M | `PHY-2` |
 | `RND-5` | Repère d'affichage inertiel / tournant | 2 | 2 | S | — |
 | `RND-6` | **Trace au sol** *(neuf)* | 3 | 2 | M | `RND-5` |
@@ -56,6 +57,16 @@ colonne de droite ; le reste peut glisser.
 | `FX-3` | Particules de tuyère | 4 | 2 | M | — |
 | `FX-4` | **Traînée plasma de rentrée** *(neuf)* | 3 | 2 | M | `MIS-10` |
 | `NAV-5` | Hover « wow » planètes + orbites | 3 | 2 | M | — |
+
+**Pourquoi `PHY-8` passe avant `PHY-2`, et non l'inverse.** Atmosphère,
+recalibrage d'Isp et structure d'étagement font trois changements de
+comportement sur la même trajectoire. Découper d'abord, sans traînée, laisse
+`PHY-2` allumer et calibrer **une seule fois**, contre une ascension de forme
+physique ; dans l'autre ordre, `PHY-2` calibrerait un mélange solide / cryo
+qu'on s'apprête à supprimer, puis il faudrait tout refaire. Le coût du
+découpage est le même quel que soit le moment où il est payé — donc le payer
+avant la calibration est strictement meilleur
+([`v2-preparation/00-preparation.md`](../v2-preparation/00-preparation.md) §2.3).
 
 **Pourquoi `RND-5` et `RND-6` sont voisins, et dans cet ordre.** Ce sont les
 deux moitiés de la même donnée : les sommets en repère lié au corps sont déjà
@@ -68,10 +79,11 @@ trace au sol *« cesse ici d'être un ornement »* — l'empreinte du point d'im
 en est le livrable visible. Prise dans l'autre ordre, `MIS-10` paie la
 projection au sol au milieu d'un chantier de rentrée.
 
-**Fin de version quand** : une ascension coûte ce qu'elle coûte vraiment
-(`PHY-2`), un vaisseau parti de la Terre y revient à un endroit choisi
-(`MIS-10`), une séparation montre deux objets qui s'écartent (`PHY-5`), et un
-satellite en orbite ressemble à un satellite (`PHY-6`).
+**Fin de version quand** : le catalogue ne déclare plus un étage que le modèle
+ne vole pas (`PHY-8`), une ascension coûte ce qu'elle coûte vraiment (`PHY-2`),
+un vaisseau parti de la Terre y revient à un endroit choisi (`MIS-10`), une
+séparation montre deux objets qui s'écartent (`PHY-5`), et un satellite en
+orbite ressemble à un satellite (`PHY-6`).
 
 ---
 
@@ -83,18 +95,25 @@ satellite en orbite ressemble à un satellite (`PHY-6`).
 [`05-roadmap-technique.md`](05-roadmap-technique.md). Cette section ne dit que
 ce que v2 doit traiter et à quel moment.*
 
-**`J2` — trois arbitrages, avant tout calibrage.** Ce n'est pas du travail de
+**`J2` — deux arbitrages, avant tout calibrage.** Ce n'est pas du travail de
 code : c'est ce qu'il faut avoir **tranché** avant que `PHY-2` calibre quoi que
 ce soit, sous peine de figer l'erreur dans le recalibrage.
 
 | Item | Ce qu'il faut décider |
 |---|---|
-| `DT-13` | Les Isp du catalogue absorbent déjà **408 m/s** (Falcon Heavy S1) et **671 m/s** (Ariane 62 S1) de traînée implicite — au-dessus des 100–300 m/s que la traînée réelle est censée coûter. Allumer l'une par-dessus l'autre **double-compte** |
 | `DT-14` | 22,6 % d'écart entre Harris-Priester et NRLMSISE-00, tous deux déjà codés. Choisir la référence **avant** de calibrer dessus |
 | `DT-15` | `Cd = 2,2` est déclaré valide au-dessus de 70 km ; le seul profil réel mesuré allume S2 à **58 km** |
 
-Tous trois se tranchent en une séance sur les mesures déjà disponibles dans
+Les deux se tranchent en une séance sur les mesures déjà disponibles dans
 [`atmosphere/05-conception-L2.md`](../atmosphere/05-conception-L2.md).
+
+**Ils étaient trois.** `DT-13` — les Isp « moyenne de trajectoire » du catalogue
+absorbent déjà 408 m/s (Falcon Heavy S1) et 671 m/s (Ariane 62 S1) de traînée
+implicite — n'est plus un arbitrage : `PHY-8` rend à chaque étage son Isp réelle
+et **dissout** le double-comptage au lieu de le trancher. Les deux chiffres
+mesurent d'ailleurs la dette d'étages qui n'existeront plus, et le 671 est en
+grande partie l'artefact de la moyenne solide / cryogénique que `PHY-8`
+supprime. La fiche du registre reste à passer en « fermé par `PHY-8` ».
 
 **Avec `PHY-2` :** `REL-22` — la restauration d'un scénario dont l'atmosphère
 n'est pas `NONE` est **incorrigible avant** que `PHY-2` existe ; elle est versée
@@ -154,6 +173,139 @@ maillage qui casse l'une des deux vole de travers ou à la mauvaise taille.
 texturés au niveau des lanceurs existants. Une silhouette juste et une
 orientation correcte valent mieux qu'un modèle détaillé qui arrive après la
 version.
+
+---
+
+### PHY-8 — Propulseurs séparés du corps : Falcon Heavy et Ariane 64 — ★4 ◆4 L *(neuf)*
+
+**Il ne se conçoit pas ici.** Le raisonnement est dans
+[`v2-preparation/00-preparation.md`](../v2-preparation/00-preparation.md) §2,
+qui l'a tranché comme *« un item à part entière »* précédant les deux objectifs
+de la version : il n'est ni une sous-tâche de `PHY-2` ni une sous-tâche de
+`PHY-5`, il sert les deux, et c'est lui qui invalide toutes les références.
+Cette fiche l'enregistre et ajoute les deux décisions prises depuis — la
+combustion parallèle, et la fraction de poussée qu'elle rend nécessaire.
+
+**Pourquoi.** Les deux fictions du modèle sont la même fiction : l'agrégat
+existe parce que `VehicleStack` *« resolves exactly one active stage »*, et
+l'Isp « moyenne de trajectoire » existe parce qu'il n'y a pas de traînée.
+`PHY-2` supprime la seconde ; n'en supprimer qu'une revient à recalibrer un
+mélange contre de la vraie physique. Le symptôme est déjà écrit au catalogue :
+l'agrégat Ariane 62, à 9 960 kN et 300 s, s'éteint à **T+128,2 s** — fidèle aux
+P120C (~130 s), faux pour le Vulcain qui brûle réellement ~8 min. Le modèle **ne
+vole donc jamais la phase corps-seul**, et aucune manette ne le corrige :
+*« stretching the burn to 300 s would need the aggregate thrust below the
+lift-off weight »*. Le catalogue déclare par ailleurs `CRYOGENIC` pour un bloc à
+65 % solide, en l'assumant — *« a modelling convention, not a chemical claim »*.
+
+**Ce qu'il livre.**
+
+- **La combustion parallèle.** Les deux lanceurs allument propulseurs et corps
+  **ensemble au décollage** ; la phase partagée tire la masse des deux, les
+  propulseurs s'épuisent, sont largués, le corps continue. C'est l'invariant
+  *« the active stage changes only by an explicit jettison »* qui tombe, et
+  c'est le vrai coût de l'item : **47 fichiers de `src/main`** touchent
+  `resolveActiveStage`, `VehicleStack`, `.stages()` ou `StageSeparation`.
+  L'alternative — deux étages en série — a été écartée : elle échange la fiction
+  actuelle contre une autre, exacte en impulsion sur l'Ariane et fausse en forme
+  sur le Falcon Heavy, dont le premier étage durerait 314 s contre ~187 s réels.
+- **Une fraction de poussée par étage pendant la phase parallèle.** Sans elle le
+  Falcon Heavy n'a **pas** de phase corps-seul : ses trois corps étant
+  identiques, poussée et ergols sont dans le même rapport 2:1 et les deux blocs
+  se vident au même instant, **157,0 s** chacun. Le vrai véhicule s'en sort en
+  étranglant son corps central. `PropulsionSystem` est un `record (isp, thrust)`
+  figé et aucune notion d'étranglement n'existe dans `src/main` : c'est le seul
+  concept neuf de l'item. L'Ariane 64 n'en a pas besoin : ses **quatre** P120C
+  vident 564 t en ~130 s là où le Vulcain met ~8 min pour 152 t — un rapport de
+  débits d'environ quatorze, qui l'étage toute seule.
+- **Un étage de propulseurs à multiplicité** — 2 pour le Falcon Heavy, 4 pour
+  l'Ariane 64. Agréger un solide et un cryogénique est une fiction ; agréger N
+  solides identiques est exact : même Isp, allumage commun, extinction commune,
+  largage commun. `StageRole.BOOSTER` existe déjà et n'apparaît aujourd'hui que
+  dans **cinq fichiers de test**, jamais dans `Launchers` — le modèle avait
+  anticipé le cas, le catalogue ne s'en est jamais servi.
+- **Ariane 64 remplace Ariane 62 au catalogue**, et chaque étage porte son Isp
+  réelle. Plus aucune moyenne solide / cryogénique, donc plus rien à
+  dé-double-compter pour `PHY-2`.
+- **Les dimensions du lanceur et de ses pièces**, au catalogue — voir plus bas.
+- **Le re-baselining.** **45 des 196 fichiers de test** (23 %) référencent
+  `FALCON_HEAVY` ou `ARIANE_62`, dont les épinglages à tolérance zéro
+  d'`EarthOrbitNonRegressionTest`, `MissionPolylineBaselineTest`,
+  `CentralBodyBaselineTest` et `AscentBaselineN2Test`.
+
+**Ce que le découpage n'ajoute pas : une variable d'optimisation.**
+`PropellantLoadOptimizer` masque déjà les étages `!variableLoad()` (lignes 334
+et 367), et `variableLoad()` ne renvoie `false` que pour `SOLID` — *« Solids fly
+full »*. Un étage de P120C n'entre donc pas dans le balayage λ. **Mais
+l'asymétrie est réelle et le masque est à revoir, pas à hériter** : les
+propulseurs du Falcon Heavy sont des corps kérolox, donc à charge variable, et
+sous combustion parallèle faire varier indépendamment leur charge et celle du
+corps n'a pas de sens — ils se vident ensemble.
+
+**Les dimensions, et pourquoi elles sont ici.** `MissionRenderer:40` tient un
+`SPACECRAFT_RADIUS_METERS = 50.0` **en dur**, qui sert à la fois d'échelle de
+modèle et de seuil de bascule LOD : tout ce qui vole est dessiné 100 m de haut.
+Le catalogue porte des **sections** — `AerodynamicProperties`, π·1,83² pour un
+corps de 3,66 m — et **aucune longueur**. L'item les ajoute, par lanceur et par
+pièce, et la constante disparaît.
+
+> **Changement assumé de périmètre.** La préparation §1.3 rangeait ce point dans
+> `PHY-6` — *« une conséquence à traiter dans `PHY-6`, pas ici »*. Il vient ici
+> parce que c'est le catalogue qui est ouvert, et parce que deux items en aval
+> l'attendent : `PHY-5` a besoin de la taille d'un propulseur largué pour le
+> dessiner, `PHY-6` de celle d'un satellite de deux tonnes pour qu'il ne soit
+> pas aussi grand que le lanceur qui l'a mis là. Effet de bord : la question
+> ouverte n° 1 de la préparation — la longueur relative des propulseurs A64,
+> 36,2 % du maillage contre 21–24 % attendus — devient **vérifiable depuis le
+> dépôt**, alors qu'elle ne l'était pas (*« le catalogue porte des sections, pas
+> des longueurs »*).
+
+**Sa seule dépendance dure : le maillage Ariane 64.** Il est validé — préparation
+§1.4, verdict accepté, remontage exact au 10⁻⁴ — et **absent du dépôt** :
+`git ls-files` ne trouve aucun `ariane_64`, quand le Falcon Heavy re-sourcé est
+versionné depuis `a3ae7a0` sous `new_falcon_heavy/`, 22 fichiers. Sans lui la
+bascule est silencieusement fausse : `LauncherAssets.modelPath` retombe sur
+`DEFAULT_MODEL_PATH` pour un id inconnu, donc **une Ariane 64 serait dessinée en
+Falcon Heavy**, sans message. C'est `AST-1`.
+
+**Ce qu'il ferme.**
+
+| | |
+|---|---|
+| `DT-12` | Le catalogue cesse de déclarer une Ariane 62 dessinée en Ariane 5 : le lanceur devient une Ariane 64 et porte son propre maillage. *(La fiche du registre conclut par ailleurs que `src/main/resources/models/` est gitignored ; `AST-1` l'a déjà réfuté, `git ls-files` y compte 76 fichiers suivis.)* |
+| `DT-13` | Dissous plutôt qu'arbitré, cf. §3 — c'est ce qui fait passer `J2` de trois arbitrages à deux |
+| préparation §5, q. 2 | *« Comment refermer l'écart quatre propulseurs / Ariane 62 »* — par la troisième option : l'A64 revient au catalogue, et l'A62 en sort |
+| préparation §5, q. 5 | Le partage de la masse sèche entre propulseurs et corps devient la donnée d'entrée de l'item plutôt qu'une question. Le catalogue fixe déjà les deux totaux que l'A62 doit respecter — 36 t sèches, 434 t d'ergols — et 65 % de 434 t = 282 t de solide, soit **141 t par P120C**, ce qui tombe sur la capacité réelle |
+
+**L'état intermédiaire est délibérément faux, et faux dans une direction
+prévue** (préparation §2.3). La traînée n'étant pas encore allumée, l'ascension
+doit sur-performer. **Prédiction, pas mesure**, et à re-prédire : les 408 m/s et
+671 m/s de `DT-13` sont ceux des agrégats, qui n'existeront plus. À relever au
+premier vol découpé — un écart franc serait une information, pas un échec.
+
+**Ce qu'il s'interdit.** Pas de traînée : c'est `PHY-2`, et l'ordre du §2.3
+l'exige. Pas de débris propagés : c'est `PHY-5`, dont l'item prépare la donnée
+sans la consommer — chaque propulseur largué hérite de sa propre section
+(π·1,7² = 9,1 m² pour un P120C), *« ce dont `PHY-5` a besoin de toute façon »*,
+et qu'il faudrait sinon inventer. Pas de largage de coiffe, pas d'impulsion de
+séparation.
+
+**Les scénarios sauvegardés : le retrait est prévu, le changement d'arité ne
+l'est pas.** `ScenarioSession.restore` met déjà de côté, avec son motif, une
+mission *« whose launcher left the catalog »* — l'A62 qui sort ne casse donc
+rien, elle produit un rejet lisible. Ce qui n'est pas couvert est l'autre
+moitié : `ScenarioSolution.launcherLoads` est un `double[]` **par étage**, et
+`LauncherModel.instantiate` **lève** si la longueur ne correspond plus. Un
+scénario Falcon Heavy sauvegardé à deux étages ne rejoue pas sur un lanceur qui
+en a trois, et il ne le dit pas de la même façon. À traiter dans l'item, faute
+de quoi la version rend illisibles des scénarios que la précédente écrivait.
+
+**Un mode d'échec à surveiller, parce qu'il s'est déjà produit une fois.**
+`StageSeparationStage` porte un contrôle `expectedStageIndex` parce que, sur le
+profil GEO, *« a lighter upper stage makes the gravity turn stop before S1 is
+dry, leaving S1 active »*, et un « S2 separation » non vérifié larguait alors
+S1. Avec un étage de plus et une combustion parallèle, il y a plus de façons
+pour la comptabilité de masse de se tromper d'étage.
 
 ---
 
