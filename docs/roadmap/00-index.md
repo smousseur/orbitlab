@@ -68,6 +68,7 @@ sont dans [v1](01-roadmap-v1.md) §3 et §6.
 | **1.1.X** | — | ~~toute la ligne~~ — **close le 2026-09-03** à 1.1.1 : `J0`, `BUG-19`, et `BUG-3` requalifié « accepté, avec raison » | — | — | — |
 | **1.2.0** | — | ~~toute la ligne~~ — **close le 2026-09-05** : `BUG-1`, `BUG-2`, `BUG-5`, `BUG-22`, `BUG-20`, `FX-5`, plus `BUG-23` pris en cours de route. Deux fiches neuves en sont sorties, `BUG-23` (close) et `BUG-24` (ouverte) | — | — | — |
 | **v2** | `AST-1` | Lot d'assets 3D *(hors code)* | — | — | — |
+| **v2** | `PHY-8` | Propulseurs séparés du corps : Falcon Heavy et Ariane 64 | 4 | 4 | L |
 | **v2** | `PHY-2` | Atmosphère par défaut + recalibrage optimiseur | 5 | 4 | L |
 | **v2** | `PHY-3` | Détecteurs MaxQ, télémétrie, UI de fidélité | 3 | 2 | M |
 | **v2** | `RND-5` | Repère d'affichage inertiel / tournant | 2 | 2 | S |
@@ -105,6 +106,7 @@ v1 (livré)
   PHY-1 (brique drag) ✔ ──── PHY-2
 
 v2
+  PHY-8 ──── PHY-2                       (découper avant de calibrer)
   PHY-2 ──┬── MIS-10 ──── MIS-11        (v3 : la rentrée finale d'Artemis)
           ├── PHY-5  ──── PHY-6 ──┬──── MIS-11  (v3 : la capsule qui rentre)
           │                       └──── MIS-12  (v4 : l'objet qui s'amarre)
@@ -113,7 +115,7 @@ v2
   RND-5 ──── RND-6 ──── MIS-10
   AST-1 ──┬── PHY-5
           ├── PHY-6
-          └── DT-12  (maillage Ariane 6)
+          └── PHY-8 ──── DT-12  (maillage Ariane 64)
 
 v3
   UI-6 ──── UI-7 ──── UI-8
@@ -129,6 +131,13 @@ v4
 la queue jusqu'à v3 ; `PHY-6` est la seule chose qui sépare une charge utile
 d'un lanceur, et sans elle ni `MIS-11` ni `MIS-12` n'ont de sujet. Ce sont les
 deux items dont un retard décale une version entière.
+
+**Et `PHY-8` est en amont de la première.** Il ne débloque rien à lui seul, mais
+il précède `PHY-2` pour une raison d'attribution : découper les étages sans
+traînée, puis allumer la traînée et calibrer une seule fois, contre une
+ascension de forme physique. Pris dans l'autre ordre, le calibrage de `PHY-2`
+serait fait sur un agrégat solide / cryogénique qu'on s'apprête à supprimer,
+donc à refaire.
 
 **`AST-1` n'est pas du code**, et c'est justement pourquoi il est dans le
 graphe : quatre items l'attendent, et un approvisionnement de maillages se
