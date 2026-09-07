@@ -1,6 +1,7 @@
 package com.smousseur.orbitlab.engine;
 
 import com.jme3.asset.AssetManager;
+import com.jme3.material.MatParam;
 import com.jme3.material.MatParamTexture;
 import com.jme3.material.Material;
 import com.jme3.material.MaterialDef;
@@ -98,6 +99,11 @@ public class AssetFactory {
    * Replaces the material of every {@link Geometry} under the given spatial with a twilight Lambert
    * material ({@code MatDefs/Light/WrapLighting.j3md}).
    *
+   * <p>Two things are carried across from the material being replaced, and only two: its base
+   * colour map and its base colour factor. Everything else the GLTF loader built — the metallic and
+   * roughness factors and their map, the normals, the occlusion, the emissive, the render state —
+   * is dropped with the material that held it.
+   *
    * @param spatial the root spatial whose geometries should be re-materialized
    * @param fallOffFactor width of the twilight band on the lit side (0 = hard step, 0.1-0.3 = soft
    *     twilight)
@@ -109,10 +115,11 @@ public class AssetFactory {
           @Override
           public void visit(Geometry geom) {
             Texture diffuse = extractDiffuseTexture(geom.getMaterial());
+            ColorRGBA baseColor = extractBaseColor(geom.getMaterial());
             Material lambert = new Material(assetManager, "MatDefs/Light/WrapLighting.j3md");
             lambert.setBoolean("UseMaterialColors", true);
             lambert.setColor("Ambient", new ColorRGBA(0.1f, 0.1f, 0.1f, 0.1f));
-            lambert.setColor("Diffuse", ColorRGBA.White);
+            lambert.setColor("Diffuse", baseColor);
             lambert.setFloat("FallOffFactor", fallOffFactor);
             if (diffuse != null) {
               lambert.setTexture("DiffuseMap", diffuse);
@@ -194,6 +201,40 @@ public class AssetFactory {
       param = source.getTextureParam("DiffuseMap");
     }
     return param != null ? param.getTextureValue() : null;
+  }
+
+  /**
+   * The base colour a material carries, under whichever name its definition uses: the PBR
+   * definitions the GLTF loader assigns call it {@code BaseColor}, {@code WrapLighting} and the
+   * stock lighting definitions call it {@code Diffuse}.
+   *
+   * <p>Companion of {@link #extractDiffuseTexture}, and it exists for what the launcher assets are:
+   * their colour is in this factor and practically never in a map. Of the 133 750 triangles of
+   * {@code ariane_64.gltf}, 32 carry a base colour texture — 0.02 % — and its twenty-eight greys
+   * and five tints all live here. Writing a fixed white instead drew the whole vehicle in one flat
+   * tone (`docs/v2-preparation/00-preparation.md` §1.7).
+   *
+   * <p><b>Only the RGB is read.</b> A GLTF base colour factor may carry an alpha — Venus's
+   * atmosphere shell does, at 0.722 — and {@code WrapLighting} multiplies it into the fragment's
+   * own alpha. Carrying it would turn a shell that is opaque today translucent, on models whose
+   * transparency is decided by their render state rather than by this factor.
+   *
+   * @param source the material to inspect, may be null
+   * @return its base colour with alpha 1, or opaque white when it declares none — which is also
+   *     GLTF's own default for a material without a factor
+   */
+  private static ColorRGBA extractBaseColor(Material source) {
+    if (source == null) {
+      return ColorRGBA.White.clone();
+    }
+    MatParam param = source.getParam("BaseColor");
+    if (param == null) {
+      param = source.getParam("Diffuse");
+    }
+    if (param == null || !(param.getValue() instanceof ColorRGBA color)) {
+      return ColorRGBA.White.clone();
+    }
+    return new ColorRGBA(color.r, color.g, color.b, 1f);
   }
 
   /**

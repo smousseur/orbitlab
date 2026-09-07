@@ -48,7 +48,7 @@ public final class LauncherAssets {
           Launchers.FALCON_HEAVY.id(),
           DEFAULT_MODEL_PATH,
           Launchers.ARIANE_62.id(),
-          "models/vehicles/ariane/scene.gltf");
+          "models/vehicles/ariane_64/ariane_64.gltf");
 
   private LauncherAssets() {}
 

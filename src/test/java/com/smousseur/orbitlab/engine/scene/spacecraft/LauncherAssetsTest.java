@@ -20,7 +20,8 @@ class LauncherAssetsTest {
   @Test
   void modelPath_ariane62_returnsItsOwnMesh() {
     assertEquals(
-        "models/vehicles/ariane/scene.gltf", LauncherAssets.modelPath(Launchers.ARIANE_62.id()));
+        "models/vehicles/ariane_64/ariane_64.gltf",
+        LauncherAssets.modelPath(Launchers.ARIANE_62.id()));
   }
 
   /**
