@@ -46,7 +46,7 @@ colonne de droite ; le reste peut glisser.
 |---|---|:-:|:-:|:-:|---|
 | `AST-1` | **Lot d'assets 3D** *(neuf, hors code)* | — | — | — | — (à lancer en premier : c'est un délai, pas un travail) |
 | `PHY-8` | **Propulseurs séparés du corps : Falcon Heavy et Ariane 64** *(neuf)* | 4 | 4 | L | `AST-1` (maillage Ariane 64) |
-| `J2` | Deux arbitrages du modèle atmosphérique | — | — | — | `PHY-8` |
+| `J2` | Trois arbitrages du modèle atmosphérique | — | — | — | `PHY-8` |
 | `PHY-2` | Atmosphère par défaut + recalibrage optimiseur | 5 | 4 | L | `J2`, `PHY-8` |
 | `PHY-3` | Détecteurs MaxQ, télémétrie, UI de fidélité | 3 | 2 | M | `PHY-2` |
 | `RND-5` | Repère d'affichage inertiel / tournant | 2 | 2 | S | — |
@@ -95,25 +95,31 @@ orbite ressemble à un satellite (`PHY-6`).
 [`05-roadmap-technique.md`](05-roadmap-technique.md). Cette section ne dit que
 ce que v2 doit traiter et à quel moment.*
 
-**`J2` — deux arbitrages, avant tout calibrage.** Ce n'est pas du travail de
+**`J2` — trois arbitrages, avant tout calibrage.** Ce n'est pas du travail de
 code : c'est ce qu'il faut avoir **tranché** avant que `PHY-2` calibre quoi que
 ce soit, sous peine de figer l'erreur dans le recalibrage.
 
 | Item | Ce qu'il faut décider |
 |---|---|
+| `DT-13` | Les Isp « moyenne de trajectoire » absorbent **408 m/s** (Falcon Heavy S1) et **671 m/s** (Ariane 62 S1) de traînée implicite. Décider ce que le catalogue porte une fois la traînée allumée : Isp de vide partout, ou proxy conservé — et de combien |
 | `DT-14` | 22,6 % d'écart entre Harris-Priester et NRLMSISE-00, tous deux déjà codés. Choisir la référence **avant** de calibrer dessus |
 | `DT-15` | `Cd = 2,2` est déclaré valide au-dessus de 70 km ; le seul profil réel mesuré allume S2 à **58 km** |
 
-Les deux se tranchent en une séance sur les mesures déjà disponibles dans
+Les trois se tranchent en une séance sur les mesures déjà disponibles dans
 [`atmosphere/05-conception-L2.md`](../atmosphere/05-conception-L2.md).
 
-**Ils étaient trois.** `DT-13` — les Isp « moyenne de trajectoire » du catalogue
-absorbent déjà 408 m/s (Falcon Heavy S1) et 671 m/s (Ariane 62 S1) de traînée
-implicite — n'est plus un arbitrage : `PHY-8` rend à chaque étage son Isp réelle
-et **dissout** le double-comptage au lieu de le trancher. Les deux chiffres
-mesurent d'ailleurs la dette d'étages qui n'existeront plus, et le 671 est en
-grande partie l'artefact de la moyenne solide / cryogénique que `PHY-8`
-supprime. La fiche du registre reste à passer en « fermé par `PHY-8` ».
+> **Correction du 2026-09-08 — de retour à trois.** Ce paragraphe retirait
+> `DT-13` de la liste, au motif que `PHY-8` *« rend à chaque étage son Isp réelle
+> et dissout le double-comptage au lieu de le trancher »*. Le découpage de
+> `PHY-8` a mesuré le contraire
+> ([`etagement/01-decoupage.md`](../etagement/01-decoupage.md) §3.4) : la dette
+> est la moyenne **sol / vide**, pas la moyenne solide / cryogénique, et séparer
+> les propulseurs du corps ne la supprime pas — l'écart sol/vide d'un solide se
+> compte en dizaines de secondes, celui d'un cryogénique en centaines. `PHY-8` la
+> **localise** sur le corps central au lieu de la diluer dans un mélange : `J2`
+> arbitrera donc une entrée par lanceur, ce qui rend l'arbitrage plus simple, pas
+> inutile. C'est aussi pourquoi `J2` reste **après** `PHY-8`. La fiche du registre
+> reste **ouverte** ; il n'y a rien à y passer en « fermé par `PHY-8` ».
 
 **Avec `PHY-2` :** `REL-22` — la restauration d'un scénario dont l'atmosphère
 n'est pas `NONE` est **incorrigible avant** que `PHY-2` existe ; elle est versée
@@ -319,7 +325,7 @@ lot que l'id.
 | | |
 |---|---|
 | `DT-12` | Le catalogue cesse de déclarer une Ariane 62 dessinée en Ariane 5 : le lanceur devient une Ariane 64 et porte son propre maillage. *(La fiche du registre conclut par ailleurs que `src/main/resources/models/` est gitignored ; `AST-1` l'a déjà réfuté, `git ls-files` y compte 100 fichiers suivis.)* |
-| ~~`DT-13`~~ | **Ne ferme pas.** La séparation supprime la moyenne solide / cryogénique et laisse intacte la moyenne sol / vide, qui *est* la dette. Elle la localise sur le corps au lieu de la diluer — un progrès, pas une fermeture. Le §3 de ce document, et le passage qui fait passer `J2` de trois arbitrages à deux, sont à reprendre en conséquence |
+| ~~`DT-13`~~ | **Ne ferme pas.** La séparation supprime la moyenne solide / cryogénique et laisse intacte la moyenne sol / vide, qui *est* la dette. Elle la localise sur le corps au lieu de la diluer — un progrès, pas une fermeture. `DT-13` est donc **revenu dans `J2`** (§3), qui repasse à trois arbitrages |
 | préparation §5, q. 2 | *« Comment refermer l'écart quatre propulseurs / Ariane 62 »* — par la troisième option : l'A64 revient au catalogue, et l'A62 en sort |
 | préparation §5, q. 5 | **À moitié.** Le partage des **ergols** se lit dans le catalogue — 65 % de 434 t = 282 t de solide, soit **141 t par P120C**, donc 564 t pour quatre et 152 t de LLPM — mais le partage des **36 t de masse sèche**, qui est ce que la question demande, ne s'en déduit pas et reste à sourcer ([découpage](../etagement/01-decoupage.md) §7) |
 
