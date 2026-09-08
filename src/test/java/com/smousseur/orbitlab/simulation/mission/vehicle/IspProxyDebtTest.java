@@ -1,10 +1,12 @@
 package com.smousseur.orbitlab.simulation.mission.vehicle;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Launchers;
 import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Payloads;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.LauncherModel;
+import com.smousseur.orbitlab.simulation.mission.vehicle.model.stage.IgnitionMode;
 import java.util.Locale;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -68,11 +70,22 @@ class IspProxyDebtTest {
     assertTrue(
         falconHeavy > 0 && ariane62 > 0,
         "a mean-trajectory ISP is below the vacuum one, so the debt is a positive number");
+    // Pinned loosely, because the figure is quoted outside this test - the DT-13 roadmap entry, the
+    // PHY-8 decoupage §3.4 and its L0 §3 all carry it. Splitting the Falcon Heavy's first stage in
+    // two halves the mass ratio and reports 144 m/s here, silently, if the debt keeps being read
+    // off the bottom entry alone (spec docs/etagement/04-conception-L2.md §2.3).
+    assertEquals(408, falconHeavy, 5, "the Falcon Heavy S1 proxy debt recorded for PHY-2");
+    assertEquals(671, ariane62, 5, "the Ariane 62 S1 proxy debt recorded for PHY-2");
   }
 
   /**
    * {@code g₀·(IspVacuum − IspProxy)·ln(m0/mf)} over the first stage, on the stack the propellant
    * budget sizes for a LEO mission with this payload.
+   *
+   * <p><b>The first stage may be several stack entries.</b> A parallel block burns its tanks
+   * together and is jettisoned as one, so the mass ratio is the block's — the entries taken apart
+   * have none of their own, a ratio presupposing a serial burn (spec {@code
+   * docs/etagement/04-conception-L2.md} §3.3).
    */
   private static double debtOf(
       LauncherModel launcher, double payloadDryMass, double proxyIsp, double vacuumIsp) {
@@ -81,15 +94,21 @@ class IspProxyDebtTest {
         PropellantBudget.loadsForLeo(launcher, payload, TARGET_ALTITUDE, LAUNCH_LATITUDE_DEG);
     VehicleStack stack = new LaunchConfiguration(launcher, loads, payload).toVehicleStack();
 
+    double firstStageLoad = 0.0;
+    for (int i = 0; i < launcher.stages().size(); i++) {
+      if (launcher.stages().get(i).capabilities().ignition() == IgnitionMode.GROUND) {
+        firstStageLoad += loads[i];
+      }
+    }
     double liftOffMass = stack.getMass();
-    double burnOutMass = liftOffMass - loads[0];
+    double burnOutMass = liftOffMass - firstStageLoad;
     double massRatio = liftOffMass / burnOutMass;
 
     logger.info(
-        "  {}: lift-off {} kg, S1 load {} kg, mass ratio {}",
+        "  {}: lift-off {} kg, first-stage load {} kg, mass ratio {}",
         launcher.displayName(),
         round(liftOffMass),
-        round(loads[0]),
+        round(firstStageLoad),
         String.format(Locale.ROOT, "%.3f", massRatio));
 
     return G0 * (vacuumIsp - proxyIsp) * FastMath.log(massRatio);

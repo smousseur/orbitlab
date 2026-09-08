@@ -12,9 +12,22 @@ public final class Launchers {
   private Launchers() {}
 
   /**
-   * Falcon Heavy (expendable), first stage aggregating the three kerolox cores. The upper stage max
-   * coast (2 h) exceeds any parking coast but not a GTO coast to apogee (~5 h 15), which delegates
-   * distant circularization to the payload's kick motor.
+   * Falcon Heavy (expendable): two strap-on cores burning in parallel with a third, identical
+   * central one, then the Merlin Vacuum upper stage. The upper stage max coast (2 h) exceeds any
+   * parking coast but not a GTO coast to apogee (~5 h 15), which delegates distant circularization
+   * to the payload's kick motor.
+   *
+   * <p><b>Why the three cores are two entries and not one</b> (spec {@code
+   * docs/etagement/04-conception-L2.md}). They are physically identical and lit together, so the
+   * old single {@code S1} reproduced the flight exactly — but it could not express the side cores
+   * being dropped while the centre one keeps firing, which is what the vehicle actually does. Split
+   * at full thrust the two entries run dry together and are jettisoned together, so the trajectory
+   * is unchanged to the bit; {@code L3} is where the centre core is throttled and starts outliving
+   * them.
+   *
+   * <p>Figures are <b>per exemplar</b> — one core is a third of the block: 22 t dry, 411 t of
+   * kerolox, 7.6 MN, 10.5 m². The aggregate reads 66 t / 1 233 t / 22.8 MN, which is what the
+   * catalog declared before the split.
    */
   public static final LauncherModel FALCON_HEAVY =
       new LauncherModel(
@@ -22,12 +35,34 @@ public final class Launchers {
           "Falcon Heavy",
           List.of(
               new StageModel(
-                  "S1 (3 cores aggregated)",
-                  66_000,
-                  1_233_000,
+                  "Boosters (2 side cores)",
+                  22_000,
+                  411_000,
                   // Mean-trajectory ISP (sea level 282 s / vacuum 311 s): with no atmosphere
                   // modeled, 296 s is the proxy for real ascent losses (spec 06 §S1).
-                  new PropulsionSystem(296, 22_800_000),
+                  new PropulsionSystem(296, 7_600_000),
+                  new StageCapabilities(
+                      IgnitionMode.GROUND,
+                      0,
+                      ShutdownMode.COMMANDED,
+                      // Kerolox, not solid: the load stays mission-sizable, as it was on the
+                      // aggregate.
+                      PropellantType.CRYOGENIC,
+                      0.0,
+                      StageRole.BOOSTER),
+                  // π·1.83² for one 3.66 m core (diameter verified 2026-08-20). Declared per
+                  // exemplar, the three cores now total 31.5 m² where the aggregate rounded to
+                  // 31.6; the exact value is 31.56, so this is the closer of the two. The fairing
+                  // is not modeled — it does not exceed the section. Cd 0.4 is the middle of the
+                  // usual 0.3–0.5 bracket for a slender launcher in continuum flow, referred to
+                  // that same area; NO transonic peak is represented.
+                  new AerodynamicProperties(10.5, 0.4),
+                  2),
+              new StageModel(
+                  "Core",
+                  22_000,
+                  411_000,
+                  new PropulsionSystem(296, 7_600_000),
                   new StageCapabilities(
                       IgnitionMode.GROUND,
                       0,
@@ -35,12 +70,7 @@ public final class Launchers {
                       PropellantType.CRYOGENIC,
                       0.0,
                       StageRole.CORE),
-                  // Frontal area of the block as aggregated: three 3.66 m cores flying side by
-                  // side, so 3 × π·1.83² (Falcon Heavy core diameter verified 2026-08-20). The
-                  // fairing is not modeled — it does not exceed the aggregate section. Cd 0.4 is
-                  // the middle of the usual 0.3–0.5 bracket for a slender launcher in continuum
-                  // flow, referred to that same area; NO transonic peak is represented.
-                  new AerodynamicProperties(31.6, 0.4)),
+                  new AerodynamicProperties(10.5, 0.4)),
               new StageModel(
                   "S2 (Merlin Vacuum)",
                   4_000,

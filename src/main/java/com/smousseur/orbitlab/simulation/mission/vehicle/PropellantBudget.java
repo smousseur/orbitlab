@@ -340,12 +340,21 @@ public final class PropellantBudget {
    * Sizes the top stage for the ΔV left over by the fully-loaded lower stages. Fixed-point
    * iteration: the lower stages' ΔV depends on the mass above them, which depends on the sized top
    * load. Solid top stages fly full (no sizing degree of freedom).
+   *
+   * <p><b>The ΔV chain is evaluated on the serial-equivalent stages</b>, not on the stack entries
+   * (spec {@code docs/etagement/04-conception-L2.md} §3.1). The loop below is a chain of
+   * Tsiolkovsky terms, each stage dropping its dry mass before the next ignites; a parallel block
+   * is one burn, so handing it over as two entries would make this believe in a staging that never
+   * happens. Measured on the split Falcon Heavy: 2 111 m/s of ΔV credited to nothing, and an upper
+   * stage sized at zero.
+   *
+   * <p>The loads returned are still one per stack entry. No proportioning is needed to get there —
+   * every lower stage flies full, so a block's load <em>is</em> the sum of its entries' capacities.
    */
   private static double[] sizeTopStage(LauncherModel launcher, double payloadMass, double dvTotal) {
     List<StageModel> stages = launcher.stages();
-    int n = stages.size();
-    double[] loads = new double[n];
-    for (int i = 0; i < n; i++) {
+    double[] loads = new double[stages.size()];
+    for (int i = 0; i < stages.size(); i++) {
       loads[i] = stages.get(i).propellantCapacity();
     }
 
@@ -354,15 +363,17 @@ public final class PropellantBudget {
       return loads;
     }
 
+    List<StageModel> burns = StagingPlan.foldParallelBlock(stages, launcher.ascentProfile());
+    int n = burns.size();
     double exhaustVelocityTop = top.propulsion().isp() * G0;
     double topLoad = top.propellantCapacity();
     for (int iter = 0; iter < SIZING_ITERATIONS; iter++) {
       double dvLower = 0.0;
       for (int i = 0; i < n - 1; i++) {
-        StageModel stage = stages.get(i);
+        StageModel stage = burns.get(i);
         double massAbove = payloadMass + top.dryMass() + topLoad;
         for (int j = i + 1; j < n - 1; j++) {
-          massAbove += stages.get(j).dryMass() + loads[j];
+          massAbove += burns.get(j).dryMass() + burns.get(j).propellantCapacity();
         }
         double burnout = massAbove + stage.dryMass();
         dvLower +=
@@ -376,7 +387,7 @@ public final class PropellantBudget {
           finalMass * (FastMath.exp(dvTop / exhaustVelocityTop) - 1.0) * (1.0 + SAFETY_MARGIN);
       topLoad = FastMath.min(raw, top.propellantCapacity());
     }
-    loads[n - 1] = topLoad;
+    loads[loads.length - 1] = topLoad;
     return loads;
   }
 

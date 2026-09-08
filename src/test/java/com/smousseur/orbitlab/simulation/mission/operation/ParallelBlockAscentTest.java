@@ -35,26 +35,27 @@ import org.orekit.time.TimeScalesFactory;
 import org.orekit.utils.Constants;
 
 /**
- * <b>PHY-8 / L1 — the closing gate</b> (spec {@code docs/etagement/03-conception-L1.md} §6.2).
+ * <b>PHY-8 / L1 and L2 — the iso-trajectory gate</b> (spec {@code
+ * docs/etagement/03-conception-L1.md} §6.2 and {@code 04-conception-L2.md} §5).
  *
- * <p>The catalog declares no boosters, so the mechanism is exercised here by two <em>test</em>
- * launchers, and the four pinned baselines close the lot untouched. What this test adds is the
- * proof the découpage schedules for {@code L2}, brought forward: a Falcon Heavy split into {@code
- * [boosters ×2, core, S2]} and flown at full thrust is iso-trajectory with the catalog's two-stage
- * entry — <b>to the bit</b>, not to a tolerance.
+ * <p>Splitting the Falcon Heavy into {@code [boosters ×2, core, S2]} and flying it at full thrust
+ * must move nothing — <b>to the bit</b>, not to a tolerance. {@code L1} proved it with the split as
+ * a fixture against the catalog; {@code L2} moved the split <em>into</em> the catalog, so the
+ * reference swapped sides: {@link #AGGREGATED} is now the frozen pre-L2 entry and the subject is
+ * {@code Launchers.FALCON_HEAVY}. Neither side is a pinned literal, so the comparison survives
+ * {@code L3} and {@code L4} untouched.
  *
  * <p><b>Why bit equality is reachable.</b> Every figure of the split is an exact integer and the
  * boosters are twice the core, so the aggregate thrust is 22 800 000 N exactly, {@code ΣF/Σ(F/Isp)}
  * lands on 296 s exactly, and the block's dry mass, depletion floor, burn duration and jettison
- * mass all reproduce the catalog S1's (spec §2.4).
+ * mass all reproduce the former S1's (spec L1 §2.4).
  *
  * <p>The profile flown is the one the two zero-tolerance gates use — hand-written loads {@code {600
  * 000, 100 000}} on {@code Spacecraft.LEGACY} — which split at the exact 2/3–1/3 pro rata.
  *
- * <p><b>One figure does move, and it is inert.</b> The catalog rounds its aggregate section to 31.6
- * m²; three exemplars of 10.5 m² give 31.5. Nothing reads it — no production mission declares an
- * atmosphere — so the trajectory is unaffected; which of the two roundings the catalog keeps is
- * {@code L2}'s to settle.
+ * <p><b>One figure does move, and it is inert.</b> The former entry rounded its aggregate section
+ * to 31.6 m²; three exemplars of 10.5 m² give 31.5, and the exact value is 31.56. Nothing reads it
+ * — no production mission declares an atmosphere — so the trajectory is unaffected (spec L2 §3.5).
  */
 class ParallelBlockAscentTest {
   private static final Logger logger = LogManager.getLogger(ParallelBlockAscentTest.class);
@@ -82,11 +83,11 @@ class ParallelBlockAscentTest {
   // ── The block, before any flight ──────────────────────────────────────────
 
   @Test
-  void theAggregatedBlockReproducesTheCatalogFirstStageBitForBit() {
-    var catalogS1 = Launchers.FALCON_HEAVY.instantiate(SEQUENTIAL_LOADS, Spacecraft.LEGACY);
-    var split = splitFalconHeavy(1.0).instantiate(SPLIT_LOADS, Spacecraft.LEGACY);
+  void theCatalogBlockReproducesTheFormerFirstStageBitForBit() {
+    var aggregated = AGGREGATED.instantiate(SEQUENTIAL_LOADS, Spacecraft.LEGACY);
+    var split = Launchers.FALCON_HEAVY.instantiate(SPLIT_LOADS, Spacecraft.LEGACY);
 
-    var reference = catalogS1.resolveActiveStage(catalogS1.getMass());
+    var reference = aggregated.resolveActiveStage(aggregated.getMass());
     var block = split.resolveActiveStage(split.getMass());
 
     assertEquals(reference.propulsion().thrust(), block.propulsion().thrust(), 0.0);
@@ -94,12 +95,12 @@ class ParallelBlockAscentTest {
     assertEquals(reference.dryMass(), block.dryMass(), 0.0);
     assertEquals(reference.depletionFloor(), block.depletionFloor(), 0.0);
     assertEquals(reference.massAfterJettison(), block.massAfterJettison(), 0.0);
-    assertEquals(catalogS1.getMass(), split.getMass(), 0.0);
+    assertEquals(aggregated.getMass(), split.getMass(), 0.0);
   }
 
   @Test
   void atFullThrustTheCoreEmptiesWithTheBoosters_soOneJettisonDropsBoth() {
-    var split = splitFalconHeavy(1.0).instantiate(SPLIT_LOADS, Spacecraft.LEGACY);
+    var split = Launchers.FALCON_HEAVY.instantiate(SPLIT_LOADS, Spacecraft.LEGACY);
 
     assertTrue(split.stagingPlan().hasParallelBlock());
     assertTrue(split.stagingPlan().parallelBlock().groupedJettison());
@@ -109,8 +110,8 @@ class ParallelBlockAscentTest {
   @Test
   void aGroupedBlockKeepsTheThreeHistoricalAscentPhases() {
     assertEquals(
-        stageNames(missionOf(Launchers.FALCON_HEAVY, SEQUENTIAL_LOADS)),
-        stageNames(missionOf(splitFalconHeavy(1.0), SPLIT_LOADS)));
+        stageNames(missionOf(AGGREGATED, SEQUENTIAL_LOADS)),
+        stageNames(missionOf(Launchers.FALCON_HEAVY, SPLIT_LOADS)));
   }
 
   // ── The flight ────────────────────────────────────────────────────────────
@@ -123,15 +124,15 @@ class ParallelBlockAscentTest {
    */
   @Test
   void theSplitFalconHeavyFliesTheVerySameAscent() {
-    SpacecraftState sequential = flyAscent(missionOf(Launchers.FALCON_HEAVY, SEQUENTIAL_LOADS));
-    SpacecraftState split = flyAscent(missionOf(splitFalconHeavy(1.0), SPLIT_LOADS));
+    SpacecraftState sequential = flyAscent(missionOf(AGGREGATED, SEQUENTIAL_LOADS));
+    SpacecraftState split = flyAscent(missionOf(Launchers.FALCON_HEAVY, SPLIT_LOADS));
 
     double deltaPosition = Vector3D.distance(sequential.getPosition(), split.getPosition());
     double deltaVelocity =
         Vector3D.distance(
             sequential.getPVCoordinates().getVelocity(), split.getPVCoordinates().getVelocity());
     logger.info(
-        "L1 split vs catalog Falcon Heavy at MECO: Δpos {} m, Δvel {} m/s, Δmass {} kg",
+        "Catalog (split) vs aggregated Falcon Heavy at MECO: Δpos {} m, Δvel {} m/s, Δmass {} kg",
         String.format(Locale.ROOT, "%.3e", deltaPosition),
         String.format(Locale.ROOT, "%.3e", deltaVelocity),
         String.format(Locale.ROOT, "%.3e", FastMath.abs(sequential.getMass() - split.getMass())));
@@ -146,7 +147,7 @@ class ParallelBlockAscentTest {
 
   @Test
   void aThrottledCoreOutlastsTheBoostersAndGetsItsOwnPhase() {
-    var split = splitFalconHeavy(0.81).instantiate(fullLoads(), Spacecraft.LEGACY);
+    var split = throttledFalconHeavy(0.81).instantiate(fullLoads(), Spacecraft.LEGACY);
 
     // 822 t of boosters drain 0.81 × 7.6/15.2 = 0.405 of that from the core, leaving 78 t of the
     // 411 t it carries — the figure the découpage derives (spec 01-decoupage.md §2.3).
@@ -156,7 +157,7 @@ class ParallelBlockAscentTest {
 
   @Test
   void theThrottledAscentIsFivePhases() {
-    List<String> names = stageNames(missionOf(splitFalconHeavy(0.81), fullLoads()));
+    List<String> names = stageNames(missionOf(throttledFalconHeavy(0.81), fullLoads()));
 
     assertTrue(names.contains(AscentSequence.BOOSTER_SEPARATION_NAME), names.toString());
     assertTrue(names.contains(AscentSequence.CORE_BURN_NAME), names.toString());
@@ -172,7 +173,7 @@ class ParallelBlockAscentTest {
 
   @Test
   void theBurnDurationsReproduceTheDecoupageFigures() {
-    Mission mission = missionOf(splitFalconHeavy(0.81), fullLoads());
+    Mission mission = missionOf(throttledFalconHeavy(0.81), fullLoads());
     SpacecraftState entry = mission.getInitialState(epoch());
     AscentPlan plan = maneuverOf(mission, entry).plan(entry, new double[] {600.0, 0.32});
 
@@ -200,50 +201,49 @@ class ParallelBlockAscentTest {
    * The Falcon Heavy as {@code L2} will declare it: three identical kerolox cores, two of them
    * strapped on. Per-exemplar figures are exactly a third of the catalog aggregate.
    */
-  private static LauncherModel splitFalconHeavy(double coreThrottle) {
-    StageCapabilities groundLit =
-        new StageCapabilities(
-            IgnitionMode.GROUND,
-            0,
-            ShutdownMode.COMMANDED,
-            PropellantType.CRYOGENIC,
-            0.0,
-            StageRole.BOOSTER);
-    StageModel boosters =
-        new StageModel(
-            "Boosters (2 side cores)",
-            22_000,
-            411_000,
-            new PropulsionSystem(296, 7_600_000),
-            groundLit,
-            new AerodynamicProperties(10.5, 0.4),
-            2);
-    StageModel core =
-        new StageModel(
-            "Core",
-            22_000,
-            411_000,
-            new PropulsionSystem(296, 7_600_000),
-            new StageCapabilities(
-                IgnitionMode.GROUND,
-                0,
-                ShutdownMode.COMMANDED,
-                PropellantType.CRYOGENIC,
-                0.0,
-                StageRole.CORE),
-            new AerodynamicProperties(10.5, 0.4));
-    StageModel upper = Launchers.FALCON_HEAVY.stages().getLast();
+  /**
+   * The catalog Falcon Heavy with its centre core throttled, which is what {@code L3} will declare.
+   * Built from the catalog stages rather than from figures of its own, so it tracks whatever the
+   * catalog says.
+   */
+  private static LauncherModel throttledFalconHeavy(double coreThrottle) {
     AscentProfile catalog = Launchers.FALCON_HEAVY.ascentProfile();
     return new LauncherModel(
-        "FALCON_HEAVY_SPLIT",
-        "Falcon Heavy (split)",
-        List.of(boosters, core, upper),
+        "FALCON_HEAVY_THROTTLED",
+        "Falcon Heavy (throttled core)",
+        Launchers.FALCON_HEAVY.stages(),
         new AscentProfile(
             catalog.verticalAscentDuration(),
             catalog.pitchKickAngleDeg(),
             catalog.interstageCoastDuration(),
             coreThrottle));
   }
+
+  /**
+   * The Falcon Heavy as the catalog declared it before {@code L2}: one entry aggregating the three
+   * identical kerolox cores. Frozen here because it is the reference the split must reproduce, and
+   * because nothing else in the repository states it any more.
+   */
+  private static final LauncherModel AGGREGATED =
+      new LauncherModel(
+          "FALCON_HEAVY_AGGREGATED",
+          "Falcon Heavy (aggregated first stage)",
+          List.of(
+              new StageModel(
+                  "S1 (3 cores aggregated)",
+                  66_000,
+                  1_233_000,
+                  new PropulsionSystem(296, 22_800_000),
+                  new StageCapabilities(
+                      IgnitionMode.GROUND,
+                      0,
+                      ShutdownMode.COMMANDED,
+                      PropellantType.CRYOGENIC,
+                      0.0,
+                      StageRole.CORE),
+                  new AerodynamicProperties(31.6, 0.4)),
+              Launchers.FALCON_HEAVY.stages().getLast()),
+          Launchers.FALCON_HEAVY.ascentProfile());
 
   private static double[] fullLoads() {
     return new double[] {822_000, 411_000, 107_500};

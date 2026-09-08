@@ -95,9 +95,7 @@ public class StepLauncher implements StepValues {
               CARD_H,
               launcher.displayName().toUpperCase(Locale.ROOT),
               String.format(
-                  Locale.ROOT,
-                  "S1 thrust: %.1f MN",
-                  launcher.stages().getFirst().propulsion().thrust() / 1e6),
+                  Locale.ROOT, "Lift-off thrust: %.1f MN", launcher.liftOffThrust() / 1e6),
               String.format(
                   Locale.ROOT, "Isp S2: %.0fs", launcher.stages().getLast().propulsion().isp()),
               null,

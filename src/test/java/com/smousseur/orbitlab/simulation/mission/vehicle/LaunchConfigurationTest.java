@@ -18,7 +18,7 @@ class LaunchConfigurationTest {
 
   @Test
   void toVehicleStack_matchesLauncherInstantiate() {
-    double[] loads = {600_000, 50_000};
+    double[] loads = {400_000, 200_000, 50_000};
     LaunchConfiguration configuration =
         new LaunchConfiguration(Launchers.FALCON_HEAVY, loads, PAYLOAD);
     VehicleStack fromConfiguration = configuration.toVehicleStack();
@@ -30,7 +30,8 @@ class LaunchConfigurationTest {
   @Test
   void ascentProfile_delegatesToLauncher() {
     LaunchConfiguration configuration =
-        new LaunchConfiguration(Launchers.FALCON_HEAVY, new double[] {600_000, 50_000}, PAYLOAD);
+        new LaunchConfiguration(
+            Launchers.FALCON_HEAVY, new double[] {400_000, 200_000, 50_000}, PAYLOAD);
     assertSame(Launchers.FALCON_HEAVY.ascentProfile(), configuration.ascentProfile());
   }
 
@@ -46,12 +47,12 @@ class LaunchConfigurationTest {
 
   @Test
   void propellantLoads_isDefensivelyCopied() {
-    double[] loads = {600_000, 50_000};
+    double[] loads = {400_000, 200_000, 50_000};
     LaunchConfiguration configuration =
         new LaunchConfiguration(Launchers.FALCON_HEAVY, loads, PAYLOAD);
     loads[0] = 0.0;
-    assertEquals(600_000, configuration.propellantLoads()[0], 1e-6);
-    configuration.propellantLoads()[1] = 0.0;
-    assertEquals(50_000, configuration.propellantLoads()[1], 1e-6);
+    assertEquals(400_000, configuration.propellantLoads()[0], 1e-6);
+    configuration.propellantLoads()[2] = 0.0;
+    assertEquals(50_000, configuration.propellantLoads()[2], 1e-6);
   }
 }

@@ -102,17 +102,29 @@ class LaunchersTest {
   @Test
   void falconHeavy_knownFigures() {
     List<StageModel> stages = Launchers.FALCON_HEAVY.stages();
-    assertEquals(2, stages.size());
+    assertEquals(3, stages.size(), "the two side cores are a stage of their own since PHY-8 / L2");
 
-    StageModel s1 = stages.getFirst();
-    assertEquals(66_000, s1.dryMass(), 1e-6);
-    assertEquals(1_233_000, s1.propellantCapacity(), 1e-6);
-    assertEquals(296, s1.propulsion().isp(), 1e-6);
-    assertEquals(22_800_000, s1.propulsion().thrust(), 1e-6);
-    assertEquals(IgnitionMode.GROUND, s1.capabilities().ignition());
-    assertEquals(StageRole.CORE, s1.capabilities().role());
+    // Components are per exemplar, accessors aggregate (spec docs/etagement/03-conception-L1.md
+    // §3.4): one side core is exactly a third of the block the catalog used to declare.
+    StageModel boosters = stages.getFirst();
+    assertEquals(2, boosters.multiplicity());
+    assertEquals(22_000, boosters.unitDryMass(), 1e-6);
+    assertEquals(44_000, boosters.dryMass(), 1e-6);
+    assertEquals(822_000, boosters.propellantCapacity(), 1e-6);
+    assertEquals(296, boosters.propulsion().isp(), 1e-6);
+    assertEquals(15_200_000, boosters.propulsion().thrust(), 1e-6);
+    assertEquals(IgnitionMode.GROUND, boosters.capabilities().ignition());
+    assertEquals(StageRole.BOOSTER, boosters.capabilities().role());
 
-    StageModel s2 = stages.get(1);
+    StageModel core = stages.get(1);
+    assertEquals(22_000, core.dryMass(), 1e-6);
+    assertEquals(411_000, core.propellantCapacity(), 1e-6);
+    assertEquals(296, core.propulsion().isp(), 1e-6);
+    assertEquals(7_600_000, core.propulsion().thrust(), 1e-6);
+    assertEquals(IgnitionMode.GROUND, core.capabilities().ignition());
+    assertEquals(StageRole.CORE, core.capabilities().role());
+
+    StageModel s2 = stages.get(2);
     assertEquals(4_000, s2.dryMass(), 1e-6);
     assertEquals(107_500, s2.propellantCapacity(), 1e-6);
     assertEquals(348, s2.propulsion().isp(), 1e-6);
@@ -122,9 +134,48 @@ class LaunchersTest {
     assertEquals(StageRole.UPPER, s2.capabilities().role());
   }
 
+  /** The block still weighs, holds and pushes exactly what the aggregated S1 did (spec L2 §3.5). */
+  @Test
+  void falconHeavy_theBlockAggregatesToTheFormerFirstStage() {
+    List<StageModel> stages = Launchers.FALCON_HEAVY.stages();
+    StageModel boosters = stages.getFirst();
+    StageModel core = stages.get(1);
+
+    assertEquals(66_000, boosters.dryMass() + core.dryMass(), 0.0);
+    assertEquals(1_233_000, boosters.propellantCapacity() + core.propellantCapacity(), 0.0);
+    assertEquals(22_800_000, boosters.propulsion().thrust() + core.propulsion().thrust(), 0.0);
+  }
+
+  /**
+   * What the wizard card shows: the thrust the vehicle actually leaves the pad with, summed over
+   * every ground-lit entry (spec {@code docs/etagement/04-conception-L2.md} §3.4). Reading the
+   * bottom entry alone would report 15.2 MN on a split Falcon Heavy.
+   */
+  @Test
+  void liftOffThrust_sumsTheGroundLitStages() {
+    assertEquals(22_800_000, Launchers.FALCON_HEAVY.liftOffThrust(), 1e-6);
+    assertEquals(9_960_000, Launchers.ARIANE_62.liftOffThrust(), 1e-6);
+  }
+
+  @Test
+  void liftOffThrust_ignoresTheAirStartedStages() {
+    double groundLit =
+        Launchers.FALCON_HEAVY.stages().stream()
+            .filter(stage -> stage.capabilities().ignition() == IgnitionMode.GROUND)
+            .mapToDouble(stage -> stage.propulsion().thrust())
+            .sum();
+
+    assertEquals(groundLit, Launchers.FALCON_HEAVY.liftOffThrust(), 0.0);
+  }
+
+  @Test
+  void falconHeavy_isNotThrottled() {
+    assertFalse(Launchers.FALCON_HEAVY.ascentProfile().throttlesCore());
+  }
+
   @Test
   void falconHeavy_upperStageCoast_allowsParkingButNotGtoCoast() {
-    StageCapabilities s2 = Launchers.FALCON_HEAVY.stages().get(1).capabilities();
+    StageCapabilities s2 = Launchers.FALCON_HEAVY.stages().getLast().capabilities();
     assertTrue(s2.canCoastFor(45 * 60), "parking coast to node must be possible");
     assertFalse(s2.canCoastFor(5.25 * 3_600), "GTO coast to apogee must delegate to the AKM");
   }
@@ -132,31 +183,36 @@ class LaunchersTest {
   /**
    * Mass-equivalence lock (spec 07 §6): instantiating the catalog model with the loads of the
    * former {@code Launchers.FalconHeavy(600_000, 50_000, …)} factory yields a stack with the same
-   * per-stage masses. Propulsion follows the catalog, whose S1 ISP was deliberately recalibrated
-   * from 311 s to 296 s (spec 06 §S1).
+   * masses. Propulsion follows the catalog, whose S1 ISP was deliberately recalibrated from 311 s
+   * to 296 s (spec 06 §S1).
+   *
+   * <p>Since {@code PHY-8 / L2} the first stage is two entries, so the 600 t are the pro rata
+   * {@code 400 / 200} split and the former figures are read off the block the stack resolves — the
+   * level at which the vehicle burns.
    */
   @Test
   void falconHeavy_instantiate_matchesFormerFactoryStack() {
     Spacecraft payload = Spacecraft.LEGACY;
     VehicleStack stack =
-        Launchers.FALCON_HEAVY.instantiate(new double[] {600_000, 50_000}, payload);
+        Launchers.FALCON_HEAVY.instantiate(new double[] {400_000, 200_000, 50_000}, payload);
 
     List<Vehicle> vehicles = stack.vehicles();
-    assertEquals(3, vehicles.size());
+    assertEquals(4, vehicles.size());
 
-    Vehicle s1 = vehicles.getFirst();
-    assertEquals(66_000, s1.dryMass(), 1e-6);
-    assertEquals(600_000, s1.propellantLoad(), 1e-6);
-    assertEquals(296, s1.propulsion().isp(), 1e-6);
-    assertEquals(22_800_000, s1.propulsion().thrust(), 1e-6);
+    ActiveStageInfo block = stack.resolveActiveStage(stack.getMass());
+    assertEquals(66_000, block.dryMass(), 1e-6);
+    assertEquals(296, block.propulsion().isp(), 1e-6);
+    assertEquals(22_800_000, block.propulsion().thrust(), 1e-6);
+    assertEquals(
+        600_000, vehicles.getFirst().propellantLoad() + vehicles.get(1).propellantLoad(), 1e-6);
 
-    Vehicle s2 = vehicles.get(1);
+    Vehicle s2 = vehicles.get(2);
     assertEquals(4_000, s2.dryMass(), 1e-6);
     assertEquals(50_000, s2.propellantLoad(), 1e-6);
     assertEquals(348, s2.propulsion().isp(), 1e-6);
     assertEquals(981_000, s2.propulsion().thrust(), 1e-6);
 
-    assertSame(payload, vehicles.get(2));
+    assertSame(payload, vehicles.get(3));
     assertEquals(66_000 + 600_000 + 4_000 + 50_000 + payload.getMass(), stack.getMass(), 1e-6);
   }
 }

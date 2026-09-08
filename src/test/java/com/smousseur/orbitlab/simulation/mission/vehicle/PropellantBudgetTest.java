@@ -52,12 +52,13 @@ class PropellantBudgetTest {
     Spacecraft payload = Payloads.EARTH_OBSERVATION_SAT.toSpacecraft(10_000, 0.0);
     double[] loads = PropellantBudget.loadsForLeo(Launchers.FALCON_HEAVY, payload, 400_000, 45.96);
 
-    assertEquals(2, loads.length);
-    assertEquals(1_233_000, loads[0], 1e-6, "S1 flies full in v1");
-    assertTrue(loads[1] > 0, "S2 needs some propellant");
+    // Three entries since PHY-8 / L2: the two side cores, the centre one, then S2.
+    assertEquals(3, loads.length);
+    assertEquals(1_233_000, loads[0] + loads[1], 1e-6, "the whole block flies full in v1");
+    assertTrue(loads[2] > 0, "S2 needs some propellant");
     assertTrue(
-        loads[1] < 0.5 * S2_CAPACITY,
-        () -> "LEO 400 km must size S2 under half capacity, got " + loads[1]);
+        loads[2] < 0.5 * S2_CAPACITY,
+        () -> "LEO 400 km must size S2 under half capacity, got " + loads[2]);
   }
 
   @Test
@@ -70,18 +71,22 @@ class PropellantBudgetTest {
         PropellantBudget.loadsForGeo(
             Launchers.FALCON_HEAVY, Payloads.GEO_SAT, 2_000, 400_000, 5.23);
 
-    assertEquals(1_233_000, geoLoads.launcherLoads()[0], 1e-6, "S1 flies full in v1");
+    assertEquals(
+        1_233_000,
+        geoLoads.launcherLoads()[0] + geoLoads.launcherLoads()[1],
+        1e-6,
+        "the whole block flies full in v1");
     assertTrue(
         geoLoads.akmLoad() > 1_000 && geoLoads.akmLoad() <= 2_000,
         () ->
             "AKM sized for ~1 500 m/s apogee dV expected in (1000, 2000] kg, got "
                 + geoLoads.akmLoad());
     assertTrue(
-        geoLoads.launcherLoads()[1] > 3 * leoLoads[1],
+        geoLoads.launcherLoads()[2] > 3 * leoLoads[2],
         () ->
             String.format(
                 "GEO S2 load (%.0f) must dwarf LEO S2 load (%.0f)",
-                geoLoads.launcherLoads()[1], leoLoads[1]));
+                geoLoads.launcherLoads()[2], leoLoads[2]));
   }
 
   @Test

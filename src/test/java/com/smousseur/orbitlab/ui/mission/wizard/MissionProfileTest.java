@@ -43,7 +43,7 @@ class MissionProfileTest {
     LaunchConfiguration configuration =
         new LaunchConfiguration(
             Launchers.byId("FALCON_HEAVY"),
-            new double[] {400_000.0, 90_000.0},
+            new double[] {266_666.0, 133_334.0, 90_000.0},
             payload,
             "EARTH_OBS_SAT");
     return new MissionSpec.EarthOrbit(
@@ -121,7 +121,7 @@ class MissionProfileTest {
             "fixture",
             new LaunchConfiguration(
                 Launchers.byId("FALCON_HEAVY"),
-                new double[] {400_000.0, 90_000.0},
+                new double[] {266_666.0, 133_334.0, 90_000.0},
                 payload,
                 "GEO_SAT"),
             300_000.0,

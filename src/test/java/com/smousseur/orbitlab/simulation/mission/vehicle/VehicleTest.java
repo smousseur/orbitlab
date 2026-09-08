@@ -314,7 +314,8 @@ class VehicleTest {
 
     AerodynamicProperties liftOff = stack.resolveActiveStage(stack.getMass()).aerodynamics();
     assertNotNull(liftOff);
-    assertEquals(31.6, liftOff.crossSection(), 1e-9);
+    // 3 x 10.5 m2 per exemplar since PHY-8 / L2, against the 31.6 the aggregate rounded to.
+    assertEquals(31.5, liftOff.crossSection(), 1e-9);
     assertEquals(0.4, liftOff.dragCoefficient(), 1e-9);
 
     AerodynamicProperties payload =

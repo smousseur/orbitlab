@@ -140,6 +140,63 @@ public record StagingPlan(List<StageRole> roles, ParallelBlock parallelBlock) {
     return roles;
   }
 
+  /**
+   * The serial-equivalent view of a launcher's stages: the {@code BOOSTER} + {@code CORE} pair, if
+   * there is one, replaced by a single stage carrying their sums and the effective specific impulse
+   * {@code ΣF / Σ(F/Isp)} (spec {@code docs/etagement/04-conception-L2.md} §3.1).
+   *
+   * <p><b>Why anything needs this.</b> {@code PropellantBudget} sizes the top stage against the ΔV
+   * the lower ones give, and it evaluates that ΔV as a chain of Tsiolkovsky terms — one stage
+   * dropping its dry mass before the next ignites. A parallel block is <em>one</em> burn: handing
+   * it over as two entries makes the budget believe in a staging that never happens and credit ΔV
+   * that does not exist. Measured on the Falcon Heavy split, the invented credit is 2 111 m/s and
+   * the sized upper-stage load collapses from 1 963 kg to zero (spec §2.1).
+   *
+   * <p><b>The fold is exact exactly when the jettison is grouped.</b> The serial formula assumes a
+   * stage's dry mass leaves in one go, which is what happens at full thrust — boosters and core run
+   * dry together and are dropped together. It stops being exact as soon as the core outlasts the
+   * boosters and their dry masses leave at different times; the fold then <em>under</em>-estimates
+   * the lower stages' ΔV. That is a known limitation, to be measured rather than assumed.
+   *
+   * @param stages the launcher stages, bottom to top
+   * @param profile the launcher's flight profile, holding the throttle the core applies
+   * @return the same list when the launcher stages sequentially, or one with the block folded
+   */
+  public static List<StageModel> foldParallelBlock(List<StageModel> stages, AscentProfile profile) {
+    int boosterIndex = -1;
+    for (int i = 0; i < stages.size(); i++) {
+      if (stages.get(i).capabilities().role() == StageRole.BOOSTER) {
+        boosterIndex = i;
+        break;
+      }
+    }
+    if (boosterIndex < 0) {
+      return stages;
+    }
+    StageModel boosters = stages.get(boosterIndex);
+    StageModel core = stages.get(boosterIndex + 1);
+    List<StageModel> folded = new ArrayList<>(stages.size() - 1);
+    folded.addAll(stages.subList(0, boosterIndex));
+    folded.add(equivalentStage(boosters, core, profile.coreThrottle()));
+    folded.addAll(stages.subList(boosterIndex + 2, stages.size()));
+    return List.copyOf(folded);
+  }
+
+  private static StageModel equivalentStage(StageModel boosters, StageModel core, double throttle) {
+    double thrust = boosters.propulsion().thrust() + throttle * core.propulsion().thrust();
+    double flow = massFlow(boosters.propulsion(), 1.0) + massFlow(core.propulsion(), throttle);
+    return new StageModel(
+        boosters.name() + " + " + core.name(),
+        boosters.dryMass() + core.dryMass(),
+        boosters.propellantCapacity() + core.propellantCapacity(),
+        new PropulsionSystem(thrust / (flow * Constants.G0_STANDARD_GRAVITY), thrust),
+        core.capabilities());
+  }
+
+  private static double massFlow(PropulsionSystem propulsion, double throttle) {
+    return throttle * propulsion.thrust() / (propulsion.isp() * Constants.G0_STANDARD_GRAVITY);
+  }
+
   private static ParallelBlock block(
       List<StageModel> stages, double[] propellantLoads, AscentProfile profile, int boosterIndex) {
     StageModel boosters = stages.get(boosterIndex);

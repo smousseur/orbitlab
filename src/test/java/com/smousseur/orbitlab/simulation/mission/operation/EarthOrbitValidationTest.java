@@ -172,7 +172,7 @@ class EarthOrbitValidationTest {
         new MissionSpec.EarthOrbit(
             "MEO with AKM",
             new LaunchConfiguration(
-                Launchers.FALCON_HEAVY, new double[] {1_233_000, 107_500}, withAkm),
+                Launchers.FALCON_HEAVY, new double[] {822_000, 411_000, 107_500}, withAkm),
             20_200_000.0,
             20_200_000.0,
             FastMath.toRadians(55.0),
@@ -273,7 +273,8 @@ class EarthOrbitValidationTest {
   void resizingThePropellantLoads_keepsTheTargetNode() {
     // The sizing planner rebuilds the spec at every candidate load array; a node lost there would
     // silently turn a mission waiting for a plane into one launching whenever.
-    MissionSpec resized = specWithRaan(120.0).withLauncherLoads(new double[] {1_000.0, 500.0});
+    MissionSpec resized =
+        specWithRaan(120.0).withLauncherLoads(new double[] {1_000.0, 500.0, 250.0});
 
     assertTrue(((MissionSpec.EarthOrbit) resized).hasTargetRaan());
     assertEquals(120.0, ((MissionSpec.EarthOrbit) resized).targetRaan(), 0.0);

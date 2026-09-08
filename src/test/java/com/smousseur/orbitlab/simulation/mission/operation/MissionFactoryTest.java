@@ -20,6 +20,15 @@ import org.junit.jupiter.api.Test;
 class MissionFactoryTest {
 
   private static final double S1_CAPACITY = 1_233_000;
+
+  /**
+   * Propellant loaded into the launcher's parallel block, whose two entries fly as one burn since
+   * {@code PHY-8 / L2}.
+   */
+  private static double blockLoad(List<Vehicle> vehicles) {
+    return vehicles.get(0).propellantLoad() + vehicles.get(1).propellantLoad();
+  }
+
   private static final double S2_CAPACITY = 107_500;
 
   @BeforeAll
@@ -87,10 +96,10 @@ class MissionFactoryTest {
 
     Mission mission = MissionFactory.fromWizardValues(values, MissionType.LUNAR_FLYBY);
     List<Vehicle> vehicles = stackOf(mission);
-    assertEquals(S1_CAPACITY, vehicles.get(0).propellantLoad(), 1e-6, "S1 flies full in v1");
-    double s2Load = vehicles.get(1).propellantLoad();
+    assertEquals(S1_CAPACITY, blockLoad(vehicles), 1e-6, "the whole block flies full in v1");
+    double s2Load = vehicles.get(2).propellantLoad();
     assertTrue(s2Load > 0 && s2Load < S2_CAPACITY, () -> "sized S2 load, got " + s2Load);
-    assertEquals(2_000, vehicles.get(2).getMass(), 1e-6, "payload mass as entered, no AKM");
+    assertEquals(2_000, vehicles.get(3).getMass(), 1e-6, "payload mass as entered, no AKM");
   }
 
   /**
@@ -103,10 +112,10 @@ class MissionFactoryTest {
     assertInstanceOf(EarthOrbitMission.class, mission);
 
     List<Vehicle> vehicles = stackOf(mission);
-    assertEquals(S1_CAPACITY, vehicles.get(0).propellantLoad(), 1e-6, "S1 flies full in v1");
-    double s2Load = vehicles.get(1).propellantLoad();
+    assertEquals(S1_CAPACITY, blockLoad(vehicles), 1e-6, "the whole block flies full in v1");
+    double s2Load = vehicles.get(2).propellantLoad();
     assertTrue(s2Load > 0 && s2Load < 0.5 * S2_CAPACITY, () -> "sized S2 load, got " + s2Load);
-    assertEquals(10_000, vehicles.get(2).getMass(), 1e-6, "payload mass as entered, AKM empty");
+    assertEquals(10_000, vehicles.get(3).getMass(), 1e-6, "payload mass as entered, AKM empty");
   }
 
   @Test
@@ -120,14 +129,14 @@ class MissionFactoryTest {
     Mission leoMission = MissionFactory.fromWizardValues(baseValues(), MissionType.LEO);
 
     List<Vehicle> geoVehicles = stackOf(geoMission);
-    Vehicle akmPayload = geoVehicles.get(2);
+    Vehicle akmPayload = geoVehicles.get(3);
     assertEquals(2_000, akmPayload.dryMass(), 1e-6);
     assertTrue(
         akmPayload.propellantLoad() > 1_000 && akmPayload.propellantLoad() <= 2_000,
         () -> "sized AKM load expected, got " + akmPayload.propellantLoad());
 
-    double geoS2 = geoVehicles.get(1).propellantLoad();
-    double leoS2 = stackOf(leoMission).get(1).propellantLoad();
+    double geoS2 = geoVehicles.get(2).propellantLoad();
+    double leoS2 = stackOf(leoMission).get(2).propellantLoad();
     assertTrue(
         geoS2 > 3 * leoS2,
         () -> String.format("GEO S2 load (%.0f) must dwarf LEO S2 load (%.0f)", geoS2, leoS2));
@@ -152,7 +161,7 @@ class MissionFactoryTest {
     Map<String, Object> values = baseValues();
     values.put("PAYLOAD_MASS", 0.0);
     Mission mission = MissionFactory.fromWizardValues(values, MissionType.LEO);
-    assertEquals(10_000, stackOf(mission).get(2).getMass(), 1e-6);
+    assertEquals(10_000, stackOf(mission).get(3).getMass(), 1e-6);
   }
 
   @Test
@@ -355,8 +364,8 @@ class MissionFactoryTest {
     Map<String, Object> polarValues = baseValues();
     polarValues.put("TARGET_INCLINATION", 90.0);
 
-    double dueEastLoad = earthOrbitSpec(baseValues()).configuration().propellantLoads()[1];
-    double polarLoad = earthOrbitSpec(polarValues).configuration().propellantLoads()[1];
+    double dueEastLoad = earthOrbitSpec(baseValues()).configuration().propellantLoads()[2];
+    double polarLoad = earthOrbitSpec(polarValues).configuration().propellantLoads()[2];
 
     assertTrue(
         polarLoad > dueEastLoad,

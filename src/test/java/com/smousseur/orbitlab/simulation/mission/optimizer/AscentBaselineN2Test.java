@@ -188,7 +188,9 @@ class AscentBaselineN2Test extends AbstractTrajectoryOptimizerTest {
         new EarthOrbitMission(
             "Falcon Heavy",
             new LaunchConfiguration(
-                Launchers.FALCON_HEAVY, new double[] {600_000, 100_000}, Spacecraft.LEGACY),
+                Launchers.FALCON_HEAVY,
+                new double[] {400_000, 200_000, 100_000},
+                Spacecraft.LEGACY),
             400_000);
     Snapshot snapshot = capture("leo-400", mission);
     compare(LEO_400_BASELINE, snapshot);

@@ -271,7 +271,7 @@ class MissionPolylineBaselineTest {
    */
   private static LaunchConfiguration falconHeavyBaselineLoads() {
     return new LaunchConfiguration(
-        Launchers.FALCON_HEAVY, new double[] {600_000, 100_000}, Spacecraft.LEGACY);
+        Launchers.FALCON_HEAVY, new double[] {400_000, 200_000, 100_000}, Spacecraft.LEGACY);
   }
 
   private static AbsoluteDate epoch() {

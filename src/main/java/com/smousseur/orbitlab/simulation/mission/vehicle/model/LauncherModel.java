@@ -3,6 +3,7 @@ package com.smousseur.orbitlab.simulation.mission.vehicle.model;
 import com.smousseur.orbitlab.simulation.mission.vehicle.*;
 import com.smousseur.orbitlab.simulation.mission.vehicle.StagingPlan;
 import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Launchers;
+import com.smousseur.orbitlab.simulation.mission.vehicle.model.stage.IgnitionMode;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.stage.StageModel;
 import java.util.ArrayList;
 import java.util.List;
@@ -30,6 +31,24 @@ public record LauncherModel(
     }
     stages = List.copyOf(stages);
     StagingPlan.checkStructure(stages, ascentProfile);
+  }
+
+  /**
+   * The thrust this launcher leaves the pad with: the sum over every ground-lit stage.
+   *
+   * <p>Reading the bottom stage alone was the same number until {@code PHY-8 / L2} split the Falcon
+   * Heavy's three cores into two entries; it would now report the two strap-ons, 15.2 MN instead of
+   * 22.8 (spec {@code docs/etagement/04-conception-L2.md} §3.4). Summing the ground-lit stages is
+   * the grandeur a reader actually compares between launchers, and it stays right whatever the
+   * catalog does to its staging afterwards.
+   *
+   * @return the lift-off thrust in newtons
+   */
+  public double liftOffThrust() {
+    return stages.stream()
+        .filter(stage -> stage.capabilities().ignition() == IgnitionMode.GROUND)
+        .mapToDouble(stage -> stage.propulsion().thrust())
+        .sum();
   }
 
   /**
