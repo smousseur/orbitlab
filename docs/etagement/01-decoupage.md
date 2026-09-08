@@ -37,7 +37,8 @@ corrige cette fiche sur cinq points, dont un qui touche à ce que l'item promet 
 2. **La traînée.** C'est `PHY-2`, et l'ordre est délibéré : découper d'abord laisse
    `PHY-2` calibrer une seule fois, contre une ascension de forme physique.
 3. **La dette `DT-13`.** Elle traverse l'item sans être entamée — voir §3.4, qui est le
-   point où la fiche promet le contraire.
+   point où la fiche promet le contraire — et **retourne à `J2`**, qui repasse de deux
+   arbitrages à trois.
 4. **La machinerie multi-objets et les débris dessinés** (`PHY-5`). `PHY-8` lui livre la
    section et la taille d'un propulseur largué ; il ne dessine rien.
 5. **L'étranglement variable dans le temps.** Le vrai Falcon Heavy ré-accélère son corps
@@ -262,6 +263,15 @@ le `[271, 331]` de l'agrégat Ariane est large **à cause du Vulcain**. Séparé
 propulseurs est presque honnête et la dette **se concentre sur le corps** au lieu de se
 diluer. `PHY-2` aura une entrée à reprendre par lanceur, pas un mélange. Les brackets par
 étage restent à sourcer ; le lot qui écrit le catalogue enregistrera lequel porte la dette.
+
+**Ce que cette décision remplace, nommément.** La préparation §2.3 écrit *« découper
+d'abord, sans traînée, chaque étage portant son Isp vide réelle »*, et prédit que l'état
+intermédiaire sur-performera d'à peu près les 408 et 671 m/s que l'Isp actuelle absorbe.
+C'était l'option retenue le 5 septembre ; ce découpage retient l'autre. Les deux chiffres
+restent à relever au premier vol découpé, mais **ils ne mesureront pas un écart à zéro** :
+le proxy étant conservé sur les étages atmosphériques, la compensation ne disparaît pas
+avec les agrégats, elle se redistribue. Conséquence portée au roadmap le 2026-09-08 :
+`DT-13` **revient dans `J2`**, qui repasse à trois arbitrages.
 
 ### 3.5 Le cargo sort des listes par un axe de finalité
 
