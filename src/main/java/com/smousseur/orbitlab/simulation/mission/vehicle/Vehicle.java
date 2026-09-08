@@ -79,6 +79,16 @@ public interface Vehicle {
   }
 
   /**
+   * The roles of this vehicle's entries and its parallel block, if any. A single vehicle is a stack
+   * of one that declares nothing; only {@link VehicleStack} carries a plan worth reading.
+   *
+   * @return the staging plan of this vehicle
+   */
+  default StagingPlan stagingPlan() {
+    return StagingPlan.unknown(1);
+  }
+
+  /**
    * Resolves the per-stage propellant accounting implied by the current spacecraft mass. For a
    * single vehicle this is one entry holding whatever mass sits above the dry mass.
    *

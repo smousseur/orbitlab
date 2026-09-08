@@ -27,12 +27,17 @@ import org.orekit.time.AbsoluteDate;
  * @param kickDate the pitch-kick date, anchor of the pitch law and origin of every date below
  * @param transitionTime total gravity turn duration up to MECO (s) — CMA-ES variable 0
  * @param exponent power-law exponent controlling the pitch-over profile — CMA-ES variable 1
- * @param burn1Duration first-stage burn duration to propellant exhaustion (s)
+ * @param burn1Duration first-stage burn duration to propellant exhaustion (s) — of the parallel
+ *     block, when the launcher flies one, and it ends at the <em>boosters'</em> flame-out
+ * @param coreBurnDuration core-only burn duration after the boosters are dropped (s), {@code 0}
+ *     when the ascent has no core-only phase
  * @param interstageCoast unpowered coast between jettison and second-stage ignition (s)
  * @param burn2Duration second-stage burn duration after the coast, floored at 0 (s)
  * @param maxStepSeconds integrator max step keeping the late-ignition invariant for the ascent
  * @param firstStage the vehicle stage active at gravity-turn entry (the one jettisoned)
- * @param secondStage the vehicle stage active after jettison
+ * @param coreStage the core burning alone after the boosters are dropped, or {@code null} when the
+ *     ascent has no such phase; callers test {@link #hasCorePhase()} rather than the value
+ * @param secondStage the vehicle stage active after the last launcher jettison
  * @param commandedPlaneNormal unit normal of the plane the ascent steers into, or {@code null} when
  *     no plane is commanded and the turn follows whatever plane the kick left behind (spec {@code
  *     docs/earth-orbit/01-mission-terre-parametrable.md} §4); callers test {@link
@@ -43,10 +48,12 @@ public record AscentPlan(
     double transitionTime,
     double exponent,
     double burn1Duration,
+    double coreBurnDuration,
     double interstageCoast,
     double burn2Duration,
     double maxStepSeconds,
     ActiveStageInfo firstStage,
+    ActiveStageInfo coreStage,
     ActiveStageInfo secondStage,
     Vector3D commandedPlaneNormal) {
 
@@ -56,19 +63,81 @@ public record AscentPlan(
    */
   private static final double SETTLING_EPSILON = 1.0e-3;
 
+  /**
+   * Settling coast of the booster jettison. A real launcher cuts nothing there — the core keeps
+   * firing through the separation — but the model has to stop and restart the propagation to change
+   * the force model, so the jettison carries the shortest coast the model can schedule. The
+   * separation phase is built with this exact value rather than zero, so that no clamping happens
+   * and the phase and this schedule agree by construction (spec {@code
+   * docs/etagement/03-conception-L1.md} §3.6).
+   */
+  public static final double BOOSTER_SEPARATION_COAST = 1.0e-3;
+
+  /** An ascent that stages sequentially: one jettison, two burns, no core-only phase. */
+  public AscentPlan(
+      AbsoluteDate kickDate,
+      double transitionTime,
+      double exponent,
+      double burn1Duration,
+      double interstageCoast,
+      double burn2Duration,
+      double maxStepSeconds,
+      ActiveStageInfo firstStage,
+      ActiveStageInfo secondStage,
+      Vector3D commandedPlaneNormal) {
+    this(
+        kickDate,
+        transitionTime,
+        exponent,
+        burn1Duration,
+        0.0,
+        interstageCoast,
+        burn2Duration,
+        maxStepSeconds,
+        firstStage,
+        null,
+        secondStage,
+        commandedPlaneNormal);
+  }
+
   /** Ignition of the first-stage burn, a settling epsilon after the pitch kick. */
   public AbsoluteDate firstIgnitionDate() {
     return kickDate.shiftedBy(SETTLING_EPSILON);
   }
 
-  /** Jettison of the first stage: first-stage burnout plus a settling epsilon. */
+  /**
+   * Jettison of the first stage: first-stage burnout plus a settling epsilon. On a launcher flying
+   * a parallel block this is the <em>booster</em> jettison, the core carrying on alone.
+   */
   public AbsoluteDate jettisonDate() {
     return firstIgnitionDate().shiftedBy(burn1Duration).shiftedBy(SETTLING_EPSILON);
   }
 
-  /** Ignition of the second-stage burn, one interstage coast after the jettison. */
+  /** Ignition of the core-only burn, one separation coast after the boosters are dropped. */
+  public AbsoluteDate coreIgnitionDate() {
+    return jettisonDate().shiftedBy(BOOSTER_SEPARATION_COAST).shiftedBy(SETTLING_EPSILON);
+  }
+
+  /** Jettison of the core: core burnout plus a settling epsilon. */
+  public AbsoluteDate coreJettisonDate() {
+    return coreIgnitionDate().shiftedBy(coreBurnDuration).shiftedBy(SETTLING_EPSILON);
+  }
+
+  /**
+   * Ignition of the second-stage burn, one interstage coast after the last launcher jettison.
+   *
+   * <p>Without a core phase this is literally {@code jettisonDate().shiftedBy(interstageCoast)
+   * .shiftedBy(ε)}, the pre-split expression, epsilon by epsilon — which is what keeps a launcher
+   * declaring no boosters on its calibrated trajectory.
+   */
   public AbsoluteDate secondIgnitionDate() {
-    return jettisonDate().shiftedBy(interstageCoast).shiftedBy(SETTLING_EPSILON);
+    AbsoluteDate lastJettison = hasCorePhase() ? coreJettisonDate() : jettisonDate();
+    return lastJettison.shiftedBy(interstageCoast).shiftedBy(SETTLING_EPSILON);
+  }
+
+  /** Whether the boosters run dry before the core, leaving a core-only phase to fly. */
+  public boolean hasCorePhase() {
+    return coreStage != null;
   }
 
   /** Main engine cutoff, ending the gravity turn. */
@@ -81,7 +150,8 @@ public record AscentPlan(
    * interstage settling coast. The second burn has zero duration exactly at this time.
    */
   public double stagingCompleteTime() {
-    return burn1Duration + interstageCoast;
+    double corePhase = hasCorePhase() ? BOOSTER_SEPARATION_COAST + coreBurnDuration : 0.0;
+    return burn1Duration + corePhase + interstageCoast;
   }
 
   /** Spacecraft mass immediately after the first stage is dropped (the stack above it). */

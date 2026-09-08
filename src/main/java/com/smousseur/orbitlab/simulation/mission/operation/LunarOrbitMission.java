@@ -20,6 +20,7 @@ import com.smousseur.orbitlab.simulation.mission.stage.ascent.VerticalAscentStag
 import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchConfiguration;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.AscentProfile;
+import com.smousseur.orbitlab.simulation.mission.vehicle.model.stage.StageRole;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -51,9 +52,6 @@ import java.util.List;
  * same rule rather than writing it out.
  */
 public class LunarOrbitMission extends EarthMission {
-
-  /** Stack index of the launcher's upper stage — the one "S2 separation" is meant to jettison. */
-  private static final int UPPER_STAGE_INDEX = 1;
 
   /**
    * The circular parking orbit the translunar injection leaves from (m).
@@ -154,7 +152,7 @@ public class LunarOrbitMission extends EarthMission {
     super(
         name,
         vehicle,
-        buildStages(profile, parkingAltitude, orbitAltitude, latitude),
+        buildStages(vehicle, profile, parkingAltitude, orbitAltitude, latitude),
         // The inclination is NOT aimed at, and NaN says so rather than a plausible number. The
         // geometry delivers 131.1° to 153.4° depending on the epoch (L0 measure 1), and the closed
         // form that would predict it — 180° − φ — is right to 2° three times out of four and wrong
@@ -192,11 +190,16 @@ public class LunarOrbitMission extends EarthMission {
   }
 
   private static List<MissionStage> buildStages(
-      AscentProfile profile, double parkingAltitude, double orbitAltitude, double latitude) {
+      Vehicle vehicle,
+      AscentProfile profile,
+      double parkingAltitude,
+      double orbitAltitude,
+      double latitude) {
     List<MissionStage> stages = new ArrayList<>();
     stages.add(new VerticalAscentStage("Vertical Ascent", profile.verticalAscentDuration()));
     stages.addAll(
         AscentSequence.gravityTurn(
+            vehicle,
             profile,
             GravityTurnConstraints.forTarget(parkingAltitude),
             LaunchPlane.dueEast(latitude),
@@ -206,11 +209,11 @@ public class LunarOrbitMission extends EarthMission {
             new AnalyticParkingInsertionStage("Parking", parkingAltitude),
             new ParkingCoastStage(PARKING_COAST_NAME),
             new TLIBurnStage("Translunar injection", orbitAltitude),
-            // Index 1 = the launcher's upper stage (stack = [S1, S2, payload]). Declaring it makes
-            // the separation refuse to fire when the gravity turn left propellant in S1, which
-            // would otherwise jettison S1 in S2's place and hand the insertion to the wrong engine.
+            // Declaring the role makes the separation refuse to fire when the gravity turn left
+            // propellant in a lower stage, which would otherwise jettison that stage in the upper
+            // stage's place and hand the insertion to the wrong engine.
             new StageSeparationStage(
-                StageNames.UPPER_SEPARATION, profile.interstageCoastDuration(), UPPER_STAGE_INDEX),
+                StageNames.UPPER_SEPARATION, profile.interstageCoastDuration(), StageRole.UPPER),
             new TranslunarCoastStage(TRANSLUNAR_COAST_NAME, TRANSLUNAR_COAST_BOUND_SECONDS),
             new LunarApproachCoastStage(APPROACH_COAST_NAME),
             new LunarInsertionStage(INSERTION_NAME),

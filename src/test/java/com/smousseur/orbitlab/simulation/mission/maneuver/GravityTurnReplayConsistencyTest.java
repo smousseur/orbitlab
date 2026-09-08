@@ -413,6 +413,7 @@ class GravityTurnReplayConsistencyTest {
       GEOMission mission, SpacecraftState entry, double[] variables) {
     List<MissionStage> ascent =
         AscentSequence.gravityTurn(
+            mission.getVehicle(),
             Launchers.FALCON_HEAVY.ascentProfile(),
             GravityTurnConstraints.forTarget(PARKING_ALT),
             LAT);
@@ -480,6 +481,7 @@ class GravityTurnReplayConsistencyTest {
     GravityTurnFirstBurnStage firstBurn =
         (GravityTurnFirstBurnStage)
             AscentSequence.gravityTurn(
+                    optimizeMission.getVehicle(),
                     Launchers.FALCON_HEAVY.ascentProfile(),
                     GravityTurnConstraints.forTarget(PARKING_ALT),
                     LAT)
@@ -517,6 +519,7 @@ class GravityTurnReplayConsistencyTest {
     GravityTurnFirstBurnStage stage =
         (GravityTurnFirstBurnStage)
             AscentSequence.gravityTurn(
+                    geoMission().getVehicle(),
                     Launchers.FALCON_HEAVY.ascentProfile(),
                     GravityTurnConstraints.forTarget(PARKING_ALT),
                     LAT)

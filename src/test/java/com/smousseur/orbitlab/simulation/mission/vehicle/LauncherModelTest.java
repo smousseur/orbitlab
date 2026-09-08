@@ -2,6 +2,7 @@ package com.smousseur.orbitlab.simulation.mission.vehicle;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import com.smousseur.orbitlab.core.OrbitlabException;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.AscentProfile;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.LauncherModel;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.stage.*;
@@ -38,11 +39,84 @@ class LauncherModelTest {
               Double.POSITIVE_INFINITY,
               StageRole.UPPER));
 
+  private static final StageModel BOOSTERS =
+      new StageModel(
+          "Boosters",
+          5_000,
+          100_000,
+          new PropulsionSystem(300, 1_000_000),
+          new StageCapabilities(
+              IgnitionMode.GROUND,
+              0,
+              ShutdownMode.BURN_TO_DEPLETION,
+              PropellantType.SOLID,
+              0.0,
+              StageRole.BOOSTER),
+          null,
+          2);
+
   private static final LauncherModel MODEL =
       new LauncherModel(
           "TEST_LAUNCHER", "Test launcher", List.of(STAGE_1, STAGE_2), new AscentProfile(7, 3, 2));
 
   private static final Spacecraft PAYLOAD = Spacecraft.LEGACY;
+
+  @Test
+  void instantiate_stackCarriesTheStagingPlan() {
+    VehicleStack stack = MODEL.instantiate(new double[] {50_000, 10_000}, PAYLOAD);
+
+    assertEquals(0, stack.stagingPlan().indexOf(StageRole.CORE));
+    assertEquals(1, stack.stagingPlan().indexOf(StageRole.UPPER));
+    assertFalse(stack.stagingPlan().hasParallelBlock());
+  }
+
+  @Test
+  void instantiate_withBoosters_stackCarriesAParallelBlock() {
+    LauncherModel strapOn =
+        new LauncherModel(
+            "STRAP_ON",
+            "Strap-on",
+            List.of(BOOSTERS, STAGE_1, STAGE_2),
+            new AscentProfile(7, 3, 2));
+
+    VehicleStack stack = strapOn.instantiate(new double[] {200_000, 100_000, 10_000}, PAYLOAD);
+
+    assertTrue(stack.stagingPlan().hasParallelBlock());
+    assertEquals(0, stack.stagingPlan().parallelBlock().bottomIndex());
+    assertEquals(2, stack.stagingPlan().indexOf(StageRole.UPPER));
+  }
+
+  @Test
+  void throttleWithoutBoosters_rejectedAtConstruction() {
+    assertThrows(
+        OrbitlabException.class,
+        () ->
+            new LauncherModel(
+                "BAD", "Bad", List.of(STAGE_1, STAGE_2), new AscentProfile(7, 3, 2, 0.8)));
+  }
+
+  @Test
+  void twoStagesSharingARole_rejectedAtConstruction() {
+    assertThrows(
+        OrbitlabException.class,
+        () ->
+            new LauncherModel(
+                "BAD", "Bad", List.of(STAGE_1, STAGE_1, STAGE_2), new AscentProfile(7, 3, 2)));
+  }
+
+  @Test
+  void coreDryingBeforeTheBoosters_rejectedAtInstantiation() {
+    LauncherModel strapOn =
+        new LauncherModel(
+            "STRAP_ON",
+            "Strap-on",
+            List.of(BOOSTERS, STAGE_1, STAGE_2),
+            new AscentProfile(7, 3, 2));
+
+    assertThrows(
+        OrbitlabException.class,
+        () -> strapOn.instantiate(new double[] {200_000, 10_000, 10_000}, PAYLOAD));
+  }
 
   @Test
   void instantiate_wrongLoadCount_rejected() {

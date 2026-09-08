@@ -8,7 +8,10 @@ import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchVehicle;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropulsionSystem;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Spacecraft;
+import com.smousseur.orbitlab.simulation.mission.vehicle.StagingPlan;
+import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
 import com.smousseur.orbitlab.simulation.mission.vehicle.VehicleStack;
+import com.smousseur.orbitlab.simulation.mission.vehicle.model.stage.StageRole;
 import java.util.List;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.junit.jupiter.api.Assumptions;
@@ -33,6 +36,9 @@ class StageSeparationStageTest {
 
   private static final LaunchVehicle S2 =
       new LaunchVehicle(4_000, 107_500, 500, new PropulsionSystem(348, 981_000));
+  private static final LaunchVehicle CORE =
+      new LaunchVehicle(66_000, 1_233_000, 1_233_000, new PropulsionSystem(311, 2e7));
+
   private static final Spacecraft AKM_SAT =
       new Spacecraft(2_000, 2_000, 1_500, new PropulsionSystem(320, 400));
 
@@ -76,12 +82,13 @@ class StageSeparationStageTest {
         IllegalArgumentException.class, () -> new StageSeparationStage("S2 separation", -1.0));
   }
 
-  // ── expectedStageIndex guard (bilan 10 §6 follow-up) ──────────────────────
+  // -- expected-role guard (bilan 10 §6 follow-up, roles since PHY-8 / L1) ---
 
   @Test
-  void enter_expectedStageActive_jettisonsIt() {
-    VehicleStack stack = new VehicleStack(List.of(S2, AKM_SAT));
-    StageSeparationStage separation = new StageSeparationStage("S2 separation", 2.0, 0);
+  void enter_expectedRoleActive_jettisonsIt() {
+    VehicleStack stack = rolesOf(List.of(S2, AKM_SAT), StageRole.UPPER, StageRole.KICK);
+    StageSeparationStage separation =
+        new StageSeparationStage("S2 separation", 2.0, StageRole.UPPER);
 
     SpacecraftState afterSeparation =
         separation.enter(stateAtMass(stack.getMass()), missionWith(stack));
@@ -91,39 +98,50 @@ class StageSeparationStageTest {
 
   @Test
   void enter_wrongStageActive_throwsInsteadOfDroppingIt() {
-    // Three-stage stack; the separation is meant to drop S2 (index 1), but the mass says S1
-    // (index 0) is still active with propellant aboard — the I7 GEO failure mode.
-    LaunchVehicle s1 =
-        new LaunchVehicle(66_000, 1_233_000, 1_233_000, new PropulsionSystem(311, 2e7));
-    VehicleStack stack = new VehicleStack(List.of(s1, S2, AKM_SAT));
-    StageSeparationStage separation = new StageSeparationStage("S2 separation", 2.0, 1);
+    // Three-stage stack; the separation is meant to drop the upper stage, but the mass says the
+    // core is still active with propellant aboard - the I7 GEO failure mode.
+    VehicleStack stack =
+        rolesOf(List.of(CORE, S2, AKM_SAT), StageRole.CORE, StageRole.UPPER, StageRole.KICK);
+    StageSeparationStage separation =
+        new StageSeparationStage("S2 separation", 2.0, StageRole.UPPER);
 
-    // Full stack mass: S1 is active and still holds its whole load.
     SpacecraftState beforeSeparation = stateAtMass(stack.getMass());
 
     OrbitlabException thrown =
         assertThrows(
             OrbitlabException.class, () -> separation.enter(beforeSeparation, missionWith(stack)));
     assertTrue(
-        thrown.getMessage().contains("stack stage 1"),
-        () -> "message must name the expected stage, got: " + thrown.getMessage());
+        thrown.getMessage().contains("UPPER"),
+        () -> "message must name the expected role, got: " + thrown.getMessage());
     assertTrue(
-        thrown.getMessage().contains("stage 0 is active"),
-        () -> "message must name the active stage, got: " + thrown.getMessage());
+        thrown.getMessage().contains("CORE"),
+        () -> "message must name the active role, got: " + thrown.getMessage());
   }
 
   @Test
-  void enter_anyStage_keepsLegacyUncheckedBehaviour() {
-    LaunchVehicle s1 =
-        new LaunchVehicle(66_000, 1_233_000, 1_233_000, new PropulsionSystem(311, 2e7));
-    VehicleStack stack = new VehicleStack(List.of(s1, S2, AKM_SAT));
-    StageSeparationStage separation =
-        new StageSeparationStage("S2 separation", 2.0, StageSeparationStage.ANY_STAGE);
+  void enter_noRoleExpected_keepsLegacyUncheckedBehaviour() {
+    VehicleStack stack =
+        rolesOf(List.of(CORE, S2, AKM_SAT), StageRole.CORE, StageRole.UPPER, StageRole.KICK);
+    StageSeparationStage separation = new StageSeparationStage("S2 separation", 2.0);
 
-    // S1 active with a full load: unchecked, it is dropped anyway (the pre-guard behaviour).
+    // The core is active with a full load: unchecked, it is dropped anyway.
     SpacecraftState afterSeparation =
         separation.enter(stateAtMass(stack.getMass()), missionWith(stack));
 
     assertEquals(S2.getMass() + AKM_SAT.getMass(), afterSeparation.getMass(), 1e-9);
+  }
+
+  @Test
+  void enter_stackDeclaringNoRole_refusesTheGuardRatherThanPassingIt() {
+    VehicleStack stack = new VehicleStack(List.of(S2, AKM_SAT));
+    StageSeparationStage separation =
+        new StageSeparationStage("S2 separation", 2.0, StageRole.UPPER);
+    SpacecraftState before = stateAtMass(stack.getMass());
+
+    assertThrows(OrbitlabException.class, () -> separation.enter(before, missionWith(stack)));
+  }
+
+  private static VehicleStack rolesOf(List<Vehicle> vehicles, StageRole... roles) {
+    return new VehicleStack(vehicles, new StagingPlan(List.of(roles), null));
   }
 }

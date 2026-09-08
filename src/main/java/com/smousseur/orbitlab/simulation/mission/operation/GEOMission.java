@@ -19,15 +19,13 @@ import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
 import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Launchers;
 import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Payloads;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.AscentProfile;
+import com.smousseur.orbitlab.simulation.mission.vehicle.model.stage.StageRole;
 import java.util.ArrayList;
 import java.util.List;
 import org.hipparchus.util.FastMath;
 
 public class GEOMission extends EarthMission {
   public static final int GEO_ALTITUDE = 35_786_000;
-
-  /** Stack index of the launcher's upper stage — the one "S2 separation" is meant to jettison. */
-  private static final int UPPER_STAGE_INDEX = 1;
 
   private final double latitude;
   private final double longitude;
@@ -155,7 +153,13 @@ public class GEOMission extends EarthMission {
         name,
         vehicle,
         buildStages(
-            profile, parkingAltitude, targetAltitude, ascentPlane, latitude, finalInclination),
+            vehicle,
+            profile,
+            parkingAltitude,
+            targetAltitude,
+            ascentPlane,
+            latitude,
+            finalInclination),
         new OrbitInsertionObjective(
             SolarSystemBody.EARTH,
             parkingAltitude,
@@ -194,6 +198,7 @@ public class GEOMission extends EarthMission {
   }
 
   private static List<MissionStage> buildStages(
+      Vehicle vehicle,
       AscentProfile profile,
       double parkingAltitude,
       double targetAltitude,
@@ -202,23 +207,27 @@ public class GEOMission extends EarthMission {
       double finalInclination) {
     List<MissionStage> stages = new ArrayList<>();
     stages.add(new VerticalAscentStage("Vertical Ascent", profile.verticalAscentDuration()));
-    // The ascent is three explicit phases (spec 01 §4.2), so "S1 separation" and "S2 separation"
-    // below are now two instances of the same class with expected stack indices 0 and 1 — the
-    // launcher's staging is stated once, in one place, instead of half-implied by a detector.
+    // The ascent is explicit phases (spec 01 §4.2), so the jettisons below are instances of the
+    // same class declaring the role they drop — the launcher's staging is stated once, in one
+    // place, instead of half-implied by a detector.
     stages.addAll(
         AscentSequence.gravityTurn(
-            profile, GravityTurnConstraints.forTarget(parkingAltitude), ascentPlane, latitude));
+            vehicle,
+            profile,
+            GravityTurnConstraints.forTarget(parkingAltitude),
+            ascentPlane,
+            latitude));
     stages.addAll(
         List.of(
             new AnalyticParkingInsertionStage("Parking", parkingAltitude),
             new CoastingStage("Coasting parking", true),
             new AnalyticGtoInjectionStage("GTO injection", targetAltitude),
-            // Index 1 = the launcher's upper stage (stack = [S1, S2, payload]). Declaring it makes
-            // the separation refuse to fire when the gravity turn left propellant in S1 — S1 would
-            // still be the active stage and get jettisoned in S2's place, after which S2 silently
-            // takes over the payload kick motor's burns (bilan 10 §6 follow-up, I7 GEO run).
+            // Declaring the role makes the separation refuse to fire when the gravity turn left
+            // propellant in a lower stage — that stage would still be active and get jettisoned in
+            // the upper stage's place, after which the upper stage silently takes over the payload
+            // kick motor's burns (bilan 10 §6 follow-up, I7 GEO run).
             new StageSeparationStage(
-                StageNames.UPPER_SEPARATION, profile.interstageCoastDuration(), UPPER_STAGE_INDEX),
+                StageNames.UPPER_SEPARATION, profile.interstageCoastDuration(), StageRole.UPPER),
             // The AKM burn owns its ~5 h lead-in coast to the GTO apogee and centers the burn on it
             // (an hours-long 400 N burn starting AT apogee would ruin the insertion). Its plan runs
             // a Newton on the aimed perigee so the finite-burn apogee inflation lands on target;

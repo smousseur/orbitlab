@@ -57,7 +57,10 @@ public final class AscentChainPropagation implements AscentPropagation {
     planRef.set(maneuver.plan(entryState, variables));
 
     return StageChainRunner.plain()
-        .run(firstBurn.optimizationChain(planRef, tracker), entryState, mission);
+        .run(
+            firstBurn.optimizationChain(mission.getVehicle(), planRef, tracker),
+            entryState,
+            mission);
   }
 
   @Override

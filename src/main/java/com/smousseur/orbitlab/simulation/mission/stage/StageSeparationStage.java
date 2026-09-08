@@ -4,6 +4,7 @@ import com.smousseur.orbitlab.core.OrbitlabException;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionStage;
 import com.smousseur.orbitlab.simulation.mission.vehicle.ActiveStageInfo;
+import com.smousseur.orbitlab.simulation.mission.vehicle.model.stage.StageRole;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hipparchus.ode.events.Action;
@@ -22,20 +23,23 @@ import org.orekit.time.AbsoluteDate;
  *
  * <p><b>Which stage gets dropped.</b> The stage jettisoned is whichever one the mass accounting
  * says is active — an assumption that only holds while the flight profile consumes the stages below
- * it exactly as calibrated. Pass an {@code expectedStageIndex} to make that assumption explicit:
- * the separation then refuses to drop the wrong stage and fails fast instead of silently degrading
- * the rest of the profile (bilan 10 §6 follow-up — on the GEO profile a lighter upper stage makes
- * the gravity turn stop before S1 is dry, leaving S1 active, so an unchecked "S2 separation"
- * jettisoned S1 and let S2 masquerade as the payload's kick motor).
+ * it exactly as calibrated. Pass an {@code expectedRole} to make that assumption explicit: the
+ * separation then refuses to drop the wrong stage and fails fast instead of silently degrading the
+ * rest of the profile (bilan 10 §6 follow-up — on the GEO profile a lighter upper stage makes the
+ * gravity turn stop before S1 is dry, leaving S1 active, so an unchecked "S2 separation" jettisoned
+ * S1 and let S2 masquerade as the payload's kick motor).
+ *
+ * <p><b>A role rather than a stack index</b> (spec {@code docs/etagement/03-conception-L1.md}
+ * §3.7). Splitting the boosters out of the core moves every index above them by one, so an index
+ * written by hand would have had to move with it — the very class of bug the guard exists to close.
+ * A stack that declares no role at all refuses the guard rather than letting it pass silently:
+ * asking for a role on a stack that has none is a wiring error, not a permission.
  */
 public class StageSeparationStage extends MissionStage {
   private static final Logger logger = LogManager.getLogger(StageSeparationStage.class);
 
-  /** {@link #expectedStageIndex} value disabling the check. */
-  public static final int ANY_STAGE = -1;
-
   private final double separationCoastDuration;
-  private final int expectedStageIndex;
+  private final StageRole expectedRole;
   private final boolean logJettison;
 
   /**
@@ -46,7 +50,7 @@ public class StageSeparationStage extends MissionStage {
    *     launcher's interstage coast
    */
   public StageSeparationStage(String name, double separationCoastDuration) {
-    this(name, separationCoastDuration, ANY_STAGE);
+    this(name, separationCoastDuration, null);
   }
 
   /**
@@ -55,11 +59,11 @@ public class StageSeparationStage extends MissionStage {
    * @param name the human-readable name of this stage
    * @param separationCoastDuration the settling coast after separation (s), typically the
    *     launcher's interstage coast
-   * @param expectedStageIndex the stack index of the stage this separation is designed to jettison,
-   *     or {@link #ANY_STAGE} to accept whichever stage is active
+   * @param expectedRole the role of the stage this separation is designed to jettison, or {@code
+   *     null} to accept whichever stage is active
    */
-  public StageSeparationStage(String name, double separationCoastDuration, int expectedStageIndex) {
-    this(name, separationCoastDuration, expectedStageIndex, true);
+  public StageSeparationStage(String name, double separationCoastDuration, StageRole expectedRole) {
+    this(name, separationCoastDuration, expectedRole, true);
   }
 
   /**
@@ -79,18 +83,18 @@ public class StageSeparationStage extends MissionStage {
    * @param name the human-readable name of this stage
    * @param separationCoastDuration the settling coast after separation (s), typically the
    *     launcher's interstage coast
-   * @param expectedStageIndex the stack index of the stage this separation is designed to jettison,
-   *     or {@link #ANY_STAGE} to accept whichever stage is active
+   * @param expectedRole the role of the stage this separation is designed to jettison, or {@code
+   *     null} to accept whichever stage is active
    * @param logJettison whether firing logs the jettison; {@code false} on an optimization chain
    */
   public StageSeparationStage(
-      String name, double separationCoastDuration, int expectedStageIndex, boolean logJettison) {
+      String name, double separationCoastDuration, StageRole expectedRole, boolean logJettison) {
     super(name);
     if (!(separationCoastDuration >= 0)) {
       throw new IllegalArgumentException("separationCoastDuration cannot be negative");
     }
     this.separationCoastDuration = separationCoastDuration;
-    this.expectedStageIndex = expectedStageIndex;
+    this.expectedRole = expectedRole;
     this.logJettison = logJettison;
   }
 
@@ -102,14 +106,23 @@ public class StageSeparationStage extends MissionStage {
   @Override
   public SpacecraftState enter(SpacecraftState previousState, Mission mission) {
     ActiveStageInfo info = mission.getVehicle().resolveActiveStage(previousState.getMass());
-    if (expectedStageIndex != ANY_STAGE && info.stageIndex() != expectedStageIndex) {
+    if (expectedRole != null && info.role() == null) {
       throw new OrbitlabException(
           String.format(
-              "[%s] is designed to jettison stack stage %d but stage %d is active at %.0f kg "
-                  + "(%.0f kg of propellant still aboard it): the profile did not consume the "
-                  + "stages below as expected, jettisoning here would drop the wrong stage",
+              "[%s] guards on the %s stage but the stack declares no staging plan: the guard "
+                  + "cannot be honoured",
+              getName(), expectedRole));
+    }
+    if (expectedRole != null && info.role() != expectedRole) {
+      throw new OrbitlabException(
+          String.format(
+              "[%s] is designed to jettison the %s stage but the %s stage (stack index %d) is "
+                  + "active at %.0f kg (%.0f kg of propellant still aboard it): the profile did "
+                  + "not consume the stages below as expected, jettisoning here would drop the "
+                  + "wrong stage",
               getName(),
-              expectedStageIndex,
+              expectedRole,
+              info.role(),
               info.stageIndex(),
               previousState.getMass(),
               FastMath.max(0.0, info.remainingFuel(previousState.getMass()))));

@@ -1,5 +1,6 @@
 package com.smousseur.orbitlab.simulation.mission.maneuver;
 
+import com.smousseur.orbitlab.core.OrbitlabException;
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.Physics;
 import com.smousseur.orbitlab.simulation.flight.FlightContext;
@@ -13,6 +14,7 @@ import com.smousseur.orbitlab.simulation.mission.stage.ascent.AscentPropagation;
 import com.smousseur.orbitlab.simulation.mission.vehicle.ActiveStageInfo;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropulsionSystem;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
+import com.smousseur.orbitlab.simulation.mission.vehicle.model.stage.StageRole;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
@@ -57,6 +59,7 @@ public class GravityTurnManeuver {
   private final double interstageCoastDuration;
   private final boolean commandedPlane;
   private final ActiveStageInfo activeStage;
+  private final ActiveStageInfo coreStage;
   private final ActiveStageInfo nextStage;
   // Stored per-thread so parallel CMA-ES exploration runs can call propagateForOptimization()
   // concurrently without overwriting each other's tracker (matches TransferProblem.lastResult).
@@ -118,7 +121,18 @@ public class GravityTurnManeuver {
     this.commandedPlane = commandedPlane;
     this.context = context;
     this.activeStage = vehicle.resolveActiveStage(entryMass);
-    this.nextStage = vehicle.resolveActiveStage(activeStage.massAfterJettison());
+    ActiveStageInfo afterFirstJettison =
+        vehicle.resolveActiveStage(activeStage.massAfterJettison());
+    // A parallel block whose boosters run dry first leaves the core burning alone, so the ascent
+    // gains a phase and the stage flying the second burn is one entry higher (spec
+    // docs/etagement/03-conception-L1.md §3.5).
+    boolean corePhase =
+        activeStage.role() == StageRole.BOOSTER && afterFirstJettison.role() == StageRole.CORE;
+    this.coreStage = corePhase ? afterFirstJettison : null;
+    this.nextStage =
+        corePhase
+            ? vehicle.resolveActiveStage(afterFirstJettison.massAfterJettison())
+            : afterFirstJettison;
   }
 
   /**
@@ -140,19 +154,22 @@ public class GravityTurnManeuver {
     // Burn1 duration until propellant exhaustion
     double burn1Duration = getBurn1Duration();
 
-    // Burn2 duration after jettison and interstage coast, until transitionTime
-    double burn2Duration = transitionTime - burn1Duration - interstageCoastDuration;
-    burn2Duration = FastMath.max(0.0, burn2Duration);
+    double coreBurnDuration = getCoreBurnDuration();
+
+    // Burn2 duration after every launcher jettison and the interstage coast, until transitionTime
+    double burn2Duration = FastMath.max(0.0, transitionTime - getStagingCompleteTime());
 
     return new AscentPlan(
         entryState.getDate(),
         transitionTime,
         exponent,
         burn1Duration,
+        coreBurnDuration,
         interstageCoastDuration,
         burn2Duration,
         maxStepSeconds(),
         activeStage,
+        coreStage,
         nextStage,
         commandedPlaneNormal(entryState));
   }
@@ -202,6 +219,14 @@ public class GravityTurnManeuver {
    * @param plan the ascent plan produced by {@link #plan}
    */
   public void configure(NumericalPropagator propagator, AscentPlan plan) {
+    if (plan.hasCorePhase()) {
+      throw new OrbitlabException(
+          "the single-propagator gravity turn cannot fly a parallel block: it plants the jettison"
+              + " inside the burn and knows two burns, not three. Teaching it the core-only phase"
+              + " would duplicate the five-phase chain in a second place, which is what"
+              + " AscentChainPropagation exists to prevent (spec"
+              + " docs/etagement/03-conception-L1.md §4)");
+    }
     GravityTurnAttitudeProvider attitudeProvider =
         new GravityTurnAttitudeProvider(
             plan.kickDate(), plan.transitionTime(), plan.exponent(), plan.commandedPlaneNormal());
@@ -272,9 +297,20 @@ public class GravityTurnManeuver {
    */
   public double maxStepSeconds() {
     PropulsionSystem propulsion2 = nextStage.propulsion();
-    return OrekitService.burnLimitedMaxStep(
+    // Mass at second ignition: whatever the last launcher jettison leaves behind, which is the
+    // core's jettison when there is a core-only phase and the block's otherwise.
+    ActiveStageInfo lastJettisoned = coreStage == null ? activeStage : coreStage;
+    OrekitService.BurnSpec secondBurn =
         new OrekitService.BurnSpec(
-            propulsion2.thrust(), propulsion2.isp(), activeStage.massAfterJettison()));
+            propulsion2.thrust(), propulsion2.isp(), lastJettisoned.massAfterJettison());
+    if (coreStage == null) {
+      return OrekitService.burnLimitedMaxStep(secondBurn);
+    }
+    PropulsionSystem corePropulsion = coreStage.propulsion();
+    return OrekitService.burnLimitedMaxStep(
+        secondBurn,
+        new OrekitService.BurnSpec(
+            corePropulsion.thrust(), corePropulsion.isp(), activeStage.massAfterJettison()));
   }
 
   /**
@@ -357,6 +393,22 @@ public class GravityTurnManeuver {
   }
 
   /**
+   * Returns the duration of the core-only burn, zero when there is none. The core ignites at the
+   * mass the booster jettison leaves behind and fires to its own depletion floor, at the full
+   * thrust it recovers once the boosters are gone.
+   *
+   * @return the core burn duration in seconds
+   */
+  public double getCoreBurnDuration() {
+    if (coreStage == null) {
+      return 0.0;
+    }
+    PropulsionSystem propulsion = coreStage.propulsion();
+    double massFlowRate = propulsion.thrust() / (propulsion.isp() * Constants.G0_STANDARD_GRAVITY);
+    return coreStage.remainingFuel(activeStage.massAfterJettison()) / massFlowRate;
+  }
+
+  /**
    * Earliest MECO that still completes first-stage staging: burn 1 run to depletion plus the
    * interstage settling coast. Burn 2 has zero duration exactly at this time.
    *
@@ -377,7 +429,9 @@ public class GravityTurnManeuver {
    * @return the earliest transition time that completes staging, in seconds
    */
   public double getStagingCompleteTime() {
-    return getBurn1Duration() + interstageCoastDuration;
+    double corePhase =
+        coreStage == null ? 0.0 : AscentPlan.BOOSTER_SEPARATION_COAST + getCoreBurnDuration();
+    return getBurn1Duration() + corePhase + interstageCoastDuration;
   }
 
   /**

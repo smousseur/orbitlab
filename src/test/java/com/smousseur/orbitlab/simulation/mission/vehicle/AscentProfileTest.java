@@ -36,4 +36,27 @@ class AscentProfileTest {
   void negativeInterstageCoast_rejected() {
     assertThrows(IllegalArgumentException.class, () -> new AscentProfile(7.0, 3.0, -0.1));
   }
+
+  @Test
+  void coreThrottle_defaultsToFullThrust() {
+    assertEquals(1.0, new AscentProfile(7.0, 3.0, 2.0).coreThrottle(), 1e-9);
+  }
+
+  @Test
+  void coreThrottle_declaredValueIsKept() {
+    assertEquals(0.81, new AscentProfile(7.0, 3.0, 2.0, 0.81).coreThrottle(), 1e-9);
+  }
+
+  @Test
+  void coreThrottle_outOfRange_rejected() {
+    assertThrows(IllegalArgumentException.class, () -> new AscentProfile(7.0, 3.0, 2.0, 0.0));
+    assertThrows(IllegalArgumentException.class, () -> new AscentProfile(7.0, 3.0, 2.0, -0.1));
+    assertThrows(IllegalArgumentException.class, () -> new AscentProfile(7.0, 3.0, 2.0, 1.01));
+  }
+
+  @Test
+  void coreThrottle_throttled_isReportedAsSuch() {
+    assertFalse(new AscentProfile(7.0, 3.0, 2.0).throttlesCore());
+    assertTrue(new AscentProfile(7.0, 3.0, 2.0, 0.81).throttlesCore());
+  }
 }

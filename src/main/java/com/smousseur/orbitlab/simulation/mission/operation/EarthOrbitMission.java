@@ -17,6 +17,7 @@ import com.smousseur.orbitlab.simulation.mission.stage.ascent.VerticalAscentStag
 import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchConfiguration;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Spacecraft;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
+import com.smousseur.orbitlab.simulation.mission.vehicle.VehicleStack;
 import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Launchers;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.AscentProfile;
 import java.util.ArrayList;
@@ -101,7 +102,12 @@ public class EarthOrbitMission extends EarthMission {
         name,
         configuration.toVehicleStack(),
         buildStages(
-            configuration.ascentProfile(), perigeeAltitude, apogeeAltitude, launchPlane, latitude),
+            configuration.toVehicleStack(),
+            configuration.ascentProfile(),
+            perigeeAltitude,
+            apogeeAltitude,
+            launchPlane,
+            latitude),
         perigeeAltitude,
         apogeeAltitude,
         launchPlane,
@@ -174,8 +180,10 @@ public class EarthOrbitMission extends EarthMission {
       double longitude,
       double altitude) {
     AscentProfile profile = configuration.ascentProfile();
+    VehicleStack stack = configuration.toVehicleStack();
     List<MissionStage> stages =
         ascentThen(
+            stack,
             profile,
             GravityTurnConstraints.forTarget(targetAltitude),
             launchPlane,
@@ -185,7 +193,7 @@ public class EarthOrbitMission extends EarthMission {
             new AnalyticTrimBurnStage("Trim", targetAltitude, launchPlane.targetInclination()));
     return new EarthOrbitMission(
         name,
-        configuration.toVehicleStack(),
+        stack,
         stages,
         targetAltitude,
         targetAltitude,
@@ -239,8 +247,10 @@ public class EarthOrbitMission extends EarthMission {
       double longitude,
       double altitude) {
     AscentProfile profile = configuration.ascentProfile();
+    VehicleStack stack = configuration.toVehicleStack();
     List<MissionStage> stages =
         ascentThen(
+            stack,
             profile,
             GravityTurnConstraints.forTarget(perigeeAltitude),
             launchPlane,
@@ -252,7 +262,7 @@ public class EarthOrbitMission extends EarthMission {
             new AnalyticTrimBurnStage("Trim", perigeeAltitude, launchPlane.targetInclination()));
     return new EarthOrbitMission(
         name,
-        configuration.toVehicleStack(),
+        stack,
         stages,
         perigeeAltitude,
         apogeeAltitude,
@@ -305,12 +315,14 @@ public class EarthOrbitMission extends EarthMission {
   }
 
   private static List<MissionStage> buildStages(
+      Vehicle vehicle,
       AscentProfile profile,
       double perigeeAltitude,
       double apogeeAltitude,
       LaunchPlane launchPlane,
       double latitude) {
     return ascentThen(
+        vehicle,
         profile,
         GravityTurnConstraints.forTarget(perigeeAltitude),
         launchPlane,
@@ -327,6 +339,7 @@ public class EarthOrbitMission extends EarthMission {
    * given profile, and closed by the coast. Shared by the three variants so none of them can drift
    * on how the launcher stages, nor on when the plane residual is cleaned up.
    *
+   * @param vehicle the stack that will fly it, read for its staging plan
    * @param profile the launcher's flight profile
    * @param constraints the gravity turn's hand-off targets
    * @param launchPlane the target orbital plane
@@ -335,6 +348,7 @@ public class EarthOrbitMission extends EarthMission {
    * @return the full stage list
    */
   private static List<MissionStage> ascentThen(
+      Vehicle vehicle,
       AscentProfile profile,
       GravityTurnConstraints constraints,
       LaunchPlane launchPlane,
@@ -342,7 +356,7 @@ public class EarthOrbitMission extends EarthMission {
       MissionStage... orbitalPhases) {
     List<MissionStage> stages = new ArrayList<>();
     stages.add(new VerticalAscentStage("Vertical Ascent", profile.verticalAscentDuration()));
-    stages.addAll(AscentSequence.gravityTurn(profile, constraints, launchPlane, latitude));
+    stages.addAll(AscentSequence.gravityTurn(vehicle, profile, constraints, launchPlane, latitude));
     stages.addAll(List.of(orbitalPhases));
     if (launchPlane.commands(FastMath.toRadians(latitude))) {
       // Steering the plane during the climb does not land it to the tenth of a degree: the initial

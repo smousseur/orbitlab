@@ -1,6 +1,7 @@
 package com.smousseur.orbitlab.simulation.mission.vehicle;
 
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.AerodynamicProperties;
+import com.smousseur.orbitlab.simulation.mission.vehicle.model.stage.StageRole;
 
 /**
  * Snapshot of the active vehicle resolved from the current spacecraft mass. Provides all the
@@ -10,9 +11,17 @@ import com.smousseur.orbitlab.simulation.mission.vehicle.model.AerodynamicProper
  * @param vehicle the reference Vehicle representing the active vehicle
  * @param massAbove total reference mass (dry + propellant) of all stages above the active one
  * @param dryMassAbove total dry mass of all stages above the active one
+ * @param role the role this stage plays in the flight profile, or {@code null} on a stack that
+ *     declares none; a parallel block reports the role of its bottom entry, {@link
+ *     StageRole#BOOSTER}
  */
 public record ActiveStageInfo(
-    int stageIndex, Vehicle vehicle, double massAbove, double dryMassAbove) {
+    int stageIndex, Vehicle vehicle, double massAbove, double dryMassAbove, StageRole role) {
+
+  /** Snapshot of a stack entry whose role is unknown, as a hand-assembled stack resolves one. */
+  public ActiveStageInfo(int stageIndex, Vehicle vehicle, double massAbove, double dryMassAbove) {
+    this(stageIndex, vehicle, massAbove, dryMassAbove, null);
+  }
 
   /** Returns the propulsion system of the active vehicle. */
   public PropulsionSystem propulsion() {

@@ -125,7 +125,7 @@ class PropellantBudgetTest {
             "Tiny upper",
             List.of(
                 liquidStage("S1", 10_000, 100_000, 300, 3_000_000),
-                liquidStage("S2", 1_000, 1_000, 348, 100_000)),
+                liquidStage("S2", 1_000, 1_000, 348, 100_000, StageRole.UPPER)),
             new AscentProfile(7, 3, 2));
     double[] loads =
         PropellantBudget.loadsForLeo(
@@ -368,17 +368,17 @@ class PropellantBudgetTest {
 
   private static StageModel liquidStage(
       String name, double dryMass, double capacity, double isp, double thrust) {
+    return liquidStage(name, dryMass, capacity, isp, thrust, StageRole.CORE);
+  }
+
+  private static StageModel liquidStage(
+      String name, double dryMass, double capacity, double isp, double thrust, StageRole role) {
     return new StageModel(
         name,
         dryMass,
         capacity,
         new PropulsionSystem(isp, thrust),
         new StageCapabilities(
-            IgnitionMode.GROUND,
-            0,
-            ShutdownMode.COMMANDED,
-            PropellantType.CRYOGENIC,
-            0.0,
-            StageRole.CORE));
+            IgnitionMode.GROUND, 0, ShutdownMode.COMMANDED, PropellantType.CRYOGENIC, 0.0, role));
   }
 }

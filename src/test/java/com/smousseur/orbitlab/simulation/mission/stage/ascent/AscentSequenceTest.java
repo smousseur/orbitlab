@@ -12,7 +12,13 @@ import com.smousseur.orbitlab.simulation.mission.OptimizableMissionStage;
 import com.smousseur.orbitlab.simulation.mission.optimizer.problems.GravityTurnConstraints;
 import com.smousseur.orbitlab.simulation.mission.stage.StageSeparationStage;
 import com.smousseur.orbitlab.simulation.mission.stage.ascent.GravityTurnBurnStage.AscentInstrumentation;
+import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchVehicle;
+import com.smousseur.orbitlab.simulation.mission.vehicle.PropulsionSystem;
+import com.smousseur.orbitlab.simulation.mission.vehicle.Spacecraft;
+import com.smousseur.orbitlab.simulation.mission.vehicle.StagingPlan;
+import com.smousseur.orbitlab.simulation.mission.vehicle.VehicleStack;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.AscentProfile;
+import com.smousseur.orbitlab.simulation.mission.vehicle.model.stage.StageRole;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -34,12 +40,22 @@ class AscentSequenceTest {
   /** Kourou, the site every profile in the catalog flies from. */
   private static final double LAT_DEG = 5.23;
 
+  /** A plain two-stage launcher: no boosters, so the ascent keeps its three phases. */
+  private static final VehicleStack STACK =
+      new VehicleStack(
+          List.of(
+              new LaunchVehicle(
+                  66_000, 1_233_000, 1_233_000, new PropulsionSystem(296, 22_800_000)),
+              new LaunchVehicle(4_000, 107_500, 107_500, new PropulsionSystem(348, 981_000)),
+              new Spacecraft(150, 0, new PropulsionSystem(300, 3_000))),
+          new StagingPlan(List.of(StageRole.CORE, StageRole.UPPER, StageRole.KICK), null));
+
   private static final GravityTurnConstraints CONSTRAINTS =
       GravityTurnConstraints.forTarget(400_000.0);
 
   @Test
   void ascent_isThreePhasesWithTheJettisonInTheMiddle() {
-    List<MissionStage> ascent = AscentSequence.gravityTurn(PROFILE, CONSTRAINTS, LAT_DEG);
+    List<MissionStage> ascent = AscentSequence.gravityTurn(STACK, PROFILE, CONSTRAINTS, LAT_DEG);
 
     assertEquals(3, ascent.size(), "the ascent is burn 1, separation, burn 2");
     assertEquals(AscentSequence.FIRST_BURN_NAME, ascent.get(0).getName());
@@ -51,14 +67,12 @@ class AscentSequenceTest {
   }
 
   @Test
-  void separationPhase_isNonPropulsiveAndDeclaresTheStageItDrops() {
-    MissionStage separation = AscentSequence.gravityTurn(PROFILE, CONSTRAINTS, LAT_DEG).get(1);
+  void separationPhase_isNonPropulsive() {
+    MissionStage separation =
+        AscentSequence.gravityTurn(STACK, PROFILE, CONSTRAINTS, LAT_DEG).get(1);
 
     StageSeparationStage jettison = assertInstanceOf(StageSeparationStage.class, separation);
     assertFalse(jettison.isPropulsive(), "a jettison burns nothing: no propellant, no ΔV reported");
-    // The declared index is what makes the separation fail fast instead of dropping whichever
-    // stage the mass accounting happens to point at (bilan 10 §6 follow-up).
-    assertEquals(0, AscentSequence.FIRST_STAGE_INDEX, "the ascent drops the bottom stack stage");
   }
 
   @Test
@@ -66,7 +80,7 @@ class AscentSequenceTest {
     OptimizableMissionStage<?> firstBurn =
         assertInstanceOf(
             GravityTurnFirstBurnStage.class,
-            AscentSequence.gravityTurn(PROFILE, CONSTRAINTS, LAT_DEG).getFirst());
+            AscentSequence.gravityTurn(STACK, PROFILE, CONSTRAINTS, LAT_DEG).getFirst());
 
     // The result map is keyed by string: keeping "Gravity turn" leaves results stored before the
     // split (including in a running session) valid.

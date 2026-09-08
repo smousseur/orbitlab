@@ -153,7 +153,7 @@ public class LunarFlybyMission extends EarthMission {
     super(
         name,
         vehicle,
-        buildStages(profile, parkingAltitude, periluneAltitude, latitude),
+        buildStages(vehicle, profile, parkingAltitude, periluneAltitude, latitude),
         new FlybyObjective(SolarSystemBody.MOON, periluneAltitude, PERILUNE_TOLERANCE));
     this.latitude = latitude;
     this.longitude = longitude;
@@ -185,11 +185,16 @@ public class LunarFlybyMission extends EarthMission {
   }
 
   private static List<MissionStage> buildStages(
-      AscentProfile profile, double parkingAltitude, double periluneAltitude, double latitude) {
+      Vehicle vehicle,
+      AscentProfile profile,
+      double parkingAltitude,
+      double periluneAltitude,
+      double latitude) {
     List<MissionStage> stages = new ArrayList<>();
     stages.add(new VerticalAscentStage("Vertical Ascent", profile.verticalAscentDuration()));
     stages.addAll(
         AscentSequence.gravityTurn(
+            vehicle,
             profile,
             GravityTurnConstraints.forTarget(parkingAltitude),
             LaunchPlane.dueEast(latitude),

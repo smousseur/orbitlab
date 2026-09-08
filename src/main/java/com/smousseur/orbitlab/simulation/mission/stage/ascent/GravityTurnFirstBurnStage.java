@@ -174,17 +174,21 @@ public class GravityTurnFirstBurnStage extends GravityTurnBurnStage
   }
 
   /**
-   * Builds a chain of three phases equivalent to this one and its siblings, private to one CMA-ES
-   * evaluation: fresh stage instances, a fresh plan reference, and optimize-mode instrumentation
-   * sharing {@code tracker}. Parallel explorations therefore never touch each other's schedule.
+   * Builds a chain equivalent to this one and its siblings, private to one CMA-ES evaluation: fresh
+   * stage instances, a fresh plan reference, and optimize-mode instrumentation sharing {@code
+   * tracker}. Parallel explorations therefore never touch each other's schedule. It goes through
+   * the very factory the replay chain uses, so the two cannot disagree on the number of phases.
    *
+   * @param vehicle the stack that will fly it, read for its staging plan
    * @param planRef the reference this evaluation's plan is published on
-   * @param tracker the altitude tracker both burns of this evaluation report to
-   * @return the three ascent phases, in order
+   * @param tracker the altitude tracker every burn of this evaluation reports to
+   * @return the ascent phases, in order
    */
-  List<MissionStage> optimizationChain(AscentPlanRef planRef, MinAltitudeTracker tracker) {
+  List<MissionStage> optimizationChain(
+      Vehicle vehicle, AscentPlanRef planRef, MinAltitudeTracker tracker) {
     AscentInstrumentation instrumentation = AscentInstrumentation.optimizing(tracker);
-    return List.of(
+    return AscentSequence.chain(
+        vehicle,
         new GravityTurnFirstBurnStage(
             getName(),
             planRef,
@@ -194,8 +198,10 @@ public class GravityTurnFirstBurnStage extends GravityTurnBurnStage
             launchLatitudeDeg,
             constraints,
             instrumentation),
-        AscentSequence.silentSeparation(interstageCoastDuration),
-        new GravityTurnSecondBurnStage(AscentSequence.SECOND_BURN_NAME, planRef, instrumentation));
+        planRef,
+        interstageCoastDuration,
+        instrumentation,
+        false);
   }
 
   private GravityTurnManeuver createManeuver(Mission mission, SpacecraftState entryState) {

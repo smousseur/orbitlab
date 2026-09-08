@@ -1,6 +1,7 @@
 package com.smousseur.orbitlab.simulation.mission.vehicle.model;
 
 import com.smousseur.orbitlab.simulation.mission.vehicle.*;
+import com.smousseur.orbitlab.simulation.mission.vehicle.StagingPlan;
 import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Launchers;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.stage.StageModel;
 import java.util.ArrayList;
@@ -28,6 +29,7 @@ public record LauncherModel(
       throw new IllegalArgumentException("a launcher model needs at least one stage");
     }
     stages = List.copyOf(stages);
+    StagingPlan.checkStructure(stages, ascentProfile);
   }
 
   /**
@@ -49,7 +51,8 @@ public record LauncherModel(
       vehicles.add(stages.get(i).toVehicle(propellantLoads[i]));
     }
     vehicles.add(payload);
-    return new VehicleStack(List.copyOf(vehicles));
+    return new VehicleStack(
+        List.copyOf(vehicles), StagingPlan.forLauncher(stages, propellantLoads, ascentProfile));
   }
 
   /**

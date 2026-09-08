@@ -392,7 +392,11 @@ class AscentPlaneControlTest {
     AscentProfile profile = Launchers.FALCON_HEAVY.ascentProfile();
     List<MissionStage> ascent =
         AscentSequence.gravityTurn(
-            profile, GravityTurnConstraints.forTarget(TARGET_ALT), plane, LAT_DEG);
+            mission.getVehicle(),
+            profile,
+            GravityTurnConstraints.forTarget(TARGET_ALT),
+            plane,
+            LAT_DEG);
 
     GravityTurnManeuver reference =
         new GravityTurnManeuver(
