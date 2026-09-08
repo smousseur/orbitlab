@@ -186,6 +186,19 @@ de la version : il n'est ni une sous-tâche de `PHY-2` ni une sous-tâche de
 Cette fiche l'enregistre et ajoute les deux décisions prises depuis — la
 combustion parallèle, et la fraction de poussée qu'elle rend nécessaire.
 
+> **Le découpage est écrit** :
+> [`etagement/01-decoupage.md`](../etagement/01-decoupage.md), sept lots. Il fait
+> foi sur les décisions de conception ; cette fiche reste le résumé de l'item.
+>
+> **Corrigée contre la mesure le 2026-09-08**, en écrivant ce découpage, sur neuf
+> points : 43 fichiers touchés et non 47 · l'invariant d'étage actif est
+> **préservé**, pas cassé · `StageRole.BOOSTER` dans quatre fichiers de test et
+> non cinq · 197 fichiers de test et non 196 · les quatre épinglages sont de
+> trois natures, dont un seul coûte cher · **`DT-13` ne ferme pas** · le maillage
+> Ariane 64 est livré, la dépendance est levée · la question 5 de la préparation
+> n'est refermée qu'à moitié · 100 fichiers de modèles suivis et non 76. Le
+> périmètre a par ailleurs gagné le **catalogue des charges utiles**.
+
 **Pourquoi.** Les deux fictions du modèle sont la même fiction : l'agrégat
 existe parce que `VehicleStack` *« resolves exactly one active stage »*, et
 l'Isp « moyenne de trajectoire » existe parce qu'il n'y a pas de traînée.
@@ -202,10 +215,14 @@ lift-off weight »*. Le catalogue déclare par ailleurs `CRYOGENIC` pour un bloc
 
 - **La combustion parallèle.** Les deux lanceurs allument propulseurs et corps
   **ensemble au décollage** ; la phase partagée tire la masse des deux, les
-  propulseurs s'épuisent, sont largués, le corps continue. C'est l'invariant
-  *« the active stage changes only by an explicit jettison »* qui tombe, et
-  c'est le vrai coût de l'item : **47 fichiers de `src/main`** touchent
-  `resolveActiveStage`, `VehicleStack`, `.stages()` ou `StageSeparation`.
+  propulseurs s'épuisent, sont largués, le corps continue. Le découpage y répond
+  par un **bloc parallèle calculé** — poussée sommée, `Isp_eff` dérivée, plancher
+  de déplétion propre au bloc — dont l'agrégation est *exacte* à poussées et Isp
+  constantes. **L'invariant *« the active stage changes only by an explicit
+  jettison »* est donc préservé, non pas cassé** : un seul étage actif à la fois,
+  changé par le seul largage. C'est ce qui laisse en place les **43 fichiers de
+  `src/main`** touchant `resolveActiveStage`, `VehicleStack`, `.stages()` ou
+  `StageSeparation` — 43, pas 47, et 25 / 16 / 7 / 11 pris séparément.
   L'alternative — deux étages en série — a été écartée : elle échange la fiction
   actuelle contre une autre, exacte en impulsion sur l'Ariane et fausse en forme
   sur le Falcon Heavy, dont le premier étage durerait 314 s contre ~187 s réels.
@@ -222,16 +239,39 @@ lift-off weight »*. Le catalogue déclare par ailleurs `CRYOGENIC` pour un bloc
   l'Ariane 64. Agréger un solide et un cryogénique est une fiction ; agréger N
   solides identiques est exact : même Isp, allumage commun, extinction commune,
   largage commun. `StageRole.BOOSTER` existe déjà et n'apparaît aujourd'hui que
-  dans **cinq fichiers de test**, jamais dans `Launchers` — le modèle avait
-  anticipé le cas, le catalogue ne s'en est jamais servi.
-- **Ariane 64 remplace Ariane 62 au catalogue**, et chaque étage porte son Isp
-  réelle. Plus aucune moyenne solide / cryogénique, donc plus rien à
-  dé-double-compter pour `PHY-2`.
+  dans **quatre fichiers de test** — `PropellantLoadOptimizerTest`,
+  `LauncherModelTest`, `StageCapabilitiesTest`, `StageModelTest` — jamais dans
+  `Launchers` : le modèle avait anticipé le cas, le catalogue ne s'en est jamais
+  servi.
+- **Ariane 64 remplace Ariane 62 au catalogue**, et chaque étage porte ses
+  propres Isp, poussée et section. **La moyenne supprimée est celle des ergols,
+  pas celle de l'altitude** : `DT-13` mesure un proxy **sol / vide** — 296 s dans
+  [282, 311], 300 s dans [271, 331] — que la séparation ne touche pas. Elle le
+  **localise** : l'écart sol/vide d'un solide se compte en dizaines de secondes,
+  celui d'un cryogénique en centaines, donc la dette se concentre sur le corps au
+  lieu de se diluer dans un mélange. Les étages atmosphériques gardent un proxy,
+  les étages supérieurs portent leur Isp de vide
+  ([découpage](../etagement/01-decoupage.md) §3.4).
 - **Les dimensions du lanceur et de ses pièces**, au catalogue — voir plus bas.
-- **Le re-baselining.** **45 des 196 fichiers de test** (23 %) référencent
-  `FALCON_HEAVY` ou `ARIANE_62`, dont les épinglages à tolérance zéro
-  d'`EarthOrbitNonRegressionTest`, `MissionPolylineBaselineTest`,
-  `CentralBodyBaselineTest` et `AscentBaselineN2Test`.
+- **Le catalogue des charges utiles**, entré au périmètre depuis : le module
+  cargo **filtré hors des listes** du wizard — mettre une charge cargo en orbite
+  n'a pas d'utilité opérationnelle, il n'en a qu'en rendez-vous, donc en v4 — et
+  un **moteur pour le satellite d'observation**, avec le budget ΔV qui le
+  dimensionne. La chaîne qui s'en servira reste à `PHY-6` : la propulsion livrée
+  ici est inerte jusque-là. La frontière retenue entre les deux items est
+  *catalogue ici, chaîne là-bas*
+  ([découpage](../etagement/01-decoupage.md) §1).
+- **Le re-baselining.** **45 des 197 fichiers de test** (23 %) référencent
+  `FALCON_HEAVY` ou `ARIANE_62`. Les quatre épinglages cités ici comme étant « à
+  tolérance zéro » sont en réalité de trois natures, et le coût n'est pas celui
+  qu'annonçait cette fiche : `EarthOrbitNonRegressionTest` compare **deux
+  compositions de la même mission dans le même run** et survit donc à n'importe
+  quel catalogue ; `AscentBaselineN2Test` (tolérances mesurées, mode capture,
+  écriture dans `build/baseline/`) et `MissionPolylineBaselineTest` (générateur
+  imprimant ses constantes) portent **leur propre outil de re-enregistrement** ;
+  seul `CentralBodyBaselineTest` coûte vraiment — 1 296 lignes de `Boundary` à
+  égalité stricte de `double`, dont la justification meurt avec le premier
+  changement de trajectoire.
 
 **Ce que le découpage n'ajoute pas : une variable d'optimisation.**
 `PropellantLoadOptimizer` masque déjà les étages `!variableLoad()` (lignes 334
@@ -260,28 +300,36 @@ pièce, et la constante disparaît.
 > dépôt**, alors qu'elle ne l'était pas (*« le catalogue porte des sections, pas
 > des longueurs »*).
 
-**Sa seule dépendance dure : le maillage Ariane 64.** Il est validé — préparation
-§1.4, verdict accepté, remontage exact au 10⁻⁴ — et **absent du dépôt** :
-`git ls-files` ne trouve aucun `ariane_64`, quand le Falcon Heavy re-sourcé est
-versionné depuis `a3ae7a0` sous `new_falcon_heavy/`, 22 fichiers. Sans lui la
-bascule est silencieusement fausse : `LauncherAssets.modelPath` retombe sur
-`DEFAULT_MODEL_PATH` pour un id inconnu, donc **une Ariane 64 serait dessinée en
-Falcon Heavy**, sans message. C'est `AST-1`.
+**Sa seule dépendance dure était le maillage Ariane 64. Elle est levée.**
+`AST-1` a livré les deux lots — 24 fichiers suivis sous
+`models/vehicles/ariane_64/`, 22 sous `models/vehicles/heavy_falcon/` — et
+`LauncherAssets` pointe déjà l'A62 du catalogue sur `ariane_64/ariane_64.gltf`.
+Les hauteurs normalisées de chaque pièce que ce lot apporte dispensent d'ailleurs
+de sourcer une longueur par pièce : une hauteur par lanceur suffit
+([découpage](../etagement/01-decoupage.md) §3.8).
+
+Reste le mode d'échec silencieux qui justifiait cette dépendance :
+`LauncherAssets.MODEL_PATHS` est indexé par **id de catalogue**, et
+`modelPath` retombe sur `DEFAULT_MODEL_PATH` pour un id inconnu — donc une
+Ariane dessinée en Falcon Heavy, sans message. La table doit changer dans le même
+lot que l'id.
 
 **Ce qu'il ferme.**
 
 | | |
 |---|---|
-| `DT-12` | Le catalogue cesse de déclarer une Ariane 62 dessinée en Ariane 5 : le lanceur devient une Ariane 64 et porte son propre maillage. *(La fiche du registre conclut par ailleurs que `src/main/resources/models/` est gitignored ; `AST-1` l'a déjà réfuté, `git ls-files` y compte 76 fichiers suivis.)* |
-| `DT-13` | Dissous plutôt qu'arbitré, cf. §3 — c'est ce qui fait passer `J2` de trois arbitrages à deux |
+| `DT-12` | Le catalogue cesse de déclarer une Ariane 62 dessinée en Ariane 5 : le lanceur devient une Ariane 64 et porte son propre maillage. *(La fiche du registre conclut par ailleurs que `src/main/resources/models/` est gitignored ; `AST-1` l'a déjà réfuté, `git ls-files` y compte 100 fichiers suivis.)* |
+| ~~`DT-13`~~ | **Ne ferme pas.** La séparation supprime la moyenne solide / cryogénique et laisse intacte la moyenne sol / vide, qui *est* la dette. Elle la localise sur le corps au lieu de la diluer — un progrès, pas une fermeture. Le §3 de ce document, et le passage qui fait passer `J2` de trois arbitrages à deux, sont à reprendre en conséquence |
 | préparation §5, q. 2 | *« Comment refermer l'écart quatre propulseurs / Ariane 62 »* — par la troisième option : l'A64 revient au catalogue, et l'A62 en sort |
-| préparation §5, q. 5 | Le partage de la masse sèche entre propulseurs et corps devient la donnée d'entrée de l'item plutôt qu'une question. Le catalogue fixe déjà les deux totaux que l'A62 doit respecter — 36 t sèches, 434 t d'ergols — et 65 % de 434 t = 282 t de solide, soit **141 t par P120C**, ce qui tombe sur la capacité réelle |
+| préparation §5, q. 5 | **À moitié.** Le partage des **ergols** se lit dans le catalogue — 65 % de 434 t = 282 t de solide, soit **141 t par P120C**, donc 564 t pour quatre et 152 t de LLPM — mais le partage des **36 t de masse sèche**, qui est ce que la question demande, ne s'en déduit pas et reste à sourcer ([découpage](../etagement/01-decoupage.md) §7) |
 
 **L'état intermédiaire est délibérément faux, et faux dans une direction
 prévue** (préparation §2.3). La traînée n'étant pas encore allumée, l'ascension
 doit sur-performer. **Prédiction, pas mesure**, et à re-prédire : les 408 m/s et
-671 m/s de `DT-13` sont ceux des agrégats, qui n'existeront plus. À relever au
-premier vol découpé — un écart franc serait une information, pas un échec.
+671 m/s de `DT-13` sont ceux des agrégats, qui n'existeront plus — mais le proxy
+étant **conservé** sur les étages atmosphériques, la compensation ne disparaît
+pas avec eux, elle se redistribue. Deux chiffres à relever au premier vol
+découpé, un par lanceur, et non un écart à zéro.
 
 **Ce qu'il s'interdit.** Pas de traînée : c'est `PHY-2`, et l'ordre du §2.3
 l'exige. Pas de débris propagés : c'est `PHY-5`, dont l'item prépare la donnée
