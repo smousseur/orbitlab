@@ -26,7 +26,6 @@ import java.util.function.UnaryOperator;
 import org.hipparchus.util.FastMath;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.orekit.propagation.SpacecraftState;
 import org.orekit.time.AbsoluteDate;
@@ -98,8 +97,14 @@ import org.orekit.time.TimeScalesFactory;
  * PolarCoverageTest} keep theirs {@code private}, and more importantly a gate must not rest on
  * another test's fixture: a change over there would move the reference over here with nobody seeing
  * it.
+ *
+ * <p><b>It runs in the {@code gateTest} Gradle task, not in {@code test}.</b> The 62 boundaries are
+ * compared at strict {@code double} equality, and a lunar propagation earlier in the same JVM moves
+ * them by the last bit through Orekit's shared time caches ({@code docs/bugs.md} BUG-7). {@code
+ * gateTest} forks one JVM per class, which removes the contamination; {@code test} runs everything
+ * in one JVM and excludes this class. It carried {@code @Disabled("To be run only standalone")}
+ * from 2026-08-31 to PHY-8 / L0, which had the same effect and no way to run it.
  */
-@Disabled("To be run only standalone")
 class CentralBodyBaselineTest {
 
   private static final double LAT = 5.23;

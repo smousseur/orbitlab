@@ -16,7 +16,7 @@ la frontière entre les deux derniers doit rester lisible.
 | [`BUG-4`](#bug-4--hover-des-widgets-non-uniforme) | Hover des widgets non uniforme | 2026-08-15 | **Promu** en `UI-7` le 2026-08-16 |
 | [`BUG-5`](#bug-5--pop-du-modèle-3d-au-changement-de-focus) | Pop du modèle 3D au changement de focus | 2026-08-15 | **Corrigé le 2026-09-04** — calendrier (×138 → ×1,15) puis veto : le modèle apparaît à t = 0,70 et grossit continûment |
 | [`BUG-6`](#bug-6--plane-trim-employé-hors-de-son-enveloppe-par-lascension-polaire) | Plane trim employé hors de son enveloppe par l'ascension polaire | 2026-08-16 | **Corrigé le 2026-08-31** — coût réel mesuré (141 kg, pas 10 349), fixture remise dans l'enveloppe |
-| [`BUG-7`](#bug-7--les-gates-de-non-régression-tombent-quand-un-test-lunaire-les-précède-dans-le-même-jvm) | Les gates de non-régression tombent quand un test lunaire les précède dans le même JVM | 2026-08-18 | Ouvert, reproductible, piste identifiée — **fiabilité de l'instrument, pas de la physique** |
+| [`BUG-7`](#bug-7--les-gates-de-non-régression-tombent-quand-un-test-lunaire-les-précède-dans-le-même-jvm) | Les gates de non-régression tombent quand un test lunaire les précède dans le même JVM | 2026-08-18 | **Corrigé le 2026-09-08** — tâche `gateTest` à `forkEvery = 1`, une JVM par gate. Deux énoncés de la fiche étaient faux : la suite ne forkait **rien**, et `CentralBodyBaselineTest` avait été **désactivé** le 2026-08-31 sans que ce soit écrit ici — il n'était pas rouge, il était invisible. Le mécanisme reste non démontré : le partage est supprimé, pas expliqué |
 | [`BUG-8`](#bug-8--inclinaison-figée-invalidée-en-silence-par-un-changement-de-site) | Inclinaison figée invalidée en silence par un changement de site | 2026-08-20 | Ouvert, mécanisme identifié — **ergonomie, le modèle est sain** |
 | [`BUG-9`](#bug-9--parkingcoaststagetest-teste-la-sémantique-davant-mis-4l6) | `ParkingCoastStageTest` teste la sémantique d'avant MIS-4/L6 | 2026-08-28 | **Corrigé le 2026-08-31** — vert, et aucun autre test ne portait l'ancien contrat |
 | [`BUG-10`](#bug-10--reentryguard-inopérant-en-présence-de-traînée) | `ReentryGuard` inopérant en présence de traînée | 2026-08-30 | Ouvert — **sans impact avant PHY-2/MIS-10, aucun vol de production ne l'exerce aujourd'hui** |
@@ -877,6 +877,40 @@ trim à un résidu d'ascension. Constante inchangée.
 
 ## BUG-7 — Les gates de non-régression tombent quand un test lunaire les précède dans le même JVM
 
+**Corrigé le 2026-09-08 par `PHY-8 / L0`**, par l'issue 1 de la liste ci-dessous : une
+tâche Gradle `gateTest` à `forkEvery = 1` donne **une JVM par classe** aux quatre
+épinglages, qui ne partagent donc plus aucun cache temporel Orekit.
+`CentralBodyBaselineTest` sort de `test` et y retourne ; les trois autres restent dans les
+deux. Vérifié : `./gradlew gateTest` → 11 tests, 0 sauté, 0 échec, 2 min 47 s à 2 min 58 s
+sur deux exécutions ; et `./gradlew cleanTest test` → 1 318 tests sur 197 classes, 30
+sautés, 0 échec.
+
+**Deux énoncés de cette fiche étaient faux, et le second a laissé un gate muet pendant huit
+jours et deux commits de refactor :**
+
+1. **« la suite complète passe parce qu'elle fork plusieurs JVM et sépare les
+   protagonistes »** (§ ci-dessous). Il n'y avait **ni `forkEvery` ni `maxParallelForks`**
+   dans `build.gradle`, et pas de `gradle.properties` du tout : Gradle exécutait les
+   197 classes dans **une seule** JVM. La suite passait par chance d'ordonnancement, ce qui
+   veut dire que « forker » n'était pas un retour à un état antérieur mais un changement de
+   build à décider.
+2. **Le défaut a été « réglé » entre-temps par une désactivation, et personne ne l'a écrit
+   ici.** `960f168` (2026-08-31, « Robustness J0-B pmd rules ») a posé
+   `@Disabled("To be run only standalone")` sur `CentralBodyBaselineTest` — l'annotation
+   seule, aucune valeur touchée. Le gate n'a donc plus tourné du tout pendant que
+   `5419f63` et `2cde109` refactoraient `src/main/.../simulation/` sous lui. Mesuré le
+   2026-09-08 avant de le réactiver : **4/4 verts** lancé seul, ses 62 frontières à égalité
+   stricte de `double` intactes. Il n'était pas rouge ; il était invisible.
+
+**Ce qui n'a pas changé.** La contamination existe toujours et se reproduit à l'identique
+au commit `8beec1a`, aux mêmes derniers bits (`t` à 5 × 10⁻¹⁴ s, `x` à 3,3 × 10⁻⁷ m), et
+**`MissionPolylineBaselineTest` tombe avec** — il n'était pas désactivé, lui. Le mécanisme
+supposé au § « Piste principale » reste **non démontré** : `gateTest` supprime le partage
+plutôt qu'il n'explique la dérive. Quiconque veut la démontrer trouvera la repro intacte
+ci-dessous.
+
+Chiffres et instrument : [`etagement/02-baseline-L0.md`](etagement/02-baseline-L0.md) §2.
+
 > **`J0-D` 2026-09-02 — un des tests cités n'existe plus.**
 > `LunarTransferFlightTest`, nommé dans « Non vérifié » comme contaminant possible
 > non confirmé, a été **supprimé par `6f94d8d` (MIS-4 / L6)**. L'échantillon décrit
@@ -903,9 +937,11 @@ JAVA_HOME="$HOME/.jdks/graalvm-jdk-21.0.5" ./gradlew cleanTest test --tests "*So
 | `t` (même frontière) | 8 546,404 567 668 282 s | 8 546,404 567 668 333 s | 5,1 × 10⁻¹⁴ s |
 
 **Chacun des deux gates passe seul, et la suite complète passe** (`./gradlew
-test` : 808 tests verts), parce qu'elle fork plusieurs JVM et sépare les
-protagonistes. Le défaut n'est donc visible que sur une sélection partielle —
-c'est-à-dire exactement dans la boucle de travail quotidienne.
+test` : 808 tests verts), ~~parce qu'elle fork plusieurs JVM et sépare les
+protagonistes~~ — **faux, voir le point 1 en tête de fiche : il n'y avait qu'une
+seule JVM, la suite passait par chance d'ordonnancement**. Le défaut n'est donc
+visible que sur une sélection partielle — c'est-à-dire exactement dans la boucle
+de travail quotidienne.
 
 **Ce n'est pas PHY-4 / L6 qui l'introduit.** Reproduit à l'identique sur `main`
 au commit `08ac325`, antérieur au lot. C'est L4 qui a amené le test lunaire ; le
@@ -927,11 +963,15 @@ que ce soit. Ce n'est pas vérifié.
 
 ### Ce qu'il faut trancher
 
-Trois issues, et le choix n'est pas évident :
+Trois issues, et le choix n'est pas évident. **Tranché le 2026-09-08 : l'issue 1**, sous la
+forme d'une tâche dédiée plutôt que d'un `forkEvery` global — la suite rapide garde sa JVM
+unique et ses 2 min 57 s.
 
 1. **Isoler les gates** — `@Isolated` de JUnit, ou un `forkEvery` / une tâche
    Gradle dédiée. Ne touche à aucune assertion, mais rend la propreté du gate
-   dépendante d'une configuration de build.
+   dépendante d'une configuration de build. ✅ **retenue.** Note au passage :
+   `@Isolated` n'aurait rien réglé, il n'isole que de l'exécution parallèle, que ce
+   dépôt n'active pas.
 2. **Donner aux gates une tolérance minuscule et justifiée.** L1 §5.5 a choisi
    `0.0` **délibérément** et a écrit que toute exception devait être écrite
    plutôt qu'absorbée : cette option demande donc sa propre entrée dans
@@ -940,6 +980,10 @@ Trois issues, et le choix n'est pas évident :
    supporté de le faire.
 
 ### Non vérifié
+
+Les trois points restent ouverts après la correction : `gateTest` **supprime le partage,
+il ne l'explique pas**. Ils ne bloquent plus rien, et la repro ci-dessus reste valide pour
+qui voudra les fermer.
 
 - **Le mécanisme.** La piste ci-dessus est cohérente, elle n'est pas démontrée.
   Le confirmer demanderait d'instrumenter le cache ou de reproduire l'effet avec

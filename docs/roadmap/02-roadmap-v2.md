@@ -204,6 +204,18 @@ combustion parallèle, et la fraction de poussée qu'elle rend nécessaire.
 > Ariane 64 est livré, la dépendance est levée · la question 5 de la préparation
 > n'est refermée qu'à moitié · 100 fichiers de modèles suivis et non 76. Le
 > périmètre a par ailleurs gagné le **catalogue des charges utiles**.
+>
+> **`L0` est clos le 2026-09-08** :
+> [`etagement/02-baseline-L0.md`](../etagement/02-baseline-L0.md), six cellules
+> mesurées plus les quatre épinglages re-capturés, aucun fichier de `src/main`
+> touché. Deux de ses résultats portent sur cette fiche. **Le « 157,0 s chacun »
+> ci-dessous est juste pour toute mission budgétée** — `PropellantBudget` ne
+> dimensionne que l'étage du haut, les autres volent pleins — **mais pas pour le
+> profil de référence LEO-400 `LEGACY`**, à charges écrites à la main, qui éteint
+> son S1 à 76,4 s : or c'est lui qu'épinglent les deux gates à tolérance zéro.
+> Et sur Falcon Heavy **l'étage 0 porte 98 à 100 % du ΔV d'ascension** — 100 % en
+> LEO 400, où l'étage supérieur ne s'allume pas du tout — donc l'étranglement de
+> `L3` allonge la combustion qui porte tout. `L0` ferme aussi `BUG-7`.
 
 **Pourquoi.** Les deux fictions du modèle sont la même fiction : l'agrégat
 existe parce que `VehicleStack` *« resolves exactly one active stage »*, et

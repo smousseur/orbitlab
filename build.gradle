@@ -63,7 +63,27 @@ test {
     jvmArgs '-XX:MaxDirectMemorySize=2g'
     systemProperty 'orbitlab.slowTests', System.getProperty('orbitlab.slowTests', 'false')
     systemProperty 'orbitlab.probe', System.getProperty('orbitlab.probe', 'false')
+    filter {
+        excludeTestsMatching 'com.smousseur.orbitlab.simulation.mission.operation.CentralBodyBaselineTest'
+    }
     finalizedBy jacocoTestReport
+}
+
+tasks.register('gateTest', Test) {
+    group = 'verification'
+    description = 'Runs the four non-regression gates, each in its own JVM (BUG-7)'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform()
+    jvmArgs '-XX:MaxDirectMemorySize=2g'
+    forkEvery = 1
+    systemProperty 'orbitlab.slowTests', 'true'
+    filter {
+        includeTestsMatching 'com.smousseur.orbitlab.simulation.mission.operation.EarthOrbitNonRegressionTest'
+        includeTestsMatching 'com.smousseur.orbitlab.simulation.mission.operation.CentralBodyBaselineTest'
+        includeTestsMatching 'com.smousseur.orbitlab.simulation.mission.ephemeris.MissionPolylineBaselineTest'
+        includeTestsMatching 'com.smousseur.orbitlab.simulation.mission.optimizer.AscentBaselineN2Test'
+    }
 }
 
 jacocoTestReport {
