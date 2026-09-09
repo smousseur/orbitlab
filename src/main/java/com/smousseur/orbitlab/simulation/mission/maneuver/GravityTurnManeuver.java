@@ -428,6 +428,21 @@ public class GravityTurnManeuver {
    *
    * @return the earliest transition time that completes staging, in seconds
    */
+  /**
+   * How long the upper stage could burn if it emptied its tanks, in seconds.
+   *
+   * <p>Read by {@code GravityTurnProblem} to keep the transition-time ceiling above what the
+   * vehicle needs: a launcher whose staging completes late has to be allowed a MECO late enough for
+   * its upper stage to be worth igniting (spec {@code docs/etagement/06-conception-L4.md} §3.6).
+   *
+   * @return the upper stage's full-tank burn duration in seconds
+   */
+  public double getUpperStageBurnCapacity() {
+    PropulsionSystem propulsion = nextStage.propulsion();
+    double massFlow = propulsion.thrust() / (propulsion.isp() * Constants.G0_STANDARD_GRAVITY);
+    return nextStage.vehicle().propellantLoad() / massFlow;
+  }
+
   public double getStagingCompleteTime() {
     double corePhase =
         coreStage == null ? 0.0 : AscentPlan.BOOSTER_SEPARATION_COAST + getCoreBurnDuration();

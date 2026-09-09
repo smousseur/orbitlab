@@ -346,7 +346,7 @@ class PropellantBudgetTest {
   }
 
   /**
-   * Both launchers of the catalog must fly the orbiter, and Ariane 62 is the binding one — measured
+   * Both launchers of the catalog must fly the orbiter, and Ariane 64 is the binding one — measured
    * at 81 % of its upper-stage capacity against Falcon Heavy's 13 %.
    */
   @Test

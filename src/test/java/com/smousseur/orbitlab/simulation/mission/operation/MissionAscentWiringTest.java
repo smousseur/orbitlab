@@ -33,7 +33,7 @@ import org.junit.jupiter.params.provider.MethodSource;
  * while quietly keeping the implicit jettison this migration exists to remove.
  *
  * <p><b>The property used to be stronger, and {@code PHY-8 / L3} weakened it.</b> Until the Falcon
- * Heavy's core was throttled, the three-phase shape held for every launcher, and an Ariane 62 was
+ * Heavy's core was throttled, the three-phase shape held for every launcher, and an Ariane 64 was
  * added here on purpose to show it was not an accident of Falcon Heavy's figures. It now
  * <em>is</em> a property of the launcher's figures: the Ariane flies three phases and the Falcon
  * five. What survives, and is what this fixture asserts, is that the shape flown is the one the
@@ -56,8 +56,8 @@ class MissionAscentWiringTest {
     return LaunchConfiguration.fullyLoaded(Launchers.FALCON_HEAVY, Spacecraft.LEGACY);
   }
 
-  private static LaunchConfiguration ariane62() {
-    return LaunchConfiguration.fullyLoaded(Launchers.ARIANE_62, Spacecraft.LEGACY);
+  private static LaunchConfiguration ariane64() {
+    return LaunchConfiguration.fullyLoaded(Launchers.ARIANE_64, Spacecraft.LEGACY);
   }
 
   static Stream<Arguments> profiles() {
@@ -80,8 +80,8 @@ class MissionAscentWiringTest {
         // Heavy does". Since PHY-8 / L3 the two shapes actually differ — three phases here, five
         // on the Falcon — so it is now the only profile exercising the sequential branch.
         Arguments.of(
-            "LEO circular, Ariane 62 (analytic Hohmann transfer)",
-            (Mission) new EarthOrbitMission("LEO Ariane 62", ariane62(), TARGET_ALT)));
+            "LEO circular, Ariane 64 (analytic Hohmann transfer)",
+            (Mission) new EarthOrbitMission("LEO Ariane 64", ariane64(), TARGET_ALT)));
   }
 
   @ParameterizedTest(name = "{0}")

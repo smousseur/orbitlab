@@ -340,6 +340,9 @@ public class AnalyticGtoInjectionStage extends MissionStage {
               propulsion1.isp(),
               transferHalfPeriod,
               maxStep);
+      if (stateAtApogee == null) {
+        throw new IllegalStateException("No apogee found within one transfer half-period.");
+      }
       bias = r2 - stateAtApogee.getPVCoordinates().getPosition().getNorm();
       r2Aim += bias;
       if (FastMath.abs(bias) < 100.0) {

@@ -98,62 +98,79 @@ public final class Launchers {
           new AscentProfile(7.0, 3.0, 2.0, 0.81));
 
   /**
-   * Ariane 62 (two P120C boosters), first stage aggregating the boosters and the Vulcain core.
+   * Ariane 64: four P120C strap-on boosters, a Vulcain 2.1 core, a Vinci upper stage.
    *
-   * <p><b>Why the boosters and the core are one stage.</b> Ariane 6 stages in <em>parallel</em> —
-   * the P120Cs and the Vulcain are lit together on the pad — and the model has no parallel-burn
-   * representation: {@code VehicleStack} resolves exactly one active stage, changed only by an
-   * explicit jettison. Aggregating them is the same convention {@link #FALCON_HEAVY} already
-   * applies to its three cores, and is what the mission stage list can actually fly (spec {@code
-   * docs/launchers/01-ariane-62.md} §2).
+   * <p><b>It replaces the Ariane 62 rather than joining it</b> (spec {@code
+   * docs/etagement/06-conception-L4.md} §3.5). The catalog holds one Ariane, and the 3D scene has
+   * been drawing a four-booster Ariane 64 since AST-1 — the entry is what was lagging.
    *
-   * <p><b>What the aggregation costs, stated because it is not visible in the figures.</b> At 9 960
-   * kN and 300 s the block flames out around 128 s — measured at T+128.2 s. That is faithful to the
-   * boosters (~130 s) and wrong for the core, which really burns ~8 min, so the ascent
-   * <em>shape</em> is not this vehicle's. Neither knob can move it: stretching the burn to 300 s
-   * would need the aggregate thrust below the lift-off weight.
+   * <p><b>Every mass comes from the Ariane 62 entry it replaces.</b> That entry's 36 t of dry mass
+   * decomposed exactly as {@code 2 x 11 + 14} and its 434 t of propellant as {@code 2 x 141 + 152}
+   * ("65 % of this block's propellant is solid"), so four boosters give 58 t and 716 t. Its 41.1 m2
+   * was likewise {@code pi*2.7^2 + 2*pi*1.7^2}, hence 22.9 m2 for the core and 9.08 m2 per booster
+   * (spec §2.2). No external source is involved.
    *
-   * <p>It does not, however, prevent the mission from closing. Measured 2026-08-09 by {@code
-   * Ariane62MissionTest}: LEO 400 km on budget loads with a 5 t payload inserts inside 1.2 km of
-   * target, 21.7 % of the sized upper-stage load to spare. The reason is that {@code
-   * PropellantBudget} sizes the ULPM to 6.7 t rather than flying its 31 t capacity, so the Vinci
-   * takes over at a thrust-to-weight near 1.04 — a fully-loaded stack, which no mission flies,
-   * would hand over near 0.44 instead.
+   * <p><b>Thrusts follow the burn durations, not the other way round.</b> The two figures the
+   * decoupage gives as controls -- boosters ~130 s, Vulcain ~8 min -- fix the mass flows, and the
+   * thrust is whatever the chosen ISP makes of them. Reversing the derivation is what fails: the
+   * P120C's quoted 4 500 kN is a peak, and holding it would burn the boosters out at 86 s.
    *
-   * <p>Ariane 64 is deliberately absent: with four boosters the distortion grows until the model
-   * separates A64 from A62 by 3 % where reality separates them by a factor 2.5 in GTO capacity (§3
-   * of the spec).
+   * <p><b>The ISPs are calibrated on the ratio between launchers, and that is where the drag debt
+   * now sits.</b> The absolute capacity of this catalog is not trustworthy -- the Ariane 62 entry
+   * placed 20 t in LEO 400 against ~10.3 t in reality -- so the anchor is the ratio, which reality
+   * puts at 2.10. At 278.5 s / 360 s the model gives 2.09. And 278.5 s <em>is</em> the P120C's
+   * vacuum ISP: the boosters carry no debt at all, while the Vulcain gives up 71 s of its [320,
+   * 431] bracket and carries all of it. That is what PHY-2 has to pick up, and it is now localised
+   * instead of diluted in an aggregate (spec §2.4, and decoupage §3.4 which predicted it).
+   *
+   * <p><b>What splitting buys, stated because the aggregate's javadoc stated the opposite.</b> The
+   * Ariane 62 entry flamed its whole first stage out around 128 s -- faithful to the boosters,
+   * wrong for a core that really burns ~8 min -- and said so. Here the boosters run dry at 130 s
+   * and the core flies on alone for 350 s more. The ascent shape is this vehicle's at last.
    */
-  public static final LauncherModel ARIANE_62 =
+  public static final LauncherModel ARIANE_64 =
       new LauncherModel(
-          "ARIANE_62",
-          "Ariane 62",
+          "ARIANE_64",
+          "Ariane 64",
           List.of(
               new StageModel(
-                  "S1 (2 P120C + LLPM aggregated)",
-                  36_000,
-                  434_000,
-                  // Mean-trajectory ISP, same rule as the Falcon Heavy S1: placed in the
-                  // aggregate's [sea level 271 s, vacuum 331 s] bracket where 296 s sits in the
-                  // Falcon Heavy one, propellant-mass weighted over the solid boosters and the
-                  // cryogenic core.
-                  new PropulsionSystem(300, 9_960_000),
+                  "EAP (4 P120C)",
+                  11_000,
+                  141_000,
+                  // Vacuum ISP, unproxied: a solid's sea-level-to-vacuum spread is tens of
+                  // seconds, so the booster proxy would be nearly honest anyway. The thrust is
+                  // 141 t over 130 s at that ISP, i.e. the P120C's average and not its 4 500 kN
+                  // peak.
+                  new PropulsionSystem(278.5, 2_962_000),
+                  new StageCapabilities(
+                      IgnitionMode.GROUND,
+                      0,
+                      // A solid at last: variableLoad() finally returns false on a stage that is
+                      // one, which is all the lambda sweep needed (spec 06 §3.2).
+                      ShutdownMode.BURN_TO_DEPLETION,
+                      PropellantType.SOLID,
+                      0.0,
+                      StageRole.BOOSTER),
+                  // pi*1.7^2 for one 3.4 m booster; four of them make 36.3 m2 of the 59.2 m2 the
+                  // vehicle presents at lift-off. Cd 0.4, continuum, same rule as every other
+                  // atmospheric stage of this catalog.
+                  new AerodynamicProperties(9.08, 0.4),
+                  4),
+              new StageModel(
+                  "LLPM (Vulcain 2.1)",
+                  14_000,
+                  152_000,
+                  // Mean-trajectory ISP, 36 % into the [320, 431] bracket: this is the stage that
+                  // carries the whole drag debt of the launcher (spec 06 §3.1).
+                  new PropulsionSystem(360, 1_118_000),
                   new StageCapabilities(
                       IgnitionMode.GROUND,
                       0,
                       ShutdownMode.COMMANDED,
-                      // A modelling convention, not a chemical claim: 65 % of this block's
-                      // propellant is solid, but declaring SOLID would freeze the load (a stage
-                      // that is 35 % liquid) out of both StageModel.toVehicle and the multi-lambda
-                      // sweep of PropellantLoadOptimizer. FALCON_HEAVY declares its kerolox
-                      // aggregate the same way: the field reads "liquid, finite coast".
                       PropellantType.CRYOGENIC,
                       0.0,
                       StageRole.CORE),
-                  // Same aggregation rule as the Falcon Heavy S1: the section of the block as it
-                  // flies, π·2.7² for the 5.4 m LLPM plus 2 × π·1.7² for the P120C boosters
-                  // (ESA Ariane 6 overview, diameters verified 2026-08-20). Cd 0.4, continuum.
-                  new AerodynamicProperties(41.1, 0.4)),
+                  new AerodynamicProperties(22.9, 0.4)),
               new StageModel(
                   "S2 (ULPM, Vinci)",
                   6_000,
@@ -166,15 +183,14 @@ public final class Launchers {
                       PropellantType.CRYOGENIC,
                       21_600.0,
                       StageRole.UPPER),
-                  // π·2.7² for the 5.4 m ULPM, and the free-molecular Cd of the Falcon Heavy S2 —
-                  // same regime, same reason.
+                  // pi*2.7^2 for the 5.4 m ULPM, and the free-molecular Cd of the Falcon Heavy S2
+                  // -- same regime, same reason.
                   new AerodynamicProperties(22.9, 2.2))),
-          // Shorter vertical rise than Falcon Heavy's 7 s (lift-off T/W ~1.99 against ~1.65, the
-          // pad is cleared sooner); same pitch kick, deliberately — nothing justifies an offset.
-          // The 5 s interstage coast is the chill-down Vinci needs and the Merlin Vacuum does not.
+          // Unchanged from the Ariane 62 entry. The core is not throttled: with a flow ratio of
+          // 13.7 the boosters run dry long before it, so the block splits on its own.
           new AscentProfile(6.0, 3.0, 5.0));
 
-  private static final List<LauncherModel> CATALOG = List.of(FALCON_HEAVY, ARIANE_62);
+  private static final List<LauncherModel> CATALOG = List.of(FALCON_HEAVY, ARIANE_64);
 
   /**
    * Resolves a launcher model by its catalog id.

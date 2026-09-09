@@ -342,7 +342,7 @@ class MissionFactoryTest {
   @Test
   void mediumEarthOrbit_onALongCoastStage_composes() {
     Mission mission =
-        MissionFactory.fromWizardValues(meoValues("ARIANE_62", "EARTH_OBS_SAT"), MissionType.LEO);
+        MissionFactory.fromWizardValues(meoValues("ARIANE_64", "EARTH_OBS_SAT"), MissionType.LEO);
     assertInstanceOf(GEOMission.class, mission, "a MEO is flown through the parking chain");
   }
 

@@ -123,7 +123,7 @@ class PropellantBudgetAzimuthTest {
   /**
    * The historical entry point must be untouched: the four-argument overload means due east, and a
    * due-east azimuth must reproduce the pre-MIS-7 number exactly. This is what keeps the calibrated
-   * Falcon Heavy and Ariane 62 budgets where they were.
+   * Falcon Heavy and Ariane 64 budgets where they were.
    */
   @Test
   void theDueEastOverload_reproducesThePreMis7Budget() {

@@ -37,7 +37,7 @@ import org.orekit.time.TimeScalesFactory;
  *
  * <p><b>What it guards.</b> MIS-7 renames {@code LEOMission} to {@link EarthOrbitMission}, threads
  * a {@link LaunchPlane} through the ascent and adds a commanded-plane attitude that can steer the
- * orbital plane. The Falcon Heavy and Ariane 62 calibrations rest on measured due-east
+ * orbital plane. The Falcon Heavy and Ariane 64 calibrations rest on measured due-east
  * trajectories, so a due-east target must keep flying exactly what it flew before — the commanded
  * attitude being opt-in is what makes that possible (spec §4.2), and this fixture is what keeps the
  * door shut.

@@ -118,8 +118,24 @@ public class GravityTurnProblem implements TrajectoryProblem {
   /** Weight of an apogee short of the target window, which the transfer must make up in ΔV. */
   private static final double W_APOGEE_SHORTFALL = 8.0;
 
+  /**
+   * Weight of the altitude already lost below the achieved apogee at hand-over. Same weight as the
+   * apogee window it competes with, and that balance is the whole calibration: at 8.0 — the apogee
+   * shortfall's weight — the search bought "no dip" by overshooting the apogee, which W_APOGEE_-
+   * OVERSHOOT only charges 0.5 for. It handed over at 505 km on a 568 km apogee for a 400 km
+   * target, and nothing downstream lowers an apogee.
+   *
+   * <p>Measured at 1.0: 1.7e-8 at the 0.15 km a Falcon Heavy dips, four orders below the acceptable
+   * cost and therefore invisible; 0.119 at 138 km, still two and a half times acceptable and so
+   * decisive, without outweighing the apogee window sixteen to one.
+   */
+  private static final double W_HANDOVER_DIP = 1.0;
+
   /** Gradient per second of shortfall, pushing CMA-ES back above the staging floor. */
   private static final double W_STAGING_SHORTFALL = 1.0;
+
+  /** Fraction of the upper stage's full-tank burn the ceiling leaves above the staging floor. */
+  private static final double UPPER_STAGE_HEADROOM = 0.7;
 
   private final GravityTurnManeuver maneuver;
   private final SpacecraftState initialState;
@@ -201,6 +217,21 @@ public class GravityTurnProblem implements TrajectoryProblem {
     else lowAltFloor = 450.0;
     double transitionTimeMax =
         FastMath.max(lowAltFloor, 300.0 + 0.3 * FastMath.sqrt(constraints.targetAltitude()));
+    // A launcher whose staging completes late needs a ceiling above it, or the box cannot express
+    // a MECO at which the upper stage has done anything. Measured on the split Ariane 64: staging
+    // completes at 479.8 s against this altitude-driven 520 s, the search saturates at 100 % of the
+    // box and hands over underground (spec docs/etagement/06-conception-L4.md §3.6).
+    //
+    // The added room is a fraction of the upper stage's own full-tank burn, not a constant: any
+    // constant large enough for the Ariane also lifts the Falcon Heavy's box, and moving a bound
+    // renormalizes a search that was not asking for it. 0.7 sits inside the measured bracket
+    // [0.07, 0.89] — below it the Ariane is still capped, above it the Falcon Heavy GEO profile
+    // starts to move.
+    transitionTimeMax =
+        FastMath.max(
+            transitionTimeMax,
+            maneuver.getStagingCompleteTime()
+                + UPPER_STAGE_HEADROOM * maneuver.getUpperStageBurnCapacity());
     return new double[] {transitionTimeMax, 3.0};
   }
 
@@ -278,6 +309,16 @@ public class GravityTurnProblem implements TrajectoryProblem {
     } else if (apogee > constraints.maxApogee()) {
       cost +=
           W_APOGEE_OVERSHOOT * sq((apogee - constraints.maxApogee()) / constraints.targetApogee());
+    }
+
+    // 2b. How far the hand-over has already fallen below the apogee it reached. Every profile of
+    // this catalog hands over just past its apogee — a Falcon Heavy LEO-400 by 0.15 km, an Ariane
+    // 62 by 0.37 — so the sign of the flight path angle separates nothing and forbidding it would
+    // move every mission. The depth does: a split Ariane 64 handed over 138 km below its own
+    // apogee, and no downstream burn recovers that cheaply, because prograde thrust past apogee
+    // raises the far apsis rather than the near one (spec docs/etagement/06-conception-L4.md §3.7).
+    if (vRadial < 0) {
+      cost += W_HANDOVER_DIP * sq((apogee - alt) / constraints.targetApogee());
     }
 
     // 3. Flight path angle — penalize outside the [fpaMin, fpaMax] window
