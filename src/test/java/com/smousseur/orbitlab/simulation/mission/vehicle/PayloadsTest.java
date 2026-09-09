@@ -151,6 +151,54 @@ class PayloadsTest {
     assertThrows(IllegalArgumentException.class, () -> Payloads.CARGO_MODULE.toSpacecraft(0, 0));
   }
 
+  /**
+   * The bus dimension and the declared cross-section are two ways of writing the same assumption,
+   * and PHY-8 / L5 turned the first from a comment into a field. Nothing reads the dimension yet —
+   * PHY-6 will — so this is what keeps the pair from drifting apart in the meantime: a section
+   * edited without its dimension, or the reverse, goes red here.
+   *
+   * <p>The shapes are the catalog's own, stated in its comments: the cargo module is the one
+   * cylindrical bus, the four satellites are boxy.
+   */
+  @Test
+  void everyPayloadSectionIsItsDeclaredBusDimension() {
+    assertEquals(
+        Math.PI * Math.pow(Payloads.CARGO_MODULE.dimensionMeters() / 2, 2),
+        Payloads.CARGO_MODULE.aerodynamics().crossSection(),
+        0.01,
+        "CARGO_MODULE, cylindrical");
+
+    for (PayloadModel boxy :
+        List.of(
+            Payloads.EARTH_OBSERVATION_SAT,
+            Payloads.GEO_SAT,
+            Payloads.LUNAR_PROBE,
+            Payloads.LUNAR_ORBITER)) {
+      assertEquals(
+          Math.pow(boxy.dimensionMeters(), 2),
+          boxy.aerodynamics().crossSection(),
+          1e-9,
+          boxy.id() + ", boxy");
+    }
+  }
+
+  /** Every wizard-offered payload states a size; a fixture built by hand states none, and may. */
+  @Test
+  void everyCatalogPayloadDeclaresItsDimension() {
+    for (PayloadModel model : Payloads.all()) {
+      assertTrue(model.dimensionMeters() > 0, model.id() + " declares no dimension");
+    }
+    assertEquals(0.0, new PayloadModel("BARE", "Bare fixture", 1_000, 0, null).dimensionMeters());
+  }
+
+  @Test
+  void negativeDimension_rejected() {
+    assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            new PayloadModel("BAD", "Negative bus", 1_000, 0, null, null, PayloadDomain.ANY, -1.0));
+  }
+
   @Test
   void akmCapacityPropulsionCoherence_rejected() {
     assertThrows(

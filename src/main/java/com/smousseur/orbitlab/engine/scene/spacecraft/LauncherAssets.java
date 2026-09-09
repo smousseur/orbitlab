@@ -17,20 +17,20 @@ import org.apache.logging.log4j.Logger;
  *
  * <p>The table is explicit rather than a naming convention like the planets' ({@code
  * models/planets/&lt;name&gt;/&lt;name&gt;.gltf}), because the asset folders do not follow the
- * catalog ids: {@code FALCON_HEAVY} is stored under {@code heavy_falcon/heavy_falcon.gltf} and
- * {@code ARIANE_62} under {@code ariane/scene.gltf}.
+ * catalog ids: {@code FALCON_HEAVY} is stored under {@code heavy_falcon/heavy_falcon.gltf}.
  *
- * <p><b>Known limitation.</b> The mesh paired with {@code ARIANE_62} is an <em>Ariane 5</em>: no
- * Ariane 6 model was available. Only the silhouette is wrong — masses, propulsion and ascent
- * profile all remain the catalog's Ariane 62 — but the screen does not show the launcher being
- * flown. Replacing it is one row here plus the asset.
+ * <p><b>Known limitation.</b> The Ariane's boosters are the wrong size in its mesh — too long and
+ * too fat, by a factor its own catalog sections measure ({@code DT-18}, and {@code
+ * LauncherMeshProportionTest} which pins the gap). Only the silhouette is affected; masses,
+ * propulsion and ascent profile are the catalog's. It becomes visible when {@code PHY-5} flies a
+ * jettisoned booster beside the core, which is why the debt is due before that lot.
  *
  * <p><b>What a mesh listed here must satisfy.</b> Two conventions are assumed by the code that
  * draws it, and both hold for the two current assets: after the GLTF root transform the nose points
  * along {@code +Y} — the correction {@link SpacecraftPresenter} applies is a single one for every
- * spacecraft — and the vehicle is normalized to roughly one unit tall, since {@code Model3dView}
- * scales it from the spacecraft radius alone. A mesh breaking either would fly sideways or at the
- * wrong size, so check them before adding a row.
+ * spacecraft — and the stack is normalized to <em>exactly</em> one unit tall with its base at the
+ * origin, since {@code Model3dView} scales it by the launcher's height alone. A mesh breaking
+ * either would fly sideways or at the wrong size, so check them before adding a row.
  */
 public final class LauncherAssets {
   private static final Logger logger = LogManager.getLogger(LauncherAssets.class);
@@ -55,7 +55,7 @@ public final class LauncherAssets {
   /**
    * Returns the GLTF asset path representing the given launcher.
    *
-   * @param launcherId the catalog key (e.g. {@code "ARIANE_62"}), or {@code null} for a mission
+   * @param launcherId the catalog key (e.g. {@code "ARIANE_64"}), or {@code null} for a mission
    *     carrying no launcher
    * @return the asset path, or {@link #DEFAULT_MODEL_PATH} when the launcher has no mesh of its own
    */

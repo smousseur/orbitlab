@@ -18,9 +18,34 @@ import java.util.Objects;
  * @param displayName the human-readable name (e.g. "Falcon Heavy")
  * @param stages the stage models, bottom to top
  * @param ascentProfile the flight-profile parameters imposed by this launcher
+ * @param heightMeters the height of the assembled vehicle on the pad, fairing included (m). A
+ *     physical figure of the launcher and not a drawing parameter — which is why it lives here
+ *     rather than beside the mesh in {@code LauncherAssets}: it stays true whether or not a mesh
+ *     exists. The rendering layer converts it (spec {@code docs/etagement/01-decoupage.md} §3.8),
+ *     the propagation ignores it.
  */
 public record LauncherModel(
-    String id, String displayName, List<StageModel> stages, AscentProfile ascentProfile) {
+    String id,
+    String displayName,
+    List<StageModel> stages,
+    AscentProfile ascentProfile,
+    double heightMeters) {
+
+  /**
+   * Height given to a launcher that declares none, which is the Falcon Heavy's.
+   *
+   * <p>Not the 100 m every launcher used to be drawn at. The only path reading this default at
+   * runtime is the legacy {@code MissionEntry(Mission)} one, whose missions fly a fully loaded
+   * Falcon Heavy and are drawn with {@code LauncherAssets.DEFAULT_MODEL_PATH} — the Falcon Heavy's
+   * mesh. Drawing that mesh at any other height would be a knowingly wrong number.
+   */
+  public static final double DEFAULT_HEIGHT_METERS = 70.0;
+
+  /** A launcher stating no height, which is every hand-assembled fixture: none is ever drawn. */
+  public LauncherModel(
+      String id, String displayName, List<StageModel> stages, AscentProfile ascentProfile) {
+    this(id, displayName, stages, ascentProfile, DEFAULT_HEIGHT_METERS);
+  }
 
   public LauncherModel {
     Objects.requireNonNull(id, "id");
@@ -29,6 +54,9 @@ public record LauncherModel(
     Objects.requireNonNull(ascentProfile, "ascentProfile");
     if (stages.isEmpty()) {
       throw new IllegalArgumentException("a launcher model needs at least one stage");
+    }
+    if (!(heightMeters > 0)) {
+      throw new IllegalArgumentException("heightMeters must be positive: " + heightMeters);
     }
     stages = List.copyOf(stages);
     StagingPlan.checkStructure(stages, ascentProfile);

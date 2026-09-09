@@ -17,6 +17,12 @@ import java.util.Objects;
  * @param aerodynamics the frontal area and drag coefficient of the payload, or {@code null} when
  *     the model declares none (spec {@code docs/atmosphere/04-conception-L1.md} §3.3)
  * @param domain where this payload is meant to fly; {@code null} reads as {@link PayloadDomain#ANY}
+ * @param dimensionMeters the bus's characteristic dimension (m) — the diameter of a cylindrical
+ *     bus, the edge of a boxy one — with solar arrays stowed, as {@link #aerodynamics} assumes; 0
+ *     when the model declares none. It is the figure the declared cross-section is computed from,
+ *     so the two cannot drift apart unnoticed ({@code PayloadsTest}). Nothing reads it yet: the
+ *     scene draws launchers only, and turning it into a drawn size needs the metres-per-mesh-unit
+ *     of a given asset, which is PHY-6's to write alongside that asset.
  */
 public record PayloadModel(
     String id,
@@ -25,7 +31,8 @@ public record PayloadModel(
     double akmPropellantCapacity,
     PropulsionSystem akmPropulsion,
     AerodynamicProperties aerodynamics,
-    PayloadDomain domain) {
+    PayloadDomain domain,
+    double dimensionMeters) {
 
   /** A payload model declaring no aerodynamics, as every hand-assembled fixture does. */
   public PayloadModel(
@@ -34,7 +41,7 @@ public record PayloadModel(
       double defaultDryMass,
       double akmPropellantCapacity,
       PropulsionSystem akmPropulsion) {
-    this(id, displayName, defaultDryMass, akmPropellantCapacity, akmPropulsion, null, null);
+    this(id, displayName, defaultDryMass, akmPropellantCapacity, akmPropulsion, null, null, 0);
   }
 
   /** A payload model stating no domain, which means {@link PayloadDomain#ANY}. */
@@ -45,7 +52,15 @@ public record PayloadModel(
       double akmPropellantCapacity,
       PropulsionSystem akmPropulsion,
       AerodynamicProperties aerodynamics) {
-    this(id, displayName, defaultDryMass, akmPropellantCapacity, akmPropulsion, aerodynamics, null);
+    this(
+        id,
+        displayName,
+        defaultDryMass,
+        akmPropellantCapacity,
+        akmPropulsion,
+        aerodynamics,
+        null,
+        0);
   }
 
   public PayloadModel {
@@ -59,6 +74,9 @@ public record PayloadModel(
     }
     if (Double.isNaN(akmPropellantCapacity) || akmPropellantCapacity < 0) {
       throw new IllegalArgumentException("akmPropellantCapacity cannot be negative");
+    }
+    if (Double.isNaN(dimensionMeters) || dimensionMeters < 0) {
+      throw new IllegalArgumentException("dimensionMeters cannot be negative");
     }
     if ((akmPropellantCapacity > 0) != (akmPropulsion != null)) {
       throw new IllegalArgumentException(

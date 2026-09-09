@@ -26,6 +26,7 @@ import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemeris;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemerisPoint;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.TrajectoryArc;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.TrajectoryPolyline;
+import com.smousseur.orbitlab.simulation.mission.vehicle.model.LauncherModel;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
@@ -37,23 +38,29 @@ import org.hipparchus.geometry.euclidean.threed.Vector3D;
  */
 public final class MissionRenderer {
 
-  private static final double SPACECRAFT_RADIUS_METERS = 50.0;
-
   /**
    * Camera distance applied when the user clicks the spacecraft, expressed in solar-scale units (1
    * unit = 1e9 m). This value is consumed by the far camera via {@link
    * com.smousseur.orbitlab.states.camera.OrbitCameraAppState}; the near viewport tracks it through
    * {@link com.smousseur.orbitlab.states.camera.NearCameraSyncAppState} (position scaled by 1e6).
-   * {@code 5e-7} ≈ 500 m, which places the camera well inside the LOD-3D threshold ({@code radius ×
-   * lodMultiplier} = 0.05 × 500 = 25 km in km units) and outside the near viewport's clip plane —
-   * 100 m at this distance, since {@code NearCameraSyncAppState} derives it from the focus distance
-   * — so the 3D model appears immediately.
+   *
+   * <p><b>{@code 3.5e-7} ≈ 350 m is five times the tallest launcher of the catalog</b>, which is
+   * what 500 m was back when every vehicle was drawn 100 m tall whatever it was. Holding the
+   * distance instead of the ratio would have shrunk the Falcon Heavy by 30 % on screen and the
+   * Ariane 64 by 38 % the day L5 gave them their real heights; holding the ratio per launcher would
+   * have made every vehicle fill the frame identically, throwing away the size comparison those
+   * heights just bought. So: one distance, set by the tallest, and a shorter launcher honestly
+   * looks shorter.
+   *
+   * <p>It still leaves the model outside the near viewport's clip plane — 70 m at this distance,
+   * since {@code NearCameraSyncAppState} derives it from the focus distance — and well inside the
+   * LOD switch, which promotes the 3D model once its projected radius passes 10 px.
    *
    * <p>Public because it is applied by {@link
    * com.smousseur.orbitlab.states.camera.CameraTransitionAppState}, which now owns the framing of
    * every focus target so it can animate its way to it.
    */
-  public static final float SPACECRAFT_FOCUS_DISTANCE_SOLAR_UNITS = 5e-7f;
+  public static final float SPACECRAFT_FOCUS_DISTANCE_SOLAR_UNITS = 3.5e-7f;
 
   private final MissionEntry entry;
   private final ApplicationContext context;
@@ -105,7 +112,7 @@ public final class MissionRenderer {
             "mission-" + entry.id(),
             mission.getName(),
             trajectoryColor,
-            SPACECRAFT_RADIUS_METERS,
+            drawnRadiusOf(entry),
             modelPath,
             renderContext);
 
@@ -125,6 +132,29 @@ public final class MissionRenderer {
 
     trajectoryRenderer = new MissionTrajectoryRenderer(entry.id(), trajectoryColor);
     trajectoryRenderer.initialize(context.sceneGraph().nearOrbitsNode());
+  }
+
+  /**
+   * Half the launcher's height, which is the number {@link BodyRenderConfig} asks for.
+   *
+   * <p><b>Half, and not the height</b>: {@code Model3dView} scales the mesh by twice it, and both
+   * launcher assets are normalized to exactly one unit tall with their base at the origin — so the
+   * vehicle comes out at its own height, and every detached piece of the same asset set comes out
+   * at its own fraction of it, with no per-piece number anywhere. The same value is the radius
+   * {@link LodView} projects to decide the 3D-versus-icon switch, so a shorter vehicle turns back
+   * into its icon closer in. That is the whole of the per-object LOD threshold: it follows the
+   * height rather than being configured (spec {@code docs/etagement/01-decoupage.md} §3.8).
+   *
+   * <p>A mission carrying no spec is the legacy path, drawn with {@code
+   * LauncherAssets.DEFAULT_MODEL_PATH} — and {@link LauncherModel#DEFAULT_HEIGHT_METERS} is that
+   * very mesh's height.
+   */
+  private static double drawnRadiusOf(MissionEntry entry) {
+    return entry
+            .spec()
+            .map(spec -> spec.configuration().launcher().heightMeters())
+            .orElse(LauncherModel.DEFAULT_HEIGHT_METERS)
+        / 2.0;
   }
 
   /**

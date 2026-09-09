@@ -43,6 +43,19 @@ class LaunchersTest {
     assertEquals(5.0, profile.interstageCoastDuration(), 1e-9);
   }
 
+  /**
+   * Both heights are external figures, but neither is taken on trust: each launcher's fairing is a
+   * known fraction of its normalized mesh, and multiplying the two has to land on the published
+   * fairing length. It does, to the decimetre on the Falcon Heavy and to 3 % on the Ariane — which
+   * is also what identifies the Ariane's 63 m as its long-fairing configuration rather than the
+   * short one (spec {@code docs/etagement/01-decoupage.md} §3.8).
+   */
+  @Test
+  void bothHeightsAreConfirmedByTheirOwnFairing() {
+    assertEquals(13.1, 0.1878 * Launchers.FALCON_HEAVY.heightMeters(), 0.1, "Falcon fairing");
+    assertEquals(20.0, 0.3264 * Launchers.ARIANE_64.heightMeters(), 0.7, "Ariane long fairing");
+  }
+
   @Test
   void byId_unknownId_rejected() {
     assertThrows(IllegalArgumentException.class, () -> Launchers.byId("SATURN_V"));

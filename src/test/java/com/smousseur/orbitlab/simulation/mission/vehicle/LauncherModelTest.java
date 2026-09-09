@@ -86,6 +86,27 @@ class LauncherModelTest {
     assertEquals(2, stack.stagingPlan().indexOf(StageRole.UPPER));
   }
 
+  /**
+   * A fixture stating no height gets the Falcon Heavy's, because that is the mesh the renderer
+   * falls back to when a launcher has no row of its own — 100 m, what every vehicle used to be
+   * drawn at, would be a number known to be nobody's (spec {@code docs/etagement/01-decoupage.md}
+   * §3.8).
+   */
+  @Test
+  void aLauncherStatingNoHeightTakesTheOneItsFallbackMeshIsDrawnAt() {
+    assertEquals(70.0, MODEL.heightMeters(), 1e-9);
+    assertEquals(LauncherModel.DEFAULT_HEIGHT_METERS, MODEL.heightMeters(), 1e-9);
+  }
+
+  @Test
+  void nonPositiveHeight_rejectedAtConstruction() {
+    assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            new LauncherModel(
+                "BAD", "Bad", List.of(STAGE_1, STAGE_2), new AscentProfile(7, 3, 2), 0.0));
+  }
+
   @Test
   void throttleWithoutBoosters_rejectedAtConstruction() {
     assertThrows(

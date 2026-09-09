@@ -24,12 +24,19 @@ public final class Payloads {
    * stops holding for an end-of-life re-entry, which is outside PHY-1 and PHY-2 alike.
    */
   public static final PayloadModel CARGO_MODULE =
-      // Assumed 4.5 m diameter bus: π·2.25². B = 429 kg/m².
+      // The only cylindrical bus of the catalog, hence π·(d/2)² and not d². B = 429 kg/m².
       new PayloadModel(
-          "CARGO_MODULE", "Cargo module", 15_000, 0, null, new AerodynamicProperties(15.9, 2.2));
+          "CARGO_MODULE",
+          "Cargo module",
+          15_000,
+          0,
+          null,
+          new AerodynamicProperties(15.9, 2.2),
+          PayloadDomain.ANY,
+          4.5);
 
   public static final PayloadModel EARTH_OBSERVATION_SAT =
-      // Assumed 3.0 × 3.0 m bus. B = 505 kg/m².
+      // Boxy bus. B = 505 kg/m².
       new PayloadModel(
           "EARTH_OBS_SAT",
           "Earth observation satellite",
@@ -37,11 +44,12 @@ public final class Payloads {
           0,
           null,
           new AerodynamicProperties(9.0, 2.2),
-          PayloadDomain.EARTH);
+          PayloadDomain.EARTH,
+          3.0);
 
   /** AKM sized for ~1 800 m/s of apogee ΔV at 2 t dry, ~30 % margin (spec 06 §4.2). */
   public static final PayloadModel GEO_SAT =
-      // Assumed 2.5 × 2.5 m bus. B = 291 kg/m² at the 4 t departure mass (2 t dry + 2 t AKM).
+      // Boxy bus. B = 291 kg/m² at the 4 t departure mass (2 t dry + 2 t AKM).
       new PayloadModel(
           "GEO_SAT",
           "GEO communications satellite",
@@ -49,7 +57,8 @@ public final class Payloads {
           2_000,
           new PropulsionSystem(320, 400),
           new AerodynamicProperties(6.25, 2.2),
-          PayloadDomain.EARTH);
+          PayloadDomain.EARTH,
+          2.5);
 
   /**
    * An inert lunar probe (MIS-4 / L5 §5.1) — the dry mass of LRO (1 846 kg) and Luna-25 (1 750 kg),
@@ -57,8 +66,8 @@ public final class Payloads {
    * burn and nothing is handed over afterwards (découpage §6 pt 8).
    */
   public static final PayloadModel LUNAR_PROBE =
-      // Assumed 2.0 × 2.0 m bus. B = 227 kg/m², which widens the bracket of the PHY-2 table
-      // downwards without having been fitted to it, as the three above are.
+      // Boxy bus. B = 227 kg/m², which widens the bracket of the PHY-2 table downwards without
+      // having been fitted to it, as the three above are.
       new PayloadModel(
           "LUNAR_PROBE",
           "Lunar probe",
@@ -66,7 +75,8 @@ public final class Payloads {
           0,
           null,
           new AerodynamicProperties(4.0, 2.2),
-          PayloadDomain.LUNAR);
+          PayloadDomain.LUNAR,
+          2.0);
 
   /**
    * A propelled lunar orbiter (MIS-5 / L3, spec {@code docs/lunar-orbit/05-conception-L3.md} §2) —
@@ -90,8 +100,8 @@ public final class Payloads {
    * </ul>
    */
   public static final PayloadModel LUNAR_ORBITER =
-      // Same assumed 2.0 × 2.0 m bus as the probe. B = 302 kg/m² at the 2 658 kg departure mass,
-      // between GEO_SAT's 291 and the probe's 227, without having been fitted to either.
+      // Same bus as the probe. B = 302 kg/m² at the 2 658 kg departure mass, between GEO_SAT's
+      // 291 and the probe's 227, without having been fitted to either.
       new PayloadModel(
           "LUNAR_ORBITER",
           "Lunar orbiter",
@@ -99,7 +109,8 @@ public final class Payloads {
           800,
           new PropulsionSystem(320, 5_500),
           new AerodynamicProperties(4.0, 2.2),
-          PayloadDomain.LUNAR);
+          PayloadDomain.LUNAR,
+          2.0);
 
   private static final List<PayloadModel> CATALOG =
       List.of(CARGO_MODULE, EARTH_OBSERVATION_SAT, GEO_SAT, LUNAR_PROBE, LUNAR_ORBITER);

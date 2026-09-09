@@ -28,6 +28,11 @@ public final class Launchers {
    * <p>Figures are <b>per exemplar</b> — one core is a third of the block: 22 t dry, 411 t of
    * kerolox, 7.6 MN, 10.5 m². The aggregate reads 66 t / 1 233 t / 22.8 MN, which is what the
    * catalog declared before the split.
+   *
+   * <p><b>70 m is checked against the mesh, not just asserted.</b> The fairing spans 0.1878 of the
+   * normalized stack, which at this height is 13.1 m — the fairing's quoted length to the decimetre
+   * — and the side booster's diameter comes out within 1 % of the centre core's, as three identical
+   * cores require. {@code LauncherMeshProportionTest} holds that second check.
    */
   public static final LauncherModel FALCON_HEAVY =
       new LauncherModel(
@@ -95,7 +100,8 @@ public final class Launchers {
           // vehicle flies. Anchored on the maiden flight's timeline — booster separation T+2:33,
           // centre core MECO T+3:04, so 31 s alone — which does not pin the fraction closer than
           // [0.78, 0.83] (spec docs/etagement/05-conception-L3.md §2.1).
-          new AscentProfile(7.0, 3.0, 2.0, 0.81));
+          new AscentProfile(7.0, 3.0, 2.0, 0.81),
+          70.0);
 
   /**
    * Ariane 64: four P120C strap-on boosters, a Vulcain 2.1 core, a Vinci upper stage.
@@ -114,6 +120,12 @@ public final class Launchers {
    * decoupage gives as controls -- boosters ~130 s, Vulcain ~8 min -- fix the mass flows, and the
    * thrust is whatever the chosen ISP makes of them. Reversing the derivation is what fails: the
    * P120C's quoted 4 500 kN is a peak, and holding it would burn the boosters out at 86 s.
+   *
+   * <p><b>63 m is the long-fairing configuration, and the mesh agrees.</b> The fairing spans 0.3264
+   * of the normalized stack, which at this height is 20.6 m against the 20 m of Ariane 6's long
+   * fairing; the core's 0.0925 gives 5.83 m against the 5.40 m its own 22.9 m2 declares, the excess
+   * being the bounding box of what hangs off it. Its boosters do <em>not</em> agree, and by how
+   * much is DT-18.
    *
    * <p><b>The ISPs are calibrated on the ratio between launchers, and that is where the drag debt
    * now sits.</b> The absolute capacity of this catalog is not trustworthy -- the Ariane 62 entry
@@ -188,7 +200,8 @@ public final class Launchers {
                   new AerodynamicProperties(22.9, 2.2))),
           // Unchanged from the Ariane 62 entry. The core is not throttled: with a flow ratio of
           // 13.7 the boosters run dry long before it, so the block splits on its own.
-          new AscentProfile(6.0, 3.0, 5.0));
+          new AscentProfile(6.0, 3.0, 5.0),
+          63.0);
 
   private static final List<LauncherModel> CATALOG = List.of(FALCON_HEAVY, ARIANE_64);
 

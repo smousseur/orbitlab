@@ -63,15 +63,18 @@ public final class NearCameraSyncAppState extends BaseAppState {
    * far plane contributes nothing measurable, which is why it is left alone here (spec {@code
    * docs/graphics-effects/spacecraft-view-artefacts.md} §5.3).
    *
-   * <p>At the 500 m focus distance the old factor of {@code 5e-4} pinned the near plane to its 10 m
-   * floor, giving ~274 km per depth step at the Earth's distance: a 400 km LEO trajectory sat about
-   * one and a half steps above the surface and won or lost the depth test per pixel and per frame —
-   * the line scintillating over the Earth's disc. At {@code 0.2} the near plane is 100 m, one step
-   * is ~27 km, and the orbit clears the surface by some fifteen of them.
+   * <p>At the focus distance the old factor of {@code 5e-4} pinned the near plane to its floor,
+   * giving ~274 km per depth step at the Earth's distance: a 400 km LEO trajectory sat about one
+   * and a half steps above the surface and won or lost the depth test per pixel and per frame — the
+   * line scintillating over the Earth's disc. At {@code 0.2} the near plane is a fifth of the focus
+   * distance — 70 m since PHY-8 / L5 brought that distance to 350 m — one step is ~39 km, and the
+   * orbit clears the surface by ten of them. The margin narrowed with the distance and the reason
+   * it was raised is still met by an order of magnitude.
    *
    * <p>Nothing is given up for it: in spacecraft view the closest content <em>is</em> the focused
    * spacecraft, sitting on the near origin, so {@code distToOrigin} is the distance to it. A factor
-   * of 0.2 keeps the whole ~100 m model in front of the plane.
+   * of 0.2 keeps the whole model in front of the plane whatever the launcher's height, the plane
+   * being derived from a distance that is itself five times the tallest of them.
    */
   private static final float SPACECRAFT_NEAR_FACTOR = 0.2f;
 
@@ -86,8 +89,8 @@ public final class NearCameraSyncAppState extends BaseAppState {
    *
    * <p>1 km pushes that crossing out to the last kilometre before the surface, and costs nothing
    * where it matters: the cap is inactive below 5 km of zoom, so the whole spacecraft view keeps
-   * the 100 m plane, and even when it does engage the depth step at the Earth's distance is ~2.7 km
-   * against the 274 km this fix set out to remove.
+   * the proportional plane, and even when it does engage the depth step at the Earth's distance is
+   * ~2.7 km against the 274 km this fix set out to remove.
    */
   private static final float SPACECRAFT_NEAR_MAX = 1f;
 
