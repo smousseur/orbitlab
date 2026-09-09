@@ -5,6 +5,7 @@ import com.smousseur.orbitlab.simulation.mission.vehicle.StagingPlan;
 import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Launchers;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.stage.IgnitionMode;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.stage.StageModel;
+import com.smousseur.orbitlab.simulation.mission.vehicle.model.stage.StageRole;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -42,13 +43,29 @@ public record LauncherModel(
    * the grandeur a reader actually compares between launchers, and it stays right whatever the
    * catalog does to its staging afterwards.
    *
+   * <p><b>A throttled core leaves the pad throttled.</b> The sum is taken at the thrust each stage
+   * actually applies, so a launcher holding its core at {@code f} during the shared phase reports
+   * what it produces rather than what it has installed — the field is named after an instant of
+   * flight, and it is the one figure of the wizard card a reader can check against the trajectory
+   * (spec {@code docs/etagement/05-conception-L3.md} §3.4). The factor is 1 on every launcher that
+   * does not throttle.
+   *
    * @return the lift-off thrust in newtons
    */
   public double liftOffThrust() {
     return stages.stream()
         .filter(stage -> stage.capabilities().ignition() == IgnitionMode.GROUND)
-        .mapToDouble(stage -> stage.propulsion().thrust())
+        .mapToDouble(stage -> stage.propulsion().thrust() * throttleOf(stage))
         .sum();
+  }
+
+  /**
+   * The fraction of its thrust a ground-lit stage applies at lift-off. Only the core is throttled,
+   * and a profile declaring a throttle without a booster stage to share the phase with is refused
+   * by the constructor — so the factor is 1 on a sequential launcher without testing for one.
+   */
+  private double throttleOf(StageModel stage) {
+    return stage.capabilities().role() == StageRole.CORE ? ascentProfile.coreThrottle() : 1.0;
   }
 
   /**

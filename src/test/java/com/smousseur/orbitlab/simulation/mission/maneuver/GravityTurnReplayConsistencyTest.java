@@ -19,6 +19,8 @@ import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchConfiguration;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropellantBudget;
 import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Launchers;
 import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Payloads;
+import com.smousseur.orbitlab.simulation.mission.vehicle.model.AscentProfile;
+import com.smousseur.orbitlab.simulation.mission.vehicle.model.LauncherModel;
 import java.util.List;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -124,16 +126,46 @@ class GravityTurnReplayConsistencyTest {
     OrekitService.get().initialize();
   }
 
+  /**
+   * The catalog Falcon Heavy with its core at full thrust — the vehicle every {@code REF_*} above
+   * was recorded on, and the only one this class can fly.
+   *
+   * <p><b>Why it is frozen here rather than read from the catalog.</b> {@code PHY-8 / L3} throttles
+   * the centre core, which gives the ascent a core-only phase; the single-propagator gravity turn
+   * plants its jettison inside one burn and knows two burns, not three, so it <em>refuses</em> such
+   * a stack outright (spec {@code docs/etagement/03-conception-L1.md} §4). Three of the fixtures
+   * below go through that path, and it is the path they exist to compare against.
+   *
+   * <p>This is not a workaround for the refusal. The étape 0 reference of the explicit-staging
+   * migration was measured on a Falcon Heavy that was neither split nor throttled, so freezing the
+   * vehicle at full thrust is what that reference <em>is</em>. The stages are read from the catalog
+   * rather than restated, so everything but the throttle still tracks it (spec {@code
+   * docs/etagement/05-conception-L3.md} §3.2).
+   */
+  private static final LauncherModel FULL_THRUST = fullThrust(Launchers.FALCON_HEAVY);
+
+  private static LauncherModel fullThrust(LauncherModel launcher) {
+    AscentProfile profile = launcher.ascentProfile();
+    return new LauncherModel(
+        launcher.id() + "_FULL_THRUST",
+        launcher.displayName() + " (core at full thrust)",
+        launcher.stages(),
+        new AscentProfile(
+            profile.verticalAscentDuration(),
+            profile.pitchKickAngleDeg(),
+            profile.interstageCoastDuration()));
+  }
+
   /** Real Falcon Heavy GEO mission, fully assembled from the catalogs. */
   private static GEOMission geoMission() {
     double payloadDryMass = Payloads.GEO_SAT.defaultDryMass();
     PropellantBudget.GeoLoads geoLoads =
         PropellantBudget.loadsForGeo(
-            Launchers.FALCON_HEAVY, Payloads.GEO_SAT, payloadDryMass, PARKING_ALT, LAT);
+            FULL_THRUST, Payloads.GEO_SAT, payloadDryMass, PARKING_ALT, LAT);
     return new GEOMission(
         "GT replay test",
         new LaunchConfiguration(
-            Launchers.FALCON_HEAVY,
+            FULL_THRUST,
             geoLoads.launcherLoads(),
             Payloads.GEO_SAT.toSpacecraft(payloadDryMass, geoLoads.akmLoad())),
         PARKING_ALT,
@@ -414,7 +446,7 @@ class GravityTurnReplayConsistencyTest {
     List<MissionStage> ascent =
         AscentSequence.gravityTurn(
             mission.getVehicle(),
-            Launchers.FALCON_HEAVY.ascentProfile(),
+            FULL_THRUST.ascentProfile(),
             GravityTurnConstraints.forTarget(PARKING_ALT),
             LAT);
     ((GravityTurnFirstBurnStage) ascent.getFirst())
@@ -482,7 +514,7 @@ class GravityTurnReplayConsistencyTest {
         (GravityTurnFirstBurnStage)
             AscentSequence.gravityTurn(
                     optimizeMission.getVehicle(),
-                    Launchers.FALCON_HEAVY.ascentProfile(),
+                    FULL_THRUST.ascentProfile(),
                     GravityTurnConstraints.forTarget(PARKING_ALT),
                     LAT)
                 .getFirst();
@@ -520,7 +552,7 @@ class GravityTurnReplayConsistencyTest {
         (GravityTurnFirstBurnStage)
             AscentSequence.gravityTurn(
                     geoMission().getVehicle(),
-                    Launchers.FALCON_HEAVY.ascentProfile(),
+                    FULL_THRUST.ascentProfile(),
                     GravityTurnConstraints.forTarget(PARKING_ALT),
                     LAT)
                 .getFirst();

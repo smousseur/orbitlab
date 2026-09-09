@@ -89,7 +89,13 @@ public final class Launchers {
                   // density there is four orders of magnitude below what S1 crosses (spec
                   // docs/atmosphere/04-conception-L1.md §4.1).
                   new AerodynamicProperties(10.5, 2.2))),
-          new AscentProfile(7.0, 3.0, 2.0));
+          // Core throttle 0.81 during the shared phase. The three cores being identical, thrust
+          // and propellant are in the same ratio and both blocks would flame out at the same
+          // instant; throttling the centre one is what gives it the 29.8 s solo phase the real
+          // vehicle flies. Anchored on the maiden flight's timeline — booster separation T+2:33,
+          // centre core MECO T+3:04, so 31 s alone — which does not pin the fraction closer than
+          // [0.78, 0.83] (spec docs/etagement/05-conception-L3.md §2.1).
+          new AscentProfile(7.0, 3.0, 2.0, 0.81));
 
   /**
    * Ariane 62 (two P120C boosters), first stage aggregating the boosters and the Vulcain core.

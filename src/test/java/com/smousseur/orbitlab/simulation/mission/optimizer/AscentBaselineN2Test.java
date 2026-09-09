@@ -145,37 +145,57 @@ class AscentBaselineN2Test extends AbstractTrajectoryOptimizerTest {
   // apart in perigee. That is a property of the cost function, it predates MIS-7, and it is worth a
   // look of its own — the retained transitionTime also moved 0.818 s, past its own 0.5 s tolerance,
   // for the same reason.
+  // ── RE-RECORDED at PHY-8 / L3 (2026-09-09, seed 42) ─────────────────────
+  // The Falcon Heavy's centre core is throttled to 0.81 during the shared phase, so its ascent is
+  // five phases instead of three and both profiles fly a different trajectory. Deliberate, so
+  // re-recording is the right move and the tolerances below are UNTOUCHED.
+  //
+  // What moved, against the 2026-08-16 (MIS-7) values:
+  //
+  //          transitionTime          MECO mass          final perigee       inclination
+  //   LEO    307.1932 → 315.0702    +1 908.6 kg   400 314.5 → 400 311.6   5.30303 → 5.30270
+  //   GEO    329.1242 → 343.5384    +4 431.0 kg  35 786 247.8 → 35 786 249.2   unchanged
+  //
+  // The MECO mass is the headline: the throttle buys 1.9 t (LEO) and 4.4 t (GEO) at hand-over, and
+  // the final orbits do not move — 2.9 m of perigee on LEO, 1.4 m on GEO, both four orders of
+  // magnitude inside ORBIT_RELATIVE_TOLERANCE. Splitting the jettison in two is worth real
+  // performance: the vehicle stops carrying 44 t of empty booster through the last 30 s of
+  // first-stage flight, and pays for it with a lower lift-off thrust it can afford.
+  //
+  // optimizeSeconds went 7.1 → 60.3 and 11.4 → 84.6. It is logged and never asserted (see N3
+  // below), and it is one wall-clock reading taken inside a gateTest run rather than a benchmark:
+  // do not read a five-phase slowdown factor off it without measuring one.
   private static final Baseline LEO_400_BASELINE =
       new Baseline(
-          307.193166,
+          315.070189,
           new MecoState(
-              314.193166,
-              36368.082,
-              new Vector3D(-3065580.683126, -5677159.212400, 577919.103944),
-              new Vector3D(6963.051876, -3780.275135, -187.406132)),
+              322.070189,
+              38276.728,
+              new Vector3D(-3031449.624489, -5694240.311341, 576881.557951),
+              new Vector3D(6989.205124, -3740.219036, -191.893206)),
           new MecoState(
-              314.193166,
-              36368.082,
-              new Vector3D(-3065580.683126, -5677159.212400, 577919.103944),
-              new Vector3D(6963.051876, -3780.275135, -187.406132)),
-          new OrbitShape(400314.5, 419164.8, 5.303026),
-          7.1);
+              322.070189,
+              38276.728,
+              new Vector3D(-3031449.624489, -5694240.311341, 576881.557951),
+              new Vector3D(6989.205124, -3740.219036, -191.893206)),
+          new OrbitShape(400311.6, 419162.5, 5.302698),
+          60.3);
 
   private static final Baseline GEO_BASELINE =
       new Baseline(
-          329.124209,
+          343.538381,
           new MecoState(
-              336.124209,
-              64579.867,
-              new Vector3D(-2971529.637513, -5650537.034819, 569924.139212),
-              new Vector3D(7056.046315, -3730.610941, -197.768295)),
+              350.538381,
+              69010.913,
+              new Vector3D(-2931211.038840, -5669999.050791, 568624.193257),
+              new Vector3D(7085.792210, -3686.922638, -202.851074)),
           new MecoState(
-              336.124209,
-              64579.867,
-              new Vector3D(-2971529.637513, -5650537.034819, 569924.139212),
-              new Vector3D(7056.046315, -3730.610941, -197.768295)),
-          new OrbitShape(35786247.8, 35791193.0, 0.000034),
-          11.4);
+              350.538381,
+              69010.913,
+              new Vector3D(-2931211.038840, -5669999.050791, 568624.193257),
+              new Vector3D(7085.792210, -3686.922638, -202.851074)),
+          new OrbitShape(35786249.2, 35791192.4, 0.000034),
+          84.6);
 
   @BeforeAll
   static void init() {

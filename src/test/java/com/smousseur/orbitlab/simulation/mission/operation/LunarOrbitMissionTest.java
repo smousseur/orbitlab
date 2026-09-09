@@ -89,22 +89,26 @@ class LunarOrbitMissionTest {
   }
 
   @Test
-  @DisplayName("The composer builds the twelve stages, in any optimization mode")
+  @DisplayName("The composer closes the chain with its six lunar phases, in any optimization mode")
   void compose_yieldsTheLunarOrbitChain() {
     for (OptimizationType mode : OptimizationType.values()) {
       Mission mission = MissionComposer.compose(spec(null, null), mode);
       assertInstanceOf(LunarOrbitMission.class, mission, mode.name());
 
+      // Fourteen since PHY-8 / L3 throttled the Falcon Heavy's core, which splits the ascent into
+      // five phases instead of three.
       List<MissionStage> stages = mission.getStages();
-      assertEquals(12, stages.size(), mode.name());
+      assertEquals(14, stages.size(), mode.name());
 
-      // The five phases the lot adds, in order, closing the chain. The ascent prefix ahead of them
-      // is the ordinary one and is guarded by MissionAscentWiringTest.
-      assertInstanceOf(TLIBurnStage.class, stages.get(6), "translunar injection");
-      assertInstanceOf(StageSeparationStage.class, stages.get(7), "S2 separation");
-      assertInstanceOf(TranslunarCoastStage.class, stages.get(8), "translunar coast");
-      assertInstanceOf(LunarApproachCoastStage.class, stages.get(9), "lunar approach");
-      assertInstanceOf(LunarInsertionStage.class, stages.get(10), "lunar orbit insertion");
+      // The five phases the lot adds, in order, closing the chain — counted from the end, because
+      // what precedes them is the ordinary ascent prefix, whose length is the launcher's business
+      // and is guarded by MissionAscentWiringTest.
+      int tli = stages.size() - 6;
+      assertInstanceOf(TLIBurnStage.class, stages.get(tli), "translunar injection");
+      assertInstanceOf(StageSeparationStage.class, stages.get(tli + 1), "S2 separation");
+      assertInstanceOf(TranslunarCoastStage.class, stages.get(tli + 2), "translunar coast");
+      assertInstanceOf(LunarApproachCoastStage.class, stages.get(tli + 3), "lunar approach");
+      assertInstanceOf(LunarInsertionStage.class, stages.get(tli + 4), "lunar orbit insertion");
       assertInstanceOf(CoastingStage.class, stages.getLast(), "terminal coast");
     }
   }

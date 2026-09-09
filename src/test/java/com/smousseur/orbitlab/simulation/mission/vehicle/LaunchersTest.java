@@ -150,10 +150,14 @@ class LaunchersTest {
    * What the wizard card shows: the thrust the vehicle actually leaves the pad with, summed over
    * every ground-lit entry (spec {@code docs/etagement/04-conception-L2.md} §3.4). Reading the
    * bottom entry alone would report 15.2 MN on a split Falcon Heavy.
+   *
+   * <p>15.2 MN of boosters plus a core held at 0.81 of its 7.6 — the installed 22.8 MN is what the
+   * vehicle has, not what it leaves the pad with (spec {@code docs/etagement/05-conception-L3.md}
+   * §3.4).
    */
   @Test
-  void liftOffThrust_sumsTheGroundLitStages() {
-    assertEquals(22_800_000, Launchers.FALCON_HEAVY.liftOffThrust(), 1e-6);
+  void liftOffThrust_sumsTheGroundLitStagesAtTheThrustTheyApply() {
+    assertEquals(15_200_000 + 0.81 * 7_600_000, Launchers.FALCON_HEAVY.liftOffThrust(), 1e-6);
     assertEquals(9_960_000, Launchers.ARIANE_62.liftOffThrust(), 1e-6);
   }
 
@@ -162,15 +166,31 @@ class LaunchersTest {
     double groundLit =
         Launchers.FALCON_HEAVY.stages().stream()
             .filter(stage -> stage.capabilities().ignition() == IgnitionMode.GROUND)
-            .mapToDouble(stage -> stage.propulsion().thrust())
+            .mapToDouble(
+                stage ->
+                    stage.capabilities().role() == StageRole.CORE
+                        ? stage.propulsion().thrust()
+                            * Launchers.FALCON_HEAVY.ascentProfile().coreThrottle()
+                        : stage.propulsion().thrust())
             .sum();
 
     assertEquals(groundLit, Launchers.FALCON_HEAVY.liftOffThrust(), 0.0);
   }
 
+  /**
+   * The Falcon Heavy's three cores being identical, thrust and propellant are in the same ratio and
+   * both blocks would flame out at the same instant; throttling the centre one is what gives it a
+   * solo phase (spec {@code docs/etagement/05-conception-L3.md} §3.1).
+   */
   @Test
-  void falconHeavy_isNotThrottled() {
-    assertFalse(Launchers.FALCON_HEAVY.ascentProfile().throttlesCore());
+  void falconHeavy_throttlesItsCoreDuringTheSharedPhase() {
+    assertTrue(Launchers.FALCON_HEAVY.ascentProfile().throttlesCore());
+    assertEquals(0.81, Launchers.FALCON_HEAVY.ascentProfile().coreThrottle(), 0.0);
+  }
+
+  @Test
+  void ariane62_doesNotThrottle() {
+    assertFalse(Launchers.ARIANE_62.ascentProfile().throttlesCore());
   }
 
   @Test
@@ -199,10 +219,14 @@ class LaunchersTest {
     List<Vehicle> vehicles = stack.vehicles();
     assertEquals(4, vehicles.size());
 
+    // Since PHY-8 / L3 the core is throttled, so the block the stack resolves is the boosters
+    // alone: their 44 t of dry mass, and 15.2 + 0.81 × 7.6 MN. The former S1's 66 t and 22.8 MN are
+    // still the sum of the two catalog entries, which
+    // falconHeavy_theBlockAggregatesToTheFormerFirstStage asserts.
     ActiveStageInfo block = stack.resolveActiveStage(stack.getMass());
-    assertEquals(66_000, block.dryMass(), 1e-6);
+    assertEquals(44_000, block.dryMass(), 1e-6);
     assertEquals(296, block.propulsion().isp(), 1e-6);
-    assertEquals(22_800_000, block.propulsion().thrust(), 1e-6);
+    assertEquals(15_200_000 + 0.81 * 7_600_000, block.propulsion().thrust(), 1e-6);
     assertEquals(
         600_000, vehicles.getFirst().propellantLoad() + vehicles.get(1).propellantLoad(), 1e-6);
 
