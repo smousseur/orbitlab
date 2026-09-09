@@ -241,7 +241,7 @@ class LauncherModelTest {
   /** Expressiveness lock for a payload-integrated apogee kick motor. */
   @Test
   void capabilityDescriptor_expressesApogeeKickMotor() {
-    StageCapabilities akm =
+    StageCapabilities kickStage =
         new StageCapabilities(
             IgnitionMode.AIRSTART,
             1,
@@ -249,7 +249,7 @@ class LauncherModelTest {
             PropellantType.STORABLE,
             Double.POSITIVE_INFINITY,
             StageRole.KICK);
-    assertTrue(akm.canCoastFor(5.25 * 3_600));
-    assertTrue(akm.variableLoad());
+    assertTrue(kickStage.canCoastFor(5.25 * 3_600));
+    assertTrue(kickStage.variableLoad());
   }
 }

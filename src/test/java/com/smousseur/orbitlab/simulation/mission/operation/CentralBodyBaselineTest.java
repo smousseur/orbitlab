@@ -1465,7 +1465,7 @@ class CentralBodyBaselineTest {
     LaunchPlane plane = LaunchPlane.ofDegrees(MEO_INCLINATION_DEG, NodeBranch.ASCENDING);
     double azimuth = plane.launchAzimuth(FastMath.toRadians(LAT));
 
-    PropellantBudget.GeoLoads loads =
+    PropellantBudget.SizedLoads loads =
         PropellantBudget.loadsForHighOrbit(
             Launchers.ARIANE_64,
             model,
@@ -1475,7 +1475,7 @@ class CentralBodyBaselineTest {
             LAT,
             0.0,
             azimuth);
-    Spacecraft payload = model.toSpacecraft(payloadDryMass, loads.akmLoad());
+    Spacecraft payload = model.toSpacecraft(payloadDryMass, loads.payloadLoad());
 
     return new MissionSpec.EarthOrbit(
         "MEO Galileo",

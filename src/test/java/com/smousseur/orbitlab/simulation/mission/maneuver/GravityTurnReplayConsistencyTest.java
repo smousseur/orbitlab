@@ -159,7 +159,7 @@ class GravityTurnReplayConsistencyTest {
   /** Real Falcon Heavy GEO mission, fully assembled from the catalogs. */
   private static GEOMission geoMission() {
     double payloadDryMass = Payloads.GEO_SAT.defaultDryMass();
-    PropellantBudget.GeoLoads geoLoads =
+    PropellantBudget.SizedLoads geoLoads =
         PropellantBudget.loadsForGeo(
             FULL_THRUST, Payloads.GEO_SAT, payloadDryMass, PARKING_ALT, LAT);
     return new GEOMission(
@@ -167,7 +167,7 @@ class GravityTurnReplayConsistencyTest {
         new LaunchConfiguration(
             FULL_THRUST,
             geoLoads.launcherLoads(),
-            Payloads.GEO_SAT.toSpacecraft(payloadDryMass, geoLoads.akmLoad())),
+            Payloads.GEO_SAT.toSpacecraft(payloadDryMass, geoLoads.payloadLoad())),
         PARKING_ALT,
         GEO_ALT,
         LAT,

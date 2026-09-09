@@ -101,8 +101,8 @@ public sealed interface MissionSpec
 
   /**
    * Returns a copy of this spec with the launcher's per-stage propellant loads replaced, keeping
-   * the launcher model and the payload (including a GEO payload's fixed AKM load) unchanged. Used
-   * by the propellant-sizing planner to rebuild the mission at each candidate load array.
+   * the launcher model and the payload (its own propellant load included) unchanged. Used by the
+   * propellant-sizing planner to rebuild the mission at each candidate load array.
    *
    * @param launcherLoads the per-stage launcher loads (kg), same order as the launcher stages
    * @return a spec identical to this one but flying the given launcher loads

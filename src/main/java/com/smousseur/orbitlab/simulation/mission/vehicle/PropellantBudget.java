@@ -12,7 +12,7 @@ import org.orekit.utils.Constants;
 /**
  * Analytic propellant sizing — "just enough" loads per mission (spec 06 §4.3). Inverse Tsiolkovsky
  * computed top-down from the payload: every stage below the launcher's top stage flies fully loaded
- * (v1 — the gravity turn consumes them entirely anyway), only the top stage and the payload's AKM
+ * (v1 — the gravity turn consumes them entirely anyway), only the top stage and the payload's own
  * are sized from the ΔV budget. A safety margin absorbs finite-burn and steering losses; loads are
  * clamped to capacity (an infeasibility diagnostic is a later increment).
  *
@@ -72,8 +72,14 @@ public final class PropellantBudget {
   /** Fixed-point iterations of the top-stage sizing (monotone contraction, converges fast). */
   private static final int SIZING_ITERATIONS = 12;
 
-  /** Launcher loads plus the payload's apogee-kick-motor load for a GEO mission. */
-  public record GeoLoads(double[] launcherLoads, double akmLoad) {}
+  /**
+   * Launcher loads plus the payload's own propellant load.
+   *
+   * <p>Named for what it holds and not for the mission that first needed it: it was {@code
+   * GeoLoads} while only a GEO delegated a burn to its payload, and it already served every MEO
+   * before PHY-8 / L6 gave it a low orbit as well.
+   */
+  public record SizedLoads(double[] launcherLoads, double payloadLoad) {}
 
   /**
    * Launcher loads plus the mass the translunar injection ignites at, for a lunar mission.
@@ -93,9 +99,9 @@ public final class PropellantBudget {
    * docs/lunar-orbit/05-conception-L3.md} §4).
    *
    * <p><b>Three components and not two.</b> The découpage asked for {@code (launcherLoads,
-   * insertionLoad)}, on {@link GeoLoads}'s model — but a GEO mission has no window to confirm,
+   * insertionLoad)}, on {@link SizedLoads}'s model — but a GEO mission has no window to confirm,
    * where {@code LunarLaunchWindowPlanner} needs the mass at injection to build its problem. This
-   * record is therefore {@link LunarLoads} plus the insertion load, not {@link GeoLoads} plus a
+   * record is therefore {@link LunarLoads} plus the insertion load, not {@link SizedLoads} plus a
    * mass.
    *
    * @param launcherLoads the propellant load per stage, same order as the launcher stages
@@ -141,18 +147,77 @@ public final class PropellantBudget {
   }
 
   /**
-   * Launcher loads and AKM load for a GEO mission (parking → GTO → GEO). The split GEO profile
+   * Launcher loads <b>and the payload's own load</b> for a direct Earth-orbit ascent — the mirror
+   * of {@link #loadsForHighOrbit}, with the payload's declared ΔV budget where that one uses the
+   * apogee burn it computes (spec {@code docs/etagement/01-decoupage.md} §3.7).
+   *
+   * <p><b>Why an overload and not a change of signature.</b> The {@link #loadsForLeo(LauncherModel,
+   * Spacecraft, double, double, double) Spacecraft-taking} form answers a different, legitimate
+   * question — <em>size the launcher for this payload as it stands</em> — and is what eighteen
+   * fixtures ask. This one answers <em>size both</em>, which needs the catalog model: a {@code
+   * Spacecraft} carries a tank but not the budget that decides how much goes in it.
+   *
+   * <p><b>The propellant is dead mass today</b> and that is not an oversight. A direct chain never
+   * drops its upper stage, so the trim is still the launcher's burn; what this load does is ride to
+   * orbit, and it is the one place PHY-8 / L6 moves a trajectory — measured at +1.36 % of upper
+   * stage load on a Falcon Heavy carrying 10 t, +1.02 % on an Ariane 64 carrying 20 t. PHY-6 is
+   * where the payload starts spending it.
+   *
+   * @param launcher the launcher model
+   * @param payload the payload model (provides the tank and the ΔV budget)
+   * @param payloadDryMass the dry mass entered at mission creation (kg)
+   * @param targetAltitude the target orbit altitude (m); use the apogee for elliptic targets
+   * @param launchLatitudeDeg the launch site latitude (degrees)
+   * @param launchAzimuth the launch azimuth (radians, clockwise from north)
+   * @return the launcher loads and the payload load
+   */
+  public static SizedLoads loadsForLeo(
+      LauncherModel launcher,
+      PayloadModel payload,
+      double payloadDryMass,
+      double targetAltitude,
+      double launchLatitudeDeg,
+      double launchAzimuth) {
+    double payloadLoad = payloadLoadFor(payload, payloadDryMass, payload.deltaVBudget());
+    double dvTotal = ascentDeltaV(targetAltitude, launchLatitudeDeg, launchAzimuth);
+    return new SizedLoads(
+        sizeTopStage(launcher, payloadDryMass + payloadLoad, dvTotal), payloadLoad);
+  }
+
+  /**
+   * Inverse Tsiolkovsky on the payload's own tank: what a burn of {@code deltaV} costs it, with the
+   * standard margin, capped by what the tank holds.
+   *
+   * <p>The cap is not a detail — it is what tells {@code MissionComposer} that a payload cannot fly
+   * the burn it is being asked for, so the two sizings and the composition agree on one arithmetic.
+   *
+   * @param payload the payload model
+   * @param dryMass the dry mass the burn moves (kg)
+   * @param deltaV the ΔV the load must deliver (m/s)
+   * @return the propellant load in kg; 0 for an inert payload or a zero ΔV
+   */
+  private static double payloadLoadFor(PayloadModel payload, double dryMass, double deltaV) {
+    if (!payload.hasPropulsion() || !(deltaV > 0)) {
+      return 0.0;
+    }
+    double exhaustVelocity = payload.propulsion().isp() * G0;
+    double raw = dryMass * (FastMath.exp(deltaV / exhaustVelocity) - 1.0) * (1.0 + SAFETY_MARGIN);
+    return FastMath.min(raw, payload.propellantCapacity());
+  }
+
+  /**
+   * Launcher loads and payload load for a GEO mission (parking → GTO → GEO). The split GEO profile
    * (spec 06 I5) assigns the ascent residual and the GTO injection to the launcher's top stage, and
    * the apogee circularization + plane change to the payload's kick motor.
    *
    * @param launcher the launcher model
-   * @param payload the payload model (provides the AKM characteristics)
+   * @param payload the payload model (provides the tank and the propulsion)
    * @param payloadDryMass the dry mass entered at mission creation (kg)
    * @param parkingAltitude the parking orbit altitude (m)
    * @param launchLatitudeDeg the launch site latitude (degrees); also the plane change to cancel
-   * @return the launcher loads and the AKM load
+   * @return the launcher loads and the payload load
    */
-  public static GeoLoads loadsForGeo(
+  public static SizedLoads loadsForGeo(
       LauncherModel launcher,
       PayloadModel payload,
       double payloadDryMass,
@@ -256,17 +321,17 @@ public final class PropellantBudget {
       double lunarOrbitAltitude,
       double launchLatitudeDeg,
       double launchAzimuth) {
-    if (!payload.hasAkm()) {
+    if (!payload.hasPropulsion()) {
       throw new IllegalArgumentException(
           "a lunar orbit insertion needs a propelled payload: " + payload.id());
     }
     double dvInsertion = lunarInsertionDeltaV(parkingAltitude, lunarOrbitAltitude);
-    double exhaustVelocity = payload.akmPropulsion().isp() * G0;
+    double exhaustVelocity = payload.propulsion().isp() * G0;
     double insertionLoad =
         payloadDryMass
             * (FastMath.exp(dvInsertion / exhaustVelocity) - 1.0)
             * (1.0 + SAFETY_MARGIN);
-    if (insertionLoad > payload.akmPropellantCapacity()) {
+    if (insertionLoad > payload.propellantCapacity()) {
       throw new IllegalArgumentException(
           String.format(
               Locale.ROOT,
@@ -276,7 +341,7 @@ public final class PropellantBudget {
               insertionLoad,
               dvInsertion,
               payloadDryMass,
-              payload.akmPropellantCapacity()));
+              payload.propellantCapacity()));
     }
 
     LunarLoads lunar =
@@ -290,7 +355,7 @@ public final class PropellantBudget {
   }
 
   /**
-   * Launcher loads and AKM load for any high circular orbit reached through a parking orbit —
+   * Launcher loads and payload load for any high circular orbit reached through a parking orbit —
    * geostationary, medium Earth, or anything else the direct chain cannot reach (spec {@code
    * docs/earth-orbit/01-mission-terre-parametrable.md} §6).
    *
@@ -301,16 +366,16 @@ public final class PropellantBudget {
    * plane change it has already flown would size its kick motor for a burn it never makes.
    *
    * @param launcher the launcher model
-   * @param payload the payload model (provides the AKM characteristics)
+   * @param payload the payload model (provides the tank and the propulsion)
    * @param payloadDryMass the dry mass entered at mission creation (kg)
    * @param parkingAltitude the parking orbit altitude (m)
    * @param targetAltitude the final circular orbit altitude (m)
    * @param launchLatitudeDeg the launch site latitude (degrees)
    * @param planeChangeDeg the plane change performed at apogee (degrees)
    * @param launchAzimuth the launch azimuth (radians, clockwise from north)
-   * @return the launcher loads and the AKM load
+   * @return the launcher loads and the payload load
    */
-  public static GeoLoads loadsForHighOrbit(
+  public static SizedLoads loadsForHighOrbit(
       LauncherModel launcher,
       PayloadModel payload,
       double payloadDryMass,
@@ -321,19 +386,13 @@ public final class PropellantBudget {
       double launchAzimuth) {
     double dvApogee = apogeeCircularizationDeltaV(parkingAltitude, targetAltitude, planeChangeDeg);
 
-    double akmLoad = 0.0;
-    if (payload.akmPropellantCapacity() > 0) {
-      double exhaustVelocity = payload.akmPropulsion().isp() * G0;
-      double raw =
-          payloadDryMass * (FastMath.exp(dvApogee / exhaustVelocity) - 1.0) * (1.0 + SAFETY_MARGIN);
-      akmLoad = FastMath.min(raw, payload.akmPropellantCapacity());
-    }
+    double payloadLoad = payloadLoadFor(payload, payloadDryMass, dvApogee);
 
     double dvTotal =
         ascentDeltaV(parkingAltitude, launchLatitudeDeg, launchAzimuth)
             + transferInjectionDeltaV(parkingAltitude, targetAltitude);
-    double[] launcherLoads = sizeTopStage(launcher, payloadDryMass + akmLoad, dvTotal);
-    return new GeoLoads(launcherLoads, akmLoad);
+    double[] launcherLoads = sizeTopStage(launcher, payloadDryMass + payloadLoad, dvTotal);
+    return new SizedLoads(launcherLoads, payloadLoad);
   }
 
   /**
@@ -521,6 +580,42 @@ public final class PropellantBudget {
     double vHyperbolic = FastMath.sqrt(excess * excess + 2.0 * MU_MOON / r);
     double vCircular = FastMath.sqrt(MU_MOON / r);
     return vHyperbolic - vCircular;
+  }
+
+  /**
+   * The ΔV a loaded payload can actually deliver (m/s), by Tsiolkovsky on its own tank.
+   *
+   * <p>Public because {@code MissionComposer} decides on it: whether a payload can take the apogee
+   * burn over is a question about <em>how much</em> ΔV it carries, not about whether it carries a
+   * tank at all. That distinction did not matter while GEO_SAT was the only propelled payload; it
+   * started mattering the day PHY-8 / L6 gave the observation satellite a station-keeping thruster,
+   * which would otherwise have been accepted for a 1 700 m/s circularization (spec {@code
+   * docs/etagement/01-decoupage.md} §3.7).
+   *
+   * @param payload the payload as flown, propellant included
+   * @return the ΔV it can deliver in m/s; 0 when it is inert or its tank is empty
+   */
+  public static double payloadDeltaV(Spacecraft payload) {
+    if (payload.propulsion() == null || !(payload.propellantLoad() > 0)) {
+      return 0.0;
+    }
+    double wet = payload.dryMass() + payload.propellantLoad();
+    return payload.propulsion().isp() * G0 * FastMath.log(wet / payload.dryMass());
+  }
+
+  /**
+   * The ΔV the apogee burn of a parking-chain mission needs (m/s) — the same figure {@link
+   * #loadsForHighOrbit} sizes the payload's tank from, exposed so the composer can refuse a mission
+   * on it.
+   *
+   * @param parkingAltitude the parking orbit altitude (m)
+   * @param targetAltitude the final circular orbit altitude (m)
+   * @param planeChangeDeg the plane rotation performed by the same burn (degrees)
+   * @return the apogee burn ΔV in m/s
+   */
+  public static double apogeeBurnDeltaV(
+      double parkingAltitude, double targetAltitude, double planeChangeDeg) {
+    return apogeeCircularizationDeltaV(parkingAltitude, targetAltitude, planeChangeDeg);
   }
 
   /**

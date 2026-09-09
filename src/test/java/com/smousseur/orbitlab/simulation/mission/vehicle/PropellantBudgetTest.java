@@ -2,6 +2,7 @@ package com.smousseur.orbitlab.simulation.mission.vehicle;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import com.smousseur.orbitlab.simulation.Physics;
 import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Launchers;
 import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Payloads;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.AscentProfile;
@@ -61,13 +62,78 @@ class PropellantBudgetTest {
         () -> "LEO 400 km must size S2 under half capacity, got " + loads[2]);
   }
 
+  /**
+   * The overload PHY-8 / L6 added: it sizes the payload's own tank from its declared ΔV budget,
+   * where the {@code Spacecraft}-taking one above sizes the launcher for a payload already built.
+   *
+   * <p>Both are kept because they answer different questions, and the older one is what eighteen
+   * fixtures ask — including the L0 baselines, which is why none of them moved.
+   */
+  @Test
+  void loadsForLeo_fromTheCatalogModel_alsoSizesThePayloadsOwnTank() {
+    PropellantBudget.SizedLoads sized =
+        PropellantBudget.loadsForLeo(
+            Launchers.FALCON_HEAVY,
+            Payloads.EARTH_OBSERVATION_SAT,
+            10_000,
+            400_000,
+            45.96,
+            Physics.getLaunchAzimuth());
+
+    // 10 000 x (exp(15 / (220 x 9.80665)) - 1) x 1.10, the same arithmetic loadsForHighOrbit runs
+    // on an apogee burn.
+    assertEquals(76.745, sized.payloadLoad(), 1e-3);
+
+    double[] forAnEmptyPayload =
+        PropellantBudget.loadsForLeo(
+            Launchers.FALCON_HEAVY,
+            Payloads.EARTH_OBSERVATION_SAT.toSpacecraft(10_000, 0.0),
+            400_000,
+            45.96);
+    double top = sized.launcherLoads()[2];
+    assertTrue(
+        top > forAnEmptyPayload[2],
+        "propellant on the payload is mass the launcher lifts, so the top stage grows");
+
+    // The one trajectory movement PHY-8 / L6 makes, and it is not a single number: the growth runs
+    // with the ascent ΔV, hence with the site. Measured 1.244 % here at 45.96° and 1.357 % at
+    // 28.5°, so the bracket is what is pinned rather than either end.
+    double growthPercent = 100 * (top / forAnEmptyPayload[2] - 1);
+    assertTrue(
+        growthPercent > 1.2 && growthPercent < 1.4,
+        () -> "top stage grew by " + growthPercent + " %");
+  }
+
+  /** An inert payload gets nothing, and the launcher sizing is the one it always was. */
+  @Test
+  void loadsForLeo_fromTheCatalogModel_leavesAnInertPayloadAlone() {
+    PropellantBudget.SizedLoads sized =
+        PropellantBudget.loadsForLeo(
+            Launchers.FALCON_HEAVY,
+            Payloads.CARGO_MODULE,
+            15_000,
+            400_000,
+            45.96,
+            Physics.getLaunchAzimuth());
+
+    assertEquals(0.0, sized.payloadLoad());
+    assertArrayEquals(
+        PropellantBudget.loadsForLeo(
+            Launchers.FALCON_HEAVY,
+            Payloads.CARGO_MODULE.toSpacecraft(15_000, 0.0),
+            400_000,
+            45.96),
+        sized.launcherLoads(),
+        0.0);
+  }
+
   @Test
   void loadsForGeo_sizedAkm_andMuchMoreS2ThanLeo() {
     Spacecraft leoPayload = Payloads.EARTH_OBSERVATION_SAT.toSpacecraft(10_000, 0.0);
     double[] leoLoads =
         PropellantBudget.loadsForLeo(Launchers.FALCON_HEAVY, leoPayload, 400_000, 5.23);
 
-    PropellantBudget.GeoLoads geoLoads =
+    PropellantBudget.SizedLoads geoLoads =
         PropellantBudget.loadsForGeo(
             Launchers.FALCON_HEAVY, Payloads.GEO_SAT, 2_000, 400_000, 5.23);
 
@@ -77,10 +143,10 @@ class PropellantBudgetTest {
         1e-6,
         "the whole block flies full in v1");
     assertTrue(
-        geoLoads.akmLoad() > 1_000 && geoLoads.akmLoad() <= 2_000,
+        geoLoads.payloadLoad() > 1_000 && geoLoads.payloadLoad() <= 2_000,
         () ->
             "AKM sized for ~1 500 m/s apogee dV expected in (1000, 2000] kg, got "
-                + geoLoads.akmLoad());
+                + geoLoads.payloadLoad());
     assertTrue(
         geoLoads.launcherLoads()[2] > 3 * leoLoads[2],
         () ->
@@ -91,10 +157,10 @@ class PropellantBudgetTest {
 
   @Test
   void loadsForGeo_inertPayload_zeroAkm() {
-    PropellantBudget.GeoLoads geoLoads =
+    PropellantBudget.SizedLoads geoLoads =
         PropellantBudget.loadsForGeo(
             Launchers.FALCON_HEAVY, Payloads.CARGO_MODULE, 15_000, 400_000, 5.23);
-    assertEquals(0.0, geoLoads.akmLoad(), 1e-9);
+    assertEquals(0.0, geoLoads.payloadLoad(), 1e-9);
   }
 
   @Test
@@ -285,7 +351,7 @@ class PropellantBudgetTest {
 
     assertTrue(
         loads.insertionLoad() > 600.0
-            && loads.insertionLoad() <= Payloads.LUNAR_ORBITER.akmPropellantCapacity(),
+            && loads.insertionLoad() <= Payloads.LUNAR_ORBITER.propellantCapacity(),
         () -> "expected ~658 kg inside the 800 kg tank, got " + loads.insertionLoad());
 
     double topDry = launcher.stages().getLast().dryMass();

@@ -34,18 +34,20 @@ class PayloadsTest {
   }
 
   @Test
-  void hasAkm_tracksPropulsion() {
-    assertFalse(Payloads.CARGO_MODULE.hasAkm());
-    assertFalse(Payloads.EARTH_OBSERVATION_SAT.hasAkm());
-    assertFalse(Payloads.LUNAR_PROBE.hasAkm());
-    assertTrue(Payloads.GEO_SAT.hasAkm());
+  void hasPropulsion_tracksTheDeclaredEngine() {
+    assertFalse(Payloads.CARGO_MODULE.hasPropulsion());
+    assertFalse(Payloads.LUNAR_PROBE.hasPropulsion());
+    assertTrue(Payloads.GEO_SAT.hasPropulsion());
+    assertTrue(
+        Payloads.EARTH_OBSERVATION_SAT.hasPropulsion(),
+        "the observation satellite keeps its own orbit since PHY-8 / L6");
   }
 
   @Test
   void forMissionType_geo_keepsOnlyPropelledPayloads() {
     List<PayloadModel> eligible = Payloads.forMissionType(MissionType.GEO);
     assertFalse(eligible.isEmpty(), "GEO must keep at least one flyable payload");
-    assertTrue(eligible.stream().allMatch(PayloadModel::hasAkm));
+    assertTrue(eligible.stream().allMatch(PayloadModel::hasPropulsion));
     assertFalse(eligible.contains(Payloads.CARGO_MODULE));
     assertTrue(eligible.contains(Payloads.GEO_SAT));
   }
@@ -55,24 +57,44 @@ class PayloadsTest {
    * probe entered it: eligibility has two axes, and this is the second one.
    */
   @Test
-  void forMissionType_leo_keepsEveryEarthAndUniversalPayload() {
+  void forMissionType_leo_keepsEveryEarthPayloadAndNoCargo() {
     List<PayloadModel> eligible = Payloads.forMissionType(MissionType.LEO);
-    assertTrue(eligible.contains(Payloads.CARGO_MODULE));
     assertTrue(eligible.contains(Payloads.EARTH_OBSERVATION_SAT));
     assertTrue(eligible.contains(Payloads.GEO_SAT));
     assertFalse(eligible.contains(Payloads.LUNAR_PROBE), "a lunar probe is not a LEO payload");
+    assertFalse(
+        eligible.contains(Payloads.CARGO_MODULE),
+        "putting a cargo module in orbit for its own sake is not a mission (PHY-8 / L6)");
+  }
+
+  /**
+   * The third axis, PHY-8 / L6 §3.5: <b>what</b> a payload is for. The cargo module leaves every
+   * list at once, and it is the only entry that does — which is also what makes the payload → mesh
+   * table total on everything the wizard can offer, and spares PHY-6 a fallback.
+   */
+  @Test
+  void theCargoModuleIsOfferedByNoMissionTypeAtAll() {
+    for (MissionType type : MissionType.values()) {
+      assertFalse(
+          Payloads.forMissionType(type).contains(Payloads.CARGO_MODULE),
+          () -> "cargo module offered for " + type);
+    }
+    assertTrue(Payloads.CARGO_MODULE.requiresRendezvous());
+    assertTrue(
+        Payloads.all().stream().filter(PayloadModel::requiresRendezvous).count() == 1,
+        "it is the only entry filtered on purpose");
   }
 
   /**
    * MIS-5 / L3 §2.2 — the orbiter joins this list, and that is the property rather than a leak. A
    * flyby requires no propulsion, so it excludes none: the orbiter flies it with an empty tank,
-   * exactly as {@code MissionType.LEO}'s javadoc says an AKM-equipped payload does. Keeping it out
-   * would have taken a third axis of eligibility, to forbid something physically licit.
+   * exactly as {@code MissionType.LEO}'s javadoc says a propelled payload does. Keeping it out
+   * would have taken an axis of eligibility that forbids something physically licit.
    */
   @Test
   void forMissionType_lunarFlyby_keepsEveryLunarAndUniversalPayload() {
     assertEquals(
-        List.of(Payloads.CARGO_MODULE, Payloads.LUNAR_PROBE, Payloads.LUNAR_ORBITER),
+        List.of(Payloads.LUNAR_PROBE, Payloads.LUNAR_ORBITER),
         Payloads.forMissionType(MissionType.LUNAR_FLYBY));
   }
 
@@ -87,14 +109,15 @@ class PayloadsTest {
 
     assertEquals(List.of(Payloads.LUNAR_ORBITER), eligible);
 
-    // Universal but inert.
+    // Universal, inert, and now filtered on purpose besides.
     assertEquals(PayloadDomain.ANY, Payloads.CARGO_MODULE.domain());
-    assertFalse(Payloads.CARGO_MODULE.hasAkm());
+    assertFalse(Payloads.CARGO_MODULE.hasPropulsion());
+    assertTrue(Payloads.CARGO_MODULE.requiresRendezvous());
     // Lunar but inert.
     assertEquals(PayloadDomain.LUNAR, Payloads.LUNAR_PROBE.domain());
-    assertFalse(Payloads.LUNAR_PROBE.hasAkm());
+    assertFalse(Payloads.LUNAR_PROBE.hasPropulsion());
     // Propelled but terrestrial.
-    assertTrue(Payloads.GEO_SAT.hasAkm());
+    assertTrue(Payloads.GEO_SAT.hasPropulsion());
     assertEquals(PayloadDomain.EARTH, Payloads.GEO_SAT.domain());
   }
 
@@ -104,11 +127,11 @@ class PayloadsTest {
    */
   @Test
   void lunarOrbiter_isPropelledAndPlacedByItsDomain() {
-    assertTrue(Payloads.LUNAR_ORBITER.hasAkm());
+    assertTrue(Payloads.LUNAR_ORBITER.hasPropulsion());
     assertEquals(PayloadDomain.LUNAR, Payloads.LUNAR_ORBITER.domain());
-    assertEquals(800.0, Payloads.LUNAR_ORBITER.akmPropellantCapacity(), 1e-6);
-    assertEquals(5_500.0, Payloads.LUNAR_ORBITER.akmPropulsion().thrust(), 1e-6);
-    assertEquals(320.0, Payloads.LUNAR_ORBITER.akmPropulsion().isp(), 1e-6);
+    assertEquals(800.0, Payloads.LUNAR_ORBITER.propellantCapacity(), 1e-6);
+    assertEquals(5_500.0, Payloads.LUNAR_ORBITER.propulsion().thrust(), 1e-6);
+    assertEquals(320.0, Payloads.LUNAR_ORBITER.propulsion().isp(), 1e-6);
   }
 
   @Test
@@ -119,7 +142,7 @@ class PayloadsTest {
   /** The probe is inert, so only the domain can keep it out of an Earth mission's list. */
   @Test
   void lunarProbe_isInertAndPlacedByItsDomain() {
-    assertFalse(Payloads.LUNAR_PROBE.hasAkm());
+    assertFalse(Payloads.LUNAR_PROBE.hasPropulsion());
     assertEquals(PayloadDomain.LUNAR, Payloads.LUNAR_PROBE.domain());
     assertEquals(PayloadDomain.ANY, Payloads.CARGO_MODULE.domain());
     assertEquals(PayloadDomain.EARTH, Payloads.EARTH_OBSERVATION_SAT.domain());
@@ -142,7 +165,7 @@ class PayloadsTest {
   }
 
   @Test
-  void akmLoadAboveCapacity_rejected() {
+  void propellantLoadAboveCapacity_rejected() {
     assertThrows(IllegalArgumentException.class, () -> Payloads.GEO_SAT.toSpacecraft(2_000, 2_001));
   }
 
@@ -196,11 +219,56 @@ class PayloadsTest {
     assertThrows(
         IllegalArgumentException.class,
         () ->
-            new PayloadModel("BAD", "Negative bus", 1_000, 0, null, null, PayloadDomain.ANY, -1.0));
+            new PayloadModel(
+                "BAD", "Negative bus", 1_000, 0, null, null, PayloadDomain.ANY, -1.0, 0, false));
+  }
+
+  /**
+   * The two controls PHY-8 / L6 §3.4 argues the observation satellite's numbers from, so that
+   * changing one of them without the other goes red.
+   *
+   * <p>The budget is anchored on the worst LEO trim {@code 02-baseline-L0.md} §5 measured — 6.1
+   * m/s, stable to 0.4 m/s across two launchers and three payload masses — and the thrust on the
+   * rule {@link Payloads#LUNAR_ORBITER} states: a burn past 5 % of a revolution is not
+   * near-impulsive, and the analytic stages that will fly it after PHY-6 assume it is.
+   */
+  @Test
+  void theObservationSatellitesBudgetCoversTheMeasuredTrimWithANearImpulsiveBurn() {
+    PayloadModel sat = Payloads.EARTH_OBSERVATION_SAT;
+    double measuredWorstTrim = 6.1;
+
+    assertTrue(
+        sat.deltaVBudget() >= 2 * measuredWorstTrim,
+        () -> "budget " + sat.deltaVBudget() + " m/s does not cover the measured trim twice over");
+
+    double burnSeconds = sat.defaultDryMass() * measuredWorstTrim / sat.propulsion().thrust();
+    double leo400Period = 5_553.6;
+    assertTrue(
+        burnSeconds < 0.05 * leo400Period,
+        () -> "the trim would take " + burnSeconds + " s, over 5 % of a revolution");
+  }
+
+  /** A budget nothing can burn is a number that lies; the record refuses it. */
+  @Test
+  void deltaVBudgetWithoutPropulsion_rejected() {
+    assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            new PayloadModel(
+                "BAD",
+                "Budget without engine",
+                1_000,
+                0,
+                null,
+                null,
+                PayloadDomain.ANY,
+                0,
+                15,
+                false));
   }
 
   @Test
-  void akmCapacityPropulsionCoherence_rejected() {
+  void capacityPropulsionCoherence_rejected() {
     assertThrows(
         IllegalArgumentException.class,
         () -> new PayloadModel("BAD", "Capacity without propulsion", 1_000, 500, null));

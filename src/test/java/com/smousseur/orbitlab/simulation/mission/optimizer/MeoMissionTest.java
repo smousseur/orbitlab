@@ -149,7 +149,7 @@ class MeoMissionTest extends AbstractTrajectoryOptimizerTest {
 
     // The plane change charged at apogee is zero: the ascent already flew into the target plane
     // (MIS-7 §4), so only the residual is left, and the plane trim takes that.
-    PropellantBudget.GeoLoads loads =
+    PropellantBudget.SizedLoads loads =
         PropellantBudget.loadsForHighOrbit(
             Launchers.ARIANE_64,
             model,
@@ -159,7 +159,7 @@ class MeoMissionTest extends AbstractTrajectoryOptimizerTest {
             LAT_DEG,
             0.0,
             azimuth);
-    Spacecraft payload = model.toSpacecraft(payloadDryMass, loads.akmLoad());
+    Spacecraft payload = model.toSpacecraft(payloadDryMass, loads.payloadLoad());
 
     return new MissionSpec.EarthOrbit(
         "MEO Galileo",

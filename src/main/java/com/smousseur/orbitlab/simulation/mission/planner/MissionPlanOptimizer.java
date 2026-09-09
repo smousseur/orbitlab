@@ -148,7 +148,7 @@ public class MissionPlanOptimizer {
     double[] heuristicLoads = spec.configuration().propellantLoads();
     boolean[] lambdaScaled = PropellantLoadOptimizer.lambdaScaledMask(launcher);
     // Each evaluation rebuilds the mission (same composition as the entry's mode) at the candidate
-    // launcher loads; the payload — and a GEO payload's fixed AKM — travels unchanged.
+    // launcher loads; the payload — its own propellant load included — travels unchanged.
     Function<double[], Mission> missionBuilder =
         loads -> MissionComposer.compose(spec.withLauncherLoads(loads), mode);
 

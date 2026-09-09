@@ -115,7 +115,15 @@ class MissionFactoryTest {
     assertEquals(S1_CAPACITY, blockLoad(vehicles), 1e-6, "the whole block flies full in v1");
     double s2Load = vehicles.get(2).propellantLoad();
     assertTrue(s2Load > 0 && s2Load < 0.5 * S2_CAPACITY, () -> "sized S2 load, got " + s2Load);
-    assertEquals(10_000, vehicles.get(3).getMass(), 1e-6, "payload mass as entered, AKM empty");
+
+    // The payload leaves the pad with propellant in it since PHY-8 / L6: 10 t of satellite plus the
+    // 76.7 kg its 15 m/s budget costs at Isp 220 with the standard 10 % margin (spec
+    // docs/etagement/01-decoupage.md section 3.7). Nothing burns it before PHY-6 -- a direct chain
+    // keeps its upper stage, which is what flies the trim -- so what it does today is ride up.
+    Vehicle payload = vehicles.get(3);
+    assertEquals(10_000, payload.dryMass(), 1e-6, "dry mass as entered");
+    assertEquals(76.745, payload.propellantLoad(), 1e-3, "its own ΔV budget, sized");
+    assertEquals(10_076.745, payload.getMass(), 1e-3, "and the launcher lifts both");
   }
 
   @Test
@@ -129,11 +137,11 @@ class MissionFactoryTest {
     Mission leoMission = MissionFactory.fromWizardValues(baseValues(), MissionType.LEO);
 
     List<Vehicle> geoVehicles = stackOf(geoMission);
-    Vehicle akmPayload = geoVehicles.get(3);
-    assertEquals(2_000, akmPayload.dryMass(), 1e-6);
+    Vehicle propelledPayload = geoVehicles.get(3);
+    assertEquals(2_000, propelledPayload.dryMass(), 1e-6);
     assertTrue(
-        akmPayload.propellantLoad() > 1_000 && akmPayload.propellantLoad() <= 2_000,
-        () -> "sized AKM load expected, got " + akmPayload.propellantLoad());
+        propelledPayload.propellantLoad() > 1_000 && propelledPayload.propellantLoad() <= 2_000,
+        () -> "sized AKM load expected, got " + propelledPayload.propellantLoad());
 
     double geoS2 = geoVehicles.get(2).propellantLoad();
     double leoS2 = stackOf(leoMission).get(2).propellantLoad();
@@ -161,7 +169,7 @@ class MissionFactoryTest {
     Map<String, Object> values = baseValues();
     values.put("PAYLOAD_MASS", 0.0);
     Mission mission = MissionFactory.fromWizardValues(values, MissionType.LEO);
-    assertEquals(10_000, stackOf(mission).get(3).getMass(), 1e-6);
+    assertEquals(10_000, stackOf(mission).get(3).dryMass(), 1e-6);
   }
 
   @Test

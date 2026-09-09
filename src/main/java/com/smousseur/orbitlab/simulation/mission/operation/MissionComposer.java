@@ -4,6 +4,7 @@ import com.smousseur.orbitlab.core.OrbitlabException;
 import com.smousseur.orbitlab.simulation.Physics;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.OptimizationType;
+import com.smousseur.orbitlab.simulation.mission.vehicle.PropellantBudget;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.stage.StageModel;
 import java.util.Locale;
 import java.util.Objects;
@@ -120,7 +121,7 @@ public final class MissionComposer {
    *   <tr><th>Condition</th><th>Chain</th></tr>
    *   <tr><td>Target apogee within the ascent's reach</td>
    *       <td>ascent + direct transfer (the historical chain)</td></tr>
-   *   <tr><td>Otherwise, with an AKM or a long-coast upper stage</td>
+   *   <tr><td>Otherwise, with a long-coast upper stage or a payload carrying the apogee ΔV</td>
    *       <td>parking + injection + circularization (the GEO chain)</td></tr>
    *   <tr><td>Otherwise</td>
    *       <td>explicit refusal, naming the stage and the duration it is short of</td></tr>
@@ -207,21 +208,30 @@ public final class MissionComposer {
 
     StageModel upperStage = spec.configuration().launcher().stages().getLast();
     boolean stageHoldsTheCoast = upperStage.capabilities().canCoastFor(transferCoast);
-    boolean payloadCanTakeOver = spec.configuration().payload().hasApogeeKickMotor();
 
-    if (!stageHoldsTheCoast && !payloadCanTakeOver) {
+    // Asked as a quantity and not as a presence (spec docs/etagement/01-decoupage.md §3.7). While
+    // GEO_SAT was the only propelled payload, "does it carry a tank" and "can it fly the apogee
+    // burn" were the same question; a station-keeping thruster answers yes to the first and no to
+    // the second, and would otherwise have been signed up for a 1 700 m/s circularization.
+    double burnDeltaV =
+        PropellantBudget.apogeeBurnDeltaV(parkingAltitude, spec.apogeeAltitude(), 0.0);
+    double payloadDeltaV = PropellantBudget.payloadDeltaV(spec.configuration().payload());
+
+    if (!stageHoldsTheCoast && payloadDeltaV < burnDeltaV) {
       throw new OrbitlabException(
           String.format(
               Locale.ROOT,
               "Target apogee %.0f km is out of the ascent's reach, so it needs a parking orbit and"
                   + " a %.2f h coast to apogee — but '%s' (%s) declares a maximum coast of %.2f h"
-                  + " and the payload has no apogee kick motor to take the burn over. Fly a"
+                  + " and the payload carries %.0f m/s where the apogee burn needs %.0f. Fly a"
                   + " launcher whose upper stage holds the coast, or a payload with a kick motor.",
               spec.apogeeAltitude() / 1000.0,
               transferCoast / 3600.0,
               upperStage.name(),
               spec.configuration().launcher().displayName(),
-              upperStage.capabilities().maxCoastDuration() / 3600.0));
+              upperStage.capabilities().maxCoastDuration() / 3600.0,
+              payloadDeltaV,
+              burnDeltaV));
     }
 
     // The GEO chain, parameterised. GEOMission is named for the orbit it was written for, not for

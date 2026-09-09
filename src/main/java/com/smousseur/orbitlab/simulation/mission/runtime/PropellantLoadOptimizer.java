@@ -15,10 +15,10 @@ import org.apache.logging.log4j.Logger;
  *
  * <p>The search is a scalar bisection on a single scale factor {@code λ} applied to the heuristic
  * loads: {@code load_i(λ) = λ · load_i^heuristic} for the liquid (variable-load) launcher stages,
- * SOLID stages and the payload AKM being left off the scaling (they keep their design/analytic
- * sizing — spec 09 §1). Feasibility (objective met <em>and</em> a per-stage residual floor) is
- * monotone in λ, so a bisection between an infeasible lower bound and a feasible upper bound
- * converges on the minimal feasible {@code λ*}.
+ * SOLID stages and the payload's own load being left off the scaling (they keep their
+ * design/analytic sizing — spec 09 §1). Feasibility (objective met <em>and</em> a per-stage
+ * residual floor) is monotone in λ, so a bisection between an infeasible lower bound and a feasible
+ * upper bound converges on the minimal feasible {@code λ*}.
  *
  * <p>This class owns only the <em>bisection</em> and the pure {@code λ → loads} mapping. Rebuilding
  * a mission with {@code loads(λ)}, running {@link MissionOptimizer#optimize()} and evaluating the
@@ -316,7 +316,7 @@ public final class PropellantLoadOptimizer {
   /**
    * Scaling mask putting <b>every variable-load stage</b> under its own {@code λ} — the mask the
    * multi-stage coordinate sweep consumes. SOLID stages keep their design load (no sizing degree of
-   * freedom) and the payload AKM never appears in the launcher loads.
+   * freedom) and the payload's own load never appears in the launcher loads.
    *
    * <p><b>Opt-in, per profile</b> — {@link #lambdaScaledMask} (top stage only) stays the default.
    * Measured on Falcon Heavy: this mask reclaims 67 t on GEO ({@code λ₀ = 0.9453}) and
@@ -339,10 +339,10 @@ public final class PropellantLoadOptimizer {
   /**
    * Builds the scaling mask for a launcher: only the <b>sized top stage</b> — the last stage, and
    * only when it is variable-load (liquid) — is scaled by {@code λ}. The lower stages and any SOLID
-   * stage stay off the scaling, and the payload AKM is sized separately and never appears in the
-   * launcher loads.
+   * stage stay off the scaling, and the payload's own load is sized separately and never appears in
+   * the launcher loads.
    *
-   * <p><b>Deviation from spec 09 §1</b> (which puts every non-SOLID, non-AKM stage under {@code
+   * <p><b>Deviation from spec 09 §1</b> (which puts every non-SOLID launcher stage under {@code
    * λ}), kept on the strength of a measurement, not of an assumption. Re-run on Falcon Heavy LEO
    * with every variable-load stage under its own {@code λ}, the first stage settles at {@code λ₀ =
    * 1} exactly: nothing to reclaim. The mechanism is a load transfer, not a broken ascent — taking

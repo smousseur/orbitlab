@@ -33,19 +33,49 @@ public final class Payloads {
           null,
           new AerodynamicProperties(15.9, 2.2),
           PayloadDomain.ANY,
-          4.5);
+          4.5,
+          0,
+          true);
 
+  /**
+   * The satellite that keeps its own orbit, and the four numbers that say so (spec {@code
+   * docs/etagement/01-decoupage.md} §3.7).
+   *
+   * <ul>
+   *   <li><b>15 m/s</b> is two and a half times the worst LEO trim PHY-8 / L0 measured — 6.1 m/s,
+   *       stable to 0.4 m/s across two launchers and three payload masses. A ΔV does not depend on
+   *       the mass carrying it, so that figure survives the day PHY-6 hands the trim to the
+   *       satellite alone. PHY-2 is where it gets raised, once drag makes orbit maintenance a real
+   *       expense rather than a residual.
+   *   <li><b>100 kg</b> of tank covers those 15 m/s up to 13 032 kg of dry mass, i.e. 30 % above
+   *       the default the wizard pre-fills — the same kind of writing margin {@link #GEO_SAT}
+   *       leaves, at +21.6 %.
+   *   <li><b>220 s</b> is a hydrazine monopropellant, not the 320 s of an apogee engine. It is the
+   *       shortest way to say this is not a kick motor, and {@code MissionComposer} now checks the
+   *       ΔV rather than the presence of a tank, so the distinction is enforced and not just
+   *       stated.
+   *   <li><b>400 N</b> keeps the measured trim at 152 s, <b>2.75 % of a revolution</b> at 400 km —
+   *       inside the 5 % {@link #LUNAR_ORBITER} sets as the limit of a near-impulsive burn — and it
+   *       is a thrust the catalog already carries.
+   * </ul>
+   *
+   * <p><b>Nothing burns it yet.</b> A LEO chain never drops its upper stage, so the trim is still
+   * the S2's burn; what this load does today is ride along as mass the launcher must lift, which is
+   * the lot's one real trajectory movement.
+   */
   public static final PayloadModel EARTH_OBSERVATION_SAT =
-      // Boxy bus. B = 505 kg/m².
+      // Boxy bus. B = 509 kg/m² at the 10 077 kg departure mass (10 t dry + 77 kg of propellant).
       new PayloadModel(
           "EARTH_OBS_SAT",
           "Earth observation satellite",
           10_000,
-          0,
-          null,
+          100,
+          new PropulsionSystem(220, 400),
           new AerodynamicProperties(9.0, 2.2),
           PayloadDomain.EARTH,
-          3.0);
+          3.0,
+          15.0,
+          false);
 
   /** AKM sized for ~1 800 m/s of apogee ΔV at 2 t dry, ~30 % margin (spec 06 §4.2). */
   public static final PayloadModel GEO_SAT =
@@ -58,7 +88,9 @@ public final class Payloads {
           new PropulsionSystem(320, 400),
           new AerodynamicProperties(6.25, 2.2),
           PayloadDomain.EARTH,
-          2.5);
+          2.5,
+          0,
+          false);
 
   /**
    * An inert lunar probe (MIS-4 / L5 §5.1) — the dry mass of LRO (1 846 kg) and Luna-25 (1 750 kg),
@@ -76,7 +108,9 @@ public final class Payloads {
           null,
           new AerodynamicProperties(4.0, 2.2),
           PayloadDomain.LUNAR,
-          2.0);
+          2.0,
+          0,
+          false);
 
   /**
    * A propelled lunar orbiter (MIS-5 / L3, spec {@code docs/lunar-orbit/05-conception-L3.md} §2) —
@@ -93,8 +127,8 @@ public final class Payloads {
    *       (+21.6 %, against GEO_SAT's +17.4 %);
    *   <li>5 500 N is what keeps the burn under 5 % of a lunar revolution — 4.83 % at 100 km, 5.08 %
    *       at 50 km — for an initial acceleration of 2.06 m/s², between Apollo's 2.03 and
-   *       Chang'e-3's 1.98. The catalog's 400 N AKM would take 66.4 % of a revolution, which is not
-   *       a near-impulsive burn by any reading. Real orbiters split their insertion in three to
+   *       Chang'e-3's 1.98. GEO_SAT's 400 N kick motor would take 66.4 % of a revolution, which is
+   *       not a near-impulsive burn by any reading. Real orbiters split their insertion in three to
    *       five burns for exactly that reason; this one does it once, and that is a catalog decision
    *       written as such (découpage §6 pt 4).
    * </ul>
@@ -110,7 +144,9 @@ public final class Payloads {
           new PropulsionSystem(320, 5_500),
           new AerodynamicProperties(4.0, 2.2),
           PayloadDomain.LUNAR,
-          2.0);
+          2.0,
+          0,
+          false);
 
   private static final List<PayloadModel> CATALOG =
       List.of(CARGO_MODULE, EARTH_OBSERVATION_SAT, GEO_SAT, LUNAR_PROBE, LUNAR_ORBITER);
@@ -137,18 +173,20 @@ public final class Payloads {
   /**
    * Returns the payload models a mission of the given type can actually fly, on the two axes the
    * question has: what the payload must be able to <b>do</b> — {@link
-   * MissionType#requiresPayloadPropulsion()}, which keeps only the models carrying an AKM — and
-   * where it is meant to <b>fly</b> (MIS-4 / L5 §5.2).
+   * MissionType#requiresPayloadPropulsion()}, which keeps only the propelled models — and where it
+   * is meant to <b>fly</b> (MIS-4 / L5 §5.2). A third axis joined them at PHY-8 / L6: what a
+   * payload is <b>for</b>, which takes the cargo module out of every list until MIS-6 gives it the
+   * rendezvous it is meant for.
    *
    * <p>The second axis was missing until L5, and it showed: a lunar flyby requires no propulsion,
    * so it was offered the whole catalog, GEO communications satellite included.
    *
    * <p><b>The two axes cross, and a lunar flyby is offered the orbiter too</b> (MIS-5 / L3 §2.2). A
    * flyby requires no propulsion, so it excludes none: the orbiter flies it with an empty tank,
-   * exactly as {@link MissionType#LEO} says an AKM-equipped payload does. Only {@code LUNAR_ORBIT}
+   * exactly as {@link MissionType#LEO} says a propelled payload does. Only {@code LUNAR_ORBIT}
    * needs both axes at once, and it is the one type the catalog answers with a single model — the
-   * cargo module being universal but inert, the probe lunar but inert, the GEO satellite propelled
-   * but terrestrial.
+   * probe being lunar but inert, the GEO satellite propelled but terrestrial, and the cargo module
+   * now filtered out of everything.
    *
    * @param type the selected mission type
    * @return the eligible models, possibly empty if the catalog offers no compatible model
@@ -156,8 +194,9 @@ public final class Payloads {
   public static List<PayloadModel> forMissionType(MissionType type) {
     PayloadDomain domain = domainOf(type);
     return CATALOG.stream()
-        .filter(model -> !type.requiresPayloadPropulsion() || model.hasAkm())
+        .filter(model -> !type.requiresPayloadPropulsion() || model.hasPropulsion())
         .filter(model -> model.domain() == PayloadDomain.ANY || model.domain() == domain)
+        .filter(model -> !model.requiresRendezvous())
         .toList();
   }
 

@@ -1,7 +1,11 @@
 package com.smousseur.orbitlab.simulation.mission;
 
 public enum MissionType {
-  /** The AKM has no role here: an AKM-equipped payload simply flies with an empty tank. */
+  /**
+   * Nothing is handed over to the payload here, so a propelled one keeps whatever its own ΔV budget
+   * loaded: since PHY-8 / L6 that tank is filled by {@code PropellantBudget.loadsForLeo} and rides
+   * to orbit unburnt, the direct chain never dropping the upper stage that flies the trim.
+   */
   LEO("LEO", false),
 
   /** Delegates the apogee circularization to the payload's kick motor. */
@@ -35,7 +39,7 @@ public enum MissionType {
    * OptimizationType} — {@code MissionComposer} offers a single (analytic) GEO composition — so an
    * inert payload cannot fly it.
    *
-   * @return true when the payload must have an AKM
+   * @return true when the payload must carry propulsion of its own
    */
   public boolean requiresPayloadPropulsion() {
     return requiresPayloadPropulsion;

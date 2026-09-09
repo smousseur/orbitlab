@@ -21,10 +21,10 @@ import org.orekit.time.AbsoluteDate;
  * and decides feasibility from the result.
  *
  * <p><b>Reconstruction.</b> The λ scaling is applied to the heuristic loads over the liquid stages
- * only (SOLID stages and the payload AKM stay off λ, {@link PropellantLoadOptimizer#scaledLoads});
- * the scaled loads are handed to an injected {@code missionBuilder} that assembles a fresh {@link
- * Mission} — a fresh one every time, because {@link MissionOptimizer#optimize()} mutates the
- * mission it optimizes.
+ * only (SOLID stages and the payload's own load stay off λ, {@link
+ * PropellantLoadOptimizer#scaledLoads}); the scaled loads are handed to an injected {@code
+ * missionBuilder} that assembles a fresh {@link Mission} — a fresh one every time, because {@link
+ * MissionOptimizer#optimize()} mutates the mission it optimizes.
  *
  * <p><b>Feasibility.</b> The mission is feasible when all three hold:
  *

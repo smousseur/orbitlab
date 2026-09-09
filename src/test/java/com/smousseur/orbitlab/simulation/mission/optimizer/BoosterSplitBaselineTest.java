@@ -153,7 +153,7 @@ class BoosterSplitBaselineTest {
   void ariane64MediumEarthOrbit() {
     PayloadModel model = Payloads.GEO_SAT;
     LaunchPlane plane = LaunchPlane.ofDegrees(MEO_INCLINATION_DEG, NodeBranch.ASCENDING);
-    PropellantBudget.GeoLoads loads =
+    PropellantBudget.SizedLoads loads =
         PropellantBudget.loadsForHighOrbit(
             Launchers.ARIANE_64,
             model,
@@ -167,7 +167,7 @@ class BoosterSplitBaselineTest {
         new LaunchConfiguration(
             Launchers.ARIANE_64,
             loads.launcherLoads(),
-            model.toSpacecraft(model.defaultDryMass(), loads.akmLoad()),
+            model.toSpacecraft(model.defaultDryMass(), loads.payloadLoad()),
             model.id());
     MissionSpec.EarthOrbit spec =
         new MissionSpec.EarthOrbit(
@@ -198,14 +198,14 @@ class BoosterSplitBaselineTest {
   @Test
   void ariane64Geostationary() {
     PayloadModel model = Payloads.GEO_SAT;
-    PropellantBudget.GeoLoads loads =
+    PropellantBudget.SizedLoads loads =
         PropellantBudget.loadsForGeo(
             Launchers.ARIANE_64, model, model.defaultDryMass(), PARKING_ALTITUDE, KOUROU_LAT);
     LaunchConfiguration configuration =
         new LaunchConfiguration(
             Launchers.ARIANE_64,
             loads.launcherLoads(),
-            model.toSpacecraft(model.defaultDryMass(), loads.akmLoad()),
+            model.toSpacecraft(model.defaultDryMass(), loads.payloadLoad()),
             model.id());
     measure(
         "ariane-64-geo",
