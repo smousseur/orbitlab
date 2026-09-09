@@ -36,11 +36,12 @@ import org.junit.jupiter.api.Test;
  * 62) — but the figure is computed from the sized stack all the same, so it follows the catalog if
  * a later lot changes how the boosters are loaded.
  *
- * <p><b>Measured 2026-08-21: 408 m/s on Falcon Heavy S1, 671 m/s on Ariane 64 S1.</b> Both sit
- * <em>above</em> the 100–300 m/s of ascent drag the impact study attributes to a heavy launcher,
- * and Ariane 64 more than doubles its upper bound — the wider its sea-level-to-vacuum bracket, the
- * more the mean-trajectory convention absorbs. PHY-2 therefore does not simply hand back what the
- * drag will cost: on these two entries the proxy is paying for more than drag alone.
+ * <p><b>Measured 2026-08-21: 408 m/s on Falcon Heavy S1, 671 m/s on Ariane 64 S1</b> — since
+ * revised to 396 and 64 by PHY-8, see the assertions. Both sat <em>above</em> the 100–300 m/s of
+ * ascent drag the impact study attributes to a heavy launcher, and Ariane 64 more than doubles its
+ * upper bound — the wider its sea-level-to-vacuum bracket, the more the mean-trajectory convention
+ * absorbs. PHY-2 therefore does not simply hand back what the drag will cost: on these two entries
+ * the proxy is paying for more than drag alone.
  *
  * <p>No propagation, no Orekit data — this is arithmetic on the catalog.
  */
@@ -76,7 +77,11 @@ class IspProxyDebtTest {
     // PHY-8 decoupage §3.4 and its L0 §3 all carry it. Splitting the Falcon Heavy's first stage in
     // two halves the mass ratio and reports 144 m/s here, silently, if the debt keeps being read
     // off the bottom entry alone (spec docs/etagement/04-conception-L2.md §2.3).
-    assertEquals(408, falconHeavy, 5, "the Falcon Heavy S1 proxy debt recorded for PHY-2");
+    // 396 since PHY-8 reserved 1 300 m/s of insertion ΔV on the top stage: the debt goes as
+    // ln(m0/mf) over the first stage, and a fuller S2 rides above it in both masses. The 12 m/s
+    // lost is arithmetic on a heavier stack, not a change in what the proxy hides — but it is the
+    // figure PHY-2 will hand back, so it is the figure recorded.
+    assertEquals(396, falconHeavy, 5, "the Falcon Heavy S1 proxy debt recorded for PHY-2");
     // PHY-8 / L4 collapsed this one, and that is the finding rather than the number. The Ariane 62
     // aggregate blended a solid with a cryogenic core into a single 300 s proxy inside a [271, 331]
     // bracket, and 671 m/s of the debt was that blend rather than any real loss. Split, the four

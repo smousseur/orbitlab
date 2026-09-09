@@ -28,6 +28,33 @@ public final class PropellantBudget {
   public static final double SAFETY_MARGIN = 0.10;
 
   /**
+   * ΔV reserved on the top stage for the orbital insertion, <b>above</b> what the ascent chain
+   * sizes it for.
+   *
+   * <p><b>Why a reserve exists at all.</b> The chain above computes an <em>ideal</em> ΔV to the
+   * target and hands the top stage whatever the lower stages leave of it. On a launcher whose lower
+   * stages over-deliver, that remainder goes to nothing: PHY-8 / L0 measured the Falcon Heavy
+   * LEO-400 budget cell with its first stage doing <b>100 %</b> of the ascent and its upper stage
+   * never igniting — 1 963 kg aboard, 448 m/s of capability, against the 436 the transfer and trim
+   * actually spent. Twelve metres per second of margin, and only because the trajectory happened to
+   * land right. The day L3 throttled the core it did not, and the mission had nothing left to
+   * correct with.
+   *
+   * <p><b>Additive, not a floor.</b> A {@code max(raw, floor)} was measured first and rejected: it
+   * clamps every under-floor profile to the same number, and the polar and due-east sizings of the
+   * same mission came out identical — destroying the azimuth-projected rotation assist MIS-7 built,
+   * whose own javadoc puts a 529 m/s error at tonnes of upper-stage load. Adding the reserve keeps
+   * every profile's own sizing and its differences.
+   *
+   * <p><b>1 300 m/s is the worst case, measured.</b> It is what the transfer needed on the
+   * throttled Falcon Heavy at the smallest upper-stage load that closes the mission. A profile that
+   * hands over well spends 430 and trims with 6, so this over-provisions it — the price of one
+   * number that every budgeted mission pays, taken deliberately over a per-mission estimate that
+   * would need the hand-over state the sizing does not have.
+   */
+  private static final double TOP_STAGE_INSERTION_RESERVE_DV = 1_300.0;
+
+  /**
    * Gravity + steering losses of the ascent (m/s). Calibrated on two MissionPerformanceReport
    * points of the FH LEO 400 km budget run (1 600 → 37.9 % S2 residual, 1 400 → 26.2 %; the
    * residual converges slowly because consumption shrinks with the load, slope ≈ 0.31 kg/kg). 1 260
@@ -444,7 +471,9 @@ public final class PropellantBudget {
       double finalMass = top.dryMass() + payloadMass;
       double raw =
           finalMass * (FastMath.exp(dvTop / exhaustVelocityTop) - 1.0) * (1.0 + SAFETY_MARGIN);
-      topLoad = FastMath.min(raw, top.propellantCapacity());
+      double reserve =
+          finalMass * (FastMath.exp(TOP_STAGE_INSERTION_RESERVE_DV / exhaustVelocityTop) - 1.0);
+      topLoad = FastMath.min(raw + reserve, top.propellantCapacity());
     }
     loads[loads.length - 1] = topLoad;
     return loads;

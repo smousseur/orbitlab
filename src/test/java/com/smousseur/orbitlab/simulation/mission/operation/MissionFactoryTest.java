@@ -145,9 +145,14 @@ class MissionFactoryTest {
 
     double geoS2 = geoVehicles.get(2).propellantLoad();
     double leoS2 = stackOf(leoMission).get(2).propellantLoad();
+    // 1.4x since the top stage carries an insertion reserve (PHY-8): a common addend compresses
+    // the ratio without touching the ordering, which is what this asserts. Measured 14 735 against
+    // 9 834.
     assertTrue(
-        geoS2 > 3 * leoS2,
-        () -> String.format("GEO S2 load (%.0f) must dwarf LEO S2 load (%.0f)", geoS2, leoS2));
+        geoS2 > 1.4 * leoS2,
+        () ->
+            String.format(
+                "GEO S2 load (%.0f) must stay well above LEO S2 load (%.0f)", geoS2, leoS2));
   }
 
   /**

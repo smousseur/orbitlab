@@ -96,11 +96,13 @@ class PropellantBudgetTest {
         "propellant on the payload is mass the launcher lifts, so the top stage grows");
 
     // The one trajectory movement PHY-8 / L6 makes, and it is not a single number: the growth runs
-    // with the ascent ΔV, hence with the site. Measured 1.244 % here at 45.96° and 1.357 % at
-    // 28.5°, so the bracket is what is pinned rather than either end.
+    // with the ascent ΔV, hence with the site, and with whatever else sits on the top stage. It was
+    // 1.244 % here when the stage carried only what the ascent chain sized; the insertion reserve
+    // added later leaves the same absolute growth over a bigger load, hence 0.811 %. The bracket is
+    // what is pinned rather than either end.
     double growthPercent = 100 * (top / forAnEmptyPayload[2] - 1);
     assertTrue(
-        growthPercent > 1.2 && growthPercent < 1.4,
+        growthPercent > 0.7 && growthPercent < 0.9,
         () -> "top stage grew by " + growthPercent + " %");
   }
 
@@ -147,11 +149,15 @@ class PropellantBudgetTest {
         () ->
             "AKM sized for ~1 500 m/s apogee dV expected in (1000, 2000] kg, got "
                 + geoLoads.payloadLoad());
+    // 1.4x, re-recorded at PHY-8 against the 3x this asserted before the top stage gained its
+    // insertion reserve. The ordering is the property and it holds — GEO still asks 51 % more than
+    // LEO, 14 735 kg against 9 754 — but a reserve added to both compresses every ratio, and a
+    // factor that no longer measures anything would be a tolerance widened to keep a test green.
     assertTrue(
-        geoLoads.launcherLoads()[2] > 3 * leoLoads[2],
+        geoLoads.launcherLoads()[2] > 1.4 * leoLoads[2],
         () ->
             String.format(
-                "GEO S2 load (%.0f) must dwarf LEO S2 load (%.0f)",
+                "GEO S2 load (%.0f) must stay well above LEO S2 load (%.0f)",
                 geoLoads.launcherLoads()[2], leoLoads[2]));
   }
 

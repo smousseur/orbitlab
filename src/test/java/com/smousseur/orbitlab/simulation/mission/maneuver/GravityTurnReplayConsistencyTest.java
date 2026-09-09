@@ -109,14 +109,27 @@ class GravityTurnReplayConsistencyTest {
   // is
   // legitimate and is documented here; widening a tolerance to make a test pass is the failure spec
   // §9 forbids, and the two must not be confused.
+  // RE-RECORDED at PHY-8, closing the L3 fallout: PropellantBudget now reserves 1 300 m/s of
+  // insertion ΔV on the top stage, so this fixture's Falcon Heavy leaves the pad with a fuller S2.
+  // The displacement was measured before being accepted:
+  //
+  //   MECO mass  17 360.267 -> 21 476.105 kg   (+4 115.838)
+  //   Δposition   3 105.323 m                  (tolerance 10 m)
+  //   Δvelocity     148.500 m/s                (tolerance 0.05 m/s)
+  //
+  // The SCHEDULE did not move — burn 1 duration, staging completion and the exit date are unchanged
+  // to the last recorded digit, as they must be: the reserve changes what is aboard, not when
+  // anything happens. What moved is what four tonnes of extra mass do to a fixed-variable ascent,
+  // which is the whole point of a fixture that flies frozen variables. The tolerances below are
+  // UNTOUCHED.
   private static final double REF_BURN1_DURATION_S = 149.979660;
   private static final double REF_STAGING_COMPLETE_S = 151.979660;
   private static final double REF_EXIT_DT_S = 153.979660;
-  private static final double REF_EXIT_MASS_KG = 17360.267;
+  private static final double REF_EXIT_MASS_KG = 21476.105;
   private static final Vector3D REF_EXIT_POSITION =
-      new Vector3D(-3948760.923784, -5014568.081480, 589237.742790);
+      new Vector3D(-3950621.592627, -5012082.425511, 589188.154635);
   private static final Vector3D REF_EXIT_VELOCITY =
-      new Vector3D(6226.572243, -5159.065669, -48.116619);
+      new Vector3D(6117.033029, -5058.113640, -47.964452);
 
   @BeforeAll
   static void setup() {
