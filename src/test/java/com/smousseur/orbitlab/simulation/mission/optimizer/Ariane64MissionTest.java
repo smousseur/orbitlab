@@ -20,8 +20,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 
 /**
- * The Ariane 62 catalog entry flies a LEO mission, and stages where the model says it does (spec
- * {@code docs/launchers/01-ariane-62.md} §5).
+ * The Ariane 64 catalog entry flies a LEO mission, and stages where the model says it does (spec
+ * {@code docs/launchers/01-ariane-64.md} §5).
  *
  * <p><b>This started as a measurement probe with no accuracy assertion</b>, because whether the
  * entry could close a mission at all was genuinely unknown: aggregating the boosters and the
@@ -37,9 +37,9 @@ import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
  * after the fact on observed numbers rather than guessed before them.
  */
 @EnabledIfSystemProperty(named = "orbitlab.slowTests", matches = "true")
-class Ariane62MissionTest extends AbstractTrajectoryOptimizerTest {
+class Ariane64MissionTest extends AbstractTrajectoryOptimizerTest {
 
-  private static final Logger logger = LogManager.getLogger(Ariane62MissionTest.class);
+  private static final Logger logger = LogManager.getLogger(Ariane64MissionTest.class);
 
   /** Kourou, the latitude the mission actually flies from — and the one the budget is sized at. */
   private static final double LAUNCH_LATITUDE_DEG = 5.23;
@@ -50,10 +50,14 @@ class Ariane62MissionTest extends AbstractTrajectoryOptimizerTest {
    * Bracket on the aggregated first stage's flame-out, in seconds from lift-off. Measured at 128.2
    * s; the ±10 s band is wide enough to survive an optimizer re-tune and tight enough to catch a
    * change in the aggregate's mass, thrust or ISP. It exists because that instant is the one
-   * documented modelling distortion of this entry — the real Ariane 62 core burns ~490 s — and a
+   * documented modelling distortion of this entry — the real Ariane 64 core burns ~490 s — and a
    * claim carried only by a Javadoc is a claim nothing checks.
    */
-  private static final double STAGING_INSTANT_S = 128.2;
+  /** The boosters run dry: 564 t at the flow the catalog's thrust and ISP give. */
+  private static final double BOOSTER_SEPARATION_S = 130.0;
+
+  /** And the core flies on alone until its own tanks are empty, which is the point of L4. */
+  private static final double CORE_SEPARATION_S = 480.0;
 
   private static final double STAGING_TOLERANCE_S = 10.0;
 
@@ -63,17 +67,24 @@ class Ariane62MissionTest extends AbstractTrajectoryOptimizerTest {
   }
 
   @Test
-  void ariane62_leo400km_insertsAndStagesWhereTheModelSaysItDoes() {
-    Spacecraft payload = Payloads.EARTH_OBSERVATION_SAT.toSpacecraft(5_000, 0.0);
+  void ariane64_leo400km_insertsAndStagesWhereTheModelSaysItDoes() {
+    // 20 t, measured rather than reasoned. At 5 t this launcher is so over-powered that the
+    // optimizer stops igniting the upper stage at all (cost 300x acceptable); at 40 t — the ideal-
+    // ΔV capacity §2.4 computes — it cannot make orbit and hands over on the re-entry floor. The
+    // ideal figure ignores every loss the flight actually pays, so the flown capacity sits well
+    // below it, and 20 t is where this profile behaves (spec docs/etagement/06-conception-L4.md
+    // §6).
+    Spacecraft payload = Payloads.EARTH_OBSERVATION_SAT.toSpacecraft(20_000, 0.0);
     double[] loads =
         PropellantBudget.loadsForLeo(
-            Launchers.ARIANE_62, payload, TARGET_ALTITUDE, LAUNCH_LATITUDE_DEG);
-    logger.info("[A62] Budget loads: S1 {} kg, S2 {} kg", loads[0], loads[1]);
+            Launchers.ARIANE_64, payload, TARGET_ALTITUDE, LAUNCH_LATITUDE_DEG);
+    logger.info(
+        "[A64] Budget loads: boosters {} kg, core {} kg, ULPM {} kg", loads[0], loads[1], loads[2]);
 
     EarthOrbitMission mission =
         new EarthOrbitMission(
-            "Ariane 62 (budget loads)",
-            new LaunchConfiguration(Launchers.ARIANE_62, loads, payload),
+            "Ariane 64 (budget loads)",
+            new LaunchConfiguration(Launchers.ARIANE_64, loads, payload),
             TARGET_ALTITUDE);
 
     // The flown-band criterion of every other LEO mission test, applied unchanged: a second
@@ -90,31 +101,46 @@ class Ariane62MissionTest extends AbstractTrajectoryOptimizerTest {
    * sample dates it.
    */
   private static void assertStagingInstant(MissionEphemeris ephemeris) {
-    MissionEphemerisPoint liftOff = ephemeris.allPoints().getFirst();
-    MissionEphemerisPoint separation = firstPointOfStage(ephemeris, AscentSequence.SEPARATION_NAME);
-    Assertions.assertNotNull(
-        separation,
-        "no '" + AscentSequence.SEPARATION_NAME + "' samples: the ascent never reached staging");
+    double boosters = instantOf(ephemeris, AscentSequence.BOOSTER_SEPARATION_NAME);
+    double core = instantOf(ephemeris, AscentSequence.SEPARATION_NAME);
 
-    double stagingInstant = separation.time().durationFrom(liftOff.time());
-    logger.info("[A62] S1 flame-out at T+{} s (real Ariane 62 core burn ~490 s)", stagingInstant);
+    logger.info(
+        "[A64] boosters dry at T+{} s, core at T+{} s — the real vehicle drops its P120C around"
+            + " 130 s and burns its Vulcain for ~8 min",
+        boosters,
+        core);
     Assertions.assertEquals(
-        STAGING_INSTANT_S,
-        stagingInstant,
+        BOOSTER_SEPARATION_S,
+        boosters,
         STAGING_TOLERANCE_S,
-        "the aggregated first stage no longer flames out where the catalog figures put it");
+        "the boosters no longer run dry where the catalog figures put them");
+    // The control the aggregate could never satisfy. The Ariane 62 entry this one replaces flamed
+    // its whole first stage out at 128 s and said so in its own javadoc: "wrong for the core, which
+    // really burns ~8 min, so the ascent shape is not this vehicle's". It is now.
+    Assertions.assertEquals(
+        CORE_SEPARATION_S,
+        core,
+        STAGING_TOLERANCE_S,
+        "the core no longer flies the ~8 minutes that splitting the block bought");
+  }
+
+  private static double instantOf(MissionEphemeris ephemeris, String stageName) {
+    MissionEphemerisPoint liftOff = ephemeris.allPoints().getFirst();
+    MissionEphemerisPoint point = firstPointOfStage(ephemeris, stageName);
+    Assertions.assertNotNull(point, "no '" + stageName + "' samples: the ascent never got there");
+    return point.time().durationFrom(liftOff.time());
   }
 
   /** Per-stage propellant left aboard: what the aggregation leaves on the table, in kilograms. */
   private static void logResiduals(MissionComputeResult result) {
-    for (int stage = 0; stage < 2; stage++) {
+    for (int stage = 0; stage < 3; stage++) {
       StagePropellant residual = result.performanceReport().residualForStage(stage).orElse(null);
       if (residual == null) {
-        logger.info("[A62] Stage {}: no propellant split reported", stage);
+        logger.info("[A64] Stage {}: no propellant split reported", stage);
         continue;
       }
       logger.info(
-          "[A62] Stage {}: {} kg left of {} kg loaded ({}%)",
+          "[A64] Stage {}: {} kg left of {} kg loaded ({}%)",
           stage, residual.residual(), residual.loaded(), 100.0 * residual.residualRatio());
     }
   }

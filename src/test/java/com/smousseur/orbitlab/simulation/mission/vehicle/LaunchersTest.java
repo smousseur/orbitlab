@@ -20,24 +20,40 @@ class LaunchersTest {
   }
 
   @Test
-  void byId_ariane62_returnsCatalogEntry() {
-    assertEquals("Ariane 62", Launchers.byId("ARIANE_62").displayName());
+  void byId_ariane64_returnsCatalogEntry() {
+    assertEquals("Ariane 64", Launchers.byId("ARIANE_64").displayName());
   }
 
   /**
-   * The Ariane 62 flight profile, and the reasoning behind each figure (spec {@code
-   * docs/launchers/01-ariane-62.md} §4.2). The pitch kick is deliberately identical to Falcon
+   * The Ariane 64 flight profile, and the reasoning behind each figure (spec {@code
+   * docs/launchers/01-ariane-64.md} §4.2). The pitch kick is deliberately identical to Falcon
    * Heavy's: nothing justifies an offset, and inventing one to make the catalog look more varied
    * would put an unfounded number in it.
    */
   @Test
-  void ariane62_ascentProfile_differsFromFalconHeavy() {
-    AscentProfile profile = Launchers.ARIANE_62.ascentProfile();
-    // Lifts off at T/W ~1.99 against ~1.65 for Falcon Heavy: the pad is cleared sooner.
+  void ariane64_ascentProfile_differsFromFalconHeavy() {
+    AscentProfile profile = Launchers.ARIANE_64.ascentProfile();
+    // Kept from the Ariane 62 entry this one replaces. Its comment justified the 6 s by a lift-off
+    // T/W of ~1.99; the Ariane 64 leaves the pad at ~1.60, so that justification no longer holds
+    // and the value is now simply inherited — moving it would be a second cause in a lot that is
+    // already a re-baseline (spec docs/etagement/06-conception-L4.md §3.1).
     assertEquals(6.0, profile.verticalAscentDuration(), 1e-9);
     assertEquals(3.0, profile.pitchKickAngleDeg(), 1e-9);
     // Vinci is cryogenic and needs a chill-down before ignition; the Merlin Vacuum relights fast.
     assertEquals(5.0, profile.interstageCoastDuration(), 1e-9);
+  }
+
+  /**
+   * Both heights are external figures, but neither is taken on trust: each launcher's fairing is a
+   * known fraction of its normalized mesh, and multiplying the two has to land on the published
+   * fairing length. It does, to the decimetre on the Falcon Heavy and to 3 % on the Ariane — which
+   * is also what identifies the Ariane's 63 m as its long-fairing configuration rather than the
+   * short one (spec {@code docs/etagement/01-decoupage.md} §3.8).
+   */
+  @Test
+  void bothHeightsAreConfirmedByTheirOwnFairing() {
+    assertEquals(13.1, 0.1878 * Launchers.FALCON_HEAVY.heightMeters(), 0.1, "Falcon fairing");
+    assertEquals(20.0, 0.3264 * Launchers.ARIANE_64.heightMeters(), 0.7, "Ariane long fairing");
   }
 
   @Test
@@ -52,28 +68,40 @@ class LaunchersTest {
    * appears, not a silent append.
    */
   @Test
-  void all_listsFalconHeavyThenAriane62() {
-    assertEquals(List.of(Launchers.FALCON_HEAVY, Launchers.ARIANE_62), Launchers.all());
+  void all_listsFalconHeavyThenAriane64() {
+    assertEquals(List.of(Launchers.FALCON_HEAVY, Launchers.ARIANE_64), Launchers.all());
   }
 
   @Test
-  void ariane62_knownFigures() {
-    List<StageModel> stages = Launchers.ARIANE_62.stages();
-    assertEquals(2, stages.size());
+  void ariane64_knownFigures() {
+    List<StageModel> stages = Launchers.ARIANE_64.stages();
+    assertEquals(3, stages.size(), "the four boosters are a stage of their own since PHY-8 / L4");
 
-    StageModel s1 = stages.getFirst();
-    assertEquals(36_000, s1.dryMass(), 1e-6);
-    assertEquals(434_000, s1.propellantCapacity(), 1e-6);
-    assertEquals(300, s1.propulsion().isp(), 1e-6);
-    assertEquals(9_960_000, s1.propulsion().thrust(), 1e-6);
-    assertEquals(IgnitionMode.GROUND, s1.capabilities().ignition());
-    assertEquals(StageRole.CORE, s1.capabilities().role());
-    // Two thirds of this block's propellant is solid, yet it is declared liquid on purpose:
-    // SOLID would freeze the load out of StageModel.toVehicle and of the multi-lambda sweep.
-    assertEquals(PropellantType.CRYOGENIC, s1.capabilities().propellant());
-    assertTrue(s1.capabilities().variableLoad(), "the aggregate must stay mission-sizable");
+    // Per exemplar, as everywhere in this catalog since L1: one P120C, flown in four.
+    StageModel boosters = stages.getFirst();
+    assertEquals(4, boosters.multiplicity());
+    assertEquals(11_000, boosters.unitDryMass(), 1e-6);
+    assertEquals(44_000, boosters.dryMass(), 1e-6);
+    assertEquals(564_000, boosters.propellantCapacity(), 1e-6);
+    assertEquals(278.5, boosters.propulsion().isp(), 1e-6);
+    assertEquals(2_962_000, boosters.unitPropulsion().thrust(), 1e-6);
+    assertEquals(IgnitionMode.GROUND, boosters.capabilities().ignition());
+    assertEquals(StageRole.BOOSTER, boosters.capabilities().role());
+    // A solid at last, and the point of saying so: variableLoad() now returns false on a stage
+    // that really is one, which is all the lambda sweep ever needed (spec 06 §3.2).
+    assertEquals(PropellantType.SOLID, boosters.capabilities().propellant());
+    assertFalse(boosters.capabilities().variableLoad(), "solid boosters fly full");
 
-    StageModel s2 = stages.get(1);
+    StageModel core = stages.get(1);
+    assertEquals(14_000, core.dryMass(), 1e-6);
+    assertEquals(152_000, core.propellantCapacity(), 1e-6);
+    assertEquals(360, core.propulsion().isp(), 1e-6);
+    assertEquals(1_118_000, core.propulsion().thrust(), 1e-6);
+    assertEquals(StageRole.CORE, core.capabilities().role());
+    assertEquals(PropellantType.CRYOGENIC, core.capabilities().propellant());
+    assertTrue(core.capabilities().variableLoad(), "the core stays mission-sizable");
+
+    StageModel s2 = stages.get(2);
     assertEquals(6_000, s2.dryMass(), 1e-6);
     assertEquals(31_000, s2.propellantCapacity(), 1e-6);
     assertEquals(457, s2.propulsion().isp(), 1e-6);
@@ -84,17 +112,39 @@ class LaunchersTest {
   }
 
   /**
+   * The two figures the decoupage gives as controls, which is what the thrusts were derived from:
+   * the boosters run dry around 130 s and the Vulcain around 8 minutes, in a flow ratio near 14
+   * (spec {@code docs/etagement/06-conception-L4.md} §3.1). Asserted on durations rather than on
+   * thrusts, because the durations are what was anchored and the thrusts are what followed.
+   */
+  @Test
+  void ariane64_burnDurations_areTheOnesTheThrustsWereDerivedFrom() {
+    List<StageModel> stages = Launchers.ARIANE_64.stages();
+    double boosterFlow = massFlow(stages.getFirst());
+    double coreFlow = massFlow(stages.get(1));
+
+    assertEquals(130.0, stages.getFirst().propellantCapacity() / boosterFlow, 0.1);
+    assertEquals(480.0, stages.get(1).propellantCapacity() / coreFlow, 0.5);
+    assertEquals(13.7, boosterFlow / coreFlow, 0.05);
+  }
+
+  private static double massFlow(StageModel stage) {
+    return stage.propulsion().thrust()
+        / (stage.propulsion().isp() * org.orekit.utils.Constants.G0_STANDARD_GRAVITY);
+  }
+
+  /**
    * Locks a <b>declaration</b>, not a behaviour. Nothing in {@code src/main} reads {@code
    * canCoastFor}, {@code restartCount}, {@code ShutdownMode}, {@code IgnitionMode} or {@code
    * StageRole} — {@code StageCapabilities} is, in its own words, the input of a <em>future</em>
-   * profile derivation. So this passing does <b>not</b> mean an Ariane 62 GEO mission circularizes
+   * profile derivation. So this passing does <b>not</b> mean an Ariane 64 GEO mission circularizes
    * with its own upper stage: {@code GEOMission} hardcodes the split profile and delegates the
    * apogee burn to the payload's kick motor for every launcher. Read the sibling Falcon Heavy test
    * the same way.
    */
   @Test
-  void ariane62_upperStageCoast_declaresTheLongCoastItsDesignAllows() {
-    StageCapabilities s2 = Launchers.ARIANE_62.stages().get(1).capabilities();
+  void ariane64_upperStageCoast_declaresTheLongCoastItsDesignAllows() {
+    StageCapabilities s2 = Launchers.ARIANE_64.stages().getLast().capabilities();
     assertTrue(s2.canCoastFor(45 * 60), "parking coast to node must be possible");
     assertTrue(s2.canCoastFor(5.25 * 3_600), "the ULPM is designed for a GTO coast to apogee");
   }
@@ -150,11 +200,15 @@ class LaunchersTest {
    * What the wizard card shows: the thrust the vehicle actually leaves the pad with, summed over
    * every ground-lit entry (spec {@code docs/etagement/04-conception-L2.md} §3.4). Reading the
    * bottom entry alone would report 15.2 MN on a split Falcon Heavy.
+   *
+   * <p>15.2 MN of boosters plus a core held at 0.81 of its 7.6 — the installed 22.8 MN is what the
+   * vehicle has, not what it leaves the pad with (spec {@code docs/etagement/05-conception-L3.md}
+   * §3.4).
    */
   @Test
-  void liftOffThrust_sumsTheGroundLitStages() {
-    assertEquals(22_800_000, Launchers.FALCON_HEAVY.liftOffThrust(), 1e-6);
-    assertEquals(9_960_000, Launchers.ARIANE_62.liftOffThrust(), 1e-6);
+  void liftOffThrust_sumsTheGroundLitStagesAtTheThrustTheyApply() {
+    assertEquals(15_200_000 + 0.81 * 7_600_000, Launchers.FALCON_HEAVY.liftOffThrust(), 1e-6);
+    assertEquals(4 * 2_962_000 + 1_118_000, Launchers.ARIANE_64.liftOffThrust(), 1e-6);
   }
 
   @Test
@@ -162,15 +216,31 @@ class LaunchersTest {
     double groundLit =
         Launchers.FALCON_HEAVY.stages().stream()
             .filter(stage -> stage.capabilities().ignition() == IgnitionMode.GROUND)
-            .mapToDouble(stage -> stage.propulsion().thrust())
+            .mapToDouble(
+                stage ->
+                    stage.capabilities().role() == StageRole.CORE
+                        ? stage.propulsion().thrust()
+                            * Launchers.FALCON_HEAVY.ascentProfile().coreThrottle()
+                        : stage.propulsion().thrust())
             .sum();
 
     assertEquals(groundLit, Launchers.FALCON_HEAVY.liftOffThrust(), 0.0);
   }
 
+  /**
+   * The Falcon Heavy's three cores being identical, thrust and propellant are in the same ratio and
+   * both blocks would flame out at the same instant; throttling the centre one is what gives it a
+   * solo phase (spec {@code docs/etagement/05-conception-L3.md} §3.1).
+   */
   @Test
-  void falconHeavy_isNotThrottled() {
-    assertFalse(Launchers.FALCON_HEAVY.ascentProfile().throttlesCore());
+  void falconHeavy_throttlesItsCoreDuringTheSharedPhase() {
+    assertTrue(Launchers.FALCON_HEAVY.ascentProfile().throttlesCore());
+    assertEquals(0.81, Launchers.FALCON_HEAVY.ascentProfile().coreThrottle(), 0.0);
+  }
+
+  @Test
+  void ariane64_doesNotThrottle() {
+    assertFalse(Launchers.ARIANE_64.ascentProfile().throttlesCore());
   }
 
   @Test
@@ -199,10 +269,14 @@ class LaunchersTest {
     List<Vehicle> vehicles = stack.vehicles();
     assertEquals(4, vehicles.size());
 
+    // Since PHY-8 / L3 the core is throttled, so the block the stack resolves is the boosters
+    // alone: their 44 t of dry mass, and 15.2 + 0.81 × 7.6 MN. The former S1's 66 t and 22.8 MN are
+    // still the sum of the two catalog entries, which
+    // falconHeavy_theBlockAggregatesToTheFormerFirstStage asserts.
     ActiveStageInfo block = stack.resolveActiveStage(stack.getMass());
-    assertEquals(66_000, block.dryMass(), 1e-6);
+    assertEquals(44_000, block.dryMass(), 1e-6);
     assertEquals(296, block.propulsion().isp(), 1e-6);
-    assertEquals(22_800_000, block.propulsion().thrust(), 1e-6);
+    assertEquals(15_200_000 + 0.81 * 7_600_000, block.propulsion().thrust(), 1e-6);
     assertEquals(
         600_000, vehicles.getFirst().propellantLoad() + vehicles.get(1).propellantLoad(), 1e-6);
 

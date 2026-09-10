@@ -93,16 +93,19 @@ class MissionPolylineBaselineTest {
       int index, String stage, boolean propulsive, double t, double x, double y, double z) {}
 
   // ════════════════════════════════════════════════════════════════════════
-  // The pinned polyline — measured on 1a8317d, 2026-08-17, before any L3 change
+  // The pinned polyline — re-measured at PHY-8 / L3, the core throttled to 0.81
   // ════════════════════════════════════════════════════════════════════════
 
   /**
-   * <b>The fixture decimates, and that was not a given.</b> 9 992 raw samples against a budget of 8
+   * <b>The fixture decimates, and that was not a given.</b> 9 993 raw samples against a budget of 8
    * 192: the drawn line is strided down to 5 000 vertices. So this gate does not merely check that
    * an under-budget trail is copied through — it exercises the stride path that spec §4.1 names as
    * the one numerical risk of the lot, on a real trajectory rather than a synthetic one.
+   *
+   * <p>9 992 until {@code PHY-8 / L3}: throttling the core adds two ascent phases, hence one more
+   * boundary sample.
    */
-  private static final int RAW_POINTS = 9992;
+  private static final int RAW_POINTS = 9993;
 
   private static final int TRAIL_SIZE = 5000;
 
@@ -121,57 +124,73 @@ class MissionPolylineBaselineTest {
               "Gravity turn (S1)",
               true,
               7.0,
-              -4242437.403903735,
-              -4726544.756832523,
-              588476.6352637771),
+              -4242405.362219772,
+              -4726509.082985815,
+              588472.1923325304),
           new Vertex(
               41,
-              "S1 separation",
+              "Booster separation",
               false,
-              76.39164210526314,
-              -4161034.9606876844,
-              -4836957.645658843,
-              590773.6731263066),
+              76.39164210526316,
+              -4165765.7928744075,
+              -4826164.610657123,
+              590343.5997294071),
           new Vertex(
               42,
+              "Gravity turn (core)",
+              true,
+              76.39264210526316,
+              -4165763.265358973,
+              -4826167.583640363,
+              590343.6401315596),
+          new Vertex(
+              50,
+              "S1 separation",
+              false,
+              90.90848410526316,
+              -4125128.0061023585,
+              -4872714.56393565,
+              590908.4204645224),
+          new Vertex(
+              51,
               "Gravity turn (S2)",
               true,
-              78.39164210526314,
-              -4155363.820830963,
-              -4843860.898629096,
-              590880.1233619973),
+              92.90848410526316,
+              -4118924.314666473,
+              -4879626.663785931,
+              590981.4829665112),
           new Vertex(
-              161,
+              163,
               "Transfert",
               true,
               314.193166,
-              -3065580.756105344,
-              -5677159.277736631,
-              577919.1129824509),
+              -3065171.9834796577,
+              -5652251.568200303,
+              576194.5594955221),
           new Vertex(
               1507,
               "Trim",
               true,
-              3002.836747688871,
-              3168936.400792205,
-              5961285.082526461,
-              -603008.6377632977),
+              3000.022691006276,
+              3150515.8045862075,
+              5971052.200452161,
+              -602468.5828872334),
           new Vertex(
               4280,
               "Coasting",
               false,
-              8546.404567668282,
-              3129196.3682721797,
-              5982644.292413696,
-              -600467.5597814192),
+              8543.261615874384,
+              3112307.763643382,
+              5991456.946383542,
+              -599944.4041713069),
           new Vertex(
               4999,
               "Coasting",
               false,
-              94710.40456766829,
-              -2134597.345345826,
-              -6412117.796404588,
-              525086.6571915376));
+              94707.26161587438,
+              -2113736.121167141,
+              -6419117.856297435,
+              523927.4068755575));
 
   @Test
   void leo400_polylineHasNotMoved() {

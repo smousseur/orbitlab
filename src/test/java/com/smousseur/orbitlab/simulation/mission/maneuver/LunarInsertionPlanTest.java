@@ -226,8 +226,7 @@ class LunarInsertionPlanTest {
     // 4. The depletion floor, judged on the commanded ΔV: the same approach on a tank that cannot
     // pay for it.
     SpacecraftState approach = LunarApproachFixture.selenocentric();
-    Spacecraft starved =
-        new Spacecraft(2_600.0, 120.0, 120.0, Payloads.LUNAR_ORBITER.akmPropulsion());
+    Spacecraft starved = new Spacecraft(2_600.0, 120.0, 120.0, Payloads.LUNAR_ORBITER.propulsion());
     ActiveStageInfo poor = starved.resolveActiveStage(approach.getMass());
     Arrival arrival = LunarInsertionPlan.arrivalFrom(approach, context);
     SpacecraftState atIgnition =

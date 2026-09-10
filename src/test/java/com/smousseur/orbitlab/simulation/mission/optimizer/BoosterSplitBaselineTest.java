@@ -48,7 +48,7 @@ import org.orekit.utils.Constants;
  *
  * <p>PHY-8 splits the boosters from the core stage: {@code L2} turns the Falcon Heavy's aggregated
  * S1 into {@code [boosters ×2, core]}, {@code L3} throttles the core, and {@code L4} replaces the
- * Ariane 62 with an Ariane 64. The first two are meant to be iso-trajectory and the last two are
+ * Ariane 64 with an Ariane 64. The first two are meant to be iso-trajectory and the last two are
  * not, so every lot has to be able to say which numbers it moved. This fixture is the
  * <em>before</em> they are all read against, and it is re-run unchanged at each lot.
  *
@@ -130,18 +130,18 @@ class BoosterSplitBaselineTest {
   }
 
   @Test
-  void ariane62Leo400OnBudgetLoads() {
+  void ariane64Leo400OnBudgetLoads() {
     Spacecraft payload = Payloads.EARTH_OBSERVATION_SAT.toSpacecraft(5_000.0, 0.0);
     LaunchConfiguration configuration =
         new LaunchConfiguration(
-            Launchers.ARIANE_62,
-            PropellantBudget.loadsForLeo(Launchers.ARIANE_62, payload, LEO_ALTITUDE, KOUROU_LAT),
+            Launchers.ARIANE_64,
+            PropellantBudget.loadsForLeo(Launchers.ARIANE_64, payload, LEO_ALTITUDE, KOUROU_LAT),
             payload);
     measure(
-        "ariane-62-leo-400",
+        "ariane-64-leo-400",
         "Earth observation satellite, 5 t dry",
         configuration,
-        new EarthOrbitMission("Ariane 62 LEO 400", configuration, LEO_ALTITUDE),
+        new EarthOrbitMission("Ariane 64 LEO 400", configuration, LEO_ALTITUDE),
         earthEpoch());
   }
 
@@ -150,12 +150,12 @@ class BoosterSplitBaselineTest {
    * circularizes.
    */
   @Test
-  void ariane62MediumEarthOrbit() {
+  void ariane64MediumEarthOrbit() {
     PayloadModel model = Payloads.GEO_SAT;
     LaunchPlane plane = LaunchPlane.ofDegrees(MEO_INCLINATION_DEG, NodeBranch.ASCENDING);
-    PropellantBudget.GeoLoads loads =
+    PropellantBudget.SizedLoads loads =
         PropellantBudget.loadsForHighOrbit(
-            Launchers.ARIANE_62,
+            Launchers.ARIANE_64,
             model,
             model.defaultDryMass(),
             PARKING_ALTITUDE,
@@ -165,13 +165,13 @@ class BoosterSplitBaselineTest {
             plane.launchAzimuth(FastMath.toRadians(KOUROU_LAT)));
     LaunchConfiguration configuration =
         new LaunchConfiguration(
-            Launchers.ARIANE_62,
+            Launchers.ARIANE_64,
             loads.launcherLoads(),
-            model.toSpacecraft(model.defaultDryMass(), loads.akmLoad()),
+            model.toSpacecraft(model.defaultDryMass(), loads.payloadLoad()),
             model.id());
     MissionSpec.EarthOrbit spec =
         new MissionSpec.EarthOrbit(
-            "Ariane 62 MEO",
+            "Ariane 64 MEO",
             configuration,
             MEO_ALTITUDE,
             MEO_ALTITUDE,
@@ -183,7 +183,7 @@ class BoosterSplitBaselineTest {
             KOUROU_ALT,
             null);
     measure(
-        "ariane-62-meo",
+        "ariane-64-meo",
         "GEO communications satellite, 2 t dry",
         configuration,
         MissionComposer.compose(spec, OptimizationType.FAST),
@@ -192,27 +192,27 @@ class BoosterSplitBaselineTest {
 
   /**
    * The cell no fixture covers today, and the one {@code L4} will produce an <em>after</em> for: an
-   * Ariane 64 is a geostationary launcher where the Ariane 62 in the catalog is not specified to be
+   * Ariane 64 is a geostationary launcher where the Ariane 64 in the catalog is not specified to be
    * one. Whether this chain closes is itself the measurement.
    */
   @Test
-  void ariane62Geostationary() {
+  void ariane64Geostationary() {
     PayloadModel model = Payloads.GEO_SAT;
-    PropellantBudget.GeoLoads loads =
+    PropellantBudget.SizedLoads loads =
         PropellantBudget.loadsForGeo(
-            Launchers.ARIANE_62, model, model.defaultDryMass(), PARKING_ALTITUDE, KOUROU_LAT);
+            Launchers.ARIANE_64, model, model.defaultDryMass(), PARKING_ALTITUDE, KOUROU_LAT);
     LaunchConfiguration configuration =
         new LaunchConfiguration(
-            Launchers.ARIANE_62,
+            Launchers.ARIANE_64,
             loads.launcherLoads(),
-            model.toSpacecraft(model.defaultDryMass(), loads.akmLoad()),
+            model.toSpacecraft(model.defaultDryMass(), loads.payloadLoad()),
             model.id());
     measure(
-        "ariane-62-geo",
+        "ariane-64-geo",
         "GEO communications satellite, 2 t dry",
         configuration,
         new GEOMission(
-            "Ariane 62 GEO",
+            "Ariane 64 GEO",
             configuration,
             PARKING_ALTITUDE,
             GEO_ALTITUDE,

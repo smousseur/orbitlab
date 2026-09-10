@@ -5,6 +5,13 @@ document est un état des lieux mesuré, pas une roadmap : les items qui mérite
 d'être planifiés doivent être promus dans une roadmap de version — voir
 `roadmap/00-index.md`.
 
+**Complément du 2026-09-10.** `DT-19` à `DT-21` viennent de la clôture de `PHY-8`
+([`etagement/07-cloture.md`](etagement/07-cloture.md) §5), et sont tous trois des
+**mesures**, pas des relectures : chacun a été trouvé en faisant voler la chose.
+
+**Complément du 2026-09-09.** `DT-18` vient d'une mesure de `PHY-8 / L5` sur les
+maillages de lanceurs, et succède à `DT-12` que le même lot ferme.
+
 **Complément du 2026-08-30.** `DT-12` à `DT-17` viennent d'une revue des
 documents de conception par chantier, pas d'une nouvelle passe de mesure
 statique sur `src/` — la méthode du §1 ne les couvre donc pas. Les items
@@ -78,12 +85,16 @@ aujourd'hui. C'est le sujet de [`DT-1`](#dt-1--aucune-analyse-statique-dans-le-b
 | [`DT-9`](#dt-9--code-mort) | Code mort | Mineur | Trivial | Nul | **Corrigé le 2026-09-02** |
 | [`DT-10`](#dt-10--commentaires-redondants) | Commentaires redondants | Mineur | Faible | Nul | Ouvert |
 | [`DT-11`](#dt-11--littéraux-dupliqués-et-todo-non-tracés) | Littéraux dupliqués et TODO non tracés | Mineur | Faible | Nul | **Partiel le 2026-09-02** |
-| [`DT-12`](#dt-12--mesh-ariane-6-absent-ariane-5-utilisé-à-la-place) | Mesh Ariane 6 absent (Ariane 5 utilisé à la place) | Mineur | Faible* | Nul | Ouvert |
+| [`DT-12`](#dt-12--mesh-ariane-6-absent-ariane-5-utilisé-à-la-place) | Mesh Ariane 6 absent (Ariane 5 utilisé à la place) | Mineur | Faible* | Nul | **Corrigé le 2026-09-09** |
 | [`DT-13`](#dt-13--isp-catalogue-déjà-en-double-comptage-latent-avec-la-traînée-à-venir) | Isp catalogue déjà en double-comptage latent avec la traînée à venir | Majeur | Moyen | **Élevé pour `PHY-2`** | Ouvert |
 | [`DT-14`](#dt-14--écart-harris-priester--nrlmsise-00-non-arbitré) | Écart Harris-Priester / NRLMSISE-00 non arbitré | Mineur | Faible | Nul | Ouvert |
 | [`DT-15`](#dt-15--cd-catalogue-s2-hors-domaine-de-validité-déclaré) | `Cd` catalogue S2 hors domaine de validité déclaré | Mineur | Faible | Nul | Ouvert |
 | [`DT-16`](#dt-16--nrev-du-solveur-de-lambert-figé-à-0-partout) | `nRev` du solveur de Lambert figé à 0 partout | Mineur | Moyen | Nul aujourd'hui | Ouvert |
 | [`DT-17`](#dt-17--performance-du-ruban-rnd-4-jamais-mesurée) | Performance du ruban (`RND-4`) jamais mesurée | Mineur | Faible | Nul | Ouvert |
+| [`DT-18`](#dt-18--propulseurs-de-lariane-64-surdimensionnés-dans-le-maillage) | Propulseurs de l'Ariane 64 surdimensionnés dans le maillage | Mineur | Faible* | Nul aujourd'hui | Ouvert, **dû avant `PHY-5`** |
+| [`DT-19`](#dt-19--réserve-dinsertion-universelle-sur-létage-supérieur) | Réserve d'insertion universelle sur l'étage supérieur | Majeur | Moyen | Moyen pour `PHY-2` | Ouvert |
+| [`DT-20`](#dt-20--lascension-na-aucune-prise-sur-son-corps-central) | L'ascension n'a aucune prise sur son corps central | Majeur | Élevé | Moyen | Ouvert |
+| [`DT-21`](#dt-21--w_apogee_overshoot-calibré-hors-de-son-domaine) | `W_APOGEE_OVERSHOOT` calibré hors de son domaine | Mineur | Moyen | **Élevé pour `PHY-2`** | Ouvert |
 
 `*` Faible côté code — bloqué par la disponibilité d'un maillage externe, pas
 par du travail de développement.
@@ -513,22 +524,23 @@ Ils devraient être des constantes.
 
 ### DT-12 — Mesh Ariane 6 absent (Ariane 5 utilisé à la place)
 
-**`J0-D` 2026-09-02 — confirmé.** Le catalogue déclare toujours `ARIANE_62`
-(`Launchers:91`) avec sa Javadoc expliquant l'agrégation boosters + Vulcain, et
-aucun maillage Ariane 6 n'est apparu sous `src/main/resources/models`.
+**Corrigé le 2026-09-09, en deux temps.** `AST-1` a livré le maillage Ariane 64
+manquant ; `PHY-8 / L4` a fait pointer `LauncherAssets` dessus en remplaçant
+`ARIANE_62` par `ARIANE_64` au catalogue ; `PHY-8 / L5` a nettoyé la Javadoc qui
+décrivait encore le défaut. Il n'y a plus d'Ariane 5 nulle part.
 
-**Mesuré.** `roadmap/01-roadmap-v1.md` §`MIS-1` : le catalogue utilise le maillage
-Ariane 5 pour représenter Ariane 62, faute d'export disponible. Masse,
-propulsion et vol restent corrects — seule la silhouette est fausse.
+**Le second volet est fermé aussi, et par une mesure.** La fiche notait que la
+convention de maillage — nez sur `+Y`, échelle « ~1 unité » — n'avait jamais été
+vérifiée, seulement supposée par la chaîne de chargement. Elle l'est désormais :
+`LauncherMeshProportionTest` mesure les deux piles à **1,0000 unité exactement,
+base à l'origine**, et c'est ce qui autorise `L5` à ne porter qu'**un seul
+nombre par lanceur** — sa hauteur — pour que chaque pièce du lot sorte à sa
+fraction juste.
 
-**Deuxième volet, non mesuré.** La convention de mesh attendue pour tout
-futur candidat (nez sur +Y, échelle ~1 unité) n'a jamais été vérifiée, y
-compris sur le mesh Ariane 5 actuellement utilisé — elle est simplement
-supposée par la chaîne de chargement.
-
-**Inféré.** Bloqué par un actif externe (`src/main/resources/models/` est
-gitignored, cf. `CLAUDE.md`), pas par du code. Rien à corriger avant qu'un
-maillage Ariane 6 existe.
+**Ce qui reste n'est plus ce que cette fiche décrit** : le maillage est bien une
+Ariane 6, mais ses propulseurs sont trop gros. Cela s'ouvre en
+[`DT-18`](#dt-18--propulseurs-de-lariane-64-surdimensionnés-dans-le-maillage),
+avec le chiffre.
 
 ---
 
@@ -539,6 +551,27 @@ maillage Ariane 6 existe.
 300 s Ariane 62 S1) absorbent déjà une perte de traînée implicite chiffrée à
 **408 m/s** et **671 m/s** respectivement — au-dessus des 100-300 m/s que
 l'étude d'impact originale de l'atmosphère prévoyait comme plage réelle.
+
+> **Les deux chiffres ont changé, et pas du même montant** (`PHY-8`,
+> [`etagement/07-cloture.md`](etagement/07-cloture.md) §6). Ce qu'il faut lire
+> aujourd'hui : **396 m/s** sur le Falcon Heavy, **64 m/s** sur l'Ariane 64.
+>
+> Côté Ariane, `L4` a dissous l'essentiel : les 671 m/s étaient surtout l'artefact
+> d'un solide honnête et d'un cryogénique endetté fondus dans un même proxy de
+> 300 s. Éclatés, les quatre P120C volent leur Isp de vide et ne portent **rien** ;
+> le Vulcain cède 71 s sur les 21 % du débit qu'il détient, et c'est toute la dette.
+> Elle est donc **localisée** au lieu d'être diluée — ce que le §3.4 du découpage
+> annonçait — et dix fois plus petite qu'écrit ici.
+>
+> Côté Falcon, rien n'a été dissous : ses deux entrées déclarent le même moteur à
+> 296 s, l'éclatement ne pouvait rien y localiser. Les 12 m/s perdus viennent
+> d'ailleurs — la réserve d'insertion de [`DT-19`](#dt-19) alourdit l'étage
+> supérieur, donc le rapport de masses du premier étage. C'est de l'arithmétique
+> sur une pile plus lourde, pas un changement de ce que le proxy cache.
+>
+> **La dette est donc devenue asymétrique entre les deux lanceurs**, dans un rapport
+> de six. `PHY-2` ne peut plus les calibrer d'une seule passe, et `J2` arbitrera sur
+> ces chiffres-ci.
 
 **Pourquoi c'est critique pour `PHY-2`, pas pour aujourd'hui.** Tant que la
 traînée reste **off** par défaut (`PHY-1`), cette dette est invisible. Le
@@ -614,6 +647,140 @@ plus élevé (typiquement, plusieurs missions actives à la fois).
 
 ---
 
+### DT-18 — Propulseurs de l'Ariane 64 surdimensionnés dans le maillage
+
+**Successeur de [`DT-12`](#dt-12--mesh-ariane-6-absent-ariane-5-utilisé-à-la-place)**,
+qui est fermé : le maillage *est* une Ariane 6. Ce sont ses proportions qui ne
+le sont pas.
+
+**Mesuré, et sans aucune source externe.** Les sections du catalogue donnent les
+vrais diamètres — 9,08 m² pour un P120C et 22,9 m² pour le LLPM, soit 3,40 m et
+5,40 m, un rapport de **0,630**. Le maillage donne 0,0798 et 0,0925 en unités
+normalisées, soit **0,863**. Le propulseur est donc **37 % trop large**.
+
+Le même contrôle passe sur le Falcon Heavy — 0,995 mesuré contre 1,000 déclaré,
+ses trois corps étant identiques — ce qui dit que la méthode est bonne et que le
+défaut est local.
+
+**En longueur aussi.** Le propulseur court sur 0,3624 de la pile, soit **22,8 m**
+à 63 m, là où un P120C fait 13,5 m. Aucune hauteur ne réconcilie les deux :
+atteindre 13,5 m demanderait une Ariane de **37 m**. Ce n'est donc pas une
+erreur d'échelle mais de modèle, et `L5` ne pouvait pas la corriger en
+choisissant une hauteur.
+
+**Ce qui tombe juste**, et qui délimite le défaut : la coiffe (0,3264 → 20,6 m
+contre 20 m réels), le corps (0,0925 → 5,83 m contre 5,40 m déclarés, l'excès
+étant ce qui pend autour), et tout le lot Falcon.
+
+**Épinglé.** `LauncherMeshProportionTest` fige l'écart **et non l'accord** : il
+passe au vert sur la valeur fausse. Remplacer le maillage le rend rouge, ce qui
+oblige à revenir mettre à jour cette fiche.
+
+**Inféré — pourquoi c'est dû avant `PHY-5`.** Aujourd'hui la pile est dessinée
+d'un bloc et l'erreur se voit à peine. `PHY-5` fera voler un propulseur largué
+**à côté** du corps : un cylindre de 22,8 m sur 4,95 m flottant près d'un corps
+de 36 m, quand il devrait faire 13,5 sur 3,40. Corriger après coup demanderait
+de re-régler ce que `PHY-5` aura calibré autour de la mauvaise taille.
+
+**Bloqué par un actif externe** — un ré-export du maillage — pas par du code.
+
+---
+
+### DT-19 — Réserve d'insertion universelle sur l'étage supérieur
+
+**Mesuré.** `PropellantBudget.sizeTopStage` ajoute **1 300 m/s** de capacité au
+sommet de ce que la chaîne de ΔV idéal lui donne. Le nombre est le **pire cas**
+observé : ce que le transfert réclame sur un Falcon Heavy au corps étranglé, à la
+plus petite charge d'étage supérieur qui ferme la mission. Un profil qui remet
+correctement les commandes dépense **430 m/s** au transfert et **6** au trim.
+
+**Pourquoi elle existe quand même.** Sans elle, l'étage supérieur du profil
+`falcon-heavy-leo-400` portait 1 963 kg, soit **448 m/s**, contre les 436 que la
+mission dépense — douze mètres par seconde de marge, et seulement parce que la
+trajectoire tombait juste. `L0` avait mesuré la cause sans en tirer la conséquence :
+sur ce profil, l'étage 0 fait **100 %** de l'ascension et l'étage supérieur ne
+s'allume jamais.
+
+**Pourquoi additive et non plancher.** Un `max(raw, plancher)` a été mesuré d'abord et
+rejeté : il clampe tout profil sous le plancher sur un même nombre, et les
+dimensionnements **polaire et plein-est** de la même mission sortaient identiques —
+`8 373,838899728531` kg des deux côtés. C'est exactement la propriété que `MIS-7` a
+construite, dont le Javadoc chiffre une erreur de 529 m/s à des tonnes de charge.
+
+**Le coût, chiffré.** Toutes les missions budgétées paient le pire cas : +18 à +66 %
+de charge d'étage supérieur. Effets de bord mesurés — la dette d'Isp du Falcon Heavy
+que `DT-13` porte tombe de **408 à 396 m/s** (le rapport de masses du premier étage
+change), et le profil MEO de `CentralBodyBaselineTest` a dû être ré-enregistré.
+
+**Voie de sortie.** Le nombre juste est le ΔV que l'insertion de *cette* mission
+demandera, et le dimensionnement ne connaît pas l'état de remise des commandes. Un
+dimensionnement en **deux passes** — dimensionner, voler, redimensionner — le donnerait
+exactement et supprimerait cette fiche.
+
+---
+
+### DT-20 — L'ascension n'a aucune prise sur son corps central
+
+**Mesuré, dans `GravityTurnManeuver.plan()`.** Des trois durées du plan d'ascension,
+une seule dépend d'une variable d'optimisation :
+
+```
+burn1Duration    = getBurn1Duration()      // jusqu'à épuisement des propulseurs
+coreBurnDuration = getCoreBurnDuration()   // jusqu'à épuisement du corps
+burn2Duration    = max(0, transitionTime − stagingCompleteTime)
+```
+
+Le corps central du Falcon Heavy est déclaré `ShutdownMode.COMMANDED` au catalogue, et
+le code le brûle **toujours** jusqu'au plancher de déplétion. Sur le profil budgété,
+l'optimiseur se pose exactement sur `stagingCompleteTime` — `181,8066` contre `181,83`
+— avec `burn2 = 0` : il ne lui reste **qu'une variable effective**, l'exposant de
+tangage. Le Javadoc de `stagingCompleteTime` le nomme déjà : *« it is now the edge of a
+useless plateau »*.
+
+**Et une barrière interdit la région utile.** `computeCost` ajoute
+`STAGING_PENALTY_BASE = 1e3` dès que `transitionTime < stagingCompleteTime`, contre un
+coût nominal de 73,76 — donc la région est inatteignable. Or c'est là que sont les
+bonnes remises : `transitionTime = 170` avec un exposant de `0,634` rend un apogée de
+**407,9 km**, la cible, contre 4 596 km à l'optimum retenu. La barrière est légitime
+tant que le corps n'est pas commandable — sous le plancher, le véhicule volait la même
+trajectoire — et cesse de l'être dès qu'il le devient.
+
+**Ce qui a été mesuré, et ne suffit pas seul.** Rendre le corps commandable **sans**
+lever la barrière ne change rien : coût `73,76361806179528` contre `73,7636180617952`,
+même optimum. Lever la barrière **avec** le corps commandable fait cesser la levée mais
+n'insère pas — `72 551 × 400 178 m`, étage supérieur vide, trim à zéro. Il manque un
+rééquilibrage de la fonction de coût, ce qui renvoie à [`DT-21`](#dt-21).
+
+**Inféré.** Aucune urgence propre : le chantier a fermé ses six cellules par le
+dimensionnement ([`DT-19`](#dt-19)) sans toucher à l'ascension. Mais tout lot qui
+voudra faire mieux qu'un étage supérieur sur-provisionné passera par ici.
+
+---
+
+### DT-21 — `W_APOGEE_OVERSHOOT` calibré hors de son domaine
+
+**Mesuré.** Le poids d'un apogée au-dessus de la fenêtre vaut **0,5**, contre **8,0**
+pour un apogée en dessous. Le Javadoc justifie l'asymétrie ainsi : *« an apogee past it
+is absorbed by the trim burn at the next apside for nothing measurable »*, et la mesure
+citée porte sur des remises **distantes de 91 km** en apogée, arrivant toutes deux à
+400,128 km.
+
+À **4 596 km** d'apogée — ce que le Falcon Heavy étranglé rend sur le profil budgété —
+on est **cinquante fois** hors de cette mesure, et la prémisse est fausse : aucun trim
+n'absorbe onze fois la cible.
+
+**Conséquence observée.** L'optimiseur préfère un dépassement massif à tout déficit,
+puisqu'un apogée court est facturé seize fois plus cher. Rendu libre de couper son
+corps central, il **refuse de le faire** pour cette raison.
+
+**Inféré, et pourquoi ce n'est pas une correction à faire à la légère.** Le même
+Javadoc consigne ce qui s'est passé quand le poids valait 3,0 : le plafond a surenchéri
+sur le terme de pente et acheté une remise **148 km sous la cible**. Ce poids touche
+tous les profils du dépôt, et `PHY-2` va de toute façon rouvrir la calibration de
+l'ascension — c'est là qu'il faut le reprendre, avec les mesures de traînée en main
+plutôt qu'avant.
+---
+
 ## 4. Ce qui est sain
 
 À consigner autant que le reste, pour ne pas dégrader ce qui tient :
@@ -668,9 +835,23 @@ passages dans les fichiers concernés (cf. règle de la trace en
 revue documentaire, pas de la même mesure de code, et leur urgence dépend
 d'un chantier pas encore commencé plutôt que d'un ratio impact/risque
 immédiat. Repère simple : `DT-13`, `DT-14`, `DT-15` sont à trancher **avant
-ou pendant `PHY-2`** (ils s'aggravent silencieusement sinon) ; `DT-12` et
-`DT-16` n'ont aucune urgence propre ; `DT-17` se vérifie au premier profiling
-venu, sans chantier dédié.
+ou pendant `PHY-2`** (ils s'aggravent silencieusement sinon) ; `DT-16` n'a
+aucune urgence propre ; `DT-17` se vérifie au premier profiling venu, sans
+chantier dédié. `DT-12` est fermé.
+
+**`DT-18` est le seul à porter une échéance nommée.** Il ne vient pas de la
+revue documentaire mais d'une mesure faite par `PHY-8 / L5`, et il est **dû
+avant `PHY-5`** : c'est ce lot qui fera voler un propulseur largué à côté de son
+corps, et le calibrer autour d'une pièce trop grosse coûterait un second
+réglage.
+
+**`DT-19` à `DT-21` se traitent avec `PHY-2`, et dans cet ordre.** `DT-21` d'abord,
+parce que `PHY-2` rouvre de toute façon la calibration de l'ascension et que ce poids
+s'y reprend avec les mesures de traînée en main. `DT-19` ensuite : la réserve
+sur-provisionne, mais elle tient et son remplacement — un dimensionnement en deux
+passes — est un travail à part entière. `DT-20` en dernier : rien ne le presse tant
+que le dimensionnement compense, et il ne se traite pas seul, la barrière d'étagement
+et le poids de `DT-21` étant du même arbitrage.
 
 ---
 

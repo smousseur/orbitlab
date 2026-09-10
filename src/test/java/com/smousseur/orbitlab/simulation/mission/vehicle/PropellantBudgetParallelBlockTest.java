@@ -53,26 +53,26 @@ class PropellantBudgetParallelBlockTest {
 
   @Test
   void geoLoadsAreUnmoved() {
-    PropellantBudget.GeoLoads sequential =
+    PropellantBudget.SizedLoads sequential =
         PropellantBudget.loadsForGeo(SEQUENTIAL, Payloads.GEO_SAT, 2_000.0, PARKING, LAT);
-    PropellantBudget.GeoLoads split =
+    PropellantBudget.SizedLoads split =
         PropellantBudget.loadsForGeo(SPLIT, Payloads.GEO_SAT, 2_000.0, PARKING, LAT);
 
     assertSameLoads(sequential.launcherLoads(), split.launcherLoads());
-    assertEquals(sequential.akmLoad(), split.akmLoad(), 0.0);
+    assertEquals(sequential.payloadLoad(), split.payloadLoad(), 0.0);
   }
 
   @Test
   void highOrbitLoadsAreUnmoved() {
-    PropellantBudget.GeoLoads sequential =
+    PropellantBudget.SizedLoads sequential =
         PropellantBudget.loadsForHighOrbit(
             SEQUENTIAL, Payloads.GEO_SAT, 2_000.0, PARKING, GEO, LAT, LAT, AZIMUTH);
-    PropellantBudget.GeoLoads split =
+    PropellantBudget.SizedLoads split =
         PropellantBudget.loadsForHighOrbit(
             SPLIT, Payloads.GEO_SAT, 2_000.0, PARKING, GEO, LAT, LAT, AZIMUTH);
 
     assertSameLoads(sequential.launcherLoads(), split.launcherLoads());
-    assertEquals(sequential.akmLoad(), split.akmLoad(), 0.0);
+    assertEquals(sequential.payloadLoad(), split.payloadLoad(), 0.0);
   }
 
   @Test

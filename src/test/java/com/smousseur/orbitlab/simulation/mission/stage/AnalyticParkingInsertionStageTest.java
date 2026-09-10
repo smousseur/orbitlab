@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.orekit.orbits.CartesianOrbit;
+import org.orekit.orbits.KeplerianOrbit;
 import org.orekit.propagation.SpacecraftState;
 import org.orekit.time.AbsoluteDate;
 import org.orekit.utils.Constants;
@@ -69,25 +70,61 @@ class AnalyticParkingInsertionStageTest {
     return new VehicleStack(List.of(upperStage, payload));
   }
 
+  /**
+   * <b>This used to be a refusal, and it is now a flight.</b> An entry above the target needs burn
+   * 1 to brake rather than push, and the stage refused it because negating a burn taken at the
+   * entry point drops the periapsis underground — measured, on the Falcon Heavy lunar cells, as an
+   * integrator that gives up at its minimum step. The descending plan takes both burns to an apsis
+   * instead, which flies this geometry and the sub-orbital one with the same arithmetic.
+   *
+   * <p>Entering on a 600 km circle for a 400 km target, that means: brake at 600 to put the
+   * periapsis on the target, coast half a transfer period, brake again at 400 to circularize. Two
+   * retrograde burns, and the mission arrives at its parking orbit instead of being refused.
+   */
   @Test
-  void entryAboveTarget_refusesThePlanInsteadOfPlanningARetrogradeBurn() {
+  void entryAboveTarget_fliesADescendingPlanToTheTarget() {
     VehicleStack stack = stack();
-    // Entering at 600 km for a 400 km target: the transfer ellipse is *below* the entry orbit, so
-    // burn 1 would have to brake (≈ −55 m/s), the mirror image of the λ=0.3 GEO failure.
     SpacecraftState tooHigh = circularStateAt(600_000, stack.getMass());
     AnalyticParkingInsertionStage stage =
         new AnalyticParkingInsertionStage("Parking", TARGET_ALTITUDE);
 
-    OrbitlabException thrown =
-        assertThrows(
-            OrbitlabException.class, () -> stage.propagateStandalone(tooHigh, missionWith(stack)));
+    SpacecraftState arrived = stage.propagateStandalone(tooHigh, missionWith(stack));
 
+    KeplerianOrbit orbit = new KeplerianOrbit(arrived.getOrbit());
+    double perigee = orbit.getA() * (1 - orbit.getE()) - Constants.WGS84_EARTH_EQUATORIAL_RADIUS;
+    double apogee = orbit.getA() * (1 + orbit.getE()) - Constants.WGS84_EARTH_EQUATORIAL_RADIUS;
+    // 28 km is the repository's own insertion bar, ORBIT_MARGIN_RATIO = 7 % of the target. The
+    // flight lands 18.6 km low on both apsides, which is what two finite braking burns at 981 kN
+    // cost against the impulsive plan — inside the bar, and not pretended to be exact.
+    double bar = 0.07 * TARGET_ALTITUDE;
+    assertEquals(TARGET_ALTITUDE, perigee, bar, "perigee on the target");
+    assertEquals(TARGET_ALTITUDE, apogee, bar, "apogee on the target");
     assertTrue(
-        thrown.getMessage().contains("retrograde"),
-        () -> "message must name the cause, got: " + thrown.getMessage());
-    assertTrue(
-        thrown.getMessage().contains("Parking"),
-        () -> "message must name the stage, got: " + thrown.getMessage());
+        arrived.getMass() < stack.getMass(), "the two braking burns must have spent propellant");
+  }
+
+  /**
+   * <b>How far the descending plan widened this stage, stated because it is wider than the lunar
+   * cells needed.</b> A target well below the entry is flown too — a 600 km circle brought down to
+   * 100 km — because the plan asks only that an apoapsis exist above the target, and a descent
+   * satisfies that as readily as a sub-orbital hand-over does. The stage is shared by the GEO and
+   * both lunar chains, so this is a deliberate scope note rather than a discovered capability.
+   *
+   * <p>The refusal it replaced is therefore gone, and the one that remains reachable is the
+   * capability guard below: a plan the propellant cannot fly.
+   */
+  @Test
+  void aTargetFarBelowTheEntryIsFlownAsADescentToo() {
+    VehicleStack stack = stack();
+    AnalyticParkingInsertionStage stage = new AnalyticParkingInsertionStage("Parking", 100_000.0);
+    SpacecraftState wayAbove = circularStateAt(600_000, stack.getMass());
+
+    SpacecraftState arrived = stage.propagateStandalone(wayAbove, missionWith(stack));
+
+    KeplerianOrbit orbit = new KeplerianOrbit(arrived.getOrbit());
+    double perigee = orbit.getA() * (1 - orbit.getE()) - Constants.WGS84_EARTH_EQUATORIAL_RADIUS;
+    assertTrue(perigee < 200_000.0, () -> "the descent must reach low, got " + perigee + " m");
+    assertTrue(arrived.getMass() < stack.getMass(), "and it must spend propellant doing it");
   }
 
   /**

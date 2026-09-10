@@ -194,7 +194,7 @@ public class GEOMission extends EarthMission {
     return LaunchConfiguration.fullyLoaded(
         Launchers.FALCON_HEAVY,
         Payloads.GEO_SAT.toSpacecraft(
-            Payloads.GEO_SAT.defaultDryMass(), Payloads.GEO_SAT.akmPropellantCapacity()));
+            Payloads.GEO_SAT.defaultDryMass(), Payloads.GEO_SAT.propellantCapacity()));
   }
 
   private static List<MissionStage> buildStages(

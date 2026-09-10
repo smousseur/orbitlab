@@ -19,6 +19,7 @@ import org.hipparchus.ode.events.Action;
 import org.hipparchus.util.FastMath;
 import org.orekit.attitudes.FrameAlignedProvider;
 import org.orekit.forces.maneuvers.ConstantThrustManeuver;
+import org.orekit.orbits.KeplerianOrbit;
 import org.orekit.propagation.SpacecraftState;
 import org.orekit.propagation.events.ApsideDetector;
 import org.orekit.propagation.events.DateDetector;
@@ -73,6 +74,21 @@ import org.orekit.utils.Constants;
 public class AnalyticHohmannTransferStage extends MissionStage {
   private static final Logger logger = LogManager.getLogger(AnalyticHohmannTransferStage.class);
   private static final double EARTH_RADIUS = Constants.WGS84_EARTH_EQUATORIAL_RADIUS;
+
+  /** How far above its target an apogee must sit before the descending branch is worth firing. */
+  private static final double DESCENT_THRESHOLD_M = 5_000.0;
+
+  /** Convergence threshold on the perigee the insertion branch aims at (m). */
+  private static final double INSERTION_PERIGEE_TOLERANCE_M = 2_000.0;
+
+  /** Durations tried across the search span before the rising branch is refined. */
+  private static final int INSERTION_SCAN_POINTS = 14;
+
+  /** Bisection steps refining the rising branch once the target is bracketed. */
+  private static final int INSERTION_REFINE_STEPS = 12;
+
+  /** How far past the impulsive circularization the scan looks, in multiples of it. */
+  private static final double INSERTION_SPAN_FACTOR = 2.5;
 
   private final double targetPerigeeAltitude;
   private final double targetApogeeAltitude;
@@ -145,6 +161,8 @@ public class AnalyticHohmannTransferStage extends MissionStage {
   // ════════════════════════════════════════════════════════════════════════
 
   private record AnalyticBurnPlan(
+      double dtInsertion,
+      Vector3D insertionDirectionInertial,
       double dt1,
       Vector3D burn1DirectionInertial,
       double dtCoast,
@@ -156,6 +174,20 @@ public class AnalyticHohmannTransferStage extends MissionStage {
 
   private AnalyticBurnPlan computeBurnPlan(
       SpacecraftState state, Vehicle vehicle, FlightContext context) {
+    return computeBurnPlan(state, vehicle, context, true);
+  }
+
+  /**
+   * @param mayInsert whether an unreachable apogee may be answered by inserting first; false on the
+   *     re-plan that follows an insertion, so a state that is still unplannable fails loudly rather
+   *     than looping
+   */
+  private AnalyticBurnPlan computeBurnPlan(
+      SpacecraftState state, Vehicle vehicle, FlightContext context, boolean mayInsert) {
+    AnalyticBurnPlan descending = computeDescendingPlan(state, vehicle, context);
+    if (descending != null) {
+      return descending;
+    }
     double mu = state.getOrbit().getMu();
 
     Vector3D r1 = state.getPVCoordinates().getPosition();
@@ -211,6 +243,9 @@ public class AnalyticHohmannTransferStage extends MissionStage {
               propulsion1.isp(),
               transferHalfPeriod,
               maxStep);
+      if (stateAtApogee == null) {
+        break;
+      }
       double rApoActual = stateAtApogee.getPVCoordinates().getPosition().getNorm();
       double bias = r2 - rApoActual;
       r2Aim += bias;
@@ -218,6 +253,13 @@ public class AnalyticHohmannTransferStage extends MissionStage {
         break;
       }
     }
+    if (stateAtApogee == null) {
+      if (!mayInsert) {
+        throw new IllegalStateException("No apogee found within one transfer half-period.");
+      }
+      return insertThenTransfer(state, vehicle, context);
+    }
+
     Vector3D burn1DirectionInertial = deltaV1.normalize();
     double massAfterBurn1 = state.getMass() * FastMath.exp(-dv1 / g0Ve);
 
@@ -274,7 +316,356 @@ public class AnalyticHohmannTransferStage extends MissionStage {
         vRadial1);
 
     return new AnalyticBurnPlan(
-        dt1, burn1DirectionInertial, dtCoast, dt2, burn2DirectionInertial, totalDuration, dv1, dv2);
+        0.0,
+        null,
+        dt1,
+        burn1DirectionInertial,
+        dtCoast,
+        dt2,
+        burn2DirectionInertial,
+        totalDuration,
+        dv1,
+        dv2);
+  }
+
+  /**
+   * <b>PHY-8 / L4 — the branch taken when there is no apogee to aim at</b> (spec {@code
+   * docs/etagement/06-conception-L4.md} §3.3).
+   *
+   * <p>An ascent can hand over on an arc so deep that raising its apogee does not produce one ahead
+   * — the vehicle re-enters first. A split Ariane 64 does exactly that: apogee 372 km, perigee −3
+   * 536 km, and 3 247 m/s still aboard. Before this branch the stage threw, which is why {@code
+   * CentralBodyBaselineTest}'s polar profile has been frozen on an ascent-only chain since BUG-6.
+   *
+   * <p>The answer is one prograde burn that lifts the perigee to where the vehicle already is, then
+   * the ordinary plan from the resulting orbit — which now has an apogee, by construction.
+   *
+   * <p><b>Why this lives on the throw path and nowhere else.</b> Measured: applying the same
+   * insertion to a profile that did <em>not</em> need it costs 11 452 kg of final mass on the
+   * Falcon Heavy LEO-400 baseline, 31 %. That ascent hands over at 77 km but with its apogee
+   * already at 420 km, and circularizing at 77 km throws that apogee away — {@code dv1} goes from
+   * 199 to 638 m/s. Reaching an apogee the ascent already paid for is what this stage is good at;
+   * the branch must not take that away (spec §3.4).
+   */
+  private AnalyticBurnPlan insertThenTransfer(
+      SpacecraftState state, Vehicle vehicle, FlightContext context) {
+    Vector3D direction = insertionDirection(state);
+    double dtInsertion = resolveInsertion(state, vehicle, context, direction);
+    SpacecraftState inserted = flyInsertion(state, dtInsertion, direction, vehicle, context);
+    ActiveStageInfo stageInfo = vehicle.resolveActiveStage(state.getMass());
+    logger.info(
+        "Orbit insertion before transfer: burn {}s ({} s of propellant aboard), mass {} -> {} kg,"
+            + " orbit {} x {} km -> {} x {} km",
+        (float) dtInsertion,
+        (float)
+            (stageInfo.remainingFuel(state.getMass())
+                / (stageInfo.propulsion().thrust()
+                    / (stageInfo.propulsion().isp() * Constants.G0_STANDARD_GRAVITY))),
+        (float) state.getMass(),
+        (float) inserted.getMass(),
+        (float) perigeeKm(state),
+        (float) apogeeKm(state),
+        (float) perigeeKm(inserted),
+        (float) apogeeKm(inserted));
+    AnalyticBurnPlan onward = computeBurnPlan(inserted, vehicle, context, false);
+
+    return new AnalyticBurnPlan(
+        dtInsertion,
+        direction,
+        onward.dt1(),
+        onward.burn1DirectionInertial(),
+        onward.dtCoast(),
+        onward.dt2(),
+        onward.burn2DirectionInertial(),
+        dtInsertion + onward.totalDuration(),
+        onward.dv1(),
+        onward.dv2());
+  }
+
+  /**
+   * Burn duration lifting the perigee to the radius the vehicle is at, resolved by flying
+   * candidates rather than by the impulsive formula. Measured at design time: the impulsive figure
+   * asks 1 723 m/s, which is 435 s of Vinci, and an impulse spread over seven minutes of arc lands
+   * the perigee hundreds of kilometres short. A loop must evaluate its candidates on what will
+   * actually be flown (MIS-4 / L6).
+   */
+  /**
+   * <b>PHY-8 / L4 — the transfer that lowers</b> (spec {@code docs/etagement/06-conception-L4.md}
+   * §3.5).
+   *
+   * <p>A Hohmann only ever climbed here: burn now, coast to apogee, circularize. That covers every
+   * ascent that hands over <em>below</em> its target, which until L4 was all of them — a Falcon
+   * Heavy hands over at 77 km for a 400 km orbit. A split Ariane 64 does the opposite: it is a far
+   * bigger launcher for the same target, and after the insertion it sits on 400 x 467 km with the
+   * perigee already right and 67 km too much apogee.
+   *
+   * <p>No single burn removes that. A burn produces an orbit through the point it fires at, and 467
+   * km is not on a 400 km circle — the best one burn can do from there is exactly the 400 x 467 it
+   * is already on. Lowering an apogee takes a burn at the <em>perigee</em>, retrograde, which is
+   * the mirror of what this stage already does at apogee.
+   *
+   * @return the plan, or {@code null} when the orbit is not above its target and the ordinary
+   *     ascending Hohmann applies
+   */
+  private AnalyticBurnPlan computeDescendingPlan(
+      SpacecraftState state, Vehicle vehicle, FlightContext context) {
+    KeplerianOrbit orbit = new KeplerianOrbit(state.getOrbit());
+    double apogee = orbit.getA() * (1 + orbit.getE());
+    double perigee = orbit.getA() * (1 - orbit.getE());
+    double targetApogee = EARTH_RADIUS + targetApogeeAltitude;
+    double targetPerigee = EARTH_RADIUS + targetPerigeeAltitude;
+    if (apogee <= targetApogee + DESCENT_THRESHOLD_M
+        || perigee < targetPerigee - DESCENT_THRESHOLD_M) {
+      return null;
+    }
+
+    SpacecraftState atPerigee = detectStateAtPerigee(state, context);
+    if (atPerigee == null) {
+      return null;
+    }
+
+    double mu = state.getOrbit().getMu();
+    double rp = atPerigee.getPosition().getNorm();
+    Vector3D vAtPerigee = atPerigee.getPVCoordinates().getVelocity();
+    // Magnitude only, along the flown velocity: the plane is not this burn's business — a commanded
+    // inclination is cleaned at a node by AnalyticPlaneTrimAtNodeStage, and a due-east target has
+    // nothing to clean.
+    double vTarget = FastMath.sqrt(mu * (2.0 / rp - 2.0 / (rp + targetApogee)));
+    double dv = vTarget - vAtPerigee.getNorm();
+    if (dv >= 0) {
+      return null;
+    }
+
+    ActiveStageInfo stageInfo = vehicle.resolveActiveStage(atPerigee.getMass());
+    PropulsionSystem propulsion = stageInfo.propulsion();
+    double dt =
+        Physics.computeBurnDurationCapped(
+            -dv,
+            atPerigee.getMass(),
+            propulsion.isp(),
+            propulsion.thrust(),
+            stageInfo.remainingFuel(atPerigee.getMass()));
+    Vector3D retrograde = vAtPerigee.normalize().negate();
+
+    double dtToPerigee = atPerigee.getDate().durationFrom(state.getDate());
+    double dtCoast = FastMath.max(0.0, dtToPerigee - dt / 2.0);
+
+    logger.info(
+        "Analytic Hohmann, descending: apogee {} km -> {} km, retrograde dv={} m/s over {}s at a"
+            + " perigee reached in {}s",
+        (float) ((apogee - EARTH_RADIUS) / 1000.0),
+        (float) ((targetApogee - EARTH_RADIUS) / 1000.0),
+        (float) -dv,
+        (float) dt,
+        (float) dtToPerigee);
+
+    return new AnalyticBurnPlan(
+        0.0, null, 0.0, retrograde, dtCoast, dt, retrograde, dtCoast + dt, 0.0, -dv);
+  }
+
+  /**
+   * The next perigee after {@code state}, or {@code null} when none is reached within one period.
+   * Mirror of {@link AnalyticTrimBurnStage#detectStateAtApogee}, which records the decreasing
+   * apsis; this one records the increasing side.
+   */
+  private static SpacecraftState detectStateAtPerigee(
+      SpacecraftState state, FlightContext context) {
+    NumericalPropagator propagator =
+        OrekitService.get().createOptimizationPropagator(context, OrekitService.COAST_MAX_STEP);
+    propagator.setInitialState(state);
+    ReentryGuard.armQuiet(propagator, context.gravity());
+
+    RecordAndContinue recorder = new RecordAndContinue();
+    propagator.addEventDetector(new ApsideDetector(state.getOrbit()).withHandler(recorder));
+    propagator.propagate(state.getDate().shiftedBy(state.getOrbit().getKeplerianPeriod() * 1.1));
+
+    for (RecordAndContinue.Event event : recorder.getEvents()) {
+      if (event.isIncreasing()) {
+        double dt = event.getState().getDate().durationFrom(state.getDate());
+        if (dt > 1.0) {
+          return event.getState();
+        }
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Direction of the insertion burn: towards the circular velocity at the current radius, in the
+   * plane the vehicle already flies.
+   *
+   * <p><b>Not prograde, and that is the whole point.</b> A hand-over past apogee is descending, and
+   * prograde thrust there raises the <em>far</em> apsis — measured: a full tank spent prograde took
+   * a −200 x 568 km arc to 472 x 5 515 km, lifting the apogee by five thousand kilometres while the
+   * perigee came up only as a side effect. What has to be cancelled is the radial descent, so the
+   * direction is {@code v_circular − v}, the same construction burn 2 of this stage and the trim
+   * stage already use.
+   *
+   * @param state the hand-over state
+   * @return the unit direction of the insertion burn
+   */
+  private static Vector3D insertionDirection(SpacecraftState state) {
+    Vector3D position = state.getPosition();
+    Vector3D velocity = state.getPVCoordinates().getVelocity();
+    Vector3D momentum = Vector3D.crossProduct(position, velocity);
+    Vector3D horizontal = Vector3D.crossProduct(momentum, position).normalize();
+    double vCircular = FastMath.sqrt(state.getOrbit().getMu() / position.getNorm());
+    return horizontal.scalarMultiply(vCircular).subtract(velocity).normalize();
+  }
+
+  /**
+   * Burn duration lifting the perigee to the radius the vehicle is at, resolved by <b>flying</b>
+   * candidates rather than by the impulsive formula.
+   *
+   * <p>Measured at design time: the impulsive figure asks 935 m/s here, which is 213 s of Vinci,
+   * and a burn that long is not an impulse — the vehicle travels most of an arc under a thrust
+   * direction frozen at ignition, and the perigee comes up 2 000 km short. The relation between
+   * duration and achieved perigee is monotone, so this bisects on it. A secant was tried first and
+   * converged on the wrong root: the response is far too non-linear for two points to describe it.
+   *
+   * @return the burn duration, or the longest the stage can afford when even that falls short
+   */
+  private double resolveInsertion(
+      SpacecraftState state, Vehicle vehicle, FlightContext context, Vector3D direction) {
+    // The mission's own perigee when the vehicle is above it, the current radius when it is not: a
+    // single burn cannot raise a perigee above the radius it fires at. Aiming there rather than at
+    // a full circularization leaves the apogee for the transfer to finish, which is what the
+    // transfer is for.
+    double targetPerigeeRadius =
+        FastMath.min(EARTH_RADIUS + targetPerigeeAltitude, state.getPosition().getNorm());
+    ActiveStageInfo stageInfo = vehicle.resolveActiveStage(state.getMass());
+    PropulsionSystem propulsion = stageInfo.propulsion();
+    double massFlow = propulsion.thrust() / (propulsion.isp() * Constants.G0_STANDARD_GRAVITY);
+    double maxBurn = stageInfo.remainingFuel(state.getMass()) / massFlow;
+
+    // The impulsive circularization is the scale of the problem, not the answer: the search runs
+    // over [0, 2.5x] of it, capped by the tank.
+    double dvCircular =
+        FastMath.sqrt(state.getOrbit().getMu() / state.getPosition().getNorm())
+            * FastMath.hypot(1.0, 0.0);
+    double dtCircular =
+        Physics.computeBurnDurationCapped(
+            insertionDeltaV(state),
+            state.getMass(),
+            propulsion.isp(),
+            propulsion.thrust(),
+            stageInfo.remainingFuel(state.getMass()));
+    double span = FastMath.min(maxBurn, INSERTION_SPAN_FACTOR * dtCircular);
+    if (!(span > 0) || !(dvCircular > 0)) {
+      return 0.0;
+    }
+
+    // Scanned, not bisected. The achieved perigee is NOT monotone in burn duration: it rises to a
+    // maximum near the impulsive circularization and falls again beyond it, because a burn this
+    // long is flown in a frozen inertial direction and starts re-eccentricizing the orbit.
+    // Measured: the whole tank took the perigee back down to 283 km where a third of it reaches
+    // 400 (spec docs/etagement/06-conception-L4.md §3.4).
+    double bestDt = 0.0;
+    double bestPerigee = -Double.MAX_VALUE;
+    double previousDt = 0.0;
+    double previousError = -Double.MAX_VALUE;
+    for (int i = 1; i <= INSERTION_SCAN_POINTS; i++) {
+      double dt = span * i / INSERTION_SCAN_POINTS;
+      double error = perigeeError(state, dt, direction, vehicle, context, targetPerigeeRadius);
+      if (error + targetPerigeeRadius > bestPerigee) {
+        bestPerigee = error + targetPerigeeRadius;
+        bestDt = dt;
+      }
+      if (error >= 0) {
+        // Crossed the target on the rising branch: refine between the last two points.
+        return refine(state, direction, vehicle, context, targetPerigeeRadius, previousDt, dt);
+      }
+      previousDt = dt;
+      previousError = error;
+    }
+    logger.info(
+        "Orbit insertion: the best reachable perigee is {} km against {} km wanted; flying it and"
+            + " letting the transfer judge.",
+        (float) ((bestPerigee - EARTH_RADIUS) / 1000.0),
+        (float) ((targetPerigeeRadius - EARTH_RADIUS) / 1000.0));
+    return previousError > -Double.MAX_VALUE ? bestDt : 0.0;
+  }
+
+  /** Bisects the rising branch between a duration that undershoots and one that overshoots. */
+  private double refine(
+      SpacecraftState state,
+      Vector3D direction,
+      Vehicle vehicle,
+      FlightContext context,
+      double targetPerigeeRadius,
+      double undershoot,
+      double overshoot) {
+    double low = undershoot;
+    double high = overshoot;
+    for (int i = 0; i < INSERTION_REFINE_STEPS; i++) {
+      double mid = 0.5 * (low + high);
+      double error = perigeeError(state, mid, direction, vehicle, context, targetPerigeeRadius);
+      if (FastMath.abs(error) < INSERTION_PERIGEE_TOLERANCE_M) {
+        return mid;
+      }
+      if (error < 0) {
+        low = mid;
+      } else {
+        high = mid;
+      }
+    }
+    return 0.5 * (low + high);
+  }
+
+  /** Magnitude of the impulsive velocity change that would circularize where the vehicle is. */
+  private static double insertionDeltaV(SpacecraftState state) {
+    Vector3D position = state.getPosition();
+    Vector3D velocity = state.getPVCoordinates().getVelocity();
+    Vector3D momentum = Vector3D.crossProduct(position, velocity);
+    Vector3D horizontal = Vector3D.crossProduct(momentum, position).normalize();
+    double vCircular = FastMath.sqrt(state.getOrbit().getMu() / position.getNorm());
+    return horizontal.scalarMultiply(vCircular).subtract(velocity).getNorm();
+  }
+
+  private static double perigeeKm(SpacecraftState state) {
+    KeplerianOrbit orbit = new KeplerianOrbit(state.getOrbit());
+    return (orbit.getA() * (1 - orbit.getE()) - EARTH_RADIUS) / 1000.0;
+  }
+
+  private static double apogeeKm(SpacecraftState state) {
+    KeplerianOrbit orbit = new KeplerianOrbit(state.getOrbit());
+    return (orbit.getA() * (1 + orbit.getE()) - EARTH_RADIUS) / 1000.0;
+  }
+
+  private double perigeeError(
+      SpacecraftState state,
+      double dt,
+      Vector3D direction,
+      Vehicle vehicle,
+      FlightContext context,
+      double targetPerigeeRadius) {
+    KeplerianOrbit orbit =
+        new KeplerianOrbit(flyInsertion(state, dt, direction, vehicle, context).getOrbit());
+    return orbit.getA() * (1 - orbit.getE()) - targetPerigeeRadius;
+  }
+
+  private SpacecraftState flyInsertion(
+      SpacecraftState state,
+      double dt,
+      Vector3D direction,
+      Vehicle vehicle,
+      FlightContext context) {
+    ActiveStageInfo stageInfo = vehicle.resolveActiveStage(state.getMass());
+    PropulsionSystem propulsion = stageInfo.propulsion();
+    NumericalPropagator propagator =
+        OrekitService.get()
+            .createOptimizationPropagator(context, burnLimitedMaxStep(state, vehicle));
+    propagator.setInitialState(state);
+    ReentryGuard.armQuiet(propagator, context.gravity());
+    propagator.addForceModel(
+        new ConstantThrustManeuver(
+            state.getDate(),
+            dt,
+            propulsion.thrust(),
+            propulsion.isp(),
+            inertialFrameAttitude(direction, state),
+            Vector3D.PLUS_I));
+    return propagator.propagate(state.getDate().shiftedBy(dt));
   }
 
   /**
@@ -329,7 +720,7 @@ public class AnalyticHohmannTransferStage extends MissionStage {
         }
       }
     }
-    throw new IllegalStateException("No apogee found within one transfer half-period.");
+    return null;
   }
 
   /**
@@ -390,22 +781,38 @@ public class AnalyticHohmannTransferStage extends MissionStage {
     ActiveStageInfo stage1 = vehicle.resolveActiveStage(state.getMass());
     PropulsionSystem propulsion1 = stage1.propulsion();
     DepletionGuard.armCappedBurn(propagator, stage1.depletionFloor(), getName());
-    AbsoluteDate burn1Start = epoch.shiftedBy(1.0e-3);
-    // Burn 1 uses a frame-aligned inertial attitude: the ΔV₁ vector has a radial component
-    // (cancelling the parking-orbit residual eccentricity at the node) plus the tangential
-    // Hohmann boost, so a pure-prograde LOF-TNW attitude would not deliver the right vector.
-    propagator.addForceModel(
-        new ConstantThrustManeuver(
-            burn1Start,
-            plan.dt1(),
-            propulsion1.thrust(),
-            propulsion1.isp(),
-            inertialFrameAttitude(plan.burn1DirectionInertial(), state),
-            Vector3D.PLUS_I));
+
+    // The insertion burn, when the plan needed one: it fires first, from the hand-over state, and
+    // everything below is shifted by its duration.
+    if (plan.dtInsertion() > 0) {
+      propagator.addForceModel(
+          new ConstantThrustManeuver(
+              epoch.shiftedBy(1.0e-3),
+              plan.dtInsertion(),
+              propulsion1.thrust(),
+              propulsion1.isp(),
+              inertialFrameAttitude(plan.insertionDirectionInertial(), state),
+              Vector3D.PLUS_I));
+    }
+    AbsoluteDate burn1Start = epoch.shiftedBy(1.0e-3 + plan.dtInsertion());
+    // A descending plan has no first burn: it coasts to the perigee and brakes there.
+    if (plan.dt1() > 0) {
+      // Burn 1 uses a frame-aligned inertial attitude: the ΔV₁ vector has a radial component
+      // (cancelling the parking-orbit residual eccentricity at the node) plus the tangential
+      // Hohmann boost, so a pure-prograde LOF-TNW attitude would not deliver the right vector.
+      propagator.addForceModel(
+          new ConstantThrustManeuver(
+              burn1Start,
+              plan.dt1(),
+              propulsion1.thrust(),
+              propulsion1.isp(),
+              inertialFrameAttitude(plan.burn1DirectionInertial(), state),
+              Vector3D.PLUS_I));
+    }
 
     // Burn 2 fires the same stage as burn 1 (no jettison in this phase, see
     // VehicleStack#resolveActiveStage), so it reuses propulsion1.
-    AbsoluteDate burn2Start = epoch.shiftedBy(plan.dt1() + plan.dtCoast());
+    AbsoluteDate burn2Start = epoch.shiftedBy(plan.dtInsertion() + plan.dt1() + plan.dtCoast());
     // Burn 2 uses a frame-aligned attitude so the thrust direction stays constant in inertial
     // throughout the finite burn — this is what makes the combined circularization + plane change
     // converge to the impulsive target instead of losing authority to LOF rotation.

@@ -145,37 +145,73 @@ class AscentBaselineN2Test extends AbstractTrajectoryOptimizerTest {
   // apart in perigee. That is a property of the cost function, it predates MIS-7, and it is worth a
   // look of its own — the retained transitionTime also moved 0.818 s, past its own 0.5 s tolerance,
   // for the same reason.
+  // ── RE-RECORDED at PHY-8 / L3 (2026-09-09, seed 42) ─────────────────────
+  // The Falcon Heavy's centre core is throttled to 0.81 during the shared phase, so its ascent is
+  // five phases instead of three and both profiles fly a different trajectory. Deliberate, so
+  // re-recording is the right move and the tolerances below are UNTOUCHED.
+  //
+  // What moved, against the 2026-08-16 (MIS-7) values:
+  //
+  //          transitionTime          MECO mass          final perigee       inclination
+  //   LEO    307.1932 → 315.0702    +1 908.6 kg   400 314.5 → 400 311.6   5.30303 → 5.30270
+  //   GEO    329.1242 → 343.5384    +4 431.0 kg  35 786 247.8 → 35 786 249.2   unchanged
+  //
+  // The MECO mass is the headline: the throttle buys 1.9 t (LEO) and 4.4 t (GEO) at hand-over, and
+  // the final orbits do not move — 2.9 m of perigee on LEO, 1.4 m on GEO, both four orders of
+  // magnitude inside ORBIT_RELATIVE_TOLERANCE. Splitting the jettison in two is worth real
+  // performance: the vehicle stops carrying 44 t of empty booster through the last 30 s of
+  // first-stage flight, and pays for it with a lower lift-off thrust it can afford.
+  //
+  // optimizeSeconds went 7.1 → 60.3 and 11.4 → 84.6. It is logged and never asserted (see N3
+  // below), and it is one wall-clock reading taken inside a gateTest run rather than a benchmark:
+  // do not read a five-phase slowdown factor off it without measuring one.
+  // ── RE-RECORDED at PHY-8 / L4 (2026-09-09, seed 42) ─────────────────────
+  // The gravity turn's cost function gained a term charging how far below its own apogee a
+  // candidate hands over (spec docs/etagement/06-conception-L4.md §3.7). It exists for the split
+  // Ariane 64, which handed over 138 km below its apogee where these two profiles hand over 0.15
+  // km below theirs — the term is four orders of magnitude below the acceptable cost here. It is
+  // not zero, though, and this optimizer returns the first good-enough candidate rather than an
+  // optimum, so which candidate that is moved:
+  //
+  //          transitionTime            MECO mass          final perigee
+  //   LEO    315.0702 → 314.8657      +58.8 kg      400 311.6 → 400 311.8 m
+  //   GEO    343.5384 → 343.3690      +48.7 kg      unchanged to the decimetre
+  //
+  // Both shifts are inside TRANSITION_TIME_TOLERANCE_S, and both mass deltas are the shift times
+  // the upper stage's 287.46 kg/s to the gram: 0.2046 x 287.46 = 58.8, 0.1694 x 287.46 = 48.7.
+  // That is the case this fixture's own javadoc says calls for a re-baseline rather than an
+  // investigation. The tolerances below are UNTOUCHED.
   private static final Baseline LEO_400_BASELINE =
       new Baseline(
-          307.193166,
+          314.865656,
           new MecoState(
-              314.193166,
-              36368.082,
-              new Vector3D(-3065580.683126, -5677159.212400, 577919.103944),
-              new Vector3D(6963.051876, -3780.275135, -187.406132)),
+              321.865656,
+              38335.522,
+              new Vector3D(-3032997.664934, -5693529.839660, 576931.994530),
+              new Vector3D(6983.312954, -3739.588732, -191.560768)),
           new MecoState(
-              314.193166,
-              36368.082,
-              new Vector3D(-3065580.683126, -5677159.212400, 577919.103944),
-              new Vector3D(6963.051876, -3780.275135, -187.406132)),
-          new OrbitShape(400314.5, 419164.8, 5.303026),
-          7.1);
+              321.865656,
+              38335.522,
+              new Vector3D(-3032997.664934, -5693529.839660, 576931.994530),
+              new Vector3D(6983.312954, -3739.588732, -191.560768)),
+          new OrbitShape(400311.8, 419162.6, 5.302712),
+          60.8);
 
   private static final Baseline GEO_BASELINE =
       new Baseline(
-          329.124209,
+          343.368964,
           new MecoState(
-              336.124209,
-              64579.867,
-              new Vector3D(-2971529.637513, -5650537.034819, 569924.139212),
-              new Vector3D(7056.046315, -3730.610941, -197.768295)),
+              350.368964,
+              69059.613,
+              new Vector3D(-2932498.028106, -5669399.168734, 568665.692616),
+              new Vector3D(7082.662555, -3687.304818, -202.625763)),
           new MecoState(
-              336.124209,
-              64579.867,
-              new Vector3D(-2971529.637513, -5650537.034819, 569924.139212),
-              new Vector3D(7056.046315, -3730.610941, -197.768295)),
-          new OrbitShape(35786247.8, 35791193.0, 0.000034),
-          11.4);
+              350.368964,
+              69059.613,
+              new Vector3D(-2932498.028106, -5669399.168734, 568665.692616),
+              new Vector3D(7082.662555, -3687.304818, -202.625763)),
+          new OrbitShape(35786249.2, 35791192.4, 0.000034),
+          89.6);
 
   @BeforeAll
   static void init() {

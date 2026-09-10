@@ -17,8 +17,8 @@ import org.hipparchus.util.FastMath;
  * the parameters step accepts.
  *
  * <p>Only what the wizard owns is reproduced. Everything the spec derived on its own — propellant
- * loads sized by {@code PropellantBudget}, the AKM load, the composed stages — is deliberately left
- * out: validating the edit sizes it all again from the values on screen.
+ * loads sized by {@code PropellantBudget}, the payload load, the composed stages — is deliberately
+ * left out: validating the edit sizes it all again from the values on screen.
  */
 public final class WizardPrefill {
 

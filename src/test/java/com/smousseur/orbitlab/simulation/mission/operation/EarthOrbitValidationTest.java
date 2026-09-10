@@ -113,7 +113,7 @@ class EarthOrbitValidationTest {
   /**
    * A target beyond the ascent's reach needs a parking orbit and a long coast to apogee. Where
    * neither the upper stage nor a kick motor can hold it, the mission is refused at composition —
-   * naming the stage and the duration it is short of, so the way out ("fly Ariane 62, or take a
+   * naming the stage and the duration it is short of, so the way out ("fly Ariane 64, or take a
    * payload with a kick motor") is in the failure itself.
    */
   @Test
@@ -152,13 +152,13 @@ class EarthOrbitValidationTest {
   }
 
   /**
-   * The same target on Ariane 62 composes: its upper stage declares 6 h against the 2 h 58 needed.
-   * This is the "reserved to Ariane 62" of §6 turned into a property of the catalog rather than a
+   * The same target on Ariane 64 composes: its upper stage declares 6 h against the 2 h 58 needed.
+   * This is the "reserved to Ariane 64" of §6 turned into a property of the catalog rather than a
    * rule someone has to remember.
    */
   @Test
-  void theSameMeoOnAriane62_composes() {
-    assertDoesNotThrow(() -> MissionComposer.compose(meoSpec(Launchers.ARIANE_62), FAST));
+  void theSameMeoOnAriane64_composes() {
+    assertDoesNotThrow(() -> MissionComposer.compose(meoSpec(Launchers.ARIANE_64), FAST));
   }
 
   /**

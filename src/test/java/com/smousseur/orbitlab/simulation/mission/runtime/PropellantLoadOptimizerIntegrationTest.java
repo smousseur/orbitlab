@@ -201,7 +201,7 @@ class PropellantLoadOptimizerIntegrationTest {
 
     // Heuristic loads (10 % margin) — the λ = 1 baseline the loop must beat. The AKM load is
     // sized once here and stays fixed across evaluations: λ only scales the launcher's S2.
-    PropellantBudget.GeoLoads geoLoads =
+    PropellantBudget.SizedLoads geoLoads =
         PropellantBudget.loadsForGeo(
             launcher,
             Payloads.GEO_SAT,
@@ -209,10 +209,10 @@ class PropellantLoadOptimizerIntegrationTest {
             GEO_PARKING_ALTITUDE_M,
             GEO_LAUNCH_LATITUDE_DEG);
     double[] heuristicLoads = geoLoads.launcherLoads();
-    double akmLoad = geoLoads.akmLoad();
+    double payloadLoad = geoLoads.payloadLoad();
     boolean[] mask = PropellantLoadOptimizer.lambdaScaledMask(launcher);
     logStageLoads("GEO heuristic loads", launcher, heuristicLoads, mask);
-    logger.info("GEO heuristic AKM load: {} kg (off λ)", Math.round(akmLoad));
+    logger.info("GEO heuristic AKM load: {} kg (off λ)", Math.round(payloadLoad));
 
     AbsoluteDate launchEpoch = new AbsoluteDate(2026, 1, 1, 12, 0, 0.0, TimeScalesFactory.getUTC());
 
@@ -221,7 +221,7 @@ class PropellantLoadOptimizerIntegrationTest {
             new GEOMission(
                 "I7 GEO",
                 new LaunchConfiguration(
-                    launcher, loads, Payloads.GEO_SAT.toSpacecraft(payloadDryMass, akmLoad)),
+                    launcher, loads, Payloads.GEO_SAT.toSpacecraft(payloadDryMass, payloadLoad)),
                 GEO_PARKING_ALTITUDE_M,
                 GEO_ALTITUDE_M,
                 GEO_LAUNCH_LATITUDE_DEG,
@@ -480,7 +480,7 @@ class PropellantLoadOptimizerIntegrationTest {
     LauncherModel launcher = Launchers.FALCON_HEAVY;
     double payloadDryMass = Payloads.GEO_SAT.defaultDryMass();
 
-    PropellantBudget.GeoLoads geoLoads =
+    PropellantBudget.SizedLoads geoLoads =
         PropellantBudget.loadsForGeo(
             launcher,
             Payloads.GEO_SAT,
@@ -488,10 +488,10 @@ class PropellantLoadOptimizerIntegrationTest {
             GEO_PARKING_ALTITUDE_M,
             GEO_LAUNCH_LATITUDE_DEG);
     double[] heuristicLoads = geoLoads.launcherLoads();
-    double akmLoad = geoLoads.akmLoad();
+    double payloadLoad = geoLoads.payloadLoad();
     boolean[] mask = PropellantLoadOptimizer.allVariableLoadMask(launcher);
     logStageLoads("GEO multi-stage heuristic loads", launcher, heuristicLoads, mask);
-    logger.info("GEO heuristic AKM load: {} kg (off λ)", Math.round(akmLoad));
+    logger.info("GEO heuristic AKM load: {} kg (off λ)", Math.round(payloadLoad));
 
     AbsoluteDate launchEpoch = new AbsoluteDate(2026, 1, 1, 12, 0, 0.0, TimeScalesFactory.getUTC());
 
@@ -500,7 +500,7 @@ class PropellantLoadOptimizerIntegrationTest {
             new GEOMission(
                 "I7 GEO multi-stage",
                 new LaunchConfiguration(
-                    launcher, loads, Payloads.GEO_SAT.toSpacecraft(payloadDryMass, akmLoad)),
+                    launcher, loads, Payloads.GEO_SAT.toSpacecraft(payloadDryMass, payloadLoad)),
                 GEO_PARKING_ALTITUDE_M,
                 GEO_ALTITUDE_M,
                 GEO_LAUNCH_LATITUDE_DEG,

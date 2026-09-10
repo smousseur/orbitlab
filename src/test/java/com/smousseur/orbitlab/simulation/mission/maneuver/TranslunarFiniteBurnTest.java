@@ -31,7 +31,7 @@ import org.orekit.utils.Constants;
  * MIS-4 / L6 §6.3 — the finite burn on its own, on the two upper-stage profiles the découpage sizes
  * the lot by.
  *
- * <p><b>It exists because no lunar flight of the repository flies an Ariane 62</b> (spec §1.3): the
+ * <p><b>It exists because no lunar flight of the repository flies an Ariane 64</b> (spec §1.3): the
  * four of them build a Falcon Heavy, whose 3° of arc is the one case where the lot barely earns its
  * keep. The 19° profile that justifies L6 is exercised here, at the level of the burn alone —
  * seconds rather than a second four-day flight, and it asks exactly what L6 delivers rather than
@@ -45,7 +45,7 @@ import org.orekit.utils.Constants;
  *   <caption>Measured against the découpage's estimate</caption>
  *   <tr><th>Profile</th><th>Duration</th><th>Arc</th><th>Surcharge</th><th>Announced</th></tr>
  *   <tr><td>Falcon Heavy S2</td><td>47.9 s</td><td>3.3°</td><td>+2.18 m/s</td><td>~0.4</td></tr>
- *   <tr><td>Ariane 62 ULPM</td><td>288.5 s</td><td>19.6°</td><td>+23.5 m/s</td><td>~14</td></tr>
+ *   <tr><td>Ariane 64 ULPM</td><td>288.5 s</td><td>19.6°</td><td>+23.5 m/s</td><td>~14</td></tr>
  * </table>
  *
  * <p><b>Each case asserts two things, and the second is the one L6 nearly shipped without.</b> The
@@ -100,9 +100,9 @@ class TranslunarFiniteBurnTest {
   }
 
   @Test
-  @DisplayName("An Ariane 62 ULPM delivers the same energy over a 19° arc, and pays for it")
-  void ariane62Ulpm_deliversTheImpulsiveEnergyOverAMuchLongerArc() {
-    assertProfile("Ariane 62 ULPM", new PropulsionSystem(457, 180_000.0), 12.0, 40.0);
+  @DisplayName("An Ariane 64 ULPM delivers the same energy over a 19° arc, and pays for it")
+  void ariane64Ulpm_deliversTheImpulsiveEnergyOverAMuchLongerArc() {
+    assertProfile("Ariane 64 ULPM", new PropulsionSystem(457, 180_000.0), 12.0, 40.0);
   }
 
   /**

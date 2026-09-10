@@ -35,15 +35,22 @@ import org.orekit.time.TimeScalesFactory;
 import org.orekit.utils.Constants;
 
 /**
- * <b>PHY-8 / L1 and L2 — the iso-trajectory gate</b> (spec {@code
- * docs/etagement/03-conception-L1.md} §6.2 and {@code 04-conception-L2.md} §5).
+ * <b>PHY-8 / L1, L2 and L3 — the iso-trajectory gate and the twin flight</b> (spec {@code
+ * docs/etagement/03-conception-L1.md} §6.2, {@code 04-conception-L2.md} §5, {@code
+ * 05-conception-L3.md} §3.3).
  *
  * <p>Splitting the Falcon Heavy into {@code [boosters ×2, core, S2]} and flying it at full thrust
  * must move nothing — <b>to the bit</b>, not to a tolerance. {@code L1} proved it with the split as
  * a fixture against the catalog; {@code L2} moved the split <em>into</em> the catalog, so the
- * reference swapped sides: {@link #AGGREGATED} is now the frozen pre-L2 entry and the subject is
- * {@code Launchers.FALCON_HEAVY}. Neither side is a pinned literal, so the comparison survives
- * {@code L3} and {@code L4} untouched.
+ * reference swapped sides. {@code L3} throttled the catalog's core, so they swapped once more:
+ * {@link #AGGREGATED} is the frozen pre-L2 entry and the subject is {@link #FULL_THRUST}, the
+ * catalog's own stages with the throttle taken back off. Neither side is a pinned literal.
+ *
+ * <p><b>Why the proof is kept rather than retired with L2.</b> The block's arithmetic — thrust
+ * aggregation, {@code ΣF/Σ(F/Isp)}, depletion floor, consumption pro rata — outlives this lot and
+ * will be exercised differently by the Ariane 64, with four boosters and two ISPs that do not
+ * cancel in the quotient. A proof of inertness on the one case where inertness is checkable at the
+ * bit is worth keeping for as long as that code lives.
  *
  * <p><b>Why bit equality is reachable.</b> Every figure of the split is an exact integer and the
  * boosters are twice the core, so the aggregate thrust is 22 800 000 N exactly, {@code ΣF/Σ(F/Isp)}
@@ -85,7 +92,7 @@ class ParallelBlockAscentTest {
   @Test
   void theCatalogBlockReproducesTheFormerFirstStageBitForBit() {
     var aggregated = AGGREGATED.instantiate(SEQUENTIAL_LOADS, Spacecraft.LEGACY);
-    var split = Launchers.FALCON_HEAVY.instantiate(SPLIT_LOADS, Spacecraft.LEGACY);
+    var split = FULL_THRUST.instantiate(SPLIT_LOADS, Spacecraft.LEGACY);
 
     var reference = aggregated.resolveActiveStage(aggregated.getMass());
     var block = split.resolveActiveStage(split.getMass());
@@ -100,7 +107,7 @@ class ParallelBlockAscentTest {
 
   @Test
   void atFullThrustTheCoreEmptiesWithTheBoosters_soOneJettisonDropsBoth() {
-    var split = Launchers.FALCON_HEAVY.instantiate(SPLIT_LOADS, Spacecraft.LEGACY);
+    var split = FULL_THRUST.instantiate(SPLIT_LOADS, Spacecraft.LEGACY);
 
     assertTrue(split.stagingPlan().hasParallelBlock());
     assertTrue(split.stagingPlan().parallelBlock().groupedJettison());
@@ -111,7 +118,7 @@ class ParallelBlockAscentTest {
   void aGroupedBlockKeepsTheThreeHistoricalAscentPhases() {
     assertEquals(
         stageNames(missionOf(AGGREGATED, SEQUENTIAL_LOADS)),
-        stageNames(missionOf(Launchers.FALCON_HEAVY, SPLIT_LOADS)));
+        stageNames(missionOf(FULL_THRUST, SPLIT_LOADS)));
   }
 
   // ── The flight ────────────────────────────────────────────────────────────
@@ -125,7 +132,7 @@ class ParallelBlockAscentTest {
   @Test
   void theSplitFalconHeavyFliesTheVerySameAscent() {
     SpacecraftState sequential = flyAscent(missionOf(AGGREGATED, SEQUENTIAL_LOADS));
-    SpacecraftState split = flyAscent(missionOf(Launchers.FALCON_HEAVY, SPLIT_LOADS));
+    SpacecraftState split = flyAscent(missionOf(FULL_THRUST, SPLIT_LOADS));
 
     double deltaPosition = Vector3D.distance(sequential.getPosition(), split.getPosition());
     double deltaVelocity =
@@ -143,11 +150,11 @@ class ParallelBlockAscentTest {
     assertEquals(sequential.getDate(), split.getDate());
   }
 
-  // ── The five-phase path, which is not iso-trajectory and is not meant to be ──
+  // ── The five-phase path the catalog flies since L3 ────────────────────────
 
   @Test
   void aThrottledCoreOutlastsTheBoostersAndGetsItsOwnPhase() {
-    var split = throttledFalconHeavy(0.81).instantiate(fullLoads(), Spacecraft.LEGACY);
+    var split = Launchers.FALCON_HEAVY.instantiate(fullLoads(), Spacecraft.LEGACY);
 
     // 822 t of boosters drain 0.81 × 7.6/15.2 = 0.405 of that from the core, leaving 78 t of the
     // 411 t it carries — the figure the découpage derives (spec 01-decoupage.md §2.3).
@@ -157,7 +164,7 @@ class ParallelBlockAscentTest {
 
   @Test
   void theThrottledAscentIsFivePhases() {
-    List<String> names = stageNames(missionOf(throttledFalconHeavy(0.81), fullLoads()));
+    List<String> names = stageNames(missionOf(Launchers.FALCON_HEAVY, fullLoads()));
 
     assertTrue(names.contains(AscentSequence.BOOSTER_SEPARATION_NAME), names.toString());
     assertTrue(names.contains(AscentSequence.CORE_BURN_NAME), names.toString());
@@ -173,7 +180,7 @@ class ParallelBlockAscentTest {
 
   @Test
   void theBurnDurationsReproduceTheDecoupageFigures() {
-    Mission mission = missionOf(throttledFalconHeavy(0.81), fullLoads());
+    Mission mission = missionOf(Launchers.FALCON_HEAVY, fullLoads());
     SpacecraftState entry = mission.getInitialState(epoch());
     AscentPlan plan = maneuverOf(mission, entry).plan(entry, new double[] {600.0, 0.32});
 
@@ -189,34 +196,95 @@ class ParallelBlockAscentTest {
         String.format(Locale.ROOT, "%.1f", plan.coreBurnDuration()),
         String.format(Locale.ROOT, "%.1f", plan.burn1Duration() + plan.coreBurnDuration()));
     assertEquals(
-        187.0,
+        186.8,
         plan.burn1Duration() + plan.coreBurnDuration(),
         0.5,
-        "the core flies the ~187 s the decoupage derives from f ≈ 0.81");
+        "the core flies the 186.8 s that f = 0.81 produces");
+  }
+
+  /**
+   * <b>The twin flight</b>, and the instrument that makes {@code L3}'s re-baseline attributable
+   * rather than merely asserted (spec {@code docs/etagement/05-conception-L3.md} §5.2).
+   *
+   * <p>One stack, one set of loads, one MECO date: the only thing separating the two states below
+   * is the throttle, so whatever separates them is what {@code L3} moved. Nothing is pinned — the
+   * displacement is logged for the lot's report, and the two assertions are the structural facts
+   * the throttle cannot change.
+   *
+   * <p>The core-only phase is checked against {@code burn1 · (1 − f)} rather than against 29.8 s,
+   * because that identity is what makes it a phase at all: the three cores being identical, the
+   * propellant the throttle spares is exactly the propellant burnt after the boosters are gone.
+   */
+  @Test
+  void theThrottleIsTheOnlyThingSeparatingTheTwoFlights() {
+    Mission full = missionOf(FULL_THRUST, fullLoads());
+    Mission throttled = missionOf(Launchers.FALCON_HEAVY, fullLoads());
+
+    double transitionTime = stagingCompleteOf(throttled) + BURN2_SECONDS;
+    AscentPlan planAtFullThrust = planOf(full, transitionTime);
+    AscentPlan planThrottled = planOf(throttled, transitionTime);
+    double blockBurn = planThrottled.burn1Duration();
+    double coreOnly = planThrottled.coreBurnDuration();
+
+    SpacecraftState atFullThrust = flyAscent(full, transitionTime);
+    SpacecraftState throttledState = flyAscent(throttled, transitionTime);
+
+    double deltaPosition =
+        Vector3D.distance(atFullThrust.getPosition(), throttledState.getPosition());
+    double deltaVelocity =
+        Vector3D.distance(
+            atFullThrust.getPVCoordinates().getVelocity(),
+            throttledState.getPVCoordinates().getVelocity());
+    logger.info(
+        "Twin flight, f = 1 vs f = {}, same MECO at t+{} s: block burn {} s unchanged, core-only"
+            + " {} s, Δpos {} m, Δvel {} m/s, Δmass {} kg",
+        Launchers.FALCON_HEAVY.ascentProfile().coreThrottle(),
+        String.format(Locale.ROOT, "%.1f", transitionTime),
+        String.format(Locale.ROOT, "%.1f", blockBurn),
+        String.format(Locale.ROOT, "%.1f", coreOnly),
+        String.format(Locale.ROOT, "%.1f", deltaPosition),
+        String.format(Locale.ROOT, "%.3f", deltaVelocity),
+        String.format(Locale.ROOT, "%.1f", atFullThrust.getMass() - throttledState.getMass()));
+
+    assertEquals(
+        planAtFullThrust.burn1Duration(),
+        blockBurn,
+        1.0e-6,
+        "the boosters run dry at the same instant: the throttle spares the core's tanks, not"
+            + " theirs");
+    assertEquals(
+        blockBurn * (1 - Launchers.FALCON_HEAVY.ascentProfile().coreThrottle()),
+        coreOnly,
+        0.05,
+        "the propellant the throttle spares is what the core burns alone");
+    assertTrue(
+        deltaPosition > 1.0,
+        () -> "the throttle must actually move the trajectory; Δpos=" + deltaPosition);
   }
 
   // ── Fixtures ──────────────────────────────────────────────────────────────
 
   /**
-   * The Falcon Heavy as {@code L2} will declare it: three identical kerolox cores, two of them
-   * strapped on. Per-exemplar figures are exactly a third of the catalog aggregate.
+   * The catalog Falcon Heavy with its centre core at full thrust, which is what the catalog
+   * declared until {@code L3} throttled it. Built from the catalog stages rather than from figures
+   * of its own, so everything but the throttle still tracks whatever the catalog says.
+   *
+   * <p>It is the mirror of the {@code throttledFalconHeavy(0.81)} helper {@code L1} and {@code L2}
+   * used: the two halves of this class have swapped sides again, and the split-is-inert proof now
+   * needs an un-throttled subject where it used to need a throttled one.
    */
-  /**
-   * The catalog Falcon Heavy with its centre core throttled, which is what {@code L3} will declare.
-   * Built from the catalog stages rather than from figures of its own, so it tracks whatever the
-   * catalog says.
-   */
-  private static LauncherModel throttledFalconHeavy(double coreThrottle) {
-    AscentProfile catalog = Launchers.FALCON_HEAVY.ascentProfile();
+  private static final LauncherModel FULL_THRUST = fullThrust(Launchers.FALCON_HEAVY);
+
+  private static LauncherModel fullThrust(LauncherModel launcher) {
+    AscentProfile catalog = launcher.ascentProfile();
     return new LauncherModel(
-        "FALCON_HEAVY_THROTTLED",
-        "Falcon Heavy (throttled core)",
-        Launchers.FALCON_HEAVY.stages(),
+        launcher.id() + "_FULL_THRUST",
+        launcher.displayName() + " (core at full thrust)",
+        launcher.stages(),
         new AscentProfile(
             catalog.verticalAscentDuration(),
             catalog.pitchKickAngleDeg(),
-            catalog.interstageCoastDuration(),
-            coreThrottle));
+            catalog.interstageCoastDuration()));
   }
 
   /**
@@ -243,7 +311,7 @@ class ParallelBlockAscentTest {
                       StageRole.CORE),
                   new AerodynamicProperties(31.6, 0.4)),
               Launchers.FALCON_HEAVY.stages().getLast()),
-          Launchers.FALCON_HEAVY.ascentProfile());
+          FULL_THRUST.ascentProfile());
 
   private static double[] fullLoads() {
     return new double[] {822_000, 411_000, 107_500};
@@ -258,6 +326,20 @@ class ParallelBlockAscentTest {
         LAT,
         LON,
         ALT);
+  }
+
+  /** The schedule this mission's own vehicle would fly, for a MECO at {@code transitionTime}. */
+  private static AscentPlan planOf(Mission mission, double transitionTime) {
+    SpacecraftState entry = mission.getInitialState(epoch());
+    return maneuverOf(mission, entry).plan(entry, new double[] {transitionTime, TURN_EXPONENT});
+  }
+
+  /** The earliest MECO that completes staging on this mission's own vehicle. */
+  private static double stagingCompleteOf(Mission mission) {
+    mission.setCurrentState(mission.getInitialState(epoch()));
+    SpacecraftState entry =
+        mission.getStages().getFirst().propagateStandalone(mission.getCurrentState(), mission);
+    return maneuverOf(mission, entry).getStagingCompleteTime();
   }
 
   private static List<String> stageNames(Mission mission) {
@@ -287,16 +369,20 @@ class ParallelBlockAscentTest {
     throw new AssertionError("no gravity-turn first burn in " + stageNames(mission));
   }
 
-  /** Flies the vertical ascent then every gravity-turn phase, at fixed variables. */
+  /** Flies the vertical ascent then every gravity-turn phase, at this vehicle's own schedule. */
   private static SpacecraftState flyAscent(Mission mission) {
+    return flyAscent(mission, stagingCompleteOf(mission) + BURN2_SECONDS);
+  }
+
+  /** Flies the vertical ascent then every gravity-turn phase, MECO scheduled by the caller. */
+  private static SpacecraftState flyAscent(Mission mission, double transitionTime) {
     mission.setCurrentState(mission.getInitialState(epoch()));
     List<MissionStage> stages = mission.getStages();
     SpacecraftState entry =
         stages.getFirst().propagateStandalone(mission.getCurrentState(), mission);
 
     GravityTurnFirstBurnStage firstBurn = firstBurnOf(mission);
-    GravityTurnManeuver reference = maneuverOf(mission, entry);
-    double[] variables = {reference.getStagingCompleteTime() + BURN2_SECONDS, TURN_EXPONENT};
+    double[] variables = {transitionTime, TURN_EXPONENT};
     firstBurn.applyOptimization(new OptimizationResult(variables, 0.0, entry, 1, entry));
 
     int lastAscentPhase = stages.indexOf(firstBurn) + ascentPhaseCount(stages);

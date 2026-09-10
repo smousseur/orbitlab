@@ -2,6 +2,7 @@ package com.smousseur.orbitlab.simulation.mission.vehicle;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import com.smousseur.orbitlab.simulation.Physics;
 import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Launchers;
 import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Payloads;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.AscentProfile;
@@ -61,13 +62,80 @@ class PropellantBudgetTest {
         () -> "LEO 400 km must size S2 under half capacity, got " + loads[2]);
   }
 
+  /**
+   * The overload PHY-8 / L6 added: it sizes the payload's own tank from its declared ΔV budget,
+   * where the {@code Spacecraft}-taking one above sizes the launcher for a payload already built.
+   *
+   * <p>Both are kept because they answer different questions, and the older one is what eighteen
+   * fixtures ask — including the L0 baselines, which is why none of them moved.
+   */
+  @Test
+  void loadsForLeo_fromTheCatalogModel_alsoSizesThePayloadsOwnTank() {
+    PropellantBudget.SizedLoads sized =
+        PropellantBudget.loadsForLeo(
+            Launchers.FALCON_HEAVY,
+            Payloads.EARTH_OBSERVATION_SAT,
+            10_000,
+            400_000,
+            45.96,
+            Physics.getLaunchAzimuth());
+
+    // 10 000 x (exp(15 / (220 x 9.80665)) - 1) x 1.10, the same arithmetic loadsForHighOrbit runs
+    // on an apogee burn.
+    assertEquals(76.745, sized.payloadLoad(), 1e-3);
+
+    double[] forAnEmptyPayload =
+        PropellantBudget.loadsForLeo(
+            Launchers.FALCON_HEAVY,
+            Payloads.EARTH_OBSERVATION_SAT.toSpacecraft(10_000, 0.0),
+            400_000,
+            45.96);
+    double top = sized.launcherLoads()[2];
+    assertTrue(
+        top > forAnEmptyPayload[2],
+        "propellant on the payload is mass the launcher lifts, so the top stage grows");
+
+    // The one trajectory movement PHY-8 / L6 makes, and it is not a single number: the growth runs
+    // with the ascent ΔV, hence with the site, and with whatever else sits on the top stage. It was
+    // 1.244 % here when the stage carried only what the ascent chain sized; the insertion reserve
+    // added later leaves the same absolute growth over a bigger load, hence 0.811 %. The bracket is
+    // what is pinned rather than either end.
+    double growthPercent = 100 * (top / forAnEmptyPayload[2] - 1);
+    assertTrue(
+        growthPercent > 0.7 && growthPercent < 0.9,
+        () -> "top stage grew by " + growthPercent + " %");
+  }
+
+  /** An inert payload gets nothing, and the launcher sizing is the one it always was. */
+  @Test
+  void loadsForLeo_fromTheCatalogModel_leavesAnInertPayloadAlone() {
+    PropellantBudget.SizedLoads sized =
+        PropellantBudget.loadsForLeo(
+            Launchers.FALCON_HEAVY,
+            Payloads.CARGO_MODULE,
+            15_000,
+            400_000,
+            45.96,
+            Physics.getLaunchAzimuth());
+
+    assertEquals(0.0, sized.payloadLoad());
+    assertArrayEquals(
+        PropellantBudget.loadsForLeo(
+            Launchers.FALCON_HEAVY,
+            Payloads.CARGO_MODULE.toSpacecraft(15_000, 0.0),
+            400_000,
+            45.96),
+        sized.launcherLoads(),
+        0.0);
+  }
+
   @Test
   void loadsForGeo_sizedAkm_andMuchMoreS2ThanLeo() {
     Spacecraft leoPayload = Payloads.EARTH_OBSERVATION_SAT.toSpacecraft(10_000, 0.0);
     double[] leoLoads =
         PropellantBudget.loadsForLeo(Launchers.FALCON_HEAVY, leoPayload, 400_000, 5.23);
 
-    PropellantBudget.GeoLoads geoLoads =
+    PropellantBudget.SizedLoads geoLoads =
         PropellantBudget.loadsForGeo(
             Launchers.FALCON_HEAVY, Payloads.GEO_SAT, 2_000, 400_000, 5.23);
 
@@ -77,24 +145,28 @@ class PropellantBudgetTest {
         1e-6,
         "the whole block flies full in v1");
     assertTrue(
-        geoLoads.akmLoad() > 1_000 && geoLoads.akmLoad() <= 2_000,
+        geoLoads.payloadLoad() > 1_000 && geoLoads.payloadLoad() <= 2_000,
         () ->
             "AKM sized for ~1 500 m/s apogee dV expected in (1000, 2000] kg, got "
-                + geoLoads.akmLoad());
+                + geoLoads.payloadLoad());
+    // 1.4x, re-recorded at PHY-8 against the 3x this asserted before the top stage gained its
+    // insertion reserve. The ordering is the property and it holds — GEO still asks 51 % more than
+    // LEO, 14 735 kg against 9 754 — but a reserve added to both compresses every ratio, and a
+    // factor that no longer measures anything would be a tolerance widened to keep a test green.
     assertTrue(
-        geoLoads.launcherLoads()[2] > 3 * leoLoads[2],
+        geoLoads.launcherLoads()[2] > 1.4 * leoLoads[2],
         () ->
             String.format(
-                "GEO S2 load (%.0f) must dwarf LEO S2 load (%.0f)",
+                "GEO S2 load (%.0f) must stay well above LEO S2 load (%.0f)",
                 geoLoads.launcherLoads()[2], leoLoads[2]));
   }
 
   @Test
   void loadsForGeo_inertPayload_zeroAkm() {
-    PropellantBudget.GeoLoads geoLoads =
+    PropellantBudget.SizedLoads geoLoads =
         PropellantBudget.loadsForGeo(
             Launchers.FALCON_HEAVY, Payloads.CARGO_MODULE, 15_000, 400_000, 5.23);
-    assertEquals(0.0, geoLoads.akmLoad(), 1e-9);
+    assertEquals(0.0, geoLoads.payloadLoad(), 1e-9);
   }
 
   @Test
@@ -285,7 +357,7 @@ class PropellantBudgetTest {
 
     assertTrue(
         loads.insertionLoad() > 600.0
-            && loads.insertionLoad() <= Payloads.LUNAR_ORBITER.akmPropellantCapacity(),
+            && loads.insertionLoad() <= Payloads.LUNAR_ORBITER.propellantCapacity(),
         () -> "expected ~658 kg inside the 800 kg tank, got " + loads.insertionLoad());
 
     double topDry = launcher.stages().getLast().dryMass();
@@ -346,7 +418,7 @@ class PropellantBudgetTest {
   }
 
   /**
-   * Both launchers of the catalog must fly the orbiter, and Ariane 62 is the binding one — measured
+   * Both launchers of the catalog must fly the orbiter, and Ariane 64 is the binding one — measured
    * at 81 % of its upper-stage capacity against Falcon Heavy's 13 %.
    */
   @Test

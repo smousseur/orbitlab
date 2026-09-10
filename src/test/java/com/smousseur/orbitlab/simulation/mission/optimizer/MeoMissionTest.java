@@ -33,12 +33,12 @@ import org.orekit.utils.PVCoordinates;
 
 /**
  * <b>MIS-7 / P1.d, test T8</b> — a medium Earth orbit (Galileo/GPS altitude, 20 200 km, i = 55°)
- * flown on Ariane 62 (spec {@code docs/earth-orbit/01-mission-terre-parametrable.md} §6 and §9.2).
+ * flown on Ariane 64 (spec {@code docs/earth-orbit/01-mission-terre-parametrable.md} §6 and §9.2).
  *
  * <p><b>What makes a MEO different from a taller LEO.</b> Nothing about the target says so — it is
  * still a circular orbit with an inclination. What says so is the <em>vehicle</em>: reaching it
  * needs a parking orbit and a Hohmann transfer whose coast to apogee lasts 2 h 58, and an upper
- * stage has to survive shut down for all of it. The Ariane 62 ULPM declares 6 h and does; the
+ * stage has to survive shut down for all of it. The Ariane 64 ULPM declares 6 h and does; the
  * Falcon Heavy second stage declares 2 h and does not, which {@code EarthOrbitValidationTest}
  * asserts as an explicit refusal. The roadmap fiche called MEO "free" once the inclination was
  * parametrable; it is not, and that is why §6 gave it a lot of its own.
@@ -76,7 +76,7 @@ class MeoMissionTest extends AbstractTrajectoryOptimizerTest {
   }
 
   @Test
-  void ariane62_reachesMediumEarthOrbitThroughTheParkingChain() {
+  void ariane64_reachesMediumEarthOrbitThroughTheParkingChain() {
     MissionSpec.EarthOrbit spec = meoSpec();
     Mission mission = MissionComposer.compose(spec, OptimizationType.FAST);
 
@@ -149,9 +149,9 @@ class MeoMissionTest extends AbstractTrajectoryOptimizerTest {
 
     // The plane change charged at apogee is zero: the ascent already flew into the target plane
     // (MIS-7 §4), so only the residual is left, and the plane trim takes that.
-    PropellantBudget.GeoLoads loads =
+    PropellantBudget.SizedLoads loads =
         PropellantBudget.loadsForHighOrbit(
-            Launchers.ARIANE_62,
+            Launchers.ARIANE_64,
             model,
             payloadDryMass,
             PARKING_ALTITUDE,
@@ -159,11 +159,11 @@ class MeoMissionTest extends AbstractTrajectoryOptimizerTest {
             LAT_DEG,
             0.0,
             azimuth);
-    Spacecraft payload = model.toSpacecraft(payloadDryMass, loads.akmLoad());
+    Spacecraft payload = model.toSpacecraft(payloadDryMass, loads.payloadLoad());
 
     return new MissionSpec.EarthOrbit(
         "MEO Galileo",
-        new LaunchConfiguration(Launchers.ARIANE_62, loads.launcherLoads(), payload, model.id()),
+        new LaunchConfiguration(Launchers.ARIANE_64, loads.launcherLoads(), payload, model.id()),
         MEO_ALTITUDE,
         MEO_ALTITUDE,
         plane.targetInclination(),

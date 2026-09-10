@@ -12,6 +12,7 @@ import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Launchers;
 import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Payloads;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.LauncherModel;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.PayloadModel;
+import java.util.Locale;
 import java.util.Map;
 import org.hipparchus.util.FastMath;
 
@@ -117,16 +118,28 @@ public final class MissionFactory {
             horizon);
       }
       case GEO -> {
-        // The apogee circularization is flown by the payload's kick motor; without one the burn
-        // would only fail during propagation, on a background thread.
-        if (!payloadModel.hasAkm()) {
-          throw new IllegalArgumentException(
-              "GEO mission requires a payload with an apogee kick motor: " + payloadModel.id());
-        }
         double parkingAlt = doubleValue(values, "GTO_PARKING_ALT") * 1000.0;
-        PropellantBudget.GeoLoads geoLoads =
+        PropellantBudget.SizedLoads geoLoads =
             PropellantBudget.loadsForGeo(launcher, payloadModel, payloadMass, parkingAlt, latitude);
-        Spacecraft payload = payloadModel.toSpacecraft(payloadMass, geoLoads.akmLoad());
+        Spacecraft payload = payloadModel.toSpacecraft(payloadMass, geoLoads.payloadLoad());
+        // The apogee circularization is flown by the payload's kick motor; without the ΔV for it
+        // the burn would only fail during propagation, on a background thread. Asked as a ΔV and
+        // not as the presence of a tank, the same way MissionComposer asks it of a MEO: since
+        // PHY-8 / L6 a payload can carry propellant that is nowhere near an apogee burn (spec
+        // docs/etagement/01-decoupage.md §3.7).
+        double burnDeltaV =
+            PropellantBudget.apogeeBurnDeltaV(parkingAlt, GEOMission.GEO_ALTITUDE, latitude);
+        double carriedDeltaV = PropellantBudget.payloadDeltaV(payload);
+        if (carriedDeltaV < burnDeltaV) {
+          throw new IllegalArgumentException(
+              String.format(
+                  Locale.ROOT,
+                  "GEO mission requires a payload with an apogee kick motor: %s carries %.0f m/s"
+                      + " where the circularization needs %.0f.",
+                  payloadModel.id(),
+                  carriedDeltaV,
+                  burnDeltaV));
+        }
         LaunchConfiguration configuration =
             new LaunchConfiguration(launcher, geoLoads.launcherLoads(), payload, payloadModel.id());
         yield new MissionSpec.Geo(
@@ -202,8 +215,13 @@ public final class MissionFactory {
   }
 
   /**
-   * The historical sizing: one ascent straight to the target, AKM flown empty because a direct
-   * chain has no burn for it. Loads are sized on the apogee, which is conservative for an ellipse.
+   * One ascent straight to the target, loads sized on the apogee — conservative for an ellipse.
+   *
+   * <p><b>The payload now flies with propellant in it</b> (spec {@code
+   * docs/etagement/01-decoupage.md} §3.7). It used to be handed a hard-coded empty tank, on the
+   * argument that a direct chain has no burn for it; true of the burn, false of the mass, and the
+   * catalog is where a satellite says how much ΔV it must carry. Nothing spends it before PHY-6 —
+   * the direct chain keeps its upper stage all the way, so the trim is still that stage's burn.
    */
   private static LaunchConfiguration directConfiguration(
       LauncherModel launcher,
@@ -212,15 +230,17 @@ public final class MissionFactory {
       double apogeeAlt,
       double latitude,
       double azimuth) {
-    Spacecraft payload = payloadModel.toSpacecraft(payloadMass, 0.0);
-    double[] loads = PropellantBudget.loadsForLeo(launcher, payload, apogeeAlt, latitude, azimuth);
-    return new LaunchConfiguration(launcher, loads, payload, payloadModel.id());
+    PropellantBudget.SizedLoads loads =
+        PropellantBudget.loadsForLeo(
+            launcher, payloadModel, payloadMass, apogeeAlt, latitude, azimuth);
+    Spacecraft payload = payloadModel.toSpacecraft(payloadMass, loads.payloadLoad());
+    return new LaunchConfiguration(launcher, loads.launcherLoads(), payload, payloadModel.id());
   }
 
   /**
    * Sizing for a target the ascent cannot reach directly (spec §6): parking orbit, injection burn,
-   * coast to apogee, circularization there. The AKM is loaded when the payload has one — it is what
-   * lets a launcher whose upper stage cannot hold the coast fly the mission at all.
+   * coast to apogee, circularization there. The payload's tank is filled when it has one — it is
+   * what lets a launcher whose upper stage cannot hold the coast fly the mission at all.
    *
    * <p>The plane change charged at apogee is <b>zero</b>, unlike a GEO mission's. Since MIS-7 the
    * ascent is steered into the target plane, so what reaches apogee is already in it, give or take
@@ -235,7 +255,7 @@ public final class MissionFactory {
       double apogeeAlt,
       double latitude,
       double azimuth) {
-    PropellantBudget.GeoLoads loads =
+    PropellantBudget.SizedLoads loads =
         PropellantBudget.loadsForHighOrbit(
             launcher,
             payloadModel,
@@ -245,7 +265,7 @@ public final class MissionFactory {
             latitude,
             0.0,
             azimuth);
-    Spacecraft payload = payloadModel.toSpacecraft(payloadMass, loads.akmLoad());
+    Spacecraft payload = payloadModel.toSpacecraft(payloadMass, loads.payloadLoad());
     return new LaunchConfiguration(launcher, loads.launcherLoads(), payload, payloadModel.id());
   }
 

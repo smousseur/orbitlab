@@ -113,7 +113,7 @@ public class AnalyticParkingInsertionStage extends MissionStage {
   @Override
   public void configure(NumericalPropagator propagator, Mission mission) {
     SpacecraftState state = mission.getCurrentState();
-    BurnPlan plan = computeBurnPlan(state, mission.getVehicle());
+    BurnPlan plan = computeBurnPlan(state, mission.getVehicle(), flightContext(state, mission));
 
     addBurns(propagator, state, plan, mission.getVehicle());
 
@@ -135,13 +135,14 @@ public class AnalyticParkingInsertionStage extends MissionStage {
 
   @Override
   public SpacecraftState propagateStandalone(SpacecraftState currentState, Mission mission) {
-    BurnPlan plan = computeBurnPlan(currentState, mission.getVehicle());
+    FlightContext planContext = flightContext(currentState, mission);
+    BurnPlan plan = computeBurnPlan(currentState, mission.getVehicle(), planContext);
 
     // 8×8 gravity, matching the ephemeris generator (bilan 11 §3.9): this standalone flight
     // advances
     // the state the next stage plans from, so a Newtonian point-mass field here would diverge from
     // the flown 8×8 trajectory and break the apogee-node geometry the GEO plane change relies on.
-    FlightContext context = flightContext(currentState, mission);
+    FlightContext context = planContext;
     NumericalPropagator propagator =
         OrekitService.get()
             .createOptimizationPropagator(
@@ -153,10 +154,24 @@ public class AnalyticParkingInsertionStage extends MissionStage {
     return propagator.propagate(currentState.getDate().shiftedBy(plan.totalDuration()));
   }
 
+  /**
+   * The two burns and the coasts around them.
+   *
+   * <p><b>{@code dtLead} is zero on the raising plan and only there.</b> A raising insertion burns
+   * at the entry point, which the stage's geometry assumes to be the periapsis; the descending one
+   * has to reach an apsis first, and that wait is what this holds. <b>{@code dv1} and {@code dv2}
+   * keep their sign</b>: the magnitude sizes the burn, the sign points it.
+   */
   private record BurnPlan(
-      double dt1, double dtCoast, double dt2, double dv1, double dv2, double totalDuration) {}
+      double dtLead,
+      double dt1,
+      double dtCoast,
+      double dt2,
+      double dv1,
+      double dv2,
+      double totalDuration) {}
 
-  private BurnPlan computeBurnPlan(SpacecraftState state, Vehicle vehicle) {
+  private BurnPlan computeBurnPlan(SpacecraftState state, Vehicle vehicle, FlightContext context) {
     double mu = state.getOrbit().getMu();
 
     double r1 = state.getPVCoordinates().getPosition().getNorm();
@@ -179,15 +194,25 @@ public class AnalyticParkingInsertionStage extends MissionStage {
     // on the I7 GEO loop at λ=0.3 (dv1 = −57 m/s, dt1 = −0.61 s): the burns silently did nothing
     // and the mission flew on with a corrupted plan. Refuse it instead — the caller (mission
     // optimizer, then the outer propellant loop) reads this as a clean infeasibility.
-    if (dv1Raw < -DV_SIGN_TOLERANCE || dv2Raw < -DV_SIGN_TOLERANCE) {
+    // A retrograde ΔV1 means the entry apoapsis already sits ABOVE the target, so the raising
+    // geometry documented on this class does not hold. That state is flown by the descending plan
+    // below rather than refused — but it cannot be flown by negating this burn, because the two
+    // plans do not act at the same point. Here the burn is at the entry, which the geometry assumes
+    // is the periapsis; a hand-over carrying excess energy is nowhere near one. Measured on the
+    // Falcon Heavy lunar cells: vRad = 1 085.6 m/s and a flight path angle of 7.39°, against the
+    // 0.2 m/s and 0.00° an Ariane 64 hands over in the same run.
+    if (dv1Raw < -DV_SIGN_TOLERANCE) {
+      return computeDescendingPlan(state, vehicle, context, r1);
+    }
+    // A retrograde ΔV2 is a different geometry again: the target below the entry radius, leaving
+    // the transfer no far apsis to circularize at. Nothing here expresses it, so it is refused.
+    if (dv2Raw < -DV_SIGN_TOLERANCE) {
       throw new OrbitlabException(
           String.format(
-              "[%s] cannot plan the insertion to a %.0f km circular orbit: the entry state at "
-                  + "%.0f km already carries too much energy, so the transfer would need a "
-                  + "retrograde burn (ΔV1 %.1f m/s, ΔV2 %.1f m/s — both must be prograde). The "
-                  + "entry apoapsis is above the target, which breaks the raising-Hohmann "
-                  + "geometry this stage assumes",
-              getName(), targetAltitude / 1000.0, (r1 - EARTH_RADIUS) / 1000.0, dv1Raw, dv2Raw));
+              "[%s] cannot plan the insertion to a %.0f km circular orbit from an entry at %.0f "
+                  + "km: circularizing would need a retrograde ΔV2 of %.1f m/s, so the target "
+                  + "sits below the entry radius and the transfer has no far apsis to burn at",
+              getName(), targetAltitude / 1000.0, (r1 - EARTH_RADIUS) / 1000.0, dv2Raw));
     }
     // Within tolerance the entry apoapsis is level with the target: the correct response is no
     // burn at all, not a retrograde one.
@@ -229,7 +254,116 @@ public class AnalyticParkingInsertionStage extends MissionStage {
         dv2,
         dt2);
 
-    return new BurnPlan(dt1, dtCoast, dt2, dv1, dv2, totalDuration);
+    return new BurnPlan(0.0, dt1, dtCoast, dt2, dv1, dv2, totalDuration);
+  }
+
+  /**
+   * The plan for a hand-over that already carries more energy than the target parking orbit.
+   *
+   * <p><b>Both burns move to an apsis</b>, which is the whole difference with the raising plan. The
+   * vehicle coasts to its own apoapsis and raises the periapsis to the target there; it then coasts
+   * to that new periapsis — which is at the target radius — and brakes to circularize. Two apsidal
+   * burns, each acting on the apsis opposite it, exactly as a Hohmann does in the other direction.
+   *
+   * <p><b>Why not simply negate burn 1 of the raising plan.</b> That plan burns at the entry point
+   * on the documented assumption that the entry <em>is</em> the periapsis. A hand-over with excess
+   * energy is nowhere near one — measured at a flight path angle of 7.39° and vRad = 1 085.6 m/s on
+   * the Falcon Heavy lunar cells — so braking along that velocity drops the periapsis underground
+   * and the following coast flies into the planet. It was tried, and the integrator refused it.
+   *
+   * <p>This mirrors the descending branch {@code AnalyticHohmannTransferStage} gained at {@code
+   * PHY-8 / L4}, and it exists for the same reason: a launcher whose core outlives its boosters
+   * hands over higher and faster than one whose block flames out in a single event.
+   *
+   * @param state the hand-over state
+   * @param vehicle the stack, for the active stage and its propellant
+   * @param context the flight context the apsis detection propagates in
+   * @param r1 the entry radius (m), for the refusal messages
+   * @return the plan, never null — an unreachable geometry throws
+   */
+  private BurnPlan computeDescendingPlan(
+      SpacecraftState state, Vehicle vehicle, FlightContext context, double r1) {
+    SpacecraftState atApogee = AnalyticTrimBurnStage.detectStateAtApogee(state, context);
+    if (atApogee == null) {
+      throw new OrbitlabException(
+          String.format(
+              "[%s] cannot plan the insertion to a %.0f km circular orbit: the entry at %.0f km "
+                  + "carries too much energy for a raising transfer, and no apoapsis is reached "
+                  + "within one period to brake at either — the arc is re-entering",
+              getName(), targetAltitude / 1000.0, (r1 - EARTH_RADIUS) / 1000.0));
+    }
+
+    double mu = state.getOrbit().getMu();
+    double rTarget = EARTH_RADIUS + targetAltitude;
+    double ra = atApogee.getPosition().getNorm();
+    if (ra <= rTarget + DV_SIGN_TOLERANCE) {
+      throw new OrbitlabException(
+          String.format(
+              "[%s] cannot plan the insertion to a %.0f km circular orbit: the entry carries "
+                  + "excess energy yet its apoapsis is only %.0f km, below the target — neither "
+                  + "the raising nor the descending geometry applies",
+              getName(), targetAltitude / 1000.0, (ra - EARTH_RADIUS) / 1000.0));
+    }
+
+    // Burn 1, at apoapsis: SET the periapsis to the target, in whichever direction that takes.
+    // Prograde on a sub-orbital hand-over, whose periapsis is below the target; retrograde when the
+    // entry is a circle above it, which is the same manoeuvre read the other way. The sign is the
+    // comparison of the two speeds and nothing else, so neither case is special-cased.
+    double aTransfer = 0.5 * (ra + rTarget);
+    double vTransferApogee = FastMath.sqrt(mu * (2.0 / ra - 1.0 / aTransfer));
+    double dv1 = vTransferApogee - atApogee.getPVCoordinates().getVelocity().getNorm();
+
+    ActiveStageInfo stage = vehicle.resolveActiveStage(atApogee.getMass());
+    PropulsionSystem propulsion = stage.propulsion();
+    double fuelAtBurn1 = stage.remainingFuel(atApogee.getMass());
+    double dt1 =
+        Physics.computeBurnDurationCapped(
+            FastMath.abs(dv1),
+            atApogee.getMass(),
+            propulsion.isp(),
+            propulsion.thrust(),
+            fuelAtBurn1);
+    requireDeliverable(
+        dv1 < 0 ? "periapsis lowering" : "periapsis raise",
+        FastMath.abs(dv1),
+        dt1,
+        atApogee.getMass(),
+        propulsion,
+        fuelAtBurn1);
+
+    double g0Ve = propulsion.isp() * Constants.G0_STANDARD_GRAVITY;
+    double massAfterBurn1 = atApogee.getMass() * FastMath.exp(-FastMath.abs(dv1) / g0Ve);
+
+    // Burn 2, at the periapsis of that transfer — which is the target radius: brake to circular.
+    // Retrograde by construction, the ellipse being faster at its periapsis than a circle there.
+    double vTransferPerigee = FastMath.sqrt(mu * (2.0 / rTarget - 1.0 / aTransfer));
+    double dv2 = FastMath.sqrt(mu / rTarget) - vTransferPerigee;
+
+    double fuelAtBurn2 = stage.remainingFuel(massAfterBurn1);
+    double dt2 =
+        Physics.computeBurnDurationCapped(
+            FastMath.abs(dv2), massAfterBurn1, propulsion.isp(), propulsion.thrust(), fuelAtBurn2);
+    requireDeliverable(
+        "circularization", FastMath.abs(dv2), dt2, massAfterBurn1, propulsion, fuelAtBurn2);
+
+    double transferPeriod =
+        2.0 * FastMath.PI * FastMath.sqrt(aTransfer * aTransfer * aTransfer / mu);
+    double dtCoast = FastMath.max(0.0, transferPeriod / 2.0 - dt1 / 2.0 - dt2 / 2.0);
+    double dtToApogee = atApogee.getDate().durationFrom(state.getDate());
+    double dtLead = FastMath.max(0.0, dtToApogee - dt1 / 2.0);
+
+    logger.info(
+        "Analytic parking plan (descending): apoapsis {} km reached in {}s, periapsis to target"
+            + " dv1={} m/s over {}s, coast {}s, brake to circular dv2={} m/s over {}s",
+        (float) ((ra - EARTH_RADIUS) / 1000.0),
+        (float) dtToApogee,
+        (float) dv1,
+        (float) dt1,
+        (float) dtCoast,
+        (float) dv2,
+        (float) dt2);
+
+    return new BurnPlan(dtLead, dt1, dtCoast, dt2, dv1, dv2, dtLead + dt1 + dtCoast + dt2);
   }
 
   /**
@@ -283,6 +417,7 @@ public class AnalyticParkingInsertionStage extends MissionStage {
     AbsoluteDate epoch = state.getDate();
     LofOffset attitude = new LofOffset(state.getFrame(), LOFType.TNW);
     Vector3D progradeTNW = Physics.buildThrustDirectionTNW(0.0, 0.0);
+    Vector3D retrogradeTNW = Physics.buildThrustDirectionTNW(FastMath.PI, 0.0);
 
     ActiveStageInfo stage1 = vehicle.resolveActiveStage(state.getMass());
     PropulsionSystem propulsion1 = stage1.propulsion();
@@ -290,7 +425,11 @@ public class AnalyticParkingInsertionStage extends MissionStage {
     // requireDeliverable, so a propellant-capped one never reaches this propagator and the floor is
     // unreachable by construction (docs/bugs.md BUG-15).
     DepletionGuard.arm(propagator, stage1.depletionFloor(), getName());
-    AbsoluteDate burn1Start = epoch.shiftedBy(1.0e-3);
+    // The settling epsilon is what separates a raising burn from the phase boundary; a descending
+    // one is already separated by its lead coast to the apoapsis, and adding it there would shift
+    // the burn off the apsis the plan centred it on.
+    AbsoluteDate burn1Start =
+        plan.dtLead() > 0 ? epoch.shiftedBy(plan.dtLead()) : epoch.shiftedBy(1.0e-3);
     propagator.addForceModel(
         new ConstantThrustManeuver(
             burn1Start,
@@ -298,11 +437,15 @@ public class AnalyticParkingInsertionStage extends MissionStage {
             propulsion1.thrust(),
             propulsion1.isp(),
             attitude,
-            progradeTNW));
+            plan.dv1() < 0 ? retrogradeTNW : progradeTNW));
 
     // Burn 2 fires the same stage as burn 1 (no jettison in this phase, see
     // VehicleStack#resolveActiveStage), so it reuses propulsion1.
-    AbsoluteDate burn2Start = epoch.shiftedBy(plan.dt1() + plan.dtCoast());
+    // Off the EPOCH and not off burn 1's start, which carries a 1 ms settling offset on the
+    // raising path. Hanging burn 2 off that offset would shift it by the same millisecond and
+    // move every pinned GEO and MEO boundary by ~10 cm and ~0.3 kg — measured, when this was
+    // written the other way.
+    AbsoluteDate burn2Start = epoch.shiftedBy(plan.dtLead() + plan.dt1() + plan.dtCoast());
     propagator.addForceModel(
         new ConstantThrustManeuver(
             burn2Start,
@@ -310,6 +453,6 @@ public class AnalyticParkingInsertionStage extends MissionStage {
             propulsion1.thrust(),
             propulsion1.isp(),
             attitude,
-            progradeTNW));
+            plan.dv2() < 0 ? retrogradeTNW : progradeTNW));
   }
 }
