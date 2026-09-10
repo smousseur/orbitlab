@@ -25,6 +25,7 @@ import org.hipparchus.util.FastMath;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.orekit.propagation.SpacecraftState;
 import org.orekit.time.AbsoluteDate;
 import org.orekit.time.TimeScalesFactory;
@@ -54,6 +55,7 @@ import org.orekit.utils.Constants;
  * <p><b>Contrainte de méthode</b> (découpage §3): this case flies some thirty four-day propagations
  * per confirmed epoch, so it costs some fifteen seconds, and it is the user who runs it.
  */
+@EnabledIfSystemProperty(named = "orbitlab.slowTests", matches = "true")
 class LunarLaunchWindowFlightTest {
   private static final Logger logger = LogManager.getLogger(LunarLaunchWindowFlightTest.class);
 

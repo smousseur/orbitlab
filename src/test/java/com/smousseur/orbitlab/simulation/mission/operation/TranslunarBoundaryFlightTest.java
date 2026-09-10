@@ -61,7 +61,6 @@ import org.orekit.time.TimeScalesFactory;
  *
  * <p><b>Contrainte de méthode</b> (découpage §3): this flight is the user's to run.
  */
-@EnabledIfSystemProperty(named = "orbitlab.slowTests", matches = "true")
 class TranslunarBoundaryFlightTest {
   private static final Logger logger = LogManager.getLogger(TranslunarBoundaryFlightTest.class);
 

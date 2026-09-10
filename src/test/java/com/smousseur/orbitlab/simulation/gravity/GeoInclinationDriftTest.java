@@ -13,6 +13,7 @@ import org.hipparchus.util.FastMath;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.orekit.orbits.KeplerianOrbit;
 import org.orekit.orbits.Orbit;
 import org.orekit.orbits.OrbitType;
@@ -70,6 +71,7 @@ import org.orekit.time.TimeScalesFactory;
  * first line means: the découpage's own suggestion of "a few tens of days" would have measured 1.22
  * °/year and failed the ±20 % tolerance it proposed in the same sentence.
  */
+@EnabledIfSystemProperty(named = "orbitlab.slowTests", matches = "true")
 class GeoInclinationDriftTest {
   private static final Logger logger = LogManager.getLogger(GeoInclinationDriftTest.class);
 
