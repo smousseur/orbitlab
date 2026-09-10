@@ -46,7 +46,7 @@ colonne de droite ; le reste peut glisser.
 |---|---|:-:|:-:|:-:|---|
 | `AST-1` | **Lot d'assets 3D** *(neuf, hors code)* | — | — | — | — (à lancer en premier : c'est un délai, pas un travail) |
 | ~~`PHY-8`~~ | ~~**Propulseurs séparés du corps : Falcon Heavy et Ariane 64**~~ — **livré le 2026-09-10** ([`etagement/07-cloture.md`](../etagement/07-cloture.md)) | — | — | — | — |
-| `J2` | Trois arbitrages du modèle atmosphérique | — | — | — | `PHY-8` |
+| ~~`J2`~~ | ~~Trois arbitrages du modèle atmosphérique~~ — **tranché le 2026-09-10** (`DT-13`/`DT-14`/`DT-15`, [`dette-technique.md`](../dette-technique.md)) | — | — | — | `PHY-8` |
 | `PHY-2` | Atmosphère par défaut + recalibrage optimiseur | 5 | 4 | L | `J2`, `PHY-8` |
 | `PHY-3` | Détecteurs MaxQ, télémétrie, UI de fidélité | 3 | 2 | M | `PHY-2` |
 | `RND-5` | Repère d'affichage inertiel / tournant | 2 | 2 | S | — |
@@ -107,6 +107,17 @@ ce soit, sous peine de figer l'erreur dans le recalibrage.
 
 Les trois se tranchent en une séance sur les mesures déjà disponibles dans
 [`atmosphere/05-conception-L2.md`](../atmosphere/05-conception-L2.md).
+
+> **Séance tenue le 2026-09-10 — les trois sont tranchés**, résolutions dans les fiches
+> ([`DT-13`](../dette-technique.md#dt-13), [`DT-14`](../dette-technique.md#dt-14),
+> [`DT-15`](../dette-technique.md#dt-15)). **`DT-14`** — l'optimiseur utilise toujours
+> Harris-Priester, le runtime le modèle de la mission (`Off` → rien des deux côtés, défaut
+> runtime NRLMSISE) ; correction au cadrage ci-dessus, l'atmosphère n'est **pas**
+> choisie par type de propagateur aujourd'hui, un câblage neuf est dû à `PHY-2`.
+> **`DT-13`** — proxy conservé, re-calibré « lapse seule », la traînée devenant explicite.
+> **`DT-15`** — `Cd = 2,2` assumé (correct pour l'orbite), airstart S2 à re-vérifier sur
+> l'ascension redimensionnée. Les trois **politiques** sont posées ; les trois
+> **calibrations** rejoignent le périmètre de `PHY-2`.
 
 > **Correction du 2026-09-08 — de retour à trois.** Ce paragraphe retirait
 > `DT-13` de la liste, au motif que `PHY-8` *« rend à chaque étage son Isp réelle

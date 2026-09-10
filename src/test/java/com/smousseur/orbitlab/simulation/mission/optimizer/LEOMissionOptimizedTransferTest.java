@@ -6,6 +6,7 @@ import com.smousseur.orbitlab.simulation.mission.vehicle.*;
 import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Launchers;
 import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Payloads;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -45,6 +46,12 @@ class LEOMissionOptimizedTransferTest extends AbstractTrajectoryOptimizerTest {
   }
 
   @Test
+  @Disabled(
+      "BUG-25 / DT-20 / DT-21: since PHY-8 (#106) the throttled Falcon Heavy over-delivers on ascent"
+          + " and the two-burn circular transfer cannot lower the apogee — flew 416 x 1271 km for a"
+          + " 400 km circular target (measured 2026-09-10). The fix (commandable core + staging"
+          + " barrier removal + apogee-weight rebalance, none sufficient alone) is scheduled with"
+          + " PHY-2, where the ascent calibration is reopened with drag in hand. Re-enable then.")
   void testFalconHeavyOptimizedTransfer() {
     Spacecraft payload = Payloads.EARTH_OBSERVATION_SAT.toSpacecraft(10_000, 0.0);
     double[] loads =

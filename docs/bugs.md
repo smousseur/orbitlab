@@ -34,6 +34,7 @@ la frontière entre les deux derniers doit rester lisible.
 | [`BUG-22`](#bug-22--les-icônes-des-corps-derrière-la-caméra-sont-dessinées-en-position-miroir) | Les icônes des corps derrière la caméra sont dessinées, en position miroir | 2026-09-03 | **Corrigé le 2026-09-03** — le garde testait une profondeur normalisée dont la résolution dépend du plan near ; il teste maintenant le signe. Épinglé par `BillboardIconVisibilityTest` |
 | [`BUG-23`](#bug-23--les-orbites-externes-portent-plus-de-sommets-que-le-budget-demandé) | Les orbites externes portent plus de sommets que le budget demandé | 2026-09-04 | **Corrigé le 2026-09-04**, mais pas où la fiche le situait : le code incriminé est le **générateur hors-ligne**, son dépassement est **transitoire**, et le correctif qu'elle proposait aurait laissé 68 % de l'orbite de Pluton non dessinée. Épinglé par `OrbitPathCacheTest` |
 | [`BUG-24`](#bug-24--la-largeur-du-ruban-nest-tenue-quaux-sommets-pas-le-long-dun-segment) | La largeur du ruban n'est tenue qu'aux sommets, pas le long d'un segment | 2026-09-05 | Ouvert, **mesuré** — le gonflement vaut `(L/2)/d` ; à un million de km du trait, Pluton rend **20,1 px** pour 2,5 demandés, Neptune 15,6, la Terre 4,5. C'est la cause que `BUG-23` cherchait |
+| [`BUG-25`](#bug-25--falcon-heavy-ne-vole-plus-en-transfert-optimisé-depuis-phy-8) | Falcon Heavy ne vole plus en transfert optimisé depuis PHY-8 | 2026-09-10 | Ouvert — **différé à `PHY-2`** avec `DT-19/20/21` ; casse dure **mesurée** (416×1271 km pour une cible 400 circ.), test hors-gate `@Disabled` |
 
 ---
 
@@ -2094,3 +2095,48 @@ un futur ajustement de budget déplace celle-ci.
 Même sous-système que `REL-1` (raccord terminal du ruban), `REL-2` (`MUTING_STEP`) et `REL-3`
 (fondu alpha et largeurs) : la passe `H-RND` de [v3](roadmap/03-roadmap-v3.md). Le mécanisme touche
 aussi les trajectoires de mission, qui partagent `Ribbon.vert` — non vérifié à ce jour.
+
+---
+
+## BUG-25 — Falcon Heavy ne vole plus en transfert optimisé depuis PHY-8
+
+> **Différé à `PHY-2`, avec [`DT-19`](dette-technique.md#dt-19)/[`DT-20`](dette-technique.md#dt-20)/[`DT-21`](dette-technique.md#dt-21).**
+> Le correctif est entrelacé avec la recalibration d'ascension de `PHY-2` — le
+> rééquilibrage du poids apogée se fait traînée en main, sinon il se referait deux fois.
+> Le débloquer maintenant serait ce double-calibrage. Le test est `@Disabled` en
+> attendant, avec renvoi ici.
+
+**Constaté le 2026-09-10.** Un Falcon Heavy en mode transfert optimisé
+(`OptimizationType.BALANCED`/`PRECISE`, cible LEO circulaire) rate sa cible. Vol réel :
+`LEOMissionOptimizedTransferTest.testFalconHeavyOptimizedTransfer` (hors-gate,
+`orbitlab.slowTests`, 1 h 03), orbite atteinte **416 × 1271 km** pour une cible **400
+circulaire** — périgée bon, apogée **3× trop haut**. Assertion : *« Max flown altitude
+1271085 m not within 28000 m of target apogee 400000 m »*. Marchait le 2026-08-06
+(mesure du Javadoc d'`OptimizationType`) ; cassé par `#106`.
+
+**Mécanisme (cru, mesuré aux logs).** Le découpage propulseurs/cœur étranglé (f=0,81)
+donne au cœur une phase solo qui court **jusqu'à extinction** — dans
+`GravityTurnManeuver.plan()`, `burn1` et le cœur sont fixes, `transitionTime` ne
+dimensionne que `burn2` (= 0 ici). L'ascension sur-délivre (~1 100 m/s de trop,
+`total dV=10 517`), l'excédent part dans l'apogée, et le transfert circulaire à deux
+manœuvres (prograde, circularisation à l'apoapse) **ne peut pas l'abaisser**. Gravity
+turn coût 22,6 (acc. 0,048) ; Transfert coût 118 (acc. 0,003), `α1` saturé. C'est
+[`DT-20`](dette-technique.md#dt-20) (aucune prise sur le cœur) **+**
+[`DT-21`](dette-technique.md#dt-21) (`W_APOGEE_OVERSHOOT` hors domaine) ; la clôture a
+mesuré que **ni l'un ni l'autre ne suffit seul** — il faut cœur commandable **+** retrait
+de la barrière `1e3` **+** rééquilibrage du poids, ensemble.
+
+**Pourquoi ça a échappé à `PHY-8`.** Le test est
+`@EnabledIfSystemProperty("orbitlab.slowTests")` et n'est pas dans `gateTest` : le run de
+clôture (« 30 skipped ») l'a skippé. C'est pourquoi `DT-20` le classait *« aucune urgence
+propre, le dimensionnement compense »* — vrai pour le profil **budgété analytique**, faux
+pour le transfert optimisé. L'**analytique** LEO Falcon Heavy, lui, vole (confirmé).
+
+**Reste à vérifier.** Les deux autres méthodes Falcon Heavy de la classe —
+`testCircularMissions` (600 km, plein) et `testEllipticMissions` (600/800) — sont
+**présumées** touchées par le même mécanisme, **non confirmées** (non relancées, ~1 h
+chacune). Seule `testFalconHeavyOptimizedTransfer` est mesurée.
+
+**Où ça va.** Avec `PHY-2` ([§3 de `02-roadmap-v2.md`](roadmap/02-roadmap-v2.md)), dans
+l'ordre `DT-21` → `DT-19` → `DT-20` que fixe
+[`dette-technique.md` §5](dette-technique.md#5-ordre-dattaque-proposé).
