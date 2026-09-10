@@ -45,7 +45,7 @@ colonne de droite ; le reste peut glisser.
 | ID | Item | ★ | ◆ | Taille | Après |
 |---|---|:-:|:-:|:-:|---|
 | `AST-1` | **Lot d'assets 3D** *(neuf, hors code)* | — | — | — | — (à lancer en premier : c'est un délai, pas un travail) |
-| `PHY-8` | **Propulseurs séparés du corps : Falcon Heavy et Ariane 64** *(neuf)* | 4 | 4 | L | `AST-1` (maillage Ariane 64) |
+| ~~`PHY-8`~~ | ~~**Propulseurs séparés du corps : Falcon Heavy et Ariane 64**~~ — **livré le 2026-09-10** ([`etagement/07-cloture.md`](../etagement/07-cloture.md)) | — | — | — | — |
 | `J2` | Trois arbitrages du modèle atmosphérique | — | — | — | `PHY-8` |
 | `PHY-2` | Atmosphère par défaut + recalibrage optimiseur | 5 | 4 | L | `J2`, `PHY-8` |
 | `PHY-3` | Détecteurs MaxQ, télémétrie, UI de fidélité | 3 | 2 | M | `PHY-2` |
@@ -101,7 +101,7 @@ ce soit, sous peine de figer l'erreur dans le recalibrage.
 
 | Item | Ce qu'il faut décider |
 |---|---|
-| `DT-13` | Les Isp « moyenne de trajectoire » absorbent **408 m/s** (Falcon Heavy S1) et **671 m/s** (Ariane 62 S1) de traînée implicite. Décider ce que le catalogue porte une fois la traînée allumée : Isp de vide partout, ou proxy conservé — et de combien |
+| `DT-13` | Les Isp « moyenne de trajectoire » absorbent **396 m/s** (Falcon Heavy S1) et **64 m/s** (Ariane 64) de traînée implicite — chiffres révisés par `PHY-8`, contre les 408 et 671 que cette ligne portait. Décider ce que le catalogue porte une fois la traînée allumée : Isp de vide partout, ou proxy conservé — et de combien |
 | `DT-14` | 22,6 % d'écart entre Harris-Priester et NRLMSISE-00, tous deux déjà codés. Choisir la référence **avant** de calibrer dessus |
 | `DT-15` | `Cd = 2,2` est déclaré valide au-dessus de 70 km ; le seul profil réel mesuré allume S2 à **58 km** |
 
@@ -120,6 +120,22 @@ Les trois se tranchent en une séance sur les mesures déjà disponibles dans
 > arbitrera donc une entrée par lanceur, ce qui rend l'arbitrage plus simple, pas
 > inutile. C'est aussi pourquoi `J2` reste **après** `PHY-8`. La fiche du registre
 > reste **ouverte** ; il n'y a rien à y passer en « fermé par `PHY-8` ».
+
+> **Complément du 2026-09-10 — les deux chiffres ont bougé, et l'arbitrage change de
+> forme.** Mesuré à la clôture de `PHY-8` : **396 m/s** côté Falcon Heavy, **64 m/s**
+> côté Ariane 64. Le second s'est effondré parce que les 671 étaient surtout l'artefact
+> d'un solide et d'un cryogénique fondus dans un proxy unique — éclatés, les propulseurs
+> ne portent rien et le Vulcain porte tout. Le premier a perdu 12 m/s pour une raison
+> sans rapport, la réserve d'insertion de [`DT-19`](../dette-technique.md#dt-19)
+> alourdissant l'étage supérieur.
+>
+> **La dette est donc asymétrique dans un rapport de six**, là où elle semblait
+> comparable. `J2` arbitrera deux situations différentes et non une : un Falcon dont la
+> dette est **indivise** — ses deux entrées déclarent le même moteur, l'éclatement ne
+> pouvait rien y localiser — et une Ariane dont elle est **entièrement sur le Vulcain**.
+> Deux fiches de dette neuves s'ajoutent au périmètre de `PHY-2` par la même occasion :
+> [`DT-19`](../dette-technique.md#dt-19) et
+> [`DT-21`](../dette-technique.md#dt-21).
 
 **Avec `PHY-2` :** `REL-22` — la restauration d'un scénario dont l'atmosphère
 n'est pas `NONE` est **incorrigible avant** que `PHY-2` existe ; elle est versée

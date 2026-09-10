@@ -68,7 +68,7 @@ sont dans [v1](01-roadmap-v1.md) §3 et §6.
 | **1.1.X** | — | ~~toute la ligne~~ — **close le 2026-09-03** à 1.1.1 : `J0`, `BUG-19`, et `BUG-3` requalifié « accepté, avec raison » | — | — | — |
 | **1.2.0** | — | ~~toute la ligne~~ — **close le 2026-09-05** : `BUG-1`, `BUG-2`, `BUG-5`, `BUG-22`, `BUG-20`, `FX-5`, plus `BUG-23` pris en cours de route. Deux fiches neuves en sont sorties, `BUG-23` (close) et `BUG-24` (ouverte) | — | — | — |
 | **v2** | `AST-1` | Lot d'assets 3D *(hors code)* | — | — | — |
-| **v2** | `PHY-8` | Propulseurs séparés du corps : Falcon Heavy et Ariane 64 | 4 | 4 | L |
+| **v2** | ~~`PHY-8`~~ | ~~Propulseurs séparés du corps : Falcon Heavy et Ariane 64~~ — **livré le 2026-09-10**, `L0` à `L6` ; bilan et réserves dans [`etagement/07-cloture.md`](../etagement/07-cloture.md) | — | — | — |
 | **v2** | `PHY-2` | Atmosphère par défaut + recalibrage optimiseur | 5 | 4 | L |
 | **v2** | `PHY-3` | Détecteurs MaxQ, télémétrie, UI de fidélité | 3 | 2 | M |
 | **v2** | `RND-5` | Repère d'affichage inertiel / tournant | 2 | 2 | S |
@@ -106,7 +106,7 @@ v1 (livré)
   PHY-1 (brique drag) ✔ ──── PHY-2
 
 v2
-  PHY-8 ──── PHY-2                       (découper avant de calibrer)
+  PHY-8 ✔ ── PHY-2                       (découper avant de calibrer)
   PHY-2 ──┬── MIS-10 ──── MIS-11        (v3 : la rentrée finale d'Artemis)
           ├── PHY-5  ──── PHY-6 ──┬──── MIS-11  (v3 : la capsule qui rentre)
           │                       └──── MIS-12  (v4 : l'objet qui s'amarre)
@@ -115,7 +115,7 @@ v2
   RND-5 ──── RND-6 ──── MIS-10
   AST-1 ──┬── PHY-5
           ├── PHY-6
-          └── PHY-8 ──── DT-12  (maillage Ariane 64)
+          └── PHY-8 ✔ ── DT-12 ✔ (maillage Ariane 64 ; DT-18 lui succède)
 
 v3
   UI-6 ──── UI-7 ──── UI-8

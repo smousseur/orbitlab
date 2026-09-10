@@ -5,6 +5,10 @@ document est un état des lieux mesuré, pas une roadmap : les items qui mérite
 d'être planifiés doivent être promus dans une roadmap de version — voir
 `roadmap/00-index.md`.
 
+**Complément du 2026-09-10.** `DT-19` à `DT-21` viennent de la clôture de `PHY-8`
+([`etagement/07-cloture.md`](etagement/07-cloture.md) §5), et sont tous trois des
+**mesures**, pas des relectures : chacun a été trouvé en faisant voler la chose.
+
 **Complément du 2026-09-09.** `DT-18` vient d'une mesure de `PHY-8 / L5` sur les
 maillages de lanceurs, et succède à `DT-12` que le même lot ferme.
 
@@ -88,6 +92,9 @@ aujourd'hui. C'est le sujet de [`DT-1`](#dt-1--aucune-analyse-statique-dans-le-b
 | [`DT-16`](#dt-16--nrev-du-solveur-de-lambert-figé-à-0-partout) | `nRev` du solveur de Lambert figé à 0 partout | Mineur | Moyen | Nul aujourd'hui | Ouvert |
 | [`DT-17`](#dt-17--performance-du-ruban-rnd-4-jamais-mesurée) | Performance du ruban (`RND-4`) jamais mesurée | Mineur | Faible | Nul | Ouvert |
 | [`DT-18`](#dt-18--propulseurs-de-lariane-64-surdimensionnés-dans-le-maillage) | Propulseurs de l'Ariane 64 surdimensionnés dans le maillage | Mineur | Faible* | Nul aujourd'hui | Ouvert, **dû avant `PHY-5`** |
+| [`DT-19`](#dt-19--réserve-dinsertion-universelle-sur-létage-supérieur) | Réserve d'insertion universelle sur l'étage supérieur | Majeur | Moyen | Moyen pour `PHY-2` | Ouvert |
+| [`DT-20`](#dt-20--lascension-na-aucune-prise-sur-son-corps-central) | L'ascension n'a aucune prise sur son corps central | Majeur | Élevé | Moyen | Ouvert |
+| [`DT-21`](#dt-21--w_apogee_overshoot-calibré-hors-de-son-domaine) | `W_APOGEE_OVERSHOOT` calibré hors de son domaine | Mineur | Moyen | **Élevé pour `PHY-2`** | Ouvert |
 
 `*` Faible côté code — bloqué par la disponibilité d'un maillage externe, pas
 par du travail de développement.
@@ -545,6 +552,27 @@ avec le chiffre.
 **408 m/s** et **671 m/s** respectivement — au-dessus des 100-300 m/s que
 l'étude d'impact originale de l'atmosphère prévoyait comme plage réelle.
 
+> **Les deux chiffres ont changé, et pas du même montant** (`PHY-8`,
+> [`etagement/07-cloture.md`](etagement/07-cloture.md) §6). Ce qu'il faut lire
+> aujourd'hui : **396 m/s** sur le Falcon Heavy, **64 m/s** sur l'Ariane 64.
+>
+> Côté Ariane, `L4` a dissous l'essentiel : les 671 m/s étaient surtout l'artefact
+> d'un solide honnête et d'un cryogénique endetté fondus dans un même proxy de
+> 300 s. Éclatés, les quatre P120C volent leur Isp de vide et ne portent **rien** ;
+> le Vulcain cède 71 s sur les 21 % du débit qu'il détient, et c'est toute la dette.
+> Elle est donc **localisée** au lieu d'être diluée — ce que le §3.4 du découpage
+> annonçait — et dix fois plus petite qu'écrit ici.
+>
+> Côté Falcon, rien n'a été dissous : ses deux entrées déclarent le même moteur à
+> 296 s, l'éclatement ne pouvait rien y localiser. Les 12 m/s perdus viennent
+> d'ailleurs — la réserve d'insertion de [`DT-19`](#dt-19) alourdit l'étage
+> supérieur, donc le rapport de masses du premier étage. C'est de l'arithmétique
+> sur une pile plus lourde, pas un changement de ce que le proxy cache.
+>
+> **La dette est donc devenue asymétrique entre les deux lanceurs**, dans un rapport
+> de six. `PHY-2` ne peut plus les calibrer d'une seule passe, et `J2` arbitrera sur
+> ces chiffres-ci.
+
 **Pourquoi c'est critique pour `PHY-2`, pas pour aujourd'hui.** Tant que la
 traînée reste **off** par défaut (`PHY-1`), cette dette est invisible. Le
 jour où `PHY-2` l'active par défaut, la traînée réelle s'ajoutera à une Isp
@@ -655,6 +683,102 @@ de 36 m, quand il devrait faire 13,5 sur 3,40. Corriger après coup demanderait
 de re-régler ce que `PHY-5` aura calibré autour de la mauvaise taille.
 
 **Bloqué par un actif externe** — un ré-export du maillage — pas par du code.
+
+---
+
+### DT-19 — Réserve d'insertion universelle sur l'étage supérieur
+
+**Mesuré.** `PropellantBudget.sizeTopStage` ajoute **1 300 m/s** de capacité au
+sommet de ce que la chaîne de ΔV idéal lui donne. Le nombre est le **pire cas**
+observé : ce que le transfert réclame sur un Falcon Heavy au corps étranglé, à la
+plus petite charge d'étage supérieur qui ferme la mission. Un profil qui remet
+correctement les commandes dépense **430 m/s** au transfert et **6** au trim.
+
+**Pourquoi elle existe quand même.** Sans elle, l'étage supérieur du profil
+`falcon-heavy-leo-400` portait 1 963 kg, soit **448 m/s**, contre les 436 que la
+mission dépense — douze mètres par seconde de marge, et seulement parce que la
+trajectoire tombait juste. `L0` avait mesuré la cause sans en tirer la conséquence :
+sur ce profil, l'étage 0 fait **100 %** de l'ascension et l'étage supérieur ne
+s'allume jamais.
+
+**Pourquoi additive et non plancher.** Un `max(raw, plancher)` a été mesuré d'abord et
+rejeté : il clampe tout profil sous le plancher sur un même nombre, et les
+dimensionnements **polaire et plein-est** de la même mission sortaient identiques —
+`8 373,838899728531` kg des deux côtés. C'est exactement la propriété que `MIS-7` a
+construite, dont le Javadoc chiffre une erreur de 529 m/s à des tonnes de charge.
+
+**Le coût, chiffré.** Toutes les missions budgétées paient le pire cas : +18 à +66 %
+de charge d'étage supérieur. Effets de bord mesurés — la dette d'Isp du Falcon Heavy
+que `DT-13` porte tombe de **408 à 396 m/s** (le rapport de masses du premier étage
+change), et le profil MEO de `CentralBodyBaselineTest` a dû être ré-enregistré.
+
+**Voie de sortie.** Le nombre juste est le ΔV que l'insertion de *cette* mission
+demandera, et le dimensionnement ne connaît pas l'état de remise des commandes. Un
+dimensionnement en **deux passes** — dimensionner, voler, redimensionner — le donnerait
+exactement et supprimerait cette fiche.
+
+---
+
+### DT-20 — L'ascension n'a aucune prise sur son corps central
+
+**Mesuré, dans `GravityTurnManeuver.plan()`.** Des trois durées du plan d'ascension,
+une seule dépend d'une variable d'optimisation :
+
+```
+burn1Duration    = getBurn1Duration()      // jusqu'à épuisement des propulseurs
+coreBurnDuration = getCoreBurnDuration()   // jusqu'à épuisement du corps
+burn2Duration    = max(0, transitionTime − stagingCompleteTime)
+```
+
+Le corps central du Falcon Heavy est déclaré `ShutdownMode.COMMANDED` au catalogue, et
+le code le brûle **toujours** jusqu'au plancher de déplétion. Sur le profil budgété,
+l'optimiseur se pose exactement sur `stagingCompleteTime` — `181,8066` contre `181,83`
+— avec `burn2 = 0` : il ne lui reste **qu'une variable effective**, l'exposant de
+tangage. Le Javadoc de `stagingCompleteTime` le nomme déjà : *« it is now the edge of a
+useless plateau »*.
+
+**Et une barrière interdit la région utile.** `computeCost` ajoute
+`STAGING_PENALTY_BASE = 1e3` dès que `transitionTime < stagingCompleteTime`, contre un
+coût nominal de 73,76 — donc la région est inatteignable. Or c'est là que sont les
+bonnes remises : `transitionTime = 170` avec un exposant de `0,634` rend un apogée de
+**407,9 km**, la cible, contre 4 596 km à l'optimum retenu. La barrière est légitime
+tant que le corps n'est pas commandable — sous le plancher, le véhicule volait la même
+trajectoire — et cesse de l'être dès qu'il le devient.
+
+**Ce qui a été mesuré, et ne suffit pas seul.** Rendre le corps commandable **sans**
+lever la barrière ne change rien : coût `73,76361806179528` contre `73,7636180617952`,
+même optimum. Lever la barrière **avec** le corps commandable fait cesser la levée mais
+n'insère pas — `72 551 × 400 178 m`, étage supérieur vide, trim à zéro. Il manque un
+rééquilibrage de la fonction de coût, ce qui renvoie à [`DT-21`](#dt-21).
+
+**Inféré.** Aucune urgence propre : le chantier a fermé ses six cellules par le
+dimensionnement ([`DT-19`](#dt-19)) sans toucher à l'ascension. Mais tout lot qui
+voudra faire mieux qu'un étage supérieur sur-provisionné passera par ici.
+
+---
+
+### DT-21 — `W_APOGEE_OVERSHOOT` calibré hors de son domaine
+
+**Mesuré.** Le poids d'un apogée au-dessus de la fenêtre vaut **0,5**, contre **8,0**
+pour un apogée en dessous. Le Javadoc justifie l'asymétrie ainsi : *« an apogee past it
+is absorbed by the trim burn at the next apside for nothing measurable »*, et la mesure
+citée porte sur des remises **distantes de 91 km** en apogée, arrivant toutes deux à
+400,128 km.
+
+À **4 596 km** d'apogée — ce que le Falcon Heavy étranglé rend sur le profil budgété —
+on est **cinquante fois** hors de cette mesure, et la prémisse est fausse : aucun trim
+n'absorbe onze fois la cible.
+
+**Conséquence observée.** L'optimiseur préfère un dépassement massif à tout déficit,
+puisqu'un apogée court est facturé seize fois plus cher. Rendu libre de couper son
+corps central, il **refuse de le faire** pour cette raison.
+
+**Inféré, et pourquoi ce n'est pas une correction à faire à la légère.** Le même
+Javadoc consigne ce qui s'est passé quand le poids valait 3,0 : le plafond a surenchéri
+sur le terme de pente et acheté une remise **148 km sous la cible**. Ce poids touche
+tous les profils du dépôt, et `PHY-2` va de toute façon rouvrir la calibration de
+l'ascension — c'est là qu'il faut le reprendre, avec les mesures de traînée en main
+plutôt qu'avant.
 ---
 
 ## 4. Ce qui est sain
@@ -720,6 +844,14 @@ revue documentaire mais d'une mesure faite par `PHY-8 / L5`, et il est **dû
 avant `PHY-5`** : c'est ce lot qui fera voler un propulseur largué à côté de son
 corps, et le calibrer autour d'une pièce trop grosse coûterait un second
 réglage.
+
+**`DT-19` à `DT-21` se traitent avec `PHY-2`, et dans cet ordre.** `DT-21` d'abord,
+parce que `PHY-2` rouvre de toute façon la calibration de l'ascension et que ce poids
+s'y reprend avec les mesures de traînée en main. `DT-19` ensuite : la réserve
+sur-provisionne, mais elle tient et son remplacement — un dimensionnement en deux
+passes — est un travail à part entière. `DT-20` en dernier : rien ne le presse tant
+que le dimensionnement compense, et il ne se traite pas seul, la barrière d'étagement
+et le poids de `DT-21` étant du même arbitrage.
 
 ---
 
