@@ -86,9 +86,9 @@ aujourd'hui. C'est le sujet de [`DT-1`](#dt-1--aucune-analyse-statique-dans-le-b
 | [`DT-10`](#dt-10--commentaires-redondants) | Commentaires redondants | Mineur | Faible | Nul | Ouvert |
 | [`DT-11`](#dt-11--littéraux-dupliqués-et-todo-non-tracés) | Littéraux dupliqués et TODO non tracés | Mineur | Faible | Nul | **Partiel le 2026-09-02** |
 | [`DT-12`](#dt-12--mesh-ariane-6-absent-ariane-5-utilisé-à-la-place) | Mesh Ariane 6 absent (Ariane 5 utilisé à la place) | Mineur | Faible* | Nul | **Corrigé le 2026-09-09** |
-| [`DT-13`](#dt-13--isp-catalogue-déjà-en-double-comptage-latent-avec-la-traînée-à-venir) | Isp catalogue déjà en double-comptage latent avec la traînée à venir | Majeur | Moyen | **Élevé pour `PHY-2`** | Ouvert |
-| [`DT-14`](#dt-14--écart-harris-priester--nrlmsise-00-non-arbitré) | Écart Harris-Priester / NRLMSISE-00 non arbitré | Mineur | Faible | Nul | Ouvert |
-| [`DT-15`](#dt-15--cd-catalogue-s2-hors-domaine-de-validité-déclaré) | `Cd` catalogue S2 hors domaine de validité déclaré | Mineur | Faible | Nul | Ouvert |
+| [`DT-13`](#dt-13--isp-catalogue-déjà-en-double-comptage-latent-avec-la-traînée-à-venir) | Isp catalogue déjà en double-comptage latent avec la traînée à venir | Majeur | Moyen | **Élevé pour `PHY-2`** | **Tranché en J2** (2026-09-10) ; calibration → `PHY-2` |
+| [`DT-14`](#dt-14--écart-harris-priester--nrlmsise-00-non-arbitré) | Écart Harris-Priester / NRLMSISE-00 non arbitré | Mineur | Faible | Nul | **Tranché en J2** (2026-09-10) ; câblage + mesure → `PHY-2` |
+| [`DT-15`](#dt-15--cd-catalogue-s2-hors-domaine-de-validité-déclaré) | `Cd` catalogue S2 hors domaine de validité déclaré | Mineur | Faible | Nul | **Tranché en J2** (2026-09-10) ; re-vérif → `PHY-2` |
 | [`DT-16`](#dt-16--nrev-du-solveur-de-lambert-figé-à-0-partout) | `nRev` du solveur de Lambert figé à 0 partout | Mineur | Moyen | Nul aujourd'hui | Ouvert |
 | [`DT-17`](#dt-17--performance-du-ruban-rnd-4-jamais-mesurée) | Performance du ruban (`RND-4`) jamais mesurée | Mineur | Faible | Nul | Ouvert |
 | [`DT-18`](#dt-18--propulseurs-de-lariane-64-surdimensionnés-dans-le-maillage) | Propulseurs de l'Ariane 64 surdimensionnés dans le maillage | Mineur | Faible* | Nul aujourd'hui | Ouvert, **dû avant `PHY-5`** |
@@ -584,6 +584,19 @@ l'arbitre avant.
 précéder le recalibrage global de l'optimiseur que `PHY-2` prévoit déjà,
 plutôt que de s'y ajouter comme un second passage.
 
+**Tranché en J2 le 2026-09-10 — proxy conservé, re-calibré « lapse seule ».** Le
+catalogue garde une Isp moyenne unique sur les deux étages qui la portent encore (bloc
+bas Falcon Heavy 296 s, Vulcain 360 s), mais sa **valeur** ne représentera plus que la
+baisse d'Isp par contre-pression — le lapse sol/vide, physique et réelle — la traînée
+devenant explicite au lieu d'être cachée dans l'Isp. Retenu contre « Isp de vide
+partout », qui fausse le Vulcain (spread [320, 431] = 111 s, contre 29 s pour le bloc
+FH), et contre une Isp dépendante de la pression — correcte mais qui demande un modèle
+de poussée neuf, `PropulsionSystem` étant un `record (isp, thrust)` figé, soit un item à
+part. Les pertes gravitationnelles et de pilotage restent portées par la propagation,
+pas par l'Isp : pas de double-comptage de ce côté. **Le nombre reste à poser par
+`PHY-2`**, traînée en main : J2 tranche la direction, pas la valeur, le vol drag-on
+étant infaisable aujourd'hui ([`atmosphere/05-conception-L2.md`](atmosphere/05-conception-L2.md) §4.2).
+
 ---
 
 ### DT-14 — Écart Harris-Priester / NRLMSISE-00 non arbitré
@@ -597,6 +610,24 @@ implémentés par `PHY-1`, sur les cas testés. Aucun des deux n'a été retenu 
 `PHY-2` sera fait dans l'instant plutôt que sur la base de cette mesure déjà
 disponible.
 
+**Tranché en J2 le 2026-09-10 — un modèle par usage, l'optim toujours HP.** L'optimiseur
+utilise **toujours Harris-Priester** quand la traînée est allumée — bon marché (HP
+×1,35–1,92 contre NRLMSISE ×3,73–4,03 par propagation, sur une optim déjà lente) — et le
+**runtime** vole le modèle de la mission. La règle, par valeur : `NONE` → rien des deux
+côtés, ce qui **préserve l'invariant** `PHY-1` « drag off ⇒ identique au bit » via le
+chemin `!hasDrag()` existant ; `HARRIS_PRIESTER` → HP à l'optim et au runtime ;
+`NRLMSISE` → **HP à l'optim, NRLMSISE au runtime**. Défaut runtime de `PHY-2` : NRLMSISE
+(le palier « Réaliste » du sélecteur PHY-3), HP disponible en « Statique ».
+
+**Correction au cadrage de la roadmap.** L'atmosphère **n'est pas** choisie par type de
+propagateur aujourd'hui : optim et runtime lisent tous deux `context.drag().model()`
+(`OrekitService.addDrag`). « Cohérent avec le 8×8/50×50 déjà en place » est donc faux au
+niveau du câblage. **`PHY-2`
+hérite** : une ligne neuve — substituer NRLMSISE→HP dans la *factory* d'optimisation,
+active **uniquement** si `hasDrag()` — plus la mesure du biais directionnel de 22,6 %
+(l'optim HP, moins sévère, sous-provisionne face au runtime NRLMSISE ; ordre de 22–68 m/s
+sur ~9 400, dans la tolérance ±7 %) et une marge à l'optim si nécessaire.
+
 ---
 
 ### DT-15 — `Cd` catalogue S2 hors domaine de validité déclaré
@@ -609,6 +640,18 @@ continu — hors de ce domaine.
 
 **Inféré.** Sans conséquence tant que la traînée reste off par défaut ; à
 traiter avant que `PHY-2` fasse voler ce coefficient en production.
+
+**Tranché en J2 le 2026-09-10 — assumer 2,2, re-vérifier en `PHY-2`.** Le `Cd = 2,2` est
+conservé : il est **correct pour le domaine réel** de l'étage supérieur — sa vie en
+orbite, en écoulement libre-moléculaire, où la décroissance compte. Le passer en 0,4
+continu « pour régler le 58 km » la sous-estimerait d'un facteur ~5,5, contre l'objet
+même du chantier atmosphère (MIS-10). Et le seul airstart bas mesuré (58 km) vient d'une
+**ascension cassée** ([L2 §4.2](atmosphere/05-conception-L2.md) : budget non
+redimensionné, le S2 s'allume trop bas faute d'atteindre l'orbite). **`PHY-2` hérite** :
+re-mesurer l'altitude d'airstart du S2 sur l'ascension reprovisionnée — celle que produit
+la recalibration `DT-19`/`DT-20`/`DT-21` — et n'escalader vers un **Cd par régime** (0,4
+continu sous ~90 km, 2,2 au-dessus) **que si** l'airstart y reste en continu. Ne rien
+construire avant de savoir que c'est nécessaire.
 
 ---
 
@@ -754,6 +797,19 @@ rééquilibrage de la fonction de coût, ce qui renvoie à [`DT-21`](#dt-21).
 **Inféré.** Aucune urgence propre : le chantier a fermé ses six cellules par le
 dimensionnement ([`DT-19`](#dt-19)) sans toucher à l'ascension. Mais tout lot qui
 voudra faire mieux qu'un étage supérieur sur-provisionné passera par ici.
+
+**Correction du 2026-09-10 — « aucune urgence propre » ne vaut que pour le profil
+budgété.** Le dimensionnement compense l'**analytique** (les six cellules) ; il ne
+compense **pas** le **transfert optimisé** (`OptimizationType.BALANCED`/`PRECISE`), que le
+chantier n'a jamais lancé — son test est hors-gate (`orbitlab.slowTests`). Vol réel du
+2026-09-10 : `LEOMissionOptimizedTransferTest.testFalconHeavyOptimizedTransfer` rend
+**416 × 1271 km** pour une cible 400 circulaire (l'ascension sur-délivre, le transfert
+prograde ne rabaisse pas l'apogée). C'est une **casse dure**, pas une dette qui dégrade
+doucement — [`BUG-25`](bugs.md#bug-25--falcon-heavy-ne-vole-plus-en-transfert-optimisé-depuis-phy-8).
+L'urgence de ce chemin n'est donc plus « aucune ». Le traitement reste néanmoins avec
+`PHY-2` (le rééquilibrage de [`DT-21`](#dt-21) se refait de toute façon traînée en main),
+et la mesure **confirme** le verdict ci-dessus : ni le cœur commandable ni le poids ne
+suffisent seuls.
 
 ---
 
