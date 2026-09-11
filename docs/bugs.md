@@ -19,7 +19,7 @@ la frontière entre les deux derniers doit rester lisible.
 | [`BUG-7`](#bug-7--les-gates-de-non-régression-tombent-quand-un-test-lunaire-les-précède-dans-le-même-jvm) | Les gates de non-régression tombent quand un test lunaire les précède dans le même JVM | 2026-08-18 | **Corrigé le 2026-09-08** — tâche `gateTest` à `forkEvery = 1`, une JVM par gate. Deux énoncés de la fiche étaient faux : la suite ne forkait **rien**, et `CentralBodyBaselineTest` avait été **désactivé** le 2026-08-31 sans que ce soit écrit ici — il n'était pas rouge, il était invisible. Le mécanisme reste non démontré : le partage est supprimé, pas expliqué |
 | [`BUG-8`](#bug-8--inclinaison-figée-invalidée-en-silence-par-un-changement-de-site) | Inclinaison figée invalidée en silence par un changement de site | 2026-08-20 | Ouvert, mécanisme identifié — **ergonomie, le modèle est sain** |
 | [`BUG-9`](#bug-9--parkingcoaststagetest-teste-la-sémantique-davant-mis-4l6) | `ParkingCoastStageTest` teste la sémantique d'avant MIS-4/L6 | 2026-08-28 | **Corrigé le 2026-08-31** — vert, et aucun autre test ne portait l'ancien contrat |
-| [`BUG-10`](#bug-10--reentryguard-inopérant-en-présence-de-traînée) | `ReentryGuard` inopérant en présence de traînée | 2026-08-30 | Ouvert — **sans impact avant PHY-2/MIS-10, aucun vol de production ne l'exerce aujourd'hui** |
+| [`BUG-10`](#bug-10--reentryguard-inopérant-en-présence-de-traînée) | `ReentryGuard` inopérant en présence de traînée | 2026-08-30 | **Fermé par `PHY-2 / L1`** (2026-09-11) — arrêt d'altitude drag-conditionnel, descente-gardé, à 0 km |
 | [`BUG-11`](#bug-11--loptimiseur-saute-les-coasts-que-le-vol-rejoue) | L'optimiseur saute les coasts que le vol rejoue | 2026-08-30 | Ouvert, mécanisme identifié — **traverse PHY-4 → MIS-4 → MIS-5 sans jamais être refermé** |
 | [`BUG-12`](#bug-12--bande-morte-ε-de-franchissement-de-soi-jamais-calibrée) | Bande morte ε de franchissement de SOI jamais calibrée | 2026-08-30 | Ouvert, acceptée par verdict — **redevient un risque actif pour MIS-11** |
 | [`BUG-13`](#bug-13--fenêtre-de-lancement-lunaire-refusée-sans-signal-à-lécran) | Fenêtre de lancement lunaire refusée sans signal à l'écran | 2026-08-30 | Ouvert — famille de `BUG-8`, sous-système distinct |
@@ -1114,6 +1114,15 @@ celui-ci.
 ---
 
 ## BUG-10 — `ReentryGuard` inopérant en présence de traînée
+
+> **Fermé par `PHY-2 / L1` le 2026-09-11**
+> ([`atmosphere/08-conception-L1-PHY-2.md`](atmosphere/08-conception-L1-PHY-2.md) §3.1). Le
+> plancher profond à −50 km ne pouvait pas être relevé (un plancher sphérique unique se
+> déclencherait sur les pas de tir, cf. `SUBSURFACE_FLOOR`). `L1` ajoute un **arrêt distinct,
+> armé uniquement sous traînée**, à 0 km et **gardé sur une vitesse radiale descendante** : une
+> ascension le traverse en montant, une rentrée le déclenche en descendant — 9 km au-dessus de
+> la cession. `ReentryGuard.armQuiet` l'arme en lisant le `DragForce` déjà monté, donc le
+> drag-off reste au bit près. Vérifié par `ReentryGuardTest.reentryUnderDrag_stopsAtTheDragFloor`.
 
 > **`J0-D` 2026-09-02 — confirmé.** `ReentryGuard.SUBSURFACE_FLOOR`, `armQuiet` et
 > `StageLegRunner` sont en place et inchangés. La mesure de `−9/−30 km` vient d'un

@@ -3,6 +3,8 @@ package com.smousseur.orbitlab.simulation.mission.detector;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.smousseur.orbitlab.simulation.OrekitService;
+import com.smousseur.orbitlab.simulation.flight.AtmosphereModel;
+import com.smousseur.orbitlab.simulation.flight.DragContext;
 import com.smousseur.orbitlab.simulation.flight.FlightContext;
 import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
 import com.smousseur.orbitlab.simulation.mission.Mission;
@@ -13,6 +15,7 @@ import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchVehicle;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropulsionSystem;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Spacecraft;
 import com.smousseur.orbitlab.simulation.mission.vehicle.VehicleStack;
+import com.smousseur.orbitlab.simulation.mission.vehicle.model.AerodynamicProperties;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -44,6 +47,9 @@ class ReentryGuardTest {
    * Wall-clock budget for a guarded propagation. Generous — the point is to bound, not to profile.
    */
   private static final Duration TIMEOUT = Duration.ofSeconds(30);
+
+  /** A drag cross-section and coefficient — the same fixture the PHY-1 mounting test flies. */
+  private static final AerodynamicProperties AERO = new AerodynamicProperties(31.6, 0.4);
 
   @BeforeAll
   static void setup() {
@@ -245,8 +251,80 @@ class ReentryGuardTest {
   }
 
   // ─────────────────────────────────────────────────────────────────────────
+  // 3. The drag-regime stop (PHY-2 / L1, BUG-10)
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /**
+   * BUG-10 closed. Under drag the integrator's step control collapses <em>above</em> the deep −50
+   * km floor (−9 to −30 km), so before this lot a re-entry ran to the collapse and hung. The
+   * descent-gated drag stop catches it at {@link ReentryGuard#DRAG_REENTRY_FLOOR} (0 km) instead —
+   * well above both the deep floor and the collapse.
+   */
+  @Test
+  void reentryUnderDrag_stopsAtTheDragFloor_notTheDeepOne() {
+    SpacecraftState entry = reentringState();
+
+    SpacecraftState end =
+        assertTimeoutPreemptively(
+            TIMEOUT,
+            () -> {
+              NumericalPropagator propagator =
+                  OrekitService.get()
+                      .createOptimizationPropagator(earthWithDrag(), OrekitService.COAST_MAX_STEP);
+              propagator.setInitialState(entry);
+              ReentryGuard.armQuiet(propagator, GravitationalContext.earth());
+              return propagator.propagate(entry.getDate().shiftedBy(2_666.0));
+            },
+            "the drag stop must halt the re-entry; a timeout means it ran to the integrator collapse");
+
+    double altitude =
+        end.getPVCoordinates().getPosition().getNorm() - Constants.WGS84_EARTH_EQUATORIAL_RADIUS;
+    // Same 7.6 km/s descent the deep-floor test resolves to 1 km; near the surface the drag makes
+    // the steps only smaller, so 2 km is comfortable.
+    assertEquals(
+        ReentryGuard.DRAG_REENTRY_FLOOR,
+        altitude,
+        2_000.0,
+        "the drag stop must fire at 0 km, not run down to the −50 km deep floor");
+  }
+
+  /**
+   * The descent gate. The drag stop is armed on every drag propagator, yet it must wave a climbing
+   * ascent through the very floor it stops a re-entry at — otherwise it would truncate every ascent
+   * on the way up. A ballistic climb from below the floor (Plesetsk sits 17 km under the reference
+   * sphere) crosses 0 km going up and must fly on.
+   */
+  @Test
+  void climbUnderDrag_isWavedThroughTheDragFloor() {
+    SpacecraftState onThePad = padState(62.9); // Plesetsk, −17.0 km spherical
+    Vector3D up = onThePad.getPVCoordinates().getPosition().normalize().scalarMultiply(3_000.0);
+    // A high ballistic coefficient: the drag is mounted, so the stop is armed, but light enough that
+    // the climb crosses 0 km ballistically instead of being braked back below it.
+    SpacecraftState climbing = stateAt(onThePad.getPVCoordinates().getPosition(), up, 5_000_000.0);
+    AbsoluteDate endDate = climbing.getDate().shiftedBy(15.0);
+
+    NumericalPropagator propagator =
+        OrekitService.get()
+            .createOptimizationPropagator(earthWithDrag(), OrekitService.SAFE_MAX_STEP);
+    propagator.setInitialState(climbing);
+    ReentryGuard.armQuiet(propagator, GravitationalContext.earth());
+    SpacecraftState end = propagator.propagate(endDate);
+
+    assertEquals(
+        0.0,
+        end.getDate().durationFrom(endDate),
+        0.0,
+        "the drag stop must not truncate a climb crossing 0 km on the way up");
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
   // Helpers
   // ─────────────────────────────────────────────────────────────────────────
+
+  /** The Earth context carrying an atmosphere, so its propagators mount a {@link DragContext}. */
+  private static FlightContext earthWithDrag() {
+    return FlightContext.earth().withDrag(new DragContext(AERO, AtmosphereModel.NRLMSISE));
+  }
 
   /**
    * A state sitting on the WGS84 ellipsoid at the given latitude — a launch pad at sea level. Built

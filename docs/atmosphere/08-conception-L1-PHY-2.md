@@ -210,15 +210,30 @@ par la fiche roadmap, et **n'écrit `c` que si `a` dépasse**. Pas de double câ
 
 ---
 
-## 6. Ce qui reste à trancher par mesure
+## 6. Tranché en `L1` par mesure (2026-09-11)
 
-- **`a` vs `c`** — selon le surcoût compute de l'ascension sous NRLMSISE mesuré en preuve 2.
-- **Les contingences de §3.1** — coupe au périgée osculateur et/ou pas max sous traînée, à
-  n'écrire que si la coupe à 0 km laisse un nombre de pas trop élevé sur la descente en air
-  dense.
+- **`a` retenu, `c` reporté à `L3`.** La preuve 2 a fait tourner l'optim drag-on du Falcon
+  Heavy LEO-400 analytique sous NRLMSISE : **elle termine** (le socle tient) en **52,8 s**,
+  contre **~7 s** drag-off sur le même profil — **×7,5**. Décisif : c'est le chemin
+  analytique, donc ces 52,8 s sont le **gravity turn seul**, et l'ascension est NRLMSISE-forcée
+  dans `a` **comme dans** `c` (HP lève à 0 km) — `c` donnerait les mêmes 52,8 s. On fige donc
+  **`a`** (zéro câblage). La seule valeur de `c` — couper les mauvais candidats de *transfert*
+  sous HP (Axe 2) — n'est pas exerçable avant que `BUG-25` soit levé en `L3` ; elle s'y reporte.
+- **Les contingences de §3.1 — non écrites, non nécessaires.** La preuve 2 a terminé sans
+  coupe au périgée osculateur ni pas-max : l'arrêt descente-gardé à 0 km a suffi à borner les
+  candidats. À ne rouvrir que si un profil futur en montre le besoin.
 
-Rien d'autre : l'arming, la forme du détecteur, le foyer du câblage et la fermeture sont
-arrêtés ci-dessus.
+**Ce que la mesure a fait apparaître, et qui n'est pas de `L1` :** le ×7,5 est le coût de
+l'ascension **nominale** sous NRLMSISE, pas un effet de mauvais candidat — intrinsèque, car
+NRLMSISE est le seul modèle valide à 0 km et l'ascension traverse l'air dense en pas nombreux.
+Ni `a`/`c` ni le pas-max ne l'abaissent. Le **+5 %/+50 %** annoncé par la roadmap est donc
+faux pour l'ascension : c'est un **risque pour `L5`** (défaut-on, chaque optim paierait le
+×7,5), qui demanderait un **levier neuf** — une atmosphère bon marché pour l'optim et NRLMSISE
+au runtime, ou une étude de tolérance d'intégrateur — du design au-delà de ce lot, avant `L5`.
+
+Le reste — l'arming, la forme du détecteur, le foyer du câblage, la fermeture — est arrêté
+ci-dessus. **`L1` est livré** : socle terminant (preuve 2), `BUG-10` fermé (preuve 3), drag-off
+au bit près (preuve 1).
 
 ---
 

@@ -628,6 +628,18 @@ active **uniquement** si `hasDrag()` — plus la mesure du biais directionnel de
 (l'optim HP, moins sévère, sous-provisionne face au runtime NRLMSISE ; ordre de 22–68 m/s
 sur ~9 400, dans la tolérance ±7 %) et une marge à l'optim si nécessaire.
 
+**Amendé en `PHY-2 / L1` le 2026-09-11 — « optim toujours HP » ne vole pas l'ascension, et la
+substitution est abandonnée.** La conception `L1`
+([`atmosphere/08-conception-L1-PHY-2.md`](atmosphere/08-conception-L1-PHY-2.md) §3.3) a mesuré
+que HP **lève à 0 km** : aucune ascension ne peut le voler, et c'est l'ascension qui porte le
+coût. Le foyer de la substitution n'était d'ailleurs pas la *factory* (uniforme) mais le
+résolveur par étage. `L1` retient donc **`a` — l'optim monte le modèle de la mission,
+NRLMSISE, sans substitution** (zéro câblage) ; la substitution NRLMSISE→HP **`c`** — réservée
+au transfert, où HP est valide — est **reportée à `L3`**, quand `BUG-25` la rendra mesurable.
+Et le coût réel est **×7,5** (52,8 s contre ~7 s drag-off sur le Falcon Heavy LEO-400
+analytique), non le +50 % annoncé : intrinsèque à l'ascension NRLMSISE, il n'est réductible ni
+par `a`/`c` ni par un pas-max, et devient un **risque pour `L5`** (défaut-on).
+
 ---
 
 ### DT-15 — `Cd` catalogue S2 hors domaine de validité déclaré
