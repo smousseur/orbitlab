@@ -597,6 +597,21 @@ pas par l'Isp : pas de double-comptage de ce côté. **Le nombre reste à poser 
 `PHY-2`**, traînée en main : J2 tranche la direction, pas la valeur, le vol drag-on
 étant infaisable aujourd'hui ([`atmosphere/05-conception-L2.md`](atmosphere/05-conception-L2.md) §4.2).
 
+**Amendé en `PHY-2 / L2` le 2026-09-11 — la traînée mesurée retourne la prémisse et l'approche
+([`atmosphere/09-conception-L2-PHY-2.md`](atmosphere/09-conception-L2-PHY-2.md)).** Un banc a
+intégré `∫a_drag` sur l'ascension : la traînée réelle est **51 m/s (Falcon Heavy)** et **230 m/s
+(Ariane)** — **inversée** par rapport aux 396/64. Ces derniers sont le **déficit d'Isp**
+(`g₀·ΔIsp·ln R`, vide vs proxy), pas la traînée — ce que le §4.3 de `05-conception-L2` avertissait
+déjà (« le proxy paie davantage que la seule traînée »). Deux conséquences : **(1)** la relève
+d'Isp ne rend que la **traînée** (le reste du déficit — pilotage/gravité/marge — reste dans
+l'Isp) ; **(2)** la calibration devient **`A`/`B` par lanceur**, non `B` uniforme. **FH → `B`** :
+marge Isp ~400 m/s ≫ 51, on relocalise (296 → ~298), capacité préservée. **Ariane → `A`** : les
+230 m/s sont sur les **boosters solides** (P120C, Isp de vide, 0 marge), et le Vulcain plafonne à
++64 → **166 m/s incompensables**. On subit : le Vulcain va à son lapse physique, la traînée est
+explicite, la capacité Ariane **baisse (~166 m/s)** au drag-on et le ratio 2,10 se décale — le
+catalogue était drag-optimiste, l'expliciter le corrige. La baisse ne se matérialise qu'au
+drag-on (donc à `L5`) ; `L2` re-baseline drag-off aux Isp neuves.
+
 ---
 
 ### DT-14 — Écart Harris-Priester / NRLMSISE-00 non arbitré
