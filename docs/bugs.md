@@ -34,7 +34,7 @@ la frontière entre les deux derniers doit rester lisible.
 | [`BUG-22`](#bug-22--les-icônes-des-corps-derrière-la-caméra-sont-dessinées-en-position-miroir) | Les icônes des corps derrière la caméra sont dessinées, en position miroir | 2026-09-03 | **Corrigé le 2026-09-03** — le garde testait une profondeur normalisée dont la résolution dépend du plan near ; il teste maintenant le signe. Épinglé par `BillboardIconVisibilityTest` |
 | [`BUG-23`](#bug-23--les-orbites-externes-portent-plus-de-sommets-que-le-budget-demandé) | Les orbites externes portent plus de sommets que le budget demandé | 2026-09-04 | **Corrigé le 2026-09-04**, mais pas où la fiche le situait : le code incriminé est le **générateur hors-ligne**, son dépassement est **transitoire**, et le correctif qu'elle proposait aurait laissé 68 % de l'orbite de Pluton non dessinée. Épinglé par `OrbitPathCacheTest` |
 | [`BUG-24`](#bug-24--la-largeur-du-ruban-nest-tenue-quaux-sommets-pas-le-long-dun-segment) | La largeur du ruban n'est tenue qu'aux sommets, pas le long d'un segment | 2026-09-05 | Ouvert, **mesuré** — le gonflement vaut `(L/2)/d` ; à un million de km du trait, Pluton rend **20,1 px** pour 2,5 demandés, Neptune 15,6, la Terre 4,5. C'est la cause que `BUG-23` cherchait |
-| [`BUG-25`](#bug-25--falcon-heavy-ne-vole-plus-en-transfert-optimisé-depuis-phy-8) | Falcon Heavy ne vole plus en transfert optimisé depuis PHY-8 | 2026-09-10 | Ouvert — **différé à `PHY-2`** avec `DT-19/20/21` ; casse dure **mesurée** (416×1271 km pour une cible 400 circ.), test hors-gate `@Disabled` |
+| [`BUG-25`](#bug-25--falcon-heavy-ne-vole-plus-en-transfert-optimisé-depuis-phy-8) | Falcon Heavy ne vole plus en transfert optimisé depuis PHY-8 | 2026-09-10 | **Fermé par `PHY-2 / L3`** (2026-09-11) — coupure du cœur câblée sur `transitionTime`, `testFalconHeavyOptimizedTransfer` ré-activé et vert (400 ±7 %, 410 km circ.) ; le poids `W_APOGEE_OVERSHOOT` n'a **pas** eu à monter |
 
 ---
 
@@ -2108,6 +2108,21 @@ aussi les trajectoires de mission, qui partagent `Ribbon.vert` — non vérifié
 ---
 
 ## BUG-25 — Falcon Heavy ne vole plus en transfert optimisé depuis PHY-8
+
+> **Fermé par `PHY-2 / L3` le 2026-09-11**
+> ([`atmosphere/10-conception-L3-PHY-2.md`](atmosphere/10-conception-L3-PHY-2.md) §3.1). La cause
+> était que l'ascension n'avait aucune prise sur son cœur : `L3` câble la coupure du cœur sur
+> `transitionTime` (un cap dans `GravityTurnManeuver.plan()`) et abaisse la barrière d'étagement au
+> temps de séparation boosters, ce qui ouvre la région où l'optimiseur *coupe* le cœur plutôt que de
+> sur-délivrer. `testFalconHeavyOptimizedTransfer` (`@Disabled` levé) atteint **410 km circulaire**
+> pour une cible 400 (dans les ±7 %), l'optimiseur choisissant `transitionTime = 176,2` (région B,
+> cœur coupé, résidu 17,8 t largué).
+>
+> **La prédiction de `DT-21` est démentie sur un point** : le rééquilibrage de `W_APOGEE_OVERSHOOT`
+> s'est révélé **inutile**. À `0,5` (valeur inchangée), un dépassement de 4 596 km coûte déjà ~55 et
+> couper le cœur coûte ~0, donc le seul déverrouillage de la région B suffit — l'optimiseur y va de
+> lui-même. Ni `DT-20` ni le poids n'ont eu besoin l'un de l'autre autant que la clôture PHY-8 le
+> pensait : la barrière abaissée + le cœur commandable **ont suffi**.
 
 > **Différé à `PHY-2`, avec [`DT-19`](dette-technique.md#dt-19)/[`DT-20`](dette-technique.md#dt-20)/[`DT-21`](dette-technique.md#dt-21).**
 > Le correctif est entrelacé avec la recalibration d'ascension de `PHY-2` — le

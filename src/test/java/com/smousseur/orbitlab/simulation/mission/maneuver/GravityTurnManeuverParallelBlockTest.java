@@ -70,6 +70,24 @@ class GravityTurnManeuverParallelBlockTest {
   }
 
   @Test
+  void splitBlock_aMecoBelowStagingCommandsTheCoreOffEarly() {
+    // PHY-2/L3 (spec docs/atmosphere/10-conception-L3-PHY-2.md §3.1): a MECO between core ignition
+    // and staging completion cuts the core short of depletion — the optimizer's lever to lower an
+    // over-delivered apogee (DT-20). Staging then completes at the MECO itself.
+    GravityTurnManeuver maneuver = maneuverOf(splitStack());
+    double fullCore = maneuver.getCoreBurnDuration();
+    double staging = maneuver.getStagingCompleteTime();
+    double meco = staging - 200.0;
+
+    AscentPlan plan = planOf(splitStack(), meco);
+
+    assertTrue(plan.coreBurnDuration() < fullCore, "the core no longer burns to depletion");
+    assertEquals(
+        fullCore - (staging - meco), plan.coreBurnDuration(), 1e-9, "core cut at the MECO");
+    assertEquals(meco, plan.stagingCompleteTime(), 1e-9, "staging completes at the MECO");
+  }
+
+  @Test
   void groupedBlock_thereIsNoCorePhase() {
     assertFalse(planOf(groupedStack()).hasCorePhase());
   }
@@ -115,7 +133,15 @@ class GravityTurnManeuverParallelBlockTest {
   }
 
   private static AscentPlan planOf(VehicleStack stack) {
-    return maneuverOf(stack).plan(stateAtMass(stack.getMass()), new double[] {600.0, 0.32});
+    // A MECO clear of staging completion, so a core-phase stack burns its core to depletion
+    // (region A, spec docs/atmosphere/10-conception-L3-PHY-2.md §3.1). The early-cutoff region is
+    // exercised explicitly by splitBlock_aMecoBelowStagingCommandsTheCoreOffEarly.
+    return planOf(stack, 1300.0);
+  }
+
+  private static AscentPlan planOf(VehicleStack stack, double transitionTime) {
+    return maneuverOf(stack)
+        .plan(stateAtMass(stack.getMass()), new double[] {transitionTime, 0.32});
   }
 
   private static GravityTurnManeuver maneuverOf(VehicleStack stack) {

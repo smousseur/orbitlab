@@ -86,15 +86,15 @@ aujourd'hui. C'est le sujet de [`DT-1`](#dt-1--aucune-analyse-statique-dans-le-b
 | [`DT-10`](#dt-10--commentaires-redondants) | Commentaires redondants | Mineur | Faible | Nul | Ouvert |
 | [`DT-11`](#dt-11--littéraux-dupliqués-et-todo-non-tracés) | Littéraux dupliqués et TODO non tracés | Mineur | Faible | Nul | **Partiel le 2026-09-02** |
 | [`DT-12`](#dt-12--mesh-ariane-6-absent-ariane-5-utilisé-à-la-place) | Mesh Ariane 6 absent (Ariane 5 utilisé à la place) | Mineur | Faible* | Nul | **Corrigé le 2026-09-09** |
-| [`DT-13`](#dt-13--isp-catalogue-déjà-en-double-comptage-latent-avec-la-traînée-à-venir) | Isp catalogue déjà en double-comptage latent avec la traînée à venir | Majeur | Moyen | **Élevé pour `PHY-2`** | **Tranché en J2** (2026-09-10) ; calibration → `PHY-2` |
+| [`DT-13`](#dt-13--isp-catalogue-déjà-en-double-comptage-latent-avec-la-traînée-à-venir) | Isp catalogue déjà en double-comptage latent avec la traînée à venir | Majeur | Moyen | **Élevé pour `PHY-2`** | **Implémenté en `PHY-2 / L3`** (2026-09-11) ; FH bloc bas 296→298, dette résiduelle 343 m/s |
 | [`DT-14`](#dt-14--écart-harris-priester--nrlmsise-00-non-arbitré) | Écart Harris-Priester / NRLMSISE-00 non arbitré | Mineur | Faible | Nul | **Tranché en J2** (2026-09-10) ; câblage + mesure → `PHY-2` |
-| [`DT-15`](#dt-15--cd-catalogue-s2-hors-domaine-de-validité-déclaré) | `Cd` catalogue S2 hors domaine de validité déclaré | Mineur | Faible | Nul | **Tranché en J2** (2026-09-10) ; re-vérif → `PHY-2` |
+| [`DT-15`](#dt-15--cd-catalogue-s2-hors-domaine-de-validité-déclaré) | `Cd` catalogue S2 hors domaine de validité déclaré | Mineur | Faible | Nul | **Fermé en `PHY-2 / L3`** (2026-09-11) ; `Cd = 2,2` assumé, pas d'escalade (mesure) |
 | [`DT-16`](#dt-16--nrev-du-solveur-de-lambert-figé-à-0-partout) | `nRev` du solveur de Lambert figé à 0 partout | Mineur | Moyen | Nul aujourd'hui | Ouvert |
 | [`DT-17`](#dt-17--performance-du-ruban-rnd-4-jamais-mesurée) | Performance du ruban (`RND-4`) jamais mesurée | Mineur | Faible | Nul | Ouvert |
 | [`DT-18`](#dt-18--propulseurs-de-lariane-64-surdimensionnés-dans-le-maillage) | Propulseurs de l'Ariane 64 surdimensionnés dans le maillage | Mineur | Faible* | Nul aujourd'hui | Ouvert, **dû avant `PHY-5`** |
 | [`DT-19`](#dt-19--réserve-dinsertion-universelle-sur-létage-supérieur) | Réserve d'insertion universelle sur l'étage supérieur | Majeur | Moyen | Moyen pour `PHY-2` | Ouvert |
-| [`DT-20`](#dt-20--lascension-na-aucune-prise-sur-son-corps-central) | L'ascension n'a aucune prise sur son corps central | Majeur | Élevé | Moyen | Ouvert |
-| [`DT-21`](#dt-21--w_apogee_overshoot-calibré-hors-de-son-domaine) | `W_APOGEE_OVERSHOOT` calibré hors de son domaine | Mineur | Moyen | **Élevé pour `PHY-2`** | Ouvert |
+| [`DT-20`](#dt-20--lascension-na-aucune-prise-sur-son-corps-central) | L'ascension n'a aucune prise sur son corps central | Majeur | Élevé | Moyen | **Corrigé en `PHY-2 / L3`** (2026-09-11) |
+| [`DT-21`](#dt-21--w_apogee_overshoot-calibré-hors-de-son-domaine) | `W_APOGEE_OVERSHOOT` calibré hors de son domaine | Mineur | Moyen | **Élevé pour `PHY-2`** | **Fermé en `PHY-2 / L3`** ; rééquilibrage jugé **inutile** (0,5 conservé) |
 
 `*` Faible côté code — bloqué par la disponibilité d'un maillage externe, pas
 par du travail de développement.
@@ -612,6 +612,15 @@ explicite, la capacité Ariane **baisse (~166 m/s)** au drag-on et le ratio 2,10
 catalogue était drag-optimiste, l'expliciter le corrige. La baisse ne se matérialise qu'au
 drag-on (donc à `L5`) ; `L2` re-baseline drag-off aux Isp neuves.
 
+**Implémenté en `PHY-2 / L3` le 2026-09-11**
+([`atmosphere/10-conception-L3-PHY-2.md`](atmosphere/10-conception-L3-PHY-2.md) §3.3). Le catalogue
+FH bloc bas passe `296 → 298 s` (les deux entrées, même moteur), rendant la traînée mesurée
+(~51 m/s). Le **B-check drag-on** confirme la capacité préservée (FH LEO-400 à 298 → 400,3 × 419,2
+km). La dette résiduelle contre le vide tombe à **343 m/s** (= 396 × 13/15, `IspProxyDebtTest`) — le
+déficit de pilotage/gravité/marge que `L2` garde délibérément dans l'Isp, pas de la traînée.
+**L'Ariane Vulcain (décision `A`) n'est pas touché ici** : il reste à 360 et part à `L5` avec la
+matérialisation de sa baisse au drag-on.
+
 ---
 
 ### DT-14 — Écart Harris-Priester / NRLMSISE-00 non arbitré
@@ -679,6 +688,16 @@ re-mesurer l'altitude d'airstart du S2 sur l'ascension reprovisionnée — celle
 la recalibration `DT-19`/`DT-20`/`DT-21` — et n'escalader vers un **Cd par régime** (0,4
 continu sous ~90 km, 2,2 au-dessus) **que si** l'airstart y reste en continu. Ne rien
 construire avant de savoir que c'est nécessaire.
+
+**Fermé en `PHY-2 / L3` le 2026-09-11 — mesuré, pas d'escalade**
+([`atmosphere/10-conception-L3-PHY-2.md`](atmosphere/10-conception-L3-PHY-2.md) §3.4). Sur
+l'ascension reprovisionnée (région B, cœur coupé), le S2 devient la surface active à la séparation
+S1, **~35 km — en continu**. Le critère « escalader si continu » était donc rempli, mais la mesure
+le désarme : le **B-check drag-on est passé avec le `Cd = 2,2` en place**, qui *sur-estime* la
+traînée du S2 en continu d'un facteur ~5,5 (conservateur) — la capacité tient malgré ça (FH LEO-400
+à 298 → 400,3 × 419,2 km). L'écart est donc immatériel pour la capacité : on **assume `Cd = 2,2`**,
+sans escalade, ce que le §3.7 du découpage autorise. Le vrai domaine du S2 reste l'orbite, où 2,2
+est juste.
 
 ---
 
@@ -838,6 +857,21 @@ L'urgence de ce chemin n'est donc plus « aucune ». Le traitement reste néanmo
 et la mesure **confirme** le verdict ci-dessus : ni le cœur commandable ni le poids ne
 suffisent seuls.
 
+**Corrigé en `PHY-2 / L3` le 2026-09-11**
+([`atmosphere/10-conception-L3-PHY-2.md`](atmosphere/10-conception-L3-PHY-2.md) §3.1). La coupure
+du cœur est câblée sur `transitionTime` par un **cap** dans `GravityTurnManeuver.plan()`
+(`coreBurnDuration = plein − max(0, stagingCompleteTime − transitionTime)`), sans variable neuve ;
+la région A (MECO au-delà de l'étagement) reste bit-exacte. La barrière `STAGING_PENALTY_BASE`
+s'abaisse au temps de séparation boosters via un `getStagingFloor()` conditionnel au cœur, et le
+cap fait que le garde de replay `checkStagingInvariant` **s'auto-ajuste** (il ne lui faut qu'une
+tolérance FP). Ferme [`BUG-25`](bugs.md#bug-25).
+
+**Un point du verdict tombe.** La clôture PHY-8 disait « ni le cœur commandable ni le poids ne
+suffisent seuls ». Faux pour le poids : le cœur commandable **+** la barrière abaissée **suffisent**
+— l'optimiseur va en région B de lui-même et coupe le cœur, `W_APOGEE_OVERSHOOT` inchangé à `0,5`
+(cf. [`DT-21`](#dt-21)). Le `72 551 × 400 178 m` mesuré à la clôture était un artefact du poids
+non-recalibré, pas une preuve que le poids devait monter.
+
 ---
 
 ### DT-21 — `W_APOGEE_OVERSHOOT` calibré hors de son domaine
@@ -862,6 +896,21 @@ sur le terme de pente et acheté une remise **148 km sous la cible**. Ce poids t
 tous les profils du dépôt, et `PHY-2` va de toute façon rouvrir la calibration de
 l'ascension — c'est là qu'il faut le reprendre, avec les mesures de traînée en main
 plutôt qu'avant.
+
+**Fermé en `PHY-2 / L3` le 2026-09-11 — le rééquilibrage s'est révélé inutile**
+([`atmosphere/10-conception-L3-PHY-2.md`](atmosphere/10-conception-L3-PHY-2.md) §3.2). La prémisse
+« il faut remonter le poids » est fausse. Une fois la coupure du cœur câblée (`DT-20`) et la
+barrière abaissée, un dépassement de 4 596 km coûte déjà ~55 à `0,5`, et couper le cœur pour viser
+la cible coûte ~0 : l'optimiseur **choisit de couper de lui-même**, sans qu'on touche au poids.
+`testFalconHeavyOptimizedTransfer` atteint 400 ±7 % à `W_APOGEE_OVERSHOOT = 0,5` inchangé.
+
+**Et pourquoi le laisser à `0,5` est plus qu'une commodité.** L'implémentation a mesuré que monter
+ce poids **rachèterait la fausse économie** que `0,5` avait été choisi pour empêcher — sur un profil
+qui sur-délivre **sans** levier de coupure (`coreStage == null`), le seul recours reste le cabrage,
+et un poids élevé le récompense de nouveau. Le catalogue actuel n'a pas ce cas (FH et Ariane ont
+tous deux une phase de cœur), mais `GravityTurnProblemTest.computeCost_prefersTheHandOffTheMissionSurvives`
+l'épingle. Le poids reste donc à `0,5`, et cette fiche se ferme sans y toucher.
+
 ---
 
 ## 4. Ce qui est sain

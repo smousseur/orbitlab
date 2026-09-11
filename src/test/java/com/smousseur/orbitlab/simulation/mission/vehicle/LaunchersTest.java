@@ -161,7 +161,7 @@ class LaunchersTest {
     assertEquals(22_000, boosters.unitDryMass(), 1e-6);
     assertEquals(44_000, boosters.dryMass(), 1e-6);
     assertEquals(822_000, boosters.propellantCapacity(), 1e-6);
-    assertEquals(296, boosters.propulsion().isp(), 1e-6);
+    assertEquals(298, boosters.propulsion().isp(), 1e-6);
     assertEquals(15_200_000, boosters.propulsion().thrust(), 1e-6);
     assertEquals(IgnitionMode.GROUND, boosters.capabilities().ignition());
     assertEquals(StageRole.BOOSTER, boosters.capabilities().role());
@@ -169,7 +169,7 @@ class LaunchersTest {
     StageModel core = stages.get(1);
     assertEquals(22_000, core.dryMass(), 1e-6);
     assertEquals(411_000, core.propellantCapacity(), 1e-6);
-    assertEquals(296, core.propulsion().isp(), 1e-6);
+    assertEquals(298, core.propulsion().isp(), 1e-6);
     assertEquals(7_600_000, core.propulsion().thrust(), 1e-6);
     assertEquals(IgnitionMode.GROUND, core.capabilities().ignition());
     assertEquals(StageRole.CORE, core.capabilities().role());
@@ -253,8 +253,9 @@ class LaunchersTest {
   /**
    * Mass-equivalence lock (spec 07 §6): instantiating the catalog model with the loads of the
    * former {@code Launchers.FalconHeavy(600_000, 50_000, …)} factory yields a stack with the same
-   * masses. Propulsion follows the catalog, whose S1 ISP was deliberately recalibrated from 311 s
-   * to 296 s (spec 06 §S1).
+   * masses. Propulsion follows the catalog, whose S1 ISP was a 296 s mean-trajectory proxy (spec 06
+   * §S1) and is 298 s since PHY-2/L3 handed back the ~51 m/s of ascent drag it was standing in for
+   * (spec docs/atmosphere/10-conception-L3-PHY-2.md §3.3).
    *
    * <p>Since {@code PHY-8 / L2} the first stage is two entries, so the 600 t are the pro rata
    * {@code 400 / 200} split and the former figures are read off the block the stack resolves — the
@@ -275,7 +276,7 @@ class LaunchersTest {
     // falconHeavy_theBlockAggregatesToTheFormerFirstStage asserts.
     ActiveStageInfo block = stack.resolveActiveStage(stack.getMass());
     assertEquals(44_000, block.dryMass(), 1e-6);
-    assertEquals(296, block.propulsion().isp(), 1e-6);
+    assertEquals(298, block.propulsion().isp(), 1e-6);
     assertEquals(15_200_000 + 0.81 * 7_600_000, block.propulsion().thrust(), 1e-6);
     assertEquals(
         600_000, vehicles.getFirst().propellantLoad() + vehicles.get(1).propellantLoad(), 1e-6);

@@ -43,9 +43,12 @@ public final class Launchers {
                   "Boosters (2 side cores)",
                   22_000,
                   411_000,
-                  // Mean-trajectory ISP (sea level 282 s / vacuum 311 s): with no atmosphere
-                  // modeled, 296 s is the proxy for real ascent losses (spec 06 §S1).
-                  new PropulsionSystem(296, 7_600_000),
+                  // Sea level 282 s / vacuum 311 s. Was 296 s, a mean-trajectory proxy standing
+                  // in for ascent drag while no atmosphere was modeled; PHY-2/L3 raised it to 298 s
+                  // so the ISP carries only the sea-level-to-vacuum lapse, the ~51 m/s of measured
+                  // ascent drag becoming explicit once drag is on by default (spec
+                  // docs/atmosphere/10-conception-L3-PHY-2.md §3.3).
+                  new PropulsionSystem(298, 7_600_000),
                   new StageCapabilities(
                       IgnitionMode.GROUND,
                       0,
@@ -67,7 +70,8 @@ public final class Launchers {
                   "Core",
                   22_000,
                   411_000,
-                  new PropulsionSystem(296, 7_600_000),
+                  // Same engine and same PHY-2/L3 recalibration as the boosters, 296 → 298 s.
+                  new PropulsionSystem(298, 7_600_000),
                   new StageCapabilities(
                       IgnitionMode.GROUND,
                       0,

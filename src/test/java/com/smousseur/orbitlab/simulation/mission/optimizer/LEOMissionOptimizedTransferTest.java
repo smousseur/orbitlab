@@ -6,7 +6,6 @@ import com.smousseur.orbitlab.simulation.mission.vehicle.*;
 import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Launchers;
 import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Payloads;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -45,13 +44,14 @@ class LEOMissionOptimizedTransferTest extends AbstractTrajectoryOptimizerTest {
     testMission(mission, targetAltitude, targetAltitude);
   }
 
+  /**
+   * BUG-25 closure criterion, re-enabled at PHY-2/L3. Since PHY-8 (#106) the throttled Falcon Heavy
+   * over-delivered on ascent and the two-burn circular transfer could not lower the apogee — 416 x
+   * 1271 km for a 400 km circular target (measured 2026-09-10). L3 wires the core cutoff onto the
+   * MECO so the ascent can stop over-delivering (spec {@code
+   * docs/atmosphere/10-conception-L3-PHY-2.md} §3.1); this must reach 400 ±7 % for the fix to hold.
+   */
   @Test
-  @Disabled(
-      "BUG-25 / DT-20 / DT-21: since PHY-8 (#106) the throttled Falcon Heavy over-delivers on ascent"
-          + " and the two-burn circular transfer cannot lower the apogee — flew 416 x 1271 km for a"
-          + " 400 km circular target (measured 2026-09-10). The fix (commandable core + staging"
-          + " barrier removal + apogee-weight rebalance, none sufficient alone) is scheduled with"
-          + " PHY-2, where the ascent calibration is reopened with drag in hand. Re-enable then.")
   void testFalconHeavyOptimizedTransfer() {
     Spacecraft payload = Payloads.EARTH_OBSERVATION_SAT.toSpacecraft(10_000, 0.0);
     double[] loads =
