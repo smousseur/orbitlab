@@ -51,6 +51,16 @@ public class GravityTurnFirstBurnStage extends GravityTurnBurnStage
    */
   public static final String OPTIMIZATION_KEY = "Gravity turn";
 
+  /**
+   * Slack on the staging-invariant check. With a commandable core, {@link
+   * AscentPlan#stagingCompleteTime()} equals the transition time by construction in the
+   * early-cutoff region (spec {@code docs/atmosphere/10-conception-L3-PHY-2.md} §3.1), up to a
+   * floating-point residue of a few ulp from the subtraction that produces the capped core burn.
+   * This absorbs that residue so a legitimate early-cutoff schedule is not rejected; a MECO so
+   * early the core never fires still falls short by a whole interstage coast and is caught.
+   */
+  private static final double STAGING_INVARIANT_SLACK = 1.0e-6;
+
   private final double pitchKickAngleDeg;
   private final double interstageCoastDuration;
   private final LaunchPlane launchPlane;
@@ -232,9 +242,18 @@ public class GravityTurnFirstBurnStage extends GravityTurnBurnStage
    * burn, ascent ending at the jettison coast), but flying it silently would hide where it came
    * from. Removing it together with the penalty was tried and reverted; see {@code
    * GravityTurnProblem} and 02-baseline-n2.md §12.
+   *
+   * <p><b>PHY-2/L3: the floor is no longer staging completion.</b> With a commandable core, a MECO
+   * between {@link
+   * com.smousseur.orbitlab.simulation.mission.maneuver.GravityTurnManeuver#getStagingFloor()} and
+   * staging completion commands an early core cutoff (spec {@code
+   * docs/atmosphere/10-conception-L3-PHY-2.md} §3.1), which is legitimate — and the capped core
+   * makes {@link AscentPlan#stagingCompleteTime()} equal the transition time there, so this check
+   * passes it within {@link #STAGING_INVARIANT_SLACK}. Only a MECO so early the core never fires
+   * still trips it.
    */
   private void checkStagingInvariant(AscentPlan plan) {
-    if (plan.transitionTime() < plan.stagingCompleteTime()) {
+    if (plan.transitionTime() < plan.stagingCompleteTime() - STAGING_INVARIANT_SLACK) {
       throw new OrbitlabException(
           String.format(
               Locale.ROOT,

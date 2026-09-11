@@ -105,9 +105,16 @@ class MissionPolylineBaselineTest {
    * <p>9 992 until {@code PHY-8 / L3}: throttling the core adds two ascent phases, hence one more
    * boundary sample.
    */
-  private static final int RAW_POINTS = 9993;
+  private static final int RAW_POINTS = 9992;
 
-  private static final int TRAIL_SIZE = 5000;
+  private static final int TRAIL_SIZE = 4999;
+
+  /**
+   * When {@code -Dorbitlab.recordBaseline=true}, {@link #leo400_polylineHasNotMoved} logs the
+   * measured constants (via {@link #logMeasured}) and skips the assertions, so a legitimate
+   * re-baseline is copied from the log rather than transcribed. Off by default: the gate asserts.
+   */
+  private static final boolean RECORD_BASELINE = Boolean.getBoolean("orbitlab.recordBaseline");
 
   private static final List<Vertex> LEO_400_VERTICES =
       List.of(
@@ -124,73 +131,73 @@ class MissionPolylineBaselineTest {
               "Gravity turn (S1)",
               true,
               7.0,
-              -4242405.362219772,
-              -4726509.082985815,
-              588472.1923325304),
+              -4242405.289840548,
+              -4726509.002388168,
+              588472.18229543),
           new Vertex(
               41,
               "Booster separation",
               false,
-              76.39164210526316,
-              -4165765.7928744075,
-              -4826164.610657123,
-              590343.5997294071),
+              76.90778157894736,
+              -4164668.161345898,
+              -4827349.195040115,
+              590353.9300294485),
           new Vertex(
               42,
               "Gravity turn (core)",
               true,
-              76.39264210526316,
-              -4165763.265358973,
-              -4826167.583640363,
-              590343.6401315596),
+              76.90878157894737,
+              -4164665.6137515674,
+              -4827352.183849979,
+              590353.9702239139),
           new Vertex(
               50,
               "S1 separation",
               false,
-              90.90848410526316,
-              -4125128.0061023585,
-              -4872714.56393565,
-              590908.4204645224),
+              91.52269007894738,
+              -4123430.053562891,
+              -4874463.296481038,
+              590918.7142749168),
           new Vertex(
               51,
               "Gravity turn (S2)",
               true,
-              92.90848410526316,
-              -4118924.314666473,
-              -4879626.663785931,
-              590981.4829665112),
+              93.52269007894738,
+              -4117176.949542237,
+              -4881412.30259238,
+              590991.1273167201),
           new Vertex(
-              163,
+              162,
               "Transfert",
               true,
               314.193166,
-              -3065171.9834796577,
-              -5652251.568200303,
-              576194.5594955221),
+              -3062082.8082133904,
+              -5655492.57496921,
+              576217.1601048842),
           new Vertex(
-              1507,
+              1506,
               "Trim",
               true,
-              3000.022691006276,
-              3150515.8045862075,
-              5971052.200452161,
-              -602468.5828872334),
+              2999.837896963097,
+              3151090.0526107037,
+              5970753.55016088,
+              -602485.5684339062),
           new Vertex(
-              4280,
+              4279,
               "Coasting",
               false,
-              8543.261615874384,
-              3112307.763643382,
-              5991456.946383542,
-              -599944.4041713069),
+              8543.082874665895,
+              3112932.5671697115,
+              5991136.479803182,
+              -599963.7405803913),
           new Vertex(
-              4999,
+              4998,
               "Coasting",
               false,
-              94707.26161587438,
-              -2113736.121167141,
-              -6419117.856297435,
-              523927.4068755575));
+              94707.0828746659,
+              -2114779.2729038135,
+              -6418769.634823774,
+              523984.50998403283));
 
   @Test
   void leo400_polylineHasNotMoved() {
@@ -198,6 +205,10 @@ class MissionPolylineBaselineTest {
     TrajectoryPolyline trail = ephemeris.displayTrail();
 
     logMeasured(ephemeris, trail);
+
+    if (RECORD_BASELINE) {
+      return;
+    }
 
     assertTrue(ephemeris.isComplete(), "the LEO-400 baseline must fly to the end of every stage");
     assertEquals(RAW_POINTS, ephemeris.size(), "the raw sample count moved");

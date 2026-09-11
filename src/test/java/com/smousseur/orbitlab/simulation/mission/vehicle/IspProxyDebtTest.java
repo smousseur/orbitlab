@@ -20,9 +20,9 @@ import org.junit.jupiter.api.Test;
  * docs/atmosphere/05-conception-L2.md} §4.3). Recorded for PHY-2, not asserted.
  *
  * <p>The catalog's two first stages carry a "mean-trajectory" ISP instead of a vacuum one, and say
- * so in their own comments: Falcon Heavy S1 flies 296 s inside a [282 s at sea level, 311 s in
- * vacuum] bracket, Ariane 64 S1 flies 300 s inside [271 s, 331 s]. With no atmosphere modelled,
- * that deficit is what stands in for the losses of a real ascent.
+ * so in their own comments: Falcon Heavy S1 flies 298 s (296 s before PHY-2/L3) inside a [282 s at
+ * sea level, 311 s in vacuum] bracket, Ariane 64 S1 flies 300 s inside [271 s, 331 s]. With no
+ * atmosphere modelled, that deficit is what stands in for the losses of a real ascent.
  *
  * <p><b>The debt is the Δv that convention is quietly absorbing</b>: {@code g₀·ΔIsp·ln R} over the
  * first stage's own mass ratio. PHY-2 owes it back the day it models the drag and restores a vacuum
@@ -65,7 +65,7 @@ class IspProxyDebtTest {
     double ariane64 = debtOf(Launchers.ARIANE_64, 20_000.0, new double[] {278.5, 431.0});
 
     logger.info("L2 ISP proxy debt — the losses the catalog compensates by a mean-trajectory ISP:");
-    logger.info("  Falcon Heavy S1 (296 s against 311 s in vacuum) = {} m/s", round(falconHeavy));
+    logger.info("  Falcon Heavy S1 (298 s against 311 s in vacuum) = {} m/s", round(falconHeavy));
     logger.info(
         "  Ariane 64 block (P120C honest, Vulcain 360 against 431) = {} m/s", round(ariane64));
     logger.info("  for comparison, the impact study puts ascent drag losses at 100-300 m/s");
@@ -79,9 +79,17 @@ class IspProxyDebtTest {
     // off the bottom entry alone (spec docs/etagement/04-conception-L2.md §2.3).
     // 396 since PHY-8 reserved 1 300 m/s of insertion ΔV on the top stage: the debt goes as
     // ln(m0/mf) over the first stage, and a fuller S2 rides above it in both masses. The 12 m/s
-    // lost is arithmetic on a heavier stack, not a change in what the proxy hides — but it is the
-    // figure PHY-2 will hand back, so it is the figure recorded.
-    assertEquals(396, falconHeavy, 5, "the Falcon Heavy S1 proxy debt recorded for PHY-2");
+    // lost is arithmetic on a heavier stack, not a change in what the proxy hides.
+    // 343 since PHY-2/L3: raising the proxy from 296 to 298 s handed back the ~51 m/s of ascent
+    // drag it was standing in for (spec docs/atmosphere/10-conception-L3-PHY-2.md §3.3). The first
+    // stage flies full and the S2 keeps its 348 s, so the mass ratio is unchanged and the debt
+    // scales exactly by the ISP ratio, 396 × 13/15. What is left is the deficit L2 kept in the ISP
+    // deliberately — not drag, and not double-counted (DT-13).
+    assertEquals(
+        343,
+        falconHeavy,
+        5,
+        "the Falcon Heavy S1 residual proxy debt after L3 handed back the drag");
     // PHY-8 / L4 collapsed this one, and that is the finding rather than the number. The Ariane 62
     // aggregate blended a solid with a cryogenic core into a single 300 s proxy inside a [271, 331]
     // bracket, and 671 m/s of the debt was that blend rather than any real loss. Split, the four

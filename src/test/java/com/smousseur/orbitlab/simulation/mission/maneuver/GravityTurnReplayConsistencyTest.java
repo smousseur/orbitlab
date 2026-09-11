@@ -122,14 +122,18 @@ class GravityTurnReplayConsistencyTest {
   // anything happens. What moved is what four tonnes of extra mass do to a fixed-variable ascent,
   // which is the whole point of a fixture that flies frozen variables. The tolerances below are
   // UNTOUCHED.
-  private static final double REF_BURN1_DURATION_S = 149.979660;
-  private static final double REF_STAGING_COMPLETE_S = 151.979660;
-  private static final double REF_EXIT_DT_S = 153.979660;
-  private static final double REF_EXIT_MASS_KG = 21476.105;
+  // RE-RECORDED at PHY-2/L3 (2026-09-11): the Falcon Heavy first stage flies 298 s instead of 296,
+  // so this fixed-variable ascent burns a longer first stage (149.98 → 151.04 s) and hands over a
+  // different state. The tolerances below are UNTOUCHED; only the reference moves (spec
+  // docs/atmosphere/10-conception-L3-PHY-2.md §3.3).
+  private static final double REF_BURN1_DURATION_S = 151.040326;
+  private static final double REF_STAGING_COMPLETE_S = 153.040326;
+  private static final double REF_EXIT_DT_S = 155.040326;
+  private static final double REF_EXIT_MASS_KG = 21113.827;
   private static final Vector3D REF_EXIT_POSITION =
-      new Vector3D(-3950621.592627, -5012082.425511, 589188.154635);
+      new Vector3D(-3946811.750258, -5015678.338678, 589188.059682);
   private static final Vector3D REF_EXIT_VELOCITY =
-      new Vector3D(6117.033029, -5058.113640, -47.964452);
+      new Vector3D(6167.860484, -5095.914663, -48.657234);
 
   @BeforeAll
   static void setup() {

@@ -95,6 +95,13 @@ class AscentBaselineN2Test extends AbstractTrajectoryOptimizerTest {
   private static final double INCLINATION_TOLERANCE_DEG = 0.01;
   private static final double TRANSITION_TIME_TOLERANCE_S = 0.5;
 
+  /**
+   * When {@code -Dorbitlab.recordBaseline=true}, {@link #compare} prints the flown snapshot as a
+   * pasteable {@link Baseline} literal instead of asserting, so a legitimate re-baseline
+   * regenerates the pinned constant exactly rather than by hand. Off by default: the gate asserts.
+   */
+  private static final boolean RECORD_BASELINE = Boolean.getBoolean("orbitlab.recordBaseline");
+
   // ── Recorded baseline, post-split (2026-08-03, seed 42, étape 3) ─────────
   // Full snapshots (ΔV, per-stage accounting, ephemeris point counts) are in
   // docs/mission-stages/02-baseline-n2.md §9.3.
@@ -183,35 +190,35 @@ class AscentBaselineN2Test extends AbstractTrajectoryOptimizerTest {
   // investigation. The tolerances below are UNTOUCHED.
   private static final Baseline LEO_400_BASELINE =
       new Baseline(
-          314.865656,
+          314.448535,
           new MecoState(
-              321.865656,
-              38335.522,
-              new Vector3D(-3032997.664934, -5693529.839660, 576931.994530),
-              new Vector3D(6983.312954, -3739.588732, -191.560768)),
+              321.448535,
+              38631.981,
+              new Vector3D(-3029875.323471, -5693604.139057, 576739.233747),
+              new Vector3D(6992.666130, -3741.492387, -192.022337)),
           new MecoState(
-              321.865656,
-              38335.522,
-              new Vector3D(-3032997.664934, -5693529.839660, 576931.994530),
-              new Vector3D(6983.312954, -3739.588732, -191.560768)),
-          new OrbitShape(400311.8, 419162.6, 5.302712),
-          60.8);
+              321.448535,
+              38631.981,
+              new Vector3D(-3029875.323471, -5693604.139057, 576739.233747),
+              new Vector3D(6992.666130, -3741.492387, -192.022337)),
+          new OrbitShape(400311.5, 419162.7, 5.302686),
+          44.2);
 
   private static final Baseline GEO_BASELINE =
       new Baseline(
-          343.368964,
+          341.770242,
           new MecoState(
-              350.368964,
-              69059.613,
-              new Vector3D(-2932498.028106, -5669399.168734, 568665.692616),
-              new Vector3D(7082.662555, -3687.304818, -202.625763)),
+              348.770242,
+              69881.996,
+              new Vector3D(-2941261.758258, -5664820.154152, 568914.444849),
+              new Vector3D(7075.101042, -3704.827732, -200.962595)),
           new MecoState(
-              350.368964,
-              69059.613,
-              new Vector3D(-2932498.028106, -5669399.168734, 568665.692616),
-              new Vector3D(7082.662555, -3687.304818, -202.625763)),
-          new OrbitShape(35786249.2, 35791192.4, 0.000034),
-          89.6);
+              348.770242,
+              69881.996,
+              new Vector3D(-2941261.758258, -5664820.154152, 568914.444849),
+              new Vector3D(7075.101042, -3704.827732, -200.962595)),
+          new OrbitShape(35786252.1, 35791192.1, 0.000034),
+          56.3);
 
   @BeforeAll
   static void init() {
@@ -325,6 +332,10 @@ class AscentBaselineN2Test extends AbstractTrajectoryOptimizerTest {
    * been recorded yet the run is a capture only: the report above is the material to record.
    */
   private static void compare(Baseline reference, Snapshot got) {
+    if (RECORD_BASELINE) {
+      logger.info("recordBaseline [{}] =\n{}", got.profile(), asBaselineLiteral(got));
+      return;
+    }
     if (reference == null) {
       logger.warn(
           "No N2 baseline recorded for profile '{}' — capture-only run, nothing compared",
@@ -543,6 +554,41 @@ class AscentBaselineN2Test extends AbstractTrajectoryOptimizerTest {
 
   private static String fmt(double value, int decimals) {
     return String.format(Locale.ROOT, "%." + decimals + "f", value);
+  }
+
+  /**
+   * The just-flown snapshot as a pasteable {@link Baseline} literal, at the recorded style's
+   * precision.
+   */
+  private static String asBaselineLiteral(Snapshot s) {
+    return "new Baseline(\n"
+        + "    "
+        + fmt(s.transitionTime(), 6)
+        + ",\n    "
+        + mecoLiteral(s.mecoOptimize())
+        + ",\n    "
+        + mecoLiteral(s.mecoEphemeris())
+        + ",\n    new OrbitShape("
+        + fmt(s.finalOrbit().perigeeAltitude(), 1)
+        + ", "
+        + fmt(s.finalOrbit().apogeeAltitude(), 1)
+        + ", "
+        + fmt(s.finalOrbit().inclinationDeg(), 6)
+        + "),\n    "
+        + fmt(s.optimizeSeconds(), 1)
+        + ");";
+  }
+
+  private static String mecoLiteral(MecoState m) {
+    return "new MecoState("
+        + fmt(m.timeSinceLaunch(), 6)
+        + ", "
+        + fmt(m.mass(), 3)
+        + ", new Vector3D("
+        + vector(m.position())
+        + "), new Vector3D("
+        + vector(m.velocity())
+        + "))";
   }
 
   private static void write(String profile, String report) {

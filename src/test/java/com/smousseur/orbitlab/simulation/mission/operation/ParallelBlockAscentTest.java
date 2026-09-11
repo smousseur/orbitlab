@@ -54,8 +54,8 @@ import org.orekit.utils.Constants;
  *
  * <p><b>Why bit equality is reachable.</b> Every figure of the split is an exact integer and the
  * boosters are twice the core, so the aggregate thrust is 22 800 000 N exactly, {@code ΣF/Σ(F/Isp)}
- * lands on 296 s exactly, and the block's dry mass, depletion floor, burn duration and jettison
- * mass all reproduce the former S1's (spec L1 §2.4).
+ * lands on 298 s exactly (296 before PHY-2/L3), and the block's dry mass, depletion floor, burn
+ * duration and jettison mass all reproduce the former S1's (spec L1 §2.4).
  *
  * <p>The profile flown is the one the two zero-tolerance gates use — hand-written loads {@code {600
  * 000, 100 000}} on {@code Spacecraft.LEGACY} — which split at the exact 2/3–1/3 pro rata.
@@ -184,9 +184,9 @@ class ParallelBlockAscentTest {
     SpacecraftState entry = mission.getInitialState(epoch());
     AscentPlan plan = maneuverOf(mission, entry).plan(entry, new double[] {600.0, 0.32});
 
-    // Boosters run dry at 822 000 / 5 236.4 kg/s; the core then burns its 78 t at full thrust.
-    double boosterFlow = 15_200_000 / (296 * G0);
-    double coreFlow = 7_600_000 / (296 * G0);
+    // Boosters run dry at 822 000 / 5 201.2 kg/s; the core then burns its 78 t at full thrust.
+    double boosterFlow = 15_200_000 / (298 * G0);
+    double coreFlow = 7_600_000 / (298 * G0);
 
     assertEquals(822_000 / boosterFlow, plan.burn1Duration(), 1e-6);
     assertEquals(78_090 / coreFlow, plan.coreBurnDuration(), 0.05);
@@ -196,10 +196,10 @@ class ParallelBlockAscentTest {
         String.format(Locale.ROOT, "%.1f", plan.coreBurnDuration()),
         String.format(Locale.ROOT, "%.1f", plan.burn1Duration() + plan.coreBurnDuration()));
     assertEquals(
-        186.8,
+        188.1,
         plan.burn1Duration() + plan.coreBurnDuration(),
         0.5,
-        "the core flies the 186.8 s that f = 0.81 produces");
+        "the core flies the 188.1 s that f = 0.81 produces (186.8 before the L3 ISP raise)");
   }
 
   /**
@@ -301,7 +301,8 @@ class ParallelBlockAscentTest {
                   "S1 (3 cores aggregated)",
                   66_000,
                   1_233_000,
-                  new PropulsionSystem(296, 22_800_000),
+                  // 298 s since PHY-2/L3 raised the split cores' ISP; the aggregate mirrors them.
+                  new PropulsionSystem(298, 22_800_000),
                   new StageCapabilities(
                       IgnitionMode.GROUND,
                       0,

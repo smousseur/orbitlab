@@ -250,8 +250,8 @@ troisième :
 |---|---|---|---|
 | ~~**L0**~~ | Baseline consolidée — **livrée** ([`07`](07-baseline-L0-PHY-2.md)) | non (aucun code de prod) | un document |
 | ~~**L1**~~ | Socle de faisabilité + câblage — **livré le 2026-09-11** (`a` retenu, `BUG-10` fermé, coût ×7,5 mesuré ; [`08`](08-conception-L1-PHY-2.md)) | **non** (structurel, `hasDrag()`-conditionnel) | 4 gates + ascension drag-on terminante + candidat bas abandonné |
-| **L2** | Isp recalibrée (`DT-13`) | oui — attribuable à l'Isp | mesure : dette explicitée ; **implémentation (Isp + re-baseline) repliée sur `L3`**, cf. [`09`](09-conception-L2-PHY-2.md) §6 |
-| **L3** | Autorité d'ascension (`DT-21`+`DT-20`) = fix `BUG-25` | oui — attribuable à l'arbitrage | `testFalconHeavyOptimizedTransfer` ré-activé + gates re-baselinés + airstart S2 (`DT-15`) |
+| ~~**L2**~~ | Isp recalibrée (`DT-13`) — mesure livrée ; **implémentation (Isp + re-baseline) livrée à `L3`** ([`09`](09-conception-L2-PHY-2.md) §6) | oui — attribuable à l'Isp | dette explicitée ; le catalogue passe à 298 en `L3` |
+| ~~**L3**~~ | Autorité d'ascension (`DT-21`+`DT-20`) = fix `BUG-25` — **livré le 2026-09-11** (mécanisme seul, `W = 0,5` inchangé ; B-check vert ; `DT-15` sans escalade ; [`10`](10-conception-L3-PHY-2.md)) | oui — attribuable à l'arbitrage | `testFalconHeavyOptimizedTransfer` ré-activé et vert + 3 gates re-baselinés (mode record) + B-check drag-on |
 | **L4** | Dimensionnement deux passes (`DT-19`) | oui — attribuable au dimensionnement | mesure : réserve retirée, résidu passe 2 |
 | **L5** | Bascule du défaut + `REL-22` | oui — le moment « on » | défaut basculé, suite complète re-baselinée drag-on, restauration opérante |
 

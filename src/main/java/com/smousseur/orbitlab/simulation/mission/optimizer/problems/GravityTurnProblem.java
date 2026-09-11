@@ -84,6 +84,16 @@ public class GravityTurnProblem implements TrajectoryProblem {
   // It remains a cost term rather than a search bound on the original grounds: Hipparchus
   // normalizes the search space by the box width, so raising the lower bound would re-encode every
   // candidate and rescale the effective sigma, perturbing missions the floor never binds.
+  //
+  // PHY-2/L3: the plateau it defends shrank. The floor is now maneuver.getStagingFloor() — the
+  // booster-separation-plus-interstage time, a whole core burn below staging completion — because
+  // between those two times the MECO commands an early core cutoff (spec
+  // docs/atmosphere/10-conception-L3-PHY-2.md §3.1.3): every candidate there flies a different
+  // core burn and a different apogee, so it is a gradient the search must keep, not a plateau to
+  // fence off. Only below getStagingFloor() does the core never fire, leaving the degenerate flat
+  // region with the reproducibility hazard measured above — and that is all this penalty now
+  // guards. On a launcher with no core-only phase getStagingFloor() is staging completion, the
+  // pre-L3 floor unchanged.
   private static final double STAGING_PENALTY_BASE = 1e3;
 
   /**
@@ -112,6 +122,19 @@ public class GravityTurnProblem implements TrajectoryProblem {
    * the ranking flips below a weight of 0.687. 0.5 is that threshold with margin, and it leaves the
    * ceiling doing its real job — discouraging an overshoot the vehicle <em>can</em> avoid — without
    * letting it pay for one it cannot.
+   *
+   * <p><b>PHY-2/L3 unlocks the lever that would let this rise, but leaves the value for flight
+   * calibration.</b> The reasoning that pinned it at 0.5 — the gravity turn cannot lower an
+   * over-delivered apogee except by pitching up, a false economy this weight must not reward — is
+   * dissolved by §3.2 of spec {@code docs/atmosphere/10-conception-L3-PHY-2.md} <em>only where the
+   * core-cutoff lever exists</em>: with the cutoff wired onto {@code transitionTime} (§3.1) the
+   * turn can lower its apogee by cutting the core instead of pitching. Where that lever is
+   * available — every core-phase launcher in the catalog — a higher weight drives the optimizer to
+   * cut rather than overshoot; where it is not, raising this weight re-buys the false economy,
+   * which {@code GravityTurnProblemTest#computeCost_prefersTheHandOffTheMissionSurvives} pins on a
+   * no-core stage. The value is therefore posed by flying {@code testFalconHeavyOptimizedTransfer}
+   * to its 400 ±7 % target with the lever open, one change at a time; it is held at 0.5 until that
+   * measurement says how far it may rise.
    */
   private static final double W_APOGEE_OVERSHOOT = 0.5;
 
@@ -248,7 +271,10 @@ public class GravityTurnProblem implements TrajectoryProblem {
   @Override
   public SpacecraftState propagate(double[] variables) {
     // Recorded for the computeCost() call the executor makes right after, on this same thread.
-    stagingShortfall.set(FastMath.max(0.0, maneuver.getStagingCompleteTime() - variables[0]));
+    // Floored at getStagingFloor(), not staging completion: a MECO between the two commands an
+    // early core cutoff (spec docs/atmosphere/10-conception-L3-PHY-2.md §3.1.3), a live lever the
+    // penalty must not fence off.
+    stagingShortfall.set(FastMath.max(0.0, maneuver.getStagingFloor() - variables[0]));
     return propagation.propagate(initialState, variables);
   }
 

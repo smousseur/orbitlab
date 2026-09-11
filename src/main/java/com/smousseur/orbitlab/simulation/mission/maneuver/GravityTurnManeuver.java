@@ -154,7 +154,18 @@ public class GravityTurnManeuver {
     // Burn1 duration until propellant exhaustion
     double burn1Duration = getBurn1Duration();
 
+    // A MECO below staging completion commands the core off early instead of running it to
+    // depletion — the optimizer's only lever to lower an over-delivered apogee, and the fix for
+    // BUG-25 (spec docs/atmosphere/10-conception-L3-PHY-2.md §3.1). The full burn is kept
+    // bit-for-bit at or above staging completion: the shortfall is zero there, so subtracting it
+    // leaves getCoreBurnDuration() untouched. Below the shortfall reaches the full burn, the
+    // clamp gives a zero core burn, and getStagingFloor() is where the staging penalty stops that
+    // being reached.
     double coreBurnDuration = getCoreBurnDuration();
+    if (coreStage != null) {
+      double stagingShortfall = FastMath.max(0.0, getStagingCompleteTime() - transitionTime);
+      coreBurnDuration = FastMath.max(0.0, coreBurnDuration - stagingShortfall);
+    }
 
     // Burn2 duration after every launcher jettison and the interstage coast, until transitionTime
     double burn2Duration = FastMath.max(0.0, transitionTime - getStagingCompleteTime());
@@ -447,6 +458,26 @@ public class GravityTurnManeuver {
     double corePhase =
         coreStage == null ? 0.0 : AscentPlan.BOOSTER_SEPARATION_COAST + getCoreBurnDuration();
     return getBurn1Duration() + corePhase + interstageCoastDuration;
+  }
+
+  /**
+   * The MECO floor below which the schedule is degenerate — the transition time the staging penalty
+   * regularizes the search above.
+   *
+   * <p>With a commandable core it is <b>below</b> {@link #getStagingCompleteTime()} by the whole
+   * core burn: a MECO between the two commands an early core cutoff ({@link #plan}), so that region
+   * is a live lever rather than a plateau and is no longer penalized (spec {@code
+   * docs/atmosphere/10-conception-L3-PHY-2.md} §3.1.3). Only below this floor does the core never
+   * fire, leaving the degenerate plateau the penalty still guards. A launcher with no core-only
+   * phase keeps staging completion as its floor, as before.
+   *
+   * @return the earliest non-degenerate transition time, in seconds
+   */
+  public double getStagingFloor() {
+    if (coreStage == null) {
+      return getStagingCompleteTime();
+    }
+    return getStagingCompleteTime() - getCoreBurnDuration();
   }
 
   /**
