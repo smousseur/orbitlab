@@ -414,6 +414,15 @@ un gravity turn atteint son apogée avec moins d'ergols qu'un vrai lanceur.
 Coût compute attendu : +5 % (Harris-Priester) à +50 % (NRLMSISE-00) sur une
 optimisation CMA-ES.
 
+> **Mesuré le 2026-09-11 (`PHY-2 / L1`), et le +50 % était optimiste : c'est ×7,5.** Une
+> optimisation d'ascension drag-on du Falcon Heavy LEO-400 prend **52,8 s** contre **~7 s**
+> drag-off. Le coût est intrinsèque — NRLMSISE est le seul modèle valide à 0 km, et
+> l'ascension traverse l'air dense en pas nombreux — donc irréductible par le choix de modèle
+> (Harris-Priester ne peut pas voler une ascension). C'est un **risque pour la bascule du
+> défaut** (chaque optim le paierait), à traiter avant elle par un levier neuf (atmosphère
+> d'optim bon marché, ou tolérance d'intégrateur). Détail :
+> [`atmosphere/08-conception-L1-PHY-2.md`](../atmosphere/08-conception-L1-PHY-2.md) §6.
+
 **Le recalibrage est groupé, et c'est le prix de la stratégie de v1.** `PHY-1`
 avait livré la brique **off** par défaut sous une contrainte tenue jusqu'au
 bout — *drag off ⇒ trajectoire identique au bit près*. Chaque type de mission

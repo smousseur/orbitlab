@@ -3,13 +3,17 @@ package com.smousseur.orbitlab.simulation.mission.detector;
 import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.hipparchus.ode.events.Action;
+import org.orekit.forces.drag.DragForce;
+import org.orekit.propagation.SpacecraftState;
 import org.orekit.propagation.numerical.NumericalPropagator;
 
 /**
  * Fail-fast re-entry guard (spec {@code docs/mission-stages/03-garde-rentree.md}). Arms a {@link
  * ReentryDetector} that stops a propagation whose trajectory has sunk irrecoverably below the
- * Earth's surface.
+ * Earth's surface. Under drag it also arms a second, shallower and descent-gated stop the deep
+ * floor cannot serve (PHY-2 / L1, {@link #armDragStop}).
  *
  * <p><b>The defect class it closes.</b> Nothing in the mission phase chain used to stop a numerical
  * propagation that re-enters. The integrator follows the trajectory under the surface, the adaptive
@@ -49,6 +53,21 @@ public final class ReentryGuard {
    */
   public static final double SUBSURFACE_FLOOR = -50_000.0;
 
+  /**
+   * Spherical altitude (m) below which a <em>descending</em> trajectory is declared re-entered when
+   * drag is mounted (PHY-2 / L1, spec {@code docs/atmosphere/08-conception-L1-PHY-2.md} §3.1).
+   *
+   * <p><b>Why it can be this shallow when {@link #SUBSURFACE_FLOOR} could not.</b> Under drag the
+   * integrator's step control collapses <em>above</em> the deepest launch pad — measured at −9 to
+   * −30 km ({@code docs/bugs.md} BUG-10) against pads as deep as −17 km (Plesetsk) — so a single
+   * unconditional spherical floor cannot be both above the collapse and below every pad. The drag
+   * stop breaks the tie with a radial-velocity gate: the handler stops only a <em>descending</em>
+   * crossing (see {@link #armDragStop}), so a climbing ascent passes through this floor untouched
+   * and only a genuine re-entry is caught, 9 km above where the integrator would otherwise cede. A
+   * valid orbit whose perigee sits at or above the reference sphere never crosses it.
+   */
+  public static final double DRAG_REENTRY_FLOOR = 0.0;
+
   private ReentryGuard() {}
 
   /**
@@ -81,6 +100,7 @@ public final class ReentryGuard {
                       Math.round(-SUBSURFACE_FLOOR / 1000.0));
                   return Action.STOP;
                 }));
+    armDragStop(propagator, radius, context);
   }
 
   /**
@@ -92,8 +112,65 @@ public final class ReentryGuard {
    * @param propagator the propagator to guard
    */
   public static void armQuiet(NumericalPropagator propagator, GravitationalContext body) {
+    double radius = body.equatorialRadius();
     propagator.addEventDetector(
-        new ReentryDetector(body.equatorialRadius())
-            .withHandler((state, detector, increasing) -> Action.STOP));
+        new ReentryDetector(radius).withHandler((state, detector, increasing) -> Action.STOP));
+    armDragStop(propagator, radius, null);
+  }
+
+  /**
+   * Arms the drag-regime re-entry stop — but only when the propagator carries drag, so a drag-off
+   * propagation is byte-identical to before this method existed. PHY-2 / L1 (spec {@code
+   * docs/atmosphere/08-conception-L1-PHY-2.md} §3.1).
+   *
+   * <p><b>The drag is read from the force list already mounted, not passed in.</b> The propagator
+   * is built with its {@link DragForce} (or none) before it is armed, so its own force models are
+   * the true, un-driftable answer to "is this flown under drag?" — which is why {@code arm}/{@code
+   * armQuiet} keep their gravity-only signatures and no call site has to thread a flight context.
+   *
+   * <p><b>The stop is gated on a descending radial velocity</b>, and that is what lets its floor
+   * sit at {@link #DRAG_REENTRY_FLOOR} (0 km) rather than deep like {@link #SUBSURFACE_FLOOR}: a
+   * climbing ascent crosses 0 km on the way up ({@code vRadial ≥ 0}) and is waved through, while a
+   * re-entry crosses it coming down ({@code vRadial < 0}) and is stopped — above the depth at which
+   * the integrator would otherwise cede under drag.
+   *
+   * @param propagator the propagator being armed
+   * @param radius the reference sphere radius (m)
+   * @param context the stage/maneuver label to log on a loud stop, or {@code null} to stop quietly
+   */
+  private static void armDragStop(NumericalPropagator propagator, double radius, String context) {
+    if (!hasDrag(propagator)) {
+      return;
+    }
+    propagator.addEventDetector(
+        new ReentryDetector(radius, DRAG_REENTRY_FLOOR)
+            .withHandler(
+                (state, detector, increasing) -> {
+                  if (!descending(state)) {
+                    return Action.CONTINUE;
+                  }
+                  if (context != null) {
+                    logger.warn(
+                        "[{}] Trajectory re-entered under drag at {} ({} km below the reference "
+                            + "sphere): stopping propagation, this phase is truncated",
+                        context,
+                        state.getDate(),
+                        Math.round(
+                            (radius - state.getPVCoordinates().getPosition().getNorm()) / 1000.0));
+                  }
+                  return Action.STOP;
+                }));
+  }
+
+  /** Whether the propagator mounts a {@link DragForce}, i.e. is flown against an atmosphere. */
+  private static boolean hasDrag(NumericalPropagator propagator) {
+    return propagator.getAllForceModels().stream().anyMatch(DragForce.class::isInstance);
+  }
+
+  /** Whether the state's radial velocity points inward, i.e. the trajectory is falling. */
+  private static boolean descending(SpacecraftState state) {
+    Vector3D position = state.getPVCoordinates().getPosition();
+    Vector3D velocity = state.getPVCoordinates().getVelocity();
+    return Vector3D.dotProduct(velocity, position.normalize()) < 0.0;
   }
 }
