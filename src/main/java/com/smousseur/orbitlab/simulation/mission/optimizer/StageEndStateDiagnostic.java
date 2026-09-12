@@ -3,6 +3,7 @@ package com.smousseur.orbitlab.simulation.mission.optimizer;
 import java.util.Locale;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.hipparchus.util.FastMath;
+import org.orekit.orbits.KeplerianOrbit;
 import org.orekit.propagation.SpacecraftState;
 import org.orekit.utils.Constants;
 import org.orekit.utils.PVCoordinates;
@@ -32,8 +33,12 @@ public final class StageEndStateDiagnostic {
    * @param vTan tangential velocity (m/s)
    * @param vRad radial velocity (m/s, positive = outward)
    * @param fpaDeg flight-path angle (degrees, positive = climbing)
+   * @param periapsis periapsis altitude of the osculating orbit (m); the low point of the coast the
+   *     transfer is about to fly, and what the drag-on hand-off floor of {@code GravityTurnProblem}
+   *     is read against
    */
-  public record EndState(double altitude, double vTan, double vRad, double fpaDeg) {}
+  public record EndState(
+      double altitude, double vTan, double vRad, double fpaDeg, double periapsis) {}
 
   /**
    * Extracts the end-state indicators from a propagated spacecraft state.
@@ -54,7 +59,9 @@ public final class StageEndStateDiagnostic {
     double vTanSq = vNorm * vNorm - vRad * vRad;
     double vTan = vTanSq > 0 ? FastMath.sqrt(vTanSq) : 0.0;
     double fpaDeg = FastMath.toDegrees(FastMath.atan2(vRad, vTan));
-    return new EndState(altitude, vTan, vRad, fpaDeg);
+    KeplerianOrbit orbit = new KeplerianOrbit(pv, state.getFrame(), state.getDate(), MU);
+    double periapsis = orbit.getA() * (1.0 - orbit.getE()) - EARTH_RADIUS;
+    return new EndState(altitude, vTan, vRad, fpaDeg, periapsis);
   }
 
   /**
@@ -75,14 +82,17 @@ public final class StageEndStateDiagnostic {
     double rTarget = EARTH_RADIUS + targetAltitude;
     double aTransfer = (rGtEnd + rTarget) / 2.0;
     double vIdeal = FastMath.sqrt(MU * (2.0 / rGtEnd - 1.0 / aTransfer));
-    return new EndState(currentAltitude, vIdeal, 0.0, 0.0);
+    // The ideal hand-off IS the periapsis of the transfer ellipse, so its periapsis altitude is the
+    // altitude it happens at — which makes the Δ the diagnostic prints the depth of the arc below
+    // the hand-off, zero on the ideal one.
+    return new EndState(currentAltitude, vIdeal, 0.0, 0.0, currentAltitude);
   }
 
   /**
    * Formats actual vs. ideal as a single-line diagnostic.
    *
-   * <p>Example: {@code alt=348142 m | vTan=7320 m/s (Δ=+12) | vRad=132 m/s (Δ=+132) | FPA=2.10°
-   * (Δ=+2.10°)}
+   * <p>Example: {@code alt=348142 m | peri=-201700 m (Δ=-549842) | vTan=7320 m/s (Δ=+12) | vRad=132
+   * m/s (Δ=+132) | FPA=2.10° (Δ=+2.10°)}
    *
    * @param actual measured end state
    * @param ideal computed Hohmann reference at the same altitude
@@ -91,8 +101,11 @@ public final class StageEndStateDiagnostic {
   public static String format(EndState actual, EndState ideal) {
     return String.format(
         Locale.ROOT,
-        "alt=%.0f m | vTan=%.1f m/s (Δ=%+.1f) | vRad=%.1f m/s (Δ=%+.1f) | FPA=%.2f° (Δ=%+.2f°)",
+        "alt=%.0f m | peri=%.0f m (Δ=%+.0f) | vTan=%.1f m/s (Δ=%+.1f) | vRad=%.1f m/s (Δ=%+.1f) "
+            + "| FPA=%.2f° (Δ=%+.2f°)",
         actual.altitude(),
+        actual.periapsis(),
+        actual.periapsis() - ideal.periapsis(),
         actual.vTan(),
         actual.vTan() - ideal.vTan(),
         actual.vRad(),

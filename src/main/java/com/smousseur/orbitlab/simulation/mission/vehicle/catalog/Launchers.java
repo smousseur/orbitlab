@@ -93,10 +93,12 @@ public final class Launchers {
                       7_200.0,
                       StageRole.UPPER),
                   // π·1.83² for the single 3.66 m core. Cd 2.2 is the standard satellite-drag
-                  // value: an upper stage ignites above 70 km, where the flow is already
-                  // free-molecular rather than continuous. Numerically it barely matters — the
-                  // density there is four orders of magnitude below what S1 crosses (spec
-                  // docs/atmosphere/04-conception-L1.md §4.1).
+                  // value, correct for this stage's real domain — its orbital life, in
+                  // free-molecular flow. It is knowingly out of domain at ignition: PHY-2 / L3
+                  // measured the S2 becoming the active surface at ~35 km, in continuous flow,
+                  // where 2.2 over-estimates the drag by ~5.5 and the capacity holds anyway, so
+                  // DT-15 closed without escalating to a per-regime Cd (spec
+                  // docs/atmosphere/10-conception-L3-PHY-2.md §3.4).
                   new AerodynamicProperties(10.5, 2.2))),
           // Core throttle 0.81 during the shared phase. The three cores being identical, thrust
           // and propellant are in the same ratio and both blocks would flame out at the same

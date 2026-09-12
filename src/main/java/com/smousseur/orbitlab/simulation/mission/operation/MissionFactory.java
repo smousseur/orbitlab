@@ -1,6 +1,7 @@
 package com.smousseur.orbitlab.simulation.mission.operation;
 
 import com.smousseur.orbitlab.core.OrbitlabException;
+import com.smousseur.orbitlab.simulation.flight.AtmosphereModel;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionHorizon;
 import com.smousseur.orbitlab.simulation.mission.MissionType;
@@ -22,6 +23,17 @@ import org.hipparchus.util.FastMath;
  * ui.mission.wizard.FormField} keys without depending on the UI layer.
  */
 public final class MissionFactory {
+
+  /**
+   * The atmosphere every mission created here flies against unless a saved value overrides it — the
+   * "on by default" of PHY-2 / L5 (spec {@code docs/atmosphere/12-conception-L5-PHY-2.md} §3.1). It
+   * lives at this single production origin rather than in the {@code MissionSpec} constructors so a
+   * spec assembled by hand (tests, fixtures) still defaults to {@link AtmosphereModel#NONE}: the
+   * flip touches what a user creates, not what a test asserts. Scenario restore reads it back to
+   * the value the file saved through {@link MissionSpec#withAtmosphere(AtmosphereModel)}.
+   */
+  private static final AtmosphereModel DEFAULT_ATMOSPHERE = AtmosphereModel.NRLMSISE;
+
   private MissionFactory() {}
 
   /**
@@ -86,132 +98,153 @@ public final class MissionFactory {
       payloadMass = payloadModel.defaultDryMass();
     }
 
-    return switch (type) {
-      case LEO -> {
-        double perigeeKm = doubleValue(values, "LEO_PERIGEE_ALT");
-        double apogeeKm = doubleValue(values, "LEO_APOGEE_ALT");
-        double perigeeAlt = Math.min(perigeeKm, apogeeKm) * 1000.0;
-        double apogeeAlt = Math.max(perigeeKm, apogeeKm) * 1000.0;
-        LaunchPlane plane = launchPlane(values, latitude);
-        double azimuth = plane.launchAzimuth(FastMath.toRadians(latitude));
-        // The budget has to agree with the chain MissionComposer will pick (spec §6.1): a target
-        // beyond the ascent's reach is flown through a parking orbit and circularized at apogee, so
-        // it is sized for an injection plus an apogee burn — not for one direct ascent.
-        LaunchConfiguration configuration =
-            MissionComposer.needsParkingOrbit(apogeeAlt)
-                ? highOrbitConfiguration(
-                    launcher, payloadModel, payloadMass, perigeeAlt, apogeeAlt, latitude, azimuth)
-                : directConfiguration(
-                    launcher, payloadModel, payloadMass, apogeeAlt, latitude, azimuth);
-        yield new MissionSpec.EarthOrbit(
-            name,
-            configuration,
-            perigeeAlt,
-            apogeeAlt,
-            plane.targetInclination(),
-            plane.nodeBranch(),
-            targetRaanOrNull(values),
-            siteName,
-            latitude,
-            longitude,
-            altitude,
-            horizon);
-      }
-      case GEO -> {
-        double parkingAlt = doubleValue(values, "GTO_PARKING_ALT") * 1000.0;
-        PropellantBudget.SizedLoads geoLoads =
-            PropellantBudget.loadsForGeo(launcher, payloadModel, payloadMass, parkingAlt, latitude);
-        Spacecraft payload = payloadModel.toSpacecraft(payloadMass, geoLoads.payloadLoad());
-        // The apogee circularization is flown by the payload's kick motor; without the ΔV for it
-        // the burn would only fail during propagation, on a background thread. Asked as a ΔV and
-        // not as the presence of a tank, the same way MissionComposer asks it of a MEO: since
-        // PHY-8 / L6 a payload can carry propellant that is nowhere near an apogee burn (spec
-        // docs/etagement/01-decoupage.md §3.7).
-        double burnDeltaV =
-            PropellantBudget.apogeeBurnDeltaV(parkingAlt, GEOMission.GEO_ALTITUDE, latitude);
-        double carriedDeltaV = PropellantBudget.payloadDeltaV(payload);
-        if (carriedDeltaV < burnDeltaV) {
-          throw new IllegalArgumentException(
-              String.format(
-                  Locale.ROOT,
-                  "GEO mission requires a payload with an apogee kick motor: %s carries %.0f m/s"
-                      + " where the circularization needs %.0f.",
-                  payloadModel.id(),
-                  carriedDeltaV,
-                  burnDeltaV));
-        }
-        LaunchConfiguration configuration =
-            new LaunchConfiguration(launcher, geoLoads.launcherLoads(), payload, payloadModel.id());
-        yield new MissionSpec.Geo(
-            name,
-            configuration,
-            parkingAlt,
-            GEOMission.GEO_ALTITUDE,
-            0.0,
-            siteName,
-            latitude,
-            longitude,
-            altitude,
-            horizon);
-      }
-      // MIS-4 / L5 §6.2. The parking altitude is not a wizard field: it comes from the mission's
-      // own constant, the single source the window, the chain and the budget have to agree on.
-      case LUNAR_FLYBY -> {
-        double periluneAlt = doubleValue(values, "LUNAR_PERILUNE_ALT") * 1000.0;
-        double parkingAlt = LunarFlybyMission.DEFAULT_PARKING_ALTITUDE;
-        // Inert by construction: LUNAR_FLYBY does not require payload propulsion, and the
-        // translunar injection is the launcher's last burn — nothing is handed over afterwards.
-        Spacecraft payload = payloadModel.toSpacecraft(payloadMass, 0.0);
-        // Due east: the chain flies i = φ, where the two azimuth branches merge.
-        PropellantBudget.LunarLoads loads =
-            PropellantBudget.loadsForLunar(
-                launcher, payload, parkingAlt, latitude, FastMath.PI / 2);
-        yield new MissionSpec.Lunar(
-            name,
-            new LaunchConfiguration(launcher, loads.launcherLoads(), payload, payloadModel.id()),
-            parkingAlt,
-            periluneAlt,
-            siteName,
-            latitude,
-            longitude,
-            altitude,
-            horizon,
-            null);
-      }
-      // MIS-5 / L7 §4. The parking altitude is the mission's own constant, as the flyby's is.
-      case LUNAR_ORBIT -> {
-        double orbitAlt = doubleValue(values, "LUNAR_ORBIT_ALT") * 1000.0;
-        double parkingAlt = LunarOrbitMission.DEFAULT_PARKING_ALTITUDE;
-        // The order is forced, and it is the flyby's reversed: there, the payload is built inert
-        // and handed to the budget; here the budget is given the model and the dry mass and
-        // *returns* the insertion load the payload is then built with. No propulsion check beside
-        // it — loadsForLunarOrbit performs its own, and words the refusal with the kilos, the
-        // delta-V
-        // and the tank capacity, which is what the wizard's dry composition shows the user.
-        PropellantBudget.LunarOrbitLoads loads =
-            PropellantBudget.loadsForLunarOrbit(
-                launcher,
-                payloadModel,
-                payloadMass,
+    MissionSpec spec =
+        switch (type) {
+          case LEO -> {
+            double perigeeKm = doubleValue(values, "LEO_PERIGEE_ALT");
+            double apogeeKm = doubleValue(values, "LEO_APOGEE_ALT");
+            double perigeeAlt = Math.min(perigeeKm, apogeeKm) * 1000.0;
+            double apogeeAlt = Math.max(perigeeKm, apogeeKm) * 1000.0;
+            LaunchPlane plane = launchPlane(values, latitude);
+            double azimuth = plane.launchAzimuth(FastMath.toRadians(latitude));
+            // The budget has to agree with the chain MissionComposer will pick (spec §6.1): a
+            // target
+            // beyond the ascent's reach is flown through a parking orbit and circularized at
+            // apogee, so
+            // it is sized for an injection plus an apogee burn — not for one direct ascent.
+            LaunchConfiguration configuration =
+                MissionComposer.needsParkingOrbit(apogeeAlt)
+                    ? highOrbitConfiguration(
+                        launcher,
+                        payloadModel,
+                        payloadMass,
+                        perigeeAlt,
+                        apogeeAlt,
+                        latitude,
+                        azimuth)
+                    : directConfiguration(
+                        launcher, payloadModel, payloadMass, apogeeAlt, latitude, azimuth);
+            yield new MissionSpec.EarthOrbit(
+                name,
+                configuration,
+                perigeeAlt,
+                apogeeAlt,
+                plane.targetInclination(),
+                plane.nodeBranch(),
+                targetRaanOrNull(values),
+                siteName,
+                latitude,
+                longitude,
+                altitude,
+                horizon);
+          }
+          case GEO -> {
+            double parkingAlt = doubleValue(values, "GTO_PARKING_ALT") * 1000.0;
+            PropellantBudget.SizedLoads geoLoads =
+                PropellantBudget.loadsForGeo(
+                    launcher, payloadModel, payloadMass, parkingAlt, latitude);
+            Spacecraft payload = payloadModel.toSpacecraft(payloadMass, geoLoads.payloadLoad());
+            // The apogee circularization is flown by the payload's kick motor; without the ΔV for
+            // it
+            // the burn would only fail during propagation, on a background thread. Asked as a ΔV
+            // and
+            // not as the presence of a tank, the same way MissionComposer asks it of a MEO: since
+            // PHY-8 / L6 a payload can carry propellant that is nowhere near an apogee burn (spec
+            // docs/etagement/01-decoupage.md §3.7).
+            double burnDeltaV =
+                PropellantBudget.apogeeBurnDeltaV(parkingAlt, GEOMission.GEO_ALTITUDE, latitude);
+            double carriedDeltaV = PropellantBudget.payloadDeltaV(payload);
+            if (carriedDeltaV < burnDeltaV) {
+              throw new IllegalArgumentException(
+                  String.format(
+                      Locale.ROOT,
+                      "GEO mission requires a payload with an apogee kick motor: %s carries %.0f m/s"
+                          + " where the circularization needs %.0f.",
+                      payloadModel.id(),
+                      carriedDeltaV,
+                      burnDeltaV));
+            }
+            LaunchConfiguration configuration =
+                new LaunchConfiguration(
+                    launcher, geoLoads.launcherLoads(), payload, payloadModel.id());
+            yield new MissionSpec.Geo(
+                name,
+                configuration,
+                parkingAlt,
+                GEOMission.GEO_ALTITUDE,
+                0.0,
+                siteName,
+                latitude,
+                longitude,
+                altitude,
+                horizon);
+          }
+          // MIS-4 / L5 §6.2. The parking altitude is not a wizard field: it comes from the
+          // mission's
+          // own constant, the single source the window, the chain and the budget have to agree on.
+          case LUNAR_FLYBY -> {
+            double periluneAlt = doubleValue(values, "LUNAR_PERILUNE_ALT") * 1000.0;
+            double parkingAlt = LunarFlybyMission.DEFAULT_PARKING_ALTITUDE;
+            // Inert by construction: LUNAR_FLYBY does not require payload propulsion, and the
+            // translunar injection is the launcher's last burn — nothing is handed over afterwards.
+            Spacecraft payload = payloadModel.toSpacecraft(payloadMass, 0.0);
+            // Due east: the chain flies i = φ, where the two azimuth branches merge.
+            PropellantBudget.LunarLoads loads =
+                PropellantBudget.loadsForLunar(
+                    launcher, payload, parkingAlt, latitude, FastMath.PI / 2);
+            yield new MissionSpec.Lunar(
+                name,
+                new LaunchConfiguration(
+                    launcher, loads.launcherLoads(), payload, payloadModel.id()),
+                parkingAlt,
+                periluneAlt,
+                siteName,
+                latitude,
+                longitude,
+                altitude,
+                horizon,
+                null);
+          }
+          // MIS-5 / L7 §4. The parking altitude is the mission's own constant, as the flyby's is.
+          case LUNAR_ORBIT -> {
+            double orbitAlt = doubleValue(values, "LUNAR_ORBIT_ALT") * 1000.0;
+            double parkingAlt = LunarOrbitMission.DEFAULT_PARKING_ALTITUDE;
+            // The order is forced, and it is the flyby's reversed: there, the payload is built
+            // inert
+            // and handed to the budget; here the budget is given the model and the dry mass and
+            // *returns* the insertion load the payload is then built with. No propulsion check
+            // beside
+            // it — loadsForLunarOrbit performs its own, and words the refusal with the kilos, the
+            // delta-V
+            // and the tank capacity, which is what the wizard's dry composition shows the user.
+            PropellantBudget.LunarOrbitLoads loads =
+                PropellantBudget.loadsForLunarOrbit(
+                    launcher,
+                    payloadModel,
+                    payloadMass,
+                    parkingAlt,
+                    orbitAlt,
+                    latitude,
+                    // Due east: the chain flies i = φ, where the two azimuth branches merge.
+                    FastMath.PI / 2);
+            Spacecraft payload = payloadModel.toSpacecraft(payloadMass, loads.insertionLoad());
+            yield new MissionSpec.LunarOrbit(
+                name,
+                new LaunchConfiguration(
+                    launcher, loads.launcherLoads(), payload, payloadModel.id()),
                 parkingAlt,
                 orbitAlt,
+                siteName,
                 latitude,
-                // Due east: the chain flies i = φ, where the two azimuth branches merge.
-                FastMath.PI / 2);
-        Spacecraft payload = payloadModel.toSpacecraft(payloadMass, loads.insertionLoad());
-        yield new MissionSpec.LunarOrbit(
-            name,
-            new LaunchConfiguration(launcher, loads.launcherLoads(), payload, payloadModel.id()),
-            parkingAlt,
-            orbitAlt,
-            siteName,
-            latitude,
-            longitude,
-            altitude,
-            horizon,
-            null);
-      }
-    };
+                longitude,
+                altitude,
+                horizon,
+                null);
+          }
+        };
+    // The atmosphere is not a wizard field, so the default is applied here — the single production
+    // origin — rather than in each yield above or in the MissionSpec constructors.
+    return spec.withAtmosphere(DEFAULT_ATMOSPHERE);
   }
 
   /**

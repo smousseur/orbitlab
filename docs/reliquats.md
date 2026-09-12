@@ -255,12 +255,19 @@ retenu ; il faudrait le garder et lire un drapeau dans la fonction objectif,
 à côté de `crossRunStop` qui existe déjà pour un autre usage.
 Source : `roadmap/01-roadmap-v1.md` fiche `UI-2`.
 
-### REL-22 — Restauration de scénario refusée si atmosphère ≠ `NONE` (`UI-3`)
+### REL-22 — Restauration de scénario refusée si atmosphère ≠ `NONE` (`UI-3`) — **levée par `PHY-2 / L5` le 2026-09-12**
 
 Limitation actuelle, déjà en production : un scénario sauvegardé avec un
 modèle d'atmosphère non nul ne peut pas être rechargé aujourd'hui — rien ne
 peut le remonter avant `PHY-2`.
 Source : [`scenario/01-persistance-missions.md`](scenario/01-persistance-missions.md).
+
+**Levée** ([`atmosphere/12-conception-L5-PHY-2.md`](atmosphere/12-conception-L5-PHY-2.md)
+§2.5 et §3.5). Le champ existait ; c'est la **couture de restauration** qui était neuve —
+`MissionSpec.withAtmosphere()` plus son application au restore, la bascule du défaut vivant
+dans `MissionFactory` et non dans les constructeurs de spec. Round-trips verts : `NRLMSISE`
+restauré, **`NONE` honoré verbatim** (un scénario d'avant la bascule ne se met pas à voler
+sous atmosphère), modèle inconnu refusé.
 
 ### REL-23 — Tests longs et essai manuel de `UI-3` jamais lancés — **traité le 2026-08-31**
 
@@ -273,7 +280,8 @@ au runtime est concluant. Le juge que la fiche désignait s'est donc prononcé.
 
 **Ce que cela ne referme pas.** Les limitations connues d'`UI-3` gardent leurs
 fiches propres et restent ouvertes — `REL-22` (restauration refusée si
-atmosphère ≠ `NONE`) et [`bugs.md` BUG-18](bugs.md#bug-18--rejets-de-scénario-au-chargement-seulement-journalisés)
+atmosphère ≠ `NONE`, **levée depuis par `PHY-2 / L5`**, voir ci-dessus) et
+[`bugs.md` BUG-18](bugs.md#bug-18--rejets-de-scénario-au-chargement-seulement-journalisés)
 (rejets au chargement seulement journalisés). Cet item-ci ne portait que
 l'exécution, pas leur contenu.
 

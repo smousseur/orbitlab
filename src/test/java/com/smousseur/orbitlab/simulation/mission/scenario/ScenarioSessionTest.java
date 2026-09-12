@@ -6,6 +6,7 @@ import com.jme3.math.ColorRGBA;
 import com.smousseur.orbitlab.app.converters.TimeConverter;
 import com.smousseur.orbitlab.core.OrbitlabException;
 import com.smousseur.orbitlab.simulation.OrekitService;
+import com.smousseur.orbitlab.simulation.flight.AtmosphereModel;
 import com.smousseur.orbitlab.simulation.mission.MissionType;
 import com.smousseur.orbitlab.simulation.mission.OptimizableMissionStage;
 import com.smousseur.orbitlab.simulation.mission.OptimizationType;
@@ -201,6 +202,80 @@ class ScenarioSessionTest {
     MissionEntry restored = ScenarioSession.restore(capture(List.of(saved))).missions().getFirst();
 
     assertFalse(restored.getPendingSolutions().orElseThrow().hasLauncherLoads());
+  }
+
+  /**
+   * REL-22: a mission saved with a non-{@code NONE} atmosphere is restored under that atmosphere.
+   * Before PHY-2 this path refused it ("cannot be restored yet"); since L5 the wizard default is
+   * drag-on and it round-trips (spec {@code docs/atmosphere/12-conception-L5-PHY-2.md} §3.5).
+   */
+  @Test
+  void restoresANonNoneAtmosphere() {
+    MissionEntry saved = entry("Drag", OptimizationType.FAST, ColorRGBA.Cyan);
+    assertEquals(
+        AtmosphereModel.NRLMSISE,
+        saved.spec().orElseThrow().atmosphere(),
+        "the wizard default is drag-on since L5");
+
+    MissionEntry restored = ScenarioSession.restore(capture(List.of(saved))).missions().getFirst();
+
+    assertEquals(AtmosphereModel.NRLMSISE, restored.spec().orElseThrow().atmosphere());
+  }
+
+  /**
+   * REL-22, the other direction: a scenario saved in vacuum revoles in vacuum. The saved value is
+   * honoured verbatim, so a pre-PHY-2 file is not silently promoted to the new drag-on default.
+   */
+  @Test
+  void restoresAVacuumScenarioAsVacuum() {
+    MissionEntry saved =
+        new MissionEntry(
+            MissionFactory.specFromWizardValues(leoValues("Vacuum"), MissionType.LEO)
+                .withAtmosphere(AtmosphereModel.NONE));
+    saved.setScheduledDate(TimeConverter.parseUtcDate(LAUNCH_DATE).orElseThrow());
+
+    MissionEntry restored = ScenarioSession.restore(capture(List.of(saved))).missions().getFirst();
+
+    assertEquals(AtmosphereModel.NONE, restored.spec().orElseThrow().atmosphere());
+  }
+
+  /** An atmosphere naming a model this build does not know is set aside, not defaulted (§3.5). */
+  @Test
+  void unknownAtmosphereModelIsRefused() {
+    ScenarioFile captured = capture(List.of(entry("Alien", OptimizationType.FAST, ColorRGBA.Red)));
+    List<ScenarioMission> missions = new ArrayList<>(captured.missions());
+    missions.set(0, withAtmosphere((ScenarioMission.EarthOrbit) missions.get(0), "PLASMA"));
+    ScenarioFile file =
+        new ScenarioFile(
+            captured.formatVersion(), captured.savedAt(), captured.clockDate(), missions);
+
+    ScenarioLoadReport report = ScenarioSession.restore(file);
+
+    assertTrue(report.missions().isEmpty());
+    assertEquals(1, report.rejections().size());
+    assertTrue(
+        report.rejections().getFirst().reason().contains("PLASMA"),
+        report.rejections().getFirst().reason());
+  }
+
+  private static ScenarioMission.EarthOrbit withAtmosphere(
+      ScenarioMission.EarthOrbit mission, String atmosphere) {
+    return new ScenarioMission.EarthOrbit(
+        mission.type(),
+        mission.name(),
+        mission.launchDate(),
+        mission.site(),
+        mission.vehicle(),
+        mission.horizonDays(),
+        atmosphere,
+        mission.optimizationMode(),
+        mission.color(),
+        mission.visible(),
+        mission.solution(),
+        mission.perigeeKm(),
+        mission.apogeeKm(),
+        mission.inclinationDeg(),
+        mission.raanDeg());
   }
 
   /** A scenario of two missions with one broken brings back one, not zero (§7). */

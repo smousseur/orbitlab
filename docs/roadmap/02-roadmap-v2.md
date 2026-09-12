@@ -47,7 +47,7 @@ colonne de droite ; le reste peut glisser.
 | `AST-1` | **Lot d'assets 3D** *(neuf, hors code)* | — | — | — | — (à lancer en premier : c'est un délai, pas un travail) |
 | ~~`PHY-8`~~ | ~~**Propulseurs séparés du corps : Falcon Heavy et Ariane 64**~~ — **livré le 2026-09-10** ([`etagement/07-cloture.md`](../etagement/07-cloture.md)) | — | — | — | — |
 | ~~`J2`~~ | ~~Trois arbitrages du modèle atmosphérique~~ — **tranché le 2026-09-10** (`DT-13`/`DT-14`/`DT-15`, [`dette-technique.md`](../dette-technique.md)) | — | — | — | `PHY-8` |
-| `PHY-2` | Atmosphère par défaut + recalibrage optimiseur | 5 | 4 | L | `J2`, `PHY-8` |
+| ~~`PHY-2`~~ | ~~**Atmosphère par défaut + recalibrage optimiseur**~~ — **livré le 2026-09-12** ([`atmosphere/13-cloture-PHY-2.md`](../atmosphere/13-cloture-PHY-2.md)) | — | — | — | — |
 | `PHY-3` | Détecteurs MaxQ, télémétrie, UI de fidélité | 3 | 2 | M | `PHY-2` |
 | `RND-5` | Repère d'affichage inertiel / tournant | 2 | 2 | S | — |
 | `RND-6` | **Trace au sol** *(neuf)* | 3 | 2 | M | `RND-5` |
@@ -422,6 +422,14 @@ optimisation CMA-ES.
 > défaut** (chaque optim le paierait), à traiter avant elle par un levier neuf (atmosphère
 > d'optim bon marché, ou tolérance d'intégrateur). Détail :
 > [`atmosphere/08-conception-L1-PHY-2.md`](../atmosphere/08-conception-L1-PHY-2.md) §6.
+
+> **Livré le 2026-09-12, `L0` à `L5` — et le ×7,5 ci-dessus ne s'est pas matérialisé :
+> un calcul complet drag-on coûte ×2,4**, le dimensionnement diluant le facteur par trois.
+> L'escalade vers le levier « atmosphère bon marché à l'optim » n'est **pas** déclenchée.
+> Le `periapsisFloor` qu'annonce le paragraphe ci-dessus a dû être **retiré** sous traînée et
+> non relevé, et la « suite paramétrique re-baselinée » n'a pas eu lieu — les gates montent
+> leur spec à la main et restent drag-off. Bilan, réserves et **restes** (dont un livrable de
+> `L2` non porté) : [`atmosphere/13-cloture-PHY-2.md`](../atmosphere/13-cloture-PHY-2.md).
 
 **Le recalibrage est groupé, et c'est le prix de la stratégie de v1.** `PHY-1`
 avait livré la brique **off** par défaut sous une contrainte tenue jusqu'au

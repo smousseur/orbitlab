@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import com.smousseur.orbitlab.core.OrbitlabException;
 import com.smousseur.orbitlab.simulation.OrekitService;
+import com.smousseur.orbitlab.simulation.flight.AtmosphereModel;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionType;
 import com.smousseur.orbitlab.simulation.mission.OptimizationType;
@@ -84,6 +85,23 @@ class MissionFactoryTest {
         0.0, lunar.configuration().payload().propellantLoad(), 1e-9, "the payload flies inert");
     assertInstanceOf(
         LunarFlybyMission.class, MissionComposer.compose(lunar, OptimizationType.FAST));
+  }
+
+  /**
+   * PHY-2 / L5: a mission created through the wizard flies drag-on by default. The atmosphere is
+   * not a wizard field, so the default is applied here, at the single production origin — which is
+   * why a spec assembled by hand still defaults to {@code NONE} (spec {@code
+   * docs/atmosphere/12-conception-L5-PHY-2.md} §3.1). The default reaches the composed mission, not
+   * just the spec.
+   */
+  @Test
+  void wizardMission_defaultsToDragOn() {
+    MissionSpec spec = MissionFactory.specFromWizardValues(baseValues(), MissionType.LEO);
+    assertEquals(AtmosphereModel.NRLMSISE, spec.atmosphere());
+
+    Mission mission =
+        MissionFactory.fromWizardValues(baseValues(), MissionType.LEO, OptimizationType.FAST);
+    assertEquals(AtmosphereModel.NRLMSISE, mission.getAtmosphere());
   }
 
   /** The top stage is sized by the budget, not filled to capacity. */

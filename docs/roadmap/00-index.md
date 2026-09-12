@@ -69,7 +69,7 @@ sont dans [v1](01-roadmap-v1.md) §3 et §6.
 | **1.2.0** | — | ~~toute la ligne~~ — **close le 2026-09-05** : `BUG-1`, `BUG-2`, `BUG-5`, `BUG-22`, `BUG-20`, `FX-5`, plus `BUG-23` pris en cours de route. Deux fiches neuves en sont sorties, `BUG-23` (close) et `BUG-24` (ouverte) | — | — | — |
 | **v2** | `AST-1` | Lot d'assets 3D *(hors code)* | — | — | — |
 | **v2** | ~~`PHY-8`~~ | ~~Propulseurs séparés du corps : Falcon Heavy et Ariane 64~~ — **livré le 2026-09-10**, `L0` à `L6` ; bilan et réserves dans [`etagement/07-cloture.md`](../etagement/07-cloture.md) | — | — | — |
-| **v2** | `PHY-2` | Atmosphère par défaut + recalibrage optimiseur | 5 | 4 | L |
+| **v2** | ~~`PHY-2`~~ | ~~Atmosphère par défaut + recalibrage optimiseur~~ — **livré le 2026-09-12**, `L0` à `L5` ; bilan, réserves et restes dans [`atmosphere/13-cloture-PHY-2.md`](../atmosphere/13-cloture-PHY-2.md) | — | — | — |
 | **v2** | `PHY-3` | Détecteurs MaxQ, télémétrie, UI de fidélité | 3 | 2 | M |
 | **v2** | `RND-5` | Repère d'affichage inertiel / tournant | 2 | 2 | S |
 | **v2** | `RND-6` | Trace au sol | 3 | 2 | M |

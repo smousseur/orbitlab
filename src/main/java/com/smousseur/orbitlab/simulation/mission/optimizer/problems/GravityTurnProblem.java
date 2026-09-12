@@ -57,6 +57,26 @@ public class GravityTurnProblem implements TrajectoryProblem {
   private static final double MAX_EXPECTED_HANDOFF_FPA_RAD = FastMath.toRadians(2.5);
   private static final double ACCEPTABLE_COST = W_FPA_SOFT * sq(MAX_EXPECTED_HANDOFF_FPA_RAD);
 
+  // The same threshold, read against the hand-off an ascent flown in air has to make (PHY-2 / L5,
+  // spec docs/atmosphere/12-conception-L5-PHY-2.md §7.6). The paragraph above sizes acceptance on
+  // the irreducible FPA of the reference profile; under drag that profile is a different one. The
+  // altitude floor of §5 forces the hand-off above the atmosphere, which is reached by lofting on a
+  // shortened core burn, and a lofted hand-off is not level: measured, 6.81° against the 2.1° of
+  // the vacuum reference, leaving W_FPA_SOFT·(6.81°)² = 0.353 of the 0.371 the search converges to.
+  // Against the vacuum threshold of 0.048 that is unreachable, so every drag-on ascent burned its
+  // whole budget — 13 514 evaluations against 1 989, twelve minutes against forty seconds — and
+  // logged the WARN, while the four explorations agreed on the retained solution to seven digits.
+  //
+  // Only acceptance moves. W_FPA_SOFT itself is left alone deliberately: the paragraph above
+  // records that removing the pull toward a level hand-off was measured to degrade final-orbit
+  // circularity ~6×, and weakening it here would change which candidate wins rather than when the
+  // search stops. 8° is the measured 6.81° with the same margin the vacuum constant takes over its
+  // own 2.1° reference — so a drag-on mission handing off above 8° still returns the WARN, which is
+  // what it is for.
+  private static final double MAX_EXPECTED_DRAG_HANDOFF_FPA_RAD = FastMath.toRadians(8.0);
+  private static final double DRAG_ACCEPTABLE_COST =
+      W_FPA_SOFT * sq(MAX_EXPECTED_DRAG_HANDOFF_FPA_RAD);
+
   // ── Staging floor penalty: no longer a guard, now a search regularizer ────
   //
   // ORIGINALLY (bilan 10 §5.3) this guarded a real failure mode. The jettison was a DateDetector
@@ -159,6 +179,38 @@ public class GravityTurnProblem implements TrajectoryProblem {
 
   /** Fraction of the upper stage's full-tank burn the ceiling leaves above the staging floor. */
   private static final double UPPER_STAGE_HEADROOM = 0.7;
+
+  /**
+   * Altitude the hand-off must clear when the ascent is flown through vacuum. Historic value, and a
+   * guard rail rather than a target: the reference Falcon Heavy LEO-400 profile settles exactly on
+   * it, handing over at 29 998 m, because nothing downstream cares how low a ballistic coast starts
+   * when there is nothing to rub against.
+   */
+  private static final double VACUUM_HANDOFF_ALTITUDE_FLOOR = 30_000.0;
+
+  /**
+   * Altitude the hand-off must clear when the ascent is flown against an atmosphere (PHY-2 / L5,
+   * spec {@code docs/atmosphere/12-conception-L5-PHY-2.md} §7.5).
+   *
+   * <p><b>Why the hand-off altitude is the quantity that matters.</b> The analytic transfer burns
+   * at the hand-off, then coasts to the apogee it aimed at — half an orbit, 2661 s on the reference
+   * profile. That coast is the <em>ascending</em> branch: it climbs and never descends, so the
+   * lowest altitude it ever flies is the hand-off's own. Floor that, and the whole coast is
+   * bounded.
+   *
+   * <p><b>Why it has to be floored at all, and only under drag.</b> At S1 separation the ballistic
+   * coefficient collapses — the stack is 1.27·10⁶ kg at {@code Cd 0.4}, the upper stage 23.6 t at
+   * {@code Cd 2.2} for the same 10.5 m², a factor 300 — so the 30 km the vacuum profile settles on
+   * becomes roughly 10 g of drag for the coasting stage, and {@code AnalyticHohmannTransferStage}
+   * never finds its apogee. Under thrust, with the whole stack, the same altitude is benign, which
+   * is why the ascent itself terminates normally and only the coast fails.
+   *
+   * <p><b>Why 100 km.</b> Measured by {@code GravityTurnHandoffEnvelopeProbe} over the problem's
+   * own box: the one candidate that both clears the air and lands its apogee in the window hands
+   * over at 103.1 km on a 396.5 km apogee. 100 km sits just under it, and puts the density four
+   * orders of magnitude below the 40 km the search used to settle at.
+   */
+  private static final double DRAG_HANDOFF_ALTITUDE_FLOOR = 100_000.0;
 
   private final GravityTurnManeuver maneuver;
   private final SpacecraftState initialState;
@@ -265,7 +317,7 @@ public class GravityTurnProblem implements TrajectoryProblem {
 
   @Override
   public double getAcceptableCost() {
-    return ACCEPTABLE_COST;
+    return maneuver.hasDrag() ? DRAG_ACCEPTABLE_COST : ACCEPTABLE_COST;
   }
 
   @Override
@@ -366,8 +418,11 @@ public class GravityTurnProblem implements TrajectoryProblem {
       cost += 5.0 * sq((minVtan - vTangential) / minVtan);
     }
 
-    // 5. Smooth guard rails
-    if (alt < 30_000) cost += 100.0 * sq((30_000 - alt) / 30_000);
+    // 5. Smooth guard rails. The altitude floor is the environment's, not a constant: a hand-off
+    // the vacuum profile is free to make at 30 km is a drag wall for the stage that coasts from it.
+    double altitudeFloor =
+        maneuver.hasDrag() ? DRAG_HANDOFF_ALTITUDE_FLOOR : VACUUM_HANDOFF_ALTITUDE_FLOOR;
+    if (alt < altitudeFloor) cost += 100.0 * sq((altitudeFloor - alt) / altitudeFloor);
     if (ecc > 1.0) cost += 100.0 * sq(ecc - 1.0);
     if (apogee < 100_000) cost += 50.0 * sq((100_000 - apogee) / 100_000);
     if (vNorm < 2000) cost += 100.0 * sq((2000 - vNorm) / 2000);
@@ -376,9 +431,20 @@ public class GravityTurnProblem implements TrajectoryProblem {
     // transfer phase a near-impossible starting point (Earth-piercing orbit).
     // Penalize trajectories whose orbital periapsis falls more than 200 km
     // below sea level so CMA-ES is pushed towards a near-orbital hand-off.
-    double periFloor = -200_000.0;
-    if (periapsis < periFloor) {
-      cost += 30.0 * sq((periFloor - periapsis) / 200_000.0);
+    //
+    // VACUUM ONLY, and that is not a precaution — measured, this term is what blocks the drag-on
+    // solution (spec docs/atmosphere/12-conception-L5-PHY-2.md §7.5). A hand-off high enough to
+    // clear the atmosphere is reached by lofting on a shortened core burn, so it is steep and
+    // eccentric and its periapsis is necessarily deep: the one candidate of the box that both
+    // clears the air and holds the apogee window sits at 103 km on a −1663 km periapsis, and this
+    // term charged it 1605.5 of its 1605.8. It has nothing to protect there either — the coast the
+    // transfer flies from the hand-off is the ascending branch, so it never reaches that periapsis.
+    // Under drag the altitude floor of §5 bounds the same coast, at the quantity drag reads.
+    if (!maneuver.hasDrag()) {
+      double periFloor = -200_000.0;
+      if (periapsis < periFloor) {
+        cost += 30.0 * sq((periFloor - periapsis) / 200_000.0);
+      }
     }
 
     cost += W_P * (initialState.getMass() - state.getMass()) / initialState.getMass();

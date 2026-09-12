@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import com.smousseur.orbitlab.simulation.OrbitElements;
 import com.smousseur.orbitlab.simulation.OrekitService;
+import com.smousseur.orbitlab.simulation.flight.AtmosphereModel;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionType;
 import com.smousseur.orbitlab.simulation.mission.OptimizationType;
@@ -75,7 +76,11 @@ class ScenarioReplayTest extends AbstractTrajectoryOptimizerTest {
     values.put("PAYLOAD_MASS", 8_000.0);
     values.put("LEO_PERIGEE_ALT", 400.0);
     values.put("LEO_APOGEE_ALT", 400.0);
-    return MissionFactory.specFromWizardValues(values, MissionType.LEO);
+    // Pinned to vacuum: this test measures replay fidelity (replay == the optimization that
+    // produced the vectors), not drag. Since PHY-2 / L5 the factory defaults to NRLMSISE, so the
+    // pin keeps the reference optimization out of the drag-on ×7.5 cost and the comparison exact.
+    return MissionFactory.specFromWizardValues(values, MissionType.LEO)
+        .withAtmosphere(AtmosphereModel.NONE);
   }
 
   private static Mission compose(MissionSpec spec) {

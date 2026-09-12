@@ -110,6 +110,21 @@ public sealed interface MissionSpec
   MissionSpec withLauncherLoads(double[] launcherLoads);
 
   /**
+   * Returns a copy of this spec flown against the given atmosphere, everything else unchanged.
+   *
+   * <p>Symmetric with {@link #withLauncherLoads(double[])}, and the seam REL-22 restores through:
+   * the atmosphere is not a wizard field, so a spec rebuilt from a scenario file ({@code
+   * MissionFactory.specFromWizardValues}) carries the production default until this method
+   * re-applies the value the file saved (spec {@code docs/atmosphere/12-conception-L5-PHY-2.md}
+   * §3.5). {@code null} normalises to {@link AtmosphereModel#NONE}, as the constructors do.
+   *
+   * @param atmosphere the atmosphere to fly against, or {@code null} for {@link
+   *     AtmosphereModel#NONE}
+   * @return a spec identical to this one but flying the given atmosphere
+   */
+  MissionSpec withAtmosphere(AtmosphereModel atmosphere);
+
+  /**
    * Earth-orbit insertion spec: any orbit reached by an ascent followed by a transfer, whatever its
    * plane. A circular target has {@code perigeeAltitude == apogeeAltitude}; an elliptic target
    * keeps a distinct apogee. A polar or sun-synchronous target is this same record with another
@@ -364,6 +379,24 @@ public sealed interface MissionSpec
           horizon,
           atmosphere);
     }
+
+    @Override
+    public MissionSpec withAtmosphere(AtmosphereModel atmosphere) {
+      return new EarthOrbit(
+          name,
+          configuration,
+          perigeeAltitude,
+          apogeeAltitude,
+          targetInclination,
+          nodeBranch,
+          targetRaan,
+          siteName,
+          latitude,
+          longitude,
+          altitude,
+          horizon,
+          atmosphere);
+    }
   }
 
   /**
@@ -470,6 +503,22 @@ public sealed interface MissionSpec
           horizon,
           atmosphere);
     }
+
+    @Override
+    public MissionSpec withAtmosphere(AtmosphereModel atmosphere) {
+      return new Geo(
+          name,
+          configuration,
+          parkingAltitude,
+          targetAltitude,
+          finalInclination,
+          siteName,
+          latitude,
+          longitude,
+          altitude,
+          horizon,
+          atmosphere);
+    }
   }
 
   /**
@@ -547,6 +596,21 @@ public sealed interface MissionSpec
               launcherLoads,
               configuration.payload(),
               configuration.payloadId()),
+          parkingAltitude,
+          periluneAltitude,
+          siteName,
+          latitude,
+          longitude,
+          altitude,
+          horizon,
+          atmosphere);
+    }
+
+    @Override
+    public MissionSpec withAtmosphere(AtmosphereModel atmosphere) {
+      return new Lunar(
+          name,
+          configuration,
           parkingAltitude,
           periluneAltitude,
           siteName,
@@ -634,6 +698,21 @@ public sealed interface MissionSpec
               launcherLoads,
               configuration.payload(),
               configuration.payloadId()),
+          parkingAltitude,
+          orbitAltitude,
+          siteName,
+          latitude,
+          longitude,
+          altitude,
+          horizon,
+          atmosphere);
+    }
+
+    @Override
+    public MissionSpec withAtmosphere(AtmosphereModel atmosphere) {
+      return new LunarOrbit(
+          name,
+          configuration,
           parkingAltitude,
           orbitAltitude,
           siteName,

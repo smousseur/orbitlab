@@ -178,7 +178,9 @@ class ScenarioMapperTest {
     ScenarioMission dto = ScenarioMapper.toScenarioMission(entry, prefilled(entry), null);
 
     assertEquals("BALANCED", dto.optimizationMode());
-    assertEquals("NONE", dto.atmosphere());
+    // Since PHY-2 / L5 a wizard-built mission defaults to drag-on, and that choice travels to the
+    // file (the entry here is built through MissionFactory, the single production origin).
+    assertEquals("NRLMSISE", dto.atmosphere());
     assertEquals("#4FC3F7", dto.color());
     assertTrue(dto.visible());
     assertEquals("2030-03-01T12:00:00Z", dto.launchDate(), "the file writes ISO UTC");

@@ -3,10 +3,13 @@ package com.smousseur.orbitlab.simulation.mission.optimizer.problems;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.smousseur.orbitlab.simulation.OrekitService;
+import com.smousseur.orbitlab.simulation.flight.AtmosphereModel;
+import com.smousseur.orbitlab.simulation.flight.DragContext;
 import com.smousseur.orbitlab.simulation.flight.FlightContext;
 import com.smousseur.orbitlab.simulation.mission.maneuver.GravityTurnManeuver;
 import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchVehicle;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
+import com.smousseur.orbitlab.simulation.mission.vehicle.model.AerodynamicProperties;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.Assumptions;
@@ -22,6 +25,7 @@ import org.orekit.utils.PVCoordinates;
 class GravityTurnProblemTest {
 
   private static GravityTurnManeuver maneuver;
+  private static GravityTurnManeuver dragManeuver;
 
   @BeforeAll
   static void setup() {
@@ -33,6 +37,17 @@ class GravityTurnProblemTest {
     maneuver =
         new GravityTurnManeuver(
             vehicle, vehicle.getMass(), 0.0, Math.PI / 2, 0.0, FlightContext.earth());
+    dragManeuver =
+        new GravityTurnManeuver(
+            vehicle,
+            vehicle.getMass(),
+            0.0,
+            Math.PI / 2,
+            0.0,
+            FlightContext.earth()
+                .withDrag(
+                    new DragContext(
+                        new AerodynamicProperties(10.5, 2.2), AtmosphereModel.NRLMSISE)));
   }
 
   @Test
@@ -91,6 +106,36 @@ class GravityTurnProblemTest {
     assertTrue(
         p.getAcceptableCost() < 0.1,
         "Acceptable cost must stay below genuine constraint-violation costs");
+  }
+
+  /**
+   * PHY-2 / L5 §7.6 — acceptance is read against the hand-off the environment forces, and only
+   * acceptance moves.
+   *
+   * <p>Measured: the drag-on profile converges to a 6.81° hand-off, whose irreducible {@code
+   * W_FPA_SOFT·fpa²} is 0.353 — unreachable against the vacuum threshold of 0.048, so the search
+   * spent 13 514 evaluations instead of 1 989 to retain a solution four explorations already agreed
+   * on. The threshold has to clear that floor under drag while leaving the vacuum one untouched.
+   */
+  @Test
+  void getAcceptableCost_clearsTheFpaFloorTheEnvironmentImposes() {
+    GravityTurnProblem vacuum = getGravityTurnProblem();
+    GravityTurnProblem air =
+        new GravityTurnProblem(dragManeuver, null, GravityTurnConstraints.forTarget(400_000));
+
+    double measuredDragFpaFloor = 25.0 * Math.pow(Math.toRadians(6.81), 2); // ≈ 0.353
+    assertTrue(
+        air.getAcceptableCost() > measuredDragFpaFloor,
+        () ->
+            "under drag the threshold must clear the measured 6.81° hand-off floor: "
+                + air.getAcceptableCost()
+                + " vs "
+                + measuredDragFpaFloor);
+    assertEquals(
+        25.0 * Math.pow(Math.toRadians(2.5), 2),
+        vacuum.getAcceptableCost(),
+        1e-12,
+        "the vacuum threshold is untouched");
   }
 
   @Test
@@ -242,6 +287,77 @@ class GravityTurnProblemTest {
                 + overshootCost
                 + " vs "
                 + shortfallCost);
+  }
+
+  /**
+   * PHY-2 / L5 §7.5 — the environment decides which hand-off is cheap, and the two measured states
+   * are the fixture.
+   *
+   * <p>Both come from {@code GravityTurnHandoffEnvelopeProbe} on the Falcon Heavy LEO-400 of
+   * 2026-09-12. The <b>low</b> one (39.9 km, −75 × 355 km) is what the search settles on and what
+   * the vacuum cost function likes; the <b>high</b> one (103.1 km, apogee 396.5 km) is the only
+   * candidate of the box that both clears the atmosphere and lands its apogee in the window — and
+   * the vacuum periapsis floor charged it 1605.5 for the −1663 km periapsis that lofting costs.
+   * Under drag the ranking has to invert, or the search cannot reach the hand-off that flies.
+   */
+  @Test
+  void computeCost_underDrag_ranksTheHandOffThatClearsTheAirCheapest() {
+    GravityTurnProblem vacuum = problemWithRealInitialState();
+    GravityTurnProblem air =
+        new GravityTurnProblem(
+            dragManeuver,
+            circularStateAfter(150_000, 0.0),
+            GravityTurnConstraints.forTarget(400_000));
+
+    SpacecraftState low = handOff(39_894, 7937.5, 236.9);
+    SpacecraftState high = handOff(103_100, 7263.8, 925.1);
+
+    assertTrue(
+        vacuum.computeCost(low) < vacuum.computeCost(high),
+        "in vacuum the low hand-off stays the cheap one — the reference profile is unchanged");
+    assertTrue(
+        air.computeCost(high) < air.computeCost(low),
+        () ->
+            "under drag the hand-off that clears the air must rank cheaper: "
+                + air.computeCost(high)
+                + " vs "
+                + air.computeCost(low));
+  }
+
+  /** The drag altitude floor bites the low hand-off, and only under drag. */
+  @Test
+  void computeCost_dragAltitudeFloor_chargesOnlyTheAscentFlownInAir() {
+    GravityTurnProblem vacuum = problemWithRealInitialState();
+    GravityTurnProblem air =
+        new GravityTurnProblem(
+            dragManeuver,
+            circularStateAfter(150_000, 0.0),
+            GravityTurnConstraints.forTarget(400_000));
+
+    SpacecraftState low = handOff(39_894, 7937.5, 236.9);
+    // 100·((100 km − 39.894 km)/100 km)², the §5 guard rail read at the drag floor.
+    double expectedFloorCharge = 100.0 * Math.pow((100_000.0 - 39_894.0) / 100_000.0, 2);
+
+    assertEquals(
+        expectedFloorCharge,
+        air.computeCost(low) - vacuum.computeCost(low),
+        1e-6,
+        "under drag the low hand-off pays the altitude floor and nothing else changes for it");
+  }
+
+  /** Above the drag floor, and with a periapsis the vacuum floor tolerates, the two agree. */
+  @Test
+  void computeCost_aboveBothFloors_isGradedIdenticallyInEitherEnvironment() {
+    GravityTurnProblem vacuum = problemWithRealInitialState();
+    GravityTurnProblem air =
+        new GravityTurnProblem(
+            dragManeuver,
+            circularStateAfter(150_000, 0.0),
+            GravityTurnConstraints.forTarget(400_000));
+
+    SpacecraftState clear = circularStateAfter(380_000, 200.0);
+
+    assertEquals(vacuum.computeCost(clear), air.computeCost(clear), 1e-12);
   }
 
   @Test

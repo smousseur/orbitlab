@@ -206,13 +206,24 @@ public final class StageChainRunner {
       SpacecraftState finalState = flight.lastLeg().exitState();
       boolean failed = false;
       if (flight.failure() != null) {
+        // On the optimize-pass runner a failure is the penalty contract, not an anomaly: plain()
+        // aborts, the cost function reads the barely-advanced state and grades the candidate as
+        // failed. Reporting a contractual outcome at WARN meant one line per rejected CMA-ES
+        // candidate, from every exploration thread at once, queued on a single appender — the same
+        // noise the jettison line was taken out of when the ascent became three explicit phases
+        // (StageSeparationStage#logJettison). On a real flight the same failure is a genuine
+        // anomaly and stays at WARN.
+        if (abortOnFailure) {
+          logger.debug(
+              "Candidate rejected: stage '{}' did not propagate: {}",
+              stage.getName(),
+              flight.failure().getMessage());
+          return entryState;
+        }
         logger.warn(
             "Propagation failed for stage '{}': {}",
             stage.getName(),
             flight.failure().getMessage());
-        if (abortOnFailure) {
-          return entryState;
-        }
         finalState = mission.getCurrentState();
         failed = true;
       }

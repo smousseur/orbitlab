@@ -488,4 +488,17 @@ public class GravityTurnManeuver {
   public Vehicle getVehicle() {
     return vehicle;
   }
+
+  /**
+   * Whether this ascent is flown against an atmosphere.
+   *
+   * <p>Exposed for the cost function: what a hand-off state is worth depends on the environment the
+   * coast that follows it is flown in, and that environment is carried here (PHY-2 / L5, spec
+   * {@code docs/atmosphere/12-conception-L5-PHY-2.md} §7.5).
+   *
+   * @return {@code true} when the flight context carries a drag model
+   */
+  public boolean hasDrag() {
+    return context.hasDrag();
+  }
 }

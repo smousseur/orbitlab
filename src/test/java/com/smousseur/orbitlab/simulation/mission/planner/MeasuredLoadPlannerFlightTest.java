@@ -108,6 +108,52 @@ class MeasuredLoadPlannerFlightTest {
         () -> "unexpected pass count " + sizing.passes());
   }
 
+  /**
+   * PHY-2 / L5 follow-up — the pass budget must never hand back a starved stage.
+   *
+   * <p><b>The Ariane 64 and not the Falcon Heavy</b>, because the Falcon Heavy cannot exhibit it:
+   * it converges inside the band on pass 2 and the test above already pins that. The Ariane 64's
+   * sizing loop <em>diverges</em> on the same target — measured 2026-09-12, residual 66.5 % then
+   * 92.8 % then 0.0 % — because the 272 kg pass 2 measured were burnt on a trajectory the previous
+   * resizing had itself changed: at those loads the gravity turn stops relighting the upper stage.
+   * The loop then ran out of passes and returned that third flight, whose upper stage was dry, so
+   * the trim burn had nothing to fire and the mean orbit went from {@code 409 672 x 409 919 m} (e =
+   * 1.8e-5) to {@code 404 333 x 409 681 m} (e = 3.9e-4).
+   *
+   * <p>The assertion is the invariant, not the pass count: whatever the loop does internally, the
+   * plan it returns must have propellant left in the sized stage. A vehicle whose loop converges
+   * satisfies it on the last pass; one whose loop does not satisfies it on the pass the fallback
+   * keeps.
+   */
+  @Test
+  void measuredSizing_neverReturnsAPassThatRanTheSizedStageDry() {
+    MissionSpec spec = ariane64Leo400();
+    int top = spec.configuration().propellantLoads().length - 1;
+
+    MissionPlan plan =
+        new MeasuredLoadPlanner(spec, OptimizationType.FAST, launchEpoch(), 40_000, 42L, null)
+            .plan();
+
+    StagePropellant sized =
+        plan.computation()
+            .performanceReport()
+            .residualForStage(top)
+            .orElseThrow(() -> new AssertionError("no per-stage split for the sized stage"));
+    double residualRatio = sized.residualRatio();
+    assertTrue(
+        residualRatio >= MissionLoadEvaluator.DEFAULT_RESIDUAL_FLOOR_RATIO,
+        () ->
+            "the returned plan ran the sized stage dry (residual ratio "
+                + residualRatio
+                + "): the trim burn has nothing left to fire");
+
+    AchievedOrbit achieved = plan.computation().achievedOrbit();
+    assertTrue(achieved.hasOsculating(), "the flight must report an achieved orbit");
+    OrbitElements orbit = achieved.osculating();
+    assertWithinTolerance("perigee", orbit.perigeeAltitude());
+    assertWithinTolerance("apogee", orbit.apogeeAltitude());
+  }
+
   private static void assertWithinTolerance(String label, double altitude) {
     double deviation = Math.abs(altitude - TARGET_ALTITUDE_M) / TARGET_ALTITUDE_M;
     assertTrue(
@@ -131,6 +177,22 @@ class MeasuredLoadPlannerFlightTest {
     return MissionSpec.EarthOrbit.dueEast(
         "Falcon Heavy LEO 400 (measured sizing)",
         new LaunchConfiguration(Launchers.FALCON_HEAVY, budgeted, payload),
+        TARGET_ALTITUDE_M,
+        TARGET_ALTITUDE_M,
+        "Kourou",
+        LATITUDE_DEG,
+        LONGITUDE_DEG,
+        0.0,
+        null);
+  }
+
+  private static MissionSpec ariane64Leo400() {
+    Spacecraft payload = Payloads.EARTH_OBSERVATION_SAT.toSpacecraft(PAYLOAD_MASS_KG, 0.0);
+    double[] budgeted =
+        PropellantBudget.loadsForLeo(Launchers.ARIANE_64, payload, TARGET_ALTITUDE_M, LATITUDE_DEG);
+    return MissionSpec.EarthOrbit.dueEast(
+        "Ariane 64 LEO 400 (measured sizing)",
+        new LaunchConfiguration(Launchers.ARIANE_64, budgeted, payload),
         TARGET_ALTITUDE_M,
         TARGET_ALTITUDE_M,
         "Kourou",
