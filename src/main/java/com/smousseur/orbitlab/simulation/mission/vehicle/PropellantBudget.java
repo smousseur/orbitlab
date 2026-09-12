@@ -12,9 +12,15 @@ import org.orekit.utils.Constants;
 /**
  * Analytic propellant sizing — "just enough" loads per mission (spec 06 §4.3). Inverse Tsiolkovsky
  * computed top-down from the payload: every stage below the launcher's top stage flies fully loaded
- * (v1 — the gravity turn consumes them entirely anyway), only the top stage and the payload's own
- * are sized from the ΔV budget. A safety margin absorbs finite-burn and steering losses; loads are
- * clamped to capacity (an infeasibility diagnostic is a later increment).
+ * (v1), only the top stage and the payload's own are sized from the ΔV budget. A safety margin
+ * absorbs finite-burn and steering losses; loads are clamped to capacity (an infeasibility
+ * diagnostic is a later increment).
+ *
+ * <p><b>"The gravity turn consumes them entirely anyway" is no longer true</b>, and that used to be
+ * the stated reason the lower stages fly full. PHY-2 / L3 made the core cutoff commandable, so the
+ * optimizer cuts it early and jettisons the rest: measured on the Falcon Heavy LEO-400 profile, the
+ * core drops 24 448 kg unburnt, three times the over-provisioning PHY-2 / L4 just took off the top
+ * stage. The simplification stands for now; its justification does not (DT-22).
  *
  * <p><b>One method refuses instead of clamping</b>, and it is the exception rather than the new
  * rule: {@link #loadsForLunarOrbit} throws when the orbiter's tank cannot hold its insertion. A
@@ -51,6 +57,16 @@ public final class PropellantBudget {
    * hands over well spends 430 and trims with 6, so this over-provisions it — the price of one
    * number that every budgeted mission pays, taken deliberately over a per-mission estimate that
    * would need the hand-over state the sizing does not have.
+   *
+   * <p><b>Demoted to a seed by PHY-2 / L4</b> (spec {@code
+   * docs/atmosphere/11-conception-L4-PHY-2.md} §3.2). An {@code EarthOrbit} mission computed
+   * through {@code MeasuredLoadPlanner} no longer <em>flies</em> this reserve: it flies the load
+   * {@link #loadsForMeasuredTopStage} derives from the ΔV the top stage actually delivered. The
+   * reserve remains what the first pass takes off with, and it has to remain something: a
+   * reserve-free seed collapses {@code dvTop} to zero on a launcher that over-delivers, which would
+   * leave the top stage with no propellant to fly the very insertion the measurement flight has to
+   * observe. It is also still the flown value everywhere the measured path does not reach — GEO,
+   * lunar, and every caller that sizes off-flight.
    */
   private static final double TOP_STAGE_INSERTION_RESERVE_DV = 1_300.0;
 
@@ -476,6 +492,51 @@ public final class PropellantBudget {
       topLoad = FastMath.min(raw + reserve, top.propellantCapacity());
     }
     loads[loads.length - 1] = topLoad;
+    return loads;
+  }
+
+  /**
+   * Per-stage loads sizing the top stage for a <b>measured</b> top-stage ΔV, instead of the ideal
+   * chain's remainder plus {@link #TOP_STAGE_INSERTION_RESERVE_DV} (PHY-2 / L4, spec {@code
+   * docs/atmosphere/11-conception-L4-PHY-2.md} §3.2).
+   *
+   * <p><b>The measured ΔV subsumes the chain</b>, which is why this is a sibling of {@link
+   * #sizeTopStage} and not a parameter of it. That one derives what the top stage <em>ought</em> to
+   * be left with — {@code dvTotal − dvLower}, a fixed point because the lower stages' ΔV depends on
+   * the mass above them — and then adds a worst-case reserve because the hand-over state is unknown
+   * off-flight. Handed what the top stage <em>actually delivered</em> over a flown mission, both
+   * terms are gone: that number already contains its ascent share, its insertion, and whatever the
+   * ascent over-delivered. There is nothing left to iterate on and no reserve to guess.
+   *
+   * <p><b>Still off-flight, still analytic.</b> The caller flies and measures; this converts a ΔV
+   * into kilograms. The lower stages keep flying full, so only the last load moves.
+   *
+   * <p>A non-positive ΔV carries no sizing information — a top stage that never burnt — and yields
+   * capacity, the same answer as a stage with no sizing degree of freedom. Callers that mean to
+   * resize check the measurement first.
+   *
+   * @param launcher the launcher model
+   * @param payloadMass the payload mass as flown, its own propellant included (kg)
+   * @param topStageDeltaV the ΔV the top stage delivered over the measurement flight (m/s)
+   * @return the propellant load per stage, same order as the launcher stages
+   */
+  public static double[] loadsForMeasuredTopStage(
+      LauncherModel launcher, double payloadMass, double topStageDeltaV) {
+    List<StageModel> stages = launcher.stages();
+    double[] loads = new double[stages.size()];
+    for (int i = 0; i < stages.size(); i++) {
+      loads[i] = stages.get(i).propellantCapacity();
+    }
+
+    StageModel top = stages.getLast();
+    if (!top.capabilities().variableLoad() || !(topStageDeltaV > 0)) {
+      return loads;
+    }
+    double exhaustVelocity = top.propulsion().isp() * G0;
+    double finalMass = top.dryMass() + payloadMass;
+    double raw =
+        finalMass * (FastMath.exp(topStageDeltaV / exhaustVelocity) - 1.0) * (1.0 + SAFETY_MARGIN);
+    loads[loads.length - 1] = FastMath.min(raw, top.propellantCapacity());
     return loads;
   }
 

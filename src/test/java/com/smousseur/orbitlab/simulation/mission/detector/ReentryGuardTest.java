@@ -298,7 +298,8 @@ class ReentryGuardTest {
   void climbUnderDrag_isWavedThroughTheDragFloor() {
     SpacecraftState onThePad = padState(62.9); // Plesetsk, −17.0 km spherical
     Vector3D up = onThePad.getPVCoordinates().getPosition().normalize().scalarMultiply(3_000.0);
-    // A high ballistic coefficient: the drag is mounted, so the stop is armed, but light enough that
+    // A high ballistic coefficient: the drag is mounted, so the stop is armed, but light enough
+    // that
     // the climb crosses 0 km ballistically instead of being braked back below it.
     SpacecraftState climbing = stateAt(onThePad.getPVCoordinates().getPosition(), up, 5_000_000.0);
     AbsoluteDate endDate = climbing.getDate().shiftedBy(15.0);

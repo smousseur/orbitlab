@@ -5,14 +5,18 @@ import com.smousseur.orbitlab.simulation.mission.runtime.MultiStageLoadOptimizer
 import java.util.Objects;
 
 /**
- * Propellant-sizing metadata attached to a {@link MissionPlan} produced by {@link
- * MinimizedLoadPlanner}. A projection of {@link MultiStageLoadOptimizer.Result} <em>minus</em> its
+ * Propellant-sizing metadata attached to a {@link MissionPlan} by whichever planner
+ * <em>resolved</em> the loads instead of taking them as given: {@link MinimizedLoadPlanner}, which
+ * searches them with a coordinate-wise sweep, and {@link MeasuredLoadPlanner}, which measures the
+ * top stage in flight and converts the ΔV back into kilograms (PHY-2 / L4).
+ *
+ * <p>For the sweep it is a projection of {@link MultiStageLoadOptimizer.Result} <em>minus</em> its
  * embedded {@link MissionComputeResult}, which is hoisted to {@link MissionPlan#computation()} so
  * there is a single path to the computation ({@code plan.computation()}), never a second one
  * through the sizing.
  *
  * @param lambdas the resolved per-stage scale factors, {@code 1} on unscaled stages
- * @param passes the coordinate sweeps performed
+ * @param passes the coordinate sweeps performed, or the sizing flights spent
  * @param evaluations the mission optimizations spent resolving the loads
  */
 public record PropellantSizing(double[] lambdas, int passes, int evaluations) {

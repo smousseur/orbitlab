@@ -35,18 +35,20 @@ import org.orekit.utils.PVCoordinates;
  * <p><b>Termination is the only assertion, and that is deliberate.</b> The achieved orbit is
  * <em>not</em> checked against the target: the catalog Isp still double-counts the drag it was a
  * proxy for (DT-13), so a drag-on ascent inserts low until {@code L2} re-calibrates it. What L1
- * closes is that the optimization bounds its cost and returns at all — which it could not do before.
+ * closes is that the optimization bounds its cost and returns at all — which it could not do
+ * before.
  *
  * <p><b>This is also the {@code a} vs {@code c} measurement (§6).</b> This mission flies candidate
- * {@code a} — the optimizer mounts the mission's own model, NRLMSISE, with no substitution. Its wall
- * clock against the drag-off Falcon Heavy analytic (~7 s, {@code AscentBaselineN2Test}) is the +50 %
- * check that decides whether {@code a} stands or the composite {@code c} is needed. The number is
- * recorded in the log, not asserted — it is an input of {@code L2}+, not a property of {@code L1}.
+ * {@code a} — the optimizer mounts the mission's own model, NRLMSISE, with no substitution. Its
+ * wall clock against the drag-off Falcon Heavy analytic (~7 s, {@code AscentBaselineN2Test}) is the
+ * +50 % check that decides whether {@code a} stands or the composite {@code c} is needed. The
+ * number is recorded in the log, not asserted — it is an input of {@code L2}+, not a property of
+ * {@code L1}.
  *
- * <p>Flies the <b>analytic</b> Falcon Heavy LEO profile (the {@code testFalconHeavy} configuration),
- * not the optimized transfer: that path is broken independently of drag ({@code docs/bugs.md}
- * BUG-25, fixed with {@code L3}), so exercising it here would measure that regression instead of the
- * ascent.
+ * <p>Flies the <b>analytic</b> Falcon Heavy LEO profile (the {@code testFalconHeavy}
+ * configuration), not the optimized transfer: that path is broken independently of drag ({@code
+ * docs/bugs.md} BUG-25, fixed with {@code L3}), so exercising it here would measure that regression
+ * instead of the ascent.
  */
 @EnabledIfSystemProperty(named = "orbitlab.slowTests", matches = "true")
 class AscentDragTerminationTest extends AbstractTrajectoryOptimizerTest {
@@ -72,7 +74,9 @@ class AscentDragTerminationTest extends AbstractTrajectoryOptimizerTest {
         new EarthOrbitMission(
             "Falcon Heavy (drag-on NRLMSISE ascent)",
             new LaunchConfiguration(
-                Launchers.FALCON_HEAVY, new double[] {400_000, 200_000, 100_000}, Spacecraft.LEGACY),
+                Launchers.FALCON_HEAVY,
+                new double[] {400_000, 200_000, 100_000},
+                Spacecraft.LEGACY),
             400_000);
     mission.setAtmosphere(AtmosphereModel.NRLMSISE);
 
@@ -96,12 +100,12 @@ class AscentDragTerminationTest extends AbstractTrajectoryOptimizerTest {
 
   /**
    * <b>PHY-2 / L3 B-check</b> (decision B of spec {@code docs/atmosphere/09-conception-L2-PHY-2.md}
-   * §3.1, folded into {@code 10-conception-L3-PHY-2.md} §3.4): now that the first-stage ISP is 298 s,
-   * a drag-on Falcon Heavy LEO-400 still inserts. The sibling above deliberately does <em>not</em>
-   * check the orbit because at 296 s the proxy double-counted the drag; L3 handed the ~51 m/s of drag
-   * back into the ISP, so a drag-on flight at 298 must reach the target the way drag-off at the old
-   * proxy did. Capacity preserved is the whole of decision B — the Falcon Heavy keeps its reach when
-   * the drag it used to hide becomes explicit.
+   * §3.1, folded into {@code 10-conception-L3-PHY-2.md} §3.4): now that the first-stage ISP is 298
+   * s, a drag-on Falcon Heavy LEO-400 still inserts. The sibling above deliberately does
+   * <em>not</em> check the orbit because at 296 s the proxy double-counted the drag; L3 handed the
+   * ~51 m/s of drag back into the ISP, so a drag-on flight at 298 must reach the target the way
+   * drag-off at the old proxy did. Capacity preserved is the whole of decision B — the Falcon Heavy
+   * keeps its reach when the drag it used to hide becomes explicit.
    */
   @Test
   void falconHeavyLeo_dragOnAt298_preservesCapacity() {
@@ -109,7 +113,9 @@ class AscentDragTerminationTest extends AbstractTrajectoryOptimizerTest {
         new EarthOrbitMission(
             "Falcon Heavy (drag-on B-check)",
             new LaunchConfiguration(
-                Launchers.FALCON_HEAVY, new double[] {400_000, 200_000, 100_000}, Spacecraft.LEGACY),
+                Launchers.FALCON_HEAVY,
+                new double[] {400_000, 200_000, 100_000},
+                Spacecraft.LEGACY),
             400_000);
     mission.setAtmosphere(AtmosphereModel.NRLMSISE);
 
@@ -139,7 +145,8 @@ class AscentDragTerminationTest extends AbstractTrajectoryOptimizerTest {
 
     double target = 400_000.0;
     double tolerance = 0.07 * target;
-    assertEquals(target, apogee, tolerance, "drag-on capacity preserved: apogee within 7 % of 400 km");
+    assertEquals(
+        target, apogee, tolerance, "drag-on capacity preserved: apogee within 7 % of 400 km");
     assertEquals(
         target, perigee, tolerance, "drag-on capacity preserved: perigee within 7 % of 400 km");
   }

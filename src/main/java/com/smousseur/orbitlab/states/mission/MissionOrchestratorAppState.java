@@ -253,11 +253,14 @@ public final class MissionOrchestratorAppState extends BaseAppState {
   }
 
   /**
-   * The launcher loads a plan actually flew, or {@code null} when they were the budgeted ones.
+   * The launcher loads a plan actually flew, or an empty array when they were the budgeted ones.
    *
-   * <p>Only {@code MinimizedLoadPlanner} attaches a sizing, so this returns {@code null} in every
-   * mode but {@code PRECISE} — which is exactly the rule the scenario format applies: loads that
-   * were derived are recomputed on load, loads that were searched are remembered.
+   * <p>A sizing is attached by the two planners that resolve loads rather than take them: {@code
+   * MinimizedLoadPlanner} ({@code PRECISE}, searched by sweep) and {@code MeasuredLoadPlanner} (an
+   * Earth-orbit mission in any other mode, measured in flight — PHY-2 / L4). Both cases follow the
+   * same rule the scenario format applies: loads that were merely derived from the budget are
+   * recomputed on load, loads that were resolved against a flight are remembered. The product is
+   * taken here, while the λ and the base it scales are both unambiguously in hand.
    */
   private static double[] flownLoads(MissionEntry entry, MissionPlan plan) {
     PropellantSizing sizing = plan.sizing();

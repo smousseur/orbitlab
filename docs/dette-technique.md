@@ -92,9 +92,10 @@ aujourd'hui. C'est le sujet de [`DT-1`](#dt-1--aucune-analyse-statique-dans-le-b
 | [`DT-16`](#dt-16--nrev-du-solveur-de-lambert-figé-à-0-partout) | `nRev` du solveur de Lambert figé à 0 partout | Mineur | Moyen | Nul aujourd'hui | Ouvert |
 | [`DT-17`](#dt-17--performance-du-ruban-rnd-4-jamais-mesurée) | Performance du ruban (`RND-4`) jamais mesurée | Mineur | Faible | Nul | Ouvert |
 | [`DT-18`](#dt-18--propulseurs-de-lariane-64-surdimensionnés-dans-le-maillage) | Propulseurs de l'Ariane 64 surdimensionnés dans le maillage | Mineur | Faible* | Nul aujourd'hui | Ouvert, **dû avant `PHY-5`** |
-| [`DT-19`](#dt-19--réserve-dinsertion-universelle-sur-létage-supérieur) | Réserve d'insertion universelle sur l'étage supérieur | Majeur | Moyen | Moyen pour `PHY-2` | Ouvert |
+| [`DT-19`](#dt-19--réserve-dinsertion-universelle-sur-létage-supérieur) | Réserve d'insertion universelle sur l'étage supérieur | Majeur | Moyen | Moyen pour `PHY-2` | **Fermé en `PHY-2 / L4`** (2026-09-12) au runtime `EarthOrbit` ; réserve rétrogradée en graine, GEO/lunaire encore dessus |
 | [`DT-20`](#dt-20--lascension-na-aucune-prise-sur-son-corps-central) | L'ascension n'a aucune prise sur son corps central | Majeur | Élevé | Moyen | **Corrigé en `PHY-2 / L3`** (2026-09-11) |
 | [`DT-21`](#dt-21--w_apogee_overshoot-calibré-hors-de-son-domaine) | `W_APOGEE_OVERSHOOT` calibré hors de son domaine | Mineur | Moyen | **Élevé pour `PHY-2`** | **Fermé en `PHY-2 / L3`** ; rééquilibrage jugé **inutile** (0,5 conservé) |
+| [`DT-22`](#dt-22--les-étages-bas-volent-pleins-et-le-cœur-en-largue-24-t) | Les étages bas volent pleins, et le cœur en largue 24 t | Majeur | Moyen | Faible | Ouvert, **mesuré en `PHY-2 / L4`** (2026-09-12) |
 
 `*` Faible côté code — bloqué par la disponibilité d'un maillage externe, pas
 par du travail de développement.
@@ -806,6 +807,34 @@ demandera, et le dimensionnement ne connaît pas l'état de remise des commandes
 dimensionnement en **deux passes** — dimensionner, voler, redimensionner — le donnerait
 exactement et supprimerait cette fiche.
 
+**Fermé en `PHY-2 / L4` le 2026-09-12** ([`atmosphere/11-conception-L4-PHY-2.md`](atmosphere/11-conception-L4-PHY-2.md)),
+**pour le runtime `EarthOrbit`**. `MeasuredLoadPlanner` vole la mission, lit le ΔV que l'étage sommet
+a réellement délivré et redimensionne dessus. La réserve n'est pas supprimée mais **rétrogradée en
+graine de la première passe** : une graine réserve-nulle effondre `dvTop` à zéro sur un lanceur qui
+sur-délivre, et la passe de mesure n'aurait alors plus d'ergol pour voler l'insertion qu'elle doit
+observer. GEO, lunaire et tout appelant hors-vol la paient encore.
+
+**Ce que la mesure a démenti.** Sur le FH LEO-400 depuis Kourou, le budget provisionnait le S2 pour
+**1 755 m/s** — `dvTop` idéal 593 m/s (2 920 kg) **plus** réserve 1 300 m/s (6 492 kg), somme
+exactement les 9 412 kg budgétés — là où le S2 délivre **272 m/s**. Soit **9 412 → 1 275 kg, −86,4 %**,
+un facteur 7,4 et non les « +18 à +66 % » que cette fiche annonçait. Deux enseignements : la réserve
+**n'était pas un supplément sur un dimensionnement correct, elle dominait le réservoir** (74 % du
+gaspillage) ; et le `dvTop` de la chaîne idéale **sur-provisionne à lui seul de 2,2×**, donc retirer
+la seule réserve aurait laissé 2 920 kg là où 1 275 suffisent. `L4` fait strictement plus que cette
+voie de sortie ne promettait. La fourchette « +18 à +66 % » est vraisemblablement une plage
+inter-profils tirée des cellules où l'étage sommet fait une vraie injection (MEO/GEO, ~2 400 m/s),
+qui diluent le cas LEO — non vérifié, faute d'avoir remesuré ces cellules.
+
+**Trois chiffres à garder.** Le ΔV du sommet est **mass-invariant** — 271,6 m/s mesurés à 23 412 kg
+d'allumage, 274,1 à 15 275, soit 0,9 % d'écart pour 35 % de masse en moins — et c'est la raison pour
+laquelle le redimensionnement passe par un ΔV et non par des kilos consommés (ceux-là ont chuté de
+34 %). La convergence tient en **2 passes**. Et la marge de 10 % est **consommée à 82 %**
+(dimensionnement sans marge 1 159,7 kg, consommation réelle 1 179) : la resserrer à cette échelle
+ferait un flame-out à 20 kg près.
+
+**Ce que la fermeture a ouvert** : le gaspillage s'est déplacé vers le cœur, qui largue désormais
+24,4 t ([`DT-22`](#dt-22--les-étages-bas-volent-pleins-et-le-cœur-en-largue-24-t)).
+
 ---
 
 ### DT-20 — L'ascension n'a aucune prise sur son corps central
@@ -910,6 +939,36 @@ qui sur-délivre **sans** levier de coupure (`coreStage == null`), le seul recou
 et un poids élevé le récompense de nouveau. Le catalogue actuel n'a pas ce cas (FH et Ariane ont
 tous deux une phase de cœur), mais `GravityTurnProblemTest.computeCost_prefersTheHandOffTheMissionSurvives`
 l'épingle. Le poids reste donc à `0,5`, et cette fiche se ferme sans y toucher.
+
+---
+
+### DT-22 — Les étages bas volent pleins, et le cœur en largue 24 t
+
+**Mesuré (`PHY-2 / L4`, 2026-09-12).** Sur le profil Falcon Heavy LEO-400 depuis Kourou, le cœur
+largue **24 448 kg d'ergol non brûlé** — 5,9 % de sa charge — contre 17 800 kg avant le
+dimensionnement mesuré de `L4`. Les boosters, eux, brûlent tout (0 % de résidu).
+
+**L'hypothèse qui le justifiait est fausse depuis `L3`.** Le javadoc de `PropellantBudget` fonde
+« tous les étages sous le sommet volent pleins » sur *« v1 — the gravity turn consumes them entirely
+anyway »*. C'était vrai quand le cœur brûlait jusqu'à extinction ; `PHY-2 / L3` a rendu sa coupure
+commandable ([`DT-20`](#dt-20--lascension-na-aucune-prise-sur-son-corps-central)), donc l'optimiseur
+**coupe le cœur tôt** et jette le reste. La raison écrite dans le code ne décrit plus le code.
+
+**Le coût, chiffré, et il dépasse celui que `L4` vient de retirer.** `L4` a retiré 8 137 kg de
+sur-provisionnement au sommet ([`DT-19`](#dt-19--réserve-dinsertion-universelle-sur-létage-supérieur)) ;
+le cœur en jette **24 448**, trois fois plus. Et alléger le sommet a **déplacé** le gaspillage plutôt
+que de le supprimer : le résidu total n'a bougé que de 877 kg (25 421 → 24 544), le cœur coupant
+d'autant plus tôt qu'il a moins à soulever. Le gain de `L4` reste entier — 8 137 kg de moins **au
+décollage**, donc de la capacité — mais le gaspillage, lui, a changé d'étage.
+
+**Voie de sortie.** Dimensionner aussi le cœur, par la mesure même que `L4` utilise pour le sommet :
+le ΔV qu'il délivre réellement est lisible dans le `MissionPerformanceReport` au même titre. La
+difficulté n'est pas la mesure mais le couplage — la charge du cœur change l'ascension, donc la
+coupure, donc sa propre charge — et le deux-passes de `L4` est précisément le mécanisme qui referme
+ce genre de boucle (convergence mesurée en 2 passes).
+
+**Inféré.** Aucune urgence fonctionnelle : la mission vole et insère. C'est de la capacité laissée
+sur la table, et elle compte surtout sur un lanceur marginal — le cas Vega-C qui motivait `L4`.
 
 ---
 

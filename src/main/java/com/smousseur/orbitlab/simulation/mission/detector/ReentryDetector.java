@@ -71,7 +71,10 @@ public class ReentryDetector extends AbstractDetector<ReentryDetector> {
    * failure that shows up as a wrong trajectory, never as an error.
    */
   private ReentryDetector(
-      EventDetectionSettings settings, EventHandler handler, double equatorialRadius, double floor) {
+      EventDetectionSettings settings,
+      EventHandler handler,
+      double equatorialRadius,
+      double floor) {
     super(settings, handler);
     this.equatorialRadius = equatorialRadius;
     this.floor = floor;

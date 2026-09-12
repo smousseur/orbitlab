@@ -27,9 +27,17 @@ import org.orekit.time.AbsoluteDate;
  * its mode); this class owns the orthogonal <em>load-handling</em> axis:
  *
  * <ul>
- *   <li>{@link OptimizationType#FAST} / {@link OptimizationType#BALANCED} — {@link
+ *   <li>{@link OptimizationType#FAST} / {@link OptimizationType#BALANCED} on an {@link
+ *       MissionSpec.EarthOrbit} — {@link MeasuredLoadPlanner}: size the top stage by measuring it
+ *       in flight, then fly the requested mode at the resolved loads (PHY-2 / L4, spec {@code
+ *       docs/atmosphere/11-conception-L4-PHY-2.md}). Requires a {@link MissionSpec}, to rebuild the
+ *       mission at each candidate load array.
+ *   <li>{@link OptimizationType#FAST} / {@link OptimizationType#BALANCED} otherwise — {@link
  *       FixedLoadPlanner}: fly the mission at its budgeted loads, a single CMA-ES pass. FAST flies
- *       the analytic composition, BALANCED the CMA-ES transfer; the planner is the same.
+ *       the analytic composition, BALANCED the CMA-ES transfer; the planner is the same. This is
+ *       where GEO and the lunar profiles stay: their top stage carries an injection of closed form,
+ *       so the number the budget gives it is improvable without a flight, and that is a separate
+ *       piece of work rather than this one's.
  *   <li>{@link OptimizationType#PRECISE} — {@link MinimizedLoadPlanner}: size the propellant first,
  *       wrapping many mission optimizations in the coordinate-wise load sweep. Requires a {@link
  *       MissionSpec} (to rebuild the mission per candidate load array); a legacy entry with no spec
@@ -94,7 +102,14 @@ public class MissionPlanOptimizer {
     if (entry.getOptimizationType() == OptimizationType.PRECISE) {
       return entry.spec().map(this::minimizedLoadPlanner).orElseGet(this::fixedLoadPlanner);
     }
-    return fixedLoadPlanner();
+    // PHY-2 / L4: an Earth-orbit mission sizes its top stage against a flight rather than against
+    // the universal reserve. Every other spec kind, and any entry without a spec to rebuild from,
+    // keeps the fixed-load path unchanged.
+    return entry
+        .spec()
+        .filter(MissionSpec.EarthOrbit.class::isInstance)
+        .map(this::measuredLoadPlanner)
+        .orElseGet(this::fixedLoadPlanner);
   }
 
   /**
@@ -132,6 +147,11 @@ public class MissionPlanOptimizer {
         MAX_EVALUATIONS,
         SEED,
         progress);
+  }
+
+  private MissionPlanner measuredLoadPlanner(MissionSpec spec) {
+    return new MeasuredLoadPlanner(
+        spec, entry.getOptimizationType(), launchEpoch, MAX_EVALUATIONS, SEED, progress);
   }
 
   private MissionPlanner fixedLoadPlanner() {
