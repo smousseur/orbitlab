@@ -464,6 +464,10 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
                         cfg.populationSize,
                         cfg.budget,
                         true,
+                        // Exploration keeps sequential per-generation evaluation: parallelizing it
+                        // is not bit-identical under cross-run early stop (OPT-1 / L1b abandoned,
+                        // REL-33). Only the refinement (crossRunStop=null) parallelizes.
+                        false,
                         runSeed,
                         crossRunStop)));
       }
@@ -555,6 +559,10 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
                   basePopSize,
                   budget,
                   false,
+                  // L1a: the refinement runs one CMA-ES pass at a time on the calling thread, so
+                  // evaluating its generation on the pool is not nested — the big BALANCED/PRECISE
+                  // win (baseline §3). earlyKill=false.
+                  true,
                   rng.nextLong(),
                   null);
           totalEvals += result.evaluations();

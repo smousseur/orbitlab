@@ -11,7 +11,6 @@ import org.hipparchus.optim.MaxEval;
 import org.hipparchus.optim.SimpleBounds;
 import org.hipparchus.optim.nonlinear.scalar.GoalType;
 import org.hipparchus.optim.nonlinear.scalar.ObjectiveFunction;
-import org.hipparchus.optim.nonlinear.scalar.noderiv.CMAESOptimizer;
 import org.hipparchus.random.MersenneTwister;
 import org.orekit.propagation.SpacecraftState;
 
@@ -106,6 +105,8 @@ final class CMAESRunExecutor {
    * @param populationSize CMA-ES population size per generation
    * @param maxEvals maximum number of objective function evaluations
    * @param earlyKill if true, the convergence checker will kill runs stuck in bad basins
+   * @param parallelGeneration if true, the generation's candidates are evaluated on the shared
+   *     {@link OptimizerThreadPool}; bit-identical to a sequential evaluation, only faster
    * @param seed seed for the MersenneTwister driving CMA-ES sampling (run-local, thread-safe)
    * @param crossRunStop shared stop signal between parallel runs, or {@code null} for a sequential
    *     pass. This run sets it when it completes with a best cost at or below the acceptable cost;
@@ -122,6 +123,7 @@ final class CMAESRunExecutor {
       int populationSize,
       int maxEvals,
       boolean earlyKill,
+      boolean parallelGeneration,
       long seed,
       AtomicBoolean crossRunStop) {
 
@@ -169,9 +171,10 @@ final class CMAESRunExecutor {
     // would stop a well-seeded run at its start point (an analytical seed can already sit below
     // the acceptable cost) before any optimization happened. Per-run termination belongs to the
     // convergence checker.
-    CMAESOptimizer optimizer =
-        new CMAESOptimizer(
-            maxEvals, stopFitness, true, 0, 0, new MersenneTwister(seed), false, checker);
+    ParallelCMAESOptimizer optimizer =
+        new ParallelCMAESOptimizer(
+            maxEvals, stopFitness, true, 0, 0, new MersenneTwister(seed), false, checker,
+            parallelGeneration, objectiveFunction, OptimizerThreadPool.get());
 
     try {
       optimizer.optimize(
@@ -179,8 +182,8 @@ final class CMAESRunExecutor {
           new ObjectiveFunction(objectiveFunction),
           GoalType.MINIMIZE,
           new InitialGuess(startPoint),
-          new CMAESOptimizer.Sigma(sigma),
-          new CMAESOptimizer.PopulationSize(populationSize),
+          new ParallelCMAESOptimizer.Sigma(sigma),
+          new ParallelCMAESOptimizer.PopulationSize(populationSize),
           new SimpleBounds(lower, upper));
     } catch (RunAbortedException e) {
       logger.debug("CMA-ES run aborted: a concurrent run completed below the acceptable cost");

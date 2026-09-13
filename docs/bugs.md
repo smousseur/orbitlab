@@ -35,6 +35,7 @@ la frontière entre les deux derniers doit rester lisible.
 | [`BUG-23`](#bug-23--les-orbites-externes-portent-plus-de-sommets-que-le-budget-demandé) | Les orbites externes portent plus de sommets que le budget demandé | 2026-09-04 | **Corrigé le 2026-09-04**, mais pas où la fiche le situait : le code incriminé est le **générateur hors-ligne**, son dépassement est **transitoire**, et le correctif qu'elle proposait aurait laissé 68 % de l'orbite de Pluton non dessinée. Épinglé par `OrbitPathCacheTest` |
 | [`BUG-24`](#bug-24--la-largeur-du-ruban-nest-tenue-quaux-sommets-pas-le-long-dun-segment) | La largeur du ruban n'est tenue qu'aux sommets, pas le long d'un segment | 2026-09-05 | Ouvert, **mesuré** — le gonflement vaut `(L/2)/d` ; à un million de km du trait, Pluton rend **20,1 px** pour 2,5 demandés, Neptune 15,6, la Terre 4,5. C'est la cause que `BUG-23` cherchait |
 | [`BUG-25`](#bug-25--falcon-heavy-ne-vole-plus-en-transfert-optimisé-depuis-phy-8) | Falcon Heavy ne vole plus en transfert optimisé depuis PHY-8 | 2026-09-10 | **Fermé par `PHY-2 / L3`** (2026-09-11) — coupure du cœur câblée sur `transitionTime`, `testFalconHeavyOptimizedTransfer` ré-activé et vert (400 ±7 %, 410 km circ.) ; le poids `W_APOGEE_OVERSHOOT` n'a **pas** eu à monter |
+| [`BUG-26`](#bug-26--génération-déphéméride-geo-en-échec-dintégrateur-sous-traînée) | Génération d'éphéméride GEO en échec d'intégrateur sous traînée | 2026-09-13 | Ouvert, **mesuré** — l'optimisation réussit (GEO à 35 786 km), la passe d'éphéméride casse au pas mini `1e-3` ; reproduit à parking 250 **et** 400 km, donc pas la config du banc |
 
 ---
 
@@ -2164,3 +2165,40 @@ chacune). Seule `testFalconHeavyOptimizedTransfer` est mesurée.
 **Où ça va.** Avec `PHY-2` ([§3 de `02-roadmap-v2.md`](roadmap/02-roadmap-v2.md)), dans
 l'ordre `DT-21` → `DT-19` → `DT-20` que fixe
 [`dette-technique.md` §5](dette-technique.md#5-ordre-dattaque-proposé).
+
+---
+
+## BUG-26 — Génération d'éphéméride GEO en échec d'intégrateur sous traînée
+
+**Constaté le 2026-09-13**, par le banc `OPT-1 / L0` (`tools/optbench`) sur la cellule
+`GEO_SAT_FAST` : Falcon Heavy + `GEO_SAT`, GEO, FAST, drag-on NRLMSISE.
+
+**Ce qu'on observe.** Le calcul échoue sur
+`org.orekit.errors.OrekitException: minimal step size (1.00E-03) reached, integration needs
+9.68E-04` — l'intégrateur adaptatif demande un pas sous son plancher `minStep = 1e-3 s`.
+
+**Ce qu'on croit savoir, et qui déplace le diagnostic.** L'échec n'est **ni dans l'optimisation
+ni dans le dimensionnement** : toutes les étapes de la mission passent — la circularisation
+converge à un apogée de **35 786 km (GEO)**, « Trim », « Plane trim » et « Coasting » sont
+*done* — et la panne arrive **0,4 s après la dernière étape**, donc dans la **passe
+d'éphéméride** (`MissionEphemerisGenerator.generate`, la re-propagation complète de la
+trajectoire pour l'affichage et l'horizon de restitution), pas dans `MissionOptimizer`. La
+mission GEO **s'optimise mais ne se restitue pas**.
+
+**Ce n'est pas la config du banc.** Reproduit à parking **250 km** (`9.01E-04`) **et 400 km**
+(`9.68E-04`) — le parking a été monté exprès pour trancher. L'optimisation réussissant dans les
+deux cas, la charge utile et les charges d'ergols ne sont pas en cause. Le facteur commun est la
+**traînée** appliquée à la longue coast de restitution GEO.
+
+**Ce qui reste à vérifier.**
+
+- Où exactement dans `generate` le pas s'effondre — candidat : le périgée GTO (~altitude de
+  parking) que la coast de restitution retraverse, où la traînée raidit la dynamique.
+- Rejouer la même cellule **drag-off** : si elle restitue, la traînée est la cause isolée.
+- Le pas maximal du propagateur d'échantillonnage (éphéméride) contre celui de l'optimisation,
+  et le plancher de déplétion de l'étage actif pendant la coast.
+
+**Périmètre.** Hors `OPT-1` (temps de calcul) — fiche de robustesse. Elle bloque la ligne de
+baseline `GEO FAST` de [`03-baseline-L0.md`](optimization/03-baseline-L0.md) §5, qui reste en
+attente. Voisine possible de `BUG-11` (l'optimiseur et le rejeu ne voient pas la même
+trajectoire), à confronter.

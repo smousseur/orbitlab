@@ -364,6 +364,32 @@ vaut que 1,4 % en relatif. À réexaminer en même temps que `REL-30`, dont
 c'est le multiplicateur.
 Source : [`optimization/bilan.md`](optimization/bilan.md), piste 3.
 
+### REL-33 — Exploration parallèle (`OPT-1 / A1`) incompatible avec l'arrêt croisé sous bit-identité
+
+> **`OPT-1 / L1b` 2026-09-13 — tenté, mesuré rouge, abandonné.** Paralléliser la génération
+> **à l'exploration** (gain FAST visé) casse la bit-identité des gates (`leo400`, `geo`
+> rouges). Cause racine : les runs d'exploration partagent `crossRunStop`
+> ([`CMAESRunExecutor:136`](../src/main/java/com/smousseur/orbitlab/simulation/mission/optimizer/CMAESRunExecutor.java)) ;
+> l'ensemble de candidats qu'un run avorté a évalués au moment du flip dépend de
+> l'ordonnancement (`invokeAll` en parallèle vs ordre d'index en séquentiel), donc son
+> `runBestVars` — qui peut gagner la phase — n'est plus déterministe. **Bit-identité +
+> arrêt croisé + exploration parallèle sont mutuellement incompatibles.** L1a (raffinement,
+> passe unique, `crossRunStop = null`) n'était pas touché ; son gain BALANCED/PRECISE reste
+> acquis.
+
+Amélioration possible plus tard, hors du barreau tolérance-zéro actuel :
+- **Îlots synchronisés (lockstep)** — tous les runs avancent génération par génération ensemble,
+  la décision d'arrêt croisé se prend à une frontière de génération commune → déterministe **et**
+  arrêt croisé **et** génération parallèle. Coût : refactor conséquent (piloter CMA-ES génération
+  par génération à travers les runs) + un re-baseline unique (dont `CentralBodyBaselineTest`).
+- **Abandon de l'arrêt croisé** — runs indépendants jusqu'à convergence ; déterministe et simple,
+  mais perd le levier d'arrêt croisé, change les budgets et **risque d'améliorer le verdict**
+  (contraire au barreau verdict-neutre d'`OPT-1`).
+
+En attendant, le gain FAST passe par le backlog **sans ce conflit** : `B2` (plancher 100 gén.),
+`D2` (amorce GT), `C1` (tolérances intégrateur).
+Source : [`optimization/06-conception-L1b.md`](optimization/06-conception-L1b.md).
+
 ---
 
 ## Note de lecture

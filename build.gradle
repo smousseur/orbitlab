@@ -105,6 +105,13 @@ tasks.register('meshProbe', JavaExec) {
     mainClass = 'com.smousseur.orbitlab.tools.meshprobe.MeshProbeMain'
 }
 
+tasks.register('optBench', JavaExec) {
+    group = 'orbitlab'
+    description = 'Run optimization bench'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'com.smousseur.orbitlab.tools.optbench.OptBenchMain'
+}
+
 javadoc {
     options {
         encoding = 'UTF-8'
