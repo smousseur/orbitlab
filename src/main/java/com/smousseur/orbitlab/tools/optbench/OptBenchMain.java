@@ -53,7 +53,7 @@ import org.orekit.time.TimeScalesFactory;
  * #classifyThread}).
  *
  * <pre>
- *   OptBenchMain [outputDir] [cellFilter...] [--tolSweep=abs/rel,...] [--floorSweep=n,...]
+ *   OptBenchMain [outputDir] [cellFilter...] [--tolSweep=abs/rel,...|--floorSweep=n,...|--seedSweep]
  *   # outputDir defaults to ./optbench-out
  * </pre>
  *
@@ -73,7 +73,12 @@ import org.orekit.time.TimeScalesFactory;
  * docs/optimization/09-conception-B2.md}): same shape as {@code --tolSweep}, but each level is a
  * {@code MIN_ITERS_BEFORE_CONVERGE} value pushed to {@code orbitlab.opt.minConvergeIters}, writing
  * {@code b2-floorsweep.md}. Example:
- * {@code optBench --args="optbench-out FAST --floorSweep=100,50,30,20,10"}. At most one sweep at a
+ * {@code optBench --args="optbench-out FAST --floorSweep=100,50,30,20,10"}.
+ *
+ * <p><b>{@code --seedSweep}</b> is the OPT-1 / D2 cross-pass seeding A/B (spec {@code
+ * docs/optimization/11-conception-D2.md}): each matching cell is flown twice — {@code
+ * orbitlab.opt.seedAcrossPasses} off then on — writing {@code d2-seedsweep.md}. Example:
+ * {@code optBench --args="optbench-out ARIANE64 FH_LEO400_FAST --seedSweep"}. At most one sweep at a
  * time.
  */
 public final class OptBenchMain {
@@ -89,6 +94,13 @@ public final class OptBenchMain {
    * referenced from this package.
    */
   private static final String MIN_CONVERGE_ITERS_PROPERTY = "orbitlab.opt.minConvergeIters";
+
+  /**
+   * Property the D2 seed sweep toggles. Kept in sync with {@code
+   * MeasuredLoadPlanner.SEED_ACROSS_PASSES_PROPERTY} (package-private). Set here rather than passed
+   * on the Gradle command line because {@code JavaExec} does not forward {@code -D} to the forked JVM.
+   */
+  private static final String SEED_ACROSS_PASSES_PROPERTY = "orbitlab.opt.seedAcrossPasses";
 
   /** Kourou, the site the PHY-2 reference measurements were flown from. */
   private static final double SITE_LAT = 5.23;
@@ -114,17 +126,21 @@ public final class OptBenchMain {
     List<String> positional = new ArrayList<>();
     List<TolLevel> tolSweep = List.of();
     List<Integer> floorSweep = List.of();
+    boolean seedSweep = false;
     for (String arg : args) {
       if (arg.startsWith("--tolSweep=")) {
         tolSweep = parseTolSweep(arg.substring("--tolSweep=".length()));
       } else if (arg.startsWith("--floorSweep=")) {
         floorSweep = parseFloorSweep(arg.substring("--floorSweep=".length()));
+      } else if (arg.equals("--seedSweep")) {
+        seedSweep = true;
       } else {
         positional.add(arg);
       }
     }
-    if (!tolSweep.isEmpty() && !floorSweep.isEmpty()) {
-      throw new IllegalArgumentException("Pass at most one of --tolSweep / --floorSweep");
+    long sweeps = (tolSweep.isEmpty() ? 0 : 1) + (floorSweep.isEmpty() ? 0 : 1) + (seedSweep ? 1 : 0);
+    if (sweeps > 1) {
+      throw new IllegalArgumentException("Pass at most one of --tolSweep / --floorSweep / --seedSweep");
     }
 
     Path outputDir = Path.of(!positional.isEmpty() ? positional.get(0) : "optbench-out");
@@ -141,6 +157,10 @@ public final class OptBenchMain {
     }
     if (!floorSweep.isEmpty()) {
       runFloorSweep(floorSweep, filters, epoch, listener, outputDir);
+      return;
+    }
+    if (seedSweep) {
+      runSeedSweep(filters, epoch, listener, outputDir);
       return;
     }
 
@@ -299,6 +319,42 @@ public final class OptBenchMain {
     writeSweep(
         "b2-floorsweep",
         "# OPT-1 / B2 — balayage du plancher de convergence (brut du banc)",
+        filters,
+        entries,
+        epoch,
+        outputDir);
+  }
+
+  /**
+   * Flies each matching cell twice — D2 seeding off, then on — pushing {@link
+   * #SEED_ACROSS_PASSES_PROPERTY} around each run, so the A/B is same-session. The default is
+   * unchanged throughout; the property is scoped to the run and always cleared.
+   */
+  private static void runSeedSweep(
+      List<String> filters, AbsoluteDate epoch, BenchProgressListener listener, Path outputDir)
+      throws Exception {
+    List<SweepEntry> entries = new ArrayList<>();
+    for (Cell cell : matrix()) {
+      if (!matches(cell, filters)) {
+        continue;
+      }
+      for (boolean on : new boolean[] {false, true}) {
+        String label = on ? "seed=on" : "seed=off";
+        logger.info("Sweep cell {} with {}...", cell.id(), label);
+        System.setProperty(SEED_ACROSS_PASSES_PROPERTY, Boolean.toString(on));
+        try {
+          Path jfr = outputDir.resolve(cell.id() + "-" + (on ? "seedon" : "seedoff") + ".jfr");
+          CellResult result = runCell(cell, epoch, listener, jfr);
+          entries.add(new SweepEntry(cell.id(), label, result));
+          logSweepRow(cell.id(), label, result);
+        } finally {
+          System.clearProperty(SEED_ACROSS_PASSES_PROPERTY);
+        }
+      }
+    }
+    writeSweep(
+        "d2-seedsweep",
+        "# OPT-1 / D2 — amorçage entre passes, A/B off vs on (brut du banc)",
         filters,
         entries,
         epoch,

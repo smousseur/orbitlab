@@ -328,9 +328,12 @@ Chaque entrée est un lot à changement unique, soumis au protocole §4.
   `100 → 50` (knee mesuré, plateau en dessous). **Petit levier** : ~−14 % d'évals / ~−15 % wall FAST,
   quasi rien en wall BALANCED/PRECISE (transfert-bound, arrêt croisé — comme L0 §6 l'annonçait),
   verdict-neutre (apogée PRECISE −1,4 km, sous REL-18). Gates re-baselinés verts.
-- **`D2` — amorcer le GT à travers les passes de `MeasuredLoadPlanner`.** Aujourd'hui
-  re-cherché de zéro à chaque vol. Une **graine, pas un replay** (le replay est écarté, §1).
-  FAST/BALANCED.
+- **`D2` — amorcer le GT à travers les passes de `MeasuredLoadPlanner`.** **Mesuré et clos le
+  2026-09-14** ([`11-conception-D2.md`](11-conception-D2.md), [`12-mesures-D2.md`](12-mesures-D2.md)) :
+  graine par clé de stage, passe N → N+1 (et vol final), **défaut on**. **~−13 % d'évals FAST**,
+  verdict **bit-identique** off/on. Deux constats : l'Ariane n'est **pas** le standout promis (loads
+  divergents → graine gaspillée, gain non proportionnel au nombre de vols), et D2 **ne re-baseline
+  pas les gates** (il vit dans le planner, que les gates contournent).
 - **`C1` — tolérances de l'intégrateur.** **Mesuré et tranché le 2026-09-13**
   ([`07-conception-C1.md`](07-conception-C1.md), [`08-mesures-C1.md`](08-mesures-C1.md)) : le pas
   était **tol-borné** (la réserve « ou cap-borné ? » est levée). Scalaire desserré de `1e-8/1e-10` à

@@ -12,7 +12,9 @@ import com.smousseur.orbitlab.simulation.mission.runtime.StagePerformance;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropellantBudget;
 import com.smousseur.orbitlab.simulation.mission.vehicle.StagePropellant;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
+import java.util.LinkedHashMap;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import org.apache.logging.log4j.LogManager;
@@ -139,6 +141,18 @@ public final class MeasuredLoadPlanner implements MissionPlanner {
   /** Relative load change below which another flight would measure the same thing. */
   private static final double NEGLIGIBLE_LOAD_CHANGE_RATIO = 1.0e-3;
 
+  /**
+   * Whether each pass seeds the next pass's CMA-ES search with this pass's solution per stage (OPT-1
+   * / D2, spec {@code docs/optimization/11-conception-D2.md}, mesures {@code 12-mesures-D2.md}).
+   *
+   * <p><b>On by default since D2</b> (~−13 % evaluations on FAST, verdict bit-identical off/on at the
+   * bench). The property remains an override, set to {@code false} to disable — used by the bench's
+   * {@code --seedSweep} A/B and available as an escape hatch. It only affects the {@code
+   * MeasuredLoadPlanner} sizing path: the non-regression gates fly through {@code MissionOptimizer} /
+   * {@code StageChainRunner} directly, so this changes nothing they measure.
+   */
+  private static final String SEED_ACROSS_PASSES_PROPERTY = "orbitlab.opt.seedAcrossPasses";
+
   private final MissionSpec spec;
   private final OptimizationType mode;
   private final AbsoluteDate launchEpoch;
@@ -181,6 +195,13 @@ public final class MeasuredLoadPlanner implements MissionPlanner {
     MissionPlan sizingPlan = null;
     int passes = 0;
 
+    // D2: carry each pass's per-stage solution into the next pass's CMA-ES as a warm-start seed. On
+    // by default; the property disables it (bench --seedSweep A/B, escape hatch). When off, seeds
+    // stays null and every fly() behaves exactly as before D2.
+    boolean seedAcrossPasses =
+        Boolean.parseBoolean(System.getProperty(SEED_ACROSS_PASSES_PROPERTY, "true"));
+    Map<String, double[]> seeds = null;
+
     // The cheapest pass whose sized stage did NOT run dry, and the richest load that did. Kept so
     // the loop cannot end on a plan it has itself judged infeasible (the fallback below), and
     // because together they bracket the answer (the bisection below).
@@ -190,9 +211,12 @@ public final class MeasuredLoadPlanner implements MissionPlanner {
 
     int budget = MAX_SIZING_PASSES;
     for (int pass = 1; pass <= budget; pass++) {
-      sizingPlan = fly(loads, OptimizationType.FAST);
+      sizingPlan = fly(loads, OptimizationType.FAST, seeds);
       flown = loads;
       passes = pass;
+      if (seedAcrossPasses) {
+        seeds = captureSeeds(sizingPlan);
+      }
       if (sizedStage < 0) {
         break;
       }
@@ -271,18 +295,38 @@ public final class MeasuredLoadPlanner implements MissionPlanner {
     logSizing(budgeted, flown, sizedStage, passes, sizingPlan);
 
     // The sizing flights run in FAST; only a different requested mode owes one more flight, at the
-    // loads the sizing settled on.
-    MissionPlan result = mode == OptimizationType.FAST ? sizingPlan : fly(flown, mode);
+    // loads the sizing settled on. That final flight's gravity turn is seeded from the last sizing
+    // pass — same load, and the GT is mode-independent, so it is a strong warm-start (D2).
+    MissionPlan result = mode == OptimizationType.FAST ? sizingPlan : fly(flown, mode, seeds);
     return new MissionPlan(result.computation(), sizing(budgeted, flown, passes));
   }
 
-  /** Flies the mission once at the given loads, in the given mode. */
-  private MissionPlan fly(double[] loads, OptimizationType flightMode) {
+  /** Flies the mission once at the given loads and mode, seeding each stage's search with {@code seeds}. */
+  private MissionPlan fly(double[] loads, OptimizationType flightMode, Map<String, double[]> seeds) {
     Mission mission = MissionComposer.compose(spec.withLauncherLoads(loads), flightMode);
     // MissionOptimizer reads mission.getCurrentState() as the launch epoch, exactly as the
     // fixed-load path seeds it.
     mission.setCurrentState(mission.getInitialState(launchEpoch));
-    return new FixedLoadPlanner(mission, maxEvaluations, seed, progress).plan();
+    return new FixedLoadPlanner(mission, maxEvaluations, seed, progress, seeds).plan();
+  }
+
+  /**
+   * The per-stage solutions of a flown pass, keyed by optimization key, to warm-start the next pass
+   * (D2). Only stages actually optimized ({@code evaluations() > 0}) are kept — a replayed stage
+   * carries no fresh search to seed from.
+   */
+  private static Map<String, double[]> captureSeeds(MissionPlan plan) {
+    Map<String, double[]> seeds = new LinkedHashMap<>();
+    plan.computation()
+        .optimizerResult()
+        .resultsByStageKey()
+        .forEach(
+            (key, result) -> {
+              if (result.evaluations() > 0 && result.bestVariables() != null) {
+                seeds.put(key, result.bestVariables().clone());
+              }
+            });
+    return seeds;
   }
 
   /**

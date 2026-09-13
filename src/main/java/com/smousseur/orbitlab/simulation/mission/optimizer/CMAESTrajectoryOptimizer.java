@@ -101,6 +101,16 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
   private final MissionProgressListener progress;
 
   /**
+   * An external warm-start prepended to the first attempt's exploration seeds, or {@code null}
+   * (OPT-1 / D2, spec {@code docs/optimization/11-conception-D2.md}). Carries the previous sizing
+   * pass's solution for this stage so the search starts near the answer when the load is stable. It
+   * is a <em>seed</em>, not a replay: the analytical seed and the perturbed runs still explore, so a
+   * stale seed (the load changed sharply) is recovered from, never trusted blindly. Clamped to the
+   * attempt's bounds like any other start point.
+   */
+  private double[] externalSeed;
+
+  /**
    * Creates an optimizer with default exploration runs, retries, tolerances, and stop fitness, and
    * a non-deterministic master seed (current default behavior).
    *
@@ -226,6 +236,21 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
     this.executor =
         new CMAESRunExecutor(problem, stopFitness, absoluteTolerance, relativeTolerance, progress);
     logger.info("CMA-ES optimizer initialized with seed={}", seed);
+  }
+
+  /**
+   * Sets an external warm-start prepended to the first attempt's exploration seeds (OPT-1 / D2). A
+   * {@code null} or wrong-dimensioned vector is ignored, so a caller can pass whatever the previous
+   * pass produced without pre-checking. Returns {@code this} to allow {@code
+   * new CMAESTrajectoryOptimizer(...).withExternalSeed(v).optimize()}.
+   *
+   * @param seed the previous pass's solution for this stage, or {@code null}
+   * @return this optimizer
+   */
+  public CMAESTrajectoryOptimizer withExternalSeed(double[] seed) {
+    this.externalSeed =
+        (seed != null && seed.length == problem.getNumVariables()) ? seed.clone() : null;
+    return this;
   }
 
   @Override
@@ -625,12 +650,18 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
       int attempt, boolean previousSaturated, double[] lower, double[] upper) {
     if (attempt == 0) {
       List<double[]> seeds = new ArrayList<>();
+      // D2: the previous sizing pass's solution leads, but the analytical seed and initialGuess
+      // still take runs of their own, so a stale warm-start is recovered from rather than trusted.
+      if (externalSeed != null) {
+        seeds.add(externalSeed.clone());
+        logger.info("D2: warm-start run 0 with the previous pass's solution for this stage");
+      }
       double[] analyticalSeed = problem.buildAnalyticalSeed();
       if (analyticalSeed != null && analyticalSeed.length > 0) {
         seeds.add(analyticalSeed.clone());
         seeds.add(problem.buildInitialGuess());
         logger.info(
-            "Niveau 3.2: warm-start with pure analytical seed for run 0, initialGuess for run 1");
+            "Niveau 3.2: warm-start with pure analytical seed and initialGuess for the next runs");
       }
       return seeds;
     }

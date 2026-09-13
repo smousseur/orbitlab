@@ -3,6 +3,7 @@ package com.smousseur.orbitlab.simulation.mission.planner;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.progress.MissionProgressListener;
 import com.smousseur.orbitlab.simulation.mission.runtime.MissionOptimizer;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -19,6 +20,9 @@ public final class FixedLoadPlanner implements MissionPlanner {
 
   /** Progress sink handed to the mission optimizer, or {@code null}. */
   private final MissionProgressListener progress;
+
+  /** Per-stage CMA-ES warm-start seeds keyed by optimization key, or {@code null} (OPT-1 / D2). */
+  private final Map<String, double[]> seeds;
 
   /**
    * Creates a planner with the deterministic default CMA-ES seed.
@@ -51,18 +55,34 @@ public final class FixedLoadPlanner implements MissionPlanner {
    */
   public FixedLoadPlanner(
       Mission mission, int maxEvaluations, Long seed, MissionProgressListener progress) {
+    this(mission, maxEvaluations, seed, progress, null);
+  }
+
+  /**
+   * Creates a planner that seeds each stage's CMA-ES search with a warm-start vector (OPT-1 / D2).
+   *
+   * @param mission the mission to optimize
+   * @param maxEvaluations the per-stage CMA-ES evaluation budget
+   * @param seed the CMA-ES master seed, or {@code null} for {@link MissionOptimizer}'s default
+   * @param progress the sink, or {@code null}
+   * @param seeds warm-start vectors keyed by stage optimization key, or {@code null}
+   */
+  public FixedLoadPlanner(
+      Mission mission,
+      int maxEvaluations,
+      Long seed,
+      MissionProgressListener progress,
+      Map<String, double[]> seeds) {
     this.mission = Objects.requireNonNull(mission, "mission");
     this.maxEvaluations = maxEvaluations;
     this.seed = seed;
     this.progress = progress;
+    this.seeds = seeds;
   }
 
   @Override
   public MissionPlan plan() {
-    MissionOptimizer optimizer =
-        seed == null
-            ? new MissionOptimizer(mission, maxEvaluations, progress)
-            : new MissionOptimizer(mission, maxEvaluations, seed, progress);
-    return new MissionPlan(optimizer.optimize());
+    return new MissionPlan(
+        new MissionOptimizer(mission, maxEvaluations, seed, progress, seeds).optimize());
   }
 }

@@ -64,6 +64,15 @@ public class MissionOptimizer {
   private final MissionSolutions solutions;
 
   /**
+   * Per-stage warm-start vectors, keyed by {@link OptimizableMissionStage#optimizationKey()}, or
+   * {@code null} (OPT-1 / D2). Unlike {@link #solutions} these do not replace the search — each is
+   * prepended to a stage's CMA-ES exploration as a seed, and the search still runs. Used by {@link
+   * com.smousseur.orbitlab.simulation.mission.planner.MeasuredLoadPlanner} to carry the gravity turn
+   * from one sizing pass to the next.
+   */
+  private final Map<String, double[]> stageSeeds;
+
+  /**
    * Creates a mission optimizer with a specified evaluation budget per stage and a
    * non-deterministic CMA-ES seed.
    *
@@ -109,7 +118,7 @@ public class MissionOptimizer {
    */
   public MissionOptimizer(
       Mission mission, int maxEvaluations, Long seed, MissionProgressListener progress) {
-    this(mission, maxEvaluations, seed, progress, null);
+    this(mission, maxEvaluations, seed, progress, (MissionSolutions) null, null);
   }
 
   /**
@@ -133,11 +142,55 @@ public class MissionOptimizer {
       Long seed,
       MissionProgressListener progress,
       MissionSolutions solutions) {
+    this(mission, maxEvaluations, seed, progress, solutions, null);
+  }
+
+  /**
+   * Creates an optimizer with per-stage CMA-ES warm-start seeds (OPT-1 / D2). Distinct from the
+   * replay constructor: {@code stageSeeds} do not replace the search, each is prepended to a stage's
+   * exploration and the search still runs. A {@code null} {@code seed} falls back to the built-in
+   * deterministic default, matching {@link com.smousseur.orbitlab.simulation.mission.planner.FixedLoadPlanner}'s
+   * contract.
+   *
+   * @param mission the mission whose stages will be optimized
+   * @param maxEvaluations the per-stage CMA-ES budget
+   * @param seed master seed, or {@code null} for the deterministic default
+   * @param progress the sink, or {@code null}
+   * @param stageSeeds warm-start vectors keyed by stage optimization key, or {@code null}
+   */
+  public MissionOptimizer(
+      Mission mission,
+      int maxEvaluations,
+      Long seed,
+      MissionProgressListener progress,
+      Map<String, double[]> stageSeeds) {
+    this(mission, maxEvaluations, seed != null ? seed : DEFAULT_SEED, progress, null, stageSeeds);
+  }
+
+  /**
+   * Canonical constructor: both a replay ({@code solutions}) and warm-start seeds ({@code
+   * stageSeeds}) may be supplied, though in practice a caller uses at most one.
+   *
+   * @param mission the mission whose stages will be optimized
+   * @param maxEvaluations the per-stage CMA-ES budget
+   * @param seed master seed for CMA-ES randomness, or null for non-deterministic
+   * @param progress the sink, or {@code null}
+   * @param solutions the solved variables per stage key to replay, or {@code null} to optimize
+   * @param stageSeeds the warm-start vectors per stage key, or {@code null}
+   */
+  public MissionOptimizer(
+      Mission mission,
+      int maxEvaluations,
+      Long seed,
+      MissionProgressListener progress,
+      MissionSolutions solutions,
+      Map<String, double[]> stageSeeds) {
     this.mission = mission;
     this.maxEvaluations = maxEvaluations;
     this.seed = seed;
     this.progress = progress;
     this.solutions = solutions;
+    this.stageSeeds = stageSeeds;
   }
 
   /**
@@ -193,7 +246,8 @@ public class MissionOptimizer {
 
         TrajectoryProblem problem = optimizable.buildProblem(mission);
         double[] provided = providedVectorFor(optimizable);
-        OptimizationResult result = solveStage(problem, provided, seedRng, entryState);
+        double[] warmStart = seedVectorFor(optimizable);
+        OptimizationResult result = solveStage(problem, provided, warmStart, seedRng, entryState);
         mission.setCurrentState(entryState);
 
         results.put(optimizable.optimizationKey(), result);
@@ -297,6 +351,11 @@ public class MissionOptimizer {
     return solutions == null ? null : solutions.vectorFor(stage.optimizationKey());
   }
 
+  /** The warm-start seed for this stage's search, or {@code null} when there is none (OPT-1 / D2). */
+  private double[] seedVectorFor(OptimizableMissionStage<?> stage) {
+    return stageSeeds == null ? null : stageSeeds.get(stage.optimizationKey());
+  }
+
   /**
    * Produces the stage result, either by searching for it or by flying the vector it is given.
    *
@@ -311,6 +370,7 @@ public class MissionOptimizer {
   private OptimizationResult solveStage(
       TrajectoryProblem problem,
       double[] provided,
+      double[] warmStart,
       MersenneTwister seedRng,
       SpacecraftState entryState) {
     if (provided != null) {
@@ -319,7 +379,9 @@ public class MissionOptimizer {
     }
     long stageSeed = seedRng.nextLong();
     OptimizationResult found =
-        new CMAESTrajectoryOptimizer(problem, maxEvaluations, stageSeed, progress).optimize();
+        new CMAESTrajectoryOptimizer(problem, maxEvaluations, stageSeed, progress)
+            .withExternalSeed(warmStart)
+            .optimize();
     return new OptimizationResult(
         found.bestVariables(),
         found.bestCost(),
