@@ -48,6 +48,7 @@ colonne de droite ; le reste peut glisser.
 | ~~`PHY-8`~~ | ~~**Propulseurs séparés du corps : Falcon Heavy et Ariane 64**~~ — **livré le 2026-09-10** ([`etagement/07-cloture.md`](../etagement/07-cloture.md)) | — | — | — | — |
 | ~~`J2`~~ | ~~Trois arbitrages du modèle atmosphérique~~ — **tranché le 2026-09-10** (`DT-13`/`DT-14`/`DT-15`, [`dette-technique.md`](../dette-technique.md)) | — | — | — | `PHY-8` |
 | ~~`PHY-2`~~ | ~~**Atmosphère par défaut + recalibrage optimiseur**~~ — **livré le 2026-09-12** ([`atmosphere/13-cloture-PHY-2.md`](../atmosphere/13-cloture-PHY-2.md)) | — | — | — | — |
+| `OPT-1` | **Temps de calcul des trajectoires** *(neuf, prioritaire)* | 4 | 3 | L | — |
 | `PHY-3` | Détecteurs MaxQ, télémétrie, UI de fidélité | 3 | 2 | M | `PHY-2` |
 | `RND-5` | Repère d'affichage inertiel / tournant | 2 | 2 | S | — |
 | `RND-6` | **Trace au sol** *(neuf)* | 3 | 2 | M | `RND-5` |
@@ -57,6 +58,12 @@ colonne de droite ; le reste peut glisser.
 | `FX-3` | Particules de tuyère | 4 | 2 | M | — |
 | `FX-4` | **Traînée plasma de rentrée** *(neuf)* | 3 | 2 | M | `MIS-10` |
 | `NAV-5` | Hover « wow » planètes + orbites | 3 | 2 | M | — |
+
+**Pourquoi `OPT-1` passe en tête.** Décidé le 2026-09-13 : le temps de calcul est la
+priorité. `PHY-2` a fait passer un calcul FAST de 80 s à 192 s en allumant la traînée par
+défaut, et chaque item qui suit se développe et se valide en volant des missions — il paie ce
+prix à chaque itération, l'utilisateur à chaque calcul. `OPT-1` n'a aucune dépendance dure, et
+son premier lot livrable ne change aucun résultat.
 
 **Pourquoi `PHY-8` passe avant `PHY-2`, et non l'inverse.** Atmosphère,
 recalibrage d'Isp et structure d'étagement font trois changements de
@@ -436,6 +443,201 @@ avait livré la brique **off** par défaut sous une contrainte tenue jusqu'au
 bout — *drag off ⇒ trajectoire identique au bit près*. Chaque type de mission
 écrit depuis l'est donc **sans** traînée, et bascule ici en une fois, sur un
 périmètre connu. C'est l'échéance que v1 avait achetée ; elle arrive.
+
+---
+
+### OPT-1 — Temps de calcul des trajectoires — ★4 ◆3 L *(neuf, prioritaire)*
+
+**Le problème.** Chaque mission passe par l'optimiseur, et l'attente est la première chose que
+l'utilisateur en voit : **3 min 12 s** pour un calcul FAST drag-on — le défaut depuis `PHY-2` —,
+**24 min** pour un PRECISE LEO mesuré drag-off en août. Le calcul n'a jamais été dimensionné pour
+la machine : **pendant 79 % d'un calcul PRECISE, un seul thread travaille**. Cette fiche consigne
+ce qui est mesuré, ce qui ne l'est pas, et les pistes — elle n'en tranche aucune.
+
+#### Ce que coûte un calcul aujourd'hui
+
+| Calcul | Durée | Source |
+|---|---|---|
+| FAST, Falcon Heavy + 10 t, LEO 400 km, drag-off | 73–80 s | [`atmosphere/13-cloture-PHY-2.md`](../atmosphere/13-cloture-PHY-2.md) §4 |
+| Le même, **drag-on (défaut de l'application)** | **183–192 s** | idem, et [`12-conception-L5-PHY-2.md`](../atmosphere/12-conception-L5-PHY-2.md) §7.7 |
+| Gravity turn seul, drag-on | 52,8 s (×7,5 contre drag-off) | [`08-conception-L1-PHY-2.md`](../atmosphere/08-conception-L1-PHY-2.md) §6 |
+| PRECISE, LEO 550 km, drag-off, 2026-08-22 | 23 min 47 s | [`optimization/bilan.md`](../optimization/bilan.md) |
+| BALANCED, PRECISE drag-on, sur le code actuel | **non mesuré** | — |
+
+#### Où part le temps — le log PRECISE du 2026-08-22
+
+Horodatages relevés dans [`optimization/run 550km.log`](../optimization/run%20550km.log), cinq
+premiers λ de l'étage de transfert :
+
+| λ | Exploration (4 threads) | Raffinement (1 thread) | Part du raffinement |
+|---|---:|---:|---:|
+| 1,0 | 57 s | 261 s | 82 % |
+| 0,65 (3 tentatives) | 55 s | 222 s | 80 % |
+| 0,5625 | 20 s | 91 s | 82 % |
+| 0,51875 | 23 s | 228 s | 91 % |
+| 0,540625 | 27 s | 88 s | 76 % |
+
+- Le gravity turn coûte ~5 s par λ ; **le transfert fait ~95 % du temps**, et **son raffinement
+  889 s sur 1 119 s (79 %)**, sur un seul thread.
+- Une évaluation de transfert coûte **49 à 64 ms** en raffinement. En exploration, un thread met
+  35 à 72 ms par évaluation pendant que les quatre tournent : **pas de contention visible** entre
+  évaluations parallèles.
+
+#### Pourquoi les runs durent ce qu'ils durent
+
+**Sur le transfert, c'est le budget qui dimensionne le calcul, pas la convergence.** Trois règles
+se composent :
+
+1. `AdaptiveConvergenceChecker` interdit la convergence avant **100 générations**, et avant
+   **500** tant que le coût dépasse `acceptableCost`.
+2. `acceptableCost = 3e-3` (`TransferTuning.defaults()`) est **inatteignable** : le plancher
+   mesuré du transfert est de ~2,64e-3 orbital plus ~1,4e-3 de terme propergol
+   ([`bilan.md`](../optimization/bilan.md), piste 2). Aucun « Target reached » ne se produit donc
+   sur un transfert, et la règle des 500 générations est toujours armée.
+3. L'exploration reçoit `0,4 × budget / runs` : **800 évaluations = 100 générations** au budget
+   PRECISE (8 000), **4 000 = 500 générations** au budget BALANCED (40 000). Aucun run
+   d'exploration ne peut s'arrêter avant d'avoir tout dépensé ; le raffinement reçoit ensuite le
+   reste en trois tiers.
+
+**Le gravity turn est dans la situation inverse.** Il atteint son seuil pendant l'exploration
+dans tous les logs disponibles, donc ni raffinement ni retry ne tournent — mais un run ne peut pas
+s'arrêter avant 100 générations, soit **600 évaluations** à population 6, sur quatre runs (491 à
+753 relevées par run).
+
+#### Raffinements et retries : sont-ils utiles ?
+
+**Périmètre.** Ils ne tournent que sur le transfert CMA-ES — BALANCED et PRECISE des orbites
+terrestres. Le gravity turn ne les déclenche jamais ; GEO et lunaire n'ont pas de transfert
+CMA-ES.
+
+Relevé sur les cascades des deux runs du 2026-08-22 (12:13 et 15:23) :
+
+| Passe | Exécutions | Résultat sur le coût | Temps |
+|---|:-:|---|---|
+| 1 (σ×0,1) | 10 | **8 gains de −13 % à −76 %** ; 2 nulles — exactement les deux tentatives plates de λ=0,65 qui ont déclenché les retries | 67–103 s, une à 5 s |
+| 2 (σ×0,03) | 8 | 4 nulles (3 coupées en ~7 s, **une à budget plein, 83 s**) ; 3 marginales (−0,75 %, −0,50 %, ~0 %) ; **1 décisive (−43 %, λ=0,51875)** | 7–83 s |
+| 3 (σ×0,01) | 3 | −0,11 %, −0,10 %, −0,003 % | ~80 s chacune |
+
+Les passes 2 et 3 prennent **495 s des 1 427 s** du run de 12:13 (35 %).
+
+**Retries.** Mesurés sur 7 λ avant la règle du 2026-08-22 : **un seul utile** (λ=0,65, coût ×5,6
+meilleur, faisabilité retournée), six stériles payant 41 à 58 % du budget de l'étage — et un retry
+stérile a même dégradé un verdict ([`bilan.md`](../optimization/bilan.md), « Bonus non
+attendu »). Depuis la règle (`refinementDescended`), ils ne tirent plus qu'à λ=0,65 : coût
+résiduel faible, valeur réelle.
+
+**Lecture.**
+
+- **La passe 3 n'a jamais rapporté plus de 0,11 % de coût**, pour ~80 s à chaque fois.
+- **La passe 2 est décisive une fois sur huit**, et ne s'arrête pas toujours seule sur un plateau
+  (83 s pour 0 %).
+- **La passe 1 est indispensable dans la structure actuelle** — mais parce que l'exploration est
+  tronquée à 100 générations par le budget : elle est moins un raffinement que la suite du
+  meilleur run.
+- **Le retry utile est une exploration élargie** (8 runs, σ×1,6) : ce qu'il rattrape, c'est une
+  première exploration trop étroite.
+- **Non mesuré, et c'est ce qui décide** : l'effet sur le **verdict** — λ\*, résidu en kg,
+  faisabilité — de retirer la passe 3 ou de conditionner la passe 2. Un écart de coût de 0,75 % ne
+  dit pas combien de kilogrammes il vaut, et le bruit de comparaison des références est déjà de
+  ~19 km ([`REL-18`](../reliquats.md)).
+
+#### Pistes
+
+**A — Parallélisme, résultats inchangés**
+
+- **A1. Évaluer chaque génération CMA-ES en parallèle.** Le bytecode de
+  `CMAESOptimizer.doOptimize` (Hipparchus 4.0.2) tire toute la génération (`randn1`) **avant** la
+  boucle d'évaluation ; le tirage par candidat n'existe que si `checkFeasableCount > 0`, et
+  `CMAESRunExecutor` passe 0. Réécrire `doOptimize` (Apache 2.0) pour évaluer ses 6 à 8
+  candidats sur un pool garde les mêmes candidats, dans le même ordre. Deux points à reproduire à
+  l'identique : la génération partielle quand `MaxEval` s'épuise, et l'arrêt croisé
+  `crossRunStop`, dont l'instant est déjà non déterministe. L'état par évaluation est déjà par
+  thread (`TransferProblem.lastResult`, `GravityTurnProblem.stagingShortfall`,
+  `AscentChainPropagation.lastAltitudeTracker`, tous `ThreadLocal`), et aucune classe de la chaîne
+  d'ascension ne lit ni n'écrit l'état courant de la mission — le commentaire de
+  `MissionOptimizer.optimize()` qui affirme le contraire est à vérifier. **Estimation, non
+  mesurée : raffinement ×4 à ×6 sur la machine de développement (6 cœurs / 12 threads), soit
+  ×2,5 à ×3 sur un PRECISE LEO.** Juge : les quatre gates à tolérance zéro de `gateTest`,
+  inchangés.
+- **A2. Un pool unique, borné, partagé** par les deux niveaux (runs d'exploration × candidats), au
+  lieu d'un `Executors.newFixedThreadPool` créé à chaque passe. Sans lui, A1 sursouscrit
+  (jusqu'à 8 runs × 8 candidats). Nommé et daemon : les pools actuels ne le sont pas, et retiennent
+  le processus à la fermeture pendant une exploration.
+- **A3. Paralléliser la boucle externe de PRECISE** (plusieurs λ à la fois). Change le chemin de
+  la bissection et dispute les cœurs à A1 — en dernier.
+
+**B — Arrêts et budgets, résultats modifiés**
+
+- **B1. Rendre le test de convergence du transfert atteignable.** C'est la règle « pas avant 500
+  générations au-dessus du seuil », combinée au seuil inatteignable, qui fait dépenser tout le
+  budget ; au budget BALANCED de 40 000, elle arme 500 générations par passe. Formes possibles :
+  comparer la seule partie orbitale au seuil (piste 2 de [`bilan.md`](../optimization/bilan.md) —
+  sans rouvrir l'extinction sèche que la barrière vient de corriger), ou un critère de stagnation
+  sur une fenêtre de générations. **Probablement le premier levier en BALANCED.**
+- **B2. Le plancher de 100 générations** (`MIN_ITERS_BEFORE_CONVERGE`) coûte au gravity turn ~600
+  évaluations par run même quand le seuil est atteint plus tôt — sur **toute** mission, FAST
+  compris.
+- **B3. Retirer la passe 3, conditionner la passe 2** (tableau ci-dessus), sous réserve de la
+  mesure du verdict.
+- **B4. Nombre de runs d'exploration du gravity turn.** Quatre runs atteignent le seuil et l'arrêt
+  croisé coupe les trois autres : le temps mur ne change pas, mais le temps CPU compte dès A1.
+- **B5. Élargir la première exploration** plutôt que payer une cascade puis un retry.
+- **B6. Ce que 40 000 évaluations achètent contre 8 000** sur un transfert : jamais comparé.
+
+**C — Coût d'une évaluation, résultats modifiés**
+
+- **C1. Tolérances de l'intégrateur.** `createOptimizationPropagator` passe `absTol = 1e-8` et
+  `relTol = 1e-10` en scalaires sur les 7 composantes cartésiennes, masse comprise : ~0,7 mm sur la
+  position, pour un coût gradé en kilomètres. Levier déjà nommé par `PHY-2 / L1`
+  ([`08-conception-L1-PHY-2.md`](../atmosphere/08-conception-L1-PHY-2.md) §6). Gain inconnu tant
+  qu'on ignore si le pas est limité par la tolérance ou par le plafond de 30 s ; risque : un coût
+  plus bruité quand le raffinement travaille à σ×0,01. Re-baseline des quatre gates.
+- **C2. Harris-Priester au transfert seulement** : le candidat `c` de `PHY-2`, « fermé,
+  disponible » ([`13-cloture-PHY-2.md`](../atmosphere/13-cloture-PHY-2.md) §5.4). L'ascension
+  reste NRLMSISE, seul modèle valide à 0 km.
+- **C3. Profiler une évaluation** (JFR) de gravity turn drag-on et de transfert : NRLMSISE,
+  détecteurs (`MinAltitudeTracker`, `DepletionGuard`, `ReentryGuard`), conversions géodésiques.
+  L'ITRF à EOP simplifiés (`OrekitService.itrf()`) est déjà en place.
+- **C4. Découper le transfert en coast et poussées**, pour que le coast vole à `COAST_MAX_STEP`
+  (300 s) au lieu du plafond de 30 s que `burnLimitedMaxStep` impose à toute la propagation. Sans
+  effet si le pas est limité par la tolérance (voir C1) ; l'invariant d'allumage tardif de
+  `CLAUDE.md` doit tenir.
+
+**D — Planners, résultats modifiés**
+
+- **D1. PRECISE : amorcer le transfert d'un λ sur la solution du λ précédent**
+  (`seededStartPoints` existe).
+- **D2. `MeasuredLoadPlanner` ré-optimise le gravity turn à chaque passe** (≤ 3 + 3), 52,8 s
+  drag-on chacune. Le replay différé a été **écarté** par `PHY-2 / L4` (dangereux sur lanceur
+  léger) ; un amorçage — une graine, pas un replay — reste ouvert.
+
+#### Pièges de mesure
+
+- **`gateTest` tourne sous l'agent jacoco** : le plugin s'applique à toutes les tâches `Test`
+  (`build/jacoco/gateTest.exec`). Le rapport d'`AscentBaselineN2Test` du 2026-09-12 donne 43 s
+  d'exploration du gravity turn, contre ~5 s dans le log d'août ; l'écart mêle jacoco et la chaîne
+  d'ascension de `PHY-8`, non séparés. **Aucune durée de test n'est une référence.**
+- **Le log d'août est antérieur à `PHY-8` et au drag-on par défaut**, et les gates volent
+  drag-off.
+- Relancer un même filtre `--tests` après un succès n'exécute rien : `cleanTest` d'abord.
+
+#### Découpage recommandé — à confirmer au découpage du chantier
+
+1. **`L0` — référence mesurée** sur le code actuel, hors jacoco, drag-on : horodatages par phase
+   et profil JFR sur Falcon Heavy LEO-400 en FAST, BALANCED et PRECISE, plus un GEO FAST. Et le
+   contrefactuel qui manque : un PRECISE LEO rejoué sans passe 3, jugé sur λ\*, le résidu et la
+   faisabilité.
+2. **`L1` — A1 + A2.** Résultats inchangés, quatre gates verts à tolérance zéro. Le parallélisme ne
+   se mélange à aucun changement de comportement, et il rend moins chères toutes les mesures des
+   lots suivants.
+3. **`L2` — B1 à B6**, un changement de comportement à la fois, chacun jugé sur le verdict et
+   au-delà du bruit de `REL-18`.
+4. **`L3` — C1 à C4**, dans l'ordre que le profil de `L0` désigne.
+
+**Registres liés.** `REL-18` (bruit de comparaison — critère d'acceptation de `L2` et `L3`),
+`REL-21` (annulation d'un calcul : son drapeau vit là où vit `crossRunStop`, que A1 réécrit),
+`REL-30` et `REL-32` (ils fixent le plancher de coût qui rend `acceptableCost` inatteignable — B1
+touche la même chose), `REL-31` (exemption de la règle de retry, B3 et B5).
 
 ---
 

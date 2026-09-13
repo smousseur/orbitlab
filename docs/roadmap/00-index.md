@@ -70,6 +70,7 @@ sont dans [v1](01-roadmap-v1.md) §3 et §6.
 | **v2** | `AST-1` | Lot d'assets 3D *(hors code)* | — | — | — |
 | **v2** | ~~`PHY-8`~~ | ~~Propulseurs séparés du corps : Falcon Heavy et Ariane 64~~ — **livré le 2026-09-10**, `L0` à `L6` ; bilan et réserves dans [`etagement/07-cloture.md`](../etagement/07-cloture.md) | — | — | — |
 | **v2** | ~~`PHY-2`~~ | ~~Atmosphère par défaut + recalibrage optimiseur~~ — **livré le 2026-09-12**, `L0` à `L5` ; bilan, réserves et restes dans [`atmosphere/13-cloture-PHY-2.md`](../atmosphere/13-cloture-PHY-2.md) | — | — | — |
+| **v2** | `OPT-1` | Temps de calcul des trajectoires : parallélisme, arrêts CMA-ES, coût d'une évaluation — **prioritaire** | 4 | 3 | L |
 | **v2** | `PHY-3` | Détecteurs MaxQ, télémétrie, UI de fidélité | 3 | 2 | M |
 | **v2** | `RND-5` | Repère d'affichage inertiel / tournant | 2 | 2 | S |
 | **v2** | `RND-6` | Trace au sol | 3 | 2 | M |
