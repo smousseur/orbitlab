@@ -23,20 +23,23 @@ final class AdaptiveConvergenceChecker implements ConvergenceChecker<PointValueP
    *
    * <p>Because rule 3 already holds any run still above {@code acceptableCost} to 500 generations,
    * this floor only governs runs that have <b>already reached</b> the acceptable cost: it is what
-   * keeps a well-seeded run (one that starts at or below the threshold) from declaring victory at its
-   * start point and returning the seed verbatim, angles unexplored (see {@code CMAESRunExecutor}).
+   * keeps a well-seeded run (one that starts at or below the threshold) from declaring victory at
+   * its start point and returning the seed verbatim, angles unexplored (see {@code
+   * CMAESRunExecutor}).
    *
-   * <p><b>{@code 50} since OPT-1 / B2</b> (spec {@code docs/optimization/09-conception-B2.md}, mesures
-   * {@code 10-mesures-B2.md}). The bench sweep found the GT search stalls around generation 40-50, so
-   * the historical {@code 100} spent ~14 % of its evaluations spinning past a converged, acceptable
-   * solution. {@code 50} captures the full gain (the sweep plateaus below it) while staying clear of
-   * the seed-verbatim trap (evaluations stayed at full search depth, no collapse), verdict-neutral
-   * (largest move 1.4 km on the PRECISE apogee, well under REL-18). The bench overrides it through
-   * {@link #MIN_CONVERGE_ITERS_PROPERTY}, defaulting here otherwise.
+   * <p><b>{@code 50} since OPT-1 / B2</b> (spec {@code docs/optimization/09-conception-B2.md},
+   * mesures {@code 10-mesures-B2.md}). The bench sweep found the GT search stalls around generation
+   * 40-50, so the historical {@code 100} spent ~14 % of its evaluations spinning past a converged,
+   * acceptable solution. {@code 50} captures the full gain (the sweep plateaus below it) while
+   * staying clear of the seed-verbatim trap (evaluations stayed at full search depth, no collapse),
+   * verdict-neutral (largest move 1.4 km on the PRECISE apogee, well under REL-18). The bench
+   * overrides it through {@link #MIN_CONVERGE_ITERS_PROPERTY}, defaulting here otherwise.
    */
   static final int DEFAULT_MIN_ITERS_BEFORE_CONVERGE = 50;
 
-  /** System property the B2 bench sweep sets to override {@link #DEFAULT_MIN_ITERS_BEFORE_CONVERGE}. */
+  /**
+   * System property the B2 bench sweep sets to override {@link #DEFAULT_MIN_ITERS_BEFORE_CONVERGE}.
+   */
   static final String MIN_CONVERGE_ITERS_PROPERTY = "orbitlab.opt.minConvergeIters";
 
   private static final int BAD_BASIN_MIN_ITERS = 300;

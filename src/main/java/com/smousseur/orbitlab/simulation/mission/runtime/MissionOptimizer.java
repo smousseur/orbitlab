@@ -67,8 +67,8 @@ public class MissionOptimizer {
    * Per-stage warm-start vectors, keyed by {@link OptimizableMissionStage#optimizationKey()}, or
    * {@code null} (OPT-1 / D2). Unlike {@link #solutions} these do not replace the search — each is
    * prepended to a stage's CMA-ES exploration as a seed, and the search still runs. Used by {@link
-   * com.smousseur.orbitlab.simulation.mission.planner.MeasuredLoadPlanner} to carry the gravity turn
-   * from one sizing pass to the next.
+   * com.smousseur.orbitlab.simulation.mission.planner.MeasuredLoadPlanner} to carry the gravity
+   * turn from one sizing pass to the next.
    */
   private final Map<String, double[]> stageSeeds;
 
@@ -147,10 +147,10 @@ public class MissionOptimizer {
 
   /**
    * Creates an optimizer with per-stage CMA-ES warm-start seeds (OPT-1 / D2). Distinct from the
-   * replay constructor: {@code stageSeeds} do not replace the search, each is prepended to a stage's
-   * exploration and the search still runs. A {@code null} {@code seed} falls back to the built-in
-   * deterministic default, matching {@link com.smousseur.orbitlab.simulation.mission.planner.FixedLoadPlanner}'s
-   * contract.
+   * replay constructor: {@code stageSeeds} do not replace the search, each is prepended to a
+   * stage's exploration and the search still runs. A {@code null} {@code seed} falls back to the
+   * built-in deterministic default, matching {@link
+   * com.smousseur.orbitlab.simulation.mission.planner.FixedLoadPlanner}'s contract.
    *
    * @param mission the mission whose stages will be optimized
    * @param maxEvaluations the per-stage CMA-ES budget
@@ -351,7 +351,9 @@ public class MissionOptimizer {
     return solutions == null ? null : solutions.vectorFor(stage.optimizationKey());
   }
 
-  /** The warm-start seed for this stage's search, or {@code null} when there is none (OPT-1 / D2). */
+  /**
+   * The warm-start seed for this stage's search, or {@code null} when there is none (OPT-1 / D2).
+   */
   private double[] seedVectorFor(OptimizableMissionStage<?> stage) {
     return stageSeeds == null ? null : stageSeeds.get(stage.optimizationKey());
   }

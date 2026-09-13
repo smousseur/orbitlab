@@ -173,8 +173,17 @@ final class CMAESRunExecutor {
     // convergence checker.
     ParallelCMAESOptimizer optimizer =
         new ParallelCMAESOptimizer(
-            maxEvals, stopFitness, true, 0, 0, new MersenneTwister(seed), false, checker,
-            parallelGeneration, objectiveFunction, OptimizerThreadPool.get());
+            maxEvals,
+            stopFitness,
+            true,
+            0,
+            0,
+            new MersenneTwister(seed),
+            false,
+            checker,
+            parallelGeneration,
+            objectiveFunction,
+            OptimizerThreadPool.get());
 
     try {
       optimizer.optimize(

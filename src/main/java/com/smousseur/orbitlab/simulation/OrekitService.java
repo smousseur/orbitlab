@@ -249,12 +249,14 @@ public final class OrekitService {
    * the sweet spot: −58 % FAST / −66 % BALANCED / −63 % PRECISE wall, verdict bit-identical on
    * PRECISE and within tens of metres elsewhere (~0.7 m local error, still ~27 000× under REL-18).
    * Loosening further (1e-4/1e-6) bought only 3-11 % more for ten times the truncation error and a
-   * visible drift, not worth it when this is the only propagator the verdict is read from. The bench
-   * overrides it through {@link #OPT_ABS_TOL_PROPERTY} / {@link #OPT_REL_TOL_PROPERTY}.
+   * visible drift, not worth it when this is the only propagator the verdict is read from. The
+   * bench overrides it through {@link #OPT_ABS_TOL_PROPERTY} / {@link #OPT_REL_TOL_PROPERTY}.
    */
   public static final double DEFAULT_OPT_ABS_TOL = 1e-5;
 
-  /** Default relative tolerance for the optimization propagator; see {@link #DEFAULT_OPT_ABS_TOL}. */
+  /**
+   * Default relative tolerance for the optimization propagator; see {@link #DEFAULT_OPT_ABS_TOL}.
+   */
   public static final double DEFAULT_OPT_REL_TOL = 1e-7;
 
   /** System property the C1 bench sweep sets to override {@link #DEFAULT_OPT_ABS_TOL}. */
@@ -302,10 +304,11 @@ public final class OrekitService {
   }
 
   /**
-   * Optional system-property override for an integrator tolerance, used only by the OPT-1 / C1 bench
-   * sweep ({@link #OPT_ABS_TOL_PROPERTY} / {@link #OPT_REL_TOL_PROPERTY}). Absent in production,
-   * where the default constant wins. A present-but-invalid value <b>fails fast</b> rather than
-   * silently defaulting, so a typo in a sweep cannot pass unnoticed and corrupt a measured row.
+   * Optional system-property override for an integrator tolerance, used only by the OPT-1 / C1
+   * bench sweep ({@link #OPT_ABS_TOL_PROPERTY} / {@link #OPT_REL_TOL_PROPERTY}). Absent in
+   * production, where the default constant wins. A present-but-invalid value <b>fails fast</b>
+   * rather than silently defaulting, so a typo in a sweep cannot pass unnoticed and corrupt a
+   * measured row.
    *
    * @param property the system-property name to read
    * @param defaultValue the value used when the property is absent

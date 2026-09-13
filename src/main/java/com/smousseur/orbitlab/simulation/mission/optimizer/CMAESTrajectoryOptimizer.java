@@ -104,9 +104,9 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
    * An external warm-start prepended to the first attempt's exploration seeds, or {@code null}
    * (OPT-1 / D2, spec {@code docs/optimization/11-conception-D2.md}). Carries the previous sizing
    * pass's solution for this stage so the search starts near the answer when the load is stable. It
-   * is a <em>seed</em>, not a replay: the analytical seed and the perturbed runs still explore, so a
-   * stale seed (the load changed sharply) is recovered from, never trusted blindly. Clamped to the
-   * attempt's bounds like any other start point.
+   * is a <em>seed</em>, not a replay: the analytical seed and the perturbed runs still explore, so
+   * a stale seed (the load changed sharply) is recovered from, never trusted blindly. Clamped to
+   * the attempt's bounds like any other start point.
    */
   private double[] externalSeed;
 
@@ -241,8 +241,8 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
   /**
    * Sets an external warm-start prepended to the first attempt's exploration seeds (OPT-1 / D2). A
    * {@code null} or wrong-dimensioned vector is ignored, so a caller can pass whatever the previous
-   * pass produced without pre-checking. Returns {@code this} to allow {@code
-   * new CMAESTrajectoryOptimizer(...).withExternalSeed(v).optimize()}.
+   * pass produced without pre-checking. Returns {@code this} to allow {@code new
+   * CMAESTrajectoryOptimizer(...).withExternalSeed(v).optimize()}.
    *
    * @param seed the previous pass's solution for this stage, or {@code null}
    * @return this optimizer

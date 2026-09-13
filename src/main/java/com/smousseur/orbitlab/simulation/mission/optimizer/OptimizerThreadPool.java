@@ -13,8 +13,7 @@ import org.hipparchus.util.FastMath;
  *
  * <p><b>Sized {@code availableProcessors − 1}</b> — one core left for the JME render thread, the
  * size the exploration pool already used. <b>Daemon and named</b>, so it never holds the process
- * open at shutdown, which the old non-daemon pools did during an exploration
- * ({@code REL-21}).
+ * open at shutdown, which the old non-daemon pools did during an exploration ({@code REL-21}).
  *
  * <p>A {@code ForkJoinPool} rather than a fixed pool, and from L1a on: L1b nests exploration runs
  * over their own offspring, and only work-stealing keeps a controller thread that is waiting on a
@@ -34,8 +33,7 @@ public final class OptimizerThreadPool {
   }
 
   private static ForkJoinWorkerThread newDaemonWorker(ForkJoinPool pool) {
-    ForkJoinWorkerThread thread =
-        ForkJoinPool.defaultForkJoinWorkerThreadFactory.newThread(pool);
+    ForkJoinWorkerThread thread = ForkJoinPool.defaultForkJoinWorkerThreadFactory.newThread(pool);
     thread.setName("cmaes-eval-" + thread.getPoolIndex());
     thread.setDaemon(true);
     return thread;

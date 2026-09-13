@@ -35,10 +35,10 @@ import org.orekit.time.TimeScalesFactory;
 
 /**
  * Standalone benchmark for the trajectory optimizer ({@code OPT-1 / L0}, spec {@code
- * docs/optimization/02-conception-L0.md}). It flies each reference mission of the matrix through the
- * <em>same</em> path the application uses — {@link MissionFactory#specFromWizardValues} then {@link
- * MissionPlanOptimizer#compute()} — while timing it, and writes a Markdown report ready to seed
- * {@code 03-baseline-L0.md}.
+ * docs/optimization/02-conception-L0.md}). It flies each reference mission of the matrix through
+ * the <em>same</em> path the application uses — {@link MissionFactory#specFromWizardValues} then
+ * {@link MissionPlanOptimizer#compute()} — while timing it, and writes a Markdown report ready to
+ * seed {@code 03-baseline-L0.md}.
  *
  * <p><b>It changes nothing in {@code src/main}.</b> The phase breakdown is reconstructed from the
  * {@link BenchProgressListener} attached to the optimizer (cold event timeline + hot evaluation
@@ -62,24 +62,23 @@ import org.orekit.time.TimeScalesFactory;
  * overwrites the full baseline. {@code optBench --args="optbench-out GEO"} flies only the GEO cell.
  *
  * <p><b>{@code --tolSweep}</b> is the OPT-1 / C1 integrator-tolerance sweep (spec {@code
- * docs/optimization/07-conception-C1.md}): each matching cell is flown once per {@code absTol/relTol}
- * level, the level pushed to {@link OrekitService#OPT_ABS_TOL_PROPERTY} / {@link
- * OrekitService#OPT_REL_TOL_PROPERTY} around the run, and a comparison report {@code c1-tolsweep.md}
- * is written (a distinct {@code .jfr} per level). Without it the bench keeps its default single-run
- * behaviour on the src/main default tolerance. Example:
- * {@code optBench --args="optbench-out FAST --tolSweep=1e-8/1e-10,1e-6/1e-8,1e-5/1e-7"}.
+ * docs/optimization/07-conception-C1.md}): each matching cell is flown once per {@code
+ * absTol/relTol} level, the level pushed to {@link OrekitService#OPT_ABS_TOL_PROPERTY} / {@link
+ * OrekitService#OPT_REL_TOL_PROPERTY} around the run, and a comparison report {@code
+ * c1-tolsweep.md} is written (a distinct {@code .jfr} per level). Without it the bench keeps its
+ * default single-run behaviour on the src/main default tolerance. Example: {@code optBench
+ * --args="optbench-out FAST --tolSweep=1e-8/1e-10,1e-6/1e-8,1e-5/1e-7"}.
  *
  * <p><b>{@code --floorSweep}</b> is the OPT-1 / B2 convergence-floor sweep (spec {@code
  * docs/optimization/09-conception-B2.md}): same shape as {@code --tolSweep}, but each level is a
  * {@code MIN_ITERS_BEFORE_CONVERGE} value pushed to {@code orbitlab.opt.minConvergeIters}, writing
- * {@code b2-floorsweep.md}. Example:
- * {@code optBench --args="optbench-out FAST --floorSweep=100,50,30,20,10"}.
+ * {@code b2-floorsweep.md}. Example: {@code optBench --args="optbench-out FAST
+ * --floorSweep=100,50,30,20,10"}.
  *
  * <p><b>{@code --seedSweep}</b> is the OPT-1 / D2 cross-pass seeding A/B (spec {@code
  * docs/optimization/11-conception-D2.md}): each matching cell is flown twice — {@code
- * orbitlab.opt.seedAcrossPasses} off then on — writing {@code d2-seedsweep.md}. Example:
- * {@code optBench --args="optbench-out ARIANE64 FH_LEO400_FAST --seedSweep"}. At most one sweep at a
- * time.
+ * orbitlab.opt.seedAcrossPasses} off then on — writing {@code d2-seedsweep.md}. Example: {@code
+ * optBench --args="optbench-out ARIANE64 FH_LEO400_FAST --seedSweep"}. At most one sweep at a time.
  */
 public final class OptBenchMain {
 
@@ -90,15 +89,16 @@ public final class OptBenchMain {
 
   /**
    * Property the B2 floor sweep pushes. Kept in sync with {@code
-   * AdaptiveConvergenceChecker.MIN_CONVERGE_ITERS_PROPERTY}, which is package-private and so cannot be
-   * referenced from this package.
+   * AdaptiveConvergenceChecker.MIN_CONVERGE_ITERS_PROPERTY}, which is package-private and so cannot
+   * be referenced from this package.
    */
   private static final String MIN_CONVERGE_ITERS_PROPERTY = "orbitlab.opt.minConvergeIters";
 
   /**
    * Property the D2 seed sweep toggles. Kept in sync with {@code
    * MeasuredLoadPlanner.SEED_ACROSS_PASSES_PROPERTY} (package-private). Set here rather than passed
-   * on the Gradle command line because {@code JavaExec} does not forward {@code -D} to the forked JVM.
+   * on the Gradle command line because {@code JavaExec} does not forward {@code -D} to the forked
+   * JVM.
    */
   private static final String SEED_ACROSS_PASSES_PROPERTY = "orbitlab.opt.seedAcrossPasses";
 
@@ -108,7 +108,9 @@ public final class OptBenchMain {
   private static final double SITE_LON = -52.77;
   private static final double SITE_ALT = 0.0;
 
-  /** The 10 t Earth-observation payload of the reference — not {@code Spacecraft.LEGACY} (150 kg). */
+  /**
+   * The 10 t Earth-observation payload of the reference — not {@code Spacecraft.LEGACY} (150 kg).
+   */
   private static final double REFERENCE_PAYLOAD_MASS = 10_000.0;
 
   private OptBenchMain() {}
@@ -138,9 +140,11 @@ public final class OptBenchMain {
         positional.add(arg);
       }
     }
-    long sweeps = (tolSweep.isEmpty() ? 0 : 1) + (floorSweep.isEmpty() ? 0 : 1) + (seedSweep ? 1 : 0);
+    long sweeps =
+        (tolSweep.isEmpty() ? 0 : 1) + (floorSweep.isEmpty() ? 0 : 1) + (seedSweep ? 1 : 0);
     if (sweeps > 1) {
-      throw new IllegalArgumentException("Pass at most one of --tolSweep / --floorSweep / --seedSweep");
+      throw new IllegalArgumentException(
+          "Pass at most one of --tolSweep / --floorSweep / --seedSweep");
     }
 
     Path outputDir = Path.of(!positional.isEmpty() ? positional.get(0) : "optbench-out");
@@ -180,7 +184,11 @@ public final class OptBenchMain {
             result.flights(),
             result.evaluations());
       } else {
-        logger.warn("Cell {} FAILED after {} s: {}", cell.id(), (long) result.wallSeconds(), result.failure());
+        logger.warn(
+            "Cell {} FAILED after {} s: {}",
+            cell.id(),
+            (long) result.wallSeconds(),
+            result.failure());
       }
     }
 
@@ -193,7 +201,9 @@ public final class OptBenchMain {
 
   // ── Tuning sweeps (C1 tolerances, B2 convergence floor) ─────────────────────
 
-  /** One integrator-tolerance level of the C1 sweep, kept as raw strings passed straight through. */
+  /**
+   * One integrator-tolerance level of the C1 sweep, kept as raw strings passed straight through.
+   */
   private record TolLevel(String absTol, String relTol) {
     String label() {
       return absTol + "/" + relTol;
@@ -217,7 +227,8 @@ public final class OptBenchMain {
         throw new IllegalArgumentException(
             "Bad --tolSweep entry '" + pair + "': expected absTol/relTol");
       }
-      // Parse to fail fast on a malformed number here, but keep the raw text so the property carries
+      // Parse to fail fast on a malformed number here, but keep the raw text so the property
+      // carries
       // exactly what the user wrote (OrekitService parses it the same way).
       Double.parseDouble(ar[0].trim());
       Double.parseDouble(ar[1].trim());
@@ -245,9 +256,10 @@ public final class OptBenchMain {
   }
 
   /**
-   * Flies each matching cell once per tolerance level (C1), pushing the level onto the OrekitService
-   * override properties around each run and clearing them afterwards. The default src/main tolerance
-   * is unchanged throughout — the override is scoped to the run and always cleared.
+   * Flies each matching cell once per tolerance level (C1), pushing the level onto the
+   * OrekitService override properties around each run and clearing them afterwards. The default
+   * src/main tolerance is unchanged throughout — the override is scoped to the run and always
+   * cleared.
    */
   private static void runTolSweep(
       List<TolLevel> levels,
@@ -393,7 +405,8 @@ public final class OptBenchMain {
   // ── Reference matrix ──────────────────────────────────────────────────────
 
   /** One benchmark cell: a mission built from wizard values, flown in one optimization mode. */
-  private record Cell(String id, MissionType type, OptimizationType mode, Map<String, Object> values) {}
+  private record Cell(
+      String id, MissionType type, OptimizationType mode, Map<String, Object> values) {}
 
   /**
    * The reference matrix of {@code 02-conception-L0.md} §2: Falcon Heavy + 10 t @ 400 km in the
@@ -403,14 +416,24 @@ public final class OptBenchMain {
     String fh = Launchers.FALCON_HEAVY.id();
     String a64 = Launchers.ARIANE_64.id();
     return List.of(
-        new Cell("FH_LEO400_FAST", MissionType.LEO, OptimizationType.FAST, leo("FH LEO400", fh, 400.0)),
         new Cell(
-            "FH_LEO400_BALANCED", MissionType.LEO, OptimizationType.BALANCED, leo("FH LEO400", fh, 400.0)),
+            "FH_LEO400_FAST", MissionType.LEO, OptimizationType.FAST, leo("FH LEO400", fh, 400.0)),
         new Cell(
-            "FH_LEO400_PRECISE", MissionType.LEO, OptimizationType.PRECISE, leo("FH LEO400", fh, 400.0)),
+            "FH_LEO400_BALANCED",
+            MissionType.LEO,
+            OptimizationType.BALANCED,
+            leo("FH LEO400", fh, 400.0)),
+        new Cell(
+            "FH_LEO400_PRECISE",
+            MissionType.LEO,
+            OptimizationType.PRECISE,
+            leo("FH LEO400", fh, 400.0)),
         new Cell("GEO_SAT_FAST", MissionType.GEO, OptimizationType.FAST, geo("GEO SAT", fh, 400.0)),
         new Cell(
-            "ARIANE64_LEO400_FAST", MissionType.LEO, OptimizationType.FAST, leo("A64 LEO400", a64, 400.0)));
+            "ARIANE64_LEO400_FAST",
+            MissionType.LEO,
+            OptimizationType.FAST,
+            leo("A64 LEO400", a64, 400.0)));
   }
 
   /** Wizard values for a circular LEO mission carrying the 10 t observation satellite. */
@@ -513,8 +536,22 @@ public final class OptBenchMain {
       double wall = (System.nanoTime() - start) / 1e9;
       stopRecording(recording);
       return new CellResult(
-          cell, false, e.toString(), wall, listener.evaluations(), listener.flights(), null, null,
-          null, null, 0.0, 0.0, 0.0, listener.timeline(), jfr, samplesByBucket(jfr));
+          cell,
+          false,
+          e.toString(),
+          wall,
+          listener.evaluations(),
+          listener.flights(),
+          null,
+          null,
+          null,
+          null,
+          0.0,
+          0.0,
+          0.0,
+          listener.timeline(),
+          jfr,
+          samplesByBucket(jfr));
     }
   }
 
@@ -651,7 +688,8 @@ public final class OptBenchMain {
   private static String renderSweep(String heading, List<SweepEntry> entries, AbsoluteDate epoch) {
     StringBuilder md = new StringBuilder();
     md.append(heading).append("\n\n");
-    md.append("Produit par `tools/optbench/OptBenchMain`. À relire, puis reporter dans le bilan du ")
+    md.append(
+            "Produit par `tools/optbench/OptBenchMain`. À relire, puis reporter dans le bilan du ")
         .append("lot.\n\n");
     md.append("- Machine : ")
         .append(Runtime.getRuntime().availableProcessors())
@@ -706,7 +744,11 @@ public final class OptBenchMain {
 
   private static void renderCell(StringBuilder md, CellResult r) {
     md.append("## ").append(r.cell().id()).append('\n');
-    md.append("- Type / mode : ").append(r.cell().type()).append(" / ").append(r.cell().mode()).append('\n');
+    md.append("- Type / mode : ")
+        .append(r.cell().type())
+        .append(" / ")
+        .append(r.cell().mode())
+        .append('\n');
     md.append("- Lanceur : ").append(r.cell().values().get("LAUNCHER_TYPE"));
     md.append(", charge utile : ").append(r.cell().values().get("PAYLOAD_TYPE")).append('\n');
     if (!r.ok()) {
@@ -717,7 +759,9 @@ public final class OptBenchMain {
           .append("`\n\n");
       return;
     }
-    md.append("- Wall-clock : **").append(String.format(Locale.ROOT, "%.1f", r.wallSeconds())).append(" s**\n");
+    md.append("- Wall-clock : **")
+        .append(String.format(Locale.ROOT, "%.1f", r.wallSeconds()))
+        .append(" s**\n");
     md.append("- Vols de dimensionnement : ").append(r.flights());
     if (r.sizingPasses() != null) {
       md.append(" (sizing.passes = ").append(r.sizingPasses()).append(')');
@@ -732,16 +776,25 @@ public final class OptBenchMain {
     md.append("- ΔV total : ")
         .append(String.format(Locale.ROOT, "%.0f m/s", r.totalDeltaV()))
         .append(", résidu ")
-        .append(String.format(Locale.ROOT, "%.0f kg (%.1f %%)", r.residualKg(), 100.0 * r.residualRatio()))
+        .append(
+            String.format(
+                Locale.ROOT, "%.0f kg (%.1f %%)", r.residualKg(), 100.0 * r.residualRatio()))
         .append('\n');
-    md.append("- JFR : `").append(r.jfr().getFileName()).append("` — ").append(bucketBreakdown(r)).append('\n');
-    md.append("\n<details><summary>Timeline (").append(r.timeline().size()).append(" événements)</summary>\n\n```\n");
+    md.append("- JFR : `")
+        .append(r.jfr().getFileName())
+        .append("` — ")
+        .append(bucketBreakdown(r))
+        .append('\n');
+    md.append("\n<details><summary>Timeline (")
+        .append(r.timeline().size())
+        .append(" événements)</summary>\n\n```\n");
     appendTimeline(md, r.timeline());
     md.append("```\n</details>\n\n");
   }
 
   /** Full timeline when short, else the head and tail with the middle elided. */
-  private static void appendTimeline(StringBuilder md, List<BenchProgressListener.TimelineEntry> timeline) {
+  private static void appendTimeline(
+      StringBuilder md, List<BenchProgressListener.TimelineEntry> timeline) {
     int cap = 80;
     if (timeline.size() <= cap) {
       for (BenchProgressListener.TimelineEntry e : timeline) {
@@ -767,7 +820,8 @@ public final class OptBenchMain {
     if (total == 0) {
       return "—";
     }
-    // Sum every "search (...)" bucket: classifyThread splits the search into the generation pool and
+    // Sum every "search (...)" bucket: classifyThread splits the search into the generation pool
+    // and
     // the exploration-run threads, so a single fixed key would miss part of it (and did, silently,
     // after the L1a rename).
     long search =

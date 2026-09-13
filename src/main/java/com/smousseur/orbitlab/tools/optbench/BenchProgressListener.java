@@ -16,8 +16,8 @@ import java.util.concurrent.atomic.AtomicLong;
  * <p><b>Thread safety follows the listener contract.</b> {@link #onEvaluation()} is called tens of
  * thousands of times from the parallel exploration threads, so it only touches an {@link
  * AtomicLong}. {@link #onProgress} is cold and its timeline list is synchronized; {@code
- * MeasuredLoadPlanner} calls it from the single calc thread, but a listener that accumulates must be
- * safe for concurrent use regardless.
+ * MeasuredLoadPlanner} calls it from the single calc thread, but a listener that accumulates must
+ * be safe for concurrent use regardless.
  */
 final class BenchProgressListener implements MissionProgressListener {
 
