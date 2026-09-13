@@ -323,9 +323,11 @@ Chaque entrée est un lot à changement unique, soumis au protocole §4.
 
 **Leviers FAST (en tête) :**
 
-- **`B2` — plancher `MIN_ITERS_BEFORE_CONVERGE = 100`.** Coûte ~600 évals/run même quand le
-  seuil GT est atteint plus tôt ; sur **toute** mission, chaque vol FAST le paie ×2. Tous
-  modes. Re-baseline des gates.
+- **`B2` — plancher `MIN_ITERS_BEFORE_CONVERGE`.** **Mesuré et clos le 2026-09-13**
+  ([`09-conception-B2.md`](09-conception-B2.md), [`10-mesures-B2.md`](10-mesures-B2.md)) : abaissé
+  `100 → 50` (knee mesuré, plateau en dessous). **Petit levier** : ~−14 % d'évals / ~−15 % wall FAST,
+  quasi rien en wall BALANCED/PRECISE (transfert-bound, arrêt croisé — comme L0 §6 l'annonçait),
+  verdict-neutre (apogée PRECISE −1,4 km, sous REL-18). Gates re-baselinés verts.
 - **`D2` — amorcer le GT à travers les passes de `MeasuredLoadPlanner`.** Aujourd'hui
   re-cherché de zéro à chaque vol. Une **graine, pas un replay** (le replay est écarté, §1).
   FAST/BALANCED.

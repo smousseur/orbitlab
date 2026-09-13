@@ -53,7 +53,7 @@ import org.orekit.time.TimeScalesFactory;
  * #classifyThread}).
  *
  * <pre>
- *   OptBenchMain [outputDir] [cellFilter...] [--tolSweep=abs/rel,abs/rel,...]
+ *   OptBenchMain [outputDir] [cellFilter...] [--tolSweep=abs/rel,...] [--floorSweep=n,...]
  *   # outputDir defaults to ./optbench-out
  * </pre>
  *
@@ -68,6 +68,13 @@ import org.orekit.time.TimeScalesFactory;
  * is written (a distinct {@code .jfr} per level). Without it the bench keeps its default single-run
  * behaviour on the src/main default tolerance. Example:
  * {@code optBench --args="optbench-out FAST --tolSweep=1e-8/1e-10,1e-6/1e-8,1e-5/1e-7"}.
+ *
+ * <p><b>{@code --floorSweep}</b> is the OPT-1 / B2 convergence-floor sweep (spec {@code
+ * docs/optimization/09-conception-B2.md}): same shape as {@code --tolSweep}, but each level is a
+ * {@code MIN_ITERS_BEFORE_CONVERGE} value pushed to {@code orbitlab.opt.minConvergeIters}, writing
+ * {@code b2-floorsweep.md}. Example:
+ * {@code optBench --args="optbench-out FAST --floorSweep=100,50,30,20,10"}. At most one sweep at a
+ * time.
  */
 public final class OptBenchMain {
 
@@ -75,6 +82,13 @@ public final class OptBenchMain {
 
   /** The calc thread's name, so JFR execution samples on it separate from the exploration pool. */
   private static final String CALC_THREAD_NAME = "optbench-calc";
+
+  /**
+   * Property the B2 floor sweep pushes. Kept in sync with {@code
+   * AdaptiveConvergenceChecker.MIN_CONVERGE_ITERS_PROPERTY}, which is package-private and so cannot be
+   * referenced from this package.
+   */
+  private static final String MIN_CONVERGE_ITERS_PROPERTY = "orbitlab.opt.minConvergeIters";
 
   /** Kourou, the site the PHY-2 reference measurements were flown from. */
   private static final double SITE_LAT = 5.23;
@@ -99,12 +113,18 @@ public final class OptBenchMain {
 
     List<String> positional = new ArrayList<>();
     List<TolLevel> tolSweep = List.of();
+    List<Integer> floorSweep = List.of();
     for (String arg : args) {
       if (arg.startsWith("--tolSweep=")) {
         tolSweep = parseTolSweep(arg.substring("--tolSweep=".length()));
+      } else if (arg.startsWith("--floorSweep=")) {
+        floorSweep = parseFloorSweep(arg.substring("--floorSweep=".length()));
       } else {
         positional.add(arg);
       }
+    }
+    if (!tolSweep.isEmpty() && !floorSweep.isEmpty()) {
+      throw new IllegalArgumentException("Pass at most one of --tolSweep / --floorSweep");
     }
 
     Path outputDir = Path.of(!positional.isEmpty() ? positional.get(0) : "optbench-out");
@@ -117,6 +137,10 @@ public final class OptBenchMain {
 
     if (!tolSweep.isEmpty()) {
       runTolSweep(tolSweep, filters, epoch, listener, outputDir);
+      return;
+    }
+    if (!floorSweep.isEmpty()) {
+      runFloorSweep(floorSweep, filters, epoch, listener, outputDir);
       return;
     }
 
@@ -147,7 +171,7 @@ public final class OptBenchMain {
     logger.info("Report written to {}", report.toAbsolutePath());
   }
 
-  // ── C1 tolerance sweep (spec docs/optimization/07-conception-C1.md) ─────────
+  // ── Tuning sweeps (C1 tolerances, B2 convergence floor) ─────────────────────
 
   /** One integrator-tolerance level of the C1 sweep, kept as raw strings passed straight through. */
   private record TolLevel(String absTol, String relTol) {
@@ -161,8 +185,8 @@ public final class OptBenchMain {
     }
   }
 
-  /** One flown cell at one tolerance level. */
-  private record SweepEntry(String cellId, TolLevel level, CellResult result) {}
+  /** One flown cell at one sweep level, labelled by that level. */
+  private record SweepEntry(String cellId, String label, CellResult result) {}
 
   /** Parses {@code abs/rel,abs/rel,...} into tolerance levels, validating each pair up front. */
   private static List<TolLevel> parseTolSweep(String value) {
@@ -182,11 +206,28 @@ public final class OptBenchMain {
     return levels;
   }
 
+  /** Parses {@code n,n,...} into convergence-floor levels, validating each up front. */
+  private static List<Integer> parseFloorSweep(String value) {
+    List<Integer> levels = new ArrayList<>();
+    for (String s : value.split(",")) {
+      int floor;
+      try {
+        floor = Integer.parseInt(s.trim());
+      } catch (NumberFormatException e) {
+        throw new IllegalArgumentException("Bad --floorSweep entry '" + s + "': not an integer", e);
+      }
+      if (floor < 1) {
+        throw new IllegalArgumentException("Bad --floorSweep entry '" + s + "': must be >= 1");
+      }
+      levels.add(floor);
+    }
+    return levels;
+  }
+
   /**
-   * Flies each matching cell once per tolerance level, pushing the level onto the OrekitService
-   * override properties around each run and clearing them afterwards, then writes a comparison
-   * report. The default src/main tolerance is unchanged throughout — the override is scoped to the
-   * run and always cleared.
+   * Flies each matching cell once per tolerance level (C1), pushing the level onto the OrekitService
+   * override properties around each run and clearing them afterwards. The default src/main tolerance
+   * is unchanged throughout — the override is scoped to the run and always cleared.
    */
   private static void runTolSweep(
       List<TolLevel> levels,
@@ -207,30 +248,90 @@ public final class OptBenchMain {
         try {
           Path jfr = outputDir.resolve(cell.id() + "-" + level.tag() + ".jfr");
           CellResult result = runCell(cell, epoch, listener, jfr);
-          entries.add(new SweepEntry(cell.id(), level, result));
-          if (result.ok()) {
-            logger.info(
-                "  {} @ {}: {} s, {} evals, residual {} %",
-                cell.id(),
-                level.label(),
-                String.format(Locale.ROOT, "%.1f", result.wallSeconds()),
-                result.evaluations(),
-                String.format(Locale.ROOT, "%.1f", 100.0 * result.residualRatio()));
-          } else {
-            logger.warn("  {} @ {} FAILED: {}", cell.id(), level.label(), result.failure());
-          }
+          entries.add(new SweepEntry(cell.id(), level.label(), result));
+          logSweepRow(cell.id(), level.label(), result);
         } finally {
           System.clearProperty(OrekitService.OPT_ABS_TOL_PROPERTY);
           System.clearProperty(OrekitService.OPT_REL_TOL_PROPERTY);
         }
       }
     }
+    writeSweep(
+        "c1-tolsweep",
+        "# OPT-1 / C1 — balayage de tolérance (brut du banc)",
+        filters,
+        entries,
+        epoch,
+        outputDir);
+  }
 
+  /**
+   * Flies each matching cell once per convergence-floor level (B2), pushing the level onto the
+   * AdaptiveConvergenceChecker override property around each run and clearing it afterwards. The
+   * default floor is unchanged throughout — the override is scoped to the run and always cleared.
+   */
+  private static void runFloorSweep(
+      List<Integer> levels,
+      List<String> filters,
+      AbsoluteDate epoch,
+      BenchProgressListener listener,
+      Path outputDir)
+      throws Exception {
+    List<SweepEntry> entries = new ArrayList<>();
+    for (Cell cell : matrix()) {
+      if (!matches(cell, filters)) {
+        continue;
+      }
+      for (int floor : levels) {
+        String label = Integer.toString(floor);
+        logger.info("Sweep cell {} at convergence floor {}...", cell.id(), label);
+        System.setProperty(MIN_CONVERGE_ITERS_PROPERTY, label);
+        try {
+          Path jfr = outputDir.resolve(cell.id() + "-floor" + floor + ".jfr");
+          CellResult result = runCell(cell, epoch, listener, jfr);
+          entries.add(new SweepEntry(cell.id(), label, result));
+          logSweepRow(cell.id(), label, result);
+        } finally {
+          System.clearProperty(MIN_CONVERGE_ITERS_PROPERTY);
+        }
+      }
+    }
+    writeSweep(
+        "b2-floorsweep",
+        "# OPT-1 / B2 — balayage du plancher de convergence (brut du banc)",
+        filters,
+        entries,
+        epoch,
+        outputDir);
+  }
+
+  private static void logSweepRow(String cellId, String label, CellResult result) {
+    if (result.ok()) {
+      logger.info(
+          "  {} @ {}: {} s, {} evals, residual {} %",
+          cellId,
+          label,
+          String.format(Locale.ROOT, "%.1f", result.wallSeconds()),
+          result.evaluations(),
+          String.format(Locale.ROOT, "%.1f", 100.0 * result.residualRatio()));
+    } else {
+      logger.warn("  {} @ {} FAILED: {}", cellId, label, result.failure());
+    }
+  }
+
+  private static void writeSweep(
+      String basename,
+      String heading,
+      List<String> filters,
+      List<SweepEntry> entries,
+      AbsoluteDate epoch,
+      Path outputDir)
+      throws Exception {
     String reportName =
-        "c1-tolsweep" + (filters.isEmpty() ? "" : "-" + String.join("-", filters)) + ".md";
+        basename + (filters.isEmpty() ? "" : "-" + String.join("-", filters)) + ".md";
     Path report = outputDir.resolve(reportName);
-    Files.writeString(report, renderTolSweep(entries, epoch));
-    logger.info("Tol sweep report written to {}", report.toAbsolutePath());
+    Files.writeString(report, renderSweep(heading, entries, epoch));
+    logger.info("Sweep report written to {}", report.toAbsolutePath());
   }
 
   // ── Reference matrix ──────────────────────────────────────────────────────
@@ -490,12 +591,12 @@ public final class OptBenchMain {
     return md.toString();
   }
 
-  /** Comparison report for a C1 tolerance sweep: one table per cell, one row per tolerance level. */
-  private static String renderTolSweep(List<SweepEntry> entries, AbsoluteDate epoch) {
+  /** Comparison report for a tuning sweep: one table per cell, one row per swept level. */
+  private static String renderSweep(String heading, List<SweepEntry> entries, AbsoluteDate epoch) {
     StringBuilder md = new StringBuilder();
-    md.append("# OPT-1 / C1 — balayage de tolérance (brut du banc)\n\n");
-    md.append("Produit par `tools/optbench/OptBenchMain --tolSweep=...`. À relire, puis reporter ")
-        .append("dans `08-mesures-C1.md`.\n\n");
+    md.append(heading).append("\n\n");
+    md.append("Produit par `tools/optbench/OptBenchMain`. À relire, puis reporter dans le bilan du ")
+        .append("lot.\n\n");
     md.append("- Machine : ")
         .append(Runtime.getRuntime().availableProcessors())
         .append(" processeurs logiques\n");
@@ -507,11 +608,11 @@ public final class OptBenchMain {
     md.append("- OS : ").append(System.getProperty("os.name")).append('\n');
     md.append("- Époque de lancement : ").append(epoch).append('\n');
     md.append("- Atmosphère : NRLMSISE (défaut `MissionFactory`), drag-on\n");
-    md.append("- Défaut `src/main` : absTol=")
+    md.append("- Défaut tol `src/main` : ")
         .append(OrekitService.DEFAULT_OPT_ABS_TOL)
-        .append(", relTol=")
+        .append('/')
         .append(OrekitService.DEFAULT_OPT_REL_TOL)
-        .append(" (la constante que C1 fige)\n\n");
+        .append("\n\n");
 
     Set<String> cellIds = new LinkedHashSet<>();
     for (SweepEntry e : entries) {
@@ -519,7 +620,7 @@ public final class OptBenchMain {
     }
     for (String cellId : cellIds) {
       md.append("## ").append(cellId).append("\n\n");
-      md.append("| absTol/relTol | Wall (s) | Évals | Résidu | λ | Orbite atteinte (moy.) | JFR |\n");
+      md.append("| Niveau | Wall (s) | Évals | Résidu | λ | Orbite atteinte (moy.) | JFR |\n");
       md.append("|---|---:|---:|---:|---|---|---|\n");
       for (SweepEntry e : entries) {
         if (!e.cellId().equals(cellId)) {
@@ -527,7 +628,7 @@ public final class OptBenchMain {
         }
         CellResult r = e.result();
         md.append("| ")
-            .append(e.level().label())
+            .append(e.label())
             .append(" | ")
             .append(r.ok() ? String.format(Locale.ROOT, "%.1f", r.wallSeconds()) : "— échec")
             .append(" | ")
