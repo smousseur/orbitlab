@@ -10,7 +10,7 @@ gradle/**
 gradlew
 gradlew.bat
 **/*.pyc
-optbench-out/**
+optbench-out/
 
 ### IntelliJ IDEA ###
 .idea/**

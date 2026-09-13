@@ -48,7 +48,7 @@ colonne de droite ; le reste peut glisser.
 | ~~`PHY-8`~~ | ~~**Propulseurs séparés du corps : Falcon Heavy et Ariane 64**~~ — **livré le 2026-09-10** ([`etagement/07-cloture.md`](../etagement/07-cloture.md)) | — | — | — | — |
 | ~~`J2`~~ | ~~Trois arbitrages du modèle atmosphérique~~ — **tranché le 2026-09-10** (`DT-13`/`DT-14`/`DT-15`, [`dette-technique.md`](../dette-technique.md)) | — | — | — | `PHY-8` |
 | ~~`PHY-2`~~ | ~~**Atmosphère par défaut + recalibrage optimiseur**~~ — **livré le 2026-09-12** ([`atmosphere/13-cloture-PHY-2.md`](../atmosphere/13-cloture-PHY-2.md)) | — | — | — | — |
-| `OPT-1` | **Temps de calcul des trajectoires** *(neuf, prioritaire)* | 4 | 3 | L | — |
+| ~~`OPT-1`~~ | ~~**Temps de calcul des trajectoires**~~ — **livré le 2026-09-14** ([`optimization/13-cloture.md`](../optimization/13-cloture.md)) ; reliquat → `OPT-2` (backlog, §4) | — | — | — | — |
 | `PHY-3` | Détecteurs MaxQ, télémétrie, UI de fidélité | 3 | 2 | M | `PHY-2` |
 | `RND-5` | Repère d'affichage inertiel / tournant | 2 | 2 | S | — |
 | `RND-6` | **Trace au sol** *(neuf)* | 3 | 2 | M | `RND-5` |
@@ -448,6 +448,13 @@ périmètre connu. C'est l'échéance que v1 avait achetée ; elle arrive.
 
 ### OPT-1 — Temps de calcul des trajectoires — ★4 ◆3 L *(neuf, prioritaire)*
 
+> **Livré le 2026-09-14** ([`optimization/13-cloture.md`](../optimization/13-cloture.md)). Joués :
+> L0 (banc + baseline), L1a (raffinement parallèle — BALANCED −55 %, PRECISE −46 %), C1 (tolérances —
+> FAST −58 %), B2 (plancher de convergence), D2 (amorçage GT). **FAST ~55 s → ~18 s.** L1b
+> (exploration parallèle) **abandonné** ([`REL-33`](../reliquats.md) : incompatible avec l'arrêt
+> croisé sous bit-identité). Le reliquat du backlog part en `OPT-2` (ci-dessous). Le texte qui suit
+> est la fiche d'avant-chantier, conservée pour mémoire.
+
 **Le problème.** Chaque mission passe par l'optimiseur, et l'attente est la première chose que
 l'utilisateur en voit : **3 min 12 s** pour un calcul FAST drag-on — le défaut depuis `PHY-2` —,
 **24 min** pour un PRECISE LEO mesuré drag-off en août. Le calcul n'a jamais été dimensionné pour
@@ -638,6 +645,37 @@ résiduel faible, valeur réelle.
 `REL-21` (annulation d'un calcul : son drapeau vit là où vit `crossRunStop`, que A1 réécrit),
 `REL-30` et `REL-32` (ils fixent le plancher de coût qui rend `acceptableCost` inatteignable — B1
 touche la même chose), `REL-31` (exemption de la règle de retry, B3 et B5).
+
+---
+
+### OPT-2 — Temps de calcul des trajectoires (suite) — *backlog, sans slot*
+
+> **Reliquat d'`OPT-1`** ([`optimization/13-cloture.md`](../optimization/13-cloture.md) §3). Pas de
+> place fixe dans le plan §2 : lot de fond, tiré à la demande quand un calcul BALANCED/PRECISE
+> redevient un point de douleur. `OPT-1` a traité la cible primaire (FAST — ~55 s → ~18 s) ; ce qui
+> reste vise surtout le **transfert** (BALANCED/PRECISE), là où OPT-1 a le moins mordu.
+
+**Leviers**, chacun un changement de comportement à la fois, jugé verdict-neutre (`REL-18`), mesuré au
+banc `tools/optbench` (les balayages `--tolSweep`/`--floorSweep`/`--seedSweep` et les overrides système
+d'`OPT-1` sont réutilisables) :
+
+- **`B1`** — rendre la convergence du transfert atteignable (seuil inatteignable, `REL-30`/`REL-32` :
+  le budget se dépense en entier). Probablement le premier levier BALANCED/PRECISE.
+- **`C2`** — Harris-Priester au transfert seul (candidat *c* de `PHY-2`) ; l'ascension reste NRLMSISE.
+- **`C4`** — transfert en coast + poussées (coast à `COAST_MAX_STEP`). Valable : `C1` a mesuré le pas
+  **tol-borné**, le plafond de coast est un levier distinct.
+- **`D1`** — PRECISE : amorcer le transfert d'un λ sur le précédent (la plomberie de graine par clé de
+  `D2` est réutilisable).
+- **`B3`** — retirer/conditionner les passes de raffinement, avec le contrefactuel de verdict que L0
+  n'a pas pu jouer.
+- **`B4`/`B5`/`B6`** — nombre de runs d'exploration / largeur de la première exploration / ce que
+  40 000 évals achètent contre 8 000.
+- **`A3`** — paralléliser la boucle λ externe de PRECISE (dispute les cœurs à A1 — en dernier).
+- **`REL-33`** — reprise éventuelle de l'exploration parallèle, **déterministe** (îlots synchronisés
+  ou abandon de l'arrêt croisé), hors barreau tolérance-zéro (re-baseline unique).
+
+**Hors périmètre** : [`BUG-26`](../bugs.md) (échec d'intégrateur de l'éphéméride GEO sous traînée)
+reste un `BUG`, pas un lot d'`OPT-2` ; la baseline GEO du banc reste en attente.
 
 ---
 
