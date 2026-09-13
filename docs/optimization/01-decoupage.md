@@ -329,12 +329,12 @@ Chaque entrée est un lot à changement unique, soumis au protocole §4.
 - **`D2` — amorcer le GT à travers les passes de `MeasuredLoadPlanner`.** Aujourd'hui
   re-cherché de zéro à chaque vol. Une **graine, pas un replay** (le replay est écarté, §1).
   FAST/BALANCED.
-- **`C1` — tolérances de l'intégrateur.** `absTol 1e-8` / `relTol 1e-10` scalaires : ~0,7 mm
-  sur la position pour un coût gradé en kilomètres. **Premier levier `C`** (JFR de L0, baseline
-  §4) : l'évaluation est liée NRLMSISE, appelé **par pas d'intégration**, donc moins de pas ⇒ moins
-  d'appels — et ça **aide FAST aussi**, la propagation par candidat étant dans la recherche (§3).
-  Risque : coût plus bruité à σ×0,01 (PRECISE). Re-baseline des gates. Reste à mesurer : le pas
-  est-il limité par la tolérance, ou par le plafond de 30 s / la détection d'événements ?
+- **`C1` — tolérances de l'intégrateur.** **Mesuré et tranché le 2026-09-13**
+  ([`07-conception-C1.md`](07-conception-C1.md), [`08-mesures-C1.md`](08-mesures-C1.md)) : le pas
+  était **tol-borné** (la réserve « ou cap-borné ? » est levée). Scalaire desserré de `1e-8/1e-10` à
+  **`1e-5/1e-7`** → **−58 % FAST / −66 % BALANCED / −63 % PRECISE** au banc, **verdict-neutre**
+  (PRECISE bit-identique, λ\* et orbite dans REL-18 partout). Le risque de bruit PRECISE ne s'est pas
+  matérialisé. **Clos le 2026-09-13** : gates re-baselinés et verts.
 
 **Leviers BALANCED/PRECISE (ensuite) :**
 

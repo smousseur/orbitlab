@@ -18,11 +18,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import jdk.jfr.Recording;
 import jdk.jfr.consumer.RecordedEvent;
 import jdk.jfr.consumer.RecordedThread;
@@ -52,12 +53,21 @@ import org.orekit.time.TimeScalesFactory;
  * #classifyThread}).
  *
  * <pre>
- *   OptBenchMain [outputDir] [cellFilter...]   # outputDir defaults to ./optbench-out
+ *   OptBenchMain [outputDir] [cellFilter...] [--tolSweep=abs/rel,abs/rel,...]
+ *   # outputDir defaults to ./optbench-out
  * </pre>
  *
  * <p>Each {@code cellFilter} is a case-insensitive substring of a cell id; only cells matching at
  * least one filter run, and a run with filters writes {@code baseline-L0-<filters>.md} so it never
  * overwrites the full baseline. {@code optBench --args="optbench-out GEO"} flies only the GEO cell.
+ *
+ * <p><b>{@code --tolSweep}</b> is the OPT-1 / C1 integrator-tolerance sweep (spec {@code
+ * docs/optimization/07-conception-C1.md}): each matching cell is flown once per {@code absTol/relTol}
+ * level, the level pushed to {@link OrekitService#OPT_ABS_TOL_PROPERTY} / {@link
+ * OrekitService#OPT_REL_TOL_PROPERTY} around the run, and a comparison report {@code c1-tolsweep.md}
+ * is written (a distinct {@code .jfr} per level). Without it the bench keeps its default single-run
+ * behaviour on the src/main default tolerance. Example:
+ * {@code optBench --args="optbench-out FAST --tolSweep=1e-8/1e-10,1e-6/1e-8,1e-5/1e-7"}.
  */
 public final class OptBenchMain {
 
@@ -87,13 +97,28 @@ public final class OptBenchMain {
     Thread.currentThread().setName(CALC_THREAD_NAME);
     OrekitService.get().initialize();
 
-    Path outputDir = Path.of(args.length > 0 ? args[0] : "optbench-out");
+    List<String> positional = new ArrayList<>();
+    List<TolLevel> tolSweep = List.of();
+    for (String arg : args) {
+      if (arg.startsWith("--tolSweep=")) {
+        tolSweep = parseTolSweep(arg.substring("--tolSweep=".length()));
+      } else {
+        positional.add(arg);
+      }
+    }
+
+    Path outputDir = Path.of(!positional.isEmpty() ? positional.get(0) : "optbench-out");
     Files.createDirectories(outputDir);
     List<String> filters =
-        args.length > 1 ? List.of(Arrays.copyOfRange(args, 1, args.length)) : List.of();
+        positional.size() > 1 ? List.copyOf(positional.subList(1, positional.size())) : List.of();
 
     AbsoluteDate epoch = new AbsoluteDate(2026, 1, 1, 12, 0, 0.0, TimeScalesFactory.getUTC());
     BenchProgressListener listener = new BenchProgressListener();
+
+    if (!tolSweep.isEmpty()) {
+      runTolSweep(tolSweep, filters, epoch, listener, outputDir);
+      return;
+    }
 
     List<CellResult> results = new ArrayList<>();
     for (Cell cell : matrix()) {
@@ -101,7 +126,7 @@ public final class OptBenchMain {
         continue;
       }
       logger.info("Running cell {} ({} / {})...", cell.id(), cell.type(), cell.mode());
-      CellResult result = runCell(cell, epoch, listener, outputDir);
+      CellResult result = runCell(cell, epoch, listener, outputDir.resolve(cell.id() + ".jfr"));
       results.add(result);
       if (result.ok()) {
         logger.info(
@@ -120,6 +145,92 @@ public final class OptBenchMain {
     Path report = outputDir.resolve(reportName);
     Files.writeString(report, renderReport(results, epoch));
     logger.info("Report written to {}", report.toAbsolutePath());
+  }
+
+  // ── C1 tolerance sweep (spec docs/optimization/07-conception-C1.md) ─────────
+
+  /** One integrator-tolerance level of the C1 sweep, kept as raw strings passed straight through. */
+  private record TolLevel(String absTol, String relTol) {
+    String label() {
+      return absTol + "/" + relTol;
+    }
+
+    /** Filename-safe tag for the per-level JFR (no {@code /}). */
+    String tag() {
+      return absTol + "_" + relTol;
+    }
+  }
+
+  /** One flown cell at one tolerance level. */
+  private record SweepEntry(String cellId, TolLevel level, CellResult result) {}
+
+  /** Parses {@code abs/rel,abs/rel,...} into tolerance levels, validating each pair up front. */
+  private static List<TolLevel> parseTolSweep(String value) {
+    List<TolLevel> levels = new ArrayList<>();
+    for (String pair : value.split(",")) {
+      String[] ar = pair.trim().split("/");
+      if (ar.length != 2) {
+        throw new IllegalArgumentException(
+            "Bad --tolSweep entry '" + pair + "': expected absTol/relTol");
+      }
+      // Parse to fail fast on a malformed number here, but keep the raw text so the property carries
+      // exactly what the user wrote (OrekitService parses it the same way).
+      Double.parseDouble(ar[0].trim());
+      Double.parseDouble(ar[1].trim());
+      levels.add(new TolLevel(ar[0].trim(), ar[1].trim()));
+    }
+    return levels;
+  }
+
+  /**
+   * Flies each matching cell once per tolerance level, pushing the level onto the OrekitService
+   * override properties around each run and clearing them afterwards, then writes a comparison
+   * report. The default src/main tolerance is unchanged throughout — the override is scoped to the
+   * run and always cleared.
+   */
+  private static void runTolSweep(
+      List<TolLevel> levels,
+      List<String> filters,
+      AbsoluteDate epoch,
+      BenchProgressListener listener,
+      Path outputDir)
+      throws Exception {
+    List<SweepEntry> entries = new ArrayList<>();
+    for (Cell cell : matrix()) {
+      if (!matches(cell, filters)) {
+        continue;
+      }
+      for (TolLevel level : levels) {
+        logger.info("Sweep cell {} at tol {}...", cell.id(), level.label());
+        System.setProperty(OrekitService.OPT_ABS_TOL_PROPERTY, level.absTol());
+        System.setProperty(OrekitService.OPT_REL_TOL_PROPERTY, level.relTol());
+        try {
+          Path jfr = outputDir.resolve(cell.id() + "-" + level.tag() + ".jfr");
+          CellResult result = runCell(cell, epoch, listener, jfr);
+          entries.add(new SweepEntry(cell.id(), level, result));
+          if (result.ok()) {
+            logger.info(
+                "  {} @ {}: {} s, {} evals, residual {} %",
+                cell.id(),
+                level.label(),
+                String.format(Locale.ROOT, "%.1f", result.wallSeconds()),
+                result.evaluations(),
+                String.format(Locale.ROOT, "%.1f", 100.0 * result.residualRatio()));
+          } else {
+            logger.warn("  {} @ {} FAILED: {}", cell.id(), level.label(), result.failure());
+          }
+        } finally {
+          System.clearProperty(OrekitService.OPT_ABS_TOL_PROPERTY);
+          System.clearProperty(OrekitService.OPT_REL_TOL_PROPERTY);
+        }
+      }
+    }
+
+    String reportName =
+        "c1-tolsweep" + (filters.isEmpty() ? "" : "-" + String.join("-", filters)) + ".md";
+    Path report = outputDir.resolve(reportName);
+    Files.writeString(report, renderTolSweep(entries, epoch));
+    logger.info("Tol sweep report written to {}", report.toAbsolutePath());
   }
 
   // ── Reference matrix ──────────────────────────────────────────────────────
@@ -205,9 +316,8 @@ public final class OptBenchMain {
       Map<String, Long> jfrSamplesByBucket) {}
 
   private static CellResult runCell(
-      Cell cell, AbsoluteDate epoch, BenchProgressListener listener, Path outputDir) {
+      Cell cell, AbsoluteDate epoch, BenchProgressListener listener, Path jfr) {
     listener.reset();
-    Path jfr = outputDir.resolve(cell.id() + ".jfr");
     Recording recording = startRecording(jfr);
     long start = System.nanoTime();
     try {
@@ -380,6 +490,63 @@ public final class OptBenchMain {
     return md.toString();
   }
 
+  /** Comparison report for a C1 tolerance sweep: one table per cell, one row per tolerance level. */
+  private static String renderTolSweep(List<SweepEntry> entries, AbsoluteDate epoch) {
+    StringBuilder md = new StringBuilder();
+    md.append("# OPT-1 / C1 — balayage de tolérance (brut du banc)\n\n");
+    md.append("Produit par `tools/optbench/OptBenchMain --tolSweep=...`. À relire, puis reporter ")
+        .append("dans `08-mesures-C1.md`.\n\n");
+    md.append("- Machine : ")
+        .append(Runtime.getRuntime().availableProcessors())
+        .append(" processeurs logiques\n");
+    md.append("- JVM : ")
+        .append(System.getProperty("java.version"))
+        .append(" (")
+        .append(System.getProperty("java.vm.name"))
+        .append(")\n");
+    md.append("- OS : ").append(System.getProperty("os.name")).append('\n');
+    md.append("- Époque de lancement : ").append(epoch).append('\n');
+    md.append("- Atmosphère : NRLMSISE (défaut `MissionFactory`), drag-on\n");
+    md.append("- Défaut `src/main` : absTol=")
+        .append(OrekitService.DEFAULT_OPT_ABS_TOL)
+        .append(", relTol=")
+        .append(OrekitService.DEFAULT_OPT_REL_TOL)
+        .append(" (la constante que C1 fige)\n\n");
+
+    Set<String> cellIds = new LinkedHashSet<>();
+    for (SweepEntry e : entries) {
+      cellIds.add(e.cellId());
+    }
+    for (String cellId : cellIds) {
+      md.append("## ").append(cellId).append("\n\n");
+      md.append("| absTol/relTol | Wall (s) | Évals | Résidu | λ | Orbite atteinte (moy.) | JFR |\n");
+      md.append("|---|---:|---:|---:|---|---|---|\n");
+      for (SweepEntry e : entries) {
+        if (!e.cellId().equals(cellId)) {
+          continue;
+        }
+        CellResult r = e.result();
+        md.append("| ")
+            .append(e.level().label())
+            .append(" | ")
+            .append(r.ok() ? String.format(Locale.ROOT, "%.1f", r.wallSeconds()) : "— échec")
+            .append(" | ")
+            .append(r.evaluations())
+            .append(" | ")
+            .append(r.ok() ? String.format(Locale.ROOT, "%.1f %%", 100.0 * r.residualRatio()) : "—")
+            .append(" | ")
+            .append(r.ok() && r.lambdas() != null ? formatLambdas(r.lambdas()) : "—")
+            .append(" | ")
+            .append(r.ok() ? r.orbitMean() : "—")
+            .append(" | `")
+            .append(r.jfr().getFileName())
+            .append("` |\n");
+      }
+      md.append('\n');
+    }
+    return md.toString();
+  }
+
   private static void renderCell(StringBuilder md, CellResult r) {
     md.append("## ").append(r.cell().id()).append('\n');
     md.append("- Type / mode : ").append(r.cell().type()).append(" / ").append(r.cell().mode()).append('\n');
@@ -443,7 +610,14 @@ public final class OptBenchMain {
     if (total == 0) {
       return "—";
     }
-    long search = r.jfrSamplesByBucket().getOrDefault("search (exploration pool)", 0L);
+    // Sum every "search (...)" bucket: classifyThread splits the search into the generation pool and
+    // the exploration-run threads, so a single fixed key would miss part of it (and did, silently,
+    // after the L1a rename).
+    long search =
+        r.jfrSamplesByBucket().entrySet().stream()
+            .filter(e -> e.getKey().startsWith("search"))
+            .mapToLong(Map.Entry::getValue)
+            .sum();
     return String.format(Locale.ROOT, "%.0f %%", 100.0 * search / total);
   }
 

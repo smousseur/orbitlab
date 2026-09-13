@@ -164,7 +164,7 @@ Pass `ApplicationContext` (not individual services) to AppStates and constructor
 
 ### OrekitService (Singleton)
 Access via `OrekitService.get()`. It provides:
-- Three propagator types: **Simple** (Newtonian), **Optimization** (8×8 gravity, fast), **Default** (50×50 gravity, accurate)
+- Two propagator factories: `createOptimizationPropagator` — the **production** one (8×8 gravity via Holmes-Featherstone, third-body perturbers, optional drag), on which every mission is optimized, replayed **and** measured (there is no higher-fidelity re-check); and `createTestPropagator` — a **test-only** point-mass (Newtonian) variant. Both take an integrator max step (see below). The optimization propagator's scalar tolerances are `DEFAULT_OPT_ABS_TOL`/`DEFAULT_OPT_REL_TOL` (`1e-5`/`1e-7` since OPT-1 / C1)
 - Reference frames: ICRF, ITRF, GCRF
 - Requires `orekit-data.zip` on classpath
 

@@ -238,6 +238,32 @@ public final class OrekitService {
   private static final double MAX_STEP_SAFETY_FACTOR = 1.5;
 
   /**
+   * Default scalar integrator tolerances for the optimization propagator, applied to all seven
+   * Cartesian state components.
+   *
+   * <p><b>{@code 1e-5} / {@code 1e-7} since OPT-1 / C1</b> (spec {@code
+   * docs/optimization/07-conception-C1.md}, mesures {@code 08-mesures-C1.md}). The historical
+   * {@code 1e-8} / {@code 1e-10} held position to ~0.7 mm for a cost graded in kilometres — some
+   * seven orders below the REL-18 comparison noise, and paid for by many small integrator steps
+   * (each an NRLMSISE call). The bench sweep measured the step as tolerance-bound and this value as
+   * the sweet spot: −58 % FAST / −66 % BALANCED / −63 % PRECISE wall, verdict bit-identical on
+   * PRECISE and within tens of metres elsewhere (~0.7 m local error, still ~27 000× under REL-18).
+   * Loosening further (1e-4/1e-6) bought only 3-11 % more for ten times the truncation error and a
+   * visible drift, not worth it when this is the only propagator the verdict is read from. The bench
+   * overrides it through {@link #OPT_ABS_TOL_PROPERTY} / {@link #OPT_REL_TOL_PROPERTY}.
+   */
+  public static final double DEFAULT_OPT_ABS_TOL = 1e-5;
+
+  /** Default relative tolerance for the optimization propagator; see {@link #DEFAULT_OPT_ABS_TOL}. */
+  public static final double DEFAULT_OPT_REL_TOL = 1e-7;
+
+  /** System property the C1 bench sweep sets to override {@link #DEFAULT_OPT_ABS_TOL}. */
+  public static final String OPT_ABS_TOL_PROPERTY = "orbitlab.opt.absTol";
+
+  /** System property the C1 bench sweep sets to override {@link #DEFAULT_OPT_REL_TOL}. */
+  public static final String OPT_REL_TOL_PROPERTY = "orbitlab.opt.relTol";
+
+  /**
    * Ignition parameters of a burn that can start mid-propagation, used to size the integrator max
    * step via {@link #burnLimitedMaxStep}.
    *
@@ -273,6 +299,35 @@ public final class OrekitService {
       limit = Math.min(limit, burn.burnToZeroSeconds() / MAX_STEP_SAFETY_FACTOR);
     }
     return limit;
+  }
+
+  /**
+   * Optional system-property override for an integrator tolerance, used only by the OPT-1 / C1 bench
+   * sweep ({@link #OPT_ABS_TOL_PROPERTY} / {@link #OPT_REL_TOL_PROPERTY}). Absent in production,
+   * where the default constant wins. A present-but-invalid value <b>fails fast</b> rather than
+   * silently defaulting, so a typo in a sweep cannot pass unnoticed and corrupt a measured row.
+   *
+   * @param property the system-property name to read
+   * @param defaultValue the value used when the property is absent
+   * @return the override when set to a positive finite double, otherwise {@code defaultValue}
+   */
+  private static double toleranceOverride(String property, double defaultValue) {
+    String raw = System.getProperty(property);
+    if (raw == null) {
+      return defaultValue;
+    }
+    double value;
+    try {
+      value = Double.parseDouble(raw.trim());
+    } catch (NumberFormatException e) {
+      throw new IllegalArgumentException(
+          "Invalid " + property + " override '" + raw + "': not a number", e);
+    }
+    if (!(value > 0.0) || Double.isInfinite(value)) {
+      throw new IllegalArgumentException(
+          "Invalid " + property + " override " + value + ": must be a positive finite number");
+    }
+    return value;
   }
 
   /**
@@ -330,8 +385,8 @@ public final class OrekitService {
    */
   public NumericalPropagator createOptimizationPropagator(FlightContext context, double maxStep) {
     double minStep = 0.001;
-    double absTol = 1e-8;
-    double relTol = 1e-10;
+    double absTol = toleranceOverride(OPT_ABS_TOL_PROPERTY, DEFAULT_OPT_ABS_TOL);
+    double relTol = toleranceOverride(OPT_REL_TOL_PROPERTY, DEFAULT_OPT_REL_TOL);
 
     DormandPrince853Integrator integrator =
         new DormandPrince853Integrator(minStep, maxStep, absTol, relTol);
