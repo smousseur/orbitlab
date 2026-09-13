@@ -220,7 +220,7 @@ public final class MissionRenderer {
    * @return the body that sample is drawn about
    */
   public static SolarSystemBody renderBodyOf(MissionEphemerisPoint point, FocusView view) {
-    return view.getMode() == ViewMode.SPACECRAFT ? point.arc().body() : view.getBody();
+    return view.getMode() == ViewMode.SPACECRAFT ? point.arc().body() : view.renderCentreBody();
   }
 
   /**
