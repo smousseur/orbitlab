@@ -430,6 +430,11 @@ public final class OptBenchMain {
             leo("FH LEO400", fh, 400.0)),
         new Cell("GEO_SAT_FAST", MissionType.GEO, OptimizationType.FAST, geo("GEO SAT", fh, 400.0)),
         new Cell(
+            "GEO_SAT_BALANCED",
+            MissionType.GEO,
+            OptimizationType.BALANCED,
+            geo("GEO SAT", fh, 400.0)),
+        new Cell(
             "ARIANE64_LEO400_FAST",
             MissionType.LEO,
             OptimizationType.FAST,

@@ -63,6 +63,22 @@ class AnalyticParkingInsertionStageTest {
         .withMass(mass);
   }
 
+  /**
+   * A state at {@code altitude} with an explicit radial and tangential velocity — the off-periapsis
+   * hand-off the circular fixtures above cannot express. Position on +X, velocity in the XY plane,
+   * so {@code vRad} points radially out (+X) and {@code vTan} is prograde (+Y).
+   */
+  private static SpacecraftState stateAt(double altitude, double vRad, double vTan, double mass) {
+    double r = Constants.WGS84_EARTH_EQUATORIAL_RADIUS + altitude;
+    return new SpacecraftState(
+            new CartesianOrbit(
+                new PVCoordinates(new Vector3D(r, 0, 0), new Vector3D(vRad, vTan, 0)),
+                OrekitService.get().gcrf(),
+                AbsoluteDate.J2000_EPOCH,
+                Constants.WGS84_EARTH_MU))
+        .withMass(mass);
+  }
+
   private static VehicleStack stack() {
     LaunchVehicle upperStage =
         new LaunchVehicle(4_000, 107_500, 12_000, new PropulsionSystem(348, 981_000));
@@ -176,5 +192,38 @@ class AnalyticParkingInsertionStageTest {
     assertTrue(
         afterInsertion.getDate().durationFrom(nominal.getDate()) > 0,
         "the plan must advance time through the transfer coast");
+  }
+
+  /**
+   * The off-periapsis hand-off the circular fixtures above cannot express, and the flaw it hides
+   * (BUG-26). The GEO gravity turn hands off still climbing — FPA 6.83° (vRad 886.8, vTan 7400.8)
+   * at 99 km — on an orbit whose apogee (~428 km) already exceeds the 400 km target but whose
+   * perigee is sub-surface (~-1378 km). The branch decision is taken on {@code
+   * vTransferPerigee − |v|}, which reads that climbing state as a periapsis: it comes out positive,
+   * the raising branch burns prograde at the entry, and the parking orbit it leaves is itself
+   * sub-orbital (perigee well below the surface). The coast that then flies it re-enters, and under
+   * drag the downstream planning propagation collapses at the integrator's minimum step. The branch
+   * must be chosen on the orbit's <em>actual</em> apogee, not on a periapsis assumption.
+   */
+  @Test
+  void climbingHandoffWithApogeeAboveTarget_reachesASustainableParkingOrbit() {
+    VehicleStack stack = stack();
+    SpacecraftState handoff = stateAt(99_376, 886.8, 7400.8, stack.getMass());
+    AnalyticParkingInsertionStage stage =
+        new AnalyticParkingInsertionStage("Parking", TARGET_ALTITUDE);
+
+    SpacecraftState parked = stage.propagateStandalone(handoff, missionWith(stack));
+
+    KeplerianOrbit orbit = new KeplerianOrbit(parked.getOrbit());
+    double perigee = orbit.getA() * (1 - orbit.getE()) - Constants.WGS84_EARTH_EQUATORIAL_RADIUS;
+    assertTrue(
+        perigee > 100_000,
+        () ->
+            "the parking orbit must be sustainable (perigee well above the surface), not the "
+                + "sub-orbital ellipse the raising branch leaves; got perigee "
+                + Math.round(perigee / 1000.0)
+                + " km");
+    assertTrue(
+        parked.getMass() < stack.getMass(), "the insertion burns must have spent propellant");
   }
 }

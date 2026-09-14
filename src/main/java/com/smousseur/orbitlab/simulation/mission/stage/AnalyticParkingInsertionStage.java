@@ -19,6 +19,7 @@ import org.hipparchus.util.FastMath;
 import org.orekit.attitudes.LofOffset;
 import org.orekit.forces.maneuvers.ConstantThrustManeuver;
 import org.orekit.frames.LOFType;
+import org.orekit.orbits.KeplerianOrbit;
 import org.orekit.propagation.SpacecraftState;
 import org.orekit.propagation.events.DateDetector;
 import org.orekit.propagation.numerical.NumericalPropagator;
@@ -186,22 +187,21 @@ public class AnalyticParkingInsertionStage extends MissionStage {
     double dv1Raw = vTransferPerigee - v1;
     double dv2Raw = vCircTarget - vTransferApogee;
 
-    // Both burns of a raising Hohmann transfer are prograde. A retrograde ΔV means the entry
-    // apoapsis already sits above the target, i.e. the geometry documented on this class does not
-    // hold — and it is not a benign inaccuracy: Physics.computeBurnDuration evaluates
-    // (1 − exp(−Δv/ve)), which goes NEGATIVE for a negative Δv, so the plan hands the propagator a
-    // maneuver whose end date precedes its start and predicts a mass GAIN across burn 1. Observed
-    // on the I7 GEO loop at λ=0.3 (dv1 = −57 m/s, dt1 = −0.61 s): the burns silently did nothing
-    // and the mission flew on with a corrupted plan. Refuse it instead — the caller (mission
-    // optimizer, then the outer propellant loop) reads this as a clean infeasibility.
-    // A retrograde ΔV1 means the entry apoapsis already sits ABOVE the target, so the raising
-    // geometry documented on this class does not hold. That state is flown by the descending plan
-    // below rather than refused — but it cannot be flown by negating this burn, because the two
-    // plans do not act at the same point. Here the burn is at the entry, which the geometry assumes
-    // is the periapsis; a hand-over carrying excess energy is nowhere near one. Measured on the
-    // Falcon Heavy lunar cells: vRad = 1 085.6 m/s and a flight path angle of 7.39°, against the
-    // 0.2 m/s and 0.00° an Ariane 64 hands over in the same run.
-    if (dv1Raw < -DV_SIGN_TOLERANCE) {
+    // Branch on the orbit's ACTUAL apoapsis, not on the sign of dv1Raw. The raising plan below
+    // burns prograde at the entry point on the documented premise that the entry is the periapsis
+    // of a sub-orbital ellipse whose apoapsis is below the target. A gravity turn still climbing at
+    // hand-off breaks that premise, and dv1Raw cannot see it: computed as vTransferPerigee − |v| it
+    // reads the entry as a periapsis, so it stays positive even when the orbit already reaches the
+    // target altitude — sending a hand-over whose real periapsis is sub-surface down the raising
+    // path, which leaves the parking orbit itself sub-orbital (BUG-26; the GEO profile hands off at
+    // FPA 6.83°, apoapsis 428 km ≥ the 400 km target, periapsis −1378 km, and the raising plan then
+    // parks at −372 km). The descending plan takes both burns to an apside instead, which is
+    // correct from any phase and flies the sub-orbital hand-over and the descent with one
+    // arithmetic (its own javadoc). At a true periapsis the two criteria coincide — dv1Raw < 0 ⟺
+    // apoapsis > target — so a near-periapsis hand-over keeps its branch unchanged.
+    KeplerianOrbit entryOrbit = new KeplerianOrbit(state.getOrbit());
+    double entryApoapsis = entryOrbit.getA() * (1.0 + entryOrbit.getE());
+    if (entryApoapsis > r2 + DV_SIGN_TOLERANCE) {
       return computeDescendingPlan(state, vehicle, context, r1);
     }
     // A retrograde ΔV2 is a different geometry again: the target below the entry radius, leaving
