@@ -95,8 +95,9 @@ public final class FlownBandAim {
 
     double aim = fallback;
     for (int iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
-      // Terrestrial by nature, not by omission: this whole centring is a J2 flattening correction,
-      // and its single caller is a geostationary trim burn (MIS-5 / L2 §3.4).
+      // Terrestrial by nature, not by omission: this whole centring is a J2 flattening correction.
+      // Its callers are the Earth-orbit trim burns (the single-burn trim's resolve here, and the
+      // LEO mean-circularization through closedFormOffset), never a lunar arc.
       Optional<OrbitElements> mean = OrbitElements.mean(aimedOrbit.apply(aim), RE);
       if (mean.isEmpty()) {
         logger.debug(
@@ -138,5 +139,31 @@ public final class FlownBandAim {
    */
   public static double closedFormOffset(double semiMajorAxis) {
     return 1.5 * J2 * RE * RE / semiMajorAxis;
+  }
+
+  /**
+   * The band-centring offset corrected for orbital inclination. The flown↔mean radius gap is not
+   * the equatorial {@link #closedFormOffset(double) a·f} at every inclination: the J2 short-period
+   * term that separates the flown radius from the mean semi-major axis carries a factor {@code (1 −
+   * 3/2·sin²i)}. It shrinks with inclination, vanishes near the 54.7° where {@code sin²i = 2/3},
+   * and turns negative beyond — so on a polar orbit the flown band sits <em>above</em> the mean,
+   * and the offset must drop below the request to keep the flown band centred on it.
+   *
+   * <p><b>Measured 2026-09-14</b> by {@code InclinationBandCentringProbe} across 5.2°–90° at 550
+   * km: {@code gap/a·f} tracked {@code (1 − 3/2·sin²i)} at every point (fitted slope 1.57 against
+   * the theoretical 1.5, the 4.5% coming from the 8×8 field and Eckstein-Hechler's residual), and
+   * the sign change was confirmed at the pole (gap −5.4 km). The theoretical coefficient is kept
+   * rather than the fitted one, on the same reasoning as {@link #closedFormOffset(double)}: it
+   * already removes the inclination bias to within Eckstein-Hechler's own ~600 m residual (3.3 km →
+   * ~0.2 km at 28.5°, 14.9 km → ~0.7 km at the pole), and a fitted 1.57 would buy ~0.5 km at the
+   * price of a constant nobody could re-derive.
+   *
+   * @param semiMajorAxis the orbit's semi-major axis (m)
+   * @param inclination the orbit's inclination (rad)
+   * @return the inclination-corrected offset between the mean apside and the flown radius (m)
+   */
+  public static double closedFormOffset(double semiMajorAxis, double inclination) {
+    double sinI = FastMath.sin(inclination);
+    return closedFormOffset(semiMajorAxis) * (1.0 - 1.5 * sinI * sinI);
   }
 }

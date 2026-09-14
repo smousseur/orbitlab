@@ -279,7 +279,13 @@ public class AnalyticTrimBurnStage extends MissionStage {
     }
 
     double rTargetPeri = EARTH_RADIUS + targetPerigeeAltitude;
-    double rStar = rTargetPeri + FlownBandAim.closedFormOffset(rTargetPeri);
+    // Inclination-aware band centring: the flown↔mean gap shrinks as (1 − 3/2·sin²i) and flips sign
+    // past 54.7°, so off the equator the equatorial a·f would leave the flown band centred above
+    // the
+    // request (measured 2026-09-14, InclinationBandCentringProbe). GEO and the elliptic single-burn
+    // trim keep the equatorial offset — this correction is scoped to the circular LEO path
+    // measured.
+    double rStar = rTargetPeri + FlownBandAim.closedFormOffset(rTargetPeri, targetInclination);
     double mu = entry.getOrbit().getMu();
 
     double[] seed;

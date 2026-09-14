@@ -130,6 +130,32 @@ class FlownBandAimTest {
     Assertions.assertEquals(1_567.0, FlownBandAim.closedFormOffset(42_164_000.0), 10.0);
   }
 
+  /**
+   * The inclination-aware offset: equal to the equatorial form at {@code i = 0}, following {@code
+   * (1 − 3/2·sin²i)} off the equator — shrinking with inclination, vanishing at the 54.7° critical
+   * inclination, and turning negative at the pole, where the flown band sits above the mean ({@code
+   * InclinationBandCentringProbe}, 2026-09-14).
+   */
+  @Test
+  void closedFormOffsetFollowsInclination() {
+    double a = RE + 550_000.0;
+    double equatorial = FlownBandAim.closedFormOffset(a);
+
+    Assertions.assertEquals(equatorial, FlownBandAim.closedFormOffset(a, 0.0), 1.0e-9);
+
+    double i285 = FastMath.toRadians(28.5);
+    double sin2 = FastMath.sin(i285) * FastMath.sin(i285);
+    Assertions.assertEquals(
+        equatorial * (1.0 - 1.5 * sin2), FlownBandAim.closedFormOffset(a, i285), 1.0e-6);
+
+    double critical = FastMath.asin(FastMath.sqrt(2.0 / 3.0));
+    Assertions.assertEquals(0.0, FlownBandAim.closedFormOffset(a, critical), 1.0e-6);
+
+    Assertions.assertTrue(
+        FlownBandAim.closedFormOffset(a, FastMath.toRadians(90.0)) < 0.0,
+        "the flown band sits above the mean at the pole, so the offset is negative there");
+  }
+
   private static double meanSemiMajorAxisMiss(double aim, double apsisRadius, double targetMeanA) {
     OrbitElements mean =
         OrbitElements.mean(aimedOrbit(aim, apsisRadius), RE)
