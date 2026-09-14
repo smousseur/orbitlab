@@ -4,10 +4,13 @@ import com.smousseur.orbitlab.core.OrbitlabException;
 import java.util.Locale;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.hipparchus.util.FastMath;
+import org.orekit.frames.Frame;
+import org.orekit.models.earth.atmosphere.Atmosphere;
 import org.orekit.orbits.CartesianOrbit;
 import org.orekit.orbits.KeplerianOrbit;
 import org.orekit.orbits.OrbitType;
 import org.orekit.propagation.SpacecraftState;
+import org.orekit.time.AbsoluteDate;
 import org.orekit.utils.Constants;
 import org.orekit.utils.PVCoordinates;
 
@@ -33,6 +36,37 @@ public final class Physics {
     Vector3D position = state.getPVCoordinates().getPosition();
     Vector3D velocity = state.getPVCoordinates().getVelocity();
     return Vector3D.dotProduct(position, velocity) / position.getNorm();
+  }
+
+  /**
+   * The dynamic pressure {@code q = ½ ρ v_rel²} the vehicle feels — the aerodynamic load an
+   * atmosphere puts on an ascending or re-entering body, and the {@code Q(t)} profile PHY-9 will
+   * plot from the mission ephemeris.
+   *
+   * <p><b>{@code v_rel} is the velocity relative to the moving air, not the inertial velocity.</b>
+   * The atmosphere co-rotates with the body, and near the ground that entrainment is a few hundred
+   * m/s — the same ~465 m/s eastward the launch site itself carries — so subtracting it is not a
+   * refinement but the difference between the pressure on the vehicle and the pressure on a fixed
+   * point. Density and air velocity are both read from the {@link Atmosphere} the mission actually
+   * flies ({@link OrekitService#atmosphere}), evaluated at the state's own date, position and frame
+   * so the three agree.
+   *
+   * @param state the spacecraft state
+   * @param atmosphere the atmosphere the mission is flown against; never {@code null} — the caller
+   *     resolves it only when the flight context carries drag
+   * @return the dynamic pressure in pascals
+   */
+  public static double dynamicPressure(SpacecraftState state, Atmosphere atmosphere) {
+    AbsoluteDate date = state.getDate();
+    Frame frame = state.getFrame();
+    Vector3D position = state.getPVCoordinates().getPosition();
+    double density = atmosphere.getDensity(date, position, frame);
+    Vector3D relativeVelocity =
+        state
+            .getPVCoordinates()
+            .getVelocity()
+            .subtract(atmosphere.getVelocity(date, position, frame));
+    return 0.5 * density * relativeVelocity.getNormSq();
   }
 
   /**

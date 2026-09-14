@@ -454,6 +454,27 @@ public final class OrekitService {
   }
 
   /**
+   * The atmosphere of the given model around the given central body — the very {@link Atmosphere}
+   * instance every {@link DragForce} computes against, resolved once and shared, or {@code null}
+   * when that body has no atmosphere.
+   *
+   * <p>Public seam of PHY-3: {@code Physics.dynamicPressure} reads its density off the atmosphere
+   * the mission <em>actually flies</em> rather than a reconstruction of it — which is also why the
+   * {@code AtmosphereProbe} test helper stopped fabricating a propagator to reach the shared
+   * instance and calls this instead. It delegates to {@link #atmosphereFor(AtmosphereModel,
+   * GravitationalContext)}: the cache, the space-weather sharing and the {@code NONE} rejection all
+   * live in the one place.
+   *
+   * @param model the atmosphere model; never {@link AtmosphereModel#NONE}, which {@link
+   *     DragContext} refuses to hold
+   * @param gravity the gravitational context the atmosphere is built against
+   * @return the shared atmosphere, or {@code null} when the central body has none (e.g. the Moon)
+   */
+  public Atmosphere atmosphere(AtmosphereModel model, GravitationalContext gravity) {
+    return atmosphereFor(model, gravity);
+  }
+
+  /**
    * The atmosphere of the given model around the given central body, resolved once and shared by
    * every propagator, or {@code null} when that body has no atmosphere.
    *

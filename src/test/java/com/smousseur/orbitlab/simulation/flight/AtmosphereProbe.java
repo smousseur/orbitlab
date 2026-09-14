@@ -1,53 +1,40 @@
 package com.smousseur.orbitlab.simulation.flight;
 
 import com.smousseur.orbitlab.simulation.OrekitService;
-import com.smousseur.orbitlab.simulation.mission.vehicle.model.AerodynamicProperties;
+import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
 import java.lang.reflect.Field;
-import org.orekit.forces.ForceModel;
 import org.orekit.forces.drag.AbstractDragForceModel;
 import org.orekit.forces.drag.DragForce;
 import org.orekit.models.earth.atmosphere.Atmosphere;
 
 /**
- * Reaches the {@link Atmosphere} a propagator was actually built with — the one PHY-1 / L2 reads
- * its densities from.
- *
- * <p><b>Why the atmosphere is fetched and not rebuilt.</b> {@code OrekitService} resolves the pair
- * (model, central body) behind a private cache, so a test that instantiated its own {@code
- * HarrisPriester} would be checking its own arithmetic against Orekit's rather than checking what
- * the mission flies. Going through a factory-built propagator keeps the measured ρ on the
- * production path; the price is one reflective read, which neither {@link DragForce} nor {@link
- * AbstractDragForceModel} makes avoidable.
+ * Reaches the {@link Atmosphere} a propagation flies against — the one PHY-1 / L2 reads its
+ * densities from — without a test rebuilding its own {@code HarrisPriester} and checking its own
+ * arithmetic against Orekit's rather than checking what the mission flies.
  */
 final class AtmosphereProbe {
-
-  /** Any positive pair: the drag force has to be mounted, its cross-section is not read here. */
-  private static final AerodynamicProperties PROBE = new AerodynamicProperties(1.0, 2.2);
 
   private AtmosphereProbe() {}
 
   /**
-   * The shared atmosphere {@code OrekitService} resolves for this model around the Earth.
+   * The shared atmosphere {@code OrekitService} resolves for this model around the Earth — the very
+   * instance every production propagator's drag force computes against.
+   *
+   * <p>Since PHY-3 this is a direct call to {@link OrekitService#atmosphere(AtmosphereModel,
+   * GravitationalContext)}: it used to fabricate a propagator with a dummy drag force purely to
+   * extract the atmosphere behind it, which the public seam makes needless.
    *
    * @param model the model to resolve; never {@code NONE}, which carries no atmosphere at all
    * @return the atmosphere the production propagators use
    */
   static Atmosphere of(AtmosphereModel model) {
-    ForceModel drag =
-        OrekitService.get()
-            .createOptimizationPropagator(
-                FlightContext.earth().withDrag(new DragContext(PROBE, model)),
-                OrekitService.COAST_MAX_STEP)
-            .getAllForceModels()
-            .stream()
-            .filter(DragForce.class::isInstance)
-            .findFirst()
-            .orElseThrow(() -> new AssertionError("no DragForce mounted for " + model));
-    return behind((DragForce) drag);
+    return OrekitService.get().atmosphere(model, GravitationalContext.earth());
   }
 
   /**
-   * The atmosphere a given mounted force computes against.
+   * The atmosphere a given <em>mounted</em> force computes against — distinct from {@link
+   * #of(AtmosphereModel)}, which fetches the shared instance by model: this one verifies the force
+   * a propagator actually built, so it still has to read the private field the force holds.
    *
    * @param force the mounted drag force
    * @return its atmosphere

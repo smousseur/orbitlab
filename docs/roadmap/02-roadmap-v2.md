@@ -49,7 +49,7 @@ colonne de droite ; le reste peut glisser.
 | ~~`J2`~~ | ~~Trois arbitrages du modèle atmosphérique~~ — **tranché le 2026-09-10** (`DT-13`/`DT-14`/`DT-15`, [`dette-technique.md`](../dette-technique.md)) | — | — | — | `PHY-8` |
 | ~~`PHY-2`~~ | ~~**Atmosphère par défaut + recalibrage optimiseur**~~ — **livré le 2026-09-12** ([`atmosphere/13-cloture-PHY-2.md`](../atmosphere/13-cloture-PHY-2.md)) | — | — | — | — |
 | ~~`OPT-1`~~ | ~~**Temps de calcul des trajectoires**~~ — **livré le 2026-09-14** ([`optimization/13-cloture.md`](../optimization/13-cloture.md)) ; reliquat → `OPT-2` (backlog, §4) | — | — | — | — |
-| `PHY-3` | Détecteurs MaxQ, télémétrie, UI de fidélité | 3 | 2 | M | `PHY-2` |
+| `PHY-3` | Bricks instrumentation atmosphère (interface Kármán + fonction Q) | 1 | 1 | S | `PHY-2` |
 | `RND-5` | Repère d'affichage inertiel / tournant | 2 | 2 | S | — |
 | `RND-6` | **Trace au sol** *(neuf)* | 3 | 2 | M | `RND-5` |
 | `MIS-10` | Déorbitage contrôlé et rentrée atmosphérique | 5 | 3 | M | `PHY-2`, `PHY-3`, `RND-6`, `BUG-10` |
@@ -679,16 +679,66 @@ reste un `BUG`, pas un lot d'`OPT-2` ; la baseline GEO du banc reste en attente.
 
 ---
 
-### PHY-3 — Détecteurs, télémétrie, UI de fidélité — ★3 ◆2 M
+### PHY-3 — Bricks instrumentation atmosphère — ★1 ◆1 S
 
-`MaxQDetector`, `AtmosphericInterfaceDetector` (ligne de Kármán — hook direct
-pour `MIS-10`), extension de `TelemetryWidgetAppState` avec Q et drag
-instantané, sélecteur Off / Statique / Réaliste dans `StepParameters`. Le profil
-`Q(t)` est le meilleur objet pédagogique que l'atmosphère apporte.
+**Resserré le 2026-09-14** (brainstorm de découpage). La fiche d'origine
+bundlait quatre livrables — `MaxQDetector`, `AtmosphericInterfaceDetector`,
+télémétrie Q / traînée, sélecteur de fidélité. La mesure les a réordonnés : la
+sortie visible (le profil `Q(t)`, le sélecteur, la décision du défaut) est un
+livrable UI **autonome dont aucun ticket ne dépend**, et elle part en `PHY-9`
+(backlog, ci-dessous). Ce qui reste sous `PHY-3`, ce sont les deux **bricks que
+la roadmap couple réellement** :
 
-**`AtmosphericInterfaceDetector` est le livrable que `MIS-10` consomme**, et
-c'est la raison de l'ordre des deux items : la rentrée a besoin d'une marque
-d'entrée avant d'avoir besoin d'une terminaison.
+- **`AtmosphericInterfaceDetector`** — marque le franchissement de la ligne de
+  Kármán (100 km), sur le patron de `ReentryDetector` (`AbstractDetector` +
+  `ContinueOnEvent`, altitude sphérique). C'est le livrable que `MIS-10` consomme
+  comme marque d'entrée — la raison de l'ordre des deux items : la rentrée a
+  besoin d'une marque d'entrée avant d'avoir besoin d'une terminaison.
+- **La fonction de pression dynamique** — `Physics.dynamicPressure(état,
+  atmosphère) = 0,5·ρ·v_rel²`, densité lue sur l'`Atmosphere` réellement montée
+  (accessor public sur `OrekitService`). C'est ce dont `FX-4` module l'enveloppe
+  plasma, et ce que `PHY-9` échantillonnera sur l'éphéméride pour tracer la
+  courbe.
+
+**Aucun effet visible au runtime** : deux bricks armés nulle part en prod,
+validés par tests unitaires. Lot d'outillage, comme `AST-1` est un délai — ce
+qu'il débloque (`MIS-10`, `FX-4`, `PHY-9`) le rembourse.
+
+**`MaxQDetector` n'est pas ici** : aucun consommateur v2. Il part avec `PHY-9`
+(où MaxQ est l'extremum échantillonné du profil, sans détecteur) ou avec un
+usage plus tardif (replay caméra « highlights », charge structurelle).
+
+---
+
+### PHY-9 — Courbe Q(t) — *backlog, sans slot*
+
+> **Moitié visible re-carvée de `PHY-3`** (2026-09-14). La sortie pédagogique de
+> l'atmosphère : *« le profil `Q(t)` est le meilleur objet pédagogique que
+> l'atmosphère apporte »*. Aucun ticket n'en dépend, d'où le backlog ; débloquée
+> dès que `PHY-3` livre la fonction de pression dynamique.
+
+**À faire.**
+- **Échantillonner Q** (et la traînée instantanée) sur `MissionEphemerisPoint` au
+  moment de la génération — le `Collector` a déjà `FlightContext` +
+  `SpacecraftState` en main. Champ sans lecteur avant cet item, d'où son report
+  ici plutôt que dans les bricks.
+- **Tracer la courbe** dans le panneau détails de la mission (une fois `READY`),
+  ou une popup dédiée ouverte depuis lui — le panneau actuel est une liste
+  compacte 350 × 240 sans place pour un graphe. Aucune infra de charting
+  n'existe : l'item l'apporte.
+- **Sélecteur `Off` / `Réaliste`** dans `StepParameters`, branché sur le champ
+  `AtmosphereModel` déjà en place. **Deux valeurs, pas trois** : `Statique`
+  (Harris-Priester) lève sous 100 km et ne vole aucune mission partant du sol —
+  l'offrir donnerait une exception d'intégration
+  ([`atmosphere/13-cloture-PHY-2.md`](../atmosphere/13-cloture-PHY-2.md) §4).
+- **Trancher le défaut** (`NRLMSISE` vs `NONE`) — la décision que `PHY-2` a
+  explicitement reportée à *« le jour où le profil `Q(t)` existe »*, l'atmosphère
+  cessant alors d'être un coût ×2,4 sans contrepartie visible.
+- **MaxQ** — l'extremum de Q sur le profil échantillonné, marqué sur la courbe.
+  Pas de détecteur tant qu'un usage ne réclame pas l'instant précis.
+
+**Hors périmètre** : `FX-4` lit la fonction Q de `PHY-3` (ou le champ éphéméride
+d'ici), pas la courbe ; cet item ne le débloque pas.
 
 ---
 
