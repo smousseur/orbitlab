@@ -157,7 +157,7 @@ public class ParallelCMAESOptimizer extends MultivariateOptimizer {
   private int mu; //
 
   /** log(mu + 0.5), stored for efficiency. */
-  private double logMu2; // NOPMD - using a field here is for performance reasons
+  private double logMu2;
 
   /** Array for weighted recombination. */
   private RealMatrix weights;
@@ -210,7 +210,7 @@ public class ParallelCMAESOptimizer extends MultivariateOptimizer {
   private RealMatrix B;
 
   /** Scaling. */
-  private RealMatrix D; // NOPMD
+  private RealMatrix D;
 
   /** B*D, stored for efficiency. */
   private RealMatrix BD;
@@ -1024,6 +1024,11 @@ public class ParallelCMAESOptimizer extends MultivariateOptimizer {
    * @return {@code true} if the whole generation was evaluated, {@code false} if the budget was
    *     exhausted mid-generation and the caller must break the generation loop
    */
+  // PMD.PreserveStackTrace: the ExecutionException wrapper is unwrapped on purpose so a parallel
+  // candidate failure aborts the generation exactly as the sequential path's raw throw would, and
+  // callers keep catching the same type (e.g. the cross-run stop signal). The re-thrown cause still
+  // carries its own worker-thread origin trace; only the executor's plumbing frame is dropped.
+  @SuppressWarnings("PMD.PreserveStackTrace")
   private boolean evaluateGeneration(
       final FitnessFunction fitfun,
       final RealMatrix arx,

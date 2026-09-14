@@ -134,7 +134,7 @@ public final class OptBenchMain {
         tolSweep = parseTolSweep(arg.substring("--tolSweep=".length()));
       } else if (arg.startsWith("--floorSweep=")) {
         floorSweep = parseFloorSweep(arg.substring("--floorSweep=".length()));
-      } else if (arg.equals("--seedSweep")) {
+      } else if ("--seedSweep".equals(arg)) {
         seedSweep = true;
       } else {
         positional.add(arg);
@@ -500,6 +500,10 @@ public final class OptBenchMain {
       Path jfr,
       Map<String, Long> jfrSamplesByBucket) {}
 
+  // PMD.CloseResource: stopRecording() stops and closes the recording on both the success and the
+  // failure path, and must run before samplesByBucket(jfr) parses the file — so it closes earlier
+  // than a try-with-resources would, which is exactly why one does not fit here.
+  @SuppressWarnings("PMD.CloseResource")
   private static CellResult runCell(
       Cell cell, AbsoluteDate epoch, BenchProgressListener listener, Path jfr) {
     listener.reset();

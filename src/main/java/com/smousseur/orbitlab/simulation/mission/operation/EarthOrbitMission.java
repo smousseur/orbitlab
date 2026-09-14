@@ -190,7 +190,8 @@ public class EarthOrbitMission extends EarthMission {
             latitude,
             new TransfertTwoManeuverStage(
                 "Transfert", targetAltitude, launchPlane.targetInclination()),
-            new AnalyticTrimBurnStage("Trim", targetAltitude, launchPlane.targetInclination()));
+            new AnalyticTrimBurnStage(
+                "Trim", targetAltitude, targetAltitude, launchPlane.targetInclination()));
     return new EarthOrbitMission(
         name,
         stack,
@@ -258,8 +259,11 @@ public class EarthOrbitMission extends EarthMission {
             new TransfertManeuverStage(
                 "Transfert", perigeeAltitude, apogeeAltitude, launchPlane.targetInclination()),
             // The trim burn at the next apogee raises the perigee to the target perigee, shaping
-            // the ellipse (target perigee, achieved apogee) — its altitude argument is the perigee.
-            new AnalyticTrimBurnStage("Trim", perigeeAltitude, launchPlane.targetInclination()));
+            // the ellipse (target perigee, achieved apogee) — its altitude arguments are perigee
+            // and
+            // apogee, which differ here, so the trim stays on its single-burn path.
+            new AnalyticTrimBurnStage(
+                "Trim", perigeeAltitude, apogeeAltitude, launchPlane.targetInclination()));
     return new EarthOrbitMission(
         name,
         stack,
@@ -329,7 +333,8 @@ public class EarthOrbitMission extends EarthMission {
         latitude,
         new AnalyticHohmannTransferStage(
             "Transfert", perigeeAltitude, apogeeAltitude, launchPlane.targetInclination()),
-        new AnalyticTrimBurnStage("Trim", perigeeAltitude, launchPlane.targetInclination()));
+        new AnalyticTrimBurnStage(
+            "Trim", perigeeAltitude, apogeeAltitude, launchPlane.targetInclination()));
   }
 
   /**

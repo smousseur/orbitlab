@@ -198,12 +198,12 @@ class AnalyticParkingInsertionStageTest {
    * The off-periapsis hand-off the circular fixtures above cannot express, and the flaw it hides
    * (BUG-26). The GEO gravity turn hands off still climbing — FPA 6.83° (vRad 886.8, vTan 7400.8)
    * at 99 km — on an orbit whose apogee (~428 km) already exceeds the 400 km target but whose
-   * perigee is sub-surface (~-1378 km). The branch decision is taken on {@code
-   * vTransferPerigee − |v|}, which reads that climbing state as a periapsis: it comes out positive,
-   * the raising branch burns prograde at the entry, and the parking orbit it leaves is itself
-   * sub-orbital (perigee well below the surface). The coast that then flies it re-enters, and under
-   * drag the downstream planning propagation collapses at the integrator's minimum step. The branch
-   * must be chosen on the orbit's <em>actual</em> apogee, not on a periapsis assumption.
+   * perigee is sub-surface (~-1378 km). The branch decision is taken on {@code vTransferPerigee −
+   * |v|}, which reads that climbing state as a periapsis: it comes out positive, the raising branch
+   * burns prograde at the entry, and the parking orbit it leaves is itself sub-orbital (perigee
+   * well below the surface). The coast that then flies it re-enters, and under drag the downstream
+   * planning propagation collapses at the integrator's minimum step. The branch must be chosen on
+   * the orbit's <em>actual</em> apogee, not on a periapsis assumption.
    */
   @Test
   void climbingHandoffWithApogeeAboveTarget_reachesASustainableParkingOrbit() {

@@ -14,8 +14,12 @@ import org.orekit.propagation.conversion.osc2mean.EcksteinHechlerTheory;
 import org.orekit.propagation.conversion.osc2mean.FixedPointConverter;
 
 /**
- * The elements of an orbit as OrbitLab reports them. A <em>reporting</em> quantity only: nothing
- * here feeds a propagation, a cost function or a targeting decision.
+ * The elements of an orbit as OrbitLab reports them. Primarily a <em>reporting</em> quantity — the
+ * osculating and apside reads feed nothing but a log line or a UI field. The mean-element
+ * conversion is the exception: it is also read by two targeting sites, {@link
+ * com.smousseur.orbitlab.simulation.FlownBandAim}'s band centring and {@code
+ * AnalyticTrimBurnStage}'s mean-circularization, through {@link #mean(Orbit, double)} and {@link
+ * #meanOrbit(Orbit)}.
  *
  * <p><b>Altitude convention.</b> Apsides are spherical-equatorial, {@code a(1±e) −
  * referenceRadius}, measured from the equatorial radius of <b>the body the arc is flown around</b>
@@ -123,6 +127,28 @@ public record OrbitElements(
    * @param referenceRadius the equatorial radius the apsides are counted from (m)
    */
   public static Optional<OrbitElements> mean(Orbit orbit, double referenceRadius) {
+    return meanOrbit(orbit).map(o -> elementsOf(o, referenceRadius));
+  }
+
+  /**
+   * The <b>mean</b> orbit of {@code orbit} — the osculating orbit stripped of its short-period
+   * terms — via Eckstein-Hechler. This is the object {@link #mean(Orbit, double)} reads its apside
+   * altitudes off; it is exposed separately because a targeting site needs the mean orbit's
+   * <em>phase</em> (its apside epochs), not only its apside radii: {@code AnalyticTrimBurnStage}
+   * times its two mean-circularization burns off the mean perigee and apogee, which the osculating
+   * apsides of a near-circular hand-off cannot give — those are dominated by the J2 short-period
+   * (twice per orbit), not by the mean ellipse.
+   *
+   * <p>Returns {@code Optional.empty()} rather than throwing, on a non-terrestrial arc or a
+   * non-converging fixed point, for the reason {@link #mean(Orbit, double)} gives: no caller may
+   * fail because a mean conversion could not be computed. A targeting caller falls back on a path
+   * that does not need the mean orbit.
+   *
+   * @param orbit the orbit to convert
+   * @return the mean orbit (µ and frame of the potential provider's rebasing), or empty when the
+   *     conversion is unavailable
+   */
+  public static Optional<Orbit> meanOrbit(Orbit orbit) {
     Objects.requireNonNull(orbit, "orbit");
     try {
       UnnormalizedSphericalHarmonicsProvider provider = zonalProvider();
@@ -135,7 +161,7 @@ public record OrbitElements(
       FixedPointConverter converter =
           new FixedPointConverter(
               new EcksteinHechlerTheory(provider), CONVERGENCE_THRESHOLD, MAX_ITERATIONS, DAMPING);
-      return Optional.of(elementsOf(converter.convertToMean(rebased), referenceRadius));
+      return Optional.of(converter.convertToMean(rebased));
     } catch (RuntimeException e) {
       logger.debug("Mean orbit unavailable ({}): {}", e.getClass().getSimpleName(), e.getMessage());
       return Optional.empty();

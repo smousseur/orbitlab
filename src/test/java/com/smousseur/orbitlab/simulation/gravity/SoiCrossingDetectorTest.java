@@ -107,14 +107,17 @@ class SoiCrossingDetectorTest {
     // convergence brackets to at transfer speed, and well below anything a wrong radius would give.
     assertEquals(expected, distanceToMoon, 1.0);
 
-    // The STOP is what ended the propagation — but not to the bit. Measured: the state Orekit
-    // hands the handler and the state propagate() returns are 51 ps apart, because the returned
-    // one is re-interpolated at the located root. The leg loop must therefore convert the RETURNED
-    // state, which is also the one StageChainRunner has always threaded on.
+    // The STOP is what ended the propagation — but not to the bit. The state Orekit hands the
+    // handler and the state propagate() returns are both taken at the located root but
+    // re-interpolated independently, so they differ by a root-finder-noise amount bounded by the
+    // detector's own date convergence and nothing smaller; the integrator tolerance decides where
+    // inside that bound it lands (51 ps at OPT-1's old tolerances, tens of ns at the current ones).
+    // The leg loop must therefore convert the RETURNED state, which is also the one
+    // StageChainRunner has always threaded on.
     assertEquals(
         0.0,
         end.getDate().durationFrom(atCrossing.getDate()),
-        1.0e-9,
+        SoiCrossingDetector.DATE_CONVERGENCE_SECONDS,
         "the STOP is what ended the propagation");
     assertTrue(
         end.getDate().durationFrom(epoch) > 0.0, "the crossing is ahead of the start, not at it");

@@ -22,12 +22,17 @@ class AdaptiveConvergenceCheckerTest {
   @Test
   void doesNotConverge_beforeMinIterations() {
     AdaptiveConvergenceChecker checker = new AdaptiveConvergenceChecker(false, 0.1, 1e-6, 1e-6);
-    // Even with zero diff and cost below acceptable, never converge before 100 calls
-    for (int i = 0; i < 99; i++) {
+    int floor = AdaptiveConvergenceChecker.DEFAULT_MIN_ITERS_BEFORE_CONVERGE;
+    // Even with zero diff and cost below acceptable, never converge before the floor is cleared.
+    for (int i = 0; i < floor - 1; i++) {
       assertFalse(
           checker.converged(i, pair(0.0), pair(0.0)),
           "Should not converge at iterationCount=" + (i + 1));
     }
+    // Once the floor is reached it must be free to converge, or the floor would be a deadlock.
+    assertTrue(
+        checker.converged(floor - 1, pair(0.0), pair(0.0)),
+        "Should be free to converge once the floor is reached (iterationCount=" + floor + ")");
   }
 
   @Test

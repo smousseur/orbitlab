@@ -105,9 +105,9 @@ class MissionPolylineBaselineTest {
    * <p>9 992 until {@code PHY-8 / L3}: throttling the core adds two ascent phases, hence one more
    * boundary sample.
    */
-  private static final int RAW_POINTS = 9992;
+  private static final int RAW_POINTS = 9999;
 
-  private static final int TRAIL_SIZE = 4999;
+  private static final int TRAIL_SIZE = 5003;
 
   /**
    * When {@code -Dorbitlab.recordBaseline=true}, {@link #leo400_polylineHasNotMoved} logs the
@@ -183,21 +183,21 @@ class MissionPolylineBaselineTest {
               5970753.542224896,
               -602485.56878803),
           new Vertex(
-              4279,
+              4283,
               "Coasting",
               false,
-              8543.08269191326,
-              3112933.872041012,
-              5991135.79798473,
-              -599963.7787686214),
+              8550.07159083189,
+              3065902.4920639778,
+              6015718.272950903,
+              -598585.1068945187),
           new Vertex(
-              4998,
+              5002,
               "Coasting",
               false,
-              94707.08269191327,
-              -2114778.9292082903,
-              -6418769.721297994,
-              523984.4896046031));
+              94714.0715908319,
+              -2041247.4193695108,
+              -6442343.396541601,
+              519350.1433058829));
 
   @Test
   void leo400_polylineHasNotMoved() {

@@ -194,15 +194,15 @@ class AscentBaselineN2Test extends AbstractTrajectoryOptimizerTest {
           new MecoState(
               321.448535,
               38631.981,
-              new Vector3D(-3029875.323471, -5693604.139057, 576739.233747),
-              new Vector3D(6992.666130, -3741.492387, -192.022337)),
+              new Vector3D(-3029875.381891, -5693604.110035, 576739.235433),
+              new Vector3D(6992.665944, -3741.492322, -192.022330)),
           new MecoState(
               321.448535,
               38631.981,
-              new Vector3D(-3029875.323471, -5693604.139057, 576739.233747),
-              new Vector3D(6992.666130, -3741.492387, -192.022337)),
-          new OrbitShape(400311.5, 419162.7, 5.302686),
-          44.2);
+              new Vector3D(-3029875.381891, -5693604.110035, 576739.235433),
+              new Vector3D(6992.665944, -3741.492322, -192.022330)),
+          new OrbitShape(399775.4, 419343.8, 5.307793),
+          34.7);
 
   private static final Baseline GEO_BASELINE =
       new Baseline(
