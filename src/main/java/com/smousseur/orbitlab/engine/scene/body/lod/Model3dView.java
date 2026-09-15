@@ -66,6 +66,23 @@ public class Model3dView {
   }
 
   /**
+   * Loads a model at a given real-world size rather than at this body's radius, by normalizing the
+   * mesh's own bounding box — for the primary shrinking to its payload, a third-party mesh with no
+   * shared scale convention (PHY-5 / L5, spec {@code docs/multi-objets/07-conception-L5.md} §3.3).
+   * May be called from a background thread.
+   *
+   * @param path the asset path to load
+   * @param targetSizeMeters the size, in metres, the model's largest dimension should span
+   * @return the loaded and scaled spatial
+   */
+  public Spatial loadModelNormalized(String path, double targetSizeMeters) {
+    logger.info(
+        "Loading payload model {} at {} m for {}", path, targetSizeMeters, config.displayName());
+    float targetUnits = (float) (targetSizeMeters / RenderContext.PLANET_METERS_PER_UNIT);
+    return AssetFactory.get().loadModelNormalized(path, targetUnits);
+  }
+
+  /**
    * Radius of this body's globe as it is actually drawn, in near-view units.
    *
    * <p><b>This is the model's scale, halved — the two must not be written twice.</b> {@link

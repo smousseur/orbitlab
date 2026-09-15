@@ -12,6 +12,7 @@ import com.smousseur.orbitlab.engine.scene.body.BodyRenderConfig;
 import com.smousseur.orbitlab.engine.scene.body.LodView;
 import com.smousseur.orbitlab.engine.scene.body.lod.Model3dView;
 import com.smousseur.orbitlab.engine.scene.spacecraft.SpacecraftPresenter;
+import com.smousseur.orbitlab.engine.view.JmeVectorAdapter;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemerisPoint;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.TrajectoryPolyline;
 import java.util.concurrent.CompletableFuture;
@@ -54,6 +55,9 @@ final class TrackedObjectView {
    *     object
    * @param trajectoryColor the ribbon colour
    * @param onClick the focus handler, or {@code null} for an object that is not clickable (debris)
+   * @param parent the scene node to hang the object's anchor under — the near bodies node for the
+   *     primary, the primary's own anchor for a debris so it can be placed relative to it (PHY-5,
+   *     the GEO "tremble" fix)
    * @return the attached view
    */
   static TrackedObjectView create(
@@ -61,7 +65,8 @@ final class TrackedObjectView {
       BodyRenderConfig config,
       String trajectoryId,
       ColorRGBA trajectoryColor,
-      Runnable onClick) {
+      Runnable onClick,
+      Node parent) {
     Node guiNode = context.guiGraph().getPlanetBillboardsNode();
     LodView view = new LodView(guiNode, config, context.model3dAttacher(), onClick, null);
     SpacecraftPresenter presenter = new SpacecraftPresenter(config.id(), view);
@@ -69,7 +74,7 @@ final class TrackedObjectView {
 
     Node anchor = (Node) view.spatial();
     anchor.attachChild(view.nearSpatial());
-    context.sceneGraph().nearBodiesNode().attachChild(anchor);
+    parent.attachChild(anchor);
 
     loadModelAsync(view.getModel3dView(), config.modelPath());
 
@@ -91,6 +96,20 @@ final class TrackedObjectView {
   }
 
   /**
+   * Loads a mesh at a given real-world size, off the render thread, then attaches it — the payload
+   * silhouette the primary shrinks to (PHY-5 / L5), whose size comes from the catalog rather than
+   * from the launcher's radius.
+   */
+  private static void loadModelNormalizedAsync(
+      Model3dView model3dView, String path, double sizeMeters) {
+    CompletableFuture.supplyAsync(
+            () -> model3dView.loadModelNormalized(path, sizeMeters),
+            AssetFactory.get().assetLoadingExecutor())
+        .thenApply(spatial -> AssetFactory.get().applyLambert(spatial, 0.3f))
+        .thenAccept(model3dView::onModelLoaded);
+  }
+
+  /**
    * Swaps this object's mesh for the one at {@code path} — the live silhouette change the primary
    * makes as it sheds pieces (PHY-5 / L3). The load is asynchronous, and the attach replaces the
    * previous model rather than overlapping it (see {@code OrbitLabApplication.attach}).
@@ -99,6 +118,19 @@ final class TrackedObjectView {
    */
   void swapMesh(String path) {
     loadModelAsync(view.getModel3dView(), path);
+  }
+
+  /**
+   * Swaps this object's mesh for the one at {@code path}, drawn at {@code drawnSizeMeters} rather
+   * than at the launcher's scale — the primary shrinking to its payload (PHY-5 / L5). The mesh is
+   * normalized by its own bounding box, so a third-party asset with any intrinsic scale lands at
+   * the right size.
+   *
+   * @param path the GLTF asset path of the payload mesh
+   * @param drawnSizeMeters the size, in metres, the payload's largest dimension should span
+   */
+  void swapMesh(String path, double drawnSizeMeters) {
+    loadModelNormalizedAsync(view.getModel3dView(), path, drawnSizeMeters);
   }
 
   /** The LOD view, so {@link MissionRenderer} can push the primary's eclipse occluder onto it. */
@@ -110,9 +142,21 @@ final class TrackedObjectView {
    * Draws this object from one sample: pose, screen, and trajectory prefix, all in the sample's own
    * render context. The velocity stays in the arc's own frame (see {@code
    * MissionRenderer.updateFromEphemeris}); the position is converted once, here, and serves both
-   * the model pose and the ribbon origin.
+   * the model pose and the ribbon tip.
+   *
+   * <p>The {@code seat} (PHY-5 / L6, spec {@code docs/multi-objets/08-conception-L6.md}) is
+   * <em>not</em> added to the anchor's position — that is left on the propagated point, which is
+   * what the floating origin cancels, so the anchor keeps full precision far from Earth. It is
+   * applied instead as a small near-frame offset on the model itself ({@link
+   * BodyView#setModelOffset}) and on the ribbon tip: each piece is authored base-at-origin, so
+   * without a seat every piece and every shrunk silhouette would pile on the one propagated point.
+   * Render-only — the sample's stored position is untouched, keeping the gated trajectory clean.
    *
    * @param point the interpolated sample to draw
+   * @param seat the body-frame seat offset in metres (in the arc's frame), from {@link StackSeat};
+   *     {@link Vector3D#ZERO} for an unseated object
+   * @param referencePoint the object this one is drawn relative to — the primary, whose scene
+   *     anchor a debris hangs under — or {@code null} for the primary itself, placed absolutely
    * @param trail this object's display polyline
    * @param upTo index of the last trail vertex flown at the current instant
    * @param cam the active camera
@@ -121,6 +165,8 @@ final class TrackedObjectView {
    */
   void updateFromPoint(
       MissionEphemerisPoint point,
+      Vector3D seat,
+      MissionEphemerisPoint referencePoint,
       TrajectoryPolyline trail,
       int upTo,
       Camera cam,
@@ -129,9 +175,20 @@ final class TrackedObjectView {
     SolarSystemBody renderBody = MissionRenderer.renderBodyOf(point, view);
     RenderContext ctx = RenderContext.planet(renderBody);
     Vector3D position = MissionRenderer.renderPositionOf(point, renderBody);
-    presenter.updatePose(position, point.velocity(), tpf, ctx);
+    // The model is placed relative to a reference object — a debris relative to its primary, whose
+    // scene anchor it now hangs under — so the two large GCRF coordinates cancel in double before
+    // the float conversion. Otherwise, far from Earth (GEO), the float subtraction the scene graph
+    // does between two independently-rounded coordinates jitters the model by metres each frame
+    // (PHY-5, the debris "tremble"). The primary passes no reference: it is placed absolutely and
+    // cancels the near-frame offset exactly, as before.
+    Vector3D modelPosition =
+        referencePoint == null
+            ? position
+            : position.subtract(MissionRenderer.renderPositionOf(referencePoint, renderBody));
+    presenter.updatePose(modelPosition, point.velocity(), tpf, ctx);
+    this.view.setModelOffset(JmeVectorAdapter.toJmeBodyRelativePosition(seat, ctx));
     this.view.updateScreen(cam, true);
-    trajectoryRenderer.update(trail, upTo, position, ctx);
+    trajectoryRenderer.update(trail, upTo, position, seat, ctx);
   }
 
   void setVisible(boolean visible) {

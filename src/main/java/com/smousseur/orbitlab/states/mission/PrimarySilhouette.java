@@ -10,58 +10,69 @@ import org.orekit.time.AbsoluteDate;
 
 /**
  * The silhouette the primary object shows over time: the full launcher until it starts shedding
- * pieces, then a shorter stack after each launcher separation (PHY-5 / L3, spec {@code
- * docs/multi-objets/05-conception-L3.md} §3.2).
+ * pieces, a shorter stack after each launcher separation, and finally the payload itself once the
+ * upper stage is gone (PHY-5 / L5, spec {@code docs/multi-objets/07-conception-L5.md} §3.1).
  *
  * <p>Derived from the debris a computation produced — each carries the date and role of the
  * separation that made it — so no new data has to flow from the replay. Stateless once built:
- * {@link #suffixAt} is a pure function of the date, which is what makes the silhouette reverse by
- * itself when the clock is scrubbed back.
+ * {@link #phaseAt} is a pure function of the date, which is what makes the silhouette reverse by
+ * itself when the clock is scrubbed back. The phase names <em>what</em> to draw; resolving it to a
+ * mesh and a size is {@link MissionRenderer}'s job, since only it knows the launcher and payload.
  */
 final class PrimarySilhouette {
 
-  private final NavigableMap<AbsoluteDate, String> transitions;
+  /** The silhouette the primary wears, from the full stack down to the bare payload. */
+  enum SilhouettePhase {
+    FULL,
+    AFTER_BOOSTERS,
+    AFTER_S1,
+    PAYLOAD
+  }
 
-  private PrimarySilhouette(NavigableMap<AbsoluteDate, String> transitions) {
+  private final NavigableMap<AbsoluteDate, SilhouettePhase> transitions;
+
+  private PrimarySilhouette(NavigableMap<AbsoluteDate, SilhouettePhase> transitions) {
     this.transitions = transitions;
   }
 
   /**
-   * Builds the silhouette timeline from a mission's debris. The {@code UPPER} separation is left
-   * out — the primary becomes the payload there, which is {@code L4}; {@code KICK} is not a
-   * launcher separation. Several boosters shed at one instant collapse to a single transition.
+   * Builds the silhouette timeline from a mission's debris. {@code UPPER} shrinks the primary to
+   * its payload (L5); {@code KICK} is the payload's own motor firing, not a launcher separation, so
+   * it leaves the silhouette alone. Several boosters shed at one instant collapse to a single
+   * transition.
    *
    * @param debris the mission's debris tracks
    * @return the silhouette timeline
    */
   static PrimarySilhouette from(List<DebrisTrack> debris) {
-    NavigableMap<AbsoluteDate, String> transitions = new TreeMap<>();
+    NavigableMap<AbsoluteDate, SilhouettePhase> transitions = new TreeMap<>();
     for (DebrisTrack track : debris) {
-      String suffix = suffixAfter(track.role());
-      if (suffix != null) {
-        transitions.put(track.ephemeris().startDate(), suffix);
+      SilhouettePhase phase = phaseAfter(track.role());
+      if (phase != null) {
+        transitions.put(track.ephemeris().startDate(), phase);
       }
     }
     return new PrimarySilhouette(transitions);
   }
 
-  private static String suffixAfter(StageRole role) {
+  private static SilhouettePhase phaseAfter(StageRole role) {
     return switch (role) {
-      case BOOSTER -> "-after_boosters";
-      case CORE -> "-after_s1";
-      case UPPER, KICK -> null;
+      case BOOSTER -> SilhouettePhase.AFTER_BOOSTERS;
+      case CORE -> SilhouettePhase.AFTER_S1;
+      case UPPER -> SilhouettePhase.PAYLOAD;
+      case KICK -> null;
     };
   }
 
   /**
-   * The mesh-path suffix of the silhouette at {@code now} — {@code ""} for the full launcher,
-   * {@code "-after_boosters"} once the boosters are gone, {@code "-after_s1"} once the core is too.
+   * The silhouette phase at {@code now} — {@link SilhouettePhase#FULL} before any separation, then
+   * the phase of the last separation whose date is at or before {@code now}.
    *
    * @param now the current simulation date
-   * @return the suffix to glue onto the launcher mesh path, {@code ""} before any separation
+   * @return the phase the primary should be drawn in
    */
-  String suffixAt(AbsoluteDate now) {
-    Map.Entry<AbsoluteDate, String> entry = transitions.floorEntry(now);
-    return entry == null ? "" : entry.getValue();
+  SilhouettePhase phaseAt(AbsoluteDate now) {
+    Map.Entry<AbsoluteDate, SilhouettePhase> entry = transitions.floorEntry(now);
+    return entry == null ? SilhouettePhase.FULL : entry.getValue();
   }
 }

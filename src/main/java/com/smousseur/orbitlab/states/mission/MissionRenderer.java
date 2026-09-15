@@ -3,6 +3,7 @@ package com.smousseur.orbitlab.states.mission;
 import com.jme3.math.ColorRGBA;
 import com.jme3.math.Vector3f;
 import com.jme3.renderer.Camera;
+import com.jme3.scene.Node;
 import com.smousseur.orbitlab.app.ApplicationContext;
 import com.smousseur.orbitlab.app.view.FocusView;
 import com.smousseur.orbitlab.app.view.RenderContext;
@@ -14,6 +15,8 @@ import com.smousseur.orbitlab.engine.scene.body.BodyRenderConfig;
 import com.smousseur.orbitlab.engine.scene.body.EclipseGeometry;
 import com.smousseur.orbitlab.engine.scene.body.LodView;
 import com.smousseur.orbitlab.engine.scene.spacecraft.LauncherAssets;
+import com.smousseur.orbitlab.engine.scene.spacecraft.LauncherStackGeometry;
+import com.smousseur.orbitlab.engine.scene.spacecraft.PayloadAssets;
 import com.smousseur.orbitlab.engine.view.JmeVectorAdapter;
 import com.smousseur.orbitlab.simulation.ephemeris.service.EphemerisServiceRegistry;
 import com.smousseur.orbitlab.simulation.mission.Mission;
@@ -24,6 +27,7 @@ import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemerisPoint
 import com.smousseur.orbitlab.simulation.mission.ephemeris.TrajectoryArc;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.TrajectoryPolyline;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.LauncherModel;
+import com.smousseur.orbitlab.simulation.mission.vehicle.model.stage.StageRole;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -69,8 +73,13 @@ public final class MissionRenderer {
   /** A neutral colour for a debris; a per-role tint is possible but not retained. */
   private static final ColorRGBA DEBRIS_COLOR = new ColorRGBA(0.7f, 0.7f, 0.72f, 1.0f);
 
-  /** Half the drawn height of a debris (m), a placeholder until the per-piece height (L2, §6). */
-  private static final double DEBRIS_DRAWN_RADIUS_METERS = 20.0;
+  /**
+   * Lateral spacing (m) a jettisoned booster is drawn out to its flank, so the exemplars do not
+   * pile on the axis (PHY-5 / L6, spec {@code docs/multi-objets/08-conception-L6.md} §D2). Sized to
+   * the measured mount (~±0.06 of the stack height, ≈ 4 m); the true roll is unknown, so it is
+   * cosmetic.
+   */
+  private static final double BOOSTER_LATERAL_SPREAD_METERS = 4.0;
 
   private final MissionEntry entry;
   private final ApplicationContext context;
@@ -103,8 +112,28 @@ public final class MissionRenderer {
   /** The primary's silhouette timeline, derived from the debris (PHY-5 / L3). */
   private PrimarySilhouette silhouette = PrimarySilhouette.from(List.of());
 
-  /** The silhouette suffix currently drawn — {@code ""} is the full launcher, loaded at init. */
-  private String appliedSilhouetteSuffix = "";
+  /** The payload's drawn asset (mesh + true size), resolved once — null when it has no mesh. */
+  private PayloadAssets.PayloadAsset payloadAsset;
+
+  /** Full stack height (m) — the launcher's own height — for the render-only stack seats (L6). */
+  private double stackHeightMeters;
+
+  /** The {@code after_s1} remnant's fraction of the full stack, for the primary's seat (L6). */
+  private double afterS1Fraction;
+
+  /** How many boosters are jettisoned in the block, for their lateral fan (L6). */
+  private int boosterCount;
+
+  /** The mesh currently drawn, compared each frame to detect a silhouette change (PHY-5 / L5). */
+  private MeshTarget appliedTarget;
+
+  /**
+   * A silhouette's drawn mesh and its size. A {@code drawnSizeMeters} of {@code -1} means "use the
+   * launcher config's own scale" (a launcher phase, whose asset is one unit tall); a positive value
+   * is the payload's true catalog size, to which its bounding box is normalized (spec {@code
+   * docs/multi-objets/07-conception-L5.md} §3.3).
+   */
+  private record MeshTarget(String path, double drawnSizeMeters) {}
 
   public MissionRenderer(
       MissionEntry entry,
@@ -124,6 +153,17 @@ public final class MissionRenderer {
     // is what actually flies — that is what MissionOrchestratorAppState compares against the
     // entry's current launcher to detect a wizard edit that swapped it.
     modelPath = modelPathFor(entry);
+    stackHeightMeters = 2.0 * drawnRadiusOf(entry);
+    afterS1Fraction =
+        LauncherStackGeometry.afterS1Fraction(
+            entry.spec().map(spec -> spec.configuration().launcher().id()).orElse(null));
+    payloadAsset =
+        entry
+            .spec()
+            .map(spec -> spec.configuration().payloadId())
+            .flatMap(PayloadAssets::forPayload)
+            .orElse(null);
+    appliedTarget = launcherTarget(modelPath);
 
     // The scene-graph id is derived from the mission id, not the name: names may be duplicated, and
     // two homonymous missions sharing a spatial id would collide in the graph. The name is still
@@ -139,7 +179,12 @@ public final class MissionRenderer {
 
     primary =
         TrackedObjectView.create(
-            context, config, entry.id().toString(), trajectoryColor, this::onSpacecraftSelected);
+            context,
+            config,
+            entry.id().toString(),
+            trajectoryColor,
+            this::onSpacecraftSelected,
+            context.sceneGraph().nearBodiesNode());
 
     rebuildDebrisViews();
   }
@@ -328,10 +373,42 @@ public final class MissionRenderer {
       Camera cam,
       float tpf) {
     FocusView focus = context.focusView();
-    primary.updateFromPoint(point, trail, upTo, cam, tpf, focus);
+    Vector3D primarySeat =
+        StackSeat.offset(
+            point.velocity(),
+            point.position(),
+            primaryAxialSeat(silhouette.phaseAt(now)),
+            0.0,
+            1,
+            1);
+    primary.updateFromPoint(point, primarySeat, null, trail, upTo, cam, tpf, focus);
     pushEclipseOccluder(point, focus);
     updatePrimarySilhouette(now);
-    updateDebris(now, cam, tpf, focus);
+    updateDebris(point, now, cam, tpf, focus);
+  }
+
+  /**
+   * The primary silhouette's seat, along the flight direction, this frame: {@code H − drawnHeight},
+   * so the nose stays fixed and the stack shrinks from the bottom as it sheds pieces (PHY-5 / L6
+   * §D1). {@code FULL} and {@code AFTER_BOOSTERS} keep the full height (boosters are shed
+   * laterally), so their seat is zero.
+   */
+  private double primaryAxialSeat(PrimarySilhouette.SilhouettePhase phase) {
+    return switch (phase) {
+      case FULL, AFTER_BOOSTERS -> 0.0;
+      case AFTER_S1 -> (1.0 - afterS1Fraction) * stackHeightMeters;
+      case PAYLOAD -> stackHeightMeters - payloadDrawnHeightMeters();
+    };
+  }
+
+  /**
+   * The drawn height of the payload silhouette: its true catalog size, or the {@code after_s1}
+   * remnant's height when the payload has no mesh (the same fallback its mesh takes, §D1).
+   */
+  private double payloadDrawnHeightMeters() {
+    return payloadAsset != null
+        ? payloadAsset.drawnSizeMeters()
+        : afterS1Fraction * stackHeightMeters;
   }
 
   /**
@@ -340,19 +417,66 @@ public final class MissionRenderer {
    * stack by itself. The suffix glues onto the launcher path: {@code ""} is the full mesh.
    */
   private void updatePrimarySilhouette(AbsoluteDate now) {
-    String suffix = silhouette.suffixAt(now);
-    if (!suffix.equals(appliedSilhouetteSuffix)) {
-      primary.swapMesh(modelPath.replace(".gltf", suffix + ".gltf"));
-      appliedSilhouetteSuffix = suffix;
+    MeshTarget target = targetFor(silhouette.phaseAt(now));
+    if (target.equals(appliedTarget)) {
+      return;
     }
+    if (target.drawnSizeMeters() > 0) {
+      primary.swapMesh(target.path(), target.drawnSizeMeters());
+    } else {
+      primary.swapMesh(target.path());
+    }
+    appliedTarget = target;
   }
 
-  /** Draws each debris from its own ephemeris at {@code now}, hidden before its jettison. */
-  private void updateDebris(AbsoluteDate now, Camera cam, float tpf, FocusView focus) {
+  /**
+   * The mesh a silhouette phase resolves to. Launcher phases keep the launcher's own scale (the
+   * assets are one unit tall, so {@code Model3dView} sizes them by the vehicle height); the payload
+   * is drawn at its true catalog size by normalizing the mesh's bounding box (§3.3). A payload with
+   * no mesh — a cargo module, or a mission carrying no catalog payload — falls back to the {@code
+   * after_s1} launcher stack, the very target {@code AFTER_S1} yields, so scrubbing across the
+   * boundary swaps nothing (spec {@code docs/multi-objets/07-conception-L5.md} §3.2).
+   */
+  private MeshTarget targetFor(PrimarySilhouette.SilhouettePhase phase) {
+    return switch (phase) {
+      case FULL -> launcherTarget(modelPath);
+      case AFTER_BOOSTERS -> launcherTarget(withLauncherSuffix("-after_boosters"));
+      case AFTER_S1 -> launcherTarget(withLauncherSuffix("-after_s1"));
+      case PAYLOAD ->
+          payloadAsset != null
+              ? new MeshTarget(payloadAsset.meshPath(), payloadAsset.drawnSizeMeters())
+              : launcherTarget(withLauncherSuffix("-after_s1"));
+    };
+  }
+
+  private MeshTarget launcherTarget(String path) {
+    return new MeshTarget(path, -1.0);
+  }
+
+  private String withLauncherSuffix(String suffix) {
+    return modelPath.replace(".gltf", suffix + ".gltf");
+  }
+
+  /**
+   * Draws each debris from its own ephemeris at {@code now}, hidden before its jettison. Each is
+   * placed relative to {@code primaryPoint} — the object it hangs under in the scene graph — so its
+   * position keeps full precision far from Earth (PHY-5, the GEO "tremble" fix, {@link
+   * TrackedObjectView#updateFromPoint}), and carries its own seat so it is drawn where it detached
+   * (§D2) rather than piled on the axis. The reference is the primary's <em>unseated</em> point:
+   * the seat lives on each object's own model, not on the shared anchor, so debris never inherit
+   * the primary's seat.
+   */
+  private void updateDebris(
+      MissionEphemerisPoint primaryPoint,
+      AbsoluteDate now,
+      Camera cam,
+      float tpf,
+      FocusView focus) {
     syncDebrisViews();
     for (int i = 0; i < debrisViews.size(); i++) {
       TrackedObjectView debrisView = debrisViews.get(i);
-      MissionEphemeris ephemeris = builtDebris.get(i).ephemeris();
+      DebrisTrack track = builtDebris.get(i);
+      MissionEphemeris ephemeris = track.ephemeris();
       if (now.compareTo(ephemeris.startDate()) < 0) {
         debrisView.setVisible(false);
         continue;
@@ -362,8 +486,31 @@ public final class MissionRenderer {
       MissionEphemerisPoint pt = ephemeris.displayPointAt(now);
       int upTo = within ? trail.indexUpTo(now) : trail.size() - 1;
       debrisView.setVisible(true);
-      debrisView.updateFromPoint(pt, trail, upTo, cam, tpf, focus);
+      debrisView.updateFromPoint(
+          pt, debrisSeat(track, pt), primaryPoint, trail, upTo, cam, tpf, focus);
     }
+  }
+
+  /**
+   * A jettisoned piece's seat, at the place it detached from (PHY-5 / L6 §D2): a booster on its
+   * flank (lateral fan, in the local orbital frame), the upper stage up where it sat within {@code
+   * after_s1}, the core at the base (no seat).
+   */
+  private Vector3D debrisSeat(DebrisTrack track, MissionEphemerisPoint pt) {
+    return switch (track.role()) {
+      case BOOSTER ->
+          StackSeat.offset(
+              pt.velocity(),
+              pt.position(),
+              0.0,
+              BOOSTER_LATERAL_SPREAD_METERS,
+              track.exemplarIndex(),
+              boosterCount);
+      case UPPER ->
+          StackSeat.offset(
+              pt.velocity(), pt.position(), (1.0 - afterS1Fraction) * stackHeightMeters, 0.0, 1, 1);
+      case CORE, KICK -> Vector3D.ZERO;
+    };
   }
 
   /** Rebuilds the debris views when a recomputation replaced the entry's debris list. */
@@ -381,17 +528,33 @@ public final class MissionRenderer {
     debrisViews.clear();
     builtDebris = entry.getDebris();
     silhouette = PrimarySilhouette.from(builtDebris);
+    boosterCount = (int) builtDebris.stream().filter(t -> t.role() == StageRole.BOOSTER).count();
     for (int i = 0; i < builtDebris.size(); i++) {
-      BodyRenderConfig config = debrisConfig(i, builtDebris.get(i));
+      DebrisTrack track = builtDebris.get(i);
+      BodyRenderConfig config = debrisConfig(i, track);
       debrisViews.add(
           TrackedObjectView.create(
-              context, config, entry.id() + "-debris-" + i, DEBRIS_COLOR, null));
+              context,
+              config,
+              entry.id() + "-debris-" + i,
+              DEBRIS_COLOR,
+              null,
+              (Node) primary.view().spatial()));
     }
   }
 
   /**
    * The render config for one debris: the piece's own mesh derived from the launcher's, its label,
-   * a neutral colour, a placeholder height, and the scale context of the arc it starts in.
+   * a neutral colour, the <em>launcher's</em> own draw scale, and the scale context of the arc it
+   * starts in.
+   *
+   * <p><b>Same radius as the primary, on purpose.</b> Every piece mesh ({@code booster<i>}, {@code
+   * core}, {@code S2}) is exported in the launcher's frame — one unit is the full stack, and a
+   * piece fills its true fraction of it (measured: a Falcon Heavy booster is 0.65 unit, so 45 m of
+   * the 70 m stack; the S2 is 0.21 unit). {@code Model3dView} scales a mesh by the vehicle height
+   * and by the mesh's own extent, so feeding it the launcher height draws each piece at its true
+   * size, in step with the primary and the {@code after_*} silhouettes. A per-piece radius was the
+   * L2 placeholder that drew every piece at one fixed size regardless of the mesh.
    */
   private BodyRenderConfig debrisConfig(int index, DebrisTrack track) {
     RenderContext scale = RenderContext.planet(track.ephemeris().firstPoint().arc().body());
@@ -400,7 +563,7 @@ public final class MissionRenderer {
         "mission-" + entry.id() + "-debris-" + index,
         labelFor(track),
         DEBRIS_COLOR,
-        DEBRIS_DRAWN_RADIUS_METERS,
+        drawnRadiusOf(entry),
         debrisMeshPath,
         scale);
   }

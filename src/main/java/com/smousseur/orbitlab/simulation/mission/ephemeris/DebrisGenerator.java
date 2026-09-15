@@ -76,11 +76,12 @@ public final class DebrisGenerator {
   private static SpacecraftState exemplarInitialState(
       SpacecraftState preJettison, double mass, int index, int multiplicity) {
     PVCoordinates pv = preJettison.getPVCoordinates();
-    Vector3D kicked =
-        pv.getVelocity().add(SeparationImpulse.of(pv.getVelocity(), index, multiplicity));
+    Vector3D velocity = pv.getVelocity();
+    Vector3D position = pv.getPosition();
+    Vector3D kicked = velocity.add(SeparationImpulse.of(velocity, position, index, multiplicity));
     return new SpacecraftState(
         new CartesianOrbit(
-            new PVCoordinates(pv.getPosition(), kicked),
+            new PVCoordinates(position, kicked),
             preJettison.getFrame(),
             preJettison.getDate(),
             GravitationalContext.earth().mu()),

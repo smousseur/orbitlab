@@ -9,6 +9,7 @@ import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemeris;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemerisPoint;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.TrajectoryArc;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.stage.StageRole;
+import com.smousseur.orbitlab.states.mission.PrimarySilhouette.SilhouettePhase;
 import java.util.List;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.junit.jupiter.api.BeforeAll;
@@ -50,7 +51,7 @@ class PrimarySilhouetteTest {
     PrimarySilhouette silhouette =
         PrimarySilhouette.from(
             List.of(debris(StageRole.BOOSTER, 100.0), debris(StageRole.CORE, 200.0)));
-    assertEquals("", silhouette.suffixAt(epoch.shiftedBy(50.0)));
+    assertEquals(SilhouettePhase.FULL, silhouette.phaseAt(epoch.shiftedBy(50.0)));
   }
 
   @Test
@@ -58,7 +59,7 @@ class PrimarySilhouetteTest {
     PrimarySilhouette silhouette =
         PrimarySilhouette.from(
             List.of(debris(StageRole.BOOSTER, 100.0), debris(StageRole.CORE, 200.0)));
-    assertEquals("-after_boosters", silhouette.suffixAt(epoch.shiftedBy(150.0)));
+    assertEquals(SilhouettePhase.AFTER_BOOSTERS, silhouette.phaseAt(epoch.shiftedBy(150.0)));
   }
 
   @Test
@@ -66,7 +67,26 @@ class PrimarySilhouetteTest {
     PrimarySilhouette silhouette =
         PrimarySilhouette.from(
             List.of(debris(StageRole.BOOSTER, 100.0), debris(StageRole.CORE, 200.0)));
-    assertEquals("-after_s1", silhouette.suffixAt(epoch.shiftedBy(250.0)));
+    assertEquals(SilhouettePhase.AFTER_S1, silhouette.phaseAt(epoch.shiftedBy(250.0)));
+  }
+
+  @Test
+  void payloadOnceTheUpperStageHasGone() {
+    PrimarySilhouette silhouette =
+        PrimarySilhouette.from(
+            List.of(
+                debris(StageRole.BOOSTER, 100.0),
+                debris(StageRole.CORE, 200.0),
+                debris(StageRole.UPPER, 300.0)));
+    assertEquals(SilhouettePhase.PAYLOAD, silhouette.phaseAt(epoch.shiftedBy(350.0)));
+  }
+
+  @Test
+  void kickSeparationDoesNotChangeThePayloadSilhouette() {
+    PrimarySilhouette silhouette =
+        PrimarySilhouette.from(
+            List.of(debris(StageRole.UPPER, 300.0), debris(StageRole.KICK, 400.0)));
+    assertEquals(SilhouettePhase.PAYLOAD, silhouette.phaseAt(epoch.shiftedBy(450.0)));
   }
 
   @Test
@@ -74,27 +94,19 @@ class PrimarySilhouetteTest {
     PrimarySilhouette silhouette =
         PrimarySilhouette.from(
             List.of(debris(StageRole.BOOSTER, 100.0), debris(StageRole.BOOSTER, 100.0)));
-    assertEquals("-after_boosters", silhouette.suffixAt(epoch.shiftedBy(150.0)));
-  }
-
-  @Test
-  void upperSeparationIsIgnoredInL3() {
-    PrimarySilhouette silhouette =
-        PrimarySilhouette.from(
-            List.of(
-                debris(StageRole.BOOSTER, 100.0),
-                debris(StageRole.CORE, 200.0),
-                debris(StageRole.UPPER, 300.0)));
-    assertEquals("-after_s1", silhouette.suffixAt(epoch.shiftedBy(350.0)));
+    assertEquals(SilhouettePhase.AFTER_BOOSTERS, silhouette.phaseAt(epoch.shiftedBy(150.0)));
   }
 
   @Test
   void reversesUnderScrub() {
     PrimarySilhouette silhouette =
         PrimarySilhouette.from(
-            List.of(debris(StageRole.BOOSTER, 100.0), debris(StageRole.CORE, 200.0)));
-    assertEquals("", silhouette.suffixAt(epoch.shiftedBy(50.0)));
-    assertEquals("-after_s1", silhouette.suffixAt(epoch.shiftedBy(250.0)));
-    assertEquals("-after_boosters", silhouette.suffixAt(epoch.shiftedBy(150.0)));
+            List.of(
+                debris(StageRole.BOOSTER, 100.0),
+                debris(StageRole.CORE, 200.0),
+                debris(StageRole.UPPER, 300.0)));
+    assertEquals(SilhouettePhase.FULL, silhouette.phaseAt(epoch.shiftedBy(50.0)));
+    assertEquals(SilhouettePhase.PAYLOAD, silhouette.phaseAt(epoch.shiftedBy(350.0)));
+    assertEquals(SilhouettePhase.AFTER_BOOSTERS, silhouette.phaseAt(epoch.shiftedBy(150.0)));
   }
 }

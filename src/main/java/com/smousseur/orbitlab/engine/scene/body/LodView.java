@@ -73,6 +73,11 @@ public final class LodView implements BodyView {
   }
 
   @Override
+  public void setModelOffset(Vector3f offset) {
+    model3dView.getModelBucket().setLocalTranslation(offset);
+  }
+
+  @Override
   public void setVisible(boolean visible) {
     model3dView.setVisible(visible);
     iconView.setVisible(visible);

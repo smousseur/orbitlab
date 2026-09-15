@@ -139,15 +139,24 @@ public final class MissionTrajectoryRenderer {
    *
    * @param trail the display polyline, already bounded to the vertex budget
    * @param upTo index of the last vertex to draw, from {@link TrajectoryPolyline#indexUpTo}
-   * @param tip the interpolated position at the current instant, drawn as the final vertex and used
-   *     as the origin the vertices are expressed against
+   * @param tip the interpolated position at the current instant, used as the origin the vertices
+   *     are expressed against — the <em>unseated</em> propagated position, so the geometry's own
+   *     translation still cancels the near frame exactly for the focused object
+   * @param seat the render-only stack seat (PHY-5 / L6): the tip vertex is drawn one seat off the
+   *     origin, so the ribbon meets the seated mesh base while the historical vertices stay on the
+   *     true path — a small hook at the very end rather than a whole trail that swims. {@link
+   *     Vector3D#ZERO} for an unseated object
    * @param renderContext the context of the sample being drawn, derived from its arc by {@code
    *     MissionRenderer.renderContextFor} — a parameter and no longer a field of this class, so
    *     that the line and the near-frame offset cannot be built from two different contexts (spec
    *     {@code docs/multi-corps/05-conception-L3.md} §3.2)
    */
   public void update(
-      TrajectoryPolyline trail, int upTo, Vector3D tip, RenderContext renderContext) {
+      TrajectoryPolyline trail,
+      int upTo,
+      Vector3D tip,
+      Vector3D seat,
+      RenderContext renderContext) {
     if (trail == null || trail.size() == 0) return;
 
     if (trail != boundTrail) {
@@ -173,7 +182,9 @@ public final class MissionTrajectoryRenderer {
       putPoint(points, count++, trail.positionAt(i, renderBody).subtract(origin), renderContext);
     }
     if (tip != null) {
-      putPoint(points, count++, Vector3D.ZERO, renderContext); // the tip is the origin
+      // The tip sits one seat off the origin (L6): the mesh base is drawn there too, so the ribbon
+      // stays glued to it while every historical vertex keeps its true-path position.
+      putPoint(points, count++, seat, renderContext);
     }
     if (count == 1) {
       // One point is not a ribbon. Repeating it gives a band of zero area — nothing rasterises,

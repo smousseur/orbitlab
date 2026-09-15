@@ -288,8 +288,12 @@ trajectoire volée. `L0` l'acte comme référence ; chaque lot suivant le vérif
 
 **Un changement de comportement à la fois.** `L0` mesure. `L1` monte la machinerie
 avec un débris inerte. `L2` la charge (impulsion, multiplicité, identité). `L3` fait
-maigrir le primaire sur les pièces de lanceur. `L4` prolonge le maigrissement jusqu'à
-la charge utile — c'est là que « le Falcon Heavy en GEO » disparaît.
+maigrir le primaire sur les pièces de lanceur. `L4` fait **livrer la charge utile**
+par une LEO propulsée (séparation S2 + trim charge utile, une trajectoire — voir le
+re-cadrage §5). `L5` prolonge le maigrissement jusqu'au maillage de la charge utile —
+c'est là que « le Falcon Heavy en GEO » disparaît. `L6` (ajouté après la vérif
+visuelle de L5) place chaque pièce à son **siège de rendu** pour que les débris et
+les rubans collent, sans toucher la propagation.
 
 ---
 
@@ -334,14 +338,49 @@ la charge utile — c'est là que « le Falcon Heavy en GEO » disparaît.
   de D1 et dépend d'une capacité neuve (échange de maillage), dont le risque ne doit
   pas contaminer la machinerie.
 
-### L4 — La charge utile comme objet distinct *(absorbe `PHY-6`)*
+> **Re-cadrage du 2026-09-15 (en cours de L4).** L'ancien L4 « la charge utile
+> comme objet distinct » supposait que le seul geste manquant était un maillage à
+> dessiner. Une redirection l'a démenti : une mission **LEO** doit *livrer* sa
+> charge utile (sa raison d'être), ce qui demande une **séparation S2
+> supplémentaire** et un **trim porté par la charge utile** — un changement de
+> **trajectoire**, pas de maillage. L4 est donc scindé en deux lots, un
+> comportement à la fois (§4) : **L4** fait la physique, **L5** (ex-L4) fait le
+> rendu.
 
-- Dernière phase du maigrissement : `S2 → payloadId → payloads/*.gltf`. Table de
-  maillage par famille (`goes`/`landsat8`/`lro`), hauteur de charge utile (§7), repli
-  pour une charge sans maillage (cargo, ou payload custom).
-- Effet : une mission `GEO_SAT` dessine un **satellite** en GEO, pas un Falcon Heavy.
-  La focalisabilité est acquise (la charge utile est le primaire). C'est le livrable
-  de `PHY-6`, rendu ici parce que la machinerie et les maillages sont là.
+### L4 — La LEO livre sa charge utile *(physique)*
+
+- Détail : [`06-conception-L4.md`](06-conception-L4.md). Une LEO **à charge utile
+  propulsée** largue son S2 après le transfert (`StageSeparationStage(UPPER)`,
+  comme le GEO) et la charge utile fait son **trim final** (~6 m/s) sur sa propre
+  propulsion. Le transfert optimisé **reste sur le S2** (CMA-ES intouché) ; le
+  plane trim **reste sur le S2** (au-delà du budget charge utile).
+- **Conditionnel à l'ergol utilisable** (`Spacecraft.hasUsablePropellant()`) : une
+  charge inerte / legacy garde la chaîne d'aujourd'hui **au bit près**. Les quatre
+  gates volent toutes une charge à 0 ergol → **invariant préservé, aucune
+  re-baseline**.
+
+### L5 — La charge utile comme objet dessiné *(rendu, absorbe `PHY-6`)*
+
+- Dernière phase du maigrissement : `after_s1 → payloadId → payloads/*.gltf`. Table
+  de maillage par famille (`goes`/`landsat8`/`lro`), taille de charge utile (§7),
+  repli pour une charge sans maillage (cargo, ou payload custom).
+- Effet : une mission `GEO_SAT` dessine un **satellite** en GEO, pas un Falcon
+  Heavy — et, la séparation S2 LEO de L4 aidant, une charge d'observation en LEO
+  aussi. La focalisabilité est acquise (la charge utile est le primaire). C'est le
+  livrable de `PHY-6`, rendu ici parce que la machinerie et les maillages sont là.
+
+### L6 — Les pièces collent : sièges de rendu *(ajouté après vérif visuelle de L5)*
+
+- Détail : [`08-conception-L6.md`](08-conception-L6.md). La vérification visuelle de
+  L5 a montré que **toutes les pièces sont recentrées base = 0 dans leur glTF**, donc
+  base-à-l'ancre les empile au point propagé : au largage, le débris et la silhouette
+  restante se chevauchent, et le reste « se téléporte ». Correctif **100 % rendu** : un
+  **siège** en repère corps (règle « on aligne les nez ») ajouté à la position dessinée
+  du maillage **et** de la pointe du ruban, pour que les pièces — débris et rubans —
+  collent.
+- **La propagation n'est pas touchée** : le CoM ponctuel reste la trajectoire volée.
+  Un premier essai qui poussait l'offset dans la propagation des débris (point-1) a été
+  **annulé**. L'invariant du §4 tient ; les quatre gates sont saufs par construction.
 
 ---
 
