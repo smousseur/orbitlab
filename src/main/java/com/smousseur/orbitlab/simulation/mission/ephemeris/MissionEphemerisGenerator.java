@@ -7,7 +7,10 @@ import com.smousseur.orbitlab.simulation.mission.MissionHorizon;
 import com.smousseur.orbitlab.simulation.mission.MissionStage;
 import com.smousseur.orbitlab.simulation.mission.runtime.StageChainRunner;
 import com.smousseur.orbitlab.simulation.mission.stage.StageSeparationStage;
+import com.smousseur.orbitlab.simulation.mission.vehicle.ActiveStageInfo;
+import com.smousseur.orbitlab.simulation.mission.vehicle.StagingPlan;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.AerodynamicProperties;
+import com.smousseur.orbitlab.simulation.mission.vehicle.model.stage.StageRole;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.logging.log4j.LogManager;
@@ -127,9 +130,6 @@ public final class MissionEphemerisGenerator {
      */
     private SpacecraftState previousStageFinalState;
 
-    /** L1 emits a single debris: the first separation only (spec 03 §2.2). L2 lifts this. */
-    private boolean firstJettisonCaptured = false;
-
     /** Cleared the moment any stage fails to reach its scheduled end (bilan 11 §3.9 prérequis). */
     private boolean complete = true;
 
@@ -171,7 +171,7 @@ public final class MissionEphemerisGenerator {
       // the one it declared unless it crossed a sphere of influence on the way (PHY-4 / L4 §3.6).
       points.add(pointOf(run.stage(), run.exitContext().gravity(), run.finalState()));
 
-      captureJettisonIfSeparation(run);
+      captureJettison(run);
       previousStageFinalState = run.finalState();
 
       logger.info(
@@ -182,16 +182,14 @@ public final class MissionEphemerisGenerator {
     }
 
     /**
-     * Emits the first separation as a {@link JettisonEvent}, when this stage is one. The debris
-     * starts from the pre-jettison state ({@link #previousStageFinalState} — position and velocity
-     * unchanged by the mass drop) carrying the mass actually shed, with the jettisoned piece's own
-     * section resolved from the vehicle at the pre-jettison mass. L1 captures only the first (spec
-     * 03 §2.2); L2 lifts the guard to all separations.
+     * Emits a {@link JettisonEvent} when this stage is a separation (spec 04 §2.2). The debris
+     * start from the pre-jettison state ({@link #previousStageFinalState} — position and velocity
+     * unchanged by the mass drop) with the total mass shed, the jettisoned block's own aggregate
+     * section, and its multiplicity: the {@link DebrisGenerator} splits the block into that many
+     * drawn objects. The active stage at the pre-jettison mass <em>is</em> the one being dropped.
      */
-    private void captureJettisonIfSeparation(StageChainRunner.StageRun run) {
-      if (firstJettisonCaptured
-          || previousStageFinalState == null
-          || !(run.stage() instanceof StageSeparationStage)) {
+    private void captureJettison(StageChainRunner.StageRun run) {
+      if (previousStageFinalState == null || !(run.stage() instanceof StageSeparationStage)) {
         return;
       }
       SpacecraftState pre = previousStageFinalState;
@@ -199,13 +197,24 @@ public final class MissionEphemerisGenerator {
       if (jettisonedMass <= 0.0) {
         return;
       }
-      AerodynamicProperties aero =
-          mission.getVehicle().resolveActiveStage(pre.getMass()).aerodynamics();
-      if (aero == null) {
+      ActiveStageInfo info = mission.getVehicle().resolveActiveStage(pre.getMass());
+      AerodynamicProperties aero = info.aerodynamics();
+      StageRole role = info.role();
+      if (aero == null || role == null) {
         return;
       }
-      jettisons.add(new JettisonEvent(pre.withMass(jettisonedMass), aero));
-      firstJettisonCaptured = true;
+      jettisons.add(new JettisonEvent(pre, aero, jettisonedMass, multiplicityOf(role), role));
+    }
+
+    /**
+     * How many exemplars a role drops at once: the booster count for a parallel block, else one.
+     */
+    private int multiplicityOf(StageRole role) {
+      if (role != StageRole.BOOSTER) {
+        return 1;
+      }
+      StagingPlan staging = mission.getVehicle().stagingPlan();
+      return staging.hasParallelBlock() ? staging.parallelBlock().boosterCount() : 1;
     }
 
     /**

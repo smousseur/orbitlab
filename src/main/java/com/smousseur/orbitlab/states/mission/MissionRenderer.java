@@ -66,10 +66,7 @@ public final class MissionRenderer {
    */
   public static final float SPACECRAFT_FOCUS_DISTANCE_SOLAR_UNITS = 3.5e-7f;
 
-  /** The suffix that turns a launcher mesh path into its first booster's, for a debris (L1). */
-  private static final String DEBRIS_MESH_SUFFIX = "-booster1.gltf";
-
-  /** A neutral colour for a debris in L1; per-debris colour is L2. */
+  /** A neutral colour for a debris; a per-role tint is possible but not retained. */
   private static final ColorRGBA DEBRIS_COLOR = new ColorRGBA(0.7f, 0.7f, 0.72f, 1.0f);
 
   /** Half the drawn height of a debris (m), a placeholder until the per-piece height (L2, §6). */
@@ -372,19 +369,43 @@ public final class MissionRenderer {
   }
 
   /**
-   * The render config for one debris: the first-booster mesh derived from the launcher's, a neutral
-   * colour, a placeholder height, and the scale context of the arc it starts in.
+   * The render config for one debris: the piece's own mesh derived from the launcher's, its label,
+   * a neutral colour, a placeholder height, and the scale context of the arc it starts in.
    */
   private BodyRenderConfig debrisConfig(int index, DebrisTrack track) {
     RenderContext scale = RenderContext.planet(track.ephemeris().firstPoint().arc().body());
-    String debrisMeshPath = modelPath.replace(".gltf", DEBRIS_MESH_SUFFIX);
+    String debrisMeshPath = modelPath.replace(".gltf", meshSuffixFor(track));
     return new BodyRenderConfig(
         "mission-" + entry.id() + "-debris-" + index,
-        entry.mission().getName() + " debris",
+        labelFor(track),
         DEBRIS_COLOR,
         DEBRIS_DRAWN_RADIUS_METERS,
         debrisMeshPath,
         scale);
+  }
+
+  /**
+   * The mesh-path suffix for a jettisoned piece, glued onto the launcher's path — {@code
+   * heavy_falcon.gltf} becomes {@code heavy_falcon-booster2.gltf}. This is the render layer's own
+   * asset mapping; the simulation carries only the role and index.
+   */
+  private static String meshSuffixFor(DebrisTrack track) {
+    return switch (track.role()) {
+      case BOOSTER -> "-booster" + track.exemplarIndex() + ".gltf";
+      case CORE -> "-core.gltf";
+      case UPPER -> "-S2.gltf";
+      case KICK -> "-core.gltf";
+    };
+  }
+
+  /** The label a jettisoned piece's icon shows. */
+  private static String labelFor(DebrisTrack track) {
+    return switch (track.role()) {
+      case BOOSTER -> "Booster " + track.exemplarIndex();
+      case CORE -> "Core";
+      case UPPER -> "Upper stage";
+      case KICK -> "Kick stage";
+    };
   }
 
   /**

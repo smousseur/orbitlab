@@ -50,12 +50,17 @@ public record StagingPlan(List<StageRole> roles, ParallelBlock parallelBlock) {
    * @param coreThrottle the fraction of its thrust the core applies while the boosters burn
    * @param coreLeftAtBoosterBurnout the propellant still in the core when the boosters run dry
    *     (kg), zero on a grouped jettison
+   * @param boosterCount how many identical boosters the block aggregates — the multiplicity the
+   *     runtime otherwise dissolves into the aggregate mass and section, kept here so PHY-5 can
+   *     split the jettison back into that many drawn objects (spec {@code
+   *     docs/multi-objets/04-conception-L2.md} §2.1)
    */
   public record ParallelBlock(
       int bottomIndex,
       boolean groupedJettison,
       double coreThrottle,
-      double coreLeftAtBoosterBurnout) {
+      double coreLeftAtBoosterBurnout,
+      int boosterCount) {
 
     /** Stack index of the core entry, immediately above the boosters. */
     public int coreIndex() {
@@ -217,7 +222,11 @@ public record StagingPlan(List<StageRole> roles, ParallelBlock parallelBlock) {
     }
     boolean grouped = coreLeft <= epsilon;
     return new ParallelBlock(
-        boosterIndex, grouped, profile.coreThrottle(), grouped ? 0.0 : coreLeft);
+        boosterIndex,
+        grouped,
+        profile.coreThrottle(),
+        grouped ? 0.0 : coreLeft,
+        boosters.multiplicity());
   }
 
   private static double massFlow(StageModel stage, double throttle) {
