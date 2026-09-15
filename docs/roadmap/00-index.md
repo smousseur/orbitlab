@@ -37,9 +37,11 @@ raisons ont fait éclater le reste :
    présent dans 77 fichiers, et 21 fiches techniques sont ordonnancées sur lui.
    Tout ce qui aurait partagé sa version aurait glissé. Elle est seule.
 
-Trois items qui figuraient « hors phases » (`RND-5`, `UI-6`, `UI-7`) sont
-désormais phasés : leur coût augmente avec le temps, ce qui est un argument pour
-les planifier et non pour les laisser flotter.
+Deux items qui figuraient « hors phases » (`UI-6`, `UI-7`) sont désormais
+phasés : leur coût augmente avec le temps, ce qui est un argument pour les
+planifier et non pour les laisser flotter. (`RND-5` l'avait été aussi, en paire
+avec la trace au sol ; les deux sont repartis au [backlog](../backlog.md) le
+2026-09-15.)
 
 ---
 
@@ -70,13 +72,11 @@ sont dans [v1](01-roadmap-v1.md) §3 et §6.
 | **v2** | `AST-1` | Lot d'assets 3D *(hors code)* | — | — | — |
 | **v2** | ~~`PHY-8`~~ | ~~Propulseurs séparés du corps : Falcon Heavy et Ariane 64~~ — **livré le 2026-09-10**, `L0` à `L6` ; bilan et réserves dans [`etagement/07-cloture.md`](../etagement/07-cloture.md) | — | — | — |
 | **v2** | ~~`PHY-2`~~ | ~~Atmosphère par défaut + recalibrage optimiseur~~ — **livré le 2026-09-12**, `L0` à `L5` ; bilan, réserves et restes dans [`atmosphere/13-cloture-PHY-2.md`](../atmosphere/13-cloture-PHY-2.md) | — | — | — |
-| **v2** | `OPT-1` | Temps de calcul des trajectoires : parallélisme, arrêts CMA-ES, coût d'une évaluation — **prioritaire** | 4 | 3 | L |
-| **v2** | `PHY-3` | Bricks instrumentation atmosphère (interface Kármán + fonction Q) | 1 | 1 | S |
-| **v2** | `RND-5` | Repère d'affichage inertiel / tournant | 2 | 2 | S |
-| **v2** | `RND-6` | Trace au sol | 3 | 2 | M |
-| **v2** | `MIS-10` | Déorbitage contrôlé et rentrée atmosphérique | 5 | 3 | M |
+| **v2** | ~~`OPT-1`~~ | ~~Temps de calcul des trajectoires~~ — **livré le 2026-09-14** ([`optimization/13-cloture.md`](../optimization/13-cloture.md)) ; reliquat → `OPT-2` (backlog) | — | — | — |
+| **v2** | ~~`PHY-3`~~ | ~~Bricks instrumentation atmosphère (interface Kármán + fonction Q)~~ — **livré le 2026-09-14** (commit `2969a86`) ; moitié visible → `PHY-9` (backlog) | — | — | — |
 | **v2** | `PHY-5` | Machinerie multi-objets + étages largués | 4 | 3 | L |
 | **v2** | `PHY-6` | Charge utile comme objet distinct | 4 | 2 | M |
+| **v2** | `MIS-10` | Déorbitage contrôlé et rentrée atmosphérique | 5 | 3 | M |
 | **v2** | `FX-3` | Particules de tuyère | 4 | 2 | M |
 | **v2** | `FX-4` | Traînée plasma de rentrée | 3 | 2 | M |
 | **v2** | `NAV-5` | Hover « wow » planètes + orbites | 3 | 2 | M |
@@ -108,12 +108,10 @@ v1 (livré)
 
 v2
   PHY-8 ✔ ── PHY-2                       (découper avant de calibrer)
-  PHY-2 ──┬── MIS-10 ──── MIS-11        (v3 : la rentrée finale d'Artemis)
-          ├── PHY-5  ──── PHY-6 ──┬──── MIS-11  (v3 : la capsule qui rentre)
-          │                       └──── MIS-12  (v4 : l'objet qui s'amarre)
+  PHY-2 ──┬── PHY-5 ──── PHY-6 ──┬──── MIS-10 ──── MIS-11  (v3 : la capsule d'Artemis qui rentre)
+          │                      └──── MIS-12          (v4 : l'objet qui s'amarre)
           └── FX-4   (via MIS-10)
   PHY-3 ──── MIS-10
-  RND-5 ──── RND-6 ──── MIS-10
   AST-1 ──┬── PHY-5
           ├── PHY-6
           └── PHY-8 ✔ ── DT-12 ✔ (maillage Ariane 64 ; DT-18 lui succède)
@@ -130,8 +128,9 @@ v4
 
 **Deux arêtes commandent tout le reste.** `PHY-2` ouvre la moitié de v2 et toute
 la queue jusqu'à v3 ; `PHY-6` est la seule chose qui sépare une charge utile
-d'un lanceur, et sans elle ni `MIS-11` ni `MIS-12` n'ont de sujet. Ce sont les
-deux items dont un retard décale une version entière.
+d'un lanceur, et sans elle `MIS-10` déorbite un lanceur entier, tandis que
+`MIS-11` et `MIS-12` n'ont pas de sujet. Ce sont les deux items dont un retard
+décale une version entière.
 
 **Et `PHY-8` est en amont de la première.** Il ne débloque rien à lui seul, mais
 il précède `PHY-2` pour une raison d'attribution : découper les étages sans
@@ -148,33 +147,12 @@ mesure en délai, pas en jours de travail.
 
 ## Backlog non planifié
 
-Gardé hors versions, à remonter si le besoin se manifeste :
-
-- **Rendu** — god-rays, normal maps, lumières de villes côté nuit, halo
-  atmosphérique Fresnel, ombres portées, enveloppe d'incertitude autour du
-  nominal. *La trace au sol a quitté cette liste : elle est devenue `RND-6` ;
-  l'ombre du corps sur ses anneaux, `FX-5`, le 2026-09-03 — les maillages
-  d'anneaux existant déjà, il ne restait de cette entrée que l'ombre.*
-- **Profondeur** — les options écartées deux fois par `PHY-4` (troisième
-  viewport « mid », depth buffer logarithmique, reverse-Z). *Ce n'est plus
-  vraiment du backlog : c'est `RND-8`, avec sa condition de réouverture.*
-- **Missions** — Molniya / HEO, déploiement de constellation, points de
-  Lagrange, interplanétaire, gravity assist, désamarrage et retour depuis une
-  station. *Le déorbitage et la rentrée ont quitté cette liste : `MIS-10`.*
-- **Rentrée, troisième palier** — désintégration réelle (flux thermique,
-  ablation, fragmentation). C'est de la R&D ; `PHY-1 / L1` §4 note que
-  l'approximation « panneaux repliés » du coefficient balistique cesse d'être
-  vraie avant même le flux thermique.
-- **Plateforme** — mode batch headless, analytics et graphes post-mission,
-  replays cinématiques, catalogue de débris TLE, import de TLE arbitraire (voir
-  la question ouverte n° 1 de [v4](04-roadmap-v4.md)), scripting.
-- **Éphéméride hors mémoire** — `MIS-9`, fiche complète en
-  [v4](04-roadmap-v4.md) §6 avec ses conditions de déclenchement.
-- **Optimiseur** — mode CMA-ES pour la composition GEO (les 3 modes composent
-  aujourd'hui la même `GEOMission` analytique ; seul le levier ergols agit
-  réellement sur GEO).
-
-Détail et notation dans
+Les items identifiés sans créneau vivent désormais dans le registre
+[`backlog.md`](../backlog.md) : les fiches `RND-5`, `RND-6` (trace au sol 3D) et
+`RND-9` (planisphère 2D), la liste « backlog non planifié » (rendu, profondeur,
+missions, rentrée 3ᵉ palier, plateforme, optimiseur), et les pointeurs vers
+`OPT-2`, `PHY-9` et `MIS-9`, qui restent fichés dans leur roadmap de version. Le
+détail long terme est toujours dans
 [`docs/brainstorm/features-long-terme.md`](../brainstorm/features-long-terme.md)
 et [`docs/brainstorm/missions.md`](../brainstorm/missions.md).
 

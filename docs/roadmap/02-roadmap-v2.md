@@ -49,12 +49,10 @@ colonne de droite ; le reste peut glisser.
 | ~~`J2`~~ | ~~Trois arbitrages du modèle atmosphérique~~ — **tranché le 2026-09-10** (`DT-13`/`DT-14`/`DT-15`, [`dette-technique.md`](../dette-technique.md)) | — | — | — | `PHY-8` |
 | ~~`PHY-2`~~ | ~~**Atmosphère par défaut + recalibrage optimiseur**~~ — **livré le 2026-09-12** ([`atmosphere/13-cloture-PHY-2.md`](../atmosphere/13-cloture-PHY-2.md)) | — | — | — | — |
 | ~~`OPT-1`~~ | ~~**Temps de calcul des trajectoires**~~ — **livré le 2026-09-14** ([`optimization/13-cloture.md`](../optimization/13-cloture.md)) ; reliquat → `OPT-2` (backlog, §4) | — | — | — | — |
-| `PHY-3` | Bricks instrumentation atmosphère (interface Kármán + fonction Q) | 1 | 1 | S | `PHY-2` |
-| `RND-5` | Repère d'affichage inertiel / tournant | 2 | 2 | S | — |
-| `RND-6` | **Trace au sol** *(neuf)* | 3 | 2 | M | `RND-5` |
-| `MIS-10` | Déorbitage contrôlé et rentrée atmosphérique | 5 | 3 | M | `PHY-2`, `PHY-3`, `RND-6`, `BUG-10` |
+| ~~`PHY-3`~~ | ~~Bricks instrumentation atmosphère (interface Kármán + fonction Q)~~ — **livré le 2026-09-14** (commit `2969a86`) ; moitié visible re-carvée en `PHY-9` (backlog, §4) | — | — | — | — |
 | `PHY-5` | Machinerie multi-objets + étages largués | 4 | 3 | L | `PHY-2`, `AST-1` |
 | `PHY-6` | **Charge utile comme objet distinct** *(neuf)* | 4 | 2 | M | `PHY-5`, `AST-1` |
+| `MIS-10` | Déorbitage contrôlé et rentrée atmosphérique | 5 | 3 | M | `PHY-2`, `PHY-3`, `PHY-6`, `BUG-10` |
 | `FX-3` | Particules de tuyère | 4 | 2 | M | — |
 | `FX-4` | **Traînée plasma de rentrée** *(neuf)* | 3 | 2 | M | `MIS-10` |
 | `NAV-5` | Hover « wow » planètes + orbites | 3 | 2 | M | — |
@@ -75,16 +73,23 @@ découpage est le même quel que soit le moment où il est payé — donc le pay
 avant la calibration est strictement meilleur
 ([`v2-preparation/00-preparation.md`](../v2-preparation/00-preparation.md) §2.3).
 
-**Pourquoi `RND-5` et `RND-6` sont voisins, et dans cet ordre.** Ce sont les
-deux moitiés de la même donnée : les sommets en repère lié au corps sont déjà
-cuits une fois à la construction de l'éphéméride. `RND-5` les affiche à la place
-des sommets inertiels ; `RND-6` les projette sur la surface. Livrer la trace au
-sol sans la bascule de repère, c'est écrire deux fois la même conversion.
+**Pourquoi `MIS-10` arrive après `PHY-5` et `PHY-6`.** Un satellite se déorbite
+en un seul objet — la physique de `MIS-10` n'a besoin d'aucune séparation. Mais
+l'objet à l'écran avant `PHY-6`, c'est le **lanceur** : une mission `GEO_SAT`
+« dessine un Falcon Heavy en orbite géostationnaire » (fiche `PHY-6`). Déorbiter
+ça ferait retomber un Falcon Heavy, et tout le ★5 de `MIS-10` est la réponse
+visuelle à « où ça tombe ? ». La cohérence visuelle exige donc la charge utile
+comme objet distinct (`PHY-6`), elle-même après la machinerie multi-objets
+(`PHY-5`). C'est un préalable de **produit**, pas de physique — et c'est le
+changement de priorisation du 2026-09-15 : `RND-5` et `RND-6` sont repartis au
+[backlog](../backlog.md), et la terminaison de `MIS-10` se simplifie en une borne
+d'altitude plus un marqueur de point d'impact, sans trace au sol prédictive (voir
+sa fiche au §4).
 
-**Pourquoi `MIS-10` arrive après `RND-6` et pas avant.** Sa fiche dit que la
-trace au sol *« cesse ici d'être un ornement »* — l'empreinte du point d'impact
-en est le livrable visible. Prise dans l'autre ordre, `MIS-10` paie la
-projection au sol au milieu d'un chantier de rentrée.
+**Le vrai long-pole est `AST-1`.** `PHY-5` et `PHY-6` attendent tous deux des
+maillages (un par étage, un par famille de charge utile), et un
+approvisionnement se mesure en délai. `PHY-3`, `FX-3` et `NAV-5` — sans
+dépendance dure — remplissent cette attente.
 
 **Fin de version quand** : le catalogue ne déclare plus un étage que le modèle
 ne vole pas (`PHY-8`), une ascension coûte ce qu'elle coûte vraiment (`PHY-2`),
@@ -681,6 +686,13 @@ reste un `BUG`, pas un lot d'`OPT-2` ; la baseline GEO du banc reste en attente.
 
 ### PHY-3 — Bricks instrumentation atmosphère — ★1 ◆1 S
 
+> **Livré le 2026-09-14** (commit `2969a86`) : `AtmosphericInterfaceDetector`
+> (+ test), `Physics.dynamicPressure` (+ `DynamicPressureTest`) et l'accesseur
+> public `Atmosphere` sur `OrekitService`. Les deux bricks sont armés nulle part
+> en prod et validés par tests unitaires, exactement comme la fiche le prévoit.
+> La moitié visible (courbe `Q(t)`, sélecteur, défaut) reste en `PHY-9`
+> (backlog).
+
 **Resserré le 2026-09-14** (brainstorm de découpage). La fiche d'origine
 bundlait quatre livrables — `MaxQDetector`, `AtmosphericInterfaceDetector`,
 télémétrie Q / traînée, sélecteur de fidélité. La mesure les a réordonnés : la
@@ -742,64 +754,18 @@ d'ici), pas la courbe ; cet item ne le débloque pas.
 
 ---
 
-### RND-5 — Repère d'affichage des trajectoires — ★2 ◆2 S
+### RND-5, RND-6 — repartis au backlog le 2026-09-15
 
-**Pourquoi.** Une trajectoire de mission est dessinée en repère inertiel (GCRF)
-pendant que le globe tourne sous elle : six heures après le décollage, le pied de
-l'ascension est à 90° de longitude du pas de tir. **Ce n'est pas un défaut** —
-vérifié dans le code, les trois maillons sont corrects — mais rien dans l'image ne
-dit au lecteur laquelle des deux choses bouge.
-
-**Ce que c'est.** Une bascule globale à deux valeurs dans le menu applicatif,
-**défaut inertiel** (la convention de tous les outils de trajectoire, et le
-comportement actuel). En repère tournant, la trace repart du pas de tir et s'y
-ancre, au prix de la lecture orbitale : l'ellipse devient un enroulement.
-
-**Ce qui rend l'item petit** : les sommets en repère lié au corps sont cuits une
-fois à la construction de l'éphéméride, et l'affichage n'ajoute qu'une rotation de
-nœud par frame. La tête de la traînée retombe exactement sur le vaisseau sans
-traitement particulier, donc ni la caméra, ni le globe, ni le repère flottant ne
-sont touchés.
-
-**Il était volontairement hors phases**, comme un confort à piocher un jour de
-creux. Il est phasé ici parce que `RND-6` a besoin exactement de la même donnée :
-laissé de côté, il serait réécrit à l'intérieur de la trace au sol.
-
-**Spec.** [`trajectory-display-frame.md`](../graphics-effects/trajectory-display-frame.md).
-
----
-
-### RND-6 — Trace au sol — ★3 ◆2 M *(neuf)*
-
-**Pourquoi.** La trace au sol figurait au backlog de v1 comme un ornement de
-rendu. `MIS-10` la transforme en besoin : une rentrée sans **empreinte du point
-d'impact** ne répond pas à la seule question qu'on lui pose — *où ça tombe ?* Sa
-fiche le dit dans ces termes ; l'extraire en item propre évite qu'elle soit
-écrite au milieu d'un chantier de rentrée et n'y serve qu'une fois.
-
-**Ce que c'est.** La projection sur la surface du corps central des sommets déjà
-exprimés en repère lié au corps — ceux que `RND-5` vient de rendre affichables.
-Un ruban de plus (`RND-4` a livré la primitive), plaqué au sol à altitude nulle,
-suivant la même sémantique passé / futur que la trajectoire elle-même.
-
-**Deux clients immédiats**, et c'est ce qui la sort du décoratif :
-
-- **`MIS-10`** — l'empreinte du point d'impact, et la fenêtre d'entrée qui la
-  précède.
-- **`MIS-7`, déjà livré** — les profils polaire et SSO n'ont aujourd'hui aucune
-  vérification visuelle de leur couverture. Une trace au sol est *la* façon de
-  voir qu'une orbite héliosynchrone repasse au même endroit à la même heure
-  solaire. La version rembourse donc l'item sur du contenu déjà en place, et pas
-  seulement sur `MIS-10`.
-
-**Un piège connu, déjà payé une fois.** Le pôle inertiel n'est pas le pôle
-terrestre — **0,145° d'écart en 2026** — et une inclinaison de 90° en GCRF
-éloigne visiblement la trace au sol du pôle. La trace se calcule donc en repère
-**lié à la Terre** (ITRF), jamais en projetant naïvement une orbite inertielle.
-
-**Ce qu'on ne fait pas.** Pas de cercle de visibilité, pas d'empreinte de
-capteur, pas de trace au sol pour les corps autres que le corps central de
-l'arc courant.
+Les deux moitiés de la trace au sol — la bascule de repère d'affichage (`RND-5`)
+et la trace au sol 3D (`RND-6`) — sont sorties de v2 lors de la passe de
+repriorisation du 2026-09-15. `RND-5` était volontairement hors phases et sa
+valeur n'est pas mesurée à l'écran ; `RND-6` n'a plus d'aval de version depuis
+que la terminaison de `MIS-10` s'est simplifiée (marqueur de point d'impact, pas
+de ruban de trace au sol). Leurs fiches, et le nouveau `RND-9` (trace au sol sur
+planisphère 2D) qui les accompagne, vivent dans [`backlog.md`](../backlog.md). La
+spec `RND-5`
+([`trajectory-display-frame.md`](../graphics-effects/trajectory-display-frame.md))
+reste en place, son identifiant étant stable.
 
 ---
 
@@ -823,17 +789,26 @@ le mécanisme mesuré est au §3.
   marquer l'entrée, et une borne d'altitude qui arrête la propagation **avant** que
   l'intégrateur ne cède — la même borne que `PHY-1 / L0` §2.2 réclame déjà pour des
   raisons de temps de calcul.
-- L'empreinte au sol du point d'impact, sur le ruban livré par `RND-6`.
+- L'empreinte du point d'impact : dès que la borne d'altitude arrête la
+  propagation, projeter le dernier état sur la surface (une conversion
+  géodésique, un marqueur). Un point, pas une courbe — ni trace au sol
+  prédictive, ni ruban `RND-6`.
 
 **Le coût compute est le risque, et il est mesuré.** Entre 200 km et 130 km
 d'altitude initiale, une descente sous traînée passe de 452 pas d'intégration à
 **982 497** (`PHY-1 / L0` §2.3). Un déorbitage vise précisément ce régime : l'item
 doit borner son temps de calcul par construction, pas espérer qu'il tienne.
 
-**Un satellite se déorbite entier**, et c'est ce qui range cet item en v2 et non
-en v3 : il ne demande aucune séparation, donc ni `PHY-5` ni `PHY-6` ne sont ses
-préalables. `MIS-11`, qui rentre en capsule, ne peut pas en dire autant — d'où
-sa version.
+**Physique mono-objet, cohérence de produit multi-objets.** La physique de
+`MIS-10` ne demande aucune séparation : un satellite se déorbite en un seul objet
+propagé. Mais l'objet **affiché** avant `PHY-6` est le lanceur — une mission
+`GEO_SAT` « dessine un Falcon Heavy en orbite géostationnaire » (fiche `PHY-6`) —
+et déorbiter ça ferait retomber un Falcon Heavy. Comme tout le ★5 de l'item est
+la réponse visuelle à « où ça tombe ? », il arrive **après** `PHY-6` (charge
+utile comme objet distinct), elle-même après `PHY-5` (machinerie multi-objets).
+Le préalable est de produit, pas de physique ; c'est la repriorisation du
+2026-09-15. `MIS-11`, qui rentre en capsule, dépend de la même chaîne — d'où sa
+version.
 
 **La désintégration n'est pas dans le périmètre** — voir la question ouverte
 n° 1 au §5, qui sépare les trois paliers et leurs coûts très inégaux.
@@ -1000,8 +975,3 @@ qui arrive après.
    `PayloadDomain` (deux : `EARTH`, lunaire) est beaucoup moins cher qu'un par
    entrée, et suffit probablement à faire disparaître le Falcon Heavy en GEO.
    À trancher **avant** de commander les assets, pas après.
-3. **La bascule de repère (`RND-5`) est-elle globale ou par mission ?** Sa fiche
-   dit « bascule globale dans le menu applicatif ». Avec plusieurs missions
-   affichées, une bascule globale rend certaines traces illisibles pour en
-   rendre une lisible. À constater à l'usage avant de payer le réglage par
-   mission.
