@@ -100,6 +100,12 @@ public final class MissionRenderer {
    */
   private List<DebrisTrack> builtDebris = List.of();
 
+  /** The primary's silhouette timeline, derived from the debris (PHY-5 / L3). */
+  private PrimarySilhouette silhouette = PrimarySilhouette.from(List.of());
+
+  /** The silhouette suffix currently drawn — {@code ""} is the full launcher, loaded at init. */
+  private String appliedSilhouetteSuffix = "";
+
   public MissionRenderer(
       MissionEntry entry,
       ApplicationContext context,
@@ -324,7 +330,21 @@ public final class MissionRenderer {
     FocusView focus = context.focusView();
     primary.updateFromPoint(point, trail, upTo, cam, tpf, focus);
     pushEclipseOccluder(point, focus);
+    updatePrimarySilhouette(now);
     updateDebris(now, cam, tpf, focus);
+  }
+
+  /**
+   * Swaps the primary's mesh to the silhouette {@code now} calls for, when it differs from the one
+   * drawn (PHY-5 / L3). A function of the date, so scrubbing the clock back restores the fuller
+   * stack by itself. The suffix glues onto the launcher path: {@code ""} is the full mesh.
+   */
+  private void updatePrimarySilhouette(AbsoluteDate now) {
+    String suffix = silhouette.suffixAt(now);
+    if (!suffix.equals(appliedSilhouetteSuffix)) {
+      primary.swapMesh(modelPath.replace(".gltf", suffix + ".gltf"));
+      appliedSilhouetteSuffix = suffix;
+    }
   }
 
   /** Draws each debris from its own ephemeris at {@code now}, hidden before its jettison. */
@@ -360,6 +380,7 @@ public final class MissionRenderer {
     }
     debrisViews.clear();
     builtDebris = entry.getDebris();
+    silhouette = PrimarySilhouette.from(builtDebris);
     for (int i = 0; i < builtDebris.size(); i++) {
       BodyRenderConfig config = debrisConfig(i, builtDebris.get(i));
       debrisViews.add(

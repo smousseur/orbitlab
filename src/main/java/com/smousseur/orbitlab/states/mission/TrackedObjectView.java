@@ -71,16 +71,34 @@ final class TrackedObjectView {
     anchor.attachChild(view.nearSpatial());
     context.sceneGraph().nearBodiesNode().attachChild(anchor);
 
-    Model3dView model3dView = view.getModel3dView();
-    CompletableFuture.supplyAsync(model3dView::loadModel, AssetFactory.get().assetLoadingExecutor())
-        .thenApply(spatial -> AssetFactory.get().applyLambert(spatial, 0.3f))
-        .thenAccept(model3dView::onModelLoaded);
+    loadModelAsync(view.getModel3dView(), config.modelPath());
 
     MissionTrajectoryRenderer trajectoryRenderer =
         new MissionTrajectoryRenderer(trajectoryId, trajectoryColor);
     trajectoryRenderer.initialize(context.sceneGraph().nearOrbitsNode());
 
     return new TrackedObjectView(presenter, view, trajectoryRenderer);
+  }
+
+  /**
+   * Loads a GLTF path into a model view off the render thread, twilight-shaded, then attaches it.
+   */
+  private static void loadModelAsync(Model3dView model3dView, String path) {
+    CompletableFuture.supplyAsync(
+            () -> model3dView.loadModel(path), AssetFactory.get().assetLoadingExecutor())
+        .thenApply(spatial -> AssetFactory.get().applyLambert(spatial, 0.3f))
+        .thenAccept(model3dView::onModelLoaded);
+  }
+
+  /**
+   * Swaps this object's mesh for the one at {@code path} — the live silhouette change the primary
+   * makes as it sheds pieces (PHY-5 / L3). The load is asynchronous, and the attach replaces the
+   * previous model rather than overlapping it (see {@code OrbitLabApplication.attach}).
+   *
+   * @param path the GLTF asset path of the new silhouette
+   */
+  void swapMesh(String path) {
+    loadModelAsync(view.getModel3dView(), path);
   }
 
   /** The LOD view, so {@link MissionRenderer} can push the primary's eclipse occluder onto it. */

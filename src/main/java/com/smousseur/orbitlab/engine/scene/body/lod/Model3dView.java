@@ -49,8 +49,20 @@ public class Model3dView {
    * @return the loaded and scaled spatial
    */
   public Spatial loadModel() {
-    logger.info("Loading model for {}", config.displayName());
-    return AssetFactory.get().loadModel(config.modelPath(), 2 * drawnRadiusUnits());
+    return loadModel(config.modelPath());
+  }
+
+  /**
+   * Loads a specific GLTF model at this body's scale, for a live mesh swap (PHY-5 / L3): the
+   * primary object's silhouette changes to a shorter stack as it sheds pieces. May be called from a
+   * background thread.
+   *
+   * @param path the asset path to load, at {@code config.radiusMeters()}'s scale
+   * @return the loaded and scaled spatial
+   */
+  public Spatial loadModel(String path) {
+    logger.info("Loading model {} for {}", path, config.displayName());
+    return AssetFactory.get().loadModel(path, 2 * drawnRadiusUnits());
   }
 
   /**

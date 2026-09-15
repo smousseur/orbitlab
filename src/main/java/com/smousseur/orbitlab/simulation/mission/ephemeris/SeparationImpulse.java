@@ -12,10 +12,10 @@ import org.hipparchus.util.FastMath;
 public final class SeparationImpulse {
 
   /** Retro magnitude (m/s): how hard a debris is pushed back along the flight path. */
-  private static final double RETRO_MAG = 1.0;
+  private static final double RETRO_MAG = 3.0;
 
   /** Fan magnitude (m/s): how hard each exemplar of a block is pushed out sideways. */
-  private static final double FAN_MAG = 1.0;
+  private static final double FAN_MAG = 2.0;
 
   private SeparationImpulse() {}
 
