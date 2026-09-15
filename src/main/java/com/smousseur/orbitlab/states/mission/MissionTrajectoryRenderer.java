@@ -13,7 +13,6 @@ import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.engine.AssetFactory;
 import com.smousseur.orbitlab.engine.scene.RibbonMeshBuilder;
 import com.smousseur.orbitlab.engine.view.JmeVectorAdapter;
-import com.smousseur.orbitlab.simulation.mission.MissionId;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.TrajectoryPolyline;
 import com.smousseur.orbitlab.ui.mission.MissionPhaseShading;
 import java.nio.FloatBuffer;
@@ -49,7 +48,7 @@ public final class MissionTrajectoryRenderer {
    */
   private static final float TRAJECTORY_WIDTH_PX = 1.5f;
 
-  private final MissionId missionId;
+  private final String id;
   private final ColorRGBA color;
 
   /**
@@ -67,8 +66,8 @@ public final class MissionTrajectoryRenderer {
   private ColorRGBA[] runColors;
   private PhaseNodeMarkers markers;
 
-  public MissionTrajectoryRenderer(MissionId missionId, ColorRGBA color) {
-    this.missionId = Objects.requireNonNull(missionId, "missionId");
+  public MissionTrajectoryRenderer(String id, ColorRGBA color) {
+    this.id = Objects.requireNonNull(id, "id");
     this.color = Objects.requireNonNull(color, "color");
   }
 
@@ -86,7 +85,7 @@ public final class MissionTrajectoryRenderer {
     Material mat = AssetFactory.get().createRibbon(ColorRGBA.White, TRAJECTORY_WIDTH_PX, true);
 
     // Keyed on the id, not the name: duplicate names must not produce colliding geometry names.
-    lineGeometry = new Geometry("MissionTrajectory-" + missionId, mesh);
+    lineGeometry = new Geometry("MissionTrajectory-" + id, mesh);
     lineGeometry.setMaterial(mat);
     // The edge fade is an alpha ramp, so the trace belongs in the transparent bucket — where it is
     // still depth-tested, and therefore still disappears behind the central body.
@@ -94,7 +93,7 @@ public final class MissionTrajectoryRenderer {
     nearOrbitsNode.attachChild(lineGeometry);
 
     markers = new PhaseNodeMarkers();
-    markers.initialize(nearOrbitsNode, missionId);
+    markers.initialize(nearOrbitsNode, id);
   }
 
   /**

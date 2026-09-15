@@ -5,6 +5,9 @@ import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionStage;
 import com.smousseur.orbitlab.simulation.mission.MissionStatus;
 import com.smousseur.orbitlab.simulation.mission.OptimizableMissionStage;
+import com.smousseur.orbitlab.simulation.mission.ephemeris.DebrisGenerator;
+import com.smousseur.orbitlab.simulation.mission.ephemeris.DebrisTrack;
+import com.smousseur.orbitlab.simulation.mission.ephemeris.GeneratedTrajectory;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemeris;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemerisGenerator;
 import com.smousseur.orbitlab.simulation.mission.maneuver.TransferResult;
@@ -324,10 +327,18 @@ public class MissionOptimizer {
         String.format(Locale.ROOT, "%.0f", finalCoastSeconds));
 
     MissionEphemerisGenerator generator = new MissionEphemerisGenerator();
-    MissionEphemeris ephemeris = generator.generate(mission, initialState, finalCoastSeconds);
+    GeneratedTrajectory generated =
+        generator.generateWithJettisons(mission, initialState, finalCoastSeconds);
+    MissionEphemeris ephemeris = generated.ephemeris();
+    // Debris propagated for display only, off the optimize path: the separations captured during
+    // this replay, flown under the mission's own atmosphere and bounded by the same restitution
+    // horizon (PHY-5 / L1, spec docs/multi-objets/03-conception-L1.md §2.3).
+    List<DebrisTrack> debris =
+        new DebrisGenerator()
+            .generate(generated.jettisons(), mission.getAtmosphere(), finalCoastSeconds);
 
     mission.setStatus(MissionStatus.READY);
-    return new MissionComputeResult(optimResult, ephemeris, report, mission, achievedOrbit);
+    return new MissionComputeResult(optimResult, ephemeris, report, mission, achievedOrbit, debris);
   }
 
   /**

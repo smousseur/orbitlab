@@ -12,7 +12,6 @@ import com.jme3.util.BufferUtils;
 import com.smousseur.orbitlab.app.view.RenderContext;
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.engine.AssetFactory;
-import com.smousseur.orbitlab.simulation.mission.MissionId;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.PhaseRun;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.TrajectoryPolyline;
 import java.nio.FloatBuffer;
@@ -51,9 +50,9 @@ final class PhaseNodeMarkers {
    * Creates the point mesh and attaches it beside the trajectory line.
    *
    * @param parent the scene node for near-viewport orbit lines
-   * @param missionId the owning mission, for the geometry name
+   * @param id the owning object's id, for the geometry name
    */
-  void initialize(Node parent, MissionId missionId) {
+  void initialize(Node parent, String id) {
     Mesh mesh = new Mesh();
     mesh.setMode(Mesh.Mode.Points);
 
@@ -63,7 +62,7 @@ final class PhaseNodeMarkers {
 
     // Keyed on the id, not the name, for the same reason as the line geometry: duplicate mission
     // names must not produce colliding spatial names.
-    geometry = new Geometry("MissionPhaseNodes-" + missionId, mesh);
+    geometry = new Geometry("MissionPhaseNodes-" + id, mesh);
     geometry.setMaterial(mat);
     parent.attachChild(geometry);
   }

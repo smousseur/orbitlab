@@ -126,7 +126,7 @@ public final class MissionOrchestratorAppState extends BaseAppState {
       int upTo = within ? trail.indexUpTo(now) : trail.size() - 1;
 
       renderer.setVisible(true);
-      renderer.updateFromEphemeris(pt, trail, upTo, cam, tpf);
+      renderer.updateFromEphemeris(pt, trail, upTo, now, cam, tpf);
     }
 
     cleanupRemovedMissions(activeMissionIds);
@@ -183,6 +183,7 @@ public final class MissionOrchestratorAppState extends BaseAppState {
     Mission mission = entry.mission();
     mission.setStatus(MissionStatus.COMPUTING);
     entry.setEphemeris(null); // invalidate previous
+    entry.setDebris(List.of()); // and its debris
     // Cleared on entry rather than on success: a mission relaunched after a failure would otherwise
     // keep displaying the previous error for the whole duration of the new computation.
     entry.clearLastError();
@@ -220,6 +221,7 @@ public final class MissionOrchestratorAppState extends BaseAppState {
             entry.setMission(result.mission());
             entry.setOptimizerResult(result.optimizerResult());
             entry.setEphemeris(result.ephemeris());
+            entry.setDebris(result.debris());
             // Reporting-only, but the reason MissionComputeResult carries them rather than merely
             // logging them: the panel displays both without recomputing anything.
             entry.setAchievedOrbit(result.achievedOrbit());
