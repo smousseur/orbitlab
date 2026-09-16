@@ -382,6 +382,17 @@ les rubans collent, sans toucher la propagation.
   Un premier essai qui poussait l'offset dans la propagation des débris (point-1) a été
   **annulé**. L'invariant du §4 tient ; les quatre gates sont saufs par construction.
 
+### L7 — Débris : visibilité + trace au sol *(fonctionnel, après vérif L5/L6)*
+
+- Détail : [`09-conception-L7.md`](09-conception-L7.md). Les débris + rubans inertiels
+  font « fouilli ». Correctif fonctionnel, **100 % rendu** : débris **invisibles par
+  défaut** (3D si proche, rien sinon), **toggle global** « Afficher les débris » ; et le
+  ruban instantané est remplacé par une **trace au sol** qui répond à « d'où / où » —
+  courbe de chute complète en **repère tournant** (collée au globe dessiné, impact fixé au
+  sol) pour un débris **retombant**, **icône seule** (inertiel) pour un débris **orbital**.
+- Nouveau seam : un **nœud repère-tournant** par corps dans `SceneGraph`, mis à jour par
+  `PlanetPoseAppState`, lu par `MissionRenderer`. Physique et gates intacts.
+
 ---
 
 ## 6. Ordonnancement et risques

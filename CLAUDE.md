@@ -13,6 +13,23 @@ The application visualizes the solar system, computes spacecraft orbits, and sim
 
 ---
 
+## Working method
+
+- **Measure before claiming.** Never state a diagnosis, a number, or a behavior claim
+  without a measurement behind it — a probe test, added instrumentation, or the actual
+  log/output. If it cannot be measured yet, say so explicitly rather than hand-computing a
+  value or guessing. Facts carry a `file:line` reference; a claim that contradicts a
+  ticket or a design doc is the most valuable thing to surface, and it is surfaced
+  *before* any fix or question.
+- **Name the layer, and the revert, before editing.** Before a fix that touches
+  rendering, propagation/physics, or mission planning, state which layer it belongs in and
+  why, the exact files, and how to revert if it makes things worse — then act (see
+  *Layering rules*).
+- **Enumerate the blast radius.** After a change, say what adjacent behavior it might have
+  broken, so the visual/runtime re-check is targeted rather than a surprise.
+
+---
+
 ## Build System
 
 **Tool:** Gradle (use the wrapper)
@@ -208,6 +225,15 @@ The application renders two stacked viewports:
 
 `FloatingOriginAppState` keeps the camera near the world origin to avoid floating-point precision issues at large scales.
 
+### Layering rules
+
+Rendering concerns — offsets, seats, scale, orientation, LOD, colour — stay in the
+**render layer**. Never modify propagation/physics or mission-planning code to achieve a
+visual result: the propagated CoM trajectory is the mission's answer and is pinned by the
+zero-tolerance gates. If a visual bug seems to require a physics change, **stop and ask**.
+(PHY-5 / L6 is the cautionary case: a separation offset first went into propagation —
+"pire", full revert — before landing correctly in the render-side `StackSeat`.)
+
 ---
 
 ## Naming Conventions
@@ -262,6 +288,22 @@ The application renders two stacked viewports:
 
 ---
 
+## Editing conventions
+
+- **Use the `Edit`/`Write` tools, never `perl`/`sed`** for source or docs: shell
+  substitution has more than once mangled apostrophes and introduced CRLF. Preserve each
+  file's existing line endings (`.java` and `bugs.md` are CRLF, some roadmaps are LF —
+  detect per file, never presume) and accented/apostrophe characters exactly.
+- **`spotlessApply` reformats the whole repo, not just your files.** After running it,
+  `git diff -w` to confirm it only touched files in your change set, and
+  `git checkout -- <file>` any it reformatted out of scope. Check PMD with
+  `pmdMain pmdTest` — **not** `check`, which runs the slow tests.
+- **Fix all N.** When asked to fix N issues, fix the N; do not silently ship a subset.
+- **Gradle needs JDK 21**: prefix with
+  `JAVA_HOME="$HOME/.jdks/graalvm-jdk-21.0.5" ./gradlew …` (the default env JDK 17 fails).
+
+---
+
 ## Design Documents
 
 Design work in this repo is recorded in numbered French documents under
@@ -295,6 +337,28 @@ measurement logs are written directly.
 
 ---
 
+## Workflow: chantiers and lots
+
+Work is organised into numbered *chantiers*, each split into *lots* — `L0` a measured
+baseline, then `L1…Ln` one behaviour change at a time. A lot's design is worked out in the
+conversation first (see *Design Documents*), then recorded.
+
+**Closing a lot ends with three things — none skipped, and none reported done until it
+actually exists:**
+1. The **measurement / verification run against the production path** — the real planner
+   (`MeasuredLoadPlanner`) and the production propagator, not a fixture stand-in — with the
+   measured before/after numbers. The zero-tolerance gates run via `gateTest`
+   (`forkEvery=1`); confirm they are untouched, or that a re-baseline was a deliberate,
+   stated decision.
+2. **Closure documentation** under `docs/<chantier>/` (French): scope, measured
+   before/after, known limitations.
+3. **Registry updates**: `bugs.md`, `dette-technique.md` / reliquats, and the roadmap —
+   resolved items marked, any new tickets added.
+
+The user runs the slow flights and commits; leave both to them.
+
+---
+
 ## Testing
 
 **Framework:** JUnit 5 (Jupiter)
@@ -304,6 +368,15 @@ measurement logs are written directly.
 ```
 
 > **AI assistants: do not run `./gradlew test` (or any test task) after code changes on your own initiative.** No pipeline ever runs the tests: the only workflow, `.github/workflows/release.yml`, fires on a `vX.Y.Z` tag (or manual dispatch) and runs `shadowJar` plus `jpackage` — no test task anywhere. The user runs tests manually. Only run tests when the user explicitly asks, or when you need to investigate/debug something to complete the feature you're actively working on.
+
+**Slow suites and long runs.** The full/slow suite (mission-optimization flights) takes
+**2–5 hours** — never launch it unprompted, and never as an opaque foreground call.
+Default to the fast unit tests. When a long run is genuinely needed: ask first; make sure
+`git status` is clean (everything committed or stashed) so a stall cannot cost the working
+tree; run it in the **background** with progress that can be tailed. The user runs these
+flights themselves by default — offer, don't assume. Re-running the same `--tests` filter
+after a success does nothing (UP-TO-DATE); a reproducibility measurement goes through
+`cleanTest`.
 
 **Test categories:**
 - **Unit tests**: Clock, converters, transforms, orbit path/cache/policy, ephemeris buffer, vehicle/launcher/payload catalogs, propellant budgeting, depletion guard/stop trigger, mission stages

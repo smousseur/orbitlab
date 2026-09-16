@@ -37,6 +37,20 @@ final class TrackedObjectView {
   private final LodView view;
   private final MissionTrajectoryRenderer trajectoryRenderer;
 
+  /**
+   * Whether this object shows its far-range icon on top of its close-range 3D mesh. Always {@code
+   * true} for the primary; a debris sets it from the global "show debris" toggle, so a decluttered
+   * debris is only its 3D mesh up close (PHY-5 / L7).
+   */
+  private boolean secondaryDisplay = true;
+
+  /**
+   * Whether this object draws its inertial trajectory ribbon. {@code true} for the primary (the
+   * mission trajectory); {@code false} for a debris, whose trajectory is a ground track drawn
+   * separately in the Earth rotating frame, or nothing at all when it is orbital (PHY-5 / L7 §D3).
+   */
+  private boolean inertialTrail = true;
+
   private TrackedObjectView(
       SpacecraftPresenter presenter, LodView view, MissionTrajectoryRenderer trajectoryRenderer) {
     this.presenter = presenter;
@@ -187,8 +201,35 @@ final class TrackedObjectView {
             : position.subtract(MissionRenderer.renderPositionOf(referencePoint, renderBody));
     presenter.updatePose(modelPosition, point.velocity(), tpf, ctx);
     this.view.setModelOffset(JmeVectorAdapter.toJmeBodyRelativePosition(seat, ctx));
+    this.view.setIconFallbackEnabled(secondaryDisplay);
     this.view.updateScreen(cam, true);
-    trajectoryRenderer.update(trail, upTo, position, seat, ctx);
+    if (inertialTrail) {
+      trajectoryRenderer.setVisible(true);
+      trajectoryRenderer.update(trail, upTo, position, seat, ctx);
+    } else {
+      trajectoryRenderer.setVisible(false);
+    }
+  }
+
+  /**
+   * Sets whether this object shows its far-range icon. The primary keeps the default {@code true};
+   * a debris is driven from the global "show debris" toggle (PHY-5 / L7).
+   *
+   * @param on whether the far-range icon is shown
+   */
+  void setSecondaryDisplay(boolean on) {
+    this.secondaryDisplay = on;
+  }
+
+  /**
+   * Sets whether this object draws its inertial trajectory ribbon. The primary keeps the default
+   * {@code true}; a debris sets it {@code false}, its trajectory being a ground track drawn
+   * separately (PHY-5 / L7 §D3).
+   *
+   * @param on whether the inertial ribbon is drawn
+   */
+  void setInertialTrail(boolean on) {
+    this.inertialTrail = on;
   }
 
   void setVisible(boolean visible) {

@@ -26,6 +26,7 @@ public final class LodView implements BodyView {
   private final BodyRenderConfig config;
   private final Consumer<Boolean> onLodChanged;
   private boolean lastShow3d = false;
+  private boolean iconFallbackEnabled = true;
 
   /**
    * Creates a new LOD view for a body, setting up both the 3D model view and the icon view.
@@ -138,14 +139,31 @@ public final class LodView implements BodyView {
     if (show3d) {
       model3dView.setVisible(true);
       iconView.setVisible(false);
-    } else {
+    } else if (iconFallbackEnabled) {
       model3dView.setVisible(false);
       iconView.setVisible(true);
       iconView.updateScreenPosition(cam, farAnchor);
+    } else {
+      // No icon fallback: a decluttered debris shows its 3D mesh up close and nothing when it is
+      // too small to draw in 3D — no icon, no label (PHY-5 / L7, spec
+      // docs/multi-objets/09-conception-L7.md §D1).
+      model3dView.setVisible(false);
+      iconView.setVisible(false);
     }
     if (onLodChanged != null) {
       onLodChanged.accept(show3d);
     }
+  }
+
+  /**
+   * Whether this view falls back to its 2D icon when it is too small to draw in 3D. Default {@code
+   * true} (planets and the mission primary always keep an icon); a decluttered debris sets it
+   * {@code false} so it shows nothing beyond its close-range 3D mesh (PHY-5 / L7).
+   *
+   * @param enabled whether the far-range icon may be shown
+   */
+  public void setIconFallbackEnabled(boolean enabled) {
+    this.iconFallbackEnabled = enabled;
   }
 
   @Override

@@ -43,6 +43,7 @@ public class ApplicationContext {
 
   private final FocusView focusView;
   private final MissionContext missionContext;
+  private final DisplaySettings displaySettings = new DisplaySettings();
   private final HudSurfaces hudSurfaces = new HudSurfaces();
   private Camera nearCamera;
   private Camera skyCamera;
@@ -134,6 +135,16 @@ public class ApplicationContext {
    */
   public FocusView focusView() {
     return focusView;
+  }
+
+  /**
+   * Returns the mutable display preferences the user toggles at runtime (e.g. debris visibility),
+   * read by the renderers.
+   *
+   * @return the display settings
+   */
+  public DisplaySettings displaySettings() {
+    return displaySettings;
   }
 
   /**

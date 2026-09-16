@@ -14,6 +14,7 @@ import com.smousseur.orbitlab.engine.scene.PlanetRadius;
 import com.smousseur.orbitlab.engine.scene.body.BodyRenderConfig;
 import com.smousseur.orbitlab.engine.scene.body.EclipseGeometry;
 import com.smousseur.orbitlab.engine.scene.body.LodView;
+import com.smousseur.orbitlab.engine.scene.planet.PlanetDrawnRotation;
 import com.smousseur.orbitlab.engine.scene.spacecraft.LauncherAssets;
 import com.smousseur.orbitlab.engine.scene.spacecraft.LauncherStackGeometry;
 import com.smousseur.orbitlab.engine.scene.spacecraft.PayloadAssets;
@@ -31,6 +32,7 @@ import com.smousseur.orbitlab.simulation.mission.vehicle.model.stage.StageRole;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.orekit.time.AbsoluteDate;
 
@@ -81,6 +83,13 @@ public final class MissionRenderer {
    */
   private static final double BOOSTER_LATERAL_SPREAD_METERS = 4.0;
 
+  /**
+   * Below this altitude (m) a debris' last sample counts as an impact: it lands, and gets a ground
+   * track. Above it, the debris ends at the mission horizon in orbit and gets none (PHY-5 / L7
+   * §D2).
+   */
+  private static final double LANDED_ALTITUDE_METERS = 1000.0;
+
   private final MissionEntry entry;
   private final ApplicationContext context;
 
@@ -103,6 +112,13 @@ public final class MissionRenderer {
 
   /** One view per jettisoned object, rebuilt when the entry's debris change (a recomputation). */
   private final List<TrackedObjectView> debrisViews = new ArrayList<>();
+
+  /**
+   * One ground-track view per debris, parallel to {@link #debrisViews}: {@code null} for an orbital
+   * debris (no ground track), and for a landing debris until its rotations are available and it is
+   * built lazily (PHY-5 / L7 §D3).
+   */
+  private final List<DebrisGroundTrackView> debrisGroundTracks = new ArrayList<>();
 
   /**
    * The debris list {@link #debrisViews} was built from, compared by identity to detect a change.
@@ -473,12 +489,14 @@ public final class MissionRenderer {
       float tpf,
       FocusView focus) {
     syncDebrisViews();
+    boolean debrisVisible = context.displaySettings().isDebrisVisible();
     for (int i = 0; i < debrisViews.size(); i++) {
       TrackedObjectView debrisView = debrisViews.get(i);
       DebrisTrack track = builtDebris.get(i);
       MissionEphemeris ephemeris = track.ephemeris();
       if (now.compareTo(ephemeris.startDate()) < 0) {
         debrisView.setVisible(false);
+        hideGroundTrack(i);
         continue;
       }
       TrajectoryPolyline trail = ephemeris.displayTrail();
@@ -486,9 +504,73 @@ public final class MissionRenderer {
       MissionEphemerisPoint pt = ephemeris.displayPointAt(now);
       int upTo = within ? trail.indexUpTo(now) : trail.size() - 1;
       debrisView.setVisible(true);
+      updateGroundTrack(i, track, debrisVisible);
+      // Off by default: a debris shows only its close-range 3D mesh; the far-range icon and the
+      // ground track come with the global "show debris" toggle (PHY-5 / L7 §D1).
+      debrisView.setSecondaryDisplay(debrisVisible);
       debrisView.updateFromPoint(
           pt, debrisSeat(track, pt), primaryPoint, trail, upTo, cam, tpf, focus);
     }
+  }
+
+  /**
+   * Shows a landing debris' ground track when the "show debris" toggle is on, building it lazily
+   * the first time its rotations are available (PHY-5 / L7 §D3). An orbital debris (it never lands)
+   * gets none, and a hidden toggle hides it.
+   */
+  private void updateGroundTrack(int index, DebrisTrack track, boolean debrisVisible) {
+    boolean wanted = debrisVisible && hasLanded(track);
+    DebrisGroundTrackView groundTrack = debrisGroundTracks.get(index);
+    if (!wanted) {
+      if (groundTrack != null) {
+        groundTrack.setVisible(false);
+      }
+      return;
+    }
+    if (groundTrack == null) {
+      groundTrack = buildGroundTrack(track, index).orElse(null);
+      debrisGroundTracks.set(index, groundTrack);
+    }
+    if (groundTrack != null) {
+      groundTrack.setVisible(true);
+    }
+  }
+
+  private void hideGroundTrack(int index) {
+    DebrisGroundTrackView groundTrack = debrisGroundTracks.get(index);
+    if (groundTrack != null) {
+      groundTrack.setVisible(false);
+    }
+  }
+
+  /** Whether a debris reaches the ground — its last sample is at (near) zero altitude (§D2). */
+  private static boolean hasLanded(DebrisTrack track) {
+    return track.ephemeris().lastPoint().altitudeMeters() < LANDED_ALTITUDE_METERS;
+  }
+
+  /**
+   * Builds a landing debris' ground track from its whole fall, in the Earth rotating frame — or
+   * empty while any sample's drawn rotation is not yet available, so the caller retries next frame
+   * (PHY-5 / L7 §D3).
+   */
+  private Optional<DebrisGroundTrackView> buildGroundTrack(DebrisTrack track, int index) {
+    RenderContext ctx = RenderContext.planet(SolarSystemBody.EARTH);
+    List<MissionEphemerisPoint> points = track.ephemeris().allPoints();
+    List<Vector3f> gcrfJme = new ArrayList<>(points.size());
+    List<AbsoluteDate> times = new ArrayList<>(points.size());
+    for (MissionEphemerisPoint point : points) {
+      gcrfJme.add(JmeVectorAdapter.toJmeBodyRelativePosition(point.position(), ctx));
+      times.add(point.time());
+    }
+    return DebrisGroundTrack.tryBuild(
+            gcrfJme, times, t -> PlanetDrawnRotation.at(SolarSystemBody.EARTH, t))
+        .map(
+            groundTrack ->
+                new DebrisGroundTrackView(
+                    context.sceneGraph().earthRotatingFrame(),
+                    groundTrack,
+                    DEBRIS_COLOR,
+                    entry.id() + "-debris-" + index));
   }
 
   /**
@@ -526,21 +608,36 @@ public final class MissionRenderer {
       debris.cleanup();
     }
     debrisViews.clear();
+    cleanupGroundTracks();
     builtDebris = entry.getDebris();
     silhouette = PrimarySilhouette.from(builtDebris);
     boosterCount = (int) builtDebris.stream().filter(t -> t.role() == StageRole.BOOSTER).count();
     for (int i = 0; i < builtDebris.size(); i++) {
       DebrisTrack track = builtDebris.get(i);
       BodyRenderConfig config = debrisConfig(i, track);
-      debrisViews.add(
+      TrackedObjectView view =
           TrackedObjectView.create(
               context,
               config,
               entry.id() + "-debris-" + i,
               DEBRIS_COLOR,
               null,
-              (Node) primary.view().spatial()));
+              (Node) primary.view().spatial());
+      // A debris draws no inertial ribbon: its trajectory is a ground track (landing) or nothing
+      // (orbital), decided per frame in updateDebris (PHY-5 / L7 §D3).
+      view.setInertialTrail(false);
+      debrisViews.add(view);
+      debrisGroundTracks.add(null);
     }
+  }
+
+  private void cleanupGroundTracks() {
+    for (DebrisGroundTrackView groundTrack : debrisGroundTracks) {
+      if (groundTrack != null) {
+        groundTrack.cleanup();
+      }
+    }
+    debrisGroundTracks.clear();
   }
 
   /**
@@ -572,12 +669,19 @@ public final class MissionRenderer {
    * The mesh-path suffix for a jettisoned piece, glued onto the launcher's path — {@code
    * heavy_falcon.gltf} becomes {@code heavy_falcon-booster2.gltf}. This is the render layer's own
    * asset mapping; the simulation carries only the role and index.
+   *
+   * <p><b>The upper stage leaves as {@code after_s1}, not {@code S2}.</b> The primary flies the
+   * {@code after_s1} silhouette (upper stage <em>and</em> fairing) right up to this separation,
+   * because the fairing has no jettison of its own (découpage §1). Drawing the debris as the bare
+   * {@code S2} would make it 12 m shorter than the remnant it detached from, so the piece would
+   * appear to shrink as it separates; drawing it as {@code after_s1} makes it fill exactly the box
+   * the remnant occupied, and it peels away seamlessly while the payload is revealed (PHY-5 / L6).
    */
   private static String meshSuffixFor(DebrisTrack track) {
     return switch (track.role()) {
       case BOOSTER -> "-booster" + track.exemplarIndex() + ".gltf";
       case CORE -> "-core.gltf";
-      case UPPER -> "-S2.gltf";
+      case UPPER -> "-after_s1.gltf";
       case KICK -> "-core.gltf";
     };
   }
@@ -648,5 +752,6 @@ public final class MissionRenderer {
       debris.cleanup();
     }
     debrisViews.clear();
+    cleanupGroundTracks();
   }
 }
