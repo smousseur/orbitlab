@@ -9,6 +9,7 @@ import com.jme3.input.controls.ActionListener;
 import com.jme3.input.controls.KeyTrigger;
 import com.jme3.scene.Node;
 import com.smousseur.orbitlab.app.ApplicationContext;
+import com.smousseur.orbitlab.app.DisplaySettings;
 import com.smousseur.orbitlab.app.HudSurface;
 import com.smousseur.orbitlab.app.HudSurfaces;
 import com.smousseur.orbitlab.engine.events.EventBus;
@@ -43,6 +44,12 @@ public final class MissionDisplayPanelAppState extends BaseAppState implements A
   /** Toggles the mission management window; carries a check mark like the display panel. */
   private static final String ITEM_MANAGE_MISSIONS = "manageMissions";
 
+  /**
+   * Toggles whether jettisoned debris are shown beyond their close-range 3D mesh (far-range icon
+   * and ground track). Global, off by default (PHY-5 / L7).
+   */
+  private static final String ITEM_SHOW_DEBRIS = "showDebris";
+
   /** Opens the mission creation wizard. */
   private static final String ITEM_NEW_MISSION = "newMission";
 
@@ -60,6 +67,8 @@ public final class MissionDisplayPanelAppState extends BaseAppState implements A
           AppMenuItem.toggle(ITEM_MISSION_PANEL, "Mission panel", "missions/icon-action-view"),
           AppMenuItem.toggle(
               ITEM_MANAGE_MISSIONS, "Mission management", "missions/icon-action-manage"),
+          // Icon is a placeholder (reuses the "view" eye) until a debris icon is authored.
+          AppMenuItem.toggle(ITEM_SHOW_DEBRIS, "Show debris", "missions/icon-action-view"),
           AppMenuItem.action(ITEM_NEW_MISSION, "New mission...", "wizard/icon-plus")
               .withSeparatorBefore(),
           AppMenuItem.action(ITEM_OPEN_SCENARIO, "Open scenario...", "scenario/icon-open")
@@ -198,6 +207,7 @@ public final class MissionDisplayPanelAppState extends BaseAppState implements A
     switch (itemId) {
       case ITEM_MISSION_PANEL -> togglePanel();
       case ITEM_MANAGE_MISSIONS -> publishToggleManagement();
+      case ITEM_SHOW_DEBRIS -> toggleDebris();
       case ITEM_NEW_MISSION -> publishOpenWizard();
       case ITEM_OPEN_SCENARIO -> publishOpenScenarioBrowser(ScenarioBrowserMode.OPEN);
       case ITEM_SAVE_SCENARIO -> publishOpenScenarioBrowser(ScenarioBrowserMode.SAVE);
@@ -221,6 +231,7 @@ public final class MissionDisplayPanelAppState extends BaseAppState implements A
     menuModel.setChecked(ITEM_MISSION_PANEL, widget != null && widget.isVisible());
     menuModel.setChecked(
         ITEM_MANAGE_MISSIONS, context.hudSurfaces().isOpen(HudSurface.MISSION_MANAGEMENT));
+    menuModel.setChecked(ITEM_SHOW_DEBRIS, context.displaySettings().isDebrisVisible());
     menu.setOpen(menuModel.isOpen());
     for (AppMenuItem item : menuModel.items()) {
       menu.setEnabled(item.id(), menuModel.isEnabled(item.id()));
@@ -237,6 +248,12 @@ public final class MissionDisplayPanelAppState extends BaseAppState implements A
     } else {
       widget.show(parentNode);
     }
+  }
+
+  /** Flips the global "show debris" preference; the renderers read it each frame (PHY-5 / L7). */
+  private void toggleDebris() {
+    DisplaySettings settings = context.displaySettings();
+    settings.setDebrisVisible(!settings.isDebrisVisible());
   }
 
   /**

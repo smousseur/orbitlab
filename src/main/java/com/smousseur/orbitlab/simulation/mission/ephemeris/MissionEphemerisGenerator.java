@@ -6,6 +6,11 @@ import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionHorizon;
 import com.smousseur.orbitlab.simulation.mission.MissionStage;
 import com.smousseur.orbitlab.simulation.mission.runtime.StageChainRunner;
+import com.smousseur.orbitlab.simulation.mission.stage.StageSeparationStage;
+import com.smousseur.orbitlab.simulation.mission.vehicle.ActiveStageInfo;
+import com.smousseur.orbitlab.simulation.mission.vehicle.StagingPlan;
+import com.smousseur.orbitlab.simulation.mission.vehicle.model.AerodynamicProperties;
+import com.smousseur.orbitlab.simulation.mission.vehicle.model.stage.StageRole;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.logging.log4j.LogManager;
@@ -72,17 +77,38 @@ public final class MissionEphemerisGenerator {
    */
   public MissionEphemeris generate(
       Mission mission, SpacecraftState initialState, double finalCoastSeconds) {
+    return generateWithJettisons(mission, initialState, finalCoastSeconds).ephemeris();
+  }
+
+  /**
+   * Re-propagates the mission as {@link #generate(Mission, SpacecraftState, double)} does, and also
+   * reports the separation events for {@link DebrisGenerator} to fly (PHY-5 / L1, spec {@code
+   * docs/multi-objets/03-conception-L1.md} §2.2).
+   *
+   * <p>The ephemeris is identical to what {@code generate} returns — the jettison capture is a
+   * separate accumulation that touches no sample — so the callers that only want the trajectory,
+   * and the gate that pins it, are unaffected.
+   *
+   * @param mission the mission with optimization results injected into stages
+   * @param initialState the spacecraft state at T_start
+   * @param finalCoastSeconds how long to coast past the last stage, in seconds
+   * @return the mission trajectory and its separation events
+   */
+  public GeneratedTrajectory generateWithJettisons(
+      Mission mission, SpacecraftState initialState, double finalCoastSeconds) {
     Collector collector = new Collector(mission);
     StageChainRunner runner = StageChainRunner.sampling(collector, finalCoastSeconds, collector);
 
     runner.run(mission.getStages(), initialState, mission);
 
     logger.info(
-        "Total ephemeris points: {} (complete={}, final coast {} s)",
+        "Total ephemeris points: {} (complete={}, final coast {} s, jettisons {})",
         collector.points.size(),
         collector.complete,
-        String.format(java.util.Locale.ROOT, "%.0f", finalCoastSeconds));
-    return new MissionEphemeris(collector.points, collector.complete);
+        String.format(java.util.Locale.ROOT, "%.0f", finalCoastSeconds),
+        collector.jettisons.size());
+    return new GeneratedTrajectory(
+        new MissionEphemeris(collector.points, collector.complete), collector.jettisons);
   }
 
   /**
@@ -94,6 +120,15 @@ public final class MissionEphemerisGenerator {
 
     private final Mission mission;
     private final List<MissionEphemerisPoint> points = new ArrayList<>();
+
+    /** The separation events, in flight order — for {@link DebrisGenerator} (PHY-5 / L1). */
+    private final List<JettisonEvent> jettisons = new ArrayList<>();
+
+    /**
+     * The final state of the stage that ran just before the current one — the pre-jettison state a
+     * separation drops from, since a {@code StageSeparationStage} only changes the mass.
+     */
+    private SpacecraftState previousStageFinalState;
 
     /** Cleared the moment any stage fails to reach its scheduled end (bilan 11 §3.9 prérequis). */
     private boolean complete = true;
@@ -136,11 +171,50 @@ public final class MissionEphemerisGenerator {
       // the one it declared unless it crossed a sphere of influence on the way (PHY-4 / L4 §3.6).
       points.add(pointOf(run.stage(), run.exitContext().gravity(), run.finalState()));
 
+      captureJettison(run);
+      previousStageFinalState = run.finalState();
+
       logger.info(
           "Stage '{}': {} points, ended at {}",
           run.stage().getName(),
           points.size(),
           run.finalState().getDate());
+    }
+
+    /**
+     * Emits a {@link JettisonEvent} when this stage is a separation (spec 04 §2.2). The debris
+     * start from the pre-jettison state ({@link #previousStageFinalState} — position and velocity
+     * unchanged by the mass drop) with the total mass shed, the jettisoned block's own aggregate
+     * section, and its multiplicity: the {@link DebrisGenerator} splits the block into that many
+     * drawn objects. The active stage at the pre-jettison mass <em>is</em> the one being dropped.
+     */
+    private void captureJettison(StageChainRunner.StageRun run) {
+      if (previousStageFinalState == null || !(run.stage() instanceof StageSeparationStage)) {
+        return;
+      }
+      SpacecraftState pre = previousStageFinalState;
+      double jettisonedMass = pre.getMass() - run.entryState().getMass();
+      if (jettisonedMass <= 0.0) {
+        return;
+      }
+      ActiveStageInfo info = mission.getVehicle().resolveActiveStage(pre.getMass());
+      AerodynamicProperties aero = info.aerodynamics();
+      StageRole role = info.role();
+      if (aero == null || role == null) {
+        return;
+      }
+      jettisons.add(new JettisonEvent(pre, aero, jettisonedMass, multiplicityOf(role), role));
+    }
+
+    /**
+     * How many exemplars a role drops at once: the booster count for a parallel block, else one.
+     */
+    private int multiplicityOf(StageRole role) {
+      if (role != StageRole.BOOSTER) {
+        return 1;
+      }
+      StagingPlan staging = mission.getVehicle().stagingPlan();
+      return staging.hasParallelBlock() ? staging.parallelBlock().boosterCount() : 1;
     }
 
     /**

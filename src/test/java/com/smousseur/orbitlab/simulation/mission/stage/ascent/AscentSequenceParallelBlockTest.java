@@ -102,6 +102,6 @@ class AscentSequenceParallelBlockTest {
         vehicles,
         new StagingPlan(
             List.of(StageRole.BOOSTER, StageRole.CORE, StageRole.UPPER, StageRole.KICK),
-            new StagingPlan.ParallelBlock(0, grouped, 1.0, grouped ? 0.0 : 100_000)));
+            new StagingPlan.ParallelBlock(0, grouped, 1.0, grouped ? 0.0 : 100_000, 2)));
   }
 }

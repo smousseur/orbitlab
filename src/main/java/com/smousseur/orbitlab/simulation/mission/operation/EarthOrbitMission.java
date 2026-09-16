@@ -10,6 +10,7 @@ import com.smousseur.orbitlab.simulation.mission.stage.AnalyticPlaneTrimAtNodeSt
 import com.smousseur.orbitlab.simulation.mission.stage.AnalyticTrimBurnStage;
 import com.smousseur.orbitlab.simulation.mission.stage.CoastingStage;
 import com.smousseur.orbitlab.simulation.mission.stage.StageNames;
+import com.smousseur.orbitlab.simulation.mission.stage.StageSeparationStage;
 import com.smousseur.orbitlab.simulation.mission.stage.TransfertManeuverStage;
 import com.smousseur.orbitlab.simulation.mission.stage.TransfertTwoManeuverStage;
 import com.smousseur.orbitlab.simulation.mission.stage.ascent.AscentSequence;
@@ -20,6 +21,7 @@ import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
 import com.smousseur.orbitlab.simulation.mission.vehicle.VehicleStack;
 import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Launchers;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.AscentProfile;
+import com.smousseur.orbitlab.simulation.mission.vehicle.model.stage.StageRole;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -107,7 +109,8 @@ public class EarthOrbitMission extends EarthMission {
             perigeeAltitude,
             apogeeAltitude,
             launchPlane,
-            latitude),
+            latitude,
+            configuration.payload()),
         perigeeAltitude,
         apogeeAltitude,
         launchPlane,
@@ -188,6 +191,7 @@ public class EarthOrbitMission extends EarthMission {
             GravityTurnConstraints.forTarget(targetAltitude),
             launchPlane,
             latitude,
+            configuration.payload(),
             new TransfertTwoManeuverStage(
                 "Transfert", targetAltitude, launchPlane.targetInclination()),
             new AnalyticTrimBurnStage(
@@ -256,6 +260,7 @@ public class EarthOrbitMission extends EarthMission {
             GravityTurnConstraints.forTarget(perigeeAltitude),
             launchPlane,
             latitude,
+            configuration.payload(),
             new TransfertManeuverStage(
                 "Transfert", perigeeAltitude, apogeeAltitude, launchPlane.targetInclination()),
             // The trim burn at the next apogee raises the perigee to the target perigee, shaping
@@ -324,13 +329,15 @@ public class EarthOrbitMission extends EarthMission {
       double perigeeAltitude,
       double apogeeAltitude,
       LaunchPlane launchPlane,
-      double latitude) {
+      double latitude,
+      Spacecraft payload) {
     return ascentThen(
         vehicle,
         profile,
         GravityTurnConstraints.forTarget(perigeeAltitude),
         launchPlane,
         latitude,
+        payload,
         new AnalyticHohmannTransferStage(
             "Transfert", perigeeAltitude, apogeeAltitude, launchPlane.targetInclination()),
         new AnalyticTrimBurnStage(
@@ -340,16 +347,25 @@ public class EarthOrbitMission extends EarthMission {
   /**
    * The ascent — vertical climb then the three explicit gravity-turn phases ({@code Gravity turn
    * (S1) → S1 separation → Gravity turn (S2)}, spec {@code
-   * docs/mission-stages/01-separations-implicites.md} §4.2) — followed by the orbital phases of a
-   * given profile, and closed by the coast. Shared by the three variants so none of them can drift
-   * on how the launcher stages, nor on when the plane residual is cleaned up.
+   * docs/mission-stages/01-separations-implicites.md} §4.2) — then the transfer, the trim, and the
+   * closing coast. Shared by the three variants so none of them can drift on how the launcher
+   * stages, nor on when the plane residual is cleaned up.
+   *
+   * <p><b>Payload delivery (PHY-5 / L4, spec {@code docs/multi-objets/06-conception-L4.md}
+   * §3.2).</b> When the payload carries usable propellant, the upper stage is dropped after the
+   * transfer — and after the plane trim, which stays on it (§3.3) — and the payload flies the final
+   * trim on its own engine: the mission actually delivers its satellite. An inert payload keeps the
+   * upper stage to the end, so the chain is byte-identical to before and the zero-tolerance gates
+   * are untouched (§3.1).
    *
    * @param vehicle the stack that will fly it, read for its staging plan
    * @param profile the launcher's flight profile
    * @param constraints the gravity turn's hand-off targets
    * @param launchPlane the target orbital plane
    * @param latitude the launch site latitude in degrees
-   * @param orbitalPhases the phases flown after MECO, in order, before the closing coast
+   * @param payload the payload atop the stack, asked whether it can fly its own trim
+   * @param transfer the transfer/circularization phase, flown by the upper stage
+   * @param trim the final trim, flown by the payload when it can, else by the upper stage
    * @return the full stage list
    */
   private static List<MissionStage> ascentThen(
@@ -358,22 +374,45 @@ public class EarthOrbitMission extends EarthMission {
       GravityTurnConstraints constraints,
       LaunchPlane launchPlane,
       double latitude,
-      MissionStage... orbitalPhases) {
+      Spacecraft payload,
+      MissionStage transfer,
+      MissionStage trim) {
     List<MissionStage> stages = new ArrayList<>();
     stages.add(new VerticalAscentStage("Vertical Ascent", profile.verticalAscentDuration()));
     stages.addAll(AscentSequence.gravityTurn(vehicle, profile, constraints, launchPlane, latitude));
-    stages.addAll(List.of(orbitalPhases));
-    if (launchPlane.commands(FastMath.toRadians(latitude))) {
-      // Steering the plane during the climb does not land it to the tenth of a degree: the initial
-      // entrainment is not in the target plane and a finite thrust does not bring it there at once
-      // (spec §4.3). The residual is cleaned up at a node, where a plane change is efficient and
-      // drift-free — the same short out-of-plane burn GEO already uses for the ~0.25° its apogee
-      // circularization leaves behind.
-      //
-      // Only when a plane is commanded: on a due-east launch there is no residual to clean, and the
-      // stage would spend propellant deciding so.
-      stages.add(new AnalyticPlaneTrimAtNodeStage("Plane trim", launchPlane.targetInclination()));
+    stages.add(transfer);
+
+    // Steering the plane during the climb does not land it to the tenth of a degree: the initial
+    // entrainment is not in the target plane and a finite thrust does not bring it there at once
+    // (spec §4.3). The residual is cleaned up at a node, where a plane change is efficient and
+    // drift-free — the same short out-of-plane burn GEO already uses for the ~0.25° its apogee
+    // circularization leaves behind. Only when a plane is commanded: on a due-east launch there is
+    // no residual to clean.
+    MissionStage planeTrim =
+        launchPlane.commands(FastMath.toRadians(latitude))
+            ? new AnalyticPlaneTrimAtNodeStage("Plane trim", launchPlane.targetInclination())
+            : null;
+
+    if (payload.hasUsablePropellant()) {
+      // The upper stage delivered the payload to orbit (the transfer above) and cleans the plane;
+      // it is then dropped, and the payload flies its own final trim on its own engine (PHY-5 / L4,
+      // spec 06 §3.2). The plane trim stays on the upper stage: a LEO plane residual outruns the
+      // payload's small trim budget (§3.3). The separation's role guard refuses to fire if a lower
+      // stage still holds propellant, exactly as GEO's does.
+      if (planeTrim != null) {
+        stages.add(planeTrim);
+      }
+      stages.add(
+          new StageSeparationStage(
+              StageNames.UPPER_SEPARATION, profile.interstageCoastDuration(), StageRole.UPPER));
+      stages.add(trim);
+    } else {
+      stages.add(trim);
+      if (planeTrim != null) {
+        stages.add(planeTrim);
+      }
     }
+
     stages.add(new CoastingStage(StageNames.TERMINAL_COAST, null));
     return List.copyOf(stages);
   }

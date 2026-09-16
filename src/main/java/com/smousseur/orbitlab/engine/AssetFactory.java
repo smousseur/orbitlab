@@ -1,6 +1,9 @@
 package com.smousseur.orbitlab.engine;
 
 import com.jme3.asset.AssetManager;
+import com.jme3.bounding.BoundingBox;
+import com.jme3.bounding.BoundingSphere;
+import com.jme3.bounding.BoundingVolume;
 import com.jme3.material.MatParam;
 import com.jme3.material.MatParamTexture;
 import com.jme3.material.Material;
@@ -61,6 +64,36 @@ public class AssetFactory {
     Spatial model = assetManager.loadModel(path);
     model.setLocalScale(scale);
     return model;
+  }
+
+  /**
+   * Loads a model and scales it so its largest dimension spans {@code targetSizeUnits}, by
+   * measuring its own bounding box rather than assuming the one-unit-tall convention the launcher
+   * assets follow (PHY-5 / L5, spec {@code docs/multi-objets/07-conception-L5.md} §3.3). The
+   * payload meshes are third-party assets with no shared normalization, so their intrinsic scale
+   * has to be measured to draw them at a controlled size. May be called from a background thread —
+   * the model is detached, so {@link Spatial#updateGeometricState()} touches no shared state.
+   *
+   * @param path the asset path to the model file
+   * @param targetSizeUnits the size, in render units, the model's largest extent should span
+   * @return the loaded model, scaled to that size
+   */
+  public Spatial loadModelNormalized(String path, float targetSizeUnits) {
+    Spatial model = assetManager.loadModel(path);
+    model.updateGeometricState();
+    float extent = largestExtent(model.getWorldBound());
+    model.setLocalScale(extent > 0f ? targetSizeUnits / extent : 1f);
+    return model;
+  }
+
+  private static float largestExtent(BoundingVolume bound) {
+    if (bound instanceof BoundingBox box) {
+      return 2f * Math.max(box.getXExtent(), Math.max(box.getYExtent(), box.getZExtent()));
+    }
+    if (bound instanceof BoundingSphere sphere) {
+      return 2f * sphere.getRadius();
+    }
+    return 0f;
   }
 
   /**

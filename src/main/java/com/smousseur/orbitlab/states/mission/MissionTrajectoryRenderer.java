@@ -13,7 +13,6 @@ import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.engine.AssetFactory;
 import com.smousseur.orbitlab.engine.scene.RibbonMeshBuilder;
 import com.smousseur.orbitlab.engine.view.JmeVectorAdapter;
-import com.smousseur.orbitlab.simulation.mission.MissionId;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.TrajectoryPolyline;
 import com.smousseur.orbitlab.ui.mission.MissionPhaseShading;
 import java.nio.FloatBuffer;
@@ -49,7 +48,7 @@ public final class MissionTrajectoryRenderer {
    */
   private static final float TRAJECTORY_WIDTH_PX = 1.5f;
 
-  private final MissionId missionId;
+  private final String id;
   private final ColorRGBA color;
 
   /**
@@ -67,8 +66,8 @@ public final class MissionTrajectoryRenderer {
   private ColorRGBA[] runColors;
   private PhaseNodeMarkers markers;
 
-  public MissionTrajectoryRenderer(MissionId missionId, ColorRGBA color) {
-    this.missionId = Objects.requireNonNull(missionId, "missionId");
+  public MissionTrajectoryRenderer(String id, ColorRGBA color) {
+    this.id = Objects.requireNonNull(id, "id");
     this.color = Objects.requireNonNull(color, "color");
   }
 
@@ -86,7 +85,7 @@ public final class MissionTrajectoryRenderer {
     Material mat = AssetFactory.get().createRibbon(ColorRGBA.White, TRAJECTORY_WIDTH_PX, true);
 
     // Keyed on the id, not the name: duplicate names must not produce colliding geometry names.
-    lineGeometry = new Geometry("MissionTrajectory-" + missionId, mesh);
+    lineGeometry = new Geometry("MissionTrajectory-" + id, mesh);
     lineGeometry.setMaterial(mat);
     // The edge fade is an alpha ramp, so the trace belongs in the transparent bucket — where it is
     // still depth-tested, and therefore still disappears behind the central body.
@@ -94,7 +93,7 @@ public final class MissionTrajectoryRenderer {
     nearOrbitsNode.attachChild(lineGeometry);
 
     markers = new PhaseNodeMarkers();
-    markers.initialize(nearOrbitsNode, missionId);
+    markers.initialize(nearOrbitsNode, id);
   }
 
   /**
@@ -140,15 +139,24 @@ public final class MissionTrajectoryRenderer {
    *
    * @param trail the display polyline, already bounded to the vertex budget
    * @param upTo index of the last vertex to draw, from {@link TrajectoryPolyline#indexUpTo}
-   * @param tip the interpolated position at the current instant, drawn as the final vertex and used
-   *     as the origin the vertices are expressed against
+   * @param tip the interpolated position at the current instant, used as the origin the vertices
+   *     are expressed against — the <em>unseated</em> propagated position, so the geometry's own
+   *     translation still cancels the near frame exactly for the focused object
+   * @param seat the render-only stack seat (PHY-5 / L6): the tip vertex is drawn one seat off the
+   *     origin, so the ribbon meets the seated mesh base while the historical vertices stay on the
+   *     true path — a small hook at the very end rather than a whole trail that swims. {@link
+   *     Vector3D#ZERO} for an unseated object
    * @param renderContext the context of the sample being drawn, derived from its arc by {@code
    *     MissionRenderer.renderContextFor} — a parameter and no longer a field of this class, so
    *     that the line and the near-frame offset cannot be built from two different contexts (spec
    *     {@code docs/multi-corps/05-conception-L3.md} §3.2)
    */
   public void update(
-      TrajectoryPolyline trail, int upTo, Vector3D tip, RenderContext renderContext) {
+      TrajectoryPolyline trail,
+      int upTo,
+      Vector3D tip,
+      Vector3D seat,
+      RenderContext renderContext) {
     if (trail == null || trail.size() == 0) return;
 
     if (trail != boundTrail) {
@@ -174,7 +182,9 @@ public final class MissionTrajectoryRenderer {
       putPoint(points, count++, trail.positionAt(i, renderBody).subtract(origin), renderContext);
     }
     if (tip != null) {
-      putPoint(points, count++, Vector3D.ZERO, renderContext); // the tip is the origin
+      // The tip sits one seat off the origin (L6): the mesh base is drawn there too, so the ribbon
+      // stays glued to it while every historical vertex keeps its true-path position.
+      putPoint(points, count++, seat, renderContext);
     }
     if (count == 1) {
       // One point is not a ribbon. Repeating it gives a band of zero area — nothing rasterises,

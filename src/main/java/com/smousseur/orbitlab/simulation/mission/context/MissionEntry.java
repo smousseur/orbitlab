@@ -5,6 +5,7 @@ import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionId;
 import com.smousseur.orbitlab.simulation.mission.MissionStatus;
 import com.smousseur.orbitlab.simulation.mission.OptimizationType;
+import com.smousseur.orbitlab.simulation.mission.ephemeris.DebrisTrack;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemeris;
 import com.smousseur.orbitlab.simulation.mission.operation.MissionComposer;
 import com.smousseur.orbitlab.simulation.mission.operation.MissionSpec;
@@ -13,6 +14,7 @@ import com.smousseur.orbitlab.simulation.mission.runtime.AchievedOrbit;
 import com.smousseur.orbitlab.simulation.mission.runtime.MissionOptimizerResult;
 import com.smousseur.orbitlab.simulation.mission.runtime.MissionPerformanceReport;
 import com.smousseur.orbitlab.simulation.mission.runtime.MissionSolutions;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -42,6 +44,14 @@ public final class MissionEntry {
   private volatile OptimizationType optimizationType = OptimizationType.FAST;
   private volatile MissionOptimizerResult optimizerResult;
   private volatile MissionEphemeris ephemeris;
+
+  /**
+   * The jettisoned objects of the last computation, propagated for display (PHY-5 / L1). Empty
+   * until a computation produces some; recomputed on every run, never persisted. Held immutable
+   * (the list is copied on the way in) so the render thread reads a stable snapshot.
+   */
+  private volatile List<DebrisTrack> debris = List.of();
+
   private volatile AchievedOrbit achievedOrbit;
   private volatile MissionPerformanceReport performanceReport;
   private volatile String lastError;
@@ -187,6 +197,26 @@ public final class MissionEntry {
    */
   public void setEphemeris(MissionEphemeris ephemeris) {
     this.ephemeris = ephemeris;
+  }
+
+  /**
+   * Returns the jettisoned objects of the last computation, propagated for display. Never {@code
+   * null} — empty when the mission shed nothing drawable, or before it was computed.
+   *
+   * @return the debris tracks, possibly empty
+   */
+  public List<DebrisTrack> getDebris() {
+    return debris;
+  }
+
+  /**
+   * Stores the debris tracks a computation produced. Copied so a later mutation of the caller's
+   * list cannot reach the render thread.
+   *
+   * @param debris the debris tracks, or an empty list to clear them
+   */
+  public void setDebris(List<DebrisTrack> debris) {
+    this.debris = List.copyOf(debris);
   }
 
   /**
@@ -508,6 +538,7 @@ public final class MissionEntry {
     compositionRevision.incrementAndGet();
     this.optimizerResult = null;
     this.ephemeris = null;
+    this.debris = List.of();
     this.achievedOrbit = null;
     this.performanceReport = null;
     this.lastError = null;

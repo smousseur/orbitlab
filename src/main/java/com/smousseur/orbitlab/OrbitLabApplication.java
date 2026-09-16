@@ -221,7 +221,15 @@ public class OrbitLabApplication extends SimpleApplication implements Model3dAtt
 
   @Override
   public void attach(Node modelBucket, Spatial model3d) {
-    this.enqueue(() -> modelBucket.attachChild(model3d));
+    // Sets the bucket's single model rather than only adding one: the initial load clears an empty
+    // bucket (a no-op), while a live mesh swap (PHY-5 / L3) replaces the previous silhouette
+    // instead
+    // of overlapping it.
+    this.enqueue(
+        () -> {
+          modelBucket.detachAllChildren();
+          modelBucket.attachChild(model3d);
+        });
   }
 
   @Override

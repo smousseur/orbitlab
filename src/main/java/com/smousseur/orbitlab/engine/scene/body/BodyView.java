@@ -40,6 +40,17 @@ public interface BodyView {
   void setRotationWorld(Quaternion rotation);
 
   /**
+   * Offsets this body's drawn mesh from its anchor, in the near frame — the render-only stack seat
+   * (PHY-5 / L6, spec {@code docs/multi-objets/08-conception-L6.md}). Applied to the model and not
+   * to the anchor on purpose: the anchor is what the floating origin cancels, so moving it would
+   * lose the small seat to float cancellation far from Earth (the GEO jitter), and anything hung
+   * under the anchor — a mission's debris — would inherit the primary's seat. Default no-op.
+   *
+   * @param offset the offset in near-view units, or {@link Vector3f#ZERO} for none
+   */
+  default void setModelOffset(Vector3f offset) {}
+
+  /**
    * Updates screen-space dependent state such as LOD switching and billboard positioning based on
    * the current camera.
    *

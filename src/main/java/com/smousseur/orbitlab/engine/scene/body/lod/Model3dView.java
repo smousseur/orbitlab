@@ -49,8 +49,37 @@ public class Model3dView {
    * @return the loaded and scaled spatial
    */
   public Spatial loadModel() {
-    logger.info("Loading model for {}", config.displayName());
-    return AssetFactory.get().loadModel(config.modelPath(), 2 * drawnRadiusUnits());
+    return loadModel(config.modelPath());
+  }
+
+  /**
+   * Loads a specific GLTF model at this body's scale, for a live mesh swap (PHY-5 / L3): the
+   * primary object's silhouette changes to a shorter stack as it sheds pieces. May be called from a
+   * background thread.
+   *
+   * @param path the asset path to load, at {@code config.radiusMeters()}'s scale
+   * @return the loaded and scaled spatial
+   */
+  public Spatial loadModel(String path) {
+    logger.info("Loading model {} for {}", path, config.displayName());
+    return AssetFactory.get().loadModel(path, 2 * drawnRadiusUnits());
+  }
+
+  /**
+   * Loads a model at a given real-world size rather than at this body's radius, by normalizing the
+   * mesh's own bounding box — for the primary shrinking to its payload, a third-party mesh with no
+   * shared scale convention (PHY-5 / L5, spec {@code docs/multi-objets/07-conception-L5.md} §3.3).
+   * May be called from a background thread.
+   *
+   * @param path the asset path to load
+   * @param targetSizeMeters the size, in metres, the model's largest dimension should span
+   * @return the loaded and scaled spatial
+   */
+  public Spatial loadModelNormalized(String path, double targetSizeMeters) {
+    logger.info(
+        "Loading payload model {} at {} m for {}", path, targetSizeMeters, config.displayName());
+    float targetUnits = (float) (targetSizeMeters / RenderContext.PLANET_METERS_PER_UNIT);
+    return AssetFactory.get().loadModelNormalized(path, targetUnits);
   }
 
   /**
