@@ -11,6 +11,9 @@ class SeparationImpulseTest {
   private static final Vector3D VELOCITY = new Vector3D(0.0, 7_000.0, 0.0);
   private static final Vector3D POSITION = new Vector3D(7_000_000.0, 0.0, 0.0);
 
+  /** Same flight, a different radial: the fan must not move, being referenced to north (L7). */
+  private static final Vector3D ROTATED_POSITION = new Vector3D(0.0, 0.0, 7_000_000.0);
+
   private static double along(Vector3D impulse, Vector3D velocity) {
     return impulse.dotProduct(velocity.normalize());
   }
@@ -44,14 +47,24 @@ class SeparationImpulseTest {
   }
 
   @Test
-  void theFanOpensCrossRange() {
-    Vector3D fan = fan(SeparationImpulse.of(VELOCITY, POSITION, 1, 2), VELOCITY);
-    Vector3D crossRange = Vector3D.crossProduct(VELOCITY.normalize(), POSITION.normalize());
+  void theFanIsReferencedToNorthNotTheRadial() {
+    Vector3D atOneRadial = fan(SeparationImpulse.of(VELOCITY, POSITION, 1, 2), VELOCITY);
+    Vector3D atAnother = fan(SeparationImpulse.of(VELOCITY, ROTATED_POSITION, 1, 2), VELOCITY);
     assertEquals(
-        0.0,
-        Vector3D.crossProduct(fan, crossRange).getNorm(),
-        1e-6,
-        "azimuth 0 opens along the local cross-range axis");
+        atOneRadial, atAnother, "the fan plane follows celestial north, not the swinging radial");
+  }
+
+  @Test
+  void theFanSitsOnTheDiagonalOfItsFrame() {
+    Vector3D flight = VELOCITY.normalize();
+    Vector3D right = Vector3D.crossProduct(flight, Vector3D.PLUS_K).normalize();
+    Vector3D down = Vector3D.crossProduct(flight, right).normalize();
+    Vector3D fan = fan(SeparationImpulse.of(VELOCITY, POSITION, 1, 4), VELOCITY).normalize();
+    assertEquals(
+        fan.dotProduct(right),
+        fan.dotProduct(down),
+        1e-9,
+        "the half-step offset seats a booster on the diagonal, not on a cardinal axis");
   }
 
   @Test

@@ -61,7 +61,7 @@ class LauncherMeshProportionTest {
   @Test
   void theArianesBoostersAreOversizedByTheAmountDt18Records() {
     assertEquals(0.630, catalogDiameterRatio(Launchers.ARIANE_64), GAP_TOLERANCE, "catalog");
-    assertEquals(0.863, meshDiameterRatio("ariane_64"), GAP_TOLERANCE, "mesh");
+    assertEquals(0.643, meshDiameterRatio("ariane_64"), GAP_TOLERANCE, "mesh");
   }
 
   /**
@@ -95,7 +95,7 @@ class LauncherMeshProportionTest {
   }
 
   private static double meshDiameterRatio(String asset) {
-    return extentOf(asset, "-booster1").dx() / extentOf(asset, "-core").dx();
+    return extentOf(asset, "-booster").dx() / extentOf(asset, "-core").dx();
   }
 
   /**

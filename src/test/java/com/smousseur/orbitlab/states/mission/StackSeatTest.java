@@ -11,6 +11,11 @@ class StackSeatTest {
   private static final Vector3D VELOCITY = new Vector3D(0.0, 7_000.0, 0.0);
   private static final Vector3D POSITION = new Vector3D(7_000_000.0, 0.0, 0.0);
 
+  /**
+   * Same flight, a different radial: the lateral fan must not move, being north-referenced (L7).
+   */
+  private static final Vector3D ROTATED_POSITION = new Vector3D(0.0, 0.0, 7_000_000.0);
+
   private static double along(Vector3D offset, Vector3D velocity) {
     return offset.dotProduct(velocity.normalize());
   }
@@ -48,14 +53,12 @@ class StackSeatTest {
   }
 
   @Test
-  void twoBoostersPeelCrossRange() {
-    Vector3D first = StackSeat.offset(VELOCITY, POSITION, 0.0, 4.0, 1, 2);
-    Vector3D crossRange = Vector3D.crossProduct(VELOCITY.normalize(), POSITION.normalize());
+  void theLateralFanIsReferencedToNorthNotTheRadial() {
+    Vector3D atOneRadial = lateral(StackSeat.offset(VELOCITY, POSITION, 0.0, 4.0, 1, 2), VELOCITY);
+    Vector3D atAnother =
+        lateral(StackSeat.offset(VELOCITY, ROTATED_POSITION, 0.0, 4.0, 1, 2), VELOCITY);
     assertEquals(
-        0.0,
-        Vector3D.crossProduct(first, crossRange).getNorm(),
-        1e-6,
-        "the fan opens along the local cross-range axis, not toward the pole");
+        atOneRadial, atAnother, "the lateral fan follows celestial north, not the swinging radial");
   }
 
   @Test

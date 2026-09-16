@@ -83,7 +83,7 @@ class LambertBaseColorTest {
    */
   @Test
   void aBoosterOfTheAriane64LotKeepsItsDistinctTones() {
-    Spatial booster = assetManager.loadModel("models/vehicles/ariane_64/ariane_64-booster1.gltf");
+    Spatial booster = assetManager.loadModel("models/vehicles/ariane_64/ariane_64-booster.gltf");
 
     AssetFactory.get().applyLambert(booster, 0.3f);
 

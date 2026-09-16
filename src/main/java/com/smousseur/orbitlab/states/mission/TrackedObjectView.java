@@ -1,6 +1,7 @@
 package com.smousseur.orbitlab.states.mission;
 
 import com.jme3.math.ColorRGBA;
+import com.jme3.math.Vector3f;
 import com.jme3.renderer.Camera;
 import com.jme3.scene.Node;
 import com.smousseur.orbitlab.app.ApplicationContext;
@@ -169,6 +170,9 @@ final class TrackedObjectView {
    * @param point the interpolated sample to draw
    * @param seat the body-frame seat offset in metres (in the arc's frame), from {@link StackSeat};
    *     {@link Vector3D#ZERO} for an unseated object
+   * @param upHint the roll reference in the arc's frame, or {@code null} to roll about world up. A
+   *     booster passes its separation (fan) direction so its marked face turns outward, keeping the
+   *     orientation it had while mounted (PHY-5 / L7)
    * @param referencePoint the object this one is drawn relative to — the primary, whose scene
    *     anchor a debris hangs under — or {@code null} for the primary itself, placed absolutely
    * @param trail this object's display polyline
@@ -180,6 +184,7 @@ final class TrackedObjectView {
   void updateFromPoint(
       MissionEphemerisPoint point,
       Vector3D seat,
+      Vector3D upHint,
       MissionEphemerisPoint referencePoint,
       TrajectoryPolyline trail,
       int upTo,
@@ -199,7 +204,11 @@ final class TrackedObjectView {
         referencePoint == null
             ? position
             : position.subtract(MissionRenderer.renderPositionOf(referencePoint, renderBody));
-    presenter.updatePose(modelPosition, point.velocity(), tpf, ctx);
+    Vector3f upWorld =
+        upHint == null
+            ? Vector3f.UNIT_Y
+            : JmeVectorAdapter.toVector3f(ctx.axisConvention().icrfToJme(upHint.normalize()));
+    presenter.updatePose(modelPosition, point.velocity(), tpf, ctx, upWorld);
     this.view.setModelOffset(JmeVectorAdapter.toJmeBodyRelativePosition(seat, ctx));
     this.view.setIconFallbackEnabled(secondaryDisplay);
     this.view.updateScreen(cam, true);

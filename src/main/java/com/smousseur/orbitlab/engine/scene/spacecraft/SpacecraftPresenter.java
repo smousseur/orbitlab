@@ -94,9 +94,27 @@ public final class SpacecraftPresenter {
    */
   public void updatePose(
       Vector3D positionGcrfMeters, Vector3D velocityGcrf, float tpf, RenderContext ctx) {
+    updatePose(positionGcrfMeters, velocityGcrf, tpf, ctx, Vector3f.UNIT_Y);
+  }
+
+  /**
+   * As {@link #updatePose(Vector3D, Vector3D, float, RenderContext)}, but with an explicit "up"
+   * reference for the roll about the nose. The default is world {@code +Y}; a jettisoned booster
+   * passes its own separation (fan) direction so it keeps the roll it had while mounted — its
+   * marked face turned outward, toward its quadrant, as before the separation (PHY-5 / L7).
+   *
+   * @param upWorld the roll reference in world (JME) axes; must not be parallel to the velocity
+   */
+  public void updatePose(
+      Vector3D positionGcrfMeters,
+      Vector3D velocityGcrf,
+      float tpf,
+      RenderContext ctx,
+      Vector3f upWorld) {
     Objects.requireNonNull(positionGcrfMeters, "positionGcrfMeters");
     Objects.requireNonNull(velocityGcrf, "velocityGcrf");
     Objects.requireNonNull(ctx, "ctx");
+    Objects.requireNonNull(upWorld, "upWorld");
 
     // Through JmeVectorAdapter, never inlined: the floating-origin state negates the very same
     // conversion of the very same position to place the near-view origin on this spacecraft.
@@ -106,7 +124,7 @@ public final class SpacecraftPresenter {
       Vector3D dirIcrf = velocityGcrf.normalize();
       Vector3D dirJme = ctx.axisConvention().icrfToJme(dirIcrf);
       Vector3f forward = JmeVectorAdapter.toVector3f(dirJme);
-      targetRotation.lookAt(forward, Vector3f.UNIT_Y);
+      targetRotation.lookAt(forward, upWorld);
       targetRotation.multLocal(MODEL_FORWARD_CORRECTION);
       targetRotation.normalizeLocal();
 

@@ -25,6 +25,7 @@ import com.smousseur.orbitlab.simulation.mission.context.MissionEntry;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.DebrisTrack;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemeris;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemerisPoint;
+import com.smousseur.orbitlab.simulation.mission.ephemeris.SeparationImpulse;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.TrajectoryArc;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.TrajectoryPolyline;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.LauncherModel;
@@ -76,10 +77,11 @@ public final class MissionRenderer {
   private static final ColorRGBA DEBRIS_COLOR = new ColorRGBA(0.7f, 0.7f, 0.72f, 1.0f);
 
   /**
-   * Lateral spacing (m) a jettisoned booster is drawn out to its flank, so the exemplars do not
-   * pile on the axis (PHY-5 / L6, spec {@code docs/multi-objets/08-conception-L6.md} §D2). Sized to
-   * the measured mount (~±0.06 of the stack height, ≈ 4 m); the true roll is unknown, so it is
-   * cosmetic.
+   * Mount radius (m) a jettisoned booster is drawn out to, along the flank it occupied on the stack
+   * (the shared fan direction, {@link SeparationImpulse#fanDirection}), so it sits back where it
+   * detached rather than piling on the axis (PHY-5 / L6, spec {@code
+   * docs/multi-objets/08-conception-L6.md} §D2). Sized to the measured mount ring (~0.06 of the
+   * stack height, ≈ 4 m for the Ariane 64).
    */
   private static final double BOOSTER_LATERAL_SPREAD_METERS = 4.0;
 
@@ -397,7 +399,7 @@ public final class MissionRenderer {
             0.0,
             1,
             1);
-    primary.updateFromPoint(point, primarySeat, null, trail, upTo, cam, tpf, focus);
+    primary.updateFromPoint(point, primarySeat, null, null, trail, upTo, cam, tpf, focus);
     pushEclipseOccluder(point, focus);
     updatePrimarySilhouette(now);
     updateDebris(point, now, cam, tpf, focus);
@@ -509,8 +511,31 @@ public final class MissionRenderer {
       // ground track come with the global "show debris" toggle (PHY-5 / L7 §D1).
       debrisView.setSecondaryDisplay(debrisVisible);
       debrisView.updateFromPoint(
-          pt, debrisSeat(track, pt), primaryPoint, trail, upTo, cam, tpf, focus);
+          pt,
+          debrisSeat(track, pt),
+          debrisUpHint(track, pt),
+          primaryPoint,
+          trail,
+          upTo,
+          cam,
+          tpf,
+          focus);
     }
+  }
+
+  /**
+   * A booster's roll reference: its separation (fan) direction, so its marked face turns outward
+   * toward the flank it occupied on the stack — the orientation it had while mounted (PHY-5 / L7).
+   * The seat and the kick share this direction ({@link SeparationImpulse#fanDirection}), so a
+   * booster is drawn, seated and pushed off on the one flank. Other debris roll about world up
+   * ({@code null}), as any single object does.
+   */
+  private Vector3D debrisUpHint(DebrisTrack track, MissionEphemerisPoint pt) {
+    if (track.role() != StageRole.BOOSTER) {
+      return null;
+    }
+    return SeparationImpulse.fanDirection(
+        pt.velocity(), pt.position(), track.exemplarIndex(), boosterCount);
   }
 
   /**
@@ -574,9 +599,10 @@ public final class MissionRenderer {
   }
 
   /**
-   * A jettisoned piece's seat, at the place it detached from (PHY-5 / L6 §D2): a booster on its
-   * flank (lateral fan, in the local orbital frame), the upper stage up where it sat within {@code
-   * after_s1}, the core at the base (no seat).
+   * A jettisoned piece's seat, at the place it detached from (PHY-5 / L6 §D2): a booster on the
+   * exact flank it was mounted on (lateral fan, shared with the separation kick — {@link
+   * SeparationImpulse#fanDirection}), the upper stage up where it sat within {@code after_s1}, the
+   * core at the base (no seat).
    */
   private Vector3D debrisSeat(DebrisTrack track, MissionEphemerisPoint pt) {
     return switch (track.role()) {
@@ -667,8 +693,14 @@ public final class MissionRenderer {
 
   /**
    * The mesh-path suffix for a jettisoned piece, glued onto the launcher's path — {@code
-   * heavy_falcon.gltf} becomes {@code heavy_falcon-booster2.gltf}. This is the render layer's own
+   * heavy_falcon.gltf} becomes {@code heavy_falcon-booster.gltf}. This is the render layer's own
    * asset mapping; the simulation carries only the role and index.
+   *
+   * <p><b>All boosters share one {@code -booster} mesh.</b> A block's exemplars are the same
+   * physical booster, drawn as standalone debris (each spread to its own flank by the seat, PHY-5 /
+   * L6). The per-exemplar meshes {@code -booster<i>} were exported as slices of the full stack and
+   * carried each mount's own baked rotation, which drew them mis-oriented (PHY-5 / L7); the single
+   * {@code -booster} is a recentered, un-rotated booster in the shared one-unit-stack frame.
    *
    * <p><b>The upper stage leaves as {@code after_s1}, not {@code S2}.</b> The primary flies the
    * {@code after_s1} silhouette (upper stage <em>and</em> fairing) right up to this separation,
@@ -679,7 +711,7 @@ public final class MissionRenderer {
    */
   private static String meshSuffixFor(DebrisTrack track) {
     return switch (track.role()) {
-      case BOOSTER -> "-booster" + track.exemplarIndex() + ".gltf";
+      case BOOSTER -> "-booster.gltf";
       case CORE -> "-core.gltf";
       case UPPER -> "-after_s1.gltf";
       case KICK -> "-core.gltf";

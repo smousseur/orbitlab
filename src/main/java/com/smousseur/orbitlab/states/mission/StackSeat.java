@@ -34,9 +34,10 @@ final class StackSeat {
    * position} are expressed in.
    *
    * @param velocity the object's velocity — its nose points this way (never converted here)
-   * @param position the object's position, for the local orbital frame the lateral fan opens in
+   * @param position the object's position, only the fallback reference for the lateral fan when the
+   *     flight runs along the celestial pole (see {@link SeparationImpulse#fanDirection})
    * @param axialMeters distance to lift the base along the flight direction (the nose)
-   * @param lateralMeters distance out to the side, in the local orbital plane
+   * @param lateralMeters distance out to the side, in the plane perpendicular to the flight
    * @param fanIndex the 1-based index of this exemplar among {@code fanCount}, for the lateral fan
    * @param fanCount how many exemplars share the lateral fan (at least 1)
    * @return the offset to add to the drawn position, in metres; zero when the object is at rest
