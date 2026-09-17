@@ -1,10 +1,12 @@
 package com.smousseur.orbitlab.states.mission;
 
 import com.jme3.math.ColorRGBA;
+import com.jme3.math.Quaternion;
 import com.jme3.math.Vector3f;
 import com.jme3.renderer.Camera;
 import com.jme3.scene.Node;
 import com.smousseur.orbitlab.app.ApplicationContext;
+import com.smousseur.orbitlab.app.view.AxisConvention;
 import com.smousseur.orbitlab.app.view.FocusView;
 import com.smousseur.orbitlab.app.view.RenderContext;
 import com.smousseur.orbitlab.app.view.ViewMode;
@@ -72,9 +74,6 @@ public final class MissionRenderer {
    * every focus target so it can animate its way to it.
    */
   public static final float SPACECRAFT_FOCUS_DISTANCE_SOLAR_UNITS = 3.5e-7f;
-
-  /** A neutral colour for a debris; a per-role tint is possible but not retained. */
-  private static final ColorRGBA DEBRIS_COLOR = new ColorRGBA(0.7f, 0.7f, 0.72f, 1.0f);
 
   /**
    * Mount radius (m) a jettisoned booster is drawn out to, along the flank it occupied on the stack
@@ -504,22 +503,26 @@ public final class MissionRenderer {
       TrajectoryPolyline trail = ephemeris.displayTrail();
       boolean within = now.compareTo(ephemeris.endDate()) <= 0;
       MissionEphemerisPoint pt = ephemeris.displayPointAt(now);
+      Vector3D seat = debrisSeat(track, pt);
+      Vector3D upHint = debrisUpHint(track, pt);
+      // Once a landing piece has impacted, it rests on the ground and must ride the turning globe
+      // with its ground track's impact marker, not hang at the frozen inertial pose of the impact
+      // instant, which the rotating Earth drifts out from under (PHY-5 / L7 §D3 kept the piece
+      // inertial — right for the fall, adrift at rest; docs/bugs.md BUG-28). Position, heading, roll
+      // and seat all co-rotate rigidly with the drawn globe.
+      if (!within && hasLanded(track)) {
+        LandedPose landed = landedPose(pt, seat, upHint, now);
+        pt = landed.point();
+        seat = landed.seat();
+        upHint = landed.upHint();
+      }
       int upTo = within ? trail.indexUpTo(now) : trail.size() - 1;
       debrisView.setVisible(true);
       updateGroundTrack(i, track, debrisVisible);
       // Off by default: a debris shows only its close-range 3D mesh; the far-range icon and the
       // ground track come with the global "show debris" toggle (PHY-5 / L7 §D1).
       debrisView.setSecondaryDisplay(debrisVisible);
-      debrisView.updateFromPoint(
-          pt,
-          debrisSeat(track, pt),
-          debrisUpHint(track, pt),
-          primaryPoint,
-          trail,
-          upTo,
-          cam,
-          tpf,
-          focus);
+      debrisView.updateFromPoint(pt, seat, upHint, primaryPoint, trail, upTo, cam, tpf, focus);
     }
   }
 
@@ -541,7 +544,9 @@ public final class MissionRenderer {
   /**
    * Shows a landing debris' ground track when the "show debris" toggle is on, building it lazily
    * the first time its rotations are available (PHY-5 / L7 §D3). An orbital debris (it never lands)
-   * gets none, and a hidden toggle hides it.
+   * gets none, and a hidden toggle hides it. Whether the near view is centred on Earth at all is a
+   * separate, coarser gate owned by {@code PlanetPoseAppState}, which culls the shared frame these
+   * tracks hang under when the focus is not the Earth.
    */
   private void updateGroundTrack(int index, DebrisTrack track, boolean debrisVisible) {
     boolean wanted = debrisVisible && hasLanded(track);
@@ -573,6 +578,77 @@ public final class MissionRenderer {
     return track.ephemeris().lastPoint().altitudeMeters() < LANDED_ALTITUDE_METERS;
   }
 
+  /** An impacted debris' whole pose, carried into the globe's current drawn rotation. */
+  private record LandedPose(MissionEphemerisPoint point, Vector3D seat, Vector3D upHint) {}
+
+  /**
+   * Carries a just-landed debris' frozen impact pose into the globe's <em>current</em> drawn
+   * rotation, so the whole piece rides the turning Earth with its ground track's impact marker
+   * instead of hanging at the inertial pose of the impact instant. Position (a point about the
+   * geocentre), velocity and the seat and roll references (directions) are all turned by the same
+   * drawn rotation the marker follows, so the mesh stays rigid on the ground: {@code lookAt} and the
+   * seat offset are rotation-equivariant, so turning their inputs turns the drawn attitude with them.
+   *
+   * <p>A {@code null} roll hint (a non-booster, rolling about world up) becomes celestial north made
+   * explicit so it can be turned like any other; at {@code now = t_impact} the rotation is identity
+   * and the pose is returned unmoved, so there is no jump when the fall ends. Returns the frozen pose
+   * unchanged when the drawn rotation is not yet available for either date (PHY-5 / L7 §D3, corrected
+   * for the post-impact rest; docs/bugs.md BUG-28).
+   *
+   * @param impact the impact sample (the ephemeris' last point)
+   * @param seat the seat offset computed at the impact pose
+   * @param upHint the roll reference at the impact pose, or {@code null} for world up
+   * @param now the current simulation date
+   * @return the pose turned into the globe's current drawn rotation
+   */
+  private LandedPose landedPose(
+      MissionEphemerisPoint impact, Vector3D seat, Vector3D upHint, AbsoluteDate now) {
+    Optional<Quaternion> atImpact = PlanetDrawnRotation.at(SolarSystemBody.EARTH, impact.time());
+    Optional<Quaternion> atNow = PlanetDrawnRotation.at(SolarSystemBody.EARTH, now);
+    if (atImpact.isEmpty() || atNow.isEmpty()) {
+      return new LandedPose(impact, seat, upHint);
+    }
+    Quaternion drawnAtImpact = atImpact.get();
+    Quaternion drawnNow = atNow.get();
+    MissionEphemerisPoint pinned =
+        new MissionEphemerisPoint(
+            impact.time(),
+            rotateWithGlobe(impact.position(), drawnAtImpact, drawnNow),
+            rotateWithGlobe(impact.velocity(), drawnAtImpact, drawnNow),
+            impact.stageName(),
+            impact.propulsive(),
+            impact.mass(),
+            impact.altitudeMeters(),
+            impact.arc());
+    Vector3D roll = upHint != null ? upHint : Vector3D.PLUS_K;
+    return new LandedPose(
+        pinned,
+        rotateWithGlobe(seat, drawnAtImpact, drawnNow),
+        rotateWithGlobe(roll, drawnAtImpact, drawnNow));
+  }
+
+  /**
+   * Turns an ICRF vector — a position about the geocentre or a direction — by the globe's drawn
+   * rotation between two dates: de-rotates by {@code atImpact} into the body-fixed frame and
+   * re-rotates by {@code atNow}. Uses the same drawn rotation ({@link PlanetDrawnRotation}) the
+   * ground track and its impact marker follow, so a landed piece and its marker coincide by
+   * construction. The uniform render scale cancels under the rotation, leaving pure axis-mapping and
+   * quaternion. Package-private and taking the rotations explicitly (rather than reading {@link
+   * PlanetDrawnRotation}) so the frame algebra is testable off the ephemeris runtime, as {@link
+   * DebrisGroundTrack} is.
+   *
+   * @param icrf the vector in ICRF axes (metres for a position, any scale for a direction)
+   * @param atImpact the globe's drawn rotation at impact
+   * @param atNow the globe's drawn rotation now
+   * @return the vector turned by the drawn rotation since impact
+   */
+  static Vector3D rotateWithGlobe(Vector3D icrf, Quaternion atImpact, Quaternion atNow) {
+    AxisConvention axes = RenderContext.planet(SolarSystemBody.EARTH).axisConvention();
+    Quaternion drawnSinceImpact = atNow.mult(atImpact.inverse());
+    Vector3f rotated = drawnSinceImpact.mult(JmeVectorAdapter.toVector3f(axes.icrfToJme(icrf)));
+    return axes.jmeToIcrf(JmeVectorAdapter.toVector3D(rotated));
+  }
+
   /**
    * Builds a landing debris' ground track from its whole fall, in the Earth rotating frame — or
    * empty while any sample's drawn rotation is not yet available, so the caller retries next frame
@@ -594,7 +670,7 @@ public final class MissionRenderer {
                 new DebrisGroundTrackView(
                     context.sceneGraph().earthRotatingFrame(),
                     groundTrack,
-                    DEBRIS_COLOR,
+                    trajectoryColor,
                     entry.id() + "-debris-" + index));
   }
 
@@ -646,7 +722,7 @@ public final class MissionRenderer {
               context,
               config,
               entry.id() + "-debris-" + i,
-              DEBRIS_COLOR,
+              trajectoryColor,
               null,
               (Node) primary.view().spatial());
       // A debris draws no inertial ribbon: its trajectory is a ground track (landing) or nothing
@@ -685,7 +761,7 @@ public final class MissionRenderer {
     return new BodyRenderConfig(
         "mission-" + entry.id() + "-debris-" + index,
         labelFor(track),
-        DEBRIS_COLOR,
+        trajectoryColor,
         drawnRadiusOf(entry),
         debrisMeshPath,
         scale);

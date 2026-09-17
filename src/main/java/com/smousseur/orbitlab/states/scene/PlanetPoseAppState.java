@@ -334,8 +334,17 @@ public final class PlanetPoseAppState extends BaseAppState {
    * degradation the pose accepts.
    */
   private void updateEarthRotatingFrame(AbsoluteDate t) {
+    Node earthRotatingFrame = context.sceneGraph().earthRotatingFrame();
     PlanetDrawnRotation.at(SolarSystemBody.EARTH, t)
-        .ifPresent(q -> context.sceneGraph().earthRotatingFrame().setLocalRotation(q));
+        .ifPresent(earthRotatingFrame::setLocalRotation);
+    // The frame hangs at the near-view origin, which the single near globe is parked on, so its
+    // Earth-fixed ground tracks are only in the right place when the near globe is the Earth; on
+    // any other focus (the Moon, say) they would be drawn onto that body, so cull the whole frame
+    // (PHY-5 / L7). Per-track visibility (the "show debris" toggle) still applies underneath.
+    earthRotatingFrame.setCullHint(
+        context.focusView().isNearGlobe(SolarSystemBody.EARTH)
+            ? Spatial.CullHint.Inherit
+            : Spatial.CullHint.Always);
   }
 
   /**

@@ -76,6 +76,53 @@ class DebrisGeneratorTest {
         "the 44 t block splits into two 22 t exemplars");
   }
 
+  /**
+   * The exact Ariane 64 booster block that crashed a lunar mission's computation ({@code
+   * docs/bugs.md} BUG-27): captured from a flown ascent, it separates while still <em>climbing</em>
+   * (~63 km, ~3.4 km/s, +21° flight-path angle). Under {@code COAST_MAX_STEP} the adaptive step grew
+   * unchecked in the thin air it climbed through and one oversized step then evaluated {@code
+   * NRLMSISE00} out of its altitude range, which threw "Infinite value" inside the force model,
+   * before the geodetic-0 floor could stop the fall — and that throw propagated out of the
+   * display-only debris pass and failed the whole mission. The L0 §5.2 sweep missed the regime: every
+   * state it flew was descending, so the step never grew before the atmosphere thickened. The four
+   * exemplars must now all reach the ground without throwing.
+   */
+  @Test
+  void aClimbingBoosterBlockReentersWithoutThrowing() {
+    AbsoluteDate date = new AbsoluteDate(2026, 9, 19, 12, 2, 10.014, TimeScalesFactory.getUTC());
+    Vector3D position =
+        new Vector3D(-901272.6974400857, 5588679.798656569, 3061998.8870466626);
+    Vector3D velocity =
+        new Vector3D(-3348.597901878353, 583.7812556218751, 550.6196749861477);
+    SpacecraftState state =
+        new SpacecraftState(
+            new CartesianOrbit(
+                new PVCoordinates(position, velocity),
+                OrekitService.get().gcrf(),
+                date,
+                GravitationalContext.earth().mu()),
+            44_000.0);
+    JettisonEvent event =
+        new JettisonEvent(
+            state, new AerodynamicProperties(59.22, 0.4), 44_000.0, 4, StageRole.BOOSTER);
+
+    List<DebrisTrack> tracks =
+        new DebrisGenerator().generate(List.of(event), AtmosphereModel.NRLMSISE, 3_000.0);
+
+    assertEquals(4, tracks.size(), "the four-booster block yields four tracks");
+    for (DebrisTrack track : tracks) {
+      MissionEphemeris ephemeris = track.ephemeris();
+      assertTrue(ephemeris.size() >= 2, "a drawable trajectory needs at least two samples");
+      assertTrue(
+          ephemeris.lastPoint().altitudeMeters() < 1_000.0,
+          () ->
+              "exemplar "
+                  + track.exemplarIndex()
+                  + " should reach the ground, ended at "
+                  + ephemeris.lastPoint().altitudeMeters());
+    }
+  }
+
   @Test
   void aSingleSuborbitalPieceReentersToTheFloor() {
     List<DebrisTrack> tracks =

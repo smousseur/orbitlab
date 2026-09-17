@@ -36,6 +36,8 @@ la frontière entre les deux derniers doit rester lisible.
 | [`BUG-24`](#bug-24--la-largeur-du-ruban-nest-tenue-quaux-sommets-pas-le-long-dun-segment) | La largeur du ruban n'est tenue qu'aux sommets, pas le long d'un segment | 2026-09-05 | Ouvert, **mesuré** — le gonflement vaut `(L/2)/d` ; à un million de km du trait, Pluton rend **20,1 px** pour 2,5 demandés, Neptune 15,6, la Terre 4,5. C'est la cause que `BUG-23` cherchait |
 | [`BUG-25`](#bug-25--falcon-heavy-ne-vole-plus-en-transfert-optimisé-depuis-phy-8) | Falcon Heavy ne vole plus en transfert optimisé depuis PHY-8 | 2026-09-10 | **Fermé par `PHY-2 / L3`** (2026-09-11) — coupure du cœur câblée sur `transitionTime`, `testFalconHeavyOptimizedTransfer` ré-activé et vert (400 ±7 %, 410 km circ.) ; le poids `W_APOGEE_OVERSHOOT` n'a **pas** eu à monter |
 | [`BUG-26`](#bug-26--génération-déphéméride-geo-en-échec-dintégrateur-sous-traînée) | Génération d'éphéméride GEO en échec d'intégrateur sous traînée | 2026-09-13 | Ouvert, **mesuré** — l'optimisation réussit (GEO à 35 786 km), la passe d'éphéméride casse au pas mini `1e-3` ; reproduit à parking 250 **et** 400 km, donc pas la config du banc |
+| [`BUG-27`](#bug-27--génération-de-débris-en-échec-nrlmsise00-sur-un-booster-largué-en-montée) | Génération de débris en échec `NRLMSISE00` sur un booster largué en montée | 2026-09-18 | **Corrigé le 2026-09-18** — pas d'intégration débris plafonné à 15 s + troncature gracieuse dans `DebrisGenerator` ; le plancher géodésique 0 km ne suffisait pas seul. Épinglé par `DebrisGeneratorTest.aClimbingBoosterBlockReentersWithoutThrowing` |
+| [`BUG-28`](#bug-28--licône-dun-débris-retombé-garde-sa-position-gcrf-après-impact) | L'icône d'un débris retombé garde sa position (et son orientation) GCRF après impact | 2026-09-18 | **Corrigé le 2026-09-18** — après impact, toute la pose (position, cap, roulis, siège) est portée dans le repère tournant (même rotation dessinée que le marqueur) ; comble un trou de L7 §D3. Épinglé par `MissionRendererDebrisIconTest` |
 
 ---
 
@@ -2202,3 +2204,97 @@ deux cas, la charge utile et les charges d'ergols ne sont pas en cause. Le facte
 baseline `GEO FAST` de [`03-baseline-L0.md`](optimization/03-baseline-L0.md) §5, qui reste en
 attente. Voisine possible de `BUG-11` (l'optimiseur et le rejeu ne voient pas la même
 trajectoire), à confronter.
+
+---
+
+## BUG-27 — Génération de débris en échec `NRLMSISE00` sur un booster largué en montée
+
+> **Corrigé le 2026-09-18** — `DebrisGenerator` plafonne le pas d'intégration des débris
+> à 15 s (`REENTRY_MAX_STEP_SECONDS`) et tronque gracieusement toute propagation qui
+> échoue. Épinglé par `DebrisGeneratorTest.aClimbingBoosterBlockReentersWithoutThrowing`,
+> sur l'état exact capturé d'un vol.
+
+**Constaté le 2026-09-18**, à la création depuis l'application d'une mission d'orbite
+lunaire avec Ariane 64. Le calcul échoue :
+`org.orekit.errors.OrekitException: Infinite value appears during computation of
+atmospheric density in NRLMSISE00 model` (la première capture disait `NaN appears during
+integration`, l'autre visage du même dépassement), jeté depuis
+`DebrisGenerator.propagate`, remonté par `MissionOptimizer.optimize` →
+`FixedLoadPlanner.plan` → `MissionOrchestratorAppState`, qui journalise « Computation
+failed for mission ».
+
+**Ce qu'on observe, mesuré.** La mission elle-même est entière — toutes les étapes
+*done*, l'éphéméride complète (11 364 points), l'orbite atteinte. La panne est **dans la
+passe de débris**, hors chemin d'optimisation et hors gate. Reproduit en ~58 s sur un
+simple vol Ariane 64 LEO-400 (donc pas propre au lunaire) : c'est le **booster** qui
+casse, le core rentre proprement.
+
+**Le mécanisme, mesuré (trace).** Le booster est largué **en montée** (62,7 km,
+3 443 m/s, angle de pente +21°). Comme il s'éloigne de l'atmosphère, la traînée diminue
+et le **pas adaptatif grandit sans frein** (0,13 → 1,27 → 12,7 s). Un seul pas
+sur-dimensionné (plafond `COAST_MAX_STEP` = 300 s) évalue ensuite `NRLMSISE00` **hors de
+sa plage d'altitude**, et le modèle jette « Infinite value » **à l'intérieur** de
+l'évaluation de force, **avant** que le détecteur d'altitude géodésique 0 km ne puisse
+arrêter la chute. Balayage du pas sur l'état réel : 300 s casse, 60 s est la frontière,
+≤ 30 s atteint le sol proprement.
+
+**Pourquoi `L0 §5.2` l'a manqué.** La mesure du 2026-09-15 a validé le plancher
+géodésique 0 km sur des états *représentatifs, tous descendants* — le pas ne grandit
+jamais avant que l'atmosphère n'épaississe. Le régime réel d'une séparation de booster
+est **montant**, jamais mesuré. `docs/multi-objets/02-baseline-L0.md` §5.2 est à corriger
+sur ce point (le plancher n'est pas suffisant seul), et le propagateur débris n'a jamais
+volé à la tolérance d'affichage `1e-1` que ce même paragraphe chiffrait : il tourne à la
+tolérance d'optimisation par défaut.
+
+**Le correctif.** Deux gardes, **100 % couche affichage** (`DebrisGenerator` seul, rien
+touché du chemin d'optimisation ni d'un gate) :
+
+1. `REENTRY_MAX_STEP_SECONDS = 15 s` — un pas ne peut plus enjamber la traversée
+   atmosphérique ; coût nul sur un débris orbital (temps mur borné par l'échantillonnage,
+   ~1,5 s, plat selon le cap 300/60/30).
+2. Troncature gracieuse : `propagate` attrape toute `RuntimeException`, garde les
+   échantillons collectés et marque l'éphéméride incomplète — un tracé d'affichage ne doit
+   jamais faire tomber le calcul de mission, exactement comme `MissionEphemerisGenerator`
+   tronque une étape qui jette.
+
+**Voisin de `BUG-26`** (même famille : la traînée raidit une propagation mal bornée), mais
+distinct : `BUG-26` atteint le pas mini `1e-3` sur la coast de restitution GEO, celui-ci
+jette une valeur infinie sur une rentrée franche.
+
+---
+
+## BUG-28 — L'icône d'un débris retombé garde sa position GCRF après impact
+
+> **Corrigé le 2026-09-18** — après impact, `MissionRenderer` porte toute la pose du débris à la
+> rotation **dessinée** courante du globe (`MissionRenderer.rotateWithGlobe`, la même
+> `PlanetDrawnRotation` que la trace et son marqueur), donc le débris reste sur le point d'impact,
+> couché dans le repère tournant, au lieu de dériver. Épinglé par `MissionRendererDebrisIconTest`.
+
+**Constaté le 2026-09-18** (à l'œil, mission avec débris affichés). Après qu'un booster se
+soit écrasé, sa **pose** garde l'état **GCRF figé** de l'instant d'impact et **dérive** à mesure
+que la Terre tourne dessous — d'abord la **position** (l'icône s'éloigne du point d'impact), puis,
+une fois la position épinglée, l'**orientation** (le maillage garde un cap inertiel fixe et paraît
+tourner par rapport au sol) — alors que la **trace au sol et son marqueur d'impact** restent
+collés au bon point.
+
+**Cause, mesurée.** L'icône est placée depuis `ephemeris.displayPointAt(now)`, qui après
+`endDate` renvoie `lastPoint()` — un vecteur GCRF fixe (inertiel). La trace et le marqueur, eux,
+sont accrochés sous `earthRotatingFrame()` et tournent avec le globe. Donc l'icône se sépare de
+son propre marqueur.
+
+**C'était le comportement écrit dans L7 §D3** : « le maillage/icône du débris reste à sa vraie
+position inertielle … seule la trace vit dans le repère tournant ». Ce choix est juste **pendant
+la chute** (l'icône y coïncide avec la tête de trace, ce que §D3 voulait), mais §D3 n'a pas
+considéré le **repos après impact**, où l'inertiel figé dérive. Trou de conception signalé ici
+plutôt que réécrit dans le doc du lot clos.
+
+**Le correctif** (rendu pur, gates intacts). Pour un débris **retombé** et une fois
+`now ≥ endDate`, toute la pose est portée à la rotation dessinée courante : chaque vecteur ICRF —
+la **position** (point autour du géocentre), la **vitesse** (d'où le cap via `lookAt`), le
+**roulis** et le **siège** — est dé-tourné par `Q(t_impact)` dans le repère du corps puis re-tourné
+par `Q(now)` (`rotateWithGlobe`) ; l'échelle uniforme se simplifie sous la rotation. `lookAt` et
+l'offset de siège étant équivariants par rotation, tourner leurs entrées tourne l'attitude dessinée
+d'autant : le maillage reste rigide sur le sol. À `now = t_impact` les deux rotations s'annulent :
+aucun saut à la fin de la chute. Par construction, débris et marqueur d'impact tombent sur le
+**même point sol** (même `PlanetDrawnRotation`). La chute et les débris orbitaux (§D4) restent
+inertiels, inchangés.

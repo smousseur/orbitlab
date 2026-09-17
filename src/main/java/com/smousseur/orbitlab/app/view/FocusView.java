@@ -118,6 +118,20 @@ public class FocusView {
     return centredOnDestination && pendingMode != null ? pendingMode : mode;
   }
 
+  /**
+   * Whether the near viewport's single globe this frame is {@code body}: the frame is planet scale
+   * and centred on it, counting a transition's destination once it has {@link
+   * #handOverToDestination() handed over}. This is what near-view geometry glued to one specific
+   * body — the Earth-fixed debris ground tracks (PHY-5 / L7) — must ask before drawing, so it is
+   * not painted onto whatever other globe the near view is currently centred on.
+   *
+   * @param body the body to test
+   * @return true if that body is the near globe this frame
+   */
+  public boolean isNearGlobe(SolarSystemBody body) {
+    return isPlanetScaleMode(renderCentreMode()) && renderCentreBody() == body;
+  }
+
   /** Resets the focus to the default state: solar view centered on the Sun. */
   public void reset() {
     this.mode = ViewMode.SOLAR;

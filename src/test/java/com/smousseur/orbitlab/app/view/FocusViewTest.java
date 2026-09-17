@@ -96,6 +96,37 @@ class FocusViewTest {
   }
 
   @Test
+  void isNearGlobeIsTheFocusedPlanet() {
+    focusView.viewPlanet(SolarSystemBody.EARTH);
+
+    assertTrue(focusView.isNearGlobe(SolarSystemBody.EARTH));
+    assertFalse(focusView.isNearGlobe(SolarSystemBody.MOON));
+  }
+
+  @Test
+  void isNearGlobeIsFalseInSolarMode() {
+    assertFalse(focusView.isNearGlobe(SolarSystemBody.EARTH));
+  }
+
+  @Test
+  void isNearGlobeFollowsTheParentBodyInSpacecraftMode() {
+    focusView.viewSpacecraft(leo1, SolarSystemBody.EARTH);
+
+    assertTrue(focusView.isNearGlobe(SolarSystemBody.EARTH));
+  }
+
+  @Test
+  void isNearGlobeHandsOverToATransitionDestination() {
+    focusView.viewPlanet(SolarSystemBody.EARTH);
+    focusView.beginTransition(ViewMode.PLANET, SolarSystemBody.MARS);
+    assertTrue(focusView.isNearGlobe(SolarSystemBody.EARTH), "the frame is still the Earth's");
+
+    focusView.handOverToDestination();
+    assertFalse(focusView.isNearGlobe(SolarSystemBody.EARTH), "the frame has become Mars'");
+    assertTrue(focusView.isNearGlobe(SolarSystemBody.MARS));
+  }
+
+  @Test
   void isMissionVisibleKeepsSiblingMissionsWhileFollowingOne() {
     focusView.viewSpacecraft(leo1, SolarSystemBody.EARTH);
 
