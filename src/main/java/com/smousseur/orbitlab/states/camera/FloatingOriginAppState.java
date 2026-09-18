@@ -190,7 +190,17 @@ public class FloatingOriginAppState extends BaseAppState {
   private MissionEphemerisPoint displayPoint(FollowedObject object) {
     MissionEphemeris ephemeris =
         object == null ? null : context.missionContext().ephemerisOf(object).orElse(null);
-    return ephemeris == null ? null : ephemeris.displayPointAt(context.clock().now());
+    if (ephemeris == null) {
+      return null;
+    }
+    // A followed debris is centred on where it is *drawn* — carried into the globe's current drawn
+    // rotation once it has landed, exactly as MissionRenderer draws it — so the frame offset
+    // cancels
+    // that position bit-for-bit and the debris neither jitters nor drifts as the Earth turns (SEL-1
+    // / L2, approach A). The primary is drawn from its raw sample, so it keeps the plain path.
+    return object instanceof FollowedObject.Debris
+        ? MissionRenderer.renderedPointOf(ephemeris, context.clock().now())
+        : ephemeris.displayPointAt(context.clock().now());
   }
 
   @Override

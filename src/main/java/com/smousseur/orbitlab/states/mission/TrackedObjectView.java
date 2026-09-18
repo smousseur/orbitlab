@@ -154,6 +154,21 @@ final class TrackedObjectView {
   }
 
   /**
+   * Moves this object's anchor under {@code parent}, if it is not already there. Used to promote
+   * the followed debris to the near-bodies node so the floating origin cancels its position
+   * exactly, and to hang every other debris back under the primary (SEL-1 / L2, approach A). {@code
+   * attachChild} detaches from the previous parent, and the guard keeps a steady frame a no-op.
+   *
+   * @param parent the node to hang this object's anchor under
+   */
+  void reparent(Node parent) {
+    Node anchor = (Node) view.spatial();
+    if (anchor.getParent() != parent) {
+      parent.attachChild(anchor);
+    }
+  }
+
+  /**
    * Draws this object from one sample: pose, screen, and trajectory prefix, all in the sample's own
    * render context. The velocity stays in the arc's own frame (see {@code
    * MissionRenderer.updateFromEphemeris}); the position is converted once, here, and serves both

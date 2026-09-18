@@ -3,12 +3,12 @@ package com.smousseur.orbitlab.states.mission;
 import com.jme3.app.Application;
 import com.jme3.app.state.BaseAppState;
 import com.smousseur.orbitlab.app.ApplicationContext;
+import com.smousseur.orbitlab.simulation.mission.FollowedObject;
 import com.smousseur.orbitlab.simulation.mission.MissionStatus;
 import com.smousseur.orbitlab.simulation.mission.context.MissionContext;
 import com.smousseur.orbitlab.simulation.mission.context.MissionEntry;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemeris;
 import com.smousseur.orbitlab.ui.telemetry.TelemetryWidget;
-import java.util.Optional;
 
 /**
  * Application state that manages the mission telemetry HUD widget.
@@ -27,7 +27,10 @@ public final class TelemetryWidgetAppState extends BaseAppState {
 
   @Override
   protected void initialize(Application app) {
-    widget = new TelemetryWidget(context);
+    widget =
+        new TelemetryWidget(
+            context,
+            missionId -> context.focusController().select(new FollowedObject.Primary(missionId)));
     widget.setVisible(false);
     widget.layoutTopRight(app.getCamera().getWidth(), app.getCamera().getHeight());
   }
@@ -35,25 +38,28 @@ public final class TelemetryWidgetAppState extends BaseAppState {
   @Override
   public void update(float tpf) {
     MissionContext mc = context.missionContext();
-    Optional<MissionEntry> focus = mc.getTelemetryFocusMission();
-
-    // Telemetry requires: telemetry focus + READY + visible
-    if (focus.isEmpty()
-        || focus.get().mission().getStatus() != MissionStatus.READY
-        || !focus.get().isVisible()) {
+    FollowedObject object = mc.getTelemetryFocus();
+    if (object == null) {
       widget.setVisible(false);
       return;
     }
 
-    MissionEntry entry = focus.get();
-    MissionEphemeris eph = entry.getEphemeris().orElse(null);
+    // Gated on the parent mission — READY and visible — whichever of its objects is followed; the
+    // panels stay mission-level too (SEL-1 / L2). The object only changes which ephemeris is read.
+    MissionEntry entry = mc.findMission(object.mission()).orElse(null);
+    if (entry == null || entry.mission().getStatus() != MissionStatus.READY || !entry.isVisible()) {
+      widget.setVisible(false);
+      return;
+    }
+
+    MissionEphemeris eph = mc.ephemerisOf(object).orElse(null);
     if (eph == null) {
       widget.setVisible(false);
       return;
     }
 
     widget.setVisible(true);
-    widget.updateFromEphemeris(eph, context.clock().now(), entry.mission());
+    widget.updateFromEphemeris(eph, context.clock().now(), entry.mission(), object);
   }
 
   @Override

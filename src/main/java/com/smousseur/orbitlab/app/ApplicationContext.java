@@ -45,6 +45,7 @@ public class ApplicationContext {
   private final MissionContext missionContext;
   private final DisplaySettings displaySettings = new DisplaySettings();
   private final HudSurfaces hudSurfaces = new HudSurfaces();
+  private final FocusController focusController;
   private Camera nearCamera;
   private Camera skyCamera;
   private OrbitCameraAppState orbitCamera;
@@ -72,6 +73,7 @@ public class ApplicationContext {
     this.guiGraph = new GuiGraph();
     this.focusView = new FocusView(engineConfig);
     this.missionContext = new MissionContext();
+    this.focusController = new FocusController(this);
   }
 
   /**
@@ -145,6 +147,17 @@ public class ApplicationContext {
    */
   public DisplaySettings displaySettings() {
     return displaySettings;
+  }
+
+  /**
+   * Returns the focus controller, the single entry point for selecting an object of a mission to
+   * follow — the primary or a debris — which points both the camera and the telemetry at it (SEL-1
+   * / L2).
+   *
+   * @return the focus controller
+   */
+  public FocusController focusController() {
+    return focusController;
   }
 
   /**

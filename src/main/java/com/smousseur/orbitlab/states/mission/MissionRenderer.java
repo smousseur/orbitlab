@@ -98,12 +98,12 @@ public final class MissionRenderer {
   /**
    * The context this renderer was built with — the arc the mission <em>starts</em> in.
    *
-   * <p><b>Scale, and nothing else.</b> L3 §3.1 left it serving two purposes and asked L5 to revisit
-   * it; L5 did, and took the second away — {@link #onSpacecraftSelected()} now reads the arc the
-   * spacecraft is in right now, and falls back here only when the trajectory is missing. What
-   * remains is the metres-per-unit {@link LodView} sizes the spacecraft with, which is the same for
-   * every planet-scale context whatever the body. Everything drawn per frame derives its own
-   * context from the sample.
+   * <p><b>Scale, and nothing else.</b> L3 §3.1 left it serving two purposes; L5 took the second
+   * away and SEL-1 / L2 the last — {@link #onSpacecraftSelected()} now delegates to {@code
+   * FocusController}, which resolves the arc the object is in and falls back to the focused body,
+   * not here. What remains is the metres-per-unit {@link LodView} sizes the spacecraft with, which
+   * is the same for every planet-scale context whatever the body. Everything drawn per frame
+   * derives its own context from the sample.
    */
   private final RenderContext renderContext;
 
@@ -334,20 +334,30 @@ public final class MissionRenderer {
   }
 
   /**
-   * Hands the camera the body the spacecraft is <em>currently</em> orbiting, not the one it
-   * launched from: clicking a spacecraft already inside the lunar sphere of influence must frame it
-   * against the Moon. Falls back to the construction-time context while the trajectory is
-   * unavailable, the same degradation {@code FloatingOriginAppState} accepts.
+   * Follows the mission's primary — camera and telemetry both — through the shared {@code
+   * FocusController}, which resolves the body the object is currently orbiting (SEL-1 / L2).
+   * Clicking the spacecraft now also points the telemetry at it, where before it only moved the
+   * camera.
    */
   private void onSpacecraftSelected() {
-    MissionEphemeris ephemeris = entry.getEphemeris().orElse(null);
-    SolarSystemBody parentBody =
-        ephemeris != null
-            ? ephemeris.displayPointAt(context.clock().now()).arc().body()
-            : renderContext.targetBody().orElseGet(() -> context.focusView().getBody());
-    context
-        .cameraTransition()
-        .requestSpacecraft(new FollowedObject.Primary(entry.id()), parentBody);
+    context.focusController().select(new FollowedObject.Primary(entry.id()));
+  }
+
+  /**
+   * The click handler a debris carries: it selects the debris (camera + telemetry) through the
+   * shared {@code FocusController}, but only while the debris' icon — its handle — is actually
+   * shown, i.e. the global "show debris" toggle is on. A decluttered debris is not selectable,
+   * which is what lets L3 return the focus to the primary when the toggle is turned off (SEL-1 / L2
+   * §2.6).
+   */
+  private Runnable debrisSelectHandler(DebrisTrack track) {
+    return () -> {
+      if (context.displaySettings().isDebrisVisible()) {
+        context
+            .focusController()
+            .select(new FollowedObject.Debris(entry.id(), track.role(), track.exemplarIndex()));
+      }
+    };
   }
 
   /**
@@ -522,11 +532,28 @@ public final class MissionRenderer {
       }
       int upTo = within ? trail.indexUpTo(now) : trail.size() - 1;
       debrisView.setVisible(true);
-      updateGroundTrack(i, track, debrisVisible);
+      boolean followed = isFollowed(track, focus);
+      // The followed debris is promoted to the origin anchor — reparented under the near-bodies
+      // node
+      // and drawn absolutely (no reference point) — so the floating origin, centred on the same
+      // point, cancels its position bit-for-bit: it stops jittering, and after impact both read the
+      // co-rotated point so it no longer drifts as the Earth turns (SEL-1 / L2, approach A). Every
+      // other debris keeps the precise arrangement PHY-5 built: hung under the primary, drawn
+      // relative to it.
+      debrisView.reparent(
+          followed ? context.sceneGraph().nearBodiesNode() : (Node) primary.view().spatial());
+      // Its fall trajectory is drawn the precise way the primary's is — an inertial ribbon carried
+      // relative to the object at the origin (MissionTrajectoryRenderer) — rather than the
+      // geocentre-relative ground track, which cancels erratically against the near-frame offset up
+      // close. The co-rotating ground track stays for the other debris and the zoomed-out view,
+      // where its jitter is far and invisible (SEL-1 / L2).
+      debrisView.setInertialTrail(followed);
+      updateGroundTrack(i, track, debrisVisible, followed);
       // Off by default: a debris shows only its close-range 3D mesh; the far-range icon and the
       // ground track come with the global "show debris" toggle (PHY-5 / L7 §D1).
       debrisView.setSecondaryDisplay(debrisVisible);
-      debrisView.updateFromPoint(pt, seat, upHint, primaryPoint, trail, upTo, cam, tpf, focus);
+      debrisView.updateFromPoint(
+          pt, seat, upHint, followed ? null : primaryPoint, trail, upTo, cam, tpf, focus);
     }
   }
 
@@ -552,8 +579,13 @@ public final class MissionRenderer {
    * separate, coarser gate owned by {@code PlanetPoseAppState}, which culls the shared frame these
    * tracks hang under when the focus is not the Earth.
    */
-  private void updateGroundTrack(int index, DebrisTrack track, boolean debrisVisible) {
-    boolean wanted = debrisVisible && hasLanded(track);
+  private void updateGroundTrack(
+      int index, DebrisTrack track, boolean debrisVisible, boolean followed) {
+    // Hidden while this debris is followed: up close its geocentre-relative vertices jitter against
+    // the near-frame offset, so the followed debris shows its precise inertial ribbon instead
+    // (SEL-1
+    // / L2). Shown for the others and the zoomed-out view, where the jitter is far and invisible.
+    boolean wanted = debrisVisible && hasLanded(track) && !followed;
     DebrisGroundTrackView groundTrack = debrisGroundTracks.get(index);
     if (!wanted) {
       if (groundTrack != null) {
@@ -580,6 +612,53 @@ public final class MissionRenderer {
   /** Whether a debris reaches the ground — its last sample is at (near) zero altitude (§D2). */
   private static boolean hasLanded(DebrisTrack track) {
     return track.ephemeris().lastPoint().altitudeMeters() < LANDED_ALTITUDE_METERS;
+  }
+
+  /**
+   * The point a debris is <em>drawn</em> at now: its interpolated sample, carried into the globe's
+   * current drawn rotation once it has impacted (the same {@link #landedPose} turn), so a landed
+   * piece rides the turning Earth. This is what both the render here and the camera's {@code
+   * FloatingOriginAppState} read for a followed debris, so the frame is centred on exactly where
+   * the debris is drawn — it neither jitters nor drifts as the Earth turns (SEL-1 / L2, approach
+   * A).
+   *
+   * @param ephemeris the debris' display ephemeris
+   * @param now the current simulation date
+   * @return the sample to draw, co-rotated once landed
+   */
+  public static MissionEphemerisPoint renderedPointOf(
+      MissionEphemeris ephemeris, AbsoluteDate now) {
+    MissionEphemerisPoint pt = ephemeris.displayPointAt(now);
+    boolean landed =
+        now.compareTo(ephemeris.endDate()) > 0
+            && ephemeris.lastPoint().altitudeMeters() < LANDED_ALTITUDE_METERS;
+    if (!landed) {
+      return pt;
+    }
+    Optional<Quaternion> atImpact = PlanetDrawnRotation.at(SolarSystemBody.EARTH, pt.time());
+    Optional<Quaternion> atNow = PlanetDrawnRotation.at(SolarSystemBody.EARTH, now);
+    if (atImpact.isEmpty() || atNow.isEmpty()) {
+      return pt;
+    }
+    return new MissionEphemerisPoint(
+        pt.time(),
+        rotateWithGlobe(pt.position(), atImpact.get(), atNow.get()),
+        rotateWithGlobe(pt.velocity(), atImpact.get(), atNow.get()),
+        pt.stageName(),
+        pt.propulsive(),
+        pt.mass(),
+        pt.altitudeMeters(),
+        pt.arc());
+  }
+
+  /**
+   * Whether {@code track} is the object the view is currently following (SEL-1 / L2, approach A).
+   */
+  private boolean isFollowed(DebrisTrack track, FocusView focus) {
+    return focus.getFocusedObject() instanceof FollowedObject.Debris debris
+        && debris.mission().equals(entry.id())
+        && debris.role() == track.role()
+        && debris.exemplar() == track.exemplarIndex();
   }
 
   /** An impacted debris' whole pose, carried into the globe's current drawn rotation. */
@@ -728,7 +807,7 @@ public final class MissionRenderer {
               config,
               entry.id() + "-debris-" + i,
               trajectoryColor,
-              null,
+              debrisSelectHandler(track),
               (Node) primary.view().spatial());
       // A debris draws no inertial ribbon: its trajectory is a ground track (landing) or nothing
       // (orbital), decided per frame in updateDebris (PHY-5 / L7 §D3).
@@ -799,14 +878,9 @@ public final class MissionRenderer {
     };
   }
 
-  /** The label a jettisoned piece's icon shows. */
+  /** The label a jettisoned piece's icon shows — shared with the telemetry identity line (L2). */
   private static String labelFor(DebrisTrack track) {
-    return switch (track.role()) {
-      case BOOSTER -> "Booster " + track.exemplarIndex();
-      case CORE -> "Core";
-      case UPPER -> "Upper stage";
-      case KICK -> "Kick stage";
-    };
+    return FollowedObject.debrisLabel(track.role(), track.exemplarIndex());
   }
 
   /**

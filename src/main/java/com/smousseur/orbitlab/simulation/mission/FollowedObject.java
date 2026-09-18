@@ -24,6 +24,24 @@ public sealed interface FollowedObject permits FollowedObject.Primary, FollowedO
   MissionId mission();
 
   /**
+   * The display label of a jettisoned piece — {@code "Booster 1"}, {@code "Core"}, {@code "Upper
+   * stage"}, {@code "Kick stage"} — shared by the renderer's icon and the telemetry identity line
+   * so a piece reads the same wherever it is named (SEL-1 / L2).
+   *
+   * @param role the piece's role
+   * @param exemplar its 1-based exemplar index, shown only for a booster
+   * @return the piece label
+   */
+  static String debrisLabel(StageRole role, int exemplar) {
+    return switch (role) {
+      case BOOSTER -> "Booster " + exemplar;
+      case CORE -> "Core";
+      case UPPER -> "Upper stage";
+      case KICK -> "Kick stage";
+    };
+  }
+
+  /**
    * The mission's primary vehicle — the object followed before any object-level selection, and the
    * one a selection returns to.
    *

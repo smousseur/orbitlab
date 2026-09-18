@@ -4,6 +4,7 @@ import com.jme3.math.Vector3f;
 import com.jme3.scene.Node;
 import com.jme3.scene.Spatial;
 import com.simsilica.lemur.Axis;
+import com.simsilica.lemur.Button;
 import com.simsilica.lemur.Container;
 import com.simsilica.lemur.FillMode;
 import com.simsilica.lemur.HAlignment;
@@ -16,7 +17,9 @@ import com.simsilica.lemur.component.IconComponent;
 import com.simsilica.lemur.component.InsetsComponent;
 import com.simsilica.lemur.component.QuadBackgroundComponent;
 import com.smousseur.orbitlab.app.ApplicationContext;
+import com.smousseur.orbitlab.simulation.mission.FollowedObject;
 import com.smousseur.orbitlab.simulation.mission.Mission;
+import com.smousseur.orbitlab.simulation.mission.MissionId;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemeris;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemerisPoint;
 import com.smousseur.orbitlab.ui.AppStyles;
@@ -25,21 +28,23 @@ import com.smousseur.orbitlab.ui.UiLayers;
 import com.smousseur.orbitlab.ui.form.FormStyles;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.function.Consumer;
 import org.orekit.time.AbsoluteDate;
 
 /**
- * A Lemur-based HUD widget displaying basic mission telemetry. All values come from pre-computed
- * ephemeris — no Orekit calls at runtime.
+ * A Lemur-based HUD widget displaying basic telemetry of the followed object. All values come from
+ * pre-computed ephemeris — no Orekit calls at runtime.
  */
 public class TelemetryWidget implements AutoCloseable {
 
   private static final float MARGIN_PX = AppStyles.HUD_MARGIN_PX;
 
   private static final float WIDTH = 268f;
-  private static final float HEIGHT = 215f;
+  private static final float HEIGHT = 231f;
   private static final float PAD_X = 14f;
   private static final float PAD_Y = 12f;
   private static final float INNER_WIDTH = WIDTH - 2 * PAD_X;
+  private static final float IDENTITY_HEIGHT = 14f;
   private static final float SECTION_GAP = 8f;
   private static final float LABEL_VALUE_GAP = 2f;
 
@@ -49,6 +54,17 @@ public class TelemetryWidget implements AutoCloseable {
   private static final float DOT_LABEL_GAP = 5f;
 
   private final Container root;
+
+  /**
+   * The identity / return row's content container (SEL-1 / L2). Rebuilt only when the followed
+   * object or the mission name changes, never every frame.
+   */
+  private final Container identityRow;
+
+  private final Consumer<MissionId> onReturnToPrimary;
+  private FollowedObject lastIdentityObject;
+  private String lastIdentityMission;
+
   private final Label phaseLabel;
   private final Label metValue;
   private final Label altValue;
@@ -58,8 +74,16 @@ public class TelemetryWidget implements AutoCloseable {
   private final Label massValue;
   private final Label massUnit;
 
-  public TelemetryWidget(ApplicationContext context) {
+  /**
+   * Builds the widget.
+   *
+   * @param context the application context, for the GUI graph
+   * @param onReturnToPrimary invoked with a mission id when the identity row's mission segment is
+   *     clicked — only reachable while a debris is followed — to return to that mission's primary
+   */
+  public TelemetryWidget(ApplicationContext context, Consumer<MissionId> onReturnToPrimary) {
     Objects.requireNonNull(context, "context");
+    this.onReturnToPrimary = Objects.requireNonNull(onReturnToPrimary, "onReturnToPrimary");
     Node telemetryNode = context.guiGraph().getTelemetryNode();
 
     this.root = new Container(new BoxLayout(Axis.Y, FillMode.None), FormStyles.STYLE);
@@ -67,6 +91,13 @@ public class TelemetryWidget implements AutoCloseable {
     this.root.setPreferredSize(new Vector3f(WIDTH, HEIGHT, 0));
     this.root.setInsetsComponent(new InsetsComponent(new Insets3f(PAD_Y, PAD_X, PAD_Y, PAD_X)));
     telemetryNode.attachChild(root);
+
+    // Identity / return row: who this telemetry is for, and — for a debris — a click back to the
+    // mission's primary. Fixed height, so the widget never resizes with the followed object.
+    this.identityRow =
+        root.addChild(new Container(new BoxLayout(Axis.X, FillMode.None), FormStyles.STYLE));
+    this.identityRow.setPreferredSize(new Vector3f(INNER_WIDTH, IDENTITY_HEIGHT, 0));
+    root.addChild(UiKit.vSpacer(SECTION_GAP));
 
     // Header: dot + TELEMETRY (left)  /  dot + phase (right)
     Container header = root.addChild(new Container(new BorderLayout(), FormStyles.STYLE));
@@ -115,6 +146,56 @@ public class TelemetryWidget implements AutoCloseable {
     Container massRow = root.addChild(buildValueUnitRow(INNER_WIDTH));
     this.massValue = (Label) massRow.getChild(0);
     this.massUnit = (Label) massRow.getChild(2);
+  }
+
+  /**
+   * Rebuilds the identity / return row when the followed object or the mission name changes — not
+   * every frame. Following the primary shows the mission name, plain; following a debris shows a
+   * clickable {@code "< Mission"} that returns to the primary, then the piece label.
+   */
+  private void refreshIdentity(Mission mission, FollowedObject object) {
+    String missionName = mission.getName();
+    if (object.equals(lastIdentityObject) && missionName.equals(lastIdentityMission)) {
+      return;
+    }
+    lastIdentityObject = object;
+    lastIdentityMission = missionName;
+    identityRow.clearChildren();
+    if (object instanceof FollowedObject.Debris debris) {
+      Button back = identityRow.addChild(identitySegment("< " + missionName));
+      back.addClickCommands(source -> onReturnToPrimary.accept(debris.mission()));
+      identityRow.addChild(UiKit.hSpacer(8f));
+      identityRow.addChild(
+          identityLabel(FollowedObject.debrisLabel(debris.role(), debris.exemplar())));
+    } else {
+      identityRow.addChild(identityLabel(missionName));
+    }
+  }
+
+  /**
+   * A clickable identity segment, styled as accent text rather than a raised button. Its insets are
+   * zeroed and its height pinned to the row's so it matches {@link #identityLabel} exactly — a
+   * plain Lemur button is taller (its default insets), which pushed the back segment off the
+   * identity line and onto the header.
+   */
+  private Button identitySegment(String text) {
+    Button button = new Button(text, FormStyles.STYLE);
+    button.setBackground(null);
+    button.setInsetsComponent(new InsetsComponent(new Insets3f(0, 0, 0, 0)));
+    button.setFont(UiKit.mono(10));
+    button.setColor(FormStyles.CYAN);
+    button.setTextVAlignment(VAlignment.Center);
+    button.setPreferredSize(new Vector3f(button.getPreferredSize().x, IDENTITY_HEIGHT, 0));
+    return button;
+  }
+
+  private Label identityLabel(String text) {
+    Label label = new Label(text, FormStyles.STYLE);
+    label.setFont(UiKit.mono(10));
+    label.setColor(FormStyles.TEXT_PRIMARY);
+    label.setTextVAlignment(VAlignment.Center);
+    label.setPreferredSize(new Vector3f(label.getPreferredSize().x, IDENTITY_HEIGHT, 0));
+    return label;
   }
 
   private Label buildDotLabel(String text) {
@@ -188,11 +269,15 @@ public class TelemetryWidget implements AutoCloseable {
   /**
    * Updates telemetry display from ephemeris data. All values come from pre-computed ephemeris.
    *
-   * @param eph the mission ephemeris
+   * @param eph the followed object's ephemeris
    * @param now the current simulation time
-   * @param mission the mission (for initial date / MET computation)
+   * @param mission the parent mission (for the initial date / MET and the identity row's name)
+   * @param object the followed object, for the identity / return row
    */
-  public void updateFromEphemeris(MissionEphemeris eph, AbsoluteDate now, Mission mission) {
+  public void updateFromEphemeris(
+      MissionEphemeris eph, AbsoluteDate now, Mission mission, FollowedObject object) {
+    refreshIdentity(mission, object);
+
     if (now.compareTo(eph.startDate()) < 0) {
       metValue.setText("--:--:--");
       phaseLabel.setText("BEFORE LAUNCH");

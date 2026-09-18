@@ -24,7 +24,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public final class MissionContext {
   private final List<MissionEntry> missions = new CopyOnWriteArrayList<>();
   private volatile MissionId selectedMissionId;
-  private volatile MissionId telemetryFocusMissionId;
+  private volatile FollowedObject telemetryFocus;
   private volatile MissionType selectedMissionType = MissionType.LEO;
 
   public void addMission(MissionEntry entry) {
@@ -131,7 +131,7 @@ public final class MissionContext {
    * @return the telemetry focus mission id
    */
   public MissionId getTelemetryFocusMissionId() {
-    return telemetryFocusMissionId;
+    return telemetryFocus == null ? null : telemetryFocus.mission();
   }
 
   /**
@@ -140,7 +140,7 @@ public final class MissionContext {
    * @param missionId the mission id, or {@code null} to clear the focus
    */
   public void setTelemetryFocusMissionId(MissionId missionId) {
-    this.telemetryFocusMissionId = missionId;
+    this.telemetryFocus = missionId == null ? null : new FollowedObject.Primary(missionId);
   }
 
   /**
@@ -149,7 +149,28 @@ public final class MissionContext {
    * @return an optional containing the telemetry focus entry
    */
   public Optional<MissionEntry> getTelemetryFocusMission() {
-    return findMission(telemetryFocusMissionId);
+    return findMission(getTelemetryFocusMissionId());
+  }
+
+  /**
+   * Returns the object currently displaying telemetry — the mission's primary or one of its debris
+   * (SEL-1 / L2), or {@code null} if none.
+   *
+   * @return the telemetry focus object
+   */
+  public FollowedObject getTelemetryFocus() {
+    return telemetryFocus;
+  }
+
+  /**
+   * Sets the object whose telemetry should be displayed. The mission-level {@link
+   * #setTelemetryFocusMissionId(MissionId)} wraps its argument in a {@link FollowedObject.Primary}
+   * and routes here, so the two never disagree.
+   *
+   * @param object the object to focus, or {@code null} to clear the focus
+   */
+  public void setTelemetryFocus(FollowedObject object) {
+    this.telemetryFocus = object;
   }
 
   /**
