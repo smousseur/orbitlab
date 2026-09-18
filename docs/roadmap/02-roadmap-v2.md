@@ -50,7 +50,8 @@ colonne de droite ; le reste peut glisser.
 | ~~`PHY-2`~~ | ~~**Atmosphère par défaut + recalibrage optimiseur**~~ — **livré le 2026-09-12** ([`atmosphere/13-cloture-PHY-2.md`](../atmosphere/13-cloture-PHY-2.md)) | — | — | — | — |
 | ~~`OPT-1`~~ | ~~**Temps de calcul des trajectoires**~~ — **livré le 2026-09-14** ([`optimization/13-cloture.md`](../optimization/13-cloture.md)) ; reliquat → `OPT-2` (backlog, §4) | — | — | — | — |
 | ~~`PHY-3`~~ | ~~Bricks instrumentation atmosphère (interface Kármán + fonction Q)~~ — **livré le 2026-09-14** (commit `2969a86`) ; moitié visible re-carvée en `PHY-9` (backlog, §4) | — | — | — | — |
-| `PHY-5` | Machinerie multi-objets + étages largués | 4 | 3 | L | `PHY-2`, `AST-1` |
+| ~~`PHY-5`~~ | ~~Machinerie multi-objets + étages largués~~ — **livré le 2026-09-18** (PR #108) ; identité débris (sélection / télémétrie) re-carvée en `SEL-1` (§4) | — | — | — | — |
+| `SEL-1` | **Sélection et suivi d'un objet de mission** *(neuf)* | 3 | 2 | M | `PHY-5` |
 | `PHY-6` | **Charge utile comme objet distinct** *(neuf)* | 4 | 2 | M | `PHY-5`, `AST-1` |
 | `MIS-10` | Déorbitage contrôlé et rentrée atmosphérique | 5 | 3 | M | `PHY-2`, `PHY-3`, `PHY-6`, `BUG-10` |
 | `FX-3` | Particules de tuyère | 4 | 2 | M | — |
@@ -85,6 +86,16 @@ changement de priorisation du 2026-09-15 : `RND-5` et `RND-6` sont repartis au
 [backlog](../backlog.md), et la terminaison de `MIS-10` se simplifie en une borne
 d'altitude plus un marqueur de point d'impact, sans trace au sol prédictive (voir
 sa fiche au §4).
+
+**Pourquoi `SEL-1` avant `PHY-6`.** `SEL-1` construit l'adressage « objet suivi
+= mission + clé stable » et le suivi caméra + télémétrie d'un objet quelconque ;
+c'est le substrat que `PHY-6` réclame pour que « le vaisseau » désigne la charge
+utile après séparation (fiche `PHY-6`, *« suivi de l'objet actif »*). Le faire
+d'abord évite de l'écrire deux fois — et `SEL-1` reprend au passage un livrable
+que la fiche `PHY-5` annonçait, *« un débris qui garde son identité dans … la
+télémétrie »*, resté non fait. La mention « breadcrumb » de ce même suivi (fiches
+`PHY-5` et `PHY-6`) est périmée : `SEL-1` tient l'objet suivi **hors** du
+breadcrumb (`docs/navigation/01-breadcrumb.md`).
 
 **Le vrai long-pole est `AST-1`.** `PHY-5` et `PHY-6` attendent tous deux des
 maillages (un par étage, un par famille de charge utile), et un
@@ -817,6 +828,16 @@ n° 1 au §5, qui sépare les trois paliers et leurs coûts très inégaux.
 
 ### PHY-5 — Machinerie multi-objets et étages largués — ★4 ◆3 L
 
+> **Livré le 2026-09-18** (PR #108 + correctifs `daffd8b` / `d48ee56`). Pas de doc
+> de clôture sous `docs/multi-objets/` — les lots vivent en `01`…`09`
+> (`decoupage` → `conception-L7`). **Un livrable annoncé par cette fiche n'a pas
+> été fait et part en `SEL-1`** : *« un débris qui garde son identité dans le
+> breadcrumb et la télémétrie »* (ci-dessous). Les débris sont restés anonymes
+> (`TrackedObjectView` construit avec `onClick == null`), la décision de
+> `docs/navigation/01-breadcrumb.md` les tient hors du breadcrumb, et aucune
+> télémétrie ne les cible. `SEL-1` le reprend reconçu : clic sur l'icône → focus
+> caméra + télémétrie, sans breadcrumb.
+
 **Pourquoi.** Aujourd'hui un étage largué **n'existe pas**. `StageSeparationStage`
 est une chute de masse et rien d'autre : l'état passe à la masse de référence de
 la pile au-dessus, `resolveActiveStage` active le véhicule suivant, et l'étage
@@ -855,6 +876,64 @@ son livrable est la **machinerie multi-objets** — N objets propagés, N
 éphémérides, N vues — dont `PHY-6` est le second client dans la même version. Le
 nommer par la machinerie plutôt que par le client évite qu'elle soit écrite deux
 fois.
+
+---
+
+### SEL-1 — Sélection et suivi d'un objet de mission — ★3 ◆2 M *(neuf)*
+
+**Pourquoi.** `PHY-5` fait exister les débris comme objets propagés, mais
+**anonymes** : un débris est dessiné sans handler de clic (`TrackedObjectView`,
+*« a debris is built with no click handler … not focusable »*), n'apparaît dans
+aucun widget et n'a pas de télémétrie. On ne peut donc pas regarder une rentrée —
+le cas vedette : suivre un booster qui retombe et voir son impact, puis, plus
+tard, sa traînée plasma (`FX-4`). La donnée, elle, existe déjà : `DebrisTrack`
+porte un `MissionEphemeris` (`track.ephemeris()`), c'est-à-dire **exactement le
+type que le widget de télémétrie consomme**. Le manque est d'interaction et
+d'adressage, pas de physique.
+
+**Ce qu'il livre.**
+- **Clic sur l'icône d'un objet → focus caméra + focus télémétrie, d'un seul
+  geste** (règle unifiée). Elle vaut pour **tout** objet, le primaire comme un
+  débris. Pour le primaire c'est un progrès : aujourd'hui cliquer un spacecraft
+  ne fait que bouger la caméra, la télémétrie étant pilotée à part.
+- **Un adressage « objet suivi = mission + clé stable »**, la clé étant le couple
+  **rôle + exemplaire** qui nomme déjà la pièce (« Booster 1 »), et **non** son
+  index dans `entry.getDebris()` — cette liste est reconstruite à chaque recalcul
+  (`setDebris(List.copyOf…)`), un index n'y est pas stable.
+- **Deux pointeurs capables d'objet**, écrits ensemble par le clic : le focus
+  caméra (`FocusView`) et le focus télémétrie (`MissionContext`). Les chemins
+  télémétrie-seuls existants (auto-allumage à `READY`, panneau de détail)
+  continuent d'écrire « primaire » — on peut toujours lire une télémétrie sans y
+  voler la caméra. Un **résolveur unique** rend à la caméra et à la télémétrie
+  l'éphéméride du bon objet (primaire → `entry.getEphemeris()`, débris →
+  `track.ephemeris()`).
+- **Le retour au primaire.** Une **ligne d'identité/retour dans la télémétrie**
+  (le widget n'affiche aujourd'hui aucune identité d'objet) : le nom de l'objet
+  suivi, et quand c'est un débris, le nom du primaire cliquable = y revenir. Plus
+  un **retour automatique** sur les deux cas où le débris n'a plus de poignée : le
+  toggle « afficher débris » coupé (l'icône disparaît), ou l'horloge rembobinée
+  **avant** le largage (le débris est masqué). **L'impact ne renvoie pas** — la
+  pièce reste suivie jusqu'au sol et au repos, c'est le but.
+
+**Ce qu'il s'interdit.**
+- **L'effet graphique de rentrée** (enveloppe plasma) est `FX-4`, pas ici. `SEL-1`
+  livre la caméra qui regarde la rentrée ; l'habillage vient après.
+- **Le breadcrumb.** L'objet suivi n'y apparaît pas — décision tenue de
+  `docs/navigation/01-breadcrumb.md`, et abandon explicite au brainstorm de ce
+  chantier. La sélection d'objet vit sur l'icône 3D et le widget télémétrie.
+- **Toute physique.** 100 % couche render / UI : l'éphéméride des débris existe
+  déjà (`PHY-5`), rien n'est propagé de neuf, les gates à tolérance zéro sont
+  saufs par construction.
+
+**Ce qu'il prépare.** Le substrat « objet suivi » est ce que `PHY-6` réclame pour
+que « le vaisseau » bascule sur la charge utile après séparation. `SEL-1`
+d'abord, `PHY-6` s'y branche.
+
+**Conception.** À écrire sous `docs/selection-objets/` — brainstorm fait,
+décisions posées : règle unifiée, clé rôle + exemplaire, deux pointeurs, retour
+télémétrie + auto sur deux déclencheurs.
+
+**Après.** `PHY-5`.
 
 ---
 

@@ -2,6 +2,7 @@ package com.smousseur.orbitlab.app.view;
 
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.engine.EngineConfig;
+import com.smousseur.orbitlab.simulation.mission.FollowedObject;
 import com.smousseur.orbitlab.simulation.mission.MissionId;
 import java.util.Set;
 
@@ -14,7 +15,7 @@ import java.util.Set;
 public class FocusView {
   private ViewMode mode = ViewMode.SOLAR;
   private SolarSystemBody body = SolarSystemBody.SUN;
-  private MissionId focusedMission;
+  private FollowedObject focusedObject;
   private float cameraDistance;
   private final EngineConfig engineConfig;
 
@@ -136,7 +137,7 @@ public class FocusView {
   public void reset() {
     this.mode = ViewMode.SOLAR;
     this.body = SolarSystemBody.SUN;
-    this.focusedMission = null;
+    this.focusedObject = null;
     this.cameraDistance = engineConfig.orbitCamera().defaultDistance();
   }
 
@@ -148,30 +149,42 @@ public class FocusView {
   public void viewPlanet(SolarSystemBody body) {
     this.mode = ViewMode.PLANET;
     this.body = body;
-    this.focusedMission = null;
+    this.focusedObject = null;
   }
 
   /**
-   * Switches the focus to spacecraft view mode, centering on a mission's spacecraft. The parent
-   * body is retained so the planet-scale render context (HUD markers, orbits, Earth-3D in the near
-   * view) keeps working.
+   * Switches the focus to spacecraft view mode, following one object of a mission. The parent body
+   * is retained so the planet-scale render context (HUD markers, orbits, Earth-3D in the near view)
+   * keeps working.
    *
-   * @param missionId the id of the mission to follow
-   * @param parentBody the body the mission is currently orbiting (e.g. Earth for LEO)
+   * @param object the object to follow — a mission's primary, or one of its debris (SEL-1)
+   * @param parentBody the body the object is currently orbiting (e.g. Earth for LEO)
    */
-  public void viewSpacecraft(MissionId missionId, SolarSystemBody parentBody) {
+  public void viewSpacecraft(FollowedObject object, SolarSystemBody parentBody) {
     this.mode = ViewMode.SPACECRAFT;
     this.body = parentBody;
-    this.focusedMission = missionId;
+    this.focusedObject = object;
   }
 
   /**
-   * Returns the id of the currently focused mission, if any.
+   * Returns the object currently followed, if any.
+   *
+   * @return the followed object, or {@code null} when not in spacecraft mode
+   */
+  public FollowedObject getFocusedObject() {
+    return focusedObject;
+  }
+
+  /**
+   * Returns the id of the currently focused mission, if any — the mission of the {@linkplain
+   * #getFocusedObject() followed object}, whichever of its objects is being followed. Kept for the
+   * mission-level consumers that only care which mission is in view (e.g. dropping focus when that
+   * mission is deleted).
    *
    * @return the focused mission id, or {@code null} when not in spacecraft mode
    */
   public MissionId getFocusedMission() {
-    return focusedMission;
+    return focusedObject == null ? null : focusedObject.mission();
   }
 
   /**

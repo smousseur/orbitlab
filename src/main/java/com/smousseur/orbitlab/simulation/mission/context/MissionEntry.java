@@ -1,6 +1,7 @@
 package com.smousseur.orbitlab.simulation.mission.context;
 
 import com.jme3.math.ColorRGBA;
+import com.smousseur.orbitlab.simulation.mission.FollowedObject;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionId;
 import com.smousseur.orbitlab.simulation.mission.MissionStatus;
@@ -217,6 +218,29 @@ public final class MissionEntry {
    */
   public void setDebris(List<DebrisTrack> debris) {
     this.debris = List.copyOf(debris);
+  }
+
+  /**
+   * Resolves the display ephemeris of one object of this mission — the single resolver the camera
+   * and (from L2) the telemetry share so that following an object never reads a different
+   * trajectory than the one drawn (SEL-1 / L1). The primary yields {@link #getEphemeris()}; a
+   * debris is matched in {@link #getDebris()} by its role and exemplar.
+   *
+   * @param object which object of this mission to resolve; its mission id is assumed to be this
+   *     entry's, the caller having looked the entry up by it
+   * @return the object's ephemeris, or empty when it has none yet — the primary while a computation
+   *     is running, or a debris that this mission does not carry
+   */
+  public Optional<MissionEphemeris> ephemerisOf(FollowedObject object) {
+    Objects.requireNonNull(object, "object");
+    return switch (object) {
+      case FollowedObject.Primary ignored -> getEphemeris();
+      case FollowedObject.Debris d ->
+          getDebris().stream()
+              .filter(t -> t.role() == d.role() && t.exemplarIndex() == d.exemplar())
+              .findFirst()
+              .map(DebrisTrack::ephemeris);
+    };
   }
 
   /**

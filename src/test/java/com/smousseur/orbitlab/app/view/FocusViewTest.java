@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.engine.EngineConfig;
+import com.smousseur.orbitlab.simulation.mission.FollowedObject;
 import com.smousseur.orbitlab.simulation.mission.MissionId;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
@@ -49,7 +50,7 @@ class FocusViewTest {
 
   @Test
   void viewSpacecraftStoresMissionAndParentBody() {
-    focusView.viewSpacecraft(leo1, SolarSystemBody.EARTH);
+    focusView.viewSpacecraft(new FollowedObject.Primary(leo1), SolarSystemBody.EARTH);
 
     assertEquals(ViewMode.SPACECRAFT, focusView.getMode());
     assertEquals(SolarSystemBody.EARTH, focusView.getBody());
@@ -58,7 +59,7 @@ class FocusViewTest {
 
   @Test
   void isFocusedReturnsFalseWhileInSpacecraftMode() {
-    focusView.viewSpacecraft(leo1, SolarSystemBody.EARTH);
+    focusView.viewSpacecraft(new FollowedObject.Primary(leo1), SolarSystemBody.EARTH);
 
     // isFocused only returns true in PLANET mode by contract; document that here.
     assertFalse(focusView.isFocused(SolarSystemBody.EARTH));
@@ -110,7 +111,7 @@ class FocusViewTest {
 
   @Test
   void isNearGlobeFollowsTheParentBodyInSpacecraftMode() {
-    focusView.viewSpacecraft(leo1, SolarSystemBody.EARTH);
+    focusView.viewSpacecraft(new FollowedObject.Primary(leo1), SolarSystemBody.EARTH);
 
     assertTrue(focusView.isNearGlobe(SolarSystemBody.EARTH));
   }
@@ -128,7 +129,7 @@ class FocusViewTest {
 
   @Test
   void isMissionVisibleKeepsSiblingMissionsWhileFollowingOne() {
-    focusView.viewSpacecraft(leo1, SolarSystemBody.EARTH);
+    focusView.viewSpacecraft(new FollowedObject.Primary(leo1), SolarSystemBody.EARTH);
 
     assertTrue(focusView.isMissionVisible(Set.of(SolarSystemBody.EARTH)));
     assertFalse(focusView.isMissionVisible(Set.of(SolarSystemBody.MARS)));
@@ -156,7 +157,7 @@ class FocusViewTest {
   void isSatelliteVisibleFollowsTheParentBodyInSpacecraftMode() {
     // Following a mission in Earth orbit still looks at the Earth system: viewSpacecraft keeps the
     // parent body precisely so planet-scale rendering carries on, so the Moon must not vanish.
-    focusView.viewSpacecraft(leo1, SolarSystemBody.EARTH);
+    focusView.viewSpacecraft(new FollowedObject.Primary(leo1), SolarSystemBody.EARTH);
 
     assertTrue(focusView.isSatelliteVisible(SolarSystemBody.MOON));
   }
@@ -275,7 +276,7 @@ class FocusViewTest {
 
   @Test
   void viewPlanetClearsFocusedMission() {
-    focusView.viewSpacecraft(leo1, SolarSystemBody.EARTH);
+    focusView.viewSpacecraft(new FollowedObject.Primary(leo1), SolarSystemBody.EARTH);
     focusView.viewPlanet(SolarSystemBody.MARS);
 
     assertEquals(ViewMode.PLANET, focusView.getMode());
@@ -285,7 +286,7 @@ class FocusViewTest {
 
   @Test
   void resetGoesBackToSolarSunWithNoMission() {
-    focusView.viewSpacecraft(leo1, SolarSystemBody.EARTH);
+    focusView.viewSpacecraft(new FollowedObject.Primary(leo1), SolarSystemBody.EARTH);
 
     focusView.reset();
 
@@ -300,7 +301,7 @@ class FocusViewTest {
   void setModeAndSetBodyDoNotAutomaticallyClearFocusedMission() {
     // Low-level setters are kept on the class for backwards compatibility. Document that they
     // do NOT touch the focused-mission field — only the high-level viewXxx / reset methods do.
-    focusView.viewSpacecraft(leo1, SolarSystemBody.EARTH);
+    focusView.viewSpacecraft(new FollowedObject.Primary(leo1), SolarSystemBody.EARTH);
 
     focusView.setMode(ViewMode.PLANET);
     focusView.setBody(SolarSystemBody.EARTH);

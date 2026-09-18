@@ -1,8 +1,10 @@
 package com.smousseur.orbitlab.simulation.mission.context;
 
 import com.jme3.math.ColorRGBA;
+import com.smousseur.orbitlab.simulation.mission.FollowedObject;
 import com.smousseur.orbitlab.simulation.mission.MissionId;
 import com.smousseur.orbitlab.simulation.mission.MissionType;
+import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemeris;
 import com.smousseur.orbitlab.ui.mission.MissionColorPalette;
 import java.util.Collections;
 import java.util.List;
@@ -148,5 +150,18 @@ public final class MissionContext {
    */
   public Optional<MissionEntry> getTelemetryFocusMission() {
     return findMission(telemetryFocusMissionId);
+  }
+
+  /**
+   * Resolves the display ephemeris of a followed object, looking its mission up by id and then
+   * delegating to {@link MissionEntry#ephemerisOf(FollowedObject)}. This is the single resolver the
+   * camera and (from L2) the telemetry share, so following an object never reads a different
+   * trajectory than the one drawn (SEL-1 / L1).
+   *
+   * @param object the followed object
+   * @return the object's ephemeris, or empty when its mission or the object itself is gone
+   */
+  public Optional<MissionEphemeris> ephemerisOf(FollowedObject object) {
+    return findMission(object.mission()).flatMap(entry -> entry.ephemerisOf(object));
   }
 }

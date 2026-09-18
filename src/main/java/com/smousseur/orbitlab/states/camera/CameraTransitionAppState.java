@@ -14,8 +14,8 @@ import com.smousseur.orbitlab.engine.CameraTransitionConfig;
 import com.smousseur.orbitlab.engine.scene.PlanetRadius;
 import com.smousseur.orbitlab.engine.scene.graph.SceneGraph;
 import com.smousseur.orbitlab.engine.view.JmeVectorAdapter;
+import com.smousseur.orbitlab.simulation.mission.FollowedObject;
 import com.smousseur.orbitlab.simulation.mission.MissionId;
-import com.smousseur.orbitlab.simulation.mission.context.MissionEntry;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemeris;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemerisPoint;
 import com.smousseur.orbitlab.states.mission.MissionRenderer;
@@ -104,14 +104,14 @@ public final class CameraTransitionAppState extends BaseAppState {
   }
 
   /**
-   * Requests a transition to a mission's spacecraft.
+   * Requests a transition to one object of a mission — its primary or a debris (SEL-1).
    *
-   * @param missionId the mission to follow
-   * @param parentBody the body that mission's trajectory is expressed about
+   * @param object the object to follow
+   * @param parentBody the body that object's trajectory is expressed about
    * @return {@code true} if a transition was started
    */
-  public boolean requestSpacecraft(MissionId missionId, SolarSystemBody parentBody) {
-    return request(new TransitionTarget.Spacecraft(missionId, parentBody));
+  public boolean requestSpacecraft(FollowedObject object, SolarSystemBody parentBody) {
+    return request(new TransitionTarget.Spacecraft(object, parentBody));
   }
 
   /**
@@ -128,7 +128,7 @@ public final class CameraTransitionAppState extends BaseAppState {
     CameraTransition transition = active;
     if (transition == null
         || !(transition.target() instanceof TransitionTarget.Spacecraft spacecraft)
-        || !spacecraft.missionId().equals(missionId)) {
+        || !spacecraft.object().mission().equals(missionId)) {
       return;
     }
     active = null;
@@ -286,7 +286,7 @@ public final class CameraTransitionAppState extends BaseAppState {
     if (target instanceof TransitionTarget.Planet planet) {
       focusView.viewPlanet(planet.body());
     } else if (target instanceof TransitionTarget.Spacecraft spacecraft) {
-      focusView.viewSpacecraft(spacecraft.missionId(), spacecraft.parentBody());
+      focusView.viewSpacecraft(spacecraft.object(), spacecraft.parentBody());
     } else {
       focusView.reset();
     }
@@ -317,7 +317,7 @@ public final class CameraTransitionAppState extends BaseAppState {
     }
     if (target instanceof TransitionTarget.Spacecraft spacecraft) {
       return focusView.getMode() == ViewMode.SPACECRAFT
-          && spacecraft.missionId().equals(focusView.getFocusedMission());
+          && spacecraft.object().equals(focusView.getFocusedObject());
     }
     return focusView.getMode() == ViewMode.SOLAR;
   }
@@ -408,8 +408,7 @@ public final class CameraTransitionAppState extends BaseAppState {
    * recomputed), which is the same degradation {@code FloatingOriginAppState} accepts.
    */
   private Vector3f spacecraftPivot(TransitionTarget.Spacecraft target) {
-    MissionEntry entry = context.missionContext().findMission(target.missionId()).orElse(null);
-    MissionEphemeris ephemeris = entry == null ? null : entry.getEphemeris().orElse(null);
+    MissionEphemeris ephemeris = context.missionContext().ephemerisOf(target.object()).orElse(null);
     if (ephemeris == null) {
       return bodyPivot(target.parentBody());
     }

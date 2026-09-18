@@ -1,7 +1,7 @@
 package com.smousseur.orbitlab.app.view;
 
 import com.smousseur.orbitlab.core.SolarSystemBody;
-import com.smousseur.orbitlab.simulation.mission.MissionId;
+import com.smousseur.orbitlab.simulation.mission.FollowedObject;
 import java.util.Objects;
 
 /**
@@ -65,14 +65,15 @@ public sealed interface TransitionTarget {
   }
 
   /**
-   * A mission's spacecraft, followed in the planet-scale context of the body it orbits.
+   * One object of a mission — its primary or a debris — followed in the planet-scale context of the
+   * body it orbits (SEL-1).
    *
-   * @param missionId the mission to follow
-   * @param parentBody the body that mission's trajectory is expressed about
+   * @param object the object to follow
+   * @param parentBody the body that object's trajectory is expressed about
    */
-  record Spacecraft(MissionId missionId, SolarSystemBody parentBody) implements TransitionTarget {
+  record Spacecraft(FollowedObject object, SolarSystemBody parentBody) implements TransitionTarget {
     public Spacecraft {
-      Objects.requireNonNull(missionId, "missionId");
+      Objects.requireNonNull(object, "object");
       Objects.requireNonNull(parentBody, "parentBody");
     }
 

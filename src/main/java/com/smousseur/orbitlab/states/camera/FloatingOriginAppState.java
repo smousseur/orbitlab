@@ -11,8 +11,7 @@ import com.smousseur.orbitlab.app.view.RenderContext;
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.engine.scene.graph.SceneGraph;
 import com.smousseur.orbitlab.engine.view.JmeVectorAdapter;
-import com.smousseur.orbitlab.simulation.mission.MissionId;
-import com.smousseur.orbitlab.simulation.mission.context.MissionEntry;
+import com.smousseur.orbitlab.simulation.mission.FollowedObject;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemeris;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemerisPoint;
 import com.smousseur.orbitlab.states.mission.MissionRenderer;
@@ -96,7 +95,7 @@ public class FloatingOriginAppState extends BaseAppState {
         // One point, read once, and everything below derives from it: the body the scene is
         // centred on and the offset that puts the spacecraft on the origin cannot disagree
         // because they are two readings of the same object (spec L3 §3.1).
-        MissionEphemerisPoint point = displayPoint(view.getFocusedMission());
+        MissionEphemerisPoint point = displayPoint(view.getFocusedObject());
         SolarSystemBody renderBody =
             point == null ? view.getBody() : MissionRenderer.renderBodyOf(point, view);
 
@@ -177,21 +176,20 @@ public class FloatingOriginAppState extends BaseAppState {
   }
 
   /**
-   * The focused mission's sample at the current instant, or {@code null} when there is no mission
-   * or its trajectory is being recomputed.
+   * The followed object's sample at the current instant, or {@code null} when there is no object or
+   * its trajectory is being recomputed.
    *
    * <p>Read here rather than inside {@link #nearFrameOffset} because the body the scene is centred
    * on is derived from the same sample: two lookups could, on the frame a trajectory is replaced,
    * return points from different arcs and centre the scene on one body while offsetting it by the
    * other's coordinates.
    *
-   * @param missionId the focused mission, may be {@code null}
+   * @param object the followed object, may be {@code null}
    * @return the sample, or {@code null}
    */
-  private MissionEphemerisPoint displayPoint(MissionId missionId) {
-    MissionEntry entry =
-        missionId == null ? null : context.missionContext().findMission(missionId).orElse(null);
-    MissionEphemeris ephemeris = entry == null ? null : entry.getEphemeris().orElse(null);
+  private MissionEphemerisPoint displayPoint(FollowedObject object) {
+    MissionEphemeris ephemeris =
+        object == null ? null : context.missionContext().ephemerisOf(object).orElse(null);
     return ephemeris == null ? null : ephemeris.displayPointAt(context.clock().now());
   }
 

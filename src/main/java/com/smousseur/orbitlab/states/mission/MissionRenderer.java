@@ -22,6 +22,7 @@ import com.smousseur.orbitlab.engine.scene.spacecraft.LauncherStackGeometry;
 import com.smousseur.orbitlab.engine.scene.spacecraft.PayloadAssets;
 import com.smousseur.orbitlab.engine.view.JmeVectorAdapter;
 import com.smousseur.orbitlab.simulation.ephemeris.service.EphemerisServiceRegistry;
+import com.smousseur.orbitlab.simulation.mission.FollowedObject;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.context.MissionEntry;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.DebrisTrack;
@@ -344,7 +345,9 @@ public final class MissionRenderer {
         ephemeris != null
             ? ephemeris.displayPointAt(context.clock().now()).arc().body()
             : renderContext.targetBody().orElseGet(() -> context.focusView().getBody());
-    context.cameraTransition().requestSpacecraft(entry.id(), parentBody);
+    context
+        .cameraTransition()
+        .requestSpacecraft(new FollowedObject.Primary(entry.id()), parentBody);
   }
 
   /**
@@ -508,7 +511,8 @@ public final class MissionRenderer {
       // Once a landing piece has impacted, it rests on the ground and must ride the turning globe
       // with its ground track's impact marker, not hang at the frozen inertial pose of the impact
       // instant, which the rotating Earth drifts out from under (PHY-5 / L7 §D3 kept the piece
-      // inertial — right for the fall, adrift at rest; docs/bugs.md BUG-28). Position, heading, roll
+      // inertial — right for the fall, adrift at rest; docs/bugs.md BUG-28). Position, heading,
+      // roll
       // and seat all co-rotate rigidly with the drawn globe.
       if (!within && hasLanded(track)) {
         LandedPose landed = landedPose(pt, seat, upHint, now);
@@ -586,14 +590,15 @@ public final class MissionRenderer {
    * rotation, so the whole piece rides the turning Earth with its ground track's impact marker
    * instead of hanging at the inertial pose of the impact instant. Position (a point about the
    * geocentre), velocity and the seat and roll references (directions) are all turned by the same
-   * drawn rotation the marker follows, so the mesh stays rigid on the ground: {@code lookAt} and the
-   * seat offset are rotation-equivariant, so turning their inputs turns the drawn attitude with them.
+   * drawn rotation the marker follows, so the mesh stays rigid on the ground: {@code lookAt} and
+   * the seat offset are rotation-equivariant, so turning their inputs turns the drawn attitude with
+   * them.
    *
-   * <p>A {@code null} roll hint (a non-booster, rolling about world up) becomes celestial north made
-   * explicit so it can be turned like any other; at {@code now = t_impact} the rotation is identity
-   * and the pose is returned unmoved, so there is no jump when the fall ends. Returns the frozen pose
-   * unchanged when the drawn rotation is not yet available for either date (PHY-5 / L7 §D3, corrected
-   * for the post-impact rest; docs/bugs.md BUG-28).
+   * <p>A {@code null} roll hint (a non-booster, rolling about world up) becomes celestial north
+   * made explicit so it can be turned like any other; at {@code now = t_impact} the rotation is
+   * identity and the pose is returned unmoved, so there is no jump when the fall ends. Returns the
+   * frozen pose unchanged when the drawn rotation is not yet available for either date (PHY-5 / L7
+   * §D3, corrected for the post-impact rest; docs/bugs.md BUG-28).
    *
    * @param impact the impact sample (the ephemeris' last point)
    * @param seat the seat offset computed at the impact pose
@@ -632,8 +637,8 @@ public final class MissionRenderer {
    * rotation between two dates: de-rotates by {@code atImpact} into the body-fixed frame and
    * re-rotates by {@code atNow}. Uses the same drawn rotation ({@link PlanetDrawnRotation}) the
    * ground track and its impact marker follow, so a landed piece and its marker coincide by
-   * construction. The uniform render scale cancels under the rotation, leaving pure axis-mapping and
-   * quaternion. Package-private and taking the rotations explicitly (rather than reading {@link
+   * construction. The uniform render scale cancels under the rotation, leaving pure axis-mapping
+   * and quaternion. Package-private and taking the rotations explicitly (rather than reading {@link
    * PlanetDrawnRotation}) so the frame algebra is testable off the ephemeris runtime, as {@link
    * DebrisGroundTrack} is.
    *
