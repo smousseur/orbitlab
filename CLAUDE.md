@@ -254,15 +254,17 @@ zero-tolerance gates. If a visual bug seems to require a physics change, **stop 
 ## Code Style and Patterns
 
 - **Language**: All code comments and Javadoc are written in **English**, without exception — including
-  design rationale, which is often long in this codebase. Only the design documents under `docs/`
-  are written in French. Do not infer the code's language from the docs': they differ deliberately.
+  design rationale, which is often long in this codebase. Only the design documents are written in
+  French — they now live in the Confluence space **OrbitLab** (`OL`); older ones may still be found
+  under `docs/`. Do not infer the code's language from the docs': they differ deliberately.
 - **Inline comments are the exception, not the habit.** This rule covers comments *inside* method
   bodies (`//` and inline `/* */`); it does **not** cover Javadoc on classes, methods, records or
   fields, which stays welcome and is where long rationale belongs. An inline comment is written only
   when the code cannot carry the information by itself:
     - a **why** that is invisible locally — a non-obvious ordering, a deliberate deviation from the
       obvious implementation, a guard whose reason lives in another class;
-    - the **provenance of a magic value** — where a constant, a tolerance or a threshold comes from;
+    - the **provenance of a magic value** — where a constant, a tolerance or a threshold comes from,
+      given as the reasoning or the measurement itself, **never** a `docs/` path or a ticket id;
     - a **workaround** for a library or driver defect, with what it works around;
     - an **invariant or precondition** the reader must hold to follow the next lines.
 
@@ -271,7 +273,8 @@ zero-tolerance gates. If a visual bug seems to require a physics change, **stop 
   the shape of the code (`// loop over the stages`, `// getters`), or leaving commented-out code.
   A comment that only exists because the code is unclear is a request to rename or extract, not to
   comment. And when a change *is* worth explaining, its place is the commit message or the design
-  document under `docs/`, never a scar left in the source.
+  record in Confluence/Jira, never a scar left in the source — and in particular never a `docs/`
+  path or a ticket id carried in a comment, a Javadoc or an exception message.
 - **Records**: Prefer Java records for immutable data (`SimulationConfig`, clock events, `BodySample`, etc.)
 - **Sealed interfaces**: Used for type-safe event hierarchies (e.g., `ClockEvent`)
 - **Singletons**: Use the holder pattern (`private static final class Holder { static final T INSTANCE = new T(); }`)
@@ -306,8 +309,9 @@ zero-tolerance gates. If a visual bug seems to require a physics change, **stop 
 
 ## Design Documents
 
-Design work in this repo is recorded in numbered French documents under
-`docs/<chantier>/` (`01-decoupage.md`, `02-baseline-L0.md`, `03-conception-L1.md`, …).
+Design work is recorded as pages in the Confluence space **OrbitLab** (`OL`), one tree per
+*chantier*, each page linked to its Jira Epic (project **OBL**). Historical v1 documents may still
+be found under `docs/<chantier>/` (`01-decoupage.md`, `02-baseline-L0.md`, `03-conception-L1.md`, …).
 
 > **Rule: work the design out in the conversation first, then write the document.**
 > A generated design doc is hard to review — the reader has to reconstruct the reasoning
@@ -326,14 +330,14 @@ The exchange, in order:
 4. **Present the design section by section**, asking after each whether it holds. This is
    where a proposal that narrows or widens what was previously agreed gets raised
    explicitly, as a question — not folded silently into the document.
-5. **Write the file only once the sections are agreed.** The document introduces no
+5. **Write the page only once the sections are agreed.** The document introduces no
    decision that was not made in the conversation. If writing it reveals a new question,
    ask it rather than resolving it in the text.
 6. **Report corrections made while writing**, especially any statement that was wrong in
    the conversation and is right in the document.
 
-This applies to design and specification documents. Short factual notes, bug entries and
-measurement logs are written directly.
+This applies to design and specification pages. Short factual notes and measurement logs are written
+directly; bugs and technical-debt items go straight to Jira (project **OBL**) rather than to a file.
 
 ---
 
@@ -350,10 +354,11 @@ actually exists:**
    measured before/after numbers. The zero-tolerance gates run via `gateTest`
    (`forkEvery=1`); confirm they are untouched, or that a re-baseline was a deliberate,
    stated decision.
-2. **Closure documentation** under `docs/<chantier>/` (French): scope, measured
-   before/after, known limitations.
-3. **Registry updates**: `bugs.md`, `dette-technique.md` / reliquats, and the roadmap —
-   resolved items marked, any new tickets added.
+2. **Closure documentation** as a Confluence page (French) in the chantier's tree, linked to its
+   Jira Epic: scope, measured before/after, known limitations.
+3. **Jira updates** (project **OBL**): resolved issues transitioned to *Terminé* (label
+   `resolution:fixed|wontdo|moved`), any new Bug/Task/Story created; the roadmap is the Jira
+   backlog and the native releases (v1–v4 / fixVersion).
 
 The user runs the slow flights and commits; leave both to them.
 
