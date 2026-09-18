@@ -42,7 +42,8 @@ class MissionRendererDebrisIconTest {
     Vector3D turned = MissionRenderer.rotateWithGlobe(heading, atImpact, atNow);
 
     assertTrue(
-        Math.abs(turned.getNorm() - 1.0) < 1.0e-6, () -> "a direction keeps unit length: " + turned);
+        Math.abs(turned.getNorm() - 1.0) < 1.0e-6,
+        () -> "a direction keeps unit length: " + turned);
     assertTrue(
         turned.subtract(heading).getNorm() > 1.0,
         () -> "a quarter turn must swing the heading well away from east, got " + turned);

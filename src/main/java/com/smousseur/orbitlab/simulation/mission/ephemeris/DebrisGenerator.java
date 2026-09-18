@@ -33,10 +33,10 @@ import org.orekit.utils.PVCoordinates;
  * never by the broken {@code ReentryGuard}.
  *
  * <p>Two safeguards were added after {@code docs/bugs.md} BUG-27, when the geodetic-0 floor alone
- * proved insufficient for a booster that separates while climbing: {@link #REENTRY_MAX_STEP_SECONDS}
- * caps the integrator step so no single step can leap past the floor into the altitudes where {@code
- * NRLMSISE00} throws, and {@link #propagate} truncates gracefully on any propagation failure — a
- * display-only trail must never fail the mission computation.
+ * proved insufficient for a booster that separates while climbing: {@link
+ * #REENTRY_MAX_STEP_SECONDS} caps the integrator step so no single step can leap past the floor
+ * into the altitudes where {@code NRLMSISE00} throws, and {@link #propagate} truncates gracefully
+ * on any propagation failure — a display-only trail must never fail the mission computation.
  */
 public final class DebrisGenerator {
 
@@ -46,17 +46,17 @@ public final class DebrisGenerator {
   private static final double SAMPLE_STEP_SECONDS = 2.0;
 
   /**
-   * Integrator max step for a debris propagation (s), well below {@link OrekitService#COAST_MAX_STEP}
-   * on purpose. A booster jettisoned while still <em>climbing</em> — measured on an Ariane 64 ascent
-   * at ~63 km, ~3.4 km/s, +21° flight-path angle — lets the adaptive step grow unchecked in the thin
-   * air it climbs through; a single coast-sized step then evaluates the atmosphere far out of its
-   * altitude range, which {@code NRLMSISE00} answers with an "Infinite value" throw <em>inside</em>
-   * the force model, before the geodetic-0 floor detector can stop the fall ({@code docs/bugs.md}
-   * BUG-27). This is the regime the L0 §5.2 sweep missed: every state it flew was descending, so the
-   * step never grew before the atmosphere thickened. A 15 s cap keeps a step from spanning the
-   * atmospheric traversal — the sweep measured 300 s throwing, 60 s the failure edge, and ≤30 s
-   * reaching the ground cleanly — and costs nothing on an orbital debris, whose wall time is sampling
-   * bound and flat across caps.
+   * Integrator max step for a debris propagation (s), well below {@link
+   * OrekitService#COAST_MAX_STEP} on purpose. A booster jettisoned while still <em>climbing</em> —
+   * measured on an Ariane 64 ascent at ~63 km, ~3.4 km/s, +21° flight-path angle — lets the
+   * adaptive step grow unchecked in the thin air it climbs through; a single coast-sized step then
+   * evaluates the atmosphere far out of its altitude range, which {@code NRLMSISE00} answers with
+   * an "Infinite value" throw <em>inside</em> the force model, before the geodetic-0 floor detector
+   * can stop the fall ({@code docs/bugs.md} BUG-27). This is the regime the L0 §5.2 sweep missed:
+   * every state it flew was descending, so the step never grew before the atmosphere thickened. A
+   * 15 s cap keeps a step from spanning the atmospheric traversal — the sweep measured 300 s
+   * throwing, 60 s the failure edge, and ≤30 s reaching the ground cleanly — and costs nothing on
+   * an orbital debris, whose wall time is sampling bound and flat across caps.
    */
   private static final double REENTRY_MAX_STEP_SECONDS = 15.0;
 
