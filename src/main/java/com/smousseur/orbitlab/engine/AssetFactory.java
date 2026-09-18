@@ -69,7 +69,7 @@ public class AssetFactory {
   /**
    * Loads a model and scales it so its largest dimension spans {@code targetSizeUnits}, by
    * measuring its own bounding box rather than assuming the one-unit-tall convention the launcher
-   * assets follow (PHY-5 / L5, spec {@code docs/multi-objets/07-conception-L5.md} §3.3). The
+   * assets follow. The
    * payload meshes are third-party assets with no shared normalization, so their intrinsic scale
    * has to be measured to draw them at a controlled size. May be called from a background thread —
    * the model is detached, so {@link Spatial#updateGeometricState()} touches no shared state.
@@ -245,7 +245,7 @@ public class AssetFactory {
    * their colour is in this factor and practically never in a map. Of the 133 750 triangles of
    * {@code ariane_64.gltf}, 32 carry a base colour texture — 0.02 % — and its twenty-eight greys
    * and five tints all live here. Writing a fixed white instead drew the whole vehicle in one flat
-   * tone (`docs/v2-preparation/00-preparation.md` §1.7).
+   * tone.
    *
    * <p><b>Only the RGB is read.</b> A GLTF base colour factor may carry an alpha — Venus's
    * atmosphere shell does, at 0.722 — and {@code WrapLighting} multiplies it into the fragment's
@@ -310,8 +310,7 @@ public class AssetFactory {
 
   /**
    * Creates the material for a camera-facing ribbon: a line whose width is expressed in screen
-   * pixels and whose edges fade over exactly one pixel (spec {@code
-   * docs/graphics-effects/ribbon-lines.md} §7.3, §7.7).
+   * pixels and whose edges fade over exactly one pixel.
    *
    * <p>The render state is the whole of the design that is not in the shader:
    *

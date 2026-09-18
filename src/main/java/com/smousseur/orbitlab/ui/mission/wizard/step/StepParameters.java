@@ -160,7 +160,6 @@ public class StepParameters implements StepValues {
    * Whether the duration field still shows the derived default. This is the whole of the "auto"
    * state: while it holds, {@link #getValues()} omits the key entirely, which is what makes the
    * wizard's auto mode survive a round-trip through the raw value map without a flag of its own
-   * (spec {@code docs/mission-horizon/01-horizon-explicite.md} §7).
    */
   private boolean horizonAuto = true;
 
@@ -189,8 +188,8 @@ public class StepParameters implements StepValues {
 
   /**
    * The card the user picked. Held here rather than in {@code MissionContext}: the profile is a
-   * wizard concept, and the mission context belongs to the simulation layer (spec {@code
-   * docs/earth-orbit/02-wizard-orbites-terrestres.md} §3). The mission <em>type</em> keeps going
+   * wizard concept, and the mission context belongs to the simulation layer. The mission
+   * <em>type</em> keeps going
    * through the context, for the launcher step that only needs that much.
    */
   private MissionProfile selectedProfile = MissionProfile.LEO;
@@ -558,7 +557,7 @@ public class StepParameters implements StepValues {
    * #updatePlanningIndicator()} and {@link #validateTargetNode()} must share, since one decides
    * whether the entry point is shown and the other whether a refusal can be raised.
    *
-   * <p><b>The value is what it always was; the name is what became false</b> (MIS-4 / L5 §4.3). A
+   * <p><b>The value is what it always was; the name is what became false</b>. A
    * lunar mission has a window without having a node: what it waits for is a direction its parking
    * plane must contain, not a plane whose ascending node it must meet.
    *
@@ -826,14 +825,13 @@ public class StepParameters implements StepValues {
    *
    * <p><b>Absent as soon as one of them cannot supply its part.</b> An unreadable pad is not worth
    * a wrong answer: a window computed at latitude 0 because the user was mid-keystroke would be a
-   * false answer presented as a true one (spec {@code docs/mission-window/02-timeline-wizard.md}
-   * §6).
+   * false answer presented as a true one.
    *
    * <p><b>And it says which part.</b> The pad is the one input this step alone knows, so it is the
    * one it keeps: reporting an unreadable inclination as an unreadable launch site is what made the
    * planning page blame the wrong control, which is a false statement on screen.
    *
-   * <p><b>The rest belongs to the panel</b> (MIS-4 / L5 §4.3). Only the card on screen knows what
+   * <p><b>The rest belongs to the panel</b>. Only the card on screen knows what
    * its profile aims at, and the two profiles that have a window aim at things with no component in
    * common — a plane with a node to meet, and a direction to contain.
    *
@@ -895,8 +893,7 @@ public class StepParameters implements StepValues {
    * EarthLaunchWindowPlanner}, which schedules the mission at the next opening — and a date sitting
    * on an optimum resolves to itself, which is measured rather than assumed by {@code
    * EarthLaunchWindowPlannerTest.anOptimumTakenAsAFloorReturnsItself}. So the click introduces no
-   * meaning the field did not already have; it only puts the floor where it belongs (spec {@code
-   * docs/mission-window/02-timeline-wizard.md} §4).
+   * meaning the field did not already have; it only puts the floor where it belongs.
    *
    * @param date the chosen opportunity's optimal instant
    */

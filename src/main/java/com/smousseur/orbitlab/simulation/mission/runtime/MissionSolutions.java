@@ -10,8 +10,7 @@ import java.util.stream.Collectors;
 
 /**
  * What an optimization found, in the only form a replay needs: one solved vector per stage key,
- * plus the launcher loads that were <em>searched</em> rather than derived (spec {@code
- * docs/scenario/01-persistance-missions.md} §5).
+ * plus the launcher loads that were <em>searched</em> rather than derived.
  *
  * <p>This is the domain twin of {@code ScenarioSolution}, which carries the same pair. The
  * duplication is deliberate and not redundancy: one is a file format that must not break, the other
@@ -48,7 +47,7 @@ public record MissionSolutions(Map<String, double[]> vectors, double[] launcherL
   /**
    * Whether these solutions describe <b>exactly</b> the composition of {@code mission}.
    *
-   * <p>The replay is all or nothing (§5.1). A missing key would leave one stage to be optimized
+   * <p>The replay is all or nothing. A missing key would leave one stage to be optimized
    * beside stages that were replayed, producing a trajectory nobody asked for and nothing would
    * report; a surplus key means the file describes stages this composition no longer has, which is
    * the same mismatch seen from the other side. Either way the answer is to fall back on an

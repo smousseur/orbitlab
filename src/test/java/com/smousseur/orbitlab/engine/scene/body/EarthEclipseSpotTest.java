@@ -6,7 +6,7 @@ import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.junit.jupiter.api.Test;
 
 /**
- * Closes L3 of {@code docs/eclipses/01-decoupage.md}: the payoff of building a per-fragment
+ * Closes L3 of: the payoff of building a per-fragment
  * mechanism rather than a whole-body scalar is that the shadow the Moon casts on the Earth is
  * <em>localised</em> — a point under the Moon's shadow darkens, a point elsewhere on the same lit
  * hemisphere does not. {@link EclipseGeometry#illuminationFraction} is what the shader evaluates

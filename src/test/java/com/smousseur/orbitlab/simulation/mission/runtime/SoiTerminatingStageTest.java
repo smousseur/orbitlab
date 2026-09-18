@@ -50,7 +50,7 @@ import org.orekit.utils.TimeStampedPVCoordinates;
  * read as complete — and the same clearing, done for the stage as a whole rather than for the
  * boundary stop alone, would blind it to every other truncation. That distinction is the only thing
  * standing between this lot and a defect surfacing as "no feasible propellant load" on a mission
- * with nothing to do with the Moon (spec {@code docs/lunar-orbit/03-conception-L1.md} §9).
+ * with nothing to do with the Moon.
  */
 class SoiTerminatingStageTest {
   private static final Logger logger = LogManager.getLogger(SoiTerminatingStageTest.class);

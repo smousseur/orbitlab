@@ -30,7 +30,6 @@ import org.orekit.utils.Constants;
 
 /**
  * The parameters of any {@code MissionSpec.EarthOrbit} target — LEO, polar, sun-synchronous or MEO
- * (spec {@code docs/earth-orbit/02-wizard-orbites-terrestres.md} §3).
  *
  * <p>One class rather than four, because the four differ only in data: the altitude band they
  * offer, whether the target is circular, and where the inclination comes from. All three are
@@ -75,7 +74,7 @@ public class EarthOrbitDynamicParameters extends DynamicParameters {
    * Whether the inclination still shows the value this panel derived. The whole of the "auto"
    * state, exactly as {@code StepParameters} holds the mission duration's: while it holds, {@link
    * #getDynamicValues()} omits the key, and an absent key is what makes {@code MissionFactory}
-   * rebuild the site's free plane from the latitude in double (spec §2.0).
+   * rebuild the site's free plane from the latitude in double.
    *
    * <p>Always false on an {@link MissionProfile.InclinationMode#EXPLICIT} profile: choosing the
    * POLAR or MEO card <em>is</em> the intent.
@@ -93,7 +92,7 @@ public class EarthOrbitDynamicParameters extends DynamicParameters {
    *
    * @param profile the target family whose bounds and inclination behaviour this panel offers
    * @param launchLatitudeDeg the <b>live</b> launch site latitude — read on every frame, not
-   *     captured, because the coordinates stay editable after the cosmodrome is picked (spec §5)
+   *     captured, because the coordinates stay editable after the cosmodrome is picked
    */
   public EarthOrbitDynamicParameters(MissionProfile profile, DoubleSupplier launchLatitudeDeg) {
     this.profile = profile;
@@ -170,8 +169,7 @@ public class EarthOrbitDynamicParameters extends DynamicParameters {
    * each fit once.
    *
    * <p>The target node used to share this row for that same lack of height, and has since moved to
-   * the planning page, where the launch window it governs is shown (spec {@code
-   * docs/mission-window/02-timeline-wizard.md} §1).
+   * the planning page, where the launch window it governs is shown.
    */
   private Container buildInclinationRow() {
     Container column = new Container(new BoxLayout(Axis.Y, FillMode.None));
@@ -328,7 +326,7 @@ public class EarthOrbitDynamicParameters extends DynamicParameters {
    *
    * <p><b>The rule is not reimplemented here.</b> The check <em>is</em> {@code
    * LaunchPlane.requireReachableFrom}, so the band the user is held to is by construction the band
-   * the model enforces (spec §4).
+   * the model enforces.
    *
    * <p>The wording, on the other hand, is the wizard's. The model's message is a full sentence
    * naming the value, the latitude, the band and why the minimum is the latitude — right for a log
@@ -487,7 +485,7 @@ public class EarthOrbitDynamicParameters extends DynamicParameters {
     values.put(FormField.LEO_PERIGEE_ALT.key(), Math.round(perigeeKm()));
     values.put(FormField.LEO_APOGEE_ALT.key(), Math.round(apogeeKm()));
     // Published only when the inclination is an intention. Its absence is what makes a due-east
-    // mission rebuild the plane from the latitude rather than from this field (spec §2.0).
+    // mission rebuild the plane from the latitude rather than from this field.
     if (publishesInclination()) {
       values.put(FormField.TARGET_INCLINATION.key(), parsedInclinationDeg());
     }

@@ -39,7 +39,7 @@ import org.orekit.time.AbsoluteDate;
  *
  * <p>The page exists because the parameters step has no vertical room left: its root is pinned to
  * {@link FormStyles#CONTENT_HEIGHT} and nothing in this wizard clips, so an overflow lands on the
- * footer. Spec {@code docs/mission-window/02-timeline-wizard.md} §1.
+ * footer. Spec
  */
 public final class PlanningPage {
 
@@ -155,8 +155,7 @@ public final class PlanningPage {
    * just written becomes the floor, so the chosen opportunity moves to the head of the axis, as
    * many later ones come into view as were skipped, and the floor's rule ends up under the selected
    * marker — which is exactly what has just happened. Remembering the original date to hold the
-   * axis still would be the second source of truth about "when" that spec {@code
-   * docs/mission-window/02-timeline-wizard.md} §4 exists to refuse.
+   * axis still would be the second source of truth about "when" that spec exists to refuse.
    *
    * @param index the opportunity clicked on the axis
    */
@@ -201,7 +200,7 @@ public final class PlanningPage {
 
   /**
    * Shows or hides the target node, which is not a preference but a property of the card on screen:
-   * <b>a lunar mission has a launch window without having a node to wait for</b> (MIS-4 / L5 §4.3).
+   * <b>a lunar mission has a launch window without having a node to wait for</b>.
    *
    * <p>Three consequences, and they are one statement — there is no node here. The field leaves the
    * page; {@link #withNodeGap} stops substituting, without which a blank field would report {@link
@@ -234,8 +233,7 @@ public final class PlanningPage {
 
   /**
    * What a click on an opportunity writes. The page holds no date of its own: the launch date field
-   * on the main page is the single channel between the wizard and the planner (spec {@code
-   * docs/mission-window/02-timeline-wizard.md} §4).
+   * on the main page is the single channel between the wizard and the planner.
    *
    * @param action the sink for the chosen instant
    */
@@ -276,7 +274,7 @@ public final class PlanningPage {
    * <p><b>The node outranks whatever else is missing.</b> Blank is the quiet common case and must
    * stay quiet even when the pad is mid-keystroke; unreadable is refused elsewhere in the same
    * breath, so the axis has to erase and say so rather than announce that no plane is being waited
-   * for under a field painted red (spec {@code docs/mission-window/02-timeline-wizard.md} §6).
+   * for under a field painted red.
    *
    * @param inputs what the step assembled
    * @return the same inputs, or the node's absence in their place
@@ -301,8 +299,7 @@ public final class PlanningPage {
    * <p><b>Read-only on purpose</b> ({@link UiKit#makeReadOnly}, the recipe the derived inclination
    * already uses). The floor is edited on the fields page: changing it is changing the question
    * asked, while this page only answers it. Made editable here the field would have two owners, and
-   * the page that recomputes from it on every frame would be fighting the page that holds it (spec
-   * {@code docs/mission-window/02-timeline-wizard.md} §3).
+   * the page that recomputes from it on every frame would be fighting the page that holds it.
    *
    * @param floor the launch date read as a floor, or null when the field does not parse
    */

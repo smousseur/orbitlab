@@ -128,8 +128,8 @@ public class TimelineWidget implements AutoCloseable {
 
     // The clock owns the speed; this widget only displays it. Subscribing is what keeps the
     // stepper and the scrubber honest when something other than this widget calls setSpeed —
-    // the mission timeline's "go to mission start" button being the first such caller (spec
-    // §12.1). Routing that reset through an EventBus message instead would have worked, but it
+    // the mission timeline's "go to mission start" button being the first such caller. Routing that
+    // reset through an EventBus message instead would have worked, but it
     // would have left the next external caller desynchronised and added an event to work around
     // a defect rather than fixing it.
     //

@@ -18,7 +18,7 @@ import org.junit.jupiter.api.Test;
 
 /**
  * The ascent gains two phases exactly when the boosters run dry before the core, and keeps the
- * three it always had otherwise (spec {@code docs/etagement/03-conception-L1.md} §3.5).
+ * three it always had otherwise.
  */
 class AscentSequenceParallelBlockTest {
 

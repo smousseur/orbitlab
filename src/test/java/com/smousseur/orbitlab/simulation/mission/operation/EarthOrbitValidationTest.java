@@ -17,8 +17,7 @@ import org.hipparchus.util.FastMath;
 import org.junit.jupiter.api.Test;
 
 /**
- * <b>MIS-7 / P1, test T6</b> — every feasibility rule of spec {@code
- * docs/earth-orbit/01-mission-terre-parametrable.md} §8 refuses at spec construction, with a
+ * <b>MIS-7 / P1, test T6</b> — every feasibility rule refuses at spec construction, with a
  * message naming what is reachable.
  *
  * <p><b>Refusals, not clamps.</b> A parameter silently corrected produces a mission that flies

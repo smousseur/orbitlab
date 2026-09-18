@@ -23,7 +23,6 @@ public class CoastingStage extends MissionStage {
 
   /**
    * The body this coast flies around when it is not the mission's own, or {@code null} when it is
-   * (MIS-5 / L5, spec {@code docs/lunar-orbit/07-conception-L5.md} §3.1).
    *
    * <p>Nullable rather than a second class: a lunar terminal coast declaring its arc would have
    * been the fourth copy of an override L4 §3.2 already refused to centralise at two, and the
@@ -98,8 +97,7 @@ public class CoastingStage extends MissionStage {
    * The date this coast is configured to end on, counted from {@code entry} — or {@code null} when
    * it has no maximum duration.
    *
-   * <p><b>One arithmetic, read by both passes</b> (MIS-5 / L1, spec {@code
-   * docs/lunar-orbit/03-conception-L1.md} §5.3): {@link #configure} anchors it on the state the
+   * <p><b>One arithmetic, read by both passes</b>: {@link #configure} anchors it on the state the
    * chain runner has just published, and a subclass overriding {@code propagateStandalone} anchors
    * it on the state the stage walk hands it. The two are the same state, so the two passes stop on
    * the same date — a subclass writing {@code shiftedBy(maxTime)} itself would put that agreement
@@ -120,7 +118,7 @@ public class CoastingStage extends MissionStage {
       // announced three NodeDetector sites switched to the context and only two were; this is the
       // third, and it is the stage a sphere-of-influence crossing actually happens in. For an Earth
       // stage it is the very same frame instance, which is what lets the L1 gate prove the change
-      // moved nothing (spec docs/multi-corps/06-conception-L4.md §3.7).
+      // moved nothing.
       propagator.addEventDetector(
           new NodeDetector(gravitationalContext(mission).inertialFrame())
               .withHandler(

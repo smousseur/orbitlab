@@ -18,7 +18,7 @@ import java.util.Objects;
  * in 16 hours. {@code SlidingWindowEphemerisBuffer} interpolates attitude by SLERP, which always
  * negotiates the shortest arc: past half a turn between two samples the whole-turn count is lost
  * silently, and the body renders slower than it spins, or backwards. Measured before the fix
- * (`docs/bugs.md`, {@code BUG-19}): Neptune at 4,1 % of its true rate, Saturn and Uranus reversed,
+ *: Neptune at 4,1 % of its true rate, Saturn and Uranus reversed,
  * and the Earth reversed then frozen once the adaptive step doubled. {@link #plan} therefore caps
  * the step at {@link #ROTATION_SAMPLES_PER_TURN} samples per rotation.
  *

@@ -25,7 +25,7 @@ import org.hipparchus.geometry.euclidean.threed.Vector3D;
  * a plain object managed by {@link MissionRenderer}, not an AppState.
  *
  * <p>The primitive is a {@code TriangleStrip} expanded by {@code MatDefs/Fx/Ribbon.j3md} rather
- * than a {@code LineStrip} (spec {@code docs/graphics-effects/ribbon-lines.md}). The architecture
+ * than a {@code LineStrip}. The architecture
  * below is unchanged — one allocation, a prefix written each frame, an identity guard on the
  * polyline for the colours — and what changes is that two vertices are written per point instead of
  * one, with a tangent, and that the width finally means something: {@code glLineWidth(2)} was
@@ -42,7 +42,7 @@ public final class MissionTrajectoryRenderer {
   private static final int MAX_POINTS = TrajectoryPolyline.MAX_POINTS + 1;
 
   /**
-   * Width of a mission trace, in screen pixels (§7.4). Wider than a planetary orbit: it is the
+   * Width of a mission trace, in screen pixels. Wider than a planetary orbit: it is the
    * object of attention, it carries the phase colours, and it is drawn against a planet rather than
    * against the sky.
    */
@@ -124,8 +124,7 @@ public final class MissionTrajectoryRenderer {
    * {@code −p} of the same magnitude, so the GPU cancelled two large operands and what survived was
    * the rounding: about a metre, redrawn <em>differently</em> on every frame because {@code p}
    * moves ~130 m per frame. Seen from 500 m away that is some four pixels of shimmer, and it is why
-   * the line danced around a spacecraft model that was itself rock steady (spec {@code
-   * docs/graphics-effects/spacecraft-view-artefacts.md} §4).
+   * the line danced around a spacecraft model that was itself rock steady.
    *
    * <p>Subtracting the tip in {@code double} first bounds a vertex's error by its distance to the
    * spacecraft instead of by its distance to the geocentre, which is the standard camera-relative
@@ -154,8 +153,7 @@ public final class MissionTrajectoryRenderer {
    *     that swims. {@link Vector3D#ZERO} for an unseated object
    * @param renderContext the context of the sample being drawn, derived from its arc by {@code
    *     MissionRenderer.renderContextFor} — a parameter and no longer a field of this class, so
-   *     that the line and the near-frame offset cannot be built from two different contexts (spec
-   *     {@code docs/multi-corps/05-conception-L3.md} §3.2)
+   * that the line and the near-frame offset cannot be built from two different contexts
    */
   public void update(
       TrajectoryPolyline trail,

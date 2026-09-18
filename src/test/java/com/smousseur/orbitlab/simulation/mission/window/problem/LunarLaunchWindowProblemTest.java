@@ -57,13 +57,13 @@ class LunarLaunchWindowProblemTest {
   private static final double CANAVERAL_LONGITUDE = -80.577;
   private static final double CANAVERAL_ALTITUDE = 3.0;
 
-  /** Kourou, whose latitude reaches the Moon 12.5% of a lunation (L0 §5). */
+  /** Kourou, whose latitude reaches the Moon 12.5% of a lunation. */
   private static final double KOUROU_LATITUDE = 5.236;
 
   private static final double KOUROU_LONGITUDE = -52.769;
   private static final double KOUROU_ALTITUDE = 14.0;
 
-  /** The parking altitude the baseline was measured at (L0 §2). */
+  /** The parking altitude the baseline was measured at. */
   private static final double PARKING_ALTITUDE = TranslunarInjectionPlan.PARKING_ALTITUDE;
 
   private static final double TARGET_PERILUNE = 100_000.0;
@@ -313,7 +313,7 @@ class LunarLaunchWindowProblemTest {
   void theTwoOpportunitiesMergeAtTheDeclinationMaximum() {
     LunarLaunchWindowProblem problem = canaveral();
 
-    // The 2026 declination maximum, 28.415° (L0 §5), read four days earlier so the arrival falls
+    // The 2026 declination maximum, 28.415°, read four days earlier so the arrival falls
     // on it.
     AbsoluteDate start =
         new AbsoluteDate(2026, 2, 26, 0, 0, 0.0, TimeScalesFactory.getUTC())

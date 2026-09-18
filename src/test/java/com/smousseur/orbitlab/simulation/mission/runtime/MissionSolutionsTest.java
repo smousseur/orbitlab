@@ -19,8 +19,7 @@ import org.junit.jupiter.api.Test;
 
 /**
  * The all-or-nothing rule of the replay, tested as what it is: a pure function of a composition and
- * a set of keys, with no propagation anywhere near it (spec {@code
- * docs/scenario/01-persistance-missions.md} §5.1).
+ * a set of keys, with no propagation anywhere near it.
  */
 class MissionSolutionsTest {
 

@@ -25,7 +25,7 @@ import org.orekit.time.AbsoluteDate;
  * ICRF meters to JME render units and axes. All methods are static; this class cannot be
  * instantiated.
  *
- * <p><b>Orbits are ribbons, not lines</b> (spec {@code docs/graphics-effects/ribbon-lines.md}). The
+ * <p><b>Orbits are ribbons, not lines</b>. The
  * primitive is a {@code TriangleStrip} expanded to face the camera by {@code
  * MatDefs/Fx/Ribbon.j3md} — because {@code glLineWidth} above 1 is silently clamped back to 1 px in
  * a core profile, so the width these methods used to take was never honoured and ten one-pixel
@@ -33,7 +33,7 @@ import org.orekit.time.AbsoluteDate;
  *
  * <p>The expansion is in the vertex shader and not here, and that is the whole reason the buffers
  * below are still written once per window rebuild rather than once per frame: the geometry depends
- * only on the data, and only the uniforms depend on the camera (§2).
+ * only on the data, and only the uniforms depend on the camera.
  */
 public final class OrbitLineFactory {
 
@@ -41,7 +41,7 @@ public final class OrbitLineFactory {
   public static final double SOLAR_METERS_PER_UNIT = 1.0e9;
 
   /**
-   * Width of a planetary orbit, in screen pixels (§7.4).
+   * Width of a planetary orbit, in screen pixels.
    *
    * <p>A starting value, meant to be judged by eye — which the ribbon is the first thing to make
    * possible at all. Below ~1,5 px a ribbon reads as a thread again; above ~4 the ten orbits start

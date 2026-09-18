@@ -22,8 +22,7 @@ import java.util.Objects;
 
 /**
  * L2's instrument on screen: a labelled graticule riding on the body's own texture, and a marker on
- * the sub-solar point placed from the physics (see {@code
- * docs/orientation-planetes/01-decoupage.md}).
+ * the sub-solar point placed from the physics.
  *
  * <p><b>The two halves are deliberately fed from different places.</b> The grid hangs off the model
  * bucket, so it takes the whole render chain with it and its labels say what the application

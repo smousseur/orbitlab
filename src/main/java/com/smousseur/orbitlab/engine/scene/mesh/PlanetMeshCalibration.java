@@ -4,8 +4,8 @@ package com.smousseur.orbitlab.engine.scene.mesh;
  * What a body's asset was measured to carry, plus the values a measurement cannot supply.
  *
  * <p>The components have deliberately different natures, and fusing them into a single quaternion
- * is what the previous design got wrong (see {@code docs/orientation-planetes/01-decoupage.md}
- * §4.2): {@code measured} is produced by {@link MeshFrameProbe} and copied verbatim from its
+ * is what the previous design got wrong: {@code measured} is produced by {@link MeshFrameProbe} and
+ * copied verbatim from its
  * report, never edited by hand, while {@code lambda0Deg} is a human datum about the
  * <em>texture</em> that no file inspection can establish, and {@code visibleLayerDriftDegPerDay} is
  * a property of the body itself that no inspection of the asset could ever reach.

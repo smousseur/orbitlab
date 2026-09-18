@@ -5,10 +5,9 @@ import org.hipparchus.geometry.euclidean.threed.Vector3D;
 
 /**
  * The render-only offset a jettisoned piece or a shrunk primary silhouette is <em>drawn</em> at,
- * relative to the single propagated point the whole stack shares (PHY-5 / L6, spec {@code
- * docs/multi-objets/08-conception-L6.md}).
+ * relative to the single propagated point the whole stack shares.
  *
- * <p>Every piece mesh is authored with its base at the origin (§1), so base-at-anchor would pile
+ * <p>Every piece mesh is authored with its base at the origin, so base-at-anchor would pile
  * them all on the propagated point. This offset places each where it belongs — the primary
  * shrinking from the nose down, a booster on its flank, the upper stage up where it sat — expressed
  * in the vehicle body frame (axial along the flight direction, lateral out to the side). It is

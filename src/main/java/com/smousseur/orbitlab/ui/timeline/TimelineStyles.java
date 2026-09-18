@@ -37,7 +37,7 @@ public final class TimelineStyles {
   /**
    * Element id of the mission timeline's toggle. Registered as a selector so the button is built
    * with {@code new Button(text, new ElementId(TRIGGER_ELEMENT), STYLE)} and carries no visual
-   * override of its own — the rule {@code UI-4} left behind (spec §11).
+   * override of its own — the rule {@code UI-4} left behind.
    */
   public static final String TRIGGER_ELEMENT = "timeline.trigger.button";
 

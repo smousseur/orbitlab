@@ -35,7 +35,7 @@ public abstract class AbstractTrajectoryOptimizerTest {
    * unsafe, rather than merely perturbed.
    *
    * <p><b>Why the achieved orbit is read at insertion and not from the coast minimum.</b> The
-   * analytic trim targets the <em>mean</em> perigee (spec orbit-reporting/02), which centres the
+   * analytic trim targets the <em>mean</em> perigee, which centres the
    * flown excursion on the request instead of perching it at the top of the J2 short-period
    * oscillation. The excursion itself remains — no orbit is flat under J2 — so sampling the minimum
    * geodetic altitude over a sidereal day and comparing it against the target still measures that
@@ -126,7 +126,7 @@ public abstract class AbstractTrajectoryOptimizerTest {
     // Asserting either against the request would measure the offset between a convention and the
     // flown trajectory, not a targeting error. This class asserted the osculating orbit until
     // 2026-08-05 and the mean one briefly after; both were wrong for the same reason, and the
-    // third change is the one that stops chasing conventions (spec orbit-reporting/02 section 5.6).
+    // third change is the one that stops chasing conventions.
     logger.info(
         "[{}/{} km] Insertion orbit (osculating): {}",
         (int) (perigeeAltitude / 1000),
@@ -158,7 +158,7 @@ public abstract class AbstractTrajectoryOptimizerTest {
 
     // The assertions read the FLOWN altitude band over the terminal coast: its minimum against the
     // requested perigee, its maximum against the requested apogee. That is the quantity the trim
-    // now targets (spec orbit-reporting/02), it needs no mean theory to be computed, and it is
+    // now targets, it needs no mean theory to be computed, and it is
     // exactly what MissionLoadEvaluator.objectiveMet already reads — so the accuracy bar of these
     // tests and the feasibility gate of the λ campaigns finally measure the same thing.
     double errorApogeeMargin = ORBIT_MARGIN_RATIO * apogeeAltitude;

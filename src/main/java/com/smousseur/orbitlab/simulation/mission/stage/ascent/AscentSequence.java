@@ -13,15 +13,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Builds the explicit three-phase ascent that replaces the single {@code Gravity turn} stage (spec
- * {@code docs/mission-stages/01-separations-implicites.md} §5.1):
+ * Builds the explicit three-phase ascent that replaces the single {@code Gravity turn} stage:
  *
  * <pre>
  *   Gravity turn (S1) → S1 separation → Gravity turn (S2)
  * </pre>
  *
  * <p>and the five phases a parallel-burn launcher whose boosters run dry before its core flies
- * instead (spec {@code docs/etagement/03-conception-L1.md} §3.5):
+ * instead:
  *
  * <pre>
  *   Gravity turn (S1) → Booster separation → Gravity turn (core) → S1 separation → Gravity turn (S2)
@@ -67,8 +66,7 @@ public final class AscentSequence {
    * <p><b>The plane arguments are live as of MIS-7.</b> This overload existed before it and was
    * never called: both concrete missions went through the two-argument one, which passed {@code (0,
    * 0)}. Handing it a {@link LaunchPlane} that differs from the site's free plane now switches the
-   * ascent to the commanded-plane attitude (spec {@code
-   * docs/earth-orbit/01-mission-terre-parametrable.md} §4); handing it the free plane keeps the
+   * ascent to the commanded-plane attitude; handing it the free plane keeps the
    * historical trajectory bit-for-bit.
    *
    * @param vehicle the stack that will fly it, read for its staging plan

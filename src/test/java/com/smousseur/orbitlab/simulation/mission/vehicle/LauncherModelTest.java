@@ -89,8 +89,7 @@ class LauncherModelTest {
   /**
    * A fixture stating no height gets the Falcon Heavy's, because that is the mesh the renderer
    * falls back to when a launcher has no row of its own — 100 m, what every vehicle used to be
-   * drawn at, would be a number known to be nobody's (spec {@code docs/etagement/01-decoupage.md}
-   * §3.8).
+   * drawn at, would be a number known to be nobody's.
    */
   @Test
   void aLauncherStatingNoHeightTakesTheOneItsFallbackMeshIsDrawnAt() {
@@ -187,8 +186,8 @@ class LauncherModelTest {
   }
 
   /**
-   * Expressiveness lock (spec 07 §4.6): the capability descriptor must express Ariane 5 ECA (solid
-   * boosters, non-restartable cryogenic upper stage) without any future refactor.
+   * Expressiveness lock: the capability descriptor must express Ariane 5 ECA (solid boosters,
+   * non-restartable cryogenic upper stage) without any future refactor.
    */
   @Test
   void capabilityDescriptor_expressesAriane5Eca() {

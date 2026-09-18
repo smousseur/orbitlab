@@ -17,7 +17,7 @@ import java.util.Objects;
  * <p><b>It is also the memoisation key</b>, and that is why the gap travels with the request
  * instead of beside it: one {@code equals} decides whether anything moved, exactly as {@link
  * EarthLaunchWindowRequest}'s does for the six numbers inside it. {@link LaunchWindowRequest} being
- * sealed over records, that value equality survives the lunar branch (MIS-4 / L5 §4.2).
+ * sealed over records, that value equality survives the lunar branch.
  *
  * <p>The wording of each gap stays in {@link PlanningModel}: the axis caption is a clipped,
  * monospaced ASCII line, so what a gap reads as is a display decision and not the step's.

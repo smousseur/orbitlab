@@ -15,12 +15,11 @@ import java.util.stream.Stream;
 
 /**
  * The disk, and nothing but the disk: {@code ~/.orbitlab/scenarios/&lt;name&gt;.json}, created on
- * demand (spec {@code docs/scenario/01-persistance-missions.md} §8).
+ * demand.
  *
  * <p>This is the first file the application ever writes, hence the first user directory it owns. A
  * future preferences file belongs <b>beside</b> it in {@code ~/.orbitlab/}, never inside the
  * scenarios: replaying someone else's scenario must not reconfigure the screen of whoever opens it
- * (§10).
  *
  * <p><b>Names are refused, never sanitised.</b> Silently turning {@code ../../passwd} into {@code
  * passwd} would save a scenario under a name the user did not choose, and would make a later "does
@@ -30,7 +29,7 @@ import java.util.stream.Stream;
  */
 public final class ScenarioStore {
 
-  /** The file name character set, deliberately narrow (§7). */
+  /** The file name character set, deliberately narrow. */
   private static final Pattern VALID_NAME = Pattern.compile("[A-Za-z0-9 _-]+");
 
   private static final String EXTENSION = ".json";

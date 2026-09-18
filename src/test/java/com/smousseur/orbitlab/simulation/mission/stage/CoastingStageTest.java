@@ -60,7 +60,7 @@ class CoastingStageTest {
         new CoastingStage("Coasting", null, SolarSystemBody.MOON).gravitationalContext(mission);
 
     // Written as the crossing rule renders it, not as a literal: ArcTransition.across is the one
-    // place saying that the Earth becomes a perturber of a lunar arc (L4 §1.3 measured them equal).
+    // place saying that the Earth becomes a perturber of a lunar arc.
     assertEquals(
         GravitationalContext.moon().withPerturbers(SolarSystemBody.EARTH, SolarSystemBody.SUN),
         declared);

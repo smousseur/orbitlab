@@ -12,8 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.orekit.utils.Constants;
 
 /**
- * The wizard's derived mission duration, once it stopped assuming the Earth (MIS-5 / L2, spec
- * {@code docs/lunar-orbit/04-conception-L2.md} §5 and §7.3).
+ * The wizard's derived mission duration, once it stopped assuming the Earth.
  *
  * <p>{@code revolutionDays} is {@code static}, so nothing here builds a Lemur {@code Container} and
  * no JME context is needed. Orekit is initialised because {@code GravitationalContext} resolves

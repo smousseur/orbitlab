@@ -7,7 +7,7 @@ import java.util.Objects;
  * The environment a propagation is flown in, whole: what pulls on the vehicle, and what rubs
  * against it.
  *
- * <p>Introduced by PHY-1 / L1 (spec {@code docs/atmosphere/04-conception-L1.md} §2). It
+ * <p>Introduced by PHY-1 / L1. It
  * <b>composes</b> {@link GravitationalContext} instead of extending or renaming it: that record
  * says exactly what it is about, its two invariants keep meaning what they meant, and every site
  * that only needs gravity keeps reading a type that promises nothing else.
@@ -17,7 +17,7 @@ import java.util.Objects;
  * asks for in {@code DragForce(Atmosphere, DragSensitive)}. So {@code drag == null} means no {@code
  * DragForce} is mounted at all — not a zero force, not an identity term — and the "unchanged to the
  * bit" property of this lot is a consequence of the type rather than of a convention someone has to
- * go and check (spec §1.1).
+ * go and check.
  *
  * <p><b>Nothing is delegated.</b> There is no {@code mu()}, no {@code body()}, no {@code
  * equatorialRadius()} here: a caller needing those writes {@code .gravity().mu()}. One datum, one
@@ -60,7 +60,7 @@ public record FlightContext(GravitationalContext gravity, DragContext drag) {
 
   /**
    * The Moon context, drag off — and there is no other kind: the Moon has no atmosphere to resolve,
-   * so a drag context carried across its boundary mounts nothing (spec §1.2).
+   * so a drag context carried across its boundary mounts nothing.
    *
    * @return the lunar flight context
    */

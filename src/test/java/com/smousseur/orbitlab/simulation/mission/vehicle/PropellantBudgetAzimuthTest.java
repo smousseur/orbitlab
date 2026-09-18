@@ -14,7 +14,7 @@ import org.junit.jupiter.api.Test;
 
 /**
  * <b>MIS-7 / P1, test T7</b> — the Earth-rotation assist is signed and projected on the launch
- * azimuth (spec {@code docs/earth-orbit/01-mission-terre-parametrable.md} §7).
+ * azimuth.
  *
  * <p><b>The largest error on the list.</b> {@code ascentDeltaV} used to credit the ascent with the
  * full eastward entrainment, {@code 465 · cos φ}, whatever the heading. That is right due east and

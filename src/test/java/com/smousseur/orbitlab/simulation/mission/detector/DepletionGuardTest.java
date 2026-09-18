@@ -100,7 +100,7 @@ class DepletionGuardTest {
   }
 
   // ════════════════════════════════════════════════════════════════════════
-  // What the guard says when it fires — docs/bugs.md BUG-15
+  // What the guard says when it fires — BUG-15
   // ════════════════════════════════════════════════════════════════════════
 
   /**

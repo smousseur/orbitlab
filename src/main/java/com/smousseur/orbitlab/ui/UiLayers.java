@@ -9,7 +9,7 @@ package com.smousseur.orbitlab.ui;
  *
  * <p>The scale also orders dismissal. {@code HudSurfaces} ranks registered surfaces by their layer,
  * so the surface {@code ESC} sends away is by construction the one drawn in front. One ordering,
- * two uses — see {@code docs/ui/01-surfaces-et-modalite.md} §6.1 and §6.2.
+ * two uses.
  */
 public final class UiLayers {
 

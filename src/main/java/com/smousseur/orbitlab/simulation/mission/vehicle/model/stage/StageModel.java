@@ -10,8 +10,8 @@ import java.util.Objects;
  * tank size ({@code propellantCapacity}) is fixed by design; the propellant load is chosen per
  * mission when the stage is instantiated via {@link #toVehicle(double)}.
  *
- * <p><b>Components are per exemplar, accessors are aggregated</b> (spec {@code
- * docs/etagement/03-conception-L1.md} §3.4). A stage flown in {@code multiplicity} identical copies
+ * <p><b>Components are per exemplar, accessors are aggregated</b>. A stage flown in {@code
+ * multiplicity} identical copies
  * — four P120C boosters, two Falcon Heavy side cores — declares what one of them is, which is what
  * the sources give and what {@code PHY-5} needs to propagate a single jettisoned booster.
  * Everything downstream keeps reading {@link #dryMass()}, {@link #propellantCapacity()}, {@link
@@ -26,8 +26,7 @@ import java.util.Objects;
  * @param unitPropulsion the propulsion system of <b>one</b> exemplar
  * @param capabilities the physical capabilities of the stage
  * @param unitAerodynamics the frontal area and drag coefficient of <b>one</b> exemplar, or {@code
- *     null} when the model declares none — the stage then flies its phase without drag (spec {@code
- *     docs/atmosphere/04-conception-L1.md} §3.3)
+ * null} when the model declares none — the stage then flies its phase without drag
  * @param multiplicity how many identical exemplars fly as this one stack entry (at least 1)
  */
 public record StageModel(

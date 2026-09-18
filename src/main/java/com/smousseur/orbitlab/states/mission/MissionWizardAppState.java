@@ -199,7 +199,7 @@ public final class MissionWizardAppState extends BaseAppState {
    * "on the 4th at 12:00 or as soon after as the geometry allows". This is what gives the wizard's
    * launch-date field a meaning it did not have.
    *
-   * <p><b>Two paths, and they do not cost the same</b> (MIS-4 / L5 §6.3). An Earth window is closed
+   * <p><b>Two paths, and they do not cost the same</b>. An Earth window is closed
    * form throughout — some ninety evaluations of an angle between two vectors, 40 ms measured,
    * nothing propagates — which is why it runs here on the render thread. A lunar one confirms each
    * refined candidate by flying the aim, some 4.5 s apiece, so creating a lunar mission freezes the

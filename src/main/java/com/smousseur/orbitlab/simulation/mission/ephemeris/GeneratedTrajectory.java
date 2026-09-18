@@ -5,8 +5,7 @@ import java.util.Objects;
 
 /**
  * What a replay produces: the mission's own trajectory, and the separation events a {@link
- * DebrisGenerator} turns into debris (PHY-5 / L1, spec {@code
- * docs/multi-objets/03-conception-L1.md} §2.2).
+ * DebrisGenerator} turns into debris.
  *
  * <p>The jettisons are carried out of the replay rather than propagated inside it: the debris cost
  * stays off the mission's own sampling path, and the separation from the optimizer — which never

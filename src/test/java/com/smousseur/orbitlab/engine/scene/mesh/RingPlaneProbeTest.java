@@ -17,7 +17,7 @@ import org.junit.jupiter.api.Test;
 /**
  * A ring is not a sphere and never becomes one, so {@link MeshFrameProbe#probe(Mesh)} rejects it —
  * correctly. But something is measurable on it, and it is the only thing a ring can be wrong about:
- * the plane it lies in. See {@code docs/orientation-planetes/01-decoupage.md} §2.2.
+ * the plane it lies in. See
  */
 class RingPlaneProbeTest {
 

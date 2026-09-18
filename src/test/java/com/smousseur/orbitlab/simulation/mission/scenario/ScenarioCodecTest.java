@@ -172,7 +172,7 @@ class ScenarioCodecTest {
         "no flown loads read back either");
   }
 
-  /** We do not know what we are reading, so we refuse the file whole, with its number (§7). */
+  /** We do not know what we are reading, so we refuse the file whole, with its number. */
   @Test
   void futureFormatVersion_isRefusedWithItsNumber() {
     String json =

@@ -98,7 +98,7 @@ public final class MissionDisplayPanelAppState extends BaseAppState implements A
   protected void initialize(Application app) {
     int sh = app.getCamera().getHeight();
     // Under the breadcrumb band, not against the top edge: the band is permanent and reserves its
-    // own height (docs/navigation/01-breadcrumb.md §5.5).
+    // own height.
     float topOffset = AppStyles.HUD_TOP_OFFSET_PX;
 
     menu = new AppMenu(context, MENU_ITEMS);
@@ -141,7 +141,7 @@ public final class MissionDisplayPanelAppState extends BaseAppState implements A
     // ESC sends away the topmost open surface, and nothing else. SimpleApplication binds the same
     // key to quitting the application and its listener cannot be unregistered from here, so this
     // one owns the key outright; quitting has moved to the menu's Quit entry, behind a
-    // confirmation (docs/ui/01-surfaces-et-modalite.md §6.2).
+    // confirmation.
     inputManager = app.getInputManager();
     if (inputManager.hasMapping(SimpleApplication.INPUT_MAPPING_EXIT)) {
       inputManager.deleteMapping(SimpleApplication.INPUT_MAPPING_EXIT);

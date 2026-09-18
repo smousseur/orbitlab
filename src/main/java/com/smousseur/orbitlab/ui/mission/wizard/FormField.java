@@ -46,7 +46,7 @@ public final class FormField<T> {
       new FormField<>("GTO_PARKING_ALT", Double.class);
 
   /**
-   * Perilune altitude in <b>kilometres</b>, the one parameter a lunar flyby offers (MIS-4 / L5 §3).
+   * Perilune altitude in <b>kilometres</b>, the one parameter a lunar flyby offers.
    *
    * <p>The parking altitude is deliberately not a field beside it: it is {@code
    * LunarFlybyMission.DEFAULT_PARKING_ALTITUDE}, and MIS-4 / L0 measured the aim to converge
@@ -57,7 +57,6 @@ public final class FormField<T> {
 
   /**
    * Circular lunar orbit altitude in <b>kilometres</b>, the one parameter a lunar orbit offers
-   * (MIS-5 / L7 §4).
    *
    * <p>The parking altitude is not a field beside it either, for the reason {@link
    * #LUNAR_PERILUNE_ALT} gives: it is {@code LunarOrbitMission.DEFAULT_PARKING_ALTITUDE}.
@@ -93,8 +92,7 @@ public final class FormField<T> {
    * MissionFactory} then builds {@code LaunchPlane.dueEast(latitude)} from the latitude in double
    * rather than from the rounded number a form field shows.
    *
-   * <p>That distinction is the non-regression seam of spec {@code
-   * docs/earth-orbit/02-wizard-orbites-terrestres.md} §2.0: publishing the derived value would move
+   * <p>That distinction is the non-regression seam: publishing the derived value would move
    * the azimuth by a few thousandths of a degree, hence the signed launch assist {@code
    * PropellantBudget} charges, hence the propellant loads — a trajectory shift that no inclination
    * assertion would ever catch, because the plane itself would still be right.
@@ -117,8 +115,7 @@ public final class FormField<T> {
   /**
    * The {@link MissionProfile} the mission was created on, by name. UI-only: no spec component
    * corresponds to it, and {@code MissionFactory} ignores the key entirely — the profile is a way
-   * of offering parameters, not a property of the mission (spec {@code
-   * docs/earth-orbit/02-wizard-orbites-terrestres.md} §1).
+   * of offering parameters, not a property of the mission.
    */
   public static final FormField<String> MISSION_PROFILE =
       new FormField<>("MISSION_PROFILE", String.class);
@@ -127,8 +124,7 @@ public final class FormField<T> {
    * Total mission duration in days, written only when the user overrode the derived default. Its
    * <b>absence</b> is meaningful: it is how the wizard says "auto", so {@code MissionFactory} falls
    * back to {@code MissionHorizon.defaultFor(type)} and reopening the mission restores the auto
-   * state without any extra flag to carry (spec {@code
-   * docs/mission-horizon/01-horizon-explicite.md} §7).
+   * state without any extra flag to carry.
    */
   public static final FormField<Double> MISSION_HORIZON_DAYS =
       new FormField<>("MISSION_HORIZON_DAYS", Double.class);

@@ -22,12 +22,11 @@ import org.orekit.time.AbsoluteDate;
 import org.orekit.time.TimeScalesFactory;
 
 /**
- * PHY-2 / L4 closure: the measured two-pass sizing, flown (spec {@code
- * docs/atmosphere/11-conception-L4-PHY-2.md} §5).
+ * PHY-2 / L4 closure: the measured two-pass sizing, flown.
  *
  * <p>This is a <b>measurement</b> and not a baseline: the lot changes what a mission computed
  * through the planner flies, and the repository's gates size through {@code PropellantBudget} and
- * fly through {@code MissionOptimizer} directly, so none of them sees this path at all (§3.5). The
+ * fly through {@code MissionOptimizer} directly, so none of them sees this path at all. The
  * proof therefore lives here rather than in a re-recorded pin — and a gate that moves because of
  * this lot is a signal that the sizing leaked out of its perimeter.
  *

@@ -41,7 +41,7 @@ public interface BodyView {
 
   /**
    * Offsets this body's drawn mesh from its anchor, in the near frame — the render-only stack seat
-   * (PHY-5 / L6, spec {@code docs/multi-objets/08-conception-L6.md}). Applied to the model and not
+   *. Applied to the model and not
    * to the anchor on purpose: the anchor is what the floating origin cancels, so moving it would
    * lose the small seat to float cancellation far from Earth (the GEO jitter), and anything hung
    * under the anchor — a mission's debris — would inherit the primary's seat. Default no-op.
@@ -83,8 +83,7 @@ public interface BodyView {
 
   /**
    * Turns a shell of this body's model independently of the model as a whole — a cloud deck that
-   * does not keep the body's own rotation (L4 of {@code
-   * docs/orientation-planetes/01-decoupage.md}). Default implementation is a no-op, for the bodies
+   * does not keep the body's own rotation. Default implementation is a no-op, for the bodies
    * whose model is a single globe, which is all of them but Venus.
    *
    * @param angleRad the angle in radians about the body's measured pole
@@ -92,8 +91,7 @@ public interface BodyView {
   default void setShellSpin(float angleRad) {}
 
   /**
-   * Lights this body's ring system for the frame, so its planet casts a shadow across it (`FX-5`,
-   * {@code docs/roadmap/01-roadmap-v1.md} §4.2).
+   * Lights this body's ring system for the frame, so its planet casts a shadow across it.
    *
    * <p>Only the Sun is passed. The occulter of a ring is its own planet, whose centre and drawn
    * radius the view already holds — see {@code Model3dView.setRingSunlight}, which fills them in.
@@ -106,7 +104,7 @@ public interface BodyView {
 
   /**
    * Sets the occulter used by this body's per-fragment eclipse shading
-   * (`docs/eclipses/01-decoupage.md`). {@code occluderPositionWorld} and {@code
+   *. {@code occluderPositionWorld} and {@code
    * occluderRadiusWorld} are in this body's own world space — world units, relative to this body's
    * own anchor. {@code sunDirectionWorld} is a unit vector in that same world space, not view
    * space: pushing the occulter and light direction together as world-space data avoids needing a

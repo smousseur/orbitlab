@@ -9,10 +9,10 @@ import org.orekit.time.AbsoluteDate;
  * The sphere of influence of a body about its primary, in the Laplace sense: the radius at which
  * the body's attraction takes over from its primary's as the dominant one.
  *
- * <p>Introduced by PHY-4 / L4 (spec {@code docs/multi-corps/06-conception-L4.md} §3.2). It answers
+ * <p>Introduced by PHY-4 / L4. It answers
  * the découpage's open question 2 — geometric Laplace sphere rather than a force ratio. The force
  * ratio would be more faithful, but since a switch derives the opposite body as a perturber on both
- * sides (spec L4 §4.2), the two sides are the same physics to 0.246 m over six hours and the radius
+ * sides, the two sides are the same physics to 0.246 m over six hours and the radius
  * only decides where the <em>bookkeeping</em> flips.
  *
  * <p><b>The radius breathes, and that is measured, not stylistic.</b> The découpage quotes a single

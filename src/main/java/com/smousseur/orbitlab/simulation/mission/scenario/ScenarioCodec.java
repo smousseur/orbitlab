@@ -15,7 +15,7 @@ import tools.jackson.databind.json.JsonMapper;
  * files, {@code ScenarioSession} owns the meaning. What it does own is the <b>version gate</b>: a
  * file claiming a {@code formatVersion} above {@link ScenarioFile#CURRENT_FORMAT_VERSION} is
  * refused whole, with its number in the message, because nothing here knows what it is reading
- * (spec {@code docs/scenario/01-persistance-missions.md} §7). That is the only whole-file refusal;
+ *. That is the only whole-file refusal;
  * every other rejection is per mission and happens further up, in {@code ScenarioSession}.
  *
  * <p>Nulls are omitted on write — through {@code @JsonInclude(NON_NULL)} on the records — which is

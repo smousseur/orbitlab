@@ -7,8 +7,7 @@ import com.smousseur.orbitlab.simulation.mission.MissionType;
 
 /**
  * One saved mission, sealed on <b>the same hierarchy as {@code MissionSpec}</b> — the same
- * branches, discriminated by the {@code type} the spec already reports (spec {@code
- * docs/scenario/01-persistance-missions.md} §3).
+ * branches, discriminated by the {@code type} the spec already reports.
  *
  * <p>The mirror is on the hierarchy, not on the components, which differ deliberately: wizard units
  * rather than spec units (kilometres, degrees, days), a three-field {@link ScenarioVehicle} rather
@@ -19,10 +18,10 @@ import com.smousseur.orbitlab.simulation.mission.MissionType;
  * L5.
  *
  * <p><b>The guard fires on {@link MissionType}, not on a new {@code MissionSpec} branch</b>, and
- * this javadoc used to claim otherwise (MIS-5 / L5 §6): {@code toScenarioMission} switches on the
+ * this javadoc used to claim otherwise: {@code toScenarioMission} switches on the
  * type. Adding a spec variant compiles here untouched; adding a mission type does not.
  *
- * <p><b>Absence is meaningful</b> and stays so (§3.1, rule 1): {@link #horizonDays()}, and the
+ * <p><b>Absence is meaningful</b> and stays so: {@link #horizonDays()}, and the
  * inclination and node of an {@link EarthOrbit}, are {@code null} — hence omitted from the JSON —
  * when they were never commanded, never written at their derived value. Publishing a derived
  * inclination would move the azimuth by thousandths of a degree, hence the signed launch assist,
@@ -182,7 +181,7 @@ public sealed interface ScenarioMission
    *
    * <p><b>The parking altitude is not persisted</b>, deliberately: it is {@code
    * LunarFlybyMission.DEFAULT_PARKING_ALTITUDE}, no wizard field carries it, and writing it down
-   * would create a second truth about the same number the day the constant moves (MIS-4 / L5 §6.2).
+   * would create a second truth about the same number the day the constant moves.
    *
    * @param type always {@link MissionType#LUNAR_FLYBY}
    * @param name the mission name
@@ -214,7 +213,7 @@ public sealed interface ScenarioMission
       implements ScenarioMission {}
 
   /**
-   * A saved lunar orbit insertion (MIS-5 / L7 §4).
+   * A saved lunar orbit insertion.
    *
    * <p>The mirror of {@link Lunar}, one component apart, and it omits the parking altitude for the
    * same reason: it is {@code LunarOrbitMission.DEFAULT_PARKING_ALTITUDE}, no wizard field carries

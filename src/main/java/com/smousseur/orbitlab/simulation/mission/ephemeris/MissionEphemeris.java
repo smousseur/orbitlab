@@ -52,7 +52,7 @@ public final class MissionEphemeris {
   }
 
   /**
-   * Constructs from a list of sample points, flagged complete or not (bilan 11 §3.9 prérequis). An
+   * Constructs from a list of sample points, flagged complete or not. An
    * <em>incomplete</em> ephemeris is one whose flown trajectory could not be propagated to the end
    * of every stage — a stage threw, or a burn ran its tank dry before its scheduled cutoff and the
    * {@code DepletionGuard} truncated it. The points collected up to that break are still returned
@@ -106,7 +106,7 @@ public final class MissionEphemeris {
    * Whether every stage propagated to its scheduled end. {@code false} means the flown trajectory
    * was truncated (a stage threw, or a burn depleted its tank before its cutoff): the samples are
    * still usable for a partial trail, but the mission did not complete and must not be read as
-   * feasible (bilan 11 §3.9 prérequis).
+   * feasible.
    *
    * @return {@code true} when the trajectory reached the end of every stage
    */
@@ -148,8 +148,8 @@ public final class MissionEphemeris {
    *   <li>Stage name, mass, arc: floor semantics (value of point[i0])
    * </ul>
    *
-   * <p><b>Across an arc boundary nothing is interpolated at all</b> (PHY-4 / L3, spec {@code
-   * docs/multi-corps/05-conception-L3.md} §3.3). A cubic Hermite between two positions expressed in
+   * <p><b>Across an arc boundary nothing is interpolated at all</b>. A cubic Hermite between two
+   * positions expressed in
    * different frames is not an approximation, it is meaningless — it would blend a geocentric
    * vector with a selenocentric one. The bracketing point is returned unchanged instead, which
    * extends to the arc the floor semantics this method already applies to the stage name and the
@@ -241,9 +241,9 @@ public final class MissionEphemeris {
    * The lowest index sharing {@code times[index]}, which matters exactly once: at an arc boundary.
    *
    * <p>PHY-4 / L4 writes the boundary as <b>two samples at the same date</b>, one per frame — the
-   * outgoing state in the frame being left, the incoming one in the frame being entered (spec
-   * {@code docs/multi-corps/06-conception-L4.md} §5). {@code Arrays.binarySearch}, which {@link
-   * EphemerisInterpolator#findInterval} rests on, returns <em>some</em> matching index among equal
+   * outgoing state in the frame being left, the incoming one in the frame being entered. {@code
+   * Arrays.binarySearch}, which {@link EphemerisInterpolator#findInterval} rests on, returns
+   * <em>some</em> matching index among equal
    * keys and does not say which. Normalising to the lowest makes the answer the <b>outgoing</b>
    * point, which is the floor semantics this method already applies to the stage name, the mass and
    * the arc: the flip happens at the next sample, exactly as L3 §3.3 wrote it.

@@ -25,9 +25,9 @@ import org.orekit.time.AbsoluteDate;
  * Flies one {@link MissionStage} as a sequence of <b>legs</b>: one propagation per gravitational
  * context the stage passes through, cut wherever it crosses a sphere-of-influence boundary.
  *
- * <p>Extracted from the body of {@link StageChainRunner}'s loop by PHY-4 / L4 (spec {@code
- * docs/multi-corps/06-conception-L4.md} §4). The chain runner keeps its stage loop, its {@link
- * StageChainRunner.StageRun}, its listener and its statelessness; what moves here is the part that
+ * <p>Extracted from the body of {@link StageChainRunner}'s loop by PHY-4 / L4. The chain runner
+ * keeps its stage loop, its {@link StageChainRunner.StageRun}, its listener and its statelessness;
+ * what moves here is the part that
  * has to become a loop of its own once a stage may change central body halfway through.
  *
  * <p><b>The delegation is unconditional, and that is the point.</b> A stage declaring no transition
@@ -55,7 +55,7 @@ final class StageLegRunner {
    * read as the same stop (s).
    *
    * <p><b>It is twice the detector's own date convergence, and that is not a padded guess</b>
-   * (PHY-4 / L6, spec {@code docs/multi-corps/08-conception-L6.md} §12). Both states are taken at
+   *. Both states are taken at
    * the localised root but re-interpolated independently, so nothing can hold them closer together
    * than the precision the root itself is known to. L4 wrote {@code 1.0e-6} here after measuring 51
    * ps on its synthetic fixture; the first real translunar flight measured <b>524 µs</b> and the
@@ -68,8 +68,8 @@ final class StageLegRunner {
   /**
    * One propagation of one stage in one flight context.
    *
-   * <p>The context recorded is the <b>whole</b> environment, gravity and drag alike (PHY-1 / L1,
-   * spec {@code docs/atmosphere/04-conception-L1.md} §3.5): what the leg was actually flown in is
+   * <p>The context recorded is the <b>whole</b> environment, gravity and drag alike: what the leg
+   * was actually flown in is
    * what a later report has to be able to state, and a leg that recorded only its gravity would
    * make that a re-derivation rather than a field read.
    *
@@ -168,14 +168,13 @@ final class StageLegRunner {
               + stage.getName()
               + "' is propulsive and declares SOI transitions "
               + transitions
-              + "; a burn cannot straddle a boundary (spec docs/multi-corps/06-conception-L4.md"
-              + " §3.3)");
+              + "; a burn cannot straddle a boundary");
     }
 
     // A declaration that can never be honoured: no detector is armed, the stage ends nowhere in
     // particular, and nothing says so. Refused beside the propulsive contradiction because it is
     // the
-    // same kind of mistake (spec docs/lunar-orbit/03-conception-L1.md §2.2).
+    // same kind of mistake.
     if (endsAtCrossing && transitions.isEmpty()) {
       throw new IllegalStateException(
           "stage '"
@@ -188,11 +187,11 @@ final class StageLegRunner {
     // true by contract. The comparison inside convert() is REFERENCE equality, so a state already
     // in
     // the declared frame is returned untouched and no existing trajectory crosses an identity
-    // transform — which is what keeps the L1 gate bit-identical (spec L4 §3.5).
+    // transform — which is what keeps the L1 gate bit-identical.
     SpacecraftState legEntry = ArcTransition.convert(stageEntry, context.gravity());
 
     // Sized once, from the stage entry, exactly as the chain runner sized it. A switch only happens
-    // on a non-propulsive stage (spec L4 §3.3), where this is COAST_MAX_STEP whatever the state.
+    // on a non-propulsive stage, where this is COAST_MAX_STEP whatever the state.
     double maxStep = stage.maxStepSeconds(stageEntry, mission);
     double sampleStep = stage.sampleStepSeconds(stageEntry, mission);
 
@@ -251,11 +250,11 @@ final class StageLegRunner {
 
       legs.add(new Leg(context, legEntry, exit, crossing.body()));
 
-      // The crossing IS this stage's end (spec docs/lunar-orbit/03-conception-L1.md §3).
+      // The crossing IS this stage's end.
       //
       // No outgoing sample: there is no next leg to reopen the arc, and StageChainRunner's listener
       // already writes the final state in this same context at this same instant, so keeping it
-      // would produce a point twice. "One instant written twice, once per frame" (L4 §5) still
+      // would produce a point twice. "One instant written twice, once per frame" still
       // holds — the seam simply moves from between two legs to between two stages, and the next
       // stage's own ArcTransition.convert writes the other side.
       //
@@ -270,7 +269,6 @@ final class StageLegRunner {
       // this arc is the previous sampling step — a whole coast step short of the boundary, hundreds
       // of kilometres at transfer speed. The incoming sample is produced by the next leg's own
       // multiplexer at its first step, so the boundary is one instant written twice, once per frame
-      // (spec L4 §5).
       if (sampler != null) {
         sampler.sample(stage, context, exit);
       }
@@ -285,7 +283,7 @@ final class StageLegRunner {
       }
 
       // The aerodynamic half crosses untouched: it names a model, and the model is resolved
-      // against the new central body's shape when the next propagator is built (spec §1.2).
+      // against the new central body's shape when the next propagator is built.
       context = context.withGravity(ArcTransition.across(context.gravity(), crossing.body()));
       legEntry = ArcTransition.convert(exit, context.gravity());
     }
@@ -297,7 +295,7 @@ final class StageLegRunner {
    * <p><b>The direction decides the threshold.</b> Entering a sphere is decided at its radius;
    * leaving is decided at the radius plus the dead band, because a leg that has just switched
    * starts <em>on</em> the sphere and a detector re-armed on the same radius would see a sign
-   * decided by rounding (spec L4 §4.4). That rule moved to {@link SoiCrossingDetector#crossingFrom}
+   * decided by rounding. That rule moved to {@link SoiCrossingDetector#crossingFrom}
    * in MIS-5 / L1, so the coast that stops at the sphere on the optimize pass arms the same
    * detector as this one rather than a copy of it.
    */

@@ -29,8 +29,8 @@ import java.util.function.Consumer;
  * inside it.
  *
  * <p>Four of the six cards are backed by the same {@code MissionType} and the same spec record —
- * they are <b>presets</b>, not types (spec {@code docs/earth-orbit/02-wizard-orbites-terrestres.md}
- * §1). What a card actually decides is the parameter panel the next step shows and the inclination
+ * they are <b>presets</b>, not types. What a card actually decides is the parameter panel the next
+ * step shows and the inclination
  * it starts from.
  *
  * <p><b>Why tabs (MIS-5 / L6).</b> Six cards three per row filled 421 px of the 424 the content
@@ -127,7 +127,7 @@ public class StepMissionType implements StepValues {
     root.addChild(UiKit.vSpacer(TITLE_GAP));
 
     // The "// select the target orbit" line the five wizard pages otherwise share is gone from this
-    // one: the tabs say what it said, and its 26 px are what the strip is paid with (L6 §4).
+    // one: the tabs say what it said, and its 26 px are what the strip is paid with.
     tabs =
         new MissionDomainTabs(
             initialProfile.domain(),
@@ -228,9 +228,9 @@ public class StepMissionType implements StepValues {
    * wording per constant rather than one per variant.
    *
    * <p>The MEO's is the catalog: it needs an upper stage holding a 2 h 58 coast, or a payload whose
-   * kick motor takes the apogee burn over (spec {@code 01} §6), and saying so on the card is what
+   * kick motor takes the apogee burn over, and saying so on the card is what
    * keeps the refusal at the launcher step from reading as a surprise. The lunar one is the
-   * calendar: nothing refuses the mission, but its date is not free (MIS-4 / L5 §2.3).
+   * calendar: nothing refuses the mission, but its date is not free.
    */
   private static Badge badgeFor(MissionProfile profile) {
     return switch (profile.availability()) {

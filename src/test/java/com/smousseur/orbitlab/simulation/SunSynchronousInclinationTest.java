@@ -16,7 +16,7 @@ import org.orekit.utils.Constants;
 
 /**
  * <b>MIS-7 / P1, test T3</b> — {@link Physics#sunSynchronousInclination} against the three
- * reference values of spec {@code docs/earth-orbit/01-mission-terre-parametrable.md} §5.
+ * reference values.
  *
  * <p><b>What this fixture does and does not claim.</b> It checks the <em>arithmetic</em>, at
  * ±0.02°, and nothing else. Its tolerance must not be read as a precision on a flown inclination:

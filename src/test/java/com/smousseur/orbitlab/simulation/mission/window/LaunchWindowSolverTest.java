@@ -251,7 +251,7 @@ class LaunchWindowSolverTest {
   @Test
   @DisplayName("A coarse sweep that steps over a dip reports no window at all")
   void aSweepCoarserThanTheFeatureFindsNothing() {
-    // The executable form of why coarseStep() belongs to the problem (spec §5.a). The notch is
+    // The executable form of why coarseStep() belongs to the problem. The notch is
     // 600 s wide; sampled hourly it is invisible, and the failure is silent — an empty list reads
     // exactly like "there is genuinely no window". This test is what stops that from being a
     // surprise found in production.

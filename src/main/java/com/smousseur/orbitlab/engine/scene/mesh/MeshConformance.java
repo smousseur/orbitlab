@@ -8,7 +8,7 @@ import com.jme3.math.Vector3f;
  * Verdict of a measured {@link MeshFrame} against the export convention — pole on {@code +Z},
  * column {@code u = 0} on {@code −X}, exact equirectangular map, chirality {@code −360°/u} — which
  * is not a convention chosen on paper but the one {@code earth.gltf} and {@code moon.gltf} already
- * carry (see {@code docs/orientation-planetes/01-decoupage.md} §4.2).
+ * carry.
  *
  * <p>The four cases are deliberately distinct rather than a boolean plus a number, because they
  * call for different actions: a rotation is fixable either in Blender or as an {@code align}

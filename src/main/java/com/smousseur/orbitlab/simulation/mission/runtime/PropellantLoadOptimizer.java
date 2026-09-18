@@ -8,23 +8,23 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 /**
- * Outer propellant-sizing loop of I7 (spec 09 §1): closes the "the launcher sizes the propellant"
+ * Outer propellant-sizing loop of I7: closes the "the launcher sizes the propellant"
  * loop by searching the <em>smallest</em> load that still reaches the objective, instead of flying
  * the heuristic {@link com.smousseur.orbitlab.simulation.mission.vehicle.PropellantBudget} loads
  * with their 10 % margin.
  *
  * <p>The search is a scalar bisection on a single scale factor {@code λ} applied to the heuristic
  * loads: {@code load_i(λ) = λ · load_i^heuristic} for the liquid (variable-load) launcher stages,
- * SOLID stages and the payload's own load being left off the scaling (they keep their
- * design/analytic sizing — spec 09 §1). Feasibility (objective met <em>and</em> a per-stage
- * residual floor) is monotone in λ, so a bisection between an infeasible lower bound and a feasible
+ * SOLID stages and the payload's own load being left off the scaling. Feasibility (objective met
+ * <em>and</em> a per-stage residual floor) is monotone in λ, so a bisection between an infeasible
+ * lower bound and a feasible
  * upper bound converges on the minimal feasible {@code λ*}.
  *
  * <p>This class owns only the <em>bisection</em> and the pure {@code λ → loads} mapping. Rebuilding
  * a mission with {@code loads(λ)}, running {@link MissionOptimizer#optimize()} and evaluating the
  * success predicate is delegated to an injected {@link Evaluator} — that mission reconstruction is
  * spec 09 §6 task 2. Keeping the two apart lets the bisection be unit-tested against a synthetic
- * monotone evaluator without any propagation (spec 09 §6 task 1: monotonicity + budget).
+ * monotone evaluator without any propagation.
  */
 public final class PropellantLoadOptimizer {
   private static final Logger logger = LogManager.getLogger(PropellantLoadOptimizer.class);
@@ -35,10 +35,10 @@ public final class PropellantLoadOptimizer {
   /** Upper bound of the scaling factor: {@code λ = 1} reproduces the heuristic loads exactly. */
   public static final double DEFAULT_LAMBDA_MAX = 1.0;
 
-  /** Convergence tolerance on the width of the {@code λ} bracket (2 %, spec 09 §1). */
+  /** Convergence tolerance on the width of the {@code λ} bracket. */
   public static final double DEFAULT_TOLERANCE = 0.02;
 
-  /** External evaluation budget: each evaluation is a full mission optimization (spec 09 §1). */
+  /** External evaluation budget: each evaluation is a full mission optimization. */
   public static final int DEFAULT_MAX_EVALUATIONS = 10;
 
   private final double lambdaMin;
@@ -79,7 +79,7 @@ public final class PropellantLoadOptimizer {
   /**
    * One external evaluation of the mission at a scale factor {@code λ}: whether the mission rebuilt
    * with {@code loads(λ)} still meets its objective within tolerance and keeps a residual above the
-   * per-stage floor (spec 09 §1). The {@link #result()} carries the underlying computation so the
+   * per-stage floor. The {@link #result()} carries the underlying computation so the
    * caller can surface performance/warm-start data; the bisection itself reads only {@link
    * #feasible()}.
    *
@@ -95,7 +95,7 @@ public final class PropellantLoadOptimizer {
    * Implementations warm-start the internal CMA-ES from {@code previous} — the immediately
    * preceding evaluation, whose {@link MissionComputeResult#optimizerResult()} holds each stage's
    * {@code bestVariables} — so the bisection's repeated calls do not restart the inner optimizer
-   * from scratch (spec 09 §1, §2). This mission reconstruction is spec 09 §6 task 2.
+   * from scratch. This mission reconstruction is spec 09 §6 task 2.
    */
   @FunctionalInterface
   public interface Evaluator {

@@ -23,7 +23,7 @@ import java.util.Set;
 import java.util.function.Consumer;
 
 /**
- * The domain tabs of the wizard's first step (MIS-5 / L6 §5).
+ * The domain tabs of the wizard's first step.
  *
  * <p><b>Every pixel of the rule belongs to the object that sits on it.</b> The strip is a single
  * row as tall as a tab, and the line that becomes the panel's top edge is drawn on its bottom pixel

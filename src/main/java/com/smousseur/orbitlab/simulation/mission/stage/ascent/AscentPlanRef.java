@@ -6,8 +6,7 @@ import java.util.Objects;
 /**
  * The one {@link AscentPlan} the three ascent phases share: {@code Gravity turn (S1)}, {@code S1
  * separation} and {@code Gravity turn (S2)} hold the same reference, so they fly the same jettison
- * and ignition dates by construction rather than by each re-deriving them (spec {@code
- * docs/mission-stages/01-separations-implicites.md} §5.1).
+ * and ignition dates by construction rather than by each re-deriving them.
  *
  * <p><b>Who writes it.</b> Exactly one writer per pass, and never a worker thread:
  *

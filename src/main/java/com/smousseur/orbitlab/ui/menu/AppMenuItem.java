@@ -6,7 +6,7 @@ import java.util.Objects;
  * One entry of the top-left application menu.
  *
  * <p>The icon is mandatory: every entry sits in the same icon gutter so the labels stay aligned
- * whatever a later entry adds (see {@code docs/menu/01-menu-applicatif.md} §3). {@code iconName} is
+ * whatever a later entry adds. {@code iconName} is
  * a texture path relative to {@code interface/}, without the {@code .png} extension — for instance
  * {@code "missions/icon-action-view"}.
  *

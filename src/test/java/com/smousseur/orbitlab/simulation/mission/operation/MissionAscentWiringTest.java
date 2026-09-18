@@ -24,8 +24,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 /**
  * Every mission profile flies the ascent its staging plan declares — three explicit phases on a
- * sequential launcher, five when the launcher burns a parallel block and outlives it (étape 3 of
- * the explicit-staging migration; spec {@code docs/etagement/03-conception-L1.md} §3.5).
+ * sequential launcher, five when the launcher burns a parallel block and outlives it.
  *
  * <p>Cheap on purpose: no propagation, no optimizer. It holds the property the numeric fixtures
  * cannot — that <b>all four</b> construction sites were switched over, not just the one a test
@@ -37,8 +36,7 @@ import org.junit.jupiter.params.provider.MethodSource;
  * added here on purpose to show it was not an accident of Falcon Heavy's figures. It now
  * <em>is</em> a property of the launcher's figures: the Ariane flies three phases and the Falcon
  * five. What survives, and is what this fixture asserts, is that the shape flown is the one the
- * vehicle's staging plan declares — never a shape one construction site invented (spec {@code
- * docs/etagement/05-conception-L3.md} §7.5).
+ * vehicle's staging plan declares — never a shape one construction site invented.
  */
 class MissionAscentWiringTest {
 

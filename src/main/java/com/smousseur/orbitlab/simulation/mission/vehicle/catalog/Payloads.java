@@ -16,8 +16,7 @@ public final class Payloads {
    * families with no hardware behind them, so no published geometry exists to derive a section
    * from: each one states the bus shape it assumes and stops there. The ballistic coefficients that
    * result bracket the 455 kg/m² of the L0 measurement table without having been fitted to it —
-   * fitting them would make PHY-2's decay measurement self-fulfilling (spec {@code
-   * docs/atmosphere/04-conception-L1.md} §4.3).
+   * fitting them would make PHY-2's decay measurement self-fulfilling.
    *
    * <p>All of them use Cd 2.2, the standard free-molecular value, and none models <b>deployed solar
    * arrays</b>: at the altitude where drag matters a satellite has them stowed. That approximation
@@ -38,8 +37,7 @@ public final class Payloads {
           true);
 
   /**
-   * The satellite that keeps its own orbit, and the four numbers that say so (spec {@code
-   * docs/etagement/01-decoupage.md} §3.7).
+   * The satellite that keeps its own orbit, and the four numbers that say so.
    *
    * <ul>
    *   <li><b>15 m/s</b> is two and a half times the worst LEO trim PHY-8 / L0 measured — 6.1 m/s,
@@ -77,7 +75,7 @@ public final class Payloads {
           15.0,
           false);
 
-  /** AKM sized for ~1 800 m/s of apogee ΔV at 2 t dry, ~30 % margin (spec 06 §4.2). */
+  /** AKM sized for ~1 800 m/s of apogee ΔV at 2 t dry, ~30 % margin. */
   public static final PayloadModel GEO_SAT =
       // Boxy bus. B = 291 kg/m² at the 4 t departure mass (2 t dry + 2 t AKM).
       new PayloadModel(
@@ -93,9 +91,9 @@ public final class Payloads {
           false);
 
   /**
-   * An inert lunar probe (MIS-4 / L5 §5.1) — the dry mass of LRO (1 846 kg) and Luna-25 (1 750 kg),
+   * An inert lunar probe — the dry mass of LRO (1 846 kg) and Luna-25 (1 750 kg),
    * rounded. It carries no propulsion of its own: the translunar injection is the launcher's last
-   * burn and nothing is handed over afterwards (découpage §6 pt 8).
+   * burn and nothing is handed over afterwards.
    */
   public static final PayloadModel LUNAR_PROBE =
       // Boxy bus. B = 227 kg/m², which widens the bracket of the PHY-2 table downwards without
@@ -113,11 +111,11 @@ public final class Payloads {
           false);
 
   /**
-   * A propelled lunar orbiter (MIS-5 / L3, spec {@code docs/lunar-orbit/05-conception-L3.md} §2) —
+   * A propelled lunar orbiter —
    * the payload that flies its own lunar-orbit insertion, which {@link #LUNAR_PROBE} cannot.
    *
-   * <p><b>Every number comes from L0's measured arrival</b> (spec {@code
-   * docs/lunar-orbit/02-baseline-L0.md} §3), and the engine is the one that is not a real
+   * <p><b>Every number comes from L0's measured arrival</b>, and the engine is the one that is not
+   * a real
    * orbiter's:
    *
    * <ul>
@@ -130,7 +128,7 @@ public final class Payloads {
    *       Chang'e-3's 1.98. GEO_SAT's 400 N kick motor would take 66.4 % of a revolution, which is
    *       not a near-impulsive burn by any reading. Real orbiters split their insertion in three to
    *       five burns for exactly that reason; this one does it once, and that is a catalog decision
-   *       written as such (découpage §6 pt 4).
+   *       written as such.
    * </ul>
    */
   public static final PayloadModel LUNAR_ORBITER =
@@ -174,14 +172,14 @@ public final class Payloads {
    * Returns the payload models a mission of the given type can actually fly, on the two axes the
    * question has: what the payload must be able to <b>do</b> — {@link
    * MissionType#requiresPayloadPropulsion()}, which keeps only the propelled models — and where it
-   * is meant to <b>fly</b> (MIS-4 / L5 §5.2). A third axis joined them at PHY-8 / L6: what a
+   * is meant to <b>fly</b>. A third axis joined them at PHY-8 / L6: what a
    * payload is <b>for</b>, which takes the cargo module out of every list until MIS-6 gives it the
    * rendezvous it is meant for.
    *
    * <p>The second axis was missing until L5, and it showed: a lunar flyby requires no propulsion,
    * so it was offered the whole catalog, GEO communications satellite included.
    *
-   * <p><b>The two axes cross, and a lunar flyby is offered the orbiter too</b> (MIS-5 / L3 §2.2). A
+   * <p><b>The two axes cross, and a lunar flyby is offered the orbiter too</b>. A
    * flyby requires no propulsion, so it excludes none: the orbiter flies it with an empty tank,
    * exactly as {@link MissionType#LEO} says a propelled payload does. Only {@code LUNAR_ORBIT}
    * needs both axes at once, and it is the one type the catalog answers with a single model — the
@@ -213,8 +211,7 @@ public final class Payloads {
    * the same taxonomy a second time, so that {@code MissionProfile} keeps out of the catalog and
    * its static initialisation; {@code MissionDomainTest} pins the two together against this method,
    * and a test cannot call what it cannot see. Production code outside this class must not read it
-   * — the question it answers about a <em>card</em> is {@code MissionProfile.domain()} (MIS-5 / L6
-   * §3).
+   * — the question it answers about a <em>card</em> is {@code MissionProfile.domain()}.
    *
    * @param type the mission type to classify
    * @return where a mission of this type flies

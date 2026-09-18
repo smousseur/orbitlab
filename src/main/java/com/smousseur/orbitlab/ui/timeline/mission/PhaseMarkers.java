@@ -19,7 +19,7 @@ import java.util.List;
 
 /**
  * The transition markers of the track: one per phase-run boundary, grouped where the axis has
- * squeezed them together (spec {@code docs/navigation/02-timeline-mission.md} §8).
+ * squeezed them together.
  *
  * <p><b>Non-drawable runs keep their marker.</b> {@code StageSeparationStage} is instantaneous and
  * yields a run of one vertex, so it colours no segment — but a staging event is exactly what one
@@ -108,7 +108,7 @@ final class PhaseMarkers {
   /**
    * The cluster whose glyph is under the given track x, if any. Used by the widget to give a
    * marker's content priority over the bar's on hover, and to seek to a group's first transition on
-   * click (§9.1).
+   * click.
    *
    * @param trackX an x in the widget's local space
    * @return the cluster hit, or {@code null}

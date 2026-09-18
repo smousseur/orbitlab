@@ -6,7 +6,7 @@ import java.util.Optional;
 
 /**
  * Pairs a payload of the {@link Payloads} catalog with the GLTF mesh that draws it, and the size it
- * is drawn at (PHY-5 / L5, spec {@code docs/multi-objets/07-conception-L5.md} §3.2). It is the
+ * is drawn at. It is the
  * render layer's own asset mapping, the payload counterpart of {@link LauncherAssets}: nothing in
  * the propagation depends on which mesh a satellite wears.
  *
@@ -15,7 +15,7 @@ import java.util.Optional;
  * The cargo module has no mesh — it is filtered out of every mission type until MIS-6 — and a
  * payload with no catalog id (a hand-assembled fixture) has none either. Both cases return {@link
  * Optional#empty()}, and the primary then keeps its {@code -after_s1} launcher silhouette rather
- * than shrinking to a satellite (§3.2).
+ * than shrinking to a satellite.
  *
  * <p><b>The drawn size is the catalog's {@code dimensionMeters}, not a mesh property.</b> The
  * payload meshes are third-party assets with no shared normalization (their intrinsic scales differ

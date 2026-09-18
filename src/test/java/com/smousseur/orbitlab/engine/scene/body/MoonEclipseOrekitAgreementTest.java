@@ -19,7 +19,7 @@ import org.orekit.utils.OccultationEngine;
 import org.orekit.utils.PVCoordinates;
 
 /**
- * Closes L2 of {@code docs/eclipses/01-decoupage.md}: the same {@link EclipseGeometry} engine L1
+ * Closes L2 of: the same {@link EclipseGeometry} engine L1
  * validated at LEO scale must also agree with Orekit's {@link EclipseDetector} at the Earth-Moon
  * distance, for a Moon positioned opposite the Sun (lunar eclipse) and on the sunward side (no
  * eclipse). This only re-exercises the geometry — {@code PlanetPoseAppState}'s per-frame wiring is

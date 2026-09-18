@@ -14,20 +14,20 @@ import org.orekit.time.AbsoluteDate;
 
 /**
  * Dates a lunar mission — the one place a lunar {@link MissionSpec} meets a <b>confirming</b>
- * {@link LunarLaunchWindowProblem} (MIS-4 / L5 §6.3).
+ * {@link LunarLaunchWindowProblem}.
  *
- * <p><b>Two entries, one body</b> (MIS-5 / L5 §5.2). A flyby and an orbit insertion are dated by
+ * <p><b>Two entries, one body</b>. A flyby and an orbit insertion are dated by
  * the same criterion at the same aimed perilune; what stopped the flyby's planner from serving both
  * was its signature, not its content.
  *
  * <p><b>This is where the 4.5 s of a confirmation are paid</b>, at the click that creates the
- * mission and not on every keystroke of the parameters step, whose timeline screens only (§4.1).
+ * mission and not on every keystroke of the parameters step, whose timeline screens only.
  * The price is a freeze of ten to fifteen seconds on the render thread, against 40 ms for an Earth
  * mission; it is written down as a limitation of the lot rather than hidden.
  *
  * <p><b>The mass at injection is recomputed, not carried.</b> {@code
  * PropellantBudget.loadsForLunar} is closed-form and deterministic, so reading it back off the
- * spec's own inputs costs microseconds and keeps one definition of the figure (§5.3).
+ * spec's own inputs costs microseconds and keeps one definition of the figure.
  */
 public final class LunarLaunchWindowPlanner {
 
@@ -44,7 +44,7 @@ public final class LunarLaunchWindowPlanner {
    *
    * <p><b>Absolute here, unlike the timeline's relative margin, and that is the point.</b> A pad
    * below the lunar declination reaches no plane containing the Moon, and the criterion stays
-   * finite there rather than refusing (L2 §1.3): without a ceiling the search would hand back the
+   * finite there rather than refusing: without a ceiling the search would hand back the
    * cheapest of a set of dates nobody can fly.
    */
   private static final double MAX_DELTA_V = 3_400.0;
@@ -88,8 +88,7 @@ public final class LunarLaunchWindowPlanner {
   }
 
   /**
-   * The first opportunity at or after {@code earliest} for a lunar orbit insertion (MIS-5 / L5,
-   * spec {@code docs/lunar-orbit/07-conception-L5.md} §5.2).
+   * The first opportunity at or after {@code earliest} for a lunar orbit insertion.
    *
    * <p><b>The aimed perilune is the lunar orbit altitude</b>, which is why the window needs no lot
    * of its own: the flyby's criterion — can a shot on this date reach that perilune — is exactly
@@ -124,7 +123,7 @@ public final class LunarLaunchWindowPlanner {
    *
    * <p><b>The mass at injection is recomputed, not carried.</b> {@code
    * PropellantBudget.loadsForLunar} is closed-form and deterministic, so reading it back off the
-   * configuration costs microseconds and keeps one definition of the figure (MIS-4 / L5 §5.3).
+   * configuration costs microseconds and keeps one definition of the figure.
    */
   private static Optional<LaunchWindow> nextOpportunity(
       LaunchConfiguration configuration,

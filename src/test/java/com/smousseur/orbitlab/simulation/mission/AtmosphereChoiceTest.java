@@ -38,7 +38,7 @@ import org.orekit.utils.Constants;
 import org.orekit.utils.PVCoordinates;
 
 /**
- * The switch of PHY-1 / L1 (spec {@code docs/atmosphere/04-conception-L1.md} §§3.2–3.3): where the
+ * The switch of PHY-1 / L1: where the
  * atmosphere choice lives, who writes it, and the two independent yes it takes for a propagation to
  * actually carry drag.
  */

@@ -17,8 +17,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 /**
- * <b>MIS-7 / P2.a</b> — the mapping between a mission spec and the wizard card it came from (spec
- * {@code docs/earth-orbit/02-wizard-orbites-terrestres.md} §2.1).
+ * <b>MIS-7 / P2.a</b> — the mapping between a mission spec and the wizard card it came from.
  *
  * <p>The profile is <em>derived</em> from the spec rather than stored on it, so this fixture is
  * what stands between a polar mission and reopening as a LEO one. It is also the reason {@code
@@ -138,7 +137,7 @@ class MissionProfileTest {
   /**
    * Three cards carry a type of their own; the other four are one and the same spec record.
    *
-   * <p><b>The count stays at four, and that is the point</b> (MIS-4 / L5 §2.5). {@code
+   * <p><b>The count stays at four, and that is the point</b>. {@code
    * earthOrbitProfiles()} used to filter by excluding GEO <em>by name</em>, so the sixth constant
    * would have fallen through it and been handed a perigee/apogee panel. Repairing the filter to
    * read the mission type leaves this number where it was, which is what says the repair is right —
@@ -223,7 +222,7 @@ class MissionProfileTest {
     assertEquals(55.0, MissionProfile.MEO.initialInclinationDeg(KOUROU_LAT, 20_200_000.0), 1e-9);
   }
 
-  /** The derived one ignores the site entirely: only the altitude decides (spec {@code 01} §5). */
+  /** The derived one ignores the site entirely: only the altitude decides. */
   @Test
   void ssoInclinationFollowsTheAltitude() {
     double at600 = MissionProfile.SSO.initialInclinationDeg(KOUROU_LAT, 600_000.0);

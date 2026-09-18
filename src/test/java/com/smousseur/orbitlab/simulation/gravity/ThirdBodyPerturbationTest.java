@@ -32,8 +32,7 @@ import org.orekit.utils.Constants;
 import org.orekit.utils.PVCoordinates;
 
 /**
- * <b>PHY-4 / L2 — the third-body wiring, closed exactly</b> (spec {@code
- * docs/multi-corps/04-conception-L2.md} §5.1).
+ * <b>PHY-4 / L2 — the third-body wiring, closed exactly</b>.
  *
  * <p><b>What it guards.</b> L2 lets a stage declare perturbing bodies in its {@link
  * GravitationalContext}, and the propagator factories mount one {@link ThirdBodyAttraction} per
@@ -57,7 +56,7 @@ import org.orekit.utils.PVCoordinates;
  *
  * <p><b>On the spec's 7.3 × 10⁻⁶ m/s².</b> The découpage quotes the <em>linearised</em> tide {@code
  * 2·µ_L·r/d³}. At geostationary radius {@code r/d ≈ 0.11}, and the linearisation is 19 % low on the
- * near side and 14 % high on the far side (spec L2 §1.1-A). It is logged here as an order of
+ * near side and 14 % high on the far side. It is logged here as an order of
  * magnitude and never asserted: the exact expression is pinned instead, which is stricter, not
  * looser.
  */
@@ -95,7 +94,7 @@ class ThirdBodyPerturbationTest {
   /**
    * An unperturbed context mounts exactly what it mounted before L2 — <b>no third body at all</b>.
    * Not an identity term, not a zero contribution: nothing. That is what makes L2's non-regression
-   * structural rather than measured (spec §4.1).
+   * structural rather than measured.
    *
    * <p><b>The shape of the list, measured.</b> A {@code NumericalPropagator} always carries a
    * central {@link NewtonianAttraction} of its own, and returns it <em>last</em> whatever else was
@@ -147,7 +146,7 @@ class ThirdBodyPerturbationTest {
   }
 
   /**
-   * Both factories honour the context: a context must mean the same thing everywhere (spec §3.2).
+   * Both factories honour the context: a context must mean the same thing everywhere.
    */
   @Test
   void theNewtonianFactory_honoursPerturbersToo() {
@@ -168,7 +167,7 @@ class ThirdBodyPerturbationTest {
 
   /**
    * One instance per body, shared by every propagator — the guarantee {@code computeIfAbsent} gives
-   * and an explicit lock would not, with CMA-ES explorations running in parallel (spec §3.3).
+   * and an explicit lock would not, with CMA-ES explorations running in parallel.
    */
   @Test
   void theThirdBodyModel_isSharedPerBody() {
@@ -187,7 +186,7 @@ class ThirdBodyPerturbationTest {
   /**
    * Declaring the central body as its own perturber is a caller bug, and the easiest one to commit
    * in L4 by copying an Earth context to adapt it to a lunar arc. It throws rather than being
-   * politely dropped (spec §2.2).
+   * politely dropped.
    */
   @Test
   void theCentralBody_cannotPerturbItself() {

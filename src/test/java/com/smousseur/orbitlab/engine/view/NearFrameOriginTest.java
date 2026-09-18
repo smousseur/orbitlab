@@ -25,11 +25,9 @@ import org.orekit.time.AbsoluteDate;
 /**
  * The near-view origin must land <em>exactly</em> on the focused spacecraft, because that is the
  * position everything downstream measures against — the LOD distance in {@code
- * LodView.updateScreen} first of all (spec {@code
- * docs/graphics-effects/spacecraft-view-artefacts.md} §3).
- *
- * <p>Two independent producers write that origin every frame: {@code SpacecraftPresenter} places
- * the anchor at {@code +p}, and {@code FloatingOriginAppState} translates the near frame by {@code
+ * LodView.updateScreen} first of all. <p>Two independent producers write that origin every frame:
+ * {@code SpacecraftPresenter} places the anchor at {@code +p}, and {@code FloatingOriginAppState}
+ * translates the near frame by {@code
  * −p}. These tests pin the two properties that make the sum vanish:
  *
  * <ol>
@@ -134,8 +132,7 @@ class NearFrameOriginTest {
   }
 
   /**
-   * The PHY-4 / L5 form of the invariant, and the one risk of that lot (spec {@code
-   * docs/multi-corps/07-conception-L5.md} §10).
+   * The PHY-4 / L5 form of the invariant, and the one risk of that lot.
    *
    * <p>A sample flown about the Moon is no longer drawn where its raw coordinates say: looking at
    * the Earth, it is first re-expressed about the Earth, moving it by the best part of 400 000 km.

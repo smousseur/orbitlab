@@ -26,14 +26,14 @@ import java.util.List;
  * plane is the one the site reaches, the phase is whatever the ascent delivers, and the departure
  * point is found inside that plane rather than chosen to suit the Moon.
  *
- * <p><b>The parking altitude is a parameter and it is 400 km</b> (spec {@code
- * docs/lunar-flyby/06-conception-L4.md} §2). Not for the cost — the injection is 54 m/s cheaper
+ * <p><b>The parking altitude is a parameter and it is 400 km</b>. Not for the cost — the injection
+ * is 54 m/s cheaper
  * from 400 km than from 185, and the ascent to it costs more than that back — but because 400 km is
  * the only parking altitude any ascent in this repository actually flies, while 185 km sits exactly
  * on the knee of {@code GravityTurnConstraints.getFpaWindowDeg}, the tightest edge of the CMA-ES
  * calibration and one never yet exercised.
  *
- * <p><b>No S2 jettison after the injection</b> (§3.3). A separation exists so {@code
+ * <p><b>No S2 jettison after the injection</b>. A separation exists so {@code
  * resolveActiveStage} can hand the next burn to another engine; the injection is the last burn of
  * this chain and the payload is inert, so a separation would change no trajectory, add a stage that
  * knows how to refuse, and widen the gap between the stage walk and the flight — {@code
@@ -53,7 +53,7 @@ public class LunarFlybyMission extends EarthMission {
    * The ± band on the flown perilune (m).
    *
    * <p>It lives on the mission of the product, which is what let it outlive the PHY-4 demonstration
-   * that used to read it from here (§4.1). It is not a component of {@code MissionSpec.Lunar}
+   * that used to read it from here. It is not a component of {@code MissionSpec.Lunar}
    * either — the width is dictated by the measurement and not chosen by a caller, an order of
    * magnitude above the ~0.9 km the 60 s coast sampling can over-read closest approach by and the
    * ~1 km the aim secant converges to.
@@ -84,7 +84,7 @@ public class LunarFlybyMission extends EarthMission {
   /**
    * The circular parking altitude every lunar mission built from the wizard leaves from (m).
    *
-   * <p><b>A single source, and that is its whole reason to exist</b> (MIS-4 / L4 §4.1): the launch
+   * <p><b>A single source, and that is its whole reason to exist</b>: the launch
    * window, the chain and the propellant budget have to agree on it, and until L5 nothing held it —
    * the closure flight passed {@code 400_000} from its own test. It is not offered as a wizard
    * field either: L0 measured the aim to converge identically from 185 to 400 km, so a slider there

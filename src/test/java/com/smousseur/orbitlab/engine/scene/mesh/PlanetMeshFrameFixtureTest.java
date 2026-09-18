@@ -16,7 +16,7 @@ import org.junit.jupiter.api.Test;
 
 /**
  * The Earth and the Moon are the reference assets: their frame is what the export convention says
- * (see {@code docs/orientation-planetes/01-decoupage.md} §4.2), and they are declared frozen while
+ *, and they are declared frozen while
  * the other nine models are provisional. They are therefore the only fixture in this chantier that
  * a test can lean on without being rewritten at every asset swap.
  *

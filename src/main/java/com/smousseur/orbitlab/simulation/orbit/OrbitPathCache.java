@@ -75,8 +75,8 @@ public final class OrbitPathCache {
    * Samples one full period of a body's orbit, at exactly the number of points its configuration
    * asks for.
    *
-   * <p><b>The count is the budget and the step follows, not the other way round</b> ({@code
-   * docs/bugs.md}, BUG-23). This used to clamp the step the budget implied to at most seven days
+   * <p><b>The count is the budget and the step follows, not the other way round</b>. This used to
+   * clamp the step the budget implied to at most seven days
    * and then recompute the count from the clamped step, which for a body needing a coarser step
    * than that made the count go <em>up</em>: Pluto's dataset carried 12 940 points for a budget of
    * 4 096. The two are the same knob — the path spans {@code count * step} — so capping the count

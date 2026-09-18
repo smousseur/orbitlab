@@ -5,7 +5,7 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * A tab of the wizard's first step: where the missions of a group of cards fly (MIS-5 / L6 §3).
+ * A tab of the wizard's first step: where the missions of a group of cards fly.
  *
  * <p><b>A domain is not a {@link MissionType}, and not a mission profile either.</b> It is the
  * coarsest classification the first screen needs: six cards no longer fit one grid, and grouping

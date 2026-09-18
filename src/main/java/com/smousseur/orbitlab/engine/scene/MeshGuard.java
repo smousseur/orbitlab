@@ -16,7 +16,7 @@ import java.util.Optional;
 
 /**
  * Compares a body's asset, as actually loaded, against what {@link PlanetMeshCorrection} has
- * committed for it (see {@code docs/orientation-planetes/01-decoupage.md}, L1).
+ * committed for it.
  *
  * <p>This is what makes an asset swap <em>detected</em> rather than silently absorbed. Nine of the
  * eleven models are provisional and will be replaced; a correction computed from a frame the asset

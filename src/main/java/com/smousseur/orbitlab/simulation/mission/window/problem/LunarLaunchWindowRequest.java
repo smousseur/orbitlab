@@ -1,8 +1,7 @@
 package com.smousseur.orbitlab.simulation.mission.window.problem;
 
 /**
- * Everything the wizard's lunar timeline needs, and nothing the parameters step cannot know (MIS-4
- * / L5 §4.1).
+ * Everything the wizard's lunar timeline needs, and nothing the parameters step cannot know.
  *
  * <p><b>Five numbers, all of them available at that step.</b> The pad comes from the site step, the
  * parking altitude is {@code LunarFlybyMission.DEFAULT_PARKING_ALTITUDE}, and the perilune is the

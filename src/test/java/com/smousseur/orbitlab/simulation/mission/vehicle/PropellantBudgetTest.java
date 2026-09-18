@@ -16,7 +16,7 @@ class PropellantBudgetTest {
 
   private static final double S2_CAPACITY = 107_500;
 
-  // --- Analytic ΔV formulas (known cases, spec 06 I3) ---
+  // --- Analytic ΔV formulas ---
 
   @Test
   void gtoInjection_from200km_matchesTextbookValue() {
@@ -46,7 +46,7 @@ class PropellantBudgetTest {
     assertTrue(PropellantBudget.ascentDeltaV(400_000, 45.96) > equatorial);
   }
 
-  // --- Load sizing (spec 06 I3 exit criteria) ---
+  // --- Load sizing ---
 
   @Test
   void loadsForLeo_lowerStageFull_topStageSizedUnderHalfCapacity() {
@@ -210,7 +210,7 @@ class PropellantBudgetTest {
     assertEquals(1_000, loads[1], 1e-6, "required load beyond capacity is clamped");
   }
 
-  // --- The translunar case (MIS-4 / L5 §5.3) ---
+  // --- The translunar case ---
 
   /** The Hohmann term to the Moon's mean distance, where the ~40 m/s gap of §5.3 lives. */
   @Test
@@ -296,8 +296,8 @@ class PropellantBudgetTest {
   // --- Lunar orbit insertion (MIS-5 / L3) ---
 
   /**
-   * MIS-5 / L3 §6.2 — the closed form against the four arrivals L0 flew (spec {@code
-   * docs/lunar-orbit/02-baseline-L0.md} §3): 819.6 to 835.9 m/s at a 100 km perilune.
+   * MIS-5 / L3 §6.2 — the closed form against the four arrivals L0 flew: 819.6 to 835.9 m/s at a
+   * 100 km perilune.
    *
    * <p><b>The assertion is a bound and not an equality</b>, deliberately. The closed form is a 180°
    * Hohmann where the chain flies a 170° transfer with an aim offset, so it is a simpler model than

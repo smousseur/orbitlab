@@ -76,8 +76,7 @@ public final class TimeConverter {
    * <p>The seconds field is always written, even at zero. {@link LocalDateTime#toString()} omits it
    * on a whole minute — {@code 2026-01-08T12:00Z} — which {@link #parseUtcDate(String)} then
    * refuses, so the two were not inverse for one date in sixty. They are the round trip the
-   * scenario format is built on (spec {@code docs/scenario/01-persistance-missions.md} §3.1, rule
-   * 3), so the omission is not affordable here.
+   * scenario format is built on, so the omission is not affordable here.
    *
    * @param date the date to format
    * @return the ISO UTC text

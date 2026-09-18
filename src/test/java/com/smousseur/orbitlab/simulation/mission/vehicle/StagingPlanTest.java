@@ -9,8 +9,8 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 /**
- * The staging plan is where the parallel block is decided (spec {@code
- * docs/etagement/03-conception-L1.md} §3.2, §3.3). The figures below are deliberately synthetic and
+ * The staging plan is where the parallel block is decided. The figures below are deliberately
+ * synthetic and
  * round: the boosters and the core share one Isp, so the flow ratio is the thrust ratio and every
  * expected value is exact.
  */

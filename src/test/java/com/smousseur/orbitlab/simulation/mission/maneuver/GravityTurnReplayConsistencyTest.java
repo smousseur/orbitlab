@@ -41,7 +41,7 @@ import org.orekit.utils.PVCoordinates;
  * Guards the optimize-vs-ephemeris consistency of the ascent, and holds the étape 0 numeric
  * reference of the explicit-staging migration.
  *
- * <p><b>History (bilan 11 §3.9), now closed.</b> The GEO optimize-vs-ephemeris divergence — ~5° of
+ * <p><b>History, now closed.</b> The GEO optimize-vs-ephemeris divergence — ~5° of
  * inclinaison once the GTO → apogee-node → AKM chain had amplified it — was traced to the
  * <b>vertical ascent flying under two different gravity models</b>: {@code
  * ConstantThrustStage.propagateStandalone} (which {@code VerticalAscentStage} extends) built a
@@ -66,7 +66,7 @@ import org.orekit.utils.PVCoordinates;
  *   <li>{@code gravityTurnExit_matchesTheRecordedPreSplitBaseline} — étape 0 of the
  *       explicit-staging migration: the pre-split reference the three-phase ascent must reproduce;
  *   <li>{@code threePhaseAscent_reproducesThePreSplitBaseline} — étape 2: it does reproduce it,
- *       within the N2 tolerances (spec 01 §7.1);
+ *       within the N2 tolerances;
  *   <li>{@code threePhaseAscent_optimizeAndReplayFlyTheSameChain} — étape 2: and both passes fly
  *       that split through one traversal, so they cannot drift apart again.
  * </ul>
@@ -85,10 +85,10 @@ class GravityTurnReplayConsistencyTest {
   private static final double PITCH_KICK_DEG = 3.0; // FALCON_HEAVY AscentProfile
   private static final double INTERSTAGE_COAST = 2.0;
 
-  // ── Étape 0 baseline of the explicit-staging migration (spec 01 §7.1) ─────
+  // ── Étape 0 baseline of the explicit-staging migration ─────
   // Recorded on the pre-split code (commit 1d53e83), fixed variables, no optimizer involved.
   //
-  // RE-RECORDED at MIS-7 P1.a-bis (spec docs/earth-orbit/01-mission-terre-parametrable.md §1.1.1),
+  // RE-RECORDED at MIS-7 P1.a-bis,
   // after correcting the pitch kick's local horizontal basis, which had east and west swapped and
   // so
   // mirrored every commanded azimuth about the site meridian. The correction is a deliberate
@@ -124,8 +124,7 @@ class GravityTurnReplayConsistencyTest {
   // UNTOUCHED.
   // RE-RECORDED at PHY-2/L3 (2026-09-11): the Falcon Heavy first stage flies 298 s instead of 296,
   // so this fixed-variable ascent burns a longer first stage (149.98 → 151.04 s) and hands over a
-  // different state. The tolerances below are UNTOUCHED; only the reference moves (spec
-  // docs/atmosphere/10-conception-L3-PHY-2.md §3.3).
+  // different state. The tolerances below are UNTOUCHED; only the reference moves.
   private static final double REF_BURN1_DURATION_S = 151.040326;
   private static final double REF_STAGING_COMPLETE_S = 153.040326;
   private static final double REF_EXIT_DT_S = 155.040326;
@@ -150,14 +149,13 @@ class GravityTurnReplayConsistencyTest {
    * <p><b>Why it is frozen here rather than read from the catalog.</b> {@code PHY-8 / L3} throttles
    * the centre core, which gives the ascent a core-only phase; the single-propagator gravity turn
    * plants its jettison inside one burn and knows two burns, not three, so it <em>refuses</em> such
-   * a stack outright (spec {@code docs/etagement/03-conception-L1.md} §4). Three of the fixtures
+   * a stack outright. Three of the fixtures
    * below go through that path, and it is the path they exist to compare against.
    *
    * <p>This is not a workaround for the refusal. The étape 0 reference of the explicit-staging
    * migration was measured on a Falcon Heavy that was neither split nor throttled, so freezing the
    * vehicle at full thrust is what that reference <em>is</em>. The stages are read from the catalog
-   * rather than restated, so everything but the throttle still tracks it (spec {@code
-   * docs/etagement/05-conception-L3.md} §3.2).
+   * rather than restated, so everything but the throttle still tracks it.
    */
   private static final LauncherModel FULL_THRUST = fullThrust(Launchers.FALCON_HEAVY);
 
@@ -324,18 +322,18 @@ class GravityTurnReplayConsistencyTest {
    * Why the shared entry matters: the gravity turn <b>amplifies</b> whatever difference it is
    * handed. Feeding it two entries a mere 0.4 m / 0.1 m/s apart — the magnitude the VA
    * gravity-model mismatch used to produce — moves its exit by tens of meters, which the GTO →
-   * apogee-node → AKM chain then blew up to ~5° of inclinaison (bilan 11 §3.9).
+   * apogee-node → AKM chain then blew up to ~5° of inclinaison.
    *
    * <p>The difference is injected deliberately here, since the ascent no longer produces one on its
    * own. That keeps the sensitivity documented — and it is what makes the N2 tolerances of the
-   * explicit-staging migration (spec 01 §7.1) meaningful: 10 m at MECO is not slack, it is the
+   * explicit-staging migration meaningful: 10 m at MECO is not slack, it is the
    * budget for an entry difference three orders of magnitude smaller.
    */
   @Test
   void postAscentEntryDifference_isAmplifiedByTheGravityTurn() {
     PostVa va = postVerticalAscentBothPasses();
     SpacecraftState entry = va.optimizePass();
-    // The historical VA mismatch magnitude (bilan 11 §3.9), reproduced synthetically.
+    // The historical VA mismatch magnitude, reproduced synthetically.
     SpacecraftState nudgedEntry = displaced(entry, 0.4, 0.1);
 
     double azimuth = Physics.getLaunchAzimuth();
@@ -392,8 +390,7 @@ class GravityTurnReplayConsistencyTest {
   }
 
   /**
-   * Étape 0 of the explicit-staging migration (spec {@code
-   * docs/mission-stages/01-separations-implicites.md} §7.1/§8): the numeric reference of the
+   * Étape 0 of the explicit-staging migration: the numeric reference of the
    * gravity turn at <b>fixed variables</b>, so the split into {@code Gravity turn (S1) → S1
    * separation → Gravity turn (S2)} can be checked without running CMA-ES.
    *
@@ -401,8 +398,7 @@ class GravityTurnReplayConsistencyTest {
    *
    * <ul>
    *   <li>{@code burn1Duration} and {@code stagingCompleteTime} — the date arithmetic the split
-   *       phases inherit (spec §4.3: jettison at {@code kick + 1e-3 + burn1 + 1e-3}, second
-   *       ignition at {@code jettison + interstageCoast + 1e-3});
+   * phases inherit;
    *   <li>the state at gravity-turn exit (MECO) — date, mass, position, velocity, at the N2
    *       tolerances of §7.1 (1 ms / 1 kg / 10 m / 0.05 m/s).
    * </ul>
@@ -512,7 +508,7 @@ class GravityTurnReplayConsistencyTest {
   }
 
   /**
-   * The optimize-vs-replay contract of the split (spec 01 §5.4): the chain the CMA-ES problem flies
+   * The optimize-vs-replay contract of the split: the chain the CMA-ES problem flies
    * and the chain the ephemeris pass replays are the <b>same</b> traversal of the same three
    * phases, so they must land on the same MECO — not merely within the N2 budget.
    *
@@ -556,7 +552,7 @@ class GravityTurnReplayConsistencyTest {
   }
 
   /**
-   * The 2b fix (bilan 11 §3.9), now carried by the first ascent phase: {@code
+   * The 2b fix, now carried by the first ascent phase: {@code
    * GravityTurnFirstBurnStage.configure} — the ephemeris replay path — applies the pitch kick and
    * resets the propagator's initial state to the kicked one (the generator sets it to the pre-kick
    * saved entry before calling configure). Correct in itself, though it does not resolve the

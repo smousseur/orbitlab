@@ -17,14 +17,14 @@ import org.orekit.utils.Constants;
  * bodies that perturb it, and everything a force model, an altitude or a node detector needs from
  * either — nothing else.
  *
- * <p>Introduced by PHY-4 / L1 (spec {@code docs/multi-corps/03-conception-L1.md}) to turn the
+ * <p>Introduced by PHY-4 / L1 to turn the
  * central body from a constant read at the bottom of {@link OrekitService} into a datum carried by
- * the stage. PHY-4 / L2 (spec {@code docs/multi-corps/04-conception-L2.md}) added {@link
+ * the stage. PHY-4 / L2 added {@link
  * #perturbers()}: L1 had left open where the third-body list would live, and the answer is here
  * rather than in a second stage declaration, because a lunar arc in L4 will declare a central body
  * and its perturbers together — separating them now would only mean rejoining them later.
  *
- * <p>Nothing in production declares a perturber: L2 is opt-in and no stage opts in (spec L2 §4.1).
+ * <p>Nothing in production declares a perturber: L2 is opt-in and no stage opts in.
  * L6 is the first real declarant.
  *
  * @param body the central body
@@ -88,7 +88,7 @@ public record GravitationalContext(
    * The Moon context: point-mass gravity, a selenocentric frame with ICRF axes, and a spherical
    * reference shape.
    *
-   * <p>Introduced by PHY-4 / L4 (spec {@code docs/multi-corps/06-conception-L4.md} §2.1). Three of
+   * <p>Introduced by PHY-4 / L4. Three of
    * its five components are not what one would guess:
    *
    * <ul>
@@ -103,7 +103,7 @@ public record GravitationalContext(
    * </ul>
    *
    * <p>Unperturbed, like {@link #earth()}: the declaring stage adds the perturbers through {@link
-   * #withPerturbers}, and a switch derives them mechanically (spec L4 §4.2).
+   * #withPerturbers}, and a switch derives them mechanically.
    *
    * @return the shared Moon context
    */
@@ -153,7 +153,7 @@ public record GravitationalContext(
             SolarSystemBody.EARTH,
             // The propagator's mu, NOT the potential provider's. OrbitElements.mean() deliberately
             // rebases on the provider's mu instead: mixing the two shifts the elements by about a
-            // metre, which reads as J2 (spec orbit-reporting/01 section 3.3). L1 must not "unify"
+            // metre, which reads as J2. L1 must not "unify"
             // them — that would invalidate the L0 baseline with nothing to attribute it to.
             Constants.WGS84_EARTH_MU,
             OrekitService.get().gcrf(),
@@ -162,7 +162,7 @@ public record GravitationalContext(
             // Unperturbed, and that is what every existing mission flies. This instance is no
             // longer the only Earth context — withPerturbers derives others — but it is still the
             // only one WITHOUT a perturber, which is what keeps the L1 gate's 0.0 tolerance
-            // meaningful (spec L2 §2.3).
+            // meaningful.
             EnumSet.noneOf(SolarSystemBody.class));
 
     private static final GravitationalContext MOON =

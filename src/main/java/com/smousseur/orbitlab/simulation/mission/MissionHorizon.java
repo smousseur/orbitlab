@@ -9,7 +9,7 @@ import org.orekit.time.AbsoluteDate;
 
 /**
  * How far past insertion a mission is sampled and displayed — the mission's <b>restitution
- * horizon</b> (spec {@code docs/mission-horizon/01-horizon-explicite.md}).
+ * horizon</b>.
  *
  * <p><b>Not the optimization horizon.</b> This decides only how much of the trailing coast is flown
  * for the ephemeris, and it cannot move an optimizer baseline — that is structural, not merely
@@ -73,7 +73,7 @@ public sealed interface MissionHorizon
    *
    * <p><b>Revolutions and not a duration</b>, unlike the flyby above — this profile ends bound
    * around the Moon, so a revolution is a thing worth counting, and twelve of them is what shows
-   * whether the orbit holds (découpage §4 / L5). Total flight ~5 days, ~7 235 points at the coast
+   * whether the orbit holds. Total flight ~5 days, ~7 235 points at the coast
    * sampling step, under {@code TrajectoryPolyline}'s 8 192-vertex budget.
    *
    * <p>This default only became honest with MIS-5 / L2: before it, {@link
@@ -156,8 +156,7 @@ public sealed interface MissionHorizon
      * Built from the PV coordinates rather than read off {@code state.getOrbit()}, which throws on
      * a state propagated as absolute PVA.
      *
-     * <p><b>The µ comes off the state</b> (MIS-5 / L2, spec {@code
-     * docs/lunar-orbit/04-conception-L2.md} §4), so a revolution counted around another body is a
+     * <p><b>The µ comes off the state</b>, so a revolution counted around another body is a
      * revolution of that body's orbit. Every propagator {@code OrekitService} builds does {@code
      * setOrbitType(CARTESIAN)} then {@code setMu(gravity.mu())}, so any state reaching here carries
      * the µ of the arc it was flown on, and {@code GravitationalContext.earth().mu()} <em>is</em>

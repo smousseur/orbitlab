@@ -27,10 +27,10 @@ class GEOMissionOptimizationTest extends AbstractTrajectoryOptimizerTest {
   public static final int GEO_ALTITUDE = 35_786_000;
   public static final int PARKING_ALTITUDE = 400_000;
 
-  // Tolerances calibrated on the split GEO profile (spec 06 I5). The apogee circularization is a
+  // Tolerances calibrated on the split GEO profile. The apogee circularization is a
   // single ~3 h AKM burn whose plane rotation smears over the ~40° arc, leaving a ~0.25° residual
   // it cannot correct off-node (at the burn point the plane only rotates about the radius vector).
-  // The node-targeted plane trim (bilan 08 §3.5, AnalyticPlaneTrimAtNodeStage) nulls that residual
+  // The node-targeted plane trim nulls that residual
   // with a short out-of-plane burn at a node — on the reference mission the final inclination lands
   // at ~3e-5°. 0.05° here guards against a regression (e.g. back to the ~0.25° pre-trim floor)
   // while keeping generous headroom (was 0.30° before the trim).
@@ -83,7 +83,7 @@ class GEOMissionOptimizationTest extends AbstractTrajectoryOptimizerTest {
                 FastMath.toDegrees(finalOrbit.getI()),
                 INCLINATION_TOLERANCE_RAD,
                 FastMath.toDegrees(INCLINATION_TOLERANCE_RAD)));
-    // Split GEO profile (spec 06 I5): the launcher separates after GTO injection, only the
+    // Split GEO profile: the launcher separates after GTO injection, only the
     // payload (2 t dry + AKM residual, 4 t max) reaches GEO. A final mass above that means the
     // upper stage never separated.
     double payloadReferenceMass = 4_000.0;

@@ -16,9 +16,8 @@ import org.orekit.propagation.numerical.NumericalPropagator;
 import org.orekit.time.AbsoluteDate;
 
 /**
- * One powered phase of the explicit three-phase ascent (spec {@code
- * docs/mission-stages/01-separations-implicites.md} §5.2): {@code Gravity turn (S1) → S1 separation
- * → Gravity turn (S2)}. Both burns share everything but their propulsion and their cutoff, which is
+ * One powered phase of the explicit three-phase ascent: {@code Gravity turn (S1) → S1 separation →
+ * Gravity turn (S2)}. Both burns share everything but their propulsion and their cutoff, which is
  * what the two subclasses supply.
  *
  * <p><b>The pitch law is anchored on the plan, never on the phase.</b> {@link
@@ -92,7 +91,7 @@ public abstract class GravityTurnBurnStage extends MissionStage {
   @Override
   public double maxStepSeconds(SpacecraftState entryState, Mission mission) {
     // Every ascent phase steps at the plan's max step — the one sized on the late-igniting second
-    // burn (spec §5.5). Falling back to MissionStage's default would RELAX the step on a light
+    // burn. Falling back to MissionStage's default would RELAX the step on a light
     // load (burnLimitedMaxStep is capped at SAFE_MAX_STEP, so the default is >= this value) and
     // change the trajectory for no gain; refining the step per phase is a later concern.
     return planRef.require(getName()).maxStepSeconds();

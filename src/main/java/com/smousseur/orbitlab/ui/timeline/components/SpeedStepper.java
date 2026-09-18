@@ -92,7 +92,7 @@ public class SpeedStepper {
    * The inverse of {@link #mapIndexToSpeed(int)}: the stepper index that best represents a clock
    * speed.
    *
-   * <p>Exists because the clock, not the capsule, owns the speed (spec §12.1). Any caller of {@code
+   * <p>Exists because the clock, not the capsule, owns the speed. Any caller of {@code
    * SimulationClock.setSpeed} outside the capsule — the mission timeline's "go to mission start"
    * button is the first — would otherwise leave the capsule displaying the previous value.
    *

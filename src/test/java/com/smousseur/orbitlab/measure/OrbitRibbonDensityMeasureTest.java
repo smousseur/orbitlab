@@ -11,7 +11,6 @@ import org.junit.jupiter.api.Test;
 
 /**
  * How many vertices each planetary orbit ribbon carries, and how densely they land on screen
- * ({@code docs/bugs.md}, BUG-23).
  *
  * <p><b>What this measured before the fix.</b> {@code OrbitPathCache} clamped the step the budget
  * implied to at most seven days and then recomputed the count from the clamped step, so a body

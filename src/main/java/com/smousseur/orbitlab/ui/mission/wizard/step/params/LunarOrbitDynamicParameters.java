@@ -21,7 +21,7 @@ import com.smousseur.orbitlab.ui.mission.wizard.step.planning.PlanningInputs;
 import java.util.Map;
 
 /**
- * The lunar orbit panel: <b>one slider</b>, the circular orbit altitude (MIS-5 / L7 §3).
+ * The lunar orbit panel: <b>one slider</b>, the circular orbit altitude.
  *
  * <p>Shaped after {@link LunarDynamicParameters}, and for the same reasons: no perigee/apogee pair
  * on a target that is circular by construction, no inclination — the chain flies {@code i = φ} and
@@ -110,7 +110,7 @@ public class LunarOrbitDynamicParameters extends DynamicParameters {
    * <p>The flyby's own criterion, on the flyby's own reasoning: what a lunar mission waits for is a
    * direction its parking plane must contain, not a plane whose ascending node it must meet, so the
    * node is ignored and is not a field of this card. The aimed perilune <em>is</em> the lunar orbit
-   * altitude — the insertion burns at the periapsis of the arrival hyperbola (MIS-5 / L5 §5.2).
+   * altitude — the insertion burns at the periapsis of the arrival hyperbola.
    */
   @Override
   public PlanningInputs windowInputs(SiteCoordinates site, Double raanDeg) {

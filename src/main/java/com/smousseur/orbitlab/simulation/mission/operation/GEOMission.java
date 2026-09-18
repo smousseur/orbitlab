@@ -187,7 +187,7 @@ public class GEOMission extends EarthMission {
 
   /**
    * Default configuration of the historical ctors: Falcon Heavy fully loaded with the catalog GEO
-   * satellite, AKM at full capacity. The split GEO profile (spec 06 I5) delegates the apogee
+   * satellite, AKM at full capacity. The split GEO profile delegates the apogee
    * circularization to the payload's kick motor, so an AKM-less payload cannot fly it.
    */
   private static LaunchConfiguration defaultConfiguration() {
@@ -207,7 +207,7 @@ public class GEOMission extends EarthMission {
       double finalInclination) {
     List<MissionStage> stages = new ArrayList<>();
     stages.add(new VerticalAscentStage("Vertical Ascent", profile.verticalAscentDuration()));
-    // The ascent is explicit phases (spec 01 §4.2), so the jettisons below are instances of the
+    // The ascent is explicit phases, so the jettisons below are instances of the
     // same class declaring the role they drop — the launcher's staging is stated once, in one
     // place, instead of half-implied by a detector.
     stages.addAll(
@@ -225,7 +225,7 @@ public class GEOMission extends EarthMission {
             // Declaring the role makes the separation refuse to fire when the gravity turn left
             // propellant in a lower stage — that stage would still be active and get jettisoned in
             // the upper stage's place, after which the upper stage silently takes over the payload
-            // kick motor's burns (bilan 10 §6 follow-up, I7 GEO run).
+            // kick motor's burns.
             new StageSeparationStage(
                 StageNames.UPPER_SEPARATION, profile.interstageCoastDuration(), StageRole.UPPER),
             // The AKM burn owns its ~5 h lead-in coast to the GTO apogee and centers the burn on it
@@ -235,7 +235,7 @@ public class GEOMission extends EarthMission {
             new AnalyticApogeeCircularizationStage(
                 "Circularization", targetAltitude, FastMath.toRadians(finalInclination)),
             new AnalyticTrimBurnStage("Trim", targetAltitude, FastMath.toRadians(finalInclination)),
-            // Node-targeted plane trim (bilan 08 §3.5): the hours-long AKM burn leaves a ~0.25°
+            // Node-targeted plane trim: the hours-long AKM burn leaves a ~0.25°
             // plane residual it cannot correct off-node; a short out-of-plane burn at the node
             // cleans it up.
             new AnalyticPlaneTrimAtNodeStage("Plane trim", FastMath.toRadians(finalInclination)),

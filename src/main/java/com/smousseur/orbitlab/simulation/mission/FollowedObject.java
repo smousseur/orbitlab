@@ -6,8 +6,7 @@ import java.util.Objects;
 /**
  * Which object of a mission the view follows: the mission's primary vehicle, or one of its
  * jettisoned debris. This is the addressing SEL-1 introduces so the camera — and, from L2, the
- * telemetry — can point at an object <em>below</em> the mission (spec {@code
- * docs/selection-objets/03-conception-L1.md}).
+ * telemetry — can point at an object <em>below</em> the mission.
  *
  * <p>Every variant carries the {@link MissionId} it belongs to; a {@link Debris} additionally
  * carries the piece's own identity — its {@link StageRole role} and 1-based exemplar index. That is

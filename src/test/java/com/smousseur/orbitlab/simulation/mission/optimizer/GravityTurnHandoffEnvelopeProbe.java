@@ -171,7 +171,7 @@ class GravityTurnHandoffEnvelopeProbe {
     try {
       SpacecraftState handOff = problem.propagate(new double[] {transitionTime, exponent});
       double cost = problem.computeCost(handOff);
-      // The ascent chain advances the shared mission as it flies (spec 01 §5.6), so every candidate
+      // The ascent chain advances the shared mission as it flies, so every candidate
       // has to start from the state the stage actually entered on.
       mission.setCurrentState(entry.state());
 

@@ -25,7 +25,7 @@ import org.orekit.utils.Constants;
  *
  * <p>Burn 1 (4 CMA-ES parameters) places the spacecraft on the target orbit. The cost function
  * evaluates the orbit at the end of burn 1 against the target apsidal altitudes and the derived
- * target eccentricity, plus a small propellant-awareness term (I7, bilan 10 §5.1) penalizing Δv
+ * target eccentricity, plus a small propellant-awareness term penalizing Δv
  * consumed beyond the analytic Hohmann reference — equal-precision solutions tie-break toward the
  * least wasteful one. For the special case {@code perigee == apogee}, see {@link
  * TransferTwoManeuverProblem}, which adds a deterministic circularization burn at the next
@@ -72,7 +72,7 @@ public class TransferProblem implements TrajectoryProblem {
   protected static final double W_BARRIER = 0.1;
   protected static final double W_ALT_MAX = 1.0;
 
-  // ── Propellant-awareness tie-breaker (I7, bilan 10 §5.1) ──
+  // ── Propellant-awareness tie-breaker ──
   // Penalizes Δv spent beyond the analytic Hohmann reference, as a fraction of the Δv the
   // mission can actually waste. Small enough that orbit precision always dominates the
   // gradient; large enough that a wasteful basin (flame-out, wasted1 ~250 m/s) grades worse
@@ -306,7 +306,7 @@ public class TransferProblem implements TrajectoryProblem {
     // apoapsis when lowering it. This makes the guess valid for both circular
     // departures (LEO → GTO) and elliptic departures (post-gravity-turn → LEO).
     // A periapsis departure additionally requires the periapsis to be flyable
-    // (bilan 08 §3.3): on a sub-orbital hand-off the periapsis sits at a few tens
+    //: on a sub-orbital hand-off the periapsis sits at a few tens
     // of km — the coast there is not a usable burn point, and the resulting seed
     // t1 (time to periapsis, almost a full period away) overshoots t1Max. Depart
     // from apoapsis instead: the burn then raises the periapsis, which is the
@@ -337,7 +337,7 @@ public class TransferProblem implements TrajectoryProblem {
 
     this.guessDt1 = Physics.computeBurnDuration(FastMath.abs(dv1), initialMass, isp, thrust);
 
-    // Physical upper bound: the exact time to full depletion (spec 06 I6). Flame-out is a
+    // Physical upper bound: the exact time to full depletion. Flame-out is a
     // legitimate burn end since I4: candidates reaching the floor are truncated by the quiet
     // depletion guard and graded on their actual trajectory — no arbitrary 0.90 safety factor
     // shrinking the search space.
@@ -347,9 +347,7 @@ public class TransferProblem implements TrajectoryProblem {
 
     // Niveau 2.3 — feasibility check: total Hohmann Δv must fit available propellant.
     // Burn 2 happens at arrival (rTarget), so both speeds must be taken at that
-    // radius (bilan 08 §3.4 — the previous formula subtracted the transfer speed at
-    // *departure*, underestimating the required Δv and going negative on sub-orbital
-    // hand-offs). The speed to match is that of the target orbit at rTarget — the
+    // radius. The speed to match is that of the target orbit at rTarget — the
     // circular speed when the target is circular.
     double aTargetOrbit = (rPerigeeTarget + rApogeeTarget) / 2.0;
     double vTargetAtArrival = FastMath.sqrt(mu * (2.0 / rTarget - 1.0 / aTargetOrbit));
@@ -388,13 +386,13 @@ public class TransferProblem implements TrajectoryProblem {
     this.t1Max = FastMath.max(120.0, tuning.t1MaxPeriodFraction() * initialPeriod);
     this.dt1Max = FastMath.max(tuning.dt1MaxMultiplier() * guessDt1, dt1MaxPhysical);
 
-    // The seed must start inside the search box (bilan 08 §3.3): a clamped seed is
+    // The seed must start inside the search box: a clamped seed is
     // still a meaningful burn point, an out-of-box one derails the exploration run
     // it was supposed to anchor.
     this.guessT1 = FastMath.min(guessT1Unclamped, t1Max);
 
     // Niveau 2.4 — adaptive periapsis floor and eccentricity weight.
-    // Spec (02 §2.4) suggests max(120 km, target − 100 km); but the existing
+    // Spec suggests max(120 km, target − 100 km); but the existing
     // soft-barrier ramps from threshold up to ≈1.5·threshold, which would
     // overlap the nominal solution at high-altitude targets. Cap the floor
     // at 0.5·target to keep the barrier inactive at the target altitude.
@@ -651,8 +649,8 @@ public class TransferProblem implements TrajectoryProblem {
   CostBreakdown breakdown(SpacecraftState state) {
     KeplerianOrbit finalOrbit = (KeplerianOrbit) OrbitType.KEPLERIAN.convertType(state.getOrbit());
 
-    // Earth-fixed on purpose (PHY-4 / L1, spec docs/multi-corps/03-conception-L1.md §4.1):
-    // multi-arc optimization is out of PHY-4 (docs/multi-corps/01-decoupage.md §1).
+    // Earth-fixed on purpose:
+    // multi-arc optimization is out of PHY-4.
     OneAxisEllipsoid earth = OrekitService.get().getEarthEllipsoid();
     double apoAlt = computeGeodeticAltitude(finalOrbit, FastMath.PI, earth); // ν = π
     double periAlt = computeGeodeticAltitude(finalOrbit, 0.0, earth); // ν = 0
@@ -684,7 +682,7 @@ public class TransferProblem implements TrajectoryProblem {
       }
     }
 
-    // I7 propellant-awareness (bilan 10 §5.1): tie-break toward the least wasteful
+    // I7 propellant-awareness: tie-break toward the least wasteful
     // solution — Δv consumed above the Hohmann reference is waste (off-axis thrust,
     // overlong burns) that would otherwise drain the sized stage to a zero residual.
     double consumedDv = computeConsumedDv(state);
@@ -778,7 +776,7 @@ public class TransferProblem implements TrajectoryProblem {
   }
 
   /**
-   * Propellant-awareness diagnostic for the optimal solution (I7, bilan 10 §5.1).
+   * Propellant-awareness diagnostic for the optimal solution.
    *
    * @param consumedDv the Δv actually delivered over the whole transfer (rocket equation), m/s
    * @param hohmannDv the analytic Hohmann reference Δv (burn 1 + burn 2), m/s

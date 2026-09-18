@@ -66,7 +66,7 @@ public final class MissionResultText {
             achieved.perigeeAltitude() - target.perigeeAltitude(),
             achieved.apogeeAltitude() - target.apogeeAltitude());
     // The degree field is dropped rather than printed as NaN: a lunar orbit undergoes its plane
-    // instead of aiming at one, so there is no miss to state (MIS-5 / L7 §5). Every Earth target
+    // instead of aiming at one, so there is no miss to state. Every Earth target
     // commands an inclination, so their line is unchanged to the character.
     return target.hasInclination()
         ? altitudes

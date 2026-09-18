@@ -12,13 +12,12 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 /**
- * <b>PHY-8 / L2 — the budget gate</b> (spec {@code docs/etagement/04-conception-L2.md} §5.2).
+ * <b>PHY-8 / L2 — the budget gate</b>.
  *
  * <p>None of the four pinned baselines goes through {@link PropellantBudget}: three fly
  * hand-written loads and the fourth flies {@code fullyLoaded}. The fold {@code L2} adds to {@code
  * sizeTopStage} would therefore be guarded by nothing, while getting it wrong is not subtle —
- * without it the sized upper-stage load collapses from 1 963 kg to zero on a LEO profile (spec
- * §2.1).
+ * without it the sized upper-stage load collapses from 1 963 kg to zero on a LEO profile.
  *
  * <p>Both launchers below are <em>test</em> fixtures: the sequential one reproduces the catalog
  * Falcon Heavy as it stood before {@code L2}, the split one is what {@code L2} writes. Comparing

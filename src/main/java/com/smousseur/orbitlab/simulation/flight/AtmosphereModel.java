@@ -1,14 +1,12 @@
 package com.smousseur.orbitlab.simulation.flight;
 
 /**
- * Which atmosphere a mission is flown against — the user-facing switch of PHY-1 (spec {@code
- * docs/atmosphere/04-conception-L1.md} §2).
+ * Which atmosphere a mission is flown against — the user-facing switch of PHY-1.
  *
  * <p>The enum names a model, not a built object: an {@code Atmosphere} instance is built against a
  * body shape, so it cannot be resolved before the central body is known. {@code OrekitService}
  * resolves the pair {@code (model, shape)} at propagator construction, which is what lets a {@link
  * DragContext} cross a sphere-of-influence boundary unchanged and still be right on the other side
- * (spec §1.2).
  */
 public enum AtmosphereModel {
   /**

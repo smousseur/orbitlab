@@ -32,9 +32,9 @@ import org.orekit.utils.Constants;
  * plan reuses the Hohmann stage's Newton iteration on the aimed apogee radius so the finite-burn
  * apogee lands on target despite steering and gravity losses. The stage ends at burn cutoff: the
  * spent upper stage separates right after ({@link StageSeparationStage}) and the payload's kick
- * motor performs the apogee circularization (spec 06 I5).
+ * motor performs the apogee circularization.
  *
- * <p><b>Node-aware injection (bilan 11 §3.10).</b> The downstream apogee circularization ({@link
+ * <p><b>Node-aware injection.</b> The downstream apogee circularization ({@link
  * AnalyticApogeeCircularizationStage}) removes the whole launch-site inclination (~5.2° from
  * Kourou) with its burn centred on apogee — but a plane change at apogee only has authority when
  * <em>apogee sits on an equatorial node</em>. Injecting at a parking-orbit node and trusting the
@@ -56,7 +56,7 @@ public class AnalyticGtoInjectionStage extends MissionStage {
    * <p>Four is enough because the iteration only ever has room to move while the burn is
    * <em>not</em> propellant-limited, and there it converges to under 100 m in two or three steps.
    * Once {@link Physics#computeBurnDurationCapped} clamps the duration to depletion, no iteration
-   * count helps — the loop breaks out on that condition instead (bilan 11 §3.7).
+   * count helps — the loop breaks out on that condition instead.
    */
   private static final int AIM_ITERATIONS = 4;
 
@@ -77,7 +77,7 @@ public class AnalyticGtoInjectionStage extends MissionStage {
 
   /**
    * Secant refinements of the lead-in coast that places the transfer apogee on an equatorial node
-   * (bilan 11 §3.10). Only reached for an inclined, off-node injection; each iteration costs one
+   *. Only reached for an inclined, off-node injection; each iteration costs one
    * apogee-radius aim (a burn + ~half-transfer propagation), so the budget is kept tight. After
    * coasting to a node the residual off-node is a few tenths of a degree and two or three secant
    * steps clear it.
@@ -140,7 +140,7 @@ public class AnalyticGtoInjectionStage extends MissionStage {
     InjectionPlan plan =
         computePlan(currentState, mission.getVehicle(), flightContext(currentState, mission));
 
-    // 8×8 gravity, matching the ephemeris generator (bilan 11 §3.9): this standalone flight
+    // 8×8 gravity, matching the ephemeris generator: this standalone flight
     // advances
     // the state the next stage plans from, so a Newtonian point-mass field here would diverge from
     // the flown 8×8 trajectory and break the apogee-node geometry the downstream plane change
@@ -177,7 +177,7 @@ public class AnalyticGtoInjectionStage extends MissionStage {
       double dt1, Vector3D burnDirectionInertial, double dv1, SpacecraftState apogeeState) {}
 
   /**
-   * Plans the injection burn, targeting the equatorial node at apogee (bilan 11 §3.10).
+   * Plans the injection burn, targeting the equatorial node at apogee.
    *
    * <p>The apogee <em>radius</em> aim and the node targeting are nearly orthogonal knobs — the
    * former is set by the burn ΔV magnitude, the latter by <em>when</em> the burn fires — so they
@@ -267,7 +267,7 @@ public class AnalyticGtoInjectionStage extends MissionStage {
     // Best effort rather than a refusal: the injection radius did converge (aimApogeeRadius owns
     // that verdict and throws otherwise). A residual off-node apogee is caught downstream — the AKM
     // leaves the plane uncorrected, the node plane-trim starves, the DepletionGuard trips and
-    // MissionEphemeris.isComplete() drops (bilan 11 §3.9) — so a warn keeps the signal visible
+    // MissionEphemeris.isComplete() drops — so a warn keeps the signal visible
     // without pre-emptively rejecting a solution the feasibility machinery may still validate.
     logger.warn(
         "[{}] node targeting did not reach {}° in {} iterations; flying best apogee latitude {}° "
@@ -285,7 +285,7 @@ public class AnalyticGtoInjectionStage extends MissionStage {
    * Aims the injection burn so the finite-burn transfer apogee reaches the target radius, from a
    * given injection state. Newton on the aimed apogee radius (same scheme as the Hohmann stage's
    * burn 1). Refuses the plan — distinguishing a propellant-capped capability limit from a solver
-   * failure (bilan 11 §3.7) — when the apogee cannot be reached.
+   * failure — when the apogee cannot be reached.
    */
   private AimResult aimApogeeRadius(SpacecraftState state, Vehicle vehicle, FlightContext context) {
     double mu = state.getOrbit().getMu();
@@ -366,7 +366,7 @@ public class AnalyticGtoInjectionStage extends MissionStage {
     // — the I7 GEO run produced an aim of 177 000 km for a 35 786 km target, whose multi-day
     // transfer orbit then made the downstream propagation grind for tens of minutes.
     //
-    // Two failures reach this point and they are NOT the same thing (bilan 11 §3.7). Conflating
+    // Two failures reach this point and they are NOT the same thing. Conflating
     // them under "did not converge" is what made the I7 GEO wall look like a solver artifact worth
     // re-running with a bigger iteration budget, when it was the vehicle's own limit.
     if (!(FastMath.abs(bias) <= AIM_CONVERGENCE_TOLERANCE_RATIO * r2)) {

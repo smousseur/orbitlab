@@ -11,8 +11,7 @@ import com.smousseur.orbitlab.simulation.mission.vehicle.model.AerodynamicProper
  * @param propellantLoad the propellant mass actually loaded (kg)
  * @param propulsion the spacecraft's propulsion system
  * @param aerodynamics the frontal area and drag coefficient of the payload, or {@code null} when it
- *     declares none — a payload that declares none does not drag (spec {@code
- *     docs/atmosphere/04-conception-L1.md} §3.1)
+ * declares none — a payload that declares none does not drag
  */
 public record Spacecraft(
     double dryMass,
@@ -46,7 +45,7 @@ public record Spacecraft(
    * <p>This is the switch PHY-5 / L4 turns on: a LEO whose payload answers {@code true} drops its
    * upper stage after the transfer and lets the payload fly its own final trim, while an inert one
    * (the {@link #LEGACY} fixture, or a catalog payload loaded to zero) keeps flying the upper stage
-   * to the end exactly as before (spec {@code docs/multi-objets/06-conception-L4.md} §3.1). Both
+   * to the end exactly as before. Both
    * conditions are needed: {@code LEGACY} carries a propulsion system but no propellant, so the
    * load is what tells it apart.
    *

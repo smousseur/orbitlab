@@ -31,7 +31,7 @@ import org.orekit.utils.Constants;
 import org.orekit.utils.PVCoordinates;
 
 /**
- * I7 outer-loop integration tests (spec 09 §6 task 4, extended to GEO per bilan 10 §7.3). Runs the
+ * I7 outer-loop integration tests. Runs the
  * full propellant-sizing bisection on real Falcon Heavy missions and asserts the exit criterion:
  * the loads found at {@code λ*} weigh strictly less than the heuristic loads, and the mission at
  * {@code λ*} is feasible. On GEO the payload's AKM is sized separately by {@link
@@ -46,7 +46,7 @@ import org.orekit.utils.PVCoordinates;
  * <p>The two scenarios differ structurally in where the sized stage's residual ends up: on LEO, S2
  * is the final active stage and its residual is read at mission end; on GEO, S2 is jettisoned after
  * the GTO injection with its residual aboard, which exercises the per-stage split and the jettison
- * capture (bilan 10 §6) — the stack-wide total would only see the AKM.
+ * capture — the stack-wide total would only see the AKM.
  *
  * <p><b>Slow / nightly.</b> Each bisection evaluation is a complete mission optimization (~1.5
  * min), so each loop is ~15 min. They are opt-in: enable with {@code -Dorbitlab.fullTests=true}.
@@ -77,7 +77,7 @@ class PropellantLoadOptimizerIntegrationTest {
   private static final double TARGET_ALTITUDE_M = 400_000.0;
 
   /**
-   * Single-λ reference on the same LEO configuration (bilan 11 §1), the number the multi-stage run
+   * Single-λ reference on the same LEO configuration, the number the multi-stage run
    * is read against. Logged, not asserted: the multi-stage sweep is answering an open question, and
    * pinning it to a past figure would turn a measurement into a regression bar.
    */
@@ -85,7 +85,7 @@ class PropellantLoadOptimizerIntegrationTest {
 
   /**
    * Circularity bar on the LEO final orbit. Asserted on {@code e} rather than on min/max coast
-   * altitude (bilan 11 §3.3): geodetic altitudes mix insertion quality with the Earth's oblateness
+   * altitude: geodetic altitudes mix insertion quality with the Earth's oblateness
    * — at i = 45.9° the flattening alone spreads min and max by 11 km on a perfectly circular orbit.
    * This bar is looser than what the ±7 % feasibility band already permits (e ≈ 4.1e-3 at 400 km),
    * so it corroborates the shape without tightening the criterion the loop optimizes against.
@@ -134,8 +134,7 @@ class PropellantLoadOptimizerIntegrationTest {
 
     AbsoluteDate launchEpoch = new AbsoluteDate(2026, 1, 1, 12, 0, 0.0, TimeScalesFactory.getUTC());
 
-    // Each evaluation rebuilds the LEO mission (optimized transfer, spec 06 I6 — the inner loop I7
-    // runs per spec 09 §2) with the scaled loads and optimizes it end to end.
+    // Each evaluation rebuilds the LEO mission with the scaled loads and optimizes it end to end.
     Function<double[], Mission> missionBuilder =
         loads ->
             EarthOrbitMission.circularWithOptimizedTransfer(
@@ -176,7 +175,7 @@ class PropellantLoadOptimizerIntegrationTest {
     assertTrue(
         result.lambda() <= PropellantLoadOptimizer.DEFAULT_LAMBDA_MAX,
         () -> "λ* must not exceed the heuristic (upper) bound, got " + result.lambda());
-    // Exit criterion (spec 09 §6): the found loads weigh strictly less than the heuristic loads.
+    // Exit criterion: the found loads weigh strictly less than the heuristic loads.
     assertTrue(
         sumScaled < sumHeuristic,
         () ->
@@ -189,7 +188,7 @@ class PropellantLoadOptimizerIntegrationTest {
   }
 
   /**
-   * GEO counterpart (bilan 10 §7.3): the sized S2 does the GTO injection and is jettisoned with its
+   * GEO counterpart: the sized S2 does the GTO injection and is jettisoned with its
    * residual aboard, the AKM (off λ, sized by the budget) circularizes at apogee. Feasibility is
    * measured against the flown final orbit — circular GEO — not the mission's recorded {@code
    * (parking, GEO)} objective, and at the ±50 km bar of the GEO optimization test.
@@ -279,7 +278,7 @@ class PropellantLoadOptimizerIntegrationTest {
     MissionComputeResult best = result.best().result();
     assertNotNull(best, "The feasible best evaluation must carry its mission compute result");
 
-    // The GEO-specific mechanism under test (bilan 10 §6): S2 is jettisoned after the GTO
+    // The GEO-specific mechanism under test: S2 is jettisoned after the GTO
     // injection, so its residual only exists in the per-stage split captured at separation — and
     // it must clear the floor of its own load, not hide behind the AKM's.
     StagePropellant s2 =
@@ -321,13 +320,13 @@ class PropellantLoadOptimizerIntegrationTest {
   }
 
   /**
-   * Multi-stage counterpart on LEO (bilan 11 §3.1): <b>every</b> variable-load stage gets its own λ
+   * Multi-stage counterpart on LEO: <b>every</b> variable-load stage gets its own λ
    * and {@link MultiStageLoadOptimizer} minimizes them by coordinate-wise bisection, same setup as
    * {@link #geoMultiStage_shrinksEveryVariableLoadStage()} on the LEO optimized-transfer profile.
    *
    * <p><b>The question it settles.</b> {@link PropellantLoadOptimizer#lambdaScaledMask} records
    * that S1 has no reclaimable slack on LEO, so putting it under λ pins λ* at 1. That finding
-   * predates the staging fix (bilan 11 §2.1): before it, a {@code transitionTime} below {@code
+   * predates the staging fix: before it, a {@code transitionTime} below {@code
    * burn1Duration} stopped the propagation short of the jettison detector, so S1 was never dropped
    * and every reduced-S1 run was measured on a mission that did not fly the profile. GEO then
    * demonstrated the opposite of the same intuition — λ₀ = 0.9453, 67 t reclaimed. This test

@@ -22,7 +22,7 @@ import org.orekit.time.TimeScalesFactory;
 /**
  * L2's ruler, checked against the property that makes it a ruler at all: the body-fixed longitude
  * at which the chain paints a texture column is a constant of the asset, so it must not move when
- * anything else does (see {@code docs/orientation-planetes/01-decoupage.md}, L2).
+ * anything else does.
  */
 class TexturePaintingTest {
 

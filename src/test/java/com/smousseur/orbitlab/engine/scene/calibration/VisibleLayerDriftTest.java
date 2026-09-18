@@ -19,7 +19,7 @@ import org.orekit.time.AbsoluteDate;
 import org.orekit.time.TimeScalesFactory;
 
 /**
- * L4 of {@code docs/orientation-planetes/01-decoupage.md}: what the texture shows is a cloud deck,
+ * L4 of: what the texture shows is a cloud deck,
  * and a cloud deck does not turn at the rate Orekit turns the body frame at.
  *
  * <p>These tests never look at the drift constants. They measure how fast the rendered texture

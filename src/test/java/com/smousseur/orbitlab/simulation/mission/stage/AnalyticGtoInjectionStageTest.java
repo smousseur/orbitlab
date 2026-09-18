@@ -27,7 +27,7 @@ import org.orekit.utils.Constants;
 import org.orekit.utils.PVCoordinates;
 
 /**
- * Guard on the aimed-apogee Newton iteration (bilan 10 §6 follow-up). A stage that cannot deliver
+ * Guard on the aimed-apogee Newton iteration. A stage that cannot deliver
  * the injection caps its burn near zero, the post-burn apogee never moves, and the unchecked
  * iteration used to accumulate the whole defect into the aim — the I7 GEO run produced a 177 000 km
  * aim for a 35 786 km target, whose multi-day transfer orbit then made the downstream propagation
@@ -87,7 +87,7 @@ class AnalyticGtoInjectionStageTest {
     // A starved stage is a *capability* limit, not a solver one: its burn is clamped to depletion,
     // so the aim iteration has no degree of freedom and no iteration budget could rescue it. The
     // message must say so — conflating the two is what made the I7 GEO wall look like an artifact
-    // worth re-running with more iterations (bilan 11 §3.7).
+    // worth re-running with more iterations.
     assertTrue(
         thrown.getMessage().contains("injection out of reach"),
         () -> "message must name a capability limit, got: " + thrown.getMessage());
@@ -124,7 +124,7 @@ class AnalyticGtoInjectionStageTest {
 
   @Test
   void inclinedOffNodeParking_landsTheTransferApogeeOnTheEquator() {
-    // Node-aware injection (bilan 11 §3.10): the downstream apogee plane change only has authority
+    // Node-aware injection: the downstream apogee plane change only has authority
     // when apogee sits on an equatorial node. From an inclined parking orbit taken deliberately off
     // a node (argument of latitude 45°), the un-targeted antipodal apogee would fall several
     // degrees

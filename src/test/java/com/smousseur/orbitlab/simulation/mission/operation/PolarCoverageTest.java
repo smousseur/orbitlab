@@ -30,15 +30,14 @@ import org.orekit.time.TimeScalesFactory;
 import org.orekit.utils.Constants;
 
 /**
- * <b>MIS-7 / P1, test T5</b> — a polar mission actually covers the poles (spec {@code
- * docs/earth-orbit/01-mission-terre-parametrable.md} §9.2).
+ * <b>MIS-7 / P1, test T5</b> — a polar mission actually covers the poles.
  *
  * <p>Inclination is a number; coverage is what a polar orbit is <em>for</em>. This fixture reads
  * the ground track rather than the orbital element, so it fails on anything that would leave the
  * plane short of the poles — including the failure modes an inclination assertion cannot see.
  *
  * <p><b>It flies the whole chain {@code EarthOrbitMission} composes</b> — ascent, transfer, trim,
- * plane trim — and not the ascent alone. That is the correction of {@code docs/bugs.md} BUG-6:
+ * plane trim — and not the ascent alone. That is the correction of BUG-6:
  * {@link AnalyticPlaneTrimAtNodeStage} aims its target velocity purely transverse, so on an
  * eccentric orbit it flattens the flight path angle as well as rotating the plane, and pays for
  * both. Fired on the MECO arc, as this fixture used to fire it, it spent 1 028 m/s and 10 349 kg —
@@ -83,7 +82,7 @@ class PolarCoverageTest {
   /** Stages 1 to 3: the three gravity-turn phases, the vertical ascent being flown on its own. */
   private static final int END_OF_ASCENT = 4;
 
-  /** The coverage a polar mission is bought for (spec §9.2). */
+  /** The coverage a polar mission is bought for. */
   private static final double MIN_GROUND_TRACK_LATITUDE_DEG = 89.0;
 
   /**

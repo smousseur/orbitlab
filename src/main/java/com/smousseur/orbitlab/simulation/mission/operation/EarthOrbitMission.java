@@ -37,8 +37,7 @@ import org.hipparchus.util.FastMath;
  * the initial state, and knows nothing of orbits. {@code EarthOrbitMission} is one concrete flight
  * profile built on top of it, alongside {@link GEOMission}.
  *
- * <p>This class was {@code LEOMission} before MIS-7 (spec {@code
- * docs/earth-orbit/01-mission-terre-parametrable.md} §3.3). The rename is a rename: the three
+ * <p>This class was {@code LEOMission} before MIS-7. The rename is a rename: the three
  * factories and their stage chains are unchanged, they now carry the target plane instead of
  * recomputing {@code toRadians(latitude)} at each call site. {@link LaunchPlane#dueEast} reproduces
  * the historical behaviour exactly.
@@ -318,7 +317,7 @@ public class EarthOrbitMission extends EarthMission {
     return launchPlane;
   }
 
-  /** Default configuration of the historical ctors: Falcon Heavy fully loaded (spec 06 I1). */
+  /** Default configuration of the historical ctors: Falcon Heavy fully loaded. */
   private static LaunchConfiguration defaultConfiguration() {
     return LaunchConfiguration.fullyLoaded(Launchers.FALCON_HEAVY, Spacecraft.LEGACY);
   }
@@ -346,17 +345,16 @@ public class EarthOrbitMission extends EarthMission {
 
   /**
    * The ascent — vertical climb then the three explicit gravity-turn phases ({@code Gravity turn
-   * (S1) → S1 separation → Gravity turn (S2)}, spec {@code
-   * docs/mission-stages/01-separations-implicites.md} §4.2) — then the transfer, the trim, and the
+   * (S1) → S1 separation → Gravity turn (S2)}) — then the transfer, the trim, and the
    * closing coast. Shared by the three variants so none of them can drift on how the launcher
    * stages, nor on when the plane residual is cleaned up.
    *
-   * <p><b>Payload delivery (PHY-5 / L4, spec {@code docs/multi-objets/06-conception-L4.md}
-   * §3.2).</b> When the payload carries usable propellant, the upper stage is dropped after the
-   * transfer — and after the plane trim, which stays on it (§3.3) — and the payload flies the final
+   * <p><b>Payload delivery.</b> When the payload carries usable propellant, the upper stage is
+   * dropped after the
+   * transfer — and after the plane trim, which stays on it — and the payload flies the final
    * trim on its own engine: the mission actually delivers its satellite. An inert payload keeps the
    * upper stage to the end, so the chain is byte-identical to before and the zero-tolerance gates
-   * are untouched (§3.1).
+   * are untouched.
    *
    * @param vehicle the stack that will fly it, read for its staging plan
    * @param profile the launcher's flight profile
@@ -384,7 +382,7 @@ public class EarthOrbitMission extends EarthMission {
 
     // Steering the plane during the climb does not land it to the tenth of a degree: the initial
     // entrainment is not in the target plane and a finite thrust does not bring it there at once
-    // (spec §4.3). The residual is cleaned up at a node, where a plane change is efficient and
+    //. The residual is cleaned up at a node, where a plane change is efficient and
     // drift-free — the same short out-of-plane burn GEO already uses for the ~0.25° its apogee
     // circularization leaves behind. Only when a plane is commanded: on a due-east launch there is
     // no residual to clean.
@@ -395,9 +393,9 @@ public class EarthOrbitMission extends EarthMission {
 
     if (payload.hasUsablePropellant()) {
       // The upper stage delivered the payload to orbit (the transfer above) and cleans the plane;
-      // it is then dropped, and the payload flies its own final trim on its own engine (PHY-5 / L4,
-      // spec 06 §3.2). The plane trim stays on the upper stage: a LEO plane residual outruns the
-      // payload's small trim budget (§3.3). The separation's role guard refuses to fire if a lower
+      // it is then dropped, and the payload flies its own final trim on its own engine. The plane
+      // trim stays on the upper stage: a LEO plane residual outruns the
+      // payload's small trim budget. The separation's role guard refuses to fire if a lower
       // stage still holds propellant, exactly as GEO's does.
       if (planeTrim != null) {
         stages.add(planeTrim);

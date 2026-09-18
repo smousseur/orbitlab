@@ -44,8 +44,8 @@ public record MissionTargetOrbit(
   /**
    * Resolves the displayable target of a spec.
    *
-   * <p><b>A flyby has none, and fabricating one would be worse than showing nothing</b> (MIS-4 / L4
-   * §6.1). A lunar <em>orbit</em>, by contrast, has one — see the branch below. There is no
+   * <p><b>A flyby has none, and fabricating one would be worse than showing nothing</b>. A lunar
+   * <em>orbit</em>, by contrast, has one — see the branch below. There is no
    * (perigee, apogee, inclination) triple to display beside a lunar approach; a degenerate one
    * would put a false geocentric target next to the achieved orbit, which is exactly the kind of
    * silence this chantier removes. Both consumers already handle the absence — they meet it on

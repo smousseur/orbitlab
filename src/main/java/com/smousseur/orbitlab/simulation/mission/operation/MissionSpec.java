@@ -74,7 +74,7 @@ public sealed interface MissionSpec
 
   /**
    * Returns the restitution horizon: how far past insertion the mission is sampled and displayed
-   * (spec {@code docs/mission-horizon/01-horizon-explicite.md}). Never {@code null} — a spec built
+   *. Never {@code null} — a spec built
    * without one falls back to {@link MissionHorizon#defaultFor(MissionType)}.
    *
    * <p>It lives on the spec rather than on the built mission because it is <em>user intent</em>: it
@@ -86,8 +86,8 @@ public sealed interface MissionSpec
   MissionHorizon horizon();
 
   /**
-   * Returns the atmosphere this mission is flown against (spec {@code
-   * docs/atmosphere/04-conception-L1.md} §3.2). Never {@code null} — a spec built without one falls
+   * Returns the atmosphere this mission is flown against. Never {@code null} — a spec built without
+   * one falls
    * back to {@link AtmosphereModel#NONE}, which mounts no drag force at all.
    *
    * <p>It lives on the spec for the same reason {@link #horizon()} does: it is <em>user
@@ -115,8 +115,8 @@ public sealed interface MissionSpec
    * <p>Symmetric with {@link #withLauncherLoads(double[])}, and the seam REL-22 restores through:
    * the atmosphere is not a wizard field, so a spec rebuilt from a scenario file ({@code
    * MissionFactory.specFromWizardValues}) carries the production default until this method
-   * re-applies the value the file saved (spec {@code docs/atmosphere/12-conception-L5-PHY-2.md}
-   * §3.5). {@code null} normalises to {@link AtmosphereModel#NONE}, as the constructors do.
+   * re-applies the value the file saved. {@code null} normalises to {@link AtmosphereModel#NONE},
+   * as the constructors do.
    *
    * @param atmosphere the atmosphere to fly against, or {@code null} for {@link
    *     AtmosphereModel#NONE}
@@ -128,15 +128,14 @@ public sealed interface MissionSpec
    * Earth-orbit insertion spec: any orbit reached by an ascent followed by a transfer, whatever its
    * plane. A circular target has {@code perigeeAltitude == apogeeAltitude}; an elliptic target
    * keeps a distinct apogee. A polar or sun-synchronous target is this same record with another
-   * inclination — no dedicated mission type, no dedicated objective (spec {@code
-   * docs/earth-orbit/01-mission-terre-parametrable.md} §3.2 and §5).
+   * inclination — no dedicated mission type, no dedicated objective.
    *
    * <p><b>The eccentricity stays implicit.</b> The (perigee, apogee) pair already carries it, and
    * {@link MissionComposer} reads that pair to choose between the circular and the elliptic
    * composition. A third, redundant parameter would be a source of inconsistency rather than a
    * generalisation.
    *
-   * <p><b>The compact constructor validates</b> (spec §8): an inclination the site cannot reach, or
+   * <p><b>The compact constructor validates</b>: an inclination the site cannot reach, or
    * an apogee below the perigee, is refused here — at construction, where the caller still knows
    * what it asked for — instead of surfacing as a mission that propagates into something else.
    *
@@ -522,7 +521,7 @@ public sealed interface MissionSpec
   }
 
   /**
-   * Lunar flyby spec: ground to a perilune, through a parking orbit (MIS-4 / L4 §4).
+   * Lunar flyby spec: ground to a perilune, through a parking orbit.
    *
    * <p><b>The parking altitude is a component, and it is not exposed to the wizard.</b> It has to
    * be one, because three things must agree on it — the launch window, the composed chain and the
@@ -537,7 +536,7 @@ public sealed interface MissionSpec
    * adaptive-inclination lot, and at {@code i = φ} the two azimuths {@code
    * LaunchPlane.launchAzimuth} distinguishes merge anyway.
    *
-   * <p><b>No tolerance component either</b> (§4.1). The ± band on the flown perilune is not a
+   * <p><b>No tolerance component either</b>. The ± band on the flown perilune is not a
    * caller's choice but a property of the measurement, so it lives on {@link LunarFlybyMission} as
    * {@code PERILUNE_TOLERANCE}.
    *
@@ -624,11 +623,11 @@ public sealed interface MissionSpec
 
   /**
    * Lunar orbit spec: ground to a circular orbit around the Moon, through a parking orbit and a
-   * translunar transfer (MIS-5 / L5, spec {@code docs/lunar-orbit/07-conception-L5.md} §2).
+   * translunar transfer.
    *
    * <p><b>{@code orbitAltitude} and {@code periluneAltitude} are the same number</b>, and this
    * record carries the first name on purpose. The lunar orbit altitude <em>is</em> the perilune the
-   * injection aims at (découpage §6 pt 1), but a spec carries what the user asked for; translating
+   * injection aims at, but a spec carries what the user asked for; translating
    * it into an aim point is {@link LunarOrbitMission}'s job.
    *
    * <p><b>The parking altitude is a component</b>, as on {@link Lunar} and for the same reason:
@@ -639,7 +638,7 @@ public sealed interface MissionSpec
    *
    * <p><b>No inclination component.</b> A lunar orbit's inclination is not aimed at: {@code
    * TranslunarInjectionPlan} builds its aim direction inside the transfer plane, so the single
-   * scalar degree of freedom is spent entirely on the perilune altitude (découpage §2.2 pt 2). What
+   * scalar degree of freedom is spent entirely on the perilune altitude. What
    * the geometry delivers was measured over a lunation by L0: 131.1° to 153.4° in the selenocentric
    * ICRF-oriented frame, a 22.3° spread. It is undergone, reported, and absent from the objective.
    *

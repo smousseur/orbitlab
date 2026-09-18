@@ -417,7 +417,6 @@ public final class CameraTransitionAppState extends BaseAppState {
     // expressed about the arc's body, so the body it is added to has to be that same one. Taking
     // the parent captured at click time instead left the two disagreeing by the whole Earth-Moon
     // distance for a spacecraft that had crossed into the lunar sphere of influence since
-    // (spec docs/multi-corps/07-conception-L5.md §5.2).
     AbsoluteDate now = context.clock().now();
     MissionEphemerisPoint point = ephemeris.displayPointAt(now);
     // Aim at the primary's seated point, where the floating origin will pin it (SEL-1 / L2), so the

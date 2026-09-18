@@ -47,7 +47,7 @@ import org.orekit.utils.PVCoordinates;
  *   <li><b>Elliptic target</b> (and GEO, through the three-argument constructor): a single burn at
  *       the next apogee. The target shape is the ellipse (aimed shaping radius, achieved apogee),
  *       where the shaping radius is resolved by {@link FlownBandAim} so the <b>flown</b> altitude
- *       band is centred on the requested orbit (spec orbit-reporting/02). The resulting orbit
+ *       band is centred on the requested orbit. The resulting orbit
  *       carries the requested perigee <b>in mean elements</b>.
  *   <li><b>Circular target</b> (through the four-argument constructor): a two-burn Hohmann in
  *       <b>mean</b> elements — see below. A single apside burn cannot circularize the mean orbit
@@ -76,7 +76,7 @@ import org.orekit.utils.PVCoordinates;
  *
  * <p><b>Total by construction.</b> Any failure of the mean path — the conversion not converging, a
  * singular Jacobian, an undeliverable burn — falls back on the single-burn trim, which flies the
- * mission at the pre-fix quality rather than failing it (spec orbit-reporting/01 §3.4).
+ * mission at the pre-fix quality rather than failing it.
  */
 public class AnalyticTrimBurnStage extends MissionStage {
   private static final Logger logger = LogManager.getLogger(AnalyticTrimBurnStage.class);
@@ -213,7 +213,7 @@ public class AnalyticTrimBurnStage extends MissionStage {
       return currentState;
     }
 
-    // 8×8 gravity, matching the ephemeris generator (bilan 11 §3.9): this standalone flight
+    // 8×8 gravity, matching the ephemeris generator: this standalone flight
     // advances
     // the state the next stage plans from, so a Newtonian point-mass field here would diverge from
     // the flown 8×8 trajectory that the whole GEO plane strategy is measured against.
@@ -529,7 +529,7 @@ public class AnalyticTrimBurnStage extends MissionStage {
     Vector3D rApo = stateAtApogee.getPVCoordinates().getPosition();
     Vector3D vCurrentApo = stateAtApogee.getPVCoordinates().getVelocity();
     double r2 = rApo.getNorm();
-    // Centre the FLOWN altitude band on the requested orbit (spec orbit-reporting/02). Aiming at an
+    // Centre the FLOWN altitude band on the requested orbit. Aiming at an
     // osculating perigee perches the mission at the TOP of the J2 short-period oscillation, so the
     // flown perigee can only fall, by the whole ~19 km amplitude. The amplitude itself is not a
     // choice — no orbit is flat under J2 — only the centring is, and it is worth a factor of two on
@@ -602,7 +602,7 @@ public class AnalyticTrimBurnStage extends MissionStage {
         OrekitService.get().createOptimizationPropagator(context, OrekitService.COAST_MAX_STEP);
     coastPropagator.setInitialState(state);
     // On a re-entering orbit the coast stops early, no apogee is recorded and this returns null —
-    // which both callers already turn into an explicit failure (spec 03-garde-rentree §4.1).
+    // which both callers already turn into an explicit failure.
     ReentryGuard.armQuiet(coastPropagator, context.gravity());
 
     RecordAndContinue recorder = new RecordAndContinue();

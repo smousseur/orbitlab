@@ -17,7 +17,7 @@ import org.orekit.time.AbsoluteDate;
  * function, a {@code CONTINUE} action so the propagation is <em>marked</em> and never stopped.
  *
  * <p>Delivered by PHY-3 as the brick {@code MIS-10} consumes — the re-entry needs an entry mark
- * before it needs a termination (roadmap {@code docs/roadmap/02-roadmap-v2.md}, item PHY-3). It is
+ * before it needs a termination. It is
  * armed nowhere in production in this lot: the consumer that reads {@link
  * #firstDescendingCrossing()} is the deorbit mission, not this one. A unit test flies a trajectory
  * through 100 km to prove it records the crossing and its direction.

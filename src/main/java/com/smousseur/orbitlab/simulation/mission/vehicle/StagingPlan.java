@@ -12,8 +12,7 @@ import org.orekit.utils.Constants;
 
 /**
  * What a {@link VehicleStack} knows about its own staging beyond the masses: the role of each
- * entry, and whether the two bottom entries burn in parallel (spec {@code
- * docs/etagement/03-conception-L1.md} §3.2).
+ * entry, and whether the two bottom entries burn in parallel.
  *
  * <p><b>Why it exists at all.</b> {@code StageModel.toVehicle} drops {@code capabilities}, so a
  * flying stack cannot say that what is active is the core; and the throttle lives on {@link
@@ -52,8 +51,7 @@ public record StagingPlan(List<StageRole> roles, ParallelBlock parallelBlock) {
    *     (kg), zero on a grouped jettison
    * @param boosterCount how many identical boosters the block aggregates — the multiplicity the
    *     runtime otherwise dissolves into the aggregate mass and section, kept here so PHY-5 can
-   *     split the jettison back into that many drawn objects (spec {@code
-   *     docs/multi-objets/04-conception-L2.md} §2.1)
+   * split the jettison back into that many drawn objects
    */
   public record ParallelBlock(
       int bottomIndex,
@@ -86,8 +84,7 @@ public record StagingPlan(List<StageRole> roles, ParallelBlock parallelBlock) {
   /**
    * Derives the plan of one instantiated launcher. The parallel block is decided on the loads
    * actually flown, not on the throttle: at {@code f = 1} a Falcon Heavy splits with its core and
-   * its boosters running dry together, while an Ariane 64 keeps burning its core for minutes (spec
-   * §3.3).
+   * its boosters running dry together, while an Ariane 64 keeps burning its core for minutes.
    *
    * @param stages the launcher stages, bottom to top
    * @param propellantLoads the propellant load of each stage (kg), same order
@@ -148,14 +145,14 @@ public record StagingPlan(List<StageRole> roles, ParallelBlock parallelBlock) {
   /**
    * The serial-equivalent view of a launcher's stages: the {@code BOOSTER} + {@code CORE} pair, if
    * there is one, replaced by a single stage carrying their sums and the effective specific impulse
-   * {@code ΣF / Σ(F/Isp)} (spec {@code docs/etagement/04-conception-L2.md} §3.1).
+   * {@code ΣF / Σ(F/Isp)}.
    *
    * <p><b>Why anything needs this.</b> {@code PropellantBudget} sizes the top stage against the ΔV
    * the lower ones give, and it evaluates that ΔV as a chain of Tsiolkovsky terms — one stage
    * dropping its dry mass before the next ignites. A parallel block is <em>one</em> burn: handing
    * it over as two entries makes the budget believe in a staging that never happens and credit ΔV
    * that does not exist. Measured on the Falcon Heavy split, the invented credit is 2 111 m/s and
-   * the sized upper-stage load collapses from 1 963 kg to zero (spec §2.1).
+   * the sized upper-stage load collapses from 1 963 kg to zero.
    *
    * <p><b>The fold is exact exactly when the jettison is grouped.</b> The serial formula assumes a
    * stage's dry mass leaves in one go, which is what happens at full thrust — boosters and core run
@@ -257,7 +254,7 @@ public record StagingPlan(List<StageRole> roles, ParallelBlock parallelBlock) {
 
   /**
    * The stack index of the entry playing a role. Roles are unique by construction, so this is what
-   * replaces the stack indices the missions used to write by hand (spec §3.7).
+   * replaces the stack indices the missions used to write by hand.
    *
    * @param role the role to find
    * @return the stack index of that entry

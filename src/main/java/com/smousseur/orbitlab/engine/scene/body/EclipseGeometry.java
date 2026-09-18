@@ -11,7 +11,7 @@ import org.hipparchus.util.FastMath;
  * classic circle-circle intersection area, not a hard step.
  *
  * <p>This is the CPU-side reference for {@code MatDefs/Light/WrapLighting.frag}'s per-fragment
- * occlusion test (`docs/eclipses/01-decoupage.md`, L1): the shader evaluates the same formula per
+ * occlusion test: the shader evaluates the same formula per
  * fragment, this class evaluates it once for a single point and is what the unit tests — including
  * the agreement check against Orekit's own {@code EclipseDetector} — exercise directly.
  */

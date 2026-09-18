@@ -11,7 +11,7 @@ import org.orekit.utils.Constants;
 
 /**
  * Resolves the shaping radius an analytic burn must aim at so the <b>flown</b> altitude band is
- * centred on the requested orbit (spec orbit-reporting/02).
+ * centred on the requested orbit.
  *
  * <p>The width of that band is not a choice: under J2 the osculating semi-major axis and
  * eccentricity oscillate in phase with the same relative amplitude {@code f = (3/2)·J2·(RE/a)²},
@@ -42,7 +42,7 @@ import org.orekit.utils.Constants;
  * AnalyticHohmannTransferStage#computeTargetVelocityAtApogee}, which enters only through {@code a =
  * (aim + apsisRadius)/2}. It is <b>not</b> a prediction of the achieved osculating perigee: on a
  * near-circular target the aim exceeds the burn-point radius, so the burn point stays the perigee
- * and the aim is the far apside (spec 02 section 3.1). The name says what it steers, not what comes
+ * and the aim is the far apside. The name says what it steers, not what comes
  * out of it.
  *
  * <p><b>Total by construction.</b> {@link OrbitElements#mean(Orbit)} returns an {@code Optional}
@@ -67,7 +67,7 @@ public final class FlownBandAim {
 
   /**
    * Residual below which the aim counts as converged (m). Well under Eckstein-Hechler's own ~600 m
-   * modelling residual (spec 01 section 3.2.2): iterating past the model's noise buys nothing.
+   * modelling residual: iterating past the model's noise buys nothing.
    */
   private static final double CONVERGENCE_M = 10.0;
 

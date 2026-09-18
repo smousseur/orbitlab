@@ -15,8 +15,7 @@ import java.util.List;
 /**
  * Draws a landing debris' <em>ground track</em> — the whole fall curve, from separation to impact —
  * plus an impact marker, hung under the Earth rotating-frame node so it sticks to the turning globe
- * and answers "where does it come down?" (PHY-5 / L7, spec {@code
- * docs/multi-objets/09-conception-L7.md} §D3).
+ * and answers "where does it come down?".
  *
  * <p>The vertices are the {@link DebrisGroundTrack}'s seam-local coordinates (near-view units about
  * the geocentre), so the geometry is static: only the seam node's rotation turns it with the globe.

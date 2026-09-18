@@ -120,7 +120,7 @@ class ObjectiveEvaluatorTest {
 
   /**
    * An impact is refused whatever band was declared. The band here is wide enough to swallow the
-   * −53 km the first version of the translunar aim computed and flew (spec §12), which is the
+   * −53 km the first version of the translunar aim computed and flew, which is the
    * point: the property must not rest on the tolerance being smaller than the target.
    */
   @Test
@@ -242,7 +242,7 @@ class ObjectiveEvaluatorTest {
    * The 4.5 d lunar demo must go on passing: it stops inside the sphere of influence, so its arc is
    * never closed — but perilune falls at ~4.0 d and half a day of climbing samples follow it. That
    * is exactly why the criterion is "the minimum is the last sample of the arc" and not "the arc
-   * came back out" (§3.4).
+   * came back out".
    */
   @Test
   void flyby_arcNotClosedButClosestApproachPassed_true() {

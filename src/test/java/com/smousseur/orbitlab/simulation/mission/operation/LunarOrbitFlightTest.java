@@ -51,7 +51,7 @@ import org.orekit.utils.PVCoordinates;
  * MissionOptimizer} and the ephemeris generator, exactly as the application's compute path runs
  * them.
  *
- * <p><b>One flight, on the budget-sized configuration, and that is a decision</b> (§9.1). MIS-4
+ * <p><b>One flight, on the budget-sized configuration, and that is a decision</b>. MIS-4
  * flies two because L4 needed a fully loaded impulsive reference for L6; no lot needs one here, and
  * since L3 the fully loaded orbiter is not a configuration the product offers — it would carry 800
  * kg where the budget sizes ~658, changing the mass at injection, the injection and therefore the
@@ -65,7 +65,7 @@ import org.orekit.utils.PVCoordinates;
  * was measured on a <em>real</em> arrival, every figure of that lot coming from a fabricated
  * hyperbola.
  *
- * <p><b>Contrainte de méthode</b> (découpage §3): a full CMA-ES ascent plus five days of
+ * <p><b>Contrainte de méthode</b>: a full CMA-ES ascent plus five days of
  * propagation on both passes, and it is the user who runs it.
  */
 @EnabledIfSystemProperty(named = "orbitlab.slowTests", matches = "true")
@@ -94,8 +94,8 @@ class LunarOrbitFlightTest {
    * How many window openings are tried before giving up.
    *
    * <p>The window's {@code confirm()} flies the aim from the injection state a pad <em>would</em>
-   * reach; the chain arrives with the one its ascent really delivered, and the two differ (MIS-4 /
-   * L6 §9). A confirmed date can therefore still be unplannable by the chain, so a refusal advances
+   * reach; the chain arrives with the one its ascent really delivered, and the two differ. A
+   * confirmed date can therefore still be unplannable by the chain, so a refusal advances
    * the floor past it and asks the planner again rather than failing the lot on a date.
    */
   private static final int WINDOW_ATTEMPTS = 4;
@@ -295,8 +295,8 @@ class LunarOrbitFlightTest {
 
   /**
    * The chain as the wizard will build it: the catalogue orbiter loaded for its own insertion, and
-   * launcher loads sized top-down from it by {@code PropellantBudget.loadsForLunarOrbit} (MIS-5 /
-   * L3 §4). This is the sizing whose 10 % margin L4 saw consumed at 3.7 % on a fabricated
+   * launcher loads sized top-down from it by {@code PropellantBudget.loadsForLunarOrbit}. This is
+   * the sizing whose 10 % margin L4 saw consumed at 3.7 % on a fabricated
    * hyperbola; here it meets a real arrival.
    */
   private static LaunchConfiguration sizedConfiguration() {

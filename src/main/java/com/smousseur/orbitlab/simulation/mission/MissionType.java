@@ -20,7 +20,7 @@ public enum MissionType {
   /**
    * Ground to a circular lunar orbit (MIS-5). The launcher's top stage is dropped just after the
    * translunar injection, so the insertion burn is the payload's own: no launcher stage can hold a
-   * four-day coast (découpage §2.3 pt 1), and an inert probe cannot fly this at all.
+   * four-day coast, and an inert probe cannot fly this at all.
    */
   LUNAR_ORBIT("LUNAR ORBIT", true);
 

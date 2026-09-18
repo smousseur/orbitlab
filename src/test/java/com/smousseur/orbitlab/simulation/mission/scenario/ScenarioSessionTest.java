@@ -169,7 +169,7 @@ class ScenarioSessionTest {
   }
 
   /**
-   * The PRECISE case (§2.3): the loads a sizing sweep searched for are the ones that come back, not
+   * The PRECISE case: the loads a sizing sweep searched for are the ones that come back, not
    * the ones {@code PropellantBudget} would derive again today.
    */
   @Test
@@ -207,7 +207,7 @@ class ScenarioSessionTest {
   /**
    * REL-22: a mission saved with a non-{@code NONE} atmosphere is restored under that atmosphere.
    * Before PHY-2 this path refused it ("cannot be restored yet"); since L5 the wizard default is
-   * drag-on and it round-trips (spec {@code docs/atmosphere/12-conception-L5-PHY-2.md} §3.5).
+   * drag-on and it round-trips.
    */
   @Test
   void restoresANonNoneAtmosphere() {
@@ -239,7 +239,7 @@ class ScenarioSessionTest {
     assertEquals(AtmosphereModel.NONE, restored.spec().orElseThrow().atmosphere());
   }
 
-  /** An atmosphere naming a model this build does not know is set aside, not defaulted (§3.5). */
+  /** An atmosphere naming a model this build does not know is set aside, not defaulted. */
   @Test
   void unknownAtmosphereModelIsRefused() {
     ScenarioFile captured = capture(List.of(entry("Alien", OptimizationType.FAST, ColorRGBA.Red)));
@@ -278,7 +278,7 @@ class ScenarioSessionTest {
         mission.raanDeg());
   }
 
-  /** A scenario of two missions with one broken brings back one, not zero (§7). */
+  /** A scenario of two missions with one broken brings back one, not zero. */
   @Test
   void oneBrokenMissionDoesNotTakeTheOthersDown() {
     ScenarioFile captured =

@@ -6,7 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
-/** Gesture state machine of {@link ScrubGesture} (spec {@code NAV-3}). */
+/** Gesture state machine of {@link ScrubGesture}. */
 class ScrubGestureTest {
 
   @Test

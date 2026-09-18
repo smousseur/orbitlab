@@ -20,8 +20,8 @@ import org.junit.jupiter.api.Test;
  * The launcher assets against the launcher catalog, on the one thing the two both describe: the
  * relative width of a strap-on booster and the core it is bolted to. The catalog states it as a
  * cross-section in m², the mesh as a normalized diameter, and neither needs an external source for
- * the comparison — which is what makes open question 1 of {@code
- * docs/v2-preparation/00-preparation.md} §5 answerable from inside the repository at all.
+ * the comparison — which is what makes open question 1 of answerable from inside the repository at
+ * all.
  *
  * <p>The pieces loaded are the detached ones, not the assembled stack: they are what {@code PHY-5}
  * will fly side by side, and the moment the proportion stops being a table entry and becomes

@@ -14,7 +14,7 @@ import org.junit.jupiter.api.Test;
 /**
  * The graticule is drawn from the mesh's own UV parameterisation, so it rides with the texture: a
  * model turned away from the reference carries its grid with it, which is precisely what makes the
- * offset visible instead of invisible (L2 of {@code docs/orientation-planetes/01-decoupage.md}).
+ * offset visible instead of invisible.
  */
 class GraticuleMeshTest {
 

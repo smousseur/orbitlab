@@ -4,7 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.junit.jupiter.api.Test;
 
-/** {@link SpeedStepper#speedToIndex(double)} is the inverse the capsule needs (spec §12.1). */
+/** {@link SpeedStepper#speedToIndex(double)} is the inverse the capsule needs. */
 class SpeedStepperIndexTest {
 
   @Test

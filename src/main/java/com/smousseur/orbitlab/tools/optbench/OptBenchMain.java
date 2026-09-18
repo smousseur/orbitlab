@@ -34,8 +34,8 @@ import org.orekit.time.AbsoluteDate;
 import org.orekit.time.TimeScalesFactory;
 
 /**
- * Standalone benchmark for the trajectory optimizer ({@code OPT-1 / L0}, spec {@code
- * docs/optimization/02-conception-L0.md}). It flies each reference mission of the matrix through
+ * Standalone benchmark for the trajectory optimizer. It flies each reference mission of the matrix
+ * through
  * the <em>same</em> path the application uses — {@link MissionFactory#specFromWizardValues} then
  * {@link MissionPlanOptimizer#compute()} — while timing it, and writes a Markdown report ready to
  * seed {@code 03-baseline-L0.md}.
@@ -44,7 +44,7 @@ import org.orekit.time.TimeScalesFactory;
  * {@link BenchProgressListener} attached to the optimizer (cold event timeline + hot evaluation
  * count) and from a per-cell JFR recording, both of which the production code already exposes.
  *
- * <p><b>Run it outside the jacoco-instrumented {@code Test} tasks</b> (fiche §Pièges de mesure): a
+ * <p><b>Run it outside the jacoco-instrumented {@code Test} tasks</b>: a
  * {@code JavaExec} Gradle task or an IDE launch, on JDK 21. A run is long — a PRECISE cell alone is
  * tens of minutes — so it is the user's to launch, not a CI step.
  *
@@ -61,24 +61,24 @@ import org.orekit.time.TimeScalesFactory;
  * least one filter run, and a run with filters writes {@code baseline-L0-<filters>.md} so it never
  * overwrites the full baseline. {@code optBench --args="optbench-out GEO"} flies only the GEO cell.
  *
- * <p><b>{@code --tolSweep}</b> is the OPT-1 / C1 integrator-tolerance sweep (spec {@code
- * docs/optimization/07-conception-C1.md}): each matching cell is flown once per {@code
- * absTol/relTol} level, the level pushed to {@link OrekitService#OPT_ABS_TOL_PROPERTY} / {@link
- * OrekitService#OPT_REL_TOL_PROPERTY} around the run, and a comparison report {@code
- * c1-tolsweep.md} is written (a distinct {@code .jfr} per level). Without it the bench keeps its
+ * <p><b>{@code --tolSweep}</b> is the OPT-1 / C1 integrator-tolerance sweep: each matching cell is
+ * flown once per {@code absTol/relTol} level, the level pushed to {@link
+ * OrekitService#OPT_ABS_TOL_PROPERTY} / {@link OrekitService#OPT_REL_TOL_PROPERTY} around the run,
+ * and a comparison report {@code c1-tolsweep.md} is written (a distinct {@code.jfr} per level).
+ * Without it the bench keeps its
  * default single-run behaviour on the src/main default tolerance. Example: {@code optBench
  * --args="optbench-out FAST --tolSweep=1e-8/1e-10,1e-6/1e-8,1e-5/1e-7"}.
  *
- * <p><b>{@code --floorSweep}</b> is the OPT-1 / B2 convergence-floor sweep (spec {@code
- * docs/optimization/09-conception-B2.md}): same shape as {@code --tolSweep}, but each level is a
+ * <p><b>{@code --floorSweep}</b> is the OPT-1 / B2 convergence-floor sweep: same shape as {@code
+ * --tolSweep}, but each level is a
  * {@code MIN_ITERS_BEFORE_CONVERGE} value pushed to {@code orbitlab.opt.minConvergeIters}, writing
  * {@code b2-floorsweep.md}. Example: {@code optBench --args="optbench-out FAST
  * --floorSweep=100,50,30,20,10"}.
  *
- * <p><b>{@code --seedSweep}</b> is the OPT-1 / D2 cross-pass seeding A/B (spec {@code
- * docs/optimization/11-conception-D2.md}): each matching cell is flown twice — {@code
- * orbitlab.opt.seedAcrossPasses} off then on — writing {@code d2-seedsweep.md}. Example: {@code
- * optBench --args="optbench-out ARIANE64 FH_LEO400_FAST --seedSweep"}. At most one sweep at a time.
+ * <p><b>{@code --seedSweep}</b> is the OPT-1 / D2 cross-pass seeding A/B: each matching cell is
+ * flown twice — {@code orbitlab.opt.seedAcrossPasses} off then on — writing {@code
+ * d2-seedsweep.md}. Example: {@code optBench --args="optbench-out ARIANE64 FH_LEO400_FAST
+ * --seedSweep"}. At most one sweep at a time.
  */
 public final class OptBenchMain {
 

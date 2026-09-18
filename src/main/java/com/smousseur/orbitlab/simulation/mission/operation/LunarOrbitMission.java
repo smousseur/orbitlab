@@ -26,8 +26,7 @@ import java.util.List;
 
 /**
  * The lunar orbiter of the product: a mission that lifts off from a pad, parks, leaves for the
- * Moon, crosses its sphere of influence, and captures into a circular lunar orbit (MIS-5 / L5, spec
- * {@code docs/lunar-orbit/07-conception-L5.md} §3).
+ * Moon, crosses its sphere of influence, and captures into a circular lunar orbit.
  *
  * <p><b>It is the first mission of the repository with stages after a sphere-of-influence
  * crossing.</b> Everything up to the crossing is {@link LunarFlybyMission}'s chain; what this class
@@ -36,7 +35,7 @@ import java.util.List;
  *
  * <p><b>The lunar orbit altitude is aimed exactly once</b>, by the injection: {@code TLIBurnStage}
  * receives it as the perilune to reach, and {@code LunarInsertionStage} circularises the perilune
- * it actually arrives at, taking no target of its own (L4 §4.1). A second parameter would be a
+ * it actually arrives at, taking no target of its own. A second parameter would be a
  * second truth about one target. Checking that the two coincide is the objective's job.
  *
  * <p><b>The S2 jettison sits just after the injection</b>, exactly where {@code GEOMission} places
@@ -44,7 +43,7 @@ import java.util.List;
  * the payload's propulsion active before the launcher's upper stage is gone. Unlike the flyby,
  * which carries its spent stage to the Moon because nothing was ever handed over, this chain has a
  * burn left to fly and no launcher stage that could fly it — {@code maxCoastDuration} is 7 200 s on
- * the Falcon Heavy S2 against a ~265 000 s translunar coast (découpage §2.3 pt 1).
+ * the Falcon Heavy S2 against a ~265 000 s translunar coast.
  *
  * <p><b>The Moon and the Sun are declared at mission level</b>, as on the flyby, and that is what
  * makes the crossing work at all: {@code ArcTransition} derives the selenocentric context
@@ -61,7 +60,7 @@ public class LunarOrbitMission extends EarthMission {
    * and reading the other mission's constant would make this chain follow, in silence, a value
    * changed for that one.
    *
-   * <p><b>Not offered as a wizard field</b> (MIS-5 / L7 §3), on MIS-4 / L0's measurement: the aim
+   * <p><b>Not offered as a wizard field</b>, on MIS-4 / L0's measurement: the aim
    * converges identically from 185 to 400 km, so a slider there would be a choice with nothing
    * behind it. 400 km is what the closure flight of L5 actually flew.
    */
@@ -70,7 +69,7 @@ public class LunarOrbitMission extends EarthMission {
   /**
    * How far the translunar coast goes if it never reaches the lunar sphere (s).
    *
-   * <p><b>A bound, not a duration</b> (MIS-5 / L1 §4): a coast that ends at a boundary owes a
+   * <p><b>A bound, not a duration</b>: a coast that ends at a boundary owes a
    * figure for the case where the boundary never comes, and without one it would fall on {@code
    * StageChainRunner}'s 7 200 s safety net — three days short, while reporting itself complete.
    *
@@ -157,7 +156,7 @@ public class LunarOrbitMission extends EarthMission {
         // geometry delivers 131.1° to 153.4° depending on the epoch (L0 measure 1), and the closed
         // form that would predict it — 180° − φ — is right to 2° three times out of four and wrong
         // by 20.3° the fourth. Nothing in the repository reads this component, so the marker of
-        // absence costs no reader anything (spec §3.2).
+        // absence costs no reader anything.
         OrbitInsertionObjective.circular(SolarSystemBody.MOON, orbitAltitude, Double.NaN));
     this.latitude = latitude;
     this.longitude = longitude;
@@ -220,7 +219,7 @@ public class LunarOrbitMission extends EarthMission {
             // The terminal coast is selenocentric and has to say so: StageLegRunner converts every
             // stage entry into the context the stage declares, comparing frames by reference, so a
             // coast inheriting the mission's terrestrial context would really transform the arrival
-            // back into GCRF and the mission would be measured against the Earth (spec §3.1).
+            // back into GCRF and the mission would be measured against the Earth.
             new CoastingStage(FINAL_COAST_NAME, null, SolarSystemBody.MOON)));
     return List.copyOf(stages);
   }

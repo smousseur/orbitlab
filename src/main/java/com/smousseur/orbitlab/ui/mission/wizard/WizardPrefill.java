@@ -48,7 +48,7 @@ public final class WizardPrefill {
     Map<String, Object> values = new LinkedHashMap<>();
     values.put(FormField.MISSION_TYPE.key(), spec.type().name());
     // Derived, not read back: the profile is a way of offering parameters, so no spec component
-    // carries it (spec docs/earth-orbit/02-wizard-orbites-terrestres.md §2.1).
+    // carries it.
     values.put(FormField.MISSION_PROFILE.key(), MissionProfile.of(spec).name());
     values.put(FormField.MISSION_NAME.key(), spec.name());
     // Absent when the mission was never scheduled: the field then keeps its "now" default rather
@@ -102,7 +102,7 @@ public final class WizardPrefill {
    * back with <b>no</b> inclination key, so that revalidating an untouched edit rebuilds {@code
    * dueEast(latitude)} from the latitude rather than from the degrees printed in a field:
    * publishing the derived value would move the azimuth, the launch assist and every propellant
-   * load (spec {@code docs/earth-orbit/02-wizard-orbites-terrestres.md} §2.0).
+   * load.
    */
   private static void putInclinationIfCommanded(
       Map<String, Object> values, MissionSpec.EarthOrbit spec) {

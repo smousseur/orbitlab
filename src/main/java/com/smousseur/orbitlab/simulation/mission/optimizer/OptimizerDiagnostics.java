@@ -9,8 +9,7 @@ import org.apache.logging.log4j.Logger;
  * Stateless diagnostics helpers for inspecting CMA-ES results post-mortem.
  *
  * <p>Used by {@code MissionOptimizer} after each stage optimization to surface pathologies
- * (parameters saturated at their bounds) that would otherwise remain opaque. See {@code
- * docs/optimizer/03-robustness-roadmap.md} §0.1.
+ * (parameters saturated at their bounds) that would otherwise remain opaque. See
  */
 public final class OptimizerDiagnostics {
 

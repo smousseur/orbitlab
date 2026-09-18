@@ -35,9 +35,7 @@ import org.orekit.time.TimeScalesFactory;
 import org.orekit.utils.Constants;
 
 /**
- * <b>PHY-8 / L1, L2 and L3 — the iso-trajectory gate and the twin flight</b> (spec {@code
- * docs/etagement/03-conception-L1.md} §6.2, {@code 04-conception-L2.md} §5, {@code
- * 05-conception-L3.md} §3.3).
+ * <b>PHY-8 / L1, L2 and L3 — the iso-trajectory gate and the twin flight</b>.
  *
  * <p>Splitting the Falcon Heavy into {@code [boosters ×2, core, S2]} and flying it at full thrust
  * must move nothing — <b>to the bit</b>, not to a tolerance. {@code L1} proved it with the split as
@@ -55,14 +53,14 @@ import org.orekit.utils.Constants;
  * <p><b>Why bit equality is reachable.</b> Every figure of the split is an exact integer and the
  * boosters are twice the core, so the aggregate thrust is 22 800 000 N exactly, {@code ΣF/Σ(F/Isp)}
  * lands on 298 s exactly (296 before PHY-2/L3), and the block's dry mass, depletion floor, burn
- * duration and jettison mass all reproduce the former S1's (spec L1 §2.4).
+ * duration and jettison mass all reproduce the former S1's.
  *
  * <p>The profile flown is the one the two zero-tolerance gates use — hand-written loads {@code {600
  * 000, 100 000}} on {@code Spacecraft.LEGACY} — which split at the exact 2/3–1/3 pro rata.
  *
  * <p><b>One figure does move, and it is inert.</b> The former entry rounded its aggregate section
  * to 31.6 m²; three exemplars of 10.5 m² give 31.5, and the exact value is 31.56. Nothing reads it
- * — no production mission declares an atmosphere — so the trajectory is unaffected (spec L2 §3.5).
+ * — no production mission declares an atmosphere — so the trajectory is unaffected.
  */
 class ParallelBlockAscentTest {
   private static final Logger logger = LogManager.getLogger(ParallelBlockAscentTest.class);
@@ -157,7 +155,7 @@ class ParallelBlockAscentTest {
     var split = Launchers.FALCON_HEAVY.instantiate(fullLoads(), Spacecraft.LEGACY);
 
     // 822 t of boosters drain 0.81 × 7.6/15.2 = 0.405 of that from the core, leaving 78 t of the
-    // 411 t it carries — the figure the découpage derives (spec 01-decoupage.md §2.3).
+    // 411 t it carries — the figure the découpage derives.
     assertEquals(78_090, split.stagingPlan().parallelBlock().coreLeftAtBoosterBurnout(), 1.0);
     assertFalse(split.stagingPlan().parallelBlock().groupedJettison());
   }
@@ -204,7 +202,7 @@ class ParallelBlockAscentTest {
 
   /**
    * <b>The twin flight</b>, and the instrument that makes {@code L3}'s re-baseline attributable
-   * rather than merely asserted (spec {@code docs/etagement/05-conception-L3.md} §5.2).
+   * rather than merely asserted.
    *
    * <p>One stack, one set of loads, one MECO date: the only thing separating the two states below
    * is the throttle, so whatever separates them is what {@code L3} moved. Nothing is pinned — the

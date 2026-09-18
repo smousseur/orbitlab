@@ -33,10 +33,8 @@ public interface OptimizableMissionStage<P extends TrajectoryProblem> {
   /**
    * Whether this stage's problem propagates a <b>chain</b> of stages that the mission loop will
    * itself replay — the case of the ascent, optimized as a whole across {@code Gravity turn (S1) →
-   * S1 separation → Gravity turn (S2)} (spec {@code
-   * docs/mission-stages/01-separations-implicites.md} §5.6).
-   *
-   * <p>When true, {@code MissionOptimizer} must not advance the mission state from {@code
+   * S1 separation → Gravity turn (S2)}. <p>When true, {@code MissionOptimizer} must not advance the
+   * mission state from {@code
    * problem.propagate()} — doing so would fly the following phases twice. It instead injects the
    * result immediately (the following phases read the plan it publishes) and advances phase by
    * phase, as it does for a non-optimizable stage.

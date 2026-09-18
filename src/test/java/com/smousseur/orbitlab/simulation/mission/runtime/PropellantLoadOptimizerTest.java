@@ -17,7 +17,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 /**
- * Unit test of the I7 outer sizing loop (spec 09 §6 task 1). Exercises the bisection against a
+ * Unit test of the I7 outer sizing loop. Exercises the bisection against a
  * synthetic monotone feasibility function — feasible iff {@code λ ≥ threshold} — so it validates
  * the search logic (minimal feasible λ, bracket invariant, evaluation budget, warm-start threading)
  * without any propagation.

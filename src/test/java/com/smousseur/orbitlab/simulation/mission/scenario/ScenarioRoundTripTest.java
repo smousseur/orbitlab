@@ -28,8 +28,7 @@ import org.junit.jupiter.api.Test;
  * <p>The loads are the assertion that matters. They are downstream of every subtlety of the wizard
  * path — the due-east derivation, the parking-orbit sizing, the AKM load — so a value the format
  * lost or rounded on the way shows up there, whereas an assertion on the targets alone would pass
- * with a mission sized for another trajectory (spec {@code
- * docs/scenario/01-persistance-missions.md} §9).
+ * with a mission sized for another trajectory.
  */
 class ScenarioRoundTripTest {
 

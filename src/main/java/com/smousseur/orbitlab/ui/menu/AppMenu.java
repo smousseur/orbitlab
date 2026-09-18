@@ -36,7 +36,7 @@ import java.util.function.Consumer;
  * <p>Everything the widget shows comes from the {@code form} style: the title carries {@code
  * menu.title.button} and the entries {@code menu.item}. The title's hover is the style's own {@code
  * highlightColor}, so the only calls that touch a skin attribute here are an entry's hover, check
- * and disabled transitions — see {@code docs/menu/01-menu-applicatif.md} §6.1.
+ * and disabled transitions — see
  */
 public final class AppMenu implements AutoCloseable {
 

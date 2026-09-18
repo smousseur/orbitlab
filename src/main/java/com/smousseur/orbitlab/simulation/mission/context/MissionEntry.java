@@ -74,7 +74,7 @@ public final class MissionEntry {
    * The per-stage launcher loads the last computation actually flew (kg), or {@code null} when they
    * were the budgeted ones. Only a {@code PRECISE} sizing sweep <em>searches</em> for loads; in
    * every other mode {@code PropellantBudget} derives them and recomputing costs nothing, so there
-   * is nothing worth remembering (spec {@code docs/scenario/01-persistance-missions.md} §2.3).
+   * is nothing worth remembering.
    */
   private volatile double[] flownLauncherLoads;
 

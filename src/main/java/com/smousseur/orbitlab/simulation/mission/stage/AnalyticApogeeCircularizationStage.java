@@ -27,7 +27,7 @@ import org.orekit.time.AbsoluteDate;
 import org.orekit.utils.Constants;
 
 /**
- * Apogee circularization + plane change executed by a low-thrust kick motor (spec 06 I5). The burn
+ * Apogee circularization + plane change executed by a low-thrust kick motor. The burn
  * is centered on the detected apogee, but an hours-long finite burn still inflates the apogee while
  * it executes — and a subsequent apogee trim can only set the opposite side of the orbit, so that
  * drift would be locked in. The plan therefore iterates (secant) on a <em>scale of the target

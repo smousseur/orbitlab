@@ -11,8 +11,7 @@ import org.orekit.time.AbsoluteDate;
 
 /**
  * The powered phase a parallel-burn launcher inserts between its two jettisons: the core stage
- * burning alone, at the full thrust it recovers once the boosters are dropped (spec {@code
- * docs/etagement/03-conception-L1.md} §3.5).
+ * burning alone, at the full thrust it recovers once the boosters are dropped.
  *
  * <p><b>Why it is a phase rather than a continuation.</b> The thrust changes at booster flame-out —
  * the block's aggregate gives way to the core's own — and a {@code ConstantThrustManeuver} does not

@@ -11,8 +11,7 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * A lat/long grid drawn on a body's globe from the mesh's own UV parameterisation (L2 of {@code
- * docs/orientation-planetes/01-decoupage.md}).
+ * A lat/long grid drawn on a body's globe from the mesh's own UV parameterisation.
  *
  * <p><b>Why from the UVs and not from the axes.</b> A grid built on the reference axes would sit
  * where the application believes the body's longitudes are, and would look perfectly correct on a

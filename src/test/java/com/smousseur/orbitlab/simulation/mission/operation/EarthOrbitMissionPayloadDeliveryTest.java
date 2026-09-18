@@ -14,7 +14,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 /**
- * PHY-5 / L4 (spec {@code docs/multi-objets/06-conception-L4.md}): a LEO whose payload carries
+ * PHY-5 / L4: a LEO whose payload carries
  * usable propellant drops its upper stage after the transfer and lets the payload fly its own final
  * trim; an inert payload keeps flying the upper stage to the end exactly as before.
  */

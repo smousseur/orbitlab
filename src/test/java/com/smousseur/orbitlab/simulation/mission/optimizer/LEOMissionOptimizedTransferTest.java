@@ -13,11 +13,11 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 /**
- * Mirror of {@link LEOMissionOptimizationTest} flying the CMA-ES-optimized transfer (spec 06 I6,
- * {@link EarthOrbitMission#circularWithOptimizedTransfer}) instead of the analytic Hohmann profile.
+ * Mirror of {@link LEOMissionOptimizationTest} flying the CMA-ES-optimized transfer instead of the
+ * analytic Hohmann profile.
  * Same launcher configuration (Falcon Heavy fully loaded) and same targets, so any divergence
  * between the two classes isolates the transfer mode. This is the multi-altitude sweep required
- * before deciding whether the optimized transfer becomes the LEO default (bilan 08 §3.2).
+ * before deciding whether the optimized transfer becomes the LEO default.
  */
 @EnabledIfSystemProperty(named = "orbitlab.slowTests", matches = "true")
 class LEOMissionOptimizedTransferTest extends AbstractTrajectoryOptimizerTest {
@@ -48,8 +48,7 @@ class LEOMissionOptimizedTransferTest extends AbstractTrajectoryOptimizerTest {
    * BUG-25 closure criterion, re-enabled at PHY-2/L3. Since PHY-8 (#106) the throttled Falcon Heavy
    * over-delivered on ascent and the two-burn circular transfer could not lower the apogee — 416 x
    * 1271 km for a 400 km circular target (measured 2026-09-10). L3 wires the core cutoff onto the
-   * MECO so the ascent can stop over-delivering (spec {@code
-   * docs/atmosphere/10-conception-L3-PHY-2.md} §3.1); this must reach 400 ±7 % for the fix to hold.
+   * MECO so the ascent can stop over-delivering; this must reach 400 ±7 % for the fix to hold.
    */
   @Test
   void testFalconHeavyOptimizedTransfer() {

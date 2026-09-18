@@ -141,7 +141,7 @@ public class AnalyticHohmannTransferStage extends MissionStage {
     FlightContext context = flightContext(currentState, mission);
     AnalyticBurnPlan plan = computeBurnPlan(currentState, mission.getVehicle(), context);
 
-    // 8×8 gravity, matching the ephemeris generator (bilan 11 §3.9): this standalone flight
+    // 8×8 gravity, matching the ephemeris generator: this standalone flight
     // advances
     // the state the next stage plans from, so a Newtonian point-mass field here would diverge from
     // the flown 8×8 trajectory.
@@ -329,8 +329,7 @@ public class AnalyticHohmannTransferStage extends MissionStage {
   }
 
   /**
-   * <b>PHY-8 / L4 — the branch taken when there is no apogee to aim at</b> (spec {@code
-   * docs/etagement/06-conception-L4.md} §3.3).
+   * <b>PHY-8 / L4 — the branch taken when there is no apogee to aim at</b>.
    *
    * <p>An ascent can hand over on an arc so deep that raising its apogee does not produce one ahead
    * — the vehicle re-enters first. A split Ariane 64 does exactly that: apogee 372 km, perigee −3
@@ -345,7 +344,7 @@ public class AnalyticHohmannTransferStage extends MissionStage {
    * Falcon Heavy LEO-400 baseline, 31 %. That ascent hands over at 77 km but with its apogee
    * already at 420 km, and circularizing at 77 km throws that apogee away — {@code dv1} goes from
    * 199 to 638 m/s. Reaching an apogee the ascent already paid for is what this stage is good at;
-   * the branch must not take that away (spec §3.4).
+   * the branch must not take that away.
    */
   private AnalyticBurnPlan insertThenTransfer(
       SpacecraftState state, Vehicle vehicle, FlightContext context) {
@@ -390,8 +389,7 @@ public class AnalyticHohmannTransferStage extends MissionStage {
    * actually be flown (MIS-4 / L6).
    */
   /**
-   * <b>PHY-8 / L4 — the transfer that lowers</b> (spec {@code docs/etagement/06-conception-L4.md}
-   * §3.5).
+   * <b>PHY-8 / L4 — the transfer that lowers</b>.
    *
    * <p>A Hohmann only ever climbed here: burn now, coast to apogee, circularize. That covers every
    * ascent that hands over <em>below</em> its target, which until L4 was all of them — a Falcon
@@ -559,7 +557,7 @@ public class AnalyticHohmannTransferStage extends MissionStage {
     // maximum near the impulsive circularization and falls again beyond it, because a burn this
     // long is flown in a frozen inertial direction and starts re-eccentricizing the orbit.
     // Measured: the whole tank took the perigee back down to 283 km where a third of it reaches
-    // 400 (spec docs/etagement/06-conception-L4.md §3.4).
+    // 400.
     double bestDt = 0.0;
     double bestPerigee = -Double.MAX_VALUE;
     double previousDt = 0.0;
@@ -676,7 +674,7 @@ public class AnalyticHohmannTransferStage extends MissionStage {
    * <p>Package-private so {@link AnalyticGtoInjectionStage} can reuse the same Newton-iteration
    * building block for its perigee-injection plan. Both callers size {@code maxStep} from their
    * active stage via {@link #burnLimitedMaxStep} so this burn-hosting plan propagator honours the
-   * late-ignition invariant on a light I7 load (spec 09 §4).
+   * late-ignition invariant on a light I7 load.
    */
   static SpacecraftState simulateBurn1AndFindApogee(
       FlightContext context,

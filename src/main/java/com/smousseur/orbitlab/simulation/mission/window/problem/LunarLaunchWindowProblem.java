@@ -26,7 +26,7 @@ import org.orekit.utils.TimeStampedPVCoordinates;
 /**
  * The lunar problem, and the one that dates a launch: what a translunar injection costs when the
  * parking plane is <b>the one the pad reaches</b> rather than one built around the Moon — MIS-4 /
- * L2 (spec {@code docs/lunar-flyby/04-conception-L2.md}).
+ * L2.
  *
  * <p><b>The criterion is the injection alone.</b> The ascent costs the same Δv at every hour of the
  * day, so the only thing the launch date decides is the geometry the transfer starts from: the pad
@@ -34,7 +34,7 @@ import org.orekit.utils.TimeStampedPVCoordinates;
  * a signed angle β above that plane. What that misalignment costs is the Lambert term and nothing
  * else — L1 measured the naive plane change {@code 2·v·sin(β/2)} at a <em>third</em> of the real
  * price, because an arc that must span 170° between a point of the parking plane and an off-plane
- * target rotates the plane by {@code asin(sin β / sin 170°)}, not by β (spec §2.3). Adding the two
+ * target rotates the plane by {@code asin(sin β / sin 170°)}, not by β. Adding the two
  * would double-count the same physics and still understate it.
  *
  * <p><b>Two opportunities per sidereal day, and not one.</b> The Earth problem aims at a plane with
@@ -43,15 +43,14 @@ import org.orekit.utils.TimeStampedPVCoordinates;
  * Moon at declination δ, {@code ĥ · û_M} vanishes iff {@code |tan δ| ≤ tan i}, twice per turn of
  * node, the two roots separated by {@code 180° − 2·|arcsin(cot i · tan δ)|}: half a day apart when
  * the Moon crosses the equator, some fifty minutes apart at the 2026 maximum seen from Canaveral —
- * where δ reaches 28.415° against i = 28.562° — and merging into a single soft minimum beyond (spec
- * §1.1).
+ * where δ reaches 28.415° against i = 28.562° — and merging into a single soft minimum beyond.
  *
  * <p><b>Nothing refuses a site here.</b> A pad whose latitude is below the lunar declination — from
  * Kourou, 87.5% of a lunation — reaches no plane containing the Moon, but that is priced rather
  * than declared: the criterion stays finite and returns an optimum no budget accepts, so the search
  * yields no window on its own. The refusals that remain are the ones taken from a flown trajectory,
  * in {@link #confirm}: the perilune the aim converges to, and the depletion floor of the active
- * stage (spec §1.3).
+ * stage.
  *
  * <p><b>What this criterion does not carry</b>, both biased the same way: the ascent is outside the
  * model, so the parking orbit is posed at the launch instant on the site's own direction where the
@@ -107,7 +106,7 @@ public class LunarLaunchWindowProblem implements LaunchWindowProblem {
   /**
    * The launch azimuth, due east. The chain this problem serves flies {@code i = φ}, where {@code
    * sin A = cos i / cos φ} is 1 exactly and {@code LaunchPlane.launchAzimuth} returns {@code π/2}
-   * for both node branches — so there is no branch to choose and no plane to pass in (spec §1.2).
+   * for both node branches — so there is no branch to choose and no plane to pass in.
    */
   private static final double DUE_EAST = FastMath.PI / 2;
 
@@ -159,7 +158,7 @@ public class LunarLaunchWindowProblem implements LaunchWindowProblem {
 
   /**
    * The problem as the wizard's timeline poses it: <b>screening only</b>, with no vehicle and
-   * therefore no verdict (MIS-4 / L5 §4.1).
+   * therefore no verdict.
    *
    * <p><b>The contract read literally, not a workaround.</b> {@code vehicle} is documented "for
    * {@link #confirm} alone", and {@link LaunchWindowProblem#confirm} carries a no-op default the
@@ -241,8 +240,8 @@ public class LunarLaunchWindowProblem implements LaunchWindowProblem {
    *
    * <p>A refusal here is an accident rather than a regime — the projection L1 injects through is
    * defined at every misalignment a pad can produce, and the true transfer angle {@code acos(cos
-   * 170°·cos β)} moves <em>away</em> from the Lambert singularity as the geometry degrades (spec
-   * §1.4). It is caught all the same, because one bad sample must not abort a sweep.
+   * 170°·cos β)} moves <em>away</em> from the Lambert singularity as the geometry degrades. It is
+   * caught all the same, because one bad sample must not abort a sweep.
    */
   @Override
   public LaunchWindowCandidate evaluate(AbsoluteDate epoch) {
@@ -270,12 +269,12 @@ public class LunarLaunchWindowProblem implements LaunchWindowProblem {
    * candidates and not on the sweep.
    *
    * <p><b>Both verdicts come from {@link TranslunarInjectionPlan#inject}, which is also what {@code
-   * TLIBurnStage} flies</b> (MIS-4 / L4 §7). They were the same four lines written twice until L4,
+   * TLIBurnStage} flies</b>. They were the same four lines written twice until L4,
    * and holding them together is what let L6 turn the injection into a finite burn without the
    * window drifting behind it: the price quoted here is the <em>commanded</em> ΔV, the one the
    * mission really burns.
    *
-   * <p><b>It is a verdict on reachability and not only on cost</b> (spec L6 §9.6). A finite
+   * <p><b>It is a verdict on reachability and not only on cost</b>. A finite
    * departure reaches fewer perilunes than an impulsive one: on the flyby's own window an epoch the
    * impulse aims at 100 km bottoms out at 132 km once burnt, the whole aim map lifted above the
    * target. This method is what refuses such an epoch instead of handing the mission a date it
@@ -327,7 +326,7 @@ public class LunarLaunchWindowProblem implements LaunchWindowProblem {
    *
    * <p>Exposed rather than private, with {@link #injectionAt}, because it is what a caller reads
    * the geometry <em>behind</em> a price with: β is not a term of the cost — L1 measured that the
-   * Lambert term already carries all of it (spec §2.3) — but it is what explains one, and a reader
+   * Lambert term already carries all of it — but it is what explains one, and a reader
    * who could only see the number could not tell a right price from a plausible one.
    *
    * <p><b>Public since MIS-4 / L4</b>, where the closure flight reads the geometry this problem

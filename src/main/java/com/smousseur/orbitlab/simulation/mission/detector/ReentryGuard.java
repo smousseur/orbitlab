@@ -10,7 +10,7 @@ import org.orekit.propagation.SpacecraftState;
 import org.orekit.propagation.numerical.NumericalPropagator;
 
 /**
- * Fail-fast re-entry guard (spec {@code docs/mission-stages/03-garde-rentree.md}). Arms a {@link
+ * Fail-fast re-entry guard. Arms a {@link
  * ReentryDetector} that stops a propagation whose trajectory has sunk irrecoverably below the
  * Earth's surface. Under drag it also arms a second, shallower and descent-gated stop the deep
  * floor cannot serve (PHY-2 / L1, {@link #armDragStop}).
@@ -55,11 +55,11 @@ public final class ReentryGuard {
 
   /**
    * Spherical altitude (m) below which a <em>descending</em> trajectory is declared re-entered when
-   * drag is mounted (PHY-2 / L1, spec {@code docs/atmosphere/08-conception-L1-PHY-2.md} §3.1).
+   * drag is mounted.
    *
    * <p><b>Why it can be this shallow when {@link #SUBSURFACE_FLOOR} could not.</b> Under drag the
    * integrator's step control collapses <em>above</em> the deepest launch pad — measured at −9 to
-   * −30 km ({@code docs/bugs.md} BUG-10) against pads as deep as −17 km (Plesetsk) — so a single
+   * −30 km against pads as deep as −17 km (Plesetsk) — so a single
    * unconditional spherical floor cannot be both above the collapse and below every pad. The drag
    * stop breaks the tie with a radial-velocity gate: the handler stops only a <em>descending</em>
    * crossing (see {@link #armDragStop}), so a climbing ascent passes through this floor untouched
@@ -120,8 +120,7 @@ public final class ReentryGuard {
 
   /**
    * Arms the drag-regime re-entry stop — but only when the propagator carries drag, so a drag-off
-   * propagation is byte-identical to before this method existed. PHY-2 / L1 (spec {@code
-   * docs/atmosphere/08-conception-L1-PHY-2.md} §3.1).
+   * propagation is byte-identical to before this method existed. PHY-2 / L1.
    *
    * <p><b>The drag is read from the force list already mounted, not passed in.</b> The propagator
    * is built with its {@link DragForce} (or none) before it is armed, so its own force models are

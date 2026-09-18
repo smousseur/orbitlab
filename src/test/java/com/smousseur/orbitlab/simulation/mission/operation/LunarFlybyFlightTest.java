@@ -63,7 +63,7 @@ import org.orekit.utils.TimeStampedPVCoordinates;
  * time, before anyone knows what it should be — and the ascent references have already had to be
  * re-recorded once, after MIS-7.
  *
- * <p><b>Three measurements ride on this flight and nothing else can take them</b> (§8.3): the
+ * <p><b>Three measurements ride on this flight and nothing else can take them</b>: the
  * perilune actually reached, before the ±10 km band of §4.1 is fixed; the two biases L2 chiffered
  * without flying — 68 s of out-of-model ascent and 115 s of nodal regression — read as the gap
  * between the β planned at the window date and the β real at injection; and the half-degree of J2
@@ -76,7 +76,7 @@ import org.orekit.utils.TimeStampedPVCoordinates;
  * what a mission created in the wizard takes off with; see {@link
  * #theSizedConfigurationAlsoReachesThePerilune()}.
  *
- * <p><b>Contrainte de méthode</b> (découpage §3): each flight costs a full CMA-ES ascent plus seven
+ * <p><b>Contrainte de méthode</b>: each flight costs a full CMA-ES ascent plus seven
  * days of propagation, and it is the user who runs them.
  */
 @EnabledIfSystemProperty(named = "orbitlab.slowTests", matches = "true")
@@ -99,7 +99,7 @@ class LunarFlybyFlightTest {
    * Mass at injection handed to the <b>window</b> (kg), and to the window alone.
    *
    * <p><b>It is the mass the fully loaded chain really arrives with, and the window is given the
-   * launcher that really flies</b> (MIS-4 / L6 §9.6). The budget-sized profile arrives far lighter
+   * launcher that really flies</b>. The budget-sized profile arrives far lighter
    * and hands the window {@code LunarLoads.massAtInjection()} instead: a mass that does not match
    * the vehicle resolves the wrong stage, and since L6 the window's verdict is on reachability and
    * not only cost, so a wrong stage empties the window rather than mispricing it.
@@ -168,7 +168,7 @@ class LunarFlybyFlightTest {
    *     what resolves the stage the window takes its verdict on
    */
   private void fly(String label, LaunchConfiguration configuration, double windowInjectionMass) {
-    // ── the launch date comes from L2's window (§1.4) ────────────────────────
+    // ── the launch date comes from L2's window ────────────────────────
     // Nothing on the spec carries a date. Since L5 the wizard's planning step supplies one, on
     // the very problem LunarLaunchWindowPlanner builds; here the test plays that role.
     LunarLaunchWindowProblem window =
@@ -193,7 +193,7 @@ class LunarFlybyFlightTest {
                     5));
     assertFalse(windows.isEmpty(), "twenty-six hours must hold at least one lunar window");
 
-    // ── the epoch: the cheapest the chain can actually plan (§9.8) ───────────
+    // ── the epoch: the cheapest the chain can actually plan ───────────
     // The window confirms on the injection state a pad *would* reach; the chain arrives with the
     // one its ascent really delivered, and MEASURE 2 below is the bias between the two. Since L6
     // that bias can decide feasibility and not only cost: a finite departure reaches fewer
@@ -294,7 +294,7 @@ class LunarFlybyFlightTest {
         "the flown perilune must land in the announced band");
 
     // The same reading through the mission's own objective, which is what the feasibility predicate
-    // now runs (§5) and what the truncation guard of §3.4 lives in.
+    // now runs and what the truncation guard of §3.4 lives in.
     assertTrue(
         ObjectiveEvaluator.met(ephemeris, mission.getObjective(), Double.NaN),
         "the flown flyby must satisfy the mission's own objective");
@@ -369,7 +369,7 @@ class LunarFlybyFlightTest {
 
   /**
    * A budget-sized chain and the mass it reaches the injection point with — the second being what
-   * the window needs to resolve the right stage (§9.6).
+   * the window needs to resolve the right stage.
    *
    * @param configuration the launcher, its sized loads and the payload
    * @param massAtInjection the mass at the injection point (kg)
@@ -378,7 +378,7 @@ class LunarFlybyFlightTest {
 
   /**
    * The chain as the wizard builds it: an inert 2 t lunar probe, and loads sized top-down from it
-   * by {@code PropellantBudget.loadsForLunar} (MIS-4 / L5 §5.3).
+   * by {@code PropellantBudget.loadsForLunar}.
    */
   private static Sized sizedConfiguration() {
     Spacecraft probe = Payloads.LUNAR_PROBE.toSpacecraft(2_000.0, 0.0);

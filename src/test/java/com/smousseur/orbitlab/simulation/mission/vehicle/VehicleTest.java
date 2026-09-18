@@ -209,7 +209,7 @@ class VehicleTest {
   }
 
   /**
-   * Separation boundary of the split GEO profile (spec 06 I5 risk): with a nearly-empty upper
+   * Separation boundary of the split GEO profile: with a nearly-empty upper
    * stage, jettisoning to the exact reference mass of the stack above must activate the payload's
    * kick motor with its full AKM load available.
    */
@@ -233,7 +233,7 @@ class VehicleTest {
     assertEquals(400, kick.propulsion().thrust(), 1e-9);
   }
 
-  // --- aerodynamics (PHY-1 / L1, spec docs/atmosphere/04-conception-L1.md section 5.3) ---
+  // --- aerodynamics ---
 
   /**
    * The aerodynamics follows the active stage, and <b>changes at the jettison</b>. The

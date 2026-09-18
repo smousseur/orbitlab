@@ -12,7 +12,7 @@ import org.orekit.utils.TimeStampedPVCoordinates;
  * Crossing a sphere-of-influence boundary: which gravitational context the trajectory continues in,
  * and the same physical state expressed in it.
  *
- * <p>Introduced by PHY-4 / L4 (spec {@code docs/multi-corps/06-conception-L4.md} §4.2). Two
+ * <p>Introduced by PHY-4 / L4. Two
  * operations, and nothing else — the orchestration that calls them lives in {@code StageLegRunner}.
  */
 public final class ArcTransition {
@@ -35,11 +35,11 @@ public final class ArcTransition {
    * moon().withPerturbers(EARTH, SUN)}: the Sun crosses without being named, and the body just left
    * keeps perturbing the one now flown around. Measured, that is what makes the two sides of a
    * boundary the same physics — 0.246 m apart after six hours, against 7 249 m of solar tide when
-   * the Sun is dropped on one side (spec L4 §2.2).
+   * the Sun is dropped on one side.
    *
    * <p>Removing the new central body from the perturbers is not cosmetic: {@link
-   * GravitationalContext} <b>throws</b> when the central body is among its own perturbers (spec L2
-   * §2.2), which is precisely the mistake this method exists to make impossible.
+   * GravitationalContext} <b>throws</b> when the central body is among its own perturbers, which is
+   * precisely the mistake this method exists to make impossible.
    *
    * @param from the context flown up to the boundary
    * @param boundaryBody the body whose sphere of influence was crossed
@@ -70,7 +70,7 @@ public final class ArcTransition {
    *
    * <p><b>Exact, and that is a property of the frames rather than of this code.</b> Both inertial
    * frames are ICRF-oriented, so the transform between them is a pure translation: the round trip
-   * measures 0 m in position and 8.5e-14 m/s in velocity (spec L4 §1.2-C). The découpage asked for
+   * measures 0 m in position and 8.5e-14 m/s in velocity. The découpage asked for
    * the millimetre and the µm/s; this is several orders tighter, and the reason is written rather
    * than the tolerance being negotiated.
    *
@@ -80,7 +80,7 @@ public final class ArcTransition {
    * <p>The attitude is re-expressed in the new frame rather than dropped. {@code SpacecraftState}
    * refuses an attitude whose reference frame differs from its orbit's, so the alternative would be
    * an unspecified default attitude — silently discarding whatever the outgoing leg was holding.
-   * Nothing in L4 reads it (a switch only happens on a non-propulsive stage, spec §3.3), which is
+   * Nothing in L4 reads it, which is
    * exactly why it must be carried rather than quietly reset.
    *
    * @param state the state to convert, in the outgoing context's frame

@@ -24,8 +24,7 @@ import org.orekit.time.AbsoluteDate;
 import org.orekit.time.TimeScalesFactory;
 
 /**
- * <b>PHY-4 / L2 — the third body does the physics it is supposed to do</b> (spec {@code
- * docs/multi-corps/04-conception-L2.md} §5.2).
+ * <b>PHY-4 / L2 — the third body does the physics it is supposed to do</b>.
  *
  * <p>An equatorial geostationary orbit left alone by the Moon and the Sun keeps its plane.
  * Perturbed by both, its inclination grows at a rate quoted across the domain at about <b>0.85
@@ -59,7 +58,7 @@ import org.orekit.time.TimeScalesFactory;
  *
  * <p><b>Why the span is long, measured rather than argued.</b> Over a short span the fortnightly
  * lunar term is the same order as the accumulated secular drift, so the measured rate reports the
- * start date rather than the physics (spec §1.1-B). Sweeping the span at a fixed epoch shows
+ * start date rather than the physics. Sweeping the span at a fixed epoch shows
  * exactly where that stops:
  *
  * <pre>

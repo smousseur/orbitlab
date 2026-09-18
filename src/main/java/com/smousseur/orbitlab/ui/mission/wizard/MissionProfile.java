@@ -10,8 +10,7 @@ import org.hipparchus.util.FastMath;
 
 /**
  * A card on the wizard's first step: one target orbit family, with the parameter bounds and the
- * inclination behaviour that go with it (spec {@code
- * docs/earth-orbit/02-wizard-orbites-terrestres.md} §2).
+ * inclination behaviour that go with it.
  *
  * <p><b>A profile is not a {@link MissionType}.</b> Four of the six profiles map onto the very same
  * type, and onto the very same {@code MissionSpec.EarthOrbit}: a polar orbit is that record with
@@ -30,7 +29,7 @@ public enum MissionProfile {
   /**
    * The historical target: any low orbit, plane left to whatever a due-east launch reaches for
    * free. Its inclination default is therefore not a constant but the site's latitude, and stays on
-   * {@link InclinationMode#AUTO} until the user overrides it (§2.0).
+   * {@link InclinationMode#AUTO} until the user overrides it.
    */
   LEO(
       MissionType.LEO,
@@ -62,7 +61,7 @@ public enum MissionProfile {
   /**
    * A circular orbit whose nodal precession keeps pace with the Sun. The one profile whose
    * inclination is <b>not</b> a choice: it follows from the altitude, and the field shows it rather
-   * than accepting it (spec {@code 01} §5).
+   * than accepting it.
    */
   SSO(
       MissionType.LEO,
@@ -80,7 +79,7 @@ public enum MissionProfile {
   /**
    * A medium Earth orbit — the Galileo/GPS band. Past {@code MissionComposer}'s direct-chain
    * ceiling, so it is flown through a parking orbit and refused outright on a vehicle that can
-   * neither hold the coast nor delegate the apogee burn (spec {@code 01} §6.1).
+   * neither hold the coast nor delegate the apogee burn.
    */
   MEO(
       MissionType.LEO,
@@ -112,7 +111,7 @@ public enum MissionProfile {
   /**
    * A flyby of the Moon: ascent, parking orbit, translunar injection, and a pass at the perilune
    * asked for. The one card aimed at another body — and the one whose launch date is not free,
-   * hence {@link Availability#WINDOWED} (MIS-4 / L5 §2).
+   * hence {@link Availability#WINDOWED}.
    *
    * <p>Named {@code LUNAR} and not {@code LUNAR_FLYBY} because {@code
    * StepParameters.defaultMissionName} composes {@code %s-%03d} on the constant: the proposed name
@@ -128,7 +127,7 @@ public enum MissionProfile {
       // The perilune band, in kilometres. The floor of 50 km holds the ±10 km merit band of
       // LunarFlybyMission.PERILUNE_TOLERANCE clear of the surface; the ceiling of 500 km is still a
       // flyby. Neither bound is measured — what the geometry refuses depends on the epoch as much
-      // as on the value asked for (MIS-4 / L5 §2.2).
+      // as on the value asked for.
       new AltitudeRange(50, 500, 100),
       false,
       InclinationMode.NONE,
@@ -170,7 +169,7 @@ public enum MissionProfile {
     /**
      * The catalog constrains it. Only the MEO: past the ascent's reach, it needs an upper stage
      * that holds a 2 h 58 coast or a payload whose kick motor takes the apogee burn over, and
-     * {@code MissionComposer} refuses the rest by name (spec {@code 01} §6).
+     * {@code MissionComposer} refuses the rest by name.
      */
     CONSTRAINED,
 
@@ -181,7 +180,7 @@ public enum MissionProfile {
      * <p><b>Not {@link #CONSTRAINED}</b>, whose motive is the catalog and whose wording is the
      * MEO's. Nothing in the catalog constrains a lunar mission — both launchers fly the injection
      * with margin — and no site is refused either, the cost of launching outside the window being
-     * priced rather than declared (MIS-4 / L2 §1.3). What binds is the geometry of the encounter.
+     * priced rather than declared. What binds is the geometry of the encounter.
      */
     WINDOWED
   }
@@ -191,7 +190,7 @@ public enum MissionProfile {
     /**
      * Editable, and derived from the launch site until it is edited. While it holds, the wizard
      * publishes <b>no</b> inclination key at all, which is what keeps a due-east mission
-     * bit-identical to its pre-P2 self (§2.0).
+     * bit-identical to its pre-P2 self.
      */
     AUTO,
 
@@ -277,7 +276,7 @@ public enum MissionProfile {
    *
    * <p>A constructor argument and not a derivation from {@link #missionType()}: a card that omitted
    * it would not compile, which is how {@code L7} is prevented from adding a seventh card without
-   * saying which tab it belongs to (MIS-5 / L6 §3).
+   * saying which tab it belongs to.
    *
    * @return the domain whose tab shows this card
    */
@@ -369,7 +368,7 @@ public enum MissionProfile {
   public static List<MissionProfile> earthOrbitProfiles() {
     // On what the name says, and not on an exclusion by name: a sixth constant slipping through a
     // "!= GEO" filter would be handed an EarthOrbitDynamicParameters — a perigee/apogee panel for a
-    // lunar flyby (MIS-4 / L5 §1.4).
+    // lunar flyby.
     return Arrays.stream(values())
         .filter(profile -> profile.missionType() == MissionType.LEO)
         .toList();
@@ -377,7 +376,6 @@ public enum MissionProfile {
 
   /**
    * Recovers the profile a mission was created on, so reopening the wizard lights the right card
-   * (§2.1).
    *
    * <p><b>Derived rather than stored.</b> A spec component carrying the profile could contradict
    * the inclination beside it; this cannot.
@@ -392,8 +390,7 @@ public enum MissionProfile {
   public static MissionProfile of(MissionSpec spec) {
     // A switch over the sealed hierarchy, and not an instanceof with a fallback: that fallback
     // answered GEO for a lunar spec, and the verdict only held because WizardPrefill threw before
-    // reaching it. It is the compiler that must point here at the fourth spec type (MIS-4 / L5
-    // §1.3).
+    // reaching it. It is the compiler that must point here at the fourth spec type.
     return switch (spec) {
       case MissionSpec.Geo ignored -> GEO;
       case MissionSpec.Lunar ignored -> LUNAR;
@@ -408,7 +405,7 @@ public enum MissionProfile {
    *
    * <p>Replaces a {@code == GEO ? GEO : LEO} ternary that answered {@link #LEO} for a lunar type —
    * harmless while the cards were one grid, and no longer so now that the answer also decides which
-   * tab opens (MIS-5 / L6 §6). Four profiles share {@link MissionType#LEO}, and the one this
+   * tab opens. Four profiles share {@link MissionType#LEO}, and the one this
    * returns for it is the historical default rather than a preset.
    *
    * @param type the mission type the context currently selects

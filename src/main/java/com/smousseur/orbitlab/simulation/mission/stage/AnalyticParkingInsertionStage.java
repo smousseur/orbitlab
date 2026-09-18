@@ -139,7 +139,7 @@ public class AnalyticParkingInsertionStage extends MissionStage {
     FlightContext planContext = flightContext(currentState, mission);
     BurnPlan plan = computeBurnPlan(currentState, mission.getVehicle(), planContext);
 
-    // 8×8 gravity, matching the ephemeris generator (bilan 11 §3.9): this standalone flight
+    // 8×8 gravity, matching the ephemeris generator: this standalone flight
     // advances
     // the state the next stage plans from, so a Newtonian point-mass field here would diverge from
     // the flown 8×8 trajectory and break the apogee-node geometry the GEO plane change relies on.
@@ -423,7 +423,7 @@ public class AnalyticParkingInsertionStage extends MissionStage {
     PropulsionSystem propulsion1 = stage1.propulsion();
     // The loud guard, unlike the sibling analytic stages: both burns here go through
     // requireDeliverable, so a propellant-capped one never reaches this propagator and the floor is
-    // unreachable by construction (docs/bugs.md BUG-15).
+    // unreachable by construction.
     DepletionGuard.arm(propagator, stage1.depletionFloor(), getName());
     // The settling epsilon is what separates a raising burn from the phase boundary; a descending
     // one is already separated by its lead coast to the apoapsis, and adding it there would shift

@@ -2,8 +2,7 @@ package com.smousseur.orbitlab.simulation.mission.vehicle.model;
 
 /**
  * The second axis of payload eligibility, beside {@code MissionType.requiresPayloadPropulsion()}:
- * <b>where</b> a payload is meant to fly, as opposed to <b>what</b> it must be able to do (MIS-4 /
- * L5 §5.2).
+ * <b>where</b> a payload is meant to fly, as opposed to <b>what</b> it must be able to do.
  *
  * <p>It exists because {@code hasPropulsion()} cannot carry it. A lunar probe is inert, so
  * propulsion says nothing about it, and a catalog filtered on propulsion alone offers a GEO

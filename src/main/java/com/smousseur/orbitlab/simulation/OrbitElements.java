@@ -24,8 +24,8 @@ import org.orekit.propagation.conversion.osc2mean.FixedPointConverter;
  * <p><b>Altitude convention.</b> Apsides are spherical-equatorial, {@code a(1±e) −
  * referenceRadius}, measured from the equatorial radius of <b>the body the arc is flown around</b>
  * — the caller says which, because an {@code Orbit} carries a µ and a frame but never a body radius
- * (MIS-5 / L2, spec {@code docs/lunar-orbit/04-conception-L2.md} §3.1). It is not geodetic: at
- * 5.23° inclination the difference is ~180 m (spec orbit-reporting/01 section 1.1). Keeping it
+ *. It is not geodetic: at
+ * 5.23° inclination the difference is ~180 m. Keeping it
  * identical is what makes the osculating and mean lines comparable side by side.
  *
  * <p><b>No Earth default, deliberately.</b> An Earth radius applied to a selenocentric state is not
@@ -96,8 +96,7 @@ public record OrbitElements(
    * <p>Eckstein-Hechler, not Brouwer-Lyddane: measured against a theory-free referee (equinoctial
    * averaging of the osculating elements over one period under the 8x8 field), EH lands within ~200
    * m across the whole useful eccentricity range, where BL either diverges or, worse, returns a
-   * mean perigee that varies by 8 216 m depending on the sampling anomaly (spec orbit-reporting/01
-   * section 3.2.1).
+   * mean perigee that varies by 8 216 m depending on the sampling anomaly.
    *
    * <p><b>Residual.</b> The conversion removes ~97% of the short-period oscillation, not 100%:
    * measured 2026-08-05, the mean perigee of one and the same orbit still varies by ~625 m at 400
@@ -106,11 +105,10 @@ public record OrbitElements(
    * kilometre, not to the metre.
    *
    * <p>Returns {@code Optional.empty()} rather than throwing: a fixed point may fail to converge,
-   * and <b>no mission must ever fail because a report could not be computed</b> (spec
-   * orbit-reporting/01 section 3.4).
+   * and <b>no mission must ever fail because a report could not be computed</b>.
    *
-   * <p><b>This is an Earth theory, and it refuses a non-terrestrial arc by itself</b> (MIS-5 / L2,
-   * spec {@code docs/lunar-orbit/04-conception-L2.md} §6). The rebase below deliberately uses the
+   * <p><b>This is an Earth theory, and it refuses a non-terrestrial arc by itself</b>. The rebase
+   * below deliberately uses the
    * potential provider's µ, which is terrestrial, so a selenocentric state comes out as a
    * near-radial ellipse of eccentricity {@code 1 − µM/µE = 0.9877} — measured constant with
    * altitude, at 100, 1 000, 10 000 and 50 000 km — which is outside Eckstein-Hechler's domain
@@ -153,7 +151,7 @@ public record OrbitElements(
     try {
       UnnormalizedSphericalHarmonicsProvider provider = zonalProvider();
       // Rebuilt on the provider's mu: mixing it with WGS84_EARTH_MU shifts the elements by about a
-      // metre, which would read as J2 (spec orbit-reporting/01 section 3.3).
+      // metre, which would read as J2.
       KeplerianOrbit rebased =
           new KeplerianOrbit(
               orbit.getPVCoordinates(), orbit.getFrame(), orbit.getDate(), provider.getMu());

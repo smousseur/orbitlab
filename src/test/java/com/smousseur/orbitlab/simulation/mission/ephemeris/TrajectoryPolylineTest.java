@@ -15,8 +15,8 @@ import org.junit.jupiter.api.Test;
 import org.orekit.time.AbsoluteDate;
 
 /**
- * The display product's two guarantees (spec {@code docs/mission-horizon/01-horizon-explicite.md}
- * §6): it never exceeds the vertex budget, and it always spans the whole flown trajectory — first
+ * The display product's two guarantees: it never exceeds the vertex budget, and it always spans the
+ * whole flown trajectory — first
  * and last sample included.
  *
  * <p>The second one is the regression under test. The renderer used to walk the ephemeris backwards
@@ -120,8 +120,7 @@ class TrajectoryPolylineTest {
   }
 
   /**
-   * The exact vertex selection, pinned — the net for the decimation budget formula (spec {@code
-   * docs/multi-corps/05-conception-L3.md} §4.1).
+   * The exact vertex selection, pinned — the net for the decimation budget formula.
    *
    * <p>The other over-budget tests here assert bounds and endpoints, which a stride that shifted by
    * one would still satisfy. This one pins the stride itself, and the fixture is sized to make a
@@ -266,7 +265,7 @@ class TrajectoryPolylineTest {
   }
 
   // ════════════════════════════════════════════════════════════════════════
-  // Arcs — the second partition (PHY-4 / L3, spec docs/multi-corps/05-conception-L3.md §4)
+  // Arcs — the second partition
   // ════════════════════════════════════════════════════════════════════════
 
   /**
@@ -287,8 +286,8 @@ class TrajectoryPolylineTest {
   }
 
   /**
-   * PHY-4 / L5's non-regression, and it is an identity rather than an equality (spec {@code
-   * docs/multi-corps/07-conception-L5.md} §3.4). A trajectory of a single arc holds exactly one
+   * PHY-4 / L5's non-regression, and it is an identity rather than an equality. A trajectory of a
+   * single arc holds exactly one
    * vertex table and it <em>is</em> the sampled array: no copy, no arithmetic, and no Orekit call —
    * which is also why this class can keep building polylines without initialising {@code
    * OrekitService}. Nothing L5 does can move a vertex of a trajectory that has one arc, and this is

@@ -27,8 +27,8 @@ import org.orekit.propagation.numerical.NumericalPropagator;
 import org.orekit.time.AbsoluteDate;
 
 /**
- * Node-targeted plane trim (bilan 08 §3.5). The apogee circularization ({@link
- * AnalyticApogeeCircularizationStage}) rotates the orbital plane with an hours-long finite burn
+ * Node-targeted plane trim. The apogee circularization ({@link AnalyticApogeeCircularizationStage})
+ * rotates the orbital plane with an hours-long finite burn
  * whose out-of-plane component smears over a wide arc, leaving a ~0.25° residual that is
  * geometrically uncorrectable away from a node. This stage cleans it up with a short out-of-plane
  * burn placed at a node, where a plane change is efficient and drift-free — bringing the residual
@@ -50,8 +50,8 @@ import org.orekit.time.AbsoluteDate;
  * <p>In the regime this stage is written for — a residual of a few hundredths of a degree on the
  * near-circular orbit left by apogee circularization or by a transfer — the radial velocity is
  * negligible and so is the effect. Away from it the cost grows with the flight path angle, because
- * the burn also has to flatten it. The two ends of that, both measured ({@code docs/bugs.md}
- * BUG-6): on the eccentric ascent state a test once handed it (e = 0.21, 3.24° of plane error) it
+ * the burn also has to flatten it. The two ends of that, both measured: on the eccentric ascent
+ * state a test once handed it (e = 0.21, 3.24° of plane error) it
  * spent 1028 m/s where a pure rotation costs 350-460 m/s, pulling the eccentricity from 0.206 to
  * 0.137; on the orbit a polar mission actually fires it on (e = 0.0025, 0.064° of plane error) it
  * spends 10 m/s and 141 kg. Nothing composes the first case — {@code EarthOrbitMission} inserts
@@ -157,7 +157,7 @@ public class AnalyticPlaneTrimAtNodeStage extends MissionStage {
     // Keep the node speed, rotate the velocity into the target plane. The target-plane prograde
     // direction at the node is nIdeal × rNode (sign-matched to the current velocity). The magnitude
     // is unchanged, so the energy is too — but this direction is purely transverse, so the shape is
-    // not preserved away from an apsis (class javadoc, docs/bugs.md BUG-6).
+    // not preserved away from an apsis.
     double vMag = vNode.getNorm();
     Vector3D vTargetDir = Vector3D.crossProduct(nIdeal, rNode).normalize();
     if (vTargetDir.dotProduct(vNode) < 0) {
@@ -205,7 +205,7 @@ public class AnalyticPlaneTrimAtNodeStage extends MissionStage {
         OrekitService.get().createOptimizationPropagator(context, OrekitService.COAST_MAX_STEP);
     coastPropagator.setInitialState(state);
     // On a re-entering orbit the coast stops early, no node is recorded and this returns null —
-    // the caller already treats that as "no plane trim to fly" (spec 03-garde-rentree §4.1).
+    // the caller already treats that as "no plane trim to fly".
     ReentryGuard.armQuiet(coastPropagator, context.gravity());
 
     RecordAndContinue recorder = new RecordAndContinue();

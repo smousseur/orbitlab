@@ -15,22 +15,20 @@ import org.orekit.propagation.numerical.NumericalPropagator;
 import org.orekit.time.AbsoluteDate;
 
 /**
- * Explicit separation of the spent active stage between two mission stages (spec 06 I5, decision
- * S4). On entry the state mass drops to the exact reference mass of the stack above, so {@code
- * resolveActiveStage} activates the next vehicle (e.g. the payload's kick motor once the upper
- * stage separates) without any ε-boundary ambiguity. A short settling coast follows before the next
+ * Explicit separation of the spent active stage between two mission stages. On entry the state mass
+ * drops to the exact reference mass of the stack above, so {@code resolveActiveStage} activates the
+ * next vehicle (e.g. the payload's kick motor once the upper stage separates) without any
+ * ε-boundary ambiguity. A short settling coast follows before the next
  * stage configures its burn.
  *
  * <p><b>Which stage gets dropped.</b> The stage jettisoned is whichever one the mass accounting
  * says is active — an assumption that only holds while the flight profile consumes the stages below
  * it exactly as calibrated. Pass an {@code expectedRole} to make that assumption explicit: the
  * separation then refuses to drop the wrong stage and fails fast instead of silently degrading the
- * rest of the profile (bilan 10 §6 follow-up — on the GEO profile a lighter upper stage makes the
- * gravity turn stop before S1 is dry, leaving S1 active, so an unchecked "S2 separation" jettisoned
- * S1 and let S2 masquerade as the payload's kick motor).
+ * rest of the profile.
  *
- * <p><b>A role rather than a stack index</b> (spec {@code docs/etagement/03-conception-L1.md}
- * §3.7). Splitting the boosters out of the core moves every index above them by one, so an index
+ * <p><b>A role rather than a stack index</b>. Splitting the boosters out of the core moves every
+ * index above them by one, so an index
  * written by hand would have had to move with it — the very class of bug the guard exists to close.
  * A stack that declares no role at all refuses the guard rather than letting it pass silently:
  * asking for a role on a stack that has none is a wiring error, not a permission.
@@ -143,7 +141,7 @@ public class StageSeparationStage extends MissionStage {
     // mission.getCurrentState():
     // the two are the same state (the runner sets both), but only the propagator's is private to
     // this run. Once the ascent is optimized as a chain, this method runs on the parallel CMA-ES
-    // exploration threads, which share the mission (spec 01 §5.4).
+    // exploration threads, which share the mission.
     AbsoluteDate endDate =
         propagator
             .getInitialState()

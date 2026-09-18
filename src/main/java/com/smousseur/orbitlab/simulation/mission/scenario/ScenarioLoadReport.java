@@ -9,7 +9,7 @@ import org.orekit.time.AbsoluteDate;
  * What reading a scenario produced: the missions that came back, the clock they were saved with,
  * and the ones that did not come back, each with its reason.
  *
- * <p>Rejection is <b>per mission</b> (spec {@code docs/scenario/01-persistance-missions.md} §7): a
+ * <p>Rejection is <b>per mission</b>: a
  * scenario of six missions with one broken brings back five, not zero. The only whole-file refusal
  * is a format version this build does not know, and that one is an exception rather than a report —
  * there is nothing partial to salvage from a file whose shape is unknown.

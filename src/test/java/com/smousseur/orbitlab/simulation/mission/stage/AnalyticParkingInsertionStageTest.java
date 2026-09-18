@@ -23,7 +23,7 @@ import org.orekit.utils.Constants;
 import org.orekit.utils.PVCoordinates;
 
 /**
- * Guard on the raising-Hohmann geometry the stage assumes (bilan 10 §6 follow-up). An entry state
+ * Guard on the raising-Hohmann geometry the stage assumes. An entry state
  * whose apoapsis already sits above the target needs a retrograde burn, which {@code
  * Physics.computeBurnDuration} turns into a <em>negative</em> duration — the propagator then gets a
  * maneuver ending before it starts and the plan predicts a mass gain. Observed on the I7 GEO loop
@@ -144,7 +144,7 @@ class AnalyticParkingInsertionStageTest {
   }
 
   /**
-   * Capability sibling of the test above (bilan 11 §3.11). The geometry is nominal — entry below
+   * Capability sibling of the test above. The geometry is nominal — entry below
    * the target, both burns prograde — but the active stage sits exactly on its dry mass, so {@code
    * Physics.computeBurnDurationCapped} caps both burns to 0 s while the plan still asks for real
    * ΔV. Before the guard, the stage flew that plan: a 2 666 s ballistic coast from a sub-orbital

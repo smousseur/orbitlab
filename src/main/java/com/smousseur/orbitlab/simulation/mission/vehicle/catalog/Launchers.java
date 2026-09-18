@@ -17,8 +17,8 @@ public final class Launchers {
    * parking coast but not a GTO coast to apogee (~5 h 15), which delegates distant circularization
    * to the payload's kick motor.
    *
-   * <p><b>Why the three cores are two entries and not one</b> (spec {@code
-   * docs/etagement/04-conception-L2.md}). They are physically identical and lit together, so the
+   * <p><b>Why the three cores are two entries and not one</b>. They are physically identical and
+   * lit together, so the
    * old single {@code S1} reproduced the flight exactly — but it could not express the side cores
    * being dropped while the centre one keeps firing, which is what the vehicle actually does. Split
    * at full thrust the two entries run dry together and are jettisoned together, so the trajectory
@@ -46,8 +46,7 @@ public final class Launchers {
                   // Sea level 282 s / vacuum 311 s. Was 296 s, a mean-trajectory proxy standing
                   // in for ascent drag while no atmosphere was modeled; PHY-2/L3 raised it to 298 s
                   // so the ISP carries only the sea-level-to-vacuum lapse, the ~51 m/s of measured
-                  // ascent drag becoming explicit once drag is on by default (spec
-                  // docs/atmosphere/10-conception-L3-PHY-2.md §3.3).
+                  // ascent drag becoming explicit once drag is on by default.
                   new PropulsionSystem(298, 7_600_000),
                   new StageCapabilities(
                       IgnitionMode.GROUND,
@@ -97,30 +96,29 @@ public final class Launchers {
                   // free-molecular flow. It is knowingly out of domain at ignition: PHY-2 / L3
                   // measured the S2 becoming the active surface at ~35 km, in continuous flow,
                   // where 2.2 over-estimates the drag by ~5.5 and the capacity holds anyway, so
-                  // DT-15 closed without escalating to a per-regime Cd (spec
-                  // docs/atmosphere/10-conception-L3-PHY-2.md §3.4).
+                  // DT-15 closed without escalating to a per-regime Cd.
                   new AerodynamicProperties(10.5, 2.2))),
           // Core throttle 0.81 during the shared phase. The three cores being identical, thrust
           // and propellant are in the same ratio and both blocks would flame out at the same
           // instant; throttling the centre one is what gives it the 29.8 s solo phase the real
           // vehicle flies. Anchored on the maiden flight's timeline — booster separation T+2:33,
           // centre core MECO T+3:04, so 31 s alone — which does not pin the fraction closer than
-          // [0.78, 0.83] (spec docs/etagement/05-conception-L3.md §2.1).
+          // [0.78, 0.83].
           new AscentProfile(7.0, 3.0, 2.0, 0.81),
           70.0);
 
   /**
    * Ariane 64: four P120C strap-on boosters, a Vulcain 2.1 core, a Vinci upper stage.
    *
-   * <p><b>It replaces the Ariane 62 rather than joining it</b> (spec {@code
-   * docs/etagement/06-conception-L4.md} §3.5). The catalog holds one Ariane, and the 3D scene has
+   * <p><b>It replaces the Ariane 62 rather than joining it</b>. The catalog holds one Ariane, and
+   * the 3D scene has
    * been drawing a four-booster Ariane 64 since AST-1 — the entry is what was lagging.
    *
    * <p><b>Every mass comes from the Ariane 62 entry it replaces.</b> That entry's 36 t of dry mass
    * decomposed exactly as {@code 2 x 11 + 14} and its 434 t of propellant as {@code 2 x 141 + 152}
    * ("65 % of this block's propellant is solid"), so four boosters give 58 t and 716 t. Its 41.1 m2
    * was likewise {@code pi*2.7^2 + 2*pi*1.7^2}, hence 22.9 m2 for the core and 9.08 m2 per booster
-   * (spec §2.2). No external source is involved.
+   *. No external source is involved.
    *
    * <p><b>Thrusts follow the burn durations, not the other way round.</b> The two figures the
    * decoupage gives as controls -- boosters ~130 s, Vulcain ~8 min -- fix the mass flows, and the
@@ -139,7 +137,7 @@ public final class Launchers {
    * puts at 2.10. At 278.5 s / 360 s the model gives 2.09. And 278.5 s <em>is</em> the P120C's
    * vacuum ISP: the boosters carry no debt at all, while the Vulcain gives up 71 s of its [320,
    * 431] bracket and carries all of it. That is what PHY-2 has to pick up, and it is now localised
-   * instead of diluted in an aggregate (spec §2.4, and decoupage §3.4 which predicted it).
+   * instead of diluted in an aggregate.
    *
    * <p><b>What splitting buys, stated because the aggregate's javadoc stated the opposite.</b> The
    * Ariane 62 entry flamed its whole first stage out around 128 s -- faithful to the boosters,
@@ -164,7 +162,7 @@ public final class Launchers {
                       IgnitionMode.GROUND,
                       0,
                       // A solid at last: variableLoad() finally returns false on a stage that is
-                      // one, which is all the lambda sweep needed (spec 06 §3.2).
+                      // one, which is all the lambda sweep needed.
                       ShutdownMode.BURN_TO_DEPLETION,
                       PropellantType.SOLID,
                       0.0,
@@ -179,7 +177,7 @@ public final class Launchers {
                   14_000,
                   152_000,
                   // Mean-trajectory ISP, 36 % into the [320, 431] bracket: this is the stage that
-                  // carries the whole drag debt of the launcher (spec 06 §3.1).
+                  // carries the whole drag debt of the launcher.
                   new PropulsionSystem(360, 1_118_000),
                   new StageCapabilities(
                       IgnitionMode.GROUND,

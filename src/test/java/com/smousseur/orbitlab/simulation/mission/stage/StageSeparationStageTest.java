@@ -82,7 +82,7 @@ class StageSeparationStageTest {
         IllegalArgumentException.class, () -> new StageSeparationStage("S2 separation", -1.0));
   }
 
-  // -- expected-role guard (bilan 10 §6 follow-up, roles since PHY-8 / L1) ---
+  // -- expected-role guard ---
 
   @Test
   void enter_expectedRoleActive_jettisonsIt() {

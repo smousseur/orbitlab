@@ -5,13 +5,13 @@ import java.util.Map;
 
 /**
  * What the optimization cost to find, and the only reason a scenario replays in one propagation
- * instead of N (spec {@code docs/scenario/01-persistance-missions.md} §2 and §5).
+ * instead of N.
  *
  * <p>The vectors are the sole component of an {@code OptimizationResult} that any stage reads back
  * — the two Orekit states it also carries are read by nobody on the replay path — which is what
  * makes the whole thing cheap to persist.
  *
- * <p><b>The loads are kilograms, never λ</b> (§2.3). A scale factor has two dated dependencies an
+ * <p><b>The loads are kilograms, never λ</b>. A scale factor has two dated dependencies an
  * absolute mass does not: its base, which is whatever {@code PropellantBudget} produced on the day
  * of the save, and its mask, which decides per launcher which stages carry a λ at all. Replaying
  * {@code budgeted × λ} after either moved would fly a third load set — neither the one that flew,

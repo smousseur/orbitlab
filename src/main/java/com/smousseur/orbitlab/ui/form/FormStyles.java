@@ -147,7 +147,7 @@ public final class FormStyles {
     // Button(FormStyles.STYLE) and takes btn-ghost, Sora 13 and TEXT_PRIMARY from the selector
     // above. Only the dropdown and its entries are a look the form style did not already carry —
     // "s'il lui faut une autre allure, c'est un sélecteur de plus", never an override at
-    // construction (docs/menu/01-menu-applicatif.md §6.1).
+    // construction.
     // Title chip: the shape of any form button — same insets, same font, same text colour, all
     // inherited from the "button" selector above — except that the HUD's one permanently visible
     // entry point is never a ghost. It wears the hover skin at rest, and answers the mouse with its

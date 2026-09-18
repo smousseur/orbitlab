@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Test;
 
 /**
  * The one multiplication the scenario format depends on: budgeted loads × resolved λ = the loads
- * that actually flew, in kilograms (spec {@code docs/scenario/01-persistance-missions.md} §2.3).
+ * that actually flew, in kilograms.
  */
 class PropellantSizingTest {
 

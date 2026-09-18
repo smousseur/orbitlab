@@ -10,8 +10,8 @@ import org.junit.jupiter.api.Test;
 import org.orekit.utils.Constants;
 
 /**
- * PHY-2 / L4: the analytic half of the measured sizing (spec {@code
- * docs/atmosphere/11-conception-L4-PHY-2.md} §3.2). {@code loadsForMeasuredTopStage} converts a ΔV
+ * PHY-2 / L4: the analytic half of the measured sizing. {@code loadsForMeasuredTopStage} converts a
+ * ΔV
  * that was measured in flight back into kilograms; the flight itself is {@code
  * MeasuredLoadPlannerFlightTest}'s business.
  *

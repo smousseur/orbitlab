@@ -25,7 +25,7 @@ import org.orekit.time.AbsoluteDate;
 import org.orekit.utils.Constants;
 
 /**
- * The lunar orbit insertion (MIS-5 / L4, spec {@code docs/lunar-orbit/06-conception-L4.md}) — where
+ * The lunar orbit insertion — where
  * a selenocentric approach reaches its perilune, how long before that the retrograde burn has to be
  * lit, and the burn that circularises there.
  *
@@ -46,7 +46,7 @@ public final class LunarInsertionPlan {
    * Max check interval of the perilune detector (s). Explicit, because the constructor that takes
    * an orbit cannot serve a hyperbola: it reads {@code getKeplerianPeriod()}, which is {@code
    * Infinity} when {@code a < 0}, and derives {@code maxCheck = Infinity / 3} and {@code threshold
-   * = 1e-13 * Infinity} — both infinite (spec §1.2 pt 2).
+   * = 1e-13 * Infinity} — both infinite.
    */
   private static final double APSIDE_MAX_CHECK_SECONDS = 60.0;
 
@@ -111,7 +111,7 @@ public final class LunarInsertionPlan {
    * Flies the approach and reads the perilune it actually reaches.
    *
    * <p><b>The perilune is detected, not computed, and that is the finding the lot is built on</b>
-   * (spec §1.2 pt 1). Read off the hyperbolic anomaly of the state at the sphere, the time to
+   *. Read off the hyperbolic anomaly of the state at the sphere, the time to
    * periapsis is wrong by −402 to +723 s — one to four half-burns — and the Keplerian perilune
    * altitude is wrong by hundreds of kilometres, to the point of predicting 100 km for a trajectory
    * that impacts. The error is the Earth's tide integrated over the approach: it decays smoothly
@@ -183,7 +183,7 @@ public final class LunarInsertionPlan {
    * form, no propagation</b>, the shape of {@link TranslunarInjectionPlan#ignitionLead}.
    *
    * <p><b>The closed form is right about the lead and wrong about the date</b>, and the same
-   * measurement shows both (spec §2.3). At 175 s of range the vehicle is some 430 km from the
+   * measurement shows both. At 175 s of range the vehicle is some 430 km from the
    * perilune, where the tide is nil: measured, the perilune re-read from the ignition state falls
    * within 1e-4 s of what this lead announced.
    *
@@ -212,8 +212,8 @@ public final class LunarInsertionPlan {
    * aimed circular speed, and ζ, a rotation of the thrust <em>within the plane</em>, about {@code r
    * × v}.
    *
-   * <p><b>It is a Newton and not a secant, because both slopes are closed form</b> (spec §1.2 pt
-   * 4): {@code ∂a/∂β = −2r} and {@code ∂v_r/∂ζ = +Δv}, measured at 99.65 % and 99.41 % of the flown
+   * <p><b>It is a Newton and not a secant, because both slopes are closed form</b>: {@code ∂a/∂β =
+   * −2r} and {@code ∂v_r/∂ζ = +Δv}, measured at 99.65 % and 99.41 % of the flown
    * values. The Jacobian is treated as diagonal: {@code ∂a/∂ζ} is 8.3 km/rad, negligible, and
    * {@code ∂v_r/∂β} is a 14 % contraction the next iteration absorbs. Measured across three
    * orientations and three altitudes: three evaluations, an achieved band of 0.30 km and {@code e ≤

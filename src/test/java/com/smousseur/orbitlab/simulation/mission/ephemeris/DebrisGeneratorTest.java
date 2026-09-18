@@ -77,8 +77,8 @@ class DebrisGeneratorTest {
   }
 
   /**
-   * The exact Ariane 64 booster block that crashed a lunar mission's computation ({@code
-   * docs/bugs.md} BUG-27): captured from a flown ascent, it separates while still <em>climbing</em>
+   * The exact Ariane 64 booster block that crashed a lunar mission's computation: captured from a
+   * flown ascent, it separates while still <em>climbing</em>
    * (~63 km, ~3.4 km/s, +21° flight-path angle). Under {@code COAST_MAX_STEP} the adaptive step
    * grew unchecked in the thin air it climbed through and one oversized step then evaluated {@code
    * NRLMSISE00} out of its altitude range, which threw "Infinite value" inside the force model,

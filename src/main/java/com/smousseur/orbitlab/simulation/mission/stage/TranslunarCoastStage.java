@@ -22,8 +22,7 @@ import org.orekit.propagation.numerical.NumericalPropagator;
  * that only wanted the lunar perturbation, and make {@code withPerturbers(MOON)} say two things at
  * once. So a stage has to carry it, and this is the first production stage in the repository to.
  *
- * <p><b>Two shapes, told apart by whether the coast is bounded</b> (MIS-5 / L1, spec {@code
- * docs/lunar-orbit/03-conception-L1.md} §5.1):
+ * <p><b>Two shapes, told apart by whether the coast is bounded</b>:
  *
  * <ul>
  *   <li>{@link #TranslunarCoastStage(String)} — MIS-4's <em>terminal</em> coast. Open-ended,
@@ -43,14 +42,13 @@ import org.orekit.propagation.numerical.NumericalPropagator;
  * structural.</b> Without the guard MIS-4's coast would fly three days on the optimize pass too,
  * and the damage would land nowhere near the trajectory: {@code MissionOptimizer} reads {@code
  * getCurrentState()} after the stage walk to resolve the restitution horizon, so a coast that
- * advanced the walk by 3.07 d would shorten the recorded flight from 7 d to 3.95 d (spec §1.2 pt
- * 2).
+ * advanced the walk by 3.07 d would shorten the recorded flight from 7 d to 3.95 d.
  *
  * <p><b>The state it returns is on the Earth side of the boundary, unconverted</b> — exactly what
  * {@code StageLegRunner} returns, whose last leg carries the outgoing context. The two passes
  * therefore hand the next stage the same thing. On the ephemeris pass {@code ArcTransition.convert}
  * at the head of {@code fly} converts it; on the optimize pass nothing does, and the selenocentric
- * stage that follows has to convert it itself (spec §8 pt 1).
+ * stage that follows has to convert it itself.
  */
 public class TranslunarCoastStage extends CoastingStage {
 
@@ -119,7 +117,7 @@ public class TranslunarCoastStage extends CoastingStage {
   /**
    * Arms one STOP detector per declared boundary, through the same factory {@code StageLegRunner}
    * arms the ephemeris pass with — the direction rule is written once, in {@link
-   * SoiCrossingDetector#crossingFrom} (spec §5.4).
+   * SoiCrossingDetector#crossingFrom}.
    */
   private void armTheSphere(
       NumericalPropagator propagator, GravitationalContext context, Mission mission) {

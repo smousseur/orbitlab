@@ -11,8 +11,7 @@ import org.orekit.time.AbsoluteDate;
  * Second powered phase of the explicit ascent: the upper stage burning from the end of the
  * interstage coast to MECO. It computes nothing — every date and duration comes from the {@link
  * AscentPlan} the first burn published, which is what makes the three phases reproduce the
- * single-propagator ascent to the millisecond (spec {@code
- * docs/mission-stages/01-separations-implicites.md} §4.3).
+ * single-propagator ascent to the millisecond.
  *
  * <p>Configuring it without a plan fails loudly rather than flying an invented schedule.
  */

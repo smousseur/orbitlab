@@ -52,12 +52,11 @@ public record AchievedOrbit(OrbitElements osculating, OrbitElements mean) {
    *
    * @param state the state to report
    * @param referenceRadius the equatorial radius the apsides are counted from (m), read off the
-   *     gravitational context of the stage that flew this arc (MIS-5 / L2, spec {@code
-   *     docs/lunar-orbit/04-conception-L2.md} §3.2)
+   * gravitational context of the stage that flew this arc
    */
   public static AchievedOrbit of(SpacecraftState state, double referenceRadius) {
-    // The µ comes off the state's own orbit, not from an Earth constant (PHY-4 / L6, spec
-    // docs/multi-corps/08-conception-L6.md §5.1). createOptimizationPropagator does
+    // The µ comes off the state's own orbit, not from an Earth constant.
+    // createOptimizationPropagator does
     // setOrbitType(CARTESIAN) then setMu(context.mu()), so the propagated state already carries the
     // µ of the body it was flown around: an orbit achieved around the Moon is reported against the
     // lunar µ, and every terrestrial mission keeps the very same double, since
@@ -67,12 +66,12 @@ public record AchievedOrbit(OrbitElements osculating, OrbitElements mean) {
     //
     // Note for whoever touches the other µ: this one is the PROPAGATOR's, while
     // OrbitElements.mean() deliberately rebases on the potential provider's. Mixing the two shifts
-    // the elements by about a metre, which reads as J2 (spec orbit-reporting/01 §3.3) — so a single
+    // the elements by about a metre, which reads as J2 — so a single
     // "central body µ" must not be made to serve both, and making this one contextual does not make
     // that one contextual.
     //
     // The radius comes from the caller and the µ from the state, and the asymmetry is deliberate
-    // (MIS-5 / L2 §3.2): the µ is what the integrator integrated, the radius is what a reader
+    //: the µ is what the integrator integrated, the radius is what a reader
     // counts an altitude from. Two questions, not two answers to one — which is also why this
     // signature takes a double and not a GravitationalContext: a context would put context.mu()
     // within reach of the very line above that must not read it.

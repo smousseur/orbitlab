@@ -102,7 +102,7 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
 
   /**
    * An external warm-start prepended to the first attempt's exploration seeds, or {@code null}
-   * (OPT-1 / D2, spec {@code docs/optimization/11-conception-D2.md}). Carries the previous sizing
+   *. Carries the previous sizing
    * pass's solution for this stage so the search starts near the answer when the load is stable. It
    * is a <em>seed</em>, not a replay: the analytical seed and the perturbed runs still explore, so
    * a stale seed (the load changed sharply) is recovered from, never trusted blindly. Clamped to
@@ -586,7 +586,7 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
                   false,
                   // L1a: the refinement runs one CMA-ES pass at a time on the calling thread, so
                   // evaluating its generation on the pool is not nested — the big BALANCED/PRECISE
-                  // win (baseline §3). earlyKill=false.
+                  // win. earlyKill=false.
                   true,
                   rng.nextLong(),
                   null);

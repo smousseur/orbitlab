@@ -45,7 +45,7 @@ public final class NearCameraSyncAppState extends BaseAppState {
    * half a kilometre, so {@code distToOrigin · 10} is nothing and this floor is what the far plane
    * actually is. At 100 000 km it cut a lunar transfer at a quarter of its length: the trace
    * reaches 384 400 km and everything past the floor was clipped away before any depth question
-   * arose (spec {@code docs/multi-corps/07-conception-L5.md} §1.3).
+   * arose.
    *
    * <p><b>And raising it is free.</b> The near viewport's depth resolution is {@code Δz = 2⁻²⁴ · z²
    * · (1/near − 1/far)}, and with {@code near = 0.1} the two terms are {@code 10} against {@code 2
@@ -60,8 +60,7 @@ public final class NearCameraSyncAppState extends BaseAppState {
   /**
    * Near-plane factor in spacecraft view. The depth resolution of the near viewport is {@code Δz =
    * 2⁻²⁴ · z² · (1/near − 1/far)}, so with {@code far ≫ near} the near plane alone decides it — the
-   * far plane contributes nothing measurable, which is why it is left alone here (spec {@code
-   * docs/graphics-effects/spacecraft-view-artefacts.md} §5.3).
+   * far plane contributes nothing measurable, which is why it is left alone here.
    *
    * <p>At the focus distance the old factor of {@code 5e-4} pinned the near plane to its floor,
    * giving ~274 km per depth step at the Earth's distance: a 400 km LEO trajectory sat about one
@@ -99,7 +98,7 @@ public final class NearCameraSyncAppState extends BaseAppState {
    * #SPACECRAFT_NEAR_FACTOR}, because the assumption that licenses that one does not hold here: in
    * planet view the origin is the body's <em>centre</em> and the closest content is its surface, a
    * planetary radius nearer. The two factors merge the day the near plane is driven by the actual
-   * content of the viewport (spec §9.3, "limite connue").
+   * content of the viewport.
    */
   private static final float DEFAULT_NEAR_FACTOR = 0.0005f;
 

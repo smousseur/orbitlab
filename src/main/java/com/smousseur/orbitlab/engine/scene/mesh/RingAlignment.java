@@ -5,8 +5,7 @@ import com.jme3.math.Vector3f;
 
 /**
  * The turn that brings a ring's plane onto its globe's equator — the whole of what a ring can be
- * wrong about (see {@code docs/orientation-planetes/01-decoupage.md} §2.2 and {@code docs/bugs.md},
- * BUG-20).
+ * wrong about.
  *
  * <p><b>An angle alone is not a correction.</b> Thirteen degrees about the wrong axis leaves the
  * ring just as far out as before, so the axis travels with the angle, exactly as it does in the

@@ -21,7 +21,7 @@ import java.util.Objects;
  * @param heightMeters the height of the assembled vehicle on the pad, fairing included (m). A
  *     physical figure of the launcher and not a drawing parameter — which is why it lives here
  *     rather than beside the mesh in {@code LauncherAssets}: it stays true whether or not a mesh
- *     exists. The rendering layer converts it (spec {@code docs/etagement/01-decoupage.md} §3.8),
+ *     exists. The rendering layer converts it,
  *     the propagation ignores it.
  */
 public record LauncherModel(
@@ -67,7 +67,7 @@ public record LauncherModel(
    *
    * <p>Reading the bottom stage alone was the same number until {@code PHY-8 / L2} split the Falcon
    * Heavy's three cores into two entries; it would now report the two strap-ons, 15.2 MN instead of
-   * 22.8 (spec {@code docs/etagement/04-conception-L2.md} §3.4). Summing the ground-lit stages is
+   * 22.8. Summing the ground-lit stages is
    * the grandeur a reader actually compares between launchers, and it stays right whatever the
    * catalog does to its staging afterwards.
    *
@@ -75,7 +75,7 @@ public record LauncherModel(
    * actually applies, so a launcher holding its core at {@code f} during the shared phase reports
    * what it produces rather than what it has installed — the field is named after an instant of
    * flight, and it is the one figure of the wizard card a reader can check against the trajectory
-   * (spec {@code docs/etagement/05-conception-L3.md} §3.4). The factor is 1 on every launcher that
+   *. The factor is 1 on every launcher that
    * does not throttle.
    *
    * @return the lift-off thrust in newtons

@@ -17,7 +17,7 @@ import org.junit.jupiter.api.Test;
 import org.orekit.propagation.SpacecraftState;
 import org.orekit.time.AbsoluteDate;
 
-/** The five display conditions of the mission timeline (spec §10.1). */
+/** The five display conditions of the mission timeline. */
 class MissionTimelineVisibilityTest {
 
   /**
@@ -116,7 +116,7 @@ class MissionTimelineVisibilityTest {
 
   @Test
   void aTruncatedFlightIsStillShown() {
-    // The right bound gets a distinct terminator (§10.3); it does not remove the widget.
+    // The right bound gets a distinct terminator; it does not remove the widget.
     MissionContext mc = new MissionContext();
     focusedReadyEntry(mc, false);
     assertTrue(MissionTimelineVisibility.isAvailable(mc));

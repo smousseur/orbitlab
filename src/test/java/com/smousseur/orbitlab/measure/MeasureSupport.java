@@ -14,7 +14,7 @@ import com.smousseur.orbitlab.engine.OrbitCameraConfig;
  * updateFrustum} / {@code normalizedZoom01} are private methods of the same class. Every value and
  * every branch below is copied from there. If one of them moves, this harness measures a camera the
  * application no longer has — which is exactly why the harness is throwaway and the numbers it
- * produces belong in {@code docs/bugs.md} rather than in a pinned assertion.
+ * produces belong in rather than in a pinned assertion.
  */
 final class MeasureSupport {
 

@@ -43,9 +43,8 @@ import org.orekit.utils.Constants;
  * {@link #configure} and {@link #propagateForOptimization} build one propagator carrying burn 1,
  * the jettison detector and burn 2 — the way the ascent was flown before it became {@code Gravity
  * turn (S1) → S1 separation → Gravity turn (S2)}. No mission uses them: they are kept because the
- * migration's non-regression fixtures are defined <em>against</em> them (spec {@code
- * docs/mission-stages/02-baseline-n2.md} §5), and étape 5 still has a behaviour change to measure
- * from that reference.
+ * migration's non-regression fixtures are defined <em>against</em> them, and a later step still
+ * has a behaviour change to measure from that reference.
  */
 public class GravityTurnManeuver {
 
@@ -103,7 +102,6 @@ public class GravityTurnManeuver {
    * @param interstageCoastDuration unpowered coast between jettison and next-stage ignition (s)
    * @param commandedPlane {@code true} to steer the turn into the plane the azimuth defines, {@code
    *     false} to follow the plane the kick leaves behind — the historical, calibrated behaviour
-   *     (spec {@code docs/earth-orbit/01-mission-terre-parametrable.md} §4.2)
    */
   public GravityTurnManeuver(
       Vehicle vehicle,
@@ -124,8 +122,7 @@ public class GravityTurnManeuver {
     ActiveStageInfo afterFirstJettison =
         vehicle.resolveActiveStage(activeStage.massAfterJettison());
     // A parallel block whose boosters run dry first leaves the core burning alone, so the ascent
-    // gains a phase and the stage flying the second burn is one entry higher (spec
-    // docs/etagement/03-conception-L1.md §3.5).
+    // gains a phase and the stage flying the second burn is one entry higher.
     boolean corePhase =
         activeStage.role() == StageRole.BOOSTER && afterFirstJettison.role() == StageRole.CORE;
     this.coreStage = corePhase ? afterFirstJettison : null;
@@ -139,8 +136,7 @@ public class GravityTurnManeuver {
    * Decodes raw CMA-ES optimization variables into the fully dated ascent schedule. The burn
    * durations are derived from the propellant remaining at gravity turn entry, and every date the
    * ascent hangs off is fixed here — this is the single place they are computed, which is what lets
-   * the ascent be flown either as one propagation or as three phases without drifting (spec 01
-   * §5.1).
+   * the ascent be flown either as one propagation or as three phases without drifting.
    *
    * @param entryState the state at gravity turn entry; only its date is read, and the pitch kick
    *     preserves it, so the pre-kick and kicked states give the same plan
@@ -155,8 +151,8 @@ public class GravityTurnManeuver {
     double burn1Duration = getBurn1Duration();
 
     // A MECO below staging completion commands the core off early instead of running it to
-    // depletion — the optimizer's only lever to lower an over-delivered apogee, and the fix for
-    // BUG-25 (spec docs/atmosphere/10-conception-L3-PHY-2.md §3.1). The full burn is kept
+    // depletion — the optimizer's only lever to lower an over-delivered apogee. The full burn is
+    // kept
     // bit-for-bit at or above staging completion: the shortfall is zero there, so subtracting it
     // leaves getCoreBurnDuration() untouched. Below the shortfall reaches the full burn, the
     // clamp gives a zero core burn, and getStagingFloor() is where the staging penalty stops that
@@ -188,8 +184,7 @@ public class GravityTurnManeuver {
   /**
    * The unit normal of the plane this ascent steers into, or {@code null} when none is commanded.
    *
-   * <p>Built once, at the kick, from the site direction {@code r̂₀} and the commanded azimuth (spec
-   * §4.1):
+   * <p>Built once, at the kick, from the site direction {@code r̂₀} and the commanded azimuth:
    *
    * <pre>
    *   û_A = cos A · n̂ + sin A · ê      the commanded horizontal direction
@@ -235,15 +230,14 @@ public class GravityTurnManeuver {
           "the single-propagator gravity turn cannot fly a parallel block: it plants the jettison"
               + " inside the burn and knows two burns, not three. Teaching it the core-only phase"
               + " would duplicate the five-phase chain in a second place, which is what"
-              + " AscentChainPropagation exists to prevent (spec"
-              + " docs/etagement/03-conception-L1.md §4)");
+              + " AscentChainPropagation exists to prevent");
     }
     GravityTurnAttitudeProvider attitudeProvider =
         new GravityTurnAttitudeProvider(
             plan.kickDate(), plan.transitionTime(), plan.exponent(), plan.commandedPlaneNormal());
     propagator.setAttitudeProvider(attitudeProvider);
 
-    // Burn 1 — active stage propulsion, flame-out semantics (spec 06 I4b): the engine thrusts
+    // Burn 1 — active stage propulsion, flame-out semantics: the engine thrusts
     // until stage 1's depletion floor instead of a date window, so the load can vary (outer
     // propellant-sizing loop) without recomputing the window. The analytic burn1Duration remains
     // the schedule prediction for the jettison and burn 2 dates below.
@@ -291,7 +285,7 @@ public class GravityTurnManeuver {
    * Returns the depletion floor guarding this maneuver: the post-jettison stack floor. A single
    * detector at this floor covers both burns — during burn 1 the mass stays above stage 1's own
    * floor, which is above this one. Burn 2's window is transition-time-driven, not fuel-capped, so
-   * this is where a wrong mass accounting would burn nonexistent propellant (spec 06 I4a).
+   * this is where a wrong mass accounting would burn nonexistent propellant.
    */
   public double getDepletionFloor() {
     return nextStage.depletionFloor();
@@ -428,14 +422,14 @@ public class GravityTurnManeuver {
    * value ended the propagation before the detector fired: burn 1 truncated, the first stage never
    * dropped, and it stayed active for every downstream phase — silent and knife-edge, on the GEO
    * profile CMA-ES once settled at 149.6 s against a 150.0 s burn 1, stranding 3.3 t in S1, after
-   * which the "S2 separation" jettisoned S1 in its place and S2 flew the payload kick motor's burns
-   * (bilan 10 §5.3). The ascent now drops the stage in a phase of its own, so that cannot happen.
+   * which the "S2 separation" jettisoned S1 in its place and S2 flew the payload kick motor's
+   * burns. The ascent now drops the stage in a phase of its own, so that cannot happen.
    *
    * <p>What remains below this value is a region where the transition time controls nothing: every
    * candidate flies the same ascent and ends at the same jettison coast. The optimizer's staging
    * penalty still keeps CMA-ES out of it — not as a guard rail any more, but because exploring a
    * plateau costs budget for nothing (measured: +47 % evaluations on the LEO profile when it was
-   * removed, spec {@code docs/mission-stages/02-baseline-n2.md} §12).
+   * removed).
    *
    * @return the earliest transition time that completes staging, in seconds
    */
@@ -444,7 +438,7 @@ public class GravityTurnManeuver {
    *
    * <p>Read by {@code GravityTurnProblem} to keep the transition-time ceiling above what the
    * vehicle needs: a launcher whose staging completes late has to be allowed a MECO late enough for
-   * its upper stage to be worth igniting (spec {@code docs/etagement/06-conception-L4.md} §3.6).
+   * its upper stage to be worth igniting.
    *
    * @return the upper stage's full-tank burn duration in seconds
    */
@@ -466,8 +460,8 @@ public class GravityTurnManeuver {
    *
    * <p>With a commandable core it is <b>below</b> {@link #getStagingCompleteTime()} by the whole
    * core burn: a MECO between the two commands an early core cutoff ({@link #plan}), so that region
-   * is a live lever rather than a plateau and is no longer penalized (spec {@code
-   * docs/atmosphere/10-conception-L3-PHY-2.md} §3.1.3). Only below this floor does the core never
+   * is a live lever rather than a plateau and is no longer penalized. Only below this floor does
+   * the core never
    * fire, leaving the degenerate plateau the penalty still guards. A launcher with no core-only
    * phase keeps staging completion as its floor, as before.
    *
@@ -493,8 +487,7 @@ public class GravityTurnManeuver {
    * Whether this ascent is flown against an atmosphere.
    *
    * <p>Exposed for the cost function: what a hand-off state is worth depends on the environment the
-   * coast that follows it is flown in, and that environment is carried here (PHY-2 / L5, spec
-   * {@code docs/atmosphere/12-conception-L5-PHY-2.md} §7.5).
+   * coast that follows it is flown in, and that environment is carried here.
    *
    * @return {@code true} when the flight context carries a drag model
    */

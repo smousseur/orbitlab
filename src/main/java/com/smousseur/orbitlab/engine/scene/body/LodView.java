@@ -145,8 +145,7 @@ public final class LodView implements BodyView {
       iconView.updateScreenPosition(cam, farAnchor);
     } else {
       // No icon fallback: a decluttered debris shows its 3D mesh up close and nothing when it is
-      // too small to draw in 3D — no icon, no label (PHY-5 / L7, spec
-      // docs/multi-objets/09-conception-L7.md §D1).
+      // too small to draw in 3D — no icon, no label.
       model3dView.setVisible(false);
       iconView.setVisible(false);
     }
