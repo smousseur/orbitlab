@@ -209,16 +209,22 @@ final class TrackedObjectView {
     SolarSystemBody renderBody = MissionRenderer.renderBodyOf(point, view);
     RenderContext ctx = RenderContext.planet(renderBody);
     Vector3D position = MissionRenderer.renderPositionOf(point, renderBody);
-    // The model is placed relative to a reference object — a debris relative to its primary, whose
-    // scene anchor it now hangs under — so the two large GCRF coordinates cancel in double before
-    // the float conversion. Otherwise, far from Earth (GEO), the float subtraction the scene graph
-    // does between two independently-rounded coordinates jitters the model by metres each frame
-    // (PHY-5, the debris "tremble"). The primary passes no reference: it is placed absolutely and
-    // cancels the near-frame offset exactly, as before.
-    Vector3D modelPosition =
+    // The object this one is placed relative to — a debris relative to its primary, whose scene
+    // anchor it now hangs under — or {@code null} when it has none (the primary, or a followed
+    // debris the near frame is centred on). Subtracting it cancels the two large GCRF coordinates
+    // in
+    // double before the float conversion; otherwise, far from Earth (GEO), the float subtraction
+    // the
+    // scene graph does between two independently-rounded coordinates jitters the model by metres
+    // each frame (PHY-5, the debris "tremble").
+    Vector3D referencePosition =
         referencePoint == null
-            ? position
-            : position.subtract(MissionRenderer.renderPositionOf(referencePoint, renderBody));
+            ? null
+            : MissionRenderer.renderPositionOf(referencePoint, renderBody);
+    // The primary passes no reference: it is placed absolutely and cancels the near-frame offset
+    // exactly, as before. A debris stays relative to its reference.
+    Vector3D modelPosition =
+        referencePosition == null ? position : position.subtract(referencePosition);
     Vector3f upWorld =
         upHint == null
             ? Vector3f.UNIT_Y
@@ -229,7 +235,15 @@ final class TrackedObjectView {
     this.view.updateScreen(cam, true);
     if (inertialTrail) {
       trajectoryRenderer.setVisible(true);
-      trajectoryRenderer.update(trail, upTo, position, seat, ctx);
+      // Expressed about the same reference as the mesh — the primary for a debris hung under it —
+      // so
+      // the line's geometry cancels the near-frame offset exactly and stays steady up close,
+      // instead
+      // of jittering the way a geocentre-relative line does (SEL-1 / L2). The primary and a
+      // followed
+      // debris have no reference and key on their own position, as before.
+      Vector3D trailReference = referencePosition == null ? position : referencePosition;
+      trajectoryRenderer.update(trail, upTo, position, trailReference, seat, ctx);
     } else {
       trajectoryRenderer.setVisible(false);
     }

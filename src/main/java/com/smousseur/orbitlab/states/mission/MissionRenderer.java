@@ -403,18 +403,16 @@ public final class MissionRenderer {
       Camera cam,
       float tpf) {
     FocusView focus = context.focusView();
-    Vector3D primarySeat =
-        StackSeat.offset(
-            point.velocity(),
-            point.position(),
-            primaryAxialSeat(silhouette.phaseAt(now)),
-            0.0,
-            1,
-            1);
-    primary.updateFromPoint(point, primarySeat, null, null, trail, upTo, cam, tpf, focus);
+    // The primary is drawn at its seated point — the propagated sample lifted by the render-only
+    // stack seat, baked into the point rather than carried as a separate model offset (SEL-1 / L2).
+    // The mesh, its ribbon, the debris reference and the floating origin all key on this one point,
+    // so the near frame frames the drawn silhouette — down to a bare payload — instead of the empty
+    // centre of mass the seat lifts it off. The eclipse occluder stays on the raw propagated point.
+    MissionEphemerisPoint drawnPrimary = renderedPrimaryPoint(point, now);
+    primary.updateFromPoint(drawnPrimary, Vector3D.ZERO, null, null, trail, upTo, cam, tpf, focus);
     pushEclipseOccluder(point, focus);
     updatePrimarySilhouette(now);
-    updateDebris(point, now, cam, tpf, focus);
+    updateDebris(drawnPrimary, now, cam, tpf, focus);
   }
 
   /**
@@ -439,6 +437,44 @@ public final class MissionRenderer {
     return payloadAsset != null
         ? payloadAsset.drawnSizeMeters()
         : afterS1Fraction * stackHeightMeters;
+  }
+
+  /**
+   * The primary's drawn point at {@code now}: the propagated sample lifted along the flight
+   * direction by the render-only stack seat (PHY-5 / L6, {@link #primaryAxialSeat}). Baking the
+   * seat into the <em>point</em> — rather than carrying it as a model offset added on top of a raw
+   * anchor — is what lets the near frame centre on the silhouette the eye sees: once the stack has
+   * shed down to a bare payload the seat has lifted the mesh a whole launcher-height toward the
+   * nose, off the centre of mass the propagation tracks, and centring on the raw sample framed that
+   * empty point instead of the payload (SEL-1 / L2).
+   *
+   * <p>Called with the very same raw sample by this renderer (to place the anchor, its ribbon and
+   * the debris reference) and by {@link
+   * com.smousseur.orbitlab.states.camera.FloatingOriginAppState} (to offset the near frame): both
+   * add a bit-identical seat, so the anchor and the offset stay exact opposites and the silhouette
+   * neither jitters nor drifts. The seat is zero in the {@code FULL} and {@code AFTER_BOOSTERS}
+   * phases, where the returned sample is {@code raw} itself, so early flight is untouched.
+   *
+   * @param raw the propagated sample at {@code now}
+   * @param now the current simulation date, for the silhouette phase
+   * @return the seated sample the primary is drawn at, or {@code raw} when the seat is zero
+   */
+  public MissionEphemerisPoint renderedPrimaryPoint(MissionEphemerisPoint raw, AbsoluteDate now) {
+    Vector3D seat =
+        StackSeat.offset(
+            raw.velocity(), raw.position(), primaryAxialSeat(silhouette.phaseAt(now)), 0.0, 1, 1);
+    if (seat.getNorm() == 0.0) {
+      return raw;
+    }
+    return new MissionEphemerisPoint(
+        raw.time(),
+        raw.position().add(seat),
+        raw.velocity(),
+        raw.stageName(),
+        raw.propulsive(),
+        raw.mass(),
+        raw.altitudeMeters(),
+        raw.arc());
   }
 
   /**
@@ -492,9 +528,10 @@ public final class MissionRenderer {
    * placed relative to {@code primaryPoint} — the object it hangs under in the scene graph — so its
    * position keeps full precision far from Earth (PHY-5, the GEO "tremble" fix, {@link
    * TrackedObjectView#updateFromPoint}), and carries its own seat so it is drawn where it detached
-   * (§D2) rather than piled on the axis. The reference is the primary's <em>unseated</em> point:
-   * the seat lives on each object's own model, not on the shared anchor, so debris never inherit
-   * the primary's seat.
+   * (§D2) rather than piled on the axis. The reference is the primary's <em>drawn</em> point — the
+   * same seated point that positions the shared anchor the debris hang under (SEL-1 / L2) — so that
+   * anchor's position cancels out of each debris' world position exactly, and the primary's own
+   * seat, baked into that shared point, cancels with it rather than being inherited.
    */
   private void updateDebris(
       MissionEphemerisPoint primaryPoint,
@@ -533,6 +570,16 @@ public final class MissionRenderer {
       int upTo = within ? trail.indexUpTo(now) : trail.size() - 1;
       debrisView.setVisible(true);
       boolean followed = isFollowed(track, focus);
+      // Zoomed into this mission: the near frame sits on one of its objects, so a debris'
+      // geocentre-relative ground track cancels that large offset erratically and jitters up close
+      // (SEL-1 / L2). A landing debris shows its primary-relative ribbon instead while the primary
+      // holds the focus — the near frame is then centred on that same primary, so the line cancels
+      // it exactly. A followed debris keys on itself; any other focus keeps the ground track.
+      boolean primaryFocused =
+          focus.getFocusedObject() instanceof FollowedObject.Primary p
+              && p.mission().equals(entry.id());
+      boolean nearView = followed || primaryFocused;
+      boolean relativeDescent = primaryFocused && debrisVisible && hasLanded(track);
       // The followed debris is promoted to the origin anchor — reparented under the near-bodies
       // node
       // and drawn absolutely (no reference point) — so the floating origin, centred on the same
@@ -542,13 +589,13 @@ public final class MissionRenderer {
       // relative to it.
       debrisView.reparent(
           followed ? context.sceneGraph().nearBodiesNode() : (Node) primary.view().spatial());
-      // Its fall trajectory is drawn the precise way the primary's is — an inertial ribbon carried
-      // relative to the object at the origin (MissionTrajectoryRenderer) — rather than the
-      // geocentre-relative ground track, which cancels erratically against the near-frame offset up
-      // close. The co-rotating ground track stays for the other debris and the zoomed-out view,
-      // where its jitter is far and invisible (SEL-1 / L2).
-      debrisView.setInertialTrail(followed);
-      updateGroundTrack(i, track, debrisVisible, followed);
+      // A debris' descent is drawn the precise way the primary's trajectory is — an inertial ribbon
+      // expressed about the object it hangs under, so it cancels the near-frame offset exactly —
+      // whenever the near frame is on one of this mission's objects: itself when followed, else the
+      // primary when the primary is focused. Its geocentre-relative ground track, which jitters up
+      // close, is shown only in the zoomed-out view.
+      debrisView.setInertialTrail(followed || relativeDescent);
+      updateGroundTrack(i, track, debrisVisible, nearView);
       // Off by default: a debris shows only its close-range 3D mesh; the far-range icon and the
       // ground track come with the global "show debris" toggle (PHY-5 / L7 §D1).
       debrisView.setSecondaryDisplay(debrisVisible);
@@ -580,12 +627,12 @@ public final class MissionRenderer {
    * tracks hang under when the focus is not the Earth.
    */
   private void updateGroundTrack(
-      int index, DebrisTrack track, boolean debrisVisible, boolean followed) {
-    // Hidden while this debris is followed: up close its geocentre-relative vertices jitter against
-    // the near-frame offset, so the followed debris shows its precise inertial ribbon instead
-    // (SEL-1
-    // / L2). Shown for the others and the zoomed-out view, where the jitter is far and invisible.
-    boolean wanted = debrisVisible && hasLanded(track) && !followed;
+      int index, DebrisTrack track, boolean debrisVisible, boolean nearView) {
+    // Hidden in the near view — this debris followed, or its primary focused: up close its
+    // geocentre-relative vertices jitter against the near-frame offset, so the debris shows its
+    // primary-relative ribbon instead (SEL-1 / L2). Shown for the zoomed-out view, where the jitter
+    // is far and invisible.
+    boolean wanted = debrisVisible && hasLanded(track) && !nearView;
     DebrisGroundTrackView groundTrack = debrisGroundTracks.get(index);
     if (!wanted) {
       if (groundTrack != null) {

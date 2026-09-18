@@ -23,6 +23,7 @@ import java.util.Objects;
 import java.util.function.Supplier;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.orekit.time.AbsoluteDate;
 
 /**
  * Animates the camera between focus states instead of cutting to them.
@@ -417,7 +418,16 @@ public final class CameraTransitionAppState extends BaseAppState {
     // the parent captured at click time instead left the two disagreeing by the whole Earth-Moon
     // distance for a spacecraft that had crossed into the lunar sphere of influence since
     // (spec docs/multi-corps/07-conception-L5.md §5.2).
-    MissionEphemerisPoint point = ephemeris.displayPointAt(context.clock().now());
+    AbsoluteDate now = context.clock().now();
+    MissionEphemerisPoint point = ephemeris.displayPointAt(now);
+    // Aim at the primary's seated point, where the floating origin will pin it (SEL-1 / L2), so the
+    // fly-in settles on the drawn silhouette rather than hopping the stack seat on the final frame.
+    if (target.object() instanceof FollowedObject.Primary) {
+      MissionRenderer renderer = context.getMissionRenderer(target.object().mission());
+      if (renderer != null) {
+        point = renderer.renderedPrimaryPoint(point, now);
+      }
+    }
     SolarSystemBody arcBody = point.arc().body();
     Vector3f planetUnits =
         JmeVectorAdapter.toJmeBodyRelativePosition(point.position(), RenderContext.planet(arcBody));

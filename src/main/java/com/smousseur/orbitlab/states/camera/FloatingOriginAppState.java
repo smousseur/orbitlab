@@ -16,6 +16,7 @@ import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemeris;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemerisPoint;
 import com.smousseur.orbitlab.states.mission.MissionRenderer;
 import java.util.Objects;
+import org.orekit.time.AbsoluteDate;
 
 /**
  * Application state that implements a floating-origin technique to prevent floating-point precision
@@ -193,14 +194,22 @@ public class FloatingOriginAppState extends BaseAppState {
     if (ephemeris == null) {
       return null;
     }
-    // A followed debris is centred on where it is *drawn* — carried into the globe's current drawn
-    // rotation once it has landed, exactly as MissionRenderer draws it — so the frame offset
-    // cancels
-    // that position bit-for-bit and the debris neither jitters nor drifts as the Earth turns (SEL-1
-    // / L2, approach A). The primary is drawn from its raw sample, so it keeps the plain path.
-    return object instanceof FollowedObject.Debris
-        ? MissionRenderer.renderedPointOf(ephemeris, context.clock().now())
-        : ephemeris.displayPointAt(context.clock().now());
+    AbsoluteDate now = context.clock().now();
+    // Both kinds of object are centred on where they are *drawn*, so the frame offset cancels that
+    // position bit-for-bit (SEL-1 / L2). A followed debris is carried into the globe's current
+    // drawn
+    // rotation once it has landed, exactly as MissionRenderer draws it, so it neither jitters nor
+    // drifts as the Earth turns (approach A).
+    if (object instanceof FollowedObject.Debris) {
+      return MissionRenderer.renderedPointOf(ephemeris, now);
+    }
+    // The primary is centred on its seated point too — the propagated sample lifted by the
+    // render-only stack seat the renderer bakes into the very anchor it draws — so once the stack
+    // has shed down to a bare payload the near frame frames the payload, not the empty centre of
+    // mass the seat lifts it off. Falls back to the raw sample if the renderer is not registered.
+    MissionRenderer renderer = context.getMissionRenderer(object.mission());
+    MissionEphemerisPoint raw = ephemeris.displayPointAt(now);
+    return renderer == null ? raw : renderer.renderedPrimaryPoint(raw, now);
   }
 
   @Override

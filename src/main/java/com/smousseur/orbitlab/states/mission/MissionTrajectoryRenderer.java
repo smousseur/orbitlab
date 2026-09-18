@@ -139,13 +139,19 @@ public final class MissionTrajectoryRenderer {
    *
    * @param trail the display polyline, already bounded to the vertex budget
    * @param upTo index of the last vertex to draw, from {@link TrajectoryPolyline#indexUpTo}
-   * @param tip the interpolated position at the current instant, used as the origin the vertices
-   *     are expressed against — the <em>unseated</em> propagated position, so the geometry's own
-   *     translation still cancels the near frame exactly for the focused object
+   * @param tip the interpolated position at the current instant — the object's own drawn position,
+   *     which the ribbon ends on (one {@code seat} off it, see below)
+   * @param reference the point the vertices are expressed against and the geometry is translated
+   *     by, so the near frame cancels that translation exactly rather than nearly. Usually the
+   *     object's own {@code tip}, so the near frame — centred on that object — cancels it bit for
+   *     bit. A debris drawn while <em>another</em> object of its mission holds the focus passes
+   *     that focused object's position instead (the primary it hangs under), so its line cancels
+   *     the same offset the mesh does and stays steady up close, where its own geocentre-relative
+   *     ground track jitters (SEL-1 / L2). {@code null} falls back to {@code tip}
    * @param seat the render-only stack seat (PHY-5 / L6): the tip vertex is drawn one seat off the
-   *     origin, so the ribbon meets the seated mesh base while the historical vertices stay on the
-   *     true path — a small hook at the very end rather than a whole trail that swims. {@link
-   *     Vector3D#ZERO} for an unseated object
+   *     object's drawn position, so the ribbon meets the seated mesh base while the historical
+   *     vertices stay on the true path — a small hook at the very end rather than a whole trail
+   *     that swims. {@link Vector3D#ZERO} for an unseated object
    * @param renderContext the context of the sample being drawn, derived from its arc by {@code
    *     MissionRenderer.renderContextFor} — a parameter and no longer a field of this class, so
    *     that the line and the near-frame offset cannot be built from two different contexts (spec
@@ -155,6 +161,7 @@ public final class MissionTrajectoryRenderer {
       TrajectoryPolyline trail,
       int upTo,
       Vector3D tip,
+      Vector3D reference,
       Vector3D seat,
       RenderContext renderContext) {
     if (trail == null || trail.size() == 0) return;
@@ -173,18 +180,24 @@ public final class MissionTrajectoryRenderer {
             .orElseThrow(() -> new IllegalStateException("a mission is drawn at planet scale"));
 
     int last = Math.min(upTo, trail.size() - 1);
-    // Fall back to the last drawn sample when there is no tip: the origin has to be a point of the
-    // line, not the geocentre, or the precision this whole method buys is given straight back.
-    Vector3D origin = tip != null ? tip : trail.positionAt(last, renderBody);
+    // Fall back to the last drawn sample when there is no tip: the current position the ribbon ends
+    // on has to be a point of the line, not the geocentre.
+    Vector3D tipPos = tip != null ? tip : trail.positionAt(last, renderBody);
+    // The frame the whole line is expressed and translated about, so the geometry's translation
+    // cancels the near-frame offset exactly. Defaults to the object's own position; a debris drawn
+    // relative to its focused primary passes the primary here (SEL-1 / L2).
+    Vector3D origin = reference != null ? reference : tipPos;
 
     int count = 0;
     for (int i = 0; i <= last; i++) {
       putPoint(points, count++, trail.positionAt(i, renderBody).subtract(origin), renderContext);
     }
     if (tip != null) {
-      // The tip sits one seat off the origin (L6): the mesh base is drawn there too, so the ribbon
-      // stays glued to it while every historical vertex keeps its true-path position.
-      putPoint(points, count++, seat, renderContext);
+      // The tip sits one seat off the object's drawn position (L6): the mesh base is drawn there
+      // too, so the ribbon stays glued to it while every historical vertex keeps its true-path
+      // position. Expressed about the reference like every other vertex, so it lands correctly even
+      // when the reference is not the tip itself.
+      putPoint(points, count++, tipPos.subtract(origin).add(seat), renderContext);
     }
     if (count == 1) {
       // One point is not a ribbon. Repeating it gives a band of zero area — nothing rasterises,
