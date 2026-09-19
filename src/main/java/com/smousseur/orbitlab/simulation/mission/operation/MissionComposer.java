@@ -253,8 +253,8 @@ public final class MissionComposer {
   }
 
   /**
-   * The lunar chain: ascent, parking insertion, parking coast to the injection
-   * point, translunar injection, translunar coast.
+   * The lunar chain: ascent, parking insertion, parking coast to the injection point, translunar
+   * injection, translunar coast.
    *
    * <p>The optimization mode is not an argument, for the same reason {@link #composeGeo} gives: no
    * stage of the lunar half of the chain has a CMA-ES counterpart, so every mode yields the same
@@ -274,10 +274,9 @@ public final class MissionComposer {
   }
 
   /**
-   * The lunar orbit chain: the
-   * lunar chain above, plus an upper-stage jettison, a translunar coast that <em>ends</em> at the
-   * sphere of influence, a selenocentric approach, the insertion burn, and a terminal coast flown
-   * around the Moon.
+   * The lunar orbit chain: the lunar chain above, plus an upper-stage jettison, a translunar coast
+   * that <em>ends</em> at the sphere of influence, a selenocentric approach, the insertion burn,
+   * and a terminal coast flown around the Moon.
    *
    * <p>The optimization mode is not an argument, for the reason {@link #composeLunar} gives: no
    * stage of the lunar half of the chain has a CMA-ES counterpart. What this mission optimizes is

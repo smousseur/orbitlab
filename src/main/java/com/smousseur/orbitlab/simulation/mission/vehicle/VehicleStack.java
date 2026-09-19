@@ -73,9 +73,8 @@ public record VehicleStack(List<Vehicle> vehicles, StagingPlan stagingPlan) impl
    * strictly above the {@code massAbove[i]} threshold. That argument is <em>false</em> for a
    * parallel block, which burns straight through the reference mass of the stack above it — on the
    * split Falcon Heavy, 74 % of the way into the shared burn. What holds instead is that the
-   * block's threshold
-   * <em>is</em> the mass it leaves behind when its boosters are dropped, so the strict {@code >}
-   * hands over exactly at the jettison and never during a burn.
+   * block's threshold <em>is</em> the mass it leaves behind when its boosters are dropped, so the
+   * strict {@code >} hands over exactly at the jettison and never during a burn.
    *
    * <p>Worth stating because the opposite was once assumed: several two-burn analytic stages
    * re-resolved the active stage from the mass predicted after their first burn, as if staging

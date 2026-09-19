@@ -147,10 +147,9 @@ public abstract class DynamicParameters {
    * altitudeMeters} above {@code body}, via the Keplerian period {@code 2π√(a³/µ)}.
    *
    * <p><b>An altitude and not a semi-major axis</b>: the body radius used to be added by each call
-   * site,
-   * so making the µ contextual without moving the radius in here would have left the panel of every
-   * new body writing its own {@code radius +}. The pair (µ, R) belongs to one body, and {@code
-   * GravitationalContext} is that pair.
+   * site, so making the µ contextual without moving the radius in here would have left the panel of
+   * every new body writing its own {@code radius +}. The pair (µ, R) belongs to one body, and
+   * {@code GravitationalContext} is that pair.
    *
    * @param revolutions the number of revolutions
    * @param altitudeMeters the orbit altitude in meters above the body's equatorial radius

@@ -222,11 +222,11 @@ public final class OrbitRuntimeAppState extends BaseAppState {
    * Writes a freshly computed window into the body's ribbon, and says so.
    *
    * <p><b>The log is the evidence that the runtime window reaches the screen at all</b>. What
-   * {@code OrbitInitAppState} draws at startup comes from the dataset
-   * file, whose point count is the generator's; this state then recomputes the same orbit at
-   * exactly {@code bodyPoints} and rewrites the mesh. Reading the two vertex counts on either side
-   * of that write is what distinguishes "the rebuild landed" from "the ribbon still carries what
-   * the generator wrote", and the two used to be indistinguishable from outside.
+   * {@code OrbitInitAppState} draws at startup comes from the dataset file, whose point count is
+   * the generator's; this state then recomputes the same orbit at exactly {@code bodyPoints} and
+   * rewrites the mesh. Reading the two vertex counts on either side of that write is what
+   * distinguishes "the rebuild landed" from "the ribbon still carries what the generator wrote",
+   * and the two used to be indistinguishable from outside.
    *
    * <p>It fires once per body, on the single rebuild each one gets at startup: past that the
    * comfort margin runs to decades of simulated time.

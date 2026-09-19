@@ -73,10 +73,10 @@ class LunarApproachCoastStageTest {
   }
 
   /**
-   * The hole pt 1 wrote before meeting it. Both
-   * passes hand this stage a geocentric state — {@code StageChainRunner} calls {@code enter} before
-   * {@code StageLegRunner.fly} converts, and the optimize pass never converts at all. A state left
-   * in GCRF would be integrated with a lunar µ at the centre, silently.
+   * The hole pt 1 wrote before meeting it. Both passes hand this stage a geocentric state — {@code
+   * StageChainRunner} calls {@code enter} before {@code StageLegRunner.fly} converts, and the
+   * optimize pass never converts at all. A state left in GCRF would be integrated with a lunar µ at
+   * the centre, silently.
    */
   @Test
   @DisplayName("A geocentric entry state comes out selenocentric, on both passes")

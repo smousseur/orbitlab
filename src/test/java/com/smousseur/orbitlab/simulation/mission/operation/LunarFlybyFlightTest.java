@@ -63,12 +63,12 @@ import org.orekit.utils.TimeStampedPVCoordinates;
  * time, before anyone knows what it should be — and the ascent references have already had to be
  * re-recorded once, after MIS-7.
  *
- * <p><b>Three measurements ride on this flight and nothing else can take them</b>: the
- * perilune actually reached, before the ±10 km band of §4.1 is fixed; the two biases L2 chiffered
- * without flying — 68 s of out-of-model ascent and 115 s of nodal regression — read as the gap
- * between the β planned at the window date and the β real at injection; and the half-degree of J2
- * regression L1 §5 pt 1 computed without flying. They are <b>logged, not asserted</b>: pinning them
- * would pin numbers this lot exists to find out.
+ * <p><b>Three measurements ride on this flight and nothing else can take them</b>: the perilune
+ * actually reached, before the ±10 km band of §4.1 is fixed; the two biases L2 chiffered without
+ * flying — 68 s of out-of-model ascent and 115 s of nodal regression — read as the gap between the
+ * β planned at the window date and the β real at injection; and the half-degree of J2 regression L1
+ * §5 pt 1 computed without flying. They are <b>logged, not asserted</b>: pinning them would pin
+ * numbers this lot exists to find out.
  *
  * <p><b>Two flights since MIS-4 / L5.</b> The one above is L4's and is left untouched — L4 §11
  * bequeaths it to L6 as the impulsive reference the finite burn will be measured against. The
@@ -76,8 +76,8 @@ import org.orekit.utils.TimeStampedPVCoordinates;
  * what a mission created in the wizard takes off with; see {@link
  * #theSizedConfigurationAlsoReachesThePerilune()}.
  *
- * <p><b>Contrainte de méthode</b>: each flight costs a full CMA-ES ascent plus seven
- * days of propagation, and it is the user who runs them.
+ * <p><b>Contrainte de méthode</b>: each flight costs a full CMA-ES ascent plus seven days of
+ * propagation, and it is the user who runs them.
  */
 @EnabledIfSystemProperty(named = "orbitlab.slowTests", matches = "true")
 class LunarFlybyFlightTest {
@@ -99,10 +99,10 @@ class LunarFlybyFlightTest {
    * Mass at injection handed to the <b>window</b> (kg), and to the window alone.
    *
    * <p><b>It is the mass the fully loaded chain really arrives with, and the window is given the
-   * launcher that really flies</b>. The budget-sized profile arrives far lighter
-   * and hands the window {@code LunarLoads.massAtInjection()} instead: a mass that does not match
-   * the vehicle resolves the wrong stage, and since L6 the window's verdict is on reachability and
-   * not only cost, so a wrong stage empties the window rather than mispricing it.
+   * launcher that really flies</b>. The budget-sized profile arrives far lighter and hands the
+   * window {@code LunarLoads.massAtInjection()} instead: a mass that does not match the vehicle
+   * resolves the wrong stage, and since L6 the window's verdict is on reachability and not only
+   * cost, so a wrong stage empties the window rather than mispricing it.
    *
    * <p>It used to be 1 700 kg on a 3 kN spacecraft motor — the PHY-4 demonstration's fixture — on
    * the reasoning that the date is set by the encounter geometry and the vehicle only enters the

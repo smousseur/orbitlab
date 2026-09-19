@@ -86,9 +86,9 @@ public final class ScenarioSession {
    *
    * <p>Every mission is tried on its own. One whose launcher left the catalog, whose inclination is
    * no longer reachable from its site, or whose atmosphere names a model this build does not know
-   * is set aside with its raw reason; the others come back. Since PHY-2 / L5 a known
-   * atmosphere is <em>restored</em>, not refused ({@code REL-22}): the mission revoles under the
-   * model the file saved.
+   * is set aside with its raw reason; the others come back. Since PHY-2 / L5 a known atmosphere is
+   * <em>restored</em>, not refused ({@code REL-22}): the mission revoles under the model the file
+   * saved.
    *
    * @param file the scenario as read
    * @return the rebuilt missions, the clock to restore, and the rejections
@@ -148,8 +148,8 @@ public final class ScenarioSession {
    * Posts the solutions to replay, if and only if they describe exactly the composition just built.
    *
    * <p>A mismatch is not a rejection: the mission is perfectly valid, it simply arrives in {@code
-   * DRAFT} and is recomputed by an ordinary {@code OPTIMIZE}. Replaying the stages that
-   * happen to match would fly a trajectory nobody asked for.
+   * DRAFT} and is recomputed by an ordinary {@code OPTIMIZE}. Replaying the stages that happen to
+   * match would fly a trajectory nobody asked for.
    */
   private static void applySolution(MissionEntry entry, ScenarioMission mission) {
     ScenarioSolution solution = mission.solution();
@@ -175,11 +175,10 @@ public final class ScenarioSession {
    *
    * <p>The value the file carries is used, not the current default: a scenario saved in vacuum
    * revoles in vacuum, one saved under a model revoles under that model. Before PHY-2 a non-{@code
-   * NONE} atmosphere
-   * was refused here because nothing could mount it; PHY-2 mounts every model, so the only refusal
-   * left is an <em>unreadable</em> model name — the rule {@code MissionFactory} applies to an
-   * unreadable mission type. An absent or blank value is a pre-atmosphere file: it was flown in
-   * vacuum, so it restores as {@link AtmosphereModel#NONE}, not as the new default.
+   * NONE} atmosphere was refused here because nothing could mount it; PHY-2 mounts every model, so
+   * the only refusal left is an <em>unreadable</em> model name — the rule {@code MissionFactory}
+   * applies to an unreadable mission type. An absent or blank value is a pre-atmosphere file: it
+   * was flown in vacuum, so it restores as {@link AtmosphereModel#NONE}, not as the new default.
    */
   private static AtmosphereModel restoredAtmosphere(ScenarioMission mission) {
     String name = mission.atmosphere();

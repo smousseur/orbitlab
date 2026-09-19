@@ -56,9 +56,8 @@ import org.orekit.utils.PVCoordinates;
  *
  * <p><b>On the spec's 7.3 × 10⁻⁶ m/s².</b> The découpage quotes the <em>linearised</em> tide {@code
  * 2·µ_L·r/d³}. At geostationary radius {@code r/d ≈ 0.11}, and the linearisation is 19 % low on the
- * near side and 14 % high on the far side. It is logged here as an order of
- * magnitude and never asserted: the exact expression is pinned instead, which is stricter, not
- * looser.
+ * near side and 14 % high on the far side. It is logged here as an order of magnitude and never
+ * asserted: the exact expression is pinned instead, which is stricter, not looser.
  */
 class ThirdBodyPerturbationTest {
   private static final Logger logger = LogManager.getLogger(ThirdBodyPerturbationTest.class);
@@ -145,9 +144,7 @@ class ThirdBodyPerturbationTest {
     assertEquals(moonFirst, sunFirst, "the caller's argument order must not reach the propagator");
   }
 
-  /**
-   * Both factories honour the context: a context must mean the same thing everywhere.
-   */
+  /** Both factories honour the context: a context must mean the same thing everywhere. */
   @Test
   void theNewtonianFactory_honoursPerturbersToo() {
     List<ForceModel> forces =

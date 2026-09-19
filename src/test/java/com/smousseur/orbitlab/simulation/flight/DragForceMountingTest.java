@@ -20,8 +20,7 @@ import org.orekit.models.earth.atmosphere.NRLMSISE00;
 
 /**
  * The structural non-regression of PHY-1 / L1: drag off mounts the force list of before the lot, to
- * the type and to the order; drag on
- * mounts that same list plus one {@link DragForce}.
+ * the type and to the order; drag on mounts that same list plus one {@link DragForce}.
  *
  * <p><b>This is what makes the four gates a confirmation rather than the proof.</b> {@code drag ==
  * null} adds nothing at all — not a zero force, not an identity term — so "unchanged to the bit" is

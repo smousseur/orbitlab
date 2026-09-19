@@ -17,9 +17,7 @@ import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-/**
- * The target orbit as the user asked for it.
- */
+/** The target orbit as the user asked for it. */
 class MissionTargetOrbitTest {
 
   private static final double GEO_ALT = 35_786_000.0;

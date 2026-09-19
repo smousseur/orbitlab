@@ -69,10 +69,10 @@ public class AssetFactory {
   /**
    * Loads a model and scales it so its largest dimension spans {@code targetSizeUnits}, by
    * measuring its own bounding box rather than assuming the one-unit-tall convention the launcher
-   * assets follow. The
-   * payload meshes are third-party assets with no shared normalization, so their intrinsic scale
-   * has to be measured to draw them at a controlled size. May be called from a background thread —
-   * the model is detached, so {@link Spatial#updateGeometricState()} touches no shared state.
+   * assets follow. The payload meshes are third-party assets with no shared normalization, so their
+   * intrinsic scale has to be measured to draw them at a controlled size. May be called from a
+   * background thread — the model is detached, so {@link Spatial#updateGeometricState()} touches no
+   * shared state.
    *
    * @param path the asset path to the model file
    * @param targetSizeUnits the size, in render units, the model's largest extent should span

@@ -148,7 +148,7 @@ class MeoMissionTest extends AbstractTrajectoryOptimizerTest {
     double azimuth = plane.launchAzimuth(FastMath.toRadians(LAT_DEG));
 
     // The plane change charged at apogee is zero: the ascent already flew into the target plane
-    //, so only the residual is left, and the plane trim takes that.
+    // , so only the residual is left, and the plane trim takes that.
     PropellantBudget.SizedLoads loads =
         PropellantBudget.loadsForHighOrbit(
             Launchers.ARIANE_64,

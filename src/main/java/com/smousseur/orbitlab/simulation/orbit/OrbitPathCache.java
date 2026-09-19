@@ -76,11 +76,11 @@ public final class OrbitPathCache {
    * asks for.
    *
    * <p><b>The count is the budget and the step follows, not the other way round</b>. This used to
-   * clamp the step the budget implied to at most seven days
-   * and then recompute the count from the clamped step, which for a body needing a coarser step
-   * than that made the count go <em>up</em>: Pluto's dataset carried 12 940 points for a budget of
-   * 4 096. The two are the same knob — the path spans {@code count * step} — so capping the count
-   * while keeping the clamped step would have left two thirds of that orbit undrawn.
+   * clamp the step the budget implied to at most seven days and then recompute the count from the
+   * clamped step, which for a body needing a coarser step than that made the count go <em>up</em>:
+   * Pluto's dataset carried 12 940 points for a budget of 4 096. The two are the same knob — the
+   * path spans {@code count * step} — so capping the count while keeping the clamped step would
+   * have left two thirds of that orbit undrawn.
    *
    * <p>This is now the same arithmetic {@code OrbitRuntimeAppState.computeOrbitSnapshot} performs
    * when it rebuilds the same ribbon at runtime: {@code bodyPoints} samples of {@code period /

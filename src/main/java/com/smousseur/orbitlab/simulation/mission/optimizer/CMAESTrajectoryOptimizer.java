@@ -101,12 +101,11 @@ public class CMAESTrajectoryOptimizer implements TrajectoryOptimizer {
   private final MissionProgressListener progress;
 
   /**
-   * An external warm-start prepended to the first attempt's exploration seeds, or {@code null}
-   *. Carries the previous sizing
-   * pass's solution for this stage so the search starts near the answer when the load is stable. It
-   * is a <em>seed</em>, not a replay: the analytical seed and the perturbed runs still explore, so
-   * a stale seed (the load changed sharply) is recovered from, never trusted blindly. Clamped to
-   * the attempt's bounds like any other start point.
+   * An external warm-start prepended to the first attempt's exploration seeds, or {@code null} .
+   * Carries the previous sizing pass's solution for this stage so the search starts near the answer
+   * when the load is stable. It is a <em>seed</em>, not a replay: the analytical seed and the
+   * perturbed runs still explore, so a stale seed (the load changed sharply) is recovered from,
+   * never trusted blindly. Clamped to the attempt's bounds like any other start point.
    */
   private double[] externalSeed;
 

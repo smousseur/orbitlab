@@ -11,14 +11,13 @@ import java.util.Objects;
  * mission when the stage is instantiated via {@link #toVehicle(double)}.
  *
  * <p><b>Components are per exemplar, accessors are aggregated</b>. A stage flown in {@code
- * multiplicity} identical copies
- * — four P120C boosters, two Falcon Heavy side cores — declares what one of them is, which is what
- * the sources give and what {@code PHY-5} needs to propagate a single jettisoned booster.
- * Everything downstream keeps reading {@link #dryMass()}, {@link #propellantCapacity()}, {@link
- * #propulsion()} and {@link #aerodynamics()}, which now return the block as it flies. No accessor
- * with a total's name returns a per-exemplar value: the factor is impossible to pick up by mistake,
- * which is the same defect-prevention rule {@link AerodynamicProperties} states for the order of
- * its own two components.
+ * multiplicity} identical copies — four P120C boosters, two Falcon Heavy side cores — declares what
+ * one of them is, which is what the sources give and what {@code PHY-5} needs to propagate a single
+ * jettisoned booster. Everything downstream keeps reading {@link #dryMass()}, {@link
+ * #propellantCapacity()}, {@link #propulsion()} and {@link #aerodynamics()}, which now return the
+ * block as it flies. No accessor with a total's name returns a per-exemplar value: the factor is
+ * impossible to pick up by mistake, which is the same defect-prevention rule {@link
+ * AerodynamicProperties} states for the order of its own two components.
  *
  * @param name the stage name, for diagnostics and logs (e.g. "S1 (3 cores aggregated)")
  * @param unitDryMass the structural mass without propellant of <b>one</b> exemplar (kg)
@@ -26,7 +25,7 @@ import java.util.Objects;
  * @param unitPropulsion the propulsion system of <b>one</b> exemplar
  * @param capabilities the physical capabilities of the stage
  * @param unitAerodynamics the frontal area and drag coefficient of <b>one</b> exemplar, or {@code
- * null} when the model declares none — the stage then flies its phase without drag
+ *     null} when the model declares none — the stage then flies its phase without drag
  * @param multiplicity how many identical exemplars fly as this one stack entry (at least 1)
  */
 public record StageModel(

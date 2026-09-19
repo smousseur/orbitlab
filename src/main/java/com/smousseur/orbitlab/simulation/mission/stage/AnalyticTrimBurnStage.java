@@ -47,8 +47,8 @@ import org.orekit.utils.PVCoordinates;
  *   <li><b>Elliptic target</b> (and GEO, through the three-argument constructor): a single burn at
  *       the next apogee. The target shape is the ellipse (aimed shaping radius, achieved apogee),
  *       where the shaping radius is resolved by {@link FlownBandAim} so the <b>flown</b> altitude
- *       band is centred on the requested orbit. The resulting orbit
- *       carries the requested perigee <b>in mean elements</b>.
+ *       band is centred on the requested orbit. The resulting orbit carries the requested perigee
+ *       <b>in mean elements</b>.
  *   <li><b>Circular target</b> (through the four-argument constructor): a two-burn Hohmann in
  *       <b>mean</b> elements — see below. A single apside burn cannot circularize the mean orbit
  *       off the equator, so this path replaces it there.

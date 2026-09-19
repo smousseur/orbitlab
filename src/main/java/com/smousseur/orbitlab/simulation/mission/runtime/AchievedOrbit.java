@@ -52,7 +52,7 @@ public record AchievedOrbit(OrbitElements osculating, OrbitElements mean) {
    *
    * @param state the state to report
    * @param referenceRadius the equatorial radius the apsides are counted from (m), read off the
-   * gravitational context of the stage that flew this arc
+   *     gravitational context of the stage that flew this arc
    */
   public static AchievedOrbit of(SpacecraftState state, double referenceRadius) {
     // The µ comes off the state's own orbit, not from an Earth constant.
@@ -71,7 +71,7 @@ public record AchievedOrbit(OrbitElements osculating, OrbitElements mean) {
     // that one contextual.
     //
     // The radius comes from the caller and the µ from the state, and the asymmetry is deliberate
-    //: the µ is what the integrator integrated, the radius is what a reader
+    // : the µ is what the integrator integrated, the radius is what a reader
     // counts an altitude from. Two questions, not two answers to one — which is also why this
     // signature takes a double and not a GravitationalContext: a context would put context.mu()
     // within reach of the very line above that must not read it.

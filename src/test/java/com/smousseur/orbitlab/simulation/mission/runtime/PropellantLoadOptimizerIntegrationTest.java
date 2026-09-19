@@ -31,11 +31,10 @@ import org.orekit.utils.Constants;
 import org.orekit.utils.PVCoordinates;
 
 /**
- * I7 outer-loop integration tests. Runs the
- * full propellant-sizing bisection on real Falcon Heavy missions and asserts the exit criterion:
- * the loads found at {@code λ*} weigh strictly less than the heuristic loads, and the mission at
- * {@code λ*} is feasible. On GEO the payload's AKM is sized separately by {@link
- * PropellantBudget#loadsForGeo} and never appears in the launcher loads.
+ * I7 outer-loop integration tests. Runs the full propellant-sizing bisection on real Falcon Heavy
+ * missions and asserts the exit criterion: the loads found at {@code λ*} weigh strictly less than
+ * the heuristic loads, and the mission at {@code λ*} is feasible. On GEO the payload's AKM is sized
+ * separately by {@link PropellantBudget#loadsForGeo} and never appears in the launcher loads.
  *
  * <p>Each profile is run twice, under two scaling masks: the single-λ tests scale only the sized
  * top stage (S2, {@link PropellantLoadOptimizer#lambdaScaledMask}), while the {@code *MultiStage}
@@ -77,18 +76,18 @@ class PropellantLoadOptimizerIntegrationTest {
   private static final double TARGET_ALTITUDE_M = 400_000.0;
 
   /**
-   * Single-λ reference on the same LEO configuration, the number the multi-stage run
-   * is read against. Logged, not asserted: the multi-stage sweep is answering an open question, and
-   * pinning it to a past figure would turn a measurement into a regression bar.
+   * Single-λ reference on the same LEO configuration, the number the multi-stage run is read
+   * against. Logged, not asserted: the multi-stage sweep is answering an open question, and pinning
+   * it to a past figure would turn a measurement into a regression bar.
    */
   private static final double SINGLE_LAMBDA_LEO_REFERENCE = 0.4313;
 
   /**
    * Circularity bar on the LEO final orbit. Asserted on {@code e} rather than on min/max coast
-   * altitude: geodetic altitudes mix insertion quality with the Earth's oblateness
-   * — at i = 45.9° the flattening alone spreads min and max by 11 km on a perfectly circular orbit.
-   * This bar is looser than what the ±7 % feasibility band already permits (e ≈ 4.1e-3 at 400 km),
-   * so it corroborates the shape without tightening the criterion the loop optimizes against.
+   * altitude: geodetic altitudes mix insertion quality with the Earth's oblateness — at i = 45.9°
+   * the flattening alone spreads min and max by 11 km on a perfectly circular orbit. This bar is
+   * looser than what the ±7 % feasibility band already permits (e ≈ 4.1e-3 at 400 km), so it
+   * corroborates the shape without tightening the criterion the loop optimizes against.
    */
   private static final double LEO_ECCENTRICITY_TOLERANCE = 5e-3;
 
@@ -188,10 +187,10 @@ class PropellantLoadOptimizerIntegrationTest {
   }
 
   /**
-   * GEO counterpart: the sized S2 does the GTO injection and is jettisoned with its
-   * residual aboard, the AKM (off λ, sized by the budget) circularizes at apogee. Feasibility is
-   * measured against the flown final orbit — circular GEO — not the mission's recorded {@code
-   * (parking, GEO)} objective, and at the ±50 km bar of the GEO optimization test.
+   * GEO counterpart: the sized S2 does the GTO injection and is jettisoned with its residual
+   * aboard, the AKM (off λ, sized by the budget) circularizes at apogee. Feasibility is measured
+   * against the flown final orbit — circular GEO — not the mission's recorded {@code (parking,
+   * GEO)} objective, and at the ±50 km bar of the GEO optimization test.
    */
   @Test
   void geo_shrinksHeuristicLoads_andStaysFeasible() {
@@ -320,17 +319,17 @@ class PropellantLoadOptimizerIntegrationTest {
   }
 
   /**
-   * Multi-stage counterpart on LEO: <b>every</b> variable-load stage gets its own λ
-   * and {@link MultiStageLoadOptimizer} minimizes them by coordinate-wise bisection, same setup as
-   * {@link #geoMultiStage_shrinksEveryVariableLoadStage()} on the LEO optimized-transfer profile.
+   * Multi-stage counterpart on LEO: <b>every</b> variable-load stage gets its own λ and {@link
+   * MultiStageLoadOptimizer} minimizes them by coordinate-wise bisection, same setup as {@link
+   * #geoMultiStage_shrinksEveryVariableLoadStage()} on the LEO optimized-transfer profile.
    *
    * <p><b>The question it settles.</b> {@link PropellantLoadOptimizer#lambdaScaledMask} records
    * that S1 has no reclaimable slack on LEO, so putting it under λ pins λ* at 1. That finding
-   * predates the staging fix: before it, a {@code transitionTime} below {@code
-   * burn1Duration} stopped the propagation short of the jettison detector, so S1 was never dropped
-   * and every reduced-S1 run was measured on a mission that did not fly the profile. GEO then
-   * demonstrated the opposite of the same intuition — λ₀ = 0.9453, 67 t reclaimed. This test
-   * re-measures LEO on corrected data.
+   * predates the staging fix: before it, a {@code transitionTime} below {@code burn1Duration}
+   * stopped the propagation short of the jettison detector, so S1 was never dropped and every
+   * reduced-S1 run was measured on a mission that did not fly the profile. GEO then demonstrated
+   * the opposite of the same intuition — λ₀ = 0.9453, 67 t reclaimed. This test re-measures LEO on
+   * corrected data.
    *
    * <p><b>Measured answer: {@code λ* = [1.0000, 0.4312]}</b> — S1 stays pinned, and λ(S2)
    * reproduces the single-λ reference ({@code 0.4313}) to four decimals, which also cross-validates

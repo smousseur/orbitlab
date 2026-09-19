@@ -70,8 +70,7 @@ public abstract class Mission {
    *
    * <p>Shaped exactly like {@link MissionStage#maxStepSeconds}: a default carried by the mission,
    * overridable per stage. In L1 nothing overrides it — that is the definition of the lot. L4 is
-   * where a stage first declares another
-   * body.
+   * where a stage first declares another body.
    *
    * @return the central body context
    */

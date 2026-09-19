@@ -22,8 +22,8 @@ import org.hipparchus.geometry.euclidean.threed.Vector3D;
 /**
  * One drawn object of a mission: a spacecraft model ({@link LodView} + {@link SpacecraftPresenter})
  * and its trajectory ribbon ({@link MissionTrajectoryRenderer}), driven each frame from a
- * pre-computed {@link MissionEphemerisPoint}. It is the unit {@link MissionRenderer} fans out
- * over: the mission's primary object and each jettisoned debris are one of these.
+ * pre-computed {@link MissionEphemerisPoint}. It is the unit {@link MissionRenderer} fans out over:
+ * the mission's primary object and each jettisoned debris are one of these.
  *
  * <p>It carries only what is common to every tracked object. The mission-level concerns of the
  * <em>primary</em> — the click handler that focuses it, and the eclipse occluder it pushes — stay
@@ -173,10 +173,9 @@ final class TrackedObjectView {
    * MissionRenderer.updateFromEphemeris}); the position is converted once, here, and serves both
    * the model pose and the ribbon tip.
    *
-   * <p>The {@code seat} is
-   * <em>not</em> added to the anchor's position — that is left on the propagated point, which is
-   * what the floating origin cancels, so the anchor keeps full precision far from Earth. It is
-   * applied instead as a small near-frame offset on the model itself ({@link
+   * <p>The {@code seat} is <em>not</em> added to the anchor's position — that is left on the
+   * propagated point, which is what the floating origin cancels, so the anchor keeps full precision
+   * far from Earth. It is applied instead as a small near-frame offset on the model itself ({@link
    * BodyView#setModelOffset}) and on the ribbon tip: each piece is authored base-at-origin, so
    * without a seat every piece and every shrunk silhouette would pile on the one propagated point.
    * Render-only — the sample's stored position is untouched, keeping the gated trajectory clean.

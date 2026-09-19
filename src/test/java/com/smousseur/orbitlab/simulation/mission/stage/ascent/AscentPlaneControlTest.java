@@ -44,9 +44,9 @@ import org.orekit.time.TimeScalesFactory;
  * two differ. The fixtures below assert what that buys, at <b>fixed variables</b> — no CMA-ES, no
  * seed, the commanded plane being the only difference between two runs.
  *
- * <p><b>The node sign is asserted, not just the inclination</b>. An inclination is blind to
- * a mirrored plane: fly azimuth {@code −A} instead of {@code A} and the inclination is exactly
- * right while the orbit sweeps the opposite side of the ground track. That is the failure mode the
+ * <p><b>The node sign is asserted, not just the inclination</b>. An inclination is blind to a
+ * mirrored plane: fly azimuth {@code −A} instead of {@code A} and the inclination is exactly right
+ * while the orbit sweeps the opposite side of the ground track. That is the failure mode the
  * east/west basis defect of §1.1c would have produced, and no inclination assertion in the suite
  * could ever have caught it — so this one compares the achieved angular momentum against the
  * commanded plane normal, which is sensitive to both.
@@ -76,10 +76,9 @@ class AscentPlaneControlTest {
 
   /**
    * The residual the ascent hands over to the trim, in degrees. <b>Measured, not chosen</b>. Worst
-   * case of the four targets
-   * is 3.27° at a polar command; 4° is that with room, and it is the figure {@code
-   * AnalyticPlaneTrimAtNodeStage} has to absorb — a plane change of 3.3° at 7.7 km/s costs about
-   * 440 m/s, far above the ~0.25° residual the stage was originally written for.
+   * case of the four targets is 3.27° at a polar command; 4° is that with room, and it is the
+   * figure {@code AnalyticPlaneTrimAtNodeStage} has to absorb — a plane change of 3.3° at 7.7 km/s
+   * costs about 440 m/s, far above the ~0.25° residual the stage was originally written for.
    */
   private static final double MAX_RESIDUAL_DEG = 4.0;
 

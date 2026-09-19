@@ -37,12 +37,12 @@ import org.orekit.utils.Constants;
  * plane short of the poles — including the failure modes an inclination assertion cannot see.
  *
  * <p><b>It flies the whole chain {@code EarthOrbitMission} composes</b> — ascent, transfer, trim,
- * plane trim — and not the ascent alone. That is the correction of BUG-6:
- * {@link AnalyticPlaneTrimAtNodeStage} aims its target velocity purely transverse, so on an
- * eccentric orbit it flattens the flight path angle as well as rotating the plane, and pays for
- * both. Fired on the MECO arc, as this fixture used to fire it, it spent 1 028 m/s and 10 349 kg —
- * a figure read as the cost of a polar mission, which it never was. Fired where the mission
- * actually fires it, on the circularized orbit, it costs <b>10 m/s and 141 kg</b>.
+ * plane trim — and not the ascent alone. That is the correction of BUG-6: {@link
+ * AnalyticPlaneTrimAtNodeStage} aims its target velocity purely transverse, so on an eccentric
+ * orbit it flattens the flight path angle as well as rotating the plane, and pays for both. Fired
+ * on the MECO arc, as this fixture used to fire it, it spent 1 028 m/s and 10 349 kg — a figure
+ * read as the cost of a polar mission, which it never was. Fired where the mission actually fires
+ * it, on the circularized orbit, it costs <b>10 m/s and 141 kg</b>.
  *
  * <p><b>Where the plane is actually closed, measured.</b> The ascent alone lands 3.41° short of the
  * polar command — the thrust stays in the target plane, so it never cancels the out-of-plane

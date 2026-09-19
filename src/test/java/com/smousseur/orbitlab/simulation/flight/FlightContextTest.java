@@ -18,8 +18,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 /**
- * The four types of PHY-1 / L1, and the one
- * property the lot exists to make true: everything is in place and nothing is switched on.
+ * The four types of PHY-1 / L1, and the one property the lot exists to make true: everything is in
+ * place and nothing is switched on.
  */
 class FlightContextTest {
 

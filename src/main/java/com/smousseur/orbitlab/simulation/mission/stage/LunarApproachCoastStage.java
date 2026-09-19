@@ -34,11 +34,10 @@ import org.orekit.time.AbsoluteDate;
  * <p><b>One difference: {@code enter} converts the state, and returns the converted one.</b> On
  * both passes the state arrives geocentric — {@code StageChainRunner} calls {@code enter} before
  * the {@code ArcTransition.convert} at the head of {@code StageLegRunner.fly}, and the optimize
- * pass never converts at all. Returning
- * the unconverted state, as {@link ParkingCoastStage} does, would leave {@code
- * Mission.getCurrentState()} geocentric while {@code fly} propagates selenocentrically: two truths
- * about one instant. Returning the converted one makes {@code fly}'s own convert an identity by
- * reference, so both passes publish the same thing.
+ * pass never converts at all. Returning the unconverted state, as {@link ParkingCoastStage} does,
+ * would leave {@code Mission.getCurrentState()} geocentric while {@code fly} propagates
+ * selenocentrically: two truths about one instant. Returning the converted one makes {@code fly}'s
+ * own convert an identity by reference, so both passes publish the same thing.
  *
  * <p><b>This is the one place in the lot where a mistake does not raise:</b> {@code
  * createOptimizationPropagator} takes its frame from the initial state, so a GCRF state integrated

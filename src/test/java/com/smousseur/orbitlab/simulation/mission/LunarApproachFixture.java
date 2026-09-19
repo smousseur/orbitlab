@@ -19,16 +19,15 @@ import org.orekit.time.TimeScalesFactory;
 
 /**
  * The fabricated selenocentric approach MIS-5 / L4 is tested on — an inbound hyperbola started at
- * the lunar sphere of
- * influence, carrying the catalogue orbiter.
+ * the lunar sphere of influence, carrying the catalogue orbiter.
  *
  * <p><b>The fixture must be flown perturbed, and that is a condition of validity rather than a
  * detail.</b> Under lunar point-mass gravity alone the Keplerian closed form is exact — 100.000000
  * km at the date it predicts, with a radial velocity of 2.3e-8 m/s — so a test written on an
  * unperturbed approach would pass against an implementation that reads the perilune off the
- * hyperbolic anomaly, which is wrong by hundreds of seconds on the real thing.
- * {@code LunarInsertionPlanTest} keeps one case whose only job is to assert that this fixture still
- * has that property.
+ * hyperbolic anomaly, which is wrong by hundreds of seconds on the real thing. {@code
+ * LunarInsertionPlanTest} keeps one case whose only job is to assert that this fixture still has
+ * that property.
  *
  * <p>Shared by three test classes across two packages, which is why it is public and why the
  * constants live here rather than three times over.

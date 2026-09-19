@@ -34,8 +34,8 @@ import org.orekit.utils.TimeStampedPVCoordinates;
  * a signed angle β above that plane. What that misalignment costs is the Lambert term and nothing
  * else — L1 measured the naive plane change {@code 2·v·sin(β/2)} at a <em>third</em> of the real
  * price, because an arc that must span 170° between a point of the parking plane and an off-plane
- * target rotates the plane by {@code asin(sin β / sin 170°)}, not by β. Adding the two
- * would double-count the same physics and still understate it.
+ * target rotates the plane by {@code asin(sin β / sin 170°)}, not by β. Adding the two would
+ * double-count the same physics and still understate it.
  *
  * <p><b>Two opportunities per sidereal day, and not one.</b> The Earth problem aims at a plane with
  * a fixed node, an equality of vectors met once per turn; this one aims at a <em>direction</em>,
@@ -269,17 +269,17 @@ public class LunarLaunchWindowProblem implements LaunchWindowProblem {
    * candidates and not on the sweep.
    *
    * <p><b>Both verdicts come from {@link TranslunarInjectionPlan#inject}, which is also what {@code
-   * TLIBurnStage} flies</b>. They were the same four lines written twice until L4,
-   * and holding them together is what let L6 turn the injection into a finite burn without the
-   * window drifting behind it: the price quoted here is the <em>commanded</em> ΔV, the one the
-   * mission really burns.
+   * TLIBurnStage} flies</b>. They were the same four lines written twice until L4, and holding them
+   * together is what let L6 turn the injection into a finite burn without the window drifting
+   * behind it: the price quoted here is the <em>commanded</em> ΔV, the one the mission really
+   * burns.
    *
-   * <p><b>It is a verdict on reachability and not only on cost</b>. A finite
-   * departure reaches fewer perilunes than an impulsive one: on the flyby's own window an epoch the
-   * impulse aims at 100 km bottoms out at 132 km once burnt, the whole aim map lifted above the
-   * target. This method is what refuses such an epoch instead of handing the mission a date it
-   * cannot honour — and that only means something if {@code vehicle} is the launcher that will fly.
-   * Screening on a spacecraft kick motor prices a 75° burn nothing in the chain ever lights.
+   * <p><b>It is a verdict on reachability and not only on cost</b>. A finite departure reaches
+   * fewer perilunes than an impulsive one: on the flyby's own window an epoch the impulse aims at
+   * 100 km bottoms out at 132 km once burnt, the whole aim map lifted above the target. This method
+   * is what refuses such an epoch instead of handing the mission a date it cannot honour — and that
+   * only means something if {@code vehicle} is the launcher that will fly. Screening on a
+   * spacecraft kick motor prices a 75° burn nothing in the chain ever lights.
    */
   @Override
   public LaunchWindowCandidate confirm(LaunchWindowCandidate candidate) {
@@ -326,8 +326,8 @@ public class LunarLaunchWindowProblem implements LaunchWindowProblem {
    *
    * <p>Exposed rather than private, with {@link #injectionAt}, because it is what a caller reads
    * the geometry <em>behind</em> a price with: β is not a term of the cost — L1 measured that the
-   * Lambert term already carries all of it — but it is what explains one, and a reader
-   * who could only see the number could not tell a right price from a plausible one.
+   * Lambert term already carries all of it — but it is what explains one, and a reader who could
+   * only see the number could not tell a right price from a plausible one.
    *
    * <p><b>Public since MIS-4 / L4</b>, where the closure flight reads the geometry this problem
    * <em>planned</em> in order to measure it against the one the chain actually flew — the two

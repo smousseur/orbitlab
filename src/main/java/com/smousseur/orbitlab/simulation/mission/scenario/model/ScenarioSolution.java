@@ -11,12 +11,12 @@ import java.util.Map;
  * — the two Orekit states it also carries are read by nobody on the replay path — which is what
  * makes the whole thing cheap to persist.
  *
- * <p><b>The loads are kilograms, never λ</b>. A scale factor has two dated dependencies an
- * absolute mass does not: its base, which is whatever {@code PropellantBudget} produced on the day
- * of the save, and its mask, which decides per launcher which stages carry a λ at all. Replaying
- * {@code budgeted × λ} after either moved would fly a third load set — neither the one that flew,
- * nor the one that would be computed today. The multiplication is therefore done at save time,
- * where both factors are unambiguously in hand.
+ * <p><b>The loads are kilograms, never λ</b>. A scale factor has two dated dependencies an absolute
+ * mass does not: its base, which is whatever {@code PropellantBudget} produced on the day of the
+ * save, and its mask, which decides per launcher which stages carry a λ at all. Replaying {@code
+ * budgeted × λ} after either moved would fly a third load set — neither the one that flew, nor the
+ * one that would be computed today. The multiplication is therefore done at save time, where both
+ * factors are unambiguously in hand.
  *
  * @param vectors the solved variables per {@code OptimizableMissionStage.optimizationKey()}
  * @param launcherLoads the per-stage launcher loads actually flown, in kilograms; {@code null}

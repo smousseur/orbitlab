@@ -209,9 +209,9 @@ class VehicleTest {
   }
 
   /**
-   * Separation boundary of the split GEO profile: with a nearly-empty upper
-   * stage, jettisoning to the exact reference mass of the stack above must activate the payload's
-   * kick motor with its full AKM load available.
+   * Separation boundary of the split GEO profile: with a nearly-empty upper stage, jettisoning to
+   * the exact reference mass of the stack above must activate the payload's kick motor with its
+   * full AKM load available.
    */
   @Test
   void vehicleStack_separationBoundary_activatesKickStage() {

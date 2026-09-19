@@ -76,11 +76,10 @@ public class AnalyticGtoInjectionStage extends MissionStage {
   private static final double AIM_CONVERGENCE_TOLERANCE_RATIO = 0.01;
 
   /**
-   * Secant refinements of the lead-in coast that places the transfer apogee on an equatorial node
-   *. Only reached for an inclined, off-node injection; each iteration costs one
-   * apogee-radius aim (a burn + ~half-transfer propagation), so the budget is kept tight. After
-   * coasting to a node the residual off-node is a few tenths of a degree and two or three secant
-   * steps clear it.
+   * Secant refinements of the lead-in coast that places the transfer apogee on an equatorial node .
+   * Only reached for an inclined, off-node injection; each iteration costs one apogee-radius aim (a
+   * burn + ~half-transfer propagation), so the budget is kept tight. After coasting to a node the
+   * residual off-node is a few tenths of a degree and two or three secant steps clear it.
    */
   private static final int NODE_AIM_ITERATIONS = 5;
 

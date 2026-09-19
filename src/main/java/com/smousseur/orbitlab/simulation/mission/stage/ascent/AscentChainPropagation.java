@@ -11,10 +11,10 @@ import org.orekit.propagation.SpacecraftState;
  * Flies a gravity-turn candidate as the three explicit ascent phases, through the very {@link
  * StageChainRunner} the ephemeris pass uses.
  *
- * <p><b>This is the point of the split</b>. As long as the optimize pass built one
- * propagator for the whole turn while the ephemeris pass walked stage by stage, the two passes saw
- * different sequences of integrator restarts and were free to drift apart — the divergence closed
- * by bilan 11 §3.9. One traversal, used by both, cannot drift.
+ * <p><b>This is the point of the split</b>. As long as the optimize pass built one propagator for
+ * the whole turn while the ephemeris pass walked stage by stage, the two passes saw different
+ * sequences of integrator restarts and were free to drift apart — the divergence closed by bilan 11
+ * §3.9. One traversal, used by both, cannot drift.
  *
  * <p><b>Nothing is shared between evaluations.</b> CMA-ES explores in parallel, so each {@link
  * #propagate} builds its own plan reference, its own three phases and its own altitude tracker, and

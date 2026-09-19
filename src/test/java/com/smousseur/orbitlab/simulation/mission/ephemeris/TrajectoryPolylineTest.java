@@ -16,8 +16,7 @@ import org.orekit.time.AbsoluteDate;
 
 /**
  * The display product's two guarantees: it never exceeds the vertex budget, and it always spans the
- * whole flown trajectory — first
- * and last sample included.
+ * whole flown trajectory — first and last sample included.
  *
  * <p>The second one is the regression under test. The renderer used to walk the ephemeris backwards
  * from the end and stop after the budget, so on a long mission the ascent silently vanished from
@@ -287,11 +286,10 @@ class TrajectoryPolylineTest {
 
   /**
    * PHY-4 / L5's non-regression, and it is an identity rather than an equality. A trajectory of a
-   * single arc holds exactly one
-   * vertex table and it <em>is</em> the sampled array: no copy, no arithmetic, and no Orekit call —
-   * which is also why this class can keep building polylines without initialising {@code
-   * OrekitService}. Nothing L5 does can move a vertex of a trajectory that has one arc, and this is
-   * the reason stated as a test rather than as an argument.
+   * single arc holds exactly one vertex table and it <em>is</em> the sampled array: no copy, no
+   * arithmetic, and no Orekit call — which is also why this class can keep building polylines
+   * without initialising {@code OrekitService}. Nothing L5 does can move a vertex of a trajectory
+   * that has one arc, and this is the reason stated as a test rather than as an argument.
    */
   @Test
   void aSingleArcTrajectoryHandsBackTheSampledVectorsThemselves() {

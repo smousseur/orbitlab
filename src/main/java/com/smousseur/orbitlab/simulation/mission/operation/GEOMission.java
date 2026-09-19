@@ -187,8 +187,8 @@ public class GEOMission extends EarthMission {
 
   /**
    * Default configuration of the historical ctors: Falcon Heavy fully loaded with the catalog GEO
-   * satellite, AKM at full capacity. The split GEO profile delegates the apogee
-   * circularization to the payload's kick motor, so an AKM-less payload cannot fly it.
+   * satellite, AKM at full capacity. The split GEO profile delegates the apogee circularization to
+   * the payload's kick motor, so an AKM-less payload cannot fly it.
    */
   private static LaunchConfiguration defaultConfiguration() {
     return LaunchConfiguration.fullyLoaded(

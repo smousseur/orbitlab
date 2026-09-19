@@ -10,10 +10,9 @@ import org.orekit.propagation.SpacecraftState;
 import org.orekit.propagation.numerical.NumericalPropagator;
 
 /**
- * Fail-fast re-entry guard. Arms a {@link
- * ReentryDetector} that stops a propagation whose trajectory has sunk irrecoverably below the
- * Earth's surface. Under drag it also arms a second, shallower and descent-gated stop the deep
- * floor cannot serve (PHY-2 / L1, {@link #armDragStop}).
+ * Fail-fast re-entry guard. Arms a {@link ReentryDetector} that stops a propagation whose
+ * trajectory has sunk irrecoverably below the Earth's surface. Under drag it also arms a second,
+ * shallower and descent-gated stop the deep floor cannot serve (PHY-2 / L1, {@link #armDragStop}).
  *
  * <p><b>The defect class it closes.</b> Nothing in the mission phase chain used to stop a numerical
  * propagation that re-enters. The integrator follows the trajectory under the surface, the adaptive
@@ -59,12 +58,12 @@ public final class ReentryGuard {
    *
    * <p><b>Why it can be this shallow when {@link #SUBSURFACE_FLOOR} could not.</b> Under drag the
    * integrator's step control collapses <em>above</em> the deepest launch pad — measured at −9 to
-   * −30 km against pads as deep as −17 km (Plesetsk) — so a single
-   * unconditional spherical floor cannot be both above the collapse and below every pad. The drag
-   * stop breaks the tie with a radial-velocity gate: the handler stops only a <em>descending</em>
-   * crossing (see {@link #armDragStop}), so a climbing ascent passes through this floor untouched
-   * and only a genuine re-entry is caught, 9 km above where the integrator would otherwise cede. A
-   * valid orbit whose perigee sits at or above the reference sphere never crosses it.
+   * −30 km against pads as deep as −17 km (Plesetsk) — so a single unconditional spherical floor
+   * cannot be both above the collapse and below every pad. The drag stop breaks the tie with a
+   * radial-velocity gate: the handler stops only a <em>descending</em> crossing (see {@link
+   * #armDragStop}), so a climbing ascent passes through this floor untouched and only a genuine
+   * re-entry is caught, 9 km above where the integrator would otherwise cede. A valid orbit whose
+   * perigee sits at or above the reference sphere never crosses it.
    */
   public static final double DRAG_REENTRY_FLOOR = 0.0;
 

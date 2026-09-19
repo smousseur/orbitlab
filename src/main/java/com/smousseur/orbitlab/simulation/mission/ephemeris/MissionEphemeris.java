@@ -52,12 +52,12 @@ public final class MissionEphemeris {
   }
 
   /**
-   * Constructs from a list of sample points, flagged complete or not. An
-   * <em>incomplete</em> ephemeris is one whose flown trajectory could not be propagated to the end
-   * of every stage — a stage threw, or a burn ran its tank dry before its scheduled cutoff and the
-   * {@code DepletionGuard} truncated it. The points collected up to that break are still returned
-   * (a partial trail is better than none for rendering), but a consumer judging feasibility must
-   * read {@link #isComplete()} first: a truncated trajectory is not a mission that flew.
+   * Constructs from a list of sample points, flagged complete or not. An <em>incomplete</em>
+   * ephemeris is one whose flown trajectory could not be propagated to the end of every stage — a
+   * stage threw, or a burn ran its tank dry before its scheduled cutoff and the {@code
+   * DepletionGuard} truncated it. The points collected up to that break are still returned (a
+   * partial trail is better than none for rendering), but a consumer judging feasibility must read
+   * {@link #isComplete()} first: a truncated trajectory is not a mission that flew.
    *
    * @param points the sorted list of ephemeris points
    * @param complete whether every stage propagated to its scheduled end
@@ -149,11 +149,10 @@ public final class MissionEphemeris {
    * </ul>
    *
    * <p><b>Across an arc boundary nothing is interpolated at all</b>. A cubic Hermite between two
-   * positions expressed in
-   * different frames is not an approximation, it is meaningless — it would blend a geocentric
-   * vector with a selenocentric one. The bracketing point is returned unchanged instead, which
-   * extends to the arc the floor semantics this method already applies to the stage name and the
-   * mass.
+   * positions expressed in different frames is not an approximation, it is meaningless — it would
+   * blend a geocentric vector with a selenocentric one. The bracketing point is returned unchanged
+   * instead, which extends to the arc the floor semantics this method already applies to the stage
+   * name and the mass.
    *
    * <p>Two consequences, both wanted. The spacecraft holds still for at most one sampling step at
    * the crossing, rather than being drawn somewhere it never was. And the render context — derived
@@ -243,10 +242,10 @@ public final class MissionEphemeris {
    * <p>PHY-4 / L4 writes the boundary as <b>two samples at the same date</b>, one per frame — the
    * outgoing state in the frame being left, the incoming one in the frame being entered. {@code
    * Arrays.binarySearch}, which {@link EphemerisInterpolator#findInterval} rests on, returns
-   * <em>some</em> matching index among equal
-   * keys and does not say which. Normalising to the lowest makes the answer the <b>outgoing</b>
-   * point, which is the floor semantics this method already applies to the stage name, the mass and
-   * the arc: the flip happens at the next sample, exactly as L3 §3.3 wrote it.
+   * <em>some</em> matching index among equal keys and does not say which. Normalising to the lowest
+   * makes the answer the <b>outgoing</b> point, which is the floor semantics this method already
+   * applies to the stage name, the mass and the arc: the flip happens at the next sample, exactly
+   * as L3 §3.3 wrote it.
    *
    * <p>The behaviour was never actually at risk — the three readers query the same array at the
    * same date, so they get the same index whichever it is. What is closed here is the contract.

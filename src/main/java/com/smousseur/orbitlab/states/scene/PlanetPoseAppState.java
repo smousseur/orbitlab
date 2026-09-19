@@ -201,8 +201,7 @@ public final class PlanetPoseAppState extends BaseAppState {
   /**
    * Gives a body's cloud deck a pivot of its own, while the model is still unattached and private
    * to this thread — Venus is the only body with one. The axis is the pole the probe measured, in
-   * the
-   * model's own axes, which is exactly what the committed calibration carries.
+   * the model's own axes, which is exactly what the committed calibration carries.
    */
   private static void isolateAtmosphereShell(
       SolarSystemBody body, Model3dView model3dView, Spatial spatial) {
@@ -359,8 +358,8 @@ public final class PlanetPoseAppState extends BaseAppState {
 
   /**
    * Pushes {@code occluderBody} as {@code presenter}'s eclipse occulter — the same method for both
-   * directions, since the geometry is symmetric: only which
-   * body is doing the occulting and which is receiving the shading changes.
+   * directions, since the geometry is symmetric: only which body is doing the occulting and which
+   * is receiving the shading changes.
    *
    * <p>Reuses {@link EclipseGeometry#sunApparentRadius}, the L1 vessel case's shared static utility
    * — no duplicated formula.

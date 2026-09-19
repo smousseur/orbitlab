@@ -264,11 +264,11 @@ public final class MissionRenderer {
    * The body every drawn coordinate of a mission is expressed about, this frame.
    *
    * <p><b>It takes a point and not a mission entry</b>, and that is the whole of PHY-4 / L3's
-   * rendering seam, which L5 extends
-   * rather than replaces. Three states convert the same spacecraft position every frame — {@link
-   * com.smousseur.orbitlab.states.camera.FloatingOriginAppState} negates it onto the near frame,
-   * {@code MissionOrchestratorAppState} places the anchor at it, {@code CameraTransitionAppState}
-   * aims at it — and they must not disagree. All three already call {@link
+   * rendering seam, which L5 extends rather than replaces. Three states convert the same spacecraft
+   * position every frame — {@link com.smousseur.orbitlab.states.camera.FloatingOriginAppState}
+   * negates it onto the near frame, {@code MissionOrchestratorAppState} places the anchor at it,
+   * {@code CameraTransitionAppState} aims at it — and they must not disagree. All three already
+   * call {@link
    * com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemeris#displayPointAt} at the
    * same date, so deriving this from the point they already share makes disagreement impossible
    * without them first disagreeing about the position, which would break everything anyway.
@@ -276,13 +276,12 @@ public final class MissionRenderer {
    * attached before {@code FloatingOriginAppState}, so it would read the previous frame's value.
    *
    * <p><b>Why the arc in spacecraft view and the focus elsewhere</b>. Following a spacecraft, the
-   * near scene is centred
-   * on the spacecraft and the one globe the near viewport can hold has to be the body its
-   * coordinates are about, or the Earth would be drawn where the Moon should be — 1 837 km from a
-   * spacecraft at perilune. Looking at a planet, the centre is that planet and the trajectory has
-   * to come to it. The switch therefore happens at the arc boundary, atomically, and reverses by
-   * itself when the clock is scrubbed backwards, because it is a function of the sample and not an
-   * event.
+   * near scene is centred on the spacecraft and the one globe the near viewport can hold has to be
+   * the body its coordinates are about, or the Earth would be drawn where the Moon should be — 1
+   * 837 km from a spacecraft at perilune. Looking at a planet, the centre is that planet and the
+   * trajectory has to come to it. The switch therefore happens at the arc boundary, atomically, and
+   * reverses by itself when the clock is scrubbed backwards, because it is a function of the sample
+   * and not an event.
    *
    * @param point the sample being drawn
    * @param view the current focus
@@ -492,8 +491,8 @@ public final class MissionRenderer {
   /**
    * The mesh a silhouette phase resolves to. Launcher phases keep the launcher's own scale (the
    * assets are one unit tall, so {@code Model3dView} sizes them by the vehicle height); the payload
-   * is drawn at its true catalog size by normalizing the mesh's bounding box. A payload with
-   * no mesh — a cargo module, or a mission carrying no catalog payload — falls back to the {@code
+   * is drawn at its true catalog size by normalizing the mesh's bounding box. A payload with no
+   * mesh — a cargo module, or a mission carrying no catalog payload — falls back to the {@code
    * after_s1} launcher stack, the very target {@code AFTER_S1} yields, so scrubbing across the
    * boundary swaps nothing.
    */
@@ -522,8 +521,8 @@ public final class MissionRenderer {
    * placed relative to {@code primaryPoint} — the object it hangs under in the scene graph — so its
    * position keeps full precision far from Earth (PHY-5, the GEO "tremble" fix, {@link
    * TrackedObjectView#updateFromPoint}), and carries its own seat so it is drawn where it detached
-   * rather than piled on the axis. The reference is the primary's <em>drawn</em> point — the
-   * same seated point that positions the shared anchor the debris hang under (SEL-1 / L2) — so that
+   * rather than piled on the axis. The reference is the primary's <em>drawn</em> point — the same
+   * seated point that positions the shared anchor the debris hang under (SEL-1 / L2) — so that
    * anchor's position cancels out of each debris' world position exactly, and the primary's own
    * seat, baked into that shared point, cancels with it rather than being inherited.
    */
@@ -614,10 +613,10 @@ public final class MissionRenderer {
 
   /**
    * Shows a landing debris' ground track when the "show debris" toggle is on, building it lazily
-   * the first time its rotations are available. An orbital debris (it never lands)
-   * gets none, and a hidden toggle hides it. Whether the near view is centred on Earth at all is a
-   * separate, coarser gate owned by {@code PlanetPoseAppState}, which culls the shared frame these
-   * tracks hang under when the focus is not the Earth.
+   * the first time its rotations are available. An orbital debris (it never lands) gets none, and a
+   * hidden toggle hides it. Whether the near view is centred on Earth at all is a separate, coarser
+   * gate owned by {@code PlanetPoseAppState}, which culls the shared frame these tracks hang under
+   * when the focus is not the Earth.
    */
   private void updateGroundTrack(
       int index, DebrisTrack track, boolean debrisVisible, boolean nearView) {
@@ -797,8 +796,8 @@ public final class MissionRenderer {
   }
 
   /**
-   * A jettisoned piece's seat, at the place it detached from: a booster on the
-   * exact flank it was mounted on (lateral fan, shared with the separation kick — {@link
+   * A jettisoned piece's seat, at the place it detached from: a booster on the exact flank it was
+   * mounted on (lateral fan, shared with the separation kick — {@link
    * SeparationImpulse#fanDirection}), the upper stage up where it sat within {@code after_s1}, the
    * core at the base (no seat).
    */
@@ -902,10 +901,10 @@ public final class MissionRenderer {
    *
    * <p><b>The upper stage leaves as {@code after_s1}, not {@code S2}.</b> The primary flies the
    * {@code after_s1} silhouette (upper stage <em>and</em> fairing) right up to this separation,
-   * because the fairing has no jettison of its own. Drawing the debris as the bare
-   * {@code S2} would make it 12 m shorter than the remnant it detached from, so the piece would
-   * appear to shrink as it separates; drawing it as {@code after_s1} makes it fill exactly the box
-   * the remnant occupied, and it peels away seamlessly while the payload is revealed (PHY-5 / L6).
+   * because the fairing has no jettison of its own. Drawing the debris as the bare {@code S2} would
+   * make it 12 m shorter than the remnant it detached from, so the piece would appear to shrink as
+   * it separates; drawing it as {@code after_s1} makes it fill exactly the box the remnant
+   * occupied, and it peels away seamlessly while the payload is revealed (PHY-5 / L6).
    */
   private static String meshSuffixFor(DebrisTrack track) {
     return switch (track.role()) {
@@ -923,10 +922,10 @@ public final class MissionRenderer {
 
   /**
    * Pushes the arc's own central body as the primary spacecraft's eclipse occulter — the render
-   * body follows physics, not the camera. The three quantities
-   * derived here — the render body, the converted position, and the context — are pure functions of
-   * the sample and the focus, so recomputing them beside {@link TrackedObjectView#updateFromPoint}
-   * cannot disagree with it. Debris push no occluder.
+   * body follows physics, not the camera. The three quantities derived here — the render body, the
+   * converted position, and the context — are pure functions of the sample and the focus, so
+   * recomputing them beside {@link TrackedObjectView#updateFromPoint} cannot disagree with it.
+   * Debris push no occluder.
    */
   private void pushEclipseOccluder(MissionEphemerisPoint point, FocusView focus) {
     SolarSystemBody renderBody = renderBodyOf(point, focus);

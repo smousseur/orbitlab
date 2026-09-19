@@ -26,11 +26,11 @@ public final class MissionFactory {
 
   /**
    * The atmosphere every mission created here flies against unless a saved value overrides it — the
-   * "on by default" of PHY-2 / L5. It
-   * lives at this single production origin rather than in the {@code MissionSpec} constructors so a
-   * spec assembled by hand (tests, fixtures) still defaults to {@link AtmosphereModel#NONE}: the
-   * flip touches what a user creates, not what a test asserts. Scenario restore reads it back to
-   * the value the file saved through {@link MissionSpec#withAtmosphere(AtmosphereModel)}.
+   * "on by default" of PHY-2 / L5. It lives at this single production origin rather than in the
+   * {@code MissionSpec} constructors so a spec assembled by hand (tests, fixtures) still defaults
+   * to {@link AtmosphereModel#NONE}: the flip touches what a user creates, not what a test asserts.
+   * Scenario restore reads it back to the value the file saved through {@link
+   * MissionSpec#withAtmosphere(AtmosphereModel)}.
    */
   private static final AtmosphereModel DEFAULT_ATMOSPHERE = AtmosphereModel.NRLMSISE;
 
@@ -250,10 +250,10 @@ public final class MissionFactory {
    * One ascent straight to the target, loads sized on the apogee — conservative for an ellipse.
    *
    * <p><b>The payload now flies with propellant in it</b>. It used to be handed a hard-coded empty
-   * tank, on the
-   * argument that a direct chain has no burn for it; true of the burn, false of the mass, and the
-   * catalog is where a satellite says how much ΔV it must carry. Nothing spends it before PHY-6 —
-   * the direct chain keeps its upper stage all the way, so the trim is still that stage's burn.
+   * tank, on the argument that a direct chain has no burn for it; true of the burn, false of the
+   * mass, and the catalog is where a satellite says how much ΔV it must carry. Nothing spends it
+   * before PHY-6 — the direct chain keeps its upper stage all the way, so the trim is still that
+   * stage's burn.
    */
   private static LaunchConfiguration directConfiguration(
       LauncherModel launcher,
@@ -270,9 +270,9 @@ public final class MissionFactory {
   }
 
   /**
-   * Sizing for a target the ascent cannot reach directly: parking orbit, injection burn,
-   * coast to apogee, circularization there. The payload's tank is filled when it has one — it is
-   * what lets a launcher whose upper stage cannot hold the coast fly the mission at all.
+   * Sizing for a target the ascent cannot reach directly: parking orbit, injection burn, coast to
+   * apogee, circularization there. The payload's tank is filled when it has one — it is what lets a
+   * launcher whose upper stage cannot hold the coast fly the mission at all.
    *
    * <p>The plane change charged at apogee is <b>zero</b>, unlike a GEO mission's. Since MIS-7 the
    * ascent is steered into the target plane, so what reaches apogee is already in it, give or take
@@ -313,8 +313,7 @@ public final class MissionFactory {
    * before P2, lands in this branch and keeps its trajectory bit-for-bit.
    *
    * <p><b>An unusable value is refused, never clamped</b>: a mission that quietly flies a plane
-   * other than the one
-   * asked for is the defect MIS-7 exists to remove.
+   * other than the one asked for is the defect MIS-7 exists to remove.
    *
    * @param values the raw wizard values
    * @param latitude the launch site latitude in degrees

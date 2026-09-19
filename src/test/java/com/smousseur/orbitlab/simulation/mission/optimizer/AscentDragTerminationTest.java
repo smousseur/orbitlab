@@ -26,11 +26,10 @@ import org.orekit.utils.Constants;
 import org.orekit.utils.PVCoordinates;
 
 /**
- * PHY-2 / L1 proof 2: a drag-on ascent
- * optimization <em>terminates</em>. Before the socle a candidate that piqued low ran 982 497
- * integration steps and never returned; the
- * descent-gated drag stop of {@code ReentryGuard} bounds it, so a Falcon Heavy LEO optimization
- * flown under NRLMSISE now runs to a result.
+ * PHY-2 / L1 proof 2: a drag-on ascent optimization <em>terminates</em>. Before the socle a
+ * candidate that piqued low ran 982 497 integration steps and never returned; the descent-gated
+ * drag stop of {@code ReentryGuard} bounds it, so a Falcon Heavy LEO optimization flown under
+ * NRLMSISE now runs to a result.
  *
  * <p><b>Termination is the only assertion, and that is deliberate.</b> The achieved orbit is
  * <em>not</em> checked against the target: the catalog Isp still double-counts the drag it was a
@@ -47,8 +46,7 @@ import org.orekit.utils.PVCoordinates;
  *
  * <p>Flies the <b>analytic</b> Falcon Heavy LEO profile (the {@code testFalconHeavy}
  * configuration), not the optimized transfer: that path is broken independently of drag, so
- * exercising it here would measure that regression
- * instead of the ascent.
+ * exercising it here would measure that regression instead of the ascent.
  */
 @EnabledIfSystemProperty(named = "orbitlab.slowTests", matches = "true")
 class AscentDragTerminationTest extends AbstractTrajectoryOptimizerTest {
@@ -99,12 +97,12 @@ class AscentDragTerminationTest extends AbstractTrajectoryOptimizerTest {
   }
 
   /**
-   * <b>PHY-2 / L3 B-check</b>: now that the first-stage ISP is 298
-   * s, a drag-on Falcon Heavy LEO-400 still inserts. The sibling above deliberately does
-   * <em>not</em> check the orbit because at 296 s the proxy double-counted the drag; L3 handed the
-   * ~51 m/s of drag back into the ISP, so a drag-on flight at 298 must reach the target the way
-   * drag-off at the old proxy did. Capacity preserved is the whole of decision B — the Falcon Heavy
-   * keeps its reach when the drag it used to hide becomes explicit.
+   * <b>PHY-2 / L3 B-check</b>: now that the first-stage ISP is 298 s, a drag-on Falcon Heavy
+   * LEO-400 still inserts. The sibling above deliberately does <em>not</em> check the orbit because
+   * at 296 s the proxy double-counted the drag; L3 handed the ~51 m/s of drag back into the ISP, so
+   * a drag-on flight at 298 must reach the target the way drag-off at the old proxy did. Capacity
+   * preserved is the whole of decision B — the Falcon Heavy keeps its reach when the drag it used
+   * to hide becomes explicit.
    */
   @Test
   void falconHeavyLeo_dragOnAt298_preservesCapacity() {

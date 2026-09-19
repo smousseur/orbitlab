@@ -53,8 +53,8 @@ public final class ObjectiveEvaluator {
    * closest approach within the objective's own band. The maximum is never read (see {@link
    * FlybyObjective}).
    *
-   * <p><b>A minimum reached at the very last sample of the arc is refused</b>: see the guard
-   * below for why a truncated flight cannot be told from a completed one by the minimum alone.
+   * <p><b>A minimum reached at the very last sample of the arc is refused</b>: see the guard below
+   * for why a truncated flight cannot be told from a completed one by the minimum alone.
    *
    * <p><b>Points are selected by body alone</b> — not by stage name, and not by the arc's rank in
    * the flown sequence. A round trip flies {@code [EARTH, MOON, EARTH]} and the arc to measure is

@@ -26,9 +26,8 @@ class LaunchersTest {
 
   /**
    * The Ariane 64 flight profile, and the reasoning behind each figure. The pitch kick is
-   * deliberately identical to Falcon
-   * Heavy's: nothing justifies an offset, and inventing one to make the catalog look more varied
-   * would put an unfounded number in it.
+   * deliberately identical to Falcon Heavy's: nothing justifies an offset, and inventing one to
+   * make the catalog look more varied would put an unfounded number in it.
    */
   @Test
   void ariane64_ascentProfile_differsFromFalconHeavy() {
@@ -113,9 +112,9 @@ class LaunchersTest {
 
   /**
    * The two figures the decoupage gives as controls, which is what the thrusts were derived from:
-   * the boosters run dry around 130 s and the Vulcain around 8 minutes, in a flow ratio near 14
-   *. Asserted on durations rather than on
-   * thrusts, because the durations are what was anchored and the thrusts are what followed.
+   * the boosters run dry around 130 s and the Vulcain around 8 minutes, in a flow ratio near 14 .
+   * Asserted on durations rather than on thrusts, because the durations are what was anchored and
+   * the thrusts are what followed.
    */
   @Test
   void ariane64_burnDurations_areTheOnesTheThrustsWereDerivedFrom() {
@@ -198,8 +197,8 @@ class LaunchersTest {
 
   /**
    * What the wizard card shows: the thrust the vehicle actually leaves the pad with, summed over
-   * every ground-lit entry. Reading the
-   * bottom entry alone would report 15.2 MN on a split Falcon Heavy.
+   * every ground-lit entry. Reading the bottom entry alone would report 15.2 MN on a split Falcon
+   * Heavy.
    *
    * <p>15.2 MN of boosters plus a core held at 0.81 of its 7.6 — the installed 22.8 MN is what the
    * vehicle has, not what it leaves the pad with.
@@ -250,10 +249,10 @@ class LaunchersTest {
   }
 
   /**
-   * Mass-equivalence lock: instantiating the catalog model with the loads of the
-   * former {@code Launchers.FalconHeavy(600_000, 50_000, …)} factory yields a stack with the same
-   * masses. Propulsion follows the catalog, whose S1 ISP was a 296 s mean-trajectory proxy and is
-   * 298 s since PHY-2/L3 handed back the ~51 m/s of ascent drag it was standing in for
+   * Mass-equivalence lock: instantiating the catalog model with the loads of the former {@code
+   * Launchers.FalconHeavy(600_000, 50_000, …)} factory yields a stack with the same masses.
+   * Propulsion follows the catalog, whose S1 ISP was a 296 s mean-trajectory proxy and is 298 s
+   * since PHY-2/L3 handed back the ~51 m/s of ascent drag it was standing in for
    *
    * <p>Since {@code PHY-8 / L2} the first stage is two entries, so the 600 t are the pro rata
    * {@code 400 / 200} split and the former figures are read off the block the stack resolves — the

@@ -40,11 +40,11 @@ import org.orekit.utils.TimeStampedPVCoordinates;
  * same forces.
  *
  * <p><b>The two agree only because both sides declare the opposite body</b>. Drop the Sun on one
- * side and they part company by
- * kilometres — measured 7 249 m over six hours, which is the solar tide on the Earth-Moon system
- * (2·µ_S·d/D³ ≈ 3.0e-5 m/s², 7.0 km in ½at²) and not a defect. That contrast is logged rather than
- * asserted, in the shape L2 §5.2 gave its four propagations: separating the contributions is what
- * makes a half-wrong wiring visible where a single tolerance would swallow it.
+ * side and they part company by kilometres — measured 7 249 m over six hours, which is the solar
+ * tide on the Earth-Moon system (2·µ_S·d/D³ ≈ 3.0e-5 m/s², 7.0 km in ½at²) and not a defect. That
+ * contrast is logged rather than asserted, in the shape L2 §5.2 gave its four propagations:
+ * separating the contributions is what makes a half-wrong wiring visible where a single tolerance
+ * would swallow it.
  */
 class SoiRoundTripFlightTest {
   private static final Logger logger = LogManager.getLogger(SoiRoundTripFlightTest.class);

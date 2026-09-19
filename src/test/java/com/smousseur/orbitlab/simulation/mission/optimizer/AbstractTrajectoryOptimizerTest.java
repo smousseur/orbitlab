@@ -35,11 +35,11 @@ public abstract class AbstractTrajectoryOptimizerTest {
    * unsafe, rather than merely perturbed.
    *
    * <p><b>Why the achieved orbit is read at insertion and not from the coast minimum.</b> The
-   * analytic trim targets the <em>mean</em> perigee, which centres the
-   * flown excursion on the request instead of perching it at the top of the J2 short-period
-   * oscillation. The excursion itself remains — no orbit is flat under J2 — so sampling the minimum
-   * geodetic altitude over a sidereal day and comparing it against the target still measures that
-   * oscillation, not an insertion error. Only its amplitude has been halved.
+   * analytic trim targets the <em>mean</em> perigee, which centres the flown excursion on the
+   * request instead of perching it at the top of the J2 short-period oscillation. The excursion
+   * itself remains — no orbit is flat under J2 — so sampling the minimum geodetic altitude over a
+   * sidereal day and comparing it against the target still measures that oscillation, not an
+   * insertion error. Only its amplitude has been halved.
    *
    * <p><b>The value is twice the worst case measured after the retargeting, not a round number.</b>
    * Measured 2026-08-05 by {@code GravityTurnFloorProbeTest#flownBandCentringAndCost}: the minimum

@@ -23,19 +23,18 @@ import org.orekit.utils.PVCoordinates;
 
 /**
  * Turns {@link JettisonEvent}s into {@link DebrisTrack}s. A block of {@code multiplicity} exemplars
- * becomes
- * that many tracks, each with its share of the mass and section, its own {@link SeparationImpulse},
- * and its own fall. Runs only on the replay pass, never in the optimizer loop.
+ * becomes that many tracks, each with its share of the mass and section, its own {@link
+ * SeparationImpulse}, and its own fall. Runs only on the replay pass, never in the optimizer loop.
  *
- * <p>The propagator is the production one, drag included. The
- * trajectory is bounded by two of D5's stops — a geodetic-0 floor and the mission horizon — and
- * never by the broken {@code ReentryGuard}.
+ * <p>The propagator is the production one, drag included. The trajectory is bounded by two of D5's
+ * stops — a geodetic-0 floor and the mission horizon — and never by the broken {@code
+ * ReentryGuard}.
  *
- * <p>Two safeguards were added after BUG-27, when the geodetic-0 floor alone
- * proved insufficient for a booster that separates while climbing: {@link
- * #REENTRY_MAX_STEP_SECONDS} caps the integrator step so no single step can leap past the floor
- * into the altitudes where {@code NRLMSISE00} throws, and {@link #propagate} truncates gracefully
- * on any propagation failure — a display-only trail must never fail the mission computation.
+ * <p>Two safeguards were added after BUG-27, when the geodetic-0 floor alone proved insufficient
+ * for a booster that separates while climbing: {@link #REENTRY_MAX_STEP_SECONDS} caps the
+ * integrator step so no single step can leap past the floor into the altitudes where {@code
+ * NRLMSISE00} throws, and {@link #propagate} truncates gracefully on any propagation failure — a
+ * display-only trail must never fail the mission computation.
  */
 public final class DebrisGenerator {
 
@@ -51,11 +50,11 @@ public final class DebrisGenerator {
    * adaptive step grow unchecked in the thin air it climbs through; a single coast-sized step then
    * evaluates the atmosphere far out of its altitude range, which {@code NRLMSISE00} answers with
    * an "Infinite value" throw <em>inside</em> the force model, before the geodetic-0 floor detector
-   * can stop the fall. This is the regime the L0 §5.2 sweep missed:
-   * every state it flew was descending, so the step never grew before the atmosphere thickened. A
-   * 15 s cap keeps a step from spanning the atmospheric traversal — the sweep measured 300 s
-   * throwing, 60 s the failure edge, and ≤30 s reaching the ground cleanly — and costs nothing on
-   * an orbital debris, whose wall time is sampling bound and flat across caps.
+   * can stop the fall. This is the regime the L0 §5.2 sweep missed: every state it flew was
+   * descending, so the step never grew before the atmosphere thickened. A 15 s cap keeps a step
+   * from spanning the atmospheric traversal — the sweep measured 300 s throwing, 60 s the failure
+   * edge, and ≤30 s reaching the ground cleanly — and costs nothing on an orbital debris, whose
+   * wall time is sampling bound and flat across caps.
    */
   private static final double REENTRY_MAX_STEP_SECONDS = 15.0;
 

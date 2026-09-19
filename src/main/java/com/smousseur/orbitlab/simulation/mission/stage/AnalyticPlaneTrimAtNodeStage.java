@@ -28,11 +28,10 @@ import org.orekit.time.AbsoluteDate;
 
 /**
  * Node-targeted plane trim. The apogee circularization ({@link AnalyticApogeeCircularizationStage})
- * rotates the orbital plane with an hours-long finite burn
- * whose out-of-plane component smears over a wide arc, leaving a ~0.25° residual that is
- * geometrically uncorrectable away from a node. This stage cleans it up with a short out-of-plane
- * burn placed at a node, where a plane change is efficient and drift-free — bringing the residual
- * down toward ~0.10-0.15°.
+ * rotates the orbital plane with an hours-long finite burn whose out-of-plane component smears over
+ * a wide arc, leaving a ~0.25° residual that is geometrically uncorrectable away from a node. This
+ * stage cleans it up with a short out-of-plane burn placed at a node, where a plane change is
+ * efficient and drift-free — bringing the residual down toward ~0.10-0.15°.
  *
  * <p>The stage detects the next node itself (equatorial crossing, {@link NodeDetector}) and centers
  * the burn on it, so it does not depend on a preceding coast. For an equatorial target ({@code
@@ -51,11 +50,11 @@ import org.orekit.time.AbsoluteDate;
  * near-circular orbit left by apogee circularization or by a transfer — the radial velocity is
  * negligible and so is the effect. Away from it the cost grows with the flight path angle, because
  * the burn also has to flatten it. The two ends of that, both measured: on the eccentric ascent
- * state a test once handed it (e = 0.21, 3.24° of plane error) it
- * spent 1028 m/s where a pure rotation costs 350-460 m/s, pulling the eccentricity from 0.206 to
- * 0.137; on the orbit a polar mission actually fires it on (e = 0.0025, 0.064° of plane error) it
- * spends 10 m/s and 141 kg. Nothing composes the first case — {@code EarthOrbitMission} inserts
- * this stage after the orbital phases, never before them.
+ * state a test once handed it (e = 0.21, 3.24° of plane error) it spent 1028 m/s where a pure
+ * rotation costs 350-460 m/s, pulling the eccentricity from 0.206 to 0.137; on the orbit a polar
+ * mission actually fires it on (e = 0.0025, 0.064° of plane error) it spends 10 m/s and 141 kg.
+ * Nothing composes the first case — {@code EarthOrbitMission} inserts this stage after the orbital
+ * phases, never before them.
  */
 public class AnalyticPlaneTrimAtNodeStage extends MissionStage {
   private static final Logger logger = LogManager.getLogger(AnalyticPlaneTrimAtNodeStage.class);

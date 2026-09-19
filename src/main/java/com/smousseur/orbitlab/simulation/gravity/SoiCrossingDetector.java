@@ -46,11 +46,11 @@ public class SoiCrossingDetector extends AbstractDetector<SoiCrossingDetector> {
    * millisecond, which is about a metre at transfer speed.
    *
    * <p><b>Public because a caller has to bound the gap between two dates with it</b>: the state
-   * handed to the handler and the
-   * state {@code propagate()} returns are both taken at the localised root, but re-interpolated
-   * independently, so they can differ by up to this threshold. Measured 51 ps on L4's synthetic
-   * fixture and <b>524 µs</b> on the first real translunar flight — an amplitude the fixture could
-   * not show, and which no constant unrelated to this threshold can bound.
+   * handed to the handler and the state {@code propagate()} returns are both taken at the localised
+   * root, but re-interpolated independently, so they can differ by up to this threshold. Measured
+   * 51 ps on L4's synthetic fixture and <b>524 µs</b> on the first real translunar flight — an
+   * amplitude the fixture could not show, and which no constant unrelated to this threshold can
+   * bound.
    */
   public static final double DATE_CONVERGENCE_SECONDS = 1.0e-3;
 
@@ -79,10 +79,9 @@ public class SoiCrossingDetector extends AbstractDetector<SoiCrossingDetector> {
    * + EXIT_DEAD_BAND)}.
    *
    * <p><b>The rule lives here because two callers need it</b>. It used to sit in {@code
-   * StageLegRunner}'s private
-   * arming loop, which a stage cannot reach; a translunar coast that stops at the sphere has to arm
-   * the very same detector on the optimize pass, and a rule written twice is a rule free to drift
-   * on the only thing that decides where the two passes stop.
+   * StageLegRunner}'s private arming loop, which a stage cannot reach; a translunar coast that
+   * stops at the sphere has to arm the very same detector on the optimize pass, and a rule written
+   * twice is a rule free to drift on the only thing that decides where the two passes stop.
    *
    * <p>No handler is attached: what to do about the crossing stays the caller's, as it is for the
    * public constructor.

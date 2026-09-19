@@ -31,8 +31,8 @@ import org.orekit.time.TimeScalesFactory;
  * <p><b>What it guards.</b> L3 makes the frame of a trajectory explicit: {@link
  * MissionEphemerisPoint} gains an arc, {@link TrajectoryPolyline} gains a second partition beside
  * its phase runs, and the decimation budget has to reserve headroom for the <em>union</em> of the
- * two sets of forced vertices rather than for their sum. Nothing produces a second arc,
- * so the drawn line of a real mission must come out of the lot identical — vertex for vertex.
+ * two sets of forced vertices rather than for their sum. Nothing produces a second arc, so the
+ * drawn line of a real mission must come out of the lot identical — vertex for vertex.
  *
  * <p><b>Why a flown mission and not the synthetic argument.</b> Spec §4.1 shows that with a single
  * arc the union is the run starts, so the selection is unchanged <em>by construction</em>, and

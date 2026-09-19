@@ -27,18 +27,17 @@ import java.util.List;
  * point is found inside that plane rather than chosen to suit the Moon.
  *
  * <p><b>The parking altitude is a parameter and it is 400 km</b>. Not for the cost — the injection
- * is 54 m/s cheaper
- * from 400 km than from 185, and the ascent to it costs more than that back — but because 400 km is
- * the only parking altitude any ascent in this repository actually flies, while 185 km sits exactly
- * on the knee of {@code GravityTurnConstraints.getFpaWindowDeg}, the tightest edge of the CMA-ES
- * calibration and one never yet exercised.
+ * is 54 m/s cheaper from 400 km than from 185, and the ascent to it costs more than that back — but
+ * because 400 km is the only parking altitude any ascent in this repository actually flies, while
+ * 185 km sits exactly on the knee of {@code GravityTurnConstraints.getFpaWindowDeg}, the tightest
+ * edge of the CMA-ES calibration and one never yet exercised.
  *
- * <p><b>No S2 jettison after the injection</b>. A separation exists so {@code
- * resolveActiveStage} can hand the next burn to another engine; the injection is the last burn of
- * this chain and the payload is inert, so a separation would change no trajectory, add a stage that
- * knows how to refuse, and widen the gap between the stage walk and the flight — {@code
- * StageSeparationStage} does not override {@code propagateStandalone} either. The assumed price is
- * that the end-of-mission mass includes the spent stage.
+ * <p><b>No S2 jettison after the injection</b>. A separation exists so {@code resolveActiveStage}
+ * can hand the next burn to another engine; the injection is the last burn of this chain and the
+ * payload is inert, so a separation would change no trajectory, add a stage that knows how to
+ * refuse, and widen the gap between the stage walk and the flight — {@code StageSeparationStage}
+ * does not override {@code propagateStandalone} either. The assumed price is that the
+ * end-of-mission mass includes the spent stage.
  *
  * <p><b>The Moon and the Sun are declared at mission level</b>, as on the demo, and that is what
  * makes the crossing work at all: {@code ArcTransition} derives the selenocentric context
@@ -53,10 +52,10 @@ public class LunarFlybyMission extends EarthMission {
    * The ± band on the flown perilune (m).
    *
    * <p>It lives on the mission of the product, which is what let it outlive the PHY-4 demonstration
-   * that used to read it from here. It is not a component of {@code MissionSpec.Lunar}
-   * either — the width is dictated by the measurement and not chosen by a caller, an order of
-   * magnitude above the ~0.9 km the 60 s coast sampling can over-read closest approach by and the
-   * ~1 km the aim secant converges to.
+   * that used to read it from here. It is not a component of {@code MissionSpec.Lunar} either — the
+   * width is dictated by the measurement and not chosen by a caller, an order of magnitude above
+   * the ~0.9 km the 60 s coast sampling can over-read closest approach by and the ~1 km the aim
+   * secant converges to.
    *
    * <p><b>Measured on the ground-launched chain, and the ground adds nothing.</b> The band was
    * written as provisional because a flight starting on the pad carries the dispersion of the
@@ -84,11 +83,11 @@ public class LunarFlybyMission extends EarthMission {
   /**
    * The circular parking altitude every lunar mission built from the wizard leaves from (m).
    *
-   * <p><b>A single source, and that is its whole reason to exist</b>: the launch
-   * window, the chain and the propellant budget have to agree on it, and until L5 nothing held it —
-   * the closure flight passed {@code 400_000} from its own test. It is not offered as a wizard
-   * field either: L0 measured the aim to converge identically from 185 to 400 km, so a slider there
-   * would be a choice with nothing behind it.
+   * <p><b>A single source, and that is its whole reason to exist</b>: the launch window, the chain
+   * and the propellant budget have to agree on it, and until L5 nothing held it — the closure
+   * flight passed {@code 400_000} from its own test. It is not offered as a wizard field either: L0
+   * measured the aim to converge identically from 185 to 400 km, so a slider there would be a
+   * choice with nothing behind it.
    */
   public static final double DEFAULT_PARKING_ALTITUDE = 400_000.0;
 

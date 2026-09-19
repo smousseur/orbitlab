@@ -30,8 +30,8 @@ import org.orekit.time.AbsoluteDate;
  *
  * <p><b>The identity is the expected value, not a placeholder.</b> The Earth and the Moon carry the
  * reference frame and are declared frozen; Mars and Saturn measure identical to them. A body with a
- * non-identity correction is an asset that has not been brought onto the export convention yet
- *, and each says so below.
+ * non-identity correction is an asset that has not been brought onto the export convention yet ,
+ * and each says so below.
  *
  * <h2>Where λ0 stands, body by body (L3)</h2>
  *

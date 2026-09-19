@@ -18,14 +18,14 @@ import com.smousseur.orbitlab.simulation.mission.MissionType;
  * L5.
  *
  * <p><b>The guard fires on {@link MissionType}, not on a new {@code MissionSpec} branch</b>, and
- * this javadoc used to claim otherwise: {@code toScenarioMission} switches on the
- * type. Adding a spec variant compiles here untouched; adding a mission type does not.
+ * this javadoc used to claim otherwise: {@code toScenarioMission} switches on the type. Adding a
+ * spec variant compiles here untouched; adding a mission type does not.
  *
- * <p><b>Absence is meaningful</b> and stays so: {@link #horizonDays()}, and the
- * inclination and node of an {@link EarthOrbit}, are {@code null} — hence omitted from the JSON —
- * when they were never commanded, never written at their derived value. Publishing a derived
- * inclination would move the azimuth by thousandths of a degree, hence the signed launch assist,
- * hence every propellant load: a trajectory drift no assertion on the inclination would catch.
+ * <p><b>Absence is meaningful</b> and stays so: {@link #horizonDays()}, and the inclination and
+ * node of an {@link EarthOrbit}, are {@code null} — hence omitted from the JSON — when they were
+ * never commanded, never written at their derived value. Publishing a derived inclination would
+ * move the azimuth by thousandths of a degree, hence the signed launch assist, hence every
+ * propellant load: a trajectory drift no assertion on the inclination would catch.
  */
 @JsonTypeInfo(
     use = JsonTypeInfo.Id.NAME,

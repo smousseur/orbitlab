@@ -10,10 +10,9 @@ import org.orekit.time.AbsoluteDate;
  *
  * <p><b>Why it exists.</b> The ascent is one propagation today but becomes three phases: {@code
  * Gravity turn (S1) → S1 separation → Gravity turn (S2)}. Those phases only reproduce today's
- * trajectory if they agree to
- * the millisecond on when the first stage stops thrusting, when it is dropped, and when the second
- * ignites — so the dates must be computed <b>once</b>, not re-derived per phase. This record is
- * that single computation; {@link
+ * trajectory if they agree to the millisecond on when the first stage stops thrusting, when it is
+ * dropped, and when the second ignites — so the dates must be computed <b>once</b>, not re-derived
+ * per phase. This record is that single computation; {@link
  * com.smousseur.orbitlab.simulation.mission.maneuver.GravityTurnManeuver#plan} is the only place
  * that produces one.
  *
@@ -39,8 +38,8 @@ import org.orekit.time.AbsoluteDate;
  *     ascent has no such phase; callers test {@link #hasCorePhase()} rather than the value
  * @param secondStage the vehicle stage active after the last launcher jettison
  * @param commandedPlaneNormal unit normal of the plane the ascent steers into, or {@code null} when
- * no plane is commanded and the turn follows whatever plane the kick left behind; callers test
- * {@link #hasCommandedPlane()} rather than the value
+ *     no plane is commanded and the turn follows whatever plane the kick left behind; callers test
+ *     {@link #hasCommandedPlane()} rather than the value
  */
 public record AscentPlan(
     AbsoluteDate kickDate,

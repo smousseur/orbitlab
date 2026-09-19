@@ -18,8 +18,7 @@ import org.orekit.time.AbsoluteDate;
  * Explicit separation of the spent active stage between two mission stages. On entry the state mass
  * drops to the exact reference mass of the stack above, so {@code resolveActiveStage} activates the
  * next vehicle (e.g. the payload's kick motor once the upper stage separates) without any
- * ε-boundary ambiguity. A short settling coast follows before the next
- * stage configures its burn.
+ * ε-boundary ambiguity. A short settling coast follows before the next stage configures its burn.
  *
  * <p><b>Which stage gets dropped.</b> The stage jettisoned is whichever one the mass accounting
  * says is active — an assumption that only holds while the flight profile consumes the stages below
@@ -28,10 +27,10 @@ import org.orekit.time.AbsoluteDate;
  * rest of the profile.
  *
  * <p><b>A role rather than a stack index</b>. Splitting the boosters out of the core moves every
- * index above them by one, so an index
- * written by hand would have had to move with it — the very class of bug the guard exists to close.
- * A stack that declares no role at all refuses the guard rather than letting it pass silently:
- * asking for a role on a stack that has none is a wiring error, not a permission.
+ * index above them by one, so an index written by hand would have had to move with it — the very
+ * class of bug the guard exists to close. A stack that declares no role at all refuses the guard
+ * rather than letting it pass silently: asking for a role on a stack that has none is a wiring
+ * error, not a permission.
  */
 public class StageSeparationStage extends MissionStage {
   private static final Logger logger = LogManager.getLogger(StageSeparationStage.class);

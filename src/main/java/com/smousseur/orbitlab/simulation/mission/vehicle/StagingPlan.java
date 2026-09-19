@@ -51,7 +51,7 @@ public record StagingPlan(List<StageRole> roles, ParallelBlock parallelBlock) {
    *     (kg), zero on a grouped jettison
    * @param boosterCount how many identical boosters the block aggregates — the multiplicity the
    *     runtime otherwise dissolves into the aggregate mass and section, kept here so PHY-5 can
-   * split the jettison back into that many drawn objects
+   *     split the jettison back into that many drawn objects
    */
   public record ParallelBlock(
       int bottomIndex,

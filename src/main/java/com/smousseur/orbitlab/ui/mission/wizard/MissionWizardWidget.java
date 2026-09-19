@@ -265,9 +265,9 @@ public class MissionWizardWidget implements AutoCloseable {
    * <p><b>Why here and not at creation.</b> Some refusals depend on the whole form: a target beyond
    * the ascent's reach needs an upper stage that holds the coast to apogee, or a payload whose kick
    * motor takes the burn over — so the target chosen at step 3 is only refutable once the vehicle
-   * is picked at step 4. Left to
-   * {@code MissionWizardAppState}, the exception lands in a log line with the wizard already closed
-   * and no mission created, which is indistinguishable from the application ignoring the user.
+   * is picked at step 4. Left to {@code MissionWizardAppState}, the exception lands in a log line
+   * with the wizard already closed and no mission created, which is indistinguishable from the
+   * application ignoring the user.
    *
    * <p>Nothing is propagated: composing resolves the catalogs, sizes the propellant analytically
    * and assembles the stages. The mission built here is thrown away — the submit path rebuilds it,
@@ -320,8 +320,8 @@ public class MissionWizardWidget implements AutoCloseable {
    * the context currently selects when creating.
    *
    * <p>Reopening reads the profile the prefill derived from the spec — no spec component carries it
-   * — and falls back on the
-   * type alone if the values predate P2 or name a profile this build does not know.
+   * — and falls back on the type alone if the values predate P2 or name a profile this build does
+   * not know.
    *
    * <p>That fallback decides which tab the step opens on since MIS-5 / L6, which is why it now goes
    * through {@link MissionProfile#defaultFor} rather than through a ternary that answered LEO for

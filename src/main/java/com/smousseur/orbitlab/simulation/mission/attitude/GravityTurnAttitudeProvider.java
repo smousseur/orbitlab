@@ -31,14 +31,14 @@ import org.orekit.utils.PVCoordinatesProvider;
  * <p><b>Two modes, and the difference is the whole of MIS-7 §4.</b> By default the horizontal
  * target is {@code vTangential.normalize()}: the thrust stays in the instantaneous {@code (r, v)}
  * plane, which is structurally incapable of changing the orbital plane — measured at ≤ 0.02 % of
- * authority over the commanded azimuth. Given a commanded plane normal {@code ĥ},
- * the horizontal target becomes {@code (ĥ × r̂).normalize()} instead — the prograde direction
- * <em>in the target plane</em> — so the thrust acquires an out-of-plane component for as long as
- * the flown plane differs from the wanted one. That is what gives the azimuth authority at last.
+ * authority over the commanded azimuth. Given a commanded plane normal {@code ĥ}, the horizontal
+ * target becomes {@code (ĥ × r̂).normalize()} instead — the prograde direction <em>in the target
+ * plane</em> — so the thrust acquires an out-of-plane component for as long as the flown plane
+ * differs from the wanted one. That is what gives the azimuth authority at last.
  *
- * <p><b>The default mode is byte-for-byte the pre-MIS-7 code</b>. The two horizontal
- * targets are not numerically identical even when the planes coincide, so the commanded mode is
- * strictly opt-in and the calibrated due-east trajectories never take it.
+ * <p><b>The default mode is byte-for-byte the pre-MIS-7 code</b>. The two horizontal targets are
+ * not numerically identical even when the planes coincide, so the commanded mode is strictly opt-in
+ * and the calibrated due-east trajectories never take it.
  */
 public class GravityTurnAttitudeProvider implements AttitudeProvider {
 

@@ -96,11 +96,11 @@ public abstract class MissionStage {
 
   /**
    * Returns the integrator max step to use when propagating this stage, sized to keep the
-   * late-ignition invariant. The default steps at {@link
-   * OrekitService#COAST_MAX_STEP} for a non-propulsive (burn-free) stage and at the conservative
-   * {@link OrekitService#SAFE_MAX_STEP} for a propulsive one. Stages whose upper-stage burn can
-   * grow light under a varying I7 load override this to size the step from their actual burns, so
-   * the proven Falcon Heavy stepping is preserved while a lighter load auto-tightens.
+   * late-ignition invariant. The default steps at {@link OrekitService#COAST_MAX_STEP} for a
+   * non-propulsive (burn-free) stage and at the conservative {@link OrekitService#SAFE_MAX_STEP}
+   * for a propulsive one. Stages whose upper-stage burn can grow light under a varying I7 load
+   * override this to size the step from their actual burns, so the proven Falcon Heavy stepping is
+   * preserved while a lighter load auto-tightens.
    *
    * @param entryState the spacecraft state at the start of this stage
    * @param mission the parent mission
@@ -115,8 +115,8 @@ public abstract class MissionStage {
    *
    * <p>Deliberately shaped like {@link #maxStepSeconds}: a phase is the unit that knows what it
    * flies around, so it is the unit that declares it. Nothing overrides this in L1 — the lot is a
-   * pure refactor. L4 is where a stage
-   * first declares another body, and this is the seam it will use.
+   * pure refactor. L4 is where a stage first declares another body, and this is the seam it will
+   * use.
    *
    * @param mission the parent mission
    * @return the central body context for this stage
@@ -170,9 +170,9 @@ public abstract class MissionStage {
    * where that may change.
    *
    * <p><b>A propulsive stage may not declare one</b>, and that is a decision rather than an
-   * oversight: a burn is rebuilt from the stage entry date with its full duration
-   * and its attitude is bound to the frame, so re-configuring it on the far side of a boundary
-   * would fly it again, re-oriented. A lunar transfer crosses ballistically, so nothing is lost.
+   * oversight: a burn is rebuilt from the stage entry date with its full duration and its attitude
+   * is bound to the frame, so re-configuring it on the far side of a boundary would fly it again,
+   * re-oriented. A lunar transfer crosses ballistically, so nothing is lost.
    *
    * @param mission the parent mission
    * @return the bodies whose SOI boundary may cut this stage, possibly empty
@@ -227,9 +227,9 @@ public abstract class MissionStage {
    * Sizes the integrator max step from the burns of the vehicle stage active at {@code entryState},
    * taking that stage's {@link ActiveStageInfo#depletionFloor() depletion floor} as the worst-case
    * (smallest) ignition mass — the tightest bound that keeps the late-ignition invariant for every
-   * burn the stage can fire. {@link
-   * OrekitService#burnLimitedMaxStep} caps at {@link OrekitService#SAFE_MAX_STEP}, so a heavy load
-   * (Falcon Heavy) keeps its 30 s stepping unchanged and only a lighter I7 load auto-tightens.
+   * burn the stage can fire. {@link OrekitService#burnLimitedMaxStep} caps at {@link
+   * OrekitService#SAFE_MAX_STEP}, so a heavy load (Falcon Heavy) keeps its 30 s stepping unchanged
+   * and only a lighter I7 load auto-tightens.
    *
    * <p>Analytic stages that host a burn override {@link #maxStepSeconds} with this <em>and</em>
    * pass the SAME value to every {@code create*Propagator(...)} that hosts one of their burns —

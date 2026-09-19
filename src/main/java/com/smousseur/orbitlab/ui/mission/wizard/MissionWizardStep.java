@@ -4,10 +4,9 @@ package com.smousseur.orbitlab.ui.mission.wizard;
  * The wizard's steps, in the order they are walked.
  *
  * <p><b>SITE comes before PARAMETERS</b>, and that is a MIS-7 P2 change. The target inclination is
- * bounded by the
- * launch latitude — a site at {@code φ} reaches {@code [φ, 180° − φ]} and nothing else — so asking
- * for the orbit before the site meant showing a field that could not be bounded, nor its refusal
- * explained. It also reads better: where one leaves from, then where one is going.
+ * bounded by the launch latitude — a site at {@code φ} reaches {@code [φ, 180° − φ]} and nothing
+ * else — so asking for the orbit before the site meant showing a field that could not be bounded,
+ * nor its refusal explained. It also reads better: where one leaves from, then where one is going.
  */
 public enum MissionWizardStep {
   MISSION(0, "MISSION"),

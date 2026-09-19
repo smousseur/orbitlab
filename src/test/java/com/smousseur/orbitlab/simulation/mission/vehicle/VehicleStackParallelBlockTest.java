@@ -10,8 +10,7 @@ import org.junit.jupiter.api.Test;
 
 /**
  * The parallel block as {@link VehicleStack} resolves it. Figures are synthetic and round: boosters
- * and core
- * share one Isp, the core flows a fifth of the block, and every expected mass is exact.
+ * and core share one Isp, the core flows a fifth of the block, and every expected mass is exact.
  *
  * <pre>
  *   boosters ×2   dry 2 × 10 000, capacity 2 × 200 000, thrust 2 × 1 000 000, Isp 300

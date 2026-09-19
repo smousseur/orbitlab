@@ -91,9 +91,9 @@ public final class Payloads {
           false);
 
   /**
-   * An inert lunar probe — the dry mass of LRO (1 846 kg) and Luna-25 (1 750 kg),
-   * rounded. It carries no propulsion of its own: the translunar injection is the launcher's last
-   * burn and nothing is handed over afterwards.
+   * An inert lunar probe — the dry mass of LRO (1 846 kg) and Luna-25 (1 750 kg), rounded. It
+   * carries no propulsion of its own: the translunar injection is the launcher's last burn and
+   * nothing is handed over afterwards.
    */
   public static final PayloadModel LUNAR_PROBE =
       // Boxy bus. B = 227 kg/m², which widens the bracket of the PHY-2 table downwards without
@@ -111,12 +111,11 @@ public final class Payloads {
           false);
 
   /**
-   * A propelled lunar orbiter —
-   * the payload that flies its own lunar-orbit insertion, which {@link #LUNAR_PROBE} cannot.
+   * A propelled lunar orbiter — the payload that flies its own lunar-orbit insertion, which {@link
+   * #LUNAR_PROBE} cannot.
    *
    * <p><b>Every number comes from L0's measured arrival</b>, and the engine is the one that is not
-   * a real
-   * orbiter's:
+   * a real orbiter's:
    *
    * <ul>
    *   <li>2 000 kg dry at Isp 320 is the configuration L0 recomputed its table on;
@@ -172,19 +171,19 @@ public final class Payloads {
    * Returns the payload models a mission of the given type can actually fly, on the two axes the
    * question has: what the payload must be able to <b>do</b> — {@link
    * MissionType#requiresPayloadPropulsion()}, which keeps only the propelled models — and where it
-   * is meant to <b>fly</b>. A third axis joined them at PHY-8 / L6: what a
-   * payload is <b>for</b>, which takes the cargo module out of every list until MIS-6 gives it the
-   * rendezvous it is meant for.
+   * is meant to <b>fly</b>. A third axis joined them at PHY-8 / L6: what a payload is <b>for</b>,
+   * which takes the cargo module out of every list until MIS-6 gives it the rendezvous it is meant
+   * for.
    *
    * <p>The second axis was missing until L5, and it showed: a lunar flyby requires no propulsion,
    * so it was offered the whole catalog, GEO communications satellite included.
    *
-   * <p><b>The two axes cross, and a lunar flyby is offered the orbiter too</b>. A
-   * flyby requires no propulsion, so it excludes none: the orbiter flies it with an empty tank,
-   * exactly as {@link MissionType#LEO} says a propelled payload does. Only {@code LUNAR_ORBIT}
-   * needs both axes at once, and it is the one type the catalog answers with a single model — the
-   * probe being lunar but inert, the GEO satellite propelled but terrestrial, and the cargo module
-   * now filtered out of everything.
+   * <p><b>The two axes cross, and a lunar flyby is offered the orbiter too</b>. A flyby requires no
+   * propulsion, so it excludes none: the orbiter flies it with an empty tank, exactly as {@link
+   * MissionType#LEO} says a propelled payload does. Only {@code LUNAR_ORBIT} needs both axes at
+   * once, and it is the one type the catalog answers with a single model — the probe being lunar
+   * but inert, the GEO satellite propelled but terrestrial, and the cargo module now filtered out
+   * of everything.
    *
    * @param type the selected mission type
    * @return the eligible models, possibly empty if the catalog offers no compatible model

@@ -17,15 +17,14 @@ import org.orekit.utils.Constants;
  * bodies that perturb it, and everything a force model, an altitude or a node detector needs from
  * either — nothing else.
  *
- * <p>Introduced by PHY-4 / L1 to turn the
- * central body from a constant read at the bottom of {@link OrekitService} into a datum carried by
- * the stage. PHY-4 / L2 added {@link
- * #perturbers()}: L1 had left open where the third-body list would live, and the answer is here
- * rather than in a second stage declaration, because a lunar arc in L4 will declare a central body
- * and its perturbers together — separating them now would only mean rejoining them later.
+ * <p>Introduced by PHY-4 / L1 to turn the central body from a constant read at the bottom of {@link
+ * OrekitService} into a datum carried by the stage. PHY-4 / L2 added {@link #perturbers()}: L1 had
+ * left open where the third-body list would live, and the answer is here rather than in a second
+ * stage declaration, because a lunar arc in L4 will declare a central body and its perturbers
+ * together — separating them now would only mean rejoining them later.
  *
- * <p>Nothing in production declares a perturber: L2 is opt-in and no stage opts in.
- * L6 is the first real declarant.
+ * <p>Nothing in production declares a perturber: L2 is opt-in and no stage opts in. L6 is the first
+ * real declarant.
  *
  * @param body the central body
  * @param mu the gravitational parameter the <b>propagator</b> integrates with (m³/s²)
@@ -88,8 +87,7 @@ public record GravitationalContext(
    * The Moon context: point-mass gravity, a selenocentric frame with ICRF axes, and a spherical
    * reference shape.
    *
-   * <p>Introduced by PHY-4 / L4. Three of
-   * its five components are not what one would guess:
+   * <p>Introduced by PHY-4 / L4. Three of its five components are not what one would guess:
    *
    * <ul>
    *   <li>the frame is {@link OrekitService#bodyCentredIcrfFrame}, <b>not</b> {@code

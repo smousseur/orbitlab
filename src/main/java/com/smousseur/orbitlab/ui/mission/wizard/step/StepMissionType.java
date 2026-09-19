@@ -30,8 +30,7 @@ import java.util.function.Consumer;
  *
  * <p>Four of the six cards are backed by the same {@code MissionType} and the same spec record —
  * they are <b>presets</b>, not types. What a card actually decides is the parameter panel the next
- * step shows and the inclination
- * it starts from.
+ * step shows and the inclination it starts from.
  *
  * <p><b>Why tabs (MIS-5 / L6).</b> Six cards three per row filled 421 px of the 424 the content
  * pane offers; a seventh row would have landed on the footer, nothing in this wizard clipping.
@@ -228,9 +227,9 @@ public class StepMissionType implements StepValues {
    * wording per constant rather than one per variant.
    *
    * <p>The MEO's is the catalog: it needs an upper stage holding a 2 h 58 coast, or a payload whose
-   * kick motor takes the apogee burn over, and saying so on the card is what
-   * keeps the refusal at the launcher step from reading as a surprise. The lunar one is the
-   * calendar: nothing refuses the mission, but its date is not free.
+   * kick motor takes the apogee burn over, and saying so on the card is what keeps the refusal at
+   * the launcher step from reading as a surprise. The lunar one is the calendar: nothing refuses
+   * the mission, but its date is not free.
    */
   private static Badge badgeFor(MissionProfile profile) {
     return switch (profile.availability()) {

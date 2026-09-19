@@ -29,9 +29,8 @@ import org.orekit.time.AbsoluteDate;
  * <ul>
  *   <li>{@link OptimizationType#FAST} / {@link OptimizationType#BALANCED} on an {@link
  *       MissionSpec.EarthOrbit} — {@link MeasuredLoadPlanner}: size the top stage by measuring it
- * in flight, then fly the requested mode at the resolved loads. Requires a {@link MissionSpec}, to
- * rebuild the
- *       mission at each candidate load array.
+ *       in flight, then fly the requested mode at the resolved loads. Requires a {@link
+ *       MissionSpec}, to rebuild the mission at each candidate load array.
  *   <li>{@link OptimizationType#FAST} / {@link OptimizationType#BALANCED} otherwise — {@link
  *       FixedLoadPlanner}: fly the mission at its budgeted loads, a single CMA-ES pass. FAST flies
  *       the analytic composition, BALANCED the CMA-ES transfer; the planner is the same. This is
@@ -115,11 +114,10 @@ public class MissionPlanOptimizer {
   /**
    * Selects the replay path, or {@code null} to fall back on a real optimization.
    *
-   * <p>The replay is all or nothing:
-   * solutions that do not describe exactly this composition — a mode changed since the save, a
-   * stage renamed, a composition a later lot moved — are dropped whole rather than applied to the
-   * stages that still match. Falling back is not a silent degradation: it is the same computation
-   * the user asked for, merely paid for in full.
+   * <p>The replay is all or nothing: solutions that do not describe exactly this composition — a
+   * mode changed since the save, a stage renamed, a composition a later lot moved — are dropped
+   * whole rather than applied to the stages that still match. Falling back is not a silent
+   * degradation: it is the same computation the user asked for, merely paid for in full.
    */
   private MissionPlanner replayPlanner(MissionSolutions solutions) {
     Mission mission = entry.mission();

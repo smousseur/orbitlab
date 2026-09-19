@@ -66,8 +66,8 @@ public final class AscentSequence {
    * <p><b>The plane arguments are live as of MIS-7.</b> This overload existed before it and was
    * never called: both concrete missions went through the two-argument one, which passed {@code (0,
    * 0)}. Handing it a {@link LaunchPlane} that differs from the site's free plane now switches the
-   * ascent to the commanded-plane attitude; handing it the free plane keeps the
-   * historical trajectory bit-for-bit.
+   * ascent to the commanded-plane attitude; handing it the free plane keeps the historical
+   * trajectory bit-for-bit.
    *
    * @param vehicle the stack that will fly it, read for its staging plan
    * @param profile the launcher's flight profile (pitch kick, interstage coast)

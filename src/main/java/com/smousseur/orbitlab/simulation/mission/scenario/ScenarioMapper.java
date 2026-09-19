@@ -29,9 +29,9 @@ import java.util.Map;
  * {@code ui.mission.wizard.FormField} without depending on it.
  *
  * <p><b>Units are the wizard units</b> — kilometres, degrees, days — not the metres and radians of
- * the spec: the file is meant to be read and diffed by a human, and it is the shape
- * the map carries anyway. Dates are normalised to ISO UTC on the way out and back to the display
- * format on the way in, both through {@code TimeConverter}, which parses either.
+ * the spec: the file is meant to be read and diffed by a human, and it is the shape the map carries
+ * anyway. Dates are normalised to ISO UTC on the way out and back to the display format on the way
+ * in, both through {@code TimeConverter}, which parses either.
  */
 public final class ScenarioMapper {
 
@@ -286,8 +286,8 @@ public final class ScenarioMapper {
 
   /**
    * Reads an optional number. An absent key stays absent — it is the very thing the format has to
-   * carry for an uncommanded inclination, an unwaited node and an "auto" horizon —
-   * while a present but unreadable one is refused rather than dropped.
+   * carry for an uncommanded inclination, an unwaited node and an "auto" horizon — while a present
+   * but unreadable one is refused rather than dropped.
    */
   private static Double doubleOrNull(Map<String, Object> values, String key) {
     Object raw = values.get(key);

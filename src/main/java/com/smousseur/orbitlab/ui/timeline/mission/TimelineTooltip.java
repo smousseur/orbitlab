@@ -16,8 +16,8 @@ import java.util.List;
 
 /**
  * The hover tooltip of the mission track: a small opaque card that follows the cursor and lists the
- * stage name, the absolute UTC date and the {@code T+} offset under it — or, over a
- * group of markers, every transition the group stands for.
+ * stage name, the absolute UTC date and the {@code T+} offset under it — or, over a group of
+ * markers, every transition the group stands for.
  *
  * <p>Rebuilt only when its text actually changes. A cursor sweeping the track changes the date on
  * every motion event, so the lines are compared before any Lemur element is touched; without that,

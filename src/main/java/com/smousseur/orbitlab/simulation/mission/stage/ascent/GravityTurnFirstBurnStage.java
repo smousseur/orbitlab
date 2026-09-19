@@ -34,8 +34,7 @@ import org.orekit.time.AbsoluteDate;
  * <p><b>Why it owns the optimization.</b> The turn is optimized as a whole — {@code transitionTime}
  * is the MECO of the <em>second</em> burn — so the problem must fly all three phases. It does so
  * through the same {@code StageChainRunner} the ephemeris pass uses, which is what keeps the two
- * passes on
- * the same sequence of integrator restarts. {@link #advancesByReplay()} then tells {@code
+ * passes on the same sequence of integrator restarts. {@link #advancesByReplay()} then tells {@code
  * MissionOptimizer} not to advance the mission from {@code problem.propagate()}, since the loop
  * itself walks the two phases that follow.
  */
@@ -54,10 +53,10 @@ public class GravityTurnFirstBurnStage extends GravityTurnBurnStage
   /**
    * Slack on the staging-invariant check. With a commandable core, {@link
    * AscentPlan#stagingCompleteTime()} equals the transition time by construction in the
-   * early-cutoff region, up to a
-   * floating-point residue of a few ulp from the subtraction that produces the capped core burn.
-   * This absorbs that residue so a legitimate early-cutoff schedule is not rejected; a MECO so
-   * early the core never fires still falls short by a whole interstage coast and is caught.
+   * early-cutoff region, up to a floating-point residue of a few ulp from the subtraction that
+   * produces the capped core burn. This absorbs that residue so a legitimate early-cutoff schedule
+   * is not rejected; a MECO so early the core never fires still falls short by a whole interstage
+   * coast and is caught.
    */
   private static final double STAGING_INVARIANT_SLACK = 1.0e-6;
 
@@ -232,8 +231,8 @@ public class GravityTurnFirstBurnStage extends GravityTurnBurnStage
    *
    * <p><b>What it no longer guards.</b> While the jettison was a {@code DateDetector} inside the
    * ascent, such a schedule ended the propagation before it fired and the first stage stayed
-   * attached for the rest of the mission. That cannot happen now: the jettison is a
-   * phase, so it takes place whatever the MECO.
+   * attached for the rest of the mission. That cannot happen now: the jettison is a phase, so it
+   * takes place whatever the MECO.
    *
    * <p><b>What it guards instead.</b> An assertion that should never fire. The optimizer's staging
    * penalty keeps retained solutions above this floor, so reaching here means a schedule arrived

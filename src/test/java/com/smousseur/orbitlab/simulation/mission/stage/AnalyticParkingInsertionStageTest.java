@@ -23,11 +23,11 @@ import org.orekit.utils.Constants;
 import org.orekit.utils.PVCoordinates;
 
 /**
- * Guard on the raising-Hohmann geometry the stage assumes. An entry state
- * whose apoapsis already sits above the target needs a retrograde burn, which {@code
- * Physics.computeBurnDuration} turns into a <em>negative</em> duration — the propagator then gets a
- * maneuver ending before it starts and the plan predicts a mass gain. Observed on the I7 GEO loop
- * at λ=0.3 (ΔV1 = −57 m/s, dt1 = −0.61 s), where the burns silently did nothing.
+ * Guard on the raising-Hohmann geometry the stage assumes. An entry state whose apoapsis already
+ * sits above the target needs a retrograde burn, which {@code Physics.computeBurnDuration} turns
+ * into a <em>negative</em> duration — the propagator then gets a maneuver ending before it starts
+ * and the plan predicts a mass gain. Observed on the I7 GEO loop at λ=0.3 (ΔV1 = −57 m/s, dt1 =
+ * −0.61 s), where the burns silently did nothing.
  */
 class AnalyticParkingInsertionStageTest {
 
@@ -144,8 +144,8 @@ class AnalyticParkingInsertionStageTest {
   }
 
   /**
-   * Capability sibling of the test above. The geometry is nominal — entry below
-   * the target, both burns prograde — but the active stage sits exactly on its dry mass, so {@code
+   * Capability sibling of the test above. The geometry is nominal — entry below the target, both
+   * burns prograde — but the active stage sits exactly on its dry mass, so {@code
    * Physics.computeBurnDurationCapped} caps both burns to 0 s while the plan still asks for real
    * ΔV. Before the guard, the stage flew that plan: a 2 666 s ballistic coast from a sub-orbital
    * state, i.e. a re-entry no detector on this chain stops, on which the integrator's step control

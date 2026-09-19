@@ -33,9 +33,8 @@ import org.orekit.utils.Constants;
 import org.orekit.utils.PVCoordinates;
 
 /**
- * Closes the defect class: a propagation
- * whose trajectory re-enters used to run forever — the integrator follows it under the surface and
- * the adaptive step collapses as {@code r → 0}.
+ * Closes the defect class: a propagation whose trajectory re-enters used to run forever — the
+ * integrator follows it under the surface and the adaptive step collapses as {@code r → 0}.
  *
  * <p>Every propagation here is wrapped in a wall-clock timeout on purpose: without the guard the
  * failure mode is a <em>hang</em>, and a hanging test tells you nothing. The timeout turns it back

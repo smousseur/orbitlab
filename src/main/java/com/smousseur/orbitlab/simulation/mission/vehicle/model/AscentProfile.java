@@ -11,9 +11,8 @@ package com.smousseur.orbitlab.simulation.mission.vehicle.model;
  * @param coreThrottle the fraction of its thrust the core stage applies while the boosters burn
  *     alongside it, within (0, 1]; 1 means the core is not throttled. It lives here rather than on
  *     the stage because a throttle held during a shared phase is a flight program, not an engine
- *     property, and it is read by nothing but
- *     the parallel block: at booster jettison the core recovers full thrust without anything
- *     writing it.
+ *     property, and it is read by nothing but the parallel block: at booster jettison the core
+ *     recovers full thrust without anything writing it.
  */
 public record AscentProfile(
     double verticalAscentDuration,

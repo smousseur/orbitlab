@@ -22,10 +22,10 @@ import org.orekit.time.AbsoluteDate;
  * has to <em>ignite</em> at, and no further.
  *
  * <p><b>It stops at ignition and not at the injection point</b>, which is what centres the finite
- * burn. Centring requires the burn duration to be known before igniting,
- * so this coast reads the propulsion of the active stage and subtracts {@link
- * TranslunarInjectionPlan#ignitionLead} from the injection date. The consequence to hold: {@code
- * configuredEndDate} means "ignition" here, half a burn short of the geometric departure point.
+ * burn. Centring requires the burn duration to be known before igniting, so this coast reads the
+ * propulsion of the active stage and subtracts {@link TranslunarInjectionPlan#ignitionLead} from
+ * the injection date. The consequence to hold: {@code configuredEndDate} means "ignition" here,
+ * half a burn short of the geometric departure point.
  *
  * <p><b>Its duration cannot be a constructor argument</b>, which is what closes the reuse of {@link
  * CoastingStage#CoastingStage(String, Double)} — that {@code maxTime} is final and read at {@code

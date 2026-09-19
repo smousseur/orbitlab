@@ -41,10 +41,9 @@ import org.orekit.utils.Constants;
  * two verdicts that decide whether a date is a plan or a wish.
  *
  * <p><b>Since L6 those verdicts are taken on the launcher that flies, and they decide reachability
- * as well as cost</b>. A finite departure
- * reaches fewer perilunes than an impulse, so an epoch whose aim has no root is refused here rather
- * than handed on as a date. Screening on a spacecraft kick motor, as this case did until L6, prices
- * a 75° burn nothing in the chain ever lights.
+ * as well as cost</b>. A finite departure reaches fewer perilunes than an impulse, so an epoch
+ * whose aim has no root is refused here rather than handed on as a date. Screening on a spacecraft
+ * kick motor, as this case did until L6, prices a 75° burn nothing in the chain ever lights.
  *
  * <p><b>The screen-to-confirmation gap is the closing measurement of the lot.</b> The solver
  * anchors its acceptance margin on the screening tier on both sides, which is only sound while the
@@ -52,8 +51,8 @@ import org.orekit.utils.Constants;
  * m/s, and this is the same measurement taken on a suffered plane. It is logged, not asserted:
  * pinning it would pin a number this lot exists to find out.
  *
- * <p><b>Contrainte de méthode</b>: this case flies some thirty four-day propagations
- * per confirmed epoch, so it costs some fifteen seconds, and it is the user who runs it.
+ * <p><b>Contrainte de méthode</b>: this case flies some thirty four-day propagations per confirmed
+ * epoch, so it costs some fifteen seconds, and it is the user who runs it.
  */
 @EnabledIfSystemProperty(named = "orbitlab.slowTests", matches = "true")
 class LunarLaunchWindowFlightTest {

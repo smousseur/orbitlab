@@ -46,11 +46,11 @@ import org.orekit.utils.TimeStampedPVCoordinates;
  * the resulting {@link FlightContext}, and {@code ReentryGuard} is armed on the leg exactly as in
  * production. Only the initial state is imposed.
  *
- * <p><b>Why the fixture starts in orbit instead of recomposing an existing profile</b>.
- * Every terrestrial mission starts on the launch pad, so giving {@code LEO-400} an atmosphere would
- * mean flying an ascent from 0 km: Harris-Priester throws below 100 km, and the regime below 200 km
- * costs up to 982 497 integration steps for a single day. Both belong to PHY-2, which
- * owns the altitude bound. This fixture never goes below 200 km.
+ * <p><b>Why the fixture starts in orbit instead of recomposing an existing profile</b>. Every
+ * terrestrial mission starts on the launch pad, so giving {@code LEO-400} an atmosphere would mean
+ * flying an ascent from 0 km: Harris-Priester throws below 100 km, and the regime below 200 km
+ * costs up to 982 497 integration steps for a single day. Both belong to PHY-2, which owns the
+ * altitude bound. This fixture never goes below 200 km.
  *
  * <p><b>Two things had to be measured before this fixture could assert anything</b>, and both were
  * found by sweeping the coast duration against the analytic expression — with ρ sampled on an
@@ -119,10 +119,10 @@ class OrbitalDecayFlightTest {
   /**
    * Floor on the 800 km drag-on / drag-off gap, in metres of semi-major axis.
    *
-   * <p><b>Why a lower bound at all</b>: the découpage's "under 0.1 %" is a net four
-   * orders of magnitude wider than the signal, so on its own it also passes when no drag was
-   * mounted whatsoever — the one failure mode L1 was built to exclude. Measured here: 0.281 m of
-   * decay over 24 h against an analytic 0.282 m. The floor is a third of that.
+   * <p><b>Why a lower bound at all</b>: the découpage's "under 0.1 %" is a net four orders of
+   * magnitude wider than the signal, so on its own it also passes when no drag was mounted
+   * whatsoever — the one failure mode L1 was built to exclude. Measured here: 0.281 m of decay over
+   * 24 h against an analytic 0.282 m. The floor is a third of that.
    */
   private static final double HIGH_ALTITUDE_FLOOR_M = 0.09;
 

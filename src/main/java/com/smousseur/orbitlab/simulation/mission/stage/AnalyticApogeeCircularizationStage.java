@@ -27,15 +27,15 @@ import org.orekit.time.AbsoluteDate;
 import org.orekit.utils.Constants;
 
 /**
- * Apogee circularization + plane change executed by a low-thrust kick motor. The burn
- * is centered on the detected apogee, but an hours-long finite burn still inflates the apogee while
- * it executes — and a subsequent apogee trim can only set the opposite side of the orbit, so that
- * drift would be locked in. The plan therefore iterates (secant) on a <em>scale of the target
- * velocity</em>: simulate the centered finite burn, measure the post-burn osculating apogee, and
- * shave the target speed until it lands on the target radius — the energy is the only knob with
- * real authority over the far apside. A vector feedback on the aimed plane normal simultaneously
- * absorbs the plane smear of the long arc, whatever its direction. The residual perigee deficit is
- * left to the downstream trim stage, whose short burn drifts negligibly.
+ * Apogee circularization + plane change executed by a low-thrust kick motor. The burn is centered
+ * on the detected apogee, but an hours-long finite burn still inflates the apogee while it executes
+ * — and a subsequent apogee trim can only set the opposite side of the orbit, so that drift would
+ * be locked in. The plan therefore iterates (secant) on a <em>scale of the target velocity</em>:
+ * simulate the centered finite burn, measure the post-burn osculating apogee, and shave the target
+ * speed until it lands on the target radius — the energy is the only knob with real authority over
+ * the far apside. A vector feedback on the aimed plane normal simultaneously absorbs the plane
+ * smear of the long arc, whatever its direction. The residual perigee deficit is left to the
+ * downstream trim stage, whose short burn drifts negligibly.
  */
 public class AnalyticApogeeCircularizationStage extends MissionStage {
   private static final Logger logger =

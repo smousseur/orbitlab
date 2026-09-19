@@ -47,11 +47,11 @@ public record MissionSolutions(Map<String, double[]> vectors, double[] launcherL
   /**
    * Whether these solutions describe <b>exactly</b> the composition of {@code mission}.
    *
-   * <p>The replay is all or nothing. A missing key would leave one stage to be optimized
-   * beside stages that were replayed, producing a trajectory nobody asked for and nothing would
-   * report; a surplus key means the file describes stages this composition no longer has, which is
-   * the same mismatch seen from the other side. Either way the answer is to fall back on an
-   * ordinary optimization, not to fly half a memory.
+   * <p>The replay is all or nothing. A missing key would leave one stage to be optimized beside
+   * stages that were replayed, producing a trajectory nobody asked for and nothing would report; a
+   * surplus key means the file describes stages this composition no longer has, which is the same
+   * mismatch seen from the other side. Either way the answer is to fall back on an ordinary
+   * optimization, not to fly half a memory.
    *
    * @param mission the composed mission the replay would fly
    * @return {@code true} when every optimizable stage has its vector, and no vector is left over

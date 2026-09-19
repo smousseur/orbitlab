@@ -38,8 +38,7 @@ import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.orekit.time.AbsoluteDate;
 
 /**
- * L2 of: the instrument that turns "does this
- * planet look right?" into a number of degrees.
+ * L2 of: the instrument that turns "does this planet look right?" into a number of degrees.
  *
  * <p>Press <b>G</b> while a body is focused. Its globe gets a graticule drawn from its own texture
  * map, each meridian labelled with the body-fixed longitude the application believes it carries,

@@ -17,8 +17,8 @@ import org.hipparchus.util.FastMath;
 import org.junit.jupiter.api.Test;
 
 /**
- * <b>MIS-7 / P1, test T6</b> — every feasibility rule refuses at spec construction, with a
- * message naming what is reachable.
+ * <b>MIS-7 / P1, test T6</b> — every feasibility rule refuses at spec construction, with a message
+ * naming what is reachable.
  *
  * <p><b>Refusals, not clamps.</b> A parameter silently corrected produces a mission that flies
  * something other than what was asked for — precisely the defect MIS-7 exists to remove. The spec

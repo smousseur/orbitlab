@@ -17,10 +17,10 @@ import java.util.Objects;
  * ample for its position — but the same grid also carries the body's <i>rotation</i>, which turns
  * in 16 hours. {@code SlidingWindowEphemerisBuffer} interpolates attitude by SLERP, which always
  * negotiates the shortest arc: past half a turn between two samples the whole-turn count is lost
- * silently, and the body renders slower than it spins, or backwards. Measured before the fix
- *: Neptune at 4,1 % of its true rate, Saturn and Uranus reversed,
- * and the Earth reversed then frozen once the adaptive step doubled. {@link #plan} therefore caps
- * the step at {@link #ROTATION_SAMPLES_PER_TURN} samples per rotation.
+ * silently, and the body renders slower than it spins, or backwards. Measured before the fix :
+ * Neptune at 4,1 % of its true rate, Saturn and Uranus reversed, and the Earth reversed then frozen
+ * once the adaptive step doubled. {@link #plan} therefore caps the step at {@link
+ * #ROTATION_SAMPLES_PER_TURN} samples per rotation.
  *
  * @param speedMaxAbs the maximum absolute clock speed to plan for (speeds above this are clamped)
  * @param lookaheadRealSeconds the real-time lookahead duration used to size the window

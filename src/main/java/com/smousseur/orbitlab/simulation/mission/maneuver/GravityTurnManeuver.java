@@ -43,8 +43,8 @@ import org.orekit.utils.Constants;
  * {@link #configure} and {@link #propagateForOptimization} build one propagator carrying burn 1,
  * the jettison detector and burn 2 — the way the ascent was flown before it became {@code Gravity
  * turn (S1) → S1 separation → Gravity turn (S2)}. No mission uses them: they are kept because the
- * migration's non-regression fixtures are defined <em>against</em> them, and a later step still
- * has a behaviour change to measure from that reference.
+ * migration's non-regression fixtures are defined <em>against</em> them, and a later step still has
+ * a behaviour change to measure from that reference.
  */
 public class GravityTurnManeuver {
 
@@ -461,9 +461,8 @@ public class GravityTurnManeuver {
    * <p>With a commandable core it is <b>below</b> {@link #getStagingCompleteTime()} by the whole
    * core burn: a MECO between the two commands an early core cutoff ({@link #plan}), so that region
    * is a live lever rather than a plateau and is no longer penalized. Only below this floor does
-   * the core never
-   * fire, leaving the degenerate plateau the penalty still guards. A launcher with no core-only
-   * phase keeps staging completion as its floor, as before.
+   * the core never fire, leaving the degenerate plateau the penalty still guards. A launcher with
+   * no core-only phase keeps staging completion as its floor, as before.
    *
    * @return the earliest non-degenerate transition time, in seconds
    */

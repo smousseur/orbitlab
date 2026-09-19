@@ -13,10 +13,10 @@ import org.orekit.time.AbsoluteDate;
  * The frame one segment of a trajectory is expressed in: the body it is centred on, and the
  * inertial frame that centring is realised by.
  *
- * <p>Introduced by PHY-4 / L3 to make explicit
- * what {@code MissionEphemerisGenerator} already had in hand and dropped — a sample's positions are
- * expressed in {@code SpacecraftState.getFrame()}, and nothing recorded which one that was. Until
- * L4 produces a second arc, every point of every mission carries {@link #earth()}.
+ * <p>Introduced by PHY-4 / L3 to make explicit what {@code MissionEphemerisGenerator} already had
+ * in hand and dropped — a sample's positions are expressed in {@code SpacecraftState.getFrame()},
+ * and nothing recorded which one that was. Until L4 produces a second arc, every point of every
+ * mission carries {@link #earth()}.
  *
  * <p><b>Narrower than {@link GravitationalContext} on purpose.</b> The two carry the same pair, and
  * reusing the existing record would have spared the derivation below. But <b>the equality of this
@@ -40,8 +40,8 @@ public record TrajectoryArc(SolarSystemBody body, Frame frame) {
    * The arc a stage's samples belong to, derived from what that stage declares. This is the one
    * place the pairing <em>central body ↔ frame the positions are actually in</em> is stated, which
    * matters because nothing else checks it: {@code OrekitService.createOptimizationPropagator}
-   * never sets a propagation frame, so Orekit takes it from the initial orbit. An arc
-   * built from the stage's own context is the closest a sample can get to saying what it flew in.
+   * never sets a propagation frame, so Orekit takes it from the initial orbit. An arc built from
+   * the stage's own context is the closest a sample can get to saying what it flew in.
    *
    * @param context the gravitational context of the stage that produced the samples
    * @return the matching arc
@@ -83,8 +83,8 @@ public record TrajectoryArc(SolarSystemBody body, Frame frame) {
    *
    * <p>The Earth branch goes through {@link #earth()} and therefore does <b>not</b> reach {@code
    * OrekitService}: the four test classes that build polylines without initialising it must keep
-   * working. {@code FramesFactory.getGCRF()} is the same instance {@code
-   * OrekitService.gcrf()} returns, so the two paths cannot diverge.
+   * working. {@code FramesFactory.getGCRF()} is the same instance {@code OrekitService.gcrf()}
+   * returns, so the two paths cannot diverge.
    *
    * @param body the body positions are centred on
    * @return the arc for that body

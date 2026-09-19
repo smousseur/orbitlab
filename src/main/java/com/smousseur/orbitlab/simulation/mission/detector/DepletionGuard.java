@@ -6,12 +6,12 @@ import org.hipparchus.ode.events.Action;
 import org.orekit.propagation.numerical.NumericalPropagator;
 
 /**
- * Fail-fast propellant guard. Arms a {@link MassDepletionDetector} that stops the
- * propagation when the spacecraft mass crosses the depletion floor of the burning stage.
+ * Fail-fast propellant guard. Arms a {@link MassDepletionDetector} that stops the propagation when
+ * the spacecraft mass crosses the depletion floor of the burning stage.
  *
  * <p><b>Two ways to reach the floor, and they do not mean the same thing</b>. Which one applies is
- * a property of how the burn's duration was scheduled, so the arming
- * site knows it statically and picks the method accordingly:
+ * a property of how the burn's duration was scheduled, so the arming site knows it statically and
+ * picks the method accordingly:
  *
  * <ul>
  *   <li>{@link #arm} — the burn window is a duration nothing clamps: a fixed ascent phase, an

@@ -25,12 +25,11 @@ import org.hipparchus.geometry.euclidean.threed.Vector3D;
  * a plain object managed by {@link MissionRenderer}, not an AppState.
  *
  * <p>The primitive is a {@code TriangleStrip} expanded by {@code MatDefs/Fx/Ribbon.j3md} rather
- * than a {@code LineStrip}. The architecture
- * below is unchanged — one allocation, a prefix written each frame, an identity guard on the
- * polyline for the colours — and what changes is that two vertices are written per point instead of
- * one, with a tangent, and that the width finally means something: {@code glLineWidth(2)} was
- * clamped back to 1 px by the core profile, which also made the per-run shading of {@code RND-3}
- * nearly unreadable on a trace one pixel wide.
+ * than a {@code LineStrip}. The architecture below is unchanged — one allocation, a prefix written
+ * each frame, an identity guard on the polyline for the colours — and what changes is that two
+ * vertices are written per point instead of one, with a tangent, and that the width finally means
+ * something: {@code glLineWidth(2)} was clamped back to 1 px by the core profile, which also made
+ * the per-run shading of {@code RND-3} nearly unreadable on a trace one pixel wide.
  */
 public final class MissionTrajectoryRenderer {
 
@@ -42,9 +41,9 @@ public final class MissionTrajectoryRenderer {
   private static final int MAX_POINTS = TrajectoryPolyline.MAX_POINTS + 1;
 
   /**
-   * Width of a mission trace, in screen pixels. Wider than a planetary orbit: it is the
-   * object of attention, it carries the phase colours, and it is drawn against a planet rather than
-   * against the sky.
+   * Width of a mission trace, in screen pixels. Wider than a planetary orbit: it is the object of
+   * attention, it carries the phase colours, and it is drawn against a planet rather than against
+   * the sky.
    */
   private static final float TRAJECTORY_WIDTH_PX = 1.5f;
 
@@ -153,7 +152,7 @@ public final class MissionTrajectoryRenderer {
    *     that swims. {@link Vector3D#ZERO} for an unseated object
    * @param renderContext the context of the sample being drawn, derived from its arc by {@code
    *     MissionRenderer.renderContextFor} — a parameter and no longer a field of this class, so
-   * that the line and the near-frame offset cannot be built from two different contexts
+   *     that the line and the near-frame offset cannot be built from two different contexts
    */
   public void update(
       TrajectoryPolyline trail,

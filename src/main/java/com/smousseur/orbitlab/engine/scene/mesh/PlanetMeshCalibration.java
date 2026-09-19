@@ -5,10 +5,10 @@ package com.smousseur.orbitlab.engine.scene.mesh;
  *
  * <p>The components have deliberately different natures, and fusing them into a single quaternion
  * is what the previous design got wrong: {@code measured} is produced by {@link MeshFrameProbe} and
- * copied verbatim from its
- * report, never edited by hand, while {@code lambda0Deg} is a human datum about the
- * <em>texture</em> that no file inspection can establish, and {@code visibleLayerDriftDegPerDay} is
- * a property of the body itself that no inspection of the asset could ever reach.
+ * copied verbatim from its report, never edited by hand, while {@code lambda0Deg} is a human datum
+ * about the <em>texture</em> that no file inspection can establish, and {@code
+ * visibleLayerDriftDegPerDay} is a property of the body itself that no inspection of the asset
+ * could ever reach.
  *
  * <p>Which is also why they age differently. Replacing a mesh invalidates {@code measured} and
  * leaves the other two intact whenever the new model reuses the same texture — the common case.

@@ -91,8 +91,7 @@ class MissionFactoryTest {
    * PHY-2 / L5: a mission created through the wizard flies drag-on by default. The atmosphere is
    * not a wizard field, so the default is applied here, at the single production origin — which is
    * why a spec assembled by hand still defaults to {@code NONE}. The default reaches the composed
-   * mission, not
-   * just the spec.
+   * mission, not just the spec.
    */
   @Test
   void wizardMission_defaultsToDragOn() {
@@ -270,8 +269,8 @@ class MissionFactoryTest {
   }
 
   /**
-   * Refused, not clamped. The message has to name the reachable band, because it is
-   * the one the wizard shows the user.
+   * Refused, not clamped. The message has to name the reachable band, because it is the one the
+   * wizard shows the user.
    */
   @Test
   void unreachableInclination_isRefusedWithTheReachableBand() {
@@ -387,8 +386,8 @@ class MissionFactoryTest {
 
   /**
    * The budget has to follow the plane, not the latitude: a polar launch loses the whole 463 m/s of
-   * eastward entrainment the due-east one banks, so it is sized heavier. This is what
-   * makes the single line of §14.1.3 enough — nothing downstream had to be told about the plane.
+   * eastward entrainment the due-east one banks, so it is sized heavier. This is what makes the
+   * single line of §14.1.3 enough — nothing downstream had to be told about the plane.
    */
   @Test
   void commandedPlane_reachesThePropellantBudget() {

@@ -137,11 +137,11 @@ class MissionProfileTest {
   /**
    * Three cards carry a type of their own; the other four are one and the same spec record.
    *
-   * <p><b>The count stays at four, and that is the point</b>. {@code
-   * earthOrbitProfiles()} used to filter by excluding GEO <em>by name</em>, so the sixth constant
-   * would have fallen through it and been handed a perigee/apogee panel. Repairing the filter to
-   * read the mission type leaves this number where it was, which is what says the repair is right —
-   * and the seventh constant, added by MIS-5 / L7, leaves it there again.
+   * <p><b>The count stays at four, and that is the point</b>. {@code earthOrbitProfiles()} used to
+   * filter by excluding GEO <em>by name</em>, so the sixth constant would have fallen through it
+   * and been handed a perigee/apogee panel. Repairing the filter to read the mission type leaves
+   * this number where it was, which is what says the repair is right — and the seventh constant,
+   * added by MIS-5 / L7, leaves it there again.
    */
   @Test
   void onlyTheThreeOwnTypedProfilesCarryTheirOwnType() {

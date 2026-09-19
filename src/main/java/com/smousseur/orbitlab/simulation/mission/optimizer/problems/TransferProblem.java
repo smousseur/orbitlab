@@ -25,11 +25,10 @@ import org.orekit.utils.Constants;
  *
  * <p>Burn 1 (4 CMA-ES parameters) places the spacecraft on the target orbit. The cost function
  * evaluates the orbit at the end of burn 1 against the target apsidal altitudes and the derived
- * target eccentricity, plus a small propellant-awareness term penalizing Δv
- * consumed beyond the analytic Hohmann reference — equal-precision solutions tie-break toward the
- * least wasteful one. For the special case {@code perigee == apogee}, see {@link
- * TransferTwoManeuverProblem}, which adds a deterministic circularization burn at the next
- * apoapsis.
+ * target eccentricity, plus a small propellant-awareness term penalizing Δv consumed beyond the
+ * analytic Hohmann reference — equal-precision solutions tie-break toward the least wasteful one.
+ * For the special case {@code perigee == apogee}, see {@link TransferTwoManeuverProblem}, which
+ * adds a deterministic circularization burn at the next apoapsis.
  *
  * <p>Parameter vector (4 dimensions):
  *
@@ -306,7 +305,7 @@ public class TransferProblem implements TrajectoryProblem {
     // apoapsis when lowering it. This makes the guess valid for both circular
     // departures (LEO → GTO) and elliptic departures (post-gravity-turn → LEO).
     // A periapsis departure additionally requires the periapsis to be flyable
-    //: on a sub-orbital hand-off the periapsis sits at a few tens
+    // : on a sub-orbital hand-off the periapsis sits at a few tens
     // of km — the coast there is not a usable burn point, and the resulting seed
     // t1 (time to periapsis, almost a full period away) overshoots t1Max. Depart
     // from apoapsis instead: the burn then raises the periapsis, which is the

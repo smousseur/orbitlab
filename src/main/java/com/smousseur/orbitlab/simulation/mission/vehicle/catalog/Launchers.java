@@ -18,12 +18,11 @@ public final class Launchers {
    * to the payload's kick motor.
    *
    * <p><b>Why the three cores are two entries and not one</b>. They are physically identical and
-   * lit together, so the
-   * old single {@code S1} reproduced the flight exactly — but it could not express the side cores
-   * being dropped while the centre one keeps firing, which is what the vehicle actually does. Split
-   * at full thrust the two entries run dry together and are jettisoned together, so the trajectory
-   * is unchanged to the bit; {@code L3} is where the centre core is throttled and starts outliving
-   * them.
+   * lit together, so the old single {@code S1} reproduced the flight exactly — but it could not
+   * express the side cores being dropped while the centre one keeps firing, which is what the
+   * vehicle actually does. Split at full thrust the two entries run dry together and are jettisoned
+   * together, so the trajectory is unchanged to the bit; {@code L3} is where the centre core is
+   * throttled and starts outliving them.
    *
    * <p>Figures are <b>per exemplar</b> — one core is a third of the block: 22 t dry, 411 t of
    * kerolox, 7.6 MN, 10.5 m². The aggregate reads 66 t / 1 233 t / 22.8 MN, which is what the
@@ -111,14 +110,14 @@ public final class Launchers {
    * Ariane 64: four P120C strap-on boosters, a Vulcain 2.1 core, a Vinci upper stage.
    *
    * <p><b>It replaces the Ariane 62 rather than joining it</b>. The catalog holds one Ariane, and
-   * the 3D scene has
-   * been drawing a four-booster Ariane 64 since AST-1 — the entry is what was lagging.
+   * the 3D scene has been drawing a four-booster Ariane 64 since AST-1 — the entry is what was
+   * lagging.
    *
    * <p><b>Every mass comes from the Ariane 62 entry it replaces.</b> That entry's 36 t of dry mass
    * decomposed exactly as {@code 2 x 11 + 14} and its 434 t of propellant as {@code 2 x 141 + 152}
    * ("65 % of this block's propellant is solid"), so four boosters give 58 t and 716 t. Its 41.1 m2
    * was likewise {@code pi*2.7^2 + 2*pi*1.7^2}, hence 22.9 m2 for the core and 9.08 m2 per booster
-   *. No external source is involved.
+   * . No external source is involved.
    *
    * <p><b>Thrusts follow the burn durations, not the other way round.</b> The two figures the
    * decoupage gives as controls -- boosters ~130 s, Vulcain ~8 min -- fix the mass flows, and the

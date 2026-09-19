@@ -80,9 +80,9 @@ public final class ReplayPlanner implements MissionPlanner {
    * loads.
    *
    * <p>The loads are taken from the solutions <b>as they are</b> — absolute kilograms, no
-   * multiplication here. That is the whole point of persisting the product rather than the
-   * scale factors: what flies is the vehicle that flew, not whatever today's {@code
-   * PropellantBudget} would rebuild under the same λ.
+   * multiplication here. That is the whole point of persisting the product rather than the scale
+   * factors: what flies is the vehicle that flew, not whatever today's {@code PropellantBudget}
+   * would rebuild under the same λ.
    */
   private Mission flownMission() {
     if (!solutions.hasLauncherLoads()) {

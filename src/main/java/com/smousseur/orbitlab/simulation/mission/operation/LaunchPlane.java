@@ -16,9 +16,9 @@ import org.orekit.frames.Frame;
  * silent. The inclination is the intention. This record therefore owns the derivation, and is the
  * <em>only</em> place in the code where {@code asin(cos i / cos φ)} is written.
  *
- * <p><b>Reachability is checked here, not discovered in flight</b>. A site at latitude
- * {@code φ} reaches inclinations in {@code [φ, 180° − φ]} and nothing else, short of a plane change
- * no launcher in the catalog can pay for. {@link #requireReachableFrom} refuses the rest with the
+ * <p><b>Reachability is checked here, not discovered in flight</b>. A site at latitude {@code φ}
+ * reaches inclinations in {@code [φ, 180° − φ]} and nothing else, short of a plane change no
+ * launcher in the catalog can pay for. {@link #requireReachableFrom} refuses the rest with the
  * reachable bound named, rather than clamping it into a mission that quietly flies something other
  * than what was asked.
  *
@@ -68,9 +68,9 @@ public record LaunchPlane(double targetInclination, NodeBranch nodeBranch) {
 
   /**
    * The plane of a sun-synchronous orbit at a given circular altitude: the inclination is
-   * <b>derived, not asked for</b>. The user picks an altitude and gets the one
-   * inclination whose nodal precession keeps pace with the Sun; it is always retrograde, so the
-   * azimuth this plane yields points west of north.
+   * <b>derived, not asked for</b>. The user picks an altitude and gets the one inclination whose
+   * nodal precession keeps pace with the Sun; it is always retrograde, so the azimuth this plane
+   * yields points west of north.
    *
    * <p>An SSO needs nothing else — no mission type of its own, no objective of its own. It is an
    * ordinary circular {@link MissionSpec.EarthOrbit} built on this plane.
@@ -152,8 +152,7 @@ public record LaunchPlane(double targetInclination, NodeBranch nodeBranch) {
    * inside what a real SSO corrects by station-keeping, which this simulation does not model.
    *
    * <p><b>Earth by construction, not by omission</b>. A launch plane is defined by a launch site on
-   * a
-   * rotating ground, and nothing in PHY-4 lifts off from another body; L1's seam runs through the
+   * a rotating ground, and nothing in PHY-4 lifts off from another body; L1's seam runs through the
    * propagation, not the launch. This becomes contextual when a mission launches from somewhere
    * other than the Earth, not before.
    *
@@ -169,8 +168,8 @@ public record LaunchPlane(double targetInclination, NodeBranch nodeBranch) {
    *
    * <p>This is spherical trigonometry on a non-rotating Earth: {@code sin A = cos i / cos φ}. It
    * takes no account of the Earth's rotation, which biases the true inertial heading; that bias is
-   * absorbed by the commanded-plane attitude, whose job is precisely to reach the plane
-   * whatever the entrainment does to the initial heading.
+   * absorbed by the commanded-plane attitude, whose job is precisely to reach the plane whatever
+   * the entrainment does to the initial heading.
    *
    * @param launchLatitude the launch site latitude in <b>radians</b>
    * @return the launch azimuth in radians, clockwise from north

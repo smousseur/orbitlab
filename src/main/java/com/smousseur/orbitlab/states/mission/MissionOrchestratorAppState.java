@@ -112,7 +112,7 @@ public final class MissionOrchestratorAppState extends BaseAppState {
       // vertices into whichever of them is being looked at — but about no other: not in the solar
       // view, and not while focusing a body its trajectory never visits. Asking the trail rather
       // than the objective is what keeps a lunar transfer on screen during its terrestrial ascent
-      //. Deciding it here rather than inside the
+      // . Deciding it here rather than inside the
       // renderer is what makes the rule cover the trajectory line as well: setVisible() hides both,
       // whereas the mode test that used to live in updateFromEphemeris() hid the spacecraft alone
       // and left the line drawn.
@@ -279,9 +279,8 @@ public final class MissionOrchestratorAppState extends BaseAppState {
    *
    * <p>That construction-time context serves the <b>scale</b> the spacecraft mesh is sized with,
    * and nothing else — L5 took the second use away, a click now framing the arc the spacecraft is
-   * actually in. Since the scale is the
-   * same for every planet-scale context whatever the body, the first sample's arc is a good enough
-   * answer and stays one.
+   * actually in. Since the scale is the same for every planet-scale context whatever the body, the
+   * first sample's arc is a good enough answer and stays one.
    */
   private MissionRenderer createRenderer(MissionEntry entry, MissionEphemeris ephemeris) {
     RenderContext renderContext = RenderContext.planet(ephemeris.firstPoint().arc().body());

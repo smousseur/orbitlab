@@ -14,10 +14,10 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 /**
  * Mirror of {@link LEOMissionOptimizationTest} flying the CMA-ES-optimized transfer instead of the
- * analytic Hohmann profile.
- * Same launcher configuration (Falcon Heavy fully loaded) and same targets, so any divergence
- * between the two classes isolates the transfer mode. This is the multi-altitude sweep required
- * before deciding whether the optimized transfer becomes the LEO default.
+ * analytic Hohmann profile. Same launcher configuration (Falcon Heavy fully loaded) and same
+ * targets, so any divergence between the two classes isolates the transfer mode. This is the
+ * multi-altitude sweep required before deciding whether the optimized transfer becomes the LEO
+ * default.
  */
 @EnabledIfSystemProperty(named = "orbitlab.slowTests", matches = "true")
 class LEOMissionOptimizedTransferTest extends AbstractTrajectoryOptimizerTest {

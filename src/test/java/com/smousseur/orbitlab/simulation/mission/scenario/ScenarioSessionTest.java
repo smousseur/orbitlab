@@ -169,8 +169,8 @@ class ScenarioSessionTest {
   }
 
   /**
-   * The PRECISE case: the loads a sizing sweep searched for are the ones that come back, not
-   * the ones {@code PropellantBudget} would derive again today.
+   * The PRECISE case: the loads a sizing sweep searched for are the ones that come back, not the
+   * ones {@code PropellantBudget} would derive again today.
    */
   @Test
   void flownLoadsComeBackInsteadOfTheBudgetedOnes() {

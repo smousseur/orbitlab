@@ -7,10 +7,10 @@ import java.util.Objects;
  * The aerodynamic half of a {@link FlightContext}: what the vehicle presents to the flow, and which
  * atmosphere it is presented to.
  *
- * <p>Introduced by PHY-1 / L1. Together with
- * {@link com.smousseur.orbitlab.simulation.gravity.GravitationalContext} it is exactly the force
- * list of a propagator: this pair is what Orekit's {@code DragForce(Atmosphere, DragSensitive)}
- * asks for, in the same two parts.
+ * <p>Introduced by PHY-1 / L1. Together with {@link
+ * com.smousseur.orbitlab.simulation.gravity.GravitationalContext} it is exactly the force list of a
+ * propagator: this pair is what Orekit's {@code DragForce(Atmosphere, DragSensitive)} asks for, in
+ * the same two parts.
  *
  * <p><b>It holds the model, not a built {@code Atmosphere}</b>, and that is what makes it portable
  * across a sphere-of-influence boundary: an atmosphere is built against a body shape, so an

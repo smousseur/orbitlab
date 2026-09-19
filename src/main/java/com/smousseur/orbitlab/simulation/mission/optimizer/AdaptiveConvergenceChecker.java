@@ -28,12 +28,11 @@ final class AdaptiveConvergenceChecker implements ConvergenceChecker<PointValueP
    * CMAESRunExecutor}).
    *
    * <p><b>{@code 50} since OPT-1 / B2</b>. The bench sweep found the GT search stalls around
-   * generation
-   * 40-50, so the historical {@code 100} spent ~14 % of its evaluations spinning past a converged,
-   * acceptable solution. {@code 50} captures the full gain (the sweep plateaus below it) while
-   * staying clear of the seed-verbatim trap (evaluations stayed at full search depth, no collapse),
-   * verdict-neutral (largest move 1.4 km on the PRECISE apogee, well under REL-18). The bench
-   * overrides it through {@link #MIN_CONVERGE_ITERS_PROPERTY}, defaulting here otherwise.
+   * generation 40-50, so the historical {@code 100} spent ~14 % of its evaluations spinning past a
+   * converged, acceptable solution. {@code 50} captures the full gain (the sweep plateaus below it)
+   * while staying clear of the seed-verbatim trap (evaluations stayed at full search depth, no
+   * collapse), verdict-neutral (largest move 1.4 km on the PRECISE apogee, well under REL-18). The
+   * bench overrides it through {@link #MIN_CONVERGE_ITERS_PROPERTY}, defaulting here otherwise.
    */
   static final int DEFAULT_MIN_ITERS_BEFORE_CONVERGE = 50;
 

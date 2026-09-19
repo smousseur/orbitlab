@@ -19,11 +19,10 @@ import org.orekit.propagation.events.handlers.EventHandler;
  *       negative once the trajectory is 50 km <em>under</em> the WGS84 equatorial reference sphere.
  *       See {@link ReentryGuard#SUBSURFACE_FLOOR} for why the floor sits that deep — the short
  *       version is that a floor at 0 m would already be breached on the launch pad.
- *   <li><b>drag-on</b>,
- *       {@code floor = }{@link ReentryGuard#DRAG_REENTRY_FLOOR} (0 km): the integrator cedes under
- *       drag <em>above</em> the deepest launch pad, so the deep floor never fires; a shallow one
- *       does, and the handler {@link ReentryGuard} attaches gates it on a descending radial
- *       velocity so a climbing ascent crosses it without stopping.
+ *   <li><b>drag-on</b>, {@code floor = }{@link ReentryGuard#DRAG_REENTRY_FLOOR} (0 km): the
+ *       integrator cedes under drag <em>above</em> the deepest launch pad, so the deep floor never
+ *       fires; a shallow one does, and the handler {@link ReentryGuard} attaches gates it on a
+ *       descending radial velocity so a climbing ascent crosses it without stopping.
  * </ul>
  */
 public class ReentryDetector extends AbstractDetector<ReentryDetector> {

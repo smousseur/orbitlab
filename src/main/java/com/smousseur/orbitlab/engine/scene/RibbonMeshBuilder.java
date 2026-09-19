@@ -260,10 +260,10 @@ public final class RibbonMeshBuilder {
   /**
    * Unit tangent at point {@code i}, written into {@code out}.
    *
-   * <p>The chord of the two neighbours is what removes the joins. The fallbacks below are
-   * not defensive padding: a mission trajectory really does write a tip that lands on the last
-   * sampled point once the head reaches the end of the polyline, and a chord of length zero
-   * normalises to NaN — which is a ribbon that vanishes, or a triangle sent to infinity.
+   * <p>The chord of the two neighbours is what removes the joins. The fallbacks below are not
+   * defensive padding: a mission trajectory really does write a tip that lands on the last sampled
+   * point once the head reaches the end of the polyline, and a chord of length zero normalises to
+   * NaN — which is a ribbon that vanishes, or a triangle sent to infinity.
    */
   private static void tangentAt(float[] xyz, int count, int i, boolean closed, float[] out) {
     int prev = closed ? (i - 1 + count) % count : i - 1;

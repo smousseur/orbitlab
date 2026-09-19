@@ -25,9 +25,10 @@ import org.orekit.time.AbsoluteDate;
 /**
  * The near-view origin must land <em>exactly</em> on the focused spacecraft, because that is the
  * position everything downstream measures against — the LOD distance in {@code
- * LodView.updateScreen} first of all. <p>Two independent producers write that origin every frame:
- * {@code SpacecraftPresenter} places the anchor at {@code +p}, and {@code FloatingOriginAppState}
- * translates the near frame by {@code
+ * LodView.updateScreen} first of all.
+ *
+ * <p>Two independent producers write that origin every frame: {@code SpacecraftPresenter} places
+ * the anchor at {@code +p}, and {@code FloatingOriginAppState} translates the near frame by {@code
  * −p}. These tests pin the two properties that make the sum vanish:
  *
  * <ol>

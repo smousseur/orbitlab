@@ -145,15 +145,14 @@ public class GravityTurnProblem implements TrajectoryProblem {
    * <p><b>PHY-2/L3 unlocks the lever that would let this rise, but leaves the value for flight
    * calibration.</b> The reasoning that pinned it at 0.5 — the gravity turn cannot lower an
    * over-delivered apogee except by pitching up, a false economy this weight must not reward — is
-   * dissolved <em>only where the
-   * core-cutoff lever exists</em>: with the cutoff wired onto {@code transitionTime} the
-   * turn can lower its apogee by cutting the core instead of pitching. Where that lever is
-   * available — every core-phase launcher in the catalog — a higher weight drives the optimizer to
-   * cut rather than overshoot; where it is not, raising this weight re-buys the false economy,
-   * which {@code GravityTurnProblemTest#computeCost_prefersTheHandOffTheMissionSurvives} pins on a
-   * no-core stage. The value is therefore posed by flying {@code testFalconHeavyOptimizedTransfer}
-   * to its 400 ±7 % target with the lever open, one change at a time; it is held at 0.5 until that
-   * measurement says how far it may rise.
+   * dissolved <em>only where the core-cutoff lever exists</em>: with the cutoff wired onto {@code
+   * transitionTime} the turn can lower its apogee by cutting the core instead of pitching. Where
+   * that lever is available — every core-phase launcher in the catalog — a higher weight drives the
+   * optimizer to cut rather than overshoot; where it is not, raising this weight re-buys the false
+   * economy, which {@code GravityTurnProblemTest#computeCost_prefersTheHandOffTheMissionSurvives}
+   * pins on a no-core stage. The value is therefore posed by flying {@code
+   * testFalconHeavyOptimizedTransfer} to its 400 ±7 % target with the lever open, one change at a
+   * time; it is held at 0.5 until that measurement says how far it may rise.
    */
   private static final double W_APOGEE_OVERSHOOT = 0.5;
 
@@ -238,8 +237,7 @@ public class GravityTurnProblem implements TrajectoryProblem {
   /**
    * Creates a gravity turn optimization problem with an explicit way of flying a candidate — the
    * three explicit ascent phases, once the mission is built on {@code AscentSequence}. The cost
-   * function is unchanged either
-   * way: only the propagation differs.
+   * function is unchanged either way: only the propagation differs.
    *
    * @param maneuver the gravity turn maneuver decoding the variables (burn 1 duration, staging)
    * @param initialState the spacecraft state at the beginning of the gravity turn

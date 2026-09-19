@@ -38,8 +38,7 @@ import org.orekit.time.TimeScalesFactory;
  * a {@link LaunchPlane} through the ascent and adds a commanded-plane attitude that can steer the
  * orbital plane. The Falcon Heavy and Ariane 64 calibrations rest on measured due-east
  * trajectories, so a due-east target must keep flying exactly what it flew before — the commanded
- * attitude being opt-in is what makes that possible, and this fixture is what keeps the
- * door shut.
+ * attitude being opt-in is what makes that possible, and this fixture is what keeps the door shut.
  *
  * <p><b>The risk it exists for</b> is spec §10's "calibration trap": the temptation, while
  * refactoring, to unify two paths that merely look alike. The two horizontal targets are

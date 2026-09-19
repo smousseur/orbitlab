@@ -41,15 +41,15 @@ import org.orekit.utils.PVCoordinates;
  * Guards the optimize-vs-ephemeris consistency of the ascent, and holds the étape 0 numeric
  * reference of the explicit-staging migration.
  *
- * <p><b>History, now closed.</b> The GEO optimize-vs-ephemeris divergence — ~5° of
- * inclinaison once the GTO → apogee-node → AKM chain had amplified it — was traced to the
- * <b>vertical ascent flying under two different gravity models</b>: {@code
- * ConstantThrustStage.propagateStandalone} (which {@code VerticalAscentStage} extends) built a
- * point-mass {@code createSimplePropagator}, while the ephemeris generator flew every stage under
- * the 8×8 {@code createOptimizationPropagator}. Same 7 s burn, same mass consumed, but a
- * post-ascent state differing by ~0.4 m / 0.1 m/s — which the gravity turn's {@code
- * getEntryState()} never reconciled. {@code propagateStandalone} now builds the 8×8 too, so the two
- * passes coincide; the fixtures below hold that closure rather than the former mismatch.
+ * <p><b>History, now closed.</b> The GEO optimize-vs-ephemeris divergence — ~5° of inclinaison once
+ * the GTO → apogee-node → AKM chain had amplified it — was traced to the <b>vertical ascent flying
+ * under two different gravity models</b>: {@code ConstantThrustStage.propagateStandalone} (which
+ * {@code VerticalAscentStage} extends) built a point-mass {@code createSimplePropagator}, while the
+ * ephemeris generator flew every stage under the 8×8 {@code createOptimizationPropagator}. Same 7 s
+ * burn, same mass consumed, but a post-ascent state differing by ~0.4 m / 0.1 m/s — which the
+ * gravity turn's {@code getEntryState()} never reconciled. {@code propagateStandalone} now builds
+ * the 8×8 too, so the two passes coincide; the fixtures below hold that closure rather than the
+ * former mismatch.
  *
  * <ul>
  *   <li>{@code verticalAscent_fliesTheSameGravityModelInBothPasses} — the fix: the two passes
@@ -149,8 +149,8 @@ class GravityTurnReplayConsistencyTest {
    * <p><b>Why it is frozen here rather than read from the catalog.</b> {@code PHY-8 / L3} throttles
    * the centre core, which gives the ascent a core-only phase; the single-propagator gravity turn
    * plants its jettison inside one burn and knows two burns, not three, so it <em>refuses</em> such
-   * a stack outright. Three of the fixtures
-   * below go through that path, and it is the path they exist to compare against.
+   * a stack outright. Three of the fixtures below go through that path, and it is the path they
+   * exist to compare against.
    *
    * <p>This is not a workaround for the refusal. The étape 0 reference of the explicit-staging
    * migration was measured on a Falcon Heavy that was neither split nor throttled, so freezing the
@@ -326,8 +326,8 @@ class GravityTurnReplayConsistencyTest {
    *
    * <p>The difference is injected deliberately here, since the ascent no longer produces one on its
    * own. That keeps the sensitivity documented — and it is what makes the N2 tolerances of the
-   * explicit-staging migration meaningful: 10 m at MECO is not slack, it is the
-   * budget for an entry difference three orders of magnitude smaller.
+   * explicit-staging migration meaningful: 10 m at MECO is not slack, it is the budget for an entry
+   * difference three orders of magnitude smaller.
    */
   @Test
   void postAscentEntryDifference_isAmplifiedByTheGravityTurn() {
@@ -390,15 +390,15 @@ class GravityTurnReplayConsistencyTest {
   }
 
   /**
-   * Étape 0 of the explicit-staging migration: the numeric reference of the
-   * gravity turn at <b>fixed variables</b>, so the split into {@code Gravity turn (S1) → S1
-   * separation → Gravity turn (S2)} can be checked without running CMA-ES.
+   * Étape 0 of the explicit-staging migration: the numeric reference of the gravity turn at
+   * <b>fixed variables</b>, so the split into {@code Gravity turn (S1) → S1 separation → Gravity
+   * turn (S2)} can be checked without running CMA-ES.
    *
    * <p>Three quantities are pinned, and they are exactly the ones the split must reproduce:
    *
    * <ul>
    *   <li>{@code burn1Duration} and {@code stagingCompleteTime} — the date arithmetic the split
-   * phases inherit;
+   *       phases inherit;
    *   <li>the state at gravity-turn exit (MECO) — date, mass, position, velocity, at the N2
    *       tolerances of §7.1 (1 ms / 1 kg / 10 m / 0.05 m/s).
    * </ul>
@@ -508,9 +508,9 @@ class GravityTurnReplayConsistencyTest {
   }
 
   /**
-   * The optimize-vs-replay contract of the split: the chain the CMA-ES problem flies
-   * and the chain the ephemeris pass replays are the <b>same</b> traversal of the same three
-   * phases, so they must land on the same MECO — not merely within the N2 budget.
+   * The optimize-vs-replay contract of the split: the chain the CMA-ES problem flies and the chain
+   * the ephemeris pass replays are the <b>same</b> traversal of the same three phases, so they must
+   * land on the same MECO — not merely within the N2 budget.
    *
    * <p>This is what closes the door the divergence of bilan 11 §3.9 came through. Two
    * implementations of "walk the ascent" would be free to restart the integrator differently; one,
@@ -552,11 +552,11 @@ class GravityTurnReplayConsistencyTest {
   }
 
   /**
-   * The 2b fix, now carried by the first ascent phase: {@code
-   * GravityTurnFirstBurnStage.configure} — the ephemeris replay path — applies the pitch kick and
-   * resets the propagator's initial state to the kicked one (the generator sets it to the pre-kick
-   * saved entry before calling configure). Correct in itself, though it does not resolve the
-   * divergence (the kick washes out; the config difference above is the real cause).
+   * The 2b fix, now carried by the first ascent phase: {@code GravityTurnFirstBurnStage.configure}
+   * — the ephemeris replay path — applies the pitch kick and resets the propagator's initial state
+   * to the kicked one (the generator sets it to the pre-kick saved entry before calling configure).
+   * Correct in itself, though it does not resolve the divergence (the kick washes out; the config
+   * difference above is the real cause).
    */
   @Test
   void firstBurnConfigure_startsTheReplayFromTheKickedState() {

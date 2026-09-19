@@ -10,9 +10,8 @@ import org.junit.jupiter.api.Test;
 
 /**
  * The staging plan is where the parallel block is decided. The figures below are deliberately
- * synthetic and
- * round: the boosters and the core share one Isp, so the flow ratio is the thrust ratio and every
- * expected value is exact.
+ * synthetic and round: the boosters and the core share one Isp, so the flow ratio is the thrust
+ * ratio and every expected value is exact.
  */
 class StagingPlanTest {
 

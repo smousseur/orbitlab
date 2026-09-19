@@ -92,8 +92,8 @@ public final class FormField<T> {
    * MissionFactory} then builds {@code LaunchPlane.dueEast(latitude)} from the latitude in double
    * rather than from the rounded number a form field shows.
    *
-   * <p>That distinction is the non-regression seam: publishing the derived value would move
-   * the azimuth by a few thousandths of a degree, hence the signed launch assist {@code
+   * <p>That distinction is the non-regression seam: publishing the derived value would move the
+   * azimuth by a few thousandths of a degree, hence the signed launch assist {@code
    * PropellantBudget} charges, hence the propellant loads — a trajectory shift that no inclination
    * assertion would ever catch, because the plane itself would still be right.
    */

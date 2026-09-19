@@ -42,8 +42,7 @@ import org.orekit.utils.Constants;
  * AnalyticHohmannTransferStage#computeTargetVelocityAtApogee}, which enters only through {@code a =
  * (aim + apsisRadius)/2}. It is <b>not</b> a prediction of the achieved osculating perigee: on a
  * near-circular target the aim exceeds the burn-point radius, so the burn point stays the perigee
- * and the aim is the far apside. The name says what it steers, not what comes
- * out of it.
+ * and the aim is the far apside. The name says what it steers, not what comes out of it.
  *
  * <p><b>Total by construction.</b> {@link OrbitElements#mean(Orbit)} returns an {@code Optional}
  * because a fixed point may fail to converge, and <b>no mission may fail because a centring

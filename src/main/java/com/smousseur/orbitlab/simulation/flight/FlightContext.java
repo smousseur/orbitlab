@@ -7,10 +7,10 @@ import java.util.Objects;
  * The environment a propagation is flown in, whole: what pulls on the vehicle, and what rubs
  * against it.
  *
- * <p>Introduced by PHY-1 / L1. It
- * <b>composes</b> {@link GravitationalContext} instead of extending or renaming it: that record
- * says exactly what it is about, its two invariants keep meaning what they meant, and every site
- * that only needs gravity keeps reading a type that promises nothing else.
+ * <p>Introduced by PHY-1 / L1. It <b>composes</b> {@link GravitationalContext} instead of extending
+ * or renaming it: that record says exactly what it is about, its two invariants keep meaning what
+ * they meant, and every site that only needs gravity keeps reading a type that promises nothing
+ * else.
  *
  * <p><b>This pair is the propagator's force list.</b> The gravitational half becomes {@code setMu}
  * + the non-central field + the third bodies; the aerodynamic half is precisely the couple Orekit

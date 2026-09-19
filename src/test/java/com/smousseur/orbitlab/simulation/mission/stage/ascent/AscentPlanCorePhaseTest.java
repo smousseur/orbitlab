@@ -19,9 +19,8 @@ import org.orekit.time.AbsoluteDate;
 
 /**
  * The third burn an ascent gains when the boosters run dry before the core. {@link AscentPlanTest}
- * pins the other half of the
- * contract: without a core phase, the very same accessors reproduce the pre-split date chain
- * epsilon by epsilon.
+ * pins the other half of the contract: without a core phase, the very same accessors reproduce the
+ * pre-split date chain epsilon by epsilon.
  */
 class AscentPlanCorePhaseTest {
 

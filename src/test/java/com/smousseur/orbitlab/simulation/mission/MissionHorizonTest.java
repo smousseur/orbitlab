@@ -19,9 +19,7 @@ import org.orekit.utils.AbsolutePVCoordinates;
 import org.orekit.utils.Constants;
 import org.orekit.utils.PVCoordinates;
 
-/**
- * The restitution horizon's resolution rules. Pure: nothing here propagates.
- */
+/** The restitution horizon's resolution rules. Pure: nothing here propagates. */
 class MissionHorizonTest {
 
   private static final AbsoluteDate LAUNCH = AbsoluteDate.J2000_EPOCH;

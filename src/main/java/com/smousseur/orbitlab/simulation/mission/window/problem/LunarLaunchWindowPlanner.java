@@ -16,14 +16,14 @@ import org.orekit.time.AbsoluteDate;
  * Dates a lunar mission — the one place a lunar {@link MissionSpec} meets a <b>confirming</b>
  * {@link LunarLaunchWindowProblem}.
  *
- * <p><b>Two entries, one body</b>. A flyby and an orbit insertion are dated by
- * the same criterion at the same aimed perilune; what stopped the flyby's planner from serving both
- * was its signature, not its content.
+ * <p><b>Two entries, one body</b>. A flyby and an orbit insertion are dated by the same criterion
+ * at the same aimed perilune; what stopped the flyby's planner from serving both was its signature,
+ * not its content.
  *
  * <p><b>This is where the 4.5 s of a confirmation are paid</b>, at the click that creates the
- * mission and not on every keystroke of the parameters step, whose timeline screens only.
- * The price is a freeze of ten to fifteen seconds on the render thread, against 40 ms for an Earth
- * mission; it is written down as a limitation of the lot rather than hidden.
+ * mission and not on every keystroke of the parameters step, whose timeline screens only. The price
+ * is a freeze of ten to fifteen seconds on the render thread, against 40 ms for an Earth mission;
+ * it is written down as a limitation of the lot rather than hidden.
  *
  * <p><b>The mass at injection is recomputed, not carried.</b> {@code
  * PropellantBudget.loadsForLunar} is closed-form and deterministic, so reading it back off the
@@ -44,8 +44,8 @@ public final class LunarLaunchWindowPlanner {
    *
    * <p><b>Absolute here, unlike the timeline's relative margin, and that is the point.</b> A pad
    * below the lunar declination reaches no plane containing the Moon, and the criterion stays
-   * finite there rather than refusing: without a ceiling the search would hand back the
-   * cheapest of a set of dates nobody can fly.
+   * finite there rather than refusing: without a ceiling the search would hand back the cheapest of
+   * a set of dates nobody can fly.
    */
   private static final double MAX_DELTA_V = 3_400.0;
 

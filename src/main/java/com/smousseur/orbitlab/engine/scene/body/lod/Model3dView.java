@@ -68,8 +68,7 @@ public class Model3dView {
   /**
    * Loads a model at a given real-world size rather than at this body's radius, by normalizing the
    * mesh's own bounding box — for the primary shrinking to its payload, a third-party mesh with no
-   * shared scale convention.
-   * May be called from a background thread.
+   * shared scale convention. May be called from a background thread.
    *
    * @param path the asset path to load
    * @param targetSizeMeters the size, in metres, the model's largest dimension should span
@@ -162,8 +161,7 @@ public class Model3dView {
 
   /**
    * Casts this body's own globe as the occulter of its ring system, for the frame the given Sun
-   * direction describes. A model with no ring
-   * does nothing.
+   * direction describes. A model with no ring does nothing.
    *
    * <p><b>The caller supplies only what it alone knows.</b> Where the Sun is takes an ephemeris;
    * the other two uniforms do not leave this object. The occulter is the model bucket's own world
@@ -209,9 +207,9 @@ public class Model3dView {
 
   /**
    * Pushes the current occulter onto every geometry's material, for the per-fragment eclipse test
-   * in {@code WrapLighting.frag}. Walks the bucket every call
-   * rather than caching materials: the bucket is empty until the async load completes, so the walk
-   * is a no-op until then, and is otherwise a handful of geometries per body.
+   * in {@code WrapLighting.frag}. Walks the bucket every call rather than caching materials: the
+   * bucket is empty until the async load completes, so the walk is a no-op until then, and is
+   * otherwise a handful of geometries per body.
    *
    * <p><b>Ring geometries are skipped.</b> They carry their own occulter — their planet, pushed by
    * {@link #setRingSunlight} — and there is one set of occulter uniforms per material. No body in

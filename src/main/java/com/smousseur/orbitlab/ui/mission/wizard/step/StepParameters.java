@@ -189,8 +189,7 @@ public class StepParameters implements StepValues {
   /**
    * The card the user picked. Held here rather than in {@code MissionContext}: the profile is a
    * wizard concept, and the mission context belongs to the simulation layer. The mission
-   * <em>type</em> keeps going
-   * through the context, for the launcher step that only needs that much.
+   * <em>type</em> keeps going through the context, for the launcher step that only needs that much.
    */
   private MissionProfile selectedProfile = MissionProfile.LEO;
 
@@ -557,9 +556,9 @@ public class StepParameters implements StepValues {
    * #updatePlanningIndicator()} and {@link #validateTargetNode()} must share, since one decides
    * whether the entry point is shown and the other whether a refusal can be raised.
    *
-   * <p><b>The value is what it always was; the name is what became false</b>. A
-   * lunar mission has a window without having a node: what it waits for is a direction its parking
-   * plane must contain, not a plane whose ascending node it must meet.
+   * <p><b>The value is what it always was; the name is what became false</b>. A lunar mission has a
+   * window without having a node: what it waits for is a direction its parking plane must contain,
+   * not a plane whose ascending node it must meet.
    *
    * @return whether the selected profile has a window to plan
    */
@@ -831,9 +830,9 @@ public class StepParameters implements StepValues {
    * one it keeps: reporting an unreadable inclination as an unreadable launch site is what made the
    * planning page blame the wrong control, which is a false statement on screen.
    *
-   * <p><b>The rest belongs to the panel</b>. Only the card on screen knows what
-   * its profile aims at, and the two profiles that have a window aim at things with no component in
-   * common — a plane with a node to meet, and a direction to contain.
+   * <p><b>The rest belongs to the panel</b>. Only the card on screen knows what its profile aims
+   * at, and the two profiles that have a window aim at things with no component in common — a plane
+   * with a node to meet, and a direction to contain.
    *
    * @return the request, or the reason the form cannot describe one
    */

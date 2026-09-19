@@ -10,11 +10,11 @@ import org.hipparchus.util.FastMath;
 import org.orekit.utils.Constants;
 
 /**
- * Analytic propellant sizing — "just enough" loads per mission. Inverse Tsiolkovsky
- * computed top-down from the payload: every stage below the launcher's top stage flies fully loaded
- * (v1), only the top stage and the payload's own are sized from the ΔV budget. A safety margin
- * absorbs finite-burn and steering losses; loads are clamped to capacity (an infeasibility
- * diagnostic is a later increment).
+ * Analytic propellant sizing — "just enough" loads per mission. Inverse Tsiolkovsky computed
+ * top-down from the payload: every stage below the launcher's top stage flies fully loaded (v1),
+ * only the top stage and the payload's own are sized from the ΔV budget. A safety margin absorbs
+ * finite-burn and steering losses; loads are clamped to capacity (an infeasibility diagnostic is a
+ * later increment).
  *
  * <p><b>"The gravity turn consumes them entirely anyway" is no longer true</b>, and that used to be
  * the stated reason the lower stages fly full. PHY-2 / L3 made the core cutoff commandable, so the
@@ -58,14 +58,14 @@ public final class PropellantBudget {
    * number that every budgeted mission pays, taken deliberately over a per-mission estimate that
    * would need the hand-over state the sizing does not have.
    *
-   * <p><b>Demoted to a seed by PHY-2 / L4</b>. An {@code EarthOrbit} mission computed
-   * through {@code MeasuredLoadPlanner} no longer <em>flies</em> this reserve: it flies the load
-   * {@link #loadsForMeasuredTopStage} derives from the ΔV the top stage actually delivered. The
-   * reserve remains what the first pass takes off with, and it has to remain something: a
-   * reserve-free seed collapses {@code dvTop} to zero on a launcher that over-delivers, which would
-   * leave the top stage with no propellant to fly the very insertion the measurement flight has to
-   * observe. It is also still the flown value everywhere the measured path does not reach — GEO,
-   * lunar, and every caller that sizes off-flight.
+   * <p><b>Demoted to a seed by PHY-2 / L4</b>. An {@code EarthOrbit} mission computed through
+   * {@code MeasuredLoadPlanner} no longer <em>flies</em> this reserve: it flies the load {@link
+   * #loadsForMeasuredTopStage} derives from the ΔV the top stage actually delivered. The reserve
+   * remains what the first pass takes off with, and it has to remain something: a reserve-free seed
+   * collapses {@code dvTop} to zero on a launcher that over-delivers, which would leave the top
+   * stage with no propellant to fly the very insertion the measurement flight has to observe. It is
+   * also still the flown value everywhere the measured path does not reach — GEO, lunar, and every
+   * caller that sizes off-flight.
    */
   private static final double TOP_STAGE_INSERTION_RESERVE_DV = 1_300.0;
 
@@ -247,8 +247,8 @@ public final class PropellantBudget {
 
   /**
    * Launcher loads and payload load for a GEO mission (parking → GTO → GEO). The split GEO profile
-   * assigns the ascent residual and the GTO injection to the launcher's top stage, and
-   * the apogee circularization + plane change to the payload's kick motor.
+   * assigns the ascent residual and the GTO injection to the launcher's top stage, and the apogee
+   * circularization + plane change to the payload's kick motor.
    *
    * @param launcher the launcher model
    * @param payload the payload model (provides the tank and the propulsion)
@@ -335,12 +335,12 @@ public final class PropellantBudget {
    * and the injection, two profiles.
    *
    * <p><b>It refuses where its siblings clamp</b>, and the asymmetry is physical rather than a
-   * change of mind: a clamped apogee circularization yields a low orbit — wrong,
-   * visible, but an orbit — whereas a clamped lunar insertion does not capture at all and the
-   * spacecraft sails past the Moon. There is no degraded mission to show, so there is nothing to
-   * clamp to. The refusal surfaces through the wizard's dry composition, which turns it into a
-   * worded refusal; this method is on no existing mission's path, and is never called from the
-   * optimizer, where an exception would read as "load infeasible".
+   * change of mind: a clamped apogee circularization yields a low orbit — wrong, visible, but an
+   * orbit — whereas a clamped lunar insertion does not capture at all and the spacecraft sails past
+   * the Moon. There is no degraded mission to show, so there is nothing to clamp to. The refusal
+   * surfaces through the wizard's dry composition, which turns it into a worded refusal; this
+   * method is on no existing mission's path, and is never called from the optimizer, where an
+   * exception would read as "load infeasible".
    *
    * @param launcher the launcher model
    * @param payload the payload model (provides the insertion propulsion and its capacity)
@@ -439,12 +439,11 @@ public final class PropellantBudget {
    * iteration: the lower stages' ΔV depends on the mass above them, which depends on the sized top
    * load. Solid top stages fly full (no sizing degree of freedom).
    *
-   * <p><b>The ΔV chain is evaluated on the serial-equivalent stages</b>, not on the stack entries
-   *. The loop below is a chain of
-   * Tsiolkovsky terms, each stage dropping its dry mass before the next ignites; a parallel block
-   * is one burn, so handing it over as two entries would make this believe in a staging that never
-   * happens. Measured on the split Falcon Heavy: 2 111 m/s of ΔV credited to nothing, and an upper
-   * stage sized at zero.
+   * <p><b>The ΔV chain is evaluated on the serial-equivalent stages</b>, not on the stack entries .
+   * The loop below is a chain of Tsiolkovsky terms, each stage dropping its dry mass before the
+   * next ignites; a parallel block is one burn, so handing it over as two entries would make this
+   * believe in a staging that never happens. Measured on the split Falcon Heavy: 2 111 m/s of ΔV
+   * credited to nothing, and an upper stage sized at zero.
    *
    * <p>The loads returned are still one per stack entry. No proportioning is needed to get there —
    * every lower stage flies full, so a block's load <em>is</em> the sum of its entries' capacities.
@@ -551,16 +550,15 @@ public final class PropellantBudget {
    * Earth-rotation assist.
    *
    * <p><b>The assist is signed and projected on the azimuth</b>. It used to be {@code 465 · cos φ},
-   * the
-   * full eastward entrainment, credited whatever the heading — correct due east and wrong
+   * the full eastward entrainment, credited whatever the heading — correct due east and wrong
    * everywhere else. A polar launch from Kourou uses none of it (the entrainment is perpendicular
    * to the flight), and a retrograde sun-synchronous one <em>pays</em> for it. Getting this wrong
    * is not a margin detail: on an inverse-Tsiolkovsky budget, the 529 m/s error of an SSO from
    * Kourou is tonnes on the upper-stage load.
    *
-   * <p>What is <em>not</em> in here is the steering loss of turning the plane during the climb
-   *. It has no closed form; {@link #SAFETY_MARGIN} absorbs it, and {@code
-   * AscentPlaneControlTest} measures it. No value is hard-coded until it is measured.
+   * <p>What is <em>not</em> in here is the steering loss of turning the plane during the climb . It
+   * has no closed form; {@link #SAFETY_MARGIN} absorbs it, and {@code AscentPlaneControlTest}
+   * measures it. No value is hard-coded until it is measured.
    *
    * @param targetAltitude the target orbit altitude (m)
    * @param launchLatitudeDeg the launch site latitude (degrees)
@@ -619,9 +617,9 @@ public final class PropellantBudget {
    * difference legitimate here and nowhere else.
    *
    * <p><b>Measured against the four flown arrivals of L0</b>: this returns 828.7 m/s from a 400 km
-   * parking orbit,
-   * against 825.8 to 872.5 measured across a lunation. It sits 2.5 % under the measured mean — the
-   * geometry L0 flies is a 170° transfer with an aim offset, not a 180° Hohmann.
+   * parking orbit, against 825.8 to 872.5 measured across a lunation. It sits 2.5 % under the
+   * measured mean — the geometry L0 flies is a 170° transfer with an aim offset, not a 180°
+   * Hohmann.
    *
    * @param parkingAltitude the circular parking orbit the injection leaves from (m)
    * @return the arrival excess velocity in m/s

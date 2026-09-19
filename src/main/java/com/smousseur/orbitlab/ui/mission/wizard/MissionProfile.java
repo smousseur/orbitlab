@@ -405,8 +405,8 @@ public enum MissionProfile {
    *
    * <p>Replaces a {@code == GEO ? GEO : LEO} ternary that answered {@link #LEO} for a lunar type —
    * harmless while the cards were one grid, and no longer so now that the answer also decides which
-   * tab opens. Four profiles share {@link MissionType#LEO}, and the one this
-   * returns for it is the historical default rather than a preset.
+   * tab opens. Four profiles share {@link MissionType#LEO}, and the one this returns for it is the
+   * historical default rather than a preset.
    *
    * @param type the mission type the context currently selects
    * @return the profile whose card the wizard should open on

@@ -19,9 +19,8 @@ import org.orekit.propagation.numerical.NumericalPropagator;
 import org.orekit.time.AbsoluteDate;
 
 /**
- * The lunar orbit insertion burn
- * — a constant-thrust retrograde burn lit half a burn short of the perilune, calibrated on the
- * orbit it actually delivers.
+ * The lunar orbit insertion burn — a constant-thrust retrograde burn lit half a burn short of the
+ * perilune, calibrated on the orbit it actually delivers.
  *
  * <p>Twin of {@link TLIBurnStage}: {@code enter} plans and moves no mass, {@code configure} flies
  * the burn, {@code propagateStandalone} re-plans and flies it on its own propagator. {@code

@@ -15,10 +15,10 @@ import java.util.Locale;
 import org.junit.jupiter.api.Test;
 
 /**
- * The Earth and the Moon are the reference assets: their frame is what the export convention says
- *, and they are declared frozen while
- * the other nine models are provisional. They are therefore the only fixture in this chantier that
- * a test can lean on without being rewritten at every asset swap.
+ * The Earth and the Moon are the reference assets: their frame is what the export convention says ,
+ * and they are declared frozen while the other nine models are provisional. They are therefore the
+ * only fixture in this chantier that a test can lean on without being rewritten at every asset
+ * swap.
  *
  * <p>The Moon carries the longitude half of the reference on its own: being in synchronous
  * rotation, a correct near side cannot coexist with a shifted prime meridian.

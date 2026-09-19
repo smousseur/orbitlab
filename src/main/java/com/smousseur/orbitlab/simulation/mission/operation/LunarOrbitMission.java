@@ -35,8 +35,8 @@ import java.util.List;
  *
  * <p><b>The lunar orbit altitude is aimed exactly once</b>, by the injection: {@code TLIBurnStage}
  * receives it as the perilune to reach, and {@code LunarInsertionStage} circularises the perilune
- * it actually arrives at, taking no target of its own. A second parameter would be a
- * second truth about one target. Checking that the two coincide is the objective's job.
+ * it actually arrives at, taking no target of its own. A second parameter would be a second truth
+ * about one target. Checking that the two coincide is the objective's job.
  *
  * <p><b>The S2 jettison sits just after the injection</b>, exactly where {@code GEOMission} places
  * its own and for the same reason: {@code resolveActiveStage} resolves by mass, so nothing makes
@@ -60,18 +60,18 @@ public class LunarOrbitMission extends EarthMission {
    * and reading the other mission's constant would make this chain follow, in silence, a value
    * changed for that one.
    *
-   * <p><b>Not offered as a wizard field</b>, on MIS-4 / L0's measurement: the aim
-   * converges identically from 185 to 400 km, so a slider there would be a choice with nothing
-   * behind it. 400 km is what the closure flight of L5 actually flew.
+   * <p><b>Not offered as a wizard field</b>, on MIS-4 / L0's measurement: the aim converges
+   * identically from 185 to 400 km, so a slider there would be a choice with nothing behind it. 400
+   * km is what the closure flight of L5 actually flew.
    */
   public static final double DEFAULT_PARKING_ALTITUDE = 400_000.0;
 
   /**
    * How far the translunar coast goes if it never reaches the lunar sphere (s).
    *
-   * <p><b>A bound, not a duration</b>: a coast that ends at a boundary owes a
-   * figure for the case where the boundary never comes, and without one it would fall on {@code
-   * StageChainRunner}'s 7 200 s safety net — three days short, while reporting itself complete.
+   * <p><b>A bound, not a duration</b>: a coast that ends at a boundary owes a figure for the case
+   * where the boundary never comes, and without one it would fall on {@code StageChainRunner}'s 7
+   * 200 s safety net — three days short, while reporting itself complete.
    *
    * <p>Derived from the transfer's own time of flight rather than written as a fresh number, and
    * set so that reaching it reads as a failure: the crossing is measured at 3.071–3.148 d (L0

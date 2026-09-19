@@ -27,11 +27,11 @@ import org.orekit.utils.Constants;
 import org.orekit.utils.PVCoordinates;
 
 /**
- * Guard on the aimed-apogee Newton iteration. A stage that cannot deliver
- * the injection caps its burn near zero, the post-burn apogee never moves, and the unchecked
- * iteration used to accumulate the whole defect into the aim — the I7 GEO run produced a 177 000 km
- * aim for a 35 786 km target, whose multi-day transfer orbit then made the downstream propagation
- * grind for tens of minutes. The plan must refuse instead.
+ * Guard on the aimed-apogee Newton iteration. A stage that cannot deliver the injection caps its
+ * burn near zero, the post-burn apogee never moves, and the unchecked iteration used to accumulate
+ * the whole defect into the aim — the I7 GEO run produced a 177 000 km aim for a 35 786 km target,
+ * whose multi-day transfer orbit then made the downstream propagation grind for tens of minutes.
+ * The plan must refuse instead.
  */
 class AnalyticGtoInjectionStageTest {
 

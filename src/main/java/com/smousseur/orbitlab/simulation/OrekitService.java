@@ -240,15 +240,15 @@ public final class OrekitService {
    * Default scalar integrator tolerances for the optimization propagator, applied to all seven
    * Cartesian state components.
    *
-   * <p><b>{@code 1e-5} / {@code 1e-7} since OPT-1 / C1</b>. The historical
-   * {@code 1e-8} / {@code 1e-10} held position to ~0.7 mm for a cost graded in kilometres — some
-   * seven orders below the REL-18 comparison noise, and paid for by many small integrator steps
-   * (each an NRLMSISE call). The bench sweep measured the step as tolerance-bound and this value as
-   * the sweet spot: −58 % FAST / −66 % BALANCED / −63 % PRECISE wall, verdict bit-identical on
-   * PRECISE and within tens of metres elsewhere (~0.7 m local error, still ~27 000× under REL-18).
-   * Loosening further (1e-4/1e-6) bought only 3-11 % more for ten times the truncation error and a
-   * visible drift, not worth it when this is the only propagator the verdict is read from. The
-   * bench overrides it through {@link #OPT_ABS_TOL_PROPERTY} / {@link #OPT_REL_TOL_PROPERTY}.
+   * <p><b>{@code 1e-5} / {@code 1e-7} since OPT-1 / C1</b>. The historical {@code 1e-8} / {@code
+   * 1e-10} held position to ~0.7 mm for a cost graded in kilometres — some seven orders below the
+   * REL-18 comparison noise, and paid for by many small integrator steps (each an NRLMSISE call).
+   * The bench sweep measured the step as tolerance-bound and this value as the sweet spot: −58 %
+   * FAST / −66 % BALANCED / −63 % PRECISE wall, verdict bit-identical on PRECISE and within tens of
+   * metres elsewhere (~0.7 m local error, still ~27 000× under REL-18). Loosening further
+   * (1e-4/1e-6) bought only 3-11 % more for ten times the truncation error and a visible drift, not
+   * worth it when this is the only propagator the verdict is read from. The bench overrides it
+   * through {@link #OPT_ABS_TOL_PROPERTY} / {@link #OPT_REL_TOL_PROPERTY}.
    */
   public static final double DEFAULT_OPT_ABS_TOL = 1e-5;
 
@@ -364,8 +364,8 @@ public final class OrekitService {
    * <p><b>The order of the three calls below is load-bearing</b> — {@code setOrbitType}, then
    * {@code setMu}, then {@code addForceModel}. Orekit is not indifferent to it everywhere, and a
    * tidier-looking permutation would cost the L0 baseline. L2 extends that by one line: the central
-   * field is
-   * added first, then the perturbers in the canonical order of the context's {@code EnumSet}.
+   * field is added first, then the perturbers in the canonical order of the context's {@code
+   * EnumSet}.
    *
    * <p><b>A body with no harmonic field gets none</b>, and its central term is still whole: {@code
    * setMu} mounts a {@link NewtonianAttraction} of its own when no attraction model is present, and
@@ -532,10 +532,10 @@ public final class OrekitService {
    * #createOptimizationPropagator} is the single caller that reads it.
    *
    * <p><b>The shared instance is an invariant, not an optimisation</b>: it is what makes
-   * bit-for-bit equality with the L0
-   * baseline achievable, and therefore what lets the gate demand a zero tolerance. {@code
-   * computeIfAbsent} is atomic and evaluates the mapping function at most once per key, which is
-   * exactly that guarantee — do not replace it with an explicit lock or a pre-warm.
+   * bit-for-bit equality with the L0 baseline achievable, and therefore what lets the gate demand a
+   * zero tolerance. {@code computeIfAbsent} is atomic and evaluates the mapping function at most
+   * once per key, which is exactly that guarantee — do not replace it with an explicit lock or a
+   * pre-warm.
    *
    * <p>The mapping function must not modify the map, so the Earth test sits <em>outside</em> it: a
    * resolution that fell back to another body from inside would deadlock.

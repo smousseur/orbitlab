@@ -26,9 +26,9 @@ import org.orekit.time.TimeScalesFactory;
  *
  * <p>This is a <b>measurement</b> and not a baseline: the lot changes what a mission computed
  * through the planner flies, and the repository's gates size through {@code PropellantBudget} and
- * fly through {@code MissionOptimizer} directly, so none of them sees this path at all. The
- * proof therefore lives here rather than in a re-recorded pin — and a gate that moves because of
- * this lot is a signal that the sizing leaked out of its perimeter.
+ * fly through {@code MissionOptimizer} directly, so none of them sees this path at all. The proof
+ * therefore lives here rather than in a re-recorded pin — and a gate that moves because of this lot
+ * is a signal that the sizing leaked out of its perimeter.
  *
  * <p>Slow by construction: each sizing pass is a full mission optimization, so the run is two or
  * three of them.

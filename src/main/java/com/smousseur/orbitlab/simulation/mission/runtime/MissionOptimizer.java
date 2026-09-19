@@ -346,13 +346,13 @@ public class MissionOptimizer {
    * Non-propulsive stages (coasts, separations) drop mass by jettison only — including any residual
    * propellant discarded with the spent stage — so they report zero consumption and zero ΔV.
    *
-   * <p><b>No stage spans a jettison any more</b>, so the entry stage's Isp is the only
-   * Isp burnt during the stage and this accounting is exact. It used to be an approximation: the
-   * ascent was one stage carrying burn 1, a 66 t jettison and burn 2, and a single Tsiolkovsky
-   * across a mass drop is not an approximation but a category error — on the Falcon Heavy LEO
-   * profile the ascent reported 5 648 m/s where the staged computation gives 7 781 m/s. Every
-   * jettison being its own non-propulsive phase is what makes the formula below correct rather than
-   * indicative; a future stage that dropped mass mid-burn would silently reintroduce the error.
+   * <p><b>No stage spans a jettison any more</b>, so the entry stage's Isp is the only Isp burnt
+   * during the stage and this accounting is exact. It used to be an approximation: the ascent was
+   * one stage carrying burn 1, a 66 t jettison and burn 2, and a single Tsiolkovsky across a mass
+   * drop is not an approximation but a category error — on the Falcon Heavy LEO profile the ascent
+   * reported 5 648 m/s where the staged computation gives 7 781 m/s. Every jettison being its own
+   * non-propulsive phase is what makes the formula below correct rather than indicative; a future
+   * stage that dropped mass mid-burn would silently reintroduce the error.
    */
 
   /** The vector this stage is to be flown at, or {@code null} when it has to be searched for. */
@@ -673,12 +673,11 @@ public class MissionOptimizer {
    * none to diagnose against — in which case the caller logs the raw end state instead.
    *
    * <p><b>A non-terrestrial insertion has none</b>. The diagnostic compares an <em>Earth</em>
-   * ascent to
-   * an ideal Earth Hohmann handoff, and it is only ever called under a {@code GravityTurnProblem}
-   * guard, so the ascent really is terrestrial. The objective, since MIS-5, need not be: a lunar
-   * insertion would hand 100 km straight into a terrestrial comparison and print a number that
-   * looks like a measurement. Returning NaN takes the exit that already exists — the one MIS-4
-   * takes, a flyby objective not being an insertion at all.
+   * ascent to an ideal Earth Hohmann handoff, and it is only ever called under a {@code
+   * GravityTurnProblem} guard, so the ascent really is terrestrial. The objective, since MIS-5,
+   * need not be: a lunar insertion would hand 100 km straight into a terrestrial comparison and
+   * print a number that looks like a measurement. Returning NaN takes the exit that already exists
+   * — the one MIS-4 takes, a flyby objective not being an insertion at all.
    *
    * <p>Every other {@code OrbitInsertionObjective} of the repository is built on {@code EARTH}, so
    * this guard changes no existing log line by identity rather than by tolerance.

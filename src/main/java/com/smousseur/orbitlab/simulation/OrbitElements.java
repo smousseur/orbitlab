@@ -24,9 +24,8 @@ import org.orekit.propagation.conversion.osc2mean.FixedPointConverter;
  * <p><b>Altitude convention.</b> Apsides are spherical-equatorial, {@code a(1±e) −
  * referenceRadius}, measured from the equatorial radius of <b>the body the arc is flown around</b>
  * — the caller says which, because an {@code Orbit} carries a µ and a frame but never a body radius
- *. It is not geodetic: at
- * 5.23° inclination the difference is ~180 m. Keeping it
- * identical is what makes the osculating and mean lines comparable side by side.
+ * . It is not geodetic: at 5.23° inclination the difference is ~180 m. Keeping it identical is what
+ * makes the osculating and mean lines comparable side by side.
  *
  * <p><b>No Earth default, deliberately.</b> An Earth radius applied to a selenocentric state is not
  * an approximation but a wrong number — measured, a perilune reported 4 640 737 m below the surface
@@ -108,13 +107,12 @@ public record OrbitElements(
    * and <b>no mission must ever fail because a report could not be computed</b>.
    *
    * <p><b>This is an Earth theory, and it refuses a non-terrestrial arc by itself</b>. The rebase
-   * below deliberately uses the
-   * potential provider's µ, which is terrestrial, so a selenocentric state comes out as a
-   * near-radial ellipse of eccentricity {@code 1 − µM/µE = 0.9877} — measured constant with
-   * altitude, at 100, 1 000, 10 000 and 50 000 km — which is outside Eckstein-Hechler's domain
-   * everywhere. The refusal is therefore structural rather than incidental, and it is what makes a
-   * lunar mission display no mean line at all. {@code OrbitElementsTest} pins it, because nothing
-   * else states it.
+   * below deliberately uses the potential provider's µ, which is terrestrial, so a selenocentric
+   * state comes out as a near-radial ellipse of eccentricity {@code 1 − µM/µE = 0.9877} — measured
+   * constant with altitude, at 100, 1 000, 10 000 and 50 000 km — which is outside
+   * Eckstein-Hechler's domain everywhere. The refusal is therefore structural rather than
+   * incidental, and it is what makes a lunar mission display no mean line at all. {@code
+   * OrbitElementsTest} pins it, because nothing else states it.
    *
    * <p>{@code referenceRadius} is used <b>only</b> to count the apsides of the converted orbit,
    * never by the theory. A non-terrestrial radius is therefore always paired with an empty result

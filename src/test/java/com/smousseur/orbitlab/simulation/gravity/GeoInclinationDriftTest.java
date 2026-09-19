@@ -58,8 +58,8 @@ import org.orekit.time.TimeScalesFactory;
  *
  * <p><b>Why the span is long, measured rather than argued.</b> Over a short span the fortnightly
  * lunar term is the same order as the accumulated secular drift, so the measured rate reports the
- * start date rather than the physics. Sweeping the span at a fixed epoch shows
- * exactly where that stops:
+ * start date rather than the physics. Sweeping the span at a fixed epoch shows exactly where that
+ * stops:
  *
  * <pre>
  *    30 d → 1.2178     90 d → 0.9209    365 d → 0.9487

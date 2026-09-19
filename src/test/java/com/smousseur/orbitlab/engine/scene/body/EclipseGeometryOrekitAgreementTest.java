@@ -19,10 +19,9 @@ import org.orekit.utils.OccultationEngine;
 import org.orekit.utils.PVCoordinates;
 
 /**
- * Closes L1 of: {@link EclipseGeometry#illuminationFraction}
- * must agree with Orekit's own {@link EclipseDetector} — an independent oracle already shipped with
- * the dependency and unused elsewhere in this codebase — on whether a point is in the Earth's
- * shadow.
+ * Closes L1 of: {@link EclipseGeometry#illuminationFraction} must agree with Orekit's own {@link
+ * EclipseDetector} — an independent oracle already shipped with the dependency and unused elsewhere
+ * in this codebase — on whether a point is in the Earth's shadow.
  */
 class EclipseGeometryOrekitAgreementTest {
 

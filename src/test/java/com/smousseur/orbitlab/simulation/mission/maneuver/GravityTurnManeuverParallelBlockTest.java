@@ -133,7 +133,7 @@ class GravityTurnManeuverParallelBlockTest {
 
   private static AscentPlan planOf(VehicleStack stack) {
     // A MECO clear of staging completion, so a core-phase stack burns its core to depletion
-    //. The early-cutoff region is
+    // . The early-cutoff region is
     // exercised explicitly by splitBlock_aMecoBelowStagingCommandsTheCoreOffEarly.
     return planOf(stack, 1300.0);
   }

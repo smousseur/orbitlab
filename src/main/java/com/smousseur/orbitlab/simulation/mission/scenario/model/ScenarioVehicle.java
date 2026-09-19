@@ -7,9 +7,9 @@ import com.fasterxml.jackson.annotation.JsonInclude;
  *
  * <p>The propellant loads are deliberately absent: they are <b>derived</b>, and {@code
  * PropellantBudget} resizes them from these three values on the way back in. Freezing them would
- * replay an old sizing after the
- * budget improved. The one exception — the loads a {@code PRECISE} sweep <em>searched</em> rather
- * than derived — is not a property of the vehicle and travels in {@link ScenarioSolution}.
+ * replay an old sizing after the budget improved. The one exception — the loads a {@code PRECISE}
+ * sweep <em>searched</em> rather than derived — is not a property of the vehicle and travels in
+ * {@link ScenarioSolution}.
  *
  * @param launcherId the launcher catalog id
  * @param payloadId the payload catalog id, or {@code null} for a payload assembled by hand

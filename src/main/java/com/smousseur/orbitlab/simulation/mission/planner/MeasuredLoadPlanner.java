@@ -93,12 +93,11 @@ public final class MeasuredLoadPlanner implements MissionPlanner {
    * this budget stays unspent, which is why the Falcon Heavy is untouched by construction.
    *
    * <p><b>What it buys, flown 2026-09-12</b>. On the Ariane 64 LEO-400 drag-on profile the loop
-   * ends dry with the answer bracketed in
-   * {@code [246, 3 804] kg} and used to return the rich end. The three probes land on 967.4, 487.8
-   * and <b>346.5 kg</b>, all feasible: {@code 3 804 -> 346 kg} for the same orbit to the decimal
-   * (399.3 x 420.3 km), <b>3 438 kg</b> of dead propellant given back, the computation going from
-   * 140 s to 265 s. An independent flight of the same profile at another core ISP had converged on
-   * 215 kg, the order the bisection walks to.
+   * ends dry with the answer bracketed in {@code [246, 3 804] kg} and used to return the rich end.
+   * The three probes land on 967.4, 487.8 and <b>346.5 kg</b>, all feasible: {@code 3 804 -> 346
+   * kg} for the same orbit to the decimal (399.3 x 420.3 km), <b>3 438 kg</b> of dead propellant
+   * given back, the computation going from 140 s to 265 s. An independent flight of the same
+   * profile at another core ISP had converged on 215 kg, the order the bisection walks to.
    *
    * <p><b>Three is one short of this planner's own stopping rule, knowingly.</b> The probes took
    * the bracket ratio from 15.5 to 1.41, above {@link #BRACKET_TIGHT_RATIO}: the loop stopped on
@@ -447,9 +446,9 @@ public final class MeasuredLoadPlanner implements MissionPlanner {
    *
    * <p>Each mission stage is attributed to the physical stage that flew it, resolved from the mass
    * at its entry. That is exact because no mission stage spans a jettison any more, so one phase
-   * burns one stage's propellant
-   * at one Isp. Non-propulsive phases report zero ΔV and drop out, which is what keeps separations
-   * — whose entry mass still resolves to the stage being dropped — from being counted.
+   * burns one stage's propellant at one Isp. Non-propulsive phases report zero ΔV and drop out,
+   * which is what keeps separations — whose entry mass still resolves to the stage being dropped —
+   * from being counted.
    */
   private static double topStageDeltaV(
       MissionPerformanceReport report, Vehicle vehicle, int sizedStage) {

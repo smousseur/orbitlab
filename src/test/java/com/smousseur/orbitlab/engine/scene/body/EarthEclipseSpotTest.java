@@ -6,15 +6,14 @@ import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.junit.jupiter.api.Test;
 
 /**
- * Closes L3 of: the payoff of building a per-fragment
- * mechanism rather than a whole-body scalar is that the shadow the Moon casts on the Earth is
- * <em>localised</em> — a point under the Moon's shadow darkens, a point elsewhere on the same lit
- * hemisphere does not. {@link EclipseGeometry#illuminationFraction} is what the shader evaluates
- * per fragment (`WrapLighting.frag`'s {@code eclipseIllumination}, same formula) — this test
- * evaluates it directly at several points on the Earth's surface instead of once at the Earth's
- * centre, since the centre is never a meaningful eclipse point (it sits under thousands of km of
- * rock, never in anyone's shadow) and the whole point of L3 is spatial variation across the
- * surface.
+ * Closes L3 of: the payoff of building a per-fragment mechanism rather than a whole-body scalar is
+ * that the shadow the Moon casts on the Earth is <em>localised</em> — a point under the Moon's
+ * shadow darkens, a point elsewhere on the same lit hemisphere does not. {@link
+ * EclipseGeometry#illuminationFraction} is what the shader evaluates per fragment
+ * (`WrapLighting.frag`'s {@code eclipseIllumination}, same formula) — this test evaluates it
+ * directly at several points on the Earth's surface instead of once at the Earth's centre, since
+ * the centre is never a meaningful eclipse point (it sits under thousands of km of rock, never in
+ * anyone's shadow) and the whole point of L3 is spatial variation across the surface.
  */
 class EarthEclipseSpotTest {
 

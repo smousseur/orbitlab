@@ -17,11 +17,10 @@ import org.orekit.time.AbsoluteDate;
  *
  * <p><b>Why it is extracted.</b> This traversal was the body of {@link
  * com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemerisGenerator}. Splitting the
- * ascent into explicit phases
- * requires the <b>optimize</b> pass to fly the same chain the <b>ephemeris</b> pass replays: two
- * implementations of "walk the stages" would let the two passes drift apart in how often the
- * integrator restarts, which is exactly the optimize-vs-ephemeris divergence closed by bilan 11
- * §3.9. One implementation, used by both, cannot drift.
+ * ascent into explicit phases requires the <b>optimize</b> pass to fly the same chain the
+ * <b>ephemeris</b> pass replays: two implementations of "walk the stages" would let the two passes
+ * drift apart in how often the integrator restarts, which is exactly the optimize-vs-ephemeris
+ * divergence closed by bilan 11 §3.9. One implementation, used by both, cannot drift.
  *
  * <p><b>Stateless by contract.</b> CMA-ES explores in parallel, so a runner instance carries no
  * per-run state: everything mutable lives in the caller's sampler and listener, and each {@code
@@ -42,9 +41,9 @@ public final class StageChainRunner {
    * far below anything that would hang the optimizer.
    *
    * <p>The value is deliberately left where it was by the mission-horizon work: it is a genuine
-   * safety net on the stage
-   * path, not an arbitrary restitution horizon, and moving it would change what an event-terminated
-   * coast does. It is logged when it fires instead, so its use stops being invisible.
+   * safety net on the stage path, not an arbitrary restitution horizon, and moving it would change
+   * what an event-terminated coast does. It is logged when it fires instead, so its use stops being
+   * invisible.
    */
   public static final double FALLBACK_DURATION_SECONDS = 7200.0;
 
@@ -52,11 +51,10 @@ public final class StageChainRunner {
    * Receives every fixed-step sample of the flown trajectory, tagged with its stage and with the
    * flight context it was actually flown in.
    *
-   * <p><b>The context is a parameter and not something the receiver reads back off the stage</b>
-   *. Once a stage may cross a
-   * sphere of influence halfway through, what it <em>declares</em> and what it is <em>flying</em>
-   * stop being the same thing, and asking the stage would write the wrong body into the arc L3
-   * added for exactly this purpose.
+   * <p><b>The context is a parameter and not something the receiver reads back off the stage</b> .
+   * Once a stage may cross a sphere of influence halfway through, what it <em>declares</em> and
+   * what it is <em>flying</em> stop being the same thing, and asking the stage would write the
+   * wrong body into the arc L3 added for exactly this purpose.
    */
   @FunctionalInterface
   public interface StepSampler {
@@ -86,9 +84,8 @@ public final class StageChainRunner {
    *     mean something
    * @param propagationFailed whether the propagation threw
    * @param exitContext the flight context the stage <em>ended</em> in, which is the one it declared
-   *     unless it crossed a sphere of influence on the way. Whole rather than
-   *     gravitational since PHY-1 / L1 §3.5: what a mission report has to state is what was flown,
-   *     drag included
+   *     unless it crossed a sphere of influence on the way. Whole rather than gravitational since
+   *     PHY-1 / L1 §3.5: what a mission report has to state is what was flown, drag included
    */
   public record StageRun(
       MissionStage stage,

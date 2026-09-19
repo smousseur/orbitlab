@@ -5,9 +5,9 @@ import org.hipparchus.util.FastMath;
 
 /**
  * The kinematics a jettisoned object gets at separation: a velocity kick — a retro component so the
- * debris
- * falls behind the primary that keeps flying its optimized trajectory, plus, for a multi-exemplar
- * jettison, a fan that opens the exemplars apart. Cosmetic, tunable, never a physical claim (D4).
+ * debris falls behind the primary that keeps flying its optimized trajectory, plus, for a
+ * multi-exemplar jettison, a fan that opens the exemplars apart. Cosmetic, tunable, never a
+ * physical claim (D4).
  *
  * <p>The fan opens in the plane perpendicular to the flight, its azimuth referenced to
  * <em>celestial north</em> (ICRF {@code +Z}) and offset half a step ({@code fanDirection}). North
@@ -15,9 +15,8 @@ import org.hipparchus.util.FastMath;
  * exact flank it occupied on the stack, and the half step lands the four Ariane boosters on the
  * diagonals their meshes are mounted at rather than on the cardinal axes. That same basis is reused
  * by the render-only seat and roll that draw each piece where it detached, so start, drift and
- * drawing agree
- * (PHY-5 / L7). This reverses the L2 choice of a radial (orbital-frame) reference, which did not
- * match the frame the stack is actually drawn in.
+ * drawing agree (PHY-5 / L7). This reverses the L2 choice of a radial (orbital-frame) reference,
+ * which did not match the frame the stack is actually drawn in.
  */
 public final class SeparationImpulse {
 

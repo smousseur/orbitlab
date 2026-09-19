@@ -73,9 +73,9 @@ public sealed interface MissionSpec
   MissionType type();
 
   /**
-   * Returns the restitution horizon: how far past insertion the mission is sampled and displayed
-   *. Never {@code null} — a spec built
-   * without one falls back to {@link MissionHorizon#defaultFor(MissionType)}.
+   * Returns the restitution horizon: how far past insertion the mission is sampled and displayed .
+   * Never {@code null} — a spec built without one falls back to {@link
+   * MissionHorizon#defaultFor(MissionType)}.
    *
    * <p>It lives on the spec rather than on the built mission because it is <em>user intent</em>: it
    * must survive the recompositions that {@code MissionEntry} performs on a mode toggle or a wizard
@@ -87,8 +87,7 @@ public sealed interface MissionSpec
 
   /**
    * Returns the atmosphere this mission is flown against. Never {@code null} — a spec built without
-   * one falls
-   * back to {@link AtmosphereModel#NONE}, which mounts no drag force at all.
+   * one falls back to {@link AtmosphereModel#NONE}, which mounts no drag force at all.
    *
    * <p>It lives on the spec for the same reason {@link #horizon()} does: it is <em>user
    * intent</em>, and it must survive the recompositions {@code MissionEntry} performs on a mode
@@ -135,9 +134,9 @@ public sealed interface MissionSpec
    * composition. A third, redundant parameter would be a source of inconsistency rather than a
    * generalisation.
    *
-   * <p><b>The compact constructor validates</b>: an inclination the site cannot reach, or
-   * an apogee below the perigee, is refused here — at construction, where the caller still knows
-   * what it asked for — instead of surfacing as a mission that propagates into something else.
+   * <p><b>The compact constructor validates</b>: an inclination the site cannot reach, or an apogee
+   * below the perigee, is refused here — at construction, where the caller still knows what it
+   * asked for — instead of surfacing as a mission that propagates into something else.
    *
    * @param name the mission name
    * @param configuration the launch configuration
@@ -536,9 +535,9 @@ public sealed interface MissionSpec
    * adaptive-inclination lot, and at {@code i = φ} the two azimuths {@code
    * LaunchPlane.launchAzimuth} distinguishes merge anyway.
    *
-   * <p><b>No tolerance component either</b>. The ± band on the flown perilune is not a
-   * caller's choice but a property of the measurement, so it lives on {@link LunarFlybyMission} as
-   * {@code PERILUNE_TOLERANCE}.
+   * <p><b>No tolerance component either</b>. The ± band on the flown perilune is not a caller's
+   * choice but a property of the measurement, so it lives on {@link LunarFlybyMission} as {@code
+   * PERILUNE_TOLERANCE}.
    *
    * <p><b>And no launch date.</b> No spec of this repository carries one: the date lives on {@code
    * MissionEntry.getScheduledDate()}, written by the wizard's planning step. Until L5 exists it is
@@ -627,8 +626,8 @@ public sealed interface MissionSpec
    *
    * <p><b>{@code orbitAltitude} and {@code periluneAltitude} are the same number</b>, and this
    * record carries the first name on purpose. The lunar orbit altitude <em>is</em> the perilune the
-   * injection aims at, but a spec carries what the user asked for; translating
-   * it into an aim point is {@link LunarOrbitMission}'s job.
+   * injection aims at, but a spec carries what the user asked for; translating it into an aim point
+   * is {@link LunarOrbitMission}'s job.
    *
    * <p><b>The parking altitude is a component</b>, as on {@link Lunar} and for the same reason:
    * three things have to agree on it — the launch window, the composed chain and the propellant
@@ -638,9 +637,9 @@ public sealed interface MissionSpec
    *
    * <p><b>No inclination component.</b> A lunar orbit's inclination is not aimed at: {@code
    * TranslunarInjectionPlan} builds its aim direction inside the transfer plane, so the single
-   * scalar degree of freedom is spent entirely on the perilune altitude. What
-   * the geometry delivers was measured over a lunation by L0: 131.1° to 153.4° in the selenocentric
-   * ICRF-oriented frame, a 22.3° spread. It is undergone, reported, and absent from the objective.
+   * scalar degree of freedom is spent entirely on the perilune altitude. What the geometry delivers
+   * was measured over a lunation by L0: 131.1° to 153.4° in the selenocentric ICRF-oriented frame,
+   * a 22.3° spread. It is undergone, reported, and absent from the objective.
    *
    * <p><b>Nothing else is validated</b> beyond the null checks and the two normalisations, exactly
    * as on {@link Lunar}. The refusal that matters is {@code PropellantBudget.loadsForLunarOrbit}'s,

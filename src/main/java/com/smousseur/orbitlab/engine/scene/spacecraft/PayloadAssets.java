@@ -6,9 +6,8 @@ import java.util.Optional;
 
 /**
  * Pairs a payload of the {@link Payloads} catalog with the GLTF mesh that draws it, and the size it
- * is drawn at. It is the
- * render layer's own asset mapping, the payload counterpart of {@link LauncherAssets}: nothing in
- * the propagation depends on which mesh a satellite wears.
+ * is drawn at. It is the render layer's own asset mapping, the payload counterpart of {@link
+ * LauncherAssets}: nothing in the propagation depends on which mesh a satellite wears.
  *
  * <p><b>Three meshes, five payloads.</b> {@code goes}, {@code landsat8} and {@code lro} cover the
  * geostationary, earth-observation and lunar families; the two lunar payloads share {@code lro}.

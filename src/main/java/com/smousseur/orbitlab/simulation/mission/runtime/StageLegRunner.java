@@ -27,8 +27,8 @@ import org.orekit.time.AbsoluteDate;
  *
  * <p>Extracted from the body of {@link StageChainRunner}'s loop by PHY-4 / L4. The chain runner
  * keeps its stage loop, its {@link StageChainRunner.StageRun}, its listener and its statelessness;
- * what moves here is the part that
- * has to become a loop of its own once a stage may change central body halfway through.
+ * what moves here is the part that has to become a loop of its own once a stage may change central
+ * body halfway through.
  *
  * <p><b>The delegation is unconditional, and that is the point.</b> A stage declaring no transition
  * flies a single leg through exactly the sequence of calls the chain runner used to make, in the
@@ -54,14 +54,14 @@ final class StageLegRunner {
    * How far apart the crossing date and the date {@code propagate()} returns may be and still be
    * read as the same stop (s).
    *
-   * <p><b>It is twice the detector's own date convergence, and that is not a padded guess</b>
-   *. Both states are taken at
-   * the localised root but re-interpolated independently, so nothing can hold them closer together
-   * than the precision the root itself is known to. L4 wrote {@code 1.0e-6} here after measuring 51
-   * ps on its synthetic fixture; the first real translunar flight measured <b>524 µs</b> and the
-   * crossing was silently read as an ordinary end of leg — one arc instead of two, no warning, and
-   * a coast that stopped three days in while reporting itself complete. A tolerance unrelated to
-   * what sets the gap cannot bound it, however generous it looks.
+   * <p><b>It is twice the detector's own date convergence, and that is not a padded guess</b> .
+   * Both states are taken at the localised root but re-interpolated independently, so nothing can
+   * hold them closer together than the precision the root itself is known to. L4 wrote {@code
+   * 1.0e-6} here after measuring 51 ps on its synthetic fixture; the first real translunar flight
+   * measured <b>524 µs</b> and the crossing was silently read as an ordinary end of leg — one arc
+   * instead of two, no warning, and a coast that stopped three days in while reporting itself
+   * complete. A tolerance unrelated to what sets the gap cannot bound it, however generous it
+   * looks.
    */
   static final double BOUNDARY_STOP_TOLERANCE = 2.0 * SoiCrossingDetector.DATE_CONVERGENCE_SECONDS;
 
@@ -69,9 +69,8 @@ final class StageLegRunner {
    * One propagation of one stage in one flight context.
    *
    * <p>The context recorded is the <b>whole</b> environment, gravity and drag alike: what the leg
-   * was actually flown in is
-   * what a later report has to be able to state, and a leg that recorded only its gravity would
-   * make that a re-derivation rather than a field read.
+   * was actually flown in is what a later report has to be able to state, and a leg that recorded
+   * only its gravity would make that a re-derivation rather than a field read.
    *
    * @param context the environment this leg was flown in
    * @param entryState the state it started from, expressed in {@code context}'s frame
@@ -295,9 +294,9 @@ final class StageLegRunner {
    * <p><b>The direction decides the threshold.</b> Entering a sphere is decided at its radius;
    * leaving is decided at the radius plus the dead band, because a leg that has just switched
    * starts <em>on</em> the sphere and a detector re-armed on the same radius would see a sign
-   * decided by rounding. That rule moved to {@link SoiCrossingDetector#crossingFrom}
-   * in MIS-5 / L1, so the coast that stops at the sphere on the optimize pass arms the same
-   * detector as this one rather than a copy of it.
+   * decided by rounding. That rule moved to {@link SoiCrossingDetector#crossingFrom} in MIS-5 / L1,
+   * so the coast that stops at the sphere on the optimize pass arms the same detector as this one
+   * rather than a copy of it.
    */
   private static void armBoundaries(
       NumericalPropagator propagator,

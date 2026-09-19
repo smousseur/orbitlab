@@ -127,12 +127,12 @@ public final class Physics {
    * Returns the due-east launch azimuth (90°), the heading of every profile that asks for no
    * particular plane and simply takes the one the site's latitude gives for free.
    *
-   * <p><b>The general derivation no longer lives here</b>. The two-argument overload
-   * this class used to carry mixed units with its callers — it consumed radians while the ascent
-   * documented degrees — and mis-guarded the equatorial polar case, both invisibly, because every
-   * caller passed {@code (0, 0)}. Azimuth derivation is now {@code LaunchPlane}'s, the one type
-   * that also knows which of the two branches reaching an inclination is being flown and whether
-   * the site reaches it at all.
+   * <p><b>The general derivation no longer lives here</b>. The two-argument overload this class
+   * used to carry mixed units with its callers — it consumed radians while the ascent documented
+   * degrees — and mis-guarded the equatorial polar case, both invisibly, because every caller
+   * passed {@code (0, 0)}. Azimuth derivation is now {@code LaunchPlane}'s, the one type that also
+   * knows which of the two branches reaching an inclination is being flown and whether the site
+   * reaches it at all.
    *
    * @return the launch azimuth in radians, clockwise from north
    */
@@ -223,8 +223,8 @@ public final class Physics {
    *
    * <p>This is the quantity an upper stage has to survive shut down between the injection burn and
    * the circularization, and it is what decides which chain a high-orbit mission can be flown with
-   *: 400 km → 20 200 km takes
-   * about 2 h 58, which an Ariane 62 upper stage can hold and a Falcon Heavy one cannot.
+   * : 400 km → 20 200 km takes about 2 h 58, which an Ariane 62 upper stage can hold and a Falcon
+   * Heavy one cannot.
    *
    * @param perigeeAltitude the transfer perigee altitude in meters
    * @param apogeeAltitude the transfer apogee altitude in meters

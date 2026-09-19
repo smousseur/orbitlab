@@ -73,8 +73,8 @@ public sealed interface MissionHorizon
    *
    * <p><b>Revolutions and not a duration</b>, unlike the flyby above — this profile ends bound
    * around the Moon, so a revolution is a thing worth counting, and twelve of them is what shows
-   * whether the orbit holds. Total flight ~5 days, ~7 235 points at the coast
-   * sampling step, under {@code TrajectoryPolyline}'s 8 192-vertex budget.
+   * whether the orbit holds. Total flight ~5 days, ~7 235 points at the coast sampling step, under
+   * {@code TrajectoryPolyline}'s 8 192-vertex budget.
    *
    * <p>This default only became honest with MIS-5 / L2: before it, {@link
    * Revolutions#finalCoastSeconds} read the period with the Earth µ and would have flown 0.93 hour

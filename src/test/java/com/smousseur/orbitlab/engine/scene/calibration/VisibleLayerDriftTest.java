@@ -19,8 +19,8 @@ import org.orekit.time.AbsoluteDate;
 import org.orekit.time.TimeScalesFactory;
 
 /**
- * L4 of: what the texture shows is a cloud deck,
- * and a cloud deck does not turn at the rate Orekit turns the body frame at.
+ * L4 of: what the texture shows is a cloud deck, and a cloud deck does not turn at the rate Orekit
+ * turns the body frame at.
  *
  * <p>These tests never look at the drift constants. They measure how fast the rendered texture
  * turns <em>in inertial space</em> and compare that against the published rotation of the layer the

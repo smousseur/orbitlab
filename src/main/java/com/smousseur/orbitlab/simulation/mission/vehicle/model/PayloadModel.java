@@ -16,8 +16,8 @@ import java.util.Objects;
  * @param propulsion the payload's own propulsion; null for an inert payload. Named for what every
  *     entry has in common — the payload can fly a burn of its own — and not for one of the three
  *     engines it holds: a GEO apogee kick motor, a 5 500 N lunar insertion engine, and a
- * station-keeping thruster. That common denominator is exactly what {@code
- * MissionType#requiresPayloadPropulsion()} has always asked for.
+ *     station-keeping thruster. That common denominator is exactly what {@code
+ *     MissionType#requiresPayloadPropulsion()} has always asked for.
  * @param aerodynamics the frontal area and drag coefficient of the payload, or {@code null} when
  *     the model declares none
  * @param domain where this payload is meant to fly; {@code null} reads as {@link PayloadDomain#ANY}
@@ -30,9 +30,8 @@ import java.util.Objects;
  * @param deltaVBudget the ΔV (m/s) the payload must carry for burns <b>the mission chain does not
  *     compute for it</b>; 0 when it carries none. A GEO or lunar payload declares none on purpose:
  *     its burn is the mission's, sized from the target by {@code PropellantBudget}, and freezing it
- *     as a constant here would freeze one target. What is left is orbit maintenance,
- *     which nothing computes — and which is where PHY-2 will come to raise the number once drag is
- *     real.
+ *     as a constant here would freeze one target. What is left is orbit maintenance, which nothing
+ *     computes — and which is where PHY-2 will come to raise the number once drag is real.
  * @param requiresRendezvous whether this payload only makes sense on a rendezvous mission, which no
  *     {@code MissionType} is before MIS-6. True on the cargo module alone. It is a purpose and not
  *     a place, which is why it is not a {@link PayloadDomain} value: a cargo module flies perfectly

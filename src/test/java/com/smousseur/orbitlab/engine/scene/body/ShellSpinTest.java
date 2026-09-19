@@ -14,8 +14,7 @@ import org.junit.jupiter.api.Test;
 
 /**
  * Venus's model carries two shells that do not turn at the same rate, so one of them has to be
- * turned inside a model the
- * renderer turns as a whole.
+ * turned inside a model the renderer turns as a whole.
  *
  * <p>What these tests are really about is the change of basis. The axis to turn about is known in
  * the model's own axes — it is what the probe measured — but the pivot is spliced deep inside a

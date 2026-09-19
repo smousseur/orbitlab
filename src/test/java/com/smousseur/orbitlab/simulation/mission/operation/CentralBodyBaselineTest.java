@@ -102,10 +102,10 @@ import org.orekit.time.TimeScalesFactory;
  *
  * <p><b>It runs in the {@code gateTest} Gradle task, not in {@code test}.</b> The 62 boundaries are
  * compared at strict {@code double} equality, and a lunar propagation earlier in the same JVM moves
- * them by the last bit through Orekit's shared time caches. {@code
- * gateTest} forks one JVM per class, which removes the contamination; {@code test} runs everything
- * in one JVM and excludes this class. It carried {@code @Disabled("To be run only standalone")}
- * from 2026-08-31 to PHY-8 / L0, which had the same effect and no way to run it.
+ * them by the last bit through Orekit's shared time caches. {@code gateTest} forks one JVM per
+ * class, which removes the contamination; {@code test} runs everything in one JVM and excludes this
+ * class. It carried {@code @Disabled("To be run only standalone")} from 2026-08-31 to PHY-8 / L0,
+ * which had the same effect and no way to run it.
  */
 class CentralBodyBaselineTest {
 

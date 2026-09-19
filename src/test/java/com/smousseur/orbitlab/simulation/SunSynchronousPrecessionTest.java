@@ -65,9 +65,9 @@ class SunSynchronousPrecessionTest {
 
   /**
    * Tolerance on the measured drift rate, in degrees per day. <b>Set from the measurement</b>, not
-   * chosen in advance: what is asserted is that the orbit precesses with the Sun to
-   * a few percent, which is what distinguishes a sun-synchronous orbit from a merely polar one — a
-   * polar orbit's node does not drift at all.
+   * chosen in advance: what is asserted is that the orbit precesses with the Sun to a few percent,
+   * which is what distinguishes a sun-synchronous orbit from a merely polar one — a polar orbit's
+   * node does not drift at all.
    */
   private static final double TOLERANCE_DEG_PER_DAY = 0.05;
 

@@ -16,10 +16,10 @@ import org.orekit.time.AbsoluteDate;
  * when the ephemeris is built.
  *
  * <p><b>Why this is a separate product.</b> One array used to serve two consumers with incompatible
- * needs. The flight recorder —
- * telemetry, the completeness verdict, post-flight analysis — wants fidelity wherever the dynamics
- * are fast, and that is {@link MissionEphemeris}. The display polyline wants at most a few thousand
- * points, because the screen is ~2000 px wide, and that is this class.
+ * needs. The flight recorder — telemetry, the completeness verdict, post-flight analysis — wants
+ * fidelity wherever the dynamics are fast, and that is {@link MissionEphemeris}. The display
+ * polyline wants at most a few thousand points, because the screen is ~2000 px wide, and that is
+ * this class.
  *
  * <p>Keeping them merged had already produced a silent defect: the renderer walked the ephemeris
  * <em>backwards</em> from the end and stopped after {@code MAX_POINTS}, so on any mission longer
@@ -87,11 +87,10 @@ public final class TrajectoryPolyline {
    *
    * <p><b>Both sides of every arc boundary are forced too</b>, so that each arc's vertex range
    * actually contains its own boundary rather than stopping up to a stride short of it. The
-   * headroom reserved for the forced vertices is
-   * therefore computed on the <b>union</b> of the run starts and the arc boundaries, never on their
-   * sum — with a single arc the arc start is vertex 0, which is already a run start, so the union
-   * is the run starts and the decimation is bit-for-bit what it was before PHY-4 / L3. Written as a
-   * sum, the budget would lose a slot and
+   * headroom reserved for the forced vertices is therefore computed on the <b>union</b> of the run
+   * starts and the arc boundaries, never on their sum — with a single arc the arc start is vertex
+   * 0, which is already a run start, so the union is the run starts and the decimation is
+   * bit-for-bit what it was before PHY-4 / L3. Written as a sum, the budget would lose a slot and
    * the stride could shift on any trajectory near a multiple of the budget.
    *
    * <p>The arrays are copied, not aliased: the caller keeps ownership of its own storage.
@@ -209,8 +208,7 @@ public final class TrajectoryPolyline {
    * run start, so the union below is unchanged and so is the stride.
    *
    * <p><b>Why the outgoing side is forced too</b>. L4 §5 flagged this as a debt on the grounds that
-   * a
-   * decimated trace would otherwise join two vertices expressed about different bodies with a
+   * a decimated trace would otherwise join two vertices expressed about different bodies with a
    * straight segment. That reason is now void: L5 converts every vertex into the render body's
    * frame, so the segment across a boundary is geometrically sound, merely coarser. What forcing it
    * still buys is that {@link ArcRun#vertexCount()} of the outgoing arc actually contains its own
@@ -318,8 +316,7 @@ public final class TrajectoryPolyline {
    * <p><b>The single-body case returns the sampled array itself.</b> No copy, no Orekit call, no
    * arithmetic — which is what makes every trajectory that exists today bit-for-bit what it was, by
    * identity of reference rather than by a measured equality. It is also what keeps the four test
-   * classes that
-   * build polylines without initialising {@code OrekitService} working.
+   * classes that build polylines without initialising {@code OrekitService} working.
    *
    * <p>Beyond one body the conversion is a pure translation between two body-centred ICRF frames,
    * done here — once, at build time, off the render thread — rather than per frame. The render
