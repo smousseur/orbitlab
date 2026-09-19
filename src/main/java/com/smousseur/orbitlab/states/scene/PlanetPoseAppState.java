@@ -200,9 +200,8 @@ public final class PlanetPoseAppState extends BaseAppState {
 
   /**
    * Gives a body's cloud deck a pivot of its own, while the model is still unattached and private
-   * to this thread — Venus is the only body with one (L4 of {@code
-   * docs/orientation-planetes/01-decoupage.md}). The axis is the pole the probe measured, in the
-   * model's own axes, which is exactly what the committed calibration carries.
+   * to this thread — Venus is the only body with one. The axis is the pole the probe measured, in
+   * the model's own axes, which is exactly what the committed calibration carries.
    */
   private static void isolateAtmosphereShell(
       SolarSystemBody body, Model3dView model3dView, Spatial spatial) {
@@ -227,8 +226,7 @@ public final class PlanetPoseAppState extends BaseAppState {
   }
 
   /**
-   * Tells a ringed body where the Sun is, so its globe casts a shadow across its own rings (`FX-5`,
-   * {@code docs/roadmap/01-roadmap-v1.md} §4.2).
+   * Tells a ringed body where the Sun is, so its globe casts a shadow across its own rings.
    *
    * <p><b>Only the Sun travels.</b> The occulter of a ring is the planet the ring belongs to, and
    * {@code Model3dView} is the one that knows where its own globe sits and at what radius it was
@@ -266,8 +264,7 @@ public final class PlanetPoseAppState extends BaseAppState {
 
   /**
    * Says, once per model load, that an asset no longer matches the frame committed for it — the
-   * detection that lets a mesh be replaced without the body silently ending up drawn turned (see
-   * {@code docs/orientation-planetes/01-decoupage.md}, L1).
+   * detection that lets a mesh be replaced without the body silently ending up drawn turned.
    */
   private static void warnDivergence(MeshDivergence divergence) {
     logger.warn(
@@ -292,8 +289,8 @@ public final class PlanetPoseAppState extends BaseAppState {
 
     updateEarthRotatingFrame(t);
 
-    // Sampled once per frame and reused for both eclipse directions below (docs/eclipses/
-    // 01-decoupage.md, L3): the Moon shadowing the Earth and the Earth shadowing the Moon are the
+    // Sampled once per frame and reused for both eclipse directions below: the Moon shadowing the
+    // Earth and the Earth shadowing the Moon are the
     // same pair of positions read the other way around, not two independent lookups.
     Optional<Vector3D> earthHelio = sampleHelioPosition(SolarSystemBody.EARTH, t);
     Optional<Vector3D> moonHelio = sampleHelioPosition(SolarSystemBody.MOON, t);
@@ -360,10 +357,9 @@ public final class PlanetPoseAppState extends BaseAppState {
   }
 
   /**
-   * Pushes {@code occluderBody} as {@code presenter}'s eclipse occulter (`docs/eclipses/
-   * 01-decoupage.md`, L2 for the Moon eclipsed by the Earth, L3 for the Earth showing the Moon's
-   * shadow spot) — the same method for both directions, since the geometry is symmetric: only which
-   * body is doing the occulting and which is receiving the shading changes.
+   * Pushes {@code occluderBody} as {@code presenter}'s eclipse occulter — the same method for both
+   * directions, since the geometry is symmetric: only which body is doing the occulting and which
+   * is receiving the shading changes.
    *
    * <p>Reuses {@link EclipseGeometry#sunApparentRadius}, the L1 vessel case's shared static utility
    * — no duplicated formula.

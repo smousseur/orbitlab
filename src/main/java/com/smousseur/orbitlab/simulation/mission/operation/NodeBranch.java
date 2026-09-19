@@ -1,8 +1,7 @@
 package com.smousseur.orbitlab.simulation.mission.operation;
 
 /**
- * Which of the two azimuths reaching a given inclination a launch flies (spec {@code
- * docs/earth-orbit/01-mission-terre-parametrable.md} §3.1).
+ * Which of the two azimuths reaching a given inclination a launch flies.
  *
  * <p>An inclination never determines an azimuth on its own: {@code A} and {@code 180° − A} reach
  * the same plane from the same site, one heading north of east, the other south of it. The two

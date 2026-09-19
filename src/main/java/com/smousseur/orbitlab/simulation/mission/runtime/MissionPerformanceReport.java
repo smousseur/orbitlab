@@ -15,9 +15,9 @@ import java.util.Optional;
  *   <li>{@link #totalPropellantResidual()} — everything still aboard at mission end, whole stack.
  *       Dominated by whatever sits above the final active stage (a payload kick motor, say), so it
  *       is <em>not</em> a usable margin for any single stage.
- *   <li>{@link #stagePropellants()} — the true per-stage split (bilan 10 §6). Use this to judge the
- *       margin of a specific stage, in particular the propellant-sized one, which is not
- *       necessarily the final active stage.
+ *   <li>{@link #stagePropellants()} — the true per-stage split. Use this to judge the margin of a
+ *       specific stage, in particular the propellant-sized one, which is not necessarily the final
+ *       active stage.
  * </ul>
  *
  * @param stages the per-mission-stage accounting, in execution order

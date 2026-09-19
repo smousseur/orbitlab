@@ -10,11 +10,11 @@ import org.hipparchus.util.FastMath;
 import org.orekit.utils.Constants;
 
 /**
- * Analytic propellant sizing — "just enough" loads per mission (spec 06 §4.3). Inverse Tsiolkovsky
- * computed top-down from the payload: every stage below the launcher's top stage flies fully loaded
- * (v1), only the top stage and the payload's own are sized from the ΔV budget. A safety margin
- * absorbs finite-burn and steering losses; loads are clamped to capacity (an infeasibility
- * diagnostic is a later increment).
+ * Analytic propellant sizing — "just enough" loads per mission. Inverse Tsiolkovsky computed
+ * top-down from the payload: every stage below the launcher's top stage flies fully loaded (v1),
+ * only the top stage and the payload's own are sized from the ΔV budget. A safety margin absorbs
+ * finite-burn and steering losses; loads are clamped to capacity (an infeasibility diagnostic is a
+ * later increment).
  *
  * <p><b>"The gravity turn consumes them entirely anyway" is no longer true</b>, and that used to be
  * the stated reason the lower stages fly full. PHY-2 / L3 made the core cutoff commandable, so the
@@ -25,7 +25,7 @@ import org.orekit.utils.Constants;
  * <p><b>One method refuses instead of clamping</b>, and it is the exception rather than the new
  * rule: {@link #loadsForLunarOrbit} throws when the orbiter's tank cannot hold its insertion. A
  * clamped apogee circularization still yields an orbit; a clamped lunar insertion does not capture
- * at all (MIS-5 / L3, spec {@code docs/lunar-orbit/05-conception-L3.md} §4.2).
+ * at all.
  */
 public final class PropellantBudget {
   private PropellantBudget() {}
@@ -58,15 +58,14 @@ public final class PropellantBudget {
    * number that every budgeted mission pays, taken deliberately over a per-mission estimate that
    * would need the hand-over state the sizing does not have.
    *
-   * <p><b>Demoted to a seed by PHY-2 / L4</b> (spec {@code
-   * docs/atmosphere/11-conception-L4-PHY-2.md} §3.2). An {@code EarthOrbit} mission computed
-   * through {@code MeasuredLoadPlanner} no longer <em>flies</em> this reserve: it flies the load
-   * {@link #loadsForMeasuredTopStage} derives from the ΔV the top stage actually delivered. The
-   * reserve remains what the first pass takes off with, and it has to remain something: a
-   * reserve-free seed collapses {@code dvTop} to zero on a launcher that over-delivers, which would
-   * leave the top stage with no propellant to fly the very insertion the measurement flight has to
-   * observe. It is also still the flown value everywhere the measured path does not reach — GEO,
-   * lunar, and every caller that sizes off-flight.
+   * <p><b>Demoted to a seed by PHY-2 / L4</b>. An {@code EarthOrbit} mission computed through
+   * {@code MeasuredLoadPlanner} no longer <em>flies</em> this reserve: it flies the load {@link
+   * #loadsForMeasuredTopStage} derives from the ΔV the top stage actually delivered. The reserve
+   * remains what the first pass takes off with, and it has to remain something: a reserve-free seed
+   * collapses {@code dvTop} to zero on a launcher that over-delivers, which would leave the top
+   * stage with no propellant to fly the very insertion the measurement flight has to observe. It is
+   * also still the flown value everywhere the measured path does not reach — GEO, lunar, and every
+   * caller that sizes off-flight.
    */
   private static final double TOP_STAGE_INSERTION_RESERVE_DV = 1_300.0;
 
@@ -89,8 +88,8 @@ public final class PropellantBudget {
   /** Mean Earth-Moon distance (m): the semi-major axis of the lunar orbit, rounded. */
   private static final double LUNAR_DISTANCE_M = 384_400_000.0;
 
-  // Off-flight sizing, left Earth-fixed by PHY-4 / L1 (spec docs/multi-corps/03-conception-L1.md
-  // §4.1): propellant budgeting runs before any propagation and never sees an arc, so the L1 seam
+  // Off-flight sizing, left Earth-fixed by PHY-4 / L1: propellant budgeting runs before any
+  // propagation and never sees an arc, so the L1 seam
   // does not run through it. That comment used to say the class would become contextual once a
   // mission was sized around another body; MIS-5 / L3 met that case and it did not — the two below
   // are still right for the ascent and the injection, and the Moon arrived as two more constants.
@@ -98,8 +97,7 @@ public final class PropellantBudget {
   private static final double RE = Constants.WGS84_EARTH_EQUATORIAL_RADIUS;
   private static final double G0 = Constants.G0_STANDARD_GRAVITY;
 
-  // The lunar pair, for the insertion burn alone (MIS-5 / L3, spec
-  // docs/lunar-orbit/05-conception-L3.md §3.1). The two above stay: the ascent and the translunar
+  // The lunar pair, for the insertion burn alone. The two above stay: the ascent and the translunar
   // injection are geocentric and are four fifths of the mission's ΔV, so this class does not become
   // contextual — it gains two constants beside the terrestrial ones.
   //
@@ -129,7 +127,7 @@ public final class PropellantBudget {
    *
    * <p><b>The second component is not an extra.</b> It is the very figure {@code
    * LunarLaunchWindowProblem}'s confirming solve asks for, and the top-down sizing already knows
-   * it: one definition, two consumers (MIS-4 / L5 §5.3).
+   * it: one definition, two consumers.
    *
    * @param launcherLoads the propellant load per stage, same order as the launcher stages
    * @param massAtInjection the vehicle mass when the injection burn ignites (kg)
@@ -138,8 +136,7 @@ public final class PropellantBudget {
 
   /**
    * Launcher loads, the mass the translunar injection ignites at, and the payload's insertion load,
-   * for a mission ending in lunar orbit (MIS-5 / L3, spec {@code
-   * docs/lunar-orbit/05-conception-L3.md} §4).
+   * for a mission ending in lunar orbit.
    *
    * <p><b>Three components and not two.</b> The découpage asked for {@code (launcherLoads,
    * insertionLoad)}, on {@link SizedLoads}'s model — but a GEO mission has no window to confirm,
@@ -192,7 +189,7 @@ public final class PropellantBudget {
   /**
    * Launcher loads <b>and the payload's own load</b> for a direct Earth-orbit ascent — the mirror
    * of {@link #loadsForHighOrbit}, with the payload's declared ΔV budget where that one uses the
-   * apogee burn it computes (spec {@code docs/etagement/01-decoupage.md} §3.7).
+   * apogee burn it computes.
    *
    * <p><b>Why an overload and not a change of signature.</b> The {@link #loadsForLeo(LauncherModel,
    * Spacecraft, double, double, double) Spacecraft-taking} form answers a different, legitimate
@@ -250,8 +247,8 @@ public final class PropellantBudget {
 
   /**
    * Launcher loads and payload load for a GEO mission (parking → GTO → GEO). The split GEO profile
-   * (spec 06 I5) assigns the ascent residual and the GTO injection to the launcher's top stage, and
-   * the apogee circularization + plane change to the payload's kick motor.
+   * assigns the ascent residual and the GTO injection to the launcher's top stage, and the apogee
+   * circularization + plane change to the payload's kick motor.
    *
    * @param launcher the launcher model
    * @param payload the payload model (provides the tank and the propulsion)
@@ -280,7 +277,7 @@ public final class PropellantBudget {
   /**
    * Per-stage loads for a lunar mission: ascent to the parking orbit, then one translunar
    * injection. <b>Simpler than {@link #loadsForGeo}</b> — the payload is inert, so there is no kick
-   * motor to delegate a burn to and nothing to split the budget with (MIS-4 / L5 §5.3).
+   * motor to delegate a burn to and nothing to split the budget with.
    *
    * <p><b>The injection ΔV is taken in closed form</b> rather than written as a constant, because
    * the parking altitude is a component of the spec and a constant would freeze one value of it in
@@ -326,7 +323,7 @@ public final class PropellantBudget {
 
   /**
    * Per-stage loads, mass at injection and payload insertion load for a mission ending in a
-   * circular lunar orbit (MIS-5 / L3, spec {@code docs/lunar-orbit/05-conception-L3.md} §4).
+   * circular lunar orbit.
    *
    * <p><b>The insertion is sized first, and the launcher on the result</b> — {@link #loadsForGeo}'s
    * order, and it is load-bearing: sizing the launcher on the bare dry mass would leave out the
@@ -338,12 +335,12 @@ public final class PropellantBudget {
    * and the injection, two profiles.
    *
    * <p><b>It refuses where its siblings clamp</b>, and the asymmetry is physical rather than a
-   * change of mind (spec §4.2): a clamped apogee circularization yields a low orbit — wrong,
-   * visible, but an orbit — whereas a clamped lunar insertion does not capture at all and the
-   * spacecraft sails past the Moon. There is no degraded mission to show, so there is nothing to
-   * clamp to. The refusal surfaces through the wizard's dry composition, which turns it into a
-   * worded refusal; this method is on no existing mission's path, and is never called from the
-   * optimizer, where an exception would read as "load infeasible".
+   * change of mind: a clamped apogee circularization yields a low orbit — wrong, visible, but an
+   * orbit — whereas a clamped lunar insertion does not capture at all and the spacecraft sails past
+   * the Moon. There is no degraded mission to show, so there is nothing to clamp to. The refusal
+   * surfaces through the wizard's dry composition, which turns it into a worded refusal; this
+   * method is on no existing mission's path, and is never called from the optimizer, where an
+   * exception would read as "load infeasible".
    *
    * @param launcher the launcher model
    * @param payload the payload model (provides the insertion propulsion and its capacity)
@@ -399,8 +396,7 @@ public final class PropellantBudget {
 
   /**
    * Launcher loads and payload load for any high circular orbit reached through a parking orbit —
-   * geostationary, medium Earth, or anything else the direct chain cannot reach (spec {@code
-   * docs/earth-orbit/01-mission-terre-parametrable.md} §6).
+   * geostationary, medium Earth, or anything else the direct chain cannot reach.
    *
    * <p><b>The plane change is an argument, and that is the point.</b> A GEO mission cancels the
    * whole launch inclination at apogee, which is why {@link #loadsForGeo} passes the site latitude
@@ -443,12 +439,11 @@ public final class PropellantBudget {
    * iteration: the lower stages' ΔV depends on the mass above them, which depends on the sized top
    * load. Solid top stages fly full (no sizing degree of freedom).
    *
-   * <p><b>The ΔV chain is evaluated on the serial-equivalent stages</b>, not on the stack entries
-   * (spec {@code docs/etagement/04-conception-L2.md} §3.1). The loop below is a chain of
-   * Tsiolkovsky terms, each stage dropping its dry mass before the next ignites; a parallel block
-   * is one burn, so handing it over as two entries would make this believe in a staging that never
-   * happens. Measured on the split Falcon Heavy: 2 111 m/s of ΔV credited to nothing, and an upper
-   * stage sized at zero.
+   * <p><b>The ΔV chain is evaluated on the serial-equivalent stages</b>, not on the stack entries .
+   * The loop below is a chain of Tsiolkovsky terms, each stage dropping its dry mass before the
+   * next ignites; a parallel block is one burn, so handing it over as two entries would make this
+   * believe in a staging that never happens. Measured on the split Falcon Heavy: 2 111 m/s of ΔV
+   * credited to nothing, and an upper stage sized at zero.
    *
    * <p>The loads returned are still one per stack entry. No proportioning is needed to get there —
    * every lower stage flies full, so a block's load <em>is</em> the sum of its entries' capacities.
@@ -497,8 +492,7 @@ public final class PropellantBudget {
 
   /**
    * Per-stage loads sizing the top stage for a <b>measured</b> top-stage ΔV, instead of the ideal
-   * chain's remainder plus {@link #TOP_STAGE_INSERTION_RESERVE_DV} (PHY-2 / L4, spec {@code
-   * docs/atmosphere/11-conception-L4-PHY-2.md} §3.2).
+   * chain's remainder plus {@link #TOP_STAGE_INSERTION_RESERVE_DV}.
    *
    * <p><b>The measured ΔV subsumes the chain</b>, which is why this is a sibling of {@link
    * #sizeTopStage} and not a parameter of it. That one derives what the top stage <em>ought</em> to
@@ -555,17 +549,16 @@ public final class PropellantBudget {
    * Ideal ascent ΔV to a circular orbit (m/s): orbital speed plus gravity/steering losses minus the
    * Earth-rotation assist.
    *
-   * <p><b>The assist is signed and projected on the azimuth</b> (spec {@code
-   * docs/earth-orbit/01-mission-terre-parametrable.md} §7). It used to be {@code 465 · cos φ}, the
-   * full eastward entrainment, credited whatever the heading — correct due east and wrong
+   * <p><b>The assist is signed and projected on the azimuth</b>. It used to be {@code 465 · cos φ},
+   * the full eastward entrainment, credited whatever the heading — correct due east and wrong
    * everywhere else. A polar launch from Kourou uses none of it (the entrainment is perpendicular
    * to the flight), and a retrograde sun-synchronous one <em>pays</em> for it. Getting this wrong
    * is not a margin detail: on an inverse-Tsiolkovsky budget, the 529 m/s error of an SSO from
    * Kourou is tonnes on the upper-stage load.
    *
-   * <p>What is <em>not</em> in here is the steering loss of turning the plane during the climb
-   * (spec §4.1). It has no closed form; {@link #SAFETY_MARGIN} absorbs it, and {@code
-   * AscentPlaneControlTest} measures it. No value is hard-coded until it is measured.
+   * <p>What is <em>not</em> in here is the steering loss of turning the plane during the climb . It
+   * has no closed form; {@link #SAFETY_MARGIN} absorbs it, and {@code AscentPlaneControlTest}
+   * measures it. No value is hard-coded until it is measured.
    *
    * @param targetAltitude the target orbit altitude (m)
    * @param launchLatitudeDeg the launch site latitude (degrees)
@@ -623,10 +616,10 @@ public final class PropellantBudget {
    * velocity is purely tangential and parallel to the Moon's, which is what makes the scalar
    * difference legitimate here and nowhere else.
    *
-   * <p><b>Measured against the four flown arrivals of L0</b> (spec {@code
-   * docs/lunar-orbit/02-baseline-L0.md} §3): this returns 828.7 m/s from a 400 km parking orbit,
-   * against 825.8 to 872.5 measured across a lunation. It sits 2.5 % under the measured mean — the
-   * geometry L0 flies is a 170° transfer with an aim offset, not a 180° Hohmann.
+   * <p><b>Measured against the four flown arrivals of L0</b>: this returns 828.7 m/s from a 400 km
+   * parking orbit, against 825.8 to 872.5 measured across a lunation. It sits 2.5 % under the
+   * measured mean — the geometry L0 flies is a 170° transfer with an aim offset, not a 180°
+   * Hohmann.
    *
    * @param parkingAltitude the circular parking orbit the injection leaves from (m)
    * @return the arrival excess velocity in m/s
@@ -679,8 +672,7 @@ public final class PropellantBudget {
    * burn over is a question about <em>how much</em> ΔV it carries, not about whether it carries a
    * tank at all. That distinction did not matter while GEO_SAT was the only propelled payload; it
    * started mattering the day PHY-8 / L6 gave the observation satellite a station-keeping thruster,
-   * which would otherwise have been accepted for a 1 700 m/s circularization (spec {@code
-   * docs/etagement/01-decoupage.md} §3.7).
+   * which would otherwise have been accepted for a 1 700 m/s circularization.
    *
    * @param payload the payload as flown, propellant included
    * @return the ΔV it can deliver in m/s; 0 when it is inert or its tank is empty

@@ -18,7 +18,7 @@ import com.smousseur.orbitlab.ui.mission.wizard.step.planning.PlanningInputs;
 import java.util.Map;
 
 /**
- * The lunar panel: <b>one slider</b>, the perilune altitude (MIS-4 / L5 §3).
+ * The lunar panel: <b>one slider</b>, the perilune altitude.
  *
  * <p>The shortest panel of the package, and the only one with no perigee/apogee pair. There is no
  * inclination field either — the chain flies {@code i = φ}, where the two azimuth branches merge,
@@ -85,7 +85,7 @@ public class LunarDynamicParameters extends DynamicParameters {
   }
 
   /**
-   * The screening window this panel describes (MIS-4 / L5 §4.1).
+   * The screening window this panel describes.
    *
    * <p><b>The node is ignored, and it is not a field of this card.</b> A lunar mission has a launch
    * window without having a target node: what it waits for is a direction its parking plane must

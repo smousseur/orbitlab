@@ -14,9 +14,9 @@ import tools.jackson.databind.json.JsonMapper;
  * <p>It knows nothing about missions and nothing about the disk — {@code ScenarioStore} owns the
  * files, {@code ScenarioSession} owns the meaning. What it does own is the <b>version gate</b>: a
  * file claiming a {@code formatVersion} above {@link ScenarioFile#CURRENT_FORMAT_VERSION} is
- * refused whole, with its number in the message, because nothing here knows what it is reading
- * (spec {@code docs/scenario/01-persistance-missions.md} §7). That is the only whole-file refusal;
- * every other rejection is per mission and happens further up, in {@code ScenarioSession}.
+ * refused whole, with its number in the message, because nothing here knows what it is reading .
+ * That is the only whole-file refusal; every other rejection is per mission and happens further up,
+ * in {@code ScenarioSession}.
  *
  * <p>Nulls are omitted on write — through {@code @JsonInclude(NON_NULL)} on the records — which is
  * what makes a meaningful absence legible in the file rather than written out as {@code null}.

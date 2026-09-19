@@ -37,7 +37,7 @@ import org.orekit.time.AbsoluteDate;
 
 /**
  * The mission track: a second capsule of 600×72 posed 8 px above the time capsule, showing the
- * followed mission on a linear time axis (spec {@code docs/navigation/02-timeline-mission.md} §6).
+ * followed mission on a linear time axis.
  *
  * <p><b>Twin capsule, not a new visual family.</b> Same 9-slice shell, same cyan chrome; the
  * mission's colour appears only in the content — dot, segments, markers. Two successive missions
@@ -422,8 +422,8 @@ public final class MissionTimelineWidget implements AutoCloseable {
   /**
    * The "go to mission start" button. Its three effects are ordered: seek to the pre-roll, pause,
    * then reset the speed to ×1. The reset only reaches the time capsule because that widget now
-   * subscribes to {@code SpeedChanged} (spec §12.1) — before that change it would have left the
-   * capsule displaying the previous speed.
+   * subscribes to {@code SpeedChanged} — before that change it would have left the capsule
+   * displaying the previous speed.
    */
   private Button buildStartButton() {
     Button button = new Button("|< START", TimelineStyles.STYLE);
@@ -512,9 +512,9 @@ public final class MissionTimelineWidget implements AutoCloseable {
   }
 
   /**
-   * The distinct terminator of a truncated flight (§10.3). Without it the track would show a
-   * mission running to its scheduled end, which is not what was flown. Nothing else changes: the
-   * points that were collected stay drawn.
+   * The distinct terminator of a truncated flight. Without it the track would show a mission
+   * running to its scheduled end, which is not what was flown. Nothing else changes: the points
+   * that were collected stay drawn.
    */
   private void rebuildTerminator() {
     if (terminator != null) {
@@ -637,9 +637,9 @@ public final class MissionTimelineWidget implements AutoCloseable {
    * One transparent capture panel over the whole track carries both gestures.
    *
    * <p>Markers are hit-tested analytically against the cluster positions rather than each carrying
-   * its own listener: that is what makes "a marker's content takes precedence over the bar's"
-   * (§9.1) a single branch instead of a z-order argument, and it costs one pass over a handful of
-   * clusters per cursor move.
+   * its own listener: that is what makes "a marker's content takes precedence over the bar's" a
+   * single branch instead of a z-order argument, and it costs one pass over a handful of clusters
+   * per cursor move.
    *
    * <p><b>All three intents share one press, and {@link ScrubGesture} is what tells them apart.</b>
    * A rail click, a cluster click and a drag are indistinguishable at button-down — every one of
@@ -760,7 +760,7 @@ public final class MissionTimelineWidget implements AutoCloseable {
 
   /**
    * The discrete {@code NAV-2} click, unchanged by {@code NAV-3}: a cluster under the cursor seeks
-   * to its <em>first</em> transition rather than to the clicked pixel (§8), because the point of
+   * to its <em>first</em> transition rather than to the clicked pixel, because the point of
    * clicking a group of markers is to land on the event, and the group's own x is an artefact of
    * declustering. Elsewhere, the pixel is the date.
    *

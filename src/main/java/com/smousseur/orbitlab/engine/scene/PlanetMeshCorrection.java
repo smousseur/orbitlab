@@ -15,8 +15,7 @@ import org.orekit.time.AbsoluteDate;
 
 /**
  * Provides the per-body corrective rotation applied to a planet's 3D mesh before it is oriented by
- * the physical body-fixed rotation (see {@code docs/bugs.md}, BUG-3, and the chantier it opened,
- * {@code docs/orientation-planetes/01-decoupage.md}).
+ * the physical body-fixed rotation.
  *
  * <p>The rendering chain used to apply a single global mesh correction for all eleven GLTF models
  * ({@code RenderTransform#toRenderQuaternion}), which is only correct if every asset shares exactly
@@ -31,8 +30,8 @@ import org.orekit.time.AbsoluteDate;
  *
  * <p><b>The identity is the expected value, not a placeholder.</b> The Earth and the Moon carry the
  * reference frame and are declared frozen; Mars and Saturn measure identical to them. A body with a
- * non-identity correction is an asset that has not been brought onto the export convention yet
- * (§4.2 of the chantier), and each says so below.
+ * non-identity correction is an asset that has not been brought onto the export convention yet ,
+ * and each says so below.
  *
  * <h2>Where λ0 stands, body by body (L3)</h2>
  *
@@ -169,8 +168,7 @@ public final class PlanetMeshCorrection {
 
   /**
    * Node under which a body's model carries its ring system, by the name its exporter wrote — the
-   * geometry that receives the planet's own shadow (`FX-5`, {@code docs/roadmap/01-roadmap-v1.md}
-   * §4.2).
+   * geometry that receives the planet's own shadow.
    *
    * <p><b>One entry per body rather than a single shared prefix.</b> Both assets happen to start
    * their ring node with {@code Circle}, the name Blender gives a circle primitive, so one string

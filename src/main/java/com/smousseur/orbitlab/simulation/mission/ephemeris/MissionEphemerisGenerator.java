@@ -23,8 +23,8 @@ import org.orekit.propagation.SpacecraftState;
  * injected. Uses Orekit numerical propagation with a fixed-step handler to sample the trajectory.
  *
  * <p>The stage-by-stage traversal itself lives in {@link StageChainRunner}, shared with the
- * optimize pass so the two cannot drift apart (spec 01 §5.4); this class contributes only what is
- * specific to sampling a trajectory: the points, and the completeness verdict.
+ * optimize pass so the two cannot drift apart; this class contributes only what is specific to
+ * sampling a trajectory: the points, and the completeness verdict.
  */
 public final class MissionEphemerisGenerator {
   private static final Logger logger = LogManager.getLogger(MissionEphemerisGenerator.class);
@@ -33,8 +33,8 @@ public final class MissionEphemerisGenerator {
    * How far short of its scheduled cutoff a stage may stop before the trajectory counts as
    * truncated. Orekit brackets STOP events to well under a millisecond, so a stage reaching its own
    * cutoff lands on it; ending seconds early means a different STOP fired first — in practice the
-   * {@code DepletionGuard} on a burn that ran its tank dry (bilan 11 §3.9). One second sits far
-   * above the bracketing noise and far below any real depletion shortfall (tens of seconds+).
+   * {@code DepletionGuard} on a burn that ran its tank dry. One second sits far above the
+   * bracketing noise and far below any real depletion shortfall (tens of seconds+).
    */
   private static final double STAGE_END_TOLERANCE_SECONDS = 1.0;
 
@@ -63,8 +63,8 @@ public final class MissionEphemerisGenerator {
    *
    * <p>The caller passes a <b>resolved duration</b>, not a {@link MissionHorizon}: deciding how
    * long a mission should be recorded is an intent, and a generator has no business knowing the
-   * intent (spec {@code docs/mission-horizon/01-horizon-explicite.md} §4). {@code MissionOptimizer}
-   * resolves it, because that is where the achieved orbit is already in hand.
+   * intent. {@code MissionOptimizer} resolves it, because that is where the achieved orbit is
+   * already in hand.
    *
    * <p>The sampling step is not a parameter either: each stage advertises its own through {@link
    * com.smousseur.orbitlab.simulation.mission.MissionStage#sampleStepSeconds}, so burns are
@@ -82,8 +82,7 @@ public final class MissionEphemerisGenerator {
 
   /**
    * Re-propagates the mission as {@link #generate(Mission, SpacecraftState, double)} does, and also
-   * reports the separation events for {@link DebrisGenerator} to fly (PHY-5 / L1, spec {@code
-   * docs/multi-objets/03-conception-L1.md} §2.2).
+   * reports the separation events for {@link DebrisGenerator} to fly.
    *
    * <p>The ephemeris is identical to what {@code generate} returns — the jettison capture is a
    * separate accumulation that touches no sample — so the callers that only want the trajectory,
@@ -130,7 +129,7 @@ public final class MissionEphemerisGenerator {
      */
     private SpacecraftState previousStageFinalState;
 
-    /** Cleared the moment any stage fails to reach its scheduled end (bilan 11 §3.9 prérequis). */
+    /** Cleared the moment any stage fails to reach its scheduled end. */
     private boolean complete = true;
 
     private Collector(Mission mission) {
@@ -154,8 +153,8 @@ public final class MissionEphemerisGenerator {
       }
 
       // A stage that stops materially before its own scheduled cutoff was truncated by an earlier
-      // STOP event — in practice the DepletionGuard firing on a burn that ran its tank dry (bilan
-      // 11 §3.9). The flown 8×8 trajectory (the one rendered and read for feasibility) is then
+      // STOP event — in practice the DepletionGuard firing on a burn that ran its tank dry. The
+      // flown 8×8 trajectory (the one rendered and read for feasibility) is then
       // broken past this point, so the whole ephemeris is flagged incomplete.
       double shortfall = run.shortfallSeconds();
       if (shortfall > STAGE_END_TOLERANCE_SECONDS) {
@@ -168,7 +167,7 @@ public final class MissionEphemerisGenerator {
       }
 
       // Add the final state of this stage as a sample point, in the context it ENDED in — which is
-      // the one it declared unless it crossed a sphere of influence on the way (PHY-4 / L4 §3.6).
+      // the one it declared unless it crossed a sphere of influence on the way.
       points.add(pointOf(run.stage(), run.exitContext().gravity(), run.finalState()));
 
       captureJettison(run);
@@ -182,11 +181,11 @@ public final class MissionEphemerisGenerator {
     }
 
     /**
-     * Emits a {@link JettisonEvent} when this stage is a separation (spec 04 §2.2). The debris
-     * start from the pre-jettison state ({@link #previousStageFinalState} — position and velocity
-     * unchanged by the mass drop) with the total mass shed, the jettisoned block's own aggregate
-     * section, and its multiplicity: the {@link DebrisGenerator} splits the block into that many
-     * drawn objects. The active stage at the pre-jettison mass <em>is</em> the one being dropped.
+     * Emits a {@link JettisonEvent} when this stage is a separation. The debris start from the
+     * pre-jettison state ({@link #previousStageFinalState} — position and velocity unchanged by the
+     * mass drop) with the total mass shed, the jettisoned block's own aggregate section, and its
+     * multiplicity: the {@link DebrisGenerator} splits the block into that many drawn objects. The
+     * active stage at the pre-jettison mass <em>is</em> the one being dropped.
      */
     private void captureJettison(StageChainRunner.StageRun run) {
       if (previousStageFinalState == null || !(run.stage() instanceof StageSeparationStage)) {
@@ -221,13 +220,12 @@ public final class MissionEphemerisGenerator {
      * Turns one flown state into a sample.
      *
      * <p>The gravitational context serves twice: it names the arc the sample belongs to, and it
-     * provides the reference shape the altitude is measured against (PHY-4 / L3, spec {@code
-     * docs/multi-corps/05-conception-L3.md} §3.4). Reading it twice would let the two disagree
-     * about which body the point is describing.
+     * provides the reference shape the altitude is measured against. Reading it twice would let the
+     * two disagree about which body the point is describing.
      *
      * <p>It is <b>handed in by the runner</b> rather than read off the stage since PHY-4 / L4: a
      * stage that crosses a sphere of influence declares one context and flies two, and asking the
-     * stage would tag the second arc's points with the first arc's body (spec L4 §3.6).
+     * stage would tag the second arc's points with the first arc's body.
      */
     private MissionEphemerisPoint pointOf(
         MissionStage stage, GravitationalContext context, SpacecraftState state) {

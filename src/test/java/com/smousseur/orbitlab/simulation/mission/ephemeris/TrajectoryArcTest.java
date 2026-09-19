@@ -16,7 +16,7 @@ import org.orekit.time.AbsoluteDate;
 import org.orekit.time.TimeScalesFactory;
 
 /**
- * The arc's two contracts (PHY-4 / L3, spec {@code docs/multi-corps/05-conception-L3.md} §2).
+ * The arc's two contracts.
  *
  * <p>{@link TrajectoryArc#earth()} states the Earth pairing a <em>second</em> time — {@link
  * GravitationalContext#earth()} already does — because four of the five test classes that build

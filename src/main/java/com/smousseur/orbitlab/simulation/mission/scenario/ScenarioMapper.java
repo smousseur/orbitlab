@@ -16,7 +16,7 @@ import java.util.Map;
 
 /**
  * Translates between the scenario DTO and the <b>wizard values map</b> — never between the DTO and
- * a {@code MissionSpec} (spec {@code docs/scenario/01-persistance-missions.md} §4.2).
+ * a {@code MissionSpec}.
  *
  * <p>That is the whole point of the class. {@code WizardPrefill.fromEntry} and {@code
  * MissionFactory.specFromWizardValues} are already an exact inverse pair, exercised on every wizard
@@ -29,9 +29,9 @@ import java.util.Map;
  * {@code ui.mission.wizard.FormField} without depending on it.
  *
  * <p><b>Units are the wizard units</b> — kilometres, degrees, days — not the metres and radians of
- * the spec (§3.1, rule 2): the file is meant to be read and diffed by a human, and it is the shape
- * the map carries anyway. Dates are normalised to ISO UTC on the way out and back to the display
- * format on the way in, both through {@code TimeConverter}, which parses either.
+ * the spec: the file is meant to be read and diffed by a human, and it is the shape the map carries
+ * anyway. Dates are normalised to ISO UTC on the way out and back to the display format on the way
+ * in, both through {@code TimeConverter}, which parses either.
  */
 public final class ScenarioMapper {
 
@@ -145,7 +145,7 @@ public final class ScenarioMapper {
    * <p>Exactly symmetric to {@link #toScenarioMission(MissionEntry, Map, ScenarioSolution)} on
    * everything the map owns, with one deliberate asymmetry: {@code MISSION_PROFILE} is not
    * reproduced. It is derived — {@code MissionProfile.of(spec)} rebuilds it — and the factory
-   * ignores the key entirely; persisting it would create a second truth about the mission (§2).
+   * ignores the key entirely; persisting it would create a second truth about the mission.
    *
    * @param mission the mission as read from the file
    * @return the wizard values, keyed as {@code FormField} keys them
@@ -225,7 +225,7 @@ public final class ScenarioMapper {
   /**
    * The mission type is the JSON discriminator, so an unreadable one has no record to land in: it
    * is refused here rather than defaulted, the rule {@code MissionFactory} already applies to an
-   * unreadable RAAN (§7).
+   * unreadable RAAN.
    */
   private static MissionType missionType(Map<String, Object> values) {
     String raw = requiredString(values, "MISSION_TYPE");
@@ -286,8 +286,8 @@ public final class ScenarioMapper {
 
   /**
    * Reads an optional number. An absent key stays absent — it is the very thing the format has to
-   * carry for an uncommanded inclination, an unwaited node and an "auto" horizon (§3.1, rule 1) —
-   * while a present but unreadable one is refused rather than dropped.
+   * carry for an uncommanded inclination, an unwaited node and an "auto" horizon — while a present
+   * but unreadable one is refused rather than dropped.
    */
   private static Double doubleOrNull(Map<String, Object> values, String key) {
     Object raw = values.get(key);

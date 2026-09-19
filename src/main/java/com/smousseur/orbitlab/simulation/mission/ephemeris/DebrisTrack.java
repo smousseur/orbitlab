@@ -5,8 +5,7 @@ import java.util.Objects;
 
 /**
  * One jettisoned object's display trajectory: a {@link MissionEphemeris} propagated on its own
- * after separation, for the sole purpose of drawing it (PHY-5, spec {@code
- * docs/multi-objets/04-conception-L2.md} §2.3). A debris is never seen by the optimizer.
+ * after separation, for the sole purpose of drawing it. A debris is never seen by the optimizer.
  *
  * <p>The {@code role} and {@code exemplarIndex} are its identity: the renderer maps them to the
  * piece's own mesh ({@code booster{i}}, {@code core}, {@code S2}) and label. The colour is a render

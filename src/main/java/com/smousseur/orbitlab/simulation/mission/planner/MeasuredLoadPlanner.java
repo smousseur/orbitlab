@@ -25,8 +25,7 @@ import org.orekit.time.AbsoluteDate;
 /**
  * {@link MissionPlanner} that sizes the top stage by <b>measuring it in flight</b>: it flies the
  * mission at its budgeted loads, reads the ΔV the top stage actually delivered, resizes the stage
- * for exactly that, and flies again (PHY-2 / L4, spec {@code
- * docs/atmosphere/11-conception-L4-PHY-2.md}).
+ * for exactly that, and flies again.
  *
  * <p><b>What it replaces.</b> {@code PropellantBudget.sizeTopStage} hands the top stage the ideal
  * chain's remainder plus a universal 1 300 m/s reserve, because off-flight it cannot know the
@@ -93,13 +92,12 @@ public final class MeasuredLoadPlanner implements MissionPlanner {
    * by the profiles that need it: a loop that converges inside the band never opens a bracket and
    * this budget stays unspent, which is why the Falcon Heavy is untouched by construction.
    *
-   * <p><b>What it buys, flown 2026-09-12</b> (spec {@code docs/atmosphere/13-cloture-PHY-2.md}
-   * §5.3). On the Ariane 64 LEO-400 drag-on profile the loop ends dry with the answer bracketed in
-   * {@code [246, 3 804] kg} and used to return the rich end. The three probes land on 967.4, 487.8
-   * and <b>346.5 kg</b>, all feasible: {@code 3 804 -> 346 kg} for the same orbit to the decimal
-   * (399.3 x 420.3 km), <b>3 438 kg</b> of dead propellant given back, the computation going from
-   * 140 s to 265 s. An independent flight of the same profile at another core ISP had converged on
-   * 215 kg, the order the bisection walks to.
+   * <p><b>What it buys, flown 2026-09-12</b>. On the Ariane 64 LEO-400 drag-on profile the loop
+   * ends dry with the answer bracketed in {@code [246, 3 804] kg} and used to return the rich end.
+   * The three probes land on 967.4, 487.8 and <b>346.5 kg</b>, all feasible: {@code 3 804 -> 346
+   * kg} for the same orbit to the decimal (399.3 x 420.3 km), <b>3 438 kg</b> of dead propellant
+   * given back, the computation going from 140 s to 265 s. An independent flight of the same
+   * profile at another core ISP had converged on 215 kg, the order the bisection walks to.
    *
    * <p><b>Three is one short of this planner's own stopping rule, knowingly.</b> The probes took
    * the bracket ratio from 15.5 to 1.41, above {@link #BRACKET_TIGHT_RATIO}: the loop stopped on
@@ -143,8 +141,6 @@ public final class MeasuredLoadPlanner implements MissionPlanner {
 
   /**
    * Whether each pass seeds the next pass's CMA-ES search with this pass's solution per stage
-   * (OPT-1 / D2, spec {@code docs/optimization/11-conception-D2.md}, mesures {@code
-   * 12-mesures-D2.md}).
    *
    * <p><b>On by default since D2</b> (~−13 % evaluations on FAST, verdict bit-identical off/on at
    * the bench). The property remains an override, set to {@code false} to disable — used by the
@@ -449,10 +445,10 @@ public final class MeasuredLoadPlanner implements MissionPlanner {
    * PropellantBudget.loadsForMeasuredTopStage} converts back into kilograms.
    *
    * <p>Each mission stage is attributed to the physical stage that flew it, resolved from the mass
-   * at its entry. That is exact because no mission stage spans a jettison any more (spec {@code
-   * docs/mission-stages/01-separations-implicites.md}), so one phase burns one stage's propellant
-   * at one Isp. Non-propulsive phases report zero ΔV and drop out, which is what keeps separations
-   * — whose entry mass still resolves to the stage being dropped — from being counted.
+   * at its entry. That is exact because no mission stage spans a jettison any more, so one phase
+   * burns one stage's propellant at one Isp. Non-propulsive phases report zero ΔV and drop out,
+   * which is what keeps separations — whose entry mass still resolves to the stage being dropped —
+   * from being counted.
    */
   private static double topStageDeltaV(
       MissionPerformanceReport report, Vehicle vehicle, int sizedStage) {
@@ -471,8 +467,7 @@ public final class MeasuredLoadPlanner implements MissionPlanner {
    *
    * <p>Expressed as λ rather than as absolute kilograms so the existing plumbing applies: the
    * orchestrator multiplies them back the moment the plan lands, while both factors are
-   * unambiguously in hand, and persists the product (spec {@code
-   * docs/scenario/01-persistance-missions.md} §2.3). A stage the budget left empty keeps λ = 1
+   * unambiguously in hand, and persists the product. A stage the budget left empty keeps λ = 1
    * rather than dividing by zero.
    */
   private static PropellantSizing sizing(double[] budgeted, double[] flown, int passes) {

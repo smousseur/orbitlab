@@ -72,9 +72,9 @@ class LauncherDragConvergenceProbe {
    * <p>{@code PHY-2 / L2} decided the Vulcain goes to its <b>physical lapse</b> — its
    * thrust-weighted sea-level-to-vacuum mean, somewhere in [320, 431], "to be posed by flying" —
    * and no lot ever carried it: the catalog still holds the 360 that {@code L2} describes as pulled
-   * down to calibrate the FH/Ariane ratio (spec {@code docs/atmosphere/13-cloture-PHY-2.md} §5.1).
-   * The stage burns from lift-off to ~480 s and the atmosphere is behind it after ~100 s, so an
-   * honest lapse sits high in the bracket: the range worth flying is [360, 431], not all of it.
+   * down to calibrate the FH/Ariane ratio. The stage burns from lift-off to ~480 s and the
+   * atmosphere is behind it after ~100 s, so an honest lapse sits high in the bracket: the range
+   * worth flying is [360, 431], not all of it.
    *
    * <p><b>The ceiling is measured before the value is posed.</b> 431 s is pure vacuum — no launcher
    * does better — so it bounds what the whole question is worth, and three flights here decide
@@ -85,9 +85,8 @@ class LauncherDragConvergenceProbe {
    * raising it buys no measurable capacity — pure vacuum is the <em>second</em> best of the three,
    * not the best. What the ISP moves is the sizing loop: the retained upper-stage load goes 3 804
    * kg (92.8 % residual) → 215 kg (4.9 %) → 353 kg (47.3 %), a factor 17.7 for a 10 % perturbation,
-   * on one launcher and one target (spec {@code docs/atmosphere/13-cloture-PHY-2.md} §5.1 and
-   * §5.3). Re-run this only against a change to {@code MeasuredLoadPlanner}, for which it is now
-   * the sharpest instrument in the repository.
+   * on one launcher and one target. Re-run this only against a change to {@code
+   * MeasuredLoadPlanner}, for which it is now the sharpest instrument in the repository.
    */
   private static final double[] CORE_ISP_SWEEP = {360.0, 395.0, 431.0};
 

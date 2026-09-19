@@ -279,8 +279,7 @@ public class FocusView {
    * <p><b>Why not the objective's body</b>, which is what this took until L5. With the view body
    * following the arc, a lunar mission (objective {@code MOON}, first arc {@code EARTH}) would be
    * hidden for the whole of its terrestrial ascent and appear only at the sphere-of-influence
-   * crossing. The old rule does not merely become incomplete, it becomes wrong (spec {@code
-   * docs/multi-corps/07-conception-L5.md} §5.4).
+   * crossing. The old rule does not merely become incomplete, it becomes wrong.
    *
    * <p>Missions around the focused body stay visible in spacecraft mode too, so following one of
    * them does not hide its siblings.

@@ -38,8 +38,7 @@ import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.orekit.time.AbsoluteDate;
 
 /**
- * L2 of {@code docs/orientation-planetes/01-decoupage.md}: the instrument that turns "does this
- * planet look right?" into a number of degrees.
+ * L2 of: the instrument that turns "does this planet look right?" into a number of degrees.
  *
  * <p>Press <b>G</b> while a body is focused. Its globe gets a graticule drawn from its own texture
  * map, each meridian labelled with the body-fixed longitude the application believes it carries,
@@ -54,7 +53,7 @@ import org.orekit.time.AbsoluteDate;
  *
  * <p><b>Nothing here changes what is rendered.</b> The instrument reads; the values it leads to are
  * committed by hand in {@code PlanetMeshCorrection}, which is what keeps an asset swap a detected
- * event rather than a silently absorbed one (§4.1).
+ * event rather than a silently absorbed one.
  */
 public final class MeshCalibrationAppState extends BaseAppState implements ActionListener {
 

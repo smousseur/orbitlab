@@ -8,7 +8,7 @@ import java.util.Objects;
 
 /**
  * Builds the camera-facing ribbon that replaces {@code LineStrip} / {@code LineLoop} everywhere in
- * the application (spec {@code docs/graphics-effects/ribbon-lines.md}).
+ * the application.
  *
  * <p><b>What this class does and does not do.</b> It produces the <em>undisplaced</em> mesh: each
  * polyline point becomes two vertices carrying the same position and opposite {@code side} flags,
@@ -16,13 +16,13 @@ import java.util.Objects;
  * happens in {@code MatDefs/Fx/Ribbon.vert}, and it happens there so that a planetary orbit's
  * buffer stays static: the ten orbits are 40 960 points written once per window rebuild, and
  * expanding them on the CPU would turn that into 81 920 vertices rewritten every frame because the
- * camera moved a pixel (§2).
+ * camera moved a pixel.
  *
  * <p><b>No index buffer, and none is possible.</b> A {@code TriangleStrip} of {@code 2N} vertices
  * is {@code 2(N−1)} triangles by construction. Indexing would be the obvious economy and it cannot
  * work here: the two vertices of a pair differ <em>only</em> by their {@code side} attribute, so an
  * index that made them one vertex would give them one side as well. The duplication is the form,
- * not a shortcut (§7.1).
+ * not a shortcut.
  *
  * <p><b>No miter, no bevel, no round join — deliberately.</b> The tangent at a point is the chord
  * of its two neighbours, {@code p[i+1] − p[i−1]}, which makes two consecutive quads share both of
@@ -30,9 +30,9 @@ import java.util.Objects;
  * of {@code cos(θ/2)} in a turn, and our polylines are densely sampled smooth curves — 0,09° per
  * segment on a planetary orbit, ~20° in the worst decimated coast, i.e. 1,5 % of width lost at the
  * apex of a bend. Invisible. This paragraph exists so that the whole "polyline rendering"
- * literature on joins is not re-imported into a codebase whose data does not need it (§7.5).
+ * literature on joins is not re-imported into a codebase whose data does not need it.
  *
- * <p>Attribute layout, per vertex (§7.2):
+ * <p>Attribute layout, per vertex:
  *
  * <ul>
  *   <li>{@code Position} — the polyline point, unmodified;
@@ -260,10 +260,10 @@ public final class RibbonMeshBuilder {
   /**
    * Unit tangent at point {@code i}, written into {@code out}.
    *
-   * <p>The chord of the two neighbours is what removes the joins (§7.5). The fallbacks below are
-   * not defensive padding: a mission trajectory really does write a tip that lands on the last
-   * sampled point once the head reaches the end of the polyline, and a chord of length zero
-   * normalises to NaN — which is a ribbon that vanishes, or a triangle sent to infinity.
+   * <p>The chord of the two neighbours is what removes the joins. The fallbacks below are not
+   * defensive padding: a mission trajectory really does write a tip that lands on the last sampled
+   * point once the head reaches the end of the polyline, and a chord of length zero normalises to
+   * NaN — which is a ribbon that vanishes, or a triangle sent to infinity.
    */
   private static void tangentAt(float[] xyz, int count, int i, boolean closed, float[] out) {
     int prev = closed ? (i - 1 + count) % count : i - 1;

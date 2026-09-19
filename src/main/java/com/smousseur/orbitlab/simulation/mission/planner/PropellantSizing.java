@@ -35,12 +35,11 @@ public record PropellantSizing(double[] lambdas, int passes, int evaluations) {
    * Turns the resolved scale factors into the per-stage loads that were actually flown, in
    * kilograms.
    *
-   * <p><b>This multiplication belongs at computation time, never at load time</b> (spec {@code
-   * docs/scenario/01-persistance-missions.md} §2.3). A λ carries two dated dependencies its product
-   * does not: the base it scales — whatever {@code PropellantBudget} produced that day — and the
-   * mask deciding which stages carry a λ at all. Replaying {@code budgeted × λ} after either moved
-   * would fly a third load set: neither the one that flew, nor the one today would compute. Here,
-   * both factors are unambiguously in hand.
+   * <p><b>This multiplication belongs at computation time, never at load time</b>. A λ carries two
+   * dated dependencies its product does not: the base it scales — whatever {@code PropellantBudget}
+   * produced that day — and the mask deciding which stages carry a λ at all. Replaying {@code
+   * budgeted × λ} after either moved would fly a third load set: neither the one that flew, nor the
+   * one today would compute. Here, both factors are unambiguously in hand.
    *
    * <p>It lives on this record rather than inline in the caller for the same reason: the record
    * owns the λ, and a length mismatch between the two arrays is a real failure mode — an

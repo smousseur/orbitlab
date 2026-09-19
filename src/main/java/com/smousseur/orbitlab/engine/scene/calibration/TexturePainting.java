@@ -11,8 +11,7 @@ import org.hipparchus.geometry.euclidean.threed.Vector3D;
 
 /**
  * Where the rendering chain actually paints a body's texture, expressed in the body-fixed
- * longitudes Orekit works in. This is L2's ruler (see {@code
- * docs/orientation-planetes/01-decoupage.md}).
+ * longitudes Orekit works in. This is L2's ruler.
  *
  * <p><b>What makes it an instrument rather than a restatement.</b> The two halves come from
  * unrelated data. Where a texture column lands is the whole render chain evaluated forward —

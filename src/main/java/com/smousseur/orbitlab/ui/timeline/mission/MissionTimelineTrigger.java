@@ -11,7 +11,7 @@ import com.smousseur.orbitlab.ui.timeline.TimelineStyles;
 import java.util.Objects;
 
 /**
- * The compact button that opens and closes the mission track (spec §11).
+ * The compact button that opens and closes the mission track.
  *
  * <p><b>It is present or absent, never greyed.</b> Its condition of existence is the telemetry
  * widget's own: whenever telemetry is on screen there is a followed mission with an ephemeris, and

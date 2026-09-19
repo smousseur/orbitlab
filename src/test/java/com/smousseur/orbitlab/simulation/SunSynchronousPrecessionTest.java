@@ -27,8 +27,7 @@ import org.orekit.utils.IERSConventions;
 
 /**
  * <b>MIS-7 / P1, test T4 — a sun-synchronous orbit actually precesses with the Sun</b>, and the
- * <b>arbiter of the reference-frame question of spec §3.4</b> ({@code
- * docs/earth-orbit/01-mission-terre-parametrable.md}).
+ * <b>arbiter of the reference-frame question</b>.
  *
  * <p><b>Why the inclination alone proves nothing.</b> {@code SunSynchronousInclinationTest} (T3)
  * checks the arithmetic of {@code cos i = −a^{7/2}(1−e²)²·n_prec / (3/2·J2·Re²·√µ)} against three
@@ -66,9 +65,9 @@ class SunSynchronousPrecessionTest {
 
   /**
    * Tolerance on the measured drift rate, in degrees per day. <b>Set from the measurement</b>, not
-   * chosen in advance (spec §7, §10): what is asserted is that the orbit precesses with the Sun to
-   * a few percent, which is what distinguishes a sun-synchronous orbit from a merely polar one — a
-   * polar orbit's node does not drift at all.
+   * chosen in advance: what is asserted is that the orbit precesses with the Sun to a few percent,
+   * which is what distinguishes a sun-synchronous orbit from a merely polar one — a polar orbit's
+   * node does not drift at all.
    */
   private static final double TOLERANCE_DEG_PER_DAY = 0.05;
 

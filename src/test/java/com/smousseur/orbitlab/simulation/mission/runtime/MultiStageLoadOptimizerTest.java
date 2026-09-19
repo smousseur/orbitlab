@@ -348,7 +348,7 @@ class MultiStageLoadOptimizerTest {
     MultiStageLoadOptimizer.Result result =
         optimizer.minimize(evaluator, scaled, new double[] {100_000, 10_000});
 
-    // The step must be absolute on the λ axis, not relative (bilan 11 §3.1): a relative step is
+    // The step must be absolute on the λ axis, not relative: a relative step is
     // smaller than the bisection's own bracket tolerance as soon as λ < 1, so it probes inside the
     // unresolved bracket and can only re-measure what the bisection already declined to resolve.
     double[] last = evaluator.calls.get(evaluator.calls.size() - 1);

@@ -27,8 +27,7 @@ import org.orekit.utils.Constants;
 import org.orekit.utils.PVCoordinates;
 
 /**
- * Sampling and horizon behaviour at chain level (spec {@code
- * docs/mission-horizon/01-horizon-explicite.md} §5 and §8).
+ * Sampling and horizon behaviour at chain level.
  *
  * <p>Deliberately built on inert phases rather than on a real mission: what is under test is the
  * <em>wiring</em> — which step each phase is recorded at, what bounds a phase that configured no

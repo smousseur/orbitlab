@@ -41,9 +41,8 @@ class OrbitElementsTest {
 
   /**
    * Near-circular, at the order of magnitude of the real insertions (measured e between 4.7e-6 and
-   * 6.3e-6). This is the regime that disqualified Brouwer-Lyddane by measurement (spec section
-   * 3.2.1): its fixed point diverges there or, worse, converges to a mean perigee that depends on
-   * the sampling phase.
+   * 6.3e-6). This is the regime that disqualified Brouwer-Lyddane by measurement: its fixed point
+   * diverges there or, worse, converges to a mean perigee that depends on the sampling phase.
    */
   private static final double ECCENTRICITY = 1.0e-5;
 
@@ -86,8 +85,8 @@ class OrbitElementsTest {
 
   /**
    * Reported altitudes are spherical-equatorial — {@code a(1±e) − RE} — exactly the convention of
-   * today's call sites (spec section 3.3). This test pins it down: switching to geodetic altitude
-   * would move every reported figure by ~200 m.
+   * today's call sites. This test pins it down: switching to geodetic altitude would move every
+   * reported figure by ~200 m.
    */
   @Test
   void osculating_reportsSphericalEquatorialApsides() {

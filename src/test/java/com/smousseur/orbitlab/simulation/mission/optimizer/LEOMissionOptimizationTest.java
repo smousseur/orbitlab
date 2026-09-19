@@ -66,8 +66,7 @@ class LEOMissionOptimizationTest extends AbstractTrajectoryOptimizerTest {
   /**
    * Spec 06 I3 integration criterion: a LEO 400 km mission flying the analytic budget loads
    * converges, and the propellant left in the sized S2 stays under 15 % of that stage's load. Read
-   * from the per-stage split (bilan 10 §6) rather than the stack-wide total, so the assertion
-   * measures S2 alone.
+   * from the per-stage split rather than the stack-wide total, so the assertion measures S2 alone.
    */
   @Test
   @EnabledIfSystemProperty(named = "orbitlab.slowTests", matches = "true")

@@ -18,9 +18,9 @@ import org.junit.jupiter.api.Test;
 import org.orekit.time.AbsoluteDate;
 
 /**
- * Fast unit test of the I7 feasibility predicate (spec 09 §6 task 2) — the {@code objectiveMet} and
- * {@code residualSufficient} decisions — exercised on synthetic ephemerides and performance
- * reports, with no propagation.
+ * Fast unit test of the I7 feasibility predicate — the {@code objectiveMet} and {@code
+ * residualSufficient} decisions — exercised on synthetic ephemerides and performance reports, with
+ * no propagation.
  */
 class MissionLoadEvaluatorTest {
 
@@ -157,7 +157,7 @@ class MissionLoadEvaluatorTest {
     assertFalse(MissionLoadEvaluator.objectiveMet(ephemeris, target, TOL));
   }
 
-  // ── ephemeris completeness (bilan 11 §3.9 prérequis) ─────────────────────
+  // ── ephemeris completeness ─────────────────────
 
   @Test
   void ephemeris_defaultsToComplete() {

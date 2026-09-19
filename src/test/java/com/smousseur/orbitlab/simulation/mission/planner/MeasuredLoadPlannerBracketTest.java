@@ -6,8 +6,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 /**
- * The bisection that narrows the bracket a flame-out opens (PHY-2, spec {@code
- * docs/atmosphere/13-cloture-PHY-2.md} §5.3).
+ * The bisection that narrows the bracket a flame-out opens.
  *
  * <p>The behaviour it serves needs flights and lives in {@code MeasuredLoadPlannerFlightTest}; the
  * arithmetic does not, and pinning it here is what makes the flight test's result readable — a

@@ -14,8 +14,7 @@ import org.orekit.time.AbsoluteDate;
  *
  * <p><b>It exists because two problems ask the same question</b>: {@link EarthLaunchWindowProblem}
  * compares the plane the pad reaches against a target plane, and {@link LunarLaunchWindowProblem}
- * takes that plane as the one it must depart in (MIS-4 / L2, spec {@code
- * docs/lunar-flyby/04-conception-L2.md} §2.6). Two classes answering it separately would be two
+ * takes that plane as the one it must depart in. Two classes answering it separately would be two
  * places to be right about a frame chain and a topocentric basis.
  *
  * <p><b>The basis itself is not written here.</b> The {@code (north, east)} convention stays in

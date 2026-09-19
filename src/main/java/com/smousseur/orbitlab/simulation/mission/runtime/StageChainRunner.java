@@ -17,11 +17,10 @@ import org.orekit.time.AbsoluteDate;
  *
  * <p><b>Why it is extracted.</b> This traversal was the body of {@link
  * com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemerisGenerator}. Splitting the
- * ascent into explicit phases (spec {@code docs/mission-stages/01-separations-implicites.md} §5.4)
- * requires the <b>optimize</b> pass to fly the same chain the <b>ephemeris</b> pass replays: two
- * implementations of "walk the stages" would let the two passes drift apart in how often the
- * integrator restarts, which is exactly the optimize-vs-ephemeris divergence closed by bilan 11
- * §3.9. One implementation, used by both, cannot drift.
+ * ascent into explicit phases requires the <b>optimize</b> pass to fly the same chain the
+ * <b>ephemeris</b> pass replays: two implementations of "walk the stages" would let the two passes
+ * drift apart in how often the integrator restarts, which is exactly the optimize-vs-ephemeris
+ * divergence closed by bilan 11 §3.9. One implementation, used by both, cannot drift.
  *
  * <p><b>Stateless by contract.</b> CMA-ES explores in parallel, so a runner instance carries no
  * per-run state: everything mutable lives in the caller's sampler and listener, and each {@code
@@ -41,10 +40,10 @@ public final class StageChainRunner {
    * never comes, these 7200 s are what bound it — comfortably above any LEO or GTO node wait, and
    * far below anything that would hang the optimizer.
    *
-   * <p>The value is deliberately left where it was by the mission-horizon work (spec {@code
-   * docs/mission-horizon/01-horizon-explicite.md} §9): it is a genuine safety net on the stage
-   * path, not an arbitrary restitution horizon, and moving it would change what an event-terminated
-   * coast does. It is logged when it fires instead, so its use stops being invisible.
+   * <p>The value is deliberately left where it was by the mission-horizon work: it is a genuine
+   * safety net on the stage path, not an arbitrary restitution horizon, and moving it would change
+   * what an event-terminated coast does. It is logged when it fires instead, so its use stops being
+   * invisible.
    */
   public static final double FALLBACK_DURATION_SECONDS = 7200.0;
 
@@ -52,11 +51,10 @@ public final class StageChainRunner {
    * Receives every fixed-step sample of the flown trajectory, tagged with its stage and with the
    * flight context it was actually flown in.
    *
-   * <p><b>The context is a parameter and not something the receiver reads back off the stage</b>
-   * (PHY-4 / L4, spec {@code docs/multi-corps/06-conception-L4.md} §3.6). Once a stage may cross a
-   * sphere of influence halfway through, what it <em>declares</em> and what it is <em>flying</em>
-   * stop being the same thing, and asking the stage would write the wrong body into the arc L3
-   * added for exactly this purpose.
+   * <p><b>The context is a parameter and not something the receiver reads back off the stage</b> .
+   * Once a stage may cross a sphere of influence halfway through, what it <em>declares</em> and
+   * what it is <em>flying</em> stop being the same thing, and asking the stage would write the
+   * wrong body into the arc L3 added for exactly this purpose.
    */
   @FunctionalInterface
   public interface StepSampler {
@@ -86,9 +84,8 @@ public final class StageChainRunner {
    *     mean something
    * @param propagationFailed whether the propagation threw
    * @param exitContext the flight context the stage <em>ended</em> in, which is the one it declared
-   *     unless it crossed a sphere of influence on the way (PHY-4 / L4 §3.6). Whole rather than
-   *     gravitational since PHY-1 / L1 §3.5: what a mission report has to state is what was flown,
-   *     drag included
+   *     unless it crossed a sphere of influence on the way. Whole rather than gravitational since
+   *     PHY-1 / L1 §3.5: what a mission report has to state is what was flown, drag included
    */
   public record StageRun(
       MissionStage stage,
@@ -145,8 +142,8 @@ public final class StageChainRunner {
    *
    * <p>The sampling step is <b>not</b> a parameter: each stage advertises its own through {@link
    * MissionStage#sampleStepSeconds}, so a burn is recorded at 1 s where the dynamics are fast and a
-   * coast at 60 s where they are not (spec {@code docs/mission-horizon/01-horizon-explicite.md}
-   * §5). A single step for the whole chain cannot serve both an 8-minute ascent and a 3-day coast.
+   * coast at 60 s where they are not. A single step for the whole chain cannot serve both an
+   * 8-minute ascent and a 3-day coast.
    *
    * @param sampler receives every sample, or {@code null} to fly the chain without sampling
    * @param lastStageCoastSeconds how long to propagate the last stage of the chain, which has no
@@ -198,7 +195,7 @@ public final class StageChainRunner {
 
       // The stage is flown by StageLegRunner, which owns everything from building the propagator to
       // returning the state it ended on — one leg per gravitational context it passed through, and
-      // exactly one when it declares no sphere-of-influence transition (PHY-4 / L4 §4).
+      // exactly one when it declares no sphere-of-influence transition.
       StageLegRunner legRunner =
           new StageLegRunner(sampler, abortOnFailure, endDateResolver(isLastStage, mission));
       StageLegRunner.StageFlight flight = legRunner.fly(stage, stageEntry, mission);
@@ -273,7 +270,7 @@ public final class StageChainRunner {
         return new StageLegRunner.EndDate(stage.getConfiguredEndDate(), true);
       }
       // A stage that ends at a sphere-of-influence crossing must still say how far it goes if the
-      // crossing never comes (spec docs/lunar-orbit/03-conception-L1.md §4.2). Falling into the net
+      // crossing never comes. Falling into the net
       // below would bound a translunar coast at 7200 s against a boundary some 265 000 s away — and
       // it would report itself complete, since the net carries isStageCutoff = false. Refused here
       // and not in StageLegRunner because this is the only place the net is told apart from the

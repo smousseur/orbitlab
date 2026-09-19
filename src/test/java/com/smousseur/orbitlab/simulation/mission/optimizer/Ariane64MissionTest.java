@@ -20,8 +20,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 
 /**
- * The Ariane 64 catalog entry flies a LEO mission, and stages where the model says it does (spec
- * {@code docs/launchers/01-ariane-64.md} §5).
+ * The Ariane 64 catalog entry flies a LEO mission, and stages where the model says it does.
  *
  * <p><b>This started as a measurement probe with no accuracy assertion</b>, because whether the
  * entry could close a mission at all was genuinely unknown: aggregating the boosters and the
@@ -72,8 +71,7 @@ class Ariane64MissionTest extends AbstractTrajectoryOptimizerTest {
     // optimizer stops igniting the upper stage at all (cost 300x acceptable); at 40 t — the ideal-
     // ΔV capacity §2.4 computes — it cannot make orbit and hands over on the re-entry floor. The
     // ideal figure ignores every loss the flight actually pays, so the flown capacity sits well
-    // below it, and 20 t is where this profile behaves (spec docs/etagement/06-conception-L4.md
-    // §6).
+    // below it, and 20 t is where this profile behaves.
     Spacecraft payload = Payloads.EARTH_OBSERVATION_SAT.toSpacecraft(20_000, 0.0);
     double[] loads =
         PropellantBudget.loadsForLeo(

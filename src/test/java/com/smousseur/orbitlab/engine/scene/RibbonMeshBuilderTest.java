@@ -9,7 +9,7 @@ import java.nio.FloatBuffer;
 import org.junit.jupiter.api.Test;
 
 /**
- * The ribbon mesh layout (spec {@code docs/graphics-effects/ribbon-lines.md} §10).
+ * The ribbon mesh layout.
  *
  * <p>The shader is not testable here and is not tested here: what is testable is the mesh the
  * shader reads, and that is where the errors that cost the most live — a tangent taken from the
@@ -59,7 +59,7 @@ class RibbonMeshBuilderTest {
 
     for (int i = 0; i < 4; i++) {
       // Both vertices of a pair sit on the polyline point itself: the ribbon is centred on the
-      // trajectory, and the offset only exists once the vertex shader has run (§7.1).
+      // trajectory, and the offset only exists once the vertex shader has run.
       for (int c = 0; c < 3; c++) {
         assertEquals(xyz[i * 3 + c], pos[(2 * i) * 3 + c], EPS);
         assertEquals(xyz[i * 3 + c], pos[(2 * i + 1) * 3 + c], EPS);
@@ -156,7 +156,7 @@ class RibbonMeshBuilderTest {
   @Test
   void twoCoincidentPointsProduceNeitherNaNNorAnUnnormalisedTangent() {
     // The real case: the mission trajectory writes an interpolated tip that lands exactly on the
-    // last sampled point as soon as the head reaches the end of the polyline (§10).
+    // last sampled point as soon as the head reaches the end of the polyline.
     float[] xyz = {0, 0, 0, 1, 0, 0, 2, 0, 0, 2, 0, 0};
     Mesh mesh = ribbon(xyz, false);
 

@@ -17,7 +17,7 @@ import org.orekit.utils.PVCoordinates;
 
 /**
  * Unit oracle for the flown-band aim. Synthetic orbits only — no mission, no numerical propagation,
- * tens of milliseconds (spec orbit-reporting/02 section 6.2).
+ * tens of milliseconds.
  */
 class FlownBandAimTest {
 
@@ -108,7 +108,7 @@ class FlownBandAimTest {
   /**
    * Forced fallback: an aimed orbit Eckstein-Hechler refuses (an eccentricity far beyond its
    * near-circular domain) must NOT fail the mission — it must fall back on the closed-form seed.
-   * This is the property that keeps the targeting path total (spec 02 section 3.2).
+   * This is the property that keeps the targeting path total.
    */
   @Test
   void fallsBackOnTheClosedFormWhenTheMeanIsUnavailable() {

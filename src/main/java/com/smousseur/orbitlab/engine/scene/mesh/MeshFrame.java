@@ -4,7 +4,6 @@ import com.jme3.math.Vector3f;
 
 /**
  * The body-fixed frame a textured sphere carries in its own geometry, as recovered from its UV map
- * (see {@code docs/orientation-planetes/01-decoupage.md} §2.1).
  *
  * @param pole direction of the texture's {@code v = 0} edge. Which pole that is belongs to the
  *     image, not to the geometry: measured on {@code earth}'s own map, whose band at {@code v =

@@ -6,10 +6,9 @@ import java.util.Objects;
 import org.orekit.propagation.SpacecraftState;
 
 /**
- * One separation, as the replay captures it for {@link DebrisGenerator} to fly (PHY-5, spec {@code
- * docs/multi-objets/04-conception-L2.md} §2.2). It describes the jettison as a whole — the
- * aggregate mass and section of a multi-exemplar block — and the {@code DebrisGenerator} splits it
- * into {@code multiplicity} drawn objects.
+ * One separation, as the replay captures it for {@link DebrisGenerator} to fly. It describes the
+ * jettison as a whole — the aggregate mass and section of a multi-exemplar block — and the {@code
+ * DebrisGenerator} splits it into {@code multiplicity} drawn objects.
  *
  * <p>Position, velocity and date are those of the pre-jettison state (continuous across the
  * separation, since only the mass changes), carried by {@code state}. The {@code aero} and {@code

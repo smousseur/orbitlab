@@ -39,12 +39,12 @@ import org.orekit.utils.TimeStampedPVCoordinates;
  * leg runner, against the same trajectory flown end to end in one geocentric propagation with the
  * same forces.
  *
- * <p><b>The two agree only because both sides declare the opposite body</b> (spec {@code
- * docs/multi-corps/06-conception-L4.md} §4.2). Drop the Sun on one side and they part company by
- * kilometres — measured 7 249 m over six hours, which is the solar tide on the Earth-Moon system
- * (2·µ_S·d/D³ ≈ 3.0e-5 m/s², 7.0 km in ½at²) and not a defect. That contrast is logged rather than
- * asserted, in the shape L2 §5.2 gave its four propagations: separating the contributions is what
- * makes a half-wrong wiring visible where a single tolerance would swallow it.
+ * <p><b>The two agree only because both sides declare the opposite body</b>. Drop the Sun on one
+ * side and they part company by kilometres — measured 7 249 m over six hours, which is the solar
+ * tide on the Earth-Moon system (2·µ_S·d/D³ ≈ 3.0e-5 m/s², 7.0 km in ½at²) and not a defect. That
+ * contrast is logged rather than asserted, in the shape L2 §5.2 gave its four propagations:
+ * separating the contributions is what makes a half-wrong wiring visible where a single tolerance
+ * would swallow it.
  */
 class SoiRoundTripFlightTest {
   private static final Logger logger = LogManager.getLogger(SoiRoundTripFlightTest.class);
@@ -336,8 +336,8 @@ class SoiRoundTripFlightTest {
 
     // The anti-chatter property, asserted where it is actually at risk. A leg that has just
     // switched starts exactly ON the sphere, where g is zero to the root finder's precision; the
-    // exit dead band is what stops the re-armed detector from firing again immediately (spec L4
-    // §4.4). Without it the lunar arc would last milliseconds instead of hours.
+    // exit dead band is what stops the re-armed detector from firing again immediately. Without it
+    // the lunar arc would last milliseconds instead of hours.
     Sample firstLunar = firstSampleOfArc(samples, SolarSystemBody.MOON);
     Sample lastLunar = lastSampleOfArc(samples, SolarSystemBody.MOON);
     double dwell = lastLunar.date().durationFrom(firstLunar.date());

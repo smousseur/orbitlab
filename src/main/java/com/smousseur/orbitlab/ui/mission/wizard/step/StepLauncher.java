@@ -182,8 +182,7 @@ public class StepLauncher implements StepValues {
   }
 
   /**
-   * Shows why the mission cannot be composed, on the step where the answer is (spec {@code
-   * docs/earth-orbit/02-wizard-orbites-terrestres.md} §6).
+   * Shows why the mission cannot be composed, on the step where the answer is.
    *
    * <p>A target beyond the ascent's reach — a MEO — is only refutable once the vehicle is known,
    * and the vehicle is picked here, last. The message comes from {@code MissionComposer} unchanged:

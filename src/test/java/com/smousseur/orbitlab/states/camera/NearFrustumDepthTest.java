@@ -7,10 +7,9 @@ import com.smousseur.orbitlab.app.view.ViewMode;
 import org.junit.jupiter.api.Test;
 
 /**
- * Depth resolution of the near viewport (spec {@code
- * docs/graphics-effects/spacecraft-view-artefacts.md} §5). The trajectory line scintillates where
- * it crosses the Earth's disc because the depth buffer cannot separate it from the surface, and the
- * only quantity that governs that separation is the near plane:
+ * Depth resolution of the near viewport. The trajectory line scintillates where it crosses the
+ * Earth's disc because the depth buffer cannot separate it from the surface, and the only quantity
+ * that governs that separation is the near plane:
  *
  * <pre>Δz = 2⁻²⁴ · z² · (1/near − 1/far)</pre>
  *
@@ -19,14 +18,13 @@ import org.junit.jupiter.api.Test;
  * orbit is barely one and a half steps above the surface: the line wins or loses the depth test per
  * pixel and per frame. These tests pin the near plane by what it buys, not by its value.
  *
- * <p><b>The third viewport, and why there is none</b> (spec {@code
- * docs/multi-corps/07-conception-L5.md} §5.3). Roadmap open question n° 4 asked whether Earth +
- * Moon + spacecraft in one frame forces a third "mid" viewport, reverse-Z or a logarithmic depth
- * buffer, and named this class as the instrument to decide it. The measurement below says no. One
- * depth step at the Moon's distance is ~88 000 km, fourteen Earth radii — but nothing out there is
- * competing for depth: the near viewport draws exactly one globe, on the origin, where the step is
- * ~27 km. The far end of the trajectory disputes depth only with itself. What was actually broken
- * was the far <em>clip</em> plane, and that is one constant.
+ * <p><b>The third viewport, and why there is none</b>. Roadmap open question n° 4 asked whether
+ * Earth + Moon + spacecraft in one frame forces a third "mid" viewport, reverse-Z or a logarithmic
+ * depth buffer, and named this class as the instrument to decide it. The measurement below says no.
+ * One depth step at the Moon's distance is ~88 000 km, fourteen Earth radii — but nothing out there
+ * is competing for depth: the near viewport draws exactly one globe, on the origin, where the step
+ * is ~27 km. The far end of the trajectory disputes depth only with itself. What was actually
+ * broken was the far <em>clip</em> plane, and that is one constant.
  */
 class NearFrustumDepthTest {
 
@@ -113,7 +111,6 @@ class NearFrustumDepthTest {
     // The spacecraft-view factor assumes the closest content sits at the origin. In planet view the
     // origin is the Earth's centre and the closest content is its surface, 6378 km nearer — so the
     // factor must stay conditioned on the view mode until a content-driven near plane exists
-    // (spec §9.3, "limite connue").
     float distanceToCentre = 7_000f;
     float near = NearCameraSyncAppState.nearPlane(ViewMode.PLANET, distanceToCentre);
 
@@ -178,7 +175,7 @@ class NearFrustumDepthTest {
   void loweringTheFarPlaneChangesNothing() {
     // Recorded because the previous diagnostic prescribed exactly this, and it was the one fix in
     // it
-    // that could not work: Δz ∝ z²/near as soon as far ≫ near (spec §5.3, §7.2).
+    // that could not work: Δz ∝ z²/near as soon as far ≫ near.
     float near = NearCameraSyncAppState.nearPlane(ViewMode.SPACECRAFT, SPACECRAFT_FOCUS_KM);
 
     double atHundredThousand = depthStepKm(EARTH_DISTANCE_KM, near, 100_000f);

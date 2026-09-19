@@ -49,8 +49,7 @@ import org.orekit.time.TimeScalesFactory;
  *
  * <p>Nothing here is asserted. The geometry is already pinned by {@code EclipseGeometryTest} and
  * {@code EarthEclipseSpotTest}; what varies below is the epoch, and a number that legitimately
- * changes with the date belongs in {@code docs/} rather than in a test that would go red for being
- * right.
+ * changes with the date belongs in rather than in a test that would go red for being right.
  */
 class RingShadowMeasureTest {
 

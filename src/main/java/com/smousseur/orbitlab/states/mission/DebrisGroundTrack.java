@@ -10,8 +10,7 @@ import org.orekit.time.AbsoluteDate;
 
 /**
  * A jettisoned debris' fall re-expressed in the Earth's rotating (drawn-globe) frame, so the curve
- * sticks to the ground and its last point is the impact lat/lon (PHY-5 / L7, spec {@code
- * docs/multi-objets/09-conception-L7.md} §D3).
+ * sticks to the ground and its last point is the impact lat/lon.
  *
  * <p>Each sample's inertial position {@code D(t)} becomes {@code Q(t)⁻¹ · D(t)}, where {@code Q(t)}
  * is the globe's <em>drawn</em> rotation at that instant ({@link

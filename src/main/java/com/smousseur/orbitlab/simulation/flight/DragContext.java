@@ -7,16 +7,16 @@ import java.util.Objects;
  * The aerodynamic half of a {@link FlightContext}: what the vehicle presents to the flow, and which
  * atmosphere it is presented to.
  *
- * <p>Introduced by PHY-1 / L1 (spec {@code docs/atmosphere/04-conception-L1.md} §2). Together with
- * {@link com.smousseur.orbitlab.simulation.gravity.GravitationalContext} it is exactly the force
- * list of a propagator: this pair is what Orekit's {@code DragForce(Atmosphere, DragSensitive)}
- * asks for, in the same two parts.
+ * <p>Introduced by PHY-1 / L1. Together with {@link
+ * com.smousseur.orbitlab.simulation.gravity.GravitationalContext} it is exactly the force list of a
+ * propagator: this pair is what Orekit's {@code DragForce(Atmosphere, DragSensitive)} asks for, in
+ * the same two parts.
  *
  * <p><b>It holds the model, not a built {@code Atmosphere}</b>, and that is what makes it portable
  * across a sphere-of-influence boundary: an atmosphere is built against a body shape, so an
  * already-built one would be a <em>terrestrial</em> atmosphere and applying it around the Moon
  * would be silently wrong. The resolution happens at propagator construction, where the central
- * body is known (spec §1.2).
+ * body is known.
  *
  * @param aero the frontal area and drag coefficient of the hardware actually flying
  * @param model the atmosphere the drag is computed against; never {@link AtmosphereModel#NONE}

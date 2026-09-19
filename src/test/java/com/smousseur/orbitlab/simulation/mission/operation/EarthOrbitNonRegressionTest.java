@@ -32,15 +32,13 @@ import org.orekit.time.AbsoluteDate;
 import org.orekit.time.TimeScalesFactory;
 
 /**
- * <b>MIS-7 / P1, test T2 — the non-regression gate</b> (spec {@code
- * docs/earth-orbit/01-mission-terre-parametrable.md} §9.2). It must stay green at every step of P1.
+ * <b>MIS-7 / P1, test T2 — the non-regression gate</b>. It must stay green at every step of P1.
  *
  * <p><b>What it guards.</b> MIS-7 renames {@code LEOMission} to {@link EarthOrbitMission}, threads
  * a {@link LaunchPlane} through the ascent and adds a commanded-plane attitude that can steer the
  * orbital plane. The Falcon Heavy and Ariane 64 calibrations rest on measured due-east
  * trajectories, so a due-east target must keep flying exactly what it flew before — the commanded
- * attitude being opt-in is what makes that possible (spec §4.2), and this fixture is what keeps the
- * door shut.
+ * attitude being opt-in is what makes that possible, and this fixture is what keeps the door shut.
  *
  * <p><b>The risk it exists for</b> is spec §10's "calibration trap": the temptation, while
  * refactoring, to unify two paths that merely look alike. The two horizontal targets are

@@ -25,8 +25,7 @@ import org.orekit.utils.PVCoordinates;
  * PHY-5 / L0 measurement §5.2 — the debris-reentry integration-step sweep. NOT a gate: it changes
  * no {@code src/main} and asserts nothing. It answers the L1 go/no-go — does a jettisoned launcher
  * piece cost so much to propagate under drag that K debris (K ≤ 6) cannot be replayed for display,
- * and does a coarse integrator tolerance tame it ({@code PHY-1 / L0} §2.3 measured 452 → 982 497
- * steps between 200 and 130 km for a low-ballistic-coefficient descent)?
+ * and does a coarse integrator tolerance tame it?
  *
  * <p>Run with {@code -Dorbitlab.probe=true --tests '*Phy5ReentryStepSweepTest*'}. The states are
  * <b>representative</b>, not extracted from a live optimize — the step regime is a property of the

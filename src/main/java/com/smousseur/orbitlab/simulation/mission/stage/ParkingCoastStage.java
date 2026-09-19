@@ -19,21 +19,20 @@ import org.orekit.time.AbsoluteDate;
 
 /**
  * The parking coast of a lunar mission: from insertion round to the point the translunar injection
- * has to <em>ignite</em> at, and no further (MIS-4 / L4 §3.2, MIS-4 / L6 §5.1).
+ * has to <em>ignite</em> at, and no further.
  *
  * <p><b>It stops at ignition and not at the injection point</b>, which is what centres the finite
- * burn (spec L6 §2, decision α). Centring requires the burn duration to be known before igniting,
- * so this coast reads the propulsion of the active stage and subtracts {@link
- * TranslunarInjectionPlan#ignitionLead} from the injection date. The consequence to hold: {@code
- * configuredEndDate} means "ignition" here, half a burn short of the geometric departure point.
+ * burn. Centring requires the burn duration to be known before igniting, so this coast reads the
+ * propulsion of the active stage and subtracts {@link TranslunarInjectionPlan#ignitionLead} from
+ * the injection date. The consequence to hold: {@code configuredEndDate} means "ignition" here,
+ * half a burn short of the geometric departure point.
  *
  * <p><b>Its duration cannot be a constructor argument</b>, which is what closes the reuse of {@link
  * CoastingStage#CoastingStage(String, Double)} — that {@code maxTime} is final and read at {@code
  * configure}. Where the injection point lies depends on the launch date and on the ascent actually
  * flown, so it is only knowable at {@link #enter}. {@link TranslunarInjectionPlan#departureFrom}
  * and {@code ignitionLead} are both in closed form — no propagation, the lunar ephemeris alone — so
- * resolving them once per pass costs nothing (spec {@code docs/lunar-flyby/03-conception-L1.md}
- * §2.2).
+ * resolving them once per pass costs nothing.
  *
  * <p><b>It overrides {@code propagateStandalone}, and that is the whole reason the class
  * exists.</b> A plain coast does not, so in {@code MissionOptimizer}'s stage walk it collapses to
@@ -41,8 +40,7 @@ import org.orekit.time.AbsoluteDate;
  * — wrong phase, wrong date, and nothing raised. That trap is what L1 §6 left to this lot.
  * Repairing {@link CoastingStage} itself would have been the tempting shortcut and is refused:
  * every coast of every mission in the repository collapses the same way, GEO carries one mid-chain,
- * and moving them all would move the ascent references MIS-7 re-recorded (spec {@code
- * docs/lunar-flyby/06-conception-L4.md} §1.1).
+ * and moving them all would move the ascent references MIS-7 re-recorded.
  */
 public class ParkingCoastStage extends CoastingStage {
   private static final Logger logger = LogManager.getLogger(ParkingCoastStage.class);

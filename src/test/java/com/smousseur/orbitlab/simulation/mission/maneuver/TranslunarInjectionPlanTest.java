@@ -38,18 +38,18 @@ import org.orekit.utils.TimeStampedPVCoordinates;
  * it, and the Lambert seed. What the flight costs is in {@code LunarFlybyFlightTest}; this class
  * runs in milliseconds and is what says <em>why</em> the flight can work before anything is flown.
  *
- * <p><b>MIS-4 / L1 §4.1 extends it rather than opening a class of its own</b> ({@code
- * docs/lunar-flyby/03-conception-L1.md}): the departure from an <em>imposed</em> plane is the same
- * kind of statement — closed form, milliseconds — about the same geometry. The five tests above the
- * L1 block are the ones the lot must leave untouched, and they are.
+ * <p><b>MIS-4 / L1 §4.1 extends it rather than opening a class of its own</b>: the departure from
+ * an <em>imposed</em> plane is the same kind of statement — closed form, milliseconds — about the
+ * same geometry. The five tests above the L1 block are the ones the lot must leave untouched, and
+ * they are.
  */
 class TranslunarInjectionPlanTest {
   private static final Logger logger = LogManager.getLogger(TranslunarInjectionPlanTest.class);
 
   /**
    * The parking planes L1 §4.1 imposes: the three launch-site latitudes the lunar chain can fly
-   * from (L0 §5), each with a right ascension of the ascending node and an argument of latitude of
-   * its own, plus one deliberately arbitrary plane that answers to no site at all.
+   * from, each with a right ascension of the ascending node and an argument of latitude of its own,
+   * plus one deliberately arbitrary plane that answers to no site at all.
    */
   private static final List<ImposedPlane> IMPOSED_PLANES =
       List.of(
@@ -162,7 +162,7 @@ class TranslunarInjectionPlanTest {
     // The reference is derived here and not recorded from a previous run: vis-viva on an ellipse
     // from
     // the parking radius to the Moon's distance. Asserting against the implementation's own output
-    // would only prove it reproduces yesterday (the discipline L4 §7.2 set).
+    // would only prove it reproduces yesterday.
     double mu = Constants.WGS84_EARTH_MU;
     double rp = parking.getPosition().getNorm();
     double ra = moonPosition(arrival).getNorm();

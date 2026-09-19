@@ -37,7 +37,7 @@ public final class MissionComposer {
 
   /**
    * Highest target apogee (meters) the direct chain is composed for — the conventional ceiling of
-   * low Earth orbit (spec {@code docs/earth-orbit/01-mission-terre-parametrable.md} §6.1).
+   * low Earth orbit.
    *
    * <p><b>Why a ceiling and not a coast.</b> The direct chain has the gravity turn place the apogee
    * at the target itself, and then one transfer burn shape the orbit there. That is an <em>ascent
@@ -61,7 +61,7 @@ public final class MissionComposer {
 
   /**
    * Whether a target apogee is beyond the ascent's reach and must therefore be flown through a
-   * parking orbit (spec §6.1, row 1).
+   * parking orbit.
    *
    * <p>Exposed so {@code MissionFactory} sizes the propellant for the chain that will actually be
    * composed. Those two decisions have to agree: a mission budgeted for one direct ascent and then
@@ -102,13 +102,12 @@ public final class MissionComposer {
           case MissionSpec.Lunar lunar -> composeLunar(lunar);
           case MissionSpec.LunarOrbit lunarOrbit -> composeLunarOrbit(lunarOrbit);
         };
-    // This composer is the ONLY writer of a mission's restitution horizon (spec
-    // docs/mission-horizon/01-horizon-explicite.md). Carrying it on the spec and applying it here,
+    // This composer is the ONLY writer of a mission's restitution horizon. Carrying it on the spec
+    // and applying it here,
     // rather than threading it through the constructor chains, is what makes it survive a mode
     // toggle or a wizard edit: both replace the Mission, neither replaces the spec.
     mission.setHorizon(spec.horizon());
-    // Same rule, same single writer, for the atmosphere choice (spec
-    // docs/atmosphere/04-conception-L1.md section 3.2).
+    // Same rule, same single writer, for the atmosphere choice.
     mission.setAtmosphere(spec.atmosphere());
     return mission;
   }
@@ -209,7 +208,7 @@ public final class MissionComposer {
     StageModel upperStage = spec.configuration().launcher().stages().getLast();
     boolean stageHoldsTheCoast = upperStage.capabilities().canCoastFor(transferCoast);
 
-    // Asked as a quantity and not as a presence (spec docs/etagement/01-decoupage.md §3.7). While
+    // Asked as a quantity and not as a presence. While
     // GEO_SAT was the only propelled payload, "does it carry a tank" and "can it fly the apogee
     // burn" were the same question; a station-keeping thruster answers yes to the first and no to
     // the second, and would otherwise have been signed up for a 1 700 m/s circularization.
@@ -254,8 +253,8 @@ public final class MissionComposer {
   }
 
   /**
-   * The lunar chain (MIS-4 / L4 §3.1): ascent, parking insertion, parking coast to the injection
-   * point, translunar injection, translunar coast.
+   * The lunar chain: ascent, parking insertion, parking coast to the injection point, translunar
+   * injection, translunar coast.
    *
    * <p>The optimization mode is not an argument, for the same reason {@link #composeGeo} gives: no
    * stage of the lunar half of the chain has a CMA-ES counterpart, so every mode yields the same
@@ -275,10 +274,9 @@ public final class MissionComposer {
   }
 
   /**
-   * The lunar orbit chain (MIS-5 / L5, spec {@code docs/lunar-orbit/07-conception-L5.md} §3): the
-   * lunar chain above, plus an upper-stage jettison, a translunar coast that <em>ends</em> at the
-   * sphere of influence, a selenocentric approach, the insertion burn, and a terminal coast flown
-   * around the Moon.
+   * The lunar orbit chain: the lunar chain above, plus an upper-stage jettison, a translunar coast
+   * that <em>ends</em> at the sphere of influence, a selenocentric approach, the insertion burn,
+   * and a terminal coast flown around the Moon.
    *
    * <p>The optimization mode is not an argument, for the reason {@link #composeLunar} gives: no
    * stage of the lunar half of the chain has a CMA-ES counterpart. What this mission optimizes is

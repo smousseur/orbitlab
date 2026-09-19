@@ -24,8 +24,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 /**
- * Owner of the scenario browser, and the only place a session is swapped (spec {@code
- * docs/scenario/01-persistance-missions.md} §6.3).
+ * Owner of the scenario browser, and the only place a session is swapped.
  *
  * <p>It knows nothing of the menu that opens it and the menu knows nothing of it: the two speak
  * through {@link EventBus} and {@link ApplicationContext}, and the project rule against {@code

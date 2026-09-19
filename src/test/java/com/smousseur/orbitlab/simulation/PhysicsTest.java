@@ -105,7 +105,7 @@ class PhysicsTest {
   }
 
   // The general derivation asin(cos i / cos φ) — the site-latitude case, the pole guard and the
-  // branch choice — now belongs to LaunchPlane, and is covered by LaunchPlaneTest (MIS-7 §3.1).
+  // branch choice — now belongs to LaunchPlane, and is covered by LaunchPlaneTest.
 
   // --- computeRadialVelocity ---
 

@@ -11,11 +11,10 @@ import java.util.Optional;
 /**
  * Turns one shell of a model independently of the model it belongs to.
  *
- * <p>Venus is the case that calls for it (L4 of {@code docs/orientation-planetes/01-decoupage.md}):
- * its asset holds a surface globe and a separate atmosphere shell, and the two do not turn at the
- * same rate — the cloud deck laps the ground every four days while the ground itself takes eight
- * months. The renderer applies one rotation to the whole model, so the difference has to be applied
- * inside it.
+ * <p>Venus is the case that calls for it: its asset holds a surface globe and a separate atmosphere
+ * shell, and the two do not turn at the same rate — the cloud deck laps the ground every four days
+ * while the ground itself takes eight months. The renderer applies one rotation to the whole model,
+ * so the difference has to be applied inside it.
  *
  * <p><b>Why a pivot rather than a rotation on the shell's own node.</b> The shell node already
  * carries the rotation the exporter gave it, which is not ours to overwrite. Splicing an

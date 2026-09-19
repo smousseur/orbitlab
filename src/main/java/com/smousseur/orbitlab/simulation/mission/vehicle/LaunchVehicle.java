@@ -11,8 +11,7 @@ import com.smousseur.orbitlab.simulation.mission.vehicle.model.AerodynamicProper
  * @param propellantLoad the propellant mass actually loaded (kg)
  * @param propulsion the propulsion system of this stage
  * @param aerodynamics the frontal area and drag coefficient of the stage, or {@code null} when it
- *     declares none — a stage that declares none does not drag (spec {@code
- *     docs/atmosphere/04-conception-L1.md} §3.1)
+ *     declares none — a stage that declares none does not drag
  */
 public record LaunchVehicle(
     double dryMass,

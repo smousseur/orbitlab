@@ -20,11 +20,11 @@ import org.orekit.utils.Constants;
 import org.orekit.utils.PVCoordinates;
 
 /**
- * Regression tests for the late-ignition crash (spec 06 I6): a burn igniting long after the
- * propagation start restarts the integrator with a coast-sized step; if that trial step can drive
- * the mass negative, Orekit throws during the trial evaluation — before step-size control or any
- * event detector (burn cutoff, depletion guard) can react. The propagator factories therefore cap
- * the max step below mass(ignition)/massFlow of the strongest mid-propagation burn.
+ * Regression tests for the late-ignition crash: a burn igniting long after the propagation start
+ * restarts the integrator with a coast-sized step; if that trial step can drive the mass negative,
+ * Orekit throws during the trial evaluation — before step-size control or any event detector (burn
+ * cutoff, depletion guard) can react. The propagator factories therefore cap the max step below
+ * mass(ignition)/massFlow of the strongest mid-propagation burn.
  */
 class LateIgnitionReproTest {
 

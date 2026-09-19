@@ -46,8 +46,7 @@ public final class SceneGraph {
   private final Node nearBodiesNode = new Node("nearBodiesNode");
 
   /**
-   * The Earth's rotating frame in the near viewport (PHY-5 / L7, spec {@code
-   * docs/multi-objets/09-conception-L7.md} §D5). A node at the geocentre (like the near globe,
+   * The Earth's rotating frame in the near viewport. A node at the geocentre (like the near globe,
    * which is parked there) carrying the globe's <em>drawn</em> rotation, kept in step by {@link
    * com.smousseur.orbitlab.states.scene.PlanetPoseAppState}. Ground-fixed geometry hung under it —
    * a debris ground track, its impact marker — rides the turning globe and stays on the right

@@ -33,7 +33,7 @@ import org.orekit.utils.PVCoordinates;
 
 /**
  * <b>MIS-7 / P1.d, test T8</b> — a medium Earth orbit (Galileo/GPS altitude, 20 200 km, i = 55°)
- * flown on Ariane 64 (spec {@code docs/earth-orbit/01-mission-terre-parametrable.md} §6 and §9.2).
+ * flown on Ariane 64.
  *
  * <p><b>What makes a MEO different from a taller LEO.</b> Nothing about the target says so — it is
  * still a circular orbit with an inclination. What says so is the <em>vehicle</em>: reaching it
@@ -148,7 +148,7 @@ class MeoMissionTest extends AbstractTrajectoryOptimizerTest {
     double azimuth = plane.launchAzimuth(FastMath.toRadians(LAT_DEG));
 
     // The plane change charged at apogee is zero: the ascent already flew into the target plane
-    // (MIS-7 §4), so only the residual is left, and the plane trim takes that.
+    // , so only the residual is left, and the plane trim takes that.
     PropellantBudget.SizedLoads loads =
         PropellantBudget.loadsForHighOrbit(
             Launchers.ARIANE_64,

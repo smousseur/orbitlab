@@ -3,8 +3,7 @@ package com.smousseur.orbitlab.engine.scene.mesh;
 import com.jme3.math.Vector3f;
 
 /**
- * The plane a flat annulus lies in — a planetary ring system, as a model carries it (see {@code
- * docs/orientation-planetes/01-decoupage.md} §2.2).
+ * The plane a flat annulus lies in — a planetary ring system, as a model carries it.
  *
  * <p><b>A ring has one degree of freedom fewer than a globe, and it is the interesting one.</b> It
  * carries no longitude: a ring is banded radially and uniform all the way round, so no rotation

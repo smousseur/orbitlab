@@ -19,9 +19,8 @@ import org.orekit.propagation.numerical.NumericalPropagator;
 import org.orekit.time.AbsoluteDate;
 
 /**
- * The lunar orbit insertion burn (MIS-5 / L4, spec {@code docs/lunar-orbit/06-conception-L4.md} §4)
- * — a constant-thrust retrograde burn lit half a burn short of the perilune, calibrated on the
- * orbit it actually delivers.
+ * The lunar orbit insertion burn — a constant-thrust retrograde burn lit half a burn short of the
+ * perilune, calibrated on the orbit it actually delivers.
  *
  * <p>Twin of {@link TLIBurnStage}: {@code enter} plans and moves no mass, {@code configure} flies
  * the burn, {@code propagateStandalone} re-plans and flies it on its own propagator. {@code
@@ -85,7 +84,7 @@ public class LunarInsertionStage extends MissionStage {
     ActiveStageInfo active = activeStage(state, mission);
     // The loud guard, unlike the sibling analytic stages: LunarInsertionPlan.requirePropellantFor
     // refuses a burn the stage cannot pay for, so a propellant-capped one never reaches this
-    // propagator and the floor is unreachable by construction (docs/bugs.md BUG-15).
+    // propagator and the floor is unreachable by construction.
     DepletionGuard.arm(propagator, active.depletionFloor(), getName());
     LunarInsertionPlan.addBurn(
         propagator, state, burn.direction(), burn.duration(), active.propulsion());

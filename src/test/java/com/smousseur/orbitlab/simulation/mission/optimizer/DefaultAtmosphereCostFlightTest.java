@@ -35,11 +35,10 @@ import org.orekit.utils.PVCoordinates;
 /**
  * PHY-2 / L5 §3.3 — the measurement the bascule was assumed against, made runnable. Flipping the
  * default to drag-on makes every production computation pay the ascent's drag-on cost that {@code
- * L1} measured at ×7.5 on the gravity turn ({@code docs/atmosphere/08-conception-L1-PHY-2.md} §6).
- * This runs the <b>real production computation</b> — a {@link MissionPlanOptimizer} on a Falcon
- * Heavy LEO-400 built the way the wizard builds it, which for an {@link MissionSpec.EarthOrbit}
- * routes to the two-pass {@code MeasuredLoadPlanner} of {@code L4} ("un dimensionnement + vol
- * planner", §3.3) — drag-on against the same mission opted out, and logs the ratio.
+ * L1} measured at ×7.5 on the gravity turn. This runs the <b>real production computation</b> — a
+ * {@link MissionPlanOptimizer} on a Falcon Heavy LEO-400 built the way the wizard builds it, which
+ * for an {@link MissionSpec.EarthOrbit} routes to the two-pass {@code MeasuredLoadPlanner} of
+ * {@code L4} — drag-on against the same mission opted out, and logs the ratio.
  *
  * <p><b>It goes through {@link MissionPlanOptimizer}, not a planner directly</b>, precisely so it
  * exercises the LEO production path: the sizing sees the flown Δv, drag included. Driving {@code
@@ -49,11 +48,9 @@ import org.orekit.utils.PVCoordinates;
  *
  * <p><b>Termination is the only assertion, and that is deliberate</b> — the same stance as its L1
  * sibling {@code AscentDragTerminationTest}. The number is logged, not asserted: it is the
- * escalation trigger of §3.3 (if the per-computation cost is intolerable, the "cheap atmosphere for
- * the optimizer" lever of {@code L1} §6 is opened as its own lot; if it is a tolerable one-shot,
- * the bascule stands as is), an input to a decision, not a property of L5. A drag-on run that fails
- * to <em>close</em> is itself the finding — it fails here with the propagation's own reason, which
- * is the honest outcome to surface rather than to swallow.
+ * escalation trigger of §3.3, an input to a decision, not a property of L5. A drag-on run that
+ * fails to <em>close</em> is itself the finding — it fails here with the propagation's own reason,
+ * which is the honest outcome to surface rather than to swallow.
  */
 @EnabledIfSystemProperty(named = "orbitlab.slowTests", matches = "true")
 class DefaultAtmosphereCostFlightTest extends AbstractTrajectoryOptimizerTest {

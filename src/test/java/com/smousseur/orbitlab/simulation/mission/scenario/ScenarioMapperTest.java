@@ -24,8 +24,7 @@ import org.junit.jupiter.api.Test;
  *
  * <p>The absences are the point: an uncommanded inclination, an unwaited node and an "auto" horizon
  * must come back <b>absent</b>, not written at whatever value they were derived to be. That is what
- * keeps a reopened scenario flying the trajectory it flew (spec {@code
- * docs/scenario/01-persistance-missions.md} §3.1, rule 1).
+ * keeps a reopened scenario flying the trajectory it flew.
  */
 class ScenarioMapperTest {
 
@@ -197,7 +196,7 @@ class ScenarioMapperTest {
     assertThrows(OrbitlabException.class, () -> ScenarioMapper.fromHex("blue"));
   }
 
-  /** A value that is present but unreadable is refused, never quietly dropped (§7). */
+  /** A value that is present but unreadable is refused, never quietly dropped. */
   @Test
   void unreadableValue_isRefused() {
     Map<String, Object> values = leoValues();

@@ -18,8 +18,7 @@ import java.util.Objects;
  * that decides what the breadcrumb shows — mode and body — is two field reads a frame. The mission
  * being followed is deliberately <em>not</em> part of the key: it changes nothing on screen, since
  * missions have no segment, and the mode change that comes with it is enough to catch the one thing
- * that does change, whether the last segment is clickable ({@code docs/navigation/01-breadcrumb.md}
- * §4.5).
+ * that does change, whether the last segment is clickable.
  */
 public final class BreadcrumbWidgetAppState extends BaseAppState {
 

@@ -25,9 +25,8 @@ import org.orekit.time.AbsoluteDate;
 import org.orekit.utils.Constants;
 
 /**
- * The lunar orbit insertion (MIS-5 / L4, spec {@code docs/lunar-orbit/06-conception-L4.md}) — where
- * a selenocentric approach reaches its perilune, how long before that the retrograde burn has to be
- * lit, and the burn that circularises there.
+ * The lunar orbit insertion — where a selenocentric approach reaches its perilune, how long before
+ * that the retrograde burn has to be lit, and the burn that circularises there.
  *
  * <p><b>Two stages call it and neither knows the other</b>, exactly as {@code ParkingCoastStage}
  * and {@code TLIBurnStage} both call {@link TranslunarInjectionPlan}. The property that shape
@@ -46,7 +45,7 @@ public final class LunarInsertionPlan {
    * Max check interval of the perilune detector (s). Explicit, because the constructor that takes
    * an orbit cannot serve a hyperbola: it reads {@code getKeplerianPeriod()}, which is {@code
    * Infinity} when {@code a < 0}, and derives {@code maxCheck = Infinity / 3} and {@code threshold
-   * = 1e-13 * Infinity} — both infinite (spec §1.2 pt 2).
+   * = 1e-13 * Infinity} — both infinite.
    */
   private static final double APSIDE_MAX_CHECK_SECONDS = 60.0;
 
@@ -110,14 +109,14 @@ public final class LunarInsertionPlan {
   /**
    * Flies the approach and reads the perilune it actually reaches.
    *
-   * <p><b>The perilune is detected, not computed, and that is the finding the lot is built on</b>
-   * (spec §1.2 pt 1). Read off the hyperbolic anomaly of the state at the sphere, the time to
-   * periapsis is wrong by −402 to +723 s — one to four half-burns — and the Keplerian perilune
-   * altitude is wrong by hundreds of kilometres, to the point of predicting 100 km for a trajectory
-   * that impacts. The error is the Earth's tide integrated over the approach: it decays smoothly
-   * with the starting radius (+38.8 s from 30 000 km, +0.7 s from 10 000 km, +0.0 s from 2 000 km),
-   * which is what tells it apart from a fixture artefact. At the sphere the tide and the Moon's own
-   * pull are of the same order — that is what a sphere of influence <em>is</em>.
+   * <p><b>The perilune is detected, not computed, and that is the finding the lot is built on</b> .
+   * Read off the hyperbolic anomaly of the state at the sphere, the time to periapsis is wrong by
+   * −402 to +723 s — one to four half-burns — and the Keplerian perilune altitude is wrong by
+   * hundreds of kilometres, to the point of predicting 100 km for a trajectory that impacts. The
+   * error is the Earth's tide integrated over the approach: it decays smoothly with the starting
+   * radius (+38.8 s from 30 000 km, +0.7 s from 10 000 km, +0.0 s from 2 000 km), which is what
+   * tells it apart from a fixture artefact. At the sphere the tide and the Moon's own pull are of
+   * the same order — that is what a sphere of influence <em>is</em>.
    *
    * @param selenocentric the approach state, in the lunar frame
    * @param context the environment the approach is flown in
@@ -183,9 +182,9 @@ public final class LunarInsertionPlan {
    * form, no propagation</b>, the shape of {@link TranslunarInjectionPlan#ignitionLead}.
    *
    * <p><b>The closed form is right about the lead and wrong about the date</b>, and the same
-   * measurement shows both (spec §2.3). At 175 s of range the vehicle is some 430 km from the
-   * perilune, where the tide is nil: measured, the perilune re-read from the ignition state falls
-   * within 1e-4 s of what this lead announced.
+   * measurement shows both. At 175 s of range the vehicle is some 430 km from the perilune, where
+   * the tide is nil: measured, the perilune re-read from the ignition state falls within 1e-4 s of
+   * what this lead announced.
    *
    * @param arrival the arrival {@link #arrivalFrom} resolved
    * @param active the vehicle stage that will burn the insertion
@@ -212,12 +211,11 @@ public final class LunarInsertionPlan {
    * aimed circular speed, and ζ, a rotation of the thrust <em>within the plane</em>, about {@code r
    * × v}.
    *
-   * <p><b>It is a Newton and not a secant, because both slopes are closed form</b> (spec §1.2 pt
-   * 4): {@code ∂a/∂β = −2r} and {@code ∂v_r/∂ζ = +Δv}, measured at 99.65 % and 99.41 % of the flown
-   * values. The Jacobian is treated as diagonal: {@code ∂a/∂ζ} is 8.3 km/rad, negligible, and
-   * {@code ∂v_r/∂β} is a 14 % contraction the next iteration absorbs. Measured across three
-   * orientations and three altitudes: three evaluations, an achieved band of 0.30 km and {@code e ≤
-   * 8.2e-5}.
+   * <p><b>It is a Newton and not a secant, because both slopes are closed form</b>: {@code ∂a/∂β =
+   * −2r} and {@code ∂v_r/∂ζ = +Δv}, measured at 99.65 % and 99.41 % of the flown values. The
+   * Jacobian is treated as diagonal: {@code ∂a/∂ζ} is 8.3 km/rad, negligible, and {@code ∂v_r/∂β}
+   * is a 14 % contraction the next iteration absorbs. Measured across three orientations and three
+   * altitudes: three evaluations, an achieved band of 0.30 km and {@code e ≤ 8.2e-5}.
    *
    * <p><b>Not the far apside</b>, which is what {@code AnalyticApogeeCircularizationStage}
    * converges — that stage burns at apogee, where the far apside is the free one. At a circular

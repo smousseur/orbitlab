@@ -9,9 +9,8 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 /**
- * The parallel block as {@link VehicleStack} resolves it (spec {@code
- * docs/etagement/03-conception-L1.md} §3.1). Figures are synthetic and round: boosters and core
- * share one Isp, the core flows a fifth of the block, and every expected mass is exact.
+ * The parallel block as {@link VehicleStack} resolves it. Figures are synthetic and round: boosters
+ * and core share one Isp, the core flows a fifth of the block, and every expected mass is exact.
  *
  * <pre>
  *   boosters ×2   dry 2 × 10 000, capacity 2 × 200 000, thrust 2 × 1 000 000, Isp 300
@@ -60,7 +59,7 @@ class VehicleStackParallelBlockTest {
   void split_theBlockStaysActiveBelowTheReferenceMassOfTheStackAboveIt() {
     // The old threshold, mass of core + upper + payload at their reference loads. The block burns
     // straight through it: resolving on it would hand over to the core with the boosters still
-    // firing (spec §2.2).
+    // firing.
     ActiveStageInfo block = SPLIT.resolveActiveStage(250_000);
 
     assertEquals(0, block.stageIndex());

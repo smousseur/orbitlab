@@ -13,8 +13,7 @@ import com.smousseur.orbitlab.ui.form.FormStyles;
  * Lemur selectors of the breadcrumb band, declared once in the {@code form} style.
  *
  * <p>The widget builds plain {@code Button} and {@code Label} elements carrying the element ids
- * below and touches no skin attribute at construction — the rule that came out of {@code UI-4} (see
- * {@code docs/menu/01-menu-applicatif.md} §6.1, and {@code docs/navigation/01-breadcrumb.md} §3):
+ * below and touches no skin attribute at construction — the rule that came out of {@code UI-4}:
  * what a widget of the form style needs beyond that style is a selector more, never an override.
  *
  * <p>Element ids are hierarchical and read right to left, so each of these inherits the {@code
@@ -60,8 +59,8 @@ public final class BreadcrumbStyles {
    * over a scene that is nearly black in places and washed out in others, and the segments have to
    * stay readable in both without the strip itself reading as a title bar.
    *
-   * <p>This is the one value the spec left to the mock-up ({@code docs/navigation/01-breadcrumb.md}
-   * §5.5). It is a single line here precisely so that settling it later costs nothing.
+   * <p>This is the one value the spec left to the mock-up. It is a single line here precisely so
+   * that settling it later costs nothing.
    */
   private static final ColorRGBA BAND_TINT = new ColorRGBA(0.024f, 0.055f, 0.094f, 0.1f);
 

@@ -10,11 +10,11 @@ import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.junit.jupiter.api.Test;
 
 /**
- * PHY-5 / L7, {@code docs/bugs.md} BUG-28 — a debris that has impacted must keep its whole pose on
- * the <em>turning</em> globe (with the ground track's impact marker), not at the frozen inertial
- * pose of the impact instant, which the rotating Earth drifts out from under. Tests the pure frame
- * algebra of {@link MissionRenderer#rotateWithGlobe} on both a position and a direction; the
- * on-screen placement itself is judged by eye (L7 §5).
+ * PHY-5 / L7, BUG-28 — a debris that has impacted must keep its whole pose on the <em>turning</em>
+ * globe (with the ground track's impact marker), not at the frozen inertial pose of the impact
+ * instant, which the rotating Earth drifts out from under. Tests the pure frame algebra of {@link
+ * MissionRenderer#rotateWithGlobe} on both a position and a direction; the on-screen placement
+ * itself is judged by eye.
  */
 class MissionRendererDebrisIconTest {
 

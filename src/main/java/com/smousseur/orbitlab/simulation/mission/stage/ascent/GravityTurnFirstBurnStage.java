@@ -33,9 +33,8 @@ import org.orekit.time.AbsoluteDate;
  *
  * <p><b>Why it owns the optimization.</b> The turn is optimized as a whole — {@code transitionTime}
  * is the MECO of the <em>second</em> burn — so the problem must fly all three phases. It does so
- * through the same {@code StageChainRunner} the ephemeris pass uses (spec {@code
- * docs/mission-stages/01-separations-implicites.md} §5.4), which is what keeps the two passes on
- * the same sequence of integrator restarts. {@link #advancesByReplay()} then tells {@code
+ * through the same {@code StageChainRunner} the ephemeris pass uses, which is what keeps the two
+ * passes on the same sequence of integrator restarts. {@link #advancesByReplay()} then tells {@code
  * MissionOptimizer} not to advance the mission from {@code problem.propagate()}, since the loop
  * itself walks the two phases that follow.
  */
@@ -47,17 +46,17 @@ public class GravityTurnFirstBurnStage extends GravityTurnBurnStage
   /**
    * The optimization key of the whole gravity turn. Deliberately <b>not</b> the phase name: the
    * result map is keyed by string, and keeping the historical key leaves every result already
-   * stored (including in a running session) valid across the split (spec §5.2).
+   * stored (including in a running session) valid across the split.
    */
   public static final String OPTIMIZATION_KEY = "Gravity turn";
 
   /**
    * Slack on the staging-invariant check. With a commandable core, {@link
    * AscentPlan#stagingCompleteTime()} equals the transition time by construction in the
-   * early-cutoff region (spec {@code docs/atmosphere/10-conception-L3-PHY-2.md} §3.1), up to a
-   * floating-point residue of a few ulp from the subtraction that produces the capped core burn.
-   * This absorbs that residue so a legitimate early-cutoff schedule is not rejected; a MECO so
-   * early the core never fires still falls short by a whole interstage coast and is caught.
+   * early-cutoff region, up to a floating-point residue of a few ulp from the subtraction that
+   * produces the capped core burn. This absorbs that residue so a legitimate early-cutoff schedule
+   * is not rejected; a MECO so early the core never fires still falls short by a whole interstage
+   * coast and is caught.
    */
   private static final double STAGING_INVARIANT_SLACK = 1.0e-6;
 
@@ -124,7 +123,7 @@ public class GravityTurnFirstBurnStage extends GravityTurnBurnStage
 
   @Override
   public SpacecraftState enter(SpacecraftState previousState, Mission mission) {
-    // The pitch kick is applied in configure(), not here (bilan 11 §3.9): the ephemeris generator
+    // The pitch kick is applied in configure(), not here: the ephemeris generator
     // may override enter()'s result with the entry state saved during optimization, so a kick
     // applied here could be discarded. Entering is therefore a no-op.
     return previousState;
@@ -143,7 +142,7 @@ public class GravityTurnFirstBurnStage extends GravityTurnBurnStage
     SpacecraftState entryState = propagator.getInitialState();
     GravityTurnManeuver maneuver = createManeuver(mission, entryState);
 
-    // Apply the pitch kick here (bilan 11 §3.9): the generator replays the turn from the pre-kick
+    // Apply the pitch kick here: the generator replays the turn from the pre-kick
     // entry state it saved, so without this the ascent would fly from an un-kicked velocity — 3°
     // off on Falcon Heavy. The optimize pass runs this very phase, so both passes start
     // identically.
@@ -165,7 +164,7 @@ public class GravityTurnFirstBurnStage extends GravityTurnBurnStage
 
   @Override
   protected void configureBurn(NumericalPropagator propagator, AscentPlan plan) {
-    // Flame-out semantics (spec 06 I4b): the first stage thrusts until its own depletion floor
+    // Flame-out semantics: the first stage thrusts until its own depletion floor
     // rather than for a fixed window, so a varying propellant load needs no window recomputation.
     // The analytic burn1Duration stays the schedule prediction the jettison date hangs off.
     PropulsionSystem propulsion = plan.firstStage().propulsion();
@@ -232,8 +231,8 @@ public class GravityTurnFirstBurnStage extends GravityTurnBurnStage
    *
    * <p><b>What it no longer guards.</b> While the jettison was a {@code DateDetector} inside the
    * ascent, such a schedule ended the propagation before it fired and the first stage stayed
-   * attached for the rest of the mission (bilan 10 §5.3). That cannot happen now: the jettison is a
-   * phase, so it takes place whatever the MECO.
+   * attached for the rest of the mission. That cannot happen now: the jettison is a phase, so it
+   * takes place whatever the MECO.
    *
    * <p><b>What it guards instead.</b> An assertion that should never fire. The optimizer's staging
    * penalty keeps retained solutions above this floor, so reaching here means a schedule arrived
@@ -246,8 +245,7 @@ public class GravityTurnFirstBurnStage extends GravityTurnBurnStage
    * <p><b>PHY-2/L3: the floor is no longer staging completion.</b> With a commandable core, a MECO
    * between {@link
    * com.smousseur.orbitlab.simulation.mission.maneuver.GravityTurnManeuver#getStagingFloor()} and
-   * staging completion commands an early core cutoff (spec {@code
-   * docs/atmosphere/10-conception-L3-PHY-2.md} §3.1), which is legitimate — and the capped core
+   * staging completion commands an early core cutoff, which is legitimate — and the capped core
    * makes {@link AscentPlan#stagingCompleteTime()} equal the transition time there, so this check
    * passes it within {@link #STAGING_INVARIANT_SLACK}. Only a MECO so early the core never fires
    * still trips it.

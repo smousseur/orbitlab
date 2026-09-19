@@ -23,7 +23,7 @@
  * is that the offspring of a generation may be evaluated on a shared ForkJoinPool instead of
  * sequentially; evaluation counting stays single-threaded and the retained best is reduced in
  * index order, so the optimisation is bit-identical to the sequential upstream. See
- * evaluateGeneration and FitnessFunction.valueNoCount, and docs/optimization/04-conception-L1.md.
+ * evaluateGeneration and FitnessFunction.valueNoCount.
  */
 
 package com.smousseur.orbitlab.simulation.mission.optimizer;

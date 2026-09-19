@@ -124,7 +124,7 @@ class LunarOrbitMissionTest {
     assertEquals("Coasting", terminal.getName());
 
     // Without this declaration StageLegRunner would convert the arrival back into GCRF, and the
-    // mission would be measured against the Earth from 380 000 km away (§3.1).
+    // mission would be measured against the Earth from 380 000 km away.
     assertEquals(
         GravitationalContext.moon().withPerturbers(SolarSystemBody.EARTH, SolarSystemBody.SUN),
         terminal.gravitationalContext(mission));

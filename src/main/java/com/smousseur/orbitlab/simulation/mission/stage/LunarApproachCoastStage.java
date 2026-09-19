@@ -22,8 +22,7 @@ import org.orekit.time.AbsoluteDate;
 
 /**
  * The selenocentric approach of a lunar mission: from the sphere of influence to the point the
- * insertion burn has to <em>ignite</em> at, and no further (MIS-5 / L4, spec {@code
- * docs/lunar-orbit/06-conception-L4.md} §3).
+ * insertion burn has to <em>ignite</em> at, and no further.
  *
  * <p>Twin of {@link ParkingCoastStage}, down to the absolute {@code ignitionDate} resolved in
  * {@link #enter} and read by both {@link #configure} and {@link #propagateStandalone} — the
@@ -35,11 +34,10 @@ import org.orekit.time.AbsoluteDate;
  * <p><b>One difference: {@code enter} converts the state, and returns the converted one.</b> On
  * both passes the state arrives geocentric — {@code StageChainRunner} calls {@code enter} before
  * the {@code ArcTransition.convert} at the head of {@code StageLegRunner.fly}, and the optimize
- * pass never converts at all (spec {@code docs/lunar-orbit/03-conception-L1.md} §8 pt 1). Returning
- * the unconverted state, as {@link ParkingCoastStage} does, would leave {@code
- * Mission.getCurrentState()} geocentric while {@code fly} propagates selenocentrically: two truths
- * about one instant. Returning the converted one makes {@code fly}'s own convert an identity by
- * reference, so both passes publish the same thing.
+ * pass never converts at all. Returning the unconverted state, as {@link ParkingCoastStage} does,
+ * would leave {@code Mission.getCurrentState()} geocentric while {@code fly} propagates
+ * selenocentrically: two truths about one instant. Returning the converted one makes {@code fly}'s
+ * own convert an identity by reference, so both passes publish the same thing.
  *
  * <p><b>This is the one place in the lot where a mistake does not raise:</b> {@code
  * createOptimizationPropagator} takes its frame from the initial state, so a GCRF state integrated

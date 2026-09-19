@@ -127,13 +127,12 @@ public final class Physics {
    * Returns the due-east launch azimuth (90°), the heading of every profile that asks for no
    * particular plane and simply takes the one the site's latitude gives for free.
    *
-   * <p><b>The general derivation no longer lives here</b> (spec {@code
-   * docs/earth-orbit/01-mission-terre-parametrable.md} §1.1 and §3.1). The two-argument overload
-   * this class used to carry mixed units with its callers — it consumed radians while the ascent
-   * documented degrees — and mis-guarded the equatorial polar case, both invisibly, because every
-   * caller passed {@code (0, 0)}. Azimuth derivation is now {@code LaunchPlane}'s, the one type
-   * that also knows which of the two branches reaching an inclination is being flown and whether
-   * the site reaches it at all.
+   * <p><b>The general derivation no longer lives here</b>. The two-argument overload this class
+   * used to carry mixed units with its callers — it consumed radians while the ascent documented
+   * degrees — and mis-guarded the equatorial polar case, both invisibly, because every caller
+   * passed {@code (0, 0)}. Azimuth derivation is now {@code LaunchPlane}'s, the one type that also
+   * knows which of the two branches reaching an inclination is being flown and whether the site
+   * reaches it at all.
    *
    * @return the launch azimuth in radians, clockwise from north
    */
@@ -148,8 +147,7 @@ public final class Physics {
    * <p><b>The one place that basis is written.</b> The pitch kick and the commanded-plane attitude
    * both need it, and they must agree: a launch commanded at azimuth {@code A} whose kick and whose
    * target plane disagreed on where east is would fly a mirrored plane with a perfectly correct
-   * inclination, which no inclination assertion can catch (spec {@code
-   * docs/earth-orbit/01-mission-terre-parametrable.md} §4.1).
+   * inclination, which no inclination assertion can catch.
    *
    * @param position the position the local frame is built at (inertial)
    * @param azimuth the azimuth in radians, clockwise from north — 90° is due east
@@ -162,7 +160,7 @@ public final class Physics {
         northPole
             .subtract(new Vector3D(Vector3D.dotProduct(northPole, zenith), zenith))
             .normalize();
-    // Geographic east (spec §1.1c). This used to read zenith × north, which is WEST: at the equator
+    // Geographic east. This used to read zenith × north, which is WEST: at the equator
     // r̂ = x̂, n̂ = ẑ and x̂ × ẑ = −ŷ, while east is +ŷ. The kick's azimuths were therefore
     // counter-clockwise from north — 0° and 180° right, 90° pointing due west — and every standard
     // azimuth handed to it was mirrored, A → −A. It stayed invisible because every mission commands
@@ -225,18 +223,18 @@ public final class Physics {
    *
    * <p>This is the quantity an upper stage has to survive shut down between the injection burn and
    * the circularization, and it is what decides which chain a high-orbit mission can be flown with
-   * (spec {@code docs/earth-orbit/01-mission-terre-parametrable.md} §6): 400 km → 20 200 km takes
-   * about 2 h 58, which an Ariane 62 upper stage can hold and a Falcon Heavy one cannot.
+   * : 400 km → 20 200 km takes about 2 h 58, which an Ariane 62 upper stage can hold and a Falcon
+   * Heavy one cannot.
    *
    * @param perigeeAltitude the transfer perigee altitude in meters
    * @param apogeeAltitude the transfer apogee altitude in meters
    * @return the coast duration from perigee to apogee, in seconds
    */
   public static double hohmannTransferDuration(double perigeeAltitude, double apogeeAltitude) {
-    // Off-flight helper, left Earth-fixed by PHY-4 / L1 (spec docs/multi-corps/03-conception-L1.md
-    // §4.1). Note for whoever makes it contextual: this µ is the PROPAGATOR's, while
+    // Off-flight helper, left Earth-fixed by PHY-4 / L1. Note for whoever makes it contextual: this
+    // µ is the PROPAGATOR's, while
     // OrbitElements.mean() deliberately rebases on the potential provider's — mixing the two shifts
-    // the elements by about a metre, which reads as J2 (spec orbit-reporting/01 §3.3).
+    // the elements by about a metre, which reads as J2.
     double re = Constants.WGS84_EARTH_EQUATORIAL_RADIUS;
     double semiMajorAxis = re + 0.5 * (perigeeAltitude + apogeeAltitude);
     return FastMath.PI
@@ -251,8 +249,7 @@ public final class Physics {
 
   /**
    * The inclination that makes an orbit sun-synchronous — its node precessing eastward at exactly
-   * the rate the Earth orbits the Sun, so the local solar time of each pass stays fixed (spec
-   * {@code docs/earth-orbit/01-mission-terre-parametrable.md} §5).
+   * the rate the Earth orbits the Sun, so the local solar time of each pass stays fixed.
    *
    * <p>The J2 secular nodal drift of an orbit is
    *
@@ -271,7 +268,7 @@ public final class Physics {
    *
    * <p><b>Nothing else about an SSO is special.</b> It is an ordinary circular {@code
    * MissionSpec.EarthOrbit} whose inclination happens to come from this formula rather than from a
-   * form field: same stage chain, same insertion objective, no dedicated mission type (spec §5).
+   * form field: same stage chain, same insertion objective, no dedicated mission type.
    *
    * @param semiMajorAxis the orbit's semi-major axis in meters (geocentric, not an altitude)
    * @param eccentricity the orbit's eccentricity; 0 for a circular orbit
@@ -320,7 +317,7 @@ public final class Physics {
    *
    * <p>The value is expressed in the frame the state is propagated in, which is the frame {@code
    * LaunchPlane.inclinationFrame()} declares for the target — the two are only comparable because
-   * they are the same (spec {@code docs/earth-orbit/01-mission-terre-parametrable.md} §3.4).
+   * they are the same.
    *
    * @param state the spacecraft state
    * @return the osculating inclination in degrees

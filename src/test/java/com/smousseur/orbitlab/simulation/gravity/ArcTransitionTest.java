@@ -27,8 +27,7 @@ import org.orekit.utils.TimeStampedPVCoordinates;
  *
  * <p>The découpage asks for the millimetre and the µm/s on the continuity. Both selenocentric and
  * geocentric frames being ICRF-oriented, the transform is a pure translation and the round trip is
- * <b>exact</b> in position — so this class asks for exactly zero and says why (spec {@code
- * docs/multi-corps/06-conception-L4.md} §7.3).
+ * <b>exact</b> in position — so this class asks for exactly zero and says why.
  */
 class ArcTransitionTest {
   private static final Logger logger = LogManager.getLogger(ArcTransitionTest.class);
@@ -147,7 +146,7 @@ class ArcTransitionTest {
   @DisplayName("Keeping the new central body as its own perturber throws, and that is the point")
   void theNewCentralBodyIsRemovedNotTolerated() {
     // The removal in across() is what prevents this. Proving the guard exists proves the removal
-    // is load-bearing rather than cosmetic (spec L2 §2.2).
+    // is load-bearing rather than cosmetic.
     assertThrows(
         IllegalArgumentException.class,
         () -> GravitationalContext.moon().withPerturbers(SolarSystemBody.MOON));
@@ -164,7 +163,7 @@ class ArcTransitionTest {
   void sameFrameIsNotConverted() {
     SpacecraftState inGcrf = nearTheBoundary();
     // Reference equality on the returned state: this is what keeps the L1 gate bit-identical when
-    // the leg runner aligns an entry state that is already in the right frame (spec L4 §3.5).
+    // the leg runner aligns an entry state that is already in the right frame.
     assertSame(inGcrf, ArcTransition.convert(inGcrf, GravitationalContext.earth()));
   }
 }

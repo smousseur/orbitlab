@@ -15,8 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.orekit.time.AbsoluteDate;
 
 /**
- * Pins the ascent date arithmetic (spec {@code docs/mission-stages/01-separations-implicites.md}
- * §4.3, étape 1).
+ * Pins the ascent date arithmetic.
  *
  * <p>{@link AscentPlan} exists so the jettison and second-ignition dates are computed <b>once</b>
  * and consumed identically by however many phases the ascent is split into. The dates it returns

@@ -6,7 +6,6 @@ import java.util.Objects;
 
 /**
  * A group of phase-transition markers drawn as one glyph, and the algorithm that forms the groups
- * (spec {@code docs/navigation/02-timeline-mission.md} §8).
  *
  * <p><b>Why grouping rather than a curved axis.</b> {@link TimeAxis} is linear, so on a GEO the
  * whole ascent — vertical climb, staging, parking insertion, GTO injection — falls inside the first

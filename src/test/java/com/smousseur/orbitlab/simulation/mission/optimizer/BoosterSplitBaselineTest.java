@@ -44,7 +44,7 @@ import org.orekit.time.TimeScalesFactory;
 import org.orekit.utils.Constants;
 
 /**
- * <b>PHY-8 / L0 — the booster-split baseline</b> (spec {@code docs/etagement/01-decoupage.md} §5).
+ * <b>PHY-8 / L0 — the booster-split baseline</b>.
  *
  * <p>PHY-8 splits the boosters from the core stage: {@code L2} turns the Falcon Heavy's aggregated
  * S1 into {@code [boosters ×2, core]}, {@code L3} throttles the core, and {@code L4} replaces the

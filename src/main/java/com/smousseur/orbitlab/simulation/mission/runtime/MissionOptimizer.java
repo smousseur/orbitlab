@@ -62,7 +62,6 @@ public class MissionOptimizer {
 
   /**
    * Solved variables to fly instead of searching for them, or {@code null} for a real optimization
-   * (spec {@code docs/scenario/01-persistance-missions.md} §5).
    */
   private final MissionSolutions solutions;
 
@@ -240,8 +239,8 @@ public class MissionOptimizer {
               new MissionProgressEvent.StageEntered(optimizableIndex, optimizableCount));
         }
 
-        // Captured BEFORE the optimizer runs. A problem that flies real mission stages (the ascent
-        // chain, spec 01 §5.4) advances the shared mission as it goes — and does so from the
+        // Captured BEFORE the optimizer runs. A problem that flies real mission stages advances the
+        // shared mission as it goes — and does so from the
         // parallel CMA-ES exploration threads — so mission.getCurrentState() is no longer the stage
         // entry once optimize() returns. Reading it here, and restoring it below, keeps the loop on
         // the state the stage actually starts from.
@@ -268,7 +267,7 @@ public class MissionOptimizer {
 
         SpacecraftState propagated;
         if (optimizable.advancesByReplay()) {
-          // The problem flew a chain this loop is about to walk itself (spec 01 §5.6). Inject the
+          // The problem flew a chain this loop is about to walk itself. Inject the
           // result now — the phases that follow read the plan it publishes — and advance one phase
           // at a time, so each gets its own accounting line instead of the chain's aggregate.
           optimizable.applyOptimization(result);
@@ -313,7 +312,7 @@ public class MissionOptimizer {
     // Resolve the restitution horizon here rather than in the generator: this is the one place that
     // holds both ends of what the policy needs — the launch date and the insertion state — and it
     // already reads the achieved orbit off the very same state a few lines above. The generator
-    // receives seconds, not an intent (spec docs/mission-horizon/01-horizon-explicite.md §4).
+    // receives seconds, not an intent.
     //
     // mission.getCurrentState() is the insertion state at this point: the trailing CoastingStage
     // does not override propagateStandalone, so the stage walk above left the state at the end of
@@ -332,7 +331,7 @@ public class MissionOptimizer {
     MissionEphemeris ephemeris = generated.ephemeris();
     // Debris propagated for display only, off the optimize path: the separations captured during
     // this replay, flown under the mission's own atmosphere and bounded by the same restitution
-    // horizon (PHY-5 / L1, spec docs/multi-objets/03-conception-L1.md §2.3).
+    // horizon.
     List<DebrisTrack> debris =
         new DebrisGenerator()
             .generate(generated.jettisons(), mission.getAtmosphere(), finalCoastSeconds);
@@ -347,14 +346,13 @@ public class MissionOptimizer {
    * Non-propulsive stages (coasts, separations) drop mass by jettison only — including any residual
    * propellant discarded with the spent stage — so they report zero consumption and zero ΔV.
    *
-   * <p><b>No stage spans a jettison any more</b> (spec {@code
-   * docs/mission-stages/01-separations-implicites.md}, S2), so the entry stage's Isp is the only
-   * Isp burnt during the stage and this accounting is exact. It used to be an approximation: the
-   * ascent was one stage carrying burn 1, a 66 t jettison and burn 2, and a single Tsiolkovsky
-   * across a mass drop is not an approximation but a category error — on the Falcon Heavy LEO
-   * profile the ascent reported 5 648 m/s where the staged computation gives 7 781 m/s. Every
-   * jettison being its own non-propulsive phase is what makes the formula below correct rather than
-   * indicative; a future stage that dropped mass mid-burn would silently reintroduce the error.
+   * <p><b>No stage spans a jettison any more</b>, so the entry stage's Isp is the only Isp burnt
+   * during the stage and this accounting is exact. It used to be an approximation: the ascent was
+   * one stage carrying burn 1, a 66 t jettison and burn 2, and a single Tsiolkovsky across a mass
+   * drop is not an approximation but a category error — on the Falcon Heavy LEO profile the ascent
+   * reported 5 648 m/s where the staged computation gives 7 781 m/s. Every jettison being its own
+   * non-propulsive phase is what makes the formula below correct rather than indicative; a future
+   * stage that dropped mass mid-burn would silently reintroduce the error.
    */
 
   /** The vector this stage is to be flown at, or {@code null} when it has to be searched for. */
@@ -374,8 +372,7 @@ public class MissionOptimizer {
    *
    * <p>The replay branch is not an approximation of the other: {@code propagate} and {@code
    * computeCost} are both on {@link TrajectoryProblem}'s contract, so what comes out is a complete
-   * {@link OptimizationResult} whose {@code evaluations = 0} reads as "not optimized" (spec {@code
-   * docs/scenario/01-persistance-missions.md} §5).
+   * {@link OptimizationResult} whose {@code evaluations = 0} reads as "not optimized".
    *
    * <p>Both branches record {@code entryState} rather than whatever the problem left behind, so the
    * runtime restarts a stage from exactly the point the loop entered it.
@@ -502,7 +499,7 @@ public class MissionOptimizer {
 
   /**
    * The equatorial radius the achieved orbit is reported against — that of the body the last stage
-   * flies around (MIS-5 / L2, spec {@code docs/lunar-orbit/04-conception-L2.md} §3.3).
+   * flies around.
    *
    * <p><b>The stage's context and not the mission's</b>, because {@code
    * Mission.gravitationalContext()} is terrestrial even on a lunar mission: a mission lifts off
@@ -629,7 +626,7 @@ public class MissionOptimizer {
         FastMath.round(report.totalPropellantLoaded()),
         FastMath.round(report.totalPropellantResidual()),
         String.format(java.util.Locale.ROOT, "%.1f", 100.0 * report.residualRatio()));
-    // Per-stage split (bilan 10 §6): the margin that actually matters for a sized stage, which the
+    // Per-stage split: the margin that actually matters for a sized stage, which the
     // stack-wide ratio above cannot show on an S1-dominated stack.
     for (StagePropellant sp : report.stagePropellants()) {
       logger.info(
@@ -643,7 +640,7 @@ public class MissionOptimizer {
   }
 
   /**
-   * The orbit achieved at the end of the mission, in both conventions (spec orbit-reporting/01).
+   * The orbit achieved at the end of the mission, in both conventions.
    *
    * <p>Reporting only: neither value is read back into the computation. Between insertion and the
    * end of the coast, the osculating orbit has oscillated by about 19 km under J2 while the mean
@@ -675,13 +672,12 @@ public class MissionOptimizer {
    * The altitude the gravity turn's exit state is diagnosed against, or {@code NaN} when there is
    * none to diagnose against — in which case the caller logs the raw end state instead.
    *
-   * <p><b>A non-terrestrial insertion has none</b> (MIS-5 / L5, spec {@code
-   * docs/lunar-orbit/07-conception-L5.md} §6). The diagnostic compares an <em>Earth</em> ascent to
-   * an ideal Earth Hohmann handoff, and it is only ever called under a {@code GravityTurnProblem}
-   * guard, so the ascent really is terrestrial. The objective, since MIS-5, need not be: a lunar
-   * insertion would hand 100 km straight into a terrestrial comparison and print a number that
-   * looks like a measurement. Returning NaN takes the exit that already exists — the one MIS-4
-   * takes, a flyby objective not being an insertion at all.
+   * <p><b>A non-terrestrial insertion has none</b>. The diagnostic compares an <em>Earth</em>
+   * ascent to an ideal Earth Hohmann handoff, and it is only ever called under a {@code
+   * GravityTurnProblem} guard, so the ascent really is terrestrial. The objective, since MIS-5,
+   * need not be: a lunar insertion would hand 100 km straight into a terrestrial comparison and
+   * print a number that looks like a measurement. Returning NaN takes the exit that already exists
+   * — the one MIS-4 takes, a flyby objective not being an insertion at all.
    *
    * <p>Every other {@code OrbitInsertionObjective} of the repository is built on {@code EARTH}, so
    * this guard changes no existing log line by identity rather than by tolerance.

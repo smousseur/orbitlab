@@ -10,9 +10,8 @@ import org.orekit.time.AbsoluteDate;
 
 /**
  * {@link MissionEphemeris#displayPointAt} is the single answer to "where is this spacecraft now?",
- * shared by the floating-origin state and the mission orchestrator so the two cannot disagree (spec
- * {@code docs/graphics-effects/spacecraft-view-artefacts.md} §9.1). It must therefore answer for
- * <em>any</em> date, including outside the recorded span, where {@link
+ * shared by the floating-origin state and the mission orchestrator so the two cannot disagree. It
+ * must therefore answer for <em>any</em> date, including outside the recorded span, where {@link
  * MissionEphemeris#interpolate} is not meant to be called.
  */
 class MissionEphemerisDisplayPointTest {
@@ -74,7 +73,7 @@ class MissionEphemerisDisplayPointTest {
   }
 
   // ════════════════════════════════════════════════════════════════════════
-  // Across an arc boundary (PHY-4 / L3, spec docs/multi-corps/05-conception-L3.md §3.3)
+  // Across an arc boundary
   // ════════════════════════════════════════════════════════════════════════
 
   /** The same drift, with the middle sample opening a second arc. */
@@ -138,7 +137,7 @@ class MissionEphemerisDisplayPointTest {
   }
 
   // ════════════════════════════════════════════════════════════════════════
-  // The duplicated boundary sample (PHY-4 / L4, spec docs/multi-corps/06-conception-L4.md §5)
+  // The duplicated boundary sample
   // ════════════════════════════════════════════════════════════════════════
 
   /**

@@ -42,11 +42,10 @@ public interface Vehicle {
   /**
    * The frontal area and drag coefficient of this vehicle, or {@code null} when it declares none.
    *
-   * <p><b>Declaring nothing means not dragging</b>, and that is the whole contract (spec {@code
-   * docs/atmosphere/04-conception-L1.md} §3.1). It makes a partially populated catalog predictable
-   * rather than dangerous: a stage with no aerodynamic data flies its phase without drag, instead
-   * of borrowing a neighbour's section or inventing one. No exception, no default value, no {@code
-   * NaN}.
+   * <p><b>Declaring nothing means not dragging</b>, and that is the whole contract. It makes a
+   * partially populated catalog predictable rather than dangerous: a stage with no aerodynamic data
+   * flies its phase without drag, instead of borrowing a neighbour's section or inventing one. No
+   * exception, no default value, no {@code NaN}.
    *
    * <p>The aerodynamics is resolved through {@link #resolveActiveStage(double)}, never off the
    * stack as a whole — see {@code VehicleStack}, which deliberately does not override this.

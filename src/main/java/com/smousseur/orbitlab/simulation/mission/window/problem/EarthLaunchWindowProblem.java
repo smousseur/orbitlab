@@ -157,10 +157,10 @@ public class EarthLaunchWindowProblem implements LaunchWindowProblem {
    * The unit normal of the plane the site reaches at {@code epoch}, in GCRF.
    *
    * <p>Delegated to {@link LaunchSitePlane}, which the lunar problem raises its departure plane on
-   * as well: the frame chain and the topocentric basis are asked for in one place rather than two
-   * (MIS-4 / L2 §2.6). Kept here as a method because it is what the tests of this problem build
-   * their target planes from — an alignment is defined as "the plane the pad reaches at that
-   * instant" — so it is part of what they guard.
+   * as well: the frame chain and the topocentric basis are asked for in one place rather than two .
+   * Kept here as a method because it is what the tests of this problem build their target planes
+   * from — an alignment is defined as "the plane the pad reaches at that instant" — so it is part
+   * of what they guard.
    */
   Vector3D reachablePlaneNormal(AbsoluteDate epoch) {
     return site.normalAt(epoch);

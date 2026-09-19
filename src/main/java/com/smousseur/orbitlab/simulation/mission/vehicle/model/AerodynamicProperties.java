@@ -4,15 +4,14 @@ package com.smousseur.orbitlab.simulation.mission.vehicle.model;
  * The two numbers a drag force needs from a piece of hardware: how much of it the flow sees, and
  * how badly that shape pushes back.
  *
- * <p>Introduced by PHY-1 / L1 (spec {@code docs/atmosphere/04-conception-L1.md} §2). It lives here,
- * at the smallest common ancestor of {@link stage.StageModel} and {@link PayloadModel}, because
- * both declare one and neither owns the other.
+ * <p>Introduced by PHY-1 / L1. It lives here, at the smallest common ancestor of {@link
+ * stage.StageModel} and {@link PayloadModel}, because both declare one and neither owns the other.
  *
  * <p><b>The surface comes first, and that is a defect-prevention decision rather than a stylistic
- * one</b> (spec §2, point 4). Orekit's consumer is {@code IsotropicDrag(crossSection, dragCoeff)}:
- * two adjacent {@code double}s whose transposition no unit test can see, and which would falsify
- * the drag of a launcher stage by a factor near 30. Aligning the record on the constructor it feeds
- * makes the transposition impossible to commit.
+ * one</b>. Orekit's consumer is {@code IsotropicDrag(crossSection, dragCoeff)}: two adjacent {@code
+ * double}s whose transposition no unit test can see, and which would falsify the drag of a launcher
+ * stage by a factor near 30. Aligning the record on the constructor it feeds makes the
+ * transposition impossible to commit.
  *
  * @param crossSection the reference frontal area the drag is computed against (m²)
  * @param dragCoefficient the dimensionless drag coefficient referred to that same area

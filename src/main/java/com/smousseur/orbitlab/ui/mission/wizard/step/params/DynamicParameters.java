@@ -115,7 +115,7 @@ public abstract class DynamicParameters {
    * #defaultHorizonDays()} does</b>: only the panel on screen knows what its own profile is aiming
    * at, and the two profiles that have a window aim at things with no component in common — a plane
    * with a node to meet, and a direction to contain. The step keeps the one gap it alone can see,
-   * an unreadable pad, and delegates the rest (MIS-4 / L5 §4.3).
+   * an unreadable pad, and delegates the rest.
    *
    * <p>The default is {@link PlanningInputs.Gap#NO_NODE}: a profile with nothing to wait for says
    * so quietly, which is the state the geostationary card is in.
@@ -146,11 +146,10 @@ public abstract class DynamicParameters {
    * Days spanned by {@code revolutions} turns of a circular-equivalent orbit at {@code
    * altitudeMeters} above {@code body}, via the Keplerian period {@code 2π√(a³/µ)}.
    *
-   * <p><b>An altitude and not a semi-major axis</b> (MIS-5 / L2, spec {@code
-   * docs/lunar-orbit/04-conception-L2.md} §5): the body radius used to be added by each call site,
-   * so making the µ contextual without moving the radius in here would have left the panel of every
-   * new body writing its own {@code radius +}. The pair (µ, R) belongs to one body, and {@code
-   * GravitationalContext} is that pair.
+   * <p><b>An altitude and not a semi-major axis</b>: the body radius used to be added by each call
+   * site, so making the µ contextual without moving the radius in here would have left the panel of
+   * every new body writing its own {@code radius +}. The pair (µ, R) belongs to one body, and
+   * {@code GravitationalContext} is that pair.
    *
    * @param revolutions the number of revolutions
    * @param altitudeMeters the orbit altitude in meters above the body's equatorial radius

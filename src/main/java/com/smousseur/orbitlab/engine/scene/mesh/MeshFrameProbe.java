@@ -19,7 +19,7 @@ import java.util.Optional;
  * Recovers the body-fixed frame a textured sphere carries in its own geometry, from its vertex
  * positions and UV coordinates alone — no reference image, no visual adjustment.
  *
- * <p>See {@code docs/orientation-planetes/01-decoupage.md}, L0.
+ * <p>See, L0.
  */
 public final class MeshFrameProbe {
 

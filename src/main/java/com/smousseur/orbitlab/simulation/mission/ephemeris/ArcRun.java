@@ -10,8 +10,7 @@ import java.util.Objects;
  * change of central body, and the two do not coincide — a sphere-of-influence crossing falls in the
  * middle of a coast, with the same stage name and the same propulsive flag on either side. Folding
  * the arc into the run criterion would cut that coast into two homonymous runs, drawing two phase
- * markers and reporting one phase too many in the mission timeline (PHY-4 / L3, spec {@code
- * docs/multi-corps/05-conception-L3.md} §4).
+ * markers and reporting one phase too many in the mission timeline.
  *
  * <p>Until L4 produces a second arc, every polyline has exactly one of these, spanning the whole
  * line.

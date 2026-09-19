@@ -8,12 +8,11 @@ import org.orekit.time.AbsoluteDate;
  * The fully dated schedule of one gravity-turn ascent: the decoded CMA-ES variables, the burn
  * durations derived from them, and every date the ascent hangs off.
  *
- * <p><b>Why it exists.</b> The ascent is one propagation today but becomes three phases (spec
- * {@code docs/mission-stages/01-separations-implicites.md} §4.2): {@code Gravity turn (S1) → S1
- * separation → Gravity turn (S2)}. Those phases only reproduce today's trajectory if they agree to
- * the millisecond on when the first stage stops thrusting, when it is dropped, and when the second
- * ignites — so the dates must be computed <b>once</b>, not re-derived per phase. This record is
- * that single computation; {@link
+ * <p><b>Why it exists.</b> The ascent is one propagation today but becomes three phases: {@code
+ * Gravity turn (S1) → S1 separation → Gravity turn (S2)}. Those phases only reproduce today's
+ * trajectory if they agree to the millisecond on when the first stage stops thrusting, when it is
+ * dropped, and when the second ignites — so the dates must be computed <b>once</b>, not re-derived
+ * per phase. This record is that single computation; {@link
  * com.smousseur.orbitlab.simulation.mission.maneuver.GravityTurnManeuver#plan} is the only place
  * that produces one.
  *
@@ -39,9 +38,8 @@ import org.orekit.time.AbsoluteDate;
  *     ascent has no such phase; callers test {@link #hasCorePhase()} rather than the value
  * @param secondStage the vehicle stage active after the last launcher jettison
  * @param commandedPlaneNormal unit normal of the plane the ascent steers into, or {@code null} when
- *     no plane is commanded and the turn follows whatever plane the kick left behind (spec {@code
- *     docs/earth-orbit/01-mission-terre-parametrable.md} §4); callers test {@link
- *     #hasCommandedPlane()} rather than the value
+ *     no plane is commanded and the turn follows whatever plane the kick left behind; callers test
+ *     {@link #hasCommandedPlane()} rather than the value
  */
 public record AscentPlan(
     AbsoluteDate kickDate,
@@ -68,8 +66,7 @@ public record AscentPlan(
    * firing through the separation — but the model has to stop and restart the propagation to change
    * the force model, so the jettison carries the shortest coast the model can schedule. The
    * separation phase is built with this exact value rather than zero, so that no clamping happens
-   * and the phase and this schedule agree by construction (spec {@code
-   * docs/etagement/03-conception-L1.md} §3.6).
+   * and the phase and this schedule agree by construction.
    */
   public static final double BOOSTER_SEPARATION_COAST = 1.0e-3;
 
@@ -162,7 +159,7 @@ public record AscentPlan(
   /**
    * Mass floor guarding the whole ascent: the post-jettison stack floor. A single detector at this
    * floor covers both burns — during burn 1 the mass stays above the first stage's own floor, which
-   * is above this one (spec 06 I4a).
+   * is above this one.
    */
   public double depletionFloor() {
     return secondStage.depletionFloor();
@@ -171,7 +168,7 @@ public record AscentPlan(
   /**
    * Whether this ascent steers into a commanded plane rather than following the one the pitch kick
    * left behind. Drives which {@code GravityTurnAttitudeProvider} the burn phases install, and is
-   * the seam that keeps the calibrated due-east trajectories bit-for-bit (spec §4.2).
+   * the seam that keeps the calibrated due-east trajectories bit-for-bit.
    *
    * @return {@code true} when a target plane normal is carried
    */

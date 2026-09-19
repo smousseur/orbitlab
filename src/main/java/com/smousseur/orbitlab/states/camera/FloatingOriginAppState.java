@@ -95,15 +95,15 @@ public class FloatingOriginAppState extends BaseAppState {
 
         // One point, read once, and everything below derives from it: the body the scene is
         // centred on and the offset that puts the spacecraft on the origin cannot disagree
-        // because they are two readings of the same object (spec L3 §3.1).
+        // because they are two readings of the same object.
         MissionEphemerisPoint point = displayPoint(view.getFocusedObject());
         SolarSystemBody renderBody =
             point == null ? view.getBody() : MissionRenderer.renderBodyOf(point, view);
 
         // The near viewport holds exactly one globe, parked on the origin of nearBodiesNode, and
         // it has to be the body the spacecraft's coordinates are about — otherwise the Earth is
-        // drawn where the Moon should be, 1 837 km from a spacecraft at perilune (spec
-        // docs/multi-corps/07-conception-L5.md §3.2). That constraint is also the mechanism: the
+        // drawn where the Moon should be, 1 837 km from a spacecraft at perilune. That constraint
+        // is also the mechanism: the
         // globe then lands at |p| from the spacecraft, which is exactly where it belongs.
         sceneGraph.showBodySpatial(renderBody);
 

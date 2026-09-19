@@ -90,9 +90,8 @@ class MissionFactoryTest {
   /**
    * PHY-2 / L5: a mission created through the wizard flies drag-on by default. The atmosphere is
    * not a wizard field, so the default is applied here, at the single production origin — which is
-   * why a spec assembled by hand still defaults to {@code NONE} (spec {@code
-   * docs/atmosphere/12-conception-L5-PHY-2.md} §3.1). The default reaches the composed mission, not
-   * just the spec.
+   * why a spec assembled by hand still defaults to {@code NONE}. The default reaches the composed
+   * mission, not just the spec.
    */
   @Test
   void wizardMission_defaultsToDragOn() {
@@ -135,8 +134,8 @@ class MissionFactoryTest {
     assertTrue(s2Load > 0 && s2Load < 0.5 * S2_CAPACITY, () -> "sized S2 load, got " + s2Load);
 
     // The payload leaves the pad with propellant in it since PHY-8 / L6: 10 t of satellite plus the
-    // 76.7 kg its 15 m/s budget costs at Isp 220 with the standard 10 % margin (spec
-    // docs/etagement/01-decoupage.md section 3.7). Nothing burns it before PHY-6 -- a direct chain
+    // 76.7 kg its 15 m/s budget costs at Isp 220 with the standard 10 % margin. Nothing burns it
+    // before PHY-6 -- a direct chain
     // keeps its upper stage, which is what flies the trim -- so what it does today is ride up.
     Vehicle payload = vehicles.get(3);
     assertEquals(10_000, payload.dryMass(), 1e-6, "dry mass as entered");
@@ -213,7 +212,7 @@ class MissionFactoryTest {
         () -> MissionFactory.fromWizardValues(values, MissionType.LEO));
   }
 
-  // --- MIS-7 P2: the inclination the wizard hands over (spec 02 §2.0) ---
+  // --- MIS-7 P2: the inclination the wizard hands over ---
 
   private static MissionSpec.EarthOrbit earthOrbitSpec(Map<String, Object> values) {
     return assertInstanceOf(
@@ -270,8 +269,8 @@ class MissionFactoryTest {
   }
 
   /**
-   * Refused, not clamped (spec 01 §8). The message has to name the reachable band, because it is
-   * the one the wizard shows the user.
+   * Refused, not clamped. The message has to name the reachable band, because it is the one the
+   * wizard shows the user.
    */
   @Test
   void unreachableInclination_isRefusedWithTheReachableBand() {
@@ -335,7 +334,7 @@ class MissionFactoryTest {
         () -> MissionFactory.specFromWizardValues(values, MissionType.LEO));
   }
 
-  // --- MIS-7 P2.e: what the wizard's launcher step dry-runs before submitting (spec 02 §6) ---
+  // --- MIS-7 P2.e: what the wizard's launcher step dry-runs before submitting ---
 
   private static Map<String, Object> meoValues(String launcherId, String payloadId) {
     Map<String, Object> values = baseValues();
@@ -387,8 +386,8 @@ class MissionFactoryTest {
 
   /**
    * The budget has to follow the plane, not the latitude: a polar launch loses the whole 463 m/s of
-   * eastward entrainment the due-east one banks (spec 01 §7), so it is sized heavier. This is what
-   * makes the single line of §14.1.3 enough — nothing downstream had to be told about the plane.
+   * eastward entrainment the due-east one banks, so it is sized heavier. This is what makes the
+   * single line of §14.1.3 enough — nothing downstream had to be told about the plane.
    */
   @Test
   void commandedPlane_reachesThePropellantBudget() {

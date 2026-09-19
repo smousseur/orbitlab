@@ -146,12 +146,12 @@ public final class MultiStageLoadOptimizer {
    * Step, on the {@code λ} axis, that the closing diagonal probe takes on every movable coordinate
    * at once.
    *
-   * <p><b>Absolute, not relative</b> (bilan 11 §3.1). The step has to be commensurable with the
-   * bisection's own convergence criterion, which is an absolute bracket width; a relative step
-   * shrinks below that width as soon as {@code λ < 1}, so the probe lands <em>inside</em> the
-   * unresolved bracket and re-asks a question the bisection just declined to answer. Measured on FH
-   * LEO: at {@code λ = 0.43125} with a converged bracket of {@code [0.4203, 0.43125]}, a 2 %
-   * relative step probed {@code 0.4226} — strictly inside it, hence an uninformative failure.
+   * <p><b>Absolute, not relative</b>. The step has to be commensurable with the bisection's own
+   * convergence criterion, which is an absolute bracket width; a relative step shrinks below that
+   * width as soon as {@code λ < 1}, so the probe lands <em>inside</em> the unresolved bracket and
+   * re-asks a question the bisection just declined to answer. Measured on FH LEO: at {@code λ =
+   * 0.43125} with a converged bracket of {@code [0.4203, 0.43125]}, a 2 % relative step probed
+   * {@code 0.4226} — strictly inside it, hence an uninformative failure.
    */
   public double diagonalStep() {
     return tolerance;

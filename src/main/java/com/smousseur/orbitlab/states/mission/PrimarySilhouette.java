@@ -11,7 +11,7 @@ import org.orekit.time.AbsoluteDate;
 /**
  * The silhouette the primary object shows over time: the full launcher until it starts shedding
  * pieces, a shorter stack after each launcher separation, and finally the payload itself once the
- * upper stage is gone (PHY-5 / L5, spec {@code docs/multi-objets/07-conception-L5.md} §3.1).
+ * upper stage is gone.
  *
  * <p>Derived from the debris a computation produced — each carries the date and role of the
  * separation that made it — so no new data has to flow from the replay. Stateless once built:

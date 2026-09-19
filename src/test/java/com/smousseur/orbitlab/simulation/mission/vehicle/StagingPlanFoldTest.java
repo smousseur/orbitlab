@@ -8,9 +8,9 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 /**
- * The serial-equivalent view of a stack (spec {@code docs/etagement/04-conception-L2.md} §3.1).
- * {@code PropellantBudget} reasons in Tsiolkovsky terms, one stage jettisoned before the next
- * ignites; a parallel block is one burn, so it must be handed one stage.
+ * The serial-equivalent view of a stack. {@code PropellantBudget} reasons in Tsiolkovsky terms, one
+ * stage jettisoned before the next ignites; a parallel block is one burn, so it must be handed one
+ * stage.
  */
 class StagingPlanFoldTest {
 

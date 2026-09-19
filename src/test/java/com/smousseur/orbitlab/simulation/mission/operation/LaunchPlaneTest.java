@@ -11,8 +11,7 @@ import org.hipparchus.util.FastMath;
 import org.junit.jupiter.api.Test;
 
 /**
- * The azimuth derivation and the reachability rules of {@link LaunchPlane} (spec {@code
- * docs/earth-orbit/01-mission-terre-parametrable.md} §3.1 and §8).
+ * The azimuth derivation and the reachability rules of {@link LaunchPlane}.
  *
  * <p>This is the arithmetic half of what {@code AscentAzimuthAuthorityTest} T0.4 used to
  * <em>characterise as broken</em> in {@code Physics.getLaunchAzimuth}: a guard that sent an
@@ -99,7 +98,7 @@ class LaunchPlaneTest {
     assertEquals(180.0, FastMath.toDegrees(azimuth), 1.0e-9);
   }
 
-  // ── Which planes must be flown to (spec §4.2) ────────────────────────────
+  // ── Which planes must be flown to ────────────────────────────
 
   @Test
   void theSitesFreePlane_isNotCommanded() {
@@ -115,7 +114,7 @@ class LaunchPlaneTest {
     assertTrue(LaunchPlane.ofDegrees(98.19).commands(KOUROU_RAD));
   }
 
-  // ── The refusals (spec §8) ───────────────────────────────────────────────
+  // ── The refusals ───────────────────────────────────────────────
 
   /** Refusals name the reachable bound, so the caller learns what to ask for instead. */
   @Test

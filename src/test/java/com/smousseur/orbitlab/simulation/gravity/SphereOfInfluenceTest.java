@@ -19,8 +19,7 @@ import org.orekit.time.TimeScalesFactory;
  *
  * <p>The découpage quotes a single 66 200 km. This class pins that it is the value at the mean
  * Earth-Moon distance and that the real radius sweeps 61 427 → 70 000 km over a year — the reason
- * the detector's threshold is recomputed rather than written down (spec {@code
- * docs/multi-corps/06-conception-L4.md} §3.2).
+ * the detector's threshold is recomputed rather than written down.
  */
 class SphereOfInfluenceTest {
   private static final Logger logger = LogManager.getLogger(SphereOfInfluenceTest.class);
@@ -52,7 +51,7 @@ class SphereOfInfluenceTest {
     SphereOfInfluence soi = SphereOfInfluence.of(SolarSystemBody.MOON);
     double atMeanDistance = MEAN_EARTH_MOON_DISTANCE * soi.laplaceFactor();
 
-    // 66 183 km against the 66 200 km of docs/multi-corps/01-decoupage.md §4 (L4).
+    // 66 183 km against the 66 200 km reference (L4).
     assertEquals(66_183_000.0, atMeanDistance, 1_000.0);
   }
 

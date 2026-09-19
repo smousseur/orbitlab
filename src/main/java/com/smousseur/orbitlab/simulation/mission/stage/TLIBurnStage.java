@@ -27,24 +27,23 @@ import org.orekit.propagation.numerical.NumericalPropagator;
 import org.orekit.time.AbsoluteDate;
 
 /**
- * The translunar injection burn (MIS-4 / L6, spec {@code docs/lunar-flyby/08-conception-L6.md}
- * §5.2) — a constant-thrust burn centred on the injection point, calibrated to deliver the energy
- * the impulsive plan aims with.
+ * The translunar injection burn — a constant-thrust burn centred on the injection point, calibrated
+ * to deliver the energy the impulsive plan aims with.
  *
  * <p><b>The stage enters at ignition and finds the injection point ahead of it</b>, by calling
  * {@link TranslunarInjectionPlan#departureFrom} on its own entry state. Half a burn early, the
  * remaining travel is 1.6° on a Falcon Heavy upper stage and 9.3° on an Ariane 62 ULPM — both far
  * above the tolerance {@code departureFrom} stops at, and both positive, so the point found is the
- * one just ahead and not the next revolution's (spec §5.2).
+ * one just ahead and not the next revolution's.
  *
  * <p><b>That is not the date the parking coast stopped against, and nothing tries to make it
- * one</b> (spec §9.5). {@code departureFrom} is a fixed point on the state it is handed, so the
- * injection date it resolves from a parking insertion and the one it resolves here differ —
- * measured at 2.46 s. The design had assumed that calling the same closed form was enough for the
- * two stages to agree; it is not, and a burn calibrated centred on one date and flown from the
- * other put the flyby 1 150 km inside the Moon. What makes the disagreement harmless is that {@code
- * inject} is handed <b>this stage's entry state</b> and calibrates the burn that ignites there, so
- * the aim converges on the departure the mission really flies whatever off-centring is left.
+ * one</b>. {@code departureFrom} is a fixed point on the state it is handed, so the injection date
+ * it resolves from a parking insertion and the one it resolves here differ — measured at 2.46 s.
+ * The design had assumed that calling the same closed form was enough for the two stages to agree;
+ * it is not, and a burn calibrated centred on one date and flown from the other put the flyby 1 150
+ * km inside the Moon. What makes the disagreement harmless is that {@code inject} is handed <b>this
+ * stage's entry state</b> and calibrates the burn that ignites there, so the aim converges on the
+ * departure the mission really flies whatever off-centring is left.
  *
  * <p><b>{@code enter} moves no mass.</b> It coasts ballistically to the injection point, plans
  * there so {@link TranslunarInjectionPlan#solve} sees the geometry the impulsive model saw, and
@@ -58,8 +57,8 @@ import org.orekit.time.AbsoluteDate;
  * own propagator.
  *
  * <p><b>It declares no sphere-of-influence transition</b>, and now could not: a propulsive stage is
- * refused one (L4 §3.3, enforced in {@code StageLegRunner}). The crossing belongs to the coast that
- * follows, which is where it happens — a translunar transfer crosses ballistically.
+ * refused one. The crossing belongs to the coast that follows, which is where it happens — a
+ * translunar transfer crosses ballistically.
  */
 public class TLIBurnStage extends MissionStage {
   private static final Logger logger = LogManager.getLogger(TLIBurnStage.class);
@@ -177,8 +176,8 @@ public class TLIBurnStage extends MissionStage {
 
   /**
    * The finite-burn record of the flight: the arc swept, and what the burn costs above the impulse
-   * it replaces (spec §6.1). That surcharge is the loss the lot exists to measure, and nothing in
-   * the repository produced it before.
+   * it replaces. That surcharge is the loss the lot exists to measure, and nothing in the
+   * repository produced it before.
    */
   private void logBurn(SpacecraftState ignitionState, Burn plan) {
     double impulsive = plan.plan().deltaV().getNorm();

@@ -71,7 +71,7 @@ public final class OrekitService {
    * The identity of a cached atmosphere. An {@link AtmosphereModel} alone does not name one: an
    * {@code Atmosphere} is built against a body shape, so the same model around two bodies is two
    * objects — which is exactly what lets a {@link DragContext} carry only the enum and stay correct
-   * across a sphere-of-influence crossing (spec {@code docs/atmosphere/04-conception-L1.md} §1.2).
+   * across a sphere-of-influence crossing.
    */
   private record AtmosphereKey(AtmosphereModel model, SolarSystemBody body) {}
 
@@ -162,7 +162,6 @@ public final class OrekitService {
   /**
    * The inertial frame centred on the given body, with <b>ICRF axes</b>: a pure translation of GCRF
    * to that body's centre. This is the frame a trajectory arc around that body is expressed in
-   * (PHY-4 / L4, spec {@code docs/multi-corps/06-conception-L4.md} §2.2).
    *
    * <p><b>Deliberately not {@code CelestialBody.getInertiallyOrientedFrame()}</b>, although that is
    * Orekit's own selenocentric inertial frame. Measured: its axes are the IAU lunar pole, 22.08°
@@ -217,7 +216,7 @@ public final class OrekitService {
     }
   }
 
-  // ── Integrator max-step sizing (late-ignition invariant, spec 06 I6 / bilan 08 §3.1) ──
+  // ── Integrator max-step sizing ──
   //
   // A burn igniting mid-propagation restarts the integrator with the coast-sized step; if that
   // trial step can drive the mass negative, Orekit throws DURING the trial evaluation — before
@@ -241,16 +240,15 @@ public final class OrekitService {
    * Default scalar integrator tolerances for the optimization propagator, applied to all seven
    * Cartesian state components.
    *
-   * <p><b>{@code 1e-5} / {@code 1e-7} since OPT-1 / C1</b> (spec {@code
-   * docs/optimization/07-conception-C1.md}, mesures {@code 08-mesures-C1.md}). The historical
-   * {@code 1e-8} / {@code 1e-10} held position to ~0.7 mm for a cost graded in kilometres — some
-   * seven orders below the REL-18 comparison noise, and paid for by many small integrator steps
-   * (each an NRLMSISE call). The bench sweep measured the step as tolerance-bound and this value as
-   * the sweet spot: −58 % FAST / −66 % BALANCED / −63 % PRECISE wall, verdict bit-identical on
-   * PRECISE and within tens of metres elsewhere (~0.7 m local error, still ~27 000× under REL-18).
-   * Loosening further (1e-4/1e-6) bought only 3-11 % more for ten times the truncation error and a
-   * visible drift, not worth it when this is the only propagator the verdict is read from. The
-   * bench overrides it through {@link #OPT_ABS_TOL_PROPERTY} / {@link #OPT_REL_TOL_PROPERTY}.
+   * <p><b>{@code 1e-5} / {@code 1e-7} since OPT-1 / C1</b>. The historical {@code 1e-8} / {@code
+   * 1e-10} held position to ~0.7 mm for a cost graded in kilometres — some seven orders below the
+   * REL-18 comparison noise, and paid for by many small integrator steps (each an NRLMSISE call).
+   * The bench sweep measured the step as tolerance-bound and this value as the sweet spot: −58 %
+   * FAST / −66 % BALANCED / −63 % PRECISE wall, verdict bit-identical on PRECISE and within tens of
+   * metres elsewhere (~0.7 m local error, still ~27 000× under REL-18). Loosening further
+   * (1e-4/1e-6) bought only 3-11 % more for ten times the truncation error and a visible drift, not
+   * worth it when this is the only propagator the verdict is read from. The bench overrides it
+   * through {@link #OPT_ABS_TOL_PROPERTY} / {@link #OPT_REL_TOL_PROPERTY}.
    */
   public static final double DEFAULT_OPT_ABS_TOL = 1e-5;
 
@@ -290,7 +288,7 @@ public final class OrekitService {
    * SAFE_MAX_STEP} trial step at ignition would consume more than {@code 1/1.5} of its mass. That
    * auto-tightening is what keeps a lighter I7 load safe: once the mass at ignition drops below
    * about {@code SAFE_MAX_STEP × massFlow}, the hardcoded cap would let a single coast-sized trial
-   * step drive the mass negative and crash the trial evaluation (spec 06 I6, bilan 08 §3.1).
+   * step drive the mass negative and crash the trial evaluation.
    *
    * @param burns the burns that may ignite during the propagation
    * @return the largest safe integrator max step in seconds
@@ -339,8 +337,7 @@ public final class OrekitService {
    *
    * <p><b>It mounts the drag too</b>, although it has no caller in {@code src/main} — only tests
    * use it. Letting it ignore a {@link DragContext} would re-open the one failure mode this lot is
-   * built to exclude: drag asked for and not flown (spec {@code
-   * docs/atmosphere/04-conception-L1.md} §3.4).
+   * built to exclude: drag asked for and not flown.
    *
    * @param context the flight context: central body, third bodies, and any atmosphere
    * @param maxStep integrator maximum step in seconds (must satisfy the late-ignition invariant)
@@ -366,21 +363,21 @@ public final class OrekitService {
    *
    * <p><b>The order of the three calls below is load-bearing</b> — {@code setOrbitType}, then
    * {@code setMu}, then {@code addForceModel}. Orekit is not indifferent to it everywhere, and a
-   * tidier-looking permutation would cost the L0 baseline (spec {@code
-   * docs/multi-corps/03-conception-L1.md} §7). L2 extends that by one line: the central field is
-   * added first, then the perturbers in the canonical order of the context's {@code EnumSet}.
+   * tidier-looking permutation would cost the L0 baseline. L2 extends that by one line: the central
+   * field is added first, then the perturbers in the canonical order of the context's {@code
+   * EnumSet}.
    *
    * <p><b>A body with no harmonic field gets none</b>, and its central term is still whole: {@code
    * setMu} mounts a {@link NewtonianAttraction} of its own when no attraction model is present, and
    * that term is what the missing non-central field would have complemented. Before PHY-4 / L4 this
    * call was unconditional, so a lunar context mounted the <b>Earth's</b> 8×8 field expressed in
-   * ITRF and propagated without complaint (spec {@code docs/multi-corps/06-conception-L4.md}
-   * §1.2-D) — the one defect of that lot able to produce a plausible, wrong trajectory.
+   * ITRF and propagated without complaint — the one defect of that lot able to produce a plausible,
+   * wrong trajectory.
    *
    * <p><b>The drag comes last</b>, after the central field and the third bodies. An absent {@link
    * DragContext} adds nothing at all — not a zero force — so a drag-off propagator has exactly the
    * force list it had before PHY-1, in the same order, and the lot's non-regression is a property
-   * of the type rather than a measurement (spec {@code docs/atmosphere/04-conception-L1.md} §1.1).
+   * of the type rather than a measurement.
    *
    * @param context the flight context: central body, third bodies, and any atmosphere
    * @param maxStep integrator maximum step in seconds (must satisfy the late-ignition invariant)
@@ -413,8 +410,7 @@ public final class OrekitService {
    *
    * <p>An empty perturber set adds nothing at all — not an identity force, not a zero term. That is
    * what makes L2's non-regression structural rather than measured: an unperturbed propagation has
-   * the very same force list, in the very same order, as before the lot (spec {@code
-   * docs/multi-corps/04-conception-L2.md} §4.1).
+   * the very same force list, in the very same order, as before the lot.
    *
    * @param propagator the propagator being built
    * @param context the gravitational context whose perturbers are to be mounted
@@ -433,7 +429,6 @@ public final class OrekitService {
    * atmosphere — a lunar arc whose drag context crossed the boundary with it — resolves to a {@code
    * null} atmosphere and mounts nothing either. That second case is what makes the aerodynamic half
    * portable across a sphere-of-influence crossing instead of a datum to be dropped and mourned
-   * (spec {@code docs/atmosphere/04-conception-L1.md} §1.2).
    *
    * @param propagator the propagator being built
    * @param context the flight context whose drag is to be mounted
@@ -532,19 +527,18 @@ public final class OrekitService {
    * <p><b>Only the Earth has one here, and that is a property of the data, not a shortcut.</b>
    * {@code orekit-data.zip} carries exactly one potential file, {@code Potential/eigen-6s.gfc},
    * which is terrestrial. Asking {@link GravityFieldFactory} for a lunar field would silently hand
-   * back that same Earth model expressed in ITRF — measured in spec {@code
-   * docs/multi-corps/06-conception-L4.md} §1.2-D, where it propagated a lunar arc without raising
+   * back that same Earth model expressed in ITRF, where it propagated a lunar arc without raising
    * anything. The {@code null} is therefore the honest answer, and {@link
    * #createOptimizationPropagator} is the single caller that reads it.
    *
-   * <p><b>The shared instance is an invariant, not an optimisation</b> (spec {@code
-   * docs/multi-corps/03-conception-L1.md} §3.3): it is what makes bit-for-bit equality with the L0
-   * baseline achievable, and therefore what lets the gate demand a zero tolerance. {@code
-   * computeIfAbsent} is atomic and evaluates the mapping function at most once per key, which is
-   * exactly that guarantee — do not replace it with an explicit lock or a pre-warm.
+   * <p><b>The shared instance is an invariant, not an optimisation</b>: it is what makes
+   * bit-for-bit equality with the L0 baseline achievable, and therefore what lets the gate demand a
+   * zero tolerance. {@code computeIfAbsent} is atomic and evaluates the mapping function at most
+   * once per key, which is exactly that guarantee — do not replace it with an explicit lock or a
+   * pre-warm.
    *
    * <p>The mapping function must not modify the map, so the Earth test sits <em>outside</em> it: a
-   * resolution that fell back to another body from inside would deadlock (spec L1 §7).
+   * resolution that fell back to another body from inside would deadlock.
    *
    * @param body the central body whose non-central field is requested
    * @return the shared force model for that body, or {@code null} if it has no harmonic field
@@ -573,7 +567,7 @@ public final class OrekitService {
    * body's position in the propagation frame and assumes that frame is centred on the central body.
    * Every propagation here is Earth-centred GCRF, so it holds today. A lunar arc still propagated
    * in GCRF would get the indirect term wrong — and wrong silently, since the magnitude would stay
-   * plausible (spec {@code docs/multi-corps/04-conception-L2.md} §7).
+   * plausible.
    *
    * @param body the perturbing body
    * @return the shared third-body attraction force model for that body

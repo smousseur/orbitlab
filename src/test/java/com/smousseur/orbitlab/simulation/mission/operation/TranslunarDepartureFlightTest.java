@@ -47,8 +47,8 @@ import org.orekit.utils.TimeStampedPVCoordinates;
  * pinning L2's answer before L2 has asked the question. This test asserts what L1 owns: that the
  * aim still converges, and that the perilune it converges to is the one asked for.
  *
- * <p><b>Contrainte de méthode</b> (découpage §3): this case flies a four-day transfer some thirty
- * times over, so it costs a few seconds, and it is the user who runs it.
+ * <p><b>Contrainte de méthode</b>: this case flies a four-day transfer some thirty times over, so
+ * it costs a few seconds, and it is the user who runs it.
  */
 class TranslunarDepartureFlightTest {
   private static final Logger logger = LogManager.getLogger(TranslunarDepartureFlightTest.class);
@@ -100,7 +100,7 @@ class TranslunarDepartureFlightTest {
         TranslunarInjectionPlan.solve(atInjection, TARGET_PERILUNE, exhaustVelocity, context);
     double wallSeconds = (System.nanoTime() - startedAt) / 1.0e9;
 
-    // ── logged, not asserted (spec §4.2) ────────────────────────────────────
+    // ── logged, not asserted ────────────────────────────────────
     logger.info(
         "Departure from a {}° tilted plane: misalignment {}°, parking coast {} s, dv {} m/s,"
             + " aim offset {} km, plan perilune {} km, solved in {} s",
@@ -148,9 +148,9 @@ class TranslunarDepartureFlightTest {
    * A parking plane misaligned with the Moon by {@code tilt}, at an arbitrary phase.
    *
    * <p>Built by rotating the demo's own normal by {@code tilt} about {@code ĥ × ûM}, which gives
-   * {@code ĥ' · ûM = sin(tilt)} — the misalignment is imposed rather than searched for (spec §4.1).
-   * The phase is deliberately <em>not</em> the injection point: the departure has to resolve a real
-   * coast, which is half of what this case flies.
+   * {@code ĥ' · ûM = sin(tilt)} — the misalignment is imposed rather than searched for. The phase
+   * is deliberately <em>not</em> the injection point: the departure has to resolve a real coast,
+   * which is half of what this case flies.
    */
   private static SpacecraftState tiltedParking(double tilt) {
     SpacecraftState demo = TranslunarInjectionPlan.parkingState(epoch, INJECTION_MASS);

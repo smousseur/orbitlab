@@ -13,10 +13,10 @@ import org.orekit.time.AbsoluteDate;
  * The frame one segment of a trajectory is expressed in: the body it is centred on, and the
  * inertial frame that centring is realised by.
  *
- * <p>Introduced by PHY-4 / L3 (spec {@code docs/multi-corps/05-conception-L3.md}) to make explicit
- * what {@code MissionEphemerisGenerator} already had in hand and dropped — a sample's positions are
- * expressed in {@code SpacecraftState.getFrame()}, and nothing recorded which one that was. Until
- * L4 produces a second arc, every point of every mission carries {@link #earth()}.
+ * <p>Introduced by PHY-4 / L3 to make explicit what {@code MissionEphemerisGenerator} already had
+ * in hand and dropped — a sample's positions are expressed in {@code SpacecraftState.getFrame()},
+ * and nothing recorded which one that was. Until L4 produces a second arc, every point of every
+ * mission carries {@link #earth()}.
  *
  * <p><b>Narrower than {@link GravitationalContext} on purpose.</b> The two carry the same pair, and
  * reusing the existing record would have spared the derivation below. But <b>the equality of this
@@ -40,8 +40,8 @@ public record TrajectoryArc(SolarSystemBody body, Frame frame) {
    * The arc a stage's samples belong to, derived from what that stage declares. This is the one
    * place the pairing <em>central body ↔ frame the positions are actually in</em> is stated, which
    * matters because nothing else checks it: {@code OrekitService.createOptimizationPropagator}
-   * never sets a propagation frame, so Orekit takes it from the initial orbit (spec L3 §1). An arc
-   * built from the stage's own context is the closest a sample can get to saying what it flew in.
+   * never sets a propagation frame, so Orekit takes it from the initial orbit. An arc built from
+   * the stage's own context is the closest a sample can get to saying what it flew in.
    *
    * @param context the gravitational context of the stage that produced the samples
    * @return the matching arc
@@ -60,7 +60,7 @@ public record TrajectoryArc(SolarSystemBody body, Frame frame) {
    * OrekitService}, and the Earth context resolves ITRF and the WGS84 ellipsoid — both of which
    * need the data archive. GCRF does not: it is EME2000 plus a fixed frame bias. The price is a
    * second statement of the Earth pairing, and it is paid by a one-line test asserting the two
-   * agree (spec L3 §2.1).
+   * agree.
    *
    * <p>Holder pattern rather than a {@code static final} field, for the reason {@code
    * GravitationalContext} gives: the frame is built by Orekit, so resolution is deferred to first
@@ -83,8 +83,8 @@ public record TrajectoryArc(SolarSystemBody body, Frame frame) {
    *
    * <p>The Earth branch goes through {@link #earth()} and therefore does <b>not</b> reach {@code
    * OrekitService}: the four test classes that build polylines without initialising it must keep
-   * working (spec L3 §2.1). {@code FramesFactory.getGCRF()} is the same instance {@code
-   * OrekitService.gcrf()} returns, so the two paths cannot diverge.
+   * working. {@code FramesFactory.getGCRF()} is the same instance {@code OrekitService.gcrf()}
+   * returns, so the two paths cannot diverge.
    *
    * @param body the body positions are centred on
    * @return the arc for that body
@@ -107,8 +107,7 @@ public record TrajectoryArc(SolarSystemBody body, Frame frame) {
    * <p>Frames are compared by <b>reference</b>, not by {@code equals}. Both come from the same
    * cache in {@code OrekitService}, so a same-body conversion returns the argument untouched
    * instead of pushing it through an identity {@code Transform} — which is what keeps a single-arc
-   * trajectory bit-for-bit unconverted (spec {@code docs/multi-corps/07-conception-L5.md} §3.4, and
-   * the same discipline as L4 §3.5).
+   * trajectory bit-for-bit unconverted.
    *
    * @param position a position of this arc, in metres
    * @param date the date that position was sampled at, which decides where the two centres are

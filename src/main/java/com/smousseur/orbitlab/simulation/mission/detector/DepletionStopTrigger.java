@@ -16,10 +16,10 @@ import org.orekit.time.AbsoluteDate;
 import org.orekit.utils.ParameterDriver;
 
 /**
- * Maneuver trigger implementing flame-out semantics (spec 06 I4b): the engine ignites at a fixed
- * date and thrusts until the spacecraft mass reaches the stage's depletion floor. The burn window
- * no longer needs to match the loaded propellant, so the outer propellant-sizing loop can vary
- * loads without recomputing windows.
+ * Maneuver trigger implementing flame-out semantics: the engine ignites at a fixed date and thrusts
+ * until the spacecraft mass reaches the stage's depletion floor. The burn window no longer needs to
+ * match the loaded propellant, so the outer propellant-sizing loop can vary loads without
+ * recomputing windows.
  */
 public class DepletionStopTrigger
     extends StartStopEventsTrigger<DateDetector, DepletionStopTrigger.FlameOutDetector> {

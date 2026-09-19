@@ -1,8 +1,7 @@
 package com.smousseur.orbitlab.engine.events;
 
 /**
- * Which of its two modes the scenario browser opens in (spec {@code
- * docs/scenario/01-persistance-missions.md} §6.2).
+ * Which of its two modes the scenario browser opens in.
  *
  * <p>A top-level type rather than one nested in the event that carries it: the menu publishes it,
  * the app state reads it, the pure model branches on it and the widget draws from it — four

@@ -36,7 +36,7 @@ public class GravityTurnProblem implements TrajectoryProblem {
   // a descending state that slows the downstream transfer phase by 2-5×.
   private static final double W_FPA_SOFT = 25.0;
 
-  // Acceptance threshold (bilan 08 §3.6). The W_FPA_SOFT·fpa² term is a tie-breaker toward a level
+  // Acceptance threshold. The W_FPA_SOFT·fpa² term is a tie-breaker toward a level
   // hand-off, not a constraint to drive to zero: at the reference FH mission the profile hands off
   // at fpa ≈ 2.1° while holding the apogee window, leaving an irreducible W_FPA_SOFT·(2.1°)² ≈
   // 0.034
@@ -44,7 +44,7 @@ public class GravityTurnProblem implements TrajectoryProblem {
   // hand-off — so the GT concludes on the first exploration instead of exhausting retries (and
   // logging a WARN) against a structural minimum. A positive residual FPA here is benign: the
   // CMA-ES
-  // transfer (spec 06 I6) absorbs it downstream. Derived from W_FPA_SOFT so it tracks a future
+  // transfer absorbs it downstream. Derived from W_FPA_SOFT so it tracks a future
   // recalibration of that weight. If a mission ever hands off above 2.5°, the WARN returns — a
   // genuine anomaly worth seeing, not noise.
   //
@@ -57,8 +57,8 @@ public class GravityTurnProblem implements TrajectoryProblem {
   private static final double MAX_EXPECTED_HANDOFF_FPA_RAD = FastMath.toRadians(2.5);
   private static final double ACCEPTABLE_COST = W_FPA_SOFT * sq(MAX_EXPECTED_HANDOFF_FPA_RAD);
 
-  // The same threshold, read against the hand-off an ascent flown in air has to make (PHY-2 / L5,
-  // spec docs/atmosphere/12-conception-L5-PHY-2.md §7.6). The paragraph above sizes acceptance on
+  // The same threshold, read against the hand-off an ascent flown in air has to make. The paragraph
+  // above sizes acceptance on
   // the irreducible FPA of the reference profile; under drag that profile is a different one. The
   // altitude floor of §5 forces the hand-off above the atmosphere, which is reached by lofting on a
   // shortened core burn, and a lofted hand-off is not level: measured, 6.81° against the 2.1° of
@@ -79,7 +79,7 @@ public class GravityTurnProblem implements TrajectoryProblem {
 
   // ── Staging floor penalty: no longer a guard, now a search regularizer ────
   //
-  // ORIGINALLY (bilan 10 §5.3) this guarded a real failure mode. The jettison was a DateDetector
+  // ORIGINALLY this guarded a real failure mode. The jettison was a DateDetector
   // planted inside the ascent, so a MECO scheduled before it ended the propagation before it fired:
   // burn 1 truncated, the first stage never dropped, and it stayed active for every downstream
   // phase. On the GEO profile a 0.4 s shortfall against a 150 s burn 1 stranded 3.3 t in S1 and let
@@ -88,10 +88,9 @@ public class GravityTurnProblem implements TrajectoryProblem {
   //
   // THAT FAILURE MODE IS GONE. The jettison is a phase of its own ("S1 separation"), so it happens
   // whatever the MECO; a transition time below the floor now just yields a zero-length second burn
-  // (spec docs/mission-stages/01-separations-implicites.md §6).
   //
   // THE PENALTY IS KEPT ANYWAY, for the reason the measurement gave when it was removed and the
-  // optimization tests re-run (étape 5, see 02-baseline-n2.md §12). Below the floor, transitionTime
+  // optimization tests re-run. Below the floor, transitionTime
   // stops controlling anything — every candidate there flies the same ascent and ends at the same
   // jettison coast — so the region is a plateau of equally mediocre solutions. Without the cliff,
   // CMA-ES spends real budget exploring it: on the Falcon Heavy LEO profile, +47 % evaluations and
@@ -107,8 +106,8 @@ public class GravityTurnProblem implements TrajectoryProblem {
   //
   // PHY-2/L3: the plateau it defends shrank. The floor is now maneuver.getStagingFloor() — the
   // booster-separation-plus-interstage time, a whole core burn below staging completion — because
-  // between those two times the MECO commands an early core cutoff (spec
-  // docs/atmosphere/10-conception-L3-PHY-2.md §3.1.3): every candidate there flies a different
+  // between those two times the MECO commands an early core cutoff: every candidate there flies a
+  // different
   // core burn and a different apogee, so it is a gradient the search must keep, not a plateau to
   // fence off. Only below getStagingFloor() does the core never fire, leaving the degenerate flat
   // region with the reproducibility hazard measured above — and that is all this penalty now
@@ -146,15 +145,14 @@ public class GravityTurnProblem implements TrajectoryProblem {
    * <p><b>PHY-2/L3 unlocks the lever that would let this rise, but leaves the value for flight
    * calibration.</b> The reasoning that pinned it at 0.5 — the gravity turn cannot lower an
    * over-delivered apogee except by pitching up, a false economy this weight must not reward — is
-   * dissolved by §3.2 of spec {@code docs/atmosphere/10-conception-L3-PHY-2.md} <em>only where the
-   * core-cutoff lever exists</em>: with the cutoff wired onto {@code transitionTime} (§3.1) the
-   * turn can lower its apogee by cutting the core instead of pitching. Where that lever is
-   * available — every core-phase launcher in the catalog — a higher weight drives the optimizer to
-   * cut rather than overshoot; where it is not, raising this weight re-buys the false economy,
-   * which {@code GravityTurnProblemTest#computeCost_prefersTheHandOffTheMissionSurvives} pins on a
-   * no-core stage. The value is therefore posed by flying {@code testFalconHeavyOptimizedTransfer}
-   * to its 400 ±7 % target with the lever open, one change at a time; it is held at 0.5 until that
-   * measurement says how far it may rise.
+   * dissolved <em>only where the core-cutoff lever exists</em>: with the cutoff wired onto {@code
+   * transitionTime} the turn can lower its apogee by cutting the core instead of pitching. Where
+   * that lever is available — every core-phase launcher in the catalog — a higher weight drives the
+   * optimizer to cut rather than overshoot; where it is not, raising this weight re-buys the false
+   * economy, which {@code GravityTurnProblemTest#computeCost_prefersTheHandOffTheMissionSurvives}
+   * pins on a no-core stage. The value is therefore posed by flying {@code
+   * testFalconHeavyOptimizedTransfer} to its 400 ±7 % target with the lever open, one change at a
+   * time; it is held at 0.5 until that measurement says how far it may rise.
    */
   private static final double W_APOGEE_OVERSHOOT = 0.5;
 
@@ -189,8 +187,7 @@ public class GravityTurnProblem implements TrajectoryProblem {
   private static final double VACUUM_HANDOFF_ALTITUDE_FLOOR = 30_000.0;
 
   /**
-   * Altitude the hand-off must clear when the ascent is flown against an atmosphere (PHY-2 / L5,
-   * spec {@code docs/atmosphere/12-conception-L5-PHY-2.md} §7.5).
+   * Altitude the hand-off must clear when the ascent is flown against an atmosphere.
    *
    * <p><b>Why the hand-off altitude is the quantity that matters.</b> The analytic transfer burns
    * at the hand-off, then coasts to the apogee it aimed at — half an orbit, 2661 s on the reference
@@ -239,9 +236,8 @@ public class GravityTurnProblem implements TrajectoryProblem {
 
   /**
    * Creates a gravity turn optimization problem with an explicit way of flying a candidate — the
-   * three explicit ascent phases, once the mission is built on {@code AscentSequence} (spec {@code
-   * docs/mission-stages/01-separations-implicites.md} §5.4). The cost function is unchanged either
-   * way: only the propagation differs.
+   * three explicit ascent phases, once the mission is built on {@code AscentSequence}. The cost
+   * function is unchanged either way: only the propagation differs.
    *
    * @param maneuver the gravity turn maneuver decoding the variables (burn 1 duration, staging)
    * @param initialState the spacecraft state at the beginning of the gravity turn
@@ -295,7 +291,7 @@ public class GravityTurnProblem implements TrajectoryProblem {
     // A launcher whose staging completes late needs a ceiling above it, or the box cannot express
     // a MECO at which the upper stage has done anything. Measured on the split Ariane 64: staging
     // completes at 479.8 s against this altitude-driven 520 s, the search saturates at 100 % of the
-    // box and hands over underground (spec docs/etagement/06-conception-L4.md §3.6).
+    // box and hands over underground.
     //
     // The added room is a fraction of the upper stage's own full-tank burn, not a constant: any
     // constant large enough for the Ariane also lifts the Falcon Heavy's box, and moving a bound
@@ -324,7 +320,7 @@ public class GravityTurnProblem implements TrajectoryProblem {
   public SpacecraftState propagate(double[] variables) {
     // Recorded for the computeCost() call the executor makes right after, on this same thread.
     // Floored at getStagingFloor(), not staging completion: a MECO between the two commands an
-    // early core cutoff (spec docs/atmosphere/10-conception-L3-PHY-2.md §3.1.3), a live lever the
+    // early core cutoff, a live lever the
     // penalty must not fence off.
     stagingShortfall.set(FastMath.max(0.0, maneuver.getStagingFloor() - variables[0]));
     return propagation.propagate(initialState, variables);
@@ -365,8 +361,8 @@ public class GravityTurnProblem implements TrajectoryProblem {
     double vRadial = Vector3D.dotProduct(vel, zenith);
     double vTangential = FastMath.sqrt(vNorm * vNorm - vRadial * vRadial);
 
-    // Earth-fixed on purpose (PHY-4 / L1, spec docs/multi-corps/03-conception-L1.md §4.1):
-    // multi-arc optimization is out of PHY-4 (docs/multi-corps/01-decoupage.md §1). This µ moves
+    // Earth-fixed on purpose:
+    // multi-arc optimization is out of PHY-4. This µ moves
     // when a CMA-ES cost function has to grade a candidate that crosses an SOI switch.
     KeplerianOrbit orb =
         new KeplerianOrbit(pv, state.getFrame(), state.getDate(), Constants.WGS84_EARTH_MU);
@@ -394,7 +390,7 @@ public class GravityTurnProblem implements TrajectoryProblem {
     // 62 by 0.37 — so the sign of the flight path angle separates nothing and forbidding it would
     // move every mission. The depth does: a split Ariane 64 handed over 138 km below its own
     // apogee, and no downstream burn recovers that cheaply, because prograde thrust past apogee
-    // raises the far apsis rather than the near one (spec docs/etagement/06-conception-L4.md §3.7).
+    // raises the far apsis rather than the near one.
     if (vRadial < 0) {
       cost += W_HANDOVER_DIP * sq((apogee - alt) / constraints.targetApogee());
     }
@@ -433,7 +429,7 @@ public class GravityTurnProblem implements TrajectoryProblem {
     // below sea level so CMA-ES is pushed towards a near-orbital hand-off.
     //
     // VACUUM ONLY, and that is not a precaution — measured, this term is what blocks the drag-on
-    // solution (spec docs/atmosphere/12-conception-L5-PHY-2.md §7.5). A hand-off high enough to
+    // solution. A hand-off high enough to
     // clear the atmosphere is reached by lofting on a shortened core burn, so it is steep and
     // eccentric and its periapsis is necessarily deep: the one candidate of the box that both
     // clears the air and holds the apogee window sits at 103 km on a −1663 km periapsis, and this

@@ -36,13 +36,12 @@ import org.orekit.time.AbsoluteDate;
  *
  * <p><b>Why two scales and not one.</b> The measured Earth slot is 232 s wide and recurs every 86
  * 164 s — a ratio of one to 371. On the 752 px this wizard can give an axis, three days of span
- * make the slot 0.4 px: it is not small, it is invisible, and no tuning saves a single axis (spec
- * {@code docs/mission-window/02-timeline-wizard.md} §2). So the day scale draws an opportunity as
- * an <em>instant</em> — a marker, whose width nobody reads as a duration, so it lies about nothing
- * — and the true width appears only in the zoom pane, where it means what it says: the operational
- * margin. That pane's own scale is not fixed either, because the slot is not: {@link ZoomScale}
- * picks the rung that shows the selected slot without the captions colliding, and the note beside
- * the heading names it.
+ * make the slot 0.4 px: it is not small, it is invisible, and no tuning saves a single axis. So the
+ * day scale draws an opportunity as an <em>instant</em> — a marker, whose width nobody reads as a
+ * duration, so it lies about nothing — and the true width appears only in the zoom pane, where it
+ * means what it says: the operational margin. That pane's own scale is not fixed either, because
+ * the slot is not: {@link ZoomScale} picks the rung that shows the selected slot without the
+ * captions colliding, and the note beside the heading names it.
  *
  * <p><b>No cost curve.</b> A V-shaped trace in the zoom pane was considered and dropped: Lemur has
  * no line primitive and a custom mesh is out of proportion here. The three cost-bearing figures of
@@ -231,7 +230,7 @@ public final class LaunchWindowTimeline {
    * Draws the state, rebuilding the two frames from scratch.
    *
    * <p>The frames keep their size in all three states: the page fills in when a node is typed, it
-   * does not reorganise itself (spec §6).
+   * does not reorganise itself.
    *
    * @param state what to draw
    */
@@ -424,7 +423,7 @@ public final class LaunchWindowTimeline {
   /**
    * The gap between the first two opportunities, which is the recurrence as this search measured it
    * rather than a period written down here — the horizon belongs to the problem, not to the widget
-   * (spec §2). A lone opportunity measures nothing.
+   * . A lone opportunity measures nothing.
    */
   private static String recurrence(List<LaunchWindow> windows) {
     if (windows.size() < 2) {

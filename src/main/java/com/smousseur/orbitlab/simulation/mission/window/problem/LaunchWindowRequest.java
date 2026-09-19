@@ -4,7 +4,6 @@ import com.smousseur.orbitlab.simulation.mission.window.LaunchWindowProblem;
 
 /**
  * What a caller hands a planner to get opportunities back: the inputs of a window, and nothing else
- * (MIS-4 / L5 §4.2).
  *
  * <p><b>Sealed over records, and that is the point.</b> The wizard's planning page recomputes on a
  * polled loop and memoises on {@code equals}; a record's equality is by value all the way down,

@@ -35,8 +35,7 @@ import org.orekit.utils.Constants;
 import org.orekit.utils.PVCoordinates;
 
 /**
- * N2 non-regression baseline of the ascent, for the explicit-staging migration (spec {@code
- * docs/mission-stages/01-separations-implicites.md} §7.1, étape 0).
+ * N2 non-regression baseline of the ascent, for the explicit-staging migration.
  *
  * <p>Splitting the gravity turn into {@code Gravity turn (S1) → S1 separation → Gravity turn (S2)}
  * restarts the adaptive integrator at each new phase boundary, so the refactor cannot be
@@ -83,10 +82,10 @@ class AscentBaselineN2Test extends AbstractTrajectoryOptimizerTest {
   /** Every ascent phase name starts with this, before and after the split. */
   private static final String ASCENT_PHASE_PREFIX = "Gravity turn";
 
-  /** Optimization key of the gravity-turn problem; unchanged by the split (spec §5.2). */
+  /** Optimization key of the gravity-turn problem; unchanged by the split. */
   private static final String GRAVITY_TURN_KEY = "Gravity turn";
 
-  // ── N2 tolerances (spec §7.1) ────────────────────────────────────────────
+  // ── N2 tolerances ────────────────────────────────────────────
   private static final double MECO_DATE_TOLERANCE_S = 1.0e-3;
   private static final double MECO_MASS_TOLERANCE_KG = 1.0;
   private static final double MECO_POSITION_TOLERANCE_M = 10.0;
@@ -103,8 +102,8 @@ class AscentBaselineN2Test extends AbstractTrajectoryOptimizerTest {
   private static final boolean RECORD_BASELINE = Boolean.getBoolean("orbitlab.recordBaseline");
 
   // ── Recorded baseline, post-split (2026-08-03, seed 42, étape 3) ─────────
-  // Full snapshots (ΔV, per-stage accounting, ephemeris point counts) are in
-  // docs/mission-stages/02-baseline-n2.md §9.3.
+  // Full snapshots (ΔV, per-stage accounting, ephemeris point counts) are kept with the baseline
+  // record, not inline.
   // Set a profile back to null to re-capture it after a deliberate behavior change (étape 5).
   //
   // Re-baselined at étape 3 because CMA-ES stopped at a different point of the same basin — both
@@ -123,8 +122,7 @@ class AscentBaselineN2Test extends AbstractTrajectoryOptimizerTest {
   // GravityTurnReplayConsistencyTest.
 
   // ── RE-RECORDED at MIS-7 P1.a-bis (2026-08-16, seed 42) ──────────────────
-  // Correcting the pitch kick's local horizontal basis (spec
-  // docs/earth-orbit/01-mission-terre-parametrable.md §1.1c) mirrors the launch heading about the
+  // Correcting the pitch kick's local horizontal basis mirrors the launch heading about the
   // site meridian, and moves the ascent well past these tolerances — 890.733 m of position and
   // 5.781 m/s of velocity at MECO on GravityTurnReplayConsistencyTest, against 10 m and 0.05 m/s.
   // Both profiles were therefore re-captured. The tolerances below are UNTOUCHED: re-recording a
@@ -174,7 +172,7 @@ class AscentBaselineN2Test extends AbstractTrajectoryOptimizerTest {
   // do not read a five-phase slowdown factor off it without measuring one.
   // ── RE-RECORDED at PHY-8 / L4 (2026-09-09, seed 42) ─────────────────────
   // The gravity turn's cost function gained a term charging how far below its own apogee a
-  // candidate hands over (spec docs/etagement/06-conception-L4.md §3.7). It exists for the split
+  // candidate hands over. It exists for the split
   // Ariane 64, which handed over 138 km below its apogee where these two profiles hand over 0.15
   // km below theirs — the term is four orders of magnitude below the acceptable cost here. It is
   // not zero, though, and this optimizer returns the first good-enough candidate rather than an

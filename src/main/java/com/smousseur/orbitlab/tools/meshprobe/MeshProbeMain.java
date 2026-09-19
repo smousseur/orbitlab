@@ -25,7 +25,7 @@ import java.util.logging.Logger;
 
 /**
  * CLI entry-point reporting, for every planetary model, the frame its geometry carries and whether
- * it conforms to the export convention (see {@code docs/orientation-planetes/01-decoupage.md}, L0).
+ * it conforms to the export convention.
  *
  * <p>The report is meant to be read, and its rows copied into the javadoc of whatever ends up
  * holding a correction — deliberately not generated code, which would relit itself badly and add a

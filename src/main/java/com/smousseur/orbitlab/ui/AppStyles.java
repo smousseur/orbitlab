@@ -108,7 +108,7 @@ public final class AppStyles {
    * Height in pixels of the breadcrumb band running across the top of the screen. Fixed, and
    * deliberately independent of the depth of the hierarchy it displays: it is the origin of the
    * HUD's vertical anchoring chain, so a height that varied with the focus would move everything
-   * below it every time the camera changed body ({@code docs/navigation/01-breadcrumb.md} §5.5).
+   * below it every time the camera changed body.
    */
   public static final float BREADCRUMB_BAND_HEIGHT_PX = 36f;
 

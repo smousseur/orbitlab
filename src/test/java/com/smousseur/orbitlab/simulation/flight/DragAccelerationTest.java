@@ -31,8 +31,7 @@ import org.orekit.utils.PVCoordinates;
 import org.orekit.utils.TimeStampedPVCoordinates;
 
 /**
- * <b>PHY-1 / L2 — the drag force is the drag force</b> (spec {@code
- * docs/atmosphere/05-conception-L2.md} §3.1).
+ * <b>PHY-1 / L2 — the drag force is the drag force</b>.
  *
  * <p>The acceleration the mounted {@link DragForce} contributes at an imposed state, against {@code
  * 0.5·ρ·v_rel²·Cd·S/m} written out by hand. The force is pulled back out of a propagator built by

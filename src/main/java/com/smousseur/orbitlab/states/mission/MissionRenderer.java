@@ -47,8 +47,7 @@ import org.orekit.time.AbsoluteDate;
  *
  * <p>Every drawn object is a {@link TrackedObjectView}; this class coordinates them. The primary is
  * the one built with a click handler and the one whose eclipse occluder is pushed; the debris are
- * lean views drawn each frame from their own ephemerides (spec {@code
- * docs/multi-objets/03-conception-L1.md} §2.4).
+ * lean views drawn each frame from their own ephemerides.
  */
 public final class MissionRenderer {
 
@@ -79,16 +78,14 @@ public final class MissionRenderer {
   /**
    * Mount radius (m) a jettisoned booster is drawn out to, along the flank it occupied on the stack
    * (the shared fan direction, {@link SeparationImpulse#fanDirection}), so it sits back where it
-   * detached rather than piling on the axis (PHY-5 / L6, spec {@code
-   * docs/multi-objets/08-conception-L6.md} §D2). Sized to the measured mount ring (~0.06 of the
-   * stack height, ≈ 4 m for the Ariane 64).
+   * detached rather than piling on the axis. Sized to the measured mount ring (~0.06 of the stack
+   * height, ≈ 4 m for the Ariane 64).
    */
   private static final double BOOSTER_LATERAL_SPREAD_METERS = 4.0;
 
   /**
    * Below this altitude (m) a debris' last sample counts as an impact: it lands, and gets a ground
-   * track. Above it, the debris ends at the mission horizon in orbit and gets none (PHY-5 / L7
-   * §D2).
+   * track. Above it, the debris ends at the mission horizon in orbit and gets none.
    */
   private static final double LANDED_ALTITUDE_METERS = 1000.0;
 
@@ -118,7 +115,7 @@ public final class MissionRenderer {
   /**
    * One ground-track view per debris, parallel to {@link #debrisViews}: {@code null} for an orbital
    * debris (no ground track), and for a landing debris until its rotations are available and it is
-   * built lazily (PHY-5 / L7 §D3).
+   * built lazily.
    */
   private final List<DebrisGroundTrackView> debrisGroundTracks = new ArrayList<>();
 
@@ -148,8 +145,7 @@ public final class MissionRenderer {
   /**
    * A silhouette's drawn mesh and its size. A {@code drawnSizeMeters} of {@code -1} means "use the
    * launcher config's own scale" (a launcher phase, whose asset is one unit tall); a positive value
-   * is the payload's true catalog size, to which its bounding box is normalized (spec {@code
-   * docs/multi-objets/07-conception-L5.md} §3.3).
+   * is the payload's true catalog size, to which its bounding box is normalized.
    */
   private record MeshTarget(String path, double drawnSizeMeters) {}
 
@@ -216,7 +212,7 @@ public final class MissionRenderer {
    * at its own fraction of it, with no per-piece number anywhere. The same value is the radius
    * {@link LodView} projects to decide the 3D-versus-icon switch, so a shorter vehicle turns back
    * into its icon closer in. That is the whole of the per-object LOD threshold: it follows the
-   * height rather than being configured (spec {@code docs/etagement/01-decoupage.md} §3.8).
+   * height rather than being configured.
    *
    * <p>A mission carrying no spec is the legacy path, drawn with {@code
    * LauncherAssets.DEFAULT_MODEL_PATH} — and {@link LauncherModel#DEFAULT_HEIGHT_METERS} is that
@@ -268,25 +264,24 @@ public final class MissionRenderer {
    * The body every drawn coordinate of a mission is expressed about, this frame.
    *
    * <p><b>It takes a point and not a mission entry</b>, and that is the whole of PHY-4 / L3's
-   * rendering seam (spec {@code docs/multi-corps/05-conception-L3.md} §3.1), which L5 extends
-   * rather than replaces. Three states convert the same spacecraft position every frame — {@link
-   * com.smousseur.orbitlab.states.camera.FloatingOriginAppState} negates it onto the near frame,
-   * {@code MissionOrchestratorAppState} places the anchor at it, {@code CameraTransitionAppState}
-   * aims at it — and they must not disagree. All three already call {@link
+   * rendering seam, which L5 extends rather than replaces. Three states convert the same spacecraft
+   * position every frame — {@link com.smousseur.orbitlab.states.camera.FloatingOriginAppState}
+   * negates it onto the near frame, {@code MissionOrchestratorAppState} places the anchor at it,
+   * {@code CameraTransitionAppState} aims at it — and they must not disagree. All three already
+   * call {@link
    * com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemeris#displayPointAt} at the
    * same date, so deriving this from the point they already share makes disagreement impossible
    * without them first disagreeing about the position, which would break everything anyway.
    * Publishing it once per frame instead would not work: {@code CameraTransitionAppState} is
    * attached before {@code FloatingOriginAppState}, so it would read the previous frame's value.
    *
-   * <p><b>Why the arc in spacecraft view and the focus elsewhere</b> (spec {@code
-   * docs/multi-corps/07-conception-L5.md} §3.1). Following a spacecraft, the near scene is centred
-   * on the spacecraft and the one globe the near viewport can hold has to be the body its
-   * coordinates are about, or the Earth would be drawn where the Moon should be — 1 837 km from a
-   * spacecraft at perilune. Looking at a planet, the centre is that planet and the trajectory has
-   * to come to it. The switch therefore happens at the arc boundary, atomically, and reverses by
-   * itself when the clock is scrubbed backwards, because it is a function of the sample and not an
-   * event.
+   * <p><b>Why the arc in spacecraft view and the focus elsewhere</b>. Following a spacecraft, the
+   * near scene is centred on the spacecraft and the one globe the near viewport can hold has to be
+   * the body its coordinates are about, or the Earth would be drawn where the Moon should be — 1
+   * 837 km from a spacecraft at perilune. Looking at a planet, the centre is that planet and the
+   * trajectory has to come to it. The switch therefore happens at the arc boundary, atomically, and
+   * reverses by itself when the clock is scrubbed backwards, because it is a function of the sample
+   * and not an event.
    *
    * @param point the sample being drawn
    * @param view the current focus
@@ -316,7 +311,7 @@ public final class MissionRenderer {
    * half. <b>Both go through {@code TrajectoryArc.convertPosition}</b>, and that is not tidiness:
    * the vertices are written relative to this very position, so a second conversion path would put
    * a visible kink between the last vertex and the spacecraft model — at the one place the eye is
-   * looking (spec {@code docs/multi-corps/07-conception-L5.md} §3.3).
+   * looking.
    *
    * <p>Returns the argument untouched when the bodies agree, which is every trajectory that exists
    * before L6.
@@ -347,8 +342,7 @@ public final class MissionRenderer {
    * The click handler a debris carries: it selects the debris (camera + telemetry) through the
    * shared {@code FocusController}, but only while the debris' icon — its handle — is actually
    * shown, i.e. the global "show debris" toggle is on. A decluttered debris is not selectable,
-   * which is what lets L3 return the focus to the primary when the toggle is turned off (SEL-1 / L2
-   * §2.6).
+   * which is what lets L3 return the focus to the primary when the toggle is turned off.
    */
   private Runnable debrisSelectHandler(DebrisTrack track) {
     return () -> {
@@ -385,8 +379,7 @@ public final class MissionRenderer {
    * <p>The primary is drawn from the point the orchestrator interpolated; each debris is drawn from
    * its own ephemeris at {@code now}, and stays hidden until {@code now} reaches its jettison — a
    * debris does not exist before its separation, and reappears by itself when the clock is scrubbed
-   * back, because visibility is a function of the date and not an event (spec {@code
-   * docs/multi-objets/03-conception-L1.md} §2.4).
+   * back, because visibility is a function of the date and not an event.
    *
    * @param point the interpolated primary point, whose position also serves as the trail tip
    * @param trail the primary's display polyline, the same instance on every frame
@@ -417,9 +410,9 @@ public final class MissionRenderer {
 
   /**
    * The primary silhouette's seat, along the flight direction, this frame: {@code H − drawnHeight},
-   * so the nose stays fixed and the stack shrinks from the bottom as it sheds pieces (PHY-5 / L6
-   * §D1). {@code FULL} and {@code AFTER_BOOSTERS} keep the full height (boosters are shed
-   * laterally), so their seat is zero.
+   * so the nose stays fixed and the stack shrinks from the bottom as it sheds pieces. {@code FULL}
+   * and {@code AFTER_BOOSTERS} keep the full height (boosters are shed laterally), so their seat is
+   * zero.
    */
   private double primaryAxialSeat(PrimarySilhouette.SilhouettePhase phase) {
     return switch (phase) {
@@ -431,7 +424,7 @@ public final class MissionRenderer {
 
   /**
    * The drawn height of the payload silhouette: its true catalog size, or the {@code after_s1}
-   * remnant's height when the payload has no mesh (the same fallback its mesh takes, §D1).
+   * remnant's height when the payload has no mesh.
    */
   private double payloadDrawnHeightMeters() {
     return payloadAsset != null
@@ -498,10 +491,10 @@ public final class MissionRenderer {
   /**
    * The mesh a silhouette phase resolves to. Launcher phases keep the launcher's own scale (the
    * assets are one unit tall, so {@code Model3dView} sizes them by the vehicle height); the payload
-   * is drawn at its true catalog size by normalizing the mesh's bounding box (§3.3). A payload with
-   * no mesh — a cargo module, or a mission carrying no catalog payload — falls back to the {@code
+   * is drawn at its true catalog size by normalizing the mesh's bounding box. A payload with no
+   * mesh — a cargo module, or a mission carrying no catalog payload — falls back to the {@code
    * after_s1} launcher stack, the very target {@code AFTER_S1} yields, so scrubbing across the
-   * boundary swaps nothing (spec {@code docs/multi-objets/07-conception-L5.md} §3.2).
+   * boundary swaps nothing.
    */
   private MeshTarget targetFor(PrimarySilhouette.SilhouettePhase phase) {
     return switch (phase) {
@@ -528,8 +521,8 @@ public final class MissionRenderer {
    * placed relative to {@code primaryPoint} — the object it hangs under in the scene graph — so its
    * position keeps full precision far from Earth (PHY-5, the GEO "tremble" fix, {@link
    * TrackedObjectView#updateFromPoint}), and carries its own seat so it is drawn where it detached
-   * (§D2) rather than piled on the axis. The reference is the primary's <em>drawn</em> point — the
-   * same seated point that positions the shared anchor the debris hang under (SEL-1 / L2) — so that
+   * rather than piled on the axis. The reference is the primary's <em>drawn</em> point — the same
+   * seated point that positions the shared anchor the debris hang under (SEL-1 / L2) — so that
    * anchor's position cancels out of each debris' world position exactly, and the primary's own
    * seat, baked into that shared point, cancels with it rather than being inherited.
    */
@@ -557,8 +550,7 @@ public final class MissionRenderer {
       Vector3D upHint = debrisUpHint(track, pt);
       // Once a landing piece has impacted, it rests on the ground and must ride the turning globe
       // with its ground track's impact marker, not hang at the frozen inertial pose of the impact
-      // instant, which the rotating Earth drifts out from under (PHY-5 / L7 §D3 kept the piece
-      // inertial — right for the fall, adrift at rest; docs/bugs.md BUG-28). Position, heading,
+      // instant, which the rotating Earth drifts out from under. Position, heading,
       // roll
       // and seat all co-rotate rigidly with the drawn globe.
       if (!within && hasLanded(track)) {
@@ -597,7 +589,7 @@ public final class MissionRenderer {
       debrisView.setInertialTrail(followed || relativeDescent);
       updateGroundTrack(i, track, debrisVisible, nearView);
       // Off by default: a debris shows only its close-range 3D mesh; the far-range icon and the
-      // ground track come with the global "show debris" toggle (PHY-5 / L7 §D1).
+      // ground track come with the global "show debris" toggle.
       debrisView.setSecondaryDisplay(debrisVisible);
       debrisView.updateFromPoint(
           pt, seat, upHint, followed ? null : primaryPoint, trail, upTo, cam, tpf, focus);
@@ -621,10 +613,10 @@ public final class MissionRenderer {
 
   /**
    * Shows a landing debris' ground track when the "show debris" toggle is on, building it lazily
-   * the first time its rotations are available (PHY-5 / L7 §D3). An orbital debris (it never lands)
-   * gets none, and a hidden toggle hides it. Whether the near view is centred on Earth at all is a
-   * separate, coarser gate owned by {@code PlanetPoseAppState}, which culls the shared frame these
-   * tracks hang under when the focus is not the Earth.
+   * the first time its rotations are available. An orbital debris (it never lands) gets none, and a
+   * hidden toggle hides it. Whether the near view is centred on Earth at all is a separate, coarser
+   * gate owned by {@code PlanetPoseAppState}, which culls the shared frame these tracks hang under
+   * when the focus is not the Earth.
    */
   private void updateGroundTrack(
       int index, DebrisTrack track, boolean debrisVisible, boolean nearView) {
@@ -656,7 +648,7 @@ public final class MissionRenderer {
     }
   }
 
-  /** Whether a debris reaches the ground — its last sample is at (near) zero altitude (§D2). */
+  /** Whether a debris reaches the ground — its last sample is at (near) zero altitude. */
   private static boolean hasLanded(DebrisTrack track) {
     return track.ephemeris().lastPoint().altitudeMeters() < LANDED_ALTITUDE_METERS;
   }
@@ -723,8 +715,7 @@ public final class MissionRenderer {
    * <p>A {@code null} roll hint (a non-booster, rolling about world up) becomes celestial north
    * made explicit so it can be turned like any other; at {@code now = t_impact} the rotation is
    * identity and the pose is returned unmoved, so there is no jump when the fall ends. Returns the
-   * frozen pose unchanged when the drawn rotation is not yet available for either date (PHY-5 / L7
-   * §D3, corrected for the post-impact rest; docs/bugs.md BUG-28).
+   * frozen pose unchanged when the drawn rotation is not yet available for either date.
    *
    * @param impact the impact sample (the ephemeris' last point)
    * @param seat the seat offset computed at the impact pose
@@ -783,7 +774,6 @@ public final class MissionRenderer {
   /**
    * Builds a landing debris' ground track from its whole fall, in the Earth rotating frame — or
    * empty while any sample's drawn rotation is not yet available, so the caller retries next frame
-   * (PHY-5 / L7 §D3).
    */
   private Optional<DebrisGroundTrackView> buildGroundTrack(DebrisTrack track, int index) {
     RenderContext ctx = RenderContext.planet(SolarSystemBody.EARTH);
@@ -806,8 +796,8 @@ public final class MissionRenderer {
   }
 
   /**
-   * A jettisoned piece's seat, at the place it detached from (PHY-5 / L6 §D2): a booster on the
-   * exact flank it was mounted on (lateral fan, shared with the separation kick — {@link
+   * A jettisoned piece's seat, at the place it detached from: a booster on the exact flank it was
+   * mounted on (lateral fan, shared with the separation kick — {@link
    * SeparationImpulse#fanDirection}), the upper stage up where it sat within {@code after_s1}, the
    * core at the base (no seat).
    */
@@ -857,7 +847,7 @@ public final class MissionRenderer {
               debrisSelectHandler(track),
               (Node) primary.view().spatial());
       // A debris draws no inertial ribbon: its trajectory is a ground track (landing) or nothing
-      // (orbital), decided per frame in updateDebris (PHY-5 / L7 §D3).
+      // (orbital), decided per frame in updateDebris.
       view.setInertialTrail(false);
       debrisViews.add(view);
       debrisGroundTracks.add(null);
@@ -911,10 +901,10 @@ public final class MissionRenderer {
    *
    * <p><b>The upper stage leaves as {@code after_s1}, not {@code S2}.</b> The primary flies the
    * {@code after_s1} silhouette (upper stage <em>and</em> fairing) right up to this separation,
-   * because the fairing has no jettison of its own (découpage §1). Drawing the debris as the bare
-   * {@code S2} would make it 12 m shorter than the remnant it detached from, so the piece would
-   * appear to shrink as it separates; drawing it as {@code after_s1} makes it fill exactly the box
-   * the remnant occupied, and it peels away seamlessly while the payload is revealed (PHY-5 / L6).
+   * because the fairing has no jettison of its own. Drawing the debris as the bare {@code S2} would
+   * make it 12 m shorter than the remnant it detached from, so the piece would appear to shrink as
+   * it separates; drawing it as {@code after_s1} makes it fill exactly the box the remnant
+   * occupied, and it peels away seamlessly while the payload is revealed (PHY-5 / L6).
    */
   private static String meshSuffixFor(DebrisTrack track) {
     return switch (track.role()) {
@@ -931,11 +921,11 @@ public final class MissionRenderer {
   }
 
   /**
-   * Pushes the arc's own central body as the primary spacecraft's eclipse occulter (`docs/eclipses/
-   * 01-decoupage.md`, L1) — the render body follows physics, not the camera. The three quantities
-   * derived here — the render body, the converted position, and the context — are pure functions of
-   * the sample and the focus, so recomputing them beside {@link TrackedObjectView#updateFromPoint}
-   * cannot disagree with it. Debris push no occluder.
+   * Pushes the arc's own central body as the primary spacecraft's eclipse occulter — the render
+   * body follows physics, not the camera. The three quantities derived here — the render body, the
+   * converted position, and the context — are pure functions of the sample and the focus, so
+   * recomputing them beside {@link TrackedObjectView#updateFromPoint} cannot disagree with it.
+   * Debris push no occluder.
    */
   private void pushEclipseOccluder(MissionEphemerisPoint point, FocusView focus) {
     SolarSystemBody renderBody = renderBodyOf(point, focus);

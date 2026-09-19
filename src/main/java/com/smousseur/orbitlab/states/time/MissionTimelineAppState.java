@@ -13,7 +13,7 @@ import java.util.Optional;
 
 /**
  * Owns the mission timeline: its visibility, the mission it follows, and when its content is
- * rebuilt (spec {@code docs/navigation/02-timeline-mission.md} §10 and §12).
+ * rebuilt.
  *
  * <p><b>The track follows the telemetry focus; it never drives it.</b> The focus rules live in
  * {@code MissionDisplayPanelRules} and are not duplicated here. One consequence is that no

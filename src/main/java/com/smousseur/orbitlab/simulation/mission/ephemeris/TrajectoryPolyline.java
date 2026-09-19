@@ -16,10 +16,10 @@ import org.orekit.time.AbsoluteDate;
  * when the ephemeris is built.
  *
  * <p><b>Why this is a separate product.</b> One array used to serve two consumers with incompatible
- * needs (spec {@code docs/mission-horizon/01-horizon-explicite.md} §6). The flight recorder —
- * telemetry, the completeness verdict, post-flight analysis — wants fidelity wherever the dynamics
- * are fast, and that is {@link MissionEphemeris}. The display polyline wants at most a few thousand
- * points, because the screen is ~2000 px wide, and that is this class.
+ * needs. The flight recorder — telemetry, the completeness verdict, post-flight analysis — wants
+ * fidelity wherever the dynamics are fast, and that is {@link MissionEphemeris}. The display
+ * polyline wants at most a few thousand points, because the screen is ~2000 px wide, and that is
+ * this class.
  *
  * <p>Keeping them merged had already produced a silent defect: the renderer walked the ephemeris
  * <em>backwards</em> from the end and stopped after {@code MAX_POINTS}, so on any mission longer
@@ -50,7 +50,7 @@ public final class TrajectoryPolyline {
 
   /**
    * The vertices, one table per body they can be drawn about — every distinct arc body of this
-   * trajectory, and no other (spec {@code docs/multi-corps/07-conception-L5.md} §3.4).
+   * trajectory, and no other.
    *
    * <p>A trajectory of a single arc holds <b>one</b> table, and it is the sampled array itself, not
    * a copy: the identity is what makes L5 a structural non-regression rather than a measured one,
@@ -86,12 +86,11 @@ public final class TrajectoryPolyline {
    * runs, so the forced vertices cannot push the result over {@link #MAX_POINTS}.
    *
    * <p><b>Both sides of every arc boundary are forced too</b>, so that each arc's vertex range
-   * actually contains its own boundary rather than stopping up to a stride short of it (spec {@code
-   * docs/multi-corps/07-conception-L5.md} §4.1). The headroom reserved for the forced vertices is
-   * therefore computed on the <b>union</b> of the run starts and the arc boundaries, never on their
-   * sum — with a single arc the arc start is vertex 0, which is already a run start, so the union
-   * is the run starts and the decimation is bit-for-bit what it was before PHY-4 / L3 (spec {@code
-   * docs/multi-corps/05-conception-L3.md} §4.1). Written as a sum, the budget would lose a slot and
+   * actually contains its own boundary rather than stopping up to a stride short of it. The
+   * headroom reserved for the forced vertices is therefore computed on the <b>union</b> of the run
+   * starts and the arc boundaries, never on their sum — with a single arc the arc start is vertex
+   * 0, which is already a run start, so the union is the run starts and the decimation is
+   * bit-for-bit what it was before PHY-4 / L3. Written as a sum, the budget would lose a slot and
    * the stride could shift on any trajectory near a multiple of the budget.
    *
    * <p>The arrays are copied, not aliased: the caller keeps ownership of its own storage.
@@ -208,9 +207,8 @@ public final class TrajectoryPolyline {
    * before it. Ascending and deduplicated; for a single arc it is {@code {0}}, which is already a
    * run start, so the union below is unchanged and so is the stride.
    *
-   * <p><b>Why the outgoing side is forced too</b> (spec {@code
-   * docs/multi-corps/07-conception-L5.md} §4.1). L4 §5 flagged this as a debt on the grounds that a
-   * decimated trace would otherwise join two vertices expressed about different bodies with a
+   * <p><b>Why the outgoing side is forced too</b>. L4 §5 flagged this as a debt on the grounds that
+   * a decimated trace would otherwise join two vertices expressed about different bodies with a
    * straight segment. That reason is now void: L5 converts every vertex into the render body's
    * frame, so the segment across a boundary is geometrically sound, merely coarser. What forcing it
    * still buys is that {@link ArcRun#vertexCount()} of the outgoing arc actually contains its own
@@ -317,15 +315,14 @@ public final class TrajectoryPolyline {
    *
    * <p><b>The single-body case returns the sampled array itself.</b> No copy, no Orekit call, no
    * arithmetic — which is what makes every trajectory that exists today bit-for-bit what it was, by
-   * identity of reference rather than by a measured equality (spec {@code
-   * docs/multi-corps/07-conception-L5.md} §3.4). It is also what keeps the four test classes that
-   * build polylines without initialising {@code OrekitService} working.
+   * identity of reference rather than by a measured equality. It is also what keeps the four test
+   * classes that build polylines without initialising {@code OrekitService} working.
    *
    * <p>Beyond one body the conversion is a pure translation between two body-centred ICRF frames,
    * done here — once, at build time, off the render thread — rather than per frame. The render
    * thread cannot do it: {@code EphemerisConfig} buffers 33 h back and 66 h forward, while a lunar
    * transfer's trace spans three to five days, so a per-frame lookup through {@code
-   * EphemerisService} would silently fail on the oldest vertices (spec §1.7).
+   * EphemerisService} would silently fail on the oldest vertices.
    */
   private static Map<SolarSystemBody, Vector3D[]> renderTables(
       Vector3D[] p, AbsoluteDate[] t, short[] arcOf, List<ArcRun> arcs) {
@@ -436,8 +433,7 @@ public final class TrajectoryPolyline {
    * The bodies this trajectory can be drawn about: one per distinct arc central body.
    *
    * <p>This is what decides whether the mission belongs on screen at all — a lunar transfer is
-   * legitimate viewed from the Earth, whose arc it starts in, as well as from the Moon (spec {@code
-   * docs/multi-corps/07-conception-L5.md} §5.4).
+   * legitimate viewed from the Earth, whose arc it starts in, as well as from the Moon.
    *
    * @return the render bodies, never empty
    */
@@ -480,8 +476,7 @@ public final class TrajectoryPolyline {
    * {@code arcs().get(0).firstVertex()} is always 0.
    *
    * <p>Independent of {@link #runs()}: an arc boundary need not be a phase boundary, and is not one
-   * in the case that motivates this partition (spec {@code docs/multi-corps/05-conception-L3.md}
-   * §4).
+   * in the case that motivates this partition.
    *
    * @return the arcs, unmodifiable
    */

@@ -11,7 +11,7 @@ public enum StageRole {
   /**
    * Payload-integrated motor. Named for the apogee kick motor it was written for, and kept general
    * since: the catalog also holds a 5 500 N lunar insertion engine and a station-keeping thruster
-   * under it (spec {@code docs/etagement/01-decoupage.md} §3.6).
+   * under it.
    */
   KICK
 }

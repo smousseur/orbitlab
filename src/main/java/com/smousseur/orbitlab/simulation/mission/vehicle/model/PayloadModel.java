@@ -17,10 +17,9 @@ import java.util.Objects;
  *     entry has in common — the payload can fly a burn of its own — and not for one of the three
  *     engines it holds: a GEO apogee kick motor, a 5 500 N lunar insertion engine, and a
  *     station-keeping thruster. That common denominator is exactly what {@code
- *     MissionType#requiresPayloadPropulsion()} has always asked for (spec {@code
- *     docs/etagement/01-decoupage.md} §3.6).
+ *     MissionType#requiresPayloadPropulsion()} has always asked for.
  * @param aerodynamics the frontal area and drag coefficient of the payload, or {@code null} when
- *     the model declares none (spec {@code docs/atmosphere/04-conception-L1.md} §3.3)
+ *     the model declares none
  * @param domain where this payload is meant to fly; {@code null} reads as {@link PayloadDomain#ANY}
  * @param dimensionMeters the bus's characteristic dimension (m) — the diameter of a cylindrical
  *     bus, the edge of a boxy one — with solar arrays stowed, as {@link #aerodynamics} assumes; 0
@@ -31,13 +30,12 @@ import java.util.Objects;
  * @param deltaVBudget the ΔV (m/s) the payload must carry for burns <b>the mission chain does not
  *     compute for it</b>; 0 when it carries none. A GEO or lunar payload declares none on purpose:
  *     its burn is the mission's, sized from the target by {@code PropellantBudget}, and freezing it
- *     as a constant here would freeze one target (spec §3.7). What is left is orbit maintenance,
- *     which nothing computes — and which is where PHY-2 will come to raise the number once drag is
- *     real.
+ *     as a constant here would freeze one target. What is left is orbit maintenance, which nothing
+ *     computes — and which is where PHY-2 will come to raise the number once drag is real.
  * @param requiresRendezvous whether this payload only makes sense on a rendezvous mission, which no
  *     {@code MissionType} is before MIS-6. True on the cargo module alone. It is a purpose and not
  *     a place, which is why it is not a {@link PayloadDomain} value: a cargo module flies perfectly
- *     well in Earth orbit, it just has no reason to be put there on its own (spec §3.5).
+ *     well in Earth orbit, it just has no reason to be put there on its own.
  */
 public record PayloadModel(
     String id,

@@ -9,7 +9,7 @@ import java.util.Objects;
 /**
  * The single entry point for selecting one object of a mission to follow — its primary or a debris.
  * A selection points <em>both</em> the camera and the telemetry at that object, in one gesture: the
- * unified rule of SEL-1 / L2 (spec {@code docs/selection-objets/04-conception-L2.md} §2.1).
+ * unified selection rule.
  *
  * <p>Three sites call it — clicking the primary spacecraft, clicking a debris, and the telemetry's
  * return-to-primary segment — so the parent-body resolution and the pairing of the two focuses live

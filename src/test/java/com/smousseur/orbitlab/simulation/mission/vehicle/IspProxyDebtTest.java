@@ -16,8 +16,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 /**
- * <b>PHY-1 / L2 — how much the proxy ISPs are paying for</b> (spec {@code
- * docs/atmosphere/05-conception-L2.md} §4.3). Recorded for PHY-2, not asserted.
+ * <b>PHY-1 / L2 — how much the proxy ISPs are paying for</b>. Recorded for PHY-2, not asserted.
  *
  * <p>The catalog's two first stages carry a "mean-trajectory" ISP instead of a vacuum one, and say
  * so in their own comments: Falcon Heavy S1 flies 298 s (296 s before PHY-2/L3) inside a [282 s at
@@ -76,12 +75,12 @@ class IspProxyDebtTest {
     // Pinned loosely, because the figure is quoted outside this test - the DT-13 roadmap entry, the
     // PHY-8 decoupage §3.4 and its L0 §3 all carry it. Splitting the Falcon Heavy's first stage in
     // two halves the mass ratio and reports 144 m/s here, silently, if the debt keeps being read
-    // off the bottom entry alone (spec docs/etagement/04-conception-L2.md §2.3).
+    // off the bottom entry alone.
     // 396 since PHY-8 reserved 1 300 m/s of insertion ΔV on the top stage: the debt goes as
     // ln(m0/mf) over the first stage, and a fuller S2 rides above it in both masses. The 12 m/s
     // lost is arithmetic on a heavier stack, not a change in what the proxy hides.
     // 343 since PHY-2/L3: raising the proxy from 296 to 298 s handed back the ~51 m/s of ascent
-    // drag it was standing in for (spec docs/atmosphere/10-conception-L3-PHY-2.md §3.3). The first
+    // drag it was standing in for. The first
     // stage flies full and the S2 keeps its 348 s, so the mass ratio is unchanged and the debt
     // scales exactly by the ISP ratio, 396 × 13/15. What is left is the deficit L2 kept in the ISP
     // deliberately — not drag, and not double-counted (DT-13).
@@ -94,8 +93,7 @@ class IspProxyDebtTest {
     // aggregate blended a solid with a cryogenic core into a single 300 s proxy inside a [271, 331]
     // bracket, and 671 m/s of the debt was that blend rather than any real loss. Split, the four
     // P120C fly their true vacuum ISP and carry nothing, the Vulcain gives up 71 s over the 21 % of
-    // the flow it owns, and what is left is the debt PHY-2 actually has to hand back (spec
-    // docs/etagement/06-conception-L4.md §3.1).
+    // the flow it owns, and what is left is the debt PHY-2 actually has to hand back.
     assertEquals(71, ariane64, 10, "the Ariane 64 block proxy debt recorded for PHY-2");
   }
 
@@ -105,8 +103,7 @@ class IspProxyDebtTest {
    *
    * <p><b>The first stage may be several stack entries.</b> A parallel block burns its tanks
    * together and is jettisoned as one, so the mass ratio is the block's — the entries taken apart
-   * have none of their own, a ratio presupposing a serial burn (spec {@code
-   * docs/etagement/04-conception-L2.md} §3.3).
+   * have none of their own, a ratio presupposing a serial burn.
    */
   private static double debtOf(
       LauncherModel launcher, double payloadDryMass, double[] vacuumIspPerGroundLitStage) {

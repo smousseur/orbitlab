@@ -31,15 +31,15 @@ import org.orekit.utils.Constants;
  * MIS-4 / L6 §6.3 — the finite burn on its own, on the two upper-stage profiles the découpage sizes
  * the lot by.
  *
- * <p><b>It exists because no lunar flight of the repository flies an Ariane 64</b> (spec §1.3): the
- * four of them build a Falcon Heavy, whose 3° of arc is the one case where the lot barely earns its
- * keep. The 19° profile that justifies L6 is exercised here, at the level of the burn alone —
- * seconds rather than a second four-day flight, and it asks exactly what L6 delivers rather than
- * what a lunar Ariane would additionally need sizing (§6.3, alternatives).
+ * <p><b>It exists because no lunar flight of the repository flies an Ariane 64</b>: the four of
+ * them build a Falcon Heavy, whose 3° of arc is the one case where the lot barely earns its keep.
+ * The 19° profile that justifies L6 is exercised here, at the level of the burn alone — seconds
+ * rather than a second four-day flight, and it asks exactly what L6 delivers rather than what a
+ * lunar Ariane would additionally need sizing.
  *
  * <p><b>The two profiles fly the same 22.7 t at injection</b>, which is the mass the découpage's
- * duration table is implicitly written at (§1.4). Flown on 2026-08-27, that mass reproduces the
- * tabulated durations and arcs, and <b>refutes the loss column</b>:
+ * duration table is implicitly written at. Flown on 2026-08-27, that mass reproduces the tabulated
+ * durations and arcs, and <b>refutes the loss column</b>:
  *
  * <table>
  *   <caption>Measured against the découpage's estimate</caption>
@@ -196,8 +196,7 @@ class TranslunarFiniteBurnTest {
    * calibrated to ignite at.
    *
    * <p>Verifying from a reconstructed ignition point measures the reconstruction and not the burn —
-   * 0.31 m/s of it on the ULPM profile when this helper still assumed "half a burn early" (spec L6
-   * §9.5).
+   * 0.31 m/s of it on the ULPM profile when this helper still assumed "half a burn early".
    */
   private static SpacecraftState reflyBurn(
       SpacecraftState ignitionState,

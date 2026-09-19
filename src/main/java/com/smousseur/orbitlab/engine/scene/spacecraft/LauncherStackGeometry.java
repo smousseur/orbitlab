@@ -5,9 +5,8 @@ import java.util.Map;
 
 /**
  * Geometric facts of a launcher's stack meshes that the renderer needs to seat a shrinking
- * silhouette (PHY-5 / L6, spec {@code docs/multi-objets/08-conception-L6.md}). It sits beside
- * {@link LauncherAssets} for the same reason: it is a property of the drawn mesh, not of the
- * catalog launcher, and nothing in the propagation depends on it.
+ * silhouette. It sits beside {@link LauncherAssets} for the same reason: it is a property of the
+ * drawn mesh, not of the catalog launcher, and nothing in the propagation depends on it.
  *
  * <p>The only number needed is the height of the {@code after_s1} remnant (upper stage + fairing)
  * as a fraction of the full stack. It fixes where that remnant's base sits once the core is gone —
@@ -17,9 +16,9 @@ import java.util.Map;
 public final class LauncherStackGeometry {
 
   /**
-   * The {@code after_s1} mesh height as a fraction of the full stack, measured off the glTF (spec
-   * §1): every piece is authored base-at-origin in a shared frame where the full stack is one unit
-   * tall, so the remnant's own height <em>is</em> its fraction. Re-measure on a mesh re-export.
+   * The {@code after_s1} mesh height as a fraction of the full stack, measured off the glTF: every
+   * piece is authored base-at-origin in a shared frame where the full stack is one unit tall, so
+   * the remnant's own height <em>is</em> its fraction. Re-measure on a mesh re-export.
    */
   private static final Map<String, Double> AFTER_S1_FRACTION =
       Map.of(

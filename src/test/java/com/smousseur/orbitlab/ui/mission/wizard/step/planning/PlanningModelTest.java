@@ -73,7 +73,7 @@ class PlanningModelTest {
     PlanningState.Unavailable state =
         assertInstanceOf(PlanningState.Unavailable.class, model.state());
     // The field is painted red in the same breath, so an axis announcing "no plane is being waited
-    // for" underneath it would have the two controls contradicting each other (spec §6).
+    // for" underneath it would have the two controls contradicting each other.
     assertTrue(state.reason().contains("target node"), state.reason());
   }
 

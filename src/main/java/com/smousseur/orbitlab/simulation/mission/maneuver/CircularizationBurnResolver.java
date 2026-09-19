@@ -108,7 +108,7 @@ final class CircularizationBurnResolver {
         OrekitService.get().createOptimizationPropagator(context, OrekitService.COAST_MAX_STEP);
     coastPropagator.setInitialState(stateAfterBurn1);
     // On a re-entering post-burn-1 orbit the coast stops early, no apoapsis is recorded and this
-    // returns NaN — the failure value the caller already handles (spec 03-garde-rentree §4.1).
+    // returns NaN — the failure value the caller already handles.
     ReentryGuard.armQuiet(coastPropagator, context.gravity());
 
     RecordAndContinue recorder = new RecordAndContinue();

@@ -10,7 +10,7 @@ import org.orekit.time.AbsoluteDate;
 
 /**
  * The next opportunities of any {@link LaunchWindowRequest}, in chronological order — what the
- * wizard's timeline draws, whatever it is aiming at (MIS-4 / L5 §4.2).
+ * wizard's timeline draws, whatever it is aiming at.
  *
  * <p><b>Generic because it always was.</b> The horizon is derived from {@link
  * LaunchWindowProblem#recurrence()} through {@link LaunchWindowSearch#forOpportunities}, and the

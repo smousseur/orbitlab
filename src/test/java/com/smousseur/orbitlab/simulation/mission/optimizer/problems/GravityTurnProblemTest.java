@@ -155,11 +155,10 @@ class GravityTurnProblemTest {
 
   // ── Staging floor penalty: no longer a guard, now a search regularizer ────
   //
-  // It once protected a real failure mode (a MECO before the in-ascent jettison detector left the
-  // first stage attached, bilan 10 §5.3). The jettison is now a phase, so that cannot happen — but
+  // It once protected a real failure mode. The jettison is now a phase, so that cannot happen — but
   // removing the penalty was measured to cost +47 % evaluations and the reproducibility of the LEO
-  // solution at the fixed seed, for an identical final orbit, so it was kept (spec
-  // docs/mission-stages/02-baseline-n2.md §12). These fixtures pin it either way.
+  // solution at the fixed seed, for an identical final orbit, so it was kept. These fixtures pin it
+  // either way.
   //
   // The penalty is applied on top of the trajectory cost, so they assert the exact delta between
   // grading the SAME hand-off state with and without a below-staging candidate recorded. That keeps

@@ -8,7 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
-/** Declustering rules of {@link PhaseMarkerCluster} (spec §8). */
+/** Declustering rules of {@link PhaseMarkerCluster}. */
 class PhaseMarkerClusterTest {
 
   private static final float MIN_X = 14f + PhaseMarkerCluster.MARKER_WIDTH_PX / 2f;

@@ -134,7 +134,7 @@ class WizardPrefillTest {
     assertFalse(WizardPrefill.fromEntry(entry).containsKey("LAUNCH_DATE"));
   }
 
-  // --- MIS-7 P2: the target plane across the round trip (spec 02 §2.0 and §2.1) ---
+  // --- MIS-7 P2: the target plane across the round trip ---
 
   private static Map<String, Object> polarValues() {
     Map<String, Object> values = leoValues();
@@ -227,7 +227,7 @@ class WizardPrefillTest {
     assertSameVehicle(original, reopened);
   }
 
-  // --- UI-3 L0: the forced horizon comes back (spec docs/scenario/01-persistance-missions.md §4.3)
+  // --- UI-3 L0: the forced horizon comes back
   // ---
 
   /**

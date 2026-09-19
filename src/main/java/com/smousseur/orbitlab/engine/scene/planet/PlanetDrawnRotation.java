@@ -15,8 +15,8 @@ import org.orekit.time.AbsoluteDate;
  *
  * <p>A single source, so everything that must line up with the drawn globe cannot drift: the globe
  * itself, the Earth rotating-frame node, and a debris ground track that has to land on the right
- * continent (PHY-5 / L7, spec {@code docs/multi-objets/09-conception-L7.md}). Carrying the
- * calibration is exactly what puts a ground point where the texture draws it.
+ * continent. Carrying the calibration is exactly what puts a ground point where the texture draws
+ * it.
  */
 public final class PlanetDrawnRotation {
 

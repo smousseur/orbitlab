@@ -35,8 +35,7 @@ import org.orekit.time.AbsoluteDate;
 import org.orekit.time.TimeScalesFactory;
 
 /**
- * <b>PHY-4 / L1 — the central-body refactor gate</b> (spec {@code
- * docs/multi-corps/03-conception-L1.md} §5).
+ * <b>PHY-4 / L1 — the central-body refactor gate</b>.
  *
  * <p><b>What it guards.</b> L1 turns the central body from a constant read at the bottom of a
  * factory into a datum carried by the stage, across twenty propagator construction sites. It is a
@@ -103,10 +102,10 @@ import org.orekit.time.TimeScalesFactory;
  *
  * <p><b>It runs in the {@code gateTest} Gradle task, not in {@code test}.</b> The 62 boundaries are
  * compared at strict {@code double} equality, and a lunar propagation earlier in the same JVM moves
- * them by the last bit through Orekit's shared time caches ({@code docs/bugs.md} BUG-7). {@code
- * gateTest} forks one JVM per class, which removes the contamination; {@code test} runs everything
- * in one JVM and excludes this class. It carried {@code @Disabled("To be run only standalone")}
- * from 2026-08-31 to PHY-8 / L0, which had the same effect and no way to run it.
+ * them by the last bit through Orekit's shared time caches. {@code gateTest} forks one JVM per
+ * class, which removes the contamination; {@code test} runs everything in one JVM and excludes this
+ * class. It carried {@code @Disabled("To be run only standalone")} from 2026-08-31 to PHY-8 / L0,
+ * which had the same effect and no way to run it.
  */
 class CentralBodyBaselineTest {
 
@@ -177,8 +176,8 @@ class CentralBodyBaselineTest {
   // three Falcon Heavy profiles at PHY-8 / L3, which throttles that launcher's core to 0.81 and so
   // splits its ascent into five phases. The MEO profile flies an Ariane 64 and its twenty-two
   // boundaries are byte-identical across that change — which is what makes the re-baseline
-  // attributable to the throttle and to nothing else (spec docs/etagement/05-conception-L3.md
-  // §5.1). Forty-two boundaries moved and became fifty-four; twenty-two did not move at all.
+  // attributable to the throttle and to nothing else. Forty-two boundaries moved and became
+  // fifty-four; twenty-two did not move at all.
   // ════════════════════════════════════════════════════════════════════════
   //
   // Cross-checked against 02-baseline-L0.md §3, which is the control §5.3 of the spec asks for:

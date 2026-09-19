@@ -54,7 +54,7 @@ class MissionDomainTest {
   /**
    * The accord the duplication is allowed by. {@code MissionDomain} states a taxonomy the catalog
    * already knows, so that {@code MissionProfile} stays out of {@code Payloads}; this is what makes
-   * the two tables unable to drift apart in silence (L6 §3).
+   * the two tables unable to drift apart in silence.
    */
   @Test
   @DisplayName("A card declares the domain the payload catalog gives its type")

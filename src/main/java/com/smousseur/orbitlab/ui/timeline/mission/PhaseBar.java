@@ -18,8 +18,7 @@ import java.util.List;
 import org.orekit.time.AbsoluteDate;
 
 /**
- * The band of coloured rectangles that says how long each phase of the mission lasted (spec {@code
- * docs/navigation/02-timeline-mission.md} §6.3).
+ * The band of coloured rectangles that says how long each phase of the mission lasted.
  *
  * <p><b>No floor width, ever.</b> A run whose duration projects to less than a pixel is not drawn.
  * That is the whole point of an honest axis: on a GEO the entire ascent really is a fraction of a

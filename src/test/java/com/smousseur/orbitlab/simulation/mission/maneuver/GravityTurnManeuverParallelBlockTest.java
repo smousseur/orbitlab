@@ -27,8 +27,7 @@ import org.orekit.utils.Constants;
 import org.orekit.utils.PVCoordinates;
 
 /**
- * What the maneuver derives when the stack burns two stages at once (spec {@code
- * docs/etagement/03-conception-L1.md} §3.5, §4).
+ * What the maneuver derives when the stack burns two stages at once.
  *
  * <p>Round figures: the boosters flow 2 000 kN worth, the core 500 kN at the same Isp, so the core
  * drains a fifth of the block. Loaded 400 t and 200 t, the boosters run dry with 100 t left in the
@@ -71,7 +70,7 @@ class GravityTurnManeuverParallelBlockTest {
 
   @Test
   void splitBlock_aMecoBelowStagingCommandsTheCoreOffEarly() {
-    // PHY-2/L3 (spec docs/atmosphere/10-conception-L3-PHY-2.md §3.1): a MECO between core ignition
+    // PHY-2/L3: a MECO between core ignition
     // and staging completion cuts the core short of depletion — the optimizer's lever to lower an
     // over-delivered apogee (DT-20). Staging then completes at the MECO itself.
     GravityTurnManeuver maneuver = maneuverOf(splitStack());
@@ -111,7 +110,7 @@ class GravityTurnManeuverParallelBlockTest {
   @Test
   void theSinglePropagatorPathRefusesAParallelBlock() {
     // It plants the jettison inside the burn and knows only two burns; teaching it the block would
-    // duplicate the five-phase logic in a second place. No src/main caller reaches it (spec §4).
+    // duplicate the five-phase logic in a second place. No src/main caller reaches it.
     GravityTurnManeuver maneuver = maneuverOf(splitStack());
     AscentPlan plan = planOf(splitStack());
     NumericalPropagator propagator =
@@ -134,7 +133,7 @@ class GravityTurnManeuverParallelBlockTest {
 
   private static AscentPlan planOf(VehicleStack stack) {
     // A MECO clear of staging completion, so a core-phase stack burns its core to depletion
-    // (region A, spec docs/atmosphere/10-conception-L3-PHY-2.md §3.1). The early-cutoff region is
+    // . The early-cutoff region is
     // exercised explicitly by splitBlock_aMecoBelowStagingCommandsTheCoreOffEarly.
     return planOf(stack, 1300.0);
   }

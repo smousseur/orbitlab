@@ -16,9 +16,9 @@ import org.apache.logging.log4j.Logger;
 import org.orekit.time.AbsoluteDate;
 
 /**
- * Production {@link PropellantLoadOptimizer.Evaluator} of the I7 outer loop (spec 09 §6 task 2):
- * one evaluation rebuilds the mission with {@code loads(λ)}, runs a full {@link MissionOptimizer}
- * and decides feasibility from the result.
+ * Production {@link PropellantLoadOptimizer.Evaluator} of the I7 outer loop: one evaluation
+ * rebuilds the mission with {@code loads(λ)}, runs a full {@link MissionOptimizer} and decides
+ * feasibility from the result.
  *
  * <p><b>Reconstruction.</b> The λ scaling is applied to the heuristic loads over the liquid stages
  * only (SOLID stages and the payload's own load stay off λ, {@link
@@ -32,7 +32,7 @@ import org.orekit.time.AbsoluteDate;
  *   <li><b>ephemeris complete</b> — the flown (8×8, rendered) trajectory actually reached the end
  *       of every stage ({@link MissionEphemeris#isComplete()}). A burn that ran its tank dry
  *       mid-mission truncates the flight yet can still leave the terminal coast looking on-target,
- *       so the objective check below is not enough on its own (bilan 11 §3.9 prérequis);
+ *       so the objective check below is not enough on its own;
  *   <li><b>objective</b> — the final coast orbit lands within {@code objectiveToleranceRatio} of
  *       the target perigee and apogee, measured from the ephemeris exactly as the mission
  *       optimization tests do (min/max altitude of the terminal {@code "Coasting"} stage). The
@@ -40,31 +40,31 @@ import org.orekit.time.AbsoluteDate;
  *       the flown final orbit must pass an explicit feasibility objective — {@code GEOMission}
  *       records {@code (parking, GEO)}, the two mission phases, while the flown end state is
  *       circular GEO. The scoring is routed by {@link ObjectiveEvaluator}, so a mission whose
- *       objective is a flyby is measured on its own arc rather than refused (MIS-4 / L4 §5);
+ *       objective is a flyby is measured on its own arc rather than refused;
  *   <li><b>residual floor</b> — the end-of-mission residual is at least {@code residualFloorRatio}
- *       of the <em>sized stage's</em> load (spec 09 §5, "≥ 1 % de la charge par étage liquide").
- *       The denominator is the load of the λ-scaled top stage, not the whole stack: on an
- *       S1-dominated stack the stack-wide residual ratio is meaningless (~0.3 %), but against the
- *       sized stage's own load it is the real margin (~10 % at the heuristic load). Without this
- *       floor the loop drives the sized stage to exact flame-out (residual 0), and the ephemeris
- *       replay trips the {@code DepletionGuard} on a truncated burn — a knife-edge solution that
- *       defeats I7's realism goal (observed on the first FH LEO integration run).
+ *       of the <em>sized stage's</em> load. The denominator is the load of the λ-scaled top stage,
+ *       not the whole stack: on an S1-dominated stack the stack-wide residual ratio is meaningless
+ *       (~0.3 %), but against the sized stage's own load it is the real margin (~10 % at the
+ *       heuristic load). Without this floor the loop drives the sized stage to exact flame-out
+ *       (residual 0), and the ephemeris replay trips the {@code DepletionGuard} on a truncated burn
+ *       — a knife-edge solution that defeats I7's realism goal (observed on the first FH LEO
+ *       integration run).
  * </ul>
  *
  * <p>The residual of the sized stage is read from its own entry in {@link
- * MissionPerformanceReport#stagePropellants()} (bilan 10 §6), so the predicate holds even when the
- * sized stage is not the final active stage — the stack-wide total would then also count the
- * propellant of whatever sits above it and mask an emptied sized stage.
+ * MissionPerformanceReport#stagePropellants()}, so the predicate holds even when the sized stage is
+ * not the final active stage — the stack-wide total would then also count the propellant of
+ * whatever sits above it and mask an emptied sized stage.
  *
  * <p>An optimization that <em>throws</em> (an under-resourced load whose ascent/transfer cannot
  * reach orbit makes CMA-ES fail) is caught and reported as infeasible — that is the signal the
  * bisection needs to keep λ up, not an error to propagate.
  *
  * <p><b>Warm-start.</b> The {@code previous} evaluation is available for warm-starting, but each
- * rebuilt mission's stages already warm-start their inner CMA-ES from a reliable analytic seed
- * (spec 09 §5, commit {@code a8fb39e}), recomputed for the new load, so cross-λ reinjection of the
- * previous {@code bestVariables} is a further speed-up gated on the optimizer exposing a seed hook
- * — deliberately not done here to keep the FH-neutral optimizer core untouched.
+ * rebuilt mission's stages already warm-start their inner CMA-ES from a reliable analytic seed ,
+ * recomputed for the new load, so cross-λ reinjection of the previous {@code bestVariables} is a
+ * further speed-up gated on the optimizer exposing a seed hook — deliberately not done here to keep
+ * the FH-neutral optimizer core untouched.
  */
 public final class MissionLoadEvaluator implements PropellantLoadOptimizer.Evaluator {
   private static final Logger logger = LogManager.getLogger(MissionLoadEvaluator.class);
@@ -76,14 +76,14 @@ public final class MissionLoadEvaluator implements PropellantLoadOptimizer.Evalu
   public static final double DEFAULT_OBJECTIVE_TOLERANCE_RATIO = 0.07;
 
   /**
-   * Default residual floor: the sized stage keeps ≥ 1 % of its own load, off flame-out (spec §5).
+   * Default residual floor: the sized stage keeps ≥ 1 % of its own load, off flame-out.
    *
-   * <p><b>The exact value carries little information</b> (bilan 11 §3.4). Measured on FH LEO, the
-   * sized stage's residual does not decrease continuously as the load tightens — it falls off a
-   * cliff: 10.3 % of its load at {@code λ*}, exactly 0 one bisection step below (a 2.6 % lighter
-   * load), with the objective met on both sides. Only the termination mode changes, from a
-   * commanded cutoff to depletion. Any floor in {@code (0, 0.103]} therefore yields the same {@code
-   * λ*}: this is a binary flame-out detector rather than a tuning knob.
+   * <p><b>The exact value carries little information</b>. Measured on FH LEO, the sized stage's
+   * residual does not decrease continuously as the load tightens — it falls off a cliff: 10.3 % of
+   * its load at {@code λ*}, exactly 0 one bisection step below (a 2.6 % lighter load), with the
+   * objective met on both sides. Only the termination mode changes, from a commanded cutoff to
+   * depletion. Any floor in {@code (0, 0.103]} therefore yields the same {@code λ*}: this is a
+   * binary flame-out detector rather than a tuning knob.
    */
   public static final double DEFAULT_RESIDUAL_FLOOR_RATIO = 0.01;
 
@@ -324,7 +324,7 @@ public final class MissionLoadEvaluator implements PropellantLoadOptimizer.Evalu
       return new PropellantLoadOptimizer.Evaluation(Double.NaN, false, null);
     }
 
-    // Routed by kind rather than cast to an insertion (MIS-4 / L4 §5): the insertion branch
+    // Routed by kind rather than cast to an insertion: the insertion branch
     // delegates straight back to objectiveMet below, so LEO and GEO keep their behaviour bit for
     // bit, while a flyby is scored on its own arc instead of raising here — outside the try that
     // absorbs optimization failures, on a thread the user only sees through a FAILED mission.
@@ -338,7 +338,7 @@ public final class MissionLoadEvaluator implements PropellantLoadOptimizer.Evalu
     boolean residualOk = residualSufficient(report, sizedStageIndex, residualFloorRatio);
     // The flown (8×8, rendered) trajectory must actually reach the end of every stage. A truncated
     // one — a burn that ran its tank dry mid-mission — can still leave the terminal coast looking
-    // on-target while being a broken mission (bilan 11 §3.9 prérequis); refuse it outright.
+    // on-target while being a broken mission; refuse it outright.
     boolean ephemerisComplete = result.ephemeris().isComplete();
     boolean feasible = objectiveMet && residualOk && ephemerisComplete;
 
@@ -369,14 +369,13 @@ public final class MissionLoadEvaluator implements PropellantLoadOptimizer.Evalu
    * final {@code "Coasting"} stage must land within {@code toleranceRatio} of the target perigee
    * and apogee respectively.
    *
-   * <p><b>Only the arc the coast ends in is measured</b> (PHY-4 / L6, spec {@code
-   * docs/multi-corps/08-conception-L6.md} §5.2). A terminal coast may cross a sphere of influence
-   * and therefore span two arcs, whose altitudes are measured against different bodies: mixing a
-   * geocentric ~380 000 km with a selenocentric ~1 000 km would not make the predicate approximate,
-   * it would make it meaningless. On a single-arc coast — every mission in production today — the
-   * last point's arc body is the only one there is, so this restriction changes nothing by
-   * construction rather than by measurement. It is a guard and not a javadoc warning on purpose: a
-   * silent net is discovered months later (the lesson L4 §4.4 wrote for its leg cap).
+   * <p><b>Only the arc the coast ends in is measured</b>. A terminal coast may cross a sphere of
+   * influence and therefore span two arcs, whose altitudes are measured against different bodies:
+   * mixing a geocentric ~380 000 km with a selenocentric ~1 000 km would not make the predicate
+   * approximate, it would make it meaningless. On a single-arc coast — every mission in production
+   * today — the last point's arc body is the only one there is, so this restriction changes nothing
+   * by construction rather than by measurement. It is a guard and not a javadoc warning on purpose:
+   * a silent net is discovered months later.
    *
    * @param ephemeris the computed mission ephemeris
    * @param objective the orbit insertion objective (perigee/apogee targets)
@@ -425,9 +424,9 @@ public final class MissionLoadEvaluator implements PropellantLoadOptimizer.Evalu
   /**
    * Whether the sized stage's <em>own</em> residual clears the floor: {@code residual ≥ floorRatio
    * · load}, both read from the stage's entry in {@link
-   * MissionPerformanceReport#stagePropellants()} (bilan 10 §6). This keeps the sized (λ-scaled top)
-   * stage off flame-out — the whole-stack residual ratio is meaningless on an S1-dominated stack,
-   * but against the sized stage's own load it is the real margin (spec 09 §5).
+   * MissionPerformanceReport#stagePropellants()}. This keeps the sized (λ-scaled top) stage off
+   * flame-out — the whole-stack residual ratio is meaningless on an S1-dominated stack, but against
+   * the sized stage's own load it is the real margin.
    *
    * <p>Reading the stage's own entry rather than {@link
    * MissionPerformanceReport#totalPropellantResidual()} makes the predicate exact even when the

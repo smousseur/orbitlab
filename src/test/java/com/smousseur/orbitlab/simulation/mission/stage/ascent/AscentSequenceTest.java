@@ -23,9 +23,8 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 /**
- * Structure of the explicit three-phase ascent (spec {@code
- * docs/mission-stages/01-separations-implicites.md} §4.2, §10). These fixtures need no propagation
- * — they hold the two properties the split exists for:
+ * Structure of the explicit three-phase ascent. These fixtures need no propagation — they hold the
+ * two properties the split exists for:
  *
  * <ul>
  *   <li>the jettison is a <b>phase</b>, sitting between the two burns and declaring which stage it

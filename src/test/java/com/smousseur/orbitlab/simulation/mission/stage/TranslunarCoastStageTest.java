@@ -40,7 +40,7 @@ import org.orekit.utils.TimeStampedPVCoordinates;
  * <p><b>The one-argument constructor is asserted, not assumed.</b> MIS-4's flight is expected to be
  * unchanged to the digit, and the mechanism that keeps it so is that its coast declares nothing and
  * still advances the stage walk by nothing. That is one assertion, and it costs a second — cheaper
- * than re-flying seven days to find out (spec {@code docs/lunar-orbit/03-conception-L1.md} §6.2).
+ * than re-flying seven days to find out.
  */
 class TranslunarCoastStageTest {
   private static final Logger logger = LogManager.getLogger(TranslunarCoastStageTest.class);
@@ -53,7 +53,7 @@ class TranslunarCoastStageTest {
    *
    * <p>The definition of {@code StageLegRunner.BOUNDARY_STOP_TOLERANCE}, which is package-private
    * there: twice the detector's own date convergence, and the only quantity that can bound the gap
-   * between two independently interpolated readings of one root (PHY-4 / L6 §12).
+   * between two independently interpolated readings of one root.
    */
   private static final double BOUNDARY_STOP_TOLERANCE =
       2.0 * SoiCrossingDetector.DATE_CONVERGENCE_SECONDS;

@@ -10,7 +10,7 @@ import org.hipparchus.geometry.euclidean.threed.Vector3D;
 
 /**
  * One reading of L2's instrument on one body at one instant: what the application paints, and what
- * the physics says is there (see {@code docs/orientation-planetes/01-decoupage.md}).
+ * the physics says is there.
  *
  * <p>The two are computed from unrelated data. Where the map lands comes from the render chain
  * evaluated forward — measured frame, alignment, the longitude term, the drift, the conversions of

@@ -12,8 +12,7 @@ import org.orekit.time.AbsoluteDate;
 
 /**
  * The third planner, beside {@link FixedLoadPlanner} and {@link MinimizedLoadPlanner}: it flies a
- * mission whose solutions are already known, one propagation per stage instead of N (spec {@code
- * docs/scenario/01-persistance-missions.md} §5).
+ * mission whose solutions are already known, one propagation per stage instead of N.
  *
  * <p>What it buys is time, not reproducibility — the CMA-ES seed is a hard-coded {@code 42L} and
  * determinism was already acquired. What it costs is nothing in fidelity: the vectors are flown
@@ -81,9 +80,9 @@ public final class ReplayPlanner implements MissionPlanner {
    * loads.
    *
    * <p>The loads are taken from the solutions <b>as they are</b> — absolute kilograms, no
-   * multiplication here (§2.3). That is the whole point of persisting the product rather than the
-   * scale factors: what flies is the vehicle that flew, not whatever today's {@code
-   * PropellantBudget} would rebuild under the same λ.
+   * multiplication here. That is the whole point of persisting the product rather than the scale
+   * factors: what flies is the vehicle that flew, not whatever today's {@code PropellantBudget}
+   * would rebuild under the same λ.
    */
   private Mission flownMission() {
     if (!solutions.hasLauncherLoads()) {

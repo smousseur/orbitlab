@@ -25,10 +25,9 @@ class LaunchersTest {
   }
 
   /**
-   * The Ariane 64 flight profile, and the reasoning behind each figure (spec {@code
-   * docs/launchers/01-ariane-64.md} §4.2). The pitch kick is deliberately identical to Falcon
-   * Heavy's: nothing justifies an offset, and inventing one to make the catalog look more varied
-   * would put an unfounded number in it.
+   * The Ariane 64 flight profile, and the reasoning behind each figure. The pitch kick is
+   * deliberately identical to Falcon Heavy's: nothing justifies an offset, and inventing one to
+   * make the catalog look more varied would put an unfounded number in it.
    */
   @Test
   void ariane64_ascentProfile_differsFromFalconHeavy() {
@@ -36,7 +35,7 @@ class LaunchersTest {
     // Kept from the Ariane 62 entry this one replaces. Its comment justified the 6 s by a lift-off
     // T/W of ~1.99; the Ariane 64 leaves the pad at ~1.60, so that justification no longer holds
     // and the value is now simply inherited — moving it would be a second cause in a lot that is
-    // already a re-baseline (spec docs/etagement/06-conception-L4.md §3.1).
+    // already a re-baseline.
     assertEquals(6.0, profile.verticalAscentDuration(), 1e-9);
     assertEquals(3.0, profile.pitchKickAngleDeg(), 1e-9);
     // Vinci is cryogenic and needs a chill-down before ignition; the Merlin Vacuum relights fast.
@@ -48,7 +47,7 @@ class LaunchersTest {
    * known fraction of its normalized mesh, and multiplying the two has to land on the published
    * fairing length. It does, to the decimetre on the Falcon Heavy and to 3 % on the Ariane — which
    * is also what identifies the Ariane's 63 m as its long-fairing configuration rather than the
-   * short one (spec {@code docs/etagement/01-decoupage.md} §3.8).
+   * short one.
    */
   @Test
   void bothHeightsAreConfirmedByTheirOwnFairing() {
@@ -88,7 +87,7 @@ class LaunchersTest {
     assertEquals(IgnitionMode.GROUND, boosters.capabilities().ignition());
     assertEquals(StageRole.BOOSTER, boosters.capabilities().role());
     // A solid at last, and the point of saying so: variableLoad() now returns false on a stage
-    // that really is one, which is all the lambda sweep ever needed (spec 06 §3.2).
+    // that really is one, which is all the lambda sweep ever needed.
     assertEquals(PropellantType.SOLID, boosters.capabilities().propellant());
     assertFalse(boosters.capabilities().variableLoad(), "solid boosters fly full");
 
@@ -113,9 +112,9 @@ class LaunchersTest {
 
   /**
    * The two figures the decoupage gives as controls, which is what the thrusts were derived from:
-   * the boosters run dry around 130 s and the Vulcain around 8 minutes, in a flow ratio near 14
-   * (spec {@code docs/etagement/06-conception-L4.md} §3.1). Asserted on durations rather than on
-   * thrusts, because the durations are what was anchored and the thrusts are what followed.
+   * the boosters run dry around 130 s and the Vulcain around 8 minutes, in a flow ratio near 14 .
+   * Asserted on durations rather than on thrusts, because the durations are what was anchored and
+   * the thrusts are what followed.
    */
   @Test
   void ariane64_burnDurations_areTheOnesTheThrustsWereDerivedFrom() {
@@ -154,8 +153,8 @@ class LaunchersTest {
     List<StageModel> stages = Launchers.FALCON_HEAVY.stages();
     assertEquals(3, stages.size(), "the two side cores are a stage of their own since PHY-8 / L2");
 
-    // Components are per exemplar, accessors aggregate (spec docs/etagement/03-conception-L1.md
-    // §3.4): one side core is exactly a third of the block the catalog used to declare.
+    // Components are per exemplar, accessors aggregate: one side core is exactly a third of the
+    // block the catalog used to declare.
     StageModel boosters = stages.getFirst();
     assertEquals(2, boosters.multiplicity());
     assertEquals(22_000, boosters.unitDryMass(), 1e-6);
@@ -184,7 +183,7 @@ class LaunchersTest {
     assertEquals(StageRole.UPPER, s2.capabilities().role());
   }
 
-  /** The block still weighs, holds and pushes exactly what the aggregated S1 did (spec L2 §3.5). */
+  /** The block still weighs, holds and pushes exactly what the aggregated S1 did. */
   @Test
   void falconHeavy_theBlockAggregatesToTheFormerFirstStage() {
     List<StageModel> stages = Launchers.FALCON_HEAVY.stages();
@@ -198,12 +197,11 @@ class LaunchersTest {
 
   /**
    * What the wizard card shows: the thrust the vehicle actually leaves the pad with, summed over
-   * every ground-lit entry (spec {@code docs/etagement/04-conception-L2.md} §3.4). Reading the
-   * bottom entry alone would report 15.2 MN on a split Falcon Heavy.
+   * every ground-lit entry. Reading the bottom entry alone would report 15.2 MN on a split Falcon
+   * Heavy.
    *
    * <p>15.2 MN of boosters plus a core held at 0.81 of its 7.6 — the installed 22.8 MN is what the
-   * vehicle has, not what it leaves the pad with (spec {@code docs/etagement/05-conception-L3.md}
-   * §3.4).
+   * vehicle has, not what it leaves the pad with.
    */
   @Test
   void liftOffThrust_sumsTheGroundLitStagesAtTheThrustTheyApply() {
@@ -230,7 +228,7 @@ class LaunchersTest {
   /**
    * The Falcon Heavy's three cores being identical, thrust and propellant are in the same ratio and
    * both blocks would flame out at the same instant; throttling the centre one is what gives it a
-   * solo phase (spec {@code docs/etagement/05-conception-L3.md} §3.1).
+   * solo phase.
    */
   @Test
   void falconHeavy_throttlesItsCoreDuringTheSharedPhase() {
@@ -251,11 +249,10 @@ class LaunchersTest {
   }
 
   /**
-   * Mass-equivalence lock (spec 07 §6): instantiating the catalog model with the loads of the
-   * former {@code Launchers.FalconHeavy(600_000, 50_000, …)} factory yields a stack with the same
-   * masses. Propulsion follows the catalog, whose S1 ISP was a 296 s mean-trajectory proxy (spec 06
-   * §S1) and is 298 s since PHY-2/L3 handed back the ~51 m/s of ascent drag it was standing in for
-   * (spec docs/atmosphere/10-conception-L3-PHY-2.md §3.3).
+   * Mass-equivalence lock: instantiating the catalog model with the loads of the former {@code
+   * Launchers.FalconHeavy(600_000, 50_000, …)} factory yields a stack with the same masses.
+   * Propulsion follows the catalog, whose S1 ISP was a 296 s mean-trajectory proxy and is 298 s
+   * since PHY-2/L3 handed back the ~51 m/s of ascent drag it was standing in for
    *
    * <p>Since {@code PHY-8 / L2} the first stage is two entries, so the 600 t are the pro rata
    * {@code 400 / 200} split and the former figures are read off the block the stack resolves — the

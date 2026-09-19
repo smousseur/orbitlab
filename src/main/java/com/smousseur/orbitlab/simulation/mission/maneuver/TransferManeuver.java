@@ -107,7 +107,7 @@ public class TransferManeuver {
         OrekitService.get().createOptimizationPropagator(context, maxStepSeconds(initialState));
     propagator.setInitialState(initialState);
     MinAltitudeTracker tracker = configure(propagator, initialState, params);
-    // dt1 may explore up to full depletion (spec 06 I6): truncate infeasible candidates quietly.
+    // dt1 may explore up to full depletion: truncate infeasible candidates quietly.
     DepletionGuard.armQuiet(
         propagator, vehicle.resolveActiveStage(initialState.getMass()).depletionFloor());
     ReentryGuard.armQuiet(propagator, context.gravity());

@@ -28,8 +28,7 @@ import java.util.function.Consumer;
  * <p><b>The band's height never depends on what it shows.</b> It is {@link
  * AppStyles#BREADCRUMB_BAND_HEIGHT_PX}, whatever the depth of the hierarchy displayed, because the
  * whole top-left HUD anchors under it: a band that grew with the focus would move the application
- * menu, and the mission panel under it, every time the camera changed body ({@code
- * docs/navigation/01-breadcrumb.md} §5.5).
+ * menu, and the mission panel under it, every time the camera changed body.
  *
  * <p>Segments are measured and placed by hand rather than handed to a layout, the way the time
  * capsule places its own clusters. A layout would size the band to its content; here the band is a
@@ -88,7 +87,6 @@ public final class BreadcrumbWidget implements AutoCloseable {
    * <p>Which segment is "here" — highlighted and inert — follows the mode alone. In {@link
    * ViewMode#SPACECRAFT} the focus is the spacecraft, which has no segment of its own, so the body
    * it orbits is shown as clickable context: clicking it leaves the mission and focuses the planet
-   * ({@code docs/navigation/01-breadcrumb.md} §4.2).
    *
    * @param mode the current view mode
    * @param body the body the view is centred on

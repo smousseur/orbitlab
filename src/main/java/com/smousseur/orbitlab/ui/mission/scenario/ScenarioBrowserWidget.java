@@ -37,8 +37,7 @@ import java.util.Objects;
 import java.util.function.Consumer;
 
 /**
- * The scenario browser: one modal window in two modes (spec {@code
- * docs/scenario/01-persistance-missions.md} §6.2).
+ * The scenario browser: one modal window in two modes.
  *
  * <p>Placement and skinning only, and it does not even hold the model: which row is selected,
  * whether the confirm button is live and whether confirming would overwrite something are decided

@@ -28,8 +28,7 @@ import org.orekit.time.TimeScalesFactory;
  * <p>Before this lot, {@code createOptimizationPropagator} mounted the <b>Earth's</b> 8×8 field
  * expressed in ITRF for any central body, because {@code orekit-data.zip} carries exactly one
  * potential file and it is terrestrial. A lunar propagation ran with it and produced plausible
- * numbers — the only defect of L4 able to yield a wrong trajectory that looks right (spec {@code
- * docs/multi-corps/06-conception-L4.md} §1.2-D).
+ * numbers — the only defect of L4 able to yield a wrong trajectory that looks right.
  */
 class LunarContextTest {
 
@@ -73,7 +72,7 @@ class LunarContextTest {
 
     assertEquals(2, first.getAllForceModels().size(), "harmonic field plus central term");
     assertTrue(first.getAllForceModels().get(0) instanceof HolmesFeatherstoneAttractionModel);
-    // The shared instance is what makes the L1 gate's 0.0 tolerance achievable (spec L1 §3.3).
+    // The shared instance is what makes the L1 gate's 0.0 tolerance achievable.
     assertSame(first.getAllForceModels().get(0), second.getAllForceModels().get(0));
   }
 
@@ -121,7 +120,7 @@ class LunarContextTest {
   @DisplayName("The Earth resolves to the GCRF instance itself, not a copy")
   void earthResolvesToGcrfInstance() {
     // Reference equality, not equals: the leg runner skips the conversion when the frames are the
-    // same instance, which is what keeps the L1 gate bit-identical (spec L4 §3.5).
+    // same instance, which is what keeps the L1 gate bit-identical.
     assertSame(
         OrekitService.get().gcrf(),
         OrekitService.get().bodyCentredIcrfFrame(SolarSystemBody.EARTH));

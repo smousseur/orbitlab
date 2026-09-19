@@ -8,7 +8,7 @@ import org.orekit.time.AbsoluteDate;
 
 /**
  * The linear map between a mission's time window and the pixels of the timeline track, and the
- * single owner of that projection (spec {@code docs/navigation/02-timeline-mission.md} §5).
+ * single owner of that projection.
  *
  * <p><b>Linear, with no deformation.</b> Propulsive phases are ~2% of a GEO's duration, so an
  * honest axis compresses the whole ascent into a handful of pixels. That cost is paid by the
@@ -80,7 +80,7 @@ public final class TimeAxis {
    * Projects a date onto the track.
    *
    * <p>The clamp is not a defensive precaution: it is the specified behaviour of the {@code now}
-   * indicator, which pins itself to whichever bound it has passed (§5.3).
+   * indicator, which pins itself to whichever bound it has passed.
    *
    * @param date the date to project
    * @return an x within {@code [x0, x0 + width]}
@@ -206,7 +206,7 @@ public final class TimeAxis {
   /**
    * Formats a graduation caption: relative to the window's start, at most two units, truncated
    * downward. The absolute UTC date deliberately appears only in the tooltip — the capsule's own
-   * clock stays the application's absolute reference (§7.2).
+   * clock stays the application's absolute reference.
    *
    * @param secondsFromStart the offset to format, in seconds
    * @return {@code "T+0"}, {@code "T+45 s"}, {@code "T+12 min"}, {@code "T+2 d 12 h"}…
@@ -222,7 +222,7 @@ public final class TimeAxis {
   /**
    * Formats the gap shown beside a pinned {@code now} indicator: same truncation rule as a
    * graduation, but the second unit is zero-padded and a gap under ten seconds keeps one decimal,
-   * because that is the range in which a pinned indicator is about to unpin (§5.3).
+   * because that is the range in which a pinned indicator is about to unpin.
    *
    * @param seconds the gap, sign ignored
    * @return {@code "4.2 s"}, {@code "18 min 20 s"}, {@code "3 d 04 h"}…

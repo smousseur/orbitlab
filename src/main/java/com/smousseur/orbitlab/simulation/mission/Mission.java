@@ -36,7 +36,7 @@ public abstract class Mission {
    * user choose otherwise — and the default is written here <em>as well as</em> in the spec's
    * compact constructor, deliberately: a mission assembled without going through {@code
    * MissionComposer} (the optimizer test base class, the fixtures) would otherwise carry {@code
-   * null} (spec {@code docs/atmosphere/04-conception-L1.md} §3.2).
+   * null}.
    */
   private AtmosphereModel atmosphere = AtmosphereModel.NONE;
 
@@ -69,9 +69,8 @@ public abstract class Mission {
    * The gravitational context this mission's stages fly in unless they say otherwise.
    *
    * <p>Shaped exactly like {@link MissionStage#maxStepSeconds}: a default carried by the mission,
-   * overridable per stage. In L1 nothing overrides it — that is the definition of the lot (spec
-   * {@code docs/multi-corps/03-conception-L1.md} §3.1). L4 is where a stage first declares another
-   * body.
+   * overridable per stage. In L1 nothing overrides it — that is the definition of the lot. L4 is
+   * where a stage first declares another body.
    *
    * @return the central body context
    */

@@ -26,11 +26,11 @@ public final class MissionFactory {
 
   /**
    * The atmosphere every mission created here flies against unless a saved value overrides it — the
-   * "on by default" of PHY-2 / L5 (spec {@code docs/atmosphere/12-conception-L5-PHY-2.md} §3.1). It
-   * lives at this single production origin rather than in the {@code MissionSpec} constructors so a
-   * spec assembled by hand (tests, fixtures) still defaults to {@link AtmosphereModel#NONE}: the
-   * flip touches what a user creates, not what a test asserts. Scenario restore reads it back to
-   * the value the file saved through {@link MissionSpec#withAtmosphere(AtmosphereModel)}.
+   * "on by default" of PHY-2 / L5. It lives at this single production origin rather than in the
+   * {@code MissionSpec} constructors so a spec assembled by hand (tests, fixtures) still defaults
+   * to {@link AtmosphereModel#NONE}: the flip touches what a user creates, not what a test asserts.
+   * Scenario restore reads it back to the value the file saved through {@link
+   * MissionSpec#withAtmosphere(AtmosphereModel)}.
    */
   private static final AtmosphereModel DEFAULT_ATMOSPHERE = AtmosphereModel.NRLMSISE;
 
@@ -88,7 +88,7 @@ public final class MissionFactory {
 
     // Absent means "auto": the wizard omits the key while the user leaves the derived default in
     // place, so an unedited (or reopened) mission gets MissionHorizon.defaultFor(type) rather than
-    // a frozen number (spec docs/mission-horizon/01-horizon-explicite.md §7).
+    // a frozen number.
     MissionHorizon horizon = horizonOrNull(values);
 
     LauncherModel launcher = Launchers.byId(String.valueOf(values.get("LAUNCHER_TYPE")));
@@ -107,7 +107,7 @@ public final class MissionFactory {
             double apogeeAlt = Math.max(perigeeKm, apogeeKm) * 1000.0;
             LaunchPlane plane = launchPlane(values, latitude);
             double azimuth = plane.launchAzimuth(FastMath.toRadians(latitude));
-            // The budget has to agree with the chain MissionComposer will pick (spec §6.1): a
+            // The budget has to agree with the chain MissionComposer will pick: a
             // target
             // beyond the ascent's reach is flown through a parking orbit and circularized at
             // apogee, so
@@ -149,8 +149,7 @@ public final class MissionFactory {
             // the burn would only fail during propagation, on a background thread. Asked as a ΔV
             // and
             // not as the presence of a tank, the same way MissionComposer asks it of a MEO: since
-            // PHY-8 / L6 a payload can carry propellant that is nowhere near an apogee burn (spec
-            // docs/etagement/01-decoupage.md §3.7).
+            // PHY-8 / L6 a payload can carry propellant that is nowhere near an apogee burn.
             double burnDeltaV =
                 PropellantBudget.apogeeBurnDeltaV(parkingAlt, GEOMission.GEO_ALTITUDE, latitude);
             double carriedDeltaV = PropellantBudget.payloadDeltaV(payload);
@@ -250,11 +249,11 @@ public final class MissionFactory {
   /**
    * One ascent straight to the target, loads sized on the apogee — conservative for an ellipse.
    *
-   * <p><b>The payload now flies with propellant in it</b> (spec {@code
-   * docs/etagement/01-decoupage.md} §3.7). It used to be handed a hard-coded empty tank, on the
-   * argument that a direct chain has no burn for it; true of the burn, false of the mass, and the
-   * catalog is where a satellite says how much ΔV it must carry. Nothing spends it before PHY-6 —
-   * the direct chain keeps its upper stage all the way, so the trim is still that stage's burn.
+   * <p><b>The payload now flies with propellant in it</b>. It used to be handed a hard-coded empty
+   * tank, on the argument that a direct chain has no burn for it; true of the burn, false of the
+   * mass, and the catalog is where a satellite says how much ΔV it must carry. Nothing spends it
+   * before PHY-6 — the direct chain keeps its upper stage all the way, so the trim is still that
+   * stage's burn.
    */
   private static LaunchConfiguration directConfiguration(
       LauncherModel launcher,
@@ -271,9 +270,9 @@ public final class MissionFactory {
   }
 
   /**
-   * Sizing for a target the ascent cannot reach directly (spec §6): parking orbit, injection burn,
-   * coast to apogee, circularization there. The payload's tank is filled when it has one — it is
-   * what lets a launcher whose upper stage cannot hold the coast fly the mission at all.
+   * Sizing for a target the ascent cannot reach directly: parking orbit, injection burn, coast to
+   * apogee, circularization there. The payload's tank is filled when it has one — it is what lets a
+   * launcher whose upper stage cannot hold the coast fly the mission at all.
    *
    * <p>The plane change charged at apogee is <b>zero</b>, unlike a GEO mission's. Since MIS-7 the
    * ascent is steered into the target plane, so what reaches apogee is already in it, give or take
@@ -303,8 +302,7 @@ public final class MissionFactory {
   }
 
   /**
-   * Resolves the plane the ascent is asked to reach (spec {@code
-   * docs/earth-orbit/02-wizard-orbites-terrestres.md} §2.0).
+   * Resolves the plane the ascent is asked to reach.
    *
    * <p><b>An absent key is not a missing value, it is the due-east answer.</b> The wizard omits
    * {@code TARGET_INCLINATION} while the inclination is still the one the site gives for free, and
@@ -314,9 +312,8 @@ public final class MissionFactory {
    * therefore every propellant load. Every caller assembling values by hand, and every test written
    * before P2, lands in this branch and keeps its trajectory bit-for-bit.
    *
-   * <p><b>An unusable value is refused, never clamped</b> (spec {@code
-   * 01-mission-terre-parametrable.md} §8): a mission that quietly flies a plane other than the one
-   * asked for is the defect MIS-7 exists to remove.
+   * <p><b>An unusable value is refused, never clamped</b>: a mission that quietly flies a plane
+   * other than the one asked for is the defect MIS-7 exists to remove.
    *
    * @param values the raw wizard values
    * @param latitude the launch site latitude in degrees
