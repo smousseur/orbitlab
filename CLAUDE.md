@@ -311,7 +311,7 @@ zero-tolerance gates. If a visual bug seems to require a physics change, **stop 
 
 Design work is recorded as pages in the Confluence space **OrbitLab** (`OL`), one tree per
 *chantier*, each page linked to its Jira Epic (project **OBL**). Historical v1 documents may still
-be found under `docs/<chantier>/` (`01-decoupage.md`, `02-baseline-L0.md`, `03-conception-L1.md`, …).
+be found in the local, untracked `docs/<chantier>/` folder (`01-decoupage.md`, `02-baseline-L0.md`, `03-conception-L1.md`, …).
 
 > **Rule: work the design out in the conversation first, then write the document.**
 > A generated design doc is hard to review — the reader has to reconstruct the reasoning
@@ -415,11 +415,11 @@ after a success does nothing (UP-TO-DATE); a reproducibility measurement goes th
 - **Branch naming**: Feature branches follow `feature_<name>` or `claude/<description>-<id>` conventions
 - **Commit messages**: Imperative mood, descriptive (e.g., `Add backup computations to avoid local minimums in CMAES optimization`)
 - **Merge strategy**: Feature branches are merged via pull requests
-- **Excluded from git** (see `.gitignore`): `build/`, `.gradle/`, `gradle/`, `docs/superpowers/**`, `dataset/**`. Note that `src/main/resources/` is **not** excluded at all — shaders, fonts, UI textures, the skybox, `orekit-data.zip` **and the GLTF planet models under `models/`** are all tracked, and `docs/` **is** tracked apart from `docs/superpowers/`
+- **Excluded from git** (see `.gitignore`): `build/`, `.gradle/`, `gradle/`, `docs/`, `dataset/**`. Note that `src/main/resources/` is **not** excluded at all — shaders, fonts, UI textures, the skybox, `orekit-data.zip` **and the GLTF planet models under `models/`** are all tracked. `docs/` is **no longer tracked** (design docs now live in the Confluence space `OL`); the folder is kept locally, untracked, and stays recoverable from git history
 
 ---
 
 ## What Is Not in This Repo
 
 - `dataset/` — Mission and test data files
-- `docs/superpowers/` — Locally generated implementation plans
+- `docs/` — Design docs (now in the Confluence space `OL`) plus locally generated implementation plans (`docs/superpowers/`); kept on disk but untracked
