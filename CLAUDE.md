@@ -310,7 +310,7 @@ zero-tolerance gates. If a visual bug seems to require a physics change, **stop 
 ## Design Documents
 
 Design work is recorded as pages in the Confluence space **OrbitLab** (`OL`), one tree per
-*chantier*, each page linked to its Jira Epic (project **OBL**). Historical v1 documents may still
+*chantier*, each page linked to its Jira **Story** — the chantier itself, grouped under a family **Epic** (`MIS`, `PHY`, …) in project **OBL**. Historical v1 documents may still
 be found in the local, untracked `docs/<chantier>/` folder (`01-decoupage.md`, `02-baseline-L0.md`, `03-conception-L1.md`, …).
 
 > **Rule: work the design out in the conversation first, then write the document.**
@@ -345,7 +345,7 @@ directly; bugs and technical-debt items go straight to Jira (project **OBL**) ra
 
 Work is organised into numbered *chantiers*, each split into *lots* — `L0` a measured
 baseline, then `L1…Ln` one behaviour change at a time. A lot's design is worked out in the
-conversation first (see *Design Documents*), then recorded.
+conversation first (see *Design Documents*), then recorded. **In Jira (project `OBL`) this is a three-level hierarchy:** the classification family (`MIS`, `PHY`, `FX`, `OPT`, `UI`, `RND`, `NAV`, `SEL`, `AST`) is an **Epic**; each *chantier* is a **Story** under its family Epic; each *lot* is a **Sub-task** of its chantier Story. Lot Sub-tasks are created only for the chantier actually being worked — not backfilled across closed history.
 
 **Closing a lot ends with three things — none skipped, and none reported done until it
 actually exists:**
@@ -355,7 +355,7 @@ actually exists:**
    (`forkEvery=1`); confirm they are untouched, or that a re-baseline was a deliberate,
    stated decision.
 2. **Closure documentation** as a Confluence page (French) in the chantier's tree, linked to its
-   Jira Epic: scope, measured before/after, known limitations.
+   Jira **Story** (the chantier): scope, measured before/after, known limitations.
 3. **Jira updates** (project **OBL**): resolved issues transitioned to *Terminé* (label
    `resolution:fixed|wontdo|moved`), any new Bug/Task/Story created; the roadmap is the Jira
    backlog and the native releases (v1–v4 / fixVersion).
