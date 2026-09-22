@@ -318,7 +318,6 @@ public final class PlanetPoseAppState extends BaseAppState {
     }
   }
 
-
   /**
    * The given body's heliocentric ICRF position, or empty while the ephemeris buffer has not caught
    * up to {@code t} yet — the same degradation {@link PlanetPresenter#updatePose} already accepts

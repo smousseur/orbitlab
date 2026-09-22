@@ -159,6 +159,17 @@ class PayloadsTest {
   }
 
   @Test
+  void toSpacecraft_carriesDisposalReserveAsMassBesideTheLoad() {
+    Spacecraft spacecraft = Payloads.EARTH_OBSERVATION_SAT.toSpacecraft(10_000, 50, 200);
+    assertEquals(50, spacecraft.propellantLoad(), 1e-6);
+    assertEquals(200, spacecraft.disposalReserve(), 1e-6);
+    assertEquals(10_250, spacecraft.getMass(), 1e-6, "dry 10 000 + load 50 + reserve 200");
+    assertFalse(
+        Payloads.EARTH_OBSERVATION_SAT.toSpacecraft(10_000, 0, 200).hasUsablePropellant(),
+        "a reserve without a usable load must not read as usable propellant");
+  }
+
+  @Test
   void inertPayload_akmLoad_rejected() {
     assertThrows(
         IllegalArgumentException.class, () -> Payloads.CARGO_MODULE.toSpacecraft(15_000, 1.0));

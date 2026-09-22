@@ -197,11 +197,11 @@ public final class PropellantBudget {
    * fixtures ask. This one answers <em>size both</em>, which needs the catalog model: a {@code
    * Spacecraft} carries a tank but not the budget that decides how much goes in it.
    *
-   * <p><b>The propellant is dead mass today</b> and that is not an oversight. A direct chain never
-   * drops its upper stage, so the trim is still the launcher's burn; what this load does is ride to
-   * orbit, and it is the one place PHY-8 / L6 moves a trajectory — measured at +1.36 % of upper
-   * stage load on a Falcon Heavy carrying 10 t, +1.02 % on an Ariane 64 carrying 20 t. PHY-6 is
-   * where the payload starts spending it.
+   * <p><b>The payload spends this load since PHY-5 / L4</b>: a direct chain whose payload carries a
+   * usable load drops its upper stage after the transfer and lets the payload fly its own final
+   * trim on its own engine. The load also rides to orbit as mass, and it is the one place PHY-8 /
+   * L6 moves a trajectory by that mass alone — measured at +1.36 % of upper stage load on a Falcon
+   * Heavy carrying 10 t, +1.02 % on an Ariane 64 carrying 20 t.
    *
    * @param launcher the launcher model
    * @param payload the payload model (provides the tank and the ΔV budget)
@@ -683,6 +683,88 @@ public final class PropellantBudget {
     }
     double wet = payload.dryMass() + payload.propellantLoad();
     return payload.propulsion().isp() * G0 * FastMath.log(wet / payload.dryMass());
+  }
+
+  /**
+   * Highest orbit altitude (m) disposed of by reentry; above it, disposal is a graveyard re-orbit.
+   *
+   * <p>Numerically the ceiling of the IADC protected LEO region (2 000 km altitude), and taken from
+   * that standard rather than from {@code MissionComposer.DIRECT_CHAIN_APOGEE_CEILING_M}, which it
+   * happens to match today: the disposal regime is a physics/standards question, not an
+   * ascent-reach one, and must not follow a change of the ascent ceiling.
+   */
+  private static final double DISPOSAL_REGIME_BOUNDARY_M = 2_000_000.0;
+
+  /**
+   * Graveyard re-orbit raise above the disposed orbit (m). The IADC minimum is {@code 235 km + 1000
+   * · Cr · (A/m)}; 300 km is the commonly flown round figure, and the reserve is insensitive to it
+   * — 6.0 kg at 235 km against 7.6 kg at 300 km on the GEO_SAT kick motor, both trivially carried.
+   */
+  private static final double DISPOSAL_GRAVEYARD_RAISE_M = 300_000.0;
+
+  /** How a payload's orbit is disposed of at end of life. */
+  private enum DisposalRegime {
+    REENTRY,
+    GRAVEYARD
+  }
+
+  /**
+   * The end-of-life disposal reserve (kg) for a payload delivered to a circular orbit, sized to the
+   * realistic disposal of its regime: a single retrograde burn to the reentry perigee below {@link
+   * #DISPOSAL_REGIME_BOUNDARY_M}, a two-burn graveyard re-orbit above it.
+   *
+   * <p>The reentry perigee is only part of the answer in the reentry regime; a graveyard re-orbit
+   * ignores it and raises by {@link #DISPOSAL_GRAVEYARD_RAISE_M}. The reserve pushes the payload's
+   * dry bus alone — by end of life its nominal load (LEO trim, GEO apogee kick) is spent — with the
+   * standard margin.
+   *
+   * @param payload the payload model (provides the disposal engine's Isp)
+   * @param payloadDryMass the payload dry mass the burn moves (kg)
+   * @param orbitAltitude the circular orbit altitude the disposal leaves from (m)
+   * @param reentryPerigeeAltitude the target reentry perigee altitude (m), used in the reentry
+   *     regime only
+   * @return the disposal reserve in kg
+   */
+  public static double disposalReserveFor(
+      PayloadModel payload,
+      double payloadDryMass,
+      double orbitAltitude,
+      double reentryPerigeeAltitude) {
+    if (!payload.hasPropulsion()) {
+      return 0.0;
+    }
+    double deltaV =
+        switch (regimeFor(orbitAltitude)) {
+          case REENTRY -> reentryDisposalDeltaV(orbitAltitude, reentryPerigeeAltitude);
+          case GRAVEYARD -> graveyardRaiseDeltaV(orbitAltitude, DISPOSAL_GRAVEYARD_RAISE_M);
+        };
+    double exhaustVelocity = payload.propulsion().isp() * G0;
+    return payloadDryMass * (FastMath.exp(deltaV / exhaustVelocity) - 1.0) * (1.0 + SAFETY_MARGIN);
+  }
+
+  private static DisposalRegime regimeFor(double orbitAltitude) {
+    return orbitAltitude > DISPOSAL_REGIME_BOUNDARY_M
+        ? DisposalRegime.GRAVEYARD
+        : DisposalRegime.REENTRY;
+  }
+
+  /** Single retrograde burn from a circular orbit down to a reentry perigee (m/s). */
+  private static double reentryDisposalDeltaV(
+      double circularAltitude, double reentryPerigeeAltitude) {
+    double rC = RE + circularAltitude;
+    double rP = RE + reentryPerigeeAltitude;
+    double semiMajor = 0.5 * (rC + rP);
+    return FastMath.sqrt(MU / rC) - FastMath.sqrt(MU * (2.0 / rC - 1.0 / semiMajor));
+  }
+
+  /** Two-burn Hohmann re-orbit raising a circular orbit by {@code raise} metres (m/s). */
+  private static double graveyardRaiseDeltaV(double circularAltitude, double raise) {
+    double r1 = RE + circularAltitude;
+    double r2 = RE + circularAltitude + raise;
+    double semiMajor = 0.5 * (r1 + r2);
+    double dv1 = FastMath.sqrt(MU * (2.0 / r1 - 1.0 / semiMajor)) - FastMath.sqrt(MU / r1);
+    double dv2 = FastMath.sqrt(MU / r2) - FastMath.sqrt(MU * (2.0 / r2 - 1.0 / semiMajor));
+    return dv1 + dv2;
   }
 
   /**

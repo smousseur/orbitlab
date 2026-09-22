@@ -24,9 +24,9 @@ import java.util.Objects;
  * @param dimensionMeters the bus's characteristic dimension (m) — the diameter of a cylindrical
  *     bus, the edge of a boxy one — with solar arrays stowed, as {@link #aerodynamics} assumes; 0
  *     when the model declares none. It is the figure the declared cross-section is computed from,
- *     so the two cannot drift apart unnoticed ({@code PayloadsTest}). Nothing reads it yet: the
- *     scene draws launchers only, and turning it into a drawn size needs the metres-per-mesh-unit
- *     of a given asset, which is PHY-6's to write alongside that asset.
+ *     so the two cannot drift apart unnoticed ({@code PayloadsTest}), and since PHY-5 it is also
+ *     the size the drawn payload bus is scaled to: {@code PayloadAssets} loads the mesh by its
+ *     bounding box and stretches it to this dimension.
  * @param deltaVBudget the ΔV (m/s) the payload must carry for burns <b>the mission chain does not
  *     compute for it</b>; 0 when it carries none. A GEO or lunar payload declares none on purpose:
  *     its burn is the mission's, sized from the target by {@code PropellantBudget}, and freezing it
@@ -126,6 +126,23 @@ public record PayloadModel(
    * @return the spacecraft instance topping the vehicle stack
    */
   public Spacecraft toSpacecraft(double dryMass, double propellantLoad) {
+    return toSpacecraft(dryMass, propellantLoad, 0);
+  }
+
+  /**
+   * Instantiates the payload with a disposal reserve carried beside its usable load.
+   *
+   * <p>The reserve is sized per-mission by {@code PropellantBudget.disposalReserveFor} and lives
+   * <b>outside</b> {@link #propellantCapacity}: it is a genuinely separate quantity, not a way of
+   * filling the tank, since no current tank has room for it above its nominal burn. It rides as
+   * mass and never reads as usable propellant — see {@link Spacecraft#disposalReserve()}.
+   *
+   * @param dryMass the dry mass (kg) entered in the wizard
+   * @param propellantLoad the usable propellant load (kg), within [0, propellantCapacity]
+   * @param disposalReserve the end-of-life disposal reserve (kg); 0 for no disposal
+   * @return the spacecraft instance topping the vehicle stack
+   */
+  public Spacecraft toSpacecraft(double dryMass, double propellantLoad, double disposalReserve) {
     if (!(dryMass > 0)) {
       throw new IllegalArgumentException("dryMass must be positive");
     }
@@ -133,6 +150,7 @@ public record PayloadModel(
       throw new IllegalArgumentException(
           "propellantLoad must be within [0, " + propellantCapacity + "]: " + propellantLoad);
     }
-    return new Spacecraft(dryMass, propellantCapacity, propellantLoad, propulsion, aerodynamics);
+    return new Spacecraft(
+        dryMass, propellantCapacity, propellantLoad, propulsion, aerodynamics, disposalReserve);
   }
 }

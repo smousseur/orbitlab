@@ -250,10 +250,11 @@ public final class MissionFactory {
    * One ascent straight to the target, loads sized on the apogee — conservative for an ellipse.
    *
    * <p><b>The payload now flies with propellant in it</b>. It used to be handed a hard-coded empty
-   * tank, on the argument that a direct chain has no burn for it; true of the burn, false of the
-   * mass, and the catalog is where a satellite says how much ΔV it must carry. Nothing spends it
-   * before PHY-6 — the direct chain keeps its upper stage all the way, so the trim is still that
-   * stage's burn.
+   * tank, on the argument that a direct chain has no burn for it; true then, and the catalog is
+   * where a satellite says how much ΔV it must carry. Since PHY-5 / L4 the payload does spend it: a
+   * direct chain whose payload carries a usable load drops its upper stage after the transfer and
+   * lets the payload fly its own final trim on its own engine, while a payload loaded to zero keeps
+   * flying the upper stage to the end as before.
    */
   private static LaunchConfiguration directConfiguration(
       LauncherModel launcher,

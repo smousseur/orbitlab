@@ -553,7 +553,8 @@ public final class MissionRenderer {
       boolean landed = !within && hasLanded(track);
       // Once a landing piece has impacted, it rests on the ground and must ride the turning globe,
       // not hang at the frozen inertial pose of the impact instant, which the rotating Earth drifts
-      // out from under. Position, heading, roll and seat all co-rotate rigidly with the drawn globe.
+      // out from under. Position, heading, roll and seat all co-rotate rigidly with the drawn
+      // globe.
       if (landed) {
         LandedPose pose = landedPose(pt, seat, upHint, now);
         pt = pose.point();
@@ -563,7 +564,8 @@ public final class MissionRenderer {
       int upTo = within ? trail.indexUpTo(now) : trail.size() - 1;
       debrisView.setVisible(true);
       boolean followed = isFollowed(track, focus);
-      // The followed debris is promoted to the origin anchor — reparented under the near-bodies node
+      // The followed debris is promoted to the origin anchor — reparented under the near-bodies
+      // node
       // and drawn absolutely (no reference point) — so the floating origin, centred on the same
       // point, cancels its position bit-for-bit: it stops jittering, and after impact both read the
       // co-rotated point so it no longer drifts as the Earth turns (SEL-1 / L2, approach A). Every
@@ -573,8 +575,10 @@ public final class MissionRenderer {
           followed ? context.sceneGraph().nearBodiesNode() : (Node) primary.view().spatial());
       // A debris flies an inertial trajectory like any object: growing while it falls, then — once
       // it has landed — frozen at full length and fading out over TOUCHDOWN_FADE_SECONDS, after
-      // which only the piece remains, pinned to the turning globe. An orbital debris never lands, so
-      // it keeps its trajectory. Gated by the "show debris" toggle, except that a debris the view is
+      // which only the piece remains, pinned to the turning globe. An orbital debris never lands,
+      // so
+      // it keeps its trajectory. Gated by the "show debris" toggle, except that a debris the view
+      // is
       // following shows its path regardless, as the focused object.
       float trailOpacity = landed ? touchdownFade(now, ephemeris.endDate()) : 1f;
       boolean showTrail = (debrisVisible || followed) && trailOpacity > 0f;
@@ -671,8 +675,8 @@ public final class MissionRenderer {
    * rotation, so the whole piece rides the turning Earth instead of hanging at the inertial pose of
    * the impact instant. Position (a point about the geocentre), velocity and the seat and roll
    * references (directions) are all turned by the same drawn rotation, so the mesh stays rigid on
-   * the ground: {@code lookAt} and the seat offset are rotation-equivariant, so turning their inputs
-   * turns the drawn attitude with them.
+   * the ground: {@code lookAt} and the seat offset are rotation-equivariant, so turning their
+   * inputs turns the drawn attitude with them.
    *
    * <p>A {@code null} roll hint (a non-booster, rolling about world up) becomes celestial north
    * made explicit so it can be turned like any other; at {@code now = t_impact} the rotation is

@@ -12,18 +12,39 @@ import com.smousseur.orbitlab.simulation.mission.vehicle.model.AerodynamicProper
  * @param propulsion the spacecraft's propulsion system
  * @param aerodynamics the frontal area and drag coefficient of the payload, or {@code null} when it
  *     declares none — a payload that declares none does not drag
+ * @param disposalReserve the end-of-life disposal propellant reserve (kg), carried on top of {@link
+ *     #propellantLoad} and sized per-mission by {@code PropellantBudget.disposalReserveFor}. It is
+ *     mass the launcher must lift, so it counts in {@link #getMass()}, but it is <b>not</b> usable
+ *     propellant: it does not enter {@link #propellantLoad}, {@link #propellantCapacity} or {@link
+ *     #hasUsablePropellant()}, so it never triggers the ascent trim. Spent by the payload's own
+ *     engine at end of life (the burn itself belongs to MIS-10). 0 when the mission asks for no
+ *     disposal, which is every current production mission.
  */
 public record Spacecraft(
     double dryMass,
     double propellantCapacity,
     double propellantLoad,
     PropulsionSystem propulsion,
-    AerodynamicProperties aerodynamics)
+    AerodynamicProperties aerodynamics,
+    double disposalReserve)
     implements Vehicle {
   public Spacecraft {
     if (propellantLoad > propellantCapacity) {
       throw new IllegalArgumentException("propellantLoad cannot exceed propellantCapacity");
     }
+    if (Double.isNaN(disposalReserve) || disposalReserve < 0) {
+      throw new IllegalArgumentException("disposalReserve cannot be negative");
+    }
+  }
+
+  /** A payload carrying no disposal reserve — the shape every caller but the disposal path uses. */
+  public Spacecraft(
+      double dryMass,
+      double propellantCapacity,
+      double propellantLoad,
+      PropulsionSystem propulsion,
+      AerodynamicProperties aerodynamics) {
+    this(dryMass, propellantCapacity, propellantLoad, propulsion, aerodynamics, 0);
   }
 
   /** A payload flying without declared aerodynamics — the historical shape, and the fixtures'. */
@@ -37,6 +58,18 @@ public record Spacecraft(
 
   public Spacecraft(double dryMass, double propellantCapacity, PropulsionSystem propulsion) {
     this(dryMass, propellantCapacity, propellantCapacity, propulsion, null);
+  }
+
+  /**
+   * Total mass the launcher lifts: dry structure, usable propellant, and the disposal reserve. The
+   * reserve is dead mass through ascent and orbit — only the end-of-life burn spends it — but it is
+   * mass all the same, so it belongs here and nowhere in the propellant accounting.
+   *
+   * @return the total mass in kilograms
+   */
+  @Override
+  public double getMass() {
+    return dryMass + propellantLoad + disposalReserve;
   }
 
   /**

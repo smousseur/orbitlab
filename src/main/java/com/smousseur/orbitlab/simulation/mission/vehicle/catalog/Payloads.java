@@ -42,7 +42,7 @@ public final class Payloads {
    * <ul>
    *   <li><b>15 m/s</b> is two and a half times the worst LEO trim PHY-8 / L0 measured — 6.1 m/s,
    *       stable to 0.4 m/s across two launchers and three payload masses. A ΔV does not depend on
-   *       the mass carrying it, so that figure survives the day PHY-6 hands the trim to the
+   *       the mass carrying it, so that figure survived PHY-5 / L4 handing the trim to the
    *       satellite alone. PHY-2 is where it gets raised, once drag makes orbit maintenance a real
    *       expense rather than a residual.
    *   <li><b>100 kg</b> of tank covers those 15 m/s up to 13 032 kg of dry mass, i.e. 30 % above
@@ -57,9 +57,9 @@ public final class Payloads {
    *       is a thrust the catalog already carries.
    * </ul>
    *
-   * <p><b>Nothing burns it yet.</b> A LEO chain never drops its upper stage, so the trim is still
-   * the S2's burn; what this load does today is ride along as mass the launcher must lift, which is
-   * the lot's one real trajectory movement.
+   * <p><b>It rides, and since PHY-5 / L4 it burns.</b> A LEO whose payload carries a usable load
+   * drops its upper stage after the transfer, and the satellite flies this trim on its own engine;
+   * the load also rides along as mass the launcher must lift.
    */
   public static final PayloadModel EARTH_OBSERVATION_SAT =
       // Boxy bus. B = 509 kg/m² at the 10 077 kg departure mass (10 t dry + 77 kg of propellant).
