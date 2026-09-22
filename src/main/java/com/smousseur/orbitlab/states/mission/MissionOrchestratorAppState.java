@@ -130,6 +130,11 @@ public final class MissionOrchestratorAppState extends BaseAppState {
     }
 
     cleanupRemovedMissions(activeMissionIds);
+
+    // After the focus-drop on deletion above, so a mission removed this frame is never handed back
+    // its now-gone primary: this returns the focus of a live mission whose followed debris lost its
+    // icon (SEL-1 / L3).
+    context.focusController().returnToPrimaryIfDetached();
   }
 
   private void pollMissionActions() {

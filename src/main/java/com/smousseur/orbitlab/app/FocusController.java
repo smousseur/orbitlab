@@ -48,11 +48,58 @@ public final class FocusController {
     context.missionContext().setTelemetryFocus(object);
   }
 
+  /**
+   * Hands the camera and telemetry back to the mission's primary when the followed object is a
+   * debris that has lost its handle — the "show debris" toggle switched off, or the clock rewound
+   * before the piece's jettison. Meant to be called once per frame.
+   *
+   * <p>It reads the <em>camera</em> focus, which only settles at the end of a transition, so the
+   * fallback acts on a stable focus and its own {@link #select} is never swallowed by the "a
+   * transition is already playing" guard. It resolves the piece's jettison from its ephemeris;
+   * while that ephemeris is momentarily gone (a mission being recomputed) the rewind case cannot be
+   * judged and is treated as "not before jettison", leaving that transient to the mission-level
+   * focus rules. Re-invoking it on every frame of the fly-back is harmless: the camera request is
+   * ignored while the return transition plays, and the telemetry write is idempotent.
+   */
+  public void returnToPrimaryIfDetached() {
+    if (!(context.focusView().getFocusedObject() instanceof FollowedObject.Debris debris)) {
+      return;
+    }
+    boolean debrisVisible = context.displaySettings().isDebrisVisible();
+    boolean beforeJettison =
+        context
+            .missionContext()
+            .ephemerisOf(debris)
+            .map(ephemeris -> context.clock().now().compareTo(ephemeris.startDate()) < 0)
+            .orElse(false);
+    if (handleLost(debris, debrisVisible, beforeJettison)) {
+      select(new FollowedObject.Primary(debris.mission()));
+    }
+  }
+
   private SolarSystemBody parentBodyOf(FollowedObject object) {
     MissionContext missions = context.missionContext();
     return missions
         .ephemerisOf(object)
         .map(ephemeris -> ephemeris.displayPointAt(context.clock().now()).arc().body())
         .orElseGet(() -> context.focusView().getBody());
+  }
+
+  /**
+   * Whether a followed object has lost its on-screen handle, so the focus must fall back to the
+   * primary. Only a debris can: its handle is its icon, up exactly while the "show debris" toggle
+   * is on and the clock is at or past the piece's jettison. The return therefore fires on the two
+   * cases the icon is gone — the toggle switched off, or the clock rewound before the jettison.
+   * Because this reads neither the impact instant nor the end of the debris' life, it never fires
+   * on impact: a landed piece still carries its icon and stays followed.
+   *
+   * @param followed the object the camera currently follows
+   * @param debrisVisible whether the global "show debris" toggle is on
+   * @param beforeJettison whether the clock is before the debris' jettison (its ephemeris start)
+   * @return {@code true} when a followed debris no longer has a handle
+   */
+  static boolean handleLost(
+      FollowedObject followed, boolean debrisVisible, boolean beforeJettison) {
+    return followed instanceof FollowedObject.Debris && (!debrisVisible || beforeJettison);
   }
 }
