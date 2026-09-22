@@ -84,10 +84,20 @@ public final class MissionRenderer {
   private static final double BOOSTER_LATERAL_SPREAD_METERS = 4.0;
 
   /**
-   * Below this altitude (m) a debris' last sample counts as an impact: it lands, and gets a ground
-   * track. Above it, the debris ends at the mission horizon in orbit and gets none.
+   * Below this altitude (m) a debris' last sample counts as an impact: it lands, its trajectory
+   * fades out and only the piece stays, pinned to the turning globe. Above it, the debris ends at
+   * the mission horizon in orbit and keeps its inertial trajectory.
    */
   private static final double LANDED_ALTITUDE_METERS = 1000.0;
+
+  /**
+   * How long (simulation seconds) a landed debris' trajectory takes to fade out after touchdown.
+   * Measured in <em>simulation</em> time, not real time, so the fade is a pure function of the
+   * clock: rewinding past the impact un-fades it symmetrically, with no state to reverse. Sized so
+   * the fade reads over roughly a second of real time at the tens-of-× time warp a re-entry is
+   * watched at; at extreme warp the whole fall is instant anyway.
+   */
+  private static final double TOUCHDOWN_FADE_SECONDS = 25.0;
 
   private final MissionEntry entry;
   private final ApplicationContext context;
@@ -111,13 +121,6 @@ public final class MissionRenderer {
 
   /** One view per jettisoned object, rebuilt when the entry's debris change (a recomputation). */
   private final List<TrackedObjectView> debrisViews = new ArrayList<>();
-
-  /**
-   * One ground-track view per debris, parallel to {@link #debrisViews}: {@code null} for an orbital
-   * debris (no ground track), and for a landing debris until its rotations are available and it is
-   * built lazily.
-   */
-  private final List<DebrisGroundTrackView> debrisGroundTracks = new ArrayList<>();
 
   /**
    * The debris list {@link #debrisViews} was built from, compared by identity to detect a change.
@@ -540,7 +543,6 @@ public final class MissionRenderer {
       MissionEphemeris ephemeris = track.ephemeris();
       if (now.compareTo(ephemeris.startDate()) < 0) {
         debrisView.setVisible(false);
-        hideGroundTrack(i);
         continue;
       }
       TrajectoryPolyline trail = ephemeris.displayTrail();
@@ -548,32 +550,20 @@ public final class MissionRenderer {
       MissionEphemerisPoint pt = ephemeris.displayPointAt(now);
       Vector3D seat = debrisSeat(track, pt);
       Vector3D upHint = debrisUpHint(track, pt);
-      // Once a landing piece has impacted, it rests on the ground and must ride the turning globe
-      // with its ground track's impact marker, not hang at the frozen inertial pose of the impact
-      // instant, which the rotating Earth drifts out from under. Position, heading,
-      // roll
-      // and seat all co-rotate rigidly with the drawn globe.
-      if (!within && hasLanded(track)) {
-        LandedPose landed = landedPose(pt, seat, upHint, now);
-        pt = landed.point();
-        seat = landed.seat();
-        upHint = landed.upHint();
+      boolean landed = !within && hasLanded(track);
+      // Once a landing piece has impacted, it rests on the ground and must ride the turning globe,
+      // not hang at the frozen inertial pose of the impact instant, which the rotating Earth drifts
+      // out from under. Position, heading, roll and seat all co-rotate rigidly with the drawn globe.
+      if (landed) {
+        LandedPose pose = landedPose(pt, seat, upHint, now);
+        pt = pose.point();
+        seat = pose.seat();
+        upHint = pose.upHint();
       }
       int upTo = within ? trail.indexUpTo(now) : trail.size() - 1;
       debrisView.setVisible(true);
       boolean followed = isFollowed(track, focus);
-      // Zoomed into this mission: the near frame sits on one of its objects, so a debris'
-      // geocentre-relative ground track cancels that large offset erratically and jitters up close
-      // (SEL-1 / L2). A landing debris shows its primary-relative ribbon instead while the primary
-      // holds the focus — the near frame is then centred on that same primary, so the line cancels
-      // it exactly. A followed debris keys on itself; any other focus keeps the ground track.
-      boolean primaryFocused =
-          focus.getFocusedObject() instanceof FollowedObject.Primary p
-              && p.mission().equals(entry.id());
-      boolean nearView = followed || primaryFocused;
-      boolean relativeDescent = primaryFocused && debrisVisible && hasLanded(track);
-      // The followed debris is promoted to the origin anchor — reparented under the near-bodies
-      // node
+      // The followed debris is promoted to the origin anchor — reparented under the near-bodies node
       // and drawn absolutely (no reference point) — so the floating origin, centred on the same
       // point, cancels its position bit-for-bit: it stops jittering, and after impact both read the
       // co-rotated point so it no longer drifts as the Earth turns (SEL-1 / L2, approach A). Every
@@ -581,15 +571,15 @@ public final class MissionRenderer {
       // relative to it.
       debrisView.reparent(
           followed ? context.sceneGraph().nearBodiesNode() : (Node) primary.view().spatial());
-      // A debris' descent is drawn the precise way the primary's trajectory is — an inertial ribbon
-      // expressed about the object it hangs under, so it cancels the near-frame offset exactly —
-      // whenever the near frame is on one of this mission's objects: itself when followed, else the
-      // primary when the primary is focused. Its geocentre-relative ground track, which jitters up
-      // close, is shown only in the zoomed-out view.
-      debrisView.setInertialTrail(followed || relativeDescent);
-      updateGroundTrack(i, track, debrisVisible, nearView);
-      // Off by default: a debris shows only its close-range 3D mesh; the far-range icon and the
-      // ground track come with the global "show debris" toggle.
+      // A debris flies an inertial trajectory like any object: growing while it falls, then — once
+      // it has landed — frozen at full length and fading out over TOUCHDOWN_FADE_SECONDS, after
+      // which only the piece remains, pinned to the turning globe. An orbital debris never lands, so
+      // it keeps its trajectory. Gated by the "show debris" toggle, except that a debris the view is
+      // following shows its path regardless, as the focused object.
+      float trailOpacity = landed ? touchdownFade(now, ephemeris.endDate()) : 1f;
+      boolean showTrail = (debrisVisible || followed) && trailOpacity > 0f;
+      debrisView.setInertialTrail(showTrail);
+      debrisView.setTrailOpacity(trailOpacity);
       debrisView.setSecondaryDisplay(debrisVisible);
       debrisView.updateFromPoint(
           pt, seat, upHint, followed ? null : primaryPoint, trail, upTo, cam, tpf, focus);
@@ -611,46 +601,19 @@ public final class MissionRenderer {
         pt.velocity(), pt.position(), track.exemplarIndex(), boosterCount);
   }
 
-  /**
-   * Shows a landing debris' ground track when the "show debris" toggle is on, building it lazily
-   * the first time its rotations are available. An orbital debris (it never lands) gets none, and a
-   * hidden toggle hides it. Whether the near view is centred on Earth at all is a separate, coarser
-   * gate owned by {@code PlanetPoseAppState}, which culls the shared frame these tracks hang under
-   * when the focus is not the Earth.
-   */
-  private void updateGroundTrack(
-      int index, DebrisTrack track, boolean debrisVisible, boolean nearView) {
-    // Hidden in the near view — this debris followed, or its primary focused: up close its
-    // geocentre-relative vertices jitter against the near-frame offset, so the debris shows its
-    // primary-relative ribbon instead (SEL-1 / L2). Shown for the zoomed-out view, where the jitter
-    // is far and invisible.
-    boolean wanted = debrisVisible && hasLanded(track) && !nearView;
-    DebrisGroundTrackView groundTrack = debrisGroundTracks.get(index);
-    if (!wanted) {
-      if (groundTrack != null) {
-        groundTrack.setVisible(false);
-      }
-      return;
-    }
-    if (groundTrack == null) {
-      groundTrack = buildGroundTrack(track, index).orElse(null);
-      debrisGroundTracks.set(index, groundTrack);
-    }
-    if (groundTrack != null) {
-      groundTrack.setVisible(true);
-    }
-  }
-
-  private void hideGroundTrack(int index) {
-    DebrisGroundTrackView groundTrack = debrisGroundTracks.get(index);
-    if (groundTrack != null) {
-      groundTrack.setVisible(false);
-    }
-  }
-
   /** Whether a debris reaches the ground — its last sample is at (near) zero altitude. */
   private static boolean hasLanded(DebrisTrack track) {
     return track.ephemeris().lastPoint().altitudeMeters() < LANDED_ALTITUDE_METERS;
+  }
+
+  /**
+   * The trajectory's alpha at {@code now} for a piece that touched down at {@code impactDate}: full
+   * until impact, then ramping to zero over {@link #TOUCHDOWN_FADE_SECONDS} of simulation time. A
+   * pure function of the clock, so rewinding past the impact un-fades it symmetrically.
+   */
+  private static float touchdownFade(AbsoluteDate now, AbsoluteDate impactDate) {
+    double fraction = now.durationFrom(impactDate) / TOUCHDOWN_FADE_SECONDS;
+    return (float) (1.0 - Math.min(1.0, Math.max(0.0, fraction)));
   }
 
   /**
@@ -705,12 +668,11 @@ public final class MissionRenderer {
 
   /**
    * Carries a just-landed debris' frozen impact pose into the globe's <em>current</em> drawn
-   * rotation, so the whole piece rides the turning Earth with its ground track's impact marker
-   * instead of hanging at the inertial pose of the impact instant. Position (a point about the
-   * geocentre), velocity and the seat and roll references (directions) are all turned by the same
-   * drawn rotation the marker follows, so the mesh stays rigid on the ground: {@code lookAt} and
-   * the seat offset are rotation-equivariant, so turning their inputs turns the drawn attitude with
-   * them.
+   * rotation, so the whole piece rides the turning Earth instead of hanging at the inertial pose of
+   * the impact instant. Position (a point about the geocentre), velocity and the seat and roll
+   * references (directions) are all turned by the same drawn rotation, so the mesh stays rigid on
+   * the ground: {@code lookAt} and the seat offset are rotation-equivariant, so turning their inputs
+   * turns the drawn attitude with them.
    *
    * <p>A {@code null} roll hint (a non-booster, rolling about world up) becomes celestial north
    * made explicit so it can be turned like any other; at {@code now = t_impact} the rotation is
@@ -752,12 +714,11 @@ public final class MissionRenderer {
   /**
    * Turns an ICRF vector — a position about the geocentre or a direction — by the globe's drawn
    * rotation between two dates: de-rotates by {@code atImpact} into the body-fixed frame and
-   * re-rotates by {@code atNow}. Uses the same drawn rotation ({@link PlanetDrawnRotation}) the
-   * ground track and its impact marker follow, so a landed piece and its marker coincide by
-   * construction. The uniform render scale cancels under the rotation, leaving pure axis-mapping
-   * and quaternion. Package-private and taking the rotations explicitly (rather than reading {@link
-   * PlanetDrawnRotation}) so the frame algebra is testable off the ephemeris runtime, as {@link
-   * DebrisGroundTrack} is.
+   * re-rotates by {@code atNow}. Uses the same drawn rotation ({@link PlanetDrawnRotation}) that
+   * turns the globe, so a landed piece stays on its ground point as the Earth turns. The uniform
+   * render scale cancels under the rotation, leaving pure axis-mapping and quaternion.
+   * Package-private and taking the rotations explicitly (rather than reading {@link
+   * PlanetDrawnRotation}) so the frame algebra is testable off the ephemeris runtime.
    *
    * @param icrf the vector in ICRF axes (metres for a position, any scale for a direction)
    * @param atImpact the globe's drawn rotation at impact
@@ -769,30 +730,6 @@ public final class MissionRenderer {
     Quaternion drawnSinceImpact = atNow.mult(atImpact.inverse());
     Vector3f rotated = drawnSinceImpact.mult(JmeVectorAdapter.toVector3f(axes.icrfToJme(icrf)));
     return axes.jmeToIcrf(JmeVectorAdapter.toVector3D(rotated));
-  }
-
-  /**
-   * Builds a landing debris' ground track from its whole fall, in the Earth rotating frame — or
-   * empty while any sample's drawn rotation is not yet available, so the caller retries next frame
-   */
-  private Optional<DebrisGroundTrackView> buildGroundTrack(DebrisTrack track, int index) {
-    RenderContext ctx = RenderContext.planet(SolarSystemBody.EARTH);
-    List<MissionEphemerisPoint> points = track.ephemeris().allPoints();
-    List<Vector3f> gcrfJme = new ArrayList<>(points.size());
-    List<AbsoluteDate> times = new ArrayList<>(points.size());
-    for (MissionEphemerisPoint point : points) {
-      gcrfJme.add(JmeVectorAdapter.toJmeBodyRelativePosition(point.position(), ctx));
-      times.add(point.time());
-    }
-    return DebrisGroundTrack.tryBuild(
-            gcrfJme, times, t -> PlanetDrawnRotation.at(SolarSystemBody.EARTH, t))
-        .map(
-            groundTrack ->
-                new DebrisGroundTrackView(
-                    context.sceneGraph().earthRotatingFrame(),
-                    groundTrack,
-                    trajectoryColor,
-                    entry.id() + "-debris-" + index));
   }
 
   /**
@@ -831,7 +768,6 @@ public final class MissionRenderer {
       debris.cleanup();
     }
     debrisViews.clear();
-    cleanupGroundTracks();
     builtDebris = entry.getDebris();
     silhouette = PrimarySilhouette.from(builtDebris);
     boosterCount = (int) builtDebris.stream().filter(t -> t.role() == StageRole.BOOSTER).count();
@@ -846,21 +782,11 @@ public final class MissionRenderer {
               trajectoryColor,
               debrisSelectHandler(track),
               (Node) primary.view().spatial());
-      // A debris draws no inertial ribbon: its trajectory is a ground track (landing) or nothing
-      // (orbital), decided per frame in updateDebris.
+      // The trail is decided per frame in updateDebris (inertial ribbon in flight, faded after
+      // touchdown); off until then, so a just-built debris never flashes a full trace.
       view.setInertialTrail(false);
       debrisViews.add(view);
-      debrisGroundTracks.add(null);
     }
-  }
-
-  private void cleanupGroundTracks() {
-    for (DebrisGroundTrackView groundTrack : debrisGroundTracks) {
-      if (groundTrack != null) {
-        groundTrack.cleanup();
-      }
-    }
-    debrisGroundTracks.clear();
   }
 
   /**
@@ -976,6 +902,5 @@ public final class MissionRenderer {
       debris.cleanup();
     }
     debrisViews.clear();
-    cleanupGroundTracks();
   }
 }

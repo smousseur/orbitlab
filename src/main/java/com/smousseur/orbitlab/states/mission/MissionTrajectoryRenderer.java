@@ -110,6 +110,19 @@ public final class MissionTrajectoryRenderer {
   }
 
   /**
+   * Scales the whole ribbon's alpha, for the debris touchdown fade. The base {@code Color} is white
+   * and the shader multiplies it into every vertex colour, so its alpha scales the trace uniformly
+   * without disturbing the per-phase shading.
+   *
+   * @param opacity the alpha multiplier, 1 opaque and 0 invisible
+   */
+  public void setOpacity(float opacity) {
+    if (lineGeometry != null) {
+      lineGeometry.getMaterial().setColor("Color", new ColorRGBA(1f, 1f, 1f, opacity));
+    }
+  }
+
+  /**
    * Flushes the flown prefix of {@code trail} to the mesh vertex buffer.
    *
    * <p>Walks <b>forward</b> from the first vertex — the trajectory is drawn from launch to the

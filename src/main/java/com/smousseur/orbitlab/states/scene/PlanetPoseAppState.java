@@ -25,7 +25,6 @@ import com.smousseur.orbitlab.engine.scene.body.EclipseGeometry;
 import com.smousseur.orbitlab.engine.scene.body.LodView;
 import com.smousseur.orbitlab.engine.scene.body.lod.Model3dView;
 import com.smousseur.orbitlab.engine.scene.graph.SceneGraph;
-import com.smousseur.orbitlab.engine.scene.planet.PlanetDrawnRotation;
 import com.smousseur.orbitlab.engine.scene.planet.PlanetPresenter;
 import com.smousseur.orbitlab.engine.view.JmeVectorAdapter;
 import com.smousseur.orbitlab.simulation.ephemeris.service.EphemerisServiceRegistry;
@@ -287,8 +286,6 @@ public final class PlanetPoseAppState extends BaseAppState {
     FocusView focusView = context.focusView();
     SceneGraph sceneGraph = context.sceneGraph();
 
-    updateEarthRotatingFrame(t);
-
     // Sampled once per frame and reused for both eclipse directions below: the Moon shadowing the
     // Earth and the Earth shadowing the Moon are the
     // same pair of positions read the other way around, not two independent lookups.
@@ -321,28 +318,6 @@ public final class PlanetPoseAppState extends BaseAppState {
     }
   }
 
-  /**
-   * Keeps the Earth's rotating-frame node ({@link SceneGraph#earthRotatingFrame}) in step with the
-   * drawn globe, so ground-fixed geometry hung under it (a debris ground track, PHY-5 / L7) stays
-   * on the right ground. The rotation is computed the <em>same</em> way {@link
-   * PlanetPresenter#updatePose} drives the globe — {@code toRenderQuaternion(rotation, correction)}
-   * — so the two cannot drift, and the mesh calibration ({@code PlanetMeshCorrection}) is carried,
-   * which is what puts the impact on the right continent. Empty ephemeris is the same graceful
-   * degradation the pose accepts.
-   */
-  private void updateEarthRotatingFrame(AbsoluteDate t) {
-    Node earthRotatingFrame = context.sceneGraph().earthRotatingFrame();
-    PlanetDrawnRotation.at(SolarSystemBody.EARTH, t)
-        .ifPresent(earthRotatingFrame::setLocalRotation);
-    // The frame hangs at the near-view origin, which the single near globe is parked on, so its
-    // Earth-fixed ground tracks are only in the right place when the near globe is the Earth; on
-    // any other focus (the Moon, say) they would be drawn onto that body, so cull the whole frame
-    // (PHY-5 / L7). Per-track visibility (the "show debris" toggle) still applies underneath.
-    earthRotatingFrame.setCullHint(
-        context.focusView().isNearGlobe(SolarSystemBody.EARTH)
-            ? Spatial.CullHint.Inherit
-            : Spatial.CullHint.Always);
-  }
 
   /**
    * The given body's heliocentric ICRF position, or empty while the ephemeris buffer has not caught

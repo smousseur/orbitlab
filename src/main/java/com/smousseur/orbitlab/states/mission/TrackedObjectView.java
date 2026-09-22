@@ -46,8 +46,8 @@ final class TrackedObjectView {
 
   /**
    * Whether this object draws its inertial trajectory ribbon. {@code true} for the primary (the
-   * mission trajectory); {@code false} for a debris, whose trajectory is a ground track drawn
-   * separately in the Earth rotating frame, or nothing at all when it is orbital.
+   * mission trajectory); for a debris it is decided per frame — on while it flies, faded out after
+   * touchdown, off when hidden.
    */
   private boolean inertialTrail = true;
 
@@ -259,13 +259,21 @@ final class TrackedObjectView {
 
   /**
    * Sets whether this object draws its inertial trajectory ribbon. The primary keeps the default
-   * {@code true}; a debris sets it {@code false}, its trajectory being a ground track drawn
-   * separately.
+   * {@code true}; a debris drives it per frame — on in flight, off once it has landed and faded.
    *
    * @param on whether the inertial ribbon is drawn
    */
   void setInertialTrail(boolean on) {
     this.inertialTrail = on;
+  }
+
+  /**
+   * Scales the trajectory ribbon's alpha, for the debris touchdown fade.
+   *
+   * @param opacity the alpha multiplier, 1 opaque and 0 invisible
+   */
+  void setTrailOpacity(float opacity) {
+    trajectoryRenderer.setOpacity(opacity);
   }
 
   void setVisible(boolean visible) {

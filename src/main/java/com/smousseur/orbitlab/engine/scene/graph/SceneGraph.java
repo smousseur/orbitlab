@@ -45,15 +45,6 @@ public final class SceneGraph {
   private final Node nearOrbitsNode = new Node("nearOrbitsNode");
   private final Node nearBodiesNode = new Node("nearBodiesNode");
 
-  /**
-   * The Earth's rotating frame in the near viewport. A node at the geocentre (like the near globe,
-   * which is parked there) carrying the globe's <em>drawn</em> rotation, kept in step by {@link
-   * com.smousseur.orbitlab.states.scene.PlanetPoseAppState}. Ground-fixed geometry hung under it —
-   * a debris ground track, its impact marker — rides the turning globe and stays on the right
-   * ground.
-   */
-  private final Node earthRotatingFrame = new Node("earthRotatingFrame");
-
   private final Node skyRoot = new Node("skyRoot");
 
   private final OrbitLayer farOrbitLayer = new OrbitLayer(farOrbitsNode);
@@ -66,7 +57,6 @@ public final class SceneGraph {
     nearRoot.attachChild(nearFrame);
     nearFrame.attachChild(nearOrbitsNode);
     nearFrame.attachChild(nearBodiesNode);
-    nearFrame.attachChild(earthRotatingFrame);
   }
 
   /**
@@ -214,17 +204,6 @@ public final class SceneGraph {
    */
   public Node nearOrbitsNode() {
     return nearOrbitsNode;
-  }
-
-  /**
-   * Returns the Earth's rotating-frame node in the near viewport (PHY-5 / L7). Hang ground-fixed
-   * geometry under it; {@link com.smousseur.orbitlab.states.scene.PlanetPoseAppState} keeps its
-   * rotation in step with the drawn globe.
-   *
-   * @return the Earth rotating-frame node
-   */
-  public Node earthRotatingFrame() {
-    return earthRotatingFrame;
   }
 
   /**
