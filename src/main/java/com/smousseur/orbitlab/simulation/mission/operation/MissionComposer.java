@@ -95,6 +95,7 @@ public final class MissionComposer {
   public static Mission compose(MissionSpec spec, OptimizationType mode) {
     Objects.requireNonNull(spec, "spec");
     Objects.requireNonNull(mode, "mode");
+    requireDisposalPropulsion(spec);
     Mission mission =
         switch (spec) {
           case MissionSpec.EarthOrbit earthOrbit -> composeEarthOrbit(earthOrbit, mode);
@@ -110,6 +111,34 @@ public final class MissionComposer {
     // Same rule, same single writer, for the atmosphere choice.
     mission.setAtmosphere(spec.atmosphere());
     return mission;
+  }
+
+  /**
+   * PHY-10's invariant, enforced once for every construction path. A mission that leaves its
+   * payload in a stable orbit must fly one that carries propulsion, so it can dispose of itself at
+   * end of life; an inert payload is refused here rather than propagated into an orbit it can never
+   * leave.
+   *
+   * <p>Expressed on {@code propulsion() != null} — the engine's presence, not its tank — because
+   * the disposal reserve lives outside {@code propellantCapacity} and is what the engine burns. It
+   * does <b>not</b> subsume the GEO / lunar-orbit burn checks, which refuse a payload whose engine
+   * is present but too weak for the mission's own delegated burn; this one refuses the absence of
+   * an engine, and fires first for a truly inert payload.
+   */
+  private static void requireDisposalPropulsion(MissionSpec spec) {
+    if (spec.type().deliversToStableOrbit()
+        && spec.configuration().payload().propulsion() == null) {
+      String payload =
+          spec.configuration().hasPayloadId() ? spec.configuration().payloadId() : "the payload";
+      throw new OrbitlabException(
+          String.format(
+              Locale.ROOT,
+              "A %s mission delivers its payload to a stable orbit, where it must be able to dispose"
+                  + " of itself at end of life — but %s carries no propulsion. Fly a payload with an"
+                  + " engine of its own.",
+              spec.type().displayName(),
+              payload));
+    }
   }
 
   /**

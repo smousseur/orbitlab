@@ -170,10 +170,17 @@ public final class Payloads {
   /**
    * Returns the payload models a mission of the given type can actually fly, on the two axes the
    * question has: what the payload must be able to <b>do</b> — {@link
-   * MissionType#requiresPayloadPropulsion()}, which keeps only the propelled models — and where it
-   * is meant to <b>fly</b>. A third axis joined them at PHY-8 / L6: what a payload is <b>for</b>,
-   * which takes the cargo module out of every list until MIS-6 gives it the rendezvous it is meant
-   * for.
+   * MissionType#deliversToStableOrbit()}, which keeps only the propelled models for an orbital
+   * mission — and where it is meant to <b>fly</b>. A third axis joined them at PHY-8 / L6: what a
+   * payload is <b>for</b>, which takes the cargo module out of every list until MIS-6 gives it the
+   * rendezvous it is meant for.
+   *
+   * <p><b>The "do" axis is disposal since PHY-10 / L2</b>, and it keys on {@link
+   * MissionType#deliversToStableOrbit()} rather than {@link
+   * MissionType#requiresPayloadPropulsion()}. The two differ only on LEO: a LEO delegates no
+   * in-flight burn, but its satellite stays in orbit and must carry propulsion to dispose of
+   * itself, so an inert payload is not offered for it either — matching what {@code
+   * MissionComposer} would refuse.
    *
    * <p>The second axis was missing until L5, and it showed: a lunar flyby requires no propulsion,
    * so it was offered the whole catalog, GEO communications satellite included.
@@ -191,7 +198,7 @@ public final class Payloads {
   public static List<PayloadModel> forMissionType(MissionType type) {
     PayloadDomain domain = domainOf(type);
     return CATALOG.stream()
-        .filter(model -> !type.requiresPayloadPropulsion() || model.hasPropulsion())
+        .filter(model -> !type.deliversToStableOrbit() || model.hasPropulsion())
         .filter(model -> model.domain() == PayloadDomain.ANY || model.domain() == domain)
         .filter(model -> !model.requiresRendezvous())
         .toList();

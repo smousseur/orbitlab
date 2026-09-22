@@ -53,6 +53,25 @@ class PayloadsTest {
   }
 
   /**
+   * PHY-10 / L2 — the "do" axis is disposal, and it keys on {@code deliversToStableOrbit()}: every
+   * orbital type must offer only propelled payloads, so the wizard never offers an inert satellite
+   * that {@code MissionComposer} would then refuse. A no-op on today's catalog (all orbital
+   * payloads are propelled), this locks the invariant against a future inert Earth payload.
+   */
+  @Test
+  void forMissionType_everyStableOrbitType_offersOnlyPropelledPayloads() {
+    for (MissionType type : MissionType.values()) {
+      if (type.deliversToStableOrbit()) {
+        List<PayloadModel> eligible = Payloads.forMissionType(type);
+        assertFalse(eligible.isEmpty(), () -> type + " must keep at least one flyable payload");
+        assertTrue(
+            eligible.stream().allMatch(PayloadModel::hasPropulsion),
+            () -> type + " delivers to a stable orbit, so it must offer only propelled payloads");
+      }
+    }
+  }
+
+  /**
    * MIS-4 / L5 §5.2 — the catalog stopped being the answer to "what can a LEO fly" the day a lunar
    * probe entered it: eligibility has two axes, and this is the second one.
    */
