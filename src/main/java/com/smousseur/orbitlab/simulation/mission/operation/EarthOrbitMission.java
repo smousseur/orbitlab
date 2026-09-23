@@ -2,6 +2,7 @@ package com.smousseur.orbitlab.simulation.mission.operation;
 
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.simulation.mission.MissionStage;
+import com.smousseur.orbitlab.simulation.mission.disposal.DeorbitTail;
 import com.smousseur.orbitlab.simulation.mission.objective.MissionObjective;
 import com.smousseur.orbitlab.simulation.mission.objective.OrbitInsertionObjective;
 import com.smousseur.orbitlab.simulation.mission.optimizer.problems.GravityTurnConstraints;
@@ -110,6 +111,7 @@ public class EarthOrbitMission extends EarthMission {
             launchPlane,
             latitude,
             configuration.payload()),
+        configuration.payload(),
         perigeeAltitude,
         apogeeAltitude,
         launchPlane,
@@ -129,10 +131,16 @@ public class EarthOrbitMission extends EarthMission {
         DEFAULT_ALTITUDE);
   }
 
+  /**
+   * The single constructor every variant ends in, and therefore the one place a disposal tail is
+   * decided: a payload carrying a disposal reserve is deorbited past the horizon. The stage chain
+   * is built before and without it — a reserve is dead mass through ascent and changes no stage.
+   */
   private EarthOrbitMission(
       String name,
       Vehicle vehicle,
       List<MissionStage> stages,
+      Spacecraft payload,
       double perigeeAltitude,
       double apogeeAltitude,
       LaunchPlane launchPlane,
@@ -148,6 +156,9 @@ public class EarthOrbitMission extends EarthMission {
     this.longitude = longitude;
     this.altitude = altitude;
     this.launchPlane = Objects.requireNonNull(launchPlane, "launchPlane");
+    if (payload.disposalReserve() > 0) {
+      setDisposalTail(new DeorbitTail());
+    }
   }
 
   public static EarthOrbitMission circularWithOptimizedTransfer(
@@ -199,6 +210,7 @@ public class EarthOrbitMission extends EarthMission {
         name,
         stack,
         stages,
+        configuration.payload(),
         targetAltitude,
         targetAltitude,
         launchPlane,
@@ -272,6 +284,7 @@ public class EarthOrbitMission extends EarthMission {
         name,
         stack,
         stages,
+        configuration.payload(),
         perigeeAltitude,
         apogeeAltitude,
         launchPlane,

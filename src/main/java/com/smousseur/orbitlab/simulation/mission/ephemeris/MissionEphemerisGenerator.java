@@ -111,6 +111,32 @@ public final class MissionEphemerisGenerator {
   }
 
   /**
+   * Flies a chain of stages that is not the mission's own from {@code entryState}, and samples it
+   * exactly as the mission's stages are sampled — same runner, same per-stage step, same
+   * completeness verdict.
+   *
+   * <p>This is how a disposal tail is recorded: it lives outside {@link Mission#getStages()}, and
+   * starts where the mission's own trajectory ends. Every stage is bounded by its own cutoff; none
+   * is stretched to a horizon.
+   *
+   * @param mission the mission the chain is flown for, read for its vehicle and atmosphere
+   * @param chain the stages to fly, in order; at least one
+   * @param entryState the state the first stage starts from
+   * @return the chain's own ephemeris, from {@code entryState} to the end of its last stage
+   */
+  public MissionEphemeris generateChain(
+      Mission mission, List<MissionStage> chain, SpacecraftState entryState) {
+    Collector collector = new Collector(mission);
+    StageChainRunner.sampling(collector, 0.0, collector).run(chain, entryState, mission);
+    logger.info(
+        "Chain ephemeris points: {} over {} stage(s) (complete={})",
+        collector.points.size(),
+        chain.size(),
+        collector.complete);
+    return new MissionEphemeris(collector.points, collector.complete);
+  }
+
+  /**
    * Turns the flown chain into ephemeris points, and judges whether the trajectory is whole. Both
    * roles read the same stream of stages, so they share one object.
    */

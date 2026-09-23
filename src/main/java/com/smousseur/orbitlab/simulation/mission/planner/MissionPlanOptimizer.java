@@ -4,6 +4,10 @@ import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.OptimizationType;
 import com.smousseur.orbitlab.simulation.mission.context.MissionEntry;
+import com.smousseur.orbitlab.simulation.mission.disposal.DeorbitSequence;
+import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemeris;
+import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemerisGenerator;
+import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemerisPoint;
 import com.smousseur.orbitlab.simulation.mission.objective.OrbitInsertionObjective;
 import com.smousseur.orbitlab.simulation.mission.operation.MissionComposer;
 import com.smousseur.orbitlab.simulation.mission.operation.MissionSpec;
@@ -13,11 +17,14 @@ import com.smousseur.orbitlab.simulation.mission.runtime.MissionLoadEvaluator;
 import com.smousseur.orbitlab.simulation.mission.runtime.MissionSolutions;
 import com.smousseur.orbitlab.simulation.mission.runtime.PropellantLoadOptimizer;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.LauncherModel;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hipparchus.util.FastMath;
+import org.orekit.propagation.SpacecraftState;
 import org.orekit.time.AbsoluteDate;
 
 /**
@@ -85,12 +92,65 @@ public class MissionPlanOptimizer {
   }
 
   /**
-   * Runs the planner selected by the entry's optimization mode.
+   * Runs the planner selected by the entry's optimization mode, then flies the retained mission's
+   * disposal tail past its horizon, if it carries one.
    *
    * @return the computed plan (always carrying a {@link MissionComputeResult})
    */
   public MissionPlan compute() {
-    return planner().plan();
+    return withDisposalTail(planner().plan());
+  }
+
+  /**
+   * Flies the disposal tail of the plan's mission from the state its restitution pass left it on,
+   * and appends it to the ephemeris.
+   *
+   * <p><b>After the planner, and once.</b> Every planner is done with the mission by now — the
+   * loads are sized, the stages solved, the plan retained — so the tail can neither move a CMA-ES
+   * search nor make the mission infeasible: a truncated tail only marks the ephemeris incomplete.
+   * Everything else in the result is kept as is; in particular the performance report, built by the
+   * optimize pass, does not account for the propellant the tail burns.
+   *
+   * <p>The mission's current state is put back on the horizon afterwards: planning and flying the
+   * tail move it, and the tail is meant to leave no trace on the mission beyond its trajectory.
+   *
+   * @param plan the plan a planner returned
+   * @return {@code plan} itself when there is no tail to fly, else the plan with the tail appended
+   */
+  static MissionPlan withDisposalTail(MissionPlan plan) {
+    MissionComputeResult computation = plan.computation();
+    Mission mission = computation.mission();
+    if (!mission.hasDisposalTail()) {
+      return plan;
+    }
+    SpacecraftState horizon = mission.getCurrentState();
+    DeorbitSequence sequence = mission.getDisposalTail().plan(horizon, mission);
+    if (sequence.stages().isEmpty()) {
+      mission.setCurrentState(horizon);
+      return plan;
+    }
+    MissionEphemeris tail =
+        new MissionEphemerisGenerator().generateChain(mission, sequence.stages(), horizon);
+    mission.setCurrentState(horizon);
+
+    MissionEphemeris flown = computation.ephemeris();
+    List<MissionEphemerisPoint> points = new ArrayList<>(flown.allPoints());
+    points.addAll(tail.allPoints());
+    logger.info(
+        "Mission '{}': disposal tail of {} burn(s) ended {}, {} points appended past the horizon",
+        mission.getName(),
+        sequence.burns().size(),
+        sequence.end(),
+        tail.size());
+    return new MissionPlan(
+        new MissionComputeResult(
+            computation.optimizerResult(),
+            new MissionEphemeris(points, flown.isComplete() && tail.isComplete()),
+            computation.performanceReport(),
+            mission,
+            computation.achievedOrbit(),
+            computation.debris()),
+        plan.sizing());
   }
 
   private MissionPlanner planner() {

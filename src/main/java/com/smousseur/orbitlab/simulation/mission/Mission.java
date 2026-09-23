@@ -2,6 +2,7 @@ package com.smousseur.orbitlab.simulation.mission;
 
 import com.smousseur.orbitlab.simulation.flight.AtmosphereModel;
 import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
+import com.smousseur.orbitlab.simulation.mission.disposal.DeorbitTail;
 import com.smousseur.orbitlab.simulation.mission.objective.MissionObjective;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
 import java.util.List;
@@ -39,6 +40,15 @@ public abstract class Mission {
    * null}.
    */
   private AtmosphereModel atmosphere = AtmosphereModel.NONE;
+
+  /**
+   * What the payload does after the horizon, or {@code null} when nothing is planned past it.
+   *
+   * <p>Held beside {@link #stages}, never in it: the optimize pass walks the stages, and a tail it
+   * never sees is one that cannot move a CMA-ES baseline nor the zero-tolerance gates. Flown once,
+   * after the mission has been computed.
+   */
+  private DeorbitTail disposalTail;
 
   /**
    * Creates a new mission with the specified name, vehicle, stages, and objective.
@@ -184,6 +194,35 @@ public abstract class Mission {
    */
   public void setAtmosphere(AtmosphereModel atmosphere) {
     this.atmosphere = Objects.requireNonNull(atmosphere, "atmosphere");
+  }
+
+  /**
+   * Whether a disposal tail is planned past this mission's horizon.
+   *
+   * @return {@code true} when {@link #getDisposalTail()} holds one
+   */
+  public boolean hasDisposalTail() {
+    return disposalTail != null;
+  }
+
+  /**
+   * Returns the disposal tail flown past the horizon, or {@code null} when there is none — see
+   * {@link #hasDisposalTail()}.
+   *
+   * @return the disposal tail, or {@code null}
+   */
+  public DeorbitTail getDisposalTail() {
+    return disposalTail;
+  }
+
+  /**
+   * Sets the disposal tail. Called by a concrete mission from its payload's disposal reserve, at
+   * construction; nothing else writes it.
+   *
+   * @param disposalTail the tail to fly past the horizon
+   */
+  protected final void setDisposalTail(DeorbitTail disposalTail) {
+    this.disposalTail = Objects.requireNonNull(disposalTail, "disposalTail");
   }
 
   public MissionStatus getStatus() {
