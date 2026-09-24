@@ -16,10 +16,12 @@ import com.smousseur.orbitlab.simulation.mission.detector.ReentryDetector;
 import com.smousseur.orbitlab.simulation.mission.detector.ReentryGuard;
 import com.smousseur.orbitlab.simulation.mission.disposal.DeorbitSequence;
 import com.smousseur.orbitlab.simulation.mission.disposal.DeorbitTail;
+import com.smousseur.orbitlab.simulation.mission.disposal.DisposalFixtures;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.DebrisTrack;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemeris;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemerisGenerator;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemerisPoint;
+import com.smousseur.orbitlab.simulation.mission.ephemeris.ReentryFall;
 import com.smousseur.orbitlab.simulation.mission.operation.MissionComposer;
 import com.smousseur.orbitlab.simulation.mission.operation.MissionFactory;
 import com.smousseur.orbitlab.simulation.mission.operation.MissionSpec;
@@ -482,6 +484,186 @@ class Mis10DeorbitBaselineProbe {
     MissionPlan before = closureRun("before — no reserve", nominal);
     MissionPlan after = closureRun("after  — with reserve", disposed);
     reportClosureTail(before, after, payload.dryMass());
+
+    MissionPlan again = closureRun("again  — with reserve, second compute()", disposed);
+    MissionEphemerisPoint first = after.computation().ephemeris().lastPoint();
+    MissionEphemerisPoint second = again.computation().ephemeris().lastPoint();
+    System.out.printf(
+        Locale.ROOT,
+        "%n  reproducibility: two compute() end on the same last point to the bit = %s (%s, %s)%n",
+        first.time().equals(second.time())
+            && first.position().equals(second.position())
+            && first.velocity().equals(second.velocity())
+            && first.mass() == second.mass(),
+        first.time(),
+        first.position());
+  }
+
+  /**
+   * MIS-10 / L2 input: the fall from where the L1 tail actually ends. Each re-entry-regime payload,
+   * at each direct-chain altitude and each launch latitude, carries the reserve sized by the L4
+   * convention and plans its tail with the production {@code DeorbitTail}; the fall is then flown
+   * from the tail's final state under both recipes, and the debris-recipe fall is re-flown densely
+   * to measure how far a straight segment between two samples strays from the trajectory at the
+   * sampling steps a trail could be recorded at. A deliberately under-sized reserve closes the
+   * sweep: the tail cannot bring it down, and the fall runs to its bound.
+   */
+  @Test
+  void tailThenFallSweep() {
+    GravitationalContext earth = GravitationalContext.earth();
+    OneAxisEllipsoid ellipsoid = OrekitService.get().getEarthEllipsoid();
+    System.out.printf(
+        Locale.ROOT,
+        "%nMIS-10 / L2 — fall from the L1 tail's end (reserve sized for %.0f km, circular at the"
+            + " perigee)%n",
+        DeorbitTail.REENTRY_PERIGEE_ALTITUDE_M / 1000.0);
+    for (PayloadModel payload : List.of(LEO_PAYLOAD, Payloads.GEO_SAT)) {
+      double dry = payload.defaultDryMass();
+      FlightContext context =
+          new FlightContext(
+              earth, new DragContext(payload.aerodynamics(), AtmosphereModel.NRLMSISE));
+      for (double orbitAltitude : GEOMETRY_ALTITUDES) {
+        double reserve =
+            PropellantBudget.disposalReserveFor(
+                payload, dry, orbitAltitude, DeorbitTail.REENTRY_PERIGEE_ALTITUDE_M);
+        for (double inclinationDeg : INCLINATIONS_DEG) {
+          reportFallAfterTail(
+              payload,
+              dry,
+              reserve,
+              orbitAltitude,
+              inclinationDeg,
+              context,
+              earth,
+              ellipsoid,
+              TAIL_HORIZON_SECONDS);
+        }
+      }
+    }
+    PayloadModel payload = LEO_PAYLOAD;
+    double dry = payload.defaultDryMass();
+    double sized =
+        PropellantBudget.disposalReserveFor(
+            payload, dry, 1_000_000.0, DeorbitTail.REENTRY_PERIGEE_ALTITUDE_M);
+    System.out.printf(
+        Locale.ROOT,
+        "%n  under-sized reserve (25 %% of the %.1f kg sized at 1 000 km), fall bounded at %.0f s:%n",
+        sized,
+        TAIL_HORIZON_SECONDS);
+    reportFallAfterTail(
+        payload,
+        dry,
+        0.25 * sized,
+        1_000_000.0,
+        51.6,
+        new FlightContext(earth, new DragContext(payload.aerodynamics(), AtmosphereModel.NRLMSISE)),
+        earth,
+        ellipsoid,
+        TAIL_HORIZON_SECONDS);
+  }
+
+  private static void reportFallAfterTail(
+      PayloadModel payload,
+      double dry,
+      double reserve,
+      double orbitAltitude,
+      double inclinationDeg,
+      FlightContext context,
+      GravitationalContext earth,
+      OneAxisEllipsoid ellipsoid,
+      double boundSeconds) {
+    Mission mission = DisposalFixtures.payloadMission(payload.toSpacecraft(dry, 0, reserve));
+    SpacecraftState horizon =
+        circularState(
+            earth,
+            earth.equatorialRadius() + orbitAltitude,
+            FastMath.toRadians(inclinationDeg),
+            dry + reserve);
+    DeorbitSequence sequence = new DeorbitTail().plan(horizon, mission);
+    SpacecraftState end = sequence.finalState();
+    System.out.printf(
+        Locale.ROOT,
+        "%n  %-13s %4.0f km  i %4.1f°  reserve %6.1f kg: tail %2d burn(s) %-21s +%6.0f s, hp %6.1f"
+            + " km, ha %6.1f km, period of the final orbit %.0f s, left %6.1f kg%n",
+        payload.id(),
+        orbitAltitude / 1000.0,
+        inclinationDeg,
+        reserve,
+        sequence.burns().size(),
+        sequence.end(),
+        end.getDate().durationFrom(horizon.getDate()),
+        perigeeAltitude(end, earth) / 1000.0,
+        apogeeAltitude(end, earth) / 1000.0,
+        keplerian(end, earth).getKeplerianPeriod(),
+        end.getMass() - dry);
+    System.out.printf(
+        Locale.ROOT,
+        "    %-12s %-7s %-8s %-9s %-9s %-10s %-7s %s%n",
+        "recipe",
+        "steps",
+        "wall_ms",
+        "t_karman",
+        "t_stop",
+        "geod_alt_m",
+        "lat°",
+        "outcome");
+    System.out.printf(Locale.ROOT, "    %s%n", fall(Recipe.DEBRIS, end, context, ellipsoid));
+    System.out.printf(Locale.ROOT, "    %s%n", fall(Recipe.STAGE_CHAIN, end, context, ellipsoid));
+    reportSamplingSagitta(end, context, ellipsoid, boundSeconds);
+  }
+
+  /**
+   * Re-flies the debris-recipe fall with a 1 s step handler and measures, for each candidate
+   * sampling step, the largest distance between the chord joining two samples and the trajectory at
+   * the chord's middle date — the error a straight trail segment draws.
+   */
+  private static void reportSamplingSagitta(
+      SpacecraftState start,
+      FlightContext context,
+      OneAxisEllipsoid ellipsoid,
+      double boundSeconds) {
+    NumericalPropagator propagator =
+        OrekitService.get().createOptimizationPropagator(context, DEBRIS_MAX_STEP);
+    propagator.setInitialState(start);
+    propagator.addEventDetector(
+        new AltitudeDetector(0.0, ellipsoid)
+            .withMaxCheck(30.0)
+            .withThreshold(1.0)
+            .withHandler((s, detector, increasing) -> Action.STOP));
+    List<Vector3D> positions = new java.util.ArrayList<>();
+    propagator.getMultiplexer().add(1.0, state -> positions.add(state.getPosition()));
+    try {
+      propagator.propagate(start.getDate().shiftedBy(boundSeconds));
+    } catch (RuntimeException e) {
+      System.out.printf(Locale.ROOT, "    sagitta: dense re-flight threw %s%n", e.getMessage());
+      return;
+    }
+    StringBuilder line = new StringBuilder("    samples over the fall / max chord sagitta:");
+    for (int step : new int[] {1, 2, 10, 60}) {
+      double worst = 0.0;
+      double worstLastTenMinutes = 0.0;
+      int lastTenMinutesFrom = Math.max(0, positions.size() - 600);
+      for (int index = 0; index + step < positions.size(); index += step) {
+        if (step < 2) {
+          continue;
+        }
+        Vector3D middle = positions.get(index).add(positions.get(index + step)).scalarMultiply(0.5);
+        double sagitta = Vector3D.distance(middle, positions.get(index + step / 2));
+        worst = Math.max(worst, sagitta);
+        if (index >= lastTenMinutesFrom) {
+          worstLastTenMinutes = Math.max(worstLastTenMinutes, sagitta);
+        }
+      }
+      line.append(
+          String.format(
+              Locale.ROOT,
+              " | %d s: %d pts, %.0f m (last 10 min %.0f m)",
+              step,
+              positions.size() / step + 1,
+              worst,
+              worstLastTenMinutes));
+    }
+    System.out.println(line);
   }
 
   private MissionPlan closureRun(String label, MissionSpec spec) {
@@ -524,8 +706,10 @@ class Mis10DeorbitBaselineProbe {
     MissionComputeResult result = after.computation();
     Mission mission = result.mission();
     List<MissionEphemerisPoint> points = result.ephemeris().allPoints();
-    int tailPoints = points.size() - indexAfterLast(points, StageNames.TERMINAL_COAST);
-    MissionEphemerisPoint last = points.getLast();
+    int ownEnd = indexAfterLast(points, StageNames.TERMINAL_COAST);
+    int fallStart = indexAfterLast(points, StageNames.DEORBIT_BURN);
+    int tailPoints = fallStart - ownEnd;
+    MissionEphemerisPoint last = points.get(fallStart - 1);
 
     SpacecraftState horizon = mission.getCurrentState();
     long t0 = System.nanoTime();
@@ -545,7 +729,7 @@ class Mis10DeorbitBaselineProbe {
         tailPoints,
         tail.size(),
         tail.isComplete(),
-        points.size() - tailPoints,
+        ownEnd,
         before.computation().ephemeris().size());
     System.out.printf(
         Locale.ROOT,
@@ -586,13 +770,15 @@ class Mis10DeorbitBaselineProbe {
 
     reflyTailCountingSteps(sequence, horizon, mission, last);
 
+    reportAppendedFall(result, points, fallStart, sequence, mission, earth);
+
     FlightContext context =
         new FlightContext(
             earth, new DragContext(LEO_PAYLOAD.aerodynamics(), AtmosphereModel.NRLMSISE));
     System.out.printf(
         Locale.ROOT,
-        "    fall after the tail (debris recipe, not flown by L1): %-12s %-7s %-8s %-9s %-9s"
-            + " %-10s %-7s %s%n      %s%n",
+        "    the same fall re-flown by the probe's debris recipe, to count its steps (it also arms"
+            + " a Kármán detector): %-12s %-7s %-8s %-9s %-9s %-10s %-7s %s%n      %s%n",
         "recipe",
         "steps",
         "wall_ms",
@@ -602,6 +788,60 @@ class Mis10DeorbitBaselineProbe {
         "lat°",
         "outcome",
         fall(Recipe.DEBRIS, end, context, OrekitService.get().getEarthEllipsoid()));
+  }
+
+  /**
+   * MIS-10 / L2 closure: the fall the computation appended after the tail — where it ends, how long
+   * it took, how many samples it added — and the same fall re-flown alone, to time it and to check
+   * it lands on the appended last point to the bit.
+   */
+  private static void reportAppendedFall(
+      MissionComputeResult result,
+      List<MissionEphemerisPoint> points,
+      int fallStart,
+      DeorbitSequence sequence,
+      Mission mission,
+      GravitationalContext earth) {
+    MissionEphemerisPoint last = points.getLast();
+    SpacecraftState start = sequence.finalState();
+    GeodeticPoint ground = geodetic(stateOf(last, earth), OrekitService.get().getEarthEllipsoid());
+    System.out.printf(
+        Locale.ROOT,
+        "%n  fall: %d points appended after the tail, all '%s' = %s; ends %s, +%.0f s after the"
+            + " tail, altitude %.0f m (geodetic), latitude %.1f°, longitude %.1f°; whole ephemeris"
+            + " complete=%s, %d points%n",
+        points.size() - fallStart,
+        StageNames.REENTRY,
+        points.subList(fallStart, points.size()).stream()
+            .allMatch(point -> StageNames.REENTRY.equals(point.stageName())),
+        last.time(),
+        last.time().durationFrom(start.getDate()),
+        last.altitudeMeters(),
+        FastMath.toDegrees(ground.getLatitude()),
+        FastMath.toDegrees(ground.getLongitude()),
+        result.ephemeris().isComplete(),
+        points.size());
+
+    long t0 = System.nanoTime();
+    MissionEphemeris fall =
+        ReentryFall.fly(
+            start,
+            mission.getVehicle().resolveActiveStage(start.getMass()).aerodynamics(),
+            mission.getAtmosphere(),
+            start.getOrbit().getKeplerianPeriod(),
+            StageNames.REENTRY);
+    long flown = System.nanoTime();
+    MissionEphemerisPoint alone = fall.lastPoint();
+    System.out.printf(
+        Locale.ROOT,
+        "    fall re-flown alone: %.3f s, %d points, bound %.0f s; same last point to the bit = %s%n",
+        (flown - t0) / 1e9,
+        fall.size(),
+        start.getOrbit().getKeplerianPeriod(),
+        alone.time().equals(last.time())
+            && alone.position().equals(last.position())
+            && alone.velocity().equals(last.velocity())
+            && alone.mass() == last.mass());
   }
 
   /**

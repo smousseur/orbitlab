@@ -8,6 +8,7 @@ import com.smousseur.orbitlab.simulation.mission.disposal.DeorbitSequence;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemeris;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemerisGenerator;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemerisPoint;
+import com.smousseur.orbitlab.simulation.mission.ephemeris.ReentryFall;
 import com.smousseur.orbitlab.simulation.mission.objective.OrbitInsertionObjective;
 import com.smousseur.orbitlab.simulation.mission.operation.MissionComposer;
 import com.smousseur.orbitlab.simulation.mission.operation.MissionSpec;
@@ -16,9 +17,11 @@ import com.smousseur.orbitlab.simulation.mission.runtime.MissionComputeResult;
 import com.smousseur.orbitlab.simulation.mission.runtime.MissionLoadEvaluator;
 import com.smousseur.orbitlab.simulation.mission.runtime.MissionSolutions;
 import com.smousseur.orbitlab.simulation.mission.runtime.PropellantLoadOptimizer;
+import com.smousseur.orbitlab.simulation.mission.stage.StageNames;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.LauncherModel;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.function.Function;
 import org.apache.logging.log4j.LogManager;
@@ -102,20 +105,22 @@ public class MissionPlanOptimizer {
   }
 
   /**
-   * Flies the disposal tail of the plan's mission from the state its restitution pass left it on,
-   * and appends it to the ephemeris.
+   * Flies the disposal tail of the plan's mission from the state its restitution pass left it on —
+   * then, when the tail leaves the payload falling, its fall to the ground — and appends both to
+   * the ephemeris.
    *
    * <p><b>After the planner, and once.</b> Every planner is done with the mission by now — the
-   * loads are sized, the stages solved, the plan retained — so the tail can neither move a CMA-ES
-   * search nor make the mission infeasible: a truncated tail only marks the ephemeris incomplete.
-   * Everything else in the result is kept as is; in particular the performance report, built by the
-   * optimize pass, does not account for the propellant the tail burns.
+   * loads are sized, the stages solved, the plan retained — so neither the tail nor the fall can
+   * move a CMA-ES search or make the mission infeasible: a truncated one only marks the ephemeris
+   * incomplete. Everything else in the result is kept as is; in particular the performance report,
+   * built by the optimize pass, does not account for the propellant the tail burns.
    *
    * <p>The mission's current state is put back on the horizon afterwards: planning and flying the
    * tail move it, and the tail is meant to leave no trace on the mission beyond its trajectory.
    *
    * @param plan the plan a planner returned
-   * @return {@code plan} itself when there is no tail to fly, else the plan with the tail appended
+   * @return {@code plan} itself when there is nothing to fly, else the plan with the tail and the
+   *     fall appended
    */
   static MissionPlan withDisposalTail(MissionPlan plan) {
     MissionComputeResult computation = plan.computation();
@@ -125,32 +130,71 @@ public class MissionPlanOptimizer {
     }
     SpacecraftState horizon = mission.getCurrentState();
     DeorbitSequence sequence = mission.getDisposalTail().plan(horizon, mission);
-    if (sequence.stages().isEmpty()) {
+    boolean falls = sequence.end().leadsToReentry();
+    if (sequence.stages().isEmpty() && !falls) {
       mission.setCurrentState(horizon);
       return plan;
     }
-    MissionEphemeris tail =
-        new MissionEphemerisGenerator().generateChain(mission, sequence.stages(), horizon);
-    mission.setCurrentState(horizon);
 
     MissionEphemeris flown = computation.ephemeris();
     List<MissionEphemerisPoint> points = new ArrayList<>(flown.allPoints());
-    points.addAll(tail.allPoints());
+    boolean complete = flown.isComplete();
+    if (!sequence.stages().isEmpty()) {
+      MissionEphemeris tail =
+          new MissionEphemerisGenerator().generateChain(mission, sequence.stages(), horizon);
+      points.addAll(tail.allPoints());
+      complete &= tail.isComplete();
+    }
+    mission.setCurrentState(horizon);
+    int fallPoints = 0;
+    if (falls) {
+      MissionEphemeris fall = fallOf(sequence.finalState(), mission);
+      points.addAll(fall.allPoints());
+      complete &= fall.isComplete();
+      fallPoints = fall.size();
+    }
     logger.info(
-        "Mission '{}': disposal tail of {} burn(s) ended {}, {} points appended past the horizon",
+        "Mission '{}': disposal tail of {} burn(s) ended {}, {} points appended past the horizon"
+            + " ({} of them the fall)",
         mission.getName(),
         sequence.burns().size(),
         sequence.end(),
-        tail.size());
+        points.size() - flown.size(),
+        fallPoints);
     return new MissionPlan(
         new MissionComputeResult(
             computation.optimizerResult(),
-            new MissionEphemeris(points, flown.isComplete() && tail.isComplete()),
+            new MissionEphemeris(points, complete),
             computation.performanceReport(),
             mission,
             computation.achievedOrbit(),
             computation.debris()),
         plan.sizing());
+  }
+
+  /**
+   * The payload's fall from where its tail left it, bounded by one revolution of that orbit: every
+   * measured fall reached the ground within 33 to 49 % of it, so a payload still aloft after a
+   * whole revolution is outside what was measured, and flying it further would only pile up
+   * samples.
+   */
+  private static MissionEphemeris fallOf(SpacecraftState start, Mission mission) {
+    double bound = start.getOrbit().getKeplerianPeriod();
+    MissionEphemeris fall =
+        ReentryFall.fly(
+            start,
+            mission.getVehicle().resolveActiveStage(start.getMass()).aerodynamics(),
+            mission.getAtmosphere(),
+            bound,
+            StageNames.REENTRY);
+    if (fall.endDate().durationFrom(start.getDate()) >= bound) {
+      logger.warn(
+          "Mission '{}': the payload did not reach the ground within one revolution ({} s) of its"
+              + " disposal tail's end; its trajectory ends aloft",
+          mission.getName(),
+          String.format(Locale.ROOT, "%.0f", bound));
+    }
+    return fall;
   }
 
   private MissionPlanner planner() {

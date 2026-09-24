@@ -35,5 +35,12 @@ public final class StageNames {
    */
   public static final String DEORBIT_COAST = "Deorbit coast";
 
+  /**
+   * Name of the payload's fall to the ground after its disposal tail. Its own name rather than the
+   * debris one: the payload is not a debris, and a reader sorting samples by name must not mistake
+   * one for the other.
+   */
+  public static final String REENTRY = "Reentry";
+
   private StageNames() {}
 }

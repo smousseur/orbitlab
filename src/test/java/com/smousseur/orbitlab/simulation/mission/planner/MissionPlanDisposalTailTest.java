@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
 import com.smousseur.orbitlab.simulation.mission.Mission;
+import com.smousseur.orbitlab.simulation.mission.disposal.DeorbitSequence;
 import com.smousseur.orbitlab.simulation.mission.disposal.DeorbitTail;
 import com.smousseur.orbitlab.simulation.mission.disposal.DisposalFixtures;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemeris;
@@ -28,13 +29,12 @@ import java.util.function.Function;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.orekit.orbits.CartesianOrbit;
 import org.orekit.propagation.SpacecraftState;
-import org.orekit.utils.PVCoordinates;
 
 /**
  * The hook {@link MissionPlanOptimizer#compute()} ends on: a plan whose mission carries a disposal
- * tail comes back with the tail flown past the horizon; any other plan comes back untouched.
+ * tail comes back with the tail flown past the horizon — followed by the payload's fall to the
+ * ground when the tail leaves it falling — and any other plan comes back untouched.
  *
  * <p>Built on a hand-made plan rather than a planner run: what is under test is the hook, and the
  * planners in front of it are the slow part.
@@ -44,6 +44,12 @@ class MissionPlanDisposalTailTest {
   private static final PayloadModel MODEL = Payloads.EARTH_OBSERVATION_SAT;
 
   private static final double ORBIT_ALTITUDE = 400_000.0;
+
+  /** The altitude below which the renderer reads a last sample as landed. */
+  private static final double LANDED_ALTITUDE_METERS = 1000.0;
+
+  /** Coast of the hand-made plan's own chain, before its horizon (s). */
+  private static final double TERMINAL_COAST_SECONDS = 600.0;
 
   @BeforeAll
   static void setup() {
@@ -55,17 +61,28 @@ class MissionPlanDisposalTailTest {
 
   @Test
   void aPlanWithoutATailIsReturnedUntouched() {
-    MissionPlan plan = computedPlan(DisposalFixtures::payloadMission);
+    MissionPlan plan =
+        computedPlan(
+            DisposalFixtures::payloadMission,
+            sizedReserve(),
+            circularInsertion(sizedReserve()),
+            TERMINAL_COAST_SECONDS);
 
     assertSame(plan, MissionPlanOptimizer.withDisposalTail(plan));
   }
 
   @Test
-  void aTailIsFlownPastTheHorizonAndAppendedToTheEphemeris() {
-    MissionPlan plan = computedPlan(DisposalFixtures::payloadMissionWithTail);
+  void aTailReachingItsTargetIsFollowedByTheFallToTheGround() {
+    MissionPlan plan =
+        computedPlan(
+            DisposalFixtures::payloadMissionWithTail,
+            sizedReserve(),
+            circularInsertion(sizedReserve()),
+            TERMINAL_COAST_SECONDS);
     MissionComputeResult before = plan.computation();
     Mission mission = before.mission();
     SpacecraftState horizon = mission.getCurrentState();
+    assertEquals(DeorbitSequence.End.TARGET_REACHED, planFrom(horizon, mission).end());
 
     MissionPlan extended = MissionPlanOptimizer.withDisposalTail(plan);
 
@@ -82,31 +99,108 @@ class MissionPlanDisposalTailTest {
     List<MissionEphemerisPoint> points = after.ephemeris().allPoints();
     assertEquals(original, points.subList(0, original.size()), "the mission's own trajectory");
     assertEquals(horizon.getDate(), points.get(original.size()).time(), "the tail opens there");
-    MissionEphemerisPoint last = points.getLast();
-    assertEquals(StageNames.DEORBIT_BURN, last.stageName());
-    assertTrue(after.ephemeris().isComplete());
-    double perigee = DisposalFixtures.perigeeAltitude(stateOf(last));
+    assertEquals(StageNames.DEORBIT_COAST, points.get(original.size()).stageName());
+
+    int fallFrom = firstIndexOf(points, StageNames.REENTRY);
+    assertEquals(StageNames.DEORBIT_BURN, points.get(fallFrom - 1).stageName());
+    assertEquals(
+        points.get(fallFrom - 1).time(), points.get(fallFrom).time(), "the fall opens there");
     assertTrue(
-        perigee <= DeorbitTail.REENTRY_PERIGEE_ALTITUDE_M,
-        "the trajectory ends on the target perigee, not " + perigee + " m");
+        points.subList(fallFrom, points.size()).stream()
+            .allMatch(point -> StageNames.REENTRY.equals(point.stageName())),
+        "nothing follows the fall");
+    assertTrue(
+        points.getLast().altitudeMeters() < LANDED_ALTITUDE_METERS,
+        "the trajectory ends on the ground, not at " + points.getLast().altitudeMeters() + " m");
+    assertTrue(after.ephemeris().isComplete());
+  }
+
+  @Test
+  void aTailRunningOutOfPropellantEndsOnItsLastBurnAsBefore() {
+    double reserve = 50.0;
+    MissionPlan plan =
+        computedPlan(
+            DisposalFixtures::payloadMissionWithTail,
+            reserve,
+            circularInsertion(reserve),
+            TERMINAL_COAST_SECONDS);
+    Mission mission = plan.computation().mission();
+    assertEquals(
+        DeorbitSequence.End.PROPELLANT_SPENT, planFrom(mission.getCurrentState(), mission).end());
+
+    MissionEphemeris ephemeris =
+        MissionPlanOptimizer.withDisposalTail(plan).computation().ephemeris();
+
+    assertEquals(StageNames.DEORBIT_BURN, ephemeris.lastPoint().stageName());
+    assertTrue(
+        ephemeris.allPoints().stream()
+            .noneMatch(point -> StageNames.REENTRY.equals(point.stageName())),
+        "no fall follows a tail that left the payload in orbit");
+    assertTrue(ephemeris.isComplete());
+  }
+
+  @Test
+  void aTailWithoutBurnOnAFallingPayloadFliesTheFallAlone() {
+    double reserve = 300.0;
+    // Heading for a 20 km perigee: the atmosphere takes it before it can climb back to an apogee,
+    // so the tail stops before its first burn.
+    SpacecraftState insertion =
+        DisposalFixtures.orbitState(20_000.0, 400_000.0, 300.0, MODEL.defaultDryMass() + reserve);
+    MissionPlan plan =
+        computedPlan(DisposalFixtures::payloadMissionWithTail, reserve, insertion, 60.0);
+    MissionComputeResult before = plan.computation();
+    Mission mission = before.mission();
+    SpacecraftState horizon = mission.getCurrentState();
+    DeorbitSequence sequence = planFrom(horizon, mission);
+    assertEquals(DeorbitSequence.End.FELL_BEFORE_NEXT_BURN, sequence.end());
+    assertTrue(sequence.stages().isEmpty());
+
+    MissionEphemeris ephemeris =
+        MissionPlanOptimizer.withDisposalTail(plan).computation().ephemeris();
+
+    List<MissionEphemerisPoint> original = before.ephemeris().allPoints();
+    List<MissionEphemerisPoint> appended =
+        ephemeris.allPoints().subList(original.size(), ephemeris.size());
+    assertEquals(horizon.getDate(), appended.getFirst().time(), "the fall opens on the horizon");
+    assertTrue(
+        appended.stream().allMatch(point -> StageNames.REENTRY.equals(point.stageName())),
+        "only the fall is appended");
+    assertTrue(ephemeris.lastPoint().altitudeMeters() < LANDED_ALTITUDE_METERS);
+  }
+
+  /** The tail the hook will plan, planned here from the same state to read how it ends. */
+  private static DeorbitSequence planFrom(SpacecraftState horizon, Mission mission) {
+    DeorbitSequence sequence = new DeorbitTail().plan(horizon, mission);
+    mission.setCurrentState(horizon);
+    return sequence;
+  }
+
+  private static double sizedReserve() {
+    return PropellantBudget.disposalReserveFor(
+        MODEL, MODEL.defaultDryMass(), ORBIT_ALTITUDE, DeorbitTail.REENTRY_PERIGEE_ALTITUDE_M);
+  }
+
+  private static SpacecraftState circularInsertion(double reserve) {
+    return DisposalFixtures.orbitState(
+        ORBIT_ALTITUDE, ORBIT_ALTITUDE, 0.0, MODEL.defaultDryMass() + reserve);
   }
 
   /**
    * A plan as a planner hands it back: a mission whose current state is the end of its restitution
    * pass, and an ephemeris ending there. The mission's own chain is a single terminal coast.
    */
-  private static MissionPlan computedPlan(Function<Spacecraft, Mission> missionOf) {
-    double dry = MODEL.defaultDryMass();
-    double reserve =
-        PropellantBudget.disposalReserveFor(
-            MODEL, dry, ORBIT_ALTITUDE, DeorbitTail.REENTRY_PERIGEE_ALTITUDE_M);
-    Mission mission = missionOf.apply(MODEL.toSpacecraft(dry, 0, reserve));
-    SpacecraftState insertion =
-        DisposalFixtures.orbitState(ORBIT_ALTITUDE, ORBIT_ALTITUDE, 0.0, dry + reserve);
+  private static MissionPlan computedPlan(
+      Function<Spacecraft, Mission> missionOf,
+      double reserve,
+      SpacecraftState insertion,
+      double coastSeconds) {
+    Mission mission = missionOf.apply(MODEL.toSpacecraft(MODEL.defaultDryMass(), 0, reserve));
     MissionEphemeris ephemeris =
         new MissionEphemerisGenerator()
             .generateChain(
-                mission, List.of(new CoastingStage(StageNames.TERMINAL_COAST, 600.0)), insertion);
+                mission,
+                List.of(new CoastingStage(StageNames.TERMINAL_COAST, coastSeconds)),
+                insertion);
     GravitationalContext earth = GravitationalContext.earth();
     MissionComputeResult computation =
         new MissionComputeResult(
@@ -119,14 +213,12 @@ class MissionPlanDisposalTailTest {
     return new MissionPlan(computation);
   }
 
-  private static SpacecraftState stateOf(MissionEphemerisPoint point) {
-    GravitationalContext earth = GravitationalContext.earth();
-    return new SpacecraftState(
-            new CartesianOrbit(
-                new PVCoordinates(point.position(), point.velocity()),
-                earth.inertialFrame(),
-                point.time(),
-                earth.mu()))
-        .withMass(point.mass());
+  private static int firstIndexOf(List<MissionEphemerisPoint> points, String stageName) {
+    for (int index = 0; index < points.size(); index++) {
+      if (stageName.equals(points.get(index).stageName())) {
+        return index;
+      }
+    }
+    throw new AssertionError("no '" + stageName + "' sample in the ephemeris");
   }
 }

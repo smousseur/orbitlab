@@ -23,21 +23,41 @@ public record DeorbitSequence(
   /** Why a deorbit sequence stopped. */
   public enum End {
     /** A burn brought the osculating perigee down to the target. */
-    TARGET_REACHED,
+    TARGET_REACHED(true),
     /** The last burn spent every kilogram above the depletion floor without reaching the target. */
-    PROPELLANT_SPENT,
+    PROPELLANT_SPENT(false),
     /**
      * The coast to the next apogee was stopped by the re-entry guard: the payload is falling
      * already, and needs no further burn. A success, like {@link #TARGET_REACHED}.
      */
-    FELL_BEFORE_NEXT_BURN,
+    FELL_BEFORE_NEXT_BURN(true),
     /** The safety bound on the number of burns was reached. */
-    MAX_BURNS,
+    MAX_BURNS(false),
     /**
      * A segment stopped short of its own end for another reason than its cutoff, or did not
      * propagate at all. It is kept in the stages, so that flying them reports the same truncation.
      */
-    TRUNCATED
+    TRUNCATED(false);
+
+    private final boolean leadsToReentry;
+
+    End(boolean leadsToReentry) {
+      this.leadsToReentry = leadsToReentry;
+    }
+
+    /**
+     * Whether a sequence ending this way leaves the payload falling, so that its fall to the ground
+     * is flown next. Every measured sequence ending on the target — both payloads, from 400 to 1
+     * 800 km, at three inclinations — reached the ground within 33 to 49 % of its final orbit's
+     * period, and so did the production flight ending on a fall before its next burn. The other
+     * ends leave a payload whose orbit was not brought down: flown for days, an under-sized reserve
+     * never re-entered.
+     *
+     * @return {@code true} for {@link #TARGET_REACHED} and {@link #FELL_BEFORE_NEXT_BURN}
+     */
+    public boolean leadsToReentry() {
+      return leadsToReentry;
+    }
   }
 
   /**
