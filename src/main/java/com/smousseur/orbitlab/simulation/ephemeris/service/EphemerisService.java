@@ -28,6 +28,22 @@ public interface EphemerisService {
   Optional<BodySample> trySampleIcrf(SolarSystemBody body, AbsoluteDate t);
 
   /**
+   * Attempts to retrieve the body sample at {@code t} in the ICRF frame even where the current
+   * window no longer reaches — the sample that window would give, for a reader that needs a body at
+   * a fixed date however far the clock has moved from it. Unlike {@link #trySampleIcrf} it may read
+   * the underlying source on the calling thread.
+   *
+   * <p>The default answers from the window alone.
+   *
+   * @param body the celestial body to query
+   * @param t the time at which to sample
+   * @return the body sample, or empty if it cannot be produced
+   */
+  default Optional<BodySample> trySampleIcrfOnGrid(SolarSystemBody body, AbsoluteDate t) {
+    return trySampleIcrf(body, t);
+  }
+
+  /**
    * Attempts to retrieve a heliocentric position and rotation for the given body at time {@code t}.
    *
    * <p>The position is computed by subtracting the Sun's ICRF position from the body's ICRF

@@ -64,7 +64,7 @@ public final class GlobeSubstitution {
           geometries.size());
       return false;
     }
-    Geometry globe = geometries.get(0);
+    Geometry globe = geometries.getFirst();
     globe.setMesh(EllipsoidGlobe.earth().toMesh());
     Vector3f chain = scaleBelow(model, globe);
     globe.setLocalScale(

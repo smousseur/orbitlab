@@ -1,10 +1,14 @@
 package com.smousseur.orbitlab.simulation.ephemeris;
 
+import com.smousseur.orbitlab.core.OrbitlabException;
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.simulation.ephemeris.config.EphemerisConfig;
 import com.smousseur.orbitlab.simulation.ephemeris.config.SlidingWindowConfig;
 import com.smousseur.orbitlab.simulation.source.EphemerisSource;
 import com.smousseur.orbitlab.simulation.source.PrefetchingEphemerisSource;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
@@ -24,11 +28,28 @@ import org.orekit.utils.PVCoordinates;
  */
 public final class SlidingWindowEphemerisBuffer {
 
+  /**
+   * How many off-window samples {@link #trySampleOnGrid} keeps. Well above the fixed dates in use
+   * at once — one touchdown per landed object, a handful per mission (each booster, the core, the
+   * upper stage, the payload) — so a reader asking every frame never goes back to the source.
+   */
+  private static final int OFF_WINDOW_SAMPLES_KEPT = 64;
+
   private final EphemerisSource source;
   private final EphemerisConfig config;
   private final SolarSystemBody body;
 
   private final AtomicReference<Snapshot> ref = new AtomicReference<>();
+
+  /** Samples read off the window by {@link #trySampleOnGrid}, least recently used evicted first. */
+  private final Map<AbsoluteDate, BodySample> offWindowSamples =
+      Collections.synchronizedMap(
+          new LinkedHashMap<>(16, 0.75f, true) {
+            @Override
+            protected boolean removeEldestEntry(Map.Entry<AbsoluteDate, BodySample> eldest) {
+              return size() > OFF_WINDOW_SAMPLES_KEPT;
+            }
+          });
 
   /**
    * Creates a new sliding window ephemeris buffer for the given body.
@@ -76,6 +97,67 @@ public final class SlidingWindowEphemerisBuffer {
       return Optional.empty();
     }
     return Optional.of(interpolate(s, t));
+  }
+
+  /**
+   * Attempts to produce the sample the window would give at {@code t}, wherever {@code t} lies.
+   *
+   * <p>Inside the window it is {@link #trySampleInterpolated}. Outside, the source is sampled at
+   * the two nodes of the window's own grid that bracket {@code t} and those are interpolated
+   * exactly as the window interpolates its own — the window's start is always on the grid anchored
+   * at the session start, so these are the very nodes a window covering {@code t} would hold, and
+   * the result does not change as the window slides past {@code t}.
+   *
+   * <p>For a reader that needs a body at a fixed date for as long as it runs — the Earth's rotation
+   * at the touchdown of an object lying on it — which the window, sliding with the clock, cannot
+   * hold: it reaches back 36 to 84 hours at playback speeds. Off-window samples are kept, so such a
+   * reader costs the source two samples once rather than two per frame. Unlike {@link
+   * #trySampleInterpolated} this may sample the source on the calling thread.
+   *
+   * @param t the time at which to sample
+   * @return the sample, or empty before the first window is published or when the source cannot
+   *     sample the date
+   */
+  public Optional<BodySample> trySampleOnGrid(AbsoluteDate t) {
+    Objects.requireNonNull(t, "t");
+    Snapshot s = ref.get();
+    if (s == null) {
+      return Optional.empty();
+    }
+    if (t.compareTo(s.start) >= 0 && t.compareTo(s.end) <= 0) {
+      return Optional.of(interpolate(s, t));
+    }
+    BodySample kept = offWindowSamples.get(t);
+    if (kept != null) {
+      return Optional.of(kept);
+    }
+    Optional<BodySample> sampled = sampleBetweenGridNodes(s, t);
+    sampled.ifPresent(sample -> offWindowSamples.put(t, sample));
+    return sampled;
+  }
+
+  private Optional<BodySample> sampleBetweenGridNodes(Snapshot s, AbsoluteDate t) {
+    long k = (long) Math.floor(t.durationFrom(s.start) / s.stepSeconds);
+    AbsoluteDate before = s.start.shiftedBy(k * s.stepSeconds);
+    AbsoluteDate after = s.start.shiftedBy((k + 1) * s.stepSeconds);
+    BodySample b0;
+    BodySample b1;
+    try {
+      b0 = source.sampleIcrf(body, before);
+      b1 = source.sampleIcrf(body, after);
+    } catch (OrbitlabException e) {
+      return Optional.empty();
+    }
+    Snapshot nodes =
+        new Snapshot(
+            before,
+            after,
+            s.stepSeconds,
+            new AbsoluteDate[] {b0.date(), b1.date()},
+            new Vector3D[] {b0.pvIcrf().getPosition(), b1.pvIcrf().getPosition()},
+            new Vector3D[] {b0.pvIcrf().getVelocity(), b1.pvIcrf().getVelocity()},
+            new Rotation[] {b0.rotationIcrf(), b1.rotationIcrf()});
+    return Optional.of(interpolate(nodes, t));
   }
 
   /**

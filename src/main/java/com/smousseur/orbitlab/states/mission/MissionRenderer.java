@@ -813,7 +813,7 @@ public final class MissionRenderer {
     if (!hasLanded(ephemeris, now)) {
       return pt;
     }
-    Optional<Quaternion> atImpact = PlanetDrawnRotation.at(SolarSystemBody.EARTH, pt.time());
+    Optional<Quaternion> atImpact = PlanetDrawnRotation.atAnyDate(SolarSystemBody.EARTH, pt.time());
     Optional<Quaternion> atNow = PlanetDrawnRotation.at(SolarSystemBody.EARTH, now);
     if (atImpact.isEmpty() || atNow.isEmpty()) {
       return pt;

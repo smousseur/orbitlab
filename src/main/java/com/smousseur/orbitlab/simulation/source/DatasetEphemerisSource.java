@@ -21,9 +21,10 @@ import org.orekit.utils.PVCoordinates;
 /**
  * EphemerisSource backed by the on-disk dataset (*.bin), using FileChannel random access.
  *
- * <p>Threading: designed for single-worker usage (like current SlidingWindowEphemerisBuffer
- * rebuilds). If you later need multi-threaded rebuilds, wrap caches with synchronization or use
- * per-thread instances.
+ * <p>Thread-safe once open: the only mutable state left is each body file's chunk cache, which
+ * {@link BodyFile} guards. Several threads do sample one instance — the ephemeris worker filling
+ * the windows, and a reader asking beyond a window ({@code
+ * SlidingWindowEphemerisBuffer.trySampleOnGrid}) on its own thread.
  */
 public final class DatasetEphemerisSource
     implements EphemerisSource, PrefetchingEphemerisSource, AutoCloseable {

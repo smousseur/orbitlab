@@ -16,6 +16,10 @@ import java.nio.file.StandardOpenOption;
  * <p>Each {@code BodyFile} wraps a {@link FileChannel} opened on a {@code .bin} file and maintains
  * an in-memory index of chunk offsets plus an LRU cache of decoded chunks for fast repeated access.
  * Chunks are decoded on demand and cached to avoid redundant I/O and decompression.
+ *
+ * <p>Thread-safe: the chunk cache is an access-ordered map, which even a lookup restructures, so
+ * every access to it holds this file's monitor; the channel is only ever read at explicit
+ * positions, and a decoded chunk is immutable.
  */
 final class BodyFile implements Closeable {
   private final SolarSystemBody body;
@@ -112,7 +116,7 @@ final class BodyFile implements Closeable {
    * @param chunkId the zero-based chunk index
    * @return the decoded chunk containing position/velocity and rotation data
    */
-  DecodedChunk getDecodedChunk(int chunkId) {
+  synchronized DecodedChunk getDecodedChunk(int chunkId) {
     DecodedChunk cached = decodedChunkCache.get(chunkId);
     if (cached != null) return cached;
 
@@ -129,7 +133,7 @@ final class BodyFile implements Closeable {
    *
    * @param chunkId the zero-based chunk index to prefetch
    */
-  void prefetchDecodedChunk(int chunkId) {
+  synchronized void prefetchDecodedChunk(int chunkId) {
     if (chunkId < 0 || chunkId >= chunkCount) return;
     if (decodedChunkCache.containsKey(chunkId)) return;
 

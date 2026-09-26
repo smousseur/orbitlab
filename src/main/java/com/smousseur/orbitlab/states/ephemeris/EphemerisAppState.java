@@ -6,11 +6,11 @@ import com.smousseur.orbitlab.app.ApplicationContext;
 import com.smousseur.orbitlab.app.SimulationClock;
 import com.smousseur.orbitlab.core.OrbitlabPath;
 import com.smousseur.orbitlab.core.SolarSystemBody;
-import com.smousseur.orbitlab.simulation.ephemeris.BodySample;
 import com.smousseur.orbitlab.simulation.ephemeris.EphemerisWorker;
 import com.smousseur.orbitlab.simulation.ephemeris.SlidingWindowEphemerisBuffer;
 import com.smousseur.orbitlab.simulation.ephemeris.config.EphemerisConfig;
 import com.smousseur.orbitlab.simulation.ephemeris.config.SlidingWindowConfig;
+import com.smousseur.orbitlab.simulation.ephemeris.service.BufferedEphemerisService;
 import com.smousseur.orbitlab.simulation.ephemeris.service.EphemerisService;
 import com.smousseur.orbitlab.simulation.ephemeris.service.EphemerisServiceRegistry;
 import com.smousseur.orbitlab.simulation.source.DatasetEphemerisSource;
@@ -21,7 +21,6 @@ import java.util.Objects;
 import java.util.Optional;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.orekit.time.AbsoluteDate;
 
 /**
  * JME AppState responsible for maintaining the sliding-window ephemeris buffers (PV + rotation).
@@ -37,10 +36,10 @@ public final class EphemerisAppState extends BaseAppState {
   private final EphemerisConfig ephemerisConfig;
   private final SlidingWindowConfig windowConfig;
 
-  private final EphemerisService EPHEMERIS_SERVICE = this::trySampleInterpolated;
-
   private final Map<SolarSystemBody, SlidingWindowEphemerisBuffer> buffers =
       new EnumMap<>(SolarSystemBody.class);
+
+  private final EphemerisService EPHEMERIS_SERVICE = new BufferedEphemerisService(buffers);
 
   private EphemerisWorker worker;
   private AutoCloseable clockSubscription;
@@ -64,16 +63,6 @@ public final class EphemerisAppState extends BaseAppState {
   /** Exposes the underlying buffer for advanced uses (debug, metrics, etc.). */
   public Optional<SlidingWindowEphemerisBuffer> buffer(SolarSystemBody body) {
     return Optional.ofNullable(buffers.get(body));
-  }
-
-  /** Non-blocking sample, empty if no window is built yet or outside the current window. */
-  public Optional<BodySample> trySampleInterpolated(SolarSystemBody body, AbsoluteDate t) {
-
-    Objects.requireNonNull(body, "body");
-    Objects.requireNonNull(t, "t");
-    SlidingWindowEphemerisBuffer buf = buffers.get(body);
-    if (buf == null) return Optional.empty();
-    return buf.trySampleInterpolated(t);
   }
 
   /**
