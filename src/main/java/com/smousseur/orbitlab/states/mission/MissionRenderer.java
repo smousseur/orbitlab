@@ -16,6 +16,7 @@ import com.smousseur.orbitlab.engine.scene.PlanetRadius;
 import com.smousseur.orbitlab.engine.scene.body.BodyRenderConfig;
 import com.smousseur.orbitlab.engine.scene.body.EclipseGeometry;
 import com.smousseur.orbitlab.engine.scene.body.LodView;
+import com.smousseur.orbitlab.engine.scene.planet.GroundCorrection;
 import com.smousseur.orbitlab.engine.scene.planet.PlanetDrawnRotation;
 import com.smousseur.orbitlab.engine.scene.spacecraft.LauncherAssets;
 import com.smousseur.orbitlab.engine.scene.spacecraft.LauncherStackGeometry;
@@ -100,6 +101,24 @@ public final class MissionRenderer {
    * watched at; at extreme warp the whole fall is instant anyway.
    */
   private static final double TOUCHDOWN_FADE_SECONDS = 25.0;
+
+  /**
+   * Below this horizontal speed (m/s) an impact velocity gives a landed object no heading to lie
+   * along. The Earth's rotation alone gives 465·cos φ m/s, so this is reached only within about a
+   * tenth of a degree of a pole.
+   */
+  private static final double MIN_LANDED_HEADING_SPEED = 1.0;
+
+  /**
+   * Extra lift (m) above a landed object's own clearance. The globe is drawn about the Earth's
+   * centre, some 6,378 km from the near origin where a followed landed object sits, and a float
+   * there has a 0.49 m step: through the scene graph the drawn ground under the object moved by
+   * −0.8 to +1.9 m from frame to frame (std 0.49 m, 600 frames of Earth rotation, measured), on top
+   * of the 0.2 m the drawn globe keeps over the ellipsoid. Three metres clear the peak; the
+   * residual tremor of the ground itself is only removed by rendering the globe relative to the
+   * near origin.
+   */
+  private static final double LANDED_FLOAT_MARGIN_METERS = 3.0;
 
   private final MissionEntry entry;
   private final ApplicationContext context;
@@ -415,13 +434,24 @@ public final class MissionRenderer {
     // centre of mass the seat lifts it off. The eclipse occluder stays on the raw point, which is
     // already co-rotated once landed, so a payload on the ground is shaded where it lies.
     MissionEphemerisPoint drawnPrimary = renderedPrimaryPoint(ephemeris, point, now);
-    TrailDisplay trailDisplay =
-        trailDisplay(hasLanded(ephemeris, now), true, now, ephemeris.endDate());
+    boolean landed = hasLanded(ephemeris, now);
+    Vector3D rollReference =
+        landed ? landedAttitudeAt(point, now).map(LandedAttitude::up).orElse(null) : null;
+    TrailDisplay trailDisplay = trailDisplay(landed, true, now, ephemeris.endDate());
     primary.setInertialTrail(trailDisplay.visible());
     primary.setTrailOpacity(trailDisplay.opacity());
     primary.setTrailTipFrozen(trailDisplay.tipFrozen());
     primary.updateFromPoint(
-        drawnPrimary, Vector3D.ZERO, null, null, ephemeris.displayTrail(), upTo, cam, tpf, focus);
+        drawnPrimary,
+        Vector3D.ZERO,
+        rollReference,
+        null,
+        ephemeris.displayTrail(),
+        upTo,
+        cam,
+        tpf,
+        focus,
+        now);
     pushEclipseOccluder(point, focus);
     updatePrimarySilhouette(now);
     updateDebris(drawnPrimary, now, cam, tpf, focus);
@@ -467,7 +497,8 @@ public final class MissionRenderer {
    * neither jitters nor drifts. The seat is zero in the {@code FULL} and {@code AFTER_BOOSTERS}
    * phases, where the returned sample is {@code raw} itself, so early flight is untouched. On a
    * trajectory that ends on the ground it shrinks to zero just before the touchdown ({@link
-   * #touchdownSeatFactor}), so a landed payload lies on its own ground point.
+   * #touchdownSeatFactor}); once landed the payload lies on the ground instead ({@link
+   * #landedAttitude}), raised by its own clearance so the near frame centres on its axis.
    *
    * @param ephemeris the primary's display ephemeris {@code raw} was read from
    * @param raw the primary's raw point at {@code now}, {@link #renderedPointOf} the ephemeris
@@ -476,6 +507,11 @@ public final class MissionRenderer {
    */
   public MissionEphemerisPoint renderedPrimaryPoint(
       MissionEphemeris ephemeris, MissionEphemerisPoint raw, AbsoluteDate now) {
+    if (hasLanded(ephemeris, now)) {
+      return landedAttitudeAt(raw, now)
+          .map(lying -> lying(raw, lying, landedLiftMeters(primary.groundClearanceMeters())))
+          .orElse(raw);
+    }
     double axialSeat =
         primaryAxialSeat(silhouette.phaseAt(now)) * touchdownSeatFactor(ephemeris, now);
     Vector3D seat = StackSeat.offset(raw.velocity(), raw.position(), axialSeat, 0.0, 1, 1);
@@ -567,19 +603,23 @@ public final class MissionRenderer {
       }
       TrajectoryPolyline trail = ephemeris.displayTrail();
       boolean within = now.compareTo(ephemeris.endDate()) <= 0;
-      MissionEphemerisPoint pt = ephemeris.displayPointAt(now);
-      Vector3D seat = debrisSeat(track, pt);
-      Vector3D upHint = debrisUpHint(track, pt);
+      MissionEphemerisPoint raw = ephemeris.displayPointAt(now);
+      Vector3D seat = debrisSeat(track, raw).scalarMultiply(touchdownSeatFactor(ephemeris, now));
+      Vector3D upHint = debrisUpHint(track, raw);
       boolean landed = hasLanded(ephemeris, now);
-      // Once a landing piece has impacted, it rests on the ground and must ride the turning globe,
-      // not hang at the frozen inertial pose of the impact instant, which the rotating Earth drifts
-      // out from under. Position, heading, roll and seat all co-rotate rigidly with the drawn
-      // globe.
+      // The camera's own point — co-rotated and ground-corrected — so a followed debris sits
+      // exactly where the floating origin centres the frame.
+      MissionEphemerisPoint pt = renderedPointOf(ephemeris, now);
       if (landed) {
-        LandedPose pose = landedPose(pt, seat, upHint, now);
-        pt = pose.point();
-        seat = pose.seat();
-        upHint = pose.upHint();
+        Optional<LandedAttitude> lying = landedAttitudeAt(pt, now);
+        if (lying.isPresent()) {
+          // Lifted through the seat rather than the point: the camera centres a debris on
+          // renderedPointOf, which must stay the ground point.
+          pt = lying(pt, lying.get(), 0.0);
+          seat =
+              lying.get().up().scalarMultiply(landedLiftMeters(debrisView.groundClearanceMeters()));
+          upHint = lying.get().up();
+        }
       }
       int upTo = within ? trail.indexUpTo(now) : trail.size() - 1;
       debrisView.setVisible(true);
@@ -602,7 +642,7 @@ public final class MissionRenderer {
       debrisView.setTrailTipFrozen(trailDisplay.tipFrozen());
       debrisView.setSecondaryDisplay(debrisVisible);
       debrisView.updateFromPoint(
-          pt, seat, upHint, followed ? null : primaryPoint, trail, upTo, cam, tpf, focus);
+          pt, seat, upHint, followed ? null : primaryPoint, trail, upTo, cam, tpf, focus, now);
     }
   }
 
@@ -705,22 +745,69 @@ public final class MissionRenderer {
 
   /**
    * The sample an object — the primary or a debris — is <em>drawn</em> from now: its interpolated
-   * sample, carried into the globe's current drawn rotation once it has landed (the same {@link
-   * #landedPose} turn), so a landed object rides the turning Earth instead of hanging at the frozen
-   * inertial point of its impact. Before landing it is {@link MissionEphemeris#displayPointAt}
-   * itself, so nothing that stays in flight or in orbit is affected.
+   * sample, carried into the globe's current drawn rotation once it has landed (position and
+   * velocity, so the attitude it lies in, {@link #landedAttitude}, turns with it), so a landed
+   * object rides the turning Earth instead of hanging at the frozen inertial point of its impact;
+   * then brought onto the drawn ground once it is within {@link
+   * GroundCorrection#BLEND_HEIGHT_METERS} of it. In flight or in orbit away from the ground it is
+   * {@link MissionEphemeris#displayPointAt} itself.
    *
    * <p>It is the one raw point every reader of an object's position starts from — the renderer
-   * (model, ribbon, debris reference and the primary's eclipse occluder), the camera's {@code
+   * (model, ribbon tip, every debris and the primary's eclipse occluder), the camera's {@code
    * FloatingOriginAppState}, and the {@code CameraTransitionAppState} fly-in — so the frame is
-   * centred on exactly where the object is drawn and the fly-in settles there: it neither jitters
-   * nor drifts as the Earth turns, and a fly-in to a landed object does not hop on its last frame.
+   * centred on exactly where the object is drawn: it neither jitters nor drifts as the Earth turns,
+   * a fly-in to a landed object does not hop on its last frame, and a camera ten metres from a
+   * piece on the ground sees it on the drawn surface rather than hundreds of metres off it.
    *
    * @param ephemeris the object's display ephemeris
    * @param now the current simulation date
-   * @return the sample to draw, co-rotated once landed
+   * @return the sample to draw
    */
   public static MissionEphemerisPoint renderedPointOf(
+      MissionEphemeris ephemeris, AbsoluteDate now) {
+    return groundCorrected(coRotatedPointOf(ephemeris, now), now);
+  }
+
+  /**
+   * {@code point} brought onto the drawn Earth ground at {@code now}; unchanged for another arc, a
+   * point beyond reach of the ground, or before the drawn rotation is available.
+   */
+  private static MissionEphemerisPoint groundCorrected(
+      MissionEphemerisPoint point, AbsoluteDate now) {
+    if (point.arc().body() != SolarSystemBody.EARTH
+        || !GroundCorrection.mayReach(point.position())) {
+      return point;
+    }
+    return GroundCorrection.at(now)
+        .map(correction -> groundCorrected(point, correction))
+        .orElse(point);
+  }
+
+  /**
+   * {@code point} brought onto the drawn Earth ground by a correction already in hand.
+   *
+   * @param point a drawn sample
+   * @param correction the correction of the frame
+   * @return the sample with its position corrected, or {@code point} itself for another arc
+   */
+  static MissionEphemerisPoint groundCorrected(
+      MissionEphemerisPoint point, GroundCorrection correction) {
+    if (point.arc().body() != SolarSystemBody.EARTH) {
+      return point;
+    }
+    return new MissionEphemerisPoint(
+        point.time(),
+        correction.correct(point.position()),
+        point.velocity(),
+        point.stageName(),
+        point.propulsive(),
+        point.mass(),
+        point.altitudeMeters(),
+        point.arc());
+  }
+
+  /** {@link #renderedPointOf} before the ground correction: co-rotated once landed. */
+  private static MissionEphemerisPoint coRotatedPointOf(
       MissionEphemeris ephemeris, AbsoluteDate now) {
     MissionEphemerisPoint pt = ephemeris.displayPointAt(now);
     if (!hasLanded(ephemeris, now)) {
@@ -752,52 +839,88 @@ public final class MissionRenderer {
         && debris.exemplar() == track.exemplarIndex();
   }
 
-  /** An impacted debris' whole pose, carried into the globe's current drawn rotation. */
-  private record LandedPose(MissionEphemerisPoint point, Vector3D seat, Vector3D upHint) {}
+  /**
+   * How a landed object lies on the ground: its axis along {@code heading}, horizontal, its roll
+   * referenced to the vertical {@code up}, so {@code SpacecraftPresenter} turns the model's {@code
+   * +Z} side — the one {@code Model3dView.groundClearanceMeters} measures — to the ground.
+   *
+   * @param heading the unit horizontal direction its nose points to
+   * @param up the drawn globe's unit geodetic vertical under it
+   */
+  record LandedAttitude(Vector3D heading, Vector3D up) {}
 
   /**
-   * Carries a just-landed debris' frozen impact pose into the globe's <em>current</em> drawn
-   * rotation, so the whole piece rides the turning Earth instead of hanging at the inertial pose of
-   * the impact instant. Position (a point about the geocentre), velocity and the seat and roll
-   * references (directions) are all turned by the same drawn rotation, so the mesh stays rigid on
-   * the ground: {@code lookAt} and the seat offset are rotation-equivariant, so turning their
-   * inputs turns the drawn attitude with them.
+   * The attitude a landed object lies in, from its impact velocity and the vertical under it.
    *
-   * <p>A {@code null} roll hint (a non-booster, rolling about world up) becomes celestial north
-   * made explicit so it can be turned like any other; at {@code now = t_impact} the rotation is
-   * identity and the pose is returned unmoved, so there is no jump when the fall ends. Returns the
-   * frozen pose unchanged when the drawn rotation is not yet available for either date.
+   * <p>The impact velocity always dips below the horizon — a fall ends on a downward crossing of
+   * the ground — so an object drawn along it, base on its ground point, runs into the ground: 11.7°
+   * down for a payload's fall, measured. Its horizontal part keeps the heading the object flew, so
+   * the object only pitches up onto the ground. A fall at terminal speed has no ground-relative
+   * heading (0.1 m/s measured on that fall), so the heading is the inertial one, which the Earth's
+   * rotation dominates; near a pole that vanishes, and the object lies along celestial north, or
+   * along any horizontal at the pole itself.
    *
-   * @param impact the impact sample (the ephemeris' last point)
-   * @param seat the seat offset computed at the impact pose
-   * @param upHint the roll reference at the impact pose, or {@code null} for world up
-   * @param now the current simulation date
-   * @return the pose turned into the globe's current drawn rotation
+   * @param impactVelocity the object's velocity, co-rotated with the globe
+   * @param up the drawn globe's unit geodetic vertical under the object
+   * @return the lying attitude
    */
-  private LandedPose landedPose(
-      MissionEphemerisPoint impact, Vector3D seat, Vector3D upHint, AbsoluteDate now) {
-    Optional<Quaternion> atImpact = PlanetDrawnRotation.at(SolarSystemBody.EARTH, impact.time());
-    Optional<Quaternion> atNow = PlanetDrawnRotation.at(SolarSystemBody.EARTH, now);
-    if (atImpact.isEmpty() || atNow.isEmpty()) {
-      return new LandedPose(impact, seat, upHint);
+  static LandedAttitude landedAttitude(Vector3D impactVelocity, Vector3D up) {
+    Vector3D horizontal = impactVelocity.subtract(impactVelocity.dotProduct(up), up);
+    if (horizontal.getNorm() < MIN_LANDED_HEADING_SPEED) {
+      horizontal = Vector3D.PLUS_K.subtract(up.getZ(), up);
     }
-    Quaternion drawnAtImpact = atImpact.get();
-    Quaternion drawnNow = atNow.get();
-    MissionEphemerisPoint pinned =
-        new MissionEphemerisPoint(
-            impact.time(),
-            rotateWithGlobe(impact.position(), drawnAtImpact, drawnNow),
-            rotateWithGlobe(impact.velocity(), drawnAtImpact, drawnNow),
-            impact.stageName(),
-            impact.propulsive(),
-            impact.mass(),
-            impact.altitudeMeters(),
-            impact.arc());
-    Vector3D roll = upHint != null ? upHint : Vector3D.PLUS_K;
-    return new LandedPose(
-        pinned,
-        rotateWithGlobe(seat, drawnAtImpact, drawnNow),
-        rotateWithGlobe(roll, drawnAtImpact, drawnNow));
+    if (horizontal.getNorm() < 1e-9) {
+      horizontal = up.orthogonal();
+    }
+    return new LandedAttitude(horizontal.normalize(), up);
+  }
+
+  /**
+   * {@code point} lying in {@code attitude}: lifted by {@code liftMeters} along the vertical and
+   * turned to the heading at its own speed — the direction is all the drawn pose reads, and the
+   * speed stays true for anything that shows it.
+   *
+   * @param point a landed object's drawn sample
+   * @param attitude the attitude it lies in
+   * @param liftMeters how far to raise it off its ground point
+   * @return the sample to draw
+   */
+  static MissionEphemerisPoint lying(
+      MissionEphemerisPoint point, LandedAttitude attitude, double liftMeters) {
+    return new MissionEphemerisPoint(
+        point.time(),
+        point.position().add(liftMeters, attitude.up()),
+        attitude.heading().scalarMultiply(point.velocity().getNorm()),
+        point.stageName(),
+        point.propulsive(),
+        point.mass(),
+        point.altitudeMeters(),
+        point.arc());
+  }
+
+  /**
+   * How far a landed object is raised off its ground point: its mesh's clearance, plus {@link
+   * #LANDED_FLOAT_MARGIN_METERS} so the drawn ground's frame-to-frame float noise never swallows
+   * its underside.
+   *
+   * @param groundClearanceMeters the object's mesh clearance below its axis
+   * @return the lift, in metres
+   */
+  static double landedLiftMeters(double groundClearanceMeters) {
+    return groundClearanceMeters + LANDED_FLOAT_MARGIN_METERS;
+  }
+
+  /**
+   * The attitude a landed Earth object lies in at {@code now}, from its co-rotated drawn sample;
+   * empty for another arc, or before the drawn rotation is available.
+   */
+  private static Optional<LandedAttitude> landedAttitudeAt(
+      MissionEphemerisPoint point, AbsoluteDate now) {
+    if (point.arc().body() != SolarSystemBody.EARTH) {
+      return Optional.empty();
+    }
+    return GroundCorrection.at(now)
+        .map(correction -> landedAttitude(point.velocity(), correction.up(point.position())));
   }
 
   /**

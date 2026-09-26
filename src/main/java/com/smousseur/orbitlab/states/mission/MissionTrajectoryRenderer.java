@@ -12,12 +12,14 @@ import com.smousseur.orbitlab.app.view.RenderTransform;
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.engine.AssetFactory;
 import com.smousseur.orbitlab.engine.scene.RibbonMeshBuilder;
+import com.smousseur.orbitlab.engine.scene.planet.GroundCorrection;
 import com.smousseur.orbitlab.engine.view.JmeVectorAdapter;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.TrajectoryPolyline;
 import com.smousseur.orbitlab.ui.mission.MissionPhaseShading;
 import java.nio.FloatBuffer;
 import java.util.Objects;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
+import org.orekit.time.AbsoluteDate;
 
 /**
  * Renders a mission's trajectory as a camera-facing ribbon. Receives the pre-computed {@link
@@ -62,6 +64,7 @@ public final class MissionTrajectoryRenderer {
 
   private Geometry lineGeometry;
   private TrajectoryPolyline boundTrail;
+  private TrailGroundCorrection groundedTrail;
   private ColorRGBA[] runColors;
   private PhaseNodeMarkers markers;
 
@@ -166,6 +169,7 @@ public final class MissionTrajectoryRenderer {
    * @param renderContext the context of the sample being drawn, derived from its arc by {@code
    *     MissionRenderer.renderContextFor} — a parameter and no longer a field of this class, so
    *     that the line and the near-frame offset cannot be built from two different contexts
+   * @param now the current simulation date, which the vertices near the ground are corrected at
    */
   public void update(
       TrajectoryPolyline trail,
@@ -173,11 +177,13 @@ public final class MissionTrajectoryRenderer {
       Vector3D tip,
       Vector3D reference,
       Vector3D seat,
-      RenderContext renderContext) {
+      RenderContext renderContext,
+      AbsoluteDate now) {
     if (trail == null || trail.size() == 0) return;
 
     if (trail != boundTrail) {
       bindColors(trail);
+      groundedTrail = new TrailGroundCorrection(trail);
       boundTrail = trail;
     }
 
@@ -198,9 +204,15 @@ public final class MissionTrajectoryRenderer {
     // relative to its focused primary passes the primary here (SEL-1 / L2).
     Vector3D origin = reference != null ? reference : tipPos;
 
+    GroundCorrection correction =
+        groundedTrail.isEmpty() ? null : GroundCorrection.at(now).orElse(null);
     int count = 0;
     for (int i = 0; i <= last; i++) {
-      putPoint(points, count++, trail.positionAt(i, renderBody).subtract(origin), renderContext);
+      Vector3D vertex = trail.positionAt(i, renderBody);
+      if (correction != null && groundedTrail.isNearGround(i)) {
+        vertex = vertex.add(groundedTrail.displacementAt(i, correction));
+      }
+      putPoint(points, count++, vertex.subtract(origin), renderContext);
     }
     if (tip != null) {
       // The tip sits one seat off the object's drawn position (L6): the mesh base is drawn there

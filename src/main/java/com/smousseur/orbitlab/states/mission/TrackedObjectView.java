@@ -18,6 +18,7 @@ import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemerisPoint
 import com.smousseur.orbitlab.simulation.mission.ephemeris.TrajectoryPolyline;
 import java.util.concurrent.CompletableFuture;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
+import org.orekit.time.AbsoluteDate;
 
 /**
  * One drawn object of a mission: a spacecraft model ({@link LodView} + {@link SpacecraftPresenter})
@@ -160,6 +161,16 @@ final class TrackedObjectView {
   }
 
   /**
+   * How far this object's current mesh reaches below its axis once lying on the ground — the lift
+   * that rests it on the surface when landed. Zero until the mesh has loaded.
+   *
+   * @return the ground clearance, in metres
+   */
+  double groundClearanceMeters() {
+    return view.getModel3dView().groundClearanceMeters();
+  }
+
+  /**
    * Moves this object's anchor under {@code parent}, if it is not already there. Used to promote
    * the followed debris to the near-bodies node so the floating origin cancels its position
    * exactly, and to hang every other debris back under the primary (SEL-1 / L2, approach A). {@code
@@ -200,6 +211,7 @@ final class TrackedObjectView {
    * @param cam the active camera
    * @param tpf frame time in seconds
    * @param view the current focus
+   * @param now the current simulation date, for the ribbon's ground correction
    */
   void updateFromPoint(
       MissionEphemerisPoint point,
@@ -210,7 +222,8 @@ final class TrackedObjectView {
       int upTo,
       Camera cam,
       float tpf,
-      FocusView view) {
+      FocusView view,
+      AbsoluteDate now) {
     SolarSystemBody renderBody = MissionRenderer.renderBodyOf(point, view);
     RenderContext ctx = RenderContext.planet(renderBody);
     Vector3D position = MissionRenderer.renderPositionOf(point, renderBody);
@@ -249,7 +262,7 @@ final class TrackedObjectView {
       // debris have no reference and key on their own position, as before.
       Vector3D trailReference = referencePosition == null ? position : referencePosition;
       Vector3D trailTip = trailTipFrozen ? null : position;
-      trajectoryRenderer.update(trail, upTo, trailTip, trailReference, seat, ctx);
+      trajectoryRenderer.update(trail, upTo, trailTip, trailReference, seat, ctx, now);
     } else {
       trajectoryRenderer.setVisible(false);
     }

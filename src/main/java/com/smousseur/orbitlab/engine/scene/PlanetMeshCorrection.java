@@ -195,7 +195,10 @@ public final class PlanetMeshCorrection {
    * <p>The residual and chirality are carried along even though the rotation does not use them: a
    * reader has to be able to tell how much the two directions can be trusted (Mercury's mesh is
    * irregular enough to measure 0.87°, where every other sphere sits at 0.00°), and the startup
-   * guard compares against them.
+   * guard compares the chirality's sign against the measured one — a mirrored map keeps its pole
+   * and prime meridian, so nothing else would catch it. The residual is not compared: the generated
+   * Earth globe measures 0.12° against the asset's 0.00°, its rings sitting at geodetic latitudes
+   * the probe's spherical latitude does not model.
    */
   private static final Map<SolarSystemBody, PlanetMeshCalibration> CALIBRATIONS =
       new EnumMap<>(

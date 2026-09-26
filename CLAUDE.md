@@ -27,6 +27,9 @@ The application visualizes the solar system, computes spacecraft orbits, and sim
   *Layering rules*).
 - **Enumerate the blast radius.** After a change, say what adjacent behavior it might have
   broken, so the visual/runtime re-check is targeted rather than a surprise.
+- **Multi-agent only on request.** Implement a plan directly in the session. Subagents,
+  parallel agents or subagent-driven execution (one implementer per task plus reviewers)
+  are used only when the user explicitly asks for them, for that session.
 
 ---
 

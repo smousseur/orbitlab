@@ -43,6 +43,7 @@ class MeshGuardTest {
 
     assertEquals(90.0, divergence.frameDeviationDeg(), 0.1);
     assertFalse(divergence.textureChanged());
+    assertFalse(divergence.mirrored());
   }
 
   /**
@@ -59,6 +60,65 @@ class MeshGuardTest {
 
     assertTrue(divergence.textureChanged());
     assertEquals(0.0, divergence.frameDeviationDeg(), 0.1);
+    assertFalse(divergence.mirrored());
+  }
+
+  /**
+   * A mirrored map keeps its pole and its prime meridian: nothing but the chirality's sign can tell
+   * it from the committed one.
+   */
+  @Test
+  void reportsAMirroredMapEvenWhenPoleAndMeridianStayPut() {
+    PlanetMeshCalibration committed = committed();
+    MeshFrame mirrored =
+        new MeshFrame(
+            committed.measured().pole(),
+            committed.measured().primeMeridian(),
+            committed.measured().equirectangularResidualDeg(),
+            -committed.measured().azimuthDegreesPerU());
+
+    MeshDivergence divergence =
+        MeshGuard.check(BODY, mirrored, committed.textureWidth(), committed.textureHeight())
+            .orElseThrow();
+
+    assertTrue(divergence.mirrored());
+    assertEquals(0.0, divergence.frameDeviationDeg(), 0.1);
+    assertFalse(divergence.textureChanged());
+  }
+
+  @Test
+  void treatsAnUnmeasurableChiralityAsADivergence() {
+    PlanetMeshCalibration committed = committed();
+    MeshFrame unmeasured =
+        new MeshFrame(
+            committed.measured().pole(),
+            committed.measured().primeMeridian(),
+            committed.measured().equirectangularResidualDeg(),
+            Float.NaN);
+
+    assertTrue(
+        MeshGuard.check(BODY, unmeasured, committed.textureWidth(), committed.textureHeight())
+            .orElseThrow()
+            .mirrored());
+  }
+
+  /**
+   * The generated Earth globe reads 0.12° where the asset read 0.00°: the residual alone is not a
+   * divergence.
+   */
+  @Test
+  void aDifferentResidualAloneIsNoDivergence() {
+    PlanetMeshCalibration committed = committed();
+    MeshFrame rounder =
+        new MeshFrame(
+            committed.measured().pole(),
+            committed.measured().primeMeridian(),
+            committed.measured().equirectangularResidualDeg() + 0.5f,
+            committed.measured().azimuthDegreesPerU());
+
+    assertTrue(
+        MeshGuard.check(BODY, rounder, committed.textureWidth(), committed.textureHeight())
+            .isEmpty());
   }
 
   /**

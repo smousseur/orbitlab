@@ -1,5 +1,8 @@
 package com.smousseur.orbitlab.engine.scene.body.lod;
 
+import com.jme3.bounding.BoundingBox;
+import com.jme3.bounding.BoundingSphere;
+import com.jme3.bounding.BoundingVolume;
 import com.jme3.material.Material;
 import com.jme3.math.Vector3f;
 import com.jme3.scene.Geometry;
@@ -28,6 +31,7 @@ public class Model3dView {
   private final Model3dAttacher model3dAttacher;
   private ShellSpin shellSpin;
   private List<Geometry> ringGeometries = List.of();
+  private volatile float groundClearanceUnits;
 
   /**
    * Creates a new 3D view for a body and attaches a model bucket node to the given anchor.
@@ -107,7 +111,40 @@ public class Model3dView {
    */
   public void onModelLoaded(Spatial model3d) {
     logger.info("Loaded model for {}", config.displayName());
+    groundClearanceUnits = groundClearanceUnits(model3d);
     model3dAttacher.attach(modelBucket, model3d);
+  }
+
+  /**
+   * How far the current model reaches below its axis once lying on the ground, in metres — the lift
+   * that rests a landed piece on the surface instead of half-burying it. Zero until a model has
+   * loaded; follows a mesh swap.
+   *
+   * @return the ground clearance, in metres
+   */
+  public double groundClearanceMeters() {
+    return groundClearanceUnits * RenderContext.PLANET_METERS_PER_UNIT;
+  }
+
+  /**
+   * The extent of a loaded model on its own {@code +Z}, scale included: the side {@code
+   * SpacecraftPresenter} turns to the ground when the roll reference is the local vertical (its
+   * forward correction maps model {@code +Y} to the nose and model {@code +Z} to down). Safe on the
+   * loading thread: the model is detached.
+   *
+   * @param model the loaded model, not yet attached
+   * @return the clearance, in render units
+   */
+  static float groundClearanceUnits(Spatial model) {
+    model.updateGeometricState();
+    BoundingVolume bound = model.getWorldBound();
+    if (bound instanceof BoundingBox box) {
+      return box.getCenter().z + box.getZExtent();
+    }
+    if (bound instanceof BoundingSphere sphere) {
+      return sphere.getCenter().z + sphere.getRadius();
+    }
+    return 0f;
   }
 
   /**

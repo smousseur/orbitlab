@@ -14,6 +14,7 @@ import com.smousseur.orbitlab.core.OrbitlabException;
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.engine.AssetFactory;
 import com.smousseur.orbitlab.engine.TextureDiagnostics;
+import com.smousseur.orbitlab.engine.scene.GlobeSubstitution;
 import com.smousseur.orbitlab.engine.scene.MeshDivergence;
 import com.smousseur.orbitlab.engine.scene.MeshGuard;
 import com.smousseur.orbitlab.engine.scene.PlanetColors;
@@ -173,9 +174,11 @@ public final class PlanetPoseAppState extends BaseAppState {
               model3dView::loadModel, AssetFactory.get().assetLoadingExecutor())
           .thenApply(
               spatial -> {
-                // Before re-materialisation, on the asset as authored: this asks whether the file
-                // still carries what PlanetMeshCorrection was calibrated against, which is a
-                // question about the asset, not about how it ends up shaded.
+                GlobeSubstitution.apply(body, spatial);
+                // Before re-materialisation, on the globe about to be drawn — for the Earth the
+                // generated mesh that has just replaced the asset's, for every other body the asset
+                // as authored: this asks whether its geometry still carries what
+                // PlanetMeshCorrection was calibrated against, not how it ends up shaded.
                 MeshGuard.verify(body, spatial).ifPresent(PlanetPoseAppState::warnDivergence);
                 isolateAtmosphereShell(body, model3dView, spatial);
                 isolateRing(body, model3dView, spatial);
@@ -267,11 +270,12 @@ public final class PlanetPoseAppState extends BaseAppState {
    */
   private static void warnDivergence(MeshDivergence divergence) {
     logger.warn(
-        "Mesh asset for {} diverges from its committed calibration: frame moved {}{}."
+        "Mesh asset for {} diverges from its committed calibration: frame moved {}{}{}."
             + " Re-run './gradlew meshProbe' and update PlanetMeshCorrection.",
         divergence.body().displayName(),
         String.format(Locale.ROOT, "%.1f deg", divergence.frameDeviationDeg()),
-        divergence.textureChanged() ? ", and the base colour texture changed size" : "");
+        divergence.textureChanged() ? ", and the base colour texture changed size" : "",
+        divergence.mirrored() ? ", and its texture now runs mirrored round the pole" : "");
   }
 
   private void onSelectPlanet(SolarSystemBody body) {

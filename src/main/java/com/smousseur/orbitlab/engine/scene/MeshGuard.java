@@ -79,11 +79,15 @@ public final class MeshGuard {
             angleBetweenDeg(committed.measured().primeMeridian(), measured.primeMeridian()));
     boolean textureChanged =
         textureWidth != committed.textureWidth() || textureHeight != committed.textureHeight();
+    // NaN compares unequal to every sign, so a chirality the probe could not measure counts too.
+    boolean mirrored =
+        Math.signum(measured.azimuthDegreesPerU())
+            != Math.signum(committed.measured().azimuthDegreesPerU());
 
-    if (deviation <= MAX_FRAME_DEVIATION_DEG && !textureChanged) {
+    if (deviation <= MAX_FRAME_DEVIATION_DEG && !textureChanged && !mirrored) {
       return Optional.empty();
     }
-    return Optional.of(new MeshDivergence(body, deviation, textureChanged));
+    return Optional.of(new MeshDivergence(body, deviation, textureChanged, mirrored));
   }
 
   /**
