@@ -1,5 +1,6 @@
 package com.smousseur.orbitlab.simulation.mission.bench;
 
+import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.flight.AtmosphereModel;
 import com.smousseur.orbitlab.simulation.flight.DragContext;
@@ -22,6 +23,7 @@ import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemeris;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemerisGenerator;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemerisPoint;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.ReentryFall;
+import com.smousseur.orbitlab.simulation.mission.ephemeris.TrajectoryPolyline;
 import com.smousseur.orbitlab.simulation.mission.operation.MissionComposer;
 import com.smousseur.orbitlab.simulation.mission.operation.MissionFactory;
 import com.smousseur.orbitlab.simulation.mission.operation.MissionSpec;
@@ -38,6 +40,7 @@ import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Launchers;
 import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Payloads;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.LauncherModel;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.PayloadModel;
+import com.smousseur.orbitlab.simulation.mission.vehicle.model.stage.StageRole;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -497,6 +500,179 @@ class Mis10DeorbitBaselineProbe {
             && first.mass() == second.mass(),
         first.time(),
         first.position());
+  }
+
+  /**
+   * MIS-10 / L3 input: what the render layer meets when the payload lands, on the closure mission
+   * flown through the production {@code compute()} — the debris and the primary's silhouette phase
+   * at touchdown, the render-only stack seat that phase lifts the drawn payload by along the
+   * inertial velocity (and where that puts it relative to the ground), the impact velocity inertial
+   * and Earth-relative, how far the turning globe carries the ground point away from the frozen
+   * inertial last sample, and what the display trail keeps of the fall. The same mission without a
+   * reserve closes the run, for the non-regression claim that it never ends on the ground.
+   */
+  @Test
+  void touchdownGeometry() {
+    MissionSpec.EarthOrbit nominal =
+        (MissionSpec.EarthOrbit)
+            MissionFactory.specFromWizardValues(leoWizardValues(), MissionType.LEO);
+    Spacecraft payload = nominal.configuration().payload();
+    LauncherModel launcher = nominal.configuration().launcher();
+    double reserve =
+        PropellantBudget.disposalReserveFor(
+            LEO_PAYLOAD, payload.dryMass(), ORBIT_ALTITUDE, DeorbitTail.REENTRY_PERIGEE_ALTITUDE_M);
+    Spacecraft disposable =
+        LEO_PAYLOAD.toSpacecraft(payload.dryMass(), payload.propellantLoad(), reserve);
+    double[] resized =
+        PropellantBudget.loadsForLeo(launcher, disposable, ORBIT_ALTITUDE, nominal.latitude());
+    MissionSpec.EarthOrbit disposed =
+        withConfiguration(
+            nominal,
+            new LaunchConfiguration(
+                launcher, resized, disposable, nominal.configuration().payloadId()));
+
+    System.out.printf(
+        Locale.ROOT,
+        "%nMIS-10 / L3 — touchdown geometry, %s + %s (payload id %s), reserve %.1f kg%n",
+        launcher.id(),
+        LEO_PAYLOAD.id(),
+        nominal.configuration().payloadId(),
+        reserve);
+    MissionPlan plan = closureRun("with reserve", disposed);
+    MissionComputeResult result = plan.computation();
+    MissionEphemeris ephemeris = result.ephemeris();
+    List<MissionEphemerisPoint> points = ephemeris.allPoints();
+    MissionEphemerisPoint last = ephemeris.lastPoint();
+    AbsoluteDate launch = ephemeris.startDate();
+
+    System.out.printf(Locale.ROOT, "%n  debris (%d):%n", result.debris().size());
+    boolean upperShed = false;
+    for (DebrisTrack track : result.debris()) {
+      MissionEphemeris debris = track.ephemeris();
+      upperShed |= track.role() == StageRole.UPPER && !debris.startDate().isAfter(last.time());
+      System.out.printf(
+          Locale.ROOT,
+          "    %-7s #%d: from +%.0f s to +%.0f s, last altitude %.0f m, landed=%s%n",
+          track.role(),
+          track.exemplarIndex(),
+          debris.startDate().durationFrom(launch),
+          debris.endDate().durationFrom(launch),
+          debris.lastPoint().altitudeMeters(),
+          debris.lastPoint().altitudeMeters() < LANDED_ALTITUDE_METERS);
+    }
+    double axialSeat = launcher.heightMeters() - LEO_PAYLOAD.dimensionMeters();
+    System.out.printf(
+        Locale.ROOT,
+        "  primary: ends +%.0f s at altitude %.1f m ('%s'); UPPER shed before the end = %s, so the"
+            + " silhouette phase at touchdown is %s; its axial seat H − payload = %.1f − %.1f ="
+            + " %.1f m along the inertial velocity%n",
+        last.time().durationFrom(launch),
+        last.altitudeMeters(),
+        last.stageName(),
+        upperShed,
+        upperShed ? "PAYLOAD" : "not PAYLOAD",
+        launcher.heightMeters(),
+        LEO_PAYLOAD.dimensionMeters(),
+        axialSeat);
+
+    OneAxisEllipsoid ellipsoid = OrekitService.get().getEarthEllipsoid();
+    org.orekit.frames.Frame gcrf = OrekitService.get().gcrf();
+    org.orekit.frames.Frame itrf = ellipsoid.getBodyFrame();
+    System.out.printf(
+        Locale.ROOT,
+        "%n  %-8s %-10s %-10s %-11s %-10s %-11s %-11s %s%n",
+        "t−end",
+        "alt_raw_m",
+        "|v| m/s",
+        "v·r̂ m/s",
+        "|v_itrf|",
+        "v_itrf·up",
+        "dive°",
+        "seated: geodetic alt m / horizontal offset m");
+    for (double before : new double[] {120.0, 60.0, 30.0, 10.0, 5.0, 1.0, 0.0}) {
+      MissionEphemerisPoint point =
+          before == 0.0 ? last : ephemeris.interpolate(last.time().shiftedBy(-before));
+      Vector3D up = point.position().normalize();
+      Vector3D velocity = point.velocity();
+      PVCoordinates earthFixed =
+          gcrf.getTransformTo(itrf, point.time())
+              .transformPVCoordinates(new PVCoordinates(point.position(), velocity));
+      Vector3D upFixed = earthFixed.getPosition().normalize();
+      double dive =
+          FastMath.toDegrees(FastMath.asin(-Vector3D.dotProduct(velocity.normalize(), up)));
+      Vector3D seat = velocity.normalize().scalarMultiply(axialSeat);
+      Vector3D seated = point.position().add(seat);
+      GeodeticPoint rawGround =
+          ellipsoid.transform(
+              gcrf.getStaticTransformTo(itrf, point.time()).transformPosition(point.position()),
+              itrf,
+              point.time());
+      GeodeticPoint seatedGround =
+          ellipsoid.transform(
+              gcrf.getStaticTransformTo(itrf, point.time()).transformPosition(seated),
+              itrf,
+              point.time());
+      double horizontal = seat.subtract(up.scalarMultiply(Vector3D.dotProduct(seat, up))).getNorm();
+      System.out.printf(
+          Locale.ROOT,
+          "  -%-7.0f %-10.0f %-10.1f %-11.1f %-10.1f %-11.1f %-11.1f %.1f / %.1f%n",
+          before,
+          rawGround.getAltitude(),
+          velocity.getNorm(),
+          Vector3D.dotProduct(velocity, up),
+          earthFixed.getVelocity().getNorm(),
+          Vector3D.dotProduct(earthFixed.getVelocity(), upFixed),
+          dive,
+          seatedGround.getAltitude(),
+          horizontal);
+    }
+
+    Vector3D fixedImpact =
+        gcrf.getStaticTransformTo(itrf, last.time()).transformPosition(last.position());
+    StringBuilder drift =
+        new StringBuilder(
+            "\n  ground point carried by the turning Earth vs the frozen last sample:");
+    for (double after : new double[] {1.0, 5.0, 25.0, 60.0, 600.0, 3600.0}) {
+      AbsoluteDate date = last.time().shiftedBy(after);
+      Vector3D carried = itrf.getStaticTransformTo(gcrf, date).transformPosition(fixedImpact);
+      drift.append(
+          String.format(
+              Locale.ROOT,
+              " | +%.0f s: %.0f m",
+              after,
+              Vector3D.distance(carried, last.position())));
+    }
+    System.out.println(drift);
+
+    TrajectoryPolyline trail = ephemeris.displayTrail();
+    int fallStart = indexAfterLast(points, StageNames.DEORBIT_BURN);
+    AbsoluteDate fallFrom = points.get(fallStart).time();
+    int fallVertices = 0;
+    for (int index = 0; index < trail.size(); index++) {
+      if (!trail.timeAt(index).isBefore(fallFrom)) {
+        fallVertices++;
+      }
+    }
+    System.out.printf(
+        Locale.ROOT,
+        "%n  display trail: %d vertices for %d samples (MAX_POINTS %d); %d vertices on the %d-point"
+            + " fall; last vertex on the last sample = %s%n",
+        trail.size(),
+        points.size(),
+        TrajectoryPolyline.MAX_POINTS,
+        fallVertices,
+        points.size() - fallStart,
+        trail.timeAt(trail.size() - 1).equals(last.time())
+            && trail.positionAt(trail.size() - 1, SolarSystemBody.EARTH).equals(last.position()));
+
+    MissionPlan without = closureRun("without reserve", nominal);
+    MissionEphemerisPoint nominalLast = without.computation().ephemeris().lastPoint();
+    System.out.printf(
+        Locale.ROOT,
+        "%n  without reserve: ends '%s' at altitude %.0f m (landed threshold %.0f m)%n",
+        nominalLast.stageName(),
+        nominalLast.altitudeMeters(),
+        LANDED_ALTITUDE_METERS);
   }
 
   /**

@@ -84,17 +84,19 @@ public final class MissionRenderer {
   private static final double BOOSTER_LATERAL_SPREAD_METERS = 4.0;
 
   /**
-   * Below this altitude (m) a debris' last sample counts as an impact: it lands, its trajectory
-   * fades out and only the piece stays, pinned to the turning globe. Above it, the debris ends at
-   * the mission horizon in orbit and keeps its inertial trajectory.
+   * Below this altitude (m) the last sample of an object — a debris, or the primary once its
+   * payload has been deorbited — counts as an impact: it lands, its trajectory fades out and only
+   * the object stays, pinned to the turning globe. Above it, the object ends at the mission horizon
+   * in orbit and keeps its inertial trajectory.
    */
   private static final double LANDED_ALTITUDE_METERS = 1000.0;
 
   /**
-   * How long (simulation seconds) a landed debris' trajectory takes to fade out after touchdown.
-   * Measured in <em>simulation</em> time, not real time, so the fade is a pure function of the
-   * clock: rewinding past the impact un-fades it symmetrically, with no state to reverse. Sized so
-   * the fade reads over roughly a second of real time at the tens-of-× time warp a re-entry is
+   * How long (simulation seconds) a landed object's trajectory takes to fade out after touchdown —
+   * and, for the primary, how long before touchdown its stack seat takes to shrink onto its ground
+   * point. Measured in <em>simulation</em> time, not real time, so both are pure functions of the
+   * clock: rewinding past the impact un-fades them symmetrically, with no state to reverse. Sized
+   * so the fade reads over roughly a second of real time at the tens-of-× time warp a re-entry is
    * watched at; at extreme warp the whole fall is instant anyway.
    */
   private static final double TOUCHDOWN_FADE_SECONDS = 25.0;
@@ -384,16 +386,23 @@ public final class MissionRenderer {
    * debris does not exist before its separation, and reappears by itself when the clock is scrubbed
    * back, because visibility is a function of the date and not an event.
    *
-   * @param point the interpolated primary point, whose position also serves as the trail tip
-   * @param trail the primary's display polyline, the same instance on every frame
+   * <p>A primary whose trajectory ends on the ground — a deorbited payload — lands like a debris:
+   * the orchestrator hands over {@link #renderedPointOf}, co-rotated once landed; its ribbon fades
+   * out with a frozen tip ({@link #trailDisplay}); and its seat has shrunk to nothing by the
+   * touchdown ({@link #touchdownSeatFactor}). Every other mission is drawn as before.
+   *
+   * @param ephemeris the primary's display ephemeris — the very instance {@code point} was read
+   *     from, passed rather than re-read from the entry, which the computation thread may replace
+   *     between two reads
+   * @param point the primary's raw point now, {@link #renderedPointOf} the ephemeris
    * @param upTo index of the last trail vertex flown at the current instant
    * @param now the current simulation date, for the debris' own interpolation
    * @param cam the active camera
    * @param tpf frame time in seconds, used for orientation smoothing
    */
   public void updateFromEphemeris(
+      MissionEphemeris ephemeris,
       MissionEphemerisPoint point,
-      TrajectoryPolyline trail,
       int upTo,
       AbsoluteDate now,
       Camera cam,
@@ -403,9 +412,16 @@ public final class MissionRenderer {
     // stack seat, baked into the point rather than carried as a separate model offset (SEL-1 / L2).
     // The mesh, its ribbon, the debris reference and the floating origin all key on this one point,
     // so the near frame frames the drawn silhouette — down to a bare payload — instead of the empty
-    // centre of mass the seat lifts it off. The eclipse occluder stays on the raw propagated point.
-    MissionEphemerisPoint drawnPrimary = renderedPrimaryPoint(point, now);
-    primary.updateFromPoint(drawnPrimary, Vector3D.ZERO, null, null, trail, upTo, cam, tpf, focus);
+    // centre of mass the seat lifts it off. The eclipse occluder stays on the raw point, which is
+    // already co-rotated once landed, so a payload on the ground is shaded where it lies.
+    MissionEphemerisPoint drawnPrimary = renderedPrimaryPoint(ephemeris, point, now);
+    TrailDisplay trailDisplay =
+        trailDisplay(hasLanded(ephemeris, now), true, now, ephemeris.endDate());
+    primary.setInertialTrail(trailDisplay.visible());
+    primary.setTrailOpacity(trailDisplay.opacity());
+    primary.setTrailTipFrozen(trailDisplay.tipFrozen());
+    primary.updateFromPoint(
+        drawnPrimary, Vector3D.ZERO, null, null, ephemeris.displayTrail(), upTo, cam, tpf, focus);
     pushEclipseOccluder(point, focus);
     updatePrimarySilhouette(now);
     updateDebris(drawnPrimary, now, cam, tpf, focus);
@@ -449,16 +465,20 @@ public final class MissionRenderer {
    * com.smousseur.orbitlab.states.camera.FloatingOriginAppState} (to offset the near frame): both
    * add a bit-identical seat, so the anchor and the offset stay exact opposites and the silhouette
    * neither jitters nor drifts. The seat is zero in the {@code FULL} and {@code AFTER_BOOSTERS}
-   * phases, where the returned sample is {@code raw} itself, so early flight is untouched.
+   * phases, where the returned sample is {@code raw} itself, so early flight is untouched. On a
+   * trajectory that ends on the ground it shrinks to zero just before the touchdown ({@link
+   * #touchdownSeatFactor}), so a landed payload lies on its own ground point.
    *
-   * @param raw the propagated sample at {@code now}
+   * @param ephemeris the primary's display ephemeris {@code raw} was read from
+   * @param raw the primary's raw point at {@code now}, {@link #renderedPointOf} the ephemeris
    * @param now the current simulation date, for the silhouette phase
    * @return the seated sample the primary is drawn at, or {@code raw} when the seat is zero
    */
-  public MissionEphemerisPoint renderedPrimaryPoint(MissionEphemerisPoint raw, AbsoluteDate now) {
-    Vector3D seat =
-        StackSeat.offset(
-            raw.velocity(), raw.position(), primaryAxialSeat(silhouette.phaseAt(now)), 0.0, 1, 1);
+  public MissionEphemerisPoint renderedPrimaryPoint(
+      MissionEphemeris ephemeris, MissionEphemerisPoint raw, AbsoluteDate now) {
+    double axialSeat =
+        primaryAxialSeat(silhouette.phaseAt(now)) * touchdownSeatFactor(ephemeris, now);
+    Vector3D seat = StackSeat.offset(raw.velocity(), raw.position(), axialSeat, 0.0, 1, 1);
     if (seat.getNorm() == 0.0) {
       return raw;
     }
@@ -550,7 +570,7 @@ public final class MissionRenderer {
       MissionEphemerisPoint pt = ephemeris.displayPointAt(now);
       Vector3D seat = debrisSeat(track, pt);
       Vector3D upHint = debrisUpHint(track, pt);
-      boolean landed = !within && hasLanded(track);
+      boolean landed = hasLanded(ephemeris, now);
       // Once a landing piece has impacted, it rests on the ground and must ride the turning globe,
       // not hang at the frozen inertial pose of the impact instant, which the rotating Earth drifts
       // out from under. Position, heading, roll and seat all co-rotate rigidly with the drawn
@@ -573,17 +593,13 @@ public final class MissionRenderer {
       // relative to it.
       debrisView.reparent(
           followed ? context.sceneGraph().nearBodiesNode() : (Node) primary.view().spatial());
-      // A debris flies an inertial trajectory like any object: growing while it falls, then — once
-      // it has landed — frozen at full length and fading out over TOUCHDOWN_FADE_SECONDS, after
-      // which only the piece remains, pinned to the turning globe. An orbital debris never lands,
-      // so
-      // it keeps its trajectory. Gated by the "show debris" toggle, except that a debris the view
-      // is
-      // following shows its path regardless, as the focused object.
-      float trailOpacity = landed ? touchdownFade(now, ephemeris.endDate()) : 1f;
-      boolean showTrail = (debrisVisible || followed) && trailOpacity > 0f;
-      debrisView.setInertialTrail(showTrail);
-      debrisView.setTrailOpacity(trailOpacity);
+      // Gated by the "show debris" toggle, except that a debris the view is following shows its
+      // path regardless, as the focused object.
+      TrailDisplay trailDisplay =
+          trailDisplay(landed, debrisVisible || followed, now, ephemeris.endDate());
+      debrisView.setInertialTrail(trailDisplay.visible());
+      debrisView.setTrailOpacity(trailDisplay.opacity());
+      debrisView.setTrailTipFrozen(trailDisplay.tipFrozen());
       debrisView.setSecondaryDisplay(debrisVisible);
       debrisView.updateFromPoint(
           pt, seat, upHint, followed ? null : primaryPoint, trail, upTo, cam, tpf, focus);
@@ -605,9 +621,76 @@ public final class MissionRenderer {
         pt.velocity(), pt.position(), track.exemplarIndex(), boosterCount);
   }
 
-  /** Whether a debris reaches the ground — its last sample is at (near) zero altitude. */
-  private static boolean hasLanded(DebrisTrack track) {
-    return track.ephemeris().lastPoint().altitudeMeters() < LANDED_ALTITUDE_METERS;
+  /**
+   * Whether an object lies on the ground at {@code now}: its trajectory ends on the ground and the
+   * clock is past that end. The one test behind every landed rule — the co-rotated point, the trail
+   * fade and the frozen trail tip — for the primary and each debris alike. A pure function of the
+   * date, so scrubbing back before the touchdown lifts the object off the ground by itself.
+   *
+   * @param ephemeris the object's display ephemeris
+   * @param now the current simulation date
+   * @return {@code true} once a trajectory ending on the ground is over
+   */
+  static boolean hasLanded(MissionEphemeris ephemeris, AbsoluteDate now) {
+    return now.compareTo(ephemeris.endDate()) > 0 && endsOnTheGround(ephemeris);
+  }
+
+  /** Whether a trajectory reaches the ground — its last sample is at (near) zero altitude. */
+  private static boolean endsOnTheGround(MissionEphemeris ephemeris) {
+    return ephemeris.lastPoint().altitudeMeters() < LANDED_ALTITUDE_METERS;
+  }
+
+  /**
+   * The fraction of the primary's render-only stack seat still drawn at {@code now}: whole, then
+   * shrinking linearly to zero over the {@link #TOUCHDOWN_FADE_SECONDS} before a touchdown, so the
+   * object reaches the ground on its own ground point.
+   *
+   * <p>The seat lifts the drawn silhouette along the inertial velocity, which near the ground is
+   * almost all Earth rotation: left whole, it would lay a bare payload tens of metres east of where
+   * it fell and part of the way underground. Shrinking it over the fade window, rather than
+   * dropping it at the touchdown, keeps the drawn object from jumping while the camera follows it;
+   * the ribbon's hook to the seated tip shrinks with it. One duration governs the whole touchdown,
+   * seat before and trail fade after.
+   *
+   * @param ephemeris the object's display ephemeris
+   * @param now the current simulation date
+   * @return 1 for a trajectory that never reaches the ground, else the remaining seat fraction
+   */
+  static double touchdownSeatFactor(MissionEphemeris ephemeris, AbsoluteDate now) {
+    if (!endsOnTheGround(ephemeris)) {
+      return 1.0;
+    }
+    double fraction = ephemeris.endDate().durationFrom(now) / TOUCHDOWN_FADE_SECONDS;
+    return Math.min(1.0, Math.max(0.0, fraction));
+  }
+
+  /**
+   * How an object's trajectory ribbon is drawn this frame.
+   *
+   * @param visible whether the ribbon is drawn at all
+   * @param opacity the ribbon's alpha multiplier
+   * @param tipFrozen whether the ribbon stops on its last sample instead of reaching the object
+   */
+  record TrailDisplay(boolean visible, float opacity, boolean tipFrozen) {}
+
+  /**
+   * The ribbon of an object, in flight or landed. In flight it is opaque and reaches the object.
+   * Once landed it fades out over {@link #TOUCHDOWN_FADE_SECONDS} and its tip freezes on the last
+   * sample: the ribbon is inertial while the landed object rides the turning globe, so a tip still
+   * reaching the object would stretch a segment across the ground as the Earth turns — the length
+   * the globe carries a ground point in the fade window, some ten kilometres near the equator.
+   *
+   * @param landed whether the object lies on the ground, from {@link #hasLanded}
+   * @param shown whether the object shows its ribbon at all — always for the primary; for a debris,
+   *     the "show debris" toggle or the fact that it is the followed object
+   * @param now the current simulation date
+   * @param touchdown the date the object reached the ground, its ephemeris' end
+   * @return the ribbon's display this frame
+   */
+  static TrailDisplay trailDisplay(
+      boolean landed, boolean shown, AbsoluteDate now, AbsoluteDate touchdown) {
+    float opacity = landed ? touchdownFade(now, touchdown) : 1f;
+    return new TrailDisplay(shown && opacity > 0f, opacity, landed);
   }
 
   /**
@@ -621,24 +704,26 @@ public final class MissionRenderer {
   }
 
   /**
-   * The point a debris is <em>drawn</em> at now: its interpolated sample, carried into the globe's
-   * current drawn rotation once it has impacted (the same {@link #landedPose} turn), so a landed
-   * piece rides the turning Earth. This is what both the render here and the camera's {@code
-   * FloatingOriginAppState} read for a followed debris, so the frame is centred on exactly where
-   * the debris is drawn — it neither jitters nor drifts as the Earth turns (SEL-1 / L2, approach
-   * A).
+   * The sample an object — the primary or a debris — is <em>drawn</em> from now: its interpolated
+   * sample, carried into the globe's current drawn rotation once it has landed (the same {@link
+   * #landedPose} turn), so a landed object rides the turning Earth instead of hanging at the frozen
+   * inertial point of its impact. Before landing it is {@link MissionEphemeris#displayPointAt}
+   * itself, so nothing that stays in flight or in orbit is affected.
    *
-   * @param ephemeris the debris' display ephemeris
+   * <p>It is the one raw point every reader of an object's position starts from — the renderer
+   * (model, ribbon, debris reference and the primary's eclipse occluder), the camera's {@code
+   * FloatingOriginAppState}, and the {@code CameraTransitionAppState} fly-in — so the frame is
+   * centred on exactly where the object is drawn and the fly-in settles there: it neither jitters
+   * nor drifts as the Earth turns, and a fly-in to a landed object does not hop on its last frame.
+   *
+   * @param ephemeris the object's display ephemeris
    * @param now the current simulation date
    * @return the sample to draw, co-rotated once landed
    */
   public static MissionEphemerisPoint renderedPointOf(
       MissionEphemeris ephemeris, AbsoluteDate now) {
     MissionEphemerisPoint pt = ephemeris.displayPointAt(now);
-    boolean landed =
-        now.compareTo(ephemeris.endDate()) > 0
-            && ephemeris.lastPoint().altitudeMeters() < LANDED_ALTITUDE_METERS;
-    if (!landed) {
+    if (!hasLanded(ephemeris, now)) {
       return pt;
     }
     Optional<Quaternion> atImpact = PlanetDrawnRotation.at(SolarSystemBody.EARTH, pt.time());

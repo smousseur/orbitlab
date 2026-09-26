@@ -418,13 +418,15 @@ public final class CameraTransitionAppState extends BaseAppState {
     // the parent captured at click time instead left the two disagreeing by the whole Earth-Moon
     // distance for a spacecraft that had crossed into the lunar sphere of influence since
     AbsoluteDate now = context.clock().now();
-    MissionEphemerisPoint point = ephemeris.displayPointAt(now);
-    // Aim at the primary's seated point, where the floating origin will pin it (SEL-1 / L2), so the
-    // fly-in settles on the drawn silhouette rather than hopping the stack seat on the final frame.
+    // Aim where the floating origin will pin the object: a landed object co-rotated with the globe,
+    // the primary lifted onto its seated point (SEL-1 / L2). Otherwise the fly-in settles on a
+    // point the object has left and hops on its final frame — by the stack seat for the primary,
+    // by however far the Earth has turned since the impact for a landed object.
+    MissionEphemerisPoint point = MissionRenderer.renderedPointOf(ephemeris, now);
     if (target.object() instanceof FollowedObject.Primary) {
       MissionRenderer renderer = context.getMissionRenderer(target.object().mission());
       if (renderer != null) {
-        point = renderer.renderedPrimaryPoint(point, now);
+        point = renderer.renderedPrimaryPoint(ephemeris, point, now);
       }
     }
     SolarSystemBody arcBody = point.arc().body();

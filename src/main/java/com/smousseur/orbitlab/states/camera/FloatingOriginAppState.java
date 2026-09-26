@@ -155,7 +155,7 @@ public class FloatingOriginAppState extends BaseAppState {
    *
    * <p>So this state no longer consumes the graph: it derives the offset from the same ephemeris
    * the orchestrator will read, and runs <em>before</em> it (see the attach order in {@code
-   * OrbitLabApplication}). Both go through {@link MissionEphemeris#displayPointAt} at the same date
+   * OrbitLabApplication}). Both go through {@link MissionRenderer#renderedPointOf} at the same date
    * and {@link JmeVectorAdapter#toJmeBodyRelativePosition} with the same context, so the offset and
    * the anchor stay bit-for-bit opposite and cancel exactly.
    *
@@ -196,20 +196,19 @@ public class FloatingOriginAppState extends BaseAppState {
     }
     AbsoluteDate now = context.clock().now();
     // Both kinds of object are centred on where they are *drawn*, so the frame offset cancels that
-    // position bit-for-bit (SEL-1 / L2). A followed debris is carried into the globe's current
-    // drawn
-    // rotation once it has landed, exactly as MissionRenderer draws it, so it neither jitters nor
-    // drifts as the Earth turns (approach A).
+    // position bit-for-bit (SEL-1 / L2). An object that has landed — a debris, or a deorbited
+    // payload — is carried into the globe's current drawn rotation, exactly as MissionRenderer
+    // draws it, so it neither jitters nor drifts as the Earth turns (approach A).
+    MissionEphemerisPoint raw = MissionRenderer.renderedPointOf(ephemeris, now);
     if (object instanceof FollowedObject.Debris) {
-      return MissionRenderer.renderedPointOf(ephemeris, now);
+      return raw;
     }
-    // The primary is centred on its seated point too — the propagated sample lifted by the
-    // render-only stack seat the renderer bakes into the very anchor it draws — so once the stack
-    // has shed down to a bare payload the near frame frames the payload, not the empty centre of
-    // mass the seat lifts it off. Falls back to the raw sample if the renderer is not registered.
+    // The primary is centred on its seated point too — the sample lifted by the render-only stack
+    // seat the renderer bakes into the very anchor it draws — so once the stack has shed down to a
+    // bare payload the near frame frames the payload, not the empty centre of mass the seat lifts
+    // it off. Falls back to the raw sample if the renderer is not registered.
     MissionRenderer renderer = context.getMissionRenderer(object.mission());
-    MissionEphemerisPoint raw = ephemeris.displayPointAt(now);
-    return renderer == null ? raw : renderer.renderedPrimaryPoint(raw, now);
+    return renderer == null ? raw : renderer.renderedPrimaryPoint(ephemeris, raw, now);
   }
 
   @Override

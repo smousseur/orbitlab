@@ -45,11 +45,18 @@ final class TrackedObjectView {
   private boolean secondaryDisplay = true;
 
   /**
-   * Whether this object draws its inertial trajectory ribbon. {@code true} for the primary (the
-   * mission trajectory); for a debris it is decided per frame — on while it flies, faded out after
-   * touchdown, off when hidden.
+   * Whether this object draws its inertial trajectory ribbon, decided per frame by {@link
+   * MissionRenderer}: on while the object flies or orbits, faded out after a touchdown, and for a
+   * debris also off when it is hidden.
    */
   private boolean inertialTrail = true;
+
+  /**
+   * Whether the ribbon stops on its last sample instead of reaching this object's drawn position —
+   * set once the object has landed, when the ribbon stays inertial while the object rides the
+   * turning globe.
+   */
+  private boolean trailTipFrozen;
 
   private TrackedObjectView(
       SpacecraftPresenter presenter, LodView view, MissionTrajectoryRenderer trajectoryRenderer) {
@@ -241,7 +248,8 @@ final class TrackedObjectView {
       // followed
       // debris have no reference and key on their own position, as before.
       Vector3D trailReference = referencePosition == null ? position : referencePosition;
-      trajectoryRenderer.update(trail, upTo, position, trailReference, seat, ctx);
+      Vector3D trailTip = trailTipFrozen ? null : position;
+      trajectoryRenderer.update(trail, upTo, trailTip, trailReference, seat, ctx);
     } else {
       trajectoryRenderer.setVisible(false);
     }
@@ -258,8 +266,8 @@ final class TrackedObjectView {
   }
 
   /**
-   * Sets whether this object draws its inertial trajectory ribbon. The primary keeps the default
-   * {@code true}; a debris drives it per frame — on in flight, off once it has landed and faded.
+   * Sets whether this object draws its inertial trajectory ribbon — on in flight, off once it has
+   * landed and faded, and for a debris off when it is hidden.
    *
    * @param on whether the inertial ribbon is drawn
    */
@@ -268,7 +276,18 @@ final class TrackedObjectView {
   }
 
   /**
-   * Scales the trajectory ribbon's alpha, for the debris touchdown fade.
+   * Sets whether the ribbon stops on its last sample rather than reaching this object. Frozen once
+   * the object has landed: the ribbon is inertial and the object rides the turning globe, so a tip
+   * still reaching it would stretch a segment across the ground as the Earth turns.
+   *
+   * @param frozen whether the ribbon ends on its last sample
+   */
+  void setTrailTipFrozen(boolean frozen) {
+    this.trailTipFrozen = frozen;
+  }
+
+  /**
+   * Scales the trajectory ribbon's alpha, for the touchdown fade of a landed object.
    *
    * @param opacity the alpha multiplier, 1 opaque and 0 invisible
    */

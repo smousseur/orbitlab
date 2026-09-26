@@ -121,12 +121,14 @@ public final class MissionOrchestratorAppState extends BaseAppState {
         continue;
       }
 
+      // Past its end a mission rests on its last sample; one that ended on the ground rests there
+      // co-rotated with the globe, not at the frozen inertial point the Earth turns out from under.
       boolean within = now.compareTo(eph.endDate()) <= 0;
-      MissionEphemerisPoint pt = eph.displayPointAt(now);
+      MissionEphemerisPoint pt = MissionRenderer.renderedPointOf(eph, now);
       int upTo = within ? trail.indexUpTo(now) : trail.size() - 1;
 
       renderer.setVisible(true);
-      renderer.updateFromEphemeris(pt, trail, upTo, now, cam, tpf);
+      renderer.updateFromEphemeris(eph, pt, upTo, now, cam, tpf);
     }
 
     cleanupRemovedMissions(activeMissionIds);
