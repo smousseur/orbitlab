@@ -10,6 +10,7 @@ import com.smousseur.orbitlab.simulation.mission.MissionType;
 import com.smousseur.orbitlab.simulation.mission.OptimizationType;
 import com.smousseur.orbitlab.simulation.mission.context.MissionEntry;
 import com.smousseur.orbitlab.simulation.mission.operation.MissionFactory;
+import com.smousseur.orbitlab.simulation.mission.operation.MissionSpec;
 import com.smousseur.orbitlab.simulation.mission.scenario.model.ScenarioMission;
 import com.smousseur.orbitlab.ui.mission.wizard.WizardPrefill;
 import java.util.HashMap;
@@ -227,5 +228,68 @@ class ScenarioMapperTest {
     assertEquals("LUNAR_PROBE", back.get("PAYLOAD_TYPE"));
     // The parking altitude is the mission's own constant; the file names no number for it.
     assertFalse(back.containsKey("GTO_PARKING_ALT"));
+  }
+
+  @Test
+  void deorbitFlag_survivesTheRoundTrip() {
+    Map<String, Object> values = leoValues();
+    values.put("DEORBIT", Boolean.TRUE);
+    MissionEntry entry = entryFor(values, MissionType.LEO);
+
+    ScenarioMission.EarthOrbit dto =
+        (ScenarioMission.EarthOrbit)
+            ScenarioMapper.toScenarioMission(entry, prefilled(entry), null);
+    assertEquals(Boolean.TRUE, dto.deorbit());
+
+    Map<String, Object> back = ScenarioMapper.toMissionValues(dto);
+    assertEquals(Boolean.TRUE, back.get("DEORBIT"));
+    assertEquals(prefilled(entry), roundTrip(entry));
+
+    MissionSpec.EarthOrbit original = (MissionSpec.EarthOrbit) entry.spec().orElseThrow();
+    MissionSpec.EarthOrbit reopened =
+        (MissionSpec.EarthOrbit) MissionFactory.specFromWizardValues(back, MissionType.LEO);
+    assertEquals(
+        original.configuration().payload().disposalReserve(),
+        reopened.configuration().payload().disposalReserve(),
+        1e-9,
+        "the reserve is sized the same after the round trip");
+  }
+
+  @Test
+  void noDeorbit_leavesTheFlagAbsent() {
+    MissionEntry entry = entryFor(leoValues(), MissionType.LEO);
+
+    ScenarioMission.EarthOrbit dto =
+        (ScenarioMission.EarthOrbit)
+            ScenarioMapper.toScenarioMission(entry, prefilled(entry), null);
+    assertNull(dto.deorbit());
+    assertFalse(ScenarioMapper.toMissionValues(dto).containsKey("DEORBIT"));
+  }
+
+  /**
+   * The flag is never written {@code false}: an explicit {@code false} reads the same as absent.
+   */
+  @Test
+  void deorbitFalseInValues_isNeverWritten() {
+    MissionEntry entry = entryFor(leoValues(), MissionType.LEO);
+    Map<String, Object> values = prefilled(entry);
+    values.put("DEORBIT", Boolean.FALSE);
+
+    ScenarioMission.EarthOrbit dto =
+        (ScenarioMission.EarthOrbit) ScenarioMapper.toScenarioMission(entry, values, null);
+    assertNull(dto.deorbit());
+    assertFalse(ScenarioMapper.toMissionValues(dto).containsKey("DEORBIT"));
+  }
+
+  /** The mapper's reader must accept the same whitespace {@code FormValues.flag} does. */
+  @Test
+  void deorbitGivenAsPaddedText_readsAsTrue() {
+    MissionEntry entry = entryFor(leoValues(), MissionType.LEO);
+    Map<String, Object> values = prefilled(entry);
+    values.put("DEORBIT", " true ");
+
+    ScenarioMission.EarthOrbit dto =
+        (ScenarioMission.EarthOrbit) ScenarioMapper.toScenarioMission(entry, values, null);
+    assertEquals(Boolean.TRUE, dto.deorbit());
   }
 }

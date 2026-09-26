@@ -8,7 +8,7 @@ import java.util.Objects;
  * <p>Each field is stored in the values map under {@link #key()}; {@link #cast(Object)} performs a
  * runtime check using {@link #type()} so consumers retrieve the value without explicit casts.
  *
- * @param <T> the runtime value type ({@link String} or {@link Double})
+ * @param <T> the runtime value type ({@link String}, {@link Double} or {@link Boolean})
  */
 public final class FormField<T> {
 
@@ -128,4 +128,18 @@ public final class FormField<T> {
    */
   public static final FormField<Double> MISSION_HORIZON_DAYS =
       new FormField<>("MISSION_HORIZON_DAYS", Double.class);
+
+  /**
+   * Whether the payload is deorbited at end of mission, published as {@link Boolean#TRUE} only when
+   * the toggle is on. The wizard offers the toggle only on a profile whose {@link
+   * MissionProfile#offersDeorbit()} answers true — not simply on every {@code MissionType.LEO}
+   * profile, since MEO shares that mission type and offers no toggle. {@code MissionFactory} reads
+   * the key only in the {@code MissionType.LEO} branch of its switch; a GEO or lunar mission
+   * ignores it regardless of what the map carries. Its <b>absence</b> is meaningful, as {@link
+   * #MISSION_HORIZON_DAYS}'s is: it means no deorbit, so an old scenario file and a mission whose
+   * toggle was never checked have the same shape. {@code MissionFactory} turns it into a disposal
+   * reserve carried by the payload and sized at the target perigee; no {@code MissionSpec}
+   * component carries the intent separately — the reserve itself is what the spec carries.
+   */
+  public static final FormField<Boolean> DEORBIT = new FormField<>("DEORBIT", Boolean.class);
 }

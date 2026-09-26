@@ -189,7 +189,9 @@ public class StepParameters implements StepValues {
   /**
    * The card the user picked. Held here rather than in {@code MissionContext}: the profile is a
    * wizard concept, and the mission context belongs to the simulation layer. The mission
-   * <em>type</em> keeps going through the context, for the launcher step that only needs that much.
+   * <em>type</em> still goes through the context — it is what narrows the launcher step's payload
+   * list and what {@code MissionFactory} composes from — but the launcher step also receives the
+   * profile itself directly, for its deorbit toggle.
    */
   private MissionProfile selectedProfile = MissionProfile.LEO;
 

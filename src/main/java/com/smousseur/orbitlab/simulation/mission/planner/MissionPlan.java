@@ -7,8 +7,7 @@ import java.util.Objects;
  * Unified outcome of a {@link MissionPlanner}, whatever optimization mode produced it.
  *
  * <p>{@link #computation()} is the common denominator every mode yields and the runtime consumes
- * (optimization results, ephemeris, performance report). {@link #sizing()} is present only when the
- * plan came from {@link MinimizedLoadPlanner}
+ * (optimization results, ephemeris, performance report).
  *
  * @param computation the mission computation (never {@code null})
  * @param sizing the propellant-sizing metadata, or {@code null} when the loads were fixed

@@ -16,9 +16,9 @@ import com.smousseur.orbitlab.simulation.mission.vehicle.model.AerodynamicProper
  *     #propellantLoad} and sized per-mission by {@code PropellantBudget.disposalReserveFor}. It is
  *     mass the launcher must lift, so it counts in {@link #getMass()}, but it is <b>not</b> usable
  *     propellant: it does not enter {@link #propellantLoad}, {@link #propellantCapacity} or {@link
- *     #hasUsablePropellant()}, so it never triggers the ascent trim. Spent by the payload's own
- *     engine at end of life (the burn itself belongs to MIS-10). 0 when the mission asks for no
- *     disposal, which is every current production mission.
+ *     #hasUsablePropellant()}, so it never triggers the ascent trim. {@code MissionFactory} sets it
+ *     when the wizard asks to deorbit the payload at end of mission, 0 otherwise. Spent by the
+ *     payload's own engine, flown by {@code DeorbitTail}.
  */
 public record Spacecraft(
     double dryMass,
@@ -85,6 +85,16 @@ public record Spacecraft(
    */
   public boolean hasUsablePropellant() {
     return propulsion != null && propellantLoad > 0;
+  }
+
+  /**
+   * Whether this payload carries an end-of-life disposal reserve. 0 means the mission asks for no
+   * disposal.
+   *
+   * @return {@code true} when {@link #disposalReserve} is positive
+   */
+  public boolean hasDisposalReserve() {
+    return disposalReserve > 0;
   }
 
   /**

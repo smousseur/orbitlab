@@ -3,8 +3,10 @@ package com.smousseur.orbitlab.simulation.mission.operation;
 import com.smousseur.orbitlab.core.OrbitlabException;
 import com.smousseur.orbitlab.simulation.Physics;
 import com.smousseur.orbitlab.simulation.mission.Mission;
+import com.smousseur.orbitlab.simulation.mission.MissionType;
 import com.smousseur.orbitlab.simulation.mission.OptimizationType;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropellantBudget;
+import com.smousseur.orbitlab.simulation.mission.vehicle.Spacecraft;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.stage.StageModel;
 import java.util.Locale;
 import java.util.Objects;
@@ -96,6 +98,7 @@ public final class MissionComposer {
     Objects.requireNonNull(spec, "spec");
     Objects.requireNonNull(mode, "mode");
     requireDisposalPropulsion(spec);
+    requireFlyableDisposal(spec);
     Mission mission =
         switch (spec) {
           case MissionSpec.EarthOrbit earthOrbit -> composeEarthOrbit(earthOrbit, mode);
@@ -128,8 +131,6 @@ public final class MissionComposer {
   private static void requireDisposalPropulsion(MissionSpec spec) {
     if (spec.type().deliversToStableOrbit()
         && spec.configuration().payload().propulsion() == null) {
-      String payload =
-          spec.configuration().hasPayloadId() ? spec.configuration().payloadId() : "the payload";
       throw new OrbitlabException(
           String.format(
               Locale.ROOT,
@@ -137,7 +138,86 @@ public final class MissionComposer {
                   + " of itself at end of life — but %s carries no propulsion. Fly a payload with an"
                   + " engine of its own.",
               spec.type().displayName(),
-              payload));
+              payloadLabel(spec)));
+    }
+  }
+
+  /**
+   * The payload name a refusal message names it by: the catalog id when the spec remembers one, a
+   * generic placeholder otherwise.
+   */
+  private static String payloadLabel(MissionSpec spec) {
+    return spec.configuration().hasPayloadId() ? spec.configuration().payloadId() : "the payload";
+  }
+
+  /**
+   * A payload that carries a disposal reserve must fly on a mission that can actually burn it, or
+   * the reserve rides to orbit as dead mass forever. Checked in order, each against a different
+   * owner's rule:
+   *
+   * <ol>
+   *   <li>only an {@link MissionSpec.EarthOrbit} composes into the direct chain that attaches
+   *       {@code DeorbitTail} — a GEO or lunar chain carries no tail at all;
+   *   <li>{@link #needsParkingOrbit(double)} routes the target through the parking chain ({@link
+   *       GEOMission}), whose chain carries no tail either, direct-chain spec or not;
+   *   <li>{@link PropellantBudget#isReentryRegime(double)} on the <b>apogee</b>: above it, that
+   *       orbit's end of life is a graveyard re-orbit, not a reentry, so the reserve was sized for
+   *       a burn this mission was never going to fly. (2) and (3) share today's 2 000 km number,
+   *       but they are the ascent-reach ceiling and the IADC regime boundary, two different owners'
+   *       rules that happen to coincide rather than one rule checked twice;
+   *   <li>{@link EarthOrbitMission#dropsUpperStage(Spacecraft)}: without a nominal load of its own,
+   *       the payload never gets the upper stage dropped and stays attached to it to the end, so
+   *       the tail would burn the upper stage's engine instead of the payload's own reserve.
+   * </ol>
+   *
+   * <p>A payload with no reserve carries none of this and goes through untouched.
+   */
+  private static void requireFlyableDisposal(MissionSpec spec) {
+    if (!spec.configuration().payload().hasDisposalReserve()) {
+      return;
+    }
+    if (!(spec instanceof MissionSpec.EarthOrbit earthOrbit)) {
+      throw new OrbitlabException(
+          String.format(
+              Locale.ROOT,
+              "The payload carries a disposal reserve, but only a %s mission can deorbit its"
+                  + " payload at end of mission; a %s mission cannot. Fly the payload on a %s"
+                  + " mission, or fly it without deorbiting it at end of mission.",
+              MissionType.LEO.displayName(),
+              spec.type().displayName(),
+              MissionType.LEO.displayName()));
+    }
+    double apogeeAltitude = earthOrbit.apogeeAltitude();
+    if (needsParkingOrbit(apogeeAltitude)) {
+      throw new OrbitlabException(
+          String.format(
+              Locale.ROOT,
+              "The payload carries a disposal reserve, but the target apogee %.0f km is reached"
+                  + " through a parking orbit, from which the payload is not deorbited. Fly a"
+                  + " lower target that the ascent reaches on its own, or fly the payload without"
+                  + " deorbiting it at end of mission.",
+              apogeeAltitude / 1000.0));
+    }
+    if (!PropellantBudget.isReentryRegime(apogeeAltitude)) {
+      throw new OrbitlabException(
+          String.format(
+              Locale.ROOT,
+              "The payload carries a disposal reserve, but the target apogee %.0f km is above the"
+                  + " reentry regime: that orbit's end of life is a graveyard re-orbit, not a"
+                  + " reentry. Fly a lower target within the reentry regime, or fly the payload"
+                  + " without deorbiting it at end of mission.",
+              apogeeAltitude / 1000.0));
+    }
+    if (!EarthOrbitMission.dropsUpperStage(earthOrbit.configuration().payload())) {
+      throw new OrbitlabException(
+          String.format(
+              Locale.ROOT,
+              "The payload carries a disposal reserve, but %s carries no nominal propellant load"
+                  + " of its own to fly a final trim, so the upper stage is never dropped and the"
+                  + " deorbit burn would be flown by the upper stage instead of the payload. Fly a"
+                  + " payload that can fly its own final trim, or fly the payload without"
+                  + " deorbiting it at end of mission.",
+              payloadLabel(earthOrbit)));
     }
   }
 

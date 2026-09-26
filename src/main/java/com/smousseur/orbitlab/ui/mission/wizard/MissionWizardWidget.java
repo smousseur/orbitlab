@@ -146,10 +146,15 @@ public class MissionWizardWidget implements AutoCloseable {
         new StepMissionType(
             missionContext, initialProfile(missionContext, initialValues), editMode);
     stepPanels.put(MissionWizardStep.MISSION, stepMissionType.getNode());
-    stepParameters.setProfile(stepMissionType.selectedProfile());
-    stepMissionType.setOnProfileSelected(stepParameters::setProfile);
     stepLauncher = new StepLauncher(missionContext);
     stepPanels.put(MissionWizardStep.LAUNCHER, stepLauncher.getNode());
+    stepParameters.setProfile(stepMissionType.selectedProfile());
+    stepLauncher.setProfile(stepMissionType.selectedProfile());
+    stepMissionType.setOnProfileSelected(
+        profile -> {
+          stepParameters.setProfile(profile);
+          stepLauncher.setProfile(profile);
+        });
 
     footer.setOnNext(this::goNext);
     footer.setOnPrevious(this::goPrevious);

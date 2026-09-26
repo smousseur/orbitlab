@@ -4,6 +4,7 @@ import com.smousseur.orbitlab.simulation.mission.MissionType;
 import com.smousseur.orbitlab.simulation.mission.operation.LaunchPlane;
 import com.smousseur.orbitlab.simulation.mission.operation.MissionComposer;
 import com.smousseur.orbitlab.simulation.mission.operation.MissionSpec;
+import com.smousseur.orbitlab.simulation.mission.vehicle.PropellantBudget;
 import java.util.Arrays;
 import java.util.List;
 import org.hipparchus.util.FastMath;
@@ -341,6 +342,35 @@ public enum MissionProfile {
    */
   public Availability availability() {
     return availability;
+  }
+
+  /**
+   * Whether the wizard's launcher step offers the deorbit toggle for this profile.
+   *
+   * <p>Derived from the same predicates {@code MissionComposer} and {@code PropellantBudget}
+   * themselves route on, rather than listed by name: a target the composer would send through the
+   * parking chain, or one past the reentry regime's boundary, is refused by the composer outright,
+   * so the toggle is never offered on it in the first place. A payload-dependent refusal — a
+   * payload with no nominal load of its own, such as {@code GEO_SAT} flown in LEO, which never
+   * drops the upper stage — is still caught by the composer at the launcher step, once the payload
+   * is known.
+   *
+   * <p>The type check runs first, and not the altitude band: it is not only {@link #GEO}'s band
+   * (200-2 000 km, its <em>parking</em> altitude rather than its target orbit) that would pass both
+   * predicates on its numbers alone — {@link #LUNAR}'s and {@link #LUNAR_ORBIT}'s (50-500 km) would
+   * too. The real reason is {@code MissionComposer}'s own first refusal: only an Earth-orbit
+   * (LEO-type) spec composes into a chain that can carry a disposal tail at all — a GEO or lunar
+   * chain carries none, whatever its altitude.
+   *
+   * @return {@code true} when this profile's whole altitude band flies direct and reenters
+   */
+  public boolean offersDeorbit() {
+    if (missionType != MissionType.LEO) {
+      return false;
+    }
+    double bandCeilingMeters = altitudes.maxKm() * 1_000.0;
+    return !MissionComposer.needsParkingOrbit(bandCeilingMeters)
+        && PropellantBudget.isReentryRegime(bandCeilingMeters);
   }
 
   /**

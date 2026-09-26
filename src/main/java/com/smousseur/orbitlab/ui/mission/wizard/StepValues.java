@@ -8,7 +8,8 @@ public interface StepValues {
 
   /**
    * @return the values currently held by this step's widgets, keyed by {@link FormField#key()}.
-   *     Values are either {@link String} or {@link Double}.
+   *     Values are a {@link String}, a {@link Number} ({@link Long} or {@link Double} — a slider
+   *     rounds to a {@link Long}) or a {@link Boolean}.
    */
   Map<String, Object> getValues();
 

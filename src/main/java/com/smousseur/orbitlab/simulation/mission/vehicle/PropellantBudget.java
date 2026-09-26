@@ -218,10 +218,41 @@ public final class PropellantBudget {
       double targetAltitude,
       double launchLatitudeDeg,
       double launchAzimuth) {
+    return loadsForLeo(
+        launcher, payload, payloadDryMass, targetAltitude, launchLatitudeDeg, launchAzimuth, 0.0);
+  }
+
+  /**
+   * The six-argument form above, sizing the top stage for an end-of-life disposal reserve as well.
+   *
+   * <p>The reserve is dead mass through ascent — only the end-of-life burn spends it, not the
+   * flight this method sizes for — but it still rides on the launcher exactly as the payload's own
+   * load does, so it is added where that load is added rather than tracked separately. It is sized
+   * by {@link #disposalReserveFor}; the six-argument form passes 0, for a mission that asks for no
+   * disposal.
+   *
+   * @param launcher the launcher model
+   * @param payload the payload model (provides the tank and the ΔV budget)
+   * @param payloadDryMass the dry mass entered at mission creation (kg)
+   * @param targetAltitude the target orbit altitude (m); use the apogee for elliptic targets
+   * @param launchLatitudeDeg the launch site latitude (degrees)
+   * @param launchAzimuth the launch azimuth (radians, clockwise from north)
+   * @param disposalReserve the end-of-life disposal reserve (kg); 0 for no disposal
+   * @return the launcher loads and the payload load
+   */
+  public static SizedLoads loadsForLeo(
+      LauncherModel launcher,
+      PayloadModel payload,
+      double payloadDryMass,
+      double targetAltitude,
+      double launchLatitudeDeg,
+      double launchAzimuth,
+      double disposalReserve) {
     double payloadLoad = payloadLoadFor(payload, payloadDryMass, payload.deltaVBudget());
     double dvTotal = ascentDeltaV(targetAltitude, launchLatitudeDeg, launchAzimuth);
     return new SizedLoads(
-        sizeTopStage(launcher, payloadDryMass + payloadLoad, dvTotal), payloadLoad);
+        sizeTopStage(launcher, payloadDryMass + payloadLoad + disposalReserve, dvTotal),
+        payloadLoad);
   }
 
   /**
@@ -742,10 +773,21 @@ public final class PropellantBudget {
     return payloadDryMass * (FastMath.exp(deltaV / exhaustVelocity) - 1.0) * (1.0 + SAFETY_MARGIN);
   }
 
+  /**
+   * Whether an orbit at this altitude is disposed of by reentry rather than a graveyard re-orbit:
+   * true for the reentry regime at or below {@link #DISPOSAL_REGIME_BOUNDARY_M}, false for the
+   * graveyard regime above it.
+   *
+   * @param orbitAltitude the orbit altitude (m) — an apogee when the caller means the whole orbit
+   *     to sit within the regime returned, as {@code MissionComposer} does
+   * @return {@code true} in the reentry regime, {@code false} in the graveyard regime
+   */
+  public static boolean isReentryRegime(double orbitAltitude) {
+    return orbitAltitude <= DISPOSAL_REGIME_BOUNDARY_M;
+  }
+
   private static DisposalRegime regimeFor(double orbitAltitude) {
-    return orbitAltitude > DISPOSAL_REGIME_BOUNDARY_M
-        ? DisposalRegime.GRAVEYARD
-        : DisposalRegime.REENTRY;
+    return isReentryRegime(orbitAltitude) ? DisposalRegime.REENTRY : DisposalRegime.GRAVEYARD;
   }
 
   /** Single retrograde burn from a circular orbit down to a reentry perigee (m/s). */

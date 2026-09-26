@@ -90,7 +90,8 @@ public final class ScenarioMapper {
               doubleValue(values, "LEO_PERIGEE_ALT"),
               doubleValue(values, "LEO_APOGEE_ALT"),
               doubleOrNull(values, "TARGET_INCLINATION"),
-              doubleOrNull(values, "TARGET_RAAN"));
+              doubleOrNull(values, "TARGET_RAAN"),
+              deorbitOrNull(values));
       case GEO ->
           new ScenarioMission.Geo(
               type,
@@ -176,6 +177,9 @@ public final class ScenarioMapper {
         values.put("LEO_APOGEE_ALT", earthOrbit.apogeeKm());
         putIfPresent(values, "TARGET_INCLINATION", earthOrbit.inclinationDeg());
         putIfPresent(values, "TARGET_RAAN", earthOrbit.raanDeg());
+        if (Boolean.TRUE.equals(earthOrbit.deorbit())) {
+          values.put("DEORBIT", Boolean.TRUE);
+        }
       }
       case ScenarioMission.Geo geo -> values.put("GTO_PARKING_ALT", geo.parkingKm());
       case ScenarioMission.Lunar lunar -> values.put("LUNAR_PERILUNE_ALT", lunar.periluneKm());
@@ -266,6 +270,15 @@ public final class ScenarioMapper {
       throw new OrbitlabException("Missing mission value: " + key);
     }
     return value;
+  }
+
+  /**
+   * Reads the optional deorbit toggle the way the file needs it: {@link Boolean#TRUE} when asked
+   * for, {@code null} otherwise — never {@code false} — so a mission whose toggle was never checked
+   * is written exactly as it was before the toggle existed.
+   */
+  private static Boolean deorbitOrNull(Map<String, Object> values) {
+    return Boolean.parseBoolean(String.valueOf(values.get("DEORBIT")).trim()) ? Boolean.TRUE : null;
   }
 
   private static String stringOrNull(Map<String, Object> values, String key) {

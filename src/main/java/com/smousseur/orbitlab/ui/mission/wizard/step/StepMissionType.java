@@ -270,8 +270,9 @@ public class StepMissionType implements StepValues {
   /**
    * Moves the selection, and tells everyone who needs to know in the two languages they speak: the
    * mission <em>type</em> goes to {@code MissionContext}, which the launcher step reads to narrow
-   * its payload list, and the <em>profile</em> goes to the listener, because the parameters step
-   * needs to know which of the four Earth-orbit presets it is showing.
+   * its payload list, and the <em>profile</em> goes to the listener, which feeds both the
+   * parameters step — it needs to know which of the four Earth-orbit presets it is showing — and
+   * the launcher step, for its deorbit toggle.
    *
    * <p>The outgoing profile is captured before the field moves. Assigning first made both lookups
    * land on the same card, so the card being left kept its selected skin and two cards stayed lit —

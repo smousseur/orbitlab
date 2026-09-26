@@ -63,8 +63,13 @@ class ScenarioSessionTest {
   }
 
   private static MissionEntry entry(String name, OptimizationType mode, ColorRGBA color) {
+    return entry(leoValues(name), mode, color);
+  }
+
+  private static MissionEntry entry(
+      Map<String, Object> values, OptimizationType mode, ColorRGBA color) {
     MissionEntry entry =
-        new MissionEntry(MissionFactory.specFromWizardValues(leoValues(name), MissionType.LEO));
+        new MissionEntry(MissionFactory.specFromWizardValues(values, MissionType.LEO));
     entry.setScheduledDate(TimeConverter.parseUtcDate(LAUNCH_DATE).orElseThrow());
     entry.setOptimizationType(mode);
     entry.setColor(color);
@@ -275,7 +280,8 @@ class ScenarioSessionTest {
         mission.perigeeKm(),
         mission.apogeeKm(),
         mission.inclinationDeg(),
-        mission.raanDeg());
+        mission.raanDeg(),
+        mission.deorbit());
   }
 
   /** A scenario of two missions with one broken brings back one, not zero. */
@@ -322,7 +328,8 @@ class ScenarioSessionTest {
         mission.perigeeKm(),
         mission.apogeeKm(),
         mission.inclinationDeg(),
-        mission.raanDeg());
+        mission.raanDeg(),
+        mission.deorbit());
   }
 
   /** We do not know what we are reading, so nothing is salvaged from it. */
@@ -348,5 +355,24 @@ class ScenarioSessionTest {
     ScenarioFile file = capture(List.of(legacy, entry("Good", OptimizationType.FAST, null)));
 
     assertEquals(List.of("Good"), file.missions().stream().map(ScenarioMission::name).toList());
+  }
+
+  /**
+   * The toggle survives the round trip: a payload carrying a disposal reserve restores into a
+   * mission that flies its tail, and one that never asked for it restores without one.
+   */
+  @Test
+  void restoresTheDeorbitTailOnlyForTheMissionThatAskedForIt() {
+    Map<String, Object> deorbitValues = leoValues("Deorbits");
+    deorbitValues.put("DEORBIT", Boolean.TRUE);
+    MissionEntry deorbiting = entry(deorbitValues, OptimizationType.FAST, ColorRGBA.Cyan);
+
+    List<MissionEntry> restored =
+        ScenarioSession.restore(
+                capture(List.of(deorbiting, entry("Plain", OptimizationType.FAST, ColorRGBA.Red))))
+            .missions();
+
+    assertTrue(restored.get(0).mission().hasDisposalTail());
+    assertFalse(restored.get(1).mission().hasDisposalTail());
   }
 }

@@ -351,6 +351,20 @@ public sealed interface MissionSpec
       return new LaunchPlane(targetInclination, nodeBranch);
     }
 
+    /**
+     * Whether this mission asks to deorbit its payload at end of mission — not a guarantee it will:
+     * {@code MissionComposer} can still refuse a spec that carries a reserve it cannot fly. The
+     * intent is carried by the disposal reserve itself, not by a flag of its own: the reserve is
+     * what {@code DeorbitTail} burns and what {@code EarthOrbitMission}'s terminal constructor
+     * attaches the tail on, so a separate flag would only be a second truth to keep in step with
+     * it.
+     *
+     * @return {@code true} when the payload carries a disposal reserve
+     */
+    public boolean deorbits() {
+      return configuration.payload().hasDisposalReserve();
+    }
+
     @Override
     public MissionType type() {
       return MissionType.LEO;

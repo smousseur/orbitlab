@@ -156,7 +156,7 @@ public class EarthOrbitMission extends EarthMission {
     this.longitude = longitude;
     this.altitude = altitude;
     this.launchPlane = Objects.requireNonNull(launchPlane, "launchPlane");
-    if (payload.disposalReserve() > 0) {
+    if (payload.hasDisposalReserve()) {
       setDisposalTail(new DeorbitTail());
     }
   }
@@ -357,6 +357,19 @@ public class EarthOrbitMission extends EarthMission {
   }
 
   /**
+   * Whether the ascent drops the upper stage — after the transfer and, when one is commanded, the
+   * plane trim — and lets the payload fly its own final trim, rather than carrying the upper stage
+   * to the end of the mission.
+   *
+   * @param payload the payload as flown
+   * @return {@code true} when the payload carries both an engine and a nominal propellant load of
+   *     its own
+   */
+  static boolean dropsUpperStage(Spacecraft payload) {
+    return payload.hasUsablePropellant();
+  }
+
+  /**
    * The ascent — vertical climb then the three explicit gravity-turn phases ({@code Gravity turn
    * (S1) → S1 separation → Gravity turn (S2)}) — then the transfer, the trim, and the closing
    * coast. Shared by the three variants so none of them can drift on how the launcher stages, nor
@@ -403,7 +416,7 @@ public class EarthOrbitMission extends EarthMission {
             ? new AnalyticPlaneTrimAtNodeStage("Plane trim", launchPlane.targetInclination())
             : null;
 
-    if (payload.hasUsablePropellant()) {
+    if (dropsUpperStage(payload)) {
       // The upper stage delivered the payload to orbit (the transfer above) and cleans the plane;
       // it is then dropped, and the payload flies its own final trim on its own engine. The plane
       // trim stays on the upper stage: a LEO plane residual outruns the

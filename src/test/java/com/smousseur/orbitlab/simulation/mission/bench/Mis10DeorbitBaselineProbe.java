@@ -36,6 +36,7 @@ import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchConfiguration;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropellantBudget;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropulsionSystem;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Spacecraft;
+import com.smousseur.orbitlab.simulation.mission.vehicle.VehicleStack;
 import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Launchers;
 import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Payloads;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.LauncherModel;
@@ -736,6 +737,319 @@ class Mis10DeorbitBaselineProbe {
         earth,
         ellipsoid,
         TAIL_HORIZON_SECONDS);
+  }
+
+  /**
+   * Closure flight for the deorbit toggle, flown through the wizard's own entry-from-spec path
+   * rather than {@link #closureRun}'s entry-from-mission shortcut. An Earth-orbit spec entry in
+   * FAST or BALANCED routes through the measured-load planner, which resizes the top stage from a
+   * flight it flies itself and has never before carried a disposal tail past its horizon — every
+   * earlier closure of this mission flew the tail only on the fixed-load path {@link #closureRun}
+   * takes. Four flights: the no-key mission as this path's own baseline, the toggled mission in
+   * FAST with its tail reported, a second FAST {@code compute()} rebuilt from the same wizard
+   * values to check reproducibility, and the toggled mission in BALANCED.
+   *
+   * <p>The no-key baseline's last point is printed to full precision so a later run can be diffed
+   * against it, but this probe is not what backs the claim that the no-key path is unchanged by the
+   * toggle: that rests on the factory's own spec-identity assertion ({@code
+   * MissionFactoryTest.absentDeorbit_leavesThePayloadAndLoadsBitForBitUnchanged}) and on the
+   * zero-tolerance gates ({@code gateTest}), neither of which this class replaces.
+   */
+  @Test
+  void deorbitToggleClosureFlight() {
+    GravitationalContext earth = GravitationalContext.earth();
+    Map<String, Object> values = leoWizardValues();
+
+    System.out.printf(Locale.ROOT, "%n=== flight 1: FAST, no key ===%n");
+    MissionSpec.EarthOrbit spec1 =
+        (MissionSpec.EarthOrbit) MissionFactory.specFromWizardValues(values, MissionType.LEO);
+    MissionPlan plan1 = computeFromSpec("flight 1", spec1, OptimizationType.FAST);
+    printLoads("flight 1", spec1, plan1.computation().mission());
+    reportLastPoint("flight 1", plan1, earth);
+    System.out.printf(
+        Locale.ROOT,
+        "  tail on the mission (expected false, no reserve requested): %s%n",
+        plan1.computation().mission().hasDisposalTail());
+    printFullPrecision("flight 1", plan1.computation().ephemeris().lastPoint());
+
+    Map<String, Object> deorbitValues = new HashMap<>(values);
+    deorbitValues.put("DEORBIT", Boolean.TRUE);
+
+    System.out.printf(Locale.ROOT, "%n=== flight 2: FAST, DEORBIT = TRUE ===%n");
+    MissionSpec.EarthOrbit specDeorbit =
+        (MissionSpec.EarthOrbit)
+            MissionFactory.specFromWizardValues(deorbitValues, MissionType.LEO);
+    double payloadDryMass = specDeorbit.configuration().payload().dryMass();
+    System.out.printf(
+        Locale.ROOT,
+        "  payload reserve: %.1f kg%n",
+        specDeorbit.configuration().payload().disposalReserve());
+    MissionPlan planDeorbitFast = computeFromSpec("flight 2", specDeorbit, OptimizationType.FAST);
+    printLoads("flight 2", specDeorbit, planDeorbitFast.computation().mission());
+    reportLastPoint("flight 2", planDeorbitFast, earth);
+    reportClosureTailIfBurned("flight 2", plan1, planDeorbitFast, payloadDryMass);
+
+    System.out.printf(
+        Locale.ROOT,
+        "%n=== flight 3: FAST, DEORBIT = TRUE, second compute() from the same wizard values ===%n");
+    MissionSpec.EarthOrbit specDeorbitAgain =
+        (MissionSpec.EarthOrbit)
+            MissionFactory.specFromWizardValues(deorbitValues, MissionType.LEO);
+    MissionPlan planDeorbitFastAgain =
+        computeFromSpec("flight 3", specDeorbitAgain, OptimizationType.FAST);
+    compareLastPointsToTheBit(
+        "second compute() from the same wizard values reproduces flight 2",
+        planDeorbitFast,
+        planDeorbitFastAgain);
+
+    System.out.printf(Locale.ROOT, "%n=== flight 4: BALANCED, DEORBIT = TRUE ===%n");
+    MissionPlan planDeorbitBalanced =
+        computeFromSpec("flight 4", specDeorbit, OptimizationType.BALANCED);
+    printLoads("flight 4", specDeorbit, planDeorbitBalanced.computation().mission());
+    reportLastPoint("flight 4", planDeorbitBalanced, earth);
+    System.out.printf(
+        Locale.ROOT,
+        "  note: the points-before-tail count the report below prints compares this BALANCED,"
+            + " with-reserve plan against the FAST, no-key baseline of flight 1 — different stage"
+            + " compositions, not a like-for-like count%n");
+    reportClosureTailIfBurned("flight 4", plan1, planDeorbitBalanced, payloadDryMass);
+
+    printEarlierReferenceNumbers();
+  }
+
+  /**
+   * Computes a mission entry built directly from its spec, as the wizard does, instead of {@link
+   * #closureRun}'s entry-from-mission shortcut, which always takes the fixed-load path regardless
+   * of mode. Prints the same kind of line {@link #closureRun} prints, plus which planner the entry
+   * routed to: {@link MissionPlan#sizing()} identifies a <em>sizing</em> planner — never {@code
+   * FixedLoadPlanner} nor a replay — but not which sizing planner by itself, since {@code
+   * MinimizedLoadPlanner} (PRECISE) also populates it. This probe never requests PRECISE and never
+   * posts pending solutions to replay, so for every spec it hands here a non-null {@code sizing()}
+   * is specifically the measured-load planner.
+   */
+  private MissionPlan computeFromSpec(String label, MissionSpec spec, OptimizationType mode) {
+    MissionEntry entry = new MissionEntry(spec);
+    entry.setOptimizationType(mode);
+    // setOptimizationType keeps the previous mode when recomposition fails rather than throwing,
+    // so the mode actually flown is read back off the entry instead of assumed from the request,
+    // and a mismatch fails this flight instead of silently reporting on the wrong composition.
+    OptimizationType flownMode = entry.getOptimizationType();
+    if (flownMode != mode) {
+      throw new IllegalStateException(
+          "requested mode "
+              + mode
+              + " did not apply (composition failed); the entry is still on "
+              + flownMode);
+    }
+    long t0 = System.nanoTime();
+    MissionPlan plan = new MissionPlanOptimizer(entry, epoch).compute();
+    double seconds = (System.nanoTime() - t0) / 1e9;
+
+    MissionComputeResult result = plan.computation();
+    List<MissionEphemerisPoint> points = result.ephemeris().allPoints();
+    MissionEphemerisPoint horizon = lastPointOf(points, StageNames.TERMINAL_COAST);
+    GravitationalContext earth = GravitationalContext.earth();
+    String planner;
+    if (plan.sizing() == null) {
+      planner = "fixed-load planner";
+    } else if (flownMode == OptimizationType.FAST) {
+      planner =
+          String.format(
+              Locale.ROOT, "measured-load planner (%d sizing pass(es))", plan.sizing().passes());
+    } else {
+      // MeasuredLoadPlanner sizes over FAST-only passes, then — for any other requested mode —
+      // flies one further flight at the resolved loads; that final flight is not counted in
+      // passes(), which only tracks the FAST sizing loop.
+      planner =
+          String.format(
+              Locale.ROOT,
+              "measured-load planner (%d FAST sizing pass(es), plus one final %s flight not"
+                  + " counted in that pass count)",
+              plan.sizing().passes(),
+              flownMode);
+    }
+    System.out.printf(
+        Locale.ROOT,
+        "%n  [%s] entry from spec, mode %s, routed to the %s: compute() %.1f s, tail on the mission:"
+            + " %s; ephemeris %d points, complete=%s, last '%s' at %s%n",
+        label,
+        flownMode,
+        planner,
+        seconds,
+        result.mission().hasDisposalTail(),
+        points.size(),
+        result.ephemeris().isComplete(),
+        points.getLast().stageName(),
+        points.getLast().time());
+    System.out.printf(
+        Locale.ROOT,
+        "    horizon %s (+%.0f s after launch): mass %.1f kg, hp %.1f km, ha %.1f km (spherical);"
+            + " achieved orbit %s%n",
+        horizon.time(),
+        horizon.time().durationFrom(points.getFirst().time()),
+        horizon.mass(),
+        perigeeAltitude(stateOf(horizon, earth), earth) / 1000.0,
+        apogeeAltitude(stateOf(horizon, earth), earth) / 1000.0,
+        result.achievedOrbit().formatOsculating());
+    return plan;
+  }
+
+  /**
+   * Prints the launcher's budgeted per-stage loads against what the returned mission's vehicle
+   * stack actually carries, plus the payload's own load and disposal reserve — the pair that tells
+   * a measured-load resizing apart from a fixed-load flight, which simply keeps the seed it was
+   * handed, and a direct measurement that the reserve survives the top stage's re-sizing untouched.
+   */
+  private static void printLoads(String label, MissionSpec spec, Mission mission) {
+    double[] seed = spec.configuration().propellantLoads();
+    VehicleStack stack = (VehicleStack) mission.getVehicle();
+    int stageCount = stack.vehicles().size() - 1;
+    double[] flown = new double[stageCount];
+    for (int i = 0; i < stageCount; i++) {
+      flown[i] = stack.vehicles().get(i).propellantLoad();
+    }
+    Spacecraft flownPayload = (Spacecraft) stack.vehicles().getLast();
+    System.out.printf(
+        Locale.ROOT,
+        "  [%s] launcher loads: seed %s kg, flown %s kg; payload load: seed %.1f kg, flown %.1f kg;"
+            + " payload reserve: seed %.1f kg, flown %.1f kg%n",
+        label,
+        Arrays.toString(seed),
+        Arrays.toString(flown),
+        spec.configuration().payload().propellantLoad(),
+        flownPayload.propellantLoad(),
+        spec.configuration().payload().disposalReserve(),
+        flownPayload.disposalReserve());
+  }
+
+  /**
+   * Prints where a flight's ephemeris actually ends: the stage name, its altitude, how far past
+   * launch and past the trailing-coast horizon it sits, and whether it already crossed the landed
+   * threshold. The threshold reads {@link MissionEphemerisPoint#altitudeMeters()} — the value
+   * {@code MissionRenderer} itself tests against {@link #LANDED_ALTITUDE_METERS} — with the
+   * independently recomputed geodetic altitude kept as an extra, cross-checking column.
+   */
+  private static void reportLastPoint(String label, MissionPlan plan, GravitationalContext earth) {
+    List<MissionEphemerisPoint> points = plan.computation().ephemeris().allPoints();
+    MissionEphemerisPoint last = points.getLast();
+    MissionEphemerisPoint horizon = lastPointOf(points, StageNames.TERMINAL_COAST);
+    GeodeticPoint ground = geodetic(stateOf(last, earth), OrekitService.get().getEarthEllipsoid());
+    System.out.printf(
+        Locale.ROOT,
+        "  [%s] last point '%s' at %s: +%.0f s after launch, +%.0f s after the horizon; altitude"
+            + " %.1f km (recomputed geodetic %.1f km); below the landed threshold (%.0f m) = %s%n",
+        label,
+        last.stageName(),
+        last.time(),
+        last.time().durationFrom(points.getFirst().time()),
+        last.time().durationFrom(horizon.time()),
+        last.altitudeMeters() / 1000.0,
+        ground.getAltitude() / 1000.0,
+        LANDED_ALTITUDE_METERS,
+        last.altitudeMeters() < LANDED_ALTITUDE_METERS);
+  }
+
+  /**
+   * Compares two flights' last ephemeris point field by field, the reproducibility bar every
+   * production computation is expected to clear: the same time, position, velocity and mass down to
+   * the bit.
+   */
+  private static void compareLastPointsToTheBit(String label, MissionPlan a, MissionPlan b) {
+    MissionEphemerisPoint pointA = a.computation().ephemeris().lastPoint();
+    MissionEphemerisPoint pointB = b.computation().ephemeris().lastPoint();
+    boolean identical =
+        pointA.time().equals(pointB.time())
+            && pointA.position().equals(pointB.position())
+            && pointA.velocity().equals(pointB.velocity())
+            && pointA.mass() == pointB.mass();
+    System.out.printf(
+        Locale.ROOT,
+        "%n  %s: last ephemeris point identical to the bit = %s (%s, %s)%n",
+        label,
+        identical,
+        pointA.time(),
+        pointA.position());
+  }
+
+  /**
+   * Echoes the numbers measured on the earlier, fixed-load-planner closure of this same mission, so
+   * this flight's own numbers can be read against them directly.
+   */
+  private static void printEarlierReferenceNumbers() {
+    System.out.printf(
+        Locale.ROOT,
+        "%n=== earlier reference (fixed-load planner, entry from mission) ===%n"
+            + "  reserve 534.2 kg; upper stage budget 9 488.9 kg without reserve -> 10 032.6 kg with"
+            + " it%n"
+            + "  tail: 2 burns ending FELL_BEFORE_NEXT_BURN at hp 67.8 km, 510.6 kg burnt%n"
+            + "  fall: reached the ground +1 927 s after the tail's end%n");
+  }
+
+  /**
+   * Prints a flight's last ephemeris point at a precision a later run can diff against bit for bit.
+   * {@link Vector3D#toString()} rounds its components and the {@code %.1f} formatting used
+   * elsewhere in this probe loses the rest, so every component is written out through {@link
+   * Double#toString(double)} instead, which round-trips exactly.
+   */
+  private static void printFullPrecision(String label, MissionEphemerisPoint point) {
+    Vector3D position = point.position();
+    Vector3D velocity = point.velocity();
+    System.out.printf(
+        Locale.ROOT,
+        "  [%s] last point full precision: +%s s since the flight epoch (%s)%n"
+            + "    position (m)   x=%s y=%s z=%s%n"
+            + "    velocity (m/s) x=%s y=%s z=%s%n"
+            + "    mass (kg) %s%n",
+        label,
+        Double.toString(point.time().durationFrom(epoch)),
+        point.time(),
+        Double.toString(position.getX()),
+        Double.toString(position.getY()),
+        Double.toString(position.getZ()),
+        Double.toString(velocity.getX()),
+        Double.toString(velocity.getY()),
+        Double.toString(velocity.getZ()),
+        Double.toString(point.mass()));
+  }
+
+  /** Whether any ephemeris point of {@code plan} carries the given stage name. */
+  private static boolean hasStagePoint(MissionPlan plan, String stageName) {
+    return plan.computation().ephemeris().allPoints().stream()
+        .anyMatch(point -> point.stageName().equals(stageName));
+  }
+
+  /**
+   * Runs {@link #reportClosureTail} when the tail actually flew a burn. {@code DeorbitTail.plan}
+   * can end without one, whatever the reason — {@link DeorbitSequence.End#PROPELLANT_SPENT} with no
+   * propellant left above the depletion floor before the first coast is even planned, {@link
+   * DeorbitSequence.End#FELL_BEFORE_NEXT_BURN} when the horizon state is already falling and no
+   * next apogee is found, or {@link DeorbitSequence.End#TRUNCATED} when the first coast itself
+   * comes up short — and on each of those the ephemeris carries no {@code DEORBIT_BURN} point for
+   * {@link #reportClosureTail} to index from, which would otherwise abort this flight and every one
+   * after it. On that path this plans the tail once more — the same first step {@link
+   * #reportClosureTail} itself takes — only to report why it flew no burn, and skips the detailed
+   * re-flown report.
+   */
+  private static void reportClosureTailIfBurned(
+      String label, MissionPlan before, MissionPlan after, double dryMass) {
+    if (hasStagePoint(after, StageNames.DEORBIT_BURN)) {
+      reportClosureTail(before, after, dryMass);
+      return;
+    }
+    Mission mission = after.computation().mission();
+    if (!mission.hasDisposalTail()) {
+      System.out.printf(Locale.ROOT, "%n  [%s] tail: the mission carries none%n", label);
+      return;
+    }
+    SpacecraftState horizon = mission.getCurrentState();
+    DeorbitSequence sequence = mission.getDisposalTail().plan(horizon, mission);
+    mission.setCurrentState(horizon);
+    System.out.printf(
+        Locale.ROOT,
+        "%n  [%s] tail flew no burn: sequence ended %s at %s%n",
+        label,
+        sequence.end(),
+        sequence.finalState().getDate());
   }
 
   private static void reportFallAfterTail(

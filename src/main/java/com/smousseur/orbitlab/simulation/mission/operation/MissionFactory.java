@@ -6,6 +6,7 @@ import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionHorizon;
 import com.smousseur.orbitlab.simulation.mission.MissionType;
 import com.smousseur.orbitlab.simulation.mission.OptimizationType;
+import com.smousseur.orbitlab.simulation.mission.disposal.DeorbitTail;
 import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchConfiguration;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropellantBudget;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Spacecraft;
@@ -107,6 +108,17 @@ public final class MissionFactory {
             double apogeeAlt = Math.max(perigeeKm, apogeeKm) * 1000.0;
             LaunchPlane plane = launchPlane(values, latitude);
             double azimuth = plane.launchAzimuth(FastMath.toRadians(latitude));
+            // Perigee sizing over-estimates the ideal impulsive apogee burn by 2-7% (74.0 vs 72.6
+            // m/s at 300x800 km, 45.0 vs 42.0 at 200x1900); apogee sizing would over-size it 3-11x
+            // (208 vs 72.6, 451 vs 42.0).
+            double disposalReserve =
+                deorbitRequested(values)
+                    ? PropellantBudget.disposalReserveFor(
+                        payloadModel,
+                        payloadMass,
+                        perigeeAlt,
+                        DeorbitTail.REENTRY_PERIGEE_ALTITUDE_M)
+                    : 0.0;
             // The budget has to agree with the chain MissionComposer will pick: a
             // target
             // beyond the ascent's reach is flown through a parking orbit and circularized at
@@ -121,9 +133,16 @@ public final class MissionFactory {
                         perigeeAlt,
                         apogeeAlt,
                         latitude,
-                        azimuth)
+                        azimuth,
+                        disposalReserve)
                     : directConfiguration(
-                        launcher, payloadModel, payloadMass, apogeeAlt, latitude, azimuth);
+                        launcher,
+                        payloadModel,
+                        payloadMass,
+                        apogeeAlt,
+                        latitude,
+                        azimuth,
+                        disposalReserve);
             yield new MissionSpec.EarthOrbit(
                 name,
                 configuration,
@@ -255,6 +274,9 @@ public final class MissionFactory {
    * direct chain whose payload carries a usable load drops its upper stage after the transfer and
    * lets the payload fly its own final trim on its own engine, while a payload loaded to zero keeps
    * flying the upper stage to the end as before.
+   *
+   * @param disposalReserve the end-of-life disposal reserve to add to the payload and size the top
+   *     stage for (kg); 0 when the wizard asked for no deorbit
    */
   private static LaunchConfiguration directConfiguration(
       LauncherModel launcher,
@@ -262,11 +284,13 @@ public final class MissionFactory {
       double payloadMass,
       double apogeeAlt,
       double latitude,
-      double azimuth) {
+      double azimuth,
+      double disposalReserve) {
     PropellantBudget.SizedLoads loads =
         PropellantBudget.loadsForLeo(
-            launcher, payloadModel, payloadMass, apogeeAlt, latitude, azimuth);
-    Spacecraft payload = payloadModel.toSpacecraft(payloadMass, loads.payloadLoad());
+            launcher, payloadModel, payloadMass, apogeeAlt, latitude, azimuth, disposalReserve);
+    Spacecraft payload =
+        payloadModel.toSpacecraft(payloadMass, loads.payloadLoad(), disposalReserve);
     return new LaunchConfiguration(launcher, loads.launcherLoads(), payload, payloadModel.id());
   }
 
@@ -279,6 +303,15 @@ public final class MissionFactory {
    * ascent is steered into the target plane, so what reaches apogee is already in it, give or take
    * the residual the plane trim cleans up. Charging the launch latitude here would size the kick
    * motor for a burn the mission does not make.
+   *
+   * <p><b>The disposal reserve is carried on the payload, not on the sizing.</b> This chain routes
+   * through a parking orbit, and {@code MissionComposer} refuses any disposal reserve that reaches
+   * it outright — no chain here ever flies the tail the reserve is sized for. Adding it to the
+   * payload rather than dropping it silently is what lets that refusal fire, naming the parking
+   * chain, instead of the wizard's intent quietly disappearing.
+   *
+   * @param disposalReserve the end-of-life disposal reserve to add to the payload (kg); 0 when the
+   *     wizard asked for no deorbit
    */
   private static LaunchConfiguration highOrbitConfiguration(
       LauncherModel launcher,
@@ -287,7 +320,8 @@ public final class MissionFactory {
       double perigeeAlt,
       double apogeeAlt,
       double latitude,
-      double azimuth) {
+      double azimuth,
+      double disposalReserve) {
     PropellantBudget.SizedLoads loads =
         PropellantBudget.loadsForHighOrbit(
             launcher,
@@ -298,7 +332,8 @@ public final class MissionFactory {
             latitude,
             0.0,
             azimuth);
-    Spacecraft payload = payloadModel.toSpacecraft(payloadMass, loads.payloadLoad());
+    Spacecraft payload =
+        payloadModel.toSpacecraft(payloadMass, loads.payloadLoad(), disposalReserve);
     return new LaunchConfiguration(launcher, loads.launcherLoads(), payload, payloadModel.id());
   }
 
@@ -386,6 +421,21 @@ public final class MissionFactory {
       // Covers both the parse failure and a FixedDuration rejecting a non-finite value.
       return null;
     }
+  }
+
+  /**
+   * Reads the optional deorbit toggle: a tolerant reading, like {@link #horizonOrNull}'s, not a
+   * refusal like {@link #targetRaanOrNull}'s. {@code Boolean.parseBoolean} reads a {@link Boolean}
+   * — what every producer, the wizard and the scenario mapper alike, hands over — or its text form,
+   * trimmed so a value a caller assembled by hand is not rejected on whitespace alone, and treats
+   * anything but a true value as no deorbit: a missing key, {@code Boolean.FALSE} and unrecognised
+   * text all read the same.
+   *
+   * @param values the raw wizard values
+   * @return {@code true} when the mission asks to deorbit its payload at end of mission
+   */
+  private static boolean deorbitRequested(Map<String, Object> values) {
+    return Boolean.parseBoolean(String.valueOf(values.get("DEORBIT")).trim());
   }
 
   private static String stringValueOrNull(Map<String, Object> values, String key) {

@@ -11,6 +11,8 @@ import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchConfiguration;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Spacecraft;
 import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Launchers;
 import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Payloads;
+import java.util.EnumSet;
+import java.util.Set;
 import org.hipparchus.util.FastMath;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
@@ -292,5 +294,20 @@ class MissionProfileTest {
     assertEquals(500.0, card.altitudes().maxKm());
     assertEquals(100.0, card.altitudes().defaultKm());
     assertEquals("interface/wizard/icon-mission-lunar-orbit.png", card.iconPath());
+  }
+
+  /**
+   * The toggle is offered exactly where the composer and the propellant budget agree the whole band
+   * flies direct and reenters: the three low-orbit cards. GEO's band is a parking altitude rather
+   * than a target (see {@link MissionProfile#offersDeorbit()}), and it happens to equal LEO's and
+   * POLAR's band exactly (200-2 000 km) — so it must not pass by sharing their numbers.
+   */
+  @Test
+  void offersDeorbitOnlyOnTheThreeLowOrbitCards() {
+    Set<MissionProfile> expected =
+        EnumSet.of(MissionProfile.LEO, MissionProfile.POLAR, MissionProfile.SSO);
+    for (MissionProfile profile : MissionProfile.values()) {
+      assertEquals(expected.contains(profile), profile.offersDeorbit(), profile.name());
+    }
   }
 }

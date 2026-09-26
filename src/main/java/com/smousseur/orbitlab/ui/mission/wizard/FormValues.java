@@ -50,4 +50,23 @@ public final class FormValues {
       return fallback;
     }
   }
+
+  /**
+   * Reads a boolean value, whatever concrete type carries it.
+   *
+   * @param values the raw wizard values
+   * @param field the field to read
+   * @return the value when it is a {@link Boolean}, the parsed text otherwise, or {@code false}
+   *     when the field is absent
+   */
+  public static boolean flag(Map<String, Object> values, FormField<Boolean> field) {
+    Object raw = values.get(field.key());
+    if (raw == null) {
+      return false;
+    }
+    if (raw instanceof Boolean bool) {
+      return bool;
+    }
+    return Boolean.parseBoolean(raw.toString().trim());
+  }
 }

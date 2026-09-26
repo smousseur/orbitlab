@@ -318,4 +318,32 @@ class WizardPrefillTest {
     // and a second copy of it here would be a second truth about the same number.
     assertFalse(values.containsKey("GTO_PARKING_ALT"));
   }
+
+  @Test
+  void deorbitingMission_reopensWithTheKey() {
+    Map<String, Object> values = leoValues();
+    values.put("DEORBIT", Boolean.TRUE);
+    MissionEntry entry = entryFor(values, MissionType.LEO);
+
+    Map<String, Object> prefilled = WizardPrefill.fromEntry(entry);
+    assertEquals(Boolean.TRUE, prefilled.get("DEORBIT"));
+
+    double originalReserve =
+        ((MissionSpec.EarthOrbit) entry.spec().orElseThrow())
+            .configuration()
+            .payload()
+            .disposalReserve();
+    double reopenedReserve =
+        ((MissionSpec.EarthOrbit) reopen(entry, MissionType.LEO))
+            .configuration()
+            .payload()
+            .disposalReserve();
+    assertEquals(originalReserve, reopenedReserve, 1e-9, "reserve after the round trip");
+  }
+
+  @Test
+  void nonDeorbitingMission_reopensWithoutTheKey() {
+    MissionEntry entry = entryFor(leoValues(), MissionType.LEO);
+    assertFalse(WizardPrefill.fromEntry(entry).containsKey("DEORBIT"));
+  }
 }

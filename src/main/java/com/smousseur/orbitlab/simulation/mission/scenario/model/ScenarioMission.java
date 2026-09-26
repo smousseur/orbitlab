@@ -124,6 +124,15 @@ public sealed interface ScenarioMission
    *     flies the plane its site gives for free
    * @param raanDeg the commanded ascending node in degrees, or {@code null} when the mission waits
    *     for no plane
+   * @param deorbit {@link Boolean#TRUE} when the payload is deorbited at end of mission, {@code
+   *     null} otherwise — never written {@code false}, so an unchecked mission is written exactly
+   *     as it was before this field existed. The format version does not change for it: a build
+   *     predating the field reads a file that carries it by ignoring the unknown property (Jackson
+   *     3's default here, {@code FAIL_ON_UNKNOWN_PROPERTIES} off, measured on this codec) —
+   *     restoring the mission without deorbit, since that build has no component to carry the
+   *     toggle into, and dropping the property again if it saves the mission back, since its own
+   *     record carries none. This build reads an older file that lacks the property as {@code
+   *     null}.
    */
   @JsonInclude(JsonInclude.Include.NON_NULL)
   record EarthOrbit(
@@ -141,7 +150,8 @@ public sealed interface ScenarioMission
       double perigeeKm,
       double apogeeKm,
       Double inclinationDeg,
-      Double raanDeg)
+      Double raanDeg,
+      Boolean deorbit)
       implements ScenarioMission {}
 
   /**

@@ -20,8 +20,8 @@ import tools.jackson.databind.json.JsonMapper;
  *
  * <p>Nulls are omitted on write — through {@code @JsonInclude(NON_NULL)} on the records — which is
  * what makes a meaningful absence legible in the file rather than written out as {@code null}.
- * Unknown properties are <b>not</b> tolerated on read: the project rule is to refuse rather than to
- * silently degrade, and a field this build cannot place is a field it would be dropping.
+ * Unknown properties are tolerated on read: the project rule is to refuse rather than to silently
+ * degrade, and a field this build cannot place is a field it would be dropping.
  */
 public final class ScenarioCodec {
 

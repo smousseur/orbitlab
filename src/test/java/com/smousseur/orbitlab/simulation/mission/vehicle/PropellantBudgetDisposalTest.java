@@ -1,9 +1,14 @@
 package com.smousseur.orbitlab.simulation.mission.vehicle;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.smousseur.orbitlab.simulation.Physics;
+import com.smousseur.orbitlab.simulation.mission.disposal.DeorbitTail;
+import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Launchers;
 import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Payloads;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.PayloadModel;
 import org.hipparchus.util.FastMath;
@@ -24,6 +29,14 @@ class PropellantBudgetDisposalTest {
 
   /** The graveyard raise this lot sizes for (IADC usual figure); pins the design decision. */
   private static final double GRAVEYARD_RAISE = 300_000;
+
+  // Fixture shared by the reserve-aware loadsForLeo tests below: Falcon Heavy carrying
+  // EARTH_OBSERVATION_SAT at 10 t dry to a 400 km circular target from Kourou's latitude.
+  private static final PayloadModel REFERENCE_PAYLOAD = Payloads.EARTH_OBSERVATION_SAT;
+  private static final double REFERENCE_DRY_MASS = 10_000;
+  private static final double REFERENCE_TARGET_ALTITUDE = 400_000;
+  private static final double REFERENCE_LATITUDE = 5.23;
+  private static final double REFERENCE_AZIMUTH = Physics.getLaunchAzimuth();
 
   @Test
   void reentryReserve_deliversTheRetrogradeDeltaV_belowTheBoundary() {
@@ -96,6 +109,129 @@ class PropellantBudgetDisposalTest {
         0.0,
         PropellantBudget.disposalReserveFor(Payloads.LUNAR_PROBE, 2_000, 400_000, 100_000),
         1e-9);
+  }
+
+  @Test
+  void isReentryRegime_trueAtAndBelowTheBoundary_falseJustAboveIt() {
+    assertTrue(PropellantBudget.isReentryRegime(400_000));
+    assertTrue(PropellantBudget.isReentryRegime(2_000_000));
+    assertFalse(PropellantBudget.isReentryRegime(2_000_001));
+  }
+
+  /**
+   * The overload sizes the top stage on the payload's own load plus the disposal reserve; a zero
+   * reserve must therefore reproduce the six-argument form bit for bit.
+   */
+  @Test
+  void loadsForLeo_withZeroReserve_matchesTheSixArgFormBitForBit() {
+    PropellantBudget.SizedLoads withoutReserve =
+        PropellantBudget.loadsForLeo(
+            Launchers.FALCON_HEAVY,
+            REFERENCE_PAYLOAD,
+            REFERENCE_DRY_MASS,
+            REFERENCE_TARGET_ALTITUDE,
+            REFERENCE_LATITUDE,
+            REFERENCE_AZIMUTH);
+    PropellantBudget.SizedLoads withZeroReserve =
+        PropellantBudget.loadsForLeo(
+            Launchers.FALCON_HEAVY,
+            REFERENCE_PAYLOAD,
+            REFERENCE_DRY_MASS,
+            REFERENCE_TARGET_ALTITUDE,
+            REFERENCE_LATITUDE,
+            REFERENCE_AZIMUTH,
+            0.0);
+
+    assertArrayEquals(withoutReserve.launcherLoads(), withZeroReserve.launcherLoads(), 0.0);
+    assertEquals(withoutReserve.payloadLoad(), withZeroReserve.payloadLoad());
+  }
+
+  /**
+   * A non-zero reserve leaves the payload's own load alone and moves only the top stage, matching
+   * bit for bit what the existing Spacecraft-taking form computes for a payload already carrying
+   * that reserve as mass.
+   */
+  @Test
+  void loadsForLeo_withReserve_matchesTheSpacecraftTakingFormAndMovesOnlyTheTopStage() {
+    PropellantBudget.SizedLoads withoutReserve =
+        PropellantBudget.loadsForLeo(
+            Launchers.FALCON_HEAVY,
+            REFERENCE_PAYLOAD,
+            REFERENCE_DRY_MASS,
+            REFERENCE_TARGET_ALTITUDE,
+            REFERENCE_LATITUDE,
+            REFERENCE_AZIMUTH);
+    double reserve =
+        PropellantBudget.disposalReserveFor(
+            REFERENCE_PAYLOAD,
+            REFERENCE_DRY_MASS,
+            REFERENCE_TARGET_ALTITUDE,
+            DeorbitTail.REENTRY_PERIGEE_ALTITUDE_M);
+
+    PropellantBudget.SizedLoads withReserve =
+        PropellantBudget.loadsForLeo(
+            Launchers.FALCON_HEAVY,
+            REFERENCE_PAYLOAD,
+            REFERENCE_DRY_MASS,
+            REFERENCE_TARGET_ALTITUDE,
+            REFERENCE_LATITUDE,
+            REFERENCE_AZIMUTH,
+            reserve);
+
+    assertEquals(withoutReserve.payloadLoad(), withReserve.payloadLoad());
+
+    double[] expected =
+        PropellantBudget.loadsForLeo(
+            Launchers.FALCON_HEAVY,
+            REFERENCE_PAYLOAD.toSpacecraft(
+                REFERENCE_DRY_MASS, withoutReserve.payloadLoad(), reserve),
+            REFERENCE_TARGET_ALTITUDE,
+            REFERENCE_LATITUDE,
+            REFERENCE_AZIMUTH);
+    assertArrayEquals(expected, withReserve.launcherLoads(), 0.0);
+
+    int top = expected.length - 1;
+    for (int i = 0; i < top; i++) {
+      assertEquals(withoutReserve.launcherLoads()[i], withReserve.launcherLoads()[i], 0.0);
+    }
+    assertNotEquals(withoutReserve.launcherLoads()[top], withReserve.launcherLoads()[top]);
+  }
+
+  /**
+   * Numeric pin on the budget's own output for the reference mission — Falcon Heavy,
+   * EARTH_OBSERVATION_SAT at 10 t dry, 400 km circular, latitude 5.23 — the same configuration an
+   * earlier mission flew with these loads.
+   */
+  @Test
+  void loadsForLeo_withReserve_pinsTheReferenceMissionMagnitudes() {
+    PropellantBudget.SizedLoads withoutReserve =
+        PropellantBudget.loadsForLeo(
+            Launchers.FALCON_HEAVY,
+            REFERENCE_PAYLOAD,
+            REFERENCE_DRY_MASS,
+            REFERENCE_TARGET_ALTITUDE,
+            REFERENCE_LATITUDE,
+            REFERENCE_AZIMUTH);
+    double reserve =
+        PropellantBudget.disposalReserveFor(
+            REFERENCE_PAYLOAD,
+            REFERENCE_DRY_MASS,
+            REFERENCE_TARGET_ALTITUDE,
+            DeorbitTail.REENTRY_PERIGEE_ALTITUDE_M);
+    PropellantBudget.SizedLoads withReserve =
+        PropellantBudget.loadsForLeo(
+            Launchers.FALCON_HEAVY,
+            REFERENCE_PAYLOAD,
+            REFERENCE_DRY_MASS,
+            REFERENCE_TARGET_ALTITUDE,
+            REFERENCE_LATITUDE,
+            REFERENCE_AZIMUTH,
+            reserve);
+
+    int top = withoutReserve.launcherLoads().length - 1;
+    assertEquals(534.2, reserve, 0.1);
+    assertEquals(9_488.9, withoutReserve.launcherLoads()[top], 0.1);
+    assertEquals(10_032.6, withReserve.launcherLoads()[top], 0.1);
   }
 
   /**

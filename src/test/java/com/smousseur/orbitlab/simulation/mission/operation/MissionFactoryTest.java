@@ -8,10 +8,16 @@ import com.smousseur.orbitlab.simulation.flight.AtmosphereModel;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionType;
 import com.smousseur.orbitlab.simulation.mission.OptimizationType;
+import com.smousseur.orbitlab.simulation.mission.disposal.DeorbitTail;
+import com.smousseur.orbitlab.simulation.mission.vehicle.PropellantBudget;
+import com.smousseur.orbitlab.simulation.mission.vehicle.Spacecraft;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
 import com.smousseur.orbitlab.simulation.mission.vehicle.VehicleStack;
+import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Launchers;
+import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Payloads;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import org.hipparchus.util.FastMath;
 import org.junit.jupiter.api.Assumptions;
@@ -400,5 +406,175 @@ class MissionFactoryTest {
     assertTrue(
         polarLoad > dueEastLoad,
         () -> "polar S2 load " + polarLoad + " kg should exceed due-east " + dueEastLoad + " kg");
+  }
+
+  /** The azimuth {@code MissionFactory} derives for an uncommanded (due-east) LEO target. */
+  private static double dueEastAzimuth(double latitudeDeg) {
+    return LaunchPlane.dueEast(latitudeDeg).launchAzimuth(FastMath.toRadians(latitudeDeg));
+  }
+
+  /**
+   * Independent of the {@code PayloadModel}-taking {@code loadsForLeo} overloads: the launcher
+   * loads the factory produces with no key must match what the {@code Spacecraft}-taking form
+   * computes for the same payload mass, by {@code sizeTopStage} on {@code getMass()} alone.
+   */
+  @Test
+  void absentDeorbit_leavesThePayloadAndLoadsBitForBitUnchanged() {
+    MissionSpec.EarthOrbit spec = earthOrbitSpec(baseValues());
+    assertFalse(spec.deorbits());
+
+    Spacecraft payload = spec.configuration().payload();
+    assertEquals(
+        Payloads.EARTH_OBSERVATION_SAT.toSpacecraft(10_000.0, payload.propellantLoad()), payload);
+
+    double azimuth = dueEastAzimuth(5.23);
+    double[] expected =
+        PropellantBudget.loadsForLeo(
+            Launchers.FALCON_HEAVY,
+            Payloads.EARTH_OBSERVATION_SAT.toSpacecraft(10_000.0, payload.propellantLoad()),
+            400_000.0,
+            5.23,
+            azimuth);
+
+    assertArrayEquals(expected, spec.configuration().propellantLoads(), 0.0);
+  }
+
+  @Test
+  void deorbitTrue_sizesTheReserveOnTheTargetAndAttachesATail() {
+    Map<String, Object> values = baseValues();
+    values.put("DEORBIT", Boolean.TRUE);
+    MissionSpec.EarthOrbit spec = earthOrbitSpec(values);
+
+    double expectedReserve =
+        PropellantBudget.disposalReserveFor(
+            Payloads.EARTH_OBSERVATION_SAT,
+            10_000.0,
+            400_000.0,
+            DeorbitTail.REENTRY_PERIGEE_ALTITUDE_M);
+    assertEquals(expectedReserve, spec.configuration().payload().disposalReserve(), 1e-9);
+    assertTrue(spec.deorbits());
+
+    double azimuth = dueEastAzimuth(5.23);
+    PropellantBudget.SizedLoads expectedLoads =
+        PropellantBudget.loadsForLeo(
+            Launchers.FALCON_HEAVY,
+            Payloads.EARTH_OBSERVATION_SAT,
+            10_000.0,
+            400_000.0,
+            5.23,
+            azimuth,
+            expectedReserve);
+    assertArrayEquals(expectedLoads.launcherLoads(), spec.configuration().propellantLoads(), 0.0);
+
+    assertTrue(MissionComposer.compose(spec, OptimizationType.FAST).hasDisposalTail());
+  }
+
+  @Test
+  void deorbitGivenAsText_behavesAsTrue() {
+    Map<String, Object> values = baseValues();
+    values.put("DEORBIT", "true");
+    assertTrue(earthOrbitSpec(values).deorbits());
+  }
+
+  /** The three readers of this key (wizard, factory, scenario mapper) must agree on whitespace. */
+  @Test
+  void deorbitGivenAsPaddedText_behavesAsTrue() {
+    Map<String, Object> values = baseValues();
+    values.put("DEORBIT", " true ");
+    assertTrue(earthOrbitSpec(values).deorbits());
+  }
+
+  @Test
+  void deorbitFalse_behavesAsAbsent() {
+    Map<String, Object> falseValues = baseValues();
+    falseValues.put("DEORBIT", Boolean.FALSE);
+    Map<String, Object> textFalseValues = baseValues();
+    textFalseValues.put("DEORBIT", "false");
+
+    assertFalse(earthOrbitSpec(falseValues).deorbits());
+    assertFalse(earthOrbitSpec(textFalseValues).deorbits());
+  }
+
+  /**
+   * The reserve is sized on the perigee — the circular-at-perigee convention {@code
+   * PropellantBudget.disposalReserveFor} sizes on — not on the apogee that also describes an
+   * elliptic target.
+   */
+  @Test
+  void deorbit_onAnEllipse_sizesTheReserveOnThePerigee() {
+    Map<String, Object> values = baseValues();
+    values.put("LEO_PERIGEE_ALT", 300.0);
+    values.put("LEO_APOGEE_ALT", 800.0);
+    values.put("DEORBIT", Boolean.TRUE);
+
+    double reserve = earthOrbitSpec(values).configuration().payload().disposalReserve();
+    double atPerigee =
+        PropellantBudget.disposalReserveFor(
+            Payloads.EARTH_OBSERVATION_SAT,
+            10_000.0,
+            300_000.0,
+            DeorbitTail.REENTRY_PERIGEE_ALTITUDE_M);
+    double atApogee =
+        PropellantBudget.disposalReserveFor(
+            Payloads.EARTH_OBSERVATION_SAT,
+            10_000.0,
+            800_000.0,
+            DeorbitTail.REENTRY_PERIGEE_ALTITUDE_M);
+
+    assertEquals(atPerigee, reserve, 1e-9);
+    assertNotEquals(atApogee, reserve);
+  }
+
+  /**
+   * No nominal load means the upper stage is never dropped — {@code MissionComposer}'s own refusal.
+   * The no-key counterpart composes on the very same values, which is what proves the key itself
+   * triggers the refusal rather than something else about a GEO_SAT flown in LEO.
+   */
+  @Test
+  void deorbit_onAGeoSatWithNoNominalLoad_isRefused() {
+    Map<String, Object> values = baseValues();
+    values.put("PAYLOAD_TYPE", "GEO_SAT");
+    values.put("PAYLOAD_MASS", 2_000.0);
+
+    assertInstanceOf(
+        EarthOrbitMission.class, MissionFactory.fromWizardValues(values, MissionType.LEO));
+
+    values.put("DEORBIT", Boolean.TRUE);
+    OrbitlabException failure =
+        assertThrows(
+            OrbitlabException.class,
+            () -> MissionFactory.fromWizardValues(values, MissionType.LEO));
+    assertTrue(
+        failure.getMessage().toLowerCase(Locale.ROOT).contains("upper stage"),
+        () -> "the message must name the upper stage staying attached: " + failure.getMessage());
+  }
+
+  /** The parking chain carries no deorbit tail, so a reserve routed through it is refused. */
+  @Test
+  void deorbit_onAMeoTarget_carriesTheReserveButIsRefusedForTheParkingChain() {
+    Map<String, Object> values = meoValues("ARIANE_64", "EARTH_OBS_SAT");
+    values.put("DEORBIT", Boolean.TRUE);
+
+    MissionSpec.EarthOrbit spec = earthOrbitSpec(values);
+    assertTrue(spec.configuration().payload().hasDisposalReserve());
+
+    OrbitlabException failure =
+        assertThrows(
+            OrbitlabException.class,
+            () -> MissionFactory.fromWizardValues(values, MissionType.LEO));
+    assertTrue(
+        failure.getMessage().toLowerCase(Locale.ROOT).contains("parking"),
+        () -> "the message must name the parking chain: " + failure.getMessage());
+  }
+
+  @Test
+  void deorbit_onGeoValues_isIgnored() {
+    Map<String, Object> values = baseValues();
+    values.put("PAYLOAD_TYPE", "GEO_SAT");
+    values.put("PAYLOAD_MASS", 2_000.0);
+    values.put("DEORBIT", Boolean.TRUE);
+
+    MissionSpec spec = MissionFactory.specFromWizardValues(values, MissionType.GEO);
+    assertFalse(spec.configuration().payload().hasDisposalReserve());
   }
 }

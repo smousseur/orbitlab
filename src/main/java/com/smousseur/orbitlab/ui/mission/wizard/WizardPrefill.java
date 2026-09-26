@@ -79,6 +79,9 @@ public final class WizardPrefill {
         values.put(FormField.LEO_PERIGEE_ALT.key(), toKilometers(earthOrbit.perigeeAltitude()));
         values.put(FormField.LEO_APOGEE_ALT.key(), toKilometers(earthOrbit.apogeeAltitude()));
         putInclinationIfCommanded(values, earthOrbit);
+        if (earthOrbit.deorbits()) {
+          values.put(FormField.DEORBIT.key(), Boolean.TRUE);
+        }
       }
       case MissionSpec.Geo geo ->
           values.put(FormField.GTO_PARKING_ALT.key(), toKilometers(geo.parkingAltitude()));
