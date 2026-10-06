@@ -6,6 +6,8 @@ import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.Physics;
 import com.smousseur.orbitlab.simulation.flight.FlightContext;
 import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
+import com.smousseur.orbitlab.simulation.mission.detector.LunarImpactDetector;
+import com.smousseur.orbitlab.simulation.mission.detector.ReentryGuard;
 import com.smousseur.orbitlab.simulation.mission.vehicle.ActiveStageInfo;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropulsionSystem;
 import java.util.Locale;
@@ -21,11 +23,13 @@ import org.orekit.control.heuristics.lambert.LambertBoundaryConditions;
 import org.orekit.control.heuristics.lambert.LambertBoundaryVelocities;
 import org.orekit.control.heuristics.lambert.LambertDifferentialCorrector;
 import org.orekit.control.heuristics.lambert.LambertSolver;
+import org.orekit.errors.OrekitException;
 import org.orekit.forces.maneuvers.ConstantThrustManeuver;
 import org.orekit.frames.Frame;
 import org.orekit.orbits.CartesianOrbit;
 import org.orekit.orbits.KeplerianOrbit;
 import org.orekit.propagation.SpacecraftState;
+import org.orekit.propagation.events.handlers.StopOnDecreasing;
 import org.orekit.propagation.numerical.NumericalPropagator;
 import org.orekit.time.AbsoluteDate;
 import org.orekit.utils.Constants;
@@ -158,6 +162,19 @@ public record TranslunarInjectionPlan(
    * perpendicular — and half a day either side brackets it comfortably.
    */
   private static final double PERILUNE_SEARCH_MARGIN_SECONDS = 0.5 * 86_400.0;
+
+  /**
+   * Upper bound on the speed of a perilune-search flight (m/s), geocentric or relative to the Moon
+   * — what lets its stops be checked only as often as a threshold can be reached.
+   *
+   * <p>A ballistic flight reaches the Earth's surface at {@code sqrt(v² + 2μ(1/Rₑ − 1/r))}: from a
+   * 400 km parking orbit at 7.7 km/s, even a 3.8 km/s burn — all a Falcon Heavy upper stage
+   * delivers at injection — arrives under 12 km/s. Relative to the Moon add its 1.0 km/s orbital
+   * speed and, in quadrature, its 2.4 km/s escape speed: about 13 km/s. Fifteen covers both, and a
+   * burn up to some 7 km/s. The 46 lunar impacts flown by the aim candidates of six Canaveral
+   * windows measured at most 2.5 km/s.
+   */
+  private static final double MAX_COAST_SPEED = 15_000.0;
 
   /**
    * Secant iterations calibrating the finite burn on the impulsive energy. Six, the count {@code
@@ -564,7 +581,7 @@ public record TranslunarInjectionPlan(
 
   /**
    * Solves the injection from {@code parking}, calibrates the finite burn that delivers it, and
-   * refuses on the active stage's depletion floor — the whole verdict on a translunar departure, in
+   * refuses what the active stage cannot carry — the whole verdict on a translunar departure, in
    * one place.
    *
    * <p><b>It is shared rather than duplicated</b>. {@code TLIBurnStage} flies this on the mission's
@@ -584,18 +601,22 @@ public record TranslunarInjectionPlan(
    * <p><b>{@code parking} is the state at the injection point, not at ignition.</b> The burn is
    * centred on it, and the advance a caller has to stop its coast at is {@link #ignitionLead}.
    *
-   * <p><b>The floor is judged on the commanded ΔV</b>, so a transfer that passed impulsively can be
-   * refused here. That is the under-delivery, paid in propellant rather than in miss distance; the
-   * message quotes both figures so the surcharge is readable in the refusal.
+   * <p><b>The propellant is judged twice.</b> Before the aim, on the closed-form ΔV to the Moon's
+   * centre ({@link #refuseBeyondReach}), so an unreachable transfer is refused for what it is
+   * rather than after a full aim search. After it, on the burn calibrated for the converged plan:
+   * one the propellant caps is refused, since it delivers less than the <b>commanded</b> ΔV — the
+   * finite-burn surcharge included, so a transfer that passed impulsively can still be refused
+   * there.
    *
    * @param parking the state at the injection point the burn is centred on
    * @param targetPeriluneAltitude the perilune altitude above the lunar surface to aim for (m)
    * @param active the vehicle stage burning the injection — its propulsion sizes the burn, its
-   *     depletion floor decides whether the transfer is within reach
+   *     propellant decides whether the transfer is within reach
    * @param context the environment the aim and the burn are flown in
    * @return the burn to light one {@link #ignitionLead} before {@code parking.getDate()}
-   * @throws OrbitlabException when the aim does not converge, or when the burn would take the
-   *     active stage below its depletion floor
+   * @throws OrbitlabException when the injection needs more ΔV than the active stage delivers, when
+   *     the aim does not converge, or when the burn calibrated for the converged plan is capped by
+   *     the propellant
    */
   public static Burn inject(
       SpacecraftState ignitionState,
@@ -603,6 +624,7 @@ public record TranslunarInjectionPlan(
       double targetPeriluneAltitude,
       ActiveStageInfo active,
       FlightContext context) {
+    refuseBeyondReach(ignitionState, parking, active);
     double exhaustVelocity = active.propulsion().isp() * Constants.G0_STANDARD_GRAVITY;
     TranslunarInjectionPlan plan =
         solve(
@@ -613,17 +635,82 @@ public record TranslunarInjectionPlan(
                 calibrateBurn(ignitionState, state, deltaV, active, context, false).endState(),
             context);
     return refuseOrReturn(
-        plan, calibrateBurn(ignitionState, parking, plan.deltaV(), active, context, true), active);
+        plan,
+        calibrateBurn(ignitionState, parking, plan.deltaV(), active, context, true),
+        active,
+        ignitionState.getMass());
   }
 
   /**
-   * Assembles the burn and pronounces the depletion floor on the <b>commanded</b> ΔV, so a transfer
-   * that passed impulsively can be refused here. That is the under-delivery, paid in propellant
-   * rather than in miss distance; the message quotes both figures so the surcharge is readable in
-   * the refusal.
+   * Refuses, before any aim is flown, an injection the active stage cannot deliver even to the
+   * Moon's centre.
+   *
+   * <p>The ΔV asked for is the closed form the launch window already ranks its epochs by, {@link
+   * #keplerianInjectionDeltaV}, from the injection point to the Moon's centre at arrival; the ΔV
+   * available is what the active stage delivers burning down to its depletion floor. Without this,
+   * an unreachable transfer spent the whole aim search — some forty propagations of four days —
+   * before failing as a missed perilune, which named the wrong cause.
+   *
+   * <p><b>The band it gives up is a few m/s wide.</b> The closed form aims at the centre rather
+   * than at the offset aim point, and it was measured 4 to 8 m/s above the commanded ΔV at the
+   * Canaveral windows that converge: a stage carrying exactly that much is refused here although
+   * its aim might have converged.
+   *
+   * @throws OrbitlabException quoting the ΔV asked for, the ΔV available and the angle of the
+   *     Moon's arrival direction above the parking plane — the usual reason an injection costs more
+   *     than the stage was sized for
    */
-  private static Burn refuseOrReturn(
-      TranslunarInjectionPlan plan, Calibrated calibrated, ActiveStageInfo active) {
+  private static void refuseBeyondReach(
+      SpacecraftState ignitionState, SpacecraftState parking, ActiveStageInfo active) {
+    AbsoluteDate arrival = parking.getDate().shiftedBy(TIME_OF_FLIGHT_SECONDS);
+    double required = keplerianInjectionDeltaV(parking, arrival);
+    double available = deliverableDeltaV(active, ignitionState.getMass());
+    if (required > available) {
+      double misalignment =
+          planeMisalignment(
+              Vector3D.crossProduct(parking.getPosition(), parking.getPVCoordinates().getVelocity())
+                  .normalize(),
+              moonPosition(arrival).normalize());
+      throw new OrbitlabException(
+          String.format(
+              Locale.ROOT,
+              "[TLI] the injection needs %.0f m/s and the active stage can deliver %.0f m/s from"
+                  + " %.0f kg: it does not carry the propellant for this transfer. The Moon's"
+                  + " arrival direction sits %.2f° off the parking plane",
+              required,
+              available,
+              ignitionState.getMass(),
+              FastMath.toDegrees(misalignment)));
+    }
+  }
+
+  /**
+   * The ΔV the active stage delivers from {@code mass} burning down to its depletion floor (m/s),
+   * by Tsiolkovsky.
+   */
+  private static double deliverableDeltaV(ActiveStageInfo active, double mass) {
+    double exhaustVelocity = active.propulsion().isp() * Constants.G0_STANDARD_GRAVITY;
+    return exhaustVelocity * FastMath.log(mass / (mass - active.remainingFuel(mass)));
+  }
+
+  /**
+   * Assembles the burn, or refuses it when the propellant capped its calibration: the stage then
+   * burns to its depletion floor and still falls short of the <b>commanded</b> ΔV, so a transfer
+   * that passed impulsively can be refused here. That is the under-delivery, paid in propellant
+   * rather than in miss distance; the message quotes the commanded, impulsive and deliverable
+   * figures so the surcharge is readable in the refusal.
+   *
+   * <p><b>The cap is the verdict, not the end mass.</b> A capped burn ends on the depletion floor
+   * to within rounding, so comparing its end mass with the floor refused it or not on the last bit.
+   *
+   * @param ignitionMass the mass the burn ignites at (kg), which the deliverable ΔV is computed
+   *     from
+   */
+  static Burn refuseOrReturn(
+      TranslunarInjectionPlan plan,
+      Calibrated calibrated,
+      ActiveStageInfo active,
+      double ignitionMass) {
     Burn burn =
         new Burn(
             plan,
@@ -632,18 +719,17 @@ public record TranslunarInjectionPlan(
             calibrated.commandedDeltaV(),
             calibrated.endState().getMass());
 
-    double floor = active.depletionFloor();
-    if (burn.endMass() < floor) {
+    if (calibrated.capped()) {
       throw new OrbitlabException(
           String.format(
               Locale.ROOT,
-              "the %.0f m/s injection burn (%.0f m/s impulsive) would leave %.0f kg, below the %.0f"
-                  + " kg depletion floor of the active stage — it does not carry the propellant for"
-                  + " this transfer",
+              "[TLI] the %.0f m/s injection burn (%.0f m/s impulsive) needs more than the %.0f m/s"
+                  + " the active stage delivers down to its %.0f kg depletion floor — it does not"
+                  + " carry the propellant for this transfer",
               burn.commandedDeltaV(),
               plan.deltaV().getNorm(),
-              burn.endMass(),
-              floor));
+              deliverableDeltaV(active, ignitionMass),
+              active.depletionFloor()));
     }
     return burn;
   }
@@ -732,8 +818,11 @@ public record TranslunarInjectionPlan(
    * @param duration how long to thrust (s)
    * @param commandedDeltaV the ΔV the burn is commanded for (m/s)
    * @param endState the state at cut-off, half a burn past the injection point
+   * @param capped whether {@code duration} is the propellant's and not the commanded ΔV's — the
+   *     burn then delivers less than it is commanded for
    */
-  private record Calibrated(double duration, double commandedDeltaV, SpacecraftState endState) {}
+  record Calibrated(
+      double duration, double commandedDeltaV, SpacecraftState endState, boolean capped) {}
 
   /**
    * Scales the commanded ΔV until the centred finite burn delivers the specific energy the impulse
@@ -793,13 +882,17 @@ public record TranslunarInjectionPlan(
               propulsion.isp(),
               propulsion.thrust(),
               availableFuel);
+      boolean capped =
+          duration
+              < Physics.computeBurnDuration(
+                  commanded, ignitionState.getMass(), propulsion.isp(), propulsion.thrust());
       SpacecraftState burnt =
           flyBurn(ignitionState, direction, duration, propulsion, maxStep, context);
       double residual = targetEnergy - specificEnergy(burnt);
 
       if (FastMath.abs(residual) < bestResidual) {
         bestResidual = FastMath.abs(residual);
-        best = new Calibrated(duration, commanded, burnt);
+        best = new Calibrated(duration, commanded, burnt, capped);
       }
       if (FastMath.abs(residual) < tolerance) {
         break;
@@ -1209,17 +1302,50 @@ public record TranslunarInjectionPlan(
    * <p><b>One geocentric propagation, no sphere-of-influence switching</b>, and that is licensed by
    * measurement rather than convenience: L4 §11.2 measured 9.55 m between the multi-arc flight and
    * the same flight in a single geocentric frame.
+   *
+   * <p><b>Every candidate yields a reading in bounded time</b>, because the aim flies whatever its
+   * walk asks for, including burns saturated on their propellant. A candidate falling back into the
+   * atmosphere used to drive the drag-laden step size under Orekit's minimum, or to crawl for
+   * minutes at tiny steps; one aimed at the centre of a point-mass Moon flew straight through it.
+   * The flight therefore stops on a re-entry ({@link ReentryGuard#armQuiet}) and on the lunar
+   * surface ({@link LunarImpactDetector}), and a flight Orekit itself aborts — a drag model asked
+   * for a density under the surface by a trial step, before any detector can act — is read as
+   * stopped at its last accepted step. A stopped flight reads the closer of its closest sampled
+   * approach and its last state: the last sample can sit up to a minute before an impact, above the
+   * target. Neither stop moves the aim's decisions: a lunar impact reads at most the lunar radius,
+   * under every target, and a flight stopped near the Earth reads some 370 000 km, above it. A
+   * flight that runs to the end of its search is read exactly as before the stops existed.
    */
-  private static double perileneRadius(
+  static double perileneRadius(
       SpacecraftState injected, AbsoluteDate arrival, FlightContext context) {
     double searchEnd = arrival.durationFrom(injected.getDate()) + PERILUNE_SEARCH_MARGIN_SECONDS;
+    AbsoluteDate end = injected.getDate().shiftedBy(searchEnd);
 
     NumericalPropagator propagator = propagator(context, injected);
     DistanceTracker tracker = new DistanceTracker(injected.getFrame());
     propagator.getMultiplexer().add(PERILUNE_SAMPLE_STEP, tracker);
-    propagator.propagate(injected.getDate().shiftedBy(searchEnd));
+    SpacecraftState[] lastAccepted = {injected};
+    propagator
+        .getMultiplexer()
+        .add(interpolator -> lastAccepted[0] = interpolator.getCurrentState());
+    ReentryGuard.armQuiet(propagator, context.gravity(), MAX_COAST_SPEED);
+    propagator.addEventDetector(
+        new LunarImpactDetector(lunarRadius())
+            .withClosingSpeed(MAX_COAST_SPEED)
+            .withHandler(new StopOnDecreasing()));
 
-    return tracker.refinedMinimum();
+    SpacecraftState stoppedAt;
+    try {
+      SpacecraftState reached = propagator.propagate(end);
+      if (reached.getDate().compareTo(end) >= 0) {
+        return tracker.refinedMinimum();
+      }
+      stoppedAt = reached;
+    } catch (OrekitException e) {
+      logger.debug("TLI aim candidate aborted by Orekit, read as stopped: {}", e.getMessage());
+      stoppedAt = lastAccepted[0];
+    }
+    return FastMath.min(tracker.refinedMinimum(), tracker.distance(stoppedAt));
   }
 
   /**
@@ -1241,14 +1367,7 @@ public record TranslunarInjectionPlan(
 
     @Override
     public void handleStep(SpacecraftState state) {
-      double distance =
-          state
-              .getPosition()
-              .subtract(
-                  OrekitService.get()
-                      .body(SolarSystemBody.MOON)
-                      .getPosition(state.getDate(), frame))
-              .getNorm();
+      double distance = distance(state);
       if (distance < minimum) {
         minimum = distance;
         before = previous;
@@ -1258,6 +1377,15 @@ public record TranslunarInjectionPlan(
         minimumClosed = true;
       }
       previous = distance;
+    }
+
+    /** The selenocentric distance of a state of the tracked propagation (m). */
+    private double distance(SpacecraftState state) {
+      return state
+          .getPosition()
+          .subtract(
+              OrekitService.get().body(SolarSystemBody.MOON).getPosition(state.getDate(), frame))
+          .getNorm();
     }
 
     /**

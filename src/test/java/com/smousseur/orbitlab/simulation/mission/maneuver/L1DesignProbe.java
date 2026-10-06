@@ -8,6 +8,7 @@ import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionStage;
 import com.smousseur.orbitlab.simulation.mission.MissionType;
 import com.smousseur.orbitlab.simulation.mission.context.MissionEntry;
+import com.smousseur.orbitlab.simulation.mission.detector.ReentryDetector;
 import com.smousseur.orbitlab.simulation.mission.detector.ReentryGuard;
 import com.smousseur.orbitlab.simulation.mission.operation.MissionFactory;
 import com.smousseur.orbitlab.simulation.mission.operation.MissionSpec;
@@ -15,7 +16,6 @@ import com.smousseur.orbitlab.simulation.mission.stage.TLIBurnStage;
 import com.smousseur.orbitlab.simulation.mission.vehicle.ActiveStageInfo;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropellantBudget;
 import com.smousseur.orbitlab.simulation.mission.window.problem.LunarLaunchWindowProblem;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -75,8 +75,12 @@ class L1DesignProbe {
     aimDirection =
         method("aimOffsetDirection", SpacecraftState.class, Vector3D.class, AbsoluteDate.class);
 
+    java.util.Set<String> seen = new java.util.HashSet<>();
     for (String line : Files.readAllLines(Path.of("build/probe-tli-states.txt"))) {
       String[] f = line.trim().split("\\s+");
+      if (!seen.add(f[0] + " " + f[2])) {
+        continue;
+      }
       SpacecraftState ignition =
           state(
               new AbsoluteDate(f[2], TimeScalesFactory.getUTC()),
@@ -87,7 +91,7 @@ class L1DesignProbe {
     }
 
     Counters total = new Counters();
-    for (String site : new String[] {"kourou"}) {
+    for (String site : new String[] {"canaveral", "kourou"}) {
       sweep(site, total);
     }
     logger.info("L1 SWEEP TOTAL {}", total);
@@ -195,7 +199,10 @@ class L1DesignProbe {
             Locale.ROOT,
             "L1 NRL injected: r-Re %.1f km, vr %.1f m/s, |v| %.1f m/s, perigee r-Re %.1f km",
             (injected.getPosition().getNorm() - re) / 1000.0,
-            injected.getPVCoordinates().getVelocity().dotProduct(injected.getPosition().normalize()),
+            injected
+                .getPVCoordinates()
+                .getVelocity()
+                .dotProduct(injected.getPosition().normalize()),
             injected.getPVCoordinates().getVelocity().getNorm(),
             (injected.getOrbit().getA() * (1.0 - injected.getOrbit().getE()) - re) / 1000.0));
     NumericalPropagator propagator =
@@ -211,7 +218,9 @@ class L1DesignProbe {
               last[1] = (s.getPosition().getNorm() - re) / 1000.0;
               last[2] = s.getPVCoordinates().getVelocity().dotProduct(s.getPosition().normalize());
               last[3] =
-                  interpolator.getCurrentState().getDate()
+                  interpolator
+                      .getCurrentState()
+                      .getDate()
                       .durationFrom(interpolator.getPreviousState().getDate());
             });
     try {
@@ -293,6 +302,353 @@ class L1DesignProbe {
       attempts("window@" + iso, ignition, parking, active, context, counters, true);
     }
     logger.info("L1 WINDOWS TOTAL {}", counters);
+  }
+
+  /** Decomposes the cost of the perilune-search guards on candidates that do not stop. */
+  @Test
+  void guardCost() throws Exception {
+    OrekitService.get().initialize();
+    propagatorOf = method("propagator", FlightContext.class, SpacecraftState.class);
+    calibrate =
+        method(
+            "calibrateBurn",
+            SpacecraftState.class,
+            SpacecraftState.class,
+            Vector3D.class,
+            ActiveStageInfo.class,
+            FlightContext.class,
+            boolean.class);
+    aimDirection =
+        method("aimOffsetDirection", SpacecraftState.class, Vector3D.class, AbsoluteDate.class);
+    MissionSpec.LunarOrbit spec = spec("canaveral");
+    Mission mission = new MissionEntry(spec).mission();
+    MissionStage tli =
+        mission.getStages().stream().filter(s -> s instanceof TLIBurnStage).findFirst().get();
+    ActiveStageInfo active = mission.getVehicle().resolveActiveStage(budgetMass(spec));
+    SpacecraftState parking =
+        problem(spec)
+            .injectionAt(new AbsoluteDate("2026-10-06T10:02:16.000Z", TimeScalesFactory.getUTC()))
+            .state();
+    FlightContext context = tli.flightContext(parking, mission);
+    SpacecraftState ignition = ignitionFor(parking, active, context);
+    AbsoluteDate arrival =
+        parking.getDate().shiftedBy(TranslunarInjectionPlan.TIME_OF_FLIGHT_SECONDS);
+    double targetRadius = GravitationalContext.moon().shape().getEquatorialRadius() + TARGET;
+    SpacecraftState[] candidates = new SpacecraftState[4];
+    for (int k = 0; k < candidates.length; k++) {
+      candidates[k] =
+          injected(ignition, parking, targetRadius * FastMath.pow(2.0, k), active, context);
+    }
+    String[] labels = {
+      "none", "earth", "earth+moon10", "production", "earth+moonAdaptive", "allAdaptiveStopping"
+    };
+    for (int round = 0; round < 3; round++) {
+      double[] seconds = new double[labels.length];
+      int mismatches = 0;
+      for (SpacecraftState c : candidates) {
+        double[] readings = new double[labels.length];
+        for (int v = 0; v < labels.length; v++) {
+          long start = System.nanoTime();
+          readings[v] =
+              v == 3
+                  ? TranslunarInjectionPlan.perileneRadius(c, arrival, context)
+                  : v == 5 ? adaptive(c, arrival, context) : variant(c, arrival, context, v);
+          seconds[v] += (System.nanoTime() - start) / 1.0e9;
+          if (v == 5
+              && Double.doubleToLongBits(readings[5]) != Double.doubleToLongBits(readings[3])) {
+            logger.info(
+                "L1 COST adaptive differs from production: {} vs {}", readings[5], readings[3]);
+          }
+          if (Double.doubleToLongBits(readings[v]) != Double.doubleToLongBits(readings[0])) {
+            mismatches++;
+            if (round == 0) {
+              logger.info(
+                  "L1 COST mismatch {} reading {} vs none {}", labels[v], readings[v], readings[0]);
+            }
+          }
+        }
+      }
+      StringBuilder line = new StringBuilder();
+      for (int v = 0; v < labels.length; v++) {
+        line.append(String.format(Locale.ROOT, " %s %.3f s |", labels[v], seconds[v]));
+      }
+      logger.info("L1 COST round {} ({} candidates):{} mismatches {}", round, 4, line, mismatches);
+    }
+  }
+
+  private double variant(
+      SpacecraftState injected, AbsoluteDate arrival, FlightContext context, int v)
+      throws Exception {
+    double searchEnd = arrival.durationFrom(injected.getDate()) + 0.5 * 86_400.0;
+    NumericalPropagator propagator =
+        (NumericalPropagator) propagatorOf.invoke(null, context, injected);
+    Tracker tracker = new Tracker(injected.getFrame());
+    propagator.getMultiplexer().add(60.0, tracker);
+    if (v >= 1) {
+      ReentryGuard.armQuiet(propagator, context.gravity());
+    }
+    double lunarRadius = GravitationalContext.moon().shape().getEquatorialRadius();
+    if (v == 2) {
+      propagator.addEventDetector(new LunarSurfaceDetector(lunarRadius, injected.getFrame()));
+    }
+    if (v == 4) {
+      propagator.addEventDetector(
+          new LunarSurfaceDetector(lunarRadius, injected.getFrame())
+              .withMaxCheck(
+                  (s, forward) ->
+                      FastMath.max(
+                          10.0,
+                          (s.getPosition().subtract(moon(s.getDate(), s.getFrame())).getNorm()
+                                  - lunarRadius)
+                              / 5_000.0)));
+    }
+    propagator.propagate(injected.getDate().shiftedBy(searchEnd));
+    return tracker.refinedMinimum();
+  }
+
+  /**
+   * The production guards with an adaptive check interval: the distance to each threshold divided
+   * by a speed no translunar trajectory reaches, floored at the production 10 s.
+   */
+  private double adaptive(SpacecraftState injected, AbsoluteDate arrival, FlightContext context)
+      throws Exception {
+    double bound = 15_000.0;
+    double searchEnd = arrival.durationFrom(injected.getDate()) + 0.5 * 86_400.0;
+    AbsoluteDate end = injected.getDate().shiftedBy(searchEnd);
+    NumericalPropagator propagator =
+        (NumericalPropagator) propagatorOf.invoke(null, context, injected);
+    Tracker tracker = new Tracker(injected.getFrame());
+    propagator.getMultiplexer().add(60.0, tracker);
+    double re = context.gravity().equatorialRadius();
+    propagator.addEventDetector(
+        new ReentryDetector(re, ReentryGuard.SUBSURFACE_FLOOR)
+            .withMaxCheck(
+                (s, forward) ->
+                    FastMath.max(
+                        10.0,
+                        (s.getPosition().getNorm() - re - ReentryGuard.SUBSURFACE_FLOOR) / bound))
+            .withHandler((s, d, increasing) -> Action.STOP));
+    if (context.drag() != null) {
+      propagator.addEventDetector(
+          new ReentryDetector(re, ReentryGuard.DRAG_REENTRY_FLOOR)
+              .withMaxCheck(
+                  (s, forward) ->
+                      FastMath.max(
+                          10.0,
+                          (s.getPosition().getNorm() - re - ReentryGuard.DRAG_REENTRY_FLOOR)
+                              / bound))
+              .withHandler(
+                  (s, d, increasing) ->
+                      s.getPVCoordinates().getVelocity().dotProduct(s.getPosition()) < 0.0
+                          ? Action.STOP
+                          : Action.CONTINUE));
+    }
+    double lunarRadius = GravitationalContext.moon().shape().getEquatorialRadius();
+    propagator.addEventDetector(
+        new LunarSurfaceDetector(lunarRadius, injected.getFrame())
+            .withMaxCheck(
+                (s, forward) ->
+                    FastMath.max(
+                        10.0,
+                        (s.getPosition().subtract(moon(s.getDate(), s.getFrame())).getNorm()
+                                - lunarRadius)
+                            / bound))
+            .withHandler((s, d, increasing) -> increasing ? Action.CONTINUE : Action.STOP));
+    SpacecraftState reached = propagator.propagate(end);
+    if (reached.getDate().compareTo(end) >= 0) {
+      return tracker.refinedMinimum();
+    }
+    return FastMath.min(
+        tracker.refinedMinimum(),
+        reached.getPosition().subtract(moon(reached.getDate(), reached.getFrame())).getNorm());
+  }
+
+  /** Captures, in full precision, the post-burn states the L1 tests are pinned on. */
+  @Test
+  void fixtures() throws Exception {
+    OrekitService.get().initialize();
+    propagatorOf = method("propagator", FlightContext.class, SpacecraftState.class);
+    calibrate =
+        method(
+            "calibrateBurn",
+            SpacecraftState.class,
+            SpacecraftState.class,
+            Vector3D.class,
+            ActiveStageInfo.class,
+            FlightContext.class,
+            boolean.class);
+    aimDirection =
+        method("aimOffsetDirection", SpacecraftState.class, Vector3D.class, AbsoluteDate.class);
+    double targetRadius = GravitationalContext.moon().shape().getEquatorialRadius() + TARGET;
+
+    SpacecraftState crashIgnition =
+        state(
+            new AbsoluteDate("2026-10-08T04:42:36.932610764234190952Z", TimeScalesFactory.getUTC()),
+            new Vector3D(4973611.868168, 4314726.383995, 1608361.798281),
+            new Vector3D(-3976.080372633, 5753.619853080, -3147.166622910),
+            20220.267602);
+    Mission canaveral = new MissionEntry(spec("canaveral")).mission();
+    MissionStage canaveralTli =
+        canaveral.getStages().stream().filter(s -> s instanceof TLIBurnStage).findFirst().get();
+    FlightContext canaveralContext = canaveralTli.flightContext(crashIgnition, canaveral);
+    NumericalPropagator ballistic =
+        OrekitService.get()
+            .createOptimizationPropagator(
+                canaveralContext, canaveralTli.maxStepSeconds(crashIgnition, canaveral));
+    ballistic.setInitialState(crashIgnition);
+    ReentryGuard.armQuiet(ballistic, canaveralContext.gravity());
+    SpacecraftState crashParking =
+        ballistic.propagate(TranslunarInjectionPlan.departureFrom(crashIgnition).injectionDate());
+    capture(
+        "crash-candidate",
+        crashIgnition,
+        crashParking,
+        targetRadius * 256.0,
+        canaveral.getVehicle().resolveActiveStage(crashIgnition.getMass()),
+        canaveralContext);
+
+    MissionSpec.LunarOrbit kourouSpec = spec("kourou");
+    Mission kourou = new MissionEntry(kourouSpec).mission();
+    MissionStage kourouTli =
+        kourou.getStages().stream().filter(s -> s instanceof TLIBurnStage).findFirst().get();
+    LunarLaunchWindowProblem kourouProblem = problem(kourouSpec);
+    ActiveStageInfo kourouActive = kourou.getVehicle().resolveActiveStage(budgetMass(kourouSpec));
+    SpacecraftState nrlParking =
+        kourouProblem
+            .injectionAt(new AbsoluteDate("2026-10-11T00:00:00.000Z", TimeScalesFactory.getUTC()))
+            .state();
+    FlightContext kourouContext = kourouTli.flightContext(nrlParking, kourou);
+    capture(
+        "nrlmsise-candidate",
+        ignitionFor(nrlParking, kourouActive, kourouContext),
+        nrlParking,
+        targetRadius,
+        kourouActive,
+        kourouContext);
+
+    MissionSpec.LunarOrbit canaveralSpec = spec("canaveral");
+    LunarLaunchWindowProblem canaveralProblem = problem(canaveralSpec);
+    ActiveStageInfo canaveralActive =
+        canaveral.getVehicle().resolveActiveStage(budgetMass(canaveralSpec));
+    for (String iso : new String[] {"2026-10-06T10:02:16.000Z", "2026-10-07T01:13:36.000Z"}) {
+      SpacecraftState parking =
+          canaveralProblem.injectionAt(new AbsoluteDate(iso, TimeScalesFactory.getUTC())).state();
+      FlightContext context = canaveralTli.flightContext(parking, canaveral);
+      SpacecraftState ignition = ignitionFor(parking, canaveralActive, context);
+      AbsoluteDate arrival =
+          parking.getDate().shiftedBy(TranslunarInjectionPlan.TIME_OF_FLIGHT_SECONDS);
+      for (int k = -8; k <= 0; k++) {
+        SpacecraftState injected =
+            injected(
+                ignition, parking, targetRadius * FastMath.pow(2.0, k), canaveralActive, context);
+        Guarded guarded = guarded(injected, arrival, context);
+        if ("moon-surface".equals(guarded.stop)) {
+          logger.info(
+              String.format(
+                  Locale.ROOT,
+                  "L1 FIXTURE lunar-impact %s k=%d guarded reading %s (lunar radius %s)",
+                  iso,
+                  k,
+                  guarded.reading,
+                  GravitationalContext.moon().shape().getEquatorialRadius()));
+          logFixture("lunar-impact", injected, arrival);
+          return;
+        }
+      }
+    }
+  }
+
+  private void capture(
+      String label,
+      SpacecraftState ignition,
+      SpacecraftState parking,
+      double offset,
+      ActiveStageInfo active,
+      FlightContext context)
+      throws Exception {
+    SpacecraftState injected = injected(ignition, parking, offset, active, context);
+    AbsoluteDate arrival =
+        parking.getDate().shiftedBy(TranslunarInjectionPlan.TIME_OF_FLIGHT_SECONDS);
+    Guarded guarded = guarded(injected, arrival, context);
+    logger.info(
+        "L1 FIXTURE {} guarded stop {} reading {} error {}",
+        label,
+        guarded.stop,
+        guarded.reading,
+        guarded.error);
+    logFixture(label, injected, arrival);
+  }
+
+  private SpacecraftState injected(
+      SpacecraftState ignition,
+      SpacecraftState parking,
+      double offset,
+      ActiveStageInfo active,
+      FlightContext context)
+      throws Exception {
+    AbsoluteDate arrival =
+        parking.getDate().shiftedBy(TranslunarInjectionPlan.TIME_OF_FLIGHT_SECONDS);
+    Vector3D moonAtArrival = moon(arrival, parking.getFrame());
+    Vector3D offsetDirection =
+        (Vector3D) aimDirection.invoke(null, parking, moonAtArrival, arrival);
+    Vector3D deltaV =
+        TranslunarInjectionPlan.keplerianSeedVelocity(
+                parking,
+                TranslunarInjectionPlan.boundaryConditions(
+                    parking, arrival, moonAtArrival.add(offsetDirection.scalarMultiply(offset))))
+            .subtract(parking.getPVCoordinates().getVelocity());
+    return (SpacecraftState)
+        accessor(
+            calibrate.invoke(null, ignition, parking, deltaV, active, context, false), "endState");
+  }
+
+  private static SpacecraftState ignitionFor(
+      SpacecraftState parking, ActiveStageInfo active, FlightContext context) {
+    double lead =
+        TranslunarInjectionPlan.ignitionLead(
+            parking, TranslunarInjectionPlan.departureFrom(parking), active);
+    NumericalPropagator backwards = OrekitService.get().createOptimizationPropagator(context, 30.0);
+    backwards.setInitialState(parking);
+    return backwards.propagate(parking.getDate().shiftedBy(-lead));
+  }
+
+  private static double budgetMass(MissionSpec.LunarOrbit spec) {
+    return PropellantBudget.loadsForLunar(
+            spec.configuration().launcher(),
+            spec.configuration().payload(),
+            PARKING,
+            spec.latitude(),
+            FastMath.PI / 2)
+        .massAtInjection();
+  }
+
+  private static LunarLaunchWindowProblem problem(MissionSpec.LunarOrbit spec) {
+    return new LunarLaunchWindowProblem(
+        spec.latitude(),
+        spec.longitude(),
+        spec.altitude(),
+        PARKING,
+        TARGET,
+        spec.configuration().toVehicleStack(),
+        budgetMass(spec));
+  }
+
+  private static void logFixture(String label, SpacecraftState s, AbsoluteDate arrival) {
+    Vector3D p = s.getPosition();
+    Vector3D v = s.getPVCoordinates().getVelocity();
+    logger.info(
+        "L1 FIXTURE {} state date {} pos {} {} {} vel {} {} {} mass {} frame {} arrival {}",
+        label,
+        s.getDate(),
+        p.getX(),
+        p.getY(),
+        p.getZ(),
+        v.getX(),
+        v.getY(),
+        v.getZ(),
+        s.getMass(),
+        s.getFrame().getName(),
+        arrival);
   }
 
   private void flownCase(String site, SpacecraftState ignition) throws Exception {
@@ -401,35 +757,44 @@ class L1DesignProbe {
       counters.maxGuardedSeconds = FastMath.max(counters.maxGuardedSeconds, guardedSeconds);
       String prod;
       double prodReading = Double.NaN;
-      if ("earth-reentry".equals(guarded.stop)) {
-        prod = "skipped";
-      } else {
-        try {
-          prodReading = (double) perileneRadius.invoke(null, injected, arrival, context);
-          prod = "ok";
-        } catch (InvocationTargetException e) {
-          prod = e.getCause().getClass().getSimpleName();
-          counters.prodThrew++;
-        }
+      long prodStart = System.nanoTime();
+      try {
+        prodReading = TranslunarInjectionPlan.perileneRadius(injected, arrival, context);
+        prod = "ok";
+      } catch (RuntimeException e) {
+        prod = e.getClass().getSimpleName();
+        counters.prodThrew++;
       }
+      double prodSeconds = (System.nanoTime() - prodStart) / 1.0e9;
+      counters.maxProdSeconds = FastMath.max(counters.maxProdSeconds, prodSeconds);
       counters.attempts++;
       if (guarded.error != null) {
         counters.guardedThrew++;
+        if (!Double.isNaN(prodReading) && prodReading > targetRadius) {
+          counters.thrownReadAbove++;
+        }
       }
       if (guarded.stop != null) {
         counters.count(guarded.stop);
-        if (Double.isNaN(prodReading) || prodReading < targetRadius != guarded.reading < targetRadius) {
-          if (!Double.isNaN(prodReading)) {
-            counters.signFlips++;
-          }
+        if ("moon-surface".equals(guarded.stop)) {
+          counters.maxMoonStopSpeed = FastMath.max(counters.maxMoonStopSpeed, guarded.stopSpeed);
+        } else {
+          counters.maxEarthStopSpeed = FastMath.max(counters.maxEarthStopSpeed, guarded.stopSpeed);
+        }
+        if (Double.isNaN(prodReading)
+            || prodReading < targetRadius != guarded.reading < targetRadius) {
+          counters.signFlips++;
         }
       } else if (guarded.error == null && !Double.isNaN(prodReading)) {
-        if (Double.doubleToLongBits(prodReading) == Double.doubleToLongBits(guarded.reading)) {
+        long noneStart = System.nanoTime();
+        double unguarded = variant(injected, arrival, context, 0);
+        counters.noneSeconds += (System.nanoTime() - noneStart) / 1.0e9;
+        counters.prodSecondsOnFree += prodSeconds;
+        if (Double.doubleToLongBits(prodReading) == Double.doubleToLongBits(unguarded)) {
           counters.bitIdentical++;
         } else {
           counters.differs++;
-          logger.info(
-              "L1 DIFF {} k={} prod {} guarded {}", label, k, prodReading, guarded.reading);
+          logger.info("L1 DIFF {} k={} prod {} unguarded {}", label, k, prodReading, unguarded);
         }
       }
       if (verbose || guarded.stop != null || guarded.error != null || !"ok".equals(prod)) {
@@ -480,19 +845,33 @@ class L1DesignProbe {
       SpacecraftState last = propagator.propagate(end);
       double reading = tracker.refinedMinimum();
       String stop = null;
+      double speed = Double.NaN;
       if (last.getDate().durationFrom(end) < -1.0e-6) {
         stop = stoppedBy[0] == null ? "earth-reentry" : stoppedBy[0];
         reading =
             FastMath.min(
-                reading, last.getPosition().subtract(moon(last.getDate(), last.getFrame())).getNorm());
+                reading,
+                last.getPosition().subtract(moon(last.getDate(), last.getFrame())).getNorm());
+        Vector3D velocity = last.getPVCoordinates().getVelocity();
+        speed =
+            "moon-surface".equals(stop)
+                ? velocity
+                    .subtract(
+                        OrekitService.get()
+                            .body(SolarSystemBody.MOON)
+                            .getPVCoordinates(last.getDate(), last.getFrame())
+                            .getVelocity())
+                    .getNorm()
+                : velocity.getNorm();
       }
-      return new Guarded(reading, stop, null);
+      return new Guarded(reading, stop, null, speed);
     } catch (RuntimeException e) {
-      return new Guarded(Double.NaN, null, e.getClass().getSimpleName() + ": " + e.getMessage());
+      return new Guarded(
+          Double.NaN, null, e.getClass().getSimpleName() + ": " + e.getMessage(), Double.NaN);
     }
   }
 
-  private record Guarded(double reading, String stop, String error) {}
+  private record Guarded(double reading, String stop, String error, double stopSpeed) {}
 
   private static final class Counters {
     int attempts;
@@ -505,7 +884,13 @@ class L1DesignProbe {
     int signFlips;
     int saturated;
     int belowFloor;
+    int thrownReadAbove;
     double maxGuardedSeconds;
+    double maxProdSeconds;
+    double noneSeconds;
+    double prodSecondsOnFree;
+    double maxEarthStopSpeed;
+    double maxMoonStopSpeed;
 
     void count(String stop) {
       if ("moon-surface".equals(stop)) {
@@ -526,19 +911,29 @@ class L1DesignProbe {
       signFlips += o.signFlips;
       saturated += o.saturated;
       belowFloor += o.belowFloor;
+      thrownReadAbove += o.thrownReadAbove;
       maxGuardedSeconds = FastMath.max(maxGuardedSeconds, o.maxGuardedSeconds);
+      maxProdSeconds = FastMath.max(maxProdSeconds, o.maxProdSeconds);
+      noneSeconds += o.noneSeconds;
+      prodSecondsOnFree += o.prodSecondsOnFree;
+      maxEarthStopSpeed = FastMath.max(maxEarthStopSpeed, o.maxEarthStopSpeed);
+      maxMoonStopSpeed = FastMath.max(maxMoonStopSpeed, o.maxMoonStopSpeed);
     }
 
     @Override
     public String toString() {
       return String.format(
           Locale.ROOT,
-          "attempts %d | prod threw %d | guarded threw %d | earth stops %d | moon stops %d |"
-              + " non-stopped bit-identical %d, differ %d | stop sign flips vs prod %d |"
-              + " saturated burns %d (end below floor %d) | slowest guarded reading %.1f s",
+          "attempts %d | prod threw %d | guarded threw %d (prod read above target %d) | earth"
+              + " stops %d | moon stops %d | non-stopped prod vs unguarded bit-identical %d,"
+              + " differ %d | stop side disagreements prod vs guarded %d | saturated burns %d"
+              + " (end below floor %d) | slowest guarded %.1f s, slowest prod %.1f s | free"
+              + " candidates: prod %.1f s vs unguarded %.1f s | max stop speed earth %.0f m/s,"
+              + " moon %.0f m/s",
           attempts,
           prodThrew,
           guardedThrew,
+          thrownReadAbove,
           earthStops,
           moonStops,
           bitIdentical,
@@ -546,7 +941,12 @@ class L1DesignProbe {
           signFlips,
           saturated,
           belowFloor,
-          maxGuardedSeconds);
+          maxGuardedSeconds,
+          maxProdSeconds,
+          prodSecondsOnFree,
+          noneSeconds,
+          maxEarthStopSpeed,
+          maxMoonStopSpeed);
     }
   }
 

@@ -1,5 +1,6 @@
 package com.smousseur.orbitlab.simulation.mission.detector;
 
+import org.hipparchus.util.FastMath;
 import org.orekit.propagation.SpacecraftState;
 import org.orekit.propagation.events.AbstractDetector;
 import org.orekit.propagation.events.EventDetectionSettings;
@@ -26,6 +27,9 @@ import org.orekit.propagation.events.handlers.EventHandler;
  * </ul>
  */
 public class ReentryDetector extends AbstractDetector<ReentryDetector> {
+
+  /** How often the switching function is checked by default (s); see the explicit constructor. */
+  private static final double CHECK_INTERVAL = 10.0;
 
   /** Reference sphere radius the switching function is measured against (m). */
   private final double equatorialRadius;
@@ -55,9 +59,26 @@ public class ReentryDetector extends AbstractDetector<ReentryDetector> {
    * @param floor the spherical altitude (m) below which the detector fires
    */
   public ReentryDetector(double equatorialRadius, double floor) {
-    super(10.0, 1.0, DEFAULT_MAX_ITER, new ContinueOnEvent());
+    super(CHECK_INTERVAL, 1.0, DEFAULT_MAX_ITER, new ContinueOnEvent());
     this.equatorialRadius = equatorialRadius;
     this.floor = floor;
+  }
+
+  /**
+   * The same detector, checked no more often than the floor can be reached: a trajectory moving at
+   * most {@code maxSpeed} cannot close a gap of {@code g} metres in less than {@code g / maxSpeed}
+   * seconds, so nothing can be missed by waiting that long. Near the floor the check falls back to
+   * every 10 s.
+   *
+   * <p>For a propagation that spends days far from the floor — a translunar coast — this turns tens
+   * of thousands of checks into a handful. A nominal flight sees no event either way, so its
+   * trajectory is unchanged.
+   *
+   * @param maxSpeed an upper bound on the speed of the trajectory (m/s)
+   * @return the detector with an adaptive check interval
+   */
+  public ReentryDetector withClosingSpeed(double maxSpeed) {
+    return withMaxCheck((state, isForward) -> FastMath.max(CHECK_INTERVAL, g(state) / maxSpeed));
   }
 
   /**
