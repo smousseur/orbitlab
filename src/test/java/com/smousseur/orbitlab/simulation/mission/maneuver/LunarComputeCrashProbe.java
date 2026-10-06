@@ -1,42 +1,58 @@
 package com.smousseur.orbitlab.simulation.mission.maneuver;
 
+import com.smousseur.orbitlab.app.converters.TimeConverter;
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.mission.Mission;
 import com.smousseur.orbitlab.simulation.mission.MissionStage;
 import com.smousseur.orbitlab.simulation.mission.MissionType;
 import com.smousseur.orbitlab.simulation.mission.context.MissionEntry;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemerisPoint;
+import com.smousseur.orbitlab.simulation.mission.operation.LaunchPlane;
+import com.smousseur.orbitlab.simulation.mission.operation.LunarOrbitMission;
 import com.smousseur.orbitlab.simulation.mission.operation.MissionFactory;
 import com.smousseur.orbitlab.simulation.mission.operation.MissionSpec;
 import com.smousseur.orbitlab.simulation.mission.planner.MissionPlan;
 import com.smousseur.orbitlab.simulation.mission.planner.MissionPlanOptimizer;
+import com.smousseur.orbitlab.simulation.mission.scenario.ScenarioCodec;
+import com.smousseur.orbitlab.simulation.mission.scenario.ScenarioMapper;
+import com.smousseur.orbitlab.simulation.mission.scenario.model.ScenarioFile;
+import com.smousseur.orbitlab.simulation.mission.scenario.model.ScenarioMission;
 import com.smousseur.orbitlab.simulation.mission.stage.TLIBurnStage;
-import com.smousseur.orbitlab.simulation.mission.window.LaunchWindow;
-import com.smousseur.orbitlab.simulation.mission.window.problem.LunarLaunchWindowPlanner;
+import com.smousseur.orbitlab.simulation.mission.window.problem.MissionScheduler;
+import com.smousseur.orbitlab.ui.mission.wizard.WizardPrefill;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Optional;
+import java.util.Objects;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
+import org.hipparchus.util.FastMath;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
+import org.orekit.orbits.CartesianOrbit;
 import org.orekit.propagation.SpacecraftState;
 import org.orekit.time.AbsoluteDate;
 import org.orekit.time.TimeScalesFactory;
+import org.orekit.utils.Constants;
+import org.orekit.utils.TimeStampedPVCoordinates;
 
 /**
- * Probe: replays the production lunar-orbit compute on consecutive windows. Site, window count and
- * search floor come from the environment variables {@code PROBE_SITE}, {@code PROBE_WINDOWS} and
- * {@code PROBE_FLOOR} (the build forwards no other system property than the probe switch); every
- * outcome is appended in full precision to {@code build/probe-l1-<site>.txt} so two runs can be
- * compared bit for bit.
+ * Probe: replays the production lunar compute on consecutive windows, each mission created the way
+ * the wizard creates it — {@code MissionScheduler}, due east first and the free azimuth after.
+ * Site, window count, search floor and profile come from the environment variables {@code
+ * PROBE_SITE}, {@code PROBE_WINDOWS}, {@code PROBE_FLOOR} and {@code PROBE_TYPE} ({@code orbit} or
+ * {@code flyby}; the build forwards no other system property than the probe switch). Every
+ * computation is appended in full precision to {@code build/probe-l1-<site>.txt}, unchanged in
+ * format so two runs can be compared bit for bit; the plane, the flown misalignment at the
+ * injection and the scenario round trip go to {@code build/probe-l2-<site>.txt}.
  */
 @EnabledIfSystemProperty(named = "orbitlab.probe", matches = "true")
 @SuppressWarnings("PMD.AvoidAccessibilityAlteration")
@@ -46,8 +62,11 @@ class LunarComputeCrashProbe {
   private static final int WINDOWS = Integer.parseInt(env("PROBE_WINDOWS", "5"));
   private static final String SITE = env("PROBE_SITE", "canaveral");
   private static final String FLOOR = env("PROBE_FLOOR", "2026-10-06T00:00:00Z");
+  private static final boolean FLYBY = "flyby".equals(env("PROBE_TYPE", "orbit"));
+  private static final String LABEL = SITE + (FLYBY ? "-flyby" : "");
   private static final Path OUT = Path.of("build/probe-tli-states.txt");
-  private static final Path RECORD = Path.of("build/probe-l1-" + SITE + ".txt");
+  private static final Path RECORD = Path.of("build/probe-l1-" + LABEL + ".txt");
+  private static final Path PLANE_RECORD = Path.of("build/probe-l2-" + LABEL + ".txt");
 
   @Test
   void replay() throws IOException, ReflectiveOperationException {
@@ -66,26 +85,58 @@ class LunarComputeCrashProbe {
       values.put("LAUNCH_SITE_ALT", 3.0);
     }
     values.put("LAUNCHER_TYPE", "FALCON_HEAVY");
-    values.put("PAYLOAD_TYPE", "LUNAR_ORBITER");
     values.put("PAYLOAD_MASS", 2_000.0);
-    values.put("LUNAR_ORBIT_ALT", 100.0);
+    MissionType type;
+    if (FLYBY) {
+      values.put("PAYLOAD_TYPE", "LUNAR_PROBE");
+      values.put("LUNAR_PERILUNE_ALT", 100.0);
+      type = MissionType.LUNAR_FLYBY;
+    } else {
+      values.put("PAYLOAD_TYPE", "LUNAR_ORBITER");
+      values.put("LUNAR_ORBIT_ALT", 100.0);
+      type = MissionType.LUNAR_ORBIT;
+    }
 
     AbsoluteDate floor = new AbsoluteDate(FLOOR, TimeScalesFactory.getUTC());
     for (int i = 0; i < WINDOWS; i++) {
-      MissionSpec spec = MissionFactory.specFromWizardValues(values, MissionType.LUNAR_ORBIT);
-      Optional<LaunchWindow> window =
-          LunarLaunchWindowPlanner.nextOpportunity((MissionSpec.LunarOrbit) spec, floor);
-      AbsoluteDate date;
-      if (window.isPresent()) {
-        date = window.get().date();
-        logger.info(
-            "PROBE window {}: {} at {} m/s", i, date, Math.round(window.get().best().deltaV()));
-      } else {
-        date = floor;
-        logger.info("PROBE window {}: none, keeping requested {}", i, floor);
-      }
+      // The wizard's own creation path: the spec on no plane, the entry, then the schedule, which
+      // re-specifies the entry when the free azimuth chose a plane.
+      MissionEntry entry = new MissionEntry(MissionScheduler.unplannedSpec(values, type));
+      long scheduling = System.nanoTime();
+      MissionScheduler.Schedule schedule = MissionScheduler.schedule(entry, values, floor);
+      double schedulingSeconds = (System.nanoTime() - scheduling) / 1e9;
+      AbsoluteDate date = schedule.date();
+      MissionSpec spec = entry.spec().orElseThrow();
+      LaunchPlane plane = planeOf(spec);
+      logger.info(
+          "PROBE window {}: {} in {} s, plane {}, refusal {}",
+          i,
+          date,
+          String.format(Locale.ROOT, "%.1f", schedulingSeconds),
+          plane,
+          schedule.refusal());
+      Files.writeString(
+          PLANE_RECORD,
+          String.format(
+              Locale.ROOT,
+              "%s %d %s scheduled in %.1f s plane %s refusal %s scenario round trip %s%n",
+              LABEL,
+              i,
+              date,
+              schedulingSeconds,
+              plane == null
+                  ? "due east"
+                  : String.format(
+                      Locale.ROOT,
+                      "i %.6f° %s (A %.4f°)",
+                      plane.targetInclinationDeg(),
+                      plane.nodeBranch(),
+                      FastMath.toDegrees(plane.launchAzimuth(FastMath.toRadians(spec.latitude())))),
+              schedule.refusal(),
+              scenarioRoundTrip(entry, date)),
+          StandardOpenOption.CREATE,
+          StandardOpenOption.APPEND);
 
-      MissionEntry entry = new MissionEntry(spec);
       long started = System.nanoTime();
       try {
         MissionPlan plan = new MissionPlanOptimizer(entry, date).compute();
@@ -93,6 +144,18 @@ class LunarComputeCrashProbe {
         logger.info(
             "PROBE RESULT {} {}: OK in {} s", i, date, String.format(Locale.ROOT, "%.1f", seconds));
         record(i, date, "OK", seconds, describe(plan));
+        Files.writeString(
+            PLANE_RECORD,
+            String.format(
+                Locale.ROOT,
+                "%s %d %s computed in %.1f s %s%n",
+                LABEL,
+                i,
+                date,
+                seconds,
+                flown(plan)),
+            StandardOpenOption.CREATE,
+            StandardOpenOption.APPEND);
       } catch (RuntimeException failure) {
         record(
             i,
@@ -168,6 +231,68 @@ class LunarComputeCrashProbe {
         + last.stageName()
         + " points "
         + plan.computation().ephemeris().size();
+  }
+
+  /**
+   * The misalignment of the Moon at arrival from the plane actually flown, read at the TLI ignition
+   * — the last sample of the parking coast — the way the window reads it on the plane it planned.
+   */
+  private static String flown(MissionPlan plan) {
+    MissionEphemerisPoint ignition = null;
+    for (MissionEphemerisPoint p : plan.computation().ephemeris().allPoints()) {
+      if (LunarOrbitMission.PARKING_COAST_NAME.equals(p.stageName())) {
+        ignition = p;
+      }
+    }
+    if (ignition == null) {
+      return "no parking coast sample";
+    }
+    SpacecraftState state =
+        new SpacecraftState(
+                new CartesianOrbit(
+                    new TimeStampedPVCoordinates(
+                        ignition.time(), ignition.position(), ignition.velocity()),
+                    OrekitService.get().gcrf(),
+                    Constants.WGS84_EARTH_MU))
+            .withMass(ignition.mass());
+    return String.format(
+        Locale.ROOT,
+        "flown β at TLI ignition %+.4f° (ignition %s, mass %.1f kg)",
+        FastMath.toDegrees(TranslunarInjectionPlan.departureFrom(state).planeMisalignment()),
+        ignition.time(),
+        ignition.mass());
+  }
+
+  /**
+   * Saves the scheduled mission to a scenario text and reads it back: the same plane and the same
+   * loads, or the save path dropped something.
+   */
+  private static boolean scenarioRoundTrip(MissionEntry entry, AbsoluteDate date) {
+    entry.setScheduledDate(date);
+    ScenarioMission saved =
+        ScenarioMapper.toScenarioMission(entry, WizardPrefill.fromEntry(entry), null);
+    String iso = TimeConverter.toUtcIsoString(date);
+    ScenarioMission read =
+        ScenarioCodec.read(
+                ScenarioCodec.write(
+                    new ScenarioFile(
+                        ScenarioFile.CURRENT_FORMAT_VERSION, iso, iso, List.of(saved))))
+            .missions()
+            .getFirst();
+    MissionSpec original = entry.spec().orElseThrow();
+    MissionSpec restored =
+        MissionFactory.specFromWizardValues(ScenarioMapper.toMissionValues(read), read.type());
+    return Objects.equals(planeOf(original), planeOf(restored))
+        && Arrays.equals(
+            original.configuration().propellantLoads(), restored.configuration().propellantLoads());
+  }
+
+  private static LaunchPlane planeOf(MissionSpec spec) {
+    return switch (spec) {
+      case MissionSpec.Lunar lunar -> lunar.plane();
+      case MissionSpec.LunarOrbit lunarOrbit -> lunarOrbit.plane();
+      default -> null;
+    };
   }
 
   private static String env(String name, String fallback) {

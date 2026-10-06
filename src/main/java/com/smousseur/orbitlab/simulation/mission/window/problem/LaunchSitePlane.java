@@ -7,6 +7,7 @@ import org.hipparchus.util.FastMath;
 import org.orekit.bodies.GeodeticPoint;
 import org.orekit.frames.TopocentricFrame;
 import org.orekit.time.AbsoluteDate;
+import org.orekit.utils.PVCoordinates;
 
 /**
  * A ground site and the orbital plane it reaches at an instant — the geometry every launch-window
@@ -71,7 +72,35 @@ class LaunchSitePlane {
    * @return the unit angular momentum of the reachable plane
    */
   Vector3D normalOn(Vector3D position) {
-    return Vector3D.crossProduct(position, Physics.localHorizontalDirection(position, azimuth))
+    return normalOn(position, azimuth);
+  }
+
+  /**
+   * The normal of the plane a launch at another azimuth would open from the same position — for the
+   * free-azimuth problem, which searches the azimuth instead of being given one.
+   *
+   * @param position the pad's inertial position
+   * @param launchAzimuth the launch azimuth in radians, clockwise from north
+   * @return the unit angular momentum of that plane
+   */
+  Vector3D normalOn(Vector3D position, double launchAzimuth) {
+    return Vector3D.crossProduct(
+            position, Physics.localHorizontalDirection(position, launchAzimuth))
         .normalize();
+  }
+
+  /**
+   * The pad's inertial velocity — the Earth's rotation carrying it — which the ascent starts with
+   * and only partly steers out.
+   *
+   * @param epoch the instant the Earth's rotation is read at
+   * @return the pad's velocity in GCRF (m/s)
+   */
+  Vector3D velocityAt(AbsoluteDate epoch) {
+    return OrekitService.get()
+        .itrf()
+        .getTransformTo(OrekitService.get().gcrf(), epoch)
+        .transformPVCoordinates(new PVCoordinates(pad.getCartesianPoint(), Vector3D.ZERO))
+        .getVelocity();
   }
 }

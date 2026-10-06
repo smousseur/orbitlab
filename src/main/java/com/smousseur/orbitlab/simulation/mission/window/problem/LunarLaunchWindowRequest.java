@@ -9,7 +9,11 @@ package com.smousseur.orbitlab.simulation.mission.window.problem;
  * LunarLaunchWindowProblem}'s two other inputs — are absent because they belong to its {@code
  * confirm()} alone, and the launcher is chosen a step later.
  *
- * @param latitude the launch site latitude in degrees, which is also the inclination flown
+ * <p><b>Two problems, as the creation has two searches</b>: due east first, {@link #toProblem()},
+ * and the free azimuth {@link LaunchWindowPlanner} falls back to when due east offers nothing
+ * flyable, {@link #toFreeAzimuthProblem()}.
+ *
+ * @param latitude the launch site latitude in degrees
  * @param longitude the launch site longitude in degrees
  * @param altitude the launch site altitude in meters
  * @param parkingAltitude the circular parking altitude the injection leaves from (m)
@@ -27,5 +31,18 @@ public record LunarLaunchWindowRequest(
   public LunarLaunchWindowProblem toProblem() {
     return LunarLaunchWindowProblem.screening(
         latitude, longitude, altitude, parkingAltitude, periluneAltitude);
+  }
+
+  /**
+   * @return the same screening problem with its azimuth freed
+   */
+  public LunarLaunchWindowProblem toFreeAzimuthProblem() {
+    return LunarLaunchWindowProblem.screening(
+        latitude,
+        longitude,
+        altitude,
+        parkingAltitude,
+        periluneAltitude,
+        LunarLaunchWindowProblem.PlaneChoice.FREE_AZIMUTH);
   }
 }

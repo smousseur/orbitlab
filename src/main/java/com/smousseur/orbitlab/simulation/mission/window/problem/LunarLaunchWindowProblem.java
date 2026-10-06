@@ -3,16 +3,20 @@ package com.smousseur.orbitlab.simulation.mission.window.problem;
 import com.smousseur.orbitlab.core.OrbitlabException;
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.simulation.OrekitService;
+import com.smousseur.orbitlab.simulation.Physics;
 import com.smousseur.orbitlab.simulation.flight.FlightContext;
 import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
 import com.smousseur.orbitlab.simulation.mission.maneuver.TranslunarInjectionPlan;
 import com.smousseur.orbitlab.simulation.mission.maneuver.TranslunarInjectionPlan.Departure;
+import com.smousseur.orbitlab.simulation.mission.operation.LaunchPlane;
+import com.smousseur.orbitlab.simulation.mission.vehicle.PropellantBudget;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
 import com.smousseur.orbitlab.simulation.mission.window.LaunchWindowCandidate;
 import com.smousseur.orbitlab.simulation.mission.window.LaunchWindowProblem;
 import java.time.Duration;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.Optional;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
@@ -77,9 +81,34 @@ import org.orekit.utils.TimeStampedPVCoordinates;
  * injection, so the bisection absorbs the whole geometric error. The flight landed 1.0 km off its
  * 100 km target. Closing the bias would buy a better <em>price</em> for the date the window offers,
  * not a better trajectory.
+ *
+ * <p><b>Where due east has nothing, the azimuth is freed</b> ({@link PlaneChoice#FREE_AZIMUTH}). At
+ * any instant exactly one prograde plane holds both the pad and the Moon's direction at arrival, so
+ * the misalignment can be nulled at every epoch and only the price of reaching that plane varies:
+ * the ascent loses the part of the Earth's rotation the heading no longer banks, which the
+ * criterion adds to the injection. The plane priced is the one the ascent is predicted to
+ * <em>fly</em>, not the one it is commanded: the climb leaves the pad's entrainment out of the
+ * commanded plane uncorrected, which turns the flown plane about the vertical by {@code atan(w /
+ * v)} — 0.4° to 1.7° measured from Kourou, a β that cost up to 375 m/s of injection when left in.
+ * The commanded azimuth is therefore the one whose <em>flown</em> plane contains the Moon.
  */
 public class LunarLaunchWindowProblem implements LaunchWindowProblem {
   private static final Logger logger = LogManager.getLogger(LunarLaunchWindowProblem.class);
+
+  /** Which plane the parking orbit of a lift-off at an epoch is posed in. */
+  public enum PlaneChoice {
+    /**
+     * The plane a due-east launch reaches, {@code i = φ} — one plane per instant, wherever the Moon
+     * is. What every lunar mission flew before the free azimuth, and still the first choice.
+     */
+    DUE_EAST,
+
+    /**
+     * The plane containing the Moon at arrival once flown, at the azimuth that commands it; the
+     * criterion adds what that azimuth costs the ascent against due east.
+     */
+    FREE_AZIMUTH
+  }
 
   /**
    * Sweep step. The criterion is smooth at the hour and only its minimum has to be bracketed, which
@@ -104,9 +133,9 @@ public class LunarLaunchWindowProblem implements LaunchWindowProblem {
       Duration.ofMillis(Math.round(FastMath.PI / Constants.WGS84_EARTH_ANGULAR_VELOCITY * 1000.0));
 
   /**
-   * The launch azimuth, due east. The chain this problem serves flies {@code i = φ}, where {@code
-   * sin A = cos i / cos φ} is 1 exactly and {@code LaunchPlane.launchAzimuth} returns {@code π/2}
-   * for both node branches — so there is no branch to choose and no plane to pass in.
+   * The launch azimuth, due east. At {@code i = φ}, {@code sin A = cos i / cos φ} is 1 exactly and
+   * {@code LaunchPlane.launchAzimuth} returns {@code π/2} for both node branches — so a due-east
+   * problem has no branch to choose and no plane to pass in.
    */
   private static final double DUE_EAST = FastMath.PI / 2;
 
@@ -117,13 +146,46 @@ public class LunarLaunchWindowProblem implements LaunchWindowProblem {
    */
   private static final double SCREENING_MASS = 1_000.0;
 
+  /**
+   * Passes of the fixed point that closes the plane through the pad and the Moon on its own arrival
+   * date. Two are enough for what it is used for — seeding the secant, whose own tolerance decides
+   * the plane: the arrival only moves with the coast, by the Moon's 0.55°/h over at most a parking
+   * revolution.
+   */
+  private static final int THROUGH_THE_MOON_PASSES = 2;
+
+  /** The second azimuth the secant starts from, a milliradian past the first (rad). */
+  private static final double SECANT_STEP = 1.0e-3;
+
+  /** Misalignment the secant stops at (rad) — numerical zero, the criterion being smooth there. */
+  private static final double SECANT_TOLERANCE = 1.0e-12;
+
+  /** A bound on the secant, which converges in a handful of steps on a sinusoid's zero crossing. */
+  private static final int SECANT_ITERATIONS = 20;
+
+  /**
+   * Below this, the Moon at arrival sits at the pad's zenith or nadir and no single plane is
+   * defined by the two directions.
+   */
+  private static final double ALIGNED_SINE = 1.0e-9;
+
   private final LaunchSitePlane site;
+  private final double latitude;
+  private final double parkingAltitude;
   private final double parkingRadius;
+  private final double parkingSpeed;
   private final double targetPerileneAltitude;
   private final Vehicle vehicle;
   private final double massAtInjection;
   private final boolean confirming;
+  private final PlaneChoice planeChoice;
   private final String name;
+
+  /**
+   * The reason the latest confirmation refused its candidate. Mutable state on a problem that is
+   * already not shareable — its {@link #confirm} flies a stage — and read once its search is over.
+   */
+  private String latestRefusal;
 
   /**
    * @param latitude the launch site latitude in degrees, which is also the inclination flown
@@ -151,9 +213,42 @@ public class LunarLaunchWindowProblem implements LaunchWindowProblem {
         altitude,
         parkingAltitude,
         targetPerileneAltitude,
+        vehicle,
+        massAtInjection,
+        PlaneChoice.DUE_EAST);
+  }
+
+  /**
+   * The confirming problem on a chosen plane.
+   *
+   * @param latitude the launch site latitude in degrees
+   * @param longitude the launch site longitude in degrees
+   * @param altitude the launch site altitude in meters
+   * @param parkingAltitude the circular parking altitude the injection leaves from (m)
+   * @param targetPerileneAltitude the perilune altitude {@link #confirm} aims for (m)
+   * @param vehicle the vehicle, for {@link #confirm} alone
+   * @param massAtInjection the mass at injection (kg)
+   * @param planeChoice which plane the parking orbit is posed in
+   */
+  public LunarLaunchWindowProblem(
+      double latitude,
+      double longitude,
+      double altitude,
+      double parkingAltitude,
+      double targetPerileneAltitude,
+      Vehicle vehicle,
+      double massAtInjection,
+      PlaneChoice planeChoice) {
+    this(
+        latitude,
+        longitude,
+        altitude,
+        parkingAltitude,
+        targetPerileneAltitude,
         Objects.requireNonNull(vehicle, "vehicle"),
         massAtInjection,
-        true);
+        true,
+        planeChoice);
   }
 
   /**
@@ -180,6 +275,33 @@ public class LunarLaunchWindowProblem implements LaunchWindowProblem {
       double altitude,
       double parkingAltitude,
       double targetPerileneAltitude) {
+    return screening(
+        latitude,
+        longitude,
+        altitude,
+        parkingAltitude,
+        targetPerileneAltitude,
+        PlaneChoice.DUE_EAST);
+  }
+
+  /**
+   * The screening problem on a chosen plane — the timeline's, when due east offers nothing.
+   *
+   * @param latitude the launch site latitude in degrees
+   * @param longitude the launch site longitude in degrees
+   * @param altitude the launch site altitude in meters
+   * @param parkingAltitude the circular parking altitude the injection leaves from (m)
+   * @param targetPerileneAltitude the perilune altitude aimed for (m)
+   * @param planeChoice which plane the parking orbit is posed in
+   * @return the screening problem
+   */
+  public static LunarLaunchWindowProblem screening(
+      double latitude,
+      double longitude,
+      double altitude,
+      double parkingAltitude,
+      double targetPerileneAltitude,
+      PlaneChoice planeChoice) {
     return new LunarLaunchWindowProblem(
         latitude,
         longitude,
@@ -188,7 +310,8 @@ public class LunarLaunchWindowProblem implements LaunchWindowProblem {
         targetPerileneAltitude,
         null,
         SCREENING_MASS,
-        false);
+        false,
+        planeChoice);
   }
 
   private LunarLaunchWindowProblem(
@@ -199,19 +322,25 @@ public class LunarLaunchWindowProblem implements LaunchWindowProblem {
       double targetPerileneAltitude,
       Vehicle vehicle,
       double massAtInjection,
-      boolean confirming) {
+      boolean confirming,
+      PlaneChoice planeChoice) {
     this.site = new LaunchSitePlane(latitude, longitude, altitude, DUE_EAST);
+    this.latitude = latitude;
+    this.parkingAltitude = parkingAltitude;
     this.parkingRadius = Constants.WGS84_EARTH_EQUATORIAL_RADIUS + parkingAltitude;
+    this.parkingSpeed = FastMath.sqrt(Constants.WGS84_EARTH_MU / parkingRadius);
     this.targetPerileneAltitude = targetPerileneAltitude;
     this.vehicle = vehicle;
     this.massAtInjection = massAtInjection;
     this.confirming = confirming;
+    this.planeChoice = Objects.requireNonNull(planeChoice, "planeChoice");
     this.name =
         String.format(
             Locale.ROOT,
-            "Lunar launch (φ %.2f°, parking %.0f km)",
+            "Lunar launch (φ %.2f°, parking %.0f km%s)",
             latitude,
-            parkingAltitude / 1000.0);
+            parkingAltitude / 1000.0,
+            planeChoice == PlaneChoice.FREE_AZIMUTH ? ", free azimuth" : "");
   }
 
   @Override
@@ -249,17 +378,32 @@ public class LunarLaunchWindowProblem implements LaunchWindowProblem {
       Injection injection = injectionAt(epoch);
       double deltaV =
           TranslunarInjectionPlan.keplerianInjectionDeltaV(
-              injection.state(), injection.arrivalDate());
+                  injection.state(), injection.arrivalDate())
+              + ascentSurcharge(injection.azimuth());
       logger.debug(
-          "[{}] {}: {} m/s at β = {}°",
+          "[{}] {}: {} m/s at β = {}°, A = {}°",
           name(),
           epoch,
           String.format(Locale.ROOT, "%.1f", deltaV),
-          String.format(Locale.ROOT, "%.3f", FastMath.toDegrees(injection.planeMisalignment())));
+          String.format(Locale.ROOT, "%.3f", FastMath.toDegrees(injection.planeMisalignment())),
+          String.format(Locale.ROOT, "%.3f", FastMath.toDegrees(injection.azimuth())));
       return LaunchWindowCandidate.of(epoch, deltaV);
     } catch (OrbitlabException refused) {
       return LaunchWindowCandidate.refused(epoch, refused.getMessage());
     }
+  }
+
+  /**
+   * What reaching the plane at {@code azimuth} costs the ascent beyond due east (m/s), on the
+   * budget's own model — the figure the loads are sized on once that plane is chosen. Zero on the
+   * due-east problem, whose criterion is the injection alone.
+   */
+  private double ascentSurcharge(double azimuth) {
+    if (planeChoice == PlaneChoice.DUE_EAST) {
+      return 0.0;
+    }
+    return PropellantBudget.ascentDeltaV(parkingAltitude, latitude, azimuth)
+        - PropellantBudget.ascentDeltaV(parkingAltitude, latitude, DUE_EAST);
   }
 
   /**
@@ -298,26 +442,54 @@ public class LunarLaunchWindowProblem implements LaunchWindowProblem {
               vehicle.resolveActiveStage(massAtInjection),
               flightContext());
 
-      double deltaV = burn.commandedDeltaV();
+      double deltaV = burn.commandedDeltaV() + ascentSurcharge(injection.azimuth());
       logger.info(
-          "[{}] {} confirmed at {} m/s (screened at {} m/s) — β = {}°, perilune {} km",
+          "[{}] {} confirmed at {} m/s (screened at {} m/s) — β = {}°, A = {}°, perilune {} km",
           name(),
           epoch,
           FastMath.round(deltaV),
           FastMath.round(candidate.deltaV()),
           String.format(Locale.ROOT, "%.3f", FastMath.toDegrees(injection.planeMisalignment())),
+          String.format(Locale.ROOT, "%.3f", FastMath.toDegrees(injection.azimuth())),
           String.format(Locale.ROOT, "%.1f", burn.plan().perileneAltitude() / 1000.0));
       return LaunchWindowCandidate.of(epoch, deltaV);
     } catch (OrbitlabException refused) {
       logger.info("[{}] {} refused: {}", name(), epoch, refused.getMessage());
+      latestRefusal = refused.getMessage();
       return LaunchWindowCandidate.refused(epoch, refused.getMessage());
     } catch (RuntimeException failure) {
       // Anything the force model or Orekit throws on an extreme geometry. Withdrawing the epoch
       // keeps one bad candidate from aborting a whole search, but it is a fault and not a refusal,
       // so it is logged as one.
       logger.warn("[{}] {} could not be confirmed", name(), epoch, failure);
+      latestRefusal = failure.getMessage();
       return LaunchWindowCandidate.refused(epoch, failure.getMessage());
     }
+  }
+
+  /**
+   * Why the latest candidate this problem confirmed was refused — what a caller tells the user when
+   * a search came back empty. One problem serves one search, so "latest" is that search's.
+   *
+   * @return the refusal, or empty when no confirmation was refused
+   */
+  public Optional<String> latestRefusal() {
+    return Optional.ofNullable(latestRefusal);
+  }
+
+  /**
+   * The plane the ascent is commanded to fly for a lift-off at {@code epoch}: the site's due-east
+   * plane, or on the free-azimuth problem the plane of the azimuth {@link #injectionAt} solved for.
+   * Recomputed from the date rather than carried by a candidate, the geometry being deterministic.
+   *
+   * @param epoch the lift-off date
+   * @return the commanded plane
+   */
+  public LaunchPlane launchPlaneAt(AbsoluteDate epoch) {
+    if (planeChoice == PlaneChoice.DUE_EAST) {
+      return LaunchPlane.dueEast(latitude);
+    }
+    return LaunchPlane.fromAzimuth(injectionAt(epoch).azimuth(), FastMath.toRadians(latitude));
   }
 
   /**
@@ -339,9 +511,11 @@ public class LunarLaunchWindowProblem implements LaunchWindowProblem {
    * @param arrivalDate the date the Moon's centre is aimed at
    * @param planeMisalignment the signed angle of the arrival direction above the parking plane
    *     (rad), positive towards the plane's normal
+   * @param azimuth the launch azimuth the ascent is commanded to fly (rad, clockwise from north):
+   *     due east, or on the free-azimuth problem the one whose flown plane is {@code state}'s
    */
   public record Injection(
-      SpacecraftState state, AbsoluteDate arrivalDate, double planeMisalignment) {}
+      SpacecraftState state, AbsoluteDate arrivalDate, double planeMisalignment, double azimuth) {}
 
   /**
    * Resolves the whole geometry of a lift-off at {@code epoch}: the plane the pad reaches, the
@@ -354,13 +528,116 @@ public class LunarLaunchWindowProblem implements LaunchWindowProblem {
    * point of the orbit.
    */
   public Injection injectionAt(AbsoluteDate epoch) {
+    if (planeChoice == PlaneChoice.FREE_AZIMUTH) {
+      return freeAzimuthInjectionAt(epoch);
+    }
     Vector3D position = site.positionAt(epoch);
     Vector3D normal = site.normalOn(position);
     Departure departure = TranslunarInjectionPlan.departureFrom(circular(normal, position, epoch));
     return new Injection(
         circular(normal, departure.injectionDirection(), departure.injectionDate()),
         departure.arrivalDate(),
-        departure.planeMisalignment());
+        departure.planeMisalignment(),
+        DUE_EAST);
+  }
+
+  /**
+   * The free-azimuth geometry: the commanded azimuth whose predicted flown plane contains the Moon
+   * at arrival, found by a secant on that plane's misalignment from the azimuth of the plane
+   * through the pad and the Moon.
+   *
+   * <p>The arrival date is part of the unknown — it is the end of the parking coast plus the time
+   * of flight, and the coast depends on the plane — which is why every evaluation of the secant
+   * re-reads the departure on the plane it is trying, rather than fixing the Moon once.
+   */
+  private Injection freeAzimuthInjectionAt(AbsoluteDate epoch) {
+    Vector3D position = site.positionAt(epoch);
+    Vector3D entrainment = site.velocityAt(epoch);
+    double previous = azimuthThroughTheMoon(position, epoch);
+    double current = previous + SECANT_STEP;
+    double previousMisalignment = flownDeparture(position, entrainment, previous, epoch);
+    double currentMisalignment = flownDeparture(position, entrainment, current, epoch);
+    for (int i = 0;
+        i < SECANT_ITERATIONS
+            && FastMath.abs(currentMisalignment) > SECANT_TOLERANCE
+            && currentMisalignment != previousMisalignment;
+        i++) {
+      double next =
+          current
+              - currentMisalignment
+                  * (current - previous)
+                  / (currentMisalignment - previousMisalignment);
+      previous = current;
+      previousMisalignment = currentMisalignment;
+      current = next;
+      currentMisalignment = flownDeparture(position, entrainment, current, epoch);
+    }
+    Vector3D normal = flownNormal(position, entrainment, current);
+    Departure departure = TranslunarInjectionPlan.departureFrom(circular(normal, position, epoch));
+    return new Injection(
+        circular(normal, departure.injectionDirection(), departure.injectionDate()),
+        departure.arrivalDate(),
+        departure.planeMisalignment(),
+        current);
+  }
+
+  /**
+   * The azimuth of the prograde plane holding both the pad and the Moon at arrival, closed on the
+   * arrival date by a short fixed point on the coast.
+   */
+  private double azimuthThroughTheMoon(Vector3D position, AbsoluteDate epoch) {
+    Vector3D north = Physics.localHorizontalDirection(position, 0.0);
+    Vector3D east = Physics.localHorizontalDirection(position, DUE_EAST);
+    double coast = 0.0;
+    double azimuth = DUE_EAST;
+    for (int pass = 0; pass < THROUGH_THE_MOON_PASSES; pass++) {
+      Vector3D moon =
+          OrekitService.get()
+              .body(SolarSystemBody.MOON)
+              .getPosition(
+                  epoch.shiftedBy(coast + TranslunarInjectionPlan.TIME_OF_FLIGHT_SECONDS),
+                  OrekitService.get().gcrf());
+      Vector3D normal = Vector3D.crossProduct(position.normalize(), moon.normalize());
+      if (normal.getNorm() < ALIGNED_SINE) {
+        throw new OrbitlabException(
+            "the Moon at arrival is at the pad's zenith or nadir: no single plane holds both");
+      }
+      normal = normal.getZ() < 0.0 ? normal.normalize().negate() : normal.normalize();
+      Vector3D motion = Vector3D.crossProduct(normal, position);
+      azimuth = FastMath.atan2(motion.dotProduct(east), motion.dotProduct(north));
+      coast =
+          TranslunarInjectionPlan.departureFrom(circular(normal, position, epoch)).coastDuration();
+    }
+    return azimuth;
+  }
+
+  /** The misalignment of the Moon at arrival from the plane flown at {@code azimuth} (rad). */
+  private double flownDeparture(
+      Vector3D position, Vector3D entrainment, double azimuth, AbsoluteDate epoch) {
+    Vector3D normal = flownNormal(position, entrainment, azimuth);
+    return TranslunarInjectionPlan.departureFrom(circular(normal, position, epoch))
+        .planeMisalignment();
+  }
+
+  /**
+   * The plane the ascent is predicted to fly when commanded at {@code azimuth}: the commanded plane
+   * turned about the vertical by {@code atan(w / v)}, where {@code w} is the pad's entrainment
+   * velocity out of the commanded plane — which the climb leaves uncorrected — and {@code v} the
+   * parking orbit's circular speed. Due east, {@code w} vanishes and so does the turn.
+   *
+   * <p>Measured against four uncompensated flights from Kourou, with {@code v} taken anywhere from
+   * the 7 461 m/s of the Falcon Heavy's cut-off to 7 700 m/s, the model predicted the flown
+   * misalignment to within 0.23°, where the residual it corrects is 0.4° to 1.7°. Two flights
+   * commanded through it came out at −0.03° and −0.23°.
+   */
+  private Vector3D flownNormal(Vector3D position, Vector3D entrainment, double azimuth) {
+    Vector3D commanded = site.normalOn(position, azimuth);
+    double outOfPlane = entrainment.dotProduct(commanded);
+    Vector3D along = Vector3D.crossProduct(commanded, position.normalize());
+    return commanded
+        .scalarMultiply(parkingSpeed)
+        .subtract(along.scalarMultiply(outOfPlane))
+        .normalize();
   }
 
   /**

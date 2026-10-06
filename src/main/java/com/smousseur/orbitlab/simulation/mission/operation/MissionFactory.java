@@ -35,6 +35,15 @@ public final class MissionFactory {
    */
   private static final AtmosphereModel DEFAULT_ATMOSPHERE = AtmosphereModel.NRLMSISE;
 
+  /**
+   * Key of the inclination, in degrees, of the plane a lunar launch window chose. Written by the
+   * window when due east has no date, never by a form; absent means due east.
+   */
+  public static final String LUNAR_PLANE_INCLINATION = "LUNAR_PLANE_INCLINATION";
+
+  /** Key of the {@link NodeBranch} name of that plane, present exactly when its inclination is. */
+  public static final String LUNAR_PLANE_BRANCH = "LUNAR_PLANE_BRANCH";
+
   private MissionFactory() {}
 
   /**
@@ -206,10 +215,10 @@ public final class MissionFactory {
             // Inert by construction: LUNAR_FLYBY does not require payload propulsion, and the
             // translunar injection is the launcher's last burn — nothing is handed over afterwards.
             Spacecraft payload = payloadModel.toSpacecraft(payloadMass, 0.0);
-            // Due east: the chain flies i = φ, where the two azimuth branches merge.
+            LaunchPlane plane = lunarPlaneOrNull(values, latitude);
             PropellantBudget.LunarLoads loads =
                 PropellantBudget.loadsForLunar(
-                    launcher, payload, parkingAlt, latitude, FastMath.PI / 2);
+                    launcher, payload, parkingAlt, latitude, lunarAzimuth(plane, latitude));
             yield new MissionSpec.Lunar(
                 name,
                 new LaunchConfiguration(
@@ -221,7 +230,8 @@ public final class MissionFactory {
                 longitude,
                 altitude,
                 horizon,
-                null);
+                null,
+                plane);
           }
           // MIS-5 / L7 §4. The parking altitude is the mission's own constant, as the flyby's is.
           case LUNAR_ORBIT -> {
@@ -235,6 +245,7 @@ public final class MissionFactory {
             // it — loadsForLunarOrbit performs its own, and words the refusal with the kilos, the
             // delta-V
             // and the tank capacity, which is what the wizard's dry composition shows the user.
+            LaunchPlane plane = lunarPlaneOrNull(values, latitude);
             PropellantBudget.LunarOrbitLoads loads =
                 PropellantBudget.loadsForLunarOrbit(
                     launcher,
@@ -243,8 +254,7 @@ public final class MissionFactory {
                     parkingAlt,
                     orbitAlt,
                     latitude,
-                    // Due east: the chain flies i = φ, where the two azimuth branches merge.
-                    FastMath.PI / 2);
+                    lunarAzimuth(plane, latitude));
             Spacecraft payload = payloadModel.toSpacecraft(payloadMass, loads.insertionLoad());
             yield new MissionSpec.LunarOrbit(
                 name,
@@ -257,7 +267,8 @@ public final class MissionFactory {
                 longitude,
                 altitude,
                 horizon,
-                null);
+                null,
+                plane);
           }
         };
     // The atmosphere is not a wizard field, so the default is applied here — the single production
@@ -368,6 +379,52 @@ public final class MissionFactory {
       throw new OrbitlabException("Target inclination is not a number: " + raw, e);
     }
     return LaunchPlane.ofDegrees(inclinationDeg).requireReachableFrom(latitude);
+  }
+
+  /**
+   * Reads the plane a lunar launch window chose, when it chose one.
+   *
+   * <p><b>Derived values, not wizard fields</b>, like {@code MISSION_PROFILE}: no form offers them.
+   * The lunar window writes them when due east has no date and it picks the plane containing the
+   * Moon instead; the prefill and the scenario file carry them back. Their absence is the due-east
+   * answer, exactly as an absent {@code TARGET_INCLINATION} is.
+   *
+   * <p><b>A half plane is refused</b>, as an unreadable inclination is: an inclination without its
+   * branch is two different azimuths, and picking one would fly a plane nobody chose.
+   *
+   * @param values the raw wizard values
+   * @param latitude the launch site latitude in degrees
+   * @return the chosen plane, or {@code null} for due east
+   * @throws OrbitlabException if the inclination or the branch is unreadable or missing, or the
+   *     plane unreachable from the site
+   */
+  private static LaunchPlane lunarPlaneOrNull(Map<String, Object> values, double latitude) {
+    Object rawInclination = values.get(LUNAR_PLANE_INCLINATION);
+    if (rawInclination == null || rawInclination.toString().isBlank()) {
+      return null;
+    }
+    double inclinationDeg;
+    try {
+      inclinationDeg = Double.parseDouble(rawInclination.toString().trim());
+    } catch (NumberFormatException e) {
+      throw new OrbitlabException("Lunar plane inclination is not a number: " + rawInclination, e);
+    }
+    Object rawBranch = values.get(LUNAR_PLANE_BRANCH);
+    NodeBranch branch;
+    try {
+      branch = NodeBranch.valueOf(String.valueOf(rawBranch).trim());
+    } catch (IllegalArgumentException e) {
+      throw new OrbitlabException("Lunar plane branch is not a node branch: " + rawBranch, e);
+    }
+    return LaunchPlane.ofDegrees(inclinationDeg, branch).requireReachableFrom(latitude);
+  }
+
+  /**
+   * The azimuth a lunar budget is sized at. Due east is written as the literal it has always been,
+   * so a lunar mission without a plane keeps its loads to the bit.
+   */
+  private static double lunarAzimuth(LaunchPlane plane, double latitude) {
+    return plane == null ? FastMath.PI / 2 : plane.launchAzimuth(FastMath.toRadians(latitude));
   }
 
   /**

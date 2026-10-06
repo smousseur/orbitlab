@@ -379,7 +379,8 @@ public final class MissionComposer {
         spec.periluneAltitude(),
         spec.latitude(),
         spec.longitude(),
-        spec.altitude());
+        spec.altitude(),
+        spec.launchPlane());
   }
 
   /**
@@ -399,7 +400,8 @@ public final class MissionComposer {
         spec.orbitAltitude(),
         spec.latitude(),
         spec.longitude(),
-        spec.altitude());
+        spec.altitude(),
+        spec.launchPlane());
   }
 
   /**

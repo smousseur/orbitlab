@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.simulation.OrekitService;
+import com.smousseur.orbitlab.simulation.Physics;
 import com.smousseur.orbitlab.simulation.mission.maneuver.TranslunarInjectionPlan;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropulsionSystem;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Spacecraft;
@@ -586,6 +587,84 @@ class LunarLaunchWindowProblemTest {
         problem.recurrence().toNanos() / 1.0e9,
         1.0,
         "two opportunities per sidereal day, so the recurrence is half of one");
+  }
+
+  /**
+   * The free-azimuth plane at the case the due-east plane cannot serve: Kourou, 2026-10-06T08:00Z,
+   * where due east leaves the Moon at arrival 6.9° off the parking plane.
+   *
+   * <p><b>Three readings, each independent of the problem's own arithmetic.</b> The parking plane
+   * the problem prices must contain the Moon at arrival — its misalignment nulled by the secant.
+   * That plane must be the one the ascent is predicted to <em>fly</em> from the commanded azimuth:
+   * the commanded plane turned about the vertical by {@code atan(w / v)}, {@code w} being the pad's
+   * entrainment velocity out of that plane, here rebuilt from the Earth's rotation rate about the
+   * GCRF pole — hence a hundredth of a degree of slack for the 0.15° the true pole sits away from
+   * it. And the commanded azimuth must sit east of the plane through the pad and the Moon, by the
+   * half degree the design measured the residual at here.
+   */
+  @Test
+  @DisplayName("From Kourou, the predicted flown plane contains the Moon at arrival")
+  void theFreeAzimuthPlaneContainsTheMoonOnceFlown() {
+    double latitude = 5.236;
+    double longitude = -52.775;
+    double altitude = 0.0;
+    AbsoluteDate epoch = new AbsoluteDate("2026-10-06T08:00:00.000Z", TimeScalesFactory.getUTC());
+    LunarLaunchWindowProblem problem =
+        LunarLaunchWindowProblem.screening(
+            latitude,
+            longitude,
+            altitude,
+            PARKING_ALTITUDE,
+            TARGET_PERILUNE,
+            LunarLaunchWindowProblem.PlaneChoice.FREE_AZIMUTH);
+
+    LunarLaunchWindowProblem.Injection injection = problem.injectionAt(epoch);
+
+    assertEquals(0.0, injection.planeMisalignment(), 1.0e-6, "the Moon at arrival is in plane");
+
+    LaunchSitePlane site = new LaunchSitePlane(latitude, longitude, altitude, injection.azimuth());
+    Vector3D pad = site.positionAt(epoch);
+    Vector3D commanded = site.normalOn(pad);
+    double entrainment =
+        Vector3D.crossProduct(new Vector3D(0.0, 0.0, Constants.WGS84_EARTH_ANGULAR_VELOCITY), pad)
+            .dotProduct(commanded);
+    double parkingSpeed =
+        FastMath.sqrt(
+            Constants.WGS84_EARTH_MU
+                / (Constants.WGS84_EARTH_EQUATORIAL_RADIUS + PARKING_ALTITUDE));
+    Vector3D predicted =
+        commanded
+            .scalarMultiply(parkingSpeed)
+            .subtract(Vector3D.crossProduct(commanded, pad.normalize()).scalarMultiply(entrainment))
+            .normalize();
+    Vector3D priced =
+        Vector3D.crossProduct(
+                injection.state().getPosition(), injection.state().getPVCoordinates().getVelocity())
+            .normalize();
+    assertEquals(
+        0.0,
+        FastMath.toDegrees(Vector3D.angle(predicted, priced)),
+        0.01,
+        "the plane priced is the commanded one as the ascent is predicted to fly it");
+
+    Vector3D throughTheMoon =
+        Vector3D.crossProduct(pad, moonDirection(injection.arrivalDate())).normalize();
+    Vector3D motion = Vector3D.crossProduct(throughTheMoon, pad).normalize();
+    double rawAzimuth =
+        FastMath.atan2(
+            motion.dotProduct(Physics.localHorizontalDirection(pad, FastMath.PI / 2)),
+            motion.dotProduct(Physics.localHorizontalDirection(pad, 0.0)));
+    double offset = FastMath.toDegrees(injection.azimuth() - rawAzimuth);
+    logger.info(
+        "Kourou {}: plane through the Moon at A = {}°, commanded A = {}° ({} away)",
+        epoch,
+        degrees(rawAzimuth),
+        degrees(injection.azimuth()),
+        String.format(Locale.ROOT, "%+.3f°", offset));
+    assertEquals(97.33, FastMath.toDegrees(rawAzimuth), 0.05);
+    assertTrue(
+        offset > 0.3 && offset < 0.7,
+        "the residual is pre-compensated by about half a degree, got " + offset + "°");
   }
 
   /**

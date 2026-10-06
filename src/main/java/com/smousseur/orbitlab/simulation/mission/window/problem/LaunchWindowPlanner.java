@@ -18,6 +18,13 @@ import org.orekit.time.AbsoluteDate;
  * is {@link #MARGIN}. What it does <b>not</b> touch is {@code
  * EarthLaunchWindowPlanner.nextOpportunity} — the singular, the path every mission is scheduled on,
  * whose 26 h, 50 m/s and five candidates are a measured triple that must not move.
+ *
+ * <p><b>A lunar request falls back as the creation does.</b> Its due-east opportunities are drawn
+ * when the cheapest of them is one the creation's search would accept; above that ceiling — from
+ * Kourou most days: on 2026-10-06 the cheapest due-east epoch of the axis screens at 6 292 m/s —
+ * the axis draws the free-azimuth opportunities instead, which are the ones the creation will
+ * schedule on. The test is the ceiling and not an empty answer, because this search caps nothing
+ * absolutely: due east always offers its cheapest epoch, however dear.
  */
 public final class LaunchWindowPlanner {
 
@@ -51,7 +58,17 @@ public final class LaunchWindowPlanner {
    */
   public static List<LaunchWindow> nextOpportunities(
       LaunchWindowRequest request, AbsoluteDate earliest, int count) {
-    LaunchWindowProblem problem = request.toProblem();
+    List<LaunchWindow> windows = nextOpportunities(request.toProblem(), earliest, count);
+    if (request instanceof LunarLaunchWindowRequest lunar
+        && windows.stream()
+            .noneMatch(window -> window.best().deltaV() <= LunarLaunchWindowPlanner.MAX_DELTA_V)) {
+      return nextOpportunities(lunar.toFreeAzimuthProblem(), earliest, count);
+    }
+    return windows;
+  }
+
+  private static List<LaunchWindow> nextOpportunities(
+      LaunchWindowProblem problem, AbsoluteDate earliest, int count) {
     LaunchWindowSearch search =
         LaunchWindowSearch.forOpportunities(
             earliest,

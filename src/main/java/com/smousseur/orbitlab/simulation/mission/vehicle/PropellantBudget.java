@@ -591,12 +591,16 @@ public final class PropellantBudget {
    * has no closed form; {@link #SAFETY_MARGIN} absorbs it, and {@code AscentPlaneControlTest}
    * measures it. No value is hard-coded until it is measured.
    *
+   * <p>Public because the free-azimuth lunar window prices an epoch with it: what a plane south or
+   * north of due east costs the ascent is the difference of two of these, and it has to be the
+   * figure the loads are then sized on.
+   *
    * @param targetAltitude the target orbit altitude (m)
    * @param launchLatitudeDeg the launch site latitude (degrees)
    * @param launchAzimuth the launch azimuth (radians, clockwise from north)
    * @return the ascent ΔV in m/s
    */
-  static double ascentDeltaV(
+  public static double ascentDeltaV(
       double targetAltitude, double launchLatitudeDeg, double launchAzimuth) {
     double r = RE + targetAltitude;
     double assist =

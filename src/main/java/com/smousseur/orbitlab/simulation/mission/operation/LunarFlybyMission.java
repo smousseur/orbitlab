@@ -17,6 +17,7 @@ import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.AscentProfile;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * The lunar flyby of the product: a mission that lifts off from a pad, parks, coasts to its
@@ -104,14 +105,14 @@ public class LunarFlybyMission extends EarthMission {
   private final double latitude;
   private final double longitude;
   private final double altitude;
+  private final LaunchPlane launchPlane;
 
   /**
    * Creates a lunar flyby flown from a ground site.
    *
-   * <p>The ascent plane is the one a due-east launch reaches for free, {@code i = φ}, and there is
-   * no choice to offer: at that inclination the two azimuths {@code LaunchPlane.launchAzimuth}
-   * distinguishes merge, which is why L2's window problem takes no {@code LaunchPlane} either. An
-   * adaptive inclination is a later lot.
+   * <p>The ascent plane is not the user's to choose: it is the site's due-east plane, {@code i =
+   * φ}, unless the launch window found no date there and chose the plane containing the Moon at
+   * arrival instead.
    *
    * @param name the mission name
    * @param configuration the launcher model, propellant loads and payload
@@ -120,6 +121,7 @@ public class LunarFlybyMission extends EarthMission {
    * @param latitude the launch site latitude in degrees
    * @param longitude the launch site longitude in degrees
    * @param altitude the launch site altitude in meters
+   * @param launchPlane the plane the ascent flies
    */
   public LunarFlybyMission(
       String name,
@@ -128,7 +130,8 @@ public class LunarFlybyMission extends EarthMission {
       double periluneAltitude,
       double latitude,
       double longitude,
-      double altitude) {
+      double altitude,
+      LaunchPlane launchPlane) {
     this(
         name,
         configuration.toVehicleStack(),
@@ -137,7 +140,8 @@ public class LunarFlybyMission extends EarthMission {
         periluneAltitude,
         latitude,
         longitude,
-        altitude);
+        altitude,
+        Objects.requireNonNull(launchPlane, "launchPlane"));
   }
 
   private LunarFlybyMission(
@@ -148,15 +152,24 @@ public class LunarFlybyMission extends EarthMission {
       double periluneAltitude,
       double latitude,
       double longitude,
-      double altitude) {
+      double altitude,
+      LaunchPlane launchPlane) {
     super(
         name,
         vehicle,
-        buildStages(vehicle, profile, parkingAltitude, periluneAltitude, latitude),
+        buildStages(vehicle, profile, parkingAltitude, periluneAltitude, launchPlane, latitude),
         new FlybyObjective(SolarSystemBody.MOON, periluneAltitude, PERILUNE_TOLERANCE));
     this.latitude = latitude;
     this.longitude = longitude;
     this.altitude = altitude;
+    this.launchPlane = launchPlane;
+  }
+
+  /**
+   * @return the plane the ascent flies
+   */
+  public LaunchPlane getLaunchPlane() {
+    return launchPlane;
   }
 
   @Override
@@ -188,6 +201,7 @@ public class LunarFlybyMission extends EarthMission {
       AscentProfile profile,
       double parkingAltitude,
       double periluneAltitude,
+      LaunchPlane launchPlane,
       double latitude) {
     List<MissionStage> stages = new ArrayList<>();
     stages.add(new VerticalAscentStage("Vertical Ascent", profile.verticalAscentDuration()));
@@ -196,7 +210,7 @@ public class LunarFlybyMission extends EarthMission {
             vehicle,
             profile,
             GravityTurnConstraints.forTarget(parkingAltitude),
-            LaunchPlane.dueEast(latitude),
+            launchPlane,
             latitude));
     stages.addAll(
         List.of(

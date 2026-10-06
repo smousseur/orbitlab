@@ -121,7 +121,9 @@ public final class ScenarioMapper {
               color,
               visible,
               solution,
-              doubleValue(values, "LUNAR_PERILUNE_ALT"));
+              doubleValue(values, "LUNAR_PERILUNE_ALT"),
+              doubleOrNull(values, "LUNAR_PLANE_INCLINATION"),
+              stringOrNull(values, "LUNAR_PLANE_BRANCH"));
       case LUNAR_ORBIT ->
           new ScenarioMission.LunarOrbit(
               type,
@@ -135,7 +137,9 @@ public final class ScenarioMapper {
               color,
               visible,
               solution,
-              doubleValue(values, "LUNAR_ORBIT_ALT"));
+              doubleValue(values, "LUNAR_ORBIT_ALT"),
+              doubleOrNull(values, "LUNAR_PLANE_INCLINATION"),
+              stringOrNull(values, "LUNAR_PLANE_BRANCH"));
     };
   }
 
@@ -182,9 +186,16 @@ public final class ScenarioMapper {
         }
       }
       case ScenarioMission.Geo geo -> values.put("GTO_PARKING_ALT", geo.parkingKm());
-      case ScenarioMission.Lunar lunar -> values.put("LUNAR_PERILUNE_ALT", lunar.periluneKm());
-      case ScenarioMission.LunarOrbit lunarOrbit ->
-          values.put("LUNAR_ORBIT_ALT", lunarOrbit.orbitAltitudeKm());
+      case ScenarioMission.Lunar lunar -> {
+        values.put("LUNAR_PERILUNE_ALT", lunar.periluneKm());
+        putIfPresent(values, "LUNAR_PLANE_INCLINATION", lunar.planeInclinationDeg());
+        putIfPresent(values, "LUNAR_PLANE_BRANCH", lunar.planeBranch());
+      }
+      case ScenarioMission.LunarOrbit lunarOrbit -> {
+        values.put("LUNAR_ORBIT_ALT", lunarOrbit.orbitAltitudeKm());
+        putIfPresent(values, "LUNAR_PLANE_INCLINATION", lunarOrbit.planeInclinationDeg());
+        putIfPresent(values, "LUNAR_PLANE_BRANCH", lunarOrbit.planeBranch());
+      }
     }
     return values;
   }

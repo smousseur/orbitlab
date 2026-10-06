@@ -121,6 +121,19 @@ public final class FormField<T> {
       new FormField<>("MISSION_PROFILE", String.class);
 
   /**
+   * Inclination in <b>degrees</b> of the plane a lunar launch window chose, when due east had no
+   * date. Derived, like {@link #MISSION_PROFILE}: no step offers it, the window writes it and the
+   * prefill carries it back so a saved scenario reopens on the plane its date was chosen for. Its
+   * <b>absence</b> means due east.
+   */
+  public static final FormField<Double> LUNAR_PLANE_INCLINATION =
+      new FormField<>("LUNAR_PLANE_INCLINATION", Double.class);
+
+  /** The {@code NodeBranch} name of that plane, present exactly when its inclination is. */
+  public static final FormField<String> LUNAR_PLANE_BRANCH =
+      new FormField<>("LUNAR_PLANE_BRANCH", String.class);
+
+  /**
    * Total mission duration in days, written only when the user overrode the derived default. Its
    * <b>absence</b> is meaningful: it is how the wizard says "auto", so {@code MissionFactory} falls
    * back to {@code MissionHorizon.defaultFor(type)} and reopening the mission restores the auto

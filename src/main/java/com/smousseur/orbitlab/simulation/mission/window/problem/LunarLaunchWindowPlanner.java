@@ -1,5 +1,6 @@
 package com.smousseur.orbitlab.simulation.mission.window.problem;
 
+import com.smousseur.orbitlab.simulation.mission.operation.LaunchPlane;
 import com.smousseur.orbitlab.simulation.mission.operation.MissionSpec;
 import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchConfiguration;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropellantBudget;
@@ -8,6 +9,7 @@ import com.smousseur.orbitlab.simulation.mission.window.LaunchWindowSearch;
 import com.smousseur.orbitlab.simulation.mission.window.LaunchWindowSolver;
 import java.time.Duration;
 import java.util.Comparator;
+import java.util.Locale;
 import java.util.Optional;
 import org.hipparchus.util.FastMath;
 import org.orekit.time.AbsoluteDate;
@@ -20,10 +22,10 @@ import org.orekit.time.AbsoluteDate;
  * at the same aimed perilune; what stopped the flyby's planner from serving both was its signature,
  * not its content.
  *
- * <p><b>This is where the 4.5 s of a confirmation are paid</b>, at the click that creates the
- * mission and not on every keystroke of the parameters step, whose timeline screens only. The price
- * is a freeze of ten to fifteen seconds on the render thread, against 40 ms for an Earth mission;
- * it is written down as a limitation of the lot rather than hidden.
+ * <p><b>This is where the confirmations are paid</b>, at the click that creates the mission and not
+ * on every keystroke of the parameters step, whose timeline screens only: seven to ten seconds a
+ * candidate, 24 to 64 s a mission as {@code MissionScheduler} measures it, on the wizard's creation
+ * thread, against 40 ms for an Earth mission.
  *
  * <p><b>The mass at injection is recomputed, not carried.</b> {@code
  * PropellantBudget.loadsForLunar} is closed-form and deterministic, so reading it back off the
@@ -47,7 +49,7 @@ public final class LunarLaunchWindowPlanner {
    * finite there rather than refusing: without a ceiling the search would hand back the cheapest of
    * a set of dates nobody can fly.
    */
-  private static final double MAX_DELTA_V = 3_400.0;
+  static final double MAX_DELTA_V = 3_400.0;
 
   /** The margin that carves the slot out of the criterion (m/s) — the Earth problem's own. */
   private static final double MARGIN = 50.0;
@@ -59,13 +61,148 @@ public final class LunarLaunchWindowPlanner {
    */
   private static final int CANDIDATES = 4;
 
-  /** Due east, the azimuth this chain flies: at {@code i = φ} there is no branch to choose. */
+  /**
+   * Due east, the azimuth the budget sizes the mass at injection on, whichever plane is then
+   * searched: the confirmation keeps the budget's mass, as it always has — the gap between that
+   * mass and the one flown is a matter of its own.
+   */
   private static final double DUE_EAST = FastMath.PI / 2;
 
   private LunarLaunchWindowPlanner() {}
 
   /**
-   * The first opportunity at or after {@code earliest} for a lunar flyby.
+   * What a lunar mission is scheduled on: a window, and the plane chosen for it when due east had
+   * none — or, when neither search found anything, why.
+   *
+   * @param window the window to fly, or {@code null} when none was found
+   * @param plane the plane the free-azimuth search chose, or {@code null} for due east (and when
+   *     nothing was found)
+   * @param refusal why no window was found, or {@code null} when one was
+   */
+  public record Opportunity(LaunchWindow window, LaunchPlane plane, String refusal) {
+
+    /**
+     * @return {@code true} when there is a window to schedule on
+     */
+    public boolean found() {
+      return window != null;
+    }
+
+    /**
+     * @return {@code true} when the window was found at a free azimuth, on {@link #plane()}
+     */
+    public boolean hasPlane() {
+      return plane != null;
+    }
+  }
+
+  /**
+   * The opportunity a lunar flyby is scheduled on: due east if it has a window within the span, the
+   * free azimuth otherwise, and the reason when neither does.
+   *
+   * @param spec the mission being scheduled, on no plane yet
+   * @param earliest the date the user asked for, read as a floor
+   * @return the opportunity
+   */
+  public static Opportunity opportunity(MissionSpec.Lunar spec, AbsoluteDate earliest) {
+    return opportunity(
+        spec.configuration(),
+        spec.latitude(),
+        spec.longitude(),
+        spec.altitude(),
+        spec.parkingAltitude(),
+        spec.periluneAltitude(),
+        earliest);
+  }
+
+  /**
+   * The opportunity a lunar orbit is scheduled on, on {@link #opportunity(MissionSpec.Lunar,
+   * AbsoluteDate)}'s rule.
+   *
+   * @param spec the mission being scheduled, on no plane yet
+   * @param earliest the date the user asked for, read as a floor
+   * @return the opportunity
+   */
+  public static Opportunity opportunity(MissionSpec.LunarOrbit spec, AbsoluteDate earliest) {
+    return opportunity(
+        spec.configuration(),
+        spec.latitude(),
+        spec.longitude(),
+        spec.altitude(),
+        spec.parkingAltitude(),
+        spec.orbitAltitude(),
+        earliest);
+  }
+
+  /**
+   * Due east first, the free azimuth only when due east has nothing.
+   *
+   * <p><b>Due east keeps the priority even where the free azimuth would be a few m/s cheaper</b>:
+   * it is the plane every mission was flown and calibrated on, and a site that has a due-east
+   * window — Canaveral, most days — keeps the very date and trajectory it had. The second search
+   * costs a second round of confirmations, paid only where the first came back empty.
+   *
+   * <p><b>The reason given when both are empty is the free search's</b>, the last one run: the
+   * refusal of its latest confirmation, or the absence of any epoch under the ceiling.
+   */
+  private static Opportunity opportunity(
+      LaunchConfiguration configuration,
+      double latitude,
+      double longitude,
+      double altitude,
+      double parkingAltitude,
+      double periluneAltitude,
+      AbsoluteDate earliest) {
+    double massAtInjection = massAtInjection(configuration, latitude, parkingAltitude);
+    Optional<LaunchWindow> dueEast =
+        earliestWindow(
+            new LunarLaunchWindowProblem(
+                latitude,
+                longitude,
+                altitude,
+                parkingAltitude,
+                periluneAltitude,
+                configuration.toVehicleStack(),
+                massAtInjection),
+            earliest);
+    if (dueEast.isPresent()) {
+      return new Opportunity(dueEast.get(), null, null);
+    }
+    LunarLaunchWindowProblem freeAzimuth =
+        new LunarLaunchWindowProblem(
+            latitude,
+            longitude,
+            altitude,
+            parkingAltitude,
+            periluneAltitude,
+            configuration.toVehicleStack(),
+            massAtInjection,
+            LunarLaunchWindowProblem.PlaneChoice.FREE_AZIMUTH);
+    Optional<LaunchWindow> window = earliestWindow(freeAzimuth, earliest);
+    if (window.isPresent()) {
+      return new Opportunity(window.get(), freeAzimuth.launchPlaneAt(window.get().date()), null);
+    }
+    return new Opportunity(
+        null,
+        null,
+        String.format(
+            Locale.ROOT,
+            "no lunar launch window within %d h of %s, neither due east nor at a free azimuth: %s",
+            SEARCH_SPAN.toHours(),
+            earliest,
+            freeAzimuth
+                .latestRefusal()
+                .orElse(
+                    String.format(
+                        Locale.ROOT,
+                        "no epoch is priced under the %.0f m/s ceiling",
+                        MAX_DELTA_V))));
+  }
+
+  /**
+   * The first <b>due-east</b> opportunity at or after {@code earliest} for a lunar flyby — the
+   * first of {@link #opportunity}'s two searches, kept on its own for the callers that measure due
+   * east alone.
    *
    * <p><b>The soonest, not the cheapest</b>, on {@code EarthLaunchWindowPlanner}'s reasoning: the
    * roots of consecutive turns are the same opportunity repeated, so ordering by cost would push
@@ -88,7 +225,7 @@ public final class LunarLaunchWindowPlanner {
   }
 
   /**
-   * The first opportunity at or after {@code earliest} for a lunar orbit insertion.
+   * The first <b>due-east</b> opportunity at or after {@code earliest} for a lunar orbit insertion.
    *
    * <p><b>The aimed perilune is the lunar orbit altitude</b>, which is why the window needs no lot
    * of its own: the flyby's criterion — can a shot on this date reach that perilune — is exactly
@@ -133,10 +270,7 @@ public final class LunarLaunchWindowPlanner {
       double parkingAltitude,
       double periluneAltitude,
       AbsoluteDate earliest) {
-    PropellantBudget.LunarLoads loads =
-        PropellantBudget.loadsForLunar(
-            configuration.launcher(), configuration.payload(), parkingAltitude, latitude, DUE_EAST);
-    LunarLaunchWindowProblem problem =
+    return earliestWindow(
         new LunarLaunchWindowProblem(
             latitude,
             longitude,
@@ -144,7 +278,20 @@ public final class LunarLaunchWindowPlanner {
             parkingAltitude,
             periluneAltitude,
             configuration.toVehicleStack(),
-            loads.massAtInjection());
+            massAtInjection(configuration, latitude, parkingAltitude)),
+        earliest);
+  }
+
+  private static double massAtInjection(
+      LaunchConfiguration configuration, double latitude, double parkingAltitude) {
+    return PropellantBudget.loadsForLunar(
+            configuration.launcher(), configuration.payload(), parkingAltitude, latitude, DUE_EAST)
+        .massAtInjection();
+  }
+
+  /** One confirming search over the span, and its soonest window. */
+  private static Optional<LaunchWindow> earliestWindow(
+      LunarLaunchWindowProblem problem, AbsoluteDate earliest) {
     LaunchWindowSearch search =
         new LaunchWindowSearch(
             earliest,
