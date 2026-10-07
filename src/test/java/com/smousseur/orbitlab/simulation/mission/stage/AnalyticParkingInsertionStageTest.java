@@ -5,12 +5,19 @@ import static org.junit.jupiter.api.Assertions.*;
 import com.smousseur.orbitlab.core.OrbitlabException;
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.mission.Mission;
+import com.smousseur.orbitlab.simulation.mission.MissionType;
+import com.smousseur.orbitlab.simulation.mission.operation.LaunchPlane;
+import com.smousseur.orbitlab.simulation.mission.operation.MissionFactory;
+import com.smousseur.orbitlab.simulation.mission.operation.MissionSpec;
+import com.smousseur.orbitlab.simulation.mission.operation.ParkingAscentMission;
 import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchVehicle;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropulsionSystem;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Spacecraft;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
 import com.smousseur.orbitlab.simulation.mission.vehicle.VehicleStack;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
@@ -19,8 +26,10 @@ import org.orekit.orbits.CartesianOrbit;
 import org.orekit.orbits.KeplerianOrbit;
 import org.orekit.propagation.SpacecraftState;
 import org.orekit.time.AbsoluteDate;
+import org.orekit.time.TimeScalesFactory;
 import org.orekit.utils.Constants;
 import org.orekit.utils.PVCoordinates;
+import org.orekit.utils.TimeStampedPVCoordinates;
 
 /**
  * Guard on the raising-Hohmann geometry the stage assumes. An entry state whose apoapsis already
@@ -225,5 +234,70 @@ class AnalyticParkingInsertionStageTest {
                 + " km");
     assertTrue(
         parked.getMass() < stack.getMass(), "the insertion burns must have spent propellant");
+  }
+
+  /**
+   * <b>A hand-over whose apoapsis search flew on into the atmosphere.</b> The state the Falcon
+   * Heavy lunar ascent lifting off from Canaveral at 2026-10-09T09:57:11Z hands its insertion,
+   * recorded at full precision: 99.4 km up and still climbing, to an apoapsis of 428.6 km reached
+   * 686.6 s later. The descending plan brakes there, so it searches for that apoapsis; a search
+   * that keeps flying past it flies the re-entry that follows, and on this one NRLMSISE00 throws
+   * before the coast ends. Its neighbouring dates hand over the same way and park — so must this
+   * one.
+   */
+  @Test
+  void aHandOverWhoseApoapsisSearchFliesIntoTheAtmosphereStillParks() {
+    MissionSpec.LunarOrbit spec =
+        (MissionSpec.LunarOrbit)
+            MissionFactory.specFromWizardValues(canaveralLunarOrbiter(), MissionType.LUNAR_ORBIT);
+    ParkingAscentMission mission =
+        new ParkingAscentMission(
+            "hand-over",
+            spec.configuration(),
+            spec.parkingAltitude(),
+            spec.latitude(),
+            spec.longitude(),
+            spec.altitude(),
+            LaunchPlane.dueEast(spec.latitude()));
+    mission.setAtmosphere(spec.atmosphere());
+    AnalyticParkingInsertionStage insertion =
+        mission.getStages().stream()
+            .filter(AnalyticParkingInsertionStage.class::isInstance)
+            .map(AnalyticParkingInsertionStage.class::cast)
+            .findFirst()
+            .orElseThrow();
+    SpacecraftState handOver =
+        new SpacecraftState(
+                new CartesianOrbit(
+                    new TimeStampedPVCoordinates(
+                        new AbsoluteDate(
+                            "2026-10-09T10:00:14.437157740779298368Z", TimeScalesFactory.getUTC()),
+                        new Vector3D(-73782.7125245034, 5701621.533842627, 3073150.7288524527),
+                        new Vector3D(-7349.5547727345875, 848.7651958881276, 210.79567451595983)),
+                    OrekitService.get().gcrf(),
+                    Constants.WGS84_EARTH_MU))
+            .withMass(24470.14669829041);
+
+    SpacecraftState parked = insertion.propagateStandalone(handOver, mission);
+
+    KeplerianOrbit orbit = new KeplerianOrbit(parked.getOrbit());
+    double perigee = orbit.getA() * (1 - orbit.getE()) - Constants.WGS84_EARTH_EQUATORIAL_RADIUS;
+    double apogee = orbit.getA() * (1 + orbit.getE()) - Constants.WGS84_EARTH_EQUATORIAL_RADIUS;
+    double bar = 0.07 * spec.parkingAltitude();
+    assertEquals(spec.parkingAltitude(), perigee, bar, "perigee on the parking altitude");
+    assertEquals(spec.parkingAltitude(), apogee, bar, "apogee on the parking altitude");
+  }
+
+  private static Map<String, Object> canaveralLunarOrbiter() {
+    Map<String, Object> values = new HashMap<>();
+    values.put("MISSION_NAME", "hand-over");
+    values.put("LAUNCH_SITE_LAT", 28.562);
+    values.put("LAUNCH_SITE_LONG", -80.577);
+    values.put("LAUNCH_SITE_ALT", 3.0);
+    values.put("LAUNCHER_TYPE", "FALCON_HEAVY");
+    values.put("PAYLOAD_TYPE", "LUNAR_ORBITER");
+    values.put("PAYLOAD_MASS", 2_000.0);
+    values.put("LUNAR_ORBIT_ALT", 100.0);
+    return values;
   }
 }

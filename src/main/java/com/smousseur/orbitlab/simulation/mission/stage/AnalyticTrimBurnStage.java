@@ -28,7 +28,6 @@ import org.orekit.orbits.Orbit;
 import org.orekit.propagation.SpacecraftState;
 import org.orekit.propagation.events.ApsideDetector;
 import org.orekit.propagation.events.DateDetector;
-import org.orekit.propagation.events.handlers.RecordAndContinue;
 import org.orekit.propagation.numerical.NumericalPropagator;
 import org.orekit.time.AbsoluteDate;
 import org.orekit.utils.Constants;
@@ -590,38 +589,45 @@ public class AnalyticTrimBurnStage extends MissionStage {
 
   /**
    * Detects the next apogee after {@code state} using a propagator with J2+ (same gravity model as
-   * the optimization path). Returns the spacecraft state recorded at the apogee event, or null on
-   * failure. Pattern matches {@code CircularizationBurnResolver#detectTimeToApoapsis}.
+   * the optimization path). Returns the spacecraft state at the first apogee more than a second
+   * after {@code state}, or null when none is reached within 1.1 periods.
+   *
+   * <p><b>The coast stops at that apogee.</b> Flying on to the end of the search would fly the
+   * descent that follows it, and from a hand-over still climbing out of the atmosphere that descent
+   * is a re-entry: measured on a lunar ascent, NRLMSISE00 throws an "Infinite value" on it before
+   * the re-entry guard ends the coast. Wherever the full search completes, stopping returns the
+   * same state, bit for bit — measured on every call of the GEO, the elliptic Earth orbits and the
+   * lunar ascents.
    *
    * <p>Package-private so {@link AnalyticApogeeCircularizationStage} reuses the same detection.
    */
   static SpacecraftState detectStateAtApogee(SpacecraftState state, FlightContext context) {
     // Burn-free coast: nothing ignites, so step at the large coast cap (the apogee found is set by
-    // the detector's root-finder + dense output, not by the integration step). See bilan 08 §3.1.
+    // the detector's root-finder + dense output, not by the integration step).
     NumericalPropagator coastPropagator =
         OrekitService.get().createOptimizationPropagator(context, OrekitService.COAST_MAX_STEP);
     coastPropagator.setInitialState(state);
-    // On a re-entering orbit the coast stops early, no apogee is recorded and this returns null —
-    // which both callers already turn into an explicit failure.
+    // On a re-entering orbit the coast stops before any apogee and this returns null, which the
+    // callers handle: the parking insertion and the circularization fail, the trim skips its burn.
     ReentryGuard.armQuiet(coastPropagator, context.gravity());
 
-    RecordAndContinue recorder = new RecordAndContinue();
-    ApsideDetector apsideDetector = new ApsideDetector(state.getOrbit()).withHandler(recorder);
+    double minDt = 1.0; // skip the immediate apsis if we're already at one
+    SpacecraftState[] apogee = new SpacecraftState[1];
+    ApsideDetector apsideDetector =
+        new ApsideDetector(state.getOrbit())
+            .withHandler(
+                (s, detector, increasing) -> {
+                  if (increasing || s.getDate().durationFrom(state.getDate()) <= minDt) {
+                    return Action.CONTINUE;
+                  }
+                  apogee[0] = s;
+                  return Action.STOP;
+                });
     coastPropagator.addEventDetector(apsideDetector);
 
     double period = state.getOrbit().getKeplerianPeriod();
     coastPropagator.propagate(state.getDate().shiftedBy(period * 1.1));
-
-    double minDt = 1.0; // skip the immediate apsis if we're already at one
-    for (RecordAndContinue.Event event : recorder.getEvents()) {
-      if (!event.isIncreasing()) {
-        double dt = event.getState().getDate().durationFrom(state.getDate());
-        if (dt > minDt) {
-          return event.getState();
-        }
-      }
-    }
-    return null;
+    return apogee[0];
   }
 
   private void addBurns(

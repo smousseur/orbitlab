@@ -117,9 +117,10 @@ public record ParkingInsertion(
     } catch (OrbitlabException refused) {
       throw refused;
     } catch (RuntimeException failure) {
-      // What the force model throws on a state it cannot evaluate — measured: NRLMSISE00 turning
-      // infinite during the parking insertion of one Canaveral date. The ascent did not reach its
-      // parking orbit all the same, and the caller dates nothing on it.
+      // What the force model throws on a state it cannot evaluate, of the kind measured once:
+      // NRLMSISE00 turning infinite on a re-entry flown at coast-sized steps. No ascent is known to
+      // reach it; this is the net that keeps one a refusal. The ascent did not reach its parking
+      // orbit all the same, and the caller dates nothing on it.
       throw new OrbitlabException(
           String.format(
               Locale.ROOT,

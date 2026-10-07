@@ -134,21 +134,20 @@ class LunarLaunchWindowPlannerTest {
   }
 
   /**
-   * An ascent the force model cannot fly is a refusal too, not an exception thrown at the wizard:
-   * from Canaveral on 2026-10-09T09:57:11 the NRLMSISE00 density turns infinite during the parking
-   * insertion, measured on the production compute and on the ascent alone.
+   * <b>This used to be a refusal, and it is now an opportunity.</b> From Canaveral on
+   * 2026-10-09T09:57:11 the parking insertion searched for its apoapsis by flying on past it, into
+   * the re-entry that follows, and NRLMSISE00 turned infinite there — measured on the production
+   * compute and on the ascent alone. The search stops at the apoapsis, so this ascent parks like
+   * its neighbours and its date is scheduled.
    */
   @Test
   @EnabledIfSystemProperty(named = "orbitlab.slowTests", matches = "true")
-  void anAscentTheForceModelCannotFlyIsTheRefusal() {
+  void anAscentWhoseApoapsisSearchFliesIntoTheAtmosphereHasAnOpportunity() {
     LunarLaunchWindowPlanner.Opportunity opportunity =
         LunarLaunchWindowPlanner.opportunity(
             lunarOrbit(28.562, -80.577, 3.0), utc("2026-10-09T09:57:11.000Z"));
 
-    assertFalse(opportunity.found());
-    String refusal = opportunity.refusal();
-    assertTrue(
-        refusal.contains("parking orbit") && refusal.contains("NRLMSISE00"),
-        () -> "the reason names the ascent and what stopped it: " + refusal);
+    assertTrue(opportunity.found(), () -> "no window: " + opportunity.refusal());
+    assertNull(opportunity.refusal());
   }
 }

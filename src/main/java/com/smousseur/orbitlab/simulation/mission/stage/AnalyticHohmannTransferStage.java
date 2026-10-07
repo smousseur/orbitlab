@@ -463,8 +463,9 @@ public class AnalyticHohmannTransferStage extends MissionStage {
 
   /**
    * The next perigee after {@code state}, or {@code null} when none is reached within one period.
-   * Mirror of {@link AnalyticTrimBurnStage#detectStateAtApogee}, which records the decreasing
-   * apsis; this one records the increasing side.
+   * The perigee side of {@link AnalyticTrimBurnStage#detectStateAtApogee}, without its stop: this
+   * one records every apsis of the coast and keeps the first increasing one past a second, so it
+   * flies on past the perigee it returns.
    */
   private static SpacecraftState detectStateAtPerigee(
       SpacecraftState state, FlightContext context) {
