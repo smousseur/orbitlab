@@ -58,8 +58,11 @@ public class MissionPlanOptimizer {
 
   private static final int MAX_EVALUATIONS = MissionLoadEvaluator.DEFAULT_OPTIMIZER_MAX_EVALUATIONS;
 
-  /** Deterministic CMA-ES master seed, matching the legacy inline optimizer path. */
-  private static final long SEED = 42L;
+  /**
+   * Deterministic CMA-ES master seed, matching the legacy inline optimizer path. Public for a
+   * flight that must reproduce this computation's own, as the lunar window's measured ascent does.
+   */
+  public static final long SEED = 42L;
 
   /**
    * Feasibility half-band on the GEO radius (±50 km) the {@code MinimizedLoadPlanner} measures the

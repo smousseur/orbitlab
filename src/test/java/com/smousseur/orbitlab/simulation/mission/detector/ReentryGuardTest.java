@@ -318,6 +318,82 @@ class ReentryGuardTest {
   }
 
   // ─────────────────────────────────────────────────────────────────────────
+  // 4. The closing-speed cadence, for propagations that spend days far from the floor
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /** The speed bound the closing-speed tests check against (m/s). */
+  private static final double CLOSING_SPEED = 15_000.0;
+
+  /**
+   * A trajectory cannot close on the floor faster than it moves, so the floor cannot be reached
+   * before {@code g / maxSpeed}: far away the detector is checked that rarely, near it every 10 s
+   * as before.
+   */
+  @Test
+  void closingSpeed_checksAFarFloorRarely_andANearOneEveryTenSeconds() {
+    ReentryDetector detector =
+        new ReentryDetector(GravitationalContext.earth().equatorialRadius())
+            .withClosingSpeed(CLOSING_SPEED);
+    SpacecraftState far = circularStateAt(380_000_000.0, 6_000.0);
+    SpacecraftState near = reentringState();
+
+    assertEquals(
+        detector.g(far) / CLOSING_SPEED,
+        detector.getMaxCheckInterval().currentInterval(far, true),
+        1.0e-9);
+    assertEquals(10.0, detector.getMaxCheckInterval().currentInterval(near, true), 0.0);
+  }
+
+  @Test
+  void closingSpeedGuard_stopsAReentryUnderDragAtTheDragFloor() {
+    SpacecraftState entry = reentringState();
+
+    SpacecraftState end =
+        assertTimeoutPreemptively(
+            TIMEOUT,
+            () -> {
+              NumericalPropagator propagator =
+                  OrekitService.get()
+                      .createOptimizationPropagator(earthWithDrag(), OrekitService.COAST_MAX_STEP);
+              propagator.setInitialState(entry);
+              ReentryGuard.armQuiet(propagator, GravitationalContext.earth(), CLOSING_SPEED);
+              return propagator.propagate(entry.getDate().shiftedBy(2_666.0));
+            },
+            "the drag stop must halt the re-entry; a timeout means it ran to the integrator collapse");
+
+    double altitude =
+        end.getPVCoordinates().getPosition().getNorm() - Constants.WGS84_EARTH_EQUATORIAL_RADIUS;
+    assertEquals(ReentryGuard.DRAG_REENTRY_FLOOR, altitude, 2_000.0);
+  }
+
+  @Test
+  void closingSpeedGuard_doesNotMoveANominalTrajectory() {
+    SpacecraftState entry = circularStateAt(400_000.0, 6_000.0);
+    AbsoluteDate endDate = entry.getDate().shiftedBy(3_600.0);
+
+    NumericalPropagator bare =
+        OrekitService.get()
+            .createOptimizationPropagator(earthWithDrag(), OrekitService.COAST_MAX_STEP);
+    bare.setInitialState(entry);
+    SpacecraftState reference = bare.propagate(endDate);
+
+    NumericalPropagator guarded =
+        OrekitService.get()
+            .createOptimizationPropagator(earthWithDrag(), OrekitService.COAST_MAX_STEP);
+    guarded.setInitialState(entry);
+    ReentryGuard.armQuiet(guarded, GravitationalContext.earth(), CLOSING_SPEED);
+    SpacecraftState actual = guarded.propagate(endDate);
+
+    assertEquals(0.0, actual.getDate().durationFrom(endDate), 0.0, "the full hour must be flown");
+    assertEquals(
+        0.0,
+        Vector3D.distance(
+            actual.getPVCoordinates().getPosition(), reference.getPVCoordinates().getPosition()),
+        0.0,
+        "arming the guard must not move a single metre of a nominal trajectory");
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
   // Helpers
   // ─────────────────────────────────────────────────────────────────────────
 

@@ -99,7 +99,7 @@ public final class ReentryGuard {
                       Math.round(-SUBSURFACE_FLOOR / 1000.0));
                   return Action.STOP;
                 }));
-    armDragStop(propagator, radius, context);
+    armDragStop(propagator, new ReentryDetector(radius, DRAG_REENTRY_FLOOR), radius, context);
   }
 
   /**
@@ -114,7 +114,31 @@ public final class ReentryGuard {
     double radius = body.equatorialRadius();
     propagator.addEventDetector(
         new ReentryDetector(radius).withHandler((state, detector, increasing) -> Action.STOP));
-    armDragStop(propagator, radius, null);
+    armDragStop(propagator, new ReentryDetector(radius, DRAG_REENTRY_FLOOR), radius, null);
+  }
+
+  /**
+   * Arms the guard without the log, its detectors checked at the cadence of {@link
+   * ReentryDetector#withClosingSpeed}. Use on a propagation that spends most of its time far from
+   * the Earth, where checking every 10 s is the bulk of the cost: a four-and-a-half-day translunar
+   * coast measured some 45 % slower guarded at the fixed cadence than unguarded. The stops are the
+   * same ones, at the same floors.
+   *
+   * @param propagator the propagator to guard
+   * @param maxSpeed an upper bound on the speed of the trajectory (m/s)
+   */
+  public static void armQuiet(
+      NumericalPropagator propagator, GravitationalContext body, double maxSpeed) {
+    double radius = body.equatorialRadius();
+    propagator.addEventDetector(
+        new ReentryDetector(radius)
+            .withClosingSpeed(maxSpeed)
+            .withHandler((state, detector, increasing) -> Action.STOP));
+    armDragStop(
+        propagator,
+        new ReentryDetector(radius, DRAG_REENTRY_FLOOR).withClosingSpeed(maxSpeed),
+        radius,
+        null);
   }
 
   /**
@@ -133,31 +157,32 @@ public final class ReentryGuard {
    * the integrator would otherwise cede under drag.
    *
    * @param propagator the propagator being armed
+   * @param stop the detector at {@link #DRAG_REENTRY_FLOOR} to arm, at the caller's cadence
    * @param radius the reference sphere radius (m)
    * @param context the stage/maneuver label to log on a loud stop, or {@code null} to stop quietly
    */
-  private static void armDragStop(NumericalPropagator propagator, double radius, String context) {
+  private static void armDragStop(
+      NumericalPropagator propagator, ReentryDetector stop, double radius, String context) {
     if (!hasDrag(propagator)) {
       return;
     }
     propagator.addEventDetector(
-        new ReentryDetector(radius, DRAG_REENTRY_FLOOR)
-            .withHandler(
-                (state, detector, increasing) -> {
-                  if (!descending(state)) {
-                    return Action.CONTINUE;
-                  }
-                  if (context != null) {
-                    logger.warn(
-                        "[{}] Trajectory re-entered under drag at {} ({} km below the reference "
-                            + "sphere): stopping propagation, this phase is truncated",
-                        context,
-                        state.getDate(),
-                        Math.round(
-                            (radius - state.getPVCoordinates().getPosition().getNorm()) / 1000.0));
-                  }
-                  return Action.STOP;
-                }));
+        stop.withHandler(
+            (state, detector, increasing) -> {
+              if (!descending(state)) {
+                return Action.CONTINUE;
+              }
+              if (context != null) {
+                logger.warn(
+                    "[{}] Trajectory re-entered under drag at {} ({} km below the reference "
+                        + "sphere): stopping propagation, this phase is truncated",
+                    context,
+                    state.getDate(),
+                    Math.round(
+                        (radius - state.getPVCoordinates().getPosition().getNorm()) / 1000.0));
+              }
+              return Action.STOP;
+            }));
   }
 
   /** Whether the propagator mounts a {@link DragForce}, i.e. is flown against an atmosphere. */

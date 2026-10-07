@@ -20,8 +20,14 @@ import tools.jackson.databind.json.JsonMapper;
  *
  * <p>Nulls are omitted on write — through {@code @JsonInclude(NON_NULL)} on the records — which is
  * what makes a meaningful absence legible in the file rather than written out as {@code null}.
- * Unknown properties are tolerated on read: the project rule is to refuse rather than to silently
- * degrade, and a field this build cannot place is a field it would be dropping.
+ *
+ * <p><b>Unknown properties are tolerated on read, and dropped</b> — Jackson 3's default, {@code
+ * FAIL_ON_UNKNOWN_PROPERTIES} off, measured on this codec: a mission carrying a field this build
+ * has no component for is read without it, and saved back without it, with nothing said. That is a
+ * silent degradation, and the version gate is the only thing that refuses one; a field added
+ * without moving {@link ScenarioFile#CURRENT_FORMAT_VERSION} is therefore a field an older build
+ * loses quietly. The deorbit toggle and the lunar plane were added that way, deliberately, and say
+ * so on their own records.
  */
 public final class ScenarioCodec {
 

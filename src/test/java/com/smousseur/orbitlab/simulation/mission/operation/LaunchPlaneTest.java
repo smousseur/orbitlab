@@ -98,6 +98,28 @@ class LaunchPlaneTest {
     assertEquals(180.0, FastMath.toDegrees(azimuth), 1.0e-9);
   }
 
+  /**
+   * A plane chosen by its azimuth — what the free-azimuth lunar window produces — must give that
+   * azimuth back, on either side of due east: the ascent is flown from {@code launchAzimuth}, so a
+   * round trip that drifted would fly a plane other than the one the window priced. The two cases
+   * are the Kourou planes the design flew, 97.33° (i = 9.0°, descending) and 63.3° (ascending).
+   */
+  @Test
+  void aPlaneBuiltFromAnAzimuth_givesThatAzimuthBack() {
+    double latitude = FastMath.toRadians(5.236);
+    double descendingAzimuth = FastMath.toRadians(97.33);
+    double ascendingAzimuth = FastMath.toRadians(63.3);
+
+    LaunchPlane descending = LaunchPlane.fromAzimuth(descendingAzimuth, latitude);
+    LaunchPlane ascending = LaunchPlane.fromAzimuth(ascendingAzimuth, latitude);
+
+    assertEquals(NodeBranch.DESCENDING, descending.nodeBranch());
+    assertEquals(9.0, descending.targetInclinationDeg(), 0.05);
+    assertEquals(descendingAzimuth, descending.launchAzimuth(latitude), 1.0e-12);
+    assertEquals(NodeBranch.ASCENDING, ascending.nodeBranch());
+    assertEquals(ascendingAzimuth, ascending.launchAzimuth(latitude), 1.0e-12);
+  }
+
   // ── Which planes must be flown to ────────────────────────────
 
   @Test

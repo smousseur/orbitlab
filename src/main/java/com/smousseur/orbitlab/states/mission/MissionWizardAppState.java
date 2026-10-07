@@ -11,11 +11,8 @@ import com.smousseur.orbitlab.simulation.mission.MissionId;
 import com.smousseur.orbitlab.simulation.mission.MissionStatus;
 import com.smousseur.orbitlab.simulation.mission.context.MissionContext;
 import com.smousseur.orbitlab.simulation.mission.context.MissionEntry;
-import com.smousseur.orbitlab.simulation.mission.operation.MissionFactory;
 import com.smousseur.orbitlab.simulation.mission.operation.MissionSpec;
-import com.smousseur.orbitlab.simulation.mission.window.LaunchWindow;
-import com.smousseur.orbitlab.simulation.mission.window.problem.EarthLaunchWindowPlanner;
-import com.smousseur.orbitlab.simulation.mission.window.problem.LunarLaunchWindowPlanner;
+import com.smousseur.orbitlab.simulation.mission.window.problem.MissionScheduler;
 import com.smousseur.orbitlab.ui.UiLayers;
 import com.smousseur.orbitlab.ui.form.ConfirmDialog;
 import com.smousseur.orbitlab.ui.mission.wizard.FormField;
@@ -175,13 +172,11 @@ public final class MissionWizardAppState extends BaseAppState {
       creationExecutor.submit(
           () -> {
             MissionSpec spec =
-                MissionFactory.specFromWizardValues(
-                    valuesMap, missionContext.getSelectedMissionType());
+                MissionScheduler.unplannedSpec(valuesMap, missionContext.getSelectedMissionType());
             MissionEntry missionEntry = new MissionEntry(spec);
             missionContext.addMission(missionEntry);
             missionEntry.mission().setStatus(MissionStatus.CREATING);
-            missionEntry.setScheduledDate(scheduledDateFor(spec, missionDate.get()));
-            missionEntry.mission().setStatus(MissionStatus.DRAFT);
+            schedule(missionEntry, valuesMap, missionDate.get());
             logger.info("Mission '{}' created [{}]", name, missionEntry.id().shortForm());
           });
     } catch (RuntimeException e) {
@@ -191,106 +186,22 @@ public final class MissionWizardAppState extends BaseAppState {
   }
 
   /**
-   * The date the mission is actually scheduled at: the one the user typed, unless the mission has a
-   * window to sit through, in which case it is the next opening of that window (MIS-2).
-   *
-   * <p><b>The typed date becomes a floor.</b> A pad meets a given node once per sidereal day and
-   * the rest of the day costs kilometres per second, so "launch on the 4th at 12:00" can only mean
-   * "on the 4th at 12:00 or as soon after as the geometry allows". This is what gives the wizard's
-   * launch-date field a meaning it did not have.
-   *
-   * <p><b>Two paths, and they do not cost the same</b>. An Earth window is closed form throughout —
-   * some ninety evaluations of an angle between two vectors, 40 ms measured, nothing propagates —
-   * which is why it runs here on the render thread. A lunar one confirms each refined candidate by
-   * flying the aim, some 4.5 s apiece, so creating a lunar mission freezes the render thread for
-   * ten to fifteen seconds. It is paid here, once, rather than on every keystroke of the parameters
-   * step, whose timeline screens only.
-   *
-   * @param spec the mission being scheduled
-   * @param requested the date read from the wizard
-   * @return the date to schedule
+   * Dates the entry and settles its status: {@code DRAFT} on a date it can fly, {@code FAILED} with
+   * the reason when no window was found — the mission then keeps the requested date, stays
+   * editable, and the panel shows why.
    */
-  private static AbsoluteDate scheduledDateFor(MissionSpec spec, AbsoluteDate requested) {
-    return switch (spec) {
-      case MissionSpec.EarthOrbit earthOrbit -> earthWindow(earthOrbit, requested);
-      case MissionSpec.Lunar lunar -> lunarWindow(lunar, requested);
-      case MissionSpec.LunarOrbit lunarOrbit -> lunarOrbitWindow(lunarOrbit, requested);
-      case MissionSpec.Geo ignored -> requested;
-    };
-  }
-
-  /**
-   * The next opening of a lunar window, confirmed on the flown aim.
-   *
-   * @param spec the mission being scheduled
-   * @param requested the date read from the wizard, taken as a floor
-   * @return the date to schedule
-   */
-  private static AbsoluteDate lunarWindow(MissionSpec.Lunar spec, AbsoluteDate requested) {
-    return lunarWindow(LunarLaunchWindowPlanner.nextOpportunity(spec, requested), requested);
-  }
-
-  /**
-   * The next opening of a lunar window for an orbit insertion, confirmed on the flown aim (MIS-5 /
-   * L5). The aimed perilune is the lunar orbit altitude, so the criterion is the flyby's own.
-   *
-   * <p><b>Not reachable before L7</b>, which adds the wizard card: nothing creates a lunar orbit
-   * mission until then. It is written correctly rather than stubbed because the planner entry it
-   * calls exists, and a placeholder here would be a wrong scheduled date waiting for a caller.
-   *
-   * @param spec the mission being scheduled
-   * @param requested the date read from the wizard, taken as a floor
-   * @return the date to schedule
-   */
-  private static AbsoluteDate lunarOrbitWindow(
-      MissionSpec.LunarOrbit spec, AbsoluteDate requested) {
-    return lunarWindow(LunarLaunchWindowPlanner.nextOpportunity(spec, requested), requested);
-  }
-
-  /** The verdict and the log line shared by the two lunar profiles. */
-  private static AbsoluteDate lunarWindow(Optional<LaunchWindow> window, AbsoluteDate requested) {
-    if (window.isEmpty()) {
-      logger.warn(
-          "No lunar launch window within two days of {}; keeping the requested date", requested);
-      return requested;
+  private static void schedule(
+      MissionEntry entry, Map<String, Object> values, AbsoluteDate requested) {
+    MissionScheduler.Schedule schedule = MissionScheduler.schedule(entry, values, requested);
+    entry.setScheduledDate(schedule.date());
+    if (schedule.refused()) {
+      // Status first, error last: lastError is the volatile write that publishes both to the
+      // render thread, as on the computation's own failure path.
+      entry.mission().setStatus(MissionStatus.FAILED);
+      entry.setLastError(schedule.refusal());
+    } else {
+      entry.mission().setStatus(MissionStatus.DRAFT);
     }
-    logger.info(
-        "Lunar launch window: {} (requested {}, slot {} at {} m/s)",
-        window.get().date(),
-        requested,
-        window.get().duration(),
-        Math.round(window.get().best().deltaV()));
-    return window.get().date();
-  }
-
-  /**
-   * The next opening of an Earth target plane, or the requested date when no plane is waited for.
-   *
-   * @param earthOrbit the mission being scheduled
-   * @param requested the date read from the wizard, taken as a floor
-   * @return the date to schedule
-   */
-  private static AbsoluteDate earthWindow(
-      MissionSpec.EarthOrbit earthOrbit, AbsoluteDate requested) {
-    if (!earthOrbit.hasTargetRaan()) {
-      return requested;
-    }
-    Optional<LaunchWindow> window = EarthLaunchWindowPlanner.nextOpportunity(earthOrbit, requested);
-    if (window.isEmpty()) {
-      logger.warn(
-          "No launch window found for RAAN {}° within a day of {}; keeping the requested date",
-          earthOrbit.targetRaan(),
-          requested);
-      return requested;
-    }
-    logger.info(
-        "Launch window for RAAN {}°: {} (requested {}, slot {} at {} m/s)",
-        earthOrbit.targetRaan(),
-        window.get().date(),
-        requested,
-        window.get().duration(),
-        Math.round(window.get().best().deltaV()));
-    return window.get().date();
   }
 
   /**
@@ -336,14 +247,13 @@ public final class MissionWizardAppState extends BaseAppState {
     try {
       creationExecutor.submit(
           () -> {
-            MissionSpec spec = MissionFactory.specFromWizardValues(valuesMap, currentSpec.type());
+            MissionSpec spec = MissionScheduler.unplannedSpec(valuesMap, currentSpec.type());
             if (!entry.applySpec(spec)) {
               return;
             }
 
             entry.mission().setStatus(MissionStatus.UPDATING);
-            entry.setScheduledDate(scheduledDateFor(spec, missionDate.get()));
-            entry.mission().setStatus(MissionStatus.DRAFT);
+            schedule(entry, valuesMap, missionDate.get());
             logger.info("Mission '{}' updated [{}]", name, entry.id().shortForm());
           });
     } catch (RuntimeException e) {

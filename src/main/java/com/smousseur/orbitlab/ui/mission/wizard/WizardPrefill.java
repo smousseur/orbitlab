@@ -85,16 +85,32 @@ public final class WizardPrefill {
       }
       case MissionSpec.Geo geo ->
           values.put(FormField.GTO_PARKING_ALT.key(), toKilometers(geo.parkingAltitude()));
-      // MIS-4 / L5 §6.2. Only the perilune: the parking altitude is the mission's own constant and
-      // no field carries it, so writing it back would be a second truth about the same number.
-      case MissionSpec.Lunar lunar ->
-          values.put(FormField.LUNAR_PERILUNE_ALT.key(), toKilometers(lunar.periluneAltitude()));
-      // MIS-5 / L7 §4. Only the orbit altitude, on the flyby's reasoning: the parking altitude is
-      // the mission's own constant and no field carries it.
-      case MissionSpec.LunarOrbit lunarOrbit ->
-          values.put(FormField.LUNAR_ORBIT_ALT.key(), toKilometers(lunarOrbit.orbitAltitude()));
+      // Never the parking altitude: it is the mission's own constant and no field carries it, so
+      // writing it back would be a second truth about the same number.
+      case MissionSpec.Lunar lunar -> {
+        values.put(FormField.LUNAR_PERILUNE_ALT.key(), toKilometers(lunar.periluneAltitude()));
+        if (lunar.hasPlane()) {
+          putLunarPlane(values, lunar.plane());
+        }
+      }
+      // Never the parking altitude either, on the flyby's reasoning.
+      case MissionSpec.LunarOrbit lunarOrbit -> {
+        values.put(FormField.LUNAR_ORBIT_ALT.key(), toKilometers(lunarOrbit.orbitAltitude()));
+        if (lunarOrbit.hasPlane()) {
+          putLunarPlane(values, lunarOrbit.plane());
+        }
+      }
     }
     return values;
+  }
+
+  /**
+   * Writes back the plane a lunar window chose. Only when it chose one: a due-east mission comes
+   * back with no key, for the reason {@link #putInclinationIfCommanded} gives.
+   */
+  private static void putLunarPlane(Map<String, Object> values, LaunchPlane plane) {
+    values.put(FormField.LUNAR_PLANE_INCLINATION.key(), plane.targetInclinationDeg());
+    values.put(FormField.LUNAR_PLANE_BRANCH.key(), plane.nodeBranch().name());
   }
 
   /**

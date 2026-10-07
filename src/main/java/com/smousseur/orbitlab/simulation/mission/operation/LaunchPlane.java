@@ -117,6 +117,26 @@ public record LaunchPlane(double targetInclination, NodeBranch nodeBranch) {
   }
 
   /**
+   * The plane a launch at a given azimuth reaches — the inverse of {@link #launchAzimuth}, for a
+   * caller that chose the heading first: the free-azimuth lunar window picks the azimuth whose
+   * plane contains the Moon, and the mission then carries the plane rather than a second vocabulary
+   * for it.
+   *
+   * <p>The inclination is {@code acos(sin A · cos φ)} and the branch is ascending north of due
+   * east, descending south of it. Built that way, {@link #launchAzimuth} gives {@code A} back to
+   * the rounding of an arc sine, which is coarsest next to due east.
+   *
+   * @param azimuth the launch azimuth in <b>radians</b>, clockwise from north, in {@code [0, π]}
+   * @param launchLatitude the launch site latitude in <b>radians</b>
+   * @return the plane that azimuth reaches from that site
+   */
+  public static LaunchPlane fromAzimuth(double azimuth, double launchLatitude) {
+    double inclination = FastMath.acos(FastMath.sin(azimuth) * FastMath.cos(launchLatitude));
+    return new LaunchPlane(
+        inclination, azimuth <= FastMath.PI / 2 ? NodeBranch.ASCENDING : NodeBranch.DESCENDING);
+  }
+
+  /**
    * The frame the target inclination — and the achieved inclination it is compared against — are
    * expressed in. <b>GCRF</b>, and the choice is settled.
    *

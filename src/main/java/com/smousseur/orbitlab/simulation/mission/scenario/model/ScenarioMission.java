@@ -21,11 +21,12 @@ import com.smousseur.orbitlab.simulation.mission.MissionType;
  * this javadoc used to claim otherwise: {@code toScenarioMission} switches on the type. Adding a
  * spec variant compiles here untouched; adding a mission type does not.
  *
- * <p><b>Absence is meaningful</b> and stays so: {@link #horizonDays()}, and the inclination and
- * node of an {@link EarthOrbit}, are {@code null} — hence omitted from the JSON — when they were
- * never commanded, never written at their derived value. Publishing a derived inclination would
- * move the azimuth by thousandths of a degree, hence the signed launch assist, hence every
- * propellant load: a trajectory drift no assertion on the inclination would catch.
+ * <p><b>Absence is meaningful</b> and stays so: {@link #horizonDays()}, the inclination and node of
+ * an {@link EarthOrbit}, and the plane of a lunar mission, are {@code null} — hence omitted from
+ * the JSON — when they were never commanded, never written at their derived value. Publishing a
+ * derived inclination would move the azimuth by thousandths of a degree, hence the signed launch
+ * assist, hence every propellant load: a trajectory drift no assertion on the inclination would
+ * catch.
  */
 @JsonTypeInfo(
     use = JsonTypeInfo.Id.NAME,
@@ -205,6 +206,12 @@ public sealed interface ScenarioMission
    * @param visible whether the mission was displayed
    * @param solution the optimization outcome, or {@code null}
    * @param periluneKm the perilune altitude aimed for, in kilometres
+   * @param planeInclinationDeg the inclination in degrees of the plane the launch window chose, or
+   *     {@code null} when the mission flies due east. Like {@link EarthOrbit#deorbit()}, it does
+   *     not move the format version: a build predating the field reads the mission due east and
+   *     says nothing, and saves it back without the plane.
+   * @param planeBranch the {@code NodeBranch} name of that plane, present exactly when its
+   *     inclination is
    */
   @JsonInclude(JsonInclude.Include.NON_NULL)
   record Lunar(
@@ -219,7 +226,9 @@ public sealed interface ScenarioMission
       String color,
       boolean visible,
       ScenarioSolution solution,
-      double periluneKm)
+      double periluneKm,
+      Double planeInclinationDeg,
+      String planeBranch)
       implements ScenarioMission {}
 
   /**
@@ -242,6 +251,10 @@ public sealed interface ScenarioMission
    * @param visible whether the mission was displayed
    * @param solution the optimization outcome, or {@code null}
    * @param orbitAltitudeKm the circular lunar orbit aimed for, in kilometres above the surface
+   * @param planeInclinationDeg the inclination in degrees of the plane the launch window chose, or
+   *     {@code null} when the mission flies due east — see {@link Lunar#planeInclinationDeg()}
+   * @param planeBranch the {@code NodeBranch} name of that plane, present exactly when its
+   *     inclination is
    */
   @JsonInclude(JsonInclude.Include.NON_NULL)
   record LunarOrbit(
@@ -256,6 +269,8 @@ public sealed interface ScenarioMission
       String color,
       boolean visible,
       ScenarioSolution solution,
-      double orbitAltitudeKm)
+      double orbitAltitudeKm,
+      Double planeInclinationDeg,
+      String planeBranch)
       implements ScenarioMission {}
 }

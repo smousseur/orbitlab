@@ -36,14 +36,14 @@ import org.orekit.time.AbsoluteDate;
  * above the tolerance {@code departureFrom} stops at, and both positive, so the point found is the
  * one just ahead and not the next revolution's.
  *
- * <p><b>That is not the date the parking coast stopped against, and nothing tries to make it
- * one</b>. {@code departureFrom} is a fixed point on the state it is handed, so the injection date
- * it resolves from a parking insertion and the one it resolves here differ — measured at 2.46 s.
- * The design had assumed that calling the same closed form was enough for the two stages to agree;
- * it is not, and a burn calibrated centred on one date and flown from the other put the flyby 1 150
- * km inside the Moon. What makes the disagreement harmless is that {@code inject} is handed <b>this
- * stage's entry state</b> and calibrates the burn that ignites there, so the aim converges on the
- * departure the mission really flies whatever off-centring is left.
+ * <p><b>That is the point the parking coast stopped half a burn short of, to a few hundredths of a
+ * second</b>. The coast finds it by flying to it, and from half a burn out the closed form
+ * re-predicts it to the millisecond: lit that way, the burns of eight Canaveral windows were
+ * measured centred 0.02 to 0.04 s before their point. Stopped against a prediction made from the
+ * insertion instead, they were centred 0.7 to 7.3 s past it, and the last one refused the aim. The
+ * residue is absorbed because {@code inject} is handed <b>this stage's entry state</b> and
+ * calibrates the burn that ignites there; a burn calibrated centred on one date and flown from
+ * another once put the flyby 1 150 km inside the Moon.
  *
  * <p><b>{@code enter} moves no mass.</b> It coasts ballistically to the injection point, plans
  * there so {@link TranslunarInjectionPlan#solve} sees the geometry the impulsive model saw, and

@@ -543,11 +543,13 @@ public sealed interface MissionSpec
    * injection is 54 m/s cheaper from 400 km than from 185, and the ascent to 400 km costs more than
    * that back. L5 keeps the single field the découpage gives it, the perilune altitude.
    *
-   * <p><b>No inclination component.</b> The flight is {@code i = φ}, due east. {@code EarthOrbit}
-   * carries {@code targetInclination} and {@code nodeBranch}, and {@code Geo} carries {@code
-   * finalInclination}, because those two have a choice to offer; this one does not before the
-   * adaptive-inclination lot, and at {@code i = φ} the two azimuths {@code
-   * LaunchPlane.launchAzimuth} distinguishes merge anyway.
+   * <p><b>The plane is not the user's to choose, and it is still a component.</b> A lunar mission
+   * flies due east, {@code i = φ}, whenever the launch window finds a date there; where due east
+   * has none — Kourou, most of a lunation — the window picks the plane that contains the Moon at
+   * arrival instead, and that plane has to travel with the mission: the budget sizes the ascent on
+   * its azimuth, the chain flies it, and a saved scenario must reopen on it. {@code null} means due
+   * east, which is what every spec built before the free azimuth existed carries; {@link
+   * #launchPlane()} resolves it.
    *
    * <p><b>No tolerance component either</b>. The ± band on the flown perilune is not a caller's
    * choice but a property of the measurement, so it lives on {@link LunarFlybyMission} as {@code
@@ -569,6 +571,8 @@ public sealed interface MissionSpec
    * @param horizon the restitution horizon, or {@code null} for the derived default
    * @param atmosphere the atmosphere to fly against, or {@code null} for {@link
    *     AtmosphereModel#NONE}
+   * @param plane the plane the launch window chose, or {@code null} for the site's due-east plane —
+   *     read through {@link #hasPlane()} and {@link #launchPlane()}
    */
   record Lunar(
       String name,
@@ -580,7 +584,8 @@ public sealed interface MissionSpec
       double longitude,
       double altitude,
       MissionHorizon horizon,
-      AtmosphereModel atmosphere)
+      AtmosphereModel atmosphere,
+      LaunchPlane plane)
       implements MissionSpec {
     public Lunar {
       Objects.requireNonNull(name, "name");
@@ -594,9 +599,63 @@ public sealed interface MissionSpec
       }
     }
 
+    /**
+     * A flyby on the site's due-east plane.
+     *
+     * @param name the mission name
+     * @param configuration the launch configuration
+     * @param parkingAltitude the parking orbit altitude in meters
+     * @param periluneAltitude the perilune altitude to fly past the Moon at, in meters
+     * @param siteName the launch site display name, or {@code null} when unnamed
+     * @param latitude the launch site latitude in degrees
+     * @param longitude the launch site longitude in degrees
+     * @param altitude the launch site altitude in meters
+     * @param horizon the restitution horizon, or {@code null} for the derived default
+     * @param atmosphere the atmosphere to fly against, or {@code null} for {@link
+     *     AtmosphereModel#NONE}
+     */
+    public Lunar(
+        String name,
+        LaunchConfiguration configuration,
+        double parkingAltitude,
+        double periluneAltitude,
+        String siteName,
+        double latitude,
+        double longitude,
+        double altitude,
+        MissionHorizon horizon,
+        AtmosphereModel atmosphere) {
+      this(
+          name,
+          configuration,
+          parkingAltitude,
+          periluneAltitude,
+          siteName,
+          latitude,
+          longitude,
+          altitude,
+          horizon,
+          atmosphere,
+          null);
+    }
+
     @Override
     public MissionType type() {
       return MissionType.LUNAR_FLYBY;
+    }
+
+    /**
+     * @return {@code true} when the launch window chose a plane other than due east
+     */
+    public boolean hasPlane() {
+      return plane != null;
+    }
+
+    /**
+     * @return the plane the ascent flies: the one the window chose, or the site's due-east plane
+     */
+    public LaunchPlane launchPlane() {
+      return plane != null ? plane : LaunchPlane.dueEast(latitude);
     }
 
     @Override
@@ -615,7 +674,8 @@ public sealed interface MissionSpec
           longitude,
           altitude,
           horizon,
-          atmosphere);
+          atmosphere,
+          plane);
     }
 
     @Override
@@ -630,7 +690,8 @@ public sealed interface MissionSpec
           longitude,
           altitude,
           horizon,
-          atmosphere);
+          atmosphere,
+          plane);
     }
   }
 
@@ -649,11 +710,16 @@ public sealed interface MissionSpec
    * LunarFlybyMission.DEFAULT_PARKING_ALTITUDE}, which already declares itself the altitude every
    * lunar mission built from the wizard leaves from.
    *
-   * <p><b>No inclination component.</b> A lunar orbit's inclination is not aimed at: {@code
+   * <p><b>No lunar inclination component.</b> A lunar orbit's inclination is not aimed at: {@code
    * TranslunarInjectionPlan} builds its aim direction inside the transfer plane, so the single
    * scalar degree of freedom is spent entirely on the perilune altitude. What the geometry delivers
    * was measured over a lunation by L0: 131.1° to 153.4° in the selenocentric ICRF-oriented frame,
    * a 22.3° spread. It is undergone, reported, and absent from the objective.
+   *
+   * <p><b>The launch plane is a component</b>, on {@link Lunar}'s reasoning: due east when the
+   * window found a date there ({@code null}), the plane containing the Moon at arrival when it did
+   * not — chosen by the window, never by the user, and carried so that the budget, the chain and a
+   * saved scenario all fly the same one.
    *
    * <p><b>Nothing else is validated</b> beyond the null checks and the two normalisations, exactly
    * as on {@link Lunar}. The refusal that matters is {@code PropellantBudget.loadsForLunarOrbit}'s,
@@ -671,6 +737,8 @@ public sealed interface MissionSpec
    * @param horizon the restitution horizon, or {@code null} for the derived default
    * @param atmosphere the atmosphere to fly against, or {@code null} for {@link
    *     AtmosphereModel#NONE}
+   * @param plane the plane the launch window chose, or {@code null} for the site's due-east plane —
+   *     read through {@link #hasPlane()} and {@link #launchPlane()}
    */
   record LunarOrbit(
       String name,
@@ -682,7 +750,8 @@ public sealed interface MissionSpec
       double longitude,
       double altitude,
       MissionHorizon horizon,
-      AtmosphereModel atmosphere)
+      AtmosphereModel atmosphere,
+      LaunchPlane plane)
       implements MissionSpec {
     public LunarOrbit {
       Objects.requireNonNull(name, "name");
@@ -696,9 +765,63 @@ public sealed interface MissionSpec
       }
     }
 
+    /**
+     * A lunar orbit on the site's due-east plane.
+     *
+     * @param name the mission name
+     * @param configuration the launch configuration, payload insertion load included
+     * @param parkingAltitude the parking orbit altitude in meters
+     * @param orbitAltitude the circular lunar orbit altitude in meters above the lunar surface
+     * @param siteName the launch site display name, or {@code null} when unnamed
+     * @param latitude the launch site latitude in degrees
+     * @param longitude the launch site longitude in degrees
+     * @param altitude the launch site altitude in meters
+     * @param horizon the restitution horizon, or {@code null} for the derived default
+     * @param atmosphere the atmosphere to fly against, or {@code null} for {@link
+     *     AtmosphereModel#NONE}
+     */
+    public LunarOrbit(
+        String name,
+        LaunchConfiguration configuration,
+        double parkingAltitude,
+        double orbitAltitude,
+        String siteName,
+        double latitude,
+        double longitude,
+        double altitude,
+        MissionHorizon horizon,
+        AtmosphereModel atmosphere) {
+      this(
+          name,
+          configuration,
+          parkingAltitude,
+          orbitAltitude,
+          siteName,
+          latitude,
+          longitude,
+          altitude,
+          horizon,
+          atmosphere,
+          null);
+    }
+
     @Override
     public MissionType type() {
       return MissionType.LUNAR_ORBIT;
+    }
+
+    /**
+     * @return {@code true} when the launch window chose a plane other than due east
+     */
+    public boolean hasPlane() {
+      return plane != null;
+    }
+
+    /**
+     * @return the plane the ascent flies: the one the window chose, or the site's due-east plane
+     */
+    public LaunchPlane launchPlane() {
+      return plane != null ? plane : LaunchPlane.dueEast(latitude);
     }
 
     @Override
@@ -717,7 +840,8 @@ public sealed interface MissionSpec
           longitude,
           altitude,
           horizon,
-          atmosphere);
+          atmosphere,
+          plane);
     }
 
     @Override
@@ -732,7 +856,8 @@ public sealed interface MissionSpec
           longitude,
           altitude,
           horizon,
-          atmosphere);
+          atmosphere,
+          plane);
     }
   }
 }

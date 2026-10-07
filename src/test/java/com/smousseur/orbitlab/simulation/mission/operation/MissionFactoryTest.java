@@ -125,6 +125,100 @@ class MissionFactoryTest {
     assertEquals(2_000, vehicles.get(3).getMass(), 1e-6, "payload mass as entered, no AKM");
   }
 
+  /** The values of the lunar orbit L0 measured from Kourou, Falcon Heavy, 2 000 kg orbiter. */
+  private static Map<String, Object> kourouLunarValues(String payloadId) {
+    Map<String, Object> values = baseValues();
+    values.put("LAUNCH_SITE_LAT", 5.236);
+    values.put("LAUNCH_SITE_LONG", -52.775);
+    values.put("PAYLOAD_TYPE", payloadId);
+    values.put("PAYLOAD_MASS", 2_000.0);
+    values.put("LUNAR_ORBIT_ALT", 100.0);
+    values.put("LUNAR_PERILUNE_ALT", 100.0);
+    return values;
+  }
+
+  /**
+   * A lunar orbit whose window chose a plane is sized and composed on that plane: the two derived
+   * keys reach the spec, the budget charges the ascent at the plane's azimuth rather than due east,
+   * and the composed chain carries the plane. Without the keys it is the due-east mission of
+   * before, loads included, to the bit.
+   */
+  @Test
+  void lunarOrbitPlane_reachesTheSpecTheBudgetAndTheChain() {
+    Map<String, Object> values = kourouLunarValues("LUNAR_ORBITER");
+    MissionSpec.LunarOrbit dueEast =
+        assertInstanceOf(
+            MissionSpec.LunarOrbit.class,
+            MissionFactory.specFromWizardValues(values, MissionType.LUNAR_ORBIT));
+    values.put("LUNAR_PLANE_INCLINATION", 9.0);
+    values.put("LUNAR_PLANE_BRANCH", "DESCENDING");
+    MissionSpec.LunarOrbit planed =
+        assertInstanceOf(
+            MissionSpec.LunarOrbit.class,
+            MissionFactory.specFromWizardValues(values, MissionType.LUNAR_ORBIT));
+
+    LaunchPlane plane = LaunchPlane.ofDegrees(9.0, NodeBranch.DESCENDING);
+    assertFalse(dueEast.hasPlane(), "no key, no plane");
+    assertEquals(LaunchPlane.dueEast(5.236), dueEast.launchPlane());
+    assertEquals(plane, planed.plane());
+    assertArrayEquals(
+        lunarOrbitLoads(FastMath.PI / 2), dueEast.configuration().propellantLoads(), 0.0);
+    double[] atPlane = lunarOrbitLoads(plane.launchAzimuth(FastMath.toRadians(5.236)));
+    assertArrayEquals(atPlane, planed.configuration().propellantLoads(), 0.0);
+    assertTrue(
+        atPlane[2] > dueEast.configuration().propellantLoads()[2],
+        "a plane south of east banks less of the entrainment, so the upper stage is loaded more");
+    LunarOrbitMission mission =
+        assertInstanceOf(
+            LunarOrbitMission.class, MissionComposer.compose(planed, OptimizationType.FAST));
+    assertEquals(plane, mission.getLaunchPlane());
+    assertEquals(
+        LaunchPlane.dueEast(5.236),
+        assertInstanceOf(
+                LunarOrbitMission.class, MissionComposer.compose(dueEast, OptimizationType.FAST))
+            .getLaunchPlane());
+  }
+
+  /** The flyby's half of the same property: its own budget branch, its own chain. */
+  @Test
+  void lunarFlybyPlane_reachesTheBudgetAndTheChain() {
+    Map<String, Object> values = kourouLunarValues("LUNAR_PROBE");
+    values.put("LUNAR_PLANE_INCLINATION", 9.0);
+    values.put("LUNAR_PLANE_BRANCH", "DESCENDING");
+    MissionSpec.Lunar planed =
+        assertInstanceOf(
+            MissionSpec.Lunar.class,
+            MissionFactory.specFromWizardValues(values, MissionType.LUNAR_FLYBY));
+
+    LaunchPlane plane = LaunchPlane.ofDegrees(9.0, NodeBranch.DESCENDING);
+    assertEquals(plane, planed.plane());
+    double[] expected =
+        PropellantBudget.loadsForLunar(
+                Launchers.FALCON_HEAVY,
+                Payloads.byId("LUNAR_PROBE").toSpacecraft(2_000.0, 0.0),
+                LunarFlybyMission.DEFAULT_PARKING_ALTITUDE,
+                5.236,
+                plane.launchAzimuth(FastMath.toRadians(5.236)))
+            .launcherLoads();
+    assertArrayEquals(expected, planed.configuration().propellantLoads(), 0.0);
+    LunarFlybyMission mission =
+        assertInstanceOf(
+            LunarFlybyMission.class, MissionComposer.compose(planed, OptimizationType.FAST));
+    assertEquals(plane, mission.getLaunchPlane());
+  }
+
+  private static double[] lunarOrbitLoads(double azimuth) {
+    return PropellantBudget.loadsForLunarOrbit(
+            Launchers.FALCON_HEAVY,
+            Payloads.byId("LUNAR_ORBITER"),
+            2_000.0,
+            LunarOrbitMission.DEFAULT_PARKING_ALTITUDE,
+            100_000.0,
+            5.236,
+            azimuth)
+        .launcherLoads();
+  }
+
   /**
    * Exit criteria of spec 06 I2 (vehicle mass reflects the entered payload) and I3 (loads sized per
    * mission: S1 full, S2 well under capacity for LEO 400 km).

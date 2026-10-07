@@ -5,12 +5,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.simulation.OrekitService;
+import com.smousseur.orbitlab.simulation.Physics;
 import com.smousseur.orbitlab.simulation.mission.maneuver.TranslunarInjectionPlan;
-import com.smousseur.orbitlab.simulation.mission.vehicle.PropulsionSystem;
-import com.smousseur.orbitlab.simulation.mission.vehicle.Spacecraft;
-import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
 import com.smousseur.orbitlab.simulation.mission.window.LaunchWindow;
-import com.smousseur.orbitlab.simulation.mission.window.LaunchWindowCandidate;
 import com.smousseur.orbitlab.simulation.mission.window.LaunchWindowSearch;
 import com.smousseur.orbitlab.simulation.mission.window.LaunchWindowSolver;
 import java.time.Duration;
@@ -45,8 +42,12 @@ import org.orekit.utils.Constants;
  * the geodetic one the site is named by, and near the declination maximum that fraction is the
  * whole question — it is what decides whether the two roots still exist at all.
  *
- * <p><b>Nothing here confirms</b> (see {@link ScreeningOnly}): a flown perilune costs some four
- * seconds, and it belongs to {@code LunarLaunchWindowFlightTest}.
+ * <p><b>Nothing here confirms</b>: every problem is the screening one, the parking orbit posed at
+ * the pad. Every test here is about the shape of that criterion; confirming a candidate flies some
+ * thirty four-day propagations, and it would rank a brute-force sweep of {@code evaluate} against
+ * an optimum ranked on {@code confirm} — the two are six m/s apart at the optimum, enough to swap
+ * two opportunities that sit 0.2 m/s from each other. Confirming belongs to {@code
+ * LunarLaunchWindowFlightTest}.
  */
 class LunarLaunchWindowProblemTest {
   private static final Logger logger = LogManager.getLogger(LunarLaunchWindowProblemTest.class);
@@ -74,48 +75,23 @@ class LunarLaunchWindowProblemTest {
   private static final double SIDEREAL_DAY =
       2.0 * FastMath.PI / Constants.WGS84_EARTH_ANGULAR_VELOCITY;
 
-  /**
-   * The problem with its second tier switched off — the screening criterion alone.
-   *
-   * <p>Every test here is about the shape of that criterion, and confirming a candidate flies some
-   * thirty four-day propagations. Left on, a single solver call would put this class in the tens of
-   * seconds, and worse, it would compare a brute-force sweep of {@code evaluate} against an optimum
-   * ranked on {@code confirm} — the two are six m/s apart at the optimum, which is enough to swap
-   * two opportunities that sit 0.2 m/s from each other.
-   */
-  private static final class ScreeningOnly extends LunarLaunchWindowProblem {
-    ScreeningOnly(double latitude, double longitude, double altitude) {
-      super(
-          latitude,
-          longitude,
-          altitude,
-          PARKING_ALTITUDE,
-          TARGET_PERILUNE,
-          vehicle(),
-          INJECTION_MASS);
-    }
-
-    @Override
-    public LaunchWindowCandidate confirm(LaunchWindowCandidate candidate) {
-      return candidate;
-    }
-  }
-
   @BeforeAll
   static void init() {
     OrekitService.get().initialize();
   }
 
-  private static Vehicle vehicle() {
-    return new Spacecraft(500, 1200, 1200, PropulsionSystem.getSpacecraftPropulsion());
-  }
-
   private static LunarLaunchWindowProblem canaveral() {
-    return new ScreeningOnly(CANAVERAL_LATITUDE, CANAVERAL_LONGITUDE, CANAVERAL_ALTITUDE);
+    return LunarLaunchWindowProblem.screening(
+        CANAVERAL_LATITUDE,
+        CANAVERAL_LONGITUDE,
+        CANAVERAL_ALTITUDE,
+        PARKING_ALTITUDE,
+        TARGET_PERILUNE);
   }
 
   private static LunarLaunchWindowProblem kourou() {
-    return new ScreeningOnly(KOUROU_LATITUDE, KOUROU_LONGITUDE, KOUROU_ALTITUDE);
+    return LunarLaunchWindowProblem.screening(
+        KOUROU_LATITUDE, KOUROU_LONGITUDE, KOUROU_ALTITUDE, PARKING_ALTITUDE, TARGET_PERILUNE);
   }
 
   /** The plane Canaveral reaches, built the way the problem builds its own. */
@@ -586,6 +562,84 @@ class LunarLaunchWindowProblemTest {
         problem.recurrence().toNanos() / 1.0e9,
         1.0,
         "two opportunities per sidereal day, so the recurrence is half of one");
+  }
+
+  /**
+   * The free-azimuth plane at the case the due-east plane cannot serve: Kourou, 2026-10-06T08:00Z,
+   * where due east leaves the Moon at arrival 6.9° off the parking plane.
+   *
+   * <p><b>Three readings, each independent of the problem's own arithmetic.</b> The parking plane
+   * the problem prices must contain the Moon at arrival — its misalignment nulled by the secant.
+   * That plane must be the one the ascent is predicted to <em>fly</em> from the commanded azimuth:
+   * the commanded plane turned about the vertical by {@code atan(w / v)}, {@code w} being the pad's
+   * entrainment velocity out of that plane, here rebuilt from the Earth's rotation rate about the
+   * GCRF pole — hence a hundredth of a degree of slack for the 0.15° the true pole sits away from
+   * it. And the commanded azimuth must sit east of the plane through the pad and the Moon, by the
+   * half degree the design measured the residual at here.
+   */
+  @Test
+  @DisplayName("From Kourou, the predicted flown plane contains the Moon at arrival")
+  void theFreeAzimuthPlaneContainsTheMoonOnceFlown() {
+    double latitude = 5.236;
+    double longitude = -52.775;
+    double altitude = 0.0;
+    AbsoluteDate epoch = new AbsoluteDate("2026-10-06T08:00:00.000Z", TimeScalesFactory.getUTC());
+    LunarLaunchWindowProblem problem =
+        LunarLaunchWindowProblem.screening(
+            latitude,
+            longitude,
+            altitude,
+            PARKING_ALTITUDE,
+            TARGET_PERILUNE,
+            LunarLaunchWindowProblem.PlaneChoice.FREE_AZIMUTH);
+
+    LunarLaunchWindowProblem.Injection injection = problem.injectionAt(epoch);
+
+    assertEquals(0.0, injection.planeMisalignment(), 1.0e-6, "the Moon at arrival is in plane");
+
+    LaunchSitePlane site = new LaunchSitePlane(latitude, longitude, altitude, injection.azimuth());
+    Vector3D pad = site.positionAt(epoch);
+    Vector3D commanded = site.normalOn(pad);
+    double entrainment =
+        Vector3D.crossProduct(new Vector3D(0.0, 0.0, Constants.WGS84_EARTH_ANGULAR_VELOCITY), pad)
+            .dotProduct(commanded);
+    double parkingSpeed =
+        FastMath.sqrt(
+            Constants.WGS84_EARTH_MU
+                / (Constants.WGS84_EARTH_EQUATORIAL_RADIUS + PARKING_ALTITUDE));
+    Vector3D predicted =
+        commanded
+            .scalarMultiply(parkingSpeed)
+            .subtract(Vector3D.crossProduct(commanded, pad.normalize()).scalarMultiply(entrainment))
+            .normalize();
+    Vector3D priced =
+        Vector3D.crossProduct(
+                injection.state().getPosition(), injection.state().getPVCoordinates().getVelocity())
+            .normalize();
+    assertEquals(
+        0.0,
+        FastMath.toDegrees(Vector3D.angle(predicted, priced)),
+        0.01,
+        "the plane priced is the commanded one as the ascent is predicted to fly it");
+
+    Vector3D throughTheMoon =
+        Vector3D.crossProduct(pad, moonDirection(injection.arrivalDate())).normalize();
+    Vector3D motion = Vector3D.crossProduct(throughTheMoon, pad).normalize();
+    double rawAzimuth =
+        FastMath.atan2(
+            motion.dotProduct(Physics.localHorizontalDirection(pad, FastMath.PI / 2)),
+            motion.dotProduct(Physics.localHorizontalDirection(pad, 0.0)));
+    double offset = FastMath.toDegrees(injection.azimuth() - rawAzimuth);
+    logger.info(
+        "Kourou {}: plane through the Moon at A = {}°, commanded A = {}° ({} away)",
+        epoch,
+        degrees(rawAzimuth),
+        degrees(injection.azimuth()),
+        String.format(Locale.ROOT, "%+.3f°", offset));
+    assertEquals(97.33, FastMath.toDegrees(rawAzimuth), 0.05);
+    assertTrue(
+        offset > 0.3 && offset < 0.7,
+        "the residual is pre-compensated by about half a degree, got " + offset + "°");
   }
 
   /**

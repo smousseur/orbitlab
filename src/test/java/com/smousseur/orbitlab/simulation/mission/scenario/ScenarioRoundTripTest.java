@@ -7,6 +7,7 @@ import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.mission.MissionHorizon;
 import com.smousseur.orbitlab.simulation.mission.MissionType;
 import com.smousseur.orbitlab.simulation.mission.context.MissionEntry;
+import com.smousseur.orbitlab.simulation.mission.operation.LaunchPlane;
 import com.smousseur.orbitlab.simulation.mission.operation.MissionFactory;
 import com.smousseur.orbitlab.simulation.mission.operation.MissionSpec;
 import com.smousseur.orbitlab.simulation.mission.scenario.model.ScenarioFile;
@@ -203,6 +204,77 @@ class ScenarioRoundTripTest {
         restored.configuration().payload().propellantLoad(),
         1e-6,
         "the insertion load the payload carries");
+  }
+
+  /**
+   * The plane a free-azimuth window chose. Not a round number: it comes out of an arc cosine, so
+   * the round trip is checked on the kind of value it will really carry.
+   */
+  private static Map<String, Object> withLunarPlane(Map<String, Object> values) {
+    values.put("LUNAR_PLANE_INCLINATION", 9.004_737_812_345);
+    values.put("LUNAR_PLANE_BRANCH", "DESCENDING");
+    return values;
+  }
+
+  /**
+   * The plane a lunar window chose survives the file, and so does the budget sized on it: a plane
+   * lost on the way would reopen the mission due east, resized, on a date chosen for another plane.
+   */
+  @Test
+  void lunarOrbitPlane_comesBackWithItsBudget() {
+    MissionSpec.LunarOrbit original =
+        (MissionSpec.LunarOrbit)
+            MissionFactory.specFromWizardValues(
+                withLunarPlane(lunarOrbitValues()), MissionType.LUNAR_ORBIT);
+    MissionSpec.LunarOrbit restored =
+        (MissionSpec.LunarOrbit)
+            throughTheFile(withLunarPlane(lunarOrbitValues()), MissionType.LUNAR_ORBIT);
+
+    assertTrue(original.hasPlane());
+    assertEquals(original.plane(), restored.plane(), "the plane, to the bit");
+    assertSameVehicle(original, restored);
+  }
+
+  /** The flyby's half: its own record in the file, the same two fields. */
+  @Test
+  void lunarFlybyPlane_comesBackWithItsBudget() {
+    MissionSpec.Lunar original =
+        (MissionSpec.Lunar)
+            MissionFactory.specFromWizardValues(
+                withLunarPlane(lunarValues()), MissionType.LUNAR_FLYBY);
+    MissionSpec.Lunar restored =
+        (MissionSpec.Lunar) throughTheFile(withLunarPlane(lunarValues()), MissionType.LUNAR_FLYBY);
+
+    assertTrue(original.hasPlane());
+    assertEquals(original.plane(), restored.plane(), "the plane, to the bit");
+    assertSameVehicle(original, restored);
+  }
+
+  /**
+   * A lunar mission saved without a plane — every file written before the free azimuth existed —
+   * comes back due east, and writes no plane field: the absence is what says due east.
+   */
+  @Test
+  void lunarOrbitWithoutPlane_comesBackDueEast() {
+    MissionEntry entry =
+        new MissionEntry(
+            MissionFactory.specFromWizardValues(lunarOrbitValues(), MissionType.LUNAR_ORBIT));
+    String json =
+        ScenarioCodec.write(
+            new ScenarioFile(
+                ScenarioFile.CURRENT_FORMAT_VERSION,
+                "2026-08-21T14:32:10Z",
+                "2030-03-01T05:30:00Z",
+                List.of(
+                    ScenarioMapper.toScenarioMission(
+                        entry, WizardPrefill.fromEntry(entry), null))));
+    assertFalse(json.contains("planeInclinationDeg"), json);
+    assertFalse(json.contains("planeBranch"), json);
+
+    MissionSpec.LunarOrbit restored =
+        (MissionSpec.LunarOrbit) throughTheFile(lunarOrbitValues(), MissionType.LUNAR_ORBIT);
+    assertFalse(restored.hasPlane());
+    assertEquals(LaunchPlane.dueEast(restored.latitude()), restored.launchPlane());
   }
 
   /**
