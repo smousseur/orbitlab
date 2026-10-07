@@ -13,6 +13,7 @@ import com.simsilica.lemur.Container;
 import com.simsilica.lemur.FillMode;
 import com.simsilica.lemur.Insets3f;
 import com.simsilica.lemur.Label;
+import com.simsilica.lemur.Panel;
 import com.simsilica.lemur.TextField;
 import com.simsilica.lemur.VAlignment;
 import com.simsilica.lemur.component.BoxLayout;
@@ -131,14 +132,14 @@ public final class PlanningPage {
 
     timeline = new LaunchWindowTimeline();
     timeline.setOnSelected(this::onWindowSelected);
-    root.addChild(timeline.getNode());
+    root.addChild(unstretched(timeline.getNode()));
 
     root.addChild(UiKit.vSpacer(ROW_GAP));
     root.addChild(fieldLabelRow("LAUNCH DATE", "lbl-clock", LABEL_ICON_SIZE, LABEL_FIELD_GAP));
     root.addChild(UiKit.vSpacer(LABEL_FIELD_GAP));
     dateEcho = newInputField("", DATE_ECHO_W, FIELD_H);
     UiKit.makeReadOnly(dateEcho);
-    root.addChild(dateEcho);
+    root.addChild(unstretched(dateEcho));
 
     root.addChild(UiKit.vSpacer(LABEL_FIELD_GAP));
     dateEchoHelper = new Label(DATE_TYPED_HELPER, FormStyles.STYLE);
@@ -165,6 +166,19 @@ public final class PlanningPage {
     if (model.state() instanceof PlanningState.Windows windows) {
       onDateChosen.accept(windows.current().date());
     }
+  }
+
+  /**
+   * A row holding {@code child} at its own width. The root's vertical {@code BoxLayout} stretches
+   * every child it holds across the page's full {@link FormStyles#CONTENT_WIDTH}: a frame of the
+   * timeline would get its tint drawn past its right border, and the date field would run to the
+   * page's edge instead of the width it asks for.
+   */
+  private static Container unstretched(Panel child) {
+    Container row = new Container(new BoxLayout(Axis.X, FillMode.None));
+    row.setBackground(null);
+    row.addChild(child);
+    return row;
   }
 
   /** The back band, on {@code MissionDetailView}'s recipe: accent text, no chrome, no insets. */

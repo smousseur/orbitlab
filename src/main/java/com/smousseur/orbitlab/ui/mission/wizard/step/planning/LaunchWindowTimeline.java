@@ -280,10 +280,10 @@ public final class LaunchWindowTimeline {
    *
    * <p>The optimum is the cheapest candidate of the slot and not its midpoint: the solver bisects
    * outward from it, so the two halves are usually equal, but a fusion of two slots keeps one
-   * optimum and a slot truncated by the end of the search range keeps none of its symmetry. Sizing
-   * on the greater half is what keeps the far bound off the pane's edge. It cannot do more: a slot
-   * leaning hard one way brings its near bound's caption toward the centre, and no pane centred on
-   * the optimum can push it back out.
+   * optimum and a slot truncated by either end of the search range keeps none of its symmetry.
+   * Sizing on the greater half is what keeps the far bound off the pane's edge. The near bound's
+   * caption, which a leaning slot brings toward the centre, is placed by {@link
+   * ZoomScale#captions}.
    */
   private static double zoomSpanSeconds(LaunchWindow window) {
     double before = window.date().durationFrom(window.opening());
@@ -397,7 +397,9 @@ public final class LaunchWindowTimeline {
         "opens " + time(window.opening()),
         FormStyles.ACCENT_BRIGHT,
         HAlignment.Center);
-    attachCaption(captions.optimum(), time(optimum), FormStyles.ACCENT_BRIGHT, HAlignment.Center);
+    if (captions.hasOptimum()) {
+      attachCaption(captions.optimum(), time(optimum), FormStyles.ACCENT_BRIGHT, HAlignment.Center);
+    }
     attachCaption(
         captions.closes(),
         "closes " + time(window.closing()),

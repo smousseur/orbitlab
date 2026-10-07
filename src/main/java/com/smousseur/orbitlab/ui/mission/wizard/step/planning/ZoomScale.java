@@ -41,6 +41,14 @@ package com.smousseur.orbitlab.ui.mission.wizard.step.planning;
  * is the invariant {@code ZoomScaleTest} checks, alongside the collision-freedom the ratios exist
  * to produce.
  *
+ * <p><b>A slot that leans.</b> The two bounds hold for a slot centred on its optimum. One that
+ * leans brings its near bound's caption toward the optimum's, and no pane centred on the optimum
+ * can push it back out — and a slot leans all the way after every pick on the timeline: the picked
+ * optimum is written back as the floor, the search starts there, and the re-anchored slot opens on
+ * it. So the captions give way instead. A bound less than a second from the optimum takes the
+ * optimum's caption and names both; any other bound caption that would come within a gap of the
+ * optimum's slides outward until it clears it, staying on its own side of the rule.
+ *
  * <p>Extracted from the widget so that property can be exercised at all: a Lemur container cannot
  * be built without an initialised {@code AssetManager}, and the arithmetic below is the whole of
  * the decision. The same split as {@code RaanEntry} and {@code RefusedPage}. The widget lays its
@@ -63,6 +71,13 @@ final class ZoomScale {
    * the narrowest gap that still reads as a gap on a monospaced font.
    */
   private static final float CAPTION_GAP = LaunchWindowTimeline.CAPTION_CHAR_W;
+
+  /**
+   * Below this distance from the optimum, a bound's caption names the optimum too. The strip reads
+   * to the second, so two instants closer than that would be printed as the same time, or as two
+   * times one count apart, under what the pane draws as a single rule.
+   */
+  private static final double SAME_INSTANT_SECONDS = 1.0;
 
   /**
    * Smallest half-span, in half-slots, that keeps {@code opens} clear of the pane-start caption.
@@ -149,7 +164,7 @@ final class ZoomScale {
   }
 
   /**
-   * Where the five captions of the graduation strip sit.
+   * Where the captions of the graduation strip sit: five, or four when a bound names the optimum.
    *
    * <p>The two offsets are taken separately rather than as one width because the optimum is the
    * cheapest candidate of the slot and not its midpoint, so the two halves need not be equal.
@@ -161,11 +176,23 @@ final class ZoomScale {
    */
   static ZoomCaptions captions(
       double openOffsetSeconds, double closeOffsetSeconds, double halfSpanSeconds) {
+    boolean opensOnOptimum = Math.abs(openOffsetSeconds) < SAME_INSTANT_SECONDS;
+    boolean closesOnOptimum =
+        !opensOnOptimum && Math.abs(closeOffsetSeconds) < SAME_INSTANT_SECONDS;
+    CaptionSpan centre =
+        opensOnOptimum || closesOnOptimum
+            ? centred(BOUND_LABEL_W, 0.5)
+            : centred(TIME_LABEL_W, 0.5);
     return new ZoomCaptions(
         new CaptionSpan(0f, TIME_LABEL_W),
-        centred(BOUND_LABEL_W, fraction(openOffsetSeconds, halfSpanSeconds)),
-        centred(TIME_LABEL_W, 0.5),
-        centred(BOUND_LABEL_W, fraction(closeOffsetSeconds, halfSpanSeconds)),
+        opensOnOptimum
+            ? centre
+            : leftOf(centre, centred(BOUND_LABEL_W, fraction(openOffsetSeconds, halfSpanSeconds))),
+        opensOnOptimum || closesOnOptimum ? null : centre,
+        closesOnOptimum
+            ? centre
+            : rightOf(
+                centre, centred(BOUND_LABEL_W, fraction(closeOffsetSeconds, halfSpanSeconds))),
         new CaptionSpan(TRACK_W - TIME_LABEL_W, TIME_LABEL_W));
   }
 
@@ -173,6 +200,20 @@ final class ZoomScale {
     double bounded = Double.isNaN(fraction) ? 0.0 : Math.max(0.0, Math.min(1.0, fraction));
     float left = (float) (TRACK_W * bounded) - width / 2f;
     return new CaptionSpan(Math.max(0f, Math.min(TRACK_W - width, left)), width);
+  }
+
+  /** {@code caption}, slid left if it has to, so that it ends a gap short of {@code centre}. */
+  private static CaptionSpan leftOf(CaptionSpan centre, CaptionSpan caption) {
+    float limit = centre.left() - CAPTION_GAP;
+    return caption.right() <= limit
+        ? caption
+        : new CaptionSpan(limit - caption.width(), caption.width());
+  }
+
+  /** {@code caption}, slid right if it has to, so that it starts a gap past {@code centre}. */
+  private static CaptionSpan rightOf(CaptionSpan centre, CaptionSpan caption) {
+    float limit = centre.right() + CAPTION_GAP;
+    return caption.left() >= limit ? caption : new CaptionSpan(limit, caption.width());
   }
 
   /**
@@ -196,7 +237,8 @@ final class ZoomScale {
    *
    * @param paneStart the instant at the pane's left edge
    * @param opens the slot's opening
-   * @param optimum the cheapest instant of the slot, always at the centre
+   * @param optimum the cheapest instant of the slot, always at the centre; null when a bound less
+   *     than a second away takes its place and names it
    * @param closes the slot's closing
    * @param paneEnd the instant at the pane's right edge
    */
@@ -205,5 +247,13 @@ final class ZoomScale {
       CaptionSpan opens,
       CaptionSpan optimum,
       CaptionSpan closes,
-      CaptionSpan paneEnd) {}
+      CaptionSpan paneEnd) {
+
+    /**
+     * @return whether the optimum has a caption of its own
+     */
+    boolean hasOptimum() {
+      return optimum != null;
+    }
+  }
 }
