@@ -4,18 +4,13 @@ import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
 import com.smousseur.orbitlab.simulation.mission.MissionStage;
 import com.smousseur.orbitlab.simulation.mission.objective.FlybyObjective;
-import com.smousseur.orbitlab.simulation.mission.optimizer.problems.GravityTurnConstraints;
-import com.smousseur.orbitlab.simulation.mission.stage.AnalyticParkingInsertionStage;
 import com.smousseur.orbitlab.simulation.mission.stage.ParkingCoastStage;
 import com.smousseur.orbitlab.simulation.mission.stage.StageNames;
 import com.smousseur.orbitlab.simulation.mission.stage.TLIBurnStage;
 import com.smousseur.orbitlab.simulation.mission.stage.TranslunarCoastStage;
-import com.smousseur.orbitlab.simulation.mission.stage.ascent.AscentSequence;
-import com.smousseur.orbitlab.simulation.mission.stage.ascent.VerticalAscentStage;
 import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchConfiguration;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.AscentProfile;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -203,18 +198,10 @@ public class LunarFlybyMission extends EarthMission {
       double periluneAltitude,
       LaunchPlane launchPlane,
       double latitude) {
-    List<MissionStage> stages = new ArrayList<>();
-    stages.add(new VerticalAscentStage("Vertical Ascent", profile.verticalAscentDuration()));
-    stages.addAll(
-        AscentSequence.gravityTurn(
-            vehicle,
-            profile,
-            GravityTurnConstraints.forTarget(parkingAltitude),
-            launchPlane,
-            latitude));
+    List<MissionStage> stages =
+        ParkingAscentMission.stages(vehicle, profile, parkingAltitude, launchPlane, latitude);
     stages.addAll(
         List.of(
-            new AnalyticParkingInsertionStage("Parking", parkingAltitude),
             new ParkingCoastStage(PARKING_COAST_NAME),
             new TLIBurnStage("Translunar injection", periluneAltitude),
             new TranslunarCoastStage(FINAL_COAST_NAME)));

@@ -7,11 +7,7 @@ import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.Physics;
 import com.smousseur.orbitlab.simulation.mission.maneuver.TranslunarInjectionPlan;
-import com.smousseur.orbitlab.simulation.mission.vehicle.PropulsionSystem;
-import com.smousseur.orbitlab.simulation.mission.vehicle.Spacecraft;
-import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
 import com.smousseur.orbitlab.simulation.mission.window.LaunchWindow;
-import com.smousseur.orbitlab.simulation.mission.window.LaunchWindowCandidate;
 import com.smousseur.orbitlab.simulation.mission.window.LaunchWindowSearch;
 import com.smousseur.orbitlab.simulation.mission.window.LaunchWindowSolver;
 import java.time.Duration;
@@ -46,8 +42,12 @@ import org.orekit.utils.Constants;
  * the geodetic one the site is named by, and near the declination maximum that fraction is the
  * whole question — it is what decides whether the two roots still exist at all.
  *
- * <p><b>Nothing here confirms</b> (see {@link ScreeningOnly}): a flown perilune costs some four
- * seconds, and it belongs to {@code LunarLaunchWindowFlightTest}.
+ * <p><b>Nothing here confirms</b>: every problem is the screening one, the parking orbit posed at
+ * the pad. Every test here is about the shape of that criterion; confirming a candidate flies some
+ * thirty four-day propagations, and it would rank a brute-force sweep of {@code evaluate} against
+ * an optimum ranked on {@code confirm} — the two are six m/s apart at the optimum, enough to swap
+ * two opportunities that sit 0.2 m/s from each other. Confirming belongs to {@code
+ * LunarLaunchWindowFlightTest}.
  */
 class LunarLaunchWindowProblemTest {
   private static final Logger logger = LogManager.getLogger(LunarLaunchWindowProblemTest.class);
@@ -75,48 +75,23 @@ class LunarLaunchWindowProblemTest {
   private static final double SIDEREAL_DAY =
       2.0 * FastMath.PI / Constants.WGS84_EARTH_ANGULAR_VELOCITY;
 
-  /**
-   * The problem with its second tier switched off — the screening criterion alone.
-   *
-   * <p>Every test here is about the shape of that criterion, and confirming a candidate flies some
-   * thirty four-day propagations. Left on, a single solver call would put this class in the tens of
-   * seconds, and worse, it would compare a brute-force sweep of {@code evaluate} against an optimum
-   * ranked on {@code confirm} — the two are six m/s apart at the optimum, which is enough to swap
-   * two opportunities that sit 0.2 m/s from each other.
-   */
-  private static final class ScreeningOnly extends LunarLaunchWindowProblem {
-    ScreeningOnly(double latitude, double longitude, double altitude) {
-      super(
-          latitude,
-          longitude,
-          altitude,
-          PARKING_ALTITUDE,
-          TARGET_PERILUNE,
-          vehicle(),
-          INJECTION_MASS);
-    }
-
-    @Override
-    public LaunchWindowCandidate confirm(LaunchWindowCandidate candidate) {
-      return candidate;
-    }
-  }
-
   @BeforeAll
   static void init() {
     OrekitService.get().initialize();
   }
 
-  private static Vehicle vehicle() {
-    return new Spacecraft(500, 1200, 1200, PropulsionSystem.getSpacecraftPropulsion());
-  }
-
   private static LunarLaunchWindowProblem canaveral() {
-    return new ScreeningOnly(CANAVERAL_LATITUDE, CANAVERAL_LONGITUDE, CANAVERAL_ALTITUDE);
+    return LunarLaunchWindowProblem.screening(
+        CANAVERAL_LATITUDE,
+        CANAVERAL_LONGITUDE,
+        CANAVERAL_ALTITUDE,
+        PARKING_ALTITUDE,
+        TARGET_PERILUNE);
   }
 
   private static LunarLaunchWindowProblem kourou() {
-    return new ScreeningOnly(KOUROU_LATITUDE, KOUROU_LONGITUDE, KOUROU_ALTITUDE);
+    return LunarLaunchWindowProblem.screening(
+        KOUROU_LATITUDE, KOUROU_LONGITUDE, KOUROU_ALTITUDE, PARKING_ALTITUDE, TARGET_PERILUNE);
   }
 
   /** The plane Canaveral reaches, built the way the problem builds its own. */

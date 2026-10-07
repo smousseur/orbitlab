@@ -30,13 +30,13 @@ import org.orekit.time.AbsoluteDate;
  * date beside a plane chosen for another one.
  *
  * <p><b>Two paths, and they do not cost the same</b>. An Earth window is closed form throughout —
- * some ninety evaluations of an angle between two vectors, 40 ms measured. A lunar one confirms
- * each refined candidate by flying the aim, seven to ten seconds apiece with the guards the aim now
- * flies under. Measured on the production configuration — Falcon Heavy, a 2 000 kg orbiter — a
- * Canaveral mission is scheduled in 24 to 34 s, its due-east search confirming three or four
- * candidates; a Kourou one in 58 to 64 s, its due-east search screening every epoch out above the
- * ceiling before the free azimuth confirms five. It runs on the wizard's creation thread, not on
- * the render thread.
+ * some ninety evaluations of an angle between two vectors, 40 ms measured. A lunar one first flies
+ * the mission's ascent to measure the parking orbit it reaches, 44 to 57 s, then confirms each
+ * refined candidate by flying the aim, seven to ten seconds apiece. Measured on the production
+ * configuration — Falcon Heavy, a 2 000 kg orbiter — a Canaveral mission is scheduled in 70 to 85
+ * s, its due-east search confirming three or four candidates; a Kourou one in 106 to 108 s, its
+ * due-east search screening every epoch out above the ceiling before the free azimuth confirms
+ * five. It runs on the wizard's creation thread, not on the render thread.
  */
 public final class MissionScheduler {
   private static final Logger logger = LogManager.getLogger(MissionScheduler.class);

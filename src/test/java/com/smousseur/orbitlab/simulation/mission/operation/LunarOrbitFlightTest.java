@@ -91,14 +91,15 @@ class LunarOrbitFlightTest {
   private static final long TEST_SEED = 42L;
 
   /**
-   * How many window openings are tried before giving up.
+   * How many window openings are tried before giving up: one.
    *
-   * <p>The window's {@code confirm()} flies the aim from the injection state a pad <em>would</em>
-   * reach; the chain arrives with the one its ascent really delivered, and the two differ. A
-   * confirmed date can therefore still be unplannable by the chain, so a refusal advances the floor
-   * past it and asks the planner again rather than failing the lot on a date.
+   * <p>The window's {@code confirm()} flies the aim from the insertion the mission's ascent was
+   * measured to reach, on the passage the chain itself takes after it, so a confirmed date is one
+   * the chain plans. The first opening flies or the flight fails — which is that property, checked
+   * directly. It was four while the window posed the parking orbit at the pad and confirmed, for
+   * half the windows of a lunation, a passage the chain could not reach.
    */
-  private static final int WINDOW_ATTEMPTS = 4;
+  private static final int WINDOW_ATTEMPTS = 1;
 
   /** Due east: this chain flies {@code i = φ}, where the two azimuth branches merge. */
   private static final double DUE_EAST = FastMath.PI / 2;

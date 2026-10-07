@@ -1,9 +1,10 @@
 package com.smousseur.orbitlab.simulation.mission.window.problem;
 
+import com.smousseur.orbitlab.core.OrbitlabException;
+import com.smousseur.orbitlab.simulation.flight.AtmosphereModel;
 import com.smousseur.orbitlab.simulation.mission.operation.LaunchPlane;
 import com.smousseur.orbitlab.simulation.mission.operation.MissionSpec;
 import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchConfiguration;
-import com.smousseur.orbitlab.simulation.mission.vehicle.PropellantBudget;
 import com.smousseur.orbitlab.simulation.mission.window.LaunchWindow;
 import com.smousseur.orbitlab.simulation.mission.window.LaunchWindowSearch;
 import com.smousseur.orbitlab.simulation.mission.window.LaunchWindowSolver;
@@ -11,7 +12,6 @@ import java.time.Duration;
 import java.util.Comparator;
 import java.util.Locale;
 import java.util.Optional;
-import org.hipparchus.util.FastMath;
 import org.orekit.time.AbsoluteDate;
 
 /**
@@ -24,12 +24,14 @@ import org.orekit.time.AbsoluteDate;
  *
  * <p><b>This is where the confirmations are paid</b>, at the click that creates the mission and not
  * on every keystroke of the parameters step, whose timeline screens only: seven to ten seconds a
- * candidate, 24 to 64 s a mission as {@code MissionScheduler} measures it, on the wizard's creation
- * thread, against 40 ms for an Earth mission.
+ * candidate, on the wizard's creation thread, against 40 ms for an Earth mission.
  *
- * <p><b>The mass at injection is recomputed, not carried.</b> {@code
- * PropellantBudget.loadsForLunar} is closed-form and deterministic, so reading it back off the
- * spec's own inputs costs microseconds and keeps one definition of the figure.
+ * <p><b>And where the ascent is flown.</b> The window prices and confirms from the parking orbit
+ * the mission's ascent really reaches, which only a flight measures: once per dating, due east, at
+ * the requested date, by the optimizer, budget and seed of the production compute — 44 to 57 s for
+ * a 2 000 kg orbiter on a Falcon Heavy, 116 s for a thirty-tonne probe. Both searches read that one
+ * ascent, the free azimuth included. An ascent that does not reach its parking orbit is the
+ * opportunity's refusal.
  */
 public final class LunarLaunchWindowPlanner {
 
@@ -60,13 +62,6 @@ public final class LunarLaunchWindowPlanner {
    * depletion floor the active stage will not go under.
    */
   private static final int CANDIDATES = 4;
-
-  /**
-   * Due east, the azimuth the budget sizes the mass at injection on, whichever plane is then
-   * searched: the confirmation keeps the budget's mass, as it always has — the gap between that
-   * mass and the one flown is a matter of its own.
-   */
-  private static final double DUE_EAST = FastMath.PI / 2;
 
   private LunarLaunchWindowPlanner() {}
 
@@ -107,6 +102,7 @@ public final class LunarLaunchWindowPlanner {
   public static Opportunity opportunity(MissionSpec.Lunar spec, AbsoluteDate earliest) {
     return opportunity(
         spec.configuration(),
+        spec.atmosphere(),
         spec.latitude(),
         spec.longitude(),
         spec.altitude(),
@@ -126,6 +122,7 @@ public final class LunarLaunchWindowPlanner {
   public static Opportunity opportunity(MissionSpec.LunarOrbit spec, AbsoluteDate earliest) {
     return opportunity(
         spec.configuration(),
+        spec.atmosphere(),
         spec.latitude(),
         spec.longitude(),
         spec.altitude(),
@@ -143,17 +140,26 @@ public final class LunarLaunchWindowPlanner {
    * costs a second round of confirmations, paid only where the first came back empty.
    *
    * <p><b>The reason given when both are empty is the free search's</b>, the last one run: the
-   * refusal of its latest confirmation, or the absence of any epoch under the ceiling.
+   * refusal of its latest confirmation, or the absence of any epoch under the ceiling. When the
+   * ascent itself does not reach its parking orbit, neither search runs and the reason is that.
    */
   private static Opportunity opportunity(
       LaunchConfiguration configuration,
+      AtmosphereModel atmosphere,
       double latitude,
       double longitude,
       double altitude,
       double parkingAltitude,
       double periluneAltitude,
       AbsoluteDate earliest) {
-    double massAtInjection = massAtInjection(configuration, latitude, parkingAltitude);
+    ParkingInsertion insertion;
+    try {
+      insertion =
+          ParkingInsertion.fly(
+              configuration, atmosphere, latitude, longitude, altitude, parkingAltitude, earliest);
+    } catch (OrbitlabException refused) {
+      return new Opportunity(null, null, refused.getMessage());
+    }
     Optional<LaunchWindow> dueEast =
         earliestWindow(
             new LunarLaunchWindowProblem(
@@ -163,7 +169,7 @@ public final class LunarLaunchWindowPlanner {
                 parkingAltitude,
                 periluneAltitude,
                 configuration.toVehicleStack(),
-                massAtInjection),
+                insertion),
             earliest);
     if (dueEast.isPresent()) {
       return new Opportunity(dueEast.get(), null, null);
@@ -176,7 +182,7 @@ public final class LunarLaunchWindowPlanner {
             parkingAltitude,
             periluneAltitude,
             configuration.toVehicleStack(),
-            massAtInjection,
+            insertion,
             LunarLaunchWindowProblem.PlaneChoice.FREE_AZIMUTH);
     Optional<LaunchWindow> window = earliestWindow(freeAzimuth, earliest);
     if (window.isPresent()) {
@@ -211,11 +217,13 @@ public final class LunarLaunchWindowPlanner {
    * @param spec the mission being scheduled
    * @param earliest the date the user asked for, read as a floor
    * @return the window to fly, or empty when every candidate of the span was refused
+   * @throws OrbitlabException when the ascent does not reach its parking orbit
    */
   public static Optional<LaunchWindow> nextOpportunity(
       MissionSpec.Lunar spec, AbsoluteDate earliest) {
     return nextOpportunity(
         spec.configuration(),
+        spec.atmosphere(),
         spec.latitude(),
         spec.longitude(),
         spec.altitude(),
@@ -231,21 +239,20 @@ public final class LunarLaunchWindowPlanner {
    * of its own: the flyby's criterion — can a shot on this date reach that perilune — is exactly
    * the verdict an insertion needs, and {@code confirm()} already flies the aim to give it.
    *
-   * <p><b>The mass at injection needs no separate formula either.</b> The configuration's payload
-   * is the {@code Spacecraft} as it will fly, insertion propellant included, and {@code
-   * Vehicle.getMass()} is dry plus load — so the shared body below reads the right mass without
-   * knowing which lunar profile it is serving. That is what {@code
-   * PropellantBudget.loadsForLunarOrbit} does internally too: it sizes the insertion, then
-   * delegates to {@code loadsForLunar} with the payload as flown.
+   * <p><b>The mass needs no separate formula either.</b> The configuration's payload is the {@code
+   * Spacecraft} as it will fly, insertion propellant included, so the ascent the shared body flies
+   * carries it to parking without knowing which lunar profile it is serving.
    *
    * @param spec the mission being scheduled
    * @param earliest the date the user asked for, read as a floor
    * @return the window to fly, or empty when every candidate of the span was refused
+   * @throws OrbitlabException when the ascent does not reach its parking orbit
    */
   public static Optional<LaunchWindow> nextOpportunity(
       MissionSpec.LunarOrbit spec, AbsoluteDate earliest) {
     return nextOpportunity(
         spec.configuration(),
+        spec.atmosphere(),
         spec.latitude(),
         spec.longitude(),
         spec.altitude(),
@@ -255,15 +262,12 @@ public final class LunarLaunchWindowPlanner {
   }
 
   /**
-   * The shared body of the two entries above: size the loads, build the confirming problem, search,
-   * take the soonest.
-   *
-   * <p><b>The mass at injection is recomputed, not carried.</b> {@code
-   * PropellantBudget.loadsForLunar} is closed-form and deterministic, so reading it back off the
-   * configuration costs microseconds and keeps one definition of the figure.
+   * The shared body of the two entries above: fly the ascent, build the confirming problem on the
+   * insertion it reached, search, take the soonest.
    */
   private static Optional<LaunchWindow> nextOpportunity(
       LaunchConfiguration configuration,
+      AtmosphereModel atmosphere,
       double latitude,
       double longitude,
       double altitude,
@@ -278,15 +282,15 @@ public final class LunarLaunchWindowPlanner {
             parkingAltitude,
             periluneAltitude,
             configuration.toVehicleStack(),
-            massAtInjection(configuration, latitude, parkingAltitude)),
+            ParkingInsertion.fly(
+                configuration,
+                atmosphere,
+                latitude,
+                longitude,
+                altitude,
+                parkingAltitude,
+                earliest)),
         earliest);
-  }
-
-  private static double massAtInjection(
-      LaunchConfiguration configuration, double latitude, double parkingAltitude) {
-    return PropellantBudget.loadsForLunar(
-            configuration.launcher(), configuration.payload(), parkingAltitude, latitude, DUE_EAST)
-        .massAtInjection();
   }
 
   /** One confirming search over the span, and its soonest window. */

@@ -18,6 +18,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.orekit.time.AbsoluteDate;
 import org.orekit.time.TimeScalesFactory;
 
@@ -25,8 +26,10 @@ import org.orekit.time.TimeScalesFactory;
  * The lunar planner's two searches: due east first, the free azimuth only when due east has
  * nothing, and the reason carried back when neither has anything.
  *
- * <p><b>These confirm</b>, flying the aim on every candidate offered — some twenty seconds a search
- * — because the order of the two searches is decided on confirmed windows, not on screened ones.
+ * <p><b>The creation's searches run behind {@code orbitlab.slowTests}</b>: they fly the ascent the
+ * window measures the parking orbit on, some fifty seconds, then confirm by flying the aim on every
+ * candidate offered, because the order of the two searches is decided on confirmed windows, not on
+ * screened ones. The timeline's, which screens only, runs in the default suite.
  */
 class LunarLaunchWindowPlannerTest {
   private static final Logger logger = LogManager.getLogger(LunarLaunchWindowPlannerTest.class);
@@ -56,17 +59,19 @@ class LunarLaunchWindowPlannerTest {
   }
 
   /**
-   * Where due east has a window, it is the one taken, and no plane comes with it: the date is the
-   * first window of the Canaveral baseline the production compute was measured on before this lot.
+   * Where due east has a window, it is the one taken, and no plane comes with it: the first window
+   * of the Canaveral baseline, dated on the insertion the ascent flown at the requested date
+   * reaches — 80 s past the 10:02:16 the parking orbit posed at the pad gave.
    */
   @Test
+  @EnabledIfSystemProperty(named = "orbitlab.slowTests", matches = "true")
   void dueEastKeepsPriorityWhereItHasAWindow() {
     LunarLaunchWindowPlanner.Opportunity opportunity =
         LunarLaunchWindowPlanner.opportunity(
             lunarOrbit(28.562, -80.577, 3.0), utc("2026-10-06T00:00:00.000Z"));
 
     assertTrue(opportunity.found(), () -> "no window: " + opportunity.refusal());
-    assertEquals(utc("2026-10-06T10:02:16.000Z"), opportunity.window().date());
+    assertEquals(utc("2026-10-06T10:03:36.000Z"), opportunity.window().date());
     assertFalse(opportunity.hasPlane(), "due east carries no plane");
     assertNull(opportunity.refusal());
   }
@@ -98,18 +103,13 @@ class LunarLaunchWindowPlannerTest {
   }
 
   /**
-   * Neither search finds anything for a probe the launcher cannot send to the Moon: due east from
-   * Kourou prices every epoch above the ceiling, and every free-azimuth candidate is refused by the
-   * injection's own propellant check. The planner then hands back that refusal, not an empty
-   * answer.
-   *
-   * <p><b>A hundred tonnes, and not thirty</b>: the confirmation flies the budget's mass at
-   * injection, which assumes the upper stage reaches the parking orbit holding the injection's
-   * propellant. A 30 t probe is confirmed on that assumption; only once the payload outweighs what
-   * a <em>full</em> upper stage can push to the Moon does the budget itself fall short.
+   * A probe the launcher cannot even put in parking: the ascent the window measures the parking
+   * orbit on refuses itself, its parking insertion short of the propellant to circularise, and that
+   * refusal is the planner's answer — neither search runs.
    */
   @Test
-  void noWindowAtAllCarriesTheLastRefusal() {
+  @EnabledIfSystemProperty(named = "orbitlab.slowTests", matches = "true")
+  void anAscentThatDoesNotReachParkingIsTheRefusal() {
     Map<String, Object> values = new HashMap<>();
     values.put("MISSION_NAME", "too heavy");
     values.put("LAUNCH_SITE_LAT", 5.236);
@@ -129,10 +129,26 @@ class LunarLaunchWindowPlannerTest {
     assertFalse(opportunity.hasPlane());
     String refusal = opportunity.refusal();
     assertTrue(
-        refusal.contains("neither due east nor at a free azimuth"),
-        () -> "the reason says both searches came back empty: " + refusal);
+        refusal.contains("[Parking]") && refusal.contains("400 km circular orbit"),
+        () -> "the reason is the parking insertion's own refusal: " + refusal);
+  }
+
+  /**
+   * An ascent the force model cannot fly is a refusal too, not an exception thrown at the wizard:
+   * from Canaveral on 2026-10-09T09:57:11 the NRLMSISE00 density turns infinite during the parking
+   * insertion, measured on the production compute and on the ascent alone.
+   */
+  @Test
+  @EnabledIfSystemProperty(named = "orbitlab.slowTests", matches = "true")
+  void anAscentTheForceModelCannotFlyIsTheRefusal() {
+    LunarLaunchWindowPlanner.Opportunity opportunity =
+        LunarLaunchWindowPlanner.opportunity(
+            lunarOrbit(28.562, -80.577, 3.0), utc("2026-10-09T09:57:11.000Z"));
+
+    assertFalse(opportunity.found());
+    String refusal = opportunity.refusal();
     assertTrue(
-        refusal.contains("does not carry the propellant"),
-        () -> "the reason carries the confirmation's own refusal: " + refusal);
+        refusal.contains("parking orbit") && refusal.contains("NRLMSISE00"),
+        () -> "the reason names the ascent and what stopped it: " + refusal);
   }
 }

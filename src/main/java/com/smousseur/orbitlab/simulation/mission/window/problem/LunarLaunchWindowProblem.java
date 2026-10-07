@@ -17,14 +17,18 @@ import java.time.Duration;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.DoubleFunction;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.hipparchus.geometry.euclidean.threed.Rotation;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.hipparchus.util.FastMath;
 import org.orekit.orbits.CartesianOrbit;
+import org.orekit.orbits.KeplerianOrbit;
 import org.orekit.propagation.SpacecraftState;
 import org.orekit.time.AbsoluteDate;
 import org.orekit.utils.Constants;
+import org.orekit.utils.PVCoordinates;
 import org.orekit.utils.TimeStampedPVCoordinates;
 
 /**
@@ -56,31 +60,25 @@ import org.orekit.utils.TimeStampedPVCoordinates;
  * in {@link #confirm}: the perilune the aim converges to, and the depletion floor of the active
  * stage.
  *
- * <p><b>What this criterion does not carry</b>, both biased the same way: the ascent is outside the
- * model, so the parking orbit is posed at the launch instant on the site's own direction where the
- * real insertion arrives later, and the plane is read at that same instant without the nodal
- * regression the parking coast accumulates.
+ * <p><b>The parking orbit a confirming problem prices is the one the ascent really reaches.</b> The
+ * vehicle is not in parking at lift-off: the chain inserts it some 3 650 s later, 226° down range,
+ * and leaves from the first passage of the injection point <em>after</em> that insertion. Posed at
+ * the pad at the instant of lift-off, the parking orbit passed its injection point before the
+ * vehicle was there for 27 of the 50 windows of a lunation from Canaveral, and the window confirmed
+ * a passage the chain could not fly: on 2026-10-08T02:52:04 it confirmed at β = 0 on a passage 918
+ * s after lift-off, while the chain, left with the next one, read β = −0.83° at its insertion and
+ * aimed no lower than a 257 km perilune for a 100 km target.
  *
- * <p><b>Flown and measured on 2026-08-27</b> by {@code LunarFlybyFlightTest}, Canaveral, 400 km
- * parking, and <b>one of the two estimates §6 of the spec gives is wrong by a factor of five</b>.
+ * <p>A confirming problem is therefore given a {@link ParkingInsertion} — the ascent flown once,
+ * carried to every epoch through the Earth-fixed frame — and coasts it to the first passage after
+ * the insertion, turning the plane with the secular J2 nodal regression on the way: 0.49° a
+ * revolution, measured −0.4886° on a flown 400 km parking coast. The mass it confirms with is the
+ * one the ascent left in parking.
  *
- * <ul>
- *   <li><b>The insertion does not arrive "some ten minutes" later, it arrives 3 011 s later</b> —
- *       fifty minutes. The spec counted the climb to MECO and forgot that {@code
- *       AnalyticParkingInsertionStage} carries its own coast to apogee between its two burns, which
- *       is most of the delay. The <b>68 s</b> of date bias derived from ten minutes is understated
- *       in the same proportion.
- *   <li><b>The 0.49° per revolution of nodal regression is right to three digits.</b> Measured
- *       −0.2956° over a 3 360 s parking coast, which is −0.4886° over the 5 553.6 s revolution.
- *   <li><b>Together they put the real β 0.664° away from the planned one</b> (−0.6655° against
- *       −0.0011°), of which J2 explains about 40 %.
- * </ul>
- *
- * <p><b>And none of it reaches the perilune</b>, which is why the chain flies despite the bias:
- * {@code TranslunarInjectionPlan.solve} re-aims from the state the vehicle is really in at
- * injection, so the bisection absorbs the whole geometric error. The flight landed 1.0 km off its
- * 100 km target. Closing the bias would buy a better <em>price</em> for the date the window offers,
- * not a better trajectory.
+ * <p><b>The screening problem keeps the parking orbit posed at the pad</b>: it is the wizard's
+ * timeline, which runs before a launcher is chosen and so has no ascent to fly. Its dates precede
+ * the creation's — measured from Canaveral over five days, by 80 to 121 s on the morning windows
+ * and 9 to 11 minutes on the night ones, always inside the same slot.
  *
  * <p><b>Where due east has nothing, the azimuth is freed</b> ({@link PlaneChoice#FREE_AZIMUTH}). At
  * any instant exactly one prograde plane holds both the pad and the Moon's direction at arrival, so
@@ -176,7 +174,10 @@ public class LunarLaunchWindowProblem implements LaunchWindowProblem {
   private final double parkingSpeed;
   private final double targetPerileneAltitude;
   private final Vehicle vehicle;
-  private final double massAtInjection;
+
+  /** The measured insertion a confirming problem prices from, {@code null} on a screening one. */
+  private final ParkingInsertion insertion;
+
   private final boolean confirming;
   private final PlaneChoice planeChoice;
   private final String name;
@@ -194,10 +195,9 @@ public class LunarLaunchWindowProblem implements LaunchWindowProblem {
    * @param parkingAltitude the circular parking altitude the injection leaves from (m); a parameter
    *     and not a constant, L0 having measured the aim to converge identically from 185 to 400 km
    * @param targetPerileneAltitude the perilune altitude {@link #confirm} aims for (m)
-   * @param vehicle the vehicle, for {@link #confirm} alone: it supplies the Isp of the active stage
-   *     and the depletion floor that stage refuses below
-   * @param massAtInjection the mass at injection (kg), given rather than derived — the ascent is
-   *     outside this model, and it is {@code PropellantBudget} that will size it in L5
+   * @param vehicle the vehicle: it supplies the Isp of the active stage and the depletion floor
+   *     that stage refuses below
+   * @param insertion the parking insertion the mission's ascent was measured to reach, due east
    */
   public LunarLaunchWindowProblem(
       double latitude,
@@ -206,7 +206,7 @@ public class LunarLaunchWindowProblem implements LaunchWindowProblem {
       double parkingAltitude,
       double targetPerileneAltitude,
       Vehicle vehicle,
-      double massAtInjection) {
+      ParkingInsertion insertion) {
     this(
         latitude,
         longitude,
@@ -214,7 +214,7 @@ public class LunarLaunchWindowProblem implements LaunchWindowProblem {
         parkingAltitude,
         targetPerileneAltitude,
         vehicle,
-        massAtInjection,
+        insertion,
         PlaneChoice.DUE_EAST);
   }
 
@@ -226,8 +226,8 @@ public class LunarLaunchWindowProblem implements LaunchWindowProblem {
    * @param altitude the launch site altitude in meters
    * @param parkingAltitude the circular parking altitude the injection leaves from (m)
    * @param targetPerileneAltitude the perilune altitude {@link #confirm} aims for (m)
-   * @param vehicle the vehicle, for {@link #confirm} alone
-   * @param massAtInjection the mass at injection (kg)
+   * @param vehicle the vehicle
+   * @param insertion the parking insertion the mission's ascent was measured to reach, due east
    * @param planeChoice which plane the parking orbit is posed in
    */
   public LunarLaunchWindowProblem(
@@ -237,7 +237,7 @@ public class LunarLaunchWindowProblem implements LaunchWindowProblem {
       double parkingAltitude,
       double targetPerileneAltitude,
       Vehicle vehicle,
-      double massAtInjection,
+      ParkingInsertion insertion,
       PlaneChoice planeChoice) {
     this(
         latitude,
@@ -246,7 +246,7 @@ public class LunarLaunchWindowProblem implements LaunchWindowProblem {
         parkingAltitude,
         targetPerileneAltitude,
         Objects.requireNonNull(vehicle, "vehicle"),
-        massAtInjection,
+        Objects.requireNonNull(insertion, "insertion"),
         true,
         planeChoice);
   }
@@ -259,7 +259,8 @@ public class LunarLaunchWindowProblem implements LaunchWindowProblem {
    * {@link #confirm} alone", and {@link LaunchWindowProblem#confirm} carries a no-op default the
    * interface calls "the honest answer for a problem whose evaluate is already the truth". The
    * parameters step runs before the launcher step, so no vehicle exists there — and confirming
-   * would cost 4.5 s a candidate on the render thread, where {@link #evaluate} costs microseconds.
+   * would cost seven to ten seconds a candidate on the render thread, plus an ascent to measure the
+   * parking orbit on, where {@link #evaluate} costs microseconds.
    *
    * @param latitude the launch site latitude in degrees, which is also the inclination flown
    * @param longitude the launch site longitude in degrees
@@ -309,7 +310,7 @@ public class LunarLaunchWindowProblem implements LaunchWindowProblem {
         parkingAltitude,
         targetPerileneAltitude,
         null,
-        SCREENING_MASS,
+        null,
         false,
         planeChoice);
   }
@@ -321,7 +322,7 @@ public class LunarLaunchWindowProblem implements LaunchWindowProblem {
       double parkingAltitude,
       double targetPerileneAltitude,
       Vehicle vehicle,
-      double massAtInjection,
+      ParkingInsertion insertion,
       boolean confirming,
       PlaneChoice planeChoice) {
     this.site = new LaunchSitePlane(latitude, longitude, altitude, DUE_EAST);
@@ -331,7 +332,7 @@ public class LunarLaunchWindowProblem implements LaunchWindowProblem {
     this.parkingSpeed = FastMath.sqrt(Constants.WGS84_EARTH_MU / parkingRadius);
     this.targetPerileneAltitude = targetPerileneAltitude;
     this.vehicle = vehicle;
-    this.massAtInjection = massAtInjection;
+    this.insertion = insertion;
     this.confirming = confirming;
     this.planeChoice = Objects.requireNonNull(planeChoice, "planeChoice");
     this.name =
@@ -408,9 +409,9 @@ public class LunarLaunchWindowProblem implements LaunchWindowProblem {
 
   /**
    * Flies the aim at a screened epoch: the perilune bisection of {@link
-   * TranslunarInjectionPlan#solve}, then the depletion floor of the active stage. Some thirty
-   * four-day propagations, about 4.5 seconds, which is why it runs on the handful of refined
-   * candidates and not on the sweep.
+   * TranslunarInjectionPlan#solve}, then the depletion floor of the active stage, from the mass the
+   * ascent left in parking. Some thirty four-day propagations, seven to ten seconds, which is why
+   * it runs on the handful of refined candidates and not on the sweep.
    *
    * <p><b>Both verdicts come from {@link TranslunarInjectionPlan#inject}, which is also what {@code
    * TLIBurnStage} flies</b>. They were the same four lines written twice until L4, and holding them
@@ -439,7 +440,7 @@ public class LunarLaunchWindowProblem implements LaunchWindowProblem {
           TranslunarInjectionPlan.inject(
               injection.state(),
               targetPerileneAltitude,
-              vehicle.resolveActiveStage(massAtInjection),
+              vehicle.resolveActiveStage(injection.state().getMass()),
               flightContext());
 
       double deltaV = burn.commandedDeltaV() + ascentSurcharge(injection.azimuth());
@@ -507,10 +508,11 @@ public class LunarLaunchWindowProblem implements LaunchWindowProblem {
    * That comparison is the only way those numbers stop being an estimate, and it cannot be made
    * from inside this package: the mission that flies is somewhere else entirely.
    *
-   * @param state the circular parking state at the injection point, in the plane the pad reaches
+   * @param state the parking state at the injection point, in GCRF: the measured insertion coasted
+   *     there on a confirming problem, a circular orbit posed at the pad on a screening one
    * @param arrivalDate the date the Moon's centre is aimed at
-   * @param planeMisalignment the signed angle of the arrival direction above the parking plane
-   *     (rad), positive towards the plane's normal
+   * @param planeMisalignment the signed angle of the arrival direction above the parking plane at
+   *     the injection point (rad), positive towards the plane's normal
    * @param azimuth the launch azimuth the ascent is commanded to fly (rad, clockwise from north):
    *     due east, or on the free-azimuth problem the one whose flown plane is {@code state}'s
    */
@@ -518,27 +520,28 @@ public class LunarLaunchWindowProblem implements LaunchWindowProblem {
       SpacecraftState state, AbsoluteDate arrivalDate, double planeMisalignment, double azimuth) {}
 
   /**
-   * Resolves the whole geometry of a lift-off at {@code epoch}: the plane the pad reaches, the
-   * parking orbit posed on the site's own direction, the coast to the injection point, and the
-   * parking state as it is there.
+   * Resolves the whole geometry of a lift-off at {@code epoch}: the parking orbit, the coast to the
+   * injection point, and the parking state as it is there.
    *
-   * <p><b>The phase is the site's direction, and it is free rather than chosen.</b> The plane is
-   * raised as {@code position × horizontal}, so the pad lies in it by construction; it is also the
-   * physically right phase, a due-east launch at {@code i = φ} putting the site at the northernmost
-   * point of the orbit.
+   * <p><b>On a confirming problem the parking orbit is the measured insertion</b>: due east,
+   * carried to {@code epoch} through the Earth-fixed frame; at a free azimuth, rebuilt from the
+   * same measurement on the plane that azimuth is predicted to fly. The coast is then the chain's
+   * own rule — the first passage after the insertion — with the plane turning by the nodal
+   * regression.
+   *
+   * <p><b>On a screening problem it is posed at the pad at the lift-off instant</b>, the phase
+   * being the site's direction: the plane is raised as {@code position × horizontal}, so the pad
+   * lies in it by construction.
    */
   public Injection injectionAt(AbsoluteDate epoch) {
     if (planeChoice == PlaneChoice.FREE_AZIMUTH) {
       return freeAzimuthInjectionAt(epoch);
     }
+    if (insertion != null) {
+      return coasted(insertion.carriedTo(epoch), insertion.mass(), DUE_EAST);
+    }
     Vector3D position = site.positionAt(epoch);
-    Vector3D normal = site.normalOn(position);
-    Departure departure = TranslunarInjectionPlan.departureFrom(circular(normal, position, epoch));
-    return new Injection(
-        circular(normal, departure.injectionDirection(), departure.injectionDate()),
-        departure.arrivalDate(),
-        departure.planeMisalignment(),
-        DUE_EAST);
+    return posed(epoch, position, site.normalOn(position), DUE_EAST);
   }
 
   /**
@@ -553,10 +556,13 @@ public class LunarLaunchWindowProblem implements LaunchWindowProblem {
   private Injection freeAzimuthInjectionAt(AbsoluteDate epoch) {
     Vector3D position = site.positionAt(epoch);
     Vector3D entrainment = site.velocityAt(epoch);
+    DoubleFunction<Injection> atAzimuth =
+        azimuth -> onPlane(epoch, position, flownNormal(position, entrainment, azimuth), azimuth);
     double previous = azimuthThroughTheMoon(position, epoch);
     double current = previous + SECANT_STEP;
-    double previousMisalignment = flownDeparture(position, entrainment, previous, epoch);
-    double currentMisalignment = flownDeparture(position, entrainment, current, epoch);
+    double previousMisalignment = atAzimuth.apply(previous).planeMisalignment();
+    Injection injection = atAzimuth.apply(current);
+    double currentMisalignment = injection.planeMisalignment();
     for (int i = 0;
         i < SECANT_ITERATIONS
             && FastMath.abs(currentMisalignment) > SECANT_TOLERANCE
@@ -570,15 +576,91 @@ public class LunarLaunchWindowProblem implements LaunchWindowProblem {
       previous = current;
       previousMisalignment = currentMisalignment;
       current = next;
-      currentMisalignment = flownDeparture(position, entrainment, current, epoch);
+      injection = atAzimuth.apply(current);
+      currentMisalignment = injection.planeMisalignment();
     }
-    Vector3D normal = flownNormal(position, entrainment, current);
-    Departure departure = TranslunarInjectionPlan.departureFrom(circular(normal, position, epoch));
+    return injection;
+  }
+
+  /**
+   * The injection of a lift-off at {@code epoch} into the plane {@code normal} holds: the measured
+   * insertion rebuilt on that plane, with the mass the azimuth's surcharge leaves, on a confirming
+   * problem; the parking orbit posed at the pad on a screening one.
+   */
+  private Injection onPlane(AbsoluteDate epoch, Vector3D pad, Vector3D normal, double azimuth) {
+    if (insertion == null) {
+      return posed(epoch, pad, normal, azimuth);
+    }
+    return coasted(
+        insertion.onPlane(epoch, pad, normal, parkingRadius), massAfterSurcharge(azimuth), azimuth);
+  }
+
+  /**
+   * The mass in parking at {@code azimuth}: the one measured due east, less the propellant the
+   * azimuth's ascent surcharge burns on the active stage, by Tsiolkovsky. Some 22 kg for the 3.8
+   * m/s of Kourou on 2026-10-06 at 08:00Z, some 300 kg for the 52 m/s of the dearest azimuth.
+   */
+  private double massAfterSurcharge(double azimuth) {
+    double exhaustVelocity =
+        vehicle.resolveActiveStage(insertion.mass()).propulsion().isp()
+            * Constants.G0_STANDARD_GRAVITY;
+    return insertion.mass() * FastMath.exp(-ascentSurcharge(azimuth) / exhaustVelocity);
+  }
+
+  /**
+   * The parking orbit posed at the pad at {@code epoch}, in the plane {@code normal} holds, and its
+   * first passage of the injection point — the screening geometry, which flies no ascent.
+   */
+  private Injection posed(AbsoluteDate epoch, Vector3D pad, Vector3D normal, double azimuth) {
+    Departure departure = TranslunarInjectionPlan.departureFrom(circular(normal, pad, epoch));
     return new Injection(
         circular(normal, departure.injectionDirection(), departure.injectionDate()),
         departure.arrivalDate(),
         departure.planeMisalignment(),
-        current);
+        azimuth);
+  }
+
+  /**
+   * The injection of a vehicle parked at {@code atInsertion}: the first passage of the injection
+   * point after the insertion, reached on a Keplerian coast whose plane turns with the nodal
+   * regression, and the misalignment read on the plane as it is there.
+   *
+   * <p>The coast is rebuilt from position and velocity alone, like {@code departureFrom}'s own, so
+   * that it shifts by mean anomaly and not by Orekit's quadratic expansion.
+   */
+  private static Injection coasted(SpacecraftState atInsertion, double mass, double azimuth) {
+    Departure departure = TranslunarInjectionPlan.departureFrom(atInsertion);
+    PVCoordinates insertionPv =
+        new PVCoordinates(atInsertion.getPosition(), atInsertion.getPVCoordinates().getVelocity());
+    KeplerianOrbit parking =
+        new KeplerianOrbit(
+            insertionPv,
+            OrekitService.get().gcrf(),
+            atInsertion.getDate(),
+            Constants.WGS84_EARTH_MU);
+    Vector3D normal = insertionPv.getMomentum().normalize();
+    Rotation regression =
+        ParkingInsertion.nodalRegression(
+            insertionPv.getPosition().getNorm(), normal, departure.coastDuration());
+    PVCoordinates atPoint = parking.shiftedBy(departure.coastDuration()).getPVCoordinates();
+    Vector3D arrival =
+        OrekitService.get()
+            .body(SolarSystemBody.MOON)
+            .getPosition(departure.arrivalDate(), OrekitService.get().gcrf())
+            .normalize();
+    return new Injection(
+        new SpacecraftState(
+                new CartesianOrbit(
+                    new TimeStampedPVCoordinates(
+                        departure.injectionDate(),
+                        regression.applyTo(atPoint.getPosition()),
+                        regression.applyTo(atPoint.getVelocity())),
+                    OrekitService.get().gcrf(),
+                    Constants.WGS84_EARTH_MU))
+            .withMass(mass),
+        departure.arrivalDate(),
+        TranslunarInjectionPlan.planeMisalignment(regression.applyTo(normal), arrival),
+        azimuth);
   }
 
   /**
@@ -609,14 +691,6 @@ public class LunarLaunchWindowProblem implements LaunchWindowProblem {
           TranslunarInjectionPlan.departureFrom(circular(normal, position, epoch)).coastDuration();
     }
     return azimuth;
-  }
-
-  /** The misalignment of the Moon at arrival from the plane flown at {@code azimuth} (rad). */
-  private double flownDeparture(
-      Vector3D position, Vector3D entrainment, double azimuth, AbsoluteDate epoch) {
-    Vector3D normal = flownNormal(position, entrainment, azimuth);
-    return TranslunarInjectionPlan.departureFrom(circular(normal, position, epoch))
-        .planeMisalignment();
   }
 
   /**
@@ -656,7 +730,7 @@ public class LunarLaunchWindowProblem implements LaunchWindowProblem {
                     date, direction.scalarMultiply(parkingRadius), velocity),
                 OrekitService.get().gcrf(),
                 Constants.WGS84_EARTH_MU))
-        .withMass(massAtInjection);
+        .withMass(SCREENING_MASS);
   }
 
   /** The same environment the lunar mission declares: Earth-centred, Moon and Sun as perturbers. */

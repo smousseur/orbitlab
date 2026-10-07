@@ -6,9 +6,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.simulation.OrekitService;
+import com.smousseur.orbitlab.simulation.flight.AtmosphereModel;
 import com.smousseur.orbitlab.simulation.flight.FlightContext;
 import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
 import com.smousseur.orbitlab.simulation.mission.maneuver.TranslunarInjectionPlan;
+import com.smousseur.orbitlab.simulation.mission.operation.LunarOrbitMission;
 import com.smousseur.orbitlab.simulation.mission.vehicle.LaunchConfiguration;
 import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Launchers;
 import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Payloads;
@@ -51,8 +53,8 @@ import org.orekit.utils.Constants;
  * m/s, and this is the same measurement taken on a suffered plane. It is logged, not asserted:
  * pinning it would pin a number this lot exists to find out.
  *
- * <p><b>Contrainte de méthode</b>: this case flies some thirty four-day propagations per confirmed
- * epoch, so it costs some fifteen seconds, and it is the user who runs it.
+ * <p><b>Contrainte de méthode</b>: this case flies the ascent the window measures its parking orbit
+ * on, then some thirty four-day propagations per confirmed epoch, and it is the user who runs it.
  */
 @EnabledIfSystemProperty(named = "orbitlab.slowTests", matches = "true")
 class LunarLaunchWindowFlightTest {
@@ -72,17 +74,10 @@ class LunarLaunchWindowFlightTest {
   private static final double PERILUNE_BAND = 10_000.0;
 
   /**
-   * Mass at injection (kg) — the mass a Falcon Heavy upper stage really arrives with.
-   *
-   * <p><b>It was 1 700 kg on a 3 kN spacecraft motor until L6</b>, chosen because that vehicle
-   * leaves so little above its depletion floor that the confirmation was a real test of the floor
-   * rather than a formality. The finite injection took the choice away: 3 kN sweeps 75° of arc, the
-   * out-of-model regime L6 §1.2 measured, and the aim flown finitely there does not converge at any
-   * epoch of the search — the window came back empty. What replaces the intent rather than
-   * abandoning it is that the real stage is tight too: it arrives at 61 400 kg and cuts off within
-   * a few kilograms of its floor.
+   * The parking altitude the ascent is flown to (m), the lunar missions' own: 400 km is the only
+   * parking altitude any ascent in this repository flies.
    */
-  private static final double INJECTION_MASS = 61_400.0;
+  private static final double PARKING_ALTITUDE = LunarOrbitMission.DEFAULT_PARKING_ALTITUDE;
 
   /** The budget the search accepts an epoch under (m/s), a little above the 3 178 m/s baseline. */
   private static final double MAX_DELTA_V = 3_400.0;
@@ -95,21 +90,38 @@ class LunarLaunchWindowFlightTest {
     OrekitService.get().initialize();
   }
 
+  /**
+   * A fully loaded Falcon Heavy with an inert 5 t payload, whose upper stage is tight: it reaches
+   * parking at some 61 400 kg and cuts off within a few kilograms of its floor, so the confirmation
+   * is a real test of the floor rather than a formality.
+   */
+  private static LaunchConfiguration configuration() {
+    return LaunchConfiguration.fullyLoaded(
+        Launchers.FALCON_HEAVY, Payloads.CARGO_MODULE.toSpacecraft(5_000.0, 0.0));
+  }
+
   @Test
   @DisplayName("A launch window from Canaveral is dated, confirmed, and flies its perilune")
   void aWindowFromCanaveralIsDatedAndConfirmed() {
+    AbsoluteDate start = new AbsoluteDate(2026, 3, 31, 0, 0, 0.0, TimeScalesFactory.getUTC());
+    ParkingInsertion insertion =
+        ParkingInsertion.fly(
+            configuration(),
+            AtmosphereModel.NRLMSISE,
+            CANAVERAL_LATITUDE,
+            CANAVERAL_LONGITUDE,
+            CANAVERAL_ALTITUDE,
+            PARKING_ALTITUDE,
+            start);
     LunarLaunchWindowProblem problem =
         new LunarLaunchWindowProblem(
             CANAVERAL_LATITUDE,
             CANAVERAL_LONGITUDE,
             CANAVERAL_ALTITUDE,
-            TranslunarInjectionPlan.PARKING_ALTITUDE,
+            PARKING_ALTITUDE,
             TARGET_PERILUNE,
-            LaunchConfiguration.fullyLoaded(
-                    Launchers.FALCON_HEAVY, Payloads.CARGO_MODULE.toSpacecraft(5_000.0, 0.0))
-                .toVehicleStack(),
-            INJECTION_MASS);
-    AbsoluteDate start = new AbsoluteDate(2026, 3, 31, 0, 0, 0.0, TimeScalesFactory.getUTC());
+            configuration().toVehicleStack(),
+            insertion);
 
     long startedAt = System.nanoTime();
     List<LaunchWindow> windows =
@@ -133,12 +145,7 @@ class LunarLaunchWindowFlightTest {
     // aim converged to. The solver's own confirmation gives back a cost and a verdict only.
     LunarLaunchWindowProblem.Injection injection = problem.injectionAt(window.date());
     double exhaustVelocity =
-        LaunchConfiguration.fullyLoaded(
-                    Launchers.FALCON_HEAVY, Payloads.CARGO_MODULE.toSpacecraft(5_000.0, 0.0))
-                .toVehicleStack()
-                .resolveActiveStage(INJECTION_MASS)
-                .propulsion()
-                .isp()
+        configuration().toVehicleStack().resolveActiveStage(insertion.mass()).propulsion().isp()
             * Constants.G0_STANDARD_GRAVITY;
     TranslunarInjectionPlan plan =
         TranslunarInjectionPlan.solve(

@@ -393,11 +393,13 @@ public record TranslunarInjectionPlan(
   /**
    * The signed angle of the arrival direction above an orbital plane (rad), positive towards the
    * plane's normal — the term L2 weighs its epochs on, computed once here rather than twice there.
+   * Public for the window, which reads it again on the plane the parking coast has turned to.
    *
    * @param planeNormal the unit normal of the plane
    * @param arrivalDirection the unit direction of the Moon at arrival
+   * @return the misalignment (rad)
    */
-  private static double planeMisalignment(Vector3D planeNormal, Vector3D arrivalDirection) {
+  public static double planeMisalignment(Vector3D planeNormal, Vector3D arrivalDirection) {
     // Clamped only against rounding: both arguments are unit vectors, so the product is in [-1, 1]
     // up to the last bit.
     return FastMath.asin(
