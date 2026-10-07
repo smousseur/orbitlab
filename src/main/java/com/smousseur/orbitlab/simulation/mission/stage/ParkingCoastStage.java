@@ -30,9 +30,20 @@ import org.orekit.time.AbsoluteDate;
  * <p><b>Its duration cannot be a constructor argument</b>, which is what closes the reuse of {@link
  * CoastingStage#CoastingStage(String, Double)} — that {@code maxTime} is final and read at {@code
  * configure}. Where the injection point lies depends on the launch date and on the ascent actually
- * flown, so it is only knowable at {@link #enter}. {@link TranslunarInjectionPlan#departureFrom}
- * and {@code ignitionLead} are both in closed form — no propagation, the lunar ephemeris alone — so
- * resolving them once per pass costs nothing.
+ * flown, so it is only knowable at {@link #enter}.
+ *
+ * <p><b>{@link #enter} flies the coast to find that point, and each pass then flies it again.</b>
+ * The closed form {@link TranslunarInjectionPlan#departureFrom} predicts it on a two-body orbit,
+ * and the vehicle reaches it earlier: 0.74 to 7.30 s on the parking coasts of eight Canaveral
+ * windows, the longest coasts the latest. Stopped against that prediction, the burn was centred as
+ * far past its point, and 7.3 s was enough to refuse the injection. {@link
+ * TranslunarInjectionPlan#injectionPassage} finds the passage the flight really makes, so the coast
+ * is paid twice per pass. The half burn stays in closed form: read from the insertion or from the
+ * point itself, it moves by at most 0.03 s.
+ *
+ * <p><b>The coast never runs backwards.</b> When the first passage comes less than half a burn
+ * after the insertion, igniting for it would mean igniting before the coast began; the coast waits
+ * for the next passage instead, a revolution later.
  *
  * <p><b>It overrides {@code propagateStandalone}, and that is the whole reason the class
  * exists.</b> A plain coast does not, so in {@code MissionOptimizer}'s stage walk it collapses to
@@ -64,14 +75,19 @@ public class ParkingCoastStage extends CoastingStage {
     Departure departure = TranslunarInjectionPlan.departureFrom(previousState);
     ActiveStageInfo active = mission.getVehicle().resolveActiveStage(previousState.getMass());
     double lead = TranslunarInjectionPlan.ignitionLead(previousState, departure, active);
-    this.ignitionDate = departure.injectionDate().shiftedBy(-lead);
+    AbsoluteDate injection =
+        TranslunarInjectionPlan.injectionPassage(
+                previousState, lead, flightContext(previousState, mission))
+            .getDate();
+    this.ignitionDate = injection.shiftedBy(-lead);
     logger.info(
-        "[{}] coasting {} s to ignition, {} s ahead of the injection point at {} (β = {}° at"
-            + " arrival)",
+        "[{}] coasting {} s to ignition, {} s ahead of the injection point at {}, {} s from the"
+            + " Keplerian prediction (β = {}° at arrival)",
         getName(),
-        FastMath.round(departure.coastDuration() - lead),
+        FastMath.round(ignitionDate.durationFrom(previousState.getDate())),
         String.format(Locale.ROOT, "%.1f", lead),
-        departure.injectionDate(),
+        injection,
+        String.format(Locale.ROOT, "%+.2f", injection.durationFrom(departure.injectionDate())),
         String.format(Locale.ROOT, "%.3f", FastMath.toDegrees(departure.planeMisalignment())));
     return previousState;
   }

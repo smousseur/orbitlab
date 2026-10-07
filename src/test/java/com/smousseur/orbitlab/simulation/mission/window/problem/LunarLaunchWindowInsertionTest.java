@@ -1,11 +1,16 @@
 package com.smousseur.orbitlab.simulation.mission.window.problem;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.mission.MissionType;
+import com.smousseur.orbitlab.simulation.mission.maneuver.TranslunarInjectionPlan;
 import com.smousseur.orbitlab.simulation.mission.operation.MissionFactory;
 import com.smousseur.orbitlab.simulation.mission.operation.MissionSpec;
+import com.smousseur.orbitlab.simulation.mission.vehicle.ActiveStageInfo;
+import com.smousseur.orbitlab.simulation.mission.vehicle.VehicleStack;
 import com.smousseur.orbitlab.simulation.mission.window.LaunchWindow;
 import com.smousseur.orbitlab.simulation.mission.window.LaunchWindowCandidate;
 import com.smousseur.orbitlab.simulation.mission.window.LaunchWindowSearch;
@@ -19,6 +24,7 @@ import org.apache.logging.log4j.Logger;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.orekit.propagation.SpacecraftState;
 import org.orekit.time.AbsoluteDate;
 import org.orekit.time.TimeScalesFactory;
 import org.orekit.utils.PVCoordinates;
@@ -42,6 +48,15 @@ class LunarLaunchWindowInsertionTest {
   private static final double CANAVERAL_LATITUDE = 28.562;
   private static final double CANAVERAL_LONGITUDE = -80.577;
   private static final double CANAVERAL_ALTITUDE = 3.0;
+
+  /** Lift-off step of the scan for a short first coast (s), a couple of seconds of coast each. */
+  private static final double SCAN_STEP_SECONDS = 30.0;
+
+  /** A day of lift-offs. */
+  private static final int SCAN_STEPS = 2_880;
+
+  /** The next passage is a revolution later, plus the 12 s the injection point drifts meanwhile. */
+  private static final double NEXT_PASSAGE_TOLERANCE_SECONDS = 30.0;
 
   /** The ascent flown at 2026-10-06T00:00Z, as {@code ParkingInsertion.fly} measured it. */
   private static final ParkingInsertion MIDNIGHT_INSERTION =
@@ -116,6 +131,57 @@ class LunarLaunchWindowInsertionTest {
     assertTrue(
         afterLiftOff < MIDNIGHT_INSERTION.insertionDelay() + period,
         () -> "the window injects " + afterLiftOff + " s after lift-off, past the first passage");
+  }
+
+  /**
+   * A lift-off whose first passage comes less than half a burn after the insertion: the chain would
+   * have to ignite before its coast began, so it waits for the next passage, and the window injects
+   * there too.
+   */
+  @Test
+  void aPassageInsideTheHalfBurnIsSkipped() {
+    VehicleStack vehicle = spec.configuration().toVehicleStack();
+    ActiveStageInfo active = vehicle.resolveActiveStage(MIDNIGHT_INSERTION.mass());
+    AbsoluteDate floor = utc("2026-10-06T00:00:00.000Z");
+    SpacecraftState first = MIDNIGHT_INSERTION.carriedTo(floor);
+    double lead =
+        TranslunarInjectionPlan.ignitionLead(
+            first, TranslunarInjectionPlan.departureFrom(first), active);
+
+    AbsoluteDate liftOff = null;
+    double firstCoast = Double.NaN;
+    for (int step = 0; step < SCAN_STEPS && liftOff == null; step++) {
+      AbsoluteDate candidate = floor.shiftedBy(step * SCAN_STEP_SECONDS);
+      double coast =
+          TranslunarInjectionPlan.departureFrom(MIDNIGHT_INSERTION.carriedTo(candidate))
+              .coastDuration();
+      if (coast > 0.25 * lead && coast < 0.75 * lead) {
+        liftOff = candidate;
+        firstCoast = coast;
+      }
+    }
+    assertNotNull(liftOff, "no lift-off within a day puts the first passage inside the half burn");
+
+    LunarLaunchWindowProblem.Injection injection = onTheRecordedInsertion().injectionAt(liftOff);
+
+    double afterInsertion =
+        injection
+            .state()
+            .getDate()
+            .durationFrom(liftOff.shiftedBy(MIDNIGHT_INSERTION.insertionDelay()));
+    double period = MIDNIGHT_INSERTION.carriedTo(liftOff).getOrbit().getKeplerianPeriod();
+    logger.info(
+        "Lift-off {}: first passage {} s after the insertion for a {} s half burn, injection {} s"
+            + " after it",
+        liftOff,
+        firstCoast,
+        lead,
+        afterInsertion);
+    assertEquals(
+        firstCoast + period,
+        afterInsertion,
+        NEXT_PASSAGE_TOLERANCE_SECONDS,
+        "the window must inject on the passage after the one inside the half burn");
   }
 
   /**

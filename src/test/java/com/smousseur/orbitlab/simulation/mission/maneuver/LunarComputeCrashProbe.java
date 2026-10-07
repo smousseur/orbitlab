@@ -51,8 +51,8 @@ import org.orekit.utils.TimeStampedPVCoordinates;
  * PROBE_SITE}, {@code PROBE_WINDOWS}, {@code PROBE_FLOOR} and {@code PROBE_TYPE} ({@code orbit} or
  * {@code flyby}; the build forwards no other system property than the probe switch). Every
  * computation is appended in full precision to {@code build/probe-l1-<site>.txt}, unchanged in
- * format so two runs can be compared bit for bit; the plane, the flown misalignment at the
- * injection and the scenario round trip go to {@code build/probe-l2-<site>.txt}.
+ * format so two runs can be compared bit for bit; the plane, the flown misalignment and the burn
+ * centring at the injection and the scenario round trip go to {@code build/probe-l2-<site>.txt}.
  */
 @EnabledIfSystemProperty(named = "orbitlab.probe", matches = "true")
 @SuppressWarnings("PMD.AvoidAccessibilityAlteration")
@@ -197,13 +197,19 @@ class LunarComputeCrashProbe {
     }
   }
 
-  private static String describe(MissionPlan plan) throws ReflectiveOperationException {
+  /** The burn the last pass flew, as the TLI stage resolved it at its entry. */
+  private static TranslunarInjectionPlan.Burn burnOf(MissionPlan plan)
+      throws ReflectiveOperationException {
     Mission mission = plan.computation().mission();
     MissionStage tli =
         mission.getStages().stream().filter(s -> s instanceof TLIBurnStage).findFirst().get();
     Field field = TLIBurnStage.class.getDeclaredField("burn");
     field.setAccessible(true);
-    TranslunarInjectionPlan.Burn burn = (TranslunarInjectionPlan.Burn) field.get(tli);
+    return (TranslunarInjectionPlan.Burn) field.get(tli);
+  }
+
+  private static String describe(MissionPlan plan) throws ReflectiveOperationException {
+    TranslunarInjectionPlan.Burn burn = burnOf(plan);
     MissionEphemerisPoint last = plan.computation().ephemeris().lastPoint();
     return "burn dir "
         + exact(burn.direction())
@@ -235,9 +241,10 @@ class LunarComputeCrashProbe {
 
   /**
    * The misalignment of the Moon at arrival from the plane actually flown, read at the TLI ignition
-   * — the last sample of the parking coast — the way the window reads it on the plane it planned.
+   * — the last sample of the parking coast — the way the window reads it on the plane it planned;
+   * and how far past the injection point found from that ignition the burn is centred.
    */
-  private static String flown(MissionPlan plan) {
+  private static String flown(MissionPlan plan) throws ReflectiveOperationException {
     MissionEphemerisPoint ignition = null;
     for (MissionEphemerisPoint p : plan.computation().ephemeris().allPoints()) {
       if (LunarOrbitMission.PARKING_COAST_NAME.equals(p.stageName())) {
@@ -255,12 +262,18 @@ class LunarComputeCrashProbe {
                     OrekitService.get().gcrf(),
                     Constants.WGS84_EARTH_MU))
             .withMass(ignition.mass());
+    TranslunarInjectionPlan.Departure ahead = TranslunarInjectionPlan.departureFrom(state);
+    TranslunarInjectionPlan.Burn burn = burnOf(plan);
     return String.format(
         Locale.ROOT,
-        "flown β at TLI ignition %+.4f° (ignition %s, mass %.1f kg)",
-        FastMath.toDegrees(TranslunarInjectionPlan.departureFrom(state).planeMisalignment()),
+        "flown β at TLI ignition %+.4f° (ignition %s, mass %.1f kg); burn %.3f s centred %+.3f s"
+            + " past the injection point %.3f s ahead",
+        FastMath.toDegrees(ahead.planeMisalignment()),
         ignition.time(),
-        ignition.mass());
+        ignition.mass(),
+        burn.duration(),
+        0.5 * burn.duration() - ahead.coastDuration(),
+        ahead.coastDuration());
   }
 
   /**

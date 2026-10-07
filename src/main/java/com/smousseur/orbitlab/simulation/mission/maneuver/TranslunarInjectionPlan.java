@@ -16,6 +16,7 @@ import org.apache.logging.log4j.Logger;
 import org.hipparchus.geometry.euclidean.threed.Rotation;
 import org.hipparchus.geometry.euclidean.threed.RotationConvention;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
+import org.hipparchus.ode.events.Action;
 import org.hipparchus.util.FastMath;
 import org.hipparchus.util.MathUtils;
 import org.orekit.attitudes.FrameAlignedProvider;
@@ -29,6 +30,7 @@ import org.orekit.frames.Frame;
 import org.orekit.orbits.CartesianOrbit;
 import org.orekit.orbits.KeplerianOrbit;
 import org.orekit.propagation.SpacecraftState;
+import org.orekit.propagation.events.FunctionalDetector;
 import org.orekit.propagation.events.handlers.StopOnDecreasing;
 import org.orekit.propagation.numerical.NumericalPropagator;
 import org.orekit.time.AbsoluteDate;
@@ -155,6 +157,25 @@ public record TranslunarInjectionPlan(
    * yield a zero coast, not a whole extra revolution bought from a rounding sign.
    */
   private static final double DEPARTURE_TOLERANCE_RADIANS = 1.0e-9;
+
+  /**
+   * Revolutions past the minimum coast within which {@link #injectionPassage} must meet a passage.
+   * The next one comes within one revolution and the 12 s the injection point drifts during it; the
+   * second revolution is margin.
+   */
+  private static final double PASSAGE_SEARCH_REVOLUTIONS = 2.0;
+
+  /**
+   * How often the passage detector is checked (s). The decreasing root it looks for and the jump
+   * from −π to π it ignores are half a revolution apart, so a minute cannot step over either.
+   */
+  private static final double PASSAGE_MAX_CHECK_SECONDS = 60.0;
+
+  /**
+   * Date precision of a passage (s), two orders of magnitude inside the 0.1 s the burn is held
+   * centred to.
+   */
+  private static final double PASSAGE_THRESHOLD_SECONDS = 1.0e-3;
 
   /**
    * How far past the aim date the perilune search runs (s). Closest approach need not fall exactly
@@ -355,13 +376,7 @@ public record TranslunarInjectionPlan(
       Vector3D arrivalDirection =
           moonPosition(parking.getDate().shiftedBy(coast + TIME_OF_FLIGHT_SECONDS)).normalize();
       misalignment = planeMisalignment(planeNormal, arrivalDirection);
-      Vector3D inPlane =
-          arrivalDirection
-              .subtract(planeNormal.scalarMultiply(arrivalDirection.dotProduct(planeNormal)))
-              .normalize();
-      injectionDirection =
-          new Rotation(planeNormal, -TRANSFER_ANGLE, RotationConvention.VECTOR_OPERATOR)
-              .applyTo(inPlane);
+      injectionDirection = injectionDirection(planeNormal, arrivalDirection);
 
       double travel =
           orientedAngle(keplerian.shiftedBy(coast).getPosition(), injectionDirection, planeNormal);
@@ -383,6 +398,105 @@ public record TranslunarInjectionPlan(
         parking.getDate().shiftedBy(coast + TIME_OF_FLIGHT_SECONDS),
         injectionDirection,
         misalignment);
+  }
+
+  /**
+   * The injection point of a plane: the arrival direction projected into it, then rotated back by
+   * {@link #TRANSFER_ANGLE} — the single definition {@link #departureFrom} and {@link
+   * #injectionPassage} both read.
+   *
+   * @param planeNormal the unit normal of the parking plane
+   * @param arrivalDirection the unit direction of the Moon at arrival
+   * @return the unit direction of the injection point, inside the plane
+   */
+  private static Vector3D injectionDirection(Vector3D planeNormal, Vector3D arrivalDirection) {
+    Vector3D inPlane =
+        arrivalDirection
+            .subtract(planeNormal.scalarMultiply(arrivalDirection.dotProduct(planeNormal)))
+            .normalize();
+    return new Rotation(planeNormal, -TRANSFER_ANGLE, RotationConvention.VECTOR_OPERATOR)
+        .applyTo(inPlane);
+  }
+
+  /**
+   * The first passage the flight really makes through its injection point, at least {@code
+   * minimumCoast} after {@code from} — <b>found by flying, not predicted</b>.
+   *
+   * <p><b>{@link #departureFrom} predicts this point on a two-body orbit, and the vehicle reaches
+   * it earlier.</b> Measured from the parking insertions of eight Canaveral windows, flown at 8×8
+   * with drag: the prediction is 0.74 s late after 1 126 s of coast and 7.30 s late after 3 165 s,
+   * a lag growing faster than the coast. A burn centred that far past its point drives the aim into
+   * a refusal; lit on the point found here, all eight fly.
+   *
+   * <p><b>The point is the one {@link #departureFrom} resolves at zero remaining coast</b>, read
+   * along the flight: the plane of the current state, the Moon at its date plus {@link
+   * #TIME_OF_FLIGHT_SECONDS}, projected and rotated back by {@link #injectionDirection}. The
+   * detector follows the signed angle still to travel; only its decreasing roots are passages, the
+   * increasing ones being the jump from −π to π half a revolution away.
+   *
+   * <p><b>A passage closer than {@code minimumCoast} is skipped, and the search goes on to the next
+   * one</b>. The parking coast asks for half a burn: lit on a passage nearer than that, the burn
+   * would ignite before the coast began, and the ephemeris would run backwards.
+   *
+   * @param from the state the coast starts from, on its parking orbit
+   * @param minimumCoast the shortest coast a passage is accepted at (s)
+   * @param context the environment the coast is flown in
+   * @return the state at the passage
+   * @throws OrbitlabException when no passage comes within two revolutions past {@code
+   *     minimumCoast}: on a parking orbit the next one is at most a revolution and 12 s away, so
+   *     the flight stopped before it, on a re-entry
+   */
+  public static SpacecraftState injectionPassage(
+      SpacecraftState from, double minimumCoast, FlightContext context) {
+    double horizon =
+        minimumCoast + PASSAGE_SEARCH_REVOLUTIONS * from.getOrbit().getKeplerianPeriod();
+    NumericalPropagator propagator =
+        OrekitService.get().createOptimizationPropagator(context, OrekitService.COAST_MAX_STEP);
+    propagator.setInitialState(from);
+    ReentryGuard.armQuiet(propagator, context.gravity());
+
+    SpacecraftState[] passage = new SpacecraftState[1];
+    propagator.addEventDetector(
+        new FunctionalDetector()
+            .withFunction(TranslunarInjectionPlan::remainingTravel)
+            .withMaxCheck(PASSAGE_MAX_CHECK_SECONDS)
+            .withThreshold(PASSAGE_THRESHOLD_SECONDS)
+            .withHandler(
+                (state, detector, increasing) -> {
+                  if (increasing || state.getDate().durationFrom(from.getDate()) < minimumCoast) {
+                    return Action.CONTINUE;
+                  }
+                  passage[0] = state;
+                  return Action.STOP;
+                }));
+    SpacecraftState reached = propagator.propagate(from.getDate().shiftedBy(horizon));
+
+    if (passage[0] == null) {
+      throw new OrbitlabException(
+          String.format(
+              Locale.ROOT,
+              "[Parking] no passage of the injection point at least %.0f s after %s: the coast"
+                  + " stopped %.0f s in, %.0f km up, of a %.0f s search",
+              minimumCoast,
+              from.getDate(),
+              reached.getDate().durationFrom(from.getDate()),
+              (reached.getPosition().getNorm() - context.gravity().equatorialRadius()) / 1000.0,
+              horizon));
+    }
+    return passage[0];
+  }
+
+  /**
+   * The signed angle the state still has to travel to its injection point (rad), in {@code (−π,
+   * π]}: positive ahead of the point, crossing zero downwards on it.
+   */
+  private static double remainingTravel(SpacecraftState state) {
+    Vector3D position = state.getPosition();
+    Vector3D planeNormal =
+        Vector3D.crossProduct(position, state.getPVCoordinates().getVelocity()).normalize();
+    Vector3D arrivalDirection =
+        moonPosition(state.getDate().shiftedBy(TIME_OF_FLIGHT_SECONDS)).normalize();
+    return orientedAngle(position, injectionDirection(planeNormal, arrivalDirection), planeNormal);
   }
 
   /** The angle from {@code from} to {@code to} measured about {@code axis}, in {@code (−π, π]}. */

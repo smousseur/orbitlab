@@ -9,6 +9,7 @@ import com.smousseur.orbitlab.simulation.gravity.GravitationalContext;
 import com.smousseur.orbitlab.simulation.mission.maneuver.TranslunarInjectionPlan;
 import com.smousseur.orbitlab.simulation.mission.maneuver.TranslunarInjectionPlan.Departure;
 import com.smousseur.orbitlab.simulation.mission.operation.LaunchPlane;
+import com.smousseur.orbitlab.simulation.mission.vehicle.ActiveStageInfo;
 import com.smousseur.orbitlab.simulation.mission.vehicle.PropellantBudget;
 import com.smousseur.orbitlab.simulation.mission.vehicle.Vehicle;
 import com.smousseur.orbitlab.simulation.mission.window.LaunchWindowCandidate;
@@ -70,10 +71,10 @@ import org.orekit.utils.TimeStampedPVCoordinates;
  * aimed no lower than a 257 km perilune for a 100 km target.
  *
  * <p>A confirming problem is therefore given a {@link ParkingInsertion} — the ascent flown once,
- * carried to every epoch through the Earth-fixed frame — and coasts it to the first passage after
- * the insertion, turning the plane with the secular J2 nodal regression on the way: 0.49° a
- * revolution, measured −0.4886° on a flown 400 km parking coast. The mass it confirms with is the
- * one the ascent left in parking.
+ * carried to every epoch through the Earth-fixed frame — and coasts it to the first passage at
+ * least half a burn after the insertion, turning the plane with the secular J2 nodal regression on
+ * the way: 0.49° a revolution, measured −0.4886° on a flown 400 km parking coast. The mass it
+ * confirms with is the one the ascent left in parking.
  *
  * <p><b>The screening problem keeps the parking orbit posed at the pad</b>: it is the wizard's
  * timeline, which runs before a launcher is chosen and so has no ascent to fly. Its dates precede
@@ -526,8 +527,8 @@ public class LunarLaunchWindowProblem implements LaunchWindowProblem {
    * <p><b>On a confirming problem the parking orbit is the measured insertion</b>: due east,
    * carried to {@code epoch} through the Earth-fixed frame; at a free azimuth, rebuilt from the
    * same measurement on the plane that azimuth is predicted to fly. The coast is then the chain's
-   * own rule — the first passage after the insertion — with the plane turning by the nodal
-   * regression.
+   * own rule — the first passage at least half a burn after the insertion — with the plane turning
+   * by the nodal regression.
    *
    * <p><b>On a screening problem it is posed at the pad at the lift-off instant</b>, the phase
    * being the site's direction: the plane is raised as {@code position × horizontal}, so the pad
@@ -538,7 +539,11 @@ public class LunarLaunchWindowProblem implements LaunchWindowProblem {
       return freeAzimuthInjectionAt(epoch);
     }
     if (insertion != null) {
-      return coasted(insertion.carriedTo(epoch), insertion.mass(), DUE_EAST);
+      return coasted(
+          insertion.carriedTo(epoch),
+          insertion.mass(),
+          DUE_EAST,
+          vehicle.resolveActiveStage(insertion.mass()));
     }
     Vector3D position = site.positionAt(epoch);
     return posed(epoch, position, site.normalOn(position), DUE_EAST);
@@ -591,8 +596,12 @@ public class LunarLaunchWindowProblem implements LaunchWindowProblem {
     if (insertion == null) {
       return posed(epoch, pad, normal, azimuth);
     }
+    double mass = massAfterSurcharge(azimuth);
     return coasted(
-        insertion.onPlane(epoch, pad, normal, parkingRadius), massAfterSurcharge(azimuth), azimuth);
+        insertion.onPlane(epoch, pad, normal, parkingRadius),
+        mass,
+        azimuth,
+        vehicle.resolveActiveStage(mass));
   }
 
   /**
@@ -622,13 +631,26 @@ public class LunarLaunchWindowProblem implements LaunchWindowProblem {
 
   /**
    * The injection of a vehicle parked at {@code atInsertion}: the first passage of the injection
-   * point after the insertion, reached on a Keplerian coast whose plane turns with the nodal
-   * regression, and the misalignment read on the plane as it is there.
+   * point at least half a burn after the insertion, reached on a Keplerian coast whose plane turns
+   * with the nodal regression, and the misalignment read on the plane as it is there.
+   *
+   * <p><b>The passage is the chain's</b>: a first passage nearer than {@link
+   * TranslunarInjectionPlan#ignitionLead} would have the burn ignite before the parking coast
+   * began, so the coast takes the next one, which {@code departureFrom} finds again from the
+   * Keplerian state at that half burn. Past it, the coast is the first passage, unchanged.
+   *
+   * <p><b>The coast stays Keplerian while the chain's is flown</b>: the injection read here is 0.7
+   * to 7.3 s and 11 to 30 km behind the point the chain lights its burn for. Confirmed on that
+   * point instead, eight Canaveral windows kept their verdict — perilune to 1 km, injection to
+   * −2.6/+0.7 m/s.
    *
    * <p>The coast is rebuilt from position and velocity alone, like {@code departureFrom}'s own, so
    * that it shifts by mean anomaly and not by Orekit's quadratic expansion.
+   *
+   * @param active the stage burning the injection, resolved on {@code mass}: it sizes the half burn
    */
-  private static Injection coasted(SpacecraftState atInsertion, double mass, double azimuth) {
+  private static Injection coasted(
+      SpacecraftState atInsertion, double mass, double azimuth, ActiveStageInfo active) {
     Departure departure = TranslunarInjectionPlan.departureFrom(atInsertion);
     PVCoordinates insertionPv =
         new PVCoordinates(atInsertion.getPosition(), atInsertion.getPVCoordinates().getVelocity());
@@ -638,6 +660,19 @@ public class LunarLaunchWindowProblem implements LaunchWindowProblem {
             OrekitService.get().gcrf(),
             atInsertion.getDate(),
             Constants.WGS84_EARTH_MU);
+    double lead =
+        TranslunarInjectionPlan.ignitionLead(atInsertion.withMass(mass), departure, active);
+    if (departure.coastDuration() < lead) {
+      Departure next =
+          TranslunarInjectionPlan.departureFrom(new SpacecraftState(parking.shiftedBy(lead)));
+      departure =
+          new Departure(
+              lead + next.coastDuration(),
+              next.injectionDate(),
+              next.arrivalDate(),
+              next.injectionDirection(),
+              next.planeMisalignment());
+    }
     Vector3D normal = insertionPv.getMomentum().normalize();
     Rotation regression =
         ParkingInsertion.nodalRegression(
