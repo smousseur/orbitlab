@@ -23,6 +23,10 @@ class HoverConfigTest {
     assertEquals(25f, config.iconHoverPx());
     assertEquals(0.45f, config.ringWhiteBlend());
     assertEquals(0.85f, config.labelWhiteBlend());
+    assertEquals(1f, config.orbitCoreGrowPx());
+    assertEquals(0.35f, config.orbitCoreWhiteBlend());
+    assertEquals(18f, config.haloPx());
+    assertEquals(0.36f, config.haloPeakAlpha());
   }
 
   @Test
@@ -60,6 +64,28 @@ class HoverConfigTest {
     assertThrows(IllegalArgumentException.class, () -> config(8f, 12f, 4, 0.05f, 0.085f, 0f, 1.1f));
   }
 
+  @Test
+  void acceptsAnOrbitCoreThatDoesNotGrow() {
+    assertDoesNotThrow(() -> orbitConfig(0f, 0.35f, 18f, 0.36f));
+  }
+
+  @Test
+  void refusesAnOrbitCoreThatShrinks() {
+    assertThrows(IllegalArgumentException.class, () -> orbitConfig(-1f, 0.35f, 18f, 0.36f));
+  }
+
+  @Test
+  void refusesANonPositiveHaloWidth() {
+    assertThrows(IllegalArgumentException.class, () -> orbitConfig(1f, 0.35f, 0f, 0.36f));
+    assertThrows(IllegalArgumentException.class, () -> orbitConfig(1f, 0.35f, Float.NaN, 0.36f));
+  }
+
+  @Test
+  void refusesAnOrbitBlendOrHaloPeakOutsideTheUnitInterval() {
+    assertThrows(IllegalArgumentException.class, () -> orbitConfig(1f, -0.1f, 18f, 0.36f));
+    assertThrows(IllegalArgumentException.class, () -> orbitConfig(1f, 0.35f, 18f, 1.1f));
+  }
+
   private static HoverConfig config(
       float enterPx,
       float exitPx,
@@ -69,6 +95,38 @@ class HoverConfigTest {
       float ringBlend,
       float labelBlend) {
     return new HoverConfig(
-        enterPx, exitPx, stride, fadeInTau, fadeOutTau, 1e-3f, 16f, 25f, ringBlend, labelBlend);
+        enterPx,
+        exitPx,
+        stride,
+        fadeInTau,
+        fadeOutTau,
+        1e-3f,
+        16f,
+        25f,
+        ringBlend,
+        labelBlend,
+        1f,
+        0.35f,
+        18f,
+        0.36f);
+  }
+
+  private static HoverConfig orbitConfig(
+      float coreGrowPx, float coreWhiteBlend, float haloPx, float haloPeakAlpha) {
+    return new HoverConfig(
+        8f,
+        12f,
+        4,
+        0.05f,
+        0.085f,
+        1e-3f,
+        16f,
+        25f,
+        0.45f,
+        0.85f,
+        coreGrowPx,
+        coreWhiteBlend,
+        haloPx,
+        haloPeakAlpha);
   }
 }

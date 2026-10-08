@@ -16,6 +16,20 @@ MaterialDef Ribbon {
         // Whether the mesh carries a per-vertex colour buffer. Mission trajectories do (one shade
         // per phase run); planetary orbits do not, their colour being uniform.
         Boolean VertexColor
+
+        // Full width of the hover halo, in screen pixels. Setting it is what compiles the halo
+        // variant (HAS_HALO), and that variant writes premultiplied colour: the material must then
+        // blend as PremultAlpha, which is why AssetFactory.enableRibbonHalo sets both together.
+        // No default on purpose — a default would switch every ribbon, trajectories included.
+        Float HaloPx
+
+        // Opacity of the halo on the ribbon's axis. While it is zero the ribbon is not widened to
+        // the halo, so a resting orbit keeps its narrow band of geometry.
+        Float HaloAlpha : 0.0
+
+        // How far toward white the ribbon's core is blended, in [0,1]. Kept apart from Color, whose
+        // alpha already carries other fades.
+        Float CoreWhite : 0.0
     }
 
     // Deliberately no Glow technique, for the reason Corona.j3md gives: PostFxAppState runs the
@@ -38,6 +52,7 @@ MaterialDef Ribbon {
 
         Defines {
             HAS_VERTEXCOLOR : VertexColor
+            HAS_HALO : HaloPx
         }
     }
 }

@@ -14,6 +14,7 @@ import com.smousseur.orbitlab.engine.scene.graph.SceneGraph;
 import com.smousseur.orbitlab.engine.scene.hover.HoverFade;
 import com.smousseur.orbitlab.engine.scene.hover.HoverResolver;
 import com.smousseur.orbitlab.engine.scene.hover.HoverTarget;
+import com.smousseur.orbitlab.engine.scene.hover.OrbitHalo;
 import com.smousseur.orbitlab.engine.scene.hover.OrbitHoverDetector;
 import com.smousseur.orbitlab.engine.scene.hover.OrbitScreenProjector;
 import com.smousseur.orbitlab.engine.scene.planet.PlanetPresenter;
@@ -26,18 +27,20 @@ import java.util.Set;
 
 /**
  * Resolves, once a frame, which planet the cursor designates — by its icon or by its orbit — and
- * lights that planet's icon in a fade.
+ * lights that planet's icon and orbit in a fade.
  *
  * <p>Each frame, in order:
  *
  * <ol>
+ *   <li>the orbit ribbons not found yet are looked up, and each one found is switched to its halo
+ *       variant, see {@link OrbitHalo};
  *   <li>the hover is frozen while the camera turns or flies, so that nothing sweeping under a still
  *       cursor lights up;
  *   <li>{@link HoverResolver} designates a planet from the facts the listeners recorded in {@link
  *       HoverState}; the orbit detection it may ask for projects the orbit ribbons through the far
  *       camera — the one they are drawn with — and searches them around the cursor;
  *   <li>every planet's fade moves toward lit or unlit, in real time, and its intensity is pushed to
- *       the planet's view;
+ *       the planet's view and to its orbit's halo;
  *   <li>the scene sensor follows the screen's size.
  * </ol>
  *
@@ -63,6 +66,7 @@ public final class HoverAppState extends BaseAppState {
   private final OrbitHoverDetector detector;
   private final HoverResolver.OrbitPicker orbitPicker = this::pickOrbit;
   private final Map<SolarSystemBody, Geometry> ribbons = new EnumMap<>(SolarSystemBody.class);
+  private final Map<SolarSystemBody, OrbitHalo> halos = new EnumMap<>(SolarSystemBody.class);
   private final Map<SolarSystemBody, HoverFade> fades = new EnumMap<>(SolarSystemBody.class);
 
   private InputManager inputManager;
@@ -99,6 +103,7 @@ public final class HoverAppState extends BaseAppState {
 
   @Override
   public void update(float tpf) {
+    collectRibbons();
     boolean frozen = context.orbitCamera().isRotating() || context.cameraTransition().isActive();
     HoverTarget target =
         HoverResolver.resolve(
@@ -113,21 +118,26 @@ public final class HoverAppState extends BaseAppState {
     SolarSystemBody lit = target == null ? null : target.body();
     for (PlanetPresenter presenter : context.getPlanets().values()) {
       SolarSystemBody body = presenter.body();
-      presenter.view().setHoverIntensity(fades.get(body).advance(body == lit, tpf));
+      float intensity = fades.get(body).advance(body == lit, tpf);
+      presenter.view().setHoverIntensity(intensity);
+      OrbitHalo halo = halos.get(body);
+      if (halo != null) {
+        halo.setIntensity(intensity);
+      }
     }
     sensor.update(camera);
   }
 
   private Optional<SolarSystemBody> pickOrbit(SolarSystemBody current) {
-    collectRibbons();
     Vector2f cursor = inputManager.getCursorPosition();
     return detector.pick(
         projector.project(camera, ribbons, config.detectionStride()), cursor.x, cursor.y, current);
   }
 
   /**
-   * Looks up the ribbons not found yet. They are built by the orbit states, which are attached
-   * after this one, and a body whose dataset file is missing never gets one.
+   * Looks up the ribbons not found yet, and switches each one found to its halo variant. They are
+   * built by the orbit states, which are attached after this one, and a body whose dataset file is
+   * missing never gets one.
    */
   private void collectRibbons() {
     if (ribbons.size() == orbitBodies.size()) {
@@ -138,6 +148,7 @@ public final class HoverAppState extends BaseAppState {
       if (!ribbons.containsKey(body)
           && layer.orbitNode(body).getChild(RIBBON_PREFIX + body.name()) instanceof Geometry g) {
         ribbons.put(body, g);
+        halos.put(body, new OrbitHalo(g.getMaterial(), config));
       }
     }
   }
