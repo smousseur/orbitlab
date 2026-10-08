@@ -3,11 +3,13 @@ package com.smousseur.orbitlab.ui;
 import com.jme3.asset.AssetManager;
 import com.jme3.asset.AssetNotFoundException;
 import com.jme3.font.BitmapFont;
+import com.jme3.input.event.MouseButtonEvent;
 import com.jme3.material.Material;
 import com.jme3.material.RenderState;
 import com.jme3.math.ColorRGBA;
 import com.jme3.math.Vector2f;
 import com.jme3.math.Vector3f;
+import com.jme3.scene.Spatial;
 import com.jme3.texture.Texture;
 import com.jme3.texture.Texture2D;
 import com.simsilica.lemur.*;
@@ -15,7 +17,9 @@ import com.simsilica.lemur.component.BoxLayout;
 import com.simsilica.lemur.component.IconComponent;
 import com.simsilica.lemur.component.QuadBackgroundComponent;
 import com.simsilica.lemur.component.TbtQuadBackgroundComponent;
+import com.simsilica.lemur.event.DefaultMouseListener;
 import com.simsilica.lemur.event.MouseEventControl;
+import com.simsilica.lemur.event.MouseListener;
 import com.smousseur.orbitlab.ui.form.FormStyles;
 import java.util.HashMap;
 import java.util.Map;
@@ -48,6 +52,16 @@ public final class UiKit {
   private static AssetManager assetManager;
   private static Texture gradientTex;
   private static final Map<String, Texture2D> textureCache = new HashMap<>();
+
+  /**
+   * The listener of {@link #shield}. It overrides {@code mouseButtonEvent} only to leave the event
+   * alone: the default implementation consumes every button.
+   */
+  private static final MouseListener SHIELD_LISTENER =
+      new DefaultMouseListener() {
+        @Override
+        public void mouseButtonEvent(MouseButtonEvent event, Spatial target, Spatial capture) {}
+      };
 
   private UiKit() {}
 
@@ -352,6 +366,38 @@ public final class UiKit {
     MouseEventControl cec = field.getControl(MouseEventControl.class);
     if (cec != null) {
       field.removeControl(cec);
+    }
+  }
+
+  /**
+   * Makes a panel's root the hover target over its own background, so that a gap between its
+   * children does not count as the scene behind it.
+   *
+   * <p>Lemur resolves the hover target by walking up from the geometry under the cursor to the
+   * first node carrying an enabled listener control; a container without one is transparent to it,
+   * and the scene sensor behind would be entered through the panel. The shield is such a control,
+   * and it does nothing else: children with their own listener stay targets of their own, and no
+   * button is consumed — a camera rotation started on the panel's background still turns, exactly
+   * as before the shield.
+   *
+   * @param root the panel's root
+   */
+  public static void shield(Spatial root) {
+    MouseEventControl.addListenersToSpatial(root, SHIELD_LISTENER);
+  }
+
+  /**
+   * Switches a panel's shield on or off, for a panel hidden by its cull hint rather than detached.
+   * Lemur picks a culled panel all the same, so a shield left on would keep the scene from being
+   * hovered under a panel that is no longer drawn.
+   *
+   * @param root the panel's root, shielded by {@link #shield}
+   * @param enabled whether the panel is shown
+   */
+  public static void setShieldEnabled(Spatial root, boolean enabled) {
+    MouseEventControl control = root.getControl(MouseEventControl.class);
+    if (control != null) {
+      control.setEnabled(enabled);
     }
   }
 }

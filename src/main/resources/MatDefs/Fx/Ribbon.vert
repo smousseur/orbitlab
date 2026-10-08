@@ -23,6 +23,10 @@ uniform mat4  g_WorldViewMatrix;
 uniform mat4  g_ProjectionMatrix;
 uniform vec2  g_Resolution;
 uniform float m_WidthPx;
+#ifdef HAS_HALO
+uniform float m_HaloPx;
+uniform float m_HaloAlpha;
+#endif
 
 varying float vSide;
 varying float vArc;
@@ -54,6 +58,14 @@ void main() {
     // +1 px of geometry beyond the nominal half-width: that margin is where the fragment shader
     // puts the fade, so the fade never eats into the ribbon itself.
     float halfPx    = 0.5 * m_WidthPx + 1.0;
+#ifdef HAS_HALO
+    // Widened to the halo only while it shows: a resting orbit keeps its narrow band, instead of
+    // every orbit paying for a halo's worth of fragments at all times. Ribbon.frag derives the same
+    // half-width from the same uniforms, which is what keeps its distances in pixels.
+    if (m_HaloAlpha > 0.0) {
+        halfPx = 0.5 * max(m_WidthPx, m_HaloPx) + 1.0;
+    }
+#endif
     float halfWorld = halfPx * depth * 2.0
                     / (g_Resolution.y * g_ProjectionMatrix[1][1]);
 

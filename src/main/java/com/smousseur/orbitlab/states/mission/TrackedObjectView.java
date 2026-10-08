@@ -5,10 +5,12 @@ import com.jme3.math.Vector3f;
 import com.jme3.renderer.Camera;
 import com.jme3.scene.Node;
 import com.smousseur.orbitlab.app.ApplicationContext;
+import com.smousseur.orbitlab.app.HoverState;
 import com.smousseur.orbitlab.app.view.FocusView;
 import com.smousseur.orbitlab.app.view.RenderContext;
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.engine.AssetFactory;
+import com.smousseur.orbitlab.engine.HoverConfig;
 import com.smousseur.orbitlab.engine.scene.body.BodyRenderConfig;
 import com.smousseur.orbitlab.engine.scene.body.LodView;
 import com.smousseur.orbitlab.engine.scene.body.lod.Model3dView;
@@ -39,6 +41,15 @@ final class TrackedObjectView {
   private final MissionTrajectoryRenderer trajectoryRenderer;
 
   /**
+   * This object's icon hover. Held here rather than in the shared hover state, which resolves the
+   * planets only: a mission icon lights from its own listener, and borrows nothing from the planets
+   * but their freeze.
+   */
+  private final MissionIconHover iconHover;
+
+  private final HoverState hoverState;
+
+  /**
    * Whether this object shows its far-range icon on top of its close-range 3D mesh. Always {@code
    * true} for the primary; a debris sets it from the global "show debris" toggle, so a decluttered
    * debris is only its 3D mesh up close (PHY-5 / L7).
@@ -60,10 +71,16 @@ final class TrackedObjectView {
   private boolean trailTipFrozen;
 
   private TrackedObjectView(
-      SpacecraftPresenter presenter, LodView view, MissionTrajectoryRenderer trajectoryRenderer) {
+      SpacecraftPresenter presenter,
+      LodView view,
+      MissionTrajectoryRenderer trajectoryRenderer,
+      MissionIconHover iconHover,
+      HoverState hoverState) {
     this.presenter = presenter;
     this.view = view;
     this.trajectoryRenderer = trajectoryRenderer;
+    this.iconHover = iconHover;
+    this.hoverState = hoverState;
   }
 
   /**
@@ -90,7 +107,17 @@ final class TrackedObjectView {
       Runnable onClick,
       Node parent) {
     Node guiNode = context.guiGraph().getPlanetBillboardsNode();
-    LodView view = new LodView(guiNode, config, context.model3dAttacher(), onClick, null);
+    HoverConfig hoverConfig = context.getEngineConfig().hover();
+    MissionIconHover iconHover = new MissionIconHover(hoverConfig);
+    LodView view =
+        new LodView(
+            guiNode,
+            config,
+            hoverConfig,
+            context.model3dAttacher(),
+            onClick,
+            iconHover::setHovered,
+            null);
     SpacecraftPresenter presenter = new SpacecraftPresenter(config.id(), view);
     presenter.setVisible(true);
 
@@ -104,7 +131,8 @@ final class TrackedObjectView {
         new MissionTrajectoryRenderer(trajectoryId, trajectoryColor);
     trajectoryRenderer.initialize(context.sceneGraph().nearOrbitsNode());
 
-    return new TrackedObjectView(presenter, view, trajectoryRenderer);
+    return new TrackedObjectView(
+        presenter, view, trajectoryRenderer, iconHover, context.hoverState());
   }
 
   /**
@@ -250,6 +278,8 @@ final class TrackedObjectView {
     presenter.updatePose(modelPosition, point.velocity(), tpf, ctx, upWorld);
     this.view.setModelOffset(JmeVectorAdapter.toJmeBodyRelativePosition(seat, ctx));
     this.view.setIconFallbackEnabled(secondaryDisplay);
+    // Before the screen update, which places the icon from its size.
+    this.view.setHoverIntensity(iconHover.advance(hoverState.isFrozen(), tpf));
     this.view.updateScreen(cam, true);
     if (inertialTrail) {
       trajectoryRenderer.setVisible(true);

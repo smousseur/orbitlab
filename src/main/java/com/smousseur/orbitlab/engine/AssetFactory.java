@@ -344,6 +344,23 @@ public class AssetFactory {
   }
 
   /**
+   * Switches a ribbon material to its halo variant, which can draw a soft halo around the ribbon
+   * once given an opacity and blend its core toward white.
+   *
+   * <p>The width and the blend go together and are only ever set here: the halo variant writes
+   * premultiplied colour, which only {@link RenderState.BlendMode#PremultAlpha} composes correctly
+   * — the halo then adds light to what lies under it instead of veiling it. With no halo showing,
+   * the premultiplied output under that blend is the ribbon as {@link #createRibbon} draws it.
+   *
+   * @param ribbon a material made by {@link #createRibbon}
+   * @param haloPx the full width of the halo, in screen pixels (must be positive)
+   */
+  public void enableRibbonHalo(Material ribbon, float haloPx) {
+    ribbon.setFloat("HaloPx", haloPx);
+    ribbon.getAdditionalRenderState().setBlendMode(RenderState.BlendMode.PremultAlpha);
+  }
+
+  /**
    * Creates an unshaded material with alpha blending enabled and depth write disabled.
    *
    * @param color the color (with alpha channel) to apply to the material

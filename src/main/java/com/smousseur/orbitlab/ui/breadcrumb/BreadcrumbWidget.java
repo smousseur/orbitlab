@@ -9,6 +9,7 @@ import com.simsilica.lemur.Panel;
 import com.smousseur.orbitlab.app.view.ViewMode;
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.ui.AppStyles;
+import com.smousseur.orbitlab.ui.UiKit;
 import com.smousseur.orbitlab.ui.UiLayers;
 import com.smousseur.orbitlab.ui.form.FormStyles;
 import java.util.ArrayDeque;
@@ -54,6 +55,7 @@ public final class BreadcrumbWidget implements AutoCloseable {
     this.onRootSelected = Objects.requireNonNull(onRootSelected, "onRootSelected");
     this.onBodySelected = Objects.requireNonNull(onBodySelected, "onBodySelected");
     this.band = new Container(BreadcrumbStyles.BAND, FormStyles.STYLE);
+    UiKit.shield(band);
   }
 
   /**

@@ -13,6 +13,7 @@ import com.smousseur.orbitlab.app.HudSurfaces;
 import com.smousseur.orbitlab.app.OrekitTime;
 import com.smousseur.orbitlab.app.SimulationClock;
 import com.smousseur.orbitlab.ui.AppStyles;
+import com.smousseur.orbitlab.ui.UiKit;
 import com.smousseur.orbitlab.ui.UiLayers;
 import com.smousseur.orbitlab.ui.timeline.components.*;
 import java.util.Objects;
@@ -82,6 +83,7 @@ public class TimelineWidget implements AutoCloseable {
     Vector3f capsuleSize = new Vector3f(CAPSULE_WIDTH, CAPSULE_HEIGHT, 0f);
     root.setPreferredSize(capsuleSize);
     root.setSize(capsuleSize);
+    UiKit.shield(root);
     timelineNode.attachChild(root);
 
     // Live indicator — leftmost cluster

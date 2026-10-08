@@ -10,11 +10,13 @@ import java.util.Objects;
  *     finite and positive)
  * @param orbitCamera the orbit camera tuning configuration
  * @param cameraTransition the tuning of the animated focus transitions
+ * @param hover the tuning of the hover over planets and their orbits
  */
 public record EngineConfig(
     float systemRadiusWorldUnits,
     OrbitCameraConfig orbitCamera,
-    CameraTransitionConfig cameraTransition) {
+    CameraTransitionConfig cameraTransition,
+    HoverConfig hover) {
 
   public EngineConfig {
     if (!Float.isFinite(systemRadiusWorldUnits) || systemRadiusWorldUnits <= 0f) {
@@ -22,6 +24,7 @@ public record EngineConfig(
     }
     Objects.requireNonNull(orbitCamera, "orbitCamera");
     Objects.requireNonNull(cameraTransition, "cameraTransition");
+    Objects.requireNonNull(hover, "hover");
   }
 
   /**
@@ -33,6 +36,7 @@ public record EngineConfig(
   public static EngineConfig defaultSolarSystem() {
     float systemRadius = 20_000f;
     OrbitCameraConfig cam = OrbitCameraConfig.defaultForSystemRadius(systemRadius);
-    return new EngineConfig(systemRadius, cam, CameraTransitionConfig.defaults());
+    return new EngineConfig(
+        systemRadius, cam, CameraTransitionConfig.defaults(), HoverConfig.defaults());
   }
 }

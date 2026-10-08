@@ -150,8 +150,10 @@ public final class PlanetPoseAppState extends BaseAppState {
           new LodView(
               guiNode,
               config,
+              context.getEngineConfig().hover(),
               context.model3dAttacher(),
               () -> onSelectPlanet(body),
+              entered -> onIconHover(body, entered),
               show3d -> sceneGraph.setOrbitVisible(body, !show3d));
       PlanetPresenter presenter = new PlanetPresenter(body, view);
       presenter.setVisible(!body.isSatellite());
@@ -282,6 +284,18 @@ public final class PlanetPoseAppState extends BaseAppState {
     // The focus switch and the framing distance both belong to CameraTransitionAppState, which
     // animates its way there and drops the click if a transition is already playing.
     context.cameraTransition().requestPlanet(body);
+  }
+
+  /**
+   * Reports a planet icon's hover to the shared hover state. The icon does not light itself: the
+   * hover state resolves the icon against the orbits and pushes the planet's intensity back.
+   */
+  private void onIconHover(SolarSystemBody body, boolean entered) {
+    if (entered) {
+      context.hoverState().iconEntered(body);
+    } else {
+      context.hoverState().iconExited(body);
+    }
   }
 
   @Override

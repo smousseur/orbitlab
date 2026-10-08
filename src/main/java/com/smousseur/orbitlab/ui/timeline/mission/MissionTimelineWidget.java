@@ -28,6 +28,7 @@ import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemeris;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.PhaseRun;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.TrajectoryPolyline;
 import com.smousseur.orbitlab.ui.AppStyles;
+import com.smousseur.orbitlab.ui.UiKit;
 import com.smousseur.orbitlab.ui.UiLayers;
 import com.smousseur.orbitlab.ui.timeline.TimelineStyles;
 import java.util.ArrayList;
@@ -222,6 +223,7 @@ public final class MissionTimelineWidget implements AutoCloseable {
     Vector3f size = new Vector3f(WIDTH, HEIGHT, 0f);
     root.setPreferredSize(size);
     root.setSize(size);
+    UiKit.shield(root);
 
     missionDot = new Panel(DOT_SIZE, DOT_SIZE, TimelineStyles.STYLE);
     missionDot.setBackground(new QuadBackgroundComponent(AppStyles.TL_CYAN));

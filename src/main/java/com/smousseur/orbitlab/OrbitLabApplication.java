@@ -34,6 +34,7 @@ import com.smousseur.orbitlab.states.mission.TelemetryWidgetAppState;
 import com.smousseur.orbitlab.states.orbits.OrbitInitAppState;
 import com.smousseur.orbitlab.states.orbits.OrbitRuntimeAppState;
 import com.smousseur.orbitlab.states.scene.BreadcrumbWidgetAppState;
+import com.smousseur.orbitlab.states.scene.HoverAppState;
 import com.smousseur.orbitlab.states.scene.MeshCalibrationAppState;
 import com.smousseur.orbitlab.states.scene.PlanetHudMarkersAppState;
 import com.smousseur.orbitlab.states.scene.PlanetPoseAppState;
@@ -110,6 +111,9 @@ public class OrbitLabApplication extends SimpleApplication implements Model3dAtt
             () -> wizardState.isWizardVisible() || cameraTransition.isActive());
     applicationContext.setOrbitCamera(orbitCam);
     stateManager.attach(orbitCam);
+    // After the camera it projects through, before the mission icons and the planet markers it
+    // sets the hover freeze and intensities for.
+    stateManager.attach(new HoverAppState(applicationContext));
 
     stateManager.attach(new MissionOrchestratorAppState(applicationContext));
     stateManager.attach(new PlanetHudMarkersAppState(applicationContext));

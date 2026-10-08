@@ -11,6 +11,7 @@ import java.util.Objects;
 public class GuiGraph {
   private final Node guiRoot = new Node("guiRoot");
   private final Node guiFrame = new Node("guiFrame");
+  private final Node sceneSensorNode = new Node("sceneSensorNode");
   private final Node timelineNode = new Node("timelineNode");
   private final Node breadcrumbNode = new Node("breadcrumbNode");
   private final Node planetBillboardsNode = new Node("planetBillboardsNode");
@@ -20,6 +21,7 @@ public class GuiGraph {
 
   public GuiGraph() {
     guiRoot.attachChild(guiFrame);
+    guiFrame.attachChild(sceneSensorNode);
     guiFrame.attachChild(timelineNode);
     guiFrame.attachChild(breadcrumbNode);
     guiFrame.attachChild(planetBillboardsNode);
@@ -47,6 +49,17 @@ public class GuiGraph {
    */
   public Node getGuiFrame() {
     return guiFrame;
+  }
+
+  /**
+   * Returns the node for the scene sensor, the invisible full-screen surface that tells the hover
+   * whether the cursor is over the scene. It sits behind every other surface by its depth, not by
+   * this node's place in the graph: see {@code UiLayers.SCENE}.
+   *
+   * @return the scene sensor node
+   */
+  public Node getSceneSensorNode() {
+    return sceneSensorNode;
   }
 
   /**
