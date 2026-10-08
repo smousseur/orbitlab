@@ -90,6 +90,7 @@ public class TelemetryWidget implements AutoCloseable {
     this.root.setBackground(FormStyles.shellBg());
     this.root.setPreferredSize(new Vector3f(WIDTH, HEIGHT, 0));
     this.root.setInsetsComponent(new InsetsComponent(new Insets3f(PAD_Y, PAD_X, PAD_Y, PAD_X)));
+    UiKit.shield(root);
     telemetryNode.attachChild(root);
 
     // Identity / return row: who this telemetry is for, and — for a debris — a click back to the
@@ -314,6 +315,7 @@ public class TelemetryWidget implements AutoCloseable {
 
   public void setVisible(boolean visible) {
     root.setCullHint(visible ? Spatial.CullHint.Inherit : Spatial.CullHint.Always);
+    UiKit.setShieldEnabled(root, visible);
   }
 
   public void layoutTopRight(int screenWidth, int screenHeight) {

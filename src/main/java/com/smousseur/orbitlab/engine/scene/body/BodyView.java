@@ -103,6 +103,14 @@ public interface BodyView {
   default void setRingSunlight(Vector3f sunDirectionWorld, float sunApparentRadiusRadians) {}
 
   /**
+   * Shows how strongly this body is hovered: its icon grows and brightens with the intensity.
+   * Default implementation is a no-op, for views without an icon.
+   *
+   * @param intensity the hover intensity, 0 at rest and 1 fully lit
+   */
+  default void setHoverIntensity(float intensity) {}
+
+  /**
    * Sets the occulter used by this body's per-fragment eclipse shading . {@code
    * occluderPositionWorld} and {@code occluderRadiusWorld} are in this body's own world space —
    * world units, relative to this body's own anchor. {@code sunDirectionWorld} is a unit vector in

@@ -71,6 +71,7 @@ public final class MissionDisplayPanelWidget implements AutoCloseable {
     root.setPreferredSize(new Vector3f(WINDOW_WIDTH, WINDOW_HEIGHT, 0));
     root.setBackground(FormStyles.shellBg());
     root.setInsetsComponent(new InsetsComponent(new Insets3f(5, 0, 5, 0)));
+    UiKit.shield(root);
 
     DisplayPanelHeader header = new DisplayPanelHeader(WINDOW_WIDTH, () -> onManageClicked.run());
     root.addChild(header.getNode());

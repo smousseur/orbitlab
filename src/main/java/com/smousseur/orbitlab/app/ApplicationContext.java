@@ -45,6 +45,7 @@ public class ApplicationContext {
   private final MissionContext missionContext;
   private final DisplaySettings displaySettings = new DisplaySettings();
   private final HudSurfaces hudSurfaces = new HudSurfaces();
+  private final HoverState hoverState = new HoverState();
   private final FocusController focusController;
   private Camera nearCamera;
   private Camera skyCamera;
@@ -282,6 +283,16 @@ public class ApplicationContext {
    */
   public HudSurfaces hudSurfaces() {
     return hudSurfaces;
+  }
+
+  /**
+   * Returns what the cursor hovers: written by the icon and scene listeners and by the hover state,
+   * read by the mission icons for the hover freeze. Render thread only.
+   *
+   * @return the hover state
+   */
+  public HoverState hoverState() {
+    return hoverState;
   }
 
   /**

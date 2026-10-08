@@ -140,6 +140,17 @@ public final class OrbitCameraAppState extends BaseAppState
   }
 
   /**
+   * Whether the user is moving the camera by hand: the right button is held, which turns it, or
+   * pans it with shift. Read by the hover, which freezes for the duration so that an icon or an
+   * orbit sweeping under a still cursor does not light up.
+   *
+   * @return {@code true} while the right button drags the camera
+   */
+  public boolean isRotating() {
+    return mmbDown;
+  }
+
+  /**
    * Returns the camera's current turntable orientation.
    *
    * @return the current yaw and pitch

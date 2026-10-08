@@ -5,6 +5,7 @@ import com.jme3.math.Vector3f;
 import com.jme3.renderer.Camera;
 import com.jme3.scene.Node;
 import com.jme3.scene.Spatial;
+import com.smousseur.orbitlab.engine.HoverConfig;
 import com.smousseur.orbitlab.engine.scene.body.lod.BillboardIconView;
 import com.smousseur.orbitlab.engine.scene.body.lod.Model3dAttacher;
 import com.smousseur.orbitlab.engine.scene.body.lod.Model3dView;
@@ -33,23 +34,29 @@ public final class LodView implements BodyView {
    *
    * @param guiNode the GUI node for attaching the 2D icon overlay
    * @param config the render configuration for this body
+   * @param hoverConfig the hover tuning of the icon
    * @param onClick optional click handler for the icon; null for no click behavior
+   * @param onHover optional hover handler for the icon; receives {@code true} when the cursor
+   *     enters it, {@code false} when it leaves it or the icon is hidden under it. May be null.
    * @param onLodChanged optional callback invoked when LOD state changes; receives {@code true}
    *     when the 3D model is shown, {@code false} when the icon is shown. May be null.
    */
   public LodView(
       Node guiNode,
       BodyRenderConfig config,
+      HoverConfig hoverConfig,
       Model3dAttacher model3dAttacher,
       Runnable onClick,
+      Consumer<Boolean> onHover,
       Consumer<Boolean> onLodChanged) {
     Objects.requireNonNull(guiNode, "guiNode");
     Objects.requireNonNull(config, "config");
+    Objects.requireNonNull(hoverConfig, "hoverConfig");
     this.config = config;
     this.onLodChanged = onLodChanged;
     this.farAnchor = new Node("Anchor-" + config.id());
     this.anchor3d = new Node("BodyAnchor-" + config.id());
-    this.iconView = new BillboardIconView(guiNode, config, onClick);
+    this.iconView = new BillboardIconView(guiNode, config, hoverConfig, onClick, onHover);
     this.model3dView = new Model3dView(model3dAttacher, anchor3d, config);
   }
 
@@ -92,6 +99,11 @@ public final class LodView implements BodyView {
   @Override
   public void setRingSunlight(Vector3f sunDirectionWorld, float sunApparentRadiusRadians) {
     model3dView.setRingSunlight(sunDirectionWorld, sunApparentRadiusRadians);
+  }
+
+  @Override
+  public void setHoverIntensity(float intensity) {
+    iconView.setHoverIntensity(intensity);
   }
 
   /**

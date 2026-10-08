@@ -14,6 +14,12 @@ package com.smousseur.orbitlab.ui;
 public final class UiLayers {
 
   /**
+   * The scene sensor, behind every other surface: it is under the cursor exactly when nothing in
+   * front of the scene is, which is when the orbits may be hovered.
+   */
+  public static final float SCENE = -10f;
+
+  /**
    * Permanent HUD: breadcrumb band, timeline, telemetry, planet billboards. The time capsule stacks
    * its own components up to a local {@code z} of 5; the mission timeline posed above it goes to 10
    * (its hover tooltip), so that tooltip ties with {@link #PANEL} in world {@code z}.
