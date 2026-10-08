@@ -106,6 +106,11 @@ public final class LodView implements BodyView {
     iconView.setHoverIntensity(intensity);
   }
 
+  @Override
+  public void setHoverDim(float dim) {
+    iconView.setHoverDim(dim);
+  }
+
   /**
    * Returns the 3D model view component for this body.
    *

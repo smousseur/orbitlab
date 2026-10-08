@@ -6,7 +6,7 @@ import com.jme3.math.ColorRGBA;
 import com.smousseur.orbitlab.engine.HoverConfig;
 import org.junit.jupiter.api.Test;
 
-/** How a planet or mission icon looks at a given hover intensity. */
+/** How a planet or mission icon looks at a given hover intensity and dimming. */
 class IconHoverLookTest {
 
   private static final float TOLERANCE = 1e-5f;
@@ -15,7 +15,7 @@ class IconHoverLookTest {
 
   @Test
   void atRestTheIconKeepsItsSizeAndColour() {
-    IconHoverLook look = IconHoverLook.of(0f, BASE, CONFIG);
+    IconHoverLook look = IconHoverLook.of(0f, 1f, BASE, CONFIG);
 
     assertEquals(16f, look.iconPx(), TOLERANCE);
     assertColor(BASE, look.ring());
@@ -24,7 +24,7 @@ class IconHoverLookTest {
 
   @Test
   void fullyLitTheIconGrowsAndBlendsTowardWhite() {
-    IconHoverLook look = IconHoverLook.of(1f, BASE, CONFIG);
+    IconHoverLook look = IconHoverLook.of(1f, 1f, BASE, CONFIG);
 
     assertEquals(25f, look.iconPx(), TOLERANCE);
     assertColor(new ColorRGBA(0.56f, 0.67f, 0.78f, 0.8f), look.ring());
@@ -37,14 +37,33 @@ class IconHoverLookTest {
     assertEquals(0.875f, IconHoverLook.easeOut(0.5f), TOLERANCE);
     assertEquals(1f, IconHoverLook.easeOut(1f), TOLERANCE);
 
-    assertEquals(16f + 9f * 0.875f, IconHoverLook.of(0.5f, BASE, CONFIG).iconPx(), TOLERANCE);
+    assertEquals(16f + 9f * 0.875f, IconHoverLook.of(0.5f, 1f, BASE, CONFIG).iconPx(), TOLERANCE);
+  }
+
+  @Test
+  void dimmingFadesTheRingAndTheNameButKeepsTheirColour() {
+    IconHoverLook look = IconHoverLook.of(0f, 0.5f, BASE, CONFIG);
+
+    assertEquals(16f, look.iconPx(), TOLERANCE);
+    assertColor(new ColorRGBA(0.2f, 0.4f, 0.6f, 0.4f), look.ring());
+    assertColor(new ColorRGBA(0.2f, 0.4f, 0.6f, 0.4f), look.label());
+  }
+
+  /** Mid-crossing, an icon can still be lit while it is already dimmed: the two compose. */
+  @Test
+  void dimmingComposesWithTheLitLook() {
+    IconHoverLook look = IconHoverLook.of(1f, 0.5f, BASE, CONFIG);
+
+    assertEquals(25f, look.iconPx(), TOLERANCE);
+    assertColor(new ColorRGBA(0.56f, 0.67f, 0.78f, 0.4f), look.ring());
+    assertColor(new ColorRGBA(0.88f, 0.91f, 0.94f, 0.4f), look.label());
   }
 
   @Test
   void leavesTheBaseColourUntouched() {
     ColorRGBA base = BASE.clone();
 
-    IconHoverLook.of(1f, base, CONFIG);
+    IconHoverLook.of(1f, 0.5f, base, CONFIG);
 
     assertColor(BASE, base);
   }

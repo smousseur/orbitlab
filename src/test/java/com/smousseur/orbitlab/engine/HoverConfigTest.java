@@ -27,6 +27,8 @@ class HoverConfigTest {
     assertEquals(0.35f, config.orbitCoreWhiteBlend());
     assertEquals(18f, config.haloPx());
     assertEquals(0.36f, config.haloPeakAlpha());
+    assertEquals(0.35f, config.orbitDimAlpha());
+    assertEquals(0.5f, config.iconDimAlpha());
   }
 
   @Test
@@ -86,6 +88,18 @@ class HoverConfigTest {
     assertThrows(IllegalArgumentException.class, () -> orbitConfig(1f, 0.35f, 18f, 1.1f));
   }
 
+  @Test
+  void acceptsDimmingFloorsAtTheEdgesOfTheUnitInterval() {
+    assertDoesNotThrow(() -> dimConfig(0f, 1f));
+  }
+
+  @Test
+  void refusesADimmingFloorOutsideTheUnitInterval() {
+    assertThrows(IllegalArgumentException.class, () -> dimConfig(-0.1f, 0.5f));
+    assertThrows(IllegalArgumentException.class, () -> dimConfig(0.35f, 1.1f));
+    assertThrows(IllegalArgumentException.class, () -> dimConfig(Float.NaN, 0.5f));
+  }
+
   private static HoverConfig config(
       float enterPx,
       float exitPx,
@@ -108,7 +122,9 @@ class HoverConfigTest {
         1f,
         0.35f,
         18f,
-        0.36f);
+        0.36f,
+        0.35f,
+        0.5f);
   }
 
   private static HoverConfig orbitConfig(
@@ -127,6 +143,28 @@ class HoverConfigTest {
         coreGrowPx,
         coreWhiteBlend,
         haloPx,
-        haloPeakAlpha);
+        haloPeakAlpha,
+        0.35f,
+        0.5f);
+  }
+
+  private static HoverConfig dimConfig(float orbitDimAlpha, float iconDimAlpha) {
+    return new HoverConfig(
+        8f,
+        12f,
+        4,
+        0.05f,
+        0.085f,
+        1e-3f,
+        16f,
+        25f,
+        0.45f,
+        0.85f,
+        1f,
+        0.35f,
+        18f,
+        0.36f,
+        orbitDimAlpha,
+        iconDimAlpha);
   }
 }

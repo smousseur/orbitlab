@@ -10,7 +10,9 @@ import com.smousseur.orbitlab.app.ApplicationContext;
 import com.smousseur.orbitlab.app.HoverState;
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.engine.HoverConfig;
+import com.smousseur.orbitlab.engine.scene.body.BodyView;
 import com.smousseur.orbitlab.engine.scene.graph.SceneGraph;
+import com.smousseur.orbitlab.engine.scene.hover.HoverDim;
 import com.smousseur.orbitlab.engine.scene.hover.HoverFade;
 import com.smousseur.orbitlab.engine.scene.hover.HoverResolver;
 import com.smousseur.orbitlab.engine.scene.hover.HoverTarget;
@@ -19,6 +21,7 @@ import com.smousseur.orbitlab.engine.scene.hover.OrbitHoverDetector;
 import com.smousseur.orbitlab.engine.scene.hover.OrbitScreenProjector;
 import com.smousseur.orbitlab.engine.scene.planet.PlanetPresenter;
 import com.smousseur.orbitlab.ui.SceneHoverSensor;
+import java.util.Collection;
 import java.util.EnumMap;
 import java.util.Map;
 import java.util.Objects;
@@ -26,8 +29,8 @@ import java.util.Optional;
 import java.util.Set;
 
 /**
- * Resolves, once a frame, which planet the cursor designates — by its icon or by its orbit — and
- * lights that planet's icon and orbit in a fade.
+ * Resolves, once a frame, which planet the cursor designates — by its icon or by its orbit — lights
+ * that planet's icon and orbit in a fade, and dims the other bodies meanwhile.
  *
  * <p>Each frame, in order:
  *
@@ -39,8 +42,11 @@ import java.util.Set;
  *   <li>{@link HoverResolver} designates a planet from the facts the listeners recorded in {@link
  *       HoverState}; the orbit detection it may ask for projects the orbit ribbons through the far
  *       camera — the one they are drawn with — and searches them around the cursor;
- *   <li>every planet's fade moves toward lit or unlit, in real time, and its intensity is pushed to
- *       the planet's view and to its orbit's halo;
+ *   <li>every planet's fade moves toward lit or unlit, in real time;
+ *   <li>each planet's intensity is pushed to its view and to its orbit's halo, together with how
+ *       far it trails the most lit planet, which dims its icon and its orbit — see {@link
+ *       HoverDim}. The most lit intensity has to be known before anything is pushed, hence the two
+ *       passes;
  *   <li>the scene sensor follows the screen's size.
  * </ol>
  *
@@ -116,16 +122,29 @@ public final class HoverAppState extends BaseAppState {
     state.update(target, frozen);
 
     SolarSystemBody lit = target == null ? null : target.body();
-    for (PlanetPresenter presenter : context.getPlanets().values()) {
+    Collection<PlanetPresenter> planets = context.getPlanets().values();
+    float strongest = 0f;
+    for (PlanetPresenter presenter : planets) {
       SolarSystemBody body = presenter.body();
-      float intensity = fades.get(body).advance(body == lit, tpf);
-      presenter.view().setHoverIntensity(intensity);
+      strongest = Math.max(strongest, fades.get(body).advance(body == lit, tpf));
+    }
+    pushLooks(planets, strongest);
+    sensor.update(camera);
+  }
+
+  private void pushLooks(Collection<PlanetPresenter> planets, float strongest) {
+    for (PlanetPresenter presenter : planets) {
+      SolarSystemBody body = presenter.body();
+      float intensity = fades.get(body).intensity();
+      BodyView view = presenter.view();
+      view.setHoverIntensity(intensity);
+      view.setHoverDim(HoverDim.of(strongest, intensity, config.iconDimAlpha()));
       OrbitHalo halo = halos.get(body);
       if (halo != null) {
         halo.setIntensity(intensity);
+        halo.setDim(HoverDim.of(strongest, intensity, config.orbitDimAlpha()));
       }
     }
-    sensor.update(camera);
   }
 
   private Optional<SolarSystemBody> pickOrbit(SolarSystemBody current) {

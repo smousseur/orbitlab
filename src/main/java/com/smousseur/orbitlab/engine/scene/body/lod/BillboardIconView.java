@@ -24,8 +24,9 @@ import java.util.function.Consumer;
  *
  * <p>The icon tracks the body's 3D position by projecting it to screen coordinates and supports
  * mouse interaction: a left press triggers the optional onClick handler, and the cursor entering
- * and leaving the icon is reported to the optional hover handler. How lit the icon looks is not its
- * own decision: it shows the hover intensity it is given, see {@link #setHoverIntensity}.
+ * and leaving the icon is reported to the optional hover handler. How lit or dimmed the icon looks
+ * is not its own decision: it shows the hover intensity and the dimming it is given, see {@link
+ * #setHoverIntensity} and {@link #setHoverDim}.
  *
  * <p>A hidden icon is neither hoverable nor clickable, although Lemur still picks it — see {@link
  * IconHoverGuard}.
@@ -42,6 +43,7 @@ public class BillboardIconView {
   private final HoverConfig hoverConfig;
   private final IconHoverGuard hoverGuard;
   private float hoverIntensity;
+  private float hoverDim = 1f;
 
   /**
    * Creates a new billboard icon view and attaches it to the GUI node.
@@ -111,7 +113,7 @@ public class BillboardIconView {
       return;
     }
     hoverIntensity = intensity;
-    IconHoverLook look = IconHoverLook.of(intensity, dotIconColor, hoverConfig);
+    IconHoverLook look = look();
     // Lemur 1.16.0's IconComponent builds a new quad on every resize and attaches it without
     // detaching the previous one: resized in place, each frame of a fade would leave a ring drawn
     // behind. Detached from its label first, the icon takes its current quad away with it, and
@@ -119,6 +121,29 @@ public class BillboardIconView {
     labelIcon.setIcon(null);
     dotIcon.setIconSize(new Vector2f(look.iconPx(), look.iconPx()));
     labelIcon.setIcon(dotIcon);
+    recolor(look);
+  }
+
+  /**
+   * Shows how far the icon fades back while another body is lit: its ring and its name fade
+   * together, keeping their colour and size, as {@link IconHoverLook} computes it. The icon is only
+   * recoloured when the dimming changes, and never resized.
+   *
+   * @param dim the opacity factor, 1 for an icon that is not dimmed
+   */
+  public void setHoverDim(float dim) {
+    if (dim == hoverDim) {
+      return;
+    }
+    hoverDim = dim;
+    recolor(look());
+  }
+
+  private IconHoverLook look() {
+    return IconHoverLook.of(hoverIntensity, hoverDim, dotIconColor, hoverConfig);
+  }
+
+  private void recolor(IconHoverLook look) {
     dotIcon.setColor(look.ring());
     label.setColor(look.label());
   }
