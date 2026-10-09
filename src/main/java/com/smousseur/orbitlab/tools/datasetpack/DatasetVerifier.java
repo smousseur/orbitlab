@@ -17,6 +17,10 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
@@ -33,7 +37,9 @@ import tools.jackson.databind.json.JsonMapper;
  * and nothing more, and it is not the repository's latest release — which would send the README's
  * download link to a release without the application.
  *
- * <p>Nothing is retried: a failed check is reported, and the verification is run again.
+ * <p>Only the wait for each response's headers is bounded; a download's body is not, however long
+ * it lasts, since the largest pieces take minutes on an ordinary connection. Nothing is retried: a
+ * failed check is reported, and the verification is run again.
  */
 public final class DatasetVerifier {
 
@@ -86,6 +92,7 @@ public final class DatasetVerifier {
   private final HttpClient client;
   private final URI downloadBase;
   private final URI repositoryApi;
+  private final Duration responseTimeout;
 
   /**
    * Creates a verifier.
@@ -96,9 +103,24 @@ public final class DatasetVerifier {
    * @param repositoryApi the repository's API address, ending with {@code /}
    */
   public DatasetVerifier(HttpClient client, URI downloadBase, URI repositoryApi) {
+    this(client, downloadBase, repositoryApi, RESPONSE_TIMEOUT);
+  }
+
+  /**
+   * Creates a verifier with another bound on the wait for a response.
+   *
+   * @param client the HTTP client, which must follow redirects
+   * @param downloadBase the folder holding one sub-folder per tag, ending with {@code /}
+   * @param repositoryApi the repository's API address, ending with {@code /}
+   * @param responseTimeout how long to wait for a response's headers; a download's body, however
+   *     long, is not bounded
+   */
+  DatasetVerifier(
+      HttpClient client, URI downloadBase, URI repositoryApi, Duration responseTimeout) {
     this.client = Objects.requireNonNull(client, "client");
     this.downloadBase = Objects.requireNonNull(downloadBase, "downloadBase");
     this.repositoryApi = Objects.requireNonNull(repositoryApi, "repositoryApi");
+    this.responseTimeout = Objects.requireNonNull(responseTimeout, "responseTimeout");
   }
 
   /**
@@ -139,44 +161,70 @@ public final class DatasetVerifier {
   private PieceResult download(DatasetManifest manifest, DatasetPiece piece, MessageDigest whole)
       throws InterruptedException {
     URI uri = manifest.pieceUri(downloadBase, piece);
-    HttpRequest request = HttpRequest.newBuilder(uri).timeout(RESPONSE_TIMEOUT).GET().build();
     long started = System.nanoTime();
     long bytes = 0;
+    // Not HttpRequest.timeout: once a request is redirected, as every GitHub release download is,
+    // Java 21's client keeps that timer running through the body and cuts any download that lasts
+    // longer. Only the wait for the response headers is bounded here.
+    CompletableFuture<HttpResponse<InputStream>> pending =
+        client.sendAsync(
+            HttpRequest.newBuilder(uri).GET().build(), HttpResponse.BodyHandlers.ofInputStream());
+    HttpResponse<InputStream> response;
     try {
-      HttpResponse<InputStream> response =
-          client.send(request, HttpResponse.BodyHandlers.ofInputStream());
-      try (InputStream body = response.body()) {
-        if (response.statusCode() != 200) {
-          return new PieceResult(
-              new Check(piece.name(), false, "HTTP " + response.statusCode() + " from " + uri), 0);
-        }
-        MessageDigest digest = Sha256.newDigest();
-        byte[] buffer = new byte[READ_BUFFER_BYTES];
-        int read = body.read(buffer);
-        while (read >= 0) {
-          digest.update(buffer, 0, read);
-          whole.update(buffer, 0, read);
-          bytes += read;
-          read = body.read(buffer);
-        }
-        double seconds = (System.nanoTime() - started) / 1e9;
-        String sha = Sha256.hex(digest);
-        boolean ok = bytes == piece.size() && sha.equals(piece.sha256());
-        String detail =
-            String.format(
-                    Locale.ROOT,
-                    "%,d bytes in %.1f s (%.1f MiB/s), sha256 %s",
-                    bytes,
-                    seconds,
-                    bytes / (1024.0 * 1024.0) / Math.max(seconds, 1e-9),
-                    sha)
-                + (ok ? "" : mismatch(piece.size(), piece.sha256()));
-        return new PieceResult(new Check(piece.name(), ok, detail), bytes);
+      response = pending.get(responseTimeout.toMillis(), TimeUnit.MILLISECONDS);
+    } catch (TimeoutException e) {
+      pending.cancel(true);
+      return new PieceResult(
+          new Check(
+              piece.name(),
+              false,
+              "no response from " + uri + " within " + responseTimeout.toSeconds() + " s"),
+          0);
+    } catch (ExecutionException e) {
+      return new PieceResult(
+          new Check(piece.name(), false, "request failed: " + describe(e.getCause())), 0);
+    }
+    try (InputStream body = response.body()) {
+      if (response.statusCode() != 200) {
+        return new PieceResult(
+            new Check(piece.name(), false, "HTTP " + response.statusCode() + " from " + uri), 0);
       }
+      MessageDigest digest = Sha256.newDigest();
+      byte[] buffer = new byte[READ_BUFFER_BYTES];
+      int read = body.read(buffer);
+      while (read >= 0) {
+        digest.update(buffer, 0, read);
+        whole.update(buffer, 0, read);
+        bytes += read;
+        read = body.read(buffer);
+      }
+      double seconds = (System.nanoTime() - started) / 1e9;
+      String sha = Sha256.hex(digest);
+      boolean ok = bytes == piece.size() && sha.equals(piece.sha256());
+      String detail =
+          String.format(
+                  Locale.ROOT,
+                  "%,d bytes in %.1f s (%.1f MiB/s), sha256 %s",
+                  bytes,
+                  seconds,
+                  bytes / (1024.0 * 1024.0) / Math.max(seconds, 1e-9),
+                  sha)
+              + (ok ? "" : mismatch(piece.size(), piece.sha256()));
+      return new PieceResult(new Check(piece.name(), ok, detail), bytes);
     } catch (IOException e) {
       return new PieceResult(
-          new Check(piece.name(), false, "download failed after " + bytes + " bytes: " + e), bytes);
+          new Check(
+              piece.name(), false, "download failed after " + bytes + " bytes: " + describe(e)),
+          bytes);
     }
+  }
+
+  /**
+   * An exception and its cause: the JDK's response stream reports every failure as "closed", with
+   * what actually happened only in the cause.
+   */
+  private static String describe(Throwable e) {
+    return e.getCause() == null ? e.toString() : e + " (caused by " + e.getCause() + ")";
   }
 
   private Check checkReleaseFiles(DatasetManifest manifest) throws InterruptedException {
@@ -190,7 +238,7 @@ public final class DatasetVerifier {
       }
       release = response.json();
     } catch (IOException e) {
-      return new Check(subject, false, "cannot read " + uri + ": " + e);
+      return new Check(subject, false, "cannot read " + uri + ": " + describe(e));
     }
     Map<String, Long> published = new LinkedHashMap<>();
     for (JsonNode asset : release.path("assets")) {
@@ -237,16 +285,17 @@ public final class DatasetVerifier {
           ? new Check(subject, false, manifest.tag() + " is the latest release of the repository")
           : new Check(subject, true, latest + ", not " + manifest.tag());
     } catch (IOException e) {
-      return new Check(subject, false, "cannot read " + uri + ": " + e);
+      return new Check(subject, false, "cannot read " + uri + ": " + describe(e));
     }
   }
 
   private record ApiResponse(int status, JsonNode json) {}
 
+  /** A small JSON answer, not redirected: a request timeout bounds the whole exchange safely. */
   private ApiResponse getJson(URI uri) throws IOException, InterruptedException {
     HttpRequest request =
         HttpRequest.newBuilder(uri)
-            .timeout(RESPONSE_TIMEOUT)
+            .timeout(responseTimeout)
             .header("Accept", "application/vnd.github+json")
             .GET()
             .build();

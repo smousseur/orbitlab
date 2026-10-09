@@ -15,12 +15,17 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,8 +33,9 @@ import org.junit.jupiter.api.Test;
 /**
  * The release check against a local server shaped like GitHub: every download address answers a
  * {@code 302} to where the file really is, and a small API lists the release's files and names the
- * latest release. A release that matches passes; a changed byte, a missing file, a file too many or
- * a data release marked latest each fail.
+ * latest release. A release that matches passes, even when a body lasts longer than the response
+ * timeout; a changed byte, a missing file, a file too many, a server that does not answer in time
+ * or a data release marked latest each fail.
  */
 class DatasetVerifierTest {
 
@@ -37,7 +43,10 @@ class DatasetVerifierTest {
 
   private final Map<String, byte[]> served = new LinkedHashMap<>();
   private final List<String> listed = new ArrayList<>();
+  private final Set<String> slow = ConcurrentHashMap.newKeySet();
+  private final Set<String> silent = ConcurrentHashMap.newKeySet();
   private String latestTag = "v2.0.0";
+  private ExecutorService executor;
   private HttpServer server;
   private URI base;
   private DatasetManifest manifest;
@@ -74,6 +83,8 @@ class DatasetVerifierTest {
                         new DatasetPiece("Y.bin.002", 100, sha256(second))))));
 
     server = HttpServer.create(new InetSocketAddress(InetAddress.getLoopbackAddress(), 0), 0);
+    executor = Executors.newCachedThreadPool();
+    server.setExecutor(executor);
     base = URI.create("http://127.0.0.1:" + server.getAddress().getPort() + "/");
     server.createContext("/download/", this::redirect);
     server.createContext("/assets/", this::serveAsset);
@@ -85,6 +96,15 @@ class DatasetVerifierTest {
   @AfterEach
   void stopServer() {
     server.stop(0);
+    executor.shutdownNow();
+  }
+
+  private static void pause(long millis) {
+    try {
+      Thread.sleep(millis);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+    }
   }
 
   private static String sha256(byte[] bytes) {
@@ -104,14 +124,31 @@ class DatasetVerifierTest {
     exchange.close();
   }
 
+  /**
+   * Serves a file; a {@code silent} one only after 3 s, a {@code slow} one in ten slices 250 ms
+   * apart, so its body lasts about 2.5 s.
+   */
   private void serveAsset(HttpExchange exchange) throws IOException {
-    byte[] body = served.get(lastSegment(exchange));
+    String name = lastSegment(exchange);
+    if (silent.contains(name)) {
+      pause(3_000);
+    }
+    byte[] body = served.get(name);
     if (body == null) {
       exchange.sendResponseHeaders(404, -1);
     } else {
       exchange.sendResponseHeaders(200, body.length);
       try (OutputStream out = exchange.getResponseBody()) {
-        out.write(body);
+        if (slow.contains(name)) {
+          int slice = Math.ceilDiv(body.length, 10);
+          for (int from = 0; from < body.length; from += slice) {
+            out.write(body, from, Math.min(slice, body.length - from));
+            out.flush();
+            pause(250);
+          }
+        } else {
+          out.write(body);
+        }
       }
     }
     exchange.close();
@@ -146,9 +183,14 @@ class DatasetVerifierTest {
   }
 
   private DatasetVerifier.Report verify() throws InterruptedException {
+    return verify(Duration.ofSeconds(10));
+  }
+
+  private DatasetVerifier.Report verify(Duration responseTimeout) throws InterruptedException {
     try (HttpClient client =
         HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NORMAL).build()) {
-      return new DatasetVerifier(client, base.resolve("download/"), base.resolve("api/"))
+      return new DatasetVerifier(
+              client, base.resolve("download/"), base.resolve("api/"), responseTimeout)
           .verify(manifest);
     }
   }
@@ -167,6 +209,32 @@ class DatasetVerifierTest {
     assertTrue(report.ok(), report.toString());
     assertEquals(6, report.checks().size(), report.toString());
     assertTrue(check(report, "ephemeris/Y.bin (pieces joined)").ok());
+  }
+
+  /**
+   * The case that broke the first verification of the real release: behind a redirect, a request
+   * timeout cut every download longer than it, whatever was still flowing.
+   */
+  @Test
+  void downloadsABodyLastingLongerThanTheResponseTimeoutBehindARedirect()
+      throws InterruptedException {
+    slow.add("X.bin");
+
+    DatasetVerifier.Report report = verify(Duration.ofSeconds(1));
+
+    assertTrue(report.ok(), report.toString());
+  }
+
+  @Test
+  void failsAPieceWhoseServerDoesNotAnswerInTime() throws InterruptedException {
+    silent.add("X.bin");
+
+    DatasetVerifier.Report report = verify(Duration.ofSeconds(1));
+
+    DatasetVerifier.Check late = check(report, "X.bin");
+    assertFalse(late.ok());
+    assertTrue(late.detail().contains("no response"), late.detail());
+    assertEquals(1, report.failures(), report.toString());
   }
 
   @Test
