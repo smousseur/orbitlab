@@ -1,0 +1,198 @@
+{
+  "formatVersion" : 1,
+  "tag" : "dataset-v1",
+  "files" : [ {
+    "path" : "ephemeris/SUN.bin",
+    "size" : 126137886,
+    "sha256" : "28069f9ba525d808aa98816d2fb10ed7b3df98750dbd9d2f223d1ecf78457e29",
+    "pieces" : [ {
+      "name" : "SUN.bin",
+      "size" : 126137886,
+      "sha256" : "28069f9ba525d808aa98816d2fb10ed7b3df98750dbd9d2f223d1ecf78457e29"
+    } ]
+  }, {
+    "path" : "ephemeris/MERCURY.bin",
+    "size" : 1454765615,
+    "sha256" : "f19a45abd7e036ff90bc79292aabb0c9a0425ae27cd2a650e414ca9fbfb1a9ad",
+    "pieces" : [ {
+      "name" : "MERCURY.bin",
+      "size" : 1454765615,
+      "sha256" : "f19a45abd7e036ff90bc79292aabb0c9a0425ae27cd2a650e414ca9fbfb1a9ad"
+    } ]
+  }, {
+    "path" : "ephemeris/VENUS.bin",
+    "size" : 551059752,
+    "sha256" : "40bc3d3a963fbedf4bbfbb4ab9efde77a61b65bc72db65b1bc5a52f87b90dae8",
+    "pieces" : [ {
+      "name" : "VENUS.bin",
+      "size" : 551059752,
+      "sha256" : "40bc3d3a963fbedf4bbfbb4ab9efde77a61b65bc72db65b1bc5a52f87b90dae8"
+    } ]
+  }, {
+    "path" : "ephemeris/EARTH.bin",
+    "size" : 712292488,
+    "sha256" : "ebd534e3bd213d3cb91e39929518e9e6eb9e4301e7c9b1f697484af8d8b9e3a4",
+    "pieces" : [ {
+      "name" : "EARTH.bin",
+      "size" : 712292488,
+      "sha256" : "ebd534e3bd213d3cb91e39929518e9e6eb9e4301e7c9b1f697484af8d8b9e3a4"
+    } ]
+  }, {
+    "path" : "ephemeris/MARS.bin",
+    "size" : 448804977,
+    "sha256" : "6176adcfded96cb4c4feb704caf67675992c8e8f41c06fb32d83246d1b79fff2",
+    "pieces" : [ {
+      "name" : "MARS.bin",
+      "size" : 448804977,
+      "sha256" : "6176adcfded96cb4c4feb704caf67675992c8e8f41c06fb32d83246d1b79fff2"
+    } ]
+  }, {
+    "path" : "ephemeris/JUPITER.bin",
+    "size" : 537381135,
+    "sha256" : "ac25f1d7aba4eb6886e04d09ed7470615e4ab6ce088cb264168857523a4cc0ff",
+    "pieces" : [ {
+      "name" : "JUPITER.bin",
+      "size" : 537381135,
+      "sha256" : "ac25f1d7aba4eb6886e04d09ed7470615e4ab6ce088cb264168857523a4cc0ff"
+    } ]
+  }, {
+    "path" : "ephemeris/SATURN.bin",
+    "size" : 451060174,
+    "sha256" : "5336e74b5ba9356f2154ec07b0e5853454bb5de7c359cc30ef5415a5930c7f2d",
+    "pieces" : [ {
+      "name" : "SATURN.bin",
+      "size" : 451060174,
+      "sha256" : "5336e74b5ba9356f2154ec07b0e5853454bb5de7c359cc30ef5415a5930c7f2d"
+    } ]
+  }, {
+    "path" : "ephemeris/URANUS.bin",
+    "size" : 170840352,
+    "sha256" : "b599fbbdc1e1fb5c12ab3435d956ff34cacd2c171400b9510ed2a0979e006254",
+    "pieces" : [ {
+      "name" : "URANUS.bin",
+      "size" : 170840352,
+      "sha256" : "b599fbbdc1e1fb5c12ab3435d956ff34cacd2c171400b9510ed2a0979e006254"
+    } ]
+  }, {
+    "path" : "ephemeris/NEPTUNE.bin",
+    "size" : 91442287,
+    "sha256" : "63abb58ab4186f4da009df8510bc3dca51e73a5f114287840c009f3670630ddc",
+    "pieces" : [ {
+      "name" : "NEPTUNE.bin",
+      "size" : 91442287,
+      "sha256" : "63abb58ab4186f4da009df8510bc3dca51e73a5f114287840c009f3670630ddc"
+    } ]
+  }, {
+    "path" : "ephemeris/PLUTO.bin",
+    "size" : 33242670,
+    "sha256" : "bf37c898334ce3c32b15dd94b36e33d7bba97d082d7d7649e0549f817cbb5f33",
+    "pieces" : [ {
+      "name" : "PLUTO.bin",
+      "size" : 33242670,
+      "sha256" : "bf37c898334ce3c32b15dd94b36e33d7bba97d082d7d7649e0549f817cbb5f33"
+    } ]
+  }, {
+    "path" : "ephemeris/MOON.bin",
+    "size" : 2989273090,
+    "sha256" : "a56d4bc0ec05ca4b105d4c98ac0a014c1631dbacd62604a24cf803fe785c4bf4",
+    "pieces" : [ {
+      "name" : "MOON.bin.001",
+      "size" : 1494636545,
+      "sha256" : "0899ee796870750099bccac83d11f7b9a9b6d97749530eb8534df3093f1d0e7e"
+    }, {
+      "name" : "MOON.bin.002",
+      "size" : 1494636545,
+      "sha256" : "3b217cfa13b6c21a3cf8f63b4d8f8de786efc98bacf67df9833323bdd6534046"
+    } ]
+  }, {
+    "path" : "orbits/MERCURY-orbit.bin",
+    "size" : 98308,
+    "sha256" : "6dae715eb14d280562baa059592055b26c1e49b35c70de4489dbc763c9afe1ca",
+    "pieces" : [ {
+      "name" : "MERCURY-orbit.bin",
+      "size" : 98308,
+      "sha256" : "6dae715eb14d280562baa059592055b26c1e49b35c70de4489dbc763c9afe1ca"
+    } ]
+  }, {
+    "path" : "orbits/VENUS-orbit.bin",
+    "size" : 98308,
+    "sha256" : "c50f996afa102249dd1aa0617f7af3feb891fc808765168630700ad4c93a9ac9",
+    "pieces" : [ {
+      "name" : "VENUS-orbit.bin",
+      "size" : 98308,
+      "sha256" : "c50f996afa102249dd1aa0617f7af3feb891fc808765168630700ad4c93a9ac9"
+    } ]
+  }, {
+    "path" : "orbits/EARTH-orbit.bin",
+    "size" : 98308,
+    "sha256" : "caf8dd6c1501d61d2f5f920c32658196799741ee7cfa9bab595ca3084c55ea19",
+    "pieces" : [ {
+      "name" : "EARTH-orbit.bin",
+      "size" : 98308,
+      "sha256" : "caf8dd6c1501d61d2f5f920c32658196799741ee7cfa9bab595ca3084c55ea19"
+    } ]
+  }, {
+    "path" : "orbits/MARS-orbit.bin",
+    "size" : 98308,
+    "sha256" : "1ca0449fd80c06a6806e90af0dfc7c9c0d5b7bee9803c463567b658b56ba3f77",
+    "pieces" : [ {
+      "name" : "MARS-orbit.bin",
+      "size" : 98308,
+      "sha256" : "1ca0449fd80c06a6806e90af0dfc7c9c0d5b7bee9803c463567b658b56ba3f77"
+    } ]
+  }, {
+    "path" : "orbits/JUPITER-orbit.bin",
+    "size" : 98308,
+    "sha256" : "60c71908ec597766c9687f0137c25957c389e4387085b87ed59bb6c55d3b74f0",
+    "pieces" : [ {
+      "name" : "JUPITER-orbit.bin",
+      "size" : 98308,
+      "sha256" : "60c71908ec597766c9687f0137c25957c389e4387085b87ed59bb6c55d3b74f0"
+    } ]
+  }, {
+    "path" : "orbits/SATURN-orbit.bin",
+    "size" : 98308,
+    "sha256" : "90fcc679c0dab5d2cb7d69be8a8b1750242e6adb537fa4488d23cde5838f2457",
+    "pieces" : [ {
+      "name" : "SATURN-orbit.bin",
+      "size" : 98308,
+      "sha256" : "90fcc679c0dab5d2cb7d69be8a8b1750242e6adb537fa4488d23cde5838f2457"
+    } ]
+  }, {
+    "path" : "orbits/URANUS-orbit.bin",
+    "size" : 98308,
+    "sha256" : "3fed79da233da1e2197dbeb61af719b97178298c37986f81416d26307a319194",
+    "pieces" : [ {
+      "name" : "URANUS-orbit.bin",
+      "size" : 98308,
+      "sha256" : "3fed79da233da1e2197dbeb61af719b97178298c37986f81416d26307a319194"
+    } ]
+  }, {
+    "path" : "orbits/NEPTUNE-orbit.bin",
+    "size" : 98308,
+    "sha256" : "17b8bf4b4a735abc56d56c60b8b119e7599893fbd0008786498711ea1a44fb14",
+    "pieces" : [ {
+      "name" : "NEPTUNE-orbit.bin",
+      "size" : 98308,
+      "sha256" : "17b8bf4b4a735abc56d56c60b8b119e7599893fbd0008786498711ea1a44fb14"
+    } ]
+  }, {
+    "path" : "orbits/PLUTO-orbit.bin",
+    "size" : 98308,
+    "sha256" : "2c7025d6de697e4a3c1a759b1acbdaede4eaa6296432dac111e3e54e20cb7a5a",
+    "pieces" : [ {
+      "name" : "PLUTO-orbit.bin",
+      "size" : 98308,
+      "sha256" : "2c7025d6de697e4a3c1a759b1acbdaede4eaa6296432dac111e3e54e20cb7a5a"
+    } ]
+  }, {
+    "path" : "orbits/MOON-orbit.bin",
+    "size" : 98308,
+    "sha256" : "78d3cf0592241c54c81e6b59b9af8388ff1d071215c5f77925212d137b75aee9",
+    "pieces" : [ {
+      "name" : "MOON-orbit.bin",
+      "size" : 98308,
+      "sha256" : "78d3cf0592241c54c81e6b59b9af8388ff1d071215c5f77925212d137b75aee9"
+    } ]
+  } ]
+}
