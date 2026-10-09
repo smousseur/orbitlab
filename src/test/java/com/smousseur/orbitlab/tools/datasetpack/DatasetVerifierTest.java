@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import com.smousseur.orbitlab.app.dataset.DatasetFile;
 import com.smousseur.orbitlab.app.dataset.DatasetManifest;
 import com.smousseur.orbitlab.app.dataset.DatasetPiece;
+import com.smousseur.orbitlab.app.dataset.Sha256;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import java.io.IOException;

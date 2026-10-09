@@ -3,6 +3,7 @@ package com.smousseur.orbitlab.tools.datasetpack;
 import com.smousseur.orbitlab.app.dataset.DatasetFile;
 import com.smousseur.orbitlab.app.dataset.DatasetManifest;
 import com.smousseur.orbitlab.app.dataset.DatasetPiece;
+import com.smousseur.orbitlab.app.dataset.Sha256;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;

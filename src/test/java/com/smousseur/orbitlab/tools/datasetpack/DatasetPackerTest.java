@@ -6,6 +6,7 @@ import com.smousseur.orbitlab.app.dataset.DatasetFile;
 import com.smousseur.orbitlab.app.dataset.DatasetManifest;
 import com.smousseur.orbitlab.app.dataset.DatasetManifestCodec;
 import com.smousseur.orbitlab.app.dataset.DatasetPiece;
+import com.smousseur.orbitlab.app.dataset.Sha256;
 import com.smousseur.orbitlab.core.OrbitlabException;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
