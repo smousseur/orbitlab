@@ -11,12 +11,16 @@ import com.simsilica.lemur.GuiGlobals;
 import com.simsilica.lemur.event.PickState;
 import com.simsilica.lemur.style.BaseStyles;
 import com.smousseur.orbitlab.app.ApplicationContext;
+import com.smousseur.orbitlab.app.dataset.DatasetChecker;
+import com.smousseur.orbitlab.app.dataset.DatasetInstallConfig;
+import com.smousseur.orbitlab.app.dataset.DatasetInstaller;
 import com.smousseur.orbitlab.engine.AssetFactory;
 import com.smousseur.orbitlab.engine.TextureDiagnostics;
 import com.smousseur.orbitlab.engine.scene.body.lod.Model3dAttacher;
 import com.smousseur.orbitlab.simulation.OrekitService;
 import com.smousseur.orbitlab.simulation.mission.window.problem.EarthLaunchWindowPlanner;
 import com.smousseur.orbitlab.states.InitAppState;
+import com.smousseur.orbitlab.states.boot.DatasetBootAppState;
 import com.smousseur.orbitlab.states.camera.CameraTransitionAppState;
 import com.smousseur.orbitlab.states.camera.FloatingOriginAppState;
 import com.smousseur.orbitlab.states.camera.NearCameraSyncAppState;
@@ -54,6 +58,9 @@ import org.apache.logging.log4j.Logger;
  * environment for orbital mechanics simulation. Initializes the Orekit astrodynamics library,
  * configures the GUI (Lemur), and registers all application states that drive the simulation,
  * rendering, and user interaction.
+ *
+ * <p>The dataset is checked first: when it is not ready, {@link DatasetBootAppState} installs it
+ * behind a start-up screen, and the simulation starts once it is.
  */
 public class OrbitLabApplication extends SimpleApplication implements Model3dAttacher {
   private static final int ANISOTROPIC_FILTER_LEVEL = 8;
@@ -91,6 +98,34 @@ public class OrbitLabApplication extends SimpleApplication implements Model3dAtt
     renderer.setDefaultAnisotropicFilter(ANISOTROPIC_FILTER_LEVEL);
     TextureDiagnostics.logRendererCaps(renderer);
 
+    long checkStart = System.nanoTime();
+    DatasetChecker checker = DatasetChecker.forThisBuild();
+    boolean ready = checker.check().ready();
+    LOGGER.info(
+        "Dataset checked in {} ms: {}",
+        (System.nanoTime() - checkStart) / 1_000_000L,
+        ready ? "ready" : "to install");
+    if (ready) {
+      startSimulation();
+      return;
+    }
+    // The fly camera is on until startSimulation turns it off, and it would hide the cursor and
+    // capture the mouse over the start-up screen.
+    flyCam.setEnabled(false);
+    stateManager.attach(
+        new DatasetBootAppState(
+            new DatasetInstaller(checker, DatasetInstallConfig.defaults()),
+            guiNode,
+            this::startSimulation));
+  }
+
+  /**
+   * Attaches every state of the simulation and sets up its viewports: what {@code simpleInitApp}
+   * did in one piece before the dataset had to be checked first. Runs on the render thread, from
+   * {@code simpleInitApp} when the dataset is ready, or at the start of the frame after it was
+   * installed.
+   */
+  private void startSimulation() {
     ApplicationContext applicationContext = new ApplicationContext(this, rootNode, guiNode);
     stateManager.attach(new InitAppState());
     stateManager.attach(new SkyboxAppState(applicationContext));
