@@ -88,6 +88,9 @@ public class OrbitLabApplication extends SimpleApplication implements Model3dAtt
 
   @Override
   public void simpleInitApp() {
+    // Hidden by default; SimpleApplication still maps F5 to toggling both back on.
+    setDisplayFps(false);
+    setDisplayStatView(false);
     GuiGlobals.initialize(this);
     OrekitService.get().initialize();
     startFrameWarmUp();
