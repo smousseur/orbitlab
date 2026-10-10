@@ -143,3 +143,9 @@ xattr -dr com.apple.quarantine /path/to/Orbitlab.app
 | Async / Reactive | Reactor Core |
 | Logging | Log4j 2 |
 | Testing | JUnit 5 |
+
+---
+
+## 📄 License
+
+OrbitLab is released under the [Apache License 2.0](LICENSE).
