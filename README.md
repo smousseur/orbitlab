@@ -59,15 +59,15 @@ Under the hood, OrbitLab uses **CMA-ES trajectory optimization** to find the opt
 
 #### Running the released bundles (recommended)
 
-| Requirement | Details |
-|---|---|
-| **OS** | Windows 10+, Linux x86_64 (glibc 2.31+), macOS 12+ |
-| **GPU / OpenGL** | **OpenGL 3.2 core profile** or newer — the shaders are `GLSL150`. Up-to-date GPU drivers required |
-| **Disk space** | **~7.6 GB free in your user HOME** for the data downloaded at first launch, plus ~360 MB for the extracted bundle |
-| **RAM** | **4 GB minimum, 8 GB recommended** — the application uses up to about 2 GB |
-| **CPU** | 4 cores minimum; CMA-ES optimization is multi-threaded and scales with core count |
-| **Network** | Internet access at first launch only (~7.6 GB from GitHub). A system proxy is used if one is configured |
-| **Java** | **None.** Every archive embeds its own Java 21 runtime (Temurin) |
+| Requirement | Details                                                                                                           |
+|---|-------------------------------------------------------------------------------------------------------------------|
+| **OS** | Windows 10+, Linux x86_64 (glibc 2.31+), macOS 12+                                                                |
+| **GPU / OpenGL** | **OpenGL 3.2 core profile** or newer — the shaders are `GLSL150`. Up-to-date GPU drivers required                 |
+| **Disk space** | **~7.6 GB free in your user HOME** for the data downloaded at first launch, plus ~320 MB for the extracted bundle |
+| **RAM** | **4 GB minimum, 8 GB recommended** — the application uses up to about 2 GB                                        |
+| **CPU** | 4 cores minimum; CMA-ES optimization is multi-threaded and scales with core count                                 |
+| **Network** | Internet access at first launch only (~7.6 GB from GitHub). A system proxy is used if one is configured           |
+| **Java** | **None.** Every archive embeds its own Java 21 runtime (Temurin)                                                  |
 
 > ⚠️ **Software / remote OpenGL** (RDP, plain VNC, `llvmpipe`, some VMs without GPU passthrough) usually
 > exposes only OpenGL 2.1 and will fail to start. A physical display with a real GPU is expected.
