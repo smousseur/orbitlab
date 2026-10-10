@@ -26,18 +26,17 @@ import java.util.logging.Logger;
 /**
  * CLI entry-point to generate the full ephemeris dataset files.
  *
- * <p>Usage:
+ * <p>Run through the Gradle task, which gives it the heap it needs:
  *
  * <pre>
- *   EphemerisDatasetGeneratorMain &lt;orekit-data.zip&gt; &lt;outputDir&gt;
+ *   ./gradlew ephemerisGen
+ *   ./gradlew ephemerisGen --args=MOON,EARTH
  * </pre>
  *
- * <p>Example:
- *
- * <pre>
- *   java -Xmx6g -cp build/libs/orbitlab.jar com.smousseur.orbitlab.tools.ephemerisgen.EphemerisDatasetGeneratorMain \
- *     ./orekit-data.zip ./build/ephemeris-dataset
- * </pre>
+ * <p>The Orekit data is the {@code orekit-data.zip} on the classpath, and the files are written to
+ * {@code ~/.orbitlab/dataset/ephemeris} ({@link OrbitlabPath#EPHEMERIS_PATH}); neither can be
+ * changed from the command line. The only argument, optional, restricts the generation to a
+ * comma-separated list of bodies.
  */
 public final class EphemerisDatasetGeneratorMain {
 
@@ -49,11 +48,12 @@ public final class EphemerisDatasetGeneratorMain {
   /**
    * Entry point for ephemeris dataset generation.
    *
-   * <p>Expects exactly two arguments: the path to the Orekit data zip file and the output
-   * directory. Configures logging, builds a {@link GeneratorConfigV1} with tuned per-body sampling
-   * parameters, and runs the full generation pipeline.
+   * <p>Configures logging, extracts the Orekit data from the classpath, builds a {@link
+   * GeneratorConfigV1} with tuned per-body sampling parameters, and runs the full generation
+   * pipeline into {@link OrbitlabPath#EPHEMERIS_PATH}.
    *
-   * @param args command-line arguments: {@code <orekit-data.zip> <outputDir>}
+   * @param args none, or a single comma-separated list of bodies to generate (for instance {@code
+   *     MOON,EARTH})
    * @throws Exception if generation fails
    */
   public static void main(String[] args) throws Exception {

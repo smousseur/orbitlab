@@ -7,7 +7,7 @@ plugins {
 }
 
 group = 'com.smousseur'
-version = (findProperty('appVersion') ?: '2.0.0-SNAPSHOT')
+version = (findProperty('appVersion') ?: '2.1.0-SNAPSHOT')
 ext.jmonkeyengineVersion = '3.9.0-beta1'
 
 java {
@@ -110,6 +110,45 @@ tasks.register('optBench', JavaExec) {
     description = 'Run optimization bench'
     classpath = sourceSets.main.runtimeClasspath
     mainClass = 'com.smousseur.orbitlab.tools.optbench.OptBenchMain'
+}
+
+tasks.register('ephemerisGen', JavaExec) {
+    group = 'orbitlab'
+    description = 'Generates the ephemeris dataset into ~/.orbitlab/dataset/ephemeris (about two hours; --args=MOON,EARTH for some bodies only). Then run orbitGen.'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'com.smousseur.orbitlab.tools.ephemerisgen.EphemerisDatasetGeneratorMain'
+    maxHeapSize = '6g'
+}
+
+tasks.register('orbitGen', JavaExec) {
+    group = 'orbitlab'
+    description = 'Generates the precomputed orbits into ~/.orbitlab/dataset/orbits from the ephemeris dataset. Run after ephemerisGen, then datasetPack.'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'com.smousseur.orbitlab.tools.orbitgen.OrbitDatasetGeneratorMain'
+    maxHeapSize = '4g'
+}
+
+tasks.register('datasetPack', JavaExec) {
+    group = 'orbitlab'
+    description = 'Prepares the dataset release -PdatasetTag=<tag> into build/dataset/<tag> and writes src/main/resources/dataset-manifest.json. Run after orbitGen.'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'com.smousseur.orbitlab.tools.datasetpack.DatasetPackMain'
+    doFirst {
+        def tag = findProperty('datasetTag')
+        if (!tag) {
+            throw new GradleException('datasetPack needs the release tag: -PdatasetTag=<tag>, e.g. -PdatasetTag=dataset-v1')
+        }
+        args tag,
+                layout.buildDirectory.dir("dataset/$tag").get().asFile.absolutePath,
+                file('src/main/resources/dataset-manifest.json').absolutePath
+    }
+}
+
+tasks.register('datasetVerify', JavaExec) {
+    group = 'orbitlab'
+    description = 'Downloads every file of the published dataset release and checks it against the embedded manifest.'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'com.smousseur.orbitlab.tools.datasetpack.DatasetVerifyMain'
 }
 
 javadoc {

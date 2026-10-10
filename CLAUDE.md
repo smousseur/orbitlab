@@ -364,7 +364,7 @@ directly; bugs and technical-debt items go straight to Jira (project **OBL**) ra
 
 Work is organised into numbered *chantiers*, each split into *lots* — `L0` a measured
 baseline, then `L1…Ln` one behaviour change at a time. A lot's design is worked out in the
-conversation first (see *Design Documents*), then recorded. **In Jira (project `OBL`) this is a three-level hierarchy:** the classification family (`MIS`, `PHY`, `FX`, `OPT`, `UI`, `RND`, `NAV`, `SEL`, `AST`) is an **Epic**; each *chantier* is a **Story** under its family Epic; each *lot* is a **Sub-task** of its chantier Story. Lot Sub-tasks are created only for the chantier actually being worked — not backfilled across closed history.
+conversation first (see *Design Documents*), then recorded. **In Jira (project `OBL`) this is a three-level hierarchy:** the classification family (`MIS`, `PHY`, `FX`, `OPT`, `UI`, `RND`, `NAV`, `SEL`, `AST`, `TEC`) is an **Epic**; each *chantier* is a **Story** under its family Epic; each *lot* is a **Sub-task** of its chantier Story. Lot Sub-tasks are created only for the chantier actually being worked — not backfilled across closed history.
 
 **Closing a lot ends with three things — none skipped, and none reported done until it
 actually exists:**

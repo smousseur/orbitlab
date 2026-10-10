@@ -21,7 +21,7 @@ OrbitLab is built around two core experiences:
 
 Fly through a physically accurate, animated solar system — for the sheer joy of it.
 
-- **All 10 solar system bodies** rendered as detailed 3D models (Sun → Pluto), scaled to their real physical sizes
+- **All 11 solar system bodies** — the Sun, the eight planets, Pluto and the Moon — rendered as detailed 3D models, scaled to their real physical sizes
 - **Live orbital motion** — planet positions are computed from real ephemeris data and updated in real-time
 - **Orbit paths** traced for every body, visible at solar and planetary scales simultaneously
 - **Simulation clock** you can speed up, slow down, or rewind — watch years of orbital motion in seconds
@@ -41,20 +41,15 @@ Create, configure, and visualize complete space missions — from launch vehicle
 - **Create** custom missions: define your launch vehicle, target orbit, and mission profile
 - **Configure** every parameter: stage masses, thrust, ISP, payload, target altitude, and more
 - **Visualize** the resulting trajectory in 3D, with full playback controls to step through every phase of the flight
+- **Earth's atmosphere** is simulated: the vehicle feels aerodynamic drag
+- **Stage jettisoning**: spent stages separate from the vehicle and fall back as debris
+- **Controlled deorbiting**: an optional deorbit burn at the end of the mission brings the payload back through atmospheric reentry
 
 Under the hood, OrbitLab uses **CMA-ES trajectory optimization** to find the optimal flight profile for your target orbit, and a **high-fidelity physics model** (including Earth's gravitational oblateness) to make the resulting trajectory realistic. Once optimized, missions are deterministic and can be replayed and analyzed in 3D.
 
 | | | |
 |:---:|:---:|:---:|
 | ![Mission setup](https://github.com/user-attachments/assets/34a932b2-425d-4ad6-97b0-b1b746eb84ea) | ![Mission in flight](https://github.com/user-attachments/assets/ed7e4722-5dc5-4831-bea5-8363ad3aca28) | ![Orbit insertion](https://github.com/user-attachments/assets/a17ff4a5-b8ee-43ab-a2df-4e36c6efb1b7) |
-
-### Roadmap
-
-OrbitLab's mission simulation is actively expanding:
-
-- **Simulation of Earth's atmosphere**
-- **Controlled deorbiting**
-- **Stage jettisoning and atmospheric reentry**
 
 ---
 
@@ -68,9 +63,10 @@ OrbitLab's mission simulation is actively expanding:
 |---|---|
 | **OS** | Windows 10+, Linux x86_64 (glibc 2.31+), macOS 12+ |
 | **GPU / OpenGL** | **OpenGL 3.2 core profile** or newer — the shaders are `GLSL150`. Up-to-date GPU drivers required |
-| **Disk space** | **~10 GB free in your user HOME** for the generated datasets, plus ~400 MB for the extracted bundle |
-| **RAM** | **8 GB minimum, 16 GB recommended** — the ephemeris generator runs with `-Xmx6g`, the orbit generator with `-Xmx4g` |
-| **CPU** | 4 cores minimum; generation and CMA-ES optimization are multi-threaded and scale with core count |
+| **Disk space** | **~7.6 GB free in your user HOME** for the data downloaded at first launch, plus ~360 MB for the extracted bundle |
+| **RAM** | **4 GB minimum, 8 GB recommended** — the application uses up to about 2 GB |
+| **CPU** | 4 cores minimum; CMA-ES optimization is multi-threaded and scales with core count |
+| **Network** | Internet access at first launch only (~7.6 GB from GitHub). A system proxy is used if one is configured |
 | **Java** | **None.** Every archive embeds its own Java 21 runtime (Temurin) |
 
 > ⚠️ **Software / remote OpenGL** (RDP, plain VNC, `llvmpipe`, some VMs without GPU passthrough) usually
@@ -81,39 +77,59 @@ OrbitLab's mission simulation is actively expanding:
 - **JDK 21+** — the Gradle toolchain targets Java 21
 - **Gradle** — wrapper included, no installation needed
 
+##### Dataset maintenance
+
+The data downloaded at first launch is produced and published with Gradle tasks, for maintainers:
+
+| Task | What it does |
+|---|---|
+| `./gradlew ephemerisGen` | Computes the ephemeris dataset into `~/.orbitlab/dataset/ephemeris` (about two hours) |
+| `./gradlew orbitGen` | Computes the orbit paths into `~/.orbitlab/dataset/orbits`, from the ephemeris dataset |
+| `./gradlew datasetPack -PdatasetTag=<tag>` | Prepares the files of a dataset release and writes the embedded manifest, `src/main/resources/dataset-manifest.json` |
+| `./gradlew datasetVerify` | Downloads every file of the published dataset release and checks it against the embedded manifest |
+
+> The generators write into the folder the application checks at start-up: a regenerated file whose
+> size differs from the embedded manifest is replaced by the release's copy at the next launch.
+
 ---
 
 ### 🚀 Quick start (released bundle)
 
 Grab the archive for your platform from the
 **[Releases page](https://github.com/smousseur/orbitlab/releases/latest)**
-(`orbitlab-vX.Y.Z-windows.zip`, `-linux.zip` or `-macos.zip`), extract it, then run the three
-executables **in this exact order**:
+(`orbitlab-vX.Y.Z-windows.zip`, `-linux.zip` or `-macos.zip`), extract it, then run `Orbitlab`:
 
-| # | Executable | What it does                                                                                                     | Output |
-|:-:|---|------------------------------------------------------------------------------------------------------------------|---|
-| 1️⃣ | `ephemeris-generator` | Computes the ephemeris dataset (position/velocity + rotation of all bodies, 1989 → 2100) ≈ 2 hours of processing | `~/.orbitlab/dataset/ephemeris` |
-| 2️⃣ | `orbits-generator` | Computes the pre-traced orbit paths, **from the ephemeris dataset** ≈ few seconds of processing                  | `~/.orbitlab/dataset/orbits` |
-| 3️⃣ | `Orbitlab` | The application itself                                                                                           | — |
+| Platform | Executable |
+|---|---|
+| **Windows** | `Orbitlab\Orbitlab.exe` |
+| **Linux** | `Orbitlab/bin/Orbitlab` |
+| **macOS** | `Orbitlab.app/Contents/MacOS/Orbitlab` |
 
-> The order matters: `orbits-generator` consumes what step 1 produced, and `Orbitlab` renders an
-> **empty scene** if either dataset is missing. Both generators are console applications — keep the
-> window open, they log their progress and total elapsed time.
+#### First launch
 
-Executable locations after extraction:
+On first launch, OrbitLab downloads its data — ephemerides and orbit paths, about 7.6 GB — into
+`~/.orbitlab/dataset`. A start-up screen shows the file being downloaded, the progress,
+the speed and the time left: at 5 MB/s, it takes about 25 minutes. The simulation starts as soon as
+the data is complete.
 
-| Platform | Main app | Generators |
-|---|---|---|
-| **Windows** | `Orbitlab\Orbitlab.exe` | `Orbitlab\ephemeris-generator.exe`, `Orbitlab\orbits-generator.exe` |
-| **Linux** | `Orbitlab/bin/Orbitlab` | `Orbitlab/bin/ephemeris-generator`, `Orbitlab/bin/orbits-generator` |
-| **macOS** | `Orbitlab.app/Contents/MacOS/Orbitlab` | `Orbitlab.app/Contents/MacOS/ephemeris-generator`, `.../orbits-generator` |
+- An interrupted download **resumes** where it stopped. **Cancel** closes the application and keeps
+  what was already downloaded.
+- If the download fails, the screen gives the cause, with **Retry** and **Quit**.
+- **Later launches** start straight away, without network.
+- **Upgrading from an earlier version**, which generated its data locally: the files already in
+  `~/.orbitlab/dataset` are checked once, in a few seconds, kept when identical and downloaded again
+  otherwise.
+
+The log is written to `~/.orbitlab/logs/orbitlab.log`.
 
 <details>
-<summary><b>macOS:</b> Gatekeeper blocks the launch (binaries are ad-hoc signed only)</summary></details>
+<summary><b>macOS:</b> Gatekeeper blocks the launch (binaries are ad-hoc signed only)</summary>
 
 ```bash
 xattr -dr com.apple.quarantine /path/to/Orbitlab.app
 ```
+
+</details>
 
 ---
 

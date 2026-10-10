@@ -1,16 +1,33 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Configuration status="WARN">
+  <Properties>
+    <!-- Mirrors home.path in application.properties, which Log4j cannot read: change both together. -->
+    <Property name="logDir">${sys:user.home}/.orbitlab/logs</Property>
+  </Properties>
   <Appenders>
     <Console name="Console" target="SYSTEM_OUT">
       <PatternLayout pattern="%d{HH:mm:ss.SSS} %-5p %c{1} - %m%n"/>
     </Console>
+    <!-- A single file, appended to across launches: past 10 MB it starts again empty. The rollover
+         renames it to orbitlab-1.log, which the Delete action then removes, so no copy is kept. -->
+    <RollingFile name="File" fileName="${logDir}/orbitlab.log" filePattern="${logDir}/orbitlab-%i.log">
+      <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} %-5p [%t] %c{1} - %m%n"/>
+      <SizeBasedTriggeringPolicy size="10 MB"/>
+      <DefaultRolloverStrategy max="1">
+        <Delete basePath="${logDir}" maxDepth="1">
+          <IfFileName glob="orbitlab-*.log"/>
+        </Delete>
+      </DefaultRolloverStrategy>
+    </RollingFile>
   </Appenders>
   <Loggers>
     <Logger name="com.smousseur.orbitlab" level="info" additivity="false">
       <AppenderRef ref="Console"/>
+      <AppenderRef ref="File"/>
     </Logger>
     <Root level="info">
       <AppenderRef ref="Console"/>
+      <AppenderRef ref="File"/>
     </Root>
   </Loggers>
 </Configuration>

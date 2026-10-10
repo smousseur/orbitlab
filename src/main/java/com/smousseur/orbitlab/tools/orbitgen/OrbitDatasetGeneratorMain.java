@@ -12,11 +12,15 @@ import java.util.logging.Logger;
 /**
  * CLI entry point for generating pre-computed orbital path dataset files.
  *
- * <p>Usage:
+ * <p>Run through the Gradle task, once the ephemeris dataset exists:
  *
  * <pre>
- *   OrbitDatasetGeneratorMain &lt;orekit-data.zip&gt; &lt;outputDir&gt;
+ *   ./gradlew orbitGen
  * </pre>
+ *
+ * <p>It takes no argument: the orbits are computed from the ephemeris dataset in {@code
+ * ~/.orbitlab/dataset/ephemeris} and written to {@code ~/.orbitlab/dataset/orbits} ({@link
+ * OrbitlabPath#ORBITS_PATH}).
  */
 public final class OrbitDatasetGeneratorMain {
   private OrbitDatasetGeneratorMain() {}
@@ -26,10 +30,10 @@ public final class OrbitDatasetGeneratorMain {
   /**
    * Entry point for orbit dataset generation.
    *
-   * <p>Initializes Orekit, validates the command-line arguments, and runs the {@link
-   * OrbitDatasetGenerator} to produce binary orbit files for all configured bodies.
+   * <p>Initializes Orekit and runs the {@link OrbitDatasetGenerator} to produce binary orbit files
+   * for all configured bodies.
    *
-   * @param args command-line arguments: {@code <orekit-data.zip> <outputDir>}
+   * @param args ignored
    * @throws Exception if initialization or generation fails
    */
   public static void main(String[] args) throws Exception {
