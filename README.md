@@ -30,7 +30,8 @@ Fly through a physically accurate, animated solar system — for the sheer joy o
 
 | | | |
 |:---:|:---:|:---:|
-| ![Solar system view](https://github.com/user-attachments/assets/aa06d343-acc0-436c-b09c-caae5cf67feb) | ![Planet and orbits](https://github.com/user-attachments/assets/a2cbb0dd-e39f-483e-aa79-8b5215eb307c) | ![Close-up view](https://github.com/user-attachments/assets/a18981f4-fa01-49fb-aac5-27f733df8fab) |
+| ![The inner solar system with the orbits of Mercury, Venus, the Earth, Mars and Jupiter](.github/screenshots/solar-system.png) | ![Saturn, with the globe's shadow across its rings](.github/screenshots/saturn.png) | ![The Earth during the total solar eclipse of 12 August 2026, the Moon's shadow over the North Atlantic](.github/screenshots/eclipse.png) |
+| *The inner solar system, from real ephemerides* | *Saturn — the globe casts its shadow across the rings* | *Total solar eclipse of 12 August 2026 — the Moon's shadow over the North Atlantic* |
 
 ---
 
@@ -47,9 +48,10 @@ Create, configure, and visualize complete space missions — from launch vehicle
 
 Under the hood, OrbitLab uses **CMA-ES trajectory optimization** to find the optimal flight profile for your target orbit, and a **high-fidelity physics model** (including Earth's gravitational oblateness) to make the resulting trajectory realistic. Once optimized, missions are deterministic and can be replayed and analyzed in 3D.
 
-| | | |
-|:---:|:---:|:---:|
-| ![Mission setup](https://github.com/user-attachments/assets/34a932b2-425d-4ad6-97b0-b1b746eb84ea) | ![Mission in flight](https://github.com/user-attachments/assets/ed7e4722-5dc5-4831-bea5-8363ad3aca28) | ![Orbit insertion](https://github.com/user-attachments/assets/a17ff4a5-b8ee-43ab-a2df-4e36c6efb1b7) |
+| | |
+|:---:|:---:|
+| ![The mission wizard, with the Earth orbit missions on offer](.github/screenshots/mission-wizard.png) | ![A launch to geostationary orbit replayed in 3D: parking orbit, transfer and circularized orbit, with the telemetry panel](.github/screenshots/geo-mission.png) |
+| *The mission wizard — Earth orbits and lunar missions* | *A launch to geostationary orbit, replayed after optimization: the parking orbit, the transfer, then the circularized orbit* |
 
 ---
 
