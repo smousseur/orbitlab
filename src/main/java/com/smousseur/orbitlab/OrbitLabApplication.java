@@ -271,6 +271,22 @@ public class OrbitLabApplication extends SimpleApplication implements Model3dAtt
         });
   }
 
+  /**
+   * Logs an error JME reports — an exception escaping the render thread, or a failure of the
+   * context — through Log4j, then lets JME handle it as before.
+   *
+   * <p>JME logs it through {@code java.util.logging} only, which writes to the console. The
+   * packaged Windows launcher has no console, so without this the log file would miss the crash.
+   *
+   * @param errMsg the message JME gives the error
+   * @param t the error, or null when JME gives none
+   */
+  @Override
+  public void handleError(String errMsg, Throwable t) {
+    LOGGER.error(errMsg, t);
+    super.handleError(errMsg, t);
+  }
+
   @Override
   public void destroy() {
     try {
