@@ -11,11 +11,13 @@ import com.jme3.material.MaterialDef;
 import com.jme3.material.RenderState;
 import com.jme3.math.ColorRGBA;
 import com.jme3.scene.Geometry;
+import com.jme3.scene.Mesh;
 import com.jme3.scene.SceneGraphVisitorAdapter;
 import com.jme3.scene.Spatial;
 import com.jme3.texture.Texture;
 import com.jme3.util.SkyFactory;
 import com.smousseur.orbitlab.core.OrbitlabException;
+import com.smousseur.orbitlab.engine.scene.spacecraft.ReentrySheathMesh;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
@@ -34,6 +36,11 @@ import org.jspecify.annotations.NonNull;
 public class AssetFactory {
   private static final String COLOR = "Color";
   private final AssetManager assetManager;
+
+  /** The shared sheath shell, built for {@link #sheathMeshConfig}; null until first asked for. */
+  private Mesh sheathMesh;
+
+  private ReentryFxConfig sheathMeshConfig;
 
   private static final ExecutorService ASSET_LOADING_EXECUTOR =
       Executors.newFixedThreadPool(
@@ -358,6 +365,61 @@ public class AssetFactory {
   public void enableRibbonHalo(Material ribbon, float haloPx) {
     ribbon.setFloat("HaloPx", haloPx);
     ribbon.getAdditionalRenderState().setBlendMode(RenderState.BlendMode.PremultAlpha);
+  }
+
+  /**
+   * Creates the material of one re-entry sheath: a procedural glow over a paraboloid shell, written
+   * as premultiplied colour, put out until its intensity is set.
+   *
+   * <p>The render state is the rest of the design:
+   *
+   * <ul>
+   *   <li><b>{@link RenderState.BlendMode#PremultAlpha}</b> — the shader adds its light, and veils
+   *       the background only along the shell's edge, by the share its coverage asks for. Additive
+   *       would saturate to white over the clouds, with nothing but the bloom downstream to tone it
+   *       back.
+   *   <li><b>Depth test on</b> — the piece's body, drawn opaque first, hides the part of the shell
+   *       behind it.
+   *   <li><b>Depth write off</b> — the sheath blends with the ribbons and the atmosphere instead of
+   *       erasing them, as {@link #createCorona} and {@link #createRibbon} do.
+   *   <li><b>Back faces culled</b> — only the shell's outer surface is drawn, so the glow is not
+   *       counted twice where the shell overlaps itself on screen.
+   * </ul>
+   *
+   * <p>One material per sheath, since its intensity is per piece; the mesh is shared.
+   *
+   * @param config the colours and the coverage
+   * @return the sheath material, intensity zero
+   */
+  public Material createReentrySheath(ReentryFxConfig config) {
+    Material material = new Material(assetManager, "MatDefs/Fx/ReentrySheath.j3md");
+    material.setColor("RimColor", config.rimColor());
+    material.setColor("HotCoreColor", config.hotCoreColor());
+    material.setFloat("Coverage", config.coverage());
+    material.setFloat("Intensity", 0f);
+    RenderState state = material.getAdditionalRenderState();
+    state.setBlendMode(RenderState.BlendMode.PremultAlpha);
+    state.setDepthTest(true);
+    state.setDepthWrite(false);
+    state.setFaceCullMode(RenderState.FaceCullMode.Back);
+    return material;
+  }
+
+  /**
+   * The shell every re-entry sheath is drawn with, built once for a tuning and shared: each sheath
+   * scales it to its own piece's body radius.
+   *
+   * @param config the shell's proportions
+   * @return the shared unit shell
+   */
+  public synchronized Mesh reentrySheathMesh(ReentryFxConfig config) {
+    if (sheathMesh == null || !config.equals(sheathMeshConfig)) {
+      sheathMesh =
+          ReentrySheathMesh.unit(
+              config.standoffRatio(), config.lengthRatio(), config.openingRatio());
+      sheathMeshConfig = config;
+    }
+    return sheathMesh;
   }
 
   /**

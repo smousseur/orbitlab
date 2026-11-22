@@ -234,6 +234,17 @@ public class Model3dView {
   }
 
   /**
+   * Whether the model is drawn this frame: what {@link #setVisible} was last told, by the LOD
+   * switch or by an owner hiding the whole body. Anything drawn beside the model rather than in its
+   * bucket reads this to show and hide with it.
+   *
+   * @return {@code false} once hidden, {@code true} otherwise
+   */
+  public boolean isVisible() {
+    return modelBucket.getLocalCullHint() != Spatial.CullHint.Always;
+  }
+
+  /**
    * Returns the model bucket node that holds the loaded 3D model.
    *
    * @return the model bucket node

@@ -1,0 +1,34 @@
+MaterialDef ReentrySheath {
+
+    MaterialParameters {
+        // How hot the piece is now, in [0,1]: the re-entry heat profile's intensity at the clock's
+        // date. Zero puts the sheath out; it scales both its light and how far its core whitens.
+        Float Intensity : 0.0
+
+        // Colour of the shell's edge, the same at every intensity, so a faint sheath still reads.
+        Color RimColor
+
+        // Colour the stagnation core turns toward as the intensity rises.
+        Color HotCoreColor
+
+        // Share of the background hidden where the shell is seen edge-on, at full intensity, in
+        // [0,1]; seen face-on it hides nothing. The shader writes premultiplied colour and the
+        // material blends as PremultAlpha: the colour is added on top, and this alone decides how
+        // much of what lies behind is veiled.
+        Float Coverage
+    }
+
+    // Deliberately no Glow technique, for the reason Corona.j3md gives: PostFxAppState runs the
+    // bloom in GlowMode.Objects, which re-renders the scene through that technique, and a sheath
+    // that declared one would be blurred and added back on top of itself.
+    Technique {
+        VertexShader   GLSL150: MatDefs/Fx/ReentrySheath.vert
+        FragmentShader GLSL150: MatDefs/Fx/ReentrySheath.frag
+
+        WorldParameters {
+            WorldViewProjectionMatrix
+            WorldViewMatrix
+            NormalMatrix
+        }
+    }
+}

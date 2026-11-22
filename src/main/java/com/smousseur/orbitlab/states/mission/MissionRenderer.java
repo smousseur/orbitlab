@@ -12,6 +12,7 @@ import com.smousseur.orbitlab.app.view.RenderContext;
 import com.smousseur.orbitlab.app.view.ViewMode;
 import com.smousseur.orbitlab.core.OrbitlabException;
 import com.smousseur.orbitlab.core.SolarSystemBody;
+import com.smousseur.orbitlab.engine.AssetFactory;
 import com.smousseur.orbitlab.engine.scene.PlanetRadius;
 import com.smousseur.orbitlab.engine.scene.body.BodyRenderConfig;
 import com.smousseur.orbitlab.engine.scene.body.EclipseGeometry;
@@ -147,6 +148,9 @@ public final class MissionRenderer {
    * The debris list {@link #debrisViews} was built from, compared by identity to detect a change.
    */
   private List<DebrisTrack> builtDebris = List.of();
+
+  /** The debris' re-entry heat profiles, built off the render thread for {@link #builtDebris}. */
+  private final DebrisHeatProfiles heatProfiles = new DebrisHeatProfiles();
 
   /** The primary's silhouette timeline, derived from the debris (PHY-5 / L3). */
   private PrimarySilhouette silhouette = PrimarySilhouette.from(List.of());
@@ -622,6 +626,8 @@ public final class MissionRenderer {
         }
       }
       int upTo = within ? trail.indexUpTo(now) : trail.size() - 1;
+      ReentryHeatProfile heat = heatProfiles.profileFor(builtDebris, i);
+      debrisView.setHeat(heat.intensityAt(now), heat.axisAt(now));
       debrisView.setVisible(true);
       boolean followed = isFollowed(track, focus);
       // The followed debris is promoted to the origin anchor — reparented under the near-bodies
@@ -981,6 +987,13 @@ public final class MissionRenderer {
     }
     debrisViews.clear();
     builtDebris = entry.getDebris();
+    if (!builtDebris.isEmpty()) {
+      heatProfiles.request(
+          builtDebris,
+          entry.mission().getAtmosphere(),
+          context.getEngineConfig().reentry(),
+          AssetFactory.get().assetLoadingExecutor());
+    }
     silhouette = PrimarySilhouette.from(builtDebris);
     boosterCount = (int) builtDebris.stream().filter(t -> t.role() == StageRole.BOOSTER).count();
     for (int i = 0; i < builtDebris.size(); i++) {

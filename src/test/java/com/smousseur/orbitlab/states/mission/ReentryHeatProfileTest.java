@@ -2,6 +2,7 @@ package com.smousseur.orbitlab.states.mission;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -11,6 +12,7 @@ import com.smousseur.orbitlab.simulation.flight.AtmosphereModel;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemeris;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemerisPoint;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.TrajectoryArc;
+import java.util.ArrayList;
 import java.util.List;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.junit.jupiter.api.BeforeAll;
@@ -40,6 +42,7 @@ class ReentryHeatProfileTest {
   private static final Vector3D DESCENDING = new Vector3D(-2_000.0, 7_000.0, 0.0);
   private static final Vector3D ASCENDING = new Vector3D(2_000.0, 7_000.0, 0.0);
   private static final Vector3D GRAZING = new Vector3D(0.0, 7_000.0, 0.0);
+  private static final Vector3D STEEPER = new Vector3D(-3_000.0, 6_000.0, 0.0);
 
   private static AbsoluteDate epoch;
   private static OneAxisEllipsoid earth;
@@ -231,6 +234,162 @@ class ReentryHeatProfileTest {
     assertEquals(intensity, single.intensityAt(epoch), 0.0);
     assertEquals(0.0, single.intensityAt(epoch.shiftedBy(-1.0)), 0.0);
     assertEquals(0.0, single.intensityAt(epoch.shiftedBy(1.0)), 0.0);
+  }
+
+  @Test
+  void axisOnAHeatingSampleIsTheAirRelativeVelocityDirection() {
+    MissionEphemerisPoint point = earthPoint(epoch, 60_000.0, DESCENDING);
+
+    ReentryHeatProfile profile = new ReentryHeatProfile(List.of(point), air, THRESHOLD, CEILING);
+
+    Vector3D expected = airRelativeDirection(point);
+    assertTrue(Vector3D.angle(expected, DESCENDING) > 1e-3, "the wind must tilt the axis");
+    assertVectorEquals(expected, profile.axisAt(epoch));
+  }
+
+  @Test
+  void axisOutsideTheHeatingDomainIsTheInertialVelocityDirection() {
+    ReentryHeatProfile profile =
+        new ReentryHeatProfile(
+            List.of(earthPoint(epoch, 60_000.0, ASCENDING)), air, THRESHOLD, CEILING);
+
+    assertVectorEquals(ASCENDING.normalize(), profile.axisAt(epoch));
+  }
+
+  @Test
+  void axisWhereTheAtmosphereFailsIsTheInertialVelocityDirection() {
+    ReentryHeatProfile profile =
+        new ReentryHeatProfile(
+            List.of(earthPoint(epoch, 50_000.0, DESCENDING)),
+            new ThrowingAtmosphere(earth, 55_000.0),
+            THRESHOLD,
+            CEILING);
+
+    assertEquals(1, profile.atmosphereFailures());
+    assertVectorEquals(DESCENDING.normalize(), profile.axisAt(epoch));
+  }
+
+  @Test
+  void aVanishingAirRelativeSpeedFallsBackToTheInertialAxis() {
+    Atmosphere coMoving = windAtmosphere(DESCENDING);
+
+    ReentryHeatProfile profile =
+        new ReentryHeatProfile(
+            List.of(earthPoint(epoch, 60_000.0, DESCENDING)), coMoving, THRESHOLD, CEILING);
+
+    assertEquals(0, profile.atmosphereFailures());
+    assertVectorEquals(DESCENDING.normalize(), profile.axisAt(epoch));
+  }
+
+  @Test
+  void axisBetweenTwoSamplesIsTheNormalizedBlendOfTheirAxes() {
+    MissionEphemerisPoint first = earthPoint(epoch, 62_000.0, DESCENDING);
+    MissionEphemerisPoint second = earthPoint(epoch.shiftedBy(2.0), 60_000.0, STEEPER);
+
+    ReentryHeatProfile profile =
+        new ReentryHeatProfile(List.of(first, second), air, THRESHOLD, CEILING);
+
+    Vector3D a0 = airRelativeDirection(first);
+    Vector3D a1 = airRelativeDirection(second);
+    assertVectorEquals(a0, profile.axisAt(epoch));
+    assertVectorEquals(a1, profile.axisAt(epoch.shiftedBy(2.0)));
+    assertVectorEquals(a0.add(a1).normalize(), profile.axisAt(epoch.shiftedBy(1.0)));
+    assertVectorEquals(
+        new Vector3D(0.75, a0, 0.25, a1).normalize(), profile.axisAt(epoch.shiftedBy(0.5)));
+  }
+
+  @Test
+  void opposedAxesBlendToTheEarlierOne() {
+    Atmosphere still = windAtmosphere(Vector3D.ZERO);
+    List<MissionEphemerisPoint> points =
+        List.of(
+            earthPoint(epoch, 60_000.0, DESCENDING),
+            earthPoint(epoch.shiftedBy(2.0), 60_000.0, DESCENDING.negate()));
+
+    ReentryHeatProfile profile = new ReentryHeatProfile(points, still, THRESHOLD, CEILING);
+
+    assertVectorEquals(DESCENDING.normalize(), profile.axisAt(epoch.shiftedBy(1.0)));
+  }
+
+  @Test
+  void axisIsZeroOutsideTheEphemerisAndOnAnEmptyProfile() {
+    ReentryHeatProfile profile = descentProfile();
+    ReentryHeatProfile empty = new ReentryHeatProfile(List.of(), air, THRESHOLD, CEILING);
+
+    assertEquals(Vector3D.ZERO, profile.axisAt(epoch.shiftedBy(-0.001)));
+    assertEquals(Vector3D.ZERO, profile.axisAt(epoch.shiftedBy(4.001)));
+    assertEquals(Vector3D.ZERO, empty.axisAt(epoch));
+  }
+
+  @Test
+  void axisOnEqualDatesIsTheFirstSample() {
+    MissionEphemerisPoint first = earthPoint(epoch, 65_000.0, DESCENDING);
+    List<MissionEphemerisPoint> points =
+        List.of(
+            first,
+            earthPoint(epoch, 60_000.0, STEEPER),
+            earthPoint(epoch.shiftedBy(2.0), 62_000.0, DESCENDING));
+
+    ReentryHeatProfile profile = new ReentryHeatProfile(points, air, THRESHOLD, CEILING);
+
+    assertVectorEquals(airRelativeDirection(first), profile.axisAt(epoch));
+  }
+
+  @Test
+  void rewindingGivesTheSameAxes() {
+    List<MissionEphemerisPoint> points =
+        List.of(
+            earthPoint(epoch, 70_000.0, DESCENDING),
+            earthPoint(epoch.shiftedBy(2.0), 65_000.0, STEEPER),
+            earthPoint(epoch.shiftedBy(4.0), 60_000.0, DESCENDING));
+    ReentryHeatProfile profile = new ReentryHeatProfile(points, air, THRESHOLD, CEILING);
+    int count = 17;
+    Vector3D[] forward = new Vector3D[count];
+    for (int i = 0; i < count; i++) {
+      forward[i] = profile.axisAt(epoch.shiftedBy(-1.0 + 0.37 * i));
+    }
+    Vector3D[] backward = new Vector3D[count];
+    for (int i = count - 1; i >= 0; i--) {
+      backward[i] = profile.axisAt(epoch.shiftedBy(-1.0 + 0.37 * i));
+    }
+
+    assertArrayEquals(forward, backward);
+  }
+
+  @Test
+  void mayHeatNeedsOneSampleInTheHeatingDomain() {
+    TrajectoryArc moonArc = new TrajectoryArc(SolarSystemBody.MOON, FramesFactory.getGCRF());
+    List<MissionEphemerisPoint> outside =
+        List.of(
+            earthPoint(epoch, 60_000.0, ASCENDING),
+            earthPoint(epoch.shiftedBy(2.0), 130_000.0, DESCENDING),
+            point(epoch.shiftedBy(4.0), 60_000.0, DESCENDING, moonArc),
+            earthPoint(epoch.shiftedBy(6.0), 60_000.0, GRAZING));
+    List<MissionEphemerisPoint> withOneInside = new ArrayList<>(outside);
+    withOneInside.add(earthPoint(epoch.shiftedBy(8.0), 60_000.0, DESCENDING));
+
+    assertFalse(ReentryHeatProfile.mayHeat(new MissionEphemeris(outside)));
+    assertTrue(ReentryHeatProfile.mayHeat(new MissionEphemeris(withOneInside)));
+  }
+
+  /** The unit air-relative velocity of a sample, read off the test atmosphere directly. */
+  private static Vector3D airRelativeDirection(MissionEphemerisPoint point) {
+    Vector3D wind = air.getVelocity(point.time(), point.position(), point.arc().frame());
+    return point.velocity().subtract(wind).normalize();
+  }
+
+  private static void assertVectorEquals(Vector3D expected, Vector3D actual) {
+    assertEquals(0.0, expected.distance(actual), 1e-12, () -> expected + " vs " + actual);
+  }
+
+  /** An exponential atmosphere whose wind is {@code wind} everywhere. */
+  private static Atmosphere windAtmosphere(Vector3D wind) {
+    return new SimpleExponentialAtmosphere(earth, RHO0, 0.0, SCALE_HEIGHT_M) {
+      @Override
+      public Vector3D getVelocity(AbsoluteDate date, Vector3D position, Frame frame) {
+        return wind;
+      }
+    };
   }
 
   /** Three descending Earth samples two seconds apart, at 70, 65 and 60 km. */

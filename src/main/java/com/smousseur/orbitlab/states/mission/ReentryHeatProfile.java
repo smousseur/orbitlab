@@ -33,6 +33,10 @@ import org.orekit.time.AbsoluteDate;
  * built for. The intensity maps the flux onto {@code [0, 1]} on a logarithmic scale between a
  * threshold, below which nothing glows, and a ceiling, above which everything saturates.
  *
+ * <p>Each sample also keeps the <b>axis</b> a shock layer would face: the direction of the
+ * air-relative velocity, from the very wind the flux was computed with, where the flux is computed;
+ * the inertial velocity's direction elsewhere, where nothing glows and the axis is never drawn.
+ *
  * <p>Immutable: everything is computed once, in the constructor, so a profile may be built off the
  * render thread and read from it. The atmosphere is only read, and the shared Orekit instance is
  * already read concurrently by the optimizer. A failure of that atmosphere on a sample gives it a
@@ -56,6 +60,19 @@ public final class ReentryHeatProfile {
   private static final double DOMAIN_TOP_M = 120_000.0;
 
   /**
+   * Speed (m/s) below which a velocity gives no direction, the threshold {@code StackSeat} uses for
+   * the same reason. The launch-pad sample is the case in point: it falls in the domain by rounding
+   * and moves with the air, so its air-relative velocity is zero and could not be normalized.
+   */
+  private static final double MIN_DIRECTION_SPEED = 1e-3;
+
+  /**
+   * Norm below which the blend of two unit axes counts as cancelled: they were opposed, and their
+   * mean has no direction left to normalize.
+   */
+  private static final double MIN_BLEND_NORM = 1e-9;
+
+  /**
    * One sample of the profile, aligned with the ephemeris point it was computed from.
    *
    * @param date the sample date
@@ -71,6 +88,12 @@ public final class ReentryHeatProfile {
   private final double[] offsets;
 
   private final double[] intensities;
+
+  /** Each sample's unit axis, as three coordinate arrays rather than one object per point. */
+  private final double[] axisX;
+
+  private final double[] axisY;
+  private final double[] axisZ;
   private final List<HeatSample> samples;
   private final int atmosphereFailures;
 
@@ -100,16 +123,26 @@ public final class ReentryHeatProfile {
     dates = new AbsoluteDate[n];
     offsets = new double[n];
     intensities = new double[n];
+    axisX = new double[n];
+    axisY = new double[n];
+    axisZ = new double[n];
     List<HeatSample> built = new ArrayList<>(n);
     int inDomain = 0;
     int failures = 0;
     for (int i = 0; i < n; i++) {
       MissionEphemerisPoint point = points.get(i);
       double flux = 0.0;
+      Vector3D axis = directionOf(point.velocity());
       if (inDomain(point)) {
         inDomain++;
-        flux = fluxOrNaN(point, air);
-        if (!Double.isFinite(flux)) {
+        AirState state = airStateOf(point, air);
+        flux = state.fluxWm2();
+        if (Double.isFinite(flux)) {
+          Vector3D relative = directionOf(state.relativeVelocity());
+          if (!relative.equals(Vector3D.ZERO)) {
+            axis = relative;
+          }
+        } else {
           failures++;
           flux = 0.0;
         }
@@ -117,6 +150,9 @@ public final class ReentryHeatProfile {
       dates[i] = point.time();
       offsets[i] = point.time().durationFrom(dates[0]);
       intensities[i] = intensityOf(flux, thresholdWm2, ceilingWm2);
+      axisX[i] = axis.getX();
+      axisY[i] = axis.getY();
+      axisZ[i] = axis.getZ();
       built.add(new HeatSample(point.time(), flux, intensities[i]));
     }
     samples = List.copyOf(built);
@@ -161,26 +197,56 @@ public final class ReentryHeatProfile {
    * @return the intensity, in {@code [0, 1]}
    */
   public double intensityAt(AbsoluteDate date) {
-    int n = dates.length;
-    if (n == 0) {
+    Bracket bracket = bracketOf(date);
+    if (bracket == null) {
       return 0.0;
     }
-    double offset = date.durationFrom(dates[0]);
-    if (offset < 0.0 || offset > offsets[n - 1]) {
-      return 0.0;
+    int lower = bracket.lower();
+    return intensities[lower] + bracket.tau() * (intensities[bracket.upper()] - intensities[lower]);
+  }
+
+  /**
+   * The unit axis at a date: that of the sample itself on a sample date — the first one when
+   * several share it — and, between two samples, the normalized linear blend of theirs. Where the
+   * two axes cancel out the blend has no direction, and the earlier sample's axis is kept. A pure
+   * function of the date, like {@link #intensityAt}.
+   *
+   * <p>Meaningful only where the {@link #intensityAt intensity} is positive: there, at least one of
+   * the two samples was heating, and its axis is the air-relative velocity's direction.
+   *
+   * @param date the date to read
+   * @return the unit axis, in the frame of the ephemeris arcs; {@link Vector3D#ZERO} outside the
+   *     ephemeris and for an empty profile
+   */
+  public Vector3D axisAt(AbsoluteDate date) {
+    Bracket bracket = bracketOf(date);
+    if (bracket == null) {
+      return Vector3D.ZERO;
     }
-    int found = Arrays.binarySearch(offsets, offset);
-    if (found >= 0) {
-      int first = found;
-      while (first > 0 && offsets[first - 1] == offsets[first]) {
-        first--;
+    Vector3D lower = axisOf(bracket.lower());
+    double tau = bracket.tau();
+    if (tau == 0.0) {
+      return lower;
+    }
+    Vector3D blend = new Vector3D(1.0 - tau, lower, tau, axisOf(bracket.upper()));
+    return blend.getNorm() < MIN_BLEND_NORM ? lower : blend.normalize();
+  }
+
+  /**
+   * Whether any point of an ephemeris lies in the heating domain — the only points a profile reads
+   * the atmosphere on. An ephemeris with none heats nowhere, so its profile is all zeros: a
+   * consumer can skip building it, which is what costs on a long orbital ephemeris.
+   *
+   * @param ephemeris the raw mission ephemeris
+   * @return {@code true} if at least one point is on an Earth arc, descending, below the domain top
+   */
+  static boolean mayHeat(MissionEphemeris ephemeris) {
+    for (MissionEphemerisPoint point : ephemeris.allPoints()) {
+      if (inDomain(point)) {
+        return true;
       }
-      return intensities[first];
     }
-    int upper = -found - 1;
-    int lower = upper - 1;
-    double tau = (offset - offsets[lower]) / (offsets[upper] - offsets[lower]);
-    return intensities[lower] + tau * (intensities[upper] - intensities[lower]);
+    return false;
   }
 
   /**
@@ -220,17 +286,71 @@ public final class ReentryHeatProfile {
         && point.altitudeMeters() < DOMAIN_TOP_M;
   }
 
-  private static double fluxOrNaN(MissionEphemerisPoint point, Atmosphere air) {
+  /**
+   * The dates bracketing {@code date}: its own sample — the first of several sharing the date —
+   * with a zero weight, or the two samples around it with the weight of the upper one.
+   *
+   * @return the bracket, or {@code null} outside the ephemeris and for an empty profile
+   */
+  private Bracket bracketOf(AbsoluteDate date) {
+    int n = dates.length;
+    if (n == 0) {
+      return null;
+    }
+    double offset = date.durationFrom(dates[0]);
+    if (offset < 0.0 || offset > offsets[n - 1]) {
+      return null;
+    }
+    int found = Arrays.binarySearch(offsets, offset);
+    if (found >= 0) {
+      int first = found;
+      while (first > 0 && offsets[first - 1] == offsets[first]) {
+        first--;
+      }
+      return new Bracket(first, first, 0.0);
+    }
+    int upper = -found - 1;
+    int lower = upper - 1;
+    double tau = (offset - offsets[lower]) / (offsets[upper] - offsets[lower]);
+    return new Bracket(lower, upper, tau);
+  }
+
+  private Vector3D axisOf(int index) {
+    return new Vector3D(axisX[index], axisY[index], axisZ[index]);
+  }
+
+  /** {@code velocity}'s direction, or {@link Vector3D#ZERO} when it is too slow to have one. */
+  private static Vector3D directionOf(Vector3D velocity) {
+    return velocity.getNorm() < MIN_DIRECTION_SPEED ? Vector3D.ZERO : velocity.normalize();
+  }
+
+  private static AirState airStateOf(MissionEphemerisPoint point, Atmosphere air) {
     try {
       double density = air.getDensity(point.time(), point.position(), point.arc().frame());
       Vector3D wind = air.getVelocity(point.time(), point.position(), point.arc().frame());
-      double vRel = point.velocity().subtract(wind).getNorm();
-      return SUTTON_GRAVES_K * Math.sqrt(density / NOSE_RADIUS_M) * vRel * vRel * vRel;
+      Vector3D relative = point.velocity().subtract(wind);
+      double vRel = relative.getNorm();
+      return new AirState(
+          SUTTON_GRAVES_K * Math.sqrt(density / NOSE_RADIUS_M) * vRel * vRel * vRel, relative);
     } catch (RuntimeException e) {
       // An empirical model can throw on a state it does not cover (NRLMSISE00 answers far outside
       // its altitude range with an "Infinite value" throw); the caller turns any such failure into
       // a counted zero flux rather than letting it escape a display object.
-      return Double.NaN;
+      return new AirState(Double.NaN, Vector3D.ZERO);
     }
   }
+
+  /**
+   * What the atmosphere says of one heating sample.
+   *
+   * @param fluxWm2 the stagnation heat flux, NaN when the atmosphere failed
+   * @param relativeVelocity the velocity relative to the air, in the arc's frame
+   */
+  private record AirState(double fluxWm2, Vector3D relativeVelocity) {}
+
+  /**
+   * The samples bracketing a date: {@code lower} and {@code upper} with {@code tau} the weight of
+   * {@code upper}, or one sample twice with a zero weight on a sample date.
+   */
+  private record Bracket(int lower, int upper, double tau) {}
 }
