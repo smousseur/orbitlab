@@ -24,17 +24,20 @@ import java.util.Objects;
  * applied; the bucket is emptied whenever a model is attached, and the eclipse writes its uniforms
  * on everything in it. So the volume hangs under the same 3D anchor, as the bucket's sibling, and
  * takes its pose from the bucket's every frame: anchored on the nose the eye sees — seat plus
- * bucket rotation times the nose height — and turned onto the air-relative velocity, its {@code +Y}
- * being the prototype's flow axis. It is scaled by the body's radius, so the shader works in body
- * radii. The axis is a pure function of the date and is not smoothed: scrubbing the clock, the
- * volume faces its new direction at once and the smoothed body catches up.
+ * bucket rotation times the nose, on the body's measured axis ({@link PieceGeometry}) — and turned
+ * onto the air-relative velocity, its {@code +Y} being the prototype's flow axis. It is scaled by
+ * the body's radius, so the shader works in body radii. The axis is a pure function of the date and
+ * is not smoothed: scrubbing the clock, the volume faces its new direction at once and the smoothed
+ * body catches up.
  *
  * <h2>The body inside it</h2>
  *
  * <p>The drawn body follows its inertial heading, not the air-relative velocity: the two part by up
- * to 8.8 degrees while a piece glows, measured. The shock and the wake hang on the flow; the
- * boundary layer hugs the body, and the rays stop on it. So the shader is told the body's own axis
- * in the box's axes, and its length in radii.
+ * to 8.8 degrees while a piece glows, measured. The shock and the wake hang on the flow. The rays
+ * stop on the drawn mesh itself, read from the scene's depth ({@code ReentryVolumeFilter}), and the
+ * boundary layer glows just before that stop; it fades along the body, and the wake starts past its
+ * base. So the shader is told the body's own axis in the box's axes, and its length in radii, from
+ * the nose down to the measured base.
  *
  * <h2>When it shows, and who draws it</h2>
  *
@@ -83,7 +86,7 @@ public final class ReentryVolumeView {
    * Hands over the measure of the piece's current mesh. Safe from the loading thread: the box is
    * rebuilt for it on the render thread, by the next {@link #update}.
    *
-   * @param piece the nose height and body radius of the model about to be attached
+   * @param piece the nose, base, axis and body radius of the model about to be attached
    */
   public void setPieceGeometry(PieceGeometry piece) {
     this.piece = Objects.requireNonNull(piece, "piece");
@@ -117,15 +120,14 @@ public final class ReentryVolumeView {
       pivot.setCullHint(Spatial.CullHint.Always);
       return;
     }
-    float bodyLength = measured.noseHeightUnits() / measured.bodyRadiusUnits();
+    float bodyLength = measured.bodyLengthUnits() / measured.bodyRadiusUnits();
     if (measured != boxedFor) {
       rebuildBox(bodyLength);
       boxedFor = measured;
     }
     Quaternion orientation = orientation(axis);
     pivot.setLocalTranslation(
-        anchorPoint(
-            body.getLocalTranslation(), body.getLocalRotation(), measured.noseHeightUnits()));
+        anchorPoint(body.getLocalTranslation(), body.getLocalRotation(), measured));
     pivot.setLocalRotation(orientation);
     pivot.setLocalScale(measured.bodyRadiusUnits());
 
@@ -177,16 +179,17 @@ public final class ReentryVolumeView {
   }
 
   /**
-   * The drawn nose: the body's seat, plus its attitude applied to the nose height on its {@code
-   * +Y}, along which every piece mesh is authored.
+   * The drawn nose: the body's seat, plus its attitude applied to the nose on the body's measured
+   * axis — on {@code +Y} for a launcher piece, off it for a payload mesh.
    *
    * @param seat the body's translation under the anchor
    * @param bodyRotation the body's rotation under the anchor
-   * @param noseHeight the nose's height above the mesh origin
+   * @param piece the body's measured nose height and axis, in its mesh's units
    * @return where the volume is anchored, under the anchor
    */
-  static Vector3f anchorPoint(Vector3f seat, Quaternion bodyRotation, float noseHeight) {
-    return bodyRotation.mult(new Vector3f(0f, noseHeight, 0f)).addLocal(seat);
+  static Vector3f anchorPoint(Vector3f seat, Quaternion bodyRotation, PieceGeometry piece) {
+    Vector3f nose = new Vector3f(piece.axisXUnits(), piece.noseHeightUnits(), piece.axisZUnits());
+    return bodyRotation.mult(nose).addLocal(seat);
   }
 
   /**

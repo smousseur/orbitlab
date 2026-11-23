@@ -28,9 +28,18 @@ MaterialDef ReentryVolume {
         Float Temp
 
         // The drawn body, in the box's own axes and in body radii: its unit axis, pointing from its
-        // base to its nose at the origin, and its length. The rays stop on it. Set every frame.
+        // base to its nose at the origin, and its length. The boundary layer fades along it and the
+        // wake starts past its base. Set every frame.
         Vector3 BodyAxis
         Float BodyLength
+
+        // The scene's depth as the filter post-processor renders it, how many samples it holds,
+        // and the size in pixels of the reduced target the volume is marched into: the rays stop
+        // on whatever the scene drew - the piece's own mesh - read where each reduced texel is
+        // centred. Set by ReentryVolumeFilter every frame.
+        Texture2D DepthTexture
+        Int NumSamplesDepth
+        Vector2 TargetSize
 
         // The box's corners, in the box's own axes and in body radii. Set with the piece's measure.
         Vector3 BoxMin
@@ -55,8 +64,15 @@ MaterialDef ReentryVolume {
 
         WorldParameters {
             WorldViewProjectionMatrix
+            WorldMatrix
             WorldMatrixInverse
             CameraPosition
+            CameraDirection
+            FrustumNearFar
+        }
+
+        Defines {
+            RESOLVE_DEPTH_MS : NumSamplesDepth
         }
     }
 }

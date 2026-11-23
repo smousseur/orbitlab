@@ -138,6 +138,38 @@ class ReentryHeatProfileTest {
     assertEquals(0.0, profile.intensityAt(epoch.shiftedBy(4.001)), 0.0);
   }
 
+  /** Above the domain at 130 km the sample is cold; the first to glow is the one at 70 km. */
+  @Test
+  void theFirstHeatDateIsThatOfTheFirstGlowingSample() {
+    List<MissionEphemerisPoint> points =
+        List.of(
+            earthPoint(epoch, 130_000.0, DESCENDING),
+            earthPoint(epoch.shiftedBy(2.0), 70_000.0, DESCENDING),
+            earthPoint(epoch.shiftedBy(4.0), 65_000.0, DESCENDING));
+
+    ReentryHeatProfile profile = new ReentryHeatProfile(points, air, THRESHOLD, CEILING);
+
+    assertEquals(0.0, profile.samples().get(0).intensity(), 0.0);
+    assertTrue(profile.samples().get(1).intensity() > 0.0);
+    assertEquals(epoch.shiftedBy(2.0), profile.firstHeatDate().orElseThrow());
+  }
+
+  @Test
+  void aProfileThatNeverGlowsHasNoFirstHeatDate() {
+    ReentryHeatProfile climbing =
+        new ReentryHeatProfile(
+            List.of(
+                earthPoint(epoch, 60_000.0, ASCENDING),
+                earthPoint(epoch.shiftedBy(2.0), 62_000.0, ASCENDING)),
+            air,
+            THRESHOLD,
+            CEILING);
+    ReentryHeatProfile empty = new ReentryHeatProfile(List.of(), air, THRESHOLD, CEILING);
+
+    assertTrue(climbing.firstHeatDate().isEmpty());
+    assertTrue(empty.firstHeatDate().isEmpty());
+  }
+
   @Test
   void rewindingGivesTheSameValues() {
     ReentryHeatProfile profile = descentProfile();

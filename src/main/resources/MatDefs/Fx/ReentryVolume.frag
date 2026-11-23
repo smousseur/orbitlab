@@ -1,4 +1,5 @@
 #import "Common/ShaderLib/GLSLCompat.glsllib"
+#import "Common/ShaderLib/MultiSample.glsllib"
 
 // The plasma around a re-entering piece: the user's ray-marched prototype (plasma.frag), ported.
 // Bow shock after Billig, shock layer, boundary layer on the wall, turbulent wake, all integrated
@@ -6,15 +7,23 @@
 //
 // The flow axis - the prototype's x - is the box's +Y, the air-relative velocity, and the nose is
 // at the origin. The shock, the shock layer and the wake hang on that axis. The drawn body follows
-// its inertial heading instead, a few degrees off: the boundary layer hugs the body along BodyAxis,
-// and the rays stop on the body there, a cylinder one radius wide reaching BodyLength back from the
-// nose. The prototype's solid (engines first, nozzles, grid fins) is not drawn: the body is the
-// piece's own model.
+// its inertial heading instead, a few degrees off, along BodyAxis, BodyLength back from the nose.
+// The rays stop on whatever the scene drew, read from its depth: the piece's own mesh, whatever its
+// shape - a cylinder one radius wide fitted a launcher piece, but showed as a shell of its own
+// around a boxy payload. The boundary layer glows over the last stretch of a ray before that stop.
+// The prototype's solid (engines first, nozzles, grid fins) is not drawn: the body is the piece's
+// own model.
 //
 // Output premultiplied, tone mapped here: the scene has no tone mapping of its own.
 
+uniform mat4  g_WorldMatrix;
 uniform mat4  g_WorldMatrixInverse;
 uniform vec3  g_CameraPosition;
+uniform vec3  g_CameraDirection;
+uniform vec2  g_FrustumNearFar;
+
+uniform DEPTHTEXTURE m_DepthTexture;
+uniform vec2  m_TargetSize;
 
 uniform int   m_Steps;
 uniform float m_Intensity;
@@ -54,7 +63,7 @@ const float REAR_FADE_RADII = 8.0;
 // too: at 0.6 radius the jitter's pattern showed as a checker on the body; at 0.45 it barely does.
 const float STEP_RADII = 0.45;
 
-// How a ray that ends on the body takes its last stretch: its last body radius in WALL_STEPS
+// How a ray that ends on the scene takes its last stretch: its last body radius in WALL_STEPS
 // samples. The boundary layer fades within 0.3 radius of the wall, so at STEP_RADII it fell inside
 // a single sample, whose share of it depended on the jitter: the jitter's pattern showed on the
 // body as a checker. Measured: 16 samples there bring that checker down to what the other terms
@@ -95,7 +104,9 @@ vec3 heatRamp(float t) {
     return c * (0.10 + 1.15 * t);
 }
 
-vec3 plasma(vec3 p, out float sig) {
+// wallDistance: how far along the ray the sample lies before the surface the ray stops on, in body
+// radii; NO_HIT for a ray that stops on nothing.
+vec3 plasma(vec3 p, float wallDistance, out float sig) {
     // The prototype's frame: x along the flow, y and z across it.
     vec3 flow = vec3(p.y, p.z, p.x);
     float r = length(flow.yz);
@@ -129,10 +140,8 @@ vec3 plasma(vec3 p, out float sig) {
     float modS = mix(1.0, 0.35 + 1.3 * n1, tf * 0.9);
 
     float along = dot(p, m_BodyAxis);
-    float rBody = length(p - along * m_BodyAxis);
-    float hb = length(vec2(max(rBody - 1.0, 0.0), max(along - 0.5, 0.0)));
     float xb = max(-along, 0.0);
-    float bl = inside * exp(-hb / 0.30) * exp(-xb / 9.0) * (0.6 + 0.8 * mix(1.0, n2, tf));
+    float bl = inside * exp(-wallDistance / 0.30) * exp(-xb / 9.0) * (0.6 + 0.8 * mix(1.0, n2, tf));
 
     float xt = -m_BodyLength - x;
     float sw = 0.9 + 0.17 * max(xt, 0.0);
@@ -170,52 +179,35 @@ vec2 boxHit(vec3 ro, vec3 rd) {
     return vec2(max(max(tmin.x, tmin.y), tmin.z), min(min(tmax.x, tmax.y), tmax.z));
 }
 
-// Where the ray meets one end disc of the body, or NO_HIT.
-float capHit(vec3 ro, vec3 rd, float startAlong, float rayAlong, float capAlong) {
-    float t = (capAlong - startAlong) / rayAlong;
-    vec3 p = ro + rd * t;
-    vec3 radial = p - dot(p, m_BodyAxis) * m_BodyAxis;
-    return (t > 0.0 && dot(radial, radial) <= 1.0) ? t : NO_HIT;
-}
-
-// Where the ray first meets the body, or NO_HIT.
-float bodyHit(vec3 ro, vec3 rd) {
-    float hit = NO_HIT;
-    float startAlong = dot(ro, m_BodyAxis);
-    float rayAlong = dot(rd, m_BodyAxis);
-    vec3 startRadial = ro - startAlong * m_BodyAxis;
-    vec3 rayRadial = rd - rayAlong * m_BodyAxis;
-    float a = dot(rayRadial, rayRadial);
-    if (a > 1e-8) {
-        float b = dot(startRadial, rayRadial);
-        float c = dot(startRadial, startRadial) - 1.0;
-        float h = b * b - a * c;
-        if (h >= 0.0) {
-            float t = (-b - sqrt(h)) / a;
-            float along = startAlong + t * rayAlong;
-            if (t > 0.0 && along < 0.0 && along > -m_BodyLength) {
-                hit = t;
-            }
-        }
+// Where the ray from the camera meets what the scene drew - the piece's own mesh, or anything in
+// front of it - read from the scene's depth where this reduced texel is centred, as the composite
+// reads it; NO_HIT where the scene drew nothing.
+float sceneHit(vec3 rd) {
+    float depth = fetchTextureSample(m_DepthTexture, gl_FragCoord.xy / m_TargetSize, 0).r;
+    if (depth >= 1.0) {
+        return NO_HIT;
     }
-    if (abs(rayAlong) > 1e-8) {
-        hit = min(hit, capHit(ro, rd, startAlong, rayAlong, 0.0));
-        hit = min(hit, capHit(ro, rd, startAlong, rayAlong, -m_BodyLength));
-    }
-    return hit;
+    float near = g_FrustumNearFar.x;
+    float far = g_FrustumNearFar.y;
+    float viewDepth = near * far / (far - depth * (far - near));
+    // How far the view depth advances per unit of the ray: the world matrix carries the body
+    // radius, so the ray, like the box, stays in body radii.
+    float depthPerUnit = dot(mat3(g_WorldMatrix) * rd, g_CameraDirection);
+    return depthPerUnit > 0.0 ? viewDepth / depthPerUnit : NO_HIT;
 }
 
 // Integrates the plasma from distance a to b along the ray, in n samples, until it hides all but a
-// hundredth of what lies behind.
-void march(vec3 ro, vec3 rd, float a, float b, int n, float jitter,
+// hundredth of what lies behind. wallT is where the ray stops on the scene, NO_HIT if it does not.
+void march(vec3 ro, vec3 rd, float a, float b, int n, float jitter, float wallT,
         inout vec3 acc, inout float transmittance) {
     float dt = (b - a) / float(n);
     for (int i = 0; i < n; i++) {
         if (transmittance < 0.01) {
             return;
         }
+        float t = a + (float(i) + jitter) * dt;
         float sig;
-        vec3 e = plasma(ro + rd * (a + (float(i) + jitter) * dt), sig);
+        vec3 e = plasma(ro + rd * t, wallT - t, sig);
         acc += transmittance * e * dt;
         transmittance *= exp(-sig * dt);
     }
@@ -226,21 +218,23 @@ void main() {
     vec3 rd = normalize(vObjectPosition - ro);
     vec2 box = boxHit(ro, rd);
     float start = max(box.x, 0.0);
-    float bodyT = bodyHit(ro, rd);
-    float end = min(box.y, bodyT);
+    float sceneT = sceneHit(rd);
+    float end = min(box.y, sceneT);
     if (end <= start) {
         discard;
     }
     float jitter = interleavedGradientNoise(gl_FragCoord.xy);
-    float wall = bodyT <= box.y ? max(start, end - WALL_RADII) : end;
+    bool stopsOnScene = sceneT <= box.y;
+    float wallT = stopsOnScene ? end : NO_HIT;
+    float wall = stopsOnScene ? max(start, end - WALL_RADII) : end;
     vec3 acc = vec3(0.0);
     float transmittance = 1.0;
     if (wall > start) {
         int steps = clamp(int(ceil((wall - start) / STEP_RADII)), 1, m_Steps);
-        march(ro, rd, start, wall, steps, jitter, acc, transmittance);
+        march(ro, rd, start, wall, steps, jitter, wallT, acc, transmittance);
     }
     if (end > wall) {
-        march(ro, rd, wall, end, WALL_STEPS, jitter, acc, transmittance);
+        march(ro, rd, wall, end, WALL_STEPS, jitter, wallT, acc, transmittance);
     }
     gl_FragColor = vec4(1.0 - exp(-acc * m_Exposure), 1.0 - transmittance);
 }

@@ -14,22 +14,57 @@ import java.nio.FloatBuffer;
 import java.util.Arrays;
 
 /**
- * Where a loaded piece's nose is, and how thick its body is — the two numbers its re-entry plasma
- * volume is placed and sized by.
+ * Where a loaded piece's nose, base and axis are, and how thick its body is — the numbers its
+ * re-entry plasma volume is placed and sized by.
  *
- * <p>The nose is the top of the model's bounding box: every launcher piece is authored nose up,
- * base at the origin. The body radius is <b>not</b> the box's half-width, which on a Falcon Heavy
- * piece spans its landing legs and grid fins — 2.88 m against a 1.94 m body, measured on the
- * booster — while on an Ariane 64 piece box and body agree. One set of proportions in body radii
- * could not fit both. Instead the model is cut into {@value #SLICES} slices along its height, the
- * widest vertex of each slice is taken about the box's vertical axis, and the median over the
- * slices that hold any vertex is kept: appendages confined to a few slices fall out of it, the body
- * that runs the whole height does not.
+ * <p>Every piece flies its {@code +Y} first, so the nose is the top of the model's bounding box and
+ * the base its bottom, and the body runs along the box's vertical axis. A launcher piece is
+ * authored nose up, base at the origin, its body on {@code +Y}: measured, its base lies within 1.5
+ * cm of the origin and its axis within 7 cm of {@code +Y} on a Falcon Heavy, 22 cm on the Ariane 64
+ * core. A payload mesh is not: the third-party satellites put their origin inside the body, 2.38 m
+ * above the base of a 3 m Landsat 8 whose axis runs 0.90 m off {@code +Y}. Hence the base and the
+ * axis are measured rather than assumed.
+ *
+ * <p>The body radius is <b>not</b> the box's half-width, which on a Falcon Heavy piece spans its
+ * landing legs and grid fins — 2.88 m against a 1.94 m body, measured on the booster — while on an
+ * Ariane 64 piece box and body agree. One set of proportions in body radii could not fit both.
+ * Instead the model is cut into {@value #SLICES} slices along its height, the widest vertex of each
+ * slice is taken about the box's vertical axis, and the median over the slices that hold any vertex
+ * is kept: appendages confined to a few slices fall out of it, the body that runs the whole height
+ * does not.
  *
  * @param noseHeightUnits the nose's height above the model's origin, in the model's world units
  * @param bodyRadiusUnits the body's radius, in the same units
+ * @param baseHeightUnits the base's height above the model's origin, in the same units; negative
+ *     below it
+ * @param axisXUnits where the body's axis crosses the model's {@code x}, in the same units
+ * @param axisZUnits where the body's axis crosses the model's {@code z}, in the same units
  */
-public record PieceGeometry(float noseHeightUnits, float bodyRadiusUnits) {
+public record PieceGeometry(
+    float noseHeightUnits,
+    float bodyRadiusUnits,
+    float baseHeightUnits,
+    float axisXUnits,
+    float axisZUnits) {
+
+  /**
+   * A piece authored on the launcher convention: its base at the origin, its body on {@code +Y}.
+   *
+   * @param noseHeightUnits the nose's height above the model's origin, in the model's world units
+   * @param bodyRadiusUnits the body's radius, in the same units
+   */
+  public PieceGeometry(float noseHeightUnits, float bodyRadiusUnits) {
+    this(noseHeightUnits, bodyRadiusUnits, 0f, 0f, 0f);
+  }
+
+  /**
+   * How long the body is, from its base to its nose.
+   *
+   * @return the body's length, in the model's world units
+   */
+  public float bodyLengthUnits() {
+    return noseHeightUnits - baseHeightUnits;
+  }
 
   /**
    * How many slices the height is cut into. On the Falcon Heavy booster, legs and grid fins widen 6
@@ -42,7 +77,7 @@ public record PieceGeometry(float noseHeightUnits, float bodyRadiusUnits) {
    * the model.
    *
    * @param model the loaded model, scale included, not attached to the scene
-   * @return its nose height and body radius, in its own world units
+   * @return its nose height, body radius, base height and axis, in its own world units
    */
   public static PieceGeometry measure(Spatial model) {
     model.updateGeometricState();
@@ -67,7 +102,7 @@ public record PieceGeometry(float noseHeightUnits, float bodyRadiusUnits) {
             widths.add(geometry);
           }
         });
-    return new PieceGeometry(top, widths.median());
+    return new PieceGeometry(top, widths.median(), bottom, centre.x, centre.z);
   }
 
   /** The widest vertex of each height slice, about a vertical axis. */

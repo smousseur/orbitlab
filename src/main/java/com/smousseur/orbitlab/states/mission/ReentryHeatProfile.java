@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
@@ -107,6 +108,9 @@ public final class ReentryHeatProfile {
   private final List<HeatSample> samples;
   private final int atmosphereFailures;
 
+  /** The date of the first sample whose intensity is above zero; null when none is. */
+  private final AbsoluteDate firstHeat;
+
   /**
    * Computes the profile of a sequence of ephemeris points.
    *
@@ -139,6 +143,7 @@ public final class ReentryHeatProfile {
     speeds = new double[n];
     altitudes = new double[n];
     List<HeatSample> built = new ArrayList<>(n);
+    AbsoluteDate firstGlowing = null;
     int inDomain = 0;
     int failures = 0;
     for (int i = 0; i < n; i++) {
@@ -164,6 +169,9 @@ public final class ReentryHeatProfile {
       dates[i] = point.time();
       offsets[i] = point.time().durationFrom(dates[0]);
       intensities[i] = intensityOf(flux, thresholdWm2, ceilingWm2);
+      if (firstGlowing == null && intensities[i] > 0.0) {
+        firstGlowing = point.time();
+      }
       axisX[i] = axis.getX();
       axisY[i] = axis.getY();
       axisZ[i] = axis.getZ();
@@ -173,6 +181,7 @@ public final class ReentryHeatProfile {
     }
     samples = List.copyOf(built);
     atmosphereFailures = failures;
+    firstHeat = firstGlowing;
     if (failures > 0) {
       logger.warn(
           "Re-entry heat profile: the atmosphere failed on {} of the {} sample(s) in the heating"
@@ -284,6 +293,20 @@ public final class ReentryHeatProfile {
     }
     int lower = bracket.lower();
     return altitudes[lower] + bracket.tau() * (altitudes[bracket.upper()] - altitudes[lower]);
+  }
+
+  /**
+   * The date of the first sample that glows — the first whose intensity is above zero.
+   *
+   * <p>The origin an object's turbulence clock can count from while it glows. A primary's ephemeris
+   * starts at the launch and its payload falls after the mission's horizon, more than a day later:
+   * counted from the launch, the seconds would reach where a {@code float}, which the shader takes
+   * them as, steps by a frame or more.
+   *
+   * @return the date of the first glowing sample, or empty for a profile that never glows
+   */
+  public Optional<AbsoluteDate> firstHeatDate() {
+    return Optional.ofNullable(firstHeat);
   }
 
   /**

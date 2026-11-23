@@ -36,6 +36,12 @@ class ReentryVolumeViewTest {
   /** A nose 10 units up and a body 2 units wide: 5 radii long. */
   private static final PieceGeometry PIECE = new PieceGeometry(10f, 2f);
 
+  /**
+   * A body authored as a payload is: its nose 10 units up, its base 4 units under the origin, its
+   * axis through (1.5, -0.5). 2 units wide, it is 7 radii long.
+   */
+  private static final PieceGeometry OFF_AXIS_PIECE = new PieceGeometry(10f, 2f, -4f, 1.5f, -0.5f);
+
   private Node anchor3d;
   private Node body;
   private ReentryVolumeView view;
@@ -65,9 +71,22 @@ class ReentryVolumeViewTest {
   @Test
   void theAnchorIsTheDrawnNose() {
     Vector3f anchor =
-        ReentryVolumeView.anchorPoint(new Vector3f(1f, 2f, 3f), QUARTER_TURN_ABOUT_Z, 10f);
+        ReentryVolumeView.anchorPoint(new Vector3f(1f, 2f, 3f), QUARTER_TURN_ABOUT_Z, PIECE);
 
     assertVectorEquals(new Vector3f(-9f, 2f, 3f), anchor);
+  }
+
+  /**
+   * A body whose axis runs through (1.5, -0.5) of its mesh, as a payload's does: its nose (1.5, 10,
+   * -0.5) turns a quarter about Z onto (-10, 1.5, -0.5), off its seat.
+   */
+  @Test
+  void theAnchorIsTheDrawnNoseOnTheMeasuredAxis() {
+    Vector3f anchor =
+        ReentryVolumeView.anchorPoint(
+            new Vector3f(1f, 2f, 3f), QUARTER_TURN_ABOUT_Z, OFF_AXIS_PIECE);
+
+    assertVectorEquals(new Vector3f(-9f, 3.5f, 2.5f), anchor);
   }
 
   @Test
@@ -145,6 +164,22 @@ class ReentryVolumeViewTest {
     assertVectorEquals(new Vector3f(-11f, -25f, -11f), bound.getMin(null));
     assertVectorEquals(new Vector3f(11f, 3f, 11f), bound.getMax(null));
     assertEquals(5f, (Float) material().getParamValue("BodyLength"), 1e-6f);
+  }
+
+  /**
+   * A payload's body runs from its nose down to its base, under the origin: 7 radii, and the box
+   * reaches 20 radii beyond that base. The volume hangs on its drawn nose, on its own axis.
+   */
+  @Test
+  void anOffAxisBodyRunsFromItsNoseToItsBase() {
+    view.setPieceGeometry(OFF_AXIS_PIECE);
+
+    view.update(0.7f, Vector3f.UNIT_X, 4_000f, 25_000f, body, true);
+
+    assertEquals(7f, (Float) material().getParamValue("BodyLength"), 1e-6f);
+    assertVectorEquals(
+        new Vector3f(-11f, -27f, -11f), (Vector3f) material().getParamValue("BoxMin"));
+    assertVectorEquals(new Vector3f(-9f, 3.5f, 2.5f), pivot().getLocalTranslation());
   }
 
   /** A silhouette change hands over a new measure: a body twice as long, a box 5 radii longer. */

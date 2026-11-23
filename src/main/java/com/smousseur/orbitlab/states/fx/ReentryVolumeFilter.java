@@ -3,11 +3,13 @@ package com.smousseur.orbitlab.states.fx;
 import com.jme3.asset.AssetManager;
 import com.jme3.material.Material;
 import com.jme3.math.ColorRGBA;
+import com.jme3.math.Vector2f;
 import com.jme3.post.Filter;
 import com.jme3.renderer.RenderManager;
 import com.jme3.renderer.Renderer;
 import com.jme3.renderer.ViewPort;
 import com.jme3.renderer.queue.RenderQueue;
+import com.jme3.scene.Geometry;
 import com.jme3.texture.FrameBuffer;
 import com.jme3.texture.Image;
 import com.jme3.texture.Texture;
@@ -23,9 +25,16 @@ import com.jme3.texture.Texture2D;
  * project's reference GPU, against a budget of 2 ms; marched at half that resolution and laid over
  * the scene, at most 1.83 ms at the median, the composite alone 0.08 ms. So the boxes are queued in
  * the {@link RenderQueue.Bucket#Translucent Translucent} bucket, which this filter takes out of the
- * near view's main pass, and drawn here, in {@link #postQueue}, into a target {@code divisor} times
+ * near view's main pass, and drawn here, in {@link #postFrame}, into a target {@code divisor} times
  * smaller in each direction — the way the bloom draws its glow pass at half resolution. The
  * composite then lays that target, filtered bilinearly, over the scene the processor holds.
+ *
+ * <h2>Why after the scene</h2>
+ *
+ * <p>The rays stop on what the scene drew, read from its depth: the piece's own mesh, whatever its
+ * shape. An analytic body — a cylinder one body radius wide — fits a launcher piece but not a
+ * payload: around a 3 m Landsat 8, seen on screen, it showed as a shell of its own. So the volumes
+ * are marched once the scene is drawn, when its depth is valid.
  *
  * <p>The {@code Translucent} bucket is therefore reserved for the plasma volumes: whatever else
  * were queued there would be drawn into the reduced target too, and the flag that keeps it out of
@@ -43,9 +52,11 @@ final class ReentryVolumeFilter extends Filter {
   private final int resolutionDivisor;
 
   private RenderManager renderManager;
-  private ViewPort viewPort;
   private FrameBuffer volumeBuffer;
   private Material material;
+
+  /** The scene's depth, handed over by the processor; null until it has initialised the filter. */
+  private Texture sceneDepth;
 
   /**
    * Creates the filter.
@@ -78,7 +89,6 @@ final class ReentryVolumeFilter extends Filter {
   protected void initFilter(
       AssetManager manager, RenderManager renderManager, ViewPort vp, int w, int h) {
     this.renderManager = renderManager;
-    this.viewPort = vp;
     Texture2D volume =
         new Texture2D(
             reducedSize(w, resolutionDivisor),
@@ -108,16 +118,65 @@ final class ReentryVolumeFilter extends Filter {
     return true;
   }
 
+  /** Keeps the scene's depth the processor hands over, at start-up and at every resize. */
   @Override
-  protected void postQueue(RenderQueue queue) {
+  protected void setDepthTexture(Texture depthTexture) {
+    super.setDepthTexture(depthTexture);
+    sceneDepth = depthTexture;
+  }
+
+  /**
+   * Marches the volumes, now that the scene is drawn and its depth holds the pieces' meshes. The
+   * render manager runs the processors after the opaque buckets and empties the queue only after
+   * them, so the {@code Translucent} bucket still holds this frame's volumes here; the filters
+   * before this one leave their own camera set, so the view's is set back first, and binding the
+   * reduced target then sizes the viewport to it.
+   */
+  @Override
+  protected void postFrame(
+      RenderManager renderManager,
+      ViewPort viewPort,
+      FrameBuffer prevFilterBuffer,
+      FrameBuffer sceneBuffer) {
     Renderer renderer = renderManager.getRenderer();
+    RenderQueue queue = viewPort.getQueue();
+    renderManager.setCamera(viewPort.getCamera(), false);
     renderer.setFrameBuffer(volumeBuffer);
     renderer.setBackgroundColor(ColorRGBA.BlackNoAlpha);
     renderer.clearBuffers(true, false, false);
-    if (!queue.isQueueEmpty(RenderQueue.Bucket.Translucent)) {
+    if (sceneDepth != null && !queue.isQueueEmpty(RenderQueue.Bucket.Translucent)) {
+      bindSceneDepth(
+          queue.getList(RenderQueue.Bucket.Translucent),
+          sceneDepth,
+          volumeBuffer.getWidth(),
+          volumeBuffer.getHeight());
       queue.renderQueue(RenderQueue.Bucket.Translucent, renderManager, viewPort.getCamera(), true);
     }
-    renderer.setFrameBuffer(viewPort.getOutputFrameBuffer());
+  }
+
+  /**
+   * Hands every volume about to be marched the scene's depth, which its rays stop on, and the size
+   * of the reduced target, which places each of its texels on that depth.
+   *
+   * @param volumes the volumes queued this frame
+   * @param depth the scene's depth, as the filter post-processor renders it
+   * @param targetWidth the reduced target's width, in pixels
+   * @param targetHeight the reduced target's height, in pixels
+   */
+  static void bindSceneDepth(
+      Iterable<Geometry> volumes, Texture depth, int targetWidth, int targetHeight) {
+    int samples = depth.getImage().getMultiSamples();
+    Vector2f targetSize = new Vector2f(targetWidth, targetHeight);
+    for (Geometry volume : volumes) {
+      Material volumeMaterial = volume.getMaterial();
+      volumeMaterial.setTexture("DepthTexture", depth);
+      volumeMaterial.setVector2("TargetSize", targetSize);
+      if (samples > 1) {
+        volumeMaterial.setInt("NumSamplesDepth", samples);
+      } else {
+        volumeMaterial.clearParam("NumSamplesDepth");
+      }
+    }
   }
 
   @Override
