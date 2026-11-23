@@ -4,8 +4,8 @@ import com.jme3.math.ColorRGBA;
 import java.util.Objects;
 
 /**
- * Tuning of the re-entry effects: when a falling object starts to glow and how hard, and how its
- * plasma sheath looks.
+ * Tuning of the re-entry effects: when a falling object starts to glow and how hard, how its plasma
+ * sheath looks, and how its wake trails behind it.
  *
  * <p>The threshold and the ceiling map a stagnation heat flux onto the intensity {@code ln(flux /
  * threshold) / ln(ceiling / threshold)}, bounded to {@code [0, 1]}. The sheath is a paraboloid
@@ -26,6 +26,8 @@ import java.util.Objects;
  *     0)
  * @param lengthRatio how far back from its apex the shell reaches, in body radii (positive)
  * @param openingRatio the radius of the shell's open end, in body radii (positive)
+ * @param wake the tuning of the wake, which shares the rim colour, the opening and the intensity
+ *     scale above
  */
 public record ReentryFxConfig(
     double thresholdWm2,
@@ -35,7 +37,8 @@ public record ReentryFxConfig(
     float coverage,
     float standoffRatio,
     float lengthRatio,
-    float openingRatio) {
+    float openingRatio,
+    ReentryWakeConfig wake) {
 
   public ReentryFxConfig {
     if (!Double.isFinite(thresholdWm2) || thresholdWm2 <= 0.0) {
@@ -58,6 +61,7 @@ public record ReentryFxConfig(
     if (!Float.isFinite(openingRatio) || openingRatio <= 0f) {
       throw new IllegalArgumentException("openingRatio must be finite and > 0");
     }
+    Objects.requireNonNull(wake, "wake");
   }
 
   /**
@@ -108,6 +112,7 @@ public record ReentryFxConfig(
         0.6f,
         1.0f,
         2.5f,
-        2.0f);
+        2.0f,
+        ReentryWakeConfig.defaults());
   }
 }

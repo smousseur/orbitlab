@@ -1,0 +1,52 @@
+MaterialDef ReentryWake {
+
+    MaterialParameters {
+        // How hot the piece is now, in [0,1]: the re-entry heat profile's intensity at the clock's
+        // date. Zero puts the wake out; it scales its light.
+        Float Intensity : 0.0
+
+        // The wake's physical length, in world units: the body it streams past, plus the distance
+        // the piece covers through the air in the persistence, persistence x |v_rel|. Set every
+        // frame.
+        Float LengthUnits : 0.0
+
+        // The length, in world units, of the wake the length floor is quoted for (persistence x
+        // reference speed). Set every frame with LengthUnits, being in the same units. Never zero:
+        // the shader divides by it.
+        Float RefLengthUnits : 1.0
+
+        // The wake's full physical width at its root, in world units: the diameter of the sheath's
+        // open rim, where the wake starts. Set every frame.
+        Float WidthUnits : 0.0
+
+        // Length, in screen pixels, under which a wake of RefLengthUnits never shrinks. Every wake
+        // is magnified by the same factor, so far away they keep their proportions.
+        Float MinLengthPx
+
+        // Width, in screen pixels, under which the wake never narrows.
+        Float MinWidthPx
+
+        // Colour of the wake: the sheath's rim colour, which the wake streams back from. It does not
+        // whiten as the sheath's core does: the sheath's apex stays the hottest point. The shader
+        // writes it premultiplied, hiding what the wake crosses as much as it shines, and the
+        // material blends as PremultAlpha.
+        Color RimColor
+    }
+
+    // Deliberately no Glow technique, for the reason Corona.j3md gives: PostFxAppState runs the
+    // bloom in GlowMode.Objects, which re-renders the scene through that technique, and a wake
+    // that declared one would be blurred and added back on top of itself.
+    Technique {
+        VertexShader   GLSL150: MatDefs/Fx/ReentryWake.vert
+        FragmentShader GLSL150: MatDefs/Fx/ReentryWake.frag
+
+        WorldParameters {
+            // The tube is sized in view space, before projection, as Ribbon.vert widens a trace:
+            // the two halves of the usual WorldViewProjectionMatrix are needed apart, and the
+            // viewport height turns a pixel into a view-space length.
+            WorldViewMatrix
+            ProjectionMatrix
+            Resolution
+        }
+    }
+}

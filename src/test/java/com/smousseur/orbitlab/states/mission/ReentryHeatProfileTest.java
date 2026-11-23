@@ -372,6 +372,119 @@ class ReentryHeatProfileTest {
     assertTrue(ReentryHeatProfile.mayHeat(new MissionEphemeris(withOneInside)));
   }
 
+  @Test
+  void speedOnAHeatingSampleIsTheAirRelativeSpeed() {
+    MissionEphemerisPoint point = earthPoint(epoch, 60_000.0, DESCENDING);
+
+    ReentryHeatProfile profile = new ReentryHeatProfile(List.of(point), air, THRESHOLD, CEILING);
+
+    double expected = airRelativeSpeed(point);
+    assertTrue(Math.abs(expected - DESCENDING.getNorm()) > 1.0, "the wind must change the speed");
+    assertEquals(expected, profile.speedAt(epoch), 1e-9);
+  }
+
+  @Test
+  void speedOutsideTheHeatingDomainIsTheInertialSpeed() {
+    ReentryHeatProfile profile =
+        new ReentryHeatProfile(
+            List.of(earthPoint(epoch, 60_000.0, ASCENDING)), air, THRESHOLD, CEILING);
+
+    assertEquals(ASCENDING.getNorm(), profile.speedAt(epoch), 1e-9);
+  }
+
+  @Test
+  void speedWhereTheAtmosphereFailsIsTheInertialSpeed() {
+    ReentryHeatProfile profile =
+        new ReentryHeatProfile(
+            List.of(earthPoint(epoch, 50_000.0, DESCENDING)),
+            new ThrowingAtmosphere(earth, 55_000.0),
+            THRESHOLD,
+            CEILING);
+
+    assertEquals(1, profile.atmosphereFailures());
+    assertEquals(DESCENDING.getNorm(), profile.speedAt(epoch), 1e-9);
+  }
+
+  @Test
+  void aCoMovingAtmosphereGivesAZeroSpeed() {
+    ReentryHeatProfile profile =
+        new ReentryHeatProfile(
+            List.of(earthPoint(epoch, 60_000.0, DESCENDING)),
+            windAtmosphere(DESCENDING),
+            THRESHOLD,
+            CEILING);
+
+    assertEquals(0.0, profile.speedAt(epoch), 0.0);
+  }
+
+  @Test
+  void speedBetweenTwoSamplesIsLinear() {
+    MissionEphemerisPoint first = earthPoint(epoch, 62_000.0, DESCENDING);
+    MissionEphemerisPoint second = earthPoint(epoch.shiftedBy(2.0), 60_000.0, STEEPER);
+
+    ReentryHeatProfile profile =
+        new ReentryHeatProfile(List.of(first, second), air, THRESHOLD, CEILING);
+
+    double s0 = airRelativeSpeed(first);
+    double s1 = airRelativeSpeed(second);
+    assertTrue(Math.abs(s1 - s0) > 1.0, "the two speeds must differ");
+    assertEquals(s0, profile.speedAt(epoch), 1e-9);
+    assertEquals(s1, profile.speedAt(epoch.shiftedBy(2.0)), 1e-9);
+    assertEquals(0.5 * (s0 + s1), profile.speedAt(epoch.shiftedBy(1.0)), 1e-9);
+    assertEquals(s0 + 0.25 * (s1 - s0), profile.speedAt(epoch.shiftedBy(0.5)), 1e-9);
+  }
+
+  @Test
+  void speedIsZeroOutsideTheEphemerisAndOnAnEmptyProfile() {
+    ReentryHeatProfile profile = descentProfile();
+    ReentryHeatProfile empty = new ReentryHeatProfile(List.of(), air, THRESHOLD, CEILING);
+
+    assertEquals(0.0, profile.speedAt(epoch.shiftedBy(-0.001)), 0.0);
+    assertEquals(0.0, profile.speedAt(epoch.shiftedBy(4.001)), 0.0);
+    assertEquals(0.0, empty.speedAt(epoch), 0.0);
+  }
+
+  @Test
+  void speedOnEqualDatesIsTheFirstSample() {
+    MissionEphemerisPoint first = earthPoint(epoch, 65_000.0, DESCENDING);
+    List<MissionEphemerisPoint> points =
+        List.of(
+            first,
+            earthPoint(epoch, 60_000.0, STEEPER),
+            earthPoint(epoch.shiftedBy(2.0), 62_000.0, DESCENDING));
+
+    ReentryHeatProfile profile = new ReentryHeatProfile(points, air, THRESHOLD, CEILING);
+
+    assertEquals(airRelativeSpeed(first), profile.speedAt(epoch), 1e-9);
+  }
+
+  @Test
+  void rewindingGivesTheSameSpeeds() {
+    List<MissionEphemerisPoint> points =
+        List.of(
+            earthPoint(epoch, 70_000.0, DESCENDING),
+            earthPoint(epoch.shiftedBy(2.0), 65_000.0, STEEPER),
+            earthPoint(epoch.shiftedBy(4.0), 60_000.0, DESCENDING));
+    ReentryHeatProfile profile = new ReentryHeatProfile(points, air, THRESHOLD, CEILING);
+    int count = 17;
+    double[] forward = new double[count];
+    for (int i = 0; i < count; i++) {
+      forward[i] = profile.speedAt(epoch.shiftedBy(-1.0 + 0.37 * i));
+    }
+    double[] backward = new double[count];
+    for (int i = count - 1; i >= 0; i--) {
+      backward[i] = profile.speedAt(epoch.shiftedBy(-1.0 + 0.37 * i));
+    }
+
+    assertArrayEquals(forward, backward, 0.0);
+  }
+
+  /** The air-relative speed of a sample, read off the test atmosphere directly. */
+  private static double airRelativeSpeed(MissionEphemerisPoint point) {
+    Vector3D wind = air.getVelocity(point.time(), point.position(), point.arc().frame());
+    return point.velocity().subtract(wind).getNorm();
+  }
+
   /** The unit air-relative velocity of a sample, read off the test atmosphere directly. */
   private static Vector3D airRelativeDirection(MissionEphemerisPoint point) {
     Vector3D wind = air.getVelocity(point.time(), point.position(), point.arc().frame());

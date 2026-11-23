@@ -12,6 +12,7 @@ class ReentryFxConfigTest {
 
   private static final ColorRGBA RIM = new ColorRGBA(1f, 0.45f, 0.1f, 1f);
   private static final ColorRGBA CORE = new ColorRGBA(1f, 0.97f, 0.9f, 1f);
+  private static final ReentryWakeConfig WAKE = ReentryWakeConfig.defaults();
 
   @Test
   void defaultsCarryTheThresholdAndCeilingL0Measured() {
@@ -60,16 +61,29 @@ class ReentryFxConfigTest {
   void refusesAMissingColour() {
     assertThrows(
         NullPointerException.class,
-        () -> new ReentryFxConfig(1e5, 1.1e7, null, CORE, 0.35f, 0.5f, 2.5f, 1.6f));
+        () -> new ReentryFxConfig(1e5, 1.1e7, null, CORE, 0.35f, 0.5f, 2.5f, 1.6f, WAKE));
     assertThrows(
         NullPointerException.class,
-        () -> new ReentryFxConfig(1e5, 1.1e7, RIM, null, 0.35f, 0.5f, 2.5f, 1.6f));
+        () -> new ReentryFxConfig(1e5, 1.1e7, RIM, null, 0.35f, 0.5f, 2.5f, 1.6f, WAKE));
+  }
+
+  @Test
+  void defaultsCarryTheWakeDefaults() {
+    assertEquals(ReentryWakeConfig.defaults(), ReentryFxConfig.defaults().wake());
+  }
+
+  @Test
+  void refusesAMissingWake() {
+    assertThrows(
+        NullPointerException.class,
+        () -> new ReentryFxConfig(1e5, 1.1e7, RIM, CORE, 0.35f, 0.5f, 2.5f, 1.6f, null));
   }
 
   @Test
   void coloursCannotBeChangedFromOutside() {
     ColorRGBA rim = RIM.clone();
-    ReentryFxConfig config = new ReentryFxConfig(1e5, 1.1e7, rim, CORE, 0.35f, 0.5f, 2.5f, 1.6f);
+    ReentryFxConfig config =
+        new ReentryFxConfig(1e5, 1.1e7, rim, CORE, 0.35f, 0.5f, 2.5f, 1.6f, WAKE);
 
     rim.set(0f, 0f, 0f, 0f);
     config.hotCoreColor().set(0f, 0f, 0f, 0f);
@@ -85,7 +99,8 @@ class ReentryFxConfigTest {
       float standoff,
       float length,
       float opening) {
-    return new ReentryFxConfig(threshold, ceiling, RIM, CORE, coverage, standoff, length, opening);
+    return new ReentryFxConfig(
+        threshold, ceiling, RIM, CORE, coverage, standoff, length, opening, WAKE);
   }
 
   private static void assertRefused(Runnable construction) {

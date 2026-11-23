@@ -18,6 +18,7 @@ import com.smousseur.orbitlab.engine.scene.body.LodView;
 import com.smousseur.orbitlab.engine.scene.body.lod.Model3dView;
 import com.smousseur.orbitlab.engine.scene.spacecraft.PieceGeometry;
 import com.smousseur.orbitlab.engine.scene.spacecraft.ReentrySheathView;
+import com.smousseur.orbitlab.engine.scene.spacecraft.ReentryWakeView;
 import com.smousseur.orbitlab.engine.scene.spacecraft.SpacecraftPresenter;
 import com.smousseur.orbitlab.engine.view.JmeVectorAdapter;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemerisPoint;
@@ -80,11 +81,21 @@ final class TrackedObjectView {
    */
   private final ReentrySheathView sheath;
 
+  /**
+   * This object's re-entry wake, lit by the same heat as the sheath. It relays the sheath past the
+   * level-of-detail switch: shown on the ribbon's rule, only while the 3D model is not drawn, so a
+   * re-entry still shows from afar.
+   */
+  private final ReentryWakeView wake;
+
   /** The heat intensity set for this frame, in {@code [0, 1]}; zero keeps the sheath out. */
   private float heatIntensity;
 
   /** The air-relative velocity's direction set for this frame, in the arc's frame; or zero. */
   private Vector3D heatAxis = Vector3D.ZERO;
+
+  /** The air-relative speed set for this frame, in m/s; it sizes the wake. */
+  private float heatSpeed;
 
   private TrackedObjectView(
       SpacecraftPresenter presenter,
@@ -92,13 +103,15 @@ final class TrackedObjectView {
       MissionTrajectoryRenderer trajectoryRenderer,
       MissionIconHover iconHover,
       HoverState hoverState,
-      ReentrySheathView sheath) {
+      ReentrySheathView sheath,
+      ReentryWakeView wake) {
     this.presenter = presenter;
     this.view = view;
     this.trajectoryRenderer = trajectoryRenderer;
     this.iconHover = iconHover;
     this.hoverState = hoverState;
     this.sheath = sheath;
+    this.wake = wake;
   }
 
   /**
@@ -149,26 +162,32 @@ final class TrackedObjectView {
             (Node) view.nearSpatial(),
             AssetFactory.get().reentrySheathMesh(reentry),
             AssetFactory.get().createReentrySheath(reentry));
+    ReentryWakeView wake =
+        new ReentryWakeView(
+            (Node) view.nearSpatial(),
+            AssetFactory.get().reentryWakeMesh(),
+            AssetFactory.get().createReentryWake(reentry),
+            reentry);
 
-    loadModelAsync(view.getModel3dView(), config.modelPath(), sheath);
+    loadModelAsync(view.getModel3dView(), config.modelPath(), sheath, wake);
 
     MissionTrajectoryRenderer trajectoryRenderer =
         new MissionTrajectoryRenderer(trajectoryId, trajectoryColor);
     trajectoryRenderer.initialize(context.sceneGraph().nearOrbitsNode());
 
     return new TrackedObjectView(
-        presenter, view, trajectoryRenderer, iconHover, context.hoverState(), sheath);
+        presenter, view, trajectoryRenderer, iconHover, context.hoverState(), sheath, wake);
   }
 
   /**
    * Loads a GLTF path into a model view off the render thread, twilight-shaded, then attaches it.
-   * The model is measured for the sheath on the way, while it is still detached.
+   * The model is measured for the sheath and the wake on the way, while it is still detached.
    */
   private static void loadModelAsync(
-      Model3dView model3dView, String path, ReentrySheathView sheath) {
+      Model3dView model3dView, String path, ReentrySheathView sheath, ReentryWakeView wake) {
     CompletableFuture.supplyAsync(
             () -> model3dView.loadModel(path), AssetFactory.get().assetLoadingExecutor())
-        .thenApply(spatial -> measuredFor(sheath, spatial))
+        .thenApply(spatial -> measuredFor(sheath, wake, spatial))
         .thenApply(spatial -> AssetFactory.get().applyLambert(spatial, 0.3f))
         .thenAccept(model3dView::onModelLoaded);
   }
@@ -176,21 +195,32 @@ final class TrackedObjectView {
   /**
    * Loads a mesh at a given real-world size, off the render thread, then attaches it — the payload
    * silhouette the primary shrinks to (PHY-5 / L5), whose size comes from the catalog rather than
-   * from the launcher's radius. Measured for the sheath on the way, like {@link #loadModelAsync}.
+   * from the launcher's radius. Measured for the sheath and the wake on the way, like {@link
+   * #loadModelAsync}.
    */
   private static void loadModelNormalizedAsync(
-      Model3dView model3dView, String path, double sizeMeters, ReentrySheathView sheath) {
+      Model3dView model3dView,
+      String path,
+      double sizeMeters,
+      ReentrySheathView sheath,
+      ReentryWakeView wake) {
     CompletableFuture.supplyAsync(
             () -> model3dView.loadModelNormalized(path, sizeMeters),
             AssetFactory.get().assetLoadingExecutor())
-        .thenApply(spatial -> measuredFor(sheath, spatial))
+        .thenApply(spatial -> measuredFor(sheath, wake, spatial))
         .thenApply(spatial -> AssetFactory.get().applyLambert(spatial, 0.3f))
         .thenAccept(model3dView::onModelLoaded);
   }
 
-  /** Hands the sheath the nose and body of a freshly loaded model; returns the model unchanged. */
-  private static Spatial measuredFor(ReentrySheathView sheath, Spatial model) {
-    sheath.setPieceGeometry(PieceGeometry.measure(model));
+  /**
+   * Hands the sheath and the wake the nose and body of a freshly loaded model; returns the model
+   * unchanged.
+   */
+  private static Spatial measuredFor(
+      ReentrySheathView sheath, ReentryWakeView wake, Spatial model) {
+    PieceGeometry piece = PieceGeometry.measure(model);
+    sheath.setPieceGeometry(piece);
+    wake.setPieceGeometry(piece);
     return model;
   }
 
@@ -202,7 +232,7 @@ final class TrackedObjectView {
    * @param path the GLTF asset path of the new silhouette
    */
   void swapMesh(String path) {
-    loadModelAsync(view.getModel3dView(), path, sheath);
+    loadModelAsync(view.getModel3dView(), path, sheath, wake);
   }
 
   /**
@@ -215,20 +245,23 @@ final class TrackedObjectView {
    * @param drawnSizeMeters the size, in metres, the payload's largest dimension should span
    */
   void swapMesh(String path, double drawnSizeMeters) {
-    loadModelNormalizedAsync(view.getModel3dView(), path, drawnSizeMeters, sheath);
+    loadModelNormalizedAsync(view.getModel3dView(), path, drawnSizeMeters, sheath, wake);
   }
 
   /**
-   * Sets how hot this object is for the next {@link #updateFromPoint}: its re-entry heat intensity
-   * and the direction its sheath faces, both read off its heat profile at the current date.
+   * Sets how hot this object is for the next {@link #updateFromPoint}: its re-entry heat intensity,
+   * the direction its sheath faces and its wake trails against, and the speed that sizes the wake,
+   * all read off its heat profile at the current date.
    *
-   * @param intensity the heat intensity, in {@code [0, 1]}; zero keeps the sheath out
+   * @param intensity the heat intensity, in {@code [0, 1]}; zero keeps the sheath and the wake out
    * @param axis the air-relative velocity's direction, in the arc's frame; {@link Vector3D#ZERO}
    *     when there is none
+   * @param speedMs the air-relative speed, in m/s
    */
-  void setHeat(double intensity, Vector3D axis) {
+  void setHeat(double intensity, Vector3D axis, double speedMs) {
     this.heatIntensity = (float) intensity;
     this.heatAxis = axis;
+    this.heatSpeed = (float) speedMs;
   }
 
   /** The LOD view, so {@link MissionRenderer} can push the primary's eclipse occluder onto it. */
@@ -330,7 +363,16 @@ final class TrackedObjectView {
     this.view.setHoverIntensity(iconHover.advance(hoverState.isFrozen(), tpf));
     this.view.updateScreen(cam, true);
     Model3dView model = this.view.getModel3dView();
-    sheath.update(heatIntensity, sheathAxis(ctx), model.getModelBucket(), model.isVisible());
+    Vector3f axis = heatAxis(ctx);
+    sheath.update(heatIntensity, axis, model.getModelBucket(), model.isVisible());
+    wake.update(
+        heatIntensity,
+        axis,
+        heatSpeed,
+        (float) ctx.unitsPerMeter(),
+        model.getModelBucket(),
+        model.isVisible(),
+        inertialTrail);
     if (inertialTrail) {
       trajectoryRenderer.setVisible(true);
       // Expressed about the same reference as the mesh — the primary for a debris hung under it —
@@ -389,7 +431,7 @@ final class TrackedObjectView {
   }
 
   /** The heat axis in the render context's JME axes, or zero when there is none. */
-  private Vector3f sheathAxis(RenderContext ctx) {
+  private Vector3f heatAxis(RenderContext ctx) {
     if (heatAxis.getNorm() == 0.0) {
       return Vector3f.ZERO;
     }
@@ -401,6 +443,7 @@ final class TrackedObjectView {
     trajectoryRenderer.setVisible(visible);
     if (!visible) {
       sheath.putOut();
+      wake.putOut();
     }
   }
 

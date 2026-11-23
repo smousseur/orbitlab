@@ -18,6 +18,7 @@ import com.jme3.texture.Texture;
 import com.jme3.util.SkyFactory;
 import com.smousseur.orbitlab.core.OrbitlabException;
 import com.smousseur.orbitlab.engine.scene.spacecraft.ReentrySheathMesh;
+import com.smousseur.orbitlab.engine.scene.spacecraft.ReentryWakeMesh;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
@@ -41,6 +42,9 @@ public class AssetFactory {
   private Mesh sheathMesh;
 
   private ReentryFxConfig sheathMeshConfig;
+
+  /** The shared wake tube; null until first asked for. */
+  private Mesh wakeMesh;
 
   private static final ExecutorService ASSET_LOADING_EXECUTOR =
       Executors.newFixedThreadPool(
@@ -403,6 +407,57 @@ public class AssetFactory {
     state.setDepthWrite(false);
     state.setFaceCullMode(RenderState.FaceCullMode.Back);
     return material;
+  }
+
+  /**
+   * Creates the material of one re-entry wake: a glowing tube the shader stretches and widens,
+   * written as premultiplied colour like the sheath's, put out until its intensity is set.
+   *
+   * <p>The render state follows the sheath's, but for the face it culls:
+   *
+   * <ul>
+   *   <li><b>{@link RenderState.BlendMode#PremultAlpha}</b> — written as the sheath's, but the wake
+   *       hides what it crosses as much as it shines: it only shows past the icon switch, as a line
+   *       a few pixels wide, whose orange must read over a bright sky and over the trace it runs
+   *       along. Adding its light to them, it saturated to white.
+   *   <li><b>Depth test on</b> — the Earth and the piece's own body hide what lies behind them.
+   *   <li><b>Depth write off</b> — the wake blends with the trace it runs along, the sheath and the
+   *       atmosphere instead of erasing them.
+   *   <li><b>Front faces culled</b> — only the tube's far wall is drawn. The near wall would pass
+   *       in front of the body and veil it in orange; the far wall lies behind it, so the body
+   *       stays dark inside the glow, and it still surrounds a camera that sits inside the wake.
+   * </ul>
+   *
+   * <p>One material per wake, since its intensity and its size are per piece; the mesh is shared.
+   *
+   * @param config the sheath's rim colour and the wake's pixel floors
+   * @return the wake material, intensity zero
+   */
+  public Material createReentryWake(ReentryFxConfig config) {
+    Material material = new Material(assetManager, "MatDefs/Fx/ReentryWake.j3md");
+    material.setColor("RimColor", config.rimColor());
+    material.setFloat("MinWidthPx", config.wake().minWidthPx());
+    material.setFloat("MinLengthPx", config.wake().minLengthPx());
+    material.setFloat("Intensity", 0f);
+    RenderState state = material.getAdditionalRenderState();
+    state.setBlendMode(RenderState.BlendMode.PremultAlpha);
+    state.setDepthTest(true);
+    state.setDepthWrite(false);
+    state.setFaceCullMode(RenderState.FaceCullMode.Front);
+    return material;
+  }
+
+  /**
+   * The tube every re-entry wake is drawn with, built once and shared: each wake's shader stretches
+   * and widens it to its own size.
+   *
+   * @return the shared unit tube
+   */
+  public synchronized Mesh reentryWakeMesh() {
+    if (wakeMesh == null) {
+      wakeMesh = ReentryWakeMesh.unit();
+    }
+    return wakeMesh;
   }
 
   /**

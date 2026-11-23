@@ -29,7 +29,8 @@ class ReentrySheathMaterialTest {
           0.25f,
           0.5f,
           2.5f,
-          1.6f);
+          1.6f,
+          ReentryWakeConfig.defaults());
 
   @BeforeAll
   static void initAssetFactory() {

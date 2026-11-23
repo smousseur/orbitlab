@@ -627,7 +627,7 @@ public final class MissionRenderer {
       }
       int upTo = within ? trail.indexUpTo(now) : trail.size() - 1;
       ReentryHeatProfile heat = heatProfiles.profileFor(builtDebris, i);
-      debrisView.setHeat(heat.intensityAt(now), heat.axisAt(now));
+      debrisView.setHeat(heat.intensityAt(now), heat.axisAt(now), heat.speedAt(now));
       debrisView.setVisible(true);
       boolean followed = isFollowed(track, focus);
       // The followed debris is promoted to the origin anchor — reparented under the near-bodies

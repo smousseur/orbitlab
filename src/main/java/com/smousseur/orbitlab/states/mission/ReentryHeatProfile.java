@@ -35,7 +35,9 @@ import org.orekit.time.AbsoluteDate;
  *
  * <p>Each sample also keeps the <b>axis</b> a shock layer would face: the direction of the
  * air-relative velocity, from the very wind the flux was computed with, where the flux is computed;
- * the inertial velocity's direction elsewhere, where nothing glows and the axis is never drawn.
+ * the inertial velocity's direction elsewhere, where nothing glows and the axis is never drawn. And
+ * it keeps the matching <b>speed</b>: relative to the air where the axis is, which sizes the wake a
+ * hot object leaves behind, and inertial elsewhere.
  *
  * <p>Immutable: everything is computed once, in the constructor, so a profile may be built off the
  * render thread and read from it. The atmosphere is only read, and the shared Orekit instance is
@@ -94,6 +96,10 @@ public final class ReentryHeatProfile {
 
   private final double[] axisY;
   private final double[] axisZ;
+
+  /** Each sample's speed (m/s), relative to the air wherever its axis is. */
+  private final double[] speeds;
+
   private final List<HeatSample> samples;
   private final int atmosphereFailures;
 
@@ -126,6 +132,7 @@ public final class ReentryHeatProfile {
     axisX = new double[n];
     axisY = new double[n];
     axisZ = new double[n];
+    speeds = new double[n];
     List<HeatSample> built = new ArrayList<>(n);
     int inDomain = 0;
     int failures = 0;
@@ -133,11 +140,13 @@ public final class ReentryHeatProfile {
       MissionEphemerisPoint point = points.get(i);
       double flux = 0.0;
       Vector3D axis = directionOf(point.velocity());
+      double speed = point.velocity().getNorm();
       if (inDomain(point)) {
         inDomain++;
         AirState state = airStateOf(point, air);
         flux = state.fluxWm2();
         if (Double.isFinite(flux)) {
+          speed = state.relativeVelocity().getNorm();
           Vector3D relative = directionOf(state.relativeVelocity());
           if (!relative.equals(Vector3D.ZERO)) {
             axis = relative;
@@ -153,6 +162,7 @@ public final class ReentryHeatProfile {
       axisX[i] = axis.getX();
       axisY[i] = axis.getY();
       axisZ[i] = axis.getZ();
+      speeds[i] = speed;
       built.add(new HeatSample(point.time(), flux, intensities[i]));
     }
     samples = List.copyOf(built);
@@ -230,6 +240,26 @@ public final class ReentryHeatProfile {
     }
     Vector3D blend = new Vector3D(1.0 - tau, lower, tau, axisOf(bracket.upper()));
     return blend.getNorm() < MIN_BLEND_NORM ? lower : blend.normalize();
+  }
+
+  /**
+   * The speed at a date, on the rule of {@link #intensityAt}: linear between the two samples that
+   * bracket it, that of the sample itself on a sample date — the first one when several share it —
+   * and zero outside the ephemeris.
+   *
+   * <p>Meaningful only where the {@link #intensityAt intensity} is positive: there, at least one of
+   * the two samples was heating, and its speed is the one relative to the air.
+   *
+   * @param date the date to read
+   * @return the speed, in m/s; zero outside the ephemeris and for an empty profile
+   */
+  public double speedAt(AbsoluteDate date) {
+    Bracket bracket = bracketOf(date);
+    if (bracket == null) {
+      return 0.0;
+    }
+    int lower = bracket.lower();
+    return speeds[lower] + bracket.tau() * (speeds[bracket.upper()] - speeds[lower]);
   }
 
   /**
