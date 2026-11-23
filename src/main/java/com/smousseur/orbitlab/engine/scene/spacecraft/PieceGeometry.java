@@ -14,17 +14,17 @@ import java.nio.FloatBuffer;
 import java.util.Arrays;
 
 /**
- * Where a loaded piece's nose is, and how thick its body is — the two numbers a re-entry sheath is
- * placed and sized by.
+ * Where a loaded piece's nose is, and how thick its body is — the two numbers its re-entry plasma
+ * volume is placed and sized by.
  *
  * <p>The nose is the top of the model's bounding box: every launcher piece is authored nose up,
  * base at the origin. The body radius is <b>not</b> the box's half-width, which on a Falcon Heavy
  * piece spans its landing legs and grid fins — 2.88 m against a 1.94 m body, measured on the
- * booster — while on an Ariane 64 piece box and body agree. One set of sheath proportions could not
- * fit both. Instead the model is cut into {@value #SLICES} slices along its height, the widest
- * vertex of each slice is taken about the box's vertical axis, and the median over the slices that
- * hold any vertex is kept: appendages confined to a few slices fall out of it, the body that runs
- * the whole height does not.
+ * booster — while on an Ariane 64 piece box and body agree. One set of proportions in body radii
+ * could not fit both. Instead the model is cut into {@value #SLICES} slices along its height, the
+ * widest vertex of each slice is taken about the box's vertical axis, and the median over the
+ * slices that hold any vertex is kept: appendages confined to a few slices fall out of it, the body
+ * that runs the whole height does not.
  *
  * @param noseHeightUnits the nose's height above the model's origin, in the model's world units
  * @param bodyRadiusUnits the body's radius, in the same units

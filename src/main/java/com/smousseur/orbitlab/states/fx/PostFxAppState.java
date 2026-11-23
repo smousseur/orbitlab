@@ -7,15 +7,21 @@ import com.jme3.post.filters.BloomFilter;
 import com.jme3.renderer.ViewPort;
 import com.jme3.system.AppSettings;
 import com.jme3.texture.FrameBuffer;
+import com.smousseur.orbitlab.app.ApplicationContext;
 import java.util.List;
 import java.util.Objects;
 
 /**
  * Application state that owns the scene's screen-space post-processing chain.
  *
- * <p>It carries a single effect today — a narrow bloom — but it is meant to be the one place where
- * the other screen-space effects land (tone mapping, god rays), so that they share a single {@link
- * FilterPostProcessor} and therefore a single offscreen framebuffer and a single resolve.
+ * <p>It carries two effects — a narrow bloom, then the re-entry plasma volumes ({@link
+ * ReentryVolumeFilter}) — and it is meant to be the one place where the other screen-space effects
+ * land (tone mapping, god rays), so that they share a single {@link FilterPostProcessor} and
+ * therefore a single offscreen framebuffer and a single resolve.
+ *
+ * <p>The plasma volumes own the {@link com.jme3.renderer.queue.RenderQueue.Bucket#Translucent
+ * Translucent} bucket: the volume filter takes it out of every viewport's main pass and marches it
+ * at a reduced resolution. Nothing else may be queued there.
  *
  * <p>The bloom is <em>not</em> what gives the Sun its halo. That is {@code CoronaView}, geometry
  * attached to the star itself, and the division of labour is deliberate: a screen-space blur works
@@ -140,6 +146,7 @@ public final class PostFxAppState extends BaseAppState {
    */
   private static final float DOWN_SAMPLING_FACTOR = 2f;
 
+  private final ApplicationContext context;
   private final ViewPort bloomViewport;
   private final List<ViewPort> upstreamViewports;
 
@@ -149,12 +156,15 @@ public final class PostFxAppState extends BaseAppState {
   /**
    * Creates the post-processing state.
    *
+   * @param context the application context, whose engine configuration tunes the effects
    * @param bloomViewport the viewport that draws the glowing geometry and will carry the filter
    *     chain — the near viewport, see the class documentation
    * @param upstreamViewports the viewports rendered before it whose output must be redirected into
    *     the filter's framebuffer, in render order
    */
-  public PostFxAppState(ViewPort bloomViewport, ViewPort... upstreamViewports) {
+  public PostFxAppState(
+      ApplicationContext context, ViewPort bloomViewport, ViewPort... upstreamViewports) {
+    this.context = Objects.requireNonNull(context, "context");
     this.bloomViewport = Objects.requireNonNull(bloomViewport, "bloomViewport");
     this.upstreamViewports =
         List.of(Objects.requireNonNull(upstreamViewports, "upstreamViewports"));
@@ -174,6 +184,8 @@ public final class PostFxAppState extends BaseAppState {
     bloom.setExposurePower(EXPOSURE_POWER);
     bloom.setBloomIntensity(BLOOM_INTENSITY);
     processor.addFilter(bloom);
+    processor.addFilter(
+        new ReentryVolumeFilter(context.getEngineConfig().reentry().volume().resolutionDivisor()));
   }
 
   /**

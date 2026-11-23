@@ -597,6 +597,7 @@ public final class MissionRenderer {
       FocusView focus) {
     syncDebrisViews();
     boolean debrisVisible = context.displaySettings().isDebrisVisible();
+    double clockRate = context.clock().isPlaying() ? context.clock().speed() : 0.0;
     for (int i = 0; i < debrisViews.size(); i++) {
       TrackedObjectView debrisView = debrisViews.get(i);
       DebrisTrack track = builtDebris.get(i);
@@ -627,7 +628,9 @@ public final class MissionRenderer {
       }
       int upTo = within ? trail.indexUpTo(now) : trail.size() - 1;
       ReentryHeatProfile heat = heatProfiles.profileFor(builtDebris, i);
-      debrisView.setHeat(heat.intensityAt(now), heat.axisAt(now), heat.speedAt(now));
+      debrisView.setHeat(
+          heat.intensityAt(now), heat.axisAt(now), heat.speedAt(now), heat.altitudeAt(now));
+      debrisView.setFlowClock(now.durationFrom(ephemeris.startDate()), clockRate);
       debrisView.setVisible(true);
       boolean followed = isFollowed(track, focus);
       // The followed debris is promoted to the origin anchor — reparented under the near-bodies

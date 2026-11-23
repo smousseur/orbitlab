@@ -20,7 +20,7 @@ import org.apache.logging.log4j.Logger;
  * published since. A list is matched by identity, as the renderer itself detects a recomputation: a
  * result built for another list, however equal, is never served, and a result overtaken by a newer
  * request is dropped rather than published over it. Until its profiles are ready, a debris reads an
- * empty profile, whose intensity is zero everywhere: its sheath simply stays off.
+ * empty profile, whose intensity is zero everywhere: its plasma simply stays off.
  *
  * <p>A debris whose trajectory never enters the heating domain — an upper stage left in orbit — is
  * given the empty profile without being built: walking its long ephemeris is most of what a profile

@@ -479,6 +479,56 @@ class ReentryHeatProfileTest {
     assertArrayEquals(forward, backward, 0.0);
   }
 
+  /** Out of the heating domain too: the plasma's shape reads it wherever the profile is read. */
+  @Test
+  void altitudeOnASampleIsTheAltitudeTheSampleCarries() {
+    ReentryHeatProfile profile =
+        new ReentryHeatProfile(
+            List.of(earthPoint(epoch, 130_000.0, ASCENDING)), air, THRESHOLD, CEILING);
+
+    assertEquals(130_000.0, profile.altitudeAt(epoch), 0.0);
+  }
+
+  @Test
+  void altitudeBetweenTwoSamplesIsLinear() {
+    ReentryHeatProfile profile =
+        new ReentryHeatProfile(
+            List.of(
+                earthPoint(epoch, 62_000.0, DESCENDING),
+                earthPoint(epoch.shiftedBy(2.0), 60_000.0, STEEPER)),
+            air,
+            THRESHOLD,
+            CEILING);
+
+    assertEquals(62_000.0, profile.altitudeAt(epoch), 1e-9);
+    assertEquals(61_000.0, profile.altitudeAt(epoch.shiftedBy(1.0)), 1e-9);
+    assertEquals(61_500.0, profile.altitudeAt(epoch.shiftedBy(0.5)), 1e-9);
+    assertEquals(60_000.0, profile.altitudeAt(epoch.shiftedBy(2.0)), 1e-9);
+  }
+
+  @Test
+  void altitudeIsZeroOutsideTheEphemerisAndOnAnEmptyProfile() {
+    ReentryHeatProfile profile = descentProfile();
+    ReentryHeatProfile empty = new ReentryHeatProfile(List.of(), air, THRESHOLD, CEILING);
+
+    assertEquals(0.0, profile.altitudeAt(epoch.shiftedBy(-0.001)), 0.0);
+    assertEquals(0.0, profile.altitudeAt(epoch.shiftedBy(4.001)), 0.0);
+    assertEquals(0.0, empty.altitudeAt(epoch), 0.0);
+  }
+
+  @Test
+  void altitudeOnEqualDatesIsTheFirstSample() {
+    List<MissionEphemerisPoint> points =
+        List.of(
+            earthPoint(epoch, 65_000.0, DESCENDING),
+            earthPoint(epoch, 60_000.0, STEEPER),
+            earthPoint(epoch.shiftedBy(2.0), 62_000.0, DESCENDING));
+
+    ReentryHeatProfile profile = new ReentryHeatProfile(points, air, THRESHOLD, CEILING);
+
+    assertEquals(65_000.0, profile.altitudeAt(epoch), 0.0);
+  }
+
   /** The air-relative speed of a sample, read off the test atmosphere directly. */
   private static double airRelativeSpeed(MissionEphemerisPoint point) {
     Vector3D wind = air.getVelocity(point.time(), point.position(), point.arc().frame());

@@ -11,14 +11,19 @@ import com.jme3.material.MaterialDef;
 import com.jme3.material.RenderState;
 import com.jme3.math.ColorRGBA;
 import com.jme3.scene.Geometry;
-import com.jme3.scene.Mesh;
 import com.jme3.scene.SceneGraphVisitorAdapter;
 import com.jme3.scene.Spatial;
+import com.jme3.texture.Image;
 import com.jme3.texture.Texture;
+import com.jme3.texture.Texture3D;
+import com.jme3.texture.image.ColorSpace;
+import com.jme3.util.BufferUtils;
 import com.jme3.util.SkyFactory;
 import com.smousseur.orbitlab.core.OrbitlabException;
-import com.smousseur.orbitlab.engine.scene.spacecraft.ReentrySheathMesh;
-import com.smousseur.orbitlab.engine.scene.spacecraft.ReentryWakeMesh;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
@@ -38,13 +43,21 @@ public class AssetFactory {
   private static final String COLOR = "Color";
   private final AssetManager assetManager;
 
-  /** The shared sheath shell, built for {@link #sheathMeshConfig}; null until first asked for. */
-  private Mesh sheathMesh;
+  /** The plasma volume's noise lattice: cells along each side of the repeating texture. */
+  static final int NOISE_CELLS = 32;
 
-  private ReentryFxConfig sheathMeshConfig;
+  /**
+   * Texels per lattice cell along each side of the noise texture. Two, not more: at four, 128
+   * texels a side, the six reads each sample makes fell out of the texture cache, and the worst
+   * case cost 2.46 ms at the 95th percentile against 1.78 ms at two, measured.
+   */
+  static final int NOISE_SAMPLES_PER_CELL = 2;
 
-  /** The shared wake tube; null until first asked for. */
-  private Mesh wakeMesh;
+  /** Fixed, so every run draws the same turbulence. */
+  private static final long NOISE_SEED = 42L;
+
+  /** The shared plasma noise; null until first asked for. */
+  private Texture3D noiseTexture;
 
   private static final ExecutorService ASSET_LOADING_EXECUTOR =
       Executors.newFixedThreadPool(
@@ -372,109 +385,132 @@ public class AssetFactory {
   }
 
   /**
-   * Creates the material of one re-entry sheath: a procedural glow over a paraboloid shell, written
-   * as premultiplied colour, put out until its intensity is set.
+   * Creates the material of one plasma volume: the box a hot piece is wrapped in up close, in which
+   * the plasma is ray-marched, put out until its intensity is set.
    *
-   * <p>The render state is the rest of the design:
-   *
-   * <ul>
-   *   <li><b>{@link RenderState.BlendMode#PremultAlpha}</b> — the shader adds its light, and veils
-   *       the background only along the shell's edge, by the share its coverage asks for. Additive
-   *       would saturate to white over the clouds, with nothing but the bloom downstream to tone it
-   *       back.
-   *   <li><b>Depth test on</b> — the piece's body, drawn opaque first, hides the part of the shell
-   *       behind it.
-   *   <li><b>Depth write off</b> — the sheath blends with the ribbons and the atmosphere instead of
-   *       erasing them, as {@link #createCorona} and {@link #createRibbon} do.
-   *   <li><b>Back faces culled</b> — only the shell's outer surface is drawn, so the glow is not
-   *       counted twice where the shell overlaps itself on screen.
-   * </ul>
-   *
-   * <p>One material per sheath, since its intensity is per piece; the mesh is shared.
-   *
-   * @param config the colours and the coverage
-   * @return the sheath material, intensity zero
-   */
-  public Material createReentrySheath(ReentryFxConfig config) {
-    Material material = new Material(assetManager, "MatDefs/Fx/ReentrySheath.j3md");
-    material.setColor("RimColor", config.rimColor());
-    material.setColor("HotCoreColor", config.hotCoreColor());
-    material.setFloat("Coverage", config.coverage());
-    material.setFloat("Intensity", 0f);
-    RenderState state = material.getAdditionalRenderState();
-    state.setBlendMode(RenderState.BlendMode.PremultAlpha);
-    state.setDepthTest(true);
-    state.setDepthWrite(false);
-    state.setFaceCullMode(RenderState.FaceCullMode.Back);
-    return material;
-  }
-
-  /**
-   * Creates the material of one re-entry wake: a glowing tube the shader stretches and widens,
-   * written as premultiplied colour like the sheath's, put out until its intensity is set.
-   *
-   * <p>The render state follows the sheath's, but for the face it culls:
+   * <p>The render state follows from where and how the box is marched:
    *
    * <ul>
-   *   <li><b>{@link RenderState.BlendMode#PremultAlpha}</b> — written as the sheath's, but the wake
-   *       hides what it crosses as much as it shines: it only shows past the icon switch, as a line
-   *       a few pixels wide, whose orange must read over a bright sky and over the trace it runs
-   *       along. Adding its light to them, it saturated to white.
-   *   <li><b>Depth test on</b> — the Earth and the piece's own body hide what lies behind them.
-   *   <li><b>Depth write off</b> — the wake blends with the trace it runs along, the sheath and the
-   *       atmosphere instead of erasing them.
-   *   <li><b>Front faces culled</b> — only the tube's far wall is drawn. The near wall would pass
-   *       in front of the body and veil it in orange; the far wall lies behind it, so the body
-   *       stays dark inside the glow, and it still surrounds a camera that sits inside the wake.
+   *   <li><b>{@link RenderState.BlendMode#PremultAlpha}</b> — the shader writes the light the
+   *       plasma adds and, as alpha, the share of what lies behind it hides. Several pieces' boxes
+   *       blend into one another this way in the reduced-resolution target, which is then laid over
+   *       the scene the same way.
+   *   <li><b>Depth test and write off</b> — the box is drawn into the volume's own target, where no
+   *       depth was written, and each ray stops on the body it is told of rather than on a depth.
+   *   <li><b>Front faces culled</b> — only the box's far wall is drawn, so each pixel it covers is
+   *       marched once, from the camera to that wall, even with the camera inside the box.
    * </ul>
    *
-   * <p>One material per wake, since its intensity and its size are per piece; the mesh is shared.
+   * <p>One material per volume, since its intensity, its shock and its box are per piece; the noise
+   * texture is shared.
    *
-   * @param config the sheath's rim colour and the wake's pixel floors
-   * @return the wake material, intensity zero
+   * @param config the volume's steps, gain and exposure
+   * @return the volume material, intensity zero
    */
-  public Material createReentryWake(ReentryFxConfig config) {
-    Material material = new Material(assetManager, "MatDefs/Fx/ReentryWake.j3md");
-    material.setColor("RimColor", config.rimColor());
-    material.setFloat("MinWidthPx", config.wake().minWidthPx());
-    material.setFloat("MinLengthPx", config.wake().minLengthPx());
+  public Material createReentryVolume(ReentryFxConfig config) {
+    ReentryVolumeConfig volume = config.volume();
+    Material material = new Material(assetManager, "MatDefs/Fx/ReentryVolume.j3md");
+    material.setInt("Steps", volume.steps());
+    material.setFloat("EmissionGain", volume.emissionGain());
+    material.setFloat("Exposure", volume.exposure());
     material.setFloat("Intensity", 0f);
+    material.setTexture("NoiseTex", reentryNoiseTexture());
     RenderState state = material.getAdditionalRenderState();
     state.setBlendMode(RenderState.BlendMode.PremultAlpha);
-    state.setDepthTest(true);
+    state.setDepthTest(false);
     state.setDepthWrite(false);
     state.setFaceCullMode(RenderState.FaceCullMode.Front);
     return material;
   }
 
   /**
-   * The tube every re-entry wake is drawn with, built once and shared: each wake's shader stretches
-   * and widens it to its own size.
+   * The value noise every plasma volume's turbulence is read from, built once and shared.
    *
-   * @return the shared unit tube
+   * <p>The prototype hashed eight lattice corners per noise lookup, 48 per sample, and that hashing
+   * was most of its cost: reading the noise from a texture made a sample 2.6 times cheaper,
+   * measured. The texture holds {@value #NOISE_CELLS} lattice cells along each side, repeating, and
+   * samples each cell {@value #NOISE_SAMPLES_PER_CELL} times with the prototype's smoothstep fade
+   * between corners, so the hardware's linear filtering between texels comes closer to the
+   * prototype's smooth noise than the raw lattice would. One byte per texel.
+   *
+   * @return the shared noise texture
    */
-  public synchronized Mesh reentryWakeMesh() {
-    if (wakeMesh == null) {
-      wakeMesh = ReentryWakeMesh.unit();
+  public synchronized Texture3D reentryNoiseTexture() {
+    if (noiseTexture == null) {
+      noiseTexture = buildReentryNoise();
     }
-    return wakeMesh;
+    return noiseTexture;
   }
 
-  /**
-   * The shell every re-entry sheath is drawn with, built once for a tuning and shared: each sheath
-   * scales it to its own piece's body radius.
-   *
-   * @param config the shell's proportions
-   * @return the shared unit shell
-   */
-  public synchronized Mesh reentrySheathMesh(ReentryFxConfig config) {
-    if (sheathMesh == null || !config.equals(sheathMeshConfig)) {
-      sheathMesh =
-          ReentrySheathMesh.unit(
-              config.standoffRatio(), config.lengthRatio(), config.openingRatio());
-      sheathMeshConfig = config;
+  private static Texture3D buildReentryNoise() {
+    Random random = new Random(NOISE_SEED);
+    float[] lattice = new float[NOISE_CELLS * NOISE_CELLS * NOISE_CELLS];
+    for (int i = 0; i < lattice.length; i++) {
+      lattice[i] = random.nextFloat();
     }
-    return sheathMesh;
+    int size = NOISE_CELLS * NOISE_SAMPLES_PER_CELL;
+    ByteBuffer data = BufferUtils.createByteBuffer(size * size * size);
+    for (int z = 0; z < size; z++) {
+      for (int y = 0; y < size; y++) {
+        for (int x = 0; x < size; x++) {
+          float value =
+              smoothLattice(
+                  lattice,
+                  (x + 0.5f) / NOISE_SAMPLES_PER_CELL,
+                  (y + 0.5f) / NOISE_SAMPLES_PER_CELL,
+                  (z + 0.5f) / NOISE_SAMPLES_PER_CELL);
+          data.put((byte) Math.round(value * 255f));
+        }
+      }
+    }
+    data.flip();
+    Texture3D texture =
+        new Texture3D(
+            new Image(
+                Image.Format.Luminance8,
+                size,
+                size,
+                size,
+                new ArrayList<>(List.of(data)),
+                ColorSpace.Linear));
+    texture.setWrap(Texture.WrapMode.Repeat);
+    texture.setMagFilter(Texture.MagFilter.Bilinear);
+    texture.setMinFilter(Texture.MinFilter.BilinearNoMipMaps);
+    return texture;
+  }
+
+  /** The lattice values around a point, blended with a smoothstep fade, the lattice repeating. */
+  private static float smoothLattice(float[] lattice, float x, float y, float z) {
+    int x0 = (int) Math.floor(x);
+    int y0 = (int) Math.floor(y);
+    int z0 = (int) Math.floor(z);
+    float fx = fade(x - x0);
+    float fy = fade(y - y0);
+    float fz = fade(z - z0);
+    float c00 = lerp(latticeAt(lattice, x0, y0, z0), latticeAt(lattice, x0 + 1, y0, z0), fx);
+    float c10 =
+        lerp(latticeAt(lattice, x0, y0 + 1, z0), latticeAt(lattice, x0 + 1, y0 + 1, z0), fx);
+    float c01 =
+        lerp(latticeAt(lattice, x0, y0, z0 + 1), latticeAt(lattice, x0 + 1, y0, z0 + 1), fx);
+    float c11 =
+        lerp(
+            latticeAt(lattice, x0, y0 + 1, z0 + 1), latticeAt(lattice, x0 + 1, y0 + 1, z0 + 1), fx);
+    return lerp(lerp(c00, c10, fy), lerp(c01, c11, fy), fz);
+  }
+
+  private static float latticeAt(float[] lattice, int x, int y, int z) {
+    int wx = Math.floorMod(x, NOISE_CELLS);
+    int wy = Math.floorMod(y, NOISE_CELLS);
+    int wz = Math.floorMod(z, NOISE_CELLS);
+    return lattice[(wz * NOISE_CELLS + wy) * NOISE_CELLS + wx];
+  }
+
+  private static float fade(float t) {
+    return t * t * (3f - 2f * t);
+  }
+
+  private static float lerp(float a, float b, float t) {
+    return a + (b - a) * t;
   }
 
   /**

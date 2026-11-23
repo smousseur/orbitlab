@@ -36,8 +36,9 @@ import org.orekit.time.AbsoluteDate;
  * <p>Each sample also keeps the <b>axis</b> a shock layer would face: the direction of the
  * air-relative velocity, from the very wind the flux was computed with, where the flux is computed;
  * the inertial velocity's direction elsewhere, where nothing glows and the axis is never drawn. And
- * it keeps the matching <b>speed</b>: relative to the air where the axis is, which sizes the wake a
- * hot object leaves behind, and inertial elsewhere.
+ * it keeps the matching <b>speed</b>: relative to the air where the axis is, and inertial
+ * elsewhere. With each sample's <b>altitude</b>, also kept, it shapes and tints the plasma around a
+ * hot object.
  *
  * <p>Immutable: everything is computed once, in the constructor, so a profile may be built off the
  * render thread and read from it. The atmosphere is only read, and the shared Orekit instance is
@@ -100,6 +101,9 @@ public final class ReentryHeatProfile {
   /** Each sample's speed (m/s), relative to the air wherever its axis is. */
   private final double[] speeds;
 
+  /** Each sample's altitude (m), as the flown state carries it. */
+  private final double[] altitudes;
+
   private final List<HeatSample> samples;
   private final int atmosphereFailures;
 
@@ -133,6 +137,7 @@ public final class ReentryHeatProfile {
     axisY = new double[n];
     axisZ = new double[n];
     speeds = new double[n];
+    altitudes = new double[n];
     List<HeatSample> built = new ArrayList<>(n);
     int inDomain = 0;
     int failures = 0;
@@ -163,6 +168,7 @@ public final class ReentryHeatProfile {
       axisY[i] = axis.getY();
       axisZ[i] = axis.getZ();
       speeds[i] = speed;
+      altitudes[i] = point.altitudeMeters();
       built.add(new HeatSample(point.time(), flux, intensities[i]));
     }
     samples = List.copyOf(built);
@@ -260,6 +266,24 @@ public final class ReentryHeatProfile {
     }
     int lower = bracket.lower();
     return speeds[lower] + bracket.tau() * (speeds[bracket.upper()] - speeds[lower]);
+  }
+
+  /**
+   * The altitude at a date, on the rule of {@link #speedAt}: linear between the two samples that
+   * bracket it, that of the sample itself on a sample date — the first one when several share it —
+   * and zero outside the ephemeris. Kept for every sample, in the heating domain or not: it is the
+   * altitude the flown state carries, not something read off the atmosphere.
+   *
+   * @param date the date to read
+   * @return the altitude, in metres; zero outside the ephemeris and for an empty profile
+   */
+  public double altitudeAt(AbsoluteDate date) {
+    Bracket bracket = bracketOf(date);
+    if (bracket == null) {
+      return 0.0;
+    }
+    int lower = bracket.lower();
+    return altitudes[lower] + bracket.tau() * (altitudes[bracket.upper()] - altitudes[lower]);
   }
 
   /**

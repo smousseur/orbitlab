@@ -11,7 +11,8 @@ import java.util.Objects;
  * @param orbitCamera the orbit camera tuning configuration
  * @param cameraTransition the tuning of the animated focus transitions
  * @param hover the tuning of the hover over planets and their orbits
- * @param reentry the tuning of the re-entry effects: when a falling piece glows, and its sheath
+ * @param reentry the tuning of the re-entry effects: when a falling piece glows, and the plasma
+ *     volume it is wrapped in up close
  */
 public record EngineConfig(
     float systemRadiusWorldUnits,
