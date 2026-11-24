@@ -11,12 +11,15 @@ import java.util.Objects;
  * @param orbitCamera the orbit camera tuning configuration
  * @param cameraTransition the tuning of the animated focus transitions
  * @param hover the tuning of the hover over planets and their orbits
+ * @param reentry the tuning of the re-entry effects: when a falling piece glows, and the plasma
+ *     volume it is wrapped in up close
  */
 public record EngineConfig(
     float systemRadiusWorldUnits,
     OrbitCameraConfig orbitCamera,
     CameraTransitionConfig cameraTransition,
-    HoverConfig hover) {
+    HoverConfig hover,
+    ReentryFxConfig reentry) {
 
   public EngineConfig {
     if (!Float.isFinite(systemRadiusWorldUnits) || systemRadiusWorldUnits <= 0f) {
@@ -25,6 +28,7 @@ public record EngineConfig(
     Objects.requireNonNull(orbitCamera, "orbitCamera");
     Objects.requireNonNull(cameraTransition, "cameraTransition");
     Objects.requireNonNull(hover, "hover");
+    Objects.requireNonNull(reentry, "reentry");
   }
 
   /**
@@ -37,6 +41,10 @@ public record EngineConfig(
     float systemRadius = 20_000f;
     OrbitCameraConfig cam = OrbitCameraConfig.defaultForSystemRadius(systemRadius);
     return new EngineConfig(
-        systemRadius, cam, CameraTransitionConfig.defaults(), HoverConfig.defaults());
+        systemRadius,
+        cam,
+        CameraTransitionConfig.defaults(),
+        HoverConfig.defaults(),
+        ReentryFxConfig.defaults());
   }
 }

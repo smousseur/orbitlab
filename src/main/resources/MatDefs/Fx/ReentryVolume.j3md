@@ -1,0 +1,78 @@
+MaterialDef ReentryVolume {
+
+    MaterialParameters {
+        // The most samples a ray takes through the box before its last body radius: the shader
+        // spaces them a fixed distance apart (STEP_RADII), so a shorter ray takes fewer, and a ray
+        // that ends on the body adds WALL_STEPS over its last radius. Set from the tuning.
+        Int Steps
+
+        // How hot the piece is now, in [0,1]: the re-entry heat profile's intensity at the clock's
+        // date. It scales both the light the plasma gives and how much of the background it hides;
+        // zero leaves nothing.
+        Float Intensity : 0.0
+
+        // Light per unit of intensity, and the exposure of the volume's own tone mapping: the scene
+        // has none, so the volume maps its light into [0,1) itself. Set from the tuning.
+        Float EmissionGain
+        Float Exposure
+
+        // The bow shock (ReentryPlasmaShape): apex ahead of the nose, K, A and nose radius of
+        // Billig's x_s(r) = XA - K (sqrt(1 + A r^2) - 1), in body radii. Set every frame.
+        Float XA
+        Float K
+        Float A
+        Float Rc
+
+        // The share of violet emission, and the scale of the hot gas colour ramp. Set every frame.
+        Float Viol
+        Float Temp
+
+        // The drawn body, in the box's own axes and in body radii: its unit axis, pointing from its
+        // base to its nose at the origin, and its length. The boundary layer fades along it and the
+        // wake starts past its base. Set every frame.
+        Vector3 BodyAxis
+        Float BodyLength
+
+        // The scene's depth as the filter post-processor renders it, how many samples it holds,
+        // and the size in pixels of the reduced target the volume is marched into: the rays stop
+        // on whatever the scene drew - the piece's own mesh - read where each reduced texel is
+        // centred. Set by ReentryVolumeFilter every frame.
+        Texture2D DepthTexture
+        Int NumSamplesDepth
+        Vector2 TargetSize
+
+        // The box's corners, in the box's own axes and in body radii. Set with the piece's measure.
+        Vector3 BoxMin
+        Vector3 BoxMax
+
+        // The shared 3D value noise the turbulence is read from (AssetFactory.reentryNoiseTexture).
+        Texture3D NoiseTex
+
+        // The simulated time the turbulence drifts with, in seconds since a date of the piece's
+        // own, and the share of the turbulence the clock rate allows (ReentryFlowClock). Set every
+        // frame.
+        Float FlowSeconds : 0.0
+        Float Turbulence : 1.0
+    }
+
+    // Deliberately no Glow technique, for the reason Corona.j3md gives: PostFxAppState runs the
+    // bloom in GlowMode.Objects, which re-renders the scene through that technique, and a volume
+    // that declared one would be blurred and added back on top of itself.
+    Technique {
+        VertexShader   GLSL150: MatDefs/Fx/ReentryVolume.vert
+        FragmentShader GLSL150: MatDefs/Fx/ReentryVolume.frag
+
+        WorldParameters {
+            WorldViewProjectionMatrix
+            WorldMatrix
+            WorldMatrixInverse
+            CameraPosition
+            CameraDirection
+            FrustumNearFar
+        }
+
+        Defines {
+            RESOLVE_DEPTH_MS : NumSamplesDepth
+        }
+    }
+}

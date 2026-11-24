@@ -12,6 +12,7 @@ import com.smousseur.orbitlab.app.view.RenderContext;
 import com.smousseur.orbitlab.app.view.ViewMode;
 import com.smousseur.orbitlab.core.OrbitlabException;
 import com.smousseur.orbitlab.core.SolarSystemBody;
+import com.smousseur.orbitlab.engine.AssetFactory;
 import com.smousseur.orbitlab.engine.scene.PlanetRadius;
 import com.smousseur.orbitlab.engine.scene.body.BodyRenderConfig;
 import com.smousseur.orbitlab.engine.scene.body.EclipseGeometry;
@@ -147,6 +148,12 @@ public final class MissionRenderer {
    * The debris list {@link #debrisViews} was built from, compared by identity to detect a change.
    */
   private List<DebrisTrack> builtDebris = List.of();
+
+  /**
+   * The re-entry heat profiles of the debris and of the primary, built off the render thread for
+   * {@link #builtDebris} and the primary ephemeris published with it.
+   */
+  private final MissionHeatProfiles heatProfiles = new MissionHeatProfiles();
 
   /** The primary's silhouette timeline, derived from the debris (PHY-5 / L3). */
   private PrimarySilhouette silhouette = PrimarySilhouette.from(List.of());
@@ -408,7 +415,10 @@ public final class MissionRenderer {
    * <p>A primary whose trajectory ends on the ground — a deorbited payload — lands like a debris:
    * the orchestrator hands over {@link #renderedPointOf}, co-rotated once landed; its ribbon fades
    * out with a frozen tip ({@link #trailDisplay}); and its seat has shrunk to nothing by the
-   * touchdown ({@link #touchdownSeatFactor}). Every other mission is drawn as before.
+   * touchdown ({@link #touchdownSeatFactor}). On its way down it glows like a debris, from its own
+   * heat profile ({@link MissionHeatProfiles}), its turbulence counted from its first glowing
+   * sample rather than from the launch. Every other mission is drawn as before: its primary gets no
+   * heat profile.
    *
    * @param ephemeris the primary's display ephemeris — the very instance {@code point} was read
    *     from, passed rather than re-read from the entry, which the computation thread may replace
@@ -441,6 +451,10 @@ public final class MissionRenderer {
     primary.setInertialTrail(trailDisplay.visible());
     primary.setTrailOpacity(trailDisplay.opacity());
     primary.setTrailTipFrozen(trailDisplay.tipFrozen());
+    ReentryHeatProfile heat = heatProfiles.primaryProfile(builtDebris, ephemeris);
+    primary.setHeat(
+        heat.intensityAt(now), heat.axisAt(now), heat.speedAt(now), heat.altitudeAt(now));
+    primary.setFlowClock(heat.firstHeatDate().map(now::durationFrom).orElse(0.0), clockRate());
     primary.updateFromPoint(
         drawnPrimary,
         Vector3D.ZERO,
@@ -593,6 +607,7 @@ public final class MissionRenderer {
       FocusView focus) {
     syncDebrisViews();
     boolean debrisVisible = context.displaySettings().isDebrisVisible();
+    double clockRate = clockRate();
     for (int i = 0; i < debrisViews.size(); i++) {
       TrackedObjectView debrisView = debrisViews.get(i);
       DebrisTrack track = builtDebris.get(i);
@@ -622,6 +637,10 @@ public final class MissionRenderer {
         }
       }
       int upTo = within ? trail.indexUpTo(now) : trail.size() - 1;
+      ReentryHeatProfile heat = heatProfiles.profileFor(builtDebris, i);
+      debrisView.setHeat(
+          heat.intensityAt(now), heat.axisAt(now), heat.speedAt(now), heat.altitudeAt(now));
+      debrisView.setFlowClock(now.durationFrom(ephemeris.startDate()), clockRate);
       debrisView.setVisible(true);
       boolean followed = isFollowed(track, focus);
       // The followed debris is promoted to the origin anchor — reparented under the near-bodies
@@ -644,6 +663,14 @@ public final class MissionRenderer {
       debrisView.updateFromPoint(
           pt, seat, upHint, followed ? null : primaryPoint, trail, upTo, cam, tpf, focus, now);
     }
+  }
+
+  /**
+   * The simulated seconds per real second the plasma's turbulence drifts at: the clock's speed,
+   * negative when rewinding, and zero when paused.
+   */
+  private double clockRate() {
+    return context.clock().isPlaying() ? context.clock().speed() : 0.0;
   }
 
   /**
@@ -675,8 +702,14 @@ public final class MissionRenderer {
     return now.compareTo(ephemeris.endDate()) > 0 && endsOnTheGround(ephemeris);
   }
 
-  /** Whether a trajectory reaches the ground — its last sample is at (near) zero altitude. */
-  private static boolean endsOnTheGround(MissionEphemeris ephemeris) {
+  /**
+   * Whether a trajectory reaches the ground — its last sample is at (near) zero altitude. The one
+   * test behind {@link #hasLanded} and behind which primary gets a re-entry heat profile.
+   *
+   * @param ephemeris the object's raw or display ephemeris
+   * @return {@code true} when its last sample lies on the ground
+   */
+  static boolean endsOnTheGround(MissionEphemeris ephemeris) {
     return ephemeris.lastPoint().altitudeMeters() < LANDED_ALTITUDE_METERS;
   }
 
@@ -981,6 +1014,15 @@ public final class MissionRenderer {
     }
     debrisViews.clear();
     builtDebris = entry.getDebris();
+    MissionEphemeris primaryEphemeris = entry.getEphemeris().orElse(null);
+    if (primaryEphemeris != null) {
+      heatProfiles.request(
+          builtDebris,
+          primaryEphemeris,
+          entry.mission().getAtmosphere(),
+          context.getEngineConfig().reentry(),
+          AssetFactory.get().assetLoadingExecutor());
+    }
     silhouette = PrimarySilhouette.from(builtDebris);
     boosterCount = (int) builtDebris.stream().filter(t -> t.role() == StageRole.BOOSTER).count();
     for (int i = 0; i < builtDebris.size(); i++) {

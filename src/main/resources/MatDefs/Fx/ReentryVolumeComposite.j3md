@@ -1,0 +1,31 @@
+MaterialDef ReentryVolumeComposite {
+
+    MaterialParameters {
+        Int BoundDrawBuffer
+        Int NumSamples
+        Int NumSamplesDepth
+
+        // The scene so far, as the filter post-processor hands it over, and its depth.
+        Texture2D Texture
+        Texture2D DepthTexture
+
+        // The plasma volumes, marched at a reduced resolution by ReentryVolumeFilter: premultiplied
+        // colour, the light added and, as alpha, the share of the scene hidden.
+        Texture2D VolumeTex
+    }
+
+    Technique {
+        VertexShader   GLSL150: Common/MatDefs/Post/Post.vert
+        FragmentShader GLSL150: MatDefs/Fx/ReentryVolumeComposite.frag
+
+        WorldParameters {
+            FrustumNearFar
+        }
+
+        Defines {
+            BOUND_DRAW_BUFFER: BoundDrawBuffer
+            RESOLVE_MS : NumSamples
+            RESOLVE_DEPTH_MS : NumSamplesDepth
+        }
+    }
+}

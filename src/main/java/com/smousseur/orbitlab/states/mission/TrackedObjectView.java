@@ -4,6 +4,7 @@ import com.jme3.math.ColorRGBA;
 import com.jme3.math.Vector3f;
 import com.jme3.renderer.Camera;
 import com.jme3.scene.Node;
+import com.jme3.scene.Spatial;
 import com.smousseur.orbitlab.app.ApplicationContext;
 import com.smousseur.orbitlab.app.HoverState;
 import com.smousseur.orbitlab.app.view.FocusView;
@@ -11,9 +12,12 @@ import com.smousseur.orbitlab.app.view.RenderContext;
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.engine.AssetFactory;
 import com.smousseur.orbitlab.engine.HoverConfig;
+import com.smousseur.orbitlab.engine.ReentryFxConfig;
 import com.smousseur.orbitlab.engine.scene.body.BodyRenderConfig;
 import com.smousseur.orbitlab.engine.scene.body.LodView;
 import com.smousseur.orbitlab.engine.scene.body.lod.Model3dView;
+import com.smousseur.orbitlab.engine.scene.spacecraft.PieceGeometry;
+import com.smousseur.orbitlab.engine.scene.spacecraft.ReentryVolumeView;
 import com.smousseur.orbitlab.engine.scene.spacecraft.SpacecraftPresenter;
 import com.smousseur.orbitlab.engine.view.JmeVectorAdapter;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.MissionEphemerisPoint;
@@ -70,17 +74,37 @@ final class TrackedObjectView {
    */
   private boolean trailTipFrozen;
 
+  /**
+   * This object's re-entry plasma volume. Every tracked object carries one; only the objects whose
+   * heat {@link MissionRenderer} feeds through {@link #setHeat} ever light it.
+   */
+  private final ReentryVolumeView volume;
+
+  /** The heat intensity set for this frame, in {@code [0, 1]}; zero keeps the volume out. */
+  private float heatIntensity;
+
+  /** The air-relative velocity's direction set for this frame, in the arc's frame; or zero. */
+  private Vector3D heatAxis = Vector3D.ZERO;
+
+  /** The air-relative speed set for this frame, in m/s; it shapes the plasma's shock. */
+  private float heatSpeed;
+
+  /** The altitude set for this frame, in metres; it shapes and tints the plasma. */
+  private float heatAltitude;
+
   private TrackedObjectView(
       SpacecraftPresenter presenter,
       LodView view,
       MissionTrajectoryRenderer trajectoryRenderer,
       MissionIconHover iconHover,
-      HoverState hoverState) {
+      HoverState hoverState,
+      ReentryVolumeView volume) {
     this.presenter = presenter;
     this.view = view;
     this.trajectoryRenderer = trajectoryRenderer;
     this.iconHover = iconHover;
     this.hoverState = hoverState;
+    this.volume = volume;
   }
 
   /**
@@ -125,22 +149,32 @@ final class TrackedObjectView {
     anchor.attachChild(view.nearSpatial());
     parent.attachChild(anchor);
 
-    loadModelAsync(view.getModel3dView(), config.modelPath());
+    ReentryFxConfig reentry = context.getEngineConfig().reentry();
+    ReentryVolumeView volume =
+        new ReentryVolumeView(
+            (Node) view.nearSpatial(),
+            AssetFactory.get().createReentryVolume(reentry),
+            reentry.volume());
+
+    loadModelAsync(view.getModel3dView(), config.modelPath(), volume);
 
     MissionTrajectoryRenderer trajectoryRenderer =
         new MissionTrajectoryRenderer(trajectoryId, trajectoryColor);
     trajectoryRenderer.initialize(context.sceneGraph().nearOrbitsNode());
 
     return new TrackedObjectView(
-        presenter, view, trajectoryRenderer, iconHover, context.hoverState());
+        presenter, view, trajectoryRenderer, iconHover, context.hoverState(), volume);
   }
 
   /**
    * Loads a GLTF path into a model view off the render thread, twilight-shaded, then attaches it.
+   * The model is measured for the plasma volume on the way, while it is still detached.
    */
-  private static void loadModelAsync(Model3dView model3dView, String path) {
+  private static void loadModelAsync(
+      Model3dView model3dView, String path, ReentryVolumeView volume) {
     CompletableFuture.supplyAsync(
             () -> model3dView.loadModel(path), AssetFactory.get().assetLoadingExecutor())
+        .thenApply(spatial -> measuredFor(volume, spatial))
         .thenApply(spatial -> AssetFactory.get().applyLambert(spatial, 0.3f))
         .thenAccept(model3dView::onModelLoaded);
   }
@@ -148,15 +182,26 @@ final class TrackedObjectView {
   /**
    * Loads a mesh at a given real-world size, off the render thread, then attaches it — the payload
    * silhouette the primary shrinks to (PHY-5 / L5), whose size comes from the catalog rather than
-   * from the launcher's radius.
+   * from the launcher's radius. Measured for the plasma volume on the way, like {@link
+   * #loadModelAsync}.
    */
   private static void loadModelNormalizedAsync(
-      Model3dView model3dView, String path, double sizeMeters) {
+      Model3dView model3dView, String path, double sizeMeters, ReentryVolumeView volume) {
     CompletableFuture.supplyAsync(
             () -> model3dView.loadModelNormalized(path, sizeMeters),
             AssetFactory.get().assetLoadingExecutor())
+        .thenApply(spatial -> measuredFor(volume, spatial))
         .thenApply(spatial -> AssetFactory.get().applyLambert(spatial, 0.3f))
         .thenAccept(model3dView::onModelLoaded);
+  }
+
+  /**
+   * Hands the plasma volume the nose and body of a freshly loaded model; returns the model
+   * unchanged.
+   */
+  private static Spatial measuredFor(ReentryVolumeView volume, Spatial model) {
+    volume.setPieceGeometry(PieceGeometry.measure(model));
+    return model;
   }
 
   /**
@@ -167,7 +212,7 @@ final class TrackedObjectView {
    * @param path the GLTF asset path of the new silhouette
    */
   void swapMesh(String path) {
-    loadModelAsync(view.getModel3dView(), path);
+    loadModelAsync(view.getModel3dView(), path, volume);
   }
 
   /**
@@ -180,7 +225,37 @@ final class TrackedObjectView {
    * @param drawnSizeMeters the size, in metres, the payload's largest dimension should span
    */
   void swapMesh(String path, double drawnSizeMeters) {
-    loadModelNormalizedAsync(view.getModel3dView(), path, drawnSizeMeters);
+    loadModelNormalizedAsync(view.getModel3dView(), path, drawnSizeMeters, volume);
+  }
+
+  /**
+   * Sets how hot this object is for the next {@link #updateFromPoint}: its re-entry heat intensity,
+   * the direction its plasma flows along, and the speed and altitude that shape and tint the
+   * plasma, all read off its heat profile at the current date.
+   *
+   * @param intensity the heat intensity, in {@code [0, 1]}; zero keeps the volume out
+   * @param axis the air-relative velocity's direction, in the arc's frame; {@link Vector3D#ZERO}
+   *     when there is none
+   * @param speedMs the air-relative speed, in m/s
+   * @param altitudeM the altitude, in metres
+   */
+  void setHeat(double intensity, Vector3D axis, double speedMs, double altitudeM) {
+    this.heatIntensity = (float) intensity;
+    this.heatAxis = axis;
+    this.heatSpeed = (float) speedMs;
+    this.heatAltitude = (float) altitudeM;
+  }
+
+  /**
+   * Sets the simulated clock the plasma's turbulence drifts with: frozen when paused, backward when
+   * rewound, eased toward its mean when played fast.
+   *
+   * @param flowSeconds the simulated seconds since the start of this object's ephemeris
+   * @param clockRate the simulated seconds per real second, negative when rewinding, zero when
+   *     paused
+   */
+  void setFlowClock(double flowSeconds, double clockRate) {
+    volume.setFlow((float) flowSeconds, clockRate);
   }
 
   /** The LOD view, so {@link MissionRenderer} can push the primary's eclipse occluder onto it. */
@@ -281,6 +356,14 @@ final class TrackedObjectView {
     // Before the screen update, which places the icon from its size.
     this.view.setHoverIntensity(iconHover.advance(hoverState.isFrozen(), tpf));
     this.view.updateScreen(cam, true);
+    Model3dView model = this.view.getModel3dView();
+    volume.update(
+        heatIntensity,
+        heatAxis(ctx),
+        heatSpeed,
+        heatAltitude,
+        model.getModelBucket(),
+        model.isVisible());
     if (inertialTrail) {
       trajectoryRenderer.setVisible(true);
       // Expressed about the same reference as the mesh — the primary for a debris hung under it —
@@ -338,9 +421,20 @@ final class TrackedObjectView {
     trajectoryRenderer.setOpacity(opacity);
   }
 
+  /** The heat axis in the render context's JME axes, or zero when there is none. */
+  private Vector3f heatAxis(RenderContext ctx) {
+    if (heatAxis.getNorm() == 0.0) {
+      return Vector3f.ZERO;
+    }
+    return JmeVectorAdapter.toVector3f(ctx.axisConvention().icrfToJme(heatAxis));
+  }
+
   void setVisible(boolean visible) {
     view.setVisible(visible);
     trajectoryRenderer.setVisible(visible);
+    if (!visible) {
+      volume.putOut();
+    }
   }
 
   void cleanup() {

@@ -214,7 +214,8 @@ public class OrbitLabApplication extends SimpleApplication implements Model3dAtt
 
     stateManager.attach(new NearCameraSyncAppState(applicationContext, nearCam));
 
-    stateManager.attach(new PostFxAppState(nearViewport, skyViewport, farViewport));
+    stateManager.attach(
+        new PostFxAppState(applicationContext, nearViewport, skyViewport, farViewport));
   }
 
   /**
