@@ -302,6 +302,8 @@ final class TrackedObjectView {
    * Render-only — the sample's stored position is untouched, keeping the gated trajectory clean.
    *
    * @param point the interpolated sample to draw
+   * @param noseAxis the direction the nose points, in the arc's frame: {@link DrawnFlightAxis} for
+   *     an object in flight, the lying heading for a landed one
    * @param seat the body-frame seat offset in metres (in the arc's frame), from {@link StackSeat};
    *     {@link Vector3D#ZERO} for an unseated object
    * @param upHint the roll reference in the arc's frame, or {@code null} to roll about world up. A
@@ -318,6 +320,7 @@ final class TrackedObjectView {
    */
   void updateFromPoint(
       MissionEphemerisPoint point,
+      Vector3D noseAxis,
       Vector3D seat,
       Vector3D upHint,
       MissionEphemerisPoint referencePoint,
@@ -350,7 +353,7 @@ final class TrackedObjectView {
         upHint == null
             ? Vector3f.UNIT_Y
             : JmeVectorAdapter.toVector3f(ctx.axisConvention().icrfToJme(upHint.normalize()));
-    presenter.updatePose(modelPosition, point.velocity(), tpf, ctx, upWorld);
+    presenter.updatePose(modelPosition, noseAxis, tpf, ctx, upWorld);
     this.view.setModelOffset(JmeVectorAdapter.toJmeBodyRelativePosition(seat, ctx));
     this.view.setIconFallbackEnabled(secondaryDisplay);
     // Before the screen update, which places the icon from its size.

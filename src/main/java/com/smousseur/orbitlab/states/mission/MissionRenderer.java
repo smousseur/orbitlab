@@ -455,8 +455,10 @@ public final class MissionRenderer {
     primary.setHeat(
         heat.intensityAt(now), heat.axisAt(now), heat.speedAt(now), heat.altitudeAt(now));
     primary.setFlowClock(heat.firstHeatDate().map(now::durationFrom).orElse(0.0), clockRate());
+    Vector3D noseAxis = landed ? drawnPrimary.velocity() : DrawnFlightAxis.of(point);
     primary.updateFromPoint(
         drawnPrimary,
+        noseAxis,
         Vector3D.ZERO,
         rollReference,
         null,
@@ -528,10 +530,12 @@ public final class MissionRenderer {
     }
     double axialSeat =
         primaryAxialSeat(silhouette.phaseAt(now)) * touchdownSeatFactor(ephemeris, now);
-    Vector3D seat = StackSeat.offset(raw.velocity(), raw.position(), axialSeat, 0.0, 1, 1);
-    if (seat.getNorm() == 0.0) {
+    if (axialSeat == 0.0) {
       return raw;
     }
+    Vector3D seat =
+        StackSeat.offset(
+            DrawnFlightAxis.of(raw), raw.velocity(), raw.position(), axialSeat, 0.0, 1, 1);
     return new MissionEphemerisPoint(
         raw.time(),
         raw.position().add(seat),
@@ -619,9 +623,11 @@ public final class MissionRenderer {
       TrajectoryPolyline trail = ephemeris.displayTrail();
       boolean within = now.compareTo(ephemeris.endDate()) <= 0;
       MissionEphemerisPoint raw = ephemeris.displayPointAt(now);
-      Vector3D seat = debrisSeat(track, raw).scalarMultiply(touchdownSeatFactor(ephemeris, now));
-      Vector3D upHint = debrisUpHint(track, raw);
       boolean landed = hasLanded(ephemeris, now);
+      Vector3D flightAxis = landed ? Vector3D.ZERO : DrawnFlightAxis.of(raw);
+      Vector3D seat =
+          debrisSeat(track, raw, flightAxis).scalarMultiply(touchdownSeatFactor(ephemeris, now));
+      Vector3D upHint = debrisUpHint(track, raw);
       // The camera's own point — co-rotated and ground-corrected — so a followed debris sits
       // exactly where the floating origin centres the frame.
       MissionEphemerisPoint pt = renderedPointOf(ephemeris, now);
@@ -660,8 +666,19 @@ public final class MissionRenderer {
       debrisView.setTrailOpacity(trailDisplay.opacity());
       debrisView.setTrailTipFrozen(trailDisplay.tipFrozen());
       debrisView.setSecondaryDisplay(debrisVisible);
+      Vector3D noseAxis = landed ? pt.velocity() : flightAxis;
       debrisView.updateFromPoint(
-          pt, seat, upHint, followed ? null : primaryPoint, trail, upTo, cam, tpf, focus, now);
+          pt,
+          noseAxis,
+          seat,
+          upHint,
+          followed ? null : primaryPoint,
+          trail,
+          upTo,
+          cam,
+          tpf,
+          focus,
+          now);
     }
   }
 
@@ -980,13 +997,14 @@ public final class MissionRenderer {
   /**
    * A jettisoned piece's seat, at the place it detached from: a booster on the exact flank it was
    * mounted on (lateral fan, shared with the separation kick — {@link
-   * SeparationImpulse#fanDirection}), the upper stage up where it sat within {@code after_s1}, the
-   * core at the base (no seat).
+   * SeparationImpulse#fanDirection}), the upper stage up where it sat within {@code after_s1} —
+   * lifted along {@code axis}, the one it is drawn along — the core at the base (no seat).
    */
-  private Vector3D debrisSeat(DebrisTrack track, MissionEphemerisPoint pt) {
+  private Vector3D debrisSeat(DebrisTrack track, MissionEphemerisPoint pt, Vector3D axis) {
     return switch (track.role()) {
       case BOOSTER ->
           StackSeat.offset(
+              axis,
               pt.velocity(),
               pt.position(),
               0.0,
@@ -995,7 +1013,13 @@ public final class MissionRenderer {
               boosterCount);
       case UPPER ->
           StackSeat.offset(
-              pt.velocity(), pt.position(), (1.0 - afterS1Fraction) * stackHeightMeters, 0.0, 1, 1);
+              axis,
+              pt.velocity(),
+              pt.position(),
+              (1.0 - afterS1Fraction) * stackHeightMeters,
+              0.0,
+              1,
+              1);
       case CORE, KICK -> Vector3D.ZERO;
     };
   }
