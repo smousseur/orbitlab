@@ -16,6 +16,7 @@ import com.smousseur.orbitlab.simulation.mission.ephemeris.PhaseRun;
 import com.smousseur.orbitlab.simulation.mission.ephemeris.TrajectoryPolyline;
 import java.nio.FloatBuffer;
 import java.util.List;
+import java.util.function.IntFunction;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 
 /**
@@ -81,6 +82,8 @@ final class PhaseNodeMarkers {
    * @param renderBody the body the vertices are read about, taken from the ribbon's own derivation
    *     rather than re-derived here, for the reason {@code translation} is passed in: a marker
    *     built from a second computation of the same thing drifts off the trace by the difference
+   * @param shift how far the ribbon draws each vertex from its inertial place this frame, so a
+   *     marker moves with the vertex it sits on
    */
   void update(
       TrajectoryPolyline trail,
@@ -89,7 +92,8 @@ final class PhaseNodeMarkers {
       Vector3D origin,
       Vector3f translation,
       RenderContext renderContext,
-      SolarSystemBody renderBody) {
+      SolarSystemBody renderBody,
+      IntFunction<Vector3D> shift) {
     List<PhaseRun> runs = trail.runs();
     if (trail != boundTrail) {
       allocate(runs.size());
@@ -113,7 +117,9 @@ final class PhaseNodeMarkers {
         break;
       }
       MissionTrajectoryRenderer.putVertex(
-          pb, trail.positionAt(vertex, renderBody).subtract(origin), renderContext);
+          pb,
+          trail.positionAt(vertex, renderBody).add(shift.apply(vertex)).subtract(origin),
+          renderContext);
       ColorRGBA c = runColors[r];
       cb.put(c.r).put(c.g).put(c.b).put(c.a);
     }

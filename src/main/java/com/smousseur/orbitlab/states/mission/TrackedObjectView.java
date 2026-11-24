@@ -378,7 +378,15 @@ final class TrackedObjectView {
       // debris have no reference and key on their own position, as before.
       Vector3D trailReference = referencePosition == null ? position : referencePosition;
       Vector3D trailTip = trailTipFrozen ? null : position;
-      trajectoryRenderer.update(trail, upTo, trailTip, trailReference, seat, ctx, now);
+      trajectoryRenderer.update(
+          trail,
+          upTo,
+          trailTip,
+          trailReference,
+          seat,
+          CoRotatingTrail.groundFollowing(point),
+          ctx,
+          now);
     } else {
       trajectoryRenderer.setVisible(false);
     }

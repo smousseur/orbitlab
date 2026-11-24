@@ -59,7 +59,7 @@ final class DrawnFlightAxis {
     if (point.arc().body() != SolarSystemBody.EARTH) {
       return inertial;
     }
-    double toInertial = smoothstep(point.altitudeMeters());
+    double toInertial = inertialWeight(point.altitudeMeters());
     if (toInertial >= 1.0) {
       return inertial;
     }
@@ -89,8 +89,15 @@ final class DrawnFlightAxis {
     return toTerrestrial.getRotation().applyInverseTo(terrestrial.getVelocity());
   }
 
-  /** The weight of the inertial axis: 0 up to the air's ceiling, 1 from the inertial floor on. */
-  private static double smoothstep(double altitude) {
+  /**
+   * How far above the air an altitude lies, as the drawn axis weighs it: 0 up to the air's ceiling,
+   * 1 from the inertial floor on, a smoothstep in between. Shared with {@link CoRotatingTrail}, so
+   * the trail leaves the ground in step with the nose.
+   *
+   * @param altitude the geodetic altitude, in metres
+   * @return the weight of the inertial frame, in [0, 1]
+   */
+  static double inertialWeight(double altitude) {
     double t = (altitude - AIR_CEILING_M) / (INERTIAL_FLOOR_M - AIR_CEILING_M);
     double clamped = Math.max(0.0, Math.min(1.0, t));
     return clamped * clamped * (3.0 - 2.0 * clamped);

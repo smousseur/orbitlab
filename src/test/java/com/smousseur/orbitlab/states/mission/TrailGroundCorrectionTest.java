@@ -58,6 +58,29 @@ class TrailGroundCorrectionTest {
     assertEquals(484.06, displacement.getNorm(), 1.0);
   }
 
+  /**
+   * A vertex already moved — carried with the Earth while its object is in the air — is corrected
+   * against the facet under where it is drawn: moved from a cell centre, 484 m deep, onto a grid
+   * node, where the facets meet the ellipsoid, it needs no correction at all.
+   */
+  @Test
+  void aMovedVertexIsCorrectedWhereItIsDrawn() {
+    TrajectoryPolyline trail = earthTrail(new Vector3D(A + 400_000.0, 0.0, 0.0), ground());
+    TrailGroundCorrection grounded = new TrailGroundCorrection(trail);
+    Vector3D gridNode =
+        RenderContext.planet(SolarSystemBody.EARTH)
+            .axisConvention()
+            .jmeToIcrf(EllipsoidGlobe.earth().surface(0.0, 0.0).scalarMultiply(A));
+
+    Vector3D displacement =
+        grounded.displacementAt(
+            1,
+            gridNode.subtract(ground()),
+            GroundCorrection.withDrawnRotation(Quaternion.IDENTITY));
+
+    assertEquals(0.0, displacement.getNorm(), 1.0);
+  }
+
   @Test
   void aTrailFlownAboutTheMoonHasNoGroundVertex() {
     TrajectoryArc moon = TrajectoryArc.forBody(SolarSystemBody.MOON);
