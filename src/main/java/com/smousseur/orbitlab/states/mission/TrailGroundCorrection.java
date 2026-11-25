@@ -67,7 +67,22 @@ final class TrailGroundCorrection {
    * @return the displacement, in metres
    */
   Vector3D displacementAt(int index, GroundCorrection correction) {
-    Vector3D position = trail.positionAt(index, SolarSystemBody.EARTH);
+    return displacementAt(index, Vector3D.ZERO, correction);
+  }
+
+  /**
+   * The displacement bringing vertex {@code index}, already moved by {@code offset}, onto the drawn
+   * ground this frame: a vertex carried with the Earth ({@link CoRotatingTrail}) sits over another
+   * part of the globe than its inertial place, and must be corrected against the facet under where
+   * it is drawn.
+   *
+   * @param index a vertex for which {@link #isNearGround} holds
+   * @param offset how far the vertex is already moved from its inertial place, in metres
+   * @param correction the correction of the frame
+   * @return the further displacement, in metres
+   */
+  Vector3D displacementAt(int index, Vector3D offset, GroundCorrection correction) {
+    Vector3D position = trail.positionAt(index, SolarSystemBody.EARTH).add(offset);
     return correction.correct(position).subtract(position);
   }
 }

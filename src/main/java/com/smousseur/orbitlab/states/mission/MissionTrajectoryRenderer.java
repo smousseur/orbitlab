@@ -18,6 +18,7 @@ import com.smousseur.orbitlab.simulation.mission.ephemeris.TrajectoryPolyline;
 import com.smousseur.orbitlab.ui.mission.MissionPhaseShading;
 import java.nio.FloatBuffer;
 import java.util.Objects;
+import java.util.function.IntFunction;
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.orekit.time.AbsoluteDate;
 
@@ -65,6 +66,17 @@ public final class MissionTrajectoryRenderer {
   private Geometry lineGeometry;
   private TrajectoryPolyline boundTrail;
   private TrailGroundCorrection groundedTrail;
+  private CoRotatingTrail coRotatingTrail;
+
+  /** This frame's ground correction, or {@code null} when no vertex can near the ground. */
+  private GroundCorrection correctionNow;
+
+  /** This frame's displacements of the low vertices, or {@code null} when none moves. */
+  private CoRotatingTrail.Frame carriedNow;
+
+  /** {@link #shiftAt}, bound once so handing it to the markers allocates nothing per frame. */
+  private final IntFunction<Vector3D> shiftOfVertex = this::shiftAt;
+
   private ColorRGBA[] runColors;
   private PhaseNodeMarkers markers;
 
@@ -166,10 +178,14 @@ public final class MissionTrajectoryRenderer {
    *     object's drawn position, so the ribbon meets the seated mesh base while the historical
    *     vertices stay on the true path — a small hook at the very end rather than a whole trail
    *     that swims. {@link Vector3D#ZERO} for an unseated object
+   * @param groundFollowing how much the low part of the ribbon follows the ground this frame, from
+   *     {@link CoRotatingTrail#groundFollowing} of the object's own sample: 1 while it is in the
+   *     air, 0 once it is above the inertial floor, where the ribbon is the inertial one untouched
    * @param renderContext the context of the sample being drawn, derived from its arc by {@code
    *     MissionRenderer.renderContextFor} — a parameter and no longer a field of this class, so
    *     that the line and the near-frame offset cannot be built from two different contexts
-   * @param now the current simulation date, which the vertices near the ground are corrected at
+   * @param now the current simulation date, which the low vertices are carried to and the vertices
+   *     near the ground are corrected at
    */
   public void update(
       TrajectoryPolyline trail,
@@ -177,6 +193,7 @@ public final class MissionTrajectoryRenderer {
       Vector3D tip,
       Vector3D reference,
       Vector3D seat,
+      double groundFollowing,
       RenderContext renderContext,
       AbsoluteDate now) {
     if (trail == null || trail.size() == 0) return;
@@ -184,6 +201,7 @@ public final class MissionTrajectoryRenderer {
     if (trail != boundTrail) {
       bindColors(trail);
       groundedTrail = new TrailGroundCorrection(trail);
+      coRotatingTrail = new CoRotatingTrail(trail);
       boundTrail = trail;
     }
 
@@ -204,13 +222,14 @@ public final class MissionTrajectoryRenderer {
     // relative to its focused primary passes the primary here (SEL-1 / L2).
     Vector3D origin = reference != null ? reference : tipPos;
 
-    GroundCorrection correction =
-        groundedTrail.isEmpty() ? null : GroundCorrection.at(now).orElse(null);
+    correctionNow = groundedTrail.isEmpty() ? null : GroundCorrection.at(now).orElse(null);
+    carriedNow = coRotatingTrail.at(now, groundFollowing);
     int count = 0;
     for (int i = 0; i <= last; i++) {
       Vector3D vertex = trail.positionAt(i, renderBody);
-      if (correction != null && groundedTrail.isNearGround(i)) {
-        vertex = vertex.add(groundedTrail.displacementAt(i, correction));
+      Vector3D shift = shiftAt(i);
+      if (shift != Vector3D.ZERO) {
+        vertex = vertex.add(shift);
       }
       putPoint(points, count++, vertex.subtract(origin), renderContext);
     }
@@ -244,7 +263,22 @@ public final class MissionTrajectoryRenderer {
         origin,
         lineGeometry.getLocalTranslation(),
         renderContext,
-        renderBody);
+        renderBody,
+        shiftOfVertex);
+  }
+
+  /**
+   * How far vertex {@code index} is drawn from its inertial place this frame: carried with the
+   * Earth while the object is in the air ({@link CoRotatingTrail}), then brought onto the drawn
+   * ground where it is drawn ({@link TrailGroundCorrection}). The very {@link Vector3D#ZERO}
+   * instance when it is not moved, so the caller can skip the addition.
+   */
+  private Vector3D shiftAt(int index) {
+    Vector3D shift = carriedNow == null ? Vector3D.ZERO : carriedNow.displacementAt(index);
+    if (correctionNow != null && groundedTrail.isNearGround(index)) {
+      shift = shift.add(groundedTrail.displacementAt(index, shift, correctionNow));
+    }
+    return shift;
   }
 
   /**
