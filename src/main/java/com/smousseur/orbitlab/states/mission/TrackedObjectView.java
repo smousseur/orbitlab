@@ -16,7 +16,9 @@ import com.smousseur.orbitlab.engine.ReentryFxConfig;
 import com.smousseur.orbitlab.engine.scene.body.BodyRenderConfig;
 import com.smousseur.orbitlab.engine.scene.body.LodView;
 import com.smousseur.orbitlab.engine.scene.body.lod.Model3dView;
+import com.smousseur.orbitlab.engine.scene.spacecraft.NozzlePlumeView;
 import com.smousseur.orbitlab.engine.scene.spacecraft.PieceGeometry;
+import com.smousseur.orbitlab.engine.scene.spacecraft.PlumeDrive;
 import com.smousseur.orbitlab.engine.scene.spacecraft.ReentryVolumeView;
 import com.smousseur.orbitlab.engine.scene.spacecraft.SpacecraftPresenter;
 import com.smousseur.orbitlab.engine.view.JmeVectorAdapter;
@@ -80,6 +82,15 @@ final class TrackedObjectView {
    */
   private final ReentryVolumeView volume;
 
+  /**
+   * This object's exhaust plumes; {@code null} for a debris, which never fires. Lit only while
+   * {@link MissionRenderer} feeds a burn through {@link #setPlume}.
+   */
+  private final NozzlePlumeView plume;
+
+  /** What drives the plumes this frame; {@link PlumeDrive#OFF} between burns. */
+  private PlumeDrive plumeDrive = PlumeDrive.OFF;
+
   /** The heat intensity set for this frame, in {@code [0, 1]}; zero keeps the volume out. */
   private float heatIntensity;
 
@@ -98,13 +109,15 @@ final class TrackedObjectView {
       MissionTrajectoryRenderer trajectoryRenderer,
       MissionIconHover iconHover,
       HoverState hoverState,
-      ReentryVolumeView volume) {
+      ReentryVolumeView volume,
+      NozzlePlumeView plume) {
     this.presenter = presenter;
     this.view = view;
     this.trajectoryRenderer = trajectoryRenderer;
     this.iconHover = iconHover;
     this.hoverState = hoverState;
     this.volume = volume;
+    this.plume = plume;
   }
 
   /**
@@ -121,6 +134,8 @@ final class TrackedObjectView {
    * @param parent the scene node to hang the object's anchor under — the near bodies node for the
    *     primary, the primary's own anchor for a debris so it can be placed relative to it (PHY-5,
    *     the GEO "tremble" fix)
+   * @param withPlume whether the object fires, and so carries exhaust plumes: the primary does, a
+   *     debris never
    * @return the attached view
    */
   static TrackedObjectView create(
@@ -129,7 +144,8 @@ final class TrackedObjectView {
       String trajectoryId,
       ColorRGBA trajectoryColor,
       Runnable onClick,
-      Node parent) {
+      Node parent,
+      boolean withPlume) {
     Node guiNode = context.guiGraph().getPlanetBillboardsNode();
     HoverConfig hoverConfig = context.getEngineConfig().hover();
     MissionIconHover iconHover = new MissionIconHover(hoverConfig);
@@ -156,25 +172,31 @@ final class TrackedObjectView {
             AssetFactory.get().createReentryVolume(reentry),
             reentry.volume());
 
-    loadModelAsync(view.getModel3dView(), config.modelPath(), volume);
+    NozzlePlumeView plume =
+        withPlume
+            ? new NozzlePlumeView((Node) view.nearSpatial(), context.getEngineConfig().plume())
+            : null;
+
+    loadModelAsync(view.getModel3dView(), config.modelPath(), volume, plume);
 
     MissionTrajectoryRenderer trajectoryRenderer =
         new MissionTrajectoryRenderer(trajectoryId, trajectoryColor);
     trajectoryRenderer.initialize(context.sceneGraph().nearOrbitsNode());
 
     return new TrackedObjectView(
-        presenter, view, trajectoryRenderer, iconHover, context.hoverState(), volume);
+        presenter, view, trajectoryRenderer, iconHover, context.hoverState(), volume, plume);
   }
 
   /**
    * Loads a GLTF path into a model view off the render thread, twilight-shaded, then attaches it.
-   * The model is measured for the plasma volume on the way, while it is still detached.
+   * The model is measured for the plasma volume on the way, while it is still detached, and its
+   * mesh handed to the plumes.
    */
   private static void loadModelAsync(
-      Model3dView model3dView, String path, ReentryVolumeView volume) {
+      Model3dView model3dView, String path, ReentryVolumeView volume, NozzlePlumeView plume) {
     CompletableFuture.supplyAsync(
             () -> model3dView.loadModel(path), AssetFactory.get().assetLoadingExecutor())
-        .thenApply(spatial -> measuredFor(volume, spatial))
+        .thenApply(spatial -> measuredFor(volume, plume, path, spatial))
         .thenApply(spatial -> AssetFactory.get().applyLambert(spatial, 0.3f))
         .thenAccept(model3dView::onModelLoaded);
   }
@@ -186,21 +208,29 @@ final class TrackedObjectView {
    * #loadModelAsync}.
    */
   private static void loadModelNormalizedAsync(
-      Model3dView model3dView, String path, double sizeMeters, ReentryVolumeView volume) {
+      Model3dView model3dView,
+      String path,
+      double sizeMeters,
+      ReentryVolumeView volume,
+      NozzlePlumeView plume) {
     CompletableFuture.supplyAsync(
             () -> model3dView.loadModelNormalized(path, sizeMeters),
             AssetFactory.get().assetLoadingExecutor())
-        .thenApply(spatial -> measuredFor(volume, spatial))
+        .thenApply(spatial -> measuredFor(volume, plume, path, spatial))
         .thenApply(spatial -> AssetFactory.get().applyLambert(spatial, 0.3f))
         .thenAccept(model3dView::onModelLoaded);
   }
 
   /**
-   * Hands the plasma volume the nose and body of a freshly loaded model; returns the model
-   * unchanged.
+   * Hands the plasma volume the nose and body of a freshly loaded model, and the plumes its mesh
+   * and scale; returns the model unchanged.
    */
-  private static Spatial measuredFor(ReentryVolumeView volume, Spatial model) {
+  private static Spatial measuredFor(
+      ReentryVolumeView volume, NozzlePlumeView plume, String path, Spatial model) {
     volume.setPieceGeometry(PieceGeometry.measure(model));
+    if (plume != null) {
+      plume.setMesh(path, model.getLocalScale().y);
+    }
     return model;
   }
 
@@ -212,7 +242,7 @@ final class TrackedObjectView {
    * @param path the GLTF asset path of the new silhouette
    */
   void swapMesh(String path) {
-    loadModelAsync(view.getModel3dView(), path, volume);
+    loadModelAsync(view.getModel3dView(), path, volume, plume);
   }
 
   /**
@@ -225,7 +255,7 @@ final class TrackedObjectView {
    * @param drawnSizeMeters the size, in metres, the payload's largest dimension should span
    */
   void swapMesh(String path, double drawnSizeMeters) {
-    loadModelNormalizedAsync(view.getModel3dView(), path, drawnSizeMeters, volume);
+    loadModelNormalizedAsync(view.getModel3dView(), path, drawnSizeMeters, volume, plume);
   }
 
   /**
@@ -256,6 +286,16 @@ final class TrackedObjectView {
    */
   void setFlowClock(double flowSeconds, double clockRate) {
     volume.setFlow((float) flowSeconds, clockRate);
+  }
+
+  /**
+   * Sets what drives this object's exhaust plumes for the next {@link #updateFromPoint}; ignored by
+   * an object that carries none.
+   *
+   * @param drive the plumes' drive at the current date
+   */
+  void setPlume(PlumeDrive drive) {
+    this.plumeDrive = drive;
   }
 
   /** The LOD view, so {@link MissionRenderer} can push the primary's eclipse occluder onto it. */
@@ -367,6 +407,9 @@ final class TrackedObjectView {
         heatAltitude,
         model.getModelBucket(),
         model.isVisible());
+    if (plume != null) {
+      plume.update(plumeDrive, model.getModelBucket(), model.isVisible(), cam.getLocation());
+    }
     if (inertialTrail) {
       trajectoryRenderer.setVisible(true);
       // Expressed about the same reference as the mesh — the primary for a debris hung under it —
@@ -445,6 +488,9 @@ final class TrackedObjectView {
     trajectoryRenderer.setVisible(visible);
     if (!visible) {
       volume.putOut();
+      if (plume != null) {
+        plume.putOut();
+      }
     }
   }
 

@@ -1,0 +1,271 @@
+// The exhaust plume of one nozzle cluster: a jet leaving the exit plane, which is at the origin of
+// the cluster's own frame, and running along -Y. Its edge is a cone, R(s) = ExitRadius + s TanAlpha
+// for s in [0, Length], s the distance past the exit. The view ray is intersected with that cone
+// analytically, then marched along the chord: a jet brightest along its axis and near the exit,
+// fading toward its edge and its tail, its turbulence drifting down the jet with the simulated
+// time, and, on a liquid engine in thick air, a train of shock diamonds. Everything is in cluster
+// radii, so one tuning serves every nozzle size.
+
+uniform mat4  g_WorldMatrixInverse;
+uniform vec3  g_CameraPosition;
+
+uniform int   m_MaxSteps;
+uniform float m_StepRadii;
+uniform float m_ExitRadius;
+uniform float m_Length;
+uniform float m_TanAlpha;
+uniform float m_Brightness;
+uniform float m_Opacity;
+uniform float m_Diamonds;
+uniform vec4  m_CoreColor;
+uniform vec4  m_EdgeColor;
+uniform float m_Intensity;
+uniform float m_Exposure;
+uniform sampler3D m_NoiseTex;
+uniform float m_FlowSeconds;
+uniform float m_Turbulence;
+
+varying vec3 vObjectPosition;
+
+// Lattice cells along each side of the noise texture, which repeats.
+const float NOISE_CELLS = 32.0;
+
+// How fast the turbulence drifts down the jet, in cluster radii per simulated second: the plasma's
+// rate, the one ReentryFlowClock eases the turbulence for at high clock rates.
+const float FLOW_RADII_PER_SECOND = 5.5;
+
+// The stretch past the exit, in cluster radii, that is marched in FINE_STEPS even samples whatever
+// the step: the hot core fades within a few radii of the exit, and a feature that fits in one sample
+// shows the per-pixel jitter as a checker, as the plasma's boundary layer did. Eight rather than
+// twelve, measured: the camera in a Falcon Heavy's vacuum plume, looking up at its exits, from 0.98
+// to 0.69 ms, for a grain a quarter of what the march had when its step was fixed.
+const float FINE_RADII = 3.0;
+const int FINE_STEPS = 8;
+
+// How many times longer a cell may be along the jet's axis than across it. Across the jet its
+// profile and its core are a fraction of its radius wide; along it, past the fine stretch, it
+// changes over several radii, and the rays that cost are those running along it, from inside the
+// jet. Measured against a march fine enough to be exact: twice as long takes the camera inside an
+// Ariane 64's vacuum plume, looking down its tail, from 1.2 to 0.7 ms, for an error of at most 5.4
+// levels in 255, a smooth bias rather than grain, where a fixed step of 0.35 exit radius had 5.1.
+const float AXIAL_STRETCH = 2.0;
+
+// Set on screen, not measured: the shock diamonds' spacing along the jet, in cluster radii, and how
+// far their train reaches, as the distance over which it fades by e. They belong to the jet's first
+// few diameters, whatever its length.
+const float DIAMOND_PERIOD_RADII = 2.4;
+const float DIAMOND_REACH_RADII = 6.0;
+
+const float FAR = 1e9;
+
+// Jimenez's interleaved gradient noise (Call of Duty: Advanced Warfare, 2014), as the plasma uses:
+// neighbouring pixels spread their first-sample offsets evenly.
+float interleavedGradientNoise(vec2 pixel) {
+    return fract(52.9829189 * fract(dot(pixel, vec2(0.06711056, 0.00583715))));
+}
+
+float vnoise(vec3 x) {
+    return texture(m_NoiseTex, x / NOISE_CELLS).r;
+}
+
+float fbm(vec3 p) {
+    float a = 0.5;
+    float s = 0.0;
+    for (int i = 0; i < 3; i++) {
+        s += a * vnoise(p);
+        p = p * 2.03 + vec3(1.7, 9.2, 3.1);
+        a *= 0.5;
+    }
+    return s / 0.875;
+}
+
+// The span of the ray within y in [yLow, yHigh]; x > y when none.
+vec2 slabHit(vec3 ro, vec3 rd, float yLow, float yHigh) {
+    if (abs(rd.y) < 1e-7) {
+        return (ro.y >= yLow && ro.y <= yHigh) ? vec2(-FAR, FAR) : vec2(1.0, 0.0);
+    }
+    float ta = (yHigh - ro.y) / rd.y;
+    float tb = (yLow - ro.y) / rd.y;
+    return vec2(min(ta, tb), max(ta, tb));
+}
+
+// The span of the ray inside the jet's cone, clipped to its length; x > y when it misses. The solid
+// cone is convex, so the span is a single interval; of the two pieces a ray can leave in the double
+// cone, the one past the apex lies above the exit plane, where the slab clips it away.
+vec2 coneHit(vec3 ro, vec3 rd) {
+    vec2 slab = slabHit(ro, rd, -m_Length, 0.0);
+    if (slab.x > slab.y) {
+        return slab;
+    }
+    // f(t) = x^2 + z^2 - R^2, with R = c0 + c1 t along the ray.
+    float c0 = m_ExitRadius - m_TanAlpha * ro.y;
+    float c1 = -m_TanAlpha * rd.y;
+    float a = rd.x * rd.x + rd.z * rd.z - c1 * c1;
+    float b = 2.0 * (ro.x * rd.x + ro.z * rd.z - c0 * c1);
+    float c = ro.x * ro.x + ro.z * ro.z - c0 * c0;
+    vec2 inside;
+    if (abs(a) < 1e-9) {
+        if (abs(b) < 1e-12) {
+            inside = c <= 0.0 ? vec2(-FAR, FAR) : vec2(1.0, 0.0);
+        } else {
+            float t = -c / b;
+            inside = b > 0.0 ? vec2(-FAR, t) : vec2(t, FAR);
+        }
+    } else {
+        float disc = b * b - 4.0 * a * c;
+        if (disc < 0.0) {
+            inside = a > 0.0 ? vec2(1.0, 0.0) : vec2(-FAR, FAR);
+        } else {
+            float sq = sqrt(disc);
+            float r1 = (-b - sq) / (2.0 * a);
+            float r2 = (-b + sq) / (2.0 * a);
+            float lo = min(r1, r2);
+            float hi = max(r1, r2);
+            if (a > 0.0) {
+                inside = vec2(lo, hi);
+            } else {
+                vec2 before = vec2(max(-FAR, slab.x), min(lo, slab.y));
+                inside = before.x < before.y ? vec2(-FAR, lo) : vec2(hi, FAR);
+            }
+        }
+    }
+    return vec2(max(inside.x, slab.x), min(inside.y, slab.y));
+}
+
+// The jet at a point of the cluster's frame: light per cluster radius crossed and, through sig, how
+// much it veils per cluster radius.
+vec3 jet(vec3 p, out float sig) {
+    float r0 = m_ExitRadius;
+    float s = max(-p.y, 0.0);
+    float sr = s / r0;
+    float lenR = m_Length / r0;
+    float rad = r0 + m_TanAlpha * s;
+    float u = length(p.xz) / rad;
+
+    vec3 q = vec3(p.x / rad, sr - m_FlowSeconds * FLOW_RADII_PER_SECOND, p.z / rad);
+    float n = mix(0.5, fbm(q * vec3(1.3, 0.55, 1.3)), m_Turbulence);
+    float turb = 0.35 + 1.3 * n;
+
+    // The jet's light and veil thin out with its section, the square of its radius down the cone,
+    // as a flow spreading at constant mass rate does. Held per unit volume instead, a ray across the
+    // wide tail crosses more of the jet than one across the narrow exit, and the jet brightens
+    // toward a tail it then ends on a cut.
+    float spread = (r0 * r0) / (rad * rad);
+    float radial = exp(-u * u * 2.2);
+    float axial = exp(-2.0 * sr / lenR) * (1.0 - smoothstep(0.6 * lenR, lenR, sr));
+    float core = exp(-u * u * 12.0) * exp(-sr / 2.5);
+    float wave = 0.5 + 0.5 * cos(6.2831853 * sr / DIAMOND_PERIOD_RADII);
+    float diamonds = m_Diamonds * pow(wave, 10.0) * exp(-u * u * 8.0) * exp(-sr / DIAMOND_REACH_RADII) * spread;
+
+    float body = radial * axial * turb * spread;
+    vec3 colour = mix(m_EdgeColor.rgb, m_CoreColor.rgb, clamp(core * 1.5 + diamonds + body * 0.3, 0.0, 1.0));
+    float light = m_Brightness * m_Intensity;
+    sig = m_Opacity * m_Intensity * body;
+    return colour * light * (body + core * 2.0 + diamonds * 1.5);
+}
+
+// Integrates the jet from a to b along the ray, in n samples, front to back.
+void march(vec3 ro, vec3 rd, float a, float b, int n, float jitter,
+        inout vec3 acc, inout float transmittance) {
+    if (b <= a) {
+        return;
+    }
+    float dt = (b - a) / float(n);
+    float dr = dt / m_ExitRadius;
+    for (int i = 0; i < n; i++) {
+        if (transmittance < 0.01) {
+            return;
+        }
+        float t = a + (float(i) + jitter) * dt;
+        float sig;
+        vec3 e = jet(ro + rd * t, sig);
+        acc += transmittance * e * dr;
+        transmittance *= exp(-sig * dr);
+    }
+}
+
+// The jet's radius at t along the ray, inside its chord, where the distance past the exit grows or
+// shrinks linearly with t.
+float radiusAt(vec3 ro, vec3 rd, float t) {
+    return m_ExitRadius + m_TanAlpha * max(-(ro.y + rd.y * t), 0.0);
+}
+
+// Integrates the jet from a to b along the ray, front to back, in cells of cell local jet radii
+// rather than of exit radii: the jet's features widen with it, and a tail twenty exit radii wide
+// marched at the exit's spacing costs a hundred samples for nothing. The radius is linear in t
+// along the chord, so cells in proportion to it are even in its logarithm: u in [0, 1] sits at
+// the fraction (q^u - 1) / (q - 1) of the span, q the ratio of the radii at its two ends. Each
+// cell is sampled at its middle, without the per-pixel jitter: over cells this long the jet varies
+// enough that the jitter shows as grain. The span holds whole cells from a and a last, partial
+// one rather than a whole number of cells, so that the estimate does not jump where the number of
+// cells does, which would draw rings.
+void marchWidening(vec3 ro, vec3 rd, float a, float b, float cell,
+        inout vec3 acc, inout float transmittance) {
+    if (b <= a) {
+        return;
+    }
+    float span = b - a;
+    float ra = radiusAt(ro, rd, a);
+    float rb = radiusAt(ro, rd, b);
+    float q = rb / ra;
+    // Within a percent of a constant radius, (q^u - 1) / (q - 1) is lost to cancellation and
+    // even cells are as good.
+    bool even = abs(q - 1.0) < 0.01;
+    float radiiCrossed = even ? span / (0.5 * (ra + rb)) : span * log(q) / (rb - ra);
+    float cells = min(radiiCrossed / cell, float(m_MaxSteps));
+    float du = 1.0 / cells;
+    int n = clamp(int(ceil(cells)), 1, m_MaxSteps);
+    float lq = log2(q);
+    float fLow = 0.0;
+    for (int i = 0; i < n; i++) {
+        if (transmittance < 0.01) {
+            return;
+        }
+        float uLow = float(i) * du;
+        float uHigh = min(uLow + du, 1.0);
+        float uMid = 0.5 * (uLow + uHigh);
+        float fHigh = even ? uHigh : (exp2(uHigh * lq) - 1.0) / (q - 1.0);
+        float fMid = even ? uMid : (exp2(uMid * lq) - 1.0) / (q - 1.0);
+        float dr = span * (fHigh - fLow) / m_ExitRadius;
+        float sig;
+        vec3 e = jet(ro + rd * (a + span * fMid), sig);
+        acc += transmittance * e * dr;
+        transmittance *= exp(-sig * dr);
+        fLow = fHigh;
+    }
+}
+
+// Marches this fragment's ray through the jet; false when it misses the jet.
+bool marchPlume(out vec3 acc, out float transmittance) {
+    acc = vec3(0.0);
+    transmittance = 1.0;
+    if (m_Intensity <= 0.0) {
+        return false;
+    }
+    vec3 ro = (g_WorldMatrixInverse * vec4(g_CameraPosition, 1.0)).xyz;
+    vec3 rd = normalize(vObjectPosition - ro);
+    vec2 chord = coneHit(ro, rd);
+    float start = max(chord.x, 0.0);
+    float end = chord.y;
+    if (end <= start) {
+        return false;
+    }
+    float jitter = interleavedGradientNoise(gl_FragCoord.xy);
+    // The chord crosses the fine stretch past the exit at most once, so it splits into at most
+    // three pieces, marched in order along the ray.
+    vec2 fine = slabHit(ro, rd, -FINE_RADII * m_ExitRadius, 0.0);
+    float fineIn = clamp(fine.x, start, end);
+    float fineOut = clamp(fine.y, start, end);
+    if (fine.x > fine.y) {
+        fineIn = end;
+        fineOut = end;
+    }
+    // A cell no longer than m_StepRadii local radii across the jet nor AXIAL_STRETCH times that
+    // along it; the ray's direction is the same all along it, and so is this length in radii.
+    float cell = m_StepRadii
+            * min(1.0 / max(length(rd.xz), 1e-3), AXIAL_STRETCH / max(abs(rd.y), 1e-3));
+    marchWidening(ro, rd, start, fineIn, cell, acc, transmittance);
+    march(ro, rd, fineIn, fineOut, FINE_STEPS, jitter, acc, transmittance);
+    marchWidening(ro, rd, fineOut, end, cell, acc, transmittance);
+    return true;
+}

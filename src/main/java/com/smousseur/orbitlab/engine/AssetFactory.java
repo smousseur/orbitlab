@@ -424,6 +424,44 @@ public class AssetFactory {
   }
 
   /**
+   * Creates the material of one nozzle cluster's exhaust plume, put out until its intensity is set.
+   *
+   * <p>The render state follows from where the plume is drawn — in the near view's transparent
+   * bucket, at full resolution, over the scene:
+   *
+   * <ul>
+   *   <li><b>{@link RenderState.BlendMode#PremultAlpha}</b> — the shader writes the light the jet
+   *       adds and, as alpha, the share of what lies behind it hides: an additive jet saturates to
+   *       white over bright clouds, the scene having no tone mapping.
+   *   <li><b>Depth tested, not written</b> — the launcher and the ground hide what lies behind
+   *       them, and a plume behind another stays visible through it.
+   *   <li><b>Back faces culled</b> — the hull's near wall is drawn, so each pixel it covers is
+   *       marched once from where the ray enters it; the view turns this to the far wall while the
+   *       camera is inside the hull, where the near wall is behind it.
+   * </ul>
+   *
+   * <p>One material per cluster, since its cone, look and intensity are its own; the noise texture
+   * is the plasma's, shared.
+   *
+   * @param config the plume tuning
+   * @return the plume material, intensity zero
+   */
+  public Material createNozzlePlume(NozzlePlumeConfig config) {
+    Material material = new Material(assetManager, "MatDefs/Fx/NozzlePlume.j3md");
+    material.setInt("MaxSteps", config.maxSteps());
+    material.setFloat("StepRadii", config.stepRadii());
+    material.setFloat("Exposure", config.exposure());
+    material.setFloat("Intensity", 0f);
+    material.setTexture("NoiseTex", reentryNoiseTexture());
+    RenderState state = material.getAdditionalRenderState();
+    state.setBlendMode(RenderState.BlendMode.PremultAlpha);
+    state.setDepthTest(true);
+    state.setDepthWrite(false);
+    state.setFaceCullMode(RenderState.FaceCullMode.Back);
+    return material;
+  }
+
+  /**
    * The value noise every plasma volume's turbulence is read from, built once and shared.
    *
    * <p>The prototype hashed eight lattice corners per noise lookup, 48 per sample, and that hashing

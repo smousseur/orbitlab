@@ -22,6 +22,7 @@ import com.smousseur.orbitlab.engine.scene.planet.PlanetDrawnRotation;
 import com.smousseur.orbitlab.engine.scene.spacecraft.LauncherAssets;
 import com.smousseur.orbitlab.engine.scene.spacecraft.LauncherStackGeometry;
 import com.smousseur.orbitlab.engine.scene.spacecraft.PayloadAssets;
+import com.smousseur.orbitlab.engine.scene.spacecraft.PlumeDrive;
 import com.smousseur.orbitlab.engine.view.JmeVectorAdapter;
 import com.smousseur.orbitlab.simulation.ephemeris.service.EphemerisServiceRegistry;
 import com.smousseur.orbitlab.simulation.mission.FollowedObject;
@@ -155,6 +156,15 @@ public final class MissionRenderer {
    */
   private final MissionHeatProfiles heatProfiles = new MissionHeatProfiles();
 
+  /** The primary's burns, read off its raw ephemeris off the render thread, for its plumes. */
+  private final MissionBurnTimelines burnTimelines = new MissionBurnTimelines();
+
+  /**
+   * The fraction of its thrust the launcher's core applies while the boosters burn, from the
+   * catalog's ascent profile; 1 for a launcher that does not throttle, or a mission with none.
+   */
+  private float coreThrottle = 1f;
+
   /** The primary's silhouette timeline, derived from the debris (PHY-5 / L3). */
   private PrimarySilhouette silhouette = PrimarySilhouette.from(List.of());
 
@@ -202,6 +212,11 @@ public final class MissionRenderer {
     afterS1Fraction =
         LauncherStackGeometry.afterS1Fraction(
             entry.spec().map(spec -> spec.configuration().launcher().id()).orElse(null));
+    coreThrottle =
+        entry
+            .spec()
+            .map(spec -> (float) spec.configuration().launcher().ascentProfile().coreThrottle())
+            .orElse(1f);
     payloadAsset =
         entry
             .spec()
@@ -229,7 +244,8 @@ public final class MissionRenderer {
             entry.id().toString(),
             trajectoryColor,
             this::onSpacecraftSelected,
-            context.sceneGraph().nearBodiesNode());
+            context.sceneGraph().nearBodiesNode(),
+            true);
 
     rebuildDebrisViews();
   }
@@ -455,6 +471,7 @@ public final class MissionRenderer {
     primary.setHeat(
         heat.intensityAt(now), heat.axisAt(now), heat.speedAt(now), heat.altitudeAt(now));
     primary.setFlowClock(heat.firstHeatDate().map(now::durationFrom).orElse(0.0), clockRate());
+    primary.setPlume(plumeDriveAt(ephemeris, point, now));
     Vector3D noseAxis = landed ? drawnPrimary.velocity() : DrawnFlightAxis.of(point);
     primary.updateFromPoint(
         drawnPrimary,
@@ -680,6 +697,23 @@ public final class MissionRenderer {
           focus,
           now);
     }
+  }
+
+  /**
+   * What drives the primary's plumes now: the burn firing at {@code now}, read off the timeline
+   * built for this very ephemeris, nothing until it is.
+   */
+  private PlumeDrive plumeDriveAt(
+      MissionEphemeris ephemeris, MissionEphemerisPoint point, AbsoluteDate now) {
+    BurnTimeline.Burn burn =
+        burnTimelines.timelineFor(ephemeris).flatMap(timeline -> timeline.burnAt(now)).orElse(null);
+    return NozzlePlumeSchedule.driveAt(
+        burn,
+        now,
+        point.altitudeMeters(),
+        clockRate(),
+        coreThrottle,
+        context.getEngineConfig().plume());
   }
 
   /**
@@ -1046,6 +1080,10 @@ public final class MissionRenderer {
           entry.mission().getAtmosphere(),
           context.getEngineConfig().reentry(),
           AssetFactory.get().assetLoadingExecutor());
+      burnTimelines.request(
+          primaryEphemeris,
+          entry.mission().getVehicle(),
+          AssetFactory.get().assetLoadingExecutor());
     }
     silhouette = PrimarySilhouette.from(builtDebris);
     boosterCount = (int) builtDebris.stream().filter(t -> t.role() == StageRole.BOOSTER).count();
@@ -1059,7 +1097,8 @@ public final class MissionRenderer {
               entry.id() + "-debris-" + i,
               trajectoryColor,
               debrisSelectHandler(track),
-              (Node) primary.view().spatial());
+              (Node) primary.view().spatial(),
+              false);
       // The trail is decided per frame in updateDebris (inertial ribbon in flight, faded after
       // touchdown); off until then, so a just-built debris never flashes a full trace.
       view.setInertialTrail(false);
