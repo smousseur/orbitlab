@@ -13,6 +13,7 @@ import com.smousseur.orbitlab.app.view.ViewMode;
 import com.smousseur.orbitlab.core.OrbitlabException;
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.engine.AssetFactory;
+import com.smousseur.orbitlab.engine.RetrogradeFlipConfig;
 import com.smousseur.orbitlab.engine.scene.PlanetRadius;
 import com.smousseur.orbitlab.engine.scene.body.BodyRenderConfig;
 import com.smousseur.orbitlab.engine.scene.body.EclipseGeometry;
@@ -167,6 +168,17 @@ public final class MissionRenderer {
 
   /** The primary's silhouette timeline, derived from the debris (PHY-5 / L3). */
   private PrimarySilhouette silhouette = PrimarySilhouette.from(List.of());
+
+  /**
+   * When the primary is turned over for its retrograde burns; rebuilt by {@link #flipsFor} when the
+   * burn timeline, the heat profile or the silhouette it was built from — each matched by identity
+   * — has changed.
+   */
+  private RetrogradeFlips flips = RetrogradeFlips.NONE;
+
+  private BurnTimeline flipsTimeline;
+  private ReentryHeatProfile flipsHeat;
+  private PrimarySilhouette flipsSilhouette;
 
   /** The payload's drawn asset (mesh + true size), resolved once — null when it has no mesh. */
   private PayloadAssets.PayloadAsset payloadAsset;
@@ -472,6 +484,7 @@ public final class MissionRenderer {
         heat.intensityAt(now), heat.axisAt(now), heat.speedAt(now), heat.altitudeAt(now));
     primary.setFlowClock(heat.firstHeatDate().map(now::durationFrom).orElse(0.0), clockRate());
     primary.setPlume(plumeDriveAt(ephemeris, point, now));
+    primary.setTurn(landed ? 0.0 : flipsFor(ephemeris, heat).angleAt(now));
     Vector3D noseAxis = landed ? drawnPrimary.velocity() : DrawnFlightAxis.of(point);
     primary.updateFromPoint(
         drawnPrimary,
@@ -703,6 +716,50 @@ public final class MissionRenderer {
    * What drives the primary's plumes now: the burn firing at {@code now}, read off the timeline
    * built for this very ephemeris, nothing until it is.
    */
+  /**
+   * The primary's turn schedule for the ephemeris drawn: bounded by its silhouette changes and by
+   * the first heated sample of its re-entry, whose plasma is placed on its nose. Built on the
+   * render thread — it walks only the burns — and kept until one of its inputs changes; no turn
+   * until the burn timeline has been published, as no plume either.
+   */
+  private RetrogradeFlips flipsFor(MissionEphemeris ephemeris, ReentryHeatProfile heat) {
+    BurnTimeline timeline = burnTimelines.timelineFor(ephemeris).orElse(null);
+    if (timeline == null) {
+      return RetrogradeFlips.NONE;
+    }
+    if (timeline != flipsTimeline || heat != flipsHeat || silhouette != flipsSilhouette) {
+      flips = flipsOf(timeline, silhouette, heat, ephemeris, context.getEngineConfig().flip());
+      flipsTimeline = timeline;
+      flipsHeat = heat;
+      flipsSilhouette = silhouette;
+    }
+    return flips;
+  }
+
+  /**
+   * The turn schedule of a primary: its burns, bounded by its silhouette changes, the first heated
+   * sample of its re-entry and the ends of its ephemeris. Shared with the measurement probes, so
+   * they measure the very schedule the renderer draws.
+   *
+   * @param timeline the primary's burns
+   * @param silhouette the primary's silhouette timeline
+   * @param heat the primary's heat profile, empty when it does not re-enter
+   * @param ephemeris the primary's ephemeris
+   * @param config the flip tuning
+   * @return the schedule
+   */
+  static RetrogradeFlips flipsOf(
+      BurnTimeline timeline,
+      PrimarySilhouette silhouette,
+      ReentryHeatProfile heat,
+      MissionEphemeris ephemeris,
+      RetrogradeFlipConfig config) {
+    List<AbsoluteDate> barriers = new ArrayList<>(silhouette.transitionDates());
+    heat.firstHeatDate().ifPresent(barriers::add);
+    return RetrogradeFlips.of(
+        timeline.burns(), barriers, ephemeris.startDate(), ephemeris.endDate(), config);
+  }
+
   private PlumeDrive plumeDriveAt(
       MissionEphemeris ephemeris, MissionEphemerisPoint point, AbsoluteDate now) {
     BurnTimeline.Burn burn =

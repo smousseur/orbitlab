@@ -17,7 +17,8 @@ import org.hipparchus.geometry.euclidean.threed.Vector3D;
  *
  * <p>Orientation is driven by the velocity vector: the model's nose is aligned with the direction
  * of travel, interpolated frame-to-frame with a slerp to avoid jitter. When the velocity is ~0 the
- * last orientation is preserved.
+ * last orientation is preserved. On top of it the primary can be turned over for a retrograde burn:
+ * a pitch through its local vertical, smoothed apart from the attitude it is applied to.
  */
 public final class SpacecraftPresenter {
 
@@ -40,11 +41,29 @@ public final class SpacecraftPresenter {
   private static final Quaternion MODEL_FORWARD_CORRECTION =
       new Quaternion().fromAngleAxis(FastMath.HALF_PI, Vector3f.UNIT_X);
 
+  /**
+   * How close, in radians, the smoothed turn has to come to its target before it is set on it: the
+   * exponential smoothing only creeps toward its target, and an unturned primary must get back the
+   * very rotation it had before any turn, not one a ten-thousandth of a radian off.
+   */
+  private static final float TURN_SNAP_RADIANS = 1e-4f;
+
+  /**
+   * The smallest squared norm of {@code nose x radial} that still gives a turn axis: a nose along
+   * the vertical has none, and keeps the last axis it had.
+   */
+  private static final float MIN_TURN_AXIS_NORM_SQ = 1e-12f;
+
   private final String id;
   private final BodyView view;
   private final Quaternion currentRotation = new Quaternion();
   private final Quaternion targetRotation = new Quaternion();
+  private final Quaternion turnedRotation = new Quaternion();
+  private final Vector3f turnAxis = new Vector3f();
   private boolean rotationInitialized;
+  private boolean turnAxisSet;
+  private boolean turnInitialized;
+  private float turnAngle;
 
   public SpacecraftPresenter(String id, BodyView view) {
     this.id = Objects.requireNonNull(id, "id");
@@ -111,15 +130,47 @@ public final class SpacecraftPresenter {
       float tpf,
       RenderContext ctx,
       Vector3f upWorld) {
+    updatePose(positionGcrfMeters, velocityGcrf, tpf, ctx, upWorld, 0.0, Vector3D.ZERO);
+  }
+
+  /**
+   * As {@link #updatePose(Vector3D, Vector3D, float, RenderContext, Vector3f)}, with the primary
+   * turned over by {@code turn} for a retrograde burn: the attitude it would otherwise have is
+   * pitched by that angle about {@code nose x radial}, so the nose goes up through the local
+   * vertical and comes down tail first at pi. The angle is smoothed with the same half-life as the
+   * attitude, but apart from it, as a number: a slerp between two attitudes half a turn apart would
+   * take whichever way is shortest, through the inside or about the nose, as soon as the clock runs
+   * fast enough for the turn to fit in a frame or two. At a zero turn the rotation is the very one
+   * the shorter overload sets.
+   *
+   * @param positionGcrfMeters the spacecraft position in GCRF frame, in meters
+   * @param velocityGcrf the direction the nose points, in the same frame (may be zero)
+   * @param tpf the frame time in seconds used to drive the smoothing
+   * @param ctx the render context defining the scale
+   * @param upWorld the roll reference in world (JME) axes; must not be parallel to the velocity
+   * @param turn the angle the primary is turned by, from 0 (nose first) to pi (tail first)
+   * @param radialGcrf the direction from the centre of the body flown around to the spacecraft, in
+   *     the same frame as the velocity; zero leaves the turn axis as it was
+   */
+  public void updatePose(
+      Vector3D positionGcrfMeters,
+      Vector3D velocityGcrf,
+      float tpf,
+      RenderContext ctx,
+      Vector3f upWorld,
+      double turn,
+      Vector3D radialGcrf) {
     Objects.requireNonNull(positionGcrfMeters, "positionGcrfMeters");
     Objects.requireNonNull(velocityGcrf, "velocityGcrf");
     Objects.requireNonNull(ctx, "ctx");
     Objects.requireNonNull(upWorld, "upWorld");
+    Objects.requireNonNull(radialGcrf, "radialGcrf");
 
     // Through JmeVectorAdapter, never inlined: the floating-origin state negates the very same
     // conversion of the very same position to place the near-view origin on this spacecraft.
     view.setPositionWorld(JmeVectorAdapter.toJmeBodyRelativePosition(positionGcrfMeters, ctx));
 
+    float alpha = 1f - (float) Math.pow(0.5, tpf / ROTATION_SMOOTHING_HALF_LIFE);
     if (velocityGcrf.getNormSq() > MIN_VELOCITY_NORM_SQ) {
       Vector3D dirIcrf = velocityGcrf.normalize();
       Vector3D dirJme = ctx.axisConvention().icrfToJme(dirIcrf);
@@ -132,15 +183,65 @@ public final class SpacecraftPresenter {
         currentRotation.set(targetRotation);
         rotationInitialized = true;
       } else {
-        float alpha = 1f - (float) Math.pow(0.5, tpf / ROTATION_SMOOTHING_HALF_LIFE);
         Quaternion from = new Quaternion().set(currentRotation);
         currentRotation.slerp(from, targetRotation, alpha);
         currentRotation.normalizeLocal();
       }
+      updateTurnAxis(forward, radialGcrf, ctx);
     }
+    smoothTurn((float) turn, alpha);
 
     if (rotationInitialized) {
-      view.setRotationWorld(currentRotation);
+      view.setRotationWorld(turned());
     }
+  }
+
+  /**
+   * Where a point of the model, given in its bucket's frame, has moved to because of the turn, the
+   * other way round: added to the bucket's translation, it turns the model about that point instead
+   * of about the bucket's origin. Zero when the primary is not turned.
+   *
+   * @param pivot the point to turn about, in the bucket's frame
+   * @return the translation that keeps {@code pivot} where it stood unturned
+   */
+  public Vector3f flipCompensation(Vector3f pivot) {
+    if (!isTurned()) {
+      return new Vector3f();
+    }
+    return currentRotation.mult(pivot).subtractLocal(turnedRotation.mult(pivot));
+  }
+
+  private void updateTurnAxis(Vector3f forward, Vector3D radialGcrf, RenderContext ctx) {
+    if (radialGcrf.getNormSq() == 0.0) {
+      return;
+    }
+    Vector3f radial =
+        JmeVectorAdapter.toVector3f(ctx.axisConvention().icrfToJme(radialGcrf.normalize()));
+    Vector3f axis = forward.cross(radial);
+    if (axis.lengthSquared() > MIN_TURN_AXIS_NORM_SQ) {
+      turnAxis.set(axis).normalizeLocal();
+      turnAxisSet = true;
+    }
+  }
+
+  private void smoothTurn(float target, float alpha) {
+    if (!turnInitialized || Math.abs(target - turnAngle) < TURN_SNAP_RADIANS) {
+      turnAngle = target;
+      turnInitialized = true;
+    } else {
+      turnAngle += (target - turnAngle) * alpha;
+    }
+  }
+
+  private boolean isTurned() {
+    return rotationInitialized && turnAxisSet && turnAngle != 0f;
+  }
+
+  /** The rotation to draw: the attitude itself, or the attitude turned about the turn axis. */
+  private Quaternion turned() {
+    if (!isTurned()) {
+      return currentRotation;
+    }
+    return turnedRotation.fromAngleNormalAxis(turnAngle, turnAxis).multLocal(currentRotation);
   }
 }

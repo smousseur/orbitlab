@@ -98,6 +98,19 @@ class PrimarySilhouetteTest {
   }
 
   @Test
+  void transitionDatesAreTheSeparationsThatChangeTheSilhouette() {
+    PrimarySilhouette silhouette =
+        PrimarySilhouette.from(
+            List.of(
+                debris(StageRole.BOOSTER, 100.0),
+                debris(StageRole.BOOSTER, 100.0),
+                debris(StageRole.CORE, 200.0),
+                debris(StageRole.KICK, 400.0)));
+    assertEquals(
+        List.of(epoch.shiftedBy(100.0), epoch.shiftedBy(200.0)), silhouette.transitionDates());
+  }
+
+  @Test
   void reversesUnderScrub() {
     PrimarySilhouette silhouette =
         PrimarySilhouette.from(
