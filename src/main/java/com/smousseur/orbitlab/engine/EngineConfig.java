@@ -13,13 +13,17 @@ import java.util.Objects;
  * @param hover the tuning of the hover over planets and their orbits
  * @param reentry the tuning of the re-entry effects: when a falling piece glows, and the plasma
  *     volume it is wrapped in up close
+ * @param plume the tuning of the exhaust plumes drawn at a launcher's firing nozzles
+ * @param flip the tuning of the half turn the primary makes around a retrograde burn
  */
 public record EngineConfig(
     float systemRadiusWorldUnits,
     OrbitCameraConfig orbitCamera,
     CameraTransitionConfig cameraTransition,
     HoverConfig hover,
-    ReentryFxConfig reentry) {
+    ReentryFxConfig reentry,
+    NozzlePlumeConfig plume,
+    RetrogradeFlipConfig flip) {
 
   public EngineConfig {
     if (!Float.isFinite(systemRadiusWorldUnits) || systemRadiusWorldUnits <= 0f) {
@@ -29,6 +33,8 @@ public record EngineConfig(
     Objects.requireNonNull(cameraTransition, "cameraTransition");
     Objects.requireNonNull(hover, "hover");
     Objects.requireNonNull(reentry, "reentry");
+    Objects.requireNonNull(plume, "plume");
+    Objects.requireNonNull(flip, "flip");
   }
 
   /**
@@ -45,6 +51,8 @@ public record EngineConfig(
         cam,
         CameraTransitionConfig.defaults(),
         HoverConfig.defaults(),
-        ReentryFxConfig.defaults());
+        ReentryFxConfig.defaults(),
+        NozzlePlumeConfig.defaults(),
+        RetrogradeFlipConfig.defaults());
   }
 }

@@ -75,4 +75,14 @@ final class PrimarySilhouette {
     Map.Entry<AbsoluteDate, SilhouettePhase> entry = transitions.floorEntry(now);
     return entry == null ? SilhouettePhase.FULL : entry.getValue();
   }
+
+  /**
+   * The dates the silhouette changes on, in date order: each launcher separation, several shed at
+   * one instant counting once, and none for a kick stage, which leaves the silhouette alone.
+   *
+   * @return the transition dates
+   */
+  List<AbsoluteDate> transitionDates() {
+    return List.copyOf(transitions.keySet());
+  }
 }

@@ -113,6 +113,95 @@ class SpacecraftPresenterTest {
     assertNull(view.lastRotation);
   }
 
+  private static final Vector3D RADIAL = new Vector3D(7_000_000.0, 0.0, 0.0);
+  private static final Vector3D ALONG_TRACK = new Vector3D(0.0, 7_500.0, 0.0);
+  private static final Vector3D CLIMBING = new Vector3D(500.0, 7_500.0, 300.0);
+  private static final float SETTLED = 10f;
+  private static final float TURN_TOLERANCE = 1e-5f;
+
+  private Vector3f jme(Vector3D icrf) {
+    return JmeVectorAdapter.toVector3f(ctx.axisConvention().icrfToJme(icrf.normalize()));
+  }
+
+  private static Vector3f noseOf(Quaternion rotation) {
+    return rotation.mult(Vector3f.UNIT_Y);
+  }
+
+  private Quaternion unturned(Vector3D velocity, float tpf) {
+    RecordingBodyView plain = new RecordingBodyView();
+    new SpacecraftPresenter("plain", plain).updatePose(RADIAL, velocity, tpf, ctx);
+    return plain.lastRotation;
+  }
+
+  @Test
+  void aZeroTurnLeavesTheRotationUntouched() {
+    RecordingBodyView plain = new RecordingBodyView();
+    SpacecraftPresenter reference = new SpacecraftPresenter("plain", plain);
+    reference.updatePose(RADIAL, ALONG_TRACK, 0.016f, ctx);
+    reference.updatePose(RADIAL, CLIMBING, 0.016f, ctx);
+
+    presenter.updatePose(RADIAL, ALONG_TRACK, 0.016f, ctx, Vector3f.UNIT_Y, 0.0, RADIAL);
+    presenter.updatePose(RADIAL, CLIMBING, 0.016f, ctx, Vector3f.UNIT_Y, 0.0, RADIAL);
+
+    assertEquals(plain.lastRotation, view.lastRotation);
+    assertEquals(Vector3f.ZERO, presenter.flipCompensation(new Vector3f(0.02f, 0.4f, -0.01f)));
+  }
+
+  @Test
+  void aHalfTurnFliesTailFirst() {
+    presenter.updatePose(RADIAL, ALONG_TRACK, SETTLED, ctx, Vector3f.UNIT_Y, Math.PI, RADIAL);
+
+    assertEquals(-1f, noseOf(view.lastRotation).dot(jme(ALONG_TRACK)), TURN_TOLERANCE);
+  }
+
+  @Test
+  void aQuarterTurnPointsTheNoseOutward() {
+    presenter.updatePose(RADIAL, ALONG_TRACK, SETTLED, ctx, Vector3f.UNIT_Y, Math.PI / 2, RADIAL);
+
+    assertEquals(1f, noseOf(view.lastRotation).dot(jme(RADIAL)), TURN_TOLERANCE);
+  }
+
+  @Test
+  void aHalfTurnIsAPitchAboutTheOrbitNormal() {
+    Quaternion before = unturned(ALONG_TRACK, SETTLED);
+    presenter.updatePose(RADIAL, ALONG_TRACK, SETTLED, ctx, Vector3f.UNIT_Y, Math.PI, RADIAL);
+    Quaternion after = view.lastRotation;
+    Vector3f normal = jme(ALONG_TRACK).cross(jme(RADIAL)).normalizeLocal();
+
+    assertEquals(-1f, noseOf(after).dot(jme(ALONG_TRACK)), TURN_TOLERANCE);
+    for (Vector3f side : new Vector3f[] {Vector3f.UNIT_X, Vector3f.UNIT_Z}) {
+      assertEquals(
+          before.mult(side).dot(normal), after.mult(side).dot(normal), TURN_TOLERANCE, "" + side);
+    }
+  }
+
+  @Test
+  void theTurnIsSmoothedThroughTheOutside() {
+    presenter.updatePose(RADIAL, ALONG_TRACK, 0.016f, ctx, Vector3f.UNIT_Y, 0.0, RADIAL);
+    Vector3f normal = jme(ALONG_TRACK).cross(jme(RADIAL)).normalizeLocal();
+    for (int frame = 0; frame < 200; frame++) {
+      presenter.updatePose(RADIAL, ALONG_TRACK, 0.016f, ctx, Vector3f.UNIT_Y, Math.PI, RADIAL);
+      Vector3f nose = noseOf(view.lastRotation);
+      assertTrue(nose.dot(jme(RADIAL)) >= -TURN_TOLERANCE, "inward at frame " + frame);
+      assertEquals(0f, nose.dot(normal), TURN_TOLERANCE, "out of the plane at frame " + frame);
+    }
+    assertTrue(noseOf(view.lastRotation).dot(jme(ALONG_TRACK)) < -0.99f);
+  }
+
+  @Test
+  void theCompensationHoldsThePivotWhereItStood() {
+    Quaternion before = unturned(ALONG_TRACK, SETTLED);
+    presenter.updatePose(RADIAL, ALONG_TRACK, SETTLED, ctx, Vector3f.UNIT_Y, 2.0, RADIAL);
+    Vector3f pivot = new Vector3f(0.02f, 0.4f, -0.01f);
+
+    assertTrue(noseOf(view.lastRotation).dot(jme(ALONG_TRACK)) < 0.9f, "not turned");
+    Vector3f held = view.lastRotation.mult(pivot).addLocal(presenter.flipCompensation(pivot));
+    Vector3f stood = before.mult(pivot);
+    assertEquals(stood.x, held.x, TURN_TOLERANCE);
+    assertEquals(stood.y, held.y, TURN_TOLERANCE);
+    assertEquals(stood.z, held.z, TURN_TOLERANCE);
+  }
+
   private static float quaternionNorm(Quaternion q) {
     return (float)
         Math.sqrt(

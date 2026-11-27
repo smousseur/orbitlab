@@ -16,7 +16,10 @@ import com.smousseur.orbitlab.engine.ReentryFxConfig;
 import com.smousseur.orbitlab.engine.scene.body.BodyRenderConfig;
 import com.smousseur.orbitlab.engine.scene.body.LodView;
 import com.smousseur.orbitlab.engine.scene.body.lod.Model3dView;
+import com.smousseur.orbitlab.engine.scene.spacecraft.NozzlePlumeView;
+import com.smousseur.orbitlab.engine.scene.spacecraft.PayloadMounts;
 import com.smousseur.orbitlab.engine.scene.spacecraft.PieceGeometry;
+import com.smousseur.orbitlab.engine.scene.spacecraft.PlumeDrive;
 import com.smousseur.orbitlab.engine.scene.spacecraft.ReentryVolumeView;
 import com.smousseur.orbitlab.engine.scene.spacecraft.SpacecraftPresenter;
 import com.smousseur.orbitlab.engine.view.JmeVectorAdapter;
@@ -80,6 +83,15 @@ final class TrackedObjectView {
    */
   private final ReentryVolumeView volume;
 
+  /**
+   * This object's exhaust plumes; {@code null} for a debris, which never fires. Lit only while
+   * {@link MissionRenderer} feeds a burn through {@link #setPlume}.
+   */
+  private final NozzlePlumeView plume;
+
+  /** What drives the plumes this frame; {@link PlumeDrive#OFF} between burns. */
+  private PlumeDrive plumeDrive = PlumeDrive.OFF;
+
   /** The heat intensity set for this frame, in {@code [0, 1]}; zero keeps the volume out. */
   private float heatIntensity;
 
@@ -92,19 +104,33 @@ final class TrackedObjectView {
   /** The altitude set for this frame, in metres; it shapes and tints the plasma. */
   private float heatAltitude;
 
+  /**
+   * The angle this object is turned over by for a retrograde burn this frame, from 0 to pi; only
+   * the primary is ever turned.
+   */
+  private double turn;
+
+  /**
+   * The last mesh's nose, base and axis, measured off the render thread as it loads; {@code null}
+   * until the first one has. The turn pivots about its middle.
+   */
+  private volatile PieceGeometry piece;
+
   private TrackedObjectView(
       SpacecraftPresenter presenter,
       LodView view,
       MissionTrajectoryRenderer trajectoryRenderer,
       MissionIconHover iconHover,
       HoverState hoverState,
-      ReentryVolumeView volume) {
+      ReentryVolumeView volume,
+      NozzlePlumeView plume) {
     this.presenter = presenter;
     this.view = view;
     this.trajectoryRenderer = trajectoryRenderer;
     this.iconHover = iconHover;
     this.hoverState = hoverState;
     this.volume = volume;
+    this.plume = plume;
   }
 
   /**
@@ -121,6 +147,8 @@ final class TrackedObjectView {
    * @param parent the scene node to hang the object's anchor under — the near bodies node for the
    *     primary, the primary's own anchor for a debris so it can be placed relative to it (PHY-5,
    *     the GEO "tremble" fix)
+   * @param withPlume whether the object fires, and so carries exhaust plumes: the primary does, a
+   *     debris never
    * @return the attached view
    */
   static TrackedObjectView create(
@@ -129,7 +157,8 @@ final class TrackedObjectView {
       String trajectoryId,
       ColorRGBA trajectoryColor,
       Runnable onClick,
-      Node parent) {
+      Node parent,
+      boolean withPlume) {
     Node guiNode = context.guiGraph().getPlanetBillboardsNode();
     HoverConfig hoverConfig = context.getEngineConfig().hover();
     MissionIconHover iconHover = new MissionIconHover(hoverConfig);
@@ -156,25 +185,32 @@ final class TrackedObjectView {
             AssetFactory.get().createReentryVolume(reentry),
             reentry.volume());
 
-    loadModelAsync(view.getModel3dView(), config.modelPath(), volume);
+    NozzlePlumeView plume =
+        withPlume
+            ? new NozzlePlumeView((Node) view.nearSpatial(), context.getEngineConfig().plume())
+            : null;
 
     MissionTrajectoryRenderer trajectoryRenderer =
         new MissionTrajectoryRenderer(trajectoryId, trajectoryColor);
     trajectoryRenderer.initialize(context.sceneGraph().nearOrbitsNode());
 
-    return new TrackedObjectView(
-        presenter, view, trajectoryRenderer, iconHover, context.hoverState(), volume);
+    TrackedObjectView tracked =
+        new TrackedObjectView(
+            presenter, view, trajectoryRenderer, iconHover, context.hoverState(), volume, plume);
+    tracked.loadModelAsync(config.modelPath());
+    return tracked;
   }
 
   /**
    * Loads a GLTF path into a model view off the render thread, twilight-shaded, then attaches it.
-   * The model is measured for the plasma volume on the way, while it is still detached.
+   * The model is measured for the plasma volume on the way, while it is still detached, and its
+   * mesh handed to the plumes.
    */
-  private static void loadModelAsync(
-      Model3dView model3dView, String path, ReentryVolumeView volume) {
+  private void loadModelAsync(String path) {
+    Model3dView model3dView = view.getModel3dView();
     CompletableFuture.supplyAsync(
             () -> model3dView.loadModel(path), AssetFactory.get().assetLoadingExecutor())
-        .thenApply(spatial -> measuredFor(volume, spatial))
+        .thenApply(spatial -> measured(path, spatial))
         .thenApply(spatial -> AssetFactory.get().applyLambert(spatial, 0.3f))
         .thenAccept(model3dView::onModelLoaded);
   }
@@ -182,25 +218,32 @@ final class TrackedObjectView {
   /**
    * Loads a mesh at a given real-world size, off the render thread, then attaches it — the payload
    * silhouette the primary shrinks to (PHY-5 / L5), whose size comes from the catalog rather than
-   * from the launcher's radius. Measured for the plasma volume on the way, like {@link
-   * #loadModelAsync}.
+   * from the launcher's radius. The mesh is mounted on the launcher's convention first (see {@link
+   * PayloadMounts}), so the plasma volume, the turn's pivot, the plumes and the ground clearance
+   * all measure it as it is drawn; then measured like {@link #loadModelAsync}.
    */
-  private static void loadModelNormalizedAsync(
-      Model3dView model3dView, String path, double sizeMeters, ReentryVolumeView volume) {
+  private void loadModelNormalizedAsync(String path, double sizeMeters) {
+    Model3dView model3dView = view.getModel3dView();
     CompletableFuture.supplyAsync(
             () -> model3dView.loadModelNormalized(path, sizeMeters),
             AssetFactory.get().assetLoadingExecutor())
-        .thenApply(spatial -> measuredFor(volume, spatial))
+        .thenApply(spatial -> PayloadMounts.mount(path, spatial))
+        .thenApply(spatial -> measured(path, spatial))
         .thenApply(spatial -> AssetFactory.get().applyLambert(spatial, 0.3f))
         .thenAccept(model3dView::onModelLoaded);
   }
 
   /**
-   * Hands the plasma volume the nose and body of a freshly loaded model; returns the model
-   * unchanged.
+   * Hands the plasma volume and the turn the nose and body of a freshly loaded model, and the
+   * plumes its mesh and scale; returns the model unchanged.
    */
-  private static Spatial measuredFor(ReentryVolumeView volume, Spatial model) {
-    volume.setPieceGeometry(PieceGeometry.measure(model));
+  private Spatial measured(String path, Spatial model) {
+    PieceGeometry measured = PieceGeometry.measure(model);
+    piece = measured;
+    volume.setPieceGeometry(measured);
+    if (plume != null) {
+      plume.setMesh(path, model.getLocalScale().y);
+    }
     return model;
   }
 
@@ -212,7 +255,7 @@ final class TrackedObjectView {
    * @param path the GLTF asset path of the new silhouette
    */
   void swapMesh(String path) {
-    loadModelAsync(view.getModel3dView(), path, volume);
+    loadModelAsync(path);
   }
 
   /**
@@ -225,7 +268,7 @@ final class TrackedObjectView {
    * @param drawnSizeMeters the size, in metres, the payload's largest dimension should span
    */
   void swapMesh(String path, double drawnSizeMeters) {
-    loadModelNormalizedAsync(view.getModel3dView(), path, drawnSizeMeters, volume);
+    loadModelNormalizedAsync(path, drawnSizeMeters);
   }
 
   /**
@@ -256,6 +299,50 @@ final class TrackedObjectView {
    */
   void setFlowClock(double flowSeconds, double clockRate) {
     volume.setFlow((float) flowSeconds, clockRate);
+  }
+
+  /**
+   * Sets what drives this object's exhaust plumes for the next {@link #updateFromPoint}; ignored by
+   * an object that carries none.
+   *
+   * @param drive the plumes' drive at the current date
+   */
+  void setPlume(PlumeDrive drive) {
+    this.plumeDrive = drive;
+  }
+
+  /**
+   * Sets the angle this object is turned over by for a retrograde burn for the next {@link
+   * #updateFromPoint}: it pitches through its local vertical about the middle of its mesh, so the
+   * mesh turns in place while its drawn point, and everything keyed on it, stays put.
+   *
+   * @param angle the turn, from 0 (nose first) to pi (tail first)
+   */
+  void setTurn(double angle) {
+    this.turn = angle;
+  }
+
+  /**
+   * The middle of the current mesh along its axis, in its bucket's frame: the point a turn pivots
+   * about. The origin until a mesh has been measured.
+   */
+  private Vector3f pivot() {
+    PieceGeometry measured = piece;
+    return measured == null ? new Vector3f() : pivotOf(measured);
+  }
+
+  /**
+   * The middle of a measured mesh along its axis, in its bucket's frame: halfway between its base
+   * and its nose, on its axis — which a third-party payload puts anywhere about its own origin.
+   *
+   * @param piece the mesh's measure
+   * @return the point a turn pivots about
+   */
+  static Vector3f pivotOf(PieceGeometry piece) {
+    return new Vector3f(
+        piece.axisXUnits(),
+        0.5f * (piece.noseHeightUnits() + piece.baseHeightUnits()),
+        piece.axisZUnits());
   }
 
   /** The LOD view, so {@link MissionRenderer} can push the primary's eclipse occluder onto it. */
@@ -353,8 +440,10 @@ final class TrackedObjectView {
         upHint == null
             ? Vector3f.UNIT_Y
             : JmeVectorAdapter.toVector3f(ctx.axisConvention().icrfToJme(upHint.normalize()));
-    presenter.updatePose(modelPosition, noseAxis, tpf, ctx, upWorld);
-    this.view.setModelOffset(JmeVectorAdapter.toJmeBodyRelativePosition(seat, ctx));
+    presenter.updatePose(modelPosition, noseAxis, tpf, ctx, upWorld, turn, point.position());
+    this.view.setModelOffset(
+        JmeVectorAdapter.toJmeBodyRelativePosition(seat, ctx)
+            .addLocal(presenter.flipCompensation(pivot())));
     this.view.setIconFallbackEnabled(secondaryDisplay);
     // Before the screen update, which places the icon from its size.
     this.view.setHoverIntensity(iconHover.advance(hoverState.isFrozen(), tpf));
@@ -367,6 +456,9 @@ final class TrackedObjectView {
         heatAltitude,
         model.getModelBucket(),
         model.isVisible());
+    if (plume != null) {
+      plume.update(plumeDrive, model.getModelBucket(), model.isVisible(), cam.getLocation());
+    }
     if (inertialTrail) {
       trajectoryRenderer.setVisible(true);
       // Expressed about the same reference as the mesh — the primary for a debris hung under it —
@@ -445,6 +537,9 @@ final class TrackedObjectView {
     trajectoryRenderer.setVisible(visible);
     if (!visible) {
       volume.putOut();
+      if (plume != null) {
+        plume.putOut();
+      }
     }
   }
 

@@ -36,6 +36,22 @@ class PayloadAssetsTest {
   }
 
   @Test
+  void aMountedPayloadStandsItsMountedHeightAboveItsEngine() {
+    PayloadAssets.PayloadAsset goes = PayloadAssets.forPayload(Payloads.GEO_SAT.id()).orElseThrow();
+    float fraction = PayloadMounts.mountOf(goes.meshPath()).orElseThrow().heightAboveExitFraction();
+
+    assertEquals(fraction * goes.drawnSizeMeters(), goes.heightAboveExitMeters(), 1e-6);
+  }
+
+  @Test
+  void aPayloadWithoutAMountStandsItsWholeSizeAboveItsBase() {
+    PayloadAssets.PayloadAsset unmounted =
+        new PayloadAssets.PayloadAsset("models/payloads/unknown/unknown.gltf", 4.0);
+
+    assertEquals(4.0, unmounted.heightAboveExitMeters(), 1e-12);
+  }
+
+  @Test
   void cargoModuleHasNoMesh() {
     assertTrue(PayloadAssets.forPayload(Payloads.CARGO_MODULE.id()).isEmpty());
   }

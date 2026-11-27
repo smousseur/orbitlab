@@ -13,6 +13,7 @@ import com.smousseur.orbitlab.app.view.ViewMode;
 import com.smousseur.orbitlab.core.OrbitlabException;
 import com.smousseur.orbitlab.core.SolarSystemBody;
 import com.smousseur.orbitlab.engine.AssetFactory;
+import com.smousseur.orbitlab.engine.RetrogradeFlipConfig;
 import com.smousseur.orbitlab.engine.scene.PlanetRadius;
 import com.smousseur.orbitlab.engine.scene.body.BodyRenderConfig;
 import com.smousseur.orbitlab.engine.scene.body.EclipseGeometry;
@@ -22,6 +23,7 @@ import com.smousseur.orbitlab.engine.scene.planet.PlanetDrawnRotation;
 import com.smousseur.orbitlab.engine.scene.spacecraft.LauncherAssets;
 import com.smousseur.orbitlab.engine.scene.spacecraft.LauncherStackGeometry;
 import com.smousseur.orbitlab.engine.scene.spacecraft.PayloadAssets;
+import com.smousseur.orbitlab.engine.scene.spacecraft.PlumeDrive;
 import com.smousseur.orbitlab.engine.view.JmeVectorAdapter;
 import com.smousseur.orbitlab.simulation.ephemeris.service.EphemerisServiceRegistry;
 import com.smousseur.orbitlab.simulation.mission.FollowedObject;
@@ -155,8 +157,28 @@ public final class MissionRenderer {
    */
   private final MissionHeatProfiles heatProfiles = new MissionHeatProfiles();
 
+  /** The primary's burns, read off its raw ephemeris off the render thread, for its plumes. */
+  private final MissionBurnTimelines burnTimelines = new MissionBurnTimelines();
+
+  /**
+   * The fraction of its thrust the launcher's core applies while the boosters burn, from the
+   * catalog's ascent profile; 1 for a launcher that does not throttle, or a mission with none.
+   */
+  private float coreThrottle = 1f;
+
   /** The primary's silhouette timeline, derived from the debris (PHY-5 / L3). */
   private PrimarySilhouette silhouette = PrimarySilhouette.from(List.of());
+
+  /**
+   * When the primary is turned over for its retrograde burns; rebuilt by {@link #flipsFor} when the
+   * burn timeline, the heat profile or the silhouette it was built from — each matched by identity
+   * — has changed.
+   */
+  private RetrogradeFlips flips = RetrogradeFlips.NONE;
+
+  private BurnTimeline flipsTimeline;
+  private ReentryHeatProfile flipsHeat;
+  private PrimarySilhouette flipsSilhouette;
 
   /** The payload's drawn asset (mesh + true size), resolved once — null when it has no mesh. */
   private PayloadAssets.PayloadAsset payloadAsset;
@@ -202,6 +224,11 @@ public final class MissionRenderer {
     afterS1Fraction =
         LauncherStackGeometry.afterS1Fraction(
             entry.spec().map(spec -> spec.configuration().launcher().id()).orElse(null));
+    coreThrottle =
+        entry
+            .spec()
+            .map(spec -> (float) spec.configuration().launcher().ascentProfile().coreThrottle())
+            .orElse(1f);
     payloadAsset =
         entry
             .spec()
@@ -229,7 +256,8 @@ public final class MissionRenderer {
             entry.id().toString(),
             trajectoryColor,
             this::onSpacecraftSelected,
-            context.sceneGraph().nearBodiesNode());
+            context.sceneGraph().nearBodiesNode(),
+            true);
 
     rebuildDebrisViews();
   }
@@ -455,6 +483,8 @@ public final class MissionRenderer {
     primary.setHeat(
         heat.intensityAt(now), heat.axisAt(now), heat.speedAt(now), heat.altitudeAt(now));
     primary.setFlowClock(heat.firstHeatDate().map(now::durationFrom).orElse(0.0), clockRate());
+    primary.setPlume(plumeDriveAt(ephemeris, point, now));
+    primary.setTurn(landed ? 0.0 : flipsFor(ephemeris, heat).angleAt(now));
     Vector3D noseAxis = landed ? drawnPrimary.velocity() : DrawnFlightAxis.of(point);
     primary.updateFromPoint(
         drawnPrimary,
@@ -488,12 +518,14 @@ public final class MissionRenderer {
   }
 
   /**
-   * The drawn height of the payload silhouette: its true catalog size, or the {@code after_s1}
-   * remnant's height when the payload has no mesh.
+   * The drawn height of the payload silhouette above its seat: the part of its true catalog size
+   * that stands above its engine's exit plane, the origin its mounted mesh is drawn from — so the
+   * seat {@code H − L} keeps its nose at the stack's nose — or the {@code after_s1} remnant's
+   * height when the payload has no mesh.
    */
   private double payloadDrawnHeightMeters() {
     return payloadAsset != null
-        ? payloadAsset.drawnSizeMeters()
+        ? payloadAsset.heightAboveExitMeters()
         : afterS1Fraction * stackHeightMeters;
   }
 
@@ -680,6 +712,67 @@ public final class MissionRenderer {
           focus,
           now);
     }
+  }
+
+  /**
+   * What drives the primary's plumes now: the burn firing at {@code now}, read off the timeline
+   * built for this very ephemeris, nothing until it is.
+   */
+  /**
+   * The primary's turn schedule for the ephemeris drawn: bounded by its silhouette changes and by
+   * the first heated sample of its re-entry, whose plasma is placed on its nose. Built on the
+   * render thread — it walks only the burns — and kept until one of its inputs changes; no turn
+   * until the burn timeline has been published, as no plume either.
+   */
+  private RetrogradeFlips flipsFor(MissionEphemeris ephemeris, ReentryHeatProfile heat) {
+    BurnTimeline timeline = burnTimelines.timelineFor(ephemeris).orElse(null);
+    if (timeline == null) {
+      return RetrogradeFlips.NONE;
+    }
+    if (timeline != flipsTimeline || heat != flipsHeat || silhouette != flipsSilhouette) {
+      flips = flipsOf(timeline, silhouette, heat, ephemeris, context.getEngineConfig().flip());
+      flipsTimeline = timeline;
+      flipsHeat = heat;
+      flipsSilhouette = silhouette;
+    }
+    return flips;
+  }
+
+  /**
+   * The turn schedule of a primary: its burns, bounded by its silhouette changes, the first heated
+   * sample of its re-entry and the ends of its ephemeris. Shared with the measurement probes, so
+   * they measure the very schedule the renderer draws.
+   *
+   * @param timeline the primary's burns
+   * @param silhouette the primary's silhouette timeline
+   * @param heat the primary's heat profile, empty when it does not re-enter
+   * @param ephemeris the primary's ephemeris
+   * @param config the flip tuning
+   * @return the schedule
+   */
+  static RetrogradeFlips flipsOf(
+      BurnTimeline timeline,
+      PrimarySilhouette silhouette,
+      ReentryHeatProfile heat,
+      MissionEphemeris ephemeris,
+      RetrogradeFlipConfig config) {
+    List<AbsoluteDate> barriers = new ArrayList<>(silhouette.transitionDates());
+    heat.firstHeatDate().ifPresent(barriers::add);
+    return RetrogradeFlips.of(
+        timeline.burns(), barriers, ephemeris.startDate(), ephemeris.endDate(), config);
+  }
+
+  private PlumeDrive plumeDriveAt(
+      MissionEphemeris ephemeris, MissionEphemerisPoint point, AbsoluteDate now) {
+    BurnTimeline.Burn burn =
+        burnTimelines.timelineFor(ephemeris).flatMap(timeline -> timeline.burnAt(now)).orElse(null);
+    return NozzlePlumeSchedule.driveAt(
+        burn,
+        now,
+        point.altitudeMeters(),
+        clockRate(),
+        coreThrottle,
+        context.getEngineConfig().plume());
   }
 
   /**
@@ -1046,6 +1139,10 @@ public final class MissionRenderer {
           entry.mission().getAtmosphere(),
           context.getEngineConfig().reentry(),
           AssetFactory.get().assetLoadingExecutor());
+      burnTimelines.request(
+          primaryEphemeris,
+          entry.mission().getVehicle(),
+          AssetFactory.get().assetLoadingExecutor());
     }
     silhouette = PrimarySilhouette.from(builtDebris);
     boosterCount = (int) builtDebris.stream().filter(t -> t.role() == StageRole.BOOSTER).count();
@@ -1059,7 +1156,8 @@ public final class MissionRenderer {
               entry.id() + "-debris-" + i,
               trajectoryColor,
               debrisSelectHandler(track),
-              (Node) primary.view().spatial());
+              (Node) primary.view().spatial(),
+              false);
       // The trail is decided per frame in updateDebris (inertial ribbon in flight, faded after
       // touchdown); off until then, so a just-built debris never flashes a full trace.
       view.setInertialTrail(false);

@@ -30,14 +30,33 @@ public final class PayloadAssets {
    * @param drawnSizeMeters the payload's characteristic dimension (m), from the catalog — the size
    *     the mesh's largest extent is normalized to
    */
-  public record PayloadAsset(String meshPath, double drawnSizeMeters) {}
+  public record PayloadAsset(String meshPath, double drawnSizeMeters) {
+
+    /**
+     * How far the drawn payload reaches above its engine's exit plane — the origin it is drawn from
+     * once mounted (see {@link PayloadMounts}). It is what keeps the payload's nose at the stack's
+     * nose when it is drawn alone. A mesh with no mount is taken to stand on its base, its whole
+     * size above it.
+     *
+     * @return the height above the exit plane (m)
+     */
+    public double heightAboveExitMeters() {
+      return PayloadMounts.mountOf(meshPath)
+          .map(mount -> mount.heightAboveExitFraction() * drawnSizeMeters)
+          .orElse(drawnSizeMeters);
+    }
+  }
+
+  static final String GOES_MESH = "models/payloads/goes/goes.gltf";
+  static final String LANDSAT8_MESH = "models/payloads/landsat8/landsat8.gltf";
+  static final String LRO_MESH = "models/payloads/lro/lro.gltf";
 
   private static final Map<String, String> MESH_PATHS =
       Map.of(
-          Payloads.GEO_SAT.id(), "models/payloads/goes/goes.gltf",
-          Payloads.EARTH_OBSERVATION_SAT.id(), "models/payloads/landsat8/landsat8.gltf",
-          Payloads.LUNAR_PROBE.id(), "models/payloads/lro/lro.gltf",
-          Payloads.LUNAR_ORBITER.id(), "models/payloads/lro/lro.gltf");
+          Payloads.GEO_SAT.id(), GOES_MESH,
+          Payloads.EARTH_OBSERVATION_SAT.id(), LANDSAT8_MESH,
+          Payloads.LUNAR_PROBE.id(), LRO_MESH,
+          Payloads.LUNAR_ORBITER.id(), LRO_MESH);
 
   private PayloadAssets() {}
 

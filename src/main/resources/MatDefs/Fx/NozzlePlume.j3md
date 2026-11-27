@@ -1,0 +1,57 @@
+MaterialDef NozzlePlume {
+
+    MaterialParameters {
+        // The most samples a ray takes through the cone, and their spacing in cluster radii: the
+        // shader spaces them a fixed distance apart, so a shorter chord takes fewer. Set from the
+        // tuning.
+        Int MaxSteps
+        Float StepRadii
+
+        // The cone, in the cluster's own frame (exit plane at the origin, jet along -Y) and in
+        // stack units: the exit radius, how far the jet reaches past the exit, and the tangent of
+        // its half angle. Set every frame from the look's shape at the air's thinness.
+        Float ExitRadius
+        Float Length
+        Float TanAlpha
+
+        // The look's light and veil, per cluster radius crossed, and its shock diamonds. Set every
+        // frame from the look's shape at the air's thinness.
+        Float Brightness
+        Float Opacity
+        Float Diamonds
+
+        // The colour at the heart of the jet and toward its edge and tail. Set with the look.
+        Color CoreColor
+        Color EdgeColor
+
+        // How lit the cluster is now, in [0,1]: its share of the burn times the ignition ramp. It
+        // scales the light and the veil; zero leaves nothing.
+        Float Intensity : 0.0
+
+        // The exposure of the plume's own tone mapping: the scene has none. Set from the tuning.
+        Float Exposure
+
+        // The shared 3D value noise the turbulence is read from (AssetFactory.reentryNoiseTexture).
+        Texture3D NoiseTex
+
+        // The simulated seconds since the burn ignited, and the share of the turbulence the clock
+        // rate allows (ReentryFlowClock). Set every frame.
+        Float FlowSeconds : 0.0
+        Float Turbulence : 1.0
+    }
+
+    // Deliberately no Glow technique. PostFxAppState runs the bloom in GlowMode.Objects, which
+    // re-renders the scene through that technique, and the planets and the launchers declare none:
+    // skipped by that pass, they hide nothing there, so a plume glowing in it would shine through
+    // the ground and through its own launcher.
+    Technique {
+        VertexShader   GLSL150: MatDefs/Fx/NozzlePlume.vert
+        FragmentShader GLSL150: MatDefs/Fx/NozzlePlume.frag
+
+        WorldParameters {
+            WorldViewProjectionMatrix
+            WorldMatrixInverse
+            CameraPosition
+        }
+    }
+}
