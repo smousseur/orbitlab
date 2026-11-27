@@ -4,6 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.jme3.app.SimpleApplication;
+import com.jme3.asset.DesktopAssetManager;
+import com.jme3.bounding.BoundingBox;
 import com.jme3.math.ColorRGBA;
 import com.jme3.math.FastMath;
 import com.jme3.math.Quaternion;
@@ -19,6 +21,7 @@ import com.jme3.renderer.Renderer;
 import com.jme3.renderer.ViewPort;
 import com.jme3.renderer.queue.RenderQueue;
 import com.jme3.scene.Node;
+import com.jme3.scene.Spatial;
 import com.jme3.system.AppSettings;
 import com.jme3.system.JmeContext;
 import com.jme3.util.BufferUtils;
@@ -26,7 +29,9 @@ import com.smousseur.orbitlab.core.OrbitlabException;
 import com.smousseur.orbitlab.engine.AssetFactory;
 import com.smousseur.orbitlab.engine.NozzlePlumeConfig;
 import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Launchers;
+import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Payloads;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.LauncherModel;
+import com.smousseur.orbitlab.simulation.mission.vehicle.model.PayloadModel;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.stage.StageRole;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
@@ -48,8 +53,9 @@ import org.junit.jupiter.api.function.Executable;
 /**
  * Measures on the real driver the GPU time the exhaust plumes take to draw, through {@link
  * NozzlePlumeView} and the production shader: the Falcon Heavy and the Ariane 64 firing every
- * first-stage cluster, at sea level and in vacuum, which the budget rules; and, for information,
- * their core and upper stages firing alone in vacuum.
+ * first-stage cluster, at sea level and in vacuum, and each payload mesh firing its engine in
+ * vacuum, which the budget rules; and, for information, the launchers' core and upper stages firing
+ * alone in vacuum.
  *
  * <p>A probe, not a test: run with {@code -Dorbitlab.probe=true --tests '*Fx3PlumeGpuProbe*'}, with
  * nothing else drawing on the GPU — OrbitLab closed. The report and one image of each view go to
@@ -63,12 +69,12 @@ import org.junit.jupiter.api.function.Executable;
  * in for the application's smoothed one, which draws the same objects. No launcher is drawn, so
  * nothing hides any part of a jet: the times are an upper bound.
  *
- * <p>The views, in stack heights, the model being drawn one unit tall: the default follow, from 350
- * m; side on from 1, 0.5 and 0.25 of the stack, aimed at the longest jet's first half; from inside
- * that jet, a quarter of its length down, looking up at the nozzle, down the jet and across it; and
- * from below its tail, along the stack's axis and 30° off it, where a ray runs the length of a jet.
- * Every view is timed in each of {@value #PASSES} passes; each median of the first stages must stay
- * within {@value #MAX_MEDIAN_MS} ms.
+ * <p>The views, in stack heights, the model being drawn one unit tall — a payload its catalog size
+ * across, as it is normalized: the default follow, from 350 m; side on from 1, 0.5 and 0.25 of the
+ * stack, aimed at the longest jet's first half; from inside that jet, a quarter of its length down,
+ * looking up at the nozzle, down the jet and across it; and from below its tail, along the stack's
+ * axis and 30° off it, where a ray runs the length of a jet. Every view is timed in each of {@value
+ * #PASSES} passes; each median of the first stages must stay within {@value #MAX_MEDIAN_MS} ms.
  */
 @EnabledIfSystemProperty(named = "orbitlab.probe", matches = "true")
 class Fx3PlumeGpuProbe {
@@ -95,13 +101,45 @@ class Fx3PlumeGpuProbe {
   private record View(String name, Vector3f location, Vector3f lookAt, Vector3f up) {}
 
   /**
-   * A silhouette firing its role's clusters; {@code ruled} when the budget applies to it, the
-   * others being measured for information.
+   * A silhouette firing its role's clusters, drawn {@code modelScale} per mesh unit so that it is
+   * one unit tall or across; {@code ruled} when the budget applies to it, the others being measured
+   * for information.
    */
   private record Firing(
-      String prefix, LauncherModel launcher, String suffix, StageRole role, boolean ruled) {
-    String meshPath() {
-      return LauncherAssets.modelPath(launcher.id()).replace(".gltf", suffix + ".gltf");
+      String prefix,
+      String meshPath,
+      float modelScale,
+      double sizeMeters,
+      StageRole role,
+      float coreThrottle,
+      boolean ruled) {
+
+    static Firing launcher(
+        String prefix, LauncherModel launcher, String suffix, StageRole role, boolean ruled) {
+      return new Firing(
+          prefix,
+          LauncherAssets.modelPath(launcher.id()).replace(".gltf", suffix + ".gltf"),
+          1f,
+          launcher.heightMeters(),
+          role,
+          (float) launcher.ascentProfile().coreThrottle(),
+          ruled);
+    }
+
+    /** A payload mesh firing its engine, mounted and normalized as the renderer draws it. */
+    static Firing payload(String prefix, PayloadModel payload) {
+      PayloadAssets.PayloadAsset asset = PayloadAssets.forPayload(payload.id()).orElseThrow();
+      Spatial model = new DesktopAssetManager(true).loadModel(asset.meshPath());
+      model.updateGeometricState();
+      BoundingBox box = (BoundingBox) model.getWorldBound();
+      float extent = 2f * Math.max(box.getXExtent(), Math.max(box.getYExtent(), box.getZExtent()));
+      return new Firing(
+          prefix, asset.meshPath(), 1f / extent, asset.drawnSizeMeters(), StageRole.KICK, 1f, true);
+    }
+
+    /** The air the budget is ruled in: a payload only fires in orbit. */
+    float[] pressureFactors() {
+      return ruled && role != StageRole.KICK ? new float[] {0f, 1f} : new float[] {1f};
     }
   }
 
@@ -109,19 +147,24 @@ class Fx3PlumeGpuProbe {
 
   private static final List<Firing> FIRINGS =
       List.of(
-          new Firing("fh-full", Launchers.FALCON_HEAVY, "", StageRole.BOOSTER, true),
-          new Firing("a64-full", Launchers.ARIANE_64, "", StageRole.BOOSTER, true),
-          new Firing("fh-core", Launchers.FALCON_HEAVY, "-after_boosters", StageRole.CORE, false),
-          new Firing("fh-mvac", Launchers.FALCON_HEAVY, "-after_s1", StageRole.UPPER, false),
-          new Firing("a64-vulcain", Launchers.ARIANE_64, "-after_boosters", StageRole.CORE, false),
-          new Firing("a64-vinci", Launchers.ARIANE_64, "-after_s1", StageRole.UPPER, false));
+          Firing.launcher("fh-full", Launchers.FALCON_HEAVY, "", StageRole.BOOSTER, true),
+          Firing.launcher("a64-full", Launchers.ARIANE_64, "", StageRole.BOOSTER, true),
+          Firing.payload("goes", Payloads.GEO_SAT),
+          Firing.payload("landsat8", Payloads.EARTH_OBSERVATION_SAT),
+          Firing.payload("lro", Payloads.LUNAR_ORBITER),
+          Firing.launcher(
+              "fh-core", Launchers.FALCON_HEAVY, "-after_boosters", StageRole.CORE, false),
+          Firing.launcher("fh-mvac", Launchers.FALCON_HEAVY, "-after_s1", StageRole.UPPER, false),
+          Firing.launcher(
+              "a64-vulcain", Launchers.ARIANE_64, "-after_boosters", StageRole.CORE, false),
+          Firing.launcher("a64-vinci", Launchers.ARIANE_64, "-after_s1", StageRole.UPPER, false));
 
   @Test
   void thePlumesStayWithinTheirGpuBudget() throws Exception {
     NozzlePlumeConfig config = NozzlePlumeConfig.defaults();
     List<Shot> shots = new ArrayList<>();
     for (Firing firing : FIRINGS) {
-      for (float pressureFactor : firing.ruled() ? new float[] {0f, 1f} : new float[] {1f}) {
+      for (float pressureFactor : firing.pressureFactors()) {
         String air = pressureFactor == 0f ? "sea" : "vac";
         for (View view : views(config, firing, pressureFactor)) {
           shots.add(
@@ -184,7 +227,9 @@ class Fx3PlumeGpuProbe {
     float length = 0f;
     for (LauncherNozzles.Cluster cluster : LauncherNozzles.clustersOf(firing.meshPath())) {
       float reach =
-          config.look(cluster.look()).shapeAt(pressureFactor).lengthRadii() * cluster.radius();
+          config.look(cluster.look()).shapeAt(pressureFactor).lengthRadii()
+              * cluster.radius()
+              * firing.modelScale();
       if (reach > length) {
         longest = cluster;
         length = reach;
@@ -193,11 +238,12 @@ class Fx3PlumeGpuProbe {
     if (longest == null) {
       throw new IllegalStateException("no cluster for " + firing.meshPath());
     }
-    Vector3f exit = NozzlePlumeView.exitPoint(Vector3f.ZERO, Quaternion.IDENTITY, 1f, longest);
+    Vector3f exit =
+        NozzlePlumeView.exitPoint(Vector3f.ZERO, Quaternion.IDENTITY, firing.modelScale(), longest);
     Vector3f firstHalf = new Vector3f(0f, exit.y - 0.4f * length, 0f);
     Vector3f inJet = exit.add(0f, -0.25f * length, 0f);
     Vector3f tail = new Vector3f(0f, exit.y - length, 0f);
-    float follow = FOLLOW_DISTANCE_M / (float) firing.launcher().heightMeters();
+    float follow = FOLLOW_DISTANCE_M / (float) firing.sizeMeters();
     float off = 30f * FastMath.DEG_TO_RAD;
     return List.of(
         new View("follow", new Vector3f(follow, 0f, 0f), Vector3f.ZERO, Vector3f.UNIT_Y),
@@ -303,7 +349,7 @@ class Fx3PlumeGpuProbe {
             anchor = new Node("anchor-" + shot.name());
             rootNode.attachChild(anchor);
             view = new NozzlePlumeView(anchor, config);
-            view.setMesh(shot.firing().meshPath(), 1f);
+            view.setMesh(shot.firing().meshPath(), shot.firing().modelScale());
           }
 
           private PlumeDrive drive(Shot shot) {
@@ -313,7 +359,7 @@ class Fx3PlumeGpuProbe {
                 FLOW_SECONDS,
                 shot.pressureFactor(),
                 1.0,
-                (float) shot.firing().launcher().ascentProfile().coreThrottle());
+                shot.firing().coreThrottle());
           }
         };
     var settings = new AppSettings(true);

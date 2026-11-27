@@ -4,6 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.jme3.app.SimpleApplication;
+import com.jme3.asset.DesktopAssetManager;
+import com.jme3.bounding.BoundingBox;
 import com.jme3.math.ColorRGBA;
 import com.jme3.math.Quaternion;
 import com.jme3.math.Vector3f;
@@ -13,6 +15,7 @@ import com.jme3.renderer.RenderManager;
 import com.jme3.renderer.ViewPort;
 import com.jme3.renderer.queue.RenderQueue;
 import com.jme3.scene.Node;
+import com.jme3.scene.Spatial;
 import com.jme3.system.AppSettings;
 import com.jme3.system.JmeContext;
 import com.jme3.texture.FrameBuffer;
@@ -22,7 +25,9 @@ import com.smousseur.orbitlab.core.OrbitlabException;
 import com.smousseur.orbitlab.engine.AssetFactory;
 import com.smousseur.orbitlab.engine.NozzlePlumeConfig;
 import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Launchers;
+import com.smousseur.orbitlab.simulation.mission.vehicle.catalog.Payloads;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.LauncherModel;
+import com.smousseur.orbitlab.simulation.mission.vehicle.model.PayloadModel;
 import com.smousseur.orbitlab.simulation.mission.vehicle.model.stage.StageRole;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
@@ -44,7 +49,8 @@ import org.junit.jupiter.api.function.Executable;
 /**
  * Renders the plumes offscreen on the real driver, side on over black, through {@link
  * NozzlePlumeView} and the production shader, and measures how bright the longest jet of each mesh
- * is along its axis.
+ * is along its axis — each launcher silhouette that fires, and each payload firing in orbit, drawn
+ * one unit across.
  *
  * <p>A probe, not a test: run with {@code -Dorbitlab.probe=true --tests '*Fx3PlumeLookProbe*'}. The
  * images and the report go to {@code build/fx3-look/}. The brightness along a jet is the mean
@@ -80,10 +86,34 @@ class Fx3PlumeLookProbe {
       new Quaternion()
           .fromAxes(new Vector3f(0f, 0f, -1f), new Vector3f(-1f, 0f, 0f), new Vector3f(0f, 1f, 0f));
 
+  /** A silhouette firing its role's clusters, drawn {@code modelScale} per mesh unit. */
   private record Case(
-      String name, LauncherModel launcher, String suffix, StageRole role, double altitudeM) {
-    String meshPath() {
-      return LauncherAssets.modelPath(launcher.id()).replace(".gltf", suffix + ".gltf");
+      String name,
+      String meshPath,
+      float modelScale,
+      StageRole role,
+      double altitudeM,
+      float coreThrottle) {
+
+    static Case launcher(
+        String name, LauncherModel launcher, String suffix, StageRole role, double altitudeM) {
+      return new Case(
+          name,
+          LauncherAssets.modelPath(launcher.id()).replace(".gltf", suffix + ".gltf"),
+          1f,
+          role,
+          altitudeM,
+          (float) launcher.ascentProfile().coreThrottle());
+    }
+
+    /** A payload mesh firing its engine in orbit, one unit across as it is normalized. */
+    static Case payload(String name, PayloadModel payload) {
+      String path = PayloadAssets.forPayload(payload.id()).orElseThrow().meshPath();
+      Spatial model = new DesktopAssetManager(true).loadModel(path);
+      model.updateGeometricState();
+      BoundingBox box = (BoundingBox) model.getWorldBound();
+      float extent = 2f * Math.max(box.getXExtent(), Math.max(box.getYExtent(), box.getZExtent()));
+      return new Case(name, path, 1f / extent, StageRole.KICK, 400_000.0, 1f);
     }
   }
 
@@ -92,18 +122,21 @@ class Fx3PlumeLookProbe {
 
   private static final List<Case> CASES =
       List.of(
-          new Case("fh-full-0km", Launchers.FALCON_HEAVY, "", StageRole.BOOSTER, 0.0),
-          new Case("fh-full-20km", Launchers.FALCON_HEAVY, "", StageRole.BOOSTER, 20_000.0),
-          new Case(
+          Case.launcher("fh-full-0km", Launchers.FALCON_HEAVY, "", StageRole.BOOSTER, 0.0),
+          Case.launcher("fh-full-20km", Launchers.FALCON_HEAVY, "", StageRole.BOOSTER, 20_000.0),
+          Case.launcher(
               "fh-core-45km", Launchers.FALCON_HEAVY, "-after_boosters", StageRole.CORE, 45_000.0),
-          new Case(
+          Case.launcher(
               "fh-mvac-vacuum", Launchers.FALCON_HEAVY, "-after_s1", StageRole.UPPER, 150_000.0),
-          new Case("a64-full-0km", Launchers.ARIANE_64, "", StageRole.BOOSTER, 0.0),
-          new Case("a64-full-20km", Launchers.ARIANE_64, "", StageRole.BOOSTER, 20_000.0),
-          new Case(
+          Case.launcher("a64-full-0km", Launchers.ARIANE_64, "", StageRole.BOOSTER, 0.0),
+          Case.launcher("a64-full-20km", Launchers.ARIANE_64, "", StageRole.BOOSTER, 20_000.0),
+          Case.launcher(
               "a64-vulcain-60km", Launchers.ARIANE_64, "-after_boosters", StageRole.CORE, 60_000.0),
-          new Case(
-              "a64-vinci-vacuum", Launchers.ARIANE_64, "-after_s1", StageRole.UPPER, 150_000.0));
+          Case.launcher(
+              "a64-vinci-vacuum", Launchers.ARIANE_64, "-after_s1", StageRole.UPPER, 150_000.0),
+          Case.payload("goes-orbit", Payloads.GEO_SAT),
+          Case.payload("landsat8-orbit", Payloads.EARTH_OBSERVATION_SAT),
+          Case.payload("lro-orbit", Payloads.LUNAR_ORBITER));
 
   @Test
   void everyJetIsBrightestAtItsExitAndFadesToItsTail() throws Exception {
@@ -205,7 +238,7 @@ class Fx3PlumeLookProbe {
             anchor = new Node("anchor-" + c.name());
             rootNode.attachChild(anchor);
             NozzlePlumeView view = new NozzlePlumeView(anchor, config);
-            view.setMesh(c.meshPath(), 1f);
+            view.setMesh(c.meshPath(), c.modelScale());
             Node body = new Node("body");
             body.setLocalRotation(SIDE_ON);
             PlumeDrive drive =
@@ -215,23 +248,25 @@ class Fx3PlumeLookProbe {
                     FLOW_SECONDS,
                     config.pressureFactor(c.altitudeM()),
                     1.0,
-                    (float) c.launcher().ascentProfile().coreThrottle());
+                    c.coreThrottle());
             view.update(drive, body, true, cam.getLocation());
             LauncherNozzles.Cluster axis = null;
             float length = 0f;
             for (LauncherNozzles.Cluster cluster : LauncherNozzles.clustersOf(c.meshPath())) {
               float reach =
                   config.look(cluster.look()).shapeAt(drive.pressureFactor()).lengthRadii()
-                      * cluster.radius();
+                      * cluster.radius()
+                      * c.modelScale();
               if (reach > length) {
                 axis = cluster;
                 length = reach;
               }
             }
-            Vector3f exit = NozzlePlumeView.exitPoint(Vector3f.ZERO, SIDE_ON, 1f, axis);
+            Vector3f exit = NozzlePlumeView.exitPoint(Vector3f.ZERO, SIDE_ON, c.modelScale(), axis);
             Vector3f exitPx = cam.getScreenCoordinates(exit);
             Vector3f endPx = cam.getScreenCoordinates(exit.add(length, 0f, 0f));
-            Vector3f rimPx = cam.getScreenCoordinates(exit.add(0f, axis.radius(), 0f));
+            Vector3f rimPx =
+                cam.getScreenCoordinates(exit.add(0f, axis.radius() * c.modelScale(), 0f));
             capture.arm();
             return () -> measure(c.name(), capture.take(), exitPx, endPx, rimPx.y - exitPx.y);
           }

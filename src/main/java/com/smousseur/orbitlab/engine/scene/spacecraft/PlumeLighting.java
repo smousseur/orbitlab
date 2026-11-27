@@ -10,7 +10,8 @@ import java.util.List;
  * parallel block — boosters and core together — on the full stack, the core alone once the boosters
  * are gone, the upper stage once the core is. A mesh swap is asynchronous, so the mesh drawn can
  * lag the burn by a few frames: until it is the silhouette the burn fires from, nothing is lit
- * rather than the wrong nozzles. The payload's own motor fires from no launcher nozzle.
+ * rather than the wrong nozzles. The payload's own engine fires from the payload's mesh alone, once
+ * the upper stage that carried it is gone.
  */
 public final class PlumeLighting {
 
@@ -43,7 +44,7 @@ public final class PlumeLighting {
       case BOOSTER -> has(clusters, StageRole.BOOSTER);
       case CORE -> has(clusters, StageRole.CORE) && !has(clusters, StageRole.BOOSTER);
       case UPPER -> has(clusters, StageRole.UPPER);
-      case KICK -> false;
+      case KICK -> has(clusters, StageRole.KICK);
     };
   }
 

@@ -21,9 +21,10 @@ import java.util.Arrays;
  * the base its bottom, and the body runs along the box's vertical axis. A launcher piece is
  * authored nose up, base at the origin, its body on {@code +Y}: measured, its base lies within 1.5
  * cm of the origin and its axis within 7 cm of {@code +Y} on a Falcon Heavy, 22 cm on the Ariane 64
- * core. A payload mesh is not: the third-party satellites put their origin inside the body, 2.38 m
- * above the base of a 3 m Landsat 8 whose axis runs 0.90 m off {@code +Y}. Hence the base and the
- * axis are measured rather than assumed.
+ * core. A payload mesh is mounted onto that convention as it loads (see {@link PayloadMounts}), its
+ * engine's exit plane at the origin, but its box is not centred on its engine: Landsat 8's thruster
+ * ring lies 1.03 native units off the middle of a 2.46-unit box, and the GOES mast reaches 0.52 of
+ * the mesh's size below its engine. Hence the base and the axis are measured rather than assumed.
  *
  * <p>The body radius is <b>not</b> the box's half-width, which on a Falcon Heavy piece spans its
  * landing legs and grid fins — 2.88 m against a 1.94 m body, measured on the booster — while on an

@@ -20,6 +20,9 @@ import java.util.stream.Collectors;
  * the middle of the box of the vertices within a thin band above it, and its radius the widest of
  * those about that centre. The band is the cluster: a Falcon Heavy core's named engine node holds
  * its centre Merlin alone, the other eight being an unnamed mesh beside it.
+ *
+ * <p>A payload mesh is read the same way once mounted, in its own native units: see {@link
+ * #payloadEngine}.
  */
 final class NozzleSlices {
 
@@ -99,6 +102,43 @@ final class NozzleSlices {
         out.add(t);
       }
     }
+    return out;
+  }
+
+  /**
+   * The vertices of a mounted payload mesh's engine, in its own frame — engine down, exit at the
+   * origin. No payload mesh names its engine, so each is picked out its own way: {@code goes} and
+   * {@code lro} by a disc about the vertical axis, past the engine's rim and short of what hangs
+   * beside it (on {@code goes}, a mast 0.24 off the axis that reaches further down than the
+   * engine); {@code landsat8} by the materials of its ring of thrusters, since a disc wide enough
+   * to hold the ring also holds a fitting that reaches lower than the ring, by 0.0044 of the mesh's
+   * native units.
+   *
+   * @param path the payload mesh's asset path
+   * @param mounted the mesh, mounted and with its geometric state updated
+   * @return the engine's vertices
+   */
+  static List<Tagged> payloadEngine(String path, Spatial mounted) {
+    if (path.endsWith("landsat8.gltf")) {
+      return verticesOfMaterial(mounted, "thruster");
+    }
+    float pick = path.endsWith("goes.gltf") ? 0.1f : 0.06f;
+    return over(vertices(mounted), 0f, 0f, pick);
+  }
+
+  private static List<Tagged> verticesOfMaterial(Spatial spatial, String fragment) {
+    List<Tagged> out = new ArrayList<>();
+    spatial.depthFirstTraversal(
+        new SceneGraphVisitorAdapter() {
+          @Override
+          public void visit(Geometry geometry) {
+            String material =
+                geometry.getMaterial() == null ? null : geometry.getMaterial().getName();
+            if (material != null && material.contains(fragment)) {
+              out.addAll(vertices(geometry));
+            }
+          }
+        });
     return out;
   }
 

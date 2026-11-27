@@ -17,6 +17,7 @@ import com.smousseur.orbitlab.engine.scene.body.BodyRenderConfig;
 import com.smousseur.orbitlab.engine.scene.body.LodView;
 import com.smousseur.orbitlab.engine.scene.body.lod.Model3dView;
 import com.smousseur.orbitlab.engine.scene.spacecraft.NozzlePlumeView;
+import com.smousseur.orbitlab.engine.scene.spacecraft.PayloadMounts;
 import com.smousseur.orbitlab.engine.scene.spacecraft.PieceGeometry;
 import com.smousseur.orbitlab.engine.scene.spacecraft.PlumeDrive;
 import com.smousseur.orbitlab.engine.scene.spacecraft.ReentryVolumeView;
@@ -217,14 +218,16 @@ final class TrackedObjectView {
   /**
    * Loads a mesh at a given real-world size, off the render thread, then attaches it — the payload
    * silhouette the primary shrinks to (PHY-5 / L5), whose size comes from the catalog rather than
-   * from the launcher's radius. Measured for the plasma volume on the way, like {@link
-   * #loadModelAsync}.
+   * from the launcher's radius. The mesh is mounted on the launcher's convention first (see {@link
+   * PayloadMounts}), so the plasma volume, the turn's pivot, the plumes and the ground clearance
+   * all measure it as it is drawn; then measured like {@link #loadModelAsync}.
    */
   private void loadModelNormalizedAsync(String path, double sizeMeters) {
     Model3dView model3dView = view.getModel3dView();
     CompletableFuture.supplyAsync(
             () -> model3dView.loadModelNormalized(path, sizeMeters),
             AssetFactory.get().assetLoadingExecutor())
+        .thenApply(spatial -> PayloadMounts.mount(path, spatial))
         .thenApply(spatial -> measured(path, spatial))
         .thenApply(spatial -> AssetFactory.get().applyLambert(spatial, 0.3f))
         .thenAccept(model3dView::onModelLoaded);

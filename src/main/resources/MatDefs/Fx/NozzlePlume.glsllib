@@ -152,8 +152,12 @@ vec3 jet(vec3 p, out float sig) {
     // toward a tail it then ends on a cut.
     float spread = (r0 * r0) / (rad * rad);
     float radial = exp(-u * u * 2.2);
-    float axial = exp(-2.0 * sr / lenR) * (1.0 - smoothstep(0.6 * lenR, lenR, sr));
-    float core = exp(-u * u * 12.0) * exp(-sr / 2.5);
+    float tail = 1.0 - smoothstep(0.6 * lenR, lenR, sr);
+    float axial = exp(-2.0 * sr / lenR) * tail;
+    // The core fades over a fixed number of radii, not over the jet's length: on a jet a dozen radii
+    // long, a payload's, it still glows at the end, and the jet ends on a cut unless the tail fades
+    // it too. A launcher jet, 25 radii or longer, has lost it by then.
+    float core = exp(-u * u * 12.0) * exp(-sr / 2.5) * tail;
     float wave = 0.5 + 0.5 * cos(6.2831853 * sr / DIAMOND_PERIOD_RADII);
     float diamonds = m_Diamonds * pow(wave, 10.0) * exp(-u * u * 8.0) * exp(-sr / DIAMOND_REACH_RADII) * spread;
 

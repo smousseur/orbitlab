@@ -15,5 +15,10 @@ public enum PlumeLook {
   /** Ariane 64 upper-stage Vinci, hydrolox, vacuum nozzle. */
   VINCI,
   /** Ariane 64 P120C solid boosters. */
-  P120C
+  P120C,
+  /**
+   * A payload's own engine, fired in orbit: one light, nearly clear look shared by every satellite
+   * mesh, its apogee engine and its ring of thrusters alike, bipropellant or monopropellant.
+   */
+  PAYLOAD
 }

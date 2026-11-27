@@ -9,16 +9,17 @@ import java.util.Objects;
 import java.util.Set;
 
 /**
- * The nozzle clusters of the launcher meshes that fire, for their exhaust plumes: where each
- * cluster's exit plane sits, how wide it is, which block of the stack it belongs to and how its
- * flame looks. It sits beside {@link LauncherStackGeometry} for the same reason: it is a property
- * of the drawn mesh, not of the catalog launcher, and nothing in the propagation depends on it.
+ * The nozzle clusters of the meshes that fire, for their exhaust plumes: where each cluster's exit
+ * plane sits, how wide it is, which block of the stack it belongs to and how its flame looks. It
+ * sits beside {@link LauncherStackGeometry} for the same reason: it is a property of the drawn
+ * mesh, not of the catalog launcher or payload, and nothing in the propagation depends on it.
  */
 public final class LauncherNozzles {
 
   /**
-   * One nozzle cluster of a mesh, in the frame the silhouettes are drawn in: one unit is the full
-   * stack, the base at the origin.
+   * One nozzle cluster of a mesh, in the frame the mesh is drawn in. For a launcher silhouette, one
+   * unit is the full stack, the base at the origin; for a payload, the mesh's native units once
+   * mounted (see {@link PayloadMounts}), its engine's exit centre at the origin.
    *
    * @param block the block of the stack the cluster belongs to
    * @param exitX the exit plane's centre x
@@ -44,7 +45,11 @@ public final class LauncherNozzles {
    * of its lowest one. On the Falcon Heavy the slice is the nine Merlins of a core, its named
    * engine node holding the centre one alone; their rims sit 0.0014 unit, 8.5 cm, above the centre
    * engine's, whose exit is the one kept. The Ariane 64's P120C rows are those of the current mesh,
-   * whose boosters are oversized: re-measure on a mesh re-export.
+   * whose boosters are oversized: re-measure on a mesh re-export. A payload's single engine is
+   * measured the same way on its mounted mesh, its exit at the origin by construction of the mount:
+   * the cone of {@code goes} alone, not the foil disc around it; the whole ring of thrusters of
+   * {@code landsat8}, one wide jet; the four small nozzles at the centre of the crown of {@code
+   * lro}, read as one.
    */
   private static final Map<String, List<Cluster>> CLUSTERS =
       Map.of(
@@ -67,12 +72,22 @@ public final class LauncherNozzles {
           suffixed(A64, "-after_boosters"),
           List.of(vulcain()),
           suffixed(A64, "-after_s1"),
-          List.of(new Cluster(StageRole.UPPER, 0f, 0f, 0.0001f, 0.0167f, PlumeLook.VINCI)));
+          List.of(new Cluster(StageRole.UPPER, 0f, 0f, 0.0001f, 0.0167f, PlumeLook.VINCI)),
+          PayloadAssets.GOES_MESH,
+          List.of(payloadEngine(0.0149f)),
+          PayloadAssets.LANDSAT8_MESH,
+          List.of(payloadEngine(0.1821f)),
+          PayloadAssets.LRO_MESH,
+          List.of(payloadEngine(0.0306f)));
 
   private LauncherNozzles() {}
 
   private static Cluster merlins(StageRole block, float x, float z) {
     return new Cluster(block, x, -0.0002f, z, 0.0252f, PlumeLook.MERLIN);
+  }
+
+  private static Cluster payloadEngine(float radius) {
+    return new Cluster(StageRole.KICK, 0f, 0f, 0f, radius, PlumeLook.PAYLOAD);
   }
 
   private static Cluster vulcain() {

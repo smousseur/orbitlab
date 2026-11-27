@@ -518,12 +518,14 @@ public final class MissionRenderer {
   }
 
   /**
-   * The drawn height of the payload silhouette: its true catalog size, or the {@code after_s1}
-   * remnant's height when the payload has no mesh.
+   * The drawn height of the payload silhouette above its seat: the part of its true catalog size
+   * that stands above its engine's exit plane, the origin its mounted mesh is drawn from — so the
+   * seat {@code H − L} keeps its nose at the stack's nose — or the {@code after_s1} remnant's
+   * height when the payload has no mesh.
    */
   private double payloadDrawnHeightMeters() {
     return payloadAsset != null
-        ? payloadAsset.drawnSizeMeters()
+        ? payloadAsset.heightAboveExitMeters()
         : afterS1Fraction * stackHeightMeters;
   }
 

@@ -36,7 +36,8 @@ public final class SpacecraftPresenter {
    *
    * <p>One correction for every spacecraft, deliberately: the +Y nose is a convention every mesh
    * listed in {@link LauncherAssets} is checked against, rather than something re-derived per
-   * launcher.
+   * launcher. The payload meshes, authored without it, are turned onto it as they load (see {@link
+   * PayloadMounts}).
    */
   private static final Quaternion MODEL_FORWARD_CORRECTION =
       new Quaternion().fromAngleAxis(FastMath.HALF_PI, Vector3f.UNIT_X);

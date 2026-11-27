@@ -105,15 +105,18 @@ public record NozzlePlumeConfig(
    * chosen on, to be set on screen: kerolox Merlins orange and fairly opaque, hydrolox Vulcain and
    * Vinci nearly clear and bluish, the P120C solids white-hot and the densest, shock diamonds on
    * the liquid sea-level engines only, and the vacuum engines — which only fire in vacuum — given
-   * the same shape twice. The drawing atmosphere's scale height of 7 km is the pressure scale
-   * height of the lower atmosphere, to be checked against a standard table; with the two ratios,
-   * the plume starts to open near 4.9 km and has its vacuum shape from about 48 km. Cells 0.35
-   * local radius long across the jet, up to 64 in a stretch of a ray, hold the dearest view
-   * measured — the camera a quarter of a stack from an Ariane 64's vacuum plume, at 1280×720 — to
-   * 0.83 to 0.91 ms of GPU time, where samples 0.35 exit radius apart took 9 ms inside it. A ramp
-   * of 0.3 s softens ignition and cut-off without blurring them at the clock's normal rate. The
-   * exposure of 2 is what puts the exit of every jet back to at least the brightness it had when
-   * the light did not thin out with the jet's widening section, measured side on over black.
+   * the same shape twice. The payloads' engines, which fire in orbit too, share one shape that is
+   * the lightest, clearest and narrowest of all: Landsat 8's exit is its whole ring of thrusters,
+   * 0.22 m in radius, and a vacuum stage's 28° opened its plume 4.7 m wide on a 3 m satellite. The
+   * drawing atmosphere's scale height of 7 km is the pressure scale height of the lower atmosphere,
+   * to be checked against a standard table; with the two ratios, the plume starts to open near 4.9
+   * km and has its vacuum shape from about 48 km. Cells 0.35 local radius long across the jet, up
+   * to 64 in a stretch of a ray, hold the dearest view measured — the camera a quarter of a stack
+   * from an Ariane 64's vacuum plume, at 1280×720 — to 0.83 to 0.91 ms of GPU time, where samples
+   * 0.35 exit radius apart took 9 ms inside it. A ramp of 0.3 s softens ignition and cut-off
+   * without blurring them at the clock's normal rate. The exposure of 2 is what puts the exit of
+   * every jet back to at least the brightness it had when the light did not thin out with the jet's
+   * widening section, measured side on over black.
    *
    * @return the default plume configuration
    */
@@ -124,6 +127,7 @@ public record NozzlePlumeConfig(
     PlumeLookConfig.Rgb hydroloxEdge = new PlumeLookConfig.Rgb(0.5f, 0.55f, 1.0f);
     PlumeShape mvac = new PlumeShape(26f, 28f, 0.6f, 0.12f, 0f);
     PlumeShape vinci = new PlumeShape(30f, 30f, 0.35f, 0.03f, 0f);
+    PlumeShape payload = new PlumeShape(12f, 12f, 0.3f, 0.02f, 0f);
     return new NozzlePlumeConfig(
         Map.of(
             PlumeLook.MERLIN,
@@ -151,7 +155,13 @@ public record NozzlePlumeConfig(
                 new PlumeShape(60f, 5f, 1.3f, 0.55f, 0f),
                 new PlumeShape(45f, 25f, 0.9f, 0.3f, 0f),
                 new PlumeLookConfig.Rgb(1.0f, 1.0f, 0.96f),
-                new PlumeLookConfig.Rgb(1.0f, 0.74f, 0.42f))),
+                new PlumeLookConfig.Rgb(1.0f, 0.74f, 0.42f)),
+            PlumeLook.PAYLOAD,
+            new PlumeLookConfig(
+                payload,
+                payload,
+                new PlumeLookConfig.Rgb(0.97f, 0.95f, 0.92f),
+                new PlumeLookConfig.Rgb(0.75f, 0.62f, 0.85f))),
         0.35f,
         64,
         7_000.0,

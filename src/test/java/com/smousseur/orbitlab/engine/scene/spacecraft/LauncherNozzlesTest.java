@@ -16,9 +16,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
 /**
- * The nozzle table against the launcher assets it describes: every silhouette that fires has its
- * clusters, and every cluster sits where its mesh draws it. Re-exporting a mesh makes this red,
- * which is the point — the table is a measurement of the mesh, and a new mesh owes it a new one.
+ * The nozzle table against the assets it describes: every silhouette that fires has its clusters,
+ * and every cluster sits where its mesh draws it — a launcher's in the stack's units, a payload's
+ * in its mounted native frame. Re-exporting a mesh makes this red, which is the point — the table
+ * is a measurement of the mesh, and a new mesh owes it a new one.
  */
 class LauncherNozzlesTest {
 
@@ -34,11 +35,14 @@ class LauncherNozzlesTest {
 
   private static final String FH = LauncherAssets.modelPath(Launchers.FALCON_HEAVY.id());
   private static final String A64 = LauncherAssets.modelPath(Launchers.ARIANE_64.id());
+  private static final String GOES = "models/payloads/goes/goes.gltf";
+  private static final String LANDSAT8 = "models/payloads/landsat8/landsat8.gltf";
+  private static final String LRO = "models/payloads/lro/lro.gltf";
 
   private final DesktopAssetManager assets = new DesktopAssetManager(true);
 
   @Test
-  void everyLauncherSilhouetteThatFiresHasItsClusters() {
+  void everySilhouetteThatFiresHasItsClusters() {
     Map<String, List<StageRole>> expected =
         Map.of(
             FH,
@@ -57,7 +61,13 @@ class LauncherNozzlesTest {
             suffixed(A64, "-after_boosters"),
             List.of(StageRole.CORE),
             suffixed(A64, "-after_s1"),
-            List.of(StageRole.UPPER));
+            List.of(StageRole.UPPER),
+            GOES,
+            List.of(StageRole.KICK),
+            LANDSAT8,
+            List.of(StageRole.KICK),
+            LRO,
+            List.of(StageRole.KICK));
 
     assertEquals(expected.keySet(), LauncherNozzles.meshPaths());
     for (Map.Entry<String, List<StageRole>> mesh : expected.entrySet()) {
@@ -77,12 +87,18 @@ class LauncherNozzlesTest {
     assertEquals(PlumeLook.P120C, LauncherNozzles.clustersOf(A64).get(1).look());
     assertEquals(
         PlumeLook.VINCI, LauncherNozzles.clustersOf(suffixed(A64, "-after_s1")).get(0).look());
+    for (String payload : List.of(GOES, LANDSAT8, LRO)) {
+      assertEquals(PlumeLook.PAYLOAD, LauncherNozzles.clustersOf(payload).get(0).look(), payload);
+    }
   }
 
   @Test
   void everyClusterSitsWhereItsMeshDrawsIt() {
     List<Executable> checks = new ArrayList<>();
     for (String path : LauncherNozzles.meshPaths()) {
+      if (PayloadMounts.mountOf(path).isPresent()) {
+        continue;
+      }
       Spatial model = assets.loadModel(path);
       model.updateGeometricState();
       List<NozzleSlices.Tagged> vertices = NozzleSlices.vertices(model);
@@ -104,6 +120,28 @@ class LauncherNozzlesTest {
       }
     }
     assertTrue(checks.size() >= 4 * 12, "every cluster of the table is checked");
+    assertAll(checks);
+  }
+
+  /** A payload's engine exits at the origin of its mounted frame, by construction of the mount. */
+  @Test
+  void everyPayloadClusterSitsOnItsMountedEngine() {
+    List<Executable> checks = new ArrayList<>();
+    for (String path : PayloadMounts.meshPaths()) {
+      Spatial model = assets.loadModel(path);
+      PayloadMounts.mountOf(path).orElseThrow().applyTo(model);
+      model.updateGeometricState();
+      NozzleSlices.Reading measured = NozzleSlices.sliceOf(NozzleSlices.payloadEngine(path, model));
+      List<LauncherNozzles.Cluster> clusters = LauncherNozzles.clustersOf(path);
+      checks.add(() -> assertEquals(1, clusters.size(), path + " clusters"));
+      LauncherNozzles.Cluster cluster = clusters.isEmpty() ? null : clusters.get(0);
+      checks.add(() -> assertEquals(0f, cluster.exitX(), 0f, path + " x"));
+      checks.add(() -> assertEquals(0f, cluster.exitY(), 0f, path + " exit"));
+      checks.add(() -> assertEquals(0f, cluster.exitZ(), 0f, path + " z"));
+      checks.add(
+          () -> assertEquals(measured.radius(), cluster.radius(), TOLERANCE, path + " radius"));
+    }
+    assertEquals(5 * 3, checks.size(), "every payload cluster is checked");
     assertAll(checks);
   }
 

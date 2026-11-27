@@ -16,6 +16,8 @@ class PlumeLightingTest {
       LauncherNozzles.clustersOf(FH.replace(".gltf", "-after_boosters.gltf"));
   private static final List<LauncherNozzles.Cluster> AFTER_S1 =
       LauncherNozzles.clustersOf(FH.replace(".gltf", "-after_s1.gltf"));
+  private static final List<LauncherNozzles.Cluster> GOES =
+      LauncherNozzles.clustersOf("models/payloads/goes/goes.gltf");
 
   private static final float THROTTLE = 0.81f;
 
@@ -44,11 +46,23 @@ class PlumeLightingTest {
         1e-6f);
   }
 
-  /** The payload's own motor is L4's: the upper stage it was carried by is gone. */
   @Test
-  void aKickBurnLightsNothing() {
+  void aKickBurnLightsThePayloadsEngine() {
+    assertArrayEquals(
+        new float[] {1f}, PlumeLighting.intensities(GOES, StageRole.KICK, THROTTLE, 1f), 1e-6f);
+  }
+
+  /** The payload fires alone: the upper stage that carried it is gone, its nozzle with it. */
+  @Test
+  void aKickBurnWaitingForThePayloadLightsNothing() {
     assertArrayEquals(
         new float[] {0f}, PlumeLighting.intensities(AFTER_S1, StageRole.KICK, THROTTLE, 1f), 0f);
+  }
+
+  @Test
+  void aLauncherBurnLightsNoPayloadEngine() {
+    assertArrayEquals(
+        new float[] {0f}, PlumeLighting.intensities(GOES, StageRole.UPPER, THROTTLE, 1f), 0f);
   }
 
   /**
